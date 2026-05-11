@@ -11,7 +11,7 @@
     "server:build": "cd .. && make dev"
   },
   "devDependencies": {
-    "@playwright/test": "^1.59.1",
+    "@playwright/test": "^1.60.0",
     "ws": "^8.19.0"
   }
 }
