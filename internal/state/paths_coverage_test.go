@@ -542,6 +542,9 @@ func TestRootDir_ErrorWhenHomeUndefined(t *testing.T) {
 func TestLegacyRootDir_ErrorWhenHomeUndefined(t *testing.T) {
 	t.Setenv("HOME", "")
 	t.Setenv("USERPROFILE", "")
+	// os.UserConfigDir() consults XDG_CONFIG_HOME before HOME on Linux; CI runners
+	// set it, so it must be cleared too for the "undefined home" path to trigger.
+	t.Setenv("XDG_CONFIG_HOME", "")
 
 	_, err := LegacyRootDir()
 	if err == nil {
@@ -607,6 +610,9 @@ func TestLegacySettingsFile_ErrorWhenHomeUndefined(t *testing.T) {
 func TestLegacyRecordingsDir_ErrorWhenHomeUndefined(t *testing.T) {
 	t.Setenv("HOME", "")
 	t.Setenv("USERPROFILE", "")
+	// LegacyRecordingsDir resolves via os.UserConfigDir(); clear XDG_CONFIG_HOME so
+	// the missing-home error path triggers on Linux CI as well as macOS.
+	t.Setenv("XDG_CONFIG_HOME", "")
 
 	_, err := LegacyRecordingsDir()
 	if err == nil {
@@ -620,6 +626,9 @@ func TestLegacyRecordingsDir_ErrorWhenHomeUndefined(t *testing.T) {
 func TestLegacySecurityConfigFile_ErrorWhenHomeUndefined(t *testing.T) {
 	t.Setenv("HOME", "")
 	t.Setenv("USERPROFILE", "")
+	// LegacySecurityConfigFile resolves via os.UserConfigDir(); clear XDG_CONFIG_HOME
+	// so the missing-home error path triggers on Linux CI as well as macOS.
+	t.Setenv("XDG_CONFIG_HOME", "")
 
 	_, err := LegacySecurityConfigFile()
 	if err == nil {
