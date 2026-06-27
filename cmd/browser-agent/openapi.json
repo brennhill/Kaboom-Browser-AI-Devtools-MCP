@@ -79,6 +79,50 @@
     }
   ],
   "paths": {
+    "/debug/usage": {
+      "get": {
+        "tags": [
+          "Debug"
+        ],
+        "summary": "Tool usage counters",
+        "description": "Returns per-tool invocation counts for diagnostics. Debug-only endpoint.",
+        "operationId": "getDebugUsage",
+        "responses": {
+          "200": {
+            "description": "Usage counts keyed by tool:action",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/debug/beacon-flush": {
+      "post": {
+        "tags": [
+          "Debug"
+        ],
+        "summary": "Flush telemetry beacon buffer",
+        "description": "Forces a flush of the buffered telemetry beacon payload and returns it. Debug-only endpoint.",
+        "operationId": "postDebugBeaconFlush",
+        "responses": {
+          "200": {
+            "description": "Flushed beacon payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "tags": [

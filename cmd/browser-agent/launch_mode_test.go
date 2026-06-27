@@ -8,6 +8,16 @@ import (
 	"testing"
 )
 
+// clearSupervisorEnv neutralizes every supervisor marker so classifyLaunchMode
+// does not treat the test host (e.g. CI under systemd) as supervised.
+func clearSupervisorEnv(t *testing.T) {
+	t.Helper()
+	t.Setenv("KABOOM_SUPERVISED", "")
+	for _, k := range supervisorEnvVars {
+		t.Setenv(k, "")
+	}
+}
+
 func TestClassifyLaunchMode_DaemonFlagAlwaysPersistent(t *testing.T) {
 	origLookup := lookupParentProcessName
 	t.Cleanup(func() { lookupParentProcessName = origLookup })
@@ -23,8 +33,7 @@ func TestClassifyLaunchMode_DaemonFlagAlwaysPersistent(t *testing.T) {
 }
 
 func TestClassifyLaunchMode_InteractiveShellIsLikelyTransient(t *testing.T) {
-	t.Setenv("KABOOM_SUPERVISED", "")
-	t.Setenv("INVOCATION_ID", "")
+	clearSupervisorEnv(t)
 
 	origLookup := lookupParentProcessName
 	t.Cleanup(func() { lookupParentProcessName = origLookup })
@@ -40,8 +49,7 @@ func TestClassifyLaunchMode_InteractiveShellIsLikelyTransient(t *testing.T) {
 }
 
 func TestClassifyLaunchMode_NonInteractiveDefaultsPersistent(t *testing.T) {
-	t.Setenv("KABOOM_SUPERVISED", "")
-	t.Setenv("INVOCATION_ID", "")
+	clearSupervisorEnv(t)
 
 	origLookup := lookupParentProcessName
 	t.Cleanup(func() { lookupParentProcessName = origLookup })

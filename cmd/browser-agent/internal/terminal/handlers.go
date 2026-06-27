@@ -11,6 +11,8 @@ import (
 	"io/fs"
 	"net"
 	"net/http"
+	"os"
+	"os/exec"
 	"strings"
 	"sync"
 	"time"
@@ -18,6 +20,24 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 )
+
+// defaultShell returns a usable interactive shell for the host. It prefers
+// $SHELL, then falls back to shells that actually exist. Hardcoding a single
+// path (e.g. /bin/zsh) fails on hosts without it, such as Linux CI runners and
+// minimal containers.
+func defaultShell() string {
+	if sh := strings.TrimSpace(os.Getenv("SHELL")); sh != "" {
+		if _, err := exec.LookPath(sh); err == nil {
+			return sh
+		}
+	}
+	for _, candidate := range []string{"/bin/zsh", "/bin/bash", "/bin/sh"} {
+		if _, err := exec.LookPath(candidate); err == nil {
+			return candidate
+		}
+	}
+	return "/bin/sh"
+}
 
 // PingInterval is how often the server sends WebSocket ping frames.
 // Browser WebSocket API auto-replies with pong — no client code needed.
@@ -402,7 +422,7 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 
 	// Default to shell if no command specified.
 	if req.Cmd == "" {
-		req.Cmd = "/bin/zsh"
+		req.Cmd = defaultShell()
 	}
 
 	// CWD priority: request dir > active_codebase (set via MCP/extension) > auto-detect

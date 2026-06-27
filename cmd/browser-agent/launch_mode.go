@@ -121,24 +121,30 @@ func isPersistentModeRequired() bool {
 	return truthyEnv("KABOOM_REQUIRE_PERSISTENT")
 }
 
+// supervisorEnvVars are environment markers indicating the process was launched
+// by a service manager / supervisor rather than an interactive shell. Hoisted to
+// package scope so tests can deterministically clear them — CI runners set some
+// (e.g. JOURNAL_STREAM/INVOCATION_ID under systemd), which would otherwise make
+// classifyLaunchMode report "supervisor_detected".
+var supervisorEnvVars = []string{
+	"INVOCATION_ID",      // systemd
+	"JOURNAL_STREAM",     // systemd
+	"LAUNCH_JOB_NAME",    // launchd
+	"LAUNCH_JOB_KEY",     // launchd
+	"RUNNING_AS_SERVICE", // explicit service marker
+	"SERVICE_NAME",       // generic service marker
+	"K_SERVICE",          // Cloud Run
+	"K_REVISION",         // Cloud Run
+	"CONTAINER",          // container supervisors
+	"KABOOM_DAEMONIZED",  // project-local explicit marker
+	"KABOOM_PERSISTENT",  // project-local explicit marker
+}
+
 func isSupervisedLaunch() bool {
 	if truthyEnv("KABOOM_SUPERVISED") {
 		return true
 	}
-	supervisorVars := []string{
-		"INVOCATION_ID",       // systemd
-		"JOURNAL_STREAM",      // systemd
-		"LAUNCH_JOB_NAME",     // launchd
-		"LAUNCH_JOB_KEY",      // launchd
-		"RUNNING_AS_SERVICE",  // explicit service marker
-		"SERVICE_NAME",        // generic service marker
-		"K_SERVICE",           // Cloud Run
-		"K_REVISION",          // Cloud Run
-		"CONTAINER",           // container supervisors
-		"KABOOM_DAEMONIZED", // project-local explicit marker
-		"KABOOM_PERSISTENT", // project-local explicit marker
-	}
-	for _, key := range supervisorVars {
+	for _, key := range supervisorEnvVars {
 		if strings.TrimSpace(os.Getenv(key)) != "" {
 			return true
 		}
