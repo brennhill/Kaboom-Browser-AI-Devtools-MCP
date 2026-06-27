@@ -79,8 +79,10 @@ for i in $(seq 0 $((SHARDS - 1))); do
   outfile=$(mktemp "/tmp/js-shard-${i}-XXXXXX")
   OUTPUTS+=("$outfile")
 
+  # Force the spec reporter so ✔/✖ marks appear even when stdout is redirected
+  # (node defaults to the TAP reporter off a TTY, which this script cannot count).
   # shellcheck disable=SC2086
-  node --experimental-test-module-mocks --test --test-force-exit --test-timeout="$TIMEOUT" --test-concurrency="$CONCURRENCY" $files > "$outfile" 2>&1 &
+  node --experimental-test-module-mocks --test --test-reporter=spec --test-reporter-destination=stdout --test-force-exit --test-timeout="$TIMEOUT" --test-concurrency="$CONCURRENCY" $files > "$outfile" 2>&1 &
   PIDS+=($!)
 done
 
@@ -104,13 +106,20 @@ for outfile in "${OUTPUTS[@]}"; do
   TOTAL_FAIL=$((TOTAL_FAIL + fail))
 done
 
-# Show failures if any
-if [[ $TOTAL_FAIL -gt 0 ]]; then
+# Show failures if any. Trigger on parsed ✖ marks OR a non-zero shard exit: a shard
+# can fail to run at all (unknown node flag, import error, crash) and produce zero ✖
+# marks, so dump its raw tail too — otherwise the real cause is invisible in CI logs.
+if [[ $TOTAL_FAIL -gt 0 || $FAILED -ne 0 ]]; then
   echo ""
   echo "=== FAILURES ==="
-  for outfile in "${OUTPUTS[@]}"; do
+  for i in "${!OUTPUTS[@]}"; do
+    outfile="${OUTPUTS[$i]}"
     if grep -q '✖' "$outfile" 2>/dev/null; then
       grep -B1 '✖' "$outfile"
+      echo "---"
+    elif [[ $FAILED -ne 0 ]]; then
+      echo "--- shard $i produced no ✖ but a shard exited non-zero; raw tail ---"
+      tail -40 "$outfile"
       echo "---"
     fi
   done
