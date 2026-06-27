@@ -237,10 +237,59 @@ test('opencode buildEntry includes env vars', () => {
 
 // --- Antigravity client ---
 
-test('antigravity uses correct config path', () => {
+test('antigravity uses the home-dir config path on every platform', () => {
   const ag = CLIENT_DEFINITIONS.find(c => c.id === 'antigravity');
   assert.equal(ag.type, 'file');
-  assert.ok(ag.configPath.darwin.includes('.gemini/antigravity/mcp_config.json'));
+  assert.ok(ag.configPath.all.includes('.gemini/antigravity/mcp_config.json'));
+  // Regression: win32 must NOT drift to %APPDATA% — Antigravity uses ~ on all OSes.
+  for (const plat of ['darwin', 'linux', 'win32']) {
+    const resolved = getClientConfigPath(ag, plat);
+    assert.ok(resolved.includes(path.join('.gemini', 'antigravity', 'mcp_config.json')), `bad path on ${plat}`);
+    assert.ok(!resolved.includes('%APPDATA%'), `must not use %APPDATA% on ${plat}`);
+  }
+});
+
+test('antigravity keeps the old %APPDATA% path tracked for stale cleanup', () => {
+  const ag = CLIENT_DEFINITIONS.find(c => c.id === 'antigravity');
+  assert.ok(ag.legacyConfigPaths, 'must declare legacy config paths');
+  assert.ok(ag.legacyConfigPaths.win32.includes('%APPDATA%'), 'legacy win32 path must be the %APPDATA% location');
+});
+
+test('getClientLegacyConfigPaths resolves declared legacy paths per platform', () => {
+  const { getClientLegacyConfigPaths } = require('./config');
+  const def = {
+    id: 'test',
+    type: 'file',
+    configPath: { all: '~/x.json' },
+    detectDir: { all: '~' },
+    legacyConfigPaths: { all: '~/legacy/x.json' },
+  };
+  const paths = getClientLegacyConfigPaths(def);
+  assert.equal(paths.length, 1);
+  assert.ok(paths[0].includes(path.join('legacy', 'x.json')));
+  assert.deepEqual(getClientLegacyConfigPaths({ id: 'no-legacy', type: 'file', configPath: {}, detectDir: {} }), []);
+});
+
+// --- VS Code client ---
+
+test('vscode uses the "servers" config key with "mcpServers" as legacy key', () => {
+  const vs = CLIENT_DEFINITIONS.find(c => c.id === 'vscode');
+  assert.equal(vs.configKey, 'servers', 'VS Code mcp.json uses a top-level "servers" key');
+  assert.deepEqual(vs.legacyConfigKeys, ['mcpServers'], 'legacy mcpServers entries must still be cleaned');
+  assert.equal(vs.dedicatedMcpFile, true);
+});
+
+// --- Dedicated vs shared config files ---
+
+test('shared settings files are never flagged as dedicated MCP configs', () => {
+  for (const id of ['gemini', 'opencode', 'zed']) {
+    const def = CLIENT_DEFINITIONS.find(c => c.id === id);
+    assert.ok(!def.dedicatedMcpFile, `${id} writes into a shared settings file and must never be deleted`);
+  }
+  for (const id of ['claude-desktop', 'cursor', 'windsurf', 'vscode', 'antigravity']) {
+    const def = CLIENT_DEFINITIONS.find(c => c.id === id);
+    assert.equal(def.dedicatedMcpFile, true, `${id} uses a dedicated MCP config file`);
+  }
 });
 
 // --- Zed client ---

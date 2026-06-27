@@ -1,15 +1,16 @@
 ---
 doc_type: flow_map_pointer
 status: active
-last_reviewed: 2026-03-28
+last_reviewed: 2026-06-10
 canonical_flow_map: ../../../architecture/flow-maps/installer-binary-path-and-manual-extension-handoff.md
 ---
 
 # Enhanced CLI Config Flow Map Pointer
 
-Canonical flow map:
+Canonical flow maps:
 
 - [Installer Binary Path and Manual Extension Handoff](../../../architecture/flow-maps/installer-binary-path-and-manual-extension-handoff.md)
+- [Uninstall and Cleanup](../../../architecture/flow-maps/uninstall-and-cleanup.md)
 
 Notable coverage:
 
@@ -22,3 +23,4 @@ Notable coverage:
 - Installer defaults unpacked extension output to `~/KaboomAgenticDevtoolExtension` (overridable via `KABOOM_EXTENSION_DIR`) so users can select it in Chrome without enabling hidden files.
 - CRX fallback packaging in `scripts/build-crx.js` archives the full `extension/` directory to prevent missing MV3 module imports.
 - Startup integrity regression checks assert manifest file paths and service worker import graph resolve before release.
+- One-liner uninstallers (`scripts/uninstall.sh`, `scripts/uninstall.ps1`) reverse every install artifact: binaries/state, extension dir, autostart registrations, `# kaboom` PATH lines, MCP client entries (canonical + legacy keys, in-place JSON edits with backups), and marker-managed agent skills. Behavioral coverage in `tests/cli/uninstall-script.test.cjs`.

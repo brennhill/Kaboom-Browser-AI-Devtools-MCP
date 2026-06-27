@@ -25,8 +25,9 @@ CRITICAL_FILES=(
     "internal/queries/types.go"
     "$CMD_DIR/tools_core.go"
     "$CMD_DIR/tools_observe.go"
-    "$CMD_DIR/tools_interact.go"
-    "$CMD_DIR/bridge.go"
+    "$CMD_DIR/tools_interact_dispatch.go"
+    "$CMD_DIR/bridge_adapter.go"
+    "$CMD_DIR/internal/bridge/bridge.go"
 )
 
 for file in "${CRITICAL_FILES[@]}"; do
@@ -101,16 +102,19 @@ done
 echo ""
 echo "4️⃣  Checking MCP tool handlers..."
 
+# Top-level observe handlers live in $CMD_DIR/tools_*.go; the interact action
+# implementations moved to $CMD_DIR/internal/toolinteract/ (HandleExecuteJSImpl,
+# HandleBrowserActionNavigateImpl).
 MCP_TOOL_HANDLERS=(
     "toolObserveCommandResult"
     "toolObservePendingCommands"
     "toolObserveFailedCommands"
-    "handleExecuteJS"
-    "handleBrowserActionNavigate"
+    "HandleExecuteJSImpl"
+    "HandleBrowserActionNavigateImpl"
 )
 
 for handler in "${MCP_TOOL_HANDLERS[@]}"; do
-    if ! grep -rq "func.*$handler" "${CMD_DIR}"/tools_*.go; then
+    if ! grep -rq "func.*$handler" "${CMD_DIR}"/tools_*.go "${CMD_DIR}"/internal/toolinteract/*.go; then
         echo "   ❌ MISSING TOOL HANDLER: $handler"
         ERRORS=$((ERRORS + 1))
     else

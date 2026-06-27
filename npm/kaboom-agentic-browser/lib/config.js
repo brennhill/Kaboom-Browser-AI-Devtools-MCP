@@ -95,6 +95,8 @@ const CLIENT_DEFINITIONS = [
     id: 'claude-desktop',
     name: 'Claude Desktop',
     type: 'file',
+    // claude_desktop_config.json is a dedicated MCP config: safe to delete when emptied.
+    dedicatedMcpFile: true,
     configPath: {
       darwin: '~/Library/Application Support/Claude/claude_desktop_config.json',
       win32: '%APPDATA%/Claude/claude_desktop_config.json',
@@ -108,6 +110,7 @@ const CLIENT_DEFINITIONS = [
     id: 'cursor',
     name: 'Cursor',
     type: 'file',
+    dedicatedMcpFile: true,
     configPath: { all: '~/.cursor/mcp.json' },
     detectDir: { all: '~/.cursor' },
   },
@@ -115,6 +118,7 @@ const CLIENT_DEFINITIONS = [
     id: 'windsurf',
     name: 'Windsurf',
     type: 'file',
+    dedicatedMcpFile: true,
     configPath: { all: '~/.codeium/windsurf/mcp_config.json' },
     detectDir: { all: '~/.codeium/windsurf' },
   },
@@ -122,6 +126,11 @@ const CLIENT_DEFINITIONS = [
     id: 'vscode',
     name: 'VS Code',
     type: 'file',
+    dedicatedMcpFile: true,
+    // VS Code's mcp.json uses a top-level "servers" key; "mcpServers" entries
+    // were written by older Kaboom versions and must still be cleaned up.
+    configKey: 'servers',
+    legacyConfigKeys: ['mcpServers'],
     configPath: {
       darwin: '~/Library/Application Support/Code/User/mcp.json',
       win32: '%APPDATA%/Code/User/mcp.json',
@@ -157,16 +166,12 @@ const CLIENT_DEFINITIONS = [
     id: 'antigravity',
     name: 'Antigravity',
     type: 'file',
-    configPath: {
-      darwin: '~/.gemini/antigravity/mcp_config.json',
-      win32: '%APPDATA%/.gemini/antigravity/mcp_config.json',
-      linux: '~/.gemini/antigravity/mcp_config.json',
-    },
-    detectDir: {
-      darwin: '~/.gemini/antigravity',
-      win32: '%APPDATA%/.gemini/antigravity',
-      linux: '~/.gemini/antigravity',
-    },
+    dedicatedMcpFile: true,
+    // Antigravity uses the home-dir path on every OS (matches the Go installer).
+    configPath: { all: '~/.gemini/antigravity/mcp_config.json' },
+    detectDir: { all: '~/.gemini/antigravity' },
+    // Older npm versions wrote to %APPDATA% on Windows; keep cleaning that path.
+    legacyConfigPaths: { win32: '%APPDATA%/.gemini/antigravity/mcp_config.json' },
   },
   {
     id: 'zed',
@@ -191,6 +196,7 @@ const LEGACY_PATHS = [
   { path: '~/.codeium/mcp.json', description: 'Old Windsurf/Codeium path' },
   { path: '~/.vscode/claude.mcp.json', description: 'Old VS Code path' },
   { path: '~/.claude.json', description: 'Old Claude Code path (now uses CLI)' },
+  { path: '%APPDATA%/.gemini/antigravity/mcp_config.json', description: 'Old Antigravity path (Windows %APPDATA% location)' },
 ];
 
 /**
@@ -218,6 +224,22 @@ function getClientConfigPath(def, platform) {
   const plat = platform || os.platform();
   const raw = def.configPath[plat] || def.configPath.all || null;
   return raw ? expandPath(raw) : null;
+}
+
+/**
+ * Get resolved legacy config paths for a file-type client definition.
+ * These are paths older versions wrote to; uninstall/doctor still clean them.
+ * @param {Object} def Client definition
+ * @param {string} [platform] Platform override (defaults to os.platform())
+ * @returns {Array<string>} Resolved legacy paths (empty when none apply)
+ */
+function getClientLegacyConfigPaths(def, platform) {
+  if (def.type === 'cli' || !def.legacyConfigPaths) return [];
+  const plat = platform || os.platform();
+  const raw = def.legacyConfigPaths[plat] || def.legacyConfigPaths.all || null;
+  if (!raw) return [];
+  const list = Array.isArray(raw) ? raw : [raw];
+  return list.map((p) => expandPath(p)).filter(Boolean);
 }
 
 /**
@@ -550,11 +572,18 @@ function mergeKaboomConfig(existing, kaboomEntry, envVars = {}) {
  */
 function parseEnvVar(envStr) {
   const { InvalidEnvFormatError } = require('./errors');
-  const parts = envStr.split('=');
-  if (parts.length !== 2 || !parts[0] || !parts[1]) {
+  const raw = String(envStr ?? '');
+  // Split on the FIRST '=' only — values may legitimately contain '='
+  // (e.g. TOKEN=abc=def, base64 payloads, URLs with query strings).
+  const idx = raw.indexOf('=');
+  if (idx <= 0) {
     throw new InvalidEnvFormatError(envStr);
   }
-  const [key, value] = parts;
+  const key = raw.slice(0, idx);
+  const value = raw.slice(idx + 1);
+  if (!value) {
+    throw new InvalidEnvFormatError(envStr);
+  }
 
   // Validate key (no null bytes or control chars)
   if (!/^[A-Z_][A-Z0-9_]*$/i.test(key)) {
@@ -572,6 +601,7 @@ module.exports = {
   LEGACY_MCP_SERVER_NAMES,
   expandPath,
   getClientConfigPath,
+  getClientLegacyConfigPaths,
   getClientDetectDir,
   commandExistsOnPath,
   isClientInstalled,

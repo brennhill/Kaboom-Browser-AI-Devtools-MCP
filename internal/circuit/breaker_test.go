@@ -178,6 +178,54 @@ func TestCircuitBreaker_LifecycleCallback(t *testing.T) {
 	}
 }
 
+// TestCircuitBreaker_ClosesViaCheckRateLimitPath is the regression test for the
+// permanent-lockout bug: once the circuit opened, only RecordEvents ticked the
+// rate window, but ingest handlers call CheckRateLimit first and return 429
+// while the circuit is open — so RecordEvents was never called again and
+// OPEN->CLOSED was unreachable until restart. CheckRateLimit must drive the
+// window state machine itself.
+func TestCircuitBreaker_ClosesViaCheckRateLimitPath(t *testing.T) {
+	t.Parallel()
+	current := time.Date(2026, 6, 10, 12, 0, 0, 0, time.UTC)
+	cb := NewCircuitBreaker(func(string, map[string]any) {})
+	cb.mu.Lock()
+	cb.now = func() time.Time { return current }
+	cb.rateWindowStart = current
+	cb.lastBelowThresholdAt = current
+	cb.mu.Unlock()
+
+	advance := func(d time.Duration) { current = current.Add(d) }
+
+	// Open the circuit through the real ingest path: each over-threshold
+	// window is ticked into the streak by the next RecordEvents call.
+	for i := 0; i <= CircuitOpenStreakCount; i++ {
+		cb.RecordEvents(RateLimitThreshold + 1)
+		advance(1100 * time.Millisecond)
+	}
+	if !cb.IsOpen() {
+		t.Fatal("Circuit should open after sustained over-threshold rate")
+	}
+	if !cb.CheckRateLimit() {
+		t.Fatal("CheckRateLimit should reject while circuit is open")
+	}
+
+	// One quiet window resets the streak and starts the below-threshold timer.
+	// Only CheckRateLimit runs from here on (the 429 path never reaches RecordEvents).
+	advance(1100 * time.Millisecond)
+	if !cb.CheckRateLimit() {
+		t.Fatal("Circuit should still be open before CircuitCloseSeconds elapse")
+	}
+
+	// After CircuitCloseSeconds below threshold, the 429 path itself must close the circuit.
+	advance(time.Duration(CircuitCloseSeconds+1) * time.Second)
+	if cb.CheckRateLimit() {
+		t.Fatal("CheckRateLimit should allow traffic once recovery conditions are met")
+	}
+	if cb.IsOpen() {
+		t.Fatal("Circuit should close via the CheckRateLimit path after recovery")
+	}
+}
+
 func TestCircuitBreaker_RecordEventsWindowReset(t *testing.T) {
 	t.Parallel()
 	cb := NewCircuitBreaker(func(string, map[string]any) {})

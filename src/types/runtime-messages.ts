@@ -668,6 +668,30 @@ export interface OffscreenStopRecordingMessage {
 }
 
 /**
+ * Query live recording state (SW → offscreen).
+ * Sent on service-worker startup so a restarted SW can rehydrate in-memory
+ * recording state while the offscreen MediaRecorder is still running.
+ */
+export interface OffscreenGetRecordingStateMessage {
+  readonly target: 'offscreen'
+  readonly type: 'offscreen_get_recording_state'
+}
+
+/**
+ * Live recording state (offscreen → SW, sendResponse payload for
+ * OffscreenGetRecordingStateMessage).
+ */
+export interface OffscreenRecordingStateResponse {
+  readonly active: boolean
+  readonly name: string
+  readonly startTime: number
+  readonly fps: number
+  readonly audioMode: string
+  readonly tabId: number
+  readonly url: string
+}
+
+/**
  * Recording started confirmation (offscreen → SW)
  */
 export interface OffscreenRecordingStartedMessage {
@@ -698,6 +722,7 @@ export interface OffscreenRecordingStoppedMessage {
 export type OffscreenMessage =
   | OffscreenStartRecordingMessage
   | OffscreenStopRecordingMessage
+  | OffscreenGetRecordingStateMessage
   | OffscreenRecordingStartedMessage
   | OffscreenRecordingStoppedMessage
 

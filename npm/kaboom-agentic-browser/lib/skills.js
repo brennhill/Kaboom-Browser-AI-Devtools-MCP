@@ -67,6 +67,28 @@ function parseScope(defaultScope = detectDefaultScope()) {
   return defaultScope;
 }
 
+const SKILLS_DIR_ENV_BY_AGENT = {
+  claude: 'KABOOM_CLAUDE_SKILLS_DIR',
+  codex: 'KABOOM_CODEX_SKILLS_DIR',
+  gemini: 'KABOOM_GEMINI_SKILLS_DIR',
+};
+
+/**
+ * Returns true when bundled skills may be installed into rootDir for agent.
+ * Skill roots are only created inside agent layouts that ALREADY exist
+ * (e.g. ~/.claude, ~/.gemini) so the installer never fabricates agent dirs
+ * that would later trip client auto-detection. Explicit env-var targets
+ * (KABOOM_<AGENT>_SKILLS_DIR) are always honored and force-created.
+ */
+function isAgentRootInstallable(agent, rootDir) {
+  const envVar = SKILLS_DIR_ENV_BY_AGENT[agent];
+  const envValue = envVar ? process.env[envVar] : '';
+  if (envValue && path.resolve(envValue) === path.resolve(rootDir)) {
+    return true;
+  }
+  return fs.existsSync(path.dirname(path.resolve(rootDir)));
+}
+
 function getAgentRoots(agent, scope) {
   const roots = [];
   const home = os.homedir();
@@ -496,6 +518,58 @@ function removeLegacySkillVariants(agent, rootDir, skillId, options = {}) {
   return removed;
 }
 
+function isManagedSkillFileStart(content) {
+  const text = String(content || '');
+  return MANAGED_MARKERS.some((marker) => text.startsWith(marker));
+}
+
+/**
+ * Remove managed skill files that are no longer in the bundled manifest
+ * (renamed or dropped skills). Only files whose content STARTS with a managed
+ * marker are removed — user-owned files are never touched.
+ * handledPaths lists files already processed by the manifest-based cleanup so
+ * dry-run counts are not duplicated.
+ */
+function removeOrphanedManagedSkills(agent, rootDir, handledPaths, options = {}) {
+  const { dryRun = false } = options;
+  const result = { removed: 0, errors: 0 };
+  let entries;
+  try {
+    entries = fs.readdirSync(rootDir, { withFileTypes: true });
+  } catch (_) {
+    return result; // Root does not exist — nothing to clean.
+  }
+
+  for (const entry of entries) {
+    let candidate = null;
+    if (agent === 'codex') {
+      if (entry.isDirectory()) candidate = path.join(rootDir, entry.name, 'SKILL.md');
+    } else if (entry.isFile() && entry.name.endsWith('.md')) {
+      candidate = path.join(rootDir, entry.name);
+    }
+    if (!candidate || handledPaths.has(candidate)) continue;
+    try {
+      if (!fs.existsSync(candidate)) continue;
+      const content = fs.readFileSync(candidate, 'utf8');
+      if (!isManagedSkillFileStart(content)) continue;
+      if (!dryRun) {
+        fs.unlinkSync(candidate);
+        if (agent === 'codex') {
+          try {
+            fs.rmdirSync(path.dirname(candidate));
+          } catch (_) {
+            // Ignore non-empty or missing directory errors.
+          }
+        }
+      }
+      result.removed += 1;
+    } catch (_) {
+      result.errors += 1;
+    }
+  }
+  return result;
+}
+
 function cleanupInstalledSkills(options = {}) {
   const verbose = Boolean(options.verbose);
   const dryRun = Boolean(options.dryRun);
@@ -514,7 +588,12 @@ function cleanupInstalledSkills(options = {}) {
   for (const agent of agents) {
     const roots = getAgentRoots(agent, scope);
     for (const rootDir of roots) {
+      const handledPaths = new Set();
       for (const skill of bundledSkills) {
+        handledPaths.add(skillFilePath(agent, rootDir, skill.id));
+        for (const prefix of LEGACY_PREFIXES) {
+          handledPaths.add(skillFilePath(agent, rootDir, `${prefix}${skill.id}`));
+        }
         const current = removeManagedSkillFile(agent, rootDir, skill.id, { dryRun });
         summary.removed += current.removed;
         summary.skipped_user_owned += current.skipped_user_owned;
@@ -523,6 +602,13 @@ function cleanupInstalledSkills(options = {}) {
         if (verbose && current.removed > 0) {
           console.log(`[kaboom-mcp] skills removed: ${agent}:${skill.id} -> ${rootDir}`);
         }
+      }
+      // Also remove managed skills orphaned by renames/drops in the manifest.
+      const orphans = removeOrphanedManagedSkills(agent, rootDir, handledPaths, { dryRun });
+      summary.removed += orphans.removed;
+      summary.errors += orphans.errors;
+      if (verbose && orphans.removed > 0) {
+        console.log(`[kaboom-mcp] orphaned managed skills removed: ${agent} -> ${rootDir} (${orphans.removed})`);
       }
     }
   }
@@ -591,6 +677,14 @@ async function installBundledSkills(options = {}) {
   for (const agent of agents) {
     const roots = getAgentRoots(agent, scope);
     for (const rootDir of roots) {
+      if (!isAgentRootInstallable(agent, rootDir)) {
+        if (verbose) {
+          console.log(
+            `[kaboom-mcp] skills skipped for ${agent}: agent directory not found (${path.dirname(path.resolve(rootDir))})`
+          );
+        }
+        continue;
+      }
       for (const skill of bundledSkills) {
         const content = buildManagedContent(skill.id, skill.version, skill.body);
         const filePath = skillFilePath(agent, rootDir, skill.id);
@@ -626,6 +720,7 @@ async function installBundledSkills(options = {}) {
 module.exports = {
   cleanupInstalledSkills,
   installBundledSkills,
+  isAgentRootInstallable,
   parseAgents,
   parseScope,
   loadSkillCatalog,

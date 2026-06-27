@@ -11,10 +11,46 @@ permissions:
   contents: read
 
 jobs:
+  test:
+    name: Test (Go + JS + wire drift)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.release.tag_name || github.ref }}
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version: '1.24.13'
+          cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '20'
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Wire drift gate (Go <-> TS payload contracts)
+        run: |
+          make check-wire-drift
+          node scripts/check-sync-wire-drift.js
+
+      - name: Go tests (short)
+        run: go test -short ./...
+
+      - name: JS tests
+        run: npm run test:ext
+
   build-and-publish:
     name: Build binaries and publish packages
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    needs: test
 
     steps:
       - name: Checkout code
@@ -33,6 +69,10 @@ jobs:
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
+
+      # Required by `make npm-binaries` (compile-ts uses tsc + esbuild from devDependencies)
+      - name: Install Node dependencies
+        run: npm ci
 
       - name: Extract and validate version
         id: version
@@ -69,24 +109,24 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.VERSION }}
 
+      # Stages kaboom-agentic-browser + kaboom-hooks binaries into npm/*/bin/
+      # using the names whitelisted by each platform package's "files" field.
       - name: Copy binaries to package directories
         run: |
-          mkdir -p npm/darwin-arm64/bin
-          mkdir -p npm/darwin-x64/bin
-          mkdir -p npm/linux-x64/bin
-          mkdir -p npm/linux-arm64/bin
-          mkdir -p npm/win32-x64/bin
-
-          cp dist/kaboom-agentic-browser-darwin-arm64 npm/darwin-arm64/bin/kaboom
-          cp dist/kaboom-agentic-browser-darwin-x64 npm/darwin-x64/bin/kaboom
-          cp dist/kaboom-agentic-browser-linux-x64 npm/linux-x64/bin/kaboom
-          cp dist/kaboom-agentic-browser-linux-arm64 npm/linux-arm64/bin/kaboom
-          cp dist/kaboom-agentic-browser-win32-x64.exe npm/win32-x64/bin/kaboom.exe
-
+          make npm-binaries
           chmod +x npm/*/bin/*
 
           echo "✅ Binaries staged for package publishing"
           ls -lh npm/*/bin/
+
+      # Hard publish gate: fail BEFORE any npm publish if a platform package would
+      # ship without its binaries. npm silently drops missing "files" entries, which
+      # is how @brennhill/...@0.8.2 published an empty (binary-less) darwin-arm64 package.
+      - name: Verify platform binaries staged (publish gate)
+        run: |
+          for d in darwin-arm64 darwin-x64 linux-arm64 linux-x64 win32-x64; do
+            node scripts/verify-platform-binaries.js "npm/$d"
+          done
 
       - name: Publish darwin-arm64
         run: |

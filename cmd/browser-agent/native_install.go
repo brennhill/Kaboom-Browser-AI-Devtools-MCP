@@ -71,6 +71,50 @@ func printInstallerPanel(title string, lines []string) {
 	stderrf("\033[1;36m%s\033[0m\n", border)
 }
 
+// mcpFileConfig describes one file-based MCP client config target.
+type mcpFileConfig struct {
+	name     string
+	path     string
+	key      string
+	isCustom bool
+}
+
+// fileConfigTargets returns the file-based MCP client config targets for the
+// current OS. VS Code reads MCP servers from a top-level "servers" key in
+// mcp.json (not "mcpServers" like Claude Desktop/Cursor).
+func fileConfigTargets(home string) []mcpFileConfig {
+	configs := []mcpFileConfig{
+		{"Cursor", "~/.cursor/mcp.json", "mcpServers", false},
+		{"Windsurf", "~/.codeium/windsurf/mcp_config.json", "mcpServers", false},
+		{"Gemini CLI", "~/.gemini/settings.json", "mcpServers", false},
+		{"Antigravity", "~/.gemini/antigravity/mcp_config.json", "mcpServers", false},
+		{"OpenCode", "~/.config/opencode/opencode.json", "mcp", true},
+		{"Zed", "~/.config/zed/settings.json", "context_servers", true},
+	}
+
+	switch runtime.GOOS {
+	case "darwin":
+		configs = append(configs,
+			mcpFileConfig{"Claude Desktop", "Library/Application Support/Claude/claude_desktop_config.json", "mcpServers", false},
+			mcpFileConfig{"VS Code", "Library/Application Support/Code/User/mcp.json", "servers", false},
+		)
+	case "linux":
+		configs = append(configs,
+			mcpFileConfig{"VS Code", ".config/Code/User/mcp.json", "servers", false},
+		)
+	case "windows":
+		appData := os.Getenv("APPDATA")
+		if appData == "" {
+			appData = filepath.Join(home, "AppData", "Roaming")
+		}
+		configs = append(configs,
+			mcpFileConfig{"Claude Desktop", filepath.Join(appData, "Claude", "claude_desktop_config.json"), "mcpServers", false},
+			mcpFileConfig{"VS Code", filepath.Join(appData, "Code", "User", "mcp.json"), "servers", false},
+		)
+	}
+	return configs
+}
+
 // runNativeInstall detects and configures all supported MCP clients.
 func runNativeInstall() {
 	// 1. Silent Reset (Kill stale instances)
@@ -84,7 +128,10 @@ func runNativeInstall() {
 		os.Exit(1)
 	}
 
-	home, _ := os.UserHomeDir()
+	home, homeErr := os.UserHomeDir()
+	if homeErr != nil {
+		home = ""
+	}
 	extDir := extensionInstallDir(home)
 
 	// 2. Claude Code
@@ -93,78 +140,30 @@ func runNativeInstall() {
 	}
 
 	// 3. File-based configs
-	configs := []struct {
-		name     string
-		path     string
-		key      string
-		isCustom bool
-	}{
-		{"Cursor", "~/.cursor/mcp.json", "mcpServers", false},
-		{"Windsurf", "~/.codeium/windsurf/mcp_config.json", "mcpServers", false},
-		{"Gemini CLI", "~/.gemini/settings.json", "mcpServers", false},
-		{"Antigravity", "~/.gemini/antigravity/mcp_config.json", "mcpServers", false},
-		{"OpenCode", "~/.config/opencode/opencode.json", "mcp", true},
-		{"Zed", "~/.config/zed/settings.json", "context_servers", true},
-	}
-
-	// OS-specific paths
-	if runtime.GOOS == "darwin" {
-		configs = append(configs, struct {
-			name     string
-			path     string
-			key      string
-			isCustom bool
-		}{"Claude Desktop", "Library/Application Support/Claude/claude_desktop_config.json", "mcpServers", false})
-		configs = append(configs, struct {
-			name     string
-			path     string
-			key      string
-			isCustom bool
-		}{"VS Code", "Library/Application Support/Code/User/mcp.json", "mcpServers", false})
-	} else if runtime.GOOS == "linux" {
-		configs = append(configs, struct {
-			name     string
-			path     string
-			key      string
-			isCustom bool
-		}{"VS Code", ".config/Code/User/mcp.json", "mcpServers", false})
-	} else if runtime.GOOS == "windows" {
-		appData := os.Getenv("APPDATA")
-		if appData == "" {
-			appData = filepath.Join(home, "AppData", "Roaming")
-		}
-		configs = append(configs, struct {
-			name     string
-			path     string
-			key      string
-			isCustom bool
-		}{"Claude Desktop", filepath.Join(appData, "Claude", "claude_desktop_config.json"), "mcpServers", false})
-		configs = append(configs, struct {
-			name     string
-			path     string
-			key      string
-			isCustom bool
-		}{"VS Code", filepath.Join(appData, "Code", "User", "mcp.json"), "mcpServers", false})
-	}
-
 	clientsConfigured := 0
-	for _, cfg := range configs {
-		path := cfg.path
-		if strings.HasPrefix(path, "~/") {
-			path = filepath.Join(home, path[2:])
-		} else if !filepath.IsAbs(path) && home != "" {
-			path = filepath.Join(home, path)
-		}
+	if home == "" {
+		// Without a home directory every relative target would resolve to
+		// cwd-relative junk paths, so skip the file-based configs entirely.
+		stderrf("  ⚠️  Could not determine home directory (%v); skipping file-based MCP client configs\n", homeErr)
+	} else {
+		for _, cfg := range fileConfigTargets(home) {
+			path := cfg.path
+			if strings.HasPrefix(path, "~/") {
+				path = filepath.Join(home, path[2:])
+			} else if !filepath.IsAbs(path) {
+				path = filepath.Join(home, path)
+			}
 
-		if _, err := os.Stat(filepath.Dir(path)); os.IsNotExist(err) {
-			continue // Client directory doesn't exist, skip
-		}
+			if _, err := os.Stat(filepath.Dir(path)); os.IsNotExist(err) {
+				continue // Client directory doesn't exist, skip
+			}
 
-		if err := mergeJSONConfig(path, cfg.key, exe, cfg.isCustom); err != nil {
-			telemetry.AppError("install_config_error", nil)
-			stderrf("  ⚠️  %s: %v\n", cfg.name, err)
-		} else {
-			clientsConfigured++
+			if err := mergeJSONConfig(path, cfg.key, exe, cfg.isCustom); err != nil {
+				telemetry.AppError("install_config_error", nil)
+				stderrf("  ⚠️  %s: %v\n", cfg.name, err)
+			} else {
+				clientsConfigured++
+			}
 		}
 	}
 
@@ -217,6 +216,15 @@ func installClaudeCode(exePath string) error {
 		return nil // Claude Code not installed, skip silently
 	}
 
+	env := envWithout("CLAUDECODE")
+
+	// add-json fails if the server is already registered; remove any previous
+	// registration first so reinstalls stay idempotent. Failures are ignored:
+	// "not registered" is the expected first-install outcome.
+	removeCmd := exec.Command("claude", "mcp", "remove", "--scope", "user", mcpServerName)
+	removeCmd.Env = env
+	_ = removeCmd.Run() //nolint:errcheck // best-effort cleanup before re-adding
+
 	entry := map[string]any{
 		"command": exePath,
 		"args":    []string{},
@@ -225,12 +233,28 @@ func installClaudeCode(exePath string) error {
 
 	cmd := exec.Command("claude", "mcp", "add-json", "--scope", "user", mcpServerName)
 	cmd.Stdin = strings.NewReader(string(data))
-	cmd.Env = append(os.Environ(), "CLAUDECODE=")
+	cmd.Env = env
 
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("claude mcp add-json failed: %v (output: %s)", err, strings.TrimSpace(string(output)))
 	}
 	return nil
+}
+
+// envWithout returns the current environment minus the named variable.
+// Unsetting (rather than appending NAME= present-but-empty) matters for
+// present/absent checks like the claude CLI's CLAUDECODE nesting guard.
+func envWithout(name string) []string {
+	prefix := name + "="
+	environ := os.Environ()
+	env := make([]string, 0, len(environ))
+	for _, kv := range environ {
+		if strings.HasPrefix(kv, prefix) {
+			continue
+		}
+		env = append(env, kv)
+	}
+	return env
 }
 
 func mergeJSONConfig(path, key, exePath string, isCustom bool) error {
@@ -286,5 +310,12 @@ func mergeJSONConfig(path, key, exePath string, isCustom bool) error {
 		_ = os.WriteFile(path+".bak", existing, 0600)
 	}
 
-	return os.WriteFile(path, append(out, '\n'), 0600)
+	// Write to a temp file in the same directory and rename into place so a
+	// crash mid-write can never leave a truncated client config behind.
+	tmpPath := path + ".tmp"
+	if err := os.WriteFile(tmpPath, append(out, '\n'), 0600); err != nil {
+		_ = os.Remove(tmpPath)
+		return err
+	}
+	return os.Rename(tmpPath, path)
 }

@@ -753,6 +753,48 @@ describe('Successful Recording Lifecycle', () => {
 })
 
 // =============================================================================
+// stopRecording ERROR PATH — name capture regression
+// =============================================================================
+
+describe('stopRecording error path', () => {
+  test('returns the recording name when stop throws (name captured before state clear)', async () => {
+    globalThis.chrome = createRecordingChromeMock()
+
+    const startPromise = startRecording('stop-error-name', 15, '', '', true)
+    await new Promise((r) => setTimeout(r, 50))
+    simulateOffscreenStarted(true)
+    const startResult = await startPromise
+    assert.strictEqual(startResult.status, 'recording')
+
+    // Shrink the orphaned 30s stop timeout so it doesn't keep the event loop alive.
+    const prevScale = globalThis.KABOOM_TEST_TIMEOUT_SCALE
+    globalThis.KABOOM_TEST_TIMEOUT_SCALE = 0.001
+    // Make the offscreen stop command throw synchronously to hit the catch block.
+    globalThis.chrome.runtime.sendMessage = mock.fn(() => {
+      throw new Error('runtime unavailable')
+    })
+
+    try {
+      const result = await stopRecording()
+      // Regression: the catch block used to clear state BEFORE reading the name,
+      // so the error result always returned name: ''.
+      assert.strictEqual(result.status, 'error')
+      assert.strictEqual(result.name, 'stop-error-name', 'error result must include the recording name')
+      assert.ok(result.error.includes('RECORD_STOP'))
+      assert.strictEqual(isRecording(), false)
+    } finally {
+      if (prevScale === undefined) {
+        delete globalThis.KABOOM_TEST_TIMEOUT_SCALE
+      } else {
+        globalThis.KABOOM_TEST_TIMEOUT_SCALE = prevScale
+      }
+      // Let the orphaned (shrunk) stop timeout fire and clean up its listener.
+      await new Promise((r) => setTimeout(r, 20))
+    }
+  })
+})
+
+// =============================================================================
 // AUTO-TRACK TAB
 // =============================================================================
 

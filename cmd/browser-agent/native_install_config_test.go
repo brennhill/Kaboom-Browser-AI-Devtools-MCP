@@ -156,6 +156,77 @@ func TestMergeJSONConfig_MissingFileCreatesNew(t *testing.T) {
 	}
 }
 
+func TestMergeJSONConfig_VSCodeServersKeyShape(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "mcp.json")
+
+	// Pre-existing VS Code mcp.json with another server under "servers".
+	original := `{"servers": {"other": {"command": "other-mcp", "args": []}}}`
+	if err := os.WriteFile(path, []byte(original), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := mergeJSONConfig(path, "servers", "/usr/local/bin/kaboom", false); err != nil {
+		t.Fatalf("mergeJSONConfig failed: %v", err)
+	}
+
+	result := readJSONFile(t, path)
+	servers, ok := result["servers"].(map[string]any)
+	if !ok {
+		t.Fatalf("top-level %q key missing or wrong type: %v", "servers", result)
+	}
+	if _, ok := servers["other"]; !ok {
+		t.Error("existing VS Code server was deleted")
+	}
+	entry, ok := servers[mcpServerName].(map[string]any)
+	if !ok {
+		t.Fatalf("%s entry missing under servers key", mcpServerName)
+	}
+	if entry["command"] != "/usr/local/bin/kaboom" {
+		t.Errorf("entry command = %v, want /usr/local/bin/kaboom", entry["command"])
+	}
+	if _, ok := entry["args"]; !ok {
+		t.Error("entry should keep the {command,args} shape")
+	}
+	if _, ok := result["mcpServers"]; ok {
+		t.Error("VS Code config must not gain an mcpServers key")
+	}
+}
+
+func TestMergeJSONConfig_AtomicWriteLeavesNoTempFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "mcp.json")
+
+	original := `{"mcpServers": {"other": {"command": "other-mcp"}}}`
+	if err := os.WriteFile(path, []byte(original), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := mergeJSONConfig(path, "mcpServers", "/usr/local/bin/kaboom", false); err != nil {
+		t.Fatalf("mergeJSONConfig failed: %v", err)
+	}
+	if _, err := os.Stat(path + ".tmp"); !os.IsNotExist(err) {
+		t.Fatalf("temp file left behind after merge: stat err = %v", err)
+	}
+
+	// Block the temp path with a directory: merge must fail without
+	// truncating the existing config (regression for plain WriteFile).
+	if err := os.MkdirAll(path+".tmp", 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := mergeJSONConfig(path, "mcpServers", "/usr/local/bin/kaboom", false); err == nil {
+		t.Fatal("expected error when temp path is blocked, got nil")
+	}
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+	result := readJSONFile(t, path)
+	if _, ok := result["mcpServers"].(map[string]any); !ok {
+		t.Fatalf("existing config corrupted by failed merge: %s", content)
+	}
+}
+
 func TestGoStaticContractsUseKaboomBranding(t *testing.T) {
 	checklist := manualExtensionSetupChecklist("/tmp/KaboomExtension")
 	joinedChecklist := strings.Join(checklist, "\n")

@@ -6,7 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-03-05
 code_paths:
-  - cmd/browser-agent/tools_interact_batch.go
+  - cmd/browser-agent/internal/toolinteract/interact_batch.go
   - cmd/browser-agent/tools_interact_dispatch.go
   - cmd/browser-agent/tools_configure_sequence.go
   - cmd/browser-agent/tools_configure_sequence_replay.go

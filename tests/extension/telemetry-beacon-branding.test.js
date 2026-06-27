@@ -51,6 +51,8 @@ describe('telemetry beacon branding', () => {
     const mod = await import(`../../extension/lib/telemetry-beacon.js?v=${++importCounter}`)
 
     mod.beacon('extension_start', { source: 'test' })
+    // beacon() awaits opt-out flag hydration before sending
+    await new Promise((r) => setTimeout(r, 0))
 
     assert.strictEqual(storageGet.mock.calls[0].arguments[0], 'kaboom_telemetry_off')
     assert.strictEqual(sendBeacon.mock.calls.length, 1)
@@ -69,6 +71,7 @@ describe('telemetry beacon branding', () => {
 
     onChangedListener({ kaboom_telemetry_off: { newValue: true } }, 'local')
     mod.beacon('extension_start')
+    await new Promise((r) => setTimeout(r, 0))
 
     assert.strictEqual(sendBeacon.mock.calls.length, 0)
   })

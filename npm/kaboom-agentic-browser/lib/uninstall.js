@@ -14,6 +14,7 @@ const {
   MCP_SERVER_NAME,
   LEGACY_MCP_SERVER_NAMES,
   getClientConfigPath,
+  getClientLegacyConfigPaths,
   getDetectedClients,
   readConfigFile,
   writeConfigFile,
@@ -28,7 +29,7 @@ const LEGACY_UNINSTALL_SERVER_NAMES = [
 ];
 
 function knownServerNames() {
-  return [MCP_SERVER_NAME, ...LEGACY_UNINSTALL_SERVER_NAMES.filter((name) => name !== MCP_SERVER_NAME)];
+  return [...new Set([MCP_SERVER_NAME, ...LEGACY_UNINSTALL_SERVER_NAMES])];
 }
 
 /**
@@ -58,7 +59,10 @@ function uninstallViaCli(def, options) {
   const env = { ...process.env };
   delete env.CLAUDECODE;
   const serverNames = knownServerNames();
-  let lastErr = null;
+  // Both the canonical name and one or more legacy names can be configured at
+  // the same time — attempt removal for EVERY known name and collect results.
+  const removedNames = [];
+  let unexpectedErr = null;
   for (const serverName of serverNames) {
     const args = [...canonicalArgs];
     if (args.length > 0) {
@@ -70,38 +74,108 @@ function uninstallViaCli(def, options) {
         stdio: ['pipe', 'pipe', 'pipe'],
         timeout: 15000,
       });
-      return {
-        status: 'removed',
-        name: def.name,
-        id: def.id,
-        method: 'cli',
-        message: `Removed via ${cmd} CLI`,
-      };
+      removedNames.push(serverName);
     } catch (err) {
-      lastErr = err;
       const stderr = err.stderr ? err.stderr.toString() : '';
       const notConfigured = stderr.includes('not found') || stderr.includes('does not exist');
       if (!notConfigured) {
-        break;
+        unexpectedErr = err;
       }
     }
   }
-  const stderr = lastErr && lastErr.stderr ? lastErr.stderr.toString() : '';
-  if (stderr.includes('not found') || stderr.includes('does not exist')) {
+  if (removedNames.length > 0) {
     return {
-      status: 'notConfigured',
+      status: 'removed',
       name: def.name,
       id: def.id,
       method: 'cli',
+      message: `Removed via ${cmd} CLI (${removedNames.join(', ')})`,
+    };
+  }
+  if (unexpectedErr) {
+    return {
+      status: 'error',
+      name: def.name,
+      id: def.id,
+      method: 'cli',
+      message: `CLI uninstall failed: ${unexpectedErr.message}`,
     };
   }
   return {
-    status: 'error',
+    status: 'notConfigured',
     name: def.name,
     id: def.id,
     method: 'cli',
-    message: `CLI uninstall failed: ${lastErr ? lastErr.message : 'unknown error'}`,
   };
+}
+
+/**
+ * Remove managed Kaboom entries from one config file.
+ * Cleans the client's primary config key plus any legacy keys (e.g. VS Code's
+ * old "mcpServers" alongside the current "servers").
+ * Only deletes the file itself when the client definition marks it as a
+ * dedicated MCP config (def.dedicatedMcpFile) — shared settings files
+ * (Zed/Gemini/OpenCode settings) are always written back, never unlinked.
+ * @param {string} cfgPath Config file path
+ * @param {Object} def Client definition
+ * @param {Object} options {dryRun, verbose}
+ * @returns {Object} {status: 'removed'|'notConfigured'|'error', message?}
+ */
+function removeManagedEntriesFromConfigFile(cfgPath, def, options) {
+  const { dryRun = false, verbose = false } = options;
+
+  if (!cfgPath || !fs.existsSync(cfgPath)) {
+    return { status: 'notConfigured' };
+  }
+
+  const readResult = readConfigFile(cfgPath);
+  if (!readResult.valid) {
+    return {
+      status: 'error',
+      message: `${def.name}: Invalid JSON, cannot uninstall`,
+    };
+  }
+
+  const configKeys = [def.configKey || 'mcpServers', ...(def.legacyConfigKeys || [])];
+  const names = knownServerNames();
+  const present = configKeys.some((key) => {
+    const servers = readResult.data[key] || {};
+    return names.some((name) => Object.prototype.hasOwnProperty.call(servers, name));
+  });
+  if (!present) {
+    return { status: 'notConfigured' };
+  }
+
+  if (dryRun) {
+    if (verbose) {
+      console.log(`[DEBUG] Would remove kaboom from ${cfgPath}`);
+    }
+    return { status: 'removed' };
+  }
+
+  const modified = structuredClone(readResult.data);
+  let remainingEntries = 0;
+  for (const key of configKeys) {
+    if (!modified[key] || typeof modified[key] !== 'object') continue;
+    for (const name of names) {
+      delete modified[key][name];
+    }
+    remainingEntries += Object.keys(modified[key]).length;
+  }
+
+  if (remainingEntries === 0 && def.dedicatedMcpFile) {
+    fs.unlinkSync(cfgPath);
+  } else {
+    const primaryKey = def.configKey || 'mcpServers';
+    const skipValidation = primaryKey !== 'mcpServers';
+    writeConfigFile(cfgPath, modified, false, { skipValidation });
+  }
+
+  if (verbose) {
+    console.log(`[DEBUG] Removed kaboom from ${cfgPath}`);
+  }
+
+  return { status: 'removed' };
 }
 
 /**
@@ -111,38 +185,27 @@ function uninstallViaCli(def, options) {
  * @returns {Object} {status, name, method, path}
  */
 function uninstallViaFile(def, options) {
-  const { dryRun = false, verbose = false } = options;
   const cfgPath = getClientConfigPath(def);
+  const primary = removeManagedEntriesFromConfigFile(cfgPath, def, options);
 
-  if (!cfgPath) {
-    return { status: 'notConfigured', name: def.name, id: def.id };
-  }
-
-  if (!fs.existsSync(cfgPath)) {
-    return { status: 'notConfigured', name: def.name, id: def.id };
-  }
-
-  const readResult = readConfigFile(cfgPath);
-  if (!readResult.valid) {
-    return {
-      status: 'error',
-      name: def.name,
-      id: def.id,
-      message: `${def.name}: Invalid JSON, cannot uninstall`,
-    };
-  }
-
-  const configKey = def.configKey || 'mcpServers';
-  const servers = readResult.data[configKey] || {};
-  const presentServerNames = knownServerNames().filter((name) => Object.prototype.hasOwnProperty.call(servers, name));
-  if (presentServerNames.length === 0) {
-    return { status: 'notConfigured', name: def.name, id: def.id };
-  }
-
-  if (dryRun) {
-    if (verbose) {
-      console.log(`[DEBUG] Would remove kaboom from ${cfgPath}`);
+  // Best-effort cleanup of paths older versions wrote to (e.g. the
+  // Windows %APPDATA% Antigravity location).
+  let legacyRemoved = false;
+  for (const legacyPath of getClientLegacyConfigPaths(def)) {
+    try {
+      const legacyResult = removeManagedEntriesFromConfigFile(legacyPath, def, options);
+      if (legacyResult.status === 'removed') {
+        legacyRemoved = true;
+      }
+    } catch (_) {
+      // Legacy path cleanup must never fail the uninstall.
     }
+  }
+
+  if (primary.status === 'error') {
+    return { status: 'error', name: def.name, id: def.id, message: primary.message };
+  }
+  if (primary.status === 'removed' || legacyRemoved) {
     return {
       status: 'removed',
       name: def.name,
@@ -151,30 +214,7 @@ function uninstallViaFile(def, options) {
       path: cfgPath,
     };
   }
-
-  const modified = structuredClone(readResult.data);
-  for (const name of knownServerNames()) {
-    delete modified[configKey][name];
-  }
-
-  if (Object.keys(modified[configKey]).length > 0) {
-    const skipValidation = configKey !== 'mcpServers';
-    writeConfigFile(cfgPath, modified, false, { skipValidation });
-  } else {
-    fs.unlinkSync(cfgPath);
-  }
-
-  if (verbose) {
-    console.log(`[DEBUG] Removed kaboom from ${cfgPath}`);
-  }
-
-  return {
-    status: 'removed',
-    name: def.name,
-    id: def.id,
-    method: 'file',
-    path: cfgPath,
-  };
+  return { status: 'notConfigured', name: def.name, id: def.id };
 }
 
 /**

@@ -7,7 +7,8 @@
 import { isInternalUrl } from './ui-utils.js'
 import { KABOOM_LOG_PREFIX } from '../lib/brand.js'
 import { StorageKey } from '../lib/constants.js'
-import { getLocal, setLocals, removeLocals } from '../lib/storage-utils.js'
+import { getLocal } from '../lib/storage-utils.js'
+import { setTrackedTab, clearTrackedTab } from '../lib/tracked-tab-storage.js'
 import { isDomainCloaked } from '../lib/cloaked-domains.js'
 import { requestAudit } from '../lib/request-audit.js'
 
@@ -28,7 +29,7 @@ export async function handleStopTracking(showIdleState: ShowStateFn): Promise<vo
   const prevTabId = await getLocal(StorageKey.TRACKED_TAB_ID) as number | undefined
   if (!prevTabId) return
 
-  await removeLocals([StorageKey.TRACKED_TAB_ID, StorageKey.TRACKED_TAB_URL])
+  await clearTrackedTab()
   const btn = document.getElementById('track-page-btn') as HTMLButtonElement | null
   if (btn) showIdleState(btn)
 
@@ -67,8 +68,8 @@ export async function handleUrlClick(tabId: number | undefined): Promise<void> {
     console.log(KABOOM_LOG_PREFIX, 'Switched to tracked tab:', tabId)
   } catch (err) {
     console.error(KABOOM_LOG_PREFIX, 'Failed to switch to tracked tab:', err)
-    // Tab might have been closed - clear tracking
-    void removeLocals([StorageKey.TRACKED_TAB_ID, StorageKey.TRACKED_TAB_URL])
+    // Tab might have been closed - clear tracking (fire-and-forget, never throws)
+    clearTrackedTab().catch(() => {})
   }
 }
 
@@ -112,11 +113,7 @@ export async function handleTrackPageClick(
     return
   }
 
-  await setLocals({
-    [StorageKey.TRACKED_TAB_ID]: tab.id,
-    [StorageKey.TRACKED_TAB_URL]: tab.url,
-    [StorageKey.TRACKED_TAB_TITLE]: tab.title || ''
-  })
+  await setTrackedTab(tab)
   if (btn) showTrackingState(btn, tab.url, tab.id)
 
   console.log(KABOOM_LOG_PREFIX, 'Now tracking tab:', tab.id, tab.url)

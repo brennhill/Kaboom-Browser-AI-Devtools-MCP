@@ -8,7 +8,9 @@
 #
 # USAGE:
 #   curl -sSL https://raw.githubusercontent.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/STABLE/scripts/install.sh | bash
-#   curl -sSL ... | sh -s -- --hooks-only   # Install only the hooks binary
+#   curl -sSL ... | bash -s -- --hooks-only   # Install only the hooks binary
+#
+# NOTE: this script requires bash (set -o pipefail, echo -e, == tests) — never pipe it to sh.
 
 # Fail immediately if a command fails (-e), an unset variable is used (-u),
 # or a command in a pipeline fails (-o pipefail). This is critical for installer safety.
@@ -63,6 +65,12 @@ beacon_error() {
 # Uses mktemp to prevent predictable filename attacks.
 TEMP_ROOT=$(mktemp -d)
 cleanup() {
+    # An interrupt during extension promotion can leave the backup as the ONLY
+    # copy of the user's extension (EXT_DIR was already moved aside). Restore
+    # it instead of deleting it; debris is only removed once EXT_DIR exists.
+    if [ ! -d "$EXT_DIR" ] && [ -d "$BACKUP_EXT_DIR" ]; then
+        mv "$BACKUP_EXT_DIR" "$EXT_DIR" 2>/dev/null || true
+    fi
     rm -rf "$STAGE_EXT_DIR" "$BACKUP_EXT_DIR"
     rm -rf "$TEMP_ROOT"
 }
@@ -177,6 +185,36 @@ curl_retry() {
 # Extension staging helpers
 # ─────────────────────────────────────────────────────────────
 
+# assert_safe_ext_dir refuses obviously catastrophic extension targets before
+# any destructive rm/mv of EXT_DIR — KABOOM_EXTENSION_DIR is taken verbatim
+# from the environment (mirrors safe_rm_rf in scripts/uninstall.sh).
+assert_safe_ext_dir() {
+    case "${EXT_DIR:-}" in
+        ""|"/"|"$HOME"|"$HOME/")
+            echo -e "${RED}Refusing to modify unsafe extension path: '${EXT_DIR:-}'${NC}"
+            exit 1
+            ;;
+        /*) ;;
+        *)
+            echo -e "${RED}Refusing to modify relative extension path: '${EXT_DIR:-}'${NC}"
+            exit 1
+            ;;
+    esac
+}
+
+# sweep_stale_staging_dirs removes PID-suffixed staging/backup debris orphaned
+# by previous interrupted runs (e.g. SIGKILL before the EXIT trap could fire).
+# This run's own directories are always preserved.
+sweep_stale_staging_dirs() {
+    local stale=""
+    for stale in "$INSTALL_DIR"/.extension-stage-* "$INSTALL_DIR"/.extension-backup-*; do
+        [ -e "$stale" ] || continue
+        [ "$stale" = "$STAGE_EXT_DIR" ] && continue
+        [ "$stale" = "$BACKUP_EXT_DIR" ] && continue
+        rm -rf "$stale" 2>/dev/null || true
+    done
+}
+
 prepare_extension_stage() {
     rm -rf "$STAGE_EXT_DIR"
     mkdir -p "$STAGE_EXT_DIR"
@@ -204,6 +242,9 @@ validate_extension_stage() {
 }
 
 promote_extension_stage() {
+    # Guard before any destructive rm/mv that targets EXT_DIR.
+    assert_safe_ext_dir
+
     if ! validate_extension_stage "$STAGE_EXT_DIR"; then
         echo -e "${RED}Extension staging failed: required module files are missing from staging.${NC}"
         exit 1
@@ -268,13 +309,15 @@ stage_extension_from_source_zip() {
     return 0
 }
 
+# purge_legacy_install_artifacts removes binaries left behind by older
+# releases. It must ONLY list genuinely legacy names — never the canonical
+# kaboom-agentic-browser / kaboom-hooks binaries — and must only run after
+# the new binaries have been downloaded, verified, and installed.
 purge_legacy_install_artifacts() {
     local legacy_path=""
     for legacy_path in \
         "$BIN_DIR/kaboom$BINARY_EXT" \
-        "$BIN_DIR/kaboom-agentic-browser$BINARY_EXT" \
         "$BIN_DIR/kaboom-agentic-devtools$BINARY_EXT" \
-        "$BIN_DIR/kaboom-hooks$BINARY_EXT" \
         "$BIN_DIR/gasoline$BINARY_EXT" \
         "$BIN_DIR/gasoline-agentic-browser$BINARY_EXT" \
         "$BIN_DIR/gasoline-agentic-devtools$BINARY_EXT" \
@@ -293,16 +336,20 @@ purge_legacy_install_artifacts() {
 kill_stale_kaboom_processes() {
     # Kill any running Kaboom daemons before replacing the binary.
     # This avoids "text file busy" on Linux and ensures a clean upgrade.
+    # Anchored to full binary names — never bare substrings like 'strum',
+    # which would match unrelated processes (e.g. 'instrument'). Keep this
+    # pattern in sync with scripts/uninstall.sh.
+    local proc_pattern='(kaboom|gasoline|strum)-(agentic-browser|agentic-devtools|hooks)|\.kaboom/bin/'
     local killed=0
     local pids=""
 
     if command -v pgrep >/dev/null 2>&1; then
-        pids=$(pgrep -f 'kaboom-agentic-browser|kaboom.*--daemon|kaboom-agentic-devtools|gasoline-agentic-browser|gasoline.*--daemon|gasoline-agentic-devtools|strum(\.exe)?|strum.*--daemon' 2>/dev/null || true)
+        pids=$(pgrep -f "$proc_pattern" 2>/dev/null || true)
     elif command -v pkill >/dev/null 2>&1; then
         # pgrep not available but pkill is — just send TERM directly.
-        pkill -f 'kaboom-agentic-browser|kaboom-agentic-devtools|gasoline-agentic-browser|gasoline-agentic-devtools|gasoline|strum' 2>/dev/null || true
+        pkill -f "$proc_pattern" 2>/dev/null || true
         sleep 0.5
-        pkill -9 -f 'kaboom-agentic-browser|kaboom-agentic-devtools|gasoline-agentic-browser|gasoline-agentic-devtools|gasoline|strum' 2>/dev/null || true
+        pkill -9 -f "$proc_pattern" 2>/dev/null || true
         return 0
     fi
 
@@ -410,6 +457,9 @@ if ! touch "$INSTALL_DIR/.write-test" 2>/dev/null; then
 fi
 rm -f "$INSTALL_DIR/.write-test"
 
+# Remove staging/backup debris orphaned by previous interrupted runs.
+sweep_stale_staging_dirs
+
 echo -e "Install root: $INSTALL_DIR"
 
 # ─────────────────────────────────────────────────────────────
@@ -420,7 +470,6 @@ echo -e "Install root: $INSTALL_DIR"
 if [ "$HOOKS_ONLY" != "1" ]; then
     kill_stale_kaboom_processes
 fi
-purge_legacy_install_artifacts
 
 # ─────────────────────────────────────────────────────────────
 # 6. Binary Installation
@@ -458,8 +507,10 @@ download_and_verify() {
 
     # Integrity Verification (SHA-256).
     if [ -f "$TEMP_ROOT/checksums.txt" ]; then
+        # Exact field match — an unanchored grep could multi-match assets
+        # whose names contain this asset's name as a substring.
         local expected_hash
-        expected_hash=$(grep "$asset_name" "$TEMP_ROOT/checksums.txt" | awk '{print $1}' || true)
+        expected_hash=$(awk -v f="$asset_name" '$2 == f || $2 == "*" f {print $1; exit}' "$TEMP_ROOT/checksums.txt" || true)
         local actual_hash=""
 
         if [ -z "$expected_hash" ]; then
@@ -521,6 +572,10 @@ fi
 HOOKS_BINARY_NAME="kaboom-hooks-$PLATFORM-$E_ARCH$BINARY_EXT"
 download_and_verify "$HOOKS_BINARY_NAME" "$KABOOM_HOOKS_BIN" "$MIN_HOOKS_BINARY_BYTES" "kaboom-hooks binary"
 echo -e "${GREEN}kaboom-hooks installed.${NC}"
+
+# Remove genuinely legacy binaries only AFTER the new binaries are verified
+# and installed — a failed download must never leave the user binary-less.
+purge_legacy_install_artifacts
 
 # ─────────────────────────────────────────────────────────────
 # 7. Extension, Config, Daemon (skip for --hooks-only)
@@ -586,7 +641,11 @@ fi
 sleep 1
 HEALTH_OK=0
 HEALTH_RESPONSE=$(curl -sS --max-time 5 "http://127.0.0.1:7890/health" 2>/dev/null || true)
-if echo "$HEALTH_RESPONSE" | grep -q '"status"' 2>/dev/null; then
+# Require kaboom identity, not just any responder with a "status" field —
+# /health returns "service-name":"kaboom-browser-devtools" (handleHealth in
+# cmd/browser-agent/server_routes_health_diagnostics.go).
+if echo "$HEALTH_RESPONSE" | grep -q '"status"' 2>/dev/null && \
+   echo "$HEALTH_RESPONSE" | grep -q 'kaboom-browser-devtools' 2>/dev/null; then
     HEALTH_OK=1
 fi
 
@@ -725,6 +784,9 @@ register_path() {
         path_line="export PATH=\"$BIN_DIR:\$PATH\" # kaboom"
     fi
 
+    # The rc-file directory may not exist yet (e.g. fish: ~/.config/fish on a
+    # machine where fish was never started) — create it or set -e aborts here.
+    mkdir -p "$(dirname "$rc_file")"
     echo "" >> "$rc_file"
     echo "$path_line" >> "$rc_file"
     echo -e "${GREEN}Added $BIN_DIR to PATH in $rc_file${NC}"
@@ -761,7 +823,7 @@ if [ "$HOOKS_ONLY" = "1" ]; then
     echo -e "  kaboom-hooks compress-output (compress verbose test/build output)"
     echo ""
     echo -e "Want the full KaBOOM! suite (browser devtools, MCP server, extension)?"
-    echo -e "  curl -fsSL https://gokaboom.dev/install.sh | sh"
+    echo -e "  curl -fsSL https://gokaboom.dev/install.sh | bash"
 elif [ "$IS_UPGRADE" = "1" ] && [ -n "$PREVIOUS_VERSION" ]; then
     echo -e "${GREEN}${BOLD}KaBOOM! upgraded: v$PREVIOUS_VERSION -> v$VERSION${NC}"
 else

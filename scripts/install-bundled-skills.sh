@@ -11,6 +11,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SKILLS_SRC_DIR="${KABOOM_BUNDLED_SKILLS_DIR:-$PROJECT_ROOT/npm/kaboom-agentic-browser/skills}"
 MARKER="<!-- kaboom-managed-skill"
+# Managed markers from every brand era — must match npm installer (lib/skills.js).
+MANAGED_MARKER_RE='<!-- (kaboom|gasoline|strum)-managed-skill'
 
 SCOPE="${KABOOM_SKILL_SCOPE:-global}"
 TARGETS_RAW="${KABOOM_SKILL_TARGETS:-${KABOOM_SKILL_TARGET:-claude,codex,gemini}}"
@@ -35,6 +37,35 @@ if [ ! -d "$SKILLS_SRC_DIR" ] || [ ! -f "$SKILLS_SRC_DIR/skills.json" ]; then
   echo "Bundled skills directory not found: $SKILLS_SRC_DIR" >&2
   exit 1
 fi
+
+# Emit "id<TAB>version" lines from skills.json so installs use per-skill
+# versions from the manifest (never a hardcoded version) and only install
+# manifest-listed skills. jq-free: prefers node, falls back to python3.
+manifest_entries() {
+  local manifest="$SKILLS_SRC_DIR/skills.json"
+  if command -v node >/dev/null 2>&1; then
+    node -e '
+      const manifest = require(process.argv[1]);
+      for (const skill of manifest.skills || []) {
+        if (skill && typeof skill.id === "string" && skill.id) {
+          console.log(`${skill.id}\t${skill.version || 1}`);
+        }
+      }
+    ' "$manifest"
+  elif command -v python3 >/dev/null 2>&1; then
+    python3 -c '
+import json, sys
+with open(sys.argv[1]) as fh:
+    manifest = json.load(fh)
+for skill in manifest.get("skills", []):
+    if isinstance(skill, dict) and skill.get("id"):
+        print("%s\t%s" % (skill["id"], skill.get("version", 1)))
+' "$manifest"
+  else
+    echo "install-bundled-skills.sh requires node or python3 to parse skills.json" >&2
+    return 1
+  fi
+}
 
 agent_global_root() {
   local agent="$1"
@@ -89,26 +120,29 @@ remove_legacy_skill() {
   local agent="$1"
   local root="$2"
   local skill_id="$3"
-  local legacy_id="kaboom-$skill_id"
-  local legacy_path
-  legacy_path="$(skill_dest_path "$agent" "$root" "$legacy_id")"
+  local prefix legacy_id legacy_path
 
-  if [ -f "$legacy_path" ] && grep -q "$MARKER" "$legacy_path"; then
-    rm -f "$legacy_path" || true
-    if [ "$agent" = "codex" ]; then
-      rmdir "$(dirname "$legacy_path")" 2>/dev/null || true
+  # Remove every brand-era prefixed variant — matches npm installer behavior.
+  for prefix in kaboom- gasoline- strum-; do
+    legacy_id="${prefix}${skill_id}"
+    legacy_path="$(skill_dest_path "$agent" "$root" "$legacy_id")"
+
+    if [ -f "$legacy_path" ] && grep -Eq "$MANAGED_MARKER_RE" "$legacy_path"; then
+      rm -f "$legacy_path" || true
+      if [ "$agent" = "codex" ]; then
+        rmdir "$(dirname "$legacy_path")" 2>/dev/null || true
+      fi
+      LEGACY_REMOVED=$((LEGACY_REMOVED + 1))
     fi
-    LEGACY_REMOVED=$((LEGACY_REMOVED + 1))
-  fi
+  done
 }
 
 install_skill() {
   local agent="$1"
   local root="$2"
-  local skill_dir="$3"
-  local skill_id
-  skill_id="$(basename "$skill_dir")"
-  local src_file="$skill_dir/SKILL.md"
+  local skill_id="$3"
+  local version="$4"
+  local src_file="$SKILLS_SRC_DIR/$skill_id/SKILL.md"
 
   if [ ! -f "$src_file" ]; then
     return
@@ -121,7 +155,7 @@ install_skill() {
   local tmp_file
   tmp_file="$(mktemp)"
   {
-    printf "%s id:%s version:1 -->\n" "$MARKER" "$skill_id"
+    printf "%s id:%s version:%s -->\n" "$MARKER" "$skill_id" "$version"
     cat "$src_file"
   } >"$tmp_file"
 
@@ -131,7 +165,7 @@ install_skill() {
       rm -f "$tmp_file"
       return
     fi
-    if ! grep -q "$MARKER" "$dest"; then
+    if ! grep -Eq "$MANAGED_MARKER_RE" "$dest"; then
       SKIPPED=$((SKIPPED + 1))
       rm -f "$tmp_file"
       return
@@ -152,6 +186,9 @@ install_skill() {
   rm -f "$tmp_file"
   remove_legacy_skill "$agent" "$root" "$skill_id"
 }
+
+# Resolve manifest once; iterate manifest-listed skills (never raw directory globs).
+MANIFEST_ENTRIES="$(manifest_entries)" || exit 1
 
 for agent in $(printf "%s" "$TARGETS_RAW" | tr ',' ' '); do
   case "$agent" in
@@ -177,10 +214,12 @@ $(agent_project_root "$agent")"
 
   while IFS= read -r root; do
     [ -z "$root" ] && continue
-    for skill_dir in "$SKILLS_SRC_DIR"/*; do
-      [ -d "$skill_dir" ] || continue
-      install_skill "$agent" "$root" "$skill_dir"
-    done
+    while IFS=$'\t' read -r skill_id skill_version; do
+      [ -z "$skill_id" ] && continue
+      install_skill "$agent" "$root" "$skill_id" "${skill_version:-1}"
+    done <<EOF_SKILLS
+$MANIFEST_ENTRIES
+EOF_SKILLS
   done <<EOF_ROOTS
 $roots
 EOF_ROOTS

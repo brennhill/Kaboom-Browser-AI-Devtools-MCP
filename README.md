@@ -8,7 +8,7 @@
 <img src="docs/assets/images/chrome_store/readme-banner-kaboom.svg" alt="KaBOOM! — Browser debugging, inspection, and verification for AI coding assistants via MCP" width="100%" />
 
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.8.2-green.svg)](https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/releases)
+[![Version](https://img.shields.io/badge/version-0.8.3-green.svg)](https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/releases)
 [![Go](https://img.shields.io/badge/Go-1.21+-00ADD8.svg?logo=go&logoColor=white)](https://go.dev/)
 [![Chrome](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4.svg?logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/mv3/)
 [![macOS](https://img.shields.io/badge/macOS-supported-000000.svg?logo=apple&logoColor=white)](https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP)
@@ -35,7 +35,7 @@
 
 ## 📦 Latest Release
 
-Current version: **v0.8.2** — Structured telemetry, session analytics, KaBOOM! branding, and contract-compliant metrics reporting.
+Current version: **v0.8.3** — Structured telemetry, session analytics, KaBOOM! branding, and contract-compliant metrics reporting.
 
 **macOS / Linux:**
 ```bash
@@ -67,7 +67,7 @@ irm https://raw.githubusercontent.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/S
 
 This script automatically:
 1.  **Downloads** the latest stable binary for your platform.
-2.  **Installs** the browser extension files to `~/.kaboom/extension`.
+2.  **Installs** the browser extension files to `~/KaboomAgenticDevtoolExtension` (override with `KABOOM_EXTENSION_DIR`).
 3.  **Auto-configures** all detected MCP clients (Claude Code, Cursor, Windsurf, Zed, etc.).
 
 ---
@@ -77,13 +77,29 @@ This script automatically:
 1. Open `chrome://extensions`
 2. Enable **Developer mode** (top right)
 3. Click **Load unpacked**
-4. Select the folder: `~/.kaboom/extension` (or wherever the script printed)
+4. Select the folder: `~/KaboomAgenticDevtoolExtension` (or wherever the script printed)
 
 ### Step 2: Restart Your AI Tool
 
 Restart Claude Code, Cursor, Windsurf, or Zed. The Kaboom server will now start automatically when needed.
 
 **[Full setup guide →](https://gokaboom.dev/getting-started/)** | **[Per-tool install guide →](docs/mcp-install-guide.md)**
+
+### Uninstall
+
+Clean removal of everything the installer created (binaries, extension files, autostart registration, PATH entries, MCP client configs, managed skills):
+
+**macOS / Linux:**
+```bash
+curl -sSL https://raw.githubusercontent.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/STABLE/scripts/uninstall.sh | bash -s -- --yes
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/STABLE/scripts/uninstall.ps1 -OutFile kaboom-uninstall.ps1; ./kaboom-uninstall.ps1 -Yes
+```
+
+Useful flags: `--dry-run` (preview), `--keep-data` (keep logs/recordings/project state). Afterwards, remove the extension from `chrome://extensions` — the script can't click browser UI for you.
 
 ---
 

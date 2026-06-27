@@ -161,8 +161,8 @@ Token savings are tracked per session and across lifetime:
 - Run `claude --debug` to see hook execution
 
 **kaboom-hooks not found?**
-- Install hooks standalone: `curl -fsSL https://kaboom.dev/install.sh | sh -s -- --hooks-only`
-- Or install the full suite: `curl -fsSL https://kaboom.dev/install.sh | sh`
+- Install hooks standalone: `curl -fsSL https://kaboom.dev/install.sh | bash -s -- --hooks-only`
+- Or install the full suite: `curl -fsSL https://kaboom.dev/install.sh | bash`
 - Via npm: `npm install -g kaboom-agentic-devtools`
 
 **Too many false positives?**

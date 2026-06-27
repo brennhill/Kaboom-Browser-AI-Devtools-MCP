@@ -170,6 +170,7 @@ func TestApplyLogCursorPagination_NoСursor(t *testing.T) {
 					metadata,
 					result[0].Timestamp,
 					result[len(result)-1].Timestamp,
+					result[len(result)-1].Timestamp,
 					result[len(result)-1].Sequence,
 				)
 			} else {
@@ -230,6 +231,73 @@ func TestApplyLogCursorPagination_AfterCursor(t *testing.T) {
 		func(entry LogEntryWithSequence) int64 { return entry.Sequence },
 		func(entry LogEntryWithSequence) string { return entry.Timestamp },
 	)
+}
+
+// TestApplyLogCursorPagination_AfterCursorWalkNoOverlap is the regression test
+// for the after_cursor+limit pagination overlap bug: the continuation cursor
+// for an after-walk (older history) was built from the newest returned entry,
+// so each page re-fetched most of the previous one. A full multi-page walk
+// must visit every entry exactly once and terminate.
+func TestApplyLogCursorPagination_AfterCursorWalkNoOverlap(t *testing.T) {
+	baseTime := time.Date(2026, 1, 30, 10, 0, 0, 0, time.UTC)
+	const total = 100
+	const limit = 25
+	entries := buildSequentialLogEntries(baseTime, 0, total)
+
+	seen := make(map[int64]bool, total)
+	recordPage := func(page []LogEntryWithSequence) {
+		t.Helper()
+		for _, e := range page {
+			if seen[e.Sequence] {
+				t.Fatalf("Sequence %d returned twice — pages overlap", e.Sequence)
+			}
+			seen[e.Sequence] = true
+		}
+	}
+
+	// Page 1: default view returns the newest entries (76-100).
+	page, metadata, err := ApplyLogCursorPagination(entries, "", "", "", limit, false)
+	if err != nil {
+		t.Fatalf("Unexpected error on first page: %v", err)
+	}
+	if len(page) != limit {
+		t.Fatalf("First page count = %d, want %d", len(page), limit)
+	}
+	recordPage(page)
+
+	// Walk older history. Each continuation cursor must come from the OLDEST
+	// entry of the previous page; with the buggy newest-entry cursor this walk
+	// never advances and the page guard below trips.
+	cursor := BuildCursor(page[0].Timestamp, page[0].Sequence)
+	const maxPages = total/limit + 2 // guard against a non-advancing walk
+	for pages := 0; ; pages++ {
+		if pages > maxPages {
+			t.Fatalf("Walk did not terminate after %d pages — cursor is not advancing", maxPages)
+		}
+		page, metadata, err = ApplyLogCursorPagination(entries, cursor, "", "", limit, false)
+		if err != nil {
+			t.Fatalf("Unexpected error during walk: %v", err)
+		}
+		if len(page) == 0 {
+			break
+		}
+		recordPage(page)
+		wantCursor := BuildCursor(page[0].Timestamp, page[0].Sequence)
+		if metadata.Cursor != wantCursor {
+			t.Fatalf("After-walk cursor = %q, want oldest returned entry %q", metadata.Cursor, wantCursor)
+		}
+		cursor = metadata.Cursor
+	}
+
+	// Complete coverage: every sequence 1..total visited exactly once.
+	if len(seen) != total {
+		t.Fatalf("Walk covered %d entries, want %d", len(seen), total)
+	}
+	for seq := int64(1); seq <= total; seq++ {
+		if !seen[seq] {
+			t.Errorf("Sequence %d was never returned", seq)
+		}
+	}
 }
 
 func TestApplyLogCursorPagination_BeforeCursor(t *testing.T) {
@@ -341,10 +409,12 @@ func TestApplyLogCursorPagination_CursorExpired(t *testing.T) {
 		}
 
 		if len(result) > 0 {
+			// Restarted walks paginate forward, so the cursor is the newest entry.
 			assertPaginationCursorFields(
 				t,
 				metadata,
 				result[0].Timestamp,
+				result[len(result)-1].Timestamp,
 				result[len(result)-1].Timestamp,
 				result[len(result)-1].Sequence,
 			)

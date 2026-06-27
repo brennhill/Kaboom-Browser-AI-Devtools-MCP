@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, UNSTABLE]
+    branches: [STABLE, UNSTABLE]
   pull_request:
-    branches: [main, UNSTABLE]
+    branches: [STABLE, UNSTABLE]
   schedule:
     - cron: "0 6 * * *" # Daily at 6 AM UTC
   workflow_dispatch: # Manual trigger
@@ -93,10 +93,11 @@ jobs:
       - name: npm cleanup tests
         run: node --test npm/kaboom-agentic-browser/lib/kill-daemon.test.js
 
-      - name: PyPI cleanup tests
-        env:
-          PYTHONPATH: pypi/kaboom-agentic-browser
-        run: python -m unittest discover -s pypi/kaboom-agentic-browser/tests -p "test_*.py"
+      - name: Platform-binary publish guard tests
+        run: node --test scripts/verify-platform-binaries.test.mjs
+
+      # PyPI cleanup tests removed: pypi/ packaging tree no longer exists in this repo.
+      # scripts/install-upgrade-regression.mjs skips its PyPI stage when pypi/ is absent.
 
       - name: End-to-end upgrade regression
         run: node scripts/install-upgrade-regression.mjs
@@ -198,12 +199,13 @@ jobs:
       - name: Feature docs strict gate (frontmatter + freshness)
         run: npm run docs:check:strict
 
-      - name: ESLint (errors only)
+      - name: Wire drift gate (Go <-> TS payload contracts)
         run: |
-          npx eslint extension/ tests/extension/ --max-warnings=50 || {
-            echo ""
-            echo "WARNING: ESLint found issues (allowing up to 50 warnings)"
-          }
+          make check-wire-drift
+          node scripts/check-sync-wire-drift.js
+
+      - name: ESLint (errors only)
+        run: npx eslint extension/ tests/extension/ --max-warnings=50
 
       - name: TypeScript typecheck
         run: npx tsc --noEmit
@@ -240,18 +242,3 @@ jobs:
       - name: JS security lint
         run: |
           npx eslint extension/ tests/extension/ --max-warnings=50
-
-      - name: Codacy Security Scan
-        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
-        env:
-          CODACY_API_TOKEN: ${{ secrets.CODACY_API_TOKEN }}
-          CODACY_ORGANIZATION_PROVIDER: gh
-          CODACY_USERNAME: brennhill
-          CODACY_PROJECT_NAME: gasoline-agentic-browser-devtools-mcp
-        run: |
-          if [ -z "$CODACY_API_TOKEN" ]; then
-            echo "WARNING: Codacy API token not configured (skipping scan)"
-            exit 0
-          fi
-          # Install Codacy client if needed and run scan
-          echo "Codacy scan configured (will run when token is set)"

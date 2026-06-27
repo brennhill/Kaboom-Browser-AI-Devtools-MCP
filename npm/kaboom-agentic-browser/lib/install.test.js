@@ -403,6 +403,41 @@ test('installToClient creates Zed-format config with context_servers key', () =>
   fs.rmSync(tmp, { recursive: true });
 });
 
+// --- VS Code format install ---
+
+test('installToClient writes VS Code config under servers key and migrates legacy mcpServers entries', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-install-'));
+  const cfgPath = path.join(tmp, 'mcp.json');
+
+  // Pre-existing VS Code config: stale kaboom entry under the legacy key plus a user server.
+  fs.writeFileSync(cfgPath, JSON.stringify({
+    servers: { other: { command: 'other-cmd', args: [] } },
+    mcpServers: { 'kaboom-browser-devtools': { command: 'old-kaboom', args: [] } },
+  }));
+
+  const def = {
+    id: 'test-vscode',
+    name: 'Test VS Code',
+    type: 'file',
+    dedicatedMcpFile: true,
+    configKey: 'servers',
+    legacyConfigKeys: ['mcpServers'],
+    configPath: { all: cfgPath },
+    detectDir: { all: tmp },
+  };
+
+  const result = installToClient(def, { dryRun: false, envVars: {}, binaryCommand: '/tmp/kaboom-bin' });
+  assert.equal(result.success, true);
+
+  const written = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+  assert.ok(written.servers['kaboom-browser-devtools'], 'must write under the servers key');
+  assert.equal(written.servers['kaboom-browser-devtools'].command, '/tmp/kaboom-bin');
+  assert.ok(written.servers.other, 'must preserve user servers');
+  assert.equal(written.mcpServers, undefined, 'stale legacy-key entry must be migrated away');
+
+  fs.rmSync(tmp, { recursive: true });
+});
+
 test('executeInstall dry-run reports all detected clients without writing', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-install-'));
   const cursorDir = path.join(tmp, '.cursor');

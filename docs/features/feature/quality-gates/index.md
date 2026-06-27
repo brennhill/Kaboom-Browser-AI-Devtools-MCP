@@ -64,10 +64,10 @@ Automated code quality enforcement that catches architectural drift, duplicate c
 
 ```bash
 # Hooks only (standalone)
-curl -fsSL https://gokaboom.dev/install.sh | sh -s -- --hooks-only
+curl -fsSL https://gokaboom.dev/install.sh | bash -s -- --hooks-only
 
 # Full Kaboom (includes hooks)
-curl -fsSL https://gokaboom.dev/install.sh | sh
+curl -fsSL https://gokaboom.dev/install.sh | bash
 ```
 
 ## Setup

@@ -2,9 +2,9 @@ name: Validate Versions
 
 on:
   push:
-    branches: [main, UNSTABLE]
+    branches: [STABLE, UNSTABLE]
   pull_request:
-    branches: [main, UNSTABLE]
+    branches: [STABLE, UNSTABLE]
   workflow_call: # Allow other workflows to call this
 
 permissions:
@@ -17,91 +17,9 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
-        with:
-          node-version: "20"
-
+      # Canonical version-consistency check lives in scripts/validate-versions.sh
+      # (single source of truth shared by CI and local runs).
       - name: Validate all versions match VERSION file
         run: |
-          VERSION=$(cat VERSION)
-          echo "Expected version: $VERSION"
-          echo ""
-
-          ERRORS=0
-
-          # Critical files that MUST match VERSION
-          declare -A CRITICAL_FILES=(
-            ["cmd/browser-agent/main.go"]="version = \"$VERSION\""
-            ["npm/kaboom-agentic-browser/package.json"]="\"version\": \"$VERSION\""
-            ["npm/darwin-arm64/package.json"]="\"version\": \"$VERSION\""
-            ["npm/darwin-x64/package.json"]="\"version\": \"$VERSION\""
-            ["npm/linux-arm64/package.json"]="\"version\": \"$VERSION\""
-            ["npm/linux-x64/package.json"]="\"version\": \"$VERSION\""
-            ["npm/win32-x64/package.json"]="\"version\": \"$VERSION\""
-            ["extension/manifest.json"]="\"version\": \"$VERSION\""
-            ["extension/package.json"]="\"version\": \"$VERSION\""
-            ["server/package.json"]="\"version\": \"$VERSION\""
-          )
-
-          for file in "${!CRITICAL_FILES[@]}"; do
-            pattern="${CRITICAL_FILES[$file]}"
-            if [ -f "$file" ]; then
-              if grep -q "$pattern" "$file"; then
-                echo "✓ $file"
-              else
-                echo "✗ $file - expected pattern: $pattern"
-                ERRORS=$((ERRORS + 1))
-              fi
-            else
-              echo "? $file - file not found"
-              ERRORS=$((ERRORS + 1))
-            fi
-          done
-
-          echo ""
-
-          # Check optionalDependencies in main package.json
-          echo "Checking optionalDependencies in npm/kaboom-agentic-browser/package.json..."
-          OPTIONAL_DEPS=$(node -e "
-            const pkg = require('./npm/kaboom-agentic-browser/package.json');
-            const deps = pkg.optionalDependencies || {};
-            let errors = 0;
-            for (const [name, version] of Object.entries(deps)) {
-              if (version !== '$VERSION') {
-                console.log('✗ ' + name + ': ' + version + ' (expected $VERSION)');
-                errors++;
-              } else {
-                console.log('✓ ' + name + ': ' + version);
-              }
-            }
-            process.exit(errors);
-          ")
-
-          if [ $? -ne 0 ]; then
-            ERRORS=$((ERRORS + 1))
-          fi
-
-          echo ""
-
-          if [ $ERRORS -gt 0 ]; then
-            echo "❌ FAILED: $ERRORS version mismatches found"
-            echo ""
-            echo "To fix, run: node scripts/bump-version.js $VERSION"
-            exit 1
-          else
-            echo "✅ All versions are consistent: $VERSION"
-          fi
-
-      - name: Verify Go binary version matches
-        run: |
-          VERSION=$(cat VERSION)
-
-          # Check the version constant in main.go
-          GO_VERSION=$(grep -o 'version = "[^"]*"' cmd/browser-agent/main.go | head -1 | cut -d'"' -f2)
-
-          if [ "$GO_VERSION" != "$VERSION" ]; then
-            echo "❌ Go binary version mismatch: $GO_VERSION (expected $VERSION)"
-            exit 1
-          fi
-
-          echo "✅ Go binary version: $GO_VERSION"
+          chmod +x scripts/validate-versions.sh
+          ./scripts/validate-versions.sh

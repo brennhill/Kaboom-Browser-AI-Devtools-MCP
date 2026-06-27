@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -146,6 +147,75 @@ func TestAppendToFileSkipsUnmarshalableAndOpenErrors(t *testing.T) {
 	s.logFile = t.TempDir() // directory path causes OpenFile to fail
 	if err := s.appendToFile([]LogEntry{{"msg": "x"}}); err == nil {
 		t.Fatal("appendToFile() expected OpenFile error for directory path, got nil")
+	}
+}
+
+// TestSaveEntriesCopyAtomicWrite is the regression test for the truncate-write
+// save path: os.Create truncated the live log before writing, so a failed save
+// destroyed the previous contents. Saves now go through a same-directory temp
+// file plus os.Rename, leaving the existing log untouched on failure.
+func TestSaveEntriesCopyAtomicWrite(t *testing.T) {
+	t.Parallel()
+
+	s, logFile := newTestServer(t, 10)
+	if err := s.saveEntriesCopy([]LogEntry{{"msg": "original"}}); err != nil {
+		t.Fatalf("saveEntriesCopy() error = %v", err)
+	}
+
+	// A successful save must not leave the temp file behind.
+	if _, err := os.Stat(logFile + ".tmp"); !os.IsNotExist(err) {
+		t.Fatalf("temp file left behind after save: stat err = %v", err)
+	}
+
+	if runtime.GOOS != "windows" {
+		info, err := os.Stat(logFile)
+		if err != nil {
+			t.Fatalf("Stat() error = %v", err)
+		}
+		if got := info.Mode().Perm(); got != 0o600 {
+			t.Fatalf("log file mode = %o, want 0600 (owner-only, matches live store)", got)
+		}
+	}
+
+	// Block the temp path with a directory: the save must fail without
+	// touching the existing log.
+	if err := os.MkdirAll(logFile+".tmp", 0o755); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+	if err := s.saveEntriesCopy([]LogEntry{{"msg": "replacement"}}); err == nil {
+		t.Fatal("saveEntriesCopy() expected error when temp path is blocked, got nil")
+	}
+	data, err := os.ReadFile(logFile)
+	if err != nil {
+		t.Fatalf("ReadFile() error = %v", err)
+	}
+	if !strings.Contains(string(data), "original") {
+		t.Fatalf("existing log was modified by a failed save: %s", data)
+	}
+	if strings.Contains(string(data), "replacement") {
+		t.Fatalf("failed save must not be applied: %s", data)
+	}
+}
+
+// TestAppendToFileOwnerOnlyPermissions verifies new log files are created 0600
+// (owner-only), matching the live store's privacy choice for captured telemetry.
+func TestAppendToFileOwnerOnlyPermissions(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("unix permission bits are not meaningful on windows")
+	}
+
+	s, logFile := newTestServer(t, 10)
+	if err := s.appendToFile([]LogEntry{{"msg": "hello"}}); err != nil {
+		t.Fatalf("appendToFile() error = %v", err)
+	}
+
+	info, err := os.Stat(logFile)
+	if err != nil {
+		t.Fatalf("Stat() error = %v", err)
+	}
+	if got := info.Mode().Perm(); got != 0o600 {
+		t.Fatalf("appended log file mode = %o, want 0600", got)
 	}
 }
 

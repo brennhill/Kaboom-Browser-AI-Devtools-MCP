@@ -112,15 +112,22 @@ func applyLimit[T Sequenced](entries []T, limit int, forwardPagination bool) []T
 }
 
 // buildMetadata populates pagination metadata from the result set.
-func buildMetadata[T Sequenced](entries []T, afterCursor string, countBeforeLimit int, metadata *CursorPaginationMetadata) {
+// The continuation cursor follows the walk direction: backward (after_cursor)
+// walks continue from the oldest returned entry, forward walks from the newest.
+// Building the after-walk cursor from the newest entry would make every
+// subsequent page overlap the previous one.
+func buildMetadata[T Sequenced](entries []T, backwardWalk bool, countBeforeLimit int, metadata *CursorPaginationMetadata) {
 	metadata.Count = len(entries)
 	if len(entries) == 0 {
 		return
 	}
 	metadata.OldestTimestamp = entries[0].GetTimestamp()
-	last := entries[len(entries)-1]
-	metadata.NewestTimestamp = last.GetTimestamp()
-	metadata.Cursor = BuildCursor(last.GetTimestamp(), last.GetSequence())
+	metadata.NewestTimestamp = entries[len(entries)-1].GetTimestamp()
+	cursorEntry := entries[len(entries)-1]
+	if backwardWalk {
+		cursorEntry = entries[0]
+	}
+	metadata.Cursor = BuildCursor(cursorEntry.GetTimestamp(), cursorEntry.GetSequence())
 	if countBeforeLimit > len(entries) {
 		metadata.HasMore = true
 	}
@@ -134,9 +141,10 @@ func ApplyCursorPagination[T Sequenced](entries []T, p CursorParams) ([]T, *Curs
 	cursorStr, cursorType := resolveCursorType(p.AfterCursor, p.BeforeCursor, p.SinceCursor)
 
 	if cursorStr == "" {
+		// Default view: newest entries, forward continuation cursor.
 		countBeforeLimit := len(entries)
 		entries = applyLimit(entries, p.Limit, false)
-		buildMetadata(entries, p.AfterCursor, countBeforeLimit, metadata)
+		buildMetadata(entries, false, countBeforeLimit, metadata)
 		return entries, metadata, nil
 	}
 
@@ -154,9 +162,13 @@ func ApplyCursorPagination[T Sequenced](entries []T, p CursorParams) ([]T, *Curs
 	}
 
 	countBeforeLimit := len(entries)
-	forwardPagination := metadata.CursorRestarted || p.AfterCursor == ""
-	entries = applyLimit(entries, p.Limit, forwardPagination)
-	buildMetadata(entries, p.AfterCursor, countBeforeLimit, metadata)
+	// after_cursor walks backward through older history: limit keeps the
+	// entries closest to the cursor (the tail) and the continuation cursor is
+	// the oldest returned entry. before/since cursors — and after-walks that
+	// restarted from the oldest entry after eviction — paginate forward.
+	backwardWalk := cursorType == "after" && !metadata.CursorRestarted
+	entries = applyLimit(entries, p.Limit, !backwardWalk)
+	buildMetadata(entries, backwardWalk, countBeforeLimit, metadata)
 	return entries, metadata, nil
 }
 

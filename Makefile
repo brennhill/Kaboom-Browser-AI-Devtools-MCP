@@ -75,8 +75,10 @@ compile-ts: generate-wire-types generate-dom-primitives
 	fi
 	@echo "✅ TypeScript compilation successful"
 
+# "All tests" (documented contract): file-length gate + Go (-short) + JS suites.
 test: check-file-length
 	$(MAKE) test-go-quick
+	$(MAKE) test-js
 
 test-long:
 	$(MAKE) test-go-long
@@ -89,7 +91,8 @@ test-fast:
 	$(MAKE) test-go-quick
 	./scripts/test-js-sharded.sh
 
-test-all: test test-js
+# `test` now includes the JS suite; keep test-all as a stable alias.
+test-all: test
 
 test-go-quick:
 	@set -e; trap 'bash ./scripts/cleanup-test-daemons.sh --quiet >/dev/null 2>&1 || true' EXIT; \
@@ -196,30 +199,43 @@ windows-amd64:
 	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-win32-x64.exe $(CMD_PKG)
 	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$(HOOKS_LDFLAGS)" -o $(BUILD_DIR)/$(HOOKS_BINARY_NAME)-win32-x64.exe $(HOOKS_PKG)
 
-# Build and copy binaries to NPM package directories (for releases)
+# Build and copy binaries to NPM package directories (for releases).
+# Staged names MUST match each platform package's "files" whitelist and the
+# launcher's lookup (bin/kaboom-agentic-browser + bin/kaboom-hooks).
 npm-binaries: build compile-ts
 	@echo "=== Copying binaries to NPM packages ==="
-	cp $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64 npm/darwin-arm64/bin/kaboom
-	cp $(BUILD_DIR)/$(BINARY_NAME)-darwin-x64 npm/darwin-x64/bin/kaboom
-	cp $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64 npm/linux-arm64/bin/kaboom
-	cp $(BUILD_DIR)/$(BINARY_NAME)-linux-x64 npm/linux-x64/bin/kaboom
-	cp $(BUILD_DIR)/$(BINARY_NAME)-win32-x64.exe npm/win32-x64/bin/kaboom.exe
+	@mkdir -p npm/darwin-arm64/bin npm/darwin-x64/bin npm/linux-arm64/bin npm/linux-x64/bin npm/win32-x64/bin
+	cp $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64 npm/darwin-arm64/bin/$(BINARY_NAME)
+	cp $(BUILD_DIR)/$(BINARY_NAME)-darwin-x64 npm/darwin-x64/bin/$(BINARY_NAME)
+	cp $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64 npm/linux-arm64/bin/$(BINARY_NAME)
+	cp $(BUILD_DIR)/$(BINARY_NAME)-linux-x64 npm/linux-x64/bin/$(BINARY_NAME)
+	cp $(BUILD_DIR)/$(BINARY_NAME)-win32-x64.exe npm/win32-x64/bin/$(BINARY_NAME).exe
 	@echo "=== Copying hooks binaries to NPM packages ==="
-	cp $(BUILD_DIR)/$(HOOKS_BINARY_NAME)-darwin-arm64 npm/darwin-arm64/bin/kaboom-hooks
-	cp $(BUILD_DIR)/$(HOOKS_BINARY_NAME)-darwin-x64 npm/darwin-x64/bin/kaboom-hooks
-	cp $(BUILD_DIR)/$(HOOKS_BINARY_NAME)-linux-arm64 npm/linux-arm64/bin/kaboom-hooks
-	cp $(BUILD_DIR)/$(HOOKS_BINARY_NAME)-linux-x64 npm/linux-x64/bin/kaboom-hooks
-	cp $(BUILD_DIR)/$(HOOKS_BINARY_NAME)-win32-x64.exe npm/win32-x64/bin/kaboom-hooks.exe
+	cp $(BUILD_DIR)/$(HOOKS_BINARY_NAME)-darwin-arm64 npm/darwin-arm64/bin/$(HOOKS_BINARY_NAME)
+	cp $(BUILD_DIR)/$(HOOKS_BINARY_NAME)-darwin-x64 npm/darwin-x64/bin/$(HOOKS_BINARY_NAME)
+	cp $(BUILD_DIR)/$(HOOKS_BINARY_NAME)-linux-arm64 npm/linux-arm64/bin/$(HOOKS_BINARY_NAME)
+	cp $(BUILD_DIR)/$(HOOKS_BINARY_NAME)-linux-x64 npm/linux-x64/bin/$(HOOKS_BINARY_NAME)
+	cp $(BUILD_DIR)/$(HOOKS_BINARY_NAME)-win32-x64.exe npm/win32-x64/bin/$(HOOKS_BINARY_NAME).exe
 	@echo "=== Copying extension to main NPM package ==="
 	@mkdir -p npm/kaboom-agentic-browser/extension
 	@cp -r extension/* npm/kaboom-agentic-browser/extension/
 	@echo "=== Verifying embedded versions ==="
-	@EMBEDDED=$$(npm/darwin-arm64/bin/kaboom --version 2>&1 | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+'); \
+	@case "$$(uname -s)-$$(uname -m)" in \
+		Darwin-arm64) VERIFY_BIN=npm/darwin-arm64/bin/$(BINARY_NAME) ;; \
+		Darwin-*) VERIFY_BIN=npm/darwin-x64/bin/$(BINARY_NAME) ;; \
+		Linux-aarch64|Linux-arm64) VERIFY_BIN=npm/linux-arm64/bin/$(BINARY_NAME) ;; \
+		*) VERIFY_BIN=npm/linux-x64/bin/$(BINARY_NAME) ;; \
+	esac; \
+	EMBEDDED=$$($$VERIFY_BIN --version 2>&1 | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+'); \
 	EXPECTED=$$(cat VERSION); \
 	if [ "$$EMBEDDED" != "$$EXPECTED" ]; then \
 		echo "❌ ERROR: Embedded version $$EMBEDDED does not match VERSION file $$EXPECTED"; \
 		exit 1; \
 	fi
+	@echo "=== Verifying every platform package ships its binaries (publish guard) ==="
+	@for d in darwin-arm64 darwin-x64 linux-arm64 linux-x64 win32-x64; do \
+		node scripts/verify-platform-binaries.js npm/$$d || exit 1; \
+	done
 	@echo "✅ NPM binaries and extension ready with version $(VERSION)"
 
 # Build for current platform only (for development)
@@ -313,7 +329,8 @@ check-invariants: check-wire-drift check-ts-json-casing
 smoke-mcp-transport:
 	@./scripts/smoke-mcp-transport.sh
 
-ci: check test test-js validate-deps-versions
+# `test` already includes the JS suite (test-js).
+ci: check test validate-deps-versions
 
 # --- Local CI (mirrors GitHub Actions) ---
 
@@ -411,7 +428,8 @@ verify-llm:
 	@echo "verify-llm passed"
 
 # Quality gate for top 1% standards (comprehensive)
-quality-gate: check-file-length lint lint-hardening lint-dead lint-circular lint-boundaries lint-json-casing typecheck security-check test test-js validate-deps-versions
+# `test` already includes the JS suite (test-js).
+quality-gate: check-file-length lint lint-hardening lint-dead lint-circular lint-boundaries lint-json-casing typecheck security-check test validate-deps-versions
 	@echo ""
 	@echo "═══════════════════════════════════════════"
 	@echo "✅ QUALITY GATE PASSED - Top 1% Standards"
@@ -435,7 +453,12 @@ test-upgrade-guards:
 	go test ./cmd/browser-agent -run 'TestConnectWithRetriesRejectsVersionMismatch' -count=1
 	node --test scripts/install-upgrade-regression.contract.test.mjs
 	node --test npm/kaboom-agentic-browser/lib/kill-daemon.test.js
-	python3 -m unittest discover -s pypi/kaboom-agentic-browser/tests -p 'test_*.py'
+	node --test scripts/verify-platform-binaries.test.mjs
+	@if [ -d pypi/kaboom-agentic-browser/tests ]; then \
+		python3 -m unittest discover -s pypi/kaboom-agentic-browser/tests -p 'test_*.py'; \
+	else \
+		echo "pypi/ not present; skipping PyPI cleanup tests"; \
+	fi
 	node scripts/install-upgrade-regression.mjs
 
 # Release gate for daemon cleanup/version safety.
@@ -455,25 +478,7 @@ sync-version:
 	@# NPM optionalDependencies versions
 	@perl -pi -e 's/("@brennhill\/kaboom-[^"]+": ")[0-9]+\.[0-9]+\.[0-9]+(")/$${1}$(VERSION)$$2/g' \
 		npm/kaboom-agentic-browser/package.json
-	@# PyPI version fields in pyproject.toml
-	@perl -pi -e 's/^version = "[0-9]+\.[0-9]+\.[0-9]+"/version = "$(VERSION)"/' \
-		pypi/kaboom-agentic-browser/pyproject.toml \
-		pypi/kaboom-agentic-browser-darwin-arm64/pyproject.toml \
-		pypi/kaboom-agentic-browser-darwin-x64/pyproject.toml \
-		pypi/kaboom-agentic-browser-linux-arm64/pyproject.toml \
-		pypi/kaboom-agentic-browser-linux-x64/pyproject.toml \
-		pypi/kaboom-agentic-browser-win32-x64/pyproject.toml
-	@# PyPI optional dependencies versions
-	@perl -pi -e 's/(kaboom-agentic-browser-[^"]+==)[0-9]+\.[0-9]+\.[0-9]+/$${1}$(VERSION)/g' \
-		pypi/kaboom-agentic-browser/pyproject.toml
-	@# PyPI __init__.py versions
-	@perl -pi -e 's/__version__ = "[0-9]+\.[0-9]+\.[0-9]+"/__version__ = "$(VERSION)"/' \
-		pypi/kaboom-agentic-browser/kaboom_agentic_browser/__init__.py \
-		pypi/kaboom-agentic-browser-darwin-arm64/kaboom_agentic_browser_darwin_arm64/__init__.py \
-		pypi/kaboom-agentic-browser-darwin-x64/kaboom_agentic_browser_darwin_x64/__init__.py \
-		pypi/kaboom-agentic-browser-linux-arm64/kaboom_agentic_browser_linux_arm64/__init__.py \
-		pypi/kaboom-agentic-browser-linux-x64/kaboom_agentic_browser_linux_x64/__init__.py \
-		pypi/kaboom-agentic-browser-win32-x64/kaboom_agentic_browser_win32_x64/__init__.py
+	@# PyPI sync removed: pypi/ packaging tree no longer exists in this repo.
 	@# JS version strings
 	@perl -pi -e "s/version: '[0-9]+\.[0-9]+\.[0-9]+'/version: '$(VERSION)'/g" \
 		extension/inject.js tests/extension/popup.test.js

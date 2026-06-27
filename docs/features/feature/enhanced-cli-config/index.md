@@ -4,13 +4,15 @@ feature_id: feature-enhanced-cli-config
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-03-28
+last_reviewed: 2026-06-10
 code_paths:
   - Makefile
   - scripts/build-crx.js
   - cmd/browser-agent/native_install.go
   - scripts/install.sh
   - scripts/install.ps1
+  - scripts/uninstall.sh
+  - scripts/uninstall.ps1
   - server/scripts/install.js
   - npm/kaboom-agentic-browser/bin/kaboom-agentic-browser
   - npm/kaboom-agentic-browser/lib/config.js
@@ -18,29 +20,12 @@ code_paths:
   - npm/kaboom-agentic-browser/lib/install.js
   - npm/kaboom-agentic-browser/lib/uninstall.js
   - npm/kaboom-agentic-browser/lib/cli.js
-  - pypi/kaboom-agentic-browser/kaboom_agentic_browser/__init__.py
-  - pypi/kaboom-agentic-browser/kaboom_agentic_browser/config.py
-  - pypi/kaboom-agentic-browser/kaboom_agentic_browser/doctor.py
-  - pypi/kaboom-agentic-browser/kaboom_agentic_browser/install.py
-  - pypi/kaboom-agentic-browser/kaboom_agentic_browser/uninstall.py
-  - pypi/kaboom-agentic-browser/kaboom_agentic_browser/skills/skills.json
-  - pypi/kaboom-agentic-browser/kaboom_agentic_browser.egg-info/PKG-INFO
-  - pypi/kaboom-agentic-browser/kaboom_agentic_browser.egg-info/entry_points.txt
-  - pypi/kaboom-agentic-browser/kaboom_agentic_browser.egg-info/requires.txt
-  - pypi/kaboom-agentic-browser/kaboom_agentic_browser.egg-info/top_level.txt
-  - pypi/kaboom-agentic-browser/kaboom_agentic_browser.egg-info/SOURCES.txt
-  - pypi/kaboom-agentic-browser/kaboom_agentic_browser/platform.py
   - docs/mcp-install-guide.md
 test_paths:
   - cmd/browser-agent/native_install_test.go
   - npm/kaboom-agentic-browser/lib/config.test.js
   - npm/kaboom-agentic-browser/lib/install.test.js
   - npm/kaboom-agentic-browser/lib/uninstall.test.js
-  - pypi/kaboom-agentic-browser/tests/test_branding.py
-  - pypi/kaboom-agentic-browser/tests/test_config.py
-  - pypi/kaboom-agentic-browser/tests/test_install.py
-  - pypi/kaboom-agentic-browser/tests/test_uninstall.py
-  - pypi/kaboom-agentic-browser/tests/test_skills.py
   - tests/packaging/kaboom-packaging-branding.test.js
   - tests/extension/install-script-extension-source.test.js
   - tests/extension/release-extension-zip.test.js
@@ -52,6 +37,7 @@ test_paths:
   - tests/cli/doctor.test.cjs
   - tests/cli/install.test.cjs
   - tests/cli/uninstall.test.cjs
+  - tests/cli/uninstall-script.test.cjs
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-28
 ---

@@ -10,7 +10,12 @@
 // via MediaRecorder, and POSTs the final blob to the Go server on stop.
 // Standalone: imports nothing from src/background/ to avoid circular deps.
 
-import type { OffscreenStartRecordingMessage, OffscreenStopRecordingMessage } from '../types/runtime-messages.js'
+import type {
+  OffscreenStartRecordingMessage,
+  OffscreenStopRecordingMessage,
+  OffscreenGetRecordingStateMessage,
+  OffscreenRecordingStateResponse
+} from '../types/runtime-messages.js'
 import { errorMessage } from '../lib/error-utils.js'
 import { buildDaemonHeaders } from '../lib/daemon-http.js'
 import { KABOOM_RECORDING_LOG_PREFIX } from '../lib/brand.js'
@@ -68,12 +73,14 @@ async function handleStartRecording(msg: OffscreenStartRecordingMessage): Promis
   })
   if (state.active) {
     console.warn(LOG, 'START BLOCKED: already recording')
-    chrome.runtime.sendMessage({
-      target: 'background',
-      type: 'offscreen_recording_started',
-      success: false,
-      error: 'RECORD_START: Already recording in offscreen document.'
-    })
+    chrome.runtime
+      .sendMessage({
+        target: 'background',
+        type: 'offscreen_recording_started',
+        success: false,
+        error: 'RECORD_START: Already recording in offscreen document.'
+      })
+      .catch(() => {})
     return
   }
 
@@ -211,11 +218,13 @@ async function handleStartRecording(msg: OffscreenStartRecordingMessage): Promis
     }
 
     console.log(LOG, 'Recording STARTED, sending confirmation to background')
-    chrome.runtime.sendMessage({
-      target: 'background',
-      type: 'offscreen_recording_started',
-      success: true
-    })
+    chrome.runtime
+      .sendMessage({
+        target: 'background',
+        type: 'offscreen_recording_started',
+        success: true
+      })
+      .catch(() => {})
   } catch (err) {
     console.error(LOG, 'START EXCEPTION:', errorMessage(err), (err as Error).stack)
     // Clean up any acquired streams to release the tab capture
@@ -224,12 +233,14 @@ async function handleStartRecording(msg: OffscreenStartRecordingMessage): Promis
       s.getTracks().forEach((t) => t.stop())
     }
     state = { ...defaultState } // eslint-disable-line require-atomic-updates
-    chrome.runtime.sendMessage({
-      target: 'background',
-      type: 'offscreen_recording_started',
-      success: false,
-      error: `RECORD_START: ${errorMessage(err, 'Failed to start recording in offscreen document.')}`
-    })
+    chrome.runtime
+      .sendMessage({
+        target: 'background',
+        type: 'offscreen_recording_started',
+        success: false,
+        error: `RECORD_START: ${errorMessage(err, 'Failed to start recording in offscreen document.')}`
+      })
+      .catch(() => {})
   }
 }
 
@@ -248,13 +259,15 @@ function handleStopRecording(truncated: boolean = false): void {
   })
   if (!state.active) {
     console.warn(LOG, 'STOP: not active')
-    chrome.runtime.sendMessage({
-      target: 'background',
-      type: 'offscreen_recording_stopped',
-      status: 'error',
-      name: '',
-      error: 'RECORD_STOP: No active recording in offscreen document.'
-    })
+    chrome.runtime
+      .sendMessage({
+        target: 'background',
+        type: 'offscreen_recording_stopped',
+        status: 'error',
+        name: '',
+        error: 'RECORD_STOP: No active recording in offscreen document.'
+      })
+      .catch(() => {})
     return
   }
 
@@ -267,13 +280,15 @@ function handleStopRecording(truncated: boolean = false): void {
       stream.getTracks().forEach((t) => t.stop())
     }
     state = { ...defaultState }
-    chrome.runtime.sendMessage({
-      target: 'background',
-      type: 'offscreen_recording_stopped',
-      status: 'error',
-      name: '',
-      error: 'RECORD_STOP: Recorder already inactive.'
-    })
+    chrome.runtime
+      .sendMessage({
+        target: 'background',
+        type: 'offscreen_recording_stopped',
+        status: 'error',
+        name: '',
+        error: 'RECORD_STOP: Recorder already inactive.'
+      })
+      .catch(() => {})
     return
   }
 
@@ -332,13 +347,15 @@ function handleStopRecording(truncated: boolean = false): void {
 
       if (!response.ok) {
         console.error(LOG, 'Server returned error:', response.status)
-        chrome.runtime.sendMessage({
-          target: 'background',
-          type: 'offscreen_recording_stopped',
-          status: 'error',
-          name,
-          error: `RECORD_STOP: Server returned ${response.status}.`
-        })
+        chrome.runtime
+          .sendMessage({
+            target: 'background',
+            type: 'offscreen_recording_stopped',
+            status: 'error',
+            name,
+            error: `RECORD_STOP: Server returned ${response.status}.`
+          })
+          .catch(() => {})
         return
       }
 
@@ -351,26 +368,30 @@ function handleStopRecording(truncated: boolean = false): void {
       }
 
       console.log(LOG, 'Recording SAVED', { name, duration, size: blob.size, path: savePath })
-      chrome.runtime.sendMessage({
-        target: 'background',
-        type: 'offscreen_recording_stopped',
-        status: 'saved',
-        name,
-        duration_seconds: duration,
-        size_bytes: blob.size,
-        truncated: truncated || undefined,
-        path: savePath
-      })
+      chrome.runtime
+        .sendMessage({
+          target: 'background',
+          type: 'offscreen_recording_stopped',
+          status: 'saved',
+          name,
+          duration_seconds: duration,
+          size_bytes: blob.size,
+          truncated: truncated || undefined,
+          path: savePath
+        })
+        .catch(() => {})
     } catch (err) {
       console.error(LOG, 'SAVE EXCEPTION:', errorMessage(err), (err as Error).stack)
       state = { ...defaultState }
-      chrome.runtime.sendMessage({
-        target: 'background',
-        type: 'offscreen_recording_stopped',
-        status: 'error',
-        name,
-        error: `RECORD_STOP: ${errorMessage(err, 'Save failed.')}`
-      })
+      chrome.runtime
+        .sendMessage({
+          target: 'background',
+          type: 'offscreen_recording_stopped',
+          status: 'error',
+          name,
+          error: `RECORD_STOP: ${errorMessage(err, 'Save failed.')}`
+        })
+        .catch(() => {})
     }
   }
 
@@ -380,7 +401,11 @@ function handleStopRecording(truncated: boolean = false): void {
 // Listen for messages from the service worker
 console.log(LOG, 'Offscreen recording worker loaded')
 chrome.runtime.onMessage.addListener(
-  (message: OffscreenStartRecordingMessage | OffscreenStopRecordingMessage, sender: chrome.runtime.MessageSender) => {
+  (
+    message: OffscreenStartRecordingMessage | OffscreenStopRecordingMessage | OffscreenGetRecordingStateMessage,
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response: OffscreenRecordingStateResponse) => void
+  ) => {
     // Only handle messages from the extension itself
     if (sender.id !== chrome.runtime.id) return
     // Only handle messages targeted at offscreen
@@ -391,6 +416,17 @@ chrome.runtime.onMessage.addListener(
       handleStartRecording(message as OffscreenStartRecordingMessage)
     } else if (message.type === 'offscreen_stop_recording') {
       handleStopRecording()
+    } else if (message.type === 'offscreen_get_recording_state') {
+      // Restarted service worker asks whether a recording survived (rehydration).
+      sendResponse({
+        active: state.active,
+        name: state.name,
+        startTime: state.startTime,
+        fps: state.fps,
+        audioMode: state.audioMode,
+        tabId: state.tabId,
+        url: state.url
+      })
     }
   }
 )

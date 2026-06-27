@@ -14,7 +14,7 @@ import (
 
 // version is set at build time via -ldflags "-X main.version=..."
 // Fallback used for `go run` and `make dev` (no ldflags).
-var version = "0.8.2"
+var version = "0.8.3"
 
 func init() {
 	// Sync telemetry version from main for go run (no ldflags) fallback.

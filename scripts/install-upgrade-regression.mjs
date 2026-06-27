@@ -235,7 +235,11 @@ async function expectDaemonIdentity(port, expectedVersion, timeoutMs = 20000) {
 
 async function main() {
   const version = readVersionFile()
-  const python = pickPython()
+  // The PyPI packaging tree may not exist in this repo; skip its stage when absent
+  // (structure preserved so the stage resumes automatically if pypi/ returns).
+  const pypiPackageDir = path.join(repoRoot, 'pypi', 'kaboom-agentic-browser')
+  const hasPypiPackage = fs.existsSync(pypiPackageDir)
+  const python = hasPypiPackage ? pickPython() : null
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-upgrade-regression-'))
   const homeDir = path.join(tmpRoot, 'home')
   const binDir = path.join(tmpRoot, 'bin')
@@ -297,25 +301,29 @@ async function main() {
       fail(`npm cleanup did not remove pid file ${pidFile}`)
     }
 
-    info('stage 3: pypi cleanup kills old daemon + pid file')
-    daemon = startDaemon(oldBinary, port, envWithShims)
-    await expectDaemonIdentity(port, '0.0.1')
-    run(
-      python,
-      [
-        '-c',
-        "import os,sys;sys.path.insert(0,os.environ['KABOOM_PYPI_PATH']);from kaboom_agentic_browser import platform;platform.cleanup_old_processes()"
-      ],
-      {
-        env: {
-          ...envWithShims,
-          KABOOM_PYPI_PATH: path.join(repoRoot, 'pypi', 'kaboom-agentic-browser')
+    if (hasPypiPackage) {
+      info('stage 3: pypi cleanup kills old daemon + pid file')
+      daemon = startDaemon(oldBinary, port, envWithShims)
+      await expectDaemonIdentity(port, '0.0.1')
+      run(
+        python,
+        [
+          '-c',
+          "import os,sys;sys.path.insert(0,os.environ['KABOOM_PYPI_PATH']);from kaboom_agentic_browser import platform;platform.cleanup_old_processes()"
+        ],
+        {
+          env: {
+            ...envWithShims,
+            KABOOM_PYPI_PATH: pypiPackageDir
+          }
         }
+      )
+      await waitForChildExit(daemon, 12000)
+      if (fs.existsSync(pidFile)) {
+        fail(`pypi cleanup did not remove pid file ${pidFile}`)
       }
-    )
-    await waitForChildExit(daemon, 12000)
-    if (fs.existsSync(pidFile)) {
-      fail(`pypi cleanup did not remove pid file ${pidFile}`)
+    } else {
+      info('stage 3 skipped: pypi/kaboom-agentic-browser not present in this checkout')
     }
 
     info('all upgrade cleanup regressions passed')

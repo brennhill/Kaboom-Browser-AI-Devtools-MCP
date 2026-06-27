@@ -18,6 +18,15 @@ const GITHUB_REPO = 'brennhill/Kaboom-Browser-AI-Devtools-MCP'
 const BINARY_NAME = 'kaboom-agentic-browser'
 const EXPECTED_SERVICE_NAME = 'kaboom-browser-devtools'
 
+// Anchored to full daemon binary names (current + legacy brands). Never use
+// bare substrings like "gasoline" — they match unrelated command lines.
+const DAEMON_NAME_PATTERN =
+  '(kaboom|gasoline|strum)-(agentic-browser|agentic-devtools|browser-devtools|hooks|mcp)|\\.kaboom/bin/'
+
+// Accepted /health identities for the kill path: current daemon plus legacy brand eras.
+const KABOOM_SERVICE_IDENTITY_RE =
+  /^(kaboom|gasoline|strum)(-browser-devtools|-agentic-browser|-agentic-devtools|-mcp)?$/
+
 function printPanel(title, lines = []) {
   const border = '+----------------------------------------------------------+'
   console.log(border)
@@ -51,15 +60,29 @@ function printBanner() {
 }
 
 /**
- * Kill all running Kaboom and legacy processes to ensure clean upgrade
+ * Check whether a /health payload identifies a Kaboom (or legacy-brand) daemon.
+ * Used to gate by-port kills so unrelated dev servers are never killed.
+ */
+function isKaboomServiceIdentity(health) {
+  if (!health) return false
+  const serviceName = resolveServiceName(health).toLowerCase()
+  return KABOOM_SERVICE_IDENTITY_RE.test(serviceName)
+}
+
+/**
+ * Kill all running Kaboom and legacy processes to ensure clean upgrade.
+ * deps: { spawnSync, readHealth } injection seams for tests.
  */
 // #lizard forgives
-function cleanupOldProcesses() {
+async function cleanupOldProcesses(deps = {}) {
+  const exec = deps.spawnSync || spawnSync
+  const fetchHealth = deps.readHealth || readHealth
+
   if (process.platform === 'win32') {
     // Windows: Find and kill Kaboom and legacy processes
     try {
       for (const imagePattern of ['kaboom*', 'gasoline*', 'browser-agent*']) {
-        const result = spawnSync('tasklist', ['/FI', `IMAGENAME eq ${imagePattern}`, '/FO', 'CSV'], {
+        const result = exec('tasklist', ['/FI', `IMAGENAME eq ${imagePattern}`, '/FO', 'CSV'], {
           encoding: 'utf8',
           windowsHide: true
         })
@@ -70,7 +93,7 @@ function cleanupOldProcesses() {
             if (match) {
               const imageName = match[1]
               const pid = match[2]
-              spawnSync('taskkill', ['/F', '/PID', pid], { windowsHide: true })
+              exec('taskkill', ['/F', '/PID', pid], { windowsHide: true })
               console.log(`Killed old ${imageName} process (PID: ${pid})`)
             }
           }
@@ -80,27 +103,33 @@ function cleanupOldProcesses() {
       // Ignore errors - process might not exist
     }
   } else {
-    // Unix: Find and kill Kaboom and legacy processes by name
+    // Unix: Find and kill Kaboom and legacy processes by full binary name only.
     try {
-      // Method 1: pkill by name (most reliable)
-      for (const pattern of ['kaboom-agentic-browser', 'gasoline', 'browser-agent']) {
-        spawnSync('pkill', ['-f', pattern], {
-          encoding: 'utf8'
-        })
-      }
+      // Method 1: pkill anchored to full daemon binary names (never bare substrings).
+      exec('pkill', ['-f', DAEMON_NAME_PATTERN], {
+        encoding: 'utf8'
+      })
 
-      // Method 2: Also check for processes on common ports (7890, 17890)
-      const ports = ['7890', '17890']
+      // Method 2: Also check common ports (7890, 17890), but only kill the
+      // listener when its /health endpoint identifies a Kaboom daemon.
+      const ports = [7890, 17890]
       for (const port of ports) {
-        const lsofResult = spawnSync('lsof', ['-ti', `:${port}`], {
+        const health = await fetchHealth(port, 800)
+        if (!isKaboomServiceIdentity(health)) {
+          if (health) {
+            console.log(`Port ${port} is in use by a non-Kaboom service; leaving it alone`)
+          }
+          continue
+        }
+        const lsofResult = exec('lsof', ['-ti', `:${port}`], {
           encoding: 'utf8'
         })
         if (lsofResult.stdout && lsofResult.stdout.trim()) {
           const pids = lsofResult.stdout.trim().split('\n')
           for (const pid of pids) {
             if (pid) {
-              spawnSync('kill', ['-9', pid])
-              console.log(`Killed process on port ${port} (PID: ${pid})`)
+              exec('kill', ['-9', pid])
+              console.log(`Killed Kaboom process on port ${port} (PID: ${pid})`)
             }
           }
         }
@@ -245,9 +274,24 @@ function sha256File(filePath) {
   return hash.digest('hex').toLowerCase()
 }
 
-async function verifyDownloadedBinary(binaryPath, binaryName) {
+function isStrictChecksumMode() {
+  const raw = String(process.env.KABOOM_REQUIRE_CHECKSUM || '').trim().toLowerCase()
+  return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on'
+}
+
+async function verifyDownloadedBinary(binaryPath, binaryName, deps = {}) {
+  const fetchText = deps.downloadText || downloadText
   const checksumUrl = `https://github.com/${GITHUB_REPO}/releases/download/v${VERSION}/checksums.txt`
-  const manifest = await downloadText(checksumUrl)
+  let manifest
+  try {
+    manifest = await fetchText(checksumUrl)
+  } catch (err) {
+    // The binary itself downloaded fine — a missing checksums.txt is a
+    // manifest problem, not a binary-availability problem.
+    const unavailable = new Error(`checksum manifest unavailable (${checksumUrl}): ${err.message}`)
+    unavailable.code = 'CHECKSUM_MANIFEST_UNAVAILABLE'
+    throw unavailable
+  }
   const expected = extractExpectedChecksum(manifest, binaryName)
   if (!expected) {
     throw new Error(`checksums.txt missing entry for ${binaryName}`)
@@ -426,7 +470,7 @@ async function main() {
 
   // Clean up any old Kaboom and legacy processes before installing new version
   console.log('Cleaning up old Kaboom and legacy processes...')
-  cleanupOldProcesses()
+  await cleanupOldProcesses()
 
   // Ensure bin directory exists
   if (!fs.existsSync(binDir)) {
@@ -440,53 +484,68 @@ async function main() {
   console.log(`URL: ${downloadUrl}`)
 
   let usedLocalBinary = false
+  let checksumSkipped = false
   try {
     await download(downloadUrl, stagedBinaryPath)
     await verifyDownloadedBinary(stagedBinaryPath, binaryName)
   } catch (err) {
-    if (/checksum/i.test(err.message || '')) {
+    if (err && err.code === 'CHECKSUM_MANIFEST_UNAVAILABLE') {
+      // The binary downloaded fine — only the checksums.txt manifest is missing.
+      if (isStrictChecksumMode()) {
+        console.error('Binary downloaded, but the release checksum manifest (checksums.txt) is unavailable.')
+        console.error('KABOOM_REQUIRE_CHECKSUM is set, so the install cannot be verified. Aborting.')
+        throw err
+      }
+      checksumSkipped = true
+      console.warn(`Warning: ${err.message}`)
+      console.warn('Binary downloaded successfully, but the checksum manifest could not be fetched.')
+      console.warn('Continuing without checksum verification (set KABOOM_REQUIRE_CHECKSUM=1 to enforce).')
+    } else if (/checksum/i.test(err.message || '')) {
       throw err
-    }
-    // If download fails, check if we're in development (binary might be local)
-    console.warn(`Download failed: ${err.message}`)
-    console.warn('Checking for local binary...')
-
-    // Look for local build
-    const localBinary = path.join(__dirname, '..', '..', 'dist', binaryName)
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- installer paths derived from verified platform config
-    if (fs.existsSync(localBinary)) {
-      console.log('Using local binary from dist/')
-      fs.copyFileSync(localBinary, stagedBinaryPath)
-      usedLocalBinary = true
     } else {
-      console.error('')
-      console.error('╔════════════════════════════════════════════════════════════════╗')
-      console.error('║  KABOOM BINARY NOT AVAILABLE                                   ║')
-      console.error('╚════════════════════════════════════════════════════════════════╝')
-      console.error('')
-      console.error('No pre-built binary found for your platform.')
-      console.error('')
-      console.error('OPTION 1: Build from source (requires Go 1.21+)')
-      console.error('  git clone https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP.git')
-      console.error('  cd gasoline')
-      console.error('  go build -o /usr/local/bin/kaboom-agentic-browser ./cmd/browser-agent')
-      console.error('')
-      console.error('OPTION 2: Run directly with Go')
-      console.error('  go run ./cmd/browser-agent')
-      console.error('')
-      console.error('OPTION 3: Use MCP config with Go (Claude Code / Cursor)')
-      console.error('  Add to .mcp.json:')
-      console.error('  {"mcpServers":{"kaboom-browser-devtools":{"command":"go","args":["run","./cmd/browser-agent"]}}}')
-      console.error('')
-      console.error('For help: https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP#quick-start')
-      console.error('')
-      // eslint-disable-next-line n/no-process-exit -- CLI script exits with error status
-      process.exit(1)
+      // If download fails, check if we're in development (binary might be local)
+      console.warn(`Download failed: ${err.message}`)
+      console.warn('Checking for local binary...')
+
+      // Look for local build
+      const localBinary = path.join(__dirname, '..', '..', 'dist', binaryName)
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- installer paths derived from verified platform config
+      if (fs.existsSync(localBinary)) {
+        console.log('Using local binary from dist/')
+        fs.copyFileSync(localBinary, stagedBinaryPath)
+        usedLocalBinary = true
+      } else {
+        console.error('')
+        console.error('╔════════════════════════════════════════════════════════════════╗')
+        console.error('║  KABOOM BINARY NOT AVAILABLE                                   ║')
+        console.error('╚════════════════════════════════════════════════════════════════╝')
+        console.error('')
+        console.error('No pre-built binary found for your platform.')
+        console.error('')
+        console.error('OPTION 1: Build from source (requires Go 1.21+)')
+        console.error('  git clone https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP.git')
+        console.error('  cd gasoline')
+        console.error('  go build -o /usr/local/bin/kaboom-agentic-browser ./cmd/browser-agent')
+        console.error('')
+        console.error('OPTION 2: Run directly with Go')
+        console.error('  go run ./cmd/browser-agent')
+        console.error('')
+        console.error('OPTION 3: Use MCP config with Go (Claude Code / Cursor)')
+        console.error('  Add to .mcp.json:')
+        console.error('  {"mcpServers":{"kaboom-browser-devtools":{"command":"go","args":["run","./cmd/browser-agent"]}}}')
+        console.error('')
+        console.error('For help: https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP#quick-start')
+        console.error('')
+        // eslint-disable-next-line n/no-process-exit -- CLI script exits with error status
+        process.exit(1)
+      }
     }
   }
 
   if (usedLocalBinary) {
     console.warn('⚠️  Skipping checksum verification for local dist binary fallback.')
+  } else if (checksumSkipped) {
+    console.warn('⚠️  Installed without checksum verification (manifest unavailable).')
   }
   installStagedBinary(stagedBinaryPath, binaryPath)
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- installer temp file path is controlled by script
@@ -521,7 +580,18 @@ async function main() {
   return
 }
 
-main().catch((err) => {
-  console.error('Installation failed:', err.message)
-  process.exit(1)
-})
+if (require.main === module) {
+  main().catch((err) => {
+    console.error('Installation failed:', err.message)
+    process.exit(1)
+  })
+}
+
+module.exports = {
+  cleanupOldProcesses,
+  isKaboomServiceIdentity,
+  resolveServiceName,
+  verifyDownloadedBinary,
+  extractExpectedChecksum,
+  checkServerIdentity,
+}

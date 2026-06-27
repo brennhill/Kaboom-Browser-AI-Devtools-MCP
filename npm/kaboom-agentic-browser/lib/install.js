@@ -162,6 +162,18 @@ function installViaFile(def, options) {
       delete configData[configKey][legacyName];
     }
   }
+  // Migrate managed entries out of legacy config keys (e.g. VS Code's old
+  // "mcpServers" key) so the client only sees the canonical entry.
+  for (const legacyKey of def.legacyConfigKeys || []) {
+    if (!configData[legacyKey] || typeof configData[legacyKey] !== 'object') continue;
+    delete configData[legacyKey][MCP_SERVER_NAME];
+    for (const legacyName of LEGACY_INSTALL_SERVER_NAMES) {
+      delete configData[legacyKey][legacyName];
+    }
+    if (Object.keys(configData[legacyKey]).length === 0) {
+      delete configData[legacyKey];
+    }
+  }
   configData[configKey][MCP_SERVER_NAME] = kaboomEntry;
 
   const skipValidation = configKey !== 'mcpServers';

@@ -51,8 +51,20 @@ func (s *Server) saveEntries() error {
 
 // saveEntriesCopy writes the given entries to file without acquiring the lock.
 // The caller is responsible for providing a snapshot of the entries.
+// Entries go to a temp file in the same directory followed by an atomic
+// os.Rename so a crash mid-write can never truncate or corrupt the log.
 func (s *Server) saveEntriesCopy(entries []LogEntry) error {
-	file, err := os.Create(s.logFile)
+	tmpPath := s.logFile + ".tmp"
+	if err := writeEntriesFile(tmpPath, entries); err != nil {
+		_ = os.Remove(tmpPath)
+		return err
+	}
+	return os.Rename(tmpPath, s.logFile)
+}
+
+// writeEntriesFile writes entries as JSON lines to path with owner-only permissions.
+func writeEntriesFile(path string, entries []LogEntry) error {
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600) // #nosec G304 -- path derived from logFile configured at startup
 	if err != nil {
 		return err
 	}
@@ -76,7 +88,8 @@ func (s *Server) saveEntriesCopy(entries []LogEntry) error {
 
 // appendToFile writes only the new entries to the file (append-only, no rewrite).
 func (s *Server) appendToFile(entries []LogEntry) error {
-	f, err := os.OpenFile(s.logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644) // #nosec G302 G304 -- log files are intentionally world-readable; path set at startup
+	// Owner-only (0600) to match the live store's privacy choice for captured telemetry.
+	f, err := os.OpenFile(s.logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600) // #nosec G304 -- path set at startup
 	if err != nil {
 		return err
 	}

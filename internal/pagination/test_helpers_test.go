@@ -73,6 +73,7 @@ func runNoCursorPaginationCases[T any](
 					metadata,
 					timestampFor(result[0]),
 					timestampFor(result[len(result)-1]),
+					timestampFor(result[len(result)-1]),
 					sequenceFor(result[len(result)-1]),
 				)
 				return
@@ -106,6 +107,7 @@ func runAfterCursorPaginationCases[T any](
 				tt.expectedCount,
 				tt.expectedFirstSeq,
 				tt.expectedLastSeq,
+				true, // after-walks continue from the oldest returned entry
 				result,
 				metadata,
 				sequenceFor,
@@ -141,6 +143,7 @@ func runBeforeCursorPaginationCases[T any](
 				tt.expectedCount,
 				tt.expectedFirstSeq,
 				tt.expectedLastSeq,
+				false, // before-walks continue from the newest returned entry
 				result,
 				metadata,
 				sequenceFor,
@@ -156,6 +159,7 @@ func assertDirectionalCursorResult[T any](
 	expectedCount int,
 	expectedFirstSeq int64,
 	expectedLastSeq int64,
+	cursorFromOldest bool,
 	result []T,
 	metadata *CursorPaginationMetadata,
 	sequenceFor func(T) int64,
@@ -174,12 +178,17 @@ func assertDirectionalCursorResult[T any](
 	if sequenceFor(result[len(result)-1]) != expectedLastSeq {
 		t.Errorf("Last sequence = %d, want %d", sequenceFor(result[len(result)-1]), expectedLastSeq)
 	}
+	cursorEntry := result[len(result)-1]
+	if cursorFromOldest {
+		cursorEntry = result[0]
+	}
 	assertPaginationCursorFields(
 		t,
 		metadata,
 		timestampFor(result[0]),
 		timestampFor(result[len(result)-1]),
-		sequenceFor(result[len(result)-1]),
+		timestampFor(cursorEntry),
+		sequenceFor(cursorEntry),
 	)
 }
 
@@ -213,10 +222,12 @@ func runCursorExpiredPaginationCases[T any](
 				if sequenceFor(result[0]) != tt.expectedFirstSeq {
 					t.Errorf("First sequence = %d, want %d (oldest after restart)", sequenceFor(result[0]), tt.expectedFirstSeq)
 				}
+				// Restarted walks paginate forward, so the cursor is the newest entry.
 				assertPaginationCursorFields(
 					t,
 					metadata,
 					timestampFor(result[0]),
+					timestampFor(result[len(result)-1]),
 					timestampFor(result[len(result)-1]),
 					sequenceFor(result[len(result)-1]),
 				)
@@ -339,13 +350,14 @@ func assertPaginationCursorFields(
 	metadata *CursorPaginationMetadata,
 	oldestTimestamp string,
 	newestTimestamp string,
-	newestSequence int64,
+	cursorTimestamp string,
+	cursorSequence int64,
 ) {
 	t.Helper()
 	if metadata == nil {
 		t.Fatal("metadata is nil")
 	}
-	expectedCursor := BuildCursor(newestTimestamp, newestSequence)
+	expectedCursor := BuildCursor(cursorTimestamp, cursorSequence)
 	if metadata.Cursor != expectedCursor {
 		t.Errorf("Metadata cursor = %v, want %v", metadata.Cursor, expectedCursor)
 	}

@@ -367,6 +367,44 @@ func TestRingBuffer_Clear(t *testing.T) {
 	}
 }
 
+// TestRingBuffer_ReadFromAndFindPositionAfterClear is the regression test for
+// positionToIndex mishandling the not-full case after Clear(): Clear preserves
+// totalAdded, so monotonic positions no longer equal slice indices. The old
+// int(position) mapping read the wrong entries in ReadFrom and indexed out of
+// range (panic) in FindPositionAtTime.
+func TestRingBuffer_ReadFromAndFindPositionAfterClear(t *testing.T) {
+	t.Parallel()
+	rb := NewRingBuffer[int](5)
+	rb.Write([]int{1, 2, 3}) // positions 0-2
+	rb.Clear()               // totalAdded stays at 3, entries empty
+	rb.Write([]int{4, 5})    // positions 3-4 at slice indices 0-1
+
+	// ReadFrom with a pre-clear cursor must return exactly the post-clear entries.
+	entries, cursor := rb.ReadFrom(BufferCursor{Position: 3})
+	if len(entries) != 2 {
+		t.Fatalf("Expected 2 entries after clear, got %d (%v)", len(entries), entries)
+	}
+	if entries[0] != 4 || entries[1] != 5 {
+		t.Errorf("Expected [4 5], got %v", entries)
+	}
+	if cursor.Position != 5 {
+		t.Errorf("Expected cursor at 5, got %d", cursor.Position)
+	}
+
+	// FindPositionAtTime must not panic and must resolve to the oldest
+	// surviving entry's monotonic position (3), not its slice index (0).
+	pos := rb.FindPositionAtTime(time.Time{}) // zero time matches every entry
+	if pos != 3 {
+		t.Errorf("FindPositionAtTime = %d, want 3 (oldest post-clear position)", pos)
+	}
+
+	// Reading from that position must include all surviving entries.
+	entries, _ = rb.ReadFrom(BufferCursor{Position: pos})
+	if len(entries) != 2 || entries[0] != 4 {
+		t.Errorf("ReadFrom(FindPositionAtTime) = %v, want [4 5]", entries)
+	}
+}
+
 // ============================================
 // Filtered Reads
 // ============================================

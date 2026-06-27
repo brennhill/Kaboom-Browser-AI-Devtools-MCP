@@ -27,7 +27,7 @@ First call: configure(what:'describe_capabilities', summary:true) for a compact 
 Key patterns:
 - Diagnostics: configure(what:'health') for daemon/extension status, observe(what:'pilot') for AI Web Pilot availability.
 - Browser automation: use interact to navigate to any URL, click buttons, type text, fill forms, and control the browser. Use observe(what="screenshot") to visually verify page state before and after actions.
-- Pagination: observe returns after_cursor/before_cursor in metadata. Pass them back for next page. Use restart_on_eviction=true if cursor expired.
+- Pagination: observe returns a 'cursor' in metadata. Pass it back as after_cursor for older entries or before_cursor for newer ones. Use restart_on_eviction=true if cursor expired.
 - Async analysis: analyze dispatches to the extension; poll results with observe(what="command_result", correlation_id=...).
 - Error debugging: start with observe(what="error_bundles") for pre-assembled context per error (error + network + actions + logs).
 - Performance: interact(what="navigate"|"refresh") auto-includes perf_diff. Add analyze=true to any interact action for profiling.

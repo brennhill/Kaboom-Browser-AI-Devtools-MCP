@@ -161,7 +161,7 @@ describe('set_server_url', () => {
 // ============================================
 
 describe('log message handling', () => {
-  test('log message is handled asynchronously', async () => {
+  test('log message is handled asynchronously as fire-and-forget', async () => {
     const { handler, deps } = getInstalledHandler()
     const sendResponse = mock.fn()
     const result = handler(
@@ -169,9 +169,12 @@ describe('log message handling', () => {
       contentScriptSender,
       sendResponse
     )
-    assert.strictEqual(result, true, 'should return true for async response')
+    // Regression: returning true without ever calling sendResponse rejects
+    // awaited senders with "message port closed" — log is fire-and-forget.
+    assert.strictEqual(result, false, 'should return false for fire-and-forget handling')
     await new Promise(r => setTimeout(r, 10))
     assert.strictEqual(deps.handleLogMessage.mock.calls.length, 1)
+    assert.strictEqual(sendResponse.mock.calls.length, 0, 'no response is sent for log messages')
   })
 })
 

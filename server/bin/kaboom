@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// bin/gasoline — Cross-platform launcher for the gasoline binary.
+// bin/kaboom — Cross-platform launcher for the kaboom-agentic-browser binary.
 // npm's bin field points here. Works on Unix (via shebang) and Windows (via node).
 
 const { execFileSync } = require('child_process')
@@ -16,12 +16,13 @@ if (!platform || !arch) {
 }
 
 const ext = process.platform === 'win32' ? '.exe' : ''
-const binaryName = `gasoline-${platform}-${arch}${ext}`
+// Must match the binary name downloaded by scripts/install.js (BINARY_NAME-<plat>-<arch>).
+const binaryName = `kaboom-agentic-browser-${platform}-${arch}${ext}`
 const binaryPath = path.join(__dirname, binaryName)
 
 if (!fs.existsSync(binaryPath)) {
   console.error(`Binary not found: ${binaryPath}`)
-  console.error('Run "npm install gasoline-mcp" to download the binary for your platform.')
+  console.error('Run "npm install kaboom-agentic-browser" to download the binary for your platform.')
   process.exit(1)
 }
 

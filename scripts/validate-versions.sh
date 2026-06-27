@@ -31,6 +31,7 @@ check_version() {
 }
 
 # Check all locations
+check_version "package.json" '"version":'
 check_version "$CMD_DIR/main.go" 'var version = "'
 check_version "extension/manifest.json" '"version":'
 check_version "extension/package.json" '"version":'
@@ -104,37 +105,8 @@ else
     fi
 fi
 
-# Check PyPI packages
-echo ""
-echo "Checking PyPI packages..."
-PYPI_ERRORS=0
-for f in pypi/*/pyproject.toml; do
-    if [ -f "$f" ]; then
-        PYPI_VERSION=$(grep '^version = ' "$f" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "NOT_FOUND")
-        if [ "$PYPI_VERSION" != "$VERSION" ]; then
-            echo "❌ $f: Expected $VERSION, found $PYPI_VERSION"
-            PYPI_ERRORS=$((PYPI_ERRORS + 1))
-        else
-            echo "✅ $f"
-        fi
-    fi
-done
-
-for f in pypi/*/*/__init__.py; do
-    if [ -f "$f" ]; then
-        PYPI_VERSION=$(grep '__version__ = ' "$f" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "NOT_FOUND")
-        if [ "$PYPI_VERSION" != "$VERSION" ] && [ "$PYPI_VERSION" != "NOT_FOUND" ]; then
-            echo "❌ $f: Expected $VERSION, found $PYPI_VERSION"
-            PYPI_ERRORS=$((PYPI_ERRORS + 1))
-        else
-            echo "✅ $f"
-        fi
-    fi
-done
-
-if [ $PYPI_ERRORS -gt 0 ]; then
-    ERRORS=$((ERRORS + PYPI_ERRORS))
-fi
+# PyPI checks removed: pypi/ packaging tree no longer exists in this repo.
+# If PyPI distribution returns, re-add per-package pyproject.toml/__init__.py checks here.
 
 echo ""
 if [ $ERRORS -eq 0 ]; then

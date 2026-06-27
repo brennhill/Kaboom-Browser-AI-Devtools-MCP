@@ -31,6 +31,9 @@ import { postDaemonJSON } from '../lib/daemon-http.js'
 import { getLocal, getLocals, setLocal } from '../lib/storage-utils.js'
 import { resolveTerminalWorkspaceTarget, setKaboomOverlayVisibility } from './tab-state.js'
 import { trackUIFeature } from './ui-usage-tracker.js'
+// Static import: dynamic import() is not allowed in MV3 service workers.
+// terminal-widget-types.js is a pure helper module (constants + types, no DOM access at load time).
+import { getTerminalServerUrl } from '../content/ui/terminal-widget-types.js'
 
 // =============================================================================
 // TYPE DEFINITIONS
@@ -216,7 +219,9 @@ function handleMessage(
     case 'network_body':
       if (deps.isNetworkBodyCaptureDisabled()) {
         deps.debugLog('capture', 'Network body dropped: capture disabled')
-        return true
+        // Fire-and-forget: returning true without calling sendResponse would
+        // reject the sender's awaited sendMessage with "message port closed".
+        return false
       }
       // Attach tab_id from sender before batching (v5.3+)
       deps.addToNetworkBodyBatcher({ ...message.payload, tab_id: message.payload.tab_id ?? message.tabId })
@@ -227,8 +232,10 @@ function handleMessage(
       return false
 
     case 'log':
+      // Fire-and-forget: content scripts never await a response for log messages.
+      // Returning true without calling sendResponse would reject awaited senders.
       handleLogMessageAsync(message, sender, deps)
-      return true
+      return false
 
     case 'get_status':
       sendResponse({
@@ -702,7 +709,6 @@ async function handleQaScanRequestedAsync(
   sendResponse: (response: Record<string, unknown>) => void,
   deps: MessageHandlerDependencies
 ): Promise<void> {
-  const { getTerminalServerUrl } = await import('../content/ui/terminal-widget-types.js')
   const termUrl = getTerminalServerUrl(deps.getServerUrl())
 
   // Try PTY injection first — works whether the side panel is open or closed.

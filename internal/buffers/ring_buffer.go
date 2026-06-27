@@ -232,10 +232,13 @@ func (rb *RingBuffer[T]) Clear() {
 // positionToIndex converts a monotonic position to a buffer index.
 // Must be called with at least a read lock held.
 func (rb *RingBuffer[T]) positionToIndex(position int64) int {
-	if len(rb.entries) < rb.capacity {
-		return int(position)
-	}
 	oldestPosition := rb.totalAdded - int64(len(rb.entries))
+	if len(rb.entries) < rb.capacity {
+		// Entries are stored at indices 0..len-1, oldest first. Offsetting by
+		// oldestPosition matters after Clear(): totalAdded keeps counting, so
+		// position alone would index past the slice (panic) or read wrong entries.
+		return int(position - oldestPosition)
+	}
 	offset := int(position - oldestPosition)
 	return (rb.head + offset) % rb.capacity
 }

@@ -235,6 +235,7 @@ func TestApplyActionCursorPagination_BeforeCursor(t *testing.T) {
 					metadata,
 					result[0].Timestamp,
 					result[len(result)-1].Timestamp,
+					result[len(result)-1].Timestamp,
 					result[len(result)-1].Sequence,
 				)
 			}

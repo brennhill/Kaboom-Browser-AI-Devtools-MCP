@@ -30,6 +30,7 @@ var forceCleanupCommandNames = []string{"kaboom", "gasoline", "strum"}
 func killUnixKaboomProcesses() (int, int) {
 	killed := 0
 	failedToKill := 0
+	selfPID := os.Getpid()
 
 	for _, commandName := range forceCleanupCommandNames {
 		cmd := exec.Command("lsof", "-c", commandName)
@@ -37,16 +38,7 @@ func killUnixKaboomProcesses() (int, int) {
 		if err != nil {
 			continue
 		}
-		lines := strings.Split(string(output), "\n")
-		for _, line := range lines {
-			fields := strings.Fields(line)
-			if len(fields) < 2 {
-				continue
-			}
-			pid, err := strconv.Atoi(fields[1])
-			if err != nil || pid <= 0 {
-				continue
-			}
+		for _, pid := range lsofListedPIDs(string(output), selfPID) {
 			k, f := terminateProcess(pid)
 			killed += k
 			failedToKill += f
@@ -60,6 +52,25 @@ func killUnixKaboomProcesses() (int, int) {
 	}
 
 	return killed, failedToKill
+}
+
+// lsofListedPIDs parses `lsof -c <name>` output into candidate PIDs.
+// selfPID is excluded: `lsof -c kaboom` prefix-matches the running binary's
+// own command name, and force-cleanup must never signal itself.
+func lsofListedPIDs(output string, selfPID int) []int {
+	pids := []int{}
+	for _, line := range strings.Split(output, "\n") {
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+		pid, err := strconv.Atoi(fields[1])
+		if err != nil || pid <= 0 || pid == selfPID {
+			continue
+		}
+		pids = append(pids, pid)
+	}
+	return pids
 }
 
 // terminateProcess sends SIGTERM then SIGKILL to a process. Returns (killed, failed) counts.

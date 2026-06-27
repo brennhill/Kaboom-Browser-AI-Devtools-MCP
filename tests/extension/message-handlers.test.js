@@ -149,10 +149,12 @@ describe('message routing', () => {
     const { handler, deps } = getInstalledHandler({
       isNetworkBodyCaptureDisabled: mock.fn(() => true)
     })
-    handler({
+    const result = handler({
       type: 'network_body',
       payload: { url: 'https://api.example.com' }
     }, contentScriptSender, mock.fn())
+    // Regression: returning true without responding hangs awaited senders.
+    assert.strictEqual(result, false, 'dropped network_body must not promise an async response')
     assert.strictEqual(deps.addToNetworkBodyBatcher.mock.calls.length, 0)
     assert.ok(deps.debugLog.mock.calls.some(
       c => c.arguments[1].includes('capture disabled')

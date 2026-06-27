@@ -634,7 +634,7 @@ export async function resolveTargetTab(
     }
 
     diagnosticLog(`[Diagnostic] Tracked tab ${trackedTabId} unavailable, clearing tracking state`)
-    clearTrackedTab()
+    await clearTrackedTab()
 
     try {
       const toastTab = await getActiveTab()

@@ -8,7 +8,12 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
-const { KNOWN_PORTS } = require('./kill-daemon');
+const {
+  KNOWN_PORTS,
+  matchesDaemonCommandLine,
+  isKaboomDaemonHealth,
+  killByKnownPorts,
+} = require('./kill-daemon');
 
 function writeExecutable(filePath, body) {
   fs.writeFileSync(filePath, body, { mode: 0o755 });
@@ -47,9 +52,56 @@ test('cleanup targets kaboom and legacy daemon names', () => {
     return;
   }
 
-  assert.match(log, /\[pattern\] kaboom-agentic-browser/, 'expected cleanup to target kaboom-agentic-browser');
-  assert.match(log, /\[pattern\] gasoline-mcp/, 'expected cleanup to target gasoline-mcp');
-  assert.match(log, /\[pattern\] browser-agent/, 'expected cleanup to target legacy browser-agent');
+  assert.match(
+    log,
+    /\[pattern\] .*\(kaboom\|gasoline\|strum\)-/,
+    'expected cleanup to target anchored full daemon binary names'
+  );
+  assert.doesNotMatch(log, /\[pattern\] kaboom\s*$/m, 'must not pgrep on bare "kaboom"');
+  assert.doesNotMatch(log, /\[pattern\] gasoline\s*$/m, 'must not pgrep on bare "gasoline"');
+});
+
+// --- Identity-gated process matching (regression: blind kills by substring/port) ---
+
+test('daemon command-line matching only targets full kaboom binary names', () => {
+  // Must NOT match unrelated processes that merely mention "kaboom"/"gasoline".
+  assert.equal(matchesDaemonCommandLine('vim /Users/dev/kaboom/notes.md'), false);
+  assert.equal(matchesDaemonCommandLine('tail -f /var/log/gasoline'), false);
+  assert.equal(matchesDaemonCommandLine('bash ./strum-along.sh'), false);
+  // Must match real daemon binary names (current and legacy).
+  assert.equal(matchesDaemonCommandLine('/usr/local/bin/kaboom-agentic-browser --port 7890'), true);
+  assert.equal(matchesDaemonCommandLine('gasoline-mcp --port 7890'), true);
+  assert.equal(matchesDaemonCommandLine('strum-agentic-browser serve'), true);
+  assert.equal(matchesDaemonCommandLine('/home/u/.kaboom/bin/kaboom-agentic-browser'), true);
+});
+
+test('health identity check accepts kaboom and legacy daemons only', () => {
+  assert.equal(isKaboomDaemonHealth({ 'service-name': 'kaboom-browser-devtools' }), true);
+  assert.equal(isKaboomDaemonHealth({ service_name: 'kaboom-browser-devtools' }), true);
+  assert.equal(isKaboomDaemonHealth({ 'service-name': 'gasoline-browser-devtools' }), true);
+  assert.equal(isKaboomDaemonHealth({ service_name: 'gasoline' }), true);
+  assert.equal(isKaboomDaemonHealth({ 'service-name': 'strum-browser-devtools' }), true);
+  assert.equal(isKaboomDaemonHealth({ 'service-name': 'vite-dev-server' }), false);
+  assert.equal(isKaboomDaemonHealth({ 'service-name': 'my-kaboom-clone-2' }), false);
+  assert.equal(isKaboomDaemonHealth({}), false);
+  assert.equal(isKaboomDaemonHealth(null), false);
+});
+
+test('killByKnownPorts only kills ports whose /health identifies a kaboom daemon', async () => {
+  if (process.platform === 'win32') return;
+  const killed = [];
+  const probed = [];
+  await killByKnownPorts({
+    fetchHealth: async (port) => {
+      probed.push(port);
+      if (port === 7890) return { 'service-name': 'kaboom-browser-devtools' };
+      if (port === 7891) return { 'service-name': 'vite-dev-server' };
+      return null; // no /health listener — must not be killed
+    },
+    killPort: (port) => killed.push(port),
+  });
+  assert.deepEqual(killed, [7890], 'must only kill ports owned by a kaboom daemon');
+  assert.equal(probed.length, KNOWN_PORTS.length, 'must probe every known port');
 });
 
 test('cleanup removes kaboom and legacy pid files', () => {

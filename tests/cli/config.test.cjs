@@ -205,6 +205,15 @@ test('config.parseEnvVar parses complex values', () => {
   assert.strictEqual(result.value, 'http://localhost:7890', 'Complex value should be extracted')
 })
 
+test('config.parseEnvVar splits on the first equals sign only', () => {
+  const result = config.parseEnvVar('TOKEN=abc=def')
+  assert.strictEqual(result.key, 'TOKEN', 'Key should be extracted')
+  assert.strictEqual(result.value, 'abc=def', 'Value containing "=" should be kept intact')
+
+  const b64 = config.parseEnvVar('SECRET=dGVzdA==')
+  assert.strictEqual(b64.value, 'dGVzdA==', 'Base64 padding should survive')
+})
+
 test('config.parseEnvVar rejects invalid format', () => {
   assert.throws(() => config.parseEnvVar('INVALID'), /InvalidEnvFormatError/, 'Should throw for missing equals')
 

@@ -27,8 +27,15 @@ func (t *WSConnectionTracker) trackEvent(event WebSocketEvent) {
 //
 // Invariants:
 // - Active connection map is bounded by maxActiveConns using oldest-id eviction.
+// - connOrder never contains duplicate IDs: re-opening a known ID moves it to
+//   the most-recent slot instead of appending a second entry (which would make
+//   eviction silently drop a still-open connection's order slot).
 func (t *WSConnectionTracker) trackConnOpen(event WebSocketEvent) {
-	if len(t.connections) >= maxActiveConns && len(t.connOrder) > 0 {
+	if _, exists := t.connections[event.ID]; exists {
+		// Re-open of a known ID refreshes state; no eviction needed since the
+		// connection count does not grow.
+		t.connOrder = removeFromSlice(t.connOrder, event.ID)
+	} else if len(t.connections) >= maxActiveConns && len(t.connOrder) > 0 {
 		oldestID := t.connOrder[0]
 		delete(t.connections, oldestID)
 		newOrder := make([]string, len(t.connOrder)-1)

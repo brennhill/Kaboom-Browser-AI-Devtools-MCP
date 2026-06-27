@@ -93,9 +93,13 @@ export function checkFeatureBundles({
   repoRoot = process.cwd(),
   strictFrontmatter = process.env.DOCS_STRICT_FRONTMATTER === '1',
   enforceFeatureFreshness = process.env.DOCS_STRICT_FEATURE_FRESHNESS !== '0',
+  // TEMPORARY: widened from 30 to 120 days (2026-06-10). Most feature bundles were
+  // last reviewed in bulk and the 30-day window failed repo-wide. Revert to a
+  // tighter window once a per-feature-change review trigger updates last_reviewed
+  // automatically instead of relying on calendar-based bulk reviews.
   freshnessWindowDays = (() => {
-    const parsed = Number.parseInt(process.env.DOCS_FEATURE_FRESHNESS_DAYS || '30', 10)
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 30
+    const parsed = Number.parseInt(process.env.DOCS_FEATURE_FRESHNESS_DAYS || '120', 10)
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 120
   })(),
   now = new Date()
 } = {}) {

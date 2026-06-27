@@ -7,7 +7,11 @@ import { scaleTimeout } from '../lib/timeouts.js'
 import { delay } from '../lib/timeout-utils.js'
 import { KABOOM_LOG_PREFIX } from '../lib/brand.js'
 import { StorageKey } from '../lib/constants.js'
-import { getLocal, getLocals, setLocal, setLocals, removeLocals } from '../lib/storage-utils.js'
+import { getLocal, getLocals, setLocal, setLocals } from '../lib/storage-utils.js'
+import { TRACKED_TAB_STORAGE_KEYS } from '../lib/tracked-tab-storage.js'
+
+// Shared tracked-tab storage helpers (also used by the popup) — single source of truth.
+export { setTrackedTab, clearTrackedTab, TRACKED_TAB_STORAGE_KEYS } from '../lib/tracked-tab-storage.js'
 
 // =============================================================================
 // CONTENT SCRIPT HELPERS
@@ -159,7 +163,6 @@ export interface TerminalWorkspaceTarget {
   tabGroupId: number
 }
 
-const TRACKED_TAB_STORAGE_KEYS = [StorageKey.TRACKED_TAB_ID, StorageKey.TRACKED_TAB_URL, StorageKey.TRACKED_TAB_TITLE]
 const TERMINAL_WORKSPACE_STORAGE_KEYS = [
   StorageKey.TERMINAL_WORKSPACE_GROUP_ID,
   StorageKey.TERMINAL_WORKSPACE_MAIN_TAB_ID,
@@ -247,25 +250,6 @@ export async function getTrackedTabInfo(): Promise<TrackedTabInfo> {
     tabStatus,
     trackedTabActive
   }
-}
-
-/**
- * Persist tracked tab state.
- */
-export async function setTrackedTab(tab: Pick<chrome.tabs.Tab, 'id' | 'url' | 'title'>): Promise<void> {
-  if (!tab.id) return
-  await setLocals({
-    [StorageKey.TRACKED_TAB_ID]: tab.id,
-    [StorageKey.TRACKED_TAB_URL]: tab.url ?? '',
-    [StorageKey.TRACKED_TAB_TITLE]: tab.title ?? ''
-  })
-}
-
-/**
- * Clear tracked tab state
- */
-export function clearTrackedTab(): void {
-  removeLocals(TRACKED_TAB_STORAGE_KEYS)
 }
 
 export async function resolveTerminalWorkspaceTarget(requestTabId?: number): Promise<TerminalWorkspaceTarget | null> {

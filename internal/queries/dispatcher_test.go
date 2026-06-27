@@ -471,6 +471,64 @@ func TestNewQueryDispatcher_WaitForResult_Async(t *testing.T) {
 }
 
 // ============================================
+// WaitForPendingQueries Tests
+// ============================================
+
+// TestNewQueryDispatcher_WaitForPendingQueries_WakesAllWaiters is the
+// regression test for the single buffered queryNotify token: with N pollers
+// blocked in WaitForPendingQueries, one enqueue woke only one of them and the
+// rest slept until their full timeout. The close-and-rotate pattern (mirroring
+// commandNotify) must wake every waiter.
+func TestNewQueryDispatcher_WaitForPendingQueries_WakesAllWaiters(t *testing.T) {
+	t.Parallel()
+
+	qd := NewQueryDispatcher()
+	defer qd.Close()
+
+	const waiters = 3
+	done := make(chan struct{}, waiters)
+	for i := 0; i < waiters; i++ {
+		go func() {
+			qd.WaitForPendingQueries(10 * time.Second)
+			done <- struct{}{}
+		}()
+	}
+
+	// Let the waiters block. Late arrivals are still safe: once the queue is
+	// non-empty, WaitForPendingQueries returns immediately.
+	time.Sleep(50 * time.Millisecond)
+
+	if _, err := qd.CreatePendingQuery(PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)}); err != nil {
+		t.Fatalf("CreatePendingQuery error = %v", err)
+	}
+
+	for i := 0; i < waiters; i++ {
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+			t.Fatalf("only %d of %d waiters woke within 2s after enqueue", i, waiters)
+		}
+	}
+}
+
+func TestNewQueryDispatcher_WaitForPendingQueries_ImmediateWhenNonEmpty(t *testing.T) {
+	t.Parallel()
+
+	qd := NewQueryDispatcher()
+	defer qd.Close()
+
+	if _, err := qd.CreatePendingQuery(PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)}); err != nil {
+		t.Fatalf("CreatePendingQuery error = %v", err)
+	}
+
+	start := time.Now()
+	qd.WaitForPendingQueries(5 * time.Second)
+	if elapsed := time.Since(start); elapsed > time.Second {
+		t.Fatalf("WaitForPendingQueries blocked %v with a non-empty queue", elapsed)
+	}
+}
+
+// ============================================
 // SetQueryTimeout / GetQueryTimeout Tests
 // ============================================
 

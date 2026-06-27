@@ -37,11 +37,16 @@ func (qd *QueryDispatcher) CreatePendingQueryWithClient(query PendingQuery, clie
 }
 
 // CreatePendingQueryWithTimeout enqueues one command for extension pickup.
+//
+// Invariants:
+// - Signaling is edge-triggered by closing queryNotify then replacing it under
+//   mu (same pattern as commandNotify) so every blocked waiter wakes, not just one.
 func (qd *QueryDispatcher) CreatePendingQueryWithTimeout(query PendingQuery, timeout time.Duration, clientID string) (string, error) {
 	type pendingQueryPlan struct {
 		id            string
 		correlationID string
 		queueFull     bool
+		notify        chan struct{}
 	}
 	plan := func() pendingQueryPlan {
 		qd.mu.Lock()
@@ -71,9 +76,12 @@ func (qd *QueryDispatcher) CreatePendingQueryWithTimeout(query PendingQuery, tim
 		}
 
 		qd.pendingQueries = append(qd.pendingQueries, entry)
+		notify := qd.queryNotify
+		qd.queryNotify = make(chan struct{})
 		return pendingQueryPlan{
 			id:            id,
 			correlationID: query.CorrelationID,
+			notify:        notify,
 		}
 	}()
 	if plan.queueFull {
@@ -88,10 +96,7 @@ func (qd *QueryDispatcher) CreatePendingQueryWithTimeout(query PendingQuery, tim
 		return "", ErrQueueFull
 	}
 
-	select {
-	case qd.queryNotify <- struct{}{}:
-	default:
-	}
+	close(plan.notify)
 
 	if plan.correlationID != "" {
 		qd.RegisterCommand(plan.correlationID, plan.id, timeout)
@@ -102,16 +107,20 @@ func (qd *QueryDispatcher) CreatePendingQueryWithTimeout(query PendingQuery, tim
 
 // WaitForPendingQueries blocks until queue is non-empty or timeout elapses.
 func (qd *QueryDispatcher) WaitForPendingQueries(timeout time.Duration) {
-	if func() bool {
+	notify := func() chan struct{} {
 		qd.mu.Lock()
 		defer qd.mu.Unlock()
-		return len(qd.pendingQueries) > 0
-	}() {
+		if len(qd.pendingQueries) > 0 {
+			return nil
+		}
+		return qd.queryNotify
+	}()
+	if notify == nil {
 		return
 	}
 
 	select {
-	case <-qd.queryNotify:
+	case <-notify:
 	case <-time.After(timeout):
 	}
 }

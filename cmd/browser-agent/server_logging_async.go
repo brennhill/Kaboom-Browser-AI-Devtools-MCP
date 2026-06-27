@@ -11,25 +11,15 @@ import (
 	"time"
 )
 
-// addEntries adds new entries and rotates if needed.
-// #lizard forgives
+// addEntries adds new entries to the in-memory window and queues them for
+// append-only persistence. The hot path performs no file I/O: all file writes
+// (appends, compaction rewrites, size rotation) happen on the async logger
+// worker goroutine, which is the single file writer.
 func (ls *LogStore) addEntries(newEntries []LogEntry) int {
-	rotated, entriesToSave, appendOnly, cb := ls.addEntriesInMemory(newEntries)
+	appendOnly, cb := ls.addEntriesInMemory(newEntries)
 
-	// File I/O outside lock — snapshot protects consistency
-	// Note: If clearEntries() is called between unlock and file I/O, the file may temporarily contain
-	// stale entries that were cleared from memory. This is acceptable because:
-	// 1. In-memory entries are always consistent (cleared immediately)
-	// 2. On rotation, the entire file is rewritten with fresh data
-	// 3. The window is very short (microseconds typically)
-	if rotated {
-		if err := ls.saveEntriesCopy(entriesToSave); err != nil {
-			ls.addWarning(fmt.Sprintf("log_save_failed: %v", err))
-		}
-	} else {
-		if err := ls.appendToFile(appendOnly); err != nil {
-			ls.addWarning(fmt.Sprintf("log_append_failed: %v", err))
-		}
+	if err := ls.appendToFile(appendOnly); err != nil {
+		ls.addWarning(fmt.Sprintf("log_append_failed: %v", err))
 	}
 
 	// Notify listeners outside the lock (e.g., cluster manager)
@@ -40,8 +30,11 @@ func (ls *LogStore) addEntries(newEntries []LogEntry) int {
 	return len(newEntries)
 }
 
-// addEntriesInMemory mutates log state under lock and returns snapshots for I/O outside the lock.
-func (ls *LogStore) addEntriesInMemory(newEntries []LogEntry) (rotated bool, entriesToSave []LogEntry, appendOnly []LogEntry, cb func([]LogEntry)) {
+// addEntriesInMemory mutates log state under lock and returns a snapshot of the
+// new entries for async file I/O outside the lock. The in-memory window is
+// trimmed to maxEntries here; the file is compacted separately by the async
+// worker (see maybeCompactLogFile) so steady-state ingest stays append-only.
+func (ls *LogStore) addEntriesInMemory(newEntries []LogEntry) (appendOnly []LogEntry, cb func([]LogEntry)) {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
 
@@ -59,9 +52,8 @@ func (ls *LogStore) addEntriesInMemory(newEntries []LogEntry) (rotated bool, ent
 	}
 	ls.entries = append(ls.entries, newEntries...)
 
-	// Rotate if needed — copy to new slice to allow GC of evicted entries
-	rotated = len(ls.entries) > ls.maxEntries
-	if rotated {
+	// Trim the in-memory window — copy to new slice to allow GC of evicted entries
+	if len(ls.entries) > ls.maxEntries {
 		kept := make([]LogEntry, ls.maxEntries)
 		copy(kept, ls.entries[len(ls.entries)-ls.maxEntries:])
 		ls.entries = kept
@@ -70,19 +62,16 @@ func (ls *LogStore) addEntriesInMemory(newEntries []LogEntry) (rotated bool, ent
 		ls.logAddedAt = keptAt
 	}
 
-	// Snapshot data for file I/O outside the lock
-	if rotated {
-		entriesToSave = make([]LogEntry, len(ls.entries))
-		copy(entriesToSave, ls.entries)
-	} else {
-		appendOnly = make([]LogEntry, len(newEntries))
-		copy(appendOnly, newEntries)
-	}
+	// Snapshot new entries for file I/O outside the lock
+	appendOnly = make([]LogEntry, len(newEntries))
+	copy(appendOnly, newEntries)
 	cb = ls.onEntries
-	return rotated, entriesToSave, appendOnly, cb
+	return appendOnly, cb
 }
 
-// asyncLoggerWorker runs in a background goroutine and handles all file I/O.
+// asyncLoggerWorker runs in a background goroutine and is the single writer
+// for the log file: it appends queued batches and performs occasional
+// compaction rewrites. No other goroutine writes the file on the hot path.
 func (ls *LogStore) asyncLoggerWorker() {
 	defer close(ls.logDone)
 
@@ -91,6 +80,7 @@ func (ls *LogStore) asyncLoggerWorker() {
 		if err := ls.appendToFileSync(entries); err != nil {
 			ls.addWarning(fmt.Sprintf("log_write_failed: %v", err))
 		}
+		ls.maybeCompactLogFile()
 	}
 }
 
@@ -99,6 +89,8 @@ func (ls *LogStore) appendToFileSync(entries []LogEntry) error {
 	if ls.logFile == "" {
 		return nil
 	}
+	ls.fileMu.Lock()
+	defer ls.fileMu.Unlock()
 	f, err := os.OpenFile(ls.logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600) // #nosec G304 -- path set at startup
 	if err != nil {
 		return err
@@ -108,6 +100,7 @@ func (ls *LogStore) appendToFileSync(entries []LogEntry) error {
 			ls.addWarning(fmt.Sprintf("log_close_failed: %v", closeErr))
 		}
 	}()
+	ls.fileAppendCount.Add(1)
 
 	for _, entry := range entries {
 		data, err := json.Marshal(entry)
@@ -120,6 +113,7 @@ func (ls *LogStore) appendToFileSync(entries []LogEntry) error {
 		if _, err := f.WriteString("\n"); err != nil {
 			return err
 		}
+		ls.fileEntryCount.Add(1)
 	}
 
 	// Check file size and rotate if needed (non-blocking, off the hot path)
@@ -150,7 +144,43 @@ func (ls *LogStore) maybeRotateLogFile(f *os.File) {
 		ls.addWarning(fmt.Sprintf("log_rotate_failed: %v", err))
 		return
 	}
+	// The next append starts a fresh, empty file.
+	ls.fileEntryCount.Store(0)
 	ls.addWarning(fmt.Sprintf("log_rotated: %s -> %s (%d bytes)", ls.logFile, oldFile, fi.Size()))
+}
+
+// maybeCompactLogFile rewrites the log file with the in-memory window once the
+// file has accumulated more than logCompactionFactor*maxEntries entries.
+// Hysteresis keeps steady-state ingest append-only (append-only I/O on hot
+// paths); the rewrite runs on the async worker goroutine so the file has a
+// single writer. Compaction is deferred while batches are still queued:
+// rewriting from memory would re-append queued entries afterwards (duplicates).
+func (ls *LogStore) maybeCompactLogFile() {
+	if ls.logFile == "" || ls.maxEntries <= 0 {
+		return
+	}
+	if ls.fileEntryCount.Load() <= int64(logCompactionFactor*ls.maxEntries) {
+		return
+	}
+	if len(ls.logChan) > 0 {
+		return
+	}
+
+	gen := ls.clearGen.Load()
+	snapshot := ls.getEntries()
+
+	ls.fileMu.Lock()
+	defer ls.fileMu.Unlock()
+	if ls.clearGen.Load() != gen {
+		// clearEntries ran after the snapshot was taken; writing the snapshot
+		// would resurrect cleared entries. The file was already truncated.
+		return
+	}
+	if err := ls.saveEntriesCopy(snapshot); err != nil {
+		ls.addWarning(fmt.Sprintf("log_compact_failed: %v", err))
+		return
+	}
+	ls.fileEntryCount.Store(int64(len(snapshot)))
 }
 
 // appendToFile queues log entries for async writing (never blocks).
@@ -175,16 +205,26 @@ func (ls *LogStore) appendToFile(entries []LogEntry) error {
 	}
 }
 
-// clearEntries removes all entries.
+// clearEntries removes all entries from memory and truncates the log file.
+// The truncate synchronizes with the async worker via fileMu so it cannot
+// interleave with an in-progress append or compaction, and the clear
+// generation bump makes the worker discard compaction snapshots taken before
+// the clear. Batches already queued in logChan before the clear may still be
+// appended afterwards; that window is short and the next compaction rewrites
+// the file from (cleared) memory.
 func (ls *LogStore) clearEntries() {
 	ls.clearEntriesInMemory()
-	// Write empty file outside lock
-	// #nosec G306 -- log files are owner-only (0600) for privacy
-	if ls.logFile != "" {
-		if err := os.WriteFile(ls.logFile, []byte{}, 0600); err != nil {
-			ls.addWarning(fmt.Sprintf("log_clear_failed: %v", err))
-		}
+	if ls.logFile == "" {
+		return
 	}
+	ls.fileMu.Lock()
+	defer ls.fileMu.Unlock()
+	// #nosec G306 -- log files are owner-only (0600) for privacy
+	if err := os.WriteFile(ls.logFile, []byte{}, 0600); err != nil {
+		ls.addWarning(fmt.Sprintf("log_clear_failed: %v", err))
+		return
+	}
+	ls.fileEntryCount.Store(0)
 }
 
 func (ls *LogStore) clearEntriesInMemory() {
@@ -192,6 +232,7 @@ func (ls *LogStore) clearEntriesInMemory() {
 	defer ls.mu.Unlock()
 	ls.entries = nil
 	ls.logAddedAt = nil
+	ls.clearGen.Add(1)
 }
 
 // shutdownAsyncLogger gracefully shuts down the async logger, draining remaining logs.

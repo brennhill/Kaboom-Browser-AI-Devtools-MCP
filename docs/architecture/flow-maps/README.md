@@ -4,7 +4,7 @@ status: active
 last_reviewed: 2026-04-13
 owners:
   - Brenn
-last_verified_version: 0.8.2
+last_verified_version: 0.8.3
 last_verified_date: 2026-04-13
 ---
 
@@ -67,6 +67,7 @@ Each flow map should include:
 - [Feature Doc Frontmatter and Freshness Gates](./feature-doc-frontmatter-freshness-gates.md)
 - [LLM Fast Verify Gate](./llm-fast-verify-gate.md)
 - [Installer Binary Path and Manual Extension Handoff](./installer-binary-path-and-manual-extension-handoff.md)
+- [Uninstall and Cleanup](./uninstall-and-cleanup.md)
 - [Interact Navigate and Document](./interact-navigate-and-document.md)
 - [Interact Action Toast Label Normalization](./interact-action-toast-label-normalization.md)
 - [Interact Action Surface Registry](./interact-action-surface-registry.md)

@@ -26,9 +26,9 @@ import (
 // 2. Monotonic counters that survive eviction (wsTotalAdded, networkTotalAdded, actionTotalAdded)
 // 3. Memory totals that estimate buffer overhead (wsMemoryTotal, networkBodyMemoryTotal)
 //
-// Rate limiting uses a sliding 1-second window with circuit breaker:
+// Rate limiting uses a sliding 1-second window with circuit breaker (see internal/circuit):
 // windowEventCount resets per window. rateLimitStreak tracks consecutive seconds over threshold.
-// Circuit opens after 5+ consecutive seconds or memory spike; closes after 10s below threshold + memory < 30MB.
+// Circuit opens after 5 consecutive seconds over threshold; closes after 10s below threshold.
 // lastBelowThresholdAt tracks when rate dropped below threshold (initialized at startup to prevent false close).
 type Capture struct {
 	mu sync.RWMutex

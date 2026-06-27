@@ -6,7 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-03-05
 code_paths:
-  - cmd/browser-agent/tools_analyze.go
+  - cmd/browser-agent/tools_analyze_dispatch.go
   - src/lib/link-health.ts
   - src/background/pending-queries.ts
   - src/content/message-handlers.ts

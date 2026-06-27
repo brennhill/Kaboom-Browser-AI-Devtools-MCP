@@ -17,6 +17,13 @@ type LogEntry = mcp.LogEntry
 // defaultMaxFileSize is the log file size threshold for rotation (50MB).
 const defaultMaxFileSize int64 = 50 * 1024 * 1024
 
+// logCompactionFactor sets the file-rewrite hysteresis: the async worker only
+// compacts (rewrites) the log file once it holds more than
+// logCompactionFactor*maxEntries appended entries. Steady-state ingest is
+// append-only; without hysteresis every POST past the in-memory cap would
+// rewrite the whole file.
+const logCompactionFactor = 2
+
 // LogStore holds log entry state, TTL rotation, and async file I/O pipeline.
 type LogStore struct {
 	logFile     string
@@ -36,7 +43,16 @@ type LogStore struct {
 	logChan       chan []LogEntry // buffered channel for async log writes
 	logDropCount  int64           // atomic counter for dropped logs (when channel full)
 	logDone       chan struct{}   // signal when async logger exits
-	logChanClosed atomic.Bool    // guards against double-close panic on logChan
+	logChanClosed atomic.Bool     // guards against double-close panic on logChan
+
+	// Single-writer file persistence state. The async logger worker is the only
+	// hot-path file writer; clearEntries (rare, user-triggered) synchronizes with
+	// it via fileMu.
+	fileMu           sync.Mutex   // serializes all log-file writes (worker appends/compaction, clear truncate)
+	fileEntryCount   atomic.Int64 // approximate entry count in the log file (load/worker/clear maintained)
+	clearGen         atomic.Int64 // bumped by clearEntries; lets the worker discard stale compaction snapshots
+	fileAppendCount  atomic.Int64 // diagnostic: append batches written to the log file
+	fileRewriteCount atomic.Int64 // diagnostic: full-file rewrites (tmp+rename) performed
 
 	// addWarning is a callback to report warnings to the server.
 	// Set during construction to avoid circular dependency.

@@ -217,6 +217,17 @@ function diagnoseFileClient(def, verbose) {
   const servers = readResult.data[configKey] || {};
   const matchedName = knownServerNames().find((name) => Object.prototype.hasOwnProperty.call(servers, name));
   if (!matchedName) {
+    // Check legacy config keys (e.g. VS Code's old "mcpServers" key).
+    for (const legacyKey of def.legacyConfigKeys || []) {
+      const legacyServers = readResult.data[legacyKey] || {};
+      const legacyMatch = knownServerNames().find((name) => Object.prototype.hasOwnProperty.call(legacyServers, name));
+      if (legacyMatch) {
+        tool.status = 'error';
+        tool.issues.push(`MCP entry found under legacy "${legacyKey}" key; migrate to "${configKey}"`);
+        tool.suggestions.push('Run: kaboom-agentic-browser --install');
+        return tool;
+      }
+    }
     tool.issues.push(`${MCP_SERVER_NAME} entry missing from ${configKey}`);
     tool.suggestions.push('Run: kaboom-agentic-browser --install');
     return tool;

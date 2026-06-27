@@ -3,8 +3,10 @@
 // Docs: docs/features/feature/enhanced-cli-config/index.md
 
 // kill-daemon.js — Best-effort daemon cleanup for install/uninstall.
-// Goal: old binaries must not survive an upgrade in memory.
+// Goal: old binaries must not survive an upgrade in memory — without ever
+// killing unrelated processes that merely share a port or a name substring.
 const fs = require('fs');
+const http = require('http');
 const os = require('os');
 const path = require('path');
 const { execSync, execFileSync } = require('child_process');
@@ -13,6 +15,17 @@ const KNOWN_PORTS = [
   17890,
   ...Array.from({ length: 21 }, (_, i) => 7890 + i),
 ];
+
+// Anchored to full daemon binary names (current + legacy brands). Never use
+// bare substrings like "kaboom" — they match unrelated command lines
+// (e.g. `vim ~/dev/kaboom/notes.md`).
+const DAEMON_NAME_PATTERN =
+  '(kaboom|gasoline|strum)-(agentic-browser|agentic-devtools|browser-devtools|hooks|mcp)|\\.kaboom/bin/';
+const DAEMON_NAME_REGEX = new RegExp(DAEMON_NAME_PATTERN);
+
+// Accepted /health identities: current daemon plus legacy brand eras.
+const KABOOM_SERVICE_NAME_REGEX =
+  /^(kaboom|gasoline|strum)(-browser-devtools|-agentic-browser|-agentic-devtools|-mcp)?$/;
 
 const LOG_PATH = process.env.KABOOM_KILL_DAEMON_LOG;
 const DRY_RUN = process.env.KABOOM_KILL_DAEMON_DRY_RUN === '1';
@@ -53,6 +66,10 @@ function runForceCleanupCommands() {
   }
 }
 
+function matchesDaemonCommandLine(cmd) {
+  return DAEMON_NAME_REGEX.test(String(cmd || ''));
+}
+
 function killByProcessName() {
   if (process.platform === 'win32') {
     // Use wildcards so renamed legacy binaries are cleaned too.
@@ -67,41 +84,104 @@ function killByProcessName() {
   const parentPid = process.ppid;
   const isNodeCmd = (cmd) => /\bnode(\s|$)/.test(cmd) || /\bnpm(\s|$)/.test(cmd);
 
-  for (const pattern of ['kaboom-agentic-browser', 'gasoline-mcp', 'browser-agent', 'gasoline', 'kaboom']) {
-    logLine(`[pattern] ${pattern}`);
-    if (DRY_RUN) continue;
-    let output = '';
+  logLine(`[pattern] ${DAEMON_NAME_PATTERN}`);
+  if (DRY_RUN) return;
+  let output = '';
+  try {
+    output = execSync(`pgrep -af "${DAEMON_NAME_PATTERN}" 2>/dev/null`, { encoding: 'utf8' }).trim();
+  } catch (_) {
+    output = '';
+  }
+  if (!output) return;
+  for (const line of output.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    const [pidPart, ...cmdParts] = trimmed.split(/\s+/);
+    const pid = Number(pidPart);
+    const cmd = cmdParts.join(' ');
+    if (!Number.isFinite(pid) || pid <= 1) continue;
+    if (pid === selfPid || pid === parentPid) continue;
+    if (isNodeCmd(cmd)) continue;
+    // When pgrep reports the command line, re-verify it against the anchored pattern.
+    if (cmd && !matchesDaemonCommandLine(cmd)) continue;
     try {
-      output = execSync(`pgrep -af "${pattern}" 2>/dev/null`, { encoding: 'utf8' }).trim();
+      process.kill(pid, 'SIGKILL');
     } catch (_) {
-      output = '';
-    }
-    if (!output) continue;
-    for (const line of output.split('\n')) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-      const [pidPart, ...cmdParts] = trimmed.split(/\s+/);
-      const pid = Number(pidPart);
-      const cmd = cmdParts.join(' ');
-      if (!Number.isFinite(pid) || pid <= 1) continue;
-      if (pid === selfPid || pid === parentPid) continue;
-      if (isNodeCmd(cmd)) continue;
-      try {
-        process.kill(pid, 'SIGKILL');
-      } catch (_) {
-        // Best effort only.
-      }
+      // Best effort only.
     }
   }
 }
 
-function killByKnownPorts() {
+function resolveServiceName(health) {
+  if (!health || typeof health !== 'object') return '';
+  for (const key of ['service-name', 'service_name', 'service']) {
+    if (typeof health[key] === 'string' && health[key].trim()) {
+      return health[key].trim();
+    }
+  }
+  return '';
+}
+
+function isKaboomDaemonHealth(health) {
+  return KABOOM_SERVICE_NAME_REGEX.test(resolveServiceName(health).toLowerCase());
+}
+
+function readHealthIdentity(port, timeoutMs = 500) {
+  return new Promise((resolve) => {
+    const req = http.get(
+      { hostname: '127.0.0.1', port, path: '/health', timeout: timeoutMs },
+      (res) => {
+        let body = '';
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => {
+          body += chunk;
+          if (body.length > 64 * 1024) req.destroy();
+        });
+        res.on('end', () => {
+          if (res.statusCode !== 200) {
+            resolve(null);
+            return;
+          }
+          try {
+            resolve(JSON.parse(body));
+          } catch (_) {
+            resolve(null);
+          }
+        });
+      }
+    );
+    req.on('timeout', () => {
+      req.destroy();
+      resolve(null);
+    });
+    req.on('error', () => resolve(null));
+  });
+}
+
+async function killByKnownPorts(deps = {}) {
   if (process.platform === 'win32') {
     return;
   }
-  for (const port of KNOWN_PORTS) {
-    safeExec(`lsof -ti :${port} 2>/dev/null | xargs kill -9 2>/dev/null`);
-  }
+  const fetchHealth = deps.fetchHealth || readHealthIdentity;
+  const killPort =
+    deps.killPort ||
+    ((port) => {
+      safeExec(`lsof -ti :${port} 2>/dev/null | xargs kill -9 2>/dev/null`);
+    });
+
+  await Promise.all(
+    KNOWN_PORTS.map(async (port) => {
+      // Only kill processes that answer /health as a Kaboom (or legacy) daemon.
+      // Unrelated dev servers on these ports must be left alone.
+      const health = await fetchHealth(port);
+      if (!isKaboomDaemonHealth(health)) {
+        logLine(`[port-skip] ${port}`);
+        return;
+      }
+      logLine(`[port-kill] ${port}`);
+      killPort(port);
+    })
+  );
 }
 
 function readPidFromFile(filePath) {
@@ -200,18 +280,23 @@ function cleanupPIDFiles() {
   }
 }
 
-function cleanupOldDaemons() {
+async function cleanupOldDaemons() {
   runForceCleanupCommands();
   killByProcessName();
-  killByKnownPorts();
+  await killByKnownPorts();
   cleanupPIDFiles();
 }
 
 if (require.main === module) {
-  cleanupOldDaemons();
+  cleanupOldDaemons().catch(() => {
+    // Best effort only — never fail the npm lifecycle hook.
+  });
 }
 
 module.exports = {
   cleanupOldDaemons,
   KNOWN_PORTS,
+  matchesDaemonCommandLine,
+  isKaboomDaemonHealth,
+  killByKnownPorts,
 };

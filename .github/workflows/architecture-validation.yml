@@ -2,9 +2,9 @@ name: Architecture Validation
 
 on:
   pull_request:
-    branches: [main, UNSTABLE]
+    branches: [STABLE, UNSTABLE]
   push:
-    branches: [main, UNSTABLE]
+    branches: [STABLE, UNSTABLE]
 
 permissions:
   contents: read

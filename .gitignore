@@ -28,6 +28,7 @@ Thumbs.db
 .vscode/
 .codex/
 .gemini/
+.serena/
 *.swp
 *.swo
 .clinerules
@@ -63,9 +64,16 @@ docs/benchmarks/*.txt
 .claude/
 .worktrees/
 server/bin/gasoline-*
-pypi/gasoline-agentic-browser-*/gasoline_agentic_browser_*/gasoline
-pypi/gasoline-agentic-browser-*/gasoline_agentic_browser_*/gasoline.exe
 gokaboom.dev/public/downloads/*.crx
+
+# Release-staged platform binaries (make npm-binaries)
+# (npm/kaboom-agentic-browser/bin/ holds tracked launcher scripts — do not ignore it)
+npm/darwin-arm64/bin/
+npm/darwin-x64/bin/
+npm/linux-arm64/bin/
+npm/linux-x64/bin/
+npm/win32-x64/bin/
+npm/kaboom-agentic-browser/extension/
 
 
 #Ignore vscode AI rules

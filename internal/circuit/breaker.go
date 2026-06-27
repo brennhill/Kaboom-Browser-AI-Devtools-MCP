@@ -58,6 +58,9 @@ type CircuitBreaker struct {
 
 	// Injected: emits lifecycle events (circuit_opened, circuit_closed)
 	emitEvent func(event string, data map[string]any)
+
+	// Injected clock for deterministic tests; defaults to time.Now.
+	now func() time.Time
 }
 
 // NewCircuitBreaker creates a CircuitBreaker with injected dependencies.
@@ -67,6 +70,7 @@ func NewCircuitBreaker(emitEvent func(string, map[string]any)) *CircuitBreaker {
 		rateWindowStart:      now,
 		lastBelowThresholdAt: now,
 		emitEvent:            emitEvent,
+		now:                  time.Now,
 	}
 }
 
@@ -82,7 +86,7 @@ func (cb *CircuitBreaker) ForceOpen(reason string) {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
 	cb.circuitOpen = true
-	cb.circuitOpenedAt = time.Now()
+	cb.circuitOpenedAt = cb.now()
 	cb.circuitReason = reason
 }
 
@@ -100,30 +104,46 @@ func (cb *CircuitBreaker) RecordEvents(count int) {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
 
-	now := time.Now()
+	cb.advanceWindowLocked()
+	cb.windowEventCount += count
+}
+
+// advanceWindowLocked ticks the rate window state machine when the current
+// 1-second window has expired, then starts a fresh window. Caller must hold lock.
+func (cb *CircuitBreaker) advanceWindowLocked() {
+	now := cb.now()
 	if now.Sub(cb.rateWindowStart) > time.Second {
 		cb.tickRateWindow()
 		cb.windowEventCount = 0
 		cb.rateWindowStart = now
 	}
-	cb.windowEventCount += count
 }
 
 // CheckRateLimit returns true if the request should be rejected (429).
 // Checks: 1) circuit open, 2) window rate.
+//
+// When the 1-second window has expired this also advances the window state
+// machine (streak counting + circuit evaluation). This matters because ingest
+// handlers call CheckRateLimit before RecordEvents and short-circuit with a
+// 429 while the circuit is open — without ticking here, the OPEN->CLOSED
+// transition would be unreachable until restart.
 func (cb *CircuitBreaker) CheckRateLimit() bool {
 	cb.mu.RLock()
-	defer cb.mu.RUnlock()
-
-	if cb.circuitOpen {
-		return true
+	expired := cb.now().Sub(cb.rateWindowStart) > time.Second
+	if !expired {
+		rejected := cb.circuitOpen || cb.windowEventCount > RateLimitThreshold
+		cb.mu.RUnlock()
+		return rejected
 	}
+	cb.mu.RUnlock()
 
-	now := time.Now()
-	if now.Sub(cb.rateWindowStart) > time.Second {
-		return false // window expired, rate is effectively 0
-	}
-	return cb.windowEventCount > RateLimitThreshold
+	// Window expired: upgrade to the write lock and tick the state machine so
+	// the circuit is re-evaluated (and can close) on the rejection path too.
+	// advanceWindowLocked re-checks expiry, so a concurrent tick is harmless.
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
+	cb.advanceWindowLocked()
+	return cb.circuitOpen || cb.windowEventCount > RateLimitThreshold
 }
 
 // tickRateWindow is called when a 1-second window expires.
@@ -135,7 +155,7 @@ func (cb *CircuitBreaker) tickRateWindow() {
 	} else {
 		cb.rateLimitStreak = 0
 		if cb.lastBelowThresholdAt.IsZero() {
-			cb.lastBelowThresholdAt = time.Now()
+			cb.lastBelowThresholdAt = cb.now()
 		}
 	}
 	cb.evaluateCircuit()
@@ -149,7 +169,7 @@ func (cb *CircuitBreaker) evaluateCircuit() {
 		// Rate-based opening
 		if cb.rateLimitStreak >= CircuitOpenStreakCount {
 			cb.circuitOpen = true
-			cb.circuitOpenedAt = time.Now()
+			cb.circuitOpenedAt = cb.now()
 			cb.circuitReason = "rate_exceeded"
 			// Capture values before goroutine to avoid data race on struct fields
 			streak := cb.rateLimitStreak
@@ -175,12 +195,12 @@ func (cb *CircuitBreaker) evaluateCircuit() {
 	if cb.lastBelowThresholdAt.IsZero() {
 		return
 	}
-	if time.Since(cb.lastBelowThresholdAt) < time.Duration(CircuitCloseSeconds)*time.Second {
+	if cb.now().Sub(cb.lastBelowThresholdAt) < time.Duration(CircuitCloseSeconds)*time.Second {
 		return
 	}
 
 	// All conditions met -- close
-	openDuration := time.Since(cb.circuitOpenedAt)
+	openDuration := cb.now().Sub(cb.circuitOpenedAt)
 	prevReason := cb.circuitReason
 	cb.circuitOpen = false
 	cb.circuitReason = ""

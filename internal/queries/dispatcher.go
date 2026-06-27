@@ -35,7 +35,7 @@ type QueryResultEntry struct {
 
 // QueryDispatcher manages pending query queues, result storage, and async command tracking.
 // Owns two locks:
-//   - mu (sync.Mutex): protects pendingQueries, queryResults, queryCond, queryIDCounter, queryTimeout
+//   - mu (sync.Mutex): protects pendingQueries, queryResults, queryCond, queryIDCounter, queryTimeout, queryNotify
 //   - resultsMu (sync.RWMutex): protects completedResults, failedCommands
 //
 // Lock ordering: mu released BEFORE resultsMu acquired (never reverse).
@@ -43,6 +43,7 @@ type QueryResultEntry struct {
 // Invariants:
 // - pendingQueries is FIFO and bounded by MaxPendingQueries.
 // - commandNotify is always non-nil; writers close-and-rotate it under resultsMu to signal waiters.
+// - queryNotify is always non-nil; enqueuers close-and-rotate it under mu so ALL waiters wake.
 // - failedCommands is an append-only ring (max 100) for terminal failure history.
 //
 // Failure semantics:
@@ -61,7 +62,7 @@ type QueryDispatcher struct {
 	completedResults map[string]*CommandResult
 	failedCommands   []*CommandResult
 	commandNotify    chan struct{} // closed on CompleteCommand, then recreated
-	queryNotify      chan struct{} // signaled when new pending queries are added
+	queryNotify      chan struct{} // closed when pending queries are enqueued, then recreated (protected by mu)
 
 	stopCleanup func()
 }
@@ -79,7 +80,7 @@ func NewQueryDispatcher() *QueryDispatcher {
 		completedResults: make(map[string]*CommandResult),
 		failedCommands:   make([]*CommandResult, 0, 100),
 		commandNotify:    make(chan struct{}),
-		queryNotify:      make(chan struct{}, 1),
+		queryNotify:      make(chan struct{}),
 	}
 	qd.queryCond = sync.NewCond(&qd.mu)
 	qd.stopCleanup = qd.startResultCleanup()

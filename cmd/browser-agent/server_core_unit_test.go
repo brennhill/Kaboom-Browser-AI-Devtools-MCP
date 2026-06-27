@@ -43,8 +43,12 @@ func TestServerAddEntriesRotationPath(t *testing.T) {
 		t.Fatalf("ReadFile(%q) error = %v", logFile, err)
 	}
 	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
-	if len(lines) != 2 {
-		t.Fatalf("line count = %d, want 2", len(lines))
+	// Persistence is append-only on the hot path: all 3 entries are appended.
+	// The file is only compacted down to the in-memory window once it exceeds
+	// logCompactionFactor*maxEntries entries (see
+	// TestLogStoreCompactionRewritesAfterThreshold); loadEntries bounds reads.
+	if len(lines) != 3 {
+		t.Fatalf("line count = %d, want 3 (append-only persistence)", len(lines))
 	}
 }
 

@@ -1,7 +1,9 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
+const os = require('node:os')
 const path = require('node:path')
+const { spawnSync } = require('node:child_process')
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..')
 const PLATFORM_PACKAGES = [
@@ -41,4 +43,107 @@ test('npm skill installer cleanup targets kaboom-managed output and strum legacy
   assert.match(skillsSource, /kaboom-managed-skill/)
   assert.match(skillsSource, /strum-/)
   assert.match(postinstallSource, /\[kaboom-mcp\]/)
+})
+
+// --- scripts/install-bundled-skills.sh parity with the npm installer ---
+
+const SKILLS_SH = path.join(REPO_ROOT, 'scripts', 'install-bundled-skills.sh')
+
+function runSkillsScript(env) {
+  return spawnSync('bash', [SKILLS_SH], {
+    env: { ...process.env, ...env },
+    encoding: 'utf8',
+    timeout: 30000,
+  })
+}
+
+test('install-bundled-skills.sh has valid bash syntax', () => {
+  if (process.platform === 'win32') return
+  const res = spawnSync('bash', ['-n', SKILLS_SH], { encoding: 'utf8' })
+  assert.equal(res.status, 0, `bash -n failed: ${res.stderr}`)
+})
+
+test('install-bundled-skills.sh uses per-skill manifest versions, manifest iteration, and all legacy prefixes', () => {
+  if (process.platform === 'win32') return
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-skills-sh-'))
+  try {
+    const skillsSrc = path.join(tmp, 'bundled')
+    fs.mkdirSync(path.join(skillsSrc, 'alpha'), { recursive: true })
+    fs.mkdirSync(path.join(skillsSrc, 'beta'), { recursive: true })
+    fs.mkdirSync(path.join(skillsSrc, 'not-in-manifest'), { recursive: true })
+    fs.writeFileSync(
+      path.join(skillsSrc, 'skills.json'),
+      JSON.stringify({ skills: [{ id: 'alpha', version: 1 }, { id: 'beta', version: 2 }] })
+    )
+    fs.writeFileSync(path.join(skillsSrc, 'alpha', 'SKILL.md'), '# Alpha\n')
+    fs.writeFileSync(path.join(skillsSrc, 'beta', 'SKILL.md'), '# Beta\n')
+    fs.writeFileSync(path.join(skillsSrc, 'not-in-manifest', 'SKILL.md'), '# Stray\n')
+
+    const claudeRoot = path.join(tmp, 'claude-skills')
+    fs.mkdirSync(claudeRoot, { recursive: true })
+    // Legacy variants from older brand eras must be removed (npm parity).
+    fs.writeFileSync(
+      path.join(claudeRoot, 'gasoline-alpha.md'),
+      '<!-- gasoline-managed-skill id:alpha version:1 -->\nold gasoline\n'
+    )
+    fs.writeFileSync(
+      path.join(claudeRoot, 'strum-alpha.md'),
+      '<!-- strum-managed-skill id:alpha version:1 -->\nold strum\n'
+    )
+
+    const res = runSkillsScript({
+      KABOOM_BUNDLED_SKILLS_DIR: skillsSrc,
+      KABOOM_CLAUDE_SKILLS_DIR: claudeRoot,
+      KABOOM_SKILL_TARGETS: 'claude',
+      KABOOM_SKILL_SCOPE: 'global',
+    })
+    assert.equal(res.status, 0, `script failed:\nstdout: ${res.stdout}\nstderr: ${res.stderr}`)
+
+    const alpha = fs.readFileSync(path.join(claudeRoot, 'alpha.md'), 'utf8')
+    const beta = fs.readFileSync(path.join(claudeRoot, 'beta.md'), 'utf8')
+    assert.match(alpha, /^<!-- kaboom-managed-skill id:alpha version:1 -->/, 'alpha must carry manifest version 1')
+    assert.match(beta, /^<!-- kaboom-managed-skill id:beta version:2 -->/, 'beta must carry manifest version 2, not a hardcoded 1')
+    assert.equal(
+      fs.existsSync(path.join(claudeRoot, 'not-in-manifest.md')),
+      false,
+      'must only install manifest-listed skills, not every directory'
+    )
+    assert.equal(fs.existsSync(path.join(claudeRoot, 'gasoline-alpha.md')), false, 'gasoline- legacy variant must be removed')
+    assert.equal(fs.existsSync(path.join(claudeRoot, 'strum-alpha.md')), false, 'strum- legacy variant must be removed')
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true })
+  }
+})
+
+test('install-bundled-skills.sh markers match the real bundled manifest versions (site-audit v2)', () => {
+  if (process.platform === 'win32') return
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-skills-sh-real-'))
+  try {
+    const claudeRoot = path.join(tmp, 'claude-skills')
+    fs.mkdirSync(claudeRoot, { recursive: true })
+
+    const res = runSkillsScript({
+      KABOOM_CLAUDE_SKILLS_DIR: claudeRoot,
+      KABOOM_SKILL_TARGETS: 'claude',
+      KABOOM_SKILL_SCOPE: 'global',
+    })
+    assert.equal(res.status, 0, `script failed:\nstdout: ${res.stdout}\nstderr: ${res.stderr}`)
+
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(REPO_ROOT, 'npm/kaboom-agentic-browser/skills/skills.json'), 'utf8')
+    )
+    for (const skill of manifest.skills) {
+      const installed = path.join(claudeRoot, `${skill.id}.md`)
+      assert.ok(fs.existsSync(installed), `manifest skill ${skill.id} must be installed`)
+      const content = fs.readFileSync(installed, 'utf8')
+      const expectedVersion = skill.version || 1
+      assert.match(
+        content,
+        new RegExp(`^<!-- kaboom-managed-skill id:${skill.id} version:${expectedVersion} -->`),
+        `${skill.id} marker version must match the manifest (shell/npm installs must not fight)`
+      )
+    }
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true })
+  }
 })

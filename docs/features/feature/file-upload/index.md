@@ -6,15 +6,15 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-03-05
 code_paths:
-  - cmd/browser-agent/tools_interact_upload_handler.go
-  - cmd/browser-agent/tools_interact_upload.go
+  - cmd/browser-agent/internal/toolinteract/interact_upload_handler.go
+  - cmd/browser-agent/internal/toolinteract/interact_upload.go
   - cmd/browser-agent/upload_handlers.go
   - internal/upload/handlers.go
   - internal/upload/security.go
   - internal/upload/os_automation.go
   - scripts/smoke-tests/upload-server.py
 test_paths:
-  - cmd/browser-agent/tools_interact_upload_test.go
+  - cmd/browser-agent/upload_integration_test.go
   - cmd/browser-agent/upload_handlers_test.go
   - internal/upload/security_test.go
   - internal/upload/os_automation_test.go

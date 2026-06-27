@@ -35,6 +35,11 @@ func (ls *LogStore) loadEntries() error {
 		ls.entries = append(ls.entries, entry)
 	}
 
+	// Seed the file entry count for compaction hysteresis: if the file already
+	// holds more than logCompactionFactor*maxEntries entries, the async worker
+	// compacts it after the next append.
+	ls.fileEntryCount.Store(int64(len(ls.entries)))
+
 	// Initialize logAddedAt for loaded entries (we don't have actual add times,
 	// but the slice must have the same length as entries for rotation to work)
 	ls.logAddedAt = make([]time.Time, len(ls.entries))
@@ -50,9 +55,10 @@ func (ls *LogStore) loadEntries() error {
 	return scanner.Err()
 }
 
-// saveEntriesCopy writes the given entries to file without acquiring the lock.
-// The caller is responsible for providing a snapshot of the entries.
-// Uses atomic write pattern: write to temp file then rename for safety.
+// saveEntriesCopy atomically rewrites the log file with the given snapshot.
+// Uses atomic write pattern: write to temp file then rename for crash safety.
+// Called only from the async logger worker (maybeCompactLogFile); the caller
+// must hold fileMu so the rewrite cannot interleave with appends or clears.
 func (ls *LogStore) saveEntriesCopy(entries []LogEntry) error {
 	if ls.logFile == "" {
 		return nil
@@ -93,6 +99,7 @@ func (ls *LogStore) saveEntriesCopy(entries []LogEntry) error {
 		return err
 	}
 
+	ls.fileRewriteCount.Add(1)
 	return nil
 }
 

@@ -238,7 +238,7 @@ describe('checkServerHealth', () => {
         json: () =>
           Promise.resolve({
             status: 'ok',
-            version: '0.8.2',
+            version: '0.8.3',
             capture: {
               extension_connected: false,
               extension_last_seen: ''

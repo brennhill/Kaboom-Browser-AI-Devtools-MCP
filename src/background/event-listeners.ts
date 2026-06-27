@@ -195,8 +195,8 @@ export async function handleTrackedTabUrlChange(
         logFn(`${KABOOM_LOG_PREFIX} Tracked tab updated: ${newUrl}`)
       }
     } catch {
-      // Tab may have been closed -- update URL only
-      setLocal(StorageKey.TRACKED_TAB_URL, newUrl)
+      // Tab may have been closed -- update URL only (fire-and-forget, never throws)
+      setLocal(StorageKey.TRACKED_TAB_URL, newUrl).catch(() => {})
     }
   }
 }
@@ -213,7 +213,7 @@ export async function handleTrackedTabClosed(
   const trackedTabId = (await getLocal(StorageKey.TRACKED_TAB_ID)) as number | undefined
   if (trackedTabId === closedTabId) {
     if (logFn) logFn(`${KABOOM_LOG_PREFIX} Tracked tab closed (id:`, closedTabId)
-    clearTrackedTabState()
+    await clearTrackedTabState()
   }
 }
 
@@ -261,12 +261,12 @@ export function installStartupListener(logFn?: (message: string) => void): void 
           if (logFn) logFn(`${KABOOM_LOG_PREFIX} Browser restarted - tracked tab still exists, keeping tracking`)
         } catch {
           if (logFn) logFn(`${KABOOM_LOG_PREFIX} Browser restarted - tracked tab gone, clearing tracking state`)
-          clearTrackedTabState()
+          await clearTrackedTabState()
         }
       }
     } catch {
-      // Safety fallback: clear if we can't check
-      clearTrackedTabState()
+      // Safety fallback: clear if we can't check (fire-and-forget, never throws)
+      clearTrackedTabState().catch(() => {})
     }
   })
 }

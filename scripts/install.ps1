@@ -169,15 +169,28 @@ function Test-ExtensionStage {
         [string]$BaseDir = $EXT_DIR
     )
 
-    $required = @(
-        (Join-Path $BaseDir "manifest.json"),
-        (Join-Path $BaseDir "background\init.js"),
-        (Join-Path $BaseDir "content\script-injection.js"),
-        (Join-Path $BaseDir "inject\index.js"),
-        (Join-Path $BaseDir "theme-bootstrap.js")
+    if (-not (Test-Path (Join-Path $BaseDir "manifest.json"))) {
+        return $false
+    }
+
+    # Support both modern bundled extension layout and legacy modular layout
+    # (mirrors validate_extension_stage in scripts/install.sh). Each group
+    # requires at least one of its alternatives to be present.
+    $alternativeGroups = @(
+        @("background.js", "background\init.js"),
+        @("content.bundled.js", "content\script-injection.js"),
+        @("inject.bundled.js", "inject\index.js"),
+        @("early-patch.bundled.js", "theme-bootstrap.js")
     )
-    foreach ($path in $required) {
-        if (-not (Test-Path $path)) {
+    foreach ($group in $alternativeGroups) {
+        $found = $false
+        foreach ($candidate in $group) {
+            if (Test-Path (Join-Path $BaseDir $candidate)) {
+                $found = $true
+                break
+            }
+        }
+        if (-not $found) {
             return $false
         }
     }

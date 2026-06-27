@@ -4,7 +4,7 @@ feature_id: feature-backend-log-streaming
 status: active
 last_reviewed: 2026-04-13
 canonical_flow_map: ../../../architecture/flow-maps/extension-heartbeat-connection-status.md
-last_verified_version: 0.8.2
+last_verified_version: 0.8.3
 last_verified_date: 2026-04-13
 ---
 
