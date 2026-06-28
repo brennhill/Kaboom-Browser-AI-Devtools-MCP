@@ -231,7 +231,7 @@ export function startSyncClient(deps: SyncManagerDeps): void {
 /**
  * Stop the sync client
  */
-function stopSyncClient(debugLog: DebugLogFn): void {
+export function stopSyncClient(debugLog: DebugLogFn): void {
   if (syncClient) {
     syncClient.stop()
     debugLog(DebugCategory.CONNECTION, 'Sync client stopped')

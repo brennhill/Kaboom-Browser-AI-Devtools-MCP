@@ -36,7 +36,7 @@ beforeEach(() => {
         sendMessageCalls.push({ tabId, message, options })
 
         const frameId = options?.frameId
-        if (message.type === 'DOM_QUERY') {
+        if (message.type === 'dom_query') {
           return {
             url: `https://example.com/frame-${frameId}`,
             title: `frame-${frameId}`,
@@ -46,7 +46,7 @@ beforeEach(() => {
           }
         }
 
-        if (message.type === 'A11Y_QUERY') {
+        if (message.type === 'a11y_query') {
           if (frameId === 0) {
             return {
               violations: [{ id: 'main-v' }],
@@ -156,7 +156,7 @@ describe('analyze frame routing', () => {
   test('dom query falls back to scripting when content script is unreachable in main frame mode', async () => {
     globalThis.chrome.tabs.sendMessage = async (tabId, message, options) => {
       sendMessageCalls.push({ tabId, message, options })
-      if (message.type === 'DOM_QUERY') {
+      if (message.type === 'dom_query') {
         throw new Error('Could not establish connection. Receiving end does not exist.')
       }
       return {}
@@ -200,7 +200,7 @@ describe('analyze frame routing', () => {
   test('highlight uses resolved target tab and falls back to scripting when content script is unreachable', async () => {
     globalThis.chrome.tabs.sendMessage = async (tabId, message, options) => {
       sendMessageCalls.push({ tabId, message, options })
-      if (message.type === 'gasoline_highlight') {
+      if (message.type === 'kaboom_highlight') {
         throw new Error('Could not establish connection. Receiving end does not exist.')
       }
       return {}

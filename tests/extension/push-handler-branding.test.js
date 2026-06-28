@@ -57,6 +57,6 @@ describe('push handler branding', () => {
 
     const failureToast = globalThis.chrome.tabs.sendMessage.mock.calls.at(-1).arguments[1]
     assert.strictEqual(failureToast.text, 'Screenshot push failed')
-    assert.match(failureToast.detail, /Kaboom daemon/)
+    assert.match(failureToast.detail, /KaBOOM! daemon/)
   })
 })

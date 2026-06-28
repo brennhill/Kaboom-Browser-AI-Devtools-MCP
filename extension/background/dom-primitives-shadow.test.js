@@ -240,7 +240,7 @@ globalThis.performance = { now: () => perfNowValue++ }
 // ---------------------------------------------------------------------------
 // Import domPrimitive AFTER globals are set up
 // ---------------------------------------------------------------------------
-const { domPrimitive, domWaitFor } = await import('./dom-primitives.js')
+const { domPrimitive, domWaitFor, domPrimitiveListInteractive } = await import('./dom-primitives.js')
 
 // ---------------------------------------------------------------------------
 // Helper: build a mock document with shadow DOM structure
@@ -409,7 +409,7 @@ describe('querySelectorAllDeep: find all across roots', () => {
   beforeEach(() => setupShadowDocument())
 
   test('list_interactive returns elements from both light DOM and shadow roots', () => {
-    const result = domPrimitive('list_interactive', '', {})
+    const result = domPrimitiveListInteractive('', {})
     assert.strictEqual(result.success, true)
     const elements = result.elements
     const tags = elements.map((e) => e.tag)
@@ -494,7 +494,7 @@ describe('selector generation for shadow elements', () => {
   beforeEach(() => setupShadowDocument())
 
   test('list_interactive generates >>> selectors for shadow elements', () => {
-    const result = domPrimitive('list_interactive', '', {})
+    const result = domPrimitiveListInteractive('', {})
     assert.strictEqual(result.success, true)
 
     const selectors = result.elements.map((e) => e.selector)
@@ -506,7 +506,7 @@ describe('selector generation for shadow elements', () => {
   })
 
   test('light DOM element selector has no >>>', () => {
-    const result = domPrimitive('list_interactive', '', {})
+    const result = domPrimitiveListInteractive('', {})
     const lightEl = result.elements.find((e) => e.tag === 'button' && !e.selector.includes('>>>'))
     assert.ok(lightEl, 'Light DOM button should have selector without >>>')
   })

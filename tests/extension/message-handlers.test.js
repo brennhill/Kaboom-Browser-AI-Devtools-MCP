@@ -299,7 +299,7 @@ describe('message routing', () => {
     assert.strictEqual(chrome.tabGroups.update.mock.calls.length, 1, 'workspace group should be named and styled')
     assert.strictEqual(chrome.tabGroups.update.mock.calls[0].arguments[0], 77)
     assert.deepStrictEqual(chrome.tabGroups.update.mock.calls[0].arguments[1], {
-      title: 'Kaboom',
+      title: 'KaBOOM!',
       color: 'orange',
       collapsed: false
     })

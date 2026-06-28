@@ -11,6 +11,7 @@ import { scaleTimeout } from '../lib/timeouts.js';
 import { StorageKey } from '../lib/constants.js';
 import { ensureOffscreenDocument, getStreamIdWithRecovery, requestRecordingGesture } from './recording-capture.js';
 import { installRecordingListeners } from './recording-listeners.js';
+import { resolveRecordingRehydration } from './recording-rehydration.js';
 import { errorMessage } from '../lib/error-utils.js';
 import { getLocal, setLocals, removeLocal } from '../lib/storage-utils.js';
 import { delay } from '../lib/timeout-utils.js';
@@ -32,9 +33,57 @@ let recordingState = { ...defaultState };
 const LOG = KABOOM_RECORDING_LOG_PREFIX;
 /** Listener to re-send watermark when recording tab navigates or content script re-injects. */
 let tabUpdateListener = null;
-// Clear stale recording state from previous session (e.g., browser crash during recording)
-console.log(LOG, 'Module loaded, clearing stale recording state from storage');
-removeLocal(StorageKey.RECORDING).catch(() => { });
+// MV3 service workers restart routinely while the offscreen MediaRecorder keeps
+// recording. On module load, ask the offscreen document whether a recording is
+// still active: rehydrate state + badge timer if so, otherwise clear stale storage
+// (e.g., browser crash during a previous recording).
+console.log(LOG, 'Module loaded, checking for surviving offscreen recording');
+void rehydrateRecordingStateOnLoad();
+/** Ask the offscreen document for its live recording state. Null when unreachable/inactive context. */
+async function queryOffscreenRecordingState() {
+    if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage)
+        return null;
+    try {
+        const response = (await chrome.runtime.sendMessage({
+            target: 'offscreen',
+            type: 'offscreen_get_recording_state'
+        }));
+        if (response && typeof response.active === 'boolean')
+            return response;
+        return null;
+    }
+    catch {
+        // No offscreen document (or no listener) — no recording survived the restart.
+        return null;
+    }
+}
+/** Rehydrate recording state after a SW restart, or clear stale persisted state. */
+async function rehydrateRecordingStateOnLoad() {
+    try {
+        const restored = await resolveRecordingRehydration({
+            queryOffscreenRecordingState,
+            getPersistedRecording: async () => (await getLocal(StorageKey.RECORDING)) ?? null
+        });
+        if (restored) {
+            recordingState = { ...restored };
+            startRecordingBadgeTimer(restored.startTime);
+            console.log(LOG, 'Rehydrated active recording after service worker restart', {
+                name: restored.name,
+                startTime: restored.startTime,
+                tabId: restored.tabId
+            });
+            return;
+        }
+        // Guard: a recording may have started while we were querying — don't wipe fresh state.
+        if (!recordingState.active) {
+            console.log(LOG, 'No surviving offscreen recording — clearing stale recording state from storage');
+            await removeLocal(StorageKey.RECORDING);
+        }
+    }
+    catch {
+        removeLocal(StorageKey.RECORDING).catch(() => { });
+    }
+}
 // =============================================================================
 // STATE QUERIES
 // =============================================================================
@@ -204,7 +253,8 @@ export async function startRecording(name, fps = 15, queryId = '', audio = '', f
                 });
             }, scaleTimeout(10000));
             chrome.runtime.onMessage.addListener(listener);
-            chrome.runtime.sendMessage({
+            chrome.runtime
+                .sendMessage({
                 target: 'offscreen',
                 type: 'offscreen_start_recording',
                 streamId,
@@ -214,6 +264,9 @@ export async function startRecording(name, fps = 15, queryId = '', audio = '', f
                 audioMode: audio,
                 tabId: tab.id,
                 url: tab.url ?? ''
+            })
+                .catch(() => {
+                /* offscreen replies via a separate broadcast; ignore port-closed rejections */
             });
         });
         console.log(LOG, 'Offscreen START result:', { success: startResult.success, error: startResult.error });
@@ -238,10 +291,18 @@ export async function startRecording(name, fps = 15, queryId = '', audio = '', f
             queryId
         };
         /* eslint-enable require-atomic-updates */
-        // Persist state flag for popup sync
-        await setLocals({
-            [StorageKey.RECORDING]: { active: true, name, startTime: Date.now() }
-        });
+        // Persist state for popup sync + rehydration after service-worker restart
+        const persisted = {
+            active: true,
+            name,
+            startTime: recordingState.startTime,
+            fps,
+            audioMode: audio,
+            tabId: tab.id,
+            url: tab.url ?? '',
+            queryId
+        };
+        await setLocals({ [StorageKey.RECORDING]: persisted });
         startRecordingBadgeTimer(recordingState.startTime);
         // Show "Recording started" toast (fades after 2s)
         sendTabToast(tab.id, buildRecordingToastLabel(tab.url), '', 'success', scaleTimeout(2000));
@@ -310,9 +371,13 @@ export async function stopRecording(truncated = false) {
                 });
             }, scaleTimeout(30000));
             chrome.runtime.onMessage.addListener(listener);
-            chrome.runtime.sendMessage({
+            chrome.runtime
+                .sendMessage({
                 target: 'offscreen',
                 type: 'offscreen_stop_recording'
+            })
+                .catch(() => {
+                /* offscreen replies via a separate broadcast; ignore port-closed rejections */
             });
         });
         console.log(LOG, 'Offscreen STOP result:', {
@@ -340,10 +405,12 @@ export async function stopRecording(truncated = false) {
     }
     catch (err) {
         console.error(LOG, 'STOP EXCEPTION:', errorMessage(err), err.stack);
+        // Capture the name BEFORE clearing — clearRecordingState resets it to ''.
+        const failedName = recordingState.name || '';
         await clearRecordingState();
         return {
             status: 'error',
-            name: recordingState.name || '',
+            name: failedName,
             error: `RECORD_STOP: ${errorMessage(err, 'Failed to stop recording.')}`
         };
     }

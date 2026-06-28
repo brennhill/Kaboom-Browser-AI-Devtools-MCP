@@ -14,7 +14,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const REPO_ROOT = path.resolve(__dirname, '../..')
 const VERSION = fs.readFileSync(path.join(REPO_ROOT, 'VERSION'), 'utf8').trim()
-const ZIP_PATH = path.join(REPO_ROOT, 'dist', `gasoline-extension-v${VERSION}.zip`)
+const ZIP_PATH = path.join(REPO_ROOT, 'dist', `kaboom-extension-v${VERSION}.zip`)
 
 function getMakeTargetBlock(makefileText, targetName) {
   const start = makefileText.indexOf(`${targetName}:`)
@@ -31,7 +31,7 @@ test('extension-zip target archives full extension tree', () => {
   const block = getMakeTargetBlock(makefile, 'extension-zip')
 
   assert.ok(
-    block.includes('cd extension && zip -r ../$(BUILD_DIR)/gasoline-extension-v$(VERSION).zip \\'),
+    block.includes('cd extension && zip -r ../$(BUILD_DIR)/kaboom-extension-v$(VERSION).zip \\'),
     'extension-zip target should invoke zip from extension/'
   )
   assert.match(

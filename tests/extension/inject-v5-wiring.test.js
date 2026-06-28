@@ -117,8 +117,10 @@ describe('V5 Wiring: Kaboom API exports', () => {
 
     assert.strictEqual(typeof injectModule.installKaboomAPI, 'function')
     assert.strictEqual(typeof injectModule.uninstallKaboomAPI, 'function')
-    assert.strictEqual(injectModule.installKaboomAPI, undefined)
-    assert.strictEqual(injectModule.uninstallKaboomAPI, undefined)
+    // Installers only: the developer API object is installed on window.__kaboom by the
+    // installer, it is not exported from the inject bundle.
+    assert.strictEqual(injectModule.__kaboom, undefined)
+    assert.strictEqual(injectModule.kaboom, undefined)
   })
 })
 

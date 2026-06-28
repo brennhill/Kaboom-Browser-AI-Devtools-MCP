@@ -96,6 +96,6 @@ describe('options branding copy', () => {
     await testConnection()
 
     const resultEl = document.getElementById('test-result')
-    assert.match(resultEl.textContent, /Is this Kaboom MCP v5\.8\.0\+\?/)
+    assert.match(resultEl.textContent, /Is this KaBOOM! MCP v5\.8\.0\+\?/)
   })
 })

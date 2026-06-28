@@ -161,7 +161,7 @@ export function applyCaptureOverrides(overrides) {
 /**
  * Reset pilot cache for testing
  */
-function _resetPilotCacheForTesting(value) {
+export function _resetPilotCacheForTesting(value) {
     state.aiWebPilotEnabledCache = value !== undefined ? value : false;
 }
 /**

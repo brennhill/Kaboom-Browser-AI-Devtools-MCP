@@ -66,6 +66,7 @@
         type: "offscreen_recording_started",
         success: false,
         error: "RECORD_START: Already recording in offscreen document."
+      }).catch(() => {
       });
       return;
     }
@@ -180,6 +181,7 @@
         target: "background",
         type: "offscreen_recording_started",
         success: true
+      }).catch(() => {
       });
     } catch (err) {
       console.error(LOG, "START EXCEPTION:", errorMessage(err), err.stack);
@@ -193,6 +195,7 @@
         type: "offscreen_recording_started",
         success: false,
         error: `RECORD_START: ${errorMessage(err, "Failed to start recording in offscreen document.")}`
+      }).catch(() => {
       });
     }
   }
@@ -213,6 +216,7 @@
         status: "error",
         name: "",
         error: "RECORD_STOP: No active recording in offscreen document."
+      }).catch(() => {
       });
       return;
     }
@@ -230,6 +234,7 @@
         status: "error",
         name: "",
         error: "RECORD_STOP: Recorder already inactive."
+      }).catch(() => {
       });
       return;
     }
@@ -281,6 +286,7 @@
             status: "error",
             name,
             error: `RECORD_STOP: Server returned ${response.status}.`
+          }).catch(() => {
           });
           return;
         }
@@ -300,6 +306,7 @@
           size_bytes: blob.size,
           truncated: truncated || void 0,
           path: savePath
+        }).catch(() => {
         });
       } catch (err) {
         console.error(LOG, "SAVE EXCEPTION:", errorMessage(err), err.stack);
@@ -310,13 +317,14 @@
           status: "error",
           name,
           error: `RECORD_STOP: ${errorMessage(err, "Save failed.")}`
+        }).catch(() => {
         });
       }
     };
     recorder.stop();
   }
   console.log(LOG, "Offscreen recording worker loaded");
-  chrome.runtime.onMessage.addListener((message, sender) => {
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (sender.id !== chrome.runtime.id)
       return;
     if (message.target !== "offscreen")
@@ -326,6 +334,16 @@
       handleStartRecording(message);
     } else if (message.type === "offscreen_stop_recording") {
       handleStopRecording();
+    } else if (message.type === "offscreen_get_recording_state") {
+      sendResponse({
+        active: state.active,
+        name: state.name,
+        startTime: state.startTime,
+        fps: state.fps,
+        audioMode: state.audioMode,
+        tabId: state.tabId,
+        url: state.url
+      });
     }
   });
 })();

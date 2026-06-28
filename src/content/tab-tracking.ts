@@ -20,7 +20,7 @@ let currentTabId: number | null = null
  * Update tracking status by checking storage and current tab ID.
  * Called on script load, storage changes, and tab activation.
  */
-async function updateTrackingStatus(): Promise<void> {
+export async function updateTrackingStatus(): Promise<void> {
   try {
     const trackedTabId = (await getLocal(StorageKey.TRACKED_TAB_ID)) as number | undefined
 

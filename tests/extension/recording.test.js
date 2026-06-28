@@ -388,7 +388,7 @@ describe('MCP-initiated recording flow', () => {
       (c) =>
         c.arguments[0] === 77 &&
         c.arguments[1]?.type === 'kaboom_action_toast' &&
-        String(c.arguments[1]?.text || '').includes('Open Kaboom')
+        String(c.arguments[1]?.text || '').includes('Open KaBOOM!')
     )
     assert.ok(permissionToastOnTarget, 'Should show popup-approval permission toast on target tab')
 
@@ -420,7 +420,7 @@ describe('MCP-initiated recording flow', () => {
     const result = await startPromise
     assert.strictEqual(result.status, 'error')
     assert.ok(String(result.error || '').toLowerCase().includes('denied'))
-    assert.ok(String(result.error || '').includes('Kaboom popup'))
+    assert.ok(String(result.error || '').includes('KaBOOM! popup'))
     assert.strictEqual(isRecording(), false)
   })
 })

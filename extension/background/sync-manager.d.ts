@@ -43,6 +43,10 @@ export interface SyncManagerDeps {
  */
 export declare function startSyncClient(deps: SyncManagerDeps): void;
 /**
+ * Stop the sync client
+ */
+export declare function stopSyncClient(debugLog: DebugLogFn): void;
+/**
  * Reset sync client connection (call when user enables pilot/tracking)
  */
 export declare function resetSyncClientConnection(debugLog: DebugLogFn): void;

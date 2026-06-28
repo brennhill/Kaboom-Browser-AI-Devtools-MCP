@@ -25,6 +25,13 @@ export interface ExecutionResult {
     execution_mode?: string;
 }
 /**
+ * Execute JavaScript via chrome.scripting.executeScript.
+ * Used as fallback when MAIN world execution fails due to page CSP,
+ * or when inject script is not loaded.
+ * The func is injected natively by Chrome's extension system.
+ */
+export declare function executeViaScriptingAPI(tabId: number, script: string, timeoutMs: number, world?: 'MAIN' | 'ISOLATED'): Promise<ExecutionResult>;
+/**
  * Execute JS with world-aware routing.
  * - isolated: structured executor in ISOLATED world (skips new Function — always fails in MV3)
  * - main: send to content script (MAIN world via inject)

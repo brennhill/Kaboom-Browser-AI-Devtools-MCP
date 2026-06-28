@@ -94,8 +94,8 @@ describe('observe full-page helpers', () => {
       documentElement: htmlEl,
       body: bodyEl,
       querySelectorAll: (selector) => {
-        if (selector !== '[data-gasoline-fpx]') return []
-        return [htmlEl, bodyEl, ...allElements].filter((el) => !!el.getAttribute('data-gasoline-fpx'))
+        if (selector !== '[data-kaboom-fpx]') return []
+        return [htmlEl, bodyEl, ...allElements].filter((el) => !!el.getAttribute('data-kaboom-fpx'))
       }
     }
   })
@@ -111,7 +111,7 @@ describe('observe full-page helpers', () => {
     assert.strictEqual(mainScrollable.style.maxHeight, 'none')
     assert.strictEqual(mainScrollable.style.flex, 'none')
     assert.strictEqual(mainScrollable.style.contain, 'none')
-    assert.ok(mainScrollable.getAttribute('data-gasoline-fpx'))
+    assert.ok(mainScrollable.getAttribute('data-kaboom-fpx'))
   })
 
   test('restores original styles after expansion', () => {
@@ -125,13 +125,13 @@ describe('observe full-page helpers', () => {
     assert.strictEqual(mainScrollable.style.maxHeight, '100vh')
     assert.strictEqual(mainScrollable.style.flex, '1 1 auto')
     assert.strictEqual(mainScrollable.style.contain, 'layout')
-    assert.strictEqual(mainScrollable.getAttribute('data-gasoline-fpx'), null)
+    assert.strictEqual(mainScrollable.getAttribute('data-kaboom-fpx'), null)
   })
 
   test('restores gracefully when stored expansion data is malformed', () => {
-    mainScrollable.setAttribute('data-gasoline-fpx', '{invalid-json')
+    mainScrollable.setAttribute('data-kaboom-fpx', '{invalid-json')
     screenshotRestoreContainers()
-    assert.strictEqual(mainScrollable.getAttribute('data-gasoline-fpx'), null)
+    assert.strictEqual(mainScrollable.getAttribute('data-kaboom-fpx'), null)
   })
 })
 

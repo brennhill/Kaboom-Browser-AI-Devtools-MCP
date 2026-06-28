@@ -15,7 +15,7 @@ const REPO_ROOT = path.resolve(TEST_DIR, '../..')
 describe('popup brand shell', () => {
   test('popup html uses Kaboom branding', () => {
     const popupHtml = fs.readFileSync(path.join(REPO_ROOT, 'extension/popup.html'), 'utf8')
-    assert.match(popupHtml, /<title>Kaboom Devtools<\/title>/)
-    assert.match(popupHtml, />\s*Kaboom Devtools\s*<\/h1>/)
+    assert.match(popupHtml, /<title>KaBOOM! Devtools<\/title>/)
+    assert.match(popupHtml, />\s*KaBOOM! Devtools\s*<\/h1>/)
   })
 })

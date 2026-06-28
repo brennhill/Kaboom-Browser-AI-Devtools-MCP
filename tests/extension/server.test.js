@@ -250,7 +250,7 @@ describe('checkServerHealth', () => {
     const result = await checkServerHealth('http://localhost:9222')
     assert.strictEqual(result.connected, false)
     assert.strictEqual(result.status, 'ok')
-    assert.strictEqual(result.version, '0.8.2')
+    assert.strictEqual(result.version, '0.8.3')
     assert.ok(result.error.includes('heartbeat'))
   })
 

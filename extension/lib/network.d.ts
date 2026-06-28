@@ -148,6 +148,12 @@ export declare function readResponseBody(response: Response): Promise<string>;
  */
 export declare function readResponseBodyWithTimeout(response: Response, timeoutMs?: number): Promise<string>;
 /**
+ * Reset all module state for testing purposes
+ * Clears pending requests, resets counters, and restores default settings.
+ * Call this in beforeEach/afterEach test hooks to prevent test pollution.
+ */
+export declare function resetForTesting(): void;
+/**
  * Type alias for fetch-like functions (avoids overload complexity)
  */
 type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;

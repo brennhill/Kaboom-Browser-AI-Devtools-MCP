@@ -8,6 +8,15 @@
  * and cleanup of stale error groups.
  */
 import type { LogEntry } from '../types/index.js';
+/** Error group max age - cleanup after 1 hour */
+export declare const ERROR_GROUP_MAX_AGE_MS = 3600000;
+/** Internal error group structure */
+interface InternalErrorGroup {
+    entry: LogEntry;
+    count: number;
+    firstSeen: number;
+    lastSeen: number;
+}
 /** Process error group result */
 interface ProcessErrorGroupResult {
     shouldSend: boolean;
@@ -23,6 +32,10 @@ export type ProcessedLogEntry = LogEntry & {
 };
 export declare function createErrorSignature(entry: LogEntry): string;
 export declare function processErrorGroup(entry: LogEntry): ProcessErrorGroupResult;
+/**
+ * Get current state of error groups (for testing)
+ */
+export declare function getErrorGroupsState(): Map<string, InternalErrorGroup>;
 /**
  * Clean up stale error groups older than ERROR_GROUP_MAX_AGE_MS
  */

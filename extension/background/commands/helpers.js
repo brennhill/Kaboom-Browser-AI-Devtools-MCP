@@ -499,7 +499,7 @@ export async function resolveTargetTab(query, paramsObj) {
             };
         }
         diagnosticLog(`[Diagnostic] Tracked tab ${trackedTabId} unavailable, clearing tracking state`);
-        clearTrackedTab();
+        await clearTrackedTab();
         try {
             const toastTab = await getActiveTab();
             if (toastTab?.id) {

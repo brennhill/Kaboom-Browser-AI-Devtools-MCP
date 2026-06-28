@@ -68,7 +68,8 @@ export function installRecordingListeners(deps) {
         if (message.type === 'screen_recording_start') {
             trackUIFeature('video');
             console.log(LOG, 'Popup screen_recording_start received', { audio: message.audio });
-            resolvePopupRecordingTargetTab().then((targetTab) => {
+            resolvePopupRecordingTargetTab()
+                .then((targetTab) => {
                 const slug = buildScreenRecordingSlug(targetTab?.url);
                 const audio = message.audio ?? '';
                 console.log(LOG, 'Popup screen_recording_start \u2192 startRecording', {
@@ -87,6 +88,11 @@ export function installRecordingListeners(deps) {
                     console.error(LOG, 'Popup screen_recording_start EXCEPTION:', err);
                     sendResponse({ status: 'error' });
                 });
+            })
+                .catch((err) => {
+                // Without this, a tabs.query/get rejection would leave the popup hanging forever.
+                console.error(LOG, 'Popup screen_recording_start target tab resolution FAILED:', err);
+                sendResponse({ status: 'error' });
             });
             return true; // async response
         }

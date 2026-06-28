@@ -1095,6 +1095,25 @@
     return false;
   }
 
+  // extension/lib/tracked-tab-storage.js
+  var TRACKED_TAB_STORAGE_KEYS = [
+    StorageKey.TRACKED_TAB_ID,
+    StorageKey.TRACKED_TAB_URL,
+    StorageKey.TRACKED_TAB_TITLE
+  ];
+  async function setTrackedTab(tab) {
+    if (!tab.id)
+      return;
+    await setLocals({
+      [StorageKey.TRACKED_TAB_ID]: tab.id,
+      [StorageKey.TRACKED_TAB_URL]: tab.url ?? "",
+      [StorageKey.TRACKED_TAB_TITLE]: tab.title ?? ""
+    });
+  }
+  async function clearTrackedTab() {
+    await removeLocals(TRACKED_TAB_STORAGE_KEYS);
+  }
+
   // extension/lib/request-audit.js
   async function requestAudit(pageUrl) {
     try {
@@ -1112,7 +1131,7 @@
     const prevTabId = await getLocal(StorageKey.TRACKED_TAB_ID);
     if (!prevTabId)
       return;
-    await removeLocals([StorageKey.TRACKED_TAB_ID, StorageKey.TRACKED_TAB_URL]);
+    await clearTrackedTab();
     const btn = document.getElementById("track-page-btn");
     if (btn)
       showIdleState2(btn);
@@ -1139,7 +1158,8 @@
       console.log(KABOOM_LOG_PREFIX, "Switched to tracked tab:", tabId);
     } catch (err) {
       console.error(KABOOM_LOG_PREFIX, "Failed to switch to tracked tab:", err);
-      void removeLocals([StorageKey.TRACKED_TAB_ID, StorageKey.TRACKED_TAB_URL]);
+      clearTrackedTab().catch(() => {
+      });
     }
   }
   async function handleTrackPageClick(showInternalPageState2, showCloakedState2, showTrackingState2, showIdleState2) {
@@ -1167,11 +1187,7 @@
         showCloakedState2(btn);
       return;
     }
-    await setLocals({
-      [StorageKey.TRACKED_TAB_ID]: tab.id,
-      [StorageKey.TRACKED_TAB_URL]: tab.url,
-      [StorageKey.TRACKED_TAB_TITLE]: tab.title || ""
-    });
+    await setTrackedTab(tab);
     if (btn)
       showTrackingState2(btn, tab.url, tab.id);
     console.log(KABOOM_LOG_PREFIX, "Now tracking tab:", tab.id, tab.url);

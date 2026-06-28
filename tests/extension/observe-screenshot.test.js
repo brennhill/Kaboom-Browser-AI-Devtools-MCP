@@ -53,12 +53,19 @@ mock.module('../../extension/background/debug.js', {
 
 globalThis.chrome = {
   tabs: {
+    // captureVisibleTabSafe queries the active tab; empty result means the target
+    // tab is activated once with no restore call (matches the single-update assertion).
+    query: mock.fn(async () => []),
     get: mock.fn(async () => ({ windowId: 11, url: 'https://www.linkedin.com/feed/' })),
     update: mock.fn(async () => ({})),
     captureVisibleTab: mock.fn(async () => 'data:image/jpeg;base64,Zm9v')
   },
   windows: {
     update: mock.fn(async () => ({}))
+  },
+  // setKaboomOverlayVisibility hides/shows Kaboom overlays via executeScript before capture.
+  scripting: {
+    executeScript: mock.fn(async () => [])
   }
 }
 

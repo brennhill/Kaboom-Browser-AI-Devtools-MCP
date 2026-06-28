@@ -41,12 +41,14 @@ async function handleStartRecording(msg) {
     });
     if (state.active) {
         console.warn(LOG, 'START BLOCKED: already recording');
-        chrome.runtime.sendMessage({
+        chrome.runtime
+            .sendMessage({
             target: 'background',
             type: 'offscreen_recording_started',
             success: false,
             error: 'RECORD_START: Already recording in offscreen document.'
-        });
+        })
+            .catch(() => { });
         return;
     }
     state.active = true; // eslint-disable-line require-atomic-updates
@@ -170,11 +172,13 @@ async function handleStartRecording(msg) {
             totalBytes: 0
         };
         console.log(LOG, 'Recording STARTED, sending confirmation to background');
-        chrome.runtime.sendMessage({
+        chrome.runtime
+            .sendMessage({
             target: 'background',
             type: 'offscreen_recording_started',
             success: true
-        });
+        })
+            .catch(() => { });
     }
     catch (err) {
         console.error(LOG, 'START EXCEPTION:', errorMessage(err), err.stack);
@@ -184,12 +188,14 @@ async function handleStartRecording(msg) {
             s.getTracks().forEach((t) => t.stop());
         }
         state = { ...defaultState }; // eslint-disable-line require-atomic-updates
-        chrome.runtime.sendMessage({
+        chrome.runtime
+            .sendMessage({
             target: 'background',
             type: 'offscreen_recording_started',
             success: false,
             error: `RECORD_START: ${errorMessage(err, 'Failed to start recording in offscreen document.')}`
-        });
+        })
+            .catch(() => { });
     }
 }
 /**
@@ -207,13 +213,15 @@ function handleStopRecording(truncated = false) {
     });
     if (!state.active) {
         console.warn(LOG, 'STOP: not active');
-        chrome.runtime.sendMessage({
+        chrome.runtime
+            .sendMessage({
             target: 'background',
             type: 'offscreen_recording_stopped',
             status: 'error',
             name: '',
             error: 'RECORD_STOP: No active recording in offscreen document.'
-        });
+        })
+            .catch(() => { });
         return;
     }
     const { name, startTime, recorder, stream, chunks, serverUrl } = state;
@@ -224,13 +232,15 @@ function handleStopRecording(truncated = false) {
             stream.getTracks().forEach((t) => t.stop());
         }
         state = { ...defaultState };
-        chrome.runtime.sendMessage({
+        chrome.runtime
+            .sendMessage({
             target: 'background',
             type: 'offscreen_recording_stopped',
             status: 'error',
             name: '',
             error: 'RECORD_STOP: Recorder already inactive.'
-        });
+        })
+            .catch(() => { });
         return;
     }
     console.log(LOG, 'Stopping recorder, waiting for onstop callback');
@@ -279,13 +289,15 @@ function handleStopRecording(truncated = false) {
             state = { ...defaultState };
             if (!response.ok) {
                 console.error(LOG, 'Server returned error:', response.status);
-                chrome.runtime.sendMessage({
+                chrome.runtime
+                    .sendMessage({
                     target: 'background',
                     type: 'offscreen_recording_stopped',
                     status: 'error',
                     name,
                     error: `RECORD_STOP: Server returned ${response.status}.`
-                });
+                })
+                    .catch(() => { });
                 return;
             }
             let savePath;
@@ -297,7 +309,8 @@ function handleStopRecording(truncated = false) {
                 /* path is optional */
             }
             console.log(LOG, 'Recording SAVED', { name, duration, size: blob.size, path: savePath });
-            chrome.runtime.sendMessage({
+            chrome.runtime
+                .sendMessage({
                 target: 'background',
                 type: 'offscreen_recording_stopped',
                 status: 'saved',
@@ -306,25 +319,28 @@ function handleStopRecording(truncated = false) {
                 size_bytes: blob.size,
                 truncated: truncated || undefined,
                 path: savePath
-            });
+            })
+                .catch(() => { });
         }
         catch (err) {
             console.error(LOG, 'SAVE EXCEPTION:', errorMessage(err), err.stack);
             state = { ...defaultState };
-            chrome.runtime.sendMessage({
+            chrome.runtime
+                .sendMessage({
                 target: 'background',
                 type: 'offscreen_recording_stopped',
                 status: 'error',
                 name,
                 error: `RECORD_STOP: ${errorMessage(err, 'Save failed.')}`
-            });
+            })
+                .catch(() => { });
         }
     };
     recorder.stop();
 }
 // Listen for messages from the service worker
 console.log(LOG, 'Offscreen recording worker loaded');
-chrome.runtime.onMessage.addListener((message, sender) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Only handle messages from the extension itself
     if (sender.id !== chrome.runtime.id)
         return;
@@ -337,6 +353,18 @@ chrome.runtime.onMessage.addListener((message, sender) => {
     }
     else if (message.type === 'offscreen_stop_recording') {
         handleStopRecording();
+    }
+    else if (message.type === 'offscreen_get_recording_state') {
+        // Restarted service worker asks whether a recording survived (rehydration).
+        sendResponse({
+            active: state.active,
+            name: state.name,
+            startTime: state.startTime,
+            fps: state.fps,
+            audioMode: state.audioMode,
+            tabId: state.tabId,
+            url: state.url
+        });
     }
 });
 //# sourceMappingURL=recording-worker.js.map

@@ -94,7 +94,7 @@ describe('terminal widget ui branding', () => {
     resetAllState()
     const widget = createWidget('token-123')
 
-    const titleNode = walkTree(widget, (child) => child.textContent === 'Kaboom Terminal')
-    assert.ok(titleNode, 'expected Kaboom Terminal title in widget header')
+    const titleNode = walkTree(widget, (child) => child.textContent === 'KaBOOM! Terminal')
+    assert.ok(titleNode, 'expected KaBOOM! Terminal title in widget header')
   })
 })

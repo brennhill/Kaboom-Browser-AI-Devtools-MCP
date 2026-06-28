@@ -90,7 +90,7 @@ describe('Tooling contracts', () => {
     )
     assert.match(
       script,
-      /export_sarif\.go uses build-time injected version fallback/,
+      /export_sarif_types\.go uses build-time injected version fallback/,
       'validate-versions should special-case build-time injected version vars'
     )
   })

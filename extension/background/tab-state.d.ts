@@ -2,6 +2,7 @@
  * Purpose: Tab-state accessors, settings persistence, and content-script helpers.
  * Split from event-listeners.ts to keep files under 800 LOC.
  */
+export { setTrackedTab, clearTrackedTab, TRACKED_TAB_STORAGE_KEYS } from '../lib/tracked-tab-storage.js';
 /**
  * Ping content script to check if it's loaded
  */
@@ -58,15 +59,11 @@ export interface TerminalWorkspaceTarget {
  * Get tracked tab information, including Chrome tab status.
  */
 export declare function getTrackedTabInfo(): Promise<TrackedTabInfo>;
-/**
- * Persist tracked tab state.
- */
-export declare function setTrackedTab(tab: Pick<chrome.tabs.Tab, 'id' | 'url' | 'title'>): Promise<void>;
-/**
- * Clear tracked tab state
- */
-export declare function clearTrackedTab(): void;
 export declare function resolveTerminalWorkspaceTarget(requestTabId?: number): Promise<TerminalWorkspaceTarget | null>;
+/**
+ * Get all extension config settings.
+ */
+export declare function getAllConfigSettings(): Promise<Record<string, boolean | string | undefined>>;
 /**
  * Query for the currently active tab in the current window.
  * Returns null if no active tab or no tab id.

@@ -87,7 +87,7 @@ export function installContextMenus(recordingHandlers, actionRecordingHandlers, 
             try {
                 const trackedTabId = (await getLocal(StorageKey.TRACKED_TAB_ID));
                 if (trackedTabId === tab.id) {
-                    clearTrackedTab();
+                    await clearTrackedTab();
                     if (logFn)
                         logFn(`Released control for tab ${tab.id}`);
                 }

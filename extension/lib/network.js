@@ -282,7 +282,7 @@ export async function readResponseBodyWithTimeout(response, timeoutMs = BODY_REA
  * Clears pending requests, resets counters, and restores default settings.
  * Call this in beforeEach/afterEach test hooks to prevent test pollution.
  */
-function resetForTesting() {
+export function resetForTesting() {
     configuredServerUrl = '';
     networkWaterfallEnabled = false;
     pendingRequests.clear();

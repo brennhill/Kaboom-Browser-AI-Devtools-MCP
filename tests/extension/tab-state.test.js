@@ -136,8 +136,9 @@ describe('tab-state helpers', () => {
 
   test('loadAiWebPilotState and loadDebugModeState read persisted flags', async () => {
     globalThis.chrome.storage.local.get = mock.fn((keys) => {
-      if (Array.isArray(keys) && keys.includes('aiWebPilotEnabled')) return Promise.resolve({ aiWebPilotEnabled: false })
-      if (Array.isArray(keys) && keys.includes('debugMode')) return Promise.resolve({ debugMode: true })
+      const keyList = Array.isArray(keys) ? keys : [keys]
+      if (keyList.includes('aiWebPilotEnabled')) return Promise.resolve({ aiWebPilotEnabled: false })
+      if (keyList.includes('debugMode')) return Promise.resolve({ debugMode: true })
       return Promise.resolve({})
     })
 
@@ -147,9 +148,11 @@ describe('tab-state helpers', () => {
     assert.strictEqual(await loadDebugModeState(), true)
   })
 
-  test('loadAiWebPilotState and loadDebugModeState return false when chrome is unavailable', async () => {
+  test('loadAiWebPilotState defaults to enabled and loadDebugModeState defaults to disabled when chrome is unavailable', async () => {
     globalThis.chrome = undefined
-    assert.strictEqual(await loadAiWebPilotState(), false)
+    // AI Web Pilot is opt-out: enabled unless explicitly set to false (getLocal -> undefined => true).
+    assert.strictEqual(await loadAiWebPilotState(), true)
+    // Debug mode is opt-in: disabled unless explicitly set to true.
     assert.strictEqual(await loadDebugModeState(), false)
   })
 

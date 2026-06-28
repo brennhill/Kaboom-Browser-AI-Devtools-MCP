@@ -123,15 +123,15 @@ const _batchers = createBatcherInstances({
     },
     debugLog
 }, sharedServerCircuitBreaker);
-const logBatcherWithCB = _batchers.logBatcherWithCB;
+export const logBatcherWithCB = _batchers.logBatcherWithCB;
 export const logBatcher = _batchers.logBatcher;
 const wsBatcherWithCB = _batchers.wsBatcherWithCB;
 export const wsBatcher = _batchers.wsBatcher;
-const enhancedActionBatcherWithCB = _batchers.enhancedActionBatcherWithCB;
+export const enhancedActionBatcherWithCB = _batchers.enhancedActionBatcherWithCB;
 export const enhancedActionBatcher = _batchers.enhancedActionBatcher;
-const networkBodyBatcherWithCB = _batchers.networkBodyBatcherWithCB;
+export const networkBodyBatcherWithCB = _batchers.networkBodyBatcherWithCB;
 export const networkBodyBatcher = _batchers.networkBodyBatcher;
-const perfBatcherWithCB = _batchers.perfBatcherWithCB;
+export const perfBatcherWithCB = _batchers.perfBatcherWithCB;
 export const perfBatcher = _batchers.perfBatcher;
 // =============================================================================
 // LOG HANDLING

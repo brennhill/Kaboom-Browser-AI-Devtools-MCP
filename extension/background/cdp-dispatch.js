@@ -162,8 +162,10 @@ function mapCDPError(err) {
 // =============================================================================
 // AUTO-ESCALATION: CDP-first for click/type/key_press, fallback to DOM
 // =============================================================================
-// Platform-specific modifier for select-all (Meta on macOS, Ctrl elsewhere)
-const SELECT_ALL_MODIFIER = /mac/i.test(navigator.platform || '') ? 4 : 2;
+// Platform-specific modifier for select-all (Meta on macOS, Ctrl elsewhere).
+// Guard `navigator` so this module evaluates safely where it is absent (Node test
+// runner on Node 20, which has no global navigator); the service worker always has it.
+const SELECT_ALL_MODIFIER = typeof navigator !== 'undefined' && /mac/i.test(navigator.platform || '') ? 4 : 2;
 /** Actions that auto-escalate to CDP. */
 const CDP_ESCALATABLE = new Set(['click', 'type', 'key_press']);
 /** Check whether an action should attempt CDP before DOM primitives. */

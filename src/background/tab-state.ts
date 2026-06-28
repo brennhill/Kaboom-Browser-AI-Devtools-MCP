@@ -307,7 +307,7 @@ export async function resolveTerminalWorkspaceTarget(requestTabId?: number): Pro
 /**
  * Get all extension config settings.
  */
-async function getAllConfigSettings(): Promise<Record<string, boolean | string | undefined>> {
+export async function getAllConfigSettings(): Promise<Record<string, boolean | string | undefined>> {
   const result = (await getLocals([
     StorageKey.AI_WEB_PILOT_ENABLED,
     StorageKey.WEBSOCKET_CAPTURE_ENABLED,

@@ -142,8 +142,8 @@ export async function handleTrackedTabUrlChange(updatedTabId, newUrl, logFn) {
             }
         }
         catch {
-            // Tab may have been closed -- update URL only
-            setLocal(StorageKey.TRACKED_TAB_URL, newUrl);
+            // Tab may have been closed -- update URL only (fire-and-forget, never throws)
+            setLocal(StorageKey.TRACKED_TAB_URL, newUrl).catch(() => { });
         }
     }
 }
@@ -157,7 +157,7 @@ export async function handleTrackedTabClosed(closedTabId, logFn) {
     if (trackedTabId === closedTabId) {
         if (logFn)
             logFn(`${KABOOM_LOG_PREFIX} Tracked tab closed (id:`, closedTabId);
-        clearTrackedTabState();
+        await clearTrackedTabState();
     }
 }
 // =============================================================================
@@ -201,13 +201,13 @@ export function installStartupListener(logFn) {
                 catch {
                     if (logFn)
                         logFn(`${KABOOM_LOG_PREFIX} Browser restarted - tracked tab gone, clearing tracking state`);
-                    clearTrackedTabState();
+                    await clearTrackedTabState();
                 }
             }
         }
         catch {
-            // Safety fallback: clear if we can't check
-            clearTrackedTabState();
+            // Safety fallback: clear if we can't check (fire-and-forget, never throws)
+            clearTrackedTabState().catch(() => { });
         }
     });
 }

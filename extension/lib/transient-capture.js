@@ -32,7 +32,7 @@ const dedupMap = new Map();
  * Classify an element as a transient UI element, or return null if not transient.
  * Priority: ARIA > class fingerprints > computed style heuristic.
  */
-function classifyTransient(el) {
+export function classifyTransient(el) {
     const tag = el.tagName;
     if (!tag || SKIP_TAGS.has(tag))
         return null;
@@ -115,7 +115,7 @@ function recordDedup(key, now) {
  * Walks one level of children to catch framework wrapper patterns
  * (e.g., React portals wrapping an inner element with role="alert").
  */
-function classifyCandidates(el) {
+export function classifyCandidates(el) {
     // Try the element itself first
     const info = classifyTransient(el);
     if (info)

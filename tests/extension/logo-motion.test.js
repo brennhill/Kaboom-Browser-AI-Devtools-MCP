@@ -60,8 +60,8 @@ describe('logo asset contracts', () => {
   test('manifest uses Kaboom branding for the extension shell', () => {
     const manifestJson = fs.readFileSync(path.join(REPO_ROOT, 'extension/manifest.json'), 'utf8')
     const manifest = JSON.parse(manifestJson)
-    assert.equal(manifest.name, 'Kaboom Devtools')
-    assert.equal(manifest.action.default_title, 'Kaboom: Agentic Browser Devtools')
+    assert.equal(manifest.name, 'KaBOOM! Devtools')
+    assert.equal(manifest.action.default_title, 'KaBOOM!: Agentic Browser Devtools')
   })
 
   test('popup html uses icon.svg as the idle asset', () => {

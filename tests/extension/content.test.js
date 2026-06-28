@@ -129,7 +129,7 @@ describe('Content Window Message Bridge', () => {
     assert.strictEqual(globalThis.chrome.runtime.sendMessage.mock.calls.length, 1)
     assert.strictEqual(warn.mock.calls.length, 1)
     const message = warn.mock.calls[0].arguments[0]
-    assert.match(message, /Kaboom extension was reloaded/)
+    assert.match(message, /KaBOOM! extension was reloaded/)
     assert.match(message, /A page refresh will reconnect capture automatically/)
     assert.doesNotMatch(message, /Gasoline extension was reloaded|STRUM extension was reloaded/)
   })

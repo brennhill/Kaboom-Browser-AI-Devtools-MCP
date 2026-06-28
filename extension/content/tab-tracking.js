@@ -16,7 +16,7 @@ let currentTabId = null;
  * Update tracking status by checking storage and current tab ID.
  * Called on script load, storage changes, and tab activation.
  */
-async function updateTrackingStatus() {
+export async function updateTrackingStatus() {
     try {
         const trackedTabId = (await getLocal(StorageKey.TRACKED_TAB_ID));
         // Request tab ID from background script (content scripts can't access chrome.tabs)

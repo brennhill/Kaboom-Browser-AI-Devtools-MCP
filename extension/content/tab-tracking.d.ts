@@ -3,6 +3,11 @@
  * Docs: docs/features/feature/tab-tracking-ux/index.md
  */
 /**
+ * Update tracking status by checking storage and current tab ID.
+ * Called on script load, storage changes, and tab activation.
+ */
+export declare function updateTrackingStatus(): Promise<void>;
+/**
  * Get the current tracking status
  */
 export declare function getIsTrackedTab(): boolean;

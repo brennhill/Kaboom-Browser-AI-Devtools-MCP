@@ -1,1 +1,1 @@
-{"version":3,"file":"telemetry-beacon.d.ts","sourceRoot":"","sources":["../../src/lib/telemetry-beacon.ts"],"names":[],"mappings":"AAAA;;GAEG;AAyBH;;;GAGG;AACH,wBAAgB,MAAM,CAAC,KAAK,EAAE,MAAM,EAAE,KAAK,GAAE,MAAM,CAAC,MAAM,EAAE,MAAM,CAAM,GAAG,IAAI,CA2B9E"}
+{"version":3,"file":"telemetry-beacon.d.ts","sourceRoot":"","sources":["../../src/lib/telemetry-beacon.ts"],"names":[],"mappings":"AAAA;;GAEG;AAoCH;;;;;GAKG;AACH,wBAAgB,MAAM,CAAC,KAAK,EAAE,MAAM,EAAE,KAAK,GAAE,MAAM,CAAC,MAAM,EAAE,MAAM,CAAM,GAAG,IAAI,CAQ9E"}
