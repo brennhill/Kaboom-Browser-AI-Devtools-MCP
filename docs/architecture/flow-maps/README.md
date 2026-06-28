@@ -4,7 +4,7 @@ status: active
 last_reviewed: 2026-04-13
 owners:
   - Brenn
-last_verified_version: 0.8.3
+last_verified_version: 0.8.4
 last_verified_date: 2026-04-13
 ---
 

@@ -238,7 +238,7 @@ describe('checkServerHealth', () => {
         json: () =>
           Promise.resolve({
             status: 'ok',
-            version: '0.8.3',
+            version: MANIFEST_VERSION,
             capture: {
               extension_connected: false,
               extension_last_seen: ''
@@ -250,7 +250,7 @@ describe('checkServerHealth', () => {
     const result = await checkServerHealth('http://localhost:9222')
     assert.strictEqual(result.connected, false)
     assert.strictEqual(result.status, 'ok')
-    assert.strictEqual(result.version, '0.8.3')
+    assert.strictEqual(result.version, MANIFEST_VERSION)
     assert.ok(result.error.includes('heartbeat'))
   })
 

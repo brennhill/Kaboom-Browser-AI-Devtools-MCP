@@ -2776,7 +2776,7 @@ function installKaboomAPI() {
     /**
      * Version of the Kaboom API
      */
-    version: "0.8.3"
+    version: "0.8.4"
   };
 }
 function uninstallKaboomAPI() {

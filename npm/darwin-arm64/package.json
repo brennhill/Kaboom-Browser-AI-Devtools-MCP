@@ -1,6 +1,6 @@
 {
   "name": "@brennhill/kaboom-agentic-browser-darwin-arm64",
-  "version": "0.8.3",
+  "version": "0.8.4",
   "description": "Kaboom binary for macOS ARM64 (Apple Silicon)",
   "license": "AGPL-3.0-only",
   "scripts": {

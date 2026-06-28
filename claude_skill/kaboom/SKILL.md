@@ -13,7 +13,7 @@ compatibility: >
   extension connected. macOS, Linux, Windows.
 metadata:
   author: Kaboom AI
-  version: 0.8.3
+  version: 0.8.4
   category: developer-tools
   tags: [browser, debugging, automation, testing, observability]
 ---
