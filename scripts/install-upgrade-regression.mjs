@@ -240,7 +240,14 @@ async function main() {
   const pypiPackageDir = path.join(repoRoot, 'pypi', 'kaboom-agentic-browser')
   const hasPypiPackage = fs.existsSync(pypiPackageDir)
   const python = hasPypiPackage ? pickPython() : null
-  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-upgrade-regression-'))
+  // realpathSync resolves symlinked ancestors (e.g. macOS /var -> /private/var,
+  // Windows 8.3 short paths). Without it, the daemon's upload-dir security check
+  // rejects $HOME/kaboom-upload-dir because EvalSymlinks(dir) != dir, and the daemon
+  // never serves /health. A real user's HOME has no symlinked ancestors, so this only
+  // affects the temp-dir test environment.
+  const tmpRoot = fs.realpathSync(
+    fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-upgrade-regression-'))
+  )
   const homeDir = path.join(tmpRoot, 'home')
   const binDir = path.join(tmpRoot, 'bin')
   fs.mkdirSync(homeDir, { recursive: true })

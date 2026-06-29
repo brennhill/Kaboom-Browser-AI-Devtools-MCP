@@ -62,7 +62,7 @@ func TestMCPProtocol_ResponseNewlines(t *testing.T) {
 		_ = serverCmd.Wait()
 	}()
 
-	if !cmbridge.WaitForServer(port, 5*time.Second) {
+	if !cmbridge.WaitForServer(port, serverStartTimeout) {
 		t.Fatalf("Server failed to start")
 	}
 
@@ -142,7 +142,7 @@ func TestMCPProtocol_NotificationNoResponse(t *testing.T) {
 		_ = serverCmd.Wait()
 	}()
 
-	if !cmbridge.WaitForServer(port, 5*time.Second) {
+	if !cmbridge.WaitForServer(port, serverStartTimeout) {
 		t.Fatalf("Server failed to start")
 	}
 
@@ -205,7 +205,7 @@ func TestMCPProtocol_JSONRPCStructure(t *testing.T) {
 		_ = serverCmd.Wait()
 	}()
 
-	if !cmbridge.WaitForServer(port, 5*time.Second) {
+	if !cmbridge.WaitForServer(port, serverStartTimeout) {
 		t.Fatalf("Server failed to start")
 	}
 
@@ -302,7 +302,7 @@ func TestMCPProtocol_IDNeverNull(t *testing.T) {
 		_ = serverCmd.Wait()
 	}()
 
-	if !cmbridge.WaitForServer(port, 5*time.Second) {
+	if !cmbridge.WaitForServer(port, serverStartTimeout) {
 		t.Fatalf("Server failed to start")
 	}
 
@@ -383,7 +383,7 @@ func TestMCPProtocol_ErrorCodes(t *testing.T) {
 		_ = serverCmd.Wait()
 	}()
 
-	if !cmbridge.WaitForServer(port, 5*time.Second) {
+	if !cmbridge.WaitForServer(port, serverStartTimeout) {
 		t.Fatalf("Server failed to start")
 	}
 
@@ -468,7 +468,7 @@ func TestMCPProtocol_InitializeResponse(t *testing.T) {
 		_ = serverCmd.Wait()
 	}()
 
-	if !cmbridge.WaitForServer(port, 5*time.Second) {
+	if !cmbridge.WaitForServer(port, serverStartTimeout) {
 		t.Fatalf("Server failed to start")
 	}
 
@@ -538,7 +538,7 @@ func TestMCPProtocol_ToolsListStructure(t *testing.T) {
 		_ = serverCmd.Wait()
 	}()
 
-	if !cmbridge.WaitForServer(port, 5*time.Second) {
+	if !cmbridge.WaitForServer(port, serverStartTimeout) {
 		t.Fatalf("Server failed to start")
 	}
 

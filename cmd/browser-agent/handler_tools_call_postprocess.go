@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
@@ -96,7 +97,11 @@ func (h *MCPHandler) maybeAddVersionWarning(resp JSONRPCResponse) JSONRPCRespons
 }
 
 // updateNotifyLastShown tracks when the update-available warning was last shown.
-var updateNotifyLastShown time.Time
+// Guarded by updateNotifyMu: the MCP/HTTP request path can run concurrently.
+var (
+	updateNotifyLastShown time.Time
+	updateNotifyMu        sync.Mutex
+)
 
 // maybeAddUpdateAvailableWarning prepends a notice when a newer release is available.
 func maybeAddUpdateAvailableWarning(resp JSONRPCResponse) JSONRPCResponse {
@@ -115,10 +120,16 @@ func maybeAddUpdateAvailableWarning(resp JSONRPCResponse) JSONRPCResponse {
 	if availVer == "" || !isNewerVersion(availVer, version) {
 		return resp
 	}
-	if !updateNotifyLastShown.IsZero() && time.Since(updateNotifyLastShown) < 24*time.Hour {
+	// Atomic check-and-set of the 24h throttle so concurrent requests don't race.
+	updateNotifyMu.Lock()
+	recentlyShown := !updateNotifyLastShown.IsZero() && time.Since(updateNotifyLastShown) < 24*time.Hour
+	if !recentlyShown {
+		updateNotifyLastShown = time.Now()
+	}
+	updateNotifyMu.Unlock()
+	if recentlyShown {
 		return resp
 	}
-	updateNotifyLastShown = time.Now()
 
 	warning := fmt.Sprintf("UPDATE AVAILABLE: Kaboom v%s is available (current: v%s). Run: npm install -g kaboom-agentic-browser@latest\n\n", availVer, version)
 	return prependWarningToResponse(resp, warning)

@@ -233,7 +233,9 @@ jobs:
         run: npm ci
 
       - name: Install gosec
-        run: go install github.com/securego/gosec/v2/cmd/gosec@latest
+        # Pinned: gosec >= v2.27 requires Go 1.25, but this repo targets Go 1.24
+        # (go.mod). v2.22.7 requires Go 1.23 and installs on the CI toolchain.
+        run: go install github.com/securego/gosec/v2/cmd/gosec@v2.22.7
 
       - name: Go security scan (gosec)
         run: |

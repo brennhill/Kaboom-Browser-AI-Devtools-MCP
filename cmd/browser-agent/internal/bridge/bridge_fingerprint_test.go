@@ -28,8 +28,8 @@ func TestExtractGoBuildID(t *testing.T) {
 }
 
 func TestBridgeLaunchFingerprint(t *testing.T) {
-	t.Parallel()
-
+	// No t.Parallel(): this test swaps the package-level getBridgeExecutablePath,
+	// which would data-race with the other fingerprint tests that do the same.
 	tmp := t.TempDir()
 	exePath := tmp + "/kaboom-agentic-browser-test"
 	content := []byte("header" + goBuildIDPrefix + "test-build-id\"tail")
@@ -70,8 +70,7 @@ func TestBridgeLaunchFingerprint(t *testing.T) {
 }
 
 func TestBridgeLaunchFingerprint_PathError(t *testing.T) {
-	t.Parallel()
-
+	// No t.Parallel(): mutates the shared getBridgeExecutablePath (see above).
 	oldGetter := getBridgeExecutablePath
 	t.Cleanup(func() {
 		getBridgeExecutablePath = oldGetter

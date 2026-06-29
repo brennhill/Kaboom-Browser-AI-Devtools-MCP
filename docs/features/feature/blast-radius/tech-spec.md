@@ -9,11 +9,9 @@ links:
   product: ./product-spec.md
 code_paths:
   - internal/hook/blast_radius.go
-  - internal/hook/import_graph.go
   - cmd/hooks/main.go
 test_paths:
   - internal/hook/blast_radius_test.go
-  - internal/hook/import_graph_test.go
   - cmd/hooks/main_test.go
 ---
 
@@ -28,8 +26,8 @@ test_paths:
 ## Requirement Mapping
 
 - BLAST_001 -> `internal/hook/blast_radius.go:RunBlastRadius()` — main entry point
-- BLAST_002 -> `internal/hook/import_graph.go:importPatterns` — regex per language
-- BLAST_003 -> `internal/hook/import_graph.go:BuildImportGraph()` + `LoadCachedGraph()`
+- BLAST_002 -> `internal/hook/blast_radius.go:buildImportGraph()` — per-language import scanning
+- BLAST_003 -> `internal/hook/blast_radius.go:buildImportGraph()` + `loadCachedGraph()`
 - BLAST_004 -> `internal/hook/blast_radius.go:annotateWithSession()` — reads session touches
 - BLAST_005 -> `internal/hook/blast_radius.go:formatDependents()` — graduated output
 - BLAST_006 -> `internal/hook/blast_radius.go:touchesExportedSymbol()` — export detection

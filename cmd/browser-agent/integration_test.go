@@ -64,7 +64,7 @@ func TestIntegration_ServerStartupUnder1Second(t *testing.T) {
 	}()
 
 	// Wait for server to be ready (health endpoint)
-	if !bridge.WaitForServer(port, 5*time.Second) {
+	if !bridge.WaitForServer(port, serverStartTimeout) {
 		t.Fatalf("Server failed to start within 5 seconds")
 	}
 
@@ -118,7 +118,7 @@ func TestIntegration_AllMCPToolsReturnValidResponses(t *testing.T) {
 		_ = cmd.Wait()
 	}()
 
-	if !bridge.WaitForServer(port, 5*time.Second) {
+	if !bridge.WaitForServer(port, serverStartTimeout) {
 		t.Fatalf("Server failed to start")
 	}
 
@@ -311,7 +311,7 @@ func TestIntegration_ToolsListMatchesImplementation(t *testing.T) {
 		_ = cmd.Wait()
 	}()
 
-	if !bridge.WaitForServer(port, 5*time.Second) {
+	if !bridge.WaitForServer(port, serverStartTimeout) {
 		t.Fatalf("Server failed to start")
 	}
 

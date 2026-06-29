@@ -249,7 +249,9 @@ func validate(expect Expectation, output string, elapsed time.Duration) []string
 		}
 	}
 
-	if expect.MaxLatencyMs > 0 && elapsed.Milliseconds() > int64(expect.MaxLatencyMs) {
+	// Latency budgets measure real performance; the race detector inflates wall time
+	// several-fold and makes the measurement meaningless, so skip the budget under -race.
+	if !raceDetectorActive && expect.MaxLatencyMs > 0 && elapsed.Milliseconds() > int64(expect.MaxLatencyMs) {
 		failures = append(failures, fmt.Sprintf("latency %dms exceeds budget %dms", elapsed.Milliseconds(), expect.MaxLatencyMs))
 	}
 
