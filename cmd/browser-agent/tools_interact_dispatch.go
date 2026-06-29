@@ -23,6 +23,7 @@ func randIntn(n int) int {
 	if n <= 0 {
 		return 0
 	}
+	// #nosec G404 -- non-cryptographic helper for jitter/selection in browser automation; not security-sensitive.
 	return rand.IntN(n)
 }
 

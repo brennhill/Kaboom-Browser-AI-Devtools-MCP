@@ -101,7 +101,7 @@ npm run demo
 
 - **[wake-up.md](wake-up.md)** — Start here
 - **[validation-guide.md](validation-guide.md)** — Hands-on validation
-- **[status.md](status.md)** — Detailed status
+- **[STATUS.md](STATUS.md)** — Detailed status
 - **[competitive-advantage.md](competitive-advantage.md)** — Why WebSocket matters
 
 ---

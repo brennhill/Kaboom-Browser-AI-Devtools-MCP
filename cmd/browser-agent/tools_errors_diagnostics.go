@@ -27,20 +27,20 @@ func (h *ToolHandler) DiagnosticHintString() string {
 	} else {
 		parts = append(parts, "extension=DISCONNECTED")
 	}
-	pilotToken := "pilot=DISABLED"
+	pilotStatus := "pilot=DISABLED"
 	switch pilotState {
 	case "assumed_enabled":
-		pilotToken = "pilot=ASSUMED_ENABLED(startup)"
+		pilotStatus = "pilot=ASSUMED_ENABLED(startup)"
 	case "explicitly_disabled":
-		pilotToken = "pilot=DISABLED(explicit)"
+		pilotStatus = "pilot=DISABLED(explicit)"
 	case "enabled":
-		pilotToken = "pilot=enabled"
+		pilotStatus = "pilot=enabled"
 	default:
 		if pilotEnabled {
-			pilotToken = "pilot=enabled"
+			pilotStatus = "pilot=enabled"
 		}
 	}
-	parts = append(parts, pilotToken)
+	parts = append(parts, pilotStatus)
 	if enabled && tabURL != "" {
 		parts = append(parts, fmt.Sprintf("tracked_tab=%q (id=%d)", tabURL, tabID))
 	} else {

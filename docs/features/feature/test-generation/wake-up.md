@@ -143,7 +143,7 @@ make dev
 ### Option 2: Review First
 
 Read these in order:
-1. [status.md](status.md) — Detailed status report
+1. [STATUS.md](STATUS.md) — Detailed status report
 2. [validation-guide.md](validation-guide.md) — Step-by-step validation
 3. [competitive-advantage.md](competitive-advantage.md) — Why WebSocket matters
 
@@ -173,7 +173,7 @@ Any of these are fair questions:
 7. `questions.md` — Autonomous decisions
 8. `validation-plan.md` — Honest gap assessment
 9. `validation-guide.md` — Hands-on validation steps (NEW)
-10. `status.md` — Detailed status report (NEW)
+10. `STATUS.md` — Detailed status report (NEW)
 11. `competitive-advantage.md` — WebSocket advantage (NEW)
 12. `wake-up.md` — This file (NEW)
 

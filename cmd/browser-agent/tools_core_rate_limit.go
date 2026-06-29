@@ -17,6 +17,7 @@ func randomInt63() int64 {
 		// Fallback to time-based if rand fails (should never happen).
 		return time.Now().UnixNano()
 	}
+	// #nosec G115 -- masked to the positive int63 range (top bit cleared); the uint64->int64 conversion cannot overflow.
 	return int64(binary.BigEndian.Uint64(b[:]) & 0x7FFFFFFFFFFFFFFF)
 }
 
