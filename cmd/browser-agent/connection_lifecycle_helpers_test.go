@@ -69,6 +69,14 @@ func buildTestBinary(t *testing.T) string {
 func getTestStateDir(t *testing.T) string {
 	t.Helper()
 	testStateOnce.Do(func() {
+		// Honor an externally provided state dir. The reliability soak gate sets
+		// KABOOM_STATE_DIR so the server spawned by startServerCmd writes its fast-path
+		// telemetry to the same root that `--check` later inspects; otherwise every
+		// spawned server gets its own isolated temp dir.
+		if ext := os.Getenv(statecfg.StateDirEnv); ext != "" {
+			testStateDir = ext
+			return
+		}
 		testStateDir, testStateErr = os.MkdirTemp("", "kaboom-test-state-*")
 		if testStateErr != nil {
 			testStateErr = fmt.Errorf("failed to create isolated test state dir: %w", testStateErr)
