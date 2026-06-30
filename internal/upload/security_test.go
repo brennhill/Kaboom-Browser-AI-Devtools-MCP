@@ -277,6 +277,28 @@ func TestSecurity_ValidateUploadDir_Symlink(t *testing.T) {
 	}
 }
 
+// Regression: a real directory reached through a SYMLINKED ANCESTOR (e.g. macOS
+// /var -> /private/var, Windows 8.3 short paths under %TEMP%) must be accepted —
+// only a directly symlinked upload dir is rejected (see _Symlink above). The old
+// validator compared EvalSymlinks(dir) against the raw path and wrongly rejected
+// these, which broke daemon startup (and the upgrade-e2e gate) on macOS/Windows.
+func TestSecurity_ValidateUploadDir_SymlinkedAncestor(t *testing.T) {
+	base := t.TempDir()
+	realParent := filepath.Join(base, "real")
+	uploadDir := filepath.Join(realParent, "uploads")
+	if err := os.MkdirAll(uploadDir, 0o750); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	linkParent := filepath.Join(base, "link")
+	if err := os.Symlink(realParent, linkParent); err != nil {
+		t.Skipf("cannot create symlink on this platform: %v", err)
+	}
+	viaSymlinkedAncestor := filepath.Join(linkParent, "uploads")
+	if _, err := ValidateUploadDir(viaSymlinkedAncestor, nil); err != nil {
+		t.Fatalf("upload dir reached via a symlinked ancestor should be accepted, got: %v", err)
+	}
+}
+
 func TestSecurity_ValidateUploadDir_HomeDir(t *testing.T) {
 	home, err := os.UserHomeDir()
 	if err != nil {

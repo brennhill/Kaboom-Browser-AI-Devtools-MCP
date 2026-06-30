@@ -71,7 +71,16 @@ func resolveAndValidateDir(rawDir string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("--upload-dir: failed to resolve symlinks: %w", err)
 	}
-	if resolved != filepath.Clean(rawDir) {
+	// Reject only when the upload directory ITSELF is a symlink — not when an ancestor
+	// component is. Comparing the fully-resolved path against the raw path falsely
+	// rejected legitimate directories whose ancestors are OS-level symlinks (macOS
+	// /var -> /private/var, Windows 8.3 short paths under %TEMP%). EvalSymlinks above
+	// still canonicalizes the path returned for downstream use.
+	linfo, lerr := os.Lstat(rawDir)
+	if lerr != nil {
+		return "", fmt.Errorf("--upload-dir: failed to stat: %w", lerr)
+	}
+	if linfo.Mode()&os.ModeSymlink != 0 {
 		return "", fmt.Errorf("--upload-dir must not be a symlink: %s resolves to %s", rawDir, resolved)
 	}
 
