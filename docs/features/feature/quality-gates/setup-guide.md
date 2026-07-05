@@ -1,7 +1,7 @@
 ---
 doc_type: guide
 feature_id: feature-quality-gates
-last_reviewed: 2026-03-07
+last_reviewed: 2026-07-05
 ---
 
 # Quality Gates Setup Guide

@@ -3,7 +3,7 @@ doc_type: product-spec
 feature_id: feature-session-tracking
 status: proposed
 owners: []
-last_reviewed: 2026-03-07
+last_reviewed: 2026-07-05
 links:
   index: ./index.md
   tech: ./tech-spec.md

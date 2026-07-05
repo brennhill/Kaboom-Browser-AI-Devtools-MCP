@@ -4,7 +4,7 @@ feature_id: feature-lazy-server-start
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-06-29
+last_reviewed: 2026-07-05
 code_paths:
   - cmd/browser-agent/internal/bridge/bridge_startup_orchestration.go
   - cmd/browser-agent/internal/bridge/bridge_forward.go

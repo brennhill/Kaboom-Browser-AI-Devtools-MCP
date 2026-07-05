@@ -3,7 +3,7 @@ feature: Visual-Semantic Bridge
 status: proposed
 doc_type: tech-spec
 feature_id: feature-visual-semantic-bridge
-last_reviewed: 2026-03-05
+last_reviewed: 2026-07-05
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

@@ -3,7 +3,7 @@ doc_type: qa-plan
 feature_id: feature-convention-engine
 status: proposed
 owners: []
-last_reviewed: 2026-06-29
+last_reviewed: 2026-07-05
 links:
   index: ./index.md
   product: ./product-spec.md

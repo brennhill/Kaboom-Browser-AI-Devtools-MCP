@@ -2,7 +2,7 @@
 doc_type: product_spec
 feature_id: feature-terminal
 status: shipped
-last_reviewed: 2026-03-28
+last_reviewed: 2026-07-05
 owners:
   - Brenn
 last_verified_version: 0.8.1

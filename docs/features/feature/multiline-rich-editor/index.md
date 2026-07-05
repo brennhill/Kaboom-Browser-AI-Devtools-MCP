@@ -4,7 +4,7 @@ feature_id: feature-multiline-rich-editor
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-03-05
+last_reviewed: 2026-07-05
 code_paths:
   - src/background/dom-primitives.ts
   - scripts/templates/dom-primitives.ts.tpl

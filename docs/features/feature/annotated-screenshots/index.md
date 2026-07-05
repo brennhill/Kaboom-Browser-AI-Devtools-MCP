@@ -4,7 +4,7 @@ feature_id: feature-annotated-screenshots
 status: active
 feature_type: feature
 owners: []
-last_reviewed: 2026-03-05
+last_reviewed: 2026-07-05
 code_paths:
   - extension/content/draw-mode.js
   - internal/annotation/store.go

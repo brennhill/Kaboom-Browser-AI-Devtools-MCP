@@ -4,7 +4,7 @@ feature_id: feature-auto-fix
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-04-03
+last_reviewed: 2026-07-05
 code_paths:
   - cmd/browser-agent/tools_analyze_page_issues.go
   - cmd/browser-agent/internal/toolanalyze/page_issues_summary.go

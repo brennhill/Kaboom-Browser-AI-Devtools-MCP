@@ -4,7 +4,7 @@ feature_id: feature-decision-guard
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-03-07
+last_reviewed: 2026-07-05
 code_paths:
   - internal/hook/decision_guard.go
   - cmd/hooks/main.go

@@ -3,7 +3,7 @@ doc_type: product-spec
 feature_id: feature-ring-buffer
 status: proposed
 owners: []
-last_reviewed: 2026-03-05
+last_reviewed: 2026-07-05
 links:
   product: ./product-spec.md
   tech: ./tech-spec.md

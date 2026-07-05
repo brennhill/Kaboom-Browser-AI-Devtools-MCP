@@ -4,7 +4,7 @@ feature_id: feature-deployment-watchdog
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-03-05
+last_reviewed: 2026-07-05
 code_paths:
   - cmd/browser-agent/main_connection_mcp_upgrade.go
   - cmd/browser-agent/binary_watcher.go

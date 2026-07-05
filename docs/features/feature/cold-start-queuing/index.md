@@ -4,7 +4,7 @@ feature_id: feature-cold-start-queuing
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-03-05
+last_reviewed: 2026-07-05
 code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/tools_async_helpers.go

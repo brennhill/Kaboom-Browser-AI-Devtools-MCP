@@ -4,7 +4,7 @@ feature_id: feature-custom-event-api
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-03-29
+last_reviewed: 2026-07-05
 code_paths:
   - src/inject/api.ts
   - src/inject.ts

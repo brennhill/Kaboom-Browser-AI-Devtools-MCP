@@ -3,7 +3,7 @@ doc_type: tech-spec
 feature_id: feature-blast-radius
 status: proposed
 owners: []
-last_reviewed: 2026-03-07
+last_reviewed: 2026-07-05
 links:
   index: ./index.md
   product: ./product-spec.md

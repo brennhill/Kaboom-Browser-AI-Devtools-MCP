@@ -6,7 +6,7 @@ tags: [features, navigation, index, lookup]
 relates-to: [FEATURE-INDEX.md, README.md]
 canonical: true
 last-verified: 2026-03-05
-last_reviewed: 2026-04-03
+last_reviewed: 2026-07-05
 last_verified_version: 0.8.1
 last_verified_date: 2026-04-03
 ---

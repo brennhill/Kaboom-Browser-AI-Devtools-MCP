@@ -4,7 +4,7 @@ feature_id: feature-multi-agent-hooks
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-03-28
+last_reviewed: 2026-07-05
 code_paths:
   - internal/hook/protocol.go
   - internal/hook/session_store.go

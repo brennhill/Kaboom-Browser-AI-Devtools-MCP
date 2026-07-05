@@ -4,7 +4,7 @@ feature_id: feature-har-export
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-03-05
+last_reviewed: 2026-07-05
 code_paths:
   - internal/export/export_har.go
   - internal/export/export_sarif.go

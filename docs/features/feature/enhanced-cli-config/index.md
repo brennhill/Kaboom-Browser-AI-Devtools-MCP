@@ -4,7 +4,7 @@ feature_id: feature-enhanced-cli-config
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-06-10
+last_reviewed: 2026-07-05
 code_paths:
   - Makefile
   - scripts/build-crx.js

@@ -4,7 +4,7 @@ feature_id: feature-browser-extension-enhancement
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-04-13
+last_reviewed: 2026-07-05
 code_paths:
   - src/popup.ts
   - src/popup/status-display.ts

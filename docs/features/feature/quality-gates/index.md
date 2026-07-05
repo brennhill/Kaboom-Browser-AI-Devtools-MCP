@@ -4,7 +4,7 @@ feature_id: feature-quality-gates
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-03-28
+last_reviewed: 2026-07-05
 code_paths:
   - cmd/browser-agent/tools_configure_quality_gates.go
   - internal/tools/configure/mode_specs_configure.go

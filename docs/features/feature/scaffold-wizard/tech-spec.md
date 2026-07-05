@@ -4,7 +4,7 @@ feature_id: feature-scaffold-wizard
 status: proposed
 feature: scaffold-wizard
 owners: []
-last_reviewed: 2026-06-29
+last_reviewed: 2026-07-05
 links:
   index: ./index.md
   product: ./product-spec.md

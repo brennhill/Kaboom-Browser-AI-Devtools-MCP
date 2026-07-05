@@ -7,7 +7,7 @@ ai-priority: high
 tags: [testing, qa, bridge, lifecycle]
 relates-to: [product-spec.md, tech-spec.md]
 last-verified: 2026-06-29
-last_reviewed: 2026-06-29
+last_reviewed: 2026-07-05
 ---
 
 # QA Plan: Lazy Server Start

@@ -1,7 +1,7 @@
 ---
 doc_type: flow_map
 feature_id: feature-quality-gates
-last_reviewed: 2026-03-28
+last_reviewed: 2026-07-05
 ---
 
 # Quality Gates Flow Map

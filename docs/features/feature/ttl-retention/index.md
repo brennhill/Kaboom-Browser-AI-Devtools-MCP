@@ -4,7 +4,7 @@ feature_id: feature-ttl-retention
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-03-05
+last_reviewed: 2026-07-05
 code_paths:
 test_paths: []
 last_verified_version: 0.7.12

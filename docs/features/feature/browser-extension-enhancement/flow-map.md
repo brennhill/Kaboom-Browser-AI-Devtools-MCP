@@ -2,7 +2,7 @@
 doc_type: feature_flow_map_pointer
 feature_id: feature-browser-extension-enhancement
 status: active
-last_reviewed: 2026-04-13
+last_reviewed: 2026-07-05
 canonical_flow_map: ../../../architecture/flow-maps/extension-heartbeat-connection-status.md
 last_verified_version: 0.8.1
 last_verified_date: 2026-04-13

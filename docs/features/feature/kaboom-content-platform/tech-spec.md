@@ -2,7 +2,7 @@
 doc_type: tech_spec
 feature_id: feature-kaboom-content-platform
 status: in_progress
-last_reviewed: 2026-03-05
+last_reviewed: 2026-07-05
 owners:
   - Brenn
 last_verified_version: 0.7.12

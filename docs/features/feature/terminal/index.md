@@ -4,7 +4,7 @@ feature_id: feature-terminal
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-03-28
+last_reviewed: 2026-07-05
 code_paths:
   - src/lib/brand.ts
   - cmd/browser-agent/terminal_handlers.go

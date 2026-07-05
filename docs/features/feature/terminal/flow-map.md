@@ -1,7 +1,7 @@
 ---
 doc_type: legacy_doc
 status: reference
-last_reviewed: 2026-03-28
+last_reviewed: 2026-07-05
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-28
 canonical_flow_map: ../../../architecture/flow-maps/terminal-side-panel-host.md

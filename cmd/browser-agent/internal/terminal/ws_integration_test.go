@@ -121,7 +121,11 @@ func TestHandleTerminalWS_EchoControlAndClose(t *testing.T) {
 	if err := testWSWriteFrame(rw, 0x9, []byte("pingpayload")); err != nil {
 		t.Fatalf("write ping: %v", err)
 	}
-	op, payload = readFrame(t, conn, rw)
+	// Skip any residual echoed data/text frames — PTY echo framing (e.g. a trailing
+	// "kaboom\r\n" frame) varies by platform — until the pong control frame arrives.
+	for i := 0; i < 10 && op != 0xA; i++ {
+		op, payload = readFrame(t, conn, rw)
+	}
 	if op != 0xA || string(payload) != "pingpayload" {
 		t.Fatalf("expected pong echo, got op=%#x payload=%q", op, payload)
 	}
@@ -130,7 +134,10 @@ func TestHandleTerminalWS_EchoControlAndClose(t *testing.T) {
 	if err := testWSWriteFrame(rw, 0x8, nil); err != nil {
 		t.Fatalf("write close: %v", err)
 	}
-	op, _ = readFrame(t, conn, rw)
+	// Likewise skip any residual data frames before the close frame.
+	for i := 0; i < 10 && op != 0x8; i++ {
+		op, _ = readFrame(t, conn, rw)
+	}
 	if op != 0x8 {
 		t.Fatalf("expected close frame from server, got op=%#x", op)
 	}

@@ -4,7 +4,7 @@ feature_id: feature-session-tracking
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-03-07
+last_reviewed: 2026-07-05
 code_paths:
   - internal/hook/session_track.go
   - internal/hook/session_store.go

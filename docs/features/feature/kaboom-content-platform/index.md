@@ -5,7 +5,7 @@ status: in_progress
 feature_type: feature
 owners:
   - Brenn
-last_reviewed: 2026-03-05
+last_reviewed: 2026-07-05
 code_paths:
   - package.json
   - .vale.ini

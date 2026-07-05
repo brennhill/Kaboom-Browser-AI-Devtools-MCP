@@ -4,7 +4,7 @@ feature_id: feature-mcp-persistent-server
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-03-29
+last_reviewed: 2026-07-05
 code_paths:
   - cmd/browser-agent/mcp_identity.go
   - cmd/browser-agent/bridge_adapter.go

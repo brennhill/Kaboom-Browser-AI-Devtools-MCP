@@ -4,7 +4,7 @@ feature_id: browser-push
 status: implementation
 feature_type: feature
 owners: []
-last_reviewed: 2026-03-28
+last_reviewed: 2026-07-05
 code_paths:
   - internal/push/
   - cmd/browser-agent/push_state.go

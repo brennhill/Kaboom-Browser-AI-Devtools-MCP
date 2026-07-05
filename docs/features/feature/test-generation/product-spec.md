@@ -6,7 +6,7 @@ mode: [test_from_context, test_heal, test_classify]
 version: 0.7.12
 doc_type: product-spec
 feature_id: feature-test-generation
-last_reviewed: 2026-03-05
+last_reviewed: 2026-07-05
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

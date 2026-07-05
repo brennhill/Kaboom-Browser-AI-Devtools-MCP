@@ -4,7 +4,7 @@ feature_id: feature-lazy-server-start
 status: proposed
 feature: lazy-server-start
 owners: []
-last_reviewed: 2026-06-29
+last_reviewed: 2026-07-05
 links:
   index: ./index.md
   product: ./product-spec.md

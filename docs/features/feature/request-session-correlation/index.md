@@ -4,7 +4,7 @@ feature_id: feature-request-session-correlation
 status: active
 feature_type: feature
 owners: []
-last_reviewed: 2026-03-05
+last_reviewed: 2026-07-05
 code_paths:
   - cmd/browser-agent/client_registry_adapter.go
   - cmd/browser-agent/main_connection_mcp_bootstrap.go

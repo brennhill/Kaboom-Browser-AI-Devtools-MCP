@@ -2,7 +2,7 @@
 feature: multiline-rich-editor
 doc_type: qa-plan
 feature_id: feature-multiline-rich-editor
-last_reviewed: 2026-03-05
+last_reviewed: 2026-07-05
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

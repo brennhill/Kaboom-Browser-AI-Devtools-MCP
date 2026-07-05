@@ -4,7 +4,7 @@ priority: tier-1
 phase: v5.4-foundation
 relates-to: [PRODUCT_SPEC.md, TECH_SPEC_KABOOM_RUN.md]
 last-updated: 2026-01-31
-last_reviewed: 2026-03-05
+last_reviewed: 2026-07-05
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

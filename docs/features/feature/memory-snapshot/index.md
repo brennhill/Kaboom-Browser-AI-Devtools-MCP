@@ -4,7 +4,7 @@ feature_id: feature-memory-snapshot
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-06-29
+last_reviewed: 2026-07-05
 code_paths:
   - cmd/browser-agent/tools_analyze_dispatch.go
   - internal/tools/configure/mode_specs_analyze.go

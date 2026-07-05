@@ -4,7 +4,7 @@ feature_id: feature-flow-recording
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-03-28
+last_reviewed: 2026-07-05
 code_paths:
   - src/background/recording.ts
   - src/background/recording-capture.ts

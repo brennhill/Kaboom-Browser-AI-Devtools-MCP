@@ -7,7 +7,7 @@ relates-to: [product-spec.md, tech-spec.md]
 last-verified: 2026-06-29
 doc_type: qa-plan
 feature_id: feature-memory-snapshot
-last_reviewed: 2026-06-29
+last_reviewed: 2026-07-05
 last_verified_version: 0.8.4
 last_verified_date: 2026-06-29
 ---

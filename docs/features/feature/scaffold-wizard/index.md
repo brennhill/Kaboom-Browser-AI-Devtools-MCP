@@ -4,7 +4,7 @@ feature_id: feature-scaffold-wizard
 status: spec
 feature_type: feature
 owners: []
-last_reviewed: 2026-06-29
+last_reviewed: 2026-07-05
 ---
 
 # Scaffold Wizard

@@ -7,7 +7,7 @@ ai-priority: medium
 tags: [testing, qa, hooks, blast-radius]
 relates-to: [product-spec.md, tech-spec.md]
 last-verified: 2026-06-29
-last_reviewed: 2026-06-29
+last_reviewed: 2026-07-05
 ---
 
 # QA Plan: Blast Radius

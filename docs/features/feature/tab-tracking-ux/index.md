@@ -4,7 +4,7 @@ feature_id: feature-tab-tracking-ux
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-04-03
+last_reviewed: 2026-07-05
 code_paths:
   - src/lib/brand.ts
   - src/lib/constants.ts

@@ -4,7 +4,7 @@ feature_id: feature-interact-explore
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-03-06
+last_reviewed: 2026-07-05
 code_paths:
   - cmd/browser-agent/tools_interact_command_builder.go
   - cmd/browser-agent/tools_interact_action_handler.go

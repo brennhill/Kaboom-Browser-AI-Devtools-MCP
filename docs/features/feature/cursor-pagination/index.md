@@ -4,7 +4,7 @@ feature_id: feature-cursor-pagination
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-03-05
+last_reviewed: 2026-07-05
 code_paths:
   - internal/pagination/cursor.go
   - internal/pagination/pagination.go

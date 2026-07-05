@@ -9,7 +9,7 @@ created: 2026-03-06
 updated: 2026-03-06
 doc_type: product-spec
 feature_id: feature-lighthouse-report
-last_reviewed: 2026-03-06
+last_reviewed: 2026-07-05
 ---
 
 # Lighthouse Report

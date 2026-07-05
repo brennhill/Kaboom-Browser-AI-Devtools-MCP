@@ -6,7 +6,7 @@ feature: scaffold-wizard
 owners: []
 created: 2026-06-29
 updated: 2026-06-29
-last_reviewed: 2026-06-29
+last_reviewed: 2026-07-05
 links:
   index: ./index.md
   tech: ./tech-spec.md

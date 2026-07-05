@@ -4,7 +4,7 @@ feature_id: feature-backend-log-streaming
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-04-13
+last_reviewed: 2026-07-05
 code_paths:
   - internal/capture/accessor.go
   - internal/capture/buffer_clear.go
