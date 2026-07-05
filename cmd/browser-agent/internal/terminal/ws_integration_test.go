@@ -77,7 +77,6 @@ func newWSTestServer(t *testing.T, mgr *pty.Manager, relays *Map) *httptest.Serv
 }
 
 func TestHandleTerminalWS_EchoControlAndClose(t *testing.T) {
-	t.Parallel()
 	mgr := pty.NewManager()
 	defer mgr.StopAll()
 
@@ -143,7 +142,6 @@ func TestHandleTerminalWS_EchoControlAndClose(t *testing.T) {
 }
 
 func TestHandleTerminalWS_SessionExitNotifies(t *testing.T) {
-	t.Parallel()
 	mgr := pty.NewManager()
 	defer mgr.StopAll()
 
@@ -192,7 +190,6 @@ func TestHandleTerminalWS_SessionExitNotifies(t *testing.T) {
 }
 
 func TestHandleTerminalWS_HijackUnsupported(t *testing.T) {
-	t.Parallel()
 	mgr := pty.NewManager()
 	defer mgr.StopAll()
 

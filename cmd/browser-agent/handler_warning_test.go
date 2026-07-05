@@ -12,7 +12,6 @@ import (
 )
 
 func TestMaybeAddUpgradeWarning_NoPending(t *testing.T) {
-	t.Parallel()
 
 	// No upgrade state set — response should pass through unchanged.
 	orig := binaryUpgradeState

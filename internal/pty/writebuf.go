@@ -56,11 +56,15 @@ func (wb *WriteBuffer) Write(data []byte) (int, error) {
 		return 0, ErrWriteBufferFull
 	}
 	wb.buf = append(wb.buf, data...)
-	wb.mu.Unlock()
+	// Signal the drain goroutine while still holding the lock: the non-blocking send
+	// must be serialized with Close()'s close(wb.notify) (also under the lock) so the
+	// two can never race — and never "send on closed channel". The send is
+	// non-blocking (default case), so holding the lock cannot deadlock the drainer.
 	select {
 	case wb.notify <- struct{}{}:
 	default:
 	}
+	wb.mu.Unlock()
 	return len(data), nil
 }
 
@@ -128,9 +132,11 @@ func (wb *WriteBuffer) Close() error {
 		return nil
 	}
 	wb.closed = true
+	// Close under the lock so it is serialized with Write()'s send. Release before
+	// waiting on the drain goroutine (whose flushAll takes the lock) to avoid deadlock.
+	close(wb.notify)
 	wb.mu.Unlock()
 
-	close(wb.notify)
 	<-wb.done
 
 	// Final synchronous flush.
