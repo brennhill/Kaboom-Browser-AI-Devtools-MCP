@@ -145,11 +145,11 @@ function Replace-KaboomBinary {
 }
 
 Write-Host ""
-Write-Host '  ____ _____ ____  _   _ __  __ ' -ForegroundColor DarkYellow
-Write-Host ' / ___|_   _|  _ \| | | |  \/  |' -ForegroundColor DarkYellow
-Write-Host ' \___ \ | | | |_) | | | | |\/| |' -ForegroundColor DarkYellow
-Write-Host '  ___) || | |  _ <| |_| | |  | |' -ForegroundColor DarkYellow
-Write-Host ' |____/ |_| |_| \_\\___/|_|  |_|' -ForegroundColor DarkYellow
+Write-Host " _  __     _    ____    ___    ___   __  __ " -ForegroundColor DarkYellow
+Write-Host "| |/ /    / \  | __ )  / _ \  / _ \ |  \/  |" -ForegroundColor DarkYellow
+Write-Host "| ' /    / _ \ |  _ \ | | | || | | || |\/| |" -ForegroundColor DarkYellow
+Write-Host "| . \   / ___ \| |_) || |_| || |_| || |  | |" -ForegroundColor DarkYellow
+Write-Host "|_|\_\ /_/   \_\____/  \___/  \___/ |_|  |_|" -ForegroundColor DarkYellow
 Write-Host ""
 Write-Host "🎸 Kaboom Installer" -ForegroundColor DarkYellow
 Write-Host "--------------------------------------------------" -ForegroundColor DarkYellow
