@@ -19,7 +19,10 @@ $EXT_DIR = if ($env:KABOOM_EXTENSION_DIR) { $env:KABOOM_EXTENSION_DIR } else { J
 $KABOOM_BIN = Join-Path $BIN_DIR "kaboom-agentic-browser.exe"
 # Release version source of truth.
 $VERSION_URL = "https://raw.githubusercontent.com/$REPO/STABLE/VERSION"
-$STRICT_CHECKSUM = $env:KABOOM_INSTALL_STRICT -eq "1"
+# Checksums are verified by DEFAULT (every real release ships checksums.txt). An
+# unverifiable download aborts, turning an HTML/404 body into a hard error instead of a
+# silently-broken install. Opt out only for offline/mirror installs: KABOOM_INSTALL_STRICT=0.
+$STRICT_CHECKSUM = $env:KABOOM_INSTALL_STRICT -ne "0"
 $TEMP_TOKEN = [Guid]::NewGuid().ToString("N")
 $STAGE_EXT_DIR = Join-Path $INSTALL_DIR ".extension-stage-$TEMP_TOKEN"
 $BACKUP_EXT_DIR = Join-Path $INSTALL_DIR ".extension-backup-$TEMP_TOKEN"
@@ -153,8 +156,8 @@ Write-Host "|_|\_\ /_/   \_\____/  \___/  \___/ |_|  |_|" -ForegroundColor DarkY
 Write-Host ""
 Write-Host "🎸 Kaboom Installer" -ForegroundColor DarkYellow
 Write-Host "--------------------------------------------------" -ForegroundColor DarkYellow
-if ($STRICT_CHECKSUM) {
-    Write-Host "🔒 Strict checksum mode enabled (KABOOM_INSTALL_STRICT=1)" -ForegroundColor Yellow
+if (-not $STRICT_CHECKSUM) {
+    Write-Host "⚠️  Checksum verification disabled (KABOOM_INSTALL_STRICT=0) — downloads will NOT be integrity-checked." -ForegroundColor Yellow
 }
 
 function New-ExtensionStage {
@@ -237,9 +240,14 @@ function Promote-ExtensionStage {
     }
 }
 
-# 1. Fetch Version: Get the latest stable version tag from GitHub.
-Write-Host "🔍 Checking for updates..."
-$VERSION = (Invoke-RestMethod -Uri $VERSION_URL).Trim()
+# 1. Fetch Version: pinned KABOOM_VERSION wins; otherwise the latest tag from STABLE.
+if ($env:KABOOM_VERSION) {
+    $VERSION = $env:KABOOM_VERSION.Trim()
+    Write-Host "🔍 Installing pinned version v$VERSION (KABOOM_VERSION)..."
+} else {
+    Write-Host "🔍 Checking for updates..."
+    $VERSION = (Invoke-RestMethod -Uri $VERSION_URL).Trim()
+}
 Write-Host "✨ Version: v$VERSION (win32-x64)"
 
 # 2. Directory Setup: Ensure the target installation folders exist on the filesystem.

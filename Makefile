@@ -26,7 +26,7 @@ PLATFORMS := \
 	pypi-binaries pypi-build pypi-publish pypi-test-publish pypi-clean \
 	security-check pre-commit verify-all npm-binaries validate-semver \
 	verify-llm \
-	test-upgrade-guards release-gate clean-test-daemons \
+	test-upgrade-guards release-gate preflight clean-test-daemons \
 	generate-wire-types generate-dom-primitives \
 	site-dev site-build site-preview \
 	$(PLATFORMS)
@@ -464,6 +464,25 @@ test-upgrade-guards:
 # Release gate for daemon cleanup/version safety.
 release-gate: quality-gate test-upgrade-guards
 	@echo "✅ release-gate passed"
+
+# Pre-tag preflight — run this BEFORE pushing a version tag. It proves the exact
+# artifacts the release train will publish are well-formed, WITHOUT publishing:
+#   1. validate-semver + validate-deps-versions — version is strict semver and every
+#      optionalDependency pin matches the aggregate package version.
+#   2. npm-binaries — builds all platforms, stages binaries + extension, verifies the
+#      embedded --version, and runs the verify-platform-binaries publish guard.
+#   3. npm publish --dry-run for every package — exercises the real pack/prepublishOnly
+#      path (which re-runs the binary guard) and surfaces "files"/tarball problems that
+#      only appear at publish time. Dry-run never contacts the registry or needs a token.
+# Fails closed: any staging, version, or empty-binary problem stops you before the tag.
+preflight: validate-semver validate-deps-versions npm-binaries
+	@echo "=== Preflight: dry-run publish for every package (no registry contact) ==="
+	@for d in darwin-arm64 darwin-x64 linux-arm64 linux-x64 win32-x64 kaboom-agentic-browser; do \
+		echo "--- npm publish --dry-run: npm/$$d ---"; \
+		( cd npm/$$d && npm publish --dry-run --access public >/dev/null ) || \
+			{ echo "❌ dry-run publish failed for npm/$$d"; exit 1; }; \
+	done
+	@echo "✅ preflight passed — v$(VERSION) is safe to tag and release"
 
 # Update all version references to match VERSION (single source of truth)
 sync-version:

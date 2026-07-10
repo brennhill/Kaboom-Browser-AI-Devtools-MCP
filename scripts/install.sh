@@ -36,7 +36,16 @@ STAGE_EXT_DIR="$INSTALL_DIR/.extension-stage-$$"
 BACKUP_EXT_DIR="$INSTALL_DIR/.extension-backup-$$"
 # The VERSION file on the STABLE branch is the source of truth for the latest release.
 VERSION_URL="https://raw.githubusercontent.com/$REPO/STABLE/VERSION"
-STRICT_CHECKSUM="${KABOOM_INSTALL_STRICT:-0}"
+# Checksums are verified by DEFAULT: every real release ships checksums.txt, so an
+# unverifiable download (missing manifest, missing entry, or no SHA-256 tool) is treated
+# as a failure and aborts. This turns the "downloaded an HTML 404 instead of a binary"
+# class of incident into a hard, understandable error. Opt out only for offline/mirror
+# installs with KABOOM_INSTALL_STRICT=0.
+STRICT_CHECKSUM="${KABOOM_INSTALL_STRICT:-1}"
+# Optional pinned release, e.g. KABOOM_VERSION=0.8.4. When unset, the installer uses the
+# latest release recorded in STABLE's VERSION file. Pinning makes installs reproducible
+# and lets release CI smoke-test the exact tag it just published.
+PINNED_VERSION="${KABOOM_VERSION:-}"
 # Minimum plausible binary sizes. Catches truncated downloads and HTML error pages.
 MIN_BINARY_BYTES=5000000
 MIN_HOOKS_BINARY_BYTES=2000000
@@ -91,8 +100,8 @@ else
     echo -e "${ORANGE}${BOLD}KaBOOM! Installer${NC}"
 fi
 echo -e "${BLUE}--------------------------------------------------${NC}"
-if [ "$STRICT_CHECKSUM" = "1" ]; then
-    echo -e "Strict checksum mode enabled (KABOOM_INSTALL_STRICT=1)"
+if [ "$STRICT_CHECKSUM" != "1" ]; then
+    echo -e "${YELLOW}⚠️  Checksum verification disabled (KABOOM_INSTALL_STRICT=0) — downloads will NOT be integrity-checked.${NC}"
 fi
 
 # ─────────────────────────────────────────────────────────────
@@ -407,12 +416,17 @@ fi
 # 2. Version Check
 # ─────────────────────────────────────────────────────────────
 
-echo -e "Checking for updates..."
-VERSION=$(curl -sSL --fail --max-time 15 "$VERSION_URL" | tr -d '[:space:]' || true)
-if [ -z "$VERSION" ]; then
-    echo -e "${RED}Failed to fetch latest version info from $VERSION_URL${NC}"
-    echo -e "Check your network connection and try again."
-    exit 1
+if [ -n "$PINNED_VERSION" ]; then
+    VERSION="$PINNED_VERSION"
+    echo -e "Installing pinned version v$VERSION (KABOOM_VERSION)..."
+else
+    echo -e "Checking for updates..."
+    VERSION=$(curl -sSL --fail --max-time 15 "$VERSION_URL" | tr -d '[:space:]' || true)
+    if [ -z "$VERSION" ]; then
+        echo -e "${RED}Failed to fetch latest version info from $VERSION_URL${NC}"
+        echo -e "Check your network connection and try again."
+        exit 1
+    fi
 fi
 
 # ─────────────────────────────────────────────────────────────

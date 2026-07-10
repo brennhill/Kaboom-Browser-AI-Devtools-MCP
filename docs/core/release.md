@@ -4,13 +4,91 @@ scope: process/release
 ai-priority: high
 tags: [release, process, quality-gates, deployment]
 relates-to: [known-issues.md, docs/core/uat-v5.3-checklist.md]
-last-verified: 2026-02-04
+last-verified: 2026-07-10
 canonical: true
 ---
 
 # Release Process
 
-Kaboom MCP uses a `UNSTABLE` → `stable` branching model with strict quality gates. Every release goes through automated and manual verification before reaching users.
+Kaboom MCP uses a `UNSTABLE` → `STABLE` branching model with strict quality gates. Every release goes through automated and manual verification before reaching users.
+
+## Hardened Release Train (authoritative)
+
+> This section is the source of truth. The manual "Build & Publish" steps further down are
+> **superseded** by the CI train and kept only for historical/emergency reference.
+
+There is exactly **one** way to publish: push an annotated `vX.Y.Z` tag whose commit is on
+`STABLE`. That triggers `.github/workflows/release.yml`, which is **fail-closed** (a broken
+artifact cannot be published) and **self-verifying** (a half-published release fails the run).
+`publish.yml` was deleted — a second, release-less publish path is how npm and GitHub Releases
+diverged in the past.
+
+### Two consumer channels — both must work every release
+
+| Channel | Consumer command | Source |
+|---------|------------------|--------|
+| npm | `npx kaboom-agentic-browser` | aggregate pkg + per-platform `@brennhill/…-<os>-<arch>` binary pkgs (via `optionalDependencies`) |
+| GitHub Release | `irm …/install.ps1 \| iex`, `curl …/install.sh \| bash` | release assets downloaded + checksum-verified by the installer |
+
+### Pipeline stages (release.yml)
+
+1. **Gate** — tag commit is on `STABLE`; `git tag == VERSION` file; Go+JS tests; wire drift.
+2. **Build + pre-publish guard** — `make build` → `make npm-binaries`, which runs
+   `scripts/verify-platform-binaries.js`: every platform package's `bin/*` must exist and be
+   > 1 MB. npm silently drops missing `files` entries, so this is what makes an *empty binary
+   package* (the 0.8.2 incident) impossible to publish.
+3. **Publish** — platform packages first, aggregate last; idempotent ("already published" is
+   tolerated so a re-run is safe). Then the GitHub Release with all binaries + `checksums.txt`.
+4. **`verify-published`** (matrix: ubuntu/macOS/**windows**) — installs from the *published*
+   channels and runs `--version`: waits for npm propagation, execs the npm-installed Go binary,
+   runs the `npx` launcher, and runs the real `install.sh`/`install.ps1` pinned to the tag.
+5. **`reconcile`** — final red/green: asserts the aggregate pkg, all 5 platform pkgs, **and**
+   the GitHub Release all serve `VERSION`. Runs even if step 4 failed, and prints exact repair
+   steps, so the two channels can never silently diverge (the 0.8.4 incident).
+
+> **Coverage note (no silent caps):** hosted runners execution-test `linux-x64`,
+> `darwin-arm64`, and `win32-x64` end-to-end. `linux-arm64` and `darwin-x64` have no free
+> hosted runners, so they are verified by the pre-publish binary guard (real file, > 1 MB,
+> correct GOOS/GOARCH cross-compile) and `reconcile`'s npm-presence check, but are **not**
+> exec-tested. Add self-hosted arm64/x64 runners to close this gap.
+
+### How each past incident is now prevented
+
+| Incident | Failure shape | Guard that makes it fail-closed |
+|----------|---------------|---------------------------------|
+| 0.8.2 empty npm binary (312 B) | published-but-broken | `verify-platform-binaries.js` (pre-publish) + `verify-published` npm exec (post-publish) |
+| 0.8.4 missing GitHub Release (installer 404) | half-published | `reconcile` asserts the Release exists |
+| 0.8.4 STRUM banner / installer regressions | stale script shipped | `verify-published` runs the real installer end-to-end |
+| Local/manual publish bypassing the train | out-of-band | `publish.yml` deleted; tag-push is the only path |
+| Unverifiable download (HTML/404 body) | silent corruption | installers verify SHA-256 **by default** (below) |
+
+### Before you tag: `make preflight`
+
+Runs locally with no registry contact. Validates semver + `optionalDependencies` pins, builds
++ stages all platforms (re-running the empty-binary guard), then `npm publish --dry-run` for
+every package (which re-runs the guard via `prepublishOnly` and surfaces tarball/`files`
+problems). If preflight is green, the tag is safe to push.
+
+```bash
+make preflight        # pre-tag safety (no publish)
+git tag vX.Y.Z && git push origin STABLE --follow-tags
+```
+
+### Re-running / repairing a release
+
+The train is idempotent. To retry after a transient failure, use **"Re-run failed jobs"** on
+the release workflow run (same tag ref) — do not cut a new tag. npm forbids re-publishing a
+version, so if a *bad* version already went public and is <72 h old, unpublish it and cut a
+patch. A missing GitHub Release can be recreated with
+`gh release create vX.Y.Z dist/* --generate-notes`.
+
+### Installer integrity (strict by default)
+
+`install.sh` and `install.ps1` now verify the SHA-256 of every downloaded binary against the
+release `checksums.txt` **by default**; an unverifiable download aborts. Opt out only for
+offline/mirror installs with `KABOOM_INSTALL_STRICT=0`. Both installers accept
+`KABOOM_VERSION=X.Y.Z` to pin a specific release (used by `verify-published` to target the
+exact tag; also handy for reproducible user installs).
 
 ## Branch Model
 
@@ -265,6 +343,11 @@ git push origin stable --follow-tags
 ```
 
 ### 5. Build & Publish
+
+> ⚠️ **Superseded.** Publishing is fully automated by the tag-triggered release train (see
+> "Hardened Release Train" at the top). Do **not** publish npm packages by hand — a manual
+> publish skips `verify-published`/`reconcile` and is how the npm and GitHub Release channels
+> diverged. The steps below are retained for emergency/offline reference only.
 
 ```bash
 # Cross-platform binaries
