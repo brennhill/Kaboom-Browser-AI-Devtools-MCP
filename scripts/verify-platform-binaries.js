@@ -13,9 +13,56 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-// Go binaries here are ~6–12MB. A real binary is never this small; anything under this is a
+// Go binaries here are ~6–12MB. A real binary is never this small; anything under these is a
 // stub, an LFS pointer, or the "files entry never staged" failure we are guarding against.
-export const MIN_BINARY_BYTES = 1_000_000
+// Aligned with the GitHub-release installer (install.sh) so BOTH channels reject the same
+// truncation range: 5MB for the server binary, 2MB for the smaller hooks binary.
+export const MIN_BINARY_BYTES = 5_000_000
+export const MIN_HOOKS_BINARY_BYTES = 2_000_000
+
+// Per-binary minimum: the hooks binary is smaller than the server binary.
+function minBytesFor(relPath) {
+  return /hooks/i.test(path.basename(relPath)) ? MIN_HOOKS_BINARY_BYTES : MIN_BINARY_BYTES
+}
+
+// Reads an executable's magic bytes and returns its target { os, arch }. Lets the guard confirm
+// each platform package ships a binary actually built for THAT platform — a wrong-arch or
+// wrong-OS `cp` in `make npm-binaries` (right filename, wrong contents) passes on size alone and
+// would only surface on the two platforms the post-publish matrix can't exec-test.
+export function detectBinaryTarget(buf) {
+  if (buf.length >= 20 && buf[0] === 0x7f && buf[1] === 0x45 && buf[2] === 0x4c && buf[3] === 0x46) {
+    const machine = buf.readUInt16LE(18) // ELF e_machine (little-endian binaries)
+    const arch = machine === 0x3e ? 'x64' : machine === 0xb7 ? 'arm64' : `elf-0x${machine.toString(16)}`
+    return { os: 'linux', arch }
+  }
+  if (buf.length >= 8 && buf[0] === 0xcf && buf[1] === 0xfa && buf[2] === 0xed && buf[3] === 0xfe) {
+    const cputype = buf.readUInt32LE(4) // Mach-O 64-bit thin, little-endian
+    const arch = cputype === 0x01000007 ? 'x64' : cputype === 0x0100000c ? 'arm64' : `macho-0x${cputype.toString(16)}`
+    return { os: 'darwin', arch }
+  }
+  if (buf.length >= 0x40 && buf[0] === 0x4d && buf[1] === 0x5a) { // 'MZ'
+    const peOff = buf.readUInt32LE(0x3c)
+    if (buf.length >= peOff + 6 && buf[peOff] === 0x50 && buf[peOff + 1] === 0x45) { // 'PE\0\0'
+      const machine = buf.readUInt16LE(peOff + 4)
+      const arch = machine === 0x8664 ? 'x64' : machine === 0xaa64 ? 'arm64' : `pe-0x${machine.toString(16)}`
+      return { os: 'win32', arch }
+    }
+    return { os: 'win32', arch: 'unknown' }
+  }
+  return { os: 'unknown', arch: 'unknown' }
+}
+
+// Reads up to the first 4KB of a file — enough for the ELF/Mach-O headers and a Go PE header.
+function readHead(abs) {
+  const fd = fs.openSync(abs, 'r')
+  try {
+    const head = Buffer.alloc(4096)
+    const n = fs.readSync(fd, head, 0, head.length, 0)
+    return head.subarray(0, n)
+  } finally {
+    fs.closeSync(fd)
+  }
+}
 
 // Verify a single platform package directory. Pure (no process.exit) so it is unit-testable.
 // Returns { ok, pkg, checked: string[], problems: string[] }.
@@ -43,6 +90,12 @@ export function verifyPlatformPackage(pkgDir) {
     return { ok: false, pkg, checked: [], problems }
   }
 
+  // The platform this package targets, from its npm os/cpu fields (real platform packages set
+  // exactly one each). When absent (e.g. a synthetic test package), the magic-byte check is
+  // skipped and only existence/size are enforced.
+  const expectOs = Array.isArray(pkg.os) && pkg.os.length === 1 ? pkg.os[0] : null
+  const expectCpu = Array.isArray(pkg.cpu) && pkg.cpu.length === 1 ? pkg.cpu[0] : null
+
   for (const rel of binFiles) {
     const abs = path.join(resolved, rel)
     if (!fs.existsSync(abs)) {
@@ -54,8 +107,17 @@ export function verifyPlatformPackage(pkgDir) {
       problems.push(`${rel}: not a regular file`)
       continue
     }
-    if (st.size < MIN_BINARY_BYTES) {
-      problems.push(`${rel}: only ${st.size} bytes (< ${MIN_BINARY_BYTES} minimum — looks like a stub, not a built binary)`)
+    const minBytes = minBytesFor(rel)
+    if (st.size < minBytes) {
+      problems.push(`${rel}: only ${st.size} bytes (< ${minBytes} minimum — looks like a stub, not a built binary)`)
+      continue
+    }
+    // Confirm the binary was actually built for THIS package's platform.
+    if (expectOs && expectCpu) {
+      const target = detectBinaryTarget(readHead(abs))
+      if (target.os !== expectOs || target.arch !== expectCpu) {
+        problems.push(`${rel}: built for ${target.os}/${target.arch} but package targets ${expectOs}/${expectCpu} (wrong binary staged)`)
+      }
     }
   }
 

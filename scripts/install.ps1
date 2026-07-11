@@ -255,54 +255,54 @@ if (-not (Test-Path $BIN_DIR)) { New-Item -Path $BIN_DIR -ItemType Directory -Fo
 if (-not (Test-Path $INSTALL_DIR)) { New-Item -Path $INSTALL_DIR -ItemType Directory -Force | Out-Null }
 Write-Host "📁 Install root: $INSTALL_DIR"
 
+# Downloads a release asset to $StagePath and verifies its SHA-256 against checksums.txt.
+# Shared by the server binary and the kaboom-hooks binary so both enforce identical integrity
+# rules. Honors $STRICT_CHECKSUM (default on): an unverifiable download throws. A hash MISMATCH
+# always throws, regardless of strict mode.
+function Get-VerifiedKaboomAsset {
+    param(
+        [Parameter(Mandatory = $true)][string]$AssetName,
+        [Parameter(Mandatory = $true)][string]$StagePath
+    )
+    $assetUrl = "https://github.com/$REPO/releases/download/v$VERSION/$AssetName"
+    if (Test-Path $StagePath) {
+        Remove-Item -Path $StagePath -Force -ErrorAction SilentlyContinue
+    }
+    Invoke-WebRequest -Uri $assetUrl -OutFile $StagePath
+
+    $verified = $false
+    try {
+        $checksums = Invoke-RestMethod -Uri $CHECKSUM_URL
+        $expectedLine = ($checksums -split "`n") | Where-Object { $_ -match [regex]::Escape($AssetName) }
+        if (-not $expectedLine) { throw "checksums.txt did not include $AssetName" }
+        $expectedHash = ($expectedLine -split "\s+")[0].ToLower()
+        $actualHash = (Get-FileHash $StagePath -Algorithm SHA256).Hash.ToLower()
+        if ($expectedHash -ne $actualHash) { throw "Checksum mismatch for $AssetName" }
+        $verified = $true
+        Write-Host "✅ Checksum verified ($AssetName)."
+    } catch {
+        $msg = $_.Exception.Message
+        if ($msg -like "*mismatch*") {
+            throw "❌ Checksum verification failed for $AssetName! The download may be corrupted or tampered with."
+        }
+        if ($STRICT_CHECKSUM) {
+            throw "❌ Strict checksum mode: $msg"
+        }
+        Write-Host "⚠️  Checksum verification skipped ($AssetName): $msg" -ForegroundColor Yellow
+    }
+    if ($STRICT_CHECKSUM -and -not $verified) {
+        throw "❌ Strict checksum mode: verification did not complete for $AssetName."
+    }
+}
+
 # 3. Binary Installation: Download the Windows-native executable.
 $INSTALL_BIN = $KABOOM_BIN
 $BINARY_NAME = "kaboom-agentic-browser-win32-x64.exe"
-$BINARY_URL = "https://github.com/$REPO/releases/download/v$VERSION/$BINARY_NAME"
 $CHECKSUM_URL = "https://github.com/$REPO/releases/download/v$VERSION/checksums.txt"
 $STAGED_BIN = "$KABOOM_BIN.tmp.$TEMP_TOKEN"
 
 Write-Host "⬇️  Downloading latest binary..."
-# Download to a temporary '.tmp' file to ensure an atomic replacement later.
-if (Test-Path $STAGED_BIN) {
-    Remove-Item -Path $STAGED_BIN -Force -ErrorAction SilentlyContinue
-}
-Invoke-WebRequest -Uri $BINARY_URL -OutFile $STAGED_BIN
-
-# 4. Integrity Verification: Verify the SHA-256 hash against the official release manifest.
- $checksumVerified = $false
-try {
-    # Fetch the checksum manifest and parse the hash for the windows binary.
-    $checksums = Invoke-RestMethod -Uri $CHECKSUM_URL
-    $expectedLine = ($checksums -split "`n") | Where-Object { $_ -match $BINARY_NAME }
-    if (-not $expectedLine) {
-        throw "checksums.txt did not include $BINARY_NAME"
-    }
-
-    $expectedHash = ($expectedLine -split "\s+")[0].ToLower()
-    # Calculate the hash of the downloaded file using built-in Windows security tools.
-    $actualHash = (Get-FileHash $STAGED_BIN -Algorithm SHA256).Hash.ToLower()
-    if ($expectedHash -ne $actualHash) {
-        throw "Checksum mismatch for $BINARY_NAME"
-    }
-
-    $checksumVerified = $true
-    Write-Host "✅ Checksum verified."
-} catch {
-    $msg = $_.Exception.Message
-    if ($msg -like "*mismatch*") {
-        throw "❌ Checksum verification failed! The download may be corrupted or tampered with."
-    }
-    if ($STRICT_CHECKSUM) {
-        throw "❌ Strict checksum mode: $msg"
-    }
-    # Non-fatal warning if checksums cannot be verified (e.g., firewall issues) and strict mode is disabled.
-    Write-Host "⚠️  Checksum verification skipped: $msg" -ForegroundColor Yellow
-}
-
-if ($STRICT_CHECKSUM -and -not $checksumVerified) {
-    throw "❌ Strict checksum mode: verification did not complete successfully."
-}
+Get-VerifiedKaboomAsset -AssetName $BINARY_NAME -StagePath $STAGED_BIN
 
 # Force-stop old server, then replace binary with retries for lock contention.
 if (-not (Replace-KaboomBinary -StagePath $STAGED_BIN -LivePath $KABOOM_BIN)) {
@@ -316,6 +316,20 @@ if (-not (Replace-KaboomBinary -StagePath $STAGED_BIN -LivePath $KABOOM_BIN)) {
     }
 } else {
     Write-Host "✅ Binary replaced: $KABOOM_BIN"
+}
+
+# 4b. kaboom-hooks CLI: install.sh installs this unconditionally (quality gates, output
+# compression, etc.); the Windows one-liner previously omitted it, so `irm install.ps1 | iex`
+# users had no kaboom-hooks. Download + verify + atomically replace, same as the server binary.
+$HOOKS_BIN = Join-Path $BIN_DIR "kaboom-hooks.exe"
+$HOOKS_ASSET = "kaboom-hooks-win32-x64.exe"
+$HOOKS_STAGED = "$HOOKS_BIN.tmp.$TEMP_TOKEN"
+Write-Host "⬇️  Downloading kaboom-hooks..."
+Get-VerifiedKaboomAsset -AssetName $HOOKS_ASSET -StagePath $HOOKS_STAGED
+if (-not (Replace-KaboomBinary -StagePath $HOOKS_STAGED -LivePath $HOOKS_BIN)) {
+    Add-InstallWarning "kaboom-hooks.exe could not be installed (file may be locked by a running process)."
+} else {
+    Write-Host "✅ kaboom-hooks installed: $HOOKS_BIN"
 }
 
 # 5. Extension Staging: Refresh the browser extension files.

@@ -21,7 +21,6 @@ import fs from 'fs'
 import path from 'path'
 // Node built-in import, not hiding a core module
 import { fileURLToPath } from 'url'
-import { normalizeMainPyprojectFile, validateMainPyprojectContent } from './normalize-pypi-main-pyproject.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.join(__dirname, '..')
@@ -113,8 +112,7 @@ const CRITICAL_FILES = [
   'cmd/browser-agent/openapi.json',
   'docs/core/async-command-api.yaml',
   'packages/kaboom-playwright/package.json',
-  'packages/kaboom-ci/package.json',
-  'pypi/create-platform-packages.sh'
+  'packages/kaboom-ci/package.json'
 ]
 
 function updateVersionInFile(filePath, oldVersion, newVersion) {
@@ -324,32 +322,10 @@ async function main() {
     process.exit(1)
   }
 
-  // Step 5b: Normalize the main PyPI pyproject structure defensively.
-  const normalizeResult = normalizeMainPyprojectFile(
-    path.join(ROOT, 'pypi', 'kaboom-agentic-browser', 'pyproject.toml'),
-    {
-      write: true
-    }
-  )
-  if (normalizeResult.changed) {
-    const normalizedRelPath = path.relative(ROOT, normalizeResult.filePath)
-    if (!updated.includes(normalizedRelPath)) {
-      updated.push(normalizedRelPath)
-    }
-    log('yellow', '⚠', `Normalized ${normalizedRelPath} (moved dependencies under [project])`)
-  }
-
-  const mainPyprojectPath = path.join(ROOT, 'pypi', 'kaboom-agentic-browser', 'pyproject.toml')
-  const mainPyprojectContent = fs.readFileSync(mainPyprojectPath, 'utf8')
-  const metadataValidation = validateMainPyprojectContent(mainPyprojectContent, { expectedVersion: newVersion })
-  if (!metadataValidation.valid) {
-    log('red', 'ERROR:', 'PyPI main package metadata validation failed:')
-    for (const validationError of metadataValidation.errors) {
-      log('red', '  -', validationError)
-    }
-    process.exit(1)
-  }
-  log('green', '✓', 'PyPI main package metadata validated')
+  // (The former Step 5b PyPI pyproject normalization was removed: the pypi/ tree no
+  // longer exists in this repo. Leaving the readFileSync in place made the canonical
+  // `node scripts/bump-version.js` crash mid-run — after writing 34 files — with ENOENT,
+  // corrupting the tree. PyPI packaging, if reintroduced, must guard on fs.existsSync.)
 
   // Step 6: Validate package.json dependencies
   log('cyan', '=>', '')

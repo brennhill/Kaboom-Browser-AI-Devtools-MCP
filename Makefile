@@ -176,28 +176,28 @@ build: $(PLATFORMS)
 
 darwin-amd64:
 	@mkdir -p $(BUILD_DIR)
-	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-x64 $(CMD_PKG)
-	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$(HOOKS_LDFLAGS)" -o $(BUILD_DIR)/$(HOOKS_BINARY_NAME)-darwin-x64 $(HOOKS_PKG)
+	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-x64 $(CMD_PKG)
+	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="$(HOOKS_LDFLAGS)" -o $(BUILD_DIR)/$(HOOKS_BINARY_NAME)-darwin-x64 $(HOOKS_PKG)
 
 darwin-arm64:
 	@mkdir -p $(BUILD_DIR)
-	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64 $(CMD_PKG)
-	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="$(HOOKS_LDFLAGS)" -o $(BUILD_DIR)/$(HOOKS_BINARY_NAME)-darwin-arm64 $(HOOKS_PKG)
+	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64 $(CMD_PKG)
+	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags="$(HOOKS_LDFLAGS)" -o $(BUILD_DIR)/$(HOOKS_BINARY_NAME)-darwin-arm64 $(HOOKS_PKG)
 
 linux-amd64:
 	@mkdir -p $(BUILD_DIR)
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-linux-x64 $(CMD_PKG)
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$(HOOKS_LDFLAGS)" -o $(BUILD_DIR)/$(HOOKS_BINARY_NAME)-linux-x64 $(HOOKS_PKG)
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-linux-x64 $(CMD_PKG)
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="$(HOOKS_LDFLAGS)" -o $(BUILD_DIR)/$(HOOKS_BINARY_NAME)-linux-x64 $(HOOKS_PKG)
 
 linux-arm64:
 	@mkdir -p $(BUILD_DIR)
-	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64 $(CMD_PKG)
-	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="$(HOOKS_LDFLAGS)" -o $(BUILD_DIR)/$(HOOKS_BINARY_NAME)-linux-arm64 $(HOOKS_PKG)
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64 $(CMD_PKG)
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags="$(HOOKS_LDFLAGS)" -o $(BUILD_DIR)/$(HOOKS_BINARY_NAME)-linux-arm64 $(HOOKS_PKG)
 
 windows-amd64:
 	@mkdir -p $(BUILD_DIR)
-	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-win32-x64.exe $(CMD_PKG)
-	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$(HOOKS_LDFLAGS)" -o $(BUILD_DIR)/$(HOOKS_BINARY_NAME)-win32-x64.exe $(HOOKS_PKG)
+	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-win32-x64.exe $(CMD_PKG)
+	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="$(HOOKS_LDFLAGS)" -o $(BUILD_DIR)/$(HOOKS_BINARY_NAME)-win32-x64.exe $(HOOKS_PKG)
 
 # Build and copy binaries to NPM package directories (for releases).
 # Staged names MUST match each platform package's "files" whitelist and the
@@ -240,16 +240,18 @@ npm-binaries: build compile-ts
 
 # Build for current platform only (for development)
 dev:
-	CGO_ENABLED=0 go build -o $(BUILD_DIR)/$(BINARY_NAME) $(CMD_PKG)
-	CGO_ENABLED=0 go build -o $(BUILD_DIR)/$(HOOKS_BINARY_NAME) $(HOOKS_PKG)
+	CGO_ENABLED=0 go build -trimpath -o $(BUILD_DIR)/$(BINARY_NAME) $(CMD_PKG)
+	CGO_ENABLED=0 go build -trimpath -o $(BUILD_DIR)/$(HOOKS_BINARY_NAME) $(HOOKS_PKG)
 
 # Run the server locally
 run:
 	CGO_ENABLED=0 go run $(CMD_PKG)
 
-# Create checksums
+# Create checksums. Hash ONLY the known release artifacts by name — never a bare `*`, which
+# would (a) self-hash checksums.txt on a re-run and (b) sweep in stale files from a prior build
+# on a non-ephemeral workspace, poisoning the manifest with entries that then get uploaded.
 checksums:
-	cd $(BUILD_DIR) && shasum -a 256 * > checksums.txt
+	cd $(BUILD_DIR) && shasum -a 256 $(BINARY_NAME)-* $(HOOKS_BINARY_NAME)-* kaboom-extension-v*.zip > checksums.txt
 
 # --- Code Quality ---
 
@@ -342,7 +344,9 @@ ci-e2e:
 
 extension-zip:
 	@mkdir -p $(BUILD_DIR)
-	@rm -f $(BUILD_DIR)/kaboom-extension-v$(VERSION).zip
+	@# Remove ALL versioned extension zips, not just the current one, so a stale prior-version
+	@# zip can't be globbed into `checksums` / the release upload.
+	@rm -f $(BUILD_DIR)/kaboom-extension-v*.zip
 	cd extension && zip -r ../$(BUILD_DIR)/kaboom-extension-v$(VERSION).zip \
 		. \
 		-x "*.DS_Store" "package.json" "*__tests__/*" "*.test.js" "*.test.cjs"
@@ -476,13 +480,21 @@ release-gate: quality-gate test-upgrade-guards
 #      only appear at publish time. Dry-run never contacts the registry or needs a token.
 # Fails closed: any staging, version, or empty-binary problem stops you before the tag.
 preflight: validate-semver validate-deps-versions npm-binaries
-	@echo "=== Preflight: dry-run publish for every package (no registry contact) ==="
+	@echo "=== Preflight: full version-consistency check across all 17+ locations ==="
+	@bash scripts/validate-versions.sh
+	@echo "=== Preflight: dry-run publish (packs + runs each prepublishOnly guard) ==="
 	@for d in darwin-arm64 darwin-x64 linux-arm64 linux-x64 win32-x64 kaboom-agentic-browser; do \
 		echo "--- npm publish --dry-run: npm/$$d ---"; \
-		( cd npm/$$d && npm publish --dry-run --access public >/dev/null ) || \
-			{ echo "❌ dry-run publish failed for npm/$$d"; exit 1; }; \
+		out=$$( cd npm/$$d && npm publish --dry-run --access public 2>&1 ); \
+		if [ $$? -ne 0 ]; then \
+			if echo "$$out" | grep -q "cannot publish over the previously published versions"; then \
+				echo "  (v$(VERSION) already published — pack + prepublishOnly guard still validated)"; \
+			else \
+				echo "$$out"; echo "❌ dry-run publish failed for npm/$$d"; exit 1; \
+			fi; \
+		fi; \
 	done
-	@echo "✅ preflight passed — v$(VERSION) is safe to tag and release"
+	@echo "✅ preflight passed — v$(VERSION) is staged correctly (bump VERSION before tagging a new release)"
 
 # Update all version references to match VERSION (single source of truth)
 sync-version:
@@ -493,10 +505,14 @@ sync-version:
 			npm/kaboom-agentic-browser/package.json npm/darwin-x64/package.json \
 			npm/darwin-arm64/package.json npm/linux-x64/package.json \
 			npm/linux-arm64/package.json npm/win32-x64/package.json \
+			packages/kaboom-ci/package.json packages/kaboom-playwright/package.json \
 			$(CMD_DIR)/testdata/mcp-initialize.golden.json
 	@# NPM optionalDependencies versions
 	@perl -pi -e 's/("@brennhill\/kaboom-[^"]+": ")[0-9]+\.[0-9]+\.[0-9]+(")/$${1}$(VERSION)$$2/g' \
 		npm/kaboom-agentic-browser/package.json
+	@# @anthropic/* cross-package pins (validate-versions.sh enforces these == VERSION)
+	@perl -pi -e 's/("@anthropic\/kaboom-[^"]+": ")[0-9]+\.[0-9]+\.[0-9]+(")/$${1}$(VERSION)$$2/g' \
+		packages/kaboom-playwright/package.json packages/kaboom-ci/package.json
 	@# PyPI sync removed: pypi/ packaging tree no longer exists in this repo.
 	@# JS version strings
 	@perl -pi -e "s/version: '[0-9]+\.[0-9]+\.[0-9]+'/version: '$(VERSION)'/g" \

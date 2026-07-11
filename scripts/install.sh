@@ -41,7 +41,13 @@ VERSION_URL="https://raw.githubusercontent.com/$REPO/STABLE/VERSION"
 # as a failure and aborts. This turns the "downloaded an HTML 404 instead of a binary"
 # class of incident into a hard, understandable error. Opt out only for offline/mirror
 # installs with KABOOM_INSTALL_STRICT=0.
-STRICT_CHECKSUM="${KABOOM_INSTALL_STRICT:-1}"
+# Normalize to canonical 0/1: strict is ON unless explicitly disabled with a falsey value.
+# (Matches install.ps1's `-ne "0"` so `KABOOM_INSTALL_STRICT=true` can't mean "on" on Windows
+# but "off" here — the pre-fix bash `= "1"` test failed OPEN for any value other than "1".)
+case "$(printf '%s' "${KABOOM_INSTALL_STRICT:-1}" | tr '[:upper:]' '[:lower:]')" in
+    0|false|off|no) STRICT_CHECKSUM=0 ;;
+    *) STRICT_CHECKSUM=1 ;;
+esac
 # Optional pinned release, e.g. KABOOM_VERSION=0.8.4. When unset, the installer uses the
 # latest release recorded in STABLE's VERSION file. Pinning makes installs reproducible
 # and lets release CI smoke-test the exact tag it just published.

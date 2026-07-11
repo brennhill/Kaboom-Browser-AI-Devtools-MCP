@@ -19,6 +19,8 @@ These shipped to users and are now prevented fail-closed by the hardened release
 | 0.8.2 | `npx` could not exec anything | npm silently published an empty (312-byte) platform package — the Go binary was never staged into `bin/` | `scripts/verify-platform-binaries.js` (pre-publish, in `make npm-binaries` + `prepublishOnly` + `make preflight`) **and** `verify-published` execs the published binary post-publish |
 | 0.8.4 | Windows `install.ps1` 404'd | npm was published but the GitHub Release was never created (out-of-band/manual publish), so the installer downloaded an HTML 404 | `reconcile` job asserts npm **and** the GitHub Release both serve `VERSION`; `publish.yml` (release-less path) deleted |
 | 0.8.4 | Installer showed a stale `STRUM` banner | branding drift in `install.ps1` | `verify-published` runs the real installer end-to-end on every release |
+| ≤0.8.4 | Windows `install.ps1` never installed `kaboom-hooks.exe` | the PowerShell one-liner only downloaded the server binary | install.ps1 now installs both; `verify-published` asserts `kaboom-hooks --version` on Windows |
+| ≤0.8.4 | `node scripts/bump-version.js` crashed mid-run | referenced the deleted `pypi/` tree; two API-spec docs (`openapi.json`, `async-command-api.yaml`) were stuck at `0.7.12` and failed its verify pass | pypi refs removed + specs synced; a full bump exits 0 and `make preflight` runs `validate-versions.sh` |
 
 **Principle:** a broken release must be *impossible to publish silently* (pre-publish guards)
 and *impossible to leave half-done* (post-publish `verify-published` + `reconcile`).

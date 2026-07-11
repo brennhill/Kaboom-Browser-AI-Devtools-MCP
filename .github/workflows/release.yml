@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   packages: write
+  id-token: write # required for `npm publish --provenance` (OIDC attestation)
 
 jobs:
   # Gate: only run the release train for tags that point to commits on STABLE.
@@ -27,7 +28,12 @@ jobs:
         run: |
           TAG_VERSION=${GITHUB_REF#refs/tags/v}
           TAG_COMMIT=$(git rev-list -n 1 "$GITHUB_REF")
-          git fetch origin STABLE --depth=1
+          # Fetch STABLE's FULL history (no --depth). A shallow "--depth=1" fetch writes a
+          # .git/shallow graft that truncates origin/STABLE to just its tip, so
+          # `merge-base --is-ancestor` would then return true ONLY when the tag IS the current
+          # tip — silently skipping the release train for any tag even one commit behind tip.
+          # The checkout above uses fetch-depth: 0, so the repo is already unshallow.
+          git fetch --no-tags origin STABLE
 
           echo "Tag version: $TAG_VERSION"
           echo "Tag commit: $TAG_COMMIT"
@@ -94,7 +100,7 @@ jobs:
 
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
-          go-version: '1.24'
+          go-version: '1.24.13' # pin to the exact build-job toolchain for reproducible artifacts
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
@@ -141,10 +147,11 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
+      # VERSION is read from the VERSION file by the Makefile (verify-tag already asserted
+      # tag == VERSION file), so no env override is needed here — a `VERSION:` env would be a
+      # silent no-op because `VERSION := $(shell cat VERSION)` overrides the environment.
       - name: Build all platform binaries
         run: make build
-        env:
-          VERSION: ${{ needs.verify-tag.outputs.version }}
 
       - name: Verify binary version
         run: |
@@ -178,7 +185,7 @@ jobs:
             echo "Publishing platform package: $pkg"
             cd npm/$pkg
             set +e
-            OUTPUT=$(npm publish --access public 2>&1)
+            OUTPUT=$(npm publish --provenance --access public 2>&1)
             STATUS=$?
             set -e
             echo "$OUTPUT"
@@ -196,7 +203,7 @@ jobs:
           echo "Publishing aggregate package"
           cd npm/kaboom-agentic-browser
           set +e
-          OUTPUT=$(npm publish --access public 2>&1)
+          OUTPUT=$(npm publish --provenance --access public 2>&1)
           STATUS=$?
           set -e
           echo "$OUTPUT"
@@ -278,13 +285,26 @@ jobs:
         env:
           VERSION: ${{ needs.verify-tag.outputs.version }}
         run: |
+          # The next step installs the aggregate AND resolves this runner's platform binary.
+          # Because the platform binary is an optionalDependency, `npm install` succeeds WITHOUT
+          # it if that package hasn't propagated yet — surfacing as a false "binary not found".
+          # So wait for BOTH the aggregate and this runner's platform package to serve VERSION.
+          case "${RUNNER_OS}" in
+            Linux)   PLAT_PKG="linux-x64" ;;
+            Windows) PLAT_PKG="win32-x64" ;;
+            macOS)   case "$(uname -m)" in arm64) PLAT_PKG="darwin-arm64" ;; *) PLAT_PKG="darwin-x64" ;; esac ;;
+            *) echo "::error::unexpected RUNNER_OS ${RUNNER_OS}"; exit 1 ;;
+          esac
           for i in $(seq 1 20); do
-            PUB=$(npm view "kaboom-agentic-browser@${VERSION}" version 2>/dev/null || true)
-            if [ "$PUB" = "$VERSION" ]; then echo "npm is serving ${VERSION}"; exit 0; fi
-            echo "attempt ${i}/20: npm not yet serving ${VERSION} (got '${PUB:-none}'); sleeping 15s"
+            AGG=$(npm view "kaboom-agentic-browser@${VERSION}" version 2>/dev/null || true)
+            PLT=$(npm view "@brennhill/kaboom-agentic-browser-${PLAT_PKG}@${VERSION}" version 2>/dev/null || true)
+            if [ "$AGG" = "$VERSION" ] && [ "$PLT" = "$VERSION" ]; then
+              echo "npm is serving ${VERSION} (aggregate + ${PLAT_PKG})"; exit 0
+            fi
+            echo "attempt ${i}/20: aggregate='${AGG:-none}' ${PLAT_PKG}='${PLT:-none}'; sleeping 15s"
             sleep 15
           done
-          echo "::error::npm never served ${VERSION} within the propagation window"
+          echo "::error::npm never served ${VERSION} (aggregate + ${PLAT_PKG}) within the propagation window"
           exit 1
 
       # npm channel, definitive check: install the aggregate package (which pulls the
@@ -333,6 +353,9 @@ jobs:
           bash scripts/install.sh
           "$HOME/.kaboom/bin/kaboom-agentic-browser" --version | grep -q "${KABOOM_VERSION}" \
             || { echo "::error::install.sh binary did not report ${KABOOM_VERSION}"; exit 1; }
+          # install.sh installs the hooks CLI too — verify it (both binaries must ship).
+          "$HOME/.kaboom/bin/kaboom-hooks" --version | grep -q "${KABOOM_VERSION}" \
+            || { echo "::error::install.sh did not install a working kaboom-hooks ${KABOOM_VERSION}"; exit 1; }
 
       - name: GitHub Release channel — install.ps1
         if: runner.os == 'Windows'
@@ -345,7 +368,12 @@ jobs:
           if ($out -notmatch [regex]::Escape($env:KABOOM_VERSION)) {
             throw "install.ps1 binary did not report $($env:KABOOM_VERSION): $out"
           }
-          Write-Host "GitHub Release channel OK — $out"
+          # install.ps1 must also install kaboom-hooks.exe (the Windows one-liner used to skip it).
+          $hout = & "$HOME/.kaboom/bin/kaboom-hooks.exe" --version
+          if ($hout -notmatch [regex]::Escape($env:KABOOM_VERSION)) {
+            throw "install.ps1 did not install a working kaboom-hooks $($env:KABOOM_VERSION): $hout"
+          }
+          Write-Host "GitHub Release channel OK — server=$out hooks=$hout"
 
   # Step 6: Final authoritative red/green. Asserts BOTH channels serve VERSION so they can
   # never silently diverge (the 0.8.4 state: npm had it, GitHub Release did not). Runs even
@@ -362,13 +390,22 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           FAIL=0
-          NPM=$(npm view "kaboom-agentic-browser@${VERSION}" version 2>/dev/null || true)
-          if [ "$NPM" = "$VERSION" ]; then echo "✅ npm aggregate serves ${VERSION}"; \
-            else echo "❌ npm aggregate missing ${VERSION} (got '${NPM:-none}')"; FAIL=1; fi
+          # Bounded retry so a lagging registry replica can't flag a healthy release as
+          # "diverged" — poll each package up to 8× before declaring it missing.
+          npm_has() {
+            local pkg="$1" got=""
+            for _ in $(seq 1 8); do
+              got=$(npm view "${pkg}@${VERSION}" version 2>/dev/null || true)
+              [ "$got" = "$VERSION" ] && return 0
+              sleep 10
+            done
+            return 1
+          }
+          if npm_has "kaboom-agentic-browser"; then echo "✅ npm aggregate serves ${VERSION}"; \
+            else echo "❌ npm aggregate missing ${VERSION}"; FAIL=1; fi
           for k in darwin-arm64 darwin-x64 linux-arm64 linux-x64 win32-x64; do
-            PV=$(npm view "@brennhill/kaboom-agentic-browser-${k}@${VERSION}" version 2>/dev/null || true)
-            if [ "$PV" = "$VERSION" ]; then echo "✅ npm @${k} serves ${VERSION}"; \
-              else echo "❌ npm @${k} missing ${VERSION} (got '${PV:-none}')"; FAIL=1; fi
+            if npm_has "@brennhill/kaboom-agentic-browser-${k}"; then echo "✅ npm @${k} serves ${VERSION}"; \
+              else echo "❌ npm @${k} missing ${VERSION}"; FAIL=1; fi
           done
           if gh release view "v${VERSION}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "✅ GitHub Release v${VERSION} exists"

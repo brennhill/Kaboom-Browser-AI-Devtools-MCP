@@ -63,7 +63,9 @@ func TestRunningServerVersionCompatible_Non200(t *testing.T) {
 func TestRunningServerVersionCompatible_HealthServed(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"service-name":"kaboom-browser-devtools","version":"0.8.4"}`))
+		// A fixed non-real version: the decode path is exercised regardless of the value, and a
+		// literal release version here would silently rot (no sync tool updates test fixtures).
+		_, _ = w.Write([]byte(`{"service-name":"kaboom-browser-devtools","version":"9.9.9"}`))
 	}))
 	defer srv.Close()
 	// Exercises the read-body + DecodeHealthMetadata + service/version compat path.

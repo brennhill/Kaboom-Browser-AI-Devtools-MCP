@@ -10,13 +10,17 @@
   "scripts": {
     "preinstall": "node lib/kill-daemon.js",
     "postinstall": "node lib/postinstall-skills.js",
-    "preuninstall": "node lib/kill-daemon.js"
+    "preuninstall": "node lib/kill-daemon.js",
+    "prepublishOnly": "node ../../scripts/verify-aggregate-package.js"
   },
   "files": [
     "bin",
     "lib",
+    "!lib/**/*.test.js",
     "skills",
-    "extension"
+    "extension",
+    "!extension/**/*.test.js",
+    "!extension/**/__tests__/**"
   ],
   "optionalDependencies": {
     "@brennhill/kaboom-agentic-browser-darwin-arm64": "0.8.4",

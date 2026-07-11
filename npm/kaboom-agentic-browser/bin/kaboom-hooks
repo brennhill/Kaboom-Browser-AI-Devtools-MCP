@@ -3,9 +3,12 @@
 // bin/kaboom-hooks — Cross-platform launcher for the kaboom-hooks binary.
 // Finds the Go hooks binary from platform-specific npm packages and spawns it.
 
-const { execFileSync, execSync } = require('child_process')
+const { execFileSync } = require('child_process')
 const path = require('path')
 const fs = require('fs')
+const os = require('os')
+
+const KABOOM_VERSION = require('../package.json').version
 
 function detectPlatform() {
   const platformMap = { darwin: 'darwin', linux: 'linux', win32: 'win32' }
@@ -28,11 +31,16 @@ function detectPlatform() {
 function findHooksBinary(info) {
   const scriptDir = __dirname
 
-  // 1. Dev build — dist/ directory
-  const devBin = path.join(scriptDir, '..', '..', '..', 'dist', `kaboom-hooks${info.ext}`)
-  if (fs.existsSync(devBin)) return devBin
+  // 1. Dev build — gated behind KABOOM_DEV so it can only fire in this repo, never in a
+  //    consumer install tree (where '../../../dist' resolves into the consumer's project).
+  if (process.env.KABOOM_DEV === '1') {
+    for (const name of [`kaboom-hooks-${info.platformKey}${info.ext}`, `kaboom-hooks${info.ext}`]) {
+      const devBin = path.join(scriptDir, '..', '..', '..', 'dist', name)
+      if (fs.existsSync(devBin)) return devBin
+    }
+  }
 
-  // 2. node_modules candidates
+  // 2. node_modules candidates — the normal npm path.
   const candidates = [
     path.join(scriptDir, '..', 'node_modules', info.pkgName, 'bin', info.binaryName),
     path.join(scriptDir, '..', '..', info.pkgName, 'bin', info.binaryName),
@@ -42,13 +50,17 @@ function findHooksBinary(info) {
     if (fs.existsSync(candidate)) return candidate
   }
 
-  // 3. Global PATH
+  // 3. Managed install location only (~/.kaboom/bin), version-matched — never an arbitrary
+  //    kaboom-hooks on PATH (the previous fallback exec'd any PATH match, entirely unverified).
   try {
-    const which = process.platform === 'win32' ? 'where kaboom-hooks' : 'command -v kaboom-hooks'
-    const globalBin = execSync(which, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim().split('\n')[0]
-    if (globalBin && fs.existsSync(globalBin)) return globalBin
+    const managed = path.join(os.homedir(), '.kaboom', 'bin', info.binaryName)
+    if (fs.existsSync(managed)) {
+      const verOut = execFileSync(managed, ['--version'], { encoding: 'utf8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] })
+      const verMatch = verOut.match(/(\d+\.\d+\.\d+)/)
+      if (verMatch && verMatch[1] === KABOOM_VERSION) return managed
+    }
   } catch {
-    // Not found in PATH
+    // Managed binary absent or unversioned — fall through to the not-found error.
   }
 
   return null

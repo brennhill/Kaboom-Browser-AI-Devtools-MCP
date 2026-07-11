@@ -33,6 +33,7 @@ check_version() {
 # Check all locations
 check_version "package.json" '"version":'
 check_version "$CMD_DIR/main.go" 'var version = "'
+check_version "cmd/hooks/main.go" 'var version = "'
 check_version "extension/manifest.json" '"version":'
 check_version "extension/package.json" '"version":'
 check_version "server/package.json" '"version":'
@@ -89,7 +90,10 @@ fi
 # Special check: optionalDependencies in kaboom-agentic-browser
 echo ""
 echo "Checking optionalDependencies in npm/kaboom-agentic-browser/package.json..."
-DEPS=$(grep -A 5 '"optionalDependencies"' npm/kaboom-agentic-browser/package.json | grep '@brennhill' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | sort -u)
+# Parse the WHOLE optionalDependencies block (open brace to its closing brace) rather than a
+# fixed `grep -A 5` window — a hard-coded line count silently skips a 6th platform if one is
+# ever added, letting its version drift past this gate.
+DEPS=$(sed -n '/"optionalDependencies"/,/}/p' npm/kaboom-agentic-browser/package.json | grep '@brennhill' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | sort -u)
 DEP_COUNT=$(echo "$DEPS" | wc -l | tr -d ' ')
 
 if [ "$DEP_COUNT" != "1" ]; then

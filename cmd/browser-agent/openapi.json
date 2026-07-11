@@ -3,7 +3,7 @@
   "info": {
     "title": "Kaboom MCP Server",
     "description": "Browser observability for AI agents. Streams console logs, network errors, and user actions from Chrome to Claude Code, Cursor, and Copilot via MCP protocol.",
-    "version": "0.7.12",
+    "version": "0.8.4",
     "license": {
       "name": "MIT"
     }

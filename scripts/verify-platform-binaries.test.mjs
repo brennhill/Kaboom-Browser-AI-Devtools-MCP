@@ -11,7 +11,7 @@ import path from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
-import { verifyPlatformPackage, MIN_BINARY_BYTES } from './verify-platform-binaries.js'
+import { verifyPlatformPackage, MIN_BINARY_BYTES, detectBinaryTarget } from './verify-platform-binaries.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const SCRIPT = path.join(__dirname, 'verify-platform-binaries.js')
@@ -80,6 +80,63 @@ test('CLI exits zero on a good package', () => {
   // Throws on non-zero exit; reaching the assert means it succeeded.
   execFileSync('node', [SCRIPT, dir], { stdio: 'pipe' })
   assert.ok(true)
+})
+
+// --- GOOS/GOARCH magic-byte guard (a wrong-arch/OS `cp` passes the size check) ---
+
+function elfHeader(machine) {
+  const b = Buffer.alloc(20, 0)
+  b[0] = 0x7f; b[1] = 0x45; b[2] = 0x4c; b[3] = 0x46 // \x7fELF
+  b.writeUInt16LE(machine, 18) // e_machine: 0x3e=x86-64, 0xb7=aarch64
+  return b
+}
+function machoHeader(cputype) {
+  const b = Buffer.alloc(8, 0)
+  b[0] = 0xcf; b[1] = 0xfa; b[2] = 0xed; b[3] = 0xfe // Mach-O 64 LE
+  b.writeUInt32LE(cputype, 4) // 0x01000007=x86_64, 0x0100000c=arm64
+  return b
+}
+// Platform package whose binaries start with `header` and declare os/cpu.
+function makePlatformPkg({ os: pkgOs, cpu, header }) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-verify-'))
+  fs.writeFileSync(
+    path.join(dir, 'package.json'),
+    JSON.stringify({ name: '@brennhill/kaboom-agentic-browser-test', version: '9.9.9', os: [pkgOs], cpu: [cpu], files: STD_FILES }, null, 2)
+  )
+  fs.mkdirSync(path.join(dir, 'bin'), { recursive: true })
+  for (const f of STD_FILES) {
+    const buf = Buffer.alloc(MIN_BINARY_BYTES + 1, 0)
+    header.copy(buf, 0)
+    fs.writeFileSync(path.join(dir, f), buf)
+  }
+  return dir
+}
+
+test('detectBinaryTarget reads ELF/Mach-O os + arch', () => {
+  assert.deepEqual(detectBinaryTarget(elfHeader(0x3e)), { os: 'linux', arch: 'x64' })
+  assert.deepEqual(detectBinaryTarget(elfHeader(0xb7)), { os: 'linux', arch: 'arm64' })
+  assert.deepEqual(detectBinaryTarget(machoHeader(0x0100000c)), { os: 'darwin', arch: 'arm64' })
+  assert.deepEqual(detectBinaryTarget(machoHeader(0x01000007)), { os: 'darwin', arch: 'x64' })
+})
+
+test('PASSES when the binary matches the package os/cpu', () => {
+  const dir = makePlatformPkg({ os: 'linux', cpu: 'x64', header: elfHeader(0x3e) })
+  const res = verifyPlatformPackage(dir)
+  assert.equal(res.ok, true, res.problems.join('; '))
+})
+
+test('FAILS when a darwin binary is staged into a linux package (wrong-OS cp)', () => {
+  const dir = makePlatformPkg({ os: 'linux', cpu: 'x64', header: machoHeader(0x0100000c) })
+  const res = verifyPlatformPackage(dir)
+  assert.equal(res.ok, false)
+  assert.match(res.problems.join('\n'), /built for darwin|wrong binary staged/)
+})
+
+test('FAILS when the arch is wrong (arm64 binary in an x64 package)', () => {
+  const dir = makePlatformPkg({ os: 'linux', cpu: 'x64', header: elfHeader(0xb7) })
+  const res = verifyPlatformPackage(dir)
+  assert.equal(res.ok, false)
+  assert.match(res.problems.join('\n'), /arm64.*x64|wrong binary staged/)
 })
 
 // Wiring guard: every real platform package must keep prepublishOnly pointed at this script,

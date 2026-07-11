@@ -84,11 +84,37 @@ patch. A missing GitHub Release can be recreated with
 
 ### Installer integrity (strict by default)
 
-`install.sh` and `install.ps1` now verify the SHA-256 of every downloaded binary against the
-release `checksums.txt` **by default**; an unverifiable download aborts. Opt out only for
-offline/mirror installs with `KABOOM_INSTALL_STRICT=0`. Both installers accept
-`KABOOM_VERSION=X.Y.Z` to pin a specific release (used by `verify-published` to target the
-exact tag; also handy for reproducible user installs).
+`install.sh` and `install.ps1` verify the SHA-256 of every downloaded binary against the release
+`checksums.txt` **by default**; an unverifiable download aborts. Opt out only for offline/mirror
+installs with `KABOOM_INSTALL_STRICT=0` (any other value — `1`, `true`, `yes` — is strict, on
+both installers). Both accept `KABOOM_VERSION=X.Y.Z` to pin a specific release (used by
+`verify-published` to target the exact tag; also handy for reproducible user installs). The
+Windows installer installs **both** the server and `kaboom-hooks.exe` (it previously skipped
+hooks); the post-publish matrix asserts both binaries on every OS.
+
+### Additional guards (round 2)
+
+- **Wrong-arch/OS binary guard.** `verify-platform-binaries.js` now reads each staged binary's
+  magic bytes (ELF / Mach-O / PE) and asserts the format+arch matches the package's `os`/`cpu` —
+  a mis-mapped `cp` in `make npm-binaries` (right filename, wrong contents) can no longer pass on
+  size alone. Size thresholds are aligned with the installer (5MB server / 2MB hooks).
+- **Aggregate guard.** `verify-aggregate-package.js` (the aggregate's `prepublishOnly`) requires
+  the launchers, `lib/cli.js`, and a real extension whose manifest-referenced JS bundles exist —
+  closing the same silent-`files`-drop hole (0.8.2) for the aggregate's gitignored `extension/`.
+- **npm provenance.** Platform + aggregate packages publish with `--provenance` (`id-token: write`),
+  giving each package a verifiable build attestation. `checksums.txt` is intentionally **not**
+  signed: the installers are zero-dependency shell/PowerShell and must not require cosign; npm
+  provenance + write-protected GitHub Releases cover the tamper case without that burden.
+- **Reproducibility.** All release builds use `-trimpath` (no build-host paths baked in) and the
+  release test job is pinned to the exact build toolchain (`go 1.24.13`). `checksums` hashes only
+  named artifacts (never a bare `*`, which could self-hash the manifest or sweep in stale files).
+- **Launcher fallbacks.** The npm launchers no longer exec an arbitrary `kaboom-*` found on
+  `PATH` (spoofable) — only the managed `~/.kaboom/bin` with a version match. The dev-build
+  fallback is gated behind `KABOOM_DEV=1` so it can never fire in an end-user install tree.
+- **Canonical version bump restored.** `node scripts/bump-version.js <v>` was crashing mid-run
+  (referenced the removed `pypi/` tree) and left two API-spec docs stuck at `0.7.12`; both are
+  fixed, so the documented bump command works end-to-end again. Run **`make preflight`** before
+  tagging — it now also runs the full `validate-versions.sh` across all 17+ locations.
 
 ## Branch Model
 
