@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/analyzehandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
@@ -73,7 +73,7 @@ func (h *ToolHandler) toolAnalyzePageIssues(req JSONRPCRequest, args json.RawMes
 	result := h.runPageIssuesChecks(categories, params.Limit, tabURL)
 
 	if params.Summary {
-		azResult := toolanalyze.PageIssuesResult{
+		azResult := analyzehandler.PageIssuesResult{
 			TotalIssues:     result.TotalIssues,
 			BySeverity:      result.BySeverity,
 			Sections:        result.Sections,
@@ -82,7 +82,7 @@ func (h *ToolHandler) toolAnalyzePageIssues(req JSONRPCRequest, args json.RawMes
 			PageURL:         result.PageURL,
 			Timestamp:       result.Timestamp,
 		}
-		return succeed(req, "Page issues summary", toolanalyze.BuildPageIssuesSummary(azResult))
+		return succeed(req, "Page issues summary", analyzehandler.BuildPageIssuesSummary(azResult))
 	}
 	return succeed(req, "Page issues scan complete", result)
 }

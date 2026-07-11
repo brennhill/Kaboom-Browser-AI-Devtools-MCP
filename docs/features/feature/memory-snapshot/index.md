@@ -10,7 +10,7 @@ code_paths:
   - internal/tools/configure/mode_specs_analyze.go
   - src/background/cdp-dispatch.ts
   - src/background/commands/analyze.ts
-  - cmd/browser-agent/internal/toolinteract/interact_command_builder.go
+  - cmd/browser-agent/internal/interacthandler/interact_command_builder.go
 test_paths: []
 last_verified_version: 0.8.4
 last_verified_date: 2026-06-29
@@ -55,7 +55,7 @@ the megabytes of raw heap data that would otherwise consume the agent's context 
 - Analyze dispatch registry: `cmd/browser-agent/tools_analyze_dispatch.go`
 - Mode hints and parameter specs: `internal/tools/configure/mode_specs_analyze.go`
 - CDP attach/detach lifecycle: `src/background/cdp-dispatch.ts`
-- Asynchronous command builder: `cmd/browser-agent/internal/toolinteract/interact_command_builder.go`
+- Asynchronous command builder: `cmd/browser-agent/internal/interacthandler/interact_command_builder.go`
 
 ## Code and Tests
 

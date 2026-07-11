@@ -1,13 +1,13 @@
-// Purpose: Thin adapter for generate(har) — delegates to toolgenerate sub-package.
+// Purpose: Thin adapter for generate(har) — delegates to generatehandler sub-package.
 
 package main
 
 import (
 	"encoding/json"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/generatehandler"
 )
 
 func (h *ToolHandler) toolExportHAR(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-	return toolgenerate.HandleExportHAR(h.generateDeps(), req, args)
+	return generatehandler.HandleExportHAR(h.generateDeps(), req, args)
 }

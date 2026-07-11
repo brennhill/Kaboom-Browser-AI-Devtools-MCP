@@ -7,7 +7,7 @@ package main
 import (
 	"encoding/json"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolobserve"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/observehandler"
 )
 
 // observeAliasParams references the shared default mode/action aliases.
@@ -27,12 +27,12 @@ var observeRegistry = toolRegistry{
 	},
 	PostDispatch: func(h *ToolHandler, req JSONRPCRequest, resp JSONRPCResponse, what string) JSONRPCResponse {
 		// Warn when extension is disconnected (except for server-side modes that don't need it)
-		if !h.IsExtensionConnected() && !toolobserve.ServerSideObserveModes[what] {
-			resp = toolobserve.PrependDisconnectWarning(resp)
+		if !h.IsExtensionConnected() && !observehandler.ServerSideObserveModes[what] {
+			resp = observehandler.PrependDisconnectWarning(resp)
 		}
 		// Piggyback alerts: append as second content block if any pending
 		if alerts := h.drainAlerts(); len(alerts) > 0 {
-			resp = toolobserve.AppendAlertsToResponse(resp, alerts)
+			resp = observehandler.AppendAlertsToResponse(resp, alerts)
 		}
 		return resp
 	},

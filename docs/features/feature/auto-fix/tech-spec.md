@@ -11,7 +11,7 @@ links:
   canonical_flow_map: ../../../architecture/flow-maps/audit-workflow.md
 code_paths:
   - cmd/browser-agent/tools_analyze_page_issues.go
-  - cmd/browser-agent/internal/toolanalyze/page_issues_summary.go
+  - cmd/browser-agent/internal/analyzehandler/page_issues_summary.go
   - cmd/browser-agent/tools_analyze_dispatch.go
   - cmd/browser-agent/handler_tools_call_postprocess.go
   - cmd/browser-agent/internal/terminal/intent_store.go
@@ -69,7 +69,7 @@ Located in `cmd/browser-agent/tools_analyze_page_issues.go`. Flow:
 
 ### Summary mode — `BuildPageIssuesSummary`
 
-In `cmd/browser-agent/internal/toolanalyze/page_issues_summary.go`. When `summary: true`, the full result is mapped into the package's `PageIssuesResult` and condensed to the top findings for a large token reduction, serving as the audit baseline.
+In `cmd/browser-agent/internal/analyzehandler/page_issues_summary.go`. When `summary: true`, the full result is mapped into the package's `PageIssuesResult` and condensed to the top findings for a large token reduction, serving as the audit baseline.
 
 ### Shared trigger — `requestAudit`
 

@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/configurehandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/interacthandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/audit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
@@ -89,7 +89,7 @@ type ToolHandler struct {
 	coldStartTimeout time.Duration
 
 	// Dedicated interact action routing/jitter sub-handler.
-	interactActionHandler *toolinteract.InteractActionHandler
+	interactActionHandler *interacthandler.InteractActionHandler
 
 	// Active test boundaries: test_id → start time.
 	// Used to detect out-of-order test_boundary_end calls.
@@ -101,13 +101,13 @@ type ToolHandler struct {
 	playbackSessions map[string]*capture.PlaybackSession
 
 	recordingInteractHandler *recordingInteractHandler
-	uploadInteractHandler    *toolinteract.UploadInteractHandler
+	uploadInteractHandler    *interacthandler.UploadInteractHandler
 	testGenHandler           *testGenHandler
-	stateInteractHandler     *toolinteract.StateInteractHandler
+	stateInteractHandler     *interacthandler.StateInteractHandler
 	configureSessionHandler  *configureSessionHandler
 
 	// Passive network traffic recording state (start/stop capture).
-	networkRecording *toolconfigure.NetworkRecordingState
+	networkRecording *configurehandler.NetworkRecordingState
 
 	// Module registry for plugin-style tool dispatch (incremental migration).
 	toolModulesOnce sync.Once

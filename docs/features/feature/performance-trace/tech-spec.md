@@ -51,7 +51,7 @@ session end. Raw trace data is optionally saved to a file.
 
 **Asynchronous command plumbing**: `start` and `stop` are dispatched as asynchronous commands
 through the existing command builder
-(`cmd/browser-agent/internal/toolinteract/interact_command_builder.go`); results are polled via
+(`cmd/browser-agent/internal/interacthandler/interact_command_builder.go`); results are polled via
 `observe({what: "command_result"})`. The `analyze` action operates on the cached insights and is
 synchronous.
 
@@ -166,7 +166,7 @@ AI calls analyze({what: "performance_trace", action: "analyze", insight_id: "...
 - The analyze dispatch registry (`cmd/browser-agent/tools_analyze_dispatch.go`).
 - The CDP attach/detach lifecycle and `Tracing` domain (`src/background/cdp-dispatch.ts`).
 - The asynchronous command pattern and command-result polling
-  (`cmd/browser-agent/internal/toolinteract/interact_command_builder.go`,
+  (`cmd/browser-agent/internal/interacthandler/interact_command_builder.go`,
   `observe({what: "command_result"})`).
 
 ### Depended on by:

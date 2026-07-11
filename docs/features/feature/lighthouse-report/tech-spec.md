@@ -170,7 +170,7 @@ Agent polls observe({what: "command_result"}) and receives the structured report
 - The analyze dispatch registry (`cmd/browser-agent/tools_analyze_dispatch.go`).
 - The CDP attach/detach lifecycle (`src/background/cdp-dispatch.ts`).
 - The asynchronous command pattern and command-result polling
-  (`cmd/browser-agent/internal/toolinteract/interact_command_builder.go`,
+  (`cmd/browser-agent/internal/interacthandler/interact_command_builder.go`,
   `observe({what: "command_result"})`).
 - For Option A, a Lighthouse CLI in the user's PATH.
 

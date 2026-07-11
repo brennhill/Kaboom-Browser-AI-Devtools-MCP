@@ -1,7 +1,7 @@
 // tools_analyze_annotations_hints.go — Error correlation for annotation responses.
 // Why: Correlates console errors with annotation timestamps.
 // Docs: docs/features/feature/annotated-screenshots/index.md
-// Note: Pure hint builders moved to cmd/browser-agent/internal/toolanalyze/annotation_hints.go.
+// Note: Pure hint builders moved to cmd/browser-agent/internal/analyzehandler/annotation_hints.go.
 
 package main
 

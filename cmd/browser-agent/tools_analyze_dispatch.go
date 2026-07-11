@@ -7,41 +7,41 @@ package main
 import (
 	"encoding/json"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/analyzehandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 )
 
 // analyzeHandlers maps analyze mode names to their handler functions.
 var analyzeHandlers = map[string]ModeHandler{
-	"dom":                method((*ToolHandler).toolQueryDOM),
-	"api_validation":     method((*ToolHandler).toolValidateAPI),
-	"page_summary":       method((*ToolHandler).toolAnalyzePageSummary),
-	"performance":        obs(observe.CheckPerformance),
-	"accessibility":      obs(observe.RunA11yAudit),
-	"error_clusters":     obs(observe.AnalyzeErrors),
+	"dom":                 method((*ToolHandler).toolQueryDOM),
+	"api_validation":      method((*ToolHandler).toolValidateAPI),
+	"page_summary":        method((*ToolHandler).toolAnalyzePageSummary),
+	"performance":         obs(observe.CheckPerformance),
+	"accessibility":       obs(observe.RunA11yAudit),
+	"error_clusters":      obs(observe.AnalyzeErrors),
 	"navigation_patterns": obs(observe.AnalyzeHistory),
-	"security_audit":    azLocal(toolanalyze.HandleSecurityAudit),
-	"third_party_audit": azLocal(toolanalyze.HandleThirdPartyAudit),
-	"link_health":       azLocal(toolanalyze.HandleLinkHealth),
+	"security_audit":      azLocal(analyzehandler.HandleSecurityAudit),
+	"third_party_audit":   azLocal(analyzehandler.HandleThirdPartyAudit),
+	"link_health":         azLocal(analyzehandler.HandleLinkHealth),
 	"link_validation": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-		return toolanalyze.HandleLinkValidation(req, args, version)
+		return analyzehandler.HandleLinkValidation(req, args, version)
 	},
-	"annotations":        method((*ToolHandler).toolGetAnnotations),
-	"annotation_detail":  method((*ToolHandler).toolGetAnnotationDetail),
-	"draw_history":       method((*ToolHandler).toolListDrawHistory),
-	"draw_session":       method((*ToolHandler).toolGetDrawSession),
-	"computed_styles":    toolComputedStyles,
-	"forms":              toolFormDiscovery,
-	"form_state":         toolFormState,
-	"form_validation":    toolFormValidation,
-	"data_table":         toolDataTable,
-	"visual_baseline":    method((*ToolHandler).toolVisualBaseline),
-	"visual_diff":        method((*ToolHandler).toolVisualDiff),
-	"visual_baselines":   method((*ToolHandler).toolListVisualBaselines),
-	"navigation":     azLocal(toolanalyze.HandleNavigation),
-	"page_structure": azLocal(toolanalyze.HandlePageStructure),
-	"audit":              method((*ToolHandler).toolAnalyzeAudit),
-	"page_issues":        method((*ToolHandler).toolAnalyzePageIssues),
+	"annotations":       method((*ToolHandler).toolGetAnnotations),
+	"annotation_detail": method((*ToolHandler).toolGetAnnotationDetail),
+	"draw_history":      method((*ToolHandler).toolListDrawHistory),
+	"draw_session":      method((*ToolHandler).toolGetDrawSession),
+	"computed_styles":   toolComputedStyles,
+	"forms":             toolFormDiscovery,
+	"form_state":        toolFormState,
+	"form_validation":   toolFormValidation,
+	"data_table":        toolDataTable,
+	"visual_baseline":   method((*ToolHandler).toolVisualBaseline),
+	"visual_diff":       method((*ToolHandler).toolVisualDiff),
+	"visual_baselines":  method((*ToolHandler).toolListVisualBaselines),
+	"navigation":        azLocal(analyzehandler.HandleNavigation),
+	"page_structure":    azLocal(analyzehandler.HandlePageStructure),
+	"audit":             method((*ToolHandler).toolAnalyzeAudit),
+	"page_issues":       method((*ToolHandler).toolAnalyzePageIssues),
 	"feature_gates": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 		return h.interactAction().HandleContentExtraction(req, args, "feature_gates", "feature_gates")
 	},
@@ -56,8 +56,8 @@ var analyzeValueAliases = map[string]modeValueAlias{
 // analyzeAliasParams references the shared default mode/action aliases.
 var analyzeAliasParams = defaultModeActionAliases
 
-// azLocal wraps a toolanalyze.Deps-accepting function as a ModeHandler.
-func azLocal(fn func(toolanalyze.Deps, JSONRPCRequest, json.RawMessage) JSONRPCResponse) ModeHandler {
+// azLocal wraps a analyzehandler.Deps-accepting function as a ModeHandler.
+func azLocal(fn func(analyzehandler.Deps, JSONRPCRequest, json.RawMessage) JSONRPCResponse) ModeHandler {
 	return func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 		return fn(h, req, args)
 	}

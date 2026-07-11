@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/generatehandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testgen"
 )
@@ -50,7 +50,7 @@ func (h *testGenHandler) handleGenerateTestFromContext(req JSONRPCRequest, args 
 	if err != nil {
 		return fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 	}
-	warnings = toolgenerate.FilterGenerateDispatchWarnings(warnings)
+	warnings = generatehandler.FilterGenerateDispatchWarnings(warnings)
 
 	if errResp, blocked := validateTestFromContextParams(req, params); blocked {
 		return errResp

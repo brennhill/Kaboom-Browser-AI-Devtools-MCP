@@ -1,29 +1,29 @@
-// Purpose: Type aliases and re-exports for backward compatibility after toolconfigure extraction.
+// Purpose: Type aliases and re-exports for backward compatibility after configurehandler extraction.
 
 package main
 
 import (
 	"sync"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/configurehandler"
 )
 
 // Type aliases for backward compatibility.
-type Sequence = toolconfigure.Sequence
-type SequenceSummary = toolconfigure.SequenceSummary
-type SequenceStepResult = toolconfigure.SequenceStepResult
-type RecordingSnapshot = toolconfigure.RecordingSnapshot
+type Sequence = configurehandler.Sequence
+type SequenceSummary = configurehandler.SequenceSummary
+type SequenceStepResult = configurehandler.SequenceStepResult
+type RecordingSnapshot = configurehandler.RecordingSnapshot
 
 // Re-exported constants.
 const (
-	sequenceNamespace  = toolconfigure.SequenceNamespace
-	maxSequenceSteps   = toolconfigure.MaxSequenceSteps
-	maxSequenceNameLen = toolconfigure.MaxSequenceNameLen
-	defaultStepTimeout = toolconfigure.DefaultStepTimeout
+	sequenceNamespace  = configurehandler.SequenceNamespace
+	maxSequenceSteps   = configurehandler.MaxSequenceSteps
+	maxSequenceNameLen = configurehandler.MaxSequenceNameLen
+	defaultStepTimeout = configurehandler.DefaultStepTimeout
 )
 
 // Re-exported variables.
-var sequenceNamePattern = toolconfigure.SequenceNamePattern
+var sequenceNamePattern = configurehandler.SequenceNamePattern
 
 // replayMu prevents concurrent sequence replays and batch executions.
 // Shared between replay_sequence (configure) and batch execution (interact).

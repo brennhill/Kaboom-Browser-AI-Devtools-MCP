@@ -1,0 +1,402 @@
+// handlers_coverage_test.go — Unit tests for the generate-local MCP artifact handlers.
+// Exercises param parsing, no-data vs with-data branches, validation and error paths
+// for each generate handler using a fake Deps backed by real capture/annotation stores.
+
+package generatehandler
+
+import (
+	"encoding/json"
+	"testing"
+	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+)
+
+// ---------------------------------------------------------------------------
+// Test fakes
+// ---------------------------------------------------------------------------
+
+type fakeGenerateDeps struct {
+	cap          *capture.Store
+	annStore     *annotation.Store
+	version      string
+	extConnected bool
+	a11yResult   json.RawMessage
+	a11yErr      error
+}
+
+func (f *fakeGenerateDeps) GetCapture() *capture.Store            { return f.cap }
+func (f *fakeGenerateDeps) GetAnnotationStore() *annotation.Store { return f.annStore }
+func (f *fakeGenerateDeps) GetVersion() string                    { return f.version }
+func (f *fakeGenerateDeps) IsExtensionConnected() bool            { return f.extConnected }
+func (f *fakeGenerateDeps) ExecuteA11yQuery(_ string, _ []string, _ any, _ bool) (json.RawMessage, error) {
+	return f.a11yResult, f.a11yErr
+}
+
+func newGenDeps() *fakeGenerateDeps {
+	return &fakeGenerateDeps{
+		cap:      capture.NewCapture(),
+		annStore: annotation.NewStore(1 * time.Hour),
+		version:  "9.9.9",
+	}
+}
+
+func genReq() mcp.JSONRPCRequest { return mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1} }
+
+// parseResult decodes an MCP tool result into (isError, text).
+func parseResult(t *testing.T, resp mcp.JSONRPCResponse) (bool, string) {
+	t.Helper()
+	var r struct {
+		Content []struct {
+			Text string `json:"text"`
+		} `json:"content"`
+		IsError bool `json:"isError"`
+	}
+	if err := json.Unmarshal(resp.Result, &r); err != nil {
+		t.Fatalf("failed to unmarshal result: %v (raw=%s)", err, string(resp.Result))
+	}
+	text := ""
+	if len(r.Content) > 0 {
+		text = r.Content[0].Text
+	}
+	return r.IsError, text
+}
+
+// ---------------------------------------------------------------------------
+// Annotation handlers (visual_test / annotation_report / annotation_issues)
+// ---------------------------------------------------------------------------
+
+func addAnonymousSession(d *fakeGenerateDeps) {
+	d.annStore.StoreSession(1, &annotation.Session{
+		PageURL:        "https://example.com/page",
+		ScreenshotPath: "/tmp/shot.png",
+		Timestamp:      time.Now().UnixMilli(),
+		Annotations: []annotation.Annotation{
+			{ID: "a1", Text: "Fix header", ElementSummary: "h1 'Welcome'", CorrelationID: "c1"},
+		},
+	})
+}
+
+func TestHandleVisualTest(t *testing.T) {
+	t.Run("no annotations returns no_data", func(t *testing.T) {
+		d := newGenDeps()
+		resp := HandleVisualTest(d, genReq(), json.RawMessage(`{}`))
+		if isErr, text := parseResult(t, resp); isErr {
+			t.Fatalf("no_data path should not be an error response: %s", text)
+		}
+	})
+
+	t.Run("with annotations generates script", func(t *testing.T) {
+		d := newGenDeps()
+		addAnonymousSession(d)
+		resp := HandleVisualTest(d, genReq(), json.RawMessage(`{"test_name":"My Test"}`))
+		isErr, text := parseResult(t, resp)
+		if isErr {
+			t.Fatalf("visual test should succeed: %s", text)
+		}
+		if len(text) == 0 {
+			t.Error("expected non-empty script text")
+		}
+	})
+
+	t.Run("default test name when empty", func(t *testing.T) {
+		d := newGenDeps()
+		addAnonymousSession(d)
+		resp := HandleVisualTest(d, genReq(), nil)
+		if isErr, _ := parseResult(t, resp); isErr {
+			t.Fatal("should succeed with default test name")
+		}
+	})
+
+	t.Run("named session not found", func(t *testing.T) {
+		d := newGenDeps()
+		resp := HandleVisualTest(d, genReq(), json.RawMessage(`{"annot_session":"ghost"}`))
+		if isErr, _ := parseResult(t, resp); isErr {
+			t.Fatal("missing named session yields no_data success, not error")
+		}
+	})
+
+	t.Run("named session found", func(t *testing.T) {
+		d := newGenDeps()
+		d.annStore.AppendToNamedSession("flow", &annotation.Session{
+			PageURL:     "https://example.com/x",
+			Annotations: []annotation.Annotation{{ID: "n1", Text: "note"}},
+		})
+		resp := HandleVisualTest(d, genReq(), json.RawMessage(`{"annot_session":"flow"}`))
+		if isErr, text := parseResult(t, resp); isErr {
+			t.Fatalf("named session should generate script: %s", text)
+		}
+	})
+}
+
+func TestHandleAnnotationReport(t *testing.T) {
+	t.Run("no data", func(t *testing.T) {
+		d := newGenDeps()
+		resp := HandleAnnotationReport(d, genReq(), json.RawMessage(`{}`))
+		if isErr, _ := parseResult(t, resp); isErr {
+			t.Fatal("no data path should be success no_data")
+		}
+	})
+	t.Run("with data", func(t *testing.T) {
+		d := newGenDeps()
+		addAnonymousSession(d)
+		resp := HandleAnnotationReport(d, genReq(), nil)
+		isErr, text := parseResult(t, resp)
+		if isErr {
+			t.Fatalf("report should succeed: %s", text)
+		}
+		if len(text) == 0 {
+			t.Error("expected markdown report text")
+		}
+	})
+}
+
+func TestHandleAnnotationIssues(t *testing.T) {
+	t.Run("no data", func(t *testing.T) {
+		d := newGenDeps()
+		resp := HandleAnnotationIssues(d, genReq(), json.RawMessage(`{}`))
+		if isErr, _ := parseResult(t, resp); isErr {
+			t.Fatal("no data path should be success no_data")
+		}
+	})
+	t.Run("with data", func(t *testing.T) {
+		d := newGenDeps()
+		addAnonymousSession(d)
+		resp := HandleAnnotationIssues(d, genReq(), nil)
+		if isErr, text := parseResult(t, resp); isErr {
+			t.Fatalf("issues should succeed: %s", text)
+		}
+	})
+}
+
+// ---------------------------------------------------------------------------
+// HandleExportHAR
+// ---------------------------------------------------------------------------
+
+func TestHandleExportHAR(t *testing.T) {
+	t.Run("no bodies yields empty export", func(t *testing.T) {
+		d := newGenDeps()
+		resp := HandleExportHAR(d, genReq(), json.RawMessage(`{}`))
+		if isErr, text := parseResult(t, resp); isErr {
+			t.Fatalf("empty HAR export should succeed: %s", text)
+		}
+	})
+
+	t.Run("with bodies", func(t *testing.T) {
+		d := newGenDeps()
+		d.cap.AddNetworkBodiesForTest([]capture.NetworkBody{
+			{URL: "https://example.com/api", Method: "GET", Status: 200},
+		})
+		resp := HandleExportHAR(d, genReq(), json.RawMessage(`{"method":"GET"}`))
+		if isErr, text := parseResult(t, resp); isErr {
+			t.Fatalf("HAR export with bodies should succeed: %s", text)
+		}
+	})
+
+	t.Run("unsafe save_to path errors", func(t *testing.T) {
+		d := newGenDeps()
+		resp := HandleExportHAR(d, genReq(), json.RawMessage(`{"save_to":"../escape.har"}`))
+		if isErr, _ := parseResult(t, resp); !isErr {
+			t.Fatal("unsafe save_to path should error")
+		}
+	})
+
+	t.Run("invalid JSON errors", func(t *testing.T) {
+		d := newGenDeps()
+		resp := HandleExportHAR(d, genReq(), json.RawMessage(`{bad`))
+		if isErr, _ := parseResult(t, resp); !isErr {
+			t.Fatal("invalid JSON should error")
+		}
+	})
+}
+
+// ---------------------------------------------------------------------------
+// HandlePRSummary
+// ---------------------------------------------------------------------------
+
+func TestHandlePRSummary(t *testing.T) {
+	t.Run("no activity", func(t *testing.T) {
+		d := newGenDeps()
+		resp := HandlePRSummary(d, genReq(), nil)
+		isErr, text := parseResult(t, resp)
+		if isErr {
+			t.Fatalf("pr summary should succeed: %s", text)
+		}
+	})
+
+	t.Run("with activity", func(t *testing.T) {
+		d := newGenDeps()
+		d.cap.SetTrackingStatusForTest(1, "https://example.com/dash")
+		d.cap.AddEnhancedActionsForTest([]capture.EnhancedAction{
+			{Type: "click", Timestamp: time.Now().UnixMilli()},
+			{Type: "click", Timestamp: time.Now().UnixMilli()},
+			{Type: "navigate", Timestamp: time.Now().UnixMilli()},
+		})
+		d.cap.AddNetworkBodiesForTest([]capture.NetworkBody{
+			{URL: "https://example.com/ok", Method: "GET", Status: 200},
+			{URL: "https://example.com/bad", Method: "GET", Status: 500},
+		})
+		d.cap.AddExtensionLogs([]capture.ExtensionLog{
+			{Level: "error", Message: "boom"},
+			{Level: "info", Message: "fine"},
+		})
+		resp := HandlePRSummary(d, genReq(), nil)
+		isErr, text := parseResult(t, resp)
+		if isErr {
+			t.Fatalf("pr summary should succeed: %s", text)
+		}
+		if len(text) == 0 {
+			t.Error("expected summary text")
+		}
+	})
+}
+
+// ---------------------------------------------------------------------------
+// HandleExportSARIF
+// ---------------------------------------------------------------------------
+
+func TestHandleExportSARIF(t *testing.T) {
+	t.Run("precomputed a11y result", func(t *testing.T) {
+		d := newGenDeps()
+		resp := HandleExportSARIF(d, genReq(), json.RawMessage(`{"a11y_result":{"violations":[]}}`))
+		if isErr, text := parseResult(t, resp); isErr {
+			t.Fatalf("SARIF export should succeed: %s", text)
+		}
+	})
+
+	t.Run("not connected uses empty a11y", func(t *testing.T) {
+		d := newGenDeps()
+		d.extConnected = false
+		resp := HandleExportSARIF(d, genReq(), json.RawMessage(`{"scope":"page"}`))
+		if isErr, text := parseResult(t, resp); isErr {
+			t.Fatalf("SARIF export (empty) should succeed: %s", text)
+		}
+	})
+
+	t.Run("connected runs a11y query", func(t *testing.T) {
+		d := newGenDeps()
+		d.extConnected = true
+		d.a11yResult = json.RawMessage(`{"violations":[]}`)
+		resp := HandleExportSARIF(d, genReq(), json.RawMessage(`{"include_passes":true}`))
+		if isErr, text := parseResult(t, resp); isErr {
+			t.Fatalf("SARIF export via query should succeed: %s", text)
+		}
+	})
+
+	t.Run("invalid JSON errors", func(t *testing.T) {
+		d := newGenDeps()
+		resp := HandleExportSARIF(d, genReq(), json.RawMessage(`{bad`))
+		if isErr, _ := parseResult(t, resp); !isErr {
+			t.Fatal("invalid JSON should error")
+		}
+	})
+}
+
+// ---------------------------------------------------------------------------
+// HandleGenerateCSP
+// ---------------------------------------------------------------------------
+
+func TestHandleGenerateCSP(t *testing.T) {
+	t.Run("no bodies unavailable", func(t *testing.T) {
+		d := newGenDeps()
+		resp := HandleGenerateCSP(d, genReq(), json.RawMessage(`{}`))
+		if isErr, _ := parseResult(t, resp); isErr {
+			t.Fatal("unavailable should be a success response, not error")
+		}
+	})
+
+	t.Run("invalid mode errors", func(t *testing.T) {
+		d := newGenDeps()
+		resp := HandleGenerateCSP(d, genReq(), json.RawMessage(`{"mode":"nuclear"}`))
+		if isErr, _ := parseResult(t, resp); !isErr {
+			t.Fatal("invalid mode should error")
+		}
+	})
+
+	t.Run("valid modes with bodies", func(t *testing.T) {
+		for _, mode := range []string{"strict", "moderate", "report_only", ""} {
+			d := newGenDeps()
+			d.cap.AddNetworkBodiesForTest([]capture.NetworkBody{
+				{URL: "https://cdn.example.com/app.js", Method: "GET", Status: 200},
+			})
+			args := `{"mode":"` + mode + `"}`
+			if mode == "" {
+				args = `{}`
+			}
+			resp := HandleGenerateCSP(d, genReq(), json.RawMessage(args))
+			if isErr, text := parseResult(t, resp); isErr {
+				t.Fatalf("CSP mode %q should succeed: %s", mode, text)
+			}
+		}
+	})
+
+	t.Run("invalid JSON errors", func(t *testing.T) {
+		d := newGenDeps()
+		resp := HandleGenerateCSP(d, genReq(), json.RawMessage(`{bad`))
+		if isErr, _ := parseResult(t, resp); !isErr {
+			t.Fatal("invalid JSON should error")
+		}
+	})
+}
+
+// ---------------------------------------------------------------------------
+// HandleGenerateSRI
+// ---------------------------------------------------------------------------
+
+func TestHandleGenerateSRI(t *testing.T) {
+	t.Run("no bodies unavailable", func(t *testing.T) {
+		d := newGenDeps()
+		resp := HandleGenerateSRI(d, genReq(), json.RawMessage(`{}`))
+		if isErr, _ := parseResult(t, resp); isErr {
+			t.Fatal("unavailable should be success response")
+		}
+	})
+
+	t.Run("with bodies", func(t *testing.T) {
+		d := newGenDeps()
+		d.cap.SetTrackingStatusForTest(1, "https://example.com")
+		d.cap.AddNetworkBodiesForTest([]capture.NetworkBody{
+			{URL: "https://cdn.example.com/lib.js", Method: "GET", Status: 200, ContentType: "application/javascript"},
+		})
+		resp := HandleGenerateSRI(d, genReq(), json.RawMessage(`{}`))
+		// Result may be success or a structured error depending on hash availability;
+		// either way the response must be well-formed.
+		parseResult(t, resp)
+	})
+}
+
+// ---------------------------------------------------------------------------
+// HandleGenerateTest
+// ---------------------------------------------------------------------------
+
+func TestHandleGenerateTest(t *testing.T) {
+	t.Run("no actions captured", func(t *testing.T) {
+		d := newGenDeps()
+		resp := HandleGenerateTest(d, genReq(), json.RawMessage(`{}`))
+		if isErr, text := parseResult(t, resp); isErr {
+			t.Fatalf("generate test should succeed with hint: %s", text)
+		}
+	})
+
+	t.Run("with actions", func(t *testing.T) {
+		d := newGenDeps()
+		d.cap.AddEnhancedActionsForTest([]capture.EnhancedAction{
+			{Type: "navigate", ToURL: "https://example.com", Timestamp: time.Now().UnixMilli()},
+			{Type: "click", Selectors: map[string]any{"css": "#btn"}, Timestamp: time.Now().UnixMilli()},
+		})
+		resp := HandleGenerateTest(d, genReq(), json.RawMessage(`{"test_name":"login","last_n":10}`))
+		if isErr, text := parseResult(t, resp); isErr {
+			t.Fatalf("generate test with actions should succeed: %s", text)
+		}
+	})
+
+	t.Run("invalid JSON errors", func(t *testing.T) {
+		d := newGenDeps()
+		resp := HandleGenerateTest(d, genReq(), json.RawMessage(`{bad`))
+		if isErr, _ := parseResult(t, resp); !isErr {
+			t.Fatal("invalid JSON should error")
+		}
+	})
+}

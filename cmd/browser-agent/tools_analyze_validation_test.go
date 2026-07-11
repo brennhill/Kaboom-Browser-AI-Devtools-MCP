@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/analyzehandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	az "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/analyze"
 )
@@ -61,7 +61,7 @@ func TestToolValidateLinksValidationErrors(t *testing.T) {
 	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 
 	t.Run("invalid JSON", func(t *testing.T) {
-		resp := toolanalyze.HandleLinkValidation(req,json.RawMessage(`{invalid`), version)
+		resp := analyzehandler.HandleLinkValidation(req, json.RawMessage(`{invalid`), version)
 		result := decodeToolResult(t, resp.Result)
 		if !result.IsError {
 			t.Fatalf("expected isError=true, got %+v", result)
@@ -72,7 +72,7 @@ func TestToolValidateLinksValidationErrors(t *testing.T) {
 	})
 
 	t.Run("missing urls", func(t *testing.T) {
-		resp := toolanalyze.HandleLinkValidation(req,json.RawMessage(`{}`), version)
+		resp := analyzehandler.HandleLinkValidation(req, json.RawMessage(`{}`), version)
 		result := decodeToolResult(t, resp.Result)
 		if !result.IsError {
 			t.Fatalf("expected isError=true, got %+v", result)
@@ -83,7 +83,7 @@ func TestToolValidateLinksValidationErrors(t *testing.T) {
 	})
 
 	t.Run("no valid http urls", func(t *testing.T) {
-		resp := toolanalyze.HandleLinkValidation(req,json.RawMessage(`{"urls":["ftp://x","javascript:alert(1)"]}`), version)
+		resp := analyzehandler.HandleLinkValidation(req, json.RawMessage(`{"urls":["ftp://x","javascript:alert(1)"]}`), version)
 		result := decodeToolResult(t, resp.Result)
 		if !result.IsError {
 			t.Fatalf("expected isError=true, got %+v", result)
@@ -100,7 +100,7 @@ func TestToolValidateLinksExecutesAndReturnsResults(t *testing.T) {
 
 	// timeout_ms and max_workers intentionally out-of-bounds to exercise clamping.
 	args := json.RawMessage(`{"urls":["http://127.0.0.1:1"],"timeout_ms":5,"max_workers":999}`)
-	resp := toolanalyze.HandleLinkValidation(req,args, version)
+	resp := analyzehandler.HandleLinkValidation(req, args, version)
 	result := decodeToolResult(t, resp.Result)
 	if result.IsError {
 		t.Fatalf("expected success result, got error: %+v", result)

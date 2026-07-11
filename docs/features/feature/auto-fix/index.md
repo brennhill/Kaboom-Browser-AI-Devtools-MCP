@@ -7,7 +7,7 @@ owners: []
 last_reviewed: 2026-07-05
 code_paths:
   - cmd/browser-agent/tools_analyze_page_issues.go
-  - cmd/browser-agent/internal/toolanalyze/page_issues_summary.go
+  - cmd/browser-agent/internal/analyzehandler/page_issues_summary.go
   - cmd/browser-agent/tools_analyze_dispatch.go
   - cmd/browser-agent/handler_tools_call_postprocess.go
   - cmd/browser-agent/internal/terminal/intent_store.go

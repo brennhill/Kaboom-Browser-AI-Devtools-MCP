@@ -54,13 +54,13 @@ func (h *ToolHandler) getCommandResult(correlationID string) (*queries.CommandRe
 }
 
 // IsExtensionConnected reports whether the browser extension is connected.
-// Satisfies toolobserve.Deps.
+// Satisfies observehandler.Deps.
 func (h *ToolHandler) IsExtensionConnected() bool {
 	return h.capture.IsExtensionConnected()
 }
 
 // PushInbox returns the push inbox, or nil if unavailable.
-// Satisfies toolobserve.Deps.
+// Satisfies observehandler.Deps.
 func (h *ToolHandler) PushInbox() *push.PushInbox {
 	return h.server.pushInbox
 }

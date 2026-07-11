@@ -6,9 +6,9 @@
 package main
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolobserve"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/analyzehandler"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/configurehandler"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/observehandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 )
@@ -20,6 +20,6 @@ var _ mcp.PendingQueryEnqueuer = (*ToolHandler)(nil)
 
 // Phase 2: Tool-specific dependency interfaces
 var _ observe.Deps = (*ToolHandler)(nil)
-var _ toolobserve.Deps = (*ToolHandler)(nil)
-var _ toolconfigure.Deps = (*ToolHandler)(nil)
-var _ toolanalyze.Deps = (*ToolHandler)(nil)
+var _ observehandler.Deps = (*ToolHandler)(nil)
+var _ configurehandler.Deps = (*ToolHandler)(nil)
+var _ analyzehandler.Deps = (*ToolHandler)(nil)

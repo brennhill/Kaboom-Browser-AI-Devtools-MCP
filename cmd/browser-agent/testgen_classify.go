@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/generatehandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -20,7 +20,7 @@ func (h *testGenHandler) handleGenerateTestClassify(req JSONRPCRequest, args jso
 		return fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 	}
 
-	warnings = toolgenerate.FilterGenerateDispatchWarnings(warnings)
+	warnings = generatehandler.FilterGenerateDispatchWarnings(warnings)
 
 	if errResp, blocked := validateClassifyParams(req, params); blocked {
 		return errResp

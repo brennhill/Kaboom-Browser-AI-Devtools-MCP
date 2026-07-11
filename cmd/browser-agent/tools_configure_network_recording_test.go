@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/configurehandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -18,7 +18,7 @@ import (
 
 func TestNetworkRecordingState_TryStart_Success(t *testing.T) {
 	t.Parallel()
-	var s toolconfigure.NetworkRecordingState
+	var s configurehandler.NetworkRecordingState
 
 	before := time.Now()
 	startTime, ok := s.TryStart("example.com", "GET")
@@ -37,7 +37,7 @@ func TestNetworkRecordingState_TryStart_Success(t *testing.T) {
 
 func TestNetworkRecordingState_TryStart_AlreadyActive(t *testing.T) {
 	t.Parallel()
-	var s toolconfigure.NetworkRecordingState
+	var s configurehandler.NetworkRecordingState
 
 	_, ok := s.TryStart("example.com", "GET")
 	if !ok {
@@ -55,7 +55,7 @@ func TestNetworkRecordingState_TryStart_AlreadyActive(t *testing.T) {
 
 func TestNetworkRecordingState_TryStart_EmptyFilters(t *testing.T) {
 	t.Parallel()
-	var s toolconfigure.NetworkRecordingState
+	var s configurehandler.NetworkRecordingState
 
 	_, ok := s.TryStart("", "")
 	if !ok {
@@ -77,7 +77,7 @@ func TestNetworkRecordingState_TryStart_EmptyFilters(t *testing.T) {
 
 func TestNetworkRecordingState_Stop_Success(t *testing.T) {
 	t.Parallel()
-	var s toolconfigure.NetworkRecordingState
+	var s configurehandler.NetworkRecordingState
 
 	origStart, _ := s.TryStart("example.com", "POST")
 
@@ -116,7 +116,7 @@ func TestNetworkRecordingState_Stop_Success(t *testing.T) {
 
 func TestNetworkRecordingState_Stop_NotActive(t *testing.T) {
 	t.Parallel()
-	var s toolconfigure.NetworkRecordingState
+	var s configurehandler.NetworkRecordingState
 
 	snap, ok := s.Stop()
 	if ok {
@@ -138,7 +138,7 @@ func TestNetworkRecordingState_Stop_NotActive(t *testing.T) {
 
 func TestNetworkRecordingState_Stop_DoubleStop(t *testing.T) {
 	t.Parallel()
-	var s toolconfigure.NetworkRecordingState
+	var s configurehandler.NetworkRecordingState
 
 	s.TryStart("example.com", "GET")
 
@@ -159,7 +159,7 @@ func TestNetworkRecordingState_Stop_DoubleStop(t *testing.T) {
 
 func TestNetworkRecordingState_Info_Active(t *testing.T) {
 	t.Parallel()
-	var s toolconfigure.NetworkRecordingState
+	var s configurehandler.NetworkRecordingState
 
 	startTime, _ := s.TryStart("api.example.com", "PUT")
 
@@ -180,7 +180,7 @@ func TestNetworkRecordingState_Info_Active(t *testing.T) {
 
 func TestNetworkRecordingState_Info_Inactive(t *testing.T) {
 	t.Parallel()
-	var s toolconfigure.NetworkRecordingState
+	var s configurehandler.NetworkRecordingState
 
 	info := s.Info()
 	if info.Active {
@@ -203,7 +203,7 @@ func TestNetworkRecordingState_Info_Inactive(t *testing.T) {
 
 func TestNetworkRecordingState_StartStopRestart(t *testing.T) {
 	t.Parallel()
-	var s toolconfigure.NetworkRecordingState
+	var s configurehandler.NetworkRecordingState
 
 	// First cycle
 	_, ok := s.TryStart("first.com", "GET")
@@ -240,7 +240,7 @@ func TestNetworkRecordingState_StartStopRestart(t *testing.T) {
 
 func TestNetworkRecordingState_ConcurrentStartStop(t *testing.T) {
 	t.Parallel()
-	var s toolconfigure.NetworkRecordingState
+	var s configurehandler.NetworkRecordingState
 
 	const goroutines = 100
 	var wg sync.WaitGroup
@@ -308,7 +308,7 @@ func TestNetworkRecordingState_ConcurrentStartStop(t *testing.T) {
 
 func TestNetworkRecordingState_ConcurrentInfo(t *testing.T) {
 	t.Parallel()
-	var s toolconfigure.NetworkRecordingState
+	var s configurehandler.NetworkRecordingState
 	s.TryStart("example.com", "GET")
 
 	const goroutines = 50
@@ -330,7 +330,7 @@ func TestNetworkRecordingState_ConcurrentInfo(t *testing.T) {
 }
 
 // ============================================
-// toolconfigure.MatchesRecordingFilter() — table-driven
+// configurehandler.MatchesRecordingFilter() — table-driven
 // ============================================
 
 func TestMatchesRecordingFilter(t *testing.T) {
@@ -612,9 +612,9 @@ func TestMatchesRecordingFilter(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got := toolconfigure.MatchesRecordingFilter(tc.body, tc.startTime, tc.domain, tc.method)
+			got := configurehandler.MatchesRecordingFilter(tc.body, tc.startTime, tc.domain, tc.method)
 			if got != tc.want {
-				t.Errorf("toolconfigure.MatchesRecordingFilter() = %v, want %v", got, tc.want)
+				t.Errorf("configurehandler.MatchesRecordingFilter() = %v, want %v", got, tc.want)
 			}
 		})
 	}

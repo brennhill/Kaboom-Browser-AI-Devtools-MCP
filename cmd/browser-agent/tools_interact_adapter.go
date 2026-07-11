@@ -1,6 +1,6 @@
-// tools_interact_adapter.go — Bridges the toolinteract package to the main ToolHandler.
-// Purpose: Constructs toolinteract.Deps from *ToolHandler and provides accessor methods.
-// Why: Keeps the toolinteract package decoupled from the main package's god object.
+// tools_interact_adapter.go — Bridges the interacthandler package to the main ToolHandler.
+// Purpose: Constructs interacthandler.Deps from *ToolHandler and provides accessor methods.
+// Why: Keeps the interacthandler package decoupled from the main package's god object.
 
 package main
 
@@ -9,15 +9,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/interacthandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 )
 
-// buildInteractDeps constructs a toolinteract.Deps wired to the given ToolHandler.
-func buildInteractDeps(h *ToolHandler) *toolinteract.Deps {
-	return &toolinteract.Deps{
+// buildInteractDeps constructs a interacthandler.Deps wired to the given ToolHandler.
+func buildInteractDeps(h *ToolHandler) *interacthandler.Deps {
+	return &interacthandler.Deps{
 		// Gate checks
 		RequirePilot:       h.requirePilot,
 		RequireExtension:   h.requireExtension,
@@ -39,12 +39,12 @@ func buildInteractDeps(h *ToolHandler) *toolinteract.Deps {
 		RecordDOMPrimitiveAction: h.recordDOMPrimitiveAction,
 
 		// Cross-tool dispatch
-		ToolInteract:  h.toolInteract,
-		ToolAnalyze:   h.toolAnalyze,
+		ToolInteract:    h.toolInteract,
+		ToolAnalyze:     h.toolAnalyze,
 		ToolExportSARIF: h.toolExportSARIF,
 
 		// Response enrichment
-		EnrichNavigateResponse: h.enrichNavigateResponse,
+		EnrichNavigateResponse:  h.enrichNavigateResponse,
 		InjectCSPBlockedActions: h.injectCSPBlockedActions,
 
 		// Screenshot/observe proxies
@@ -71,14 +71,14 @@ func buildInteractDeps(h *ToolHandler) *toolinteract.Deps {
 		},
 
 		// Evidence capture
-		DefaultEvidenceCapture: func(clientID string) toolinteract.EvidenceShot {
+		DefaultEvidenceCapture: func(clientID string) interacthandler.EvidenceShot {
 			return defaultEvidenceCaptureImpl(h, clientID)
 		},
 
 		// Session store
 		RequireSessionStore: h.requireSessionStore,
 		DiagnosticHint:      h.diagnosticHint,
-		GetRedactionEngine: func() toolinteract.RedactionEngine {
+		GetRedactionEngine: func() interacthandler.RedactionEngine {
 			return h.GetRedactionEngine()
 		},
 		GetCommandResult: func(correlationID string) (*queries.CommandResult, bool) {
@@ -90,24 +90,24 @@ func buildInteractDeps(h *ToolHandler) *toolinteract.Deps {
 	}
 }
 
-// interactAction returns the interact action handler from the toolinteract package.
-func (h *ToolHandler) interactAction() *toolinteract.InteractActionHandler {
+// interactAction returns the interact action handler from the interacthandler package.
+func (h *ToolHandler) interactAction() *interacthandler.InteractActionHandler {
 	return h.interactActionHandler
 }
 
-// stateInteract returns the state interact handler from the toolinteract package.
-func (h *ToolHandler) stateInteract() *toolinteract.StateInteractHandler {
+// stateInteract returns the state interact handler from the interacthandler package.
+func (h *ToolHandler) stateInteract() *interacthandler.StateInteractHandler {
 	return h.stateInteractHandler
 }
 
 // defaultEvidenceCaptureImpl captures an evidence screenshot using the ToolHandler's capture store.
-func defaultEvidenceCaptureImpl(h *ToolHandler, clientID string) toolinteract.EvidenceShot {
+func defaultEvidenceCaptureImpl(h *ToolHandler, clientID string) interacthandler.EvidenceShot {
 	if h == nil || h.capture == nil {
-		return toolinteract.EvidenceShot{Error: "capture_not_initialized"}
+		return interacthandler.EvidenceShot{Error: "capture_not_initialized"}
 	}
 	enabled, _, _ := h.capture.GetTrackingStatus()
 	if !enabled {
-		return toolinteract.EvidenceShot{Error: "no_tracked_tab"}
+		return interacthandler.EvidenceShot{Error: "no_tracked_tab"}
 	}
 
 	queryID, qerr := h.capture.CreatePendingQueryWithTimeout(
@@ -119,21 +119,21 @@ func defaultEvidenceCaptureImpl(h *ToolHandler, clientID string) toolinteract.Ev
 		clientID,
 	)
 	if qerr != nil {
-		return toolinteract.EvidenceShot{Error: "queue_full: " + qerr.Error()}
+		return interacthandler.EvidenceShot{Error: "queue_full: " + qerr.Error()}
 	}
 
 	raw, err := h.capture.WaitForResult(queryID, 12*time.Second)
 	if err != nil {
-		return toolinteract.EvidenceShot{Error: "screenshot_timeout: " + err.Error()}
+		return interacthandler.EvidenceShot{Error: "screenshot_timeout: " + err.Error()}
 	}
 
 	var payload map[string]any
 	if err := json.Unmarshal(raw, &payload); err != nil {
-		return toolinteract.EvidenceShot{Error: "screenshot_parse_error: " + err.Error()}
+		return interacthandler.EvidenceShot{Error: "screenshot_parse_error: " + err.Error()}
 	}
 
 	if errMsg, ok := payload["error"].(string); ok && strings.TrimSpace(errMsg) != "" {
-		return toolinteract.EvidenceShot{Error: strings.TrimSpace(errMsg)}
+		return interacthandler.EvidenceShot{Error: strings.TrimSpace(errMsg)}
 	}
 
 	path, _ := payload["path"].(string)
@@ -141,13 +141,13 @@ func defaultEvidenceCaptureImpl(h *ToolHandler, clientID string) toolinteract.Ev
 	path = strings.TrimSpace(path)
 	filename = strings.TrimSpace(filename)
 	if path == "" {
-		return toolinteract.EvidenceShot{
+		return interacthandler.EvidenceShot{
 			Filename: filename,
 			Error:    "screenshot_missing_path",
 		}
 	}
 
-	return toolinteract.EvidenceShot{
+	return interacthandler.EvidenceShot{
 		Path:     path,
 		Filename: filename,
 	}

@@ -7,7 +7,7 @@ package main
 import (
 	"encoding/json"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/interacthandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
@@ -47,7 +47,7 @@ func (h *ToolHandler) enrichNavigateResponse(resp JSONRPCResponse, req JSONRPCRe
 	// Wait for page summary (5s — page should already be loaded).
 	// Best-effort enrichment: if extraction fails, navigate still succeeds with empty content.
 	var textContent string
-	cmd, found := h.capture.WaitForCommand(summaryCorrelationID, toolinteract.NavigatePageSummaryWait)
+	cmd, found := h.capture.WaitForCommand(summaryCorrelationID, interacthandler.NavigatePageSummaryWait)
 	if found && cmd.Status != "pending" && cmd.Result != nil {
 		var summaryResult map[string]any
 		if json.Unmarshal(cmd.Result, &summaryResult) == nil {

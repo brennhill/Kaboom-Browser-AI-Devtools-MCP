@@ -103,7 +103,7 @@ echo ""
 echo "4️⃣  Checking MCP tool handlers..."
 
 # Top-level observe handlers live in $CMD_DIR/tools_*.go; the interact action
-# implementations moved to $CMD_DIR/internal/toolinteract/ (HandleExecuteJSImpl,
+# implementations moved to $CMD_DIR/internal/interacthandler/ (HandleExecuteJSImpl,
 # HandleBrowserActionNavigateImpl).
 MCP_TOOL_HANDLERS=(
     "toolObserveCommandResult"
@@ -114,7 +114,7 @@ MCP_TOOL_HANDLERS=(
 )
 
 for handler in "${MCP_TOOL_HANDLERS[@]}"; do
-    if ! grep -rq "func.*$handler" "${CMD_DIR}"/tools_*.go "${CMD_DIR}"/internal/toolinteract/*.go; then
+    if ! grep -rq "func.*$handler" "${CMD_DIR}"/tools_*.go "${CMD_DIR}"/internal/interacthandler/*.go; then
         echo "   ❌ MISSING TOOL HANDLER: $handler"
         ERRORS=$((ERRORS + 1))
     else

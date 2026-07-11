@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/configurehandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/interacthandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/audit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
@@ -54,8 +54,8 @@ func NewToolHandler(server *Server, capture *capture.Store) *MCPHandler {
 		shutdownCancel:            shutdownCancel,
 		coldStartTimeout:          defaultColdStartTimeout,
 		extensionReadinessTimeout: defaultExtensionReadinessTimeout(),
-		playbackSessions: newPlaybackSessionsMap(),
-		networkRecording: &toolconfigure.NetworkRecordingState{},
+		playbackSessions:          newPlaybackSessionsMap(),
+		networkRecording:          &configurehandler.NetworkRecordingState{},
 	}
 
 	// Initialize usage tracker for structured telemetry beacons.
@@ -125,10 +125,10 @@ func NewToolHandler(server *Server, capture *capture.Store) *MCPHandler {
 	handler.uploadSecurity = uploadSecurityConfig
 	handler.recordingInteractHandler = newRecordingInteractHandler(handler) // *ToolHandler satisfies recordingDeps
 	interactDeps := buildInteractDeps(handler)
-	handler.interactActionHandler = toolinteract.NewInteractActionHandler(interactDeps)
-	handler.uploadInteractHandler = toolinteract.NewUploadInteractHandler(interactDeps, handler.interactActionHandler)
+	handler.interactActionHandler = interacthandler.NewInteractActionHandler(interactDeps)
+	handler.uploadInteractHandler = interacthandler.NewUploadInteractHandler(interactDeps, handler.interactActionHandler)
 	handler.testGenHandler = newTestGenHandler(handler) // *ToolHandler satisfies testGenHandlerDeps
-	handler.stateInteractHandler = toolinteract.NewStateInteractHandler(interactDeps, handler.sessionStoreImpl)
+	handler.stateInteractHandler = interacthandler.NewStateInteractHandler(interactDeps, handler.sessionStoreImpl)
 	handler.configureSessionHandler = newConfigureSessionHandler(handler, handler.sessionStoreImpl, handler.sessionManager, handler.MCPHandler.server)
 
 	// Initialize dispatch modules and tool schemas once at startup.

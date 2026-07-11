@@ -1,7 +1,7 @@
-// Purpose: Test alias for batch helper that moved to internal/toolinteract.
+// Purpose: Test alias for batch helper that moved to internal/interacthandler.
 
 package main
 
-import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
+import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/interacthandler"
 
-var stripComposableScreenshotFromStep = toolinteract.StripComposableScreenshotFromStep
+var stripComposableScreenshotFromStep = interacthandler.StripComposableScreenshotFromStep

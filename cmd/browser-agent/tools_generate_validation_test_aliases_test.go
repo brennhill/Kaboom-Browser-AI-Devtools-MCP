@@ -1,5 +1,5 @@
 package main
 
-import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
+import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/generatehandler"
 
-var validateGenerateParams = toolgenerate.ValidateGenerateParams
+var validateGenerateParams = generatehandler.ValidateGenerateParams

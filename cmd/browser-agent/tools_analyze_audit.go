@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/analyzehandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 )
 
@@ -29,10 +29,10 @@ func defaultAuditCategories() []auditCategory {
 			return observe.RunA11yAudit(h, req, args)
 		}, Weight: 1.0},
 		{Name: "security", Handler: func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-			return toolanalyze.HandleSecurityAudit(h, req, args)
+			return analyzehandler.HandleSecurityAudit(h, req, args)
 		}, Weight: 1.0},
 		{Name: "best_practices", Handler: func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-			return toolanalyze.HandleThirdPartyAudit(h, req, args)
+			return analyzehandler.HandleThirdPartyAudit(h, req, args)
 		}, Weight: 1.0},
 	}
 }
@@ -45,8 +45,8 @@ var validAuditCategories = map[string]bool{
 	"best_practices": true,
 }
 
-// toolanalyze.AuditCategoryResult is defined in tools_analyze_audit_scoring.go as an alias
-// for toolanalyze.AuditCategoryResult.
+// analyzehandler.AuditCategoryResult is defined in tools_analyze_audit_scoring.go as an alias
+// for analyzehandler.AuditCategoryResult.
 
 func (h *ToolHandler) toolAnalyzeAudit(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 	var params struct {
@@ -80,7 +80,7 @@ func (h *ToolHandler) toolAnalyzeAudit(req JSONRPCRequest, args json.RawMessage)
 	}
 
 	allCategories := defaultAuditCategories()
-	categoryResults := make(map[string]toolanalyze.AuditCategoryResult)
+	categoryResults := make(map[string]analyzehandler.AuditCategoryResult)
 	var totalScore float64
 	var totalWeight float64
 
@@ -144,7 +144,7 @@ func auditRecommendations() []map[string]any {
 				"Sites that serve /llms.txt and per-page .md variants get better results from AI-powered " +
 				"search, coding assistants, and autonomous agents. " +
 				"Check whether this site serves /llms.txt — if not, consider adding one.",
-			"severity": "info",
+			"severity":  "info",
 			"reference": "https://llmstxt.org",
 		},
 	}

@@ -7,7 +7,7 @@ package main
 import (
 	"encoding/json"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/configurehandler"
 	cfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure"
 )
 
@@ -41,7 +41,7 @@ var configureHandlers = map[string]ModeHandler{
 		if err != nil {
 			return fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 		}
-		return toolconfigure.HandleNoise(h, req, rewrittenArgs)
+		return configurehandler.HandleNoise(h, req, rewrittenArgs)
 	},
 	"clear":                 method((*ToolHandler).toolConfigureClear),
 	"audit_log":             method((*ToolHandler).toolGetAuditLog),
@@ -52,30 +52,30 @@ var configureHandlers = map[string]ModeHandler{
 	"event_recording_stop":  method((*ToolHandler).toolConfigureEventRecordingStop),
 	"playback":              method((*ToolHandler).toolConfigurePlayback),
 	"log_diff":              method((*ToolHandler).toolConfigureLogDiff),
-	"telemetry":             cfgLocal(toolconfigure.HandleTelemetry),
+	"telemetry":             cfgLocal(configurehandler.HandleTelemetry),
 	"describe_capabilities": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-		return toolconfigure.HandleDescribeCapabilities(h, req, args, version)
+		return configurehandler.HandleDescribeCapabilities(h, req, args, version)
 	},
 	"tutorial": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-		return toolconfigure.HandleTutorial(h, req, args, tutorialFailureRecoveryPlaybooks())
+		return configurehandler.HandleTutorial(h, req, args, tutorialFailureRecoveryPlaybooks())
 	},
 	"examples": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-		return toolconfigure.HandleTutorial(h, req, args, tutorialFailureRecoveryPlaybooks())
+		return configurehandler.HandleTutorial(h, req, args, tutorialFailureRecoveryPlaybooks())
 	},
-	"save_sequence":         method((*ToolHandler).toolConfigureSaveSequence),
-	"get_sequence":          method((*ToolHandler).toolConfigureGetSequence),
-	"list_sequences":        method((*ToolHandler).toolConfigureListSequences),
-	"delete_sequence":       method((*ToolHandler).toolConfigureDeleteSequence),
-	"replay_sequence":       method((*ToolHandler).toolConfigureReplaySequence),
-	"security_mode":     cfgLocal(toolconfigure.HandleSecurityMode),
-	"network_recording": method((*ToolHandler).toolConfigureNetworkRecording),
-	"action_jitter": cfgLocal(toolconfigure.HandleActionJitter),
-	"report_issue":          method((*ToolHandler).toolConfigureReportIssue),
-	"setup_quality_gates":   method((*ToolHandler).toolConfigureSetupQualityGates),
+	"save_sequence":       method((*ToolHandler).toolConfigureSaveSequence),
+	"get_sequence":        method((*ToolHandler).toolConfigureGetSequence),
+	"list_sequences":      method((*ToolHandler).toolConfigureListSequences),
+	"delete_sequence":     method((*ToolHandler).toolConfigureDeleteSequence),
+	"replay_sequence":     method((*ToolHandler).toolConfigureReplaySequence),
+	"security_mode":       cfgLocal(configurehandler.HandleSecurityMode),
+	"network_recording":   method((*ToolHandler).toolConfigureNetworkRecording),
+	"action_jitter":       cfgLocal(configurehandler.HandleActionJitter),
+	"report_issue":        method((*ToolHandler).toolConfigureReportIssue),
+	"setup_quality_gates": method((*ToolHandler).toolConfigureSetupQualityGates),
 }
 
-// cfgLocal wraps a toolconfigure.Deps-accepting function as a ModeHandler.
-func cfgLocal(fn func(toolconfigure.Deps, JSONRPCRequest, json.RawMessage) JSONRPCResponse) ModeHandler {
+// cfgLocal wraps a configurehandler.Deps-accepting function as a ModeHandler.
+func cfgLocal(fn func(configurehandler.Deps, JSONRPCRequest, json.RawMessage) JSONRPCResponse) ModeHandler {
 	return func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 		return fn(h, req, args)
 	}

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/analyzehandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 )
 
@@ -184,7 +184,7 @@ func buildAnnotationSessionResult(session *AnnotationSession, urlFilter string) 
 	if session.ScreenshotPath != "" && matched {
 		result["screenshot"] = session.ScreenshotPath
 	}
-	projects := toolanalyze.BuildProjectSummaries([]*AnnotationSession{session})
+	projects := analyzehandler.BuildProjectSummaries([]*AnnotationSession{session})
 	if len(projects) > 0 {
 		result["projects"] = projects
 	}
@@ -192,13 +192,13 @@ func buildAnnotationSessionResult(session *AnnotationSession, urlFilter string) 
 		result["message"] = "No annotations match the requested url filter."
 	}
 	if len(annotations) > 0 {
-		result["hints"] = toolanalyze.BuildSessionHints(session.ScreenshotPath)
+		result["hints"] = analyzehandler.BuildSessionHints(session.ScreenshotPath)
 	}
 	return result
 }
 
 func buildNamedAnnotationSessionResult(ns *NamedAnnotationSession, urlFilter string) map[string]any {
-	allProjects := toolanalyze.BuildProjectSummaries(ns.Pages)
+	allProjects := analyzehandler.BuildProjectSummaries(ns.Pages)
 	filteredPages := filterAnnotationPages(ns.Pages, urlFilter)
 
 	totalCount := 0
@@ -238,13 +238,13 @@ func buildNamedAnnotationSessionResult(ns *NamedAnnotationSession, urlFilter str
 	}
 	if len(allProjects) > 1 && urlFilter == "" {
 		result["scope_ambiguous"] = true
-		result["scope_warning"] = toolanalyze.BuildScopeWarning(allProjects)
+		result["scope_warning"] = analyzehandler.BuildScopeWarning(allProjects)
 	}
 	if len(filteredPages) == 0 && urlFilter != "" {
 		result["message"] = "No pages in this annotation session match the requested url filter."
 	}
 	if totalCount > 0 {
-		result["hints"] = toolanalyze.BuildSessionHints(screenshotPath)
+		result["hints"] = analyzehandler.BuildSessionHints(screenshotPath)
 	}
 	return result
 }
@@ -447,7 +447,7 @@ func (h *ToolHandler) toolGetAnnotationDetail(req JSONRPCRequest, args json.RawM
 	}
 
 	// Detail-level LLM hints (context-aware)
-	if detailHints := toolanalyze.BuildDetailHints(detail.CSSFramework, detail.JSFramework, detail.A11yFlags, hasCorrelatedErrors); detailHints != nil {
+	if detailHints := analyzehandler.BuildDetailHints(detail.CSSFramework, detail.JSFramework, detail.A11yFlags, hasCorrelatedErrors); detailHints != nil {
 		result["hints"] = detailHints
 	}
 

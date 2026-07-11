@@ -1,24 +1,24 @@
-// tools_analyze_deps_adapter.go — Adapts ToolHandler to satisfy toolanalyze.Deps interface.
+// tools_analyze_deps_adapter.go — Adapts ToolHandler to satisfy analyzehandler.Deps interface.
 // Why: Provides narrow accessor methods that bridge ToolHandler fields to the analyze sub-package.
 
 package main
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/analyzehandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
-// NetworkBodies satisfies toolanalyze.Deps (also used by toolconfigure.Deps).
+// NetworkBodies satisfies analyzehandler.Deps (also used by configurehandler.Deps).
 // Already defined in tools_configure_deps_adapter.go.
 
-// NetworkWaterfallEntries satisfies toolanalyze.Deps.
+// NetworkWaterfallEntries satisfies analyzehandler.Deps.
 func (h *ToolHandler) NetworkWaterfallEntries() []capture.NetworkWaterfallEntry {
 	return h.capture.GetNetworkWaterfallEntries()
 }
 
-// ConsoleSecurityEntries satisfies toolanalyze.Deps.
+// ConsoleSecurityEntries satisfies analyzehandler.Deps.
 func (h *ToolHandler) ConsoleSecurityEntries() []security.LogEntry {
 	h.server.logs.mu.RLock()
 	entries := make([]security.LogEntry, len(h.server.logs.entries))
@@ -29,20 +29,20 @@ func (h *ToolHandler) ConsoleSecurityEntries() []security.LogEntry {
 	return entries
 }
 
-// SecurityScanner satisfies toolanalyze.Deps.
-func (h *ToolHandler) SecurityScanner() toolanalyze.SecurityScannerInterface {
+// SecurityScanner satisfies analyzehandler.Deps.
+func (h *ToolHandler) SecurityScanner() analyzehandler.SecurityScannerInterface {
 	if h.securityScannerImpl == nil {
 		return nil
 	}
 	return h.securityScannerImpl
 }
 
-// LogEntries satisfies toolanalyze.Deps (returns entries without timestamps).
+// LogEntries satisfies analyzehandler.Deps (returns entries without timestamps).
 func (h *ToolHandler) LogEntries() []types.LogEntry {
 	entries, _ := h.GetLogEntries()
 	return entries
 }
 
-// ExecuteA11yQuery satisfies toolanalyze.Deps.
+// ExecuteA11yQuery satisfies analyzehandler.Deps.
 // Delegates to the existing method (already on ToolHandler via MCPHandler).
 // Already defined via MCPHandler embedding.

@@ -9,7 +9,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolobserve"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/observehandler"
 )
 
 // obs wraps an observe.Deps-accepting function as a ModeHandler.
@@ -20,8 +20,8 @@ func obs(fn func(observe.Deps, JSONRPCRequest, json.RawMessage) JSONRPCResponse)
 	}
 }
 
-// obsLocal wraps a toolobserve.Deps-accepting function as a ModeHandler.
-func obsLocal(fn func(toolobserve.Deps, JSONRPCRequest, json.RawMessage) JSONRPCResponse) ModeHandler {
+// obsLocal wraps a observehandler.Deps-accepting function as a ModeHandler.
+func obsLocal(fn func(observehandler.Deps, JSONRPCRequest, json.RawMessage) JSONRPCResponse) ModeHandler {
 	return func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 		return fn(h, req, args)
 	}
@@ -55,10 +55,10 @@ var observeHandlers = map[string]ModeHandler{
 	"annotation_detail": method((*ToolHandler).toolGetAnnotationDetail),
 	"draw_history":      method((*ToolHandler).toolListDrawHistory),
 	"draw_session":      method((*ToolHandler).toolGetDrawSession),
-	// Delegated to cmd/browser-agent/internal/toolobserve
-	"page_inventory": obsLocal(toolobserve.HandlePageInventory),
-	"inbox":          obsLocal(toolobserve.HandleInbox),
-	"site_menus":     obsLocal(toolobserve.HandleSiteMenus),
+	// Delegated to cmd/browser-agent/internal/observehandler
+	"page_inventory": obsLocal(observehandler.HandlePageInventory),
+	"inbox":          obsLocal(observehandler.HandleInbox),
+	"site_menus":     obsLocal(observehandler.HandleSiteMenus),
 	// Local handlers (ToolHandler-dependent)
 	"command_result":    method((*ToolHandler).toolObserveCommandResult),
 	"pending_commands":  method((*ToolHandler).toolObservePendingCommands),
@@ -77,7 +77,7 @@ var observeValueAliases = map[string]modeValueAlias{
 }
 
 // serverSideObserveModes is a package-level alias to the extracted registry.
-var serverSideObserveModes = toolobserve.ServerSideObserveModes
+var serverSideObserveModes = observehandler.ServerSideObserveModes
 
 // getValidObserveModes returns a sorted, comma-separated list of valid observe modes.
 func getValidObserveModes() string { return sortedMapKeys(observeHandlers) }

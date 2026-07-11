@@ -6,7 +6,7 @@ package main
 import (
 	"encoding/json"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/generatehandler"
 	gen "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/generate"
 )
 
@@ -62,7 +62,7 @@ var generateRegistry = toolRegistry{
 		ValidModes: "", // populated lazily
 	},
 	PreDispatch: func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage, what string) (json.RawMessage, *JSONRPCResponse) {
-		return args, toolgenerate.ValidateGenerateParams(req, what, args)
+		return args, generatehandler.ValidateGenerateParams(req, what, args)
 	},
 }
 

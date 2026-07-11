@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/interacthandler"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
@@ -48,7 +48,7 @@ var interactRegistry = toolRegistry{
 		h.interactAction().ApplyJitter(what)
 
 		// Validate evidence mode.
-		if _, err := toolinteract.ParseEvidenceMode(args); err != nil {
+		if _, err := interacthandler.ParseEvidenceMode(args); err != nil {
 			resp := fail(req, ErrInvalidParam,
 				"Invalid 'evidence' value",
 				"Use evidence='off' (default), 'on_mutation', or 'always'",

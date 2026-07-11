@@ -1,16 +1,16 @@
-// Purpose: Thin adapter for recording helpers — delegates to toolrecording sub-package.
+// Purpose: Thin adapter for recording helpers — delegates to recordinghandler sub-package.
 // Docs: docs/features/feature/flow-recording/index.md
 
 package main
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolrecording"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/recordinghandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
-// buildPlaybackResult delegates to the toolrecording sub-package.
+// buildPlaybackResult delegates to the recordinghandler sub-package.
 func (h *ToolHandler) buildPlaybackResult(req JSONRPCRequest, recordingID string, session *capture.PlaybackSession) JSONRPCResponse {
-	return toolrecording.BuildPlaybackResult(req, recordingID, session)
+	return recordinghandler.BuildPlaybackResult(req, recordingID, session)
 }
 
 // appendServerLog appends one entry to bounded in-memory daemon logs.

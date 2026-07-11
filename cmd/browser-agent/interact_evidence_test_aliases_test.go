@@ -1,27 +1,27 @@
-// Purpose: Test aliases for evidence types/functions that moved to internal/toolinteract.
+// Purpose: Test aliases for evidence types/functions that moved to internal/interacthandler.
 
 package main
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/interacthandler"
 )
 
-// evidenceShot aliases the exported type from toolinteract.
-type evidenceShot = toolinteract.EvidenceShot
+// evidenceShot aliases the exported type from interacthandler.
+type evidenceShot = interacthandler.EvidenceShot
 
 // evidenceCaptureFn is a shim that mimics the old package-level var.
-// Tests read/write this var; the setter syncs to toolinteract.SetEvidenceCaptureFn.
+// Tests read/write this var; the setter syncs to interacthandler.SetEvidenceCaptureFn.
 var evidenceCaptureFn func(*ToolHandler, string) evidenceShot
 
-// syncEvidenceCaptureFn installs the current evidenceCaptureFn into toolinteract.
+// syncEvidenceCaptureFn installs the current evidenceCaptureFn into interacthandler.
 // Call after assigning evidenceCaptureFn in a test.
 func syncEvidenceCaptureFn() {
 	if evidenceCaptureFn == nil {
-		toolinteract.ResetEvidenceCaptureFn()
+		interacthandler.ResetEvidenceCaptureFn()
 		return
 	}
 	fn := evidenceCaptureFn
-	toolinteract.SetEvidenceCaptureFn(func(_ *toolinteract.Deps, clientID string) toolinteract.EvidenceShot {
+	interacthandler.SetEvidenceCaptureFn(func(_ *interacthandler.Deps, clientID string) interacthandler.EvidenceShot {
 		return fn(nil, clientID)
 	})
 }
