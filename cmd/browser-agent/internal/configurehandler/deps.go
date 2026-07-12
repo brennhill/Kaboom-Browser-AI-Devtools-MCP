@@ -61,4 +61,7 @@ type Deps interface {
 
 	// InteractActionGetJitter returns the current action jitter in milliseconds.
 	InteractActionGetJitter() int
+
+	// GetActiveCodebase returns the active project directory (empty if none set).
+	GetActiveCodebase() string
 }

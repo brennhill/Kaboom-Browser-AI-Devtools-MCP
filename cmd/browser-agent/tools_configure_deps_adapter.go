@@ -90,3 +90,8 @@ func (h *ToolHandler) InteractActionGetJitter() int {
 func (h *ToolHandler) HasCapture() bool {
 	return h.capture != nil
 }
+
+// GetActiveCodebase satisfies configurehandler.Deps.
+func (h *ToolHandler) GetActiveCodebase() string {
+	return h.server.GetActiveCodebase()
+}

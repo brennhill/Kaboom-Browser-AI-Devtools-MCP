@@ -37,6 +37,7 @@ type fakeConfigureDeps struct {
 	rewrites         []string
 	telemetryMode    string
 	jitterMs         int
+	activeCodebase   string
 
 	// call-tracking for setters
 	setSecurityCalledWith string
@@ -57,6 +58,7 @@ func (f *fakeConfigureDeps) IsExtensionConnected() bool       { return f.extConn
 func (f *fakeConfigureDeps) ToolsList() []mcp.MCPTool         { return f.tools }
 func (f *fakeConfigureDeps) GetToolModuleExamples(string) any { return f.moduleExamples }
 func (f *fakeConfigureDeps) HasCapture() bool                 { return f.hasCapture }
+func (f *fakeConfigureDeps) GetActiveCodebase() string        { return f.activeCodebase }
 func (f *fakeConfigureDeps) GetSecurityMode() (string, bool, []string) {
 	return f.securityMode, f.productionParity, f.rewrites
 }
