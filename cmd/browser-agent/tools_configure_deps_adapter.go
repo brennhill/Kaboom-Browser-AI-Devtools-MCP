@@ -4,6 +4,9 @@
 package main
 
 import (
+	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/audit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
@@ -94,4 +97,44 @@ func (h *ToolHandler) HasCapture() bool {
 // GetActiveCodebase satisfies configurehandler.Deps.
 func (h *ToolHandler) GetActiveCodebase() string {
 	return h.server.GetActiveCodebase()
+}
+
+// StartTestBoundary satisfies configurehandler.Deps.
+func (h *ToolHandler) StartTestBoundary(testID string) {
+	h.activeBoundariesMu.Lock()
+	defer h.activeBoundariesMu.Unlock()
+	if h.activeBoundaries == nil {
+		h.activeBoundaries = make(map[string]time.Time)
+	}
+	h.activeBoundaries[testID] = time.Now()
+}
+
+// EndTestBoundary satisfies configurehandler.Deps.
+func (h *ToolHandler) EndTestBoundary(testID string) bool {
+	h.activeBoundariesMu.Lock()
+	defer h.activeBoundariesMu.Unlock()
+	_, active := h.activeBoundaries[testID]
+	if active {
+		delete(h.activeBoundaries, testID)
+	}
+	return active
+}
+
+// AuditTrailReady satisfies configurehandler.Deps.
+func (h *ToolHandler) AuditTrailReady() bool {
+	return h.auditTrail != nil
+}
+
+// QueryAuditLog satisfies configurehandler.Deps.
+func (h *ToolHandler) QueryAuditLog(filter audit.Filter) []audit.Entry {
+	return h.auditTrail.Query(filter)
+}
+
+// ClearAuditLog satisfies configurehandler.Deps. Clears the trail and its session map under lock.
+func (h *ToolHandler) ClearAuditLog() int {
+	cleared := h.auditTrail.Clear()
+	h.auditMu.Lock()
+	h.auditSessionMap = make(map[string]string)
+	h.auditMu.Unlock()
+	return cleared
 }

@@ -5,6 +5,7 @@
 package configurehandler
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/audit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
@@ -64,4 +65,19 @@ type Deps interface {
 
 	// GetActiveCodebase returns the active project directory (empty if none set).
 	GetActiveCodebase() string
+
+	// StartTestBoundary records a test boundary as active (keyed by test id).
+	StartTestBoundary(testID string)
+
+	// EndTestBoundary clears a boundary and reports whether it was active.
+	EndTestBoundary(testID string) bool
+
+	// AuditTrailReady reports whether the audit trail is initialized.
+	AuditTrailReady() bool
+
+	// QueryAuditLog returns audit entries matching the filter.
+	QueryAuditLog(filter audit.Filter) []audit.Entry
+
+	// ClearAuditLog clears the audit trail (and its session map) and returns the count cleared.
+	ClearAuditLog() int
 }

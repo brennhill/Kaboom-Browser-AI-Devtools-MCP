@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/audit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
@@ -38,6 +39,10 @@ type fakeConfigureDeps struct {
 	telemetryMode    string
 	jitterMs         int
 	activeCodebase   string
+	boundaryActive   bool
+	auditReady       bool
+	auditEntries     []audit.Entry
+	auditCleared     int
 
 	// call-tracking for setters
 	setSecurityCalledWith string
@@ -53,12 +58,17 @@ func (f *fakeConfigureDeps) AllWebSocketEvents() []capture.WebSocketEvent { retu
 func (f *fakeConfigureDeps) GetTrackingStatus() (bool, int, string) {
 	return f.trackingEnabled, f.tabID, f.tabURL
 }
-func (f *fakeConfigureDeps) GetPilotStatus() any              { return f.pilotStatus }
-func (f *fakeConfigureDeps) IsExtensionConnected() bool       { return f.extConnected }
-func (f *fakeConfigureDeps) ToolsList() []mcp.MCPTool         { return f.tools }
-func (f *fakeConfigureDeps) GetToolModuleExamples(string) any { return f.moduleExamples }
-func (f *fakeConfigureDeps) HasCapture() bool                 { return f.hasCapture }
-func (f *fakeConfigureDeps) GetActiveCodebase() string        { return f.activeCodebase }
+func (f *fakeConfigureDeps) GetPilotStatus() any                      { return f.pilotStatus }
+func (f *fakeConfigureDeps) IsExtensionConnected() bool               { return f.extConnected }
+func (f *fakeConfigureDeps) ToolsList() []mcp.MCPTool                 { return f.tools }
+func (f *fakeConfigureDeps) GetToolModuleExamples(string) any         { return f.moduleExamples }
+func (f *fakeConfigureDeps) HasCapture() bool                         { return f.hasCapture }
+func (f *fakeConfigureDeps) GetActiveCodebase() string                { return f.activeCodebase }
+func (f *fakeConfigureDeps) StartTestBoundary(string)                 {}
+func (f *fakeConfigureDeps) EndTestBoundary(string) bool              { return f.boundaryActive }
+func (f *fakeConfigureDeps) AuditTrailReady() bool                    { return f.auditReady }
+func (f *fakeConfigureDeps) QueryAuditLog(audit.Filter) []audit.Entry { return f.auditEntries }
+func (f *fakeConfigureDeps) ClearAuditLog() int                       { return f.auditCleared }
 func (f *fakeConfigureDeps) GetSecurityMode() (string, bool, []string) {
 	return f.securityMode, f.productionParity, f.rewrites
 }
