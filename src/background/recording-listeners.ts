@@ -12,7 +12,7 @@ import { scaleTimeout } from '../lib/timeouts.js'
 import { StorageKey } from '../lib/constants.js'
 import { getLocal } from '../lib/storage-utils.js'
 import type { OffscreenRecordingStoppedMessage } from '../types/runtime-messages.js'
-import { errorMessage } from '../lib/error-utils.js'
+import { errorMessage, isNoReceiverError } from '../lib/error-utils.js'
 import { trackUIFeature } from './ui-usage-tracker.js'
 import { postDaemonJSON } from '../lib/daemon-http.js'
 import { buildScreenRecordingSlug } from './recording-utils.js'
@@ -183,6 +183,8 @@ export function installRecordingListeners(deps: RecordingListenerDeps): void {
                   duration_ms: scaleTimeout(8000)
                 })
                 .catch((err) => {
+                  // No content script on the tab → benign, not an error worth logging.
+                  if (isNoReceiverError(err)) return
                   console.error(LOG, 'Toast send FAILED to tab', returnTabId, ':', errorMessage(err))
                 })
             }, scaleTimeout(300))

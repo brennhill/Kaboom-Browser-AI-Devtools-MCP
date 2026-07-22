@@ -319,4 +319,43 @@ describe('executeJavaScript', () => {
     assert.deepStrictEqual(res.result.a, [1, 2])
     assert.strictEqual(res.result.b, '2025-01-01T00:00:00.000Z')
   })
+
+  // -- Top-level await (regression: issue #598) --
+
+  test('supports a top-level await expression', async () => {
+    const res = await executeJavaScript('await Promise.resolve(7)')
+    assert.strictEqual(res.success, true)
+    assert.strictEqual(res.result, 7)
+  })
+
+  test('supports top-level await between statements with a trailing return (act → wait → read)', async () => {
+    const res = await executeJavaScript(
+      'let x = 1; await new Promise(r => setTimeout(r, 5)); x = 42; return x'
+    )
+    assert.strictEqual(res.success, true)
+    assert.strictEqual(res.result, 42)
+  })
+
+  test('top-level await still honors the timeout budget', async () => {
+    const res = await executeJavaScript('await new Promise(r => setTimeout(r, 500)); return "late"', 50)
+    assert.strictEqual(res.success, false)
+    assert.strictEqual(res.error, 'execution_timeout')
+    assert.ok(res.message.includes('50'))
+  })
+
+  test('a rejection from a top-level await surfaces as promise_rejected', async () => {
+    const res = await executeJavaScript('await Promise.reject(new Error("async boom")); return 1')
+    assert.strictEqual(res.success, false)
+    assert.strictEqual(res.error, 'promise_rejected')
+    assert.strictEqual(res.message, 'async boom')
+  })
+
+  // Guard: enabling async compilation must NOT reclassify synchronous throws,
+  // which still compile via the (sync) expression form and throw at call time.
+  test('synchronous throw remains execution_error, not promise_rejected', async () => {
+    const res = await executeJavaScript('(() => { throw new Error("sync fail") })()')
+    assert.strictEqual(res.success, false)
+    assert.strictEqual(res.error, 'execution_error')
+    assert.strictEqual(res.message, 'sync fail')
+  })
 })

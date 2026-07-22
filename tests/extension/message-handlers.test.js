@@ -250,6 +250,27 @@ describe('message routing', () => {
     await new Promise((resolve) => setTimeout(resolve, 10))
   })
 
+  test('open_terminal_panel calls sidePanel.open synchronously (preserves user gesture, #terminal-panel-broken)', async () => {
+    // Regression: the previous code awaited workspace resolution (tab lookup +
+    // grouping + focus) BEFORE sidePanel.open(). Those awaits expired the
+    // forwarded user gesture, Chrome rejected open(), and the panel never
+    // appeared. open() must be invoked synchronously — before any await.
+    const open = mock.fn(() => Promise.resolve())
+    const setOptions = mock.fn(() => Promise.resolve())
+    chrome.sidePanel = { open, setOptions }
+
+    const { handler } = getInstalledHandler()
+    handler({ type: 'open_terminal_panel' }, contentScriptSender, mock.fn())
+
+    // No await: open() must already have been invoked within the same tick as
+    // dispatch, i.e. before the openTerminalSidePanel body reaches any await.
+    assert.strictEqual(open.mock.calls.length, 1, 'sidePanel.open must fire synchronously, before any workspace await')
+    assert.strictEqual(open.mock.calls[0].arguments[0].tabId, 1)
+
+    // Let the best-effort workspace refinement settle so it does not bleed.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+  })
+
   test('open_terminal_panel creates a Kaboom workspace group around the tracked tab and opens there', async () => {
     chrome.storage.local.get = mock.fn((keys, callback) => {
       const keyList = Array.isArray(keys) ? keys : [keys]
@@ -303,10 +324,12 @@ describe('message routing', () => {
       color: 'orange',
       collapsed: false
     })
-    assert.strictEqual(chrome.tabs.update.mock.calls.length, 1, 'tracked workspace tab should become active before open')
+    assert.strictEqual(chrome.tabs.update.mock.calls.length, 1, 'tracked workspace tab should become active (after open, best-effort)')
     assert.deepStrictEqual(chrome.tabs.update.mock.calls[0].arguments, [42, { active: true }])
     assert.strictEqual(open.mock.calls.length, 1)
-    assert.strictEqual(open.mock.calls[0].arguments[0].tabId, 42)
+    // open() fires synchronously on the sender's tab within the user gesture;
+    // the workspace group is resolved afterward and only refines setOptions.
+    assert.strictEqual(open.mock.calls[0].arguments[0].tabId, 1)
     assert.strictEqual(setOptions.mock.calls.length, 1)
     assert.ok(String(setOptions.mock.calls[0].arguments[0].path || '').includes('sidepanel.html?tabId=42'))
     assert.ok(String(setOptions.mock.calls[0].arguments[0].path || '').includes('tabGroupId=77'))

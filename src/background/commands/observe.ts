@@ -163,6 +163,15 @@ registerCommand('screenshot', async (ctx) => {
       return
     }
 
+    // #597: selector-scoped capture. Honor the advertised `selector` param
+    // (previously silently ignored) by scrolling the element into view and
+    // cropping the viewport capture to it.
+    const selector = typeof ctx.params.selector === 'string' ? ctx.params.selector.trim() : ''
+    if (selector) {
+      await captureElement(ctx, tab, selector, format, quality)
+      return
+    }
+
     const dataUrl = await captureVisibleTabSafe(ctx.tabId, tab.windowId, {
       format: format as 'jpeg' | 'png',
       quality
@@ -182,6 +191,153 @@ registerCommand('screenshot', async (ctx) => {
     })
   }
 })
+
+// =============================================================================
+// SELECTOR-SCOPED SCREENSHOT (#597)
+// =============================================================================
+
+interface ScreenshotElementRect {
+  found: boolean
+  x: number
+  y: number
+  width: number
+  height: number
+  dpr: number
+}
+
+/**
+ * Runs in the page's MAIN world. Scrolls the matched element into view —
+ * `scrollIntoView` honors *every* scrollable ancestor, including nested
+ * `overflow:auto` containers, which is the exact case #597 reported — then
+ * returns its viewport-relative rect and the device pixel ratio.
+ */
+function screenshotResolveElementRect(selector: string): ScreenshotElementRect {
+  const el = document.querySelector(selector)
+  if (!el) return { found: false, x: 0, y: 0, width: 0, height: 0, dpr: 1 }
+  // Instant (default behavior) so layout settles before we read the rect.
+  el.scrollIntoView({ block: 'center', inline: 'center' })
+  const r = el.getBoundingClientRect()
+  return {
+    found: true,
+    x: r.left,
+    y: r.top,
+    width: r.width,
+    height: r.height,
+    dpr: window.devicePixelRatio || 1
+  }
+}
+
+/**
+ * Compute the source crop rectangle (in image/device pixels) for an element's
+ * CSS-pixel viewport rect. `captureVisibleTab` returns an image scaled by the
+ * device pixel ratio, and the rect is viewport-relative CSS pixels — so the
+ * crop is `rect * dpr`, clamped to the image bounds. Returns null when there is
+ * nothing to crop (non-positive size, or the element lies outside the image).
+ */
+export function computeElementCropRect(
+  rect: { x: number; y: number; width: number; height: number },
+  dpr: number,
+  imageWidth: number,
+  imageHeight: number
+): { sx: number; sy: number; sw: number; sh: number } | null {
+  if (rect.width <= 0 || rect.height <= 0) return null
+  const scale = dpr > 0 ? dpr : 1
+  const sx = Math.max(0, Math.round(rect.x * scale))
+  const sy = Math.max(0, Math.round(rect.y * scale))
+  const sw = Math.min(Math.round(rect.width * scale), imageWidth - sx)
+  const sh = Math.min(Math.round(rect.height * scale), imageHeight - sy)
+  if (sw <= 0 || sh <= 0) return null
+  return { sx, sy, sw, sh }
+}
+
+async function blobToDataUrl(blob: Blob): Promise<string> {
+  const bytes = new Uint8Array(await blob.arrayBuffer())
+  let binary = ''
+  const chunk = 0x8000
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk))
+  }
+  return `data:${blob.type};base64,${btoa(binary)}`
+}
+
+/** Crop a captured data URL to the element rect via OffscreenCanvas. Returns
+ *  null (caller posts the uncropped viewport) if cropping is unavailable/fails. */
+async function cropDataUrlToRect(
+  dataUrl: string,
+  rect: ScreenshotElementRect,
+  format: 'png' | 'jpeg',
+  quality: number
+): Promise<string | null> {
+  if (typeof OffscreenCanvas === 'undefined' || typeof createImageBitmap === 'undefined') return null
+  const blob = await (await fetch(dataUrl)).blob()
+  const bitmap = await createImageBitmap(blob)
+  try {
+    const crop = computeElementCropRect(rect, rect.dpr, bitmap.width, bitmap.height)
+    if (!crop) return null
+    const canvas = new OffscreenCanvas(crop.sw, crop.sh)
+    const c = canvas.getContext('2d')
+    if (!c) return null
+    c.drawImage(bitmap, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, crop.sw, crop.sh)
+    const mime = format === 'png' ? 'image/png' : 'image/jpeg'
+    const outBlob = await canvas.convertToBlob({
+      type: mime,
+      quality: format === 'jpeg' ? quality / 100 : undefined
+    })
+    return await blobToDataUrl(outBlob)
+  } finally {
+    bitmap.close?.()
+  }
+}
+
+/**
+ * Selector-scoped screenshot (#597): scroll the element into view (honoring
+ * nested scroll containers) and crop the viewport capture to it. Falls back to
+ * the (correctly scrolled) uncropped viewport if the crop cannot be produced,
+ * so the capture never fails outright.
+ */
+async function captureElement(
+  ctx: { tabId: number; query: { id: string }; sendResult: (r: unknown) => void },
+  tab: chrome.tabs.Tab,
+  selector: string,
+  format: 'png' | 'jpeg',
+  quality: number
+): Promise<void> {
+  let rect: ScreenshotElementRect | null = null
+  try {
+    const res = await chrome.scripting.executeScript({
+      target: { tabId: ctx.tabId },
+      world: 'MAIN',
+      func: screenshotResolveElementRect,
+      args: [selector]
+    })
+    rect = (res[0]?.result as ScreenshotElementRect | undefined) ?? null
+  } catch (err) {
+    debugLog(DebugCategory.CAPTURE, 'Selector resolve script failed', { error: errorMessage(err) })
+  }
+
+  if (!rect || !rect.found) {
+    ctx.sendResult({ error: 'element_not_found', message: `No element matched selector: ${selector}` })
+    return
+  }
+
+  // Let the (instant) scroll repaint before the compositor raster.
+  await delay(120)
+  const dataUrl = await captureVisibleTabSafe(ctx.tabId, tab.windowId, { format, quality })
+  recordScreenshot(ctx.tabId)
+
+  let outUrl = dataUrl
+  try {
+    const cropped = await cropDataUrlToRect(dataUrl, rect, format, quality)
+    if (cropped) outUrl = cropped
+  } catch (err) {
+    debugLog(DebugCategory.CAPTURE, 'Selector crop failed; posting full viewport', { error: errorMessage(err) })
+  }
+
+  const ok = await postScreenshot(outUrl, tab.url, ctx.query.id)
+  if (!ok) {
+    ctx.sendResult({ error: 'screenshot_upload_failed', message: 'Server rejected screenshot' })
+  }
+}
 
 /** Full-page screenshot via CDP with scrollable container expansion (#363). */
 async function captureFullPage(

@@ -4,7 +4,7 @@ feature_id: feature-interact-explore
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-22
 code_paths:
   - cmd/browser-agent/tools_interact_command_builder.go
   - cmd/browser-agent/tools_interact_action_handler.go
@@ -76,6 +76,7 @@ test_paths:
   - extension/background/dom-primitives.test.js
   - tests/extension/action-toast-labels.test.js
   - tests/extension/execute-js.test.js
+  - tests/extension/cdp-react-reconcile.test.js
   - internal/tools/interact/workflow_test.go
   - internal/tools/configure/mode_specs_test.go
   - extension/background/dom-primitives-overlay.test.js

@@ -13,7 +13,7 @@ import { handlePendingQuery as handlePendingQueryImpl, handlePilotCommand as han
 import { updateVersionFromHealth } from './version-check.js';
 import { createBatcherInstances } from './batcher-instances.js';
 import { KABOOM_LOG_PREFIX } from '../lib/brand.js';
-import { errorMessage } from '../lib/error-utils.js';
+import { errorMessage, isNoReceiverError } from '../lib/error-utils.js';
 import { startSyncClient as startSyncClientImpl, resetSyncClientConnection as resetSyncClientConnectionImpl } from './sync-manager.js';
 // Re-export for consumers that already import from here
 export { DEFAULT_SERVER_URL } from '../lib/constants.js';
@@ -274,7 +274,13 @@ function broadcastStatusUpdate() {
         return;
     chrome.runtime
         .sendMessage({ type: 'status_update', status: { ...getConnectionStatus(), aiControlled: isAiControlled() } })
-        .catch((err) => console.error(`${KABOOM_LOG_PREFIX} Error sending status update:`, err));
+        .catch((err) => {
+        // A closed popup means no listener for this broadcast — expected, not an
+        // error. Only surface genuine failures. (#status-update-noise)
+        if (isNoReceiverError(err))
+            return;
+        console.error(`${KABOOM_LOG_PREFIX} Error sending status update:`, err);
+    });
 }
 // eslint-disable-next-line security-node/detect-unhandled-async-errors
 export async function checkConnectionAndUpdate() {
