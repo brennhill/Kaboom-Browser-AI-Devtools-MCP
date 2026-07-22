@@ -59,6 +59,9 @@ function attachMessageCapture(ws, connectionId, urlString, tracker) {
         postMessageEvent(connectionId, urlString, 'incoming', event.data);
     });
     const originalSend = ws.send.bind(ws);
+    // Match the native WebSocket.send parameter type exactly so the wrapper stays a
+    // transparent pass-through. Typing `data` as the broader ArrayBufferLike pulls in
+    // SharedArrayBuffer, which lib.dom's send() overloads reject (TS 6+).
     ws.send = function (data) {
         if (webSocketCaptureEnabled) {
             tracker.recordMessage('outgoing', data);

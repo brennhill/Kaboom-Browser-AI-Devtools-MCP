@@ -10,23 +10,62 @@ import { postDaemonJSON } from '../lib/daemon-http.js';
 import { getLocal, getLocals, setLocal } from '../lib/storage-utils.js';
 import { resolveTerminalWorkspaceTarget, setKaboomOverlayVisibility } from './tab-state.js';
 import { trackUIFeature } from './ui-usage-tracker.js';
+function buildTerminalPanelPath(workspace) {
+    return `sidepanel.html?tabId=${encodeURIComponent(workspace.hostTabId)}&tabGroupId=${encodeURIComponent(workspace.tabGroupId)}&mainTabId=${encodeURIComponent(workspace.mainTabId)}`;
+}
+// Group the tracked tab into the Kaboom workspace and point the panel at the
+// tab-scoped path. This is a best-effort enhancement that runs AFTER the panel
+// is already open — it must never gate open(), because its awaits would expire
+// the user gesture. The panel loads fine without it (default manifest path +
+// active-tab fallback in sidepanel.ts).
+async function refineTerminalWorkspace(tabId) {
+    try {
+        const workspace = await resolveTerminalWorkspaceTarget(tabId);
+        if (!workspace || !chrome.sidePanel?.setOptions)
+            return;
+        await chrome.sidePanel
+            .setOptions({ tabId: workspace.hostTabId, path: buildTerminalPanelPath(workspace), enabled: true })
+            .catch(() => undefined);
+    }
+    catch {
+        // Best-effort: the panel is already open with the default path.
+    }
+}
 async function openTerminalSidePanel(tabId) {
     if (typeof chrome === 'undefined' || !chrome.sidePanel?.open) {
         return { success: false, error: 'side panel unavailable' };
     }
+    // CRITICAL (#terminal-panel-broken): chrome.sidePanel.open() must be called
+    // synchronously within the forwarded user gesture. The previous code awaited
+    // resolveTerminalWorkspaceTarget() (tab lookups + grouping + focus) BEFORE
+    // open(), which expired the gesture — Chrome rejected open() and the panel
+    // never appeared ("clicking the terminal button loads nothing").
+    //
+    // Fast path: when we already know the sender's tab, open() FIRST with zero
+    // awaits before it, then refine the workspace/path afterward.
+    if (typeof tabId === 'number') {
+        try {
+            await chrome.sidePanel.open({ tabId });
+        }
+        catch (error) {
+            return { success: false, error: errorMessage(error) };
+        }
+        void refineTerminalWorkspace(tabId);
+        return { success: true };
+    }
+    // Slow path: no sender tab (e.g. popup-triggered). We cannot resolve a tab
+    // synchronously, so the gesture may not survive; resolve the workspace and
+    // open on its host tab as a best effort (unchanged from prior behavior).
     try {
         const workspace = await resolveTerminalWorkspaceTarget(tabId);
         if (!workspace) {
             return { success: false, error: 'missing workspace tab' };
         }
-        const path = `sidepanel.html?tabId=${encodeURIComponent(workspace.hostTabId)}&tabGroupId=${encodeURIComponent(workspace.tabGroupId)}&mainTabId=${encodeURIComponent(workspace.mainTabId)}`;
         const setOptionsPromise = chrome.sidePanel.setOptions
             ? chrome.sidePanel
-                .setOptions({ tabId: workspace.hostTabId, path, enabled: true })
+                .setOptions({ tabId: workspace.hostTabId, path: buildTerminalPanelPath(workspace), enabled: true })
                 .catch(() => undefined)
             : null;
-        // sidePanel.open must stay in the original user-gesture path. Awaiting
-        // another async API first can cause Chrome to reject the open request.
         await chrome.sidePanel.open({ tabId: workspace.hostTabId });
         void setOptionsPromise;
         return { success: true };

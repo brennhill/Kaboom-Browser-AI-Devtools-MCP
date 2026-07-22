@@ -4,7 +4,7 @@ feature_id: feature-interact-explore
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-03-06
+last_reviewed: 2026-07-22
 code_paths:
   - cmd/browser-agent/tools_interact_command_builder.go
   - cmd/browser-agent/tools_interact_action_handler.go
@@ -76,6 +76,7 @@ test_paths:
   - extension/background/dom-primitives.test.js
   - tests/extension/action-toast-labels.test.js
   - tests/extension/execute-js.test.js
+  - tests/extension/cdp-react-reconcile.test.js
   - internal/tools/interact/workflow_test.go
   - internal/tools/configure/mode_specs_test.go
   - extension/background/dom-primitives-overlay.test.js
@@ -105,6 +106,10 @@ This feature documents the shipped `interact` action surface (not a batched `int
 `get_text` supports `structured:true` for hierarchical extraction (for example accordion/list sections), and this option must be forwarded through DOM dispatch into extension primitives.
 
 `execute_js` host-object serialization must preserve prototype-backed values (for example `DOMRect`) so return payloads remain structured and parse-safe.
+
+`execute_js` snippets support top-level `await` (#598): compilation prefers the synchronous `Function()` forms and falls back to `AsyncFunction` only when they reject, so existing synchronous snippets keep identical semantics (a synchronous throw stays `execution_error`, not `promise_rejected`).
+
+`type`/`click` reliably drive framework-controlled inputs (#599): after a CDP `type`, the value is reconciled through the native prototype setter plus a bubbling `input`/`change` (gated on a detected React value tracker, so plain inputs are untouched), which fires React/Vue/Svelte `onChange`. The `dispatch:"dom"` option is an escape hatch that skips CDP entirely and routes `click`/`type` through in-page `element.click()` + native-setter input events.
 
 `navigate_and_document` combines click-driven navigation, optional URL-change/stability waits, and page-context enrichment (`url`, `title`, `tab_id`) in a single interact workflow.
 

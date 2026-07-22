@@ -45,8 +45,11 @@ export default [
       'extension/early-patch.bundled.js',
       'extension/offscreen.bundled.js',
       'extension/popup.bundled.js',
-      // Vendored terminal assets (xterm.js)
+      // Vendored terminal assets (xterm.js). The terminal was moved under
+      // internal/terminal (commit eb248ff6); keep both paths so the vendored
+      // minified bundle stays ignored wherever it lives.
       'cmd/browser-agent/terminal_assets/**',
+      'cmd/browser-agent/internal/terminal/terminal_assets/**',
       // Generated smoke fixture bundles
       'cmd/browser-agent/testpages/frameworks/*.bundle.js'
     ]

@@ -54,6 +54,11 @@ func interactCoreActionProperties() map[string]any {
 			"type":        "boolean",
 			"description": "Clear before typing",
 		},
+		"dispatch": map[string]any{
+			"type":        "string",
+			"description": "Input dispatch strategy for click/type. 'auto' (default) uses CDP hardware events; 'dom' routes through in-page element.click() + native-setter input events, which reliably drives React/Vue/Svelte controlled inputs and delegated onClick.",
+			"enum":        []string{"auto", "dom"},
+		},
 		"checked": map[string]any{
 			"type":        "boolean",
 			"description": "Check/uncheck (default true)",
