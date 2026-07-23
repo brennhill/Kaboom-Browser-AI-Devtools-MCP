@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KaBOOM! Devtools</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <h1>
+      <img class="logo" src="icons/icon.svg" alt="" />
+      KaBOOM! Devtools
+    </h1>
+
+    <div class="status-row">
+      <span class="status-label">Status</span>
+      <span id="status" class="status-value disconnected">Offline</span>
+    </div>
+    <div id="record-top-notice" class="record-top-notice" style="display: none"></div>
+
+    <!-- Inline troubleshooting - shows immediately when disconnected -->
+    <div id="troubleshooting" style="display: none; margin-bottom: 12px">
+      <div
+        style="
+          padding: 12px;
+          background: rgba(210, 153, 34, 0.1);
+          border: 1px solid #d29922;
+          border-radius: 6px;
+          font-size: 12px;
+          line-height: 1.6;
+        "
+      >
+        <p style="margin-bottom: 8px; color: #d29922; font-weight: 600">Server offline</p>
+        <p style="color: #ccc; margin-bottom: 4px">Tab tracking works offline. The server starts automatically when your AI tool invokes a command.</p>
+        <details style="margin-top: 8px">
+          <summary style="color: #888; font-size: 11px; cursor: pointer">Troubleshooting</summary>
+          <div style="margin-top: 8px">
+            <p style="color: #ccc; margin-bottom: 8px">
+              Run in terminal:
+              <code
+                style="
+                  background: #333;
+                  padding: 2px 6px;
+                  border-radius: 3px;
+                  color: #58a6ff;
+                  display: inline-block;
+                  margin-top: 4px;
+                "
+                >npx kaboom-agentic-browser</code
+              >
+            </p>
+            <p style="color: #888; font-size: 11px">
+              Port in use?
+              <code style="background: #333; padding: 1px 4px; border-radius: 2px; color: #aaa"
+                >lsof -ti :7890 | xargs kill</code
+              >
+            </p>
+            <p style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #333">
+              <a
+                href="https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP#quick-start"
+                target="_blank"
+                style="color: #58a6ff; text-decoration: none; font-size: 11px"
+                >Setup guide →</a
+              >
+              <span style="color: #444; margin: 0 6px">|</span>
+              <a href="options.html" style="color: #58a6ff; text-decoration: none; font-size: 11px">Custom port →</a>
+            </p>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <div
+      id="version-mismatch"
+      style="
+        display: none;
+        margin-bottom: 12px;
+        padding: 8px 12px;
+        background: rgba(210, 153, 34, 0.1);
+        border: 1px solid #d29922;
+        border-radius: 6px;
+        font-size: 12px;
+        color: #d29922;
+      "
+    >
+      <span style="font-weight: 600">Version mismatch</span>
+      <p class="version-detail" style="margin-top: 4px; color: #aaa"></p>
+      <p style="margin-top: 4px; color: #888; font-size: 11px">Update both to the same major version.</p>
+    </div>
+
+    <div
+      id="security-mode-warning"
+      style="
+        display: none;
+        margin-bottom: 12px;
+        padding: 8px 12px;
+        background: rgba(248, 81, 73, 0.1);
+        border: 1px solid #f85149;
+        border-radius: 6px;
+        font-size: 12px;
+        color: #f85149;
+      "
+    >
+      <span style="font-weight: 600">INSECURE DEBUG MODE</span>
+      <p id="security-mode-detail" style="margin-top: 4px; color: #aaa"></p>
+      <p style="margin-top: 4px; color: #888; font-size: 11px">
+        Altered environment is active. Results are not production-parity evidence.
+      </p>
+    </div>
+
+    <div class="section" style="margin-top: 12px">
+      <div class="section-title">Tab Control</div>
+      <div id="track-hero" style="text-align: center; padding: 12px 0">
+        <button
+          id="track-page-btn"
+          style="
+            background: #1a3a5c;
+            color: #58a6ff;
+            border: 2px solid #58a6ff;
+            font-size: 16px;
+            font-weight: 600;
+            padding: 14px 16px;
+          "
+          title="Start capturing telemetry from this browser tab only"
+        >
+          Track This Tab
+        </button>
+        <p id="track-hero-desc" style="margin-top: 8px; font-size: 12px; color: #888; line-height: 1.5">
+          Click to start monitoring this tab's console, network, and errors
+        </p>
+      </div>
+      <div
+        id="no-tracking-warning"
+        style="
+          display: none;
+          margin-top: 8px;
+          padding: 8px 12px;
+          background: rgba(248, 81, 73, 0.1);
+          border: 1px solid rgba(248, 81, 73, 0.3);
+          border-radius: 6px;
+          font-size: 12px;
+          color: #f85149;
+        "
+      >
+        No tab tracked - data capture disabled
+      </div>
+      <div id="tracking-bar" class="tracking-bar" style="display: none">
+        <div class="tracking-bar-indicator"></div>
+        <div id="tracking-bar-url" class="tracking-bar-url" title="Click to switch to tracked tab"></div>
+        <button id="tracking-bar-audit" class="tracking-bar-audit" type="button" style="display: none">Audit</button>
+        <button id="tracking-bar-stop" class="tracking-bar-stop" title="Stop tracking">&#x2715;</button>
+      </div>
+    </div>
+
+    <div class="section" style="margin-top: 0">
+      <div class="section-title">Screen Recording</div>
+      <div class="feature-section">
+        <div id="record-row" class="record-row">
+          <div class="record-icon">
+            <div class="record-icon-dot"></div>
+          </div>
+          <span id="record-label" class="record-label">Record screen</span>
+          <span id="recording-status" class="record-status"></span>
+        </div>
+        <div style="margin-top: 6px; font-size: 11px; color: #888">Hotkey: <code>Alt+Shift+R</code> (toggle)</div>
+        <div id="record-options" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #333">
+          <select
+            id="record-audio-mode"
+            style="
+              width: 100%;
+              padding: 6px 10px;
+              font-size: 12px;
+              background: #1a1a1a;
+              border: 1px solid #333;
+              border-radius: 4px;
+              color: #aaa;
+              cursor: pointer;
+            "
+          >
+            <option value="">Video only</option>
+            <option value="tab">Video + Tab audio</option>
+            <option value="mic">Video + Microphone</option>
+            <option value="both">Video + Tab + Mic</option>
+          </select>
+        </div>
+        <div id="record-approval-card" class="record-approval-card" style="display: none">
+          <div class="record-approval-title">AI requested screen recording</div>
+          <div id="record-approval-detail" class="record-approval-detail"></div>
+          <div class="record-approval-actions">
+            <button id="record-approve-btn" class="record-approve-btn" type="button">Approve</button>
+            <button id="record-deny-btn" class="record-deny-btn" type="button">Deny</button>
+          </div>
+        </div>
+        <div
+          id="record-save-info"
+          style="
+            display: none;
+            margin-top: 8px;
+            padding: 6px 10px;
+            background: rgba(63, 185, 80, 0.1);
+            border-radius: 4px;
+            font-size: 11px;
+            color: #3fb950;
+            word-break: break-all;
+          "
+        ></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Action Workflow Recording</div>
+      <div class="feature-section">
+        <div id="action-record-row" class="record-row">
+          <div class="record-icon" id="action-record-icon">
+            <div class="record-icon-dot" id="action-record-dot"></div>
+          </div>
+          <span id="action-record-label" class="record-label">Record action workflow</span>
+          <span id="action-recording-status" class="record-status"></span>
+        </div>
+        <div style="margin-top: 6px; font-size: 11px; color: #888">Captures clicks, inputs, and navigation as a replayable sequence</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <button id="clear-btn" class="danger">Clear Logs</button>
+    </div>
+
+    <div class="section">
+      <div class="section-title">AI Web Pilot</div>
+      <div class="feature-section">
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <label for="aiWebPilotEnabled" class="toggle-label">Enable AI Control</label>
+            <span class="toggle-desc" style="color: #d29922">Can take a few seconds to reflect on the server</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="aiWebPilotEnabled" checked />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <details class="advanced-capture">
+        <summary>Advanced Capture</summary>
+        <div class="feature-section">
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <label for="toggle-websocket" class="toggle-label">WebSocket Capture</label>
+              <span class="toggle-desc">Monitor WebSocket connections</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-websocket" checked />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div
+            id="ws-mode-container"
+            style="display: none; margin-top: 8px; padding: 8px 12px; background: #1a1a1a; border-radius: 4px"
+          >
+            <select
+              id="ws-mode"
+              style="
+                width: 100%;
+                padding: 6px 10px;
+                font-size: 13px;
+                background: #333;
+                border: 1px solid #444;
+                border-radius: 4px;
+                color: #e0e0e0;
+              "
+            >
+              <option value="low">Low sampling (~2 msg/s)</option>
+              <option value="medium" selected>Medium sampling (~5 msg/s)</option>
+              <option value="high">High sampling (~10 msg/s)</option>
+              <option value="all">All messages</option>
+            </select>
+            <span class="toggle-desc" id="ws-messages-warning" style="color: #d29922; display: none; margin-top: 6px"
+              >Capturing all messages may produce significant data on high-traffic connections.</span
+            >
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <label for="toggle-network-waterfall" class="toggle-label">Network Waterfall</label>
+              <span class="toggle-desc">Include request timing data</span>
+              <span class="toggle-desc" id="waterfall-warning" style="color: #888; display: none"
+                >Adds ~50KB of timing data per error. May consume significant AI context.</span
+              >
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-network-waterfall" checked />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <label for="toggle-network-body-capture" class="toggle-label">Network Bodies</label>
+              <span class="toggle-desc">Capture request/response bodies for API debugging</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-network-body-capture" checked />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <label for="toggle-performance-marks" class="toggle-label">Performance Marks</label>
+              <span class="toggle-desc">Capture performance.mark() calls</span>
+              <span class="toggle-desc" id="perfmarks-warning" style="color: #888; display: none"
+                >Adds timing data to log entries. Useful for performance debugging.</span
+              >
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-performance-marks" checked />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <label for="toggle-action-replay" class="toggle-label">User Actions</label>
+              <span class="toggle-desc">Record clicks and inputs to reproduce errors</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-action-replay" checked />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <label for="toggle-screenshot" class="toggle-label">Screenshot on Error</label>
+              <span class="toggle-desc">Auto-capture page screenshot</span>
+              <span class="toggle-desc" id="screenshot-warning" style="color: #d29922; display: none"
+                >Screenshots are saved as JPEG files on disk. High-resolution displays will produce large files.</span
+              >
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-screenshot" checked />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <label for="toggle-source-maps" class="toggle-label">Source Maps</label>
+              <span class="toggle-desc">Resolve minified stack traces to original source</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-source-maps" checked />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <label for="toggle-action-toasts" class="toggle-label">Action Toasts</label>
+              <span class="toggle-desc">Show brief visual feedback for AI actions</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-action-toasts" checked />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <label for="toggle-subtitles" class="toggle-label">Subtitles</label>
+              <span class="toggle-desc">Show AI narration text at bottom of viewport</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-subtitles" checked />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Server Info</div>
+      <div class="info-row">
+        <span class="info-label">URL</span>
+        <span id="server-url" class="info-value">localhost:7890</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Log File</span>
+        <span id="log-file-path" class="info-value">~/kaboom-logs.jsonl</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">File Size</span>
+        <span id="log-file-size" class="info-value">-</span>
+      </div>
+    </div>
+
+    <div class="links">
+      <a href="#" id="open-log-file">Open Log File</a>
+      <a href="options.html" id="options-link">Options</a>
+      <a href="https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP#quick-start" target="_blank" id="help-link"
+        >Help</a
+      >
+    </div>
+
+    <script src="popup.bundled.js"></script>
+  </body>
+</html>

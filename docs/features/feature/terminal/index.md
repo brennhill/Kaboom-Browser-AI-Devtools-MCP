@@ -4,7 +4,7 @@ feature_id: feature-terminal
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-22
+last_reviewed: 2026-07-23
 code_paths:
   - src/lib/brand.ts
   - cmd/browser-agent/terminal_handlers.go
@@ -30,6 +30,8 @@ test_paths:
   - tests/extension/message-handlers.test.js
   - internal/pty/manager_test.go
   - internal/pty/session_test.go
+  - cmd/browser-agent/internal/terminal/sandbox_error_test.go
+  - tests/extension/terminal-session-start-errors.test.js
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-28
 ---
@@ -333,9 +335,28 @@ If the user re-focuses and types again during the auto-submit window, Enter is d
 - `ForceRedraw()`: sends `SIGWINCH` directly to the child process (used on reconnect when dimensions match but display is stale)
 - Environment: inherits from parent process, adds `TERM=xterm-256color`
 
-### Sandbox Detection
+### Start Failure Reporting
 
-If the daemon was spawned by an MCP client's stdio transport, macOS sandbox restrictions may prevent `posix_spawn`/`fork`. The `handleTerminalStart` handler detects this and returns HTTP 503 with a `sandbox_restricted` error, which the side panel displays as an actionable inline error with the command to restart the daemon with full permissions.
+Being spawned by an MCP client does **not**, by itself, prevent the daemon from spawning a PTY — a daemon launched over MCP stdio spawns terminals normally. Only a genuinely restricted sandbox profile blocks it, and its signature is a fork/exec `EPERM`.
+
+`IsSandboxError` (`cmd/browser-agent/internal/terminal/handlers.go`) therefore matches exactly that shape: an `*fs.PathError` with `Op == "fork/exec"` wrapping `syscall.EPERM`. It previously substring-matched `"not permitted"` anywhere in the error, which swept in every other `EPERM` in the spawn path (`open /dev/ptmx`, `TIOCPTYGRANT`, `TIOCPTYUNLK`, opening the slave, `TIOCSWINSZ`) and replaced the real cause with a confident "restart your daemon" instruction that fixed nothing.
+
+Reporting rules, in order of precedence:
+
+| Condition | Status | Body | Panel |
+|-----------|--------|------|-------|
+| Session ID already in use | 409 | `error`, `session_id`, existing `token` | reconnects silently |
+| fork/exec `EPERM` | 503 | `sandbox_restricted` + `message`, `instruction`, `command`, `detail` | inline error with restart command |
+| Anything else | 409 | `error` | inline error, no remedy offered |
+
+Two invariants:
+
+- **`detail` always carries the underlying error.** The sandbox label is an inference; the error is the fact. `startSession` appends it to the message so a misattribution is still diagnosable from the panel.
+- **Every spawn failure is logged** by `HandleTerminalStart` with the session ID, dir, and cmd. Previously a failed start left no trace in `~/.kaboom/logs/kaboom.jsonl`, so the only signal was whichever label the client happened to render.
+
+On the client, `startSession` routes *all* failures through `reportStartFailure` to the panel's error overlay. Non-sandbox rejections used to only `console.warn` and return `null`, so the panel rendered nothing — indistinguishable from the terminal being broken.
+
+Tests: [`cmd/browser-agent/internal/terminal/sandbox_error_test.go`](../../../../cmd/browser-agent/internal/terminal/sandbox_error_test.go), [`tests/extension/terminal-session-start-errors.test.js`](../../../../tests/extension/terminal-session-start-errors.test.js)
 
 ---
 

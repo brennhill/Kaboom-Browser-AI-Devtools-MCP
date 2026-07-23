@@ -129,27 +129,24 @@ export async function startSession(config, onSandboxError) {
         });
         if (!resp.ok) {
             const body = await resp.json();
-            // Sandbox restriction — show actionable instructions to the user.
-            if (resp.status === 503 && body.error === 'sandbox_restricted') {
-                if (onSandboxError) {
-                    onSandboxError(body.message ?? '', body.instruction ?? '', body.command ?? '');
-                }
-                else {
-                    console.warn('[KaBOOM!] Terminal sandbox restriction: ' +
-                        (body.message ?? 'no message') +
-                        '. ' +
-                        (body.instruction ?? 'No instruction provided.'));
-                }
-                return null;
-            }
             // Session already exists — reconnect using the returned token.
             if (resp.status === 409 && body.token) {
                 const ss = { sessionId: body.session_id ?? 'default', token: body.token };
                 persistSession(ss);
                 return ss;
             }
-            console.warn('[KaBOOM!] Terminal session rejected (HTTP ' + resp.status + '): ' +
-                (body.error ?? 'unknown') + '. Check the daemon logs for details.');
+            // Sandbox restriction — the daemon's message is its diagnosis, `detail` is
+            // the underlying error. Show both: the diagnosis can be wrong, the error can't.
+            if (resp.status === 503 && body.error === 'sandbox_restricted') {
+                const message = body.detail
+                    ? `${body.message ?? 'Terminal start was refused.'} (${body.detail})`
+                    : (body.message ?? 'Terminal start was refused.');
+                reportStartFailure(message, body.instruction ?? '', body.command ?? '', onSandboxError);
+                return null;
+            }
+            // Any other rejection. This used to only console.warn, so the side panel
+            // rendered nothing at all and the terminal looked simply broken.
+            reportStartFailure(`Terminal start was refused (HTTP ${resp.status}): ${body.error ?? 'unknown error'}.`, '', '', onSandboxError);
             return null;
         }
         const data = await resp.json();
@@ -158,10 +155,17 @@ export async function startSession(config, onSandboxError) {
         return ss;
     }
     catch (err) {
-        console.warn('[KaBOOM!] Terminal session start failed: ' +
-            (err instanceof Error ? err.message : String(err)) +
-            `. ${getDaemonStartHint()}`);
+        reportStartFailure('Terminal session start failed: ' + (err instanceof Error ? err.message : String(err)) + '.', getDaemonStartHint(), '', onSandboxError);
         return null;
     }
+}
+/**
+ * Route a start failure to the panel when a handler is available, and always log
+ * it. A failure that only reaches the console leaves the panel blank, which reads
+ * as "the terminal is broken" rather than "here is what went wrong".
+ */
+function reportStartFailure(message, instruction, command, onError) {
+    console.warn(`[KaBOOM!] ${message} ${instruction} ${command}`.trimEnd());
+    onError?.(message, instruction, command);
 }
 //# sourceMappingURL=terminal-widget-session.js.map

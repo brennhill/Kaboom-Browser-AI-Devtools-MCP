@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KaBOOM! Options</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #1a1a1a;
+        color: #e0e0e0;
+        padding: 16px;
+        width: 320px;
+      }
+
+      .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: #58a6ff;
+        text-decoration: none;
+        font-size: 12px;
+        margin-bottom: 12px;
+      }
+
+      .back-link:hover {
+        text-decoration: underline;
+      }
+
+      .back-link svg {
+        width: 12px;
+        height: 12px;
+      }
+
+      h1 {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+
+      .subtitle {
+        color: #888;
+        font-size: 12px;
+        margin-bottom: 16px;
+      }
+
+      .section {
+        margin-bottom: 16px;
+      }
+
+      .section-title {
+        font-size: 11px;
+        font-weight: 600;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+      }
+
+      .section-description {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 12px;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 100px;
+        padding: 8px 12px;
+        font-size: 12px;
+        font-family: ui-monospace, monospace;
+        background: #252525;
+        border: 1px solid #333;
+        border-radius: 6px;
+        color: #e0e0e0;
+        resize: vertical;
+      }
+
+      textarea:focus {
+        outline: none;
+        border-color: #58a6ff;
+      }
+
+      input[type='text'] {
+        width: 100%;
+        padding: 8px 12px;
+        font-size: 12px;
+        font-family: ui-monospace, monospace;
+        background: #252525;
+        border: 1px solid #333;
+        border-radius: 6px;
+        color: #e0e0e0;
+      }
+
+      input[type='text']:focus {
+        outline: none;
+        border-color: #58a6ff;
+      }
+
+      .help-text {
+        font-size: 11px;
+        color: #666;
+        margin-top: 6px;
+      }
+
+      .help-text code {
+        background: #252525;
+        padding: 1px 4px;
+        border-radius: 3px;
+        font-family: ui-monospace, monospace;
+        font-size: 10px;
+      }
+
+      button {
+        width: 100%;
+        padding: 10px 16px;
+        font-size: 14px;
+        font-weight: 500;
+        background: #238636;
+        border: none;
+        border-radius: 6px;
+        color: white;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+
+      button:hover {
+        background: #2ea043;
+      }
+
+      button:active {
+        background: #238636;
+      }
+
+      .saved-message {
+        display: block;
+        text-align: center;
+        margin-top: 8px;
+        color: #3fb950;
+        font-size: 12px;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+
+      .saved-message.show {
+        opacity: 1;
+      }
+
+      .toggle-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #333;
+      }
+
+      .toggle-row:last-child {
+        border-bottom: none;
+      }
+
+      .toggle-info {
+        flex: 1;
+      }
+
+      .toggle-label {
+        font-size: 13px;
+        color: #e0e0e0;
+        display: block;
+      }
+
+      .toggle-description {
+        font-size: 11px;
+        color: #666;
+        margin-top: 2px;
+      }
+
+      .toggle {
+        position: relative;
+        width: 40px;
+        height: 22px;
+        flex-shrink: 0;
+        margin-left: 12px;
+        background: #333;
+        border-radius: 22px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .toggle.active {
+        background: #238636;
+      }
+
+      .toggle::after {
+        content: '';
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 16px;
+        height: 16px;
+        background: #666;
+        border-radius: 50%;
+        transition: all 0.2s;
+      }
+
+      .toggle.active::after {
+        transform: translateX(18px);
+        background: #fff;
+      }
+
+      .examples {
+        margin-top: 12px;
+        padding: 8px 12px;
+        background: #252525;
+        border-radius: 6px;
+      }
+
+      .examples h4 {
+        font-size: 10px;
+        font-weight: 600;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 6px;
+      }
+
+      .examples ul {
+        list-style: none;
+        font-size: 11px;
+      }
+
+      .examples li {
+        padding: 2px 0;
+        font-family: ui-monospace, monospace;
+      }
+
+      .examples li span {
+        color: #666;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        display: block;
+        font-size: 10px;
+        margin-top: 1px;
+      }
+
+      .feature-section {
+        background: #252525;
+        border-radius: 6px;
+        padding: 12px;
+      }
+
+      /* ── Light Theme (class-based, dark is default) ────────────────────────────────── */
+      body.light-theme {
+        background: #ffffff;
+        color: #1a1a1a;
+      }
+
+      body.light-theme .back-link {
+        color: #0969da;
+      }
+
+      body.light-theme .subtitle {
+        color: #555;
+      }
+
+      body.light-theme .section-title {
+        color: #555;
+      }
+
+      body.light-theme .section-description {
+        color: #555;
+      }
+
+      body.light-theme textarea {
+        background: #ffffff;
+        border-color: #d0d0d0;
+        color: #1a1a1a;
+      }
+
+      body.light-theme textarea:focus {
+        border-color: #0969da;
+      }
+
+      body.light-theme input[type='text'] {
+        background: #ffffff;
+        border-color: #d0d0d0;
+        color: #1a1a1a;
+      }
+
+      body.light-theme input[type='text']:focus {
+        border-color: #0969da;
+      }
+
+      body.light-theme .help-text {
+        color: #555;
+      }
+
+      body.light-theme .help-text code {
+        background: #f5f5f5;
+      }
+
+      body.light-theme button {
+        background: #1a7f37;
+        color: #ffffff;
+      }
+
+      body.light-theme button:hover {
+        background: #1a8c3e;
+      }
+
+      body.light-theme button:active {
+        background: #1a7f37;
+      }
+
+      body.light-theme .saved-message {
+        color: #1a7f37;
+      }
+
+      body.light-theme .toggle-row {
+        border-bottom-color: #e0e0e0;
+      }
+
+      body.light-theme .toggle-label {
+        color: #1a1a1a;
+      }
+
+      body.light-theme .toggle-description {
+        color: #555;
+      }
+
+      body.light-theme .toggle {
+        background: #d0d0d0;
+      }
+
+      body.light-theme .toggle.active {
+        background: #1a7f37;
+      }
+
+      body.light-theme .toggle::after {
+        background: #ffffff;
+      }
+
+      body.light-theme .toggle.active::after {
+        background: #ffffff;
+      }
+
+      body.light-theme .examples {
+        background: #f8f8f8;
+      }
+
+      body.light-theme .examples h4 {
+        color: #555;
+      }
+
+      body.light-theme .examples li span {
+        color: #555;
+      }
+
+      body.light-theme .feature-section {
+        background: #f8f8f8;
+      }
+
+      /* ── Inline-style overrides (need !important) ── */
+
+      /* Test connection button */
+      body.light-theme #test-connection-btn {
+        background: #f5f5f5 !important;
+        border-color: #d0d0d0 !important;
+        color: #1a1a1a !important;
+      }
+
+      /* Export and clear debug buttons */
+      body.light-theme #export-debug-btn {
+        background: #f5f5f5 !important;
+        border-color: #d0d0d0 !important;
+        color: #1a1a1a !important;
+      }
+
+      body.light-theme #clear-debug-btn {
+        background: #f5f5f5 !important;
+        border-color: #d0d0d0 !important;
+        color: #1a1a1a !important;
+      }
+    </style>
+  </head>
+  <body>
+    <a href="popup.html" class="back-link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
+        <path
+          fill-rule="evenodd"
+          d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"
+        />
+      </svg>
+      Back to KaBOOM!
+    </a>
+
+    <h1>Options</h1>
+    <p class="subtitle">Configure your KaBOOM! extension</p>
+
+    <div class="section">
+      <div class="section-title">Server Connection</div>
+      <div class="section-description">
+        Configure the server URL. Change the port if you're running the server on a different port.
+      </div>
+
+      <div style="display: flex; gap: 8px; align-items: stretch">
+        <input
+          type="text"
+          id="server-url-input"
+          placeholder="http://localhost:7890"
+          value="http://localhost:7890"
+          style="flex: 1"
+        />
+        <button
+          id="test-connection-btn"
+          type="button"
+          style="
+            width: auto;
+            padding: 8px 12px;
+            font-size: 12px;
+            background: #252525;
+            border: 1px solid #333;
+            border-radius: 6px;
+            color: #e0e0e0;
+            cursor: pointer;
+            white-space: nowrap;
+          "
+        >
+          Test
+        </button>
+      </div>
+      <div
+        id="test-result"
+        style="display: none; font-size: 12px; margin-top: 6px; padding: 6px 8px; border-radius: 4px"
+      ></div>
+
+      <div class="help-text">
+        Default: <code>http://localhost:7890</code>. Use <code>--port</code> flag when starting the server to use a
+        different port.
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Appearance</div>
+      <div class="feature-section">
+        <div class="toggle-row" style="border-bottom: none">
+          <div class="toggle-info">
+            <span class="toggle-label">Light Mode</span>
+            <span class="toggle-description">Switch to light color scheme</span>
+          </div>
+          <div id="theme-toggle" class="toggle"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Advanced Settings</div>
+      <div class="feature-section">
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <span class="toggle-label">Screenshot on Error</span>
+            <span class="toggle-description">Capture page screenshot automatically</span>
+          </div>
+          <div id="screenshot-toggle" class="toggle"></div>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <span class="toggle-label">Source Maps</span>
+            <span class="toggle-description">Resolve minified stack traces</span>
+          </div>
+          <div id="sourcemap-toggle" class="toggle"></div>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <span class="toggle-label">Optimize Page Load Speed</span>
+            <span class="toggle-description"
+              >Delays telemetry collection until page is interactive to reduce slowdown</span
+            >
+          </div>
+          <div id="deferral-toggle" class="toggle"></div>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <span class="toggle-label">Extension Diagnostics</span>
+            <span class="toggle-description">Enable detailed logging for debugging extension issues</span>
+          </div>
+          <div id="debug-mode-toggle" class="toggle"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Terminal</div>
+      <div class="section-description">
+        Configure the in-browser terminal. The AI command launches automatically when the terminal opens.
+      </div>
+      <div style="margin-bottom: 8px">
+        <label for="terminal-ai-command" style="font-size: 12px; color: #aaa; display: block; margin-bottom: 4px">AI Command</label>
+        <input type="text" id="terminal-ai-command" placeholder="claude" value="claude" />
+      </div>
+      <div class="help-text" style="margin-bottom: 12px">
+        The command to auto-launch in the terminal. Examples: <code>claude</code>, <code>codex</code>, <code>aider</code>. Leave empty to open a plain shell.
+      </div>
+      <div style="margin-bottom: 8px">
+        <label for="terminal-dev-root" style="font-size: 12px; color: #aaa; display: block; margin-bottom: 4px">Dev Root (optional)</label>
+        <input type="text" id="terminal-dev-root" placeholder="/Users/you/dev/my-project" value="" />
+      </div>
+      <div class="help-text">
+        Default working directory for the terminal. If empty, uses the directory detected from the connected MCP client.
+      </div>
+    </div>
+
+    <div class="section">
+      <button id="save-btn">Save Options</button>
+      <span id="saved-message" class="saved-message">Saved!</span>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Debug Log</div>
+      <div style="display: flex; gap: 8px">
+        <button id="export-debug-btn" style="flex: 1; background: #252525; border: 1px solid #333; color: #e0e0e0">
+          Export Debug Log
+        </button>
+        <button
+          id="clear-debug-btn"
+          style="
+            flex: 0 0 auto;
+            width: auto;
+            padding: 10px 12px;
+            background: #252525;
+            border: 1px solid #333;
+            color: #e0e0e0;
+          "
+          title="Clear debug log"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+
+    <script src="options.js" type="module"></script>
+  </body>
+</html>

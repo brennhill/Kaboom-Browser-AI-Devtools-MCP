@@ -92,6 +92,26 @@ Applied to: iframe src, fetch() calls, postMessage origin checks.
 | Main daemon dies | Terminal server also shuts down (graceful shutdown sequence) |
 | Widget graphics/layout corruption in page overlay | User clicks header redraw (`↻`) to reset geometry and reload iframe without terminating PTY |
 | Auto-sent annotation command collides with active user typing | Parent queues writes, waits for user idle, then submits and restores focus |
+| `POST /terminal/start` fails to spawn a PTY | Real error always logged by `HandleTerminalStart`, then classified — see Start Failure Classification |
+
+## Start Failure Classification
+
+Being spawned by an MCP client does not prevent PTY spawning; an MCP-launched daemon spawns terminals normally. Only a fork/exec `EPERM` means the daemon genuinely cannot fork.
+
+| Condition | Status | Body | Panel |
+|-----------|--------|------|-------|
+| Session ID already in use | 409 | `error`, `session_id`, existing `token` | reconnects silently |
+| `*fs.PathError{Op:"fork/exec"}` wrapping `syscall.EPERM` | 503 | `sandbox_restricted` + `message`, `instruction`, `command`, `detail` | inline error with restart command |
+| Anything else | 409 | `error` | inline error, no remedy offered |
+
+`IsSandboxError` matches only the typed fork/exec `EPERM` shape. Matching a bare `"not permitted"` substring swept in every other `EPERM` in the spawn path (`open /dev/ptmx`, `TIOCPTYGRANT`, `TIOCPTYUNLK`, opening the slave, `TIOCSWINSZ`) and replaced the real cause with an unactionable "restart your daemon".
+
+Two invariants hold regardless of classification:
+
+- `detail` carries the underlying error, because the sandbox label is an inference and the error is the fact.
+- Every spawn failure is logged with session ID, dir, and cmd; a failed start used to leave no trace in `~/.kaboom/logs/kaboom.jsonl`.
+
+Client side, `startSession` routes every failure through `reportStartFailure` into the panel overlay. Non-sandbox rejections previously only `console.warn`ed and returned `null`, leaving the panel blank — indistinguishable from a broken terminal.
 
 ## Widget Recovery Redraw
 
@@ -134,6 +154,10 @@ Iframe support in `terminal.html`:
 | `cmd/browser-agent/terminal_server.go` | `setupTerminalMux()`, `startTerminalServer()` |
 | `cmd/browser-agent/terminal_handlers.go` | All terminal route handlers |
 | `cmd/browser-agent/terminal_handlers_test.go` | Terminal handler + frame writer serialization tests |
+| `cmd/browser-agent/internal/terminal/handlers.go` | `HandleTerminalStart()`, `IsSandboxError()`, `sandboxPayload()` |
+| `cmd/browser-agent/internal/terminal/sandbox_error_test.go` | Sandbox attribution scope + `detail` preservation |
+| `src/content/ui/terminal-widget-session.ts` | `startSession()`, `reportStartFailure()` |
+| `tests/extension/terminal-session-start-errors.test.js` | Start-failure reporting reaches the panel for every failure mode |
 | `cmd/browser-agent/main_connection_mcp.go` | Terminal server startup wiring |
 | `cmd/browser-agent/main_connection_mcp_shutdown.go` | Terminal server graceful shutdown |
 | `cmd/browser-agent/server_routes_health_diagnostics.go` | `terminal_port` in health response |

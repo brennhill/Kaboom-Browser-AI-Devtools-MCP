@@ -1,0 +1,1 @@
+{"version":3,"file":"readable.d.ts","sourceRoot":"","sources":["../../../src/content/extractors/readable.ts"],"names":[],"mappings":"AAMA;;GAEG;AACH,MAAM,WAAW,cAAc;IAC7B,KAAK,EAAE,MAAM,CAAA;IACb,OAAO,EAAE,MAAM,CAAA;IACf,OAAO,EAAE,MAAM,CAAA;IACf,MAAM,EAAE,MAAM,CAAA;IACd,UAAU,EAAE,MAAM,CAAA;IAClB,GAAG,EAAE,MAAM,CAAA;CACZ;AAuDD;;;GAGG;AACH,wBAAgB,eAAe,IAAI,cAAc,CAchD"}

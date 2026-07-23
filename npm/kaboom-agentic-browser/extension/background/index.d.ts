@@ -1,0 +1,63 @@
+/**
+ * Purpose: Main background service worker hub -- owns debug logging, log handling, connection management, and batcher wiring.
+ * Why: Central export point that delegates to specialized modules while owning cross-cutting concerns.
+ * Docs: docs/features/feature/backend-log-streaming/index.md
+ */
+/**
+ * @fileoverview Main Background Service Worker — Business logic and export hub.
+ * Mutable state lives in state.ts; this module owns debug logging, log handling,
+ * connection management, and batcher wiring. Delegates batcher instance creation
+ * to batcher-instances.ts and sync client lifecycle to sync-manager.ts.
+ */
+import type { LogEntry, ChromeMessageSender } from '../types/index.js';
+import { handlePendingQuery as handlePendingQueryImpl, handlePilotCommand as handlePilotCommandImpl } from './pending-queries.js';
+export { DEFAULT_SERVER_URL } from '../lib/constants.js';
+export { DebugCategory } from './debug.js';
+/**
+ * Log a debug message (only when debug mode is enabled)
+ */
+export declare function debugLog(category: string, message: string, data?: unknown): void;
+/**
+ * Get all debug log entries
+ */
+export declare function getDebugLog(): import("../types/debug.js").DebugLogEntry[];
+/**
+ * Clear debug log buffer
+ */
+export declare function clearDebugLog(): void;
+/**
+ * Export debug log as JSON string
+ */
+export declare function exportDebugLog(): string;
+/**
+ * Set debug mode enabled/disabled
+ */
+export declare function setDebugMode(enabled: boolean): void;
+export declare const sharedServerCircuitBreaker: import("./circuit-breaker.js").CircuitBreaker;
+export declare const logBatcherWithCB: import("./batchers.js").BatcherWithCircuitBreaker<LogEntry>;
+export declare const logBatcher: import("./batchers.js").Batcher<LogEntry>;
+export declare const wsBatcher: import("./batchers.js").Batcher<import("../types/wire-websocket-event.js").WireWebSocketEvent>;
+export declare const enhancedActionBatcherWithCB: import("./batchers.js").BatcherWithCircuitBreaker<import("../types/wire-enhanced-action.js").WireEnhancedAction>;
+export declare const enhancedActionBatcher: import("./batchers.js").Batcher<import("../types/wire-enhanced-action.js").WireEnhancedAction>;
+export declare const networkBodyBatcherWithCB: import("./batchers.js").BatcherWithCircuitBreaker<import("../types/wire-network.js").WireNetworkBody>;
+export declare const networkBodyBatcher: import("./batchers.js").Batcher<import("../types/wire-network.js").WireNetworkBody>;
+export declare const perfBatcherWithCB: import("./batchers.js").BatcherWithCircuitBreaker<import("../types/wire-performance-snapshot.js").WirePerformanceSnapshot>;
+export declare const perfBatcher: import("./batchers.js").Batcher<import("../types/wire-performance-snapshot.js").WirePerformanceSnapshot>;
+export declare function handleLogMessage(payload: LogEntry, sender: ChromeMessageSender, tabId?: number): Promise<void>;
+export declare function handleClearLogs(): Promise<{
+    success: boolean;
+    error?: string;
+}>;
+/**
+ * Check if a connection check is currently running (for testing)
+ */
+export declare function isConnectionCheckRunning(): boolean;
+export declare function checkConnectionAndUpdate(): Promise<void>;
+export declare function sendStatusPingWrapper(): Promise<void>;
+/**
+ * Reset sync client connection (call when user enables pilot/tracking)
+ */
+export declare function resetSyncClientConnection(): void;
+export declare const handlePendingQuery: typeof handlePendingQueryImpl;
+export declare const handlePilotCommand: typeof handlePilotCommandImpl;
+//# sourceMappingURL=index.d.ts.map

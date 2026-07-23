@@ -1,0 +1,14 @@
+{
+  "name": "browser-agent-extension",
+  "version": "0.8.5",
+  "private": true,
+  "type": "module",
+  "description": "Browser extension for Dev Console",
+  "scripts": {
+    "test": "node --test background/*.test.js"
+  },
+  "license": "AGPL-3.0-only",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

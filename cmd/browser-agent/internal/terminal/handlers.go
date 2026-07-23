@@ -8,11 +8,13 @@ package terminal
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"io/fs"
 	"net"
 	"net/http"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
@@ -441,14 +443,12 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 		}
 	}
 	if err != nil {
-		// Detect macOS sandbox restriction (MCP stdio-spawned daemon can't fork).
+		// Always log the real error. Without this a failed start left no trace in
+		// the daemon log, so the only signal was whichever label the client chose.
+		deps.Stderrf("[Kaboom] terminal start failed (id=%q dir=%q cmd=%q): %v\n", req.ID, req.Dir, req.Cmd, err)
+		// Narrow: fork/exec EPERM only (see IsSandboxError).
 		if IsSandboxError(err) {
-			deps.JSONResponse(w, http.StatusServiceUnavailable, map[string]any{
-				"error":       "sandbox_restricted",
-				"message":     "The daemon was started by an MCP client and cannot spawn terminal processes due to macOS sandbox restrictions.",
-				"instruction": "Run this command in a separate terminal to restart the daemon with full permissions:",
-				"command":     "kaboom-agentic-browser --stop && kaboom-agentic-browser --daemon",
-			})
+			deps.JSONResponse(w, http.StatusServiceUnavailable, sandboxPayload(err))
 			return
 		}
 		// Return existing session's token so the client can reconnect instead of killing it.
@@ -541,13 +541,40 @@ func HandleTerminalStop(w http.ResponseWriter, r *http.Request, deps Deps, mgr *
 	deps.JSONResponse(w, http.StatusOK, map[string]string{"status": "stopped"})
 }
 
-// IsSandboxError returns true if err looks like a macOS sandbox/fork restriction.
-// MCP stdio-spawned daemons inherit a restricted environment that blocks posix_spawn/fork.
+// IsSandboxError reports whether err is a fork/exec EPERM — the signature of a
+// daemon running under a restricted sandbox profile that cannot spawn children.
+//
+// The scope is deliberately narrow. Every syscall in the PTY spawn path can
+// return EPERM (open /dev/ptmx, TIOCPTYGRANT, TIOCPTYUNLK, opening the slave,
+// TIOCSWINSZ), so the old bare "not permitted" substring match attributed all of
+// them to sandboxing and discarded the real error. A transient PTY failure was
+// then reported as "restart your daemon", which fixes nothing and hides the
+// actual cause. Match the one shape that genuinely means "cannot fork".
 func IsSandboxError(err error) bool {
-	msg := err.Error()
-	return strings.Contains(msg, "operation not permitted") ||
-		strings.Contains(msg, "Operation not permitted") ||
-		strings.Contains(msg, "not permitted")
+	if err == nil {
+		return false
+	}
+	var pathErr *fs.PathError
+	if !errors.As(err, &pathErr) || pathErr.Op != "fork/exec" {
+		return false
+	}
+	return errors.Is(pathErr.Err, syscall.EPERM)
+}
+
+// sandboxPayload builds the 503 body for a fork/exec EPERM. The diagnosis is an
+// inference; the underlying error is the fact, so `detail` always carries it.
+func sandboxPayload(err error) map[string]any {
+	detail := ""
+	if err != nil {
+		detail = err.Error()
+	}
+	return map[string]any{
+		"error":       "sandbox_restricted",
+		"message":     "The daemon could not spawn a terminal process: the OS denied fork/exec. This usually means the daemon is running under a restricted sandbox profile.",
+		"instruction": "Run this command in a separate terminal to restart the daemon with full permissions:",
+		"command":     "kaboom-agentic-browser --stop && kaboom-agentic-browser --daemon",
+		"detail":      detail,
+	}
 }
 
 // HandleTerminalConfig returns terminal session details including alt-screen state and subscriber counts.
