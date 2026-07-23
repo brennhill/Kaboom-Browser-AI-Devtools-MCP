@@ -60,7 +60,7 @@ async function getTerminalAICommand(): Promise<string> {
   }
 }
 
-async function getTerminalDevRoot(): Promise<string> {
+export async function getTerminalDevRoot(): Promise<string> {
   try {
     const value = await getLocal(StorageKey.TERMINAL_DEV_ROOT)
     return (value as string) || ''
@@ -121,6 +121,82 @@ export async function validateSession(token: string): Promise<boolean> {
     return data.valid === true
   } catch {
     return false
+  }
+}
+
+/** One selectable directory from the daemon's listing. */
+export interface TerminalDirEntry {
+  name: string
+  path: string
+}
+
+/** A directory and its immediate sub-directories. */
+export interface TerminalDirListing {
+  path: string
+  parent: string
+  entries: TerminalDirEntry[]
+  truncated: boolean
+}
+
+/**
+ * List the sub-directories of `path`, or of the user's home when empty.
+ *
+ * The browser cannot resolve an absolute path by itself — `webkitdirectory` and
+ * showDirectoryPicker() both withhold it — so picking a working directory has to
+ * go through the daemon, which is already running shells in these directories.
+ */
+export async function listTerminalDirs(path: string): Promise<TerminalDirListing | null> {
+  try {
+    const base = await getServerUrl()
+    const termUrl = getTerminalServerUrl(base)
+    const resp = await fetch(
+      `${termUrl}/terminal/dirs?path=${encodeURIComponent(path)}`,
+      { signal: AbortSignal.timeout(3000) }
+    )
+    if (!resp.ok) return null
+    const data = await resp.json() as Partial<TerminalDirListing>
+    return {
+      path: data.path ?? path,
+      parent: data.parent ?? '',
+      entries: Array.isArray(data.entries) ? data.entries : [],
+      truncated: data.truncated === true
+    }
+  } catch {
+    return null // Daemon unreachable; the caller falls back to typing a path.
+  }
+}
+
+/** Persist the terminal root folder (the cwd new sessions spawn in). */
+export async function setTerminalDevRoot(root: string): Promise<void> {
+  try {
+    await setLocal(StorageKey.TERMINAL_DEV_ROOT, root)
+  } catch {
+    // Extension context invalidated — nothing to persist into.
+  }
+}
+
+/**
+ * Stop the active PTY and forget it locally.
+ *
+ * Used when a setting that is fixed at spawn time changes (the working
+ * directory), and by the explicit end-session control.
+ */
+export async function stopActiveSession(): Promise<void> {
+  const persisted = await loadPersistedSession()
+  const sessionId = persisted.session?.sessionId
+  clearPersistedSession()
+  if (!sessionId) return
+  try {
+    const base = await getServerUrl()
+    const termUrl = getTerminalServerUrl(base)
+    await fetch(`${termUrl}/terminal/stop`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: sessionId }),
+      signal: AbortSignal.timeout(3000)
+    })
+  } catch {
+    // Daemon unreachable — the local state is cleared either way.
   }
 }
 

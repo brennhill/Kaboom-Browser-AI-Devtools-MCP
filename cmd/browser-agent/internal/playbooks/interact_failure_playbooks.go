@@ -95,15 +95,35 @@ func LookupInteractFailurePlaybook(rawCode string) (string, InteractFailurePlayb
 }
 
 // NormalizeInteractFailureCode normalizes a raw error string to a canonical failure code.
+//
+// Resolution rule (deterministic, and the reason this does not range the map
+// directly — Go randomises map iteration order, so an error string mentioning two
+// known codes used to resolve to an arbitrary playbook on every call):
+//
+//  1. The code whose match starts EARLIEST in the (lower-cased, trimmed) error
+//     string wins. Error strings read left to right and the primary failure is
+//     stated first, so the leftmost code is the one the caller actually hit.
+//  2. On a tie at the same start offset, the LONGEST code wins. That only happens
+//     when one code is a prefix of another, and the longer one is the more
+//     specific diagnosis.
+//
+// Returns "" when no known code appears in the string.
 func NormalizeInteractFailureCode(raw string) string {
 	v := strings.ToLower(strings.TrimSpace(raw))
 	if v == "" {
 		return ""
 	}
+	best := ""
+	bestIdx := -1
 	for code := range InteractFailurePlaybooks {
-		if v == code || strings.Contains(v, code) {
-			return code
+		idx := strings.Index(v, code)
+		if idx < 0 {
+			continue
+		}
+		if bestIdx < 0 || idx < bestIdx || (idx == bestIdx && len(code) > len(best)) {
+			best = code
+			bestIdx = idx
 		}
 	}
-	return ""
+	return best
 }

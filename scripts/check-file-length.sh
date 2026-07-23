@@ -6,6 +6,12 @@
 #   - Go: // nolint:filelength - Justification here
 #   - TS: // eslint-disable max-lines - Justification here
 #
+# Generated files are skipped: their size is a property of the generator, not a
+# refactoring decision anyone can act on, and nobody may edit them to add a
+# justification comment. Two of them (the openapi-typescript output) were failing
+# this check permanently, and because `make test` depends on it, that meant the
+# whole test target aborted before running a single test.
+#
 # Exit code: 0 if all files pass, 1 if violations found
 
 set -euo pipefail
@@ -13,6 +19,20 @@ set -euo pipefail
 MAX_LINES=800
 FOUND_VIOLATIONS=0
 JUSTIFIED_EXCEPTIONS=0
+GENERATED_SKIPPED=0
+
+# Header markers every generator in this repo writes. Matched against the top of
+# the file only, where such banners live, so prose further down cannot trip it.
+GENERATED_MARKERS='auto-?generated|@generated|do not edit|is generated|do not make direct changes'
+GENERATED_HEADER_LINES=10
+
+plural() {
+    if [ "$1" -eq 1 ]; then echo "$2"; else echo "${2}s"; fi
+}
+
+is_generated() {
+    head -"$GENERATED_HEADER_LINES" "$1" | grep -qiE "$GENERATED_MARKERS"
+}
 
 echo "Checking for files exceeding ${MAX_LINES} lines..."
 echo ""
@@ -25,6 +45,10 @@ check_file() {
     lines=$(wc -l < "$file" | tr -d ' ')
 
     if [ "$lines" -gt "$MAX_LINES" ]; then
+        if is_generated "$file"; then
+            GENERATED_SKIPPED=$((GENERATED_SKIPPED + 1))
+            return
+        fi
         # Check for justification in first 20 lines
         case "$ext" in
             go)
@@ -70,6 +94,7 @@ done < <(find . -name "*.ts" \
     -not -path "*/dist/*" \
     -not -name "*.test.ts" \
     -not -name "*.spec.ts" \
+    -not -name "*.d.ts" \
     -type f -print0 2>/dev/null || true)
 
 echo ""
@@ -86,8 +111,16 @@ if [ "$FOUND_VIOLATIONS" -eq 1 ]; then
     exit 1
 fi
 
+SUMMARY="✅ All files within line limit"
+# Say what was skipped. A gate that quietly ignores files reads as one that
+# checked them.
 if [ "$JUSTIFIED_EXCEPTIONS" -gt 0 ]; then
-    echo "✅ All files within line limit ($JUSTIFIED_EXCEPTIONS justified exceptions)"
-else
-    echo "✅ All files within line limit"
+    SUMMARY="$SUMMARY ($JUSTIFIED_EXCEPTIONS justified exceptions"
+    if [ "$GENERATED_SKIPPED" -gt 0 ]; then
+        SUMMARY="$SUMMARY, $GENERATED_SKIPPED generated $(plural "$GENERATED_SKIPPED" file) skipped"
+    fi
+    SUMMARY="$SUMMARY)"
+elif [ "$GENERATED_SKIPPED" -gt 0 ]; then
+    SUMMARY="$SUMMARY ($GENERATED_SKIPPED generated $(plural "$GENERATED_SKIPPED" file) skipped)"
 fi
+echo "$SUMMARY"

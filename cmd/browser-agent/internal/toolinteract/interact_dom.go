@@ -96,14 +96,20 @@ func (h *InteractActionHandler) HandleDOMPrimitive(req JSONRPCRequest, args json
 		return errResp
 	}
 
-	if errResp, failed := ValidateDOMActionParams(req, action, params.Text, params.Value, params.Name); failed {
-		return errResp
+	// Guarantee: `type` with clear:true and an empty text is the explicit
+	// "blank this field" intent (the extension assigns "" to the element), so it
+	// must not be rejected as a missing 'text'. This is what lets fill_form send
+	// {"selector":"#note","value":""} to empty an input.
+	if !isClearFieldRequest(action, params) {
+		if errResp, failed := ValidateDOMActionParams(req, action, params.Text, params.Value, params.Name); failed {
+			return errResp
+		}
 	}
 
 	args = normalizeDOMActionArgs(args, action)
 
-	return h.newCommand("dom_" + action).
-		correlationPrefix("dom_" + action).
+	return h.newCommand("dom_"+action).
+		correlationPrefix("dom_"+action).
 		reason(action).
 		queryType("dom_action").
 		queryParams(args).
@@ -115,6 +121,6 @@ func (h *InteractActionHandler) HandleDOMPrimitive(req JSONRPCRequest, args json
 		postEnqueue(func() {
 			h.deps.RecordDOMPrimitiveAction(action, params.Selector, params.Text, params.Value)
 		}).
-		queuedMessage(action + " queued").
+		queuedMessage(action+" queued").
 		execute(req, args)
 }

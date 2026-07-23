@@ -65,6 +65,9 @@
     "contextMenus",
     "sidePanel"
   ],
+  "optional_permissions": [
+    "tabGroups"
+  ],
   "host_permissions": [
     "<all_urls>"
   ],
@@ -105,10 +108,6 @@
       "description": "Toggle action sequence recording"
     },
     "open_terminal_panel": {
-      "suggested_key": {
-        "default": "Alt+Shift+T",
-        "mac": "Alt+Shift+T"
-      },
       "description": "Open the Kaboom terminal side panel"
     }
   },

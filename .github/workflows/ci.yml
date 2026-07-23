@@ -216,6 +216,13 @@ jobs:
       - name: OpenAPI generated types drift check
         run: npm run check:openapi-types-drift
 
+      # Chrome expires the user gesture on any await before sidePanel.open(), and
+      # the comment saying so did not stop it happening twice.
+      - name: Gesture safety rule
+        run: |
+          npm run test:gesture-safety
+          npm run check:gesture-safety
+
       - name: Extension tests
         run: |
           npm run test:ext

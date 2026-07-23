@@ -2785,6 +2785,22 @@ function uninstallKaboomAPI() {
   }
 }
 
+// extension/lib/safe-global-patch.js
+function safeAssignGlobal(target, key, value) {
+  try {
+    target[key] = value;
+    if (target[key] === value)
+      return true;
+  } catch {
+  }
+  try {
+    Object.defineProperty(target, key, { value, writable: true, configurable: true });
+    return target[key] === value;
+  } catch {
+    return false;
+  }
+}
+
 // extension/lib/transient-capture.js
 var SKIP_TAGS = /* @__PURE__ */ new Set(["SCRIPT", "STYLE", "LINK", "META", "NOSCRIPT", "BR", "HR"]);
 var CLASS_FINGERPRINTS = [
@@ -3006,7 +3022,9 @@ function installFetchCapture() {
   const earlyOriginal = window.__KABOOM_ORIGINAL_FETCH__;
   originalFetch = earlyOriginal || window.fetch;
   const wrappedWithBodies = wrapFetchWithBodies(originalFetch);
-  window.fetch = wrapFetch(wrappedWithBodies);
+  if (!safeAssignGlobal(window, "fetch", wrapFetch(wrappedWithBodies))) {
+    console.warn("[KaBOOM!] fetch is read-only on this page; network capture via fetch is unavailable.");
+  }
 }
 function installXHRCapture() {
   wrapXHRWithBodies();
@@ -3016,7 +3034,7 @@ function uninstallXHRCapture() {
 }
 function uninstallFetchCapture() {
   if (originalFetch) {
-    window.fetch = originalFetch;
+    safeAssignGlobal(window, "fetch", originalFetch);
     originalFetch = null;
   }
 }

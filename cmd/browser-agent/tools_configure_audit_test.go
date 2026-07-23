@@ -428,6 +428,14 @@ func TestConfigureAudit_EmptyState_ReturnsEmptyNotError(t *testing.T) {
 // ============================================
 
 // validateConfigureResponse checks response validity
+// validateConfigureResponse checks that an action produced a usable MCP tool
+// result — not merely *a* response.
+//
+// The previous version accepted any valid JSON, so every caller of this helper
+// (24 subtests) would still have passed if toolConfigure were replaced with
+// `return JSONRPCResponse{Result: json.RawMessage("null")}`. It now requires the
+// MCP envelope, a non-empty content block, and a JSON object with at least one
+// key in the text — the minimum a caller can actually do anything with.
 func validateConfigureResponse(t *testing.T, action string, resp JSONRPCResponse) {
 	t.Helper()
 
@@ -436,18 +444,45 @@ func validateConfigureResponse(t *testing.T, action string, resp JSONRPCResponse
 		return
 	}
 
-	if resp.Result != nil {
-		var parsed any
-		if err := json.Unmarshal(resp.Result, &parsed); err != nil {
-			t.Errorf("configure(%s): result is not valid JSON: %v", action, err)
-		}
-	}
-
 	if resp.Error != nil {
 		errStr := resp.Error.Message
 		if strings.Contains(errStr, "panic") || strings.Contains(errStr, "nil pointer") {
 			t.Errorf("configure(%s) panicked: %s", action, errStr)
 		}
+		return
+	}
+
+	var result MCPToolResult
+	if err := json.Unmarshal(resp.Result, &result); err != nil {
+		t.Errorf("configure(%s): result is not an MCP tool result: %v", action, err)
+		return
+	}
+	if len(result.Content) == 0 {
+		t.Errorf("configure(%s): no content blocks — nothing was returned to the caller", action)
+		return
+	}
+	if strings.TrimSpace(result.Content[0].Text) == "" {
+		t.Errorf("configure(%s): first content block is empty", action)
+		return
+	}
+
+	// Errors carry their structured payload as prose plus JSON; only successes
+	// are required to hand back a populated object.
+	if result.IsError {
+		return
+	}
+	idx := strings.Index(result.Content[0].Text, "{")
+	if idx < 0 {
+		t.Errorf("configure(%s): success response carries no JSON payload: %s", action, result.Content[0].Text)
+		return
+	}
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(result.Content[0].Text[idx:]), &payload); err != nil {
+		t.Errorf("configure(%s): success payload is not a JSON object: %v", action, err)
+		return
+	}
+	if len(payload) == 0 {
+		t.Errorf("configure(%s): success payload is an empty object", action)
 	}
 }
 
@@ -598,17 +633,4 @@ func TestConfigureAudit_InvalidJSON(t *testing.T) {
 	if resp.Error == nil && resp.Result == nil {
 		t.Error("invalid JSON should return some response")
 	}
-}
-
-// TestConfigureAudit_ActionCount documents coverage
-func TestConfigureAudit_ActionCount(t *testing.T) {
-	t.Log("Configure audit covers 14 actions with:")
-	t.Log("  - 5 data flow tests (verify actions return expected data)")
-	t.Log("  - 5 parameter validation tests (verify missing params return errors)")
-	t.Log("  - 4 error handling tests (verify structured errors)")
-	t.Log("  - 5 empty state tests (verify empty returns success, not error)")
-	t.Log("  - 14 safety net tests (verify all actions don't panic)")
-	t.Log("  - 5 noise_rule sub-operation tests")
-	t.Log("  - 3 audit_log sub-operation tests")
-	t.Log("  Note: query_dom and validate_api moved to analyze tool")
 }

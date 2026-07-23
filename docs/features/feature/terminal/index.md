@@ -15,9 +15,15 @@ code_paths:
   - src/content/ui/terminal-panel-bridge.ts
   - src/content/ui/terminal-widget-session.ts
   - src/content/ui/terminal-widget-types.ts
+  - src/content/ui/terminal-root-folder.ts
+  - src/content/ui/terminal-panel-states.ts
+  - src/content/ui/terminal-write-guard.ts
+  - cmd/browser-agent/internal/terminal/dirs.go
   - src/content/ui/tracked-hover-launcher.ts
   - src/background/message-handlers.ts
   - src/background/terminal-panel.ts
+  - src/background/tab-state.ts
+  - src/background/side-panel-availability.ts
   - src/background/keyboard-shortcuts.ts
   - src/background/context-menus.ts
   - src/types/runtime-messages.ts
@@ -37,8 +43,13 @@ test_paths:
   - tests/extension/terminal-session-start-errors.test.js
   - tests/extension/terminal-panel-gesture-entrypoints.test.js
   - tests/extension/terminal-panel-open-failure.test.js
-last_verified_version: 0.8.1
-last_verified_date: 2026-03-28
+  - tests/extension/terminal-panel-presence.test.js
+  - tests/extension/terminal-root-folder.test.js
+  - cmd/browser-agent/internal/terminal/dirs_test.go
+  - tests/extension/terminal-panel-close-and-scope.test.js
+  - tests/extension/chrome-platform-limits.test.js
+last_verified_version: 0.8.5
+last_verified_date: 2026-07-23
 ---
 
 # Terminal
@@ -49,14 +60,24 @@ last_verified_date: 2026-03-28
 - Availability: macOS + Linux only (Windows currently reports terminal unavailable / `terminal_port: 0`)
 - Runs on a **dedicated HTTP server** at `main_port + 1` (e.g., 7891) for isolation
 - Singleton session shared across all tabs via `chrome.storage.session`
-- One Kaboom work context maps to one Chrome tab group; the panel opens synchronously on the requesting tab (to keep the user gesture valid), then the tracked tab is grouped into the workspace and the panel path is refined best-effort
+- One Kaboom work context maps to one Chrome tab group; the panel opens synchronously on the requesting tab (to keep the user gesture valid), then the tracked tab is grouped into the workspace best-effort
 - Three UI states: **open**, **minimized**, **closed** - all persisted across page refreshes
 - Hover launcher keeps the page overlay for quick actions, but the terminal button now opens the side panel on the active workspace tab and hides the launcher only while the panel is open
-- Three entry points open the panel, all through the shared `openTerminalSidePanel()` in `src/background/terminal-panel.ts`: the keyboard command `open_terminal_panel` (**Alt+Shift+T**), the page context menu item **Open Kaboom Terminal**, and the in-page launcher button. The first two get a full user gesture from Chrome and are dependable; the launcher button goes through `runtime.onMessage`, which Chrome grants only a *restricted* gesture that `sidePanel.open()` rejects on some Chrome/Brave builds ([crbug 355266358](https://issues.chromium.org/issues/355266358)) — so it is best-effort, and its failure toast names the other two
+- Three entry points open the panel, all through the shared `openTerminalSidePanel()` in `src/background/terminal-panel.ts`: the page context menu item **Open Kaboom Terminal**, the keyboard command `open_terminal_panel` (**ships unbound** — Chrome refuses a manifest with more than four `suggested_key` commands, and four are already taken, so users assign a key at `chrome://extensions/shortcuts`), and the in-page launcher button. The first two get a full user gesture from Chrome and are dependable; the launcher button goes through `runtime.onMessage`, which Chrome grants only a *restricted* gesture that `sidePanel.open()` rejects on some Chrome/Brave builds ([crbug 355266358](https://issues.chromium.org/issues/355266358)) — so it is best-effort, and its failure toast names the other two
 - A failed open is always reported (console error + toast). It used to be swallowed by `catch { return false }`, which made the Terminal button look simply dead
 - Background must call `chrome.sidePanel.open()` synchronously in the forwarded click gesture path; **nothing may be awaited before it** — neither `resolveTerminalWorkspaceTarget()` nor `setOptions()`, or Chrome expires the gesture and refuses to open the panel (regression: the panel loaded nothing). Workspace grouping + `setOptions()` run afterward as best-effort refinement.
 - Header redraw control (`↻`) reloads iframe graphics without killing the PTY session
-- Header power control (`⏻`) closes the side panel and ends the PTY session
+- Header close control (`✕`, rightmost) closes the drawer and **leaves the shell running** — reopening reconnects to the same session. Closing must never destroy a shell the user only wanted out of the way
+- Header power control (`⏻`) is the explicit teardown: stops the PTY and closes the panel. Kept because sessions are capped (`maxSessions = 10`), so there must be a way to end one
+- `chrome.sidePanel.close()` only exists in very recent Chrome. `closeBrowserSidePanel()` falls back to `window.close()` from the panel document; the old code returned silently when the API was absent, so the close button did nothing and `unmountPanel()` left a blank panel the user could neither close nor recover
+- A **root folder bar sits above the terminal at all times**, showing the working directory with *Browse* and *Reload*. It used to appear only in the no-session state and on the options page, so with a session running there was no way to see or change where the shell actually was. *Reload* is named for what it does: a PTY's cwd is fixed at spawn, so changing it tears down the running session and starts a new one there
+- **Folder picking goes through the daemon** (`GET /terminal/dirs`). The browser cannot resolve an absolute path — `<input webkitdirectory>` exposes only relative paths and `showDirectoryPicker()` only a folder name — so neither can produce a cwd to spawn a PTY in. The endpoint lists directories only (a file cannot be a working directory), hides dot-directories, expands `~`, caps at `MaxDirEntries` and reports when it truncated. An unreachable daemon degrades to typing a path rather than showing an empty list
+- A session-less panel renders a **recoverable** state — a *Start terminal* button — instead of a dead sentence
+- The page context menu item is a **toggle**: it reads *Open Kaboom Terminal* or *Close Kaboom Terminal* depending on whether a panel document is actually connected, refreshed via `contextMenus.onShown`
+- **Panel liveness comes from a port, not from storage.** The panel connects `TERMINAL_PANEL_PORT` for as long as it lives; `isTerminalPanelOpenSync()` is `livePanelPort !== null`. Mirroring `TERMINAL_UI_STATE` did not work: dismissing the panel with Chrome's own X destroys the document before it can record anything, so the flag stuck at "open" and the toggle kept trying to close a panel that was already gone — the user could never reopen it. `TERMINAL_UI_STATE` remains the launcher's hover-overlay signal
+- **The panel is scoped to the tracked tab by default.** The manifest's `side_panel.default_path` makes it available on every tab, where it renders empty; `syncTerminalPanelAvailability()` disables the global default and enables the panel only on the tracked tab. That governs the default only — an explicit open enables its target tab first, because `chrome.sidePanel.open()` on a disabled tab fails with **"No active side panel for tabId: N"**, which is what made the Terminal button dead on every untracked page
+- **The panel path never varies.** Changing `path` in `setOptions` reloads the side panel document, so the old per-tab `sidepanel.html?tabId=…` (set right after `open()`) booted an xterm and immediately destroyed it. Only `tabId` was ever read, and `getHostTabId()` already falls back to the active tab
+- **Opening onto an existing panel restores it.** `sidePanel.open()` on a live panel only focuses it — no code runs inside — so the opener also posts `restore_terminal_panel` over the presence port. `restoreTerminalPanel()` re-shows a mounted terminal, rebuilds an unmounted one (revalidating the token so the xterm reconnects to a live shell), or retries session start when the panel is mounted with no terminal
 - Header minimize control hides the side panel while preserving the current PTY session
 - The current side panel rollout is terminal-only; xterm fills the available panel height
 - Terminal startup failure guidance now consistently points users at the Kaboom daemon command: `npx kaboom-agentic-browser`

@@ -42,13 +42,16 @@ func AppendPushPiggyback(d Deps, resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
 		return resp
 	}
 
-	events := inbox.DrainAll()
-	if len(events) == 0 {
+	// Parse the target response BEFORE draining. Draining first would consume the
+	// events even when there is nothing to attach them to, silently losing a batch
+	// of browser activity; leaving them queued lets the next call deliver them.
+	var result mcp.MCPToolResult
+	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		return resp
 	}
 
-	var result mcp.MCPToolResult
-	if err := json.Unmarshal(resp.Result, &result); err != nil {
+	events := inbox.DrainAll()
+	if len(events) == 0 {
 		return resp
 	}
 

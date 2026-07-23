@@ -9,12 +9,14 @@ import { errorMessage } from '../lib/error-utils.js';
 import { toggleDrawModeForTab } from './draw-mode-toggle.js';
 import { setTrackedTab, clearTrackedTab } from './tab-state.js';
 import { trackUIFeature } from './ui-usage-tracker.js';
-import { openTerminalSidePanel } from './terminal-panel.js';
+import { toggleTerminalSidePanel, isTerminalPanelOpenSync } from './terminal-panel.js';
 // =============================================================================
 // CONTEXT MENU IDS
 // =============================================================================
 const MENU_ID_CONTROL = 'kaboom-control-page';
 const MENU_ID_TERMINAL = 'kaboom-open-terminal';
+const TERMINAL_OPEN_TITLE = 'Open Kaboom Terminal';
+const TERMINAL_CLOSE_TITLE = 'Close Kaboom Terminal';
 const MENU_ID_SCREENSHOT = 'kaboom-screenshot';
 const MENU_ID_ANNOTATE = 'kaboom-annotate-page';
 const MENU_ID_RECORD = 'kaboom-record-screen';
@@ -52,7 +54,10 @@ async function refreshDynamicContextMenuTitles(tabId, recordingHandlers, actionR
         updateContextMenuTitle(MENU_ID_CONTROL, trackedTabId && tabId === trackedTabId ? RELEASE_CONTROL_TITLE : CONTROL_TAB_TITLE),
         updateContextMenuTitle(MENU_ID_ANNOTATE, drawModeActive ? ANNOTATE_STOP_TITLE : ANNOTATE_START_TITLE),
         updateContextMenuTitle(MENU_ID_RECORD, recordingHandlers.isRecording() ? RECORD_STOP_TITLE : RECORD_START_TITLE),
-        updateContextMenuTitle(MENU_ID_ACTION_RECORD, actionRecordingHandlers.isRecording() ? ACTION_RECORD_STOP_TITLE : ACTION_RECORD_START_TITLE)
+        updateContextMenuTitle(MENU_ID_ACTION_RECORD, actionRecordingHandlers.isRecording() ? ACTION_RECORD_STOP_TITLE : ACTION_RECORD_START_TITLE),
+        // Reads "Close" while the panel is up, so the menu is a toggle rather than
+        // an Open that does nothing when it is already open.
+        updateContextMenuTitle(MENU_ID_TERMINAL, isTerminalPanelOpenSync() ? TERMINAL_CLOSE_TITLE : TERMINAL_OPEN_TITLE)
     ]);
     const contextMenusWithRefresh = chrome.contextMenus;
     contextMenusWithRefresh.refresh?.();
@@ -74,7 +79,7 @@ export function installContextMenus(recordingHandlers, actionRecordingHandlers, 
         chrome.contextMenus.create({ id: MENU_ID_ANNOTATE, title: ANNOTATE_START_TITLE, contexts: ctx });
         chrome.contextMenus.create({ id: MENU_ID_RECORD, title: RECORD_START_TITLE, contexts: ctx });
         chrome.contextMenus.create({ id: MENU_ID_ACTION_RECORD, title: ACTION_RECORD_START_TITLE, contexts: ctx });
-        chrome.contextMenus.create({ id: MENU_ID_TERMINAL, title: 'Open Kaboom Terminal', contexts: ctx });
+        chrome.contextMenus.create({ id: MENU_ID_TERMINAL, title: TERMINAL_OPEN_TITLE, contexts: ctx });
     });
     const contextMenusWithShown = chrome.contextMenus;
     contextMenusWithShown.onShown?.addListener((_info, tab) => {
@@ -90,10 +95,19 @@ export function installContextMenus(recordingHandlers, actionRecordingHandlers, 
         // and contextMenus.onClicked is one of the few entry points Chrome grants a
         // full (unrestricted) gesture. Awaiting anything first would expire it.
         if (info.menuItemId === MENU_ID_TERMINAL) {
-            const result = await openTerminalSidePanel(tab.id);
-            if (!result.success && logFn) {
-                logFn(`Open terminal via context menu failed: ${result.error ?? 'unknown error'}`);
-            }
+            // Call synchronously — awaiting ANYTHING first (even a storage read) burns
+            // the user gesture and Chrome then refuses sidePanel.open(). This is what
+            // made "Open Kaboom Terminal" do nothing.
+            toggleTerminalSidePanel(tab.id)
+                .then((result) => {
+                if (!result.success && logFn) {
+                    logFn(`Toggle terminal via context menu failed: ${result.error ?? 'unknown error'}`);
+                }
+            })
+                .catch((err) => {
+                if (logFn)
+                    logFn(`Toggle terminal via context menu error: ${errorMessage(err)}`);
+            });
             return;
         }
         if (info.menuItemId === MENU_ID_CONTROL) {

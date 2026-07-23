@@ -353,18 +353,18 @@ func assertNonErrorResponse(t *testing.T, label string, result MCPToolResult) {
 }
 
 // assertIsError verifies the response is an error containing the expected substring.
+//
+// Both conditions, ANDed. This helper used to accept its own negation: a
+// SUCCESS response passed as long as some content block happened to contain the
+// substring, so `assertIsError(t, resp, "url")` was satisfied by any successful
+// navigate response — every one of which contains the word "url". Twenty-nine
+// call sites inherited that, and each one looked like a test of a rejection
+// while asserting only that a word appeared somewhere in a success.
 func assertIsError(t *testing.T, resp JSONRPCResponse, contains string) {
 	t.Helper()
 	if !isErrorResponse(resp) {
-		var result MCPToolResult
-		if err := json.Unmarshal(resp.Result, &result); err == nil {
-			for _, c := range result.Content {
-				if strings.Contains(c.Text, contains) {
-					return
-				}
-			}
-		}
-		t.Errorf("expected error response containing %q", contains)
+		raw, _ := json.Marshal(resp)
+		t.Errorf("expected an error response containing %q, got a success: %s", contains, raw)
 		return
 	}
 	raw, _ := json.Marshal(resp)

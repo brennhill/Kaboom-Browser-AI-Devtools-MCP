@@ -188,10 +188,32 @@ export const StorageKey = {
     ERROR_GROUPS: 'kaboom_error_groups'
 };
 /**
- * Default keyboard shortcut for `open_terminal_panel` (see extension/manifest.json).
+ * What to tell a user when the in-page Terminal button could not open the panel.
  *
- * Shared because the content script names it in the failure toast while the
- * background registers the command — the two must not drift.
+ * The `open_terminal_panel` command ships **unbound**: Chrome rejects the whole
+ * manifest if more than four commands declare a `suggested_key`, and four are
+ * already spoken for. So the zero-setup route is the context menu, with the
+ * shortcut offered as an opt-in.
  */
-export const TERMINAL_PANEL_SHORTCUT = 'Alt+Shift+T';
+export const TERMINAL_PANEL_FALLBACK_HINT = 'Right-click the page and choose "Open Kaboom Terminal", or assign a shortcut at chrome://extensions/shortcuts.';
+/**
+ * What to tell a user whose page is running an orphaned content script.
+ *
+ * Reloading the extension severs every already-open tab from the new background
+ * worker permanently — nothing in the page can reach it again. The generic
+ * fallback hint is *true* here (the context menu is served by the background and
+ * still works) but it is not the fix, and offering it first sends people
+ * right-clicking instead of pressing reload.
+ */
+export const TERMINAL_PANEL_STALE_CONTEXT_HINT = 'The Kaboom extension was reloaded, so this page is running an old copy of it. ' +
+    'Reload this page to reconnect.';
+/**
+ * Port the side panel document opens to the background while it is alive.
+ *
+ * How the background knows whether a panel exists. Storage cannot answer that:
+ * dismissing the panel with Chrome's own X destroys the document with no chance
+ * to record it, leaving a stale "open" that made the toggle refuse to reopen.
+ * Chrome disconnects a port whenever its document dies, whatever killed it.
+ */
+export const TERMINAL_PANEL_PORT = 'kaboom_terminal_panel';
 //# sourceMappingURL=constants.js.map

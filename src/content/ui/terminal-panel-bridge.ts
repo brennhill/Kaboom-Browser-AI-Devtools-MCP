@@ -5,7 +5,11 @@
  * Docs: docs/features/feature/terminal/index.md
  */
 
-import { StorageKey, TERMINAL_PANEL_SHORTCUT } from '../../lib/constants.js'
+import {
+  StorageKey,
+  TERMINAL_PANEL_FALLBACK_HINT,
+  TERMINAL_PANEL_STALE_CONTEXT_HINT
+} from '../../lib/constants.js'
 import { getSession, onStorageChanged } from '../../lib/storage-utils.js'
 import { showActionToast } from './toast.js'
 
@@ -77,20 +81,37 @@ export function onTerminalPanelVisibilityChanged(listener: VisibilityListener): 
  * the Chrome message becomes retrievable via observe(what:"errors").
  */
 function reportPanelOpenFailure(reason: string): void {
-  console.error(`[KaBOOM!] Terminal side panel did not open: ${reason}`)
+  // Chrome grants message listeners only a restricted user gesture, which
+  // sidePanel.open() rejects on some builds (crbug 355266358). Both fallbacks
+  // are gesture-native, so point at them rather than leaving a dead end — unless
+  // the page itself is the problem, in which case only a reload fixes it.
+  const stale = isStaleContextError(reason)
+  const hint = stale ? TERMINAL_PANEL_STALE_CONTEXT_HINT : TERMINAL_PANEL_FALLBACK_HINT
+  // The raw Chrome error always reaches the console — it is the only diagnostic
+  // signal, and the daemon captures it. The toast drops it when it would only
+  // add noise to advice the user can act on directly.
+  console.error(`[KaBOOM!] Terminal side panel did not open: ${reason} ${hint}`)
   try {
-    // Chrome grants message listeners only a restricted user gesture, which
-    // sidePanel.open() rejects on some builds (crbug 355266358). Both fallbacks
-    // are gesture-native, so point at them rather than leaving a dead end.
     showActionToast(
       'Terminal side panel did not open',
-      `${reason} — press ${TERMINAL_PANEL_SHORTCUT} or right-click the page and choose "Open Kaboom Terminal".`,
+      stale ? hint : `${reason} ${hint}`,
       'error',
       8000
     )
   } catch {
     // Toast is best-effort; the console error above is the durable signal.
   }
+}
+
+/**
+ * Whether this page has been cut off from the extension for good.
+ *
+ * Reloading the extension orphans the content script in every tab that was
+ * already open; from then on every runtime call throws this. It is not a
+ * terminal fault and no terminal advice applies.
+ */
+function isStaleContextError(reason: string): boolean {
+  return reason.includes('Extension context invalidated')
 }
 
 export async function openTerminalPanel(): Promise<boolean> {

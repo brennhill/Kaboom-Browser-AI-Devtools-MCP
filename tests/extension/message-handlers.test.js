@@ -300,6 +300,8 @@ describe('message routing', () => {
       Color: { ORANGE: 'orange' },
       update: mock.fn(() => Promise.resolve())
     }
+    // tabGroups is an optional permission; grouping activates only once granted.
+    chrome.permissions = { contains: mock.fn(() => Promise.resolve(true)) }
 
     const open = mock.fn(() => Promise.resolve())
     const setOptions = mock.fn(() => Promise.resolve())
@@ -328,10 +330,67 @@ describe('message routing', () => {
     // open() fires synchronously on the sender's tab within the user gesture;
     // the workspace group is resolved afterward and only refines setOptions.
     assert.strictEqual(open.mock.calls[0].arguments[0].tabId, 1)
-    assert.strictEqual(setOptions.mock.calls.length, 1)
-    assert.ok(String(setOptions.mock.calls[0].arguments[0].path || '').includes('sidepanel.html?tabId=42'))
-    assert.ok(String(setOptions.mock.calls[0].arguments[0].path || '').includes('tabGroupId=77'))
-    assert.ok(String(setOptions.mock.calls[0].arguments[0].path || '').includes('mainTabId=42'))
+    // The sender's tab is enabled before open() (Chrome rejects open on a tab
+    // where the panel is disabled), then the resolved workspace host is enabled
+    // too. Both use the one constant path: changing the path reloads the side
+    // panel document, which would tear down the xterm that just booted.
+    const optionCalls = setOptions.mock.calls.map((c) => c.arguments[0])
+    assert.deepStrictEqual(
+      optionCalls.map((o) => o.tabId), [1, 42],
+      'the opened tab first, then the workspace host'
+    )
+    for (const options of optionCalls) {
+      assert.strictEqual(options.path, 'sidepanel.html', 'the panel path must never vary')
+      assert.strictEqual(options.enabled, true)
+    }
+  })
+
+  test('open_terminal_panel skips workspace grouping when the optional tabGroups permission is not granted', async () => {
+    chrome.storage.local.get = mock.fn((keys, callback) => {
+      const keyList = Array.isArray(keys) ? keys : [keys]
+      const result = {}
+      for (const key of keyList) {
+        if (key === 'trackedTabId') result[key] = 42
+        else result[key] = undefined
+      }
+      callback?.(result)
+      return Promise.resolve(result)
+    })
+    chrome.storage.local.set = mock.fn((_data, callback) => {
+      callback?.()
+      return Promise.resolve()
+    })
+    chrome.tabs.get = mock.fn((tabId) => {
+      if (tabId === 42) {
+        return Promise.resolve({ id: 42, url: 'https://tracked.example/', groupId: -1, windowId: 7, active: false })
+      }
+      return Promise.resolve({ id: 1, url: 'https://other.example/', groupId: -1, windowId: 1, active: true })
+    })
+    chrome.tabs.group = mock.fn(() => Promise.resolve(77))
+    chrome.tabs.update = mock.fn(() => Promise.resolve())
+    chrome.windows = { update: mock.fn(() => Promise.resolve()) }
+    chrome.tabGroups = {
+      TAB_GROUP_ID_NONE: -1,
+      Color: { ORANGE: 'orange' },
+      update: mock.fn(() => Promise.resolve())
+    }
+    // Permission withheld: grouping must be skipped, never prompted.
+    chrome.permissions = { contains: mock.fn(() => Promise.resolve(false)) }
+
+    const open = mock.fn(() => Promise.resolve())
+    const setOptions = mock.fn(() => Promise.resolve())
+    chrome.sidePanel = { open, setOptions }
+
+    const { handler } = getInstalledHandler()
+    const result = handler({ type: 'open_terminal_panel' }, contentScriptSender, mock.fn())
+
+    assert.strictEqual(result, true)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    assert.strictEqual(chrome.tabs.group.mock.calls.length, 0, 'no tab group may be created without the tabGroups grant')
+    assert.strictEqual(chrome.tabGroups.update.mock.calls.length, 0, 'the workspace group must not be styled when grouping is skipped')
+    // The panel itself still opens — grouping is cosmetic and independent.
+    assert.strictEqual(open.mock.calls.length, 1, 'the terminal panel must still open without the grouping permission')
   })
 
   test('open_terminal_panel keeps the current tab when it already belongs to the Kaboom workspace group', async () => {
@@ -379,9 +438,12 @@ describe('message routing', () => {
     assert.strictEqual(chrome.tabs.update.mock.calls.length, 0, 'active workspace tab should stay active')
     assert.strictEqual(open.mock.calls.length, 1)
     assert.strictEqual(open.mock.calls[0].arguments[0].tabId, 1)
-    assert.ok(String(setOptions.mock.calls[0].arguments[0].path || '').includes('tabId=1'))
-    assert.ok(String(setOptions.mock.calls[0].arguments[0].path || '').includes('tabGroupId=77'))
-    assert.ok(String(setOptions.mock.calls[0].arguments[0].path || '').includes('mainTabId=42'))
+    // The sender's tab is already the workspace host, so it is enabled once and
+    // the refinement pass has nothing left to do.
+    assert.deepStrictEqual(
+      setOptions.mock.calls.map((c) => c.arguments[0]),
+      [{ tabId: 1, path: 'sidepanel.html', enabled: true }]
+    )
   })
 
   test('qa_scan_requested injects the Phase 1 audit prompt into the terminal server', async () => {

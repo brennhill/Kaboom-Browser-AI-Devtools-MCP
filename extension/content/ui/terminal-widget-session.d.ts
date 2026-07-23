@@ -8,6 +8,7 @@ export type TerminalSandboxErrorHandler = (message: string, instruction: string,
 export declare function getServerUrl(): Promise<string>;
 export declare function getTerminalConfig(): Promise<TerminalConfig>;
 export declare function saveTerminalConfig(config: TerminalConfig): void;
+export declare function getTerminalDevRoot(): Promise<string>;
 export declare function clearPersistedSession(): void;
 export declare function persistUIState(uiState: TerminalUIState): void;
 export declare function loadPersistedSession(): Promise<{
@@ -16,5 +17,34 @@ export declare function loadPersistedSession(): Promise<{
 }>;
 /** Validate that a persisted token is still alive on the daemon. */
 export declare function validateSession(token: string): Promise<boolean>;
+/** One selectable directory from the daemon's listing. */
+export interface TerminalDirEntry {
+    name: string;
+    path: string;
+}
+/** A directory and its immediate sub-directories. */
+export interface TerminalDirListing {
+    path: string;
+    parent: string;
+    entries: TerminalDirEntry[];
+    truncated: boolean;
+}
+/**
+ * List the sub-directories of `path`, or of the user's home when empty.
+ *
+ * The browser cannot resolve an absolute path by itself — `webkitdirectory` and
+ * showDirectoryPicker() both withhold it — so picking a working directory has to
+ * go through the daemon, which is already running shells in these directories.
+ */
+export declare function listTerminalDirs(path: string): Promise<TerminalDirListing | null>;
+/** Persist the terminal root folder (the cwd new sessions spawn in). */
+export declare function setTerminalDevRoot(root: string): Promise<void>;
+/**
+ * Stop the active PTY and forget it locally.
+ *
+ * Used when a setting that is fixed at spawn time changes (the working
+ * directory), and by the explicit end-session control.
+ */
+export declare function stopActiveSession(): Promise<void>;
 export declare function startSession(config: TerminalConfig, onSandboxError?: TerminalSandboxErrorHandler): Promise<TerminalSessionState | null>;
 //# sourceMappingURL=terminal-widget-session.d.ts.map

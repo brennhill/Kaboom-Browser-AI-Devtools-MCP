@@ -76,4 +76,22 @@ describe('openTerminalPanel failure reporting', () => {
     assert.strictEqual(err.mock.calls.length, 1)
     assert.match(err.mock.calls[0].arguments.join(' '), /Extension context invalidated/)
   })
+
+  test('an invalidated context tells the user to reload the page', async () => {
+    // Reloading the extension orphans the content script in every tab that was
+    // already open. Nothing in this page can reach the new background again, so
+    // "right-click and choose Open Kaboom Terminal" — true, but not the fix —
+    // is the wrong headline. The page has to be reloaded.
+    sendMessage = mock.fn(async () => { throw new Error('Extension context invalidated.') })
+    const err = mock.method(console, 'error', () => {})
+    const { openTerminalPanel } = await loadBridge()
+
+    await openTerminalPanel()
+
+    const logged = err.mock.calls[0].arguments.join(' ')
+    assert.match(logged, /[Rr]eload this page/,
+      'the actionable fix is a page reload, and it must lead')
+    assert.doesNotMatch(logged, /Right-click/,
+      'the context menu works, but it is not the fix and must not be the headline')
+  })
 })

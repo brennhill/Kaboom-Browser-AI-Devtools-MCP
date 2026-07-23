@@ -53,9 +53,18 @@ describe('terminal side panel gesture-native entry points', () => {
       manifest.commands?.open_terminal_panel,
       'without a command there is no gesture-native way to open the panel'
     )
-    assert.ok(
-      manifest.commands.open_terminal_panel.suggested_key?.default,
-      'the command needs a default key or users must configure it by hand'
+  })
+
+  test('the terminal command ships unbound so the manifest stays loadable', () => {
+    // Chrome refuses the ENTIRE manifest past four suggested_key commands
+    // ("Too many shortcuts specified for 'commands': The maximum is 4"), and four
+    // are already taken. Giving this one a default key broke the extension
+    // outright. See chrome-platform-limits.test.js for the cap itself.
+    const manifest = JSON.parse(readFileSync('extension/manifest.json', 'utf8'))
+    assert.strictEqual(
+      manifest.commands.open_terminal_panel.suggested_key,
+      undefined,
+      'open_terminal_panel must stay unbound; users assign a key at chrome://extensions/shortcuts'
     )
   })
 
@@ -83,8 +92,11 @@ describe('terminal side panel gesture-native entry points', () => {
     assert.deepStrictEqual(openCalls, [])
   })
 
-  test('the shared opener calls sidePanel.open before any await when a tab id is known', async () => {
-    // Ordering is the whole contract: an await before open() expires the gesture.
+  test('the shared opener reaches sidePanel.open with no await in front of it', async () => {
+    // Ordering is the whole contract: an *await* before open() expires the
+    // gesture. Dispatching setOptions first does not — it is fired, never
+    // awaited — and it has to happen, or Chrome rejects the open with "No active
+    // side panel for tabId" on any tab availability scoping has disabled.
     const order = []
     globalThis.chrome.sidePanel.setOptions = mock.fn(async () => { order.push('setOptions') })
     sidePanelOpen = mock.fn(async ({ tabId }) => { order.push('open'); openCalls.push(tabId) })
@@ -92,10 +104,11 @@ describe('terminal side panel gesture-native entry points', () => {
     const { openTerminalSidePanel } = await import(
       `../../extension/background/terminal-panel.js?v=${++importCounter}`
     )
-    const result = await openTerminalSidePanel(42)
+    const pending = openTerminalSidePanel(42) // deliberately not awaited yet
 
-    assert.deepStrictEqual(result, { success: true })
-    assert.strictEqual(order[0], 'open', 'open() must come first; workspace refinement is best-effort after')
+    assert.deepStrictEqual(order, ['setOptions', 'open'],
+      'both must land synchronously, before any microtask boundary')
+    assert.deepStrictEqual(await pending, { success: true })
   })
 
   test('the shared opener reports the Chrome error instead of swallowing it', async () => {

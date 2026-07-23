@@ -4,6 +4,7 @@
  */
 
 import { scaleTimeout } from '../lib/timeouts.js'
+import { syncTerminalPanelAvailability } from './side-panel-availability.js'
 import { delay } from '../lib/timeout-utils.js'
 import { KABOOM_LOG_PREFIX } from '../lib/brand.js'
 import { StorageKey } from '../lib/constants.js'
@@ -201,7 +202,28 @@ async function focusTab(tab: chrome.tabs.Tab): Promise<void> {
   }
 }
 
+/**
+ * Whether the optional `tabGroups` permission has been granted. Terminal
+ * workspace grouping is purely cosmetic (an orange "KaBOOM!" tab group), so the
+ * permission is `optional_permissions` in the manifest — a required permission
+ * would force every existing user through a disable/re-approve prompt on update
+ * for a label. Grouping is therefore opt-in: skipped, never prompted, until the
+ * user grants tabGroups. When the permissions API is absent (test/edge runtimes)
+ * fall back to whether the namespaces are exposed at all.
+ */
+async function hasTabGroupsPermission(): Promise<boolean> {
+  if (typeof chrome.permissions?.contains === 'function') {
+    try {
+      return await chrome.permissions.contains({ permissions: ['tabGroups'] })
+    } catch {
+      return false
+    }
+  }
+  return typeof chrome.tabs?.group === 'function' && typeof chrome.tabGroups?.update === 'function'
+}
+
 async function createTerminalWorkspaceGroup(tabId: number): Promise<number | null> {
+  if (!(await hasTabGroupsPermission())) return null
   if (!chrome.tabs.group || !chrome.tabGroups?.update) return null
   try {
     const groupId = await chrome.tabs.group({ tabIds: [tabId] })
@@ -262,6 +284,9 @@ export async function setTrackedTab(tab: Pick<chrome.tabs.Tab, 'id' | 'url' | 't
     [StorageKey.TRACKED_TAB_URL]: tab.url ?? '',
     [StorageKey.TRACKED_TAB_TITLE]: tab.title ?? ''
   })
+  // The side panel is only meaningful on the tracked tab; everywhere else it
+  // renders empty. Follow the tracked tab so it is offered exactly there.
+  await syncTerminalPanelAvailability(tab.id)
 }
 
 /**
@@ -269,6 +294,8 @@ export async function setTrackedTab(tab: Pick<chrome.tabs.Tab, 'id' | 'url' | 't
  */
 export function clearTrackedTab(): void {
   removeLocals(TRACKED_TAB_STORAGE_KEYS)
+  // Nothing is tracked, so no tab should offer the panel.
+  void syncTerminalPanelAvailability(undefined)
 }
 
 export async function resolveTerminalWorkspaceTarget(requestTabId?: number): Promise<TerminalWorkspaceTarget | null> {

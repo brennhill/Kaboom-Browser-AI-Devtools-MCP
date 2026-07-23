@@ -41,10 +41,13 @@ func HandleTelemetry(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 
 // NormalizeTelemetryMode validates and normalizes a telemetry mode string.
 // Returns the canonical mode and true, or empty string and false for invalid values.
+// The returned mode is always the trimmed value that was validated, so a padded
+// input like "  off  " is stored as "off" and compares equal to the canonical mode.
 func NormalizeTelemetryMode(input string) (string, bool) {
-	switch strings.TrimSpace(input) {
+	mode := strings.TrimSpace(input)
+	switch mode {
 	case "off", "auto", "full":
-		return input, true
+		return mode, true
 	default:
 		return "", false
 	}

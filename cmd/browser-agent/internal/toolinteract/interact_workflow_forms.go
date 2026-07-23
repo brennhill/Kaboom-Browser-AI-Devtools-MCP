@@ -37,9 +37,17 @@ func (h *InteractActionHandler) HandleFillFormAndSubmit(req JSONRPCRequest, args
 	trace := make([]WorkflowStep, 0, len(params.Fields)+1)
 	workflowStart := time.Now()
 
-	trace, errResp := h.fillWorkflowFields(req, "fill_form_and_submit", params.Fields, params.TabID, trace, workflowStart)
+	trace, errResp := h.fillWorkflowFields(req, "fill_form_and_submit", params.Fields, params.TabID, params.TimeoutMs, trace, workflowStart)
 	if errResp != nil {
 		return *errResp
+	}
+
+	// The submit click is part of the same budget: never submit a form the
+	// workflow no longer has time to finish.
+	if _, ok := remainingNavigateAndDocumentTimeoutMs(workflowStart, params.TimeoutMs); !ok {
+		trace = append(trace, fillWorkflowTimeoutStep("click_submit"))
+		return workflowResult(req, "fill_form_and_submit", trace,
+			fillWorkflowTimeoutExceeded(req, "click_submit"), workflowStart)
 	}
 
 	clickArgs := map[string]any{
@@ -86,7 +94,7 @@ func (h *InteractActionHandler) HandleFillForm(req JSONRPCRequest, args json.Raw
 	trace := make([]WorkflowStep, 0, len(params.Fields))
 	workflowStart := time.Now()
 
-	trace, errResp := h.fillWorkflowFields(req, "fill_form", params.Fields, params.TabID, trace, workflowStart)
+	trace, errResp := h.fillWorkflowFields(req, "fill_form", params.Fields, params.TabID, params.TimeoutMs, trace, workflowStart)
 	if errResp != nil {
 		return *errResp
 	}
@@ -98,12 +106,41 @@ func (h *InteractActionHandler) HandleFillForm(req JSONRPCRequest, args json.Raw
 	return workflowResult(req, "fill_form", trace, lastResp, workflowStart)
 }
 
+// fillWorkflowTimeoutExceeded reports an exhausted fill_form* timeout_ms budget,
+// naming the step the workflow was about to run.
+func fillWorkflowTimeoutExceeded(req JSONRPCRequest, step string) JSONRPCResponse {
+	return fail(req, ErrExtTimeout,
+		fmt.Sprintf("timeout_ms exhausted before %s step", step),
+		"Increase timeout_ms, or split the form into smaller fill_form calls.",
+		withParam("timeout_ms"),
+	)
+}
+
+// fillWorkflowTimeoutStep is the trace entry recorded for the step that the
+// exhausted budget prevented from running.
+func fillWorkflowTimeoutStep(step string) WorkflowStep {
+	return WorkflowStep{
+		Action: step,
+		Status: "error",
+		Detail: "timeout_ms budget exhausted",
+	}
+}
+
 // fillWorkflowFields executes all field entry steps for fill_form* workflows.
-func (h *InteractActionHandler) fillWorkflowFields(req JSONRPCRequest, workflowName string, fields []FormField, tabID int, trace []WorkflowStep, workflowStart time.Time) ([]WorkflowStep, *JSONRPCResponse) {
+// timeoutMs bounds the whole workflow: the same total-budget rule the navigate
+// workflows apply (remainingNavigateAndDocumentTimeoutMs).
+func (h *InteractActionHandler) fillWorkflowFields(req JSONRPCRequest, workflowName string, fields []FormField, tabID, timeoutMs int, trace []WorkflowStep, workflowStart time.Time) ([]WorkflowStep, *JSONRPCResponse) {
 	for i, field := range fields {
+		stepName := fmt.Sprintf("type[%d]", i)
+		if _, ok := remainingNavigateAndDocumentTimeoutMs(workflowStart, timeoutMs); !ok {
+			trace = append(trace, fillWorkflowTimeoutStep(stepName))
+			resp := workflowResult(req, workflowName, trace, fillWorkflowTimeoutExceeded(req, stepName), workflowStart)
+			return trace, &resp
+		}
+
 		if field.Selector == "" && field.Index == nil {
 			trace = append(trace, WorkflowStep{
-				Action: fmt.Sprintf("type[%d]", i),
+				Action: stepName,
 				Status: "error",
 				Detail: "Missing selector and index",
 			})

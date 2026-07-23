@@ -331,16 +331,20 @@ func TestTutorialSnippets_RequiredFields(t *testing.T) {
 
 func TestNormalizeTelemetryMode(t *testing.T) {
 	tests := []struct {
-		input   string
-		want    string
-		wantOK  bool
+		input  string
+		want   string
+		wantOK bool
 	}{
 		{"off", "off", true},
 		{"auto", "auto", true},
 		{"full", "full", true},
 		{"invalid", "", false},
 		{"", "", false},
-		{"  off  ", "  off  ", true}, // validates after trim, returns original
+		{"  off  ", "off", true},   // trims before validating AND before returning
+		{"\tfull\n", "full", true}, // any surrounding whitespace, not just spaces
+		{"  invalid  ", "", false}, // trimming must not make an invalid mode valid
+		{"of f", "", false},        // interior whitespace is still invalid
+		{"   ", "", false},         // whitespace-only trims to empty, which is invalid
 	}
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {

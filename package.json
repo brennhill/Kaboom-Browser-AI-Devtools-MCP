@@ -40,11 +40,13 @@
     "generate:openapi-types": "openapi-typescript cmd/browser-agent/openapi.json -o src/generated/openapi-types.ts",
     "check:openapi-types-drift": "node scripts/check-openapi-types-drift.js",
     "check:openapi-url-drift": "node scripts/check-openapi-url-drift.js",
+    "check:gesture-safety": "node scripts/check-gesture-safety.mjs",
     "test:openapi-url-drift": "node --test scripts/check-openapi-url-drift.test.mjs",
+    "test:gesture-safety": "node --test scripts/check-gesture-safety.test.mjs",
     "test:ext": "JS_TEST_SHARDS=4 JS_TEST_TIMEOUT=60000 JS_TEST_CONCURRENCY=1 ./scripts/test-js-sharded.sh",
     "test:go": "make test",
     "test": "npm run test:go && npm run test:ext",
-    "check": "npm run lint && npm run typecheck && npm run format"
+    "check": "npm run lint && npm run typecheck && npm run check:gesture-safety && npm run format"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

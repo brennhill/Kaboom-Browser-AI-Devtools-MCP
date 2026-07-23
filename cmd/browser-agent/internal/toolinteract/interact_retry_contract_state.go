@@ -6,6 +6,7 @@ package toolinteract
 
 import (
 	"encoding/json"
+	"sort"
 	"strings"
 	"time"
 )
@@ -72,20 +73,37 @@ func (h *InteractActionHandler) storeRetryState(correlationID string, state *com
 	h.pruneRetryStatesLocked(2048)
 }
 
+// pruneRetryStatesLocked evicts oldest-first until the map holds at most
+// maxEntries. The caller must hold retryContractMu.
+//
+// In production this runs on every storeRetryState, so the map only ever exceeds
+// the cap by a single entry and one eviction would suffice — the previous
+// implementation relied on that and removed exactly one. It now trims all the way
+// to the target so it stays correct as a general-purpose helper (e.g. if the cap
+// is lowered, or it is ever called after a batch insert).
 func (h *InteractActionHandler) pruneRetryStatesLocked(maxEntries int) {
-	if len(h.retryByCommand) <= maxEntries {
+	excess := len(h.retryByCommand) - maxEntries
+	if excess <= 0 {
 		return
 	}
 
-	var oldestKey string
-	var oldestTime time.Time
-	for key, st := range h.retryByCommand {
-		if oldestKey == "" || st.CreatedAt.Before(oldestTime) {
-			oldestKey = key
-			oldestTime = st.CreatedAt
-		}
+	type keyedEntry struct {
+		key     string
+		created time.Time
 	}
-	if oldestKey != "" {
-		delete(h.retryByCommand, oldestKey)
+	entries := make([]keyedEntry, 0, len(h.retryByCommand))
+	for key, st := range h.retryByCommand {
+		entries = append(entries, keyedEntry{key: key, created: st.CreatedAt})
+	}
+	// Oldest first; break CreatedAt ties by key so eviction is deterministic
+	// regardless of map iteration order.
+	sort.Slice(entries, func(i, j int) bool {
+		if entries[i].created.Equal(entries[j].created) {
+			return entries[i].key < entries[j].key
+		}
+		return entries[i].created.Before(entries[j].created)
+	})
+	for i := 0; i < excess; i++ {
+		delete(h.retryByCommand, entries[i].key)
 	}
 }

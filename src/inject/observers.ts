@@ -13,6 +13,7 @@ import { installPerfObservers } from '../lib/perf-snapshot.js'
 import { installWebSocketCapture, uninstallWebSocketCapture } from '../lib/websocket.js'
 import { wrapFetchWithBodies, wrapXHRWithBodies, unwrapXHR, adoptEarlyBodies, sanitizeHeaders } from '../lib/network.js'
 import { installConsoleCapture, uninstallConsoleCapture } from '../lib/console.js'
+import { safeAssignGlobal } from '../lib/safe-global-patch.js'
 import { installExceptionCapture, uninstallExceptionCapture } from '../lib/exceptions.js'
 import {
   installActionCapture,
@@ -142,7 +143,11 @@ export function installFetchCapture(): void {
   // This is necessary because the DOM lib defines fetch with multiple overloads
   // that TypeScript cannot reconcile with our simpler function signature
   const wrappedWithBodies = wrapFetchWithBodies(originalFetch as unknown as Parameters<typeof wrapFetchWithBodies>[0])
-  window.fetch = wrapFetch(wrappedWithBodies as unknown as typeof window.fetch)
+  // Guarded: pages that define fetch as read-only made this throw, and the
+  // uncaught error aborted the rest of observer installation.
+  if (!safeAssignGlobal(window, 'fetch', wrapFetch(wrappedWithBodies as unknown as typeof window.fetch))) {
+    console.warn('[KaBOOM!] fetch is read-only on this page; network capture via fetch is unavailable.')
+  }
 }
 
 /**
@@ -164,7 +169,7 @@ export function uninstallXHRCapture(): void {
  */
 export function uninstallFetchCapture(): void {
   if (originalFetch) {
-    window.fetch = originalFetch
+    safeAssignGlobal(window, 'fetch', originalFetch)
     originalFetch = null
   }
 }

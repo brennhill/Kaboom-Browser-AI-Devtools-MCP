@@ -4,7 +4,7 @@ feature_id: feature-interact-explore
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-22
+last_reviewed: 2026-07-23
 code_paths:
   - cmd/browser-agent/tools_interact_command_builder.go
   - cmd/browser-agent/tools_interact_action_handler.go
@@ -17,17 +17,18 @@ code_paths:
   - cmd/browser-agent/tools_interact_browser_util_impl.go
   - cmd/browser-agent/tools_interact_response_helpers.go
   - cmd/browser-agent/tools_interact_draw.go
-  - cmd/browser-agent/tools_interact_dom.go
+  - cmd/browser-agent/internal/toolinteract/interact_dom.go
+  - cmd/browser-agent/internal/toolinteract/interact_dom_validation.go
   - cmd/browser-agent/tools_interact_elements.go
   - cmd/browser-agent/tools_interact_storage.go
   - cmd/browser-agent/tools_interact_upload.go
   - cmd/browser-agent/tools_interact_evidence.go
   - cmd/browser-agent/tools_interact_retry_contract_strategy.go
-  - cmd/browser-agent/tools_interact_retry_contract_state.go
+  - cmd/browser-agent/internal/toolinteract/interact_retry_contract_state.go
   - cmd/browser-agent/tools_interact_retry_contract_response.go
   - cmd/browser-agent/tools_interact_workflow_navigate.go
   - cmd/browser-agent/tools_interact_workflow_navigate_document.go
-  - cmd/browser-agent/tools_interact_workflow_forms.go
+  - cmd/browser-agent/internal/toolinteract/interact_workflow_forms.go
   - cmd/browser-agent/tools_interact_workflow_a11y_sarif.go
   - cmd/browser-agent/tools_interact_workflow_types.go
   - internal/tools/interact/workflow.go
@@ -70,6 +71,8 @@ test_paths:
   - cmd/browser-agent/tools_interact_navigate_document_test.go
   - cmd/browser-agent/tools_schema_parity_test.go
   - cmd/browser-agent/tools_interact_retry_contract_test.go
+  - cmd/browser-agent/internal/toolinteract/interact_workflow_coverage_test.go
+  - cmd/browser-agent/internal/toolinteract/interact_state_coverage_test.go
   - cmd/browser-agent/tools_interact_evidence_test.go
   - cmd/browser-agent/tools_interact_state_test.go
   - extension/background/__tests__/dom-dispatch-structured.test.js
