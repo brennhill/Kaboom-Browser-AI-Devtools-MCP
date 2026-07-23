@@ -42,6 +42,13 @@ test('extension-zip target archives full extension tree', () => {
 })
 
 test('extension-zip artifact includes module graph entrypoints', (t) => {
+  // The target shells out to `zip`, which some minimal container images (e.g.
+  // node:20) omit. Skip rather than fail, mirroring the `unzip` guard below.
+  if (spawnSync('zip', ['-v'], { encoding: 'utf8' }).error?.code === 'ENOENT') {
+    t.skip('zip binary not available in this environment')
+    return
+  }
+
   const makeResult = spawnSync('make', ['extension-zip'], {
     cwd: REPO_ROOT,
     encoding: 'utf8'
