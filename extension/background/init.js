@@ -9,6 +9,7 @@
  */
 import { getTrackedTabLostToastDetail, KABOOM_LOG_PREFIX } from '../lib/brand.js';
 import { syncTerminalPanelAvailability } from './side-panel-availability.js';
+import { watchTerminalPanelState } from './terminal-panel.js';
 import { debugLog, DebugCategory, setDebugMode, resetSyncClientConnection, sharedServerCircuitBreaker, logBatcher, wsBatcher, enhancedActionBatcher, networkBodyBatcher, perfBatcher, handleLogMessage, handleClearLogs, checkConnectionAndUpdate, exportDebugLog, clearDebugLog, DEFAULT_SERVER_URL } from './index.js';
 import { getServerUrl, getConnectionStatus, isDebugMode, isScreenshotOnError, getCurrentLogLevel, isAiWebPilotEnabled, isAiWebPilotCacheInitialized, getPilotInitCallback, markInitComplete, setServerUrl, setCurrentLogLevel, setScreenshotOnError, setAiWebPilotEnabledCache, setAiWebPilotCacheInitialized, setPilotInitCallback } from './state.js';
 import { isSourceMapEnabled, setSourceMapEnabled, canTakeScreenshot, recordScreenshot, clearSourceMapCache, getContextWarning, getMemoryPressureState, isNetworkBodyCaptureDisabled, flushErrorGroups, cleanupStaleErrorGroups, clearScreenshotTimestamps } from './state-manager.js';
@@ -202,6 +203,10 @@ async function initializeExtensionAsync() {
         });
         // ============= STEP 9.6: Install draw mode keyboard shortcut listener =============
         installDrawModeCommandListener((msg) => console.log(`${KABOOM_LOG_PREFIX} ${msg}`));
+        // ============= STEP 9.6a: Mirror panel open/closed state =============
+        // Must be cached synchronously: the context-menu toggle cannot await before
+        // chrome.sidePanel.open() without losing the user gesture.
+        watchTerminalPanelState();
         // ============= STEP 9.6a: Scope the side panel to the tracked tab =============
         // Without this the manifest default makes the panel available on every tab,
         // where it renders empty.

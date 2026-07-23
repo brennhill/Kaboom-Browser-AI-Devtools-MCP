@@ -115,6 +115,6 @@ All three call the single shared opener `openTerminalSidePanel()` in `src/backgr
 - Keep all terminal shells, including legacy/fallback widget chrome, branded as Kaboom.
 - If an action-builder surface is added later, keep it separate from the terminal core instead of reintroducing mixed responsibilities into the terminal host.
 - Preserve the direct user-gesture side-panel open path from launcher click through background handler.
-- Never await before `chrome.sidePanel.open()` in any entry point.
+- Never await before `chrome.sidePanel.open()` in any entry point. This includes *deciding* whether to open: the context-menu toggle reads a cached synchronous flag (`isTerminalPanelOpenSync`), because awaiting a storage read to choose open-vs-close burned the gesture and made "Open Kaboom Terminal" do nothing.
 - Keep at least one gesture-native entry point (keyboard command or context menu). Removing them leaves only the restricted-gesture message path, which Chrome may refuse.
 - Never swallow a side-panel open failure; a silent failure is indistinguishable from a dead button.

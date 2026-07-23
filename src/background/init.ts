@@ -11,6 +11,7 @@
 
 import { getTrackedTabLostToastDetail, KABOOM_LOG_PREFIX } from '../lib/brand.js'
 import { syncTerminalPanelAvailability } from './side-panel-availability.js'
+import { watchTerminalPanelState } from './terminal-panel.js'
 import {
   debugLog,
   DebugCategory,
@@ -295,6 +296,11 @@ async function initializeExtensionAsync(): Promise<void> {
 
     // ============= STEP 9.6: Install draw mode keyboard shortcut listener =============
     installDrawModeCommandListener((msg) => console.log(`${KABOOM_LOG_PREFIX} ${msg}`))
+
+    // ============= STEP 9.6a: Mirror panel open/closed state =============
+    // Must be cached synchronously: the context-menu toggle cannot await before
+    // chrome.sidePanel.open() without losing the user gesture.
+    watchTerminalPanelState()
 
     // ============= STEP 9.6a: Scope the side panel to the tracked tab =============
     // Without this the manifest default makes the panel available on every tab,

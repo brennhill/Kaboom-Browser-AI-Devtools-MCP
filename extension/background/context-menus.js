@@ -9,7 +9,7 @@ import { errorMessage } from '../lib/error-utils.js';
 import { toggleDrawModeForTab } from './draw-mode-toggle.js';
 import { setTrackedTab, clearTrackedTab } from './tab-state.js';
 import { trackUIFeature } from './ui-usage-tracker.js';
-import { toggleTerminalSidePanel, isTerminalPanelOpen } from './terminal-panel.js';
+import { toggleTerminalSidePanel, isTerminalPanelOpenSync } from './terminal-panel.js';
 // =============================================================================
 // CONTEXT MENU IDS
 // =============================================================================
@@ -57,7 +57,7 @@ async function refreshDynamicContextMenuTitles(tabId, recordingHandlers, actionR
         updateContextMenuTitle(MENU_ID_ACTION_RECORD, actionRecordingHandlers.isRecording() ? ACTION_RECORD_STOP_TITLE : ACTION_RECORD_START_TITLE),
         // Reads "Close" while the panel is up, so the menu is a toggle rather than
         // an Open that does nothing when it is already open.
-        isTerminalPanelOpen().then((open) => updateContextMenuTitle(MENU_ID_TERMINAL, open ? TERMINAL_CLOSE_TITLE : TERMINAL_OPEN_TITLE))
+        updateContextMenuTitle(MENU_ID_TERMINAL, isTerminalPanelOpenSync() ? TERMINAL_CLOSE_TITLE : TERMINAL_OPEN_TITLE)
     ]);
     const contextMenusWithRefresh = chrome.contextMenus;
     contextMenusWithRefresh.refresh?.();
@@ -95,10 +95,19 @@ export function installContextMenus(recordingHandlers, actionRecordingHandlers, 
         // and contextMenus.onClicked is one of the few entry points Chrome grants a
         // full (unrestricted) gesture. Awaiting anything first would expire it.
         if (info.menuItemId === MENU_ID_TERMINAL) {
-            const result = await toggleTerminalSidePanel(tab.id);
-            if (!result.success && logFn) {
-                logFn(`Toggle terminal via context menu failed: ${result.error ?? 'unknown error'}`);
-            }
+            // Call synchronously — awaiting ANYTHING first (even a storage read) burns
+            // the user gesture and Chrome then refuses sidePanel.open(). This is what
+            // made "Open Kaboom Terminal" do nothing.
+            toggleTerminalSidePanel(tab.id)
+                .then((result) => {
+                if (!result.success && logFn) {
+                    logFn(`Toggle terminal via context menu failed: ${result.error ?? 'unknown error'}`);
+                }
+            })
+                .catch((err) => {
+                if (logFn)
+                    logFn(`Toggle terminal via context menu error: ${errorMessage(err)}`);
+            });
             return;
         }
         if (info.menuItemId === MENU_ID_CONTROL) {

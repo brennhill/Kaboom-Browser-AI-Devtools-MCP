@@ -9,14 +9,41 @@ import { resolveTerminalWorkspaceTarget } from './tab-state.js';
 export { syncTerminalPanelAvailability } from './side-panel-availability.js';
 import { StorageKey } from '../lib/constants.js';
 import { getSession } from '../lib/storage-utils.js';
-/** True when the terminal side panel is currently showing. */
-export async function isTerminalPanelOpen() {
-    try {
-        return (await getSession(StorageKey.TERMINAL_UI_STATE)) === 'open';
-    }
-    catch {
-        return false;
-    }
+/**
+ * Whether the panel is showing, read synchronously.
+ *
+ * Synchronous on purpose. The toggle has to decide open-vs-close *before*
+ * calling chrome.sidePanel.open(), and any await first expires the user gesture
+ * — which is exactly what broke "Open Kaboom Terminal": the storage read cost
+ * the gesture and Chrome refused the open. The service worker mirrors
+ * TERMINAL_UI_STATE into this flag instead.
+ */
+let panelOpenCache = false;
+export function isTerminalPanelOpenSync() {
+    return panelOpenCache;
+}
+/**
+ * Hydrate the cache and keep it current. Call once during background init.
+ *
+ * A service worker restart resets the flag, so it is re-read on boot; that read
+ * happens long before any click, so it never sits inside a gesture.
+ */
+export function watchTerminalPanelState() {
+    if (typeof chrome === 'undefined' || !chrome.storage?.session)
+        return;
+    void getSession(StorageKey.TERMINAL_UI_STATE)
+        .then((value) => {
+        panelOpenCache = value === 'open';
+    })
+        .catch(() => undefined);
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+        if (areaName !== 'session')
+            return;
+        const change = changes[StorageKey.TERMINAL_UI_STATE];
+        if (!change)
+            return;
+        panelOpenCache = change.newValue === 'open';
+    });
 }
 /**
  * Ask the panel to close itself.
@@ -38,13 +65,12 @@ export async function closeTerminalSidePanel() {
  * Toggle the panel. One helper so the context menu, keyboard command, and any
  * future entry point cannot drift apart (repo rule 19).
  *
- * GESTURE NOTE: the open path must stay await-free before sidePanel.open(), so
- * callers that already know they want "open" should call openTerminalSidePanel
- * directly. Toggling costs one storage read, which is fine for the context menu
- * because Chrome grants it a full (unrestricted) gesture.
+ * NOT async on the open path: it reads the cached state synchronously and calls
+ * openTerminalSidePanel() with zero awaits before chrome.sidePanel.open(), so
+ * the caller's user gesture survives.
  */
-export async function toggleTerminalSidePanel(tabId) {
-    if (await isTerminalPanelOpen()) {
+export function toggleTerminalSidePanel(tabId) {
+    if (isTerminalPanelOpenSync()) {
         return closeTerminalSidePanel();
     }
     return openTerminalSidePanel(tabId);

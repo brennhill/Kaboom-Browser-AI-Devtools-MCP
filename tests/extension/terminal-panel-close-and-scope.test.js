@@ -88,9 +88,11 @@ describe('closing the terminal panel', () => {
     installChrome({ withClose: true })
     globalThis.chrome.storage.session.get = mock.fn(async () => ({ kaboom_terminal_ui_state: 'open' }))
 
-    const { toggleTerminalSidePanel } = await import(
+    const { toggleTerminalSidePanel, watchTerminalPanelState } = await import(
       `../../extension/background/terminal-panel.js?v=${++importCounter}`
     )
+    watchTerminalPanelState()
+    await new Promise((r) => setTimeout(r, 0)) // let the cache hydrate
     const result = await toggleTerminalSidePanel(7)
 
     assert.strictEqual(result.success, true)
@@ -105,12 +107,32 @@ describe('closing the terminal panel', () => {
     installChrome({ withClose: true })
     globalThis.chrome.storage.session.get = mock.fn(async () => ({ kaboom_terminal_ui_state: 'closed' }))
 
-    const { toggleTerminalSidePanel } = await import(
+    const { toggleTerminalSidePanel, watchTerminalPanelState } = await import(
       `../../extension/background/terminal-panel.js?v=${++importCounter}`
     )
+    watchTerminalPanelState()
+    await new Promise((r) => setTimeout(r, 0))
     const result = await toggleTerminalSidePanel(7)
 
     assert.strictEqual(result.success, true)
     assert.strictEqual(globalThis.chrome.sidePanel.open.mock.calls.length, 1)
+  })
+
+  test('the open path calls sidePanel.open with no await first, preserving the gesture', async () => {
+    // The regression: toggle awaited a storage read to decide open-vs-close, and
+    // that await expired the user gesture, so Chrome refused the open and
+    // "Open Kaboom Terminal" silently did nothing.
+    mock.reset()
+    installChrome({ withClose: true })
+    const { toggleTerminalSidePanel } = await import(
+      `../../extension/background/terminal-panel.js?v=${++importCounter}`
+    )
+
+    toggleTerminalSidePanel(7) // deliberately not awaited
+
+    assert.strictEqual(
+      globalThis.chrome.sidePanel.open.mock.calls.length, 1,
+      'open() must be reached synchronously, before any microtask boundary'
+    )
   })
 })

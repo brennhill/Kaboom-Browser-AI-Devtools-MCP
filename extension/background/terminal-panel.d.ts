@@ -6,8 +6,14 @@
  * Docs: docs/features/feature/terminal/index.md
  */
 export { syncTerminalPanelAvailability } from './side-panel-availability.js';
-/** True when the terminal side panel is currently showing. */
-export declare function isTerminalPanelOpen(): Promise<boolean>;
+export declare function isTerminalPanelOpenSync(): boolean;
+/**
+ * Hydrate the cache and keep it current. Call once during background init.
+ *
+ * A service worker restart resets the flag, so it is re-read on boot; that read
+ * happens long before any click, so it never sits inside a gesture.
+ */
+export declare function watchTerminalPanelState(): void;
 /**
  * Ask the panel to close itself.
  *
@@ -23,10 +29,9 @@ export declare function closeTerminalSidePanel(): Promise<{
  * Toggle the panel. One helper so the context menu, keyboard command, and any
  * future entry point cannot drift apart (repo rule 19).
  *
- * GESTURE NOTE: the open path must stay await-free before sidePanel.open(), so
- * callers that already know they want "open" should call openTerminalSidePanel
- * directly. Toggling costs one storage read, which is fine for the context menu
- * because Chrome grants it a full (unrestricted) gesture.
+ * NOT async on the open path: it reads the cached state synchronously and calls
+ * openTerminalSidePanel() with zero awaits before chrome.sidePanel.open(), so
+ * the caller's user gesture survives.
  */
 export declare function toggleTerminalSidePanel(tabId: number | undefined): Promise<{
     success: boolean;
