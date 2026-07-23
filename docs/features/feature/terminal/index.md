@@ -22,6 +22,7 @@ code_paths:
   - src/content/ui/tracked-hover-launcher.ts
   - src/background/message-handlers.ts
   - src/background/terminal-panel.ts
+  - src/background/tab-state.ts
   - src/background/side-panel-availability.ts
   - src/background/keyboard-shortcuts.ts
   - src/background/context-menus.ts
@@ -46,6 +47,7 @@ test_paths:
   - tests/extension/terminal-root-folder.test.js
   - cmd/browser-agent/internal/terminal/dirs_test.go
   - tests/extension/terminal-panel-close-and-scope.test.js
+  - tests/extension/chrome-platform-limits.test.js
 last_verified_version: 0.8.5
 last_verified_date: 2026-07-23
 ---
