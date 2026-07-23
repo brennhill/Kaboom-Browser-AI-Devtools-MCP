@@ -83,11 +83,65 @@ jobs:
           echo "✅ Tag matches VERSION file: $TAG_VERSION"
           echo "version=$TAG_VERSION" >> $GITHUB_OUTPUT
 
+  # Step 2b: The browser extension and the published npm module are shipped as
+  # separate artifacts, so they can drift independently — a user can end up running
+  # an extension whose version differs from the daemon/module it talks to. Refuse to
+  # release unless the extension manifest, the npm module, and the tag all agree.
+  verify-extension-module-version:
+    name: Verify Extension Matches Module Version
+    runs-on: ubuntu-latest
+    needs: [check-tag-on-stable, verify-tag]
+    if: needs.check-tag-on-stable.outputs.should_release == 'true'
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Extension version must match module version and tag
+        run: |
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+          FILE_VERSION=$(cat VERSION)
+          EXT_VERSION=$(node -p "require('./extension/manifest.json').version")
+          EXT_PKG_VERSION=$(node -p "require('./extension/package.json').version")
+          MODULE_VERSION=$(node -p "require('./package.json').version")
+          NPM_VERSION=$(node -p "require('./npm/kaboom-agentic-browser/package.json').version")
+
+          echo "tag                         : $TAG_VERSION"
+          echo "VERSION                     : $FILE_VERSION"
+          echo "extension/manifest.json     : $EXT_VERSION"
+          echo "extension/package.json      : $EXT_PKG_VERSION"
+          echo "package.json (module)       : $MODULE_VERSION"
+          echo "npm/kaboom-agentic-browser  : $NPM_VERSION"
+
+          FAIL=0
+          for pair in \
+            "extension/manifest.json:$EXT_VERSION" \
+            "extension/package.json:$EXT_PKG_VERSION" \
+            "package.json:$MODULE_VERSION" \
+            "npm/kaboom-agentic-browser/package.json:$NPM_VERSION" \
+            "VERSION:$FILE_VERSION"; do
+            name="${pair%%:*}"; value="${pair##*:}"
+            if [ "$value" != "$TAG_VERSION" ]; then
+              echo "❌ $name is $value but the release tag is $TAG_VERSION"
+              FAIL=1
+            fi
+          done
+
+          if [ "$FAIL" -ne 0 ]; then
+            echo ""
+            echo "❌ RELEASE BLOCKED: extension and module versions do not match."
+            echo "Shipping these would leave users on an extension version that"
+            echo "disagrees with the daemon/module it connects to."
+            echo ""
+            echo "To fix: node scripts/bump-version.js $TAG_VERSION && git commit && retag"
+            exit 1
+          fi
+
+          echo "✅ Extension, module, and tag all at $TAG_VERSION"
+
   # Step 3: Build and publish
   build-and-release:
     name: Build & Publish
     runs-on: ubuntu-latest
-    needs: verify-tag
+    needs: [verify-tag, verify-extension-module-version]
     if: needs.verify-tag.result == 'success'
     steps:
       - name: Checkout code
@@ -189,6 +243,32 @@ jobs:
 
       - name: Build extension zip
         run: make extension-zip
+
+      # Source-level checks can pass while the packaged artifact is stale (e.g. a
+      # zip built from an extension/ tree compiled before the bump). Verify the
+      # manifest inside the artifact users actually install.
+      - name: Verify packaged extension manifest matches release version
+        run: |
+          VERSION=$(cat VERSION)
+          ZIP="dist/kaboom-extension-v${VERSION}.zip"
+
+          if [ ! -f "$ZIP" ]; then
+            echo "❌ RELEASE BLOCKED: expected extension artifact $ZIP was not produced"
+            ls -la dist/ || true
+            exit 1
+          fi
+
+          PACKAGED_VERSION=$(unzip -p "$ZIP" manifest.json | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).version")
+          echo "packaged manifest version: $PACKAGED_VERSION"
+          echo "release version         : $VERSION"
+
+          if [ "$PACKAGED_VERSION" != "$VERSION" ]; then
+            echo "❌ RELEASE BLOCKED: packaged extension is $PACKAGED_VERSION but the release is $VERSION"
+            echo "The zip was built from a stale extension/ tree — run 'make compile-ts' after bumping."
+            exit 1
+          fi
+
+          echo "✅ Packaged extension manifest matches release version: $VERSION"
 
       - name: Generate checksums manifest
         run: make checksums

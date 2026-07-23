@@ -7,7 +7,7 @@ relates-to: [../README.md, feature/]
 last-verified: 2026-04-19
 canonical: true
 last_reviewed: 2026-04-19
-last_verified_version: 0.8.2
+last_verified_version: 0.8.5
 last_verified_date: 2026-04-19
 ---
 
@@ -64,9 +64,9 @@ last_verified_date: 2026-04-19
 | Redaction Patterns | shipped | configure | (data masking) | 5.0.0 | [feature/redaction-patterns](feature/redaction-patterns/) |
 | Reproduction Enhancements | shipped | generate | reproduction, test_from_context, test_heal | 5.0.0 | [feature/reproduction-enhancements](feature/reproduction-enhancements/) |
 | SARIF Export | shipped | generate | sarif | 5.0.0 | [feature/sarif-export](feature/sarif-export/) |
-| Security Hardening | shipped | analyze, generate, configure | security_audit, third_party_audit, csp, sri, security_mode | 0.8.2 | [feature/security-hardening](feature/security-hardening/) |
+| Security Hardening | shipped | analyze, generate, configure | security_audit, third_party_audit, csp, sri, security_mode | 0.8.5 | [feature/security-hardening](feature/security-hardening/) |
 | Self-Healing Tests | proposed | observe, generate | (test auto-repair) | — | [feature/self-healing-tests](feature/self-healing-tests/) |
-| Self Update | shipped | — (extension UI) | popup "Update now" | 0.8.2 | [feature/self-update](feature/self-update/) |
+| Self Update | shipped | — (extension UI) | popup "Update now" | 0.8.5 | [feature/self-update](feature/self-update/) |
 | Self-Testing | in-progress | interact, generate | execute_js, test_from_context | — | [feature/self-testing](feature/self-testing/) |
 | SPA Route Measurement | in-progress | analyze, observe | performance, timeline | — | [feature/spa-route-measurement](feature/spa-route-measurement/) |
 | Temporal Graph | shipped | analyze | history | 5.0.0 | [feature/temporal-graph](feature/temporal-graph/) |

@@ -1,6 +1,6 @@
 {
   "name": "browser-agent-extension",
-  "version": "0.8.2",
+  "version": "0.8.5",
   "private": true,
   "type": "module",
   "description": "Browser extension for Dev Console",

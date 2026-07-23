@@ -1,6 +1,6 @@
 {
   "name": "@anthropic/kaboom-playwright",
-  "version": "0.8.2",
+  "version": "0.8.5",
   "description": "Playwright fixture for Kaboom CI browser observability",
   "main": "index.js",
   "types": "index.d.ts",
@@ -11,7 +11,7 @@
     "@playwright/test": ">=1.40.0"
   },
   "dependencies": {
-    "@anthropic/kaboom-ci": "0.8.2"
+    "@anthropic/kaboom-ci": "0.8.5"
   },
   "files": [
     "index.js",

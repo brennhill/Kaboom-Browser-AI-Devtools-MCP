@@ -103,6 +103,22 @@ function findVersionReferences(oldVersion, searchDir = ROOT) {
   return files
 }
 
+// API spec files whose single `info.version` field is set outright rather than
+// search-and-replaced, so a drifted spec is repaired by the next bump instead of
+// being stuck forever (see Step 5a).
+const SPEC_VERSION_FILES = [
+  {
+    file: 'cmd/browser-agent/openapi.json',
+    pattern: /("info"\s*:\s*\{[^}]*?"version"\s*:\s*")[0-9]+\.[0-9]+\.[0-9]+(")/s,
+    replace: (v) => `$1${v}$2`
+  },
+  {
+    file: 'docs/core/async-command-api.yaml',
+    pattern: /(^info:\s*(?:\n[ \t]+.*)*?\n[ \t]+version:[ \t]*)[0-9]+\.[0-9]+\.[0-9]+/m,
+    replace: (v) => `$1${v}`
+  }
+]
+
 // Key files that MUST be updated (validation purposes)
 const CRITICAL_FILES = [
   'VERSION',
@@ -314,6 +330,25 @@ async function main() {
     }
   }
 
+  // Step 5a: Force-set the API spec versions.
+  //
+  // The generic pass above rewrites `currentVersion` -> `newVersion`. If a spec
+  // file ever drifts (these sat at 0.7.12 for many releases), that search never
+  // matches and *every* later bump silently fails to repair it — the file just
+  // keeps drifting while CRITICAL_FILES validation fails at the end. Setting the
+  // single `info.version` field outright makes the bump self-healing.
+  for (const spec of SPEC_VERSION_FILES) {
+    const specPath = path.join(ROOT, spec.file)
+    if (!fs.existsSync(specPath)) continue
+    const before = fs.readFileSync(specPath, 'utf8')
+    const after = before.replace(spec.pattern, spec.replace(newVersion))
+    if (after !== before) {
+      fs.writeFileSync(specPath, after, 'utf8')
+      if (!updated.includes(spec.file)) updated.push(spec.file)
+      log('green', '✓', `${spec.file} (info.version set to ${newVersion})`)
+    }
+  }
+
   log('cyan', '=>', '')
   log('green', '✓', `Updated ${updated.length} files`)
 
@@ -324,32 +359,34 @@ async function main() {
     process.exit(1)
   }
 
-  // Step 5b: Normalize the main PyPI pyproject structure defensively.
-  const normalizeResult = normalizeMainPyprojectFile(
-    path.join(ROOT, 'pypi', 'kaboom-agentic-browser', 'pyproject.toml'),
-    {
-      write: true
-    }
-  )
-  if (normalizeResult.changed) {
-    const normalizedRelPath = path.relative(ROOT, normalizeResult.filePath)
-    if (!updated.includes(normalizedRelPath)) {
-      updated.push(normalizedRelPath)
-    }
-    log('yellow', '⚠', `Normalized ${normalizedRelPath} (moved dependencies under [project])`)
-  }
-
+  // Step 5b: Normalize + validate the main PyPI pyproject, when PyPI packaging is
+  // still part of the repo. The pypi/ tree has been removed, and unconditionally
+  // reading it made this script crash *after* it had already rewritten 38 files —
+  // leaving the tree half-bumped. Skip cleanly when it is absent.
   const mainPyprojectPath = path.join(ROOT, 'pypi', 'kaboom-agentic-browser', 'pyproject.toml')
-  const mainPyprojectContent = fs.readFileSync(mainPyprojectPath, 'utf8')
-  const metadataValidation = validateMainPyprojectContent(mainPyprojectContent, { expectedVersion: newVersion })
-  if (!metadataValidation.valid) {
-    log('red', 'ERROR:', 'PyPI main package metadata validation failed:')
-    for (const validationError of metadataValidation.errors) {
-      log('red', '  -', validationError)
+  if (fs.existsSync(mainPyprojectPath)) {
+    const normalizeResult = normalizeMainPyprojectFile(mainPyprojectPath, { write: true })
+    if (normalizeResult.changed) {
+      const normalizedRelPath = path.relative(ROOT, normalizeResult.filePath)
+      if (!updated.includes(normalizedRelPath)) {
+        updated.push(normalizedRelPath)
+      }
+      log('yellow', '⚠', `Normalized ${normalizedRelPath} (moved dependencies under [project])`)
     }
-    process.exit(1)
+
+    const mainPyprojectContent = fs.readFileSync(mainPyprojectPath, 'utf8')
+    const metadataValidation = validateMainPyprojectContent(mainPyprojectContent, { expectedVersion: newVersion })
+    if (!metadataValidation.valid) {
+      log('red', 'ERROR:', 'PyPI main package metadata validation failed:')
+      for (const validationError of metadataValidation.errors) {
+        log('red', '  -', validationError)
+      }
+      process.exit(1)
+    }
+    log('green', '✓', 'PyPI main package metadata validated')
+  } else {
+    log('cyan', '=>', 'PyPI packaging not present — skipping pyproject normalization/validation')
   }
-  log('green', '✓', 'PyPI main package metadata validated')
 
   // Step 6: Validate package.json dependencies
   log('cyan', '=>', '')

@@ -87,25 +87,32 @@ describe('popup update button', () => {
 
   test('hides banner when available_version is missing', async () => {
     const { renderUpdateAvailableBanner } = await importUpdateButton()
-    await renderUpdateAvailableBanner({ version: '0.8.2' })
+    await renderUpdateAvailableBanner({ version: '0.8.5' })
     assert.strictEqual(document.getElementById('update-available').style.display, 'none')
   })
 
   test('hides banner when available_version equals current version', async () => {
     const { renderUpdateAvailableBanner } = await importUpdateButton()
-    await renderUpdateAvailableBanner({ version: '0.8.2', available_version: '0.8.2' })
+    await renderUpdateAvailableBanner({ version: '0.8.5', available_version: '0.8.5' })
     assert.strictEqual(document.getElementById('update-available').style.display, 'none')
   })
 
   test('shows banner with version delta in detail when update is available', async () => {
+    // Derive the expectation from the same literals fed to the renderer. Hardcoding
+    // the version twice (once as input, once as an escaped regex) desyncs on every
+    // release bump, because the bump can rewrite the plain string but not `0\.8\.2`.
+    const installed = '0.8.5'
+    const available = '0.9.0'
+    const escape = (v) => v.replace(/\./g, '\\.')
+
     const { renderUpdateAvailableBanner } = await importUpdateButton()
-    await renderUpdateAvailableBanner({ version: '0.8.2', available_version: '0.9.0' })
+    await renderUpdateAvailableBanner({ version: installed, available_version: available })
 
     const container = document.getElementById('update-available')
     assert.strictEqual(container.style.display, '')
 
     const detail = document.getElementById('update-available-detail')
-    assert.match(detail.textContent, /v0\.8\.2.*v0\.9\.0/)
+    assert.match(detail.textContent, new RegExp(`v${escape(installed)}.*v${escape(available)}`))
 
     // Idle state visible; running/reload/error hidden
     assert.strictEqual(document.getElementById('update-action-idle').style.display, '')
@@ -132,7 +139,7 @@ describe('popup update button', () => {
     })
 
     const { renderUpdateAvailableBanner } = await importUpdateButton()
-    await renderUpdateAvailableBanner({ version: '0.8.2', available_version: '0.9.0' })
+    await renderUpdateAvailableBanner({ version: '0.8.5', available_version: '0.9.0' })
 
     const btn = document.getElementById('update-now-btn')
     const clickHandler = btn.addEventListener.mock.calls.find((c) => c.arguments[0] === 'click').arguments[1]
@@ -174,7 +181,7 @@ describe('popup update button', () => {
     })
 
     const { renderUpdateAvailableBanner } = await importUpdateButton()
-    await renderUpdateAvailableBanner({ version: '0.8.2', available_version: '0.9.0' })
+    await renderUpdateAvailableBanner({ version: '0.8.5', available_version: '0.9.0' })
 
     const btn = document.getElementById('update-now-btn')
     const clickHandler = btn.addEventListener.mock.calls.find((c) => c.arguments[0] === 'click').arguments[1]
@@ -199,7 +206,7 @@ describe('popup update button', () => {
     })
 
     const { renderUpdateAvailableBanner } = await importUpdateButton()
-    await renderUpdateAvailableBanner({ version: '0.8.2', available_version: '0.9.0' })
+    await renderUpdateAvailableBanner({ version: '0.8.5', available_version: '0.9.0' })
 
     const btn = document.getElementById('update-now-btn')
     const clickHandler = btn.addEventListener.mock.calls.find((c) => c.arguments[0] === 'click').arguments[1]
@@ -214,7 +221,7 @@ describe('popup update button', () => {
 
   test('reload button opens chrome extensions page with runtime.id', async () => {
     const { renderUpdateAvailableBanner } = await importUpdateButton()
-    await renderUpdateAvailableBanner({ version: '0.8.2', available_version: '0.9.0' })
+    await renderUpdateAvailableBanner({ version: '0.8.5', available_version: '0.9.0' })
 
     const reloadBtn = document.getElementById('update-reload-ext-btn')
     const clickHandler = reloadBtn.addEventListener.mock.calls.find((c) => c.arguments[0] === 'click').arguments[1]
@@ -239,13 +246,13 @@ describe('popup update button', () => {
       if (String(url).endsWith('/health')) {
         // Keep returning the old version so the poll loop keeps ticking and
         // we can observe the elapsed-seconds progress text advancing.
-        return Promise.resolve(jsonResponse({ version: '0.8.2' }))
+        return Promise.resolve(jsonResponse({ version: '0.8.5' }))
       }
       return Promise.reject(new Error(`unexpected fetch: ${url}`))
     })
 
     const { renderUpdateAvailableBanner } = await importUpdateButton()
-    await renderUpdateAvailableBanner({ version: '0.8.2', available_version: '0.9.0' })
+    await renderUpdateAvailableBanner({ version: '0.8.5', available_version: '0.9.0' })
 
     const btn = document.getElementById('update-now-btn')
     const clickHandler = btn.addEventListener.mock.calls.find((c) => c.arguments[0] === 'click').arguments[1]
@@ -275,8 +282,8 @@ describe('popup update button', () => {
 
   test('handlers wire once per render — repeat render does not double-attach', async () => {
     const { renderUpdateAvailableBanner } = await importUpdateButton()
-    await renderUpdateAvailableBanner({ version: '0.8.2', available_version: '0.9.0' })
-    await renderUpdateAvailableBanner({ version: '0.8.2', available_version: '0.9.0' })
+    await renderUpdateAvailableBanner({ version: '0.8.5', available_version: '0.9.0' })
+    await renderUpdateAvailableBanner({ version: '0.8.5', available_version: '0.9.0' })
 
     const btn = document.getElementById('update-now-btn')
     const clickCount = btn.addEventListener.mock.calls.filter((c) => c.arguments[0] === 'click').length
@@ -295,7 +302,7 @@ describe('popup update button', () => {
     })
 
     const { renderUpdateAvailableBanner } = await importUpdateButton()
-    await renderUpdateAvailableBanner({ version: '0.8.2', available_version: '0.9.0' })
+    await renderUpdateAvailableBanner({ version: '0.8.5', available_version: '0.9.0' })
 
     const btn = document.getElementById('update-now-btn')
     const clickHandler = btn.addEventListener.mock.calls.find((c) => c.arguments[0] === 'click').arguments[1]
@@ -343,7 +350,7 @@ describe('popup update button', () => {
     })
 
     const { renderUpdateAvailableBanner } = await importUpdateButton()
-    await renderUpdateAvailableBanner({ version: '0.8.2', available_version: '0.9.0' })
+    await renderUpdateAvailableBanner({ version: '0.8.5', available_version: '0.9.0' })
 
     const btn = document.getElementById('update-now-btn')
     const clickHandler = btn.addEventListener.mock.calls.find((c) => c.arguments[0] === 'click').arguments[1]

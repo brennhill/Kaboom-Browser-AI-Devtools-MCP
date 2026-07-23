@@ -55,7 +55,7 @@ Every event must include the shared envelope.
 | `iid` | string | yes | `e41ce1f047c8` | Stable install ID |
 | `sid` | string | yes | `8510f6ce8ca743c2` | Session ID, 16-character hex |
 | `ts` | string | yes | `2026-04-15T08:10:00Z` | ISO-8601 UTC timestamp |
-| `v` | string | yes | `0.8.2` | App version |
+| `v` | string | yes | `0.8.5` | App version |
 | `os` | string | yes | `darwin-arm64` | OS/platform identifier |
 | `channel` | string | yes | `stable` | Release channel |
 | `llm` | string | no | `claude-code` | MCP client name from initialize handshake |
@@ -208,7 +208,7 @@ Example:
   "iid": "e41ce1f047c8",
   "sid": "8510f6ce8ca743c2",
   "ts": "2026-04-15T08:10:01Z",
-  "v": "0.8.2",
+  "v": "0.8.5",
   "os": "darwin-arm64",
   "channel": "stable",
   "family": "observe",
@@ -238,7 +238,7 @@ Example:
   "iid": "e41ce1f047c8",
   "sid": "8510f6ce8ca743c2",
   "ts": "2026-04-15T08:10:01Z",
-  "v": "0.8.2",
+  "v": "0.8.5",
   "os": "darwin-arm64",
   "channel": "stable",
   "family": "observe",
@@ -263,7 +263,7 @@ Example:
   "iid": "e41ce1f047c8",
   "sid": "8510f6ce8ca743c2",
   "ts": "2026-04-15T08:10:00Z",
-  "v": "0.8.2",
+  "v": "0.8.5",
   "os": "darwin-arm64",
   "channel": "stable",
   "reason": "first_activity"
@@ -289,7 +289,7 @@ Example:
   "iid": "e41ce1f047c8",
   "sid": "8510f6ce8ca743c2",
   "ts": "2026-04-15T08:35:00Z",
-  "v": "0.8.2",
+  "v": "0.8.5",
   "os": "darwin-arm64",
   "channel": "stable",
   "reason": "shutdown",
@@ -338,7 +338,7 @@ Example:
   "iid": "e41ce1f047c8",
   "sid": "8510f6ce8ca743c2",
   "ts": "2026-04-15T08:35:00Z",
-  "v": "0.8.2",
+  "v": "0.8.5",
   "os": "darwin-arm64",
   "channel": "stable",
   "window_m": 5,
@@ -402,7 +402,7 @@ Example:
   "iid": "e41ce1f047c8",
   "sid": "8510f6ce8ca743c2",
   "ts": "2026-04-15T08:11:00Z",
-  "v": "0.8.2",
+  "v": "0.8.5",
   "os": "darwin-arm64",
   "channel": "stable",
   "error_kind": "internal",
@@ -554,7 +554,7 @@ Minimal `tool_call`:
   "iid": "e41ce1f047c8",
   "sid": "8510f6ce8ca743c2",
   "ts": "2026-04-15T08:10:01Z",
-  "v": "0.8.2",
+  "v": "0.8.5",
   "os": "darwin-arm64",
   "channel": "stable",
   "family": "observe",
@@ -572,7 +572,7 @@ Minimal `usage_summary`:
   "iid": "e41ce1f047c8",
   "sid": "8510f6ce8ca743c2",
   "ts": "2026-04-15T08:35:00Z",
-  "v": "0.8.2",
+  "v": "0.8.5",
   "os": "darwin-arm64",
   "channel": "stable",
   "window_m": 5,

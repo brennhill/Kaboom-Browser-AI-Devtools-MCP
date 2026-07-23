@@ -17,7 +17,7 @@ test_paths:
   - cmd/browser-agent/tools_generate_csp_test.go
   - cmd/browser-agent/tools_configure_security_mode_test.go
   - internal/security/sri_test.go
-last_verified_version: 0.8.2
+last_verified_version: 0.8.5
 last_verified_date: 2026-04-19
 ---
 
