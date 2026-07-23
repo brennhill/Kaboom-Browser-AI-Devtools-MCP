@@ -17,6 +17,9 @@ code_paths:
   - src/content/ui/terminal-widget-types.ts
   - src/content/ui/tracked-hover-launcher.ts
   - src/background/message-handlers.ts
+  - src/background/terminal-panel.ts
+  - src/background/keyboard-shortcuts.ts
+  - src/background/context-menus.ts
   - src/types/runtime-messages.ts
   - src/sidepanel.ts
   - internal/pty/manager.go
@@ -32,6 +35,8 @@ test_paths:
   - internal/pty/session_test.go
   - cmd/browser-agent/internal/terminal/sandbox_error_test.go
   - tests/extension/terminal-session-start-errors.test.js
+  - tests/extension/terminal-panel-gesture-entrypoints.test.js
+  - tests/extension/terminal-panel-open-failure.test.js
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-28
 ---
@@ -47,6 +52,8 @@ last_verified_date: 2026-03-28
 - One Kaboom work context maps to one Chrome tab group; the panel opens synchronously on the requesting tab (to keep the user gesture valid), then the tracked tab is grouped into the workspace and the panel path is refined best-effort
 - Three UI states: **open**, **minimized**, **closed** - all persisted across page refreshes
 - Hover launcher keeps the page overlay for quick actions, but the terminal button now opens the side panel on the active workspace tab and hides the launcher only while the panel is open
+- Three entry points open the panel, all through the shared `openTerminalSidePanel()` in `src/background/terminal-panel.ts`: the keyboard command `open_terminal_panel` (**Alt+Shift+T**), the page context menu item **Open Kaboom Terminal**, and the in-page launcher button. The first two get a full user gesture from Chrome and are dependable; the launcher button goes through `runtime.onMessage`, which Chrome grants only a *restricted* gesture that `sidePanel.open()` rejects on some Chrome/Brave builds ([crbug 355266358](https://issues.chromium.org/issues/355266358)) — so it is best-effort, and its failure toast names the other two
+- A failed open is always reported (console error + toast). It used to be swallowed by `catch { return false }`, which made the Terminal button look simply dead
 - Background must call `chrome.sidePanel.open()` synchronously in the forwarded click gesture path; **nothing may be awaited before it** — neither `resolveTerminalWorkspaceTarget()` nor `setOptions()`, or Chrome expires the gesture and refuses to open the panel (regression: the panel loaded nothing). Workspace grouping + `setOptions()` run afterward as best-effort refinement.
 - Header redraw control (`↻`) reloads iframe graphics without killing the PTY session
 - Header power control (`⏻`) closes the side panel and ends the PTY session

@@ -11,7 +11,7 @@ import { getTrackedTabLostToastDetail, KABOOM_LOG_PREFIX } from '../lib/brand.js
 import { debugLog, DebugCategory, setDebugMode, resetSyncClientConnection, sharedServerCircuitBreaker, logBatcher, wsBatcher, enhancedActionBatcher, networkBodyBatcher, perfBatcher, handleLogMessage, handleClearLogs, checkConnectionAndUpdate, exportDebugLog, clearDebugLog, DEFAULT_SERVER_URL } from './index.js';
 import { getServerUrl, getConnectionStatus, isDebugMode, isScreenshotOnError, getCurrentLogLevel, isAiWebPilotEnabled, isAiWebPilotCacheInitialized, getPilotInitCallback, markInitComplete, setServerUrl, setCurrentLogLevel, setScreenshotOnError, setAiWebPilotEnabledCache, setAiWebPilotCacheInitialized, setPilotInitCallback } from './state.js';
 import { isSourceMapEnabled, setSourceMapEnabled, canTakeScreenshot, recordScreenshot, clearSourceMapCache, getContextWarning, getMemoryPressureState, isNetworkBodyCaptureDisabled, flushErrorGroups, cleanupStaleErrorGroups, clearScreenshotTimestamps } from './state-manager.js';
-import { loadDebugModeState, installStartupListener, loadAiWebPilotState, loadSavedSettings, installStorageChangeListener, setupChromeAlarms, installAlarmListener, installTabRemovedListener, installTabUpdatedListener, installDrawModeCommandListener, installRecordingShortcutCommandListener, installScreenRecordingCommandListener, installContextMenus, saveSetting, forwardToAllContentScripts, getActiveTab, sendTabToast, handleTrackedTabClosed, handleTrackedTabUrlChange } from './event-listeners.js';
+import { loadDebugModeState, installStartupListener, loadAiWebPilotState, loadSavedSettings, installStorageChangeListener, setupChromeAlarms, installAlarmListener, installTabRemovedListener, installTabUpdatedListener, installDrawModeCommandListener, installRecordingShortcutCommandListener, installTerminalPanelCommandListener, installScreenRecordingCommandListener, installContextMenus, saveSetting, forwardToAllContentScripts, getActiveTab, sendTabToast, handleTrackedTabClosed, handleTrackedTabUrlChange } from './event-listeners.js';
 import { installPushCommandListener, installChatCommandListener } from './push-handler.js';
 import { isRecording, startRecording, stopRecording } from './recording.js';
 import { installMessageListener, broadcastTrackingState } from './message-handlers.js';
@@ -201,6 +201,10 @@ async function initializeExtensionAsync() {
         });
         // ============= STEP 9.6: Install draw mode keyboard shortcut listener =============
         installDrawModeCommandListener((msg) => console.log(`${KABOOM_LOG_PREFIX} ${msg}`));
+        // ============= STEP 9.6b: Install terminal side panel shortcut =============
+        // Gesture-native path to the side panel; the in-page launcher button cannot be
+        // relied on alone (Chrome grants message listeners only a restricted gesture).
+        installTerminalPanelCommandListener((msg) => console.log(`${KABOOM_LOG_PREFIX} ${msg}`));
         // ============= STEP 9.7: Install push keyboard shortcut listeners =============
         installPushCommandListener((msg) => console.log(`${KABOOM_LOG_PREFIX} ${msg}`));
         installChatCommandListener((msg) => console.log(`${KABOOM_LOG_PREFIX} ${msg}`));

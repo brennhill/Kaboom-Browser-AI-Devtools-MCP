@@ -20,12 +20,27 @@ The terminal server isolation flow remains a separate concern and is still docum
 
 - `src/content/ui/tracked-hover-launcher.ts`
 - `src/content/ui/terminal-panel-bridge.ts`
+- `src/background/terminal-panel.ts`
+- `src/background/keyboard-shortcuts.ts`
+- `src/background/context-menus.ts`
 - `src/background/message-handlers.ts`
 - `src/background/tab-state.ts`
 - `src/types/runtime-messages.ts`
 - `src/sidepanel.ts`
 - `extension/manifest.json`
 - `extension/sidepanel.html`
+
+## The Gesture Constraint
+
+`chrome.sidePanel.open()` only runs while a user gesture is active, and **not every gesture counts**. Chrome hands `runtime.onMessage` listeners a *restricted* gesture, which `sidePanel.open()` rejects on some Chrome/Brave builds ([crbug 355266358](https://issues.chromium.org/issues/355266358)). The in-page launcher button reaches the background through exactly that path, so it can never be the only way in.
+
+| Entry point | Gesture | Tab available synchronously | Dependable |
+|-------------|---------|------------------------------|------------|
+| `commands.onCommand` (Alt+Shift+T) | full | yes — listener arg | yes |
+| `contextMenus.onClicked` ("Open Kaboom Terminal") | full | yes — listener arg | yes |
+| `runtime.onMessage` (launcher button, popup) | restricted | only if the sender supplies `tab_id` | no — best effort |
+
+All three call the single shared opener `openTerminalSidePanel()` in `src/background/terminal-panel.ts` (repo rule 19). It has one hard rule: **nothing may be awaited before `chrome.sidePanel.open()`**, because any await expires the gesture. Workspace grouping and `setOptions()` run afterward as best-effort refinement; the panel loads fine without them via the manifest `default_path` plus the active-tab fallback in `sidepanel.ts`.
 
 ## Primary Flow
 
@@ -45,7 +60,7 @@ The terminal server isolation flow remains a separate concern and is still docum
 
 ## Error and Recovery Paths
 
-- If `chrome.sidePanel.open()` fails, the launcher button should surface the error locally and keep the launcher intact.
+- If `chrome.sidePanel.open()` fails, `openTerminalPanel()` reports the Chrome error verbatim via `console.error` **and** an error toast naming the two gesture-native fallbacks. It previously did `catch { return false }`, so a rejected open produced no console output, no toast, and no captured error — the Terminal button was indistinguishable from a dead element and there was nothing to diagnose from.
 - If the stored workspace group is stale, the background worker should rebuild it around the tracked tab before opening the panel.
 - If the terminal daemon is unavailable, the side panel should show an inline unavailable state rather than mounting a page overlay, and startup guidance should point at `npx kaboom-agentic-browser`.
 - If the persisted session token is stale, the side panel clears persisted state and starts a fresh PTY session.
@@ -57,7 +72,8 @@ The terminal server isolation flow remains a separate concern and is still docum
 - `TERMINAL_UI_STATE` is the source of truth for panel visibility.
 - Workspace ownership is stored separately from raw tracked-tab state so the panel can stay group-scoped while the rest of the extension is still tracked-tab scoped.
 - `terminal_panel_write` is the runtime message that carries terminal text from the page launcher path to the panel host.
-- `open_terminal_panel` is the runtime message that asks the background worker to open the side panel.
+- `open_terminal_panel` is both the runtime message (launcher/popup) and the manifest command id (keyboard). The message accepts an optional `tab_id`, which extension pages must supply because `sender.tab` is undefined there.
+- `TERMINAL_PANEL_SHORTCUT` in `src/lib/constants.ts` is shared so the content-script toast and the manifest command cannot drift.
 - The launcher must not mount the terminal iframe in page context.
 
 ## Code Paths
@@ -65,8 +81,12 @@ The terminal server isolation flow remains a separate concern and is still docum
 - `src/lib/brand.ts`
 - `src/content/ui/tracked-hover-launcher.ts`
 - `src/content/ui/terminal-panel-bridge.ts`
+- `src/background/terminal-panel.ts`
+- `src/background/keyboard-shortcuts.ts`
+- `src/background/context-menus.ts`
 - `src/background/message-handlers.ts`
 - `src/background/tab-state.ts`
+- `src/lib/constants.ts`
 - `src/sidepanel.ts`
 - `src/content/ui/terminal-widget-session.ts`
 - `src/content/ui/terminal-widget-types.ts`
@@ -82,6 +102,8 @@ The terminal server isolation flow remains a separate concern and is still docum
 - `tests/extension/terminal-widget-session-branding.test.js`
 - `tests/extension/terminal-widget-ui-branding.test.js`
 - `tests/extension/message-handlers.test.js`
+- `tests/extension/terminal-panel-gesture-entrypoints.test.js`
+- `tests/extension/terminal-panel-open-failure.test.js`
 
 ## Edit Guardrails
 
@@ -92,3 +114,6 @@ The terminal server isolation flow remains a separate concern and is still docum
 - Keep all terminal shells, including legacy/fallback widget chrome, branded as Kaboom.
 - If an action-builder surface is added later, keep it separate from the terminal core instead of reintroducing mixed responsibilities into the terminal host.
 - Preserve the direct user-gesture side-panel open path from launcher click through background handler.
+- Never await before `chrome.sidePanel.open()` in any entry point.
+- Keep at least one gesture-native entry point (keyboard command or context menu). Removing them leaves only the restricted-gesture message path, which Chrome may refuse.
+- Never swallow a side-panel open failure; a silent failure is indistinguishable from a dead button.

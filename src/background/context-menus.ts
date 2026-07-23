@@ -11,12 +11,14 @@ import { errorMessage } from '../lib/error-utils.js'
 import { toggleDrawModeForTab } from './draw-mode-toggle.js'
 import { setTrackedTab, clearTrackedTab } from './tab-state.js'
 import { trackUIFeature } from './ui-usage-tracker.js'
+import { openTerminalSidePanel } from './terminal-panel.js'
 
 // =============================================================================
 // CONTEXT MENU IDS
 // =============================================================================
 
 const MENU_ID_CONTROL = 'kaboom-control-page'
+const MENU_ID_TERMINAL = 'kaboom-open-terminal'
 const MENU_ID_SCREENSHOT = 'kaboom-screenshot'
 const MENU_ID_ANNOTATE = 'kaboom-annotate-page'
 const MENU_ID_RECORD = 'kaboom-record-screen'
@@ -92,6 +94,7 @@ export function installContextMenus(
     chrome.contextMenus.create({ id: MENU_ID_ANNOTATE, title: ANNOTATE_START_TITLE, contexts: ctx })
     chrome.contextMenus.create({ id: MENU_ID_RECORD, title: RECORD_START_TITLE, contexts: ctx })
     chrome.contextMenus.create({ id: MENU_ID_ACTION_RECORD, title: ACTION_RECORD_START_TITLE, contexts: ctx })
+    chrome.contextMenus.create({ id: MENU_ID_TERMINAL, title: 'Open Kaboom Terminal', contexts: ctx })
   })
 
   const contextMenusWithShown = chrome.contextMenus as unknown as {
@@ -107,6 +110,17 @@ export function installContextMenus(
 
   chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     if (!tab?.id) return
+
+    // FIRST, before any await: chrome.sidePanel.open() needs a live user gesture,
+    // and contextMenus.onClicked is one of the few entry points Chrome grants a
+    // full (unrestricted) gesture. Awaiting anything first would expire it.
+    if (info.menuItemId === MENU_ID_TERMINAL) {
+      const result = await openTerminalSidePanel(tab.id)
+      if (!result.success && logFn) {
+        logFn(`Open terminal via context menu failed: ${result.error ?? 'unknown error'}`)
+      }
+      return
+    }
 
     if (info.menuItemId === MENU_ID_CONTROL) {
       try {
