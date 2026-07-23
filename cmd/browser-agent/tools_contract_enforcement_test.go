@@ -225,22 +225,32 @@ func TestContractEnforcement_UnknownParams_ProduceWarnings(t *testing.T) {
 				t.Fatalf("%s: failed to unmarshal: %v", tc.name, err)
 			}
 
-			// Skip error responses — they skip validation
-			if result.IsError {
-				t.Skipf("%s: returned error (expected for some tools without extension)", tc.name)
+			// An unknown parameter must be *reported*, either as a warning on a
+			// successful call or as an outright rejection. This used to
+			// t.Skip on any error response, which meant two things at once:
+			// generate's stricter behavior (it rejects rather than warns) was
+			// never verified at all, and any tool that regressed into always
+			// erroring would silently skip instead of failing — leaving
+			// `make verify-contract` green while checking nothing.
+			var body strings.Builder
+			for _, block := range result.Content {
+				body.WriteString(block.Text)
+			}
+			text := body.String()
+
+			if strings.Contains(text, "totally_fake_param_xyz") &&
+				(strings.Contains(text, "unknown parameter") || strings.Contains(text, "Remove unknown parameters")) {
+				return
 			}
 
-			// Look for warnings in content blocks
-			foundWarning := false
-			for _, block := range result.Content {
-				if strings.Contains(block.Text, "unknown parameter") && strings.Contains(block.Text, "totally_fake_param_xyz") {
-					foundWarning = true
-					break
-				}
+			// The extension gate fires before parameter validation, so with no
+			// extension connected some tools never get far enough to judge the
+			// parameter. That is the only acceptable reason not to report it.
+			if result.IsError && strings.Contains(text, "no_data") {
+				t.Skipf("%s: blocked by the extension gate before parameter validation: %.120s", tc.name, text)
 			}
-			if !foundWarning {
-				t.Errorf("%s: expected warning about unknown parameter 'totally_fake_param_xyz' in response content blocks", tc.name)
-			}
+
+			t.Errorf("%s: unknown parameter 'totally_fake_param_xyz' was neither warned about nor rejected: %.300s", tc.name, text)
 		})
 	}
 }

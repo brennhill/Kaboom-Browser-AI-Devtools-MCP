@@ -368,12 +368,3 @@ func TestObserveAudit_AllModes_NoPanic(t *testing.T) {
 		})
 	}
 }
-
-// TestObserveAudit_ModeCount documents coverage
-func TestObserveAudit_ModeCount(t *testing.T) {
-	t.Log("Observe audit covers 30 modes with:")
-	t.Log("  - 4 data flow tests (verify add data → observe returns it)")
-	t.Log("  - 5 empty state tests (verify empty returns empty, not error)")
-	t.Log("  - 3 error handling tests (verify structured errors)")
-	t.Log("  - 30 panic safety tests (verify no crashes)")
-}

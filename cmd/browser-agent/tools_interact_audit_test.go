@@ -559,14 +559,3 @@ func TestInteractAudit_AllActions_NoPanic(t *testing.T) {
 		})
 	}
 }
-
-// TestInteractAudit_ActionCount documents coverage
-func TestInteractAudit_ActionCount(t *testing.T) {
-	t.Log("Interact audit covers 11 actions with:")
-	t.Log("  - 5 data flow tests (verify state actions return expected data)")
-	t.Log("  - 5 pilot state tests (verify pilot-dependent actions check state)")
-	t.Log("  - 2 parameter validation tests (verify missing params return errors)")
-	t.Log("  - 3 error handling tests (verify structured errors)")
-	t.Log("  - 5 empty state tests (verify empty returns success, not error)")
-	t.Log("  - 11 panic safety tests (verify all actions don't panic)")
-}

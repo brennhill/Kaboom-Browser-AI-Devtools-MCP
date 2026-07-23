@@ -458,12 +458,3 @@ func TestGenerateAudit_AllFormats_NoPanic(t *testing.T) {
 		})
 	}
 }
-
-// TestGenerateAudit_FormatCount documents coverage
-func TestGenerateAudit_FormatCount(t *testing.T) {
-	t.Log("Generate audit covers 10 formats with:")
-	t.Log("  - 7 data flow tests (verify formats return expected data)")
-	t.Log("  - 3 error handling tests (verify structured errors)")
-	t.Log("  - 7 empty state tests (verify empty returns success, not error)")
-	t.Log("  - 10 panic safety tests (verify all formats don't panic)")
-}
