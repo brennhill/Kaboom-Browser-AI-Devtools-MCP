@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,6 +18,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testsync"
 )
 
 // contentLengthFrame wraps a JSON payload in Content-Length framing.
@@ -134,8 +136,15 @@ func TestStdioSilence_NormalConnection(t *testing.T) {
 		_ = cmd.Wait()
 	}()
 
-	// Wait for server to be ready
-	time.Sleep(500 * time.Millisecond)
+	// Wait for the server to actually bind rather than assuming 500ms is enough.
+	testsync.Eventually(t, testsync.DefaultTimeout, "the server to accept connections", func() bool {
+		conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", port), 200*time.Millisecond)
+		if err != nil {
+			return false
+		}
+		_ = conn.Close()
+		return true
+	})
 
 	// Send MCP initialize request (like real LLM would)
 	initRequest := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test-llm","version":"1.0"}}}`

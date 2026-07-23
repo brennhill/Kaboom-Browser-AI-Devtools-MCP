@@ -318,6 +318,8 @@ interface OpenPopupForRecordingMessage {
  */
 interface OpenTerminalPanelMessage {
   readonly type: 'open_terminal_panel'
+  /** Tab that should host the panel. Required from the popup (no sender.tab). */
+  readonly tab_id?: number
 }
 
 /**
@@ -326,13 +328,6 @@ interface OpenTerminalPanelMessage {
 export interface TerminalPanelWriteMessage {
   readonly type: 'terminal_panel_write'
   readonly text: string
-}
-
-/**
- * Content script requests the side panel terminal to open.
- */
-interface OpenTerminalPanelMessage {
-  readonly type: 'open_terminal_panel'
 }
 
 /**
@@ -342,14 +337,6 @@ interface OpenTerminalPanelMessage {
 export interface QaScanRequestedMessage {
   readonly type: 'qa_scan_requested'
   readonly page_url?: string
-}
-
-/**
- * Runtime message forwarded to the side panel terminal host to write text.
- */
-export interface TerminalPanelWriteMessage {
-  readonly type: 'terminal_panel_write'
-  readonly text: string
 }
 
 /**

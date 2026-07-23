@@ -3,11 +3,11 @@ feature: security-hardening
 status: shipped
 tool: analyze, generate, configure
 mode: security_audit, third_party_audit, csp, sri, security_mode
-version: 0.8.2
+version: 0.8.5
 doc_type: product-spec
 feature_id: feature-security-hardening
 last_reviewed: 2026-04-19
-last_verified_version: 0.8.2
+last_verified_version: 0.8.5
 last_verified_date: 2026-04-19
 ---
 

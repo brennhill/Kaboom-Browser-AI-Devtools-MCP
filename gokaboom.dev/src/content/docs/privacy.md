@@ -87,7 +87,7 @@ One `usage_summary` event looks like:
   "iid": "f7a2c1e9b4d8",
   "sid": "8510f6ce8ca743c2",
   "ts": "2026-04-19T08:10:00Z",
-  "v": "0.8.2",
+  "v": "0.8.5",
   "os": "darwin-arm64",
   "channel": "stable",
   "window_m": 5,

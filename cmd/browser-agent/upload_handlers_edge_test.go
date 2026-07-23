@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/uploadhandler"
@@ -318,14 +319,30 @@ func TestUploadHandler_ProgressTier_ZeroBytes(t *testing.T) {
 // ============================================
 
 func TestUploadHandler_FormSubmit_RelativePathRejected(t *testing.T) {
+	// Local server, not example.com: ValidateFormActionURL resolves the host for
+	// its SSRF check with a 5s timeout, so an external URL made this test depend
+	// on real DNS. The recorder proves the relative path is rejected before any
+	// request rather than relying on the test never reaching the network.
+	uploadhandler.SetSkipSSRFCheck(true)
+	t.Cleanup(func() { uploadhandler.SetSkipSSRFCheck(false) })
+
+	var contacted atomic.Bool
+	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		contacted.Store(true)
+	}))
+	defer srv.Close()
+
 	resp := handleFormSubmitInternal(FormSubmitRequest{
-		FormAction:    "https://example.com/upload",
+		FormAction:    srv.URL + "/upload",
 		FileInputName: "file",
 		FilePath:      "../../../etc/passwd",
 	}, testUploadSecurity(t))
 
 	if resp.Success {
 		t.Error("form submit with relative path should fail")
+	}
+	if contacted.Load() {
+		t.Error("form submit must reject the relative path before making any request")
 	}
 	if !strings.Contains(resp.Error, "absolute path") {
 		t.Errorf("error should mention absolute path, got: %s", resp.Error)

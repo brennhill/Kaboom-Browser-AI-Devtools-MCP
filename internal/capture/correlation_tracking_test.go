@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testsync"
 )
 
 // TestCorrelationIDTracking verifies command lifecycle tracking
@@ -83,15 +85,10 @@ func TestCorrelationIDExpiration(t *testing.T) {
 		t.Errorf("Expected status 'pending', got '%s'", cmd.Status)
 	}
 
-	// Wait for expiration with polling to avoid long fixed sleep.
-	deadline := time.Now().Add(800 * time.Millisecond)
-	for time.Now().Before(deadline) {
+	testsync.EventuallyNoFail(testsync.DefaultTimeout, func() bool {
 		cmd, found = capture.GetCommandResult(correlationID)
-		if found && cmd.Status == "expired" {
-			break
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
+		return found && cmd.Status == "expired"
+	})
 
 	// Command should be "expired" and moved to failedCommands
 	cmd, found = capture.GetCommandResult(correlationID)
@@ -145,13 +142,9 @@ func TestCorrelationIDListCommands(t *testing.T) {
 		CorrelationID: "expired_1",
 	}
 	capture.CreatePendingQueryWithTimeout(expiredQuery, 120*time.Millisecond, "")
-	deadline := time.Now().Add(800 * time.Millisecond)
-	for time.Now().Before(deadline) {
-		if len(capture.GetFailedCommands()) == 1 {
-			break
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
+	testsync.EventuallyNoFail(testsync.DefaultTimeout, func() bool {
+		return len(capture.GetFailedCommands()) == 1
+	})
 
 	// Check counts
 	pending := capture.GetPendingCommands()

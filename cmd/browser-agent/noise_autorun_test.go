@@ -8,6 +8,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testsync"
 )
 
 // ============================================
@@ -24,32 +26,60 @@ func TestNoiseAutoRunner_ScheduleRunsOnce(t *testing.T) {
 
 	runner.schedule()
 
-	// Wait for debounce + execution
-	time.Sleep(150 * time.Millisecond)
-
-	if got := runCount.Load(); got != 1 {
-		t.Errorf("run count = %d, want 1", got)
-	}
+	// Poll rather than sleep: a single schedule can only ever produce one run
+	// (nothing re-schedules), so waiting for the count to reach 1 is exact.
+	testsync.Eventually(t, testsync.DefaultTimeout, "the scheduled run to complete", func() bool {
+		return runCount.Load() == 1
+	})
 }
 
+// Exercises the debounce decision directly against the pure planRunSchedule seam
+// with a controlled clock. The previous sleep-based version raced: schedule() runs
+// the first invocation on a goroutine, and under load that goroutine could finish
+// between the rapid calls, clearing `pending` and letting a second run be queued.
 func TestNoiseAutoRunner_DebouncesRapidSchedules(t *testing.T) {
 	t.Parallel()
 
-	var runCount atomic.Int32
-	runner := newNoiseAutoRunner(func() {
-		runCount.Add(1)
-	}, 100*time.Millisecond)
+	const interval = 100 * time.Millisecond
+	runner := newNoiseAutoRunner(func() {}, interval)
+	now := time.Now()
 
-	// Schedule 5 times rapidly — should only run once within debounce window
-	for i := 0; i < 5; i++ {
-		runner.schedule()
+	// First schedule: lastRun is zero, so the interval has "elapsed" — run now
+	// and mark the runner pending.
+	immediate, _, shouldRun := runner.planRunSchedule(now)
+	if !shouldRun || !immediate {
+		t.Fatalf("first schedule: immediate=%v shouldRun=%v, want true/true", immediate, shouldRun)
 	}
 
-	// Wait for debounce + execution
-	time.Sleep(250 * time.Millisecond)
+	// Rapid follow-up schedules coalesce into the pending run — no extra work.
+	for i := 2; i <= 5; i++ {
+		if _, _, again := runner.planRunSchedule(now.Add(time.Duration(i) * time.Millisecond)); again {
+			t.Fatalf("schedule #%d arrived while a run was pending: want coalesced (shouldRun=false)", i)
+		}
+	}
+}
 
-	if got := runCount.Load(); got != 1 {
-		t.Errorf("run count after rapid schedules = %d, want 1", got)
+// After a run completes, a schedule inside the interval must be deferred by the
+// remaining time rather than firing immediately.
+func TestNoiseAutoRunner_DefersScheduleWithinInterval(t *testing.T) {
+	t.Parallel()
+
+	const interval = 100 * time.Millisecond
+	runner := newNoiseAutoRunner(func() {}, interval)
+
+	start := time.Now()
+	runner.lastRun = start
+	runner.pending = false
+
+	immediate, delay, shouldRun := runner.planRunSchedule(start.Add(30 * time.Millisecond))
+	if !shouldRun {
+		t.Fatal("schedule after a completed run should be accepted")
+	}
+	if immediate {
+		t.Error("schedule inside the debounce interval should not run immediately")
+	}
+	if want := 70 * time.Millisecond; delay != want {
+		t.Errorf("delay = %v, want %v (remaining debounce)", delay, want)
 	}
 }
 
@@ -61,15 +91,18 @@ func TestNoiseAutoRunner_RunsAgainAfterDebounceExpires(t *testing.T) {
 		runCount.Add(1)
 	}, 50*time.Millisecond)
 
+	// Waiting on the count instead of the clock also makes the test *more*
+	// correct: the second schedule must land after the first run has completed,
+	// or it coalesces into the pending run and the count never reaches 2.
 	runner.schedule()
-	time.Sleep(100 * time.Millisecond) // Wait for first run
+	testsync.Eventually(t, testsync.DefaultTimeout, "the first run to complete", func() bool {
+		return runCount.Load() == 1
+	})
 
 	runner.schedule()
-	time.Sleep(100 * time.Millisecond) // Wait for second run
-
-	if got := runCount.Load(); got != 2 {
-		t.Errorf("run count = %d, want 2 (one per debounce window)", got)
-	}
+	testsync.Eventually(t, testsync.DefaultTimeout, "the second debounce window to fire", func() bool {
+		return runCount.Load() == 2
+	})
 }
 
 func TestNoiseAutoRunner_NilFuncDoesNotPanic(t *testing.T) {

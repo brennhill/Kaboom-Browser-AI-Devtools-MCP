@@ -237,7 +237,7 @@ export function applyCaptureOverrides(overrides: Record<string, string>): void {
 /**
  * Reset pilot cache for testing
  */
-function _resetPilotCacheForTesting(value?: boolean): void {
+export function _resetPilotCacheForTesting(value?: boolean): void {
   state.aiWebPilotEnabledCache = value !== undefined ? value : false
 }
 

@@ -1261,17 +1261,17 @@ The daemon will restart automatically.`;
   }
 
   // extension/lib/request-audit.js
-  async function requestAudit(pageUrl) {
+  async function requestAudit(pageUrl, tabId) {
     try {
-      await chrome.runtime.sendMessage({ type: "open_terminal_panel" });
+      await chrome.runtime.sendMessage({ type: "open_terminal_panel", tab_id: tabId });
     } catch {
     }
     await chrome.runtime.sendMessage({ type: "qa_scan_requested", page_url: pageUrl });
   }
 
   // extension/popup/tab-tracking-api.js
-  async function handleAuditClick(pageUrl) {
-    await requestAudit(pageUrl);
+  async function handleAuditClick(pageUrl, tabId) {
+    await requestAudit(pageUrl, tabId);
   }
   async function handleStopTracking(showIdleState2) {
     const prevTabId = await getLocal(StorageKey.TRACKED_TAB_ID);
@@ -1359,6 +1359,7 @@ The daemon will restart automatically.`;
 
   // extension/popup/tab-tracking.js
   var trackingStorageSyncInstalled = false;
+  var AUDIT_BUTTON_ENABLED = false;
   function hideAuditButton() {
     const trackingBarAudit = document.getElementById("tracking-bar-audit");
     if (!trackingBarAudit)
@@ -1406,11 +1407,16 @@ The daemon will restart automatically.`;
       };
     }
     if (trackingBarAudit) {
-      trackingBarAudit.textContent = "Audit";
-      trackingBarAudit.style.display = "inline-flex";
-      trackingBarAudit.onclick = () => {
-        void handleAuditClick(trackedTabUrl);
-      };
+      if (AUDIT_BUTTON_ENABLED) {
+        trackingBarAudit.textContent = "Audit";
+        trackingBarAudit.style.display = "inline-flex";
+        trackingBarAudit.onclick = () => {
+          void handleAuditClick(trackedTabUrl, trackedTabId);
+        };
+      } else {
+        trackingBarAudit.style.display = "none";
+        trackingBarAudit.onclick = null;
+      }
     }
     if (trackingBarStop) {
       trackingBarStop.onclick = (e) => {

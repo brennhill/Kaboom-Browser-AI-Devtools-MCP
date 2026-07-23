@@ -9,6 +9,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testsync"
 )
 
 // ============================================
@@ -30,12 +32,9 @@ func TestNavigationCallback_FiredOnNavigationAction(t *testing.T) {
 		{Type: "navigation", Timestamp: time.Now().UnixMilli()},
 	})
 
-	// Give the goroutine time to fire
-	time.Sleep(50 * time.Millisecond)
-
-	if got := called.Load(); got != 1 {
-		t.Errorf("navigation callback called %d times, want 1", got)
-	}
+	testsync.Eventually(t, testsync.DefaultTimeout, "the navigation callback to fire", func() bool {
+		return called.Load() == 1
+	})
 }
 
 func TestNavigationCallback_NotFiredOnNonNavigationAction(t *testing.T) {
@@ -55,6 +54,8 @@ func TestNavigationCallback_NotFiredOnNonNavigationAction(t *testing.T) {
 		{Type: "scroll", Timestamp: time.Now().UnixMilli()},
 	})
 
+	// Negative assertion: there is no event to wait for, so a settle window is
+	// the only way to observe "did not fire".
 	time.Sleep(50 * time.Millisecond)
 
 	if got := called.Load(); got != 0 {
@@ -80,8 +81,11 @@ func TestNavigationCallback_FiredOnceForMultipleNavigationsInBatch(t *testing.T)
 		{Type: "navigation", Timestamp: time.Now().UnixMilli()},
 	})
 
+	testsync.Eventually(t, testsync.DefaultTimeout, "the batched navigation callback to fire", func() bool {
+		return called.Load() == 1
+	})
+	// Coalescing is the point: give a second firing a chance to show up.
 	time.Sleep(50 * time.Millisecond)
-
 	if got := called.Load(); got != 1 {
 		t.Errorf("navigation callback called %d times for batch with 2 navigations, want 1", got)
 	}

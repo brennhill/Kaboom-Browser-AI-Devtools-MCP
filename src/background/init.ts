@@ -70,6 +70,7 @@ import {
   installTabUpdatedListener,
   installDrawModeCommandListener,
   installRecordingShortcutCommandListener,
+  installTerminalPanelCommandListener,
   installScreenRecordingCommandListener,
   installContextMenus,
   saveSetting,
@@ -293,6 +294,11 @@ async function initializeExtensionAsync(): Promise<void> {
 
     // ============= STEP 9.6: Install draw mode keyboard shortcut listener =============
     installDrawModeCommandListener((msg) => console.log(`${KABOOM_LOG_PREFIX} ${msg}`))
+
+    // ============= STEP 9.6b: Install terminal side panel shortcut =============
+    // Gesture-native path to the side panel; the in-page launcher button cannot be
+    // relied on alone (Chrome grants message listeners only a restricted gesture).
+    installTerminalPanelCommandListener((msg) => console.log(`${KABOOM_LOG_PREFIX} ${msg}`))
 
     // ============= STEP 9.7: Install push keyboard shortcut listeners =============
     installPushCommandListener((msg) => console.log(`${KABOOM_LOG_PREFIX} ${msg}`))

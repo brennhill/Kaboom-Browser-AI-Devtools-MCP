@@ -249,7 +249,10 @@ func TestReliability_Upgrade_OldServerKilled(t *testing.T) {
 		t.Logf("Warning: kill command failed: %v", err)
 	}
 
-	// Wait for old server to die
+	// Deliberately a sleep, not a port-free poll. Killing the client-mode process
+	// does not free the port: it may have spawned a detached daemon, and the new
+	// server is expected to take the port over rather than wait for it. The real
+	// assertions are below — new server healthy, old process dead.
 	time.Sleep(500 * time.Millisecond)
 
 	// Start "new" server on same port

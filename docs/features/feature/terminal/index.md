@@ -4,7 +4,7 @@ feature_id: feature-terminal
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-03-28
+last_reviewed: 2026-07-23
 code_paths:
   - src/lib/brand.ts
   - cmd/browser-agent/terminal_handlers.go
@@ -15,9 +15,11 @@ code_paths:
   - src/content/ui/terminal-panel-bridge.ts
   - src/content/ui/terminal-widget-session.ts
   - src/content/ui/terminal-widget-types.ts
-  - src/content/ui/terminal-widget-ui.ts
   - src/content/ui/tracked-hover-launcher.ts
   - src/background/message-handlers.ts
+  - src/background/terminal-panel.ts
+  - src/background/keyboard-shortcuts.ts
+  - src/background/context-menus.ts
   - src/types/runtime-messages.ts
   - src/sidepanel.ts
   - internal/pty/manager.go
@@ -27,11 +29,14 @@ test_paths:
   - cmd/browser-agent/terminal_handlers_test.go
   - tests/extension/sidepanel-terminal.test.js
   - tests/extension/terminal-widget-session-branding.test.js
-  - tests/extension/terminal-widget-ui-branding.test.js
   - tests/extension/tracked-hover-launcher.test.js
   - tests/extension/message-handlers.test.js
   - internal/pty/manager_test.go
   - internal/pty/session_test.go
+  - cmd/browser-agent/internal/terminal/sandbox_error_test.go
+  - tests/extension/terminal-session-start-errors.test.js
+  - tests/extension/terminal-panel-gesture-entrypoints.test.js
+  - tests/extension/terminal-panel-open-failure.test.js
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-28
 ---
@@ -44,10 +49,12 @@ last_verified_date: 2026-03-28
 - Availability: macOS + Linux only (Windows currently reports terminal unavailable / `terminal_port: 0`)
 - Runs on a **dedicated HTTP server** at `main_port + 1` (e.g., 7891) for isolation
 - Singleton session shared across all tabs via `chrome.storage.session`
-- One Kaboom work context maps to one Chrome tab group; the panel opens on a workspace tab, not whichever tab sent the request
+- One Kaboom work context maps to one Chrome tab group; the panel opens synchronously on the requesting tab (to keep the user gesture valid), then the tracked tab is grouped into the workspace and the panel path is refined best-effort
 - Three UI states: **open**, **minimized**, **closed** - all persisted across page refreshes
 - Hover launcher keeps the page overlay for quick actions, but the terminal button now opens the side panel on the active workspace tab and hides the launcher only while the panel is open
-- Background must call `chrome.sidePanel.open()` in the original click gesture path; tab-specific `setOptions()` cannot be awaited first or Chrome may refuse to open the panel
+- Three entry points open the panel, all through the shared `openTerminalSidePanel()` in `src/background/terminal-panel.ts`: the keyboard command `open_terminal_panel` (**Alt+Shift+T**), the page context menu item **Open Kaboom Terminal**, and the in-page launcher button. The first two get a full user gesture from Chrome and are dependable; the launcher button goes through `runtime.onMessage`, which Chrome grants only a *restricted* gesture that `sidePanel.open()` rejects on some Chrome/Brave builds ([crbug 355266358](https://issues.chromium.org/issues/355266358)) — so it is best-effort, and its failure toast names the other two
+- A failed open is always reported (console error + toast). It used to be swallowed by `catch { return false }`, which made the Terminal button look simply dead
+- Background must call `chrome.sidePanel.open()` synchronously in the forwarded click gesture path; **nothing may be awaited before it** — neither `resolveTerminalWorkspaceTarget()` nor `setOptions()`, or Chrome expires the gesture and refuses to open the panel (regression: the panel loaded nothing). Workspace grouping + `setOptions()` run afterward as best-effort refinement.
 - Header redraw control (`↻`) reloads iframe graphics without killing the PTY session
 - Header power control (`⏻`) closes the side panel and ends the PTY session
 - Header minimize control hides the side panel while preserving the current PTY session
@@ -335,9 +342,44 @@ If the user re-focuses and types again during the auto-submit window, Enter is d
 - `ForceRedraw()`: sends `SIGWINCH` directly to the child process (used on reconnect when dimensions match but display is stale)
 - Environment: inherits from parent process, adds `TERM=xterm-256color`
 
-### Sandbox Detection
+### Default Shell
 
-If the daemon was spawned by an MCP client's stdio transport, macOS sandbox restrictions may prevent `posix_spawn`/`fork`. The `handleTerminalStart` handler detects this and returns HTTP 503 with a `sandbox_restricted` error, which the side panel displays as an actionable inline error with the command to restart the daemon with full permissions.
+`HandleTerminalStart` resolves the shell via `DefaultShell()` when the caller does not name one. It was hardcoded to `/bin/zsh`, so **every terminal start failed on Linux** (`fork/exec /bin/zsh: no such file or directory`) — most Linux installs do not ship zsh. macOS never saw it because zsh is the system default there.
+
+Resolution order:
+
+| Step | Source | Why |
+|------|--------|-----|
+| 1 | `$SHELL`, if it is an **executable regular file** | the user's actual shell wins. `os.Stat` alone is not enough — a `$SHELL` pointing at a directory or a non-executable leftover would otherwise reach `fork/exec` |
+| 2 | first of `zsh`, `bash`, `sh` found on **`$PATH`** | no path is assumed. `/bin/bash` does not exist on distros without usr-merge, Homebrew and NixOS install shells elsewhere, and Alpine ships no bash at all — the golang:1.24 image resolves bash to `/usr/bin/bash` |
+| 3 | `/bin/sh` | POSIX requires it; guarantees a non-empty command |
+
+zsh is only *first in preference*, never required — step 2 skips whatever is missing.
+
+Tests (`sandbox_error_test.go`): the chosen shell must be executable on the machine running the test; `$SHELL` wins when usable; a missing, non-executable, or directory `$SHELL` falls through; a candidate reachable only via `PATH` is still found; an empty `PATH` still yields `/bin/sh`.
+
+### Start Failure Reporting
+
+Being spawned by an MCP client does **not**, by itself, prevent the daemon from spawning a PTY — a daemon launched over MCP stdio spawns terminals normally. Only a genuinely restricted sandbox profile blocks it, and its signature is a fork/exec `EPERM`.
+
+`IsSandboxError` (`cmd/browser-agent/internal/terminal/handlers.go`) therefore matches exactly that shape: an `*fs.PathError` with `Op == "fork/exec"` wrapping `syscall.EPERM`. It previously substring-matched `"not permitted"` anywhere in the error, which swept in every other `EPERM` in the spawn path (`open /dev/ptmx`, `TIOCPTYGRANT`, `TIOCPTYUNLK`, opening the slave, `TIOCSWINSZ`) and replaced the real cause with a confident "restart your daemon" instruction that fixed nothing.
+
+Reporting rules, in order of precedence:
+
+| Condition | Status | Body | Panel |
+|-----------|--------|------|-------|
+| Session ID already in use | 409 | `error`, `session_id`, existing `token` | reconnects silently |
+| fork/exec `EPERM` | 503 | `sandbox_restricted` + `message`, `instruction`, `command`, `detail` | inline error with restart command |
+| Anything else | 409 | `error` | inline error, no remedy offered |
+
+Two invariants:
+
+- **`detail` always carries the underlying error.** The sandbox label is an inference; the error is the fact. `startSession` appends it to the message so a misattribution is still diagnosable from the panel.
+- **Every spawn failure is logged** by `HandleTerminalStart` with the session ID, dir, and cmd. Previously a failed start left no trace in `~/.kaboom/logs/kaboom.jsonl`, so the only signal was whichever label the client happened to render.
+
+On the client, `startSession` routes *all* failures through `reportStartFailure` to the panel's error overlay. Non-sandbox rejections used to only `console.warn` and return `null`, so the panel rendered nothing — indistinguishable from the terminal being broken.
+
+Tests: [`cmd/browser-agent/internal/terminal/sandbox_error_test.go`](../../../../cmd/browser-agent/internal/terminal/sandbox_error_test.go), [`tests/extension/terminal-session-start-errors.test.js`](../../../../tests/extension/terminal-session-start-errors.test.js)
 
 ---
 

@@ -135,9 +135,12 @@ describe('tab-state helpers', () => {
   })
 
   test('loadAiWebPilotState and loadDebugModeState read persisted flags', async () => {
+    // getLocal() reads a single key as a string; getLocals() passes an array.
+    // Normalize so this mock serves both call shapes.
     globalThis.chrome.storage.local.get = mock.fn((keys) => {
-      if (Array.isArray(keys) && keys.includes('aiWebPilotEnabled')) return Promise.resolve({ aiWebPilotEnabled: false })
-      if (Array.isArray(keys) && keys.includes('debugMode')) return Promise.resolve({ debugMode: true })
+      const requested = Array.isArray(keys) ? keys : [keys]
+      if (requested.includes('aiWebPilotEnabled')) return Promise.resolve({ aiWebPilotEnabled: false })
+      if (requested.includes('debugMode')) return Promise.resolve({ debugMode: true })
       return Promise.resolve({})
     })
 

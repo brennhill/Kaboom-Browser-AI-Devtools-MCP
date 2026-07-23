@@ -1,0 +1,184 @@
+// sandbox_error_test.go -- Tests that sandbox attribution is narrow and never swallows the real error.
+//
+// Regression: IsSandboxError used to substring-match "not permitted" anywhere in
+// the error and then replace it with a confident "the daemon was started by an
+// MCP client" story plus a restart instruction. Every syscall in the PTY spawn
+// path can return EPERM (open /dev/ptmx, TIOCPTYGRANT, TIOCPTYUNLK, opening the
+// slave, TIOCSWINSZ), so unrelated failures were reported as sandboxing and the
+// real cause was discarded — undiagnosable from either the panel or the logs.
+
+package terminal
+
+import (
+	"errors"
+	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"strings"
+	"syscall"
+	"testing"
+)
+
+// forkExecErr builds the error shape os/exec produces when the child fails to
+// launch: a *fs.PathError with Op "fork/exec" wrapping the errno.
+func forkExecErr(errno syscall.Errno) error {
+	return fmt.Errorf("start /bin/zsh: %w", &fs.PathError{
+		Op:   "fork/exec",
+		Path: "/bin/zsh",
+		Err:  errno,
+	})
+}
+
+func TestIsSandboxErrorMatchesForkExecEPERM(t *testing.T) {
+	if !IsSandboxError(forkExecErr(syscall.EPERM)) {
+		t.Fatal("fork/exec EPERM is the sandbox signature and must be detected")
+	}
+}
+
+func TestIsSandboxErrorIgnoresNonForkExecEPERM(t *testing.T) {
+	// grantpt/unlockpt/ptmx failures are EPERM but are not sandboxing. Attributing
+	// them to the sandbox sends the user to restart a daemon that was never at fault.
+	cases := map[string]error{
+		"grantpt":  fmt.Errorf("grantpt: %w", syscall.EPERM),
+		"unlockpt": fmt.Errorf("unlockpt: %w", syscall.EPERM),
+		"ptmx":     fmt.Errorf("open /dev/ptmx: %w", syscall.EPERM),
+		"winsize":  fmt.Errorf("set winsize: %w", syscall.EPERM),
+	}
+	for name, err := range cases {
+		t.Run(name, func(t *testing.T) {
+			if IsSandboxError(err) {
+				t.Fatalf("%v must not be attributed to the sandbox", err)
+			}
+		})
+	}
+}
+
+func TestIsSandboxErrorIgnoresUnrelatedFailures(t *testing.T) {
+	cases := map[string]error{
+		"nil":            nil,
+		"session exists": errors.New("pty: session already exists: default"),
+		"max sessions":   errors.New("pty: maximum concurrent sessions reached: limit 10"),
+		"missing shell":  forkExecErr(syscall.ENOENT),
+		"bad perms":      forkExecErr(syscall.EACCES),
+		// A message that merely contains the words must not trigger detection.
+		"prose": errors.New("the operation was not permitted by policy"),
+	}
+	for name, err := range cases {
+		t.Run(name, func(t *testing.T) {
+			if IsSandboxError(err) {
+				t.Fatalf("%v must not be attributed to the sandbox", err)
+			}
+		})
+	}
+}
+
+func TestSandboxPayloadCarriesUnderlyingError(t *testing.T) {
+	// The diagnosis is a guess; the underlying error is the fact. The payload must
+	// always carry the fact so the panel and the logs can show what actually failed.
+	payload := sandboxPayload(forkExecErr(syscall.EPERM))
+	detail, ok := payload["detail"].(string)
+	if !ok || detail == "" {
+		t.Fatalf("sandbox payload must include a non-empty detail, got %#v", payload["detail"])
+	}
+	if !strings.Contains(detail, "fork/exec") {
+		t.Fatalf("detail must preserve the underlying error, got %q", detail)
+	}
+	if payload["error"] != "sandbox_restricted" {
+		t.Fatalf("error code changed: %v", payload["error"])
+	}
+}
+
+// TestDefaultShellExistsOnThisPlatform pins the regression that made every
+// terminal start fail on Linux: the default was hardcoded to /bin/zsh, which
+// most Linux installs do not ship. Whatever DefaultShell picks must actually be
+// executable on the machine running the test.
+func TestDefaultShellExistsOnThisPlatform(t *testing.T) {
+	shell := DefaultShell()
+	if shell == "" {
+		t.Fatal("DefaultShell returned an empty path")
+	}
+	info, err := os.Stat(shell)
+	if err != nil {
+		t.Fatalf("DefaultShell() = %q, which does not exist: %v", shell, err)
+	}
+	if info.Mode()&0o111 == 0 {
+		t.Fatalf("DefaultShell() = %q, which is not executable (mode %v)", shell, info.Mode())
+	}
+}
+
+// TestDefaultShellPrefersUsersShell checks $SHELL wins when it is usable, so the
+// fallback chain never overrides an explicit user preference.
+func TestDefaultShellPrefersUsersShell(t *testing.T) {
+	t.Setenv("SHELL", "/bin/sh") // present on every POSIX system
+	if got := DefaultShell(); got != "/bin/sh" {
+		t.Errorf("DefaultShell() = %q, want /bin/sh from $SHELL", got)
+	}
+}
+
+// TestDefaultShellIgnoresMissingShellEnv falls through when $SHELL points at
+// something that is not there (stale profile, container without the shell).
+func TestDefaultShellIgnoresMissingShellEnv(t *testing.T) {
+	t.Setenv("SHELL", "/nonexistent/shell-that-is-not-installed")
+	got := DefaultShell()
+	if got == "/nonexistent/shell-that-is-not-installed" {
+		t.Fatal("DefaultShell returned a $SHELL that does not exist")
+	}
+	if _, err := os.Stat(got); err != nil {
+		t.Fatalf("fallback %q does not exist: %v", got, err)
+	}
+}
+
+// TestDefaultShellRejectsNonExecutableShellEnv covers a $SHELL that exists but
+// cannot be executed. os.Stat alone would accept it and hand it to fork/exec.
+func TestDefaultShellRejectsNonExecutableShellEnv(t *testing.T) {
+	dir := t.TempDir()
+	notExec := filepath.Join(dir, "not-executable")
+	if err := os.WriteFile(notExec, []byte("#!/bin/sh\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("SHELL", notExec)
+
+	if got := DefaultShell(); got == notExec {
+		t.Fatal("DefaultShell returned a non-executable $SHELL")
+	}
+}
+
+// TestDefaultShellRejectsDirectoryShellEnv covers $SHELL pointing at a directory.
+func TestDefaultShellRejectsDirectoryShellEnv(t *testing.T) {
+	t.Setenv("SHELL", t.TempDir())
+	if got := DefaultShell(); !filepath.IsAbs(got) || got == "" {
+		t.Fatalf("DefaultShell() = %q, want a real shell path", got)
+	}
+	if _, err := os.Stat(DefaultShell()); err != nil {
+		t.Fatalf("fallback does not exist: %v", err)
+	}
+}
+
+// TestDefaultShellFindsShellsOutsideBin pins the reason the search uses $PATH
+// instead of assuming /bin: Homebrew, NixOS, and similar install shells
+// elsewhere. A candidate reachable only via PATH must still be found.
+func TestDefaultShellFindsShellsOutsideBin(t *testing.T) {
+	dir := t.TempDir()
+	fake := filepath.Join(dir, shellCandidates[0])
+	if err := os.WriteFile(fake, []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("SHELL", "") // force the candidate search
+	t.Setenv("PATH", dir) // only our fake shell is reachable
+
+	if got := DefaultShell(); got != fake {
+		t.Errorf("DefaultShell() = %q, want %q found via PATH", got, fake)
+	}
+}
+
+// TestDefaultShellFallsBackWhenNothingOnPath is the last resort: POSIX
+// guarantees /bin/sh, so an empty PATH must not yield an empty command.
+func TestDefaultShellFallsBackWhenNothingOnPath(t *testing.T) {
+	t.Setenv("SHELL", "")
+	t.Setenv("PATH", t.TempDir()) // empty dir — no shells reachable
+
+	if got := DefaultShell(); got != "/bin/sh" {
+		t.Errorf("DefaultShell() = %q, want /bin/sh as the last resort", got)
+	}
+}

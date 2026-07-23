@@ -83,6 +83,10 @@ globalThis.performance = { now: () => perfNowValue++ }
 // Import domPrimitive AFTER globals are set up
 // ---------------------------------------------------------------------------
 const { domPrimitive } = await import('./dom-primitives.js')
+// #502: intent + overlay actions were extracted to self-contained modules
+const { domPrimitiveIntent } = await import('./dom-primitives-intent.js')
+const { domPrimitiveOverlay } = await import('./dom-primitives-overlay.js')
+const { domPrimitiveListInteractive } = await import('./dom-primitives-list-interactive.js')
 
 // ---------------------------------------------------------------------------
 // Helper: create a mock document with a findable button
@@ -449,7 +453,7 @@ describe('list_interactive returns index, element_type, and deduplicates selecto
       return origDocQSA(sel)
     }
 
-    const result = domPrimitive('list_interactive', '', {})
+    const result = domPrimitiveListInteractive('', {})
 
     assert.strictEqual(result.success, true)
     assert.ok(Array.isArray(result.elements), 'elements should be an array')
@@ -508,7 +512,7 @@ describe('list_interactive returns index, element_type, and deduplicates selecto
       return origDocQSA(sel)
     }
 
-    const result = domPrimitive('list_interactive', '', {})
+    const result = domPrimitiveListInteractive('', {})
 
     assert.strictEqual(result.success, true)
     const selectors = result.elements.map((e) => e.selector)
@@ -575,7 +579,7 @@ describe('list_interactive returns index, element_type, and deduplicates selecto
       execCommand: () => {}
     }
 
-    const scopedResult = domPrimitive('list_interactive', '[role="dialog"]', {})
+    const scopedResult = domPrimitiveListInteractive('[role="dialog"]', {})
     assert.strictEqual(scopedResult.success, true)
     const labels = scopedResult.elements.map((e) => e.label)
     assert.ok(labels.includes('Post'), 'scoped list should include dialog button')
@@ -585,7 +589,7 @@ describe('list_interactive returns index, element_type, and deduplicates selecto
   test('list_interactive returns scope_not_found for missing scoped container', () => {
     setupDocument()
 
-    const result = domPrimitive('list_interactive', '[role="dialog"]', {})
+    const result = domPrimitiveListInteractive('[role="dialog"]', {})
     assert.strictEqual(result.success, false)
     assert.strictEqual(result.error, 'scope_not_found')
   })
@@ -642,7 +646,7 @@ describe('list_interactive returns index, element_type, and deduplicates selecto
       execCommand: () => {}
     }
 
-    const result = domPrimitive('list_interactive', '', {
+    const result = domPrimitiveListInteractive('', {
       scope_rect: { x: 400, y: 300, width: 220, height: 180 }
     })
     assert.strictEqual(result.success, true)
@@ -734,7 +738,7 @@ describe('list_interactive returns index, element_type, and deduplicates selecto
       execCommand: () => {}
     }
 
-    const result = domPrimitive('list_interactive', '[role="dialog"]', {})
+    const result = domPrimitiveListInteractive('[role="dialog"]', {})
     assert.strictEqual(result.success, true)
     const labels = result.elements.map((e) => e.label)
     assert.ok(labels.includes('Post'), 'dialog disambiguation should pick composer dialog')
@@ -1712,7 +1716,7 @@ describe('element handles', () => {
       execCommand: () => {}
     }
 
-    const result = domPrimitive('list_interactive', '', {})
+    const result = domPrimitiveListInteractive('', {})
     assert.strictEqual(result.success, true)
     assert.ok(result.elements.length > 0)
     assert.strictEqual(typeof result.elements[0].element_id, 'string')
@@ -1750,8 +1754,8 @@ describe('element handles', () => {
       execCommand: () => {}
     }
 
-    const first = domPrimitive('list_interactive', '', {})
-    const second = domPrimitive('list_interactive', '', {})
+    const first = domPrimitiveListInteractive('', {})
+    const second = domPrimitiveListInteractive('', {})
 
     const firstByLabel = new Map(first.elements.map((e) => [e.label, e.element_id]))
     const secondByLabel = new Map(second.elements.map((e) => [e.label, e.element_id]))
@@ -1779,7 +1783,7 @@ describe('element handles', () => {
       execCommand: () => {}
     }
 
-    const listed = domPrimitive('list_interactive', '', {})
+    const listed = domPrimitiveListInteractive('', {})
     const elementID = listed.elements[0].element_id
 
     const raw = domPrimitive('click', '.missing-selector', { element_id: elementID })
@@ -1839,7 +1843,7 @@ describe('element handles', () => {
       execCommand: () => {}
     }
 
-    const listed = domPrimitive('list_interactive', '', {})
+    const listed = domPrimitiveListInteractive('', {})
     const outsideHandle = listed.elements.find((e) => e.label === 'Outside').element_id
     const raw = domPrimitive('click', '.btn', { element_id: outsideHandle, scope_selector: '#composer' })
     const result = raw instanceof Promise ? await raw : raw
@@ -1898,7 +1902,7 @@ describe('intent-level composer and dialog primitives', () => {
       execCommand: () => {}
     }
 
-    const raw = domPrimitive('open_composer', '', {})
+    const raw = domPrimitiveIntent('open_composer', {})
     const result = raw instanceof Promise ? await raw : raw
 
     assert.strictEqual(result.success, true)
@@ -1976,7 +1980,7 @@ describe('intent-level composer and dialog primitives', () => {
       execCommand: () => {}
     }
 
-    const raw = domPrimitive('submit_active_composer', '', {})
+    const raw = domPrimitiveIntent('submit_active_composer', {})
     const result = raw instanceof Promise ? await raw : raw
 
     assert.strictEqual(result.success, true)
@@ -2047,7 +2051,7 @@ describe('intent-level composer and dialog primitives', () => {
       execCommand: () => {}
     }
 
-    const raw = domPrimitive('confirm_top_dialog', '', {})
+    const raw = domPrimitiveIntent('confirm_top_dialog', {})
     const result = raw instanceof Promise ? await raw : raw
 
     assert.strictEqual(result.success, true)
@@ -2123,7 +2127,7 @@ describe('intent-level composer and dialog primitives', () => {
       execCommand: () => {}
     }
 
-    const raw = domPrimitive('dismiss_top_overlay', '', {})
+    const raw = domPrimitiveOverlay('dismiss_top_overlay', {})
     const result = raw instanceof Promise ? await raw : raw
 
     assert.strictEqual(result.success, true)
@@ -2189,7 +2193,7 @@ describe('intent-level composer and dialog primitives', () => {
       execCommand: () => {}
     }
 
-    const result = domPrimitive('submit_active_composer', '', {})
+    const result = domPrimitiveIntent('submit_active_composer', {})
     assert.strictEqual(result.success, false)
     assert.strictEqual(result.error, 'ambiguous_target')
     assert.strictEqual(result.match_strategy, 'intent_submit_active_composer')

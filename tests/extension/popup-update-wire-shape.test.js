@@ -55,7 +55,7 @@ describe('popup update-button /health wire shape', () => {
     globalThis.fetch = mock.fn()
     globalThis.document = createMockDocument()
     globalThis.chrome = {
-      runtime: { id: 'test-ext-id', getManifest: () => ({ version: '0.8.2' }) },
+      runtime: { id: 'test-ext-id', getManifest: () => ({ version: '0.8.5' }) },
       storage: {
         local: {
           get: mock.fn((_keys, cb) => {
@@ -72,7 +72,7 @@ describe('popup update-button /health wire shape', () => {
 
   test('snake_case available_version (what the daemon actually emits) SHOWS the banner', async () => {
     const { renderUpdateAvailableBanner } = await importUpdateButton()
-    await renderUpdateAvailableBanner({ version: '0.8.2', available_version: '0.9.0' })
+    await renderUpdateAvailableBanner({ version: '0.8.5', available_version: '0.9.0' })
 
     const container = document.getElementById('update-available')
     assert.strictEqual(
@@ -86,7 +86,7 @@ describe('popup update-button /health wire shape', () => {
     const { renderUpdateAvailableBanner } = await importUpdateButton()
     // Intentionally send the wrong (camelCase) shape — what the popup used to
     // read. The daemon does not emit this key, so the banner must stay hidden.
-    await renderUpdateAvailableBanner({ version: '0.8.2', availableVersion: '0.9.0' })
+    await renderUpdateAvailableBanner({ version: '0.8.5', availableVersion: '0.9.0' })
 
     const container = document.getElementById('update-available')
     assert.strictEqual(

@@ -1,0 +1,397 @@
+/**
+ * Purpose: Dispatches hardware-level input via Chrome DevTools Protocol.
+ * Why: Synthetic DOM events have isTrusted:false which anti-bot systems and complex SPAs ignore.
+ *      CDP Input.dispatch* commands produce true hardware events indistinguishable from real user input.
+ * Docs: docs/features/feature/interact-explore/index.md
+ */
+import { CDP_VERSION } from '../lib/constants.js';
+import { errorMessage } from '../lib/error-utils.js';
+import { KEY_CODES, charToKeyInfo } from './cdp-key-mappings.js';
+import { resolveElement, buildCDPResult } from './cdp-element-resolve.js';
+async function cdpSend(tabId, method, params) {
+    await chrome.debugger.sendCommand({ tabId }, method, params);
+}
+async function resolveCoordinates(tabId, params) {
+    if (typeof params.x === 'number' && typeof params.y === 'number') {
+        return { x: params.x, y: params.y };
+    }
+    if (!params.selector) {
+        throw new Error('click requires x/y coordinates or a selector');
+    }
+    // Use Runtime.evaluate to get element center coordinates
+    const expression = `(() => {
+    const el = document.querySelector(${JSON.stringify(params.selector)});
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  })()`;
+    const evalResult = (await chrome.debugger.sendCommand({ tabId }, 'Runtime.evaluate', {
+        expression,
+        returnByValue: true
+    }));
+    const coords = evalResult?.result?.value;
+    if (!coords) {
+        throw new Error(`Element not found: ${params.selector}`);
+    }
+    return coords;
+}
+async function cdpClick(tabId, params) {
+    const { x, y } = await resolveCoordinates(tabId, params);
+    await cdpSend(tabId, 'Input.dispatchMouseEvent', {
+        type: 'mousePressed',
+        x,
+        y,
+        button: 'left',
+        clickCount: 1
+    });
+    await cdpSend(tabId, 'Input.dispatchMouseEvent', {
+        type: 'mouseReleased',
+        x,
+        y,
+        button: 'left',
+        clickCount: 1
+    });
+    return {
+        success: true,
+        action: 'hardware_click',
+        x,
+        y,
+        method: 'cdp'
+    };
+}
+async function dispatchCDPKeyPair(tabId, payload) {
+    const common = {
+        key: payload.key,
+        code: payload.code,
+        windowsVirtualKeyCode: payload.keyCode,
+        nativeVirtualKeyCode: payload.keyCode
+    };
+    await cdpSend(tabId, 'Input.dispatchKeyEvent', {
+        type: 'keyDown',
+        ...common,
+        ...(payload.text !== undefined ? { text: payload.text } : {}),
+        ...(payload.unmodifiedText !== undefined ? { unmodifiedText: payload.unmodifiedText } : {}),
+        ...(payload.modifiers !== undefined ? { modifiers: payload.modifiers } : {})
+    });
+    await cdpSend(tabId, 'Input.dispatchKeyEvent', {
+        type: 'keyUp',
+        ...common,
+        ...(payload.modifiers !== undefined ? { modifiers: payload.modifiers } : {})
+    });
+}
+async function cdpType(tabId, params) {
+    const text = params.text || '';
+    if (!text) {
+        throw new Error('type requires text parameter');
+    }
+    for (const char of text) {
+        const info = charToKeyInfo(char);
+        await dispatchCDPKeyPair(tabId, {
+            key: info.key,
+            code: info.code,
+            keyCode: info.keyCode,
+            text: char,
+            unmodifiedText: info.shiftKey ? char.toLowerCase() : char,
+            modifiers: info.shiftKey ? 8 : 0
+        });
+    }
+    return {
+        success: true,
+        action: 'hardware_type',
+        char_count: text.length,
+        method: 'cdp'
+    };
+}
+async function cdpKeyPress(tabId, params) {
+    const key = params.text || params.key || '';
+    if (!key) {
+        throw new Error('key_press requires text or key parameter');
+    }
+    const mapped = KEY_CODES[key];
+    if (mapped) {
+        // Named key (Enter, Tab, etc.)
+        await dispatchCDPKeyPair(tabId, {
+            key,
+            code: mapped.code,
+            keyCode: mapped.keyCode
+        });
+    }
+    else {
+        // Single character
+        const info = charToKeyInfo(key);
+        await dispatchCDPKeyPair(tabId, {
+            key: info.key,
+            code: info.code,
+            keyCode: info.keyCode,
+            text: key,
+            unmodifiedText: info.shiftKey ? key.toLowerCase() : key,
+            modifiers: info.shiftKey ? 8 : 0
+        });
+    }
+    return {
+        success: true,
+        action: 'hardware_key_press',
+        key,
+        method: 'cdp'
+    };
+}
+function parseCDPParams(query) {
+    try {
+        const raw = typeof query.params === 'string' ? JSON.parse(query.params) : query.params;
+        if (!raw || typeof raw !== 'object' || !('action' in raw))
+            return null;
+        return raw;
+    }
+    catch {
+        return null;
+    }
+}
+function mapCDPError(err) {
+    const msg = errorMessage(err, 'unknown_error');
+    if (msg.includes('Cannot attach to this target')) {
+        return 'cdp_attach_failed: Cannot attach debugger to this tab. It may be an internal browser page.';
+    }
+    if (msg.includes('Another debugger is already attached')) {
+        return 'cdp_already_attached: Another debugger session is active. Close DevTools or other debugging sessions.';
+    }
+    if (msg.includes('Debugger is not attached')) {
+        return 'cdp_not_attached: Debugger was detached during execution.';
+    }
+    return `cdp_error: ${msg}`;
+}
+// =============================================================================
+// AUTO-ESCALATION: CDP-first for click/type/key_press, fallback to DOM
+// =============================================================================
+// Platform-specific modifier for select-all (Meta on macOS, Ctrl elsewhere).
+// Guard `navigator` so this module evaluates safely where it is absent (Node test
+// runner on Node 20, which has no global navigator); the service worker always has it.
+const SELECT_ALL_MODIFIER = typeof navigator !== 'undefined' && /mac/i.test(navigator.platform || '') ? 4 : 2;
+/** Actions that auto-escalate to CDP. */
+const CDP_ESCALATABLE = new Set(['click', 'type', 'key_press']);
+/** Check whether an action should attempt CDP before DOM primitives. */
+export function isCDPEscalatable(action) {
+    return CDP_ESCALATABLE.has(action);
+}
+async function cdpClearField(tabId) {
+    // Select all then delete — works cross-platform
+    await cdpSend(tabId, 'Input.dispatchKeyEvent', {
+        type: 'keyDown',
+        key: 'a',
+        code: 'KeyA',
+        windowsVirtualKeyCode: 65,
+        modifiers: SELECT_ALL_MODIFIER
+    });
+    await cdpSend(tabId, 'Input.dispatchKeyEvent', {
+        type: 'keyUp',
+        key: 'a',
+        code: 'KeyA',
+        windowsVirtualKeyCode: 65,
+        modifiers: SELECT_ALL_MODIFIER
+    });
+    await cdpSend(tabId, 'Input.dispatchKeyEvent', {
+        type: 'keyDown',
+        key: 'Backspace',
+        code: 'Backspace',
+        windowsVirtualKeyCode: 8
+    });
+    await cdpSend(tabId, 'Input.dispatchKeyEvent', {
+        type: 'keyUp',
+        key: 'Backspace',
+        code: 'Backspace',
+        windowsVirtualKeyCode: 8
+    });
+}
+async function cdpDispatchKeySequence(tabId, text) {
+    for (const char of text) {
+        const info = charToKeyInfo(char);
+        const modifiers = info.shiftKey ? 8 : 0;
+        await cdpSend(tabId, 'Input.dispatchKeyEvent', {
+            type: 'keyDown',
+            key: info.key,
+            code: info.code,
+            text: char,
+            unmodifiedText: info.shiftKey ? char.toLowerCase() : char,
+            windowsVirtualKeyCode: info.keyCode,
+            nativeVirtualKeyCode: info.keyCode,
+            modifiers
+        });
+        await cdpSend(tabId, 'Input.dispatchKeyEvent', {
+            type: 'keyUp',
+            key: info.key,
+            code: info.code,
+            windowsVirtualKeyCode: info.keyCode,
+            nativeVirtualKeyCode: info.keyCode,
+            modifiers
+        });
+    }
+}
+async function cdpDispatchSingleKey(tabId, key) {
+    const mapped = KEY_CODES[key];
+    if (mapped) {
+        await cdpSend(tabId, 'Input.dispatchKeyEvent', {
+            type: 'keyDown',
+            key,
+            code: mapped.code,
+            windowsVirtualKeyCode: mapped.keyCode,
+            nativeVirtualKeyCode: mapped.keyCode
+        });
+        await cdpSend(tabId, 'Input.dispatchKeyEvent', {
+            type: 'keyUp',
+            key,
+            code: mapped.code,
+            windowsVirtualKeyCode: mapped.keyCode,
+            nativeVirtualKeyCode: mapped.keyCode
+        });
+    }
+    else {
+        const info = charToKeyInfo(key);
+        const modifiers = info.shiftKey ? 8 : 0;
+        await cdpSend(tabId, 'Input.dispatchKeyEvent', {
+            type: 'keyDown',
+            key: info.key,
+            code: info.code,
+            text: key,
+            unmodifiedText: info.shiftKey ? key.toLowerCase() : key,
+            windowsVirtualKeyCode: info.keyCode,
+            nativeVirtualKeyCode: info.keyCode,
+            modifiers
+        });
+        await cdpSend(tabId, 'Input.dispatchKeyEvent', {
+            type: 'keyUp',
+            key: info.key,
+            code: info.code,
+            windowsVirtualKeyCode: info.keyCode,
+            nativeVirtualKeyCode: info.keyCode,
+            modifiers
+        });
+    }
+}
+/**
+ * Attempt CDP-first execution for click/type/key_press.
+ * Returns a DOMResult on success, or null to signal fallback to DOM primitives.
+ * Any error is caught internally — callers just check for null.
+ */
+export async function tryCDPEscalation(tabId, action, params) {
+    if (!CDP_ESCALATABLE.has(action))
+        return null;
+    // If CDP is unavailable in this runtime (tests, constrained extension contexts),
+    // skip escalation before any DOM probing so normal DOM primitives remain deterministic.
+    if (!chrome?.debugger?.attach || !chrome?.debugger?.sendCommand || !chrome?.debugger?.detach) {
+        return null;
+    }
+    const selector = params.selector || '';
+    const startTime = Date.now();
+    try {
+        // Step 1: Resolve element via page script (also focuses for type/key_press)
+        const resolved = await resolveElement(tabId, params);
+        if (!resolved)
+            return null;
+        // Step 2: Attach debugger
+        await chrome.debugger.attach({ tabId }, CDP_VERSION);
+        try {
+            // Step 3: Execute CDP action
+            if (action === 'click') {
+                await cdpSend(tabId, 'Input.dispatchMouseEvent', {
+                    type: 'mousePressed',
+                    x: resolved.x,
+                    y: resolved.y,
+                    button: 'left',
+                    clickCount: 1
+                });
+                await cdpSend(tabId, 'Input.dispatchMouseEvent', {
+                    type: 'mouseReleased',
+                    x: resolved.x,
+                    y: resolved.y,
+                    button: 'left',
+                    clickCount: 1
+                });
+            }
+            else if (action === 'type') {
+                const text = params.text || '';
+                if (!text)
+                    return null;
+                if (params.clear)
+                    await cdpClearField(tabId);
+                await cdpDispatchKeySequence(tabId, text);
+            }
+            else if (action === 'key_press') {
+                const key = params.text || '';
+                if (!key)
+                    return null;
+                await cdpDispatchSingleKey(tabId, key);
+            }
+            // Step 4: Build DOMResult with matched evidence
+            return buildCDPResult(action, selector, resolved, Date.now() - startTime);
+        }
+        finally {
+            try {
+                await chrome.debugger.detach({ tabId });
+            }
+            catch {
+                /* already detached */
+            }
+        }
+    }
+    catch {
+        // CDP unavailable or failed — fall back to DOM primitives silently
+        return null;
+    }
+}
+// =============================================================================
+// DIRECT CDP QUERIES (hardware_click via Go-side cdp_action)
+// =============================================================================
+export async function executeCDPAction(query, tabId, syncClient, sendAsyncResult, actionToast) {
+    const params = parseCDPParams(query);
+    if (!params) {
+        sendAsyncResult(syncClient, query.id, query.correlation_id, 'error', null, 'invalid_params');
+        return;
+    }
+    const { action } = params;
+    if (!action) {
+        sendAsyncResult(syncClient, query.id, query.correlation_id, 'error', null, 'missing_action');
+        return;
+    }
+    const toastLabel = action === 'key_press' ? 'Typing...' : `CDP ${action}`;
+    actionToast(tabId, toastLabel, undefined, 'trying', 10000);
+    try {
+        await chrome.debugger.attach({ tabId }, CDP_VERSION);
+    }
+    catch (err) {
+        const errorMsg = mapCDPError(err);
+        actionToast(tabId, toastLabel, errorMsg, 'error');
+        sendAsyncResult(syncClient, query.id, query.correlation_id, 'error', null, errorMsg);
+        return;
+    }
+    try {
+        let result;
+        switch (action) {
+            case 'click':
+                result = await cdpClick(tabId, params);
+                break;
+            case 'type':
+                result = await cdpType(tabId, params);
+                break;
+            case 'key_press':
+                result = await cdpKeyPress(tabId, params);
+                break;
+            default:
+                throw new Error(`Unknown CDP action: ${action}`);
+        }
+        actionToast(tabId, toastLabel, undefined, 'success');
+        sendAsyncResult(syncClient, query.id, query.correlation_id, 'complete', result);
+    }
+    catch (err) {
+        const errorMsg = mapCDPError(err);
+        actionToast(tabId, toastLabel, errorMsg, 'error');
+        sendAsyncResult(syncClient, query.id, query.correlation_id, 'error', null, errorMsg);
+    }
+    finally {
+        try {
+            await chrome.debugger.detach({ tabId });
+        }
+        catch {
+            // Already detached or tab closed — safe to ignore
+        }
+    }
+}
+//# sourceMappingURL=cdp-dispatch.js.map

@@ -1,0 +1,1 @@
+{"version":3,"file":"logo-motion.js","sourceRoot":"","sources":["../../src/popup/logo-motion.ts"],"names":[],"mappings":"AAAA;;;GAGG;AAEH;;;GAGG;AACH,MAAM,UAAU,mBAAmB;IACjC,MAAM,IAAI,GAAG,QAAQ,CAAC,aAAa,CAAC,OAAO,CAA4B,CAAA;IACvE,IAAI,CAAC,IAAI;QAAE,OAAM;IAEjB,IAAI,CAAC,GAAG,GAAG,MAAM,CAAC,OAAO,CAAC,MAAM,CAAC,gBAAgB,CAAC,CAAA;AACpD,CAAC"}

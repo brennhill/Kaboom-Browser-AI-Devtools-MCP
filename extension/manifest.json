@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "KaBOOM! Devtools",
-  "version": "0.8.2",
+  "version": "0.8.5",
   "description": "Browser observability for AI agents. Stream console logs, network errors to Claude Code, Cursor, Copilot via MCP protocol.",
   "icons": {
     "16": "icons/icon-16.png",
@@ -25,27 +25,49 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "<all_urls>"
+      ],
       "exclude_matches": [
         "*://*.cloudflare.com/*",
         "*://dash.cloudflare.com/*"
       ],
-      "js": ["early-patch.bundled.js"],
+      "js": [
+        "early-patch.bundled.js"
+      ],
       "run_at": "document_start",
       "world": "MAIN"
     },
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "<all_urls>"
+      ],
       "exclude_matches": [
         "*://*.cloudflare.com/*",
         "*://dash.cloudflare.com/*"
       ],
-      "js": ["content.bundled.js"],
+      "js": [
+        "content.bundled.js"
+      ],
       "run_at": "document_start"
     }
   ],
-  "permissions": ["storage", "alarms", "tabs", "scripting", "tabCapture", "offscreen", "activeTab", "debugger", "cookies", "contextMenus", "sidePanel"],
-  "host_permissions": ["<all_urls>"],
+  "permissions": [
+    "storage",
+    "alarms",
+    "tabs",
+    "scripting",
+    "tabCapture",
+    "offscreen",
+    "activeTab",
+    "debugger",
+    "cookies",
+    "contextMenus",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "options_ui": {
     "page": "options.html",
     "open_in_tab": true
@@ -81,6 +103,13 @@
     },
     "toggle_action_sequence_recording": {
       "description": "Toggle action sequence recording"
+    },
+    "open_terminal_panel": {
+      "suggested_key": {
+        "default": "Alt+Shift+T",
+        "mac": "Alt+Shift+T"
+      },
+      "description": "Open the Kaboom terminal side panel"
     }
   },
   "web_accessible_resources": [
@@ -94,7 +123,9 @@
         "icons/logo-animated.svg",
         "icons/icon.svg"
       ],
-      "matches": ["<all_urls>"]
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ]
 }

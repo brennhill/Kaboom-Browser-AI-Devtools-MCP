@@ -39,6 +39,20 @@ export declare function toggleScreenRecording(handlers: ScreenRecordingHandlers,
  */
 export declare function installDrawModeCommandListener(logFn?: (message: string) => void): void;
 /**
+ * Install the keyboard shortcut that opens the terminal side panel
+ * (`open_terminal_panel` in the manifest, Alt+Shift+T by default).
+ *
+ * Why a command and not just the in-page launcher button: `chrome.sidePanel.open()`
+ * needs an active user gesture, and Chrome grants `runtime.onMessage` listeners
+ * only a *restricted* gesture that sidePanel.open() rejects on some Chrome/Brave
+ * builds (crbug 355266358). `commands.onCommand` gets a full gesture and hands us
+ * the active tab synchronously, so this path does not depend on gesture forwarding.
+ *
+ * Nothing may be awaited before openTerminalSidePanel() — `tab` comes straight
+ * from the listener argument precisely so no lookup is needed.
+ */
+export declare function installTerminalPanelCommandListener(logFn?: (message: string) => void): void;
+/**
  * Install keyboard shortcut listener for action-sequence recording toggle.
  * Shortcut is defined in manifest as `toggle_action_sequence_recording`.
  */

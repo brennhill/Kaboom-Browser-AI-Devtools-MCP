@@ -13,7 +13,7 @@ code_paths:
   - docs/core/release.md
 test_paths:
   - tests/packaging/release-workflow-contract.test.js
-last_verified_version: 0.8.2
+last_verified_version: 0.8.5
 last_verified_date: 2026-04-18
 ---
 

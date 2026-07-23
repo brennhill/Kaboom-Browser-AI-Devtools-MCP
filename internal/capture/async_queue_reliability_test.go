@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testsync"
 )
 
 // TestAsyncQueueReliability tests that commands survive timing jitter
@@ -185,17 +187,10 @@ func TestAsyncQueueTimeout(t *testing.T) {
 		t.Errorf("Expected 1 pending query before timeout, got %d", len(pendingQueries))
 	}
 
-	// Wait for expiration with polling (avoid long fixed sleeps).
-	expired := false
-	deadline := time.Now().Add(700 * time.Millisecond)
-	for time.Now().Before(deadline) {
+	expired := testsync.EventuallyNoFail(testsync.DefaultTimeout, func() bool {
 		pendingQueries = capture.GetPendingQueries()
-		if len(pendingQueries) == 0 {
-			expired = true
-			break
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
+		return len(pendingQueries) == 0
+	})
 	if !expired {
 		t.Errorf("Expected pending query to expire within deadline, still have %d pending", len(pendingQueries))
 	}

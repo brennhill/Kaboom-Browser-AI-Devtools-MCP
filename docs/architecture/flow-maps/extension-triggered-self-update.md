@@ -24,7 +24,7 @@ test_paths:
   - internal/upgrade/runner_test.go
   - cmd/browser-agent/server_routes_upgrade_test.go
   - tests/extension/popup-update-button.test.js
-last_verified_version: 0.8.2
+last_verified_version: 0.8.5
 last_verified_date: 2026-04-20
 ---
 

@@ -4,7 +4,7 @@ feature_id: feature-observe
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-03-28
+last_reviewed: 2026-07-22
 code_paths:
   - cmd/browser-agent/tools_observe.go
   - cmd/browser-agent/tools_observe_registry.go
@@ -37,6 +37,7 @@ test_paths:
   - cmd/browser-agent/tools_observe_screenshot_test.go
   - cmd/browser-agent/tools_observe_analysis_test.go
   - extension/background/commands/observe.fullpage.test.js
+  - tests/extension/observe-screenshot-selector.test.js
   - internal/a11ysummary/summary_test.go
   - internal/tools/observe/analysis_test.go
   - internal/tools/observe/analysis_save_test.go
@@ -71,6 +72,7 @@ Accessibility (`what:"accessibility"`) normalizes `summary` counts with canonica
 WebSocket status (`what:"websocket_status"`) supports `summary:true` with compact URL/connection-id previews while preserving the full default payload when `summary` is omitted.
 Network-bodies empty-result hints now echo all active filters (`url`, `method`, `status_*`, `body_path`) so retry guidance is specific to the current query.
 `level` is a quiet alias for `min_level` — accepted at runtime but hidden from schema. Both use threshold semantics (e.g., `warn` returns warn+error).
+Screenshot (`what:"screenshot"`) honors the `selector` param (#597): the extension scrolls the matched element into view — which respects nested `overflow:auto` scroll containers, not just the document scroller — then crops the device-pixel-ratio-scaled viewport capture to the element via `OffscreenCanvas`. It falls back to the (correctly scrolled) uncropped viewport when the crop cannot be produced, and returns `element_not_found` when the selector matches nothing. The default (no `selector`, no `full_page`) path stays `chrome.tabs.captureVisibleTab`, which already honors inner-container scroll.
 Storage summary tests now share common assertions for `key_count`, `sample_keys`, and `total_bytes` shape checks.
 If the extension reloads while an old content script is still attached to the page, the bridge now emits a Kaboom-branded refresh warning and stops retrying dead `chrome.runtime.sendMessage` calls until the page is refreshed.
 Context-annotation warnings and background-sender rejection logs now use the shared Kaboom runtime prefix instead of hardcoded Kaboom labels.

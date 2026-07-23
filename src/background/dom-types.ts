@@ -157,4 +157,9 @@ export interface DOMActionParams extends DOMPrimitiveOptions {
   // query action (#370)
   query_type?: string
   attribute_names?: string[]
+  // #599: input dispatch strategy. "auto" (default) tries CDP hardware events first
+  // (isTrusted:true) and falls back to DOM primitives; "dom" skips CDP and drives
+  // click/type through in-page element.click() + native-setter input events, which
+  // reliably fires React/Vue/Svelte controlled-input onChange and delegated onClick.
+  dispatch?: 'auto' | 'dom'
 }

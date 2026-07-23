@@ -17,8 +17,8 @@ export type ShowTrackingStateFn = (btn: HTMLButtonElement, url: string | undefin
 /**
  * Handle launching the tracked-site audit workflow from popup controls.
  */
-export async function handleAuditClick(pageUrl: string | undefined): Promise<void> {
-  await requestAudit(pageUrl)
+export async function handleAuditClick(pageUrl: string | undefined, tabId?: number): Promise<void> {
+  await requestAudit(pageUrl, tabId)
 }
 
 /**

@@ -11,7 +11,7 @@ import { getTrackedTabInfo, clearTrackedTab, getActiveTab } from '../event-liste
 import { DebugCategory } from '../debug.js'
 import { isAiWebPilotEnabled } from '../state.js'
 import { KABOOM_LOG_PREFIX } from '../../lib/brand.js'
-import { errorMessage } from '../../lib/error-utils.js'
+import { errorMessage, isNoReceiverError } from '../../lib/error-utils.js'
 import { delay } from '../../lib/timeout-utils.js'
 import { setLocals } from '../../lib/storage-utils.js'
 
@@ -675,8 +675,9 @@ export function isRestrictedUrl(url: string | undefined): boolean {
 
 /** Check if an error indicates the content script is not loaded on the target page. */
 export function isContentScriptUnreachableError(err: unknown): boolean {
-  const message = errorMessage(err, '')
-  return message.includes('Receiving end does not exist') || message.includes('Could not establish connection')
+  // Same underlying "no receiver" signal as a closed popup — delegate to the
+  // canonical predicate so the message strings live in exactly one place.
+  return isNoReceiverError(err)
 }
 
 // =============================================================================

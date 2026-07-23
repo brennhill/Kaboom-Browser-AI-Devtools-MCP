@@ -347,11 +347,11 @@ func TestBuildMemoryInfo_NilCapture(t *testing.T) {
 
 func TestMCPHealthResponse_Construction(t *testing.T) {
 	resp := MCPHealthResponse{
-		Server: ServerInfo{Version: "0.8.2", PID: 1234},
+		Server: ServerInfo{Version: "0.8.5", PID: 1234},
 		Memory: MemoryInfo{CurrentMB: 10.5},
 	}
-	if resp.Server.Version != "0.8.2" {
-		t.Errorf("Version: want 0.8.2, got %s", resp.Server.Version)
+	if resp.Server.Version != "0.8.5" {
+		t.Errorf("Version: want 0.8.5, got %s", resp.Server.Version)
 	}
 	if resp.Upgrade != nil {
 		t.Error("expected nil Upgrade by default")

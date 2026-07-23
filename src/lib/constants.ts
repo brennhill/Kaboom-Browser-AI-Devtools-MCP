@@ -214,3 +214,11 @@ export const StorageKey = {
   CLOAKED_DOMAINS: 'kaboom_cloaked_domains',
   ERROR_GROUPS: 'kaboom_error_groups'
 } as const
+
+/**
+ * Default keyboard shortcut for `open_terminal_panel` (see extension/manifest.json).
+ *
+ * Shared because the content script names it in the failure toast while the
+ * background registers the command — the two must not drift.
+ */
+export const TERMINAL_PANEL_SHORTCUT = 'Alt+Shift+T'

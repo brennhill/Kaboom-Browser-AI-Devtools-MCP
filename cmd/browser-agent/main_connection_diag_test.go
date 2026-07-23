@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testsync"
 )
 
 func freePortForTest(t *testing.T) int {
@@ -144,7 +145,16 @@ func TestRunStopModeHTTPShutdownPath(t *testing.T) {
 	t.Cleanup(func() {
 		_ = srv.Close()
 	})
-	time.Sleep(75 * time.Millisecond)
+	// ListenAndServe binds asynchronously; wait for a real response instead of
+	// assuming 75ms is always enough.
+	testsync.Eventually(t, testsync.DefaultTimeout, "the diagnostic test server to accept requests", func() bool {
+		resp, err := http.Get("http://127.0.0.1:" + strconv.Itoa(port) + "/health")
+		if err != nil {
+			return false
+		}
+		_ = resp.Body.Close()
+		return true
+	})
 
 	r, w, err := os.Pipe()
 	if err != nil {

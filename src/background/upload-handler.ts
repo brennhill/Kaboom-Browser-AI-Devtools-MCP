@@ -188,7 +188,7 @@ async function verifyFileOnInputOnce(tabId: number, selector: string): Promise<V
  * If the file disappears at any check, returns has_file: false immediately.
  * If it survives all checks (~4.6s window), Stage 1 is confirmed.
  */
-async function verifyFileOnInput(tabId: number, selector: string): Promise<VerifyResult> {
+export async function verifyFileOnInput(tabId: number, selector: string): Promise<VerifyResult> {
   for (const delayMs of VERIFY_BACKOFF_MS) {
     await delay(delayMs)
     const result = await verifyFileOnInputOnce(tabId, selector)
@@ -202,7 +202,7 @@ async function verifyFileOnInput(tabId: number, selector: string): Promise<Verif
 /**
  * Click a file input element to open the native file dialog.
  */
-async function clickFileInput(tabId: number, selector: string): Promise<ClickResult> {
+export async function clickFileInput(tabId: number, selector: string): Promise<ClickResult> {
   const results = await chrome.scripting.executeScript({
     target: { tabId, allFrames: true },
     world: 'MAIN',
@@ -242,7 +242,7 @@ async function dismissFileDialog(serverUrl: string): Promise<void> {
 /**
  * Escalate to Stage 4 OS automation: click file input, call daemon, verify result.
  */
-async function escalateToStage4(
+export async function escalateToStage4(
   tabId: number,
   selector: string,
   filePath: string,

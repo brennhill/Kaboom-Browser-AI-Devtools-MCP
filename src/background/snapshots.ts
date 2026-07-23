@@ -149,7 +149,7 @@ export function resetContextWarning(): void {
 /**
  * Decode a VLQ-encoded string into an array of integers
  */
-function decodeVLQ(str: string): number[] {
+export function decodeVLQ(str: string): number[] {
   const result: number[] = []
   let shift = 0
   let value = 0
@@ -180,7 +180,7 @@ function decodeVLQ(str: string): number[] {
 /**
  * Parse a source map's mappings string into a structured format
  */
-function parseMappings(mappingsStr: string): number[][][] {
+export function parseMappings(mappingsStr: string): number[][][] {
   const lines = mappingsStr.split(';')
   const parsed: number[][][] = []
 
@@ -203,7 +203,7 @@ function parseMappings(mappingsStr: string): number[][][] {
 /**
  * Parse a stack trace line into components
  */
-function parseStackFrame(line: string): ParsedStackFrame | null {
+export function parseStackFrame(line: string): ParsedStackFrame | null {
   const match = line.match(STACK_FRAME_REGEX)
   if (match) {
     const [, functionName, file1, line1, col1, file2, line2] = match
@@ -233,7 +233,7 @@ function parseStackFrame(line: string): ParsedStackFrame | null {
 /**
  * Extract sourceMappingURL from script content
  */
-function extractSourceMapUrl(content: string): string | null {
+export function extractSourceMapUrl(content: string): string | null {
   const regex = /\/\/[#@]\s*sourceMappingURL=(.+?)(?:\s|$)/
   const match = content.match(regex)
   return match && match[1] ? match[1].trim() : null
@@ -242,7 +242,7 @@ function extractSourceMapUrl(content: string): string | null {
 /**
  * Parse source map data into a usable format
  */
-function parseSourceMapData(sourceMap: {
+export function parseSourceMapData(sourceMap: {
   mappings?: string
   sources?: string[]
   names?: string[]
@@ -263,7 +263,7 @@ function parseSourceMapData(sourceMap: {
  * Find original location from source map
  */
 // #lizard forgives
-function findOriginalLocation(
+export function findOriginalLocation(
   sourceMap: ParsedSourceMap,
   line: number,
   column: number

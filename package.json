@@ -1,6 +1,6 @@
 {
   "name": "kaboom-browser-ai-devtools-mcp",
-  "version": "0.8.2",
+  "version": "0.8.5",
   "private": true,
   "type": "module",
   "scripts": {
@@ -60,7 +60,7 @@
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "svelte": "^5.53.6",
-    "typescript": "^5.5.0",
+    "typescript": "^5.9.3",
     "vue": "^3.5.29"
   },
   "homepage": "https://gokaboom.dev",

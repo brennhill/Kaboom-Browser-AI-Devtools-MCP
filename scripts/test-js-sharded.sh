@@ -37,11 +37,20 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Collect test files from both extension test roots.
-if command -v rg >/dev/null 2>&1; then
-  mapfile -t FILES < <(rg --files tests/extension extension/background -g '*.test.js' | sort)
-else
-  mapfile -t FILES < <(find tests/extension extension/background -name '*.test.js' -type f | sort)
-fi
+#
+# NOTE: do NOT use `mapfile`/`readarray` here. Those are bash 4+ builtins, and
+# macOS ships bash 3.2 as /bin/bash — there `mapfile` is "command not found",
+# which aborted this script before a single test ran. Use a portable read loop.
+FILES=()
+while IFS= read -r test_file; do
+  [ -n "$test_file" ] && FILES+=("$test_file")
+done < <(
+  if command -v rg >/dev/null 2>&1; then
+    rg --files tests/extension extension/background -g '*.test.js'
+  else
+    find tests/extension extension/background -name '*.test.js' -type f
+  fi | sort
+)
 TOTAL=${#FILES[@]}
 
 if [[ $TOTAL -eq 0 ]]; then
@@ -70,6 +79,14 @@ done
 # Launch shards in parallel, capture PIDs and temp output files
 PIDS=()
 OUTPUTS=()
+
+# Remove shard temp files even if the run is interrupted.
+cleanup_outputs() {
+  for f in "${OUTPUTS[@]:-}"; do
+    [ -n "$f" ] && rm -f "$f"
+  done
+}
+trap cleanup_outputs EXIT INT TERM
 for i in $(seq 0 $((SHARDS - 1))); do
   files="${SHARD_FILES[$i]}"
   if [[ -z "$files" ]]; then
@@ -79,8 +96,14 @@ for i in $(seq 0 $((SHARDS - 1))); do
   outfile=$(mktemp "/tmp/js-shard-${i}-XXXXXX")
   OUTPUTS+=("$outfile")
 
+  # Pin the reporter. Node picks its default by TTY *and* version — node 20 emits
+  # TAP ("# pass N") while node 22+ emits the spec reporter ("ℹ pass N"). Inferring
+  # the format means the aggregation silently matches nothing on the other runtime.
+  # TAP is stable across 20->26, so force it and parse only TAP counters.
   # shellcheck disable=SC2086
-  node --experimental-test-module-mocks --test --test-force-exit --test-timeout="$TIMEOUT" --test-concurrency="$CONCURRENCY" $files > "$outfile" 2>&1 &
+  node --experimental-test-module-mocks --test --test-force-exit \
+    --test-reporter=tap --test-reporter-destination=stdout \
+    --test-timeout="$TIMEOUT" --test-concurrency="$CONCURRENCY" $files > "$outfile" 2>&1 &
   PIDS+=($!)
 done
 
@@ -92,33 +115,62 @@ for i in "${!PIDS[@]}"; do
   fi
 done
 
-# Aggregate results
+# Aggregate results.
+#
+# Parse the TAP summary counters ("# pass N" / "# fail N") rather than
+# counting ✔/✖ glyph lines — the reporter prints those for suites as well as
+# tests, so glyph counting badly inflates the totals.
 TOTAL_PASS=0
 TOTAL_FAIL=0
+TOTAL_SKIP=0
 for outfile in "${OUTPUTS[@]}"; do
-  pass=$(grep -c '✔' "$outfile" 2>/dev/null || true)
-  fail=$(grep -c '✖' "$outfile" 2>/dev/null || true)
-  pass=${pass:-0}; pass=${pass//[^0-9]/}; pass=${pass:-0}
-  fail=${fail:-0}; fail=${fail//[^0-9]/}; fail=${fail:-0}
-  TOTAL_PASS=$((TOTAL_PASS + pass))
-  TOTAL_FAIL=$((TOTAL_FAIL + fail))
+  # Pure awk (no pipeline): awk exits 0 even with zero matches, so `set -o pipefail`
+  # cannot abort the run before the missing-summary guard below gets to report.
+  pass=$(awk '/^# pass [0-9]+$/ {s+=$3} END {print s+0}' "$outfile" 2>/dev/null)
+  fail=$(awk '/^# fail [0-9]+$/ {s+=$3} END {print s+0}' "$outfile" 2>/dev/null)
+  skip=$(awk '/^# skipped [0-9]+$/ {s+=$3} END {print s+0}' "$outfile" 2>/dev/null)
+
+  # A shard with no summary never actually ran (crash, bad flag, missing binary).
+  # Treat that as a hard failure so a broken runner can't report success.
+  if [ "$(awk '/^# fail [0-9]+$/ {n++} END {print n+0}' "$outfile" 2>/dev/null)" = "0" ]; then
+    echo "ERROR: shard produced no test summary — it did not run. Output:" >&2
+    tail -20 "$outfile" >&2
+    FAILED=1
+  fi
+
+  TOTAL_PASS=$((TOTAL_PASS + ${pass:-0}))
+  TOTAL_FAIL=$((TOTAL_FAIL + ${fail:-0}))
+  TOTAL_SKIP=$((TOTAL_SKIP + ${skip:-0}))
 done
+
+# A run that executed nothing is not a pass. Guards against a broken glob, a bad
+# discovery path, or a reporter change that makes every counter parse as zero.
+if [ "$TOTAL_PASS" -eq 0 ] && [ "$TOTAL_FAIL" -eq 0 ]; then
+  echo "ERROR: zero tests executed across $SHARDS shard(s) — refusing to report success" >&2
+  FAILED=1
+fi
 
 # Show failures if any
 if [[ $TOTAL_FAIL -gt 0 ]]; then
   echo ""
   echo "=== FAILURES ==="
   for outfile in "${OUTPUTS[@]}"; do
-    if grep -q '✖' "$outfile" 2>/dev/null; then
-      grep -B1 '✖' "$outfile"
+    if grep -q '^not ok' "$outfile" 2>/dev/null; then
+      grep -A6 '^not ok' "$outfile"
       echo "---"
     fi
   done
 fi
 
+# A non-zero aggregate failure count must fail the run even if every node
+# process happened to exit 0.
+if [[ $TOTAL_FAIL -gt 0 ]]; then
+  FAILED=1
+fi
+
 # Summary
 echo ""
-echo "JS sharded test run: $TOTAL_PASS passed, $TOTAL_FAIL failed ($SHARDS shards)"
+echo "JS sharded test run: $TOTAL_PASS passed, $TOTAL_FAIL failed, $TOTAL_SKIP skipped ($SHARDS shards)"
 
 # Cleanup
 for outfile in "${OUTPUTS[@]}"; do

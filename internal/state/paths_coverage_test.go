@@ -494,6 +494,7 @@ func TestRootDir_ErrorWhenHomeUndefined(t *testing.T) {
 	t.Setenv(xdgStateHomeEnv, "")
 	t.Setenv("HOME", "")
 	t.Setenv("USERPROFILE", "")
+	t.Setenv(XDGConfigHomeEnv, "")
 
 	_, err := RootDir()
 	if err == nil {
@@ -507,6 +508,7 @@ func TestRootDir_ErrorWhenHomeUndefined(t *testing.T) {
 func TestLegacyRootDir_ErrorWhenHomeUndefined(t *testing.T) {
 	t.Setenv("HOME", "")
 	t.Setenv("USERPROFILE", "")
+	t.Setenv(XDGConfigHomeEnv, "")
 
 	_, err := LegacyRootDir()
 	if err == nil {
@@ -520,6 +522,7 @@ func TestLegacyRootDir_ErrorWhenHomeUndefined(t *testing.T) {
 func TestLegacyDefaultLogFile_ErrorWhenHomeUndefined(t *testing.T) {
 	t.Setenv("HOME", "")
 	t.Setenv("USERPROFILE", "")
+	t.Setenv(XDGConfigHomeEnv, "")
 
 	_, err := LegacyDefaultLogFile()
 	if err == nil {
@@ -533,6 +536,7 @@ func TestLegacyDefaultLogFile_ErrorWhenHomeUndefined(t *testing.T) {
 func TestLegacyCrashLogFile_ErrorWhenHomeUndefined(t *testing.T) {
 	t.Setenv("HOME", "")
 	t.Setenv("USERPROFILE", "")
+	t.Setenv(XDGConfigHomeEnv, "")
 
 	_, err := LegacyCrashLogFile()
 	if err == nil {
@@ -546,6 +550,7 @@ func TestLegacyCrashLogFile_ErrorWhenHomeUndefined(t *testing.T) {
 func TestLegacyPIDFile_ErrorWhenHomeUndefined(t *testing.T) {
 	t.Setenv("HOME", "")
 	t.Setenv("USERPROFILE", "")
+	t.Setenv(XDGConfigHomeEnv, "")
 
 	_, err := LegacyPIDFile(8080)
 	if err == nil {
@@ -559,6 +564,7 @@ func TestLegacyPIDFile_ErrorWhenHomeUndefined(t *testing.T) {
 func TestLegacySettingsFile_ErrorWhenHomeUndefined(t *testing.T) {
 	t.Setenv("HOME", "")
 	t.Setenv("USERPROFILE", "")
+	t.Setenv(XDGConfigHomeEnv, "")
 
 	_, err := LegacySettingsFile()
 	if err == nil {
@@ -572,6 +578,7 @@ func TestLegacySettingsFile_ErrorWhenHomeUndefined(t *testing.T) {
 func TestLegacyRecordingsDir_ErrorWhenHomeUndefined(t *testing.T) {
 	t.Setenv("HOME", "")
 	t.Setenv("USERPROFILE", "")
+	t.Setenv(XDGConfigHomeEnv, "")
 
 	_, err := LegacyRecordingsDir()
 	if err == nil {
@@ -588,6 +595,7 @@ func TestInRoot_ErrorWhenRootDirFails(t *testing.T) {
 	t.Setenv(xdgStateHomeEnv, "")
 	t.Setenv("HOME", "")
 	t.Setenv("USERPROFILE", "")
+	t.Setenv(XDGConfigHomeEnv, "")
 
 	_, err := InRoot("logs")
 	if err == nil {
@@ -600,6 +608,7 @@ func TestProjectDir_ErrorWhenRootDirFails(t *testing.T) {
 	t.Setenv(xdgStateHomeEnv, "")
 	t.Setenv("HOME", "")
 	t.Setenv("USERPROFILE", "")
+	t.Setenv(XDGConfigHomeEnv, "")
 
 	_, err := ProjectDir("/some/path")
 	if err == nil {
@@ -611,6 +620,7 @@ func TestDefaultLogFile_ErrorPropagation(t *testing.T) {
 	t.Setenv(xdgStateHomeEnv, "")
 	t.Setenv("HOME", "")
 	t.Setenv("USERPROFILE", "")
+	t.Setenv(XDGConfigHomeEnv, "")
 
 	_, err := DefaultLogFile()
 	if err == nil {
@@ -623,6 +633,7 @@ func TestCrashLogFile_ErrorPropagation(t *testing.T) {
 	t.Setenv(xdgStateHomeEnv, "")
 	t.Setenv("HOME", "")
 	t.Setenv("USERPROFILE", "")
+	t.Setenv(XDGConfigHomeEnv, "")
 
 	_, err := CrashLogFile()
 	if err == nil {
@@ -635,6 +646,7 @@ func TestPIDFile_ErrorPropagation(t *testing.T) {
 	t.Setenv(xdgStateHomeEnv, "")
 	t.Setenv("HOME", "")
 	t.Setenv("USERPROFILE", "")
+	t.Setenv(XDGConfigHomeEnv, "")
 
 	_, err := PIDFile(8080)
 	if err == nil {
@@ -647,6 +659,7 @@ func TestRecordingsDir_ErrorPropagation(t *testing.T) {
 	t.Setenv(xdgStateHomeEnv, "")
 	t.Setenv("HOME", "")
 	t.Setenv("USERPROFILE", "")
+	t.Setenv(XDGConfigHomeEnv, "")
 
 	_, err := RecordingsDir()
 	if err == nil {
@@ -659,6 +672,7 @@ func TestScreenshotsDir_ErrorPropagation(t *testing.T) {
 	t.Setenv(xdgStateHomeEnv, "")
 	t.Setenv("HOME", "")
 	t.Setenv("USERPROFILE", "")
+	t.Setenv(XDGConfigHomeEnv, "")
 
 	_, err := ScreenshotsDir()
 	if err == nil {
@@ -671,6 +685,7 @@ func TestSettingsFile_ErrorPropagation(t *testing.T) {
 	t.Setenv(xdgStateHomeEnv, "")
 	t.Setenv("HOME", "")
 	t.Setenv("USERPROFILE", "")
+	t.Setenv(XDGConfigHomeEnv, "")
 
 	_, err := SettingsFile()
 	if err == nil {
@@ -702,6 +717,7 @@ func TestUpgradeMarkerFile_ErrorPropagation(t *testing.T) {
 	t.Setenv(xdgStateHomeEnv, "")
 	t.Setenv("HOME", "")
 	t.Setenv("USERPROFILE", "")
+	t.Setenv(XDGConfigHomeEnv, "")
 
 	_, err := UpgradeMarkerFile()
 	if err == nil {

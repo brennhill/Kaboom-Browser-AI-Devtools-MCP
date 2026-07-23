@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testsync"
 )
 
 // ============================================
@@ -52,9 +53,7 @@ func TestStartResultCleanup_ReturnsStopFunction(t *testing.T) {
 
 func TestStartResultCleanup_GoroutineStopsOnClose(t *testing.T) {
 	// NOT parallel: relies on runtime.NumGoroutine() counts
-	runtime.GC()
-	time.Sleep(20 * time.Millisecond)
-	before := runtime.NumGoroutine()
+	before := testsync.SettledGoroutines()
 
 	c := NewCapture()
 
@@ -65,15 +64,10 @@ func TestStartResultCleanup_GoroutineStopsOnClose(t *testing.T) {
 		t.Logf("Warning: goroutine count did not visibly increase: before=%d, during=%d", before, during)
 	}
 
+	// Teardown is not synchronous with Close(); poll instead of guessing how long
+	// the scheduler needs.
 	c.Close()
-	time.Sleep(40 * time.Millisecond)
-	runtime.GC()
-	time.Sleep(20 * time.Millisecond)
-
-	after := runtime.NumGoroutine()
-	if after > before+1 {
-		t.Errorf("Goroutine leak after Close: before=%d, after=%d", before, after)
-	}
+	testsync.EventuallyGoroutines(t, before+1, "capture goroutines to exit after Close")
 }
 
 func TestClose_Idempotent(t *testing.T) {
@@ -100,9 +94,7 @@ func TestWaitForResult_NoGoroutineLeakOnTimeout(t *testing.T) {
 		Params: json.RawMessage(`{"selector":"#leak-test"}`),
 	})
 
-	runtime.GC()
-	time.Sleep(40 * time.Millisecond)
-	before := runtime.NumGoroutine()
+	before := testsync.SettledGoroutines()
 
 	// This will timeout — the key assertion is no goroutine leak after
 	_, err := c.WaitForResult(id, 80*time.Millisecond)
@@ -110,15 +102,7 @@ func TestWaitForResult_NoGoroutineLeakOnTimeout(t *testing.T) {
 		t.Fatal("Expected timeout error")
 	}
 
-	// Wait for any spawned goroutines to finish
-	time.Sleep(120 * time.Millisecond)
-	runtime.GC()
-	time.Sleep(40 * time.Millisecond)
-
-	after := runtime.NumGoroutine()
-	if after > before+1 {
-		t.Errorf("Goroutine leak after WaitForResult timeout: before=%d, after=%d (delta=%d)", before, after, after-before)
-	}
+	testsync.EventuallyGoroutines(t, before+1, "WaitForResult goroutines to exit after timeout")
 }
 
 func TestWaitForResult_MultipleTimeoutsNoLeak(t *testing.T) {
@@ -129,9 +113,7 @@ func TestWaitForResult_MultipleTimeoutsNoLeak(t *testing.T) {
 	// Short query timeout so CreatePendingQuery cleanup goroutines exit quickly
 	c.SetQueryTimeout(40 * time.Millisecond)
 
-	runtime.GC()
-	time.Sleep(40 * time.Millisecond)
-	before := runtime.NumGoroutine()
+	before := testsync.SettledGoroutines()
 
 	for i := 0; i < 6; i++ {
 		id, _ := c.CreatePendingQuery(queries.PendingQuery{
@@ -141,17 +123,9 @@ func TestWaitForResult_MultipleTimeoutsNoLeak(t *testing.T) {
 		_, _ = c.WaitForResult(id, 40*time.Millisecond)
 	}
 
-	// Wait for per-query cleanup goroutines to complete (timeout + margin)
-	time.Sleep(120 * time.Millisecond)
-	runtime.GC()
-	time.Sleep(40 * time.Millisecond)
-
-	after := runtime.NumGoroutine()
 	// Old behavior: ~100 leaked goroutines (per-iteration spawns in WaitForResult loop).
 	// Fixed: 1 wakeup goroutine per WaitForResult call, cleaned up on return.
-	if after > before+3 {
-		t.Errorf("Goroutine leak after 10 timeouts: before=%d, after=%d (delta=%d)", before, after, after-before)
-	}
+	testsync.EventuallyGoroutines(t, before+3, "per-query cleanup goroutines to exit after 6 timeouts")
 }
 
 func TestWaitForResult_ReturnsResultWhenAvailable(t *testing.T) {

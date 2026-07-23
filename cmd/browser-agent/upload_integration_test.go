@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/uploadhandler"
@@ -510,9 +511,28 @@ func TestUploadInteg_FormSubmit_FilePermissionDenied(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = os.Chmod(path, 0o644) })
 
+	// Hermetic: point at a local server instead of example.com.
+	//
+	// ValidateFormActionURL resolves the host for its SSRF check with a 5s
+	// timeout, so "https://example.com/upload" made this test depend on real DNS.
+	// When resolution stalled, the call took exactly 5.00s and returned a DNS
+	// error — which mentions neither "open" nor "permission", so the assertion
+	// below failed for a reason unrelated to what the test is about.
+	//
+	// The recorder makes the contract explicit too: an unreadable file must be
+	// rejected before any request goes out.
+	uploadhandler.SetSkipSSRFCheck(true)
+	t.Cleanup(func() { uploadhandler.SetSkipSSRFCheck(false) })
+
+	var contacted atomic.Bool
+	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		contacted.Store(true)
+	}))
+	defer srv.Close()
+
 	sec := testUploadSecurity(t)
 	resp := handleFormSubmitInternal(FormSubmitRequest{
-		FormAction:    "https://example.com/upload",
+		FormAction:    srv.URL + "/upload",
 		FileInputName: "file",
 		FilePath:      path,
 	}, sec)
@@ -521,6 +541,9 @@ func TestUploadInteg_FormSubmit_FilePermissionDenied(t *testing.T) {
 	// but os.Open will fail with permission denied
 	if resp.Success {
 		t.Error("form submit with unreadable file should fail")
+	}
+	if contacted.Load() {
+		t.Error("form submit must reject the unreadable file before making any request")
 	}
 	if !strings.Contains(strings.ToLower(resp.Error), "open") &&
 		!strings.Contains(strings.ToLower(resp.Error), "permission") {

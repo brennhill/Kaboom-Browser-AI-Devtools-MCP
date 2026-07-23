@@ -9,7 +9,7 @@ import { domPrimitiveQuery } from './dom-primitives-query.js';
 import { domPrimitiveWaitForStable, domPrimitiveActionDiff } from './dom-primitives-stability.js';
 import { domPrimitiveOverlay } from './dom-primitives-overlay.js';
 import { domPrimitiveIntent } from './dom-primitives-intent.js';
-import { isCDPEscalatable, tryCDPEscalation } from './cdp-dispatch.js';
+import { shouldEscalateToCDP, tryCDPEscalation } from './cdp-dispatch.js';
 import { isReadOnlyAction } from './action-metadata.js';
 import { errorMessage } from '../lib/error-utils.js';
 import { delay } from '../lib/timeout-utils.js';
@@ -287,7 +287,8 @@ export async function executeDOMAction(query, tabId, syncClient, sendAsyncResult
             actionToast(tabId, toastLabel, toastDetail, 'trying', 10000);
         // CDP auto-escalation: try hardware events first for click/type/key_press (main frame only).
         // Falls back to DOM primitives silently if CDP is unavailable or fails.
-        if (isCDPEscalatable(action) && !params.frame && params.nth === undefined) {
+        // `dispatch: "dom"` opts out entirely (React escape hatch, #599).
+        if (shouldEscalateToCDP(action, params)) {
             try {
                 const cdpResult = await tryCDPEscalation(tabId, action, params);
                 if (cdpResult) {

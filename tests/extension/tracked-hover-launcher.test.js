@@ -326,7 +326,19 @@ describe('tracked hover launcher', () => {
     assert.ok(sentTypes.includes('capture_screenshot'))
   })
 
-  test('audit action uses Audit wording and opens the shared audit workflow', async () => {
+  // AUDIT_BUTTON_ENABLED in src/content/ui/tracked-hover-launcher.ts is currently
+  // false: the audit action is withheld until the terminal side-panel path is
+  // fully verified. requestAudit itself stays covered by request-audit.test.js.
+  test('does not render the audit action while the feature flag is off', async () => {
+    await setTrackedHoverLauncherEnabled(true)
+
+    const root = elementsById['kaboom-tracked-hover-launcher']
+    assert.strictEqual(findElementByTitlePrefix(root, 'Audit'), null, 'audit action must not be rendered')
+    assert.strictEqual(findElementByTitlePrefix(root, 'Find Problems'), null)
+  })
+
+  // Restore-guard: the contract to re-assert when AUDIT_BUTTON_ENABLED flips true.
+  test.skip('audit action uses Audit wording and opens the shared audit workflow (re-enable with AUDIT_BUTTON_ENABLED)', async () => {
     await setTrackedHoverLauncherEnabled(true)
 
     const root = elementsById['kaboom-tracked-hover-launcher']
@@ -369,7 +381,7 @@ describe('tracked hover launcher', () => {
 
     assert.strictEqual(warn.mock.calls.length, 1)
     const message = warn.mock.calls[0].arguments[0]
-    assert.match(message, /Kaboom/)
+    assert.match(message, /KaBOOM!/)
     assert.doesNotMatch(message, /Gasoline|STRUM/)
   })
 
@@ -386,7 +398,7 @@ describe('tracked hover launcher', () => {
 
     assert.strictEqual(warn.mock.calls.length, 1)
     const message = warn.mock.calls[0].arguments[0]
-    assert.match(message, /Kaboom/)
+    assert.match(message, /KaBOOM!/)
     assert.match(message, /chrome:\/\/extensions/)
     assert.doesNotMatch(message, /Gasoline|STRUM/)
   })
@@ -415,10 +427,10 @@ describe('tracked hover launcher', () => {
     const toggle = elementsById['kaboom-tracked-hover-toggle']
     const settingsButton = findElementByTitlePrefix(root, 'Settings')
     assert.ok(settingsButton)
-    assert.strictEqual(toggle?.title, 'Kaboom quick actions')
+    assert.strictEqual(toggle?.title, 'KaBOOM! quick actions')
     settingsButton.dispatch('click')
 
-    const hideButton = findElementWithChildText(root, 'Hide Kaboom Devtool')
+    const hideButton = findElementWithChildText(root, 'Hide KaBOOM! Devtool')
     assert.ok(hideButton, 'expected hide button')
     hideButton.dispatch('click')
 

@@ -54,6 +54,6 @@ describe('popup tab-tracking branding', () => {
 
     const button = document.getElementById('track-page-btn')
     assert.strictEqual(button.disabled, true)
-    assert.match(button.title, /Kaboom is disabled here/)
+    assert.match(button.title, /KaBOOM! is disabled here/)
   })
 })

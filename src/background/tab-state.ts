@@ -116,6 +116,9 @@ export async function loadSavedSettings(): Promise<SavedSettings> {
  */
 export async function loadAiWebPilotState(logFn?: (message: string) => void): Promise<boolean> {
   const startTime = performance.now()
+  // Fail closed: with no storage we cannot confirm the capability is enabled, and
+  // `undefined !== false` would otherwise report it as ON. Matches loadDebugModeState.
+  if (typeof chrome === 'undefined' || !chrome.storage) return false
   const aiEnabled = await getLocal(StorageKey.AI_WEB_PILOT_ENABLED)
   const wasLoaded = aiEnabled !== false
   const loadTime = performance.now() - startTime
@@ -323,7 +326,7 @@ export async function resolveTerminalWorkspaceTarget(requestTabId?: number): Pro
 /**
  * Get all extension config settings.
  */
-async function getAllConfigSettings(): Promise<Record<string, boolean | string | undefined>> {
+export async function getAllConfigSettings(): Promise<Record<string, boolean | string | undefined>> {
   const result = (await getLocals([
     StorageKey.AI_WEB_PILOT_ENABLED,
     StorageKey.WEBSOCKET_CAPTURE_ENABLED,

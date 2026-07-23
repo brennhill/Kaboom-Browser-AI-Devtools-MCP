@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <style>
+    :root {
+      --energy-speed: 1.6s;
+      --energy-displacement: 5px;
+    }
+
+    @keyframes harmonic-osc {
+      0%, 100% { transform: translateX(0); filter: brightness(1); }
+      50% { transform: translateX(var(--energy-displacement)); filter: brightness(1.18); }
+    }
+
+    .strum-path {
+      animation: harmonic-osc var(--energy-speed) infinite ease-in-out;
+      transform-box: fill-box;
+      transform-origin: center;
+    }
+  </style>
+
+  <defs>
+    <filter id="warm-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2.2" result="glow-blur" />
+      <feMerge>
+        <feMergeNode in="glow-blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <circle cx="64" cy="64" r="62" fill="#302d2a" />
+  <circle cx="64" cy="64" r="61" fill="none" stroke="#f6bf4b" stroke-width="2" opacity="0.7" filter="url(#warm-glow)" />
+
+  <clipPath id="circle-clip-glow">
+    <circle cx="64" cy="64" r="62" />
+  </clipPath>
+
+  <g clip-path="url(#circle-clip-glow)">
+    <g transform="translate(64 64) rotate(-32) translate(-64 -64)">
+      <path class="strum-path" d="M38 -25 L45 -25 Q 47 64 51 153 L38 153 Q 35 64 38 -25 Z" fill="#b45309" style="animation-delay: -0.01s" />
+      <path class="strum-path" d="M54 -25 L61 -25 Q 63 64 67 153 L54 153 Q 51 64 54 -25 Z" fill="#d97706" style="animation-delay: -0.02s" />
+      <path class="strum-path" d="M70 -25 L77 -25 Q 79 64 83 153 L70 153 Q 67 64 70 -25 Z" fill="#f59e0b" style="animation-delay: -0.03s" />
+      <path class="strum-path" d="M86 -25 L93 -25 Q 95 64 99 153 L86 153 Q 83 64 86 -25 Z" fill="#fbbf24" style="animation-delay: -0.04s" />
+      <path class="strum-path" d="M102 -25 L109 -25 Q 111 64 115 153 L102 153 Q 99 64 102 -25 Z" fill="#fcd34d" style="animation-delay: -0.05s" />
+    </g>
+  </g>
+
+  <circle cx="64" cy="64" r="62" fill="none" stroke="#222" stroke-width="3.2" />
+</svg>

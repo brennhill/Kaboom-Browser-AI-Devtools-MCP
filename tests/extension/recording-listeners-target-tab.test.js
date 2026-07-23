@@ -117,6 +117,6 @@ describe('recording listeners popup target selection', () => {
 
     assert.deepStrictEqual(globalThis.chrome.tabs.remove.mock.calls[0].arguments, [501])
     assert.deepStrictEqual(globalThis.chrome.tabs.update.mock.calls[0].arguments, [88, { active: true }])
-    assert.match(globalThis.chrome.tabs.sendMessage.mock.calls[0].arguments[1].detail, /Open Kaboom and click Record/)
+    assert.match(globalThis.chrome.tabs.sendMessage.mock.calls[0].arguments[1].detail, /Open KaBOOM! and click Record/)
   })
 })

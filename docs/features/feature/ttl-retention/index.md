@@ -9,7 +9,7 @@ code_paths:
   - cmd/browser-agent/screenshot_cleanup.go
 test_paths:
   - cmd/browser-agent/screenshot_cleanup_test.go
-last_verified_version: 0.8.2
+last_verified_version: 0.8.5
 last_verified_date: 2026-04-22
 ---
 

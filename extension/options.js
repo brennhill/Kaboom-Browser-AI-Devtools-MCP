@@ -127,6 +127,8 @@ export async function loadOptions() {
  * updates its debugMode variable so new logs use the new setting.
  */
 // #lizard forgives
+// Returns the persist+notify promise so callers (and tests) can await completion
+// deterministically rather than racing the internal setLocals().then() chain.
 export function saveOptions() {
     const serverUrlInput = document.getElementById('server-url-input');
     const serverUrl = serverUrlInput?.value.trim() || DEFAULT_SERVER_URL;
@@ -144,7 +146,7 @@ export function saveOptions() {
     const terminalAICommand = aiCmdInput?.value.trim() || '';
     const devRootInput = document.getElementById('terminal-dev-root');
     const terminalDevRoot = devRootInput?.value.trim() || '';
-    setLocals({
+    return setLocals({
         serverUrl,
         screenshotOnError,
         sourceMapEnabled,

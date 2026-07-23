@@ -602,7 +602,7 @@ describe('terminal side panel host', () => {
     const iframe = getElementById('kaboom-terminal-iframe')
     const terminalShell = header?.parentElement || null
     const newProjectButton = findButton(root, (node) => node.textContent === 'New Project')
-    const titleNode = walkTree(header, (child) => child.textContent === 'Kaboom Terminal')
+    const titleNode = walkTree(header, (child) => child.textContent === 'KaBOOM! Terminal')
 
     assert.ok(root, 'panel root should exist')
     assert.ok(header, 'terminal header should exist')
@@ -626,9 +626,9 @@ describe('terminal side panel host', () => {
 
     const header = getElementById('kaboom-terminal-header')
     const terminalBody = header?.parentElement?.children?.[1] || null
-    const titleNode = walkTree(header, (child) => child.textContent === 'Kaboom Terminal')
+    const titleNode = walkTree(header, (child) => child.textContent === 'KaBOOM! Terminal')
     const fallbackNode = walkTree(terminalBody, (child) =>
-      child.textContent === 'Terminal unavailable. Start the Kaboom daemon and reopen the panel.'
+      child.textContent === 'Terminal unavailable. Start the KaBOOM! daemon and reopen the panel.'
     )
 
     assert.ok(header, 'terminal header should exist')

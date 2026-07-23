@@ -92,6 +92,7 @@
     CLOAKED_DOMAINS: "kaboom_cloaked_domains",
     ERROR_GROUPS: "kaboom_error_groups"
   };
+  var TERMINAL_PANEL_SHORTCUT = "Alt+Shift+T";
 
   // extension/lib/storage-utils.js
   function getStorageWithSession() {
@@ -2115,9 +2116,9 @@
   }
 
   // extension/lib/request-audit.js
-  async function requestAudit(pageUrl) {
+  async function requestAudit(pageUrl, tabId) {
     try {
-      await chrome.runtime.sendMessage({ type: "open_terminal_panel" });
+      await chrome.runtime.sendMessage({ type: "open_terminal_panel", tab_id: tabId });
     } catch {
     }
     await chrome.runtime.sendMessage({ type: "qa_scan_requested", page_url: pageUrl });
@@ -2177,11 +2178,22 @@
       visibilityListeners.delete(listener);
     };
   }
+  function reportPanelOpenFailure(reason) {
+    console.error(`[KaBOOM!] Terminal side panel did not open: ${reason}`);
+    try {
+      showActionToast("Terminal side panel did not open", `${reason} \u2014 press ${TERMINAL_PANEL_SHORTCUT} or right-click the page and choose "Open Kaboom Terminal".`, "error", 8e3);
+    } catch {
+    }
+  }
   async function openTerminalPanel() {
     try {
       const result = await chrome.runtime.sendMessage({ type: "open_terminal_panel" });
-      return result?.success === true;
-    } catch {
+      if (result?.success === true)
+        return true;
+      reportPanelOpenFailure(result?.error ?? "the background service worker sent no response");
+      return false;
+    } catch (err) {
+      reportPanelOpenFailure(err instanceof Error ? err.message : String(err));
       return false;
     }
   }
@@ -2195,6 +2207,7 @@
   }
 
   // extension/content/ui/tracked-hover-launcher.js
+  var AUDIT_BUTTON_ENABLED = false;
   var ROOT_ID = "kaboom-tracked-hover-launcher";
   var PANEL_ID = "kaboom-tracked-hover-panel";
   var TOGGLE_ID = "kaboom-tracked-hover-toggle";
@@ -2666,7 +2679,8 @@
     panel.appendChild(drawButton);
     panel.appendChild(stopButton);
     panel.appendChild(screenshotButton);
-    panel.appendChild(auditButton);
+    if (AUDIT_BUTTON_ENABLED)
+      panel.appendChild(auditButton);
     panel.appendChild(terminalButton);
     const dotSep = document.createElement("span");
     dotSep.textContent = "\u22EE";

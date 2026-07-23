@@ -217,8 +217,11 @@ function showSandboxError(message, instruction, command) {
     cmdBox.textContent = command;
     overlay.appendChild(title);
     overlay.appendChild(msg);
-    overlay.appendChild(inst);
-    overlay.appendChild(cmdBox);
+    // Not every start failure has a remedy to offer; empty boxes would just be noise.
+    if (instruction)
+        overlay.appendChild(inst);
+    if (command)
+        overlay.appendChild(cmdBox);
     terminalBodyEl.appendChild(overlay);
 }
 function updateStatusDot(dotState) {
