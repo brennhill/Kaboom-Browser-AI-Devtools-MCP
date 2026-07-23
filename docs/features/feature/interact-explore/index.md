@@ -109,6 +109,8 @@ This feature documents the shipped `interact` action surface (not a batched `int
 
 `execute_js` snippets support top-level `await` (#598): compilation prefers the synchronous `Function()` forms and falls back to `AsyncFunction` only when they reject, so existing synchronous snippets keep identical semantics (a synchronous throw stays `execution_error`, not `promise_rejected`).
 
+`get_readable` / `get_markdown` / `page_summary` fall back to `chrome.scripting.executeScript` when the content script is unreachable. The `FALLBACK_SCRIPTS` map is keyed by the **runtime message type** (`kaboom_get_readable`, …); it previously used UPPERCASE keys, so every lookup missed and the fallback silently never ran.
+
 `type`/`click` reliably drive framework-controlled inputs (#599): after a CDP `type`, the value is reconciled through the native prototype setter plus a bubbling `input`/`change` (gated on a detected React value tracker, so plain inputs are untouched), which fires React/Vue/Svelte `onChange`. The `dispatch:"dom"` option is an escape hatch that skips CDP entirely and routes `click`/`type` through in-page `element.click()` + native-setter input events.
 
 `navigate_and_document` combines click-driven navigation, optional URL-change/stability waits, and page-context enrichment (`url`, `title`, `tab_id`) in a single interact workflow.

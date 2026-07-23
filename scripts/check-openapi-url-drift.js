@@ -26,12 +26,10 @@ const DAEMON_URL_HEADS = [
   '${getBrowserAgentUrl()}'
 ]
 
-// URLs on expressions in this set are not part of the daemon spec (terminal
-// sub-server, external services). They're intentionally ignored, not drift.
-const NON_DAEMON_URL_HEADS = [
-  '${termUrl}',
-  '${getTerminalServerUrl(state.serverUrl)}'
-]
+// Note: URLs built from non-daemon expressions — `${termUrl}` and
+// `${getTerminalServerUrl(state.serverUrl)}` (the terminal sub-server) — are not
+// part of the daemon spec. They need no explicit exclusion list: the scanner only
+// matches DAEMON_URL_HEADS above, so those heads never produce a hit.
 
 // Directories to scan for call sites. Only src/ — extension/ is the compiled
 // output and would double-count.

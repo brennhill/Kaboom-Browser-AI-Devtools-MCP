@@ -62,7 +62,7 @@ function postToInject(data: Record<string, unknown>): void {
 }
 
 // Feature toggle message types forwarded from background to inject.js — imported from canonical constants.
-const TOGGLE_MESSAGES = INJECT_FORWARDED_SETTINGS
+export const TOGGLE_MESSAGES = INJECT_FORWARDED_SETTINGS
 
 /**
  * Security: Validate sender is from the extension background script

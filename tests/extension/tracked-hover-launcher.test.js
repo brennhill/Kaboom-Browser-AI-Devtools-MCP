@@ -369,7 +369,7 @@ describe('tracked hover launcher', () => {
 
     assert.strictEqual(warn.mock.calls.length, 1)
     const message = warn.mock.calls[0].arguments[0]
-    assert.match(message, /Kaboom/)
+    assert.match(message, /KaBOOM!/)
     assert.doesNotMatch(message, /Gasoline|STRUM/)
   })
 
@@ -386,7 +386,7 @@ describe('tracked hover launcher', () => {
 
     assert.strictEqual(warn.mock.calls.length, 1)
     const message = warn.mock.calls[0].arguments[0]
-    assert.match(message, /Kaboom/)
+    assert.match(message, /KaBOOM!/)
     assert.match(message, /chrome:\/\/extensions/)
     assert.doesNotMatch(message, /Gasoline|STRUM/)
   })
@@ -415,10 +415,10 @@ describe('tracked hover launcher', () => {
     const toggle = elementsById['kaboom-tracked-hover-toggle']
     const settingsButton = findElementByTitlePrefix(root, 'Settings')
     assert.ok(settingsButton)
-    assert.strictEqual(toggle?.title, 'Kaboom quick actions')
+    assert.strictEqual(toggle?.title, 'KaBOOM! quick actions')
     settingsButton.dispatch('click')
 
-    const hideButton = findElementWithChildText(root, 'Hide Kaboom Devtool')
+    const hideButton = findElementWithChildText(root, 'Hide KaBOOM! Devtool')
     assert.ok(hideButton, 'expected hide button')
     hideButton.dispatch('click')
 

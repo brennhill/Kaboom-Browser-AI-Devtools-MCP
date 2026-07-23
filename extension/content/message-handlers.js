@@ -29,7 +29,7 @@ function postToInject(data) {
     window.postMessage({ ...data, _nonce: getPageNonce() }, window.location.origin);
 }
 // Feature toggle message types forwarded from background to inject.js — imported from canonical constants.
-const TOGGLE_MESSAGES = INJECT_FORWARDED_SETTINGS;
+export const TOGGLE_MESSAGES = INJECT_FORWARDED_SETTINGS;
 /**
  * Security: Validate sender is from the extension background script
  * Prevents content script from trusting messages from compromised page context

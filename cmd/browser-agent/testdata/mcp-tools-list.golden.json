@@ -1183,6 +1183,14 @@
           ],
           "type": "string"
         },
+        "dispatch": {
+          "description": "Input dispatch strategy for click/type. 'auto' (default) uses CDP hardware events; 'dom' routes through in-page element.click() + native-setter input events, which reliably drives React/Vue/Svelte controlled inputs and delegated onClick.",
+          "enum": [
+            "auto",
+            "dom"
+          ],
+          "type": "string"
+        },
         "domain": {
           "description": "Cookie domain (set_cookie/delete_cookie)",
           "type": "string"

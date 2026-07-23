@@ -36,7 +36,7 @@ describe('terminal widget session branding', () => {
     assert.strictEqual(result, null)
     assert.strictEqual(warn.mock.calls.length, 1)
     const message = warn.mock.calls[0].arguments[0]
-    assert.match(message, /Kaboom daemon running/)
+    assert.match(message, /KaBOOM! daemon running/)
     assert.match(message, /npx kaboom-agentic-browser/)
     assert.doesNotMatch(message, /Gasoline daemon|STRUM daemon|gasoline-agentic-browser|strum-agentic-browser/)
   })

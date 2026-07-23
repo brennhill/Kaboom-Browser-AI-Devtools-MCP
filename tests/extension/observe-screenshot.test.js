@@ -54,6 +54,10 @@ mock.module('../../extension/background/debug.js', {
 globalThis.chrome = {
   tabs: {
     get: mock.fn(async () => ({ windowId: 11, url: 'https://www.linkedin.com/feed/' })),
+    // captureVisibleTabSafe queries the currently-active tab so it can restore it
+    // afterward. Returning [] means "no previously-active tab to restore", so the
+    // capture performs exactly one tabs.update (activating the target tab).
+    query: mock.fn(async () => []),
     update: mock.fn(async () => ({})),
     captureVisibleTab: mock.fn(async () => 'data:image/jpeg;base64,Zm9v')
   },

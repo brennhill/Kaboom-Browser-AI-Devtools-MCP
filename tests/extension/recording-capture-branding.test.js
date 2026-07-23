@@ -73,13 +73,13 @@ describe('recording capture branding', () => {
 
     assert.deepStrictEqual(globalThis.chrome.tabs.update.mock.calls[0].arguments, [77, { active: true }])
     assert.strictEqual(globalThis.chrome.tabs.sendMessage.mock.calls.length, 1)
-    assert.match(globalThis.chrome.tabs.sendMessage.mock.calls[0].arguments[1].text, /Open Kaboom/)
+    assert.match(globalThis.chrome.tabs.sendMessage.mock.calls[0].arguments[1].text, /Open KaBOOM!/)
 
     dispatchRuntimeMessage({ type: 'recording_gesture_denied' })
     const result = await pending
 
     assert.strictEqual(result.status, 'error')
-    assert.match(String(result.error || ''), /Kaboom popup/)
+    assert.match(String(result.error || ''), /KaBOOM! popup/)
   })
 
   test('requestRecordingGesture timeout reminder keeps Kaboom popup copy', async () => {
@@ -95,9 +95,9 @@ describe('recording capture branding', () => {
     )
 
     assert.strictEqual(result.status, 'error')
-    assert.match(String(result.error || ''), /Open the Kaboom popup, click Approve/)
+    assert.match(String(result.error || ''), /Open the KaBOOM! popup, click Approve/)
     assert.strictEqual(globalThis.chrome.tabs.sendMessage.mock.calls.length, 2)
-    assert.match(globalThis.chrome.tabs.sendMessage.mock.calls[0].arguments[1].text, /Open Kaboom/)
-    assert.match(globalThis.chrome.tabs.sendMessage.mock.calls[1].arguments[1].text, /Open Kaboom/)
+    assert.match(globalThis.chrome.tabs.sendMessage.mock.calls[0].arguments[1].text, /Open KaBOOM!/)
+    assert.match(globalThis.chrome.tabs.sendMessage.mock.calls[1].arguments[1].text, /Open KaBOOM!/)
   })
 })

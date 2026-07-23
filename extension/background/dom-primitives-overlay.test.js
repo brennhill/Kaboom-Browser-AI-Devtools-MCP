@@ -258,6 +258,7 @@ function makeCloseButton(props = {}) {
 // Import domPrimitive AFTER globals
 // ---------------------------------------------------------------------------
 const { domPrimitive } = await import('./dom-primitives.js')
+const { domPrimitiveOverlay } = await import('./dom-primitives-overlay.js')
 
 // ===========================================================================
 // #444: Overlay dismiss loop detection
@@ -279,18 +280,18 @@ describe('#444: overlay dismiss loop detection', () => {
     const overlay = makeOverlay({ children: [closeBtn] })
     setupOverlayDocument([overlay], [closeBtn])
 
-    const result = await domPrimitive('dismiss_top_overlay', '', {})
+    const result = await domPrimitiveOverlay('dismiss_top_overlay', {})
     assert.strictEqual(result.success, true, 'First dismiss should succeed')
   })
 
-  test('overlay is stamped with data-gasoline-dismiss-ts after dismiss', async () => {
+  test('overlay is stamped with data-kaboom-dismiss-ts after dismiss', async () => {
     const closeBtn = makeCloseButton()
     const overlay = makeOverlay({ children: [closeBtn] })
     setupOverlayDocument([overlay], [closeBtn])
 
-    await domPrimitive('dismiss_top_overlay', '', {})
+    await domPrimitiveOverlay('dismiss_top_overlay', {})
 
-    const stamp = overlay.getAttribute('data-gasoline-dismiss-ts')
+    const stamp = overlay.getAttribute('data-kaboom-dismiss-ts')
     assert.ok(stamp, 'Overlay should be stamped after dismiss attempt')
     assert.ok(Number(stamp) > 0, 'Stamp should be a positive timestamp')
   })
@@ -299,11 +300,11 @@ describe('#444: overlay dismiss loop detection', () => {
     const closeBtn = makeCloseButton()
     const overlay = makeOverlay({
       children: [closeBtn],
-      attrs: { 'data-gasoline-dismiss-ts': String(Date.now() - 1000) } // stamped 1s ago
+      attrs: { 'data-kaboom-dismiss-ts': String(Date.now() - 1000) } // stamped 1s ago
     })
     setupOverlayDocument([overlay], [closeBtn])
 
-    const result = await domPrimitive('dismiss_top_overlay', '', {})
+    const result = await domPrimitiveOverlay('dismiss_top_overlay', {})
     assert.strictEqual(result.success, false, 'Second dismiss should fail')
     assert.strictEqual(result.error, 'dismiss_loop_detected', 'Should return dismiss_loop_detected')
   })
@@ -312,11 +313,11 @@ describe('#444: overlay dismiss loop detection', () => {
     const closeBtn = makeCloseButton()
     const overlay = makeOverlay({
       children: [closeBtn],
-      attrs: { 'data-gasoline-dismiss-ts': String(Date.now() - 60000) } // stamped 60s ago
+      attrs: { 'data-kaboom-dismiss-ts': String(Date.now() - 60000) } // stamped 60s ago
     })
     setupOverlayDocument([overlay], [closeBtn])
 
-    const result = await domPrimitive('dismiss_top_overlay', '', {})
+    const result = await domPrimitiveOverlay('dismiss_top_overlay', {})
     assert.strictEqual(result.success, true, 'Stale stamp should be ignored')
   })
 
@@ -325,11 +326,11 @@ describe('#444: overlay dismiss loop detection', () => {
       id: 'cookie-modal',
       role: 'dialog',
       textContent: 'Accept cookies?',
-      attrs: { 'data-gasoline-dismiss-ts': String(Date.now() - 2000) }
+      attrs: { 'data-kaboom-dismiss-ts': String(Date.now() - 2000) }
     })
     setupOverlayDocument([overlay])
 
-    const result = await domPrimitive('dismiss_top_overlay', '', {})
+    const result = await domPrimitiveOverlay('dismiss_top_overlay', {})
     assert.strictEqual(result.error, 'dismiss_loop_detected')
     assert.ok(result.message.includes('already attempted'), 'Message should mention prior attempt')
     assert.ok(result.overlay_selector, 'Should include overlay selector')
@@ -363,7 +364,7 @@ describe('#445: cross-extension overlay detection', () => {
     })
     setupOverlayDocument([overlay], [iframe, closeBtn])
 
-    const result = await domPrimitive('dismiss_top_overlay', '', {})
+    const result = await domPrimitiveOverlay('dismiss_top_overlay', {})
     assert.strictEqual(result.success, true, 'Dismiss should succeed')
     assert.strictEqual(result.overlay_source, 'extension',
       'Extension overlay should be flagged as extension-sourced')
@@ -374,7 +375,7 @@ describe('#445: cross-extension overlay detection', () => {
     const overlay = makeOverlay({ children: [closeBtn] })
     setupOverlayDocument([overlay], [closeBtn])
 
-    const result = await domPrimitive('dismiss_top_overlay', '', {})
+    const result = await domPrimitiveOverlay('dismiss_top_overlay', {})
     assert.strictEqual(result.success, true)
     assert.strictEqual(result.overlay_source, 'page',
       'Page overlay should be flagged as page-sourced')

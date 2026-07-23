@@ -93,7 +93,7 @@ export function resetContextWarning() {
 /**
  * Decode a VLQ-encoded string into an array of integers
  */
-function decodeVLQ(str) {
+export function decodeVLQ(str) {
     const result = [];
     let shift = 0;
     let value = 0;
@@ -120,7 +120,7 @@ function decodeVLQ(str) {
 /**
  * Parse a source map's mappings string into a structured format
  */
-function parseMappings(mappingsStr) {
+export function parseMappings(mappingsStr) {
     const lines = mappingsStr.split(';');
     const parsed = [];
     for (const line of lines) {
@@ -140,7 +140,7 @@ function parseMappings(mappingsStr) {
 /**
  * Parse a stack trace line into components
  */
-function parseStackFrame(line) {
+export function parseStackFrame(line) {
     const match = line.match(STACK_FRAME_REGEX);
     if (match) {
         const [, functionName, file1, line1, col1, file2, line2] = match;
@@ -167,7 +167,7 @@ function parseStackFrame(line) {
 /**
  * Extract sourceMappingURL from script content
  */
-function extractSourceMapUrl(content) {
+export function extractSourceMapUrl(content) {
     const regex = /\/\/[#@]\s*sourceMappingURL=(.+?)(?:\s|$)/;
     const match = content.match(regex);
     return match && match[1] ? match[1].trim() : null;
@@ -175,7 +175,7 @@ function extractSourceMapUrl(content) {
 /**
  * Parse source map data into a usable format
  */
-function parseSourceMapData(sourceMap) {
+export function parseSourceMapData(sourceMap) {
     const mappings = parseMappings(sourceMap.mappings || '');
     return {
         sources: sourceMap.sources || [],
@@ -189,7 +189,7 @@ function parseSourceMapData(sourceMap) {
  * Find original location from source map
  */
 // #lizard forgives
-function findOriginalLocation(sourceMap, line, column) {
+export function findOriginalLocation(sourceMap, line, column) {
     if (!sourceMap || !sourceMap.mappings)
         return null;
     const lineIndex = line - 1;

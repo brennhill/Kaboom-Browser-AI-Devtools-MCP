@@ -54,6 +54,10 @@ export declare function setAiWebPilotCacheInitialized(initialized: boolean): voi
 export declare function setPilotInitCallback(callback: (() => void) | null): void;
 export declare function applyCaptureOverrides(overrides: Record<string, string>): void;
 /**
+ * Reset pilot cache for testing
+ */
+export declare function _resetPilotCacheForTesting(value?: boolean): void;
+/**
  * Check if AI Web Pilot is enabled
  */
 export declare function isAiWebPilotEnabled(): boolean;

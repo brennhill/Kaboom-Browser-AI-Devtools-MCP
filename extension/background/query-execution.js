@@ -49,7 +49,7 @@ export async function probeCSPStatus(tabId) {
  * or when inject script is not loaded.
  * The func is injected natively by Chrome's extension system.
  */
-async function executeViaScriptingAPI(tabId, script, timeoutMs, world = 'MAIN') {
+export async function executeViaScriptingAPI(tabId, script, timeoutMs, world = 'MAIN') {
     const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error(`Script exceeded ${timeoutMs}ms timeout`)), timeoutMs + 2000);
     });

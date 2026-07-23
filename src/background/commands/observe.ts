@@ -31,7 +31,7 @@ const DEFAULT_CAPTURE_HEIGHT = 720
  * Temporarily expands scrollable containers so CDP captures full content.
  * Stores original styles in data attributes for restoration.
  */
-function screenshotExpandContainers(): { expanded: number; content_height_hint: number } {
+export function screenshotExpandContainers(): { expanded: number; content_height_hint: number } {
   let count = 0
   let contentHeightHint = Math.max(document.documentElement?.scrollHeight || 0, document.body?.scrollHeight || 0)
   function tryExpand(el: HTMLElement): void {
@@ -85,7 +85,7 @@ function screenshotExpandContainers(): { expanded: number; content_height_hint: 
 }
 
 /** Self-contained: restore containers after full-page capture. */
-function screenshotRestoreContainers(): void {
+export function screenshotRestoreContainers(): void {
   function tryRestore(el: HTMLElement): void {
     const raw = el.getAttribute('data-kaboom-fpx')
     if (!raw) return
@@ -121,7 +121,7 @@ function screenshotRestoreContainers(): void {
 }
 
 /** Derive bounded screenshot dimensions with fallback defaults and optional expanded-content hint. */
-function computeFullPageCaptureDimensions(
+export function computeFullPageCaptureDimensions(
   contentWidth: number,
   contentHeight: number,
   hintedHeight: number

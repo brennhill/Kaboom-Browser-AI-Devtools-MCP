@@ -38,7 +38,7 @@ describe('readPathLiteral', () => {
   })
 
   test('strips trailing sentence punctuation', () => {
-    assert.equal(readPathLiteral('/api/foo.\`'), '/api/foo')
+    assert.equal(readPathLiteral('/api/foo.`'), '/api/foo')
     assert.equal(readPathLiteral('/api/foo, and more'), '/api/foo')
   })
 

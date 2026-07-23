@@ -21,10 +21,10 @@ describe('version check branding', () => {
     const versionCheck = await import('../../extension/background/version-check.js')
 
     versionCheck.resetVersionCheck()
-    versionCheck.updateVersionFromHealth({ version: '1.0.0', availableVersion: '1.1.0' })
+    versionCheck.updateVersionFromHealth({ version: '1.0.0', available_version: '1.1.0' })
 
     const title = globalThis.chrome.action.setTitle.mock.calls.at(-1).arguments[0].title
-    assert.match(title, /Kaboom: New version available \(1.1.0\)/)
+    assert.match(title, /KaBOOM!: New version available \(1.1.0\)/)
     assert.strictEqual(
       versionCheck.getUpdateInfo().downloadUrl,
       'https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/releases/latest'

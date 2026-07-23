@@ -234,8 +234,12 @@ function pageSummaryFallbackScript(): Record<string, unknown> {
 
 export type FallbackScript = () => Record<string, unknown>
 
+// Keys MUST be the runtime message types dispatched by interact-content.ts and
+// handled in content/runtime-message-listener.ts. They were previously UPPERCASE,
+// which made every FALLBACK_SCRIPTS[messageType] lookup miss — silently disabling
+// the content-script-unreachable fallback for all three extractors.
 export const FALLBACK_SCRIPTS: Record<string, FallbackScript> = {
-  KABOOM_GET_READABLE: readableFallbackScript,
-  KABOOM_GET_MARKDOWN: markdownFallbackScript,
-  KABOOM_PAGE_SUMMARY: pageSummaryFallbackScript
+  kaboom_get_readable: readableFallbackScript,
+  kaboom_get_markdown: markdownFallbackScript,
+  kaboom_page_summary: pageSummaryFallbackScript
 }
