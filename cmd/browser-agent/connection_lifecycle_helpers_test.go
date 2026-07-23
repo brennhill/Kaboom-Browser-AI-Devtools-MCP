@@ -90,6 +90,16 @@ func warmTestBinary(binary string) {
 func getTestStateDir(t *testing.T) string {
 	t.Helper()
 	testStateOnce.Do(func() {
+		// Honour an externally supplied state dir. ci.yml's "Reliability soak gate"
+		// runs the soak with KABOOM_STATE_DIR set and then inspects that directory
+		// for fast-path telemetry. Ignoring it sent every spawned daemon's
+		// telemetry to a private temp dir, so the gate always saw 0 samples and
+		// failed with "insufficient samples: got 0, need 100" — it had never
+		// actually measured anything.
+		if dir := os.Getenv(statecfg.StateDirEnv); dir != "" {
+			testStateDir = dir
+			return
+		}
 		testStateDir, testStateErr = os.MkdirTemp("", "kaboom-test-state-*")
 		if testStateErr != nil {
 			testStateErr = fmt.Errorf("failed to create isolated test state dir: %w", testStateErr)

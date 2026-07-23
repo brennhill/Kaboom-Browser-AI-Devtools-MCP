@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"strings"
 	"sync"
 	"syscall"
@@ -473,25 +474,48 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 	})
 }
 
+// shellCandidates is the fallback preference order, used only when $SHELL is
+// unset or unusable. Nothing here is required to exist — the search skips
+// whatever is missing.
+var shellCandidates = []string{"zsh", "bash", "sh"}
+
 // DefaultShell returns the shell to spawn when the caller does not name one.
 //
-// This used to be hardcoded to /bin/zsh, which does not exist on most Linux
-// installs — every terminal start there failed with
-// "fork/exec /bin/zsh: no such file or directory". Prefer the user's own $SHELL,
-// then fall back through the common paths, ending at /bin/sh which POSIX
-// guarantees.
+// This was hardcoded to /bin/zsh, which does not exist on most Linux installs —
+// every terminal start there failed with
+// "fork/exec /bin/zsh: no such file or directory". macOS never saw it because
+// zsh is the system default there.
+//
+// Resolution order:
+//  1. $SHELL, if it is an executable file — the user's actual shell wins.
+//  2. The first of zsh, bash, sh found on $PATH. Searching $PATH rather than
+//     assuming /bin matters on Homebrew, NixOS, and any distro that puts shells
+//     in /usr/bin; Alpine in particular has no bash at all.
+//  3. /bin/sh, which POSIX requires to exist.
 func DefaultShell() string {
-	if sh := os.Getenv("SHELL"); sh != "" {
-		if _, err := os.Stat(sh); err == nil {
-			return sh
-		}
+	if sh := os.Getenv("SHELL"); isExecutableFile(sh) {
+		return sh
 	}
-	for _, candidate := range []string{"/bin/zsh", "/bin/bash", "/bin/sh"} {
-		if _, err := os.Stat(candidate); err == nil {
-			return candidate
+	for _, name := range shellCandidates {
+		if path, err := exec.LookPath(name); err == nil {
+			return path
 		}
 	}
 	return "/bin/sh"
+}
+
+// isExecutableFile reports whether path is a regular file with an execute bit.
+// os.Stat alone is not enough: a $SHELL pointing at a directory or a
+// non-executable leftover would otherwise be handed to fork/exec.
+func isExecutableFile(path string) bool {
+	if path == "" {
+		return false
+	}
+	info, err := os.Stat(path)
+	if err != nil || info.IsDir() {
+		return false
+	}
+	return info.Mode()&0o111 != 0
 }
 
 // AutoDetectCWD gets the CWD from the first registered MCP client.

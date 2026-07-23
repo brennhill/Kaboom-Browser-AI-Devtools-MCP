@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
@@ -125,5 +126,59 @@ func TestDefaultShellIgnoresMissingShellEnv(t *testing.T) {
 	}
 	if _, err := os.Stat(got); err != nil {
 		t.Fatalf("fallback %q does not exist: %v", got, err)
+	}
+}
+
+// TestDefaultShellRejectsNonExecutableShellEnv covers a $SHELL that exists but
+// cannot be executed. os.Stat alone would accept it and hand it to fork/exec.
+func TestDefaultShellRejectsNonExecutableShellEnv(t *testing.T) {
+	dir := t.TempDir()
+	notExec := filepath.Join(dir, "not-executable")
+	if err := os.WriteFile(notExec, []byte("#!/bin/sh\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("SHELL", notExec)
+
+	if got := DefaultShell(); got == notExec {
+		t.Fatal("DefaultShell returned a non-executable $SHELL")
+	}
+}
+
+// TestDefaultShellRejectsDirectoryShellEnv covers $SHELL pointing at a directory.
+func TestDefaultShellRejectsDirectoryShellEnv(t *testing.T) {
+	t.Setenv("SHELL", t.TempDir())
+	if got := DefaultShell(); !filepath.IsAbs(got) || got == "" {
+		t.Fatalf("DefaultShell() = %q, want a real shell path", got)
+	}
+	if _, err := os.Stat(DefaultShell()); err != nil {
+		t.Fatalf("fallback does not exist: %v", err)
+	}
+}
+
+// TestDefaultShellFindsShellsOutsideBin pins the reason the search uses $PATH
+// instead of assuming /bin: Homebrew, NixOS, and similar install shells
+// elsewhere. A candidate reachable only via PATH must still be found.
+func TestDefaultShellFindsShellsOutsideBin(t *testing.T) {
+	dir := t.TempDir()
+	fake := filepath.Join(dir, shellCandidates[0])
+	if err := os.WriteFile(fake, []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("SHELL", "") // force the candidate search
+	t.Setenv("PATH", dir) // only our fake shell is reachable
+
+	if got := DefaultShell(); got != fake {
+		t.Errorf("DefaultShell() = %q, want %q found via PATH", got, fake)
+	}
+}
+
+// TestDefaultShellFallsBackWhenNothingOnPath is the last resort: POSIX
+// guarantees /bin/sh, so an empty PATH must not yield an empty command.
+func TestDefaultShellFallsBackWhenNothingOnPath(t *testing.T) {
+	t.Setenv("SHELL", "")
+	t.Setenv("PATH", t.TempDir()) // empty dir — no shells reachable
+
+	if got := DefaultShell(); got != "/bin/sh" {
+		t.Errorf("DefaultShell() = %q, want /bin/sh as the last resort", got)
 	}
 }

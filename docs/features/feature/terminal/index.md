@@ -344,9 +344,19 @@ If the user re-focuses and types again during the auto-submit window, Enter is d
 
 ### Default Shell
 
-`HandleTerminalStart` resolves the shell via `DefaultShell()` when the caller does not name one: `$SHELL` if it exists, then `/bin/zsh`, `/bin/bash`, `/bin/sh`. It was hardcoded to `/bin/zsh`, so **every terminal start failed on Linux** (`fork/exec /bin/zsh: no such file or directory`) — most Linux installs do not ship zsh. macOS never saw it because zsh is the system default there.
+`HandleTerminalStart` resolves the shell via `DefaultShell()` when the caller does not name one. It was hardcoded to `/bin/zsh`, so **every terminal start failed on Linux** (`fork/exec /bin/zsh: no such file or directory`) — most Linux installs do not ship zsh. macOS never saw it because zsh is the system default there.
 
-Tests: `TestDefaultShellExistsOnThisPlatform` asserts the chosen shell is actually executable on the machine running the test, so the platform assumption cannot come back.
+Resolution order:
+
+| Step | Source | Why |
+|------|--------|-----|
+| 1 | `$SHELL`, if it is an **executable regular file** | the user's actual shell wins. `os.Stat` alone is not enough — a `$SHELL` pointing at a directory or a non-executable leftover would otherwise reach `fork/exec` |
+| 2 | first of `zsh`, `bash`, `sh` found on **`$PATH`** | no path is assumed. `/bin/bash` does not exist on distros without usr-merge, Homebrew and NixOS install shells elsewhere, and Alpine ships no bash at all — the golang:1.24 image resolves bash to `/usr/bin/bash` |
+| 3 | `/bin/sh` | POSIX requires it; guarantees a non-empty command |
+
+zsh is only *first in preference*, never required — step 2 skips whatever is missing.
+
+Tests (`sandbox_error_test.go`): the chosen shell must be executable on the machine running the test; `$SHELL` wins when usable; a missing, non-executable, or directory `$SHELL` falls through; a candidate reachable only via `PATH` is still found; an empty `PATH` still yields `/bin/sh`.
 
 ### Start Failure Reporting
 
