@@ -104,7 +104,7 @@ func runContentionClientStartupFlow(client contentionClient) error {
 		return fmt.Errorf("client %d tools/call read: %w", client.index, err)
 	}
 	elapsed := time.Since(start)
-	if elapsed > 4*time.Second {
+	if elapsed > fastStartInitBudget {
 		return fmt.Errorf("client %d tools/call took %v, want <= 4s", client.index, elapsed)
 	}
 	if toolResp.Error != nil {

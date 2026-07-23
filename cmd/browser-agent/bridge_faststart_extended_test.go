@@ -61,24 +61,24 @@ func TestFastStart_ClientCompatibilityMatrix(t *testing.T) {
 			reader := bufio.NewReader(stdout)
 			initReq := fmt.Sprintf(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"%s","version":"%s"}}}`, tc.clientName, tc.clientVer)
 			writeJSONRPCLine(t, stdin, initReq)
-			initResp := readJSONRPCLine(t, reader, 5*time.Second)
+			initResp := readJSONRPCLine(t, reader, testLivenessTimeout)
 			if initResp.Error != nil {
 				t.Fatalf("initialize error: %+v", initResp.Error)
 			}
 
 			start := time.Now()
 			writeJSONRPCLine(t, stdin, `{"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"kaboom://capabilities"}}`)
-			capResp := readJSONRPCLine(t, reader, 1*time.Second)
+			capResp := readJSONRPCLine(t, reader, testLivenessTimeout)
 			if capResp.Error != nil {
 				t.Fatalf("resources/read capabilities error: %+v", capResp.Error)
 			}
-			if elapsed := time.Since(start); elapsed > 500*time.Millisecond {
+			if elapsed := time.Since(start); elapsed > fastStartResourceBudget {
 				t.Fatalf("resources/read capabilities elapsed = %v, want < 500ms", elapsed)
 			}
 
 			playbookReq := fmt.Sprintf(`{"jsonrpc":"2.0","id":3,"method":"resources/read","params":{"uri":"%s"}}`, tc.playbookURI)
 			writeJSONRPCLine(t, stdin, playbookReq)
-			playbookResp := readJSONRPCLine(t, reader, 1*time.Second)
+			playbookResp := readJSONRPCLine(t, reader, testLivenessTimeout)
 			if playbookResp.Error != nil {
 				t.Fatalf("resources/read playbook error: %+v", playbookResp.Error)
 			}
@@ -117,7 +117,7 @@ func TestFastStart_ResourceWorkflowSoak(t *testing.T) {
 
 	reader := bufio.NewReader(stdout)
 	writeJSONRPCLine(t, stdin, `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"soak-test","version":"1.0"}}}`)
-	initResp := readJSONRPCLine(t, reader, 5*time.Second)
+	initResp := readJSONRPCLine(t, reader, testLivenessTimeout)
 	if initResp.Error != nil {
 		t.Fatalf("initialize error: %+v", initResp.Error)
 	}
@@ -127,13 +127,13 @@ func TestFastStart_ResourceWorkflowSoak(t *testing.T) {
 	for i := 0; i < iterations; i++ {
 		baseID := 100 + (i * 10)
 		writeJSONRPCLine(t, stdin, fmt.Sprintf(`{"jsonrpc":"2.0","id":%d,"method":"resources/read","params":{"uri":"kaboom://capabilities"}}`, baseID))
-		capResp := readJSONRPCLine(t, reader, 1*time.Second)
+		capResp := readJSONRPCLine(t, reader, testLivenessTimeout)
 		if capResp.Error != nil {
 			t.Fatalf("iteration %d capabilities error: %+v", i, capResp.Error)
 		}
 
 		writeJSONRPCLine(t, stdin, fmt.Sprintf(`{"jsonrpc":"2.0","id":%d,"method":"resources/read","params":{"uri":"kaboom://playbook/security_audit/quick"}}`, baseID+1))
-		playbookResp := readJSONRPCLine(t, reader, 1*time.Second)
+		playbookResp := readJSONRPCLine(t, reader, testLivenessTimeout)
 		if playbookResp.Error != nil {
 			t.Fatalf("iteration %d playbook error: %+v", i, playbookResp.Error)
 		}
@@ -141,7 +141,7 @@ func TestFastStart_ResourceWorkflowSoak(t *testing.T) {
 		// Include tool calls intermittently to verify mixed workflow stability.
 		if i%4 == 0 {
 			writeJSONRPCLine(t, stdin, fmt.Sprintf(`{"jsonrpc":"2.0","id":%d,"method":"tools/call","params":{"name":"observe","arguments":{"what":"errors"}}}`, baseID+2))
-			toolResp := readJSONRPCLine(t, reader, 1*time.Second)
+			toolResp := readJSONRPCLine(t, reader, testLivenessTimeout)
 			if toolResp.Error != nil {
 				t.Fatalf("iteration %d tools/call protocol error: %+v", i, toolResp.Error)
 			}
@@ -361,21 +361,21 @@ func TestFastStart_ResourceWorkflowBeforeDaemonReady(t *testing.T) {
 
 	start := time.Now()
 	writeJSONRPCLine(t, stdin, `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"workflow-test","version":"1.0"}}}`)
-	initResp := readJSONRPCLine(t, reader, 5*time.Second)
+	initResp := readJSONRPCLine(t, reader, testLivenessTimeout)
 	if initResp.Error != nil {
 		t.Fatalf("initialize error: %+v", initResp.Error)
 	}
-	if elapsed := time.Since(start); elapsed > 4*time.Second {
+	if elapsed := time.Since(start); elapsed > fastStartInitBudget {
 		t.Fatalf("initialize elapsed = %v, want < 4s", elapsed)
 	}
 
 	start = time.Now()
 	writeJSONRPCLine(t, stdin, `{"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"kaboom://capabilities"}}`)
-	capResp := readJSONRPCLine(t, reader, 1*time.Second)
+	capResp := readJSONRPCLine(t, reader, testLivenessTimeout)
 	if capResp.Error != nil {
 		t.Fatalf("resources/read capabilities error: %+v", capResp.Error)
 	}
-	if elapsed := time.Since(start); elapsed > 500*time.Millisecond {
+	if elapsed := time.Since(start); elapsed > fastStartResourceBudget {
 		t.Fatalf("resources/read capabilities elapsed = %v, want < 500ms", elapsed)
 	}
 
@@ -389,11 +389,11 @@ func TestFastStart_ResourceWorkflowBeforeDaemonReady(t *testing.T) {
 
 	start = time.Now()
 	writeJSONRPCLine(t, stdin, `{"jsonrpc":"2.0","id":3,"method":"resources/read","params":{"uri":"kaboom://playbook/security"}}`)
-	playbookResp := readJSONRPCLine(t, reader, 1*time.Second)
+	playbookResp := readJSONRPCLine(t, reader, testLivenessTimeout)
 	if playbookResp.Error != nil {
 		t.Fatalf("resources/read playbook error: %+v", playbookResp.Error)
 	}
-	if elapsed := time.Since(start); elapsed > 500*time.Millisecond {
+	if elapsed := time.Since(start); elapsed > fastStartResourceBudget {
 		t.Fatalf("resources/read playbook elapsed = %v, want < 500ms", elapsed)
 	}
 	var playbookResult MCPResourcesReadResult
@@ -406,7 +406,7 @@ func TestFastStart_ResourceWorkflowBeforeDaemonReady(t *testing.T) {
 
 	// tools/call should not surface protocol errors during startup.
 	writeJSONRPCLine(t, stdin, `{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"observe","arguments":{"what":"errors"}}}`)
-	toolResp := readJSONRPCLine(t, reader, 3*time.Second)
+	toolResp := readJSONRPCLine(t, reader, testLivenessTimeout)
 	if toolResp.Error != nil {
 		t.Fatalf("tools/call returned protocol error: %+v", toolResp.Error)
 	}

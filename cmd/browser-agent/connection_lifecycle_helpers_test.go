@@ -58,12 +58,33 @@ func buildTestBinary(t *testing.T) string {
 		cmd := exec.Command("go", "build", "-cover", "-o", testBinaryPath, ".") // #nosec G204,G202 -- test binary from buildTestBinary(t)
 		if output, err := cmd.CombinedOutput(); err != nil {
 			testBinaryErr = fmt.Errorf("failed to build kaboom: %v\nOutput: %s", err, output)
+			return
 		}
+		warmTestBinary(testBinaryPath)
 	})
 	if testBinaryErr != nil {
 		t.Fatalf("buildTestBinary: %v", testBinaryErr)
 	}
 	return testBinaryPath
+}
+
+// warmTestBinary runs the freshly built binary once so no timed test pays the
+// one-time cold-exec cost.
+//
+// Measured on this repo: the first exec of a just-built 16 MB coverage binary
+// takes ~520ms (page-in from disk + macOS code-signature validation); every exec
+// after is ~0ms. That 520ms landed inside whichever test spawned first, which is
+// why TestFastStart_ClientCompatibilityMatrix/claude_code — the first subtest —
+// was the one that blew its read timeout under full-suite load while subtests
+// 2..4 passed. Paying it here means every measurement is steady state.
+//
+// Best-effort: a failure here is not a test failure. `--version` is a pure
+// print-and-exit path, so it touches no ports, no state dir, and no daemon.
+func warmTestBinary(binary string) {
+	cmd := exec.Command(binary, "--version") // #nosec G204 -- test-only: binary is from buildTestBinary(t) // nosemgrep: go.lang.security.audit.dangerous-exec-command.dangerous-exec-command, go_subproc_rule-subproc -- test spawns own binary
+	cmd.Stdout = io.Discard
+	cmd.Stderr = io.Discard
+	_ = cmd.Run()
 }
 
 func getTestStateDir(t *testing.T) string {
@@ -139,4 +160,3 @@ func stopTestServer(binary string, port int, stateDir string) {
 	}
 	removePIDFile(port)
 }
-

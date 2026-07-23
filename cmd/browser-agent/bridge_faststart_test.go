@@ -117,7 +117,7 @@ func TestFastStart_InitializeRespondsImmediately(t *testing.T) {
 		// First initialize includes process startup time (~300-500ms typical, up to ~3s on loaded machines).
 		// The key guarantee is it responds WITHOUT waiting for daemon (which would add 5-10s).
 		// We set 4s as upper bound to catch regressions while allowing for slow CI/loaded machines.
-		if elapsed > 4*time.Second {
+		if elapsed > fastStartInitBudget {
 			t.Errorf("❌ Initialize took %v, expected < 4s (includes process startup)", elapsed)
 		} else {
 			t.Logf("✅ Initialize responded in %v (< 4s, includes process startup)", elapsed)
@@ -154,7 +154,7 @@ func TestFastStart_InitializeRespondsImmediately(t *testing.T) {
 	case err := <-errChan:
 		t.Fatalf("Failed to read response: %v", err)
 
-	case <-time.After(5 * time.Second):
+	case <-time.After(testLivenessTimeout):
 		t.Fatal("Timeout waiting for initialize response")
 	}
 }
@@ -227,7 +227,7 @@ func TestFastStart_ToolsListRespondsImmediately(t *testing.T) {
 		elapsed := time.Since(start)
 
 		// CRITICAL: Must respond within 100ms
-		if elapsed > 100*time.Millisecond {
+		if elapsed > fastStartWarmBudget {
 			t.Errorf("❌ tools/list took %v, expected < 100ms", elapsed)
 		} else {
 			t.Logf("✅ tools/list responded in %v (< 100ms)", elapsed)
@@ -276,7 +276,7 @@ func TestFastStart_ToolsListRespondsImmediately(t *testing.T) {
 	case err := <-errChan:
 		t.Fatalf("Failed to read response: %v", err)
 
-	case <-time.After(5 * time.Second):
+	case <-time.After(testLivenessTimeout):
 		t.Fatal("Timeout waiting for tools/list response")
 	}
 }
@@ -397,9 +397,9 @@ func TestFastStart_OtherMethodsReturnQuickly(t *testing.T) {
 
 			// First request (initialize) includes process startup overhead
 			// Subsequent requests should be < 100ms
-			threshold := 100 * time.Millisecond
+			threshold := fastStartWarmBudget
 			if tc.name == "initialize" {
-				threshold = 4 * time.Second // Includes process startup (up to ~3s on loaded machines)
+				threshold = fastStartInitBudget // Includes process startup
 			}
 
 			if elapsed > threshold {
