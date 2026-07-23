@@ -342,6 +342,12 @@ If the user re-focuses and types again during the auto-submit window, Enter is d
 - `ForceRedraw()`: sends `SIGWINCH` directly to the child process (used on reconnect when dimensions match but display is stale)
 - Environment: inherits from parent process, adds `TERM=xterm-256color`
 
+### Default Shell
+
+`HandleTerminalStart` resolves the shell via `DefaultShell()` when the caller does not name one: `$SHELL` if it exists, then `/bin/zsh`, `/bin/bash`, `/bin/sh`. It was hardcoded to `/bin/zsh`, so **every terminal start failed on Linux** (`fork/exec /bin/zsh: no such file or directory`) — most Linux installs do not ship zsh. macOS never saw it because zsh is the system default there.
+
+Tests: `TestDefaultShellExistsOnThisPlatform` asserts the chosen shell is actually executable on the machine running the test, so the platform assumption cannot come back.
+
 ### Start Failure Reporting
 
 Being spawned by an MCP client does **not**, by itself, prevent the daemon from spawning a PTY — a daemon launched over MCP stdio spawns terminals normally. Only a genuinely restricted sandbox profile blocks it, and its signature is a fork/exec `EPERM`.

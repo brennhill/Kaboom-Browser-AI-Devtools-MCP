@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"os"
 	"strings"
 	"syscall"
 	"testing"
@@ -84,5 +85,45 @@ func TestSandboxPayloadCarriesUnderlyingError(t *testing.T) {
 	}
 	if payload["error"] != "sandbox_restricted" {
 		t.Fatalf("error code changed: %v", payload["error"])
+	}
+}
+
+// TestDefaultShellExistsOnThisPlatform pins the regression that made every
+// terminal start fail on Linux: the default was hardcoded to /bin/zsh, which
+// most Linux installs do not ship. Whatever DefaultShell picks must actually be
+// executable on the machine running the test.
+func TestDefaultShellExistsOnThisPlatform(t *testing.T) {
+	shell := DefaultShell()
+	if shell == "" {
+		t.Fatal("DefaultShell returned an empty path")
+	}
+	info, err := os.Stat(shell)
+	if err != nil {
+		t.Fatalf("DefaultShell() = %q, which does not exist: %v", shell, err)
+	}
+	if info.Mode()&0o111 == 0 {
+		t.Fatalf("DefaultShell() = %q, which is not executable (mode %v)", shell, info.Mode())
+	}
+}
+
+// TestDefaultShellPrefersUsersShell checks $SHELL wins when it is usable, so the
+// fallback chain never overrides an explicit user preference.
+func TestDefaultShellPrefersUsersShell(t *testing.T) {
+	t.Setenv("SHELL", "/bin/sh") // present on every POSIX system
+	if got := DefaultShell(); got != "/bin/sh" {
+		t.Errorf("DefaultShell() = %q, want /bin/sh from $SHELL", got)
+	}
+}
+
+// TestDefaultShellIgnoresMissingShellEnv falls through when $SHELL points at
+// something that is not there (stale profile, container without the shell).
+func TestDefaultShellIgnoresMissingShellEnv(t *testing.T) {
+	t.Setenv("SHELL", "/nonexistent/shell-that-is-not-installed")
+	got := DefaultShell()
+	if got == "/nonexistent/shell-that-is-not-installed" {
+		t.Fatal("DefaultShell returned a $SHELL that does not exist")
+	}
+	if _, err := os.Stat(got); err != nil {
+		t.Fatalf("fallback %q does not exist: %v", got, err)
 	}
 }

@@ -12,6 +12,7 @@ import (
 	"io/fs"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"syscall"
@@ -404,7 +405,7 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 
 	// Default to shell if no command specified.
 	if req.Cmd == "" {
-		req.Cmd = "/bin/zsh"
+		req.Cmd = DefaultShell()
 	}
 
 	// CWD priority: request dir > active_codebase (set via MCP/extension) > auto-detect
@@ -470,6 +471,27 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 		"token":      result.Token,
 		"pid":        result.Pid,
 	})
+}
+
+// DefaultShell returns the shell to spawn when the caller does not name one.
+//
+// This used to be hardcoded to /bin/zsh, which does not exist on most Linux
+// installs — every terminal start there failed with
+// "fork/exec /bin/zsh: no such file or directory". Prefer the user's own $SHELL,
+// then fall back through the common paths, ending at /bin/sh which POSIX
+// guarantees.
+func DefaultShell() string {
+	if sh := os.Getenv("SHELL"); sh != "" {
+		if _, err := os.Stat(sh); err == nil {
+			return sh
+		}
+	}
+	for _, candidate := range []string{"/bin/zsh", "/bin/bash", "/bin/sh"} {
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+	}
+	return "/bin/sh"
 }
 
 // AutoDetectCWD gets the CWD from the first registered MCP client.

@@ -18,7 +18,12 @@ const (
 	StateDirEnv = "KABOOM_STATE_DIR"
 
 	xdgStateHomeEnv = "XDG_STATE_HOME"
-	appName         = "kaboom"
+	// XDGConfigHomeEnv is consulted by os.UserConfigDir on Linux. Exported so
+	// tests can neutralise it: on Linux a set XDG_CONFIG_HOME makes
+	// os.UserConfigDir succeed even with HOME empty, so "no home" tests that
+	// clear only HOME pass on macOS and fail on Linux CI.
+	XDGConfigHomeEnv = "XDG_CONFIG_HOME"
+	appName          = "kaboom"
 )
 
 // RootDir returns the runtime state root for Kaboom.

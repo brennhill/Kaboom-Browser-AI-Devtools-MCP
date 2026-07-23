@@ -22,9 +22,21 @@ func TestClassifyLaunchMode_DaemonFlagAlwaysPersistent(t *testing.T) {
 	}
 }
 
+// clearSupervisorEnv neutralises every environment marker that would make the
+// process look supervised. Clearing only a couple of them makes the result
+// depend on the runner: GitHub's Linux runners are started by systemd and carry
+// JOURNAL_STREAM, so these tests failed there while passing on macOS. Driving it
+// off supervisorEnvVars keeps the test from drifting when a marker is added.
+func clearSupervisorEnv(t *testing.T) {
+	t.Helper()
+	t.Setenv(supervisedEnvVar, "")
+	for _, key := range supervisorEnvVars {
+		t.Setenv(key, "")
+	}
+}
+
 func TestClassifyLaunchMode_InteractiveShellIsLikelyTransient(t *testing.T) {
-	t.Setenv("KABOOM_SUPERVISED", "")
-	t.Setenv("INVOCATION_ID", "")
+	clearSupervisorEnv(t)
 
 	origLookup := lookupParentProcessName
 	t.Cleanup(func() { lookupParentProcessName = origLookup })
@@ -40,8 +52,7 @@ func TestClassifyLaunchMode_InteractiveShellIsLikelyTransient(t *testing.T) {
 }
 
 func TestClassifyLaunchMode_NonInteractiveDefaultsPersistent(t *testing.T) {
-	t.Setenv("KABOOM_SUPERVISED", "")
-	t.Setenv("INVOCATION_ID", "")
+	clearSupervisorEnv(t)
 
 	origLookup := lookupParentProcessName
 	t.Cleanup(func() { lookupParentProcessName = origLookup })

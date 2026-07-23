@@ -122,28 +122,38 @@ func isPersistentModeRequired() bool {
 }
 
 func isSupervisedLaunch() bool {
-	if truthyEnv("KABOOM_SUPERVISED") {
+	if truthyEnv(supervisedEnvVar) {
 		return true
 	}
-	supervisorVars := []string{
-		"INVOCATION_ID",       // systemd
-		"JOURNAL_STREAM",      // systemd
-		"LAUNCH_JOB_NAME",     // launchd
-		"LAUNCH_JOB_KEY",      // launchd
-		"RUNNING_AS_SERVICE",  // explicit service marker
-		"SERVICE_NAME",        // generic service marker
-		"K_SERVICE",           // Cloud Run
-		"K_REVISION",          // Cloud Run
-		"CONTAINER",           // container supervisors
-		"KABOOM_DAEMONIZED", // project-local explicit marker
-		"KABOOM_PERSISTENT", // project-local explicit marker
-	}
-	for _, key := range supervisorVars {
+	for _, key := range supervisorEnvVars {
 		if strings.TrimSpace(os.Getenv(key)) != "" {
 			return true
 		}
 	}
 	return false
+}
+
+// supervisedEnvVar force-marks the process as supervised.
+const supervisedEnvVar = "KABOOM_SUPERVISED"
+
+// supervisorEnvVars are the environment markers that imply something is
+// supervising this process. Exported to the package so tests can neutralise the
+// whole set: a test that clears only some of them silently depends on the CI
+// runner's environment. GitHub's Linux runners are started by systemd and carry
+// JOURNAL_STREAM, which is what made TestClassifyLaunchMode_* fail there while
+// passing on macOS.
+var supervisorEnvVars = []string{
+	"INVOCATION_ID",      // systemd
+	"JOURNAL_STREAM",     // systemd
+	"LAUNCH_JOB_NAME",    // launchd
+	"LAUNCH_JOB_KEY",     // launchd
+	"RUNNING_AS_SERVICE", // explicit service marker
+	"SERVICE_NAME",       // generic service marker
+	"K_SERVICE",          // Cloud Run
+	"K_REVISION",         // Cloud Run
+	"CONTAINER",          // container supervisors
+	"KABOOM_DAEMONIZED",  // project-local explicit marker
+	"KABOOM_PERSISTENT",  // project-local explicit marker
 }
 
 func truthyEnv(key string) bool {
