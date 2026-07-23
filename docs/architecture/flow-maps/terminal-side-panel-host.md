@@ -107,7 +107,7 @@ The panel connects `TERMINAL_PANEL_PORT` on boot and reconnects if the service w
 - `terminal_panel_write` is the runtime message that carries terminal text from the page launcher path to the panel host.
 - `open_terminal_panel` is both the runtime message (launcher/popup) and the manifest command id (keyboard). The message accepts an optional `tab_id`, which extension pages must supply because `sender.tab` is undefined there.
 - `TERMINAL_PANEL_FALLBACK_HINT` in `src/lib/constants.ts` is what the content-script toast shows when the panel refuses to open.
-- **Chrome allows at most four commands with a `suggested_key`** and rejects the *entire* manifest past that ("Too many shortcuts specified for 'commands': The maximum is 4") — the extension then fails to load completely. Four are already taken, so `open_terminal_panel` ships unbound. `tests/extension/manifest-command-limits.test.js` enforces the cap.
+- **Chrome allows at most four commands with a `suggested_key`** and rejects the *entire* manifest past that ("Too many shortcuts specified for 'commands': The maximum is 4") — the extension then fails to load completely. Four are already taken, so `open_terminal_panel` ships unbound. `tests/extension/chrome-platform-limits.test.js` enforces the cap, alongside the other Chrome hard limits.
 - The launcher must not mount the terminal iframe in page context.
 
 ## Code Paths

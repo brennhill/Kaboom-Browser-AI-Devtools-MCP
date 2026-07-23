@@ -171,6 +171,8 @@ export async function openTerminalSidePanel(
   // sender tab). Resolving one costs awaits, so the gesture may not survive; this
   // is best-effort and callers should prefer supplying a tab id.
   try {
+    // gesture-safety: allow — there is no tab id to open on, so resolving one is
+    // the only option; this path is best-effort and callers avoid it.
     const workspace = await resolveTerminalWorkspaceTarget(tabId)
     if (!workspace) {
       return { success: false, error: 'missing workspace tab' }

@@ -358,6 +358,8 @@ ci-js:
 	npm ci
 	npx eslint extension/ tests/extension/
 	npx tsc --noEmit
+	npm run check:gesture-safety
+	npm run test:gesture-safety
 	JS_TEST_TIMEOUT=20000 ./scripts/test-js-sharded.sh
 
 ci-security:
