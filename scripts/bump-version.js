@@ -168,6 +168,27 @@ function updateVersionInFile(filePath, oldVersion, newVersion) {
     // Go User-Agent: "Kaboom/6.0.3 ..."
 
     updated = updated.replace(new RegExp(`Kaboom/${oldVersion.replace(/\./g, '\\.')}`, 'g'), `Kaboom/${newVersion}`) // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp, javascript_dos_rule-non-literal-regexp -- RegExp from trusted local version string
+
+    // Go struct field: Version: "6.0.1" (e.g. ServerInfo{Version: "..."}).
+    updated = updated.replace(
+      new RegExp(`(\\bVersion:\\s*")${oldVersion.replace(/\./g, '\\.')}(")`, 'g'), // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp, javascript_dos_rule-non-literal-regexp -- RegExp from trusted local version string
+      `$1${newVersion}$2`
+    )
+
+    // Go test fixtures additionally carry the version as bare quoted literals and
+    // in t.Errorf copy ("want 6.0.1"). Those drift silently every release, so
+    // rewrite them too — but only in _test.go, to keep production Go limited to
+    // the narrow, predictable patterns above.
+    if (filePath.endsWith('_test.go')) {
+      updated = updated.replace(
+        new RegExp(`"${oldVersion.replace(/\./g, '\\.')}"`, 'g'), // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp, javascript_dos_rule-non-literal-regexp -- RegExp from trusted local version string
+        `"${newVersion}"`
+      )
+      updated = updated.replace(
+        new RegExp(`(\\bwant\\s+)${oldVersion.replace(/\./g, '\\.')}\\b`, 'g'), // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp, javascript_dos_rule-non-literal-regexp -- RegExp from trusted local version string
+        `$1${newVersion}`
+      )
+    }
   } else if (filePath.endsWith('.js') || filePath.endsWith('.ts')) {
     // JavaScript/TypeScript: version: '6.0.1' or version: "6.0.1"
     updated = updated.replace(

@@ -12,8 +12,8 @@ import { requestAudit } from '../lib/request-audit.js';
 /**
  * Handle launching the tracked-site audit workflow from popup controls.
  */
-export async function handleAuditClick(pageUrl) {
-    await requestAudit(pageUrl);
+export async function handleAuditClick(pageUrl, tabId) {
+    await requestAudit(pageUrl, tabId);
 }
 /**
  * Handle stop tracking from the compact tracking bar stop button.

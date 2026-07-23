@@ -310,7 +310,11 @@ function handleMessage(
       return false
 
     case 'open_terminal_panel':
-      openTerminalSidePanel(sender.tab?.id)
+      // Prefer an explicitly supplied tab id. The popup is an extension page, so
+      // sender.tab is undefined there; without a synchronous tab id we would fall
+      // back to resolving one via await, which expires the forwarded user gesture
+      // and makes chrome.sidePanel.open() refuse to open the panel.
+      openTerminalSidePanel((message as { tab_id?: number }).tab_id ?? sender.tab?.id)
         .then((result) => sendResponse(result))
         .catch((error) => sendResponse({ success: false, error: errorMessage(error) }))
       return true

@@ -2115,9 +2115,9 @@
   }
 
   // extension/lib/request-audit.js
-  async function requestAudit(pageUrl) {
+  async function requestAudit(pageUrl, tabId) {
     try {
-      await chrome.runtime.sendMessage({ type: "open_terminal_panel" });
+      await chrome.runtime.sendMessage({ type: "open_terminal_panel", tab_id: tabId });
     } catch {
     }
     await chrome.runtime.sendMessage({ type: "qa_scan_requested", page_url: pageUrl });
@@ -2195,6 +2195,7 @@
   }
 
   // extension/content/ui/tracked-hover-launcher.js
+  var AUDIT_BUTTON_ENABLED = false;
   var ROOT_ID = "kaboom-tracked-hover-launcher";
   var PANEL_ID = "kaboom-tracked-hover-panel";
   var TOGGLE_ID = "kaboom-tracked-hover-toggle";
@@ -2666,7 +2667,8 @@
     panel.appendChild(drawButton);
     panel.appendChild(stopButton);
     panel.appendChild(screenshotButton);
-    panel.appendChild(auditButton);
+    if (AUDIT_BUTTON_ENABLED)
+      panel.appendChild(auditButton);
     panel.appendChild(terminalButton);
     const dotSep = document.createElement("span");
     dotSep.textContent = "\u22EE";

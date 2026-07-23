@@ -318,6 +318,8 @@ interface OpenPopupForRecordingMessage {
  */
 interface OpenTerminalPanelMessage {
   readonly type: 'open_terminal_panel'
+  /** Tab that should host the panel. Required from the popup (no sender.tab). */
+  readonly tab_id?: number
 }
 
 /**
