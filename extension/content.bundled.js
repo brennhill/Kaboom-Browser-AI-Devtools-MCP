@@ -92,7 +92,7 @@
     CLOAKED_DOMAINS: "kaboom_cloaked_domains",
     ERROR_GROUPS: "kaboom_error_groups"
   };
-  var TERMINAL_PANEL_SHORTCUT = "Alt+Shift+T";
+  var TERMINAL_PANEL_FALLBACK_HINT = 'Right-click the page and choose "Open Kaboom Terminal", or assign a shortcut at chrome://extensions/shortcuts.';
 
   // extension/lib/storage-utils.js
   function getStorageWithSession() {
@@ -2181,7 +2181,7 @@
   function reportPanelOpenFailure(reason) {
     console.error(`[KaBOOM!] Terminal side panel did not open: ${reason}`);
     try {
-      showActionToast("Terminal side panel did not open", `${reason} \u2014 press ${TERMINAL_PANEL_SHORTCUT} or right-click the page and choose "Open Kaboom Terminal".`, "error", 8e3);
+      showActionToast("Terminal side panel did not open", `${reason} ${TERMINAL_PANEL_FALLBACK_HINT}`, "error", 8e3);
     } catch {
     }
   }

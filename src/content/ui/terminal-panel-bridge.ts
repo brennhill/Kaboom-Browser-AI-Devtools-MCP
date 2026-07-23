@@ -5,7 +5,7 @@
  * Docs: docs/features/feature/terminal/index.md
  */
 
-import { StorageKey, TERMINAL_PANEL_SHORTCUT } from '../../lib/constants.js'
+import { StorageKey, TERMINAL_PANEL_FALLBACK_HINT } from '../../lib/constants.js'
 import { getSession, onStorageChanged } from '../../lib/storage-utils.js'
 import { showActionToast } from './toast.js'
 
@@ -84,7 +84,7 @@ function reportPanelOpenFailure(reason: string): void {
     // are gesture-native, so point at them rather than leaving a dead end.
     showActionToast(
       'Terminal side panel did not open',
-      `${reason} — press ${TERMINAL_PANEL_SHORTCUT} or right-click the page and choose "Open Kaboom Terminal".`,
+      `${reason} ${TERMINAL_PANEL_FALLBACK_HINT}`,
       'error',
       8000
     )

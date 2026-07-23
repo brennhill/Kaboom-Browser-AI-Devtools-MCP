@@ -188,10 +188,12 @@ export const StorageKey = {
     ERROR_GROUPS: 'kaboom_error_groups'
 };
 /**
- * Default keyboard shortcut for `open_terminal_panel` (see extension/manifest.json).
+ * What to tell a user when the in-page Terminal button could not open the panel.
  *
- * Shared because the content script names it in the failure toast while the
- * background registers the command — the two must not drift.
+ * The `open_terminal_panel` command ships **unbound**: Chrome rejects the whole
+ * manifest if more than four commands declare a `suggested_key`, and four are
+ * already spoken for. So the zero-setup route is the context menu, with the
+ * shortcut offered as an opt-in.
  */
-export const TERMINAL_PANEL_SHORTCUT = 'Alt+Shift+T';
+export const TERMINAL_PANEL_FALLBACK_HINT = 'Right-click the page and choose "Open Kaboom Terminal", or assign a shortcut at chrome://extensions/shortcuts.';
 //# sourceMappingURL=constants.js.map

@@ -4,7 +4,7 @@
  * and writes are coordinated through session state and runtime messages.
  * Docs: docs/features/feature/terminal/index.md
  */
-import { StorageKey, TERMINAL_PANEL_SHORTCUT } from '../../lib/constants.js';
+import { StorageKey, TERMINAL_PANEL_FALLBACK_HINT } from '../../lib/constants.js';
 import { getSession, onStorageChanged } from '../../lib/storage-utils.js';
 import { showActionToast } from './toast.js';
 let panelVisible = false;
@@ -76,7 +76,7 @@ function reportPanelOpenFailure(reason) {
         // Chrome grants message listeners only a restricted user gesture, which
         // sidePanel.open() rejects on some builds (crbug 355266358). Both fallbacks
         // are gesture-native, so point at them rather than leaving a dead end.
-        showActionToast('Terminal side panel did not open', `${reason} — press ${TERMINAL_PANEL_SHORTCUT} or right-click the page and choose "Open Kaboom Terminal".`, 'error', 8000);
+        showActionToast('Terminal side panel did not open', `${reason} ${TERMINAL_PANEL_FALLBACK_HINT}`, 'error', 8000);
     }
     catch {
         // Toast is best-effort; the console error above is the durable signal.

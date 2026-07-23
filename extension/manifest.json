@@ -105,10 +105,6 @@
       "description": "Toggle action sequence recording"
     },
     "open_terminal_panel": {
-      "suggested_key": {
-        "default": "Alt+Shift+T",
-        "mac": "Alt+Shift+T"
-      },
       "description": "Open the Kaboom terminal side panel"
     }
   },

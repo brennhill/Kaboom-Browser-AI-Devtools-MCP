@@ -36,7 +36,7 @@ The terminal server isolation flow remains a separate concern and is still docum
 
 | Entry point | Gesture | Tab available synchronously | Dependable |
 |-------------|---------|------------------------------|------------|
-| `commands.onCommand` (Alt+Shift+T) | full | yes — listener arg | yes |
+| `commands.onCommand` (`open_terminal_panel`, unbound by default) | full | yes — listener arg | yes |
 | `contextMenus.onClicked` ("Open Kaboom Terminal") | full | yes — listener arg | yes |
 | `runtime.onMessage` (launcher button, popup) | restricted | only if the sender supplies `tab_id` | no — best effort |
 
@@ -73,7 +73,8 @@ All three call the single shared opener `openTerminalSidePanel()` in `src/backgr
 - Workspace ownership is stored separately from raw tracked-tab state so the panel can stay group-scoped while the rest of the extension is still tracked-tab scoped.
 - `terminal_panel_write` is the runtime message that carries terminal text from the page launcher path to the panel host.
 - `open_terminal_panel` is both the runtime message (launcher/popup) and the manifest command id (keyboard). The message accepts an optional `tab_id`, which extension pages must supply because `sender.tab` is undefined there.
-- `TERMINAL_PANEL_SHORTCUT` in `src/lib/constants.ts` is shared so the content-script toast and the manifest command cannot drift.
+- `TERMINAL_PANEL_FALLBACK_HINT` in `src/lib/constants.ts` is what the content-script toast shows when the panel refuses to open.
+- **Chrome allows at most four commands with a `suggested_key`** and rejects the *entire* manifest past that ("Too many shortcuts specified for 'commands': The maximum is 4") — the extension then fails to load completely. Four are already taken, so `open_terminal_panel` ships unbound. `tests/extension/manifest-command-limits.test.js` enforces the cap.
 - The launcher must not mount the terminal iframe in page context.
 
 ## Code Paths

@@ -40,7 +40,12 @@ export declare function toggleScreenRecording(handlers: ScreenRecordingHandlers,
 export declare function installDrawModeCommandListener(logFn?: (message: string) => void): void;
 /**
  * Install the keyboard shortcut that opens the terminal side panel
- * (`open_terminal_panel` in the manifest, Alt+Shift+T by default).
+ * (`open_terminal_panel` in the manifest).
+ *
+ * The command ships UNBOUND on purpose: Chrome refuses to load a manifest with
+ * more than four commands carrying a `suggested_key`, and four are already
+ * taken. Users assign a key at chrome://extensions/shortcuts; until then the
+ * context menu is the zero-setup gesture-native route.
  *
  * Why a command and not just the in-page launcher button: `chrome.sidePanel.open()`
  * needs an active user gesture, and Chrome grants `runtime.onMessage` listeners
