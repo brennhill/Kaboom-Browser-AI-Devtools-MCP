@@ -335,6 +335,18 @@ interface CloseTerminalPanelMessage {
 }
 
 /**
+ * Background asks an existing side panel document to show the terminal again.
+ *
+ * Sent over the presence port (TERMINAL_PANEL_PORT), not runtime.sendMessage.
+ * `chrome.sidePanel.open()` on a panel that already exists merely focuses it and
+ * runs no code inside it, so a minimized or unmounted panel would stay blank and
+ * "open" would appear to do nothing.
+ */
+export interface RestoreTerminalPanelMessage {
+  readonly type: 'restore_terminal_panel'
+}
+
+/**
  * Runtime message forwarded to the side panel terminal host to write text.
  */
 export interface TerminalPanelWriteMessage {

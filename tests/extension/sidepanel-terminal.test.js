@@ -16,6 +16,21 @@ let windowListeners = {}
 let runtimeMessageListeners = []
 let storageChangeListener = null
 let activeTabId = 1
+let connectedPorts = []
+
+/** Stand-in for a chrome.runtime.Port, with the two listener lists exposed. */
+function createFakePort(name) {
+  const port = {
+    name,
+    messageListeners: [],
+    disconnectListeners: [],
+    postMessage: mock.fn(),
+    disconnect: mock.fn(),
+    onMessage: { addListener: mock.fn((fn) => port.messageListeners.push(fn)) },
+    onDisconnect: { addListener: mock.fn((fn) => port.disconnectListeners.push(fn)) }
+  }
+  return port
+}
 
 function makeResponse(status, body) {
   return {
@@ -148,6 +163,7 @@ function setupEnvironment() {
   runtimeMessageListeners = []
   storageChangeListener = null
   activeTabId = 1
+  connectedPorts = []
 
   const body = createElement('body')
   const head = createElement('head')
@@ -214,6 +230,11 @@ function setupEnvironment() {
         }
         callback?.({})
         return Promise.resolve({})
+      }),
+      connect: mock.fn(({ name }) => {
+        const port = createFakePort(name)
+        connectedPorts.push(port)
+        return port
       }),
       onMessage: {
         addListener: mock.fn((listener) => {
@@ -681,5 +702,93 @@ describe('terminal side panel host', () => {
       'the session must survive so reopening reconnects to it'
     )
     assert.strictEqual(chrome.sidePanel.close.mock.calls.length, 1, 'close should close the side panel')
+  })
+
+  // The background decides open-vs-close from whether a panel document exists.
+  // It learns that from this port — a stored flag cannot see Chrome's own X
+  // dismiss the panel, and a stale "open" left the user unable to reopen at all.
+  describe('presence port', () => {
+    function bootWithSession() {
+      globalThis.fetch = (url) => {
+        if (url.includes('/terminal/start')) {
+          return Promise.resolve(makeResponse(200, { session_id: 'session-1', token: 'tok-1', pid: 1 }))
+        }
+        if (url.includes('/terminal/validate?token=')) {
+          return Promise.resolve(makeResponse(200, { valid: false }))
+        }
+        throw new Error(`Unexpected fetch call: ${url}`)
+      }
+      return import(`../../extension/sidepanel.js?v=${++importCounter}`)
+    }
+
+    test('the panel announces itself on the terminal panel port while it is alive', async () => {
+      const module = await bootWithSession()
+      await module._terminalPanelForTests.bootTerminalPanel(true)
+
+      const port = connectedPorts.find((p) => p.name === 'kaboom_terminal_panel')
+      assert.ok(port, 'the background has no other way to know a panel exists')
+    })
+
+    test('a close over the port closes the drawer without stopping the shell', async () => {
+      const module = await bootWithSession()
+      await module._terminalPanelForTests.bootTerminalPanel(true)
+      const port = connectedPorts.find((p) => p.name === 'kaboom_terminal_panel')
+
+      for (const listener of port.messageListeners) listener({ type: 'close_terminal_panel' })
+      await sleep(0)
+
+      assert.strictEqual(getElementById('kaboom-terminal-widget'), null, 'the drawer should be gone')
+      assert.notStrictEqual(
+        sessionStorageData[StorageKey.TERMINAL_SESSION], undefined,
+        'closing the drawer must leave the shell running'
+      )
+    })
+
+    test('a restore over the port rebuilds a panel that had been closed', async () => {
+      // sidePanel.open() on an existing panel only focuses it — no code runs in
+      // this document — so without this an already-open-but-blank panel stayed
+      // blank and "Open Kaboom Terminal" looked broken.
+      const module = await bootWithSession()
+      await module._terminalPanelForTests.bootTerminalPanel(true)
+      const port = connectedPorts.find((p) => p.name === 'kaboom_terminal_panel')
+
+      for (const listener of port.messageListeners) listener({ type: 'close_terminal_panel' })
+      await sleep(0)
+      assert.strictEqual(getElementById('kaboom-terminal-widget'), null)
+
+      for (const listener of port.messageListeners) listener({ type: 'restore_terminal_panel' })
+      await sleep(0)
+
+      assert.ok(getElementById('kaboom-terminal-widget'), 'restore must put the terminal back')
+      assert.strictEqual(sessionStorageData[StorageKey.TERMINAL_UI_STATE], 'open')
+    })
+
+    test('a restore on a panel that has no terminal starts one', async () => {
+      // Booting while the daemon was down leaves a mounted panel with no iframe.
+      // Reopening has to try again, not just re-show the failure.
+      let startCalls = 0
+      globalThis.fetch = (url) => {
+        if (url.includes('/terminal/start')) {
+          startCalls += 1
+          return startCalls === 1
+            ? Promise.resolve(makeResponse(500, { error: 'daemon_unavailable' }))
+            : Promise.resolve(makeResponse(200, { session_id: 's2', token: 'tok-2', pid: 2 }))
+        }
+        if (url.includes('/terminal/validate?token=')) {
+          return Promise.resolve(makeResponse(200, { valid: false }))
+        }
+        throw new Error(`Unexpected fetch call: ${url}`)
+      }
+      const module = await import(`../../extension/sidepanel.js?v=${++importCounter}`)
+      await module._terminalPanelForTests.bootTerminalPanel(true)
+      const port = connectedPorts.find((p) => p.name === 'kaboom_terminal_panel')
+      assert.strictEqual(getElementById('kaboom-terminal-iframe'), null, 'no session means no iframe')
+
+      for (const listener of port.messageListeners) listener({ type: 'restore_terminal_panel' })
+      await sleep(0)
+
+      assert.strictEqual(startCalls, 2, 'restore must retry the session')
+      assert.ok(getElementById('kaboom-terminal-iframe'), 'the retry should mount a terminal')
+    })
   })
 })

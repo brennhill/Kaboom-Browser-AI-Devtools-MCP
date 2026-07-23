@@ -135,4 +135,13 @@ export declare const StorageKey: {
  * shortcut offered as an opt-in.
  */
 export declare const TERMINAL_PANEL_FALLBACK_HINT = "Right-click the page and choose \"Open Kaboom Terminal\", or assign a shortcut at chrome://extensions/shortcuts.";
+/**
+ * Port the side panel document opens to the background while it is alive.
+ *
+ * How the background knows whether a panel exists. Storage cannot answer that:
+ * dismissing the panel with Chrome's own X destroys the document with no chance
+ * to record it, leaving a stale "open" that made the toggle refuse to reopen.
+ * Chrome disconnects a port whenever its document dies, whatever killed it.
+ */
+export declare const TERMINAL_PANEL_PORT = "kaboom_terminal_panel";
 //# sourceMappingURL=constants.d.ts.map

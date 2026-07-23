@@ -82,42 +82,9 @@ describe('side panel availability follows the tracked tab', () => {
   })
 })
 
+// Open-vs-close now turns on whether a panel document is actually connected, not
+// on a mirrored storage flag — see terminal-panel-presence.test.js for that half.
 describe('closing the terminal panel', () => {
-  test('toggle closes via message when the panel is open', async () => {
-    mock.reset()
-    installChrome({ withClose: true })
-    globalThis.chrome.storage.session.get = mock.fn(async () => ({ kaboom_terminal_ui_state: 'open' }))
-
-    const { toggleTerminalSidePanel, watchTerminalPanelState } = await import(
-      `../../extension/background/terminal-panel.js?v=${++importCounter}`
-    )
-    watchTerminalPanelState()
-    await new Promise((r) => setTimeout(r, 0)) // let the cache hydrate
-    const result = await toggleTerminalSidePanel(7)
-
-    assert.strictEqual(result.success, true)
-    const sent = globalThis.chrome.runtime.sendMessage.mock.calls.map((c) => c.arguments[0]?.type)
-    assert.ok(sent.includes('close_terminal_panel'),
-      'an open panel must be asked to close, not opened again')
-    assert.strictEqual(globalThis.chrome.sidePanel.open.mock.calls.length, 0)
-  })
-
-  test('toggle opens when the panel is closed', async () => {
-    mock.reset()
-    installChrome({ withClose: true })
-    globalThis.chrome.storage.session.get = mock.fn(async () => ({ kaboom_terminal_ui_state: 'closed' }))
-
-    const { toggleTerminalSidePanel, watchTerminalPanelState } = await import(
-      `../../extension/background/terminal-panel.js?v=${++importCounter}`
-    )
-    watchTerminalPanelState()
-    await new Promise((r) => setTimeout(r, 0))
-    const result = await toggleTerminalSidePanel(7)
-
-    assert.strictEqual(result.success, true)
-    assert.strictEqual(globalThis.chrome.sidePanel.open.mock.calls.length, 1)
-  })
-
   test('the open path calls sidePanel.open with no await first, preserving the gesture', async () => {
     // The regression: toggle awaited a storage read to decide open-vs-close, and
     // that await expired the user gesture, so Chrome refused the open and

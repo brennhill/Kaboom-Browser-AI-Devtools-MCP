@@ -1,11 +1,11 @@
 ---
 doc_type: flow_map
 status: active
-last_reviewed: 2026-03-28
+last_reviewed: 2026-07-23
 owners:
   - Brenn
-last_verified_version: 0.8.1
-last_verified_date: 2026-03-28
+last_verified_version: 0.8.5
+last_verified_date: 2026-07-23
 ---
 
 # Terminal Side Panel Host and Launcher Coordination
@@ -40,7 +40,38 @@ The terminal server isolation flow remains a separate concern and is still docum
 | `contextMenus.onClicked` ("Open Kaboom Terminal") | full | yes — listener arg | yes |
 | `runtime.onMessage` (launcher button, popup) | restricted | only if the sender supplies `tab_id` | no — best effort |
 
-All three call the single shared opener `openTerminalSidePanel()` in `src/background/terminal-panel.ts` (repo rule 19). It has one hard rule: **nothing may be awaited before `chrome.sidePanel.open()`**, because any await expires the gesture. Workspace grouping and `setOptions()` run afterward as best-effort refinement; the panel loads fine without them via the manifest `default_path` plus the active-tab fallback in `sidepanel.ts`.
+All three call the single shared opener `openTerminalSidePanel()` in `src/background/terminal-panel.ts` (repo rule 19). It has one hard rule: **nothing may be awaited before `chrome.sidePanel.open()`**, because any await expires the gesture. Note the distinction — *dispatching* an async call is free, only awaiting one costs the gesture. The opener uses that to fire `enableTerminalPanelForTab()` immediately before `open()`: Chrome processes both in order, so the tab is available by the time the open lands.
+
+Workspace grouping runs afterward as best-effort refinement; the panel loads fine without it via the manifest `default_path` plus the active-tab fallback in `sidepanel.ts`.
+
+## Availability vs. an Explicit Open
+
+`side_panel.default_path` offers the panel on *every* tab, where it renders empty, so `syncTerminalPanelAvailability()` disables the global default and enables only the tracked tab.
+
+That scoping governs the default only. `chrome.sidePanel.open({tabId})` on a tab where the panel is disabled fails with **"No active side panel for tabId: N"**, which is exactly what the user saw on every untracked page — the Terminal button surfaced a Chrome error instead of a terminal. An explicit request outranks scoping: `openTerminalSidePanel()` enables the target tab before opening it.
+
+**The panel path never varies.** Changing `path` in `setOptions` makes Chrome reload the side panel document. The panel used to be opened with a per-tab `sidepanel.html?tabId=…&tabGroupId=…&mainTabId=…`, set *after* `open()` — so every open booted an xterm and then immediately reloaded the document out from under it. Only `tabId` was ever read, and `getHostTabId()` already falls back to the active tab, so the parameters bought nothing and cost a session.
+
+## Knowing Whether a Panel Exists
+
+The toggle has to decide open-vs-close synchronously (an await would expire the gesture), so the background keeps the answer in a variable. Where that answer comes from matters:
+
+| Source | Sees Chrome's own X dismiss | Verdict |
+|--------|------------------------------|---------|
+| `TERMINAL_UI_STATE` mirrored from `chrome.storage.session` | no — the document is destroyed with no chance to write | stale "open" forever; the toggle then tried to *close* a panel that was gone, and nothing could reopen it |
+| `chrome.runtime.Port` opened by the panel document | yes — Chrome disconnects the port however the document died | current design |
+
+The panel connects `TERMINAL_PANEL_PORT` on boot and reconnects if the service worker restarts. The background holds the port in `livePanelPort`; `isTerminalPanelOpenSync()` is just `livePanelPort !== null`.
+
+`TERMINAL_UI_STATE` still exists and is still the launcher bridge's signal for hover-overlay visibility — it is a UI state, not a liveness check.
+
+## Opening onto a Panel That Already Exists
+
+`chrome.sidePanel.open()` on a live panel merely focuses it; no code runs inside the panel document. A panel sitting minimized, or blank because its `window.close()` was refused, would stay that way and "open" would look broken. So the opener also posts `restore_terminal_panel` over the presence port, and `restoreTerminalPanel()` in `src/sidepanel.ts`:
+
+- re-shows the terminal if one is already mounted;
+- rebuilds the panel if it was unmounted, revalidating the token so the xterm reconnects to a shell that is actually alive;
+- retries session start if the panel is mounted with no terminal (the daemon was down when it booted).
 
 ## Primary Flow
 
@@ -69,7 +100,9 @@ All three call the single shared opener `openTerminalSidePanel()` in `src/backgr
 ## State and Contracts
 
 - `TERMINAL_SESSION` stores `{ sessionId, token }` in `chrome.storage.session`.
-- `TERMINAL_UI_STATE` is the source of truth for panel visibility.
+- `TERMINAL_UI_STATE` drives launcher hover-overlay visibility. It is **not** how the background decides whether a panel exists — see the presence port above.
+- `TERMINAL_PANEL_PORT` (`kaboom_terminal_panel`) is the port the panel document holds open for its whole life; its connect/disconnect is the liveness signal.
+- `restore_terminal_panel` is posted over that port to bring an existing panel's terminal back.
 - Workspace ownership is stored separately from raw tracked-tab state so the panel can stay group-scoped while the rest of the extension is still tracked-tab scoped.
 - `terminal_panel_write` is the runtime message that carries terminal text from the page launcher path to the panel host.
 - `open_terminal_panel` is both the runtime message (launcher/popup) and the manifest command id (keyboard). The message accepts an optional `tab_id`, which extension pages must supply because `sender.tab` is undefined there.
@@ -83,6 +116,7 @@ All three call the single shared opener `openTerminalSidePanel()` in `src/backgr
 - `src/content/ui/tracked-hover-launcher.ts`
 - `src/content/ui/terminal-panel-bridge.ts`
 - `src/background/terminal-panel.ts`
+- `src/background/side-panel-availability.ts`
 - `src/background/keyboard-shortcuts.ts`
 - `src/background/context-menus.ts`
 - `src/background/message-handlers.ts`
@@ -105,6 +139,8 @@ All three call the single shared opener `openTerminalSidePanel()` in `src/backgr
 - `tests/extension/message-handlers.test.js`
 - `tests/extension/terminal-panel-gesture-entrypoints.test.js`
 - `tests/extension/terminal-panel-open-failure.test.js`
+- `tests/extension/terminal-panel-presence.test.js`
+- `tests/extension/terminal-panel-close-and-scope.test.js`
 
 ## Edit Guardrails
 
@@ -115,6 +151,9 @@ All three call the single shared opener `openTerminalSidePanel()` in `src/backgr
 - Keep all terminal shells, including legacy/fallback widget chrome, branded as Kaboom.
 - If an action-builder surface is added later, keep it separate from the terminal core instead of reintroducing mixed responsibilities into the terminal host.
 - Preserve the direct user-gesture side-panel open path from launcher click through background handler.
-- Never await before `chrome.sidePanel.open()` in any entry point. This includes *deciding* whether to open: the context-menu toggle reads a cached synchronous flag (`isTerminalPanelOpenSync`), because awaiting a storage read to choose open-vs-close burned the gesture and made "Open Kaboom Terminal" do nothing.
+- Never await before `chrome.sidePanel.open()` in any entry point. This includes *deciding* whether to open: the context-menu toggle reads `isTerminalPanelOpenSync()`, because awaiting a storage read to choose open-vs-close burned the gesture and made "Open Kaboom Terminal" do nothing.
+- Never derive panel liveness from storage. A dismissed panel writes nothing, and the resulting stale "open" locks the user out of reopening entirely.
+- Keep one constant side panel path. A per-tab path reloads the document and kills the xterm that just booted.
+- An explicit open must enable the panel for its target tab first, or it fails with "No active side panel for tabId" wherever availability scoping applies.
 - Keep at least one gesture-native entry point (keyboard command or context menu). Removing them leaves only the restricted-gesture message path, which Chrome may refuse.
 - Never swallow a side-panel open failure; a silent failure is indistinguishable from a dead button.

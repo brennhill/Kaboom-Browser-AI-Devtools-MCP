@@ -18,6 +18,7 @@ code_paths:
   - src/content/ui/tracked-hover-launcher.ts
   - src/background/message-handlers.ts
   - src/background/terminal-panel.ts
+  - src/background/side-panel-availability.ts
   - src/background/keyboard-shortcuts.ts
   - src/background/context-menus.ts
   - src/types/runtime-messages.ts
@@ -37,8 +38,10 @@ test_paths:
   - tests/extension/terminal-session-start-errors.test.js
   - tests/extension/terminal-panel-gesture-entrypoints.test.js
   - tests/extension/terminal-panel-open-failure.test.js
-last_verified_version: 0.8.1
-last_verified_date: 2026-03-28
+  - tests/extension/terminal-panel-presence.test.js
+  - tests/extension/terminal-panel-close-and-scope.test.js
+last_verified_version: 0.8.5
+last_verified_date: 2026-07-23
 ---
 
 # Terminal
@@ -49,7 +52,7 @@ last_verified_date: 2026-03-28
 - Availability: macOS + Linux only (Windows currently reports terminal unavailable / `terminal_port: 0`)
 - Runs on a **dedicated HTTP server** at `main_port + 1` (e.g., 7891) for isolation
 - Singleton session shared across all tabs via `chrome.storage.session`
-- One Kaboom work context maps to one Chrome tab group; the panel opens synchronously on the requesting tab (to keep the user gesture valid), then the tracked tab is grouped into the workspace and the panel path is refined best-effort
+- One Kaboom work context maps to one Chrome tab group; the panel opens synchronously on the requesting tab (to keep the user gesture valid), then the tracked tab is grouped into the workspace best-effort
 - Three UI states: **open**, **minimized**, **closed** - all persisted across page refreshes
 - Hover launcher keeps the page overlay for quick actions, but the terminal button now opens the side panel on the active workspace tab and hides the launcher only while the panel is open
 - Three entry points open the panel, all through the shared `openTerminalSidePanel()` in `src/background/terminal-panel.ts`: the page context menu item **Open Kaboom Terminal**, the keyboard command `open_terminal_panel` (**ships unbound** — Chrome refuses a manifest with more than four `suggested_key` commands, and four are already taken, so users assign a key at `chrome://extensions/shortcuts`), and the in-page launcher button. The first two get a full user gesture from Chrome and are dependable; the launcher button goes through `runtime.onMessage`, which Chrome grants only a *restricted* gesture that `sidePanel.open()` rejects on some Chrome/Brave builds ([crbug 355266358](https://issues.chromium.org/issues/355266358)) — so it is best-effort, and its failure toast names the other two
@@ -60,8 +63,11 @@ last_verified_date: 2026-03-28
 - Header power control (`⏻`) is the explicit teardown: stops the PTY and closes the panel. Kept because sessions are capped (`maxSessions = 10`), so there must be a way to end one
 - `chrome.sidePanel.close()` only exists in very recent Chrome. `closeBrowserSidePanel()` falls back to `window.close()` from the panel document; the old code returned silently when the API was absent, so the close button did nothing and `unmountPanel()` left a blank panel the user could neither close nor recover
 - A session-less panel renders a **recoverable** state — a *Start terminal* button and a **root folder** field — instead of a dead sentence. Changing the root folder stops the session and restarts it there, because a PTY's cwd is fixed at spawn
-- The page context menu item is a **toggle**: it reads *Open Kaboom Terminal* or *Close Kaboom Terminal* depending on `TERMINAL_UI_STATE`, refreshed via `contextMenus.onShown`
-- **The panel is scoped to the tracked tab.** The manifest's `side_panel.default_path` makes it available on every tab, where it renders empty; `syncTerminalPanelAvailability()` disables the global default and enables the panel only on the tracked tab. It runs at startup and whenever the tracked tab is set or cleared
+- The page context menu item is a **toggle**: it reads *Open Kaboom Terminal* or *Close Kaboom Terminal* depending on whether a panel document is actually connected, refreshed via `contextMenus.onShown`
+- **Panel liveness comes from a port, not from storage.** The panel connects `TERMINAL_PANEL_PORT` for as long as it lives; `isTerminalPanelOpenSync()` is `livePanelPort !== null`. Mirroring `TERMINAL_UI_STATE` did not work: dismissing the panel with Chrome's own X destroys the document before it can record anything, so the flag stuck at "open" and the toggle kept trying to close a panel that was already gone — the user could never reopen it. `TERMINAL_UI_STATE` remains the launcher's hover-overlay signal
+- **The panel is scoped to the tracked tab by default.** The manifest's `side_panel.default_path` makes it available on every tab, where it renders empty; `syncTerminalPanelAvailability()` disables the global default and enables the panel only on the tracked tab. That governs the default only — an explicit open enables its target tab first, because `chrome.sidePanel.open()` on a disabled tab fails with **"No active side panel for tabId: N"**, which is what made the Terminal button dead on every untracked page
+- **The panel path never varies.** Changing `path` in `setOptions` reloads the side panel document, so the old per-tab `sidepanel.html?tabId=…` (set right after `open()`) booted an xterm and immediately destroyed it. Only `tabId` was ever read, and `getHostTabId()` already falls back to the active tab
+- **Opening onto an existing panel restores it.** `sidePanel.open()` on a live panel only focuses it — no code runs inside — so the opener also posts `restore_terminal_panel` over the presence port. `restoreTerminalPanel()` re-shows a mounted terminal, rebuilds an unmounted one (revalidating the token so the xterm reconnects to a live shell), or retries session start when the panel is mounted with no terminal
 - Header minimize control hides the side panel while preserving the current PTY session
 - The current side panel rollout is terminal-only; xterm fills the available panel height
 - Terminal startup failure guidance now consistently points users at the Kaboom daemon command: `npx kaboom-agentic-browser`

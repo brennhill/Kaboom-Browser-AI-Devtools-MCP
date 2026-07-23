@@ -4,7 +4,7 @@
  * interfere with the xterm host, while keeping the session and reconnect model intact.
  * Docs: docs/features/feature/terminal/index.md
  */
-import { StorageKey } from './lib/constants.js';
+import { StorageKey, TERMINAL_PANEL_PORT } from './lib/constants.js';
 import { onStorageChanged } from './lib/storage-utils.js';
 import { state, resetAllState, getTerminalServerUrl, WIDGET_ID, IFRAME_ID, HEADER_ID, DISCONNECT_TERMINAL_BUTTON_ID, CLOSE_TERMINAL_BUTTON_ID, REDRAW_TERMINAL_BUTTON_ID, MINIMIZE_TERMINAL_BUTTON_ID, START_TERMINAL_BUTTON_ID, ROOT_FOLDER_INPUT_ID, ROOT_FOLDER_SAVE_BUTTON_ID, MINIMIZED_WIDGET_HEIGHT, TERMINAL_WRITE_SUBMIT_DELAY_MS, TERMINAL_TYPING_IDLE_MS, TERMINAL_GUARD_POLL_MS, TERMINAL_GUARD_TOAST_INTERVAL_MS } from './content/ui/terminal-widget-types.js';
 import { getServerUrl, getTerminalConfig, persistUIState, loadPersistedSession, clearPersistedSession, validateSession, startSession, getTerminalDevRoot, setTerminalDevRoot, stopActiveSession } from './content/ui/terminal-widget-session.js';
@@ -115,6 +115,9 @@ let unloadListenerInstalled = false;
 let panelReady = false;
 let pendingSandboxError = null;
 let panelCloseIntent = null;
+let presencePort = null;
+/** Backoff before re-announcing presence after a service-worker restart. */
+const PRESENCE_RECONNECT_DELAY_MS = 500;
 function getHostTabIdFromLocation() {
     try {
         const raw = new URLSearchParams(globalThis.location?.search ?? '').get('tabId');
@@ -742,6 +745,43 @@ function installRuntimeListener() {
         return false;
     });
 }
+/**
+ * Announce that a panel document exists, for as long as it exists.
+ *
+ * This is how the background answers "is there a panel?" before deciding whether
+ * a toggle should open or close. It has to be a port: closing the panel with
+ * Chrome's own X destroys this document without running any of our teardown, so
+ * a stored flag would stay "open" forever and the toggle would never open again.
+ * Chrome disconnects the port either way.
+ *
+ * The reconnect covers service-worker restarts, which drop every port while this
+ * document happily stays open.
+ */
+function connectPresencePort() {
+    if (presencePort || typeof chrome === 'undefined' || !chrome.runtime?.connect)
+        return;
+    try {
+        const port = chrome.runtime.connect({ name: TERMINAL_PANEL_PORT });
+        presencePort = port;
+        port.onMessage.addListener((message) => {
+            if (message?.type === 'close_terminal_panel')
+                void closePanelKeepingSession();
+            if (message?.type === 'restore_terminal_panel')
+                void restoreTerminalPanel();
+        });
+        port.onDisconnect.addListener(() => {
+            presencePort = null;
+            // Only worth retrying while this document is still around and the runtime
+            // is still valid; both stop being true on teardown, and connect() throws.
+            if (!rootEl)
+                return;
+            setTimeout(connectPresencePort, PRESENCE_RECONNECT_DELAY_MS);
+        });
+    }
+    catch {
+        presencePort = null; // Extension context invalidated — nothing to announce to.
+    }
+}
 function installStorageListener() {
     if (storageListenerInstalled)
         return;
@@ -774,6 +814,34 @@ function installUnloadListener() {
         persistUIState('closed');
     });
 }
+/**
+ * Bring the terminal back after an open request that landed on a panel document
+ * that was already here.
+ *
+ * Chrome answers `sidePanel.open()` on an existing panel by focusing it, which
+ * runs no code in this document. A panel left minimized — or unmounted because
+ * `window.close()` was refused — would just sit there blank. Opening must always
+ * mean "there is a working terminal in front of me".
+ */
+async function restoreTerminalPanel() {
+    panelCloseIntent = null;
+    if (rootEl && state.iframeEl) {
+        // A live terminal is already mounted — it was only minimized or hidden.
+        setPanelVisible(true);
+        setTerminalBodyVisible(true);
+        state.minimized = false;
+        persistUIState('open');
+        return;
+    }
+    // No terminal in here: either unmounted, or mounted with no session (the
+    // daemon was down when it booted). Rebuild, revalidating the token so the
+    // xterm reconnects to a shell that is actually alive rather than rendering a
+    // dead one.
+    if (rootEl)
+        unmountPanel();
+    panelReady = false;
+    await bootTerminalPanel();
+}
 async function ensureTerminalSession() {
     const persisted = await loadPersistedSession();
     if (persisted.session) {
@@ -802,6 +870,7 @@ async function bootTerminalPanel(forceFresh = false) {
     installRuntimeListener();
     installStorageListener();
     installUnloadListener();
+    connectPresencePort();
     if (forceFresh) {
         resetAllState();
         state.serverUrl = await getServerUrl();

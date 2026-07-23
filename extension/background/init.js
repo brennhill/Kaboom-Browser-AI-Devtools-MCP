@@ -29,6 +29,11 @@ export function initializeExtension() {
     if (typeof chrome === 'undefined' || !chrome.runtime) {
         return;
     }
+    // Synchronously, before any await: when the service worker is woken *by* the
+    // side panel reconnecting, Chrome dispatches that connect right after the top
+    // level runs. A listener installed later in the async sequence would miss it,
+    // and the background would believe no panel exists.
+    watchTerminalPanelState();
     // Fire async initialization without awaiting at top level
     // (Service worker will remain alive as long as event handlers are installed)
     initializeExtensionAsync().catch((err) => {
@@ -203,10 +208,6 @@ async function initializeExtensionAsync() {
         });
         // ============= STEP 9.6: Install draw mode keyboard shortcut listener =============
         installDrawModeCommandListener((msg) => console.log(`${KABOOM_LOG_PREFIX} ${msg}`));
-        // ============= STEP 9.6a: Mirror panel open/closed state =============
-        // Must be cached synchronously: the context-menu toggle cannot await before
-        // chrome.sidePanel.open() without losing the user gesture.
-        watchTerminalPanelState();
         // ============= STEP 9.6a: Scope the side panel to the tracked tab =============
         // Without this the manifest default makes the panel available on every tab,
         // where it renders empty.

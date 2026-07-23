@@ -1,5 +1,5 @@
 /**
- * Purpose: Scope the terminal side panel to the tracked tab.
+ * Purpose: Control which tabs offer the terminal side panel.
  * Why: The manifest's `side_panel.default_path` makes the panel available on
  * every tab, so opening it anywhere untracked showed an empty Kaboom panel.
  * Chrome has no manifest-level "only this tab", so availability is managed here.
@@ -9,13 +9,36 @@
  * of those need it, and they already depend on each other in one direction.
  * Putting it in either would close the cycle.
  */
-/** Path the panel is served from; matches manifest `side_panel.default_path`. */
+/**
+ * Path the panel is served from; matches manifest `side_panel.default_path`.
+ *
+ * One constant path, never per-tab query parameters: Chrome reloads the side
+ * panel document whenever the path changes, which would tear down an xterm that
+ * had just booted and start a second session underneath it.
+ */
 export declare const SIDE_PANEL_PATH = "sidepanel.html";
 /**
  * Offer the side panel on `trackedTabId` and nowhere else.
  *
  * Pass `undefined` when nothing is tracked, which disables it everywhere.
  * Call whenever the tracked tab changes, and once at startup.
+ *
+ * This governs where the panel is offered *by default*. An explicit request to
+ * open it enables the target tab on the spot (see enableTerminalPanelForTab), so
+ * scoping never blocks a user who asked for the terminal on some other page.
  */
 export declare function syncTerminalPanelAvailability(trackedTabId?: number): Promise<void>;
+/**
+ * Make the panel openable on `tabId`, right now.
+ *
+ * DISPATCHES SYNCHRONOUSLY and does not await. `chrome.sidePanel.open()` needs a
+ * live user gesture and any await before it expires the gesture, so the caller
+ * fires this and then calls open() immediately. Chrome processes both on the same
+ * channel in order, so the enable lands first.
+ *
+ * Without it, opening on a tab that availability scoping has disabled fails with
+ * "No active side panel for tabId: N" — which is what made the Terminal button
+ * dead on every page except the tracked one.
+ */
+export declare function enableTerminalPanelForTab(tabId: number): void;
 //# sourceMappingURL=side-panel-availability.d.ts.map
