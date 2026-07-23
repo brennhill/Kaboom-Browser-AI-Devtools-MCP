@@ -49,7 +49,7 @@ async function getTerminalAICommand() {
         return 'claude';
     }
 }
-async function getTerminalDevRoot() {
+export async function getTerminalDevRoot() {
     try {
         const value = await getLocal(StorageKey.TERMINAL_DEV_ROOT);
         return value || '';
@@ -107,6 +107,41 @@ export async function validateSession(token) {
     }
     catch {
         return false;
+    }
+}
+/** Persist the terminal root folder (the cwd new sessions spawn in). */
+export async function setTerminalDevRoot(root) {
+    try {
+        await setLocal(StorageKey.TERMINAL_DEV_ROOT, root);
+    }
+    catch {
+        // Extension context invalidated — nothing to persist into.
+    }
+}
+/**
+ * Stop the active PTY and forget it locally.
+ *
+ * Used when a setting that is fixed at spawn time changes (the working
+ * directory), and by the explicit end-session control.
+ */
+export async function stopActiveSession() {
+    const persisted = await loadPersistedSession();
+    const sessionId = persisted.session?.sessionId;
+    clearPersistedSession();
+    if (!sessionId)
+        return;
+    try {
+        const base = await getServerUrl();
+        const termUrl = getTerminalServerUrl(base);
+        await fetch(`${termUrl}/terminal/stop`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: sessionId }),
+            signal: AbortSignal.timeout(3000)
+        });
+    }
+    catch {
+        // Daemon unreachable — the local state is cleared either way.
     }
 }
 export async function startSession(config, onSandboxError) {

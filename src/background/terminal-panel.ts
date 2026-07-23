@@ -7,6 +7,52 @@
  */
 
 import { resolveTerminalWorkspaceTarget } from './tab-state.js'
+export { syncTerminalPanelAvailability } from './side-panel-availability.js'
+import { StorageKey } from '../lib/constants.js'
+import { getSession } from '../lib/storage-utils.js'
+
+/** True when the terminal side panel is currently showing. */
+export async function isTerminalPanelOpen(): Promise<boolean> {
+  try {
+    return (await getSession(StorageKey.TERMINAL_UI_STATE)) === 'open'
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Ask the panel to close itself.
+ *
+ * The background cannot close a side panel document directly on every Chrome
+ * version, but the panel can (`window.close()`), so we message it. Closing this
+ * way keeps the shell running — reopening reconnects to the same session.
+ */
+export async function closeTerminalSidePanel(): Promise<{ success: boolean; error?: string }> {
+  try {
+    await chrome.runtime.sendMessage({ type: 'close_terminal_panel' })
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: errorMessage(error) }
+  }
+}
+
+/**
+ * Toggle the panel. One helper so the context menu, keyboard command, and any
+ * future entry point cannot drift apart (repo rule 19).
+ *
+ * GESTURE NOTE: the open path must stay await-free before sidePanel.open(), so
+ * callers that already know they want "open" should call openTerminalSidePanel
+ * directly. Toggling costs one storage read, which is fine for the context menu
+ * because Chrome grants it a full (unrestricted) gesture.
+ */
+export async function toggleTerminalSidePanel(
+  tabId: number | undefined
+): Promise<{ success: boolean; error?: string }> {
+  if (await isTerminalPanelOpen()) {
+    return closeTerminalSidePanel()
+  }
+  return openTerminalSidePanel(tabId)
+}
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)

@@ -56,7 +56,12 @@ last_verified_date: 2026-03-28
 - A failed open is always reported (console error + toast). It used to be swallowed by `catch { return false }`, which made the Terminal button look simply dead
 - Background must call `chrome.sidePanel.open()` synchronously in the forwarded click gesture path; **nothing may be awaited before it** — neither `resolveTerminalWorkspaceTarget()` nor `setOptions()`, or Chrome expires the gesture and refuses to open the panel (regression: the panel loaded nothing). Workspace grouping + `setOptions()` run afterward as best-effort refinement.
 - Header redraw control (`↻`) reloads iframe graphics without killing the PTY session
-- Header power control (`⏻`) closes the side panel and ends the PTY session
+- Header close control (`✕`, rightmost) closes the drawer and **leaves the shell running** — reopening reconnects to the same session. Closing must never destroy a shell the user only wanted out of the way
+- Header power control (`⏻`) is the explicit teardown: stops the PTY and closes the panel. Kept because sessions are capped (`maxSessions = 10`), so there must be a way to end one
+- `chrome.sidePanel.close()` only exists in very recent Chrome. `closeBrowserSidePanel()` falls back to `window.close()` from the panel document; the old code returned silently when the API was absent, so the close button did nothing and `unmountPanel()` left a blank panel the user could neither close nor recover
+- A session-less panel renders a **recoverable** state — a *Start terminal* button and a **root folder** field — instead of a dead sentence. Changing the root folder stops the session and restarts it there, because a PTY's cwd is fixed at spawn
+- The page context menu item is a **toggle**: it reads *Open Kaboom Terminal* or *Close Kaboom Terminal* depending on `TERMINAL_UI_STATE`, refreshed via `contextMenus.onShown`
+- **The panel is scoped to the tracked tab.** The manifest's `side_panel.default_path` makes it available on every tab, where it renders empty; `syncTerminalPanelAvailability()` disables the global default and enables the panel only on the tracked tab. It runs at startup and whenever the tracked tab is set or cleared
 - Header minimize control hides the side panel while preserving the current PTY session
 - The current side panel rollout is terminal-only; xterm fills the available panel height
 - Terminal startup failure guidance now consistently points users at the Kaboom daemon command: `npx kaboom-agentic-browser`

@@ -351,8 +351,11 @@ describe('terminal side panel host', () => {
     await module._terminalPanelForTests.bootTerminalPanel(true)
 
     const header = getElementById('kaboom-terminal-header')
-    const powerButton = findButton(header, (node) => node.title === 'Disconnect terminal & end session')
+    // Matched by id, not title: the title is user-facing copy and should be free
+    // to change without breaking the behavioural contract below.
+    const powerButton = findButton(header, (node) => node.id === 'kaboom-terminal-disconnect-button')
     assert.ok(powerButton, 'power button should be present')
+    assert.match(powerButton.title, /end session/i, 'the power control must read as ending the session')
     assert.strictEqual(startCount, 1)
 
     powerButton.dispatch('click')
@@ -628,12 +631,55 @@ describe('terminal side panel host', () => {
     const terminalBody = header?.parentElement?.children?.[1] || null
     const titleNode = walkTree(header, (child) => child.textContent === 'KaBOOM! Terminal')
     const fallbackNode = walkTree(terminalBody, (child) =>
-      child.textContent === 'Terminal unavailable. Start the KaBOOM! daemon and reopen the panel.'
+      typeof child.textContent === 'string' && child.textContent.includes('KaBOOM! daemon')
     )
+    // The dead-end sentence is replaced by a recoverable state: a session can be
+    // started and the root folder changed without leaving the panel. Previously
+    // an ended or failed session left nothing to click.
+    const startButton = walkTree(terminalBody, (child) => child.id === 'kaboom-terminal-start-button')
+    const rootInput = walkTree(terminalBody, (child) => child.id === 'kaboom-terminal-root-folder-input')
 
     assert.ok(header, 'terminal header should exist')
     assert.ok(titleNode, 'terminal header should show Kaboom Terminal')
     assert.ok(terminalBody, 'terminal body should exist')
     assert.ok(fallbackNode, 'fallback should mention the Kaboom daemon')
+    assert.ok(startButton, 'a session-less panel must offer a way to start one')
+    assert.ok(rootInput, 'a session-less panel must let the user set the root folder')
+  })
+
+  test('close button closes the drawer and leaves the shell running', async () => {
+    // Closing a drawer must not destroy the shell inside it. The old close
+    // called exitTerminalSession(), so a user tidying the UI lost their session.
+    const stopBodies = []
+    globalThis.fetch = (url, init) => {
+      if (url.includes('/terminal/start')) {
+        return Promise.resolve(makeResponse(200, { session_id: 'session-1', token: 'tok-1', pid: 1 }))
+      }
+      if (url.includes('/terminal/stop')) {
+        stopBodies.push(JSON.parse(init.body))
+        return Promise.resolve(makeResponse(200, { status: 'stopped' }))
+      }
+      if (url.includes('/terminal/validate?token=')) {
+        return Promise.resolve(makeResponse(200, { valid: false }))
+      }
+      throw new Error(`Unexpected fetch call: ${url}`)
+    }
+
+    const module = await import(`../../extension/sidepanel.js?v=${++importCounter}`)
+    await module._terminalPanelForTests.bootTerminalPanel(true)
+
+    const header = getElementById('kaboom-terminal-header')
+    const closeButton = findButton(header, (node) => node.id === 'kaboom-terminal-close-button')
+    assert.ok(closeButton, 'the panel needs an obvious close control')
+
+    closeButton.dispatch('click')
+    await sleep(0)
+
+    assert.deepStrictEqual(stopBodies, [], 'closing the drawer must not stop the PTY')
+    assert.notStrictEqual(
+      sessionStorageData[StorageKey.TERMINAL_SESSION], undefined,
+      'the session must survive so reopening reconnects to it'
+    )
+    assert.strictEqual(chrome.sidePanel.close.mock.calls.length, 1, 'close should close the side panel')
   })
 })

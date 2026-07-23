@@ -245,6 +245,7 @@ export type BackgroundMessage =
   | RecordingGestureDeniedMessage
   | OpenPopupForRecordingMessage
   | OpenTerminalPanelMessage
+  | CloseTerminalPanelMessage
   | QaScanRequestedMessage
 
 /**
@@ -320,6 +321,17 @@ interface OpenTerminalPanelMessage {
   readonly type: 'open_terminal_panel'
   /** Tab that should host the panel. Required from the popup (no sender.tab). */
   readonly tab_id?: number
+}
+
+/**
+ * Background asks the side panel document to close itself.
+ *
+ * The background cannot close a side panel on every Chrome version
+ * (`chrome.sidePanel.close` is very new), but the panel document can call
+ * `window.close()`. Closing this way leaves the shell running.
+ */
+interface CloseTerminalPanelMessage {
+  readonly type: 'close_terminal_panel'
 }
 
 /**

@@ -3,6 +3,7 @@
  * Split from event-listeners.ts to keep files under 800 LOC.
  */
 import { scaleTimeout } from '../lib/timeouts.js';
+import { syncTerminalPanelAvailability } from './side-panel-availability.js';
 import { delay } from '../lib/timeout-utils.js';
 import { KABOOM_LOG_PREFIX } from '../lib/brand.js';
 import { StorageKey } from '../lib/constants.js';
@@ -213,12 +214,17 @@ export async function setTrackedTab(tab) {
         [StorageKey.TRACKED_TAB_URL]: tab.url ?? '',
         [StorageKey.TRACKED_TAB_TITLE]: tab.title ?? ''
     });
+    // The side panel is only meaningful on the tracked tab; everywhere else it
+    // renders empty. Follow the tracked tab so it is offered exactly there.
+    await syncTerminalPanelAvailability(tab.id);
 }
 /**
  * Clear tracked tab state
  */
 export function clearTrackedTab() {
     removeLocals(TRACKED_TAB_STORAGE_KEYS);
+    // Nothing is tracked, so no tab should offer the panel.
+    void syncTerminalPanelAvailability(undefined);
 }
 export async function resolveTerminalWorkspaceTarget(requestTabId) {
     const result = (await getLocals(TERMINAL_WORKSPACE_STORAGE_KEYS));

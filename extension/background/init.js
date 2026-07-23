@@ -8,6 +8,7 @@
  * Uses async/await for cleaner control flow (replaces callback nesting).
  */
 import { getTrackedTabLostToastDetail, KABOOM_LOG_PREFIX } from '../lib/brand.js';
+import { syncTerminalPanelAvailability } from './side-panel-availability.js';
 import { debugLog, DebugCategory, setDebugMode, resetSyncClientConnection, sharedServerCircuitBreaker, logBatcher, wsBatcher, enhancedActionBatcher, networkBodyBatcher, perfBatcher, handleLogMessage, handleClearLogs, checkConnectionAndUpdate, exportDebugLog, clearDebugLog, DEFAULT_SERVER_URL } from './index.js';
 import { getServerUrl, getConnectionStatus, isDebugMode, isScreenshotOnError, getCurrentLogLevel, isAiWebPilotEnabled, isAiWebPilotCacheInitialized, getPilotInitCallback, markInitComplete, setServerUrl, setCurrentLogLevel, setScreenshotOnError, setAiWebPilotEnabledCache, setAiWebPilotCacheInitialized, setPilotInitCallback } from './state.js';
 import { isSourceMapEnabled, setSourceMapEnabled, canTakeScreenshot, recordScreenshot, clearSourceMapCache, getContextWarning, getMemoryPressureState, isNetworkBodyCaptureDisabled, flushErrorGroups, cleanupStaleErrorGroups, clearScreenshotTimestamps } from './state-manager.js';
@@ -16,7 +17,7 @@ import { installPushCommandListener, installChatCommandListener } from './push-h
 import { isRecording, startRecording, stopRecording } from './recording.js';
 import { installMessageListener, broadcastTrackingState } from './message-handlers.js';
 import { captureScreenshot, updateBadge } from './communication.js';
-import { wasServiceWorkerRestarted, markStateVersion, setSessionAccessLevel, setLocal } from '../lib/storage-utils.js';
+import { wasServiceWorkerRestarted, markStateVersion, setSessionAccessLevel, setLocal, getLocal } from '../lib/storage-utils.js';
 import { loadServerInstallId } from './sync-client.js';
 /**
  * Initialize the extension on startup
@@ -201,6 +202,13 @@ async function initializeExtensionAsync() {
         });
         // ============= STEP 9.6: Install draw mode keyboard shortcut listener =============
         installDrawModeCommandListener((msg) => console.log(`${KABOOM_LOG_PREFIX} ${msg}`));
+        // ============= STEP 9.6a: Scope the side panel to the tracked tab =============
+        // Without this the manifest default makes the panel available on every tab,
+        // where it renders empty.
+        void (async () => {
+            const trackedTabId = (await getLocal('trackedTabId'));
+            await syncTerminalPanelAvailability(typeof trackedTabId === 'number' ? trackedTabId : undefined);
+        })();
         // ============= STEP 9.6b: Install terminal side panel shortcut =============
         // Gesture-native path to the side panel; the in-page launcher button cannot be
         // relied on alone (Chrome grants message listeners only a restricted gesture).

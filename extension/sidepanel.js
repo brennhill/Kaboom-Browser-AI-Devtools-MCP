@@ -6,8 +6,8 @@
  */
 import { StorageKey } from './lib/constants.js';
 import { onStorageChanged } from './lib/storage-utils.js';
-import { state, resetAllState, getTerminalServerUrl, WIDGET_ID, IFRAME_ID, HEADER_ID, DISCONNECT_TERMINAL_BUTTON_ID, REDRAW_TERMINAL_BUTTON_ID, MINIMIZE_TERMINAL_BUTTON_ID, MINIMIZED_WIDGET_HEIGHT, TERMINAL_WRITE_SUBMIT_DELAY_MS, TERMINAL_TYPING_IDLE_MS, TERMINAL_GUARD_POLL_MS, TERMINAL_GUARD_TOAST_INTERVAL_MS } from './content/ui/terminal-widget-types.js';
-import { getServerUrl, getTerminalConfig, persistUIState, loadPersistedSession, clearPersistedSession, validateSession, startSession } from './content/ui/terminal-widget-session.js';
+import { state, resetAllState, getTerminalServerUrl, WIDGET_ID, IFRAME_ID, HEADER_ID, DISCONNECT_TERMINAL_BUTTON_ID, CLOSE_TERMINAL_BUTTON_ID, REDRAW_TERMINAL_BUTTON_ID, MINIMIZE_TERMINAL_BUTTON_ID, START_TERMINAL_BUTTON_ID, ROOT_FOLDER_INPUT_ID, ROOT_FOLDER_SAVE_BUTTON_ID, MINIMIZED_WIDGET_HEIGHT, TERMINAL_WRITE_SUBMIT_DELAY_MS, TERMINAL_TYPING_IDLE_MS, TERMINAL_GUARD_POLL_MS, TERMINAL_GUARD_TOAST_INTERVAL_MS } from './content/ui/terminal-widget-types.js';
+import { getServerUrl, getTerminalConfig, persistUIState, loadPersistedSession, clearPersistedSession, validateSession, startSession, getTerminalDevRoot, setTerminalDevRoot, stopActiveSession } from './content/ui/terminal-widget-session.js';
 import { showActionToast } from './content/ui/toast.js';
 // =============================================================================
 // WRITE GUARD — defer queued writes while user is typing in the terminal
@@ -141,17 +141,33 @@ async function getHostTabId() {
         return undefined;
     }
 }
+/**
+ * Close the browser side panel.
+ *
+ * `chrome.sidePanel.close()` only exists in very recent Chrome. The old code
+ * bailed out silently when it was missing, so the close button did nothing at
+ * all — combined with unmountPanel() that left a blank panel the user could not
+ * close *or* recover. `window.close()` works from the panel document itself on
+ * every version that has side panels, so it is the fallback and the last word.
+ */
 async function closeBrowserSidePanel() {
-    if (!chrome.sidePanel?.close)
-        return;
-    const tabId = await getHostTabId();
-    if (tabId === undefined)
-        return;
+    if (chrome.sidePanel?.close) {
+        const tabId = await getHostTabId();
+        if (tabId !== undefined) {
+            try {
+                await chrome.sidePanel.close({ tabId });
+                return;
+            }
+            catch {
+                // Fall through to window.close().
+            }
+        }
+    }
     try {
-        await chrome.sidePanel.close({ tabId });
+        window.close();
     }
     catch {
-        // Best effort.
+        // Nothing else to try; the panel stays open but remains usable.
     }
 }
 function setPanelVisible(visible) {
@@ -170,6 +186,120 @@ function setTerminalBodyVisible(visible) {
     terminalShellEl.style.flex = visible ? '1 1 auto' : `0 0 ${MINIMIZED_WIDGET_HEIGHT}px`;
     minimizeButtonEl.textContent = visible ? '\u2581' : '\u25A1';
     minimizeButtonEl.title = visible ? 'Minimize terminal' : 'Restore terminal';
+}
+/**
+ * Render a recoverable "no shell" state.
+ *
+ * The panel used to print a dead sentence and stop, so an ended or failed
+ * session left a panel with nothing to click — the user could neither retry nor
+ * change anything without digging through the options page. Every path out of
+ * here is in the panel itself.
+ */
+function showNoSessionState() {
+    if (!terminalBodyEl)
+        return;
+    terminalBodyEl.replaceChildren();
+    const wrap = document.createElement('div');
+    Object.assign(wrap.style, {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+        padding: '16px',
+        color: '#a9b1d6',
+        fontSize: '12px'
+    });
+    const msg = document.createElement('div');
+    msg.textContent = 'No terminal session. Start one below, or check that the KaBOOM! daemon is running.';
+    msg.style.color = '#c0caf5';
+    const startButton = document.createElement('button');
+    startButton.id = START_TERMINAL_BUTTON_ID;
+    startButton.textContent = 'Start terminal';
+    startButton.type = 'button';
+    Object.assign(startButton.style, {
+        padding: '8px 12px',
+        borderRadius: '8px',
+        border: '1px solid #7aa2f7',
+        background: '#1a1b26',
+        color: '#7aa2f7',
+        cursor: 'pointer',
+        fontSize: '12px',
+        alignSelf: 'flex-start'
+    });
+    startButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        void bootTerminalPanel(true);
+    });
+    wrap.appendChild(msg);
+    wrap.appendChild(startButton);
+    wrap.appendChild(createRootFolderControl());
+    terminalBodyEl.appendChild(wrap);
+}
+/**
+ * Root-folder editor. The working directory used to be reachable only from the
+ * options page, which is a long way to go to point a shell at a different repo.
+ * Changing it restarts the session, because a PTY's cwd is fixed at spawn.
+ */
+function createRootFolderControl() {
+    const box = document.createElement('div');
+    Object.assign(box.style, { display: 'flex', flexDirection: 'column', gap: '6px' });
+    const label = document.createElement('label');
+    label.textContent = 'Root folder';
+    label.htmlFor = ROOT_FOLDER_INPUT_ID;
+    Object.assign(label.style, { color: '#787c99', fontSize: '11px' });
+    const row = document.createElement('div');
+    Object.assign(row.style, { display: 'flex', gap: '6px' });
+    const input = document.createElement('input');
+    input.id = ROOT_FOLDER_INPUT_ID;
+    input.type = 'text';
+    input.placeholder = '/path/to/your/project';
+    Object.assign(input.style, {
+        flex: '1',
+        padding: '6px 8px',
+        borderRadius: '6px',
+        border: '1px solid #292e42',
+        background: '#16161e',
+        color: '#c0caf5',
+        fontSize: '12px',
+        minWidth: '0'
+    });
+    void getTerminalDevRoot().then((root) => {
+        input.value = root;
+    });
+    const save = document.createElement('button');
+    save.id = ROOT_FOLDER_SAVE_BUTTON_ID;
+    save.textContent = 'Use';
+    save.type = 'button';
+    Object.assign(save.style, {
+        padding: '6px 10px',
+        borderRadius: '6px',
+        border: '1px solid #9ece6a',
+        background: '#1a1b26',
+        color: '#9ece6a',
+        cursor: 'pointer',
+        fontSize: '12px',
+        flexShrink: '0'
+    });
+    save.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        void applyRootFolder(input.value.trim());
+    });
+    row.appendChild(input);
+    row.appendChild(save);
+    box.appendChild(label);
+    box.appendChild(row);
+    return box;
+}
+/**
+ * Persist the root folder and restart the shell there. A running PTY cannot be
+ * moved — its cwd is fixed at spawn — so the old session is stopped first.
+ */
+async function applyRootFolder(root) {
+    await setTerminalDevRoot(root);
+    await stopActiveSession();
+    showActionToast('Terminal root folder set', root || '(auto-detect)', 'success', 2500);
+    await bootTerminalPanel(true);
 }
 function showSandboxError(message, instruction, command) {
     if (!terminalBodyEl)
@@ -331,7 +461,7 @@ function createTerminalHeader() {
     const disconnectButton = document.createElement('button');
     disconnectButton.id = DISCONNECT_TERMINAL_BUTTON_ID;
     disconnectButton.textContent = '\u23FB';
-    disconnectButton.title = 'Disconnect terminal & end session';
+    disconnectButton.title = 'End session — stops the shell and closes the panel';
     disconnectButton.type = 'button';
     Object.assign(disconnectButton.style, {
         width: '24px',
@@ -400,12 +530,38 @@ function createTerminalHeader() {
         e.stopPropagation();
         void minimizePanel();
     });
+    const closeButton = document.createElement('button');
+    closeButton.id = CLOSE_TERMINAL_BUTTON_ID;
+    closeButton.textContent = '\u2715';
+    closeButton.title = 'Close panel — the shell keeps running, reopen to come back';
+    closeButton.type = 'button';
+    Object.assign(closeButton.style, {
+        width: '24px',
+        height: '24px',
+        border: 'none',
+        background: 'transparent',
+        color: '#c0caf5',
+        fontSize: '14px',
+        cursor: 'pointer',
+        borderRadius: '4px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: '0'
+    });
+    closeButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        void closePanelKeepingSession();
+    });
     header.appendChild(statusDotEl);
     header.appendChild(titleSpan);
     header.appendChild(disconnectButton);
     header.appendChild(spacer);
     header.appendChild(redrawButton);
     header.appendChild(minimizeButtonEl);
+    // Rightmost, where every other close control on the platform lives.
+    header.appendChild(closeButton);
     return header;
 }
 function createPanelShell(token) {
@@ -521,6 +677,20 @@ async function exitTerminalSession() {
     unmountPanel();
     await closeBrowserSidePanel();
 }
+/**
+ * Close the drawer and leave the shell running.
+ *
+ * This is what "close" has to mean for a terminal: exitTerminalSession() kills
+ * the PTY, so a user who just wanted the panel out of the way lost their shell
+ * and had no way back. Reopening the panel reconnects to this session.
+ */
+async function closePanelKeepingSession() {
+    panelCloseIntent = 'closed';
+    persistUIState('closed');
+    resetWriteGuardState();
+    unmountPanel();
+    await closeBrowserSidePanel();
+}
 async function minimizePanel() {
     panelCloseIntent = 'minimized';
     persistUIState('minimized');
@@ -559,6 +729,12 @@ function installRuntimeListener() {
     chrome.runtime.onMessage.addListener((message, sender) => {
         if (sender.id !== chrome.runtime.id)
             return false;
+        // The background cannot close a side panel document on every Chrome version,
+        // but this document can, so it asks us to.
+        if (message.type === 'close_terminal_panel') {
+            void closePanelKeepingSession();
+            return false;
+        }
         if (message.type !== 'terminal_panel_write')
             return false;
         if (typeof message.text === 'string')
@@ -641,16 +817,8 @@ async function bootTerminalPanel(forceFresh = false) {
         if (error) {
             showSandboxError(error.message, error.instruction, error.command);
         }
-        else if (terminalBodyEl) {
-            terminalBodyEl.replaceChildren();
-            const fallback = document.createElement('div');
-            fallback.textContent = 'Terminal unavailable. Start the KaBOOM! daemon and reopen the panel.';
-            Object.assign(fallback.style, {
-                color: '#fca5a5',
-                padding: '16px',
-                fontSize: '12px'
-            });
-            terminalBodyEl.appendChild(fallback);
+        else {
+            showNoSessionState();
         }
     }
 }

@@ -10,6 +10,7 @@
  */
 
 import { getTrackedTabLostToastDetail, KABOOM_LOG_PREFIX } from '../lib/brand.js'
+import { syncTerminalPanelAvailability } from './side-panel-availability.js'
 import {
   debugLog,
   DebugCategory,
@@ -85,7 +86,7 @@ import { isRecording, startRecording, stopRecording } from './recording.js'
 import type { MessageHandlerDependencies } from './message-handlers.js'
 import { installMessageListener, broadcastTrackingState } from './message-handlers.js'
 import { captureScreenshot, updateBadge } from './communication.js'
-import { wasServiceWorkerRestarted, markStateVersion, setSessionAccessLevel, setLocal } from '../lib/storage-utils.js'
+import { wasServiceWorkerRestarted, markStateVersion, setSessionAccessLevel, setLocal, getLocal } from '../lib/storage-utils.js'
 import { loadServerInstallId } from './sync-client.js'
 
 /**
@@ -294,6 +295,14 @@ async function initializeExtensionAsync(): Promise<void> {
 
     // ============= STEP 9.6: Install draw mode keyboard shortcut listener =============
     installDrawModeCommandListener((msg) => console.log(`${KABOOM_LOG_PREFIX} ${msg}`))
+
+    // ============= STEP 9.6a: Scope the side panel to the tracked tab =============
+    // Without this the manifest default makes the panel available on every tab,
+    // where it renders empty.
+    void (async () => {
+      const trackedTabId = (await getLocal('trackedTabId')) as number | undefined
+      await syncTerminalPanelAvailability(typeof trackedTabId === 'number' ? trackedTabId : undefined)
+    })()
 
     // ============= STEP 9.6b: Install terminal side panel shortcut =============
     // Gesture-native path to the side panel; the in-page launcher button cannot be

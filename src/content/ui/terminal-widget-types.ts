@@ -17,6 +17,9 @@ export const DISCONNECT_TERMINAL_BUTTON_ID = 'kaboom-terminal-disconnect-button'
 export const REDRAW_TERMINAL_BUTTON_ID = 'kaboom-terminal-redraw-button'
 export const MINIMIZE_TERMINAL_BUTTON_ID = 'kaboom-terminal-minimize-button'
 export const CLOSE_TERMINAL_BUTTON_ID = 'kaboom-terminal-close-button'
+export const START_TERMINAL_BUTTON_ID = 'kaboom-terminal-start-button'
+export const ROOT_FOLDER_INPUT_ID = 'kaboom-terminal-root-folder-input'
+export const ROOT_FOLDER_SAVE_BUTTON_ID = 'kaboom-terminal-root-folder-save'
 
 // ---------------------------------------------------------------------------
 // Layout defaults
