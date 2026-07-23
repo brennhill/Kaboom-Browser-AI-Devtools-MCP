@@ -56,7 +56,6 @@
     "storage",
     "alarms",
     "tabs",
-    "tabGroups",
     "scripting",
     "tabCapture",
     "offscreen",
@@ -65,6 +64,9 @@
     "cookies",
     "contextMenus",
     "sidePanel"
+  ],
+  "optional_permissions": [
+    "tabGroups"
   ],
   "host_permissions": [
     "<all_urls>"

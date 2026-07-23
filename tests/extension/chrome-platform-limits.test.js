@@ -182,6 +182,9 @@ const API_PERMISSIONS = {
   windows: null,
   i18n: null,
   extension: null,
+  // chrome.permissions (request/contains for optional permissions) needs no
+  // declaration — it is part of the base extension API.
+  permissions: null,
   storage: 'storage',
   tabs: 'tabs',
   scripting: 'scripting',
@@ -238,7 +241,10 @@ describe('permissions match the APIs we call', () => {
   })
 
   test('every API we call has its permission declared, or a documented gap', () => {
-    const declared = new Set(loadManifest().permissions ?? [])
+    const manifest = loadManifest()
+    // Optional permissions count as declared: the API is grantable at runtime, and
+    // our code gates its use on chrome.permissions.contains rather than assuming it.
+    const declared = new Set([...(manifest.permissions ?? []), ...(manifest.optional_permissions ?? [])])
     const undeclared = [...usedChromeNamespaces()]
       .filter(([ns]) => ns in API_PERMISSIONS)
       .filter(([ns]) => API_PERMISSIONS[ns] && !declared.has(API_PERMISSIONS[ns]))
@@ -257,7 +263,10 @@ describe('permissions match the APIs we call', () => {
   test('documented permission gaps are still real', () => {
     // Keeps the exemption list from outliving its reason: once a permission is
     // declared, its entry must go, or the next gap hides behind stale text.
-    const declared = new Set(loadManifest().permissions ?? [])
+    const manifest = loadManifest()
+    // Optional permissions count as declared: the API is grantable at runtime, and
+    // our code gates its use on chrome.permissions.contains rather than assuming it.
+    const declared = new Set([...(manifest.permissions ?? []), ...(manifest.optional_permissions ?? [])])
     for (const ns of Object.keys(KNOWN_PERMISSION_GAPS)) {
       assert.ok(
         !declared.has(API_PERMISSIONS[ns]),
@@ -274,10 +283,28 @@ describe('permissions match the APIs we call', () => {
     )
     // activeTab is granted by user action rather than by calling an API.
     const notApiBacked = new Set(['activeTab'])
-    const unused = (loadManifest().permissions ?? [])
+    const manifest = loadManifest()
+    const unused = [...(manifest.permissions ?? []), ...(manifest.optional_permissions ?? [])]
       .filter((permission) => !notApiBacked.has(permission) && !used.has(permission))
 
     assert.deepStrictEqual(unused, [], `declared but never used: ${unused.join(', ')}`)
+  })
+
+  test('tabGroups is optional, not required — a cosmetic feature must not force re-approval', () => {
+    // The terminal workspace grouping (an orange "KaBOOM!" tab group) is purely
+    // cosmetic and fully guarded with a clean fallback. Shipping tabGroups as a
+    // REQUIRED permission would make Chrome disable the extension on update until
+    // every existing user re-approves — an unacceptable trade for a label. It must
+    // live in optional_permissions and be requested/gated at runtime instead.
+    const manifest = loadManifest()
+    assert.ok(
+      !(manifest.permissions ?? []).includes('tabGroups'),
+      'tabGroups must not be a required permission — move it to optional_permissions'
+    )
+    assert.ok(
+      (manifest.optional_permissions ?? []).includes('tabGroups'),
+      'tabGroups must be declared in optional_permissions so the grouping feature can request it'
+    )
   })
 })
 
