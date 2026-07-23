@@ -14,6 +14,7 @@ import { domPrimitiveListInteractive } from '../dom-primitives-list-interactive.
 import { registerCommand } from './registry.js'
 import { CDP_VERSION } from '../../lib/constants.js'
 import { errorMessage } from '../../lib/error-utils.js'
+import { KABOOM_LOG_PREFIX } from '../../lib/brand.js'
 import { delay } from '../../lib/timeout-utils.js'
 import { postDaemonJSON } from '../../lib/daemon-http.js'
 import { captureVisibleTabSafe } from '../tab-state.js'
@@ -250,6 +251,26 @@ export function computeElementCropRect(
   return { sx, sy, sw, sh }
 }
 
+/**
+ * Decode a base64 `data:` URL into a Blob without fetch(). Service workers do not
+ * reliably allow `fetch('data:...')`, so this keeps the crop path self-contained.
+ */
+export function dataUrlToBlob(dataUrl: string): Blob {
+  const comma = dataUrl.indexOf(',')
+  if (!dataUrl.startsWith('data:') || comma === -1) {
+    throw new Error('not a data URL')
+  }
+  const header = dataUrl.slice(5, comma)
+  if (!header.includes(';base64')) {
+    throw new Error('data URL is not base64-encoded')
+  }
+  const mime = header.split(';')[0] || 'application/octet-stream'
+  const binary = atob(dataUrl.slice(comma + 1))
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  return new Blob([bytes], { type: mime })
+}
+
 async function blobToDataUrl(blob: Blob): Promise<string> {
   const bytes = new Uint8Array(await blob.arrayBuffer())
   let binary = ''
@@ -260,30 +281,54 @@ async function blobToDataUrl(blob: Blob): Promise<string> {
   return `data:${blob.type};base64,${btoa(binary)}`
 }
 
-/** Crop a captured data URL to the element rect via OffscreenCanvas. Returns
- *  null (caller posts the uncropped viewport) if cropping is unavailable/fails. */
+/**
+ * Crop a captured data URL to the element rect via OffscreenCanvas.
+ *
+ * Always reports WHY it could not crop. A bare `return null` here made #597 look
+ * fixed while the caller silently posted the uncropped viewport — the failure was
+ * invisible in unit tests (which never run a service worker) and in the product.
+ * Any user-visible fallback must carry a reason.
+ */
 async function cropDataUrlToRect(
   dataUrl: string,
   rect: ScreenshotElementRect,
   format: 'png' | 'jpeg',
   quality: number
-): Promise<string | null> {
-  if (typeof OffscreenCanvas === 'undefined' || typeof createImageBitmap === 'undefined') return null
-  const blob = await (await fetch(dataUrl)).blob()
+): Promise<{ dataUrl: string } | { reason: string }> {
+  if (typeof OffscreenCanvas === 'undefined') return { reason: 'offscreencanvas_unavailable' }
+  if (typeof createImageBitmap === 'undefined') return { reason: 'createimagebitmap_unavailable' }
+
+  // Decode the data: URL by hand rather than via fetch(). MV3 service workers
+  // restrict fetching data: URLs, and a throw there is what silently disabled the
+  // whole crop path (#597) — the caller just posted the uncropped viewport.
+  // atob + Uint8Array has no such restriction.
+  let blob: Blob
+  try {
+    blob = dataUrlToBlob(dataUrl)
+  } catch (err) {
+    return { reason: `datauri_decode_failed: ${errorMessage(err)}` }
+  }
+
   const bitmap = await createImageBitmap(blob)
   try {
     const crop = computeElementCropRect(rect, rect.dpr, bitmap.width, bitmap.height)
-    if (!crop) return null
+    if (!crop) {
+      return {
+        reason:
+          `empty_crop_rect (element ${rect.width}x${rect.height} @ ${rect.x},${rect.y} ` +
+          `dpr=${rect.dpr} vs image ${bitmap.width}x${bitmap.height})`
+      }
+    }
     const canvas = new OffscreenCanvas(crop.sw, crop.sh)
     const c = canvas.getContext('2d')
-    if (!c) return null
+    if (!c) return { reason: 'no_2d_context' }
     c.drawImage(bitmap, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, crop.sw, crop.sh)
     const mime = format === 'png' ? 'image/png' : 'image/jpeg'
     const outBlob = await canvas.convertToBlob({
       type: mime,
       quality: format === 'jpeg' ? quality / 100 : undefined
     })
-    return await blobToDataUrl(outBlob)
+    return { dataUrl: await blobToDataUrl(outBlob) }
   } finally {
     bitmap.close?.()
   }
@@ -326,11 +371,29 @@ async function captureElement(
   recordScreenshot(ctx.tabId)
 
   let outUrl = dataUrl
+  let cropFallbackReason: string | null = null
   try {
     const cropped = await cropDataUrlToRect(dataUrl, rect, format, quality)
-    if (cropped) outUrl = cropped
+    if ('dataUrl' in cropped) {
+      outUrl = cropped.dataUrl
+    } else {
+      cropFallbackReason = cropped.reason
+    }
   } catch (err) {
-    debugLog(DebugCategory.CAPTURE, 'Selector crop failed; posting full viewport', { error: errorMessage(err) })
+    cropFallbackReason = `crop_threw: ${errorMessage(err)}`
+  }
+
+  if (cropFallbackReason) {
+    // console.warn (not debugLog) so this is visible in the service worker console
+    // even with extension debug logging off — a selector screenshot that silently
+    // returns the whole viewport looks like the feature simply does not work.
+    console.warn(
+      `${KABOOM_LOG_PREFIX} screenshot(selector=${selector}): returning uncropped viewport — ${cropFallbackReason}`
+    )
+    debugLog(DebugCategory.CAPTURE, 'Selector crop fell back to full viewport', {
+      selector,
+      reason: cropFallbackReason
+    })
   }
 
   const ok = await postScreenshot(outUrl, tab.url, ctx.query.id)

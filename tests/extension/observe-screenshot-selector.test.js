@@ -58,3 +58,37 @@ describe('computeElementCropRect (#597)', () => {
     assert.deepStrictEqual(r, { sx: 10, sy: 10, sw: 20, sh: 20 })
   })
 })
+
+// The crop path originally decoded the capture with fetch('data:...'), which MV3
+// service workers restrict — the throw was swallowed and every selector screenshot
+// silently returned the uncropped viewport. Decoding is now fetch-free.
+describe('dataUrlToBlob (#597 crop decode)', () => {
+  let dataUrlToBlob
+
+  beforeEach(async () => {
+    ;({ dataUrlToBlob } = await import('../../extension/background/commands/observe.js'))
+  })
+
+  test('decodes a base64 data URL into a Blob with the right type and bytes', async () => {
+    // "hi" -> aGk=
+    const blob = dataUrlToBlob('data:image/png;base64,aGk=')
+    assert.strictEqual(blob.type, 'image/png')
+    assert.strictEqual(blob.size, 2)
+    assert.strictEqual(await blob.text(), 'hi')
+  })
+
+  test('preserves binary bytes that are not valid UTF-8 text', async () => {
+    // 0x89 0x50 0x4E 0x47 = PNG magic
+    const blob = dataUrlToBlob('data:image/png;base64,iVBORw==')
+    const bytes = new Uint8Array(await blob.arrayBuffer())
+    assert.deepStrictEqual(Array.from(bytes.slice(0, 4)), [0x89, 0x50, 0x4e, 0x47])
+  })
+
+  test('rejects a non-data URL', () => {
+    assert.throws(() => dataUrlToBlob('https://example.com/x.png'), /not a data URL/)
+  })
+
+  test('rejects a non-base64 data URL', () => {
+    assert.throws(() => dataUrlToBlob('data:image/png,rawbytes'), /not base64/)
+  })
+})
