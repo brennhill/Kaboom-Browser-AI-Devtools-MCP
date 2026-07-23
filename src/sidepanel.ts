@@ -14,13 +14,11 @@ import {
   WIDGET_ID,
   IFRAME_ID,
   HEADER_ID,
+  TERMINAL_BODY_ID,
   DISCONNECT_TERMINAL_BUTTON_ID,
   CLOSE_TERMINAL_BUTTON_ID,
   REDRAW_TERMINAL_BUTTON_ID,
   MINIMIZE_TERMINAL_BUTTON_ID,
-  START_TERMINAL_BUTTON_ID,
-  ROOT_FOLDER_INPUT_ID,
-  ROOT_FOLDER_SAVE_BUTTON_ID,
   MINIMIZED_WIDGET_HEIGHT,
   TERMINAL_WRITE_SUBMIT_DELAY_MS,
   TERMINAL_TYPING_IDLE_MS,
@@ -41,101 +39,17 @@ import {
   stopActiveSession
 } from './content/ui/terminal-widget-session.js'
 import { showActionToast } from './content/ui/toast.js'
-
-// =============================================================================
-// WRITE GUARD — defer queued writes while user is typing in the terminal
-// =============================================================================
-
-function resetWriteGuardState(): void {
-  state.queuedWrites = []
-  state.terminalFocused = false
-  state.lastTypingAt = 0
-  state.queuedWriteInFlight = false
-  state.lastGuardToastAt = 0
-  if (state.queuedWriteFlushTimer !== null) {
-    clearTimeout(state.queuedWriteFlushTimer)
-    state.queuedWriteFlushTimer = null
-  }
-  if (state.queuedSubmitTimer !== null) {
-    clearTimeout(state.queuedSubmitTimer)
-    state.queuedSubmitTimer = null
-  }
-}
-
-function shouldDeferQueuedWrite(nowMs = Date.now()): boolean {
-  if (!state.terminalFocused) return false
-  return nowMs - state.lastTypingAt < TERMINAL_TYPING_IDLE_MS
-}
-
-function maybeShowQueuedWriteToast(nowMs = Date.now()): void {
-  if (nowMs - state.lastGuardToastAt < TERMINAL_GUARD_TOAST_INTERVAL_MS) return
-  state.lastGuardToastAt = nowMs
-  showActionToast('waiting for user to stop typing', 'Queued terminal action', 'warning', 1800)
-}
-
-function scheduleQueuedWriteFlush(delayMs = 0): void {
-  if (state.queuedWriteFlushTimer !== null) clearTimeout(state.queuedWriteFlushTimer)
-  state.queuedWriteFlushTimer = setTimeout(() => {
-    state.queuedWriteFlushTimer = null
-    flushQueuedWrites()
-  }, delayMs)
-}
-
-function scheduleQueuedSubmit(delayMs: number): void {
-  if (state.queuedSubmitTimer !== null) clearTimeout(state.queuedSubmitTimer)
-  state.queuedSubmitTimer = setTimeout(() => {
-    state.queuedSubmitTimer = null
-    if (!state.visible || !state.iframeEl) {
-      resetWriteGuardState()
-      return
-    }
-    if (!state.terminalConnected) {
-      scheduleQueuedSubmit(TERMINAL_GUARD_POLL_MS)
-      return
-    }
-    if (shouldDeferQueuedWrite()) {
-      maybeShowQueuedWriteToast()
-      scheduleQueuedSubmit(TERMINAL_GUARD_POLL_MS)
-      return
-    }
-    notifyIframe('write', { text: '\r' })
-    notifyIframe('focus')
-    state.queuedWriteInFlight = false
-    if (state.queuedWrites.length > 0) {
-      scheduleQueuedWriteFlush(0)
-    }
-  }, delayMs)
-}
-
-function flushQueuedWrites(): void {
-  if (!state.visible || !state.iframeEl) {
-    resetWriteGuardState()
-    return
-  }
-  if (!state.terminalConnected) {
-    scheduleQueuedWriteFlush(TERMINAL_GUARD_POLL_MS)
-    return
-  }
-  if (state.queuedWriteInFlight) return
-  if (state.queuedWrites.length === 0) {
-    state.lastGuardToastAt = 0
-    return
-  }
-  if (shouldDeferQueuedWrite()) {
-    maybeShowQueuedWriteToast()
-    scheduleQueuedWriteFlush(TERMINAL_GUARD_POLL_MS)
-    return
-  }
-
-  const nextWrite = state.queuedWrites.shift()
-  if (!nextWrite) return
-
-  state.lastGuardToastAt = 0
-  state.queuedWriteInFlight = true
-  notifyIframe('redraw')
-  notifyIframe('write', { text: nextWrite })
-  scheduleQueuedSubmit(TERMINAL_WRITE_SUBMIT_DELAY_MS)
-}
+import { createRootFolderBar } from './content/ui/terminal-root-folder.js'
+import { renderNoSessionState, renderStartFailure } from './content/ui/terminal-panel-states.js'
+import {
+  notifyIframe,
+  resetWriteGuardState,
+  shouldDeferQueuedWrite,
+  maybeShowQueuedWriteToast,
+  scheduleQueuedWriteFlush,
+  scheduleQueuedSubmit,
+  flushQueuedWrites
+} from './content/ui/terminal-write-guard.js'
 
 // =============================================================================
 // TERMINAL PANEL STATE
@@ -153,6 +67,7 @@ let panelReady = false
 let pendingSandboxError: { message: string; instruction: string; command: string } | null = null
 let panelCloseIntent: TerminalUIState | 'clear' | null = null
 let presencePort: chrome.runtime.Port | null = null
+let rootFolderBar: { element: HTMLDivElement; setRoot: (root: string) => void } | null = null
 
 /** Backoff before re-announcing presence after a service-worker restart. */
 const PRESENCE_RECONNECT_DELAY_MS = 500
@@ -226,117 +141,27 @@ function setTerminalBodyVisible(visible: boolean): void {
 }
 
 /**
- * Render a recoverable "no shell" state.
- *
- * The panel used to print a dead sentence and stop, so an ended or failed
- * session left a panel with nothing to click — the user could neither retry nor
- * change anything without digging through the options page. Every path out of
- * here is in the panel itself.
+ * Show the recoverable no-session state in the terminal body.
  */
 function showNoSessionState(): void {
   if (!terminalBodyEl) return
-  terminalBodyEl.replaceChildren()
-
-  const wrap = document.createElement('div')
-  Object.assign(wrap.style, {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
-    padding: '16px',
-    color: '#a9b1d6',
-    fontSize: '12px'
-  })
-
-  const msg = document.createElement('div')
-  msg.textContent = 'No terminal session. Start one below, or check that the KaBOOM! daemon is running.'
-  msg.style.color = '#c0caf5'
-
-  const startButton = document.createElement('button')
-  startButton.id = START_TERMINAL_BUTTON_ID
-  startButton.textContent = 'Start terminal'
-  startButton.type = 'button'
-  Object.assign(startButton.style, {
-    padding: '8px 12px',
-    borderRadius: '8px',
-    border: '1px solid #7aa2f7',
-    background: '#1a1b26',
-    color: '#7aa2f7',
-    cursor: 'pointer',
-    fontSize: '12px',
-    alignSelf: 'flex-start'
-  })
-  startButton.addEventListener('click', (e: MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    void bootTerminalPanel(true)
-  })
-
-  wrap.appendChild(msg)
-  wrap.appendChild(startButton)
-  wrap.appendChild(createRootFolderControl())
-  terminalBodyEl.appendChild(wrap)
+  renderNoSessionState(terminalBodyEl, () => { void bootTerminalPanel(true) })
 }
 
 /**
- * Root-folder editor. The working directory used to be reachable only from the
- * options page, which is a long way to go to point a shell at a different repo.
- * Changing it restarts the session, because a PTY's cwd is fixed at spawn.
+ * Mount the root-folder bar and keep it showing the current root.
+ *
+ * The bar is built synchronously so the shell lays out immediately; the stored
+ * root arrives a tick later and is filled in.
  */
-function createRootFolderControl(): HTMLDivElement {
-  const box = document.createElement('div')
-  Object.assign(box.style, { display: 'flex', flexDirection: 'column', gap: '6px' })
-
-  const label = document.createElement('label')
-  label.textContent = 'Root folder'
-  label.htmlFor = ROOT_FOLDER_INPUT_ID
-  Object.assign(label.style, { color: '#787c99', fontSize: '11px' })
-
-  const row = document.createElement('div')
-  Object.assign(row.style, { display: 'flex', gap: '6px' })
-
-  const input = document.createElement('input')
-  input.id = ROOT_FOLDER_INPUT_ID
-  input.type = 'text'
-  input.placeholder = '/path/to/your/project'
-  Object.assign(input.style, {
-    flex: '1',
-    padding: '6px 8px',
-    borderRadius: '6px',
-    border: '1px solid #292e42',
-    background: '#16161e',
-    color: '#c0caf5',
-    fontSize: '12px',
-    minWidth: '0'
+function createRootFolderBarElement(): HTMLDivElement {
+  const bar = createRootFolderBar({
+    initialRoot: '',
+    onApply: (root: string) => { void applyRootFolder(root) }
   })
-  void getTerminalDevRoot().then((root) => {
-    input.value = root
-  })
-
-  const save = document.createElement('button')
-  save.id = ROOT_FOLDER_SAVE_BUTTON_ID
-  save.textContent = 'Use'
-  save.type = 'button'
-  Object.assign(save.style, {
-    padding: '6px 10px',
-    borderRadius: '6px',
-    border: '1px solid #9ece6a',
-    background: '#1a1b26',
-    color: '#9ece6a',
-    cursor: 'pointer',
-    fontSize: '12px',
-    flexShrink: '0'
-  })
-  save.addEventListener('click', (e: MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    void applyRootFolder(input.value.trim())
-  })
-
-  row.appendChild(input)
-  row.appendChild(save)
-  box.appendChild(label)
-  box.appendChild(row)
-  return box
+  rootFolderBar = bar
+  void getTerminalDevRoot().then((root) => bar.setRoot(root))
+  return bar.element
 }
 
 /**
@@ -350,61 +175,13 @@ async function applyRootFolder(root: string): Promise<void> {
   await bootTerminalPanel(true)
 }
 
+/**
+ * Show a start failure, remembering it so a later remount can show it again.
+ */
 function showSandboxError(message: string, instruction: string, command: string): void {
   if (!terminalBodyEl) return
   pendingSandboxError = { message, instruction, command }
-  terminalBodyEl.replaceChildren()
-
-  const overlay = document.createElement('div')
-  Object.assign(overlay.style, {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '10px',
-    padding: '16px',
-    borderRadius: '12px',
-    background: '#1a1b26',
-    border: '1px solid #f7768e',
-    color: '#a9b1d6',
-    margin: '16px'
-  })
-
-  const title = document.createElement('div')
-  title.textContent = 'Terminal unavailable'
-  Object.assign(title.style, {
-    color: '#f7768e',
-    fontWeight: '600',
-    fontSize: '14px'
-  })
-
-  const msg = document.createElement('div')
-  msg.textContent = message
-  Object.assign(msg.style, {
-    fontSize: '12px',
-    color: '#787c99'
-  })
-
-  const inst = document.createElement('div')
-  inst.textContent = instruction
-  inst.style.fontSize = '12px'
-
-  const cmdBox = document.createElement('div')
-  Object.assign(cmdBox.style, {
-    background: '#16161e',
-    border: '1px solid #292e42',
-    borderRadius: '8px',
-    padding: '10px 12px',
-    fontFamily: '"SF Mono", "Fira Code", Menlo, Monaco, monospace',
-    fontSize: '12px',
-    color: '#9ece6a'
-  })
-  cmdBox.textContent = command
-
-  overlay.appendChild(title)
-  overlay.appendChild(msg)
-  // Not every start failure has a remedy to offer; empty boxes would just be noise.
-  if (instruction) overlay.appendChild(inst)
-  if (command) overlay.appendChild(cmdBox)
-  terminalBodyEl.appendChild(overlay)
+  renderStartFailure(terminalBodyEl, message, instruction, command)
 }
 
 function updateStatusDot(dotState: 'connected' | 'disconnected' | 'exited'): void {
@@ -420,11 +197,6 @@ function updateStatusDot(dotState: 'connected' | 'disconnected' | 'exited'): voi
       statusDotEl.style.background = '#f7768e'
       break
   }
-}
-
-function notifyIframe(command: string, data: Record<string, unknown> = {}): void {
-  if (!state.iframeEl?.contentWindow) return
-  state.iframeEl.contentWindow.postMessage({ command, ...data }, '*')
 }
 
 function handleIframeMessage(event: MessageEvent): void {
@@ -653,6 +425,7 @@ function createPanelShell(token: string): HTMLDivElement {
   const header = createTerminalHeader()
 
   const terminalBody = document.createElement('div')
+  terminalBody.id = TERMINAL_BODY_ID
   terminalBody.style.cssText = [
     'flex:1',
     'min-height:0',
@@ -673,6 +446,10 @@ function createPanelShell(token: string): HTMLDivElement {
   }
 
   terminalShell.appendChild(header)
+  // Above the terminal, always visible: the working directory is the single
+  // most consequential thing about a shell, and it used to be invisible unless
+  // the session had failed to start.
+  terminalShell.appendChild(createRootFolderBarElement())
   terminalShell.appendChild(terminalBody)
 
   root.appendChild(terminalShell)
@@ -704,6 +481,7 @@ function unmountPanel(): void {
   terminalBodyEl = null
   statusDotEl = null
   minimizeButtonEl = null
+  rootFolderBar = null
   state.widgetEl = null
   state.iframeEl = null
   panelReady = false
@@ -885,6 +663,9 @@ async function restoreTerminalPanel(): Promise<void> {
     setTerminalBodyVisible(true)
     state.minimized = false
     persistUIState('open')
+    // Nothing here was rebuilt, so a root changed elsewhere (the options page,
+    // another panel) would otherwise still read as the old one.
+    void getTerminalDevRoot().then((root) => rootFolderBar?.setRoot(root))
     return
   }
   // No terminal in here: either unmounted, or mounted with no session (the

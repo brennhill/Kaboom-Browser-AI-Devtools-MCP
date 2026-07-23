@@ -11,6 +11,7 @@ import { DEFAULT_SERVER_URL, TERMINAL_PORT_OFFSET } from '../../lib/constants.js
 export const WIDGET_ID = 'kaboom-terminal-widget';
 export const IFRAME_ID = 'kaboom-terminal-iframe';
 export const HEADER_ID = 'kaboom-terminal-header';
+export const TERMINAL_BODY_ID = 'kaboom-terminal-body';
 export const DISCONNECT_TERMINAL_BUTTON_ID = 'kaboom-terminal-disconnect-button';
 export const REDRAW_TERMINAL_BUTTON_ID = 'kaboom-terminal-redraw-button';
 export const MINIMIZE_TERMINAL_BUTTON_ID = 'kaboom-terminal-minimize-button';
@@ -18,6 +19,11 @@ export const CLOSE_TERMINAL_BUTTON_ID = 'kaboom-terminal-close-button';
 export const START_TERMINAL_BUTTON_ID = 'kaboom-terminal-start-button';
 export const ROOT_FOLDER_INPUT_ID = 'kaboom-terminal-root-folder-input';
 export const ROOT_FOLDER_SAVE_BUTTON_ID = 'kaboom-terminal-root-folder-save';
+export const ROOT_FOLDER_BAR_ID = 'kaboom-terminal-root-folder-bar';
+export const ROOT_FOLDER_BROWSE_BUTTON_ID = 'kaboom-terminal-root-folder-browse';
+export const ROOT_FOLDER_PICKER_ID = 'kaboom-terminal-root-folder-picker';
+export const ROOT_FOLDER_PICKER_UP_ID = 'kaboom-terminal-root-folder-up';
+export const ROOT_FOLDER_PICKER_USE_ID = 'kaboom-terminal-root-folder-use';
 // ---------------------------------------------------------------------------
 // Layout defaults
 // ---------------------------------------------------------------------------

@@ -109,6 +109,32 @@ export async function validateSession(token) {
         return false;
     }
 }
+/**
+ * List the sub-directories of `path`, or of the user's home when empty.
+ *
+ * The browser cannot resolve an absolute path by itself — `webkitdirectory` and
+ * showDirectoryPicker() both withhold it — so picking a working directory has to
+ * go through the daemon, which is already running shells in these directories.
+ */
+export async function listTerminalDirs(path) {
+    try {
+        const base = await getServerUrl();
+        const termUrl = getTerminalServerUrl(base);
+        const resp = await fetch(`${termUrl}/terminal/dirs?path=${encodeURIComponent(path)}`, { signal: AbortSignal.timeout(3000) });
+        if (!resp.ok)
+            return null;
+        const data = await resp.json();
+        return {
+            path: data.path ?? path,
+            parent: data.parent ?? '',
+            entries: Array.isArray(data.entries) ? data.entries : [],
+            truncated: data.truncated === true
+        };
+    }
+    catch {
+        return null; // Daemon unreachable; the caller falls back to typing a path.
+    }
+}
 /** Persist the terminal root folder (the cwd new sessions spawn in). */
 export async function setTerminalDevRoot(root) {
     try {

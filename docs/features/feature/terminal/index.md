@@ -15,6 +15,10 @@ code_paths:
   - src/content/ui/terminal-panel-bridge.ts
   - src/content/ui/terminal-widget-session.ts
   - src/content/ui/terminal-widget-types.ts
+  - src/content/ui/terminal-root-folder.ts
+  - src/content/ui/terminal-panel-states.ts
+  - src/content/ui/terminal-write-guard.ts
+  - cmd/browser-agent/internal/terminal/dirs.go
   - src/content/ui/tracked-hover-launcher.ts
   - src/background/message-handlers.ts
   - src/background/terminal-panel.ts
@@ -39,6 +43,8 @@ test_paths:
   - tests/extension/terminal-panel-gesture-entrypoints.test.js
   - tests/extension/terminal-panel-open-failure.test.js
   - tests/extension/terminal-panel-presence.test.js
+  - tests/extension/terminal-root-folder.test.js
+  - cmd/browser-agent/internal/terminal/dirs_test.go
   - tests/extension/terminal-panel-close-and-scope.test.js
 last_verified_version: 0.8.5
 last_verified_date: 2026-07-23
@@ -62,7 +68,9 @@ last_verified_date: 2026-07-23
 - Header close control (`✕`, rightmost) closes the drawer and **leaves the shell running** — reopening reconnects to the same session. Closing must never destroy a shell the user only wanted out of the way
 - Header power control (`⏻`) is the explicit teardown: stops the PTY and closes the panel. Kept because sessions are capped (`maxSessions = 10`), so there must be a way to end one
 - `chrome.sidePanel.close()` only exists in very recent Chrome. `closeBrowserSidePanel()` falls back to `window.close()` from the panel document; the old code returned silently when the API was absent, so the close button did nothing and `unmountPanel()` left a blank panel the user could neither close nor recover
-- A session-less panel renders a **recoverable** state — a *Start terminal* button and a **root folder** field — instead of a dead sentence. Changing the root folder stops the session and restarts it there, because a PTY's cwd is fixed at spawn
+- A **root folder bar sits above the terminal at all times**, showing the working directory with *Browse* and *Reload*. It used to appear only in the no-session state and on the options page, so with a session running there was no way to see or change where the shell actually was. *Reload* is named for what it does: a PTY's cwd is fixed at spawn, so changing it tears down the running session and starts a new one there
+- **Folder picking goes through the daemon** (`GET /terminal/dirs`). The browser cannot resolve an absolute path — `<input webkitdirectory>` exposes only relative paths and `showDirectoryPicker()` only a folder name — so neither can produce a cwd to spawn a PTY in. The endpoint lists directories only (a file cannot be a working directory), hides dot-directories, expands `~`, caps at `MaxDirEntries` and reports when it truncated. An unreachable daemon degrades to typing a path rather than showing an empty list
+- A session-less panel renders a **recoverable** state — a *Start terminal* button — instead of a dead sentence
 - The page context menu item is a **toggle**: it reads *Open Kaboom Terminal* or *Close Kaboom Terminal* depending on whether a panel document is actually connected, refreshed via `contextMenus.onShown`
 - **Panel liveness comes from a port, not from storage.** The panel connects `TERMINAL_PANEL_PORT` for as long as it lives; `isTerminalPanelOpenSync()` is `livePanelPort !== null`. Mirroring `TERMINAL_UI_STATE` did not work: dismissing the panel with Chrome's own X destroys the document before it can record anything, so the flag stuck at "open" and the toggle kept trying to close a panel that was already gone — the user could never reopen it. `TERMINAL_UI_STATE` remains the launcher's hover-overlay signal
 - **The panel is scoped to the tracked tab by default.** The manifest's `side_panel.default_path` makes it available on every tab, where it renders empty; `syncTerminalPanelAvailability()` disables the global default and enables the panel only on the tracked tab. That governs the default only — an explicit open enables its target tab first, because `chrome.sidePanel.open()` on a disabled tab fails with **"No active side panel for tabId: N"**, which is what made the Terminal button dead on every untracked page

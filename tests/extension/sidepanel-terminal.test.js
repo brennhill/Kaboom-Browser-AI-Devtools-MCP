@@ -598,7 +598,7 @@ describe('terminal side panel host', () => {
 
     const header = getElementById('kaboom-terminal-header')
     const minimizeButton = findButton(header, (node) => node.title === 'Minimize terminal')
-    const terminalBody = header?.parentElement?.children?.[1] || null
+    const terminalBody = getElementById('kaboom-terminal-body')
 
     assert.ok(minimizeButton, 'minimize button should be present after restore')
     assert.ok(terminalBody, 'terminal body should exist after restore')
@@ -649,16 +649,17 @@ describe('terminal side panel host', () => {
     await module._terminalPanelForTests.bootTerminalPanel(true)
 
     const header = getElementById('kaboom-terminal-header')
-    const terminalBody = header?.parentElement?.children?.[1] || null
+    const terminalBody = getElementById('kaboom-terminal-body')
     const titleNode = walkTree(header, (child) => child.textContent === 'KaBOOM! Terminal')
     const fallbackNode = walkTree(terminalBody, (child) =>
       typeof child.textContent === 'string' && child.textContent.includes('KaBOOM! daemon')
     )
     // The dead-end sentence is replaced by a recoverable state: a session can be
     // started and the root folder changed without leaving the panel. Previously
-    // an ended or failed session left nothing to click.
+    // an ended or failed session left nothing to click. The root folder moved
+    // out of this state and into a bar that is always visible above the terminal.
     const startButton = walkTree(terminalBody, (child) => child.id === 'kaboom-terminal-start-button')
-    const rootInput = walkTree(terminalBody, (child) => child.id === 'kaboom-terminal-root-folder-input')
+    const rootInput = getElementById('kaboom-terminal-root-folder-input')
 
     assert.ok(header, 'terminal header should exist')
     assert.ok(titleNode, 'terminal header should show Kaboom Terminal')
@@ -666,6 +667,8 @@ describe('terminal side panel host', () => {
     assert.ok(fallbackNode, 'fallback should mention the Kaboom daemon')
     assert.ok(startButton, 'a session-less panel must offer a way to start one')
     assert.ok(rootInput, 'a session-less panel must let the user set the root folder')
+    const rootBar = getElementById('kaboom-terminal-root-folder-bar')
+    assert.ok(rootBar, 'the root folder bar must exist whether or not a session started')
   })
 
   test('close button closes the drawer and leaves the shell running', async () => {

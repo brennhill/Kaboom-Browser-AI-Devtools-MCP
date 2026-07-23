@@ -89,6 +89,18 @@ The panel connects `TERMINAL_PANEL_PORT` on boot and reconnects if the service w
 9. `exitTerminalSession()` stops the PTY session, clears persisted session state, closes the browser side panel, and remounts the launcher.
 10. When the launcher emits annotation-driven terminal text, it forwards `terminal_panel_write` to the side panel host.
 
+## Choosing the Working Directory
+
+A PTY's cwd is fixed at spawn, so the root folder is not a setting that takes effect later — changing it is a restart. The bar above the terminal makes that visible and reversible:
+
+| Control | Effect |
+|---------|--------|
+| path field | shows the current root; Enter applies |
+| *Browse* | inline directory listing from the daemon, navigable up and down |
+| *Reload* | persists the root, stops the running PTY, starts a new one there |
+
+**Why the daemon lists directories.** The browser cannot resolve an absolute path: `<input type="file" webkitdirectory>` exposes only `webkitRelativePath`, and `showDirectoryPicker()` exposes only a handle's `name`. Neither can produce a cwd to spawn a shell in. `GET /terminal/dirs?path=…` (`cmd/browser-agent/internal/terminal/dirs.go`) returns `{path, parent, entries[], truncated}` — directories only, dot-directories hidden, `~` expanded, capped at `MaxDirEntries` with `truncated` set rather than silently trimmed. An unreachable daemon degrades to typing a path.
+
 ## Error and Recovery Paths
 
 - If `chrome.sidePanel.open()` fails, `openTerminalPanel()` reports the Chrome error verbatim via `console.error` **and** an error toast naming the two gesture-native fallbacks. It previously did `catch { return false }`, so a rejected open produced no console output, no toast, and no captured error — the Terminal button was indistinguishable from a dead element and there was nothing to diagnose from.
@@ -126,6 +138,10 @@ The panel connects `TERMINAL_PANEL_PORT` on boot and reconnects if the service w
 - `src/content/ui/terminal-widget-session.ts`
 - `src/content/ui/terminal-widget-types.ts`
 - `src/content/ui/terminal-widget-ui.ts`
+- `src/content/ui/terminal-root-folder.ts`
+- `src/content/ui/terminal-panel-states.ts`
+- `src/content/ui/terminal-write-guard.ts`
+- `cmd/browser-agent/internal/terminal/dirs.go`
 - `extension/manifest.json`
 - `extension/sidepanel.html`
 
@@ -140,6 +156,8 @@ The panel connects `TERMINAL_PANEL_PORT` on boot and reconnects if the service w
 - `tests/extension/terminal-panel-gesture-entrypoints.test.js`
 - `tests/extension/terminal-panel-open-failure.test.js`
 - `tests/extension/terminal-panel-presence.test.js`
+- `tests/extension/terminal-root-folder.test.js`
+- `cmd/browser-agent/internal/terminal/dirs_test.go`
 - `tests/extension/terminal-panel-close-and-scope.test.js`
 
 ## Edit Guardrails
@@ -157,3 +175,5 @@ The panel connects `TERMINAL_PANEL_PORT` on boot and reconnects if the service w
 - An explicit open must enable the panel for its target tab first, or it fails with "No active side panel for tabId" wherever availability scoping applies.
 - Keep at least one gesture-native entry point (keyboard command or context menu). Removing them leaves only the restricted-gesture message path, which Chrome may refuse.
 - Never swallow a side-panel open failure; a silent failure is indistinguishable from a dead button.
+- Keep the root folder visible while a session is running. Hiding it behind a failure state means the only way to see where the shell is, is to break it.
+- Name the apply control for what it does. A PTY cannot be moved, so "Save" would conceal that the running session is about to be destroyed.
