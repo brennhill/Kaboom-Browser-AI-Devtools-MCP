@@ -93,6 +93,7 @@
     ERROR_GROUPS: "kaboom_error_groups"
   };
   var TERMINAL_PANEL_FALLBACK_HINT = 'Right-click the page and choose "Open Kaboom Terminal", or assign a shortcut at chrome://extensions/shortcuts.';
+  var TERMINAL_PANEL_STALE_CONTEXT_HINT = "The Kaboom extension was reloaded, so this page is running an old copy of it. Reload this page to reconnect.";
 
   // extension/lib/storage-utils.js
   function getStorageWithSession() {
@@ -2179,11 +2180,16 @@
     };
   }
   function reportPanelOpenFailure(reason) {
-    console.error(`[KaBOOM!] Terminal side panel did not open: ${reason}`);
+    const stale = isStaleContextError(reason);
+    const hint = stale ? TERMINAL_PANEL_STALE_CONTEXT_HINT : TERMINAL_PANEL_FALLBACK_HINT;
+    console.error(`[KaBOOM!] Terminal side panel did not open: ${reason} ${hint}`);
     try {
-      showActionToast("Terminal side panel did not open", `${reason} ${TERMINAL_PANEL_FALLBACK_HINT}`, "error", 8e3);
+      showActionToast("Terminal side panel did not open", stale ? hint : `${reason} ${hint}`, "error", 8e3);
     } catch {
     }
+  }
+  function isStaleContextError(reason) {
+    return reason.includes("Extension context invalidated");
   }
   async function openTerminalPanel() {
     try {

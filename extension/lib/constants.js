@@ -197,6 +197,17 @@ export const StorageKey = {
  */
 export const TERMINAL_PANEL_FALLBACK_HINT = 'Right-click the page and choose "Open Kaboom Terminal", or assign a shortcut at chrome://extensions/shortcuts.';
 /**
+ * What to tell a user whose page is running an orphaned content script.
+ *
+ * Reloading the extension severs every already-open tab from the new background
+ * worker permanently — nothing in the page can reach it again. The generic
+ * fallback hint is *true* here (the context menu is served by the background and
+ * still works) but it is not the fix, and offering it first sends people
+ * right-clicking instead of pressing reload.
+ */
+export const TERMINAL_PANEL_STALE_CONTEXT_HINT = 'The Kaboom extension was reloaded, so this page is running an old copy of it. ' +
+    'Reload this page to reconnect.';
+/**
  * Port the side panel document opens to the background while it is alive.
  *
  * How the background knows whether a panel exists. Storage cannot answer that:
