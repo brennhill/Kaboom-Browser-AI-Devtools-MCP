@@ -211,13 +211,7 @@ const API_PERMISSIONS = {
  * naming them here is that they stay visible in the failure message rather than
  * disappearing into a passing test.
  */
-const KNOWN_PERMISSION_GAPS = {
-  tabGroups:
-    'Adding a required permission on update makes Chrome disable the extension until the user ' +
-    're-approves it, so this is a release decision. Until then chrome.tabGroups is undefined at ' +
-    'runtime and the Kaboom workspace tab-group feature silently never runs (tab-state.ts guards ' +
-    'on chrome.tabGroups?.update and returns null).'
-}
+const KNOWN_PERMISSION_GAPS = {}
 
 /** Namespaces referenced in source, ignoring import paths like './chrome.js'. */
 function usedChromeNamespaces() {

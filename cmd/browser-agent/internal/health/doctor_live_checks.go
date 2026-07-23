@@ -87,19 +87,23 @@ func RunDoctorChecks(cap *capture.Store) []DoctorCheck {
 			Detail: "AI Web Pilot status not yet confirmed; assuming enabled until first sync",
 			Fix:    "Open the extension once to confirm pilot settings, then rerun doctor",
 		})
+	case capture.PilotStateEnabled:
+		checks = append(checks, DoctorCheck{
+			Name: "pilot_enabled", Status: "pass",
+			Detail: "AI Web Pilot is enabled",
+		})
 	default:
-		if cap.IsPilotActionAllowed() {
-			checks = append(checks, DoctorCheck{
-				Name: "pilot_enabled", Status: "pass",
-				Detail: "AI Web Pilot is enabled",
-			})
-		} else {
-			checks = append(checks, DoctorCheck{
-				Name: "pilot_enabled", Status: "warn",
-				Detail: "AI Web Pilot is disabled — interact actions will fail",
-				Fix:    "Enable AI Web Pilot in the extension popup",
-			})
-		}
+		// GetPilotStatus reports exactly the three states above. This arm used
+		// to test IsPilotActionAllowed() and emit a second "AI Web Pilot is
+		// disabled" warning that could never fire — enabled always implies
+		// allowed — leaving two copies of the same wording to keep in sync.
+		// Reaching here now means the state vocabulary grew and this switch was
+		// not updated, which is worth saying out loud rather than guessing.
+		checks = append(checks, DoctorCheck{
+			Name: "pilot_enabled", Status: "warn",
+			Detail: fmt.Sprintf("AI Web Pilot state %q is not recognised by this daemon", pilotState),
+			Fix:    "Update Kaboom — the extension is reporting a pilot state this version predates",
+		})
 	}
 
 	// 3. Tracked tab.

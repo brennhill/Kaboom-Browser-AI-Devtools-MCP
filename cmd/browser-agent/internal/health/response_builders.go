@@ -174,9 +174,18 @@ func (hm *Metrics) BuildAuditInfo() AuditInfo {
 	}
 	hm.mu.RUnlock()
 
+	// Clamped because a "rate" above 100% is not a number anyone can read, and
+	// this is a dashboard field. The single production call site increments the
+	// request counter before ever incrementing the error counter, so errors
+	// cannot outnumber calls through it — but Metrics is exported, and a future
+	// caller that only records failures should produce a saturated rate rather
+	// than a nonsense one.
 	var errorRate float64
 	if totalCalls > 0 {
 		errorRate = float64(totalErrors) / float64(totalCalls) * 100
+		if errorRate > 100 {
+			errorRate = 100
+		}
 	}
 
 	return AuditInfo{

@@ -632,6 +632,34 @@ func TestRunDoctorChecks_ExplicitlyDisabledPilotWarnsWithDistinctDetail(t *testi
 	}
 }
 
+// Every pilot state the capture layer can report must map to exactly one
+// doctor check, and each must say something different. There used to be a
+// second, unreachable "AI Web Pilot is disabled" arm duplicating the
+// explicitly-disabled wording; a duplicate string in a diagnostics surface is a
+// maintenance hazard, since only one copy ever gets updated.
+func TestRunDoctorChecks_EveryPilotStateHasItsOwnDistinctWording(t *testing.T) {
+	details := map[string]string{}
+	for name, setup := range map[string]func(*capture.Capture){
+		capture.PilotStateEnabled:            func(c *capture.Capture) { c.SetPilotEnabled(true) },
+		capture.PilotStateExplicitlyDisabled: func(c *capture.Capture) { c.SetPilotEnabled(false) },
+		capture.PilotStateAssumedEnabled:     func(c *capture.Capture) { c.SetPilotUnknownForTest() },
+	} {
+		cap := capture.NewCapture()
+		setup(cap)
+		pilot := findCheck(t, RunDoctorChecks(cap), "pilot_enabled")
+		if pilot.Detail == "" {
+			t.Errorf("%s: check has no detail", name)
+		}
+		if prev, dup := details[pilot.Detail]; dup {
+			t.Errorf("states %q and %q report identical wording %q", prev, name, pilot.Detail)
+		}
+		details[pilot.Detail] = name
+	}
+	if len(details) != 3 {
+		t.Errorf("got %d distinct details across 3 pilot states: %v", len(details), details)
+	}
+}
+
 func TestRunDoctorChecks_EnabledPilotPassesWithNoFix(t *testing.T) {
 	cap := capture.NewCapture()
 	cap.SetPilotEnabled(true)

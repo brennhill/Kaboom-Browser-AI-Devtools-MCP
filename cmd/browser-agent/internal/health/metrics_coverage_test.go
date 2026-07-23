@@ -72,20 +72,34 @@ func TestMetrics_GetErrorCountUnknownToolIsZero(t *testing.T) {
 	}
 }
 
-func TestMetrics_BuildAuditInfo_ErrorRateExceeds100WhenErrorsOutnumberCalls(t *testing.T) {
+func TestMetrics_BuildAuditInfo_ErrorRateSaturatesAt100(t *testing.T) {
 	m := NewMetrics()
 	m.IncrementRequest("interact")
 	m.IncrementError("interact")
 	m.IncrementError("interact")
 
 	info := m.BuildAuditInfo()
-	// Documents actual behaviour: the rate is errors/calls with no clamp, so a
-	// tool that records two errors per call reports 200%.
-	if info.ErrorRatePct != 200 {
-		t.Errorf("ErrorRatePct: want 200, got %f", info.ErrorRatePct)
+	// error_rate_pct is a dashboard field; a rate above 100% is not a number
+	// anyone can read. The raw counts stay unclamped so the discrepancy is
+	// still visible to whoever looks.
+	if info.ErrorRatePct != 100 {
+		t.Errorf("ErrorRatePct: want 100, got %f", info.ErrorRatePct)
 	}
 	if info.TotalCalls != 1 || info.TotalErrors != 2 {
 		t.Errorf("want calls=1 errors=2, got calls=%d errors=%d", info.TotalCalls, info.TotalErrors)
+	}
+}
+
+func TestMetrics_BuildAuditInfo_ErrorRateIsExactBelowTheClamp(t *testing.T) {
+	// The clamp must not round or distort an ordinary rate.
+	m := NewMetrics()
+	for i := 0; i < 4; i++ {
+		m.IncrementRequest("observe")
+	}
+	m.IncrementError("observe")
+
+	if got := m.BuildAuditInfo().ErrorRatePct; got != 25 {
+		t.Errorf("ErrorRatePct: want 25, got %f", got)
 	}
 }
 
