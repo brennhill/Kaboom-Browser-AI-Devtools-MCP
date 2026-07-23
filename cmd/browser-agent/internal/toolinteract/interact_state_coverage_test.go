@@ -2406,20 +2406,20 @@ func TestStateCov_StateLoad_RestoreGatesReportWhyItWasSkipped(t *testing.T) {
 	}
 }
 
-// Empty maps are not data: a snapshot with only empty containers must report
-// no_data rather than queueing a pointless restore.
+// Empty maps are not data: a snapshot whose every restorable container is empty
+// must report no_data rather than queueing a pointless restore.
 func TestStateCov_StateLoad_EmptyContainersCountAsNoData(t *testing.T) {
 	hs := statecovNewHarness(t)
 	hs.cap.SetPilotEnabled(true)
 	hs.cap.SimulateExtensionConnectForTest()
 	if err := hs.store.Save(act.StateNamespace, "empty",
-		[]byte(`{"url":"https://a.test/","form_values":{},"local_storage":{},"session_storage":{},"cookies":{},"scroll_position":{"y":50}}`)); err != nil {
+		[]byte(`{"url":"https://a.test/","form_values":{},"local_storage":{},"session_storage":{},"cookies":{},"scroll_position":{}}`)); err != nil {
 		t.Fatalf("seed: %v", err)
 	}
 
 	payload := statecovOK(t, hs.state.HandleStateLoad(statecovReq(), json.RawMessage(`{"snapshot_name":"empty"}`)))
 	if payload["state_restore"] != act.StateRestoreStatusNoData {
-		t.Errorf("state_restore = %v, want %s (scroll position alone is not restorable data)",
+		t.Errorf("state_restore = %v, want %s (every container is empty)",
 			payload["state_restore"], act.StateRestoreStatusNoData)
 	}
 	if n := len(hs.statecovQueries()); n != 0 {
@@ -2427,9 +2427,35 @@ func TestStateCov_StateLoad_EmptyContainersCountAsNoData(t *testing.T) {
 	}
 }
 
-// A blocked enqueue still reports "queued" but with an empty correlation id —
-// documenting current behaviour so a future fix is a deliberate change.
-func TestStateCov_StateLoad_BlockedRestoreEnqueueYieldsEmptyCorrelationID(t *testing.T) {
+// A snapshot carrying only a scroll position is restorable data: scroll_position
+// is captured, persisted, and replayed like the other fields, so it must queue a
+// restore rather than report no_data (#9).
+func TestStateCov_StateLoad_ScrollPositionAloneCountsAsData(t *testing.T) {
+	hs := statecovNewHarness(t)
+	hs.cap.SetPilotEnabled(true)
+	hs.cap.SimulateExtensionConnectForTest()
+	if err := hs.store.Save(act.StateNamespace, "scroll",
+		[]byte(`{"url":"https://a.test/","scroll_position":{"y":420}}`)); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	payload := statecovOK(t, hs.state.HandleStateLoad(statecovReq(), json.RawMessage(`{"snapshot_name":"scroll"}`)))
+	if payload["state_restore"] != act.StateRestoreStatusQueued {
+		t.Fatalf("state_restore = %v, want %s (scroll position is restorable data)",
+			payload["state_restore"], act.StateRestoreStatusQueued)
+	}
+	corr, _ := payload["restore_correlation_id"].(string)
+	if !strings.HasPrefix(corr, "state_restore_") {
+		t.Errorf("restore_correlation_id = %q, want a state_restore_ prefix", corr)
+	}
+	// The restore script must actually carry the scroll position.
+	statecovSub(t, hs.statecovLastParams()["script"].(string), "420", "restore script scroll value")
+}
+
+// A rejected restore enqueue must be reported honestly: the caller is told the
+// restore did NOT start, with a reason, rather than being handed a "queued"
+// status and an empty correlation id that points at nothing (#8).
+func TestStateCov_StateLoad_BlockedRestoreEnqueueIsReportedHonestly(t *testing.T) {
 	hs := statecovNewHarness(t)
 	hs.cap.SetPilotEnabled(true)
 	hs.cap.SimulateExtensionConnectForTest()
@@ -2439,11 +2465,16 @@ func TestStateCov_StateLoad_BlockedRestoreEnqueueYieldsEmptyCorrelationID(t *tes
 	}
 
 	payload := statecovOK(t, hs.state.HandleStateLoad(statecovReq(), json.RawMessage(`{"snapshot_name":"s"}`)))
-	if payload["state_restore"] != act.StateRestoreStatusQueued {
-		t.Errorf("state_restore = %v, want %s", payload["state_restore"], act.StateRestoreStatusQueued)
+	if payload["state_restore"] != act.StateRestoreStatusEnqueueRejected {
+		t.Fatalf("state_restore = %v, want %s (a rejected enqueue is not 'queued')",
+			payload["state_restore"], act.StateRestoreStatusEnqueueRejected)
 	}
-	if payload["restore_correlation_id"] != "" {
-		t.Errorf("restore_correlation_id = %v, want \"\" when the enqueue was rejected", payload["restore_correlation_id"])
+	if _, has := payload["restore_correlation_id"]; has {
+		t.Error("no restore_correlation_id may be reported when the enqueue was rejected — there is no command to correlate")
+	}
+	detail, _ := payload["restore_detail"].(string)
+	if !strings.Contains(detail, "not restored") {
+		t.Errorf("restore_detail = %q, want a reason stating the state was not restored", detail)
 	}
 }
 
@@ -2456,6 +2487,41 @@ func TestStateCov_StoreRetryState_InitializesNilMap(t *testing.T) {
 	h.storeRetryState("c1", &commandRetryState{Attempt: 1, CreatedAt: time.Now()})
 	if st, ok := h.getRetryState("c1"); !ok || st.Attempt != 1 {
 		t.Error("storeRetryState must lazily create retryByCommand")
+	}
+}
+
+// pruneRetryStatesLocked must trim the map all the way down to maxEntries in one
+// call, evicting oldest-first — not remove a single entry and leave the map over
+// the cap. It runs on every store today (so overflow is only ever one), but the
+// helper is now correct for any overflow (#10).
+func TestStateCov_PruneRetryStates_TrimsAllTheWayToTheCap(t *testing.T) {
+	h := &InteractActionHandler{retryByCommand: map[string]*commandRetryState{}}
+	base := time.Now()
+	// 10 entries; higher index == created later.
+	for i := 0; i < 10; i++ {
+		h.retryByCommand["c"+strconv.Itoa(i)] = &commandRetryState{
+			Attempt:   1,
+			CreatedAt: base.Add(time.Duration(i) * time.Millisecond),
+		}
+	}
+
+	h.retryContractMu.Lock()
+	h.pruneRetryStatesLocked(3)
+	h.retryContractMu.Unlock()
+
+	if got := len(h.retryByCommand); got != 3 {
+		t.Fatalf("map size after prune = %d, want 3 (must trim to the cap in one call)", got)
+	}
+	// The three newest survive; the oldest are evicted.
+	for _, key := range []string{"c7", "c8", "c9"} {
+		if _, ok := h.retryByCommand[key]; !ok {
+			t.Errorf("newest entry %q was evicted, want kept", key)
+		}
+	}
+	for _, key := range []string{"c0", "c6"} {
+		if _, ok := h.retryByCommand[key]; ok {
+			t.Errorf("oldest entry %q survived, want evicted", key)
+		}
 	}
 }
 

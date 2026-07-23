@@ -915,22 +915,89 @@ func TestFillForm_SelectFallbackFailurePropagates(t *testing.T) {
 	}
 }
 
-// TestFillForm_EmptyValueIsRejectedByTypeValidation documents current behaviour:
-// fill_form cannot be used to blank out a field, because the underlying type
-// primitive requires a non-empty 'text'. See final report.
-func TestFillForm_EmptyValueIsRejectedByTypeValidation(t *testing.T) {
+// TestFillForm_EmptyValueClearsTheField guarantees fill_form can blank a field:
+// the step is dispatched with clear:true and an empty text, which is exactly the
+// "empty this input" intent, so the missing-'text' rule must not reject it.
+func TestFillForm_EmptyValueClearsTheField(t *testing.T) {
 	t.Parallel()
 	hs := wfcovNewHarness(t)
 	resp := hs.h.HandleFillForm(wfcovReq(), json.RawMessage(`{"fields":[{"selector":"#note","value":""}]}`))
 
+	if wfcovIsError(t, resp) {
+		t.Fatalf("an empty value must clear the field, not fail: %s", string(resp.Result))
+	}
+	if got := wfcovJoin(hs.wfcovActions()); got != "type" {
+		t.Fatalf("dispatched actions = %q, want \"type\"", got)
+	}
+	call := hs.wfcovCallAt(0)
+	if call.wfcovStr("selector") != "#note" || call.wfcovStr("text") != "" {
+		t.Errorf("type args = %v, want an empty text for #note", call.Params)
+	}
+	if call.Params["clear"] != true {
+		t.Errorf("clear = %v, want true — clearing is what blanks the field", call.Params["clear"])
+	}
+	if got := wfcovJoin(wfcovStepNames(wfcovTraceOf(t, resp))); got != "type[0]=success" {
+		t.Fatalf("trace = %q", got)
+	}
+}
+
+// TestFillForm_TimeoutBudgetStopsTheWorkflowAtTheOffendingStep guarantees
+// timeout_ms bounds the whole fill_form workflow: once the budget is gone the
+// workflow fails with an extension_timeout naming the step it was on, instead of
+// running every remaining field.
+func TestFillForm_TimeoutBudgetStopsTheWorkflowAtTheOffendingStep(t *testing.T) {
+	t.Parallel()
+	hs := wfcovNewHarness(t)
+	// Fixture latency: the first field alone consumes the whole workflow budget.
+	hs.delay["type"] = 40 * time.Millisecond
+
+	resp := hs.h.HandleFillForm(wfcovReq(), json.RawMessage(`{
+		"fields":[{"selector":"#a","value":"1"},{"selector":"#b","value":"2"}],
+		"timeout_ms":5}`))
+
 	if !wfcovIsError(t, resp) {
-		t.Fatalf("expected the empty value to be rejected, got: %s", string(resp.Result))
+		t.Fatal("an exhausted timeout_ms budget must fail the workflow")
 	}
-	if len(hs.wfcovActions()) != 0 {
-		t.Fatalf("validation happens before dispatch, got %v", hs.wfcovActions())
+	if got := wfcovJoin(hs.wfcovActions()); got != "type" {
+		t.Fatalf("dispatched actions = %q, want only the first field", got)
 	}
-	if detail := wfcovMapStr(wfcovPayload(t, resp), "error_detail"); !strings.Contains(detail, "'text' is missing") {
-		t.Fatalf("error_detail = %q, want the missing-text validation message", detail)
+	if got := wfcovJoin(wfcovStepNames(wfcovTraceOf(t, resp))); got != "type[0]=success,type[1]=error" {
+		t.Fatalf("trace = %q", got)
+	}
+	detail := wfcovMapStr(wfcovPayload(t, resp), "error_detail")
+	if !strings.Contains(detail, "timeout_ms exhausted before type[1] step") {
+		t.Fatalf("error_detail = %q, want the offending step named in the timeout error", detail)
+	}
+	if !strings.Contains(detail, ErrExtTimeout) {
+		t.Errorf("error_detail = %q, want error_code %s", detail, ErrExtTimeout)
+	}
+}
+
+// TestFillFormAndSubmit_TimeoutBudgetStopsBeforeSubmitting guarantees the same
+// budget covers the submit click: an exhausted timeout_ms must never submit a
+// half-filled form.
+func TestFillFormAndSubmit_TimeoutBudgetStopsBeforeSubmitting(t *testing.T) {
+	t.Parallel()
+	hs := wfcovNewHarness(t)
+	// Fixture latency: the only field consumes the whole workflow budget.
+	hs.delay["type"] = 40 * time.Millisecond
+
+	resp := hs.h.HandleFillFormAndSubmit(wfcovReq(), json.RawMessage(`{
+		"fields":[{"selector":"#a","value":"1"}],
+		"submit_selector":"#go","timeout_ms":5}`))
+
+	if !wfcovIsError(t, resp) {
+		t.Fatal("an exhausted timeout_ms budget must fail the workflow")
+	}
+	if got := wfcovJoin(hs.wfcovActions()); got != "type" {
+		t.Fatalf("dispatched actions = %q, want the submit click to be skipped", got)
+	}
+	if got := wfcovJoin(wfcovStepNames(wfcovTraceOf(t, resp))); got != "type[0]=success,click_submit=error" {
+		t.Fatalf("trace = %q", got)
+	}
+	detail := wfcovMapStr(wfcovPayload(t, resp), "error_detail")
+	if !strings.Contains(detail, "timeout_ms exhausted before click_submit step") {
+		t.Fatalf("error_detail = %q, want the offending step named in the timeout error", detail)
 	}
 }
 

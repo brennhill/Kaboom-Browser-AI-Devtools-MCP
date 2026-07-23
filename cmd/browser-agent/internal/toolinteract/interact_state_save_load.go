@@ -121,7 +121,10 @@ func (h *StateInteractHandler) HandleStateLoad(req JSONRPCRequest, args json.Raw
 	sessionStorage, _ := stateData["session_storage"].(map[string]any)
 	cookies, _ := stateData["cookies"].(map[string]any)
 
-	hasData := len(formValues) > 0 || len(localStorage) > 0 || len(sessionStorage) > 0 || len(cookies) > 0
+	// scroll_position is captured, persisted, and restored like the other fields,
+	// so a snapshot carrying only a scroll position is real restorable data — not
+	// "skipped_no_state_data" (#9).
+	hasData := len(formValues) > 0 || len(scrollPos) > 0 || len(localStorage) > 0 || len(sessionStorage) > 0 || len(cookies) > 0
 
 	if !hasData {
 		responseData["state_restore"] = act.StateRestoreStatusNoData
@@ -129,10 +132,16 @@ func (h *StateInteractHandler) HandleStateLoad(req JSONRPCRequest, args json.Raw
 		responseData["state_restore"] = act.StateRestoreStatusPilotDisabled
 	} else if !h.deps.Capture().IsExtensionConnected() {
 		responseData["state_restore"] = act.StateRestoreStatusExtensionDown
-	} else {
-		restoreCorrelationID := h.queueStateRestore(req, formValues, scrollPos, localStorage, sessionStorage, cookies)
+	} else if restoreCorrelationID := h.queueStateRestore(req, formValues, scrollPos, localStorage, sessionStorage, cookies); restoreCorrelationID != "" {
 		responseData["state_restore"] = act.StateRestoreStatusQueued
 		responseData["restore_correlation_id"] = restoreCorrelationID
+	} else {
+		// queueStateRestore returns "" when the enqueue was rejected (queue full or
+		// shutting down). Pilot and extension are already ruled out above, so this is
+		// the queue itself refusing the command. Report it honestly instead of
+		// claiming a restore is in flight with an empty correlation id (#8).
+		responseData["state_restore"] = act.StateRestoreStatusEnqueueRejected
+		responseData["restore_detail"] = "restore command could not be enqueued (command queue unavailable); saved state was not restored"
 	}
 
 	h.deps.RecordAIAction("load_state", "", map[string]any{"snapshot_name": snapshotName})

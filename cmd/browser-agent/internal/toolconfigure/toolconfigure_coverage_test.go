@@ -285,19 +285,20 @@ func TestHandleTelemetry_InvalidModeRejectedWithoutWriting(t *testing.T) {
 	}
 }
 
-// KNOWN BUG (documented, not fixed here): NormalizeTelemetryMode validates the
-// trimmed string but returns the raw one, so a padded mode is stored verbatim.
-func TestHandleTelemetry_PaddedModeIsStoredUntrimmed(t *testing.T) {
+// Guarantees that NormalizeTelemetryMode stores the value it actually validated:
+// a padded mode is trimmed before it reaches SetTelemetryMode, so the persisted
+// mode compares equal to the canonical "off"/"auto"/"full" constants.
+func TestHandleTelemetry_PaddedModeIsStoredTrimmed(t *testing.T) {
 	t.Parallel()
 
 	d := &fakeDeps{telemetryMode: "auto"}
 	resp := HandleTelemetry(d, testReq(), json.RawMessage(`{"telemetry_mode":"  off  "}`))
 
-	if len(d.setTelemetryCalls) != 1 || d.setTelemetryCalls[0] != "  off  " {
-		t.Errorf("SetTelemetryMode calls = %q, want the untrimmed \"  off  \"", d.setTelemetryCalls)
+	if len(d.setTelemetryCalls) != 1 || d.setTelemetryCalls[0] != "off" {
+		t.Errorf("SetTelemetryMode calls = %q, want the trimmed \"off\"", d.setTelemetryCalls)
 	}
-	if got := payload(t, resp)["telemetry_mode"]; got != "  off  " {
-		t.Errorf("telemetry_mode = %q, want the untrimmed value", got)
+	if got := payload(t, resp)["telemetry_mode"]; got != "off" {
+		t.Errorf("telemetry_mode = %q, want the trimmed \"off\"", got)
 	}
 }
 

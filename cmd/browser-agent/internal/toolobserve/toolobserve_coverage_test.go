@@ -533,11 +533,14 @@ func TestAppendPushPiggyback_NoEventsLeavesResponseByteIdentical(t *testing.T) {
 	}
 }
 
-func TestAppendPushPiggyback_UnparseableResponseIsLeftAloneAndEventsAreConsumed(t *testing.T) {
+// Guarantees events are only consumed once they have actually been attached to a
+// response: an unparseable resp.Result leaves the inbox untouched, so the batch
+// survives for the next call instead of being silently dropped.
+func TestAppendPushPiggyback_UnparseableResponseLeavesEventsInTheInbox(t *testing.T) {
 	t.Parallel()
 
 	inbox := push.NewPushInbox(4)
-	inbox.Enqueue(push.PushEvent{ID: "a", Type: "chat", Message: "hi"})
+	inbox.Enqueue(push.PushEvent{ID: "a", Type: "chat", Message: "hi", PageURL: "https://app.test/x"})
 
 	orig := mcp.JSONRPCResponse{ID: json.RawMessage(`1`), Result: json.RawMessage(`not json`)}
 	got := AppendPushPiggyback(&recorderDeps{inbox: inbox}, orig)
@@ -545,10 +548,21 @@ func TestAppendPushPiggyback_UnparseableResponseIsLeftAloneAndEventsAreConsumed(
 	if string(got.Result) != "not json" {
 		t.Errorf("result = %s, want it untouched", got.Result)
 	}
-	// Documents current behavior: DrainAll runs before the unmarshal check, so
-	// the events are dropped rather than left for the next call.
+	if inbox.Len() != 1 {
+		t.Fatalf("inbox len = %d, want 1 (events must survive a response we could not attach to)", inbox.Len())
+	}
+
+	// The surviving event must still be deliverable on the next, parseable call.
+	next := AppendPushPiggyback(&recorderDeps{inbox: inbox}, baseResponse())
+	r := toolResult(t, next)
+	if len(r.Content) != 2 {
+		t.Fatalf("content blocks = %d, want 2 (original + the recovered chat event)", len(r.Content))
+	}
+	if !strings.Contains(r.Content[1].Text, "_push_chat: hi") {
+		t.Errorf("block = %q, want the recovered _push_chat event", r.Content[1].Text)
+	}
 	if inbox.Len() != 0 {
-		t.Errorf("inbox len = %d, want 0 (events were already drained)", inbox.Len())
+		t.Errorf("inbox len = %d, want 0 once the events were actually attached", inbox.Len())
 	}
 }
 

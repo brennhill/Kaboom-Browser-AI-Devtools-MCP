@@ -604,6 +604,8 @@ func TestExtractErrorMessage(t *testing.T) {
 		{name: "nil result", resp: JSONRPCResponse{}, want: ""},
 		{name: "message field of a pure json body", resp: JSONRPCResponse{Result: json.RawMessage(
 			`{"content":[{"type":"text","text":"{\"message\":\"element not found\"}"}]}`)}, want: "element not found"},
+		{name: "message field behind a summary line", resp: JSONRPCResponse{Result: json.RawMessage(
+			`{"content":[{"type":"text","text":"Error: ext_error — retry\n{\"message\":\"element detached\"}"}]}`)}, want: "element detached"},
 		{name: "json without message falls back to raw text", resp: JSONRPCResponse{Result: json.RawMessage(
 			`{"content":[{"type":"text","text":"{\"status\":\"error\"}"}]}`)}, want: `{"status":"error"}`},
 		{name: "non-json text returned verbatim", resp: JSONRPCResponse{Result: json.RawMessage(
@@ -623,19 +625,16 @@ func TestExtractErrorMessage(t *testing.T) {
 	}
 }
 
-// TestExtractErrorMessage_DoesNotUnwrapStandardFailResponses documents that a
-// response built by fail() ("Error: code — playbook\n{json}") is NOT reduced to
-// its message field: the leading summary line makes the whole block non-JSON, so
-// the raw text is returned. Batch step errors therefore carry the full banner.
-func TestExtractErrorMessage_DoesNotUnwrapStandardFailResponses(t *testing.T) {
+// TestExtractErrorMessage_UnwrapsStandardFailResponses guarantees that a response
+// built by fail() ("Error: code — playbook\n{json}") is reduced to its message
+// field: the summary line is stripped before parsing, exactly as
+// extractCorrelationIDFromToolResponse does, so a batch step's error carries the
+// message rather than the whole formatted banner.
+func TestExtractErrorMessage_UnwrapsStandardFailResponses(t *testing.T) {
 	t.Parallel()
 	resp := fail(batchcovReq(), ErrInvalidParam, "selector required", "Add a selector", withParam("selector"))
-	got := extractErrorMessage(resp)
-	if got == "selector required" {
-		t.Fatal("behaviour changed: the summary line is now stripped before parsing")
-	}
-	if !strings.HasPrefix(got, "Error: invalid_param — Add a selector\n") {
-		t.Errorf("got %q, want the raw formatted error text", got)
+	if got := extractErrorMessage(resp); got != "selector required" {
+		t.Errorf("got %q, want the unwrapped message field", got)
 	}
 }
 
@@ -1092,12 +1091,13 @@ func TestBatch_AllQueuedReportsQueuedStatus(t *testing.T) {
 	}
 }
 
-// TestBatch_ContinueOnErrorFalseDoesNotStopOnExtensionSideFailure documents a real
-// defect: the `break` for continue_on_error=false lives inside the
-// isErrorResponse(stepResp) branch only. A step whose *tool* response was a normal
-// "queued" success but whose extension command resolved to "error" is counted as
-// failed yet the batch keeps going. Fixing that should flip this assertion to 1.
-func TestBatch_ContinueOnErrorFalseDoesNotStopOnExtensionSideFailure(t *testing.T) {
+// TestBatch_ContinueOnErrorFalseStopsOnExtensionSideFailure guarantees that
+// continue_on_error=false halts the batch on ANY step failure — including a step
+// whose *tool* response was a normal "queued" success but whose correlated
+// extension command later resolved to "error". Before the fix the break lived
+// inside the isErrorResponse(stepResp) branch only, so this extension-side error
+// was counted in steps_failed yet the batch ran the remaining steps (#7).
+func TestBatch_ContinueOnErrorFalseStopsOnExtensionSideFailure(t *testing.T) {
 	t.Parallel()
 	store := capture.NewCapture()
 	defer store.Close()
@@ -1123,15 +1123,21 @@ func TestBatch_ContinueOnErrorFalseDoesNotStopOnExtensionSideFailure(t *testing.
 		"step_timeout_ms":   1,
 	}))
 
-	if got := len(rec.snapshotToolArgs()); got != 2 {
-		t.Fatalf("dispatched %d steps, want 2 — this test pins the CURRENT (buggy) behaviour", got)
+	if got := len(rec.snapshotToolArgs()); got != 1 {
+		t.Fatalf("dispatched %d steps, want 1 — the batch must stop after the extension-side failure", got)
 	}
 	data := batchcovPayload(t, resp)
+	if data["steps_executed"] != float64(1) {
+		t.Errorf("steps_executed = %v, want 1", data["steps_executed"])
+	}
 	if data["steps_failed"] != float64(1) {
 		t.Errorf("steps_failed = %v, want 1", data["steps_failed"])
 	}
-	if data["status"] != "partial" {
-		t.Errorf("status = %v, want partial under current behaviour", data["status"])
+	if data["status"] != "error" {
+		t.Errorf("status = %v, want error (stopped early on failure)", data["status"])
+	}
+	if data["message"] != "Batch failed at step 1/2" {
+		t.Errorf("message = %v, want \"Batch failed at step 1/2\"", data["message"])
 	}
 }
 

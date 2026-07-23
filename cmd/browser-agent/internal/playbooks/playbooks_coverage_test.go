@@ -361,6 +361,88 @@ func TestNormalizeInteractFailureCode_MatchesExactAndEmbeddedCodes(t *testing.T)
 	}
 }
 
+// Guarantees the documented resolution rule when an error string mentions more
+// than one known failure code: the code whose match starts EARLIEST wins, and a
+// tie at the same start offset goes to the LONGEST code. Before the fix these
+// inputs resolved by Go map iteration order, i.e. arbitrarily per run.
+func TestNormalizeInteractFailureCode_MultiCodeStringResolvesToEarliestMatch(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{
+			name: "two codes, first one in the string wins",
+			in:   "element_not_found after ambiguous_target",
+			want: "element_not_found",
+		},
+		{
+			name: "same two codes in the other order",
+			in:   "ambiguous_target after element_not_found",
+			want: "ambiguous_target",
+		},
+		{
+			name: "three codes, leftmost wins",
+			in:   "scope_not_found -> stale_element_id -> blocked_by_overlay",
+			want: "scope_not_found",
+		},
+		{
+			name: "leading prose does not change which match is earliest",
+			in:   "click failed: blocked_by_overlay; also saw stale_element_id",
+			want: "blocked_by_overlay",
+		},
+		{
+			name: "case folding does not change the ordering",
+			in:   "STALE_ELEMENT_ID then ELEMENT_NOT_FOUND",
+			want: "stale_element_id",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NormalizeInteractFailureCode(tt.in); got != tt.want {
+				t.Errorf("NormalizeInteractFailureCode(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+}
+
+// The actual defect was nondeterminism, so pin stability directly: the same
+// multi-code input must resolve to the same code on every call within a process
+// (map iteration order is randomised per range statement, not just per run).
+func TestNormalizeInteractFailureCode_MultiCodeStringIsDeterministicAcrossCalls(t *testing.T) {
+	t.Parallel()
+
+	const in = "element_not_found after ambiguous_target"
+	const want = "element_not_found"
+
+	for i := 0; i < 50; i++ {
+		if got := NormalizeInteractFailureCode(in); got != want {
+			t.Fatalf("call %d: NormalizeInteractFailureCode(%q) = %q, want a stable %q", i, in, got, want)
+		}
+	}
+}
+
+// Longest-match tie-break: when two codes would match at the same start offset
+// (one a prefix of the other), the longer code wins so the more specific
+// playbook is selected. Uses synthetic codes so the assertion stays valid if the
+// real code set changes.
+func TestNormalizeInteractFailureCode_TieAtSameOffsetPrefersLongestCode(t *testing.T) {
+	original := InteractFailurePlaybooks
+	InteractFailurePlaybooks = map[string]InteractFailurePlaybook{
+		"overlay":             {DetectionSignal: "short"},
+		"overlay_dismissed":   {DetectionSignal: "long"},
+		"unrelated_late_code": {DetectionSignal: "later"},
+	}
+	t.Cleanup(func() { InteractFailurePlaybooks = original })
+
+	// Both "overlay" and "overlay_dismissed" match at offset 0.
+	if got := NormalizeInteractFailureCode("overlay_dismissed then unrelated_late_code"); got != "overlay_dismissed" {
+		t.Errorf("got %q, want the longest code matching at the same offset (overlay_dismissed)", got)
+	}
+}
+
 func TestLookupInteractFailurePlaybook_ReturnsCanonicalCodeAndItsPlaybook(t *testing.T) {
 	t.Parallel()
 

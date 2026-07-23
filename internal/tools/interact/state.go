@@ -21,10 +21,11 @@ const (
 
 // State restore status values — always present in load_state response as "state_restore".
 const (
-	StateRestoreStatusQueued        = "queued"
-	StateRestoreStatusPilotDisabled = "skipped_pilot_disabled"
-	StateRestoreStatusExtensionDown = "skipped_extension_disconnected"
-	StateRestoreStatusNoData        = "skipped_no_state_data"
+	StateRestoreStatusQueued          = "queued"
+	StateRestoreStatusPilotDisabled   = "skipped_pilot_disabled"
+	StateRestoreStatusExtensionDown   = "skipped_extension_disconnected"
+	StateRestoreStatusNoData          = "skipped_no_state_data"
+	StateRestoreStatusEnqueueRejected = "rejected_enqueue_failed"
 )
 
 // StateNamespace is the namespace key used for persisting saved states.

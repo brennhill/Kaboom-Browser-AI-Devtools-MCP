@@ -49,6 +49,17 @@ func forceReplayAsyncInteractStep(stepArgs json.RawMessage) json.RawMessage {
 	return updated
 }
 
+// stripFailSummaryLine drops the human-readable "Error: code — playbook" banner
+// that fail() prepends ahead of the JSON body, returning the text from the JSON
+// object onward. Text with no such banner is returned unchanged. Shared by both
+// tool-response extractors so they agree on how a fail() envelope is unwrapped.
+func stripFailSummaryLine(text string) string {
+	if idx := strings.Index(text, "\n{"); idx >= 0 {
+		return text[idx+1:]
+	}
+	return text
+}
+
 // extractCorrelationIDFromToolResponse extracts correlation_id from a tool response.
 func extractCorrelationIDFromToolResponse(resp JSONRPCResponse) string {
 	if resp.Result == nil {
@@ -62,10 +73,7 @@ func extractCorrelationIDFromToolResponse(resp JSONRPCResponse) string {
 		if block.Type != "text" || block.Text == "" {
 			continue
 		}
-		text := block.Text
-		if idx := strings.Index(text, "\n{"); idx >= 0 {
-			text = text[idx+1:]
-		}
+		text := stripFailSummaryLine(block.Text)
 		var data map[string]any
 		if json.Unmarshal([]byte(text), &data) != nil {
 			continue
@@ -77,7 +85,11 @@ func extractCorrelationIDFromToolResponse(resp JSONRPCResponse) string {
 	return ""
 }
 
-// extractErrorMessage extracts an error message from a tool response.
+// extractErrorMessage extracts an error message from a tool response. Standard
+// fail() responses carry an "Error: code — playbook" summary line ahead of the
+// JSON body; that line is stripped before parsing (the same way correlation IDs
+// are recovered) so a batch step's error reports the message field rather than
+// the whole formatted banner.
 func extractErrorMessage(resp JSONRPCResponse) string {
 	if resp.Result == nil {
 		return ""
@@ -91,7 +103,7 @@ func extractErrorMessage(resp JSONRPCResponse) string {
 			continue
 		}
 		var data map[string]any
-		if json.Unmarshal([]byte(block.Text), &data) == nil {
+		if json.Unmarshal([]byte(stripFailSummaryLine(block.Text)), &data) == nil {
 			if msg, ok := data["message"].(string); ok {
 				return msg
 			}
@@ -239,19 +251,22 @@ func (h *InteractActionHandler) HandleBatch(req JSONRPCRequest, args json.RawMes
 				stepResult.Error = extractErrorMessage(stepResp)
 				stepsFailed++
 			}
-			results = append(results, stepResult)
-			stepsExecuted++
-			if !continueOnError {
-				break
-			}
-			continue
-		}
-
-		if stepResult.Status == "" {
+		} else if stepResult.Status == "" {
 			stepResult.Status = "ok"
 		}
-		stepsExecuted++
+
 		results = append(results, stepResult)
+		stepsExecuted++
+
+		// continue_on_error:false stops the batch on ANY failure. The break used to
+		// live inside the isErrorResponse branch only, so a step whose tool response
+		// was a queued success but whose correlated extension command resolved to
+		// "error" (Status set above) was counted in steps_failed yet the batch kept
+		// running (#7). Keying the break off the resolved step status covers both
+		// the tool-side and extension-side failure paths.
+		if !continueOnError && stepResult.Status == "error" {
+			break
+		}
 	}
 
 	totalDuration := time.Since(start).Milliseconds()

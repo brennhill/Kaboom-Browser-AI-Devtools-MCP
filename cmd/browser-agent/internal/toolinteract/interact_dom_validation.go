@@ -99,6 +99,13 @@ func domActionContextOptions(action, selector string) []func(*StructuredError) {
 	return opts
 }
 
+// isClearFieldRequest reports whether the call is a `type` whose only purpose is
+// to blank the target: clear:true with no text. The required-'text' rule does not
+// apply to it, because clearing is the requested outcome.
+func isClearFieldRequest(action string, params DOMPrimitiveParams) bool {
+	return action == "type" && params.Clear && params.Text == ""
+}
+
 // ValidateDOMActionParams checks action-specific required parameters.
 // Returns (response, true) if validation failed, or (zero, false) if valid.
 func ValidateDOMActionParams(req JSONRPCRequest, action, text, value, name string) (JSONRPCResponse, bool) {
