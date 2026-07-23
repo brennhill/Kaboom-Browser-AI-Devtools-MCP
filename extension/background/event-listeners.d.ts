@@ -8,10 +8,10 @@ export { installContextMenus } from './context-menus.js';
 export { pingContentScript, waitForTabLoad, forwardToAllContentScripts, loadSavedSettings, loadAiWebPilotState, loadDebugModeState, saveSetting, getTrackedTabInfo, clearTrackedTab, getActiveTab, sendTabToast } from './tab-state.js';
 export type { SavedSettings, TrackedTabInfo } from './tab-state.js';
 declare const ALARM_NAMES: {
-    readonly RECONNECT: 'reconnect';
-    readonly ERROR_GROUP_FLUSH: 'errorGroupFlush';
-    readonly MEMORY_CHECK: 'memoryCheck';
-    readonly ERROR_GROUP_CLEANUP: 'errorGroupCleanup';
+    readonly RECONNECT: "reconnect";
+    readonly ERROR_GROUP_FLUSH: "errorGroupFlush";
+    readonly MEMORY_CHECK: "memoryCheck";
+    readonly ERROR_GROUP_CLEANUP: "errorGroupCleanup";
 };
 export type AlarmName = (typeof ALARM_NAMES)[keyof typeof ALARM_NAMES];
 /**
