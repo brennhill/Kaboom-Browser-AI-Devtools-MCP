@@ -24,5 +24,6 @@ The [`in-progress/`](in-progress/) folder holds work-in-progress specs, tracking
 ## Engineering Working Rules
 
 - [common-patterns.md](common-patterns.md) - Required implementation/review patterns for shared state, multi-entry-point flows, runtime message contracts, duplication checks, and e2e data passing.
+- [testing-guidelines.md](testing-guidelines.md) - Determinism rules for tests: poll don't sleep, warm before measuring, no network
 
 For feature-specific documentation, see `/docs/features/feature/`.

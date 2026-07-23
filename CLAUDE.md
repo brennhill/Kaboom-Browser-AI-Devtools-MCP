@@ -105,7 +105,7 @@ No code-only refactor is considered complete until this documentation contract i
 6. Keep public interfaces minimal and explicit; cross-feature calls go through clear boundaries.
 7. Refactors must preserve behavior unless a behavior change is explicitly requested.
 8. Every bug fix must include a regression test that fails before and passes after.
-9. Prefer deterministic tests (mocks/fakes/controlled clocks) over sleep-based timing.
+9. Prefer deterministic tests over sleep-based timing: poll a condition with `internal/testsync` instead of sleeping before an assertion; warm caches/binaries before asserting a latency budget; keep liveness timeouts >=3x any budget they guard; no test may touch the network. See `docs/core/testing-guidelines.md`.
 10. Enforce startup and request latency budgets with explicit timeout/retry/backoff policies.
 11. Use structured logs with correlation IDs; avoid protocol-breaking stdout/stderr noise.
 12. Version public contracts and keep wire schemas synchronized across Go/TS boundaries.

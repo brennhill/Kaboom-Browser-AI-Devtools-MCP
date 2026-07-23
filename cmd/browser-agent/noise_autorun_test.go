@@ -8,6 +8,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testsync"
 )
 
 // ============================================
@@ -24,12 +26,11 @@ func TestNoiseAutoRunner_ScheduleRunsOnce(t *testing.T) {
 
 	runner.schedule()
 
-	// Wait for debounce + execution
-	time.Sleep(150 * time.Millisecond)
-
-	if got := runCount.Load(); got != 1 {
-		t.Errorf("run count = %d, want 1", got)
-	}
+	// Poll rather than sleep: a single schedule can only ever produce one run
+	// (nothing re-schedules), so waiting for the count to reach 1 is exact.
+	testsync.Eventually(t, testsync.DefaultTimeout, "the scheduled run to complete", func() bool {
+		return runCount.Load() == 1
+	})
 }
 
 // Exercises the debounce decision directly against the pure planRunSchedule seam
@@ -90,15 +91,18 @@ func TestNoiseAutoRunner_RunsAgainAfterDebounceExpires(t *testing.T) {
 		runCount.Add(1)
 	}, 50*time.Millisecond)
 
+	// Waiting on the count instead of the clock also makes the test *more*
+	// correct: the second schedule must land after the first run has completed,
+	// or it coalesces into the pending run and the count never reaches 2.
 	runner.schedule()
-	time.Sleep(100 * time.Millisecond) // Wait for first run
+	testsync.Eventually(t, testsync.DefaultTimeout, "the first run to complete", func() bool {
+		return runCount.Load() == 1
+	})
 
 	runner.schedule()
-	time.Sleep(100 * time.Millisecond) // Wait for second run
-
-	if got := runCount.Load(); got != 2 {
-		t.Errorf("run count = %d, want 2 (one per debounce window)", got)
-	}
+	testsync.Eventually(t, testsync.DefaultTimeout, "the second debounce window to fire", func() bool {
+		return runCount.Load() == 2
+	})
 }
 
 func TestNoiseAutoRunner_NilFuncDoesNotPanic(t *testing.T) {

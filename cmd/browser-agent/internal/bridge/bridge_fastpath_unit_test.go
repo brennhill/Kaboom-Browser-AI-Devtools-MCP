@@ -18,6 +18,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testsync"
 )
 
 func contentLengthFrame(payload string) string {
@@ -632,11 +633,12 @@ func TestBridgeServerHealthHelpers(t *testing.T) {
 		t.Fatalf("waitForServer(%d) = false, want true", port)
 	}
 
+	// Close() returns before the listener is fully torn down, so poll rather than
+	// guess how long the socket takes to stop accepting.
 	_ = srv.Close()
-	time.Sleep(50 * time.Millisecond)
-	if isServerRunning(port) {
-		t.Fatalf("isServerRunning(%d) = true after shutdown, want false", port)
-	}
+	testsync.Eventually(t, testsync.DefaultTimeout, "the server port to stop accepting", func() bool {
+		return !isServerRunning(port)
+	})
 }
 
 func TestCheckDaemonStatus_HealsReadyFlagFromHealth(t *testing.T) {

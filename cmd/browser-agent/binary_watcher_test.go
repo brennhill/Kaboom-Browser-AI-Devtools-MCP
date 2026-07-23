@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -210,17 +211,21 @@ func TestStartBinaryWatcher_ContextCancellation(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 
-	var called bool
-	s := startBinaryWatcher(ctx, "0.7.5", func(string) { called = true }, func() {})
+	// atomic, not a plain bool: the callback runs on the watcher goroutine while
+	// the test reads from its own, so an unsynchronised bool is a data race even
+	// when the callback never fires.
+	var called atomic.Bool
+	s := startBinaryWatcher(ctx, "0.7.5", func(string) { called.Store(true) }, func() {})
 	if s == nil {
 		t.Fatal("startBinaryWatcher returned nil")
 	}
 
 	cancel()
-	// Give goroutine time to exit
+	// Negative assertion: nothing to wait for, so a settle window is the only way
+	// to observe "did not fire".
 	time.Sleep(50 * time.Millisecond)
 
-	if called {
+	if called.Load() {
 		t.Fatal("onUpgrade should not be called without binary change")
 	}
 }
