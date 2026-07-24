@@ -37,10 +37,13 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Collect test files from both extension test roots.
+# Portable read-loop instead of `mapfile` (bash 4+): macOS ships bash 3.2, the
+# primary developer platform, so build/test scripts must run there.
+FILES=()
 if command -v rg >/dev/null 2>&1; then
-  mapfile -t FILES < <(rg --files tests/extension extension/background -g '*.test.js' | sort)
+  while IFS= read -r _f; do FILES+=("$_f"); done < <(rg --files tests/extension extension/background -g '*.test.js' | sort)
 else
-  mapfile -t FILES < <(find tests/extension extension/background -name '*.test.js' -type f | sort)
+  while IFS= read -r _f; do FILES+=("$_f"); done < <(find tests/extension extension/background -name '*.test.js' -type f | sort)
 fi
 TOTAL=${#FILES[@]}
 

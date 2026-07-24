@@ -107,14 +107,9 @@ run_test_1_3() {
         return
     fi
 
-    # Current schema uses unified `what` across all tools.
-    declare -A expected_required=(
-        [observe]="what"
-        [analyze]="what"
-        [generate]="what"
-        [configure]="what"
-        [interact]="what"
-    )
+    # Current schema uses unified `what` across all tools. (No associative array:
+    # `declare -A` is bash 4+, and macOS — the primary platform — ships bash 3.2.)
+    local expected_required_param="what"
 
     local verified=0
     local errors=""
@@ -137,7 +132,7 @@ run_test_1_3() {
         fi
 
         # Check required field contains expected param
-        local req_param="${expected_required[$tool_name]}"
+        local req_param="$expected_required_param"
         if ! echo "$tool_def" | jq -e ".inputSchema.required | index(\"$req_param\")" >/dev/null 2>&1; then
             errors="${errors}$tool_name: required field does not contain '$req_param'. "
             continue

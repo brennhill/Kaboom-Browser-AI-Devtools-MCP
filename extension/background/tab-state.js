@@ -155,7 +155,29 @@ async function focusTab(tab) {
         // Best effort.
     }
 }
+/**
+ * Whether the optional `tabGroups` permission has been granted. Terminal
+ * workspace grouping is purely cosmetic (an orange "KaBOOM!" tab group), so the
+ * permission is `optional_permissions` in the manifest — a required permission
+ * would force every existing user through a disable/re-approve prompt on update
+ * for a label. Grouping is therefore opt-in: skipped, never prompted, until the
+ * user grants tabGroups. When the permissions API is absent (test/edge runtimes)
+ * fall back to whether the namespaces are exposed at all.
+ */
+async function hasTabGroupsPermission() {
+    if (typeof chrome.permissions?.contains === 'function') {
+        try {
+            return await chrome.permissions.contains({ permissions: ['tabGroups'] });
+        }
+        catch {
+            return false;
+        }
+    }
+    return typeof chrome.tabs?.group === 'function' && typeof chrome.tabGroups?.update === 'function';
+}
 async function createTerminalWorkspaceGroup(tabId) {
+    if (!(await hasTabGroupsPermission()))
+        return null;
     if (!chrome.tabs.group || !chrome.tabGroups?.update)
         return null;
     try {

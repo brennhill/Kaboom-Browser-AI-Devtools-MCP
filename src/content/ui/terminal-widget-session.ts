@@ -60,7 +60,7 @@ async function getTerminalAICommand(): Promise<string> {
   }
 }
 
-async function getTerminalDevRoot(): Promise<string> {
+export async function getTerminalDevRoot(): Promise<string> {
   try {
     const value = await getLocal(StorageKey.TERMINAL_DEV_ROOT)
     return (value as string) || ''
@@ -124,6 +124,110 @@ export async function validateSession(token: string): Promise<boolean> {
   }
 }
 
+/** One selectable directory from the daemon's listing. */
+export interface TerminalDirEntry {
+  name: string
+  path: string
+}
+
+/** A directory and its immediate sub-directories. */
+export interface TerminalDirListing {
+  path: string
+  parent: string
+  entries: TerminalDirEntry[]
+  truncated: boolean
+}
+
+/**
+ * Why a directory listing could not be produced.
+ * - `unreachable`: the daemon did not answer (down, refused, timed out).
+ * - `outdated`: the daemon answered 404 — it predates `/terminal/dirs`. A version
+ *   problem, not a connectivity one, so it needs a different message and fix.
+ */
+export type TerminalDirsFailure = 'unreachable' | 'outdated'
+
+/** The listing, or the reason it could not be fetched. */
+export type TerminalDirsResult =
+  | { ok: true; listing: TerminalDirListing }
+  | { ok: false; reason: TerminalDirsFailure }
+
+/**
+ * List the sub-directories of `path`, or of the user's home when empty.
+ *
+ * The browser cannot resolve an absolute path by itself — `webkitdirectory` and
+ * showDirectoryPicker() both withhold it — so picking a working directory has to
+ * go through the daemon, which is already running shells in these directories.
+ *
+ * Distinguishes a daemon that is down from one that is merely too old to have the
+ * endpoint: a 404 is a reachable daemon, and telling the user it is unreachable
+ * sends them debugging a connection that is fine.
+ */
+export async function listTerminalDirs(path: string): Promise<TerminalDirsResult> {
+  let resp: Response
+  try {
+    const base = await getServerUrl()
+    const termUrl = getTerminalServerUrl(base)
+    resp = await fetch(
+      `${termUrl}/terminal/dirs?path=${encodeURIComponent(path)}`,
+      { signal: AbortSignal.timeout(3000) }
+    )
+  } catch {
+    return { ok: false, reason: 'unreachable' } // No answer at all.
+  }
+
+  if (resp.status === 404) return { ok: false, reason: 'outdated' }
+  if (!resp.ok) return { ok: false, reason: 'unreachable' }
+
+  try {
+    const data = await resp.json() as Partial<TerminalDirListing>
+    return {
+      ok: true,
+      listing: {
+        path: data.path ?? path,
+        parent: data.parent ?? '',
+        entries: Array.isArray(data.entries) ? data.entries : [],
+        truncated: data.truncated === true
+      }
+    }
+  } catch {
+    return { ok: false, reason: 'unreachable' } // Reached it, but the body was unusable.
+  }
+}
+
+/** Persist the terminal root folder (the cwd new sessions spawn in). */
+export async function setTerminalDevRoot(root: string): Promise<void> {
+  try {
+    await setLocal(StorageKey.TERMINAL_DEV_ROOT, root)
+  } catch {
+    // Extension context invalidated — nothing to persist into.
+  }
+}
+
+/**
+ * Stop the active PTY and forget it locally.
+ *
+ * Used when a setting that is fixed at spawn time changes (the working
+ * directory), and by the explicit end-session control.
+ */
+export async function stopActiveSession(): Promise<void> {
+  const persisted = await loadPersistedSession()
+  const sessionId = persisted.session?.sessionId
+  clearPersistedSession()
+  if (!sessionId) return
+  try {
+    const base = await getServerUrl()
+    const termUrl = getTerminalServerUrl(base)
+    await fetch(`${termUrl}/terminal/stop`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: sessionId }),
+      signal: AbortSignal.timeout(3000)
+    })
+  } catch {
+    // Daemon unreachable — the local state is cleared either way.
+  }
+}
+
 export async function startSession(
   config: TerminalConfig,
   onSandboxError?: TerminalSandboxErrorHandler
@@ -148,21 +252,7 @@ export async function startSession(
     if (!resp.ok) {
       const body = await resp.json() as {
         error?: string; message?: string; instruction?: string; command?: string
-        session_id?: string; token?: string
-      }
-      // Sandbox restriction — show actionable instructions to the user.
-      if (resp.status === 503 && body.error === 'sandbox_restricted') {
-        if (onSandboxError) {
-          onSandboxError(body.message ?? '', body.instruction ?? '', body.command ?? '')
-        } else {
-          console.warn(
-            '[KaBOOM!] Terminal sandbox restriction: ' +
-              (body.message ?? 'no message') +
-              '. ' +
-              (body.instruction ?? 'No instruction provided.')
-          )
-        }
-        return null
+        detail?: string; session_id?: string; token?: string
       }
       // Session already exists — reconnect using the returned token.
       if (resp.status === 409 && body.token) {
@@ -170,8 +260,21 @@ export async function startSession(
         persistSession(ss)
         return ss
       }
-      console.warn('[KaBOOM!] Terminal session rejected (HTTP ' + resp.status + '): ' +
-        (body.error ?? 'unknown') + '. Check the daemon logs for details.')
+      // Sandbox restriction — the daemon's message is its diagnosis, `detail` is
+      // the underlying error. Show both: the diagnosis can be wrong, the error can't.
+      if (resp.status === 503 && body.error === 'sandbox_restricted') {
+        const message = body.detail
+          ? `${body.message ?? 'Terminal start was refused.'} (${body.detail})`
+          : (body.message ?? 'Terminal start was refused.')
+        reportStartFailure(message, body.instruction ?? '', body.command ?? '', onSandboxError)
+        return null
+      }
+      // Any other rejection. This used to only console.warn, so the side panel
+      // rendered nothing at all and the terminal looked simply broken.
+      reportStartFailure(
+        `Terminal start was refused (HTTP ${resp.status}): ${body.error ?? 'unknown error'}.`,
+        '', '', onSandboxError
+      )
       return null
     }
     const data = await resp.json() as { session_id: string; token: string; pid: number }
@@ -179,9 +282,25 @@ export async function startSession(
     persistSession(ss)
     return ss
   } catch (err) {
-    console.warn('[KaBOOM!] Terminal session start failed: ' +
-      (err instanceof Error ? err.message : String(err)) +
-      `. ${getDaemonStartHint()}`)
+    reportStartFailure(
+      'Terminal session start failed: ' + (err instanceof Error ? err.message : String(err)) + '.',
+      getDaemonStartHint(), '', onSandboxError
+    )
     return null
   }
+}
+
+/**
+ * Route a start failure to the panel when a handler is available, and always log
+ * it. A failure that only reaches the console leaves the panel blank, which reads
+ * as "the terminal is broken" rather than "here is what went wrong".
+ */
+function reportStartFailure(
+  message: string,
+  instruction: string,
+  command: string,
+  onError?: TerminalSandboxErrorHandler
+): void {
+  console.warn(`[KaBOOM!] ${message} ${instruction} ${command}`.trimEnd())
+  onError?.(message, instruction, command)
 }

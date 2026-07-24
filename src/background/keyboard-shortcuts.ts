@@ -12,6 +12,7 @@ import { getActiveTab, sendTabToast } from './event-listeners.js'
 import { toggleDrawModeForTab } from './draw-mode-toggle.js'
 import { buildScreenRecordingSlug } from './recording-utils.js'
 import { trackUIFeature } from './ui-usage-tracker.js'
+import { openTerminalSidePanel } from './terminal-panel.js'
 export interface RecordingShortcutHandlers {
   isRecording: () => boolean
   startRecording: (
@@ -108,6 +109,41 @@ export function installDrawModeCommandListener(logFn?: (message: string) => void
       }
     } catch (err) {
       if (logFn) logFn(`Draw mode keyboard shortcut error: ${errorMessage(err)}`)
+    }
+  })
+}
+
+// =============================================================================
+// TERMINAL SIDE PANEL SHORTCUT
+// =============================================================================
+
+/**
+ * Install the keyboard shortcut that opens the terminal side panel
+ * (`open_terminal_panel` in the manifest).
+ *
+ * The command ships UNBOUND on purpose: Chrome refuses to load a manifest with
+ * more than four commands carrying a `suggested_key`, and four are already
+ * taken. Users assign a key at chrome://extensions/shortcuts; until then the
+ * context menu is the zero-setup gesture-native route.
+ *
+ * Why a command and not just the in-page launcher button: `chrome.sidePanel.open()`
+ * needs an active user gesture, and Chrome grants `runtime.onMessage` listeners
+ * only a *restricted* gesture that sidePanel.open() rejects on some Chrome/Brave
+ * builds (crbug 355266358). `commands.onCommand` gets a full gesture and hands us
+ * the active tab synchronously, so this path does not depend on gesture forwarding.
+ *
+ * Nothing may be awaited before openTerminalSidePanel() — `tab` comes straight
+ * from the listener argument precisely so no lookup is needed.
+ */
+export function installTerminalPanelCommandListener(logFn?: (message: string) => void): void {
+  if (typeof chrome === 'undefined' || !chrome.commands) return
+
+  chrome.commands.onCommand.addListener(async (command: string, tab?: chrome.tabs.Tab) => {
+    if (command !== 'open_terminal_panel') return
+
+    const result = await openTerminalSidePanel(tab?.id)
+    if (!result.success && logFn) {
+      logFn(`Terminal side panel shortcut failed: ${result.error ?? 'unknown error'}`)
     }
   })
 }

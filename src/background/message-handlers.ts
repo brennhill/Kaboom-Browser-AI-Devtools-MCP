@@ -29,7 +29,8 @@ import { pushChatMessage } from './push-handler.js'
 import { errorMessage } from '../lib/error-utils.js'
 import { postDaemonJSON } from '../lib/daemon-http.js'
 import { getLocal, getLocals, setLocal } from '../lib/storage-utils.js'
-import { resolveTerminalWorkspaceTarget, setKaboomOverlayVisibility } from './tab-state.js'
+import { setKaboomOverlayVisibility } from './tab-state.js'
+import { openTerminalSidePanel } from './terminal-panel.js'
 import { trackUIFeature } from './ui-usage-tracker.js'
 // Static import: dynamic import() is not allowed in MV3 service workers.
 // terminal-widget-types.js is a pure helper module (constants + types, no DOM access at load time).
@@ -98,34 +99,6 @@ type MessageResponse = unknown
 
 /** Send response callback type */
 type SendResponse = (response?: MessageResponse) => void
-
-async function openTerminalSidePanel(tabId: number | undefined): Promise<{ success: boolean; error?: string }> {
-  if (typeof chrome === 'undefined' || !chrome.sidePanel?.open) {
-    return { success: false, error: 'side panel unavailable' }
-  }
-  try {
-    const workspace = await resolveTerminalWorkspaceTarget(tabId)
-    if (!workspace) {
-      return { success: false, error: 'missing workspace tab' }
-    }
-    const path = `sidepanel.html?tabId=${encodeURIComponent(workspace.hostTabId)}&tabGroupId=${encodeURIComponent(
-      workspace.tabGroupId
-    )}&mainTabId=${encodeURIComponent(workspace.mainTabId)}`
-    const setOptionsPromise = chrome.sidePanel.setOptions
-      ? chrome.sidePanel
-          .setOptions({ tabId: workspace.hostTabId, path, enabled: true })
-          .catch(() => undefined)
-      : null
-
-    // sidePanel.open must stay in the original user-gesture path. Awaiting
-    // another async API first can cause Chrome to reject the open request.
-    await chrome.sidePanel.open({ tabId: workspace.hostTabId })
-    void setOptionsPromise
-    return { success: true }
-  } catch (error) {
-    return { success: false, error: errorMessage(error) }
-  }
-}
 
 // =============================================================================
 // MESSAGE HANDLER
@@ -274,7 +247,11 @@ function handleMessage(
       return false
 
     case 'open_terminal_panel':
-      openTerminalSidePanel(sender.tab?.id)
+      // Prefer an explicitly supplied tab id. The popup is an extension page, so
+      // sender.tab is undefined there; without a synchronous tab id we would fall
+      // back to resolving one via await, which expires the forwarded user gesture
+      // and makes chrome.sidePanel.open() refuse to open the panel.
+      openTerminalSidePanel((message as { tab_id?: number }).tab_id ?? sender.tab?.id)
         .then((result) => sendResponse(result))
         .catch((error) => sendResponse({ success: false, error: errorMessage(error) }))
       return true

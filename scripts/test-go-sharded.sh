@@ -73,7 +73,14 @@ if ! [[ "$COUNT" =~ ^[0-9]+$ ]] || [[ "$COUNT" -lt 1 ]]; then
   exit 2
 fi
 
-mapfile -t TESTS < <(go test "$PKG" -list '^Test' 2>/dev/null | grep '^Test' || true)
+# NOTE: do NOT use `mapfile`/`readarray` here. Those are bash 4+ builtins, and
+# macOS ships bash 3.2 as /bin/bash — there `mapfile` is "command not found",
+# which aborted `make test` after the whole Go suite had already passed. Use a
+# portable read loop, the same as scripts/test-js-sharded.sh.
+TESTS=()
+while IFS= read -r test_name; do
+  [ -n "$test_name" ] && TESTS+=("$test_name")
+done < <(go test "$PKG" -list '^Test' 2>/dev/null | grep '^Test' || true)
 if [[ ${#TESTS[@]} -eq 0 ]]; then
   echo "no top-level tests discovered in $PKG; running package directly"
   CMD=(go test "$PKG" -count "$COUNT")

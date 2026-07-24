@@ -8,7 +8,7 @@ owners:
 feature_ids:
   - feature-backend-log-streaming
   - feature-browser-extension-enhancement
-last_verified_version: 0.8.4
+last_verified_version: 0.8.5
 last_verified_date: 2026-04-13
 entrypoints:
   - src/background/server.ts

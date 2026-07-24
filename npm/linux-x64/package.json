@@ -1,6 +1,6 @@
 {
   "name": "@brennhill/kaboom-agentic-browser-linux-x64",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "description": "Kaboom binary for Linux x64",
   "license": "AGPL-3.0-only",
   "scripts": {
