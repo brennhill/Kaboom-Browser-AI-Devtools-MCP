@@ -12,7 +12,7 @@ export { createCircuitBreaker } from './circuit-breaker.js';
 // Re-export batcher functions and types
 export { createBatcherWithCircuitBreaker, createLogBatcher, RATE_LIMIT_CONFIG } from './batchers.js';
 // Re-export server communication functions
-export { sendLogsToServer, sendWSEventsToServer, sendNetworkBodiesToServer, sendEnhancedActionsToServer, sendPerformanceSnapshotsToServer, checkServerHealth, updateBadge, sendStatusPing } from './server.js';
+export { sendLogsToServer, sendWSEventsToServer, sendNetworkBodiesToServer, sendEnhancedActionsToServer, sendPerformanceSnapshotsToServer, checkServerHealth, updateBadge } from './server.js';
 import { getRequestHeaders } from './server.js';
 import { errorMessage } from '../lib/error-utils.js';
 import { captureVisibleTabSafe } from './tab-state.js';

@@ -21,8 +21,7 @@ const {
   sendNetworkBodiesToServer,
   sendWSEventsToServer: _sendWSEventsToServer,
   sendEnhancedActionsToServer: _sendEnhancedActionsToServer,
-  sendPerformanceSnapshotsToServer,
-  sendStatusPing
+  sendPerformanceSnapshotsToServer
 } = await import('../../extension/background/server.js')
 
 // ============================================
@@ -102,26 +101,6 @@ describe('sendNetworkBodiesToServer edge cases', () => {
     await assert.rejects(
       () => sendNetworkBodiesToServer('http://localhost:9222', [{ url: 'x', method: 'GET', status: 200 }])
     )
-  })
-})
-
-// ============================================
-// sendStatusPing edge cases
-// ============================================
-
-describe('sendStatusPing edge cases', () => {
-  test('sends to correct endpoint', async () => {
-    mockFetch.mock.mockImplementation(() => Promise.resolve({ ok: true }))
-    await sendStatusPing('http://localhost:9222', { type: 'heartbeat' })
-    assert.strictEqual(mockFetch.mock.calls[0].arguments[0], 'http://localhost:9222/api/extension-status')
-  })
-
-  test('handles fetch error with diagnosticLogFn', async () => {
-    mockFetch.mock.mockImplementation(() => Promise.reject(new Error('refused')))
-    const diagLog = mock.fn()
-    await sendStatusPing('http://localhost:9222', { type: 'heartbeat' }, diagLog)
-    assert.ok(diagLog.mock.calls.length >= 1)
-    assert.ok(diagLog.mock.calls[0].arguments[0].includes('refused'))
   })
 })
 

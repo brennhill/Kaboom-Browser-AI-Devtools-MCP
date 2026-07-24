@@ -139,7 +139,7 @@ export function installContextMenus(
       try {
         const trackedTabId = (await getLocal(StorageKey.TRACKED_TAB_ID)) as number | undefined
         if (trackedTabId === tab.id) {
-          clearTrackedTab()
+          await clearTrackedTab()
           if (logFn) logFn(`Released control for tab ${tab.id}`)
         } else {
           await setTrackedTab(tab)

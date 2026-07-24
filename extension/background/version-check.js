@@ -35,7 +35,7 @@ export function getAvailableVersion() {
  */
 export function updateVersionFromHealth(healthResponse, debugLogFn) {
     const currentVersion = healthResponse.version || getExtensionVersion();
-    const newAvailableVersion = healthResponse.availableVersion || null;
+    const newAvailableVersion = healthResponse.available_version || null;
     // Update cached version
     availableVersion = newAvailableVersion;
     const extensionVersion = getExtensionVersion();

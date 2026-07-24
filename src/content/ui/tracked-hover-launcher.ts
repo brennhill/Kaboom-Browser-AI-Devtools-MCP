@@ -8,6 +8,13 @@ import type { ShowTrackedHoverLauncherMessage } from '../../types/runtime-messag
 import { RuntimeMessageName, StorageKey } from '../../lib/constants.js'
 import { KABOOM_DOCS_URL, KABOOM_REPOSITORY_URL } from '../../lib/brand.js'
 import { requestAudit } from '../../lib/request-audit.js'
+
+/**
+ * Audit launches the QA-scan workflow through the terminal side panel. Hidden
+ * until that path is fully verified so users can't reach a half-working flow.
+ * Flip to `true` to restore (matches the flag in popup/tab-tracking.ts).
+ */
+const AUDIT_BUTTON_ENABLED = false
 import { getLocal, setLocal, removeLocal, onStorageChanged } from '../../lib/storage-utils.js'
 import {
   initTerminalPanelBridge,
@@ -532,7 +539,7 @@ function createLauncherUi(): HTMLDivElement {
   panel.appendChild(drawButton)
   panel.appendChild(stopButton)
   panel.appendChild(screenshotButton)
-  panel.appendChild(auditButton)
+  if (AUDIT_BUTTON_ENABLED) panel.appendChild(auditButton)
   panel.appendChild(terminalButton)
 
   const dotSep = document.createElement('span')

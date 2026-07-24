@@ -20,7 +20,8 @@ import { clearTrackedTab as clearTrackedTabState } from './tab-state.js'
 export {
   installDrawModeCommandListener,
   installRecordingShortcutCommandListener,
-  installScreenRecordingCommandListener
+  installScreenRecordingCommandListener,
+  installTerminalPanelCommandListener
 } from './keyboard-shortcuts.js'
 export type { RecordingShortcutHandlers, ScreenRecordingHandlers } from './keyboard-shortcuts.js'
 

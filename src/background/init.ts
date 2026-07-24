@@ -9,8 +9,9 @@
  * Uses async/await for cleaner control flow (replaces callback nesting).
  */
 
-import { beacon } from '../lib/telemetry-beacon.js'
 import { getTrackedTabLostToastDetail, KABOOM_LOG_PREFIX } from '../lib/brand.js'
+import { syncTerminalPanelAvailability } from './side-panel-availability.js'
+import { watchTerminalPanelState } from './terminal-panel.js'
 import {
   debugLog,
   DebugCategory,
@@ -27,7 +28,6 @@ import {
   checkConnectionAndUpdate,
   exportDebugLog,
   clearDebugLog,
-  sendStatusPingWrapper,
   DEFAULT_SERVER_URL
 } from './index.js'
 import {
@@ -72,6 +72,7 @@ import {
   installTabUpdatedListener,
   installDrawModeCommandListener,
   installRecordingShortcutCommandListener,
+  installTerminalPanelCommandListener,
   installScreenRecordingCommandListener,
   installContextMenus,
   saveSetting,
@@ -86,7 +87,7 @@ import { isRecording, startRecording, stopRecording } from './recording.js'
 import type { MessageHandlerDependencies } from './message-handlers.js'
 import { installMessageListener, broadcastTrackingState } from './message-handlers.js'
 import { captureScreenshot, updateBadge } from './communication.js'
-import { wasServiceWorkerRestarted, markStateVersion, setSessionAccessLevel, setLocal } from '../lib/storage-utils.js'
+import { wasServiceWorkerRestarted, markStateVersion, setSessionAccessLevel, setLocal, getLocal } from '../lib/storage-utils.js'
 import { loadServerInstallId } from './sync-client.js'
 
 /**
@@ -98,6 +99,12 @@ export function initializeExtension(): void {
   if (typeof chrome === 'undefined' || !chrome.runtime) {
     return
   }
+
+  // Synchronously, before any await: when the service worker is woken *by* the
+  // side panel reconnecting, Chrome dispatches that connect right after the top
+  // level runs. A listener installed later in the async sequence would miss it,
+  // and the background would believe no panel exists.
+  watchTerminalPanelState()
 
   // Fire async initialization without awaiting at top level
   // (Service worker will remain alive as long as event handlers are installed)
@@ -112,9 +119,6 @@ export function initializeExtension(): void {
  */
 async function initializeExtensionAsync(): Promise<void> {
   try {
-    // Anonymous telemetry: service worker activation (once per session)
-    beacon('extension_start')
-
     // ============= STEP 1: Check service worker restart =============
     const wasRestarted = await wasServiceWorkerRestarted()
     if (wasRestarted) {
@@ -176,7 +180,8 @@ async function initializeExtensionAsync(): Promise<void> {
         broadcastTrackingState().catch((err) => console.error(`${KABOOM_LOG_PREFIX} Error broadcasting tracking state:`, err))
       },
       onTrackedTabChanged: (newTabId, oldTabId) => {
-        sendStatusPingWrapper()
+        // Tracking state is reflected on the next /sync poll — no separate
+        // status ping needed. (Previously called a non-existent endpoint.)
         if (newTabId !== null) {
           resetSyncClientConnection()
           console.log(`${KABOOM_LOG_PREFIX} Sync client reset due to tracking enabled`)
@@ -297,6 +302,19 @@ async function initializeExtensionAsync(): Promise<void> {
 
     // ============= STEP 9.6: Install draw mode keyboard shortcut listener =============
     installDrawModeCommandListener((msg) => console.log(`${KABOOM_LOG_PREFIX} ${msg}`))
+
+    // ============= STEP 9.6a: Scope the side panel to the tracked tab =============
+    // Without this the manifest default makes the panel available on every tab,
+    // where it renders empty.
+    void (async () => {
+      const trackedTabId = (await getLocal('trackedTabId')) as number | undefined
+      await syncTerminalPanelAvailability(typeof trackedTabId === 'number' ? trackedTabId : undefined)
+    })()
+
+    // ============= STEP 9.6b: Install terminal side panel shortcut =============
+    // Gesture-native path to the side panel; the in-page launcher button cannot be
+    // relied on alone (Chrome grants message listeners only a restricted gesture).
+    installTerminalPanelCommandListener((msg) => console.log(`${KABOOM_LOG_PREFIX} ${msg}`))
 
     // ============= STEP 9.7: Install push keyboard shortcut listeners =============
     installPushCommandListener((msg) => console.log(`${KABOOM_LOG_PREFIX} ${msg}`))

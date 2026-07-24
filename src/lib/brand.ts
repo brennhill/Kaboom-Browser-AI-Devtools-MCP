@@ -8,9 +8,6 @@ export const KABOOM_REPOSITORY_URL = 'https://github.com/brennhill/Kaboom-Browse
 export const KABOOM_DAEMON_COMMAND = 'npx kaboom-agentic-browser'
 export const KABOOM_LOG_PREFIX = '[KaBOOM!]'
 export const KABOOM_RECORDING_LOG_PREFIX = '[KaBOOM! REC]'
-export const KABOOM_TELEMETRY_ENDPOINT = 'https://t.gokaboom.dev/v1/event'
-export const KABOOM_TELEMETRY_STORAGE_KEY = 'kaboom_telemetry_off'
-export const KABOOM_TELEMETRY_ENV_VAR = 'KABOOM_TELEMETRY'
 
 export function getTrackedTabLostToastDetail(): string {
   return 'Re-enable in KaBOOM! popup'

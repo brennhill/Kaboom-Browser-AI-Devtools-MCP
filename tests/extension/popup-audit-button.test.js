@@ -96,10 +96,34 @@ describe('popup audit button', () => {
     }
   })
 
-  test('shows an Audit CTA only while a site is tracked and routes through the shared audit helper', async () => {
+  // AUDIT_BUTTON_ENABLED in src/popup/tab-tracking.ts is currently false: the CTA
+  // is hidden until the terminal side-panel path is fully verified. The helper it
+  // would call is still covered by tests/extension/request-audit.test.js.
+  // When the flag flips back to true, restore the shown-state assertions kept in
+  // the sibling test below.
+  test('keeps the Audit CTA hidden and inert while the feature flag is off', async () => {
     const auditButton = document.getElementById('tracking-bar-audit')
     assert.strictEqual(auditButton.style.display, 'none')
 
+    const { initTrackPageButton } = await import(`../../extension/popup/tab-tracking.js?v=${++importCounter}`)
+    initTrackPageButton()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    assert.strictEqual(auditButton.style.display, 'none', 'Audit CTA must stay hidden while disabled')
+    assert.strictEqual(auditButton.onclick, null, 'disabled Audit CTA must not be clickable')
+
+    // Nothing should have been dispatched on behalf of the audit workflow.
+    const sentTypes = runtimeSendMessage.mock.calls.map((call) => call.arguments[0]?.type)
+    assert.ok(
+      !sentTypes.includes('qa_scan_requested'),
+      `disabled Audit CTA must not start the audit workflow (saw: ${sentTypes.join(', ')})`
+    )
+  })
+
+  // Restore-guard: documents the exact contract to re-assert when the flag flips.
+  // Skipped rather than deleted so the intended behavior isn't lost.
+  test.skip('shows an Audit CTA while tracked and routes through the shared audit helper (re-enable with AUDIT_BUTTON_ENABLED)', async () => {
+    const auditButton = document.getElementById('tracking-bar-audit')
     const { initTrackPageButton } = await import(`../../extension/popup/tab-tracking.js?v=${++importCounter}`)
     initTrackPageButton()
     await new Promise((resolve) => setTimeout(resolve, 0))

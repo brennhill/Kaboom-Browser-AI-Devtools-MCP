@@ -225,10 +225,10 @@ function pageSummaryFallbackScript() {
         fallback: true
     };
 }
-// Keyed by the runtime message type used in interact-content.ts (lowercase
-// `kaboom_*`), matching what chrome.tabs.sendMessage emits and the content
-// script listens for. Uppercase keys here silently disabled the #364
-// executeScript fallback (lookup is case-sensitive → undefined).
+// Keys MUST be the runtime message types dispatched by interact-content.ts and
+// handled in content/runtime-message-listener.ts. They were previously UPPERCASE,
+// which made every FALLBACK_SCRIPTS[messageType] lookup miss — silently disabling
+// the content-script-unreachable fallback for all three extractors.
 export const FALLBACK_SCRIPTS = {
     kaboom_get_readable: readableFallbackScript,
     kaboom_get_markdown: markdownFallbackScript,

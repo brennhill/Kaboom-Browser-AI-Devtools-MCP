@@ -13,6 +13,13 @@ import { getLocals, onStorageChanged } from '../lib/storage-utils.js'; // async 
 import { isDomainCloaked } from '../lib/cloaked-domains.js';
 import { handleAuditClick, handleStopTracking, handleUrlClick, handleTrackPageClick as handleTrackPageClickAPI } from './tab-tracking-api.js';
 let trackingStorageSyncInstalled = false;
+/**
+ * Audit launches the QA-scan workflow through the terminal side panel. It stays
+ * hidden until the side-panel/terminal path is fully verified, so users can't
+ * reach a half-working flow. Flip to `true` to restore it (see the matching flag
+ * in content/ui/tracked-hover-launcher.ts).
+ */
+const AUDIT_BUTTON_ENABLED = false;
 function hideAuditButton() {
     const trackingBarAudit = document.getElementById('tracking-bar-audit');
     if (!trackingBarAudit)
@@ -67,11 +74,20 @@ function showTrackingState(btn, trackedTabUrl, trackedTabId) {
         };
     }
     if (trackingBarAudit) {
-        trackingBarAudit.textContent = 'Audit';
-        trackingBarAudit.style.display = 'inline-flex';
-        trackingBarAudit.onclick = () => {
-            void handleAuditClick(trackedTabUrl);
-        };
+        if (AUDIT_BUTTON_ENABLED) {
+            trackingBarAudit.textContent = 'Audit';
+            trackingBarAudit.style.display = 'inline-flex';
+            trackingBarAudit.onclick = () => {
+                // Pass the tracked tab id: the popup has no sender.tab, so the background
+                // cannot resolve a tab without an await — which would expire the user
+                // gesture and stop chrome.sidePanel.open() from opening the panel.
+                void handleAuditClick(trackedTabUrl, trackedTabId);
+            };
+        }
+        else {
+            trackingBarAudit.style.display = 'none';
+            trackingBarAudit.onclick = null;
+        }
     }
     if (trackingBarStop) {
         trackingBarStop.onclick = (e) => {

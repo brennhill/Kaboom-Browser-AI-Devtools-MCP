@@ -47,10 +47,6 @@ export { sharedServerCircuitBreaker, logBatcher, wsBatcher, enhancedActionBatche
 export { handleLogMessage, handleClearLogs, isConnectionCheckRunning, checkConnectionAndUpdate } from './background/index.js';
 export { applyCaptureOverrides } from './background/state.js';
 // =============================================================================
-// === PUBLIC API: POLLING WRAPPERS
-// =============================================================================
-export { sendStatusPingWrapper } from './background/index.js';
-// =============================================================================
 // === PUBLIC API: VERSION CHECKING
 // =============================================================================
 export { getExtensionVersion, isNewVersionAvailable, getAvailableVersion, updateVersionFromHealth, updateVersionBadge, getUpdateInfo, resetVersionCheck } from './background/version-check.js';

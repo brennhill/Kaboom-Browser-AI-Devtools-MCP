@@ -24,7 +24,7 @@ export declare function loadOptions(): Promise<void>;
  * Example: debugMode=true in storage enables logging immediately, AND background
  * updates its debugMode variable so new logs use the new setting.
  */
-export declare function saveOptions(): void;
+export declare function saveOptions(): Promise<void>;
 /**
  * Toggle deferral setting
  */
