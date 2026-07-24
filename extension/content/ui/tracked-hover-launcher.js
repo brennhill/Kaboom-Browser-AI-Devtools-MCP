@@ -37,6 +37,10 @@ let annotationListenerInstalled = false;
 // extension-only storage on enable so draw-mode can echo it; validated on receipt.
 let annotationChannelNonce = null;
 let terminalVisibilityUnsubscribe = null;
+// A validated annotation prompt submitted while the terminal panel was closed.
+// Held (latest wins) until the panel becomes visible, then flushed once and
+// cleared — so an annotation is never silently dropped when the panel is shut.
+let pendingAnnotationPrompt = null;
 function clearHideTimer() {
     if (!hideTimer)
         return;
@@ -161,6 +165,10 @@ function installTerminalVisibilitySync() {
     if (terminalVisibilityUnsubscribe)
         return;
     terminalVisibilityUnsubscribe = onTerminalPanelVisibilityChanged(() => {
+        // Flush before reconciling launcher visibility: an annotation submitted while
+        // the panel was closed asked us to open it, and now that it is visible the
+        // stashed prompt can finally be written.
+        flushPendingAnnotationPrompt();
         applyVisibilityFromState();
     });
 }
@@ -210,11 +218,30 @@ function handleAnnotationsReady(event) {
         return;
     if (!detail?.annotations?.length)
         return;
+    const text = formatAnnotationsForTerminal(detail.annotations, detail.page_url || location.href);
+    if (!text)
+        return;
+    if (isTerminalVisible()) {
+        writeToTerminal(text);
+        return;
+    }
+    // Panel is closed: stash the prompt (latest wins) and open the panel. The
+    // pending prompt is flushed by installTerminalVisibilitySync once the panel
+    // reports visible, so the annotation is never silently dropped.
+    pendingAnnotationPrompt = text;
+    void openTerminalPanel();
+}
+// Write any prompt that was stashed while the terminal panel was closed, once the
+// panel is actually visible. No-op when nothing is pending or the panel is still
+// hidden; clears the pending prompt so it is written exactly once.
+function flushPendingAnnotationPrompt() {
+    if (!pendingAnnotationPrompt)
+        return;
     if (!isTerminalVisible())
         return;
-    const text = formatAnnotationsForTerminal(detail.annotations, detail.page_url || location.href);
-    if (text)
-        writeToTerminal(text);
+    const prompt = pendingAnnotationPrompt;
+    pendingAnnotationPrompt = null;
+    writeToTerminal(prompt);
 }
 function newAnnotationNonce() {
     const c = globalThis.crypto;
@@ -239,6 +266,9 @@ async function uninstallAnnotationListener() {
     annotationListenerInstalled = false;
     window.removeEventListener('kaboom-annotations-ready', handleAnnotationsReady);
     annotationChannelNonce = null;
+    // Drop any prompt stashed for a closed panel so it can't be flushed after the
+    // feature is turned off and later re-enabled.
+    pendingAnnotationPrompt = null;
     await removeLocal(StorageKey.ANNOTATION_CHANNEL_NONCE);
 }
 async function startDrawMode() {

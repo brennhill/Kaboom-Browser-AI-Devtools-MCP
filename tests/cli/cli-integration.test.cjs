@@ -9,6 +9,16 @@ const { execSync } = require('child_process')
 const fs = require('fs')
 const path = require('path')
 const os = require('os')
+const doctor = require('../../npm/kaboom-agentic-browser/lib/doctor')
+
+// --doctor now exits non-zero on a HARD failure — a missing/broken platform
+// binary — and 0 when tooling is healthy (a not-running daemon / not-connected
+// extension are SOFT states and stay exit 0). testBinary() resolves the same
+// repo-relative node_modules candidates for both this process and the CLI
+// subprocess, so it faithfully predicts the exit code without flakiness whether
+// or not the optional platform binary happens to be installed.
+const BINARY_OK = doctor.testBinary().ok
+const EXPECTED_DOCTOR_EXIT = BINARY_OK ? 0 : 1
 
 // Sandbox HOME so real (non-dry-run) --install cases write to a throwaway home
 // instead of the developer's / CI runner's actual MCP client configs. Seed a
@@ -84,15 +94,30 @@ test('kaboom-agentic-browser -c shows configuration', () => {
 test('kaboom-agentic-browser --doctor runs diagnostics', () => {
   const result = runCommand('--doctor')
 
-  assert.strictEqual(result.exitCode, 0, 'Doctor should exit with 0')
+  // Exit code follows the binary check (see EXPECTED_DOCTOR_EXIT); the diagnostic
+  // report is printed either way (stdout is captured even on a non-zero exit).
+  assert.strictEqual(result.exitCode, EXPECTED_DOCTOR_EXIT, 'Doctor exit code should follow the binary check')
   assert.ok(result.output.includes('Diagnostic') || result.output.includes('tool'), 'Should show diagnostic info')
 })
 
 test('kaboom-agentic-browser --doctor --verbose runs diagnostics verbosely', () => {
   const result = runCommand('--doctor --verbose')
 
-  assert.strictEqual(result.exitCode, 0, 'Doctor verbose should exit with 0')
+  assert.strictEqual(result.exitCode, EXPECTED_DOCTOR_EXIT, 'Doctor verbose exit code should follow the binary check')
   assert.ok(result.output.length > 0, 'Should show diagnostic info')
+})
+
+test('kaboom-agentic-browser --doctor exit code reflects the binary check (hard failure => non-zero)', () => {
+  const result = runCommand('--doctor')
+
+  if (BINARY_OK) {
+    assert.strictEqual(result.exitCode, 0, 'Healthy tooling: doctor exits 0')
+  } else {
+    // The hermetic sandbox has no installed platform binary, so the binary check
+    // is a hard failure and doctor must exit non-zero — but still print the report.
+    assert.strictEqual(result.exitCode, 1, 'Missing/broken platform binary: doctor exits 1')
+    assert.ok(result.output.includes('Binary Check'), 'Should still print the diagnostic report on failure')
+  }
 })
 
 test('kaboom-agentic-browser --install --dry-run previews without writing', () => {
@@ -174,10 +199,10 @@ test('kaboom-agentic-browser --config exits successfully', () => {
   assert.strictEqual(result.exitCode, 0, 'Config should exit with 0')
 })
 
-test('kaboom-agentic-browser --doctor exits successfully', () => {
+test('kaboom-agentic-browser --doctor exits with the binary-check code', () => {
   const result = runCommand('--doctor')
 
-  assert.strictEqual(result.exitCode, 0, 'Doctor should exit with 0')
+  assert.strictEqual(result.exitCode, EXPECTED_DOCTOR_EXIT, 'Doctor exit code should follow the binary check')
 })
 
 test('CLI handles multiple env vars', () => {
@@ -191,9 +216,9 @@ test('CLI with --verbose flag produces more output', () => {
   const resultNormal = runCommand('--doctor')
   const resultVerbose = runCommand('--doctor --verbose')
 
-  // Both should succeed
-  assert.strictEqual(resultNormal.exitCode, 0, 'Normal should exit with 0')
-  assert.strictEqual(resultVerbose.exitCode, 0, 'Verbose should exit with 0')
+  // Both should exit with the same binary-check-driven code.
+  assert.strictEqual(resultNormal.exitCode, EXPECTED_DOCTOR_EXIT, 'Normal doctor exit code should follow the binary check')
+  assert.strictEqual(resultVerbose.exitCode, EXPECTED_DOCTOR_EXIT, 'Verbose doctor exit code should follow the binary check')
 
   // Verbose output might be longer or same (depends on implementation)
   assert.ok(resultVerbose.output.length > 0, 'Verbose should produce output')
@@ -202,8 +227,8 @@ test('CLI with --verbose flag produces more output', () => {
 test('CLI outputs use emoji markers for status', () => {
   const result = runCommand('--doctor')
 
-  assert.strictEqual(result.exitCode, 0, 'Doctor should succeed')
-  // Output should have status indicators
+  assert.strictEqual(result.exitCode, EXPECTED_DOCTOR_EXIT, 'Doctor exit code should follow the binary check')
+  // Output should have status indicators (printed even on a non-zero exit).
   assert.ok(
     result.output.includes('✅') || result.output.includes('❌') || result.output.includes('ℹ️'),
     'Output should use emoji markers'
@@ -235,10 +260,12 @@ test('kaboom-agentic-browser command parser handles flag combinations', () => {
 })
 
 test('CLI gracefully handles config file errors', () => {
-  // Doctor should still complete even if config is invalid
+  // Doctor should still complete (print the report) even if config is invalid;
+  // its exit code follows the binary check, not the config state.
   const result = runCommand('--doctor')
 
-  assert.strictEqual(result.exitCode, 0, 'Doctor should handle invalid configs gracefully')
+  assert.strictEqual(result.exitCode, EXPECTED_DOCTOR_EXIT, 'Doctor exit code should follow the binary check')
+  assert.ok(result.output.length > 0, 'Doctor should still print a report')
 })
 
 test('CLI does not crash with empty arguments', () => {

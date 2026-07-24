@@ -228,7 +228,12 @@ async function doctorCommand(verbose) {
   try {
     const report = await doctor.runDiagnostics(verbose);
     console.log(output.diagnosticReport(report));
-    process.exit(0);
+    // Exit non-zero only for a HARD failure the user must fix: a missing/broken
+    // platform binary means the tool cannot run at all, so scripts and CI should
+    // catch it. SOFT/expected post-install states (daemon not running, extension
+    // not yet connected) stay exit 0 so they never fail an install script.
+    const binaryFailed = !!(report.binary && report.binary.ok === false);
+    process.exit(binaryFailed ? 1 : 0);
   } catch (err) {
     console.error(err.format ? err.format() : `Error: ${err.message}`);
     process.exit(1);

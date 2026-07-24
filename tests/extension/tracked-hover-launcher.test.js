@@ -529,6 +529,47 @@ describe('tracked hover launcher', () => {
     assert.match(write.text, /Make the header bigger/, 'prompt includes the annotation text')
   })
 
+  test('annotation submitted while the panel is closed opens it and flushes on show', async () => {
+    await setTrackedHoverLauncherEnabled(true)
+
+    // Panel starts closed. The annotation listener is installed at enable, and it
+    // publishes the per-session provenance nonce the (trusted) draw-mode echoes.
+    assert.ok(elementsById['kaboom-tracked-hover-launcher'], 'launcher mounts while the panel is closed')
+    const nonce = storageData['kaboom_annotation_channel_nonce']
+    assert.ok(nonce, 'launcher publishes an annotation-channel nonce on enable')
+    const handlerCall = globalThis.window.addEventListener.mock.calls.find((c) => c.arguments[0] === 'kaboom-annotations-ready')
+    assert.ok(handlerCall, 'annotation listener must be installed')
+
+    // Submit a valid annotation with the panel closed.
+    handlerCall.arguments[1]({
+      detail: {
+        annotations: [{ text: 'Make the header bigger', selector: 'h1', rect: { x: 1, y: 2, width: 3, height: 4 } }],
+        page_url: 'https://example.com/',
+        nonce
+      }
+    })
+
+    // The launcher asks for the panel to open and stashes the prompt — but MUST
+    // NOT write yet, because the panel is not actually visible.
+    const sentTypes = runtimeSendMessage.mock.calls.map((c) => c.arguments[0]?.type)
+    assert.ok(sentTypes.includes('open_terminal_panel'), 'a closed panel must be opened for a pending annotation')
+    const writeBefore = runtimeSendMessage.mock.calls
+      .map((c) => c.arguments[0])
+      .find((m) => m?.type === 'terminal_panel_write')
+    assert.strictEqual(writeBefore, undefined, 'no terminal write until the panel is actually visible')
+
+    // The panel becomes visible: the pending prompt flushes exactly once.
+    await chrome.storage.session.set({ [terminalUiStateKey]: 'open' })
+    await new Promise((resolve) => setTimeout(resolve, 10))
+
+    const writes = runtimeSendMessage.mock.calls
+      .map((c) => c.arguments[0])
+      .filter((m) => m?.type === 'terminal_panel_write')
+    assert.strictEqual(writes.length, 1, 'the stashed prompt is written exactly once when the panel becomes visible')
+    assert.match(writes[0].text, /Make the header bigger/, 'flushed prompt includes the annotation text')
+    assert.match(writes[0].text, /analyze\(what=/, 'flushed prompt tells the agent to fetch annotations')
+  })
+
   test('annotation event without the channel nonce (page forgery) is ignored', async () => {
     await setTrackedHoverLauncherEnabled(true)
     await chrome.storage.session.set({ [terminalUiStateKey]: 'open' })
