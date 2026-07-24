@@ -345,6 +345,35 @@ describe('terminal side panel host', () => {
     assert.strictEqual(minimizeButton.textContent, '\u2581')
   })
 
+  test('re-booting with forceFresh unmounts the old panel and attaches the fresh shell (folder-reload fix)', async () => {
+    let startCount = 0
+    fetchHandler = ({ url }) => {
+      if (url.endsWith('/terminal/start')) {
+        startCount += 1
+        return Promise.resolve(makeResponse(200, {
+          session_id: `session-${startCount}`,
+          token: `token-${startCount}`,
+          pid: 999
+        }))
+      }
+      throw new Error(`Unexpected fetch call: ${url}`)
+    }
+
+    const module = await import(`../../extension/sidepanel.js?v=${++importCounter}`)
+    await module._terminalPanelForTests.bootTerminalPanel(true)
+    assert.ok(getElementById('kaboom-terminal-iframe').src.includes('token-1'), 'first boot mounts the token-1 shell')
+
+    // A second forceFresh boot models applyRootFolder()/the retry button rebuilding
+    // the panel for a NEW session. Without unmounting first, mountPanel() early-
+    // returns while rootEl is set, so the fresh token-2 shell is never attached and
+    // the user is left on the old, just-stopped session \u2014 the "terminal won't start
+    // after picking a folder" failure.
+    await module._terminalPanelForTests.bootTerminalPanel(true)
+    const iframe = getElementById('kaboom-terminal-iframe')
+    assert.ok(iframe, 'a terminal iframe is mounted after the fresh re-boot')
+    assert.ok(iframe.src.includes('token-2'), 'forceFresh re-boot attaches the fresh token-2 shell, not the orphaned old one')
+  })
+
   test('disconnect button ends the current session and closes the side panel', async () => {
     let startCount = 0
     const stopBodies = []

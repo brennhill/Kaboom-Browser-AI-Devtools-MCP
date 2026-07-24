@@ -2239,7 +2239,6 @@
   var annotationListenerInstalled = false;
   var annotationChannelNonce = null;
   var terminalVisibilityUnsubscribe = null;
-  var pendingAnnotationPrompt = null;
   function clearHideTimer() {
     if (!hideTimer)
       return;
@@ -2356,7 +2355,6 @@
     if (terminalVisibilityUnsubscribe)
       return;
     terminalVisibilityUnsubscribe = onTerminalPanelVisibilityChanged(() => {
-      flushPendingAnnotationPrompt();
       applyVisibilityFromState();
     });
   }
@@ -2397,24 +2395,11 @@
       return;
     if (!detail?.annotations?.length)
       return;
-    const text = formatAnnotationsForTerminal(detail.annotations, detail.page_url || location.href);
-    if (!text)
-      return;
-    if (isTerminalVisible()) {
-      writeToTerminal(text);
-      return;
-    }
-    pendingAnnotationPrompt = text;
-    void openTerminalPanel();
-  }
-  function flushPendingAnnotationPrompt() {
-    if (!pendingAnnotationPrompt)
-      return;
     if (!isTerminalVisible())
       return;
-    const prompt = pendingAnnotationPrompt;
-    pendingAnnotationPrompt = null;
-    writeToTerminal(prompt);
+    const text = formatAnnotationsForTerminal(detail.annotations, detail.page_url || location.href);
+    if (text)
+      writeToTerminal(text);
   }
   function newAnnotationNonce() {
     const c = globalThis.crypto;
@@ -2436,7 +2421,6 @@
     annotationListenerInstalled = false;
     window.removeEventListener("kaboom-annotations-ready", handleAnnotationsReady);
     annotationChannelNonce = null;
-    pendingAnnotationPrompt = null;
     await removeLocal(StorageKey.ANNOTATION_CHANNEL_NONCE);
   }
   async function startDrawMode() {
@@ -2877,14 +2861,23 @@
   async function setTrackedHoverLauncherEnabled(enabled) {
     trackedEnabled = enabled;
     installRuntimeListener();
-    await initTerminalPanelBridge();
-    installTerminalVisibilitySync();
-    if (enabled) {
-      await installAnnotationListener();
-    } else {
-      await uninstallAnnotationListener();
+    try {
+      await initTerminalPanelBridge();
+    } catch {
     }
-    await syncHiddenStateFromStorage();
+    installTerminalVisibilitySync();
+    try {
+      if (enabled) {
+        await installAnnotationListener();
+      } else {
+        await uninstallAnnotationListener();
+      }
+    } catch {
+    }
+    try {
+      await syncHiddenStateFromStorage();
+    } catch {
+    }
     applyVisibilityFromState();
   }
 

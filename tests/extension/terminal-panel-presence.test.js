@@ -150,6 +150,27 @@ describe('panel liveness comes from the panel document', () => {
     assert.strictEqual(isTerminalPanelOpenSync(), false)
   })
 
+  test('port connect mirrors "open" and disconnect mirrors "closed" into TERMINAL_UI_STATE (un-sticks the flame)', async () => {
+    const { watchTerminalPanelState } = await loadPanel()
+    watchTerminalPanelState()
+    assert.ok(connectListener, 'expected a runtime.onConnect listener')
+    const setSession = globalThis.chrome.storage.session.set
+
+    const port = makePort('kaboom_terminal_panel')
+    connectListener(port)
+    // The in-page flame launcher reads TERMINAL_UI_STATE to know whether to hide;
+    // a live port must mark it open.
+    const onConnectWrite = setSession.mock.calls.at(-1)?.arguments[0]
+    assert.strictEqual(onConnectWrite?.kaboom_terminal_ui_state, 'open')
+
+    // A Chrome-native close only tears down the port — the panel document dies
+    // with no chance to write 'closed'. If the background does not reset the key
+    // here it stays stuck at 'open' and the flame is suppressed forever.
+    port.disconnect()
+    const onDisconnectWrite = setSession.mock.calls.at(-1)?.arguments[0]
+    assert.strictEqual(onDisconnectWrite?.kaboom_terminal_ui_state, 'closed')
+  })
+
   test('ports from other features do not count as a panel', async () => {
     const { isTerminalPanelOpenSync, watchTerminalPanelState } = await loadPanel()
     watchTerminalPanelState()

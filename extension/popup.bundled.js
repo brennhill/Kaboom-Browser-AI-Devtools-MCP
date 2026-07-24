@@ -1633,6 +1633,12 @@ The daemon will restart automatically.`;
   var RESHOW_TRACKED_HOVER_LAUNCHER_MESSAGE = {
     type: RuntimeMessageName.SHOW_TRACKED_HOVER_LAUNCHER
   };
+  var terminalTargetTabId;
+  function handleOpenTerminalClick() {
+    if (typeof terminalTargetTabId !== "number")
+      return;
+    void chrome.runtime.sendMessage({ type: "open_terminal_panel", tab_id: terminalTargetTabId });
+  }
   function bindToggleVisibility(toggle, target, isVisible) {
     target.style.display = isVisible() ? "block" : "none";
     toggle.addEventListener("change", () => {
@@ -1697,6 +1703,13 @@ The daemon will restart automatically.`;
     const clearBtn = document.getElementById("clear-btn");
     if (clearBtn)
       clearBtn.addEventListener("click", handleClearLogs);
+    const openTerminalBtn = document.getElementById("open-terminal-btn");
+    if (openTerminalBtn) {
+      openTerminalBtn.addEventListener("click", handleOpenTerminalClick);
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        terminalTargetTabId = tabs[0]?.id;
+      });
+    }
     chrome.runtime.onMessage.addListener((message) => {
       if (message.type === "status_update" && message.status) {
         updateConnectionStatus(message.status);

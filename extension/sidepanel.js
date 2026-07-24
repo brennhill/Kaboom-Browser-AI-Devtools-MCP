@@ -654,6 +654,15 @@ async function ensureTerminalSession() {
 async function bootTerminalPanel(forceFresh = false) {
     if (panelReady && !forceFresh)
         return;
+    // Drop the existing panel DOM before (re)building. mountPanel() early-returns
+    // while `rootEl` is set, so without this the freshly-built shell — bound to the
+    // NEW session in the just-selected folder — is never attached, and the user
+    // keeps staring at the old panel wired to the session we just stopped (the
+    // "terminal won't start after picking a folder" bug, and the retry button).
+    // Done before `panelReady = true` because unmountPanel() clears that flag;
+    // restoreTerminalPanel already unmounts, applyRootFolder did not.
+    if (forceFresh)
+        unmountPanel();
     panelReady = true;
     panelCloseIntent = null;
     pendingSandboxError = null;

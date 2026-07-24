@@ -8,7 +8,8 @@
 import { resolveTerminalWorkspaceTarget } from './tab-state.js';
 import { enableTerminalPanelForTab, SIDE_PANEL_PATH } from './side-panel-availability.js';
 export { syncTerminalPanelAvailability } from './side-panel-availability.js';
-import { TERMINAL_PANEL_PORT } from '../lib/constants.js';
+import { TERMINAL_PANEL_PORT, StorageKey } from '../lib/constants.js';
+import { setSession } from '../lib/storage-utils.js';
 import { errorMessage } from '../lib/error-utils.js';
 /**
  * The live panel document's port, or null when no panel is open.
@@ -40,9 +41,20 @@ export function watchTerminalPanelState() {
         if (port.name !== TERMINAL_PANEL_PORT)
             return;
         livePanelPort = port;
+        // Mirror authoritative panel presence into TERMINAL_UI_STATE. The in-page
+        // flame launcher suppresses itself while the terminal is visible, reading
+        // this key — but a Chrome-native panel close (the panel's own "X") destroys
+        // the document with no chance to flush its 'closed' write, which used to
+        // leave the key stuck at 'open' and hide the flame forever. The port drop is
+        // the reliable "panel is gone" signal, so reset the mirror here.
+        void setSession(StorageKey.TERMINAL_UI_STATE, 'open');
         port.onDisconnect.addListener(() => {
-            if (livePanelPort === port)
+            // Only reset if this port is still the live one — a newer panel that
+            // already reconnected must not be marked closed by an older port's drop.
+            if (livePanelPort === port) {
                 livePanelPort = null;
+                void setSession(StorageKey.TERMINAL_UI_STATE, 'closed');
+            }
         });
     });
 }
