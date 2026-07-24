@@ -2,11 +2,29 @@
 package main
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 )
+
+// portFromURL extracts the numeric port from an httptest server URL.
+func portFromURL(t *testing.T, raw string) int {
+	t.Helper()
+	u, err := url.Parse(raw)
+	if err != nil {
+		t.Fatalf("url.Parse(%q): %v", raw, err)
+	}
+	p, err := strconv.Atoi(u.Port())
+	if err != nil {
+		t.Fatalf("port from %q: %v", raw, err)
+	}
+	return p
+}
 
 func TestConnectPhase(t *testing.T) {
 	cases := []struct {
@@ -129,6 +147,57 @@ func TestInstallWaitDisabled(t *testing.T) {
 		if got := installWaitDisabled(); got != tc.want {
 			t.Fatalf("installWaitDisabled(%s=%q) = %v, want %v", tc.key, tc.val, got, tc.want)
 		}
+	}
+}
+
+func TestFetchInstallHealth_LiveServer(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"version":"0.8.6","capture":{"extension_connected":true}}`))
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	h := fetchInstallHealth(portFromURL(t, srv.URL), 2*time.Second)
+	if !h.reachable || !h.extensionConnected || h.version != "0.8.6" {
+		t.Fatalf("fetchInstallHealth = %+v, want reachable+connected+v0.8.6", h)
+	}
+}
+
+func TestFetchInstallHealth_UpButExtensionNotConnected(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"version":"0.8.6","capture":{"extension_connected":false}}`))
+	}))
+	defer srv.Close()
+
+	h := fetchInstallHealth(portFromURL(t, srv.URL), 2*time.Second)
+	if !h.reachable || h.extensionConnected {
+		t.Fatalf("fetchInstallHealth = %+v, want reachable but not connected", h)
+	}
+}
+
+func TestFetchInstallHealth_NonOKIsReachableOnly(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer srv.Close()
+
+	h := fetchInstallHealth(portFromURL(t, srv.URL), 2*time.Second)
+	if !h.reachable || h.extensionConnected {
+		t.Fatalf("fetchInstallHealth(503) = %+v, want reachable only", h)
+	}
+}
+
+func TestFetchInstallHealth_UnreachableIsZeroValue(t *testing.T) {
+	// Start then immediately close to obtain a definitely-closed port.
+	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	port := portFromURL(t, srv.URL)
+	srv.Close()
+
+	h := fetchInstallHealth(port, 500*time.Millisecond)
+	if h.reachable {
+		t.Fatalf("fetchInstallHealth(closed) = %+v, want unreachable", h)
 	}
 }
 

@@ -9,7 +9,7 @@
 
 const fs = require('fs');
 const net = require('net');
-const { execSync, execFileSync } = require('child_process');
+const { execFileSync } = require('child_process');
 const {
   CLIENT_DEFINITIONS,
   LEGACY_PATHS,
@@ -33,9 +33,10 @@ function knownServerNames() {
 }
 
 /**
- * Check if a port is available
+ * Check whether a port is free by trying to bind it. Cross-platform (net only,
+ * no lsof), so it works identically on Windows/macOS/Linux. Never rejects.
  * @param {number} port Port to check
- * @returns {Promise<{available: bool, error?: string}>}
+ * @returns {Promise<{available: boolean, error?: string}>}
  */
 function checkPort(port) {
   return new Promise((resolve) => {
@@ -53,34 +54,6 @@ function checkPort(port) {
     });
     server.listen(port, '127.0.0.1');
   });
-}
-
-/**
- * Synchronous port check (for CLI)
- * @param {number} port Port to check
- * @returns {{available: bool, error?: string}}
- */
-function checkPortSync(port) {
-  // Validate port is a safe integer to prevent shell injection
-  const portNum = parseInt(port, 10);
-  if (!Number.isInteger(portNum) || portNum < 1 || portNum > 65535) {
-    return { available: false, error: `Invalid port: ${port}` };
-  }
-  try {
-    // Try to check if something is listening
-    const result = execSync(`lsof -ti :${portNum} 2>/dev/null || true`, { // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- spawning own Kaboom binary for health check
-      encoding: 'utf8',
-      timeout: 2000,
-    }).trim();
-
-    if (result) {
-      return { available: false, error: `Port ${port} is in use (PID: ${result.split('\n')[0]})` };
-    }
-    return { available: true };
-  } catch (e) {
-    // If lsof fails, assume port is available
-    return { available: true };
-  }
 }
 
 /**
@@ -400,7 +373,7 @@ async function runDiagnostics(verbose = false, opts = {}) {
 
   // Check default port availability (7890)
   const defaultPort = DEFAULT_PORT;
-  const port = checkPortSync(defaultPort);
+  const port = await checkPort(defaultPort);
 
   // Live runtime checks: Node version + whether the daemon/extension are up.
   const node = nodeCheck();
@@ -440,6 +413,7 @@ module.exports = {
   evaluateNodeVersion,
   nodeCheck,
   checkDaemon,
+  checkPort,
   testBinary,
   runDiagnostics,
 };

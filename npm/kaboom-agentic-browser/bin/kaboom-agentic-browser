@@ -38,9 +38,15 @@ function detectPlatform() {
 // --- Binary search ---
 
 function findBinary(info) {
-  // 1. Dev build — dist/ directory (for local development)
-  const devBin = path.join(SCRIPT_DIR, '..', '..', '..', 'dist', `kaboom-${info.platformKey}${info.ext}`)
-  if (fs.existsSync(devBin)) return devBin
+  // 1. Dev build — repo-root dist/ (source tree only). The parent of the package
+  // dir is "npm" in the source tree and "node_modules" once installed, so this
+  // never execs a dist/ planted in a user's project. Name matches the Makefile's
+  // dist output ($(BINARY_NAME)-<platformKey>), not the old kaboom-<platformKey>.
+  const packageDir = path.join(SCRIPT_DIR, '..')
+  if (path.basename(path.dirname(packageDir)) === 'npm') {
+    const devBin = path.join(SCRIPT_DIR, '..', '..', '..', 'dist', `kaboom-agentic-browser-${info.platformKey}${info.ext}`)
+    if (fs.existsSync(devBin)) return devBin
+  }
 
   // 2. node_modules candidates (3 depths: local dep, hoisted, global)
   const candidates = [
