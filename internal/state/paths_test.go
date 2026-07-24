@@ -66,7 +66,7 @@ func TestRuntimePathsUnderRoot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CrashLogFile() error = %v", err)
 	}
-	if want := filepath.Join(root, "logs", "crash.log"); crashFile != want {
+	if want := filepath.Join(root, "logs", "exit-diagnostics.log"); crashFile != want {
 		t.Fatalf("CrashLogFile() = %q, want %q", crashFile, want)
 	}
 

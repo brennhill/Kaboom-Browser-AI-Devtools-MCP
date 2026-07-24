@@ -146,7 +146,13 @@ func (m *Map) WriteToFirst(data []byte) bool {
 	if relay == nil {
 		return false
 	}
-	relay.writeBuf.Write(data)
+	if _, err := relay.writeBuf.Write(data); err != nil {
+		// A full/closed write buffer means the shell has exited or is wedged under
+		// backpressure — the data did NOT land. Report failure so the caller falls
+		// through to its fallback (e.g. the in-page Audit prompt stores the intent)
+		// instead of being told the write succeeded and silently losing it.
+		return false
+	}
 	return true
 }
 

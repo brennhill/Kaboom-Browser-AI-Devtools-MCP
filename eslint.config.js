@@ -103,7 +103,12 @@ export default [
       'no-constructor-return': 'error',
       'no-template-curly-in-string': 'warn',
       'no-loss-of-precision': 'error',
-      'require-atomic-updates': 'error'
+      'require-atomic-updates': 'error',
+      // Fail loud (CLAUDE.md rule 25): a truly-empty `catch {}` silently swallows
+      // errors on a mutating path. Explicit here (not just via js:recommended) so
+      // the intent survives config changes. A catch that must swallow documents
+      // why with a comment; comment-only catches still pass no-empty by design.
+      'no-empty': ['error', { allowEmptyCatch: false }]
     }
   },
 

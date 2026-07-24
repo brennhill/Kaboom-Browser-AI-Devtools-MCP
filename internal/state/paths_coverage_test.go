@@ -454,7 +454,7 @@ func TestCrashLogFilePath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CrashLogFile() error = %v", err)
 	}
-	want := filepath.Join(root, "logs", "crash.log")
+	want := filepath.Join(root, "logs", "exit-diagnostics.log")
 	if got != want {
 		t.Fatalf("CrashLogFile() = %q, want %q", got, want)
 	}

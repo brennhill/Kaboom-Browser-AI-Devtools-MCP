@@ -8,6 +8,7 @@ package terminal
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"io/fs"
 	"net"
 	"net/http"
@@ -477,16 +478,31 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 			})
 			return
 		}
-		// Return existing session's token so the client can reconnect instead of killing it.
 		sessionID := req.ID
 		if sessionID == "" {
 			sessionID = "default"
 		}
-		existingToken := mgr.GetTokenForSession(sessionID)
-		deps.JSONResponse(w, http.StatusConflict, map[string]any{
+		// Only "session already exists" is a benign reconnect: hand back the live
+		// session's token so the client attaches to it instead of killing it. Every
+		// OTHER failure — a bad working directory, a spawn error, the session limit —
+		// is a REAL failure and must surface with a distinct status. Bucketing them
+		// all as 409-with-token silently reconnected the client to the *old* cwd with
+		// no error shown ("terminal failed with no visible reason").
+		if errors.Is(err, pty.ErrSessionExists) {
+			deps.JSONResponse(w, http.StatusConflict, map[string]any{
+				"error":      err.Error(),
+				"session_id": sessionID,
+				"token":      mgr.GetTokenForSession(sessionID),
+			})
+			return
+		}
+		status := http.StatusBadRequest
+		if errors.Is(err, pty.ErrMaxSessions) {
+			status = http.StatusTooManyRequests
+		}
+		deps.JSONResponse(w, status, map[string]any{
 			"error":      err.Error(),
 			"session_id": sessionID,
-			"token":      existingToken,
 		})
 		return
 	}

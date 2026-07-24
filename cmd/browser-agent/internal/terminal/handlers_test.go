@@ -250,6 +250,41 @@ func TestHandleTerminalStart_DuplicateReturnsConflict(t *testing.T) {
 	}
 }
 
+// A real start failure (here: a non-existent working directory) must surface as a
+// distinct 4xx error, NOT the 409-with-token "session exists" reconnect — otherwise
+// the client silently reconnects to the old cwd and the user sees no reason for the
+// failure. Regression for the "terminal failed a few times, no visible reason" bug.
+func TestHandleTerminalStart_BadDirSurfacesDistinctError(t *testing.T) {
+	mgr := pty.NewManager()
+	defer mgr.StopAll()
+	deps := testDeps()
+
+	body, _ := json.Marshal(map[string]any{
+		"cmd":  "/bin/sh",
+		"args": []string{"-c", "exec cat"},
+		"dir":  "/no/such/kaboom-dir-xyz-does-not-exist",
+	})
+	req := httptest.NewRequest("POST", "/terminal/start", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	HandleTerminalStart(rec, req, deps, nil, mgr, nil, NewMap())
+
+	if rec.Code == http.StatusConflict {
+		t.Fatalf("bad cwd must NOT return 409 (silent reconnect); body: %s", rec.Body.String())
+	}
+	if rec.Code < 400 || rec.Code >= 500 {
+		t.Fatalf("bad cwd should surface a 4xx error, got %d: %s", rec.Code, rec.Body.String())
+	}
+	var resp map[string]any
+	_ = json.NewDecoder(rec.Body).Decode(&resp)
+	if tok, ok := resp["token"]; ok && tok != nil && tok != "" {
+		t.Fatalf("a real start failure must not hand back a reconnect token, got: %v", tok)
+	}
+	if msg, _ := resp["error"].(string); msg == "" {
+		t.Fatal("expected a non-empty error message surfaced to the client")
+	}
+}
+
 func TestHandleTerminalStart_DefaultsToShell(t *testing.T) {
 	mgr := pty.NewManager()
 	defer mgr.StopAll()

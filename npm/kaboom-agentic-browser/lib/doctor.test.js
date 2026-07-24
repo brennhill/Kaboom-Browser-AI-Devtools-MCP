@@ -78,3 +78,34 @@ test('runDiagnostics is async and includes node, daemon, and extension sections'
   assert.equal(report.extension.connected, false);
   assert.ok(typeof report.summary === 'string');
 });
+
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { checkDaemonRestarts } = require('./doctor');
+
+test('checkDaemonRestarts counts daemon_mode_start events within the window (churn signal)', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kab-doctor-'));
+  const logPath = path.join(dir, 'kaboom.jsonl');
+  const now = Date.parse('2026-07-25T12:00:00Z');
+  const line = (event, timestamp) => JSON.stringify({ event, timestamp, type: 'lifecycle' });
+  fs.writeFileSync(logPath, [
+    line('daemon_mode_start', '2026-07-25T11:59:00Z'), // in the last hour
+    line('daemon_mode_start', '2026-07-25T11:30:00Z'), // in the last hour
+    line('bridge_mode_start', '2026-07-25T11:58:00Z'), // NOT a daemon start — ignored
+    line('daemon_mode_start', '2026-07-25T09:00:00Z') // 3h ago — outside the window
+  ].join('\n'));
+  try {
+    const r = checkDaemonRestarts({ logPath, now });
+    assert.equal(r.available, true);
+    assert.equal(r.restarts, 2, 'only daemon starts within the window are counted');
+    assert.equal(r.windowMinutes, 60);
+    assert.equal(r.lastStart, '2026-07-25T11:30:00Z');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('checkDaemonRestarts stays quiet (available:false) when the log is missing', () => {
+  assert.equal(checkDaemonRestarts({ logPath: '/no/such/kaboom-doctor.jsonl' }).available, false);
+});
