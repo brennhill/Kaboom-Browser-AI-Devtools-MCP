@@ -529,12 +529,13 @@ describe('tracked hover launcher', () => {
     assert.match(write.text, /Make the header bigger/, 'prompt includes the annotation text')
   })
 
-  test('annotation submitted while the panel is closed opens it and flushes on show', async () => {
+  test('annotation submitted while the panel is closed is a no-op (does NOT open the panel or write)', async () => {
     await setTrackedHoverLauncherEnabled(true)
 
-    // Panel starts closed. The annotation listener is installed at enable, and it
-    // publishes the per-session provenance nonce the (trusted) draw-mode echoes.
-    assert.ok(elementsById['kaboom-tracked-hover-launcher'], 'launcher mounts while the panel is closed')
+    // Panel starts closed. Auto-paste is a convenience that must ONLY happen when
+    // the terminal is already open — a closed panel must NOT be force-opened. The
+    // annotations still reach the AI via draw-mode's own daemon post, so this
+    // handler is simply a no-op here.
     const nonce = storageData['kaboom_annotation_channel_nonce']
     assert.ok(nonce, 'launcher publishes an annotation-channel nonce on enable')
     const handlerCall = globalThis.window.addEventListener.mock.calls.find((c) => c.arguments[0] === 'kaboom-annotations-ready')
@@ -549,25 +550,10 @@ describe('tracked hover launcher', () => {
       }
     })
 
-    // The launcher asks for the panel to open and stashes the prompt — but MUST
-    // NOT write yet, because the panel is not actually visible.
+    // Must NOT open the panel and must NOT write anything to the terminal.
     const sentTypes = runtimeSendMessage.mock.calls.map((c) => c.arguments[0]?.type)
-    assert.ok(sentTypes.includes('open_terminal_panel'), 'a closed panel must be opened for a pending annotation')
-    const writeBefore = runtimeSendMessage.mock.calls
-      .map((c) => c.arguments[0])
-      .find((m) => m?.type === 'terminal_panel_write')
-    assert.strictEqual(writeBefore, undefined, 'no terminal write until the panel is actually visible')
-
-    // The panel becomes visible: the pending prompt flushes exactly once.
-    await chrome.storage.session.set({ [terminalUiStateKey]: 'open' })
-    await new Promise((resolve) => setTimeout(resolve, 10))
-
-    const writes = runtimeSendMessage.mock.calls
-      .map((c) => c.arguments[0])
-      .filter((m) => m?.type === 'terminal_panel_write')
-    assert.strictEqual(writes.length, 1, 'the stashed prompt is written exactly once when the panel becomes visible')
-    assert.match(writes[0].text, /Make the header bigger/, 'flushed prompt includes the annotation text')
-    assert.match(writes[0].text, /analyze\(what=/, 'flushed prompt tells the agent to fetch annotations')
+    assert.ok(!sentTypes.includes('open_terminal_panel'), 'a closed panel must NOT be force-opened by an annotation')
+    assert.ok(!sentTypes.includes('terminal_panel_write'), 'no terminal write while the panel is closed')
   })
 
   test('annotation event without the channel nonce (page forgery) is ignored', async () => {

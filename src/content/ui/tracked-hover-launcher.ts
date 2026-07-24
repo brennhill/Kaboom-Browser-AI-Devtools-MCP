@@ -50,10 +50,6 @@ let annotationListenerInstalled = false
 // extension-only storage on enable so draw-mode can echo it; validated on receipt.
 let annotationChannelNonce: string | null = null
 let terminalVisibilityUnsubscribe: (() => void) | null = null
-// A validated annotation prompt submitted while the terminal panel was closed.
-// Held (latest wins) until the panel becomes visible, then flushed once and
-// cleared — so an annotation is never silently dropped when the panel is shut.
-let pendingAnnotationPrompt: string | null = null
 
 function clearHideTimer(): void {
   if (!hideTimer) return
@@ -182,10 +178,6 @@ function installRuntimeListener(): void {
 function installTerminalVisibilitySync(): void {
   if (terminalVisibilityUnsubscribe) return
   terminalVisibilityUnsubscribe = onTerminalPanelVisibilityChanged(() => {
-    // Flush before reconciling launcher visibility: an annotation submitted while
-    // the panel was closed asked us to open it, and now that it is visible the
-    // stashed prompt can finally be written.
-    flushPendingAnnotationPrompt()
     applyVisibilityFromState()
   })
 }
@@ -248,28 +240,13 @@ function handleAnnotationsReady(event: Event): void {
   // it cannot supply a valid nonce. Fail closed until the nonce is established.
   if (!annotationChannelNonce || detail?.nonce !== annotationChannelNonce) return
   if (!detail?.annotations?.length) return
-  const text = formatAnnotationsForTerminal(detail.annotations, detail.page_url || location.href)
-  if (!text) return
-  if (isTerminalVisible()) {
-    writeToTerminal(text)
-    return
-  }
-  // Panel is closed: stash the prompt (latest wins) and open the panel. The
-  // pending prompt is flushed by installTerminalVisibilitySync once the panel
-  // reports visible, so the annotation is never silently dropped.
-  pendingAnnotationPrompt = text
-  void openTerminalPanel()
-}
-
-// Write any prompt that was stashed while the terminal panel was closed, once the
-// panel is actually visible. No-op when nothing is pending or the panel is still
-// hidden; clears the pending prompt so it is written exactly once.
-function flushPendingAnnotationPrompt(): void {
-  if (!pendingAnnotationPrompt) return
+  // Auto-paste ONLY when the terminal panel is already open. If it is closed we
+  // must NOT open it — the annotations still reach the AI through the normal path
+  // (draw-mode posts them to the daemon → analyze), so a closed panel is a no-op
+  // here, not a dropped annotation.
   if (!isTerminalVisible()) return
-  const prompt = pendingAnnotationPrompt
-  pendingAnnotationPrompt = null
-  writeToTerminal(prompt)
+  const text = formatAnnotationsForTerminal(detail.annotations, detail.page_url || location.href)
+  if (text) writeToTerminal(text)
 }
 
 function newAnnotationNonce(): string {
@@ -294,9 +271,6 @@ async function uninstallAnnotationListener(): Promise<void> {
   annotationListenerInstalled = false
   window.removeEventListener('kaboom-annotations-ready', handleAnnotationsReady)
   annotationChannelNonce = null
-  // Drop any prompt stashed for a closed panel so it can't be flushed after the
-  // feature is turned off and later re-enabled.
-  pendingAnnotationPrompt = null
   await removeLocal(StorageKey.ANNOTATION_CHANNEL_NONCE)
 }
 
@@ -784,18 +758,30 @@ function syncTerminalPanelVisibility(): void {
 export async function setTrackedHoverLauncherEnabled(enabled: boolean): Promise<void> {
   trackedEnabled = enabled
   installRuntimeListener()
-  await initTerminalPanelBridge()
+  // Terminal-bridge init, the annotation listener (which awaits a storage write),
+  // and the hidden-state read are all best-effort. A rejection in any of them —
+  // e.g. "Extension context invalidated" throwing from chrome.storage — must NOT
+  // stop the launcher (flame) from mounting, so each is isolated and the mount
+  // always runs. Previously a single rejected await skipped the mount entirely and
+  // the flame silently never appeared.
+  try {
+    await initTerminalPanelBridge()
+  } catch { /* keep last-known terminal visibility */ }
   installTerminalVisibilitySync()
   // The annotation -> terminal listener must live at the subsystem level, NOT in
   // mountLauncher: the launcher UI unmounts precisely when the terminal panel is
   // open (mountLauncher early-returns on isTerminalVisible()), which is the exact
   // moment an annotation needs to be written into the panel. Binding it to the
   // launcher's lifecycle meant annotations never reached an open terminal.
-  if (enabled) {
-    await installAnnotationListener()
-  } else {
-    await uninstallAnnotationListener()
-  }
-  await syncHiddenStateFromStorage()
+  try {
+    if (enabled) {
+      await installAnnotationListener()
+    } else {
+      await uninstallAnnotationListener()
+    }
+  } catch { /* nonce publish failed; annotation auto-paste degrades, launcher still shows */ }
+  try {
+    await syncHiddenStateFromStorage()
+  } catch { /* proceed with the default hidden state */ }
   applyVisibilityFromState()
 }
