@@ -6,30 +6,30 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-23
 code_paths:
-  - cmd/browser-agent/tools_interact_command_builder.go
-  - cmd/browser-agent/tools_interact_action_handler.go
+  - cmd/browser-agent/internal/toolinteract/interact_command_builder.go
+  - cmd/browser-agent/internal/toolinteract/interact_action_handler.go
   - cmd/browser-agent/tools_interact_entrypoint.go
   - cmd/browser-agent/tools_interact_dispatch.go
   - cmd/browser-agent/tools_pending_query_enqueue.go
-  - cmd/browser-agent/tools_interact_browser_navigation_impl.go
-  - cmd/browser-agent/tools_interact_browser_script_impl.go
-  - cmd/browser-agent/tools_interact_browser_tabs.go
-  - cmd/browser-agent/tools_interact_browser_util_impl.go
-  - cmd/browser-agent/tools_interact_response_helpers.go
-  - cmd/browser-agent/tools_interact_draw.go
+  - cmd/browser-agent/internal/toolinteract/interact_browser_navigation_impl.go
+  - cmd/browser-agent/internal/toolinteract/interact_browser_script_impl.go
+  - cmd/browser-agent/internal/toolinteract/interact_browser_tabs.go
+  - cmd/browser-agent/internal/toolinteract/interact_browser_util_impl.go
+  - cmd/browser-agent/internal/toolinteract/interact_response_helpers.go
+  - cmd/browser-agent/internal/toolinteract/interact_draw.go
   - cmd/browser-agent/internal/toolinteract/interact_dom.go
   - cmd/browser-agent/internal/toolinteract/interact_dom_validation.go
-  - cmd/browser-agent/tools_interact_elements.go
-  - cmd/browser-agent/tools_interact_storage.go
-  - cmd/browser-agent/tools_interact_upload.go
-  - cmd/browser-agent/tools_interact_evidence.go
-  - cmd/browser-agent/tools_interact_retry_contract_strategy.go
+  - cmd/browser-agent/internal/toolinteract/interact_elements.go
+  - cmd/browser-agent/internal/toolinteract/interact_storage.go
+  - cmd/browser-agent/internal/toolinteract/interact_upload.go
+  - cmd/browser-agent/internal/toolinteract/interact_evidence.go
+  - cmd/browser-agent/internal/toolinteract/interact_retry_contract_strategy.go
   - cmd/browser-agent/internal/toolinteract/interact_retry_contract_state.go
-  - cmd/browser-agent/tools_interact_retry_contract_response.go
-  - cmd/browser-agent/tools_interact_workflow_navigate.go
-  - cmd/browser-agent/tools_interact_workflow_navigate_document.go
+  - cmd/browser-agent/internal/toolinteract/interact_retry_contract_response.go
+  - cmd/browser-agent/internal/toolinteract/interact_workflow_navigate.go
+  - cmd/browser-agent/internal/toolinteract/interact_workflow_navigate_document.go
   - cmd/browser-agent/internal/toolinteract/interact_workflow_forms.go
-  - cmd/browser-agent/tools_interact_workflow_a11y_sarif.go
+  - cmd/browser-agent/internal/toolinteract/interact_workflow_a11y_sarif.go
   - cmd/browser-agent/tools_interact_workflow_types.go
   - internal/tools/interact/workflow.go
   - internal/schema/interact_actions.go

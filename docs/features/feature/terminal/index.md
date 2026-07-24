@@ -9,7 +9,7 @@ code_paths:
   - src/lib/brand.ts
   - cmd/browser-agent/terminal_handlers.go
   - cmd/browser-agent/terminal_server.go
-  - cmd/browser-agent/terminal_assets/terminal.html
+  - cmd/browser-agent/internal/terminal/terminal_assets/terminal.html
   - extension/sidepanel.html
   - extension/sidepanel.js
   - src/content/ui/terminal-panel-bridge.ts

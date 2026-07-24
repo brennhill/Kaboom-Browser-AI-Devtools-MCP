@@ -6,8 +6,8 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-03-05
 code_paths:
-  - cmd/browser-agent/tools_interact_upload_handler.go
-  - cmd/browser-agent/tools_interact_upload.go
+  - cmd/browser-agent/internal/toolinteract/interact_upload_handler.go
+  - cmd/browser-agent/internal/toolinteract/interact_upload.go
   - cmd/browser-agent/upload_handlers.go
   - internal/upload/handlers.go
   - internal/upload/security.go

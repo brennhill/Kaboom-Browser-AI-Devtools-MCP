@@ -1,7 +1,11 @@
-# Scaffold Wizard
-
+---
+doc_type: feature_index
+feature_id: feature-scaffold-wizard
 status: spec
 last_reviewed: 2026-03-28
+---
+
+# Scaffold Wizard
 
 ## Overview
 
