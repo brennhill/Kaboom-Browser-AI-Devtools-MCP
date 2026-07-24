@@ -19,7 +19,70 @@ const {
   getClientById,
   getClientByAlias,
   getValidAliases,
+  resolveManagedBinaryPath,
 } = require('./config');
+
+// --- resolveManagedBinaryPath ---
+
+test('resolveManagedBinaryPath honors KABOOM_BINARY_PATH when it exists', () => {
+  const p = resolveManagedBinaryPath({
+    env: { KABOOM_BINARY_PATH: '/opt/kb/kaboom' },
+    existsFn: (f) => f === '/opt/kb/kaboom',
+  });
+  assert.equal(p, path.resolve('/opt/kb/kaboom'));
+});
+
+test('resolveManagedBinaryPath finds the installed node_modules platform binary', () => {
+  const root = path.join(path.sep, 'proj', 'node_modules', 'kaboom-agentic-browser');
+  const expected = path.join(root, 'node_modules', '@brennhill/kaboom-agentic-browser-darwin-arm64', 'bin', 'kaboom-agentic-browser');
+  const p = resolveManagedBinaryPath({
+    env: {}, platform: 'darwin', arch: 'arm64', packageRoot: root,
+    existsFn: (f) => f === expected,
+  });
+  assert.equal(p, path.resolve(expected));
+});
+
+test('resolveManagedBinaryPath prefers the repo-root dist with the CORRECT name in the source tree', () => {
+  // Regression: the dev path previously looked for dist/kaboom-<key> and never
+  // matched the actual build output dist/kaboom-agentic-browser-<key>.
+  const root = path.join(path.sep, 'repo', 'npm', 'kaboom-agentic-browser'); // parent dir "npm"
+  const distBin = path.resolve(root, '..', '..', 'dist', 'kaboom-agentic-browser-darwin-arm64');
+  const wrongOldName = path.resolve(root, '..', '..', 'dist', 'kaboom-darwin-arm64');
+  const p = resolveManagedBinaryPath({
+    env: {}, platform: 'darwin', arch: 'arm64', packageRoot: root,
+    existsFn: (f) => f === distBin, // the old wrong name would NOT satisfy this
+  });
+  assert.equal(p, distBin);
+  // And the old name must not resolve.
+  assert.notEqual(p, wrongOldName);
+});
+
+test('resolveManagedBinaryPath never resolves a repo-root dist for an installed package', () => {
+  // parent dir "node_modules" → not the source tree; a dist/ in the user's
+  // project must be ignored (supply-chain boundary).
+  const root = path.join(path.sep, 'proj', 'node_modules', 'kaboom-agentic-browser');
+  const distBin = path.resolve(root, '..', '..', 'dist', 'kaboom-agentic-browser-darwin-arm64');
+  const p = resolveManagedBinaryPath({
+    env: {}, platform: 'darwin', arch: 'arm64', packageRoot: root,
+    existsFn: (f) => f === distBin, // even though it "exists", it must be skipped
+  });
+  assert.equal(p, 'kaboom-agentic-browser');
+});
+
+test('resolveManagedBinaryPath maps win32/arm64 to the x64 .exe dist name', () => {
+  const root = path.join(path.sep, 'repo', 'npm', 'kaboom-agentic-browser');
+  const distBin = path.resolve(root, '..', '..', 'dist', 'kaboom-agentic-browser-win32-x64.exe');
+  const p = resolveManagedBinaryPath({
+    env: {}, platform: 'win32', arch: 'arm64', packageRoot: root,
+    existsFn: (f) => f === distBin,
+  });
+  assert.equal(p, distBin);
+});
+
+test('resolveManagedBinaryPath falls back to the command name on an unknown platform', () => {
+  const p = resolveManagedBinaryPath({ env: {}, platform: 'sunos', arch: 'sparc', existsFn: () => false });
+  assert.equal(p, 'kaboom-agentic-browser');
+});
 
 // --- CLIENT_DEFINITIONS ---
 

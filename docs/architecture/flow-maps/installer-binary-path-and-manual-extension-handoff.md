@@ -112,7 +112,9 @@ Covers installer behavior for shell, PowerShell, npm wrapper, and PyPI wrapper t
 8. Extension unpacked path defaults to `~/KaboomAgenticDevtoolExtension` (overridable with `KABOOM_EXTENSION_DIR`).
 9. The connect loop reads only existing `/health` fields (`version`, `capture.extension_connected`); it is a consumer and adds no new wire fields.
 10. Install-time opt-outs share one accepted-value grammar (`isEnvFlagSet` in JS, `envFlagEnabled` in Go): unset/empty/`0`/`false`/`no` are off. Auto-open uses `KABOOM_NO_OPEN`/`KABOOM_INSTALL_NO_OPEN`; connect-wait uses `KABOOM_NO_WAIT`/`KABOOM_INSTALL_NO_WAIT`; daemon-start uses `KABOOM_NO_DAEMON`.
-11. The connect loop's clock, `/health` fetch, and output sink are injectable so the loop is deterministic under test (no real timers or daemon).
+11. The connect loop's clock, `/health` fetch, and output sink are injectable so the loop is deterministic under test (no real timers or daemon). The real HTTP shells (`defaultRequest` in JS, `fetchInstallHealth` in Go) are covered against a local test server.
+12. Dev-binary resolution (launcher `findBinary`, `resolveManagedBinaryPath`) uses the repo-root dist name `kaboom-agentic-browser-<platformKey>` — matching the Makefile's `$(BINARY_NAME)-<platformKey>` output, not the former `kaboom-<platformKey>` (which never matched). The dist candidate is added **only in the source tree** (package parent dir is `npm`, never `node_modules`), so an installed package can never resolve/exec a `dist/` planted in a user's project. `KABOOM_BINARY_PATH` overrides everything.
+13. Doctor's default-port check is net-based (`net.createServer` bind probe), so it is cross-platform (no `lsof`); it reports the port in use when a daemon already holds it.
 
 ## Code Paths
 
@@ -165,3 +167,5 @@ Covers installer behavior for shell, PowerShell, npm wrapper, and PyPI wrapper t
 6. Keep the connect loop's clock/fetch/sink injectable; do not call real timers or `http` directly inside the loop body.
 7. The blocking connect-wait must remain skippable and auto-skip for non-interactive installs so CI/piped installs never hang.
 8. Keep install-time opt-out grammar centralized (`isEnvFlagSet`/`envFlagEnabled`); do not hand-roll new env parsing.
+9. Keep the dev-binary dist name in sync with the Makefile's `$(BINARY_NAME)-<platformKey>` output, and never resolve a repo-root `dist/` outside the source tree (the `npm`-parent guard is a supply-chain boundary).
+10. Keep doctor's port check net-based (no `lsof`/shell) so it stays cross-platform.

@@ -6,14 +6,30 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
+const http = require('node:http');
+const net = require('node:net');
 const {
   DEFAULT_PORT,
   summarizeHealth,
+  defaultRequest,
   fetchHealth,
   waitForExtension,
   connectHint,
   connectWaitDisabled,
 } = require('./health');
+
+// Bind an ephemeral port, hand it to fn, then clean up. Returns fn's result.
+async function withHttpServer(handler, fn) {
+  const server = http.createServer(handler);
+  await new Promise((res) => server.listen(0, '127.0.0.1', res));
+  const port = server.address().port;
+  try {
+    return await fn(port);
+  } finally {
+    if (server.closeAllConnections) server.closeAllConnections();
+    await new Promise((res) => server.close(res));
+  }
+}
 
 test('DEFAULT_PORT matches the daemon default', () => {
   assert.equal(DEFAULT_PORT, 7890);
@@ -152,6 +168,50 @@ test('waitForExtension times out reporting daemon_unreachable when nothing answe
   });
   assert.equal(result.connected, false);
   assert.equal(result.lastPhase, 'daemon_unreachable');
+});
+
+test('defaultRequest performs a real /health GET and returns status + body', async () => {
+  await withHttpServer(
+    (req, res) => {
+      if (req.url === '/health') {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ version: '0.8.6', capture: { extension_connected: true } }));
+      } else {
+        res.writeHead(404);
+        res.end('nope');
+      }
+    },
+    async (port) => {
+      const raw = await defaultRequest(port, 1000);
+      assert.equal(raw.statusCode, 200);
+      assert.equal(JSON.parse(raw.body).capture.extension_connected, true);
+      // And end-to-end through fetchHealth (exercises defaultRequest + summarize).
+      const snap = await fetchHealth(port);
+      assert.equal(snap.extensionConnected, true);
+      assert.equal(snap.version, '0.8.6');
+    }
+  );
+});
+
+test('defaultRequest returns null when the connection is refused', async () => {
+  // Grab an ephemeral port, then close it so nothing is listening.
+  const probe = net.createServer();
+  await new Promise((res) => probe.listen(0, '127.0.0.1', res));
+  const deadPort = probe.address().port;
+  await new Promise((res) => probe.close(res));
+
+  assert.equal(await defaultRequest(deadPort, 500), null);
+  // fetchHealth turns that into an unreachable snapshot.
+  assert.equal((await fetchHealth(deadPort, { timeoutMs: 500 })).reachable, false);
+});
+
+test('defaultRequest returns null when the server never responds (timeout)', async () => {
+  await withHttpServer(
+    () => { /* never write a response */ },
+    async (port) => {
+      assert.equal(await defaultRequest(port, 150), null);
+    }
+  );
 });
 
 test('connectWaitDisabled honors the opt-out env vars', () => {

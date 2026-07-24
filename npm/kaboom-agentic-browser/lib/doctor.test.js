@@ -6,11 +6,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
+const net = require('node:net');
 const {
   MIN_NODE_MAJOR,
   evaluateNodeVersion,
   nodeCheck,
   checkDaemon,
+  checkPort,
   runDiagnostics,
 } = require('./doctor');
 
@@ -47,6 +49,20 @@ test('checkDaemon reports an unreachable daemon without throwing', async () => {
   const res = await checkDaemon({ port: 7890, fetchHealthFn: async () => ({ reachable: false }) });
   assert.equal(res.reachable, false);
   assert.equal(res.extensionConnected, false);
+});
+
+test('checkPort reports a bound port as unavailable and a free one as available (cross-platform)', async () => {
+  const server = net.createServer();
+  await new Promise((res) => server.listen(0, '127.0.0.1', res));
+  const busyPort = server.address().port;
+
+  const busy = await checkPort(busyPort);
+  assert.equal(busy.available, false);
+  assert.ok(busy.error, 'busy port should carry an error message');
+
+  await new Promise((res) => server.close(res));
+  const free = await checkPort(busyPort);
+  assert.equal(free.available, true);
 });
 
 test('runDiagnostics is async and includes node, daemon, and extension sections', async () => {

@@ -227,6 +227,7 @@ function connectWaitDisabled(env = process.env) {
 module.exports = {
   DEFAULT_PORT,
   summarizeHealth,
+  defaultRequest,
   fetchHealth,
   waitForExtension,
   connectHint,

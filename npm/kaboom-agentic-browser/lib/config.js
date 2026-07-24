@@ -37,16 +37,22 @@ const LEGACY_MCP_SERVER_NAMES = [
  * Falls back to command name when an absolute binary path cannot be discovered.
  * @returns {string} Absolute binary path when discoverable, else command name
  */
-function resolveManagedBinaryPath() {
-  const envOverride = process.env.KABOOM_BINARY_PATH;
-  if (envOverride && fs.existsSync(envOverride)) {
+function resolveManagedBinaryPath(deps = {}) {
+  const env = deps.env || process.env;
+  const platformName = deps.platform || process.platform;
+  const archName = deps.arch || process.arch;
+  const existsFn = deps.existsFn || fs.existsSync;
+  const packageRoot = deps.packageRoot || path.resolve(__dirname, '..');
+
+  const envOverride = env.KABOOM_BINARY_PATH;
+  if (envOverride && existsFn(envOverride)) {
     return path.resolve(envOverride);
   }
 
   const platformMap = { darwin: 'darwin', linux: 'linux', win32: 'win32' };
   const archMap = { x64: 'x64', arm64: 'arm64' };
-  const platform = platformMap[process.platform];
-  const arch = archMap[process.arch];
+  const platform = platformMap[platformName];
+  const arch = archMap[archName];
   if (!platform || !arch) {
     return 'kaboom-agentic-browser';
   }
@@ -56,21 +62,25 @@ function resolveManagedBinaryPath() {
   const platformKey = `${platform}-${effectiveArch}`;
   const binaryName = `kaboom-agentic-browser${ext}`;
   const pkgName = `@brennhill/kaboom-agentic-browser-${platformKey}`;
-  const packageRoot = path.resolve(__dirname, '..');
 
-  const localDistCandidate = path.resolve(packageRoot, 'dist', `kaboom-${platformKey}${ext}`);
   const candidates = [
     path.join(packageRoot, 'node_modules', pkgName, 'bin', binaryName),
     path.join(packageRoot, '..', pkgName, 'bin', binaryName),
     path.join(packageRoot, '..', '..', pkgName, 'bin', binaryName),
   ];
-  // Only include the local dist fallback if it resolves within the package boundary
-  if (path.resolve(localDistCandidate).startsWith(packageRoot + path.sep)) {
-    candidates.push(localDistCandidate);
+
+  // Dev source tree only: when running from <repo>/npm/kaboom-agentic-browser
+  // (parent dir "npm", never "node_modules"), prefer the freshly built repo-root
+  // dist binary so --install and daemon-start use it instead of a stale global on
+  // PATH. Skipped for an installed package, so a dist/ planted in a user's
+  // project can never be resolved. Name matches the Makefile's dist output
+  // ($(BINARY_NAME)-<platformKey>), not the old kaboom-<platformKey>.
+  if (path.basename(path.dirname(packageRoot)) === 'npm') {
+    candidates.push(path.resolve(packageRoot, '..', '..', 'dist', `kaboom-agentic-browser-${platformKey}${ext}`));
   }
 
   for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) {
+    if (existsFn(candidate)) {
       return path.resolve(candidate);
     }
   }
