@@ -4,41 +4,63 @@ scope: process/release
 ai-priority: high
 tags: [release, process, quality-gates, deployment]
 relates-to: [known-issues.md, docs/core/uat-v5.3-checklist.md]
-last-verified: 2026-02-04
+last-verified: 2026-07-24
 canonical: true
 ---
 
 # Release Process
 
-Kaboom MCP uses a `UNSTABLE` → `stable` branching model with strict quality gates. Every release goes through automated and manual verification before reaching users.
+Kaboom MCP uses an `UNSTABLE` → `STABLE` branching model with strict quality
+gates. Releases are cut by **pushing a `v*.*.*` tag onto `STABLE`**, which
+triggers the automated release train in
+[`.github/workflows/release.yml`](../../.github/workflows/release.yml). The train
+validates, tests, builds all platform binaries, and publishes — no manual
+`npm publish` step.
 
 ## Branch Model
 
 ```
-main    ─●───────────────────●────── (releases only)
-          │                   ↑
-          │             merge + tag
-          ↓                   │
-UNSTABLE ─●──●──●──●──●──●──●─● ──── (integration)
-             ↑  ↑        ↑
+STABLE   ─●───────────────────●────── (published releases; tag v* here)
+          ▲                    ▲
+          │  merge PR          │  merge PR + push tag
+          │                    │
+UNSTABLE ─●──●──●──●──●──●──●──● ────── (integration)
+             ▲  ▲        ▲
 feature/a ───●  │        │
 feature/b ──────●        │
 feature/c ───────────────●
 ```
 
-- **`stable`** — Published releases. What's on npm and the Chrome Web Store.
-- **`UNSTABLE`** — Integration branch. All features merge here first.
-- **Feature branches** — Branch from `UNSTABLE`, merge back to `UNSTABLE`.
+- **`STABLE`** — Published releases. What's on npm and what the `curl | sh`
+  installer serves. Release tags point here.
+- **`UNSTABLE`** — Integration branch. Feature work merges here first.
+- **Feature branches** — Branch from `UNSTABLE`, PR back to `UNSTABLE`. Never
+  push directly to `STABLE`.
+
+> The old `main`/`stable` names and the PyPI distribution channel are retired.
+> There is **no PyPI package** — distribution is npm + the `curl | sh` installer
+> (which pulls binaries from the GitHub Release). Chrome Web Store uploads remain
+> a manual step (see [Chrome Web Store](#chrome-web-store)).
+
+## Distribution Channels
+
+| Channel | What ships | How |
+| --- | --- | --- |
+| **npm** | `kaboom-agentic-browser` aggregate package + 5 `@brennhill/kaboom-agentic-browser-<platform>` binary packages | `release.yml` on tag push |
+| **`curl \| sh`** | `scripts/install.sh` served live from `STABLE`; downloads the platform binary + extension from the GitHub Release | GitHub Release assets from `release.yml` |
+| **GitHub Release** | 5 platform binaries, 5 `kaboom-hooks` binaries, extension zip, `checksums.txt` | `release.yml` on tag push |
+| **Chrome Web Store** | `extension/` directory | Manual upload (see below) |
 
 ## Quality Gates
 
-Every feature must pass all gates before merging to `UNSTABLE`. All gates must be green before `UNSTABLE` merges to `stable`.
+Every feature must pass all gates before merging to `UNSTABLE`. All gates must be
+green before `UNSTABLE` merges to `STABLE`.
 
 ### Gate 1: Tests Pass
 
 ```bash
 make test                              # Go server tests
-node --test tests/extension/*.test.js  # Extension tests
+node --test tests/extension/*.test.js  # Extension tests (or: npm run test:ext)
 ```
 
 No code is merged with failing tests.
@@ -63,10 +85,17 @@ Every requirement in the specification has corresponding tests:
 
 ```bash
 go vet ./cmd/browser-agent/    # No warnings
-make build                   # Cross-platform build succeeds
+npm run lint                   # ESLint — NOT a required CI check, so run it locally
+make build                     # Cross-platform build succeeds
 ```
 
-All platforms must build: darwin-arm64, darwin-x64, linux-arm64, linux-x64, windows-x64.
+All platforms must build: darwin-arm64, darwin-x64, linux-arm64, linux-x64,
+windows-x64.
+
+> **Lint caveat:** the `Security Scan` and `JavaScript Checks` CI jobs run ESLint
+> but are **not required** merge checks, so an eslint-red PR can still auto-merge.
+> Always run `npm run lint` locally before merging changes under `extension/` or
+> `tests/extension/`.
 
 ### Gate 5: Performance SLOs
 
@@ -92,24 +121,10 @@ go tool cover -func=coverage.out | grep total
 
 Coverage must not decrease between commits.
 
-### Gate 7: Squash & Tag
+### Gate 7: MCP Command Completeness (MANDATORY)
 
-Before pushing to `UNSTABLE`, all feature work is squashed into a single commit:
-
-```bash
-# Squash all commits since branching from UNSTABLE
-/squash
-
-# Tag for pre-UAT
-git tag v{version}-pre-uat-{feature}
-
-# Push
-git push origin HEAD --follow-tags
-```
-
-### Gate 8: MCP Command Completeness (MANDATORY)
-
-**This gate cannot be skipped.** Every command exposed via MCP MUST be fully implemented.
+**This gate cannot be skipped.** Every command exposed via MCP MUST be fully
+implemented.
 
 **Rule:** If an MCP tool/command is advertised in the tool schema, it MUST:
 
@@ -124,28 +139,15 @@ git push origin HEAD --follow-tags
 2. Add a TODO in the code marking it for future implementation
 3. Track in `docs/core/known-issues.md` under "Planned Features"
 
-**Verification:**
+### Gate 8: Architecture Invariant Tests (MANDATORY)
 
-```bash
-# Review all MCP tool definitions
-grep -r "tools\|inputSchema" cmd/browser-agent/tools_*.go
+**This gate cannot be skipped.** Critical architecture invariants must be
+verified before every release.
 
-# Ensure no stub implementations
-grep -rn "TODO\|FIXME\|not implemented" cmd/browser-agent/tools_*.go
+#### 8.1 MCP Stdio Silence
 
-# Cross-reference with test coverage
-go test -v ./cmd/browser-agent/ | grep -E "^--- (PASS|FAIL)"
-```
-
-**Why this matters:** Clients (Claude Code, IDEs, automation) rely on MCP tool schemas to understand capabilities. Advertising unimplemented commands breaks client expectations and causes confusing errors.
-
-### Gate 9: Architecture Invariant Tests (MANDATORY)
-
-**This gate cannot be skipped.** Critical architecture invariants must be verified before every release.
-
-#### 9.1 MCP Stdio Silence
-
-The server MUST NOT output anything to stdio except JSON-RPC messages. Any non-JSON-RPC output breaks LLM communication.
+The server MUST NOT output anything to stdio except JSON-RPC messages. Any
+non-JSON-RPC output breaks LLM communication.
 
 ```bash
 go test ./cmd/browser-agent -run "TestToolHandler.*Stdout" -v
@@ -154,39 +156,24 @@ go test ./cmd/browser-agent -run "TestStdioSilence" -v
 
 See: `.claude/refs/mcp-stdio-invariant.md`
 
-#### 9.2 Server Persistence
+#### 8.2 Server Persistence
 
-The HTTP server MUST stay alive as long as stdin remains open. This ensures browser extension connectivity throughout the MCP session.
+The HTTP server MUST stay alive as long as stdin remains open.
 
 ```bash
 go test ./cmd/browser-agent -run "TestServerPersistence" -v
 ```
 
-**Key invariants tested:**
-
-- Server survives 10+ seconds with open stdin (no data)
-- Health endpoint responds within 100ms at all times
-- Server survives stdin close (waits for SIGTERM)
-- Server handles rapid health checks under load
-
 See: `.claude/refs/mcp-stdio-invariant.md#server-persistence-invariant---critical`
 
-#### 9.3 Behavioral Audit Tests
+#### 8.3 Wire Drift
 
-All MCP tools must have comprehensive behavioral tests verifying actual functionality, not just "doesn't crash".
+Go `wire_*.go` and TS `wire-*.ts` payload contracts must stay in sync.
 
 ```bash
-go test ./cmd/browser-agent -run "Test.*Audit" -v
+make check-wire-drift
+node scripts/check-sync-wire-drift.js
 ```
-
-**Test coverage required:**
-
-| Test File | Tools Covered | Minimum Tests |
-|-----------|---------------|---------------|
-| `tools_observe_audit_test.go` | observe (29 modes) | 41 tests |
-| `tools_configure_audit_test.go` | configure (19 actions) | 46 tests |
-| `tools_generate_audit_test.go` | generate (10 formats) | 28 tests |
-| `tools_interact_audit_test.go` | interact (11 actions) | 31 tests |
 
 ## Release Checklist
 
@@ -195,145 +182,122 @@ When `UNSTABLE` is stable and ready for release:
 ### 1. Final Verification on `UNSTABLE`
 
 ```bash
-# Full test suite
 make test
 node --test tests/extension/*.test.js
-
-# Static analysis
 go vet ./cmd/browser-agent/
-
-# Cross-platform build
 make build
-
-# Coverage check
-go test -coverprofile=coverage.out ./cmd/browser-agent/
-go tool cover -func=coverage.out | grep total
 ```
 
 ### 2. Version Bump
 
-**CRITICAL:** Use `/bump-version {version}` to update all locations, then **MUST run validation**:
+Version is single-sourced from the `VERSION` file. `make sync-version`
+propagates it to the version-bearing files; `scripts/validate-versions.sh` is
+the CI gate.
 
 ```bash
+# 1. Set the single source of truth
+echo -n "0.8.6" > VERSION
+
+# 2. Propagate to all package.json / Go / bundle / README locations
+make sync-version
+
+# 3. Regenerate the extension bundle (embeds VERSION via esbuild define)
+make compile-ts
+
+# 4. Validate — this is the required "Version Consistency" CI check
 bash scripts/validate-versions.sh
 ```
 
-This validates all 17+ version locations match, including:
-- All package.json files (npm, extension, server)
-- Go main.go version constant
-- MCP golden test file
-- README badge
-- **optionalDependencies in npm/kaboom-mcp/package.json** (CRITICAL - must match main version)
-
 **If validation fails, STOP. Do not proceed with release.**
 
-All locations updated by bump-version:
+`validate-versions.sh` checks all version locations match `VERSION`, including:
 
 | File | Field |
-|------|-------|
-| `Makefile` | `VERSION :=` |
-| `cmd/browser-agent/main.go` | `version` constant |
-| `extension/manifest.json` | `"version"` |
-| `extension/package.json` | `"version"` |
+|------|------|
+| `package.json` (root) | `"version"` |
+| `cmd/browser-agent/main.go`, `cmd/hooks/main.go` | `version` constant |
+| `extension/manifest.json`, `extension/package.json` | `"version"` |
 | `server/package.json` | `"version"` |
-| `server/scripts/install.js` | `VERSION` constant |
-| `npm/kaboom-mcp/package.json` | `"version"` + `optionalDependencies` ⚠️ |
-| `npm/darwin-arm64/package.json` | `"version"` |
-| `npm/darwin-x64/package.json` | `"version"` |
-| `npm/linux-arm64/package.json` | `"version"` |
-| `npm/linux-x64/package.json` | `"version"` |
-| `npm/win32-x64/package.json` | `"version"` |
-| `cmd/browser-agent/testdata/mcp-initialize.golden.json` | `"version"` |
-| `README.md` | Version badge |
-| `tests/extension/background.test.js` | Test assertions (2 locations) |
-| `extension/background/index.test.js` | Mock manifest version |
+| `npm/kaboom-agentic-browser/package.json` | `"version"` **+ `optionalDependencies`** ⚠️ |
+| `npm/{darwin-arm64,darwin-x64,linux-arm64,linux-x64,win32-x64}/package.json` | `"version"` |
+| `packages/kaboom-ci/package.json`, `packages/kaboom-playwright/package.json` | `"version"` (+ `@anthropic/kaboom-ci` pin) |
+| `README.md` | version badge + prose |
+| `cmd/browser-agent/testdata/mcp-initialize.golden.json` | `"VERSION"` placeholder (stays literal) |
 
-**⚠️ CRITICAL:** `optionalDependencies` in `npm/kaboom-mcp/package.json` MUST point to the same version as the wrapper package itself. If these are mismatched, npx will install old binaries.
+> **⚠️ `optionalDependencies` gotcha:** the five `@brennhill/kaboom-agentic-browser-*`
+> entries in `npm/kaboom-agentic-browser/package.json` MUST equal the wrapper
+> version, or npx installs old binaries. `make sync-version` does not currently
+> cover the root `package.json`, `package-lock.json`, or `packages/kaboom-*` —
+> update those by hand until the target is hardened, then re-run
+> `validate-versions.sh`.
 
-### 3. Merge to `stable`
+Commit the bump to a `release/<version>` branch and merge it to `STABLE` via PR.
 
-```bash
-git checkout stable
-git merge UNSTABLE
-```
+### 3. Tag on `STABLE` (this triggers the release train)
 
-### 4. Tag the Release
+The tag commit MUST be an ancestor of `STABLE` — `release.yml` refuses to publish
+otherwise.
 
 ```bash
-git tag v{version}
-git push origin stable --follow-tags
+git checkout STABLE && git pull
+git tag v0.8.6
+git push origin v0.8.6
 ```
 
-### 5. Build & Publish
+`release.yml` then runs automatically:
 
-```bash
-# Cross-platform binaries
-make build
-```
+1. **check-tag-on-stable** — confirms the tag commit is on `STABLE`
+2. **validate** — `validate-versions.yml`
+3. **verify-tag** — tag version == `VERSION` file
+4. **test** — wire-drift gate, `go test -short ./...`, `npm run test:ext`
+5. **build-and-release** — build 5 platform binaries, verify the linux-x64
+   binary reports the tag version, `make compile-ts`, stage binaries, **publish
+   the 5 platform packages then the aggregate package** (idempotent — an
+   already-published version is skipped, not an error), build the extension zip,
+   generate checksums, and create the GitHub Release with all assets.
 
-**NPM:**
-```bash
-cd npm && ./publish.sh
-```
+Publishing uses the `NPM_TOKEN` repository secret. If a job fails **after** the
+tag exists (e.g. an expired token → npm `E404`), fix the cause and **re-run the
+failed jobs** — do NOT cut a new tag. The publish step is idempotent.
 
-**PyPI:**
-```bash
-# Build all PyPI packages
-make pypi-build
+### 4. Manual publish fallback
 
-# Test PyPI first (recommended)
-make pypi-test-publish
+If you need to (re)publish without cutting a tag, run the
+[`Publish Packages`](../../.github/workflows/publish.yml) workflow manually
+(`workflow_dispatch`). It runs the same test → build → publish steps against the
+current `VERSION`.
 
-# Production PyPI
-make pypi-publish
-```
+### 5. Chrome Web Store
 
-See `docs/pypi-distribution.md` for detailed PyPI publishing instructions.
-
-**Chrome Web Store:**
-```bash
-# Upload extension/ directory via Chrome Developer Dashboard
-```
+Upload the `extension/` directory (or the `dist/kaboom-extension-v*.zip` asset)
+via the Chrome Developer Dashboard. This is not automated.
 
 ### 6. Sync `UNSTABLE`
 
+Fast-forward `UNSTABLE` back up to the released `STABLE`:
+
 ```bash
-git checkout UNSTABLE
-git merge stable
-git push origin UNSTABLE
+git push origin origin/STABLE:UNSTABLE
 ```
 
 ### 7. Update Marketing Site
 
-The marketing site is a separate repo at `~/dev/kaboom-site` (Astro).
-Blog posts go in `src/content/docs/blog/`. Update version numbers and
-add release blog post there after tagging.
+The marketing site is a separate repo at `~/dev/kaboom-site` (Astro). Add the
+release blog post under `src/content/docs/blog/` and bump version references
+there.
 
 ## Hotfix Process
 
-For critical fixes that can't wait for the next release:
+For critical fixes that can't wait for the next integration cycle:
 
 ```bash
-git checkout -b hotfix/fix-name main
+git checkout -b hotfix/fix-name STABLE
 # Fix, test, commit
-git checkout stable && git merge hotfix/fix-name
+# PR hotfix/fix-name -> STABLE, merge
+git checkout STABLE && git pull
 git tag v{version}
-git push origin stable --follow-tags
+git push origin v{version}          # triggers release.yml
 
-# Sync back
-git checkout UNSTABLE && git merge hotfix/fix-name
-git push origin UNSTABLE
-git branch -d hotfix/fix-name
+# Sync integration branch back up
+git push origin origin/STABLE:UNSTABLE
 ```
-
-## Pre-UAT Tags
-
-Every feature entering UAT gets a tagged, squashed commit:
-
-```
-v4.7.0-pre-uat-websocket-monitoring
-v4.7.0-pre-uat-network-bodies
-v4.7.0-pre-uat-checkpoint-diffs
-```
-
-If UAT fails, the single commit can be reverted atomically.
