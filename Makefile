@@ -468,22 +468,35 @@ release-gate: quality-gate test-upgrade-guards
 # Update all version references to match VERSION (single source of truth)
 sync-version:
 	@echo "Syncing version to $(VERSION)..."
-	@# JSON "version" fields
+	@# JSON "version" fields. These files hold exactly one "version" (their own),
+	@# so a blanket match is safe. package-lock.json is handled structurally below
+	@# because it also carries dependency "version" fields that must NOT change.
 	@perl -pi -e 's/"version": "[0-9]+\.[0-9]+\.[0-9]+"/"version": "$(VERSION)"/g' \
+			package.json \
 			extension/manifest.json extension/package.json server/package.json \
 			npm/kaboom-agentic-browser/package.json npm/darwin-x64/package.json \
 			npm/darwin-arm64/package.json npm/linux-x64/package.json \
 			npm/linux-arm64/package.json npm/win32-x64/package.json \
+			packages/kaboom-ci/package.json packages/kaboom-playwright/package.json \
 			$(CMD_DIR)/testdata/mcp-initialize.golden.json
-	@# NPM optionalDependencies versions
-	@perl -pi -e 's/("@brennhill\/kaboom-[^"]+": ")[0-9]+\.[0-9]+\.[0-9]+(")/$${1}$(VERSION)$$2/g' \
+	@# root package-lock.json: update ONLY the package's own version (top-level and
+	@# packages[""]) — never the nested dependency versions. Structural JSON edit
+	@# preserves npm's 2-space + trailing-newline formatting (zero-dep node built-ins).
+	@node -e 'const fs=require("fs"),f="package-lock.json",j=JSON.parse(fs.readFileSync(f,"utf8"));j.version="$(VERSION)";if(j.packages&&j.packages[""])j.packages[""].version="$(VERSION)";fs.writeFileSync(f,JSON.stringify(j,null,2)+"\n")'
+	@# NPM optionalDependencies versions. NOTE: the "@" MUST be escaped (\@) — an
+	@# unescaped @brennhill is parsed by perl as array interpolation and silently
+	@# empties the pattern, so the substitution no-ops. Same for \@anthropic below.
+	@perl -pi -e 's/("\@brennhill\/kaboom-[^"]+": ")[0-9]+\.[0-9]+\.[0-9]+(")/$${1}$(VERSION)$$2/g' \
 		npm/kaboom-agentic-browser/package.json
+	@# kaboom-playwright pins @anthropic/kaboom-ci to the release version.
+	@perl -pi -e 's/("\@anthropic\/kaboom-ci": ")[0-9]+\.[0-9]+\.[0-9]+(")/$${1}$(VERSION)$$2/g' \
+		packages/kaboom-playwright/package.json
 	@# PyPI sync removed: pypi/ packaging tree no longer exists in this repo.
-	@# JS version strings
+	@# JS version strings. (Legacy tests/extension/{popup,background}.test.js were
+	@# removed; the current extension version flows through esbuild's
+	@# __KABOOM_VERSION__ define at bundle time, so no test-file edit is needed.)
 	@perl -pi -e "s/version: '[0-9]+\.[0-9]+\.[0-9]+'/version: '$(VERSION)'/g" \
-		extension/inject.js tests/extension/popup.test.js
-	@perl -pi -e "s/(parsed\.version, )'[0-9]+\.[0-9]+\.[0-9]+'/\$$1'$(VERSION)'/g" \
-		tests/extension/background.test.js
+		extension/inject.js
 	@perl -pi -e "s/VERSION = '[0-9]+\.[0-9]+\.[0-9]+'/VERSION = '$(VERSION)'/g" \
 		server/scripts/install.js
 	@# Go version fallback (both binaries)
