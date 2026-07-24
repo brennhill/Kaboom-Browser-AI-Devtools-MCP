@@ -703,6 +703,7 @@ if (typeof document !== 'undefined' && typeof globalThis.process === 'undefined'
 }
 export const _terminalPanelForTests = {
     bootTerminalPanel,
+    applyRootFolder,
     writeToTerminal,
     exitTerminalSession,
     redrawTerminal

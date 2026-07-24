@@ -4,12 +4,18 @@
  * interfere with the xterm host, while keeping the session and reconnect model intact.
  * Docs: docs/features/feature/terminal/index.md
  */
+/**
+ * Persist the root folder and restart the shell there. A running PTY cannot be
+ * moved — its cwd is fixed at spawn — so the old session is stopped first.
+ */
+declare function applyRootFolder(root: string): Promise<void>;
 declare function redrawTerminal(): void;
 declare function exitTerminalSession(): Promise<void>;
 declare function writeToTerminal(text: string): void;
 declare function bootTerminalPanel(forceFresh?: boolean): Promise<void>;
 export declare const _terminalPanelForTests: {
     bootTerminalPanel: typeof bootTerminalPanel;
+    applyRootFolder: typeof applyRootFolder;
     writeToTerminal: typeof writeToTerminal;
     exitTerminalSession: typeof exitTerminalSession;
     redrawTerminal: typeof redrawTerminal;

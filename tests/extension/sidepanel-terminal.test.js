@@ -374,6 +374,39 @@ describe('terminal side panel host', () => {
     assert.ok(iframe.src.includes('token-2'), 'forceFresh re-boot attaches the fresh token-2 shell, not the orphaned old one')
   })
 
+  test('applyRootFolder persists the root, stops the old session, and mounts a fresh shell (reported bug, end-to-end)', async () => {
+    let startCount = 0
+    let stoppedId = null
+    fetchHandler = ({ url, options }) => {
+      if (url.endsWith('/terminal/start')) {
+        startCount += 1
+        return Promise.resolve(makeResponse(200, {
+          session_id: `session-${startCount}`,
+          token: `token-${startCount}`,
+          pid: 999
+        }))
+      }
+      if (url.endsWith('/terminal/stop')) {
+        try { stoppedId = JSON.parse(options.body || '{}').id } catch { stoppedId = 'parse-error' }
+        return Promise.resolve(makeResponse(200, { ok: true }))
+      }
+      throw new Error(`Unexpected fetch call: ${url}`)
+    }
+
+    const module = await import(`../../extension/sidepanel.js?v=${++importCounter}`)
+    await module._terminalPanelForTests.bootTerminalPanel(true)
+    assert.ok(getElementById('kaboom-terminal-iframe').src.includes('token-1'), 'first boot mounts token-1')
+
+    // The exact path that failed for the user: pick a folder and reload. A running
+    // PTY can't change cwd, so the old session is stopped and a fresh one booted.
+    await module._terminalPanelForTests.applyRootFolder('/Users/x/project')
+
+    assert.strictEqual(stoppedId, 'session-1', 'the old session is stopped before rebuilding')
+    assert.strictEqual(localStorageData[StorageKey.TERMINAL_DEV_ROOT], '/Users/x/project', 'the chosen root is persisted')
+    const iframe = getElementById('kaboom-terminal-iframe')
+    assert.ok(iframe && iframe.src.includes('token-2'), 'the fresh shell for the new folder is attached — not the orphaned, just-stopped session')
+  })
+
   test('disconnect button ends the current session and closes the side panel', async () => {
     let startCount = 0
     const stopBodies = []

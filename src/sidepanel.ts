@@ -745,6 +745,7 @@ if (typeof document !== 'undefined' && typeof (globalThis as Record<string, unkn
 
 export const _terminalPanelForTests = {
   bootTerminalPanel,
+  applyRootFolder,
   writeToTerminal,
   exitTerminalSession,
   redrawTerminal

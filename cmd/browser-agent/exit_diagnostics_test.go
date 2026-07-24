@@ -71,7 +71,7 @@ func TestAppendExitDiagnostic_UsesStateCrashPath(t *testing.T) {
 	if path == "" {
 		t.Fatal("appendExitDiagnostic returned empty path")
 	}
-	want := filepath.Join(stateDir, "logs", "crash.log")
+	want := filepath.Join(stateDir, "logs", "exit-diagnostics.log")
 	if path != want {
 		t.Fatalf("append path = %q, want %q", path, want)
 	}
