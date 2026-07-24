@@ -2823,7 +2823,6 @@
       return;
     target.appendChild(rootEl);
     installRecordingStorageSync();
-    installAnnotationListener();
   }
   function unmountLauncher() {
     clearHideTimer();
@@ -2839,13 +2838,17 @@
       rootEl = null;
     }
     uninstallRecordingStorageSync();
-    uninstallAnnotationListener();
   }
   async function setTrackedHoverLauncherEnabled(enabled) {
     trackedEnabled = enabled;
     installRuntimeListener();
     await initTerminalPanelBridge();
     installTerminalVisibilitySync();
+    if (enabled) {
+      installAnnotationListener();
+    } else {
+      uninstallAnnotationListener();
+    }
     await syncHiddenStateFromStorage();
     applyVisibilityFromState();
   }

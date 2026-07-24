@@ -481,6 +481,48 @@ describe('tracked hover launcher', () => {
     assert.ok(elementsById['kaboom-tracked-hover-launcher'], 'launcher should remount after popup signal')
   })
 
+  test('annotation->terminal listener stays active while the terminal panel is open (regression)', async () => {
+    await setTrackedHoverLauncherEnabled(true)
+
+    // Open the terminal panel: the launcher UI hides, but the annotation listener
+    // must NOT be torn down with it — it used to be installed inside mountLauncher,
+    // so annotations never reached the terminal exactly when the panel was open.
+    await chrome.storage.session.set({ [terminalUiStateKey]: 'open' })
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    assert.strictEqual(
+      elementsById['kaboom-tracked-hover-launcher'],
+      undefined,
+      'launcher UI hides while the side panel is open'
+    )
+
+    // Net add/remove for the annotation event proves it is still installed. Old
+    // code: added on mount, removed on unmount -> net 0. Fixed: added once at
+    // enable, never removed on unmount -> net 1.
+    const added = window.addEventListener.mock.calls.filter(
+      (c) => c.arguments[0] === 'kaboom-annotations-ready'
+    ).length
+    const removed = window.removeEventListener.mock.calls.filter(
+      (c) => c.arguments[0] === 'kaboom-annotations-ready'
+    ).length
+    assert.strictEqual(added - removed, 1, 'annotation listener must remain installed while the terminal panel is open')
+
+    // Firing the submit event now writes a prompt into the open panel.
+    const handlerCall = window.addEventListener.mock.calls.find((c) => c.arguments[0] === 'kaboom-annotations-ready')
+    handlerCall.arguments[1]({
+      detail: {
+        annotations: [{ text: 'Make the header bigger', selector: 'h1', rect: { x: 1, y: 2, width: 3, height: 4 } }],
+        page_url: 'https://example.com/'
+      }
+    })
+
+    const write = runtimeSendMessage.mock.calls
+      .map((c) => c.arguments[0])
+      .find((m) => m?.type === 'terminal_panel_write')
+    assert.ok(write, 'a terminal_panel_write must be sent when annotations are submitted and the panel is open')
+    assert.match(write.text, /analyze\(what=/, 'prompt tells the agent to fetch annotations via analyze')
+    assert.match(write.text, /Make the header bigger/, 'prompt includes the annotation text')
+  })
+
   test('unmount removes launcher and storage listener', async () => {
     await setTrackedHoverLauncherEnabled(true)
     assert.ok(elementsById['kaboom-tracked-hover-launcher'])

@@ -694,7 +694,6 @@ function mountLauncher(): void {
   if (!target || !rootEl) return
   target.appendChild(rootEl)
   installRecordingStorageSync()
-  installAnnotationListener()
 }
 
 function unmountLauncher(): void {
@@ -711,7 +710,6 @@ function unmountLauncher(): void {
     rootEl = null
   }
   uninstallRecordingStorageSync()
-  uninstallAnnotationListener()
 }
 
 function syncTerminalPanelVisibility(): void {
@@ -727,6 +725,16 @@ export async function setTrackedHoverLauncherEnabled(enabled: boolean): Promise<
   installRuntimeListener()
   await initTerminalPanelBridge()
   installTerminalVisibilitySync()
+  // The annotation -> terminal listener must live at the subsystem level, NOT in
+  // mountLauncher: the launcher UI unmounts precisely when the terminal panel is
+  // open (mountLauncher early-returns on isTerminalVisible()), which is the exact
+  // moment an annotation needs to be written into the panel. Binding it to the
+  // launcher's lifecycle meant annotations never reached an open terminal.
+  if (enabled) {
+    installAnnotationListener()
+  } else {
+    uninstallAnnotationListener()
+  }
   await syncHiddenStateFromStorage()
   applyVisibilityFromState()
 }

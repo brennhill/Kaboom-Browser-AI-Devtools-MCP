@@ -2,7 +2,7 @@
 doc_type: flow_map
 flow_id: tracked-tab-hover-quick-actions
 status: active
-last_reviewed: 2026-04-03
+last_reviewed: 2026-07-24
 owners:
   - Brenn
 entrypoints:
@@ -15,6 +15,7 @@ code_paths:
   - src/content.ts
   - src/content/tab-tracking.ts
   - src/content/ui/tracked-hover-launcher.ts
+  - src/content/ui/terminal-panel-bridge.ts
   - src/popup.ts
   - src/popup/logo-motion.ts
   - src/popup/tab-tracking.ts
@@ -57,7 +58,7 @@ Related feature docs:
 3. Hovering the launcher expands the action pill; clicking the gear expands a settings menu with fluid transform+opacity transitions.
 4. The settings menu points to `https://gokaboom.dev/docs` and `https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP`.
 5. The hover island logo uses the shared Kaboom flame mark from `icons/icon.svg` and swaps to `icons/logo-animated.svg` on hover.
-6. `Draw` action dynamically loads `content/draw-mode.js` and calls `activateDrawMode('user')`.
+6. `Draw` action dynamically loads `content/draw-mode.js` and calls `activateDrawMode('user')`. On submit (Escape), draw-mode dispatches a `kaboom-annotations-ready` window event; `tracked-hover-launcher` (`handleAnnotationsReady`) formats a prompt via `formatAnnotationsForTerminal` (announces the annotations, includes each note, and tells the agent to fetch full details via `analyze(what="annotations")`) and `writeToTerminal(...)` it. The side panel appends `\r`, so the prompt is auto-submitted to whatever runs in the terminal. Both `handleAnnotationsReady` and `writeToTerminal` no-op unless the terminal panel is visible.
 7. `Rec` or `Stop` action sends `record_start` or `record_stop` to background recording listeners.
 8. `Shot` action sends `capture_screenshot` to background message handlers.
 9. `Audit` action calls `requestAudit(location.href)`, which opens the side panel and then sends `qa_scan_requested`.
@@ -80,6 +81,7 @@ Related feature docs:
 ## State and Contracts
 
 - Launcher is tab-local content UI and only mounts for tracked tabs.
+- The annotation -> terminal listener (`kaboom-annotations-ready`) is installed at subsystem enable (`setTrackedHoverLauncherEnabled`), NOT in `mountLauncher`. The launcher UI unmounts while the terminal panel is open (`mountLauncher` early-returns on `isTerminalVisible()`), which is exactly when an annotation must be written into the panel — so the listener must outlive the launcher UI. Regression: `tests/extension/tracked-hover-launcher.test.js` "annotation->terminal listener stays active while the terminal panel is open".
 - `StorageKey.RECORDING` is the source of truth for active recording UI state.
 - `StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN` persists hidden-state across page reloads.
 - `hiddenUntilPopupOpen` mirrors persisted hidden-state in memory and suppresses remounts until popup sends reshow message.
