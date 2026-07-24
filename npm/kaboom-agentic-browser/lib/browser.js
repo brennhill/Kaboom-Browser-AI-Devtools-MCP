@@ -126,8 +126,11 @@ const WIN_PROGID_TO_ID = [
 /** Default command runner: stdout string, or null on any failure. */
 function defaultRunFn(command, args) {
   try {
+    // maxBuffer is raised well above Node's 1 MB default: `plutil -convert json`
+    // on a large com.apple.launchservices.secure.plist can exceed it, which would
+    // throw ENOBUFS and silently disable default-browser detection.
     // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- fixed OS query commands (plutil/xdg-settings/reg) with static args, no shell, no user input
-    return String(execFileSync(command, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 3000 }));
+    return String(execFileSync(command, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 3000, maxBuffer: 8 * 1024 * 1024 }));
   } catch {
     return null;
   }
@@ -144,12 +147,14 @@ function darwinDefaultBrowserId(runFn, homeDir) {
     return null;
   }
   const handlers = data && Array.isArray(data.LSHandlers) ? data.LSHandlers : [];
-  for (const h of handlers) {
-    if (h && h.LSHandlerURLScheme === 'https' && typeof h.LSHandlerRoleAll === 'string') {
-      return DARWIN_BUNDLE_TO_ID[h.LSHandlerRoleAll.toLowerCase()] || null;
-    }
-  }
-  return null;
+  // Prefer the https handler, then fall back to http. Some macOS systems register
+  // the default browser under http only, so an https-only scan would miss it.
+  const handlerFor = (scheme) => handlers.find(
+    (h) => h && h.LSHandlerURLScheme === scheme && typeof h.LSHandlerRoleAll === 'string'
+  );
+  const match = handlerFor('https') || handlerFor('http');
+  if (!match) return null;
+  return DARWIN_BUNDLE_TO_ID[match.LSHandlerRoleAll.toLowerCase()] || null;
 }
 
 function linuxDefaultBrowserId(runFn) {

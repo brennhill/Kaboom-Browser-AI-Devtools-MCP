@@ -77,6 +77,10 @@
     ACTION_RECORDING: "kaboom_action_recording",
     RECORDING: "kaboom_recording",
     TRACKED_HOVER_LAUNCHER_HIDDEN: "kaboom_tracked_hover_launcher_hidden",
+    // Per-session token the tracked-hover launcher publishes so the draw-mode
+    // content script can prove a kaboom-annotations-ready event is extension-origin
+    // (chrome.storage is invisible to page scripts, so a page cannot read/forge it).
+    ANNOTATION_CHANNEL_NONCE: "kaboom_annotation_channel_nonce",
     PENDING_RECORDING: "kaboom_pending_recording",
     PENDING_MIC_RECORDING: "kaboom_pending_mic_recording",
     MIC_GRANTED: "kaboom_mic_granted",
@@ -2233,7 +2237,9 @@
   var recordingStorageUnsubscribe = null;
   var runtimeListenerInstalled = false;
   var annotationListenerInstalled = false;
+  var annotationChannelNonce = null;
   var terminalVisibilityUnsubscribe = null;
+  var pendingAnnotationPrompt = null;
   function clearHideTimer() {
     if (!hideTimer)
       return;
@@ -2350,6 +2356,7 @@
     if (terminalVisibilityUnsubscribe)
       return;
     terminalVisibilityUnsubscribe = onTerminalPanelVisibilityChanged(() => {
+      flushPendingAnnotationPrompt();
       applyVisibilityFromState();
     });
   }
@@ -2360,49 +2367,77 @@
     }
     unmountLauncher();
   }
+  function sanitizeForTerminal(s) {
+    return s.replace(/[\u0000-\u001f\u007f-\u009f]/g, " ");
+  }
   function formatAnnotationsForTerminal(annotations, pageUrl) {
     if (annotations.length === 0)
       return "";
     const lines = [
       "The user just annotated the page with the following feedback. Please review and implement these changes:",
       "",
-      `Page: ${pageUrl}`,
+      `Page: ${sanitizeForTerminal(pageUrl)}`,
       ""
     ];
     for (let i = 0; i < annotations.length; i++) {
       const a = annotations[i];
-      const text = a.text || "(no label)";
-      const sel = a.selector || "unknown";
+      const text = sanitizeForTerminal(a.text || "(no label)");
+      const sel = sanitizeForTerminal(a.selector || "unknown");
       const r = a.rect;
       const loc = r ? ` (${Math.round(r.x)},${Math.round(r.y)} ${Math.round(r.width)}x${Math.round(r.height)})` : "";
       lines.push(`${i + 1}. "${text}" \u2014 ${sel}${loc}`);
     }
     lines.push("");
     lines.push('The annotations are available via analyze(what="annotations").');
-    lines.push("");
     return lines.join("\n");
   }
   function handleAnnotationsReady(event) {
     const detail = event.detail;
+    if (!annotationChannelNonce || detail?.nonce !== annotationChannelNonce)
+      return;
     if (!detail?.annotations?.length)
+      return;
+    const text = formatAnnotationsForTerminal(detail.annotations, detail.page_url || location.href);
+    if (!text)
+      return;
+    if (isTerminalVisible()) {
+      writeToTerminal(text);
+      return;
+    }
+    pendingAnnotationPrompt = text;
+    void openTerminalPanel();
+  }
+  function flushPendingAnnotationPrompt() {
+    if (!pendingAnnotationPrompt)
       return;
     if (!isTerminalVisible())
       return;
-    const text = formatAnnotationsForTerminal(detail.annotations, detail.page_url || location.href);
-    if (text)
-      writeToTerminal(text);
+    const prompt = pendingAnnotationPrompt;
+    pendingAnnotationPrompt = null;
+    writeToTerminal(prompt);
   }
-  function installAnnotationListener() {
+  function newAnnotationNonce() {
+    const c = globalThis.crypto;
+    if (c && typeof c.randomUUID === "function")
+      return c.randomUUID();
+    return `n-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  }
+  async function installAnnotationListener() {
     if (annotationListenerInstalled)
       return;
     annotationListenerInstalled = true;
+    annotationChannelNonce = newAnnotationNonce();
+    await setLocal(StorageKey.ANNOTATION_CHANNEL_NONCE, annotationChannelNonce);
     window.addEventListener("kaboom-annotations-ready", handleAnnotationsReady);
   }
-  function uninstallAnnotationListener() {
+  async function uninstallAnnotationListener() {
     if (!annotationListenerInstalled)
       return;
     annotationListenerInstalled = false;
     window.removeEventListener("kaboom-annotations-ready", handleAnnotationsReady);
+    annotationChannelNonce = null;
+    pendingAnnotationPrompt = null;
+    await removeLocal(StorageKey.ANNOTATION_CHANNEL_NONCE);
   }
   async function startDrawMode() {
     try {
@@ -2845,9 +2880,9 @@
     await initTerminalPanelBridge();
     installTerminalVisibilitySync();
     if (enabled) {
-      installAnnotationListener();
+      await installAnnotationListener();
     } else {
-      uninstallAnnotationListener();
+      await uninstallAnnotationListener();
     }
     await syncHiddenStateFromStorage();
     applyVisibilityFromState();

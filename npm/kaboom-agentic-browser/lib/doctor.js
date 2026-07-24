@@ -76,7 +76,11 @@ function testBinary() {
       'win32-x64': '@brennhill/kaboom-agentic-browser-win32-x64',
     };
 
-    const key = `${platform}-${arch}`;
+    // Windows ships only an x64 build; the launcher/resolver run it under
+    // emulation on ARM64, so normalize arch the same way here or --doctor would
+    // falsely report "Unsupported platform" on win32-arm64 while the tool works.
+    const effectiveArch = platform === 'win32' ? 'x64' : arch;
+    const key = `${platform}-${effectiveArch}`;
     const pkg = platformMap[key];
 
     if (!pkg) {
@@ -118,7 +122,8 @@ function testBinary() {
     try {
       const version = execFileSync(binaryPath, ['--version'], {
         encoding: 'utf8',
-        stdio: ['pipe', 'pipe', 'pipe'],
+        stdio: ['ignore', 'pipe', 'pipe'],
+        timeout: 5000,
       }).trim();
 
       return {
