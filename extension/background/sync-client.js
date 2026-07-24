@@ -3,6 +3,7 @@
  * Docs: docs/features/feature/backend-log-streaming/index.md
  */
 import { errorMessage } from '../lib/error-utils.js';
+import { beacon } from '../lib/telemetry-beacon.js';
 import { fetchWithTimeout } from '../lib/timeout-utils.js';
 import { buildDaemonJSONRequestInit } from '../lib/daemon-http.js';
 import { drainUIFeatures, restoreUIFeatures } from './ui-usage-tracker.js';
@@ -215,6 +216,7 @@ export class SyncClient {
                 const serverMajorMinor = data.server_version.split('.').slice(0, 2).join('.');
                 const extensionMajorMinor = this.extensionVersion.split('.').slice(0, 2).join('.');
                 if (serverMajorMinor !== extensionMajorMinor) {
+                    beacon('extension_version_mismatch', { ext: extensionMajorMinor, srv: serverMajorMinor });
                     this.callbacks.onVersionMismatch(this.extensionVersion, data.server_version);
                 }
             }
@@ -302,6 +304,7 @@ export class SyncClient {
         if (this.state.consecutiveFailures === 10 ||
             this.state.consecutiveFailures === 100 ||
             this.state.consecutiveFailures === 1000) {
+            beacon('sync_connect_failed', { failures: String(this.state.consecutiveFailures) });
             this.log('Sync failure threshold reached', { failures: this.state.consecutiveFailures });
         }
         // Require 2+ consecutive failures before marking disconnected

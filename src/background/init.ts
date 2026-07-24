@@ -10,6 +10,7 @@
  */
 
 import { getTrackedTabLostToastDetail, KABOOM_LOG_PREFIX } from '../lib/brand.js'
+import { beacon } from '../lib/telemetry-beacon.js'
 import { syncTerminalPanelAvailability } from './side-panel-availability.js'
 import { watchTerminalPanelState } from './terminal-panel.js'
 import {
@@ -119,6 +120,9 @@ export function initializeExtension(): void {
  */
 async function initializeExtensionAsync(): Promise<void> {
   try {
+    // Anonymous telemetry: service worker activation (once per session)
+    beacon('extension_start')
+
     // ============= STEP 1: Check service worker restart =============
     const wasRestarted = await wasServiceWorkerRestarted()
     if (wasRestarted) {
