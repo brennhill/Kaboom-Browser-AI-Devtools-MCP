@@ -30,13 +30,32 @@ export interface TerminalDirListing {
     truncated: boolean;
 }
 /**
+ * Why a directory listing could not be produced.
+ * - `unreachable`: the daemon did not answer (down, refused, timed out).
+ * - `outdated`: the daemon answered 404 — it predates `/terminal/dirs`. A version
+ *   problem, not a connectivity one, so it needs a different message and fix.
+ */
+export type TerminalDirsFailure = 'unreachable' | 'outdated';
+/** The listing, or the reason it could not be fetched. */
+export type TerminalDirsResult = {
+    ok: true;
+    listing: TerminalDirListing;
+} | {
+    ok: false;
+    reason: TerminalDirsFailure;
+};
+/**
  * List the sub-directories of `path`, or of the user's home when empty.
  *
  * The browser cannot resolve an absolute path by itself — `webkitdirectory` and
  * showDirectoryPicker() both withhold it — so picking a working directory has to
  * go through the daemon, which is already running shells in these directories.
+ *
+ * Distinguishes a daemon that is down from one that is merely too old to have the
+ * endpoint: a 404 is a reachable daemon, and telling the user it is unreachable
+ * sends them debugging a connection that is fine.
  */
-export declare function listTerminalDirs(path: string): Promise<TerminalDirListing | null>;
+export declare function listTerminalDirs(path: string): Promise<TerminalDirsResult>;
 /** Persist the terminal root folder (the cwd new sessions spawn in). */
 export declare function setTerminalDevRoot(root: string): Promise<void>;
 /**

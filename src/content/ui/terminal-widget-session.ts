@@ -139,30 +139,58 @@ export interface TerminalDirListing {
 }
 
 /**
+ * Why a directory listing could not be produced.
+ * - `unreachable`: the daemon did not answer (down, refused, timed out).
+ * - `outdated`: the daemon answered 404 — it predates `/terminal/dirs`. A version
+ *   problem, not a connectivity one, so it needs a different message and fix.
+ */
+export type TerminalDirsFailure = 'unreachable' | 'outdated'
+
+/** The listing, or the reason it could not be fetched. */
+export type TerminalDirsResult =
+  | { ok: true; listing: TerminalDirListing }
+  | { ok: false; reason: TerminalDirsFailure }
+
+/**
  * List the sub-directories of `path`, or of the user's home when empty.
  *
  * The browser cannot resolve an absolute path by itself — `webkitdirectory` and
  * showDirectoryPicker() both withhold it — so picking a working directory has to
  * go through the daemon, which is already running shells in these directories.
+ *
+ * Distinguishes a daemon that is down from one that is merely too old to have the
+ * endpoint: a 404 is a reachable daemon, and telling the user it is unreachable
+ * sends them debugging a connection that is fine.
  */
-export async function listTerminalDirs(path: string): Promise<TerminalDirListing | null> {
+export async function listTerminalDirs(path: string): Promise<TerminalDirsResult> {
+  let resp: Response
   try {
     const base = await getServerUrl()
     const termUrl = getTerminalServerUrl(base)
-    const resp = await fetch(
+    resp = await fetch(
       `${termUrl}/terminal/dirs?path=${encodeURIComponent(path)}`,
       { signal: AbortSignal.timeout(3000) }
     )
-    if (!resp.ok) return null
+  } catch {
+    return { ok: false, reason: 'unreachable' } // No answer at all.
+  }
+
+  if (resp.status === 404) return { ok: false, reason: 'outdated' }
+  if (!resp.ok) return { ok: false, reason: 'unreachable' }
+
+  try {
     const data = await resp.json() as Partial<TerminalDirListing>
     return {
-      path: data.path ?? path,
-      parent: data.parent ?? '',
-      entries: Array.isArray(data.entries) ? data.entries : [],
-      truncated: data.truncated === true
+      ok: true,
+      listing: {
+        path: data.path ?? path,
+        parent: data.parent ?? '',
+        entries: Array.isArray(data.entries) ? data.entries : [],
+        truncated: data.truncated === true
+      }
     }
   } catch {
-    return null // Daemon unreachable; the caller falls back to typing a path.
+    return { ok: false, reason: 'unreachable' } // Reached it, but the body was unusable.
   }
 }
 

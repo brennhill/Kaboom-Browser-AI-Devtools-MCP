@@ -115,24 +115,39 @@ export async function validateSession(token) {
  * The browser cannot resolve an absolute path by itself — `webkitdirectory` and
  * showDirectoryPicker() both withhold it — so picking a working directory has to
  * go through the daemon, which is already running shells in these directories.
+ *
+ * Distinguishes a daemon that is down from one that is merely too old to have the
+ * endpoint: a 404 is a reachable daemon, and telling the user it is unreachable
+ * sends them debugging a connection that is fine.
  */
 export async function listTerminalDirs(path) {
+    let resp;
     try {
         const base = await getServerUrl();
         const termUrl = getTerminalServerUrl(base);
-        const resp = await fetch(`${termUrl}/terminal/dirs?path=${encodeURIComponent(path)}`, { signal: AbortSignal.timeout(3000) });
-        if (!resp.ok)
-            return null;
+        resp = await fetch(`${termUrl}/terminal/dirs?path=${encodeURIComponent(path)}`, { signal: AbortSignal.timeout(3000) });
+    }
+    catch {
+        return { ok: false, reason: 'unreachable' }; // No answer at all.
+    }
+    if (resp.status === 404)
+        return { ok: false, reason: 'outdated' };
+    if (!resp.ok)
+        return { ok: false, reason: 'unreachable' };
+    try {
         const data = await resp.json();
         return {
-            path: data.path ?? path,
-            parent: data.parent ?? '',
-            entries: Array.isArray(data.entries) ? data.entries : [],
-            truncated: data.truncated === true
+            ok: true,
+            listing: {
+                path: data.path ?? path,
+                parent: data.parent ?? '',
+                entries: Array.isArray(data.entries) ? data.entries : [],
+                truncated: data.truncated === true
+            }
         };
     }
     catch {
-        return null; // Daemon unreachable; the caller falls back to typing a path.
+        return { ok: false, reason: 'unreachable' }; // Reached it, but the body was unusable.
     }
 }
 /** Persist the terminal root folder (the cwd new sessions spawn in). */

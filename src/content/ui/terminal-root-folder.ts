@@ -199,12 +199,19 @@ async function openPicker(
 ): Promise<void> {
   picker.replaceChildren(pickerRow('Loading…', '#787c99'))
 
-  const listing = await listTerminalDirs(path)
-  if (!listing) {
-    // Typing a path still works, so this is a degraded state, not a dead end.
-    picker.replaceChildren(pickerRow('Could not reach the Kaboom daemon — type a path instead', '#f7768e'))
+  const result = await listTerminalDirs(path)
+  if (!result.ok) {
+    // Typing a path still works, so both of these are degraded states, not dead
+    // ends — but an outdated daemon (reachable, 404) is a different problem from
+    // one that is down, and conflating them sends the user debugging the wrong
+    // thing (the daemon works — the folder browser was added after their build).
+    const message = result.reason === 'outdated'
+      ? 'This Kaboom daemon is too old to browse folders — update Kaboom, or type a path'
+      : 'Could not reach the Kaboom daemon — type a path instead'
+    picker.replaceChildren(pickerRow(message, '#f7768e'))
     return
   }
+  const listing = result.listing
 
   picker.replaceChildren()
   picker.appendChild(currentFolderRow(listing, onChoose, picker))

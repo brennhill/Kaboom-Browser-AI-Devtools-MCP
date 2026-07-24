@@ -257,6 +257,25 @@ describe('browsing for a folder', () => {
 
     const text = allRows(byId('kaboom-terminal-root-folder-picker')).map((r) => r.textContent).join(' ')
     assert.match(text, /type a path/, 'the field still works, so say so rather than showing an empty list')
+    assert.doesNotMatch(text, /outdated|update Kaboom/i, 'a connection failure is not a version problem')
+  })
+
+  test('an outdated daemon (404 on /terminal/dirs) says to update, not that it is unreachable', async () => {
+    // A daemon that predates the folder browser is reachable but 404s. Reporting
+    // that as "could not reach the daemon" sends the user chasing a connectivity
+    // problem that does not exist — the daemon is up, it is just too old.
+    fetchHandler = () => ({ ok: false, status: 404, json: async () => ({}) })
+    const { createRootFolderBar } = await loadBar()
+    createRootFolderBar({ initialRoot: '/Users/dev', onApply: () => {} })
+
+    byId('kaboom-terminal-root-folder-browse').dispatch('click')
+    await new Promise((r) => setTimeout(r, 0))
+
+    const text = allRows(byId('kaboom-terminal-root-folder-picker')).map((r) => r.textContent).join(' ')
+    assert.match(text, /update Kaboom/i, 'a 404 means the daemon is outdated — tell the user to update it')
+    assert.doesNotMatch(text, /[Cc]ould not reach/, 'the daemon was reached; do not claim otherwise')
+    // The typed-path fallback still works, so the message must point at it too.
+    assert.match(text, /type a path/i, 'typing a path still works without the browse endpoint')
   })
 
   test('a truncated listing says so', async () => {
