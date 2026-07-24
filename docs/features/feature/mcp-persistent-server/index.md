@@ -7,8 +7,8 @@ owners: []
 last_reviewed: 2026-03-29
 code_paths:
   - cmd/browser-agent/mcp_identity.go
-  - cmd/browser-agent/bridge.go
-  - cmd/browser-agent/bridge_startup_orchestration.go
+  - cmd/browser-agent/internal/bridge/bridge.go
+  - cmd/browser-agent/internal/bridge/bridge_startup_orchestration.go
   - cmd/browser-agent/server_middleware.go
   - cmd/browser-agent/handler_http.go
   - cmd/browser-agent/connect_mode.go
@@ -25,7 +25,7 @@ test_paths:
   - cmd/browser-agent/handler_consistency_test.go
   - cmd/browser-agent/server_routes_unit_test.go
   - cmd/browser-agent/main_connection_diag_test.go
-  - cmd/browser-agent/bridge_fastpath_unit_test.go
+  - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
   - cmd/browser-agent/test_timing_test.go
   - cmd/browser-agent/bridge_faststart_test.go
   - tests/regression/08-fast-start/test-fast-start.sh

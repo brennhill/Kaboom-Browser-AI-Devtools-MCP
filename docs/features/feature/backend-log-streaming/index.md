@@ -29,7 +29,7 @@ code_paths:
   - internal/capture/network_bodies.go
   - internal/capture/network_waterfall.go
   - internal/capture/network-types.go
-  - internal/capture/playback.go
+  - internal/recording/playback.go
   - internal/capture/queries.go
   - internal/capture/query_dispatcher.go
   - internal/capture/rate_limit.go

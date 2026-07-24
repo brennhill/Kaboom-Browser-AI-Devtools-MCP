@@ -1,20 +1,24 @@
-# Lazy Server Start
-
-last_reviewed: 2026-03-14
+---
+doc_type: feature_index
+feature_id: feature-lazy-server-start
 status: implemented
+last_reviewed: 2026-03-14
 code_paths:
-  - cmd/browser-agent/bridge_startup_orchestration.go
-  - cmd/browser-agent/bridge_forward.go
-  - cmd/browser-agent/bridge_startup_state.go
+  - cmd/browser-agent/internal/bridge/bridge_startup_orchestration.go
+  - cmd/browser-agent/internal/bridge/bridge_forward.go
+  - cmd/browser-agent/internal/bridge/bridge_startup_state.go
   - cmd/browser-agent/tools_errors_guards.go
   - src/popup/tab-tracking.ts
   - src/popup/status-display.ts
   - extension/popup.html
 test_paths:
-  - cmd/browser-agent/bridge_spawn_race_test.go
-  - cmd/browser-agent/bridge_fastpath_unit_test.go
+  - cmd/browser-agent/internal/bridge/bridge_spawn_race_test.go
+  - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
   - cmd/browser-agent/tools_interact_gate_test.go
-  - cmd/browser-agent/lazy_server_start_test.go
+  - cmd/browser-agent/internal/bridge/lazy_server_start_test.go
+---
+
+# Lazy Server Start
 
 ## Overview
 

@@ -27,7 +27,7 @@ code_paths:
   - pypi/kaboom-agentic-browser/kaboom_agentic_browser/doctor.py
   - pypi/kaboom-agentic-browser/kaboom_agentic_browser/install.py
   - pypi/kaboom-agentic-browser/kaboom_agentic_browser/uninstall.py
-  - pypi/kaboom-agentic-browser/kaboom_agentic_browser/skills/skills.json
+  - npm/kaboom-agentic-browser/skills/skills.json
   - pypi/kaboom-agentic-browser/kaboom_agentic_browser.egg-info/PKG-INFO
   - pypi/kaboom-agentic-browser/kaboom_agentic_browser.egg-info/entry_points.txt
   - pypi/kaboom-agentic-browser/kaboom_agentic_browser.egg-info/requires.txt

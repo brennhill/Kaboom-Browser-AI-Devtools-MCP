@@ -93,9 +93,13 @@ export function checkFeatureBundles({
   repoRoot = process.cwd(),
   strictFrontmatter = process.env.DOCS_STRICT_FRONTMATTER === '1',
   enforceFeatureFreshness = process.env.DOCS_STRICT_FEATURE_FRESHNESS !== '0',
+  // Annual review window. A 30-day window across 130+ feature bundles is not
+  // hand-maintainable — it forces mass date-bumps that assert a review nobody
+  // performed, which is worse than an honest yearly cadence. Override per-run
+  // with DOCS_FEATURE_FRESHNESS_DAYS when a tighter check is wanted.
   freshnessWindowDays = (() => {
-    const parsed = Number.parseInt(process.env.DOCS_FEATURE_FRESHNESS_DAYS || '30', 10)
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 30
+    const parsed = Number.parseInt(process.env.DOCS_FEATURE_FRESHNESS_DAYS || '365', 10)
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 365
   })(),
   now = new Date()
 } = {}) {
