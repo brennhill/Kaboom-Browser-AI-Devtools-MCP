@@ -175,6 +175,32 @@ make check-wire-drift
 node scripts/check-sync-wire-drift.js
 ```
 
+## One-Click Release (recommended)
+
+Once `STABLE` holds everything you want to ship, the entire release is a single
+manual CI trigger — the [`Cut Release`](../../.github/workflows/cut-release.yml)
+workflow (`workflow_dispatch`, run it **from the STABLE branch**):
+
+1. Actions → **Cut Release** → *Run workflow* → set **`version`** (e.g. `0.8.7`),
+   leave **`dry_run`** unchecked (or check it for a no-mutation preview).
+2. It does everything: bump `VERSION` → `make sync-version` → `make compile-ts` →
+   `validate-versions.sh` → wire-drift gate → `go test -short` → `npm run test:ext`
+   → commit + push `STABLE` + tag `v<version>` → build 5 platforms → publish npm
+   (platform + aggregate) → GitHub Release.
+
+Publishing is delegated to the reusable
+[`release-publish.yml`](../../.github/workflows/release-publish.yml) — the same
+pipeline the tag-triggered `release.yml` uses, so both paths build and publish
+identically. No PAT or extra secret is needed (it pushes to the unprotected
+`STABLE` with the built-in `GITHUB_TOKEN` and invokes the publish pipeline
+directly rather than via the tag event).
+
+**Dry run:** check `dry_run` to bump + validate + test and upload the prepared
+`git diff` as an artifact — nothing is committed, tagged, or published.
+
+The manual checklist below is the equivalent by-hand procedure (and how to reason
+about each gate); the one-click workflow performs exactly these steps.
+
 ## Release Checklist
 
 When `UNSTABLE` is stable and ready for release:
@@ -224,12 +250,11 @@ bash scripts/validate-versions.sh
 | `README.md` | version badge + prose |
 | `cmd/browser-agent/testdata/mcp-initialize.golden.json` | `"VERSION"` placeholder (stays literal) |
 
-> **⚠️ `optionalDependencies` gotcha:** the five `@brennhill/kaboom-agentic-browser-*`
+> **`optionalDependencies`:** the five `@brennhill/kaboom-agentic-browser-*`
 > entries in `npm/kaboom-agentic-browser/package.json` MUST equal the wrapper
-> version, or npx installs old binaries. `make sync-version` does not currently
-> cover the root `package.json`, `package-lock.json`, or `packages/kaboom-*` —
-> update those by hand until the target is hardened, then re-run
-> `validate-versions.sh`.
+> version, or npx installs old binaries. `make sync-version` now covers these plus
+> the root `package.json`, `package-lock.json` (own version only), and
+> `packages/kaboom-*` — so `validate-versions.sh` passes with no manual edits.
 
 Commit the bump to a `release/<version>` branch and merge it to `STABLE` via PR.
 

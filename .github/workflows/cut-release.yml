@@ -1,0 +1,166 @@
+name: Cut Release
+
+# One-click, manually-triggered release. Does everything:
+#   bump VERSION -> sync all version files -> recompile bundle -> validate ->
+#   test (go + ext + wire drift) -> commit + push STABLE + tag -> build & publish.
+#
+# Publishing is delegated to the reusable release-publish.yml (same pipeline the
+# tag-triggered release.yml uses), invoked directly here — we do NOT rely on the
+# tag-push event, because a tag pushed with the default GITHUB_TOKEN does not
+# trigger other workflows. No PAT or extra secret is required.
+#
+# Prereq: STABLE is not branch-protected, so this workflow pushes the bump commit
+# and tag straight to STABLE with the built-in GITHUB_TOKEN.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Target release version (no leading v), e.g. 0.8.7'
+        required: true
+        type: string
+      dry_run:
+        description: 'Prepare + validate + test only; do NOT commit, tag, or publish'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  prepare:
+    name: Bump, validate & test
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
+    steps:
+      - name: Guard — must run on STABLE
+        if: github.ref != 'refs/heads/STABLE'
+        run: |
+          echo "❌ cut-release must be run from the STABLE branch (got ${{ github.ref }})."
+          echo "   Re-run this workflow with 'Use workflow from: STABLE'."
+          exit 1
+
+      - name: Checkout STABLE
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: STABLE
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version: '1.24.13'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Validate target version
+        id: check
+        env:
+          TARGET: ${{ inputs.version }}
+        run: |
+          if ! [[ "$TARGET" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Not strict semver: '$TARGET' (expected X.Y.Z)"; exit 1
+          fi
+          CURRENT=$(tr -d '[:space:]' < VERSION)
+          echo "Current: $CURRENT  Target: $TARGET"
+          if [ "$TARGET" = "$CURRENT" ]; then
+            echo "❌ Target equals current version ($CURRENT). Nothing to release."; exit 1
+          fi
+          # Reject downgrades: highest of {current,target} must be target.
+          HIGHEST=$(printf '%s\n%s\n' "$CURRENT" "$TARGET" | sort -V | tail -1)
+          if [ "$HIGHEST" != "$TARGET" ]; then
+            echo "❌ Version regression: $CURRENT -> $TARGET"; exit 1
+          fi
+          if git ls-remote --tags origin "refs/tags/v$TARGET" | grep -q .; then
+            echo "❌ Tag v$TARGET already exists on origin. Pick a new version."; exit 1
+          fi
+
+      - name: Bump version everywhere
+        id: bump
+        env:
+          TARGET: ${{ inputs.version }}
+        run: |
+          printf '%s' "$TARGET" > VERSION
+          make sync-version
+          make compile-ts
+          echo "version=$TARGET" >> "$GITHUB_OUTPUT"
+
+      - name: Validate version consistency (fail closed)
+        run: bash scripts/validate-versions.sh
+
+      - name: Wire drift gate (Go <-> TS payload contracts)
+        run: |
+          make check-wire-drift
+          node scripts/check-sync-wire-drift.js
+
+      - name: Go tests (short)
+        run: go test -short ./...
+
+      - name: JS tests
+        run: npm run test:ext
+
+      # --- Dry run: show the diff, stop before any mutation ------------------
+      - name: Upload prepared diff (dry-run artifact)
+        if: ${{ inputs.dry_run }}
+        run: |
+          git diff > /tmp/cut-release-${{ inputs.version }}.diff
+          echo "Dry run — prepared bump for v${{ inputs.version }}. Diff:"
+          git --no-pager diff --stat
+
+      - name: Store dry-run diff
+        if: ${{ inputs.dry_run }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: cut-release-${{ inputs.version }}-diff
+          path: /tmp/cut-release-${{ inputs.version }}.diff
+
+      - name: Dry-run summary
+        if: ${{ inputs.dry_run }}
+        run: |
+          echo "## 🧪 Dry run for v${{ inputs.version }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Bump prepared, validated, and tested. Nothing committed, tagged, or published." >> "$GITHUB_STEP_SUMMARY"
+          echo "Re-run with dry_run unchecked to cut the release." >> "$GITHUB_STEP_SUMMARY"
+
+      # --- Real run: commit, push STABLE, tag --------------------------------
+      - name: Commit, push STABLE, and tag
+        if: ${{ !inputs.dry_run }}
+        env:
+          TARGET: ${{ inputs.version }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Stage tracked modifications only (a version bump never adds new files);
+          # this keeps any stray generated/untracked file out of the release commit.
+          git add -u
+          git commit -m "release: bump to $TARGET"
+          git push origin HEAD:STABLE
+          git tag "v$TARGET"
+          git push origin "v$TARGET"
+
+      - name: Release-cut summary
+        if: ${{ !inputs.dry_run }}
+        run: |
+          echo "## 🏷️ Cut v${{ inputs.version }} on STABLE" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Bumped, validated, tested, committed, pushed, and tagged. Publishing next…" >> "$GITHUB_STEP_SUMMARY"
+
+  # Delegates to the same pipeline the tag-triggered release.yml uses.
+  publish:
+    name: Publish
+    needs: prepare
+    if: ${{ !inputs.dry_run }}
+    uses: ./.github/workflows/release-publish.yml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

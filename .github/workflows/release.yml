@@ -115,137 +115,17 @@ jobs:
       - name: JS tests
         run: npm run test:ext
 
-  # Step 4: Build and publish
+  # Step 4: Build and publish (delegated to the reusable pipeline shared with
+  # cut-release.yml so both entry points build & publish identically).
   build-and-release:
     name: Build & Publish
-    runs-on: ubuntu-latest
     needs: [verify-tag, test]
     if: needs.verify-tag.result == 'success' && needs.test.result == 'success'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
-        with:
-          go-version: '1.24.13'
-
-      - name: Set up Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
-        with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-
-      # CRX build removed (requires local Chrome signing key)
-      
-      - name: Install Node dependencies
-        run: npm ci
-
-      - name: Build all platform binaries
-        run: make build
-        env:
-          VERSION: ${{ needs.verify-tag.outputs.version }}
-
-      - name: Verify binary version
-        run: |
-          ./dist/kaboom-agentic-browser-linux-x64 --version
-          BINARY_VERSION=$(./dist/kaboom-agentic-browser-linux-x64 --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
-          EXPECTED="${{ needs.verify-tag.outputs.version }}"
-
-          if [ "$BINARY_VERSION" != "$EXPECTED" ]; then
-            echo "❌ Binary version mismatch: $BINARY_VERSION (expected $EXPECTED)"
-            exit 1
-          fi
-
-          echo "✅ Binary version verified: $BINARY_VERSION"
-
-      - name: Compile TypeScript
-        run: make compile-ts
-
-      # CRX build removed (requires local Chrome signing key)
-
-      # Stages kaboom-agentic-browser + kaboom-hooks binaries into npm/*/bin/
-      # using the names whitelisted by each platform package's "files" field.
-      - name: Stage package binaries
-        run: make npm-binaries
-
-      - name: Publish packages
-        run: |
-          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
-
-          # Publish platform packages first
-          for pkg in darwin-arm64 darwin-x64 linux-arm64 linux-x64 win32-x64; do
-            echo "Publishing platform package: $pkg"
-            cd npm/$pkg
-            set +e
-            OUTPUT=$(npm publish --access public 2>&1)
-            STATUS=$?
-            set -e
-            echo "$OUTPUT"
-            if [ $STATUS -ne 0 ]; then
-              if echo "$OUTPUT" | grep -q "cannot publish over the previously published versions"; then
-                echo "Platform package already published for $pkg; continuing."
-              else
-                exit $STATUS
-              fi
-            fi
-            cd ../..
-          done
-
-          # Publish main package last
-          echo "Publishing aggregate package"
-          cd npm/kaboom-agentic-browser
-          set +e
-          OUTPUT=$(npm publish --access public 2>&1)
-          STATUS=$?
-          set -e
-          echo "$OUTPUT"
-          if [ $STATUS -ne 0 ]; then
-            if echo "$OUTPUT" | grep -q "cannot publish over the previously published versions"; then
-              echo "Aggregate package already published; continuing."
-            else
-              exit $STATUS
-            fi
-          fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Build extension zip
-        run: make extension-zip
-
-      - name: Generate checksums manifest
-        run: make checksums
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v2
-        with:
-          files: |
-            dist/kaboom-agentic-browser-darwin-arm64
-            dist/kaboom-agentic-browser-darwin-x64
-            dist/kaboom-agentic-browser-linux-arm64
-            dist/kaboom-agentic-browser-linux-x64
-            dist/kaboom-agentic-browser-win32-x64.exe
-            dist/kaboom-hooks-darwin-arm64
-            dist/kaboom-hooks-darwin-x64
-            dist/kaboom-hooks-linux-arm64
-            dist/kaboom-hooks-linux-x64
-            dist/kaboom-hooks-win32-x64.exe
-            dist/kaboom-extension-v*.zip
-            dist/checksums.txt
-          generate_release_notes: true
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Summary
-        run: |
-          VERSION="${{ needs.verify-tag.outputs.version }}"
-          echo "## 🚀 Release v$VERSION Complete" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Package Publication" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- Platform and aggregate packages published for v$VERSION." >> $GITHUB_STEP_SUMMARY
+    uses: ./.github/workflows/release-publish.yml
+    with:
+      version: ${{ needs.verify-tag.outputs.version }}
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   skip-nonstable-tag:
     name: Skip Non-STABLE Tags
