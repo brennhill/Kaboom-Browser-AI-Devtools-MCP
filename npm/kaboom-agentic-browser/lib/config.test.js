@@ -77,22 +77,27 @@ test('getClientById returns undefined for unknown id', () => {
 
 // --- getClientConfigPath ---
 
+// expandPath runs path.normalize, which emits backslashes on a Windows host even
+// for a darwin/linux platform arg. Compare on forward slashes so these assertions
+// hold on every runner, not just POSIX ones.
+const fwd = (p) => String(p).replace(/\\/g, '/');
+
 test('getClientConfigPath returns platform-specific path for claude-desktop on darwin', () => {
   const def = CLIENT_DEFINITIONS.find(c => c.id === 'claude-desktop');
   const result = getClientConfigPath(def, 'darwin');
-  assert.ok(result.includes('Library/Application Support/Claude/claude_desktop_config.json'));
+  assert.ok(fwd(result).includes('Library/Application Support/Claude/claude_desktop_config.json'));
 });
 
 test('getClientConfigPath returns platform-specific path for vscode on linux', () => {
   const def = CLIENT_DEFINITIONS.find(c => c.id === 'vscode');
   const result = getClientConfigPath(def, 'linux');
-  assert.ok(result.includes('.config/Code/User/mcp.json'));
+  assert.ok(fwd(result).includes('.config/Code/User/mcp.json'));
 });
 
 test('getClientConfigPath returns "all" path for cursor', () => {
   const def = CLIENT_DEFINITIONS.find(c => c.id === 'cursor');
   const result = getClientConfigPath(def);
-  assert.ok(result.includes('.cursor/mcp.json'));
+  assert.ok(fwd(result).includes('.cursor/mcp.json'));
 });
 
 test('getClientConfigPath returns null for CLI type', () => {
