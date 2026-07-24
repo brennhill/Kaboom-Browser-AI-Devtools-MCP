@@ -498,16 +498,16 @@ describe('tracked hover launcher', () => {
     // Net add/remove for the annotation event proves it is still installed. Old
     // code: added on mount, removed on unmount -> net 0. Fixed: added once at
     // enable, never removed on unmount -> net 1.
-    const added = window.addEventListener.mock.calls.filter(
+    const added = globalThis.window.addEventListener.mock.calls.filter(
       (c) => c.arguments[0] === 'kaboom-annotations-ready'
     ).length
-    const removed = window.removeEventListener.mock.calls.filter(
+    const removed = globalThis.window.removeEventListener.mock.calls.filter(
       (c) => c.arguments[0] === 'kaboom-annotations-ready'
     ).length
     assert.strictEqual(added - removed, 1, 'annotation listener must remain installed while the terminal panel is open')
 
     // Firing the submit event now writes a prompt into the open panel.
-    const handlerCall = window.addEventListener.mock.calls.find((c) => c.arguments[0] === 'kaboom-annotations-ready')
+    const handlerCall = globalThis.window.addEventListener.mock.calls.find((c) => c.arguments[0] === 'kaboom-annotations-ready')
     handlerCall.arguments[1]({
       detail: {
         annotations: [{ text: 'Make the header bigger', selector: 'h1', rect: { x: 1, y: 2, width: 3, height: 4 } }],
