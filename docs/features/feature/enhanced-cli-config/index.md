@@ -4,11 +4,13 @@ feature_id: feature-enhanced-cli-config
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-24
 code_paths:
   - Makefile
   - scripts/build-crx.js
   - cmd/browser-agent/native_install.go
+  - npm/kaboom-agentic-browser/lib/extension.js
+  - npm/kaboom-agentic-browser/lib/output.js
   - scripts/install.sh
   - scripts/install.ps1
   - scripts/uninstall.sh
@@ -23,7 +25,9 @@ code_paths:
   - docs/mcp-install-guide.md
 test_paths:
   - cmd/browser-agent/native_install_test.go
+  - cmd/browser-agent/native_install_open_test.go
   - npm/kaboom-agentic-browser/lib/config.test.js
+  - npm/kaboom-agentic-browser/lib/extension.test.js
   - npm/kaboom-agentic-browser/lib/install.test.js
   - npm/kaboom-agentic-browser/lib/uninstall.test.js
   - tests/packaging/kaboom-packaging-branding.test.js

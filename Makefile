@@ -452,7 +452,7 @@ quality-gate: check-file-length lint lint-hardening lint-dead lint-circular lint
 test-upgrade-guards:
 	go test ./cmd/browser-agent -run 'TestConnectWithRetriesRejectsVersionMismatch' -count=1
 	node --test scripts/install-upgrade-regression.contract.test.mjs
-	node --test npm/kaboom-agentic-browser/lib/kill-daemon.test.js
+	node --test npm/kaboom-agentic-browser/lib/*.test.js
 	node --test scripts/verify-platform-binaries.test.mjs
 	@if [ -d pypi/kaboom-agentic-browser/tests ]; then \
 		python3 -m unittest discover -s pypi/kaboom-agentic-browser/tests -p 'test_*.py'; \

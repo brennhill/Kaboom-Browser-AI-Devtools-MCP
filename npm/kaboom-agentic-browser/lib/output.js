@@ -94,6 +94,20 @@ function installResult(result) {
     output += `\nℹ️  Not configured in: ${result.notFound.join(', ')}\n`;
   }
 
+  // The browser extension is the one step the installer cannot click for the
+  // user, so give them the EXACT folder to load — not a vague "the extension".
+  if (result.extensionDir) {
+    output += '\n🧩 LOAD THE BROWSER EXTENSION (one-time):\n';
+    output += '   1) Open  chrome://extensions  (or brave://extensions, edge://extensions)\n';
+    output += '   2) Turn on "Developer mode" (top-right toggle)\n';
+    output += '   3) Click "Load unpacked" and select this exact folder:\n\n';
+    output += `        ${result.extensionDir}\n\n`;
+    if (result.extensionExists === false) {
+      output += '   ⚠️  That folder is not present yet — reinstall, or set KABOOM_EXTENSION_DIR to the\n';
+      output += '       unpacked extension you want to load.\n';
+    }
+  }
+
   return output;
 }
 

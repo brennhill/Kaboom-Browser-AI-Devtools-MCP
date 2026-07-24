@@ -8,6 +8,7 @@ const os = require('os');
 const config = require('./config');
 const output = require('./output');
 const install = require('./install');
+const extension = require('./extension');
 const skills = require('./skills');
 const doctor = require('./doctor');
 const uninstall = require('./uninstall');
@@ -64,6 +65,12 @@ async function installCommand(options) {
         console.log(`ℹ️  Dry run: No files will be written\n`);
       }
       console.log(output.installResult(result));
+      // Reveal the extension folder so "Load unpacked" is one selection away.
+      // Best-effort and opt-out via KABOOM_NO_OPEN; the exact path is printed
+      // above regardless, so nothing is lost when this cannot run.
+      if (!options.dryRun && extension.openExtensionDir(result.extensionDir)) {
+        console.log('📂 Opened the extension folder for you — just select it in "Load unpacked".');
+      }
       if (!options.dryRun) {
         const skillInstall = await skills.installBundledSkills({
           verbose: options.verbose,
