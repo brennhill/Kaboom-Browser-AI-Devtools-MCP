@@ -1,6 +1,6 @@
 {
   "name": "kaboom-browser-ai-devtools-mcp",
-  "version": "0.8.5",
+  "version": "0.8.6",
   "private": true,
   "type": "module",
   "scripts": {
