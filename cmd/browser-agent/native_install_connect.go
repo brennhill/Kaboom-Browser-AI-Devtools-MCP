@@ -165,8 +165,11 @@ func runExtensionConnectWait(port int, extDir string) {
 	if installWaitDisabled() || !isTerminal(os.Stderr) {
 		return
 	}
-	// First Ctrl-C cancels the wait (a real "skip"); NotifyContext restores the
-	// default SIGINT after the first signal, so a second Ctrl-C still force-quits.
+	// Ctrl-C cancels the wait (a real "skip"), observed at the top of the next
+	// poll cycle (bounded by one fetch+sleep). NotifyContext suppresses the
+	// default SIGINT exit until the deferred stop() runs, so default Ctrl-C
+	// behavior is restored only once this function returns — a second Ctrl-C
+	// during the (short) abort window is absorbed, not a force-quit.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 	stderrf("\n\033[1;33m⏳ Waiting for the browser extension to connect (Ctrl-C to skip)…\033[0m\n")

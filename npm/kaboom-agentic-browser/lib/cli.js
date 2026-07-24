@@ -133,9 +133,10 @@ async function installCommand(options) {
       }
       console.log(output.installResult(result));
       // Reveal the extension folder so "Load unpacked" is one selection away.
-      // Best-effort and opt-out via KABOOM_NO_OPEN; the exact path is printed
-      // above regardless, so nothing is lost when this cannot run.
-      if (!options.dryRun && extension.openExtensionDir(result.extensionDir)) {
+      // Interactive installs only, so scripted/CI runs never pop a file-manager
+      // window (matches the browser-open gate below). Best-effort and opt-out via
+      // KABOOM_NO_OPEN; the exact path is printed above regardless.
+      if (!options.dryRun && isInteractiveInstall() && extension.openExtensionDir(result.extensionDir)) {
         console.log('📂 Opened the extension folder for you — just select it in "Load unpacked".');
       }
       // Also open the browser straight to its extensions page (the folder opener

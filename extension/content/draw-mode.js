@@ -1767,15 +1767,35 @@ export function deactivateAndSendResults() {
 
       // Dispatch CustomEvent so content-script peers (e.g. terminal launcher)
       // can auto-send annotation summaries without round-tripping through background.
+      // Stamp it with the per-session channel token the launcher published to
+      // extension-only storage (StorageKey.ANNOTATION_CHANNEL_NONCE) so the
+      // receiver can tell an extension-origin event from a page-forged one — the
+      // `window` event target is shared with the page.
+      const emitAnnotationsReady = (nonce) => {
+        try {
+          window.dispatchEvent(new CustomEvent('kaboom-annotations-ready', {
+            detail: {
+              annotations: result.annotations,
+              page_url: pageUrl,
+              nonce: nonce || ''
+            }
+          }))
+        } catch {
+          // CustomEvent dispatch failed — non-critical
+        }
+      }
       try {
-        window.dispatchEvent(new CustomEvent('kaboom-annotations-ready', {
-          detail: {
-            annotations: result.annotations,
-            page_url: pageUrl
-          }
-        }))
+        // Key literal must match StorageKey.ANNOTATION_CHANNEL_NONCE in lib/constants.ts.
+        if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+          chrome.storage.local.get('kaboom_annotation_channel_nonce', (res) => {
+            emitAnnotationsReady(res && res['kaboom_annotation_channel_nonce'])
+          })
+        } else {
+          emitAnnotationsReady('')
+        }
       } catch {
-        // CustomEvent dispatch failed — non-critical
+        // storage unavailable — dispatch without a token (receiver will ignore it)
+        emitAnnotationsReady('')
       }
     }, 300)
   }

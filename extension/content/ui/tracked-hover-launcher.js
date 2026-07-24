@@ -33,6 +33,9 @@ let recordingStorageListener = null;
 let recordingStorageUnsubscribe = null;
 let runtimeListenerInstalled = false;
 let annotationListenerInstalled = false;
+// Per-session provenance token for the annotation→terminal channel. Published to
+// extension-only storage on enable so draw-mode can echo it; validated on receipt.
+let annotationChannelNonce = null;
 let terminalVisibilityUnsubscribe = null;
 function clearHideTimer() {
     if (!hideTimer)
@@ -168,30 +171,43 @@ function applyVisibilityFromState() {
     }
     unmountLauncher();
 }
+// Strip C0/C1 control characters (ESC, backspace, bell, CR/LF, …) before writing
+// annotation text to the xterm. Without this, a pasted label could drive terminal
+// escape sequences (OSC title hijack) or backspace over the prompt text — including
+// the analyze(...) instruction — silently changing what the agent is told.
+function sanitizeForTerminal(s) {
+    // eslint-disable-next-line no-control-regex -- deliberately targeting control chars
+    return s.replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ');
+}
 function formatAnnotationsForTerminal(annotations, pageUrl) {
     if (annotations.length === 0)
         return '';
     const lines = [
         'The user just annotated the page with the following feedback. Please review and implement these changes:',
         '',
-        `Page: ${pageUrl}`,
+        `Page: ${sanitizeForTerminal(pageUrl)}`,
         ''
     ];
     for (let i = 0; i < annotations.length; i++) {
         const a = annotations[i];
-        const text = a.text || '(no label)';
-        const sel = a.selector || 'unknown';
+        const text = sanitizeForTerminal(a.text || '(no label)');
+        const sel = sanitizeForTerminal(a.selector || 'unknown');
         const r = a.rect;
         const loc = r ? ` (${Math.round(r.x)},${Math.round(r.y)} ${Math.round(r.width)}x${Math.round(r.height)})` : '';
         lines.push(`${i + 1}. "${text}" — ${sel}${loc}`);
     }
     lines.push('');
     lines.push('The annotations are available via analyze(what="annotations").');
-    lines.push('');
     return lines.join('\n');
 }
 function handleAnnotationsReady(event) {
     const detail = event.detail;
+    // Provenance gate: only act on events carrying the per-session token we
+    // published to extension-only storage. `window` is shared with the page, so a
+    // hostile page can dispatch this event — but it cannot read chrome.storage, so
+    // it cannot supply a valid nonce. Fail closed until the nonce is established.
+    if (!annotationChannelNonce || detail?.nonce !== annotationChannelNonce)
+        return;
     if (!detail?.annotations?.length)
         return;
     if (!isTerminalVisible())
@@ -200,17 +216,30 @@ function handleAnnotationsReady(event) {
     if (text)
         writeToTerminal(text);
 }
-function installAnnotationListener() {
+function newAnnotationNonce() {
+    const c = globalThis.crypto;
+    if (c && typeof c.randomUUID === 'function')
+        return c.randomUUID();
+    // Same-session channel token; only needs to be unguessable by a page, which
+    // cannot observe it regardless of source.
+    return `n-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+async function installAnnotationListener() {
     if (annotationListenerInstalled)
         return;
     annotationListenerInstalled = true;
+    // Publish the channel token to extension-only storage so draw-mode can echo it.
+    annotationChannelNonce = newAnnotationNonce();
+    await setLocal(StorageKey.ANNOTATION_CHANNEL_NONCE, annotationChannelNonce);
     window.addEventListener('kaboom-annotations-ready', handleAnnotationsReady);
 }
-function uninstallAnnotationListener() {
+async function uninstallAnnotationListener() {
     if (!annotationListenerInstalled)
         return;
     annotationListenerInstalled = false;
     window.removeEventListener('kaboom-annotations-ready', handleAnnotationsReady);
+    annotationChannelNonce = null;
+    await removeLocal(StorageKey.ANNOTATION_CHANNEL_NONCE);
 }
 async function startDrawMode() {
     try {
@@ -675,10 +704,10 @@ export async function setTrackedHoverLauncherEnabled(enabled) {
     // moment an annotation needs to be written into the panel. Binding it to the
     // launcher's lifecycle meant annotations never reached an open terminal.
     if (enabled) {
-        installAnnotationListener();
+        await installAnnotationListener();
     }
     else {
-        uninstallAnnotationListener();
+        await uninstallAnnotationListener();
     }
     await syncHiddenStateFromStorage();
     applyVisibilityFromState();

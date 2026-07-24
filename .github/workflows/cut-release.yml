@@ -111,9 +111,11 @@ jobs:
       # --- Dry run: show the diff, stop before any mutation ------------------
       - name: Upload prepared diff (dry-run artifact)
         if: ${{ inputs.dry_run }}
+        env:
+          TARGET: ${{ inputs.version }}
         run: |
-          git diff > /tmp/cut-release-${{ inputs.version }}.diff
-          echo "Dry run — prepared bump for v${{ inputs.version }}. Diff:"
+          git diff > "/tmp/cut-release-$TARGET.diff"
+          echo "Dry run — prepared bump for v$TARGET. Diff:"
           git --no-pager diff --stat
 
       - name: Store dry-run diff
@@ -125,8 +127,10 @@ jobs:
 
       - name: Dry-run summary
         if: ${{ inputs.dry_run }}
+        env:
+          TARGET: ${{ inputs.version }}
         run: |
-          echo "## 🧪 Dry run for v${{ inputs.version }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "## 🧪 Dry run for v$TARGET" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "Bump prepared, validated, and tested. Nothing committed, tagged, or published." >> "$GITHUB_STEP_SUMMARY"
           echo "Re-run with dry_run unchecked to cut the release." >> "$GITHUB_STEP_SUMMARY"
@@ -143,14 +147,19 @@ jobs:
           # this keeps any stray generated/untracked file out of the release commit.
           git add -u
           git commit -m "release: bump to $TARGET"
-          git push origin HEAD:STABLE
           git tag "v$TARGET"
-          git push origin "v$TARGET"
+          # Push the bump commit and the tag atomically: either both land or
+          # neither does. A non-atomic push that lands the commit but fails on the
+          # tag would leave STABLE bumped-but-untagged, which the guards then read
+          # as "nothing to release" and wedge every re-run.
+          git push --atomic origin HEAD:STABLE "refs/tags/v$TARGET"
 
       - name: Release-cut summary
         if: ${{ !inputs.dry_run }}
+        env:
+          TARGET: ${{ inputs.version }}
         run: |
-          echo "## 🏷️ Cut v${{ inputs.version }} on STABLE" >> "$GITHUB_STEP_SUMMARY"
+          echo "## 🏷️ Cut v$TARGET on STABLE" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "Bumped, validated, tested, committed, pushed, and tagged. Publishing next…" >> "$GITHUB_STEP_SUMMARY"
 

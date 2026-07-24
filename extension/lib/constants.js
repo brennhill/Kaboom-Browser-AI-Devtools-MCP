@@ -172,6 +172,10 @@ export const StorageKey = {
     ACTION_RECORDING: 'kaboom_action_recording',
     RECORDING: 'kaboom_recording',
     TRACKED_HOVER_LAUNCHER_HIDDEN: 'kaboom_tracked_hover_launcher_hidden',
+    // Per-session token the tracked-hover launcher publishes so the draw-mode
+    // content script can prove a kaboom-annotations-ready event is extension-origin
+    // (chrome.storage is invisible to page scripts, so a page cannot read/forge it).
+    ANNOTATION_CHANNEL_NONCE: 'kaboom_annotation_channel_nonce',
     PENDING_RECORDING: 'kaboom_pending_recording',
     PENDING_MIC_RECORDING: 'kaboom_pending_mic_recording',
     MIC_GRANTED: 'kaboom_mic_granted',

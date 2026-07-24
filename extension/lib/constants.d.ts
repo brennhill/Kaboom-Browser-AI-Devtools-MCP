@@ -111,6 +111,7 @@ export declare const StorageKey: {
     readonly ACTION_RECORDING: "kaboom_action_recording";
     readonly RECORDING: "kaboom_recording";
     readonly TRACKED_HOVER_LAUNCHER_HIDDEN: "kaboom_tracked_hover_launcher_hidden";
+    readonly ANNOTATION_CHANNEL_NONCE: "kaboom_annotation_channel_nonce";
     readonly PENDING_RECORDING: "kaboom_pending_recording";
     readonly PENDING_MIC_RECORDING: "kaboom_pending_mic_recording";
     readonly MIC_GRANTED: "kaboom_mic_granted";
