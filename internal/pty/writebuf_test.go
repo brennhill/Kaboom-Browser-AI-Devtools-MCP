@@ -4,6 +4,8 @@ package pty
 
 import (
 	"bytes"
+	"io"
+	"sync"
 	"testing"
 )
 
@@ -130,5 +132,29 @@ func TestWriteBuffer_LargeWrite(t *testing.T) {
 
 	if dest.Len() != len(data) {
 		t.Fatalf("expected %d drained bytes, got %d", len(data), dest.Len())
+	}
+}
+
+func TestWriteBuffer_ConcurrentWriteDuringClose(t *testing.T) {
+	// Write signals wb.notify and Close closes it: a keystroke arriving as the
+	// shell exits pits handlers.go's Write against relay.go's deferred Close on
+	// the same channel. Unsynchronized, that is a data race the detector flags
+	// and can panic with "send on closed channel". Many rounds with several
+	// concurrent writers make the interleaving reliable under `go test -race`.
+	for round := 0; round < 300; round++ {
+		wb := NewWriteBuffer(io.Discard)
+		var wg sync.WaitGroup
+		for w := 0; w < 4; w++ {
+			wg.Add(1)
+			go func() { // lint:allow-bare-goroutine — bounded by the loop, joined via wg
+				defer wg.Done()
+				for i := 0; i < 25; i++ {
+					_, _ = wb.Write([]byte("x"))
+				}
+			}()
+		}
+		// Close concurrently with the in-flight writers — the whole point.
+		_ = wb.Close()
+		wg.Wait()
 	}
 }
