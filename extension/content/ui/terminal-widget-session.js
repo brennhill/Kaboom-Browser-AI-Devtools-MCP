@@ -130,8 +130,19 @@ export async function listTerminalDirs(path) {
     catch {
         return { ok: false, reason: 'unreachable' }; // No answer at all.
     }
-    if (resp.status === 404)
-        return { ok: false, reason: 'outdated' };
+    if (resp.status === 404) {
+        // 404 is ambiguous: a daemon that predates /terminal/dirs 404s the whole
+        // route with Chrome's plain-text ServeMux default (no error body), while a
+        // current daemon 404s a *missing directory* with {"error":"not_found"}.
+        // Telling a user whose folder was deleted to update a current daemon sends
+        // them fixing the wrong thing, so distinguish by the presence of our body.
+        const daemonError = await readDaemonError(resp);
+        return { ok: false, reason: daemonError === 'not_found' ? 'not_found' : 'outdated' };
+    }
+    // 403 is a reachable, current daemon that cannot read the folder (permissions),
+    // which is a different problem — and message — from a daemon that is down.
+    if (resp.status === 403)
+        return { ok: false, reason: 'denied' };
     if (!resp.ok)
         return { ok: false, reason: 'unreachable' };
     try {
@@ -148,6 +159,21 @@ export async function listTerminalDirs(path) {
     }
     catch {
         return { ok: false, reason: 'unreachable' }; // Reached it, but the body was unusable.
+    }
+}
+/**
+ * Read the daemon's structured `error` code from a response body, or '' when the
+ * body is not our JSON shape — which is exactly how an old daemon's plain-text
+ * 404 (no `/terminal/dirs` route) is told apart from a current daemon's
+ * `{"error":"not_found"}` for a directory that does not exist.
+ */
+async function readDaemonError(resp) {
+    try {
+        const body = await resp.json();
+        return typeof body.error === 'string' ? body.error : '';
+    }
+    catch {
+        return ''; // Plain-text / empty body — not one of our structured errors.
     }
 }
 /** Persist the terminal root folder (the cwd new sessions spawn in). */

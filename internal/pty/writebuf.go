@@ -46,17 +46,19 @@ func NewWriteBuffer(w io.Writer) *WriteBuffer {
 // Write appends data to the buffer without blocking. Returns ErrWriteBufferFull
 // if the buffer exceeds the backpressure cap.
 func (wb *WriteBuffer) Write(data []byte) (int, error) {
-	wb.mu.Lock() // lint:manual-unlock — multiple early-return paths
+	// The notify signal is sent while holding mu, together with the `closed`
+	// check: Close closes wb.notify under the same lock, so a Write can never
+	// send on an already-closed channel (a data race, and a "send on closed
+	// channel" panic). The send is non-blocking, so holding mu across it is cheap.
+	wb.mu.Lock()
+	defer wb.mu.Unlock()
 	if wb.closed {
-		wb.mu.Unlock()
 		return 0, ErrWriteBufferFull
 	}
 	if len(wb.buf)+len(data) > wb.maxSize {
-		wb.mu.Unlock()
 		return 0, ErrWriteBufferFull
 	}
 	wb.buf = append(wb.buf, data...)
-	wb.mu.Unlock()
 	select {
 	case wb.notify <- struct{}{}:
 	default:
@@ -128,9 +130,12 @@ func (wb *WriteBuffer) Close() error {
 		return nil
 	}
 	wb.closed = true
+	// Close notify under mu, paired with Write's guarded send above, so the two
+	// never race. drain receives the close without needing mu, so this cannot
+	// deadlock; flushAll (which does take mu) only runs once mu is released below.
+	close(wb.notify)
 	wb.mu.Unlock()
 
-	close(wb.notify)
 	<-wb.done
 
 	// Final synchronous flush.

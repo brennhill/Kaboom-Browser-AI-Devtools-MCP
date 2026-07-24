@@ -4,19 +4,24 @@ feature_id: feature-terminal
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-24
 code_paths:
   - src/lib/brand.ts
-  - cmd/browser-agent/terminal_handlers.go
-  - cmd/browser-agent/terminal_server.go
-  - cmd/browser-agent/terminal_assets/terminal.html
+  - cmd/browser-agent/internal/terminal/handlers.go
+  - cmd/browser-agent/internal/terminal/dirs.go
+  - cmd/browser-agent/internal/terminal/server.go
+  - cmd/browser-agent/internal/terminal/static.go
   - extension/sidepanel.html
   - extension/sidepanel.js
   - src/content/ui/terminal-panel-bridge.ts
   - src/content/ui/terminal-widget-session.ts
   - src/content/ui/terminal-widget-types.ts
-  - src/content/ui/terminal-widget-ui.ts
+  - src/content/ui/terminal-root-folder.ts
+  - src/content/ui/terminal-panel-states.ts
+  - src/content/ui/terminal-write-guard.ts
   - src/content/ui/tracked-hover-launcher.ts
+  - src/background/terminal-panel.ts
+  - src/background/side-panel-availability.ts
   - src/background/message-handlers.ts
   - src/types/runtime-messages.ts
   - src/sidepanel.ts
@@ -24,10 +29,16 @@ code_paths:
   - internal/pty/session.go
 test_paths:
   - tests/extension/brand-metadata.test.js
-  - cmd/browser-agent/terminal_handlers_test.go
+  - cmd/browser-agent/internal/terminal/dirs_test.go
+  - cmd/browser-agent/internal/terminal/handlers_test.go
   - tests/extension/sidepanel-terminal.test.js
   - tests/extension/terminal-widget-session-branding.test.js
-  - tests/extension/terminal-widget-ui-branding.test.js
+  - tests/extension/terminal-root-folder.test.js
+  - tests/extension/terminal-session-start-errors.test.js
+  - tests/extension/terminal-panel-presence.test.js
+  - tests/extension/terminal-panel-close-and-scope.test.js
+  - tests/extension/terminal-panel-open-failure.test.js
+  - tests/extension/terminal-panel-gesture-entrypoints.test.js
   - tests/extension/tracked-hover-launcher.test.js
   - tests/extension/message-handlers.test.js
   - internal/pty/manager_test.go

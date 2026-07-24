@@ -278,6 +278,41 @@ describe('browsing for a folder', () => {
     assert.match(text, /type a path/i, 'typing a path still works without the browse endpoint')
   })
 
+  test('a missing folder (404 with a not_found body) is not mistaken for an outdated daemon', async () => {
+    // dirs.go 404s a *missing directory* with {"error":"not_found"}, while a
+    // daemon that predates the endpoint 404s the whole route with no such body.
+    // Telling a user whose saved root was deleted to "update Kaboom" sends them
+    // fixing a daemon that is perfectly current — the folder is just gone.
+    fetchHandler = () => ({ ok: false, status: 404, json: async () => ({ error: 'not_found', path: '/Users/dev/gone' }) })
+    const { createRootFolderBar } = await loadBar()
+    createRootFolderBar({ initialRoot: '/Users/dev/gone', onApply: () => {} })
+
+    byId('kaboom-terminal-root-folder-browse').dispatch('click')
+    await new Promise((r) => setTimeout(r, 0))
+
+    const text = allRows(byId('kaboom-terminal-root-folder-picker')).map((r) => r.textContent).join(' ')
+    assert.doesNotMatch(text, /update Kaboom/i, 'the daemon is current — the folder is just gone, not the endpoint')
+    assert.match(text, /exist|not found|no longer/i, 'say the folder is missing, not that the daemon is old')
+    assert.match(text, /type a path/i, 'typing a path still works')
+  })
+
+  test('an unreadable folder (403) is not mistaken for an unreachable daemon', async () => {
+    // Navigating into a folder the daemon cannot read returns 403. The daemon is
+    // up and answering, so "could not reach the daemon" is a wrong diagnosis that
+    // sends the user chasing a connection problem that does not exist.
+    fetchHandler = () => ({ ok: false, status: 403, json: async () => ({ error: 'read_failed', path: '/root' }) })
+    const { createRootFolderBar } = await loadBar()
+    createRootFolderBar({ initialRoot: '/root', onApply: () => {} })
+
+    byId('kaboom-terminal-root-folder-browse').dispatch('click')
+    await new Promise((r) => setTimeout(r, 0))
+
+    const text = allRows(byId('kaboom-terminal-root-folder-picker')).map((r) => r.textContent).join(' ')
+    assert.doesNotMatch(text, /[Cc]ould not reach/, 'the daemon answered; do not claim otherwise')
+    assert.match(text, /read|permission/i, 'say the folder cannot be read')
+    assert.match(text, /type a path/i, 'typing a path still works')
+  })
+
   test('a truncated listing says so', async () => {
     // Showing part of a directory silently reads as showing all of it.
     fetchHandler = () => okJson({ ...HOME_LISTING, truncated: true })

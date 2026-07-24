@@ -10,6 +10,7 @@ import { resolveTerminalWorkspaceTarget } from './tab-state.js'
 import { enableTerminalPanelForTab, SIDE_PANEL_PATH } from './side-panel-availability.js'
 export { syncTerminalPanelAvailability } from './side-panel-availability.js'
 import { TERMINAL_PANEL_PORT } from '../lib/constants.js'
+import { errorMessage } from '../lib/error-utils.js'
 
 /**
  * The live panel document's port, or null when no panel is open.
@@ -83,10 +84,6 @@ export function toggleTerminalSidePanel(
     return closeTerminalSidePanel()
   }
   return openTerminalSidePanel(tabId)
-}
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
 }
 
 /**

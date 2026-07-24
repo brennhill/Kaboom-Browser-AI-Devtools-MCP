@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -150,6 +151,51 @@ func TestDirs_ExpandsTilde(t *testing.T) {
 
 	if listing.Path != filepath.Clean(home) {
 		t.Fatalf("path = %q, want home %q", listing.Path, home)
+	}
+}
+
+func TestResolveDirRequest_ExpandsTildeSubdir(t *testing.T) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Skip("no home directory in this environment")
+	}
+
+	// "~/dev/project" is what a user types; expanding only a bare "~" would leave
+	// the sub-path resolving against the daemon's cwd instead of the user's home.
+	got, ok := resolveDirRequest("~/dev/project")
+	if !ok {
+		t.Fatal("~/dev/project should resolve")
+	}
+	want := filepath.Join(home, "dev", "project")
+	if got != want {
+		t.Fatalf("resolveDirRequest(~/dev/project) = %q, want %q", got, want)
+	}
+}
+
+func TestDirs_UnreadableDirectoryIsForbidden(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("directory read bits do not gate listing on Windows")
+	}
+	if os.Geteuid() == 0 {
+		t.Skip("root bypasses directory read permissions")
+	}
+	root := t.TempDir()
+	locked := filepath.Join(root, "locked")
+	if err := os.Mkdir(locked, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := os.Chmod(locked, 0o000); err != nil {
+		t.Fatalf("chmod: %v", err)
+	}
+	// Restore perms so t.TempDir's cleanup can remove the tree.
+	t.Cleanup(func() { _ = os.Chmod(locked, 0o755) })
+
+	// A directory that exists but cannot be read is a permission fault, not a
+	// missing path — the picker shows an error rather than an empty listing.
+	status, _ := listDirs(t, "?path="+locked)
+
+	if status != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403 for an unreadable directory", status)
 	}
 }
 
