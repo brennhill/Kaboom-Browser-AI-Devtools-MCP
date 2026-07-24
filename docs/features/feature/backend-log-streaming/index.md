@@ -4,7 +4,7 @@ feature_id: feature-backend-log-streaming
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-24
 code_paths:
   - internal/capture/accessor.go
   - internal/capture/buffer_clear.go
@@ -56,6 +56,8 @@ code_paths:
   - src/lib/daemon-http.ts
   - src/lib/network.ts
   - src/lib/websocket.ts
+  - src/early-patch.ts
+  - src/lib/safe-global-patch.ts
 test_paths:
   - internal/capture/sync_test.go
   - internal/capture/sync_test_helpers_test.go
@@ -67,6 +69,9 @@ test_paths:
   - tests/extension/sync-client.test.js
   - tests/extension/server.test.js
   - tests/extension/background-batching.test.js
+  - tests/extension/early-patch-hardened-restore.test.js
+  - tests/extension/early-patch-branding.test.js
+  - tests/extension/safe-global-patch.test.js
 last_verified_version: 0.8.1
 last_verified_date: 2026-04-13
 ---

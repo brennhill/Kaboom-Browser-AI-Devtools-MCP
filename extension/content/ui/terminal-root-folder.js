@@ -152,6 +152,24 @@ function pickerRow(text, color) {
     return row;
 }
 /**
+ * The user-facing reason a listing failed. Each maps to a distinct cause so the
+ * message points at the actual fix — every one still ends in "type a path"
+ * because the field keeps working regardless of why the browser could not.
+ */
+function pickerFailureMessage(reason) {
+    switch (reason) {
+        case 'outdated':
+            return 'This Kaboom daemon is too old to browse folders — update Kaboom, or type a path';
+        case 'not_found':
+            return 'That folder no longer exists — type a path, or browse from one that does';
+        case 'denied':
+            return 'That folder can’t be read (permission denied) — type a path instead';
+        case 'unreachable':
+        default:
+            return 'Could not reach the Kaboom daemon — type a path instead';
+    }
+}
+/**
  * Render one level of the directory tree into `picker`.
  *
  * Navigation reuses the same element rather than opening a dialog: the panel is
@@ -161,14 +179,11 @@ async function openPicker(picker, path, onChoose) {
     picker.replaceChildren(pickerRow('Loading…', '#787c99'));
     const result = await listTerminalDirs(path);
     if (!result.ok) {
-        // Typing a path still works, so both of these are degraded states, not dead
-        // ends — but an outdated daemon (reachable, 404) is a different problem from
-        // one that is down, and conflating them sends the user debugging the wrong
-        // thing (the daemon works — the folder browser was added after their build).
-        const message = result.reason === 'outdated'
-            ? 'This Kaboom daemon is too old to browse folders — update Kaboom, or type a path'
-            : 'Could not reach the Kaboom daemon — type a path instead';
-        picker.replaceChildren(pickerRow(message, '#f7768e'));
+        // Typing a path still works, so every one of these is a degraded state, not a
+        // dead end — but each has a different cause, and conflating them sends the
+        // user debugging the wrong thing (updating a daemon that is current, or
+        // chasing a connection that is fine).
+        picker.replaceChildren(pickerRow(pickerFailureMessage(result.reason), '#f7768e'));
         return;
     }
     const listing = result.listing;

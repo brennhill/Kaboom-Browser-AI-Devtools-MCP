@@ -32,10 +32,15 @@ export interface TerminalDirListing {
 /**
  * Why a directory listing could not be produced.
  * - `unreachable`: the daemon did not answer (down, refused, timed out).
- * - `outdated`: the daemon answered 404 — it predates `/terminal/dirs`. A version
- *   problem, not a connectivity one, so it needs a different message and fix.
+ * - `outdated`: the daemon answered 404 with no error body — it predates
+ *   `/terminal/dirs`. A version problem, not a connectivity or path one.
+ * - `not_found`: the daemon answered 404 *with* a `not_found` error body — it has
+ *   the endpoint, but the requested folder does not exist (e.g. a saved root that
+ *   was since deleted). A current daemon, so telling the user to update it is wrong.
+ * - `denied`: the daemon answered 403 — the folder exists but cannot be read
+ *   (permissions). Also a reachable, current daemon.
  */
-export type TerminalDirsFailure = 'unreachable' | 'outdated';
+export type TerminalDirsFailure = 'unreachable' | 'outdated' | 'not_found' | 'denied';
 /** The listing, or the reason it could not be fetched. */
 export type TerminalDirsResult = {
     ok: true;

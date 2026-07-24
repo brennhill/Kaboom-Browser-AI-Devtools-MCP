@@ -122,7 +122,13 @@
     Object.defineProperty(EarlyWebSocket, 'CLOSING', { value: 2, writable: false })
     Object.defineProperty(EarlyWebSocket, 'CLOSED', { value: 3, writable: false })
 
-    safeAssignGlobal(window, 'WebSocket', EarlyWebSocket as unknown as typeof WebSocket)
+    if (!safeAssignGlobal(window, 'WebSocket', EarlyWebSocket as unknown as typeof WebSocket)) {
+      // Read-only WebSocket: leave the page's own alone and skip early WS capture.
+      // Mirror the fetch path — drop the stashes so inject's Phase 2 does not adopt
+      // a shim we never installed, and so the buffer is not left dangling.
+      delete window.__KABOOM_ORIGINAL_WS__
+      delete window.__KABOOM_EARLY_WS__
+    }
   }
 
   // =========================================================================
@@ -293,9 +299,11 @@
         delete window.__KABOOM_ORIGINAL_XHR_SEND__
       }
 
-      // Restore WebSocket
+      // Restore WebSocket through the same guard as the install and the fetch
+      // restore: a plain assignment throws on a non-configurable read-only global,
+      // and that throw here would abort the rest of the cleanup and leak the buffer.
       if (window.__KABOOM_ORIGINAL_WS__) {
-        window.WebSocket = window.__KABOOM_ORIGINAL_WS__
+        safeAssignGlobal(window, 'WebSocket', window.__KABOOM_ORIGINAL_WS__)
         delete window.__KABOOM_ORIGINAL_WS__
       }
       delete window.__KABOOM_EARLY_WS__
