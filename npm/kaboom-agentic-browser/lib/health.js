@@ -162,7 +162,8 @@ function phaseOf(snapshot) {
  * @param {Function} [opts.now]      () => ms.
  * @param {Function} [opts.sleep]    (ms) => Promise.
  * @param {Function} [opts.onState]  ({phase, snapshot, elapsedMs}) => void.
- * @returns {Promise<{connected: boolean, reason: 'connected'|'timeout',
+ * @param {AbortSignal} [opts.signal] Abort to stop waiting (Ctrl-C "skip").
+ * @returns {Promise<{connected: boolean, reason: 'connected'|'timeout'|'aborted',
  *   lastPhase: string, snapshot: HealthSnapshot, elapsedMs: number}>}
  */
 async function waitForExtension(opts = {}) {
@@ -174,12 +175,19 @@ async function waitForExtension(opts = {}) {
   const now = opts.now || (() => Date.now());
   const sleep = opts.sleep || ((ms) => new Promise((r) => setTimeout(r, ms)));
   const onState = typeof opts.onState === 'function' ? opts.onState : () => {};
+  const signal = opts.signal;
 
   const start = now();
   let snapshot = emptySnapshot(false);
   let lastPhase = 'daemon_unreachable';
 
   for (;;) {
+    // Checked at the loop top so an abort (Ctrl-C) is honored within one poll
+    // cycle without needing an interruptible sleep. Bounded latency (<= pollMs)
+    // is fine for a manual skip.
+    if (signal && signal.aborted) {
+      return { connected: false, reason: 'aborted', lastPhase, snapshot, elapsedMs: now() - start };
+    }
     snapshot = await fetchHealth(port, { request, timeoutMs: perPollTimeoutMs });
     lastPhase = phaseOf(snapshot);
     const elapsedMs = now() - start;

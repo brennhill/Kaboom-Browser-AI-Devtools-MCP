@@ -7,16 +7,33 @@ const test = require('node:test')
 const assert = require('node:assert')
 const { execSync } = require('child_process')
 const fs = require('fs')
-// These are used in disabled tests, keep for future use
-const _path = require('path')
-const _os = require('os')
+const path = require('path')
+const os = require('os')
+
+// Sandbox HOME so real (non-dry-run) --install cases write to a throwaway home
+// instead of the developer's / CI runner's actual MCP client configs. Seed a
+// Cursor dir (~/.cursor) so at least one client is detected — this preserves the
+// --install exit-0 contract — and any config write lands in the sandbox.
+const SANDBOX_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-cli-it-'))
+fs.mkdirSync(path.join(SANDBOX_HOME, '.cursor'), { recursive: true })
+fs.writeFileSync(path.join(SANDBOX_HOME, '.cursor', 'mcp.json'), '{}')
+process.on('exit', () => {
+  try {
+    fs.rmSync(SANDBOX_HOME, { recursive: true, force: true })
+  } catch {
+    // Best-effort temp cleanup.
+  }
+})
 
 // Helper to run kaboom-agentic-browser command.
-// Real (non-dry-run) --install would otherwise start the daemon, open the
-// extension folder/browser, and block on the connect wait. Disable all three so
-// the parser/routing tests stay hermetic and never leave a daemon running.
+// - HOME/USERPROFILE point at the sandbox so config writes never touch the real machine.
+// - Real (non-dry-run) --install would otherwise start the daemon, open the extension
+//   folder/browser, and block on the connect wait — disable all three so the
+//   parser/routing tests stay hermetic and never leave a daemon running.
 const HERMETIC_ENV = {
   ...process.env,
+  HOME: SANDBOX_HOME,
+  USERPROFILE: SANDBOX_HOME,
   KABOOM_NO_DAEMON: '1',
   KABOOM_NO_OPEN: '1',
   KABOOM_NO_WAIT: '1',

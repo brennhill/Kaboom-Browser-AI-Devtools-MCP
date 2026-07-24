@@ -10,7 +10,7 @@
 const os = require('node:os');
 const path = require('node:path');
 const fs = require('node:fs');
-const { spawn } = require('node:child_process');
+const { spawn, execFileSync } = require('node:child_process');
 const { autoOpenDisabled } = require('./extension');
 const { commandExistsOnPath } = require('./config');
 
@@ -96,9 +96,111 @@ function firstWinExe(browser, env, fileExists) {
   return null;
 }
 
+// --- OS default browser detection (maps native identifiers to KNOWN_BROWSERS ids) ---
+
+const DARWIN_BUNDLE_TO_ID = {
+  'com.google.chrome': 'chrome',
+  'com.brave.browser': 'brave',
+  'com.microsoft.edgemac': 'edge',
+  'company.thebrowser.browser': 'arc',
+  'org.chromium.chromium': 'chromium',
+};
+const LINUX_DESKTOP_TO_ID = {
+  'google-chrome': 'chrome',
+  'google-chrome-stable': 'chrome',
+  'brave-browser': 'brave',
+  brave: 'brave',
+  'microsoft-edge': 'edge',
+  'microsoft-edge-stable': 'edge',
+  chromium: 'chromium',
+  'chromium-browser': 'chromium',
+};
+// Windows ProgId substrings, most-specific first.
+const WIN_PROGID_TO_ID = [
+  [/brave/i, 'brave'],
+  [/(msedge|edgehtm|edge)/i, 'edge'],
+  [/chromium/i, 'chromium'],
+  [/chrome/i, 'chrome'],
+];
+
+/** Default command runner: stdout string, or null on any failure. */
+function defaultRunFn(command, args) {
+  try {
+    // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process -- fixed OS query commands (plutil/xdg-settings/reg) with static args, no shell, no user input
+    return String(execFileSync(command, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 3000 }));
+  } catch {
+    return null;
+  }
+}
+
+function darwinDefaultBrowserId(runFn, homeDir) {
+  const plist = path.join(homeDir, 'Library', 'Preferences', 'com.apple.LaunchServices', 'com.apple.launchservices.secure.plist');
+  const out = runFn('plutil', ['-convert', 'json', '-o', '-', plist]);
+  if (!out) return null;
+  let data;
+  try {
+    data = JSON.parse(out);
+  } catch {
+    return null;
+  }
+  const handlers = data && Array.isArray(data.LSHandlers) ? data.LSHandlers : [];
+  for (const h of handlers) {
+    if (h && h.LSHandlerURLScheme === 'https' && typeof h.LSHandlerRoleAll === 'string') {
+      return DARWIN_BUNDLE_TO_ID[h.LSHandlerRoleAll.toLowerCase()] || null;
+    }
+  }
+  return null;
+}
+
+function linuxDefaultBrowserId(runFn) {
+  const out = runFn('xdg-settings', ['get', 'default-web-browser']);
+  if (!out) return null;
+  const desktop = out.trim().replace(/\.desktop$/i, '').toLowerCase();
+  return LINUX_DESKTOP_TO_ID[desktop] || null;
+}
+
+function winDefaultBrowserId(runFn) {
+  const out = runFn('reg', [
+    'query',
+    'HKCU\\Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\https\\UserChoice',
+    '/v',
+    'ProgId',
+  ]);
+  if (!out) return null;
+  const match = /ProgId\s+REG_SZ\s+(\S+)/i.exec(out);
+  const progId = match ? match[1] : out;
+  for (const [re, id] of WIN_PROGID_TO_ID) {
+    if (re.test(progId)) return id;
+  }
+  return null;
+}
+
 /**
- * Find the first installed Chromium-family browser and how to open its
- * extensions page. Pure given its injected detectors.
+ * The KNOWN_BROWSERS id of the OS default web browser, or null if it can't be
+ * determined or isn't a Chromium-family browser we support. Best-effort and
+ * injectable (runFn/homeDir) for tests.
+ * @param {{platform?: string, runFn?: Function, homeDir?: string}} [deps]
+ * @returns {string|null}
+ */
+function detectDefaultBrowserId(deps = {}) {
+  const platform = deps.platform || process.platform;
+  const runFn = deps.runFn || defaultRunFn;
+  const homeDir = deps.homeDir || os.homedir();
+  try {
+    if (platform === 'darwin') return darwinDefaultBrowserId(runFn, homeDir);
+    if (platform === 'linux') return linuxDefaultBrowserId(runFn);
+    if (platform === 'win32') return winDefaultBrowserId(runFn);
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+/**
+ * Find the browser to open the extensions page in, and how. Prefers the OS
+ * default browser when it's a supported Chromium-family one that's installed —
+ * that's the browser the user will actually load the extension into — and falls
+ * back to the fixed preference order otherwise. Pure given its injected detectors.
  *
  * @param {Object} [deps]
  * @param {string} [deps.platform]  process.platform
@@ -106,6 +208,8 @@ function firstWinExe(browser, env, fileExists) {
  * @param {(appName: string) => boolean} [deps.hasApp]      macOS
  * @param {(cmd: string) => boolean} [deps.onPath]          Linux
  * @param {(absPath: string) => boolean} [deps.fileExists]  Windows
+ * @param {Function} [deps.runFn]     default-browser command runner (see detectDefaultBrowserId)
+ * @param {string} [deps.homeDir]     override home dir (macOS default lookup)
  * @returns {{id: string, name: string, url: string,
  *   launch: {command: string, args: string[]}}|null}
  */
@@ -116,7 +220,15 @@ function detectExtensionsTarget(deps = {}) {
   const onPath = deps.onPath || commandExistsOnPath;
   const fileExists = deps.fileExists || defaultFileExists;
 
-  for (const browser of KNOWN_BROWSERS) {
+  // Try the OS default browser first; fall back to the fixed preference order.
+  const defaultId = detectDefaultBrowserId({ platform, runFn: deps.runFn, homeDir: deps.homeDir });
+  let order = KNOWN_BROWSERS;
+  if (defaultId) {
+    const preferred = KNOWN_BROWSERS.find((b) => b.id === defaultId);
+    if (preferred) order = [preferred, ...KNOWN_BROWSERS.filter((b) => b.id !== defaultId)];
+  }
+
+  for (const browser of order) {
     const url = extensionsUrl(browser.scheme);
 
     if (platform === 'darwin') {
@@ -162,6 +274,7 @@ function openExtensionsPage(target, opts = {}) {
 module.exports = {
   KNOWN_BROWSERS,
   extensionsUrl,
+  detectDefaultBrowserId,
   detectExtensionsTarget,
   openExtensionsPage,
 };

@@ -214,6 +214,40 @@ test('defaultRequest returns null when the server never responds (timeout)', asy
   );
 });
 
+test('waitForExtension returns reason "aborted" when the signal is already aborted', async () => {
+  const controller = new AbortController();
+  controller.abort();
+  const result = await waitForExtension({
+    signal: controller.signal,
+    request: async () => null,
+    now: () => 0,
+    sleep: async () => {},
+  });
+  assert.equal(result.connected, false);
+  assert.equal(result.reason, 'aborted');
+});
+
+test('waitForExtension stops within a poll cycle when aborted mid-wait', async () => {
+  const clock = fakeClock();
+  const controller = new AbortController();
+  let polls = 0;
+  const request = async () => {
+    polls += 1;
+    if (polls === 2) controller.abort(); // abort while waiting, extension never connects
+    return { statusCode: 200, body: JSON.stringify({ capture: { extension_connected: false } }) };
+  };
+  const result = await waitForExtension({
+    signal: controller.signal,
+    request,
+    now: clock.now,
+    sleep: clock.sleep,
+    timeoutMs: 1000000,
+    pollMs: 100,
+  });
+  assert.equal(result.reason, 'aborted');
+  assert.equal(polls, 2, 'must not poll again after the abort is observed');
+});
+
 test('connectWaitDisabled honors the opt-out env vars', () => {
   assert.equal(connectWaitDisabled({}), false);
   assert.equal(connectWaitDisabled({ KABOOM_NO_WAIT: '1' }), true);
