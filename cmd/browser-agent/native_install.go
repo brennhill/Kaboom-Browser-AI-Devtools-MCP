@@ -76,16 +76,23 @@ func fileManagerOpenCommand(goos, dir string) (name string, args []string, ok bo
 	}
 }
 
-// extensionAutoOpenDisabled reports whether the user opted out of the
-// install-time folder auto-open (headless installs, CI, scripted runs).
-func extensionAutoOpenDisabled() bool {
-	for _, key := range []string{"KABOOM_NO_OPEN", "KABOOM_INSTALL_NO_OPEN"} {
+// envFlagEnabled reports whether any of the named env vars is set to a truthy
+// opt-in value. Unset/empty/"0"/"false"/"no" all count as off. Shared source of
+// truth for the install-time opt-outs so their accepted values never drift.
+func envFlagEnabled(keys ...string) bool {
+	for _, key := range keys {
 		v := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
 		if v != "" && v != "0" && v != "false" && v != "no" {
 			return true
 		}
 	}
 	return false
+}
+
+// extensionAutoOpenDisabled reports whether the user opted out of the
+// install-time folder auto-open (headless installs, CI, scripted runs).
+func extensionAutoOpenDisabled() bool {
+	return envFlagEnabled("KABOOM_NO_OPEN", "KABOOM_INSTALL_NO_OPEN")
 }
 
 // openExtensionFolder best-effort reveals extDir in the file manager so Load
@@ -243,6 +250,8 @@ func runNativeInstall() {
 	if openExtensionFolder(extDir) {
 		stderrf("   \033[1;32m📂 Opened the extension folder for you — select it in Load unpacked.\033[0m\n")
 	}
+	// Confirm the extension actually connects to the daemon we just started.
+	runExtensionConnectWait(7890, extDir)
 	stderrf("\033[1;33mREADY TO COOK:\033[0m\n")
 	stderrf("   The Kaboom server is active on port 7890.\n")
 	stderrf("   Your AI tool (Claude, Cursor, etc.) is now configured.\n")

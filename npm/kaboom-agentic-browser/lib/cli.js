@@ -9,9 +9,60 @@ const config = require('./config');
 const output = require('./output');
 const install = require('./install');
 const extension = require('./extension');
+const browser = require('./browser');
+const health = require('./health');
+const daemon = require('./daemon');
 const skills = require('./skills');
 const doctor = require('./doctor');
 const uninstall = require('./uninstall');
+
+// How long the post-install / --connect loop waits for the extension to appear.
+const CONNECT_WAIT_MS = 30000;
+
+// Interactive install = a human is watching (a TTY). The daemon-start, connect
+// wait, and browser-page open only make sense — and are only safe to trigger —
+// for an interactive install; scripted/CI installs must stay side-effect-free
+// (no lingering daemon, no windows popping open, no blocking wait).
+function isInteractiveInstall() {
+  return !!process.stdout.isTTY;
+}
+
+// Watch the loop only for an interactive install the user hasn't opted out of.
+function shouldWatchConnect() {
+  return isInteractiveInstall() && !health.connectWaitDisabled(process.env);
+}
+
+/**
+ * Ensure the daemon is up, then wait for the browser extension to connect,
+ * printing live progress and a targeted next step. Shared by post-install and
+ * the standalone --connect command.
+ */
+async function watchExtensionConnect({ port = health.DEFAULT_PORT, extensionDir, timeoutMs = CONNECT_WAIT_MS } = {}) {
+  await daemon.ensureDaemon({ port });
+
+  console.log(`\n⏳ Waiting for the browser extension to connect on port ${port} (Ctrl-C to skip)…`);
+  let lastPhase = null;
+  const result = await health.waitForExtension({
+    port,
+    timeoutMs,
+    onState: ({ phase }) => {
+      if (phase === lastPhase) return;
+      lastPhase = phase;
+      if (phase === 'daemon_unreachable') {
+        console.log('   … waiting for the Kaboom server to come up');
+      } else if (phase === 'waiting_extension') {
+        console.log('   … server is up — load the extension in your browser to finish');
+      }
+    },
+  });
+
+  if (result.connected) {
+    console.log('✅ Browser extension connected — Kaboom is fully wired up!');
+  } else {
+    console.log(`⚠️  ${health.connectHint(result.lastPhase, { port, extensionDir })}`);
+  }
+  return result;
+}
 
 // Write a JSON-RPC error to stdout so MCP clients get a clean protocol-level error
 function writeMcpError(message) {
@@ -71,6 +122,15 @@ async function installCommand(options) {
       if (!options.dryRun && extension.openExtensionDir(result.extensionDir)) {
         console.log('📂 Opened the extension folder for you — just select it in "Load unpacked".');
       }
+      // Also open the browser straight to its extensions page (the folder opener
+      // can't do that — it's a browser-internal URL). Interactive installs only,
+      // so scripted/CI runs never pop a browser window; same KABOOM_NO_OPEN opt-out.
+      if (!options.dryRun && isInteractiveInstall()) {
+        const target = browser.detectExtensionsTarget();
+        if (browser.openExtensionsPage(target)) {
+          console.log(`🌐 Opened ${target.name} at ${target.url} — click "Load unpacked" there.`);
+        }
+      }
       if (!options.dryRun) {
         const skillInstall = await skills.installBundledSkills({
           verbose: options.verbose,
@@ -91,6 +151,17 @@ async function installCommand(options) {
           for (const warning of skillInstall.warnings || []) {
             console.warn(`⚠️  ${warning}`);
           }
+        }
+        // Start the daemon so the extension has something to connect to — parity
+        // with the curl|sh installer's startDaemonSilently. ensureDaemon reuses a
+        // healthy daemon instead of double-binding; opt out with KABOOM_NO_DAEMON.
+        // The blocking connect confirmation is interactive-only so scripted/CI
+        // installs never hang; they get guidance to run --connect/--doctor.
+        if (shouldWatchConnect()) {
+          await watchExtensionConnect({ extensionDir: result.extensionDir });
+        } else {
+          await daemon.ensureDaemon();
+          console.log('👉 After loading the extension, run "kaboom-agentic-browser --connect" (or --doctor) to confirm it connected.');
         }
         console.log('✨ Kaboom Agentic Browser is ready to use!');
       }
@@ -136,11 +207,22 @@ async function updateCommand(options) {
   }
 }
 
-function doctorCommand(verbose) {
+async function doctorCommand(verbose) {
   try {
-    const report = doctor.runDiagnostics(verbose);
+    const report = await doctor.runDiagnostics(verbose);
     console.log(output.diagnosticReport(report));
     process.exit(0);
+  } catch (err) {
+    console.error(err.format ? err.format() : `Error: ${err.message}`);
+    process.exit(1);
+  }
+}
+
+async function connectCommand() {
+  try {
+    const ext = extension.resolveExtensionDir();
+    const result = await watchExtensionConnect({ extensionDir: ext.dir });
+    process.exit(result.connected ? 0 : 1);
   } catch (err) {
     console.error(err.format ? err.format() : `Error: ${err.message}`);
     process.exit(1);
@@ -169,7 +251,8 @@ function showHelp() {
   console.log('  --config, -c          Show MCP configuration and detected clients');
   console.log('  --install, -i [tool]  Auto-install to detected clients, or a specific tool');
   console.log('  --update [tool]       Clean reinstall Kaboom for detected clients or one specific tool');
-  console.log('  --doctor              Run diagnostics on installed configs');
+  console.log('  --doctor              Run diagnostics (configs + live daemon/extension/Node)');
+  console.log('  --connect             Wait for the browser extension to connect, with live status');
   console.log('  --uninstall           Remove Kaboom from all clients');
   console.log('  --help, -h            Show this help message\n');
   console.log('Supported clients:');
@@ -207,7 +290,8 @@ function showHelp() {
   console.log('  kaboom-agentic-browser --install --skills-repo brennhill/kaboom-skills');
   console.log('  kaboom-agentic-browser --update                 # Clean reinstall Kaboom');
   console.log('  kaboom-agentic-browser --config                 # Show config and detected clients');
-  console.log('  kaboom-agentic-browser --doctor                 # Check config health');
+  console.log('  kaboom-agentic-browser --doctor                 # Check config + live daemon/extension health');
+  console.log('  kaboom-agentic-browser --connect                # Wait for the extension to connect');
   console.log('  kaboom-agentic-browser --uninstall              # Remove from all clients\n');
   process.exit(0);
 }
@@ -294,7 +378,13 @@ async function main() {
 
   // Doctor command
   if (args.includes('--doctor')) {
-    doctorCommand(verbose);
+    await doctorCommand(verbose);
+    return;
+  }
+
+  // Connect command — wait for the browser extension to connect.
+  if (args.includes('--connect')) {
+    await connectCommand();
     return;
   }
 

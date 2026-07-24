@@ -193,6 +193,41 @@ function diagnosticReport(report) {
     }
   }
 
+  // Node runtime the launcher/CLI runs under.
+  if (report.node) {
+    if (report.node.ok) {
+      output += `✅ Node.js ${report.node.version}\n`;
+    } else {
+      output += `⚠️  Node.js ${report.node.version}\n`;
+      output += `   Kaboom needs Node ${report.node.minMajor}+; upgrade Node to run the CLI reliably.\n`;
+    }
+  }
+
+  // Live daemon + browser-extension status (the actual data path).
+  if (report.daemon) {
+    if (report.daemon.reachable) {
+      const ver = report.daemon.version ? ` (v${report.daemon.version})` : '';
+      output += `✅ Kaboom daemon${ver}\n`;
+      output += `   Responding on port ${report.daemon.port}\n`;
+    } else {
+      output += `⚪ Kaboom daemon\n`;
+      output += `   Not running — it starts when your AI client launches Kaboom (or run --install).\n`;
+    }
+  }
+
+  if (report.extension) {
+    if (report.extension.connected) {
+      output += `✅ Browser extension\n`;
+      output += `   Connected and streaming to the daemon\n`;
+    } else if (report.daemon && report.daemon.reachable) {
+      output += `⚠️  Browser extension\n`;
+      output += `   Not connected — open chrome://extensions, "Load unpacked", select the Kaboom folder, and enable it.\n`;
+    } else {
+      output += `⚪ Browser extension\n`;
+      output += `   Can't check until the daemon is running.\n`;
+    }
+  }
+
   // Legacy path warnings
   if (report.legacyWarnings && report.legacyWarnings.length > 0) {
     output += '\n⚠️  Legacy Configs Found:\n';
