@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -61,7 +62,7 @@ func TestWaitForExtensionConnected_ConnectsAfterPolls(t *testing.T) {
 	}
 	i := 0
 	var lines []string
-	res := waitForExtensionConnected(7890, 30*time.Second, 750*time.Millisecond, connectWaitDeps{
+	res := waitForExtensionConnected(context.Background(), 7890, 30*time.Second, 750*time.Millisecond, connectWaitDeps{
 		fetch: func(int) installHealth {
 			h := seq[i]
 			if i < len(seq)-1 {
@@ -87,7 +88,7 @@ func TestWaitForExtensionConnected_ConnectsAfterPolls(t *testing.T) {
 
 func TestWaitForExtensionConnected_Timeout(t *testing.T) {
 	now, sleep := fakeClock()
-	res := waitForExtensionConnected(7890, 2*time.Second, 750*time.Millisecond, connectWaitDeps{
+	res := waitForExtensionConnected(context.Background(), 7890, 2*time.Second, 750*time.Millisecond, connectWaitDeps{
 		fetch: func(int) installHealth { return installHealth{reachable: true} },
 		now:   now,
 		sleep: sleep,
@@ -102,13 +103,31 @@ func TestWaitForExtensionConnected_Timeout(t *testing.T) {
 
 func TestWaitForExtensionConnected_TimeoutUnreachable(t *testing.T) {
 	now, sleep := fakeClock()
-	res := waitForExtensionConnected(7890, 1500*time.Millisecond, 750*time.Millisecond, connectWaitDeps{
+	res := waitForExtensionConnected(context.Background(), 7890, 1500*time.Millisecond, 750*time.Millisecond, connectWaitDeps{
 		fetch: func(int) installHealth { return installHealth{} },
 		now:   now,
 		sleep: sleep,
 	})
 	if res.connected || res.lastPhase != "daemon_unreachable" {
 		t.Fatalf("expected unreachable timeout, got %+v", res)
+	}
+}
+
+func TestWaitForExtensionConnected_AbortSkips(t *testing.T) {
+	now, sleep := fakeClock()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Ctrl-C before the first poll: must skip, not poll.
+	polled := false
+	res := waitForExtensionConnected(ctx, 7890, 30*time.Second, 750*time.Millisecond, connectWaitDeps{
+		fetch: func(int) installHealth { polled = true; return installHealth{} },
+		now:   now,
+		sleep: sleep,
+	})
+	if !res.aborted || res.connected {
+		t.Fatalf("expected aborted, got %+v", res)
+	}
+	if polled {
+		t.Fatal("must not poll once the context is already cancelled")
 	}
 }
 

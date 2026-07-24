@@ -7,11 +7,13 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"os/signal"
 	"time"
 )
 
@@ -76,15 +78,21 @@ type connectWaitDeps struct {
 
 type connectResult struct {
 	connected bool
+	aborted   bool
 	lastPhase string
 }
 
-// waitForExtensionConnected polls until the extension connects or the deadline
-// passes, narrating each new phase exactly once via deps.sink.
-func waitForExtensionConnected(port int, timeout, poll time.Duration, deps connectWaitDeps) connectResult {
+// waitForExtensionConnected polls until the extension connects, the deadline
+// passes, or ctx is cancelled (Ctrl-C "skip"), narrating each new phase exactly
+// once via deps.sink. ctx is checked at the loop top, so an abort is honored
+// within one poll cycle without an interruptible sleep.
+func waitForExtensionConnected(ctx context.Context, port int, timeout, poll time.Duration, deps connectWaitDeps) connectResult {
 	start := deps.now()
 	rendered := ""
 	for {
+		if ctx.Err() != nil {
+			return connectResult{aborted: true, lastPhase: rendered}
+		}
 		phase := connectPhase(deps.fetch(port))
 		if phase != rendered {
 			rendered = phase
@@ -157,8 +165,12 @@ func runExtensionConnectWait(port int, extDir string) {
 	if installWaitDisabled() || !isTerminal(os.Stderr) {
 		return
 	}
+	// First Ctrl-C cancels the wait (a real "skip"); NotifyContext restores the
+	// default SIGINT after the first signal, so a second Ctrl-C still force-quits.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
 	stderrf("\n\033[1;33m⏳ Waiting for the browser extension to connect (Ctrl-C to skip)…\033[0m\n")
-	res := waitForExtensionConnected(port, connectWaitTimeout, connectPollEvery, connectWaitDeps{
+	res := waitForExtensionConnected(ctx, port, connectWaitTimeout, connectPollEvery, connectWaitDeps{
 		fetch: func(p int) installHealth { return fetchInstallHealth(p, connectHealthRead) },
 		now:   time.Now,
 		sleep: time.Sleep,
@@ -166,6 +178,8 @@ func runExtensionConnectWait(port int, extDir string) {
 	})
 	if res.connected {
 		stderrf("\033[1;32m✅ Extension connected — Kaboom is fully wired up!\033[0m\n")
+	} else if res.aborted {
+		stderrf("\033[1;33m⏭️  Skipped waiting — the Kaboom server is running; load the extension and it will connect.\033[0m\n")
 	} else {
 		stderrf("\033[1;33m⚠️  %s\033[0m\n", connectHintLine(res.lastPhase, port, extDir))
 	}

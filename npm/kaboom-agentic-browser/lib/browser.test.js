@@ -10,6 +10,7 @@ const path = require('node:path');
 const {
   KNOWN_BROWSERS,
   extensionsUrl,
+  detectDefaultBrowserId,
   detectExtensionsTarget,
   openExtensionsPage,
 } = require('./browser');
@@ -29,7 +30,7 @@ test('KNOWN_BROWSERS covers the browsers we advertise', () => {
 
 test('darwin: detects an installed app and builds an `open -a` launch', () => {
   const hasApp = (name) => name === 'Brave Browser';
-  const target = detectExtensionsTarget({ platform: 'darwin', hasApp });
+  const target = detectExtensionsTarget({ platform: 'darwin', hasApp, runFn: () => null });
   assert.equal(target.id, 'brave');
   assert.equal(target.url, 'brave://extensions/');
   assert.deepEqual(target.launch, { command: 'open', args: ['-a', 'Brave Browser', 'brave://extensions/'] });
@@ -37,14 +38,14 @@ test('darwin: detects an installed app and builds an `open -a` launch', () => {
 
 test('darwin: Chrome wins when several are installed (declaration order)', () => {
   const hasApp = () => true; // everything present
-  const target = detectExtensionsTarget({ platform: 'darwin', hasApp });
+  const target = detectExtensionsTarget({ platform: 'darwin', hasApp, runFn: () => null });
   assert.equal(target.id, 'chrome');
   assert.equal(target.url, 'chrome://extensions/');
 });
 
 test('linux: detects a browser on PATH and launches it with the URL', () => {
   const onPath = (cmd) => cmd === 'google-chrome';
-  const target = detectExtensionsTarget({ platform: 'linux', onPath });
+  const target = detectExtensionsTarget({ platform: 'linux', onPath, runFn: () => null });
   assert.equal(target.id, 'chrome');
   assert.deepEqual(target.launch, { command: 'google-chrome', args: ['chrome://extensions/'] });
 });
@@ -53,7 +54,7 @@ test('win32: finds an exe under a base dir and returns its absolute path', () =>
   const env = { ProgramFiles: 'C:/PF' };
   const edgeExe = path.join('C:/PF', 'Microsoft', 'Edge', 'Application', 'msedge.exe');
   const fileExists = (p) => p === edgeExe;
-  const target = detectExtensionsTarget({ platform: 'win32', env, fileExists });
+  const target = detectExtensionsTarget({ platform: 'win32', env, fileExists, runFn: () => null });
   assert.equal(target.id, 'edge');
   assert.equal(target.url, 'edge://extensions/');
   assert.equal(target.launch.command, edgeExe);
@@ -61,10 +62,67 @@ test('win32: finds an exe under a base dir and returns its absolute path', () =>
 });
 
 test('returns null when no supported browser is found', () => {
-  assert.equal(detectExtensionsTarget({ platform: 'darwin', hasApp: () => false }), null);
-  assert.equal(detectExtensionsTarget({ platform: 'linux', onPath: () => false }), null);
-  assert.equal(detectExtensionsTarget({ platform: 'win32', env: {}, fileExists: () => false }), null);
-  assert.equal(detectExtensionsTarget({ platform: 'sunos' }), null);
+  assert.equal(detectExtensionsTarget({ platform: 'darwin', hasApp: () => false, runFn: () => null }), null);
+  assert.equal(detectExtensionsTarget({ platform: 'linux', onPath: () => false, runFn: () => null }), null);
+  assert.equal(detectExtensionsTarget({ platform: 'win32', env: {}, fileExists: () => false, runFn: () => null }), null);
+  assert.equal(detectExtensionsTarget({ platform: 'sunos', runFn: () => null }), null);
+});
+
+test('detectDefaultBrowserId reads the OS default per platform', () => {
+  // Linux: xdg-settings returns a .desktop name.
+  assert.equal(
+    detectDefaultBrowserId({ platform: 'linux', runFn: () => 'brave-browser.desktop\n' }),
+    'brave'
+  );
+  // macOS: parse the LaunchServices https handler bundle id.
+  const plist = JSON.stringify({
+    LSHandlers: [
+      { LSHandlerURLScheme: 'mailto', LSHandlerRoleAll: 'com.apple.mail' },
+      { LSHandlerURLScheme: 'https', LSHandlerRoleAll: 'com.microsoft.edgemac' },
+    ],
+  });
+  assert.equal(detectDefaultBrowserId({ platform: 'darwin', homeDir: '/Users/x', runFn: () => plist }), 'edge');
+  // Windows: parse ProgId from reg output.
+  assert.equal(
+    detectDefaultBrowserId({ platform: 'win32', runFn: () => '    ProgId    REG_SZ    BraveHTML' }),
+    'brave'
+  );
+  // Unknown / unavailable → null.
+  assert.equal(detectDefaultBrowserId({ platform: 'linux', runFn: () => 'firefox.desktop' }), null);
+  assert.equal(detectDefaultBrowserId({ platform: 'linux', runFn: () => null }), null);
+  assert.equal(detectDefaultBrowserId({ platform: 'sunos', runFn: () => 'whatever' }), null);
+});
+
+test('detectExtensionsTarget prefers the OS default browser when it is installed', () => {
+  // Everything installed; without a default, Chrome would win by order — but the
+  // OS default is Brave, so we open Brave (the browser the user actually uses).
+  const target = detectExtensionsTarget({
+    platform: 'darwin',
+    hasApp: () => true,
+    runFn: () => 'brave-browser.desktop', // pretend-linux output is fine; darwin path uses plist
+    homeDir: '/Users/x',
+  });
+  // On darwin the runFn is fed to plutil; supply a plist that resolves to Brave.
+  const braveTarget = detectExtensionsTarget({
+    platform: 'darwin',
+    hasApp: () => true,
+    homeDir: '/Users/x',
+    runFn: () => JSON.stringify({ LSHandlers: [{ LSHandlerURLScheme: 'https', LSHandlerRoleAll: 'com.brave.Browser' }] }),
+  });
+  assert.equal(braveTarget.id, 'brave');
+  // (the first `target` used a non-plist runFn output -> no default -> Chrome by order)
+  assert.equal(target.id, 'chrome');
+});
+
+test('detectExtensionsTarget falls back to first-installed when the default is not installed', () => {
+  // Default is Arc, but only Chrome is installed -> Chrome by preference order.
+  const target = detectExtensionsTarget({
+    platform: 'darwin',
+    hasApp: (name) => name === 'Google Chrome',
+    homeDir: '/Users/x',
+    runFn: () => JSON.stringify({ LSHandlers: [{ LSHandlerURLScheme: 'https', LSHandlerRoleAll: 'company.thebrowser.Browser' }] }),
+  });
+  assert.equal(target.id, 'chrome');
 });
 
 test('openExtensionsPage launches the target, respects opt-out, and tolerates a null target', () => {

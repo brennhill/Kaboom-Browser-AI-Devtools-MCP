@@ -41,23 +41,39 @@ async function watchExtensionConnect({ port = health.DEFAULT_PORT, extensionDir,
   await daemon.ensureDaemon({ port });
 
   console.log(`\n⏳ Waiting for the browser extension to connect on port ${port} (Ctrl-C to skip)…`);
+
+  // First Ctrl-C aborts the wait (a real "skip" that continues to the ready
+  // message), not a hard kill. `once` restores default SIGINT afterward, so a
+  // second Ctrl-C still force-quits.
+  const controller = new AbortController();
+  const onSigint = () => controller.abort();
+  process.once('SIGINT', onSigint);
+
   let lastPhase = null;
-  const result = await health.waitForExtension({
-    port,
-    timeoutMs,
-    onState: ({ phase }) => {
-      if (phase === lastPhase) return;
-      lastPhase = phase;
-      if (phase === 'daemon_unreachable') {
-        console.log('   … waiting for the Kaboom server to come up');
-      } else if (phase === 'waiting_extension') {
-        console.log('   … server is up — load the extension in your browser to finish');
-      }
-    },
-  });
+  let result;
+  try {
+    result = await health.waitForExtension({
+      port,
+      timeoutMs,
+      signal: controller.signal,
+      onState: ({ phase }) => {
+        if (phase === lastPhase) return;
+        lastPhase = phase;
+        if (phase === 'daemon_unreachable') {
+          console.log('   … waiting for the Kaboom server to come up');
+        } else if (phase === 'waiting_extension') {
+          console.log('   … server is up — load the extension in your browser to finish');
+        }
+      },
+    });
+  } finally {
+    process.removeListener('SIGINT', onSigint);
+  }
 
   if (result.connected) {
     console.log('✅ Browser extension connected — Kaboom is fully wired up!');
+  } else if (result.reason === 'aborted') {
+    console.log('⏭️  Skipped waiting — run "kaboom-agentic-browser --connect" later to confirm the extension connected.');
   } else {
     console.log(`⚠️  ${health.connectHint(result.lastPhase, { port, extensionDir })}`);
   }
