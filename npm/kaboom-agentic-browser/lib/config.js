@@ -593,6 +593,23 @@ function parseEnvVar(envStr) {
   return { key, value };
 }
 
+/**
+ * True when any of the given env keys is set to a truthy opt-in value.
+ * Unset/empty/"0"/"false"/"no" all count as off. Shared source of truth for the
+ * install-time opt-outs (auto-open, daemon-start, connect-wait) so their
+ * accepted values never drift apart.
+ * @param {object} env
+ * @param {string[]} keys
+ * @returns {boolean}
+ */
+function isEnvFlagSet(env, keys) {
+  for (const key of keys) {
+    const value = String((env && env[key]) || '').trim().toLowerCase();
+    if (value && value !== '0' && value !== 'false' && value !== 'no') return true;
+  }
+  return false;
+}
+
 module.exports = {
   CLIENT_DEFINITIONS,
   CLIENT_ALIASES,
@@ -617,4 +634,5 @@ module.exports = {
   mergeKaboomConfig,
   parseEnvVar,
   resolveManagedBinaryPath,
+  isEnvFlagSet,
 };

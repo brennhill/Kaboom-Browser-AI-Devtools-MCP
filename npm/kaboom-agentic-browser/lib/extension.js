@@ -10,6 +10,7 @@ const os = require('node:os');
 const path = require('node:path');
 const fs = require('node:fs');
 const { spawn } = require('node:child_process');
+const { isEnvFlagSet } = require('./config');
 
 // The folder the curl|sh / PowerShell installers stage the extension into.
 const STAGED_DIR_NAME = 'KaboomAgenticDevtoolExtension';
@@ -57,11 +58,7 @@ function resolveExtensionDir(env = process.env, homeDir = os.homedir()) {
 
 /** True when the user opted out of the install-time auto-open. */
 function autoOpenDisabled(env = process.env) {
-  for (const key of ['KABOOM_NO_OPEN', 'KABOOM_INSTALL_NO_OPEN']) {
-    const value = String(env[key] || '').trim().toLowerCase();
-    if (value && value !== '0' && value !== 'false' && value !== 'no') return true;
-  }
-  return false;
+  return isEnvFlagSet(env, ['KABOOM_NO_OPEN', 'KABOOM_INSTALL_NO_OPEN']);
 }
 
 /**

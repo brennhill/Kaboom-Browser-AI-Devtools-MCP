@@ -21,6 +21,12 @@ const {
   readConfigFile,
   expandPath,
 } = require('./config');
+const { fetchHealth, DEFAULT_PORT } = require('./health');
+
+// Node floor: the launcher and lib/*.js rely on modern Node built-ins
+// (node: specifiers, structuredClone, fetch-free http usage). 18 is the oldest
+// still-maintained line that clears that bar.
+const MIN_NODE_MAJOR = 18;
 
 function knownServerNames() {
   return [MCP_SERVER_NAME, ...LEGACY_MCP_SERVER_NAMES.filter((name) => name !== MCP_SERVER_NAME)];
@@ -160,6 +166,47 @@ function testBinary() {
       error: `Error testing binary: ${err.message}`,
     };
   }
+}
+
+/**
+ * Evaluate a Node version string against the supported floor. Pure.
+ * @param {string} versionString e.g. process.version ("v20.11.0")
+ * @returns {{ok: boolean, version: string, major: number|null, minMajor: number}}
+ */
+function evaluateNodeVersion(versionString) {
+  const match = /^v?(\d+)\./.exec(String(versionString || ''));
+  const major = match ? Number(match[1]) : null;
+  return {
+    ok: major != null && major >= MIN_NODE_MAJOR,
+    version: String(versionString || 'unknown'),
+    major,
+    minMajor: MIN_NODE_MAJOR,
+  };
+}
+
+/** Diagnose the Node runtime the CLI itself is running under. */
+function nodeCheck() {
+  return evaluateNodeVersion(process.version);
+}
+
+/**
+ * Live daemon/extension check via /health. Never throws.
+ * @param {{port?: number, fetchHealthFn?: Function}} [opts]
+ * @returns {Promise<{port: number, reachable: boolean, ok: boolean,
+ *   version: string|null, extensionConnected: boolean, extensionLastSeen: any}>}
+ */
+async function checkDaemon(opts = {}) {
+  const port = opts.port || DEFAULT_PORT;
+  const fetchHealthFn = opts.fetchHealthFn || ((p) => fetchHealth(p, { timeoutMs: 800 }));
+  const snap = await fetchHealthFn(port);
+  return {
+    port,
+    reachable: !!(snap && snap.reachable),
+    ok: !!(snap && snap.ok),
+    version: (snap && snap.version) || null,
+    extensionConnected: !!(snap && snap.extensionConnected),
+    extensionLastSeen: (snap && snap.extensionLastSeen) || null,
+  };
 }
 
 /**
@@ -328,14 +375,19 @@ function checkLegacyPaths() {
 }
 
 /**
- * Run full diagnostics on all client locations
+ * Run full diagnostics on all client locations, plus live runtime checks
+ * (Node version, daemon reachability, extension connectivity).
  * @param {boolean} verbose If true, log debug info
- * @returns {Object} Diagnostic report with tools array and summary
+ * @param {{fetchHealthFn?: Function, clients?: Array}} [opts]
+ *   Injectable /health and client list for hermetic tests (defaults hit the
+ *   real client scan + daemon).
+ * @returns {Promise<Object>} Diagnostic report with tools array and summary
  */
-function runDiagnostics(verbose = false) {
+async function runDiagnostics(verbose = false, opts = {}) {
   const tools = [];
+  const clients = opts.clients || CLIENT_DEFINITIONS;
 
-  for (const def of CLIENT_DEFINITIONS) {
+  for (const def of clients) {
     if (def.type === 'cli') {
       tools.push(diagnoseCliClient(def, verbose));
     } else {
@@ -347,8 +399,13 @@ function runDiagnostics(verbose = false) {
   const binary = testBinary();
 
   // Check default port availability (7890)
-  const defaultPort = 7890;
+  const defaultPort = DEFAULT_PORT;
   const port = checkPortSync(defaultPort);
+
+  // Live runtime checks: Node version + whether the daemon/extension are up.
+  const node = nodeCheck();
+  const daemon = await checkDaemon({ port: defaultPort, fetchHealthFn: opts.fetchHealthFn });
+  const extension = { connected: daemon.extensionConnected, lastSeen: daemon.extensionLastSeen };
 
   // Check for legacy paths
   const legacyWarnings = checkLegacyPaths();
@@ -370,12 +427,19 @@ function runDiagnostics(verbose = false) {
     tools,
     binary,
     port: { port: defaultPort, ...port },
+    node,
+    daemon,
+    extension,
     legacyWarnings,
     summary,
   };
 }
 
 module.exports = {
+  MIN_NODE_MAJOR,
+  evaluateNodeVersion,
+  nodeCheck,
+  checkDaemon,
   testBinary,
   runDiagnostics,
 };

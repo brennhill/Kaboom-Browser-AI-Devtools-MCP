@@ -11,7 +11,12 @@ const os = require('os')
 const doctor = require('../../npm/kaboom-agentic-browser/lib/doctor')
 const config = require('../../npm/kaboom-agentic-browser/lib/config')
 
-test('doctor.testBinary returns object with expected structure', () => {
+// runDiagnostics is async and now performs a live /health probe. Stub it to an
+// unreachable daemon so these config-focused tests stay hermetic and fast
+// regardless of whether a real Kaboom daemon happens to be running.
+const NO_DAEMON = { fetchHealthFn: async () => ({ reachable: false }) }
+
+test('doctor.testBinary returns object with expected structure', async () => {
   const result = doctor.testBinary()
 
   assert.ok(typeof result === 'object', 'Should return object')
@@ -25,15 +30,15 @@ test('doctor.testBinary returns object with expected structure', () => {
   }
 })
 
-test('doctor.testBinary handles unsupported platform gracefully', () => {
+test('doctor.testBinary handles unsupported platform gracefully', async () => {
   // This test just verifies the function doesn't crash
   // The actual result depends on the platform
   const result = doctor.testBinary()
   assert.ok(result, 'Should return result')
 })
 
-test('doctor.runDiagnostics returns complete report structure', () => {
-  const report = doctor.runDiagnostics(false)
+test('doctor.runDiagnostics returns complete report structure', async () => {
+  const report = await doctor.runDiagnostics(false, NO_DAEMON)
 
   assert.ok(report.tools, 'Should have tools array')
   assert.ok(Array.isArray(report.tools), 'tools should be array')
@@ -43,8 +48,8 @@ test('doctor.runDiagnostics returns complete report structure', () => {
   assert.strictEqual(report.tools.length, config.CLIENT_DEFINITIONS.length, 'Should check all configured clients')
 })
 
-test('doctor.runDiagnostics tools have correct structure', () => {
-  const report = doctor.runDiagnostics(false)
+test('doctor.runDiagnostics tools have correct structure', async () => {
+  const report = await doctor.runDiagnostics(false, NO_DAEMON)
 
   for (const tool of report.tools) {
     assert.ok(tool.name, 'Tool should have name')
@@ -60,8 +65,8 @@ test('doctor.runDiagnostics tools have correct structure', () => {
   }
 })
 
-test('doctor.runDiagnostics identifies tool names correctly', () => {
-  const report = doctor.runDiagnostics(false)
+test('doctor.runDiagnostics identifies tool names correctly', async () => {
+  const report = await doctor.runDiagnostics(false, NO_DAEMON)
   const names = report.tools.map((t) => t.name)
 
   assert.ok(names.includes('Claude Code'), 'Should identify Claude Code')
@@ -71,15 +76,15 @@ test('doctor.runDiagnostics identifies tool names correctly', () => {
   assert.ok(names.includes('Windsurf'), 'Should identify Windsurf')
 })
 
-test('doctor.runDiagnostics with verbose=true does not crash', () => {
+test('doctor.runDiagnostics with verbose=true does not crash', async () => {
   // Verbose mode should produce debug output but not crash
-  const report = doctor.runDiagnostics(true)
+  const report = await doctor.runDiagnostics(true, NO_DAEMON)
 
   assert.ok(report.tools, 'Should still return valid report with verbose=true')
 })
 
-test('doctor.runDiagnostics provides suggestions for unconfigured tools', () => {
-  const report = doctor.runDiagnostics(false)
+test('doctor.runDiagnostics provides suggestions for unconfigured tools', async () => {
+  const report = await doctor.runDiagnostics(false, NO_DAEMON)
 
   // Error tools (misconfigured) should provide a remediation.
   const errorTools = report.tools.filter((t) => t.status === 'error')
@@ -88,8 +93,8 @@ test('doctor.runDiagnostics provides suggestions for unconfigured tools', () => 
   }
 })
 
-test('doctor.runDiagnostics binary result has correct structure', () => {
-  const report = doctor.runDiagnostics(false)
+test('doctor.runDiagnostics binary result has correct structure', async () => {
+  const report = await doctor.runDiagnostics(false, NO_DAEMON)
   const binary = report.binary
 
   assert.ok(typeof binary.ok === 'boolean', 'Binary should have ok boolean')
@@ -102,8 +107,8 @@ test('doctor.runDiagnostics binary result has correct structure', () => {
   }
 })
 
-test('doctor.runDiagnostics summary mentions count information', () => {
-  const report = doctor.runDiagnostics(false)
+test('doctor.runDiagnostics summary mentions count information', async () => {
+  const report = await doctor.runDiagnostics(false, NO_DAEMON)
 
   assert.ok(typeof report.summary === 'string', 'Summary should be string')
   assert.ok(report.summary.length > 0, 'Summary should not be empty')
@@ -111,7 +116,7 @@ test('doctor.runDiagnostics summary mentions count information', () => {
   assert.ok(report.summary.includes('Summary') || report.summary.includes('tool'), 'Summary should describe tools')
 })
 
-test('doctor.runDiagnostics identifies existing valid configs', () => {
+test('doctor.runDiagnostics identifies existing valid configs', async () => {
   // Create a temporary valid config
   const testDir = path.join(os.tmpdir(), 'doctor-test')
   if (!fs.existsSync(testDir)) {
@@ -129,7 +134,7 @@ test('doctor.runDiagnostics identifies existing valid configs', () => {
 
     // Note: runDiagnostics checks specific hardcoded paths, not our test path
     // So this test mainly verifies the diagnostic logic works with valid configs
-    const report = doctor.runDiagnostics(false)
+    const report = await doctor.runDiagnostics(false, NO_DAEMON)
 
     assert.ok(report.tools.length > 0, 'Should return tools even if not configured')
   } finally {
@@ -140,9 +145,9 @@ test('doctor.runDiagnostics identifies existing valid configs', () => {
   }
 })
 
-test('doctor.runDiagnostics handles invalid JSON gracefully', () => {
+test('doctor.runDiagnostics handles invalid JSON gracefully', async () => {
   // The diagnostic should handle invalid configs without crashing
-  const report = doctor.runDiagnostics(false)
+  const report = await doctor.runDiagnostics(false, NO_DAEMON)
 
   // Should always return a complete report
   assert.ok(report.tools, 'Should return tools')
@@ -150,8 +155,8 @@ test('doctor.runDiagnostics handles invalid JSON gracefully', () => {
   assert.ok(report.summary, 'Should return summary')
 })
 
-test('doctor tool statuses are consistent with structure', () => {
-  const report = doctor.runDiagnostics(false)
+test('doctor tool statuses are consistent with structure', async () => {
+  const report = await doctor.runDiagnostics(false, NO_DAEMON)
 
   for (const tool of report.tools) {
     // If status is 'ok', should have no issues
@@ -169,7 +174,7 @@ test('doctor tool statuses are consistent with structure', () => {
   }
 })
 
-test('doctor.runDiagnostics does not modify config files', () => {
+test('doctor.runDiagnostics does not modify config files', async () => {
   const candidates = config.getConfigCandidates()
 
   // Get checksums of existing files
@@ -182,7 +187,7 @@ test('doctor.runDiagnostics does not modify config files', () => {
   }
 
   // Run diagnostics
-  doctor.runDiagnostics(false)
+  await doctor.runDiagnostics(false, NO_DAEMON)
 
   // Verify files haven't changed
   for (const candidate in checksums) {

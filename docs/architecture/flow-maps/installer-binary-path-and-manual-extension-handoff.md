@@ -2,7 +2,7 @@
 doc_type: flow_map
 flow_id: installer-binary-path-and-manual-extension-handoff
 status: active
-last_reviewed: 2026-03-28
+last_reviewed: 2026-07-24
 owners:
   - Brenn
 entrypoints:
@@ -10,7 +10,9 @@ entrypoints:
   - scripts/install.ps1
   - scripts/build-crx.js
   - cmd/browser-agent/native_install.go:runNativeInstall
+  - cmd/browser-agent/native_install_connect.go:runExtensionConnectWait
   - npm/kaboom-agentic-browser/lib/install.js:executeInstall
+  - npm/kaboom-agentic-browser/lib/cli.js:watchExtensionConnect
   - pypi/kaboom-agentic-browser/kaboom_agentic_browser/platform.py:run_install
 code_paths:
   - Makefile
@@ -19,16 +21,27 @@ code_paths:
   - scripts/install.ps1
   - server/scripts/install.js
   - cmd/browser-agent/native_install.go
+  - cmd/browser-agent/native_install_connect.go
   - npm/kaboom-agentic-browser/lib/config.js
   - npm/kaboom-agentic-browser/lib/install.js
+  - npm/kaboom-agentic-browser/lib/cli.js
+  - npm/kaboom-agentic-browser/lib/health.js
+  - npm/kaboom-agentic-browser/lib/daemon.js
+  - npm/kaboom-agentic-browser/lib/browser.js
+  - npm/kaboom-agentic-browser/lib/doctor.js
   - npm/kaboom-agentic-browser/lib/uninstall.js
   - pypi/kaboom-agentic-browser/kaboom_agentic_browser/install.py
   - pypi/kaboom-agentic-browser/kaboom_agentic_browser/platform.py
   - docs/mcp-install-guide.md
 test_paths:
   - cmd/browser-agent/native_install_test.go
+  - cmd/browser-agent/native_install_connect_test.go
   - npm/kaboom-agentic-browser/lib/config.test.js
   - npm/kaboom-agentic-browser/lib/install.test.js
+  - npm/kaboom-agentic-browser/lib/health.test.js
+  - npm/kaboom-agentic-browser/lib/daemon.test.js
+  - npm/kaboom-agentic-browser/lib/browser.test.js
+  - npm/kaboom-agentic-browser/lib/doctor.test.js
   - npm/kaboom-agentic-browser/lib/uninstall.test.js
   - pypi/kaboom-agentic-browser/tests/test_install.py
   - tests/extension/release-extension-zip.test.js
@@ -73,6 +86,9 @@ Covers installer behavior for shell, PowerShell, npm wrapper, and PyPI wrapper t
    - pin extension
    - click Track This Tab
 10. Installer surfaces a branded panel-style summary at completion with the resolved binary path.
+11. Installer reveals the exact extension folder (`openExtensionFolder` / `openExtensionDir`) and opens the detected Chromium-family browser straight to its extensions page (`detectExtensionsTarget` → `openExtensionsPage`, browser-internal schemes `chrome://`/`brave://`/`edge://`).
+12. Installer ensures a daemon is running so the extension has something to connect to: the native installer starts it via `startDaemonSilently`; npm `--install` starts it via `ensureDaemon`/`startDaemon` (reusing an already-healthy daemon on the port instead of double-binding).
+13. Installer polls `/health` (`capture.extension_connected`) and shows a live connect loop (`waitForExtensionConnected` / `watchExtensionConnect`), printing a success line on connect or a phase-specific hint (`connectHintLine` / `connectHint`) on timeout. The wait is skipped — daemon still started — when opted out (`KABOOM_NO_WAIT`/`KABOOM_NO_DAEMON`) or when the output is non-interactive (piped/CI). `--connect` re-runs this loop on demand; `--doctor` reports the same daemon/extension/Node status non-blocking.
 
 ## Error and Recovery Paths
 
@@ -94,6 +110,9 @@ Covers installer behavior for shell, PowerShell, npm wrapper, and PyPI wrapper t
 6. In strict mode, checksum verification is mandatory for release binary downloads.
 7. Existing-daemon reuse on port checks requires service identity and version parity.
 8. Extension unpacked path defaults to `~/KaboomAgenticDevtoolExtension` (overridable with `KABOOM_EXTENSION_DIR`).
+9. The connect loop reads only existing `/health` fields (`version`, `capture.extension_connected`); it is a consumer and adds no new wire fields.
+10. Install-time opt-outs share one accepted-value grammar (`isEnvFlagSet` in JS, `envFlagEnabled` in Go): unset/empty/`0`/`false`/`no` are off. Auto-open uses `KABOOM_NO_OPEN`/`KABOOM_INSTALL_NO_OPEN`; connect-wait uses `KABOOM_NO_WAIT`/`KABOOM_INSTALL_NO_WAIT`; daemon-start uses `KABOOM_NO_DAEMON`.
+11. The connect loop's clock, `/health` fetch, and output sink are injectable so the loop is deterministic under test (no real timers or daemon).
 
 ## Code Paths
 
@@ -103,8 +122,14 @@ Covers installer behavior for shell, PowerShell, npm wrapper, and PyPI wrapper t
 - `scripts/install.ps1`
 - `server/scripts/install.js`
 - `cmd/browser-agent/native_install.go`
+- `cmd/browser-agent/native_install_connect.go`
 - `npm/kaboom-agentic-browser/lib/config.js`
 - `npm/kaboom-agentic-browser/lib/install.js`
+- `npm/kaboom-agentic-browser/lib/cli.js`
+- `npm/kaboom-agentic-browser/lib/health.js`
+- `npm/kaboom-agentic-browser/lib/daemon.js`
+- `npm/kaboom-agentic-browser/lib/browser.js`
+- `npm/kaboom-agentic-browser/lib/doctor.js`
 - `npm/kaboom-agentic-browser/lib/uninstall.js`
 - `pypi/kaboom-agentic-browser/kaboom_agentic_browser/install.py`
 - `pypi/kaboom-agentic-browser/kaboom_agentic_browser/platform.py`
@@ -113,8 +138,13 @@ Covers installer behavior for shell, PowerShell, npm wrapper, and PyPI wrapper t
 ## Test Paths
 
 - `cmd/browser-agent/native_install_test.go`
+- `cmd/browser-agent/native_install_connect_test.go`
 - `npm/kaboom-agentic-browser/lib/config.test.js`
 - `npm/kaboom-agentic-browser/lib/install.test.js`
+- `npm/kaboom-agentic-browser/lib/health.test.js`
+- `npm/kaboom-agentic-browser/lib/daemon.test.js`
+- `npm/kaboom-agentic-browser/lib/browser.test.js`
+- `npm/kaboom-agentic-browser/lib/doctor.test.js`
 - `npm/kaboom-agentic-browser/lib/uninstall.test.js`
 - `pypi/kaboom-agentic-browser/tests/test_install.py`
 - `tests/extension/release-extension-zip.test.js`
@@ -131,3 +161,7 @@ Covers installer behavior for shell, PowerShell, npm wrapper, and PyPI wrapper t
 2. Do not regress to `npx`-only config entries for managed installs.
 3. Do not reintroduce allowlist-based packaging in extension zip or CRX fallback flows.
 4. Preserve manual-extension wording in installer output to avoid user confusion.
+5. The connect loop must stay a `/health` consumer — never add wire fields here; changes to the health payload belong to the health flow map and its `wire_*` types.
+6. Keep the connect loop's clock/fetch/sink injectable; do not call real timers or `http` directly inside the loop body.
+7. The blocking connect-wait must remain skippable and auto-skip for non-interactive installs so CI/piped installs never hang.
+8. Keep install-time opt-out grammar centralized (`isEnvFlagSet`/`envFlagEnabled`); do not hand-roll new env parsing.

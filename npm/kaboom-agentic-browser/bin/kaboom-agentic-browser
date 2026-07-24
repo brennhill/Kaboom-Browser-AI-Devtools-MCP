@@ -72,7 +72,7 @@ function findBinary(info) {
 // --- CLI flag detection ---
 
 function isCliCommand(args) {
-  const cliFlags = new Set(['--config', '-c', '--install', '-i', '--update', '--doctor', '--uninstall', '--help', '-h', '--version', '-v'])
+  const cliFlags = new Set(['--config', '-c', '--install', '-i', '--update', '--doctor', '--connect', '--uninstall', '--help', '-h', '--version', '-v'])
   return args.some(arg => cliFlags.has(arg))
 }
 

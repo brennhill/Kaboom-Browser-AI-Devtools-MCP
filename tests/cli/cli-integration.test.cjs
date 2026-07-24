@@ -11,11 +11,20 @@ const fs = require('fs')
 const _path = require('path')
 const _os = require('os')
 
-// Helper to run kaboom-agentic-browser command
+// Helper to run kaboom-agentic-browser command.
+// Real (non-dry-run) --install would otherwise start the daemon, open the
+// extension folder/browser, and block on the connect wait. Disable all three so
+// the parser/routing tests stay hermetic and never leave a daemon running.
+const HERMETIC_ENV = {
+  ...process.env,
+  KABOOM_NO_DAEMON: '1',
+  KABOOM_NO_OPEN: '1',
+  KABOOM_NO_WAIT: '1',
+}
 function runCommand(args) {
   try {
     const cmd = `npm/kaboom-agentic-browser/bin/kaboom-agentic-browser ${args}`.trim()
-    const output = execSync(cmd, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] })
+    const output = execSync(cmd, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], env: HERMETIC_ENV })
     return { success: true, output, exitCode: 0 }
   } catch (e) {
     return { success: false, output: e.stdout || '', error: e.stderr || '', exitCode: e.status || 1 }
