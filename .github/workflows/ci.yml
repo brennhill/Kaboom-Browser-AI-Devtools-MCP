@@ -90,8 +90,8 @@ jobs:
       - name: Upgrade script contract tests
         run: node --test scripts/install-upgrade-regression.contract.test.mjs
 
-      - name: npm cleanup tests
-        run: node --test npm/kaboom-agentic-browser/lib/kill-daemon.test.js
+      - name: npm wrapper tests
+        run: node scripts/run-npm-wrapper-tests.js
 
       - name: Platform-binary publish guard tests
         run: node --test scripts/verify-platform-binaries.test.mjs

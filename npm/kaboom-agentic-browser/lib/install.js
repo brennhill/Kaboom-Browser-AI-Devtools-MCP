@@ -20,6 +20,7 @@ const {
   writeConfigFile,
   resolveManagedBinaryPath,
 } = require('./config');
+const { resolveExtensionDir } = require('./extension');
 
 const LEGACY_INSTALL_SERVER_NAMES = [
   ...LEGACY_MCP_SERVER_NAMES,
@@ -273,6 +274,14 @@ function executeInstall(options = {}) {
   }
 
   result.success = result.installed.length > 0;
+
+  // Tell the user the EXACT folder to load as an unpacked extension. The browser
+  // step is the one part the installer cannot do, so surfacing the precise path
+  // (and whether it is present yet) is what makes onboarding self-serve.
+  const ext = resolveExtensionDir();
+  result.extensionDir = ext.dir;
+  result.extensionExists = ext.exists;
+
   return result;
 }
 

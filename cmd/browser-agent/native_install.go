@@ -60,6 +60,61 @@ func printManualExtensionSetupChecklist(extDir string) {
 	}
 }
 
+// fileManagerOpenCommand returns the command that reveals dir in goos's desktop
+// file manager, or ok=false when the platform has none. Pure so the mapping can
+// be unit-tested without launching anything.
+func fileManagerOpenCommand(goos, dir string) (name string, args []string, ok bool) {
+	switch goos {
+	case "darwin":
+		return "open", []string{dir}, true
+	case "windows":
+		return "explorer", []string{dir}, true
+	case "linux":
+		return "xdg-open", []string{dir}, true
+	default:
+		return "", nil, false
+	}
+}
+
+// extensionAutoOpenDisabled reports whether the user opted out of the
+// install-time folder auto-open (headless installs, CI, scripted runs).
+func extensionAutoOpenDisabled() bool {
+	for _, key := range []string{"KABOOM_NO_OPEN", "KABOOM_INSTALL_NO_OPEN"} {
+		v := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
+		if v != "" && v != "0" && v != "false" && v != "no" {
+			return true
+		}
+	}
+	return false
+}
+
+// openExtensionFolder best-effort reveals extDir in the file manager so Load
+// unpacked is one selection away. Never fatal — the checklist still shows the
+// path when this cannot run (no opener, headless, opted out, dir absent).
+func openExtensionFolder(extDir string) bool {
+	if extDir == "" || extensionAutoOpenDisabled() {
+		return false
+	}
+	if info, err := os.Stat(extDir); err != nil || !info.IsDir() {
+		return false
+	}
+	name, args, ok := fileManagerOpenCommand(runtime.GOOS, extDir)
+	if !ok {
+		return false
+	}
+	if _, err := exec.LookPath(name); err != nil {
+		return false
+	}
+	cmd := exec.Command(name, args...)
+	cmd.Stdout, cmd.Stderr, cmd.Stdin = nil, nil, nil
+	util.SetDetachedProcess(cmd)
+	if err := cmd.Start(); err != nil {
+		return false
+	}
+	go func() { _ = cmd.Wait() }() // lint:allow-bare-goroutine — reap the detached opener
+	return true
+}
+
 func printInstallerPanel(title string, lines []string) {
 	const border = "+----------------------------------------------------------+"
 	stderrf("\033[1;36m%s\033[0m\n", border)
@@ -185,6 +240,9 @@ func runNativeInstall() {
 	})
 	stderrf("\n")
 	printManualExtensionSetupChecklist(extDir)
+	if openExtensionFolder(extDir) {
+		stderrf("   \033[1;32m📂 Opened the extension folder for you — select it in Load unpacked.\033[0m\n")
+	}
 	stderrf("\033[1;33mREADY TO COOK:\033[0m\n")
 	stderrf("   The Kaboom server is active on port 7890.\n")
 	stderrf("   Your AI tool (Claude, Cursor, etc.) is now configured.\n")
