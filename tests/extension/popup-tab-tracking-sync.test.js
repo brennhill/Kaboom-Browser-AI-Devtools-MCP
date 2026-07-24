@@ -117,8 +117,9 @@ describe('popup tab tracking sync', () => {
     const auditButton = document.getElementById('tracking-bar-audit')
     const warning = document.getElementById('no-tracking-warning')
     assert.strictEqual(trackingBar.style.display, 'flex')
-    assert.strictEqual(auditButton.style.display, 'inline-flex')
-    assert.strictEqual(auditButton.textContent, 'Audit')
+    // Audit stays hidden while AUDIT_BUTTON_ENABLED is false (see
+    // src/popup/tab-tracking.ts). The tracking bar itself must still appear.
+    assert.strictEqual(auditButton.style.display, 'none')
     assert.strictEqual(warning.style.display, 'none')
   })
 })

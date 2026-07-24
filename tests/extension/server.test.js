@@ -232,13 +232,17 @@ describe('checkServerHealth', () => {
   })
 
   test('returns connected false when daemon is reachable but heartbeat is missing', async () => {
+    // Assert against the same literal the fixture serves. This test is about
+    // heartbeat handling, not about any particular release, and hardcoding the
+    // version in two places desyncs whenever bump-version.js rewrites only one.
+    const servedVersion = '0.8.5'
     mockFetch.mock.mockImplementation(() =>
       Promise.resolve({
         ok: true,
         json: () =>
           Promise.resolve({
             status: 'ok',
-            version: MANIFEST_VERSION,
+            version: servedVersion,
             capture: {
               extension_connected: false,
               extension_last_seen: ''
@@ -250,7 +254,7 @@ describe('checkServerHealth', () => {
     const result = await checkServerHealth('http://localhost:9222')
     assert.strictEqual(result.connected, false)
     assert.strictEqual(result.status, 'ok')
-    assert.strictEqual(result.version, MANIFEST_VERSION)
+    assert.strictEqual(result.version, servedVersion)
     assert.ok(result.error.includes('heartbeat'))
   })
 

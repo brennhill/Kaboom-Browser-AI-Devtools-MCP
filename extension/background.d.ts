@@ -13,7 +13,6 @@ export { debugLog, getDebugLog, clearDebugLog, exportDebugLog } from './backgrou
 export { sharedServerCircuitBreaker, logBatcher, wsBatcher, enhancedActionBatcher, networkBodyBatcher, perfBatcher } from './background/index.js';
 export { handleLogMessage, handleClearLogs, isConnectionCheckRunning, checkConnectionAndUpdate } from './background/index.js';
 export { applyCaptureOverrides } from './background/state.js';
-export { sendStatusPingWrapper } from './background/index.js';
 export { getExtensionVersion, isNewVersionAvailable, getAvailableVersion, updateVersionFromHealth, updateVersionBadge, getUpdateInfo, resetVersionCheck } from './background/version-check.js';
 export { handlePendingQuery, handlePilotCommand } from './background/index.js';
 export { isAiWebPilotEnabled, markInitComplete } from './background/state.js';

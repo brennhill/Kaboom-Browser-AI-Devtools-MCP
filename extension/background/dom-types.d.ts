@@ -151,5 +151,6 @@ export interface DOMActionParams extends DOMPrimitiveOptions {
     visible_only?: boolean;
     query_type?: string;
     attribute_names?: string[];
+    dispatch?: 'auto' | 'dom';
 }
 //# sourceMappingURL=dom-types.d.ts.map

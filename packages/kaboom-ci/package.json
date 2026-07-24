@@ -1,6 +1,6 @@
 {
   "name": "@anthropic/kaboom-ci",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "description": "Kaboom CI - Standalone browser capture for CI/CD pipelines",
   "main": "kaboom-ci.js",
   "files": [

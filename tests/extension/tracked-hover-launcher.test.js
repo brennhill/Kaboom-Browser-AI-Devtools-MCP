@@ -326,7 +326,19 @@ describe('tracked hover launcher', () => {
     assert.ok(sentTypes.includes('capture_screenshot'))
   })
 
-  test('audit action uses Audit wording and opens the shared audit workflow', async () => {
+  // AUDIT_BUTTON_ENABLED in src/content/ui/tracked-hover-launcher.ts is currently
+  // false: the audit action is withheld until the terminal side-panel path is
+  // fully verified. requestAudit itself stays covered by request-audit.test.js.
+  test('does not render the audit action while the feature flag is off', async () => {
+    await setTrackedHoverLauncherEnabled(true)
+
+    const root = elementsById['kaboom-tracked-hover-launcher']
+    assert.strictEqual(findElementByTitlePrefix(root, 'Audit'), null, 'audit action must not be rendered')
+    assert.strictEqual(findElementByTitlePrefix(root, 'Find Problems'), null)
+  })
+
+  // Restore-guard: the contract to re-assert when AUDIT_BUTTON_ENABLED flips true.
+  test.skip('audit action uses Audit wording and opens the shared audit workflow (re-enable with AUDIT_BUTTON_ENABLED)', async () => {
     await setTrackedHoverLauncherEnabled(true)
 
     const root = elementsById['kaboom-tracked-hover-launcher']

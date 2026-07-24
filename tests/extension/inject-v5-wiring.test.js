@@ -115,12 +115,12 @@ describe('V5 Wiring: Kaboom API exports', () => {
   test('inject bundle should export Kaboom API installers only', async () => {
     const injectModule = await import('../../extension/inject.js')
 
+    // Kaboom-named installers are the public surface...
     assert.strictEqual(typeof injectModule.installKaboomAPI, 'function')
     assert.strictEqual(typeof injectModule.uninstallKaboomAPI, 'function')
-    // Installers only: the developer API object is installed on window.__kaboom by the
-    // installer, it is not exported from the inject bundle.
-    assert.strictEqual(injectModule.__kaboom, undefined)
-    assert.strictEqual(injectModule.kaboom, undefined)
+    // ...and the pre-rebrand Gasoline aliases must no longer be exported.
+    assert.strictEqual(injectModule.installGasolineAPI, undefined)
+    assert.strictEqual(injectModule.uninstallGasolineAPI, undefined)
   })
 })
 

@@ -32,7 +32,6 @@ export {
   sendPerformanceSnapshotsToServer,
   checkServerHealth,
   updateBadge,
-  sendStatusPing,
   type ServerHealthResponse
 } from './server.js'
 

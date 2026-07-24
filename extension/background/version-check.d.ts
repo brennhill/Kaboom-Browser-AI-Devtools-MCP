@@ -19,7 +19,7 @@ export declare function getAvailableVersion(): string | null;
  */
 export declare function updateVersionFromHealth(healthResponse: {
     version?: string;
-    availableVersion?: string;
+    available_version?: string;
 }, debugLogFn?: (category: string, message: string, data?: unknown) => void): void;
 /**
  * Update extension badge to show version update indicator

@@ -13,7 +13,7 @@ code_paths:
   - src/background/cdp-dispatch.ts
   - src/background/commands/analyze.ts
 test_paths: []
-last_verified_version: 0.8.4
+last_verified_version: 0.8.5
 last_verified_date: 2026-06-29
 ---
 

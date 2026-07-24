@@ -4,6 +4,7 @@
  */
 
 import { scaleTimeout } from '../lib/timeouts.js'
+import { syncTerminalPanelAvailability } from './side-panel-availability.js'
 import { delay } from '../lib/timeout-utils.js'
 import { KABOOM_LOG_PREFIX } from '../lib/brand.js'
 import { StorageKey } from '../lib/constants.js'
@@ -120,6 +121,9 @@ export async function loadSavedSettings(): Promise<SavedSettings> {
  */
 export async function loadAiWebPilotState(logFn?: (message: string) => void): Promise<boolean> {
   const startTime = performance.now()
+  // Fail closed: with no storage we cannot confirm the capability is enabled, and
+  // `undefined !== false` would otherwise report it as ON. Matches loadDebugModeState.
+  if (typeof chrome === 'undefined' || !chrome.storage) return false
   const aiEnabled = await getLocal(StorageKey.AI_WEB_PILOT_ENABLED)
   const wasLoaded = aiEnabled !== false
   const loadTime = performance.now() - startTime
@@ -201,7 +205,28 @@ async function focusTab(tab: chrome.tabs.Tab): Promise<void> {
   }
 }
 
+/**
+ * Whether the optional `tabGroups` permission has been granted. Terminal
+ * workspace grouping is purely cosmetic (an orange "KaBOOM!" tab group), so the
+ * permission is `optional_permissions` in the manifest — a required permission
+ * would force every existing user through a disable/re-approve prompt on update
+ * for a label. Grouping is therefore opt-in: skipped, never prompted, until the
+ * user grants tabGroups. When the permissions API is absent (test/edge runtimes)
+ * fall back to whether the namespaces are exposed at all.
+ */
+async function hasTabGroupsPermission(): Promise<boolean> {
+  if (typeof chrome.permissions?.contains === 'function') {
+    try {
+      return await chrome.permissions.contains({ permissions: ['tabGroups'] })
+    } catch {
+      return false
+    }
+  }
+  return typeof chrome.tabs?.group === 'function' && typeof chrome.tabGroups?.update === 'function'
+}
+
 async function createTerminalWorkspaceGroup(tabId: number): Promise<number | null> {
+  if (!(await hasTabGroupsPermission())) return null
   if (!chrome.tabs.group || !chrome.tabGroups?.update) return null
   try {
     const groupId = await chrome.tabs.group({ tabIds: [tabId] })

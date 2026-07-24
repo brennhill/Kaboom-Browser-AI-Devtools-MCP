@@ -208,8 +208,10 @@ function mapCDPError(err: unknown): string {
 // =============================================================================
 
 // Platform-specific modifier for select-all (Meta on macOS, Ctrl elsewhere).
-// Guard `navigator` so this module evaluates safely where it is absent (Node test
-// runner on Node 20, which has no global navigator); the service worker always has it.
+// Guard `navigator`: it is absent in the Node 20 test runner (global navigator
+// only landed in Node 21), and an unguarded module-scope read makes importing
+// this module throw ReferenceError there — taking down every test that touches
+// it. The service worker always has navigator, so behavior is unchanged.
 const SELECT_ALL_MODIFIER =
   typeof navigator !== 'undefined' && /mac/i.test(navigator.platform || '') ? 4 : 2
 
@@ -219,6 +221,58 @@ const CDP_ESCALATABLE = new Set(['click', 'type', 'key_press'])
 /** Check whether an action should attempt CDP before DOM primitives. */
 export function isCDPEscalatable(action: string): boolean {
   return CDP_ESCALATABLE.has(action)
+}
+
+/**
+ * Decide whether an action should attempt CDP hardware events before falling
+ * back to DOM primitives. Callers should route through this single predicate.
+ *
+ * `dispatch: "dom"` is the #599 escape hatch: it forces the DOM-primitives path
+ * (native-setter value + real element.click()), which drives React/Vue/Svelte
+ * controlled inputs and delegated onClick handlers reliably, at the cost of
+ * CDP's trusted (isTrusted:true) events. Frame/nth-scoped actions never use CDP
+ * because CDP input targets the main frame by coordinate only.
+ */
+export function shouldEscalateToCDP(action: string, params: DOMActionParams): boolean {
+  return (
+    isCDPEscalatable(action) &&
+    params.dispatch !== 'dom' &&
+    !params.frame &&
+    params.nth === undefined
+  )
+}
+
+/**
+ * Build an in-page JS expression that reconciles a controlled-input framework's
+ * value tracker after a CDP type (#599).
+ *
+ * CDP `Input.dispatchKeyEvent` updates the element's DOM value, but React tracks
+ * controlled-input values with a private `_valueTracker` and only fires its
+ * synthetic `onChange` when a native `input` event reports a value that differs
+ * from the tracked one. Re-applying the current value through the *prototype*
+ * `value` setter (which bypasses React's instance-level override) and dispatching
+ * a bubbling `input`/`change` makes React observe the change and fire onChange.
+ *
+ * The reconciliation is gated on a detected React tracker/fiber so it is a no-op
+ * on plain inputs (no spurious double input/change), and idempotent on React
+ * inputs whose onChange already fired (the tracker is current → no second fire).
+ */
+export function buildReactValueReconcileExpression(selector: string): string {
+  const sel = JSON.stringify(selector)
+  return `(() => {
+    const el = document.querySelector(${sel});
+    if (!el || (!(el instanceof HTMLInputElement) && !(el instanceof HTMLTextAreaElement))) return { reconciled: false };
+    const keys = Object.keys(el);
+    const hasReactTracker = !!el._valueTracker ||
+      keys.some(k => k.indexOf('__reactFiber$') === 0 || k.indexOf('__reactProps$') === 0);
+    if (!hasReactTracker) return { reconciled: false };
+    const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+    const desc = Object.getOwnPropertyDescriptor(proto, 'value');
+    if (desc && typeof desc.set === 'function') desc.set.call(el, el.value);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    return { reconciled: true };
+  })()`
 }
 
 async function cdpClearField(tabId: number): Promise<void> {
@@ -367,6 +421,19 @@ export async function tryCDPEscalation(
         if (!text) return null
         if (params.clear) await cdpClearField(tabId)
         await cdpDispatchKeySequence(tabId, text)
+        // #599: CDP keystrokes leave React's controlled-input value tracker stale,
+        // suppressing onChange. Reconcile through the native setter so onChange fires.
+        // Best-effort: the value is already typed even if reconciliation is skipped.
+        if (selector) {
+          try {
+            await cdpSend(tabId, 'Runtime.evaluate', {
+              expression: buildReactValueReconcileExpression(selector),
+              returnByValue: true
+            })
+          } catch {
+            /* reconciliation failed — value is still typed into the DOM */
+          }
+        }
       } else if (action === 'key_press') {
         const key = params.text || ''
         if (!key) return null

@@ -12,7 +12,7 @@ code_paths:
   - src/background/commands/analyze.ts
   - cmd/browser-agent/internal/toolinteract/interact_command_builder.go
 test_paths: []
-last_verified_version: 0.8.4
+last_verified_version: 0.8.5
 last_verified_date: 2026-06-29
 ---
 

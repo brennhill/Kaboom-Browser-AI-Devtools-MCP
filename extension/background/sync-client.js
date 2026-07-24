@@ -3,9 +3,9 @@
  * Docs: docs/features/feature/backend-log-streaming/index.md
  */
 import { errorMessage } from '../lib/error-utils.js';
+import { beacon } from '../lib/telemetry-beacon.js';
 import { fetchWithTimeout } from '../lib/timeout-utils.js';
 import { buildDaemonJSONRequestInit } from '../lib/daemon-http.js';
-import { beacon } from '../lib/telemetry-beacon.js';
 import { drainUIFeatures, restoreUIFeatures } from './ui-usage-tracker.js';
 // =============================================================================
 // SERVER INSTALL ID — single source of truth for all analytics
@@ -305,6 +305,7 @@ export class SyncClient {
             this.state.consecutiveFailures === 100 ||
             this.state.consecutiveFailures === 1000) {
             beacon('sync_connect_failed', { failures: String(this.state.consecutiveFailures) });
+            this.log('Sync failure threshold reached', { failures: this.state.consecutiveFailures });
         }
         // Require 2+ consecutive failures before marking disconnected
         // to prevent a single transient timeout from flipping connection state

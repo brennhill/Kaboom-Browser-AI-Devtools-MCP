@@ -107,6 +107,12 @@ func RegisterRoutes(mux *http.ServeMux, deps Deps, server ServerDeps, mgr *pty.M
 		HandleTerminalConfig(w, r, deps, mgr, relays)
 	}))
 
+	// Directory listing for the side panel's root-folder picker. The browser
+	// cannot resolve an absolute path on its own, so the daemon does it.
+	mux.HandleFunc("/terminal/dirs", deps.CORSMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		HandleTerminalDirs(w, r, deps)
+	}))
+
 	// Image upload for terminal sessions.
 	mux.HandleFunc("/terminal/upload", deps.CORSMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		HandleTerminalUpload(w, r, deps, mgr, relays)

@@ -362,6 +362,205 @@
     }
   }
 
+  // extension/lib/daemon-http.js
+  var DEFAULT_CLIENT_NAME = "kaboom-extension";
+  function buildDaemonHeaders(options = {}) {
+    const { clientName = DEFAULT_CLIENT_NAME, extensionVersion, contentType = "application/json", additionalHeaders = {} } = options;
+    const normalizedVersion = typeof extensionVersion === "string" && extensionVersion.trim().length > 0 ? extensionVersion.trim() : "";
+    const headers = {
+      "X-Kaboom-Client": normalizedVersion ? `${clientName}/${normalizedVersion}` : clientName
+    };
+    if (contentType !== null) {
+      headers["Content-Type"] = contentType;
+    }
+    if (normalizedVersion) {
+      headers["X-Kaboom-Extension-Version"] = normalizedVersion;
+    }
+    return {
+      ...headers,
+      ...additionalHeaders
+    };
+  }
+  function buildDaemonJSONRequestInit(payload, options = {}) {
+    const { method = "POST", signal, ...headerOptions } = options;
+    return {
+      method,
+      headers: buildDaemonHeaders(headerOptions),
+      body: JSON.stringify(payload),
+      ...signal ? { signal } : {}
+    };
+  }
+  async function postDaemonJSON(url, payload, options = {}) {
+    const { timeoutMs, signal, ...requestOptions } = options;
+    const effectiveSignal = signal || (typeof timeoutMs === "number" && timeoutMs > 0 && typeof AbortSignal.timeout === "function" ? AbortSignal.timeout(timeoutMs) : void 0);
+    return fetch(url, buildDaemonJSONRequestInit(payload, { ...requestOptions, signal: effectiveSignal }));
+  }
+
+  // extension/popup/update-button.js
+  var VERSION_POLL_INTERVAL_MS = 2e3;
+  var VERSION_POLL_TIMEOUT_MS = 12e4;
+  async function getServerUrl() {
+    const value = await getLocal(StorageKey.SERVER_URL);
+    return value || DEFAULT_SERVER_URL;
+  }
+  async function fetchHealth(serverUrl) {
+    const resp = await fetch(`${serverUrl}/health`, {
+      headers: buildDaemonHeaders()
+    });
+    if (!resp.ok) {
+      throw new Error(`health HTTP ${resp.status}`);
+    }
+    return await resp.json();
+  }
+  async function fetchNonce(serverUrl) {
+    const resp = await fetch(`${serverUrl}/upgrade/nonce`, {
+      headers: buildDaemonHeaders()
+    });
+    if (!resp.ok) {
+      throw new Error(`nonce HTTP ${resp.status}`);
+    }
+    const body = await resp.json();
+    if (!body.nonce) {
+      throw new Error("nonce missing from response");
+    }
+    return body.nonce;
+  }
+  async function postInstall(serverUrl, nonce) {
+    const resp = await postDaemonJSON(`${serverUrl}/upgrade/install`, { nonce });
+    if (resp.status === 501) {
+      throw new Error("Self-update is not supported on this platform \u2014 re-run the installer manually.");
+    }
+    if (resp.status === 429) {
+      throw new Error("Update was requested recently. Wait a minute and try again.");
+    }
+    if (!resp.ok) {
+      throw new Error(`install HTTP ${resp.status}`);
+    }
+  }
+  function setRunningText(seconds) {
+    const running = document.getElementById("update-action-running");
+    if (running) {
+      running.textContent = `Updating\u2026 (${seconds}s)
+The daemon will restart automatically.`;
+    }
+  }
+  function openExtensionsPage() {
+    const id = chrome?.runtime?.id;
+    const url = id ? `chrome://extensions/?id=${id}` : "chrome://extensions";
+    chrome.tabs.create({ url });
+  }
+  var INSTALL_LOG_PATH = "~/.kaboom/logs/install.log";
+  function showState(mode, errorMessage2) {
+    const idle = document.getElementById("update-action-idle");
+    const running = document.getElementById("update-action-running");
+    const reload = document.getElementById("update-action-reload");
+    const errorEl = document.getElementById("update-action-error");
+    const errorTextEl = document.getElementById("update-action-error-text");
+    if (idle)
+      idle.style.display = mode === "idle" ? "" : "none";
+    if (running)
+      running.style.display = mode === "running" ? "" : "none";
+    if (reload)
+      reload.style.display = mode === "reload" ? "" : "none";
+    if (errorEl) {
+      errorEl.style.display = mode === "error" ? "" : "none";
+    }
+    if (errorTextEl) {
+      errorTextEl.textContent = mode === "error" && errorMessage2 ? errorMessage2 : "";
+    }
+  }
+  var lastUpgradeInfo = null;
+  async function runUpgradeFlow(info) {
+    lastUpgradeInfo = info;
+    showState("running");
+    const startTime = Date.now();
+    setRunningText(0);
+    try {
+      const nonce = await fetchNonce(info.serverUrl);
+      await postInstall(info.serverUrl, nonce);
+      const deadline = startTime + VERSION_POLL_TIMEOUT_MS;
+      let observed = null;
+      while (Date.now() < deadline) {
+        const elapsedSeconds = Math.floor((Date.now() - startTime) / 1e3);
+        setRunningText(elapsedSeconds);
+        await new Promise((resolve) => setTimeout(resolve, VERSION_POLL_INTERVAL_MS));
+        try {
+          const health = await fetchHealth(info.serverUrl);
+          if (health.version && health.version === info.availableVersion) {
+            observed = health.version;
+            break;
+          }
+        } catch {
+        }
+      }
+      if (observed) {
+        showState("reload");
+      } else {
+        showState("error", "Daemon did not restart in time. Check the terminal or rerun the installer manually.");
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      showState("error", msg);
+    }
+  }
+  async function renderUpdateAvailableBanner(health) {
+    const container = document.getElementById("update-available");
+    const detail = document.getElementById("update-available-detail");
+    if (!container)
+      return;
+    const current = health.version ?? "";
+    const next = health.available_version ?? "";
+    const isNewer = next && current && next !== current;
+    if (!isNewer) {
+      container.style.display = "none";
+      return;
+    }
+    const serverUrl = await getServerUrl();
+    if (detail) {
+      detail.textContent = `v${current} installed; v${next} available.`;
+    }
+    container.style.display = "";
+    showState("idle");
+    const btn = document.getElementById("update-now-btn");
+    if (btn && !btn.dataset.wired) {
+      btn.dataset.wired = "1";
+      btn.addEventListener("click", () => {
+        void runUpgradeFlow({ currentVersion: current, availableVersion: next, serverUrl });
+      });
+    }
+    const reloadBtn = document.getElementById("update-reload-ext-btn");
+    if (reloadBtn && !reloadBtn.dataset.wired) {
+      reloadBtn.dataset.wired = "1";
+      reloadBtn.addEventListener("click", openExtensionsPage);
+    }
+    const retryBtn = document.getElementById("update-retry-btn");
+    if (retryBtn && !retryBtn.dataset.wired) {
+      retryBtn.dataset.wired = "1";
+      retryBtn.addEventListener("click", () => {
+        const info = lastUpgradeInfo ?? { currentVersion: current, availableVersion: next, serverUrl };
+        void runUpgradeFlow(info);
+      });
+    }
+    const copyLogBtn = document.getElementById("update-copy-log-btn");
+    if (copyLogBtn && !copyLogBtn.dataset.wired) {
+      copyLogBtn.dataset.wired = "1";
+      copyLogBtn.addEventListener("click", () => {
+        const originalText = copyLogBtn.textContent ?? "Copy log path";
+        void (async () => {
+          try {
+            await navigator.clipboard.writeText(INSTALL_LOG_PATH);
+            copyLogBtn.textContent = "Copied!";
+          } catch {
+            copyLogBtn.textContent = "Copy failed";
+          }
+          setTimeout(() => {
+            copyLogBtn.textContent = originalText;
+          }, 2e3);
+        })();
+      });
+    }
+  }
+
   // extension/lib/brand.js
   var KABOOM_LOG_PREFIX = "[KaBOOM!]";
   var KABOOM_RECORDING_LOG_PREFIX = "[KaBOOM! REC]";
@@ -805,40 +1004,6 @@
     });
   }
 
-  // extension/lib/daemon-http.js
-  var DEFAULT_CLIENT_NAME = "kaboom-extension";
-  function buildDaemonHeaders(options = {}) {
-    const { clientName = DEFAULT_CLIENT_NAME, extensionVersion, contentType = "application/json", additionalHeaders = {} } = options;
-    const normalizedVersion = typeof extensionVersion === "string" && extensionVersion.trim().length > 0 ? extensionVersion.trim() : "";
-    const headers = {
-      "X-Kaboom-Client": normalizedVersion ? `${clientName}/${normalizedVersion}` : clientName
-    };
-    if (contentType !== null) {
-      headers["Content-Type"] = contentType;
-    }
-    if (normalizedVersion) {
-      headers["X-Kaboom-Extension-Version"] = normalizedVersion;
-    }
-    return {
-      ...headers,
-      ...additionalHeaders
-    };
-  }
-  function buildDaemonJSONRequestInit(payload, options = {}) {
-    const { method = "POST", signal, ...headerOptions } = options;
-    return {
-      method,
-      headers: buildDaemonHeaders(headerOptions),
-      body: JSON.stringify(payload),
-      ...signal ? { signal } : {}
-    };
-  }
-  async function postDaemonJSON(url, payload, options = {}) {
-    const { timeoutMs, signal, ...requestOptions } = options;
-    const effectiveSignal = signal || (typeof timeoutMs === "number" && timeoutMs > 0 && typeof AbortSignal.timeout === "function" ? AbortSignal.timeout(timeoutMs) : void 0);
-    return fetch(url, buildDaemonJSONRequestInit(payload, { ...requestOptions, signal: effectiveSignal }));
-  }
-
   // extension/popup/action-recording.js
   var START_LABEL2 = "Record action workflow";
   var STOP_LABEL2 = "Stop recording";
@@ -877,7 +1042,7 @@
       els.statusEl.style.color = "";
     }, 5e3);
   }
-  async function getServerUrl() {
+  async function getServerUrl2() {
     const value = await getLocal(StorageKey.SERVER_URL);
     return value || DEFAULT_SERVER_URL;
   }
@@ -891,7 +1056,7 @@
     return idMatch?.[1] ?? null;
   }
   async function callConfigureFromPopup(argumentsPayload) {
-    const serverUrl = await getServerUrl();
+    const serverUrl = await getServerUrl2();
     const resp = await postDaemonJSON(`${serverUrl}/mcp`, {
       jsonrpc: "2.0",
       id: Date.now(),
@@ -1115,17 +1280,17 @@
   }
 
   // extension/lib/request-audit.js
-  async function requestAudit(pageUrl) {
+  async function requestAudit(pageUrl, tabId) {
     try {
-      await chrome.runtime.sendMessage({ type: "open_terminal_panel" });
+      await chrome.runtime.sendMessage({ type: "open_terminal_panel", tab_id: tabId });
     } catch {
     }
     await chrome.runtime.sendMessage({ type: "qa_scan_requested", page_url: pageUrl });
   }
 
   // extension/popup/tab-tracking-api.js
-  async function handleAuditClick(pageUrl) {
-    await requestAudit(pageUrl);
+  async function handleAuditClick(pageUrl, tabId) {
+    await requestAudit(pageUrl, tabId);
   }
   async function handleStopTracking(showIdleState2) {
     const prevTabId = await getLocal(StorageKey.TRACKED_TAB_ID);
@@ -1210,6 +1375,7 @@
 
   // extension/popup/tab-tracking.js
   var trackingStorageSyncInstalled = false;
+  var AUDIT_BUTTON_ENABLED = false;
   function hideAuditButton() {
     const trackingBarAudit = document.getElementById("tracking-bar-audit");
     if (!trackingBarAudit)
@@ -1257,11 +1423,16 @@
       };
     }
     if (trackingBarAudit) {
-      trackingBarAudit.textContent = "Audit";
-      trackingBarAudit.style.display = "inline-flex";
-      trackingBarAudit.onclick = () => {
-        void handleAuditClick(trackedTabUrl);
-      };
+      if (AUDIT_BUTTON_ENABLED) {
+        trackingBarAudit.textContent = "Audit";
+        trackingBarAudit.style.display = "inline-flex";
+        trackingBarAudit.onclick = () => {
+          void handleAuditClick(trackedTabUrl, trackedTabId);
+        };
+      } else {
+        trackingBarAudit.style.display = "none";
+        trackingBarAudit.onclick = null;
+      }
     }
     if (trackingBarStop) {
       trackingBarStop.onclick = (e) => {
@@ -1570,6 +1741,18 @@
         error: "Extension error \u2014 try reloading the extension"
       });
     }
+    void (async () => {
+      try {
+        const stored = await getLocal(StorageKey.SERVER_URL);
+        const serverUrl = stored && stored.length > 0 ? stored : DEFAULT_SERVER_URL;
+        const resp = await fetch(`${serverUrl}/health`, { headers: buildDaemonHeaders() });
+        if (!resp.ok)
+          return;
+        const health = await resp.json();
+        await renderUpdateAvailableBanner(health);
+      } catch {
+      }
+    })();
     const toggleKeys = FEATURE_TOGGLES.map((t) => t.storageKey);
     const allKeys = [
       ...toggleKeys,

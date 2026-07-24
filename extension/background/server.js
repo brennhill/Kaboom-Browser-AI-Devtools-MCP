@@ -2,7 +2,6 @@
  * Purpose: HTTP functions for sending telemetry data (logs, WebSocket events, network bodies, actions, performance) to the Kaboom MCP server.
  * Docs: docs/features/feature/backend-log-streaming/index.md
  */
-import { KABOOM_LOG_PREFIX } from '../lib/brand.js';
 import { getExtensionVersion } from './version-check.js';
 import { errorMessage } from '../lib/error-utils.js';
 import { buildDaemonHeaders } from '../lib/daemon-http.js';
@@ -150,27 +149,6 @@ export function updateBadge(status) {
         ]).catch(() => {
             /* badge update failed — SW may be shutting down */
         });
-    }
-}
-/**
- * Send status ping to server
- */
-export async function sendStatusPing(serverUrl, statusMessage, diagnosticLogFn) {
-    try {
-        const response = await fetch(`${serverUrl}/api/extension-status`, {
-            method: 'POST',
-            headers: getRequestHeaders(),
-            body: JSON.stringify(statusMessage)
-        });
-        if (!response.ok) {
-            console.error(`${KABOOM_LOG_PREFIX} Failed to send status ping: HTTP ${response.status}`, { type: statusMessage.type }); // nosemgrep: javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring -- console.log with internal server state, not user-controlled format string
-        }
-    }
-    catch (err) {
-        console.error(`${KABOOM_LOG_PREFIX} Error sending status ping:`, { type: statusMessage.type, error: errorMessage(err) });
-        if (diagnosticLogFn) {
-            diagnosticLogFn(`${KABOOM_LOG_PREFIX} Status ping error: ${errorMessage(err)}`);
-        }
     }
 }
 //# sourceMappingURL=server.js.map

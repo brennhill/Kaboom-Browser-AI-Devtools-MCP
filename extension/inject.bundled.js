@@ -2776,12 +2776,28 @@ function installKaboomAPI() {
     /**
      * Version of the Kaboom API
      */
-    version: "0.8.4"
+    version: "0.8.5"
   };
 }
 function uninstallKaboomAPI() {
   if (typeof window !== "undefined" && window.__kaboom) {
     delete window.__kaboom;
+  }
+}
+
+// extension/lib/safe-global-patch.js
+function safeAssignGlobal(target, key, value) {
+  try {
+    target[key] = value;
+    if (target[key] === value)
+      return true;
+  } catch {
+  }
+  try {
+    Object.defineProperty(target, key, { value, writable: true, configurable: true });
+    return target[key] === value;
+  } catch {
+    return false;
   }
 }
 
@@ -3006,7 +3022,9 @@ function installFetchCapture() {
   const earlyOriginal = window.__KABOOM_ORIGINAL_FETCH__;
   originalFetch = earlyOriginal || window.fetch;
   const wrappedWithBodies = wrapFetchWithBodies(originalFetch);
-  window.fetch = wrapFetch(wrappedWithBodies);
+  if (!safeAssignGlobal(window, "fetch", wrapFetch(wrappedWithBodies))) {
+    console.warn("[KaBOOM!] fetch is read-only on this page; network capture via fetch is unavailable.");
+  }
 }
 function installXHRCapture() {
   wrapXHRWithBodies();
@@ -3016,7 +3034,7 @@ function uninstallXHRCapture() {
 }
 function uninstallFetchCapture() {
   if (originalFetch) {
-    window.fetch = originalFetch;
+    safeAssignGlobal(window, "fetch", originalFetch);
     originalFetch = null;
   }
 }
@@ -3748,6 +3766,29 @@ function safeSerializeForExecute(value, depth = 0, seen = /* @__PURE__ */ new We
     return serializeObject2(value, depth, seen);
   return String(value);
 }
+var AsyncFunction = Object.getPrototypeOf(async function() {
+}).constructor;
+function compileUserScript(cleanScript) {
+  const forms = [
+    // eslint-disable-next-line no-new-func
+    () => new Function(`"use strict"; return (${cleanScript});`),
+    // nosemgrep: javascript.lang.security.eval.rule-eval-with-expression -- Function() constructor for controlled sandbox execution
+    // eslint-disable-next-line no-new-func
+    () => new Function(`"use strict"; ${cleanScript}`),
+    // nosemgrep: javascript.lang.security.eval.rule-eval-with-expression -- Function() constructor for controlled sandbox execution
+    () => new AsyncFunction(`"use strict"; return (${cleanScript});`),
+    () => new AsyncFunction(`"use strict"; ${cleanScript}`)
+  ];
+  let lastErr;
+  for (const compile of forms) {
+    try {
+      return compile();
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr;
+}
 function executeJavaScript(script, timeoutMs = 5e3) {
   const deferred = createDeferredPromise();
   const executeWithTimeoutProtection = async () => {
@@ -3766,12 +3807,7 @@ Tip: Run small test scripts to isolate the issue, then build up complexity.`
     }, timeoutMs);
     try {
       const cleanScript = script.trim();
-      let fn;
-      try {
-        fn = new Function(`"use strict"; return (${cleanScript});`);
-      } catch {
-        fn = new Function(`"use strict"; ${cleanScript}`);
-      }
+      const fn = compileUserScript(cleanScript);
       const result = fn();
       if (result && typeof result.then === "function") {
         ;

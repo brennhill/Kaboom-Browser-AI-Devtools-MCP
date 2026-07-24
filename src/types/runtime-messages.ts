@@ -245,6 +245,7 @@ export type BackgroundMessage =
   | RecordingGestureDeniedMessage
   | OpenPopupForRecordingMessage
   | OpenTerminalPanelMessage
+  | CloseTerminalPanelMessage
   | QaScanRequestedMessage
 
 /**
@@ -318,6 +319,31 @@ interface OpenPopupForRecordingMessage {
  */
 interface OpenTerminalPanelMessage {
   readonly type: 'open_terminal_panel'
+  /** Tab that should host the panel. Required from the popup (no sender.tab). */
+  readonly tab_id?: number
+}
+
+/**
+ * Background asks the side panel document to close itself.
+ *
+ * The background cannot close a side panel on every Chrome version
+ * (`chrome.sidePanel.close` is very new), but the panel document can call
+ * `window.close()`. Closing this way leaves the shell running.
+ */
+interface CloseTerminalPanelMessage {
+  readonly type: 'close_terminal_panel'
+}
+
+/**
+ * Background asks an existing side panel document to show the terminal again.
+ *
+ * Sent over the presence port (TERMINAL_PANEL_PORT), not runtime.sendMessage.
+ * `chrome.sidePanel.open()` on a panel that already exists merely focuses it and
+ * runs no code inside it, so a minimized or unmounted panel would stay blank and
+ * "open" would appear to do nothing.
+ */
+export interface RestoreTerminalPanelMessage {
+  readonly type: 'restore_terminal_panel'
 }
 
 /**
@@ -326,13 +352,6 @@ interface OpenTerminalPanelMessage {
 export interface TerminalPanelWriteMessage {
   readonly type: 'terminal_panel_write'
   readonly text: string
-}
-
-/**
- * Content script requests the side panel terminal to open.
- */
-interface OpenTerminalPanelMessage {
-  readonly type: 'open_terminal_panel'
 }
 
 /**
@@ -342,14 +361,6 @@ interface OpenTerminalPanelMessage {
 export interface QaScanRequestedMessage {
   readonly type: 'qa_scan_requested'
   readonly page_url?: string
-}
-
-/**
- * Runtime message forwarded to the side panel terminal host to write text.
- */
-export interface TerminalPanelWriteMessage {
-  readonly type: 'terminal_panel_write'
-  readonly text: string
 }
 
 /**

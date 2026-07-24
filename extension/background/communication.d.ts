@@ -9,7 +9,7 @@
  */
 export { createCircuitBreaker, type CircuitBreakerOptions, type CircuitBreaker } from './circuit-breaker.js';
 export { createBatcherWithCircuitBreaker, createLogBatcher, RATE_LIMIT_CONFIG, type Batcher, type BatcherWithCircuitBreaker, type BatcherConfig, type LogBatcherOptions } from './batchers.js';
-export { sendLogsToServer, sendWSEventsToServer, sendNetworkBodiesToServer, sendEnhancedActionsToServer, sendPerformanceSnapshotsToServer, checkServerHealth, updateBadge, sendStatusPing, type ServerHealthResponse } from './server.js';
+export { sendLogsToServer, sendWSEventsToServer, sendNetworkBodiesToServer, sendEnhancedActionsToServer, sendPerformanceSnapshotsToServer, checkServerHealth, updateBadge, type ServerHealthResponse } from './server.js';
 import type { LogEntry } from '../types/index.js';
 /**
  * Format a log entry with timestamp and truncation

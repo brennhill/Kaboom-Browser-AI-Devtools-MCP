@@ -16,6 +16,21 @@ let windowListeners = {}
 let runtimeMessageListeners = []
 let storageChangeListener = null
 let activeTabId = 1
+let connectedPorts = []
+
+/** Stand-in for a chrome.runtime.Port, with the two listener lists exposed. */
+function createFakePort(name) {
+  const port = {
+    name,
+    messageListeners: [],
+    disconnectListeners: [],
+    postMessage: mock.fn(),
+    disconnect: mock.fn(),
+    onMessage: { addListener: mock.fn((fn) => port.messageListeners.push(fn)) },
+    onDisconnect: { addListener: mock.fn((fn) => port.disconnectListeners.push(fn)) }
+  }
+  return port
+}
 
 function makeResponse(status, body) {
   return {
@@ -148,6 +163,7 @@ function setupEnvironment() {
   runtimeMessageListeners = []
   storageChangeListener = null
   activeTabId = 1
+  connectedPorts = []
 
   const body = createElement('body')
   const head = createElement('head')
@@ -214,6 +230,11 @@ function setupEnvironment() {
         }
         callback?.({})
         return Promise.resolve({})
+      }),
+      connect: mock.fn(({ name }) => {
+        const port = createFakePort(name)
+        connectedPorts.push(port)
+        return port
       }),
       onMessage: {
         addListener: mock.fn((listener) => {
@@ -351,8 +372,11 @@ describe('terminal side panel host', () => {
     await module._terminalPanelForTests.bootTerminalPanel(true)
 
     const header = getElementById('kaboom-terminal-header')
-    const powerButton = findButton(header, (node) => node.title === 'Disconnect terminal & end session')
+    // Matched by id, not title: the title is user-facing copy and should be free
+    // to change without breaking the behavioural contract below.
+    const powerButton = findButton(header, (node) => node.id === 'kaboom-terminal-disconnect-button')
     assert.ok(powerButton, 'power button should be present')
+    assert.match(powerButton.title, /end session/i, 'the power control must read as ending the session')
     assert.strictEqual(startCount, 1)
 
     powerButton.dispatch('click')
@@ -574,7 +598,7 @@ describe('terminal side panel host', () => {
 
     const header = getElementById('kaboom-terminal-header')
     const minimizeButton = findButton(header, (node) => node.title === 'Minimize terminal')
-    const terminalBody = header?.parentElement?.children?.[1] || null
+    const terminalBody = getElementById('kaboom-terminal-body')
 
     assert.ok(minimizeButton, 'minimize button should be present after restore')
     assert.ok(terminalBody, 'terminal body should exist after restore')
@@ -625,15 +649,149 @@ describe('terminal side panel host', () => {
     await module._terminalPanelForTests.bootTerminalPanel(true)
 
     const header = getElementById('kaboom-terminal-header')
-    const terminalBody = header?.parentElement?.children?.[1] || null
+    const terminalBody = getElementById('kaboom-terminal-body')
     const titleNode = walkTree(header, (child) => child.textContent === 'KaBOOM! Terminal')
     const fallbackNode = walkTree(terminalBody, (child) =>
-      child.textContent === 'Terminal unavailable. Start the KaBOOM! daemon and reopen the panel.'
+      typeof child.textContent === 'string' && child.textContent.includes('KaBOOM! daemon')
     )
+    // The dead-end sentence is replaced by a recoverable state: a session can be
+    // started and the root folder changed without leaving the panel. Previously
+    // an ended or failed session left nothing to click. The root folder moved
+    // out of this state and into a bar that is always visible above the terminal.
+    const startButton = walkTree(terminalBody, (child) => child.id === 'kaboom-terminal-start-button')
+    const rootInput = getElementById('kaboom-terminal-root-folder-input')
 
     assert.ok(header, 'terminal header should exist')
     assert.ok(titleNode, 'terminal header should show Kaboom Terminal')
     assert.ok(terminalBody, 'terminal body should exist')
     assert.ok(fallbackNode, 'fallback should mention the Kaboom daemon')
+    assert.ok(startButton, 'a session-less panel must offer a way to start one')
+    assert.ok(rootInput, 'a session-less panel must let the user set the root folder')
+    const rootBar = getElementById('kaboom-terminal-root-folder-bar')
+    assert.ok(rootBar, 'the root folder bar must exist whether or not a session started')
+  })
+
+  test('close button closes the drawer and leaves the shell running', async () => {
+    // Closing a drawer must not destroy the shell inside it. The old close
+    // called exitTerminalSession(), so a user tidying the UI lost their session.
+    const stopBodies = []
+    globalThis.fetch = (url, init) => {
+      if (url.includes('/terminal/start')) {
+        return Promise.resolve(makeResponse(200, { session_id: 'session-1', token: 'tok-1', pid: 1 }))
+      }
+      if (url.includes('/terminal/stop')) {
+        stopBodies.push(JSON.parse(init.body))
+        return Promise.resolve(makeResponse(200, { status: 'stopped' }))
+      }
+      if (url.includes('/terminal/validate?token=')) {
+        return Promise.resolve(makeResponse(200, { valid: false }))
+      }
+      throw new Error(`Unexpected fetch call: ${url}`)
+    }
+
+    const module = await import(`../../extension/sidepanel.js?v=${++importCounter}`)
+    await module._terminalPanelForTests.bootTerminalPanel(true)
+
+    const header = getElementById('kaboom-terminal-header')
+    const closeButton = findButton(header, (node) => node.id === 'kaboom-terminal-close-button')
+    assert.ok(closeButton, 'the panel needs an obvious close control')
+
+    closeButton.dispatch('click')
+    await sleep(0)
+
+    assert.deepStrictEqual(stopBodies, [], 'closing the drawer must not stop the PTY')
+    assert.notStrictEqual(
+      sessionStorageData[StorageKey.TERMINAL_SESSION], undefined,
+      'the session must survive so reopening reconnects to it'
+    )
+    assert.strictEqual(chrome.sidePanel.close.mock.calls.length, 1, 'close should close the side panel')
+  })
+
+  // The background decides open-vs-close from whether a panel document exists.
+  // It learns that from this port — a stored flag cannot see Chrome's own X
+  // dismiss the panel, and a stale "open" left the user unable to reopen at all.
+  describe('presence port', () => {
+    function bootWithSession() {
+      globalThis.fetch = (url) => {
+        if (url.includes('/terminal/start')) {
+          return Promise.resolve(makeResponse(200, { session_id: 'session-1', token: 'tok-1', pid: 1 }))
+        }
+        if (url.includes('/terminal/validate?token=')) {
+          return Promise.resolve(makeResponse(200, { valid: false }))
+        }
+        throw new Error(`Unexpected fetch call: ${url}`)
+      }
+      return import(`../../extension/sidepanel.js?v=${++importCounter}`)
+    }
+
+    test('the panel announces itself on the terminal panel port while it is alive', async () => {
+      const module = await bootWithSession()
+      await module._terminalPanelForTests.bootTerminalPanel(true)
+
+      const port = connectedPorts.find((p) => p.name === 'kaboom_terminal_panel')
+      assert.ok(port, 'the background has no other way to know a panel exists')
+    })
+
+    test('a close over the port closes the drawer without stopping the shell', async () => {
+      const module = await bootWithSession()
+      await module._terminalPanelForTests.bootTerminalPanel(true)
+      const port = connectedPorts.find((p) => p.name === 'kaboom_terminal_panel')
+
+      for (const listener of port.messageListeners) listener({ type: 'close_terminal_panel' })
+      await sleep(0)
+
+      assert.strictEqual(getElementById('kaboom-terminal-widget'), null, 'the drawer should be gone')
+      assert.notStrictEqual(
+        sessionStorageData[StorageKey.TERMINAL_SESSION], undefined,
+        'closing the drawer must leave the shell running'
+      )
+    })
+
+    test('a restore over the port rebuilds a panel that had been closed', async () => {
+      // sidePanel.open() on an existing panel only focuses it — no code runs in
+      // this document — so without this an already-open-but-blank panel stayed
+      // blank and "Open Kaboom Terminal" looked broken.
+      const module = await bootWithSession()
+      await module._terminalPanelForTests.bootTerminalPanel(true)
+      const port = connectedPorts.find((p) => p.name === 'kaboom_terminal_panel')
+
+      for (const listener of port.messageListeners) listener({ type: 'close_terminal_panel' })
+      await sleep(0)
+      assert.strictEqual(getElementById('kaboom-terminal-widget'), null)
+
+      for (const listener of port.messageListeners) listener({ type: 'restore_terminal_panel' })
+      await sleep(0)
+
+      assert.ok(getElementById('kaboom-terminal-widget'), 'restore must put the terminal back')
+      assert.strictEqual(sessionStorageData[StorageKey.TERMINAL_UI_STATE], 'open')
+    })
+
+    test('a restore on a panel that has no terminal starts one', async () => {
+      // Booting while the daemon was down leaves a mounted panel with no iframe.
+      // Reopening has to try again, not just re-show the failure.
+      let startCalls = 0
+      globalThis.fetch = (url) => {
+        if (url.includes('/terminal/start')) {
+          startCalls += 1
+          return startCalls === 1
+            ? Promise.resolve(makeResponse(500, { error: 'daemon_unavailable' }))
+            : Promise.resolve(makeResponse(200, { session_id: 's2', token: 'tok-2', pid: 2 }))
+        }
+        if (url.includes('/terminal/validate?token=')) {
+          return Promise.resolve(makeResponse(200, { valid: false }))
+        }
+        throw new Error(`Unexpected fetch call: ${url}`)
+      }
+      const module = await import(`../../extension/sidepanel.js?v=${++importCounter}`)
+      await module._terminalPanelForTests.bootTerminalPanel(true)
+      const port = connectedPorts.find((p) => p.name === 'kaboom_terminal_panel')
+      assert.strictEqual(getElementById('kaboom-terminal-iframe'), null, 'no session means no iframe')
+
+      for (const listener of port.messageListeners) listener({ type: 'restore_terminal_panel' })
+      await sleep(0)
+
+      assert.strictEqual(startCalls, 2, 'restore must retry the session')
+      assert.ok(getElementById('kaboom-terminal-iframe'), 'the retry should mount a terminal')
+    })
   })
 })

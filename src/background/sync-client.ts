@@ -10,9 +10,9 @@
 
 import type { PendingQuery } from '../types/index.js'
 import { errorMessage } from '../lib/error-utils.js'
+import { beacon } from '../lib/telemetry-beacon.js'
 import { fetchWithTimeout } from '../lib/timeout-utils.js'
 import { buildDaemonJSONRequestInit } from '../lib/daemon-http.js'
-import { beacon } from '../lib/telemetry-beacon.js'
 import { drainUIFeatures, restoreUIFeatures } from './ui-usage-tracker.js'
 
 // =============================================================================
@@ -465,6 +465,7 @@ export class SyncClient {
       this.state.consecutiveFailures === 1000
     ) {
       beacon('sync_connect_failed', { failures: String(this.state.consecutiveFailures) })
+      this.log('Sync failure threshold reached', { failures: this.state.consecutiveFailures })
     }
 
     // Require 2+ consecutive failures before marking disconnected

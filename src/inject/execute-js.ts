@@ -95,6 +95,48 @@ export function safeSerializeForExecute(
   return String(value)
 }
 
+// AsyncFunction constructor — same family as Function, but its body permits
+// top-level `await`. Derived once at module load from an async function's prototype.
+const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as FunctionConstructor
+
+/**
+ * Compile a user script into a callable, trying progressively more permissive forms.
+ *
+ * Order matters: the two synchronous forms are attempted first so that every
+ * script that compiled before this function existed keeps its exact prior
+ * behavior (a synchronous throw stays a synchronous throw, not a rejected
+ * promise). Only scripts the sync forms reject — chiefly those using top-level
+ * `await`, which previously failed with a SyntaxError (issue #598) — fall
+ * through to the AsyncFunction forms, whose result is always a promise.
+ *
+ * 1. sync expression  — `return (script)`  captures IIFE/expression values
+ * 2. sync statement   — `script`           allows statements + explicit return
+ * 3. async expression — `return (script)`  captures a bare `await expr` value
+ * 4. async statement  — `script`           allows statements + top-level await
+ */
+function compileUserScript(cleanScript: string): () => unknown {
+  const forms: Array<() => () => unknown> = [
+    // eslint-disable-next-line no-new-func
+    () => new Function(`"use strict"; return (${cleanScript});`) as () => unknown, // nosemgrep: javascript.lang.security.eval.rule-eval-with-expression -- Function() constructor for controlled sandbox execution
+    // eslint-disable-next-line no-new-func
+    () => new Function(`"use strict"; ${cleanScript}`) as () => unknown, // nosemgrep: javascript.lang.security.eval.rule-eval-with-expression -- Function() constructor for controlled sandbox execution
+    () => new AsyncFunction(`"use strict"; return (${cleanScript});`) as () => unknown,
+    () => new AsyncFunction(`"use strict"; ${cleanScript}`) as () => unknown
+  ]
+
+  let lastErr: unknown
+  for (const compile of forms) {
+    try {
+      return compile()
+    } catch (err) {
+      lastErr = err
+    }
+  }
+  // All forms failed (genuine syntax error / CSP block) — surface the final
+  // error so the caller can classify it (csp_blocked vs execution_error).
+  throw lastErr
+}
+
 /**
  * Execute arbitrary JavaScript in the page context with timeout handling.
  */
@@ -120,16 +162,9 @@ Tip: Run small test scripts to isolate the issue, then build up complexity.`
     try {
       const cleanScript = script.trim()
 
-      // Try expression form first (captures return values from IIFEs, expressions).
-      // If it throws SyntaxError (statements like try/catch, if/else), fall back to statement form.
-      let fn: () => unknown
-      try {
-        // eslint-disable-next-line no-new-func
-        fn = new Function(`"use strict"; return (${cleanScript});`) as () => unknown // nosemgrep: javascript.lang.security.eval.rule-eval-with-expression -- Function() constructor for controlled sandbox execution
-      } catch {
-        // eslint-disable-next-line no-new-func
-        fn = new Function(`"use strict"; ${cleanScript}`) as () => unknown // nosemgrep: javascript.lang.security.eval.rule-eval-with-expression -- Function() constructor for controlled sandbox execution
-      }
+      // Compile the script, preferring synchronous forms and falling back to
+      // AsyncFunction forms (which permit top-level `await`). See compileUserScript.
+      const fn = compileUserScript(cleanScript)
 
       const result = fn()
 

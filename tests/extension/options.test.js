@@ -133,8 +133,7 @@ describe('Options Deferral Toggle', () => {
     await loadOptions()
 
     // Toggle is active by default
-    saveOptions()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await saveOptions()
 
     assert.ok(mockChrome.storage.local.set.mock.calls.some((c) => c.arguments[0].deferralEnabled === true))
   })
@@ -143,8 +142,7 @@ describe('Options Deferral Toggle', () => {
     mockChrome.storage.local.get = mock.fn((keys, cb) => cb({ deferralEnabled: false }))
     await loadOptions()
 
-    saveOptions()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await saveOptions()
 
     assert.ok(mockChrome.storage.local.set.mock.calls.some((c) => c.arguments[0].deferralEnabled === false))
   })
@@ -153,8 +151,7 @@ describe('Options Deferral Toggle', () => {
     mockChrome.storage.local.get = mock.fn((keys, cb) => cb({}))
     await loadOptions()
 
-    saveOptions()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await saveOptions()
 
     assert.ok(
       mockChrome.runtime.sendMessage.mock.calls.some(
@@ -167,8 +164,7 @@ describe('Options Deferral Toggle', () => {
     mockChrome.storage.local.get = mock.fn((keys, cb) => cb({ deferralEnabled: false }))
     await loadOptions()
 
-    saveOptions()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await saveOptions()
 
     assert.ok(
       mockChrome.runtime.sendMessage.mock.calls.some(
@@ -221,8 +217,7 @@ describe('Options Screenshot Toggle', () => {
     mockChrome.storage.local.get = mock.fn((keys, cb) => cb({}))
     await loadOptions()
 
-    saveOptions()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await saveOptions()
 
     assert.ok(mockChrome.storage.local.set.mock.calls.some((c) => c.arguments[0].screenshotOnError === false))
   })
@@ -231,8 +226,7 @@ describe('Options Screenshot Toggle', () => {
     mockChrome.storage.local.get = mock.fn((keys, cb) => cb({ screenshotOnError: true }))
     await loadOptions()
 
-    saveOptions()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await saveOptions()
 
     assert.ok(mockChrome.storage.local.set.mock.calls.some((c) => c.arguments[0].screenshotOnError === true))
   })
@@ -241,8 +235,7 @@ describe('Options Screenshot Toggle', () => {
     mockChrome.storage.local.get = mock.fn((keys, cb) => cb({ screenshotOnError: true }))
     await loadOptions()
 
-    saveOptions()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await saveOptions()
 
     assert.ok(
       mockChrome.runtime.sendMessage.mock.calls.some(
@@ -295,8 +288,7 @@ describe('Options Source Map Toggle', () => {
     mockChrome.storage.local.get = mock.fn((keys, cb) => cb({}))
     await loadOptions()
 
-    saveOptions()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await saveOptions()
 
     assert.ok(mockChrome.storage.local.set.mock.calls.some((c) => c.arguments[0].sourceMapEnabled === false))
   })
@@ -305,8 +297,7 @@ describe('Options Source Map Toggle', () => {
     mockChrome.storage.local.get = mock.fn((keys, cb) => cb({ sourceMapEnabled: true }))
     await loadOptions()
 
-    saveOptions()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await saveOptions()
 
     assert.ok(mockChrome.storage.local.set.mock.calls.some((c) => c.arguments[0].sourceMapEnabled === true))
   })
@@ -315,8 +306,7 @@ describe('Options Source Map Toggle', () => {
     mockChrome.storage.local.get = mock.fn((keys, cb) => cb({ sourceMapEnabled: true }))
     await loadOptions()
 
-    saveOptions()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await saveOptions()
 
     assert.ok(
       mockChrome.runtime.sendMessage.mock.calls.some(
@@ -383,8 +373,7 @@ describe('Options Debug Mode Toggle', () => {
     mockChrome.storage.local.get = mock.fn((keys, cb) => cb({}))
     await loadOptions()
 
-    saveOptions()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await saveOptions()
 
     assert.ok(mockChrome.storage.local.set.mock.calls.some((c) => c.arguments[0].debugMode === false))
   })
@@ -393,8 +382,7 @@ describe('Options Debug Mode Toggle', () => {
     mockChrome.storage.local.get = mock.fn((keys, cb) => cb({ debugMode: true }))
     await loadOptions()
 
-    saveOptions()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await saveOptions()
 
     assert.ok(mockChrome.storage.local.set.mock.calls.some((c) => c.arguments[0].debugMode === true))
   })
@@ -403,8 +391,7 @@ describe('Options Debug Mode Toggle', () => {
     mockChrome.storage.local.get = mock.fn((keys, cb) => cb({ debugMode: true }))
     await loadOptions()
 
-    saveOptions()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await saveOptions()
 
     assert.ok(
       mockChrome.runtime.sendMessage.mock.calls.some(
@@ -417,8 +404,7 @@ describe('Options Debug Mode Toggle', () => {
     mockChrome.storage.local.get = mock.fn((keys, cb) => cb({ debugMode: false }))
     await loadOptions()
 
-    saveOptions()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await saveOptions()
 
     assert.ok(
       mockChrome.runtime.sendMessage.mock.calls.some(

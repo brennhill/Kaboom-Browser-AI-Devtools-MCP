@@ -5,15 +5,14 @@
  */
 import { getServerUrl, getConnectionStatus, getExtensionLogQueue, pushExtensionLog, capExtensionLogs, getCurrentLogLevel, isScreenshotOnError, _setDebugModeRaw, setConnectionStatus, setConnectionCheckRunning, clearExtensionLogQueue, EXTENSION_SESSION_ID, isAiControlled, isAiWebPilotEnabled, isConnectionCheckRunning as isConnectionCheckRunningFlag, isDebugMode, applyCaptureOverrides } from './state.js';
 import { addDebugLogEntry, getDebugLog as getDebugLogEntries, clearDebugLog as clearDebugLogEntries, isSourceMapEnabled, resolveStackTrace, processErrorGroup, canTakeScreenshot, recordScreenshot } from './state-manager.js';
-import { createCircuitBreaker, RATE_LIMIT_CONFIG, shouldCaptureLog, formatLogEntry, captureScreenshot, updateBadge, checkServerHealth, sendStatusPing } from './communication.js';
-import { getTrackedTabInfo } from './event-listeners.js';
+import { createCircuitBreaker, RATE_LIMIT_CONFIG, shouldCaptureLog, formatLogEntry, captureScreenshot, updateBadge, checkServerHealth } from './communication.js';
 import { DebugCategory } from './debug.js';
 import { getRequestHeaders } from './server.js';
 import { handlePendingQuery as handlePendingQueryImpl, handlePilotCommand as handlePilotCommandImpl } from './pending-queries.js';
 import { updateVersionFromHealth } from './version-check.js';
 import { createBatcherInstances } from './batcher-instances.js';
 import { KABOOM_LOG_PREFIX } from '../lib/brand.js';
-import { errorMessage } from '../lib/error-utils.js';
+import { errorMessage, isNoReceiverError } from '../lib/error-utils.js';
 import { startSyncClient as startSyncClientImpl, resetSyncClientConnection as resetSyncClientConnectionImpl } from './sync-manager.js';
 // Re-export for consumers that already import from here
 export { DEFAULT_SERVER_URL } from '../lib/constants.js';
@@ -233,7 +232,7 @@ export function isConnectionCheckRunning() {
 // #lizard forgives
 function updateVersionFromHealthSafe(health) {
     try {
-        updateVersionFromHealth({ version: health.version, availableVersion: health.availableVersion }, debugLog);
+        updateVersionFromHealth({ version: health.version, available_version: health.available_version }, debugLog);
     }
     catch (err) {
         debugLog(DebugCategory.CONNECTION, 'Failed to update version info', { error: errorMessage(err) });
@@ -274,7 +273,13 @@ function broadcastStatusUpdate() {
         return;
     chrome.runtime
         .sendMessage({ type: 'status_update', status: { ...getConnectionStatus(), aiControlled: isAiControlled() } })
-        .catch((err) => console.error(`${KABOOM_LOG_PREFIX} Error sending status update:`, err));
+        .catch((err) => {
+        // A closed popup means no listener for this broadcast — expected, not an
+        // error. Only surface genuine failures. (#status-update-noise)
+        if (isNoReceiverError(err))
+            return;
+        console.error(`${KABOOM_LOG_PREFIX} Error sending status update:`, err);
+    });
 }
 // eslint-disable-next-line security-node/detect-unhandled-async-errors
 export async function checkConnectionAndUpdate() {
@@ -301,22 +306,6 @@ export async function checkConnectionAndUpdate() {
     finally {
         setConnectionCheckRunning(false);
     }
-}
-// =============================================================================
-// STATUS PING (still used for tracked tab change notifications)
-// =============================================================================
-export async function sendStatusPingWrapper() {
-    const trackingInfo = await getTrackedTabInfo();
-    const statusMessage = {
-        type: 'status',
-        tracking_enabled: !!trackingInfo.trackedTabId,
-        tracked_tab_id: trackingInfo.trackedTabId,
-        tracked_tab_url: trackingInfo.trackedTabUrl,
-        message: trackingInfo.trackedTabId ? 'tracking enabled' : 'no tab tracking enabled',
-        extension_connected: true,
-        timestamp: new Date().toISOString()
-    };
-    await sendStatusPing(getServerUrl(), statusMessage, diagnosticLog);
 }
 // =============================================================================
 // SYNC CLIENT (delegated to sync-manager.ts)

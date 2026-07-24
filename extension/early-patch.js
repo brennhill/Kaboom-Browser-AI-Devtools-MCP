@@ -12,6 +12,37 @@
     'use strict';
     if (typeof window === 'undefined')
         return;
+    /**
+     * Assign a global that the page may have made read-only.
+     *
+     * Duplicated from src/lib/safe-global-patch.ts on purpose: this file runs in
+     * the MAIN world at document_start and is required to be self-contained (see
+     * the header). Keep the two in sync.
+     *
+     * Hardened pages define fetch/WebSocket as non-writable, so a plain assignment
+     * throws "Cannot assign to read only property 'fetch' of object '#<Window>'".
+     * Unguarded, that throw escaped and aborted every patch after it.
+     */
+    function safeAssignGlobal(target, key, value) {
+        try {
+            // eslint-disable-next-line security/detect-object-injection -- key is a keyof T supplied by our own call sites
+            target[key] = value;
+            // eslint-disable-next-line security/detect-object-injection -- same key, read back to confirm the write landed
+            if (target[key] === value)
+                return true;
+        }
+        catch {
+            // Non-writable — try defineProperty below.
+        }
+        try {
+            Object.defineProperty(target, key, { value, writable: true, configurable: true });
+            // eslint-disable-next-line security/detect-object-injection -- same key, read back to confirm the write landed
+            return target[key] === value;
+        }
+        catch {
+            return false;
+        }
+    }
     // Cloaked domains — bail out before patching any globals.
     // Must be sync (MAIN world, no chrome APIs). Manifest exclude_matches is
     // the primary guard; this is a defense-in-depth fallback.
@@ -76,7 +107,7 @@
         Object.defineProperty(EarlyWebSocket, 'OPEN', { value: 1, writable: false });
         Object.defineProperty(EarlyWebSocket, 'CLOSING', { value: 2, writable: false });
         Object.defineProperty(EarlyWebSocket, 'CLOSED', { value: 3, writable: false });
-        window.WebSocket = EarlyWebSocket;
+        safeAssignGlobal(window, 'WebSocket', EarlyWebSocket);
     }
     // =========================================================================
     // FETCH PATCH
@@ -85,7 +116,7 @@
         const OriginalFetch = window.fetch;
         // Store original for Phase 2 adoption
         window.__KABOOM_ORIGINAL_FETCH__ = OriginalFetch;
-        window.fetch = function (input, init) {
+        const patchedFetch = function (input, init) {
             // Determine URL and method
             let url = '';
             let method = 'GET';
@@ -146,6 +177,11 @@
             });
             return responsePromise;
         };
+        if (!safeAssignGlobal(window, 'fetch', patchedFetch)) {
+            // Read-only fetch: leave the page's own alone and skip early fetch capture.
+            // Everything below (XHR, buffering) still installs.
+            delete window.__KABOOM_ORIGINAL_FETCH__;
+        }
     }
     // =========================================================================
     // XHR PATCH
@@ -214,7 +250,7 @@
             delete window.__KABOOM_EARLY_BODIES__;
             // Restore fetch
             if (window.__KABOOM_ORIGINAL_FETCH__) {
-                window.fetch = window.__KABOOM_ORIGINAL_FETCH__;
+                safeAssignGlobal(window, 'fetch', window.__KABOOM_ORIGINAL_FETCH__);
                 delete window.__KABOOM_ORIGINAL_FETCH__;
             }
             // Restore XHR
