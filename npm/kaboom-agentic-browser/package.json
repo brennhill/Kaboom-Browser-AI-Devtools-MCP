@@ -1,6 +1,6 @@
 {
   "name": "kaboom-agentic-browser",
-  "version": "0.8.6",
+  "version": "0.8.7",
   "description": "Kaboom Agentic Browser is an AI debugger, inspector, and verification toolkit for local-first browser development workflows.",
   "license": "AGPL-3.0-only",
   "bin": {
@@ -19,11 +19,11 @@
     "extension"
   ],
   "optionalDependencies": {
-    "@brennhill/kaboom-agentic-browser-darwin-arm64": "0.8.6",
-    "@brennhill/kaboom-agentic-browser-darwin-x64": "0.8.6",
-    "@brennhill/kaboom-agentic-browser-linux-arm64": "0.8.6",
-    "@brennhill/kaboom-agentic-browser-linux-x64": "0.8.6",
-    "@brennhill/kaboom-agentic-browser-win32-x64": "0.8.6"
+    "@brennhill/kaboom-agentic-browser-darwin-arm64": "0.8.7",
+    "@brennhill/kaboom-agentic-browser-darwin-x64": "0.8.7",
+    "@brennhill/kaboom-agentic-browser-linux-arm64": "0.8.7",
+    "@brennhill/kaboom-agentic-browser-linux-x64": "0.8.7",
+    "@brennhill/kaboom-agentic-browser-win32-x64": "0.8.7"
   },
   "keywords": [
     "mcp",
