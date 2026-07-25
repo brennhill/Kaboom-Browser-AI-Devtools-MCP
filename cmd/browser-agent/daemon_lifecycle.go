@@ -36,13 +36,15 @@ var (
 	daemonFindProcessOnPort  = findProcessOnPort
 	daemonSleep              = time.Sleep
 
-	// daemonProbeHealth reports whether the daemon on port answers /health, and
-	// its reported version. Injectable for tests. Never blocks past the timeout.
-	daemonProbeHealth = func(port int) (reachable bool, version string) {
+	// daemonProbeHealth reports whether the daemon on port answers /health, its
+	// reported version, and whether the failure was connection-refused (nothing
+	// listening — definitively gone, so retrying is pointless). Injectable for
+	// tests. Never blocks past the timeout.
+	daemonProbeHealth = func(port int) (reachable bool, version string, refused bool) {
 		ctx, cancel := context.WithTimeout(context.Background(), daemonHealthProbeTimeout)
 		defer cancel()
 		h := fetchInstallHealth(ctx, port, daemonHealthProbeTimeout)
-		return h.reachable, h.version
+		return h.reachable, h.version, h.refused
 	}
 )
 
@@ -114,11 +116,18 @@ func classifyExistingDaemon(server *Server, port int, rec *daemonLockRecord) err
 	}
 
 	// Probe liveness, retried across the window so a momentarily busy-but-healthy
-	// daemon answers before we ever conclude it is stalled.
+	// daemon answers before we ever conclude it is stalled. But a connection-refused
+	// probe means nothing is listening — the daemon is definitively gone, not busy —
+	// so break immediately instead of burning the retry budget's sleeps on a
+	// certainty (finding L). Only a timeout/ambiguous failure warrants a retry.
 	reachable := false
 	liveVersion := ""
 	for attempt := 0; attempt < daemonHealthProbeRetries; attempt++ {
-		if reachable, liveVersion = daemonProbeHealth(rec.Port); reachable {
+		var refused bool
+		if reachable, liveVersion, refused = daemonProbeHealth(rec.Port); reachable {
+			break
+		}
+		if refused {
 			break
 		}
 		if attempt < daemonHealthProbeRetries-1 {

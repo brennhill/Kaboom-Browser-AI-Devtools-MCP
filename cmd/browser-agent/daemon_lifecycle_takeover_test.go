@@ -35,14 +35,14 @@ func TestClassifyExistingDaemon(t *testing.T) {
 	}
 
 	t.Run("healthy same version -> defer (never kill a healthy daemon)", func(t *testing.T) {
-		daemonProbeHealth = func(int) (bool, string) { return true, "0.8.7" }
+		daemonProbeHealth = func(int) (bool, string, bool) { return true, "0.8.7", false }
 		if err := classifyExistingDaemon(server, 7890, oldLock("0.8.7")); !errors.Is(err, errDeferToHealthyDaemon) {
 			t.Fatalf("want defer, got %v", err)
 		}
 	})
 
 	t.Run("healthy NEWER existing -> defer (never downgrade)", func(t *testing.T) {
-		daemonProbeHealth = func(int) (bool, string) { return true, "0.9.0" }
+		daemonProbeHealth = func(int) (bool, string, bool) { return true, "0.9.0", false }
 		if err := classifyExistingDaemon(server, 7890, oldLock("0.9.0")); !errors.Is(err, errDeferToHealthyDaemon) {
 			t.Fatalf("want defer, got %v", err)
 		}
@@ -50,7 +50,7 @@ func TestClassifyExistingDaemon(t *testing.T) {
 
 	t.Run("older registered version -> upgrade takeover", func(t *testing.T) {
 		probed := false
-		daemonProbeHealth = func(int) (bool, string) { probed = true; return true, "0.8.6" }
+		daemonProbeHealth = func(int) (bool, string, bool) { probed = true; return true, "0.8.6", false }
 		if err := classifyExistingDaemon(server, 7890, oldLock("0.8.6")); err != nil {
 			t.Fatalf("upgrade should take over, got %v", err)
 		}
@@ -61,7 +61,7 @@ func TestClassifyExistingDaemon(t *testing.T) {
 
 	t.Run("stalled (no /health after retries) -> takeover", func(t *testing.T) {
 		probeCalls := 0
-		daemonProbeHealth = func(int) (bool, string) { probeCalls++; return false, "" }
+		daemonProbeHealth = func(int) (bool, string, bool) { probeCalls++; return false, "", false }
 		if err := classifyExistingDaemon(server, 7890, oldLock("0.8.7")); err != nil {
 			t.Fatalf("stalled should take over, got %v", err)
 		}
@@ -72,7 +72,7 @@ func TestClassifyExistingDaemon(t *testing.T) {
 
 	t.Run("young same-version daemon -> defer via grace, without probing", func(t *testing.T) {
 		probed := false
-		daemonProbeHealth = func(int) (bool, string) { probed = true; return true, "0.8.7" }
+		daemonProbeHealth = func(int) (bool, string, bool) { probed = true; return true, "0.8.7", false }
 		young := &daemonLockRecord{PID: 1, Port: 7890, Version: "0.8.7", UpdatedAt: base.Add(-time.Second).Format(time.RFC3339)}
 		if err := classifyExistingDaemon(server, 7890, young); !errors.Is(err, errDeferToHealthyDaemon) {
 			t.Fatalf("young lock should defer (grace), got %v", err)
@@ -84,7 +84,7 @@ func TestClassifyExistingDaemon(t *testing.T) {
 
 	t.Run("future-dated lock (clock skew) -> defer via grace, without probing", func(t *testing.T) {
 		probed := false
-		daemonProbeHealth = func(int) (bool, string) { probed = true; return false, "" }
+		daemonProbeHealth = func(int) (bool, string, bool) { probed = true; return false, "", false }
 		// Lock timestamped 2s in the FUTURE (backward clock step): age is negative,
 		// which must still be treated as "brand new" and deferred, not taken over.
 		future := &daemonLockRecord{PID: 1, Port: 7890, Version: "0.8.7", UpdatedAt: base.Add(2 * time.Second).Format(time.RFC3339)}
@@ -97,10 +97,46 @@ func TestClassifyExistingDaemon(t *testing.T) {
 	})
 
 	t.Run("healthy but live version older than us -> upgrade takeover", func(t *testing.T) {
-		daemonProbeHealth = func(int) (bool, string) { return true, "0.8.6" }
+		daemonProbeHealth = func(int) (bool, string, bool) { return true, "0.8.6", false }
 		rec := oldLock("") // registered version unknown; rely on live probe
 		if err := classifyExistingDaemon(server, 7890, rec); err != nil {
 			t.Fatalf("older live version should take over, got %v", err)
+		}
+	})
+
+	// finding L: a connection-refused probe is definitive (nothing is listening), so
+	// takeover must NOT burn the retry budget's sleeps on it. Only an ambiguous
+	// timeout warrants retrying.
+	t.Run("connection-refused probe takes over WITHOUT retrying (L)", func(t *testing.T) {
+		probeCalls := 0
+		daemonProbeHealth = func(int) (bool, string, bool) { probeCalls++; return false, "", true } // refused = gone
+		if err := classifyExistingDaemon(server, 7890, oldLock("0.8.7")); err != nil {
+			t.Fatalf("a refused (gone) daemon should take over, got %v", err)
+		}
+		if probeCalls != 1 {
+			t.Fatalf("connection-refused is definitive — want exactly 1 probe, got %d", probeCalls)
+		}
+	})
+
+	t.Run("timeout probe retries the full budget before takeover (L)", func(t *testing.T) {
+		probeCalls := 0
+		daemonProbeHealth = func(int) (bool, string, bool) { probeCalls++; return false, "", false } // ambiguous/busy
+		if err := classifyExistingDaemon(server, 7890, oldLock("0.8.7")); err != nil {
+			t.Fatalf("a timed-out daemon should take over after retries, got %v", err)
+		}
+		if probeCalls != daemonHealthProbeRetries {
+			t.Fatalf("an ambiguous timeout should retry the full budget, want %d probes, got %d", daemonHealthProbeRetries, probeCalls)
+		}
+	})
+
+	t.Run("a healthy DIFFERENT-version answer skips the retry loop (L)", func(t *testing.T) {
+		probeCalls := 0
+		daemonProbeHealth = func(int) (bool, string, bool) { probeCalls++; return true, "0.8.6", false } // reachable, older
+		if err := classifyExistingDaemon(server, 7890, oldLock("")); err != nil {
+			t.Fatalf("older live version should take over, got %v", err)
+		}
+		if probeCalls != 1 {
+			t.Fatalf("a reachable answer must break the loop on the first probe, got %d probes", probeCalls)
 		}
 	})
 
