@@ -9,6 +9,7 @@ export declare const IFRAME_ID = "kaboom-terminal-iframe";
 export declare const HEADER_ID = "kaboom-terminal-header";
 export declare const TERMINAL_BODY_ID = "kaboom-terminal-body";
 export declare const DISCONNECT_TERMINAL_BUTTON_ID = "kaboom-terminal-disconnect-button";
+export declare const ANNOTATE_TERMINAL_BUTTON_ID = "kaboom-terminal-annotate-button";
 export declare const REDRAW_TERMINAL_BUTTON_ID = "kaboom-terminal-redraw-button";
 export declare const MINIMIZE_TERMINAL_BUTTON_ID = "kaboom-terminal-minimize-button";
 export declare const CLOSE_TERMINAL_BUTTON_ID = "kaboom-terminal-close-button";

@@ -16,6 +16,7 @@ import {
   HEADER_ID,
   TERMINAL_BODY_ID,
   DISCONNECT_TERMINAL_BUTTON_ID,
+  ANNOTATE_TERMINAL_BUTTON_ID,
   CLOSE_TERMINAL_BUTTON_ID,
   REDRAW_TERMINAL_BUTTON_ID,
   MINIMIZE_TERMINAL_BUTTON_ID,
@@ -131,6 +132,28 @@ async function getHostTabId(): Promise<number | undefined> {
     return tab?.id
   } catch {
     return undefined
+  }
+}
+
+/**
+ * Start page annotation (draw mode) on the terminal's host/tracked tab.
+ *
+ * Draw mode is otherwise only reachable via the right-click menu / keyboard
+ * shortcut, which is hard to discover — the header button surfaces it right next
+ * to the terminal. The terminal lives in the side panel but draw mode runs in
+ * the tracked tab's content script, so we send the same kaboom_draw_mode_start
+ * the popup and shortcut use directly to that tab.
+ */
+async function startPageAnnotation(): Promise<void> {
+  const tabId = await getHostTabId()
+  if (typeof tabId !== 'number') {
+    showActionToast('No page to annotate', 'Annotate', 'warning', 2000)
+    return
+  }
+  try {
+    await chrome.tabs.sendMessage(tabId, { type: 'kaboom_draw_mode_start', started_by: 'user' })
+  } catch {
+    showActionToast('Refresh the page, then try Annotate again', 'Annotate', 'warning', 2600)
   }
 }
 
@@ -381,6 +404,14 @@ function createTerminalHeader(): HTMLDivElement {
     onClick: () => void exitTerminalSession()
   })
 
+  const annotateButton = createTerminalHeaderButton({
+    id: ANNOTATE_TERMINAL_BUTTON_ID,
+    glyph: '\u270E',
+    title: 'Annotate the page \u2014 draw and mark up elements for the agent',
+    color: '#7aa2f7',
+    onClick: () => void startPageAnnotation()
+  })
+
   const redrawButton = createTerminalHeaderButton({
     id: REDRAW_TERMINAL_BUTTON_ID,
     glyph: '\u21BB',
@@ -409,6 +440,7 @@ function createTerminalHeader(): HTMLDivElement {
   header.appendChild(titleSpan)
   header.appendChild(disconnectButton)
   header.appendChild(spacer)
+  header.appendChild(annotateButton)
   header.appendChild(redrawButton)
   header.appendChild(panel.minimizeButtonEl)
   // Rightmost, where every other close control on the platform lives.

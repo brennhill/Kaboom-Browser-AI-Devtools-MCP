@@ -13,6 +13,7 @@ export const IFRAME_ID = 'kaboom-terminal-iframe';
 export const HEADER_ID = 'kaboom-terminal-header';
 export const TERMINAL_BODY_ID = 'kaboom-terminal-body';
 export const DISCONNECT_TERMINAL_BUTTON_ID = 'kaboom-terminal-disconnect-button';
+export const ANNOTATE_TERMINAL_BUTTON_ID = 'kaboom-terminal-annotate-button';
 export const REDRAW_TERMINAL_BUTTON_ID = 'kaboom-terminal-redraw-button';
 export const MINIMIZE_TERMINAL_BUTTON_ID = 'kaboom-terminal-minimize-button';
 export const CLOSE_TERMINAL_BUTTON_ID = 'kaboom-terminal-close-button';
