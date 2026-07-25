@@ -9,8 +9,8 @@
 import { debugLog } from './index.js'
 import { DebugCategory } from './debug.js'
 import { scaleTimeout } from '../lib/timeouts.js'
-import { parseExpression } from './csp-safe-parser.js'
-import { cspSafeExecutor } from './csp-safe-executor.js'
+import { parseExpression } from './csp-safe/parser.js'
+import { cspSafeExecutor } from './csp-safe/executor.js'
 import { errorMessage } from '../lib/error-utils.js'
 
 // =============================================================================

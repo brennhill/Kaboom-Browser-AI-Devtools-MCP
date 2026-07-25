@@ -52,4 +52,4 @@ export type ParseResult = {
     ok: false;
     reason: string;
 };
-//# sourceMappingURL=csp-safe-types.d.ts.map
+//# sourceMappingURL=types.d.ts.map

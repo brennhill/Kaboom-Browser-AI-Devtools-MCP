@@ -25,6 +25,6 @@
  * Control flow, closures, operators, and variable declarations cannot be represented
  * as structured commands and are rejected with guidance to use DOM primitives.
  */
-import type { ParseResult } from './csp-safe-types.js';
+import type { ParseResult } from './types.js';
 export declare function parseExpression(input: string): ParseResult;
-//# sourceMappingURL=csp-safe-parser.d.ts.map
+//# sourceMappingURL=parser.d.ts.map

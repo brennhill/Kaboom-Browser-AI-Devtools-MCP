@@ -1,5 +1,5 @@
 // csp-safe-parser.ts — Recursive descent parser for JS expressions into structured commands.
-import { errorMessage } from '../lib/error-utils.js';
+import { errorMessage } from '../../lib/error-utils.js';
 // Patterns that we reject outright before attempting to parse
 const REJECTED_PATTERNS = [
     { pattern: /^\s*$/, reason: 'Empty expression' },
@@ -456,4 +456,4 @@ class Parser {
         this.advance();
     }
 }
-//# sourceMappingURL=csp-safe-parser.js.map
+//# sourceMappingURL=parser.js.map
