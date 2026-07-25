@@ -9,11 +9,13 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -273,7 +275,7 @@ func wsLoop(conn net.Conn, rw *bufio.ReadWriter, deps Deps, sess *pty.Session, r
 	// Fan-out -> WebSocket (downstream): read from subscriber channel and send as binary frames.
 	// Also tracks alt-screen state changes and notifies the frontend.
 	downstreamDone := make(chan struct{})
-	go func() { // lint:allow-bare-goroutine — bounded by connDone/channel close
+	goConnWorker(deps, sess.ID, "downstream", closeConn, func() {
 		defer close(downstreamDone)
 		prevAltScreen := sess.AltScreenActive()
 		for {
@@ -303,12 +305,12 @@ func wsLoop(conn net.Conn, rw *bufio.ReadWriter, deps Deps, sess *pty.Session, r
 				return
 			}
 		}
-	}()
+	})
 
 	// Server-initiated ping keepalive — detects dead connections (browser crash,
 	// laptop sleep) without ever timing out idle users.
 	pingTicker := time.NewTicker(PingInterval)
-	go func() { // lint:allow-bare-goroutine — bounded by connDone
+	goConnWorker(deps, sess.ID, "ping", closeConn, func() {
 		defer pingTicker.Stop()
 		for {
 			select {
@@ -321,14 +323,14 @@ func wsLoop(conn net.Conn, rw *bufio.ReadWriter, deps Deps, sess *pty.Session, r
 				}
 			}
 		}
-	}()
+	})
 
 	// WebSocket -> PTY (upstream): read frames and dispatch.
 	// Uses relay.writeBuf for non-blocking writes with backpressure.
 	// NOTE: Do NOT call sess.Close() on WebSocket disconnect — the session
 	// must survive page refreshes so the browser can reconnect with scrollback replay.
 	// Sessions are only killed explicitly via POST /terminal/stop (the Exit button).
-	go func() { // lint:allow-bare-goroutine — bounded by connDone
+	goConnWorker(deps, sess.ID, "upstream", closeConn, func() {
 		defer closeConn() // Close conn on exit so downstream detects it and browser auto-reconnects
 		for {
 			// Refresh read deadline on every iteration — any received frame
@@ -363,9 +365,39 @@ func wsLoop(conn net.Conn, rw *bufio.ReadWriter, deps Deps, sess *pty.Session, r
 				HandleControlMessage(payload, sess)
 			}
 		}
-	}()
+	})
 
 	<-downstreamDone
+}
+
+// goConnWorker launches one per-connection wsLoop goroutine with panic recovery.
+// The daemon invariant is that nothing it is sent may crash the process: a panic
+// in the downstream pump, ping keepalive, or upstream reader (e.g. a write on a
+// closed pipe, a malformed frame, a nil deref on hostile input) must tear down
+// ONLY this connection. On panic it logs a structured, session-correlated event
+// (so the outage is diagnosable in ~/.kaboom/logs/kaboom.jsonl) and calls
+// closeConn so the sibling goroutines unwind and the browser can reconnect with
+// scrollback replay. fn's own deferred cleanup (e.g. close(downstreamDone)) still
+// runs during unwind because it is registered inside fn, below this recover.
+func goConnWorker(deps Deps, sessionID, role string, closeConn func(), fn func()) {
+	go func() { // lint:allow-bare-goroutine — recover-wrapped; bounded by connDone/channel close
+		defer func() {
+			if r := recover(); r != nil {
+				stack := debug.Stack()
+				deps.logEvent("terminal_ws_panic", map[string]any{
+					"session_id": sessionID,
+					"role":       role,
+					"panic":      fmt.Sprintf("%v", r),
+					"stack":      string(stack),
+				})
+				if deps.Stderrf != nil {
+					deps.Stderrf("[Kaboom] PANIC in terminal WS %s goroutine (session %s): %v\n%s\n", role, sessionID, r, stack)
+				}
+				closeConn()
+			}
+		}()
+		fn()
+	}()
 }
 
 // NewFrameWriter returns a thread-safe frame writer for one WebSocket

@@ -31,6 +31,7 @@ test_paths:
   - tests/extension/brand-metadata.test.js
   - cmd/browser-agent/internal/terminal/dirs_test.go
   - cmd/browser-agent/internal/terminal/handlers_test.go
+  - cmd/browser-agent/internal/terminal/ws_panic_test.go
   - tests/extension/sidepanel-terminal.test.js
   - tests/extension/terminal-widget-session-branding.test.js
   - tests/extension/terminal-root-folder.test.js
@@ -73,6 +74,7 @@ last_verified_date: 2026-03-28
 - Annotation auto-send now uses a typing-aware write queue: if the user is active in terminal, writes wait until ~1.5s idle
 - Queued submit is reconnect-safe: if WS drops before Enter, submit waits until connection is back
 - WebSocket frame writes are serialized per-connection to prevent concurrent writer frame interleaving
+- Per-connection WS goroutines (downstream pump, ping keepalive, upstream reader) are panic-recovered via `goConnWorker`: a fault tears down only that connection (structured `terminal_ws_panic` log + `closeConn`), never the daemon process
 - Scrollback buffer capped at 256 KB for memory safety
 - PTY session tests share a bounded `readUntilContains` helper to keep echo/size assertions consistent
 - Canonical flow maps: [terminal-side-panel-host.md](../../../architecture/flow-maps/terminal-side-panel-host.md), [terminal-server-isolation.md](../../../architecture/flow-maps/terminal-server-isolation.md)
