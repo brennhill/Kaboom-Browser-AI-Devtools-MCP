@@ -119,8 +119,6 @@ last_verified_date: 2026-03-28
 - Upload paths sanitize the session id to a single segment (`sanitizeSessionID`) so a `../` id can't escape the uploads directory.
 - Scrollback buffer capped at 256 KB for memory safety
 - PTY session tests share a bounded `readUntilContains` helper to keep echo/size assertions consistent
-- Canonical flow maps: [terminal-side-panel-host.md](../../../architecture/flow-maps/terminal-side-panel-host.md), [terminal-server-isolation.md](../../../architecture/flow-maps/terminal-server-isolation.md)
-- Feature flow-map pointer: [flow-map.md](./flow-map.md)
 
 ---
 
@@ -129,7 +127,6 @@ last_verified_date: 2026-03-28
 - Product Spec: [product-spec.md](./product-spec.md)
 - Tech Spec: [tech-spec.md](./tech-spec.md)
 - QA Plan: [qa-plan.md](./qa-plan.md)
-- Flow Map Pointer: [flow-map.md](./flow-map.md)
 
 ## Architecture
 

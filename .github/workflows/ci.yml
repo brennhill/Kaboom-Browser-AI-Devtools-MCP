@@ -45,7 +45,7 @@ jobs:
           echo "Changed files:"
           echo "$CHANGED_FILES"
 
-          if echo "$CHANGED_FILES" | grep -Eq '^(cmd/browser-agent/|internal/schema/|internal/types/|internal/performance/|scripts/docs/|scripts/generate-wire-types\.js|docs/features/|docs/architecture/flow-maps/|package\.json|Makefile|\.github/workflows/ci\.yml)'; then
+          if echo "$CHANGED_FILES" | grep -Eq '^(cmd/browser-agent/|internal/schema/|internal/types/|internal/performance/|scripts/docs/|scripts/generate-wire-types\.js|docs/features/|docs/architecture/|package\.json|Makefile|\.github/workflows/ci\.yml)'; then
             echo "run_gate=true" >> "$GITHUB_OUTPUT"
             echo "verify-llm gate enabled for this PR."
           else

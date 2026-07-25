@@ -48,5 +48,3 @@ Provide a reliable terminal side panel for Kaboom users that stays usable during
 - Tech Spec: [tech-spec.md](./tech-spec.md)
 - QA Plan: [qa-plan.md](./qa-plan.md)
 - Feature Index: [index.md](./index.md)
-- Flow Map Pointer: [flow-map.md](./flow-map.md)
-- Canonical Flow Map: [terminal-server-isolation.md](../../../architecture/flow-maps/terminal-server-isolation.md)

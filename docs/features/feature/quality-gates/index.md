@@ -44,7 +44,6 @@ last_verified_date: 2026-03-28
 
 ## Specs
 
-- [Flow Map](./flow-map.md)
 - [Setup Guide](./setup-guide.md)
 
 ## Summary

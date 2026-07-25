@@ -34,7 +34,6 @@ last_verified_date: 2026-03-05
 - [Product Spec](./product-spec.md)
 - [Tech Spec](./tech-spec.md)
 - [QA Plan](./qa-plan.md)
-- [Flow Map](./flow-map.md)
 
 ## Canonical Note
 

@@ -7,7 +7,6 @@ last_reviewed: 2026-07-05
 links:
   index: ./index.md
   product: ./product-spec.md
-  flow_map: ./flow-map.md
   setup_guide: ./setup-guide.md
 code_paths:
   - cmd/hooks/main.go

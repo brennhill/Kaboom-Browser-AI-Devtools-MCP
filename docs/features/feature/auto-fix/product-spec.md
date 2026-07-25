@@ -6,8 +6,6 @@ owners: []
 last_reviewed: 2026-07-05
 links:
   index: ./index.md
-  flow_map: ./flow-map.md
-  canonical_flow_map: ../../../architecture/flow-maps/audit-workflow.md
 ---
 
 # Auto-Fix Product Spec

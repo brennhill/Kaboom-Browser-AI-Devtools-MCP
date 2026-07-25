@@ -40,7 +40,6 @@ last_verified_date: 2026-03-28
 - Product Spec: [product-spec.md](./product-spec.md)
 - Tech Spec: [tech-spec.md](./tech-spec.md)
 - QA Plan: [qa-plan.md](./qa-plan.md)
-- Flow Map: [flow-map.md](./flow-map.md)
 
 ## Requirement IDs
 
