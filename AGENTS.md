@@ -15,7 +15,7 @@ Browser extension + MCP server for real-time browser telemetry.
 6. **Performance** — WebSocket < 0.1ms, HTTP < 0.5ms
 7. **Privacy** — All data stays local, no external transmission
 8. **Wire Types** — `wire_*.go` and `wire-*.ts` are the source of truth for HTTP payloads. Changes to either side MUST update the counterpart. Run `make check-wire-drift`
-9. **Docs Cross-Ref (Required)** — EVERY feature and EVERY refactor MUST ship with cross-referenced docs updates (flow map + feature pointers + code/test paths)
+9. **Docs Cross-Ref (Required)** — EVERY feature and EVERY refactor MUST ship with cross-referenced docs updates (feature `index.md` `code_paths`/`test_paths` + `last_reviewed`)
 
 ## Git Workflow
 
@@ -73,24 +73,20 @@ Tests: cold start, tool calls, concurrent clients, stdout purity, persistence, g
 
 ## Documentation Cross-Reference Contract (Required)
 
-For every feature and every refactor, update docs in the same change:
+For every feature and every refactor, update the feature `index.md` under
+`docs/features/feature/<feature>/` in the same change:
 
-1. Add or update the canonical flow map in `docs/architecture/flow-maps/`.
-2. Add or update the feature-local `flow-map.md` pointer under `docs/features/feature/<feature>/` when a feature folder exists.
-3. Update the feature `index.md`:
-   - `last_reviewed`
-   - `code_paths` and `test_paths`
-   - link to `flow-map.md`
-4. Update `docs/architecture/flow-maps/README.md` when adding a new canonical flow map.
-5. Keep cross-links bidirectional (feature -> canonical map, and canonical map lists code/test anchors).
+- `last_reviewed`
+- `code_paths` and `test_paths`
 
-No code-only refactor is considered complete until this documentation contract is satisfied.
+No code-only refactor is considered complete until this documentation contract is
+satisfied. (Flow maps are no longer required — do not create or update them.)
 
 ## Engineering Best Practices Contract (Required)
 
 1. Instruction precedence is strict: system > repo policy > task request > style preference.
 2. If requirements are ambiguous, state assumptions explicitly before implementation.
-3. Definition of done includes code + tests + docs + flow maps in the same change.
+3. Definition of done includes code + tests + docs in the same change.
 4. Lint/type/test must pass, or known failures must be documented with issue links.
 5. Keep modules single-purpose; avoid god objects and hidden shared state.
 6. Keep public interfaces minimal and explicit; cross-feature calls go through clear boundaries.
