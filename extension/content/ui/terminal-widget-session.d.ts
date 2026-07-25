@@ -68,6 +68,13 @@ export declare function setTerminalDevRoot(root: string): Promise<void>;
  *
  * Used when a setting that is fixed at spawn time changes (the working
  * directory), and by the explicit end-session control.
+ *
+ * The stop must be CONFIRMED, not fire-and-forget: the session id is a fixed
+ * "default", so if the stop times out but the old session survives, the following
+ * /terminal/start returns 409 and the client silently reconnects to the OLD
+ * working directory while the UI shows the newly-picked one. A 200 (or a 404 =
+ * already gone) confirms teardown; otherwise poll validate before returning so a
+ * fresh start cannot 409-reattach to a stale cwd.
  */
 export declare function stopActiveSession(): Promise<void>;
 export declare function startSession(config: TerminalConfig, onSandboxError?: TerminalSandboxErrorHandler): Promise<TerminalSessionState | null>;

@@ -171,6 +171,33 @@ describe('panel liveness comes from the panel document', () => {
     assert.strictEqual(onDisconnectWrite?.kaboom_terminal_ui_state, 'closed')
   })
 
+  test('with two panel documents, closing one keeps presence open and the flame suppressed (multi-window, L4)', async () => {
+    const { isTerminalPanelOpenSync, watchTerminalPanelState } = await loadPanel()
+    watchTerminalPanelState()
+    const setSession = globalThis.chrome.storage.session.set
+
+    const a = makePort('kaboom_terminal_panel')
+    const b = makePort('kaboom_terminal_panel')
+    connectListener(a)
+    connectListener(b)
+    assert.strictEqual(isTerminalPanelOpenSync(), true)
+
+    // Close ONE window's panel — the other is still open. The mirror must NOT flip
+    // to 'closed' (that made the flame reappear while a panel was still up).
+    a.disconnect()
+    assert.strictEqual(isTerminalPanelOpenSync(), true, 'a surviving panel keeps presence true')
+    assert.notStrictEqual(
+      setSession.mock.calls.at(-1)?.arguments[0]?.kaboom_terminal_ui_state,
+      'closed',
+      'the mirror must not flip to closed while another panel is open'
+    )
+
+    // Close the last one -> now truly closed.
+    b.disconnect()
+    assert.strictEqual(setSession.mock.calls.at(-1)?.arguments[0]?.kaboom_terminal_ui_state, 'closed')
+    assert.strictEqual(isTerminalPanelOpenSync(), false)
+  })
+
   test('ports from other features do not count as a panel', async () => {
     const { isTerminalPanelOpenSync, watchTerminalPanelState } = await loadPanel()
     watchTerminalPanelState()

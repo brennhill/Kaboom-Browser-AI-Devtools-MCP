@@ -19,7 +19,6 @@ import {
   CLOSE_TERMINAL_BUTTON_ID,
   REDRAW_TERMINAL_BUTTON_ID,
   MINIMIZE_TERMINAL_BUTTON_ID,
-  MINIMIZED_WIDGET_HEIGHT,
   TERMINAL_WRITE_SUBMIT_DELAY_MS,
   TERMINAL_TYPING_IDLE_MS,
   TERMINAL_GUARD_POLL_MS,
@@ -130,14 +129,17 @@ function setPanelVisible(visible: boolean): void {
   rootEl.style.pointerEvents = visible ? 'auto' : 'none'
 }
 
-function setTerminalBodyVisible(visible: boolean): void {
-  if (!terminalBodyEl || !terminalShellEl || !minimizeButtonEl) return
-  terminalBodyEl.style.display = visible ? 'block' : 'none'
-  terminalShellEl.style.height = visible ? '100%' : `${MINIMIZED_WIDGET_HEIGHT}px`
-  terminalShellEl.style.minHeight = visible ? '0' : `${MINIMIZED_WIDGET_HEIGHT}px`
-  terminalShellEl.style.flex = visible ? '1 1 auto' : `0 0 ${MINIMIZED_WIDGET_HEIGHT}px`
-  minimizeButtonEl.textContent = visible ? '\u2581' : '\u25A1'
-  minimizeButtonEl.title = visible ? 'Minimize terminal' : 'Restore terminal'
+// The terminal is a full-height side panel; there is no collapse-in-place state
+// (the old MINIMIZED_WIDGET_HEIGHT was leftover from the in-page-widget era and
+// was never actually applied \u2014 every caller passed `visible: true`). The body is
+// simply shown; "minimize" and "close" both dismiss the whole panel and keep the
+// session (see closePanelWithIntent).
+function showTerminalBody(): void {
+  if (!terminalBodyEl || !terminalShellEl) return
+  terminalBodyEl.style.display = 'block'
+  terminalShellEl.style.height = '100%'
+  terminalShellEl.style.minHeight = '0'
+  terminalShellEl.style.flex = '1 1 auto'
 }
 
 /**
@@ -331,7 +333,7 @@ function createTerminalHeader(): HTMLDivElement {
   redrawButton.addEventListener('click', (e: MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    redrawTerminal()
+    void redrawTerminal()
   })
 
   minimizeButtonEl = document.createElement('button')
@@ -489,10 +491,19 @@ function unmountPanel(): void {
   window.removeEventListener('message', handleIframeMessage)
 }
 
-function redrawTerminal(): void {
+async function redrawTerminal(): Promise<void> {
   if (!state.widgetEl || !state.iframeEl) return
   const currentToken = state.sessionState?.token
   if (!currentToken) return
+  // After a daemon restart the token is dead; a plain reload would reconnect
+  // forever to a session that no longer exists and the panel would wedge on
+  // "disconnected". Confirm the token still maps to a live shell first; if not,
+  // rebuild so the panel recovers into a fresh session (or the recoverable
+  // no-session state) rather than a permanent disconnect.
+  if (!(await validateSession(currentToken))) {
+    await bootTerminalPanel(true)
+    return
+  }
   const iframe = state.iframeEl
   // Reloading the iframe tears down the old WebSocket and reconnects from
   // scratch; until the fresh document posts 'connected', the socket is not OPEN.
@@ -500,8 +511,7 @@ function redrawTerminal(): void {
   // sent-and-dropped (the redraw sub-case of the write-connection race).
   state.terminalConnected = false
   iframe.src = `${getTerminalServerUrl(state.serverUrl)}/terminal?token=${encodeURIComponent(currentToken)}`
-  setTerminalBodyVisible(true)
-  state.minimized = false
+  showTerminalBody()
   persistUIState('open')
 }
 
@@ -527,8 +537,14 @@ async function closePanelWithIntent(intent: TerminalUIState | 'clear'): Promise<
     persistUIState(intent)
   }
   resetWriteGuardState()
-  unmountPanel()
+  // Hide immediately, then ask the browser to close the panel BEFORE tearing down
+  // the DOM. On mainstream Chrome window.close() destroys this document (its
+  // presence port drops so the background can reopen); doing the authoritative
+  // browser close first means we never leave an unmounted, blank document holding
+  // a stale-open presence port on the latent path where the close is refused.
+  setPanelVisible(false)
   await closeBrowserSidePanel()
+  unmountPanel()
 }
 
 async function exitTerminalSession(): Promise<void> {
@@ -687,7 +703,7 @@ async function restoreTerminalPanel(): Promise<void> {
   if (rootEl && state.iframeEl) {
     // A live terminal is already mounted — it was only minimized or hidden.
     setPanelVisible(true)
-    setTerminalBodyVisible(true)
+    showTerminalBody()
     state.minimized = false
     persistUIState('open')
     // Nothing here was rebuilt, so a root changed elsewhere (the options page,
@@ -748,7 +764,7 @@ async function bootTerminalPanel(forceFresh = false): Promise<void> {
   const token = state.sessionState?.token
   const root = createPanelShell(token ?? '')
   mountPanel(root)
-  setTerminalBodyVisible(true)
+  showTerminalBody()
   persistUIState('open')
   if (!token) {
     const error = pendingSandboxError as { message: string; instruction: string; command: string } | null

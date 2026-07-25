@@ -186,30 +186,55 @@ export async function setTerminalDevRoot(root) {
     }
 }
 /**
+ * Poll `/terminal/validate` until the token no longer maps to a live session, or
+ * a bounded number of attempts elapse. Used to CONFIRM a stop actually landed.
+ */
+async function waitForSessionTornDown(token, attempts = 5, delayMs = 200) {
+    for (let i = 0; i < attempts; i++) {
+        if (!(await validateSession(token)))
+            return true; // gone
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+    return false; // still alive after retries — the daemon is wedged
+}
+/**
  * Stop the active PTY and forget it locally.
  *
  * Used when a setting that is fixed at spawn time changes (the working
  * directory), and by the explicit end-session control.
+ *
+ * The stop must be CONFIRMED, not fire-and-forget: the session id is a fixed
+ * "default", so if the stop times out but the old session survives, the following
+ * /terminal/start returns 409 and the client silently reconnects to the OLD
+ * working directory while the UI shows the newly-picked one. A 200 (or a 404 =
+ * already gone) confirms teardown; otherwise poll validate before returning so a
+ * fresh start cannot 409-reattach to a stale cwd.
  */
 export async function stopActiveSession() {
     const persisted = await loadPersistedSession();
     const sessionId = persisted.session?.sessionId;
+    const token = persisted.session?.token;
     clearPersistedSession();
     if (!sessionId)
         return;
     try {
         const base = await getServerUrl();
         const termUrl = getTerminalServerUrl(base);
-        await fetch(`${termUrl}/terminal/stop`, {
+        const resp = await fetch(`${termUrl}/terminal/stop`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: sessionId }),
             signal: AbortSignal.timeout(3000)
         });
+        // Stop is synchronous server-side: 200 = torn down, 404 = already gone.
+        if (resp.ok || resp.status === 404)
+            return;
     }
     catch {
-        // Daemon unreachable — the local state is cleared either way.
+        // Timed out / unreachable — the stop is unconfirmed. Verify below.
     }
+    if (token)
+        await waitForSessionTornDown(token);
 }
 export async function startSession(config, onSandboxError) {
     const base = await getServerUrl();

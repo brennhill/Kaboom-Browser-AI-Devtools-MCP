@@ -532,6 +532,38 @@ describe('terminal side panel host', () => {
     assert.strictEqual(startCount, 1, 'redraw should not start a new session')
   })
 
+  test('redraw revalidates the token and rebuilds when the daemon restarted (dead token, L1)', async () => {
+    let startCount = 0
+    let tokenAlive = true
+    fetchHandler = ({ url }) => {
+      if (url.endsWith('/terminal/start')) {
+        startCount += 1
+        return Promise.resolve(makeResponse(200, {
+          session_id: `session-${startCount}`,
+          token: `tok-${startCount}`,
+          pid: 999
+        }))
+      }
+      if (url.includes('/terminal/validate?token=')) {
+        return Promise.resolve(makeResponse(200, { valid: tokenAlive }))
+      }
+      throw new Error(`Unexpected fetch call: ${url}`)
+    }
+
+    const module = await import(`../../extension/sidepanel.js?v=${++importCounter}`)
+    await module._terminalPanelForTests.bootTerminalPanel(true)
+    assert.ok(getElementById('kaboom-terminal-iframe').src.includes('tok-1'), 'first boot mounts tok-1')
+    assert.strictEqual(startCount, 1)
+
+    // Daemon restarted: the persisted token is now dead. A plain reload would
+    // reconnect forever; redraw must revalidate and rebuild into a fresh session.
+    tokenAlive = false
+    await module._terminalPanelForTests.redrawTerminal()
+
+    assert.strictEqual(startCount, 2, 'redraw on a dead token must boot a fresh session, not reload the dead one')
+    assert.ok(getElementById('kaboom-terminal-iframe').src.includes('tok-2'), 'the rebuilt panel uses the fresh token')
+  })
+
   test('write guard waits while user is typing and flushes after blur', async () => {
     fetchHandler = ({ url }) => {
       if (url.endsWith('/terminal/start')) {
