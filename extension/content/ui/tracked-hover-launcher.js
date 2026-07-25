@@ -19,6 +19,11 @@ const PANEL_ID = 'kaboom-tracked-hover-panel';
 const TOGGLE_ID = 'kaboom-tracked-hover-toggle';
 const SETTINGS_MENU_ID = 'kaboom-tracked-hover-settings-menu';
 let rootEl = null;
+// Shadow-DOM host for the flyout. The flyout is raw DOM on arbitrary pages, so
+// heavy host stylesheets (Slashdot etc.) used to bleed in and balloon it. Mounting
+// inside a shadow root isolates it: page `*`/tag/class rules no longer match the
+// flyout. The host (light DOM) carries ROOT_ID so the mount guard still finds it.
+let hostEl = null;
 let panelEl = null;
 let settingsMenuEl = null;
 let stopButtonEl = null;
@@ -429,7 +434,8 @@ function createSettingsMenuLink(iconSvg, label, href) {
 }
 function createLauncherUi() {
     const root = document.createElement('div');
-    root.id = ROOT_ID;
+    // No ROOT_ID here — the shadow host (mountLauncher) carries it. Inside the
+    // shadow root this element is scoped, so it needs no page-unique id.
     Object.assign(root.style, {
         position: 'fixed',
         top: '33vh',
@@ -652,11 +658,24 @@ function mountLauncher() {
         return;
     if (rootEl || document.getElementById(ROOT_ID))
         return;
-    rootEl = createLauncherUi();
     const target = document.body || document.documentElement;
-    if (!target || !rootEl)
+    if (!target)
         return;
-    target.appendChild(rootEl);
+    const root = createLauncherUi();
+    // Isolate from the host page's CSS via a shadow root. The shadow boundary stops
+    // page `*`/tag/class rules from matching the flyout; `:host { all: initial }`
+    // resets inheritable props (line-height/font/color) that would otherwise cross
+    // the boundary, and box-sizing is normalized for the content.
+    const host = document.createElement('div');
+    host.id = ROOT_ID;
+    const shadow = host.attachShadow({ mode: 'open' });
+    const style = document.createElement('style');
+    style.textContent = ':host { all: initial; } *, *::before, *::after { box-sizing: border-box; }';
+    shadow.appendChild(style);
+    shadow.appendChild(root);
+    rootEl = root;
+    hostEl = host;
+    target.appendChild(host);
     installRecordingStorageSync();
 }
 function unmountLauncher() {
@@ -668,10 +687,13 @@ function unmountLauncher() {
     stopButtonEl = null;
     toggleEl = null;
     recordingActive = false;
-    if (rootEl) {
-        rootEl.remove();
-        rootEl = null;
+    // Remove the shadow HOST (which carries the flyout in its shadow root); rootEl
+    // lives inside it, so removing the host tears down everything.
+    if (hostEl) {
+        hostEl.remove();
+        hostEl = null;
     }
+    rootEl = null;
     uninstallRecordingStorageSync();
 }
 function syncTerminalPanelVisibility() {

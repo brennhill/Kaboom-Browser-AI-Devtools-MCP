@@ -2225,6 +2225,7 @@
   var TOGGLE_ID = "kaboom-tracked-hover-toggle";
   var SETTINGS_MENU_ID = "kaboom-tracked-hover-settings-menu";
   var rootEl = null;
+  var hostEl = null;
   var panelEl = null;
   var settingsMenuEl = null;
   var stopButtonEl = null;
@@ -2596,7 +2597,6 @@
   }
   function createLauncherUi() {
     const root = document.createElement("div");
-    root.id = ROOT_ID;
     Object.assign(root.style, {
       position: "fixed",
       top: "33vh",
@@ -2816,11 +2816,20 @@
       return;
     if (rootEl || document.getElementById(ROOT_ID))
       return;
-    rootEl = createLauncherUi();
     const target = document.body || document.documentElement;
-    if (!target || !rootEl)
+    if (!target)
       return;
-    target.appendChild(rootEl);
+    const root = createLauncherUi();
+    const host = document.createElement("div");
+    host.id = ROOT_ID;
+    const shadow = host.attachShadow({ mode: "open" });
+    const style = document.createElement("style");
+    style.textContent = ":host { all: initial; } *, *::before, *::after { box-sizing: border-box; }";
+    shadow.appendChild(style);
+    shadow.appendChild(root);
+    rootEl = root;
+    hostEl = host;
+    target.appendChild(host);
     installRecordingStorageSync();
   }
   function unmountLauncher() {
@@ -2832,10 +2841,11 @@
     stopButtonEl = null;
     toggleEl = null;
     recordingActive = false;
-    if (rootEl) {
-      rootEl.remove();
-      rootEl = null;
+    if (hostEl) {
+      hostEl.remove();
+      hostEl = null;
     }
+    rootEl = null;
     uninstallRecordingStorageSync();
   }
   async function setTrackedHoverLauncherEnabled(enabled) {
