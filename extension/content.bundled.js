@@ -2138,6 +2138,14 @@
   var visibilityListeners = /* @__PURE__ */ new Set();
   var TERMINAL_PANEL_WRITE_RETRY_MS = 250;
   var writeRetryDelayMs = TERMINAL_PANEL_WRITE_RETRY_MS;
+  var writeRetryTimer = null;
+  var writeGeneration = 0;
+  function clearWriteRetry() {
+    if (writeRetryTimer !== null) {
+      clearTimeout(writeRetryTimer);
+      writeRetryTimer = null;
+    }
+  }
   function notifyVisibilityListeners(visible) {
     for (const listener of visibilityListeners) {
       listener(visible);
@@ -2223,6 +2231,8 @@
   function writeToTerminal(text) {
     if (!panelVisible)
       return;
+    writeGeneration += 1;
+    clearWriteRetry();
     sendTerminalWrite(text, true);
   }
   function sendTerminalWrite(text, allowRetry) {
@@ -2239,17 +2249,27 @@
       if (resp && resp.received === true)
         return;
       if (allowRetry) {
-        setTimeout(() => sendTerminalWrite(text, false), writeRetryDelayMs);
+        scheduleWriteRetry(text);
         return;
       }
       reportTerminalWriteFailure(text, "no terminal panel received the message", true);
     }, (err) => {
       if (allowRetry) {
-        setTimeout(() => sendTerminalWrite(text, false), writeRetryDelayMs);
+        scheduleWriteRetry(text);
         return;
       }
       reportTerminalWriteFailure(text, err instanceof Error ? err.message : String(err), false);
     });
+  }
+  function scheduleWriteRetry(text) {
+    clearWriteRetry();
+    const generation = writeGeneration;
+    writeRetryTimer = setTimeout(() => {
+      writeRetryTimer = null;
+      if (generation !== writeGeneration || !panelVisible)
+        return;
+      sendTerminalWrite(text, false);
+    }, writeRetryDelayMs);
   }
 
   // extension/content/ui/tracked-hover-launcher.js
