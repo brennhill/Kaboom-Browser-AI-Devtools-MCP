@@ -500,7 +500,34 @@ function redrawTerminal(): void {
   persistUIState('open')
 }
 
+/**
+ * The single teardown path for dismissing the panel, whatever the reason.
+ *
+ * Three dismissals (exit / close / minimize) previously copy-pasted the same
+ * teardown tail, and the invariant — persist-or-clear intent, then
+ * resetWriteGuardState() + unmountPanel() + closeBrowserSidePanel() — lived in
+ * each caller, so one drifting would leak the write guard. Now the invariant
+ * lives here and no caller can forget a step (repo rule 19).
+ *
+ * 'clear' fully ends the session (the shell is already being stopped by the
+ * caller); 'closed'/'minimized' keep the session and persist the UI state so
+ * reopening reconnects.
+ */
+async function closePanelWithIntent(intent: TerminalUIState | 'clear'): Promise<void> {
+  panelCloseIntent = intent
+  if (intent === 'clear') {
+    clearPersistedSession()
+    resetAllState()
+  } else {
+    persistUIState(intent)
+  }
+  resetWriteGuardState()
+  unmountPanel()
+  await closeBrowserSidePanel()
+}
+
 async function exitTerminalSession(): Promise<void> {
+  // Set the intent before the network call in case a disconnect races the stop.
   panelCloseIntent = 'clear'
   if (state.sessionState) {
     try {
@@ -515,11 +542,7 @@ async function exitTerminalSession(): Promise<void> {
       // daemon unreachable or timeout — tear down locally
     }
   }
-  clearPersistedSession()
-  resetAllState()
-  resetWriteGuardState()
-  unmountPanel()
-  await closeBrowserSidePanel()
+  await closePanelWithIntent('clear')
 }
 
 /**
@@ -530,19 +553,11 @@ async function exitTerminalSession(): Promise<void> {
  * and had no way back. Reopening the panel reconnects to this session.
  */
 async function closePanelKeepingSession(): Promise<void> {
-  panelCloseIntent = 'closed'
-  persistUIState('closed')
-  resetWriteGuardState()
-  unmountPanel()
-  await closeBrowserSidePanel()
+  await closePanelWithIntent('closed')
 }
 
 async function minimizePanel(): Promise<void> {
-  panelCloseIntent = 'minimized'
-  persistUIState('minimized')
-  resetWriteGuardState()
-  unmountPanel()
-  await closeBrowserSidePanel()
+  await closePanelWithIntent('minimized')
 }
 
 function writeToTerminal(text: string): void {

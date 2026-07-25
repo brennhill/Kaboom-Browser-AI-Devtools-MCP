@@ -20,7 +20,7 @@ import type { components } from './generated/openapi-types.js'
 import type { PopupConnectionStatus, ToggleWarningConfig } from './popup/types.js'
 import type { ShowTrackedHoverLauncherMessage } from './types/runtime-messages.js'
 import { RuntimeMessageName, StorageKey } from './lib/constants.js'
-import { getLocal, getLocals, setSession, getSession, onStorageChanged } from './lib/storage-utils.js'
+import { getLocal, getLocals, setSession, getSession, onStorageChanged, persist } from './lib/storage-utils.js'
 import { updateConnectionStatus } from './popup/status-display.js'
 import { renderUpdateAvailableBanner } from './popup/update-button.js'
 import { DEFAULT_SERVER_URL } from './lib/constants.js'
@@ -145,7 +145,7 @@ function requestTrackedHoverLauncherReshow(): void {
 
 /** Cache status to session storage so the popup renders instantly on next open. */
 function cacheStatus(status: PopupConnectionStatus): void {
-  void setSession(StorageKey.POPUP_LAST_STATUS, status)
+  persist(setSession(StorageKey.POPUP_LAST_STATUS, status), 'popup-last-status')
 }
 
 /**

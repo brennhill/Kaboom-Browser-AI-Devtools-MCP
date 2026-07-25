@@ -6,10 +6,10 @@
 import { StorageKey } from '../lib/constants.js'
 import { getLocal } from '../lib/storage-utils.js'
 import type { ScreenRecordingHandlers, RecordingShortcutHandlers } from './keyboard-shortcuts.js'
-import { toggleScreenRecording, buildActionSequenceRecordingName } from './keyboard-shortcuts.js'
+import { toggleScreenRecording, toggleActionSequenceRecording } from './keyboard-shortcuts.js'
 import { errorMessage } from '../lib/error-utils.js'
 import { toggleDrawModeForTab } from './draw-mode-toggle.js'
-import { setTrackedTab, clearTrackedTab } from './tab-state.js'
+import { trackTab, untrackTab } from '../lib/tab-tracking-core.js'
 import { trackUIFeature } from './ui-usage-tracker.js'
 import { toggleTerminalSidePanel, isTerminalPanelOpenSync } from './terminal-panel.js'
 
@@ -139,11 +139,22 @@ export function installContextMenus(
       try {
         const trackedTabId = (await getLocal(StorageKey.TRACKED_TAB_ID)) as number | undefined
         if (trackedTabId === tab.id) {
-          await clearTrackedTab()
+          // Release: shared core clears state, stops recording, and notifies the
+          // content script. The menu can reach the recording handler directly.
+          await untrackTab(tab.id, async () => {
+            if (recordingHandlers.isRecording()) await recordingHandlers.stopRecording()
+          })
           if (logFn) logFn(`Released control for tab ${tab.id}`)
         } else {
-          await setTrackedTab(tab)
-          if (logFn) logFn(`Now controlling tab ${tab.id}: ${tab.url}`)
+          // Track through the shared core so the same internal-page and
+          // cloaked-domain guards the popup enforces apply here too — controlling
+          // a cloaked tab from the menu was a privacy leak (F2, rule 7).
+          const outcome = await trackTab(tab)
+          if (outcome === 'tracked') {
+            if (logFn) logFn(`Now controlling tab ${tab.id}: ${tab.url}`)
+          } else if (logFn) {
+            logFn(`Not controlling tab ${tab.id}: ${outcome === 'cloaked' ? 'cloaked domain' : 'internal page'}`)
+          }
         }
       } catch (err) {
         if (logFn) logFn(`Control page error: ${errorMessage(err)}`)
@@ -164,12 +175,7 @@ export function installContextMenus(
       }
     } else if (info.menuItemId === MENU_ID_ACTION_RECORD) {
       try {
-        if (actionRecordingHandlers.isRecording()) {
-          await actionRecordingHandlers.stopRecording(false)
-        } else {
-          const name = buildActionSequenceRecordingName()
-          await actionRecordingHandlers.startRecording(name, 15, '', '', true, tab.id)
-        }
+        await toggleActionSequenceRecording(actionRecordingHandlers, tab, logFn)
       } catch (err) {
         if (logFn) logFn(`Context menu action recording error: ${errorMessage(err)}`)
       }

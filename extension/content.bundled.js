@@ -99,6 +99,14 @@
   var TERMINAL_PANEL_FALLBACK_HINT = 'Right-click the page and choose "Open Kaboom Terminal", or assign a shortcut at chrome://extensions/shortcuts.';
   var TERMINAL_PANEL_STALE_CONTEXT_HINT = "The Kaboom extension was reloaded, so this page is running an old copy of it. Reload this page to reconnect.";
 
+  // extension/lib/brand.js
+  var KABOOM_DOCS_URL = "https://gokaboom.dev/docs";
+  var KABOOM_REPOSITORY_URL = "https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP";
+  var KABOOM_LOG_PREFIX = "[KaBOOM!]";
+  function getReloadedExtensionWarning() {
+    return "[KaBOOM!] Please refresh this page. The KaBOOM! extension was reloaded and this page still has the old content script. A page refresh will reconnect capture automatically.";
+  }
+
   // extension/lib/storage-utils.js
   function getStorageWithSession() {
     if (typeof chrome === "undefined" || !chrome.storage)
@@ -107,6 +115,17 @@
   }
   function isPromiseLike(value) {
     return typeof value === "object" && value !== null && typeof value.then === "function";
+  }
+  function storageLastError() {
+    if (typeof chrome === "undefined" || !chrome.runtime)
+      return null;
+    const err = chrome.runtime.lastError;
+    return err ? err.message ?? "unknown chrome.storage error" : null;
+  }
+  function persist(write, context) {
+    void write.catch((err) => {
+      console.warn(`${KABOOM_LOG_PREFIX} storage write failed (${context}):`, err);
+    });
   }
   function readStorage(method, keys) {
     return new Promise((resolve, reject) => {
@@ -134,7 +153,11 @@
         if (settled)
           return;
         settled = true;
-        resolve();
+        const errMsg = storageLastError();
+        if (errMsg)
+          reject(new Error(`chrome.storage write failed: ${errMsg}`));
+        else
+          resolve();
       };
       try {
         const maybePromise = method(items, finish);
@@ -153,7 +176,11 @@
         if (settled)
           return;
         settled = true;
-        resolve();
+        const errMsg = storageLastError();
+        if (errMsg)
+          reject(new Error(`chrome.storage remove failed: ${errMsg}`));
+        else
+          resolve();
       };
       try {
         const maybePromise = method(keys, finish);
@@ -564,14 +591,6 @@
     window.addEventListener("pagehide", clearPendingRequests);
     window.addEventListener("beforeunload", clearPendingRequests);
     cleanupTimer = setInterval(performPeriodicCleanup, CLEANUP_INTERVAL_MS);
-  }
-
-  // extension/lib/brand.js
-  var KABOOM_DOCS_URL = "https://gokaboom.dev/docs";
-  var KABOOM_REPOSITORY_URL = "https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP";
-  var KABOOM_LOG_PREFIX = "[KaBOOM!]";
-  function getReloadedExtensionWarning() {
-    return "[KaBOOM!] Please refresh this page. The KaBOOM! extension was reloaded and this page still has the old content script. A page refresh will reconnect capture automatically.";
   }
 
   // extension/content/message-forwarding.js
@@ -2320,10 +2339,10 @@
   function persistHiddenState(hidden) {
     try {
       if (hidden) {
-        void setLocal(StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN, true);
+        persist(setLocal(StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN, true), "launcher-hidden");
         return;
       }
-      void removeLocal(StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN);
+      persist(removeLocal(StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN), "launcher-hidden-clear");
     } catch {
     }
   }
@@ -2429,6 +2448,9 @@
         console.warn("[KaBOOM!] Draw mode unavailable: extension context invalidated. Refresh the page to restore.");
         return;
       }
+      const trackMsg = { type: "track_ui_feature", feature: "annotations" };
+      chrome.runtime.sendMessage(trackMsg).catch(() => {
+      });
       const drawModeModule = await import(
         /* webpackIgnore: true */
         chrome.runtime.getURL("content/draw-mode.js")

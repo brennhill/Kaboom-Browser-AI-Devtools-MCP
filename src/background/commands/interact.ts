@@ -26,13 +26,19 @@ import { errorMessage } from '../../lib/error-utils.js'
 
 registerCommand('subtitle', async (ctx) => {
   const params = ctx.params as { text?: string }
-  chrome.tabs
-    .sendMessage(ctx.tabId, {
+  const label = params.text || 'cleared'
+  try {
+    await chrome.tabs.sendMessage(ctx.tabId, {
       type: 'kaboom_subtitle',
       text: params.text ?? ''
     })
-    .catch(() => {})
-  ctx.sendResult({ success: true, subtitle: params.text || 'cleared' })
+    ctx.sendResult({ success: true, subtitle: label })
+  } catch (err) {
+    // The subtitle never rendered — the content script is unreachable (internal
+    // page, not yet injected). Report the real failure rather than a phantom
+    // success that hides "the AI's caption silently vanished". (CLAUDE.md rule 25.)
+    ctx.sendResult({ success: false, subtitle: label, error: errorMessage(err, 'subtitle_failed') })
+  }
 })
 
 // =============================================================================

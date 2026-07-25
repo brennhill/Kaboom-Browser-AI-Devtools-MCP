@@ -3,10 +3,6 @@
  * Why: Provides a deterministic handoff from popup controls to content-script annotation capture.
  * Docs: docs/features/feature/annotated-screenshots/index.md
  */
-/**
- * @fileoverview Draw Mode Button Module for Popup
- * Manages the draw mode activation button and error handling.
- */
 function showDrawModeError(label, message) {
     label.textContent = message;
     label.style.color = '#f85149';
@@ -41,6 +37,13 @@ export function setupDrawModeButton() {
                 showDrawModeError(label, 'Cannot draw on internal pages');
                 return;
             }
+            // Count this UI-triggered annotation. Background owns the usage counter and
+            // the popup reaches the content script directly, so it must report in — the
+            // keyboard/context-menu entry points already track; the popup did not (F7).
+            const trackMsg = { type: 'track_ui_feature', feature: 'annotations' };
+            chrome.runtime.sendMessage(trackMsg).catch(() => {
+                // best-effort telemetry ping; the annotation flow does not depend on it
+            });
             label.textContent = 'Starting...';
             chrome.tabs.sendMessage(tab.id, { type: 'kaboom_draw_mode_start', started_by: 'user' }, (resp) => {
                 if (chrome.runtime.lastError) {

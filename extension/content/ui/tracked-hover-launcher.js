@@ -12,7 +12,7 @@ import { requestAudit } from '../../lib/request-audit.js';
  * Flip to `true` to restore (matches the flag in popup/tab-tracking.ts).
  */
 const AUDIT_BUTTON_ENABLED = false;
-import { getLocal, setLocal, removeLocal, onStorageChanged } from '../../lib/storage-utils.js';
+import { getLocal, setLocal, removeLocal, onStorageChanged, persist } from '../../lib/storage-utils.js';
 import { initTerminalPanelBridge, isTerminalVisible, onTerminalPanelVisibilityChanged, openTerminalPanel, writeToTerminal } from './terminal-panel-bridge.js';
 const ROOT_ID = 'kaboom-tracked-hover-launcher';
 const PANEL_ID = 'kaboom-tracked-hover-panel';
@@ -124,10 +124,10 @@ async function syncHiddenStateFromStorage() {
 function persistHiddenState(hidden) {
     try {
         if (hidden) {
-            void setLocal(StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN, true);
+            persist(setLocal(StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN, true), 'launcher-hidden');
             return;
         }
-        void removeLocal(StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN);
+        persist(removeLocal(StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN), 'launcher-hidden-clear');
     }
     catch {
         // Extension context invalidated — hidden state won't persist but functionality is unaffected
@@ -251,6 +251,13 @@ async function startDrawMode() {
             console.warn('[KaBOOM!] Draw mode unavailable: extension context invalidated. Refresh the page to restore.');
             return;
         }
+        // Count this UI-triggered annotation. The launcher drives draw mode from the
+        // content script, bypassing the background entry points that already track,
+        // so report in or the usage counter undercounts annotations (F7).
+        const trackMsg = { type: 'track_ui_feature', feature: 'annotations' };
+        chrome.runtime.sendMessage(trackMsg).catch(() => {
+            // best-effort telemetry ping; the annotation flow does not depend on it
+        });
         const drawModeModule = await import(/* webpackIgnore: true */ chrome.runtime.getURL('content/draw-mode.js'));
         if (typeof drawModeModule.activateDrawMode === 'function') {
             drawModeModule.activateDrawMode('user');

@@ -53,6 +53,32 @@ func (zeroReader) Read(p []byte) (int, error) {
 	return len(p), nil
 }
 
+// failingReader yields one chunk of data and then fails, simulating a stream
+// that dies mid-upload (dropped connection, truncated body).
+type failingReader struct{ done bool }
+
+func (f *failingReader) Read(p []byte) (int, error) {
+	if !f.done {
+		f.done = true
+		return copy(p, []byte("partial data")), nil
+	}
+	return 0, errors.New("simulated stream failure")
+}
+
+func TestUpload_WriteErrorRemovesPartial(t *testing.T) {
+	dir := t.TempDir()
+	_, err := Upload(dir, "sess-1", "image/png", "screenshot.png", &failingReader{})
+	if err == nil {
+		t.Fatal("expected write error, got nil")
+	}
+	// The partial file must not survive a failed upload — a leftover would be a
+	// truncated image reported (by its mere presence) as a valid capture.
+	partial := filepath.Join(dir, uploadDirName, "sess-1", "screenshot.png")
+	if _, statErr := os.Stat(partial); !os.IsNotExist(statErr) {
+		t.Fatalf("expected partial file removed, stat err = %v", statErr)
+	}
+}
+
 func TestUpload_InvalidContentType(t *testing.T) {
 	dir := t.TempDir()
 	r := strings.NewReader("data")

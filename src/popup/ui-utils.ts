@@ -20,12 +20,7 @@ export function formatFileSize(bytes: number): string {
   return `${value < 10 ? value.toFixed(1) : Math.round(value)} ${units[i]}`
 }
 
-/**
- * Check if a URL is an internal browser page that cannot be tracked.
- * Chrome blocks content scripts from these pages, so tracking is impossible.
- */
-export function isInternalUrl(url: string | undefined): boolean {
-  if (!url) return true
-  const internalPrefixes = ['chrome://', 'chrome-extension://', 'about:', 'edge://', 'brave://', 'devtools://']
-  return internalPrefixes.some((prefix) => url.startsWith(prefix))
-}
+// Canonical internal-URL predicate lives in lib/internal-url so the popup, the
+// background, and the shared tracking core cannot drift. Re-exported here to keep
+// existing popup importers working.
+export { isInternalUrl } from '../lib/internal-url.js'

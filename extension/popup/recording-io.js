@@ -7,7 +7,7 @@
 import { StorageKey } from '../lib/constants.js';
 import { KABOOM_RECORDING_LOG_PREFIX } from '../lib/brand.js';
 import { errorMessage } from '../lib/error-utils.js';
-import { setLocal, removeLocal } from '../lib/storage-utils.js';
+import { setLocal, removeLocal, persist } from '../lib/storage-utils.js';
 const LOG = `${KABOOM_RECORDING_LOG_PREFIX} Popup:`;
 export function sendRecordingGestureDecision(type) {
     chrome.runtime.sendMessage({ type }, () => {
@@ -16,7 +16,7 @@ export function sendRecordingGestureDecision(type) {
 }
 function showMicPermissionPrompt(saveInfoEl, audioMode) {
     chrome.tabs.query({ active: true, currentWindow: true }, (activeTabs) => {
-        void setLocal(StorageKey.PENDING_MIC_RECORDING, { audioMode, returnTabId: activeTabs[0]?.id });
+        persist(setLocal(StorageKey.PENDING_MIC_RECORDING, { audioMode, returnTabId: activeTabs[0]?.id }), 'pending-mic-recording');
     });
     saveInfoEl.innerHTML =
         'Microphone access needed. <a href="#" id="grant-mic-link" style="color: #58a6ff; text-decoration: underline; cursor: pointer">Grant access</a>';
@@ -56,12 +56,12 @@ function tryMicPermissionThenStart(els, state, audioMode, showRecording, showIdl
         .then((micStream) => {
         console.log(LOG, 'getUserMedia succeeded from popup');
         micStream.getTracks().forEach((t) => t.stop());
-        void setLocal(StorageKey.MIC_GRANTED, true);
+        persist(setLocal(StorageKey.MIC_GRANTED, true), 'mic-granted');
         sendRecordStart(els, state, audioMode, showRecording, showIdle, showStartError);
     })
         .catch((err) => {
         console.log(LOG, 'getUserMedia FAILED:', err.name, errorMessage(err));
-        void removeLocal(StorageKey.MIC_GRANTED);
+        persist(removeLocal(StorageKey.MIC_GRANTED), 'mic-granted-clear');
         showIdle(els, state);
         if (els.saveInfoEl)
             showMicPermissionPrompt(els.saveInfoEl, audioMode);
@@ -70,7 +70,7 @@ function tryMicPermissionThenStart(els, state, audioMode, showRecording, showIdl
 export function handleStartClick(els, state, showRecording, showIdle, showStartError) {
     const audioSelect = document.getElementById('record-audio-mode');
     const audioMode = audioSelect?.value ?? '';
-    void setLocal(StorageKey.RECORD_AUDIO_PREF, audioMode);
+    persist(setLocal(StorageKey.RECORD_AUDIO_PREF, audioMode), 'record-audio-pref');
     if (els.optionsEl)
         els.optionsEl.style.display = 'none';
     if (els.saveInfoEl)

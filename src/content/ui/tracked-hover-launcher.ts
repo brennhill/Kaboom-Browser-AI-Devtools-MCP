@@ -4,7 +4,7 @@
  * Docs: docs/features/feature/tab-tracking-ux/index.md
  */
 
-import type { ShowTrackedHoverLauncherMessage } from '../../types/runtime-messages.js'
+import type { ShowTrackedHoverLauncherMessage, TrackUiFeatureMessage } from '../../types/runtime-messages.js'
 import { RuntimeMessageName, StorageKey } from '../../lib/constants.js'
 import { KABOOM_DOCS_URL, KABOOM_REPOSITORY_URL } from '../../lib/brand.js'
 import { requestAudit } from '../../lib/request-audit.js'
@@ -15,7 +15,7 @@ import { requestAudit } from '../../lib/request-audit.js'
  * Flip to `true` to restore (matches the flag in popup/tab-tracking.ts).
  */
 const AUDIT_BUTTON_ENABLED = false
-import { getLocal, setLocal, removeLocal, onStorageChanged } from '../../lib/storage-utils.js'
+import { getLocal, setLocal, removeLocal, onStorageChanged, persist } from '../../lib/storage-utils.js'
 import {
   initTerminalPanelBridge,
   isTerminalVisible,
@@ -139,10 +139,10 @@ async function syncHiddenStateFromStorage(): Promise<void> {
 function persistHiddenState(hidden: boolean): void {
   try {
     if (hidden) {
-      void setLocal(StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN, true)
+      persist(setLocal(StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN, true), 'launcher-hidden')
       return
     }
-    void removeLocal(StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN)
+    persist(removeLocal(StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN), 'launcher-hidden-clear')
   } catch {
     // Extension context invalidated — hidden state won't persist but functionality is unaffected
   }
@@ -280,6 +280,13 @@ async function startDrawMode(): Promise<void> {
       console.warn('[KaBOOM!] Draw mode unavailable: extension context invalidated. Refresh the page to restore.')
       return
     }
+    // Count this UI-triggered annotation. The launcher drives draw mode from the
+    // content script, bypassing the background entry points that already track,
+    // so report in or the usage counter undercounts annotations (F7).
+    const trackMsg: TrackUiFeatureMessage = { type: 'track_ui_feature', feature: 'annotations' }
+    chrome.runtime.sendMessage(trackMsg).catch(() => {
+      // best-effort telemetry ping; the annotation flow does not depend on it
+    })
     const drawModeModule = await import(/* webpackIgnore: true */ chrome.runtime.getURL('content/draw-mode.js'))
     if (typeof drawModeModule.activateDrawMode === 'function') {
       drawModeModule.activateDrawMode('user')

@@ -155,6 +155,12 @@ function handleMessage(message, sender, sendResponse, deps) {
             trackUIFeature('screenshot');
             handleCaptureScreenshot(sendResponse, deps);
             return true;
+        case 'track_ui_feature':
+            // Non-background entry points (popup, in-page launcher) report UI feature
+            // use here so the usage counter is not undercounted when they trigger a
+            // feature straight against the content script (F7, repo rule 19).
+            trackUIFeature(message.feature);
+            return false;
         case 'set_source_map_enabled':
             deps.setSourceMapEnabled(message.enabled);
             deps.saveSetting(StorageKey.SOURCE_MAP_ENABLED, message.enabled);

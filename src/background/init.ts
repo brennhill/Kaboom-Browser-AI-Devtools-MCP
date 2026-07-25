@@ -132,12 +132,23 @@ async function initializeExtensionAsync(): Promise<void> {
       )
       debugLog(DebugCategory.LIFECYCLE, 'Service worker restarted, ephemeral state recovered')
     }
-    // Mark the current state version
-    await markStateVersion()
+    // Mark the current state version. Best-effort: a session-storage write that
+    // rejects (over quota, invalidated context) must NOT abort the rest of init —
+    // that would skip installing the message handler and leave the extension deaf
+    // until the next worker restart. Log and continue (rule 25).
+    try {
+      await markStateVersion()
+    } catch (err) {
+      console.warn(`${KABOOM_LOG_PREFIX} markStateVersion failed (non-fatal):`, err)
+    }
 
     // Allow content scripts to access chrome.storage.session (required for terminal state persistence).
     // Without this, content scripts silently fail to read/write session storage.
-    await setSessionAccessLevel('TRUSTED_AND_UNTRUSTED_CONTEXTS')
+    try {
+      await setSessionAccessLevel('TRUSTED_AND_UNTRUSTED_CONTEXTS')
+    } catch (err) {
+      console.warn(`${KABOOM_LOG_PREFIX} setSessionAccessLevel failed (non-fatal):`, err)
+    }
 
     // ============= STEP 2: Load debug mode =============
     const debugEnabled = await loadDebugModeState()

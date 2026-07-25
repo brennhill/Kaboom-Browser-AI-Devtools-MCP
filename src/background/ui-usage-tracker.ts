@@ -6,8 +6,13 @@
 // TYPES
 // =============================================================================
 
-/** Features that can be triggered from the extension UI. */
-export type UIFeature = 'screenshot' | 'annotations' | 'video' | 'dom_action'
+/**
+ * Features that can be triggered from the extension UI.
+ * WIRE-SYNCED: this union is the allowlist's source of truth on the extension side.
+ * Its Go counterpart is `allowedFeatureKeys` in internal/capture/sync.go — add a
+ * key to BOTH or the daemon silently drops it (CLAUDE.md rule 12).
+ */
+export type UIFeature = 'screenshot' | 'annotations' | 'video' | 'dom_action' | 'action_recording'
 
 // =============================================================================
 // STATE
