@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime/debug"
 	"sync"
 	"syscall"
 	"time"
@@ -166,14 +167,35 @@ func Spawn(cfg SpawnConfig) (*Session, error) {
 		reaped:     make(chan struct{}),
 		clk:        realClock{},
 	}
-	go func() { // lint:allow-bare-goroutine — sole reaper for child process, exits when child exits
-		_ = cmd.Wait()
-		if cmd.ProcessState != nil {
-			s.exitCode = cmd.ProcessState.ExitCode()
-		}
-		close(s.reaped)
-	}()
+	go s.reap() // lint:allow-bare-goroutine — sole reaper for child process, exits when child exits
 	return s, nil
+}
+
+// reapHook, when non-nil, is invoked by reap before waiting. Tests use it to
+// force a panic and prove the reaper's recover keeps `reaped` closed (so Close
+// never deadlocks) and does not crash the process.
+var reapHook func()
+
+// reap waits for the child process, captures its exit code, and closes reaped.
+// It recovers from any panic: leaving reaped unclosed would deadlock Close (which
+// blocks on <-s.reaped after SIGKILL), and an unrecovered panic in this spawned
+// goroutine would crash the whole daemon. `defer close(s.reaped)` is registered
+// after the recover defer, so during a panic unwind it runs FIRST — reaped is
+// always closed before the recover logs.
+func (s *Session) reap() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "[Kaboom] PANIC in PTY reaper (session %s): %v\n%s\n", s.ID, r, debug.Stack())
+		}
+	}()
+	defer close(s.reaped)
+	if reapHook != nil {
+		reapHook()
+	}
+	_ = s.cmd.Wait()
+	if s.cmd.ProcessState != nil {
+		s.exitCode = s.cmd.ProcessState.ExitCode()
+	}
 }
 
 // Read reads from the PTY master (child's stdout/stderr).
