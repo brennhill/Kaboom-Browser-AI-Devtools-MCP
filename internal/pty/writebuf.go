@@ -16,12 +16,46 @@ import (
 const (
 	writeBufferMax = 1 << 20   // 1 MB backpressure cap.
 	writeChunkSize = 16 * 1024 // 16 KB per write syscall.
-	// writeBufferCloseTimeout bounds how long Close() waits for the drain
-	// goroutine to exit. drain can be blocked inside writer.Write (a PTY child
-	// that stopped reading stdin), which close(notify) cannot interrupt — without
-	// this bound, Close, and therefore daemon shutdown, would hang forever.
-	writeBufferCloseTimeout = 2 * time.Second
 )
+
+// writeBufferCloseTimeout bounds how long Close() waits for the drain goroutine to
+// exit. drain can be blocked inside writer.Write (a PTY child that stopped reading
+// stdin), which close(notify) cannot interrupt — without this bound, Close, and
+// therefore daemon shutdown, would hang forever. A var (not const) so tests can
+// shorten it to exercise the timeout path without a real multi-second wait.
+var writeBufferCloseTimeout = 2 * time.Second
+
+// writeBufferCloseTimeoutHook, if set, is invoked when Close times out waiting for
+// the drain goroutine (a stuck writer leaks the goroutine + its fd, which cannot be
+// safely interrupted). It exists purely so that leak is not SILENT (finding M): the
+// daemon wires it to the structured log. Package-level so no logger has to be
+// threaded through NewWriteBuffer/NewRelay for this rare defense-in-depth signal;
+// guarded by a mutex because the setter and the Close-time reader can run
+// concurrently (e.g. RegisterRoutes wiring vs. a shutdown Close).
+var (
+	writeBufferHookMu           sync.Mutex
+	writeBufferCloseTimeoutHook func(pending int)
+)
+
+// SetWriteBufferCloseTimeoutHook installs (or clears, with nil) the diagnostics
+// hook invoked when WriteBuffer.Close times out. Called at daemon wiring; also used
+// by tests.
+func SetWriteBufferCloseTimeoutHook(fn func(pending int)) {
+	writeBufferHookMu.Lock()
+	writeBufferCloseTimeoutHook = fn
+	writeBufferHookMu.Unlock()
+}
+
+// fireWriteBufferCloseTimeout invokes the hook (if any) under the lock-free read of
+// a snapshot, so a concurrent SetWriteBufferCloseTimeoutHook cannot race the call.
+func fireWriteBufferCloseTimeout(pending int) {
+	writeBufferHookMu.Lock()
+	fn := writeBufferCloseTimeoutHook
+	writeBufferHookMu.Unlock()
+	if fn != nil {
+		fn(pending)
+	}
+}
 
 // ErrWriteBufferFull is returned when the write buffer exceeds the backpressure cap.
 var ErrWriteBufferFull = errors.New("pty: write buffer full")
@@ -164,6 +198,11 @@ func (wb *WriteBuffer) Close() error {
 		wb.flushAll() // drain exited cleanly — safe to do a final synchronous flush
 		return nil
 	case <-time.After(writeBufferCloseTimeout):
+		// The drain goroutine is stuck inside writer.Write and cannot be safely
+		// interrupted, so its goroutine + fd leak. Fire the diagnostics hook so the
+		// leak is not silent (finding M) — Pending() is safe here (mu is released,
+		// and flushAll releases mu around the blocked Write).
+		fireWriteBufferCloseTimeout(wb.Pending())
 		return ErrWriteBufferCloseTimeout
 	}
 }

@@ -603,6 +603,56 @@ describe('terminal side panel host', () => {
     assert.ok(getElementById('kaboom-terminal-iframe').src.includes('tok-2'), 'the rebuilt panel uses the fresh token')
   })
 
+  test('a flapping daemon stops rebuilding after the recovery ceiling and shows the no-session state (E-i)', async () => {
+    // A daemon that stays up long enough for the 2s /terminal/validate but drops
+    // the WS before onopen makes the iframe exhaust reconnects repeatedly. Each
+    // exhaustion validates (true) and reloads the iframe — an endless thrash. Past
+    // a bounded number of recoveries the parent must give up and drop to the
+    // recoverable no-session state instead of re-looping forever.
+    let startCount = 0
+    fetchHandler = ({ url }) => {
+      if (url.endsWith('/terminal/start')) {
+        startCount += 1
+        return Promise.resolve(makeResponse(200, { session_id: `s-${startCount}`, token: `tok-${startCount}`, pid: 1 }))
+      }
+      if (url.includes('/terminal/validate?token=')) {
+        return Promise.resolve(makeResponse(200, { valid: true })) // flap: token validates, but onopen keeps failing
+      }
+      throw new Error(`Unexpected fetch call: ${url}`)
+    }
+
+    const module = await import(`../../extension/sidepanel.js?v=${++importCounter}`)
+    await module._terminalPanelForTests.bootTerminalPanel(true)
+    assert.ok(getElementById('kaboom-terminal-iframe'), 'first boot mounts the terminal iframe')
+    assert.strictEqual(startCount, 1)
+
+    const flap = async () => {
+      dispatchWindowEvent('message', {
+        origin: 'http://localhost:7891',
+        data: { source: 'kaboom-terminal', event: 'reconnect_exhausted', data: { attempts: 7 } }
+      })
+      await sleep(20) // let the async validate -> redraw run
+    }
+
+    // Under the ceiling: each exhaustion revalidates and reloads the same iframe.
+    for (let i = 0; i < 3; i++) await flap()
+    assert.ok(getElementById('kaboom-terminal-iframe'), 'still recovering under the ceiling — iframe present')
+    assert.strictEqual(
+      getElementById('kaboom-terminal-start-button'),
+      null,
+      'no no-session state while under the ceiling'
+    )
+
+    // One more exhaustion trips the ceiling: stop thrashing, show no-session state.
+    await flap()
+    assert.ok(
+      getElementById('kaboom-terminal-start-button'),
+      'past the ceiling the recoverable no-session state (Start terminal) is shown instead of another rebuild'
+    )
+    assert.strictEqual(getElementById('kaboom-terminal-iframe'), null, 'the flapping iframe is detached so the loop stops')
+    assert.strictEqual(startCount, 1, 'the ceiling path does not start a new session (the flap kept the token valid)')
+  })
+
   test('write guard waits while user is typing and flushes after blur', async () => {
     fetchHandler = ({ url }) => {
       if (url.endsWith('/terminal/start')) {

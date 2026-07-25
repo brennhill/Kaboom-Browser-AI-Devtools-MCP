@@ -30,6 +30,21 @@ const visibilityListeners = new Set<VisibilityListener>()
 const TERMINAL_PANEL_WRITE_RETRY_MS = 250
 let writeRetryDelayMs = TERMINAL_PANEL_WRITE_RETRY_MS
 
+// The single outstanding retry timer, and a generation stamped onto it. An
+// untracked retry timer (finding J) fires after teardown or after a new session
+// opens — re-sending a stale nudge and spuriously reconciling the visibility
+// mirror. We keep exactly one retry, cancel it on teardown/supersede, and the
+// retry no-ops if its generation is stale or the panel is no longer visible.
+let writeRetryTimer: ReturnType<typeof setTimeout> | null = null
+let writeGeneration = 0
+
+function clearWriteRetry(): void {
+  if (writeRetryTimer !== null) {
+    clearTimeout(writeRetryTimer)
+    writeRetryTimer = null
+  }
+}
+
 function notifyVisibilityListeners(visible: boolean): void {
   for (const listener of visibilityListeners) {
     listener(visible)
@@ -161,6 +176,10 @@ function reportTerminalWriteFailure(text: string, reason: string, reconcile: boo
 
 export function writeToTerminal(text: string): void {
   if (!panelVisible) return
+  // A new write supersedes any pending retry: bump the generation and cancel the
+  // outstanding timer so an older session's retry cannot fire alongside this one.
+  writeGeneration += 1
+  clearWriteRetry()
   sendTerminalWrite(text, true)
 }
 
@@ -190,7 +209,7 @@ function sendTerminalWrite(text: string, allowRetry: boolean): void {
       if (resp && resp.received === true) return
       if (allowRetry) {
         // Possibly the panel's boot window — retry once before concluding it is gone.
-        setTimeout(() => sendTerminalWrite(text, false), writeRetryDelayMs)
+        scheduleWriteRetry(text)
         return
       }
       // Retry also missed: no panel received it. Fail loud + reconcile the mirror.
@@ -200,12 +219,30 @@ function sendTerminalWrite(text: string, allowRetry: boolean): void {
       // Transport error. Retry once (transient); if it recurs, fail loud but do NOT
       // reconcile — an ambiguous transport error is not proof the panel is gone.
       if (allowRetry) {
-        setTimeout(() => sendTerminalWrite(text, false), writeRetryDelayMs)
+        scheduleWriteRetry(text)
         return
       }
       reportTerminalWriteFailure(text, err instanceof Error ? err.message : String(err), false)
     }
   )
+}
+
+/**
+ * Schedule the single retry for `text`, tracked so teardown/supersede can cancel
+ * it, and guarded so it no-ops if the bridge state moved on since it was scheduled
+ * (finding J): a stale retry must never re-send into a new session or reconcile a
+ * panel it no longer describes.
+ */
+function scheduleWriteRetry(text: string): void {
+  clearWriteRetry()
+  const generation = writeGeneration
+  writeRetryTimer = setTimeout(() => {
+    writeRetryTimer = null
+    // A reset/teardown or a newer send bumps the generation; a closed panel clears
+    // panelVisible. In either case this retry is stale — drop it silently.
+    if (generation !== writeGeneration || !panelVisible) return
+    sendTerminalWrite(text, false)
+  }, writeRetryDelayMs)
 }
 
 export const _terminalPanelBridgeForTests = {
@@ -215,6 +252,10 @@ export const _terminalPanelBridgeForTests = {
     storageListenerInstalled = false
     writeRetryDelayMs = TERMINAL_PANEL_WRITE_RETRY_MS
     visibilityListeners.clear()
+    // Cancel any pending retry and bump the generation so an in-flight one no-ops:
+    // teardown must not leave a timer that re-sends or reconciles a new session (J).
+    clearWriteRetry()
+    writeGeneration += 1
   },
   setWriteRetryDelay(ms: number): void {
     writeRetryDelayMs = ms

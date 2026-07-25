@@ -14,6 +14,8 @@ code_paths:
   - cmd/browser-agent/terminal_supervisor.go
   - cmd/browser-agent/main_connection_mcp_shutdown.go
   - cmd/browser-agent/daemon_lifecycle.go
+  - cmd/browser-agent/native_install_connect.go
+  - cmd/browser-agent/internal/terminal/intent_handlers.go
   - cmd/browser-agent/internal/terminal/static.go
   - cmd/browser-agent/internal/terminal/terminal_assets/terminal.html
   - extension/sidepanel.html
@@ -68,7 +70,15 @@ test_paths:
   - internal/pty/upload_test.go
   - cmd/browser-agent/internal/terminal/session_end_signal_test.go
   - cmd/browser-agent/internal/terminal/frame_writer_deadline_test.go
+  - cmd/browser-agent/internal/terminal/handlers_fanout_test.go
+  - cmd/browser-agent/internal/terminal/handlers_replay_deadline_test.go
+  - cmd/browser-agent/internal/terminal/relay_boundary_test.go
+  - cmd/browser-agent/internal/terminal/relay_replace_test.go
+  - cmd/browser-agent/internal/terminal/relay_init_test.go
+  - cmd/browser-agent/internal/terminal/intent_handlers_test.go
   - cmd/browser-agent/daemon_lifecycle_takeover_test.go
+  - cmd/browser-agent/native_install_connect_refused_test.go
+  - tests/extension/terminal-html-reconnect.test.js
   - tests/extension/terminal-reconnect-recovery-contract.test.js
   - tests/extension/terminal-iframe-message-contract.test.js
   - npm/kaboom-agentic-browser/lib/kill-daemon.test.js

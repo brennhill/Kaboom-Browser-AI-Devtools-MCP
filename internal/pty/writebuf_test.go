@@ -36,6 +36,39 @@ func TestWriteBuffer_CloseDoesNotHangOnStuckWriter(t *testing.T) {
 	close(gw.gate) // let the blocked drain goroutine unwind so it does not leak
 }
 
+// The stuck-writer close timeout leaks a drain goroutine + fd that cannot be safely
+// interrupted; that leak must not be SILENT. Close must both return
+// ErrWriteBufferCloseTimeout AND fire the diagnostics hook so it is diagnosable (M).
+func TestWriteBuffer_CloseTimeoutSurfacesViaHookAndError(t *testing.T) {
+	// Shorten the bound so the timeout path runs fast; restore after.
+	origTimeout := writeBufferCloseTimeout
+	writeBufferCloseTimeout = 40 * time.Millisecond
+	defer func() { writeBufferCloseTimeout = origTimeout }()
+
+	var firedPending int
+	var fired bool
+	SetWriteBufferCloseTimeoutHook(func(pending int) { fired = true; firedPending = pending })
+	defer SetWriteBufferCloseTimeoutHook(nil)
+
+	gw := &gatedWriter{gate: make(chan struct{})} // Write blocks forever
+	wb := NewWriteBuffer(gw)
+	if _, err := wb.Write([]byte("stuck")); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	err := wb.Close()
+	if !errors.Is(err, ErrWriteBufferCloseTimeout) {
+		t.Fatalf("Close on a stuck writer must return the timeout error, got %v", err)
+	}
+	if !fired {
+		t.Fatal("the close timeout must fire the diagnostics hook — a silent goroutine+fd leak is not diagnosable")
+	}
+	if firedPending != 5 {
+		t.Fatalf("the hook should report the undrained byte count (5), got %d", firedPending)
+	}
+	close(gw.gate) // let the blocked drain goroutine unwind so it does not leak into other tests
+}
+
 func TestWriteBuffer_BasicWrite(t *testing.T) {
 	var dest bytes.Buffer
 	wb := NewWriteBuffer(&dest)

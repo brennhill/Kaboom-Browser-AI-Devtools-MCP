@@ -45,9 +45,14 @@ describe('terminal reconnect-recovery contract', () => {
       'sidepanel.ts must handle the reconnect_exhausted event'
     )
     const idx = sidepanel.indexOf("case 'reconnect_exhausted'")
-    const after = sidepanel.slice(idx, idx + 800)
+    // Slice the whole case body — from this case label to the next `case '` — instead
+    // of a fixed-width window. The recovery path legitimately grows (e.g. the bounded
+    // exhaustion-recovery ceiling guard for a flapping daemon sits BEFORE the
+    // redrawTerminal() call), and a brittle fixed slice silently breaks when it does.
+    const nextCase = sidepanel.indexOf("case '", idx + 'case '.length)
+    const caseBody = sidepanel.slice(idx, nextCase === -1 ? idx + 2000 : nextCase)
     assert.match(
-      after,
+      caseBody,
       /redrawTerminal\(\)/,
       'reconnect_exhausted must trigger redrawTerminal (validate-then-rebuild recovery)'
     )

@@ -80,6 +80,16 @@ const IdleTimeout = 30 * time.Second
 func RegisterRoutes(mux *http.ServeMux, deps Deps, server ServerDeps, mgr *pty.Manager, cap *capture.Store) *Map {
 	relays := NewMap()
 
+	// Route a stuck-writer write-buffer close timeout (a drain goroutine + fd leak
+	// that cannot be safely interrupted) to the structured log, so the leak is
+	// diagnosable instead of silent (finding M).
+	pty.SetWriteBufferCloseTimeoutHook(func(pending int) {
+		deps.logEvent("terminal_writebuffer_close_timeout", map[string]any{"pending_bytes": pending})
+		if deps.Stderrf != nil {
+			deps.Stderrf("[Kaboom] terminal write buffer close timed out (%d bytes undrained; drain goroutine+fd leaked)\n", pending)
+		}
+	})
+
 	// Serve terminal HTML page.
 	mux.HandleFunc("/terminal", deps.CORSMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		HandleTerminalPage(w, r, deps)
@@ -200,17 +210,26 @@ func HandleTerminalWS(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pt
 		return
 	}
 
+	// Build the deadline-aware frame writer immediately after the handshake and use
+	// it for EVERY write on this connection — the pre-wsLoop replay chunks,
+	// replay_end, and subscribe-failure frames, as well as wsLoop's own frames
+	// (threaded in below). The terminal server runs with WriteTimeout:0, so without
+	// this a client that stalls its reader mid-replay would block conn.Write forever
+	// and leak a goroutine+fd per connect (finding B). One writer is shared so all
+	// callers serialize on the same mutex.
+	writeFrame := NewFrameWriter(conn, bufrw, deps)
+
 	// Get or create relay for multi-subscriber fan-out.
 	relay := relays.GetOrCreate(sess.ID, sess, "")
 
-	// Capture scrollback BEFORE subscribing to the fanout to avoid duplicate
-	// data. The readLoop appends to scrollback then broadcasts, so any data
-	// arriving after this snapshot will be delivered only via the subscriber
-	// channel, not replayed from scrollback.
-	history := sess.Scrollback()
-
+	// Snapshot scrollback and register the subscriber ATOMICALLY (one subMu hold in
+	// the relay) against the readLoop's append+broadcast. A plain two-step
+	// (Scrollback then Subscribe) lets a chunk arriving in the gap be both replayed
+	// AND broadcast (duplicate) or neither (lost) at the reconnect boundary — the
+	// readLoop appends under scrollMu then broadcasts under the fanout mutex, two
+	// separate locks this snapshot+subscribe would otherwise straddle (finding C).
 	subID := NextWSSubID()
-	sub, subErr := relay.fanout.Subscribe(subID)
+	history, sub, subErr := relay.SubscribeWithHistory(subID)
 
 	// Replay scrollback so the reconnecting (or first-connecting) terminal sees prior output.
 	if len(history) > 0 {
@@ -219,7 +238,7 @@ func HandleTerminalWS(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pt
 			if end > len(history) {
 				end = len(history)
 			}
-			if err := deps.WSWriteFrame(bufrw, 0x2, history[off:end]); err != nil {
+			if err := writeFrame(0x2, history[off:end]); err != nil {
 				if subErr == nil {
 					relay.fanout.Unsubscribe(subID)
 				}
@@ -229,7 +248,7 @@ func HandleTerminalWS(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pt
 		}
 	}
 	replayEnd, _ := json.Marshal(map[string]string{"type": "replay_end"})
-	if err := deps.WSWriteFrame(bufrw, 0x1, replayEnd); err != nil {
+	if err := writeFrame(0x1, replayEnd); err != nil {
 		if subErr == nil {
 			relay.fanout.Unsubscribe(subID)
 		}
@@ -237,19 +256,25 @@ func HandleTerminalWS(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pt
 		return
 	}
 
-	// If subscribe failed (fanout already closed — process exited before reconnect),
-	// send the final scrollback, exit notification, and close. The browser receives
-	// the full output history plus the exited message and stops reconnecting.
+	// If subscribe failed, distinguish the two causes (Fanout.Subscribe returns
+	// both): ErrFanoutClosed means the shell already exited before this reconnect —
+	// send the final scrollback, an `exited` notification, and close, so the browser
+	// shows the death and stops reconnecting. ErrFanoutFull means the 32-subscriber
+	// cap was hit while the shell is HEALTHY — send a plain close (no `exited`) so
+	// the client's reconnect backoff retries instead of declaring a live terminal
+	// dead (finding A).
 	if subErr != nil {
-		exitMsg, _ := json.Marshal(map[string]any{"type": "exited", "code": relay.exitCode})
-		_ = deps.WSWriteFrame(bufrw, 0x1, exitMsg)
-		_ = deps.WSWriteFrame(bufrw, 0x8, nil)
+		if errors.Is(subErr, pty.ErrFanoutClosed) {
+			exitMsg, _ := json.Marshal(map[string]any{"type": "exited", "code": relay.exitCode})
+			_ = writeFrame(0x1, exitMsg)
+		}
+		_ = writeFrame(0x8, nil)
 		_ = conn.Close()
 		return
 	}
 
 	deps.logEvent("terminal_ws_connect", map[string]any{"session_id": sess.ID, "sub_id": subID})
-	wsLoop(conn, bufrw, deps, sess, relay, sub)
+	wsLoop(conn, bufrw, deps, sess, relay, sub, writeFrame)
 	relay.fanout.Unsubscribe(subID)
 	deps.logEvent("terminal_ws_disconnect", map[string]any{"session_id": sess.ID, "sub_id": subID})
 }
@@ -265,7 +290,12 @@ func HandleTerminalWS(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pt
 // closeConn function. Any goroutine that detects a terminal condition calls closeConn(),
 // which closes connDone (unblocking the others) then closes the underlying TCP connection
 // exactly once. This prevents double-close races and goroutine leaks.
-func wsLoop(conn net.Conn, rw *bufio.ReadWriter, deps Deps, sess *pty.Session, relay *Relay, sub <-chan []byte) {
+// writeFrame is the shared, deadline-bound frame writer created in
+// HandleTerminalWS right after the handshake and threaded through here, so the
+// pre-loop replay writes and wsLoop's downstream/ping/control writes all serialize
+// on ONE mutex (a second NewFrameWriter would double-serialize on a different
+// mutex and defeat the shared-writer invariant).
+func wsLoop(conn net.Conn, rw *bufio.ReadWriter, deps Deps, sess *pty.Session, relay *Relay, sub <-chan []byte, writeFrame func(opcode byte, payload []byte) error) {
 	// Coordinated shutdown: connDone signals all goroutines to exit,
 	// closeConn ensures conn.Close() is called exactly once.
 	connDone := make(chan struct{})
@@ -276,10 +306,6 @@ func wsLoop(conn net.Conn, rw *bufio.ReadWriter, deps Deps, sess *pty.Session, r
 			_ = conn.Close()
 		})
 	}
-
-	// Multiple goroutines emit frames (downstream, keepalive ping, and upstream
-	// control responses). Serialize writes to avoid interleaved/corrupted frames.
-	writeFrame := NewFrameWriter(conn, rw, deps)
 
 	// Fan-out -> WebSocket (downstream): read from subscriber channel and send as binary frames.
 	// Also tracks alt-screen state changes and notifies the frontend.
@@ -570,18 +596,22 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 	// and handle init_command via the relay instead of reading PTY directly.
 	if err == nil {
 		sess, _ := mgr.Get(result.SessionID)
+		var relay *Relay
 		if result.Replaced {
 			// The manager evicted a dead session with this ID and spawned a fresh
-			// one. Drop the stale relay (closed fanout, bound to the dead session)
-			// so GetOrCreate builds a new relay + readLoop bound to the new session
-			// — otherwise the reconnecting browser would attach to a dead fanout.
-			relays.Remove(result.SessionID)
+			// one. Atomically drop the stale relay (closed fanout, bound to the dead
+			// session) and install a new relay + readLoop bound to the new session.
+			// ReplaceRelay does this under one lock so a concurrent WS GetOrCreate
+			// cannot bind the relay to the dead session in the gap (finding H) —
+			// otherwise the reconnecting browser would attach to a dead fanout.
+			relay = relays.ReplaceRelay(result.SessionID, sess, req.Dir)
 			deps.logEvent("terminal_session_healed", map[string]any{
 				"session_id": result.SessionID,
 				"pid":        result.Pid,
 			})
+		} else {
+			relay = relays.GetOrCreate(result.SessionID, sess, req.Dir)
 		}
-		relay := relays.GetOrCreate(result.SessionID, sess, req.Dir)
 		deps.logEvent("terminal_session_spawned", map[string]any{
 			"session_id": result.SessionID,
 			"pid":        result.Pid,

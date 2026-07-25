@@ -133,6 +133,31 @@ describe('terminal-panel-bridge writeToTerminal delivery', () => {
       'a retry that acks means the panel is present — must NOT reconcile the mirror')
   })
 
+  test('a retry scheduled then teardown+reopen does not re-send or reconcile the fresh panel (finding J)', async () => {
+    sendMessageImpl = () => Promise.resolve(undefined)
+    await initTerminalPanelBridge()
+    assert.equal(isTerminalVisible(), true)
+
+    _terminalPanelBridgeForTests.setWriteRetryDelay(30)
+    let calls = 0
+    sendMessageImpl = () => { calls += 1; return Promise.resolve({}) } // reachable, never acks -> schedules a retry
+    writeToTerminal('stale nudge')
+    await flush()
+    assert.equal(calls, 1, 'the first send happened and a retry is scheduled')
+
+    // The panel is torn down and a fresh one opens BEFORE the retry fires. An
+    // untracked retry timer would still fire against the new session.
+    _terminalPanelBridgeForTests.reset()
+    await initTerminalPanelBridge() // fresh panel: mirror says 'open' -> visible
+    assert.equal(isTerminalVisible(), true, 'the fresh panel is visible')
+
+    await new Promise((resolve) => setTimeout(resolve, 60)) // past the 30ms retry delay
+    await flush()
+
+    assert.equal(calls, 1, 'a retry after teardown must NOT re-send (stale nudge into a new session)')
+    assert.equal(isTerminalVisible(), true, 'a stale retry must NOT reconcile the FRESH panel to hidden')
+  })
+
   test('a synchronous send throw (context invalidated) is surfaced but does NOT reconcile', async () => {
     sendMessageImpl = () => Promise.resolve({ received: true })
     await initTerminalPanelBridge()
