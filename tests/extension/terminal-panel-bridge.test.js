@@ -7,6 +7,11 @@
  * with Chrome's own X while the TERMINAL_UI_STATE mirror we gate on stayed 'open'
  * (rule 18). The bridge must fail loud (toast, rule 25) AND reconcile the stale
  * mirror so isTerminalVisible() stops reporting a panel that is gone.
+ *
+ * A single miss is retried once first: it can be the panel's brief boot window
+ * (document up, onMessage listener not installed yet). Only when the retry also
+ * misses do we conclude the panel is gone and reconcile — so a boot-window race
+ * cannot falsely wedge the mirror to false.
  */
 import { beforeEach, afterEach, describe, test } from 'node:test'
 import assert from 'node:assert'
@@ -59,6 +64,12 @@ async function flush() {
   await Promise.resolve()
 }
 
+// Flush a macrotask (the retry setTimeout) plus microtasks.
+async function macroFlush() {
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  await flush()
+}
+
 describe('terminal-panel-bridge writeToTerminal delivery', () => {
   beforeEach(() => {
     _terminalPanelBridgeForTests.reset()
@@ -80,20 +91,46 @@ describe('terminal-panel-bridge writeToTerminal delivery', () => {
     assert.equal(isTerminalVisible(), true, 'a delivered write must not flip visibility')
   })
 
-  test('an unacked write (panel gone / stale mirror) reconciles visibility to false', async () => {
-    // Panel document is not there: no ack in the response.
+  test('an unacked write reconciles to false only AFTER the retry also misses', async () => {
     sendMessageImpl = () => Promise.resolve(undefined)
     await initTerminalPanelBridge()
     assert.equal(isTerminalVisible(), true, 'stale mirror still says open before the write')
 
+    _terminalPanelBridgeForTests.setWriteRetryDelay(0)
+    let calls = 0
     let sent = null
-    sendMessageImpl = (msg) => { sent = msg; return Promise.resolve({}) } // reachable but no ack
+    sendMessageImpl = (msg) => { calls += 1; sent = msg; return Promise.resolve({}) } // reachable, never acks
     writeToTerminal('nudge')
     await flush()
 
-    assert.ok(sent && sent.type === 'terminal_panel_write', 'the write is still attempted')
+    assert.ok(sent && sent.type === 'terminal_panel_write', 'the write is attempted')
+    assert.equal(calls, 1, 'first attempt only so far')
+    assert.equal(isTerminalVisible(), true,
+      'a single miss must NOT reconcile — it can be the panel boot window')
+
+    await macroFlush() // the retry fires and also misses
+    assert.equal(calls, 2, 'the write is retried exactly once')
     assert.equal(isTerminalVisible(), false,
-      'a write no panel acked must reconcile the stale visibility mirror to false')
+      'after the retry also misses, reconcile the stale visibility mirror to false')
+  })
+
+  test('a boot-window miss that acks on retry does NOT reconcile (panel finished booting)', async () => {
+    sendMessageImpl = () => Promise.resolve(undefined)
+    await initTerminalPanelBridge()
+    assert.equal(isTerminalVisible(), true)
+
+    _terminalPanelBridgeForTests.setWriteRetryDelay(0)
+    let calls = 0
+    // First send lands before the panel's listener is installed (no ack); the
+    // retry lands after it is (acked).
+    sendMessageImpl = () => { calls += 1; return Promise.resolve(calls >= 2 ? { received: true } : {}) }
+    writeToTerminal('nudge')
+    await flush()
+    await macroFlush() // retry acks
+
+    assert.equal(calls, 2, 'the boot-window miss is retried once')
+    assert.equal(isTerminalVisible(), true,
+      'a retry that acks means the panel is present — must NOT reconcile the mirror')
   })
 
   test('a synchronous send throw (context invalidated) is surfaced but does NOT reconcile', async () => {

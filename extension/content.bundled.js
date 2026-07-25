@@ -2136,6 +2136,8 @@
   var bridgeInitialized = false;
   var storageListenerInstalled = false;
   var visibilityListeners = /* @__PURE__ */ new Set();
+  var TERMINAL_PANEL_WRITE_RETRY_MS = 250;
+  var writeRetryDelayMs = TERMINAL_PANEL_WRITE_RETRY_MS;
   function notifyVisibilityListeners(visible) {
     for (const listener of visibilityListeners) {
       listener(visible);
@@ -2221,6 +2223,9 @@
   function writeToTerminal(text) {
     if (!panelVisible)
       return;
+    sendTerminalWrite(text, true);
+  }
+  function sendTerminalWrite(text, allowRetry) {
     let pending;
     try {
       pending = chrome.runtime.sendMessage({ type: "terminal_panel_write", text });
@@ -2231,10 +2236,18 @@
     if (!pending || typeof pending.then !== "function")
       return;
     pending.then((resp) => {
-      if (!resp || resp.received !== true) {
-        reportTerminalWriteFailure(text, "no terminal panel received the message", true);
+      if (resp && resp.received === true)
+        return;
+      if (allowRetry) {
+        setTimeout(() => sendTerminalWrite(text, false), writeRetryDelayMs);
+        return;
       }
+      reportTerminalWriteFailure(text, "no terminal panel received the message", true);
     }, (err) => {
+      if (allowRetry) {
+        setTimeout(() => sendTerminalWrite(text, false), writeRetryDelayMs);
+        return;
+      }
       reportTerminalWriteFailure(text, err instanceof Error ? err.message : String(err), false);
     });
   }

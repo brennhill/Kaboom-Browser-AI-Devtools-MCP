@@ -52,6 +52,36 @@ test('healthySameVersionDaemonRunning: true only for a healthy daemon on the exa
   );
 });
 
+test('healthySameVersionDaemonRunning: retries a momentarily-busy healthy daemon (no false kill)', async () => {
+  const port = KNOWN_PORTS[0];
+  let calls = 0;
+  // Busy (null) on the first two probes, answers healthy same-version on the 3rd —
+  // exactly the GC-pause/load hiccup that a single 500ms probe would misread as
+  // "down" and kill, re-triggering the restart storm.
+  const flaky = (p) => {
+    if (p !== port) return Promise.resolve(null);
+    calls += 1;
+    return Promise.resolve(calls >= 3 ? { service: 'kaboom', version: '0.8.7' } : null);
+  };
+  const result = await healthySameVersionDaemonRunning({
+    selfVersion: '0.8.7',
+    fetchHealth: flaky,
+    sleep: () => Promise.resolve(), // no real backoff wait in the test
+  });
+  assert.equal(result, true, 'a healthy daemon that misses early probes must still be detected');
+  assert.ok(calls >= 3, 'the probe must retry, not give up on the first miss');
+});
+
+test('healthySameVersionDaemonRunning: a daemon that never answers still fails after retries', async () => {
+  const alwaysDown = () => Promise.resolve(null);
+  const result = await healthySameVersionDaemonRunning({
+    selfVersion: '0.8.7',
+    fetchHealth: alwaysDown,
+    sleep: () => Promise.resolve(),
+  });
+  assert.equal(result, false, 'a truly-down/stalled daemon must still be cleaned up');
+});
+
 test('cleanupOldDaemons: skips ALL kills on a same-version (re)install', async () => {
   let killed = false;
   const spies = {

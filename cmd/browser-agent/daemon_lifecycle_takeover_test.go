@@ -82,6 +82,20 @@ func TestClassifyExistingDaemon(t *testing.T) {
 		}
 	})
 
+	t.Run("future-dated lock (clock skew) -> defer via grace, without probing", func(t *testing.T) {
+		probed := false
+		daemonProbeHealth = func(int) (bool, string) { probed = true; return false, "" }
+		// Lock timestamped 2s in the FUTURE (backward clock step): age is negative,
+		// which must still be treated as "brand new" and deferred, not taken over.
+		future := &daemonLockRecord{PID: 1, Port: 7890, Version: "0.8.7", UpdatedAt: base.Add(2 * time.Second).Format(time.RFC3339)}
+		if err := classifyExistingDaemon(server, 7890, future); !errors.Is(err, errDeferToHealthyDaemon) {
+			t.Fatalf("future-dated (negative-age) lock should defer via grace, got %v", err)
+		}
+		if probed {
+			t.Fatalf("a future-dated lock is brand-new; grace should defer without a health probe")
+		}
+	})
+
 	t.Run("healthy but live version older than us -> upgrade takeover", func(t *testing.T) {
 		daemonProbeHealth = func(int) (bool, string) { return true, "0.8.6" }
 		rec := oldLock("") // registered version unknown; rely on live probe

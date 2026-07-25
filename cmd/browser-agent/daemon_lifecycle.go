@@ -98,8 +98,13 @@ func classifyExistingDaemon(server *Server, port int, rec *daemonLockRecord) err
 
 	// Not a known upgrade. Never kill a daemon that only just registered — it may
 	// still be binding its ports, and killing it is how two near-simultaneous
-	// launches ping-pong (A kills B, B's respawn kills A).
-	if age, ok := daemonLockAge(rec); ok && age >= 0 && age < daemonStartupGrace {
+	// launches ping-pong (A kills B, B's respawn kills A). A negative age (lock
+	// timestamped in the near future, e.g. a backward clock/NTP step during the
+	// grace window) is by definition brand-new, so it must defer too — the old
+	// `age >= 0` guard let clock skew skip grace and take over a healthy young
+	// daemon. A far-future/corrupt timestamp erring toward defer is the safe choice
+	// (never kill on bad data).
+	if age, ok := daemonLockAge(rec); ok && age < daemonStartupGrace {
 		server.logLifecycle("daemon_defer_starting", port, map[string]any{
 			"existing_pid":  rec.PID,
 			"existing_port": rec.Port,

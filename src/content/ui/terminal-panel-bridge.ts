@@ -20,6 +20,16 @@ let bridgeInitialized = false
 let storageListenerInstalled = false
 const visibilityListeners = new Set<VisibilityListener>()
 
+// A single unacked write can be the side panel's brief BOOT WINDOW — the document
+// exists (so the mirror is 'open') but its onMessage listener is not installed yet,
+// so only the background sees the write and it goes unacked. Retrying once after a
+// short delay distinguishes that (retry acks) from a genuinely gone panel (retry
+// also misses) — which the TERMINAL_UI_STATE mirror alone cannot, since it reads
+// 'open' in both cases. Only after the retry also misses do we conclude "gone" and
+// reconcile the stale mirror.
+const TERMINAL_PANEL_WRITE_RETRY_MS = 250
+let writeRetryDelayMs = TERMINAL_PANEL_WRITE_RETRY_MS
+
 function notifyVisibilityListeners(visible: boolean): void {
   for (const listener of visibilityListeners) {
     listener(visible)
@@ -151,6 +161,16 @@ function reportTerminalWriteFailure(text: string, reason: string, reconcile: boo
 
 export function writeToTerminal(text: string): void {
   if (!panelVisible) return
+  sendTerminalWrite(text, true)
+}
+
+/**
+ * Send one terminal_panel_write attempt. `allowRetry` gives the panel's boot
+ * window a second chance before we treat a missing ack as a gone panel: on the
+ * first miss we retry once after writeRetryDelayMs; only when the retry also
+ * misses do we fail loud and reconcile the (possibly stale) visibility mirror.
+ */
+function sendTerminalWrite(text: string, allowRetry: boolean): void {
   let pending: Promise<{ received?: boolean } | undefined> | undefined
   try {
     pending = chrome.runtime.sendMessage({ type: 'terminal_panel_write', text }) as
@@ -166,13 +186,23 @@ export function writeToTerminal(text: string): void {
   if (!pending || typeof pending.then !== 'function') return
   pending.then(
     (resp) => {
-      // Only the panel document acks this type (the background never replies), so
-      // a missing ack definitively means no panel received the write.
-      if (!resp || resp.received !== true) {
-        reportTerminalWriteFailure(text, 'no terminal panel received the message', true)
+      // Only the panel document acks this type (the background never replies).
+      if (resp && resp.received === true) return
+      if (allowRetry) {
+        // Possibly the panel's boot window — retry once before concluding it is gone.
+        setTimeout(() => sendTerminalWrite(text, false), writeRetryDelayMs)
+        return
       }
+      // Retry also missed: no panel received it. Fail loud + reconcile the mirror.
+      reportTerminalWriteFailure(text, 'no terminal panel received the message', true)
     },
     (err: unknown) => {
+      // Transport error. Retry once (transient); if it recurs, fail loud but do NOT
+      // reconcile — an ambiguous transport error is not proof the panel is gone.
+      if (allowRetry) {
+        setTimeout(() => sendTerminalWrite(text, false), writeRetryDelayMs)
+        return
+      }
       reportTerminalWriteFailure(text, err instanceof Error ? err.message : String(err), false)
     }
   )
@@ -183,6 +213,10 @@ export const _terminalPanelBridgeForTests = {
     panelVisible = false
     bridgeInitialized = false
     storageListenerInstalled = false
+    writeRetryDelayMs = TERMINAL_PANEL_WRITE_RETRY_MS
     visibilityListeners.clear()
+  },
+  setWriteRetryDelay(ms: number): void {
+    writeRetryDelayMs = ms
   }
 }
