@@ -477,7 +477,7 @@ type BufferStats struct {
 
 **Serialization & Enrichment:**
 - `src/lib/serialize.ts` - Safe JSON serialization
-- `src/background/dom-queries.ts` - Selector generation
+- `src/background/dom/dom-queries.ts` - Selector generation
 - `src/lib/ai-context.ts` - Error enrichment
 - `internal/redaction/redaction.go` - PII masking
 

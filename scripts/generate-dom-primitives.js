@@ -6,7 +6,7 @@
 /**
  * generate-dom-primitives.js
  *
- * Generates src/background/dom-primitives.ts from the main template plus partials:
+ * Generates src/background/dom/dom-primitives.ts from the main template plus partials:
  *   scripts/templates/dom-primitives.ts.tpl
  *   scripts/templates/partials/_dom-selectors.tpl
  *   scripts/templates/partials/_dom-semantic-resolvers.tpl
@@ -36,7 +36,7 @@ const ROOT = path.join(__dirname, '..')
 
 const TEMPLATE_PATH = path.join(ROOT, 'scripts', 'templates', 'dom-primitives.ts.tpl')
 const PARTIALS_DIR = path.join(ROOT, 'scripts', 'templates', 'partials')
-const OUTPUT_PATH = path.join(ROOT, 'src', 'background', 'dom-primitives.ts')
+const OUTPUT_PATH = path.join(ROOT, 'src', 'background', 'dom', 'dom-primitives.ts')
 const CHECK_ONLY = process.argv.includes('--check')
 
 const GENERATED_BANNER = `// AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
@@ -93,7 +93,7 @@ function main() {
 
   fs.writeFileSync(OUTPUT_PATH, generatedContent, 'utf8')
   if (isDrifted) {
-    console.log('Generated src/background/dom-primitives.ts from template.')
+    console.log('Generated src/background/dom/dom-primitives.ts from template.')
   } else {
     console.log('dom-primitives.ts already current (rewritten for normalized line endings).')
   }

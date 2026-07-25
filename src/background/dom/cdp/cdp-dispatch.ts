@@ -8,12 +8,12 @@
 // cdp-dispatch.ts — CDP executor for hardware-level clicks and keypresses.
 // Manages chrome.debugger attach/detach lifecycle and dispatches CDP Input.* commands.
 
-import type { PendingQuery } from '../types/queries.js'
-import type { SyncClient } from './sync-client.js'
-import type { DOMActionParams, DOMResult } from './dom-types.js'
-import type { SendAsyncResultFn, ActionToastFn } from './commands/helpers.js'
-import { CDP_VERSION } from '../lib/constants.js'
-import { errorMessage } from '../lib/error-utils.js'
+import type { PendingQuery } from '../../../types/queries.js'
+import type { SyncClient } from '../../sync-client.js'
+import type { DOMActionParams, DOMResult } from '../dom-types.js'
+import type { SendAsyncResultFn, ActionToastFn } from '../../commands/helpers.js'
+import { CDP_VERSION } from '../../../lib/constants.js'
+import { errorMessage } from '../../../lib/error-utils.js'
 import { KEY_CODES, charToKeyInfo } from './cdp-key-mappings.js'
 import { resolveElement, buildCDPResult } from './cdp-element-resolve.js'
 

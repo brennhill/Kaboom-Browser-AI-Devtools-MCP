@@ -4,7 +4,7 @@
  * Docs: docs/features/feature/interact-explore/index.md
  */
 
-import type { DOMActionParams, DOMResult } from './dom-types.js'
+import type { DOMActionParams, DOMResult } from '../dom-types.js'
 
 /**
  * Injected into the page via chrome.scripting.executeScript to resolve an

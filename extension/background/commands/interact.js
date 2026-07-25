@@ -7,8 +7,8 @@
 // Handles: subtitle, highlight, browser_action, dom_action, upload,
 //          execute, screen_recording_start, screen_recording_stop, state_*.
 import { isAiWebPilotEnabled } from '../state.js';
-import { executeDOMAction } from '../dom-dispatch.js';
-import { executeCDPAction } from '../cdp-dispatch.js';
+import { executeDOMAction } from '../dom/dom-dispatch.js';
+import { executeCDPAction } from '../dom/cdp/cdp-dispatch.js';
 import { executeUpload } from '../upload-handler.js';
 import { startRecording, stopRecording } from '../recording/index.js';
 import { executeWithWorldRouting } from '../query-execution.js';

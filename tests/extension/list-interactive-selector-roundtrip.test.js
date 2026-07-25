@@ -177,12 +177,12 @@ function setupDOM(elements) {
 }
 
 async function loadListInteractive() {
-  const mod = await import(`../../extension/background/dom-primitives-list-interactive.js?t=${Date.now()}`)
+  const mod = await import(`../../extension/background/dom/dom-primitives-list-interactive.js?t=${Date.now()}`)
   return mod.domPrimitiveListInteractive
 }
 
 async function loadDomPrimitive() {
-  const mod = await import(`../../extension/background/dom-primitives.js?t=${Date.now()}`)
+  const mod = await import(`../../extension/background/dom/dom-primitives.js?t=${Date.now()}`)
   return mod.domPrimitive
 }
 

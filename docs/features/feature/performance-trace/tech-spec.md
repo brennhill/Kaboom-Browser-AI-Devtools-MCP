@@ -22,7 +22,7 @@ dispatch registry (`analyzeHandlers` in `cmd/browser-agent/tools_analyze_dispatc
 hint plus optional parameters register in `internal/tools/configure/mode_specs_analyze.go`.
 
 The extension drives the CDP `Tracing` domain through the existing Chrome debugger lifecycle in
-`src/background/cdp-dispatch.ts`. The daemon parses raw trace events into actionable insights and
+`src/background/dom/cdp/cdp-dispatch.ts`. The daemon parses raw trace events into actionable insights and
 returns a compact summary. This is the on-demand counterpart to the passive Web Vitals path,
 which already lives in `internal/tools/observe/analysis.go` and `internal/performance/diff.go`;
 Performance Trace reuses the same Web Vitals vocabulary (First Contentful Paint, Largest
@@ -98,7 +98,7 @@ AI calls analyze({what: "performance_trace", action: "analyze", insight_id: "...
   optional parameters (`action`, `reload`, `auto_stop`, `insight_id`).
 
 **Extension files**:
-- `src/background/cdp-dispatch.ts` and `src/background/commands/analyze.ts`: add the `Tracing`
+- `src/background/dom/cdp/cdp-dispatch.ts` and `src/background/commands/analyze.ts`: add the `Tracing`
   domain start/collect/stop sequence and chunk accumulation.
 
 **Reused components**:
@@ -121,7 +121,7 @@ AI calls analyze({what: "performance_trace", action: "analyze", insight_id: "...
 - **Second `start` while a trace is active**: either reject with an "already tracing" error or
   discard the previous trace; the chosen behavior is documented in the response.
 - **Debugger already attached**: return the existing attach-conflict error from
-  `src/background/cdp-dispatch.ts` with a recovery action.
+  `src/background/dom/cdp/cdp-dispatch.ts` with a recovery action.
 - **`auto_stop` with no load event** (single-page application navigation): fall back to a maximum
   trace duration so the recording does not run indefinitely.
 - **`analyze` with an unknown `insight_id`**: return a "no such insight" error listing valid ids.
@@ -131,7 +131,7 @@ AI calls analyze({what: "performance_trace", action: "analyze", insight_id: "...
 
 - A1: The extension is connected and tracking a tab.
 - A2: The `debugger` permission is granted and the CDP lifecycle in
-  `src/background/cdp-dispatch.ts` is the single point of debugger management.
+  `src/background/dom/cdp/cdp-dispatch.ts` is the single point of debugger management.
 - A3: The tracked tab hosts a real web page, not an internal browser page.
 - A4: The agent sequences `start` then `stop` before `analyze`; insights exist only after a
   completed trace.
@@ -164,7 +164,7 @@ AI calls analyze({what: "performance_trace", action: "analyze", insight_id: "...
 
 ### Depends on:
 - The analyze dispatch registry (`cmd/browser-agent/tools_analyze_dispatch.go`).
-- The CDP attach/detach lifecycle and `Tracing` domain (`src/background/cdp-dispatch.ts`).
+- The CDP attach/detach lifecycle and `Tracing` domain (`src/background/dom/cdp/cdp-dispatch.ts`).
 - The asynchronous command pattern and command-result polling
   (`cmd/browser-agent/internal/toolinteract/interact_command_builder.go`,
   `observe({what: "command_result"})`).

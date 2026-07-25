@@ -8,10 +8,10 @@
 // Script builders stay self-contained because chrome.scripting.executeScript
 // serializes injected functions independently.
 
-import type { PendingQuery } from '../types/queries.js'
-import type { SyncClient } from './sync-client.js'
+import type { PendingQuery } from '../../types/queries.js'
+import type { SyncClient } from '../sync-client.js'
 import type { DOMActionParams, DOMResult } from './dom-types.js'
-import type { SendAsyncResultFn, ActionToastFn } from './commands/helpers.js'
+import type { SendAsyncResultFn, ActionToastFn } from '../commands/helpers.js'
 import { domFrameProbe } from './dom-frame-probe.js'
 import { domPrimitive } from './dom-primitives.js'
 import { domPrimitiveListInteractive } from './dom-primitives-list-interactive.js'
@@ -19,11 +19,11 @@ import { domPrimitiveQuery } from './dom-primitives-query.js'
 import { domPrimitiveWaitForStable, domPrimitiveActionDiff } from './dom-primitives-stability.js'
 import { domPrimitiveOverlay } from './dom-primitives-overlay.js'
 import { domPrimitiveIntent } from './dom-primitives-intent.js'
-import { shouldEscalateToCDP, tryCDPEscalation } from './cdp-dispatch.js'
-import { isReadOnlyAction } from './action-metadata.js'
-import { errorMessage } from '../lib/error-utils.js'
-import { delay } from '../lib/timeout-utils.js'
-import { normalizeFrameArg, resolveMatchedFrameIds } from './frame-targeting.js'
+import { shouldEscalateToCDP, tryCDPEscalation } from './cdp/cdp-dispatch.js'
+import { isReadOnlyAction } from '../action-metadata.js'
+import { errorMessage } from '../../lib/error-utils.js'
+import { delay } from '../../lib/timeout-utils.js'
+import { normalizeFrameArg, resolveMatchedFrameIds } from '../frame-targeting.js'
 import {
   toDOMResult,
   pickFrameResult,

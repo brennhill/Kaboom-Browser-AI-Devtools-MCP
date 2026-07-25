@@ -7,19 +7,19 @@ owners:
   - Brenn
 entrypoints:
   - scripts/templates/partials/_dom-overlay-helpers.tpl:findTopmostOverlay
-  - src/background/dom-primitives-overlay.ts:domPrimitiveOverlay
+  - src/background/dom/dom-primitives-overlay.ts:domPrimitiveOverlay
   - scripts/templates/partials/_dom-selectors.tpl:resolveByText
   - cmd/browser-agent/tools_interact_dom.go:normalizeDOMActionArgs
   - cmd/browser-agent/tools_async_formatting.go:formatCompleteCommand
-  - src/background/dom-primitives-list-interactive.ts:domPrimitiveListInteractive
+  - src/background/dom/dom-primitives-list-interactive.ts:domPrimitiveListInteractive
 code_paths:
   - scripts/templates/partials/_dom-overlay-helpers.tpl
   - scripts/templates/partials/_dom-selectors.tpl
   - scripts/templates/dom-primitives.ts.tpl
-  - src/background/dom-primitives-overlay.ts
-  - src/background/dom-primitives-list-interactive.ts
-  - src/background/dom-dispatch.ts
-  - src/background/dom-types.ts
+  - src/background/dom/dom-primitives-overlay.ts
+  - src/background/dom/dom-primitives-list-interactive.ts
+  - src/background/dom/dom-dispatch.ts
+  - src/background/dom/dom-types.ts
   - cmd/browser-agent/tools_interact_dom.go
   - cmd/browser-agent/tools_async_formatting.go
   - cmd/browser-agent/tools_async_result_normalization.go
@@ -91,10 +91,10 @@ Covers overlay dismiss loop detection (#444), cross-extension overlay detection 
 
 ## Code Paths
 
-- `src/background/dom-primitives-overlay.ts` — Loop detection check, dismiss stamp, extension overlay detection (#502 extraction)
+- `src/background/dom/dom-primitives-overlay.ts` — Loop detection check, dismiss stamp, extension overlay detection (#502 extraction)
 - `scripts/templates/partials/_dom-selectors.tpl` — Interactive child fallback in resolveByText
-- `src/background/dom-primitives-list-interactive.ts` — Distance calculation, proximity sort
-- `src/background/dom-dispatch.ts` — Routes overlay/intent/stability actions to extracted modules
+- `src/background/dom/dom-primitives-list-interactive.ts` — Distance calculation, proximity sort
+- `src/background/dom/dom-dispatch.ts` — Routes overlay/intent/stability actions to extracted modules
 - `cmd/browser-agent/tools_interact_dom.go` — near_* to scope_rect conversion
 - `cmd/browser-agent/tools_async_result_normalization.go` — stripSummaryModeFields
 - `cmd/browser-agent/tools_async_formatting.go` — Summary mode integration

@@ -123,7 +123,7 @@ For `<input>` and `<textarea>` elements, the existing `nativeSetter` path is unc
 
 | File | Change |
 |---|---|
-| `extension/background/dom-primitives.js` | Add editor detection, native insertion, modify type/paste handlers |
+| `extension/background/dom/dom-primitives.js` | Add editor detection, native insertion, modify type/paste handlers |
 | `extension/background/dom-primitives-richtext.test.js` | Add tests for each editor type, multiline insertion, fallback chain |
 | `docs/features/feature-navigation.md` | Add entry for this feature |
 

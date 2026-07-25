@@ -36,7 +36,7 @@ This is intentionally implementation-oriented and file-path specific.
 
 1. Clear runtime split between server and extension.
 2. Existing contract drift checks (`make check-wire-drift`).
-3. Incremental extraction already started (`src/background/dom-dispatch.ts`, `src/background/dom-types.ts`, `src/background/dom-frame-probe.ts`).
+3. Incremental extraction already started (`src/background/dom/dom-dispatch.ts`, `src/background/dom/dom-types.ts`, `src/background/dom/dom-frame-probe.ts`).
 4. Existing invariants framework (`scripts/check-sync-invariants.sh`).
 5. Good extension and server architecture docs in place.
 
@@ -228,7 +228,7 @@ Eliminate manual duplication/drift in injected executeScript helpers.
 
 ### Current status
 
-1. `src/background/dom-primitives.ts` is generated.
+1. `src/background/dom/dom-primitives.ts` is generated.
 2. Template source exists: `scripts/templates/dom-primitives.ts.tpl`.
 3. Generator exists with `--check`: `scripts/generate-dom-primitives.js`.
 4. Invariant check added in `scripts/check-sync-invariants.sh`.
