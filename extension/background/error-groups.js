@@ -3,7 +3,7 @@
  * Docs: docs/features/feature/error-clustering/index.md
  */
 import { StorageKey } from '../lib/constants.js';
-import { getSession, setSession } from '../lib/storage-utils.js';
+import { getSession, setSession, persist } from '../lib/storage-utils.js';
 // =============================================================================
 // CONSTANTS
 // =============================================================================
@@ -46,7 +46,7 @@ function schedulePersist() {
                 lastSeen: group.lastSeen
             });
         }
-        void setSession(StorageKey.ERROR_GROUPS, snapshot);
+        persist(setSession(StorageKey.ERROR_GROUPS, snapshot), 'error-groups');
     }, PERSIST_DEBOUNCE_MS);
 }
 /**

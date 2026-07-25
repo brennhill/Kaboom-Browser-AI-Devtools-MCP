@@ -71,7 +71,7 @@ type SyncRequest struct {
 	InProgress []SyncInProgress `json:"in_progress,omitempty"`
 
 	// Feature usage flags from the extension (boolean "was this used since last sync").
-	// Only UI-originated actions: screenshot, annotations, video, dom_action.
+	// Only UI-originated actions; see allowedFeatureKeys for the accepted set.
 	FeaturesUsed map[string]bool `json:"features_used,omitempty"`
 }
 
@@ -161,11 +161,14 @@ type SyncCommand struct {
 // - Connection state is updated before command/result reconciliation.
 // allowedFeatureKeys is the set of known UI-originated feature keys.
 // Only these are forwarded to the usage counter to prevent unbounded cardinality.
+// WIRE-SYNCED: mirror of the `UIFeature` union in src/background/ui-usage-tracker.ts
+// — add a key to BOTH or it is silently dropped here (CLAUDE.md rule 12).
 var allowedFeatureKeys = map[string]bool{
-	"screenshot":  true,
-	"annotations": true,
-	"video":       true,
-	"dom_action":  true,
+	"screenshot":       true,
+	"annotations":      true,
+	"video":            true,
+	"dom_action":       true,
+	"action_recording": true,
 }
 
 // filterFeaturesUsed returns only the allowed keys from the raw features map.

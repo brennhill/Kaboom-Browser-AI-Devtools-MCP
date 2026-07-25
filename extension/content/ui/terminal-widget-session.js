@@ -5,7 +5,7 @@
  */
 import { DEFAULT_SERVER_URL, StorageKey } from '../../lib/constants.js';
 import { getDaemonStartHint } from '../../lib/brand.js';
-import { getLocal, setSession, getSession, removeSessions, setLocal } from '../../lib/storage-utils.js';
+import { getLocal, setSession, getSession, removeSessions, setLocal, persist } from '../../lib/storage-utils.js';
 import { state, getTerminalServerUrl } from './terminal-widget-types.js';
 // =============================================================================
 // CONFIG HELPERS — read/write chrome.storage.local
@@ -33,7 +33,7 @@ export async function getTerminalConfig() {
 }
 export function saveTerminalConfig(config) {
     try {
-        void setLocal(StorageKey.TERMINAL_CONFIG, config);
+        persist(setLocal(StorageKey.TERMINAL_CONFIG, config), 'terminal-config');
     }
     catch {
         // Extension context invalidated — config won't persist but session still works
@@ -63,19 +63,19 @@ export async function getTerminalDevRoot() {
 // =============================================================================
 function persistSession(ss) {
     try {
-        void setSession(StorageKey.TERMINAL_SESSION, ss);
+        persist(setSession(StorageKey.TERMINAL_SESSION, ss), 'terminal-session');
     }
     catch { /* extension context invalidated */ }
 }
 export function clearPersistedSession() {
     try {
-        void removeSessions([StorageKey.TERMINAL_SESSION, StorageKey.TERMINAL_UI_STATE]);
+        persist(removeSessions([StorageKey.TERMINAL_SESSION, StorageKey.TERMINAL_UI_STATE]), 'terminal-session-clear');
     }
     catch { /* extension context invalidated */ }
 }
 export function persistUIState(uiState) {
     try {
-        void setSession(StorageKey.TERMINAL_UI_STATE, uiState);
+        persist(setSession(StorageKey.TERMINAL_UI_STATE, uiState), 'terminal-ui-state');
     }
     catch { /* extension context invalidated */ }
 }

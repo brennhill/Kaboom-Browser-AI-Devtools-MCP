@@ -3,6 +3,13 @@
  * Why: Abstracts Chrome storage API differences and provides a single facade usable from both background and popup contexts.
  */
 /**
+ * Fire-and-forget a storage write whose result the caller intentionally does not
+ * await, logging (never throwing) if it fails. Keeps non-critical writes honest
+ * without leaking unhandled rejections — a mutating write must not fail *silently*
+ * (CLAUDE.md rule 25), so we surface the failure in the log instead of swallowing it.
+ */
+export declare function persist(write: Promise<void>, context: string): void;
+/**
  * Get a persistent value from local storage (async)
  */
 export declare function getLocal(key: string): Promise<unknown>;

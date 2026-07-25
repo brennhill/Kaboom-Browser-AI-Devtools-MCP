@@ -119,6 +119,17 @@ describe('message routing', () => {
     assert.strictEqual(sendResponse.mock.calls[0].arguments[0].tabId, 1)
   })
 
+  test('track_ui_feature counts the reported feature (F7)', async () => {
+    const tracker = await import('../../extension/background/ui-usage-tracker.js')
+    tracker.drainUIFeatures() // clear any prior state so this test reads only its own
+    const { handler } = getInstalledHandler()
+    const sendResponse = mock.fn()
+    const ret = handler({ type: 'track_ui_feature', feature: 'annotations' }, extensionSender, sendResponse)
+    assert.strictEqual(ret, false, 'no async response is expected')
+    const drained = tracker.drainUIFeatures()
+    assert.ok(drained && drained.annotations === true, 'popup/launcher annotation should be counted')
+  })
+
   test('ws_event routes to WS batcher', () => {
     const { handler, deps } = getInstalledHandler()
     const payload = { event: 'message', data: 'hello' }

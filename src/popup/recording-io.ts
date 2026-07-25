@@ -8,7 +8,7 @@
 import { StorageKey } from '../lib/constants.js'
 import { KABOOM_RECORDING_LOG_PREFIX } from '../lib/brand.js'
 import { errorMessage } from '../lib/error-utils.js'
-import { setLocal, removeLocal } from '../lib/storage-utils.js'
+import { setLocal, removeLocal, persist } from '../lib/storage-utils.js'
 
 export interface RecordingElements {
   row: HTMLElement
@@ -38,7 +38,7 @@ export function sendRecordingGestureDecision(type: 'recording_gesture_granted' |
 
 function showMicPermissionPrompt(saveInfoEl: HTMLElement, audioMode: string): void {
   chrome.tabs.query({ active: true, currentWindow: true }, (activeTabs) => {
-    void setLocal(StorageKey.PENDING_MIC_RECORDING, { audioMode, returnTabId: activeTabs[0]?.id })
+    persist(setLocal(StorageKey.PENDING_MIC_RECORDING, { audioMode, returnTabId: activeTabs[0]?.id }), 'pending-mic-recording')
   })
   saveInfoEl.innerHTML =
     'Microphone access needed. <a href="#" id="grant-mic-link" style="color: #58a6ff; text-decoration: underline; cursor: pointer">Grant access</a>'
@@ -95,12 +95,12 @@ function tryMicPermissionThenStart(
     .then((micStream) => {
       console.log(LOG, 'getUserMedia succeeded from popup')
       micStream.getTracks().forEach((t) => t.stop())
-      void setLocal(StorageKey.MIC_GRANTED, true)
+      persist(setLocal(StorageKey.MIC_GRANTED, true), 'mic-granted')
       sendRecordStart(els, state, audioMode, showRecording, showIdle, showStartError)
     })
     .catch((err) => {
       console.log(LOG, 'getUserMedia FAILED:', (err as Error).name, errorMessage(err))
-      void removeLocal(StorageKey.MIC_GRANTED)
+      persist(removeLocal(StorageKey.MIC_GRANTED), 'mic-granted-clear')
       showIdle(els, state)
       if (els.saveInfoEl) showMicPermissionPrompt(els.saveInfoEl, audioMode)
     })
@@ -115,7 +115,7 @@ export function handleStartClick(
 ): void {
   const audioSelect = document.getElementById('record-audio-mode') as HTMLSelectElement | null
   const audioMode = audioSelect?.value ?? ''
-  void setLocal(StorageKey.RECORD_AUDIO_PREF, audioMode)
+  persist(setLocal(StorageKey.RECORD_AUDIO_PREF, audioMode), 'record-audio-pref')
   if (els.optionsEl) els.optionsEl.style.display = 'none'
   if (els.saveInfoEl) els.saveInfoEl.style.display = 'none'
   els.label.textContent = 'Starting...'

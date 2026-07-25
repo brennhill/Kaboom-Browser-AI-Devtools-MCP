@@ -6,7 +6,7 @@ import { scaleTimeout } from '../lib/timeouts.js';
 import { delay } from '../lib/timeout-utils.js';
 import { KABOOM_LOG_PREFIX } from '../lib/brand.js';
 import { StorageKey } from '../lib/constants.js';
-import { getLocal, getLocals, setLocal, setLocals } from '../lib/storage-utils.js';
+import { getLocal, getLocals, setLocal, setLocals, persist } from '../lib/storage-utils.js';
 import { TRACKED_TAB_STORAGE_KEYS } from '../lib/tracked-tab-storage.js';
 // Shared tracked-tab storage helpers (also used by the popup) — single source of truth.
 export { setTrackedTab, clearTrackedTab, TRACKED_TAB_STORAGE_KEYS } from '../lib/tracked-tab-storage.js';
@@ -118,7 +118,7 @@ export async function loadDebugModeState() {
  * Save setting to chrome.storage.local
  */
 export function saveSetting(key, value) {
-    setLocal(key, value);
+    persist(setLocal(key, value), `setting:${key}`);
 }
 const TERMINAL_WORKSPACE_STORAGE_KEYS = [
     StorageKey.TERMINAL_WORKSPACE_GROUP_ID,

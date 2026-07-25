@@ -4,11 +4,13 @@ feature_id: feature-tab-tracking-ux
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-25
 code_paths:
   - src/lib/brand.ts
   - src/lib/constants.ts
   - src/lib/request-audit.ts
+  - src/lib/tab-tracking-core.ts
+  - src/lib/internal-url.ts
   - src/types/runtime-messages.ts
   - src/content.ts
   - src/content/tab-tracking.ts
@@ -34,6 +36,8 @@ test_paths:
   - tests/extension/content.test.js
   - tests/extension/runtime-log-branding.test.js
   - tests/extension/sidepanel-terminal.test.js
+  - tests/extension/tab-tracking-core.test.js
+  - tests/extension/entry-point-parity.test.js
 last_verified_version: 0.8.1
 last_verified_date: 2026-04-03
 ---

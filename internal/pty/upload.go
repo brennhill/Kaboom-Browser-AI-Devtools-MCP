@@ -64,17 +64,27 @@ func Upload(workspaceDir, sessionID, contentType, filename string, r io.Reader) 
 	if err != nil {
 		return nil, fmt.Errorf("create file: %w", err)
 	}
-	defer f.Close()
 
 	limited := io.LimitReader(r, uploadMaxSize+1)
 	n, err := io.Copy(f, limited)
 	if err != nil {
+		f.Close()
 		os.Remove(path)
 		return nil, fmt.Errorf("write file: %w", err)
 	}
 	if n > uploadMaxSize {
+		f.Close()
 		os.Remove(path)
 		return nil, ErrUploadTooLarge
+	}
+
+	// Check the Close() error explicitly rather than deferring it away: a buffered
+	// filesystem can surface a write failure (disk full, network mount drop) only
+	// at Close, so a deferred-and-ignored Close would report a truncated file as a
+	// successful upload. Fail loud and drop the partial. (CLAUDE.md rule 25.)
+	if err := f.Close(); err != nil {
+		os.Remove(path)
+		return nil, fmt.Errorf("finalize file: %w", err)
 	}
 
 	relPath := filepath.Join(uploadDirName, sessionID, safe)

@@ -2,6 +2,7 @@
  * Purpose: Shared wrapper functions for chrome.storage supporting persistent (local) and ephemeral (session) storage with graceful degradation.
  * Why: Abstracts Chrome storage API differences and provides a single facade usable from both background and popup contexts.
  */
+import { KABOOM_LOG_PREFIX } from './brand.js';
 // =============================================================================
 // FEATURE DETECTION
 // =============================================================================
@@ -23,6 +24,29 @@ function isSessionStorageAvailable() {
 }
 function isPromiseLike(value) {
     return typeof value === 'object' && value !== null && typeof value.then === 'function';
+}
+/**
+ * Read chrome.runtime.lastError inside a storage callback.
+ * Chrome sets lastError (and still invokes the callback) when a callback-style
+ * write fails — over quota, context invalidated, etc. Returns the message, or
+ * null when the write succeeded. Only meaningful synchronously inside the callback.
+ */
+function storageLastError() {
+    if (typeof chrome === 'undefined' || !chrome.runtime)
+        return null;
+    const err = chrome.runtime.lastError;
+    return err ? (err.message ?? 'unknown chrome.storage error') : null;
+}
+/**
+ * Fire-and-forget a storage write whose result the caller intentionally does not
+ * await, logging (never throwing) if it fails. Keeps non-critical writes honest
+ * without leaking unhandled rejections — a mutating write must not fail *silently*
+ * (CLAUDE.md rule 25), so we surface the failure in the log instead of swallowing it.
+ */
+export function persist(write, context) {
+    void write.catch((err) => {
+        console.warn(`${KABOOM_LOG_PREFIX} storage write failed (${context}):`, err);
+    });
 }
 function readStorage(method, keys) {
     return new Promise((resolve, reject) => {
@@ -47,11 +71,19 @@ function readStorage(method, keys) {
 function writeStorage(method, items) {
     return new Promise((resolve, reject) => {
         let settled = false;
+        // Fail loud: a callback-style write that hits quota / an invalidated context
+        // still invokes the callback but sets chrome.runtime.lastError. Rejecting here
+        // means awaiting callers (state save, recording, tracked-tab) see the failure
+        // instead of trusting a silent no-op. (CLAUDE.md rule 25.)
         const finish = () => {
             if (settled)
                 return;
             settled = true;
-            resolve();
+            const errMsg = storageLastError();
+            if (errMsg)
+                reject(new Error(`chrome.storage write failed: ${errMsg}`));
+            else
+                resolve();
         };
         try {
             const maybePromise = method(items, finish);
@@ -71,7 +103,11 @@ function removeFromStorage(method, keys) {
             if (settled)
                 return;
             settled = true;
-            resolve();
+            const errMsg = storageLastError();
+            if (errMsg)
+                reject(new Error(`chrome.storage remove failed: ${errMsg}`));
+            else
+                resolve();
         };
         try {
             const maybePromise = method(keys, finish);
@@ -91,7 +127,11 @@ function setStorageAccessLevel(method, accessLevel) {
             if (settled)
                 return;
             settled = true;
-            resolve();
+            const errMsg = storageLastError();
+            if (errMsg)
+                reject(new Error(`chrome.storage setAccessLevel failed: ${errMsg}`));
+            else
+                resolve();
         };
         try {
             const maybePromise = method({ accessLevel }, finish);

@@ -92,6 +92,44 @@ describe('terminal side panel gesture-native entry points', () => {
     assert.deepStrictEqual(openCalls, [])
   })
 
+  test('the keyboard command closes an open panel instead of reopening it (toggle, F10)', async () => {
+    // Wire onConnect so a live panel port registers on the shared (non
+    // cache-busted) terminal-panel module — the same instance the keyboard
+    // listener toggles against.
+    let connectListener
+    globalThis.chrome.runtime.onConnect = {
+      addListener: mock.fn((fn) => { connectListener = fn })
+    }
+
+    const termPanel = await import('../../extension/background/terminal-panel.js')
+    termPanel.watchTerminalPanelState()
+
+    const posted = []
+    let disconnectListener
+    connectListener({
+      name: 'kaboom_terminal_panel', // TERMINAL_PANEL_PORT
+      postMessage: mock.fn((m) => posted.push(m)),
+      onDisconnect: { addListener: mock.fn((fn) => { disconnectListener = fn }) }
+    })
+    assert.strictEqual(termPanel.isTerminalPanelOpenSync(), true, 'port connect marks the panel open')
+
+    const { installTerminalPanelCommandListener } = await import(
+      `../../extension/background/keyboard-shortcuts.js?v=${++importCounter}`
+    )
+    installTerminalPanelCommandListener()
+    await commandListener('open_terminal_panel', { id: 42 })
+
+    assert.deepStrictEqual(openCalls, [], 'toggle must not reopen an already-open panel')
+    assert.ok(
+      posted.some((m) => m.type === 'close_terminal_panel'),
+      'the keyboard toggle should ask the open panel to close'
+    )
+
+    // Reset the shared singleton so later tests see no live port.
+    disconnectListener?.()
+    assert.strictEqual(termPanel.isTerminalPanelOpenSync(), false)
+  })
+
   test('the shared opener reaches sidePanel.open with no await in front of it', async () => {
     // Ordering is the whole contract: an *await* before open() expires the
     // gesture. Dispatching setOptions first does not — it is fired, never

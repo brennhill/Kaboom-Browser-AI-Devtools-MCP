@@ -13,7 +13,7 @@ import { ensureOffscreenDocument, getStreamIdWithRecovery, requestRecordingGestu
 import { installRecordingListeners } from './recording-listeners.js';
 import { resolveRecordingRehydration } from './recording-rehydration.js';
 import { errorMessage } from '../lib/error-utils.js';
-import { getLocal, setLocals, removeLocal } from '../lib/storage-utils.js';
+import { getLocal, setLocals, removeLocal, persist } from '../lib/storage-utils.js';
 import { delay } from '../lib/timeout-utils.js';
 import { buildRecordingToastLabel } from './recording-utils.js';
 import { startRecordingBadgeTimer, stopRecordingBadgeTimer } from './recording-badge.js';
@@ -81,7 +81,7 @@ async function rehydrateRecordingStateOnLoad() {
         }
     }
     catch {
-        removeLocal(StorageKey.RECORDING).catch(() => { });
+        persist(removeLocal(StorageKey.RECORDING), 'recording-clear');
     }
 }
 // =============================================================================
@@ -342,7 +342,7 @@ export async function stopRecording(truncated = false) {
         // Clean up stale storage in case of zombie recording state (e.g., service worker restarted)
         console.warn(LOG, 'STOP: No active recording in memory — cleaning up zombie storage');
         stopRecordingBadgeTimer();
-        removeLocal(StorageKey.RECORDING).catch(() => { });
+        persist(removeLocal(StorageKey.RECORDING), 'recording-clear');
         return { status: 'error', name: '', error: 'RECORD_STOP: No active recording.' };
     }
     const { tabId } = recordingState;

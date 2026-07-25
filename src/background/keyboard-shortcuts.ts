@@ -12,7 +12,7 @@ import { getActiveTab, sendTabToast } from './event-listeners.js'
 import { toggleDrawModeForTab } from './draw-mode-toggle.js'
 import { buildScreenRecordingSlug } from './recording-utils.js'
 import { trackUIFeature } from './ui-usage-tracker.js'
-import { openTerminalSidePanel } from './terminal-panel.js'
+import { toggleTerminalSidePanel } from './terminal-panel.js'
 export interface RecordingShortcutHandlers {
   isRecording: () => boolean
   startRecording: (
@@ -34,6 +34,52 @@ export function buildActionSequenceRecordingName(now: Date = new Date()): string
   const min = String(now.getMinutes()).padStart(2, '0')
   const ss = String(now.getSeconds()).padStart(2, '0')
   return `action-sequence--${yyyy}-${mm}-${dd}-${hh}${min}${ss}`
+}
+
+/**
+ * Toggle action-sequence (event/workflow) recording.
+ *
+ * One helper for every UI entry point (keyboard shortcut, context menu, repo
+ * rule 19). The context menu previously copy-inlined this and, in doing so,
+ * skipped both the usage tracking and the failure toasts — so a start/stop that
+ * failed from the menu was completely silent. Centralizing means neither can
+ * drift: both count `action_recording` and surface the same error toasts.
+ */
+export async function toggleActionSequenceRecording(
+  handlers: RecordingShortcutHandlers,
+  tab: chrome.tabs.Tab,
+  logFn?: (message: string) => void
+): Promise<void> {
+  if (!tab.id) return
+  trackUIFeature('action_recording')
+
+  if (handlers.isRecording()) {
+    const stopResult = await handlers.stopRecording(false)
+    if (stopResult.status !== 'saved' && stopResult.status !== 'stopped') {
+      sendTabToast(
+        tab.id,
+        'Stop recording failed',
+        stopResult.error || 'Could not stop action sequence recording',
+        'error',
+        3500
+      )
+      if (logFn) logFn(`Action recording stop failed: ${stopResult.error ?? 'unknown error'}`)
+    }
+    return
+  }
+
+  const name = buildActionSequenceRecordingName()
+  const startResult = await handlers.startRecording(name, 15, '', '', true, tab.id)
+  if (startResult.status !== 'recording') {
+    sendTabToast(
+      tab.id,
+      'Start recording failed',
+      startResult.error || 'Open the extension popup and try Record action sequence',
+      'error',
+      3500
+    )
+    if (logFn) logFn(`Action recording start failed: ${startResult.error ?? 'unknown error'}`)
+  }
 }
 
 // =============================================================================
@@ -118,8 +164,13 @@ export function installDrawModeCommandListener(logFn?: (message: string) => void
 // =============================================================================
 
 /**
- * Install the keyboard shortcut that opens the terminal side panel
+ * Install the keyboard shortcut that toggles the terminal side panel
  * (`open_terminal_panel` in the manifest).
+ *
+ * Toggle, not open-only, so this shares the exact behavior of the context menu:
+ * both route through `toggleTerminalSidePanel` (repo rule 19). Pressing the key
+ * again closes a panel that is up, and the shared helper is the single place that
+ * decides open-vs-close — no entry point re-implements it.
  *
  * The command ships UNBOUND on purpose: Chrome refuses to load a manifest with
  * more than four commands carrying a `suggested_key`, and four are already
@@ -132,8 +183,9 @@ export function installDrawModeCommandListener(logFn?: (message: string) => void
  * builds (crbug 355266358). `commands.onCommand` gets a full gesture and hands us
  * the active tab synchronously, so this path does not depend on gesture forwarding.
  *
- * Nothing may be awaited before openTerminalSidePanel() — `tab` comes straight
- * from the listener argument precisely so no lookup is needed.
+ * Nothing may be awaited before toggleTerminalSidePanel() — `tab` comes straight
+ * from the listener argument precisely so no lookup is needed, and the toggle
+ * reaches sidePanel.open() synchronously on the open path.
  */
 export function installTerminalPanelCommandListener(logFn?: (message: string) => void): void {
   if (typeof chrome === 'undefined' || !chrome.commands) return
@@ -141,7 +193,7 @@ export function installTerminalPanelCommandListener(logFn?: (message: string) =>
   chrome.commands.onCommand.addListener(async (command: string, tab?: chrome.tabs.Tab) => {
     if (command !== 'open_terminal_panel') return
 
-    const result = await openTerminalSidePanel(tab?.id)
+    const result = await toggleTerminalSidePanel(tab?.id)
     if (!result.success && logFn) {
       logFn(`Terminal side panel shortcut failed: ${result.error ?? 'unknown error'}`)
     }
@@ -168,32 +220,7 @@ export function installRecordingShortcutCommandListener(
     try {
       const tab = await getActiveTab()
       if (!tab?.id) return
-
-      if (handlers.isRecording()) {
-        const stopResult = await handlers.stopRecording(false)
-        if (stopResult.status !== 'saved' && stopResult.status !== 'stopped') {
-          sendTabToast(
-            tab.id,
-            'Stop recording failed',
-            stopResult.error || 'Could not stop action sequence recording',
-            'error',
-            3500
-          )
-        }
-        return
-      }
-
-      const name = buildActionSequenceRecordingName()
-      const startResult = await handlers.startRecording(name, 15, '', '', true, tab.id)
-      if (startResult.status !== 'recording') {
-        sendTabToast(
-          tab.id,
-          'Start recording failed',
-          startResult.error || 'Open the extension popup and try Record action sequence',
-          'error',
-          3500
-        )
-      }
+      await toggleActionSequenceRecording(handlers, tab, logFn)
     } catch (err) {
       if (logFn) logFn(`Recording shortcut error: ${errorMessage(err)}`)
     }

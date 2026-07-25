@@ -12,7 +12,7 @@
 
 import { StorageKey } from '../lib/constants.js'
 import { KABOOM_RECORDING_LOG_PREFIX } from '../lib/brand.js'
-import { getLocal, removeLocal, onStorageChanged } from '../lib/storage-utils.js'
+import { getLocal, removeLocal, onStorageChanged, persist } from '../lib/storage-utils.js'
 import {
   sendRecordingGestureDecision,
   handleStartClick,
@@ -247,7 +247,7 @@ export function setupRecordingUI(): void {
       applyRecordHighlight(els)
       pendingRecordingIntent = null
       setApprovalPendingState(els, approvalEls, state, null)
-      void removeLocal(StorageKey.PENDING_RECORDING)
+      persist(removeLocal(StorageKey.PENDING_RECORDING), 'pending-recording-clear')
       return
     }
     pendingRecordingIntent = pending && !pending.highlight ? pending : null
@@ -258,7 +258,7 @@ export function setupRecordingUI(): void {
   const clearPendingRecordingIntent = (): void => {
     pendingRecordingIntent = null
     setApprovalPendingState(els, approvalEls, state, null)
-    void removeLocal(StorageKey.PENDING_RECORDING)
+    persist(removeLocal(StorageKey.PENDING_RECORDING), 'pending-recording-clear')
   }
 
   // Row is visible immediately with default "not recording" state.
