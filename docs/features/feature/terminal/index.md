@@ -8,10 +8,14 @@ last_reviewed: 2026-07-25
 code_paths:
   - src/lib/brand.ts
   - cmd/browser-agent/internal/terminal/handlers.go
+  - cmd/browser-agent/internal/terminal/relay.go
   - cmd/browser-agent/internal/terminal/dirs.go
   - cmd/browser-agent/internal/terminal/server.go
   - cmd/browser-agent/terminal_supervisor.go
+  - cmd/browser-agent/main_connection_mcp_shutdown.go
+  - cmd/browser-agent/daemon_lifecycle.go
   - cmd/browser-agent/internal/terminal/static.go
+  - cmd/browser-agent/internal/terminal/terminal_assets/terminal.html
   - extension/sidepanel.html
   - extension/sidepanel.js
   - src/content/ui/terminal-panel-bridge.ts
@@ -28,6 +32,10 @@ code_paths:
   - src/sidepanel.ts
   - internal/pty/manager.go
   - internal/pty/session.go
+  - internal/pty/writebuf.go
+  - internal/pty/fanout.go
+  - internal/pty/upload.go
+  - npm/kaboom-agentic-browser/lib/kill-daemon.js
 test_paths:
   - tests/extension/brand-metadata.test.js
   - tests/extension/terminal-write-guard.test.js
@@ -53,7 +61,17 @@ test_paths:
   - tests/extension/terminal-session-stop.test.js
   - tests/extension/entry-point-parity.test.js
   - internal/pty/manager_test.go
+  - internal/pty/manager_fake_spawn_test.go
+  - internal/pty/manager_selfheal_test.go
   - internal/pty/session_test.go
+  - internal/pty/writebuf_test.go
+  - internal/pty/upload_test.go
+  - cmd/browser-agent/internal/terminal/session_end_signal_test.go
+  - cmd/browser-agent/internal/terminal/frame_writer_deadline_test.go
+  - cmd/browser-agent/daemon_lifecycle_takeover_test.go
+  - tests/extension/terminal-reconnect-recovery-contract.test.js
+  - tests/extension/terminal-iframe-message-contract.test.js
+  - npm/kaboom-agentic-browser/lib/kill-daemon.test.js
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-28
 ---
@@ -80,9 +98,15 @@ last_verified_date: 2026-03-28
 - Annotation auto-send now uses a typing-aware write queue: if the user is active in terminal, writes wait until ~1.5s idle
 - Annotation→terminal writes are delivery-verified: `terminal_panel_write` is acked by the side-panel document (the background never replies to this type), so the bridge tells a delivered write from one that vanished. A missing ack surfaces a toast (fail-loud) and reconciles the stale `TERMINAL_UI_STATE` visibility mirror to `false` (rule 18) so the gate stops firing at a panel that was closed with Chrome's own X.
 - Queued submit is reconnect-safe: if WS drops before Enter, submit waits until connection is back
-- Write-guard escape hatch: every in-flight/deferred write is bounded by `TERMINAL_GUARD_MAX_WAIT_MS` (30s). A permanently-down socket or a stuck `queuedWriteInFlight`/`terminalFocused` flag can no longer wedge the terminal forever — the poller gives up LOUDLY (error toast + `resetWriteGuardState`) instead of spinning silently. Momentary blips still queue-and-flush within the window.
-- WebSocket frame writes are serialized per-connection to prevent concurrent writer frame interleaving
-- Per-connection WS goroutines (downstream pump, ping keepalive, upstream reader) are panic-recovered via `goConnWorker`: a fault tears down only that connection (structured `terminal_ws_panic` log + `closeConn`), never the daemon process
+- Write-guard escape hatch: the genuine wedge — a socket that stays DOWN (`!terminalConnected`) — is bounded by `TERMINAL_GUARD_MAX_WAIT_MS` (30s); the poller gives up LOUDLY (error toast + `resetWriteGuardState`). The typing-defer branch is self-limiting and reachable, so it resets `guardBlockedSince` and never trips the hatch — continuous typing no longer drops a healthy write with a false "terminal not reachable". Momentary blips still queue-and-flush within the window. Queue backlog is bounded (`MAX_QUEUED_WRITES`), and an overflow drop is logged (not silent).
+- **Dead-session self-heal:** nothing removed a PTY session whose child exited on its own, so the next Start returned `ErrSessionExists` (409+old token) and the client reconnected onto a dead fanout → immediate `exited`, wedging the terminal forever. `Manager.Start` now evicts a session that is no longer `IsAlive` and spawns fresh (`StartResult.Replaced`, `terminal_session_healed` log); the handler drops the stale relay.
+- **Slow-drop ≠ exit:** a subscriber dropped for backpressure (big build, backgrounded tab) is no longer reported to the browser as `exited`. `Relay.ended` (set before the deferred `fanout.Close`) distinguishes a genuine end from a fanout drop; a drop closes the connection so the browser reconnects+replays instead of showing a dead terminal.
+- **Full-daemon-restart client recovery:** the iframe caps consecutive failed reconnects (`MAX_RECONNECT_ATTEMPTS`) and, on exhaustion, signals the parent `reconnect_exhausted` instead of looping forever on a dead token; the parent runs `redrawTerminal` (validate-then-rebuild) into a fresh session. Keystrokes typed during a reconnect gap are buffered (bounded) and flushed on `replay_end` rather than dropped.
+- **Bounded shutdown:** daemon teardown can no longer hang. `WriteBuffer.Close` is time-bounded (a drain blocked in `ptmx.Write` can't wait forever), shutdown order is `StopAll` (close PTYs) → `CloseAll` (drain write buffers) so the blocked write unblocks, and `Session.Close`'s post-SIGKILL reap wait is bounded.
+- WebSocket frame writes are serialized per-connection and bounded by `WSWriteTimeout`: a stalled reader (backgrounded-tab zero-window, hostile client) can no longer block the downstream pump or ping keepalive for up to `PongTimeout`.
+- Per-connection WS goroutines (downstream pump, ping keepalive, upstream reader) are panic-recovered via `goConnWorker`: a fault tears down only that connection (structured `terminal_ws_panic` log + `closeConn`), never the daemon process. `WriteBuffer.drain` and the init goroutine are `util.SafeGo`-wrapped for the same invariant.
+- Single-instance election never kills a healthy same-version daemon: the install hook (`kill-daemon.js`) and the in-process election both retry `/health` within a budget before concluding "down" (a momentary hiccup won't re-trigger a restart storm), and a future-dated lock (clock skew) is treated as brand-new (defer).
+- Upload paths sanitize the session id to a single segment (`sanitizeSessionID`) so a `../` id can't escape the uploads directory.
 - Scrollback buffer capped at 256 KB for memory safety
 - PTY session tests share a bounded `readUntilContains` helper to keep echo/size assertions consistent
 - Canonical flow maps: [terminal-side-panel-host.md](../../../architecture/flow-maps/terminal-side-panel-host.md), [terminal-server-isolation.md](../../../architecture/flow-maps/terminal-server-isolation.md)
