@@ -237,12 +237,18 @@ func HandleTerminalWS(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pt
 		return
 	}
 
-	// If subscribe failed (fanout already closed — process exited before reconnect),
-	// send the final scrollback, exit notification, and close. The browser receives
-	// the full output history plus the exited message and stops reconnecting.
+	// If subscribe failed, distinguish the two causes (Fanout.Subscribe returns
+	// both): ErrFanoutClosed means the shell already exited before this reconnect —
+	// send the final scrollback, an `exited` notification, and close, so the browser
+	// shows the death and stops reconnecting. ErrFanoutFull means the 32-subscriber
+	// cap was hit while the shell is HEALTHY — send a plain close (no `exited`) so
+	// the client's reconnect backoff retries instead of declaring a live terminal
+	// dead (finding A).
 	if subErr != nil {
-		exitMsg, _ := json.Marshal(map[string]any{"type": "exited", "code": relay.exitCode})
-		_ = deps.WSWriteFrame(bufrw, 0x1, exitMsg)
+		if errors.Is(subErr, pty.ErrFanoutClosed) {
+			exitMsg, _ := json.Marshal(map[string]any{"type": "exited", "code": relay.exitCode})
+			_ = deps.WSWriteFrame(bufrw, 0x1, exitMsg)
+		}
 		_ = deps.WSWriteFrame(bufrw, 0x8, nil)
 		_ = conn.Close()
 		return
