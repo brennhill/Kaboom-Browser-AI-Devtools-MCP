@@ -94,3 +94,9 @@ cmd/browser-agent/testpages/frameworks/
 cmd/browser-agent/testpages/_next/
 scripts/smoke-tests/framework-fixtures/next-app/.next/
 scripts/smoke-tests/framework-fixtures/next-app/out/
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+.beads/proxieddb/
