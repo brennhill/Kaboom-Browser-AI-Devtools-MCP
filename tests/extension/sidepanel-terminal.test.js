@@ -660,6 +660,57 @@ describe('terminal side panel host', () => {
       'the queued write must be replayed in full once connected, not lost with a bare Enter')
   })
 
+  test('two concurrent forceFresh boots keep writes on the on-screen iframe (boot race)', async () => {
+    // Double-clicked "Start", or a rapid folder re-pick, fires bootTerminalPanel(true)
+    // twice while the first is still awaiting the network. Without serialization,
+    // createPanelShell() from the 2nd boot rebinds state.iframeEl to a fresh iframe
+    // while mountPanel() early-returns (rootEl already set) — so the VISIBLE terminal
+    // is the 1st iframe but state.iframeEl points at the detached 2nd, and every write
+    // vanishes into the off-screen frame with no error. The write below must reach the
+    // iframe that is actually mounted.
+    let starts = 0
+    fetchHandler = ({ url }) => {
+      if (url.endsWith('/terminal/start')) {
+        starts += 1
+        return Promise.resolve(makeResponse(200, {
+          session_id: `session-race-${starts}`,
+          token: `token-race-${starts}`,
+          pid: 900 + starts
+        }))
+      }
+      if (url.endsWith('/terminal/validate')) {
+        return Promise.resolve(makeResponse(200, { valid: true }))
+      }
+      throw new Error(`Unexpected fetch call: ${url}`)
+    }
+
+    const module = await import(`../../extension/sidepanel.js?v=${++importCounter}`)
+
+    // Fire both boots without awaiting the first — this is the race.
+    const boot1 = module._terminalPanelForTests.bootTerminalPanel(true)
+    const boot2 = module._terminalPanelForTests.bootTerminalPanel(true)
+    await Promise.all([boot1, boot2])
+
+    const iframe = getElementById('kaboom-terminal-iframe')
+    assert.ok(iframe, 'exactly one terminal iframe is mounted after the raced boots')
+
+    dispatchWindowEvent('message', {
+      origin: 'http://localhost:7891',
+      data: { source: 'kaboom-terminal', event: 'connected' }
+    })
+
+    const callStart = iframe.contentWindow.postMessage.mock.calls.length
+    module._terminalPanelForTests.writeToTerminal('reach the visible frame')
+
+    const writes = getPostMessagePayloads(iframe, callStart)
+      .filter((p) => p?.command === 'write')
+      .map((p) => p.text)
+    assert.ok(
+      writes.includes('reach the visible frame'),
+      'the write must land on the mounted iframe (state.iframeEl), not a detached one from a raced boot'
+    )
+  })
+
   test('terminal submit re-guards if focus returns before auto-enter', async () => {
     fetchHandler = ({ url }) => {
       if (url.endsWith('/terminal/start')) {
