@@ -440,6 +440,19 @@ observe({what: "inbox"})
 observe({what: "inbox", limit: 20})
 ```
 
+### `site_menus`
+
+Discover the site's navigation menus as structured data — without relying on landmark or ARIA markup. KaBOOM dispatches `list_interactive`, then applies a menu heuristic in Go to group links into menus (primary nav, footer, dropdowns) and remove those elements from the flat interactable list.
+
+```js
+observe({what: "site_menus"})
+observe({what: "site_menus", summary: true})
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `summary` | boolean | Return a compact list of menus instead of full per-item detail |
+
 ---
 
 ## Pagination
