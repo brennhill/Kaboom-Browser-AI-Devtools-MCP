@@ -248,7 +248,11 @@ func NextWSSubID() string {
 // shell prompt character, then writes the init command. Replaces the old
 // direct-PTY-read approach so the relay's readLoop owns all PTY reads.
 func WaitForPromptViaRelay(relay *Relay, initCmd string) {
-	subID := "init-cmd"
+	// A UNIQUE id per call: a constant "init-cmd" makes two concurrent inits on one
+	// relay collide — the second Subscribe overwrites the first's map entry, and the
+	// first's deferred Unsubscribe then closes the second's channel, so the second
+	// bails without writing its init command (finding I).
+	subID := NextWSSubID()
 	ch, err := relay.fanout.Subscribe(subID)
 	if err != nil {
 		_, _ = relay.writeBuf.Write([]byte(initCmd + "\n"))
