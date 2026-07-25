@@ -963,6 +963,34 @@ describe('terminal side panel host', () => {
     assert.ok(rootInput, 'a session-less panel must let the user set the root folder')
     const rootBar = getElementById('kaboom-terminal-root-folder-bar')
     assert.ok(rootBar, 'the root folder bar must exist whether or not a session started')
+
+    // Reachable-but-unavailable (500) is recoverable — it must NOT raise a
+    // dead-end error toast; the no-session fallback IS the surface.
+    assert.equal(getElementById('kaboom-action-toast'), null,
+      'a reachable 500 must not surface a dead-end error toast')
+  })
+
+  test('daemon UNREACHABLE at open surfaces a visible error (not a silent drop)', async () => {
+    // Transport failure ("Failed to fetch") while no panel body is mounted yet.
+    // Previously showSandboxError early-returned on the missing body and the
+    // failure only reached the console — the panel looked simply broken. It must
+    // now be surfaced via a toast (fail-loud, repo rule 25).
+    fetchHandler = ({ url }) => {
+      if (url.endsWith('/terminal/start')) {
+        return Promise.reject(new Error('ECONNREFUSED terminal daemon'))
+      }
+      throw new Error(`Unexpected fetch call: ${url}`)
+    }
+
+    const module = await import(`../../extension/sidepanel.js?v=${++importCounter}`)
+    await module._terminalPanelForTests.bootTerminalPanel(true)
+
+    const toast = getElementById('kaboom-action-toast')
+    assert.ok(toast, 'an unreachable daemon must surface a visible error toast, not vanish into the console')
+    const messageNode = walkTree(toast, (child) =>
+      typeof child.textContent === 'string' && child.textContent.includes('Terminal session start')
+    )
+    assert.ok(messageNode, 'the toast must carry the start-failure message')
   })
 
   test('close button closes the drawer and leaves the shell running', async () => {

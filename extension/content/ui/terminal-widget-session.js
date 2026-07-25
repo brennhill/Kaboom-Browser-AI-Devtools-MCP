@@ -268,12 +268,14 @@ export async function startSession(config, onSandboxError) {
                 const message = body.detail
                     ? `${body.message ?? 'Terminal start was refused.'} (${body.detail})`
                     : (body.message ?? 'Terminal start was refused.');
-                reportStartFailure(message, body.instruction ?? '', body.command ?? '', onSandboxError);
+                reportStartFailure(message, body.instruction ?? '', body.command ?? '', 'sandbox', onSandboxError);
                 return null;
             }
-            // Any other rejection. This used to only console.warn, so the side panel
-            // rendered nothing at all and the terminal looked simply broken.
-            reportStartFailure(`Terminal start was refused (HTTP ${resp.status}): ${body.error ?? 'unknown error'}.`, '', '', onSandboxError);
+            // Any other rejection from a reachable daemon. This used to only
+            // console.warn, so the side panel rendered nothing at all and the terminal
+            // looked simply broken. Classified `unavailable` (reachable but not ready)
+            // so the UI shows the recoverable no-session state, not a dead-end error.
+            reportStartFailure(`Terminal start was refused (HTTP ${resp.status}): ${body.error ?? 'unknown error'}.`, '', '', 'unavailable', onSandboxError);
             return null;
         }
         const data = await resp.json();
@@ -282,7 +284,9 @@ export async function startSession(config, onSandboxError) {
         return ss;
     }
     catch (err) {
-        reportStartFailure('Terminal session start failed: ' + (err instanceof Error ? err.message : String(err)) + '.', getDaemonStartHint(), '', onSandboxError);
+        // Transport failure — the daemon did not answer at all. This is `unreachable`:
+        // a real failure the user must see even when no panel body is mounted yet.
+        reportStartFailure('Terminal session start failed: ' + (err instanceof Error ? err.message : String(err)) + '.', getDaemonStartHint(), '', 'unreachable', onSandboxError);
         return null;
     }
 }
@@ -291,8 +295,8 @@ export async function startSession(config, onSandboxError) {
  * it. A failure that only reaches the console leaves the panel blank, which reads
  * as "the terminal is broken" rather than "here is what went wrong".
  */
-function reportStartFailure(message, instruction, command, onError) {
-    console.warn(`[KaBOOM!] ${message} ${instruction} ${command}`.trimEnd());
-    onError?.(message, instruction, command);
+function reportStartFailure(message, instruction, command, kind, onError) {
+    console.warn(`[KaBOOM!] (${kind}) ${message} ${instruction} ${command}`.trimEnd());
+    onError?.(message, instruction, command, kind);
 }
 //# sourceMappingURL=terminal-widget-session.js.map

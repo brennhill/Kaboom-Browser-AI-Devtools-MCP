@@ -564,6 +564,18 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 			sessionID = "default"
 		}
 		status, body := classifyStartError(err, sessionID, mgr.GetTokenForSession(sessionID))
+		// Spawning a session is state-mutating: a failure must be logged (rule 25,
+		// fail-loud) so a "terminal won't start" report is diagnosable from
+		// ~/.kaboom/logs/kaboom.jsonl, not just surfaced transiently to the client.
+		// A 409 (session already exists) is a benign reconnect, not a failure.
+		if status != http.StatusConflict {
+			deps.logEvent("terminal_session_start_failed", map[string]any{
+				"session_id": sessionID,
+				"dir":        req.Dir,
+				"status":     status,
+				"error":      err.Error(),
+			})
+		}
 		deps.JSONResponse(w, status, body)
 		return
 	}
@@ -636,6 +648,12 @@ func HandleTerminalStop(w http.ResponseWriter, r *http.Request, deps Deps, mgr *
 	}
 
 	if err := mgr.Stop(req.ID); err != nil {
+		// Stopping a session is state-mutating; a failure (e.g. session gone) is
+		// logged so an unexpected teardown outcome is diagnosable, not silent.
+		deps.logEvent("terminal_session_stop_failed", map[string]any{
+			"session_id": req.ID,
+			"error":      err.Error(),
+		})
 		deps.JSONResponse(w, http.StatusNotFound, map[string]string{"error": err.Error()})
 		return
 	}

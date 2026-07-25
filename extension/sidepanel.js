@@ -172,13 +172,36 @@ async function applyRootFolder(root) {
     await bootTerminalPanel(true);
 }
 /**
- * Show a start failure, remembering it so a later remount can show it again.
+ * Surface a terminal start failure — logged (in startSession) AND shown to the
+ * user; no start failure may vanish into the console (repo rule 25, fail-loud).
+ *
+ * The `kind` decides the surface:
+ * - `unavailable` (daemon answered with an error status, e.g. 500): recoverable.
+ *   Do NOT remember it as a stuck error — fall through to the no-session state
+ *   (Start + root folder). Remembering it here would replace the recoverable UI
+ *   with a dead-end panel (regresses the daemon-unavailable fallback).
+ * - `unreachable` (daemon did not answer) / `sandbox` (spawn refused): a real,
+ *   actionable failure. Remember it so a later remount re-shows it, and surface
+ *   it now — inline when the body is mounted, else via a toast so a
+ *   daemon-down-at-open failure is never swallowed silently.
  */
-function showSandboxError(message, instruction, command) {
-    if (!panel.terminalBodyEl)
+function showSandboxError(message, instruction, command, kind) {
+    if (kind === 'unavailable') {
+        // Reachable but not ready — the no-session fallback IS the surface. Already
+        // logged by startSession; do not remember or render a dead-end error.
         return;
+    }
     panel.pendingSandboxError = { message, instruction, command };
-    renderStartFailure(panel.terminalBodyEl, message, instruction, command);
+    if (panel.terminalBodyEl) {
+        renderStartFailure(panel.terminalBodyEl, message, instruction, command);
+    }
+    else {
+        // No body to render into yet (daemon-down-at-open): surface via toast so the
+        // failure is visible instead of only reaching the console. A subsequent
+        // remount re-renders it inline from pendingSandboxError.
+        const detail = [instruction, command].filter(Boolean).join(' ');
+        showActionToast(message, detail || 'Terminal', 'error', 6000);
+    }
 }
 function updateStatusDot(dotState) {
     if (!panel.statusDotEl)
