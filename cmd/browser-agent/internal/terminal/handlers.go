@@ -200,6 +200,15 @@ func HandleTerminalWS(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pt
 		return
 	}
 
+	// Build the deadline-aware frame writer immediately after the handshake and use
+	// it for EVERY write on this connection — the pre-wsLoop replay chunks,
+	// replay_end, and subscribe-failure frames, as well as wsLoop's own frames
+	// (threaded in below). The terminal server runs with WriteTimeout:0, so without
+	// this a client that stalls its reader mid-replay would block conn.Write forever
+	// and leak a goroutine+fd per connect (finding B). One writer is shared so all
+	// callers serialize on the same mutex.
+	writeFrame := NewFrameWriter(conn, bufrw, deps)
+
 	// Get or create relay for multi-subscriber fan-out.
 	relay := relays.GetOrCreate(sess.ID, sess, "")
 
@@ -219,7 +228,7 @@ func HandleTerminalWS(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pt
 			if end > len(history) {
 				end = len(history)
 			}
-			if err := deps.WSWriteFrame(bufrw, 0x2, history[off:end]); err != nil {
+			if err := writeFrame(0x2, history[off:end]); err != nil {
 				if subErr == nil {
 					relay.fanout.Unsubscribe(subID)
 				}
@@ -229,7 +238,7 @@ func HandleTerminalWS(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pt
 		}
 	}
 	replayEnd, _ := json.Marshal(map[string]string{"type": "replay_end"})
-	if err := deps.WSWriteFrame(bufrw, 0x1, replayEnd); err != nil {
+	if err := writeFrame(0x1, replayEnd); err != nil {
 		if subErr == nil {
 			relay.fanout.Unsubscribe(subID)
 		}
@@ -247,15 +256,15 @@ func HandleTerminalWS(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pt
 	if subErr != nil {
 		if errors.Is(subErr, pty.ErrFanoutClosed) {
 			exitMsg, _ := json.Marshal(map[string]any{"type": "exited", "code": relay.exitCode})
-			_ = deps.WSWriteFrame(bufrw, 0x1, exitMsg)
+			_ = writeFrame(0x1, exitMsg)
 		}
-		_ = deps.WSWriteFrame(bufrw, 0x8, nil)
+		_ = writeFrame(0x8, nil)
 		_ = conn.Close()
 		return
 	}
 
 	deps.logEvent("terminal_ws_connect", map[string]any{"session_id": sess.ID, "sub_id": subID})
-	wsLoop(conn, bufrw, deps, sess, relay, sub)
+	wsLoop(conn, bufrw, deps, sess, relay, sub, writeFrame)
 	relay.fanout.Unsubscribe(subID)
 	deps.logEvent("terminal_ws_disconnect", map[string]any{"session_id": sess.ID, "sub_id": subID})
 }
@@ -271,7 +280,12 @@ func HandleTerminalWS(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pt
 // closeConn function. Any goroutine that detects a terminal condition calls closeConn(),
 // which closes connDone (unblocking the others) then closes the underlying TCP connection
 // exactly once. This prevents double-close races and goroutine leaks.
-func wsLoop(conn net.Conn, rw *bufio.ReadWriter, deps Deps, sess *pty.Session, relay *Relay, sub <-chan []byte) {
+// writeFrame is the shared, deadline-bound frame writer created in
+// HandleTerminalWS right after the handshake and threaded through here, so the
+// pre-loop replay writes and wsLoop's downstream/ping/control writes all serialize
+// on ONE mutex (a second NewFrameWriter would double-serialize on a different
+// mutex and defeat the shared-writer invariant).
+func wsLoop(conn net.Conn, rw *bufio.ReadWriter, deps Deps, sess *pty.Session, relay *Relay, sub <-chan []byte, writeFrame func(opcode byte, payload []byte) error) {
 	// Coordinated shutdown: connDone signals all goroutines to exit,
 	// closeConn ensures conn.Close() is called exactly once.
 	connDone := make(chan struct{})
@@ -282,10 +296,6 @@ func wsLoop(conn net.Conn, rw *bufio.ReadWriter, deps Deps, sess *pty.Session, r
 			_ = conn.Close()
 		})
 	}
-
-	// Multiple goroutines emit frames (downstream, keepalive ping, and upstream
-	// control responses). Serialize writes to avoid interleaved/corrupted frames.
-	writeFrame := NewFrameWriter(conn, rw, deps)
 
 	// Fan-out -> WebSocket (downstream): read from subscriber channel and send as binary frames.
 	// Also tracks alt-screen state changes and notifies the frontend.
