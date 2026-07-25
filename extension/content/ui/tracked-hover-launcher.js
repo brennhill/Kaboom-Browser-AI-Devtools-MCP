@@ -183,7 +183,7 @@ function applyVisibilityFromState() {
 // prompt, drive escape sequences, or wedge terminal input mid-session. The
 // annotations themselves already reach the agent through the normal path
 // (draw-mode -> daemon -> analyze(what="annotations")); this is only the nudge.
-const ANNOTATION_TERMINAL_NUDGE = 'check kaboom annotations';
+const ANNOTATION_TERMINAL_NUDGE = 'Check kaboom annotations and handle the requests now';
 function handleAnnotationsReady(event) {
     const detail = event.detail;
     // Provenance gate: only act on events carrying the per-session token we

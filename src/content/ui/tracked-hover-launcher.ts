@@ -212,7 +212,7 @@ interface AnnotationDetail {
 // prompt, drive escape sequences, or wedge terminal input mid-session. The
 // annotations themselves already reach the agent through the normal path
 // (draw-mode -> daemon -> analyze(what="annotations")); this is only the nudge.
-const ANNOTATION_TERMINAL_NUDGE = 'check kaboom annotations'
+const ANNOTATION_TERMINAL_NUDGE = 'Check kaboom annotations and handle the requests now'
 
 function handleAnnotationsReady(event: Event): void {
   const detail = (event as CustomEvent).detail as

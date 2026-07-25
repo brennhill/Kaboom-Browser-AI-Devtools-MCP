@@ -2368,7 +2368,7 @@
     }
     unmountLauncher();
   }
-  var ANNOTATION_TERMINAL_NUDGE = "check kaboom annotations";
+  var ANNOTATION_TERMINAL_NUDGE = "Check kaboom annotations and handle the requests now";
   function handleAnnotationsReady(event) {
     const detail = event.detail;
     if (!annotationChannelNonce || detail?.nonce !== annotationChannelNonce)

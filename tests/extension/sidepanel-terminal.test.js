@@ -660,6 +660,50 @@ describe('terminal side panel host', () => {
       'the queued write must be replayed in full once connected, not lost with a bare Enter')
   })
 
+  test('every message posted to the iframe carries target:"kaboom-terminal"', async () => {
+    // Regression for the eb248ff6 refactor, which dropped `target` from
+    // notifyIframe. terminal.html's listener is `if (event.data.target !==
+    // 'kaboom-terminal') return`, so a target-less message is silently dropped —
+    // the annotation nudge (and every agent write/focus/redraw) never reached the
+    // shell, while user keystrokes hid it by going straight to the socket.
+    fetchHandler = ({ url }) => {
+      if (url.endsWith('/terminal/start')) {
+        return Promise.resolve(makeResponse(200, {
+          session_id: 'session-target',
+          token: 'token-target',
+          pid: 777
+        }))
+      }
+      throw new Error(`Unexpected fetch call: ${url}`)
+    }
+
+    const module = await import(`../../extension/sidepanel.js?v=${++importCounter}`)
+    await module._terminalPanelForTests.bootTerminalPanel(true)
+
+    const iframe = getElementById('kaboom-terminal-iframe')
+    assert.ok(iframe, 'terminal iframe should exist')
+
+    dispatchWindowEvent('message', {
+      origin: 'http://localhost:7891',
+      data: { source: 'kaboom-terminal', event: 'connected' }
+    })
+
+    const callStart = iframe.contentWindow.postMessage.mock.calls.length
+    module._terminalPanelForTests.writeToTerminal('Check kaboom annotations and handle the requests now')
+    await sleep(800)
+
+    const payloads = getPostMessagePayloads(iframe, callStart)
+    const writes = payloads.filter((p) => p?.command === 'write')
+    assert.ok(writes.length > 0, 'the write must reach the iframe')
+    for (const payload of payloads) {
+      assert.strictEqual(
+        payload?.target,
+        'kaboom-terminal',
+        `iframe message ${JSON.stringify(payload)} must carry target:'kaboom-terminal' or the iframe drops it`
+      )
+    }
+  })
+
   test('two concurrent forceFresh boots keep writes on the on-screen iframe (boot race)', async () => {
     // Double-clicked "Start", or a rapid folder re-pick, fires bootTerminalPanel(true)
     // twice while the first is still awaiting the network. Without serialization,

@@ -38,6 +38,11 @@ const COORD_SPACE_DOCUMENT = 'document'
 const ACTION_TRAIL_LIMIT = 5
 const ACTION_BUFFER_LIMIT = 40
 
+// Keyboard shortcut that toggles draw mode on/off. MUST stay in sync with
+// manifest.json → commands.toggle_draw_mode.suggested_key.default; the
+// draw-mode-shortcut-hint test pins the two together so they cannot drift.
+const TOGGLE_DRAW_MODE_SHORTCUT = 'Alt+Shift+D'
+
 // ============================================================================
 // PUBLIC API
 // ============================================================================
@@ -211,7 +216,9 @@ function createOverlay() {
     zIndex: String(OVERLAY_Z_INDEX + 1),
     textAlign: 'center'
   })
-  escHint.textContent = 'Press ESC when done'
+  // Persistent bar (stays for the whole session): ESC exits, and the toggle
+  // shortcut is the always-visible reminder of how to start/stop the mode.
+  escHint.textContent = `Press ESC when done · ${TOGGLE_DRAW_MODE_SHORTCUT} toggles draw mode`
   overlay.appendChild(escHint)
 
   // Center instruction toast — fades out after 2.5s
@@ -237,7 +244,9 @@ function createOverlay() {
     lineHeight: '1.5'
   })
   instruction.innerHTML =
-    'Draw a box around what you want to change<br><span style="font-size:13px;color:#aaa">Then type your instruction. Press ESC when done.</span>'
+    'Draw a box around what you want to change' +
+    '<br><span style="font-size:13px;color:#aaa">Then type your instruction. Press ESC when done.</span>' +
+    `<br><span style="font-size:12px;color:#888">Start or stop draw mode anytime with ${TOGGLE_DRAW_MODE_SHORTCUT}</span>`
   overlay.appendChild(instruction)
   setTimeout(() => {
     instruction.style.opacity = '0'
