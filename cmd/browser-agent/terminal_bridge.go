@@ -39,6 +39,7 @@ func (d *serverIntentDeps) GetIntentStore() *terminal.IntentStore { return d.s.i
 // setupTerminalMux creates a new ServeMux with only terminal routes.
 func setupTerminalMux(server *Server, mgr *pty.Manager, cap *capture.Store) (*http.ServeMux, *terminal.Map) {
 	deps := terminalDeps()
+	deps.LogEvent = func(event string, fields map[string]any) { server.logLifecycle(event, 0, fields) }
 	return terminal.SetupMux(deps, server, &serverIntentDeps{s: server}, mgr, cap)
 }
 

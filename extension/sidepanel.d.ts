@@ -19,21 +19,19 @@ declare function redrawTerminal(): Promise<void>;
 declare function exitTerminalSession(): Promise<void>;
 declare function writeToTerminal(text: string): void;
 /**
- * Boot (or rebuild) the terminal panel — serialized entry point.
+ * Boot (or rebuild) the terminal panel — GENERATION-based, not serialized.
  *
- * A second trigger arriving mid-boot (double-clicked Start, a rapid folder
- * re-pick, a redraw while an earlier boot is still awaiting the network) MUST
- * NOT run concurrently with the first: createPanelShell() unconditionally
- * rebinds `state.iframeEl`, while mountPanel() early-returns once `panel.rootEl` is
- * set. Interleaved, that leaves the *visible* terminal on iframe #1 but
- * `state.iframeEl` pointing at a detached iframe #2 — so every later
- * write/annotation/redraw vanishes into the off-screen frame with no error
- * (the very "writes disappear" class the terminal work set out to kill).
+ * Each boot claims a generation (`panel.bootGeneration`); a newer boot supersedes
+ * older ones. Any boot whose generation is stale by the time it reaches DOM
+ * mutation aborts before touching the panel. This gives BOTH guarantees at once:
  *
- * Chaining on `panel.bootChain` forces boots to run one at a time; the latest wins.
- * The `panel.panelReady && !forceFresh` no-op check is evaluated AFTER the previous
- * boot settles, so a plain boot that lands behind a forceFresh rebuild correctly
- * sees the finished panel and does nothing instead of racing it.
+ *  - No iframe-orphan race: two concurrent forceFresh boots can't both mount —
+ *    the older aborts at the guard before createPanelShell()/mountPanel(), so the
+ *    visible iframe and `state.iframeEl` never diverge (the "writes disappear" bug).
+ *  - "Start terminal" ALWAYS works: we never await a previous boot, so a boot that
+ *    STALLED on the network (a daemon that isn't answering) can neither block nor
+ *    corrupt a fresh Start — the panic button always re-attempts and resets state.
+ *    (Serializing on a bootChain regressed exactly this: a hung boot froze Start.)
  */
 declare function bootTerminalPanel(forceFresh?: boolean): Promise<void>;
 /**

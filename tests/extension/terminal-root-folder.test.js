@@ -216,7 +216,7 @@ describe('browsing for a folder', () => {
     assert.ok(labels.some((text) => text.includes('kaboom')), `expected folders in ${JSON.stringify(labels)}`)
   })
 
-  test('choosing a folder fills the field without reloading yet', async () => {
+  test('choosing a folder fills the field AND launches the shell there (auto-accept)', async () => {
     const applied = []
     const { createRootFolderBar } = await loadBar()
     createRootFolderBar({ initialRoot: '/Users/dev', onApply: (root) => applied.push(root) })
@@ -225,9 +225,11 @@ describe('browsing for a folder', () => {
 
     byId('kaboom-terminal-root-folder-use').dispatch('click')
 
+    // "✓ Use …" now auto-accepts: it fills the field AND starts/reloads the shell
+    // there in one click, so the user never has to hunt for a separate Start button.
     assert.strictEqual(byId('kaboom-terminal-root-folder-input').value, '/Users/dev')
-    assert.deepStrictEqual(applied, [],
-      'picking is not committing — restarting the shell is a separate, deliberate step')
+    assert.deepStrictEqual(applied, ['/Users/dev'],
+      'picking a folder launches the shell there — no separate Reload/Start click')
   })
 
   test('descending into a folder lists that folder', async () => {

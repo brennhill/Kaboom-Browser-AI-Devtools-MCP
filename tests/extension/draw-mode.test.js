@@ -116,11 +116,34 @@ let createdElements
 let styleEl
 let storageData
 
+// Timer isolation: draw-mode's overlay schedules real 2.5s/3s toast timers (and
+// a debounced persist) that far outlive each ~10-40ms test. Left pending, they
+// fire during a LATER test and mutate shared state — e.g. a leaked persist timer
+// writes an annotation into the next test's storage, which activateDrawMode then
+// loads (the "2 annotations instead of 1" Node-20 flake). We wrap setTimeout to
+// record every scheduled id, then a global afterEach clears whatever is still
+// pending. Real timing is preserved WITHIN a test, so the persistence tests that
+// `await setTimeout(r, 350)` still work.
+let trackedTimers = null
+const realSetTimeout = globalThis.setTimeout.bind(globalThis)
+const realClearTimeout = globalThis.clearTimeout.bind(globalThis)
+
 function setupGlobals() {
   createdElements = []
   documentBody = createMockElement('body')
   styleEl = null
   storageData = {}
+
+  trackedTimers = new Set()
+  globalThis.setTimeout = (fn, ms, ...args) => {
+    const id = realSetTimeout(fn, ms, ...args)
+    trackedTimers.add(id)
+    return id
+  }
+  globalThis.clearTimeout = (id) => {
+    trackedTimers.delete(id)
+    return realClearTimeout(id)
+  }
 
   globalThis.window = {
     innerWidth: 1024,
@@ -227,6 +250,16 @@ function setupGlobals() {
     }
   }
 }
+
+// Global safety net: after every test, clear any timer it left pending so it can
+// never fire during a later test. This is the fix for the Node-20 draw-mode
+// flakiness — a leaked overlay/persist timer firing mid-test corrupted shared
+// state (extra annotations, stale correlation ids, dropped focused-element).
+afterEach(() => {
+  if (!trackedTimers) return
+  for (const id of trackedTimers) realClearTimeout(id)
+  trackedTimers.clear()
+})
 
 // =============================================================================
 // Module import — fresh each test via dynamic import

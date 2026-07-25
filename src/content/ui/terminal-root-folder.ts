@@ -148,7 +148,10 @@ export function createRootFolderBar(options: RootFolderBarOptions): {
     }
     picker.style.display = 'flex'
     void openPicker(picker, input.value.trim(), (chosen) => {
+      // Auto-accept: picking a folder ("✓ Use …") both fills the field AND launches
+      // the shell there — no separate Reload/Start click needed.
       input.value = chosen
+      applyCurrent()
     })
   })
 
@@ -158,6 +161,22 @@ export function createRootFolderBar(options: RootFolderBarOptions): {
   row.appendChild(apply)
   bar.appendChild(row)
   bar.appendChild(picker)
+
+  // Default location: when no root is set, show the daemon's own resolved working
+  // directory (where browsing starts) instead of an empty placeholder. The shell
+  // already auto-starts on panel open against this same default; this just makes it
+  // visible. Best-effort — a daemon that can't list dirs leaves the placeholder.
+  if (!options.initialRoot) {
+    void listTerminalDirs('')
+      .then((result) => {
+        if (result.ok && !input.value && document.activeElement !== input) {
+          input.value = result.listing.path
+        }
+      })
+      .catch(() => {
+        /* leave the placeholder; typing and browsing still work */
+      })
+  }
 
   return {
     element: bar,

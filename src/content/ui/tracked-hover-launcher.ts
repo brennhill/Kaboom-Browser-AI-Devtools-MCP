@@ -30,6 +30,11 @@ const TOGGLE_ID = 'kaboom-tracked-hover-toggle'
 const SETTINGS_MENU_ID = 'kaboom-tracked-hover-settings-menu'
 
 let rootEl: HTMLDivElement | null = null
+// Shadow-DOM host for the flyout. The flyout is raw DOM on arbitrary pages, so
+// heavy host stylesheets (Slashdot etc.) used to bleed in and balloon it. Mounting
+// inside a shadow root isolates it: page `*`/tag/class rules no longer match the
+// flyout. The host (light DOM) carries ROOT_ID so the mount guard still finds it.
+let hostEl: HTMLDivElement | null = null
 let panelEl: HTMLDivElement | null = null
 let settingsMenuEl: HTMLDivElement | null = null
 let stopButtonEl: HTMLButtonElement | null = null
@@ -200,35 +205,14 @@ interface AnnotationDetail {
   rect?: { x: number; y: number; width: number; height: number }
 }
 
-// Strip C0/C1 control characters (ESC, backspace, bell, CR/LF, …) before writing
-// annotation text to the xterm. Without this, a pasted label could drive terminal
-// escape sequences (OSC title hijack) or backspace over the prompt text — including
-// the analyze(...) instruction — silently changing what the agent is told.
-function sanitizeForTerminal(s: string): string {
-  // eslint-disable-next-line no-control-regex -- deliberately targeting control chars
-  return s.replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ')
-}
-
-function formatAnnotationsForTerminal(annotations: AnnotationDetail[], pageUrl: string): string {
-  if (annotations.length === 0) return ''
-  const lines: string[] = [
-    'The user just annotated the page with the following feedback. Please review and implement these changes:',
-    '',
-    `Page: ${sanitizeForTerminal(pageUrl)}`,
-    ''
-  ]
-  for (let i = 0; i < annotations.length; i++) {
-    const a = annotations[i]!
-    const text = sanitizeForTerminal(a.text || '(no label)')
-    const sel = sanitizeForTerminal(a.selector || 'unknown')
-    const r = a.rect
-    const loc = r ? ` (${Math.round(r.x)},${Math.round(r.y)} ${Math.round(r.width)}x${Math.round(r.height)})` : ''
-    lines.push(`${i + 1}. "${text}" — ${sel}${loc}`)
-  }
-  lines.push('')
-  lines.push('The annotations are available via analyze(what="annotations").')
-  return lines.join('\n')
-}
+// When the user finishes annotating with the terminal open, nudge the agent to
+// PULL the annotations via its tool instead of pasting the full annotation text
+// into the live xterm. A short, single-line, control-char-free string is far
+// safer through the write-guard than a multi-line blob — which can corrupt the
+// prompt, drive escape sequences, or wedge terminal input mid-session. The
+// annotations themselves already reach the agent through the normal path
+// (draw-mode -> daemon -> analyze(what="annotations")); this is only the nudge.
+const ANNOTATION_TERMINAL_NUDGE = 'Check kaboom annotations and handle the requests now'
 
 function handleAnnotationsReady(event: Event): void {
   const detail = (event as CustomEvent).detail as
@@ -245,8 +229,7 @@ function handleAnnotationsReady(event: Event): void {
   // (draw-mode posts them to the daemon → analyze), so a closed panel is a no-op
   // here, not a dropped annotation.
   if (!isTerminalVisible()) return
-  const text = formatAnnotationsForTerminal(detail.annotations, detail.page_url || location.href)
-  if (text) writeToTerminal(text)
+  writeToTerminal(ANNOTATION_TERMINAL_NUDGE)
 }
 
 function newAnnotationNonce(): string {
@@ -487,7 +470,8 @@ function createSettingsMenuLink(iconSvg: string, label: string, href: string): H
 
 function createLauncherUi(): HTMLDivElement {
   const root = document.createElement('div')
-  root.id = ROOT_ID
+  // No ROOT_ID here — the shadow host (mountLauncher) carries it. Inside the
+  // shadow root this element is scoped, so it needs no page-unique id.
   Object.assign(root.style, {
     position: 'fixed',
     top: '33vh',
@@ -731,10 +715,25 @@ function mountLauncher(): void {
   if (hiddenUntilPopupOpen) return
   if (isTerminalVisible()) return
   if (rootEl || document.getElementById(ROOT_ID)) return
-  rootEl = createLauncherUi()
   const target = document.body || document.documentElement
-  if (!target || !rootEl) return
-  target.appendChild(rootEl)
+  if (!target) return
+  const root = createLauncherUi()
+
+  // Isolate from the host page's CSS via a shadow root. The shadow boundary stops
+  // page `*`/tag/class rules from matching the flyout; `:host { all: initial }`
+  // resets inheritable props (line-height/font/color) that would otherwise cross
+  // the boundary, and box-sizing is normalized for the content.
+  const host = document.createElement('div')
+  host.id = ROOT_ID
+  const shadow = host.attachShadow({ mode: 'open' })
+  const style = document.createElement('style')
+  style.textContent = ':host { all: initial; } *, *::before, *::after { box-sizing: border-box; }'
+  shadow.appendChild(style)
+  shadow.appendChild(root)
+
+  rootEl = root
+  hostEl = host
+  target.appendChild(host)
   installRecordingStorageSync()
 }
 
@@ -747,10 +746,13 @@ function unmountLauncher(): void {
   stopButtonEl = null
   toggleEl = null
   recordingActive = false
-  if (rootEl) {
-    rootEl.remove()
-    rootEl = null
+  // Remove the shadow HOST (which carries the flyout in its shadow root); rootEl
+  // lives inside it, so removing the host tears down everything.
+  if (hostEl) {
+    hostEl.remove()
+    hostEl = null
   }
+  rootEl = null
   uninstallRecordingStorageSync()
 }
 

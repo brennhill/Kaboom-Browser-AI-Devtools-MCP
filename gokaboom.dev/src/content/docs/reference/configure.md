@@ -510,3 +510,16 @@ configure({what: "report_issue", operation: "submit", template: "bug", title: "R
 | `template` | string | Issue template name |
 | `title` | string | Issue title (required for `submit`) |
 | `user_context` | string | Your repro notes/context attached to the report |
+
+## setup_quality_gates — Code Quality Gate Scaffolding
+
+Scaffold `.kaboom.json` and `kaboom-code-standards.md` into your project so agent code changes are checked by the KaBOOM `kaboom-hooks` quality gates — duplicate detection, blast-radius, decision-guard, session tracking, and output compression. Requires an active codebase (set `active_codebase` first).
+
+```js
+configure({what: "setup_quality_gates"})
+configure({what: "setup_quality_gates", target_dir: "/path/within/project"})
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `target_dir` | string | Directory to write the config into. Must be within the project. Defaults to the active codebase root. |

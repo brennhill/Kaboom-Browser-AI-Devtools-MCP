@@ -2225,6 +2225,7 @@
   var TOGGLE_ID = "kaboom-tracked-hover-toggle";
   var SETTINGS_MENU_ID = "kaboom-tracked-hover-settings-menu";
   var rootEl = null;
+  var hostEl = null;
   var panelEl = null;
   var settingsMenuEl = null;
   var stopButtonEl = null;
@@ -2367,30 +2368,7 @@
     }
     unmountLauncher();
   }
-  function sanitizeForTerminal(s) {
-    return s.replace(/[\u0000-\u001f\u007f-\u009f]/g, " ");
-  }
-  function formatAnnotationsForTerminal(annotations, pageUrl) {
-    if (annotations.length === 0)
-      return "";
-    const lines = [
-      "The user just annotated the page with the following feedback. Please review and implement these changes:",
-      "",
-      `Page: ${sanitizeForTerminal(pageUrl)}`,
-      ""
-    ];
-    for (let i = 0; i < annotations.length; i++) {
-      const a = annotations[i];
-      const text = sanitizeForTerminal(a.text || "(no label)");
-      const sel = sanitizeForTerminal(a.selector || "unknown");
-      const r = a.rect;
-      const loc = r ? ` (${Math.round(r.x)},${Math.round(r.y)} ${Math.round(r.width)}x${Math.round(r.height)})` : "";
-      lines.push(`${i + 1}. "${text}" \u2014 ${sel}${loc}`);
-    }
-    lines.push("");
-    lines.push('The annotations are available via analyze(what="annotations").');
-    return lines.join("\n");
-  }
+  var ANNOTATION_TERMINAL_NUDGE = "Check kaboom annotations and handle the requests now";
   function handleAnnotationsReady(event) {
     const detail = event.detail;
     if (!annotationChannelNonce || detail?.nonce !== annotationChannelNonce)
@@ -2399,9 +2377,7 @@
       return;
     if (!isTerminalVisible())
       return;
-    const text = formatAnnotationsForTerminal(detail.annotations, detail.page_url || location.href);
-    if (text)
-      writeToTerminal(text);
+    writeToTerminal(ANNOTATION_TERMINAL_NUDGE);
   }
   function newAnnotationNonce() {
     const c = globalThis.crypto;
@@ -2621,7 +2597,6 @@
   }
   function createLauncherUi() {
     const root = document.createElement("div");
-    root.id = ROOT_ID;
     Object.assign(root.style, {
       position: "fixed",
       top: "33vh",
@@ -2841,11 +2816,20 @@
       return;
     if (rootEl || document.getElementById(ROOT_ID))
       return;
-    rootEl = createLauncherUi();
     const target = document.body || document.documentElement;
-    if (!target || !rootEl)
+    if (!target)
       return;
-    target.appendChild(rootEl);
+    const root = createLauncherUi();
+    const host = document.createElement("div");
+    host.id = ROOT_ID;
+    const shadow = host.attachShadow({ mode: "open" });
+    const style = document.createElement("style");
+    style.textContent = ":host { all: initial; } *, *::before, *::after { box-sizing: border-box; }";
+    shadow.appendChild(style);
+    shadow.appendChild(root);
+    rootEl = root;
+    hostEl = host;
+    target.appendChild(host);
     installRecordingStorageSync();
   }
   function unmountLauncher() {
@@ -2857,10 +2841,11 @@
     stopButtonEl = null;
     toggleEl = null;
     recordingActive = false;
-    if (rootEl) {
-      rootEl.remove();
-      rootEl = null;
+    if (hostEl) {
+      hostEl.remove();
+      hostEl = null;
     }
+    rootEl = null;
     uninstallRecordingStorageSync();
   }
   async function setTrackedHoverLauncherEnabled(enabled) {

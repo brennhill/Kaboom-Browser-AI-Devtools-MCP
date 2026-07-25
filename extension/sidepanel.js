@@ -6,7 +6,7 @@
  */
 import { StorageKey, TERMINAL_PANEL_PORT } from './lib/constants.js';
 import { onStorageChanged } from './lib/storage-utils.js';
-import { state, resetAllState, getTerminalServerUrl, WIDGET_ID, IFRAME_ID, HEADER_ID, TERMINAL_BODY_ID, DISCONNECT_TERMINAL_BUTTON_ID, CLOSE_TERMINAL_BUTTON_ID, REDRAW_TERMINAL_BUTTON_ID, MINIMIZE_TERMINAL_BUTTON_ID, TERMINAL_WRITE_SUBMIT_DELAY_MS, TERMINAL_GUARD_POLL_MS } from './content/ui/terminal-widget-types.js';
+import { state, resetAllState, getTerminalServerUrl, WIDGET_ID, IFRAME_ID, HEADER_ID, TERMINAL_BODY_ID, DISCONNECT_TERMINAL_BUTTON_ID, ANNOTATE_TERMINAL_BUTTON_ID, CLOSE_TERMINAL_BUTTON_ID, REDRAW_TERMINAL_BUTTON_ID, MINIMIZE_TERMINAL_BUTTON_ID, TERMINAL_WRITE_SUBMIT_DELAY_MS, TERMINAL_GUARD_POLL_MS } from './content/ui/terminal-widget-types.js';
 import { getServerUrl, getTerminalConfig, persistUIState, loadPersistedSession, clearPersistedSession, validateSession, startSession, getTerminalDevRoot, setTerminalDevRoot, stopActiveSession } from './content/ui/terminal-widget-session.js';
 import { showActionToast } from './content/ui/toast.js';
 import { createRootFolderBar } from './content/ui/terminal-root-folder.js';
@@ -27,7 +27,7 @@ function freshPanelUi() {
         panelCloseIntent: null,
         presencePort: null,
         rootFolderBar: null,
-        bootChain: Promise.resolve()
+        bootGeneration: 0
     };
 }
 const panel = freshPanelUi();
@@ -65,6 +65,28 @@ async function getHostTabId() {
     }
     catch {
         return undefined;
+    }
+}
+/**
+ * Start page annotation (draw mode) on the terminal's host/tracked tab.
+ *
+ * Draw mode is otherwise only reachable via the right-click menu / keyboard
+ * shortcut, which is hard to discover — the header button surfaces it right next
+ * to the terminal. The terminal lives in the side panel but draw mode runs in
+ * the tracked tab's content script, so we send the same kaboom_draw_mode_start
+ * the popup and shortcut use directly to that tab.
+ */
+async function startPageAnnotation() {
+    const tabId = await getHostTabId();
+    if (typeof tabId !== 'number') {
+        showActionToast('No page to annotate', 'Annotate', 'warning', 2000);
+        return;
+    }
+    try {
+        await chrome.tabs.sendMessage(tabId, { type: 'kaboom_draw_mode_start', started_by: 'user' });
+    }
+    catch {
+        showActionToast('Refresh the page, then try Annotate again', 'Annotate', 'warning', 2600);
     }
 }
 /**
@@ -186,6 +208,9 @@ function handleIframeMessage(event) {
     }
     switch (event.data.event) {
         case 'connected':
+            // Trail for diagnosing "can't type": these WS transitions are where the
+            // terminal loses input when the daemon terminal-server (port+1) blinks.
+            console.log('[KaBOOM! terminal] ws connected');
             updateStatusDot('connected');
             state.terminalConnected = true;
             if (state.queuedWrites.length > 0 && !state.queuedWriteInFlight) {
@@ -193,11 +218,13 @@ function handleIframeMessage(event) {
             }
             break;
         case 'disconnected':
+            console.log('[KaBOOM! terminal] ws disconnected (input paused; writes will queue)');
             updateStatusDot('disconnected');
             state.terminalConnected = false;
             state.terminalFocused = false;
             break;
         case 'exited':
+            console.log('[KaBOOM! terminal] session exited (write-guard reset)');
             updateStatusDot('exited');
             state.terminalConnected = false;
             state.terminalFocused = false;
@@ -298,6 +325,13 @@ function createTerminalHeader() {
         fontSize: '12px',
         onClick: () => void exitTerminalSession()
     });
+    const annotateButton = createTerminalHeaderButton({
+        id: ANNOTATE_TERMINAL_BUTTON_ID,
+        glyph: '\u270E',
+        title: 'Annotate the page \u2014 draw and mark up elements for the agent',
+        color: '#7aa2f7',
+        onClick: () => void startPageAnnotation()
+    });
     const redrawButton = createTerminalHeaderButton({
         id: REDRAW_TERMINAL_BUTTON_ID,
         glyph: '\u21BB',
@@ -323,6 +357,7 @@ function createTerminalHeader() {
     header.appendChild(titleSpan);
     header.appendChild(disconnectButton);
     header.appendChild(spacer);
+    header.appendChild(annotateButton);
     header.appendChild(redrawButton);
     header.appendChild(panel.minimizeButtonEl);
     // Rightmost, where every other close control on the platform lives.
@@ -671,33 +706,27 @@ async function ensureTerminalSession() {
     state.sessionState = ss;
 }
 /**
- * Boot (or rebuild) the terminal panel — serialized entry point.
+ * Boot (or rebuild) the terminal panel — GENERATION-based, not serialized.
  *
- * A second trigger arriving mid-boot (double-clicked Start, a rapid folder
- * re-pick, a redraw while an earlier boot is still awaiting the network) MUST
- * NOT run concurrently with the first: createPanelShell() unconditionally
- * rebinds `state.iframeEl`, while mountPanel() early-returns once `panel.rootEl` is
- * set. Interleaved, that leaves the *visible* terminal on iframe #1 but
- * `state.iframeEl` pointing at a detached iframe #2 — so every later
- * write/annotation/redraw vanishes into the off-screen frame with no error
- * (the very "writes disappear" class the terminal work set out to kill).
+ * Each boot claims a generation (`panel.bootGeneration`); a newer boot supersedes
+ * older ones. Any boot whose generation is stale by the time it reaches DOM
+ * mutation aborts before touching the panel. This gives BOTH guarantees at once:
  *
- * Chaining on `panel.bootChain` forces boots to run one at a time; the latest wins.
- * The `panel.panelReady && !forceFresh` no-op check is evaluated AFTER the previous
- * boot settles, so a plain boot that lands behind a forceFresh rebuild correctly
- * sees the finished panel and does nothing instead of racing it.
+ *  - No iframe-orphan race: two concurrent forceFresh boots can't both mount —
+ *    the older aborts at the guard before createPanelShell()/mountPanel(), so the
+ *    visible iframe and `state.iframeEl` never diverge (the "writes disappear" bug).
+ *  - "Start terminal" ALWAYS works: we never await a previous boot, so a boot that
+ *    STALLED on the network (a daemon that isn't answering) can neither block nor
+ *    corrupt a fresh Start — the panic button always re-attempts and resets state.
+ *    (Serializing on a bootChain regressed exactly this: a hung boot froze Start.)
  */
 function bootTerminalPanel(forceFresh = false) {
-    const prev = panel.bootChain;
-    panel.bootChain = (async () => {
-        await prev.catch(() => { });
-        if (panel.panelReady && !forceFresh)
-            return;
-        await bootTerminalPanelInner(forceFresh);
-    })();
-    return panel.bootChain;
+    if (panel.panelReady && !forceFresh)
+        return Promise.resolve();
+    const myGen = ++panel.bootGeneration;
+    return bootTerminalPanelInner(forceFresh, myGen);
 }
-async function bootTerminalPanelInner(forceFresh) {
+async function bootTerminalPanelInner(forceFresh, gen) {
     // Drop the existing panel DOM before (re)building. mountPanel() early-returns
     // while `panel.rootEl` is set, so without this the freshly-built shell — bound to the
     // NEW session in the just-selected folder — is never attached, and the user
@@ -710,28 +739,50 @@ async function bootTerminalPanelInner(forceFresh) {
     panel.panelReady = true;
     panel.panelCloseIntent = null;
     panel.pendingSandboxError = null;
-    state.serverUrl = await getServerUrl();
-    installRuntimeListener();
-    installStorageListener();
-    installUnloadListener();
-    connectPresencePort();
-    if (forceFresh) {
-        resetAllState();
+    try {
         state.serverUrl = await getServerUrl();
-    }
-    await ensureTerminalSession();
-    const token = state.sessionState?.token;
-    const root = createPanelShell(token ?? '');
-    mountPanel(root);
-    showTerminalBody();
-    persistUIState('open');
-    if (!token) {
-        const error = panel.pendingSandboxError;
-        if (error) {
-            showSandboxError(error.message, error.instruction, error.command);
+        if (gen !== panel.bootGeneration)
+            return; // superseded by a newer boot
+        installRuntimeListener();
+        installStorageListener();
+        installUnloadListener();
+        connectPresencePort();
+        if (forceFresh) {
+            resetAllState();
+            state.serverUrl = await getServerUrl();
+            if (gen !== panel.bootGeneration)
+                return;
         }
-        else {
-            showNoSessionState();
+        await ensureTerminalSession();
+        // A newer boot superseded this one while we awaited the (possibly slow, possibly
+        // hung) session call — abandon BEFORE mutating the DOM so we can't orphan its iframe.
+        if (gen !== panel.bootGeneration)
+            return;
+        const token = state.sessionState?.token;
+        const root = createPanelShell(token ?? '');
+        mountPanel(root);
+        showTerminalBody();
+        persistUIState('open');
+        if (!token) {
+            const error = panel.pendingSandboxError;
+            if (error) {
+                showSandboxError(error.message, error.instruction, error.command);
+            }
+            else {
+                showNoSessionState();
+            }
+        }
+    }
+    catch (err) {
+        // A boot that threw (network error, extension context invalidated) must not
+        // wedge the button: clear panelReady so the next "Start terminal" boots fresh,
+        // and — if this is still the current boot and a body exists — show the
+        // retriable no-session state instead of a blank/half-built panel.
+        if (gen === panel.bootGeneration) {
+            panel.panelReady = false;
+            console.log('[KaBOOM! terminal] boot failed:', String(err));
+            if (panel.terminalBodyEl)
+                showNoSessionState();
         }
     }
 }

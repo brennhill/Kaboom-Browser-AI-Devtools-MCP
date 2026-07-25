@@ -45,6 +45,21 @@ function createMockElement(tag) {
       registerElement(child)
       return child
     }),
+    // The flyout now mounts inside a shadow root (CSS isolation). Model it as a
+    // container whose appended children still register by id, so tests can find
+    // the toggle/panel exactly as before.
+    attachShadow: mock.fn(() => {
+      const shadow = {
+        children: [],
+        appendChild: mock.fn((child) => {
+          shadow.children.push(child)
+          registerElement(child)
+          return child
+        })
+      }
+      el.shadowRoot = shadow
+      return shadow
+    }),
     remove: mock.fn(() => {
       if (el.id) delete elementsById[el.id]
     }),
@@ -67,10 +82,16 @@ function createMockElement(tag) {
   return el
 }
 
+// Traverse light children AND shadow-root children, since the flyout now lives
+// inside a shadow root whose host carries ROOT_ID.
+function childrenOf(element) {
+  return [...(element.children || []), ...(element.shadowRoot?.children || [])]
+}
+
 function findElementByTitle(element, title) {
   if (!element) return null
   if (element.title === title) return element
-  for (const child of element.children || []) {
+  for (const child of childrenOf(element)) {
     const found = findElementByTitle(child, title)
     if (found) return found
   }
@@ -80,7 +101,7 @@ function findElementByTitle(element, title) {
 function findLinkByText(element, text) {
   if (!element) return null
   if (element.tag === 'a' && hasChildWithText(element, text)) return element
-  for (const child of element.children || []) {
+  for (const child of childrenOf(element)) {
     const found = findLinkByText(child, text)
     if (found) return found
   }
@@ -89,7 +110,7 @@ function findLinkByText(element, text) {
 
 function hasChildWithText(element, text) {
   if (element.textContent === text) return true
-  for (const child of element.children || []) {
+  for (const child of childrenOf(element)) {
     if (child.textContent === text) return true
   }
   return false
@@ -98,7 +119,7 @@ function hasChildWithText(element, text) {
 function findElementByTitlePrefix(element, prefix) {
   if (!element) return null
   if (element.title && element.title.startsWith(prefix)) return element
-  for (const child of element.children || []) {
+  for (const child of childrenOf(element)) {
     const found = findElementByTitlePrefix(child, prefix)
     if (found) return found
   }
@@ -108,7 +129,7 @@ function findElementByTitlePrefix(element, prefix) {
 function findElementWithChildText(element, text) {
   if (!element) return null
   if (hasChildWithText(element, text)) return element
-  for (const child of element.children || []) {
+  for (const child of childrenOf(element)) {
     const found = findElementWithChildText(child, text)
     if (found) return found
   }
@@ -525,8 +546,13 @@ describe('tracked hover launcher', () => {
       .map((c) => c.arguments[0])
       .find((m) => m?.type === 'terminal_panel_write')
     assert.ok(write, 'a terminal_panel_write must be sent when annotations are submitted and the panel is open')
-    assert.match(write.text, /analyze\(what=/, 'prompt tells the agent to fetch annotations via analyze')
-    assert.match(write.text, /Make the header bigger/, 'prompt includes the annotation text')
+    // The injection is a short, fixed nudge — NOT the annotation text — so nothing
+    // fragile (multi-line, control chars) is pasted into the live xterm. The
+    // annotations themselves reach the agent via draw-mode -> daemon -> analyze.
+    // The nudge is an IMPERATIVE — it must both point the agent at the annotations
+    // AND tell it to act, or the agent just acknowledges and waits.
+    assert.match(write.text, /check kaboom annotations and handle the requests now/i, 'the nudge tells the agent to fetch AND act on the annotations')
+    assert.doesNotMatch(write.text, /Make the header bigger/, 'the raw annotation text is NOT pasted into the terminal')
   })
 
   test('annotation submitted while the panel is closed is a no-op (does NOT open the panel or write)', async () => {
@@ -577,7 +603,7 @@ describe('tracked hover launcher', () => {
     assert.strictEqual(forged, undefined, 'events with a missing or wrong nonce must never reach the terminal')
   })
 
-  test('annotation text is stripped of terminal control characters before submit', async () => {
+  test('annotation payload never reaches the terminal - only the fixed nudge is injected', async () => {
     await setTrackedHoverLauncherEnabled(true)
     await chrome.storage.session.set({ [terminalUiStateKey]: 'open' })
     await new Promise((resolve) => setTimeout(resolve, 10))
@@ -586,8 +612,9 @@ describe('tracked hover launcher', () => {
     const handlerCall = globalThis.window.addEventListener.mock.calls.find((c) => c.arguments[0] === 'kaboom-annotations-ready')
     handlerCall.arguments[1]({
       detail: {
-        // ESC + OSC title hijack and backspaces that would erase prompt text.
-        annotations: [{ text: 'safe\x1b]0;pwned\x08\x08text', selector: 'h1' }],
+        // A malicious label - the whole point of injecting a fixed nudge instead of
+        // the annotation text is that NONE of the payload can reach the live xterm.
+        annotations: [{ text: 'pwned label with junk', selector: 'h1' }],
         page_url: 'https://example.com/',
         nonce
       }
@@ -596,10 +623,9 @@ describe('tracked hover launcher', () => {
     const write = runtimeSendMessage.mock.calls
       .map((c) => c.arguments[0])
       .find((m) => m?.type === 'terminal_panel_write')
-    assert.ok(write, 'sanitized annotations still submit')
-    // eslint-disable-next-line no-control-regex -- asserting control chars are gone
-    assert.doesNotMatch(write.text, /[\u0000-\u0009\u000b-\u001f\u007f-\u009f]/, 'no C0/C1 control chars reach the terminal')
-    assert.match(write.text, /safe/, 'printable content is preserved')
+    assert.ok(write, 'the nudge is injected when the panel is open')
+    assert.match(write.text, /check kaboom annotations and handle the requests now/i, 'only the fixed nudge is sent')
+    assert.doesNotMatch(write.text, /pwned/, 'the annotation label never reaches the terminal - the payload is not pasted')
   })
 
   test('unmount removes launcher and storage listener', async () => {

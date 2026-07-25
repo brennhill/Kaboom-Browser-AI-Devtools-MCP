@@ -237,8 +237,10 @@ func HandleTerminalWS(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pt
 		return
 	}
 
+	deps.logEvent("terminal_ws_connect", map[string]any{"session_id": sess.ID, "sub_id": subID})
 	wsLoop(conn, bufrw, deps, sess, relay, sub)
 	relay.fanout.Unsubscribe(subID)
+	deps.logEvent("terminal_ws_disconnect", map[string]any{"session_id": sess.ID, "sub_id": subID})
 }
 
 // wsLoop relays data between a WebSocket connection and a PTY session.
@@ -506,10 +508,16 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 	if err == nil {
 		sess, _ := mgr.Get(result.SessionID)
 		relay := relays.GetOrCreate(result.SessionID, sess, req.Dir)
+		deps.logEvent("terminal_session_spawned", map[string]any{
+			"session_id": result.SessionID,
+			"pid":        result.Pid,
+			"dir":        req.Dir,
+		})
 		sess.SetIdleConfig(pty.IdleConfig{
 			Timeout: IdleTimeout,
 			Callback: func(id string) {
 				deps.Stderrf("[Kaboom] terminal session %s is idle\n", id)
+				deps.logEvent("terminal_session_idle", map[string]any{"session_id": id})
 			},
 		})
 		if req.InitCommand != "" {
