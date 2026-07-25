@@ -8,6 +8,7 @@ import { StorageKey } from '../lib/constants.js';
 import { getLocal, persist } from '../lib/storage-utils.js';
 import { clearTrackedTab } from '../lib/tracked-tab-storage.js';
 import { trackTab, untrackTab } from '../lib/tab-tracking-core.js';
+import { focusTabAndWindow } from '../lib/tab-focus.js';
 import { requestAudit } from '../lib/request-audit.js';
 /**
  * Handle launching the tracked-site audit workflow from popup controls.
@@ -44,12 +45,8 @@ export async function handleUrlClick(tabId) {
     if (!tabId)
         return;
     try {
-        // Switch to the tracked tab and bring its window to focus
-        await chrome.tabs.update(tabId, { active: true });
-        const tab = await chrome.tabs.get(tabId);
-        if (tab.windowId) {
-            await chrome.windows.update(tab.windowId, { focused: true });
-        }
+        // Switch to the tracked tab and bring its window to focus (shared helper).
+        await focusTabAndWindow(tabId);
         console.log(KABOOM_LOG_PREFIX, 'Switched to tracked tab:', tabId);
     }
     catch (err) {

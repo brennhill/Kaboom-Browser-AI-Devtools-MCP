@@ -18,6 +18,7 @@ import { ASYNC_COMMAND_TIMEOUT_MS } from '../lib/constants.js'
 import type { SendAsyncResultFn, ActionToastFn } from './pending-queries.js'
 import { persistTrackedTab } from './commands/helpers.js'
 import { errorMessage } from '../lib/error-utils.js'
+import { focusTabAndWindow } from '../lib/tab-focus.js'
 import { delay } from '../lib/timeout-utils.js'
 
 // =============================================================================
@@ -304,12 +305,9 @@ export async function handleBrowserAction(
       }
       case 'activate_tab': {
         actionToast(tabId, reason || 'activate_tab', reason ? undefined : 'bringing tab to foreground', 'trying', 5000)
-        await chrome.tabs.update(tabId, { active: true })
-        // Also focus the window containing this tab
-        const tab = await chrome.tabs.get(tabId)
-        if (tab.windowId) {
-          await chrome.windows.update(tab.windowId, { focused: true })
-        }
+        // Activate the tab and focus its window (shared helper — one definition of
+        // "bring a tab to the foreground"). Returns the updated tab for the result.
+        const tab = await focusTabAndWindow(tabId)
         actionToast(tabId, reason || 'activate_tab', undefined, 'success')
         return {
           success: true,

@@ -68,25 +68,31 @@ function readStorage(method, keys) {
         }
     });
 }
-function writeStorage(method, items) {
+/**
+ * Run a callback-or-promise-style chrome.storage *mutation* (set / remove /
+ * setAccessLevel) and resolve only once it actually succeeded. All three kinds
+ * share one body: dispatch `invoke`, and in the settle step fail loud on
+ * chrome.runtime.lastError (reject) rather than trusting a silent no-op
+ * (CLAUDE.md rule 25). `label` names the operation in the rejection message;
+ * `invoke` owns the single method call so each caller keeps its own arg shape
+ * (items / keys / { accessLevel }). readStorage stays separate — it resolves
+ * with a result and has no lastError gate.
+ */
+function runStorageWrite(label, invoke) {
     return new Promise((resolve, reject) => {
         let settled = false;
-        // Fail loud: a callback-style write that hits quota / an invalidated context
-        // still invokes the callback but sets chrome.runtime.lastError. Rejecting here
-        // means awaiting callers (state save, recording, tracked-tab) see the failure
-        // instead of trusting a silent no-op. (CLAUDE.md rule 25.)
         const finish = () => {
             if (settled)
                 return;
             settled = true;
             const errMsg = storageLastError();
             if (errMsg)
-                reject(new Error(`chrome.storage write failed: ${errMsg}`));
+                reject(new Error(`chrome.storage ${label} failed: ${errMsg}`));
             else
                 resolve();
         };
         try {
-            const maybePromise = method(items, finish);
+            const maybePromise = invoke(finish);
             if (isPromiseLike(maybePromise)) {
                 maybePromise.then(() => finish()).catch(reject);
             }
@@ -95,54 +101,15 @@ function writeStorage(method, items) {
             reject(error);
         }
     });
+}
+function writeStorage(method, items) {
+    return runStorageWrite('write', (finish) => method(items, finish));
 }
 function removeFromStorage(method, keys) {
-    return new Promise((resolve, reject) => {
-        let settled = false;
-        const finish = () => {
-            if (settled)
-                return;
-            settled = true;
-            const errMsg = storageLastError();
-            if (errMsg)
-                reject(new Error(`chrome.storage remove failed: ${errMsg}`));
-            else
-                resolve();
-        };
-        try {
-            const maybePromise = method(keys, finish);
-            if (isPromiseLike(maybePromise)) {
-                maybePromise.then(() => finish()).catch(reject);
-            }
-        }
-        catch (error) {
-            reject(error);
-        }
-    });
+    return runStorageWrite('remove', (finish) => method(keys, finish));
 }
 function setStorageAccessLevel(method, accessLevel) {
-    return new Promise((resolve, reject) => {
-        let settled = false;
-        const finish = () => {
-            if (settled)
-                return;
-            settled = true;
-            const errMsg = storageLastError();
-            if (errMsg)
-                reject(new Error(`chrome.storage setAccessLevel failed: ${errMsg}`));
-            else
-                resolve();
-        };
-        try {
-            const maybePromise = method({ accessLevel }, finish);
-            if (isPromiseLike(maybePromise)) {
-                maybePromise.then(() => finish()).catch(reject);
-            }
-        }
-        catch (error) {
-            reject(error);
-        }
-    });
+    return runStorageWrite('setAccessLevel', (finish) => method({ accessLevel }, finish));
 }
 // =============================================================================
 // LOCAL STORAGE (Promise-based)
