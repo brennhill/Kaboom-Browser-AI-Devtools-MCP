@@ -403,6 +403,53 @@ func HandleControlMessage(payload []byte, sess *pty.Session) {
 }
 
 // HandleTerminalStart creates a new terminal session.
+// resolveStartDir applies the terminal CWD priority: an explicit request dir
+// wins, else the active codebase (set via MCP/extension), else auto-detection.
+// autoDetect is a thunk so the (capture-dependent) fallback is only computed when
+// the higher-priority sources are empty. Pure and unit-testable in isolation.
+func resolveStartDir(reqDir, activeCodebase string, autoDetect func() string) string {
+	if reqDir != "" {
+		return reqDir
+	}
+	if activeCodebase != "" {
+		return activeCodebase
+	}
+	return autoDetect()
+}
+
+// classifyStartError maps a mgr.Start failure to an HTTP status + JSON body.
+// Getting this right is load-bearing: only "session already exists" is a benign
+// reconnect (409 + the live token so the client attaches instead of killing it);
+// every other failure — bad cwd, spawn error, session limit — must surface with a
+// distinct status. Bucketing them all as 409-with-token once silently reconnected
+// the client to the *old* cwd with no error ("terminal failed for no reason").
+func classifyStartError(err error, sessionID, token string) (int, map[string]any) {
+	// macOS sandbox restriction (an MCP stdio-spawned daemon cannot fork).
+	if IsSandboxError(err) {
+		return http.StatusServiceUnavailable, map[string]any{
+			"error":       "sandbox_restricted",
+			"message":     "The daemon was started by an MCP client and cannot spawn terminal processes due to macOS sandbox restrictions.",
+			"instruction": "Run this command in a separate terminal to restart the daemon with full permissions:",
+			"command":     "kaboom-agentic-browser --stop && kaboom-agentic-browser --daemon",
+		}
+	}
+	if errors.Is(err, pty.ErrSessionExists) {
+		return http.StatusConflict, map[string]any{
+			"error":      err.Error(),
+			"session_id": sessionID,
+			"token":      token,
+		}
+	}
+	status := http.StatusBadRequest
+	if errors.Is(err, pty.ErrMaxSessions) {
+		status = http.StatusTooManyRequests
+	}
+	return status, map[string]any{
+		"error":      err.Error(),
+		"session_id": sessionID,
+	}
+}
+
 func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, server ServerDeps, mgr *pty.Manager, cap *capture.Store, relays *Map) {
 	if r.Method != "POST" {
 		deps.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "method_not_allowed"})
@@ -433,12 +480,16 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 	}
 
 	// CWD priority: request dir > active_codebase (set via MCP/extension) > auto-detect
-	if req.Dir == "" && server != nil {
-		req.Dir = server.GetActiveCodebase()
+	activeCodebase := ""
+	if server != nil {
+		activeCodebase = server.GetActiveCodebase()
 	}
-	if req.Dir == "" && cap != nil {
-		req.Dir = AutoDetectCWD(cap)
-	}
+	req.Dir = resolveStartDir(req.Dir, activeCodebase, func() string {
+		if cap == nil {
+			return ""
+		}
+		return AutoDetectCWD(cap)
+	})
 
 	result, err := mgr.Start(pty.StartConfig{
 		ID:        req.ID,
@@ -468,42 +519,12 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 		}
 	}
 	if err != nil {
-		// Detect macOS sandbox restriction (MCP stdio-spawned daemon can't fork).
-		if IsSandboxError(err) {
-			deps.JSONResponse(w, http.StatusServiceUnavailable, map[string]any{
-				"error":       "sandbox_restricted",
-				"message":     "The daemon was started by an MCP client and cannot spawn terminal processes due to macOS sandbox restrictions.",
-				"instruction": "Run this command in a separate terminal to restart the daemon with full permissions:",
-				"command":     "kaboom-agentic-browser --stop && kaboom-agentic-browser --daemon",
-			})
-			return
-		}
 		sessionID := req.ID
 		if sessionID == "" {
 			sessionID = "default"
 		}
-		// Only "session already exists" is a benign reconnect: hand back the live
-		// session's token so the client attaches to it instead of killing it. Every
-		// OTHER failure — a bad working directory, a spawn error, the session limit —
-		// is a REAL failure and must surface with a distinct status. Bucketing them
-		// all as 409-with-token silently reconnected the client to the *old* cwd with
-		// no error shown ("terminal failed with no visible reason").
-		if errors.Is(err, pty.ErrSessionExists) {
-			deps.JSONResponse(w, http.StatusConflict, map[string]any{
-				"error":      err.Error(),
-				"session_id": sessionID,
-				"token":      mgr.GetTokenForSession(sessionID),
-			})
-			return
-		}
-		status := http.StatusBadRequest
-		if errors.Is(err, pty.ErrMaxSessions) {
-			status = http.StatusTooManyRequests
-		}
-		deps.JSONResponse(w, status, map[string]any{
-			"error":      err.Error(),
-			"session_id": sessionID,
-		})
+		status, body := classifyStartError(err, sessionID, mgr.GetTokenForSession(sessionID))
+		deps.JSONResponse(w, status, body)
 		return
 	}
 

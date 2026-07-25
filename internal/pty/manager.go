@@ -29,9 +29,14 @@ var ErrMaxSessions = errors.New("pty: maximum concurrent sessions reached")
 // Manager manages PTY sessions with token-based authentication.
 type Manager struct {
 	mu        sync.RWMutex
-	sessions  map[string]*Session    // keyed by session ID
-	tokens    map[string]string      // token → session ID
-	repoIndex map[SessionKey]string  // (repo, agent) → session ID
+	sessions  map[string]*Session   // keyed by session ID
+	tokens    map[string]string     // token → session ID
+	repoIndex map[SessionKey]string // (repo, agent) → session ID
+
+	// spawn creates a session from a config. Defaults to the real Spawn; tests
+	// inject a fake so the Manager's token/index/limit bookkeeping can be
+	// exercised deterministically without launching real OS processes.
+	spawn func(SpawnConfig) (*Session, error)
 }
 
 // NewManager creates a new session manager.
@@ -40,6 +45,7 @@ func NewManager() *Manager {
 		sessions:  make(map[string]*Session),
 		tokens:    make(map[string]string),
 		repoIndex: make(map[SessionKey]string),
+		spawn:     Spawn,
 	}
 }
 
@@ -89,7 +95,7 @@ func (m *Manager) Start(cfg StartConfig) (*StartResult, error) {
 		return nil, fmt.Errorf("%w: limit %d", ErrMaxSessions, maxSessions)
 	}
 
-	sess, err := Spawn(SpawnConfig{
+	sess, err := m.spawn(SpawnConfig{
 		ID:   cfg.ID,
 		Cmd:  cfg.Cmd,
 		Args: cfg.Args,
