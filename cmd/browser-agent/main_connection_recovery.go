@@ -119,3 +119,39 @@ func terminatePIDQuiet(pid int, force bool) {
 		_ = process.Kill()
 	}
 }
+
+// reclaimPort clears anything already listening on `port` so daemon startup is
+// deterministically single-instance. It finds the owning PID(s), logs them,
+// terminates them (SIGTERM then SIGKILL), and waits for release. This is the
+// recovery for a port blocked by a LEFTOVER process the lock-based takeover did
+// not cover — a zombie from an un-clean restart or crash. That is exactly the
+// condition that leaves the terminal port (main+1) unreachable and the terminal
+// dead. Returns true if the port is free afterward. Self is never killed.
+func reclaimPort(server *Server, port int, purpose string) bool {
+	owners, err := daemonFindProcessOnPort(port)
+	if err != nil || len(owners) == 0 {
+		return !daemonIsServerRunning(port)
+	}
+	self := os.Getpid()
+	killed := make([]int, 0, len(owners))
+	for _, pid := range owners {
+		if pid <= 0 || pid == self {
+			continue
+		}
+		server.logLifecycle("port_reclaim_terminating", port, map[string]any{"purpose": purpose, "owner_pid": pid})
+		daemonTerminatePID(pid, false)
+		killed = append(killed, pid)
+	}
+	if len(killed) == 0 {
+		return !daemonIsServerRunning(port)
+	}
+	if !daemonWaitForPortRelease(port, 2*time.Second) {
+		for _, pid := range killed {
+			daemonTerminatePID(pid, true) // force
+		}
+		daemonWaitForPortRelease(port, 2*time.Second)
+	}
+	freed := !daemonIsServerRunning(port)
+	server.logLifecycle("port_reclaimed", port, map[string]any{"purpose": purpose, "killed_pids": killed, "freed": freed})
+	return freed
+}
