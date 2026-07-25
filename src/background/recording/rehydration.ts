@@ -8,7 +8,7 @@
 // recording-rehydration.ts — Pure rehydration decision logic for recording.ts.
 // No chrome API access here: dependencies are injected so the decision is unit-testable.
 
-import type { OffscreenRecordingStateResponse } from '../types/runtime-messages.js'
+import type { OffscreenRecordingStateResponse } from '../../types/runtime-messages.js'
 
 /** Recording metadata persisted under StorageKey.RECORDING at recording start. */
 export interface PersistedRecordingState {

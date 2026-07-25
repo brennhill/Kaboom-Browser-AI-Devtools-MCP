@@ -18,4 +18,4 @@ export declare function requestRecordingGesture(tab: chrome.tabs.Tab, name: stri
     name: string;
     error?: string;
 }>;
-//# sourceMappingURL=recording-capture.d.ts.map
+//# sourceMappingURL=capture.d.ts.map

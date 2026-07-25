@@ -10,7 +10,7 @@ import { isAiWebPilotEnabled } from '../state.js';
 import { executeDOMAction } from '../dom-dispatch.js';
 import { executeCDPAction } from '../cdp-dispatch.js';
 import { executeUpload } from '../upload-handler.js';
-import { startRecording, stopRecording } from '../recording.js';
+import { startRecording, stopRecording } from '../recording/index.js';
 import { executeWithWorldRouting } from '../query-execution.js';
 import { handleBrowserAction, handleAsyncBrowserAction, handleAsyncExecuteCommand } from '../browser-actions.js';
 import { saveStateSnapshot, loadStateSnapshot, listStateSnapshots, deleteStateSnapshot } from '../message-handlers.js';

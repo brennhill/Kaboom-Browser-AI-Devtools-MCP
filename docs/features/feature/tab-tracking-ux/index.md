@@ -23,7 +23,7 @@ code_paths:
   - extension/popup.html
   - extension/popup.css
   - src/background/message-handlers.ts
-  - src/background/recording-listeners.ts
+  - src/background/recording/listeners.ts
 test_paths:
   - tests/extension/brand-metadata.test.js
   - tests/extension/popup-audit-button.test.js

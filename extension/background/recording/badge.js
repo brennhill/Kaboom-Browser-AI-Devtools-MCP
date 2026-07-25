@@ -48,4 +48,4 @@ export function stopRecordingBadgeTimer() {
         // Badge updates are best-effort.
     }
 }
-//# sourceMappingURL=recording-badge.js.map
+//# sourceMappingURL=badge.js.map

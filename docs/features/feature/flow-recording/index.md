@@ -6,12 +6,12 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-25
 code_paths:
-  - src/background/recording.ts
-  - src/background/recording-capture.ts
-  - src/background/recording-listeners.ts
+  - src/background/recording/index.ts
+  - src/background/recording/capture.ts
+  - src/background/recording/listeners.ts
   - src/background/keyboard-shortcuts.ts
   - src/background/context-menus.ts
-  - src/background/recording-utils.ts
+  - src/background/recording/utils.ts
   - src/background/draw-mode-toggle.ts
   - src/offscreen/recording-worker.ts
   - src/popup/action-recording.ts
@@ -57,12 +57,12 @@ last_verified_date: 2026-03-05
 ## Code and Tests
 
 - Core recording lifecycle and listener wiring:
-  - `src/background/recording.ts`
-  - `src/background/recording-capture.ts`
-  - `src/background/recording-listeners.ts`
+  - `src/background/recording/index.ts`
+  - `src/background/recording/capture.ts`
+  - `src/background/recording/listeners.ts`
   - `src/background/keyboard-shortcuts.ts`
   - `src/background/context-menus.ts`
-  - `src/background/recording-utils.ts`
+  - `src/background/recording/utils.ts`
   - `src/offscreen/recording-worker.ts`
   - `src/popup/recording.ts`
   - `src/popup/recording-io.ts`

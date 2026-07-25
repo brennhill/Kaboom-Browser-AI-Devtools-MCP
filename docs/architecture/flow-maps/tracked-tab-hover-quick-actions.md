@@ -21,7 +21,7 @@ code_paths:
   - src/popup/tab-tracking.ts
   - src/popup/tab-tracking-api.ts
   - src/background/message-handlers.ts
-  - src/background/recording-listeners.ts
+  - src/background/recording/listeners.ts
 test_paths:
   - tests/extension/brand-metadata.test.js
   - tests/extension/popup-audit-button.test.js
@@ -104,7 +104,7 @@ Related feature docs:
 - `src/popup/tab-tracking.ts`
 - `src/popup/tab-tracking-api.ts`
 - `src/background/message-handlers.ts`
-- `src/background/recording-listeners.ts`
+- `src/background/recording/listeners.ts`
 
 ## Test Paths
 

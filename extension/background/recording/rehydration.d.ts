@@ -4,7 +4,7 @@
  *      the offscreen document is the source of truth for "is a recording still active".
  * Docs: docs/features/feature/tab-recording/index.md
  */
-import type { OffscreenRecordingStateResponse } from '../types/runtime-messages.js';
+import type { OffscreenRecordingStateResponse } from '../../types/runtime-messages.js';
 /** Recording metadata persisted under StorageKey.RECORDING at recording start. */
 export interface PersistedRecordingState {
     active?: boolean;
@@ -41,4 +41,4 @@ export interface RecordingRehydrationDeps {
  * persisted recording state.
  */
 export declare function resolveRecordingRehydration(deps: RecordingRehydrationDeps): Promise<RehydratedRecordingState | null>;
-//# sourceMappingURL=recording-rehydration.d.ts.map
+//# sourceMappingURL=rehydration.d.ts.map

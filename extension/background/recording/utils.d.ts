@@ -11,4 +11,4 @@ export declare function buildScreenRecordingSlug(url: string | undefined): strin
  * Build a short human-readable recording toast label from a tab URL.
  */
 export declare function buildRecordingToastLabel(url: string | undefined): string;
-//# sourceMappingURL=recording-utils.d.ts.map
+//# sourceMappingURL=utils.d.ts.map

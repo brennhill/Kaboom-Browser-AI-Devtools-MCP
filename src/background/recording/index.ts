@@ -7,25 +7,25 @@
 // Delegates tab capture / offscreen plumbing to recording-capture.ts and
 // chrome runtime listener registration to recording-listeners.ts.
 
-import { getServerUrl } from './state.js'
-import { pingContentScript, waitForTabLoad, getActiveTab, sendTabToast } from './event-listeners.js'
-import { scaleTimeout } from '../lib/timeouts.js'
-import { StorageKey } from '../lib/constants.js'
+import { getServerUrl } from '../state.js'
+import { pingContentScript, waitForTabLoad, getActiveTab, sendTabToast } from '../event-listeners.js'
+import { scaleTimeout } from '../../lib/timeouts.js'
+import { StorageKey } from '../../lib/constants.js'
 import type {
   OffscreenRecordingStartedMessage,
   OffscreenRecordingStoppedMessage,
   OffscreenRecordingStateResponse
-} from '../types/runtime-messages.js'
-import { ensureOffscreenDocument, getStreamIdWithRecovery, requestRecordingGesture } from './recording-capture.js'
-import { installRecordingListeners } from './recording-listeners.js'
-import { resolveRecordingRehydration, type PersistedRecordingState } from './recording-rehydration.js'
-import { errorMessage } from '../lib/error-utils.js'
-import { getLocal, setLocals, removeLocal, persist } from '../lib/storage-utils.js'
-import { delay } from '../lib/timeout-utils.js'
-import { buildRecordingToastLabel } from './recording-utils.js'
-import { startRecordingBadgeTimer, stopRecordingBadgeTimer } from './recording-badge.js'
-import { setTrackedTab } from './tab-state.js'
-import { KABOOM_RECORDING_LOG_PREFIX } from '../lib/brand.js'
+} from '../../types/runtime-messages.js'
+import { ensureOffscreenDocument, getStreamIdWithRecovery, requestRecordingGesture } from './capture.js'
+import { installRecordingListeners } from './listeners.js'
+import { resolveRecordingRehydration, type PersistedRecordingState } from './rehydration.js'
+import { errorMessage } from '../../lib/error-utils.js'
+import { getLocal, setLocals, removeLocal, persist } from '../../lib/storage-utils.js'
+import { delay } from '../../lib/timeout-utils.js'
+import { buildRecordingToastLabel } from './utils.js'
+import { startRecordingBadgeTimer, stopRecordingBadgeTimer } from './badge.js'
+import { setTrackedTab } from '../tab-state.js'
+import { KABOOM_RECORDING_LOG_PREFIX } from '../../lib/brand.js'
 
 // =============================================================================
 // STATE

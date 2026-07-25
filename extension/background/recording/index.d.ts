@@ -37,4 +37,4 @@ export declare function stopRecording(truncated?: boolean): Promise<{
     path?: string;
     error?: string;
 }>;
-//# sourceMappingURL=recording.d.ts.map
+//# sourceMappingURL=index.d.ts.map

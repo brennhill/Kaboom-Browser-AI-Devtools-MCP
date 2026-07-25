@@ -37,8 +37,8 @@ code_paths:
   - src/background/draw-mode-toggle.ts
   - src/background/context-menus.ts
   - src/background/keyboard-shortcuts.ts
-  - src/background/recording-utils.ts
-  - src/background/recording-listeners.ts
+  - src/background/recording/utils.ts
+  - src/background/recording/listeners.ts
   - src/inject/observers.ts
   - src/lib/network.ts
   - internal/tools/analyze/args_parse.go
@@ -136,8 +136,8 @@ Covers shared helper extraction and contract normalization refactors applied acr
 - `src/background/draw-mode-toggle.ts`
 - `src/background/context-menus.ts`
 - `src/background/keyboard-shortcuts.ts`
-- `src/background/recording-utils.ts`
-- `src/background/recording-listeners.ts`
+- `src/background/recording/utils.ts`
+- `src/background/recording/listeners.ts`
 - `src/inject/observers.ts`
 - `internal/tools/analyze/args_parse.go`
 - `internal/tools/analyze/forms.go`

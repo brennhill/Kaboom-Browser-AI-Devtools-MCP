@@ -59,7 +59,7 @@ describe('recording capture branding', () => {
   })
 
   test('requestRecordingGesture uses Kaboom approval copy for denied requests', async () => {
-    const { requestRecordingGesture } = await import('../../extension/background/recording-capture.js')
+    const { requestRecordingGesture } = await import('../../extension/background/recording/capture.js')
 
     const pending = requestRecordingGesture(
       { id: 77, url: 'https://target.example/form' },
@@ -84,7 +84,7 @@ describe('recording capture branding', () => {
 
   test('requestRecordingGesture timeout reminder keeps Kaboom popup copy', async () => {
     globalThis.KABOOM_TEST_TIMEOUT_SCALE = 0.001
-    const { requestRecordingGesture } = await import('../../extension/background/recording-capture.js')
+    const { requestRecordingGesture } = await import('../../extension/background/recording/capture.js')
 
     const result = await requestRecordingGesture(
       { id: 88, url: 'https://target.example/timeout' },

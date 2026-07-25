@@ -218,7 +218,7 @@ globalThis.fetch = mock.fn(() => Promise.resolve({ ok: true, json: () => Promise
 // The module is imported once. Its internal state is shared across tests.
 // We rely on stopRecording / start-stop sequences to clean state between tests.
 const { isRecording, getRecordingInfo, startRecording, stopRecording } = await import(
-  '../../extension/background/recording.js'
+  '../../extension/background/recording/index.js'
 )
 
 // =============================================================================

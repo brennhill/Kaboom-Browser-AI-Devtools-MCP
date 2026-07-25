@@ -5,4 +5,4 @@
  */
 export declare function startRecordingBadgeTimer(startTime: number): void;
 export declare function stopRecordingBadgeTimer(): void;
-//# sourceMappingURL=recording-badge.d.ts.map
+//# sourceMappingURL=badge.d.ts.map

@@ -6,15 +6,15 @@
 // Handles popup-initiated record start/stop, auto-stop from offscreen memory guard,
 // mic permission grant flow, and file reveal requests.
 // Deps are injected to avoid circular imports with recording.ts.
-import { scaleTimeout } from '../lib/timeouts.js';
-import { StorageKey } from '../lib/constants.js';
-import { getLocal } from '../lib/storage-utils.js';
-import { errorMessage, isNoReceiverError } from '../lib/error-utils.js';
-import { trackUIFeature } from './ui-usage-tracker.js';
-import { postDaemonJSON } from '../lib/daemon-http.js';
-import { buildScreenRecordingSlug } from './recording-utils.js';
-import { stopRecordingBadgeTimer } from './recording-badge.js';
-import { KABOOM_RECORDING_LOG_PREFIX } from '../lib/brand.js';
+import { scaleTimeout } from '../../lib/timeouts.js';
+import { StorageKey } from '../../lib/constants.js';
+import { getLocal } from '../../lib/storage-utils.js';
+import { errorMessage, isNoReceiverError } from '../../lib/error-utils.js';
+import { trackUIFeature } from '../ui-usage-tracker.js';
+import { postDaemonJSON } from '../../lib/daemon-http.js';
+import { buildScreenRecordingSlug } from './utils.js';
+import { stopRecordingBadgeTimer } from './badge.js';
+import { KABOOM_RECORDING_LOG_PREFIX } from '../../lib/brand.js';
 const LOG = KABOOM_RECORDING_LOG_PREFIX;
 async function resolvePopupRecordingTargetTab() {
     const trackedTabId = (await getLocal(StorageKey.TRACKED_TAB_ID));
@@ -191,4 +191,4 @@ export function installRecordingListeners(deps) {
         return true; // async response
     });
 }
-//# sourceMappingURL=recording-listeners.js.map
+//# sourceMappingURL=listeners.js.map

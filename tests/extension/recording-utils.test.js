@@ -2,7 +2,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
 
-import { buildScreenRecordingSlug, buildRecordingToastLabel } from '../../extension/background/recording-utils.js'
+import { buildScreenRecordingSlug, buildRecordingToastLabel } from '../../extension/background/recording/utils.js'
 
 describe('recording url helpers', () => {
   test('buildScreenRecordingSlug normalizes hostnames', () => {
