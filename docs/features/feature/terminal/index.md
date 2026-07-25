@@ -30,6 +30,7 @@ code_paths:
   - internal/pty/session.go
 test_paths:
   - tests/extension/brand-metadata.test.js
+  - tests/extension/terminal-write-guard.test.js
   - cmd/browser-agent/internal/terminal/dirs_test.go
   - cmd/browser-agent/internal/terminal/handlers_test.go
   - cmd/browser-agent/internal/terminal/ws_panic_test.go
@@ -75,6 +76,7 @@ last_verified_date: 2026-03-28
 - Any legacy or fallback terminal shell that still mounts from content-script code now uses `Kaboom Terminal` so mixed-brand terminal chrome does not reappear.
 - Annotation auto-send now uses a typing-aware write queue: if the user is active in terminal, writes wait until ~1.5s idle
 - Queued submit is reconnect-safe: if WS drops before Enter, submit waits until connection is back
+- Write-guard escape hatch: every in-flight/deferred write is bounded by `TERMINAL_GUARD_MAX_WAIT_MS` (30s). A permanently-down socket or a stuck `queuedWriteInFlight`/`terminalFocused` flag can no longer wedge the terminal forever — the poller gives up LOUDLY (error toast + `resetWriteGuardState`) instead of spinning silently. Momentary blips still queue-and-flush within the window.
 - WebSocket frame writes are serialized per-connection to prevent concurrent writer frame interleaving
 - Per-connection WS goroutines (downstream pump, ping keepalive, upstream reader) are panic-recovered via `goConnWorker`: a fault tears down only that connection (structured `terminal_ws_panic` log + `closeConn`), never the daemon process
 - Scrollback buffer capped at 256 KB for memory safety
