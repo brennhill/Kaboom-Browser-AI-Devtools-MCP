@@ -317,6 +317,17 @@ function handleIframeMessage(event: MessageEvent): void {
       state.terminalConnected = false
       state.terminalFocused = false
       break
+    case 'reconnect_exhausted':
+      // The iframe gave up reconnecting on a token that almost certainly died with
+      // a full daemon restart. Recover instead of sitting on a permanent silent
+      // disconnect: revalidate and rebuild into a fresh session (or the recoverable
+      // no-session state). redrawTerminal owns that validate-then-rebuild logic.
+      console.log('[KaBOOM! terminal] reconnect exhausted — revalidating and rebuilding')
+      updateStatusDot('disconnected')
+      state.terminalConnected = false
+      state.terminalFocused = false
+      void redrawTerminal()
+      break
     case 'exited':
       console.log('[KaBOOM! terminal] session exited (write-guard reset)')
       updateStatusDot('exited')

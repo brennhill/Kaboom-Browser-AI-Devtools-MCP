@@ -564,6 +564,45 @@ describe('terminal side panel host', () => {
     assert.ok(getElementById('kaboom-terminal-iframe').src.includes('tok-2'), 'the rebuilt panel uses the fresh token')
   })
 
+  test('reconnect_exhausted from the iframe revalidates and rebuilds a dead-token session', async () => {
+    // The client half of daemon-restart recovery: after a full daemon restart the
+    // iframe reconnects forever on a dead token, so it gives up and signals the
+    // parent. The parent must revalidate + rebuild into a fresh session rather than
+    // leaving a permanent silent disconnect.
+    let startCount = 0
+    let tokenAlive = true
+    fetchHandler = ({ url }) => {
+      if (url.endsWith('/terminal/start')) {
+        startCount += 1
+        return Promise.resolve(makeResponse(200, {
+          session_id: `session-${startCount}`,
+          token: `tok-${startCount}`,
+          pid: 999
+        }))
+      }
+      if (url.includes('/terminal/validate?token=')) {
+        return Promise.resolve(makeResponse(200, { valid: tokenAlive }))
+      }
+      throw new Error(`Unexpected fetch call: ${url}`)
+    }
+
+    const module = await import(`../../extension/sidepanel.js?v=${++importCounter}`)
+    await module._terminalPanelForTests.bootTerminalPanel(true)
+    assert.ok(getElementById('kaboom-terminal-iframe').src.includes('tok-1'), 'first boot mounts tok-1')
+    assert.strictEqual(startCount, 1)
+
+    // Daemon restarted -> token dead. The iframe exhausts reconnects and signals us.
+    tokenAlive = false
+    dispatchWindowEvent('message', {
+      origin: 'http://localhost:7891',
+      data: { source: 'kaboom-terminal', event: 'reconnect_exhausted', data: { attempts: 7 } }
+    })
+
+    await sleep(100) // let the async validate -> rebuild run
+    assert.strictEqual(startCount, 2, 'reconnect_exhausted on a dead token must boot a fresh session')
+    assert.ok(getElementById('kaboom-terminal-iframe').src.includes('tok-2'), 'the rebuilt panel uses the fresh token')
+  })
+
   test('write guard waits while user is typing and flushes after blur', async () => {
     fetchHandler = ({ url }) => {
       if (url.endsWith('/terminal/start')) {
