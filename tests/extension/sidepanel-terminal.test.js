@@ -711,6 +711,39 @@ describe('terminal side panel host', () => {
     )
   })
 
+  test('a hung prior boot does not block a fresh Start (generation supersede)', async () => {
+    let mode = 'hang'
+    let starts = 0
+    fetchHandler = ({ url }) => {
+      if (url.endsWith('/terminal/validate')) {
+        return Promise.resolve(makeResponse(200, { valid: false }))
+      }
+      if (url.endsWith('/terminal/start')) {
+        if (mode === 'hang') return new Promise(() => {}) // never resolves — a dead/hung daemon
+        starts += 1
+        return Promise.resolve(makeResponse(200, { session_id: 's', token: `tok-${starts}`, pid: 1 }))
+      }
+      throw new Error(`Unexpected fetch call: ${url}`)
+    }
+    const module = await import(`../../extension/sidepanel.js?v=${++importCounter}`)
+
+    // First Start hangs on /terminal/start (daemon not answering). Do NOT await it —
+    // that is the whole point: with the old bootChain, the next Start would await this
+    // forever and the button would appear dead.
+    const hung = module._terminalPanelForTests.bootTerminalPanel(true)
+    await sleep(20) // let it reach the hung fetch
+
+    // A fresh Start must supersede the stuck boot and actually open a terminal.
+    mode = 'ok'
+    await module._terminalPanelForTests.bootTerminalPanel(true)
+
+    assert.strictEqual(starts, 1, 'the fresh Start started a session despite the hung prior boot')
+    const iframe = getElementById('kaboom-terminal-iframe')
+    assert.ok(iframe && iframe.src.includes('tok-1'), 'the fresh terminal is mounted, not blocked by the hung boot')
+
+    void hung // intentionally never settles
+  })
+
   test('resetPanelUi clears the panel so a plain boot re-boots (encapsulated state)', async () => {
     let starts = 0
     fetchHandler = ({ url }) => {
