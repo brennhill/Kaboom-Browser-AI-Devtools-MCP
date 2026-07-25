@@ -54,7 +54,8 @@ func Upload(workspaceDir, sessionID, contentType, filename string, r io.Reader) 
 		safe += extForContentType(contentType)
 	}
 
-	dir := filepath.Join(workspaceDir, uploadDirName, sessionID)
+	safeSession := sanitizeSessionID(sessionID)
+	dir := filepath.Join(workspaceDir, uploadDirName, safeSession)
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return nil, fmt.Errorf("create upload dir: %w", err)
 	}
@@ -87,7 +88,7 @@ func Upload(workspaceDir, sessionID, contentType, filename string, r io.Reader) 
 		return nil, fmt.Errorf("finalize file: %w", err)
 	}
 
-	relPath := filepath.Join(uploadDirName, sessionID, safe)
+	relPath := filepath.Join(uploadDirName, safeSession, safe)
 	return &UploadResult{RelPath: relPath, Size: n}, nil
 }
 
@@ -113,6 +114,28 @@ func sanitizeFilename(name string) string {
 		}
 	}
 	return b.String()
+}
+
+// sanitizeSessionID reduces a session id to a single safe path segment so it can
+// never escape the uploads directory. The id reaches here straight from the
+// /terminal/start request (HandleTerminalStart does not constrain it), so a value
+// like "../../foo" must not become a real parent-directory traversal. filepath.Base
+// strips any path, and the char filter neutralizes cross-OS separators/dots.
+func sanitizeSessionID(id string) string {
+	id = filepath.Base(id)
+	var b strings.Builder
+	for _, r := range id {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_' || r == '.' {
+			b.WriteRune(r)
+		} else {
+			b.WriteByte('_')
+		}
+	}
+	out := b.String()
+	if out == "" || out == "." || out == ".." {
+		return "default"
+	}
+	return out
 }
 
 func extForContentType(ct string) string {

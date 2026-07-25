@@ -67,6 +67,10 @@ type StartResult struct {
 	SessionID string
 	Token     string
 	Pid       int
+	// Replaced is true when Start evicted a dead session with the same ID and
+	// spawned a fresh one in its place (self-heal). The caller uses this to drop
+	// the stale relay bound to the old (dead) session before creating a new one.
+	Replaced bool
 }
 
 // ErrSessionExists is returned when a session ID is already in use.
@@ -87,8 +91,23 @@ func (m *Manager) Start(cfg StartConfig) (*StartResult, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if _, exists := m.sessions[cfg.ID]; exists {
-		return nil, fmt.Errorf("%w: %s", ErrSessionExists, cfg.ID)
+	replaced := false
+	if existing, exists := m.sessions[cfg.ID]; exists {
+		if existing.IsAlive() {
+			return nil, fmt.Errorf("%w: %s", ErrSessionExists, cfg.ID)
+		}
+		// Self-heal a dead session. Nothing removes a session except an explicit
+		// Stop/StopAll, so when the child exits on its own (user types `exit`, the
+		// agent finishes, or it crashes) the corpse lingers in the map. Without
+		// this, the next Start returns ErrSessionExists forever and the client
+		// treats it as a benign 409-reconnect onto a dead session (closed fanout)
+		// → immediate `exited`, so the terminal never recovers until an explicit
+		// Exit or a daemon restart. Evict the corpse and spawn fresh. Close is
+		// immediate here (the child is already reaped, so it does not block the
+		// lock the way a live session's 2s teardown would).
+		m.deleteSessionLocked(cfg.ID)
+		_ = existing.Close()
+		replaced = true
 	}
 
 	if len(m.sessions) >= maxSessions {
@@ -125,7 +144,31 @@ func (m *Manager) Start(cfg StartConfig) (*StartResult, error) {
 		SessionID: cfg.ID,
 		Token:     token,
 		Pid:       sess.Pid(),
+		Replaced:  replaced,
 	}, nil
+}
+
+// deleteSessionLocked removes all map entries (session, token, repo index) for a
+// session ID and returns the removed session (nil if absent). The caller MUST
+// hold m.mu and is responsible for Close()-ing the returned session (Stop does so
+// outside the lock; Start's self-heal does so inline because the session is
+// already dead and Close returns immediately).
+func (m *Manager) deleteSessionLocked(id string) *Session {
+	sess := m.sessions[id]
+	for token, sid := range m.tokens {
+		if sid == id {
+			delete(m.tokens, token)
+			break
+		}
+	}
+	for key, sid := range m.repoIndex {
+		if sid == id {
+			delete(m.repoIndex, key)
+			break
+		}
+	}
+	delete(m.sessions, id)
+	return sess
 }
 
 // GetByToken returns the session associated with the given auth token.
@@ -173,29 +216,12 @@ func (m *Manager) Get(id string) (*Session, error) {
 // so that slow Close() calls (up to 2s) don't block concurrent reads.
 func (m *Manager) Stop(id string) error {
 	m.mu.Lock()
-	sess, ok := m.sessions[id]
-	if !ok {
-		m.mu.Unlock()
-		return fmt.Errorf("%w: %s", ErrSessionNotFound, id)
-	}
-
-	// Remove token mapping.
-	for token, sid := range m.tokens {
-		if sid == id {
-			delete(m.tokens, token)
-			break
-		}
-	}
-	// Remove repo-agent mapping.
-	for key, sid := range m.repoIndex {
-		if sid == id {
-			delete(m.repoIndex, key)
-			break
-		}
-	}
-	delete(m.sessions, id)
+	sess := m.deleteSessionLocked(id)
 	m.mu.Unlock()
 
+	if sess == nil {
+		return fmt.Errorf("%w: %s", ErrSessionNotFound, id)
+	}
 	return sess.Close()
 }
 

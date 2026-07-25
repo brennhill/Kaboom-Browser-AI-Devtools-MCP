@@ -103,7 +103,31 @@
       var reconnectTimer = null;
       var reconnectDelay = 1000;
       var processExited = false;
+      // True from ws.onopen until the server's replay_end marker: the socket is
+      // OPEN but scrollback is still replaying, so live keystrokes must be buffered
+      // (FIFO) behind any reconnect-gap input rather than sent ahead of it (D).
+      var replaying = false;
       var lastTypingNotifyAt = 0;
+      // Reconnect ceiling: a full daemon restart drops every session/token, so a
+      // reconnect on the captured token 401s and onopen never fires. Without a cap
+      // this loops forever (status dot stuck) with no recovery. After
+      // MAX_RECONNECT_ATTEMPTS consecutive failures we stop and ask the parent to
+      // revalidate + rebuild (which re-tokenizes into a fresh session).
+      var reconnectAttempts = 0;
+      var MAX_RECONNECT_ATTEMPTS = 6;
+      var reconnectExhausted = false;
+      // Total-reconnect cap within a sliding window. onopen resets the CONSECUTIVE
+      // reconnectAttempts, so an open→immediately-drop flap (server up enough to
+      // accept the socket but dropping it before it settles) would never reach
+      // MAX_RECONNECT_ATTEMPTS and never exhaust. Aging timestamps make a persistent
+      // flap eventually give up so the parent can recover (finding E-ii).
+      var reconnectTimes = [];
+      var RECONNECT_WINDOW_MS = 60000;
+      var MAX_RECONNECTS_IN_WINDOW = 12;
+      // Keystrokes typed during a reconnect gap are buffered (bounded) and flushed
+      // on reconnect instead of being silently dropped.
+      var pendingInput = [];
+      var MAX_PENDING_INPUT = 8192;
 
       function notifyFocusState(focused) {
         notifyParent('focus', { focused: !!focused });
@@ -148,6 +172,11 @@
         ws.onopen = function() {
           statusDot.className = 'status connected';
           reconnectDelay = 1000;
+          reconnectAttempts = 0;
+          reconnectExhausted = false;
+          // Entering the replay window: buffer live input until replay_end so it
+          // stays behind the gap-buffered input (finding D).
+          replaying = true;
 
           // Reset the terminal before scrollback replay to prevent duplicate
           // output. The server sends the full scrollback history followed by
@@ -179,7 +208,12 @@
                 }
               } else if (msg.type === 'replay_end') {
                 // Scrollback replay is complete — all subsequent data is live.
+                // Clear the replay flag FIRST so flushPendingInput's bytes (and any
+                // input after this) go straight to the socket, then flush the
+                // keystrokes buffered during the gap + replay window in FIFO order.
+                replaying = false;
                 notifyParent('replay_end', {});
+                flushPendingInput();
               } else if (msg.type === 'alt_screen') {
                 // Alt-screen state changed (e.g., vim, less entered/exited).
                 notifyParent('alt_screen', { active: msg.active });
@@ -212,20 +246,68 @@
       }
 
       function scheduleReconnect() {
-        if (reconnectTimer || processExited) return;
+        if (reconnectTimer || processExited || reconnectExhausted) return;
         reconnectTimer = setTimeout(function() {
           reconnectTimer = null;
+          reconnectAttempts++;
+          // Record this reconnect and drop timestamps older than the window. onopen
+          // zeroes reconnectAttempts, so a flap is only caught by this windowed
+          // total, not by the consecutive counter (finding E-ii).
+          var now = Date.now();
+          reconnectTimes.push(now);
+          while (reconnectTimes.length && now - reconnectTimes[0] > RECONNECT_WINDOW_MS) {
+            reconnectTimes.shift();
+          }
+          if (reconnectAttempts > MAX_RECONNECT_ATTEMPTS || reconnectTimes.length > MAX_RECONNECTS_IN_WINDOW) {
+            // Give up on this (almost certainly dead or flapping) token and hand
+            // recovery to the parent, which revalidates and rebuilds into a fresh
+            // session instead of reconnecting forever on a 401 or a flap.
+            reconnectExhausted = true;
+            statusDot.className = 'status error';
+            notifyParent('reconnect_exhausted', { attempts: reconnectAttempts, windowed: reconnectTimes.length });
+            return;
+          }
           connect();
           reconnectDelay = Math.min(reconnectDelay * 2, 10000);
         }, reconnectDelay);
+      }
+
+      // Buffer keystrokes typed while the socket is not OPEN (reconnect gap) up to
+      // a bounded size, dropping the OLDEST if the outage is long. flushPendingInput
+      // sends them once the socket is back and the shell state has been replayed.
+      function bufferInput(data) {
+        pendingInput.push(data);
+        var total = 0;
+        for (var i = 0; i < pendingInput.length; i++) total += pendingInput[i].length;
+        while (total > MAX_PENDING_INPUT && pendingInput.length > 1) {
+          total -= pendingInput.shift().length;
+        }
+      }
+
+      function flushPendingInput() {
+        if (!pendingInput.length) return;
+        if (!(ws && ws.readyState === WebSocket.OPEN)) return;
+        var joined = pendingInput.join('');
+        pendingInput = [];
+        ws.send(new TextEncoder().encode(joined));
       }
 
       // Terminal input → WebSocket (binary)
       term.onData(function(data) {
         notifyTypingHeartbeat();
         notifyFocusState(true);
+        if (replaying) {
+          // Socket is OPEN but scrollback is still replaying: buffer so this
+          // keystroke stays FIFO behind the gap-buffered input and flushes with it
+          // at replay_end, instead of racing ahead of it (finding D).
+          if (!processExited) bufferInput(data);
+          return;
+        }
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(new TextEncoder().encode(data));
+        } else if (!processExited) {
+          // Reconnect gap — queue instead of dropping the keystroke.
+          bufferInput(data);
         }
       });
 
@@ -235,9 +317,18 @@
         var containerHeight = container.clientHeight;
         if (containerWidth === 0 || containerHeight === 0) return;
 
-        // Measure character cell size using xterm's internal renderer
-        var cellWidth = term._core._renderService.dimensions.css.cell.width;
-        var cellHeight = term._core._renderService.dimensions.css.cell.height;
+        // Measure character cell size using xterm's internal renderer. Guard the
+        // private-internals access: if the renderer hasn't measured yet (or an
+        // xterm version bump changes the shape) this would throw. At boot it is
+        // called synchronously before connect(), so an uncaught throw would abort
+        // the IIFE and leave a blank terminal with no WebSocket — skip instead.
+        var cellWidth, cellHeight;
+        try {
+          cellWidth = term._core._renderService.dimensions.css.cell.width;
+          cellHeight = term._core._renderService.dimensions.css.cell.height;
+        } catch (_) {
+          return;
+        }
         if (!cellWidth || !cellHeight) return;
 
         var cols = Math.floor(containerWidth / cellWidth);

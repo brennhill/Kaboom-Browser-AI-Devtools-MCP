@@ -12,6 +12,7 @@ export declare function openTerminalPanel(): Promise<boolean>;
 export declare function writeToTerminal(text: string): void;
 export declare const _terminalPanelBridgeForTests: {
     reset(): void;
+    setWriteRetryDelay(ms: number): void;
 };
 export {};
 //# sourceMappingURL=terminal-panel-bridge.d.ts.map

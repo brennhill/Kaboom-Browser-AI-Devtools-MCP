@@ -9,11 +9,13 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -28,6 +30,17 @@ type installHealth struct {
 	reachable          bool
 	extensionConnected bool
 	version            string
+	// refused is true when the probe failed with connection-refused — nothing is
+	// listening on the port, so the daemon is DEFINITIVELY gone (not momentarily
+	// busy). Callers use it to skip the retry budget on a certainty (finding L).
+	refused bool
+}
+
+// isConnRefused reports whether err is a connection-refused error (the port has no
+// listener), as opposed to a timeout or other ambiguous failure. errors.Is walks
+// the *url.Error → *net.OpError → *os.SyscallError chain to the ECONNREFUSED errno.
+func isConnRefused(err error) bool {
+	return errors.Is(err, syscall.ECONNREFUSED)
 }
 
 // connectPhase classifies a health snapshot into a connect phase.
@@ -131,7 +144,7 @@ func fetchInstallHealth(ctx context.Context, port int, timeout time.Duration) in
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return installHealth{}
+		return installHealth{refused: isConnRefused(err)}
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {

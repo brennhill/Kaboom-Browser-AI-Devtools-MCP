@@ -100,3 +100,5 @@ scripts/smoke-tests/framework-fixtures/next-app/out/
 *.db
 .beads-credential-key
 .beads/proxieddb/
+# bd rewrites this session-interaction log constantly; keep it local, not tracked.
+.beads/interactions.jsonl

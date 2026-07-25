@@ -100,6 +100,49 @@ func TestUpload_SanitizesFilename(t *testing.T) {
 	}
 }
 
+func TestUpload_SanitizesSessionID(t *testing.T) {
+	dir := t.TempDir()
+	// A traversal session id (reaches Upload straight from /terminal/start) must
+	// not write outside the uploads dir.
+	result, err := Upload(dir, "../../../etc", "image/png", "x.png", strings.NewReader("data"))
+	if err != nil {
+		t.Fatalf("upload: %v", err)
+	}
+	if strings.Contains(result.RelPath, "..") {
+		t.Fatalf("session-id path traversal not sanitized: %s", result.RelPath)
+	}
+	// The written file must be contained under the uploads directory.
+	uploads := filepath.Join(dir, uploadDirName)
+	abs := filepath.Join(dir, result.RelPath)
+	rel, err := filepath.Rel(uploads, abs)
+	if err != nil || strings.HasPrefix(rel, "..") {
+		t.Fatalf("upload escaped the uploads dir: rel=%q err=%v", rel, err)
+	}
+}
+
+func TestSanitizeSessionID(t *testing.T) {
+	// Exact expectations use only cases whose filepath.Base result is the same on
+	// every OS (no backslashes, which Base treats as a separator on Windows only).
+	cases := map[string]string{
+		"default":     "default",
+		"claude-main": "claude-main",
+		"../../etc":   "etc",
+		"..":          "default",
+		".":           "default",
+		"":            "default",
+		"a/b/c":       "c",
+		"weird id!$":  "weird_id__",
+	}
+	for in, want := range cases {
+		if got := sanitizeSessionID(in); got != want {
+			t.Errorf("sanitizeSessionID(%q) = %q, want %q", in, got, want)
+		}
+		if strings.ContainsAny(sanitizeSessionID(in), `/\`) {
+			t.Errorf("sanitizeSessionID(%q) still contains a path separator", in)
+		}
+	}
+}
+
 func TestUpload_EmptyFilename(t *testing.T) {
 	dir := t.TempDir()
 	r := strings.NewReader("data")

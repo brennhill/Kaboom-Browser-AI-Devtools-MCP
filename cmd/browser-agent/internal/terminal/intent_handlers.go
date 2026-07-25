@@ -35,6 +35,10 @@ func HandleTerminalInject(w http.ResponseWriter, r *http.Request, deps Deps, int
 		return
 	}
 
+	// Cap the body like every other terminal handler, so an oversized payload is
+	// rejected instead of fully buffered into memory (finding G).
+	r.Body = http.MaxBytesReader(w, r.Body, deps.MaxPostBody)
+
 	var body struct {
 		Text string `json:"text"`
 	}
@@ -70,6 +74,10 @@ func HandleIntentCreate(w http.ResponseWriter, r *http.Request, deps Deps, inten
 		deps.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "method_not_allowed"})
 		return
 	}
+
+	// Cap the body like every other terminal handler, so an oversized payload is
+	// rejected instead of fully buffered into memory (finding G).
+	r.Body = http.MaxBytesReader(w, r.Body, deps.MaxPostBody)
 
 	var req IntentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

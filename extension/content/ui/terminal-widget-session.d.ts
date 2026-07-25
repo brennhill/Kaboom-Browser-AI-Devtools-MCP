@@ -4,7 +4,19 @@
  * Docs: docs/features/feature/terminal/index.md
  */
 import { type TerminalConfig, type TerminalSessionState, type TerminalUIState } from './terminal-widget-types.js';
-export type TerminalSandboxErrorHandler = (message: string, instruction: string, command: string) => void;
+/**
+ * Why a terminal session failed to start — lets the UI choose the right surface:
+ * - `unreachable`: the daemon did not answer (transport failure / "Failed to
+ *   fetch"). A real, actionable failure that must be shown, even if no panel body
+ *   is mounted yet (surface via toast).
+ * - `unavailable`: the daemon answered with an error status (e.g. 500). Reachable
+ *   but not ready — recoverable, so the UI falls through to the no-session state
+ *   (Start + root folder) rather than a dead-end error.
+ * - `sandbox`: the daemon refused the spawn under macOS sandbox restrictions. An
+ *   actionable failure carrying a remedy command; always shown.
+ */
+export type TerminalStartFailureKind = 'unreachable' | 'unavailable' | 'sandbox';
+export type TerminalSandboxErrorHandler = (message: string, instruction: string, command: string, kind?: TerminalStartFailureKind) => void;
 export declare function getServerUrl(): Promise<string>;
 export declare function getTerminalConfig(): Promise<TerminalConfig>;
 export declare function saveTerminalConfig(config: TerminalConfig): void;

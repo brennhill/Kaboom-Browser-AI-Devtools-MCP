@@ -22,7 +22,13 @@ type Relay struct {
 	writeBuf     *pty.WriteBuffer
 	workspaceDir string
 	done         chan struct{}
-	exitCode     int // set by readLoop before closing fanout; read by downstream after channel close
+	exitCode     int         // set by readLoop before closing fanout; read by downstream after channel close
+	ended        atomic.Bool // set true by readLoop before fanout.Close(); distinguishes session-end from a slow-subscriber drop
+	// subMu serializes the readLoop's append+broadcast (appendAndBroadcast) against
+	// SubscribeWithHistory's snapshot+subscribe, so a reconnecting viewer's history
+	// snapshot and channel registration never straddle a chunk — every chunk lands
+	// in exactly one of the two (no duplicate, no gap) at the reconnect boundary.
+	subMu sync.Mutex
 }
 
 // NewRelay creates a relay and starts the PTY reader loop.
@@ -50,8 +56,7 @@ func (r *Relay) readLoop() {
 	for {
 		n, err := r.sess.Read(buf)
 		if n > 0 {
-			r.sess.AppendScrollback(buf[:n])
-			r.fanout.Broadcast(buf[:n])
+			r.appendAndBroadcast(buf[:n])
 		}
 		if err != nil {
 			// Reap child process to capture exit code before fanout closes.
@@ -59,9 +64,42 @@ func (r *Relay) readLoop() {
 			// which closes subscriber channels, creating a happens-before edge
 			// to the downstream goroutine's read of exitCode.
 			r.reapExitCode()
+			// Mark the session genuinely ended BEFORE the deferred fanout.Close()
+			// closes subscriber channels. A subscriber channel also closes when
+			// Fanout.Broadcast drops a slow subscriber (backpressure) while the
+			// session is still alive; this flag lets the downstream pump tell the
+			// two apart so it does not falsely report `exited` on a live shell.
+			r.ended.Store(true)
 			return
 		}
 	}
+}
+
+// appendAndBroadcast records a PTY output chunk to scrollback and fans it out to
+// subscribers as ONE step under subMu, so it is atomic against
+// SubscribeWithHistory's snapshot+subscribe. Without this, the append (scrollMu)
+// and the broadcast (fanout mutex) are two separately-locked operations a
+// concurrent reconnect could straddle, replaying a chunk that is also broadcast
+// (duplicate) or dropping one that is neither (lost). Both callers copy the data,
+// so the caller's reusable read buffer is safe to pass.
+func (r *Relay) appendAndBroadcast(data []byte) {
+	r.subMu.Lock()
+	r.sess.AppendScrollback(data)
+	r.fanout.Broadcast(data)
+	r.subMu.Unlock()
+}
+
+// SubscribeWithHistory snapshots the session's scrollback and registers a fanout
+// subscriber atomically under subMu (the same lock appendAndBroadcast holds), so
+// the reconnect boundary between replayed history and live channel output is
+// seamless: every chunk is in exactly one of the two. Returns the same errors as
+// Fanout.Subscribe — ErrFanoutClosed (session ended) or ErrFanoutFull (cap).
+func (r *Relay) SubscribeWithHistory(subID string) (history []byte, sub <-chan []byte, err error) {
+	r.subMu.Lock()
+	defer r.subMu.Unlock()
+	history = r.sess.Scrollback()
+	sub, err = r.fanout.Subscribe(subID)
+	return history, sub, err
 }
 
 // reapExitCode waits for the child process exit code. Called after PTY read
@@ -90,6 +128,13 @@ func (r *Relay) WorkspaceDir() string { return r.workspaceDir }
 // ExitCode returns the exit code captured after the session exits.
 func (r *Relay) ExitCode() int { return r.exitCode }
 
+// Ended reports whether the session genuinely ended (readLoop exited), as opposed
+// to a subscriber channel closing because Fanout dropped a slow subscriber. Safe
+// to call from another goroutine after observing a subscriber-channel close: the
+// happens-before edge is through that channel close (readLoop stores ended before
+// the deferred fanout.Close()).
+func (r *Relay) Ended() bool { return r.ended.Load() }
+
 // Map manages per-session relays. Implements RelayMap.
 type Map struct {
 	mu     sync.Mutex
@@ -117,6 +162,27 @@ func (m *Map) GetOrCreate(id string, sess *pty.Session, workspaceDir string) *Re
 	}
 	r := NewRelay(sess, workspaceDir)
 	m.relays[id] = r
+	return r
+}
+
+// ReplaceRelay atomically drops any existing relay for id and installs a fresh one
+// bound to sess, under a single lock hold. The self-heal path (Start replacing a
+// dead session) must not do this as a separate Remove + GetOrCreate: a concurrent
+// GetOrCreate (a WS reconnect that fetched the session before the token was
+// invalidated) could slip into the gap and bind the relay to the just-evicted dead
+// session, which GetOrCreate would then return unchanged. Overwriting
+// unconditionally under one lock guarantees the fresh binding wins regardless of
+// interleaving (finding H). The old relay is Closed outside the lock (Close can
+// block briefly) like Remove.
+func (m *Map) ReplaceRelay(id string, sess *pty.Session, workspaceDir string) *Relay {
+	m.mu.Lock() // lint:manual-unlock — unlock before Close to avoid holding lock during I/O
+	old := m.relays[id]
+	r := NewRelay(sess, workspaceDir)
+	m.relays[id] = r
+	m.mu.Unlock()
+	if old != nil {
+		old.Close()
+	}
 	return r
 }
 
@@ -182,7 +248,11 @@ func NextWSSubID() string {
 // shell prompt character, then writes the init command. Replaces the old
 // direct-PTY-read approach so the relay's readLoop owns all PTY reads.
 func WaitForPromptViaRelay(relay *Relay, initCmd string) {
-	subID := "init-cmd"
+	// A UNIQUE id per call: a constant "init-cmd" makes two concurrent inits on one
+	// relay collide — the second Subscribe overwrites the first's map entry, and the
+	// first's deferred Unsubscribe then closes the second's channel, so the second
+	// bails without writing its init command (finding I).
+	subID := NextWSSubID()
 	ch, err := relay.fanout.Subscribe(subID)
 	if err != nil {
 		_, _ = relay.writeBuf.Write([]byte(initCmd + "\n"))

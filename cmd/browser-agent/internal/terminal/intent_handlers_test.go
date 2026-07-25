@@ -6,11 +6,54 @@ package terminal
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 )
+
+// A valid-JSON body larger than MaxPostBody must be bounded by MaxBytesReader and
+// rejected, not fully buffered — same cap every other terminal handler applies (G).
+func TestHandleTerminalInject_CapsBodySize(t *testing.T) {
+	t.Parallel()
+	deps := testDeps()
+	deps.MaxPostBody = 1024
+	relays := &fakeRelayMap{writeOK: true}
+
+	big := strings.Repeat("A", 8192)
+	body := fmt.Sprintf(`{"text":%q}`, big)
+	req := httptest.NewRequest("POST", "/terminal/inject", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	HandleTerminalInject(rec, req, deps, &fakeIntentDeps{relays: relays})
+
+	if rec.Code == http.StatusOK {
+		t.Fatalf("oversized inject body must be bounded/rejected, got 200")
+	}
+	if len(relays.written) != 0 {
+		t.Fatalf("an oversized body must be rejected before injecting into the PTY, got %d writes", len(relays.written))
+	}
+}
+
+func TestHandleIntentCreate_CapsBodySize(t *testing.T) {
+	t.Parallel()
+	deps := testDeps()
+	deps.MaxPostBody = 1024
+	store := NewIntentStore()
+
+	big := strings.Repeat("A", 8192)
+	body := fmt.Sprintf(`{"page_url":%q,"action":"qa_scan"}`, big)
+	req := httptest.NewRequest("POST", "/intent", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	HandleIntentCreate(rec, req, deps, &fakeIntentDeps{store: store})
+
+	if rec.Code == http.StatusOK {
+		t.Fatalf("oversized intent body must be bounded/rejected, got 200")
+	}
+	if len(store.Pending()) != 0 {
+		t.Fatalf("an oversized body must be rejected before storing an intent, got %d", len(store.Pending()))
+	}
+}
 
 func TestHandleTerminalInject_Success(t *testing.T) {
 	t.Parallel()

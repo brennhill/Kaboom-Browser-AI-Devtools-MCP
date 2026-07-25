@@ -15,9 +15,14 @@ import (
 )
 
 // fakeSpawn returns a minimal Session that survives Pid() (cmd non-nil, Process
-// nil -> Pid == -1). These tests never Close() the fakes, so ptmx/done stay nil.
+// nil -> Pid == -1) and is safe to Close(): `done` is open and `reaped` is
+// pre-closed so Close() returns immediately without a real child. Because
+// Process is nil, IsAlive() always reports false — so a fake is treated as a
+// "dead" session, which is exactly what the self-heal path needs to exercise.
 func fakeSpawn(cfg SpawnConfig) (*Session, error) {
-	return &Session{ID: cfg.ID, cmd: &exec.Cmd{}}, nil
+	reaped := make(chan struct{})
+	close(reaped)
+	return &Session{ID: cfg.ID, cmd: &exec.Cmd{}, done: make(chan struct{}), reaped: reaped}, nil
 }
 
 func newFakeManager() *Manager {
@@ -26,15 +31,39 @@ func newFakeManager() *Manager {
 	return m
 }
 
-func TestManager_StartWithFakeSpawn_SessionExists(t *testing.T) {
+// A second Start of an ID whose session is DEAD self-heals: it evicts the corpse
+// and spawns fresh with a new token, rather than returning ErrSessionExists (which
+// used to strand the terminal on a dead session forever). Fakes are never IsAlive,
+// so they stand in for a child that has exited on its own.
+func TestManager_StartWithFakeSpawn_SelfHealsDeadSession(t *testing.T) {
 	m := newFakeManager()
 
-	if _, err := m.Start(StartConfig{ID: "s1"}); err != nil {
+	res1, err := m.Start(StartConfig{ID: "s1"})
+	if err != nil {
 		t.Fatalf("first Start: unexpected error %v", err)
 	}
-	_, err := m.Start(StartConfig{ID: "s1"})
-	if !errors.Is(err, ErrSessionExists) {
-		t.Fatalf("second Start of same ID: got %v, want ErrSessionExists", err)
+	if res1.Replaced {
+		t.Fatal("first Start should not report Replaced")
+	}
+
+	res2, err := m.Start(StartConfig{ID: "s1"})
+	if err != nil {
+		t.Fatalf("second Start of a dead session should self-heal, got %v", err)
+	}
+	if !res2.Replaced {
+		t.Fatal("second Start should report Replaced=true")
+	}
+	if res2.Token == res1.Token {
+		t.Fatal("self-heal must mint a fresh token")
+	}
+	if _, err := m.GetByToken(res1.Token); !errors.Is(err, ErrInvalidToken) {
+		t.Fatalf("old token must be invalidated after self-heal, got %v", err)
+	}
+	if _, err := m.GetByToken(res2.Token); err != nil {
+		t.Fatalf("new token must resolve, got %v", err)
+	}
+	if got := m.Count(); got != 1 {
+		t.Fatalf("Count()=%d, want 1 (corpse evicted, not accumulated)", got)
 	}
 }
 

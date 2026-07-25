@@ -32,6 +32,13 @@ export const TERMINAL_WRITE_SUBMIT_DELAY_MS = 600;
 export const TERMINAL_TYPING_IDLE_MS = 1500;
 export const TERMINAL_GUARD_POLL_MS = 200;
 export const TERMINAL_GUARD_TOAST_INTERVAL_MS = 3000;
+// Escape hatch: the maximum total time the write-guard will keep an agent write
+// "in flight" or a queued write "deferred" (waiting for the socket to reconnect
+// or the user to stop typing) before giving up LOUDLY. Without this bound a
+// permanently-down socket or a stuck `queuedWriteInFlight`/`terminalFocused`
+// flag would wedge the terminal forever — writes queue but never flush and the
+// poller spins silently. Generous so momentary blips still queue-and-flush.
+export const TERMINAL_GUARD_MAX_WAIT_MS = 30000;
 export const state = {
     widgetEl: null,
     iframeEl: null,
@@ -45,7 +52,8 @@ export const state = {
     queuedSubmitTimer: null,
     queuedWriteInFlight: false,
     lastGuardToastAt: 0,
-    terminalConnected: false
+    terminalConnected: false,
+    guardBlockedSince: 0
 };
 /** Reset all mutable state to initial values. Used by tests to isolate module-cached state. */
 export function resetAllState() {
@@ -66,6 +74,7 @@ export function resetAllState() {
     state.queuedWriteInFlight = false;
     state.lastGuardToastAt = 0;
     state.terminalConnected = false;
+    state.guardBlockedSince = 0;
 }
 // ---------------------------------------------------------------------------
 // Utility: compute terminal server URL from a base daemon URL.

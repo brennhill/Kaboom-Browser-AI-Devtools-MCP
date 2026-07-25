@@ -8,9 +8,16 @@ last_reviewed: 2026-07-25
 code_paths:
   - src/lib/brand.ts
   - cmd/browser-agent/internal/terminal/handlers.go
+  - cmd/browser-agent/internal/terminal/relay.go
   - cmd/browser-agent/internal/terminal/dirs.go
   - cmd/browser-agent/internal/terminal/server.go
+  - cmd/browser-agent/terminal_supervisor.go
+  - cmd/browser-agent/main_connection_mcp_shutdown.go
+  - cmd/browser-agent/daemon_lifecycle.go
+  - cmd/browser-agent/native_install_connect.go
+  - cmd/browser-agent/internal/terminal/intent_handlers.go
   - cmd/browser-agent/internal/terminal/static.go
+  - cmd/browser-agent/internal/terminal/terminal_assets/terminal.html
   - extension/sidepanel.html
   - extension/sidepanel.js
   - src/content/ui/terminal-panel-bridge.ts
@@ -27,19 +34,28 @@ code_paths:
   - src/sidepanel.ts
   - internal/pty/manager.go
   - internal/pty/session.go
+  - internal/pty/writebuf.go
+  - internal/pty/fanout.go
+  - internal/pty/upload.go
+  - npm/kaboom-agentic-browser/lib/kill-daemon.js
 test_paths:
   - tests/extension/brand-metadata.test.js
+  - tests/extension/terminal-write-guard.test.js
   - cmd/browser-agent/internal/terminal/dirs_test.go
   - cmd/browser-agent/internal/terminal/handlers_test.go
+  - cmd/browser-agent/internal/terminal/ws_panic_test.go
+  - cmd/browser-agent/terminal_supervisor_test.go
   - tests/extension/sidepanel-terminal.test.js
   - tests/extension/terminal-widget-session-branding.test.js
   - tests/extension/terminal-root-folder.test.js
   - tests/extension/terminal-session-start-errors.test.js
+  - cmd/browser-agent/internal/terminal/handlers_logging_test.go
   - tests/extension/terminal-panel-presence.test.js
   - tests/extension/terminal-panel-close-and-scope.test.js
   - tests/extension/terminal-panel-open-failure.test.js
   - tests/extension/terminal-panel-gesture-entrypoints.test.js
   - tests/extension/tracked-hover-launcher.test.js
+  - tests/extension/terminal-panel-bridge.test.js
   - tests/extension/message-handlers.test.js
   - tests/extension/terminal-panel-gesture-entrypoints.test.js
   - tests/extension/terminal-panel-presence.test.js
@@ -47,7 +63,25 @@ test_paths:
   - tests/extension/terminal-session-stop.test.js
   - tests/extension/entry-point-parity.test.js
   - internal/pty/manager_test.go
+  - internal/pty/manager_fake_spawn_test.go
+  - internal/pty/manager_selfheal_test.go
   - internal/pty/session_test.go
+  - internal/pty/writebuf_test.go
+  - internal/pty/upload_test.go
+  - cmd/browser-agent/internal/terminal/session_end_signal_test.go
+  - cmd/browser-agent/internal/terminal/frame_writer_deadline_test.go
+  - cmd/browser-agent/internal/terminal/handlers_fanout_test.go
+  - cmd/browser-agent/internal/terminal/handlers_replay_deadline_test.go
+  - cmd/browser-agent/internal/terminal/relay_boundary_test.go
+  - cmd/browser-agent/internal/terminal/relay_replace_test.go
+  - cmd/browser-agent/internal/terminal/relay_init_test.go
+  - cmd/browser-agent/internal/terminal/intent_handlers_test.go
+  - cmd/browser-agent/daemon_lifecycle_takeover_test.go
+  - cmd/browser-agent/native_install_connect_refused_test.go
+  - tests/extension/terminal-html-reconnect.test.js
+  - tests/extension/terminal-reconnect-recovery-contract.test.js
+  - tests/extension/terminal-iframe-message-contract.test.js
+  - npm/kaboom-agentic-browser/lib/kill-daemon.test.js
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-28
 ---
@@ -69,10 +103,20 @@ last_verified_date: 2026-03-28
 - Header minimize control hides the side panel while preserving the current PTY session
 - The current side panel rollout is terminal-only; xterm fills the available panel height
 - Terminal startup failure guidance now consistently points users at the Kaboom daemon command: `npx kaboom-agentic-browser`
+- Start failures are never silently dropped: `startSession` classifies each failure (`unreachable` transport / `unavailable` reachable-500 / `sandbox`), and the side panel surfaces `unreachable`/`sandbox` even with no panel body mounted (via toast at daemon-down-at-open), while `unavailable` falls through to the recoverable no-session state. The daemon also logs state-mutating failures (`terminal_session_start_failed`, `terminal_session_stop_failed`) to `~/.kaboom/logs/kaboom.jsonl`.
 - Any legacy or fallback terminal shell that still mounts from content-script code now uses `Kaboom Terminal` so mixed-brand terminal chrome does not reappear.
 - Annotation auto-send now uses a typing-aware write queue: if the user is active in terminal, writes wait until ~1.5s idle
+- Annotation→terminal writes are delivery-verified: `terminal_panel_write` is acked by the side-panel document (the background never replies to this type), so the bridge tells a delivered write from one that vanished. A missing ack surfaces a toast (fail-loud) and reconciles the stale `TERMINAL_UI_STATE` visibility mirror to `false` (rule 18) so the gate stops firing at a panel that was closed with Chrome's own X.
 - Queued submit is reconnect-safe: if WS drops before Enter, submit waits until connection is back
-- WebSocket frame writes are serialized per-connection to prevent concurrent writer frame interleaving
+- Write-guard escape hatch: the genuine wedge — a socket that stays DOWN (`!terminalConnected`) — is bounded by `TERMINAL_GUARD_MAX_WAIT_MS` (30s); the poller gives up LOUDLY (error toast + `resetWriteGuardState`). The typing-defer branch is self-limiting and reachable, so it resets `guardBlockedSince` and never trips the hatch — continuous typing no longer drops a healthy write with a false "terminal not reachable". Momentary blips still queue-and-flush within the window. Queue backlog is bounded (`MAX_QUEUED_WRITES`), and an overflow drop is logged (not silent).
+- **Dead-session self-heal:** nothing removed a PTY session whose child exited on its own, so the next Start returned `ErrSessionExists` (409+old token) and the client reconnected onto a dead fanout → immediate `exited`, wedging the terminal forever. `Manager.Start` now evicts a session that is no longer `IsAlive` and spawns fresh (`StartResult.Replaced`, `terminal_session_healed` log); the handler drops the stale relay.
+- **Slow-drop ≠ exit:** a subscriber dropped for backpressure (big build, backgrounded tab) is no longer reported to the browser as `exited`. `Relay.ended` (set before the deferred `fanout.Close`) distinguishes a genuine end from a fanout drop; a drop closes the connection so the browser reconnects+replays instead of showing a dead terminal.
+- **Full-daemon-restart client recovery:** the iframe caps consecutive failed reconnects (`MAX_RECONNECT_ATTEMPTS`) and, on exhaustion, signals the parent `reconnect_exhausted` instead of looping forever on a dead token; the parent runs `redrawTerminal` (validate-then-rebuild) into a fresh session. Keystrokes typed during a reconnect gap are buffered (bounded) and flushed on `replay_end` rather than dropped.
+- **Bounded shutdown:** daemon teardown can no longer hang. `WriteBuffer.Close` is time-bounded (a drain blocked in `ptmx.Write` can't wait forever), shutdown order is `StopAll` (close PTYs) → `CloseAll` (drain write buffers) so the blocked write unblocks, and `Session.Close`'s post-SIGKILL reap wait is bounded.
+- WebSocket frame writes are serialized per-connection and bounded by `WSWriteTimeout`: a stalled reader (backgrounded-tab zero-window, hostile client) can no longer block the downstream pump or ping keepalive for up to `PongTimeout`.
+- Per-connection WS goroutines (downstream pump, ping keepalive, upstream reader) are panic-recovered via `goConnWorker`: a fault tears down only that connection (structured `terminal_ws_panic` log + `closeConn`), never the daemon process. `WriteBuffer.drain` and the init goroutine are `util.SafeGo`-wrapped for the same invariant.
+- Single-instance election never kills a healthy same-version daemon: the install hook (`kill-daemon.js`) and the in-process election both retry `/health` within a budget before concluding "down" (a momentary hiccup won't re-trigger a restart storm), and a future-dated lock (clock skew) is treated as brand-new (defer).
+- Upload paths sanitize the session id to a single segment (`sanitizeSessionID`) so a `../` id can't escape the uploads directory.
 - Scrollback buffer capped at 256 KB for memory safety
 - PTY session tests share a bounded `readUntilContains` helper to keep echo/size assertions consistent
 - Canonical flow maps: [terminal-side-panel-host.md](../../../architecture/flow-maps/terminal-side-panel-host.md), [terminal-server-isolation.md](../../../architecture/flow-maps/terminal-server-isolation.md)
@@ -122,6 +166,7 @@ If the terminal server dies at runtime:
 - Logged as `terminal_server_died`
 - `terminal_port` set to 0
 - Main daemon is **not** affected
+- **Auto-restart**: a `terminalSupervisor` reclaims the port and rebinds with exponential backoff (500ms → 30s, up to 8 attempts). On success it logs `terminal_server_restarted` and restores `terminal_port`; if all attempts fail it logs `terminal_server_restart_giveup` and leaves the terminal unavailable until a daemon restart. The supervisor never restarts during graceful daemon shutdown (`terminalSupervisor.shutdown` stops the loop and closes the current server).
 
 ---
 

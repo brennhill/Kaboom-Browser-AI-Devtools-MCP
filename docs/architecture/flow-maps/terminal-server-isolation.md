@@ -88,7 +88,7 @@ Applied to: iframe src, fetch() calls, postMessage origin checks.
 | Scenario | Behavior |
 |----------|----------|
 | Port+1 busy at startup | WARNING logged, daemon starts without terminal |
-| Terminal server dies at runtime | Logged, `terminal_port` set to 0, main daemon unaffected |
+| Terminal server dies at runtime | Logged (`terminal_server_died`), `terminal_port` set to 0, main daemon unaffected, then `terminalSupervisor` auto-restarts it with exponential backoff (gives up loudly after 8 attempts) |
 | Main daemon dies | Terminal server also shuts down (graceful shutdown sequence) |
 | Widget graphics/layout corruption in page overlay | User clicks header redraw (`↻`) to reset geometry and reload iframe without terminating PTY |
 | Auto-sent annotation command collides with active user typing | Parent queues writes, waits for user idle, then submits and restores focus |
@@ -127,11 +127,20 @@ Iframe support in `terminal.html`:
 - Emits throttled `typing` heartbeat timestamps from `term.onData`.
 - Handles new parent command `redraw` for soft canvas refresh without iframe reload.
 
+## Reliability invariants (daemon-restart & shutdown)
+
+- **Dead-session self-heal:** `Manager.Start` evicts a session whose child exited on its own and spawns fresh (`StartResult.Replaced`), so a restart/exit never strands the terminal on `ErrSessionExists`+dead fanout. The downstream pump distinguishes a genuine end from a backpressure drop via `Relay.ended`, emitting `exited` only on a real end.
+- **Full-restart client recovery:** the iframe caps reconnects (`MAX_RECONNECT_ATTEMPTS`) and emits `reconnect_exhausted`; `sidepanel.ts` runs `redrawTerminal` (validate → rebuild). Reconnect-gap keystrokes are buffered and flushed on `replay_end`.
+- **Bounded teardown:** `WriteBuffer.Close` is time-bounded; shutdown order is `StopAll` → `CloseAll` (close PTYs before draining write buffers) so a write blocked in `ptmx.Write` unblocks; `Session.Close`'s post-SIGKILL reap wait is bounded. Frame writes carry a `WSWriteTimeout` deadline; the supervisor won't publish a server bound after shutdown began.
+
 ## Code Anchors
 
 | File | Purpose |
 |------|---------|
 | `cmd/browser-agent/terminal_server.go` | `setupTerminalMux()`, `startTerminalServer()` |
+| `internal/pty/manager.go` | `Manager.Start` dead-session self-heal (`deleteSessionLocked`, `StartResult.Replaced`) |
+| `cmd/browser-agent/internal/terminal/relay.go` | `Relay.ended` (session-end vs slow-drop), `readLoop` |
+| `internal/pty/writebuf.go` | Time-bounded `Close` (`writeBufferCloseTimeout`) |
 | `cmd/browser-agent/terminal_handlers.go` | All terminal route handlers |
 | `cmd/browser-agent/terminal_handlers_test.go` | Terminal handler + frame writer serialization tests |
 | `cmd/browser-agent/main_connection_mcp.go` | Terminal server startup wiring |
