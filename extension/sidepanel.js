@@ -441,6 +441,11 @@ function redrawTerminal() {
     if (!currentToken)
         return;
     const iframe = state.iframeEl;
+    // Reloading the iframe tears down the old WebSocket and reconnects from
+    // scratch; until the fresh document posts 'connected', the socket is not OPEN.
+    // Mark disconnected so a write in that reconnect gap queues instead of being
+    // sent-and-dropped (the redraw sub-case of the write-connection race).
+    state.terminalConnected = false;
     iframe.src = `${getTerminalServerUrl(state.serverUrl)}/terminal?token=${encodeURIComponent(currentToken)}`;
     setTerminalBodyVisible(true);
     state.minimized = false;
@@ -507,12 +512,20 @@ async function minimizePanel() {
 function writeToTerminal(text) {
     if (!state.visible || !state.iframeEl)
         return;
-    if (shouldDeferQueuedWrite()) {
+    // Queue (do NOT send now) when the user is mid-keystroke OR the socket is not
+    // yet OPEN. Sending while disconnected is silently dropped by the iframe host
+    // (ws.readyState !== OPEN), and the deferred submit would then fire a bare Enter
+    // with the text gone — the AI's write / annotation vanishes with no error. The
+    // flush poller replays queued writes once `terminalConnected` (the same gate the
+    // drainers use). Fail loud, not silent (rule 25).
+    const typing = shouldDeferQueuedWrite();
+    if (typing || !state.terminalConnected) {
         if (state.queuedWrites.length >= 200) {
             state.queuedWrites.shift();
         }
         state.queuedWrites.push(text);
-        maybeShowQueuedWriteToast();
+        if (typing)
+            maybeShowQueuedWriteToast();
         scheduleQueuedWriteFlush(TERMINAL_GUARD_POLL_MS);
         return;
     }

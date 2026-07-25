@@ -584,6 +584,50 @@ describe('terminal side panel host', () => {
     assert.deepStrictEqual(flushedWrites, ['queued command', '\r'])
   })
 
+  test('a write that arrives before the socket is connected is queued and replayed, not dropped', async () => {
+    fetchHandler = ({ url }) => {
+      if (url.endsWith('/terminal/start')) {
+        return Promise.resolve(makeResponse(200, {
+          session_id: 'session-preconnect',
+          token: 'token-preconnect',
+          pid: 999
+        }))
+      }
+      throw new Error(`Unexpected fetch call: ${url}`)
+    }
+
+    const module = await import(`../../extension/sidepanel.js?v=${++importCounter}`)
+    await module._terminalPanelForTests.bootTerminalPanel(true)
+
+    const iframe = getElementById('kaboom-terminal-iframe')
+    assert.ok(iframe, 'terminal iframe should exist')
+
+    // No 'connected' event yet -> the WebSocket is not OPEN. A write here used to
+    // be sent straight to the iframe (which drops it) while the submit fired a
+    // bare Enter later -> the AI's text vanished. It must be QUEUED instead.
+    const callStart = iframe.contentWindow.postMessage.mock.calls.length
+    module._terminalPanelForTests.writeToTerminal('deploy the service')
+
+    await sleep(20)
+    const preConnectWrites = getPostMessagePayloads(iframe, callStart)
+      .filter((p) => p?.command === 'write')
+      .map((p) => p.text)
+    assert.deepStrictEqual(preConnectWrites, [], 'nothing may be written to a not-yet-connected socket')
+
+    // Socket comes up -> the queued write must be replayed (text first, then Enter).
+    dispatchWindowEvent('message', {
+      origin: 'http://localhost:7891',
+      data: { source: 'kaboom-terminal', event: 'connected' }
+    })
+
+    await sleep(800)
+    const afterConnectWrites = getPostMessagePayloads(iframe, callStart)
+      .filter((p) => p?.command === 'write')
+      .map((p) => p.text)
+    assert.deepStrictEqual(afterConnectWrites, ['deploy the service', '\r'],
+      'the queued write must be replayed in full once connected, not lost with a bare Enter')
+  })
+
   test('terminal submit re-guards if focus returns before auto-enter', async () => {
     fetchHandler = ({ url }) => {
       if (url.endsWith('/terminal/start')) {
