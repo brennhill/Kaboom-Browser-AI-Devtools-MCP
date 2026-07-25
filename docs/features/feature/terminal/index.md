@@ -42,7 +42,9 @@ test_paths:
   - tests/extension/tracked-hover-launcher.test.js
   - tests/extension/message-handlers.test.js
   - tests/extension/terminal-panel-gesture-entrypoints.test.js
+  - tests/extension/terminal-panel-presence.test.js
   - tests/extension/sidepanel-terminal.test.js
+  - tests/extension/terminal-session-stop.test.js
   - tests/extension/entry-point-parity.test.js
   - internal/pty/manager_test.go
   - internal/pty/session_test.go

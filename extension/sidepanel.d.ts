@@ -9,7 +9,7 @@
  * moved — its cwd is fixed at spawn — so the old session is stopped first.
  */
 declare function applyRootFolder(root: string): Promise<void>;
-declare function redrawTerminal(): void;
+declare function redrawTerminal(): Promise<void>;
 declare function exitTerminalSession(): Promise<void>;
 declare function writeToTerminal(text: string): void;
 declare function bootTerminalPanel(forceFresh?: boolean): Promise<void>;

@@ -6,7 +6,7 @@
  */
 import { StorageKey, TERMINAL_PANEL_PORT } from './lib/constants.js';
 import { onStorageChanged } from './lib/storage-utils.js';
-import { state, resetAllState, getTerminalServerUrl, WIDGET_ID, IFRAME_ID, HEADER_ID, TERMINAL_BODY_ID, DISCONNECT_TERMINAL_BUTTON_ID, CLOSE_TERMINAL_BUTTON_ID, REDRAW_TERMINAL_BUTTON_ID, MINIMIZE_TERMINAL_BUTTON_ID, MINIMIZED_WIDGET_HEIGHT, TERMINAL_WRITE_SUBMIT_DELAY_MS, TERMINAL_GUARD_POLL_MS } from './content/ui/terminal-widget-types.js';
+import { state, resetAllState, getTerminalServerUrl, WIDGET_ID, IFRAME_ID, HEADER_ID, TERMINAL_BODY_ID, DISCONNECT_TERMINAL_BUTTON_ID, CLOSE_TERMINAL_BUTTON_ID, REDRAW_TERMINAL_BUTTON_ID, MINIMIZE_TERMINAL_BUTTON_ID, TERMINAL_WRITE_SUBMIT_DELAY_MS, TERMINAL_GUARD_POLL_MS } from './content/ui/terminal-widget-types.js';
 import { getServerUrl, getTerminalConfig, persistUIState, loadPersistedSession, clearPersistedSession, validateSession, startSession, getTerminalDevRoot, setTerminalDevRoot, stopActiveSession } from './content/ui/terminal-widget-session.js';
 import { showActionToast } from './content/ui/toast.js';
 import { createRootFolderBar } from './content/ui/terminal-root-folder.js';
@@ -92,15 +92,18 @@ function setPanelVisible(visible) {
     rootEl.style.opacity = visible ? '1' : '0';
     rootEl.style.pointerEvents = visible ? 'auto' : 'none';
 }
-function setTerminalBodyVisible(visible) {
-    if (!terminalBodyEl || !terminalShellEl || !minimizeButtonEl)
+// The terminal is a full-height side panel; there is no collapse-in-place state
+// (the old MINIMIZED_WIDGET_HEIGHT was leftover from the in-page-widget era and
+// was never actually applied \u2014 every caller passed `visible: true`). The body is
+// simply shown; "minimize" and "close" both dismiss the whole panel and keep the
+// session (see closePanelWithIntent).
+function showTerminalBody() {
+    if (!terminalBodyEl || !terminalShellEl)
         return;
-    terminalBodyEl.style.display = visible ? 'block' : 'none';
-    terminalShellEl.style.height = visible ? '100%' : `${MINIMIZED_WIDGET_HEIGHT}px`;
-    terminalShellEl.style.minHeight = visible ? '0' : `${MINIMIZED_WIDGET_HEIGHT}px`;
-    terminalShellEl.style.flex = visible ? '1 1 auto' : `0 0 ${MINIMIZED_WIDGET_HEIGHT}px`;
-    minimizeButtonEl.textContent = visible ? '\u2581' : '\u25A1';
-    minimizeButtonEl.title = visible ? 'Minimize terminal' : 'Restore terminal';
+    terminalBodyEl.style.display = 'block';
+    terminalShellEl.style.height = '100%';
+    terminalShellEl.style.minHeight = '0';
+    terminalShellEl.style.flex = '1 1 auto';
 }
 /**
  * Show the recoverable no-session state in the terminal body.
@@ -289,7 +292,7 @@ function createTerminalHeader() {
     redrawButton.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        redrawTerminal();
+        void redrawTerminal();
     });
     minimizeButtonEl = document.createElement('button');
     minimizeButtonEl.id = MINIMIZE_TERMINAL_BUTTON_ID;
@@ -434,16 +437,29 @@ function unmountPanel() {
     setPanelVisible(false);
     window.removeEventListener('message', handleIframeMessage);
 }
-function redrawTerminal() {
+async function redrawTerminal() {
     if (!state.widgetEl || !state.iframeEl)
         return;
     const currentToken = state.sessionState?.token;
     if (!currentToken)
         return;
+    // After a daemon restart the token is dead; a plain reload would reconnect
+    // forever to a session that no longer exists and the panel would wedge on
+    // "disconnected". Confirm the token still maps to a live shell first; if not,
+    // rebuild so the panel recovers into a fresh session (or the recoverable
+    // no-session state) rather than a permanent disconnect.
+    if (!(await validateSession(currentToken))) {
+        await bootTerminalPanel(true);
+        return;
+    }
     const iframe = state.iframeEl;
+    // Reloading the iframe tears down the old WebSocket and reconnects from
+    // scratch; until the fresh document posts 'connected', the socket is not OPEN.
+    // Mark disconnected so a write in that reconnect gap queues instead of being
+    // sent-and-dropped (the redraw sub-case of the write-connection race).
+    state.terminalConnected = false;
     iframe.src = `${getTerminalServerUrl(state.serverUrl)}/terminal?token=${encodeURIComponent(currentToken)}`;
-    setTerminalBodyVisible(true);
-    state.minimized = false;
+    showTerminalBody();
     persistUIState('open');
 }
 /**
@@ -469,8 +485,14 @@ async function closePanelWithIntent(intent) {
         persistUIState(intent);
     }
     resetWriteGuardState();
-    unmountPanel();
+    // Hide immediately, then ask the browser to close the panel BEFORE tearing down
+    // the DOM. On mainstream Chrome window.close() destroys this document (its
+    // presence port drops so the background can reopen); doing the authoritative
+    // browser close first means we never leave an unmounted, blank document holding
+    // a stale-open presence port on the latent path where the close is refused.
+    setPanelVisible(false);
     await closeBrowserSidePanel();
+    unmountPanel();
 }
 async function exitTerminalSession() {
     // Set the intent before the network call in case a disconnect races the stop.
@@ -507,12 +529,20 @@ async function minimizePanel() {
 function writeToTerminal(text) {
     if (!state.visible || !state.iframeEl)
         return;
-    if (shouldDeferQueuedWrite()) {
+    // Queue (do NOT send now) when the user is mid-keystroke OR the socket is not
+    // yet OPEN. Sending while disconnected is silently dropped by the iframe host
+    // (ws.readyState !== OPEN), and the deferred submit would then fire a bare Enter
+    // with the text gone — the AI's write / annotation vanishes with no error. The
+    // flush poller replays queued writes once `terminalConnected` (the same gate the
+    // drainers use). Fail loud, not silent (rule 25).
+    const typing = shouldDeferQueuedWrite();
+    if (typing || !state.terminalConnected) {
         if (state.queuedWrites.length >= 200) {
             state.queuedWrites.shift();
         }
         state.queuedWrites.push(text);
-        maybeShowQueuedWriteToast();
+        if (typing)
+            maybeShowQueuedWriteToast();
         scheduleQueuedWriteFlush(TERMINAL_GUARD_POLL_MS);
         return;
     }
@@ -631,7 +661,7 @@ async function restoreTerminalPanel() {
     if (rootEl && state.iframeEl) {
         // A live terminal is already mounted — it was only minimized or hidden.
         setPanelVisible(true);
-        setTerminalBodyVisible(true);
+        showTerminalBody();
         state.minimized = false;
         persistUIState('open');
         // Nothing here was rebuilt, so a root changed elsewhere (the options page,
@@ -694,7 +724,7 @@ async function bootTerminalPanel(forceFresh = false) {
     const token = state.sessionState?.token;
     const root = createPanelShell(token ?? '');
     mountPanel(root);
-    setTerminalBodyVisible(true);
+    showTerminalBody();
     persistUIState('open');
     if (!token) {
         const error = pendingSandboxError;
