@@ -258,7 +258,7 @@ func TestHandleVideoRecordingSaveValidationAndSuccess(t *testing.T) {
 		t.Fatalf("metadata file missing: %v", err)
 	}
 
-	queryResult, found := env.capture.GetQueryResult("query-1")
+	queryResult, found := env.capture.TakeQueryResult("query-1")
 	if !found {
 		t.Fatal("expected query result to be set for query-1")
 	}

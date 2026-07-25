@@ -15,6 +15,7 @@ export const IFRAME_ID = 'kaboom-terminal-iframe'
 export const HEADER_ID = 'kaboom-terminal-header'
 export const TERMINAL_BODY_ID = 'kaboom-terminal-body'
 export const DISCONNECT_TERMINAL_BUTTON_ID = 'kaboom-terminal-disconnect-button'
+export const ANNOTATE_TERMINAL_BUTTON_ID = 'kaboom-terminal-annotate-button'
 export const REDRAW_TERMINAL_BUTTON_ID = 'kaboom-terminal-redraw-button'
 export const MINIMIZE_TERMINAL_BUTTON_ID = 'kaboom-terminal-minimize-button'
 export const CLOSE_TERMINAL_BUTTON_ID = 'kaboom-terminal-close-button'
@@ -26,17 +27,6 @@ export const ROOT_FOLDER_BROWSE_BUTTON_ID = 'kaboom-terminal-root-folder-browse'
 export const ROOT_FOLDER_PICKER_ID = 'kaboom-terminal-root-folder-picker'
 export const ROOT_FOLDER_PICKER_UP_ID = 'kaboom-terminal-root-folder-up'
 export const ROOT_FOLDER_PICKER_USE_ID = 'kaboom-terminal-root-folder-use'
-
-// ---------------------------------------------------------------------------
-// Layout defaults
-// ---------------------------------------------------------------------------
-export const DEFAULT_WIDGET_WIDTH = '50vw'
-export const DEFAULT_WIDGET_HEIGHT = '40vh'
-export const MIN_WIDGET_WIDTH = '400px'
-export const MIN_WIDGET_HEIGHT = '250px'
-export const MAX_WIDGET_WIDTH = '100vw'
-export const MAX_WIDGET_HEIGHT = '80vh'
-export const MINIMIZED_WIDGET_HEIGHT = '32px'
 
 // ---------------------------------------------------------------------------
 // Timing constants
@@ -69,11 +59,8 @@ export type TerminalUIState = 'open' | 'closed' | 'minimized'
 export interface TerminalWidgetState {
   widgetEl: HTMLDivElement | null
   iframeEl: HTMLIFrameElement | null
-  resizeHandleEl: HTMLDivElement | null
   sessionState: TerminalSessionState | null
   visible: boolean
-  minimized: boolean
-  savedHeight: string
   serverUrl: string
   terminalFocused: boolean
   lastTypingAt: number
@@ -88,11 +75,8 @@ export interface TerminalWidgetState {
 export const state: TerminalWidgetState = {
   widgetEl: null,
   iframeEl: null,
-  resizeHandleEl: null,
   sessionState: null,
   visible: false,
-  minimized: false,
-  savedHeight: '',
   serverUrl: DEFAULT_SERVER_URL,
   terminalFocused: false,
   lastTypingAt: 0,
@@ -108,11 +92,8 @@ export const state: TerminalWidgetState = {
 export function resetAllState(): void {
   state.widgetEl = null
   state.iframeEl = null
-  state.resizeHandleEl = null
   state.sessionState = null
   state.visible = false
-  state.minimized = false
-  state.savedHeight = ''
   state.serverUrl = DEFAULT_SERVER_URL
   state.terminalFocused = false
   state.lastTypingAt = 0

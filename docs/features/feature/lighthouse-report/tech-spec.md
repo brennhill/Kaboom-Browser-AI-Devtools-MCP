@@ -42,7 +42,7 @@ the same registration and dispatch conventions as the existing `toolAnalyzeAudit
 `cmd/browser-agent/tools_analyze_audit.go`.
 
 **CDP attach lifecycle (extension)**: The extension already manages the Chrome debugger
-attach and detach lifecycle in `src/background/cdp-dispatch.ts`, using
+attach and detach lifecycle in `src/background/dom/cdp/cdp-dispatch.ts`, using
 `chrome.debugger.attach({tabId}, CDP_VERSION)` and `chrome.debugger.detach({tabId})`. Lighthouse
 requires a debuggable target, so the extension exposes the tracked tab's debugger endpoint and
 ensures no conflicting debugger session is already attached.
@@ -99,7 +99,7 @@ Agent polls observe({what: "command_result"}) and receives the structured report
   its optional parameters (`categories`, `device`, `mode`).
 
 **Extension files**:
-- `src/background/cdp-dispatch.ts` and `src/background/commands/analyze.ts`: expose the tracked
+- `src/background/dom/cdp/cdp-dispatch.ts` and `src/background/commands/analyze.ts`: expose the tracked
   tab's debugger endpoint and guard against conflicting debugger sessions.
 
 **Trade-offs**:
@@ -117,7 +117,7 @@ Agent polls observe({what: "command_result"}) and receives the structured report
 
 - **Debugger already attached** (for example, DevTools is open): return a clear error naming the
   conflicting session and a recovery action ("close DevTools or other debugging sessions"),
-  matching the existing attach-conflict messaging in `src/background/cdp-dispatch.ts`.
+  matching the existing attach-conflict messaging in `src/background/dom/cdp/cdp-dispatch.ts`.
 - **Lighthouse CLI not in PATH** (Option A): return an actionable error explaining that the
   Lighthouse CLI must be installed, since it is the user's responsibility.
 - **Audit exceeds the timeout**: the navigation audit budget is sixty seconds (configurable). On
@@ -136,7 +136,7 @@ Agent polls observe({what: "command_result"}) and receives the structured report
 - A3: For Option A, the Lighthouse CLI is available in the user's PATH (common in Node.js
   environments).
 - A4: The `debugger` permission is already granted in the manifest, and the CDP attach/detach
-  lifecycle in `src/background/cdp-dispatch.ts` is the single point of debugger management.
+  lifecycle in `src/background/dom/cdp/cdp-dispatch.ts` is the single point of debugger management.
 
 ## Risks & Mitigations
 
@@ -149,7 +149,7 @@ Agent polls observe({what: "command_result"}) and receives the structured report
 ### Risk 2: Debugger attach conflicts
 - **Description**: A second debugger session (open DevTools, another automation tool) blocks the
   audit.
-- **Mitigation**: Reuse the existing attach-conflict detection in `src/background/cdp-dispatch.ts`
+- **Mitigation**: Reuse the existing attach-conflict detection in `src/background/dom/cdp/cdp-dispatch.ts`
   and return a recovery action rather than a generic failure.
 
 ### Risk 3: Oversized responses
@@ -168,7 +168,7 @@ Agent polls observe({what: "command_result"}) and receives the structured report
 
 ### Depends on:
 - The analyze dispatch registry (`cmd/browser-agent/tools_analyze_dispatch.go`).
-- The CDP attach/detach lifecycle (`src/background/cdp-dispatch.ts`).
+- The CDP attach/detach lifecycle (`src/background/dom/cdp/cdp-dispatch.ts`).
 - The asynchronous command pattern and command-result polling
   (`cmd/browser-agent/internal/toolinteract/interact_command_builder.go`,
   `observe({what: "command_result"})`).

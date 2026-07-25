@@ -21,7 +21,7 @@ code_paths:
   - src/popup/tab-tracking.ts
   - src/popup/tab-tracking-api.ts
   - src/background/message-handlers.ts
-  - src/background/recording-listeners.ts
+  - src/background/recording/listeners.ts
 test_paths:
   - tests/extension/brand-metadata.test.js
   - tests/extension/popup-audit-button.test.js
@@ -58,7 +58,7 @@ Related feature docs:
 3. Hovering the launcher expands the action pill; clicking the gear expands a settings menu with fluid transform+opacity transitions.
 4. The settings menu points to `https://gokaboom.dev/docs` and `https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP`.
 5. The hover island logo uses the shared Kaboom flame mark from `icons/icon.svg` and swaps to `icons/logo-animated.svg` on hover.
-6. `Draw` action dynamically loads `content/draw-mode.js` and calls `activateDrawMode('user')`. On submit (Escape), draw-mode dispatches a `kaboom-annotations-ready` window event; `tracked-hover-launcher` (`handleAnnotationsReady`) formats a prompt via `formatAnnotationsForTerminal` (announces the annotations, includes each note, and tells the agent to fetch full details via `analyze(what="annotations")`) and `writeToTerminal(...)` it. The side panel appends `\r`, so the prompt is auto-submitted to whatever runs in the terminal. Both `handleAnnotationsReady` and `writeToTerminal` no-op unless the terminal panel is visible.
+6. `Draw` action dynamically loads `content/draw-mode.js` and calls `activateDrawMode('user')`. On submit (Escape), draw-mode reads the per-session channel nonce from extension-only storage (`StorageKey.ANNOTATION_CHANNEL_NONCE`) and dispatches a `kaboom-annotations-ready` window event carrying it; `tracked-hover-launcher` (`handleAnnotationsReady`) **rejects the event unless `detail.nonce` matches the nonce it published on enable** (a page shares `window` but cannot read `chrome.storage`, so it cannot forge the event). It then formats a prompt via `formatAnnotationsForTerminal` (announces the annotations, includes each note sanitized of C0/C1 control characters, and tells the agent to fetch full details via `analyze(what="annotations")`). The auto-paste is a convenience that fires **only when the terminal panel is already visible** — `writeToTerminal(...)`; when the panel is **closed it is a no-op** (the panel is NOT force-opened). The annotations still reach the AI regardless, because draw-mode independently posts them to the daemon (`draw_mode_completed`) → `analyze`. When the panel is open, it appends `\r`, so the prompt is auto-submitted to whatever runs in the terminal.
 7. `Rec` or `Stop` action sends `record_start` or `record_stop` to background recording listeners.
 8. `Shot` action sends `capture_screenshot` to background message handlers.
 9. `Audit` action calls `requestAudit(location.href)`, which opens the side panel and then sends `qa_scan_requested`.
@@ -104,7 +104,7 @@ Related feature docs:
 - `src/popup/tab-tracking.ts`
 - `src/popup/tab-tracking-api.ts`
 - `src/background/message-handlers.ts`
-- `src/background/recording-listeners.ts`
+- `src/background/recording/listeners.ts`
 
 ## Test Paths
 

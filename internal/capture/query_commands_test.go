@@ -33,9 +33,9 @@ func TestNewCaptureDelegation_QueryDispatcher(t *testing.T) {
 	}
 
 	c.SetQueryResult(id, json.RawMessage(`{"ok":true}`))
-	result, found := c.GetQueryResult(id)
+	result, found := c.TakeQueryResult(id)
 	if !found {
-		t.Fatal("GetQueryResult returned false")
+		t.Fatal("TakeQueryResult returned false")
 	}
 	if string(result) != `{"ok":true}` {
 		t.Errorf("result = %s, want {\"ok\":true}", string(result))

@@ -9,10 +9,10 @@
 //          execute, screen_recording_start, screen_recording_stop, state_*.
 
 import { isAiWebPilotEnabled } from '../state.js'
-import { executeDOMAction } from '../dom-dispatch.js'
-import { executeCDPAction } from '../cdp-dispatch.js'
+import { executeDOMAction } from '../dom/dom-dispatch.js'
+import { executeCDPAction } from '../dom/cdp/cdp-dispatch.js'
 import { executeUpload } from '../upload-handler.js'
-import { startRecording, stopRecording } from '../recording.js'
+import { startRecording, stopRecording } from '../recording/index.js'
 import { executeWithWorldRouting } from '../query-execution.js'
 import { handleBrowserAction, handleAsyncBrowserAction, handleAsyncExecuteCommand } from '../browser-actions.js'
 import { saveStateSnapshot, loadStateSnapshot, listStateSnapshots, deleteStateSnapshot } from '../message-handlers.js'
@@ -26,13 +26,19 @@ import { errorMessage } from '../../lib/error-utils.js'
 
 registerCommand('subtitle', async (ctx) => {
   const params = ctx.params as { text?: string }
-  chrome.tabs
-    .sendMessage(ctx.tabId, {
+  const label = params.text || 'cleared'
+  try {
+    await chrome.tabs.sendMessage(ctx.tabId, {
       type: 'kaboom_subtitle',
       text: params.text ?? ''
     })
-    .catch(() => {})
-  ctx.sendResult({ success: true, subtitle: params.text || 'cleared' })
+    ctx.sendResult({ success: true, subtitle: label })
+  } catch (err) {
+    // The subtitle never rendered — the content script is unreachable (internal
+    // page, not yet injected). Report the real failure rather than a phantom
+    // success that hides "the AI's caption silently vanished". (CLAUDE.md rule 25.)
+    ctx.sendResult({ success: false, subtitle: label, error: errorMessage(err, 'subtitle_failed') })
+  }
 })
 
 // =============================================================================

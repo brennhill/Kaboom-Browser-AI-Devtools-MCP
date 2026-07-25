@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "kaboom",
+  "project_id": "c2d0b10f-87a6-4af3-9b4f-5eb09f478c66"
+}

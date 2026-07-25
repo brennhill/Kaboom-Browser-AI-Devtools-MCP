@@ -4,6 +4,7 @@
  */
 
 import type { ChromeStorageWithSession } from '../types/index.js'
+import { KABOOM_LOG_PREFIX } from './brand.js'
 
 type StorageReadResult = Record<string, unknown>
 type StorageReadCallback = (result: StorageReadResult) => void
@@ -41,6 +42,30 @@ function isPromiseLike<T>(value: Promise<T> | void): value is Promise<T> {
   return typeof value === 'object' && value !== null && typeof value.then === 'function'
 }
 
+/**
+ * Read chrome.runtime.lastError inside a storage callback.
+ * Chrome sets lastError (and still invokes the callback) when a callback-style
+ * write fails — over quota, context invalidated, etc. Returns the message, or
+ * null when the write succeeded. Only meaningful synchronously inside the callback.
+ */
+function storageLastError(): string | null {
+  if (typeof chrome === 'undefined' || !chrome.runtime) return null
+  const err = chrome.runtime.lastError
+  return err ? (err.message ?? 'unknown chrome.storage error') : null
+}
+
+/**
+ * Fire-and-forget a storage write whose result the caller intentionally does not
+ * await, logging (never throwing) if it fails. Keeps non-critical writes honest
+ * without leaking unhandled rejections — a mutating write must not fail *silently*
+ * (CLAUDE.md rule 25), so we surface the failure in the log instead of swallowing it.
+ */
+export function persist(write: Promise<void>, context: string): void {
+  void write.catch((err) => {
+    console.warn(`${KABOOM_LOG_PREFIX} storage write failed (${context}):`, err)
+  })
+}
+
 function readStorage(method: StorageGetMethod, keys: string | string[]): Promise<StorageReadResult> {
   return new Promise((resolve, reject) => {
     let settled = false
@@ -61,17 +86,32 @@ function readStorage(method: StorageGetMethod, keys: string | string[]): Promise
   })
 }
 
-function writeStorage(method: StorageSetMethod, items: Record<string, unknown>): Promise<void> {
+/**
+ * Run a callback-or-promise-style chrome.storage *mutation* (set / remove /
+ * setAccessLevel) and resolve only once it actually succeeded. All three kinds
+ * share one body: dispatch `invoke`, and in the settle step fail loud on
+ * chrome.runtime.lastError (reject) rather than trusting a silent no-op
+ * (CLAUDE.md rule 25). `label` names the operation in the rejection message;
+ * `invoke` owns the single method call so each caller keeps its own arg shape
+ * (items / keys / { accessLevel }). readStorage stays separate — it resolves
+ * with a result and has no lastError gate.
+ */
+function runStorageWrite(
+  label: 'write' | 'remove' | 'setAccessLevel',
+  invoke: (finish: StorageVoidCallback) => Promise<void> | void
+): Promise<void> {
   return new Promise((resolve, reject) => {
     let settled = false
     const finish = () => {
       if (settled) return
       settled = true
-      resolve()
+      const errMsg = storageLastError()
+      if (errMsg) reject(new Error(`chrome.storage ${label} failed: ${errMsg}`))
+      else resolve()
     }
 
     try {
-      const maybePromise = method(items, finish)
+      const maybePromise = invoke(finish)
       if (isPromiseLike(maybePromise)) {
         maybePromise.then(() => finish()).catch(reject)
       }
@@ -79,46 +119,21 @@ function writeStorage(method: StorageSetMethod, items: Record<string, unknown>):
       reject(error)
     }
   })
+}
+
+function writeStorage(method: StorageSetMethod, items: Record<string, unknown>): Promise<void> {
+  return runStorageWrite('write', (finish) => method(items, finish))
 }
 
 function removeFromStorage(method: StorageRemoveMethod, keys: string | string[]): Promise<void> {
-  return new Promise((resolve, reject) => {
-    let settled = false
-    const finish = () => {
-      if (settled) return
-      settled = true
-      resolve()
-    }
-
-    try {
-      const maybePromise = method(keys, finish)
-      if (isPromiseLike(maybePromise)) {
-        maybePromise.then(() => finish()).catch(reject)
-      }
-    } catch (error) {
-      reject(error)
-    }
-  })
+  return runStorageWrite('remove', (finish) => method(keys, finish))
 }
 
-function setStorageAccessLevel(method: StorageAccessLevelMethod, accessLevel: 'TRUSTED_CONTEXTS' | 'TRUSTED_AND_UNTRUSTED_CONTEXTS'): Promise<void> {
-  return new Promise((resolve, reject) => {
-    let settled = false
-    const finish = () => {
-      if (settled) return
-      settled = true
-      resolve()
-    }
-
-    try {
-      const maybePromise = method({ accessLevel }, finish)
-      if (isPromiseLike(maybePromise)) {
-        maybePromise.then(() => finish()).catch(reject)
-      }
-    } catch (error) {
-      reject(error)
-    }
-  })
+function setStorageAccessLevel(
+  method: StorageAccessLevelMethod,
+  accessLevel: 'TRUSTED_CONTEXTS' | 'TRUSTED_AND_UNTRUSTED_CONTEXTS'
+): Promise<void> {
+  return runStorageWrite('setAccessLevel', (finish) => method({ accessLevel }, finish))
 }
 
 // =============================================================================

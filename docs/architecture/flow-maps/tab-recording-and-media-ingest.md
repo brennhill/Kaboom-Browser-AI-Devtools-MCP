@@ -26,10 +26,10 @@ code_paths:
   - src/background/event-listeners.ts
   - src/background/init.ts
   - src/background/context-menus.ts
-  - src/background/recording-badge.ts
-  - src/background/recording-capture.ts
-  - src/background/recording.ts
-  - src/background/recording-utils.ts
+  - src/background/recording/badge.ts
+  - src/background/recording/capture.ts
+  - src/background/recording/index.ts
+  - src/background/recording/utils.ts
   - src/popup/recording.ts
   - extension/manifest.json
   - extension/popup.html
@@ -107,10 +107,10 @@ Covers interact screen recording lifecycle (`screen_recording_start`/`screen_rec
 - `src/background/event-listeners.ts`
 - `src/background/init.ts`
 - `src/background/context-menus.ts`
-- `src/background/recording-badge.ts`
-- `src/background/recording-capture.ts`
-- `src/background/recording.ts`
-- `src/background/recording-utils.ts`
+- `src/background/recording/badge.ts`
+- `src/background/recording/capture.ts`
+- `src/background/recording/index.ts`
+- `src/background/recording/utils.ts`
 - `src/popup/recording.ts`
 - `extension/manifest.json`
 - `extension/popup.html`

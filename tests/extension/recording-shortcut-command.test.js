@@ -96,6 +96,23 @@ describe('recording shortcut command listener', () => {
     assert.ok(String(toastCall.arguments[1].detail).includes('permission denied'))
   })
 
+  test('counts action_recording usage via the shared toggle helper (F6)', async () => {
+    const { installRecordingShortcutCommandListener } = await import('../../extension/background/event-listeners.js')
+    const tracker = await import('../../extension/background/ui-usage-tracker.js')
+    tracker.drainUIFeatures() // clear any prior state so this test reads only its own
+    const handlers = {
+      isRecording: () => false,
+      startRecording: mock.fn(async () => ({ status: 'recording' })),
+      stopRecording: mock.fn(async () => ({ status: 'saved' }))
+    }
+
+    installRecordingShortcutCommandListener(handlers)
+    await commandListener('toggle_action_sequence_recording')
+
+    const drained = tracker.drainUIFeatures()
+    assert.ok(drained && drained.action_recording === true, 'shortcut should count action_recording usage')
+  })
+
   test('ignores unrelated commands', async () => {
     const { installRecordingShortcutCommandListener } = await import('../../extension/background/event-listeners.js')
     const handlers = {

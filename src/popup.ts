@@ -20,7 +20,7 @@ import type { components } from './generated/openapi-types.js'
 import type { PopupConnectionStatus, ToggleWarningConfig } from './popup/types.js'
 import type { ShowTrackedHoverLauncherMessage } from './types/runtime-messages.js'
 import { RuntimeMessageName, StorageKey } from './lib/constants.js'
-import { getLocal, getLocals, setSession, getSession, onStorageChanged } from './lib/storage-utils.js'
+import { getLocal, getLocals, setSession, getSession, onStorageChanged, persist } from './lib/storage-utils.js'
 import { updateConnectionStatus } from './popup/status-display.js'
 import { renderUpdateAvailableBanner } from './popup/update-button.js'
 import { DEFAULT_SERVER_URL } from './lib/constants.js'
@@ -59,6 +59,23 @@ void getLocal('theme').then((value) => {
 const DEFAULT_MAX_ENTRIES = 1000
 const RESHOW_TRACKED_HOVER_LAUNCHER_MESSAGE: ShowTrackedHoverLauncherMessage = {
   type: RuntimeMessageName.SHOW_TRACKED_HOVER_LAUNCHER
+}
+
+// Resolved once at popup open so the terminal button can fire synchronously
+// within its click gesture (see handleOpenTerminalClick).
+let terminalTargetTabId: number | undefined
+
+/**
+ * Open the Kaboom terminal side panel for the active tab. Sent synchronously
+ * (no awaits) inside the click handler so Chrome forwards the user gesture to
+ * the background's chrome.sidePanel.open() — gesture-restricted on some
+ * Chrome/Brave builds. The popup is an extension page with no sender.tab, so the
+ * tab id is passed explicitly; the background does the enable + open. See
+ * request-audit.ts for the same contract.
+ */
+function handleOpenTerminalClick(): void {
+  if (typeof terminalTargetTabId !== 'number') return
+  void chrome.runtime.sendMessage({ type: 'open_terminal_panel', tab_id: terminalTargetTabId })
 }
 
 /**
@@ -128,7 +145,7 @@ function requestTrackedHoverLauncherReshow(): void {
 
 /** Cache status to session storage so the popup renders instantly on next open. */
 function cacheStatus(status: PopupConnectionStatus): void {
-  void setSession(StorageKey.POPUP_LAST_STATUS, status)
+  persist(setSession(StorageKey.POPUP_LAST_STATUS, status), 'popup-last-status')
 }
 
 /**
@@ -152,6 +169,15 @@ export function initPopup(): void {
 
   const clearBtn = document.getElementById('clear-btn')
   if (clearBtn) clearBtn.addEventListener('click', handleClearLogs)
+
+  const openTerminalBtn = document.getElementById('open-terminal-btn')
+  if (openTerminalBtn) {
+    openTerminalBtn.addEventListener('click', handleOpenTerminalClick)
+    // Pre-resolve the target tab so the click handler can send within its gesture.
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      terminalTargetTabId = tabs[0]?.id
+    })
+  }
 
   // Listen for status updates
   chrome.runtime.onMessage.addListener(

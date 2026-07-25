@@ -70,10 +70,10 @@ func connectHintLine(lastPhase string, port int, extDir string) string {
 
 // connectWaitDeps are the injectable seams for waitForExtensionConnected.
 type connectWaitDeps struct {
-	fetch func(port int) installHealth
+	fetch func(ctx context.Context, port int) installHealth
 	now   func() time.Time
-	sleep func(time.Duration)
-	sink  func(string) // progress narration; nil to stay silent
+	after func(time.Duration) <-chan time.Time // inter-poll wait; defaults to time.After
+	sink  func(string)                         // progress narration; nil to stay silent
 }
 
 type connectResult struct {
@@ -84,8 +84,9 @@ type connectResult struct {
 
 // waitForExtensionConnected polls until the extension connects, the deadline
 // passes, or ctx is cancelled (Ctrl-C "skip"), narrating each new phase exactly
-// once via deps.sink. ctx is checked at the loop top, so an abort is honored
-// within one poll cycle without an interruptible sleep.
+// once via deps.sink. ctx is honored promptly: it is checked at the loop top and
+// again during the inter-poll wait (via a select on ctx.Done()), and it is
+// threaded into each /health fetch so an in-flight poll cancels immediately.
 func waitForExtensionConnected(ctx context.Context, port int, timeout, poll time.Duration, deps connectWaitDeps) connectResult {
 	start := deps.now()
 	rendered := ""
@@ -93,7 +94,7 @@ func waitForExtensionConnected(ctx context.Context, port int, timeout, poll time
 		if ctx.Err() != nil {
 			return connectResult{aborted: true, lastPhase: rendered}
 		}
-		phase := connectPhase(deps.fetch(port))
+		phase := connectPhase(deps.fetch(ctx, port))
 		if phase != rendered {
 			rendered = phase
 			if deps.sink != nil {
@@ -108,15 +109,27 @@ func waitForExtensionConnected(ctx context.Context, port int, timeout, poll time
 		if deps.now().Sub(start) >= timeout {
 			return connectResult{connected: false, lastPhase: phase}
 		}
-		deps.sleep(poll)
+		// Interruptible inter-poll wait: a Ctrl-C during the wait returns the
+		// aborted result immediately rather than after the next poll cycle.
+		select {
+		case <-ctx.Done():
+			return connectResult{aborted: true, lastPhase: rendered}
+		case <-deps.after(poll):
+		}
 	}
 }
 
 // fetchInstallHealth reads /health once. Never errors — an unreachable daemon
-// yields reachable=false; a non-200 or unparseable body counts as reachable.
-func fetchInstallHealth(port int, timeout time.Duration) installHealth {
+// (or a cancelled ctx) yields reachable=false; a non-200 or unparseable body
+// counts as reachable. ctx is threaded into the request so an in-flight poll
+// cancels immediately on Ctrl-C; the per-request timeout still bounds a hung read.
+func fetchInstallHealth(ctx context.Context, port int, timeout time.Duration) installHealth {
 	client := &http.Client{Timeout: timeout}
-	resp, err := client.Get(fmt.Sprintf("http://127.0.0.1:%d/health", port))
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://127.0.0.1:%d/health", port), nil)
+	if err != nil {
+		return installHealth{}
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return installHealth{}
 	}
@@ -165,15 +178,19 @@ func runExtensionConnectWait(port int, extDir string) {
 	if installWaitDisabled() || !isTerminal(os.Stderr) {
 		return
 	}
-	// First Ctrl-C cancels the wait (a real "skip"); NotifyContext restores the
-	// default SIGINT after the first signal, so a second Ctrl-C still force-quits.
+	// Ctrl-C cancels the wait (a real "skip"), observed promptly: the
+	// inter-poll wait selects on ctx.Done() and ctx is threaded into each
+	// /health fetch, so an in-flight poll or wait aborts at once. NotifyContext
+	// suppresses the default SIGINT exit until the deferred stop() runs, so
+	// default Ctrl-C behavior is restored only once this function returns — a
+	// second Ctrl-C during the (short) abort window is absorbed, not a force-quit.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 	stderrf("\n\033[1;33m⏳ Waiting for the browser extension to connect (Ctrl-C to skip)…\033[0m\n")
 	res := waitForExtensionConnected(ctx, port, connectWaitTimeout, connectPollEvery, connectWaitDeps{
-		fetch: func(p int) installHealth { return fetchInstallHealth(p, connectHealthRead) },
+		fetch: func(c context.Context, p int) installHealth { return fetchInstallHealth(c, p, connectHealthRead) },
 		now:   time.Now,
-		sleep: time.Sleep,
+		after: time.After,
 		sink:  func(line string) { stderrf("%s\n", line) },
 	})
 	if res.connected {

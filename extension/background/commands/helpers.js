@@ -8,6 +8,7 @@ import { KABOOM_LOG_PREFIX } from '../../lib/brand.js';
 import { errorMessage, isNoReceiverError } from '../../lib/error-utils.js';
 import { delay } from '../../lib/timeout-utils.js';
 import { setLocals } from '../../lib/storage-utils.js';
+import { isInternalUrl } from '../../lib/internal-url.js';
 export function debugLog(category, message, data = null) {
     const globalLogger = globalThis
         .__KABOOM_DEBUG_LOG__;
@@ -524,12 +525,10 @@ export async function resolveTargetTab(query, paramsObj) {
 /**
  * Check if a URL is restricted — content scripts cannot run on these pages.
  * Covers internal browser pages and known CSP-restricted origins.
+ * Delegates to the canonical predicate so the blocked-prefix list lives once.
  */
 export function isRestrictedUrl(url) {
-    if (!url)
-        return true;
-    const blocked = ['chrome://', 'chrome-extension://', 'about:', 'edge://', 'brave://', 'devtools://'];
-    return blocked.some((p) => url.startsWith(p));
+    return isInternalUrl(url);
 }
 // =============================================================================
 // CONTENT SCRIPT ERROR DETECTION

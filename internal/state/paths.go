@@ -86,9 +86,13 @@ func LegacyDefaultLogFile() (string, error) {
 	return filepath.Join(homeDir, "kaboom-logs.jsonl"), nil
 }
 
-// CrashLogFile returns the panic crash log file path.
+// CrashLogFile returns the exit-diagnostics log file path. Despite the function
+// name (kept for API stability), this log records EVERY process exit — normal
+// stdin-EOF bridge exits and clean shutdowns as well as panics — so the file is
+// named exit-diagnostics.log, not crash.log: a large file here is churn, not
+// crashes. (The old logs/crash.log may linger from prior versions; it is history.)
 func CrashLogFile() (string, error) {
-	return InRoot("logs", "crash.log")
+	return InRoot("logs", "exit-diagnostics.log")
 }
 
 // LegacyCrashLogFile returns the previous crash log file path.

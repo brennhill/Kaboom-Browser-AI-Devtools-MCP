@@ -59,7 +59,11 @@ type Session struct {
 	// Idle detection (protected by scrollMu).
 	idleTimeout time.Duration
 	idleCb      func(string)
-	idleTimer   *time.Timer
+	idleTimer   stoppableTimer
+
+	// clk is the time source for idle detection + last-output/-input timestamps.
+	// nil means the real clock (see clock()); tests inject a fake for determinism.
+	clk clock
 
 	// Input tracking (protected by mu).
 	lastInputAt time.Time
@@ -68,7 +72,7 @@ type Session struct {
 
 	// Child process reaping (set by reaper goroutine started in Spawn).
 	reaped   chan struct{} // closed when child process has been reaped
-	exitCode int          // set before reaped is closed
+	exitCode int           // set before reaped is closed
 }
 
 // winsize matches the C struct winsize for TIOCSWINSZ.
@@ -160,6 +164,7 @@ func Spawn(cfg SpawnConfig) (*Session, error) {
 		done:       make(chan struct{}),
 		inputIDMax: defaultInputIDMax,
 		reaped:     make(chan struct{}),
+		clk:        realClock{},
 	}
 	go func() { // lint:allow-bare-goroutine — sole reaper for child process, exits when child exits
 		_ = cmd.Wait()
@@ -205,7 +210,7 @@ func (s *Session) Write(data []byte) (int, error) {
 		s.mu.Unlock()
 		return 0, ErrSessionClosed
 	}
-	s.lastInputAt = time.Now()
+	s.lastInputAt = s.clock().Now()
 	ptmx := s.ptmx
 	s.mu.Unlock()
 
@@ -307,7 +312,7 @@ func (s *Session) AppendScrollback(data []byte) {
 	}
 
 	// Track output time and reset idle timer.
-	s.lastOutputAt = time.Now()
+	s.lastOutputAt = s.clock().Now()
 	if s.idleCb != nil && s.idleTimeout > 0 {
 		if s.idleTimer != nil {
 			s.idleTimer.Reset(s.idleTimeout)
@@ -315,7 +320,7 @@ func (s *Session) AppendScrollback(data []byte) {
 			id := s.ID
 			cb := s.idleCb
 			timeout := s.idleTimeout
-			s.idleTimer = time.AfterFunc(timeout, func() { cb(id) })
+			s.idleTimer = s.clock().AfterFunc(timeout, func() { cb(id) })
 		}
 	}
 
@@ -414,6 +419,15 @@ func (s *Session) LastInputAt() time.Time {
 	return s.lastInputAt
 }
 
+// clock returns the session's time source, defaulting to the real clock when
+// unset so a zero-value Session (used in some unit tests) still works.
+func (s *Session) clock() clock {
+	if s.clk == nil {
+		return realClock{}
+	}
+	return s.clk
+}
+
 // ScrollbackWithSentinel returns the scrollback buffer followed by a sentinel
 // marker. Subscribers use the sentinel to distinguish replayed history from
 // live data on reconnect.
@@ -462,7 +476,7 @@ func (s *Session) WriteWithID(data []byte, inputID string) (int, error) {
 	if len(s.inputIDs) > s.inputIDMax {
 		s.inputIDs = s.inputIDs[1:]
 	}
-	s.lastInputAt = time.Now()
+	s.lastInputAt = s.clock().Now()
 	ptmx := s.ptmx
 	s.mu.Unlock()
 

@@ -4,7 +4,7 @@
  */
 import { KABOOM_LOG_PREFIX } from '../lib/brand.js';
 import { StorageKey } from '../lib/constants.js';
-import { getLocal, setLocal, setLocals, onStorageChanged } from '../lib/storage-utils.js';
+import { getLocal, setLocal, setLocals, onStorageChanged, persist } from '../lib/storage-utils.js';
 import { clearTrackedTab as clearTrackedTabState } from './tab-state.js';
 // Re-export split modules so existing consumers keep working
 export { installDrawModeCommandListener, installRecordingShortcutCommandListener, installScreenRecordingCommandListener, installTerminalPanelCommandListener } from './keyboard-shortcuts.js';
@@ -142,8 +142,8 @@ export async function handleTrackedTabUrlChange(updatedTabId, newUrl, logFn) {
             }
         }
         catch {
-            // Tab may have been closed -- update URL only (fire-and-forget, never throws)
-            setLocal(StorageKey.TRACKED_TAB_URL, newUrl).catch(() => { });
+            // Tab may have been closed -- update URL only (best-effort, logs on failure)
+            persist(setLocal(StorageKey.TRACKED_TAB_URL, newUrl), 'tracked-tab-url');
         }
     }
 }
@@ -206,8 +206,8 @@ export function installStartupListener(logFn) {
             }
         }
         catch {
-            // Safety fallback: clear if we can't check (fire-and-forget, never throws)
-            clearTrackedTabState().catch(() => { });
+            // Safety fallback: clear if we can't check (best-effort, logs on failure)
+            persist(clearTrackedTabState(), 'tracked-tab-state-clear');
         }
     });
 }

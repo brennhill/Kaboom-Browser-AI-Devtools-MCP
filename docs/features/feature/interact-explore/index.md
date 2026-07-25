@@ -4,7 +4,7 @@ feature_id: feature-interact-explore
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-25
 code_paths:
   - cmd/browser-agent/tools_interact_command_builder.go
   - cmd/browser-agent/tools_interact_action_handler.go
@@ -40,21 +40,21 @@ code_paths:
   - src/background/query-execution.ts
   - src/background/commands/helpers.ts
   - src/background/browser-actions.ts
-  - src/background/cdp-dispatch.ts
-  - src/background/dom-dispatch.ts
+  - src/background/dom/cdp/cdp-dispatch.ts
+  - src/background/dom/dom-dispatch.ts
   - src/background/frame-targeting.ts
   - src/background/content-fallback-scripts.ts
   - src/background/upload-handler.ts
   - src/lib/daemon-http.ts
   - src/background/draw-mode-toggle.ts
-  - src/background/dom-types.ts
-  - src/background/dom-primitives.ts
+  - src/background/dom/dom-types.ts
+  - src/background/dom/dom-primitives.ts
   - src/inject/execute-js.ts
   - src/content/runtime-message-listener.ts
-  - src/background/dom-primitives-list-interactive.ts
-  - src/background/dom-primitives-intent.ts
-  - src/background/dom-primitives-overlay.ts
-  - src/background/dom-primitives-stability.ts
+  - src/background/dom/dom-primitives-list-interactive.ts
+  - src/background/dom/dom-primitives-intent.ts
+  - src/background/dom/dom-primitives-overlay.ts
+  - src/background/dom/dom-primitives-stability.ts
   - scripts/templates/partials/_dom-intent.tpl
   - scripts/templates/partials/_dom-selectors.tpl
   - scripts/templates/dom-primitives.ts.tpl

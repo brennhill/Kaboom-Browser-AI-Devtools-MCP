@@ -2,7 +2,7 @@
 import { beforeEach, describe, mock, test } from 'node:test'
 import assert from 'node:assert'
 
-import { startRecordingBadgeTimer, stopRecordingBadgeTimer } from '../../extension/background/recording-badge.js'
+import { startRecordingBadgeTimer, stopRecordingBadgeTimer } from '../../extension/background/recording/badge.js'
 
 function createChromeMock() {
   return {

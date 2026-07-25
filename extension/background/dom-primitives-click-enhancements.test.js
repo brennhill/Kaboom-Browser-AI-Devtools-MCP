@@ -107,7 +107,7 @@ let perfNowValue = 0
 globalThis.performance = { now: () => perfNowValue++ }
 globalThis.requestAnimationFrame = (cb) => cb()
 
-const { domPrimitive } = await import('./dom-primitives.js')
+const { domPrimitive } = await import('./dom/dom-primitives.js')
 
 // ---------------------------------------------------------------------------
 // Helpers

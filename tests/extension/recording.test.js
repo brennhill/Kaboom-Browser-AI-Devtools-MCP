@@ -217,8 +217,8 @@ globalThis.fetch = mock.fn(() => Promise.resolve({ ok: true, json: () => Promise
 
 // The module is imported once. Its internal state is shared across tests.
 // We rely on stopRecording / start-stop sequences to clean state between tests.
-const { isRecording, getRecordingInfo, startRecording, stopRecording } = await import(
-  '../../extension/background/recording.js'
+const { isRecording, getRecordingInfo, startRecording, stopRecording, initRecording } = await import(
+  '../../extension/background/recording/index.js'
 )
 
 // =============================================================================
@@ -239,15 +239,17 @@ describe('Recording Initial State', () => {
     })
   })
 
-  test('module load should clear stale recording state from storage', () => {
-    // The module clears stale recording state at import time.
-    // We verify the storage.local.remove was called during module load.
+  test('initRecording clears stale recording state from storage', async () => {
+    // Rehydration is now an explicit startup call (initRecording), not an import
+    // side effect. With no surviving offscreen recording, it clears stale
+    // persisted state. Returning the promise makes this awaitable (no sleep).
+    await initRecording()
     const removeCalls = globalThis.chrome.storage.local.remove.mock.calls
     const clearedRecording = removeCalls.some((call) => {
       const arg = call.arguments[0]
       return arg === 'kaboom_recording' || (Array.isArray(arg) && arg.includes('kaboom_recording'))
     })
-    assert.ok(clearedRecording, 'Module should clear stale recording state from storage on load')
+    assert.ok(clearedRecording, 'initRecording should clear stale recording state from storage')
   })
 })
 

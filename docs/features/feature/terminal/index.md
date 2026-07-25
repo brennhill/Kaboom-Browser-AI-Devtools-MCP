@@ -4,7 +4,7 @@ feature_id: feature-terminal
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-24
+last_reviewed: 2026-07-25
 code_paths:
   - src/lib/brand.ts
   - cmd/browser-agent/internal/terminal/handlers.go
@@ -41,6 +41,11 @@ test_paths:
   - tests/extension/terminal-panel-gesture-entrypoints.test.js
   - tests/extension/tracked-hover-launcher.test.js
   - tests/extension/message-handlers.test.js
+  - tests/extension/terminal-panel-gesture-entrypoints.test.js
+  - tests/extension/terminal-panel-presence.test.js
+  - tests/extension/sidepanel-terminal.test.js
+  - tests/extension/terminal-session-stop.test.js
+  - tests/extension/entry-point-parity.test.js
   - internal/pty/manager_test.go
   - internal/pty/session_test.go
 last_verified_version: 0.8.1

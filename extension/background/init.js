@@ -16,7 +16,7 @@ import { getServerUrl, getConnectionStatus, isDebugMode, isScreenshotOnError, ge
 import { isSourceMapEnabled, setSourceMapEnabled, canTakeScreenshot, recordScreenshot, clearSourceMapCache, getContextWarning, getMemoryPressureState, isNetworkBodyCaptureDisabled, flushErrorGroups, cleanupStaleErrorGroups, clearScreenshotTimestamps } from './state-manager.js';
 import { loadDebugModeState, installStartupListener, loadAiWebPilotState, loadSavedSettings, installStorageChangeListener, setupChromeAlarms, installAlarmListener, installTabRemovedListener, installTabUpdatedListener, installDrawModeCommandListener, installRecordingShortcutCommandListener, installTerminalPanelCommandListener, installScreenRecordingCommandListener, installContextMenus, saveSetting, forwardToAllContentScripts, getActiveTab, sendTabToast, handleTrackedTabClosed, handleTrackedTabUrlChange } from './event-listeners.js';
 import { installPushCommandListener, installChatCommandListener } from './push-handler.js';
-import { isRecording, startRecording, stopRecording } from './recording.js';
+import { isRecording, startRecording, stopRecording, initRecording } from './recording/index.js';
 import { installMessageListener, broadcastTrackingState } from './message-handlers.js';
 import { captureScreenshot, updateBadge } from './communication.js';
 import { wasServiceWorkerRestarted, markStateVersion, setSessionAccessLevel, setLocal, getLocal } from '../lib/storage-utils.js';
@@ -35,6 +35,10 @@ export function initializeExtension() {
     // level runs. A listener installed later in the async sequence would miss it,
     // and the background would believe no panel exists.
     watchTerminalPanelState();
+    // Rehydrate any recording that survived a service-worker restart. Explicit
+    // call (formerly a recording-module import side effect) so it fires exactly
+    // once, here at startup. Best-effort — not awaited at the top level.
+    void initRecording();
     // Fire async initialization without awaiting at top level
     // (Service worker will remain alive as long as event handlers are installed)
     initializeExtensionAsync().catch((err) => {
@@ -56,11 +60,24 @@ async function initializeExtensionAsync() {
                 'User preferences restored from persistent storage.');
             debugLog(DebugCategory.LIFECYCLE, 'Service worker restarted, ephemeral state recovered');
         }
-        // Mark the current state version
-        await markStateVersion();
+        // Mark the current state version. Best-effort: a session-storage write that
+        // rejects (over quota, invalidated context) must NOT abort the rest of init —
+        // that would skip installing the message handler and leave the extension deaf
+        // until the next worker restart. Log and continue (rule 25).
+        try {
+            await markStateVersion();
+        }
+        catch (err) {
+            console.warn(`${KABOOM_LOG_PREFIX} markStateVersion failed (non-fatal):`, err);
+        }
         // Allow content scripts to access chrome.storage.session (required for terminal state persistence).
         // Without this, content scripts silently fail to read/write session storage.
-        await setSessionAccessLevel('TRUSTED_AND_UNTRUSTED_CONTEXTS');
+        try {
+            await setSessionAccessLevel('TRUSTED_AND_UNTRUSTED_CONTEXTS');
+        }
+        catch (err) {
+            console.warn(`${KABOOM_LOG_PREFIX} setSessionAccessLevel failed (non-fatal):`, err);
+        }
         // ============= STEP 2: Load debug mode =============
         const debugEnabled = await loadDebugModeState();
         setDebugMode(debugEnabled);

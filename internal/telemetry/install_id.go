@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
 // kaboomDir is the directory where install_id is persisted. Overridable for tests.
@@ -29,12 +31,18 @@ var firstToolCallOnce sync.Once
 // cachedFirstToolCallInstallID is the install ID that has already emitted first_tool_call.
 var cachedFirstToolCallInstallID string
 
+// defaultKaboomDir resolves the runtime state root the same way every other
+// Kaboom artifact does — via state.RootDir(), which honours KABOOM_STATE_DIR and
+// XDG_STATE_HOME before falling back to ~/.kaboom. Deriving ~/.kaboom directly
+// here (the old behaviour) scattered install_id/first_tool_call outside a
+// configured state dir, so a project-isolated daemon lost its install identity.
+// The no-env default is unchanged (~/.kaboom).
 func defaultKaboomDir() string {
-	home, err := os.UserHomeDir()
+	root, err := state.RootDir()
 	if err != nil {
 		return filepath.Join(os.TempDir(), ".kaboom")
 	}
-	return filepath.Join(home, ".kaboom")
+	return root
 }
 
 // Warm pre-loads install ID and session state so the first tool call

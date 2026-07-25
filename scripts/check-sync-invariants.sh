@@ -30,7 +30,7 @@ echo "✅ Sync client invariants OK"
 
 echo "Checking DOM dispatch invariants..."
 
-DOM_DISPATCH_FILE="src/background/dom-dispatch.ts"
+DOM_DISPATCH_FILE="src/background/dom/dom-dispatch.ts"
 
 if [ ! -f "$DOM_DISPATCH_FILE" ]; then
   echo "❌ REGRESSION: expected $DOM_DISPATCH_FILE to exist"
@@ -48,7 +48,7 @@ fi
 # INVARIANT 3: DOMResult contract must come from shared dom-types.ts.
 if grep -E "^interface DOMResult" "$DOM_DISPATCH_FILE" > /dev/null 2>&1; then
   echo "❌ REGRESSION: local DOMResult interface found in dom-dispatch.ts"
-  echo "   use src/background/dom-types.ts to avoid manual contract drift."
+  echo "   use src/background/dom/dom-types.ts to avoid manual contract drift."
   exit 1
 fi
 
@@ -58,7 +58,7 @@ echo "Checking DOM code generation invariants..."
 
 # INVARIANT 4: generated dom-primitives.ts must match template source.
 if ! node scripts/generate-dom-primitives.js --check > /dev/null 2>&1; then
-  echo "❌ REGRESSION: src/background/dom-primitives.ts is out of date"
+  echo "❌ REGRESSION: src/background/dom/dom-primitives.ts is out of date"
   echo "   Run: node scripts/generate-dom-primitives.js"
   exit 1
 fi

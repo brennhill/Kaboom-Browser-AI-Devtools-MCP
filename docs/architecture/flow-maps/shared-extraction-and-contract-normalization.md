@@ -10,7 +10,7 @@ entrypoints:
   - src/background/commands/analyze.ts:runFrameAwareAnalyzeQuery
   - src/popup/action-recording.ts:callConfigureFromPopup
   - src/background/sync-client.ts:SyncClient.doSync
-  - src/background/dom-dispatch.ts:resolveExecutionTarget
+  - src/background/dom/dom-dispatch.ts:resolveExecutionTarget
   - src/background/commands/interact-content.ts:contentExtractorCommand
   - src/background/context-menus.ts:installContextMenus
   - src/background/keyboard-shortcuts.ts:installDrawModeCommandListener
@@ -28,17 +28,17 @@ code_paths:
   - src/offscreen/recording-worker.ts
   - src/popup/action-recording.ts
   - src/background/frame-targeting.ts
-  - src/background/dom-frame-probe.ts
+  - src/background/dom/dom-frame-probe.ts
   - src/background/commands/analyze.ts
-  - src/background/dom-dispatch.ts
+  - src/background/dom/dom-dispatch.ts
   - src/background/content-fallback-scripts.ts
   - src/background/commands/interact-content.ts
   - src/background/commands/interact-explore.ts
   - src/background/draw-mode-toggle.ts
   - src/background/context-menus.ts
   - src/background/keyboard-shortcuts.ts
-  - src/background/recording-utils.ts
-  - src/background/recording-listeners.ts
+  - src/background/recording/utils.ts
+  - src/background/recording/listeners.ts
   - src/inject/observers.ts
   - src/lib/network.ts
   - internal/tools/analyze/args_parse.go
@@ -127,17 +127,17 @@ Covers shared helper extraction and contract normalization refactors applied acr
 - `src/offscreen/recording-worker.ts`
 - `src/popup/action-recording.ts`
 - `src/background/frame-targeting.ts`
-- `src/background/dom-frame-probe.ts`
+- `src/background/dom/dom-frame-probe.ts`
 - `src/background/commands/analyze.ts`
-- `src/background/dom-dispatch.ts`
+- `src/background/dom/dom-dispatch.ts`
 - `src/background/content-fallback-scripts.ts`
 - `src/background/commands/interact-content.ts`
 - `src/background/commands/interact-explore.ts`
 - `src/background/draw-mode-toggle.ts`
 - `src/background/context-menus.ts`
 - `src/background/keyboard-shortcuts.ts`
-- `src/background/recording-utils.ts`
-- `src/background/recording-listeners.ts`
+- `src/background/recording/utils.ts`
+- `src/background/recording/listeners.ts`
 - `src/inject/observers.ts`
 - `internal/tools/analyze/args_parse.go`
 - `internal/tools/analyze/forms.go`

@@ -4,7 +4,7 @@
  * Docs: docs/features/feature/tab-tracking-ux/index.md
  */
 
-import type { ShowTrackedHoverLauncherMessage } from '../../types/runtime-messages.js'
+import type { ShowTrackedHoverLauncherMessage, TrackUiFeatureMessage } from '../../types/runtime-messages.js'
 import { RuntimeMessageName, StorageKey } from '../../lib/constants.js'
 import { KABOOM_DOCS_URL, KABOOM_REPOSITORY_URL } from '../../lib/brand.js'
 import { requestAudit } from '../../lib/request-audit.js'
@@ -15,7 +15,7 @@ import { requestAudit } from '../../lib/request-audit.js'
  * Flip to `true` to restore (matches the flag in popup/tab-tracking.ts).
  */
 const AUDIT_BUTTON_ENABLED = false
-import { getLocal, setLocal, removeLocal, onStorageChanged } from '../../lib/storage-utils.js'
+import { getLocal, setLocal, removeLocal, onStorageChanged, persist } from '../../lib/storage-utils.js'
 import {
   initTerminalPanelBridge,
   isTerminalVisible,
@@ -30,6 +30,11 @@ const TOGGLE_ID = 'kaboom-tracked-hover-toggle'
 const SETTINGS_MENU_ID = 'kaboom-tracked-hover-settings-menu'
 
 let rootEl: HTMLDivElement | null = null
+// Shadow-DOM host for the flyout. The flyout is raw DOM on arbitrary pages, so
+// heavy host stylesheets (Slashdot etc.) used to bleed in and balloon it. Mounting
+// inside a shadow root isolates it: page `*`/tag/class rules no longer match the
+// flyout. The host (light DOM) carries ROOT_ID so the mount guard still finds it.
+let hostEl: HTMLDivElement | null = null
 let panelEl: HTMLDivElement | null = null
 let settingsMenuEl: HTMLDivElement | null = null
 let stopButtonEl: HTMLButtonElement | null = null
@@ -46,6 +51,9 @@ let recordingStorageListener:
 let recordingStorageUnsubscribe: (() => void) | null = null
 let runtimeListenerInstalled = false
 let annotationListenerInstalled = false
+// Per-session provenance token for the annotation→terminal channel. Published to
+// extension-only storage on enable so draw-mode can echo it; validated on receipt.
+let annotationChannelNonce: string | null = null
 let terminalVisibilityUnsubscribe: (() => void) | null = null
 
 function clearHideTimer(): void {
@@ -136,10 +144,10 @@ async function syncHiddenStateFromStorage(): Promise<void> {
 function persistHiddenState(hidden: boolean): void {
   try {
     if (hidden) {
-      void setLocal(StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN, true)
+      persist(setLocal(StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN, true), 'launcher-hidden')
       return
     }
-    void removeLocal(StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN)
+    persist(removeLocal(StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN), 'launcher-hidden-clear')
   } catch {
     // Extension context invalidated — hidden state won't persist but functionality is unaffected
   }
@@ -197,46 +205,56 @@ interface AnnotationDetail {
   rect?: { x: number; y: number; width: number; height: number }
 }
 
-function formatAnnotationsForTerminal(annotations: AnnotationDetail[], pageUrl: string): string {
-  if (annotations.length === 0) return ''
-  const lines: string[] = [
-    'The user just annotated the page with the following feedback. Please review and implement these changes:',
-    '',
-    `Page: ${pageUrl}`,
-    ''
-  ]
-  for (let i = 0; i < annotations.length; i++) {
-    const a = annotations[i]!
-    const text = a.text || '(no label)'
-    const sel = a.selector || 'unknown'
-    const r = a.rect
-    const loc = r ? ` (${Math.round(r.x)},${Math.round(r.y)} ${Math.round(r.width)}x${Math.round(r.height)})` : ''
-    lines.push(`${i + 1}. "${text}" — ${sel}${loc}`)
-  }
-  lines.push('')
-  lines.push('The annotations are available via analyze(what="annotations").')
-  lines.push('')
-  return lines.join('\n')
-}
+// When the user finishes annotating with the terminal open, nudge the agent to
+// PULL the annotations via its tool instead of pasting the full annotation text
+// into the live xterm. A short, single-line, control-char-free string is far
+// safer through the write-guard than a multi-line blob — which can corrupt the
+// prompt, drive escape sequences, or wedge terminal input mid-session. The
+// annotations themselves already reach the agent through the normal path
+// (draw-mode -> daemon -> analyze(what="annotations")); this is only the nudge.
+const ANNOTATION_TERMINAL_NUDGE = 'Check kaboom annotations and handle the requests now'
 
 function handleAnnotationsReady(event: Event): void {
-  const detail = (event as CustomEvent).detail as { annotations?: AnnotationDetail[]; page_url?: string } | undefined
+  const detail = (event as CustomEvent).detail as
+    | { annotations?: AnnotationDetail[]; page_url?: string; nonce?: string }
+    | undefined
+  // Provenance gate: only act on events carrying the per-session token we
+  // published to extension-only storage. `window` is shared with the page, so a
+  // hostile page can dispatch this event — but it cannot read chrome.storage, so
+  // it cannot supply a valid nonce. Fail closed until the nonce is established.
+  if (!annotationChannelNonce || detail?.nonce !== annotationChannelNonce) return
   if (!detail?.annotations?.length) return
+  // Auto-paste ONLY when the terminal panel is already open. If it is closed we
+  // must NOT open it — the annotations still reach the AI through the normal path
+  // (draw-mode posts them to the daemon → analyze), so a closed panel is a no-op
+  // here, not a dropped annotation.
   if (!isTerminalVisible()) return
-  const text = formatAnnotationsForTerminal(detail.annotations, detail.page_url || location.href)
-  if (text) writeToTerminal(text)
+  writeToTerminal(ANNOTATION_TERMINAL_NUDGE)
 }
 
-function installAnnotationListener(): void {
+function newAnnotationNonce(): string {
+  const c = (globalThis as { crypto?: Crypto }).crypto
+  if (c && typeof c.randomUUID === 'function') return c.randomUUID()
+  // Same-session channel token; only needs to be unguessable by a page, which
+  // cannot observe it regardless of source.
+  return `n-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+}
+
+async function installAnnotationListener(): Promise<void> {
   if (annotationListenerInstalled) return
   annotationListenerInstalled = true
+  // Publish the channel token to extension-only storage so draw-mode can echo it.
+  annotationChannelNonce = newAnnotationNonce()
+  await setLocal(StorageKey.ANNOTATION_CHANNEL_NONCE, annotationChannelNonce)
   window.addEventListener('kaboom-annotations-ready', handleAnnotationsReady)
 }
 
-function uninstallAnnotationListener(): void {
+async function uninstallAnnotationListener(): Promise<void> {
   if (!annotationListenerInstalled) return
   annotationListenerInstalled = false
   window.removeEventListener('kaboom-annotations-ready', handleAnnotationsReady)
+  annotationChannelNonce = null
+  await removeLocal(StorageKey.ANNOTATION_CHANNEL_NONCE)
 }
 
 async function startDrawMode(): Promise<void> {
@@ -245,6 +263,13 @@ async function startDrawMode(): Promise<void> {
       console.warn('[KaBOOM!] Draw mode unavailable: extension context invalidated. Refresh the page to restore.')
       return
     }
+    // Count this UI-triggered annotation. The launcher drives draw mode from the
+    // content script, bypassing the background entry points that already track,
+    // so report in or the usage counter undercounts annotations (F7).
+    const trackMsg: TrackUiFeatureMessage = { type: 'track_ui_feature', feature: 'annotations' }
+    chrome.runtime.sendMessage(trackMsg).catch(() => {
+      // best-effort telemetry ping; the annotation flow does not depend on it
+    })
     const drawModeModule = await import(/* webpackIgnore: true */ chrome.runtime.getURL('content/draw-mode.js'))
     if (typeof drawModeModule.activateDrawMode === 'function') {
       drawModeModule.activateDrawMode('user')
@@ -445,7 +470,8 @@ function createSettingsMenuLink(iconSvg: string, label: string, href: string): H
 
 function createLauncherUi(): HTMLDivElement {
   const root = document.createElement('div')
-  root.id = ROOT_ID
+  // No ROOT_ID here — the shadow host (mountLauncher) carries it. Inside the
+  // shadow root this element is scoped, so it needs no page-unique id.
   Object.assign(root.style, {
     position: 'fixed',
     top: '33vh',
@@ -689,10 +715,25 @@ function mountLauncher(): void {
   if (hiddenUntilPopupOpen) return
   if (isTerminalVisible()) return
   if (rootEl || document.getElementById(ROOT_ID)) return
-  rootEl = createLauncherUi()
   const target = document.body || document.documentElement
-  if (!target || !rootEl) return
-  target.appendChild(rootEl)
+  if (!target) return
+  const root = createLauncherUi()
+
+  // Isolate from the host page's CSS via a shadow root. The shadow boundary stops
+  // page `*`/tag/class rules from matching the flyout; `:host { all: initial }`
+  // resets inheritable props (line-height/font/color) that would otherwise cross
+  // the boundary, and box-sizing is normalized for the content.
+  const host = document.createElement('div')
+  host.id = ROOT_ID
+  const shadow = host.attachShadow({ mode: 'open' })
+  const style = document.createElement('style')
+  style.textContent = ':host { all: initial; } *, *::before, *::after { box-sizing: border-box; }'
+  shadow.appendChild(style)
+  shadow.appendChild(root)
+
+  rootEl = root
+  hostEl = host
+  target.appendChild(host)
   installRecordingStorageSync()
 }
 
@@ -705,10 +746,13 @@ function unmountLauncher(): void {
   stopButtonEl = null
   toggleEl = null
   recordingActive = false
-  if (rootEl) {
-    rootEl.remove()
-    rootEl = null
+  // Remove the shadow HOST (which carries the flyout in its shadow root); rootEl
+  // lives inside it, so removing the host tears down everything.
+  if (hostEl) {
+    hostEl.remove()
+    hostEl = null
   }
+  rootEl = null
   uninstallRecordingStorageSync()
 }
 
@@ -723,18 +767,30 @@ function syncTerminalPanelVisibility(): void {
 export async function setTrackedHoverLauncherEnabled(enabled: boolean): Promise<void> {
   trackedEnabled = enabled
   installRuntimeListener()
-  await initTerminalPanelBridge()
+  // Terminal-bridge init, the annotation listener (which awaits a storage write),
+  // and the hidden-state read are all best-effort. A rejection in any of them —
+  // e.g. "Extension context invalidated" throwing from chrome.storage — must NOT
+  // stop the launcher (flame) from mounting, so each is isolated and the mount
+  // always runs. Previously a single rejected await skipped the mount entirely and
+  // the flame silently never appeared.
+  try {
+    await initTerminalPanelBridge()
+  } catch { /* keep last-known terminal visibility */ }
   installTerminalVisibilitySync()
   // The annotation -> terminal listener must live at the subsystem level, NOT in
   // mountLauncher: the launcher UI unmounts precisely when the terminal panel is
   // open (mountLauncher early-returns on isTerminalVisible()), which is the exact
   // moment an annotation needs to be written into the panel. Binding it to the
   // launcher's lifecycle meant annotations never reached an open terminal.
-  if (enabled) {
-    installAnnotationListener()
-  } else {
-    uninstallAnnotationListener()
-  }
-  await syncHiddenStateFromStorage()
+  try {
+    if (enabled) {
+      await installAnnotationListener()
+    } else {
+      await uninstallAnnotationListener()
+    }
+  } catch { /* nonce publish failed; annotation auto-paste degrades, launcher still shows */ }
+  try {
+    await syncHiddenStateFromStorage()
+  } catch { /* proceed with the default hidden state */ }
   applyVisibilityFromState()
 }

@@ -46,7 +46,7 @@ the largest source of untyped, error-prone code in the project. Every property i
 hand-written JSON Schema in Go maps.
 
 **Extension-internal types** (not crossing the wire, TS-only):
-- `src/background/dom-types.ts` — `DOMResult`, `DOMActionParams`, etc.
+- `src/background/dom/dom-types.ts` — `DOMResult`, `DOMActionParams`, etc.
 
 These are TS-only and do not need IDL coverage.
 

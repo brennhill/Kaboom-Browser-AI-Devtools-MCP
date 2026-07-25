@@ -17,13 +17,13 @@ const defaultStoreNamespace = "session"
 var configureHandlers = map[string]ModeHandler{
 	// Sub-handler delegates (require closures — configureSession() accessor)
 	"store": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-		return h.configureSession().toolConfigureStore(req, args)
+		return h.configureSession().handleConfigureStore(req, args)
 	},
 	"load": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-		return h.configureSession().toolLoadSessionContext(req, args)
+		return h.configureSession().handleLoadSessionContext(req, args)
 	},
 	"diff_sessions": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-		return h.configureSession().toolDiffSessionsWrapper(req, args)
+		return h.configureSession().handleDiffSessionsWrapper(req, args)
 	},
 	// Args-less handlers (require closures — different receiver signature)
 	"health": func(h *ToolHandler, req JSONRPCRequest, _ json.RawMessage) JSONRPCResponse {
@@ -62,16 +62,16 @@ var configureHandlers = map[string]ModeHandler{
 	"examples": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 		return toolconfigure.HandleTutorial(h, req, args, tutorialFailureRecoveryPlaybooks())
 	},
-	"save_sequence":         method((*ToolHandler).toolConfigureSaveSequence),
-	"get_sequence":          method((*ToolHandler).toolConfigureGetSequence),
-	"list_sequences":        method((*ToolHandler).toolConfigureListSequences),
-	"delete_sequence":       method((*ToolHandler).toolConfigureDeleteSequence),
-	"replay_sequence":       method((*ToolHandler).toolConfigureReplaySequence),
-	"security_mode":     cfgLocal(toolconfigure.HandleSecurityMode),
-	"network_recording": method((*ToolHandler).toolConfigureNetworkRecording),
-	"action_jitter": cfgLocal(toolconfigure.HandleActionJitter),
-	"report_issue":          method((*ToolHandler).toolConfigureReportIssue),
-	"setup_quality_gates":   method((*ToolHandler).toolConfigureSetupQualityGates),
+	"save_sequence":       method((*ToolHandler).toolConfigureSaveSequence),
+	"get_sequence":        method((*ToolHandler).toolConfigureGetSequence),
+	"list_sequences":      method((*ToolHandler).toolConfigureListSequences),
+	"delete_sequence":     method((*ToolHandler).toolConfigureDeleteSequence),
+	"replay_sequence":     method((*ToolHandler).toolConfigureReplaySequence),
+	"security_mode":       cfgLocal(toolconfigure.HandleSecurityMode),
+	"network_recording":   method((*ToolHandler).toolConfigureNetworkRecording),
+	"action_jitter":       cfgLocal(toolconfigure.HandleActionJitter),
+	"report_issue":        method((*ToolHandler).toolConfigureReportIssue),
+	"setup_quality_gates": method((*ToolHandler).toolConfigureSetupQualityGates),
 }
 
 // cfgLocal wraps a toolconfigure.Deps-accepting function as a ModeHandler.

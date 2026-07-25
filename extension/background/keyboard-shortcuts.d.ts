@@ -14,6 +14,16 @@ export interface RecordingShortcutHandlers {
     }>;
 }
 export declare function buildActionSequenceRecordingName(now?: Date): string;
+/**
+ * Toggle action-sequence (event/workflow) recording.
+ *
+ * One helper for every UI entry point (keyboard shortcut, context menu, repo
+ * rule 19). The context menu previously copy-inlined this and, in doing so,
+ * skipped both the usage tracking and the failure toasts — so a start/stop that
+ * failed from the menu was completely silent. Centralizing means neither can
+ * drift: both count `action_recording` and surface the same error toasts.
+ */
+export declare function toggleActionSequenceRecording(handlers: RecordingShortcutHandlers, tab: chrome.tabs.Tab, logFn?: (message: string) => void): Promise<void>;
 export interface ScreenRecordingHandlers {
     isRecording: () => boolean;
     startRecording: (name: string, fps?: number, queryId?: string, audio?: string, fromPopup?: boolean, targetTabId?: number) => Promise<{
@@ -39,8 +49,13 @@ export declare function toggleScreenRecording(handlers: ScreenRecordingHandlers,
  */
 export declare function installDrawModeCommandListener(logFn?: (message: string) => void): void;
 /**
- * Install the keyboard shortcut that opens the terminal side panel
+ * Install the keyboard shortcut that toggles the terminal side panel
  * (`open_terminal_panel` in the manifest).
+ *
+ * Toggle, not open-only, so this shares the exact behavior of the context menu:
+ * both route through `toggleTerminalSidePanel` (repo rule 19). Pressing the key
+ * again closes a panel that is up, and the shared helper is the single place that
+ * decides open-vs-close — no entry point re-implements it.
  *
  * The command ships UNBOUND on purpose: Chrome refuses to load a manifest with
  * more than four commands carrying a `suggested_key`, and four are already
@@ -53,8 +68,9 @@ export declare function installDrawModeCommandListener(logFn?: (message: string)
  * builds (crbug 355266358). `commands.onCommand` gets a full gesture and hands us
  * the active tab synchronously, so this path does not depend on gesture forwarding.
  *
- * Nothing may be awaited before openTerminalSidePanel() — `tab` comes straight
- * from the listener argument precisely so no lookup is needed.
+ * Nothing may be awaited before toggleTerminalSidePanel() — `tab` comes straight
+ * from the listener argument precisely so no lookup is needed, and the toggle
+ * reaches sidePanel.open() synchronously on the open path.
  */
 export declare function installTerminalPanelCommandListener(logFn?: (message: string) => void): void;
 /**

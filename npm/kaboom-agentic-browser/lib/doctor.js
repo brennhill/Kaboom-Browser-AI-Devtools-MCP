@@ -76,7 +76,11 @@ function testBinary() {
       'win32-x64': '@brennhill/kaboom-agentic-browser-win32-x64',
     };
 
-    const key = `${platform}-${arch}`;
+    // Windows ships only an x64 build; the launcher/resolver run it under
+    // emulation on ARM64, so normalize arch the same way here or --doctor would
+    // falsely report "Unsupported platform" on win32-arm64 while the tool works.
+    const effectiveArch = platform === 'win32' ? 'x64' : arch;
+    const key = `${platform}-${effectiveArch}`;
     const pkg = platformMap[key];
 
     if (!pkg) {
@@ -118,7 +122,8 @@ function testBinary() {
     try {
       const version = execFileSync(binaryPath, ['--version'], {
         encoding: 'utf8',
-        stdio: ['pipe', 'pipe', 'pipe'],
+        stdio: ['ignore', 'pipe', 'pipe'],
+        timeout: 5000,
       }).trim();
 
       return {
@@ -348,6 +353,44 @@ function checkLegacyPaths() {
 }
 
 /**
+ * Surface daemon RESTART CHURN from the local log. Repeated daemon restarts drop
+ * the extension's WebSocket ("connection died"); a high count in a short window is
+ * the signal. Best-effort and read-only: any failure (no log, unreadable,
+ * malformed) yields { available: false } and --doctor stays quiet about it.
+ * @param {{logPath?: string, homeDir?: string, windowMs?: number, now?: number}} [opts]
+ * @returns {{available: boolean, restarts?: number, windowMinutes?: number, lastStart?: string|null}}
+ */
+function checkDaemonRestarts(opts = {}) {
+  const os = require('os');
+  const path = require('path');
+  const homeDir = opts.homeDir || os.homedir();
+  const logPath = opts.logPath || path.join(homeDir, '.kaboom', 'logs', 'kaboom.jsonl');
+  const windowMs = opts.windowMs || 60 * 60 * 1000; // last hour
+  const now = opts.now || Date.now();
+  try {
+    const raw = fs.readFileSync(logPath, 'utf8');
+    // Scan only the tail so a large log stays fast.
+    const tail = raw.length > 512 * 1024 ? raw.slice(-512 * 1024) : raw;
+    let restarts = 0;
+    let lastStart = null;
+    for (const line of tail.split('\n')) {
+      if (line.indexOf('"daemon_mode_start"') === -1) continue;
+      let ev;
+      try { ev = JSON.parse(line); } catch { continue; }
+      if (ev.event !== 'daemon_mode_start') continue;
+      const ts = ev.timestamp ? Date.parse(ev.timestamp) : NaN;
+      if (!Number.isNaN(ts) && now - ts <= windowMs && ts <= now) {
+        restarts += 1;
+        lastStart = ev.timestamp;
+      }
+    }
+    return { available: true, restarts, windowMinutes: Math.round(windowMs / 60000), lastStart };
+  } catch {
+    return { available: false };
+  }
+}
+
+/**
  * Run full diagnostics on all client locations, plus live runtime checks
  * (Node version, daemon reachability, extension connectivity).
  * @param {boolean} verbose If true, log debug info
@@ -396,6 +439,8 @@ async function runDiagnostics(verbose = false, opts = {}) {
     summary += `, ${infoCount} not detected`;
   }
 
+  const restarts = checkDaemonRestarts(opts.restartsOpts);
+
   return {
     tools,
     binary,
@@ -403,6 +448,7 @@ async function runDiagnostics(verbose = false, opts = {}) {
     node,
     daemon,
     extension,
+    restarts,
     legacyWarnings,
     summary,
   };
@@ -414,6 +460,7 @@ module.exports = {
   nodeCheck,
   checkDaemon,
   checkPort,
+  checkDaemonRestarts,
   testBinary,
   runDiagnostics,
 };

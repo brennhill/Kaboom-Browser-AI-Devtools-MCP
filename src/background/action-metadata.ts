@@ -105,6 +105,6 @@ export function isReadOnlyAction(action: string): boolean {
 }
 
 /** Returns true if the action modifies the DOM and requires match-evidence validation. */
-export function isMutatingAction(action: string): boolean {
+export function isDomMutatingAction(action: string): boolean {
   return ACTION_METADATA[action]?.mutating === true
 }

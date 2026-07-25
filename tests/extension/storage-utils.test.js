@@ -191,6 +191,91 @@ describe('Local Storage (async)', () => {
 })
 
 // =============================================================================
+// FAIL-LOUD WRITES (chrome.runtime.lastError) — F3
+// =============================================================================
+
+describe('Fail-loud writes (chrome.runtime.lastError)', () => {
+  beforeEach(() => {
+    chromeMock = createStorageMock()
+    globalThis.chrome = chromeMock
+  })
+
+  test('setLocal rejects when lastError is set on the write callback', async () => {
+    const mod = await loadModule()
+    chromeMock.storage.local.set = mock.fn((_data, cb) => {
+      chromeMock.runtime.lastError = { message: 'QUOTA_BYTES quota exceeded' }
+      if (typeof cb === 'function') cb()
+      chromeMock.runtime.lastError = null
+    })
+    await assert.rejects(() => mod.setLocal('k', 'v'), /write failed: QUOTA_BYTES quota exceeded/)
+  })
+
+  test('setLocals rejects when lastError is set on the write callback', async () => {
+    const mod = await loadModule()
+    chromeMock.storage.local.set = mock.fn((_data, cb) => {
+      chromeMock.runtime.lastError = { message: 'context invalidated' }
+      if (typeof cb === 'function') cb()
+      chromeMock.runtime.lastError = null
+    })
+    await assert.rejects(() => mod.setLocals({ a: 1 }), /write failed: context invalidated/)
+  })
+
+  test('removeLocal rejects when lastError is set on the remove callback', async () => {
+    const mod = await loadModule()
+    chromeMock.storage.local.remove = mock.fn((_keys, cb) => {
+      chromeMock.runtime.lastError = { message: 'gone' }
+      if (typeof cb === 'function') cb()
+      chromeMock.runtime.lastError = null
+    })
+    await assert.rejects(() => mod.removeLocal('k'), /remove failed: gone/)
+  })
+
+  test('setSession rejects when lastError is set on the write callback', async () => {
+    const mod = await loadModule()
+    chromeMock.storage.session.set = mock.fn((_data, cb) => {
+      chromeMock.runtime.lastError = { message: 'session boom' }
+      if (typeof cb === 'function') cb()
+      chromeMock.runtime.lastError = null
+    })
+    await assert.rejects(() => mod.setSession('k', 'v'), /write failed: session boom/)
+  })
+
+  test('setLocal resolves normally when lastError is absent', async () => {
+    const mod = await loadModule()
+    await assert.doesNotReject(() => mod.setLocal('k', 'v'))
+  })
+
+  test('persist swallows a rejected write but logs a warning (never throws)', async () => {
+    const mod = await loadModule()
+    const warnings = []
+    const origWarn = console.warn
+    console.warn = (...args) => warnings.push(args.join(' '))
+    try {
+      mod.persist(Promise.reject(new Error('boom')), 'unit-test')
+      await new Promise((r) => setTimeout(r, 0))
+    } finally {
+      console.warn = origWarn
+    }
+    assert.strictEqual(warnings.length, 1)
+    assert.match(warnings[0], /storage write failed \(unit-test\)/)
+  })
+
+  test('persist does not log when the write succeeds', async () => {
+    const mod = await loadModule()
+    const warnings = []
+    const origWarn = console.warn
+    console.warn = (...args) => warnings.push(args.join(' '))
+    try {
+      mod.persist(Promise.resolve(), 'unit-test-ok')
+      await new Promise((r) => setTimeout(r, 0))
+    } finally {
+      console.warn = origWarn
+    }
+    assert.strictEqual(warnings.length, 0)
+  })
+})
+
+// =============================================================================
 // LOCAL STORAGE GRACEFUL DEGRADATION
 // =============================================================================
 

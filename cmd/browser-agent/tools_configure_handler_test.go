@@ -558,7 +558,7 @@ func TestToolsConfigureStore_InvalidJSON(t *testing.T) {
 	h, _, _ := makeToolHandler(t)
 
 	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.configureSession().toolConfigureStore(req, json.RawMessage(`{bad}`))
+	resp := h.configureSession().handleConfigureStore(req, json.RawMessage(`{bad}`))
 	result := parseToolResult(t, resp)
 	if !result.IsError {
 		t.Fatal("store invalid JSON should return isError:true")

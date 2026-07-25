@@ -77,6 +77,10 @@
     ACTION_RECORDING: "kaboom_action_recording",
     RECORDING: "kaboom_recording",
     TRACKED_HOVER_LAUNCHER_HIDDEN: "kaboom_tracked_hover_launcher_hidden",
+    // Per-session token the tracked-hover launcher publishes so the draw-mode
+    // content script can prove a kaboom-annotations-ready event is extension-origin
+    // (chrome.storage is invisible to page scripts, so a page cannot read/forge it).
+    ANNOTATION_CHANNEL_NONCE: "kaboom_annotation_channel_nonce",
     PENDING_RECORDING: "kaboom_pending_recording",
     PENDING_MIC_RECORDING: "kaboom_pending_mic_recording",
     MIC_GRANTED: "kaboom_mic_granted",
@@ -95,6 +99,14 @@
   var TERMINAL_PANEL_FALLBACK_HINT = 'Right-click the page and choose "Open Kaboom Terminal", or assign a shortcut at chrome://extensions/shortcuts.';
   var TERMINAL_PANEL_STALE_CONTEXT_HINT = "The Kaboom extension was reloaded, so this page is running an old copy of it. Reload this page to reconnect.";
 
+  // extension/lib/brand.js
+  var KABOOM_DOCS_URL = "https://gokaboom.dev/docs";
+  var KABOOM_REPOSITORY_URL = "https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP";
+  var KABOOM_LOG_PREFIX = "[KaBOOM!]";
+  function getReloadedExtensionWarning() {
+    return "[KaBOOM!] Please refresh this page. The KaBOOM! extension was reloaded and this page still has the old content script. A page refresh will reconnect capture automatically.";
+  }
+
   // extension/lib/storage-utils.js
   function getStorageWithSession() {
     if (typeof chrome === "undefined" || !chrome.storage)
@@ -103,6 +115,17 @@
   }
   function isPromiseLike(value) {
     return typeof value === "object" && value !== null && typeof value.then === "function";
+  }
+  function storageLastError() {
+    if (typeof chrome === "undefined" || !chrome.runtime)
+      return null;
+    const err = chrome.runtime.lastError;
+    return err ? err.message ?? "unknown chrome.storage error" : null;
+  }
+  function persist(write, context) {
+    void write.catch((err) => {
+      console.warn(`${KABOOM_LOG_PREFIX} storage write failed (${context}):`, err);
+    });
   }
   function readStorage(method, keys) {
     return new Promise((resolve, reject) => {
@@ -123,17 +146,21 @@
       }
     });
   }
-  function writeStorage(method, items) {
+  function runStorageWrite(label, invoke) {
     return new Promise((resolve, reject) => {
       let settled = false;
       const finish = () => {
         if (settled)
           return;
         settled = true;
-        resolve();
+        const errMsg = storageLastError();
+        if (errMsg)
+          reject(new Error(`chrome.storage ${label} failed: ${errMsg}`));
+        else
+          resolve();
       };
       try {
-        const maybePromise = method(items, finish);
+        const maybePromise = invoke(finish);
         if (isPromiseLike(maybePromise)) {
           maybePromise.then(() => finish()).catch(reject);
         }
@@ -142,24 +169,11 @@
       }
     });
   }
+  function writeStorage(method, items) {
+    return runStorageWrite("write", (finish) => method(items, finish));
+  }
   function removeFromStorage(method, keys) {
-    return new Promise((resolve, reject) => {
-      let settled = false;
-      const finish = () => {
-        if (settled)
-          return;
-        settled = true;
-        resolve();
-      };
-      try {
-        const maybePromise = method(keys, finish);
-        if (isPromiseLike(maybePromise)) {
-          maybePromise.then(() => finish()).catch(reject);
-        }
-      } catch (error) {
-        reject(error);
-      }
-    });
+    return runStorageWrite("remove", (finish) => method(keys, finish));
   }
   async function getLocal(key) {
     if (typeof chrome === "undefined" || !chrome.storage)
@@ -560,14 +574,6 @@
     window.addEventListener("pagehide", clearPendingRequests);
     window.addEventListener("beforeunload", clearPendingRequests);
     cleanupTimer = setInterval(performPeriodicCleanup, CLEANUP_INTERVAL_MS);
-  }
-
-  // extension/lib/brand.js
-  var KABOOM_DOCS_URL = "https://gokaboom.dev/docs";
-  var KABOOM_REPOSITORY_URL = "https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP";
-  var KABOOM_LOG_PREFIX = "[KaBOOM!]";
-  function getReloadedExtensionWarning() {
-    return "[KaBOOM!] Please refresh this page. The KaBOOM! extension was reloaded and this page still has the old content script. A page refresh will reconnect capture automatically.";
   }
 
   // extension/content/message-forwarding.js
@@ -2219,6 +2225,7 @@
   var TOGGLE_ID = "kaboom-tracked-hover-toggle";
   var SETTINGS_MENU_ID = "kaboom-tracked-hover-settings-menu";
   var rootEl = null;
+  var hostEl = null;
   var panelEl = null;
   var settingsMenuEl = null;
   var stopButtonEl = null;
@@ -2233,6 +2240,7 @@
   var recordingStorageUnsubscribe = null;
   var runtimeListenerInstalled = false;
   var annotationListenerInstalled = false;
+  var annotationChannelNonce = null;
   var terminalVisibilityUnsubscribe = null;
   function clearHideTimer() {
     if (!hideTimer)
@@ -2315,10 +2323,10 @@
   function persistHiddenState(hidden) {
     try {
       if (hidden) {
-        void setLocal(StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN, true);
+        persist(setLocal(StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN, true), "launcher-hidden");
         return;
       }
-      void removeLocal(StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN);
+      persist(removeLocal(StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN), "launcher-hidden-clear");
     } catch {
     }
   }
@@ -2360,49 +2368,38 @@
     }
     unmountLauncher();
   }
-  function formatAnnotationsForTerminal(annotations, pageUrl) {
-    if (annotations.length === 0)
-      return "";
-    const lines = [
-      "The user just annotated the page with the following feedback. Please review and implement these changes:",
-      "",
-      `Page: ${pageUrl}`,
-      ""
-    ];
-    for (let i = 0; i < annotations.length; i++) {
-      const a = annotations[i];
-      const text = a.text || "(no label)";
-      const sel = a.selector || "unknown";
-      const r = a.rect;
-      const loc = r ? ` (${Math.round(r.x)},${Math.round(r.y)} ${Math.round(r.width)}x${Math.round(r.height)})` : "";
-      lines.push(`${i + 1}. "${text}" \u2014 ${sel}${loc}`);
-    }
-    lines.push("");
-    lines.push('The annotations are available via analyze(what="annotations").');
-    lines.push("");
-    return lines.join("\n");
-  }
+  var ANNOTATION_TERMINAL_NUDGE = "Check kaboom annotations and handle the requests now";
   function handleAnnotationsReady(event) {
     const detail = event.detail;
+    if (!annotationChannelNonce || detail?.nonce !== annotationChannelNonce)
+      return;
     if (!detail?.annotations?.length)
       return;
     if (!isTerminalVisible())
       return;
-    const text = formatAnnotationsForTerminal(detail.annotations, detail.page_url || location.href);
-    if (text)
-      writeToTerminal(text);
+    writeToTerminal(ANNOTATION_TERMINAL_NUDGE);
   }
-  function installAnnotationListener() {
+  function newAnnotationNonce() {
+    const c = globalThis.crypto;
+    if (c && typeof c.randomUUID === "function")
+      return c.randomUUID();
+    return `n-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  }
+  async function installAnnotationListener() {
     if (annotationListenerInstalled)
       return;
     annotationListenerInstalled = true;
+    annotationChannelNonce = newAnnotationNonce();
+    await setLocal(StorageKey.ANNOTATION_CHANNEL_NONCE, annotationChannelNonce);
     window.addEventListener("kaboom-annotations-ready", handleAnnotationsReady);
   }
-  function uninstallAnnotationListener() {
+  async function uninstallAnnotationListener() {
     if (!annotationListenerInstalled)
       return;
     annotationListenerInstalled = false;
     window.removeEventListener("kaboom-annotations-ready", handleAnnotationsReady);
+    annotationChannelNonce = null;
+    await removeLocal(StorageKey.ANNOTATION_CHANNEL_NONCE);
   }
   async function startDrawMode() {
     try {
@@ -2410,6 +2407,9 @@
         console.warn("[KaBOOM!] Draw mode unavailable: extension context invalidated. Refresh the page to restore.");
         return;
       }
+      const trackMsg = { type: "track_ui_feature", feature: "annotations" };
+      chrome.runtime.sendMessage(trackMsg).catch(() => {
+      });
       const drawModeModule = await import(
         /* webpackIgnore: true */
         chrome.runtime.getURL("content/draw-mode.js")
@@ -2597,7 +2597,6 @@
   }
   function createLauncherUi() {
     const root = document.createElement("div");
-    root.id = ROOT_ID;
     Object.assign(root.style, {
       position: "fixed",
       top: "33vh",
@@ -2817,11 +2816,20 @@
       return;
     if (rootEl || document.getElementById(ROOT_ID))
       return;
-    rootEl = createLauncherUi();
     const target = document.body || document.documentElement;
-    if (!target || !rootEl)
+    if (!target)
       return;
-    target.appendChild(rootEl);
+    const root = createLauncherUi();
+    const host = document.createElement("div");
+    host.id = ROOT_ID;
+    const shadow = host.attachShadow({ mode: "open" });
+    const style = document.createElement("style");
+    style.textContent = ":host { all: initial; } *, *::before, *::after { box-sizing: border-box; }";
+    shadow.appendChild(style);
+    shadow.appendChild(root);
+    rootEl = root;
+    hostEl = host;
+    target.appendChild(host);
     installRecordingStorageSync();
   }
   function unmountLauncher() {
@@ -2833,23 +2841,33 @@
     stopButtonEl = null;
     toggleEl = null;
     recordingActive = false;
-    if (rootEl) {
-      rootEl.remove();
-      rootEl = null;
+    if (hostEl) {
+      hostEl.remove();
+      hostEl = null;
     }
+    rootEl = null;
     uninstallRecordingStorageSync();
   }
   async function setTrackedHoverLauncherEnabled(enabled) {
     trackedEnabled = enabled;
     installRuntimeListener();
-    await initTerminalPanelBridge();
-    installTerminalVisibilitySync();
-    if (enabled) {
-      installAnnotationListener();
-    } else {
-      uninstallAnnotationListener();
+    try {
+      await initTerminalPanelBridge();
+    } catch {
     }
-    await syncHiddenStateFromStorage();
+    installTerminalVisibilitySync();
+    try {
+      if (enabled) {
+        await installAnnotationListener();
+      } else {
+        await uninstallAnnotationListener();
+      }
+    } catch {
+    }
+    try {
+      await syncHiddenStateFromStorage();
+    } catch {
+    }
     applyVisibilityFromState();
   }
 

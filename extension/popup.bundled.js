@@ -78,6 +78,10 @@
     ACTION_RECORDING: "kaboom_action_recording",
     RECORDING: "kaboom_recording",
     TRACKED_HOVER_LAUNCHER_HIDDEN: "kaboom_tracked_hover_launcher_hidden",
+    // Per-session token the tracked-hover launcher publishes so the draw-mode
+    // content script can prove a kaboom-annotations-ready event is extension-origin
+    // (chrome.storage is invisible to page scripts, so a page cannot read/forge it).
+    ANNOTATION_CHANNEL_NONCE: "kaboom_annotation_channel_nonce",
     PENDING_RECORDING: "kaboom_pending_recording",
     PENDING_MIC_RECORDING: "kaboom_pending_mic_recording",
     MIC_GRANTED: "kaboom_mic_granted",
@@ -94,6 +98,10 @@
     ERROR_GROUPS: "kaboom_error_groups"
   };
 
+  // extension/lib/brand.js
+  var KABOOM_LOG_PREFIX = "[KaBOOM!]";
+  var KABOOM_RECORDING_LOG_PREFIX = "[KaBOOM! REC]";
+
   // extension/lib/storage-utils.js
   function getStorageWithSession() {
     if (typeof chrome === "undefined" || !chrome.storage)
@@ -102,6 +110,17 @@
   }
   function isPromiseLike(value) {
     return typeof value === "object" && value !== null && typeof value.then === "function";
+  }
+  function storageLastError() {
+    if (typeof chrome === "undefined" || !chrome.runtime)
+      return null;
+    const err = chrome.runtime.lastError;
+    return err ? err.message ?? "unknown chrome.storage error" : null;
+  }
+  function persist(write, context) {
+    void write.catch((err) => {
+      console.warn(`${KABOOM_LOG_PREFIX} storage write failed (${context}):`, err);
+    });
   }
   function readStorage(method, keys) {
     return new Promise((resolve, reject) => {
@@ -122,17 +141,21 @@
       }
     });
   }
-  function writeStorage(method, items) {
+  function runStorageWrite(label, invoke) {
     return new Promise((resolve, reject) => {
       let settled = false;
       const finish = () => {
         if (settled)
           return;
         settled = true;
-        resolve();
+        const errMsg = storageLastError();
+        if (errMsg)
+          reject(new Error(`chrome.storage ${label} failed: ${errMsg}`));
+        else
+          resolve();
       };
       try {
-        const maybePromise = method(items, finish);
+        const maybePromise = invoke(finish);
         if (isPromiseLike(maybePromise)) {
           maybePromise.then(() => finish()).catch(reject);
         }
@@ -141,24 +164,11 @@
       }
     });
   }
+  function writeStorage(method, items) {
+    return runStorageWrite("write", (finish) => method(items, finish));
+  }
   function removeFromStorage(method, keys) {
-    return new Promise((resolve, reject) => {
-      let settled = false;
-      const finish = () => {
-        if (settled)
-          return;
-        settled = true;
-        resolve();
-      };
-      try {
-        const maybePromise = method(keys, finish);
-        if (isPromiseLike(maybePromise)) {
-          maybePromise.then(() => finish()).catch(reject);
-        }
-      } catch (error) {
-        reject(error);
-      }
-    });
+    return runStorageWrite("remove", (finish) => method(keys, finish));
   }
   async function getLocal(key) {
     if (typeof chrome === "undefined" || !chrome.storage)
@@ -212,6 +222,14 @@
     return () => chrome.storage.onChanged.removeListener(listener);
   }
 
+  // extension/lib/internal-url.js
+  function isInternalUrl(url) {
+    if (!url)
+      return true;
+    const internalPrefixes = ["chrome://", "chrome-extension://", "about:", "edge://", "brave://", "devtools://"];
+    return internalPrefixes.some((prefix) => url.startsWith(prefix));
+  }
+
   // extension/popup/ui-utils.js
   function formatFileSize(bytes) {
     if (bytes === 0)
@@ -220,12 +238,6 @@
     const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
     const value = bytes / Math.pow(1024, i);
     return `${value < 10 ? value.toFixed(1) : Math.round(value)} ${units[i]}`;
-  }
-  function isInternalUrl(url) {
-    if (!url)
-      return true;
-    const internalPrefixes = ["chrome://", "chrome-extension://", "about:", "edge://", "brave://", "devtools://"];
-    return internalPrefixes.some((prefix) => url.startsWith(prefix));
   }
 
   // extension/popup/status-display.js
@@ -561,10 +573,6 @@ The daemon will restart automatically.`;
     }
   }
 
-  // extension/lib/brand.js
-  var KABOOM_LOG_PREFIX = "[KaBOOM!]";
-  var KABOOM_RECORDING_LOG_PREFIX = "[KaBOOM! REC]";
-
   // extension/lib/error-utils.js
   function errorMessage(err, fallback = "Unknown error") {
     if (err instanceof Error && err.message)
@@ -583,7 +591,7 @@ The daemon will restart automatically.`;
   }
   function showMicPermissionPrompt(saveInfoEl, audioMode) {
     chrome.tabs.query({ active: true, currentWindow: true }, (activeTabs) => {
-      void setLocal(StorageKey.PENDING_MIC_RECORDING, { audioMode, returnTabId: activeTabs[0]?.id });
+      persist(setLocal(StorageKey.PENDING_MIC_RECORDING, { audioMode, returnTabId: activeTabs[0]?.id }), "pending-mic-recording");
     });
     saveInfoEl.innerHTML = 'Microphone access needed. <a href="#" id="grant-mic-link" style="color: #58a6ff; text-decoration: underline; cursor: pointer">Grant access</a>';
     saveInfoEl.style.display = "block";
@@ -618,11 +626,11 @@ The daemon will restart automatically.`;
     navigator.mediaDevices.getUserMedia({ audio: true }).then((micStream) => {
       console.log(LOG, "getUserMedia succeeded from popup");
       micStream.getTracks().forEach((t) => t.stop());
-      void setLocal(StorageKey.MIC_GRANTED, true);
+      persist(setLocal(StorageKey.MIC_GRANTED, true), "mic-granted");
       sendRecordStart(els, state, audioMode, showRecording3, showIdle3, showStartError2);
     }).catch((err) => {
       console.log(LOG, "getUserMedia FAILED:", err.name, errorMessage(err));
-      void removeLocal(StorageKey.MIC_GRANTED);
+      persist(removeLocal(StorageKey.MIC_GRANTED), "mic-granted-clear");
       showIdle3(els, state);
       if (els.saveInfoEl)
         showMicPermissionPrompt(els.saveInfoEl, audioMode);
@@ -631,7 +639,7 @@ The daemon will restart automatically.`;
   function handleStartClick(els, state, showRecording3, showIdle3, showStartError2) {
     const audioSelect = document.getElementById("record-audio-mode");
     const audioMode = audioSelect?.value ?? "";
-    void setLocal(StorageKey.RECORD_AUDIO_PREF, audioMode);
+    persist(setLocal(StorageKey.RECORD_AUDIO_PREF, audioMode), "record-audio-pref");
     if (els.optionsEl)
       els.optionsEl.style.display = "none";
     if (els.saveInfoEl)
@@ -862,7 +870,7 @@ The daemon will restart automatically.`;
         applyRecordHighlight(els);
         pendingRecordingIntent = null;
         setApprovalPendingState(els, approvalEls, state, null);
-        void removeLocal(StorageKey.PENDING_RECORDING);
+        persist(removeLocal(StorageKey.PENDING_RECORDING), "pending-recording-clear");
         return;
       }
       pendingRecordingIntent = pending && !pending.highlight ? pending : null;
@@ -873,7 +881,7 @@ The daemon will restart automatically.`;
     const clearPendingRecordingIntent = () => {
       pendingRecordingIntent = null;
       setApprovalPendingState(els, approvalEls, state, null);
-      void removeLocal(StorageKey.PENDING_RECORDING);
+      persist(removeLocal(StorageKey.PENDING_RECORDING), "pending-recording-clear");
     };
     void getLocal(StorageKey.RECORDING).then(async (value) => {
       const rec = value;
@@ -988,6 +996,9 @@ The daemon will restart automatically.`;
           showDrawModeError(label, "Cannot draw on internal pages");
           return;
         }
+        const trackMsg = { type: "track_ui_feature", feature: "annotations" };
+        chrome.runtime.sendMessage(trackMsg).catch(() => {
+        });
         label.textContent = "Starting...";
         chrome.tabs.sendMessage(tab.id, { type: "kaboom_draw_mode_start", started_by: "user" }, (resp) => {
           if (chrome.runtime.lastError) {
@@ -1055,6 +1066,27 @@ The daemon will restart automatically.`;
     const idMatch = text.match(/"recording_id"\s*:\s*"([^"]+)"/);
     return idMatch?.[1] ?? null;
   }
+  async function fetchDaemonPid() {
+    try {
+      const data = await callConfigureFromPopup({ what: "health" });
+      const text = data.result?.content?.[0]?.text ?? "";
+      const match = text.match(/"pid"\s*:\s*([0-9]+)/);
+      if (!match)
+        return null;
+      const pid = parseInt(match[1] ?? "", 10);
+      return Number.isFinite(pid) ? pid : null;
+    } catch {
+      return null;
+    }
+  }
+  async function isActionRecordingStillLive(startedPid) {
+    if (startedPid == null)
+      return true;
+    const currentPid = await fetchDaemonPid();
+    if (currentPid == null)
+      return true;
+    return currentPid === startedPid;
+  }
   async function callConfigureFromPopup(argumentsPayload) {
     const serverUrl = await getServerUrl2();
     const resp = await postDaemonJSON(`${serverUrl}/mcp`, {
@@ -1086,11 +1118,13 @@ The daemon will restart automatically.`;
       }
       state.recordingId = extractRecordingID(data);
       state.startTime = Date.now();
-      void setLocal(StorageKey.ACTION_RECORDING, {
+      const daemonPid = await fetchDaemonPid();
+      persist(setLocal(StorageKey.ACTION_RECORDING, {
         active: true,
         recordingId: state.recordingId,
-        startTime: state.startTime
-      });
+        startTime: state.startTime,
+        daemonPid
+      }), "action-recording");
       showRecording2(els, state);
     } catch (err) {
       showIdle2(els, state);
@@ -1108,7 +1142,7 @@ The daemon will restart automatically.`;
       if (configureError) {
         showError(els, configureError);
       }
-      void removeLocal(StorageKey.ACTION_RECORDING);
+      persist(removeLocal(StorageKey.ACTION_RECORDING), "action-recording-clear");
       showIdle2(els, state);
     } catch (err) {
       showIdle2(els, state);
@@ -1128,13 +1162,17 @@ The daemon will restart automatically.`;
       timerInterval: null,
       startTime: null
     };
-    void getLocal(StorageKey.ACTION_RECORDING).then((value) => {
+    void getLocal(StorageKey.ACTION_RECORDING).then(async (value) => {
       const saved = value;
-      if (saved?.active && saved.recordingId) {
-        state.recordingId = saved.recordingId;
-        state.startTime = saved.startTime ?? Date.now();
-        showRecording2(els, state);
+      if (!saved?.active || !saved.recordingId)
+        return;
+      if (!await isActionRecordingStillLive(saved.daemonPid)) {
+        persist(removeLocal(StorageKey.ACTION_RECORDING), "action-recording-stale");
+        return;
       }
+      state.recordingId = saved.recordingId;
+      state.startTime = saved.startTime ?? Date.now();
+      showRecording2(els, state);
     });
     row.addEventListener("click", () => {
       if (state.isRecording) {
@@ -1279,6 +1317,55 @@ The daemon will restart automatically.`;
     await removeLocals(TRACKED_TAB_STORAGE_KEYS);
   }
 
+  // extension/lib/tab-tracking-core.js
+  function hostnameOf(url) {
+    try {
+      return url ? new URL(url).hostname : "";
+    } catch {
+      return "";
+    }
+  }
+  function notifyTrackingState(tabId, isTracked) {
+    chrome.tabs.sendMessage(tabId, { type: "tracking_state_changed", state: { isTracked, aiPilotEnabled: false } }).catch(() => {
+    });
+  }
+  function ensureContentScript(tabId) {
+    chrome.tabs.sendMessage(tabId, { type: "kaboom_ping" }, (response) => {
+      if (chrome.runtime.lastError || !response?.status) {
+        chrome.tabs.reload(tabId);
+      } else {
+        notifyTrackingState(tabId, true);
+      }
+    });
+  }
+  async function trackTab(tab) {
+    if (isInternalUrl(tab.url))
+      return "internal_page";
+    if (await isDomainCloaked(hostnameOf(tab.url)))
+      return "cloaked";
+    await setTrackedTab(tab);
+    if (tab.id)
+      ensureContentScript(tab.id);
+    return "tracked";
+  }
+  async function untrackTab(prevTabId, onStopped) {
+    await clearTrackedTab();
+    if (onStopped)
+      await onStopped();
+    if (typeof prevTabId === "number")
+      notifyTrackingState(prevTabId, false);
+  }
+
+  // extension/lib/tab-focus.js
+  async function focusTabAndWindow(tabId) {
+    const updated = await chrome.tabs.update(tabId, { active: true });
+    const tab = updated ?? await chrome.tabs.get(tabId);
+    if (tab?.windowId != null && chrome.windows?.update) {
+      await chrome.windows.update(tab.windowId, { focused: true });
+    }
+    return tab;
+  }
+
   // extension/lib/request-audit.js
   async function requestAudit(pageUrl, tabId) {
     try {
@@ -1296,35 +1383,26 @@ The daemon will restart automatically.`;
     const prevTabId = await getLocal(StorageKey.TRACKED_TAB_ID);
     if (!prevTabId)
       return;
-    await clearTrackedTab();
+    await untrackTab(prevTabId, () => {
+      chrome.runtime.sendMessage({ type: "screen_recording_stop" }, () => {
+        if (chrome.runtime.lastError) {
+        }
+      });
+    });
     const btn = document.getElementById("track-page-btn");
     if (btn)
       showIdleState2(btn);
-    chrome.runtime.sendMessage({ type: "screen_recording_stop" }, () => {
-      if (chrome.runtime.lastError) {
-      }
-    });
-    chrome.tabs.sendMessage(prevTabId, {
-      type: "tracking_state_changed",
-      state: { isTracked: false, aiPilotEnabled: false }
-    }).catch(() => {
-    });
     console.log(KABOOM_LOG_PREFIX, "Stopped tracking via bar stop button");
   }
   async function handleUrlClick(tabId) {
     if (!tabId)
       return;
     try {
-      await chrome.tabs.update(tabId, { active: true });
-      const tab = await chrome.tabs.get(tabId);
-      if (tab.windowId) {
-        await chrome.windows.update(tab.windowId, { focused: true });
-      }
+      await focusTabAndWindow(tabId);
       console.log(KABOOM_LOG_PREFIX, "Switched to tracked tab:", tabId);
     } catch (err) {
       console.error(KABOOM_LOG_PREFIX, "Failed to switch to tracked tab:", err);
-      clearTrackedTab().catch(() => {
-      });
+      persist(clearTrackedTab(), "tracked-tab-clear");
     }
   }
   async function handleTrackPageClick(showInternalPageState2, showCloakedState2, showTrackingState2, showIdleState2) {
@@ -1337,40 +1415,20 @@ The daemon will restart automatically.`;
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab)
       return;
-    if (isInternalUrl(tab.url)) {
+    const outcome = await trackTab(tab);
+    if (outcome === "internal_page") {
       if (btn)
         showInternalPageState2(btn);
       return;
     }
-    let hostname = "";
-    try {
-      hostname = tab.url ? new URL(tab.url).hostname : "";
-    } catch {
-    }
-    if (await isDomainCloaked(hostname)) {
+    if (outcome === "cloaked") {
       if (btn)
         showCloakedState2(btn);
       return;
     }
-    await setTrackedTab(tab);
     if (btn)
       showTrackingState2(btn, tab.url, tab.id);
     console.log(KABOOM_LOG_PREFIX, "Now tracking tab:", tab.id, tab.url);
-    if (tab.id) {
-      const tabId = tab.id;
-      chrome.tabs.sendMessage(tabId, { type: "kaboom_ping" }, (response) => {
-        if (chrome.runtime.lastError || !response?.status) {
-          console.log(KABOOM_LOG_PREFIX, "Content script not found, reloading tab", tabId);
-          chrome.tabs.reload(tabId);
-        } else {
-          console.log(KABOOM_LOG_PREFIX, "Content script already loaded, skipping reload");
-          chrome.tabs.sendMessage(tabId, {
-            type: "tracking_state_changed",
-            state: { isTracked: true, aiPilotEnabled: false }
-          });
-        }
-      });
-    }
   }
 
   // extension/popup/tab-tracking.js
@@ -1555,7 +1613,7 @@ The daemon will restart automatically.`;
 
   // extension/popup/settings.js
   function handleWebSocketModeChange(mode) {
-    void setLocal(StorageKey.WEBSOCKET_CAPTURE_MODE, mode);
+    persist(setLocal(StorageKey.WEBSOCKET_CAPTURE_MODE, mode), "websocket-capture-mode");
     chrome.runtime.sendMessage({ type: SettingName.WEBSOCKET_CAPTURE_MODE, mode });
   }
   function applyWebSocketMode(value) {
@@ -1629,6 +1687,12 @@ The daemon will restart automatically.`;
   var RESHOW_TRACKED_HOVER_LAUNCHER_MESSAGE = {
     type: RuntimeMessageName.SHOW_TRACKED_HOVER_LAUNCHER
   };
+  var terminalTargetTabId;
+  function handleOpenTerminalClick() {
+    if (typeof terminalTargetTabId !== "number")
+      return;
+    void chrome.runtime.sendMessage({ type: "open_terminal_panel", tab_id: terminalTargetTabId });
+  }
   function bindToggleVisibility(toggle, target, isVisible) {
     target.style.display = isVisible() ? "block" : "none";
     toggle.addEventListener("change", () => {
@@ -1682,7 +1746,7 @@ The daemon will restart automatically.`;
     });
   }
   function cacheStatus(status) {
-    void setSession(StorageKey.POPUP_LAST_STATUS, status);
+    persist(setSession(StorageKey.POPUP_LAST_STATUS, status), "popup-last-status");
   }
   function initPopup() {
     setupRecordingUI();
@@ -1693,6 +1757,13 @@ The daemon will restart automatically.`;
     const clearBtn = document.getElementById("clear-btn");
     if (clearBtn)
       clearBtn.addEventListener("click", handleClearLogs);
+    const openTerminalBtn = document.getElementById("open-terminal-btn");
+    if (openTerminalBtn) {
+      openTerminalBtn.addEventListener("click", handleOpenTerminalClick);
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        terminalTargetTabId = tabs[0]?.id;
+      });
+    }
     chrome.runtime.onMessage.addListener((message) => {
       if (message.type === "status_update" && message.status) {
         updateConnectionStatus(message.status);

@@ -101,14 +101,20 @@ func TestHandleSync_FeaturesUsedNoCallback_NoPanic(t *testing.T) {
 func TestFilterFeaturesUsed_AllowsKnownKeys(t *testing.T) {
 	t.Parallel()
 	raw := map[string]bool{
-		"screenshot":  true,
-		"annotations": true,
-		"video":       false,
-		"dom_action":  true,
+		"screenshot":       true,
+		"annotations":      true,
+		"video":            false,
+		"dom_action":       true,
+		"action_recording": true,
 	}
 	filtered := filterFeaturesUsed(raw)
-	if len(filtered) != 4 {
-		t.Fatalf("Expected 4 keys, got %d: %v", len(filtered), filtered)
+	if len(filtered) != 5 {
+		t.Fatalf("Expected 5 keys, got %d: %v", len(filtered), filtered)
+	}
+	// action_recording is wire-synced with the UIFeature union on the extension
+	// side; if this drops, an extension release will silently lose the metric.
+	if !filtered["action_recording"] {
+		t.Error("Expected action_recording to be an allowed feature key")
 	}
 }
 

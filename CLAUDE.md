@@ -114,13 +114,14 @@ No code-only refactor is considered complete until this documentation contract i
 15. Reviews and handoffs must cover correctness, modularity, performance, testability, docs quality, and DRY adherence.
 16. CI must block merges on broken docs links, missing required docs, or failing quality gates.
 17. ToolHandler naming convention is strict: `tool*` for top-level MCP mode/action entry points (e.g. `toolObserve`, `toolConfigureClear`), `handle*` for sub-action dispatch handlers on subsidiary handler types (e.g. `handleRecordStart`, `handleUpload`). Unprefixed methods are internal utilities (e.g. `drainAlerts`, `loadSummaryPref`, `buildPlaybackResult`).
-18. Shared extension storage keys (`TRACKED_TAB_*`, recording state, pending intents) must be accessed through feature helpers/modules; avoid new ad-hoc read/write/remove call sites.
-19. Multi-entry-point actions (keyboard, context menu, popup, MCP) must use one shared toggle/start-stop helper so behavior stays identical.
+18. Shared extension storage keys (`TRACKED_TAB_*`, recording state, pending intents) must be accessed through feature helpers/modules; avoid new ad-hoc read/write/remove call sites. **Authoritative source:** each shared key has exactly one authoritative writer, and any reader that *gates behavior* on a mirrored key must reconcile it against the live authoritative signal (a runtime port, an in-memory flag, an API) — a storage mirror goes stale when its writer's context dies without flushing (e.g. a Chrome-native side-panel close leaving `TERMINAL_UI_STATE='open'` and suppressing the flame forever). When you migrate a decision onto an authoritative signal, migrate **every** reader of the old mirror in the same change.
+19. Multi-entry-point actions (keyboard, context menu, popup, MCP) must use one shared toggle/start-stop helper so behavior stays identical. **The invariant lives in the shared helper, not in each caller:** a function with a `forceFresh`/reset/rebuild flag must perform the required teardown (unmount/stop/clear) itself so no call site can forget it — the "terminal won't start after picking a folder" bug was one caller (`applyRootFolder`) omitting the `unmountPanel()` that another caller (`restoreTerminalPanel`) remembered.
 20. Cross-context message contracts must be declared in `src/types/runtime-messages.ts` (and corresponding wire/schema files when applicable) before adding new runtime message types.
 21. User-facing recording labels/toasts/badge text must come from shared helpers to keep wording and truncation consistent across entry points.
 22. Duplicate code checks are required for refactors touching `src/background` or `src/popup` (`npx jscpd src/background src/popup --min-lines 8 --min-tokens 60`), and each non-trivial clone must be either extracted or documented as intentional.
 23. Behavior-replacing refactors must update or delete obsolete tests in the same change (for example, replacing watermark behavior with badge behavior).
 24. See `docs/core/common-patterns.md` for the canonical patterns and review checklist.
+25. **Fail loud on state-mutating paths.** No operation that changes state may fail silently. `catch {}` is banned (ESLint `no-empty` with `allowEmptyCatch: false`) — every catch either handles the error or documents why swallowing is safe. A genuine failure must not be masked as a recoverable/expected state (the terminal Start bug returned HTTP 409-with-token — "session already exists" — for *any* spawn/cwd failure, so real errors reconnected silently); distinguish "already-exists/expected" from "actually failed" and surface the latter. Verify mutations landed (`make sync-version` silently no-oped on an unescaped-`@` perl until `validate-versions.sh` caught it — prefer a post-condition check over trusting a string transform).
 
 ## Finding Things
 
@@ -234,3 +235,59 @@ To check whether embeddings exist, inspect `.gitnexus/meta.json` — the `stats.
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
 
 <!-- gitnexus:end -->
+
+
+<!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:6cd5cc61 -->
+## Beads Issue Tracker
+
+This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
+
+### Quick Reference
+
+```bash
+bd ready              # Find available work
+bd show <id>          # View issue details
+bd update <id> --claim  # Claim work
+bd close <id>         # Complete work
+```
+
+### Rules
+
+- Use `bd` for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists
+- Run `bd prime` for detailed command reference and session close protocol
+- Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
+
+**Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
+
+## Agent Context Profiles
+
+The managed Beads block is task-tracking guidance, not permission to override repository, user, or orchestrator instructions.
+
+- **Conservative (default)**: Use `bd` for task tracking. Do not run git commits, git pushes, or Dolt remote sync unless explicitly asked. At handoff, report changed files, validation, and suggested next commands.
+- **Minimal**: Keep tool instruction files as pointers to `bd prime`; use the same conservative git policy unless active instructions say otherwise.
+- **Team-maintainer**: Only when the repository explicitly opts in, agents may close beads, run quality gates, commit, and push as part of session close. A current "do not commit" or "do not push" instruction still wins.
+
+## Session Completion
+
+This protocol applies when ending a Beads implementation workflow. It is subordinate to explicit user, repository, and orchestrator instructions.
+
+1. **File issues for remaining work** - Create beads for anything that needs follow-up
+2. **Run quality gates** (if code changed) - Tests, linters, builds
+3. **Update issue status** - Close finished work, update in-progress items
+4. **Handle git/sync by active profile**:
+   ```bash
+   # Conservative/minimal/default: report status and proposed commands; wait for approval.
+   git status
+
+   # Team-maintainer opt-in only, unless current instructions forbid it:
+   git pull --rebase
+   git push
+   git status
+   ```
+5. **Hand off** - Summarize changes, validation, issue status, and any blocked sync/commit/push step
+
+**Critical rules:**
+- Explicit user or orchestrator instructions override this Beads block.
+- Do not commit or push without clear authority from the active profile or the current user request.
+- If a required sync or push is blocked, stop and report the exact command and error.
+<!-- END BEADS INTEGRATION -->

@@ -215,6 +215,13 @@ function diagnosticReport(report) {
     }
   }
 
+  // Restart churn: repeated daemon restarts drop the extension's connection.
+  if (report.restarts && report.restarts.available && report.restarts.restarts >= 5) {
+    output += `⚠️  Daemon restart churn\n`;
+    output += `   The daemon restarted ${report.restarts.restarts} times in the last ${report.restarts.windowMinutes} min — each restart drops the extension's WebSocket ("connection died").\n`;
+    output += `   Usual causes: repeated installs / version switches, or two Kaboom binaries fighting for the port. Keep a single binary and re-check.\n`;
+  }
+
   if (report.extension) {
     if (report.extension.connected) {
       output += `✅ Browser extension\n`;

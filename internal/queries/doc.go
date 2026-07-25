@@ -14,7 +14,7 @@ Key types:
 Key functions:
   - NewQueryDispatcher: creates a dispatcher with configurable queue size and TTL.
   - CreateQuery: queues a new command for extension delivery.
-  - GetQueryResult: retrieves and consumes a one-time result by correlation ID.
+  - TakeQueryResult: retrieves and consumes a one-time result by correlation ID.
   - normalizeCommandStatus: maps extension status values into canonical lifecycle states.
 */
 package queries

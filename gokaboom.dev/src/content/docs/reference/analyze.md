@@ -419,6 +419,20 @@ analyze({what: "audit", categories: ["accessibility", "security"], summary: true
 | `categories` | array | Which audits to run: `performance`, `accessibility`, `security`, `best_practices` |
 | `summary` | boolean | Return compact summary |
 
+### `page_issues`
+
+Aggregate every detectable problem on the page into one severity-ranked response — a comprehensive starting point that saves calling each audit individually. Findings are grouped as critical / high / medium / low / info, capped per section.
+
+```js
+analyze({what: "page_issues"})
+analyze({what: "page_issues", categories: ["console_errors", "accessibility"], summary: true})
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `categories` | array | Which checks to include: `console_errors`, `network_failures`, `accessibility`, `security` |
+| `summary` | boolean | Return compact summary instead of full details |
+
 ### `feature_gates`
 
 Detect feature flags and feature gates on the page — A/B test variants, feature toggles, and experiment assignments visible in the DOM or JavaScript globals.

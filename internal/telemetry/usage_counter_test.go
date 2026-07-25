@@ -450,6 +450,79 @@ func TestEmitSessionEnd_NoOpWhenNoCalls(t *testing.T) {
 	}
 }
 
+func TestSessionDurationSeconds(t *testing.T) {
+	base := time.Unix(1_700_000_000, 0)
+	cases := []struct {
+		name  string
+		start time.Time
+		now   time.Time
+		want  int64
+	}{
+		{"zero start -> 0", time.Time{}, base, 0},
+		{"same instant -> 0", base, base, 0},
+		{"sub-second -> 0 (truncates)", base, base.Add(900 * time.Millisecond), 0},
+		{"42s -> 42", base, base.Add(42 * time.Second), 42},
+		{"clock skew (now < start) -> 0, not negative", base, base.Add(-5 * time.Second), 0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := sessionDurationSeconds(tc.start, tc.now); got != tc.want {
+				t.Errorf("sessionDurationSeconds = %d, want %d", got, tc.want)
+			}
+		})
+	}
+}
+
+// The injected clock makes session_end duration deterministic — no wall-clock
+// dependence, no sleeps.
+func TestEmitSessionEnd_DurationFromInjectedClock(t *testing.T) {
+	drainSem()
+	t.Cleanup(drainSem)
+
+	received := make(chan map[string]any, 20)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		select {
+		case received <- body:
+		default:
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+	overrideEndpoint(srv.URL)
+	defer resetEndpoint()
+
+	base := time.Unix(1_700_000_000, 0)
+	tracker := NewUsageTracker()
+	tracker.now = func() time.Time { return base.Add(42 * time.Second) } // "now" at end
+	tracker.mu.Lock()
+	tracker.sessionStart = base
+	tracker.sessionCalls = 3
+	tracker.mu.Unlock()
+
+	tracker.EmitSessionEnd("timeout")
+
+	for {
+		select {
+		case body := <-received:
+			if body["event"] != "session_end" {
+				continue
+			}
+			// JSON numbers decode as float64.
+			if body["duration_s"] != float64(42) {
+				t.Fatalf("duration_s = %v, want 42", body["duration_s"])
+			}
+			if body["tool_calls"] != float64(3) {
+				t.Fatalf("tool_calls = %v, want 3", body["tool_calls"])
+			}
+			return
+		case <-time.After(3 * time.Second):
+			t.Fatal("session_end beacon not received")
+		}
+	}
+}
+
 func TestAppError_PayloadStructure(t *testing.T) {
 	drainSem()
 	received := make(chan map[string]any, 10)

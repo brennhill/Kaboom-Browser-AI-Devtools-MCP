@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"runtime"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
 var hexPattern = regexp.MustCompile(`^[0-9a-f]{12}$`)
@@ -118,6 +120,34 @@ func TestGetInstallID_TrimsCarriageReturn(t *testing.T) {
 	id := GetInstallID()
 	if id != "aabbccddeeff" {
 		t.Fatalf("GetInstallID() = %q, want %q", id, "aabbccddeeff")
+	}
+}
+
+// Regression: defaultKaboomDir() used to derive ~/.kaboom directly, ignoring
+// KABOOM_STATE_DIR / XDG_STATE_HOME. It must route through state.RootDir() so a
+// project-isolated daemon persists install_id under the configured state root
+// (consistent with every other Kaboom artifact) instead of scattering it to
+// ~/.kaboom. Fails before the fix, passes after.
+func TestDefaultKaboomDir_HonorsStateDirEnv(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv(state.StateDirEnv, dir) // t.Setenv forbids t.Parallel and auto-restores
+	t.Cleanup(resetKaboomDir)
+
+	resetInstallIDState()
+	resetKaboomDir() // recompute kaboomDir now that KABOOM_STATE_DIR is set
+
+	if kaboomDir != dir {
+		t.Fatalf("kaboomDir = %q, want %q (KABOOM_STATE_DIR must be honored)", kaboomDir, dir)
+	}
+
+	// The install_id file must actually land under the configured root.
+	id := GetInstallID()
+	data, err := os.ReadFile(filepath.Join(dir, "install_id"))
+	if err != nil {
+		t.Fatalf("install_id not written under KABOOM_STATE_DIR: %v", err)
+	}
+	if string(data) != id {
+		t.Fatalf("install_id file content = %q, want %q", string(data), id)
 	}
 }
 

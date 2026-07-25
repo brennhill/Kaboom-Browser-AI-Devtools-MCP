@@ -10,7 +10,7 @@
  */
 import { StorageKey } from '../lib/constants.js';
 import { KABOOM_RECORDING_LOG_PREFIX } from '../lib/brand.js';
-import { getLocal, removeLocal, onStorageChanged } from '../lib/storage-utils.js';
+import { getLocal, removeLocal, onStorageChanged, persist } from '../lib/storage-utils.js';
 import { sendRecordingGestureDecision, handleStartClick, handleStopClick } from './recording-io.js';
 const START_LABEL = 'Record screen';
 const STOP_LABEL = 'Stop recording';
@@ -217,7 +217,7 @@ export function setupRecordingUI() {
             applyRecordHighlight(els);
             pendingRecordingIntent = null;
             setApprovalPendingState(els, approvalEls, state, null);
-            void removeLocal(StorageKey.PENDING_RECORDING);
+            persist(removeLocal(StorageKey.PENDING_RECORDING), 'pending-recording-clear');
             return;
         }
         pendingRecordingIntent = pending && !pending.highlight ? pending : null;
@@ -228,7 +228,7 @@ export function setupRecordingUI() {
     const clearPendingRecordingIntent = () => {
         pendingRecordingIntent = null;
         setApprovalPendingState(els, approvalEls, state, null);
-        void removeLocal(StorageKey.PENDING_RECORDING);
+        persist(removeLocal(StorageKey.PENDING_RECORDING), 'pending-recording-clear');
     };
     // Row is visible immediately with default "not recording" state.
     // Storage read updates it async — visual change is minimal (button label toggle).

@@ -18,7 +18,7 @@ globalThis.chrome.debugger = {
   detach: async () => {}
 }
 
-const { executeDOMAction } = await import('../dom-dispatch.js')
+const { executeDOMAction } = await import('../dom/dom-dispatch.js')
 
 describe('executeDOMAction structured passthrough', () => {
   beforeEach(() => {

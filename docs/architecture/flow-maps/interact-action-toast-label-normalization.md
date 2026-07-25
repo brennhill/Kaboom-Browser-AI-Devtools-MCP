@@ -9,9 +9,9 @@ entrypoints:
   - src/background/commands/helpers.ts:actionToast
 code_paths:
   - src/background/commands/helpers.ts
-  - src/background/dom-dispatch.ts
+  - src/background/dom/dom-dispatch.ts
   - src/background/browser-actions.ts
-  - src/background/cdp-dispatch.ts
+  - src/background/dom/cdp/cdp-dispatch.ts
 test_paths:
   - tests/extension/action-toast-labels.test.js
   - tests/extension/wait-for-enhanced.test.js
@@ -56,9 +56,9 @@ Covers how user-facing action toast labels are normalized for `interact` actions
 ## Code Paths
 
 - `src/background/commands/helpers.ts`
-- `src/background/dom-dispatch.ts`
+- `src/background/dom/dom-dispatch.ts`
 - `src/background/browser-actions.ts`
-- `src/background/cdp-dispatch.ts`
+- `src/background/dom/cdp/cdp-dispatch.ts`
 
 ## Test Paths
 

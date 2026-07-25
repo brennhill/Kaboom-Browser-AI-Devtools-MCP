@@ -39,7 +39,14 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonLaunchOption
 		return err
 	}
 	if err := preflightPortCheck(server, port); err != nil {
-		return err
+		// A leftover process holds the main port and the lock-based takeover did
+		// not clear it. Reclaim it (find + log + kill) so we stay single-instance,
+		// then re-check; only abort if it is still stuck.
+		server.logLifecycle("port_reclaim_attempt", port, map[string]any{"purpose": "main", "reason": err.Error()})
+		reclaimPort(server, port, "main")
+		if err := preflightPortCheck(server, port); err != nil {
+			return err
+		}
 	}
 
 	srv, httpDone, err := startHTTPServer(server, port, apiKey, mux)
@@ -54,6 +61,15 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonLaunchOption
 	termMux, termRelays := setupTerminalMux(server, server.ptyManager, cap)
 	server.ptyRelays = termRelays
 	termSrv, termDone, termErr := startTerminalServer(termPort, termMux)
+	if termErr != nil {
+		// A leftover process holds the terminal port — this is the exact state that
+		// makes 7891 "connection refused" for the extension (can't type / Start
+		// fails). Reclaim it and retry once so the terminal server reliably binds.
+		server.logLifecycle("terminal_server_bind_retry", termPort, map[string]any{"error": termErr.Error()})
+		if reclaimPort(server, termPort, "terminal") {
+			termSrv, termDone, termErr = startTerminalServer(termPort, termMux)
+		}
+	}
 	if termErr != nil {
 		stderrf("[Kaboom] WARNING: terminal server failed to start on port %d: %v\n", termPort, termErr)
 		stderrf("[Kaboom] Terminal features are unavailable. Free port %d or use a different base port.\n", termPort)

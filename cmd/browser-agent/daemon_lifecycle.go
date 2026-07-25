@@ -31,6 +31,7 @@ var (
 	daemonWaitForPortRelease = waitForPortRelease
 	daemonTerminatePID       = terminatePIDQuiet
 	daemonNow                = time.Now
+	daemonFindProcessOnPort  = findProcessOnPort
 )
 
 func enforceDaemonStartupPolicy(server *Server, port int, opts daemonLaunchOptions) error {

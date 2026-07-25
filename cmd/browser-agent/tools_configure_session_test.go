@@ -11,7 +11,7 @@ import (
 )
 
 // ============================================
-// toolLoadSessionContext — 58% → 100%
+// handleLoadSessionContext — 58% → 100%
 // ============================================
 
 func TestToolLoadSessionContext_WithStore(t *testing.T) {
@@ -42,7 +42,7 @@ func TestToolLoadSessionContext_NilStore(t *testing.T) {
 
 	args := json.RawMessage(`{"what":"load"}`)
 	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := env.handler.configureSession().toolLoadSessionContext(req, args)
+	resp := env.handler.configureSession().handleLoadSessionContext(req, args)
 
 	result := parseToolResult(t, resp)
 	if !result.IsError {

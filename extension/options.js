@@ -15,6 +15,7 @@
 import { SettingName, StorageKey, DEFAULT_SERVER_URL } from './lib/constants.js';
 import { buildDaemonHeaders, buildDaemonJSONRequestInit } from './lib/daemon-http.js';
 import { getLocal, getLocals, setLocals } from './lib/storage-utils.js';
+import { KABOOM_LOG_PREFIX } from './lib/brand.js';
 /**
  * Apply persisted theme as early as possible without inline HTML scripts.
  * Keeps options page CSP-compliant (MV3 disallows inline scripts by default).
@@ -173,6 +174,20 @@ export function saveOptions() {
         setTimeout(() => {
             message?.classList.remove('show');
         }, 2000);
+    }).catch((err) => {
+        // The persist rejected (e.g. storage over quota). Surface it instead of
+        // silently doing nothing, and absorb the rejection so the click handler that
+        // discards this promise does not leak an unhandled rejection (rule 25).
+        console.warn(`${KABOOM_LOG_PREFIX} Failed to save options:`, err);
+        const message = document.getElementById('saved-message');
+        if (message) {
+            message.textContent = 'Save failed — try again';
+            message.classList.add('show');
+            setTimeout(() => {
+                message.classList.remove('show');
+                message.textContent = 'Saved!';
+            }, 3000);
+        }
     });
 }
 /**

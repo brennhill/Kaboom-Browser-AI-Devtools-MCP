@@ -93,6 +93,31 @@ test('detectDefaultBrowserId reads the OS default per platform', () => {
   assert.equal(detectDefaultBrowserId({ platform: 'sunos', runFn: () => 'whatever' }), null);
 });
 
+test('darwin default: falls back to the http handler when no https handler exists', () => {
+  // Some macOS systems register the default browser under http only. An https-only
+  // scan would return null here; the http fallback must still resolve the browser.
+  const httpOnly = JSON.stringify({
+    LSHandlers: [
+      { LSHandlerURLScheme: 'mailto', LSHandlerRoleAll: 'com.apple.mail' },
+      { LSHandlerURLScheme: 'http', LSHandlerRoleAll: 'com.brave.Browser' },
+    ],
+  });
+  assert.equal(detectDefaultBrowserId({ platform: 'darwin', homeDir: '/Users/x', runFn: () => httpOnly }), 'brave');
+
+  // https still wins when both schemes are registered to different browsers.
+  const both = JSON.stringify({
+    LSHandlers: [
+      { LSHandlerURLScheme: 'http', LSHandlerRoleAll: 'com.brave.Browser' },
+      { LSHandlerURLScheme: 'https', LSHandlerRoleAll: 'com.microsoft.edgemac' },
+    ],
+  });
+  assert.equal(detectDefaultBrowserId({ platform: 'darwin', homeDir: '/Users/x', runFn: () => both }), 'edge');
+
+  // Malformed / empty plist still yields null (defensive).
+  assert.equal(detectDefaultBrowserId({ platform: 'darwin', homeDir: '/Users/x', runFn: () => 'not json' }), null);
+  assert.equal(detectDefaultBrowserId({ platform: 'darwin', homeDir: '/Users/x', runFn: () => JSON.stringify({}) }), null);
+});
+
 test('detectExtensionsTarget prefers the OS default browser when it is installed', () => {
   // Everything installed; without a default, Chrome would win by order — but the
   // OS default is Brave, so we open Brave (the browser the user actually uses).

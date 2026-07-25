@@ -201,7 +201,7 @@ func TestAsyncQueueTimeout(t *testing.T) {
 	}
 
 	// Result should not exist
-	_, found := capture.GetQueryResult(id)
+	_, found := capture.TakeQueryResult(id)
 	if found {
 		t.Error("Result should not exist for expired query")
 	}

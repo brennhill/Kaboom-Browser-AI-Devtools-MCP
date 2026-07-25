@@ -9,7 +9,8 @@
 import { resolveTerminalWorkspaceTarget } from './tab-state.js'
 import { enableTerminalPanelForTab, SIDE_PANEL_PATH } from './side-panel-availability.js'
 export { syncTerminalPanelAvailability } from './side-panel-availability.js'
-import { TERMINAL_PANEL_PORT } from '../lib/constants.js'
+import { TERMINAL_PANEL_PORT, StorageKey } from '../lib/constants.js'
+import { setSession, persist } from '../lib/storage-utils.js'
 import { errorMessage } from '../lib/error-utils.js'
 
 /**
@@ -25,10 +26,21 @@ import { errorMessage } from '../lib/error-utils.js'
  * Read synchronously on purpose: the toggle must decide open-vs-close *before*
  * chrome.sidePanel.open(), and any await first expires the user gesture.
  */
-let livePanelPort: chrome.runtime.Port | null = null
+// Every live panel document, not one flag. A user can have a panel open in more
+// than one window, and closing one must not report "no panel" while another is
+// still up (that flipped TERMINAL_UI_STATE to 'closed', so the flame reappeared
+// and the surviving panel's own storage listener then hid it).
+const livePanelPorts = new Set<chrome.runtime.Port>()
 
 export function isTerminalPanelOpenSync(): boolean {
-  return livePanelPort !== null
+  return livePanelPorts.size > 0
+}
+
+/** The most-recently-connected live panel port (Set keeps insertion order), or null. */
+function currentPanelPort(): chrome.runtime.Port | null {
+  let last: chrome.runtime.Port | null = null
+  for (const port of livePanelPorts) last = port
+  return last
 }
 
 /**
@@ -41,9 +53,22 @@ export function watchTerminalPanelState(): void {
   if (typeof chrome === 'undefined' || !chrome.runtime?.onConnect) return
   chrome.runtime.onConnect.addListener((port: chrome.runtime.Port) => {
     if (port.name !== TERMINAL_PANEL_PORT) return
-    livePanelPort = port
+    livePanelPorts.add(port)
+    // Mirror authoritative panel presence into TERMINAL_UI_STATE. The in-page
+    // flame launcher suppresses itself while the terminal is visible, reading
+    // this key — but a Chrome-native panel close (the panel's own "X") destroys
+    // the document with no chance to flush its 'closed' write, which used to
+    // leave the key stuck at 'open' and hide the flame forever. The port drop is
+    // the reliable "panel is gone" signal, so reset the mirror here.
+    persist(setSession(StorageKey.TERMINAL_UI_STATE, 'open'), 'terminal-ui-state-open')
     port.onDisconnect.addListener(() => {
-      if (livePanelPort === port) livePanelPort = null
+      livePanelPorts.delete(port)
+      // Only mark closed once the LAST panel document is gone — another window's
+      // panel may still be open, and an older port's drop must not hide the flame
+      // (or flip the mirror) while a newer panel is live.
+      if (livePanelPorts.size === 0) {
+        persist(setSession(StorageKey.TERMINAL_UI_STATE, 'closed'), 'terminal-ui-state-closed')
+      }
     })
   })
 }
@@ -59,7 +84,7 @@ export function watchTerminalPanelState(): void {
  * failure would surface an error toast for a no-op.
  */
 export async function closeTerminalSidePanel(): Promise<{ success: boolean; error?: string }> {
-  const port = livePanelPort
+  const port = currentPanelPort()
   if (!port) return { success: true }
   try {
     port.postMessage({ type: 'close_terminal_panel' })
@@ -96,7 +121,7 @@ export function toggleTerminalSidePanel(
  * work and this is a no-op.
  */
 function requestPanelRestore(): void {
-  const port = livePanelPort
+  const port = currentPanelPort()
   if (!port) return
   try {
     port.postMessage({ type: 'restore_terminal_panel' })

@@ -4,7 +4,7 @@ feature_id: feature-annotated-screenshots
 status: active
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-25
 code_paths:
   - extension/content/draw-mode.js
   - internal/annotation/store.go
@@ -26,6 +26,7 @@ test_paths:
   - cmd/browser-agent/tools_analyze_annotations_test.go
   - cmd/browser-agent/tools_generate_annotations_test.go
   - scripts/smoke-tests/31-annotation-parity.sh
+  - tests/extension/entry-point-parity.test.js
   - npm run smoke:annotation-parity
   - npm run smoke:annotation-parity-suite
   - npm run smoke:annotation-parity-benchmark

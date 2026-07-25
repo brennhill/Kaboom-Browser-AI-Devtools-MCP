@@ -133,9 +133,10 @@ async function installCommand(options) {
       }
       console.log(output.installResult(result));
       // Reveal the extension folder so "Load unpacked" is one selection away.
-      // Best-effort and opt-out via KABOOM_NO_OPEN; the exact path is printed
-      // above regardless, so nothing is lost when this cannot run.
-      if (!options.dryRun && extension.openExtensionDir(result.extensionDir)) {
+      // Interactive installs only, so scripted/CI runs never pop a file-manager
+      // window (matches the browser-open gate below). Best-effort and opt-out via
+      // KABOOM_NO_OPEN; the exact path is printed above regardless.
+      if (!options.dryRun && isInteractiveInstall() && extension.openExtensionDir(result.extensionDir)) {
         console.log('📂 Opened the extension folder for you — just select it in "Load unpacked".');
       }
       // Also open the browser straight to its extensions page (the folder opener
@@ -227,7 +228,12 @@ async function doctorCommand(verbose) {
   try {
     const report = await doctor.runDiagnostics(verbose);
     console.log(output.diagnosticReport(report));
-    process.exit(0);
+    // Exit non-zero only for a HARD failure the user must fix: a missing/broken
+    // platform binary means the tool cannot run at all, so scripts and CI should
+    // catch it. SOFT/expected post-install states (daemon not running, extension
+    // not yet connected) stay exit 0 so they never fail an install script.
+    const binaryFailed = !!(report.binary && report.binary.ok === false);
+    process.exit(binaryFailed ? 1 : 0);
   } catch (err) {
     console.error(err.format ? err.format() : `Error: ${err.message}`);
     process.exit(1);
