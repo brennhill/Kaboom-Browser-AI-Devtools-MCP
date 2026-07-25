@@ -16,7 +16,7 @@ import { getServerUrl, getConnectionStatus, isDebugMode, isScreenshotOnError, ge
 import { isSourceMapEnabled, setSourceMapEnabled, canTakeScreenshot, recordScreenshot, clearSourceMapCache, getContextWarning, getMemoryPressureState, isNetworkBodyCaptureDisabled, flushErrorGroups, cleanupStaleErrorGroups, clearScreenshotTimestamps } from './state-manager.js';
 import { loadDebugModeState, installStartupListener, loadAiWebPilotState, loadSavedSettings, installStorageChangeListener, setupChromeAlarms, installAlarmListener, installTabRemovedListener, installTabUpdatedListener, installDrawModeCommandListener, installRecordingShortcutCommandListener, installTerminalPanelCommandListener, installScreenRecordingCommandListener, installContextMenus, saveSetting, forwardToAllContentScripts, getActiveTab, sendTabToast, handleTrackedTabClosed, handleTrackedTabUrlChange } from './event-listeners.js';
 import { installPushCommandListener, installChatCommandListener } from './push-handler.js';
-import { isRecording, startRecording, stopRecording } from './recording.js';
+import { isRecording, startRecording, stopRecording } from './recording/index.js';
 import { installMessageListener, broadcastTrackingState } from './message-handlers.js';
 import { captureScreenshot, updateBadge } from './communication.js';
 import { wasServiceWorkerRestarted, markStateVersion, setSessionAccessLevel, setLocal, getLocal } from '../lib/storage-utils.js';

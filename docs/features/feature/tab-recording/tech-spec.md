@@ -1,7 +1,7 @@
 ---
 doc_type: tech-spec
 feature_id: feature-tab-recording
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-25
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -123,7 +123,7 @@ sequenceDiagram
 
 ## Key Implementation Details
 
-### 1. Extension: Recording Pipeline (`src/background/recording.ts`)
+### 1. Extension: Recording Pipeline (`src/background/recording/index.ts`)
 
 New module handling all recording logic:
 
@@ -667,7 +667,7 @@ No new protocol — reuses existing `PendingQuery` / `CommandResult` infrastruct
 
 ```text
 Extension:
-  src/background/recording.ts      (NEW — ~200 LOC, recording pipeline)
+  src/background/recording/index.ts      (NEW — ~200 LOC, recording pipeline)
   src/background/pending-queries.ts (MODIFY — add screen_recording_start/screen_recording_stop dispatch)
   extension/manifest.json           (MODIFY — add tabCapture permission)
   extension/popup.html              (MODIFY — add recording section)

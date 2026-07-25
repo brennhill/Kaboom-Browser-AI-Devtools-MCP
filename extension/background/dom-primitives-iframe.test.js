@@ -80,7 +80,7 @@ globalThis.chrome = {
   }
 }
 
-const { executeDOMAction } = await import('./dom-dispatch.js')
+const { executeDOMAction } = await import('./dom/dom-dispatch.js')
 
 // ---------------------------------------------------------------------------
 // Helpers

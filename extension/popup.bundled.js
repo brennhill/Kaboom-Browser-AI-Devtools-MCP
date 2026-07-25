@@ -141,7 +141,7 @@
       }
     });
   }
-  function writeStorage(method, items) {
+  function runStorageWrite(label, invoke) {
     return new Promise((resolve, reject) => {
       let settled = false;
       const finish = () => {
@@ -150,12 +150,12 @@
         settled = true;
         const errMsg = storageLastError();
         if (errMsg)
-          reject(new Error(`chrome.storage write failed: ${errMsg}`));
+          reject(new Error(`chrome.storage ${label} failed: ${errMsg}`));
         else
           resolve();
       };
       try {
-        const maybePromise = method(items, finish);
+        const maybePromise = invoke(finish);
         if (isPromiseLike(maybePromise)) {
           maybePromise.then(() => finish()).catch(reject);
         }
@@ -164,28 +164,11 @@
       }
     });
   }
+  function writeStorage(method, items) {
+    return runStorageWrite("write", (finish) => method(items, finish));
+  }
   function removeFromStorage(method, keys) {
-    return new Promise((resolve, reject) => {
-      let settled = false;
-      const finish = () => {
-        if (settled)
-          return;
-        settled = true;
-        const errMsg = storageLastError();
-        if (errMsg)
-          reject(new Error(`chrome.storage remove failed: ${errMsg}`));
-        else
-          resolve();
-      };
-      try {
-        const maybePromise = method(keys, finish);
-        if (isPromiseLike(maybePromise)) {
-          maybePromise.then(() => finish()).catch(reject);
-        }
-      } catch (error) {
-        reject(error);
-      }
-    });
+    return runStorageWrite("remove", (finish) => method(keys, finish));
   }
   async function getLocal(key) {
     if (typeof chrome === "undefined" || !chrome.storage)
@@ -1373,6 +1356,16 @@ The daemon will restart automatically.`;
       notifyTrackingState(prevTabId, false);
   }
 
+  // extension/lib/tab-focus.js
+  async function focusTabAndWindow(tabId) {
+    const updated = await chrome.tabs.update(tabId, { active: true });
+    const tab = updated ?? await chrome.tabs.get(tabId);
+    if (tab?.windowId != null && chrome.windows?.update) {
+      await chrome.windows.update(tab.windowId, { focused: true });
+    }
+    return tab;
+  }
+
   // extension/lib/request-audit.js
   async function requestAudit(pageUrl, tabId) {
     try {
@@ -1405,11 +1398,7 @@ The daemon will restart automatically.`;
     if (!tabId)
       return;
     try {
-      await chrome.tabs.update(tabId, { active: true });
-      const tab = await chrome.tabs.get(tabId);
-      if (tab.windowId) {
-        await chrome.windows.update(tab.windowId, { focused: true });
-      }
+      await focusTabAndWindow(tabId);
       console.log(KABOOM_LOG_PREFIX, "Switched to tracked tab:", tabId);
     } catch (err) {
       console.error(KABOOM_LOG_PREFIX, "Failed to switch to tracked tab:", err);

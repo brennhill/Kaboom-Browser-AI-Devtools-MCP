@@ -4,10 +4,10 @@ import assert from 'node:assert'
 import { readFileSync } from 'node:fs'
 
 const DOM_PRIMITIVE_FILES = [
-  'src/background/dom-primitives.ts',
-  'src/background/dom-primitives-list-interactive.ts',
-  'src/background/dom-primitives-intent.ts',
-  'src/background/dom-primitives-overlay.ts'
+  'src/background/dom/dom-primitives.ts',
+  'src/background/dom/dom-primitives-list-interactive.ts',
+  'src/background/dom/dom-primitives-intent.ts',
+  'src/background/dom/dom-primitives-overlay.ts'
 ]
 
 describe('DOM primitive branding contracts', () => {

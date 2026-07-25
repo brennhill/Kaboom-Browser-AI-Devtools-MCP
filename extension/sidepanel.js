@@ -210,6 +210,39 @@ function handleIframeMessage(event) {
         }
     }
 }
+/**
+ * Build one 24×24 icon button for the terminal header. All four header controls
+ * (disconnect / redraw / minimize / close) share the same box, hover affordance,
+ * and click-swallowing wrapper — only the id, glyph, tooltip, accent colour, and
+ * action differ. One factory keeps them from drifting apart (repo rule 19/DRY).
+ */
+function createTerminalHeaderButton(opts) {
+    const button = document.createElement('button');
+    button.id = opts.id;
+    button.textContent = opts.glyph;
+    button.title = opts.title;
+    button.type = 'button';
+    Object.assign(button.style, {
+        width: '24px',
+        height: '24px',
+        border: 'none',
+        background: 'transparent',
+        color: opts.color,
+        fontSize: opts.fontSize ?? '14px',
+        cursor: 'pointer',
+        borderRadius: '4px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: '0'
+    });
+    button.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        opts.onClick();
+    });
+    return button;
+}
 function createTerminalHeader() {
     const header = document.createElement('div');
     header.id = HEADER_ID;
@@ -246,101 +279,34 @@ function createTerminalHeader() {
     });
     const spacer = document.createElement('div');
     spacer.style.flex = '1';
-    const disconnectButton = document.createElement('button');
-    disconnectButton.id = DISCONNECT_TERMINAL_BUTTON_ID;
-    disconnectButton.textContent = '\u23FB';
-    disconnectButton.title = 'End session — stops the shell and closes the panel';
-    disconnectButton.type = 'button';
-    Object.assign(disconnectButton.style, {
-        width: '24px',
-        height: '24px',
-        border: 'none',
-        background: 'transparent',
+    const disconnectButton = createTerminalHeaderButton({
+        id: DISCONNECT_TERMINAL_BUTTON_ID,
+        glyph: '\u23FB',
+        title: 'End session — stops the shell and closes the panel',
         color: '#f7768e',
         fontSize: '12px',
-        cursor: 'pointer',
-        borderRadius: '4px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: '0'
+        onClick: () => void exitTerminalSession()
     });
-    disconnectButton.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        void exitTerminalSession();
-    });
-    const redrawButton = document.createElement('button');
-    redrawButton.id = REDRAW_TERMINAL_BUTTON_ID;
-    redrawButton.textContent = '\u21BB';
-    redrawButton.title = 'Redraw terminal graphics';
-    redrawButton.type = 'button';
-    Object.assign(redrawButton.style, {
-        width: '24px',
-        height: '24px',
-        border: 'none',
-        background: 'transparent',
+    const redrawButton = createTerminalHeaderButton({
+        id: REDRAW_TERMINAL_BUTTON_ID,
+        glyph: '\u21BB',
+        title: 'Redraw terminal graphics',
         color: '#565f89',
-        fontSize: '14px',
-        cursor: 'pointer',
-        borderRadius: '4px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: '0'
+        onClick: () => void redrawTerminal()
     });
-    redrawButton.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        void redrawTerminal();
-    });
-    minimizeButtonEl = document.createElement('button');
-    minimizeButtonEl.id = MINIMIZE_TERMINAL_BUTTON_ID;
-    minimizeButtonEl.textContent = '\u2581';
-    minimizeButtonEl.title = 'Minimize terminal';
-    minimizeButtonEl.type = 'button';
-    Object.assign(minimizeButtonEl.style, {
-        width: '24px',
-        height: '24px',
-        border: 'none',
-        background: 'transparent',
+    minimizeButtonEl = createTerminalHeaderButton({
+        id: MINIMIZE_TERMINAL_BUTTON_ID,
+        glyph: '\u2581',
+        title: 'Minimize terminal',
         color: '#565f89',
-        fontSize: '14px',
-        cursor: 'pointer',
-        borderRadius: '4px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: '0'
+        onClick: () => void minimizePanel()
     });
-    minimizeButtonEl.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        void minimizePanel();
-    });
-    const closeButton = document.createElement('button');
-    closeButton.id = CLOSE_TERMINAL_BUTTON_ID;
-    closeButton.textContent = '\u2715';
-    closeButton.title = 'Close panel — the shell keeps running, reopen to come back';
-    closeButton.type = 'button';
-    Object.assign(closeButton.style, {
-        width: '24px',
-        height: '24px',
-        border: 'none',
-        background: 'transparent',
+    const closeButton = createTerminalHeaderButton({
+        id: CLOSE_TERMINAL_BUTTON_ID,
+        glyph: '\u2715',
+        title: 'Close panel — the shell keeps running, reopen to come back',
         color: '#c0caf5',
-        fontSize: '14px',
-        cursor: 'pointer',
-        borderRadius: '4px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: '0'
-    });
-    closeButton.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        void closePanelKeepingSession();
+        onClick: () => void closePanelKeepingSession()
     });
     header.appendChild(statusDotEl);
     header.appendChild(titleSpan);

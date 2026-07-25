@@ -30,7 +30,7 @@ expensive (the agent's context window).
 ## Key Components
 
 **CDP heap capture (extension)**: Using the existing Chrome debugger lifecycle in
-`src/background/cdp-dispatch.ts` (`chrome.debugger.attach`, `sendCommand`, `detach`), the
+`src/background/dom/cdp/cdp-dispatch.ts` (`chrome.debugger.attach`, `sendCommand`, `detach`), the
 extension enables the `HeapProfiler` domain, calls `HeapProfiler.takeHeapSnapshot`, accumulates
 the chunked data emitted by `HeapProfiler.addHeapSnapshotChunk` events, reassembles the complete
 JavaScript Object Notation (JSON) snapshot, disables the domain, and detaches.
@@ -108,7 +108,7 @@ Comparison: analyze({..., detail: "leak_suspects", compare_to: <other snapshot_i
   `include_detached_dom`, `save_path`, `top_n`).
 
 **Extension files**:
-- `src/background/cdp-dispatch.ts` and `src/background/commands/analyze.ts`: add the
+- `src/background/dom/cdp/cdp-dispatch.ts` and `src/background/commands/analyze.ts`: add the
   `HeapProfiler` capture sequence and chunked transfer to the daemon.
 
 **Trade-offs**:
@@ -123,7 +123,7 @@ Comparison: analyze({..., detail: "leak_suspects", compare_to: <other snapshot_i
 ### Edge Cases
 
 - **Debugger already attached**: return the existing attach-conflict error from
-  `src/background/cdp-dispatch.ts` with a recovery action.
+  `src/background/dom/cdp/cdp-dispatch.ts` with a recovery action.
 - **Very large heap (500MB)**: chunked transfer and streaming parse keep memory bounded; if the
   configured limit is exceeded, return a clear size-limit error.
 - **`compare_to` references an evicted snapshot**: return an error naming the missing
@@ -139,7 +139,7 @@ Comparison: analyze({..., detail: "leak_suspects", compare_to: <other snapshot_i
 
 - A1: The extension is connected and tracking a tab.
 - A2: The `debugger` permission is granted and the CDP lifecycle in
-  `src/background/cdp-dispatch.ts` is the single point of debugger management.
+  `src/background/dom/cdp/cdp-dispatch.ts` is the single point of debugger management.
 - A3: The tracked tab hosts a real web page with a JavaScript heap, not an internal browser page.
 - A4: The WebSocket channel supports chunked transfer for multi-megabyte payloads.
 - A5: At most two snapshots are needed concurrently for comparison workflows.
@@ -171,7 +171,7 @@ Comparison: analyze({..., detail: "leak_suspects", compare_to: <other snapshot_i
 
 ### Depends on:
 - The analyze dispatch registry (`cmd/browser-agent/tools_analyze_dispatch.go`).
-- The CDP attach/detach lifecycle and `HeapProfiler` domain (`src/background/cdp-dispatch.ts`).
+- The CDP attach/detach lifecycle and `HeapProfiler` domain (`src/background/dom/cdp/cdp-dispatch.ts`).
 - The asynchronous command pattern and command-result polling
   (`cmd/browser-agent/internal/toolinteract/interact_command_builder.go`,
   `observe({what: "command_result"})`).

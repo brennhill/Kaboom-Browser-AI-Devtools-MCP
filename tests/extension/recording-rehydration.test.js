@@ -1,7 +1,7 @@
 // @ts-nocheck
 /**
  * @fileoverview recording-rehydration.test.js — Tests for the recording rehydration
- * decision logic (extension/background/recording-rehydration.js).
+ * decision logic (extension/background/recording/rehydration.js).
  * MV3 service workers restart routinely while the offscreen MediaRecorder keeps
  * recording; on startup the SW asks the offscreen document whether a recording is
  * still active and rehydrates in-memory state instead of unconditionally clearing it.
@@ -11,7 +11,7 @@
 import { test, describe, mock } from 'node:test'
 import assert from 'node:assert'
 
-const { resolveRecordingRehydration } = await import('../../extension/background/recording-rehydration.js')
+const { resolveRecordingRehydration } = await import('../../extension/background/recording/rehydration.js')
 
 const liveOffscreenState = {
   active: true,

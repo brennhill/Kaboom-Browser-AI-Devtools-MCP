@@ -240,7 +240,7 @@ globalThis.performance = { now: () => perfNowValue++ }
 // ---------------------------------------------------------------------------
 // Import domPrimitive AFTER globals are set up
 // ---------------------------------------------------------------------------
-const { domPrimitive, domWaitFor, domPrimitiveListInteractive } = await import('./dom-primitives.js')
+const { domPrimitive, domWaitFor, domPrimitiveListInteractive } = await import('./dom/dom-primitives.js')
 
 // ---------------------------------------------------------------------------
 // Helper: build a mock document with shadow DOM structure

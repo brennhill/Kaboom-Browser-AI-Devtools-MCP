@@ -54,15 +54,15 @@ Selector resolution inside extension DOM primitives used by `interact` mutating 
 
 ## Code Paths
 
-- `src/background/dom-primitives.ts`
+- `src/background/dom/dom-primitives.ts`
 - `scripts/templates/partials/_dom-selectors.tpl`
 - `scripts/templates/dom-primitives.ts.tpl`
-- `extension/background/dom-primitives.js`
-- `src/background/dom-dispatch.ts`
-- `src/background/dom-primitives-intent.ts`
-- `src/background/dom-primitives-overlay.ts`
-- `src/background/dom-primitives-stability.ts`
-- `src/background/dom-types.ts`
+- `extension/background/dom/dom-primitives.js`
+- `src/background/dom/dom-dispatch.ts`
+- `src/background/dom/dom-primitives-intent.ts`
+- `src/background/dom/dom-primitives-overlay.ts`
+- `src/background/dom/dom-primitives-stability.ts`
+- `src/background/dom/dom-types.ts`
 - `cmd/browser-agent/tools_async_result_enrichment.go`
 - `cmd/browser-agent/tools_async_result_normalization.go`
 

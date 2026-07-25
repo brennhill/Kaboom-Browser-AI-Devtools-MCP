@@ -8,7 +8,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
 
-const { parseExpression } = await import('../../extension/background/csp-safe-parser.js')
+const { parseExpression } = await import('../../extension/background/csp-safe/parser.js')
 
 // Helper: assert parse succeeds and return the command
 function mustParse(input) {

@@ -88,7 +88,7 @@ describe('Enhanced wait_for dispatch routing (#371, #362)', () => {
   // ── Selector (existing behavior) ──
 
   test('wait_for with selector dispatches wait_for action', async () => {
-    const { executeDOMAction } = await import('../../extension/background/dom-dispatch.js')
+    const { executeDOMAction } = await import('../../extension/background/dom/dom-dispatch.js')
 
     const query = createPendingQuery({
       action: 'wait_for',
@@ -110,7 +110,7 @@ describe('Enhanced wait_for dispatch routing (#371, #362)', () => {
   // ── Absent condition ──
 
   test('wait_for with absent:true dispatches wait_for_absent action', async () => {
-    const { executeDOMAction } = await import('../../extension/background/dom-dispatch.js')
+    const { executeDOMAction } = await import('../../extension/background/dom/dom-dispatch.js')
 
     globalThis.chrome.scripting.executeScript = mock.fn((opts) => {
       executeScriptCalls.push(opts)
@@ -143,7 +143,7 @@ describe('Enhanced wait_for dispatch routing (#371, #362)', () => {
   // ── Text condition ──
 
   test('wait_for with text dispatches wait_for_text action', async () => {
-    const { executeDOMAction } = await import('../../extension/background/dom-dispatch.js')
+    const { executeDOMAction } = await import('../../extension/background/dom/dom-dispatch.js')
 
     globalThis.chrome.scripting.executeScript = mock.fn((opts) => {
       executeScriptCalls.push(opts)
@@ -173,7 +173,7 @@ describe('Enhanced wait_for dispatch routing (#371, #362)', () => {
   // ── URL condition ──
 
   test('wait_for with url_contains polls tab URL without page injection', async () => {
-    const { executeDOMAction } = await import('../../extension/background/dom-dispatch.js')
+    const { executeDOMAction } = await import('../../extension/background/dom/dom-dispatch.js')
 
     const query = createPendingQuery({
       action: 'wait_for',
@@ -192,7 +192,7 @@ describe('Enhanced wait_for dispatch routing (#371, #362)', () => {
   })
 
   test('wait_for with url_contains times out when URL does not match', async () => {
-    const { executeDOMAction } = await import('../../extension/background/dom-dispatch.js')
+    const { executeDOMAction } = await import('../../extension/background/dom/dom-dispatch.js')
 
     globalThis.chrome.tabs.get = mock.fn((tabId) => Promise.resolve({
       id: tabId, windowId: 1, url: 'http://localhost:3000/login'
@@ -215,7 +215,7 @@ describe('Enhanced wait_for dispatch routing (#371, #362)', () => {
   // ── Validation: missing conditions ──
 
   test('wait_for with no selector, text, or url_contains returns error', async () => {
-    const { executeDOMAction } = await import('../../extension/background/dom-dispatch.js')
+    const { executeDOMAction } = await import('../../extension/background/dom/dom-dispatch.js')
 
     const query = createPendingQuery({ action: 'wait_for', timeout_ms: 100 })
 
@@ -230,7 +230,7 @@ describe('Enhanced wait_for dispatch routing (#371, #362)', () => {
   // ── Validation: mutual exclusivity ──
 
   test('wait_for with both selector and text returns mutual exclusivity error', async () => {
-    const { executeDOMAction } = await import('../../extension/background/dom-dispatch.js')
+    const { executeDOMAction } = await import('../../extension/background/dom/dom-dispatch.js')
 
     const query = createPendingQuery({
       action: 'wait_for',
@@ -248,7 +248,7 @@ describe('Enhanced wait_for dispatch routing (#371, #362)', () => {
   })
 
   test('wait_for with both url_contains and selector returns mutual exclusivity error', async () => {
-    const { executeDOMAction } = await import('../../extension/background/dom-dispatch.js')
+    const { executeDOMAction } = await import('../../extension/background/dom/dom-dispatch.js')
 
     const query = createPendingQuery({
       action: 'wait_for',
@@ -266,7 +266,7 @@ describe('Enhanced wait_for dispatch routing (#371, #362)', () => {
   })
 
   test('wait_for with both url_contains and text returns mutual exclusivity error', async () => {
-    const { executeDOMAction } = await import('../../extension/background/dom-dispatch.js')
+    const { executeDOMAction } = await import('../../extension/background/dom/dom-dispatch.js')
 
     const query = createPendingQuery({
       action: 'wait_for',
@@ -286,7 +286,7 @@ describe('Enhanced wait_for dispatch routing (#371, #362)', () => {
   // ── Validation: absent requires selector ──
 
   test('wait_for with absent:true but no selector returns error', async () => {
-    const { executeDOMAction } = await import('../../extension/background/dom-dispatch.js')
+    const { executeDOMAction } = await import('../../extension/background/dom/dom-dispatch.js')
 
     const query = createPendingQuery({
       action: 'wait_for',
@@ -305,7 +305,7 @@ describe('Enhanced wait_for dispatch routing (#371, #362)', () => {
   // ── Timeout for selector ──
 
   test('wait_for with selector times out when element not found', async () => {
-    const { executeDOMAction } = await import('../../extension/background/dom-dispatch.js')
+    const { executeDOMAction } = await import('../../extension/background/dom/dom-dispatch.js')
 
     globalThis.chrome.scripting.executeScript = mock.fn((opts) => {
       executeScriptCalls.push(opts)
@@ -331,7 +331,7 @@ describe('Enhanced wait_for dispatch routing (#371, #362)', () => {
   // ── Timeout for absent ──
 
   test('wait_for with absent:true times out when element persists', async () => {
-    const { executeDOMAction } = await import('../../extension/background/dom-dispatch.js')
+    const { executeDOMAction } = await import('../../extension/background/dom/dom-dispatch.js')
 
     globalThis.chrome.scripting.executeScript = mock.fn((opts) => {
       executeScriptCalls.push(opts)
@@ -358,7 +358,7 @@ describe('Enhanced wait_for dispatch routing (#371, #362)', () => {
   // ── Timeout for text ──
 
   test('wait_for with text times out when text not found', async () => {
-    const { executeDOMAction } = await import('../../extension/background/dom-dispatch.js')
+    const { executeDOMAction } = await import('../../extension/background/dom/dom-dispatch.js')
 
     globalThis.chrome.scripting.executeScript = mock.fn((opts) => {
       executeScriptCalls.push(opts)
@@ -384,7 +384,7 @@ describe('Enhanced wait_for dispatch routing (#371, #362)', () => {
   // ── Polling retry: condition becomes true after initial failure ──
 
   test('wait_for with selector retries and succeeds after initial failure', async () => {
-    const { executeDOMAction } = await import('../../extension/background/dom-dispatch.js')
+    const { executeDOMAction } = await import('../../extension/background/dom/dom-dispatch.js')
 
     let callCount = 0
     globalThis.chrome.scripting.executeScript = mock.fn((opts) => {
@@ -419,7 +419,7 @@ describe('Enhanced wait_for dispatch routing (#371, #362)', () => {
   })
 
   test('wait_for with url_contains retries and succeeds on URL change', async () => {
-    const { executeDOMAction } = await import('../../extension/background/dom-dispatch.js')
+    const { executeDOMAction } = await import('../../extension/background/dom/dom-dispatch.js')
 
     let tabGetCount = 0
     globalThis.chrome.tabs.get = mock.fn((tabId) => {
@@ -449,7 +449,7 @@ describe('Enhanced wait_for dispatch routing (#371, #362)', () => {
   // ── Error handling: chrome.tabs.get throws ──
 
   test('wait_for with url_contains handles chrome.tabs.get rejection', async () => {
-    const { executeDOMAction } = await import('../../extension/background/dom-dispatch.js')
+    const { executeDOMAction } = await import('../../extension/background/dom/dom-dispatch.js')
 
     globalThis.chrome.tabs.get = mock.fn(() => {
       return Promise.reject(new Error('No tab with id: 999'))

@@ -146,7 +146,7 @@
       }
     });
   }
-  function writeStorage(method, items) {
+  function runStorageWrite(label, invoke) {
     return new Promise((resolve, reject) => {
       let settled = false;
       const finish = () => {
@@ -155,12 +155,12 @@
         settled = true;
         const errMsg = storageLastError();
         if (errMsg)
-          reject(new Error(`chrome.storage write failed: ${errMsg}`));
+          reject(new Error(`chrome.storage ${label} failed: ${errMsg}`));
         else
           resolve();
       };
       try {
-        const maybePromise = method(items, finish);
+        const maybePromise = invoke(finish);
         if (isPromiseLike(maybePromise)) {
           maybePromise.then(() => finish()).catch(reject);
         }
@@ -169,28 +169,11 @@
       }
     });
   }
+  function writeStorage(method, items) {
+    return runStorageWrite("write", (finish) => method(items, finish));
+  }
   function removeFromStorage(method, keys) {
-    return new Promise((resolve, reject) => {
-      let settled = false;
-      const finish = () => {
-        if (settled)
-          return;
-        settled = true;
-        const errMsg = storageLastError();
-        if (errMsg)
-          reject(new Error(`chrome.storage remove failed: ${errMsg}`));
-        else
-          resolve();
-      };
-      try {
-        const maybePromise = method(keys, finish);
-        if (isPromiseLike(maybePromise)) {
-          maybePromise.then(() => finish()).catch(reject);
-        }
-      } catch (error) {
-        reject(error);
-      }
-    });
+    return runStorageWrite("remove", (finish) => method(keys, finish));
   }
   async function getLocal(key) {
     if (typeof chrome === "undefined" || !chrome.storage)
