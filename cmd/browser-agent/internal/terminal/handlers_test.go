@@ -117,7 +117,7 @@ func TestNewFrameWriter_SerializesConcurrentWrites(t *testing.T) {
 	var wire bytes.Buffer
 	rw := bufio.NewReadWriter(bufio.NewReader(&wire), bufio.NewWriter(&wire))
 	deps := testDeps()
-	writeFrame := NewFrameWriter(rw, deps)
+	writeFrame := NewFrameWriter(nil, rw, deps)
 
 	var wg sync.WaitGroup
 	for i := 0; i < frameCount; i++ {

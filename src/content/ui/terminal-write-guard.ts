@@ -13,7 +13,8 @@ import {
   TERMINAL_WRITE_SUBMIT_DELAY_MS,
   TERMINAL_TYPING_IDLE_MS,
   TERMINAL_GUARD_POLL_MS,
-  TERMINAL_GUARD_TOAST_INTERVAL_MS
+  TERMINAL_GUARD_TOAST_INTERVAL_MS,
+  TERMINAL_GUARD_MAX_WAIT_MS
 } from './terminal-widget-types.js'
 
 /**
@@ -44,6 +45,7 @@ export function resetWriteGuardState(): void {
   state.lastTypingAt = 0
   state.queuedWriteInFlight = false
   state.lastGuardToastAt = 0
+  state.guardBlockedSince = 0
   if (state.queuedWriteFlushTimer !== null) {
     clearTimeout(state.queuedWriteFlushTimer)
     state.queuedWriteFlushTimer = null
@@ -52,6 +54,39 @@ export function resetWriteGuardState(): void {
     clearTimeout(state.queuedSubmitTimer)
     state.queuedSubmitTimer = null
   }
+}
+
+/**
+ * Mark the guard as blocked (waiting for the socket or for typing to stop) if it
+ * is not already, stamping when the wait began. Idempotent while blocked so the
+ * escape-hatch deadline measures the *total* stuck time, not the last poll.
+ */
+function markGuardBlocked(nowMs: number): void {
+  if (state.guardBlockedSince === 0) state.guardBlockedSince = nowMs
+}
+
+/**
+ * Escape hatch for the genuine wedge: the socket has stayed DOWN
+ * (`!terminalConnected`) for longer than TERMINAL_GUARD_MAX_WAIT_MS, so give up
+ * LOUDLY instead of polling forever. Only ever called from the socket-down
+ * branches — the "terminal not reachable" message must be TRUE. The typing-defer
+ * branches are self-limiting and reset guardBlockedSince instead of tripping
+ * this, so `guardBlockedSince` measures contiguous unreachable time only.
+ * Returns true if it gave up — callers must then stop.
+ */
+function guardGaveUpAfterMaxWait(nowMs: number): boolean {
+  if (state.guardBlockedSince === 0) return false
+  if (nowMs - state.guardBlockedSince < TERMINAL_GUARD_MAX_WAIT_MS) return false
+  const dropped = state.queuedWrites.length + (state.queuedWriteInFlight ? 1 : 0)
+  const noun = dropped === 1 ? 'action' : 'actions'
+  showActionToast(
+    `terminal not reachable — dropped ${dropped} queued ${noun}`,
+    'Terminal write gave up',
+    'error',
+    4000
+  )
+  resetWriteGuardState()
+  return true
 }
 
 export function shouldDeferQueuedWrite(nowMs = Date.now()): boolean {
@@ -81,18 +116,29 @@ export function scheduleQueuedSubmit(delayMs: number): void {
       resetWriteGuardState()
       return
     }
+    const now = Date.now()
     if (!state.terminalConnected) {
+      if (guardGaveUpAfterMaxWait(now)) return
+      markGuardBlocked(now)
       scheduleQueuedSubmit(TERMINAL_GUARD_POLL_MS)
       return
     }
-    if (shouldDeferQueuedWrite()) {
-      maybeShowQueuedWriteToast()
+    if (shouldDeferQueuedWrite(now)) {
+      // The terminal is CONNECTED — the only reason we are waiting is that the
+      // user is typing, which is self-limiting (it clears once typing stops).
+      // Do NOT accrue unreachable-time or trip the escape hatch here: doing so
+      // dropped a healthy write after 30s of continuous typing and told the user
+      // "terminal not reachable", which was false. Reset the unreachable clock so
+      // it only ever measures contiguous socket-down time, then defer politely.
+      state.guardBlockedSince = 0
+      maybeShowQueuedWriteToast(now)
       scheduleQueuedSubmit(TERMINAL_GUARD_POLL_MS)
       return
     }
     notifyIframe('write', { text: '\r' })
     notifyIframe('focus')
     state.queuedWriteInFlight = false
+    state.guardBlockedSince = 0 // Enter delivered — progress made.
     if (state.queuedWrites.length > 0) {
       scheduleQueuedWriteFlush(0)
     }
@@ -104,17 +150,26 @@ export function flushQueuedWrites(): void {
     resetWriteGuardState()
     return
   }
+  const now = Date.now()
   if (!state.terminalConnected) {
+    if (guardGaveUpAfterMaxWait(now)) return
+    markGuardBlocked(now)
     scheduleQueuedWriteFlush(TERMINAL_GUARD_POLL_MS)
     return
   }
   if (state.queuedWriteInFlight) return
   if (state.queuedWrites.length === 0) {
     state.lastGuardToastAt = 0
+    state.guardBlockedSince = 0
     return
   }
-  if (shouldDeferQueuedWrite()) {
-    maybeShowQueuedWriteToast()
+  if (shouldDeferQueuedWrite(now)) {
+    // Connected — waiting only on the user to stop typing (self-limiting). Do NOT
+    // trip the escape hatch here; that dropped healthy writes during continuous
+    // typing and falsely reported "terminal not reachable". Reset the
+    // unreachable clock (it tracks socket-down time only) and defer politely.
+    state.guardBlockedSince = 0
+    maybeShowQueuedWriteToast(now)
     scheduleQueuedWriteFlush(TERMINAL_GUARD_POLL_MS)
     return
   }
@@ -123,6 +178,7 @@ export function flushQueuedWrites(): void {
   if (!nextWrite) return
 
   state.lastGuardToastAt = 0
+  state.guardBlockedSince = 0 // Write dispatched — progress made.
   state.queuedWriteInFlight = true
   notifyIframe('redraw')
   notifyIframe('write', { text: nextWrite })

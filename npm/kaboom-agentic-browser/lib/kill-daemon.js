@@ -126,6 +126,63 @@ function isKaboomDaemonHealth(health) {
   return KABOOM_SERVICE_NAME_REGEX.test(resolveServiceName(health).toLowerCase());
 }
 
+function resolveVersion(health) {
+  if (!health || typeof health !== 'object') return '';
+  return typeof health.version === 'string' ? health.version.trim() : '';
+}
+
+function readSelfVersion() {
+  try {
+    return String(require('../package.json').version || '').trim();
+  } catch (_) {
+    return '';
+  }
+}
+
+// Retry budget mirrors the daemon-side election (classifyExistingDaemon): a
+// healthy daemon that is momentarily busy (GC pause, disk, a burst of MCP load)
+// may miss a single 500ms /health probe. Retrying across ~1.5s before concluding
+// "not a healthy same-version daemon" stops a hiccup from re-triggering the very
+// respawn storm this gate exists to prevent.
+const HEALTH_PROBE_RETRIES = 3;
+const HEALTH_PROBE_BACKOFF_MS = 500;
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// probeHealthySameVersion returns true only if the daemon on `port` answers
+// /health as our exact version. A definitive answer (any parseable health) is
+// returned immediately — same version -> keep, any other version -> real upgrade,
+// no retry either way. Only a NON-answer (busy/slow) is retried within the budget.
+async function probeHealthySameVersion(port, fetchHealth, selfVersion, sleep) {
+  for (let attempt = 0; attempt < HEALTH_PROBE_RETRIES; attempt++) {
+    const h = await fetchHealth(port);
+    if (isKaboomDaemonHealth(h)) {
+      return resolveVersion(h) === selfVersion;
+    }
+    if (attempt < HEALTH_PROBE_RETRIES - 1) await sleep(HEALTH_PROBE_BACKOFF_MS);
+  }
+  return false;
+}
+
+// Is a HEALTHY daemon of the exact version we are installing already running?
+// If so, a (re)install has nothing to replace — killing it only triggers a
+// respawn storm (npx reinstalls repeatedly, each SIGTERMing the live daemon and
+// blinking the terminal port). A stalled daemon does NOT answer /health, so it
+// returns false here and still gets cleaned up. An older/newer version also
+// returns false, so real upgrades still replace the old binary.
+async function healthySameVersionDaemonRunning(deps = {}) {
+  const fetchHealth = deps.fetchHealth || readHealthIdentity;
+  const selfVersion = deps.selfVersion || readSelfVersion();
+  if (!selfVersion) return false;
+  const sleep = deps.sleep || delay;
+  const results = await Promise.all(
+    KNOWN_PORTS.map((port) => probeHealthySameVersion(port, fetchHealth, selfVersion, sleep))
+  );
+  return results.some(Boolean);
+}
+
 function readHealthIdentity(port, timeoutMs = 500) {
   return new Promise((resolve) => {
     const req = http.get(
@@ -280,11 +337,27 @@ function cleanupPIDFiles() {
   }
 }
 
-async function cleanupOldDaemons() {
-  runForceCleanupCommands();
-  killByProcessName();
-  await killByKnownPorts();
-  cleanupPIDFiles();
+async function cleanupOldDaemons(deps = {}) {
+  const env = deps.env || process.env;
+  const lifecycleEvent = env.npm_lifecycle_event || '';
+  // Only short-circuit on INSTALL. Uninstall must always tear the daemon down,
+  // even a healthy same-version one, because the binary is going away.
+  const isInstall = lifecycleEvent === 'preinstall' || lifecycleEvent === 'install';
+
+  if (isInstall && (await healthySameVersionDaemonRunning(deps))) {
+    logLine('[skip-cleanup] healthy daemon already on target version');
+    return;
+  }
+
+  const runForce = deps.runForceCleanupCommands || runForceCleanupCommands;
+  const killByName = deps.killByProcessName || killByProcessName;
+  const killPorts = deps.killByKnownPorts || killByKnownPorts;
+  const cleanPids = deps.cleanupPIDFiles || cleanupPIDFiles;
+
+  runForce();
+  killByName();
+  await killPorts(deps);
+  cleanPids();
 }
 
 if (require.main === module) {
@@ -299,4 +372,6 @@ module.exports = {
   matchesDaemonCommandLine,
   isKaboomDaemonHealth,
   killByKnownPorts,
+  healthySameVersionDaemonRunning,
+  resolveVersion,
 };

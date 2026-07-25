@@ -65,7 +65,13 @@ func awaitShutdownSignal(server *Server, srv *http.Server, port int, httpDone <-
 	}
 
 	// Shut down terminal server first (if running) — non-blocking, best-effort.
-	if termSrv != nil {
+	// Prefer the supervisor so it stops restarting and gracefully closes the
+	// CURRENT server (which may be a restarted instance, not the original termSrv).
+	if server.terminalSupervisor != nil {
+		termCtx, termCancel := context.WithTimeout(context.Background(), terminalShutdownTimeout)
+		server.terminalSupervisor.shutdown(termCtx)
+		termCancel()
+	} else if termSrv != nil {
 		termCtx, termCancel := context.WithTimeout(context.Background(), terminalShutdownTimeout)
 		if err := termSrv.Shutdown(termCtx); err != nil {
 			server.logLifecycle("terminal_shutdown_error", port, map[string]any{"error": err.Error()})
@@ -95,11 +101,18 @@ func awaitShutdownSignal(server *Server, srv *http.Server, port int, httpDone <-
 			th.capture.Close()
 		}
 	}
-	if server.ptyRelays != nil {
-		server.ptyRelays.CloseAll()
-	}
+	// Order matters: StopAll closes every PTY master FIRST. A relay's write buffer
+	// drain goroutine can be blocked inside ptmx.Write when the child stopped
+	// reading stdin; closing the PTY makes that Write return so the subsequent
+	// CloseAll drains and returns instead of hanging shutdown forever. (WriteBuffer
+	// close is also independently time-bounded as defense-in-depth.) StopAll first
+	// also lets each relay's readLoop exit and self-close its write buffer, so
+	// CloseAll is mostly idempotent cleanup.
 	if server.ptyManager != nil {
 		server.ptyManager.StopAll()
+	}
+	if server.ptyRelays != nil {
+		server.ptyRelays.CloseAll()
 	}
 
 	// Log token savings summary and persist lifetime stats.

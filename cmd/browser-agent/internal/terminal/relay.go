@@ -22,7 +22,8 @@ type Relay struct {
 	writeBuf     *pty.WriteBuffer
 	workspaceDir string
 	done         chan struct{}
-	exitCode     int // set by readLoop before closing fanout; read by downstream after channel close
+	exitCode     int         // set by readLoop before closing fanout; read by downstream after channel close
+	ended        atomic.Bool // set true by readLoop before fanout.Close(); distinguishes session-end from a slow-subscriber drop
 }
 
 // NewRelay creates a relay and starts the PTY reader loop.
@@ -59,6 +60,12 @@ func (r *Relay) readLoop() {
 			// which closes subscriber channels, creating a happens-before edge
 			// to the downstream goroutine's read of exitCode.
 			r.reapExitCode()
+			// Mark the session genuinely ended BEFORE the deferred fanout.Close()
+			// closes subscriber channels. A subscriber channel also closes when
+			// Fanout.Broadcast drops a slow subscriber (backpressure) while the
+			// session is still alive; this flag lets the downstream pump tell the
+			// two apart so it does not falsely report `exited` on a live shell.
+			r.ended.Store(true)
 			return
 		}
 	}
@@ -89,6 +96,13 @@ func (r *Relay) WorkspaceDir() string { return r.workspaceDir }
 
 // ExitCode returns the exit code captured after the session exits.
 func (r *Relay) ExitCode() int { return r.exitCode }
+
+// Ended reports whether the session genuinely ended (readLoop exited), as opposed
+// to a subscriber channel closing because Fanout dropped a slow subscriber. Safe
+// to call from another goroutine after observing a subscriber-channel close: the
+// happens-before edge is through that channel close (readLoop stores ended before
+// the deferred fanout.Close()).
+func (r *Relay) Ended() bool { return r.ended.Load() }
 
 // Map manages per-session relays. Implements RelayMap.
 type Map struct {

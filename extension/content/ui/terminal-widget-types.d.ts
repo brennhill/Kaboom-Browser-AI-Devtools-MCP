@@ -25,6 +25,7 @@ export declare const TERMINAL_WRITE_SUBMIT_DELAY_MS = 600;
 export declare const TERMINAL_TYPING_IDLE_MS = 1500;
 export declare const TERMINAL_GUARD_POLL_MS = 200;
 export declare const TERMINAL_GUARD_TOAST_INTERVAL_MS = 3000;
+export declare const TERMINAL_GUARD_MAX_WAIT_MS = 30000;
 export interface TerminalConfig {
     cmd?: string;
     args?: string[];
@@ -50,6 +51,7 @@ export interface TerminalWidgetState {
     queuedWriteInFlight: boolean;
     lastGuardToastAt: number;
     terminalConnected: boolean;
+    guardBlockedSince: number;
 }
 export declare const state: TerminalWidgetState;
 /** Reset all mutable state to initial values. Used by tests to isolate module-cached state. */

@@ -7,16 +7,29 @@ import (
 	"errors"
 	"io"
 	"sync"
+	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
 // Write buffer constants.
 const (
 	writeBufferMax = 1 << 20   // 1 MB backpressure cap.
 	writeChunkSize = 16 * 1024 // 16 KB per write syscall.
+	// writeBufferCloseTimeout bounds how long Close() waits for the drain
+	// goroutine to exit. drain can be blocked inside writer.Write (a PTY child
+	// that stopped reading stdin), which close(notify) cannot interrupt — without
+	// this bound, Close, and therefore daemon shutdown, would hang forever.
+	writeBufferCloseTimeout = 2 * time.Second
 )
 
 // ErrWriteBufferFull is returned when the write buffer exceeds the backpressure cap.
 var ErrWriteBufferFull = errors.New("pty: write buffer full")
+
+// ErrWriteBufferCloseTimeout is returned by Close when the drain goroutine did not
+// exit within writeBufferCloseTimeout (the underlying writer is stuck). Surfaced so
+// the caller can log it; the fd is reclaimed by the OS on process exit.
+var ErrWriteBufferCloseTimeout = errors.New("pty: write buffer close timed out")
 
 // WriteBuffer provides non-blocking writes with async draining to an io.Writer.
 // Data remains in the buffer until successfully written to the underlying writer,
@@ -39,7 +52,10 @@ func NewWriteBuffer(w io.Writer) *WriteBuffer {
 		notify:  make(chan struct{}, 1),
 		done:    make(chan struct{}),
 	}
-	go wb.drain() // lint:allow-bare-goroutine — long-lived drain loop, exits on Close
+	// Panic-recovered: the drain loop calls writer.Write on a hot path; a panic
+	// there must never crash the daemon. drain's own `defer close(wb.done)` still
+	// runs during unwind, so Close never hangs even if drain panics.
+	util.SafeGo(wb.drain)
 	return wb
 }
 
@@ -136,9 +152,18 @@ func (wb *WriteBuffer) Close() error {
 	close(wb.notify)
 	wb.mu.Unlock()
 
-	<-wb.done
-
-	// Final synchronous flush.
-	wb.flushAll()
-	return nil
+	// Bound the wait. If drain is blocked inside writer.Write (the child stopped
+	// reading stdin), close(notify) cannot wake it, so waiting unconditionally
+	// would hang shutdown forever. On timeout, skip the final flush too — it would
+	// re-block on the same stuck writer — and return the timeout so the caller can
+	// log it. Reversing daemon shutdown order (StopAll before CloseAll) closes the
+	// PTY first, which makes writer.Write return and this deadline essentially
+	// never fires; the bound is defense-in-depth against any other writer stall.
+	select {
+	case <-wb.done:
+		wb.flushAll() // drain exited cleanly — safe to do a final synchronous flush
+		return nil
+	case <-time.After(writeBufferCloseTimeout):
+		return ErrWriteBufferCloseTimeout
+	}
 }

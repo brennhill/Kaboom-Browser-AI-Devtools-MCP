@@ -13,7 +13,122 @@ const {
   matchesDaemonCommandLine,
   isKaboomDaemonHealth,
   killByKnownPorts,
+  cleanupOldDaemons,
+  healthySameVersionDaemonRunning,
 } = require('./kill-daemon');
+
+// --- Idempotent install: never kill a healthy same-version daemon (restart-storm guard) ---
+
+function fakeHealth(map) {
+  // map: { port: healthObjectOrNull }
+  return (port) => Promise.resolve(port in map ? map[port] : null);
+}
+
+test('healthySameVersionDaemonRunning: true only for a healthy daemon on the exact version', async () => {
+  const port = KNOWN_PORTS[0];
+  assert.equal(
+    await healthySameVersionDaemonRunning({
+      selfVersion: '0.8.7',
+      fetchHealth: fakeHealth({ [port]: { service: 'kaboom', version: '0.8.7' } }),
+    }),
+    true,
+    'healthy + same version => already running, skip cleanup'
+  );
+  assert.equal(
+    await healthySameVersionDaemonRunning({
+      selfVersion: '0.8.7',
+      fetchHealth: fakeHealth({ [port]: { service: 'kaboom', version: '0.8.6' } }),
+    }),
+    false,
+    'different version (upgrade) => must replace'
+  );
+  assert.equal(
+    await healthySameVersionDaemonRunning({
+      selfVersion: '0.8.7',
+      fetchHealth: fakeHealth({}), // stalled/no daemon answers /health
+    }),
+    false,
+    'no health answer (stalled/absent) => proceed to cleanup'
+  );
+});
+
+test('healthySameVersionDaemonRunning: retries a momentarily-busy healthy daemon (no false kill)', async () => {
+  const port = KNOWN_PORTS[0];
+  let calls = 0;
+  // Busy (null) on the first two probes, answers healthy same-version on the 3rd —
+  // exactly the GC-pause/load hiccup that a single 500ms probe would misread as
+  // "down" and kill, re-triggering the restart storm.
+  const flaky = (p) => {
+    if (p !== port) return Promise.resolve(null);
+    calls += 1;
+    return Promise.resolve(calls >= 3 ? { service: 'kaboom', version: '0.8.7' } : null);
+  };
+  const result = await healthySameVersionDaemonRunning({
+    selfVersion: '0.8.7',
+    fetchHealth: flaky,
+    sleep: () => Promise.resolve(), // no real backoff wait in the test
+  });
+  assert.equal(result, true, 'a healthy daemon that misses early probes must still be detected');
+  assert.ok(calls >= 3, 'the probe must retry, not give up on the first miss');
+});
+
+test('healthySameVersionDaemonRunning: a daemon that never answers still fails after retries', async () => {
+  const alwaysDown = () => Promise.resolve(null);
+  const result = await healthySameVersionDaemonRunning({
+    selfVersion: '0.8.7',
+    fetchHealth: alwaysDown,
+    sleep: () => Promise.resolve(),
+  });
+  assert.equal(result, false, 'a truly-down/stalled daemon must still be cleaned up');
+});
+
+test('cleanupOldDaemons: skips ALL kills on a same-version (re)install', async () => {
+  let killed = false;
+  const spies = {
+    runForceCleanupCommands: () => { killed = true; },
+    killByProcessName: () => { killed = true; },
+    killByKnownPorts: async () => { killed = true; },
+    cleanupPIDFiles: () => { killed = true; },
+  };
+  const port = KNOWN_PORTS[0];
+  await cleanupOldDaemons({
+    env: { npm_lifecycle_event: 'preinstall' },
+    selfVersion: '0.8.7',
+    fetchHealth: fakeHealth({ [port]: { service: 'kaboom', version: '0.8.7' } }),
+    ...spies,
+  });
+  assert.equal(killed, false, 'a healthy same-version daemon must NOT be killed on reinstall');
+});
+
+test('cleanupOldDaemons: still tears down on a version upgrade', async () => {
+  let portKills = 0;
+  const port = KNOWN_PORTS[0];
+  await cleanupOldDaemons({
+    env: { npm_lifecycle_event: 'preinstall' },
+    selfVersion: '0.8.8',
+    fetchHealth: fakeHealth({ [port]: { service: 'kaboom', version: '0.8.7' } }),
+    runForceCleanupCommands: () => {},
+    killByProcessName: () => {},
+    killByKnownPorts: async () => { portKills += 1; },
+    cleanupPIDFiles: () => {},
+  });
+  assert.equal(portKills, 1, 'an older-version daemon must be replaced on upgrade');
+});
+
+test('cleanupOldDaemons: uninstall always tears down, even same version', async () => {
+  let torn = false;
+  const port = KNOWN_PORTS[0];
+  await cleanupOldDaemons({
+    env: { npm_lifecycle_event: 'preuninstall' },
+    selfVersion: '0.8.7',
+    fetchHealth: fakeHealth({ [port]: { service: 'kaboom', version: '0.8.7' } }),
+    runForceCleanupCommands: () => {},
+    killByProcessName: () => {},
+    killByKnownPorts: async () => { torn = true; },
+    cleanupPIDFiles: () => {},
+  });
+  assert.equal(torn, true, 'uninstall must remove the daemon regardless of version');
+});
 
 function writeExecutable(filePath, body) {
   fs.writeFileSync(filePath, body, { mode: 0o755 });

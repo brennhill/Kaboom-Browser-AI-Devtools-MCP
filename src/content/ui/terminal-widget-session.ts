@@ -15,7 +15,25 @@ import {
   type TerminalUIState
 } from './terminal-widget-types.js'
 
-export type TerminalSandboxErrorHandler = (message: string, instruction: string, command: string) => void
+/**
+ * Why a terminal session failed to start — lets the UI choose the right surface:
+ * - `unreachable`: the daemon did not answer (transport failure / "Failed to
+ *   fetch"). A real, actionable failure that must be shown, even if no panel body
+ *   is mounted yet (surface via toast).
+ * - `unavailable`: the daemon answered with an error status (e.g. 500). Reachable
+ *   but not ready — recoverable, so the UI falls through to the no-session state
+ *   (Start + root folder) rather than a dead-end error.
+ * - `sandbox`: the daemon refused the spawn under macOS sandbox restrictions. An
+ *   actionable failure carrying a remedy command; always shown.
+ */
+export type TerminalStartFailureKind = 'unreachable' | 'unavailable' | 'sandbox'
+
+export type TerminalSandboxErrorHandler = (
+  message: string,
+  instruction: string,
+  command: string,
+  kind?: TerminalStartFailureKind
+) => void
 
 // =============================================================================
 // CONFIG HELPERS — read/write chrome.storage.local
@@ -320,14 +338,16 @@ export async function startSession(
         const message = body.detail
           ? `${body.message ?? 'Terminal start was refused.'} (${body.detail})`
           : (body.message ?? 'Terminal start was refused.')
-        reportStartFailure(message, body.instruction ?? '', body.command ?? '', onSandboxError)
+        reportStartFailure(message, body.instruction ?? '', body.command ?? '', 'sandbox', onSandboxError)
         return null
       }
-      // Any other rejection. This used to only console.warn, so the side panel
-      // rendered nothing at all and the terminal looked simply broken.
+      // Any other rejection from a reachable daemon. This used to only
+      // console.warn, so the side panel rendered nothing at all and the terminal
+      // looked simply broken. Classified `unavailable` (reachable but not ready)
+      // so the UI shows the recoverable no-session state, not a dead-end error.
       reportStartFailure(
         `Terminal start was refused (HTTP ${resp.status}): ${body.error ?? 'unknown error'}.`,
-        '', '', onSandboxError
+        '', '', 'unavailable', onSandboxError
       )
       return null
     }
@@ -336,9 +356,11 @@ export async function startSession(
     persistSession(ss)
     return ss
   } catch (err) {
+    // Transport failure — the daemon did not answer at all. This is `unreachable`:
+    // a real failure the user must see even when no panel body is mounted yet.
     reportStartFailure(
       'Terminal session start failed: ' + (err instanceof Error ? err.message : String(err)) + '.',
-      getDaemonStartHint(), '', onSandboxError
+      getDaemonStartHint(), '', 'unreachable', onSandboxError
     )
     return null
   }
@@ -353,8 +375,9 @@ function reportStartFailure(
   message: string,
   instruction: string,
   command: string,
+  kind: TerminalStartFailureKind,
   onError?: TerminalSandboxErrorHandler
 ): void {
-  console.warn(`[KaBOOM!] ${message} ${instruction} ${command}`.trimEnd())
-  onError?.(message, instruction, command)
+  console.warn(`[KaBOOM!] (${kind}) ${message} ${instruction} ${command}`.trimEnd())
+  onError?.(message, instruction, command, kind)
 }

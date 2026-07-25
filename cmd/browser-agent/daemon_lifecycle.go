@@ -4,6 +4,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -32,7 +34,131 @@ var (
 	daemonTerminatePID       = terminatePIDQuiet
 	daemonNow                = time.Now
 	daemonFindProcessOnPort  = findProcessOnPort
+	daemonSleep              = time.Sleep
+
+	// daemonProbeHealth reports whether the daemon on port answers /health, and
+	// its reported version. Injectable for tests. Never blocks past the timeout.
+	daemonProbeHealth = func(port int) (reachable bool, version string) {
+		ctx, cancel := context.WithTimeout(context.Background(), daemonHealthProbeTimeout)
+		defer cancel()
+		h := fetchInstallHealth(ctx, port, daemonHealthProbeTimeout)
+		return h.reachable, h.version
+	}
 )
+
+const (
+	// A daemon that registered its lock this recently is still coming up; never
+	// kill it, or two racing launches ping-pong (A kills B, B's respawn kills A).
+	daemonStartupGrace = 5 * time.Second
+	// Per-probe timeout and retry budget. Retrying across ~1.5s lets a momentarily
+	// busy-but-healthy daemon answer before we ever conclude it is stalled.
+	daemonHealthProbeTimeout = 800 * time.Millisecond
+	daemonHealthProbeRetries = 3
+	daemonHealthProbeBackoff = 500 * time.Millisecond
+)
+
+// errDeferToHealthyDaemon signals that an existing healthy, version-compatible
+// daemon is already serving, so this newly-launched daemon must exit cleanly
+// (exit 0) instead of taking over. This is what keeps a healthy daemon alive
+// when a redundant instance is launched (bridge respawn, second MCP client).
+var errDeferToHealthyDaemon = errors.New("existing healthy daemon is serving; deferring")
+
+// daemonLockAge returns how long ago the lock was written (its registration
+// time), and whether that could be determined.
+func daemonLockAge(rec *daemonLockRecord) (time.Duration, bool) {
+	if rec == nil || rec.UpdatedAt == "" {
+		return 0, false
+	}
+	t, err := time.Parse(time.RFC3339, rec.UpdatedAt)
+	if err != nil {
+		return 0, false
+	}
+	return daemonNow().Sub(t), true
+}
+
+// classifyExistingDaemon decides whether a starting daemon should DEFER to the
+// daemon described by rec (returns errDeferToHealthyDaemon) or TAKE OVER from it
+// (returns nil). Invariant: a HEALTHY daemon whose version is >= ours is never
+// killed. It is taken over only when it is STALLED (no /health after retries) or
+// strictly OLDER than us (a real upgrade). A daemon still inside the startup
+// grace window is always deferred to.
+func classifyExistingDaemon(server *Server, port int, rec *daemonLockRecord) error {
+	// A strict version upgrade always replaces the incumbent — even one still
+	// inside the startup grace window — because running the newer binary is the
+	// whole point of the install. Uses the registered version so we needn't wait
+	// on a /health round-trip for the common upgrade case.
+	if rec.Version != "" && isNewerVersion(version, rec.Version) {
+		server.logLifecycle("daemon_takeover_upgrade", port, map[string]any{
+			"existing_pid":     rec.PID,
+			"existing_version": rec.Version,
+			"our_version":      version,
+		})
+		return nil
+	}
+
+	// Not a known upgrade. Never kill a daemon that only just registered — it may
+	// still be binding its ports, and killing it is how two near-simultaneous
+	// launches ping-pong (A kills B, B's respawn kills A). A negative age (lock
+	// timestamped in the near future, e.g. a backward clock/NTP step during the
+	// grace window) is by definition brand-new, so it must defer too — the old
+	// `age >= 0` guard let clock skew skip grace and take over a healthy young
+	// daemon. A far-future/corrupt timestamp erring toward defer is the safe choice
+	// (never kill on bad data).
+	if age, ok := daemonLockAge(rec); ok && age < daemonStartupGrace {
+		server.logLifecycle("daemon_defer_starting", port, map[string]any{
+			"existing_pid":  rec.PID,
+			"existing_port": rec.Port,
+			"age_ms":        age.Milliseconds(),
+		})
+		return errDeferToHealthyDaemon
+	}
+
+	// Probe liveness, retried across the window so a momentarily busy-but-healthy
+	// daemon answers before we ever conclude it is stalled.
+	reachable := false
+	liveVersion := ""
+	for attempt := 0; attempt < daemonHealthProbeRetries; attempt++ {
+		if reachable, liveVersion = daemonProbeHealth(rec.Port); reachable {
+			break
+		}
+		if attempt < daemonHealthProbeRetries-1 {
+			daemonSleep(daemonHealthProbeBackoff)
+		}
+	}
+
+	if !reachable {
+		// Stalled: alive PID, owns the port, but never answered /health. Replace it.
+		server.logLifecycle("daemon_takeover_stalled", port, map[string]any{
+			"existing_pid":  rec.PID,
+			"existing_port": rec.Port,
+		})
+		return nil
+	}
+
+	existingVersion := liveVersion
+	if existingVersion == "" {
+		existingVersion = rec.Version
+	}
+
+	// Healthy. If the live version turns out older than us (registered version was
+	// blank/stale), treat it as an upgrade; otherwise a healthy same-or-newer
+	// daemon is never killed — defer and exit cleanly.
+	if existingVersion != "" && isNewerVersion(version, existingVersion) {
+		server.logLifecycle("daemon_takeover_upgrade", port, map[string]any{
+			"existing_pid":     rec.PID,
+			"existing_version": existingVersion,
+			"our_version":      version,
+		})
+		return nil
+	}
+
+	server.logLifecycle("daemon_defer_healthy", port, map[string]any{
+		"existing_pid":     rec.PID,
+		"existing_version": existingVersion,
+		"our_version":      version,
+	})
+	return errDeferToHealthyDaemon
+}
 
 func enforceDaemonStartupPolicy(server *Server, port int, opts daemonLaunchOptions) error {
 	stateDir, err := state.RootDir()
@@ -116,6 +242,14 @@ func performDefaultTakeover(server *Server, stateDir string, port int, rec *daem
 			rec.Port,
 			pidFromPortFile,
 		)
+	}
+
+	// The existing daemon is alive and owns its port. Never kill it blindly:
+	// defer to a healthy, version-compatible one; take over only a stalled or
+	// older instance. This is the guard against killing a healthy daemon and
+	// against launch-vs-launch restart storms.
+	if decision := classifyExistingDaemon(server, port, rec); decision != nil {
+		return decision
 	}
 
 	server.logLifecycle("daemon_takeover", port, map[string]any{

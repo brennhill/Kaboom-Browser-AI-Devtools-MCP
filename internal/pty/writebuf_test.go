@@ -4,10 +4,37 @@ package pty
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"sync"
 	"testing"
+	"time"
 )
+
+// TestWriteBuffer_CloseDoesNotHangOnStuckWriter reproduces the confirmed shutdown
+// hang: drain is blocked inside writer.Write (a PTY child that stopped reading
+// stdin), which close(notify) cannot interrupt. Close must return within its
+// bound with ErrWriteBufferCloseTimeout instead of blocking forever.
+func TestWriteBuffer_CloseDoesNotHangOnStuckWriter(t *testing.T) {
+	gw := &gatedWriter{gate: make(chan struct{})} // gate never closed -> Write blocks forever
+	wb := NewWriteBuffer(gw)
+	if _, err := wb.Write([]byte("stuck")); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	done := make(chan error, 1)
+	go func() { done <- wb.Close() }()
+
+	select {
+	case err := <-done:
+		if !errors.Is(err, ErrWriteBufferCloseTimeout) {
+			t.Fatalf("Close on a stuck writer should time out, got %v", err)
+		}
+	case <-time.After(writeBufferCloseTimeout + 3*time.Second):
+		t.Fatal("Close hung on a stuck writer — the bound did not fire")
+	}
+	close(gw.gate) // let the blocked drain goroutine unwind so it does not leak
+}
 
 func TestWriteBuffer_BasicWrite(t *testing.T) {
 	var dest bytes.Buffer

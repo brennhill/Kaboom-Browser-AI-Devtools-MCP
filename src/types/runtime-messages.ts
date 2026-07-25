@@ -376,6 +376,18 @@ export interface TerminalPanelWriteMessage {
 }
 
 /**
+ * Acknowledgement the side-panel terminal host returns for a
+ * `terminal_panel_write`. The background never responds to this type, so this ack
+ * is the sole reliable signal that a panel DOCUMENT actually received the write —
+ * letting the sender tell a delivered write from one that vanished because the
+ * panel was closed (e.g. via Chrome's own X) while the visibility mirror it gated
+ * on stayed stale. Its absence means "no panel received it" (fail-loud, rule 25).
+ */
+export interface TerminalPanelWriteResponse {
+  readonly received: boolean
+}
+
+/**
  * User clicked "Audit" in the tracked-site UI.
  * Background handler tries PTY injection, falls back to intent store.
  */

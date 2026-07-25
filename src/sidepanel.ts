@@ -241,12 +241,40 @@ async function applyRootFolder(root: string): Promise<void> {
 }
 
 /**
- * Show a start failure, remembering it so a later remount can show it again.
+ * Surface a terminal start failure — logged (in startSession) AND shown to the
+ * user; no start failure may vanish into the console (repo rule 25, fail-loud).
+ *
+ * The `kind` decides the surface:
+ * - `unavailable` (daemon answered with an error status, e.g. 500): recoverable.
+ *   Do NOT remember it as a stuck error — fall through to the no-session state
+ *   (Start + root folder). Remembering it here would replace the recoverable UI
+ *   with a dead-end panel (regresses the daemon-unavailable fallback).
+ * - `unreachable` (daemon did not answer) / `sandbox` (spawn refused): a real,
+ *   actionable failure. Remember it so a later remount re-shows it, and surface
+ *   it now — inline when the body is mounted, else via a toast so a
+ *   daemon-down-at-open failure is never swallowed silently.
  */
-function showSandboxError(message: string, instruction: string, command: string): void {
-  if (!panel.terminalBodyEl) return
+function showSandboxError(
+  message: string,
+  instruction: string,
+  command: string,
+  kind?: 'unreachable' | 'unavailable' | 'sandbox'
+): void {
+  if (kind === 'unavailable') {
+    // Reachable but not ready — the no-session fallback IS the surface. Already
+    // logged by startSession; do not remember or render a dead-end error.
+    return
+  }
   panel.pendingSandboxError = { message, instruction, command }
-  renderStartFailure(panel.terminalBodyEl, message, instruction, command)
+  if (panel.terminalBodyEl) {
+    renderStartFailure(panel.terminalBodyEl, message, instruction, command)
+  } else {
+    // No body to render into yet (daemon-down-at-open): surface via toast so the
+    // failure is visible instead of only reaching the console. A subsequent
+    // remount re-renders it inline from pendingSandboxError.
+    const detail = [instruction, command].filter(Boolean).join(' ')
+    showActionToast(message, detail || 'Terminal', 'error', 6000)
+  }
 }
 
 function updateStatusDot(dotState: 'connected' | 'disconnected' | 'exited'): void {
@@ -288,6 +316,17 @@ function handleIframeMessage(event: MessageEvent): void {
       updateStatusDot('disconnected')
       state.terminalConnected = false
       state.terminalFocused = false
+      break
+    case 'reconnect_exhausted':
+      // The iframe gave up reconnecting on a token that almost certainly died with
+      // a full daemon restart. Recover instead of sitting on a permanent silent
+      // disconnect: revalidate and rebuild into a fresh session (or the recoverable
+      // no-session state). redrawTerminal owns that validate-then-rebuild logic.
+      console.log('[KaBOOM! terminal] reconnect exhausted — revalidating and rebuilding')
+      updateStatusDot('disconnected')
+      state.terminalConnected = false
+      state.terminalFocused = false
+      void redrawTerminal()
       break
     case 'exited':
       console.log('[KaBOOM! terminal] session exited (write-guard reset)')
@@ -632,6 +671,24 @@ async function minimizePanel(): Promise<void> {
   await closePanelWithIntent('minimized')
 }
 
+const MAX_QUEUED_WRITES = 200
+
+/**
+ * Enqueue a write, bounding the backlog at MAX_QUEUED_WRITES. Dropping the oldest
+ * is a state-mutating loss, so it must not be silent (rule 25): warn to the console
+ * (which the daemon captures via observe(what:"errors")) so an overflow is
+ * diagnosable rather than a write vanishing without a trace.
+ */
+function enqueueBoundedWrite(text: string): void {
+  if (state.queuedWrites.length >= MAX_QUEUED_WRITES) {
+    const dropped = state.queuedWrites.shift()
+    console.warn(
+      `[KaBOOM! terminal] write queue full (${MAX_QUEUED_WRITES}) — dropped oldest queued write: "${(dropped ?? '').slice(0, 40)}"`
+    )
+  }
+  state.queuedWrites.push(text)
+}
+
 function writeToTerminal(text: string): void {
   if (!state.visible || !state.iframeEl) return
   // Queue (do NOT send now) when the user is mid-keystroke OR the socket is not
@@ -642,19 +699,13 @@ function writeToTerminal(text: string): void {
   // drainers use). Fail loud, not silent (rule 25).
   const typing = shouldDeferQueuedWrite()
   if (typing || !state.terminalConnected) {
-    if (state.queuedWrites.length >= 200) {
-      state.queuedWrites.shift()
-    }
-    state.queuedWrites.push(text)
+    enqueueBoundedWrite(text)
     if (typing) maybeShowQueuedWriteToast()
     scheduleQueuedWriteFlush(TERMINAL_GUARD_POLL_MS)
     return
   }
   if (state.queuedWriteInFlight) {
-    if (state.queuedWrites.length >= 200) {
-      state.queuedWrites.shift()
-    }
-    state.queuedWrites.push(text)
+    enqueueBoundedWrite(text)
     return
   }
   state.queuedWriteInFlight = true
@@ -666,7 +717,11 @@ function writeToTerminal(text: string): void {
 function installRuntimeListener(): void {
   if (panel.runtimeListenerInstalled) return
   panel.runtimeListenerInstalled = true
-  chrome.runtime.onMessage.addListener((message: { type?: string; text?: string }, sender: chrome.runtime.MessageSender) => {
+  chrome.runtime.onMessage.addListener((
+    message: { type?: string; text?: string },
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response?: unknown) => void
+  ) => {
     if (sender.id !== chrome.runtime.id) return false
     // The background cannot close a side panel document on every Chrome version,
     // but this document can, so it asks us to.
@@ -675,6 +730,10 @@ function installRuntimeListener(): void {
       return false
     }
     if (message.type !== 'terminal_panel_write') return false
+    // Acknowledge synchronously: this document existing IS the proof the sender
+    // needs that the write reached a live panel (the background never replies to
+    // this type). Ack first so a later fault in writeToTerminal can't swallow it.
+    sendResponse({ received: true })
     if (typeof message.text === 'string') writeToTerminal(message.text)
     return false
   })
