@@ -11,7 +11,6 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
 // runMCPMode runs the server in MCP mode:
@@ -89,13 +88,13 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonLaunchOption
 	} else {
 		server.setTerminalPort(termPort)
 		server.logLifecycle("terminal_server_started", termPort, nil)
-		// Monitor terminal server — log if it dies, but do NOT bring down main daemon.
-		util.SafeGo(func() {
-			<-termDone
-			stderrf("[Kaboom] terminal server on port %d exited unexpectedly\n", termPort)
-			server.logLifecycle("terminal_server_died", termPort, nil)
-			server.setTerminalPort(0) // Mark as unavailable
-		})
+		// Supervise the terminal server — restart it with backoff if it dies
+		// unexpectedly, so a transient terminal-server death does not leave the
+		// terminal permanently dead until a full daemon restart. Never brings
+		// down the main daemon; never restarts during graceful shutdown.
+		sup := newTerminalSupervisor(server, termPort, termMux, termSrv, termDone)
+		server.terminalSupervisor = sup
+		sup.superviseAsync()
 	}
 
 	server.logLifecycle("startup", port, map[string]any{

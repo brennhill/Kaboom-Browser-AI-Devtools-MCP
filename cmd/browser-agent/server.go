@@ -45,6 +45,10 @@ type Server struct {
 	// Terminal server port (0 = terminal server not running)
 	terminalPort int
 
+	// terminalSupervisor watches and auto-restarts the terminal HTTP server.
+	// nil if the terminal server never bound (Windows, or bind failure).
+	terminalSupervisor *terminalSupervisor
+
 	// Active codebase path — set via MCP configure(what='store', key='active_codebase')
 	// or via the extension options page. Used as default CWD for terminal sessions.
 	activeCodebaseMu sync.RWMutex

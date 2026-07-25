@@ -88,7 +88,7 @@ Applied to: iframe src, fetch() calls, postMessage origin checks.
 | Scenario | Behavior |
 |----------|----------|
 | Port+1 busy at startup | WARNING logged, daemon starts without terminal |
-| Terminal server dies at runtime | Logged, `terminal_port` set to 0, main daemon unaffected |
+| Terminal server dies at runtime | Logged (`terminal_server_died`), `terminal_port` set to 0, main daemon unaffected, then `terminalSupervisor` auto-restarts it with exponential backoff (gives up loudly after 8 attempts) |
 | Main daemon dies | Terminal server also shuts down (graceful shutdown sequence) |
 | Widget graphics/layout corruption in page overlay | User clicks header redraw (`↻`) to reset geometry and reload iframe without terminating PTY |
 | Auto-sent annotation command collides with active user typing | Parent queues writes, waits for user idle, then submits and restores focus |

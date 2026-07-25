@@ -10,6 +10,7 @@ code_paths:
   - cmd/browser-agent/internal/terminal/handlers.go
   - cmd/browser-agent/internal/terminal/dirs.go
   - cmd/browser-agent/internal/terminal/server.go
+  - cmd/browser-agent/terminal_supervisor.go
   - cmd/browser-agent/internal/terminal/static.go
   - extension/sidepanel.html
   - extension/sidepanel.js
@@ -32,6 +33,7 @@ test_paths:
   - cmd/browser-agent/internal/terminal/dirs_test.go
   - cmd/browser-agent/internal/terminal/handlers_test.go
   - cmd/browser-agent/internal/terminal/ws_panic_test.go
+  - cmd/browser-agent/terminal_supervisor_test.go
   - tests/extension/sidepanel-terminal.test.js
   - tests/extension/terminal-widget-session-branding.test.js
   - tests/extension/terminal-root-folder.test.js
@@ -124,6 +126,7 @@ If the terminal server dies at runtime:
 - Logged as `terminal_server_died`
 - `terminal_port` set to 0
 - Main daemon is **not** affected
+- **Auto-restart**: a `terminalSupervisor` reclaims the port and rebinds with exponential backoff (500ms → 30s, up to 8 attempts). On success it logs `terminal_server_restarted` and restores `terminal_port`; if all attempts fail it logs `terminal_server_restart_giveup` and leaves the terminal unavailable until a daemon restart. The supervisor never restarts during graceful daemon shutdown (`terminalSupervisor.shutdown` stops the loop and closes the current server).
 
 ---
 

@@ -65,7 +65,13 @@ func awaitShutdownSignal(server *Server, srv *http.Server, port int, httpDone <-
 	}
 
 	// Shut down terminal server first (if running) — non-blocking, best-effort.
-	if termSrv != nil {
+	// Prefer the supervisor so it stops restarting and gracefully closes the
+	// CURRENT server (which may be a restarted instance, not the original termSrv).
+	if server.terminalSupervisor != nil {
+		termCtx, termCancel := context.WithTimeout(context.Background(), terminalShutdownTimeout)
+		server.terminalSupervisor.shutdown(termCtx)
+		termCancel()
+	} else if termSrv != nil {
 		termCtx, termCancel := context.WithTimeout(context.Background(), terminalShutdownTimeout)
 		if err := termSrv.Shutdown(termCtx); err != nil {
 			server.logLifecycle("terminal_shutdown_error", port, map[string]any{"error": err.Error()})
