@@ -125,7 +125,19 @@ func (ts *terminalSupervisor) restartWithBackoff() (<-chan struct{}, bool) {
 		srv, newDone, err := ts.startFn(ts.port, ts.mux)
 		if err == nil {
 			ts.mu.Lock()
-			ts.srv = srv
+			// If shutdown was requested while we were binding, shutdown() has
+			// already sampled the OLD ts.srv, so this fresh server would never be
+			// gracefully closed (its listener/goroutines would leak until process
+			// exit, cutting in-flight writes). Close it here and stop instead of
+			// publishing it.
+			select {
+			case <-ts.stop:
+				ts.mu.Unlock()
+				_ = srv.Close()
+				return nil, false
+			default:
+				ts.srv = srv
+			}
 			ts.mu.Unlock()
 			ts.server.setTerminalPort(ts.port)
 			ts.logFn("terminal_server_restarted", map[string]any{"attempt": attempt})

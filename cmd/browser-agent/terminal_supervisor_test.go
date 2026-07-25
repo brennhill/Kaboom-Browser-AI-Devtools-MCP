@@ -187,3 +187,37 @@ func TestSupervisor_NoRestartDuringShutdown(t *testing.T) {
 		t.Fatal("shutdown must not be logged as an unexpected death")
 	}
 }
+
+// TestSupervisor_RestartRacingShutdownDoesNotPublishNewServer covers the window
+// where shutdown() closes `stop` WHILE a restart is mid-bind: shutdown has already
+// sampled the old srv, so the freshly-bound server must be closed and NOT
+// published (otherwise its listener/goroutines leak until process exit). The only
+// path that returns false after a successful bind is the race branch, which closes
+// the new server — so "not published + loop exits" proves the new server was torn
+// down rather than left orphaned.
+func TestSupervisor_RestartRacingShutdownDoesNotPublishNewServer(t *testing.T) {
+	initialDone := make(chan struct{})
+	ts, ev := newTestSupervisor(t, initialDone)
+
+	ts.startFn = func(int, *http.ServeMux) (*http.Server, <-chan struct{}, error) {
+		// Shutdown arrives while we are binding (after the backoff select passed).
+		ts.stopOnce.Do(func() { close(ts.stop) })
+		return &http.Server{}, make(chan struct{}), nil
+	}
+
+	loopDone := make(chan struct{})
+	go func() { ts.supervise(ts.initialDone); close(loopDone) }()
+	close(initialDone) // trigger death -> restart attempt that races shutdown
+
+	select {
+	case <-loopDone:
+	case <-time.After(3 * time.Second):
+		t.Fatal("supervise did not exit when shutdown raced the restart")
+	}
+	if ev.count("terminal_server_restarted") != 0 {
+		t.Fatalf("a server bound after shutdown must NOT be published as restarted, got %d", ev.count("terminal_server_restarted"))
+	}
+	if got := ts.server.getTerminalPort(); got != 0 {
+		t.Fatalf("terminal port must stay 0 when shutdown raced the restart, got %d", got)
+	}
+}

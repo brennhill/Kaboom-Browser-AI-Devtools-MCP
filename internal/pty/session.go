@@ -305,7 +305,14 @@ func (s *Session) Close() error {
 		if s.cmd.Process != nil {
 			_ = s.cmd.Process.Kill()
 		}
-		<-s.reaped // Wait for reap after SIGKILL.
+		// Bound the post-SIGKILL wait too. A child stuck in uninterruptible
+		// (D-state) sleep may not be reaped promptly; without this bound, Close —
+		// and StopAll during daemon shutdown — would block indefinitely. The
+		// reaper goroutine closes s.reaped whenever the kernel finally reaps it.
+		select {
+		case <-s.reaped:
+		case <-time.After(2 * time.Second):
+		}
 	}
 	return err
 }

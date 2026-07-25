@@ -101,11 +101,18 @@ func awaitShutdownSignal(server *Server, srv *http.Server, port int, httpDone <-
 			th.capture.Close()
 		}
 	}
-	if server.ptyRelays != nil {
-		server.ptyRelays.CloseAll()
-	}
+	// Order matters: StopAll closes every PTY master FIRST. A relay's write buffer
+	// drain goroutine can be blocked inside ptmx.Write when the child stopped
+	// reading stdin; closing the PTY makes that Write return so the subsequent
+	// CloseAll drains and returns instead of hanging shutdown forever. (WriteBuffer
+	// close is also independently time-bounded as defense-in-depth.) StopAll first
+	// also lets each relay's readLoop exit and self-close its write buffer, so
+	// CloseAll is mostly idempotent cleanup.
 	if server.ptyManager != nil {
 		server.ptyManager.StopAll()
+	}
+	if server.ptyRelays != nil {
+		server.ptyRelays.CloseAll()
 	}
 
 	// Log token savings summary and persist lifetime stats.

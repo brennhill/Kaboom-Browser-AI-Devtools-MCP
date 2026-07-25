@@ -22,6 +22,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
 // defaultShell returns a usable interactive shell for the host. It prefers
@@ -50,6 +51,14 @@ const PingInterval = 30 * time.Second
 // If exceeded, the connection is considered dead and closed. The PTY session survives
 // so the browser can reconnect with scrollback replay.
 const PongTimeout = 60 * time.Second
+
+// WSWriteTimeout bounds a single WebSocket frame write. A browser that stops
+// reading (backgrounded-tab TCP zero-window, laptop sleep, or a hostile client
+// that stalls) would otherwise block the downstream pump — and, via the shared
+// write mutex, the ping keepalive — until PongTimeout. On a write timeout the
+// connection is torn down. Refreshed per frame, so a slow-but-progressing
+// connection is never cut.
+const WSWriteTimeout = 10 * time.Second
 
 // ReadBufSize is the buffer size for PTY reads relayed to the browser.
 const ReadBufSize = 4096
@@ -270,7 +279,7 @@ func wsLoop(conn net.Conn, rw *bufio.ReadWriter, deps Deps, sess *pty.Session, r
 
 	// Multiple goroutines emit frames (downstream, keepalive ping, and upstream
 	// control responses). Serialize writes to avoid interleaved/corrupted frames.
-	writeFrame := NewFrameWriter(rw, deps)
+	writeFrame := NewFrameWriter(conn, rw, deps)
 
 	// Fan-out -> WebSocket (downstream): read from subscriber channel and send as binary frames.
 	// Also tracks alt-screen state changes and notifies the frontend.
@@ -408,13 +417,27 @@ func goConnWorker(deps Deps, sessionID, role string, closeConn func(), fn func()
 	}()
 }
 
+// writeDeadliner is the subset of net.Conn that NewFrameWriter uses to bound
+// frame writes. Nil in tests that write to an in-memory buffer.
+type writeDeadliner interface {
+	SetWriteDeadline(time.Time) error
+}
+
 // NewFrameWriter returns a thread-safe frame writer for one WebSocket
-// connection. All callers for that connection must share this writer.
-func NewFrameWriter(rw *bufio.ReadWriter, deps Deps) func(opcode byte, payload []byte) error {
+// connection. All callers for that connection must share this writer. When conn
+// is non-nil, each write is bounded by WSWriteTimeout so a stalled reader cannot
+// wedge the downstream/ping goroutines.
+func NewFrameWriter(conn writeDeadliner, rw *bufio.ReadWriter, deps Deps) func(opcode byte, payload []byte) error {
 	var wsWriteMu sync.Mutex
 	return func(opcode byte, payload []byte) error {
 		wsWriteMu.Lock()
 		defer wsWriteMu.Unlock()
+		if conn != nil {
+			// Refresh the deadline per frame: a slow-but-progressing connection
+			// keeps getting a fresh window; only a truly stalled write errors,
+			// and the caller tears the connection down on that error.
+			_ = conn.SetWriteDeadline(time.Now().Add(WSWriteTimeout))
+		}
 		return deps.WSWriteFrame(rw, opcode, payload)
 	}
 }
@@ -572,9 +595,10 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 			},
 		})
 		if req.InitCommand != "" {
-			go func(r *Relay, cmd string) { // lint:allow-bare-goroutine — one-shot init, bounded by timeout
-				WaitForPromptViaRelay(r, cmd)
-			}(relay, req.InitCommand)
+			// Panic-recovered one-shot init (bounded by InitTimeout): a panic here
+			// must never crash the daemon.
+			r, cmd := relay, req.InitCommand
+			util.SafeGo(func() { WaitForPromptViaRelay(r, cmd) })
 		}
 	}
 	if err != nil {
