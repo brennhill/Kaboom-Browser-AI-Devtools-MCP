@@ -16,7 +16,7 @@ import { getServerUrl, getConnectionStatus, isDebugMode, isScreenshotOnError, ge
 import { isSourceMapEnabled, setSourceMapEnabled, canTakeScreenshot, recordScreenshot, clearSourceMapCache, getContextWarning, getMemoryPressureState, isNetworkBodyCaptureDisabled, flushErrorGroups, cleanupStaleErrorGroups, clearScreenshotTimestamps } from './state-manager.js';
 import { loadDebugModeState, installStartupListener, loadAiWebPilotState, loadSavedSettings, installStorageChangeListener, setupChromeAlarms, installAlarmListener, installTabRemovedListener, installTabUpdatedListener, installDrawModeCommandListener, installRecordingShortcutCommandListener, installTerminalPanelCommandListener, installScreenRecordingCommandListener, installContextMenus, saveSetting, forwardToAllContentScripts, getActiveTab, sendTabToast, handleTrackedTabClosed, handleTrackedTabUrlChange } from './event-listeners.js';
 import { installPushCommandListener, installChatCommandListener } from './push-handler.js';
-import { isRecording, startRecording, stopRecording } from './recording/index.js';
+import { isRecording, startRecording, stopRecording, initRecording } from './recording/index.js';
 import { installMessageListener, broadcastTrackingState } from './message-handlers.js';
 import { captureScreenshot, updateBadge } from './communication.js';
 import { wasServiceWorkerRestarted, markStateVersion, setSessionAccessLevel, setLocal, getLocal } from '../lib/storage-utils.js';
@@ -35,6 +35,10 @@ export function initializeExtension() {
     // level runs. A listener installed later in the async sequence would miss it,
     // and the background would believe no panel exists.
     watchTerminalPanelState();
+    // Rehydrate any recording that survived a service-worker restart. Explicit
+    // call (formerly a recording-module import side effect) so it fires exactly
+    // once, here at startup. Best-effort — not awaited at the top level.
+    void initRecording();
     // Fire async initialization without awaiting at top level
     // (Service worker will remain alive as long as event handlers are installed)
     initializeExtensionAsync().catch((err) => {
