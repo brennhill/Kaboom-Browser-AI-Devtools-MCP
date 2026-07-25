@@ -251,6 +251,9 @@ function handleIframeMessage(event: MessageEvent): void {
   }
   switch (event.data.event as string) {
     case 'connected':
+      // Trail for diagnosing "can't type": these WS transitions are where the
+      // terminal loses input when the daemon terminal-server (port+1) blinks.
+      console.log('[KaBOOM! terminal] ws connected')
       updateStatusDot('connected')
       state.terminalConnected = true
       if (state.queuedWrites.length > 0 && !state.queuedWriteInFlight) {
@@ -258,11 +261,13 @@ function handleIframeMessage(event: MessageEvent): void {
       }
       break
     case 'disconnected':
+      console.log('[KaBOOM! terminal] ws disconnected (input paused; writes will queue)')
       updateStatusDot('disconnected')
       state.terminalConnected = false
       state.terminalFocused = false
       break
     case 'exited':
+      console.log('[KaBOOM! terminal] session exited (write-guard reset)')
       updateStatusDot('exited')
       state.terminalConnected = false
       state.terminalFocused = false
