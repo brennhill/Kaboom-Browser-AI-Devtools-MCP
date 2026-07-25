@@ -6,7 +6,7 @@
 
 import type { DOMResult } from './dom-types.js'
 import type { ActionToastFn } from '../commands/helpers.js'
-import { isMutatingAction } from '../action-metadata.js'
+import { isDomMutatingAction } from '../action-metadata.js'
 
 export function toDOMResult(value: unknown): DOMResult | null {
   if (!value || typeof value !== 'object') return null
@@ -101,7 +101,7 @@ function reconcileDOMLifecycle(
 ): { result: unknown; status: 'complete' | 'error'; error?: string } {
   const domResult = toDOMResult(result)
   if (!domResult) {
-    if (!isMutatingAction(action)) return { result, status: 'complete' }
+    if (!isDomMutatingAction(action)) return { result, status: 'complete' }
     const coerced: DOMResult = {
       success: false,
       action,
@@ -130,7 +130,7 @@ function reconcileDOMLifecycle(
     return { result: coerced, status: 'error', error: 'status_mismatch' }
   }
 
-  if (isMutatingAction(action) && !hasMatchedTargetEvidence(domResult)) {
+  if (isDomMutatingAction(action) && !hasMatchedTargetEvidence(domResult)) {
     const coerced: DOMResult = {
       ...domResult,
       success: false,

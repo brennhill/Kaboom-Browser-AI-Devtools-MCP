@@ -92,14 +92,14 @@ func (c *Capture) SetQueryResultWithClientNoCommandComplete(id string, result js
 	c.queryDispatcher.SetQueryResultWithClientNoCommandComplete(id, result, clientID)
 }
 
-// GetQueryResult delegates to QueryDispatcher.
-func (c *Capture) GetQueryResult(id string) (json.RawMessage, bool) {
-	return c.queryDispatcher.GetQueryResult(id)
+// TakeQueryResult delegates to QueryDispatcher.
+func (c *Capture) TakeQueryResult(id string) (json.RawMessage, bool) {
+	return c.queryDispatcher.TakeQueryResult(id)
 }
 
-// GetQueryResultForClient delegates to QueryDispatcher.
-func (c *Capture) GetQueryResultForClient(id string, clientID string) (json.RawMessage, bool) {
-	return c.queryDispatcher.GetQueryResultForClient(id, clientID)
+// TakeQueryResultForClient delegates to QueryDispatcher.
+func (c *Capture) TakeQueryResultForClient(id string, clientID string) (json.RawMessage, bool) {
+	return c.queryDispatcher.TakeQueryResultForClient(id, clientID)
 }
 
 // WaitForResult delegates to QueryDispatcher.

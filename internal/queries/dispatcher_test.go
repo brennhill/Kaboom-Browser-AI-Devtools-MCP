@@ -324,7 +324,7 @@ func TestNewQueryDispatcher_UniqueIDs(t *testing.T) {
 }
 
 // ============================================
-// SetQueryResult / GetQueryResult Tests
+// SetQueryResult / TakeQueryResult Tests
 // ============================================
 
 func TestNewQueryDispatcher_SetAndGetResult(t *testing.T) {
@@ -341,18 +341,18 @@ func TestNewQueryDispatcher_SetAndGetResult(t *testing.T) {
 	resultData := json.RawMessage(`{"html":"<body>test</body>"}`)
 	qd.SetQueryResult(id, resultData)
 
-	got, found := qd.GetQueryResult(id)
+	got, found := qd.TakeQueryResult(id)
 	if !found {
-		t.Fatal("GetQueryResult returned false, want true")
+		t.Fatal("TakeQueryResult returned false, want true")
 	}
 	if string(got) != string(resultData) {
 		t.Errorf("result = %s, want %s", string(got), string(resultData))
 	}
 
 	// Second get should return not found (one-time use)
-	_, found2 := qd.GetQueryResult(id)
+	_, found2 := qd.TakeQueryResult(id)
 	if found2 {
-		t.Error("second GetQueryResult should return false (one-time use)")
+		t.Error("second TakeQueryResult should return false (one-time use)")
 	}
 }
 
@@ -385,13 +385,13 @@ func TestNewQueryDispatcher_GetResultForClient_Isolation(t *testing.T) {
 	qd.SetQueryResultWithClient(id, json.RawMessage(`{"found":true}`), "client-A")
 
 	// Client B should NOT get Client A's result
-	_, foundB := qd.GetQueryResultForClient(id, "client-B")
+	_, foundB := qd.TakeQueryResultForClient(id, "client-B")
 	if foundB {
 		t.Error("client-B should not be able to access client-A's result")
 	}
 
 	// Client A should get it
-	_, foundA := qd.GetQueryResultForClient(id, "client-A")
+	_, foundA := qd.TakeQueryResultForClient(id, "client-A")
 	if !foundA {
 		t.Error("client-A should be able to access its own result")
 	}
@@ -403,9 +403,9 @@ func TestNewQueryDispatcher_GetResult_NotFound(t *testing.T) {
 	qd := NewQueryDispatcher()
 	defer qd.Close()
 
-	_, found := qd.GetQueryResult("nonexistent")
+	_, found := qd.TakeQueryResult("nonexistent")
 	if found {
-		t.Error("GetQueryResult for nonexistent id should return false")
+		t.Error("TakeQueryResult for nonexistent id should return false")
 	}
 }
 

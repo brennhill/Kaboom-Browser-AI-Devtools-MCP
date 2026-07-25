@@ -3,7 +3,7 @@
  * Why: Separates result shape validation and status derivation from chrome.scripting execution.
  * Docs: docs/features/feature/interact-explore/index.md
  */
-import { isMutatingAction } from '../action-metadata.js';
+import { isDomMutatingAction } from '../action-metadata.js';
 export function toDOMResult(value) {
     if (!value || typeof value !== 'object')
         return null;
@@ -77,7 +77,7 @@ export function mergeListInteractive(results) {
 function reconcileDOMLifecycle(action, selector, result) {
     const domResult = toDOMResult(result);
     if (!domResult) {
-        if (!isMutatingAction(action))
+        if (!isDomMutatingAction(action))
             return { result, status: 'complete' };
         const coerced = {
             success: false,
@@ -104,7 +104,7 @@ function reconcileDOMLifecycle(action, selector, result) {
         };
         return { result: coerced, status: 'error', error: 'status_mismatch' };
     }
-    if (isMutatingAction(action) && !hasMatchedTargetEvidence(domResult)) {
+    if (isDomMutatingAction(action) && !hasMatchedTargetEvidence(domResult)) {
         const coerced = {
             ...domResult,
             success: false,

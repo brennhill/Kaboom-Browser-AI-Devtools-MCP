@@ -90,7 +90,7 @@ export function isReadOnlyAction(action) {
     return action.startsWith('get_');
 }
 /** Returns true if the action modifies the DOM and requires match-evidence validation. */
-export function isMutatingAction(action) {
+export function isDomMutatingAction(action) {
     return ACTION_METADATA[action]?.mutating === true;
 }
 //# sourceMappingURL=action-metadata.js.map

@@ -83,11 +83,18 @@ func (c *Capture) ClearExtensionLogs() int {
 	return c.extensionLogs.clear()
 }
 
-// ClearAll resets all capture-owned in-memory telemetry state.
+// ClearAll resets all capture-owned in-memory telemetry state — INCLUDING
+// extension logs — and returns the number of extension-log entries cleared.
+//
+// Extension logs were previously left behind, so "All" was a lie: every caller
+// wanting a genuine full reset had to remember a separate ClearExtensionLogs(),
+// and any that forgot silently leaked stale logs. Folding it in makes the name
+// honest. ClearExtensionLogs re-locks c.mu, so clear the underlying buffer
+// directly here instead of calling it (would deadlock).
 //
 // Invariants:
 // - Runs under one c.mu critical section to avoid partially-cleared mixed state.
-func (c *Capture) ClearAll() {
+func (c *Capture) ClearAll() int {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -98,4 +105,6 @@ func (c *Capture) ClearAll() {
 
 	// Reset performance data
 	c.perf.clear()
+
+	return c.extensionLogs.clear()
 }

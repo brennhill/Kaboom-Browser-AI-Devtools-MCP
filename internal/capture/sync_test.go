@@ -655,7 +655,7 @@ func TestHandleSync_CommandResultLifecycleMatrix(t *testing.T) {
 			}
 
 			if tc.hasID {
-				if _, found := cap.GetQueryResult(queryID); !found {
+				if _, found := cap.TakeQueryResult(queryID); !found {
 					t.Fatal("expected query result to be stored for id-only command result")
 				}
 			}
@@ -749,7 +749,7 @@ func TestHandleSync_WaterfallResultDelivery(t *testing.T) {
 	}
 
 	// Verify result was stored
-	result, found := cap.GetQueryResult(queryID)
+	result, found := cap.TakeQueryResult(queryID)
 	if !found {
 		t.Fatal("Expected query result to be stored")
 	}

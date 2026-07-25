@@ -9,7 +9,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
 )
 
-func (h *configureSessionHandler) toolConfigureStore(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *configureSessionHandler) handleConfigureStore(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 	var compositeArgs struct {
 		StoreAction string          `json:"store_action"`
 		Action      string          `json:"action"`
@@ -82,7 +82,7 @@ func (h *configureSessionHandler) toolConfigureStore(req JSONRPCRequest, args js
 	return succeed(req, "Store operation complete", responseData)
 }
 
-func (h *configureSessionHandler) toolLoadSessionContext(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *configureSessionHandler) handleLoadSessionContext(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 	// If session store is initialized, use it.
 	if h.sessionStoreImpl != nil {
 		ctx := h.sessionStoreImpl.LoadSessionContext()
@@ -138,11 +138,12 @@ func (h *ToolHandler) toolConfigureClear(req JSONRPCRequest, args json.RawMessag
 func (h *ToolHandler) clearConfiguredBuffer(buffer string) (any, bool) {
 	switch buffer {
 	case "all":
-		h.capture.ClearAll()
+		// ClearAll now clears extension logs too and returns the count.
+		extensionLogsCleared := h.capture.ClearAll()
 		h.server.logs.clearEntries()
 		cleared := map[string]any{
 			"buffers":                "all",
-			"extension_logs_cleared": h.capture.ClearExtensionLogs(),
+			"extension_logs_cleared": extensionLogsCleared,
 		}
 		if h.server.pushInbox != nil {
 			drained := h.server.pushInbox.DrainAll()

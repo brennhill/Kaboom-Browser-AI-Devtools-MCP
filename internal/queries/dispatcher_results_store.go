@@ -83,20 +83,20 @@ func (qd *QueryDispatcher) setQueryResultWithClient(id string, result json.RawMe
 	}
 }
 
-// GetQueryResult retrieves and deletes a query result.
+// TakeQueryResult retrieves and deletes a query result.
 // Returns (result, found).
-func (qd *QueryDispatcher) GetQueryResult(id string) (json.RawMessage, bool) {
-	return qd.GetQueryResultForClient(id, "")
+func (qd *QueryDispatcher) TakeQueryResult(id string) (json.RawMessage, bool) {
+	return qd.TakeQueryResultForClient(id, "")
 }
 
-// GetQueryResultForClient retrieves and consumes a result scoped to one client.
+// TakeQueryResultForClient retrieves and consumes a result scoped to one client.
 //
 // Invariants:
 // - Successful reads are destructive (single-consumer semantics).
 //
 // Failure semantics:
 // - Client mismatch returns (nil,false) without consuming the stored result.
-func (qd *QueryDispatcher) GetQueryResultForClient(id string, clientID string) (json.RawMessage, bool) {
+func (qd *QueryDispatcher) TakeQueryResultForClient(id string, clientID string) (json.RawMessage, bool) {
 	qd.mu.Lock()
 	defer qd.mu.Unlock()
 

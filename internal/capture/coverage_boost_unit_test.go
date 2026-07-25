@@ -251,7 +251,7 @@ func TestCoverageBoost_ResultHandlersAndPendingQueries(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("valid query-result status = %d, want %d", rr.Code, http.StatusOK)
 	}
-	if _, ok := c.GetQueryResultForClient("q-dom", "client-1"); !ok {
+	if _, ok := c.TakeQueryResultForClient("q-dom", "client-1"); !ok {
 		t.Fatal("expected q-dom result to be stored for client-1")
 	}
 
@@ -260,7 +260,7 @@ func TestCoverageBoost_ResultHandlersAndPendingQueries(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("valid query-result (a11y) status = %d, want %d", rr.Code, http.StatusOK)
 	}
-	if _, ok := c.GetQueryResult("q-a11y"); !ok {
+	if _, ok := c.TakeQueryResult("q-a11y"); !ok {
 		t.Fatal("expected q-a11y result to be stored")
 	}
 
@@ -270,7 +270,7 @@ func TestCoverageBoost_ResultHandlersAndPendingQueries(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("valid query-result (execute) status = %d, want %d", rr.Code, http.StatusOK)
 	}
-	if _, ok := c.GetQueryResultForClient("q-exec", "client-2"); !ok {
+	if _, ok := c.TakeQueryResultForClient("q-exec", "client-2"); !ok {
 		t.Fatal("expected q-exec result to be stored for client-2")
 	}
 	if cmd, ok := c.GetCommandResult("corr-1"); !ok || cmd.Status != "complete" {
@@ -282,7 +282,7 @@ func TestCoverageBoost_ResultHandlersAndPendingQueries(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("valid query-result (highlight) status = %d, want %d", rr.Code, http.StatusOK)
 	}
-	if _, ok := c.GetQueryResult("q-highlight"); !ok {
+	if _, ok := c.TakeQueryResult("q-highlight"); !ok {
 		t.Fatal("expected q-highlight result to be stored")
 	}
 }

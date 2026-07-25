@@ -127,8 +127,8 @@ graph TB
 
     Poll -->|POST /dom-result<br/>clientID in body| Results
 
-    Results -->|GetQueryResult<br/>Check clientID match| MCP_A
-    Results -->|GetQueryResult<br/>Check clientID match| MCP_B
+    Results -->|TakeQueryResult<br/>Check clientID match| MCP_A
+    Results -->|TakeQueryResult<br/>Check clientID match| MCP_B
 
     Correlation -.->|Global lookup<br/>No client isolation| MCP_A
     Correlation -.->|Global lookup<br/>No client isolation| MCP_B
