@@ -678,7 +678,6 @@ async function restoreTerminalPanel(): Promise<void> {
     // A live terminal is already mounted — it was only minimized or hidden.
     setPanelVisible(true)
     showTerminalBody()
-    state.minimized = false
     persistUIState('open')
     // Nothing here was rebuilt, so a root changed elsewhere (the options page,
     // another panel) would otherwise still read as the old one.
@@ -700,7 +699,6 @@ async function ensureTerminalSession(): Promise<void> {
     const alive = await validateSession(persisted.session.token)
     if (alive) {
       state.sessionState = persisted.session
-      state.minimized = false
       return
     }
     clearPersistedSession()
@@ -709,7 +707,6 @@ async function ensureTerminalSession(): Promise<void> {
   const ss = await startSession(config, showSandboxError)
   if (!ss) return
   state.sessionState = ss
-  state.minimized = false
 }
 
 // Serializes boots so two never run their createPanelShell()/mountPanel()

@@ -70,10 +70,13 @@ func TestWriteBuffer_Pending(t *testing.T) {
 	}()
 
 	wb.Write([]byte("hello"))
-	// Pending should reflect buffered data (drain is blocked).
-	p := wb.Pending()
-	if p < 0 {
-		t.Fatalf("expected non-negative pending, got %d", p)
+	// Pending must reflect the buffered bytes while the drain is blocked. drain()
+	// only reslices wb.buf *after* the underlying Write returns (here: never,
+	// until the gate closes in the deferred cleanup), so all 5 bytes stay buffered
+	// and Pending() is deterministically 5. (The old `p < 0` check on a len()-based
+	// value could never fail and proved nothing.)
+	if p := wb.Pending(); p != 5 {
+		t.Fatalf("expected 5 pending bytes while drain is blocked, got %d", p)
 	}
 }
 

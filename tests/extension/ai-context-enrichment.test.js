@@ -299,27 +299,40 @@ describe('enrichErrorWithAiContext', () => {
     assert.strictEqual(enriched._aiContext, undefined)
   })
 
-  test('completes within timeout budget', async () => {
-    const start = Date.now()
+  test('runs the enrichment pipeline to completion (well-formed context, no hang)', async () => {
     const enriched = await enrichErrorWithAiContext({
       message: 'test',
       stack: 'Error: test\n    at fn (http://localhost:3000/main.js:1:1)'
     })
-    const elapsed = Date.now() - start
 
-    assert.ok(elapsed < 4000, `Took ${elapsed}ms, expected < 4s`)
-    assert.ok(enriched._aiContext)
+    // A completed run attaches a non-empty summary and records the enrichment.
+    // The old test asserted only a wall-clock `elapsed < 4000` (time-dependent,
+    // false-fails on a paused CI) plus a bare `_aiContext` truthiness check that
+    // an empty/garbage context would still pass. The node:test per-test timeout
+    // already guards against a genuine hang, so assert on content instead.
+    assert.ok(enriched._aiContext, 'enrichment attached _aiContext')
+    assert.strictEqual(typeof enriched._aiContext.summary, 'string')
+    assert.ok(enriched._aiContext.summary.length > 0, 'the summary is non-empty')
+    assert.ok(
+      Array.isArray(enriched._enrichments) && enriched._enrichments.includes('aiContext'),
+      'the aiContext enrichment is recorded'
+    )
   })
 
-  test('resetEnrichmentForTesting restores defaults', () => {
+  test('resetEnrichmentForTesting restores the enabled default', async () => {
+    const stack = 'Error: x\n    at fn (http://localhost:3000/app.js:1:1)'
+
+    // Turn enrichment off and prove it is actually off...
     setAiContextEnabled(false)
     setAiContextStateSnapshot(true)
+    const whileDisabled = await enrichErrorWithAiContext({ message: 'x', stack })
+    assert.strictEqual(whileDisabled._aiContext, undefined, 'disabled -> no enrichment')
 
+    // ...then reset must restore the default so enrichment runs again. The old test
+    // only asserted `assert.ok(true)`, which passed even if reset reset nothing.
     resetEnrichmentForTesting()
-
-    // After reset, enrichment should be enabled (verified by pipeline producing _aiContext)
-    // We just verify the function doesn't throw — the state is internal
-    assert.ok(true)
+    const afterReset = await enrichErrorWithAiContext({ message: 'x', stack })
+    assert.ok(afterReset._aiContext, 'after reset, enrichment is enabled again')
   })
 })
 
