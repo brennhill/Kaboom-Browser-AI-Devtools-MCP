@@ -8,9 +8,9 @@ import assert from 'node:assert'
 import { readFile } from 'node:fs/promises'
 
 const RECORDING_SOURCES = [
-  'src/background/recording-capture.ts',
-  'src/background/recording.ts',
-  'src/background/recording-listeners.ts',
+  'src/background/recording/capture.ts',
+  'src/background/recording/index.ts',
+  'src/background/recording/listeners.ts',
   'src/offscreen/recording-worker.ts',
   'src/popup/recording.ts',
   'src/popup/recording-io.ts'
