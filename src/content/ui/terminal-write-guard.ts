@@ -66,11 +66,13 @@ function markGuardBlocked(nowMs: number): void {
 }
 
 /**
- * Escape hatch: if the guard has been unable to deliver for longer than
- * TERMINAL_GUARD_MAX_WAIT_MS, give up LOUDLY instead of polling forever. This is
- * the guarantee that no "in-flight"/"deferred" state can wedge the terminal
- * permanently (socket never returns, `queuedWriteInFlight`/`terminalFocused`
- * stuck true). Returns true if it gave up — callers must then stop.
+ * Escape hatch for the genuine wedge: the socket has stayed DOWN
+ * (`!terminalConnected`) for longer than TERMINAL_GUARD_MAX_WAIT_MS, so give up
+ * LOUDLY instead of polling forever. Only ever called from the socket-down
+ * branches — the "terminal not reachable" message must be TRUE. The typing-defer
+ * branches are self-limiting and reset guardBlockedSince instead of tripping
+ * this, so `guardBlockedSince` measures contiguous unreachable time only.
+ * Returns true if it gave up — callers must then stop.
  */
 function guardGaveUpAfterMaxWait(nowMs: number): boolean {
   if (state.guardBlockedSince === 0) return false
@@ -122,8 +124,13 @@ export function scheduleQueuedSubmit(delayMs: number): void {
       return
     }
     if (shouldDeferQueuedWrite(now)) {
-      if (guardGaveUpAfterMaxWait(now)) return
-      markGuardBlocked(now)
+      // The terminal is CONNECTED — the only reason we are waiting is that the
+      // user is typing, which is self-limiting (it clears once typing stops).
+      // Do NOT accrue unreachable-time or trip the escape hatch here: doing so
+      // dropped a healthy write after 30s of continuous typing and told the user
+      // "terminal not reachable", which was false. Reset the unreachable clock so
+      // it only ever measures contiguous socket-down time, then defer politely.
+      state.guardBlockedSince = 0
       maybeShowQueuedWriteToast(now)
       scheduleQueuedSubmit(TERMINAL_GUARD_POLL_MS)
       return
@@ -157,8 +164,11 @@ export function flushQueuedWrites(): void {
     return
   }
   if (shouldDeferQueuedWrite(now)) {
-    if (guardGaveUpAfterMaxWait(now)) return
-    markGuardBlocked(now)
+    // Connected — waiting only on the user to stop typing (self-limiting). Do NOT
+    // trip the escape hatch here; that dropped healthy writes during continuous
+    // typing and falsely reported "terminal not reachable". Reset the
+    // unreachable clock (it tracks socket-down time only) and defer politely.
+    state.guardBlockedSince = 0
     maybeShowQueuedWriteToast(now)
     scheduleQueuedWriteFlush(TERMINAL_GUARD_POLL_MS)
     return

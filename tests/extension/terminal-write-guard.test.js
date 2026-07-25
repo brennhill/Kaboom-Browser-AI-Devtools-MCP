@@ -16,7 +16,8 @@ import assert from 'node:assert'
 import {
   state,
   resetAllState,
-  TERMINAL_GUARD_MAX_WAIT_MS
+  TERMINAL_GUARD_MAX_WAIT_MS,
+  TERMINAL_TYPING_IDLE_MS
 } from '../../extension/content/ui/terminal-widget-types.js'
 import {
   flushQueuedWrites,
@@ -160,5 +161,37 @@ describe('terminal write-guard escape hatch', () => {
     assert.equal(state.queuedWrites.length, 0, 'queued write dispatched, not dropped')
     assert.equal(state.queuedWriteInFlight, true, 'write is in flight after reconnect')
     assert.equal(state.guardBlockedSince, 0, 'blocked marker cleared once progress resumes')
+  })
+
+  // Regression (kaboom-089): the escape hatch must NOT fire while the terminal is
+  // CONNECTED and the user is merely typing — that is self-limiting, not a wedge.
+  // Before the fix, 30s of continuous typing dropped a healthy queued write and
+  // falsely toasted "terminal not reachable".
+  test('connected + continuous typing must NOT drop a healthy write', () => {
+    state.visible = true
+    state.iframeEl = fakeIframe()
+    state.serverUrl = 'http://127.0.0.1:7890'
+    state.terminalConnected = true // reachable the entire time
+    state.terminalFocused = true
+    state.lastTypingAt = Date.now() // user is actively typing
+    state.queuedWrites = ['echo hi\r']
+
+    flushQueuedWrites() // connected but typing -> defer, must not drop or accrue
+    assert.equal(state.queuedWrites.length, 1, 'write stays queued while the user types')
+    assert.equal(state.guardBlockedSince, 0, 'typing is reachable — no unreachable-time accrued')
+
+    // Simulate continuous typing well past the escape-hatch deadline: advance in
+    // steps shorter than the typing-idle window, refreshing lastTypingAt each step
+    // so shouldDeferQueuedWrite stays true (a keystroke within the idle window).
+    const step = Math.floor(TERMINAL_TYPING_IDLE_MS / 2)
+    const steps = Math.ceil((TERMINAL_GUARD_MAX_WAIT_MS + 5000) / step)
+    for (let i = 0; i < steps; i++) {
+      state.lastTypingAt = Date.now()
+      advance(step)
+    }
+
+    assert.equal(state.queuedWrites.length, 1, 'a healthy write must NOT be dropped during continuous typing')
+    assert.equal(state.guardBlockedSince, 0, 'no unreachable-time accrues while connected')
+    assert.notEqual(state.queuedWriteFlushTimer, null, 'the flush poller keeps deferring, never gives up')
   })
 })
