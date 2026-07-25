@@ -586,18 +586,22 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 	// and handle init_command via the relay instead of reading PTY directly.
 	if err == nil {
 		sess, _ := mgr.Get(result.SessionID)
+		var relay *Relay
 		if result.Replaced {
 			// The manager evicted a dead session with this ID and spawned a fresh
-			// one. Drop the stale relay (closed fanout, bound to the dead session)
-			// so GetOrCreate builds a new relay + readLoop bound to the new session
-			// — otherwise the reconnecting browser would attach to a dead fanout.
-			relays.Remove(result.SessionID)
+			// one. Atomically drop the stale relay (closed fanout, bound to the dead
+			// session) and install a new relay + readLoop bound to the new session.
+			// ReplaceRelay does this under one lock so a concurrent WS GetOrCreate
+			// cannot bind the relay to the dead session in the gap (finding H) —
+			// otherwise the reconnecting browser would attach to a dead fanout.
+			relay = relays.ReplaceRelay(result.SessionID, sess, req.Dir)
 			deps.logEvent("terminal_session_healed", map[string]any{
 				"session_id": result.SessionID,
 				"pid":        result.Pid,
 			})
+		} else {
+			relay = relays.GetOrCreate(result.SessionID, sess, req.Dir)
 		}
-		relay := relays.GetOrCreate(result.SessionID, sess, req.Dir)
 		deps.logEvent("terminal_session_spawned", map[string]any{
 			"session_id": result.SessionID,
 			"pid":        result.Pid,

@@ -165,6 +165,27 @@ func (m *Map) GetOrCreate(id string, sess *pty.Session, workspaceDir string) *Re
 	return r
 }
 
+// ReplaceRelay atomically drops any existing relay for id and installs a fresh one
+// bound to sess, under a single lock hold. The self-heal path (Start replacing a
+// dead session) must not do this as a separate Remove + GetOrCreate: a concurrent
+// GetOrCreate (a WS reconnect that fetched the session before the token was
+// invalidated) could slip into the gap and bind the relay to the just-evicted dead
+// session, which GetOrCreate would then return unchanged. Overwriting
+// unconditionally under one lock guarantees the fresh binding wins regardless of
+// interleaving (finding H). The old relay is Closed outside the lock (Close can
+// block briefly) like Remove.
+func (m *Map) ReplaceRelay(id string, sess *pty.Session, workspaceDir string) *Relay {
+	m.mu.Lock() // lint:manual-unlock — unlock before Close to avoid holding lock during I/O
+	old := m.relays[id]
+	r := NewRelay(sess, workspaceDir)
+	m.relays[id] = r
+	m.mu.Unlock()
+	if old != nil {
+		old.Close()
+	}
+	return r
+}
+
 // Remove stops and removes the relay for the given session ID.
 func (m *Map) Remove(id string) {
 	m.mu.Lock() // lint:manual-unlock — unlock before Close to avoid holding lock during I/O
