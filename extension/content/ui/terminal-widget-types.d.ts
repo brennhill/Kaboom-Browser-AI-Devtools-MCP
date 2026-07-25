@@ -20,13 +20,6 @@ export declare const ROOT_FOLDER_BROWSE_BUTTON_ID = "kaboom-terminal-root-folder
 export declare const ROOT_FOLDER_PICKER_ID = "kaboom-terminal-root-folder-picker";
 export declare const ROOT_FOLDER_PICKER_UP_ID = "kaboom-terminal-root-folder-up";
 export declare const ROOT_FOLDER_PICKER_USE_ID = "kaboom-terminal-root-folder-use";
-export declare const DEFAULT_WIDGET_WIDTH = "50vw";
-export declare const DEFAULT_WIDGET_HEIGHT = "40vh";
-export declare const MIN_WIDGET_WIDTH = "400px";
-export declare const MIN_WIDGET_HEIGHT = "250px";
-export declare const MAX_WIDGET_WIDTH = "100vw";
-export declare const MAX_WIDGET_HEIGHT = "80vh";
-export declare const MINIMIZED_WIDGET_HEIGHT = "32px";
 export declare const TERMINAL_WRITE_SUBMIT_DELAY_MS = 600;
 export declare const TERMINAL_TYPING_IDLE_MS = 1500;
 export declare const TERMINAL_GUARD_POLL_MS = 200;
@@ -45,11 +38,8 @@ export type TerminalUIState = 'open' | 'closed' | 'minimized';
 export interface TerminalWidgetState {
     widgetEl: HTMLDivElement | null;
     iframeEl: HTMLIFrameElement | null;
-    resizeHandleEl: HTMLDivElement | null;
     sessionState: TerminalSessionState | null;
     visible: boolean;
-    minimized: boolean;
-    savedHeight: string;
     serverUrl: string;
     terminalFocused: boolean;
     lastTypingAt: number;

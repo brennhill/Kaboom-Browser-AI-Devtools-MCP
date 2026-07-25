@@ -628,7 +628,6 @@ async function restoreTerminalPanel() {
         // A live terminal is already mounted — it was only minimized or hidden.
         setPanelVisible(true);
         showTerminalBody();
-        state.minimized = false;
         persistUIState('open');
         // Nothing here was rebuilt, so a root changed elsewhere (the options page,
         // another panel) would otherwise still read as the old one.
@@ -650,7 +649,6 @@ async function ensureTerminalSession() {
         const alive = await validateSession(persisted.session.token);
         if (alive) {
             state.sessionState = persisted.session;
-            state.minimized = false;
             return;
         }
         clearPersistedSession();
@@ -660,11 +658,38 @@ async function ensureTerminalSession() {
     if (!ss)
         return;
     state.sessionState = ss;
-    state.minimized = false;
 }
-async function bootTerminalPanel(forceFresh = false) {
-    if (panelReady && !forceFresh)
-        return;
+// Serializes boots so two never run their createPanelShell()/mountPanel()
+// concurrently. Each boot chains after the previous one settles.
+let bootChain = Promise.resolve();
+/**
+ * Boot (or rebuild) the terminal panel — serialized entry point.
+ *
+ * A second trigger arriving mid-boot (double-clicked Start, a rapid folder
+ * re-pick, a redraw while an earlier boot is still awaiting the network) MUST
+ * NOT run concurrently with the first: createPanelShell() unconditionally
+ * rebinds `state.iframeEl`, while mountPanel() early-returns once `rootEl` is
+ * set. Interleaved, that leaves the *visible* terminal on iframe #1 but
+ * `state.iframeEl` pointing at a detached iframe #2 — so every later
+ * write/annotation/redraw vanishes into the off-screen frame with no error
+ * (the very "writes disappear" class the terminal work set out to kill).
+ *
+ * Chaining on `bootChain` forces boots to run one at a time; the latest wins.
+ * The `panelReady && !forceFresh` no-op check is evaluated AFTER the previous
+ * boot settles, so a plain boot that lands behind a forceFresh rebuild correctly
+ * sees the finished panel and does nothing instead of racing it.
+ */
+function bootTerminalPanel(forceFresh = false) {
+    const prev = bootChain;
+    bootChain = (async () => {
+        await prev.catch(() => { });
+        if (panelReady && !forceFresh)
+            return;
+        await bootTerminalPanelInner(forceFresh);
+    })();
+    return bootChain;
+}
+async function bootTerminalPanelInner(forceFresh) {
     // Drop the existing panel DOM before (re)building. mountPanel() early-returns
     // while `rootEl` is set, so without this the freshly-built shell — bound to the
     // NEW session in the just-selected folder — is never attached, and the user

@@ -82,7 +82,7 @@ func TestAsyncQueueIntegration(t *testing.T) {
 	}
 
 	// Verify result is stored
-	storedResult, found := capture.GetQueryResult(queryID)
+	storedResult, found := capture.TakeQueryResult(queryID)
 	if !found {
 		t.Fatal("Result not found after SetQueryResult")
 	}
@@ -130,8 +130,8 @@ func TestAsyncQueueArchitectureInvariants(t *testing.T) {
 	// Verify SetQueryResult exists and works
 	capture.SetQueryResult(id, json.RawMessage(`{}`))
 
-	// Verify GetQueryResult exists and works
-	_, _ = capture.GetQueryResult(id)
+	// Verify TakeQueryResult exists and works
+	_, _ = capture.TakeQueryResult(id)
 
 	// Verify correlation ID tracking methods exist
 	query2 := queries.PendingQuery{

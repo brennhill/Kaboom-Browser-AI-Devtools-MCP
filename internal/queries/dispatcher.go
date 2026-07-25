@@ -24,7 +24,7 @@ type PendingQueryEntry struct {
 // QueryResultEntry stores a one-time consumable extension result.
 //
 // Invariants:
-// - Result is deleted on successful GetQueryResult* read to avoid stale replay.
+// - Result is deleted on successful TakeQueryResult* read to avoid stale replay.
 // - ClientID must match the originating request in multi-client mode.
 // - CreatedAt drives TTL-based cleanup and must reflect first insertion time.
 type QueryResultEntry struct {

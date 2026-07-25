@@ -170,8 +170,19 @@ func TestClearAllCapture(t *testing.T) {
 	capture.AddWebSocketEvents([]WebSocketEvent{{ID: "conn1", Data: "test"}})
 	capture.AddEnhancedActions([]EnhancedAction{{Type: "click", Timestamp: 1738238000000}})
 
+	// Regression: extension logs must be cleared by ClearAll too. They used to be
+	// left behind ("All" was a lie), so any caller that forgot the separate
+	// ClearExtensionLogs() leaked stale logs. ClearAll now clears them and returns
+	// the count.
+	capture.mu.Lock()
+	capture.extensionLogs.logs = append(capture.extensionLogs.logs, ExtensionLog{Level: "debug", Message: "ext log", Timestamp: time.Now()})
+	capture.mu.Unlock()
+
 	// Clear all
-	capture.ClearAll()
+	extensionLogsCleared := capture.ClearAll()
+	if extensionLogsCleared != 1 {
+		t.Errorf("Expected ClearAll to clear and report 1 extension log, got %d", extensionLogsCleared)
+	}
 
 	// Verify all buffers empty
 	capture.mu.RLock()
@@ -185,6 +196,9 @@ func TestClearAllCapture(t *testing.T) {
 	}
 	if len(capture.buffers.enhancedActions) != 0 {
 		t.Error("Expected enhancedActions to be empty")
+	}
+	if len(capture.extensionLogs.logs) != 0 {
+		t.Errorf("Expected extensionLogs to be empty after ClearAll, got %d entries", len(capture.extensionLogs.logs))
 	}
 }
 

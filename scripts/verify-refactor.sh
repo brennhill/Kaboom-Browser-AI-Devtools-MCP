@@ -174,7 +174,7 @@ QUEUE_METHODS=(
     "CreatePendingQueryWithClient"
     "GetPendingQueries"
     "SetQueryResult"
-    "GetQueryResult"
+    "TakeQueryResult"
 )
 
 for method in "${QUEUE_METHODS[@]}"; do

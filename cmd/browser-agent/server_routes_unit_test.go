@@ -401,7 +401,7 @@ func TestHandleScreenshotRoutes(t *testing.T) {
 		t.Fatalf("filename = %q, expected sanitized hostname", resp["filename"])
 	}
 
-	if result, ok := cap.GetQueryResult("query-1"); !ok || len(result) == 0 {
+	if result, ok := cap.TakeQueryResult("query-1"); !ok || len(result) == 0 {
 		t.Fatalf("expected query result for query-1 to be set, got ok=%v result=%q", ok, string(result))
 	}
 

@@ -10,16 +10,16 @@ import (
 	cfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure"
 )
 
-// toolDiffSessionsWrapper repackages verif_session_action -> action for toolDiffSessions.
-func (h *configureSessionHandler) toolDiffSessionsWrapper(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+// handleDiffSessionsWrapper repackages verif_session_action -> action for handleDiffSessions.
+func (h *configureSessionHandler) handleDiffSessionsWrapper(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 	rewritten, err := cfg.RewriteDiffSessionsArgs(args)
 	if err != nil {
 		return fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 	}
-	return h.toolDiffSessions(req, rewritten)
+	return h.handleDiffSessions(req, rewritten)
 }
 
-func (h *configureSessionHandler) toolDiffSessions(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *configureSessionHandler) handleDiffSessions(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 	if h.sessionManager == nil {
 		return fail(req, ErrNotInitialized, "Session manager not initialized", "Internal error — do not retry")
 	}

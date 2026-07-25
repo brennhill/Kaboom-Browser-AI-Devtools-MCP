@@ -60,12 +60,23 @@ const LOG = KABOOM_RECORDING_LOG_PREFIX
 /** Listener to re-send watermark when recording tab navigates or content script re-injects. */
 let tabUpdateListener: ((tabId: number, changeInfo: { status?: string }) => void) | null = null
 
-// MV3 service workers restart routinely while the offscreen MediaRecorder keeps
-// recording. On module load, ask the offscreen document whether a recording is
-// still active: rehydrate state + badge timer if so, otherwise clear stale storage
-// (e.g., browser crash during a previous recording).
-console.log(LOG, 'Module loaded, checking for surviving offscreen recording')
-void rehydrateRecordingStateOnLoad()
+/**
+ * Kick off recording rehydration. Call once from background init.
+ *
+ * MV3 service workers restart routinely while the offscreen MediaRecorder keeps
+ * recording, so on startup we ask the offscreen document whether a recording is
+ * still active: rehydrate state + badge timer if so, otherwise clear stale
+ * storage (e.g. a browser crash during a previous recording).
+ *
+ * This is an explicit call, NOT a module-load side effect: importing this module
+ * merely to reach isRecording()/startRecording() must not fire chrome messaging
+ * and a storage read (which forced every test to stub chrome before import, and
+ * re-ran rehydration for every importer). Only initializeExtension() calls it.
+ */
+export function initRecording(): Promise<void> {
+  console.log(LOG, 'Checking for surviving offscreen recording')
+  return rehydrateRecordingStateOnLoad()
+}
 
 /** Ask the offscreen document for its live recording state. Null when unreachable/inactive context. */
 async function queryOffscreenRecordingState(): Promise<OffscreenRecordingStateResponse | null> {

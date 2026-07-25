@@ -41,8 +41,13 @@ type UsageTracker struct {
 	mu            sync.Mutex
 	tools         map[string]*toolAccum // key: "family:name"
 	asyncOutcomes map[string]int        // "complete", "timeout", etc.
-	sessionCalls int      // total calls this session
-	sessionStart time.Time // when session started (for duration calc)
+	sessionCalls  int                   // total calls this session
+	sessionStart  time.Time             // when session started (for duration calc)
+
+	// now is the clock used for session start/duration. Defaults to time.Now;
+	// tests inject a fake so session_start timing and session_end duration are
+	// deterministic instead of wall-clock dependent.
+	now func() time.Time
 }
 
 // NewUsageTracker creates a new empty usage tracker.
@@ -51,11 +56,26 @@ func NewUsageTracker() *UsageTracker {
 	t := &UsageTracker{
 		tools:         make(map[string]*toolAccum),
 		asyncOutcomes: make(map[string]int),
+		now:           time.Now,
 	}
 	SetSessionEndCallback(func(reason string) {
 		t.EmitSessionEnd(reason)
 	})
 	return t
+}
+
+// sessionDurationSeconds is the whole-seconds session length from start to now.
+// A zero start (no session) or a non-positive span (clock skew / same instant)
+// yields 0 rather than a negative or garbage duration.
+func sessionDurationSeconds(start, now time.Time) int64 {
+	if start.IsZero() {
+		return 0
+	}
+	secs := int64(now.Sub(start).Seconds())
+	if secs < 0 {
+		return 0
+	}
+	return secs
 }
 
 // splitKey splits "observe:page" into ("observe", "page").
@@ -98,7 +118,7 @@ func (u *UsageTracker) RecordToolCall(key string, elapsed time.Duration, isError
 	u.mu.Lock()
 	newSession := u.sessionStart.IsZero()
 	if newSession {
-		u.sessionStart = time.Now()
+		u.sessionStart = u.now()
 	}
 	u.mu.Unlock()
 
@@ -221,10 +241,7 @@ func (u *UsageTracker) EmitSessionEnd(reason string) {
 		return
 	}
 
-	durationS := int64(0)
-	if !start.IsZero() {
-		durationS = int64(time.Since(start).Seconds())
-	}
+	durationS := sessionDurationSeconds(start, u.now())
 
 	fireStructuredBeacon(map[string]any{
 		"event":      "session_end",

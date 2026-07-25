@@ -84,7 +84,7 @@ import {
   handleTrackedTabUrlChange
 } from './event-listeners.js'
 import { installPushCommandListener, installChatCommandListener } from './push-handler.js'
-import { isRecording, startRecording, stopRecording } from './recording/index.js'
+import { isRecording, startRecording, stopRecording, initRecording } from './recording/index.js'
 import type { MessageHandlerDependencies } from './message-handlers.js'
 import { installMessageListener, broadcastTrackingState } from './message-handlers.js'
 import { captureScreenshot, updateBadge } from './communication.js'
@@ -106,6 +106,11 @@ export function initializeExtension(): void {
   // level runs. A listener installed later in the async sequence would miss it,
   // and the background would believe no panel exists.
   watchTerminalPanelState()
+
+  // Rehydrate any recording that survived a service-worker restart. Explicit
+  // call (formerly a recording-module import side effect) so it fires exactly
+  // once, here at startup. Best-effort — not awaited at the top level.
+  void initRecording()
 
   // Fire async initialization without awaiting at top level
   // (Service worker will remain alive as long as event handlers are installed)

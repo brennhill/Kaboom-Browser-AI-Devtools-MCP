@@ -17,5 +17,5 @@ export interface ActionMeta {
 /** Returns true if the action only reads page state (no DOM mutation, no side effects worth toasting). */
 export declare function isReadOnlyAction(action: string): boolean;
 /** Returns true if the action modifies the DOM and requires match-evidence validation. */
-export declare function isMutatingAction(action: string): boolean;
+export declare function isDomMutatingAction(action: string): boolean;
 //# sourceMappingURL=action-metadata.d.ts.map

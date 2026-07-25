@@ -2,6 +2,20 @@
  * Purpose: Manages recording lifecycle (start/stop) and recording state, delegating capture plumbing and listener registration to sub-modules.
  * Docs: docs/features/feature/flow-recording/index.md
  */
+/**
+ * Kick off recording rehydration. Call once from background init.
+ *
+ * MV3 service workers restart routinely while the offscreen MediaRecorder keeps
+ * recording, so on startup we ask the offscreen document whether a recording is
+ * still active: rehydrate state + badge timer if so, otherwise clear stale
+ * storage (e.g. a browser crash during a previous recording).
+ *
+ * This is an explicit call, NOT a module-load side effect: importing this module
+ * merely to reach isRecording()/startRecording() must not fire chrome messaging
+ * and a storage read (which forced every test to stub chrome before import, and
+ * re-ran rehydration for every importer). Only initializeExtension() calls it.
+ */
+export declare function initRecording(): Promise<void>;
 /** Returns whether a recording is currently active. */
 export declare function isRecording(): boolean;
 /** Returns current recording info for popup sync. */
