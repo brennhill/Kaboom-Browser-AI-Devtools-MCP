@@ -80,6 +80,16 @@ const IdleTimeout = 30 * time.Second
 func RegisterRoutes(mux *http.ServeMux, deps Deps, server ServerDeps, mgr *pty.Manager, cap *capture.Store) *Map {
 	relays := NewMap()
 
+	// Route a stuck-writer write-buffer close timeout (a drain goroutine + fd leak
+	// that cannot be safely interrupted) to the structured log, so the leak is
+	// diagnosable instead of silent (finding M).
+	pty.SetWriteBufferCloseTimeoutHook(func(pending int) {
+		deps.logEvent("terminal_writebuffer_close_timeout", map[string]any{"pending_bytes": pending})
+		if deps.Stderrf != nil {
+			deps.Stderrf("[Kaboom] terminal write buffer close timed out (%d bytes undrained; drain goroutine+fd leaked)\n", pending)
+		}
+	})
+
 	// Serve terminal HTML page.
 	mux.HandleFunc("/terminal", deps.CORSMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		HandleTerminalPage(w, r, deps)
