@@ -154,6 +154,162 @@ async function clearRecordingState(): Promise<void> {
   await removeLocal(StorageKey.RECORDING)
 }
 
+type RecordingStartResult = { status: string; name: string; startTime?: number; error?: string }
+
+/**
+ * Resolve the tab to record: an explicit targetTabId (MCP), else the active tab.
+ * Returns the tab, or an error message when the tab is missing.
+ */
+async function resolveRecordingTab(
+  targetTabId: number | undefined
+): Promise<(chrome.tabs.Tab & { id: number }) | { error: string }> {
+  let tab: chrome.tabs.Tab | undefined
+  if (targetTabId && targetTabId > 0) {
+    try {
+      tab = await chrome.tabs.get(targetTabId)
+    } catch {
+      console.error(LOG, 'START FAILED: target tab not found', { targetTabId })
+      return { error: `RECORD_START: Target tab ${targetTabId} not found.` }
+    }
+  } else {
+    tab = (await getActiveTab()) ?? undefined
+  }
+  console.log(LOG, 'Resolved recording tab:', {
+    requestedTabId: targetTabId ?? null,
+    resolvedTabId: tab?.id,
+    url: tab?.url?.substring(0, 80),
+    title: tab?.title?.substring(0, 40)
+  })
+  if (!tab?.id) {
+    console.error(LOG, 'START FAILED: No active tab found')
+    return { error: 'RECORD_START: No active tab found.' }
+  }
+  return tab as chrome.tabs.Tab & { id: number }
+}
+
+/**
+ * Make sure the content script is responsive (needed for toasts). Reloads the
+ * tab if it isn't, then waits for the extension to initialize. Skipped from the
+ * popup path, where a tab reload would close the popup.
+ */
+async function ensureContentScriptReady(tabId: number, fromPopup: boolean): Promise<void> {
+  if (fromPopup) {
+    console.log(LOG, 'Skipping content script ping (fromPopup=true)')
+    return
+  }
+  console.log(LOG, 'Pinging content script on tab', tabId)
+  const alive = await pingContentScript(tabId)
+  console.log(LOG, 'Content script alive:', alive)
+  if (!alive) {
+    console.log(LOG, 'Reloading tab for content script injection')
+    chrome.tabs.reload(tabId)
+    await waitForTabLoad(tabId, scaleTimeout(5000))
+  }
+  // Add extra delay to ensure extension is fully initialized for tabCapture.
+  console.log(LOG, 'Waiting for extension to fully initialize...')
+  await delay(scaleTimeout(1000))
+}
+
+/**
+ * Acquire the tabCapture stream id. The popup path already holds an activeTab
+ * grant; the MCP path must request the recording gesture first. Returns the
+ * stream id or a fully-formed error result (the gesture path returns its own).
+ */
+async function acquireStreamId(
+  tab: chrome.tabs.Tab,
+  name: string,
+  fps: number,
+  audio: string,
+  fromPopup: boolean
+): Promise<{ streamId: string } | { errorResult: RecordingStartResult }> {
+  let streamId: string
+  if (fromPopup) {
+    console.log(LOG, 'Getting stream ID via fromPopup path (targetTabId:', tab.id, ')')
+    streamId = await getStreamIdWithRecovery(tab.id!)
+  } else {
+    const mediaType = audio ? 'Audio' : 'Video'
+    const gestureResult = await requestRecordingGesture(tab, name, fps, audio, mediaType)
+    if (gestureResult.error) {
+      return { errorResult: gestureResult as RecordingStartResult }
+    }
+    streamId = await new Promise<string>((resolve, reject) => {
+      chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id! }, (id) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message ?? 'getMediaStreamId failed'))
+        } else {
+          resolve(id)
+        }
+      })
+    })
+  }
+  if (!streamId) {
+    console.error(LOG, 'START FAILED: streamId is empty')
+    return {
+      errorResult: {
+        status: 'error',
+        name: '',
+        error: 'RECORD_START: getMediaStreamId returned empty. Check tabCapture permission.'
+      }
+    }
+  }
+  return { streamId }
+}
+
+/**
+ * Ensure the offscreen document exists, send it the START command, and wait
+ * (bounded) for its confirmation. Returns the offscreen reply (success or a
+ * failure/timeout message).
+ */
+async function startOffscreenRecording(
+  streamId: string,
+  tab: chrome.tabs.Tab,
+  name: string,
+  fps: number,
+  audio: string
+): Promise<OffscreenRecordingStartedMessage> {
+  console.log(LOG, 'Ensuring offscreen document exists')
+  await ensureOffscreenDocument()
+  console.log(LOG, 'Offscreen document ready, sending START command')
+
+  return await new Promise<OffscreenRecordingStartedMessage>((resolve) => {
+    const listener = (message: OffscreenRecordingStartedMessage) => {
+      if (message.target === 'background' && message.type === 'offscreen_recording_started') {
+        clearTimeout(timeout)
+        chrome.runtime.onMessage.removeListener(listener)
+        resolve(message)
+      }
+    }
+
+    const timeout = setTimeout(() => {
+      chrome.runtime.onMessage.removeListener(listener)
+      resolve({
+        target: 'background',
+        type: 'offscreen_recording_started',
+        success: false,
+        error: 'RECORD_START: Offscreen document timed out.'
+      })
+    }, scaleTimeout(10000))
+
+    chrome.runtime.onMessage.addListener(listener)
+
+    chrome.runtime
+      .sendMessage({
+        target: 'offscreen',
+        type: 'offscreen_start_recording',
+        streamId,
+        serverUrl: getServerUrl(),
+        name,
+        fps,
+        audioMode: audio,
+        tabId: tab.id,
+        url: tab.url ?? ''
+      })
+      .catch(() => {
+        /* offscreen replies via a separate broadcast; ignore port-closed rejections */
+      })
+  })
+}
+
 // =============================================================================
 // LIFECYCLE — START
 // =============================================================================
@@ -198,30 +354,13 @@ export async function startRecording(
   fps = Math.max(5, Math.min(60, fps))
 
   try {
-    // Resolve target tab. MCP flows may provide an explicit tab_id.
-    let tab: chrome.tabs.Tab | undefined
-    if (targetTabId && targetTabId > 0) {
-      try {
-        tab = await chrome.tabs.get(targetTabId)
-      } catch {
-        recordingState.active = false // eslint-disable-line require-atomic-updates
-        console.error(LOG, 'START FAILED: target tab not found', { targetTabId })
-        return { status: 'error', name: '', error: `RECORD_START: Target tab ${targetTabId} not found.` }
-      }
-    } else {
-      tab = (await getActiveTab()) ?? undefined
-    }
-    console.log(LOG, 'Resolved recording tab:', {
-      requestedTabId: targetTabId ?? null,
-      resolvedTabId: tab?.id,
-      url: tab?.url?.substring(0, 80),
-      title: tab?.title?.substring(0, 40)
-    })
-    if (!tab?.id) {
+    // Resolve the target tab (explicit MCP tab_id, else the active tab).
+    const tabResult = await resolveRecordingTab(targetTabId)
+    if ('error' in tabResult) {
       recordingState.active = false // eslint-disable-line require-atomic-updates
-      console.error(LOG, 'START FAILED: No active tab found')
-      return { status: 'error', name: '', error: 'RECORD_START: No active tab found.' }
+      return { status: 'error', name: '', error: tabResult.error }
     }
+    const tab = tabResult
 
     // Auto-enable tab tracking if not already tracked
     const trackedTabId = await getLocal(StorageKey.TRACKED_TAB_ID)
@@ -233,102 +372,19 @@ export async function startRecording(
       await setTrackedTab(tab)
     }
 
-    // Ensure content script is responsive (needed for toasts + watermark).
-    // Skip when from popup — tab reload would close the popup.
-    if (!fromPopup) {
-      console.log(LOG, 'Pinging content script on tab', tab.id)
-      const alive = await pingContentScript(tab.id)
-      console.log(LOG, 'Content script alive:', alive)
-      if (!alive) {
-        console.log(LOG, 'Reloading tab for content script injection')
-        chrome.tabs.reload(tab.id)
-        await waitForTabLoad(tab.id, scaleTimeout(5000))
-      }
-      // Add extra delay to ensure extension is fully initialized for tabCapture
-      console.log(LOG, 'Waiting for extension to fully initialize...')
-      await delay(scaleTimeout(1000))
-    } else {
-      console.log(LOG, 'Skipping content script ping (fromPopup=true)')
-    }
+    // Ensure the content script is responsive (toasts); may reload the tab.
+    await ensureContentScriptReady(tab.id, fromPopup)
 
-    let streamId: string
-
-    if (fromPopup) {
-      // Popup click grants activeTab — get stream directly with targetTabId
-      console.log(LOG, 'Getting stream ID via fromPopup path (targetTabId:', tab.id, ')')
-      streamId = await getStreamIdWithRecovery(tab.id)
-    } else {
-      // MCP-initiated: requires activeTab via user gesture
-      const mediaType = audio ? 'Audio' : 'Video'
-      const gestureResult = await requestRecordingGesture(tab, name, fps, audio, mediaType)
-      if (gestureResult.error) {
-        recordingState.active = false // eslint-disable-line require-atomic-updates
-        return gestureResult as { status: string; name: string; error: string }
-      }
-      streamId = await new Promise<string>((resolve, reject) => {
-        chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id! }, (id) => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message ?? 'getMediaStreamId failed'))
-          } else {
-            resolve(id)
-          }
-        })
-      })
-    }
-
-    if (!streamId) {
+    // Acquire the tabCapture stream id (popup activeTab grant vs MCP gesture).
+    const streamResult = await acquireStreamId(tab, name, fps, audio, fromPopup)
+    if ('errorResult' in streamResult) {
       recordingState.active = false // eslint-disable-line require-atomic-updates
-      console.error(LOG, 'START FAILED: streamId is empty')
-      return {
-        status: 'error',
-        name: '',
-        error: 'RECORD_START: getMediaStreamId returned empty. Check tabCapture permission.'
-      }
+      return streamResult.errorResult
     }
+    const streamId = streamResult.streamId
 
-    // Ensure the offscreen document is running
-    console.log(LOG, 'Ensuring offscreen document exists')
-    await ensureOffscreenDocument()
-    console.log(LOG, 'Offscreen document ready, sending START command')
-
-    // Send start command to offscreen document and wait for confirmation (10s timeout)
-    const startResult = await new Promise<OffscreenRecordingStartedMessage>((resolve) => {
-      const listener = (message: OffscreenRecordingStartedMessage) => {
-        if (message.target === 'background' && message.type === 'offscreen_recording_started') {
-          clearTimeout(timeout)
-          chrome.runtime.onMessage.removeListener(listener)
-          resolve(message)
-        }
-      }
-
-      const timeout = setTimeout(() => {
-        chrome.runtime.onMessage.removeListener(listener)
-        resolve({
-          target: 'background',
-          type: 'offscreen_recording_started',
-          success: false,
-          error: 'RECORD_START: Offscreen document timed out.'
-        })
-      }, scaleTimeout(10000))
-
-      chrome.runtime.onMessage.addListener(listener)
-
-      chrome.runtime
-        .sendMessage({
-          target: 'offscreen',
-          type: 'offscreen_start_recording',
-          streamId,
-          serverUrl: getServerUrl(),
-          name,
-          fps,
-          audioMode: audio,
-          tabId: tab.id,
-          url: tab.url ?? ''
-        })
-        .catch(() => {
-          /* offscreen replies via a separate broadcast; ignore port-closed rejections */
-        })
-    })
+    // Start the offscreen recorder and wait (bounded) for its confirmation.
+    const startResult = await startOffscreenRecording(streamId, tab, name, fps, audio)
 
     console.log(LOG, 'Offscreen START result:', { success: startResult.success, error: startResult.error })
 
