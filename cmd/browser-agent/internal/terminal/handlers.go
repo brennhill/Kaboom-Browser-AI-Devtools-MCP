@@ -282,10 +282,18 @@ func wsLoop(conn net.Conn, rw *bufio.ReadWriter, deps Deps, sess *pty.Session, r
 			select {
 			case data, ok := <-sub:
 				if !ok {
-					// Fanout closed (session ended) — send exit notification
-					// so the browser can display the message and stop reconnecting.
-					exitMsg, _ := json.Marshal(map[string]any{"type": "exited", "code": relay.exitCode})
-					_ = writeFrame(0x1, exitMsg)
+					if relay.Ended() {
+						// Session genuinely ended — send exit notification so the
+						// browser can display the message and stop reconnecting.
+						exitMsg, _ := json.Marshal(map[string]any{"type": "exited", "code": relay.exitCode})
+						_ = writeFrame(0x1, exitMsg)
+					} else {
+						// This subscriber was dropped for being slow (fanout
+						// backpressure) while the shell is still running. Do NOT
+						// declare it `exited` — just close so the browser reconnects
+						// and replays scrollback instead of showing a dead terminal.
+						deps.logEvent("terminal_ws_subscriber_dropped", map[string]any{"session_id": sess.ID})
+					}
 					_ = writeFrame(0x8, nil)
 					closeConn()
 					return
@@ -539,6 +547,17 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 	// and handle init_command via the relay instead of reading PTY directly.
 	if err == nil {
 		sess, _ := mgr.Get(result.SessionID)
+		if result.Replaced {
+			// The manager evicted a dead session with this ID and spawned a fresh
+			// one. Drop the stale relay (closed fanout, bound to the dead session)
+			// so GetOrCreate builds a new relay + readLoop bound to the new session
+			// — otherwise the reconnecting browser would attach to a dead fanout.
+			relays.Remove(result.SessionID)
+			deps.logEvent("terminal_session_healed", map[string]any{
+				"session_id": result.SessionID,
+				"pid":        result.Pid,
+			})
+		}
 		relay := relays.GetOrCreate(result.SessionID, sess, req.Dir)
 		deps.logEvent("terminal_session_spawned", map[string]any{
 			"session_id": result.SessionID,
