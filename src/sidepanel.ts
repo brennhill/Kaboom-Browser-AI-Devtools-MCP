@@ -77,6 +77,12 @@ interface PanelUi {
   presencePort: chrome.runtime.Port | null
   rootFolderBar: { element: HTMLDivElement; setRoot: (root: string) => void } | null
   bootGeneration: number
+  // Timestamps of exhaustion-driven recoveries (iframe reconnect_exhausted →
+  // redrawTerminal) within the sliding window. A flapping daemon — up enough for
+  // the 2s validate but not for onopen — would otherwise thrash
+  // redraw→reconnect→exhaust forever; past the ceiling we drop to the no-session
+  // state instead of re-looping (finding E-i). Reset on a real 'connected'.
+  reconnectRecoveryAt: number[]
 }
 
 function freshPanelUi(): PanelUi {
@@ -94,8 +100,29 @@ function freshPanelUi(): PanelUi {
     panelCloseIntent: null,
     presencePort: null,
     rootFolderBar: null,
-    bootGeneration: 0
+    bootGeneration: 0,
+    reconnectRecoveryAt: []
   }
+}
+
+/** Sliding window and cap for parent-side exhaustion-driven recoveries (E-i). */
+const RECONNECT_RECOVERY_WINDOW_MS = 30_000
+const MAX_RECONNECT_RECOVERIES = 3
+
+/**
+ * Record one exhaustion-driven recovery attempt and report whether the ceiling is
+ * now exceeded. Prunes attempts older than the window so a slow, occasional
+ * daemon-restart recovery never trips it — only a fast flap does.
+ */
+function exhaustionRecoveryCeilingReached(): boolean {
+  const now = Date.now()
+  panel.reconnectRecoveryAt = panel.reconnectRecoveryAt.filter((t) => now - t < RECONNECT_RECOVERY_WINDOW_MS)
+  panel.reconnectRecoveryAt.push(now)
+  return panel.reconnectRecoveryAt.length > MAX_RECONNECT_RECOVERIES
+}
+
+function resetExhaustionRecovery(): void {
+  panel.reconnectRecoveryAt = []
 }
 
 const panel = freshPanelUi()
@@ -307,6 +334,9 @@ function handleIframeMessage(event: MessageEvent): void {
       console.log('[KaBOOM! terminal] ws connected')
       updateStatusDot('connected')
       state.terminalConnected = true
+      // A real connection clears the flap budget so an unrelated future outage
+      // gets its own full recovery allowance (E-i).
+      resetExhaustionRecovery()
       if (state.queuedWrites.length > 0 && !state.queuedWriteInFlight) {
         scheduleQueuedWriteFlush(0)
       }
@@ -322,10 +352,21 @@ function handleIframeMessage(event: MessageEvent): void {
       // a full daemon restart. Recover instead of sitting on a permanent silent
       // disconnect: revalidate and rebuild into a fresh session (or the recoverable
       // no-session state). redrawTerminal owns that validate-then-rebuild logic.
-      console.log('[KaBOOM! terminal] reconnect exhausted — revalidating and rebuilding')
       updateStatusDot('disconnected')
       state.terminalConnected = false
       state.terminalFocused = false
+      if (exhaustionRecoveryCeilingReached()) {
+        // A flapping daemon (up for the 2s validate, not for onopen) would thrash
+        // redraw→reconnect→exhaust indefinitely. Stop auto-recovering: detach the
+        // iframe and drop to the recoverable no-session state so the user restarts
+        // on their terms rather than watching a silent, endless reconnect (E-i).
+        console.warn('[KaBOOM! terminal] reconnect recovery ceiling reached — showing no-session state')
+        resetExhaustionRecovery()
+        state.iframeEl = null
+        showNoSessionState()
+        break
+      }
+      console.log('[KaBOOM! terminal] reconnect exhausted — revalidating and rebuilding')
       void redrawTerminal()
       break
     case 'exited':

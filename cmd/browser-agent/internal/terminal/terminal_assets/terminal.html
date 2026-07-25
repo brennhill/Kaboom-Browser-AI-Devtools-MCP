@@ -116,6 +116,14 @@
       var reconnectAttempts = 0;
       var MAX_RECONNECT_ATTEMPTS = 6;
       var reconnectExhausted = false;
+      // Total-reconnect cap within a sliding window. onopen resets the CONSECUTIVE
+      // reconnectAttempts, so an open→immediately-drop flap (server up enough to
+      // accept the socket but dropping it before it settles) would never reach
+      // MAX_RECONNECT_ATTEMPTS and never exhaust. Aging timestamps make a persistent
+      // flap eventually give up so the parent can recover (finding E-ii).
+      var reconnectTimes = [];
+      var RECONNECT_WINDOW_MS = 60000;
+      var MAX_RECONNECTS_IN_WINDOW = 12;
       // Keystrokes typed during a reconnect gap are buffered (bounded) and flushed
       // on reconnect instead of being silently dropped.
       var pendingInput = [];
@@ -242,13 +250,21 @@
         reconnectTimer = setTimeout(function() {
           reconnectTimer = null;
           reconnectAttempts++;
-          if (reconnectAttempts > MAX_RECONNECT_ATTEMPTS) {
-            // Give up on this (almost certainly dead) token and hand recovery to
-            // the parent, which revalidates and rebuilds into a fresh session
-            // instead of reconnecting forever on a 401.
+          // Record this reconnect and drop timestamps older than the window. onopen
+          // zeroes reconnectAttempts, so a flap is only caught by this windowed
+          // total, not by the consecutive counter (finding E-ii).
+          var now = Date.now();
+          reconnectTimes.push(now);
+          while (reconnectTimes.length && now - reconnectTimes[0] > RECONNECT_WINDOW_MS) {
+            reconnectTimes.shift();
+          }
+          if (reconnectAttempts > MAX_RECONNECT_ATTEMPTS || reconnectTimes.length > MAX_RECONNECTS_IN_WINDOW) {
+            // Give up on this (almost certainly dead or flapping) token and hand
+            // recovery to the parent, which revalidates and rebuilds into a fresh
+            // session instead of reconnecting forever on a 401 or a flap.
             reconnectExhausted = true;
             statusDot.className = 'status error';
-            notifyParent('reconnect_exhausted', { attempts: reconnectAttempts });
+            notifyParent('reconnect_exhausted', { attempts: reconnectAttempts, windowed: reconnectTimes.length });
             return;
           }
           connect();
