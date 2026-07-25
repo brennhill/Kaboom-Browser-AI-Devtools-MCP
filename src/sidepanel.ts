@@ -694,7 +694,11 @@ function writeToTerminal(text: string): void {
 function installRuntimeListener(): void {
   if (panel.runtimeListenerInstalled) return
   panel.runtimeListenerInstalled = true
-  chrome.runtime.onMessage.addListener((message: { type?: string; text?: string }, sender: chrome.runtime.MessageSender) => {
+  chrome.runtime.onMessage.addListener((
+    message: { type?: string; text?: string },
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response?: unknown) => void
+  ) => {
     if (sender.id !== chrome.runtime.id) return false
     // The background cannot close a side panel document on every Chrome version,
     // but this document can, so it asks us to.
@@ -703,6 +707,10 @@ function installRuntimeListener(): void {
       return false
     }
     if (message.type !== 'terminal_panel_write') return false
+    // Acknowledge synchronously: this document existing IS the proof the sender
+    // needs that the write reached a live panel (the background never replies to
+    // this type). Ack first so a later fault in writeToTerminal can't swallow it.
+    sendResponse({ received: true })
     if (typeof message.text === 'string') writeToTerminal(message.text)
     return false
   })

@@ -45,6 +45,7 @@ test_paths:
   - tests/extension/terminal-panel-open-failure.test.js
   - tests/extension/terminal-panel-gesture-entrypoints.test.js
   - tests/extension/tracked-hover-launcher.test.js
+  - tests/extension/terminal-panel-bridge.test.js
   - tests/extension/message-handlers.test.js
   - tests/extension/terminal-panel-gesture-entrypoints.test.js
   - tests/extension/terminal-panel-presence.test.js
@@ -77,6 +78,7 @@ last_verified_date: 2026-03-28
 - Start failures are never silently dropped: `startSession` classifies each failure (`unreachable` transport / `unavailable` reachable-500 / `sandbox`), and the side panel surfaces `unreachable`/`sandbox` even with no panel body mounted (via toast at daemon-down-at-open), while `unavailable` falls through to the recoverable no-session state. The daemon also logs state-mutating failures (`terminal_session_start_failed`, `terminal_session_stop_failed`) to `~/.kaboom/logs/kaboom.jsonl`.
 - Any legacy or fallback terminal shell that still mounts from content-script code now uses `Kaboom Terminal` so mixed-brand terminal chrome does not reappear.
 - Annotation auto-send now uses a typing-aware write queue: if the user is active in terminal, writes wait until ~1.5s idle
+- Annotation→terminal writes are delivery-verified: `terminal_panel_write` is acked by the side-panel document (the background never replies to this type), so the bridge tells a delivered write from one that vanished. A missing ack surfaces a toast (fail-loud) and reconciles the stale `TERMINAL_UI_STATE` visibility mirror to `false` (rule 18) so the gate stops firing at a panel that was closed with Chrome's own X.
 - Queued submit is reconnect-safe: if WS drops before Enter, submit waits until connection is back
 - Write-guard escape hatch: every in-flight/deferred write is bounded by `TERMINAL_GUARD_MAX_WAIT_MS` (30s). A permanently-down socket or a stuck `queuedWriteInFlight`/`terminalFocused` flag can no longer wedge the terminal forever — the poller gives up LOUDLY (error toast + `resetWriteGuardState`) instead of spinning silently. Momentary blips still queue-and-flush within the window.
 - WebSocket frame writes are serialized per-connection to prevent concurrent writer frame interleaving

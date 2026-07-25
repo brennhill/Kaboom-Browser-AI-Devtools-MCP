@@ -174,6 +174,12 @@ function resetGlobals() {
       callback?.({ status: 'saved' })
       return Promise.resolve({ status: 'saved' })
     }
+    if (message?.type === 'terminal_panel_write') {
+      // A live side panel document acks the write. The bridge treats a missing
+      // ack as "no panel received it"; the ack keeps the happy path clean.
+      callback?.({ received: true })
+      return Promise.resolve({ received: true })
+    }
     callback?.({})
     return Promise.resolve({})
   })

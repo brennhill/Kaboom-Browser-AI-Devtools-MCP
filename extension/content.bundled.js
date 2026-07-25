@@ -2209,13 +2209,34 @@
       return false;
     }
   }
+  function reportTerminalWriteFailure(text, reason, reconcile) {
+    console.warn(`[KaBOOM!] Terminal write did not land ("${text.slice(0, 40)}"): ${reason}`);
+    if (reconcile)
+      setPanelVisible(false);
+    try {
+      showActionToast("Terminal did not receive the message", "Open the terminal panel and try again", "warning", 5e3);
+    } catch {
+    }
+  }
   function writeToTerminal(text) {
     if (!panelVisible)
       return;
+    let pending;
     try {
-      chrome.runtime.sendMessage({ type: "terminal_panel_write", text });
-    } catch {
+      pending = chrome.runtime.sendMessage({ type: "terminal_panel_write", text });
+    } catch (err) {
+      reportTerminalWriteFailure(text, err instanceof Error ? err.message : String(err), false);
+      return;
     }
+    if (!pending || typeof pending.then !== "function")
+      return;
+    pending.then((resp) => {
+      if (!resp || resp.received !== true) {
+        reportTerminalWriteFailure(text, "no terminal panel received the message", true);
+      }
+    }, (err) => {
+      reportTerminalWriteFailure(text, err instanceof Error ? err.message : String(err), false);
+    });
   }
 
   // extension/content/ui/tracked-hover-launcher.js

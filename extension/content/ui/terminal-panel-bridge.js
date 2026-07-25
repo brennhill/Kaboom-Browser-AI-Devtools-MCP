@@ -111,15 +111,53 @@ export async function openTerminalPanel() {
         return false;
     }
 }
+/**
+ * Surface a terminal write that did not land, and reconcile the visibility mirror.
+ *
+ * The write is a runtime message to the side-panel DOCUMENT; a missing ack means
+ * no panel received it — typically the panel was closed with Chrome's own X while
+ * the TERMINAL_UI_STATE mirror we gate on stayed 'open' (rule 18). Fail loud
+ * (rule 25): log + best-effort toast so a vanished annotation nudge is not
+ * silent. `reconcile` corrects the stale mirror so the gate stops firing into the
+ * void — done only when the miss proves the panel is gone (no ack), not on a
+ * transient/ambiguous transport error.
+ */
+function reportTerminalWriteFailure(text, reason, reconcile) {
+    console.warn(`[KaBOOM!] Terminal write did not land ("${text.slice(0, 40)}"): ${reason}`);
+    if (reconcile)
+        setPanelVisible(false);
+    try {
+        showActionToast('Terminal did not receive the message', 'Open the terminal panel and try again', 'warning', 5000);
+    }
+    catch {
+        // Toast is best-effort; the console warning above is the durable signal.
+    }
+}
 export function writeToTerminal(text) {
     if (!panelVisible)
         return;
+    let pending;
     try {
-        chrome.runtime.sendMessage({ type: 'terminal_panel_write', text });
+        pending = chrome.runtime.sendMessage({ type: 'terminal_panel_write', text });
     }
-    catch {
-        // Extension context invalidated - writes are dropped.
+    catch (err) {
+        // Synchronous throw = extension context invalidated; the content script is
+        // orphaned and only a page reload restores it. The panel state is unknown, so
+        // do not reconcile the mirror — just fail loud instead of dropping silently.
+        reportTerminalWriteFailure(text, err instanceof Error ? err.message : String(err), false);
+        return;
     }
+    if (!pending || typeof pending.then !== 'function')
+        return;
+    pending.then((resp) => {
+        // Only the panel document acks this type (the background never replies), so
+        // a missing ack definitively means no panel received the write.
+        if (!resp || resp.received !== true) {
+            reportTerminalWriteFailure(text, 'no terminal panel received the message', true);
+        }
+    }, (err) => {
+        reportTerminalWriteFailure(text, err instanceof Error ? err.message : String(err), false);
+    });
 }
 export const _terminalPanelBridgeForTests = {
     reset() {
