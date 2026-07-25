@@ -12,22 +12,33 @@ import { showActionToast } from './content/ui/toast.js';
 import { createRootFolderBar } from './content/ui/terminal-root-folder.js';
 import { renderNoSessionState, renderStartFailure } from './content/ui/terminal-panel-states.js';
 import { notifyIframe, resetWriteGuardState, shouldDeferQueuedWrite, maybeShowQueuedWriteToast, scheduleQueuedWriteFlush, scheduleQueuedSubmit } from './content/ui/terminal-write-guard.js';
-// =============================================================================
-// TERMINAL PANEL STATE
-// =============================================================================
-let rootEl = null;
-let terminalShellEl = null;
-let terminalBodyEl = null;
-let statusDotEl = null;
-let minimizeButtonEl = null;
-let runtimeListenerInstalled = false;
-let storageListenerInstalled = false;
-let unloadListenerInstalled = false;
-let panelReady = false;
-let pendingSandboxError = null;
-let panelCloseIntent = null;
-let presencePort = null;
-let rootFolderBar = null;
+function freshPanelUi() {
+    return {
+        rootEl: null,
+        terminalShellEl: null,
+        terminalBodyEl: null,
+        statusDotEl: null,
+        minimizeButtonEl: null,
+        runtimeListenerInstalled: false,
+        storageListenerInstalled: false,
+        unloadListenerInstalled: false,
+        panelReady: false,
+        pendingSandboxError: null,
+        panelCloseIntent: null,
+        presencePort: null,
+        rootFolderBar: null,
+        bootChain: Promise.resolve()
+    };
+}
+const panel = freshPanelUi();
+/**
+ * Reset all panel-UI state to a clean slate. `panel` is const, so mutate its
+ * fields in place (Object.assign) rather than rebind. Lets a test start from a
+ * known-empty panel without reloading the module.
+ */
+export function resetPanelUi() {
+    Object.assign(panel, freshPanelUi());
+}
 /** Backoff before re-announcing presence after a service-worker restart. */
 const PRESENCE_RECONNECT_DELAY_MS = 500;
 function getHostTabIdFromLocation() {
@@ -87,10 +98,10 @@ async function closeBrowserSidePanel() {
 }
 function setPanelVisible(visible) {
     state.visible = visible;
-    if (!rootEl)
+    if (!panel.rootEl)
         return;
-    rootEl.style.opacity = visible ? '1' : '0';
-    rootEl.style.pointerEvents = visible ? 'auto' : 'none';
+    panel.rootEl.style.opacity = visible ? '1' : '0';
+    panel.rootEl.style.pointerEvents = visible ? 'auto' : 'none';
 }
 // The terminal is a full-height side panel; there is no collapse-in-place state
 // (the old MINIMIZED_WIDGET_HEIGHT was leftover from the in-page-widget era and
@@ -98,20 +109,20 @@ function setPanelVisible(visible) {
 // simply shown; "minimize" and "close" both dismiss the whole panel and keep the
 // session (see closePanelWithIntent).
 function showTerminalBody() {
-    if (!terminalBodyEl || !terminalShellEl)
+    if (!panel.terminalBodyEl || !panel.terminalShellEl)
         return;
-    terminalBodyEl.style.display = 'block';
-    terminalShellEl.style.height = '100%';
-    terminalShellEl.style.minHeight = '0';
-    terminalShellEl.style.flex = '1 1 auto';
+    panel.terminalBodyEl.style.display = 'block';
+    panel.terminalShellEl.style.height = '100%';
+    panel.terminalShellEl.style.minHeight = '0';
+    panel.terminalShellEl.style.flex = '1 1 auto';
 }
 /**
  * Show the recoverable no-session state in the terminal body.
  */
 function showNoSessionState() {
-    if (!terminalBodyEl)
+    if (!panel.terminalBodyEl)
         return;
-    renderNoSessionState(terminalBodyEl, () => { void bootTerminalPanel(true); });
+    renderNoSessionState(panel.terminalBodyEl, () => { void bootTerminalPanel(true); });
 }
 /**
  * Mount the root-folder bar and keep it showing the current root.
@@ -124,7 +135,7 @@ function createRootFolderBarElement() {
         initialRoot: '',
         onApply: (root) => { void applyRootFolder(root); }
     });
-    rootFolderBar = bar;
+    panel.rootFolderBar = bar;
     void getTerminalDevRoot().then((root) => bar.setRoot(root));
     return bar.element;
 }
@@ -142,23 +153,23 @@ async function applyRootFolder(root) {
  * Show a start failure, remembering it so a later remount can show it again.
  */
 function showSandboxError(message, instruction, command) {
-    if (!terminalBodyEl)
+    if (!panel.terminalBodyEl)
         return;
-    pendingSandboxError = { message, instruction, command };
-    renderStartFailure(terminalBodyEl, message, instruction, command);
+    panel.pendingSandboxError = { message, instruction, command };
+    renderStartFailure(panel.terminalBodyEl, message, instruction, command);
 }
 function updateStatusDot(dotState) {
-    if (!statusDotEl)
+    if (!panel.statusDotEl)
         return;
     switch (dotState) {
         case 'connected':
-            statusDotEl.style.background = '#9ece6a';
+            panel.statusDotEl.style.background = '#9ece6a';
             break;
         case 'disconnected':
-            statusDotEl.style.background = '#e0af68';
+            panel.statusDotEl.style.background = '#e0af68';
             break;
         case 'exited':
-            statusDotEl.style.background = '#f7768e';
+            panel.statusDotEl.style.background = '#f7768e';
             break;
     }
 }
@@ -256,9 +267,9 @@ function createTerminalHeader() {
         borderBottom: '1px solid #292e42',
         flexShrink: '0'
     });
-    statusDotEl = document.createElement('span');
-    statusDotEl.className = 'kaboom-terminal-status-dot';
-    Object.assign(statusDotEl.style, {
+    panel.statusDotEl = document.createElement('span');
+    panel.statusDotEl.className = 'kaboom-terminal-status-dot';
+    Object.assign(panel.statusDotEl.style, {
         width: '8px',
         height: '8px',
         borderRadius: '50%',
@@ -294,7 +305,7 @@ function createTerminalHeader() {
         color: '#565f89',
         onClick: () => void redrawTerminal()
     });
-    minimizeButtonEl = createTerminalHeaderButton({
+    panel.minimizeButtonEl = createTerminalHeaderButton({
         id: MINIMIZE_TERMINAL_BUTTON_ID,
         glyph: '\u2581',
         title: 'Minimize terminal',
@@ -308,12 +319,12 @@ function createTerminalHeader() {
         color: '#c0caf5',
         onClick: () => void closePanelKeepingSession()
     });
-    header.appendChild(statusDotEl);
+    header.appendChild(panel.statusDotEl);
     header.appendChild(titleSpan);
     header.appendChild(disconnectButton);
     header.appendChild(spacer);
     header.appendChild(redrawButton);
-    header.appendChild(minimizeButtonEl);
+    header.appendChild(panel.minimizeButtonEl);
     // Rightmost, where every other close control on the platform lives.
     header.appendChild(closeButton);
     return header;
@@ -370,36 +381,36 @@ function createPanelShell(token) {
     terminalShell.appendChild(createRootFolderBarElement());
     terminalShell.appendChild(terminalBody);
     root.appendChild(terminalShell);
-    terminalShellEl = terminalShell;
-    terminalBodyEl = terminalBody;
+    panel.terminalShellEl = terminalShell;
+    panel.terminalBodyEl = terminalBody;
     state.widgetEl = root;
     return root;
 }
 function mountPanel(root) {
-    if (rootEl)
+    if (panel.rootEl)
         return;
-    rootEl = root;
+    panel.rootEl = root;
     const target = document.body || document.documentElement;
     if (!target)
         return;
-    target.appendChild(rootEl);
+    target.appendChild(panel.rootEl);
     setPanelVisible(true);
     state.visible = true;
     window.addEventListener('message', handleIframeMessage);
 }
 function unmountPanel() {
-    if (rootEl) {
-        rootEl.remove();
-        rootEl = null;
+    if (panel.rootEl) {
+        panel.rootEl.remove();
+        panel.rootEl = null;
     }
-    terminalShellEl = null;
-    terminalBodyEl = null;
-    statusDotEl = null;
-    minimizeButtonEl = null;
-    rootFolderBar = null;
+    panel.terminalShellEl = null;
+    panel.terminalBodyEl = null;
+    panel.statusDotEl = null;
+    panel.minimizeButtonEl = null;
+    panel.rootFolderBar = null;
     state.widgetEl = null;
     state.iframeEl = null;
-    panelReady = false;
+    panel.panelReady = false;
     setPanelVisible(false);
     window.removeEventListener('message', handleIframeMessage);
 }
@@ -442,7 +453,7 @@ async function redrawTerminal() {
  * reopening reconnects.
  */
 async function closePanelWithIntent(intent) {
-    panelCloseIntent = intent;
+    panel.panelCloseIntent = intent;
     if (intent === 'clear') {
         clearPersistedSession();
         resetAllState();
@@ -462,7 +473,7 @@ async function closePanelWithIntent(intent) {
 }
 async function exitTerminalSession() {
     // Set the intent before the network call in case a disconnect races the stop.
-    panelCloseIntent = 'clear';
+    panel.panelCloseIntent = 'clear';
     if (state.sessionState) {
         try {
             const termUrl = getTerminalServerUrl(state.serverUrl);
@@ -525,9 +536,9 @@ function writeToTerminal(text) {
     scheduleQueuedSubmit(TERMINAL_WRITE_SUBMIT_DELAY_MS);
 }
 function installRuntimeListener() {
-    if (runtimeListenerInstalled)
+    if (panel.runtimeListenerInstalled)
         return;
-    runtimeListenerInstalled = true;
+    panel.runtimeListenerInstalled = true;
     chrome.runtime.onMessage.addListener((message, sender) => {
         if (sender.id !== chrome.runtime.id)
             return false;
@@ -557,11 +568,11 @@ function installRuntimeListener() {
  * document happily stays open.
  */
 function connectPresencePort() {
-    if (presencePort || typeof chrome === 'undefined' || !chrome.runtime?.connect)
+    if (panel.presencePort || typeof chrome === 'undefined' || !chrome.runtime?.connect)
         return;
     try {
         const port = chrome.runtime.connect({ name: TERMINAL_PANEL_PORT });
-        presencePort = port;
+        panel.presencePort = port;
         port.onMessage.addListener((message) => {
             if (message?.type === 'close_terminal_panel')
                 void closePanelKeepingSession();
@@ -569,22 +580,22 @@ function connectPresencePort() {
                 void restoreTerminalPanel();
         });
         port.onDisconnect.addListener(() => {
-            presencePort = null;
+            panel.presencePort = null;
             // Only worth retrying while this document is still around and the runtime
             // is still valid; both stop being true on teardown, and connect() throws.
-            if (!rootEl)
+            if (!panel.rootEl)
                 return;
             setTimeout(connectPresencePort, PRESENCE_RECONNECT_DELAY_MS);
         });
     }
     catch {
-        presencePort = null; // Extension context invalidated — nothing to announce to.
+        panel.presencePort = null; // Extension context invalidated — nothing to announce to.
     }
 }
 function installStorageListener() {
-    if (storageListenerInstalled)
+    if (panel.storageListenerInstalled)
         return;
-    storageListenerInstalled = true;
+    panel.storageListenerInstalled = true;
     onStorageChanged((changes, areaName) => {
         if (areaName !== 'session')
             return;
@@ -594,21 +605,21 @@ function installStorageListener() {
         const uiState = change.newValue;
         if (uiState === 'closed') {
             state.visible = false;
-            if (rootEl)
-                rootEl.style.opacity = '0';
+            if (panel.rootEl)
+                panel.rootEl.style.opacity = '0';
             return;
         }
         state.visible = true;
-        if (rootEl)
-            rootEl.style.opacity = '1';
+        if (panel.rootEl)
+            panel.rootEl.style.opacity = '1';
     });
 }
 function installUnloadListener() {
-    if (unloadListenerInstalled)
+    if (panel.unloadListenerInstalled)
         return;
-    unloadListenerInstalled = true;
+    panel.unloadListenerInstalled = true;
     window.addEventListener('pagehide', () => {
-        if (panelCloseIntent !== null)
+        if (panel.panelCloseIntent !== null)
             return;
         persistUIState('closed');
     });
@@ -623,24 +634,24 @@ function installUnloadListener() {
  * mean "there is a working terminal in front of me".
  */
 async function restoreTerminalPanel() {
-    panelCloseIntent = null;
-    if (rootEl && state.iframeEl) {
+    panel.panelCloseIntent = null;
+    if (panel.rootEl && state.iframeEl) {
         // A live terminal is already mounted — it was only minimized or hidden.
         setPanelVisible(true);
         showTerminalBody();
         persistUIState('open');
         // Nothing here was rebuilt, so a root changed elsewhere (the options page,
         // another panel) would otherwise still read as the old one.
-        void getTerminalDevRoot().then((root) => rootFolderBar?.setRoot(root));
+        void getTerminalDevRoot().then((root) => panel.rootFolderBar?.setRoot(root));
         return;
     }
     // No terminal in here: either unmounted, or mounted with no session (the
     // daemon was down when it booted). Rebuild, revalidating the token so the
     // xterm reconnects to a shell that is actually alive rather than rendering a
     // dead one.
-    if (rootEl)
+    if (panel.rootEl)
         unmountPanel();
-    panelReady = false;
+    panel.panelReady = false;
     await bootTerminalPanel();
 }
 async function ensureTerminalSession() {
@@ -659,49 +670,46 @@ async function ensureTerminalSession() {
         return;
     state.sessionState = ss;
 }
-// Serializes boots so two never run their createPanelShell()/mountPanel()
-// concurrently. Each boot chains after the previous one settles.
-let bootChain = Promise.resolve();
 /**
  * Boot (or rebuild) the terminal panel — serialized entry point.
  *
  * A second trigger arriving mid-boot (double-clicked Start, a rapid folder
  * re-pick, a redraw while an earlier boot is still awaiting the network) MUST
  * NOT run concurrently with the first: createPanelShell() unconditionally
- * rebinds `state.iframeEl`, while mountPanel() early-returns once `rootEl` is
+ * rebinds `state.iframeEl`, while mountPanel() early-returns once `panel.rootEl` is
  * set. Interleaved, that leaves the *visible* terminal on iframe #1 but
  * `state.iframeEl` pointing at a detached iframe #2 — so every later
  * write/annotation/redraw vanishes into the off-screen frame with no error
  * (the very "writes disappear" class the terminal work set out to kill).
  *
- * Chaining on `bootChain` forces boots to run one at a time; the latest wins.
- * The `panelReady && !forceFresh` no-op check is evaluated AFTER the previous
+ * Chaining on `panel.bootChain` forces boots to run one at a time; the latest wins.
+ * The `panel.panelReady && !forceFresh` no-op check is evaluated AFTER the previous
  * boot settles, so a plain boot that lands behind a forceFresh rebuild correctly
  * sees the finished panel and does nothing instead of racing it.
  */
 function bootTerminalPanel(forceFresh = false) {
-    const prev = bootChain;
-    bootChain = (async () => {
+    const prev = panel.bootChain;
+    panel.bootChain = (async () => {
         await prev.catch(() => { });
-        if (panelReady && !forceFresh)
+        if (panel.panelReady && !forceFresh)
             return;
         await bootTerminalPanelInner(forceFresh);
     })();
-    return bootChain;
+    return panel.bootChain;
 }
 async function bootTerminalPanelInner(forceFresh) {
     // Drop the existing panel DOM before (re)building. mountPanel() early-returns
-    // while `rootEl` is set, so without this the freshly-built shell — bound to the
+    // while `panel.rootEl` is set, so without this the freshly-built shell — bound to the
     // NEW session in the just-selected folder — is never attached, and the user
     // keeps staring at the old panel wired to the session we just stopped (the
     // "terminal won't start after picking a folder" bug, and the retry button).
-    // Done before `panelReady = true` because unmountPanel() clears that flag;
+    // Done before `panel.panelReady = true` because unmountPanel() clears that flag;
     // restoreTerminalPanel already unmounts, applyRootFolder did not.
     if (forceFresh)
         unmountPanel();
-    panelReady = true;
-    panelCloseIntent = null;
-    pendingSandboxError = null;
+    panel.panelReady = true;
+    panel.panelCloseIntent = null;
+    panel.pendingSandboxError = null;
     state.serverUrl = await getServerUrl();
     installRuntimeListener();
     installStorageListener();
@@ -718,7 +726,7 @@ async function bootTerminalPanelInner(forceFresh) {
     showTerminalBody();
     persistUIState('open');
     if (!token) {
-        const error = pendingSandboxError;
+        const error = panel.pendingSandboxError;
         if (error) {
             showSandboxError(error.message, error.instruction, error.command);
         }
@@ -727,7 +735,16 @@ async function bootTerminalPanelInner(forceFresh) {
         }
     }
 }
-if (typeof document !== 'undefined' && typeof globalThis.process === 'undefined') {
+/**
+ * Entry point: boot the panel once the document is ready. Auto-invoked at module
+ * scope in the real side-panel document; the `process === undefined` guard keeps
+ * it from firing under Node test imports. Named + exported so it is an explicit,
+ * callable entry rather than an anonymous top-level side effect.
+ */
+export function main() {
+    if (typeof document === 'undefined' || typeof globalThis.process !== 'undefined') {
+        return;
+    }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
             void bootTerminalPanel();
@@ -737,11 +754,13 @@ if (typeof document !== 'undefined' && typeof globalThis.process === 'undefined'
         void bootTerminalPanel();
     }
 }
+main();
 export const _terminalPanelForTests = {
     bootTerminalPanel,
     applyRootFolder,
     writeToTerminal,
     exitTerminalSession,
-    redrawTerminal
+    redrawTerminal,
+    resetPanelUi
 };
 //# sourceMappingURL=sidepanel.js.map

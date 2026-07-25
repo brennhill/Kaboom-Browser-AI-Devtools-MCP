@@ -711,6 +711,34 @@ describe('terminal side panel host', () => {
     )
   })
 
+  test('resetPanelUi clears the panel so a plain boot re-boots (encapsulated state)', async () => {
+    let starts = 0
+    fetchHandler = ({ url }) => {
+      if (url.endsWith('/terminal/start')) {
+        starts += 1
+        return Promise.resolve(makeResponse(200, { session_id: 's', token: `tok-${starts}`, pid: 1 }))
+      }
+      if (url.endsWith('/terminal/validate')) {
+        return Promise.resolve(makeResponse(200, { valid: false })) // force a fresh startSession
+      }
+      throw new Error(`Unexpected fetch call: ${url}`)
+    }
+    const module = await import(`../../extension/sidepanel.js?v=${++importCounter}`)
+
+    await module._terminalPanelForTests.bootTerminalPanel(true)
+    assert.strictEqual(starts, 1, 'first boot starts a session')
+
+    // A plain (non-force) boot is a no-op while the panel reports ready.
+    await module._terminalPanelForTests.bootTerminalPanel(false)
+    assert.strictEqual(starts, 1, 'a plain boot no-ops while panelReady is set')
+
+    // Resetting the encapsulated panel state (panelReady among it) makes a plain
+    // boot behave as first-boot again — the whole point of one resettable object.
+    module._terminalPanelForTests.resetPanelUi()
+    await module._terminalPanelForTests.bootTerminalPanel(false)
+    assert.strictEqual(starts, 2, 'after resetPanelUi, a plain boot re-boots')
+  })
+
   test('terminal submit re-guards if focus returns before auto-enter', async () => {
     fetchHandler = ({ url }) => {
       if (url.endsWith('/terminal/start')) {
