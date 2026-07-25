@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"runtime"
 
@@ -32,6 +33,14 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonLaunchOption
 	configureBinaryUpgradeMonitoring(ctx, server, port)
 
 	if err := enforceDaemonStartupPolicy(server, port, opts); err != nil {
+		if errors.Is(err, errDeferToHealthyDaemon) {
+			// A healthy, compatible daemon already owns this port. Exit cleanly
+			// (exit 0) and let it keep serving — do NOT start a rival server or
+			// kill the incumbent. Returning nil unwinds to a graceful exit.
+			server.logLifecycle("daemon_deferred_exit", port, nil)
+			stderrf("[Kaboom] A healthy daemon is already serving on port %d; this instance is exiting.\n", port)
+			return nil
+		}
 		return err
 	}
 
