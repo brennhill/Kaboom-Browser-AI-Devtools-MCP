@@ -2367,30 +2367,7 @@
     }
     unmountLauncher();
   }
-  function sanitizeForTerminal(s) {
-    return s.replace(/[\u0000-\u001f\u007f-\u009f]/g, " ");
-  }
-  function formatAnnotationsForTerminal(annotations, pageUrl) {
-    if (annotations.length === 0)
-      return "";
-    const lines = [
-      "The user just annotated the page with the following feedback. Please review and implement these changes:",
-      "",
-      `Page: ${sanitizeForTerminal(pageUrl)}`,
-      ""
-    ];
-    for (let i = 0; i < annotations.length; i++) {
-      const a = annotations[i];
-      const text = sanitizeForTerminal(a.text || "(no label)");
-      const sel = sanitizeForTerminal(a.selector || "unknown");
-      const r = a.rect;
-      const loc = r ? ` (${Math.round(r.x)},${Math.round(r.y)} ${Math.round(r.width)}x${Math.round(r.height)})` : "";
-      lines.push(`${i + 1}. "${text}" \u2014 ${sel}${loc}`);
-    }
-    lines.push("");
-    lines.push('The annotations are available via analyze(what="annotations").');
-    return lines.join("\n");
-  }
+  var ANNOTATION_TERMINAL_NUDGE = "check kaboom annotations";
   function handleAnnotationsReady(event) {
     const detail = event.detail;
     if (!annotationChannelNonce || detail?.nonce !== annotationChannelNonce)
@@ -2399,9 +2376,7 @@
       return;
     if (!isTerminalVisible())
       return;
-    const text = formatAnnotationsForTerminal(detail.annotations, detail.page_url || location.href);
-    if (text)
-      writeToTerminal(text);
+    writeToTerminal(ANNOTATION_TERMINAL_NUDGE);
   }
   function newAnnotationNonce() {
     const c = globalThis.crypto;

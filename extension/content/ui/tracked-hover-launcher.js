@@ -171,35 +171,14 @@ function applyVisibilityFromState() {
     }
     unmountLauncher();
 }
-// Strip C0/C1 control characters (ESC, backspace, bell, CR/LF, …) before writing
-// annotation text to the xterm. Without this, a pasted label could drive terminal
-// escape sequences (OSC title hijack) or backspace over the prompt text — including
-// the analyze(...) instruction — silently changing what the agent is told.
-function sanitizeForTerminal(s) {
-    // eslint-disable-next-line no-control-regex -- deliberately targeting control chars
-    return s.replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ');
-}
-function formatAnnotationsForTerminal(annotations, pageUrl) {
-    if (annotations.length === 0)
-        return '';
-    const lines = [
-        'The user just annotated the page with the following feedback. Please review and implement these changes:',
-        '',
-        `Page: ${sanitizeForTerminal(pageUrl)}`,
-        ''
-    ];
-    for (let i = 0; i < annotations.length; i++) {
-        const a = annotations[i];
-        const text = sanitizeForTerminal(a.text || '(no label)');
-        const sel = sanitizeForTerminal(a.selector || 'unknown');
-        const r = a.rect;
-        const loc = r ? ` (${Math.round(r.x)},${Math.round(r.y)} ${Math.round(r.width)}x${Math.round(r.height)})` : '';
-        lines.push(`${i + 1}. "${text}" — ${sel}${loc}`);
-    }
-    lines.push('');
-    lines.push('The annotations are available via analyze(what="annotations").');
-    return lines.join('\n');
-}
+// When the user finishes annotating with the terminal open, nudge the agent to
+// PULL the annotations via its tool instead of pasting the full annotation text
+// into the live xterm. A short, single-line, control-char-free string is far
+// safer through the write-guard than a multi-line blob — which can corrupt the
+// prompt, drive escape sequences, or wedge terminal input mid-session. The
+// annotations themselves already reach the agent through the normal path
+// (draw-mode -> daemon -> analyze(what="annotations")); this is only the nudge.
+const ANNOTATION_TERMINAL_NUDGE = 'check kaboom annotations';
 function handleAnnotationsReady(event) {
     const detail = event.detail;
     // Provenance gate: only act on events carrying the per-session token we
@@ -216,9 +195,7 @@ function handleAnnotationsReady(event) {
     // here, not a dropped annotation.
     if (!isTerminalVisible())
         return;
-    const text = formatAnnotationsForTerminal(detail.annotations, detail.page_url || location.href);
-    if (text)
-        writeToTerminal(text);
+    writeToTerminal(ANNOTATION_TERMINAL_NUDGE);
 }
 function newAnnotationNonce() {
     const c = globalThis.crypto;
