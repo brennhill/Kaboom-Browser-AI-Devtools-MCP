@@ -24,6 +24,11 @@ type Relay struct {
 	done         chan struct{}
 	exitCode     int         // set by readLoop before closing fanout; read by downstream after channel close
 	ended        atomic.Bool // set true by readLoop before fanout.Close(); distinguishes session-end from a slow-subscriber drop
+	// subMu serializes the readLoop's append+broadcast (appendAndBroadcast) against
+	// SubscribeWithHistory's snapshot+subscribe, so a reconnecting viewer's history
+	// snapshot and channel registration never straddle a chunk — every chunk lands
+	// in exactly one of the two (no duplicate, no gap) at the reconnect boundary.
+	subMu sync.Mutex
 }
 
 // NewRelay creates a relay and starts the PTY reader loop.
@@ -51,8 +56,7 @@ func (r *Relay) readLoop() {
 	for {
 		n, err := r.sess.Read(buf)
 		if n > 0 {
-			r.sess.AppendScrollback(buf[:n])
-			r.fanout.Broadcast(buf[:n])
+			r.appendAndBroadcast(buf[:n])
 		}
 		if err != nil {
 			// Reap child process to capture exit code before fanout closes.
@@ -69,6 +73,33 @@ func (r *Relay) readLoop() {
 			return
 		}
 	}
+}
+
+// appendAndBroadcast records a PTY output chunk to scrollback and fans it out to
+// subscribers as ONE step under subMu, so it is atomic against
+// SubscribeWithHistory's snapshot+subscribe. Without this, the append (scrollMu)
+// and the broadcast (fanout mutex) are two separately-locked operations a
+// concurrent reconnect could straddle, replaying a chunk that is also broadcast
+// (duplicate) or dropping one that is neither (lost). Both callers copy the data,
+// so the caller's reusable read buffer is safe to pass.
+func (r *Relay) appendAndBroadcast(data []byte) {
+	r.subMu.Lock()
+	r.sess.AppendScrollback(data)
+	r.fanout.Broadcast(data)
+	r.subMu.Unlock()
+}
+
+// SubscribeWithHistory snapshots the session's scrollback and registers a fanout
+// subscriber atomically under subMu (the same lock appendAndBroadcast holds), so
+// the reconnect boundary between replayed history and live channel output is
+// seamless: every chunk is in exactly one of the two. Returns the same errors as
+// Fanout.Subscribe — ErrFanoutClosed (session ended) or ErrFanoutFull (cap).
+func (r *Relay) SubscribeWithHistory(subID string) (history []byte, sub <-chan []byte, err error) {
+	r.subMu.Lock()
+	defer r.subMu.Unlock()
+	history = r.sess.Scrollback()
+	sub, err = r.fanout.Subscribe(subID)
+	return history, sub, err
 }
 
 // reapExitCode waits for the child process exit code. Called after PTY read

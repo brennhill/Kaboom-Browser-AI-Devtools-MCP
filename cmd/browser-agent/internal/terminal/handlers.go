@@ -212,14 +212,14 @@ func HandleTerminalWS(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pt
 	// Get or create relay for multi-subscriber fan-out.
 	relay := relays.GetOrCreate(sess.ID, sess, "")
 
-	// Capture scrollback BEFORE subscribing to the fanout to avoid duplicate
-	// data. The readLoop appends to scrollback then broadcasts, so any data
-	// arriving after this snapshot will be delivered only via the subscriber
-	// channel, not replayed from scrollback.
-	history := sess.Scrollback()
-
+	// Snapshot scrollback and register the subscriber ATOMICALLY (one subMu hold in
+	// the relay) against the readLoop's append+broadcast. A plain two-step
+	// (Scrollback then Subscribe) lets a chunk arriving in the gap be both replayed
+	// AND broadcast (duplicate) or neither (lost) at the reconnect boundary — the
+	// readLoop appends under scrollMu then broadcasts under the fanout mutex, two
+	// separate locks this snapshot+subscribe would otherwise straddle (finding C).
 	subID := NextWSSubID()
-	sub, subErr := relay.fanout.Subscribe(subID)
+	history, sub, subErr := relay.SubscribeWithHistory(subID)
 
 	// Replay scrollback so the reconnecting (or first-connecting) terminal sees prior output.
 	if len(history) > 0 {
