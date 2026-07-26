@@ -32,7 +32,6 @@ const (
 	maxClients        = 50               // Maximum concurrent clients before LRU eviction
 	clientIdleTimeout = 30 * time.Minute // Clients inactive for this long are reaped
 	clientIDLength    = 12               // Length of derived client ID (hex chars)
-	idleReapInterval  = 5 * time.Minute  // How often the idle reaper checks for stale clients
 )
 
 // ============================================
@@ -225,23 +224,6 @@ func (r *ClientRegistry) ReapIdle() int {
 		}
 	}
 	return reaped
-}
-
-// StartIdleReaper runs a background goroutine that periodically removes idle clients.
-// It stops when the provided stop channel is closed.
-func (r *ClientRegistry) StartIdleReaper(stop <-chan struct{}) {
-	go func() { // lint:allow-bare-goroutine — bounded lifecycle, exits on stop channel close
-		ticker := time.NewTicker(idleReapInterval)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-stop:
-				return
-			case <-ticker.C:
-				r.ReapIdle()
-			}
-		}
-	}()
 }
 
 // ============================================

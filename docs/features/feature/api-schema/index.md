@@ -1,7 +1,7 @@
 ---
 doc_type: feature_index
 feature_id: feature-api-schema
-status: shipped
+status: superseded
 feature_type: feature
 owners: []
 last_reviewed: 2026-07-26
@@ -13,13 +13,6 @@ code_paths:
   - internal/analysis/apicontract/learning.go
   - internal/analysis/apicontract/validation.go
   - internal/analysis/apicontract/violations.go
-  - internal/analysis/apischema/schema.go
-  - internal/analysis/apischema/builder.go
-  - internal/analysis/apischema/openapi.go
-  - internal/analysis/apischema/infer.go
-  - internal/analysis/apischema/path.go
-  - internal/analysis/apischema/observe_http.go
-  - internal/analysis/apischema/observe_ws.go
   - internal/schema/schema.go
   - internal/schema/observe.go
   - internal/schema/analyze.go
@@ -40,16 +33,19 @@ code_paths:
 test_paths:
   - internal/analysis/apicontract/contract_test.go
   - internal/analysis/apicontract/branch_coverage_test.go
-  - internal/analysis/apischema/builder_test.go
-  - internal/analysis/apischema/infer_test.go
-  - internal/analysis/apischema/observe_http_test.go
-  - internal/analysis/apischema/openapi_test.go
   - internal/schema/invariants_test.go
   - internal/schema/interact/schema_test.go
   - cmd/browser-agent/tools_schema_parity_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
+
+> **Removed 2026-07-26 — dead code, never reachable.**
+>
+> API schema inference was never wired to an MCP surface. The package had zero importers outside its own tests, was absent from `go list -deps ./cmd/browser-agent/...`, and `InferSchema`/`RecordRequest` existed nowhere else — so no schema was ever inferred at runtime. Removed rather than left as `status: shipped`, which it never was.
+
+Note: the API *contract* checking in `internal/analysis/apicontract` is live and unaffected; only the schema-inference half was dead.
+
 
 # Api Schema
 
