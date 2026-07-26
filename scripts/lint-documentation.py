@@ -29,7 +29,11 @@ LEGACY_CODE_PATH_MAP = {
     "internal/session/sessions.go": "internal/session/types.go",
     "internal/capture/queries.go": "internal/capture/query_dispatcher.go",
     "internal/capture/recording.go": "internal/capture/recording_manager.go",
-    "internal/security/security_config.go": "internal/security/security_config_mode.go",
+    "internal/security/security_config.go": "internal/security/policy/mode.go",
+    "internal/security/security_config_mode.go": "internal/security/policy/mode.go",
+    "internal/security/security_config_policy.go": "internal/security/policy/policy.go",
+    "internal/security/security_config_audit.go": "internal/security/policy/audit.go",
+    "internal/security/security_diff.go": "internal/security/diff/types.go",
 }
 
 class DocumentLinter:

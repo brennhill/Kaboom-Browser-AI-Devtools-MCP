@@ -15,11 +15,11 @@ type SchemaStore interface {
 }
 
 // CSPGenerator defines the interface for Content-Security-Policy generation.
-// Implemented by *security.CSPGenerator. Called by HTTP handlers.
+// Implemented by *csp.Generator (internal/security/csp). Called by HTTP handlers.
 // Has its own lock; safe to call outside Capture.mu.
 type CSPGenerator interface {
 	// HandleGenerateCSP is the MCP tool handler for CSP generation.
-	// params is a JSON-encoded security.CSPParams; returns *security.CSPResponse.
+	// params is a JSON-encoded csp.Params; returns *csp.Response.
 	HandleGenerateCSP(params json.RawMessage) (any, error)
 }
 

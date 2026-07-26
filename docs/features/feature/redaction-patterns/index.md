@@ -4,10 +4,14 @@ feature_id: feature-redaction-patterns
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-26
 code_paths:
   - internal/redaction/redaction.go
-test_paths: []
+  - internal/security/scan/credentials.go
+  - internal/security/scan/credentials_patterns.go
+test_paths:
+  - internal/security/scan/unit_test.go
+  - internal/security/scan/coverage_part2_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

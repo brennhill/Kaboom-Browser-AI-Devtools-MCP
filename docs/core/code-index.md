@@ -282,7 +282,9 @@ Each internal package now has `doc.go` with comprehensive package overview:
 - `internal/analysis/doc.go` - API schema inference, error clustering
 - `internal/capture/doc.go` - Real-time browser telemetry capture
 - `internal/pagination/doc.go` - Cursor-based pagination
-- `internal/security/doc.go` - Security analysis and policy generation
+- `internal/security/scan/doc.go` - Aggregate security audit (credentials, PII, headers, cookies, transport)
+- `internal/security/csp/doc.go` - CSP generation from observed traffic
+- `internal/security/sri/doc.go` - Subresource Integrity hash generation
 - `internal/session/doc.go` - Multi-client session management
 - `internal/types/doc.go` - Core type definitions
 
