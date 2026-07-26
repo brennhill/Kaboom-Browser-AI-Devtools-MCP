@@ -108,6 +108,27 @@
       // (FIFO) behind any reconnect-gap input rather than sent ahead of it (D).
       var replaying = false;
       var lastTypingNotifyAt = 0;
+      // Client-side liveness watchdog.
+      //
+      // Liveness was entirely server-driven: the daemon pings every 30s and closes
+      // after 60s of silence. But a WebSocket ping is a control frame the browser
+      // answers automatically and never surfaces to JS, so page code could not tell
+      // a live-but-idle terminal from a HALF-OPEN socket. On suspend/resume or a NAT
+      // rebind there is no FIN/RST, so readyState stays OPEN, onclose never fires,
+      // and both writers take their non-queueing branch — keystrokes and agent
+      // writes went into the void behind a green status dot.
+      //
+      // The server now also emits an observable {"type":"keepalive"} text frame on
+      // that same 30s tick. Any frame (output, control, keepalive) refreshes
+      // lastFrameAt; if nothing arrives for KEEPALIVE_DEAD_MS while the socket still
+      // claims to be OPEN, we force it closed so the existing reconnect path runs.
+      // The threshold is a multiple of the server tick so a single dropped or
+      // delayed keepalive can never sever a healthy connection.
+      var lastFrameAt = 0;
+      var livenessTimer = null;
+      var SERVER_KEEPALIVE_MS = 30000;
+      var KEEPALIVE_DEAD_MS = SERVER_KEEPALIVE_MS * 2.5;
+      var LIVENESS_POLL_MS = 5000;
       // Reconnect ceiling: a full daemon restart drops every session/token, so a
       // reconnect on the captured token 401s and onopen never fires. Without a cap
       // this loops forever (status dot stuck) with no recovery. After
@@ -188,9 +209,13 @@
 
           // Notify parent frame
           notifyParent('connected', {});
+
+          startLivenessWatchdog();
         };
 
         ws.onmessage = function(event) {
+          // ANY frame proves the socket is alive, including the keepalive below.
+          lastFrameAt = Date.now();
           if (event.data instanceof ArrayBuffer) {
             // Binary frame: terminal output
             term.write(new Uint8Array(event.data));
@@ -214,6 +239,9 @@
                 replaying = false;
                 notifyParent('replay_end', {});
                 flushPendingInput();
+              } else if (msg.type === 'keepalive') {
+                // Liveness only — lastFrameAt is already refreshed above. Handled
+                // explicitly so it is never mistaken for an unknown control message.
               } else if (msg.type === 'alt_screen') {
                 // Alt-screen state changed (e.g., vim, less entered/exited).
                 notifyParent('alt_screen', { active: msg.active });
@@ -234,6 +262,7 @@
         };
 
         ws.onclose = function() {
+          stopLivenessWatchdog();
           statusDot.className = 'status';
           notifyParent('disconnected', {});
           notifyFocusState(false);
@@ -243,6 +272,52 @@
         ws.onerror = function() {
           statusDot.className = 'status error';
         };
+      }
+
+      function stopLivenessWatchdog() {
+        if (livenessTimer) {
+          clearTimeout(livenessTimer);
+          livenessTimer = null;
+        }
+      }
+
+      /**
+       * Watch for a socket that claims to be OPEN but has gone silent.
+       *
+       * Only a socket the browser still reports as OPEN is actionable: a CLOSING or
+       * CLOSED one already has onclose driving recovery. Forcing close() here makes
+       * the half-open case take that exact same path, so there is one recovery
+       * route rather than two.
+       */
+      function startLivenessWatchdog() {
+        stopLivenessWatchdog();
+        lastFrameAt = Date.now();
+        // Self-rescheduling setTimeout rather than setInterval: it matches the
+        // reconnect path's idiom and guarantees only one pending tick at a time, so
+        // a slow turn can never stack overlapping checks.
+        function tick() {
+          livenessTimer = null;
+          if (!ws || ws.readyState !== WebSocket.OPEN) return; // onclose owns recovery
+          if (Date.now() - lastFrameAt < KEEPALIVE_DEAD_MS) {
+            livenessTimer = setTimeout(tick, LIVENESS_POLL_MS);
+            return;
+          }
+          // Silent past the threshold: the socket is half-open. Do NOT reschedule —
+          // close() drives onclose, which owns reconnect (with its existing backoff
+          // and exhaustion caps), so there is exactly one recovery route.
+          console.warn('[KaBOOM! terminal] no server frame for ' + KEEPALIVE_DEAD_MS +
+            'ms while socket was OPEN — treating as half-open and reconnecting');
+          notifyParent('disconnected', {});
+          try {
+            ws.close();
+          } catch (e) {
+            // close() can throw on an already-torn-down socket. The reconnect is the
+            // point, so fall through to it rather than swallowing the failure.
+            console.warn('[KaBOOM! terminal] forced close failed: ' + e);
+            scheduleReconnect();
+          }
+        }
+        livenessTimer = setTimeout(tick, LIVENESS_POLL_MS);
       }
 
       function scheduleReconnect() {
