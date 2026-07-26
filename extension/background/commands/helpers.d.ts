@@ -2,7 +2,7 @@
  * Purpose: Shared infrastructure for command dispatch -- result helpers, target tab resolution, action toast, and type aliases.
  */
 import type { PendingQuery } from '../../types/index.js';
-import type { SyncClient } from '../sync-client.js';
+import type { SyncClient } from '../sync/sync-client.js';
 /** Callback signature for sending async command results back through /sync */
 export type SendAsyncResultFn = (syncClient: SyncClient, queryId: string, correlationId: string, status: 'complete' | 'error' | 'timeout' | 'cancelled', result?: unknown, error?: string) => void;
 /** Callback signature for showing visual action toasts */

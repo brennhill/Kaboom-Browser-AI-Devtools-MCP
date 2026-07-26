@@ -130,7 +130,7 @@ Files with too many lines of code (limit: 600 lines)
 **internal/session/sessions_test.go** (1 issues)
 - Line 65: Method TestSessionManager_CaptureSnapshot has a cyclomatic complexity of 11 (limit is 8)
 
-**src/background/batchers.ts** (1 issues)
+**src/background/sync/batchers.ts** (1 issues)
 - Line 125: Method flushWithCircuitBreaker has a cyclomatic complexity of 10 (limit is 8)
 
 **src/background/cache-limits.ts** (1 issues)

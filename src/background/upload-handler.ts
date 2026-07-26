@@ -8,7 +8,7 @@
 // Supports Stage 1 (DataTransfer) with automatic escalation to Stage 4 (OS automation).
 
 import type { PendingQuery } from '../types/queries.js'
-import type { SyncClient } from './sync-client.js'
+import type { SyncClient } from './sync/sync-client.js'
 import type { SendAsyncResultFn, ActionToastFn } from './pending-queries.js'
 import { delay, fetchWithTimeout } from '../lib/timeout-utils.js'
 import { debugLog } from './index.js'

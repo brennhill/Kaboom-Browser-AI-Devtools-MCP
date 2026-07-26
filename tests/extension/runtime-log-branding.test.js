@@ -15,7 +15,7 @@ const RUNTIME_LOG_SOURCES = [
   'src/background/init.ts',
   'src/background/index.ts',
   'src/background/message-handlers.ts',
-  'src/background/server.ts',
+  'src/background/sync/server.ts',
   'src/background/tab-state.ts',
   'src/inject/api.ts',
   'src/inject/execute-js.ts',

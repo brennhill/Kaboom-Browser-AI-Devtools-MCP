@@ -708,7 +708,7 @@ describe('Performance Snapshot Batching (W6)', () => {
 
   test('sendPerformanceSnapshotsToServer exists as the batch sender', async () => {
     // Import from communication module directly (not re-exported from main barrel)
-    const commModule = await import('../../extension/background/communication.js')
+    const commModule = await import('../../extension/background/sync/communication.js')
     assert.strictEqual(
       typeof commModule.sendPerformanceSnapshotsToServer,
       'function',

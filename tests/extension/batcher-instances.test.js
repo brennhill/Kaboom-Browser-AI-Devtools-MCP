@@ -26,7 +26,7 @@ const mockSendNetworkBodiesToServer = mock.fn(() => Promise.resolve())
 const mockSendPerformanceSnapshotsToServer = mock.fn(() => Promise.resolve())
 const mockCheckContextAnnotations = mock.fn()
 
-mock.module('../../extension/background/communication.js', {
+mock.module('../../extension/background/sync/communication.js', {
   namedExports: {
     updateBadge: mockUpdateBadge,
     createBatcherWithCircuitBreaker: mockCreateBatcherWithCircuitBreaker,
@@ -45,7 +45,7 @@ mock.module('../../extension/background/state-manager.js', {
 })
 
 const { createBatcherInstances } = await import(
-  '../../extension/background/batcher-instances.js'
+  '../../extension/background/sync/batcher-instances.js'
 )
 
 // ---------------------------------------------------------------------------

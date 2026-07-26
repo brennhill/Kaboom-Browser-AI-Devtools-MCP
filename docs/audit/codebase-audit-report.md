@@ -171,7 +171,7 @@ Users can now view storage usage and delete recordings manually. The soft limit 
 ---
 
 #### 1.5 Sync Client Pending Results Accumulation
-**File:** [`src/background/sync-client.ts`](src/background/sync-client.ts:156-164)  
+**File:** [`src/background/sync/sync-client.ts`](src/background/sync/sync-client.ts:156-164)  
 **Severity:** Medium  
 **Type:** Memory Accumulation
 
@@ -318,7 +318,7 @@ type ClientRegistry struct {
 ---
 
 #### 3.2 Sync Client Flush Race Condition
-**File:** [`src/background/sync-client.ts`](src/background/sync-client.ts:167-178)  
+**File:** [`src/background/sync/sync-client.ts`](src/background/sync/sync-client.ts:167-178)  
 **Severity:** High  
 **Type:** Race Condition
 
@@ -424,7 +424,7 @@ func (c *Capture) LoadSettingsFromDisk() {
 ### Medium Issues
 
 #### 4.3 Fetch No Retry Mechanism
-**File:** [`src/background/server.ts`](src/background/server.ts:48-70)  
+**File:** [`src/background/sync/server.ts`](src/background/sync/server.ts:48-70)  
 **Severity:** Medium  
 **Type:** Insufficient Resilience
 
@@ -890,10 +890,10 @@ export const DOM_QUERY_MAX_ELEMENTS = 100  // Why 100?
 
 ### TypeScript/JavaScript Frontend
 - `src/background/message-handlers.ts`
-- `src/background/server.ts`
-- `src/background/sync-client.ts`
-- `src/background/circuit-breaker.ts`
-- `src/background/batchers.ts`
+- `src/background/sync/server.ts`
+- `src/background/sync/sync-client.ts`
+- `src/background/sync/circuit-breaker.ts`
+- `src/background/sync/batchers.ts`
 - `src/background/connection-state.ts`
 - `src/background/pending-queries.ts`
 - `src/background/state-manager.ts`

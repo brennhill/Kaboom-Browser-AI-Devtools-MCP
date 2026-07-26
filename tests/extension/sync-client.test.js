@@ -27,7 +27,7 @@ globalThis.chrome = {
   tabs: { get: mock.fn(), query: mock.fn(), onRemoved: { addListener: mock.fn() } }
 }
 
-import { SyncClient, createSyncClient } from '../../extension/background/sync-client.js'
+import { SyncClient, createSyncClient } from '../../extension/background/sync/sync-client.js'
 
 // =============================================================================
 // HELPERS

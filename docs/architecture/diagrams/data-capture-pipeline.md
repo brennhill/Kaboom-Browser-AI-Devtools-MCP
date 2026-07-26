@@ -42,7 +42,7 @@ graph TB
         Batchers["Event Batchers<br/>Accumulate events<br/>Debounce<br/>Max batch size"]
     end
 
-    subgraph Transport["🚀 Transport (src/background/sync-client.ts)"]
+    subgraph Transport["🚀 Transport (src/background/sync/sync-client.ts)"]
         direction TB
         BatchAssemble["Assemble Batch<br/>- Collect pending events<br/>- Tab metadata<br/>- Timestamps"]
         RetryLogic["Retry Logic<br/>- Exponential backoff<br/>- Max 3 attempts<br/>- Fallback to cache"]
@@ -482,8 +482,8 @@ type BufferStats struct {
 - `internal/redaction/redaction.go` - PII masking
 
 **Batching & Transport:**
-- `src/background/batchers.ts` - Event batching
-- `src/background/sync-client.ts` - HTTP POST /sync
+- `src/background/sync/batchers.ts` - Event batching
+- `src/background/sync/sync-client.ts` - HTTP POST /sync
 - `src/background/state-manager.ts` - State storage
 
 **Server-Side Storage:**

@@ -40,7 +40,7 @@ if (typeof globalThis.chrome === 'undefined') {
 const mockFetch = mock.fn()
 globalThis.fetch = mockFetch
 
-const { SyncClient } = await import('../../extension/background/sync-client.js')
+const { SyncClient } = await import('../../extension/background/sync/sync-client.js')
 
 const defaultSettings = {
   pilot_enabled: true,

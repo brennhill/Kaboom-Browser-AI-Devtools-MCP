@@ -195,7 +195,7 @@ lsof -i -n -P | grep kaboom
 
 **What you can inspect:**
 - `extension/manifest.json` - Permissions requested
-- `extension/background/server.js` - Where data is sent (localhost only)
+- `extension/background/sync/server.js` - Where data is sent (localhost only)
 - `extension/lib/page/serialize.js` - Sensitive data redaction
 - `extension/lib/constants.js` - Header filtering rules
 

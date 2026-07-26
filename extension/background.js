@@ -27,7 +27,7 @@ import { EXTENSION_SESSION_ID } from './background/state.js';
 // Memory enforcement constants
 export { MEMORY_SOFT_LIMIT, MEMORY_HARD_LIMIT, MEMORY_CHECK_INTERVAL_MS, MEMORY_AVG_LOG_ENTRY_SIZE, MEMORY_AVG_WS_EVENT_SIZE, MEMORY_AVG_NETWORK_BODY_SIZE, MEMORY_AVG_ACTION_SIZE } from './background/state-manager.js';
 // Rate limiting constants
-export { RATE_LIMIT_CONFIG } from './background/communication.js';
+export { RATE_LIMIT_CONFIG } from './background/sync/communication.js';
 // =============================================================================
 // === PUBLIC API: CORE STATE
 // =============================================================================
@@ -49,7 +49,7 @@ export { applyCaptureOverrides } from './background/state.js';
 // =============================================================================
 // === PUBLIC API: VERSION CHECKING
 // =============================================================================
-export { getExtensionVersion, isNewVersionAvailable, getAvailableVersion, updateVersionFromHealth, updateVersionBadge, getUpdateInfo, resetVersionCheck } from './background/version-check.js';
+export { getExtensionVersion, isNewVersionAvailable, getAvailableVersion, updateVersionFromHealth, updateVersionBadge, getUpdateInfo, resetVersionCheck } from './background/sync/version-check.js';
 // =============================================================================
 // === PUBLIC API: PENDING QUERIES & PILOT
 // =============================================================================
@@ -69,7 +69,7 @@ export { SOURCE_MAP_CACHE_SIZE, setSourceMapCacheEntry, getSourceMapCacheEntry, 
 // =============================================================================
 // === PUBLIC API: COMMUNICATION (Tests)
 // =============================================================================
-export { createCircuitBreaker, createBatcherWithCircuitBreaker, createLogBatcher, sendLogsToServer, sendEnhancedActionsToServer, checkServerHealth, updateBadge, formatLogEntry, shouldCaptureLog } from './background/communication.js';
+export { createCircuitBreaker, createBatcherWithCircuitBreaker, createLogBatcher, sendLogsToServer, sendEnhancedActionsToServer, checkServerHealth, updateBadge, formatLogEntry, shouldCaptureLog } from './background/sync/communication.js';
 // =============================================================================
 // === PUBLIC API: STATE SNAPSHOTS (Initialization)
 // =============================================================================

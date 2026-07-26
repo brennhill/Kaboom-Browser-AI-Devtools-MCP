@@ -49,7 +49,7 @@ last_reviewed: 2026-02-16
 
 #### Integration Tests: Version Check State
 
-**File**: `src/background/version-check.ts`
+**File**: `src/background/sync/version-check.ts`
 
 **Setup**: Mock `chrome.runtime.getManifest()` to return version "5.2.5"
 
@@ -62,7 +62,7 @@ last_reviewed: 2026-02-16
 
 #### Integration Tests: Version Check Rate Limiting
 
-**File**: `src/background/version-check.ts`
+**File**: `src/background/sync/version-check.ts`
 
 **Setup**: Mock fetch and Date.now()
 
@@ -73,7 +73,7 @@ last_reviewed: 2026-02-16
 
 #### Integration Tests: HTTP Request Headers
 
-**File**: `src/background/server.ts`
+**File**: `src/background/sync/server.ts`
 
 **Setup**: Spy on fetch calls
 
@@ -85,7 +85,7 @@ last_reviewed: 2026-02-16
 
 #### Integration Tests: Badge Updates
 
-**File**: `src/background/version-check.ts`
+**File**: `src/background/sync/version-check.ts`
 
 **Setup**: Mock `chrome.action` APIs
 
@@ -97,7 +97,7 @@ last_reviewed: 2026-02-16
 
 #### Integration Tests: Error Handling
 
-**File**: `src/background/version-check.ts`
+**File**: `src/background/sync/version-check.ts`
 
 **Setup**: Mock fetch with various failures
 

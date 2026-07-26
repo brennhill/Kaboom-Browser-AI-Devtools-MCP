@@ -141,7 +141,7 @@ internal/
 | Add a new observe mode                  | `internal/tools/observe/` (handler), `tools_observe.go` (register in observeHandlers map)                 |
 | Add a new analyze/generate/etc. action  | `internal/tools/<tool>/` (logic), `tools_<tool>.go` (register in dispatch map)                            |
 | Add an HTTP endpoint for the extension  | `internal/capture/` (handler), `server_routes.go` (register in setupHTTPRoutes)                           |
-| Change sync protocol                    | `internal/capture/sync.go` (server), `src/background/sync-client.ts` (extension)                         |
+| Change sync protocol                    | `internal/capture/sync.go` (server), `src/background/sync/sync-client.ts` (extension)                         |
 | Add a wire type                         | `internal/types/wire_*.go` (Go source of truth), run `make check-wire-drift`                              |
 | Add a dependency interface              | `internal/mcp/deps.go` (interface), `internal/tools/<tool>/deps.go` (embed it)                            |
 | Add a CLI command                       | `cli_commands.go` (parser), `cli.go` (if new output format needed)                                        |

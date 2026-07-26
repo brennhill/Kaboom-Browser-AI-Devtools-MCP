@@ -8,7 +8,7 @@
 
 import { getServerUrl } from './state.js'
 import { getActiveTab } from './event-listeners.js'
-import { getRequestHeaders } from './server.js'
+import { getRequestHeaders } from './sync/server.js'
 import { errorMessage } from '../lib/error-utils.js'
 import { fetchWithTimeout } from '../lib/timeout-utils.js'
 

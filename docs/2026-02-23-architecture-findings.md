@@ -48,7 +48,7 @@ Architecture-focused review of Kaboom control-plane reliability and failure mode
 3. High — Ack semantics can acknowledge work before execution completion.
 - Extension sets `lastCommandAck` on receipt; server removes all pending up to that ID.
 - Crash/reload timing windows can convert accepted work into timeout/desync paths.
-- Evidence: `src/background/sync-client.ts:348`, `src/background/sync-client.ts:359`, `internal/queries/dispatcher_queries.go:211`, `internal/queries/dispatcher_queries.go:242`, `internal/capture/sync.go:369`.
+- Evidence: `src/background/sync/sync-client.ts:348`, `src/background/sync/sync-client.ts:359`, `internal/queries/dispatcher_queries.go:211`, `internal/queries/dispatcher_queries.go:242`, `internal/capture/sync.go:369`.
 
 4. Medium — Unknown command statuses normalize to `complete`.
 - This can mask protocol drift and create false-positive success states.
@@ -61,7 +61,7 @@ Architecture-focused review of Kaboom control-plane reliability and failure mode
 
 6. Medium — Pending result queue truncates oldest outcomes when disconnected.
 - Limits memory growth, but drops command outcomes under prolonged outage bursts.
-- Evidence: `src/background/sync-client.ts:185`, `src/background/sync-client.ts:187`.
+- Evidence: `src/background/sync/sync-client.ts:185`, `src/background/sync/sync-client.ts:187`.
 
 7. Medium — Extension state-management architecture has drift risk.
 - Mutable state with legacy export mirrors coexists with a formal state-machine module that appears unintegrated.

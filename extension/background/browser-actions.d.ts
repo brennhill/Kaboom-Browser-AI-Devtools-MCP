@@ -3,7 +3,7 @@
  * Docs: docs/features/feature/interact-explore/index.md
  */
 import type { PendingQuery } from '../types/index.js';
-import type { SyncClient } from './sync-client.js';
+import type { SyncClient } from './sync/sync-client.js';
 import { type CSPProbeResult } from './query-execution.js';
 import type { SendAsyncResultFn, ActionToastFn } from './pending-queries.js';
 export type BrowserActionResult = {

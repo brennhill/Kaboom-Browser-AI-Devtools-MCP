@@ -9,7 +9,7 @@
 // serializes injected functions independently.
 
 import type { PendingQuery } from '../../types/queries.js'
-import type { SyncClient } from '../sync-client.js'
+import type { SyncClient } from '../sync/sync-client.js'
 import type { DOMActionParams, DOMResult } from './dom-types.js'
 import type { SendAsyncResultFn, ActionToastFn } from '../commands/helpers.js'
 import { domFrameProbe } from './dom-frame-probe.js'

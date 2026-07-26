@@ -7,7 +7,7 @@
 // Replaces the monolithic if-chain in pending-queries.ts with a Map-based registry.
 
 import type { PendingQuery } from '../../types/index.js'
-import type { SyncClient } from '../sync-client.js'
+import type { SyncClient } from '../sync/sync-client.js'
 import { initReady } from '../state.js'
 import { DebugCategory } from '../debug.js'
 import type { SendAsyncResultFn, QueryParamsObject, TargetResolution } from './helpers.js'

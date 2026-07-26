@@ -40,7 +40,7 @@ export {
 } from './background/state-manager.js'
 
 // Rate limiting constants
-export { RATE_LIMIT_CONFIG } from './background/communication.js'
+export { RATE_LIMIT_CONFIG } from './background/sync/communication.js'
 
 // =============================================================================
 // === PUBLIC API: CORE STATE
@@ -102,7 +102,7 @@ export {
   updateVersionBadge,
   getUpdateInfo,
   resetVersionCheck
-} from './background/version-check.js'
+} from './background/sync/version-check.js'
 
 // =============================================================================
 // === PUBLIC API: PENDING QUERIES & PILOT
@@ -164,7 +164,7 @@ export {
   updateBadge,
   formatLogEntry,
   shouldCaptureLog
-} from './background/communication.js'
+} from './background/sync/communication.js'
 
 // =============================================================================
 // === PUBLIC API: STATE SNAPSHOTS (Initialization)

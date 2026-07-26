@@ -9,7 +9,7 @@
 // Manages chrome.debugger attach/detach lifecycle and dispatches CDP Input.* commands.
 
 import type { PendingQuery } from '../../../types/queries.js'
-import type { SyncClient } from '../../sync-client.js'
+import type { SyncClient } from '../../sync/sync-client.js'
 import type { DOMActionParams, DOMResult } from '../dom-types.js'
 import type { SendAsyncResultFn, ActionToastFn } from '../../commands/helpers.js'
 import { CDP_VERSION } from '../../../lib/constants.js'

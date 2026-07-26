@@ -3,7 +3,7 @@
  * Docs: docs/features/feature/interact-explore/index.md
  */
 import type { PendingQuery } from '../types/queries.js';
-import type { SyncClient } from './sync-client.js';
+import type { SyncClient } from './sync/sync-client.js';
 import type { SendAsyncResultFn, ActionToastFn } from './pending-queries.js';
 interface VerifyResult {
     has_file: boolean;

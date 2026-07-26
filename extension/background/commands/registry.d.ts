@@ -3,7 +3,7 @@
  * Why: Extensible design lets new command modules register themselves without modifying central dispatch.
  */
 import type { PendingQuery } from '../../types/index.js';
-import type { SyncClient } from '../sync-client.js';
+import type { SyncClient } from '../sync/sync-client.js';
 import type { SendAsyncResultFn, QueryParamsObject, TargetResolution } from './helpers.js';
 import { actionToast } from './helpers.js';
 export interface CommandContext {

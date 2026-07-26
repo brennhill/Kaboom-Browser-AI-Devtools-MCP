@@ -11,15 +11,15 @@ feature_ids:
 last_verified_version: 0.8.6
 last_verified_date: 2026-04-13
 entrypoints:
-  - src/background/server.ts
+  - src/background/sync/server.ts
   - src/background/index.ts
   - src/popup/status-display.ts
   - scripts/test-all-tools-comprehensive.sh
 code_paths:
-  - src/background/server.ts
+  - src/background/sync/server.ts
   - src/background/index.ts
   - src/background/message-handlers.ts
-  - src/background/sync-manager.ts
+  - src/background/sync/sync-manager.ts
   - src/background/state.ts
   - src/popup.ts
   - src/popup/status-display.ts
@@ -38,14 +38,14 @@ Define one meaning for extension "Connected": the daemon has observed a live ext
 
 ## Entrypoints
 
-- `src/background/server.ts` parses daemon `/health` responses into extension connection state.
+- `src/background/sync/server.ts` parses daemon `/health` responses into extension connection state.
 - `src/background/index.ts` stores the parsed connection state and fans it out to popup/badge consumers.
 - `src/popup/status-display.ts` renders the user-visible `Connected` or `Offline` status.
 - `scripts/test-all-tools-comprehensive.sh` blocks UAT unless daemon-side `capture.extension_connected` is true.
 
 ## Primary Flow
 
-1. Background health checks call `checkServerHealth(serverUrl)` in `src/background/server.ts`.
+1. Background health checks call `checkServerHealth(serverUrl)` in `src/background/sync/server.ts`.
 2. The daemon response is only considered connected when `capture.extension_connected === true`.
 3. If heartbeat is missing or stale, `checkServerHealth` returns `connected: false` plus a heartbeat-specific error string.
 4. `checkConnectionAndUpdate` in `src/background/index.ts` writes that status into background state and broadcasts `status_update`.
@@ -75,10 +75,10 @@ Define one meaning for extension "Connected": the daemon has observed a live ext
 
 ## Code Paths
 
-- `src/background/server.ts`
+- `src/background/sync/server.ts`
 - `src/background/index.ts`
 - `src/background/message-handlers.ts`
-- `src/background/sync-manager.ts`
+- `src/background/sync/sync-manager.ts`
 - `src/background/state.ts`
 - `src/popup.ts`
 - `src/popup/status-display.ts`

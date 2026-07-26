@@ -22,7 +22,7 @@ const mockSyncClientInstance = {
 
 const mockCreateSyncClient = mock.fn(() => mockSyncClientInstance)
 
-mock.module('../../extension/background/sync-client.js', {
+mock.module('../../extension/background/sync/sync-client.js', {
   namedExports: {
     createSyncClient: mockCreateSyncClient,
     SyncClient: class {}
@@ -38,7 +38,7 @@ mock.module('../../extension/background/debug.js', {
   }
 })
 
-mock.module('../../extension/background/communication.js', {
+mock.module('../../extension/background/sync/communication.js', {
   namedExports: {
     updateBadge: mock.fn(),
     createCircuitBreaker: mock.fn(() => ({ call: mock.fn(async (fn) => fn()) })),
@@ -129,7 +129,7 @@ async function freshImport() {
   // we use the same path — but we need a fresh module instance.
   // Node caches modules by URL. Query params bust the cache.
   const mod = await import(
-    `../../extension/background/sync-manager.js?v=${importCounter}`
+    `../../extension/background/sync/sync-manager.js?v=${importCounter}`
   )
   return mod
 }

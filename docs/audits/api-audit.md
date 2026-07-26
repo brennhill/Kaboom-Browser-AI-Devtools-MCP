@@ -98,7 +98,7 @@ last_reviewed: 2026-02-16
 
 **Severity**: HIGH
 
-**Location**: `/Users/brenn/dev/kaboom/src/background/server.ts` (lines 410, 449, 379) vs `/Users/brenn/dev/kaboom/cmd/browser-agent/server_routes.go`
+**Location**: `/Users/brenn/dev/kaboom/src/background/sync/server.ts` (lines 410, 449, 379) vs `/Users/brenn/dev/kaboom/cmd/browser-agent/server_routes.go`
 
 **Description**: The extension background script makes fetch calls to three endpoints:
 - `POST /api/extension-status`

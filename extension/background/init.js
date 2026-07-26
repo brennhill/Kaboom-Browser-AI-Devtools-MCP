@@ -18,9 +18,9 @@ import { loadDebugModeState, installStartupListener, loadAiWebPilotState, loadSa
 import { installPushCommandListener, installChatCommandListener } from './push-handler.js';
 import { isRecording, startRecording, stopRecording, initRecording } from './recording/index.js';
 import { installMessageListener, broadcastTrackingState } from './message-handlers.js';
-import { captureScreenshot, updateBadge } from './communication.js';
+import { captureScreenshot, updateBadge } from './sync/communication.js';
 import { wasServiceWorkerRestarted, markStateVersion, setSessionAccessLevel, setLocal, getLocal } from '../lib/storage-utils.js';
-import { loadServerInstallId } from './sync-client.js';
+import { loadServerInstallId } from './sync/sync-client.js';
 /**
  * Initialize the extension on startup
  * Handles state recovery after service worker restart, loads settings, installs listeners.

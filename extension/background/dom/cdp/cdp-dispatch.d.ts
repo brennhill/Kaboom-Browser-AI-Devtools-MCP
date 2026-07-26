@@ -5,7 +5,7 @@
  * Docs: docs/features/feature/interact-explore/index.md
  */
 import type { PendingQuery } from '../../../types/queries.js';
-import type { SyncClient } from '../../sync-client.js';
+import type { SyncClient } from '../../sync/sync-client.js';
 import type { DOMActionParams, DOMResult } from '../dom-types.js';
 import type { SendAsyncResultFn, ActionToastFn } from '../../commands/helpers.js';
 /** Check whether an action should attempt CDP before DOM primitives. */

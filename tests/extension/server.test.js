@@ -29,7 +29,7 @@ const {
   sendWSEventsToServer,
   sendEnhancedActionsToServer,
   updateBadge
-} = await import('../../extension/background/server.js')
+} = await import('../../extension/background/sync/server.js')
 
 // ============================================
 // getRequestHeaders
