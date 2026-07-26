@@ -10,7 +10,7 @@ import { state, resetAllState, getTerminalServerUrl, WIDGET_ID, IFRAME_ID, HEADE
 import { getServerUrl, getTerminalConfig, persistUIState, loadPersistedSession, clearPersistedSession, validateSession, startSession, getTerminalDevRoot, setTerminalDevRoot, stopActiveSession } from './content/ui/terminal-widget-session.js';
 import { showActionToast } from './content/ui/toast.js';
 import { createRootFolderBar } from './content/ui/terminal-root-folder.js';
-import { renderNoSessionState, renderStartFailure } from './content/ui/terminal-panel-states.js';
+import { renderNoSessionState, renderStartFailure, renderStartPending } from './content/ui/terminal-panel-states.js';
 import { notifyIframe, resetWriteGuardState, shouldDeferQueuedWrite, maybeShowQueuedWriteToast, scheduleQueuedWriteFlush, scheduleQueuedSubmit } from './content/ui/terminal-write-guard.js';
 function freshPanelUi() {
     return {
@@ -163,6 +163,36 @@ function showNoSessionState() {
     if (!panel.terminalBodyEl)
         return;
     renderNoSessionState(panel.terminalBodyEl, () => { void bootTerminalPanel(true); });
+}
+const BOOT_PENDING_ID = 'kaboom-terminal-boot-pending';
+/**
+ * Show a standalone "starting…" overlay for the window where no panel exists.
+ *
+ * A boot resolves the session BEFORE it builds and mounts the shell, and a
+ * forceFresh boot unmounts the old panel first — so for the whole (network-bound,
+ * now retry-extended) `ensureTerminalSession()` call there is no terminal body to
+ * render into and the side panel sits empty. An empty panel is indistinguishable
+ * from a broken one, which is exactly the ambiguity the honest-error work is
+ * trying to remove.
+ *
+ * Deliberately NOT part of the panel shell: it owns its own element and lifecycle,
+ * so it cannot interact with the generation-based mount races that `panel.*`
+ * carefully guards.
+ */
+function showBootPending() {
+    if (document.getElementById(BOOT_PENDING_ID))
+        return;
+    const host = document.body || document.documentElement;
+    if (!host)
+        return;
+    const el = document.createElement('div');
+    el.id = BOOT_PENDING_ID;
+    renderStartPending(el);
+    host.appendChild(el);
+}
+/** Remove the boot overlay. Safe to call when it was never shown. */
+function clearBootPending() {
+    document.getElementById(BOOT_PENDING_ID)?.remove();
 }
 /**
  * Mount the root-folder bar and keep it showing the current root.
@@ -817,6 +847,11 @@ async function bootTerminalPanelInner(forceFresh, gen) {
     panel.panelReady = true;
     panel.panelCloseIntent = null;
     panel.pendingSandboxError = null;
+    // Nothing is mounted from here until mountPanel() below, and the session call in
+    // between is network-bound (and may now retry a transient EPERM). Show a live
+    // pending state for that gap. Cleared in `finally` so every exit — success, throw,
+    // and all three superseded-generation early returns — takes it down.
+    showBootPending();
     try {
         state.serverUrl = await getServerUrl();
         if (gen !== panel.bootGeneration)
@@ -862,6 +897,11 @@ async function bootTerminalPanelInner(forceFresh, gen) {
             if (panel.terminalBodyEl)
                 showNoSessionState();
         }
+    }
+    finally {
+        // Must run on EVERY exit path, including the superseded-generation returns —
+        // a leaked overlay would sit on top of the panel the newer boot just mounted.
+        clearBootPending();
     }
 }
 /**

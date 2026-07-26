@@ -4,10 +4,11 @@ feature_id: feature-terminal
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-25
+last_reviewed: 2026-07-26
 code_paths:
   - src/lib/brand.ts
   - cmd/browser-agent/internal/terminal/handlers.go
+  - cmd/browser-agent/internal/terminal/spawn_retry.go
   - cmd/browser-agent/internal/terminal/relay.go
   - cmd/browser-agent/internal/terminal/dirs.go
   - cmd/browser-agent/internal/terminal/server.go
@@ -39,6 +40,10 @@ code_paths:
   - internal/pty/upload.go
   - npm/kaboom-agentic-browser/lib/kill-daemon.js
 test_paths:
+  - cmd/browser-agent/internal/terminal/spawn_retry_test.go
+  - cmd/browser-agent/internal/terminal/sandbox_error_test.go
+  - cmd/browser-agent/internal/terminal/handlers_start_decisions_test.go
+  - tests/extension/terminal-start-pending.test.js
   - tests/extension/brand-metadata.test.js
   - tests/extension/terminal-write-guard.test.js
   - cmd/browser-agent/internal/terminal/dirs_test.go
