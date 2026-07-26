@@ -1,6 +1,8 @@
 // Purpose: Infers JSON schema types and formats from observed API response values.
 // Why: Separates type inference heuristics (UUID, datetime, number ranges) from the main schema builder.
-package analysis
+// Docs: docs/features/feature/api-schema/index.md
+
+package apischema
 
 import (
 	"math"

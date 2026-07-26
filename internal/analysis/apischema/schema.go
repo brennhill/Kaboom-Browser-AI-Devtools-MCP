@@ -2,7 +2,14 @@
 // Why: Builds data-driven endpoint schemas that power validation and drift detection workflows.
 // Docs: docs/features/feature/api-schema/index.md
 
-package analysis
+// Package apischema infers API endpoint schemas from observed browser traffic.
+//
+// SchemaStore accumulates HTTP and WebSocket observations (path patterns with
+// dynamic segments parameterized, query params, request/response field types and
+// latencies) and renders them on demand as an APISchema snapshot or an OpenAPI
+// stub. Accumulation is bounded by per-store caps so a long session cannot grow
+// without limit.
+package apischema
 
 import (
 	"sync"

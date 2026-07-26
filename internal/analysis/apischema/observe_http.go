@@ -1,6 +1,8 @@
 // Purpose: Records HTTP network body observations for API schema inference.
 // Why: Isolates HTTP observation ingestion from WebSocket and schema building logic.
-package analysis
+// Docs: docs/features/feature/api-schema/index.md
+
+package apischema
 
 import (
 	"encoding/json"

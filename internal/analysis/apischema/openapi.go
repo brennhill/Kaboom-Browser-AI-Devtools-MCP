@@ -2,7 +2,7 @@
 // Why: Separates export formatting concerns from schema accumulation logic.
 // Docs: docs/features/feature/api-schema/index.md
 
-package analysis
+package apischema
 
 import (
 	"sort"

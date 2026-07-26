@@ -1,8 +1,7 @@
-// Purpose: Unit tests for error clustering and API schema analysis api schema logic.
+// Purpose: Unit tests for JSON type/format inference (inferTypeAndFormat, inferStringFormat, isJSONContentType).
 // Docs: docs/features/feature/api-schema/index.md
 
-// api_schema_unit_test.go — Unit tests for inferTypeAndFormat and inferStringFormat.
-package analysis
+package apischema
 
 import (
 	"math"
@@ -80,6 +79,32 @@ func TestInferStringFormat(t *testing.T) {
 			got := inferStringFormat(tt.input)
 			if got != tt.wantFormat {
 				t.Errorf("inferStringFormat(%q) = %q, want %q", tt.input, got, tt.wantFormat)
+			}
+		})
+	}
+}
+
+// ============================================
+// isJSONContentType — covers empty string branch
+// ============================================
+
+func TestIsJSONContentType(t *testing.T) {
+	tests := []struct {
+		input string
+		want  bool
+	}{
+		{"", true},
+		{"application/json", true},
+		{"application/json; charset=utf-8", true},
+		{"text/html", false},
+		{"text/plain", false},
+		{"application/xml", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			if got := isJSONContentType(tt.input); got != tt.want {
+				t.Errorf("isJSONContentType(%q) = %v, want %v", tt.input, got, tt.want)
 			}
 		})
 	}

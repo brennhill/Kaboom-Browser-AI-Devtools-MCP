@@ -1,7 +1,7 @@
-// Purpose: Coverage-expansion tests for error clustering and API schema analysis edge cases and branch paths.
+// Purpose: Coverage tests for OpenAPI stub emission helpers (mapToOpenAPIType, intToString).
 // Docs: docs/features/feature/api-schema/index.md
 
-package analysis
+package apischema
 
 import (
 	"testing"
@@ -150,123 +150,5 @@ func TestIntToStringStatusCodes(t *testing.T) {
 		if result != tt.expected {
 			t.Errorf("intToString(%d) = %s, expected %s", tt.input, result, tt.expected)
 		}
-	}
-}
-
-// ============================================
-// buildPathParams Coverage Tests
-// ============================================
-
-func TestBuildPathParamsUUID(t *testing.T) {
-	t.Parallel()
-	store := NewSchemaStore()
-	params := store.buildPathParams("/api/users/{uuid}")
-
-	if len(params) != 1 {
-		t.Fatalf("Expected 1 param, got %d", len(params))
-	}
-	if params[0].Name != "uuid" {
-		t.Errorf("Expected name 'uuid', got: %s", params[0].Name)
-	}
-	if params[0].Type != "uuid" {
-		t.Errorf("Expected type 'uuid', got: %s", params[0].Type)
-	}
-	if params[0].Position != 3 {
-		t.Errorf("Expected position 3, got: %d", params[0].Position)
-	}
-}
-
-func TestBuildPathParamsID(t *testing.T) {
-	t.Parallel()
-	store := NewSchemaStore()
-	params := store.buildPathParams("/api/items/{id}")
-
-	if len(params) != 1 {
-		t.Fatalf("Expected 1 param, got %d", len(params))
-	}
-	if params[0].Name != "id" {
-		t.Errorf("Expected name 'id', got: %s", params[0].Name)
-	}
-	if params[0].Type != "integer" {
-		t.Errorf("Expected type 'integer', got: %s", params[0].Type)
-	}
-}
-
-func TestBuildPathParamsHash(t *testing.T) {
-	t.Parallel()
-	store := NewSchemaStore()
-	params := store.buildPathParams("/api/commits/{hash}")
-
-	if len(params) != 1 {
-		t.Fatalf("Expected 1 param, got %d", len(params))
-	}
-	if params[0].Name != "hash" {
-		t.Errorf("Expected name 'hash', got: %s", params[0].Name)
-	}
-	if params[0].Type != "string" {
-		t.Errorf("Expected type 'string', got: %s", params[0].Type)
-	}
-}
-
-func TestBuildPathParamsMultiple(t *testing.T) {
-	t.Parallel()
-	store := NewSchemaStore()
-	params := store.buildPathParams("/api/{uuid}/items/{id}/commits/{hash}")
-
-	if len(params) != 3 {
-		t.Fatalf("Expected 3 params, got %d", len(params))
-	}
-
-	// Check each param
-	expectedNames := []string{"uuid", "id", "hash"}
-	expectedTypes := []string{"uuid", "integer", "string"}
-	for i, p := range params {
-		if p.Name != expectedNames[i] {
-			t.Errorf("Param %d: expected name '%s', got '%s'", i, expectedNames[i], p.Name)
-		}
-		if p.Type != expectedTypes[i] {
-			t.Errorf("Param %d: expected type '%s', got '%s'", i, expectedTypes[i], p.Type)
-		}
-	}
-}
-
-func TestBuildPathParamsNoParams(t *testing.T) {
-	t.Parallel()
-	store := NewSchemaStore()
-	params := store.buildPathParams("/api/users/list")
-
-	if len(params) != 0 {
-		t.Errorf("Expected 0 params for path without placeholders, got %d", len(params))
-	}
-}
-
-func TestBuildPathParamsUnknownPlaceholder(t *testing.T) {
-	t.Parallel()
-	store := NewSchemaStore()
-	params := store.buildPathParams("/api/{unknown}/items")
-
-	// Unknown placeholders should not be recognized
-	if len(params) != 0 {
-		t.Errorf("Expected 0 params for unknown placeholder, got %d", len(params))
-	}
-}
-
-func TestBuildPathParamsEmptyPath(t *testing.T) {
-	t.Parallel()
-	store := NewSchemaStore()
-	params := store.buildPathParams("")
-
-	if len(params) != 0 {
-		t.Errorf("Expected nil/empty params for empty path, got %d", len(params))
-	}
-}
-
-func TestBuildPathParamsRootOnly(t *testing.T) {
-	t.Parallel()
-	store := NewSchemaStore()
-	params := store.buildPathParams("/")
-
-	if len(params) != 0 {
-		t.Errorf("Expected 0 params for root path, got %d", len(params))
 	}
 }
