@@ -566,6 +566,22 @@ fi
 if [ "$HOOKS_ONLY" != "1" ]; then
     BINARY_NAME="kaboom-agentic-browser-$PLATFORM-$E_ARCH$BINARY_EXT"
     download_and_verify "$BINARY_NAME" "$CANONICAL_KABOOM_BIN" "$MIN_BINARY_BYTES" "kaboom binary"
+
+    # Stamp this install's epoch next to the binary so the daemon's single-instance
+    # takeover has a deterministic tiebreaker at equal versions: the LATEST install
+    # wins (see install_epoch.go). Without it, two same-version installs (e.g. this
+    # one and an npm-global copy) thrash — a takeover war that crash-loops the daemon.
+    # Unit is UnixNano to match the binary-mtime fallback; GNU date gives it via %N,
+    # BSD/macOS date lacks %N so we fall back to whole seconds scaled to nanoseconds.
+    INSTALL_EPOCH_NS="$(date +%s%N 2>/dev/null)"
+    case "$INSTALL_EPOCH_NS" in
+        ''|*[!0-9]*) INSTALL_EPOCH_NS="$(date +%s)000000000" ;;
+    esac
+    if printf '%s\n' "$INSTALL_EPOCH_NS" > "$BIN_DIR/.kaboom-install-epoch" 2>/dev/null; then
+        echo -e "${GREEN}Install epoch stamped (latest install wins).${NC}"
+    else
+        echo -e "${YELLOW}  Could not write install epoch stamp; daemon will fall back to binary mtime.${NC}"
+    fi
 fi
 
 # --- Always install hooks binary ---
