@@ -5,8 +5,8 @@ import { readFileSync } from 'node:fs'
 
 const EARLY_PATCH_FILES = [
   'src/early-patch.ts',
-  'src/lib/network.ts',
-  'src/lib/websocket.ts',
+  'src/lib/net/network.ts',
+  'src/lib/net/websocket.ts',
   'src/inject/observers.ts',
   'src/types/global.d.ts'
 ]

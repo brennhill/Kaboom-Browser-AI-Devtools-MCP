@@ -15,7 +15,7 @@ const __dirname = path.dirname(__filename)
 const ROOT = path.resolve(__dirname, '..')
 
 const GO_FILE = 'internal/capture/sync.go'
-const TS_FILE = 'src/background/sync-client.ts'
+const TS_FILE = 'src/background/sync/sync-client.ts'
 
 // Sync types that must stay aligned between Go and TS.
 // Only types that cross the wire (sent/received over HTTP) are checked.

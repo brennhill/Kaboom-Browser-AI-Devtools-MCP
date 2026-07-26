@@ -29,7 +29,7 @@ The same command/mode/action sets are represented separately in multiple places:
 - Tool schemas: `cmd/browser-agent/tools_schema.go`
 - Server dispatch: `cmd/browser-agent/tools_core.go`, `cmd/browser-agent/tools_observe.go`, `cmd/browser-agent/tools_analyze.go`, `cmd/browser-agent/tools_configure.go`, `cmd/browser-agent/tools_interact.go`
 - Sync command types: `internal/capture/sync.go`
-- Extension sync types: `src/background/sync-client.ts`
+- Extension sync types: `src/background/sync/sync-client.ts`
 - Extension execution router: `src/background/pending-queries.ts`
 
 Impact:
@@ -87,8 +87,8 @@ Impact:
 
 Evidence:
 
-- Canonical path is `/sync`: `internal/capture/sync.go`, `src/background/sync-client.ts`
-- Legacy functions still exported and visible: `src/background/server.ts`, `src/background/communication.ts`, `src/background.ts`
+- Canonical path is `/sync`: `internal/capture/sync.go`, `src/background/sync/sync-client.ts`
+- Legacy functions still exported and visible: `src/background/sync/server.ts`, `src/background/sync/communication.ts`, `src/background.ts`
 
 Impact:
 
@@ -101,7 +101,7 @@ Evidence:
 
 - Extension sends statuses (`complete|error|timeout`), but many failures are encoded as `complete` with `error` payload.
 - Server-side processing of command results largely keys off correlation/result presence, not strict status semantics.
-- Relevant files: `src/background/pending-queries.ts`, `src/background/sync-client.ts`, `internal/capture/sync.go`, `internal/capture/queries.go`.
+- Relevant files: `src/background/pending-queries.ts`, `src/background/sync/sync-client.ts`, `internal/capture/sync.go`, `internal/capture/queries.go`.
 
 Impact:
 
@@ -128,7 +128,7 @@ Impact:
 2. Tool dispatch occurs in `ToolHandler.HandleToolCall`: `cmd/browser-agent/tools_core.go`.
 3. Tool-specific handlers enqueue `queries.PendingQuery`: `cmd/browser-agent/tools_*.go`.
 4. Pending queries are surfaced through `/sync`: `internal/capture/sync.go`.
-5. Extension `SyncClient` receives commands: `src/background/sync-client.ts`.
+5. Extension `SyncClient` receives commands: `src/background/sync/sync-client.ts`.
 6. Extension executes in `handlePendingQuery`: `src/background/pending-queries.ts`.
 7. Command results are sent back via `/sync` `command_results`.
 8. Server correlates via query ID/correlation ID: `internal/capture/sync.go`, `internal/capture/queries.go`.

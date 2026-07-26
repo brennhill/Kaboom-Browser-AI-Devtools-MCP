@@ -14,7 +14,7 @@ mock.module('../../extension/background/index.js', {
   }
 })
 
-const { executeWithWorldRouting } = await import('../../extension/background/query-execution.js')
+const { executeWithWorldRouting } = await import('../../extension/background/exec/query-execution.js')
 
 describe('query execution world routing', () => {
   beforeEach(() => {

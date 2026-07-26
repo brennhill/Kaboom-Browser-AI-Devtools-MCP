@@ -10,10 +10,10 @@ import { domPrimitiveWaitForStable, domPrimitiveActionDiff } from './dom-primiti
 import { domPrimitiveOverlay } from './dom-primitives-overlay.js';
 import { domPrimitiveIntent } from './dom-primitives-intent.js';
 import { shouldEscalateToCDP, tryCDPEscalation } from './cdp/cdp-dispatch.js';
-import { isReadOnlyAction } from '../action-metadata.js';
+import { isReadOnlyAction } from '../exec/action-metadata.js';
 import { errorMessage } from '../../lib/error-utils.js';
 import { delay } from '../../lib/timeout-utils.js';
-import { normalizeFrameArg, resolveMatchedFrameIds } from '../frame-targeting.js';
+import { normalizeFrameArg, resolveMatchedFrameIds } from '../exec/frame-targeting.js';
 import { toDOMResult, pickFrameResult, mergeListInteractive, deriveAsyncStatusFromDOMResult, enrichWithEffectiveContext, sendToastForResult } from './dom-result-reconcile.js';
 function parseDOMParams(query) {
     try {

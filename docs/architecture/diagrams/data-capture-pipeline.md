@@ -42,7 +42,7 @@ graph TB
         Batchers["Event Batchers<br/>Accumulate events<br/>Debounce<br/>Max batch size"]
     end
 
-    subgraph Transport["🚀 Transport (src/background/sync-client.ts)"]
+    subgraph Transport["🚀 Transport (src/background/sync/sync-client.ts)"]
         direction TB
         BatchAssemble["Assemble Batch<br/>- Collect pending events<br/>- Tab metadata<br/>- Timestamps"]
         RetryLogic["Retry Logic<br/>- Exponential backoff<br/>- Max 3 attempts<br/>- Fallback to cache"]
@@ -468,23 +468,23 @@ type BufferStats struct {
 
 **Page-Level Capture:**
 - `src/inject/observers.ts` - All event observers setup
-- `src/lib/console.ts` - Console capture
-- `src/lib/network.ts` - Fetch/XHR capture
-- `src/lib/websocket.ts` - WebSocket capture
-- `src/lib/actions.ts` - Action capture
-- `src/lib/performance.ts` - Performance capture
-- `src/lib/exceptions.ts` - Error capture
+- `src/lib/page/console.ts` - Console capture
+- `src/lib/net/network.ts` - Fetch/XHR capture
+- `src/lib/net/websocket.ts` - WebSocket capture
+- `src/lib/page/actions.ts` - Action capture
+- `src/lib/analysis/performance.ts` - Performance capture
+- `src/lib/page/exceptions.ts` - Error capture
 
 **Serialization & Enrichment:**
-- `src/lib/serialize.ts` - Safe JSON serialization
+- `src/lib/page/serialize.ts` - Safe JSON serialization
 - `src/background/dom/dom-queries.ts` - Selector generation
-- `src/lib/ai-context.ts` - Error enrichment
+- `src/lib/ai-context/ai-context.ts` - Error enrichment
 - `internal/redaction/redaction.go` - PII masking
 
 **Batching & Transport:**
-- `src/background/batchers.ts` - Event batching
-- `src/background/sync-client.ts` - HTTP POST /sync
-- `src/background/state-manager.ts` - State storage
+- `src/background/sync/batchers.ts` - Event batching
+- `src/background/sync/sync-client.ts` - HTTP POST /sync
+- `src/background/caches/state-manager.ts` - State storage
 
 **Server-Side Storage:**
 - `internal/capture/types.go` - Capture struct

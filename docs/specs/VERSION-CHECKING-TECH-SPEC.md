@@ -27,7 +27,7 @@ Both operate asynchronously without blocking main functionality.
 - Supports X.Y.Z format (e.g., "5.2.5")
 - Functions: `parseVersion()`, `compareVersions()`, `isVersionNewer()`
 
-**`src/background/version-check.ts`** - Version Check Logic
+**`src/background/sync/version-check.ts`** - Version Check Logic
 - Manages version check state (lastCheckedVersion, newVersionAvailable flag)
 - `checkServerVersion()`: Polls `/health`, updates state
 - `updateVersionBadge()`: Updates extension badge based on state
@@ -39,7 +39,7 @@ Both operate asynchronously without blocking main functionality.
 - `stopVersionCheck()`: Stops polling when disconnected
 - Calls version check function immediately on start, then every 30 minutes
 
-**`src/background/server.ts`** - HTTP Request Headers
+**`src/background/sync/server.ts`** - HTTP Request Headers
 - `getRequestHeaders()`: Injects `X-Kaboom-Extension-Version` header
 - Applied to all API requests (logs, WS events, actions, etc.)
 - 10+ endpoints updated

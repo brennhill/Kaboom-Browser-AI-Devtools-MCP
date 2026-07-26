@@ -18,7 +18,7 @@ last_verified_date: 2026-03-05
 ## Automated Coverage
 - `cmd/browser-agent/tools_analyze_validation_test.go`
 - `cmd/browser-agent/tools_analyze_route_test.go`
-- Extension/unit coverage for `src/lib/link-health.ts`
+- Extension/unit coverage for `src/lib/analysis/link-health.ts`
 
 ## Required Scenarios
 1. `link_health` classification

@@ -309,7 +309,7 @@ describe('Capture Gate Functions', () => {
 
   test('actions: recordAction is gated by actionCaptureEnabled', async () => {
     const { recordAction, getActionBuffer, clearActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/lib/actions.js')
+      await import('../../extension/lib/page/actions.js')
 
     // Enabled by default
     clearActionBuffer()
@@ -330,7 +330,7 @@ describe('Capture Gate Functions', () => {
 
   test('actions: disabling clears the action buffer', async () => {
     const { recordAction, getActionBuffer, clearActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/lib/actions.js')
+      await import('../../extension/lib/page/actions.js')
 
     setActionCaptureEnabled(true)
     clearActionBuffer()
@@ -342,7 +342,7 @@ describe('Capture Gate Functions', () => {
   })
 
   test('network: setNetworkWaterfallEnabled toggles capture gate', async () => {
-    const { setNetworkWaterfallEnabled, isNetworkWaterfallEnabled } = await import('../../extension/lib/network.js')
+    const { setNetworkWaterfallEnabled, isNetworkWaterfallEnabled } = await import('../../extension/lib/net/network.js')
 
     setNetworkWaterfallEnabled(true)
     assert.strictEqual(isNetworkWaterfallEnabled(), true)
@@ -355,7 +355,7 @@ describe('Capture Gate Functions', () => {
   })
 
   test('network: setNetworkBodyCaptureEnabled toggles body capture gate', async () => {
-    const { setNetworkBodyCaptureEnabled, isNetworkBodyCaptureEnabled } = await import('../../extension/lib/network.js')
+    const { setNetworkBodyCaptureEnabled, isNetworkBodyCaptureEnabled } = await import('../../extension/lib/net/network.js')
 
     setNetworkBodyCaptureEnabled(true)
     assert.strictEqual(isNetworkBodyCaptureEnabled(), true)
@@ -365,7 +365,7 @@ describe('Capture Gate Functions', () => {
   })
 
   test('performance: setPerformanceMarksEnabled toggles capture gate', async () => {
-    const { setPerformanceMarksEnabled, isPerformanceMarksEnabled } = await import('../../extension/lib/performance.js')
+    const { setPerformanceMarksEnabled, isPerformanceMarksEnabled } = await import('../../extension/lib/analysis/performance.js')
 
     setPerformanceMarksEnabled(true)
     assert.strictEqual(isPerformanceMarksEnabled(), true)
@@ -378,7 +378,7 @@ describe('Capture Gate Functions', () => {
   })
 
   test('websocket: setWebSocketCaptureEnabled toggles capture gate', async () => {
-    const { setWebSocketCaptureEnabled } = await import('../../extension/lib/websocket.js')
+    const { setWebSocketCaptureEnabled } = await import('../../extension/lib/net/websocket.js')
 
     // Just verify no error on toggle — the internal state isn't exposed via getter
     assert.doesNotThrow(() => setWebSocketCaptureEnabled(false))
@@ -645,7 +645,7 @@ describe('Rapid Toggle Switching', () => {
   })
 
   test('rapid capture gate toggling settles to final state', async () => {
-    const { setNetworkWaterfallEnabled, isNetworkWaterfallEnabled } = await import('../../extension/lib/network.js')
+    const { setNetworkWaterfallEnabled, isNetworkWaterfallEnabled } = await import('../../extension/lib/net/network.js')
 
     // Toggle 100 times rapidly
     for (let i = 0; i < 100; i++) {
@@ -661,7 +661,7 @@ describe('Rapid Toggle Switching', () => {
 
   test('rapid action capture toggling preserves buffer integrity', async () => {
     const { recordAction, getActionBuffer, clearActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/lib/actions.js')
+      await import('../../extension/lib/page/actions.js')
 
     clearActionBuffer()
     setActionCaptureEnabled(true)

@@ -19,7 +19,7 @@ The extension communicates with the Go server via HTTP POST requests. All messag
 ```mermaid
 graph TB
     subgraph Extension["🔄 Extension (src/background/)"]
-        BGSync["Background Service Worker<br/>src/background/sync-client.ts"]
+        BGSync["Background Service Worker<br/>src/background/sync/sync-client.ts"]
         BGPoll["Polling Loop<br/>Every 1 second"]
         BGState["State Manager<br/>chrome.storage.local"]
     end
@@ -594,9 +594,9 @@ If extension posts too many errors:
   - `/extension-logs` - ExtensionLogs()
 
 **Extension Send/Receive:**
-- `src/background/sync-client.ts` - Polling loop
+- `src/background/sync/sync-client.ts` - Polling loop
 - `src/background/pending-queries.ts` - Query execution
-- `src/background/communication.ts` - HTTP layer
+- `src/background/sync/communication.ts` - HTTP layer
 
 **Types:**
 - `internal/types/protocol.go` - Message types

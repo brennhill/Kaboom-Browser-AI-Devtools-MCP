@@ -61,7 +61,7 @@ globalThis.fetch = mockFetch
 let verifyFileOnInput, clickFileInput, escalateToStage4
 
 try {
-  const mod = await import('../../extension/background/upload-handler.js')
+  const mod = await import('../../extension/background/exec/upload-handler.js')
   verifyFileOnInput = mod.verifyFileOnInput
   clickFileInput = mod.clickFileInput
   escalateToStage4 = mod.escalateToStage4

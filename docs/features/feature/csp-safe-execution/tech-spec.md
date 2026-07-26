@@ -10,9 +10,9 @@ last_verified_date: 2026-03-05
 # CSP-Safe Execution Tech Spec
 
 ## Pipeline
-- Parser/types: `src/background/csp-safe/parser.ts`, `src/background/csp-safe/types.ts`
-- Structured executor: `src/background/csp-safe/executor.ts`
-- World routing + fallback: `src/background/query-execution.ts`
+- Parser/types: `src/background/exec/csp-safe/parser.ts`, `src/background/exec/csp-safe/types.ts`
+- Structured executor: `src/background/exec/csp-safe/executor.ts`
+- World routing + fallback: `src/background/exec/query-execution.ts`
 - Result serialization hardening: `src/inject/execute-js.ts`
 
 ## Strategy

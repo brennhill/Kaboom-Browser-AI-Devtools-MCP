@@ -4,7 +4,7 @@ feature_id: feature-observe
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-26
 code_paths:
   - cmd/browser-agent/tools_observe.go
   - cmd/browser-agent/tools_observe_registry.go
@@ -21,13 +21,13 @@ code_paths:
   - internal/tools/observe/handlers_logs.go
   - src/background/commands/observe.ts
   - src/lib/brand.ts
-  - src/lib/context.ts
+  - src/lib/page/context.ts
   - src/lib/daemon-http.ts
   - src/content/message-forwarding.ts
   - src/content/runtime-message-listener.ts
   - src/content/window-message-listener.ts
   - src/inject/observers.ts
-  - src/lib/network.ts
+  - src/lib/net/network.ts
   - internal/capture/queries.go
   - internal/capture/sync.go
 test_paths:

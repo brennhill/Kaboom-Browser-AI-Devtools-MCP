@@ -27,7 +27,7 @@ Primary components:
 - Tool schemas: `cmd/browser-agent/tools_schema.go`
 - Queue/command lifecycle: `internal/capture/queries.go`
 - Unified extension sync channel: `internal/capture/sync.go`
-- Extension sync client: `src/background/sync-client.ts`
+- Extension sync client: `src/background/sync/sync-client.ts`
 - Extension command executor: `src/background/pending-queries.ts`
 
 ## End-to-End Data Flows

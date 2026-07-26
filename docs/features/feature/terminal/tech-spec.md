@@ -18,7 +18,7 @@ last_verified_date: 2026-03-28
 - `cmd/browser-agent/terminal_assets/terminal.html`
 - `extension/sidepanel.html`
 - `extension/sidepanel.js`
-- `src/background/tab-state.ts`
+- `src/background/ui/tab-state.ts`
 - `src/content/ui/terminal-panel-bridge.ts`
 - `internal/pty/manager.go`
 - `internal/pty/session.go`

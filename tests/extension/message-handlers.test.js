@@ -120,7 +120,7 @@ describe('message routing', () => {
   })
 
   test('track_ui_feature counts the reported feature (F7)', async () => {
-    const tracker = await import('../../extension/background/ui-usage-tracker.js')
+    const tracker = await import('../../extension/background/ui/ui-usage-tracker.js')
     tracker.drainUIFeatures() // clear any prior state so this test reads only its own
     const { handler } = getInstalledHandler()
     const sendResponse = mock.fn()

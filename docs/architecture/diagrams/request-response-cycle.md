@@ -324,7 +324,7 @@ sequenceDiagram
 
 **Extension Polling:**
 - `src/background/pending-queries.ts` - Poll logic
-- `src/background/sync-client.ts` - Result posting
+- `src/background/sync/sync-client.ts` - Result posting
 - `internal/capture/handlers.go:/pending-queries` - Endpoint
 
 **Session Management:**

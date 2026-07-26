@@ -33,8 +33,8 @@ code_paths:
   - src/content/ui/terminal-panel-states.ts
   - src/content/ui/terminal-write-guard.ts
   - src/content/ui/tracked-hover-launcher.ts
-  - src/background/terminal-panel.ts
-  - src/background/side-panel-availability.ts
+  - src/background/ui/terminal-panel.ts
+  - src/background/ui/side-panel-availability.ts
   - src/background/message-handlers.ts
   - src/types/runtime-messages.ts
   - src/sidepanel.ts

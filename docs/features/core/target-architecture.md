@@ -28,4 +28,4 @@ Implementation anchors:
 - Tool dispatch: `cmd/browser-agent/tools_core.go`
 - Query lifecycle: `internal/capture/queries.go`
 - Unified sync endpoint: `internal/capture/sync.go`
-- Extension sync executor: `src/background/sync-client.ts`, `src/background/pending-queries.ts`
+- Extension sync executor: `src/background/sync/sync-client.ts`, `src/background/pending-queries.ts`

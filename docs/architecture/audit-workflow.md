@@ -6,7 +6,7 @@ feature_refs:
   - feature-tab-tracking-ux
 last_reviewed: 2026-04-03
 code_anchors:
-  - src/lib/request-audit.ts
+  - src/lib/tabs/request-audit.ts
   - src/popup/tab-tracking.ts
   - src/popup/tab-tracking-api.ts
   - src/content/ui/tracked-hover-launcher.ts
@@ -52,7 +52,7 @@ Related feature docs:
 ## Primary Flow
 
 1. A user tracks a site, then launches `Audit` from the popup or tracked hover launcher.
-2. Both UI surfaces call `requestAudit` in `src/lib/request-audit.ts`.
+2. Both UI surfaces call `requestAudit` in `src/lib/tabs/request-audit.ts`.
 3. `requestAudit` opens the terminal side panel first via `open_terminal_panel`.
 4. The helper then sends the existing `qa_scan_requested` runtime message with the tracked page URL.
 5. `src/background/message-handlers.ts` converts that runtime message into audit-oriented prompt text for terminal injection.
@@ -90,7 +90,7 @@ Related feature docs:
 
 ## Code Paths
 
-- `src/lib/request-audit.ts`
+- `src/lib/tabs/request-audit.ts`
 - `src/popup/tab-tracking.ts`
 - `src/popup/tab-tracking-api.ts`
 - `src/content/ui/tracked-hover-launcher.ts`

@@ -61,7 +61,7 @@ globalThis.chrome = chromeMock
 let mod
 async function loadModule() {
   if (!mod) {
-    mod = await import('../../extension/lib/cloaked-domains.js')
+    mod = await import('../../extension/lib/tabs/cloaked-domains.js')
   }
   return mod
 }

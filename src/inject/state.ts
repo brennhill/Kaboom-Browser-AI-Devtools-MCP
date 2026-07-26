@@ -9,7 +9,7 @@
  */
 
 import type { BrowserStateSnapshot } from '../types/index.js'
-import { sendPerformanceSnapshot } from '../lib/perf-snapshot.js'
+import { sendPerformanceSnapshot } from '../lib/analysis/perf-snapshot.js'
 
 /** Read the page nonce set by the content script on the inject script element */
 let pageNonce = ''

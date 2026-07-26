@@ -19,7 +19,7 @@ describe('probeCSPStatus', () => {
         executeScript: mock.fn(async () => [{ result: 'ok' }])
       }
     }
-    ;({ probeCSPStatus } = await import('../../extension/background/query-execution.js'))
+    ;({ probeCSPStatus } = await import('../../extension/background/exec/query-execution.js'))
   })
 
   test('returns none when execute_js succeeds', async () => {

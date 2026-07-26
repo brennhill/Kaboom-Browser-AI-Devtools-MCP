@@ -7,7 +7,7 @@
 import { debugLog } from '../index.js';
 import { getServerUrl } from '../state.js';
 import { DebugCategory } from '../debug.js';
-import { recordScreenshot } from '../state-manager.js';
+import { recordScreenshot } from '../caches/state-manager.js';
 import { domPrimitiveListInteractive } from '../dom/dom-primitives-list-interactive.js';
 import { registerCommand } from './registry.js';
 import { CDP_VERSION } from '../../lib/constants.js';
@@ -15,7 +15,7 @@ import { errorMessage } from '../../lib/error-utils.js';
 import { KABOOM_LOG_PREFIX } from '../../lib/brand.js';
 import { delay } from '../../lib/timeout-utils.js';
 import { postDaemonJSON } from '../../lib/daemon-http.js';
-import { captureVisibleTabSafe } from '../tab-state.js';
+import { captureVisibleTabSafe } from '../ui/tab-state.js';
 // =============================================================================
 // SCREENSHOT
 // =============================================================================

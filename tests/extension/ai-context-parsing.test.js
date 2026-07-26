@@ -16,7 +16,7 @@ import {
   getSourceMapCache,
   getSourceMapCacheSize,
   resetParsingForTesting
-} from '../../extension/lib/ai-context-parsing.js'
+} from '../../extension/lib/ai-context/ai-context-parsing.js'
 
 // =============================================================================
 // STACK FRAME PARSING

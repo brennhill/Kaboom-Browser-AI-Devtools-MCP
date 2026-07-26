@@ -255,7 +255,7 @@ describe('Inject Script: kaboom_a11y_query message handling', () => {
     }
 
     // Import real functions from the production code
-    const mod = await import('../../extension/lib/dom-queries.js')
+    const mod = await import('../../extension/lib/analysis/dom-queries.js')
     runAxeAuditWithTimeout = mod.runAxeAuditWithTimeout
     formatAxeResults = mod.formatAxeResults
   })
@@ -519,7 +519,7 @@ describe('A11Y Query: End-to-end message chain', () => {
 
   test('should handle empty audit results', async () => {
     // We CAN test this by using the real formatAxeResults with empty input
-    const { formatAxeResults } = await import('../../extension/lib/dom-queries.js')
+    const { formatAxeResults } = await import('../../extension/lib/analysis/dom-queries.js')
 
     const result = formatAxeResults({
       violations: [],

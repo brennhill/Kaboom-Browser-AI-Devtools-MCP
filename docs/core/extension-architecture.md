@@ -125,11 +125,11 @@ src/
 
 | Want to...                          | Edit these files                                                                                            |
 |-------------------------------------|-------------------------------------------------------------------------------------------------------------|
-| Add a new capture type              | `src/lib/<capture>.ts`, `src/inject/index.ts` (install hook), `src/types/` (types), `src/background/batcher-instances.ts` (new batcher) |
+| Add a new capture type              | `src/lib/<capture>.ts`, `src/inject/index.ts` (install hook), `src/types/` (types), `src/background/sync/batcher-instances.ts` (new batcher) |
 | Add a new capture toggle            | `src/lib/constants.ts`, `src/types/runtime-messages.ts`, `src/inject/settings.ts`, `src/content/message-handlers.ts` (TOGGLE_MESSAGES set) |
 | Add a new async command             | `src/background/commands/<name>.ts` (handler + registerCommand), `src/background/commands/helpers.ts` (if new helper needed) |
 | Add a new DOM query type            | `src/background/dom/dom-primitives.ts` (self-contained function), `src/background/dom/dom-dispatch.ts` (dispatch case) |
-| Change server communication         | `src/background/sync-client.ts`, `src/background/server.ts`                                                |
+| Change server communication         | `src/background/sync/sync-client.ts`, `src/background/sync/server.ts`                                                |
 | Add UI overlay                      | `src/content/ui/<name>.ts`, `src/content/runtime-message-listener.ts` (add message handler)                 |
 | Add page instrumentation            | `src/inject/` + `src/lib/`, then `make compile-ts`                                                         |
 | Add a wire type                     | `internal/types/wire_*.go` (Go source of truth), run `make generate-wire-types`, verify with `make check-wire-drift` |

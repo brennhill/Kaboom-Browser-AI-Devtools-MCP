@@ -4,13 +4,13 @@ feature_id: feature-tab-tracking-ux
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-25
+last_reviewed: 2026-07-26
 code_paths:
   - src/lib/brand.ts
   - src/lib/constants.ts
-  - src/lib/request-audit.ts
-  - src/lib/tab-tracking-core.ts
-  - src/lib/internal-url.ts
+  - src/lib/tabs/request-audit.ts
+  - src/lib/tabs/tab-tracking-core.ts
+  - src/lib/tabs/internal-url.ts
   - src/types/runtime-messages.ts
   - src/content.ts
   - src/content/tab-tracking.ts

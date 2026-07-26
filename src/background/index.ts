@@ -42,7 +42,7 @@ import {
   processErrorGroup,
   canTakeScreenshot,
   recordScreenshot
-} from './state-manager.js'
+} from './caches/state-manager.js'
 import {
   createCircuitBreaker,
   RATE_LIMIT_CONFIG,
@@ -51,22 +51,22 @@ import {
   captureScreenshot,
   updateBadge,
   checkServerHealth
-} from './communication.js'
+} from './sync/communication.js'
 import { getTrackedTabInfo } from './event-listeners.js'
 import { DebugCategory } from './debug.js'
-import { getRequestHeaders } from './server.js'
+import { getRequestHeaders } from './sync/server.js'
 import {
   handlePendingQuery as handlePendingQueryImpl,
   handlePilotCommand as handlePilotCommandImpl
 } from './pending-queries.js'
-import { updateVersionFromHealth } from './version-check.js'
-import { createBatcherInstances } from './batcher-instances.js'
+import { updateVersionFromHealth } from './sync/version-check.js'
+import { createBatcherInstances } from './sync/batcher-instances.js'
 import { KABOOM_LOG_PREFIX } from '../lib/brand.js'
 import { errorMessage, isNoReceiverError } from '../lib/error-utils.js'
 import {
   startSyncClient as startSyncClientImpl,
   resetSyncClientConnection as resetSyncClientConnectionImpl
-} from './sync-manager.js'
+} from './sync/sync-manager.js'
 
 // Re-export for consumers that already import from here
 export { DEFAULT_SERVER_URL } from '../lib/constants.js'

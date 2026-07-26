@@ -350,7 +350,7 @@ Update `serverInstructions` to mention auto-summary:
 
 ### 5.2 Extension Changes
 
-**Modify: `src/background/browser-actions.ts`**
+**Modify: `src/background/exec/browser-actions.ts`**
 
 After successful navigation (post-`waitForTabLoad`, post-500ms delay, post-content-script-ping), check for `summary_script` in params:
 
@@ -385,7 +385,7 @@ if (params.summary_script) {
 | `cmd/browser-agent/tools_analyze.go` | Modify — use `fullSummaryScript()` | -165, +3 |
 | `cmd/browser-agent/tools_schema.go` | Modify — add `summary` param | +4 |
 | `cmd/browser-agent/handler.go` | Modify — update serverInstructions | +2 |
-| `src/background/browser-actions.ts` | Modify — run summary_script after nav | +20 |
+| `src/background/exec/browser-actions.ts` | Modify — run summary_script after nav | +20 |
 
 ---
 

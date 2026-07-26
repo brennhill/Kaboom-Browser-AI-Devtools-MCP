@@ -208,5 +208,5 @@ last_verified_date: 2026-03-05
 - `cmd/browser-agent/codegen.go` — Existing Playwright generation to extend
 - `cmd/browser-agent/tools_core.go` — Tool dispatch and response helpers
 - `cmd/browser-agent/queries.go` — Pending query infrastructure
-- `extension/lib/dom-queries.js` — DOM query execution
+- `extension/lib/analysis/dom-queries.js` — DOM query execution
 - `cmd/browser-agent/ai_persistence.go` — Path validation pattern

@@ -2,12 +2,12 @@
  * Purpose: Exposes the window.__kaboom developer API for programmatic access to capture capabilities, context annotations, and event buffers.
  * Docs: docs/features/feature/custom-event-api/index.md
  */
-import { setContextAnnotation, removeContextAnnotation, clearContextAnnotations, getContextAnnotations } from '../lib/context.js';
-import { computeSelectors, recordEnhancedAction, getEnhancedActionBuffer, clearEnhancedActionBuffer, generatePlaywrightScript } from '../lib/reproduction.js';
-import { getActionBuffer, clearActionBuffer, setActionCaptureEnabled } from '../lib/actions.js';
-import { getNetworkWaterfall, setNetworkWaterfallEnabled } from '../lib/network.js';
-import { getPerformanceMarks, getPerformanceMeasures, setPerformanceMarksEnabled } from '../lib/performance.js';
-import { enrichErrorWithAiContext, setAiContextEnabled, setAiContextStateSnapshot } from '../lib/ai-context.js';
+import { setContextAnnotation, removeContextAnnotation, clearContextAnnotations, getContextAnnotations } from '../lib/page/context.js';
+import { computeSelectors, recordEnhancedAction, getEnhancedActionBuffer, clearEnhancedActionBuffer, generatePlaywrightScript } from '../lib/page/reproduction.js';
+import { getActionBuffer, clearActionBuffer, setActionCaptureEnabled } from '../lib/page/actions.js';
+import { getNetworkWaterfall, setNetworkWaterfallEnabled } from '../lib/net/network.js';
+import { getPerformanceMarks, getPerformanceMeasures, setPerformanceMarksEnabled } from '../lib/analysis/performance.js';
+import { enrichErrorWithAiContext, setAiContextEnabled, setAiContextStateSnapshot } from '../lib/ai-context/ai-context.js';
 function setWithNativeSetter(element, proto, prop, val) {
     const setter = Object.getOwnPropertyDescriptor(proto.prototype, prop)?.set;
     if (setter)

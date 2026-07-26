@@ -7,7 +7,7 @@
 // Delegates to command modules registered in commands/.
 
 import type { PendingQuery } from '../types/index.js'
-import type { SyncClient } from './sync-client.js'
+import type { SyncClient } from './sync/sync-client.js'
 import { dispatch } from './commands/registry.js'
 
 // Import command modules to trigger handler registration

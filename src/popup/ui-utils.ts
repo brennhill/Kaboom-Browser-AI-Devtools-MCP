@@ -23,4 +23,4 @@ export function formatFileSize(bytes: number): string {
 // Canonical internal-URL predicate lives in lib/internal-url so the popup, the
 // background, and the shared tracking core cannot drift. Re-exported here to keep
 // existing popup importers working.
-export { isInternalUrl } from '../lib/internal-url.js'
+export { isInternalUrl } from '../lib/tabs/internal-url.js'

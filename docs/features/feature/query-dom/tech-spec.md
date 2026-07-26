@@ -24,7 +24,7 @@ last_verified_date: 2026-03-05
 1. `src/background/pending-queries.ts` handles `query.type === 'dom'`.
 2. Background sends `DOM_QUERY` to content script.
 3. Content relays `KABOOM_DOM_QUERY` to inject script.
-4. Inject executes `executeDOMQuery` from `src/lib/dom-queries.ts`.
+4. Inject executes `executeDOMQuery` from `src/lib/analysis/dom-queries.ts`.
 5. Result returns through sync command-results channel.
 
 ## Frame Support
@@ -47,4 +47,4 @@ last_verified_date: 2026-03-05
 - `src/background/pending-queries.ts`
 - `src/content/message-handlers.ts`
 - `src/inject/message-handlers.ts`
-- `src/lib/dom-queries.ts`
+- `src/lib/analysis/dom-queries.ts`

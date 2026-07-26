@@ -4,10 +4,10 @@ feature_id: feature-reproduction-scripts
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-26
 code_paths:
   - cmd/browser-agent/reproduction.go
-  - src/lib/reproduction.ts
+  - src/lib/page/reproduction.ts
 test_paths: []
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05

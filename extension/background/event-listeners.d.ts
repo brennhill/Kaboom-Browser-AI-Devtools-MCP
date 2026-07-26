@@ -2,11 +2,11 @@
  * Purpose: Installs Chrome extension event listeners (alarms, tab lifecycle, storage changes, runtime startup) and re-exports keyboard shortcuts, context menus, and tab-state accessors.
  * Docs: docs/features/feature/tab-tracking-ux/index.md
  */
-export { installDrawModeCommandListener, installRecordingShortcutCommandListener, installScreenRecordingCommandListener, installTerminalPanelCommandListener } from './keyboard-shortcuts.js';
-export type { RecordingShortcutHandlers, ScreenRecordingHandlers } from './keyboard-shortcuts.js';
-export { installContextMenus } from './context-menus.js';
-export { pingContentScript, waitForTabLoad, forwardToAllContentScripts, loadSavedSettings, loadAiWebPilotState, loadDebugModeState, saveSetting, getTrackedTabInfo, clearTrackedTab, getActiveTab, sendTabToast } from './tab-state.js';
-export type { SavedSettings, TrackedTabInfo } from './tab-state.js';
+export { installDrawModeCommandListener, installRecordingShortcutCommandListener, installScreenRecordingCommandListener, installTerminalPanelCommandListener } from './ui/keyboard-shortcuts.js';
+export type { RecordingShortcutHandlers, ScreenRecordingHandlers } from './ui/keyboard-shortcuts.js';
+export { installContextMenus } from './ui/context-menus.js';
+export { pingContentScript, waitForTabLoad, forwardToAllContentScripts, loadSavedSettings, loadAiWebPilotState, loadDebugModeState, saveSetting, getTrackedTabInfo, clearTrackedTab, getActiveTab, sendTabToast } from './ui/tab-state.js';
+export type { SavedSettings, TrackedTabInfo } from './ui/tab-state.js';
 declare const ALARM_NAMES: {
     readonly RECONNECT: "reconnect";
     readonly ERROR_GROUP_FLUSH: "errorGroupFlush";

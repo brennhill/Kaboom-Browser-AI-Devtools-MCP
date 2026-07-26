@@ -58,7 +58,7 @@ import {
   getSourceMapCacheEntry,
   getSourceMapCacheSize,
   clearSourceMapCache
-} from '../../extension/background/cache-limits.js'
+} from '../../extension/background/caches/cache-limits.js'
 
 // =============================================================================
 // HELPER: create a minimal BufferState for memory estimation

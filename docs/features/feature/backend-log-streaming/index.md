@@ -4,7 +4,7 @@ feature_id: feature-backend-log-streaming
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-24
+last_reviewed: 2026-07-26
 code_paths:
   - internal/capture/accessor.go
   - internal/capture/buffer_clear.go
@@ -50,14 +50,14 @@ code_paths:
   - internal/capture/types.go
   - internal/capture/websocket-types.go
   - internal/capture/websocket.go
-  - src/background/server.ts
+  - src/background/sync/server.ts
   - src/background/index.ts
-  - src/background/sync-client.ts
+  - src/background/sync/sync-client.ts
   - src/lib/daemon-http.ts
-  - src/lib/network.ts
-  - src/lib/websocket.ts
+  - src/lib/net/network.ts
+  - src/lib/net/websocket.ts
   - src/early-patch.ts
-  - src/lib/safe-global-patch.ts
+  - src/lib/page/safe-global-patch.ts
 test_paths:
   - internal/capture/sync_test.go
   - internal/capture/sync_test_helpers_test.go
@@ -102,4 +102,4 @@ last_verified_date: 2026-04-13
 - `internal/capture/sync_test_helpers_test.go` centralizes `/sync` request marshaling, transport dispatch, and response decoding helpers.
 - `internal/capture/sync_test.go` now reuses those helpers across heartbeat, adaptive polling, and command lifecycle tests.
 - Additional capture contract tests (`settings_path_test`, `coverage_gaps_part2_test`, `api_contract_test`) now reuse shared helper assertions to keep endpoint/status checks consistent.
-- `src/background/server.ts` now treats popup/background `connected` as daemon-confirmed heartbeat state instead of raw `/health` reachability.
+- `src/background/sync/server.ts` now treats popup/background `connected` as daemon-confirmed heartbeat state instead of raw `/health` reachability.

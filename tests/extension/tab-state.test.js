@@ -16,7 +16,7 @@ import {
   getAllConfigSettings,
   getActiveTab,
   sendTabToast
-} from '../../extension/background/tab-state.js'
+} from '../../extension/background/ui/tab-state.js'
 
 function createChromeMock() {
   return {

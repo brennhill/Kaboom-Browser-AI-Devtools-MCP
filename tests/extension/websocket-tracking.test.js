@@ -16,7 +16,7 @@ import {
   setWebSocketCaptureModeInternal,
   getWebSocketCaptureModeInternal,
   resetCaptureModeForTesting
-} from '../../extension/lib/websocket-tracking.js'
+} from '../../extension/lib/net/websocket-tracking.js'
 
 // =============================================================================
 // getSize()

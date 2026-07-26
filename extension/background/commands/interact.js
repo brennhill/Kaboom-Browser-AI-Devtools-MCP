@@ -9,10 +9,10 @@
 import { isAiWebPilotEnabled } from '../state.js';
 import { executeDOMAction } from '../dom/dom-dispatch.js';
 import { executeCDPAction } from '../dom/cdp/cdp-dispatch.js';
-import { executeUpload } from '../upload-handler.js';
+import { executeUpload } from '../exec/upload-handler.js';
 import { startRecording, stopRecording } from '../recording/index.js';
-import { executeWithWorldRouting } from '../query-execution.js';
-import { handleBrowserAction, handleAsyncBrowserAction, handleAsyncExecuteCommand } from '../browser-actions.js';
+import { executeWithWorldRouting } from '../exec/query-execution.js';
+import { handleBrowserAction, handleAsyncBrowserAction, handleAsyncExecuteCommand } from '../exec/browser-actions.js';
 import { saveStateSnapshot, loadStateSnapshot, listStateSnapshots, deleteStateSnapshot } from '../message-handlers.js';
 import { registerCommand } from './registry.js';
 import { requireAiWebPilot, isContentScriptUnreachableError } from './helpers.js';

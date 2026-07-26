@@ -16,7 +16,7 @@ import {
   setAiContextEnabled,
   setAiContextStateSnapshot,
   resetEnrichmentForTesting
-} from '../../extension/lib/ai-context-enrichment.js'
+} from '../../extension/lib/ai-context/ai-context-enrichment.js'
 
 // =============================================================================
 // FRAMEWORK DETECTION

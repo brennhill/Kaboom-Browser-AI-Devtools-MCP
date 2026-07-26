@@ -20,7 +20,7 @@ Use this as a hard checklist during design, coding, and review.
   - `src/background/commands/registry.ts`
   - `src/background/commands/helpers.ts`
 - Frame-target handling:
-  - `src/background/frame-targeting.ts`
+  - `src/background/exec/frame-targeting.ts`
 - Shared test helpers:
   - `internal/pagination/test_helpers_test.go`
   - `internal/capture/sync_test_helpers_test.go`

@@ -42,7 +42,7 @@ The MCP server runs **on your own machine**. No cloud service, no external APIs,
 - API keys, tokens, secrets → `[redacted]`
 
 **Implementation:**
-- `extension/lib/serialize.js` (lines 107-134): Sensitive input detection
+- `extension/lib/page/serialize.js` (lines 107-134): Sensitive input detection
 - `extension/lib/constants.js` (lines 10-17, 39): Header sanitization
 - Checks input `type`, `autocomplete`, and `name` attributes
 - Filters headers matching: `*token*`, `*secret*`, `*key*`, `*password*`
@@ -195,8 +195,8 @@ lsof -i -n -P | grep kaboom
 
 **What you can inspect:**
 - `extension/manifest.json` - Permissions requested
-- `extension/background/server.js` - Where data is sent (localhost only)
-- `extension/lib/serialize.js` - Sensitive data redaction
+- `extension/background/sync/server.js` - Where data is sent (localhost only)
+- `extension/lib/page/serialize.js` - Sensitive data redaction
 - `extension/lib/constants.js` - Header filtering rules
 
 ### 5. User Control

@@ -13,12 +13,12 @@
 
 import type { BrowserStateSnapshot } from '../types/index.js'
 
-import { executeDOMQuery, runAxeAuditWithTimeout, type DOMQueryParams } from '../lib/dom-queries.js'
-import { checkLinkHealth } from '../lib/link-health.js'
+import { executeDOMQuery, runAxeAuditWithTimeout, type DOMQueryParams } from '../lib/analysis/dom-queries.js'
+import { checkLinkHealth } from '../lib/analysis/link-health.js'
 import { queryComputedStyles } from './computed-styles.js'
 import { discoverForms } from './form-discovery.js'
 import { extractDataTables } from './data-table.js'
-import { getNetworkWaterfall } from '../lib/network.js'
+import { getNetworkWaterfall } from '../lib/net/network.js'
 
 import { executeJavaScript } from './execute-js.js'
 import { errorMessage } from '../lib/error-utils.js'

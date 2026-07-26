@@ -25,7 +25,7 @@ function installChrome(updateReturn) {
   }
 }
 
-const { focusTabAndWindow } = await import('../../extension/lib/tab-focus.js')
+const { focusTabAndWindow } = await import('../../extension/lib/tabs/tab-focus.js')
 
 describe('focusTabAndWindow', () => {
   beforeEach(() => { mock.reset() })

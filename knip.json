@@ -6,8 +6,7 @@
     "src/inject/index.ts",
     "src/popup.ts",
     "src/options.ts",
-    "src/devtools.ts",
-    "src/offscreen-recording.ts"
+    "src/offscreen/recording-worker.ts"
   ],
   "project": ["src/**/*.ts"],
   "ignore": [

@@ -25,9 +25,9 @@ import { EXTENSION_SESSION_ID } from './background/state.js';
 // === PUBLIC API: CONSTANTS (Test & Init)
 // =============================================================================
 // Memory enforcement constants
-export { MEMORY_SOFT_LIMIT, MEMORY_HARD_LIMIT, MEMORY_CHECK_INTERVAL_MS, MEMORY_AVG_LOG_ENTRY_SIZE, MEMORY_AVG_WS_EVENT_SIZE, MEMORY_AVG_NETWORK_BODY_SIZE, MEMORY_AVG_ACTION_SIZE } from './background/state-manager.js';
+export { MEMORY_SOFT_LIMIT, MEMORY_HARD_LIMIT, MEMORY_CHECK_INTERVAL_MS, MEMORY_AVG_LOG_ENTRY_SIZE, MEMORY_AVG_WS_EVENT_SIZE, MEMORY_AVG_NETWORK_BODY_SIZE, MEMORY_AVG_ACTION_SIZE } from './background/caches/state-manager.js';
 // Rate limiting constants
-export { RATE_LIMIT_CONFIG } from './background/communication.js';
+export { RATE_LIMIT_CONFIG } from './background/sync/communication.js';
 // =============================================================================
 // === PUBLIC API: CORE STATE
 // =============================================================================
@@ -49,7 +49,7 @@ export { applyCaptureOverrides } from './background/state.js';
 // =============================================================================
 // === PUBLIC API: VERSION CHECKING
 // =============================================================================
-export { getExtensionVersion, isNewVersionAvailable, getAvailableVersion, updateVersionFromHealth, updateVersionBadge, getUpdateInfo, resetVersionCheck } from './background/version-check.js';
+export { getExtensionVersion, isNewVersionAvailable, getAvailableVersion, updateVersionFromHealth, updateVersionBadge, getUpdateInfo, resetVersionCheck } from './background/sync/version-check.js';
 // =============================================================================
 // === PUBLIC API: PENDING QUERIES & PILOT
 // =============================================================================
@@ -59,17 +59,17 @@ export { isAiWebPilotEnabled, markInitComplete } from './background/state.js';
 // === PUBLIC API: STATE MANAGEMENT (Tests, Initialization)
 // =============================================================================
 // Error and memory management
-export { createErrorSignature, processErrorGroup, flushErrorGroups, cleanupStaleErrorGroups, canTakeScreenshot, recordScreenshot, estimateBufferMemory, checkMemoryPressure, getMemoryPressureState, resetMemoryPressureState, getProcessingQueriesState, cleanupStaleProcessingQueries } from './background/state-manager.js';
+export { createErrorSignature, processErrorGroup, flushErrorGroups, cleanupStaleErrorGroups, canTakeScreenshot, recordScreenshot, estimateBufferMemory, checkMemoryPressure, getMemoryPressureState, resetMemoryPressureState, getProcessingQueriesState, cleanupStaleProcessingQueries } from './background/caches/state-manager.js';
 // Context and annotations
-export { measureContextSize, checkContextAnnotations, getContextWarning, resetContextWarning } from './background/state-manager.js';
+export { measureContextSize, checkContextAnnotations, getContextWarning, resetContextWarning } from './background/caches/state-manager.js';
 // Source map management
-export { setSourceMapEnabled, isSourceMapEnabled, clearSourceMapCache } from './background/state-manager.js';
+export { setSourceMapEnabled, isSourceMapEnabled, clearSourceMapCache } from './background/caches/state-manager.js';
 // Cache limits and source map cache
-export { SOURCE_MAP_CACHE_SIZE, setSourceMapCacheEntry, getSourceMapCacheEntry, getSourceMapCacheSize } from './background/cache-limits.js';
+export { SOURCE_MAP_CACHE_SIZE, setSourceMapCacheEntry, getSourceMapCacheEntry, getSourceMapCacheSize } from './background/caches/cache-limits.js';
 // =============================================================================
 // === PUBLIC API: COMMUNICATION (Tests)
 // =============================================================================
-export { createCircuitBreaker, createBatcherWithCircuitBreaker, createLogBatcher, sendLogsToServer, sendEnhancedActionsToServer, checkServerHealth, updateBadge, formatLogEntry, shouldCaptureLog } from './background/communication.js';
+export { createCircuitBreaker, createBatcherWithCircuitBreaker, createLogBatcher, sendLogsToServer, sendEnhancedActionsToServer, checkServerHealth, updateBadge, formatLogEntry, shouldCaptureLog } from './background/sync/communication.js';
 // =============================================================================
 // === PUBLIC API: STATE SNAPSHOTS (Initialization)
 // =============================================================================

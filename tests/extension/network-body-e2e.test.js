@@ -187,7 +187,7 @@ describe('Network Body E2E Tests', async () => {
         return
       }
 
-      const { truncateResponseBody } = await import('../../extension/lib/network.js')
+      const { truncateResponseBody } = await import('../../extension/lib/net/network.js')
 
       // Make actual request to get large JSON
       const res = await makeRequest('/large-json')
@@ -208,7 +208,7 @@ describe('Network Body E2E Tests', async () => {
         return
       }
 
-      const { truncateResponseBody } = await import('../../extension/lib/network.js')
+      const { truncateResponseBody } = await import('../../extension/lib/net/network.js')
 
       const res = await makeRequest('/large-text')
       assert.strictEqual(res.status, 200)
@@ -225,7 +225,7 @@ describe('Network Body E2E Tests', async () => {
         return
       }
 
-      const { truncateResponseBody } = await import('../../extension/lib/network.js')
+      const { truncateResponseBody } = await import('../../extension/lib/net/network.js')
 
       const res = await makeRequest('/json')
       assert.strictEqual(res.status, 200)
@@ -242,7 +242,7 @@ describe('Network Body E2E Tests', async () => {
         return
       }
 
-      const { truncateRequestBody } = await import('../../extension/lib/network.js')
+      const { truncateRequestBody } = await import('../../extension/lib/net/network.js')
 
       // Create large request body
       const largeBody = JSON.stringify({ data: 'x'.repeat(10000) })
@@ -261,7 +261,7 @@ describe('Network Body E2E Tests', async () => {
         return
       }
 
-      const { readResponseBody } = await import('../../extension/lib/network.js')
+      const { readResponseBody } = await import('../../extension/lib/net/network.js')
 
       const res = await makeRequest('/binary', { binary: true })
       assert.strictEqual(res.status, 200)
@@ -349,7 +349,7 @@ describe('Network Body E2E Tests', async () => {
         return
       }
 
-      const { sanitizeHeaders } = await import('../../extension/lib/network.js')
+      const { sanitizeHeaders } = await import('../../extension/lib/net/network.js')
 
       const headers = {
         Authorization: 'Bearer secret-token-123',
@@ -370,7 +370,7 @@ describe('Network Body E2E Tests', async () => {
         return
       }
 
-      const { sanitizeHeaders } = await import('../../extension/lib/network.js')
+      const { sanitizeHeaders } = await import('../../extension/lib/net/network.js')
 
       const headers = {
         Cookie: 'session=abc123; token=xyz',
@@ -391,7 +391,7 @@ describe('Network Body E2E Tests', async () => {
         return
       }
 
-      const { sanitizeHeaders } = await import('../../extension/lib/network.js')
+      const { sanitizeHeaders } = await import('../../extension/lib/net/network.js')
 
       const headers = {
         'X-API-Key': 'sk_live_abc123',
@@ -414,7 +414,7 @@ describe('Network Body E2E Tests', async () => {
         return
       }
 
-      const { sanitizeHeaders } = await import('../../extension/lib/network.js')
+      const { sanitizeHeaders } = await import('../../extension/lib/net/network.js')
 
       const headers = {
         authorization: 'Bearer xyz',
@@ -434,7 +434,7 @@ describe('Network Body E2E Tests', async () => {
         return
       }
 
-      const { sanitizeHeaders } = await import('../../extension/lib/network.js')
+      const { sanitizeHeaders } = await import('../../extension/lib/net/network.js')
 
       const headers = new MockHeaders({
         authorization: 'Bearer token',
@@ -453,7 +453,7 @@ describe('Network Body E2E Tests', async () => {
         return
       }
 
-      const { sanitizeHeaders } = await import('../../extension/lib/network.js')
+      const { sanitizeHeaders } = await import('../../extension/lib/net/network.js')
 
       assert.deepStrictEqual(sanitizeHeaders(null), {})
       assert.deepStrictEqual(sanitizeHeaders(undefined), {})
@@ -485,7 +485,7 @@ describe('Network Body E2E Tests', async () => {
         return
       }
 
-      const { wrapFetchWithBodies, setNetworkBodyCaptureEnabled } = await import('../../extension/lib/network.js')
+      const { wrapFetchWithBodies, setNetworkBodyCaptureEnabled } = await import('../../extension/lib/net/network.js')
 
       // Enable body capture
       setNetworkBodyCaptureEnabled(true)
@@ -596,7 +596,7 @@ describe('Network Body E2E Tests', async () => {
         return
       }
 
-      const { readResponseBodyWithTimeout } = await import('../../extension/lib/network.js')
+      const { readResponseBodyWithTimeout } = await import('../../extension/lib/net/network.js')
 
       // Create a slow response that takes longer than timeout
       const slowResponse = {
@@ -617,7 +617,7 @@ describe('Network Body E2E Tests', async () => {
         return
       }
 
-      const { readResponseBodyWithTimeout } = await import('../../extension/lib/network.js')
+      const { readResponseBodyWithTimeout } = await import('../../extension/lib/net/network.js')
 
       const fastResponse = {
         headers: new MockHeaders({ 'content-type': 'application/json' }),
@@ -678,7 +678,7 @@ describe('Network Body E2E Tests', async () => {
         return
       }
 
-      const { wrapFetchWithBodies, setNetworkBodyCaptureEnabled } = await import('../../extension/lib/network.js')
+      const { wrapFetchWithBodies, setNetworkBodyCaptureEnabled } = await import('../../extension/lib/net/network.js')
 
       setNetworkBodyCaptureEnabled(true)
 
@@ -702,7 +702,7 @@ describe('Network Body E2E Tests', async () => {
         return
       }
 
-      const { shouldCaptureUrl } = await import('../../extension/lib/network.js')
+      const { shouldCaptureUrl } = await import('../../extension/lib/net/network.js')
 
       assert.strictEqual(shouldCaptureUrl('http://localhost:7890/logs'), false)
       assert.strictEqual(shouldCaptureUrl('http://127.0.0.1:7890/health'), false)
@@ -714,7 +714,7 @@ describe('Network Body E2E Tests', async () => {
         return
       }
 
-      const { shouldCaptureUrl } = await import('../../extension/lib/network.js')
+      const { shouldCaptureUrl } = await import('../../extension/lib/net/network.js')
 
       assert.strictEqual(shouldCaptureUrl(`${TEST_SERVER_URL}/json`), true)
       assert.strictEqual(shouldCaptureUrl('/api/users'), true)
@@ -727,7 +727,7 @@ describe('Network Body E2E Tests', async () => {
         return
       }
 
-      const { shouldCaptureUrl } = await import('../../extension/lib/network.js')
+      const { shouldCaptureUrl } = await import('../../extension/lib/net/network.js')
 
       assert.strictEqual(shouldCaptureUrl('chrome-extension://abc123/lib/axe.min.js'), false)
     })
@@ -740,7 +740,7 @@ describe('Network Body E2E Tests', async () => {
         return
       }
 
-      const { wrapFetchWithBodies, setNetworkBodyCaptureEnabled } = await import('../../extension/lib/network.js')
+      const { wrapFetchWithBodies, setNetworkBodyCaptureEnabled } = await import('../../extension/lib/net/network.js')
 
       setNetworkBodyCaptureEnabled(true)
 
@@ -770,7 +770,7 @@ describe('Network Body E2E Tests', async () => {
         return
       }
 
-      const { wrapFetchWithBodies } = await import('../../extension/lib/network.js')
+      const { wrapFetchWithBodies } = await import('../../extension/lib/net/network.js')
 
       // Create a response with a slow body read
       const slowMockResponse = {
@@ -800,7 +800,7 @@ describe('Network Body E2E Tests', async () => {
         return
       }
 
-      const { wrapFetchWithBodies, setNetworkBodyCaptureEnabled } = await import('../../extension/lib/network.js')
+      const { wrapFetchWithBodies, setNetworkBodyCaptureEnabled } = await import('../../extension/lib/net/network.js')
 
       setNetworkBodyCaptureEnabled(true)
       capturedEvents = []

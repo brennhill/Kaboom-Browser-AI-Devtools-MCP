@@ -6,7 +6,7 @@
 // Types, result helpers, target resolution, action toast, and constants.
 
 import type { PendingQuery } from '../../types/index.js'
-import type { SyncClient } from '../sync-client.js'
+import type { SyncClient } from '../sync/sync-client.js'
 import { getTrackedTabInfo, clearTrackedTab, getActiveTab } from '../event-listeners.js'
 import { DebugCategory } from '../debug.js'
 import { isAiWebPilotEnabled } from '../state.js'
@@ -14,7 +14,7 @@ import { KABOOM_LOG_PREFIX } from '../../lib/brand.js'
 import { errorMessage, isNoReceiverError } from '../../lib/error-utils.js'
 import { delay } from '../../lib/timeout-utils.js'
 import { setLocals } from '../../lib/storage-utils.js'
-import { isInternalUrl } from '../../lib/internal-url.js'
+import { isInternalUrl } from '../../lib/tabs/internal-url.js'
 
 // =============================================================================
 // EXPORTED TYPE ALIASES (used by browser-actions.ts, dom-dispatch.ts, etc.)

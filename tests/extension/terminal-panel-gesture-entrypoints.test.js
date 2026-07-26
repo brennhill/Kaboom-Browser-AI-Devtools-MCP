@@ -70,7 +70,7 @@ describe('terminal side panel gesture-native entry points', () => {
 
   test('the keyboard command opens the panel on the tab Chrome hands the listener', async () => {
     const { installTerminalPanelCommandListener } = await import(
-      `../../extension/background/keyboard-shortcuts.js?v=${++importCounter}`
+      `../../extension/background/ui/keyboard-shortcuts.js?v=${++importCounter}`
     )
     installTerminalPanelCommandListener()
     assert.ok(commandListener, 'expected a commands.onCommand listener')
@@ -83,7 +83,7 @@ describe('terminal side panel gesture-native entry points', () => {
 
   test('the keyboard command ignores unrelated commands', async () => {
     const { installTerminalPanelCommandListener } = await import(
-      `../../extension/background/keyboard-shortcuts.js?v=${++importCounter}`
+      `../../extension/background/ui/keyboard-shortcuts.js?v=${++importCounter}`
     )
     installTerminalPanelCommandListener()
 
@@ -101,7 +101,7 @@ describe('terminal side panel gesture-native entry points', () => {
       addListener: mock.fn((fn) => { connectListener = fn })
     }
 
-    const termPanel = await import('../../extension/background/terminal-panel.js')
+    const termPanel = await import('../../extension/background/ui/terminal-panel.js')
     termPanel.watchTerminalPanelState()
 
     const posted = []
@@ -114,7 +114,7 @@ describe('terminal side panel gesture-native entry points', () => {
     assert.strictEqual(termPanel.isTerminalPanelOpenSync(), true, 'port connect marks the panel open')
 
     const { installTerminalPanelCommandListener } = await import(
-      `../../extension/background/keyboard-shortcuts.js?v=${++importCounter}`
+      `../../extension/background/ui/keyboard-shortcuts.js?v=${++importCounter}`
     )
     installTerminalPanelCommandListener()
     await commandListener('open_terminal_panel', { id: 42 })
@@ -140,7 +140,7 @@ describe('terminal side panel gesture-native entry points', () => {
     sidePanelOpen = mock.fn(async ({ tabId }) => { order.push('open'); openCalls.push(tabId) })
 
     const { openTerminalSidePanel } = await import(
-      `../../extension/background/terminal-panel.js?v=${++importCounter}`
+      `../../extension/background/ui/terminal-panel.js?v=${++importCounter}`
     )
     const pending = openTerminalSidePanel(42) // deliberately not awaited yet
 
@@ -154,7 +154,7 @@ describe('terminal side panel gesture-native entry points', () => {
       throw new Error('`sidePanel.open()` may only be called in response to a user gesture.')
     })
     const { openTerminalSidePanel } = await import(
-      `../../extension/background/terminal-panel.js?v=${++importCounter}`
+      `../../extension/background/ui/terminal-panel.js?v=${++importCounter}`
     )
 
     const result = await openTerminalSidePanel(42)

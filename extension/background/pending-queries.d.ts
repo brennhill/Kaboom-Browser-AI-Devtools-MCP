@@ -3,7 +3,7 @@
  * Why: Decouples query routing from handler implementations to keep the dispatch table extensible.
  */
 import type { PendingQuery } from '../types/index.js';
-import type { SyncClient } from './sync-client.js';
+import type { SyncClient } from './sync/sync-client.js';
 import './commands/observe.js';
 import './commands/analyze.js';
 import './commands/analyze-navigation.js';

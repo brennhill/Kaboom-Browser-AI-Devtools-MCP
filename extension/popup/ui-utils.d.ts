@@ -11,5 +11,5 @@
  * Format bytes into human-readable file size
  */
 export declare function formatFileSize(bytes: number): string;
-export { isInternalUrl } from '../lib/internal-url.js';
+export { isInternalUrl } from '../lib/tabs/internal-url.js';
 //# sourceMappingURL=ui-utils.d.ts.map

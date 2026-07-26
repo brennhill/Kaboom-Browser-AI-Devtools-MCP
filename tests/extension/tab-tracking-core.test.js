@@ -49,7 +49,7 @@ function buildChrome() {
   }
 }
 
-const { trackTab, untrackTab } = await import('../../extension/lib/tab-tracking-core.js')
+const { trackTab, untrackTab } = await import('../../extension/lib/tabs/tab-tracking-core.js')
 
 describe('shared tab-tracking core (F2 guards)', () => {
   beforeEach(() => {

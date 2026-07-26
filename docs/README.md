@@ -31,7 +31,7 @@ last-verified: 2026-02-17
 - Tool schemas: `cmd/browser-agent/tools_schema.go`
 - Tool dispatch: `cmd/browser-agent/tools_core.go`
 - Extension background runtime: `src/background/index.ts`
-- Extension sync client: `src/background/sync-client.ts`
+- Extension sync client: `src/background/sync/sync-client.ts`
 
 ## Notes
 - The codebase is the ground truth.

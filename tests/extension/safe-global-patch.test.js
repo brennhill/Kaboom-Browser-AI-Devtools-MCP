@@ -11,7 +11,7 @@
 
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
-import { safeAssignGlobal } from '../../extension/lib/safe-global-patch.js'
+import { safeAssignGlobal } from '../../extension/lib/page/safe-global-patch.js'
 
 describe('safeAssignGlobal', () => {
   test('assigns a normal writable property', () => {

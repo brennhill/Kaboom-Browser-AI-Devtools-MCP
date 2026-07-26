@@ -4,15 +4,15 @@ feature_id: feature-flow-recording
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-25
+last_reviewed: 2026-07-26
 code_paths:
   - src/background/recording/index.ts
   - src/background/recording/capture.ts
   - src/background/recording/listeners.ts
-  - src/background/keyboard-shortcuts.ts
-  - src/background/context-menus.ts
+  - src/background/ui/keyboard-shortcuts.ts
+  - src/background/ui/context-menus.ts
   - src/background/recording/utils.ts
-  - src/background/draw-mode-toggle.ts
+  - src/background/ui/draw-mode-toggle.ts
   - src/offscreen/recording-worker.ts
   - src/popup/action-recording.ts
   - src/popup/recording.ts
@@ -59,8 +59,8 @@ last_verified_date: 2026-03-05
   - `src/background/recording/index.ts`
   - `src/background/recording/capture.ts`
   - `src/background/recording/listeners.ts`
-  - `src/background/keyboard-shortcuts.ts`
-  - `src/background/context-menus.ts`
+  - `src/background/ui/keyboard-shortcuts.ts`
+  - `src/background/ui/context-menus.ts`
   - `src/background/recording/utils.ts`
   - `src/offscreen/recording-worker.ts`
   - `src/popup/recording.ts`

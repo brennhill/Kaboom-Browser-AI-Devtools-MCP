@@ -11,8 +11,8 @@
 
 import { getTrackedTabLostToastDetail, KABOOM_LOG_PREFIX } from '../lib/brand.js'
 import { beacon } from '../lib/telemetry-beacon.js'
-import { syncTerminalPanelAvailability } from './side-panel-availability.js'
-import { watchTerminalPanelState } from './terminal-panel.js'
+import { syncTerminalPanelAvailability } from './ui/side-panel-availability.js'
+import { watchTerminalPanelState } from './ui/terminal-panel.js'
 import {
   debugLog,
   DebugCategory,
@@ -60,7 +60,7 @@ import {
   flushErrorGroups,
   cleanupStaleErrorGroups,
   clearScreenshotTimestamps
-} from './state-manager.js'
+} from './caches/state-manager.js'
 import {
   loadDebugModeState,
   installStartupListener,
@@ -87,9 +87,9 @@ import { installPushCommandListener, installChatCommandListener } from './push-h
 import { isRecording, startRecording, stopRecording, initRecording } from './recording/index.js'
 import type { MessageHandlerDependencies } from './message-handlers.js'
 import { installMessageListener, broadcastTrackingState } from './message-handlers.js'
-import { captureScreenshot, updateBadge } from './communication.js'
+import { captureScreenshot, updateBadge } from './sync/communication.js'
 import { wasServiceWorkerRestarted, markStateVersion, setSessionAccessLevel, setLocal, getLocal } from '../lib/storage-utils.js'
-import { loadServerInstallId } from './sync-client.js'
+import { loadServerInstallId } from './sync/sync-client.js'
 
 /**
  * Initialize the extension on startup

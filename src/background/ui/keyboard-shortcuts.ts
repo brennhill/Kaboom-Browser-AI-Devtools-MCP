@@ -1,0 +1,255 @@
+/**
+ * Purpose: Keyboard shortcut listeners for draw mode, action-sequence recording, and screen recording.
+ * Split from event-listeners.ts to keep files under 800 LOC.
+ */
+
+// =============================================================================
+// RECORDING SHORTCUT TYPES & HELPERS
+// =============================================================================
+
+import { errorMessage } from '../../lib/error-utils.js'
+import { getActiveTab, sendTabToast } from '../event-listeners.js'
+import { toggleDrawModeForTab } from './draw-mode-toggle.js'
+import { buildScreenRecordingSlug } from '../recording/utils.js'
+import { trackUIFeature } from './ui-usage-tracker.js'
+import { toggleTerminalSidePanel } from './terminal-panel.js'
+export interface RecordingShortcutHandlers {
+  isRecording: () => boolean
+  startRecording: (
+    name: string,
+    fps?: number,
+    queryId?: string,
+    audio?: string,
+    fromPopup?: boolean,
+    targetTabId?: number
+  ) => Promise<{ status: string; error?: string }>
+  stopRecording: (truncated?: boolean) => Promise<{ status: string; error?: string }>
+}
+
+export function buildActionSequenceRecordingName(now: Date = new Date()): string {
+  const yyyy = now.getFullYear()
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+  const dd = String(now.getDate()).padStart(2, '0')
+  const hh = String(now.getHours()).padStart(2, '0')
+  const min = String(now.getMinutes()).padStart(2, '0')
+  const ss = String(now.getSeconds()).padStart(2, '0')
+  return `action-sequence--${yyyy}-${mm}-${dd}-${hh}${min}${ss}`
+}
+
+/**
+ * Toggle action-sequence (event/workflow) recording.
+ *
+ * One helper for every UI entry point (keyboard shortcut, context menu, repo
+ * rule 19). The context menu previously copy-inlined this and, in doing so,
+ * skipped both the usage tracking and the failure toasts — so a start/stop that
+ * failed from the menu was completely silent. Centralizing means neither can
+ * drift: both count `action_recording` and surface the same error toasts.
+ */
+export async function toggleActionSequenceRecording(
+  handlers: RecordingShortcutHandlers,
+  tab: chrome.tabs.Tab,
+  logFn?: (message: string) => void
+): Promise<void> {
+  if (!tab.id) return
+  trackUIFeature('action_recording')
+
+  if (handlers.isRecording()) {
+    const stopResult = await handlers.stopRecording(false)
+    if (stopResult.status !== 'saved' && stopResult.status !== 'stopped') {
+      sendTabToast(
+        tab.id,
+        'Stop recording failed',
+        stopResult.error || 'Could not stop action sequence recording',
+        'error',
+        3500
+      )
+      if (logFn) logFn(`Action recording stop failed: ${stopResult.error ?? 'unknown error'}`)
+    }
+    return
+  }
+
+  const name = buildActionSequenceRecordingName()
+  const startResult = await handlers.startRecording(name, 15, '', '', true, tab.id)
+  if (startResult.status !== 'recording') {
+    sendTabToast(
+      tab.id,
+      'Start recording failed',
+      startResult.error || 'Open the extension popup and try Record action sequence',
+      'error',
+      3500
+    )
+    if (logFn) logFn(`Action recording start failed: ${startResult.error ?? 'unknown error'}`)
+  }
+}
+
+// =============================================================================
+// SCREEN RECORDING TYPES & HELPERS
+// =============================================================================
+
+export interface ScreenRecordingHandlers {
+  isRecording: () => boolean
+  startRecording: (
+    name: string,
+    fps?: number,
+    queryId?: string,
+    audio?: string,
+    fromPopup?: boolean,
+    targetTabId?: number
+  ) => Promise<{ status: string; name: string; startTime?: number; error?: string }>
+  stopRecording: (truncated?: boolean) => Promise<{
+    status: string
+    name: string
+    duration_seconds?: number
+    size_bytes?: number
+    truncated?: boolean
+    path?: string
+    error?: string
+  }>
+}
+
+export async function toggleScreenRecording(
+  handlers: ScreenRecordingHandlers,
+  tab: chrome.tabs.Tab,
+  logFn?: (message: string) => void
+): Promise<void> {
+  if (handlers.isRecording()) {
+    const result = await handlers.stopRecording()
+    if (result.status === 'saved') {
+      sendTabToast(tab.id!, 'Recording saved', result.name || '', 'success', 3000)
+    }
+    return
+  }
+
+  const slug = buildScreenRecordingSlug(tab.url)
+  const result = await handlers.startRecording(slug, 15, '', '', true, tab.id)
+  if (result.status !== 'recording' && tab.id) {
+    sendTabToast(tab.id, 'Recording failed', result.error || 'Could not start screen recording', 'error', 4000)
+    if (logFn) logFn(`Screen recording start failed: ${result.error}`)
+  }
+}
+
+// =============================================================================
+// DRAW MODE KEYBOARD SHORTCUT
+// =============================================================================
+
+/**
+ * Install keyboard shortcut listener for draw mode toggle (Ctrl+Shift+D / Cmd+Shift+D).
+ * Sends KABOOM_DRAW_MODE_START or KABOOM_DRAW_MODE_STOP to the active tab's content script.
+ */
+export function installDrawModeCommandListener(logFn?: (message: string) => void): void {
+  if (typeof chrome === 'undefined' || !chrome.commands) return
+
+  chrome.commands.onCommand.addListener(async (command: string) => {
+    if (command !== 'toggle_draw_mode') return
+
+    try {
+      const tab = await getActiveTab()
+      if (!tab?.id) return
+
+      try {
+        trackUIFeature('annotations')
+        await toggleDrawModeForTab(tab.id)
+      } catch {
+        if (logFn) logFn('Cannot reach content script for draw mode toggle')
+        sendTabToast(tab.id, 'Draw mode unavailable', 'Refresh the page and try again', 'error', 3000)
+      }
+    } catch (err) {
+      if (logFn) logFn(`Draw mode keyboard shortcut error: ${errorMessage(err)}`)
+    }
+  })
+}
+
+// =============================================================================
+// TERMINAL SIDE PANEL SHORTCUT
+// =============================================================================
+
+/**
+ * Install the keyboard shortcut that toggles the terminal side panel
+ * (`open_terminal_panel` in the manifest).
+ *
+ * Toggle, not open-only, so this shares the exact behavior of the context menu:
+ * both route through `toggleTerminalSidePanel` (repo rule 19). Pressing the key
+ * again closes a panel that is up, and the shared helper is the single place that
+ * decides open-vs-close — no entry point re-implements it.
+ *
+ * The command ships UNBOUND on purpose: Chrome refuses to load a manifest with
+ * more than four commands carrying a `suggested_key`, and four are already
+ * taken. Users assign a key at chrome://extensions/shortcuts; until then the
+ * context menu is the zero-setup gesture-native route.
+ *
+ * Why a command and not just the in-page launcher button: `chrome.sidePanel.open()`
+ * needs an active user gesture, and Chrome grants `runtime.onMessage` listeners
+ * only a *restricted* gesture that sidePanel.open() rejects on some Chrome/Brave
+ * builds (crbug 355266358). `commands.onCommand` gets a full gesture and hands us
+ * the active tab synchronously, so this path does not depend on gesture forwarding.
+ *
+ * Nothing may be awaited before toggleTerminalSidePanel() — `tab` comes straight
+ * from the listener argument precisely so no lookup is needed, and the toggle
+ * reaches sidePanel.open() synchronously on the open path.
+ */
+export function installTerminalPanelCommandListener(logFn?: (message: string) => void): void {
+  if (typeof chrome === 'undefined' || !chrome.commands) return
+
+  chrome.commands.onCommand.addListener(async (command: string, tab?: chrome.tabs.Tab) => {
+    if (command !== 'open_terminal_panel') return
+
+    const result = await toggleTerminalSidePanel(tab?.id)
+    if (!result.success && logFn) {
+      logFn(`Terminal side panel shortcut failed: ${result.error ?? 'unknown error'}`)
+    }
+  })
+}
+
+// =============================================================================
+// ACTION-SEQUENCE RECORDING SHORTCUT
+// =============================================================================
+
+/**
+ * Install keyboard shortcut listener for action-sequence recording toggle.
+ * Shortcut is defined in manifest as `toggle_action_sequence_recording`.
+ */
+export function installRecordingShortcutCommandListener(
+  handlers: RecordingShortcutHandlers,
+  logFn?: (message: string) => void
+): void {
+  if (typeof chrome === 'undefined' || !chrome.commands) return
+
+  chrome.commands.onCommand.addListener(async (command: string) => {
+    if (command !== 'toggle_action_sequence_recording') return
+
+    try {
+      const tab = await getActiveTab()
+      if (!tab?.id) return
+      await toggleActionSequenceRecording(handlers, tab, logFn)
+    } catch (err) {
+      if (logFn) logFn(`Recording shortcut error: ${errorMessage(err)}`)
+    }
+  })
+}
+
+// =============================================================================
+// SCREEN RECORDING KEYBOARD SHORTCUT
+// =============================================================================
+
+/**
+ * Install keyboard shortcut listener for screen recording toggle (Alt+Shift+R).
+ */
+export function installScreenRecordingCommandListener(
+  handlers: ScreenRecordingHandlers,
+  logFn?: (message: string) => void
+): void {
+  if (typeof chrome === 'undefined' || !chrome.commands) return
+
+  chrome.commands.onCommand.addListener(async (command: string) => {
+    if (command !== 'toggle_screen_recording') return
+
+    try {
+      const tab = await getActiveTab()
+      if (!tab?.id) return
+      trackUIFeature('video')
+      await toggleScreenRecording(handlers, tab, logFn)
+    } catch (err) {
+      if (logFn) logFn(`Screen recording shortcut error: ${errorMessage(err)}`)
+    }
+  })
+}

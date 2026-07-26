@@ -11,7 +11,7 @@ entrypoints:
   - src/popup.ts (initPopup reshow signal)
 code_paths:
   - src/lib/brand.ts
-  - src/lib/request-audit.ts
+  - src/lib/tabs/request-audit.ts
   - src/content.ts
   - src/content/tab-tracking.ts
   - src/content/ui/tracked-hover-launcher.ts
@@ -98,7 +98,7 @@ Related feature docs:
 - `src/content.ts`
 - `src/content/tab-tracking.ts`
 - `src/content/ui/tracked-hover-launcher.ts`
-- `src/lib/request-audit.ts`
+- `src/lib/tabs/request-audit.ts`
 - `src/popup.ts`
 - `src/popup/logo-motion.ts`
 - `src/popup/tab-tracking.ts`

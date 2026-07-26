@@ -30,7 +30,7 @@ The bridge forwards JSON-RPC from stdin to the HTTP daemon. Each request gets a 
 
 **Classification logic:** `toolCallTimeout()` inspects the JSON-RPC params to determine category. Screenshot observe is classified as slow because it round-trips to the extension (sync poll + capture + upload).
 
-## Extension Sync Client (`src/background/sync-client.ts`)
+## Extension Sync Client (`src/background/sync/sync-client.ts`)
 
 | Timeout | Value | Purpose |
 |---------|-------|---------|

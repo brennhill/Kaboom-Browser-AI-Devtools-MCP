@@ -25,18 +25,18 @@ import {
   removeContextAnnotation,
   clearContextAnnotations,
   getContextAnnotations
-} from '../lib/context.js'
+} from '../lib/page/context.js'
 import {
   computeSelectors,
   recordEnhancedAction,
   getEnhancedActionBuffer,
   clearEnhancedActionBuffer,
   generatePlaywrightScript
-} from '../lib/reproduction.js'
-import { getActionBuffer, clearActionBuffer, setActionCaptureEnabled } from '../lib/actions.js'
-import { getNetworkWaterfall, setNetworkWaterfallEnabled } from '../lib/network.js'
-import { getPerformanceMarks, getPerformanceMeasures, setPerformanceMarksEnabled } from '../lib/performance.js'
-import { enrichErrorWithAiContext, setAiContextEnabled, setAiContextStateSnapshot } from '../lib/ai-context.js'
+} from '../lib/page/reproduction.js'
+import { getActionBuffer, clearActionBuffer, setActionCaptureEnabled } from '../lib/page/actions.js'
+import { getNetworkWaterfall, setNetworkWaterfallEnabled } from '../lib/net/network.js'
+import { getPerformanceMarks, getPerformanceMeasures, setPerformanceMarksEnabled } from '../lib/analysis/performance.js'
+import { enrichErrorWithAiContext, setAiContextEnabled, setAiContextStateSnapshot } from '../lib/ai-context/ai-context.js'
 
 /**
  * KaboomAPI interface exposed on window.__kaboom

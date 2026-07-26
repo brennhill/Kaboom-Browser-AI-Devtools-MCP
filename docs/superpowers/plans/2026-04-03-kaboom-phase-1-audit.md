@@ -24,7 +24,7 @@
 
 ### Shared Audit Trigger
 
-- `src/lib/request-audit.ts`
+- `src/lib/tabs/request-audit.ts`
   Why: Single helper that opens the terminal side panel and then requests the shared audit workflow.
 - `src/background/message-handlers.ts`
   Why: Keeps the existing `qa_scan_requested` bridge, but updates the injected prompt text to the new audit workflow.
@@ -98,7 +98,7 @@
 ### Task 1: Add A Shared `requestAudit` Helper
 
 **Files:**
-- Create: `src/lib/request-audit.ts`
+- Create: `src/lib/tabs/request-audit.ts`
 - Modify: `src/background/message-handlers.ts`
 - Test: `tests/extension/request-audit.test.js`
 - Test: `tests/extension/message-handlers.test.js`
@@ -140,7 +140,7 @@ Expected:
 
 - [ ] **Step 3: Write the minimal implementation**
 
-Create `src/lib/request-audit.ts` with a single helper that always tries to open the terminal first, then sends the existing audit request bridge:
+Create `src/lib/tabs/request-audit.ts` with a single helper that always tries to open the terminal first, then sends the existing audit request bridge:
 
 ```ts
 export async function requestAudit(pageUrl?: string): Promise<void> {
@@ -183,7 +183,7 @@ Expected:
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/lib/request-audit.ts src/background/message-handlers.ts tests/extension/request-audit.test.js tests/extension/message-handlers.test.js
+git add src/lib/tabs/request-audit.ts src/background/message-handlers.ts tests/extension/request-audit.test.js tests/extension/message-handlers.test.js
 git commit -m "feat: add shared audit trigger helper"
 ```
 

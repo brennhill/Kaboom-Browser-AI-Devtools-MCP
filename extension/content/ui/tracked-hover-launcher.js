@@ -5,7 +5,7 @@
  */
 import { RuntimeMessageName, StorageKey } from '../../lib/constants.js';
 import { KABOOM_DOCS_URL, KABOOM_REPOSITORY_URL } from '../../lib/brand.js';
-import { requestAudit } from '../../lib/request-audit.js';
+import { requestAudit } from '../../lib/tabs/request-audit.js';
 import { playShutterSound, primeShutterAudio, showScreenshotFlash } from './hover/screenshot-feedback.js';
 /**
  * Audit launches the QA-scan workflow through the terminal side panel. Hidden

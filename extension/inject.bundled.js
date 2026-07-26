@@ -114,7 +114,7 @@ var INJECT_FORWARDED_SETTINGS = /* @__PURE__ */ new Set([
   SettingName.SERVER_URL
 ]);
 
-// extension/lib/serialize.js
+// extension/lib/page/serialize.js
 function serializePrimitive(value, type) {
   if (type === "string") {
     const s = value;
@@ -201,7 +201,7 @@ function isSensitiveInput(element) {
 // extension/lib/brand.js
 var KABOOM_LOG_PREFIX = "[KaBOOM!]";
 
-// extension/lib/context.js
+// extension/lib/page/context.js
 var contextAnnotations = /* @__PURE__ */ new Map();
 function getContextAnnotations() {
   if (contextAnnotations.size === 0)
@@ -242,7 +242,7 @@ function clearContextAnnotations() {
   contextAnnotations.clear();
 }
 
-// extension/lib/reproduction.js
+// extension/lib/page/reproduction.js
 var enhancedActionBuffer = [];
 var TAG_TO_ROLE = {
   button: "button",
@@ -506,7 +506,7 @@ function escapeString(str) {
   return str.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t").replace(/`/g, "\\`");
 }
 
-// extension/lib/actions.js
+// extension/lib/page/actions.js
 var actionBuffer = [];
 var lastScrollTime = 0;
 var actionCaptureEnabled = true;
@@ -692,7 +692,7 @@ function uninstallNavigationCapture() {
   }
 }
 
-// extension/lib/network.js
+// extension/lib/net/network.js
 var configuredServerUrl = "";
 var networkWaterfallEnabled = false;
 var pendingRequests = /* @__PURE__ */ new Map();
@@ -1029,7 +1029,7 @@ function wrapFetchWithBodies(fetchFn) {
   };
 }
 
-// extension/lib/perf-snapshot.js
+// extension/lib/analysis/perf-snapshot.js
 var perfSnapshotEnabled = true;
 var longTaskEntries = [];
 var longTaskObserver = null;
@@ -1253,7 +1253,7 @@ function setPerformanceSnapshotEnabled(enabled) {
   perfSnapshotEnabled = enabled;
 }
 
-// extension/lib/performance.js
+// extension/lib/analysis/performance.js
 var performanceMarksEnabled = false;
 var capturedMarks = [];
 var capturedMeasures = [];
@@ -1456,7 +1456,7 @@ function isPerformanceMarksEnabled() {
   return performanceMarksEnabled;
 }
 
-// extension/lib/bridge.js
+// extension/lib/page/bridge.js
 function postLog(payload) {
   const context = getContextAnnotations();
   const actions = payload.level === "error" ? getActionBuffer() : null;
@@ -1490,7 +1490,7 @@ function postLog(payload) {
   }, window.location.origin);
 }
 
-// extension/lib/console.js
+// extension/lib/page/console.js
 var originalConsole = {};
 function installConsoleCapture() {
   const methods = ["log", "warn", "error", "info", "debug"];
@@ -1513,7 +1513,7 @@ function uninstallConsoleCapture() {
   originalConsole = {};
 }
 
-// extension/lib/ai-context-parsing.js
+// extension/lib/ai-context/ai-context-parsing.js
 var aiSourceMapCache = /* @__PURE__ */ new Map();
 var CHROME_FRAME_RE = /^at\s+(?:(.+?)\s+\()?(.+?):(\d+):(\d+)\)?$/;
 var FIREFOX_FRAME_RE = /^(.+?)@(.+?):(\d+):(\d+)$/;
@@ -1637,7 +1637,7 @@ function getSourceMapCacheSize() {
   return aiSourceMapCache.size;
 }
 
-// extension/lib/ai-context-enrichment.js
+// extension/lib/ai-context/ai-context-enrichment.js
 var aiContextEnabled = true;
 var aiContextStateSnapshotEnabled = false;
 function detectFramework(element) {
@@ -1826,7 +1826,7 @@ function setAiContextStateSnapshot(enabled) {
   aiContextStateSnapshotEnabled = enabled;
 }
 
-// extension/lib/exceptions.js
+// extension/lib/page/exceptions.js
 var originalOnerror = null;
 var unhandledrejectionHandler = null;
 function enrichAndPost(entry) {
@@ -1894,7 +1894,7 @@ function uninstallExceptionCapture() {
   }
 }
 
-// extension/lib/websocket-tracking.js
+// extension/lib/net/websocket-tracking.js
 var _textEncoder = typeof TextEncoder !== "undefined" ? new TextEncoder() : null;
 var webSocketCaptureMode = "medium";
 function setWebSocketCaptureModeInternal(mode) {
@@ -2174,7 +2174,7 @@ function createConnectionTracker(id, url) {
   return tracker;
 }
 
-// extension/lib/websocket.js
+// extension/lib/net/websocket.js
 var originalWebSocket = null;
 var webSocketCaptureEnabled = true;
 function postLifecycleEvent(event, connectionId, urlString, extra) {
@@ -2338,7 +2338,7 @@ function resetForTesting() {
   }
 }
 
-// extension/lib/dom-queries.js
+// extension/lib/analysis/dom-queries.js
 async function executeDOMQuery(params) {
   const { selector, include_styles, properties, include_children, max_depth } = params;
   const elements = document.querySelectorAll(selector);
@@ -2785,7 +2785,7 @@ function uninstallKaboomAPI() {
   }
 }
 
-// extension/lib/safe-global-patch.js
+// extension/lib/page/safe-global-patch.js
 function safeAssignGlobal(target, key, value) {
   try {
     target[key] = value;
@@ -2801,7 +2801,7 @@ function safeAssignGlobal(target, key, value) {
   }
 }
 
-// extension/lib/transient-capture.js
+// extension/lib/page/transient-capture.js
 var SKIP_TAGS = /* @__PURE__ */ new Set(["SCRIPT", "STYLE", "LINK", "META", "NOSCRIPT", "BR", "HR"]);
 var CLASS_FINGERPRINTS = [
   [/toast/i, "toast"],
@@ -3125,7 +3125,7 @@ function setDeferralEnabled(enabled) {
   deferralEnabled = enabled;
 }
 
-// extension/lib/link-health.js
+// extension/lib/analysis/link-health.js
 function extractUniqueLinks(domainFilter) {
   const linkElements = document.querySelectorAll("a[href]");
   const urls = /* @__PURE__ */ new Set();

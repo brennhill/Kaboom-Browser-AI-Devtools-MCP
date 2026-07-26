@@ -39,7 +39,7 @@ function installChrome({ withClose }) {
 }
 
 async function loadAvailability() {
-  return import(`../../extension/background/side-panel-availability.js?v=${++importCounter}`)
+  return import(`../../extension/background/ui/side-panel-availability.js?v=${++importCounter}`)
 }
 
 describe('side panel availability follows the tracked tab', () => {
@@ -92,7 +92,7 @@ describe('closing the terminal panel', () => {
     mock.reset()
     installChrome({ withClose: true })
     const { toggleTerminalSidePanel } = await import(
-      `../../extension/background/terminal-panel.js?v=${++importCounter}`
+      `../../extension/background/ui/terminal-panel.js?v=${++importCounter}`
     )
 
     toggleTerminalSidePanel(7) // deliberately not awaited

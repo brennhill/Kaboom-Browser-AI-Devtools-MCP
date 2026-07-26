@@ -4,7 +4,7 @@ import assert from 'node:assert'
 import { createMockChrome } from './helpers.js'
 
 import { handleDomQuery } from '../../extension/content/message-handlers.js'
-import { executeDOMQuery } from '../../extension/lib/dom-queries.js'
+import { executeDOMQuery } from '../../extension/lib/analysis/dom-queries.js'
 
 describe('DOM Query Production Paths', () => {
   let originalSetTimeout

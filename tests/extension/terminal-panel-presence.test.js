@@ -65,7 +65,7 @@ function installChrome() {
 }
 
 async function loadPanel() {
-  return import(`../../extension/background/terminal-panel.js?v=${++importCounter}`)
+  return import(`../../extension/background/ui/terminal-panel.js?v=${++importCounter}`)
 }
 
 describe('opening the panel on a tab that is not the tracked tab', () => {
@@ -99,7 +99,7 @@ describe('opening the panel on a tab that is not the tracked tab', () => {
     // started a second session underneath it.
     const { openTerminalSidePanel } = await loadPanel()
     const { SIDE_PANEL_PATH } = await import(
-      `../../extension/background/side-panel-availability.js?v=${++importCounter}`
+      `../../extension/background/ui/side-panel-availability.js?v=${++importCounter}`
     )
 
     await openTerminalSidePanel(7)

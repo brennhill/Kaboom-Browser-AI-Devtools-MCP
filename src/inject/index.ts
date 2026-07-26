@@ -9,13 +9,13 @@
  */
 
 // Re-export barrel pattern for tests and consumers
-export { safeSerialize, getElementSelector, isSensitiveInput } from '../lib/serialize.js'
+export { safeSerialize, getElementSelector, isSensitiveInput } from '../lib/page/serialize.js'
 export {
   getContextAnnotations,
   setContextAnnotation,
   removeContextAnnotation,
   clearContextAnnotations
-} from '../lib/context.js'
+} from '../lib/page/context.js'
 export {
   getImplicitRole,
   isDynamicClass,
@@ -25,7 +25,7 @@ export {
   getEnhancedActionBuffer,
   clearEnhancedActionBuffer,
   generatePlaywrightScript
-} from '../lib/reproduction.js'
+} from '../lib/page/reproduction.js'
 export {
   recordAction,
   getActionBuffer,
@@ -40,7 +40,7 @@ export {
   setActionCaptureEnabled,
   installNavigationCapture,
   uninstallNavigationCapture
-} from '../lib/actions.js'
+} from '../lib/page/actions.js'
 export {
   parseResourceTiming,
   getNetworkWaterfall,
@@ -64,7 +64,7 @@ export {
   wrapXHRWithBodies,
   unwrapXHR,
   adoptEarlyBodies
-} from '../lib/network.js'
+} from '../lib/net/network.js'
 export {
   getPerformanceMarks,
   getPerformanceMeasures,
@@ -76,9 +76,9 @@ export {
   getPerformanceSnapshotForError,
   setPerformanceMarksEnabled,
   isPerformanceMarksEnabled
-} from '../lib/performance.js'
-export { postLog } from '../lib/bridge.js'
-export { installConsoleCapture, uninstallConsoleCapture } from '../lib/console.js'
+} from '../lib/analysis/performance.js'
+export { postLog } from '../lib/page/bridge.js'
+export { installConsoleCapture, uninstallConsoleCapture } from '../lib/page/console.js'
 export {
   parseStackFrames,
   parseSourceMap,
@@ -94,8 +94,8 @@ export {
   setSourceMapCache,
   getSourceMapCache,
   getSourceMapCacheSize
-} from '../lib/ai-context.js'
-export { installExceptionCapture, uninstallExceptionCapture } from '../lib/exceptions.js'
+} from '../lib/ai-context/ai-context.js'
+export { installExceptionCapture, uninstallExceptionCapture } from '../lib/page/exceptions.js'
 export {
   getSize,
   formatPayload,
@@ -107,14 +107,14 @@ export {
   getWebSocketCaptureMode,
   uninstallWebSocketCapture,
   resetForTesting
-} from '../lib/websocket.js'
+} from '../lib/net/websocket.js'
 export {
   executeDOMQuery,
   getPageInfo,
   runAxeAudit,
   runAxeAuditWithTimeout,
   formatAxeResults
-} from '../lib/dom-queries.js'
+} from '../lib/analysis/dom-queries.js'
 export {
   mapInitiatorType,
   aggregateResourceTiming,
@@ -129,7 +129,7 @@ export {
   sendPerformanceSnapshot,
   isPerformanceSnapshotEnabled,
   setPerformanceSnapshotEnabled
-} from '../lib/perf-snapshot.js'
+} from '../lib/analysis/perf-snapshot.js'
 
 // Re-export constants that tests import from inject.js
 export { MAX_WATERFALL_ENTRIES, MAX_PERFORMANCE_ENTRIES, SENSITIVE_HEADERS } from '../lib/constants.js'
@@ -173,7 +173,7 @@ import { installKaboomAPI } from './api.js'
 import { installPhase1 } from './observers.js'
 import { installMessageListener } from './message-handlers.js'
 import { captureState, restoreState, sendPerformanceSnapshotWrapper } from './state.js'
-import { sendPerformanceSnapshot } from '../lib/perf-snapshot.js'
+import { sendPerformanceSnapshot } from '../lib/analysis/perf-snapshot.js'
 
 /**
  * Auto-install when loaded in browser

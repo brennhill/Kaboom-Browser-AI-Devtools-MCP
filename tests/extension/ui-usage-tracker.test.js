@@ -14,7 +14,7 @@ async function loadModule() {
   // Fresh import each test suite — but module state persists.
   // We drain before each test to reset state.
   if (!mod) {
-    mod = await import('../../extension/background/ui-usage-tracker.js')
+    mod = await import('../../extension/background/ui/ui-usage-tracker.js')
   }
   return mod
 }

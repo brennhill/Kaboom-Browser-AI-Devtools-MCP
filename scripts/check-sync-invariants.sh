@@ -11,7 +11,7 @@ echo "Checking sync client invariants..."
 # Background: Calling resetConnection in startSyncClient caused rapid
 # connect/disconnect cycling (100+ logs per second).
 # Fixed in commit 49250df.
-SYNC_MANAGER_FILE="src/background/sync-manager.ts"
+SYNC_MANAGER_FILE="src/background/sync/sync-manager.ts"
 
 if [ ! -f "$SYNC_MANAGER_FILE" ]; then
   echo "❌ REGRESSION: expected $SYNC_MANAGER_FILE to exist"

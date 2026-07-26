@@ -18,7 +18,7 @@ describe('version check branding', () => {
   })
 
   test('update badge uses Kaboom copy and Kaboom repo URL', async () => {
-    const versionCheck = await import('../../extension/background/version-check.js')
+    const versionCheck = await import('../../extension/background/sync/version-check.js')
 
     versionCheck.resetVersionCheck()
     versionCheck.updateVersionFromHealth({ version: '1.0.0', available_version: '1.1.0' })

@@ -99,7 +99,7 @@ describe('Tooling contracts', () => {
     const daemonHttp = readFileSync('src/lib/daemon-http.ts', 'utf8')
     const constants = readFileSync('src/lib/constants.ts', 'utf8')
     const options = readFileSync('src/options.ts', 'utf8')
-    const tabState = readFileSync('src/background/tab-state.ts', 'utf8')
+    const tabState = readFileSync('src/background/ui/tab-state.ts', 'utf8')
     const storageUtils = readFileSync('src/lib/storage-utils.ts', 'utf8')
 
     assert.match(daemonHttp, /const DEFAULT_CLIENT_NAME = 'kaboom-extension'/)

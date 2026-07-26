@@ -6,16 +6,16 @@
  * @fileoverview Observers - Observer registration and management for DOM, network,
  * performance, and WebSocket events.
  */
-import { installPerformanceCapture, uninstallPerformanceCapture } from '../lib/performance.js';
-import { installPerfObservers } from '../lib/perf-snapshot.js';
-import { installWebSocketCapture, uninstallWebSocketCapture } from '../lib/websocket.js';
-import { wrapFetchWithBodies, wrapXHRWithBodies, unwrapXHR, adoptEarlyBodies, sanitizeHeaders } from '../lib/network.js';
-import { installConsoleCapture, uninstallConsoleCapture } from '../lib/console.js';
-import { safeAssignGlobal } from '../lib/safe-global-patch.js';
-import { installExceptionCapture, uninstallExceptionCapture } from '../lib/exceptions.js';
-import { installActionCapture, uninstallActionCapture, installNavigationCapture, uninstallNavigationCapture } from '../lib/actions.js';
-import { installTransientCapture, uninstallTransientCapture } from '../lib/transient-capture.js';
-import { postLog } from '../lib/bridge.js';
+import { installPerformanceCapture, uninstallPerformanceCapture } from '../lib/analysis/performance.js';
+import { installPerfObservers } from '../lib/analysis/perf-snapshot.js';
+import { installWebSocketCapture, uninstallWebSocketCapture } from '../lib/net/websocket.js';
+import { wrapFetchWithBodies, wrapXHRWithBodies, unwrapXHR, adoptEarlyBodies, sanitizeHeaders } from '../lib/net/network.js';
+import { installConsoleCapture, uninstallConsoleCapture } from '../lib/page/console.js';
+import { safeAssignGlobal } from '../lib/page/safe-global-patch.js';
+import { installExceptionCapture, uninstallExceptionCapture } from '../lib/page/exceptions.js';
+import { installActionCapture, uninstallActionCapture, installNavigationCapture, uninstallNavigationCapture } from '../lib/page/actions.js';
+import { installTransientCapture, uninstallTransientCapture } from '../lib/page/transient-capture.js';
+import { postLog } from '../lib/page/bridge.js';
 import { MAX_RESPONSE_LENGTH, MEMORY_SOFT_LIMIT_MB, MEMORY_HARD_LIMIT_MB } from '../lib/constants.js';
 import { errorMessage } from '../lib/error-utils.js';
 // Store original fetch for restoration

@@ -1,7 +1,7 @@
 // @ts-nocheck
 /**
  * @fileoverview server-edge-cases.test.js — Edge case and negative path tests
- * for extension/background/server.js functions.
+ * for extension/background/sync/server.js functions.
  */
 
 import { test, describe, mock, beforeEach } from 'node:test'
@@ -22,7 +22,7 @@ const {
   sendWSEventsToServer: _sendWSEventsToServer,
   sendEnhancedActionsToServer: _sendEnhancedActionsToServer,
   sendPerformanceSnapshotsToServer
-} = await import('../../extension/background/server.js')
+} = await import('../../extension/background/sync/server.js')
 
 // ============================================
 // sendLogsToServer edge cases

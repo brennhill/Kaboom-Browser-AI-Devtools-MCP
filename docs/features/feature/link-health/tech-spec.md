@@ -13,7 +13,7 @@ last_verified_date: 2026-03-05
 1. Server queues pending query type `link_health` (`toolAnalyzeLinkHealth`).
 2. Extension receives command via `/sync`.
 3. Background sends `LINK_HEALTH_QUERY` to content/inject path.
-4. Inject runs `checkLinkHealth` in `src/lib/link-health.ts`.
+4. Inject runs `checkLinkHealth` in `src/lib/analysis/link-health.ts`.
 5. Result returns via sync command results and is surfaced via command tracker.
 
 ## `analyze.what = "link_validation"` flow
@@ -29,7 +29,7 @@ last_verified_date: 2026-03-05
 
 ## Code Anchors
 - `cmd/browser-agent/tools_analyze.go`
-- `src/lib/link-health.ts`
+- `src/lib/analysis/link-health.ts`
 - `src/background/pending-queries.ts`
 - `src/content/message-handlers.ts`
 - `src/inject/message-handlers.ts`
