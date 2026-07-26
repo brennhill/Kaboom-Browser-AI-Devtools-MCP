@@ -8,9 +8,9 @@
  * @fileoverview Recording UI Module for Popup
  * Manages recording controls, timer display, and mic permission flow.
  */
-import { StorageKey } from '../lib/constants.js';
-import { KABOOM_RECORDING_LOG_PREFIX } from '../lib/brand.js';
-import { getLocal, removeLocal, onStorageChanged, persist } from '../lib/storage-utils.js';
+import { StorageKey } from '../../lib/constants.js';
+import { KABOOM_RECORDING_LOG_PREFIX } from '../../lib/brand.js';
+import { getLocal, removeLocal, onStorageChanged, persist } from '../../lib/storage-utils.js';
 import { sendRecordingGestureDecision, handleStartClick, handleStopClick } from './recording-io.js';
 const START_LABEL = 'Record screen';
 const STOP_LABEL = 'Stop recording';

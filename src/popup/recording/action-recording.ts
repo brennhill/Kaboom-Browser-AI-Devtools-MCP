@@ -4,9 +4,9 @@
  * Docs: docs/features/feature/flow-recording/index.md
  */
 
-import { DEFAULT_SERVER_URL, StorageKey } from '../lib/constants.js'
-import { postDaemonJSON } from '../lib/daemon-http.js'
-import { getLocal, setLocal, removeLocal, persist } from '../lib/storage-utils.js'
+import { DEFAULT_SERVER_URL, StorageKey } from '../../lib/constants.js'
+import { postDaemonJSON } from '../../lib/daemon-http.js'
+import { getLocal, setLocal, removeLocal, persist } from '../../lib/storage-utils.js'
 
 interface ActionRecordingElements {
   row: HTMLElement

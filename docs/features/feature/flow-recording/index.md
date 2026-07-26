@@ -14,9 +14,9 @@ code_paths:
   - src/background/recording/utils.ts
   - src/background/ui/draw-mode-toggle.ts
   - src/offscreen/recording-worker.ts
-  - src/popup/action-recording.ts
-  - src/popup/recording.ts
-  - src/popup/recording-io.ts
+  - src/popup/recording/action-recording.ts
+  - src/popup/recording/recording.ts
+  - src/popup/recording/recording-io.ts
   - src/lib/brand.ts
   - src/lib/daemon-http.ts
 test_paths:
@@ -63,8 +63,8 @@ last_verified_date: 2026-03-05
   - `src/background/ui/context-menus.ts`
   - `src/background/recording/utils.ts`
   - `src/offscreen/recording-worker.ts`
-  - `src/popup/recording.ts`
-  - `src/popup/recording-io.ts`
+  - `src/popup/recording/recording.ts`
+  - `src/popup/recording/recording-io.ts`
   - `src/lib/brand.ts`
 - Core tests:
   - `tests/extension/recording.test.js`

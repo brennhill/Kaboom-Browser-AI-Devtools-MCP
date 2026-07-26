@@ -5,10 +5,10 @@
  * Docs: docs/features/feature/tab-recording/index.md
  */
 
-import { StorageKey } from '../lib/constants.js'
-import { KABOOM_RECORDING_LOG_PREFIX } from '../lib/brand.js'
-import { errorMessage } from '../lib/error-utils.js'
-import { setLocal, removeLocal, persist } from '../lib/storage-utils.js'
+import { StorageKey } from '../../lib/constants.js'
+import { KABOOM_RECORDING_LOG_PREFIX } from '../../lib/brand.js'
+import { errorMessage } from '../../lib/error-utils.js'
+import { setLocal, removeLocal, persist } from '../../lib/storage-utils.js'
 
 export interface RecordingElements {
   row: HTMLElement

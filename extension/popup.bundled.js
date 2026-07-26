@@ -582,7 +582,7 @@ The daemon will restart automatically.`;
     return fallback;
   }
 
-  // extension/popup/recording-io.js
+  // extension/popup/recording/recording-io.js
   var LOG = `${KABOOM_RECORDING_LOG_PREFIX} Popup:`;
   function sendRecordingGestureDecision(type) {
     chrome.runtime.sendMessage({ type }, () => {
@@ -666,7 +666,7 @@ The daemon will restart automatically.`;
     });
   }
 
-  // extension/popup/recording.js
+  // extension/popup/recording/recording.js
   var START_LABEL = "Record screen";
   var STOP_LABEL = "Stop recording";
   var HIGHLIGHT_LABEL = "\u25CF \xAB Click here to record";
@@ -1015,7 +1015,7 @@ The daemon will restart automatically.`;
     });
   }
 
-  // extension/popup/action-recording.js
+  // extension/popup/recording/action-recording.js
   var START_LABEL2 = "Record action workflow";
   var STOP_LABEL2 = "Stop recording";
   function showRecording2(els, state) {

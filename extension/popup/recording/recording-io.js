@@ -4,10 +4,10 @@
  * Docs: docs/features/feature/playback-engine/index.md
  * Docs: docs/features/feature/tab-recording/index.md
  */
-import { StorageKey } from '../lib/constants.js';
-import { KABOOM_RECORDING_LOG_PREFIX } from '../lib/brand.js';
-import { errorMessage } from '../lib/error-utils.js';
-import { setLocal, removeLocal, persist } from '../lib/storage-utils.js';
+import { StorageKey } from '../../lib/constants.js';
+import { KABOOM_RECORDING_LOG_PREFIX } from '../../lib/brand.js';
+import { errorMessage } from '../../lib/error-utils.js';
+import { setLocal, removeLocal, persist } from '../../lib/storage-utils.js';
 const LOG = `${KABOOM_RECORDING_LOG_PREFIX} Popup:`;
 export function sendRecordingGestureDecision(type) {
     chrome.runtime.sendMessage({ type }, () => {

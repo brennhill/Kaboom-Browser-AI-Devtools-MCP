@@ -19,7 +19,7 @@ code_paths:
   - src/background/recording/utils.ts
   - src/offscreen/recording-worker.ts
   - src/lib/daemon-http.ts
-  - src/popup/recording.ts
+  - src/popup/recording/recording.ts
   - extension/manifest.json
   - extension/popup.html
   - extension/popup.css
