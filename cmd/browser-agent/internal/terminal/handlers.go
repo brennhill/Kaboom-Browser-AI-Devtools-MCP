@@ -83,6 +83,13 @@ const IdleTimeout = 30 * time.Second
 // pump hostage. Matches Session.Close's own reap bound.
 const ReapTimeout = 2 * time.Second
 
+// RelayCloseTimeout bounds how long Relay.Close waits for readLoop to finish its
+// teardown. Worst case that teardown is ReapTimeout (waiting for the child's exit
+// code) plus the write buffer's own close bound, so this sits above their sum;
+// past it the caller gives up rather than letting one wedged session stall
+// /terminal/stop or daemon shutdown.
+const RelayCloseTimeout = 5 * time.Second
+
 // RegisterRoutes adds terminal-related routes to the mux.
 // NOT MCP — These are daemon-served endpoints for the in-browser terminal.
 func RegisterRoutes(mux *http.ServeMux, deps Deps, server ServerDeps, mgr *pty.Manager, cap *capture.Store) *Map {
