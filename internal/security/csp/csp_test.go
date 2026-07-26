@@ -1,13 +1,16 @@
+// csp_test.go — Tests for CSP accumulation, generation and tool dispatch.
 // Purpose: Tests for CSP policy generation and directive validation.
 // Docs: docs/features/feature/security-hardening/index.md
 
-package security
+package csp
 
 import (
 	"encoding/json"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // ============================================
@@ -18,7 +21,7 @@ import (
 
 func TestCSPDefaultModeGeneratesAllDirectives(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	// Simulate an app loading resources from 5 different origins
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/")
@@ -37,7 +40,7 @@ func TestCSPDefaultModeGeneratesAllDirectives(t *testing.T) {
 	gen.RecordOrigin("https://api.example.com", "connect", "https://myapp.com/dashboard")
 	gen.RecordOrigin("https://api.example.com", "connect", "https://myapp.com/settings")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	// Should have directives for each resource type
 	if resp.Directives == nil {
@@ -74,14 +77,14 @@ func TestCSPDefaultModeGeneratesAllDirectives(t *testing.T) {
 
 func TestCSPSameOriginProducesSelf(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	// Record same-origin resources (page origin matches resource origin)
 	gen.RecordOrigin("https://myapp.com", "script", "https://myapp.com/")
 	gen.RecordOrigin("https://myapp.com", "script", "https://myapp.com/dashboard")
 	gen.RecordOrigin("https://myapp.com", "script", "https://myapp.com/settings")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	// 'self' should always be in default-src
 	assertContains(t, resp.Directives["default-src"], "'self'")
@@ -89,35 +92,35 @@ func TestCSPSameOriginProducesSelf(t *testing.T) {
 
 func TestCSPWebSocketConnectionsInConnectSrc(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	gen.RecordOrigin("wss://realtime.example.com", "connect", "https://myapp.com/")
 	gen.RecordOrigin("wss://realtime.example.com", "connect", "https://myapp.com/dashboard")
 	gen.RecordOrigin("wss://realtime.example.com", "connect", "https://myapp.com/settings")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	assertContains(t, resp.Directives["connect-src"], "wss://realtime.example.com")
 }
 
 func TestCSPDataURIsInImgSrc(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	gen.RecordOrigin("data:", "img", "https://myapp.com/")
 	gen.RecordOrigin("data:", "img", "https://myapp.com/dashboard")
 	gen.RecordOrigin("data:", "img", "https://myapp.com/settings")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	assertContains(t, resp.Directives["img-src"], "data:")
 }
 
 func TestCSPEmptyAccumulatorReturnsHelpfulError(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	// Should still produce a minimal policy
 	assertContains(t, resp.Directives["default-src"], "'self'")
@@ -142,7 +145,7 @@ func TestCSPEmptyAccumulatorReturnsHelpfulError(t *testing.T) {
 
 func TestCSPExcludeOriginsParameter(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/")
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/dashboard")
@@ -151,7 +154,7 @@ func TestCSPExcludeOriginsParameter(t *testing.T) {
 	gen.RecordOrigin("https://tracking.example.com", "script", "https://myapp.com/dashboard")
 	gen.RecordOrigin("https://tracking.example.com", "script", "https://myapp.com/settings")
 
-	resp := gen.GenerateCSP(CSPParams{
+	resp := gen.Generate(Params{
 		Mode:           "moderate",
 		ExcludeOrigins: []string{"https://tracking.example.com"},
 	})
@@ -165,13 +168,13 @@ func TestCSPExcludeOriginsParameter(t *testing.T) {
 
 func TestCSPReportOnlyMode(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/")
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/dashboard")
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/settings")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "report_only"})
+	resp := gen.Generate(Params{Mode: "report_only"})
 
 	if resp.HeaderName != "Content-Security-Policy-Report-Only" {
 		t.Errorf("expected header name 'Content-Security-Policy-Report-Only', got %q", resp.HeaderName)
@@ -180,13 +183,13 @@ func TestCSPReportOnlyMode(t *testing.T) {
 
 func TestCSPEnforcingMode(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/")
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/dashboard")
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/settings")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "strict"})
+	resp := gen.Generate(Params{Mode: "strict"})
 
 	if resp.HeaderName != "Content-Security-Policy" {
 		t.Errorf("expected header name 'Content-Security-Policy', got %q", resp.HeaderName)
@@ -195,13 +198,13 @@ func TestCSPEnforcingMode(t *testing.T) {
 
 func TestCSPMetaTagGenerated(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/")
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/dashboard")
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/settings")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	if !strings.Contains(resp.MetaTag, "<meta") {
 		t.Error("expected meta tag in response")
@@ -215,7 +218,7 @@ func TestCSPMetaTagGenerated(t *testing.T) {
 
 func TestCSPOriginAccumulatorPersistsAfterBufferWrap(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	// Record an early origin
 	gen.RecordOrigin("https://early-cdn.example.com", "script", "https://myapp.com/")
@@ -227,7 +230,7 @@ func TestCSPOriginAccumulatorPersistsAfterBufferWrap(t *testing.T) {
 		gen.RecordOrigin("https://other.example.com", "connect", "https://myapp.com/page")
 	}
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	// Early origin should still be present
 	assertContains(t, resp.Directives["script-src"], "https://early-cdn.example.com")
@@ -235,7 +238,7 @@ func TestCSPOriginAccumulatorPersistsAfterBufferWrap(t *testing.T) {
 
 func TestCSPObservationCountIncrements(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/")
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/")
@@ -256,7 +259,7 @@ func TestCSPObservationCountIncrements(t *testing.T) {
 
 func TestCSPAccumulatorClearsOnReset(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/")
 
@@ -275,7 +278,7 @@ func TestCSPAccumulatorClearsOnReset(t *testing.T) {
 
 func TestCSPConfidenceHighOrigin(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	// Origin seen 5+ times across 3 pages -> high confidence
 	for i := 0; i < 5; i++ {
@@ -284,7 +287,7 @@ func TestCSPConfidenceHighOrigin(t *testing.T) {
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/dashboard")
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/settings")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	// Should be included with high confidence
 	found := false
@@ -307,13 +310,13 @@ func TestCSPConfidenceHighOrigin(t *testing.T) {
 
 func TestCSPConfidenceMediumOrigin(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	// Origin seen 2-4 times -> medium confidence
 	gen.RecordOrigin("https://analytics.example.com", "script", "https://myapp.com/")
 	gen.RecordOrigin("https://analytics.example.com", "script", "https://myapp.com/dashboard")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	found := false
 	for _, detail := range resp.OriginDetails {
@@ -335,12 +338,12 @@ func TestCSPConfidenceMediumOrigin(t *testing.T) {
 
 func TestCSPConfidenceLowOriginExcluded(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	// Origin seen exactly once -> low confidence -> excluded
 	gen.RecordOrigin("https://evil.com", "script", "https://myapp.com/")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	// Should NOT be in directives
 	if directives, ok := resp.Directives["script-src"]; ok {
@@ -371,12 +374,12 @@ func TestCSPConfidenceLowOriginExcluded(t *testing.T) {
 
 func TestCSPConnectSrcRelaxedThreshold(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	// API endpoint seen once — connect-src has relaxed threshold
 	gen.RecordOrigin("https://api.example.com", "connect", "https://myapp.com/")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	// Should be included at medium confidence for connect-src
 	found := false
@@ -399,7 +402,7 @@ func TestCSPConnectSrcRelaxedThreshold(t *testing.T) {
 
 func TestCSPSingleInjectedRequestNotInCSP(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	// Simulate legitimate traffic
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/")
@@ -409,7 +412,7 @@ func TestCSPSingleInjectedRequestNotInCSP(t *testing.T) {
 	// Single injected request from evil.com
 	gen.RecordOrigin("https://evil.com", "script", "https://myapp.com/")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	// evil.com should NOT be in the generated CSP
 	if scripts, ok := resp.Directives["script-src"]; ok {
@@ -419,7 +422,7 @@ func TestCSPSingleInjectedRequestNotInCSP(t *testing.T) {
 
 func TestCSPOriginOnThreePlusPages(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	// Origin seen on 3+ pages
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/")
@@ -427,7 +430,7 @@ func TestCSPOriginOnThreePlusPages(t *testing.T) {
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/settings")
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/profile")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	found := false
 	for _, detail := range resp.OriginDetails {
@@ -451,14 +454,14 @@ func TestCSPOriginOnThreePlusPages(t *testing.T) {
 
 func TestCSPFiltersChromeExtension(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	gen.RecordOrigin("chrome-extension://abcdef123456", "script", "https://myapp.com/")
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/")
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/dashboard")
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/settings")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	// Extension origin should be filtered
 	if scripts, ok := resp.Directives["script-src"]; ok {
@@ -480,11 +483,11 @@ func TestCSPFiltersChromeExtension(t *testing.T) {
 
 func TestCSPFiltersMozExtension(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	gen.RecordOrigin("moz-extension://abcdef123456", "script", "https://myapp.com/")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	// Should appear in filtered_origins
 	foundFiltered := false
@@ -501,13 +504,13 @@ func TestCSPFiltersMozExtension(t *testing.T) {
 
 func TestCSPFiltersLocalhostDevServer(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	// ws://localhost:3001 on a different port from the page (page is on :3000)
 	gen.RecordOrigin("ws://localhost:3001", "connect", "https://myapp.com/")
 	gen.RecordOrigin("http://localhost:3001", "connect", "https://myapp.com/")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	// Should be filtered
 	if connects, ok := resp.Directives["connect-src"]; ok {
@@ -523,14 +526,14 @@ func TestCSPFiltersLocalhostDevServer(t *testing.T) {
 
 func TestCSPFiltersWebpackHMR(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	gen.RecordOrigin("https://myapp.com", "connect", "https://myapp.com/")
 	// HMR requests are filtered by URL pattern, but since we record origins,
 	// the webpack HMR origin is typically localhost
 	gen.RecordOrigin("http://localhost:8080", "connect", "https://myapp.com/")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	if connects, ok := resp.Directives["connect-src"]; ok {
 		assertNotContains(t, connects, "http://localhost:8080")
@@ -539,11 +542,11 @@ func TestCSPFiltersWebpackHMR(t *testing.T) {
 
 func TestCSPFiltersViteDevServer(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	gen.RecordOrigin("http://localhost:5173", "connect", "https://myapp.com/")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	if connects, ok := resp.Directives["connect-src"]; ok {
 		assertNotContains(t, connects, "http://localhost:5173")
@@ -552,12 +555,12 @@ func TestCSPFiltersViteDevServer(t *testing.T) {
 
 func TestCSPFilteredOriginsListedInResponse(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	gen.RecordOrigin("chrome-extension://abc123", "script", "https://myapp.com/")
 	gen.RecordOrigin("ws://localhost:3001", "connect", "https://myapp.com/")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	if len(resp.FilteredOrigins) < 2 {
 		t.Errorf("expected at least 2 filtered origins, got %d", len(resp.FilteredOrigins))
@@ -573,14 +576,14 @@ func TestCSPFilteredOriginsListedInResponse(t *testing.T) {
 
 func TestCSPFirstPartyLocalhostNotFiltered(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	// If the page IS on localhost:3000, same-port localhost should not be filtered
 	gen.RecordOrigin("http://localhost:3000", "script", "http://localhost:3000/")
 	gen.RecordOrigin("http://localhost:3000", "script", "http://localhost:3000/dashboard")
 	gen.RecordOrigin("http://localhost:3000", "script", "http://localhost:3000/settings")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	// First-party localhost is the app itself, should become 'self' or be included
 	// It should NOT appear in filtered_origins
@@ -595,7 +598,7 @@ func TestCSPFirstPartyLocalhostNotFiltered(t *testing.T) {
 
 func TestCSPResourceTypeMapping(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	testCases := []struct {
 		origin       string
@@ -618,7 +621,7 @@ func TestCSPResourceTypeMapping(t *testing.T) {
 		gen.RecordOrigin(tc.origin, tc.resourceType, "https://myapp.com/page3")
 	}
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	for _, tc := range testCases {
 		t.Run(tc.directive, func(t *testing.T) {
@@ -635,7 +638,7 @@ func TestCSPResourceTypeMapping(t *testing.T) {
 
 func TestCSPPagesVisitedCount(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/")
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/dashboard")
@@ -644,31 +647,31 @@ func TestCSPPagesVisitedCount(t *testing.T) {
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/about")
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/contact")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	if resp.Observations.PagesVisited != 6 {
 		t.Errorf("expected pages_visited=6, got %d", resp.Observations.PagesVisited)
 	}
 }
 
-func TestCSPObservationsIncludeTotalResources(t *testing.T) {
+func TestObservationsIncludeTotalResources(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/")
 	gen.RecordOrigin("https://fonts.example.com", "font", "https://myapp.com/")
 	gen.RecordOrigin("https://api.example.com", "connect", "https://myapp.com/")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	if resp.Observations.TotalResources != 3 {
 		t.Errorf("expected total_resources=3, got %d", resp.Observations.TotalResources)
 	}
 }
 
-func TestCSPObservationsUniqueOrigins(t *testing.T) {
+func TestObservationsUniqueOrigins(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/")
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/page2")
@@ -677,7 +680,7 @@ func TestCSPObservationsUniqueOrigins(t *testing.T) {
 	gen.RecordOrigin("https://fonts.example.com", "font", "https://myapp.com/page2")
 	gen.RecordOrigin("https://fonts.example.com", "font", "https://myapp.com/page3")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	if resp.Observations.UniqueOrigins != 2 {
 		t.Errorf("expected unique_origins=2, got %d", resp.Observations.UniqueOrigins)
@@ -688,13 +691,13 @@ func TestCSPObservationsUniqueOrigins(t *testing.T) {
 
 func TestCSPDefaultPolicyIncludesSecurityDirectives(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/")
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/dashboard")
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/settings")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	// Should always include base security directives
 	assertContains(t, resp.Directives["default-src"], "'self'")
@@ -702,13 +705,13 @@ func TestCSPDefaultPolicyIncludesSecurityDirectives(t *testing.T) {
 
 func TestCSPWarningsGeneratedForLowCoverage(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	// Only 2 pages visited
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/")
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/dashboard")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	// Should warn about low coverage
 	if len(resp.Warnings) == 0 {
@@ -718,13 +721,13 @@ func TestCSPWarningsGeneratedForLowCoverage(t *testing.T) {
 
 func TestCSPRecommendedNextStep(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/")
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/dashboard")
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/settings")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	if resp.RecommendedNextStep == "" {
 		t.Error("expected recommended_next_step in response")
@@ -735,7 +738,7 @@ func TestCSPRecommendedNextStep(t *testing.T) {
 
 func TestCSPHandleGenerateCSPValid(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/")
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/dashboard")
@@ -753,7 +756,7 @@ func TestCSPHandleGenerateCSPValid(t *testing.T) {
 
 func TestCSPHandleGenerateCSPEmptyParams(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/")
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/dashboard")
@@ -772,7 +775,7 @@ func TestCSPHandleGenerateCSPEmptyParams(t *testing.T) {
 
 func TestCSPHandleGenerateCSPWithExclusions(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/")
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/dashboard")
@@ -787,9 +790,9 @@ func TestCSPHandleGenerateCSPWithExclusions(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	resp, ok := result.(*CSPResponse)
+	resp, ok := result.(*Response)
 	if !ok {
-		t.Fatal("expected *CSPResponse type")
+		t.Fatal("expected *Response type")
 	}
 
 	if scripts, exists := resp.Directives["script-src"]; exists {
@@ -801,7 +804,7 @@ func TestCSPHandleGenerateCSPWithExclusions(t *testing.T) {
 
 func TestCSPConcurrentAccess(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	done := make(chan bool, 10)
 
@@ -818,7 +821,7 @@ func TestCSPConcurrentAccess(t *testing.T) {
 	// Read concurrently
 	for i := 0; i < 5; i++ {
 		go func() {
-			gen.GenerateCSP(CSPParams{Mode: "moderate"})
+			gen.Generate(Params{Mode: "moderate"})
 			done <- true
 		}()
 	}
@@ -832,14 +835,14 @@ func TestCSPConcurrentAccess(t *testing.T) {
 
 func TestCSPInlineScriptHashesNotComputed(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	// Extension-injected inline scripts should not be hashed
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/")
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/dashboard")
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/settings")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	// No sha256 hashes should appear in script-src (we don't compute them)
 	if scripts, ok := resp.Directives["script-src"]; ok {
@@ -855,12 +858,12 @@ func TestCSPInlineScriptHashesNotComputed(t *testing.T) {
 
 func TestCSPPageURLTrackingIncreasesConfidence(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	// Same origin on ONE page: low confidence
 	gen.RecordOrigin("https://single-page.example.com", "script", "https://myapp.com/")
 
-	resp := gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp := gen.Generate(Params{Mode: "moderate"})
 
 	for _, detail := range resp.OriginDetails {
 		if detail.Origin == "https://single-page.example.com" {
@@ -873,7 +876,7 @@ func TestCSPPageURLTrackingIncreasesConfidence(t *testing.T) {
 	// Now see it on a second page: medium confidence
 	gen.RecordOrigin("https://single-page.example.com", "script", "https://myapp.com/dashboard")
 
-	resp = gen.GenerateCSP(CSPParams{Mode: "moderate"})
+	resp = gen.Generate(Params{Mode: "moderate"})
 
 	for _, detail := range resp.OriginDetails {
 		if detail.Origin == "https://single-page.example.com" && detail.Directive == "script-src" {
@@ -888,7 +891,7 @@ func TestCSPPageURLTrackingIncreasesConfidence(t *testing.T) {
 
 func TestCSPFirstSeenTimestamp(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	before := time.Now()
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/")
@@ -905,7 +908,7 @@ func TestCSPFirstSeenTimestamp(t *testing.T) {
 
 func TestCSPLastSeenUpdates(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	gen.RecordOrigin("https://cdn.example.com", "script", "https://myapp.com/")
 	time.Sleep(time.Millisecond)
@@ -946,34 +949,34 @@ func assertNotContains(t *testing.T, slice []string, value string) {
 
 func TestCSPRecordOriginFromBody(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	// JavaScript resource → script-src
-	gen.RecordOriginFromBody(NetworkBody{
+	gen.RecordOriginFromBody(capture.NetworkBody{
 		URL:         "https://cdn.example.com/app.js",
 		ContentType: "application/javascript",
 	}, "https://myapp.com/")
 
 	// CSS resource → style-src
-	gen.RecordOriginFromBody(NetworkBody{
+	gen.RecordOriginFromBody(capture.NetworkBody{
 		URL:         "https://cdn.example.com/style.css",
 		ContentType: "text/css",
 	}, "https://myapp.com/")
 
 	// Font resource → font-src
-	gen.RecordOriginFromBody(NetworkBody{
+	gen.RecordOriginFromBody(capture.NetworkBody{
 		URL:         "https://fonts.gstatic.com/font.woff2",
 		ContentType: "font/woff2",
 	}, "https://myapp.com/")
 
 	// Image resource → img-src
-	gen.RecordOriginFromBody(NetworkBody{
+	gen.RecordOriginFromBody(capture.NetworkBody{
 		URL:         "https://images.example.com/logo.png",
 		ContentType: "image/png",
 	}, "https://myapp.com/")
 
 	// API call → connect-src
-	gen.RecordOriginFromBody(NetworkBody{
+	gen.RecordOriginFromBody(capture.NetworkBody{
 		URL:         "https://api.example.com/data",
 		ContentType: "application/json",
 	}, "https://myapp.com/")
@@ -1046,16 +1049,16 @@ func TestContentTypeToResourceType(t *testing.T) {
 
 func TestCSPRecordOriginFromBodyInvalidURL(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	// Empty URL should not panic
-	gen.RecordOriginFromBody(NetworkBody{
+	gen.RecordOriginFromBody(capture.NetworkBody{
 		URL:         "",
 		ContentType: "application/javascript",
 	}, "https://myapp.com/")
 
 	// Invalid URL should not panic
-	gen.RecordOriginFromBody(NetworkBody{
+	gen.RecordOriginFromBody(capture.NetworkBody{
 		URL:         "://invalid",
 		ContentType: "application/javascript",
 	}, "https://myapp.com/")
@@ -1070,7 +1073,7 @@ func TestCSPRecordOriginFromBodyInvalidURL(t *testing.T) {
 
 func TestHandleGenerateCSPInvalidParams(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 
 	// Invalid JSON params should return error
 	_, err := gen.HandleGenerateCSP(json.RawMessage(`{invalid}`))
@@ -1099,7 +1102,7 @@ func TestHandleGenerateCSPInvalidParams(t *testing.T) {
 
 func TestCSPExtractPageOriginsInvalidURL(t *testing.T) {
 	t.Parallel()
-	gen := NewCSPGenerator()
+	gen := NewGenerator()
 	gen.pages["://invalid-url"] = true
 	gen.pages["https://valid.com/path"] = true
 

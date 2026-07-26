@@ -1,8 +1,9 @@
+// helpers.go — Directive shaping, confidence scoring and dev-pollution filtering.
 // Purpose: Provides CSP helper logic for directive shaping, filtering, and policy assembly.
 // Why: Keeps CSP generation behavior consistent and testable across strict/moderate/reporting modes.
 // Docs: docs/features/feature/security-hardening/index.md
 
-package security
+package csp
 
 import (
 	"fmt"
@@ -16,7 +17,7 @@ import (
 // Medium: 2+ observations OR 2+ pages
 // Low: exactly 1 observation on 1 page
 // Exception: connect-src has relaxed threshold (1 observation = medium)
-func (g *CSPGenerator) computeConfidence(entry *OriginEntry) string {
+func (g *Generator) computeConfidence(entry *OriginEntry) string {
 	pageCount := len(entry.Pages)
 	obsCount := entry.Count
 
@@ -47,7 +48,7 @@ var extensionPrefixes = []struct {
 
 // isDevPollution checks if an origin is a known development-only pattern.
 // Returns the reason string if filtered, empty string if not filtered.
-func (g *CSPGenerator) isDevPollution(origin string, pageOrigins map[string]bool) string {
+func (g *Generator) isDevPollution(origin string, pageOrigins map[string]bool) string {
 	if reason := matchExtensionPrefix(origin); reason != "" {
 		return reason
 	}
@@ -65,7 +66,7 @@ func matchExtensionPrefix(origin string) string {
 }
 
 // checkLocalhostDevServer filters localhost origins that differ from observed page origins.
-func (g *CSPGenerator) checkLocalhostDevServer(origin string, pageOrigins map[string]bool) string {
+func (g *Generator) checkLocalhostDevServer(origin string, pageOrigins map[string]bool) string {
 	parsed, err := url.Parse(origin)
 	if err != nil {
 		return ""
@@ -81,7 +82,7 @@ func (g *CSPGenerator) checkLocalhostDevServer(origin string, pageOrigins map[st
 }
 
 // extractPageOrigins returns the set of origins from observed page URLs.
-func (g *CSPGenerator) extractPageOrigins() map[string]bool {
+func (g *Generator) extractPageOrigins() map[string]bool {
 	origins := make(map[string]bool)
 	for pageURL := range g.pages {
 		parsed, err := url.Parse(pageURL)
@@ -123,7 +124,7 @@ func buildDirectiveOrderSet() map[string]bool {
 }
 
 // buildCSPHeader builds the CSP header string from sorted directives.
-func (g *CSPGenerator) buildCSPHeader(directives map[string][]string) string {
+func (g *Generator) buildCSPHeader(directives map[string][]string) string {
 	parts := make([]string, 0, len(directives))
 
 	for _, dir := range directiveOrder {
@@ -178,7 +179,7 @@ func formatMetaTag(cspHeader string) string {
 }
 
 // entryPages returns a sorted list of page URLs for an origin entry (up to 10).
-func (g *CSPGenerator) entryPages(entry *OriginEntry) []string {
+func (g *Generator) entryPages(entry *OriginEntry) []string {
 	var pages []string
 	for p := range entry.Pages {
 		pages = append(pages, p)

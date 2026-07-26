@@ -1,6 +1,7 @@
+// types.go — Origin entry, generator state, params and response models.
 // Purpose: Defines types for CSP origin entries, responses, and the CSP generator state.
 // Why: Centralizes CSP type definitions so store, generate, and tooling modules share one schema.
-package security
+package csp
 
 import (
 	"sync"
@@ -21,7 +22,7 @@ type OriginEntry struct {
 	LastSeen     time.Time       `json:"last_seen"`
 }
 
-// CSPGenerator maintains the origin accumulator and generates CSP policies.
+// Generator maintains the origin accumulator and generates CSP policies.
 //
 // Invariants:
 // - origins/pages maps are mutated only under mu.
@@ -30,14 +31,14 @@ type OriginEntry struct {
 //
 // Failure semantics:
 // - Invalid/unknown resource types are excluded rather than causing generation failure.
-type CSPGenerator struct {
+type Generator struct {
 	mu      sync.RWMutex
 	origins map[string]*OriginEntry // key: "origin|resourceType"
 	pages   map[string]bool         // all unique page URLs observed
 }
 
-// CSPParams defines the input parameters for CSP generation.
-type CSPParams struct {
+// Params defines the input parameters for CSP generation.
+type Params struct {
 	Mode              string   `json:"mode"` // strict, moderate, report_only
 	IncludeReportURI  bool     `json:"include_report_uri"`
 	ExcludeOrigins    []string `json:"exclude_origins"`
@@ -45,18 +46,18 @@ type CSPParams struct {
 	SuppressFlags     []string `json:"suppress_flags,omitempty"`     // SESSION-ONLY flag suppression (not persisted)
 }
 
-// CSPResponse is the full response from GenerateCSP.
-type CSPResponse struct {
+// Response is the full response from Generate.
+type Response struct {
 	CSPHeader           string              `json:"csp_header"`
 	HeaderName          string              `json:"header_name"`
 	MetaTag             string              `json:"meta_tag"`
 	Directives          map[string][]string `json:"directives"`
 	OriginDetails       []OriginDetail      `json:"origin_details"`
 	FilteredOrigins     []FilteredOrigin    `json:"filtered_origins"`
-	Observations        CSPObservations     `json:"observations"`
+	Observations        Observations        `json:"observations"`
 	Warnings            []string            `json:"warnings"`
 	RecommendedNextStep string              `json:"recommended_next_step"`
-	Audit               *CSPAudit           `json:"audit,omitempty"` // Security boundary audit info
+	Audit               *Audit              `json:"audit,omitempty"` // Security boundary audit info
 }
 
 // OriginDetail provides per-origin confidence and inclusion info.
@@ -78,8 +79,8 @@ type FilteredOrigin struct {
 	Reason string `json:"reason"`
 }
 
-// CSPObservations summarizes the observation session.
-type CSPObservations struct {
+// Observations summarizes the observation session.
+type Observations struct {
 	TotalResources  int `json:"total_resources"`
 	UniqueOrigins   int `json:"unique_origins"`
 	OriginsIncluded int `json:"origins_included"`

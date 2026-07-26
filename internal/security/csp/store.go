@@ -1,12 +1,13 @@
+// store.go — Bounded origin/page accumulation for one daemon session.
 // Purpose: Creates the CSP generator and records origin observations with bounded storage.
 // Why: Separates origin accumulation from policy generation and tooling integration.
-package security
+package csp
 
 import "time"
 
-// NewCSPGenerator creates a fresh accumulator for one daemon session.
-func NewCSPGenerator() *CSPGenerator {
-	return &CSPGenerator{
+// NewGenerator creates a fresh accumulator for one daemon session.
+func NewGenerator() *Generator {
+	return &Generator{
 		origins: make(map[string]*OriginEntry),
 		pages:   make(map[string]bool),
 	}
@@ -20,7 +21,7 @@ func NewCSPGenerator() *CSPGenerator {
 //
 // Failure semantics:
 // - Capacity pressure evicts oldest origin entries; ingestion remains non-blocking.
-func (g *CSPGenerator) RecordOrigin(origin, resourceType, pageURL string) {
+func (g *Generator) RecordOrigin(origin, resourceType, pageURL string) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -58,7 +59,7 @@ func (g *CSPGenerator) RecordOrigin(origin, resourceType, pageURL string) {
 //
 // Failure semantics:
 // - If map is empty, operation is a no-op.
-func (g *CSPGenerator) evictOldestOrigin() {
+func (g *Generator) evictOldestOrigin() {
 	var oldestKey string
 	var oldestTime time.Time
 	for k, v := range g.origins {
@@ -76,7 +77,7 @@ func (g *CSPGenerator) evictOldestOrigin() {
 //
 // Invariants:
 // - Both origins and pages maps are replaced atomically under lock.
-func (g *CSPGenerator) Reset() {
+func (g *Generator) Reset() {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -88,7 +89,7 @@ func (g *CSPGenerator) Reset() {
 //
 // Failure semantics:
 // - Ordering is map-iteration order (non-deterministic); callers must sort if needed.
-func (g *CSPGenerator) GetPages() []string {
+func (g *Generator) GetPages() []string {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 

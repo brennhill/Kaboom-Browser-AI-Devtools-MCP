@@ -1,13 +1,14 @@
+// generate.go — Derives CSP directives from accumulated origin observations.
 // Purpose: Derives Content Security Policy directives from accumulated origin observations.
 // Why: Separates CSP generation logic from origin storage and tooling integration.
-package security
+package csp
 
 import (
 	"fmt"
 	"time"
 )
 
-// GenerateCSP derives policy directives from accumulated observations.
+// Generate derives policy directives from accumulated observations.
 //
 // Invariants:
 // - Read lock protects consistent view of origins/pages during generation.
@@ -15,7 +16,7 @@ import (
 // Failure semantics:
 // - Empty/default mode normalizes to "moderate".
 // - Low-confidence or explicitly excluded origins are omitted rather than failing generation.
-func (g *CSPGenerator) GenerateCSP(params CSPParams) CSPResponse {
+func (g *Generator) Generate(params Params) Response {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
@@ -37,14 +38,14 @@ func (g *CSPGenerator) GenerateCSP(params CSPParams) CSPResponse {
 		headerName = "Content-Security-Policy-Report-Only"
 	}
 
-	response := CSPResponse{
+	response := Response{
 		CSPHeader:       cspHeader,
 		HeaderName:      headerName,
 		MetaTag:         formatMetaTag(cspHeader),
 		Directives:      sortedDirectives,
 		OriginDetails:   result.originDetails,
 		FilteredOrigins: result.filteredOrigins,
-		Observations: CSPObservations{
+		Observations: Observations{
 			TotalResources:  result.totalResources,
 			UniqueOrigins:   result.uniqueOrigins,
 			OriginsIncluded: result.originsIncluded,
@@ -69,7 +70,7 @@ func (g *CSPGenerator) GenerateCSP(params CSPParams) CSPResponse {
 //
 // Failure semantics:
 // - Entries flagged as dev pollution/explicitly excluded are tracked as filtered and skipped.
-func (g *CSPGenerator) processOriginEntries(excludeSet map[string]bool) originProcessingResult {
+func (g *Generator) processOriginEntries(excludeSet map[string]bool) originProcessingResult {
 	pageOrigins := g.extractPageOrigins()
 	directives := map[string]map[string]bool{
 		"default-src": {"'self'": true},
@@ -111,7 +112,7 @@ func (g *CSPGenerator) processOriginEntries(excludeSet map[string]bool) originPr
 //
 // Failure semantics:
 // - Low-confidence entries remain documented in output but are excluded from directives.
-func (g *CSPGenerator) buildOriginDetail(entry *OriginEntry, directive string) OriginDetail {
+func (g *Generator) buildOriginDetail(entry *OriginEntry, directive string) OriginDetail {
 	confidence := g.computeConfidence(entry)
 	included := confidence != "low"
 
@@ -133,7 +134,7 @@ func (g *CSPGenerator) buildOriginDetail(entry *OriginEntry, directive string) O
 }
 
 // buildWarnings generates advisory warnings based on the observation state.
-func (g *CSPGenerator) buildWarnings(pagesVisited, originsFiltered int, details []OriginDetail) []string {
+func (g *Generator) buildWarnings(pagesVisited, originsFiltered int, details []OriginDetail) []string {
 	if len(g.origins) == 0 {
 		return []string{"No origins observed yet. Browse your app to capture resource loading patterns before generating a CSP."}
 	}
