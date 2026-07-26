@@ -15,7 +15,7 @@ export { createBatcherWithCircuitBreaker, createLogBatcher, RATE_LIMIT_CONFIG } 
 export { sendLogsToServer, sendWSEventsToServer, sendNetworkBodiesToServer, sendEnhancedActionsToServer, sendPerformanceSnapshotsToServer, checkServerHealth, updateBadge } from './server.js';
 import { getRequestHeaders } from './server.js';
 import { errorMessage } from '../../lib/error-utils.js';
-import { captureVisibleTabSafe } from '../tab-state.js';
+import { captureVisibleTabSafe } from '../ui/tab-state.js';
 /**
  * Truncate a single argument if too large
  */

@@ -4,7 +4,7 @@ feature_id: feature-interact-explore
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-25
+last_reviewed: 2026-07-26
 code_paths:
   - cmd/browser-agent/tools_interact_command_builder.go
   - cmd/browser-agent/tools_interact_action_handler.go
@@ -46,7 +46,7 @@ code_paths:
   - src/background/content-fallback-scripts.ts
   - src/background/upload-handler.ts
   - src/lib/daemon-http.ts
-  - src/background/draw-mode-toggle.ts
+  - src/background/ui/draw-mode-toggle.ts
   - src/background/dom/dom-types.ts
   - src/background/dom/dom-primitives.ts
   - src/inject/execute-js.ts

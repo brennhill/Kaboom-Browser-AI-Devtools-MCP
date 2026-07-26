@@ -20,14 +20,14 @@ import assert from 'node:assert'
 import { readSrc, parseSource, fileContainsCall, functionContainsCall, SRC_ROOT } from './source-contract-utils.js'
 import { join } from 'node:path'
 
-const contextMenus = readSrc('background/context-menus.ts')
-const keyboard = readSrc('background/keyboard-shortcuts.ts')
+const contextMenus = readSrc('background/ui/context-menus.ts')
+const keyboard = readSrc('background/ui/keyboard-shortcuts.ts')
 const popupDraw = readSrc('popup/draw-mode.ts')
 const launcher = readSrc('content/ui/tracked-hover-launcher.ts')
 
 const ast = (rel) => parseSource(join(SRC_ROOT, rel))
-const contextMenusAst = ast('background/context-menus.ts')
-const keyboardAst = ast('background/keyboard-shortcuts.ts')
+const contextMenusAst = ast('background/ui/context-menus.ts')
+const keyboardAst = ast('background/ui/keyboard-shortcuts.ts')
 const trackingApiAst = ast('popup/tab-tracking-api.ts')
 
 // `callsHelper` verifies an actual CallExpression exists — unlike a substring

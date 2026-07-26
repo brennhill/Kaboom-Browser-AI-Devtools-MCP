@@ -15,7 +15,7 @@ import { errorMessage } from '../../lib/error-utils.js';
 import { KABOOM_LOG_PREFIX } from '../../lib/brand.js';
 import { delay } from '../../lib/timeout-utils.js';
 import { postDaemonJSON } from '../../lib/daemon-http.js';
-import { captureVisibleTabSafe } from '../tab-state.js';
+import { captureVisibleTabSafe } from '../ui/tab-state.js';
 // =============================================================================
 // SCREENSHOT
 // =============================================================================

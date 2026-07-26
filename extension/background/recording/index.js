@@ -17,7 +17,7 @@ import { getLocal, setLocals, removeLocal, persist } from '../../lib/storage-uti
 import { delay } from '../../lib/timeout-utils.js';
 import { buildRecordingToastLabel } from './utils.js';
 import { startRecordingBadgeTimer, stopRecordingBadgeTimer } from './badge.js';
-import { setTrackedTab } from '../tab-state.js';
+import { setTrackedTab } from '../ui/tab-state.js';
 import { KABOOM_RECORDING_LOG_PREFIX } from '../../lib/brand.js';
 const defaultState = {
     active: false,

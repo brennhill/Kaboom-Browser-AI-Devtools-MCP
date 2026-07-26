@@ -7,10 +7,10 @@
 // RECORDING SHORTCUT TYPES & HELPERS
 // =============================================================================
 
-import { errorMessage } from '../lib/error-utils.js'
-import { getActiveTab, sendTabToast } from './event-listeners.js'
+import { errorMessage } from '../../lib/error-utils.js'
+import { getActiveTab, sendTabToast } from '../event-listeners.js'
 import { toggleDrawModeForTab } from './draw-mode-toggle.js'
-import { buildScreenRecordingSlug } from './recording/utils.js'
+import { buildScreenRecordingSlug } from '../recording/utils.js'
 import { trackUIFeature } from './ui-usage-tracker.js'
 import { toggleTerminalSidePanel } from './terminal-panel.js'
 export interface RecordingShortcutHandlers {

@@ -98,7 +98,7 @@ describe('recording shortcut command listener', () => {
 
   test('counts action_recording usage via the shared toggle helper (F6)', async () => {
     const { installRecordingShortcutCommandListener } = await import('../../extension/background/event-listeners.js')
-    const tracker = await import('../../extension/background/ui-usage-tracker.js')
+    const tracker = await import('../../extension/background/ui/ui-usage-tracker.js')
     tracker.drainUIFeatures() // clear any prior state so this test reads only its own
     const handlers = {
       isRecording: () => false,

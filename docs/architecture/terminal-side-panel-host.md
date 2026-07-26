@@ -19,7 +19,7 @@ This flow covers the terminal side panel host, the page hover launcher terminal 
 - `src/content/ui/tracked-hover-launcher.ts`
 - `src/content/ui/terminal-panel-bridge.ts`
 - `src/background/message-handlers.ts`
-- `src/background/tab-state.ts`
+- `src/background/ui/tab-state.ts`
 - `src/types/runtime-messages.ts`
 - `src/sidepanel.ts`
 - `extension/manifest.json`
@@ -64,7 +64,7 @@ This flow covers the terminal side panel host, the page hover launcher terminal 
 - `src/content/ui/tracked-hover-launcher.ts`
 - `src/content/ui/terminal-panel-bridge.ts`
 - `src/background/message-handlers.ts`
-- `src/background/tab-state.ts`
+- `src/background/ui/tab-state.ts`
 - `src/sidepanel.ts`
 - `src/content/ui/terminal-widget-session.ts`
 - `src/content/ui/terminal-widget-types.ts`

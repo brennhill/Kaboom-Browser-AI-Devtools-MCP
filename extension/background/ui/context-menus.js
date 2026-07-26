@@ -2,12 +2,12 @@
  * Purpose: Chrome context menu installation and click handlers for Kaboom actions.
  * Split from event-listeners.ts to keep files under 800 LOC.
  */
-import { StorageKey } from '../lib/constants.js';
-import { getLocal } from '../lib/storage-utils.js';
+import { StorageKey } from '../../lib/constants.js';
+import { getLocal } from '../../lib/storage-utils.js';
 import { toggleScreenRecording, toggleActionSequenceRecording } from './keyboard-shortcuts.js';
-import { errorMessage } from '../lib/error-utils.js';
+import { errorMessage } from '../../lib/error-utils.js';
 import { toggleDrawModeForTab } from './draw-mode-toggle.js';
-import { trackTab, untrackTab } from '../lib/tabs/tab-tracking-core.js';
+import { trackTab, untrackTab } from '../../lib/tabs/tab-tracking-core.js';
 import { trackUIFeature } from './ui-usage-tracker.js';
 import { toggleTerminalSidePanel, isTerminalPanelOpenSync } from './terminal-panel.js';
 // =============================================================================

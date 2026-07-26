@@ -46,7 +46,7 @@ describe('context menu dynamic labels', () => {
 
   test('shows stop labels when recording/action recording/draw mode are active', async () => {
     globalThis.chrome = createChromeMock({ trackedTabId: 88, drawModeActive: true })
-    const { installContextMenus } = await import('../../extension/background/context-menus.js')
+    const { installContextMenus } = await import('../../extension/background/ui/context-menus.js')
     installContextMenus(
       {
         isRecording: () => true,
@@ -75,7 +75,7 @@ describe('context menu dynamic labels', () => {
 
   test('shows start labels when idle and tab is not controlled', async () => {
     globalThis.chrome = createChromeMock({ trackedTabId: 77, drawModeActive: false })
-    const { installContextMenus } = await import('../../extension/background/context-menus.js')
+    const { installContextMenus } = await import('../../extension/background/ui/context-menus.js')
     installContextMenus(
       {
         isRecording: () => false,

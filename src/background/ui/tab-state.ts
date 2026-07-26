@@ -3,16 +3,16 @@
  * Split from event-listeners.ts to keep files under 800 LOC.
  */
 
-import { scaleTimeout } from '../lib/timeouts.js'
+import { scaleTimeout } from '../../lib/timeouts.js'
 import { syncTerminalPanelAvailability } from './side-panel-availability.js'
-import { delay } from '../lib/timeout-utils.js'
-import { KABOOM_LOG_PREFIX } from '../lib/brand.js'
-import { StorageKey } from '../lib/constants.js'
-import { getLocal, getLocals, setLocal, setLocals, persist } from '../lib/storage-utils.js'
-import { TRACKED_TAB_STORAGE_KEYS } from '../lib/tabs/tracked-tab-storage.js'
+import { delay } from '../../lib/timeout-utils.js'
+import { KABOOM_LOG_PREFIX } from '../../lib/brand.js'
+import { StorageKey } from '../../lib/constants.js'
+import { getLocal, getLocals, setLocal, setLocals, persist } from '../../lib/storage-utils.js'
+import { TRACKED_TAB_STORAGE_KEYS } from '../../lib/tabs/tracked-tab-storage.js'
 
 // Shared tracked-tab storage helpers (also used by the popup) — single source of truth.
-export { setTrackedTab, clearTrackedTab, TRACKED_TAB_STORAGE_KEYS } from '../lib/tabs/tracked-tab-storage.js'
+export { setTrackedTab, clearTrackedTab, TRACKED_TAB_STORAGE_KEYS } from '../../lib/tabs/tracked-tab-storage.js'
 
 // =============================================================================
 // CONTENT SCRIPT HELPERS

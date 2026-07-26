@@ -11,8 +11,8 @@
 
 import { getTrackedTabLostToastDetail, KABOOM_LOG_PREFIX } from '../lib/brand.js'
 import { beacon } from '../lib/telemetry-beacon.js'
-import { syncTerminalPanelAvailability } from './side-panel-availability.js'
-import { watchTerminalPanelState } from './terminal-panel.js'
+import { syncTerminalPanelAvailability } from './ui/side-panel-availability.js'
+import { watchTerminalPanelState } from './ui/terminal-panel.js'
 import {
   debugLog,
   DebugCategory,

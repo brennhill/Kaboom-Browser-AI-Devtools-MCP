@@ -4,7 +4,7 @@ feature_id: feature-tab-recording
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-25
+last_reviewed: 2026-07-26
 code_paths:
   - cmd/browser-agent/tools_interact_dispatch.go
   - internal/schema/interact_actions.go
@@ -12,7 +12,7 @@ code_paths:
   - cmd/browser-agent/tools_recording_video_handlers.go
   - src/background/event-listeners.ts
   - src/background/init.ts
-  - src/background/context-menus.ts
+  - src/background/ui/context-menus.ts
   - src/background/recording/badge.ts
   - src/background/recording/capture.ts
   - src/background/recording/index.ts

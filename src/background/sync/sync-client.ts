@@ -13,7 +13,7 @@ import { errorMessage } from '../../lib/error-utils.js'
 import { beacon } from '../../lib/telemetry-beacon.js'
 import { fetchWithTimeout } from '../../lib/timeout-utils.js'
 import { buildDaemonJSONRequestInit } from '../../lib/daemon-http.js'
-import { drainUIFeatures, restoreUIFeatures } from '../ui-usage-tracker.js'
+import { drainUIFeatures, restoreUIFeatures } from '../ui/ui-usage-tracker.js'
 
 // =============================================================================
 // SERVER INSTALL ID — single source of truth for all analytics

@@ -5,11 +5,11 @@
 import { KABOOM_LOG_PREFIX } from '../lib/brand.js';
 import { StorageKey } from '../lib/constants.js';
 import { getLocal, setLocal, setLocals, onStorageChanged, persist } from '../lib/storage-utils.js';
-import { clearTrackedTab as clearTrackedTabState } from './tab-state.js';
+import { clearTrackedTab as clearTrackedTabState } from './ui/tab-state.js';
 // Re-export split modules so existing consumers keep working
-export { installDrawModeCommandListener, installRecordingShortcutCommandListener, installScreenRecordingCommandListener, installTerminalPanelCommandListener } from './keyboard-shortcuts.js';
-export { installContextMenus } from './context-menus.js';
-export { pingContentScript, waitForTabLoad, forwardToAllContentScripts, loadSavedSettings, loadAiWebPilotState, loadDebugModeState, saveSetting, getTrackedTabInfo, clearTrackedTab, getActiveTab, sendTabToast } from './tab-state.js';
+export { installDrawModeCommandListener, installRecordingShortcutCommandListener, installScreenRecordingCommandListener, installTerminalPanelCommandListener } from './ui/keyboard-shortcuts.js';
+export { installContextMenus } from './ui/context-menus.js';
+export { pingContentScript, waitForTabLoad, forwardToAllContentScripts, loadSavedSettings, loadAiWebPilotState, loadDebugModeState, saveSetting, getTrackedTabInfo, clearTrackedTab, getActiveTab, sendTabToast } from './ui/tab-state.js';
 // =============================================================================
 // CONSTANTS - Rate Limiting & DoS Protection
 // =============================================================================
