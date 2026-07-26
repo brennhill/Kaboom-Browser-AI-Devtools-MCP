@@ -4,23 +4,64 @@ feature_id: feature-security-hardening
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-26
 code_paths:
-  - internal/security/security_diff.go
-  - internal/security/security_diff_compare.go
-  - internal/security/security_diff_snapshot.go
-  - internal/security/security_diff_helpers_headers_cookies.go
-  - internal/security/security_diff_helpers_maps_urls.go
-  - internal/security/security_diff_helpers_summary.go
-  - internal/security/security_diff_tool.go
-  - internal/security/security_config_policy.go
-  - internal/security/security_config_mode.go
-  - internal/security/security_config_audit.go
+  - internal/security/diff/types.go
+  - internal/security/diff/compare.go
+  - internal/security/diff/snapshot.go
+  - internal/security/diff/helpers_headers_cookies.go
+  - internal/security/diff/helpers_maps_urls.go
+  - internal/security/diff/helpers_summary.go
+  - internal/security/diff/tool.go
+  - internal/security/policy/policy.go
+  - internal/security/policy/mode.go
+  - internal/security/policy/audit.go
+  - internal/security/scan/doc.go
+  - internal/security/scan/scan.go
+  - internal/security/scan/types.go
+  - internal/security/scan/checks_cookies.go
+  - internal/security/scan/checks_headers.go
+  - internal/security/scan/checks_pii.go
+  - internal/security/scan/checks_transport_auth.go
+  - internal/security/scan/checks_network.go
+  - internal/security/csp/doc.go
+  - internal/security/csp/types.go
+  - internal/security/csp/store.go
+  - internal/security/csp/generate.go
+  - internal/security/csp/helpers.go
+  - internal/security/csp/tooling.go
+  - internal/security/csp/audit.go
+  - internal/security/sri/doc.go
+  - internal/security/sri/types.go
+  - internal/security/sri/generate.go
+  - internal/security/sri/helpers.go
+  - internal/security/sri/tooling.go
+  - internal/security/netflag/netflag.go
+  - internal/security/netflag/data.go
+  - internal/security/netflag/detectors.go
+  - internal/security/netflag/distance.go
+  - internal/security/httpsec/url.go
+  - internal/security/httpsec/cookie.go
 test_paths:
-  - internal/security/security_diff_test.go
-  - internal/security/security_config_unit_test.go
-  - internal/security/security_boundary_test.go
-  - internal/security/security_config_path_test.go
+  - internal/security/diff/diff_test.go
+  - internal/security/diff/helpers_test.go
+  - internal/security/policy/policy_test.go
+  - internal/security/policy/boundary_test.go
+  - internal/security/policy/config_path_test.go
+  - internal/security/scan/scan_test.go
+  - internal/security/scan/unit_test.go
+  - internal/security/scan/coverage_test.go
+  - internal/security/scan/coverage_part2_test.go
+  - internal/security/scan/network_wiring_test.go
+  - internal/security/csp/csp_test.go
+  - internal/security/csp/boundary_test.go
+  - internal/security/csp/coverage_test.go
+  - internal/security/sri/sri_test.go
+  - internal/security/sri/helpers_test.go
+  - internal/security/netflag/netflag_test.go
+  - internal/security/netflag/detectors_unit_test.go
+  - internal/security/httpsec/url_test.go
+  - internal/security/httpsec/cookie_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -48,8 +89,26 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-- `internal/security/security_config_policy.go` — manual-only security config mutation guards (`AddToWhitelist`, `SetMinSeverity`, `ClearWhitelist`) with explicit human-review guidance and in-memory audit events.
-- `internal/security/security_config_mode.go` — MCP-mode and interactive-terminal gating flags.
-- `internal/security/security_config_audit.go` — session-scoped in-memory audit trail for security config actions/attempts.
-- `internal/security/security_config_unit_test.go` — manual-only policy and audit-event behavior.
-- `internal/security/security_diff_test.go` — regression/improvement diff coverage with shared snapshot/compare test helpers for consistent setup.
+`internal/security` is a namespace of focused subpackages, not a package of its own.
+The dependency direction is one-way — `httpsec`, `netflag`, `policy` and `sri` import
+no sibling; `csp` imports `policy`; `scan` imports `httpsec` and `netflag`; `diff`
+imports `httpsec`.
+
+| Subpackage | Responsibility |
+| --- | --- |
+| `scan/` | Aggregate security audit — credentials, PII, headers, cookies, transport, auth, network |
+| `csp/` | CSP generation from accumulated origin observations |
+| `sri/` | Subresource Integrity hash generation for third-party scripts/styles |
+| `diff/` | Named posture snapshots and regression/improvement comparison |
+| `policy/` | MCP-mode trust boundary, manual-only config guards, audit trail |
+| `netflag/` | Suspicious-origin detection (abusive TLDs, ports, IP origins, typosquatting, mixed content) |
+| `httpsec/` | Shared URL classification and Set-Cookie parsing (leaf; imported by `scan` and `diff`) |
+
+- `internal/security/policy/policy.go` — manual-only security config mutation guards (`AddToWhitelist`, `SetMinSeverity`, `ClearWhitelist`) with explicit human-review guidance and in-memory audit events.
+- `internal/security/policy/mode.go` — MCP-mode and interactive-terminal gating flags.
+- `internal/security/policy/audit.go` — session-scoped in-memory audit trail for security config actions/attempts.
+- `internal/security/policy/policy_test.go` — manual-only policy and audit-event behavior.
+- `internal/security/policy/boundary_test.go` — LLM trust boundary: MCP mode detection and blocked config mutations.
+- `internal/security/csp/boundary_test.go` — session-only whitelist overrides are applied, warned about, audited, and never persisted.
+- `internal/security/diff/diff_test.go` — regression/improvement diff coverage with shared snapshot/compare test helpers for consistent setup.
+- `internal/security/scan/scan_test.go` — end-to-end scanner coverage across every check category.

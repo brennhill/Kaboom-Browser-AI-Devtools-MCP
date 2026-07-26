@@ -11,7 +11,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -24,7 +24,7 @@ type fakeScanner struct {
 	err    error
 }
 
-func (s fakeScanner) HandleSecurityAudit(_ json.RawMessage, _ []capture.NetworkBody, _ []security.LogEntry, _ []string, _ []capture.NetworkWaterfallEntry) (any, error) {
+func (s fakeScanner) HandleSecurityAudit(_ json.RawMessage, _ []capture.NetworkBody, _ []scan.LogEntry, _ []string, _ []capture.NetworkWaterfallEntry) (any, error) {
 	return s.result, s.err
 }
 
@@ -34,7 +34,7 @@ type fakeAnalyzeDeps struct {
 	tabURL          string
 	networkBodies   []capture.NetworkBody
 	waterfall       []capture.NetworkWaterfallEntry
-	consoleSec      []security.LogEntry
+	consoleSec      []scan.LogEntry
 	scanner         SecurityScannerInterface
 	scannerSet      bool
 	logEntries      []types.LogEntry
@@ -59,7 +59,7 @@ func (f *fakeAnalyzeDeps) NetworkBodies() []capture.NetworkBody { return f.netwo
 func (f *fakeAnalyzeDeps) NetworkWaterfallEntries() []capture.NetworkWaterfallEntry {
 	return f.waterfall
 }
-func (f *fakeAnalyzeDeps) ConsoleSecurityEntries() []security.LogEntry { return f.consoleSec }
+func (f *fakeAnalyzeDeps) ConsoleSecurityEntries() []scan.LogEntry { return f.consoleSec }
 func (f *fakeAnalyzeDeps) SecurityScanner() SecurityScannerInterface {
 	return f.scanner
 }

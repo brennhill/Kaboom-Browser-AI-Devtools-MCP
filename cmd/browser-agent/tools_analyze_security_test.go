@@ -10,7 +10,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
 )
 
 // ============================================
@@ -19,15 +19,15 @@ import (
 
 func TestBuildSecuritySummary_Basic(t *testing.T) {
 	t.Parallel()
-	result := security.ScanResult{
-		Findings: []security.Finding{
+	result := scan.Result{
+		Findings: []scan.Finding{
 			{Check: "credentials", Severity: "critical", Title: "API key in response"},
 			{Check: "credentials", Severity: "high", Title: "Token in URL"},
 			{Check: "headers", Severity: "medium", Title: "Missing CSP"},
 			{Check: "headers", Severity: "medium", Title: "Missing HSTS"},
 			{Check: "transport", Severity: "low", Title: "Mixed content"},
 		},
-		Summary: security.ScanSummary{
+		Summary: scan.Summary{
 			TotalFindings: 5,
 			BySeverity:    map[string]int{"critical": 1, "high": 1, "medium": 2, "low": 1},
 			ByCheck:       map[string]int{"credentials": 2, "headers": 2, "transport": 1},
@@ -62,7 +62,7 @@ func TestBuildSecuritySummary_Basic(t *testing.T) {
 
 func TestBuildSecuritySummary_Empty(t *testing.T) {
 	t.Parallel()
-	result := security.ScanResult{}
+	result := scan.Result{}
 	summary := toolanalyze.BuildSecurityAuditSummary(result)
 	if summary["total"] != 0 {
 		t.Errorf("total = %v, want 0", summary["total"])
@@ -75,11 +75,11 @@ func TestBuildSecuritySummary_Empty(t *testing.T) {
 
 func TestBuildSecuritySummary_LimitTo5(t *testing.T) {
 	t.Parallel()
-	findings := make([]security.Finding, 8)
+	findings := make([]scan.Finding, 8)
 	for i := range findings {
-		findings[i] = security.Finding{Check: "headers", Severity: "medium", Title: "issue"}
+		findings[i] = scan.Finding{Check: "headers", Severity: "medium", Title: "issue"}
 	}
-	result := security.ScanResult{Findings: findings}
+	result := scan.Result{Findings: findings}
 	summary := toolanalyze.BuildSecurityAuditSummary(result)
 	topIssues := summary["top_issues"].([]map[string]any)
 	if len(topIssues) > 5 {

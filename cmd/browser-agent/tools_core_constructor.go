@@ -19,7 +19,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/redaction"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
@@ -110,7 +110,7 @@ func NewToolHandler(server *Server, capture *capture.Store) *MCPHandler {
 	wireNoiseFirstConnect(handler)
 
 	// Initialize security and audit tools.
-	handler.securityScannerImpl = security.NewSecurityScanner()
+	handler.securityScannerImpl = scan.NewScanner()
 	handler.thirdPartyAuditorImpl = analysis.NewThirdPartyAuditor()
 	handler.apiContractValidator = analysis.NewAPIContractValidator()
 	handler.sessionManager = session.NewSessionManager(10, newToolCaptureStateReader(handler))

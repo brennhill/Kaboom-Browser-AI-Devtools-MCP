@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/sri"
 	gen "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/generate"
 )
 
@@ -65,7 +65,7 @@ func HandleGenerateSRI(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 
 	_, _, tabURL := cap.GetTrackingStatus()
 	pageURLs := []string{tabURL}
-	result, err := security.HandleGenerateSRI(args, networkBodies, pageURLs)
+	result, err := sri.HandleGenerate(args, networkBodies, pageURLs)
 	if err != nil {
 		return fail(req, mcp.ErrInvalidParam, "SRI generation failed: "+err.Error(), "Fix parameters and call again")
 	}

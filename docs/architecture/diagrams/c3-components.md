@@ -251,11 +251,14 @@ graph TB
 - Security analysis (for threat context)
 
 #### **Security** (`internal/security/`)
-**Purpose:** Threat detection and compliance
-- **CSP Analysis** - Detect CSP violations, suggest policies
-- **SRI Analysis** - Validate Subresource Integrity
-- **Threat Flagging** - Mark security issues
-- **Security Diffing** - Compare security state over time
+**Purpose:** Threat detection and compliance. Split into focused subpackages:
+- **`scan/`** - Aggregate audit: credentials, PII, headers, cookies, transport, auth
+- **`csp/`** - Detect CSP violations, suggest policies from observed traffic
+- **`sri/`** - Generate Subresource Integrity hashes
+- **`netflag/`** - Flag suspicious origins (abusive TLDs, typosquatting, mixed content)
+- **`diff/`** - Compare security posture over time via named snapshots
+- **`policy/`** - MCP-mode trust boundary and the manual-only config guards
+- **`httpsec/`** - Shared URL/cookie primitives (leaf, no sibling imports)
 
 **Used By:**
 - `generate` tool (for SARIF reports, CSP recommendations)
@@ -407,7 +410,7 @@ AI calls configure({action: 'store', data: {...}})
 - **Capture:** `internal/capture/*.go` (29 files)
 - **Session:** `internal/session/*.go` (6 files)
 - **Analysis:** `internal/analysis/*.go` (7 files)
-- **Security:** `internal/security/*.go` (8 files)
+- **Security:** `internal/security/{scan,csp,sri,diff,policy,netflag,httpsec}/*.go` (38 files)
 - **Tools:** `cmd/browser-agent/tools_*.go` (8 files)
 - **HTTP Server:** `cmd/browser-agent/{main,handler,server,middleware,routes,health}.go`
 - **Utilities:** `internal/{rate_limit,circuit_breaker,redaction,export}` + `internal/util/`
