@@ -1,9 +1,8 @@
 // Purpose: Computes before/after metric changes for load time, request count, and transfer size with regression detection.
 // Docs: docs/features/feature/request-session-correlation/index.md
 
-// performance-diff.go — Performance diff computation.
-// diffPerformance and computeMetricChange functions.
-package session
+// performance.go — Performance diff computation.
+package snapdiff
 
 import (
 	"fmt"
@@ -17,8 +16,8 @@ func computeMetricIfNonZero(before, after float64) *MetricChange {
 	return computeMetricChange(before, after)
 }
 
-// diffPerformance compares performance metrics between two snapshots.
-func (sm *SessionManager) diffPerformance(a, b *NamedSnapshot) PerformanceDiff {
+// Performance compares performance metrics between two snapshots.
+func Performance(a, b *NamedSnapshot) PerformanceDiff {
 	if a.Performance == nil || b.Performance == nil {
 		return PerformanceDiff{}
 	}

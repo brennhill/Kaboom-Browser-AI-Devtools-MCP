@@ -3,13 +3,13 @@
 
 // network_diff_test.go — Tests for network-diff.go.
 // Covers: buildEndpointMap, formatDurationChange, diffNetwork with all change types.
-package session
+package snapdiff
 
 import (
 	"testing"
 )
 
-func assertNetworkDiffEmpty(t *testing.T, diff SessionNetworkDiff) {
+func assertNetworkDiffEmpty(t *testing.T, diff NetworkDiff) {
 	t.Helper()
 	if len(diff.NewEndpoints) != 0 {
 		t.Errorf("Expected 0 new endpoints, got %d", len(diff.NewEndpoints))
@@ -159,9 +159,6 @@ func TestFormatDurationChange_NegativeValues(t *testing.T) {
 
 func TestDiffNetwork_NewEndpoints(t *testing.T) {
 	t.Parallel()
-	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
-	sm := NewSessionManager(10, mock)
-
 	snapA := &NamedSnapshot{
 		NetworkRequests: []SnapshotNetworkRequest{
 			{Method: "GET", URL: "/api/users", Status: 200},
@@ -175,7 +172,7 @@ func TestDiffNetwork_NewEndpoints(t *testing.T) {
 		},
 	}
 
-	diff := sm.diffNetwork(snapA, snapB)
+	diff := Network(snapA, snapB)
 
 	if len(diff.NewEndpoints) != 2 {
 		t.Fatalf("Expected 2 new endpoints, got %d", len(diff.NewEndpoints))
@@ -196,9 +193,6 @@ func TestDiffNetwork_NewEndpoints(t *testing.T) {
 
 func TestDiffNetwork_MissingEndpoints(t *testing.T) {
 	t.Parallel()
-	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
-	sm := NewSessionManager(10, mock)
-
 	snapA := &NamedSnapshot{
 		NetworkRequests: []SnapshotNetworkRequest{
 			{Method: "GET", URL: "/api/users", Status: 200},
@@ -212,7 +206,7 @@ func TestDiffNetwork_MissingEndpoints(t *testing.T) {
 		},
 	}
 
-	diff := sm.diffNetwork(snapA, snapB)
+	diff := Network(snapA, snapB)
 
 	if len(diff.MissingEndpoints) != 2 {
 		t.Fatalf("Expected 2 missing endpoints, got %d", len(diff.MissingEndpoints))
@@ -233,9 +227,6 @@ func TestDiffNetwork_MissingEndpoints(t *testing.T) {
 
 func TestDiffNetwork_StatusChanges(t *testing.T) {
 	t.Parallel()
-	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
-	sm := NewSessionManager(10, mock)
-
 	snapA := &NamedSnapshot{
 		NetworkRequests: []SnapshotNetworkRequest{
 			{Method: "GET", URL: "/api/data", Status: 200, Duration: 50},
@@ -247,7 +238,7 @@ func TestDiffNetwork_StatusChanges(t *testing.T) {
 		},
 	}
 
-	diff := sm.diffNetwork(snapA, snapB)
+	diff := Network(snapA, snapB)
 
 	if len(diff.StatusChanges) != 1 {
 		t.Fatalf("Expected 1 status change, got %d", len(diff.StatusChanges))
@@ -273,9 +264,6 @@ func TestDiffNetwork_StatusChanges(t *testing.T) {
 
 func TestDiffNetwork_StatusChangeOKToError_AddsToNewErrors(t *testing.T) {
 	t.Parallel()
-	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
-	sm := NewSessionManager(10, mock)
-
 	snapA := &NamedSnapshot{
 		NetworkRequests: []SnapshotNetworkRequest{
 			{Method: "POST", URL: "/api/submit", Status: 200},
@@ -287,7 +275,7 @@ func TestDiffNetwork_StatusChangeOKToError_AddsToNewErrors(t *testing.T) {
 		},
 	}
 
-	diff := sm.diffNetwork(snapA, snapB)
+	diff := Network(snapA, snapB)
 
 	// Status 200 -> 503 should appear in NewErrors
 	if len(diff.NewErrors) != 1 {
@@ -300,9 +288,6 @@ func TestDiffNetwork_StatusChangeOKToError_AddsToNewErrors(t *testing.T) {
 
 func TestDiffNetwork_StatusChangeErrorToError_NotNewError(t *testing.T) {
 	t.Parallel()
-	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
-	sm := NewSessionManager(10, mock)
-
 	// 500 -> 502: error changed but was already an error
 	snapA := &NamedSnapshot{
 		NetworkRequests: []SnapshotNetworkRequest{
@@ -315,7 +300,7 @@ func TestDiffNetwork_StatusChangeErrorToError_NotNewError(t *testing.T) {
 		},
 	}
 
-	diff := sm.diffNetwork(snapA, snapB)
+	diff := Network(snapA, snapB)
 
 	if len(diff.StatusChanges) != 1 {
 		t.Fatalf("Expected 1 status change, got %d", len(diff.StatusChanges))
@@ -332,9 +317,6 @@ func TestDiffNetwork_StatusChangeErrorToError_NotNewError(t *testing.T) {
 
 func TestDiffNetwork_NewEndpointWithErrorStatus(t *testing.T) {
 	t.Parallel()
-	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
-	sm := NewSessionManager(10, mock)
-
 	snapA := &NamedSnapshot{
 		NetworkRequests: []SnapshotNetworkRequest{},
 	}
@@ -345,7 +327,7 @@ func TestDiffNetwork_NewEndpointWithErrorStatus(t *testing.T) {
 		},
 	}
 
-	diff := sm.diffNetwork(snapA, snapB)
+	diff := Network(snapA, snapB)
 
 	if len(diff.NewEndpoints) != 2 {
 		t.Fatalf("Expected 2 new endpoints, got %d", len(diff.NewEndpoints))
@@ -365,9 +347,6 @@ func TestDiffNetwork_NewEndpointWithErrorStatus(t *testing.T) {
 
 func TestDiffNetwork_NoChanges(t *testing.T) {
 	t.Parallel()
-	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
-	sm := NewSessionManager(10, mock)
-
 	requests := []SnapshotNetworkRequest{
 		{Method: "GET", URL: "/api/users", Status: 200},
 		{Method: "POST", URL: "/api/login", Status: 200},
@@ -376,7 +355,7 @@ func TestDiffNetwork_NoChanges(t *testing.T) {
 	snapA := &NamedSnapshot{NetworkRequests: requests}
 	snapB := &NamedSnapshot{NetworkRequests: requests}
 
-	diff := sm.diffNetwork(snapA, snapB)
+	diff := Network(snapA, snapB)
 	assertNetworkDiffEmpty(t, diff)
 }
 
@@ -386,25 +365,19 @@ func TestDiffNetwork_NoChanges(t *testing.T) {
 
 func TestDiffNetwork_BothEmpty(t *testing.T) {
 	t.Parallel()
-	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
-	sm := NewSessionManager(10, mock)
-
 	snapA := &NamedSnapshot{NetworkRequests: []SnapshotNetworkRequest{}}
 	snapB := &NamedSnapshot{NetworkRequests: []SnapshotNetworkRequest{}}
 
-	diff := sm.diffNetwork(snapA, snapB)
+	diff := Network(snapA, snapB)
 	assertNetworkDiffEmpty(t, diff)
 }
 
 func TestDiffNetwork_NilNetworkRequests(t *testing.T) {
 	t.Parallel()
-	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
-	sm := NewSessionManager(10, mock)
-
 	snapA := &NamedSnapshot{NetworkRequests: nil}
 	snapB := &NamedSnapshot{NetworkRequests: nil}
 
-	diff := sm.diffNetwork(snapA, snapB)
+	diff := Network(snapA, snapB)
 
 	if len(diff.NewEndpoints) != 0 {
 		t.Errorf("Expected 0 new endpoints for nil, got %d", len(diff.NewEndpoints))
@@ -417,9 +390,6 @@ func TestDiffNetwork_NilNetworkRequests(t *testing.T) {
 
 func TestDiffNetwork_DurationChangeNoDuration(t *testing.T) {
 	t.Parallel()
-	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
-	sm := NewSessionManager(10, mock)
-
 	// Status change with zero duration (missing data)
 	snapA := &NamedSnapshot{
 		NetworkRequests: []SnapshotNetworkRequest{
@@ -432,7 +402,7 @@ func TestDiffNetwork_DurationChangeNoDuration(t *testing.T) {
 		},
 	}
 
-	diff := sm.diffNetwork(snapA, snapB)
+	diff := Network(snapA, snapB)
 
 	if len(diff.StatusChanges) != 1 {
 		t.Fatalf("Expected 1 status change, got %d", len(diff.StatusChanges))
@@ -448,9 +418,6 @@ func TestDiffNetwork_DurationChangeNoDuration(t *testing.T) {
 
 func TestDiffNetwork_QueryParamsIgnoredForMatching(t *testing.T) {
 	t.Parallel()
-	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
-	sm := NewSessionManager(10, mock)
-
 	snapA := &NamedSnapshot{
 		NetworkRequests: []SnapshotNetworkRequest{
 			{Method: "GET", URL: "https://api.example.com/users?page=1&limit=10", Status: 200},
@@ -462,7 +429,7 @@ func TestDiffNetwork_QueryParamsIgnoredForMatching(t *testing.T) {
 		},
 	}
 
-	diff := sm.diffNetwork(snapA, snapB)
+	diff := Network(snapA, snapB)
 
 	// Should match on path, not new/missing
 	if len(diff.NewEndpoints) != 0 {

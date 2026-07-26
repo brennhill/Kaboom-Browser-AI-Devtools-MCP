@@ -1,9 +1,8 @@
 // Purpose: Compares network requests between two snapshots by endpoint key to find new, missing, and status-changed entries.
 // Docs: docs/features/feature/request-session-correlation/index.md
 
-// network-diff.go — Network diff computation.
-// diffNetwork function compares network requests between two snapshots.
-package session
+// network.go — Network diff computation.
+package snapdiff
 
 import (
 	"fmt"
@@ -39,12 +38,12 @@ func formatDurationChange(beforeDur, afterDur int) string {
 	return fmt.Sprintf("%dms", delta)
 }
 
-// diffNetwork compares network requests between two snapshots.
+// Network compares network requests between two snapshots.
 // Requests are matched by (method, URL path) — query params are ignored.
-func (sm *SessionManager) diffNetwork(a, b *NamedSnapshot) SessionNetworkDiff {
-	diff := SessionNetworkDiff{
+func Network(a, b *NamedSnapshot) NetworkDiff {
+	diff := NetworkDiff{
 		NewErrors:        make([]SnapshotNetworkRequest, 0),
-		StatusChanges:    make([]SessionNetworkChange, 0),
+		StatusChanges:    make([]NetworkChange, 0),
 		NewEndpoints:     make([]SnapshotNetworkRequest, 0),
 		MissingEndpoints: make([]SnapshotNetworkRequest, 0),
 	}
@@ -75,7 +74,7 @@ func (sm *SessionManager) diffNetwork(a, b *NamedSnapshot) SessionNetworkDiff {
 		if !found || aReq.Status == bReq.Status {
 			continue
 		}
-		change := SessionNetworkChange{
+		change := NetworkChange{
 			Method:         key.Method,
 			URL:            aReq.URL,
 			BeforeStatus:   aReq.Status,

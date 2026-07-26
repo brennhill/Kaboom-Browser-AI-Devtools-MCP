@@ -1,12 +1,11 @@
 // Purpose: Computes error diffs, performance regression counts, and summary verdicts between snapshots.
 // Docs: docs/features/feature/request-session-correlation/index.md
 
-// actions-diff.go — Actions diff computation.
-// diffErrors function compares errors between two snapshots.
-package session
+// errors.go — Console error diff computation plus the aggregate verdict.
+package snapdiff
 
-// diffErrors computes the set difference of errors between two snapshots.
-func (sm *SessionManager) diffErrors(a, b *NamedSnapshot) ErrorDiff {
+// Errors computes the set difference of console errors between two snapshots.
+func Errors(a, b *NamedSnapshot) ErrorDiff {
 	diff := ErrorDiff{
 		New:       make([]SnapshotError, 0),
 		Resolved:  make([]SnapshotError, 0),
@@ -54,7 +53,7 @@ func countPerfRegressions(perf PerformanceDiff) int {
 }
 
 // hasStatusRegression returns true if any status change went from OK to error.
-func hasStatusRegression(changes []SessionNetworkChange) bool {
+func hasStatusRegression(changes []NetworkChange) bool {
 	for _, sc := range changes {
 		if sc.AfterStatus >= 400 && sc.BeforeStatus < 400 {
 			return true
@@ -63,9 +62,9 @@ func hasStatusRegression(changes []SessionNetworkChange) bool {
 	return false
 }
 
-// computeSummary derives the verdict and aggregate counts from diff.
-func (sm *SessionManager) computeSummary(result *SessionDiffResult) DiffSummary {
-	summary := DiffSummary{
+// Summarize derives the verdict and aggregate counts from a computed diff.
+func Summarize(result *Result) Summary {
+	summary := Summary{
 		NewErrors:              len(result.Errors.New),
 		ResolvedErrors:         len(result.Errors.Resolved),
 		NewNetworkErrors:       len(result.Network.NewErrors),

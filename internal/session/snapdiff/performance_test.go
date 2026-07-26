@@ -3,7 +3,7 @@
 
 // performance_diff_test.go — Tests for performance-diff.go.
 // Covers: computeMetricIfNonZero, computeMetricChange, formatPctChange, diffPerformance.
-package session
+package snapdiff
 
 import (
 	"testing"
@@ -210,13 +210,10 @@ func TestFormatPctChange_LargePositive(t *testing.T) {
 
 func TestDiffPerformance_BothNilPerformance(t *testing.T) {
 	t.Parallel()
-	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
-	sm := NewSessionManager(10, mock)
-
 	snapA := &NamedSnapshot{Performance: nil}
 	snapB := &NamedSnapshot{Performance: nil}
 
-	diff := sm.diffPerformance(snapA, snapB)
+	diff := Performance(snapA, snapB)
 	if diff.LoadTime != nil {
 		t.Error("Expected nil LoadTime when both nil")
 	}
@@ -230,9 +227,6 @@ func TestDiffPerformance_BothNilPerformance(t *testing.T) {
 
 func TestDiffPerformance_AIsNil(t *testing.T) {
 	t.Parallel()
-	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
-	sm := NewSessionManager(10, mock)
-
 	snapA := &NamedSnapshot{Performance: nil}
 	snapB := &NamedSnapshot{
 		Performance: &performance.Snapshot{
@@ -241,7 +235,7 @@ func TestDiffPerformance_AIsNil(t *testing.T) {
 		},
 	}
 
-	diff := sm.diffPerformance(snapA, snapB)
+	diff := Performance(snapA, snapB)
 	if diff.LoadTime != nil {
 		t.Error("Expected nil LoadTime when A is nil")
 	}
@@ -249,9 +243,6 @@ func TestDiffPerformance_AIsNil(t *testing.T) {
 
 func TestDiffPerformance_BIsNil(t *testing.T) {
 	t.Parallel()
-	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
-	sm := NewSessionManager(10, mock)
-
 	snapA := &NamedSnapshot{
 		Performance: &performance.Snapshot{
 			Timing:  performance.Timing{Load: 1000},
@@ -260,7 +251,7 @@ func TestDiffPerformance_BIsNil(t *testing.T) {
 	}
 	snapB := &NamedSnapshot{Performance: nil}
 
-	diff := sm.diffPerformance(snapA, snapB)
+	diff := Performance(snapA, snapB)
 	if diff.LoadTime != nil {
 		t.Error("Expected nil LoadTime when B is nil")
 	}
@@ -268,9 +259,6 @@ func TestDiffPerformance_BIsNil(t *testing.T) {
 
 func TestDiffPerformance_AllMetrics(t *testing.T) {
 	t.Parallel()
-	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
-	sm := NewSessionManager(10, mock)
-
 	snapA := &NamedSnapshot{
 		Performance: &performance.Snapshot{
 			Timing:  performance.Timing{Load: 1000},
@@ -284,7 +272,7 @@ func TestDiffPerformance_AllMetrics(t *testing.T) {
 		},
 	}
 
-	diff := sm.diffPerformance(snapA, snapB)
+	diff := Performance(snapA, snapB)
 
 	// LoadTime: 1000 -> 2000
 	if diff.LoadTime == nil {
@@ -334,9 +322,6 @@ func TestDiffPerformance_AllMetrics(t *testing.T) {
 
 func TestDiffPerformance_ZeroMetrics(t *testing.T) {
 	t.Parallel()
-	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
-	sm := NewSessionManager(10, mock)
-
 	snapA := &NamedSnapshot{
 		Performance: &performance.Snapshot{
 			Timing:  performance.Timing{Load: 0},
@@ -350,7 +335,7 @@ func TestDiffPerformance_ZeroMetrics(t *testing.T) {
 		},
 	}
 
-	diff := sm.diffPerformance(snapA, snapB)
+	diff := Performance(snapA, snapB)
 
 	// Both zero => computeMetricIfNonZero returns nil
 	if diff.LoadTime != nil {
@@ -366,9 +351,6 @@ func TestDiffPerformance_ZeroMetrics(t *testing.T) {
 
 func TestDiffPerformance_Improvement(t *testing.T) {
 	t.Parallel()
-	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
-	sm := NewSessionManager(10, mock)
-
 	snapA := &NamedSnapshot{
 		Performance: &performance.Snapshot{
 			Timing:  performance.Timing{Load: 3000},
@@ -382,7 +364,7 @@ func TestDiffPerformance_Improvement(t *testing.T) {
 		},
 	}
 
-	diff := sm.diffPerformance(snapA, snapB)
+	diff := Performance(snapA, snapB)
 
 	if diff.LoadTime == nil {
 		t.Fatal("Expected non-nil LoadTime")

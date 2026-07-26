@@ -11,7 +11,4 @@ const (
 	maxConsolePerSnapshot = 50
 	maxNetworkPerSnapshot = 100
 	reservedSnapshotName  = "current"
-
-	// Performance regression threshold: >50% increase
-	perfRegressionRatio = 1.5
 )
