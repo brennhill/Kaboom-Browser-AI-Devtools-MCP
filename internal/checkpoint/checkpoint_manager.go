@@ -1,10 +1,15 @@
-// Purpose: Creates and manages named and auto checkpoints for before/after state comparison.
-// Why: Centralizes checkpoint lifecycle so diff, resolution, and summary logic can be split into focused files.
+// Purpose: Checkpoint lifecycle — create/resolve checkpoints, compose the diff response, and summarize it.
+// Why: Keeps the whole GetChangesSince path (resolution -> diff assembly -> severity/summary) in one place
+// so the lock-holding sequence in GetChangesSince is readable end to end.
+// Docs: docs/features/feature/push-alerts/index.md
+
 package checkpoint
 
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
@@ -153,4 +158,155 @@ func (cm *CheckpointManager) shouldInclude(include []string, category string) bo
 		}
 	}
 	return false
+}
+
+func (cm *CheckpointManager) resolveCheckpoint(name, clientID string, now time.Time) (*Checkpoint, bool) {
+	if name == "" {
+		return cm.resolveAutoCheckpoint(now), false
+	}
+
+	namespacedName := name
+	if clientID != "" {
+		namespacedName = clientID + ":" + name
+	}
+
+	if named, ok := cm.namedCheckpoints[namespacedName]; ok {
+		return named, true
+	}
+	if named, ok := cm.namedCheckpoints[name]; ok {
+		return named, true
+	}
+	if cp := cm.resolveTimestampCheckpoint(name); cp != nil {
+		return cp, true
+	}
+	return &Checkpoint{CreatedAt: now, KnownEndpoints: make(map[string]endpointState)}, true
+}
+
+func (cm *CheckpointManager) resolveAutoCheckpoint(now time.Time) *Checkpoint {
+	if cm.autoCheckpoint != nil {
+		return cm.autoCheckpoint
+	}
+	return &Checkpoint{
+		CreatedAt:      now,
+		KnownEndpoints: make(map[string]endpointState),
+	}
+}
+
+func (cm *CheckpointManager) snapshotNow() *Checkpoint {
+	logTotal := cm.server.GetLogTotalAdded()
+	netTotal := cm.capture.GetNetworkTotalAdded()
+	wsTotal := cm.capture.GetWebSocketTotalAdded()
+	actTotal := cm.capture.GetActionTotalAdded()
+
+	return &Checkpoint{
+		CreatedAt:      time.Now(),
+		LogTotal:       logTotal,
+		NetworkTotal:   netTotal,
+		WSTotal:        wsTotal,
+		ActionTotal:    actTotal,
+		KnownEndpoints: make(map[string]endpointState),
+	}
+}
+
+func (cm *CheckpointManager) resolveTimestampCheckpoint(tsStr string) *Checkpoint {
+	t, err := time.Parse(time.RFC3339Nano, tsStr)
+	if err != nil {
+		t, err = time.Parse(time.RFC3339, tsStr)
+		if err != nil {
+			return nil
+		}
+	}
+
+	logTotal := cm.findPositionAtTime(cm.server.GetLogTimestamps(), cm.server.GetLogTotalAdded(), t)
+	netTotal := cm.findPositionAtTime(cm.capture.GetNetworkTimestamps(), cm.capture.GetNetworkTotalAdded(), t)
+	wsTotal := cm.findPositionAtTime(cm.capture.GetWebSocketTimestamps(), cm.capture.GetWebSocketTotalAdded(), t)
+	actTotal := cm.findPositionAtTime(cm.capture.GetActionTimestamps(), cm.capture.GetActionTotalAdded(), t)
+
+	return &Checkpoint{
+		CreatedAt:      t,
+		LogTotal:       logTotal,
+		NetworkTotal:   netTotal,
+		WSTotal:        wsTotal,
+		ActionTotal:    actTotal,
+		KnownEndpoints: make(map[string]endpointState),
+	}
+}
+
+func (cm *CheckpointManager) findPositionAtTime(addedAt []time.Time, currentTotal int64, t time.Time) int64 {
+	if len(addedAt) == 0 {
+		return currentTotal
+	}
+
+	idx := sort.Search(len(addedAt), func(i int) bool {
+		return addedAt[i].After(t)
+	})
+
+	entriesAfter := int64(len(addedAt) - idx)
+	pos := currentTotal - entriesAfter
+	if pos < 0 {
+		pos = 0
+	}
+	return pos
+}
+
+func (cm *CheckpointManager) determineSeverity(resp DiffResponse) string {
+	if hasConsoleErrors(resp) || hasNetworkFailures(resp) {
+		return "error"
+	}
+	if hasConsoleWarnings(resp) || hasWSDisconnections(resp) {
+		return "warning"
+	}
+	return "clean"
+}
+
+func hasConsoleErrors(resp DiffResponse) bool {
+	return resp.Console != nil && len(resp.Console.Errors) > 0
+}
+
+func hasNetworkFailures(resp DiffResponse) bool {
+	return resp.Network != nil && len(resp.Network.Failures) > 0
+}
+
+func hasConsoleWarnings(resp DiffResponse) bool {
+	return resp.Console != nil && len(resp.Console.Warnings) > 0
+}
+
+func hasWSDisconnections(resp DiffResponse) bool {
+	return resp.WebSocket != nil && len(resp.WebSocket.Disconnections) > 0
+}
+
+func (cm *CheckpointManager) buildSummary(resp DiffResponse) string {
+	if resp.Severity == "clean" {
+		return "No significant changes."
+	}
+	parts := collectSummaryParts(resp)
+	if len(parts) == 0 {
+		return "No significant changes."
+	}
+	return strings.Join(parts, ", ")
+}
+
+func collectSummaryParts(resp DiffResponse) []string {
+	var parts []string
+	if hasConsoleErrors(resp) {
+		parts = append(parts, fmt.Sprintf("%d new console error(s)", sumConsoleCounts(resp.Console.Errors)))
+	}
+	if hasNetworkFailures(resp) {
+		parts = append(parts, fmt.Sprintf("%d network failure(s)", len(resp.Network.Failures)))
+	}
+	if hasConsoleWarnings(resp) {
+		parts = append(parts, fmt.Sprintf("%d new console warning(s)", sumConsoleCounts(resp.Console.Warnings)))
+	}
+	if hasWSDisconnections(resp) {
+		parts = append(parts, fmt.Sprintf("%d websocket disconnection(s)", len(resp.WebSocket.Disconnections)))
+	}
+	return parts
+}
+
+func sumConsoleCounts(entries []ConsoleEntry) int {
+	total := 0
+	for _, e := range entries {
+		total += e.Count
+	}
+	return total
 }
