@@ -2,7 +2,7 @@
 doc_type: flow_map
 flow_id: mcp-daemon-lifecycle
 status: active
-last_reviewed: 2026-03-29
+last_reviewed: 2026-07-26
 owners:
   - Brenn
 entrypoints:
@@ -14,8 +14,8 @@ code_paths:
   - cmd/browser-agent/main_connection_mcp_bootstrap.go
   - cmd/browser-agent/main_connection_mcp_upgrade.go
   - cmd/browser-agent/main_connection_mcp_shutdown.go
-  - cmd/browser-agent/daemon_lifecycle.go
-  - cmd/browser-agent/daemon_lock_file.go
+  - cmd/browser-agent/internal/daemonlife/lifecycle.go
+  - cmd/browser-agent/internal/daemonlife/lock_file.go
   - cmd/browser-agent/server_routes.go
   - cmd/browser-agent/server_middleware.go
   - cmd/browser-agent/handler_http.go
@@ -85,8 +85,8 @@ Covers daemon startup, HTTP bind, PID/lock persistence, upgrade watcher wiring, 
 - `cmd/browser-agent/main_connection_mcp_bootstrap.go`
 - `cmd/browser-agent/main_connection_mcp_upgrade.go`
 - `cmd/browser-agent/main_connection_mcp_shutdown.go`
-- `cmd/browser-agent/daemon_lifecycle.go`
-- `cmd/browser-agent/daemon_lock_file.go`
+- `cmd/browser-agent/internal/daemonlife/lifecycle.go`
+- `cmd/browser-agent/internal/daemonlife/lock_file.go`
 - `cmd/browser-agent/server_middleware.go`
 - `cmd/browser-agent/handler_http.go`
 - `cmd/browser-agent/connect_mode.go`

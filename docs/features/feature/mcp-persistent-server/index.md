@@ -10,9 +10,15 @@ code_paths:
   - cmd/browser-agent/bridge_adapter.go
   - cmd/browser-agent/internal/bridge/bridge.go
   - cmd/browser-agent/internal/bridge/bridge_startup_orchestration.go
-  - cmd/browser-agent/daemon_lifecycle.go
-  - cmd/browser-agent/startup_throttle.go
+  - cmd/browser-agent/internal/daemonlife/lifecycle.go
+  - cmd/browser-agent/internal/daemonlife/lock_file.go
+  - cmd/browser-agent/internal/daemonlife/install_epoch.go
+  - cmd/browser-agent/internal/daemonlife/startup_throttle.go
+  - cmd/browser-agent/internal/daemonlife/version_compare.go
+  - cmd/browser-agent/internal/daemonlife/deps.go
+  - cmd/browser-agent/daemon_lifecycle_wiring.go
   - cmd/browser-agent/main_connection_mcp.go
+  - cmd/browser-agent/main_connection_mcp_bootstrap.go
   - cmd/browser-agent/main_connection_recovery.go
   - cmd/browser-agent/server_routes_health_diagnostics.go
   - cmd/browser-agent/main_connection_mcp_shutdown.go
@@ -38,8 +44,13 @@ test_paths:
   - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
   - cmd/browser-agent/internal/bridge/bridge_detach_stdio_test.go
   - cmd/browser-agent/internal/bridge/bridge_deps_isolation_test.go
-  - cmd/browser-agent/daemon_lifecycle_takeover_test.go
-  - cmd/browser-agent/startup_throttle_test.go
+  - cmd/browser-agent/internal/daemonlife/lifecycle_takeover_test.go
+  - cmd/browser-agent/internal/daemonlife/install_epoch_test.go
+  - cmd/browser-agent/internal/daemonlife/startup_throttle_test.go
+  - cmd/browser-agent/internal/daemonlife/version_compare_test.go
+  - cmd/browser-agent/internal/daemonlife/helpers_test.go
+  - cmd/browser-agent/daemon_lifecycle_policy_test.go
+  - cmd/browser-agent/daemon_lifecycle_wiring_test.go
   - tests/regression/08-fast-start/test-fast-start.sh
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-29

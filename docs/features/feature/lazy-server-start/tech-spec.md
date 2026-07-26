@@ -16,7 +16,7 @@ code_paths:
   - cmd/browser-agent/internal/bridge/bridge_startup_status.go
   - cmd/browser-agent/internal/bridge/bridge_fastpath.go
   - cmd/browser-agent/internal/bridge/bridge_forward.go
-  - cmd/browser-agent/daemon_lifecycle.go
+  - cmd/browser-agent/internal/daemonlife/lifecycle.go
   - cmd/browser-agent/launch_mode.go
   - cmd/browser-agent/tools_errors_guards.go
 test_paths:
@@ -65,7 +65,7 @@ The critical invariant is that the read loop starts before, or concurrently with
 
 **Request forwarding (`bridge_forward.go`).** Forwarded requests proxy to the daemon over HTTP. On a connection error the bridge calls `respawnIfNeeded` and retries. Responses with status code 500 or higher are treated as `retryable`, and the structured error carries that flag back to the client.
 
-**Daemon singleton lifecycle (`daemon_lifecycle.go`).** `enforceDaemonStartupPolicy` reads the daemon lock record and either validates parallel isolation (for `--state-dir`-isolated runs) or performs a default takeover. Takeover is conservative: it requires the lock process identifier to match the port's process-identifier file before terminating anything, reclaims stale mismatched locks only when the port is not serving, and never kills a non-Kaboom service.
+**Daemon singleton lifecycle (`internal/daemonlife/lifecycle.go`).** `daemonlife.EnforceStartupPolicy` reads the daemon lock record and either validates parallel isolation (for `--state-dir`-isolated runs) or performs a default takeover. Takeover is conservative: it requires the lock process identifier to match the port's process-identifier file before terminating anything, reclaims stale mismatched locks only when the port is not serving, and never kills a non-Kaboom service.
 
 **Launch-mode classification (`launch_mode.go`).** `classifyLaunchMode` inspects the `--daemon` flag, supervisor environment markers, terminal interactivity, and the parent process name to label the launch `persistent` or `likely_transient`. `buildLaunchModeWarning` produces the advisory string; `enforcePersistentMode` upgrades it to a hard error when `KABOOM_REQUIRE_PERSISTENT` is set.
 
@@ -120,7 +120,7 @@ These are package variables so tests can shrink them for deterministic timing.
 
 **Bridge (`cmd/browser-agent/internal/bridge/`):** the fast path, startup coordinator, daemon state, and forwarding live here. Startup leadership uses a port-scoped lock file in the state directory; daemon state uses channels rather than sleeps so waiters wake on the exact transition.
 
-**Daemon process (`cmd/browser-agent/`):** `daemon_lifecycle.go` enforces the singleton via the lock record; `launch_mode.go` classifies the launch; `tools_errors_guards.go` gates tool calls on extension readiness.
+**Daemon process (`cmd/browser-agent/`):** `internal/daemonlife/lifecycle.go` enforces the singleton via the lock record; `launch_mode.go` classifies the launch; `tools_errors_guards.go` gates tool calls on extension readiness.
 
 **Extension (`src/popup/`):** `tab-tracking.ts` keeps tracking state in `chrome.storage.local`; `status-display.ts` renders the connected/offline state. The sync client polls every second with no backoff so reconnection is prompt.
 
