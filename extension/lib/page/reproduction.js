@@ -7,7 +7,7 @@
  * Captures user interactions with multi-strategy selectors (testId, role, aria,
  * text, CSS path) and generates Playwright test scripts for reproducing issues.
  */
-import { ENHANCED_ACTION_BUFFER_SIZE, CSS_PATH_MAX_DEPTH, SELECTOR_TEXT_MAX_LENGTH, SCRIPT_MAX_SIZE, CLICKABLE_TAGS } from './constants.js';
+import { ENHANCED_ACTION_BUFFER_SIZE, CSS_PATH_MAX_DEPTH, SELECTOR_TEXT_MAX_LENGTH, SCRIPT_MAX_SIZE, CLICKABLE_TAGS } from '../constants.js';
 import { isSensitiveInput } from './serialize.js';
 // Enhanced action buffer (separate from v3 action buffer)
 let enhancedActionBuffer = [];

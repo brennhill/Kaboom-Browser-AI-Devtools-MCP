@@ -13,7 +13,7 @@ import {
   installPerformanceCapture,
   uninstallPerformanceCapture
 } from '../lib/performance.js'
-import { setActionCaptureEnabled } from '../lib/actions.js'
+import { setActionCaptureEnabled } from '../lib/page/actions.js'
 import {
   setWebSocketCaptureEnabled,
   setWebSocketCaptureMode,

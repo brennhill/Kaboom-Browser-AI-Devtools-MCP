@@ -4,7 +4,7 @@
  */
 import { setNetworkWaterfallEnabled, setNetworkBodyCaptureEnabled, setServerUrl } from '../lib/network.js';
 import { setPerformanceMarksEnabled, installPerformanceCapture, uninstallPerformanceCapture } from '../lib/performance.js';
-import { setActionCaptureEnabled } from '../lib/actions.js';
+import { setActionCaptureEnabled } from '../lib/page/actions.js';
 import { setWebSocketCaptureEnabled, setWebSocketCaptureMode, installWebSocketCapture, uninstallWebSocketCapture } from '../lib/websocket.js';
 import { setPerformanceSnapshotEnabled } from '../lib/perf-snapshot.js';
 import { setDeferralEnabled } from './observers.js';

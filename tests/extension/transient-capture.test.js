@@ -101,7 +101,7 @@ describe('classifyTransient', () => {
   afterEach(teardownBrowserEnv)
 
   test('should classify role="alert" as alert', async () => {
-    const { classifyTransient } = await import('../../extension/lib/transient-capture.js')
+    const { classifyTransient } = await import('../../extension/lib/page/transient-capture.js')
 
     const el = createElement('div', { role: 'alert' }, { textContent: 'Error occurred' })
     const result = classifyTransient(el)
@@ -113,7 +113,7 @@ describe('classifyTransient', () => {
   })
 
   test('should classify aria-live="assertive" as alert', async () => {
-    const { classifyTransient } = await import('../../extension/lib/transient-capture.js')
+    const { classifyTransient } = await import('../../extension/lib/page/transient-capture.js')
 
     const el = createElement('div', { 'aria-live': 'assertive' }, { textContent: 'Critical error' })
     const result = classifyTransient(el)
@@ -123,7 +123,7 @@ describe('classifyTransient', () => {
   })
 
   test('should classify role="status" as toast', async () => {
-    const { classifyTransient } = await import('../../extension/lib/transient-capture.js')
+    const { classifyTransient } = await import('../../extension/lib/page/transient-capture.js')
 
     const el = createElement('div', { role: 'status' }, { textContent: 'Saved' })
     const result = classifyTransient(el)
@@ -134,7 +134,7 @@ describe('classifyTransient', () => {
   })
 
   test('should classify aria-live="polite" as toast', async () => {
-    const { classifyTransient } = await import('../../extension/lib/transient-capture.js')
+    const { classifyTransient } = await import('../../extension/lib/page/transient-capture.js')
 
     const el = createElement('div', { 'aria-live': 'polite' }, { textContent: 'Updated' })
     const result = classifyTransient(el)
@@ -144,7 +144,7 @@ describe('classifyTransient', () => {
   })
 
   test('should classify toast class as toast', async () => {
-    const { classifyTransient } = await import('../../extension/lib/transient-capture.js')
+    const { classifyTransient } = await import('../../extension/lib/page/transient-capture.js')
 
     const el = createElement('div', { class: 'Toastify__toast' }, { textContent: 'Success!' })
     const result = classifyTransient(el)
@@ -154,7 +154,7 @@ describe('classifyTransient', () => {
   })
 
   test('should classify snackbar class as snackbar', async () => {
-    const { classifyTransient } = await import('../../extension/lib/transient-capture.js')
+    const { classifyTransient } = await import('../../extension/lib/page/transient-capture.js')
 
     const el = createElement('div', { class: 'MuiSnackbar-root' }, { textContent: 'Item deleted' })
     const result = classifyTransient(el)
@@ -164,7 +164,7 @@ describe('classifyTransient', () => {
   })
 
   test('should classify notification class as notification', async () => {
-    const { classifyTransient } = await import('../../extension/lib/transient-capture.js')
+    const { classifyTransient } = await import('../../extension/lib/page/transient-capture.js')
 
     const el = createElement('div', { class: 'notification-banner' }, { textContent: 'New message' })
     const result = classifyTransient(el)
@@ -174,7 +174,7 @@ describe('classifyTransient', () => {
   })
 
   test('should classify tooltip class as tooltip', async () => {
-    const { classifyTransient } = await import('../../extension/lib/transient-capture.js')
+    const { classifyTransient } = await import('../../extension/lib/page/transient-capture.js')
 
     const el = createElement('div', { class: 'tooltip-content' }, { textContent: 'Help text' })
     const result = classifyTransient(el)
@@ -184,7 +184,7 @@ describe('classifyTransient', () => {
   })
 
   test('should skip SCRIPT elements', async () => {
-    const { classifyTransient } = await import('../../extension/lib/transient-capture.js')
+    const { classifyTransient } = await import('../../extension/lib/page/transient-capture.js')
 
     const el = createElement('script', { role: 'alert' }, { textContent: 'alert("test")' })
     const result = classifyTransient(el)
@@ -193,7 +193,7 @@ describe('classifyTransient', () => {
   })
 
   test('should skip STYLE elements', async () => {
-    const { classifyTransient } = await import('../../extension/lib/transient-capture.js')
+    const { classifyTransient } = await import('../../extension/lib/page/transient-capture.js')
 
     const el = createElement('style', {}, { textContent: 'body { color: red }' })
     const result = classifyTransient(el)
@@ -202,7 +202,7 @@ describe('classifyTransient', () => {
   })
 
   test('should skip LINK elements', async () => {
-    const { classifyTransient } = await import('../../extension/lib/transient-capture.js')
+    const { classifyTransient } = await import('../../extension/lib/page/transient-capture.js')
 
     const el = createElement('link', {}, { textContent: 'stylesheet ref' })
     const result = classifyTransient(el)
@@ -211,7 +211,7 @@ describe('classifyTransient', () => {
   })
 
   test('should skip META elements', async () => {
-    const { classifyTransient } = await import('../../extension/lib/transient-capture.js')
+    const { classifyTransient } = await import('../../extension/lib/page/transient-capture.js')
 
     const el = createElement('meta', {}, { textContent: 'charset info' })
     const result = classifyTransient(el)
@@ -220,7 +220,7 @@ describe('classifyTransient', () => {
   })
 
   test('should skip elements with no text content', async () => {
-    const { classifyTransient } = await import('../../extension/lib/transient-capture.js')
+    const { classifyTransient } = await import('../../extension/lib/page/transient-capture.js')
 
     const el = createElement('div', { role: 'alert' }, { textContent: '' })
     const result = classifyTransient(el)
@@ -229,7 +229,7 @@ describe('classifyTransient', () => {
   })
 
   test('should skip elements with only whitespace text', async () => {
-    const { classifyTransient } = await import('../../extension/lib/transient-capture.js')
+    const { classifyTransient } = await import('../../extension/lib/page/transient-capture.js')
 
     const el = createElement('div', { role: 'alert' }, { textContent: '   \n\t  ' })
     const result = classifyTransient(el)
@@ -238,7 +238,7 @@ describe('classifyTransient', () => {
   })
 
   test('should return null for plain div with no transient signals', async () => {
-    const { classifyTransient } = await import('../../extension/lib/transient-capture.js')
+    const { classifyTransient } = await import('../../extension/lib/page/transient-capture.js')
 
     const el = createElement('div', {}, { textContent: 'Regular content' })
     // Override getComputedStyle to return non-matching styles
@@ -252,7 +252,7 @@ describe('classifyTransient', () => {
   })
 
   test('should classify fixed/high-z-index/small element as flash', async () => {
-    const { classifyTransient } = await import('../../extension/lib/transient-capture.js')
+    const { classifyTransient } = await import('../../extension/lib/page/transient-capture.js')
 
     const el = createElement('div', {}, { textContent: 'Flash message', height: 80 })
     globalThis.window.getComputedStyle = () => ({
@@ -267,7 +267,7 @@ describe('classifyTransient', () => {
   })
 
   test('should NOT classify fixed element with height > 200 as flash', async () => {
-    const { classifyTransient } = await import('../../extension/lib/transient-capture.js')
+    const { classifyTransient } = await import('../../extension/lib/page/transient-capture.js')
 
     const el = createElement('div', {}, { textContent: 'Large fixed element', height: 300 })
     globalThis.window.getComputedStyle = () => ({
@@ -280,7 +280,7 @@ describe('classifyTransient', () => {
   })
 
   test('should NOT classify fixed element with low z-index as flash', async () => {
-    const { classifyTransient } = await import('../../extension/lib/transient-capture.js')
+    const { classifyTransient } = await import('../../extension/lib/page/transient-capture.js')
 
     const el = createElement('div', {}, { textContent: 'Low z fixed', height: 80 })
     globalThis.window.getComputedStyle = () => ({
@@ -293,7 +293,7 @@ describe('classifyTransient', () => {
   })
 
   test('should prioritize ARIA over class fingerprints', async () => {
-    const { classifyTransient } = await import('../../extension/lib/transient-capture.js')
+    const { classifyTransient } = await import('../../extension/lib/page/transient-capture.js')
 
     // Element has both role="alert" AND toast class
     const el = createElement('div', { role: 'alert', class: 'toast-container' }, { textContent: 'Error!' })
@@ -305,7 +305,7 @@ describe('classifyTransient', () => {
   })
 
   test('should truncate text to 500 chars', async () => {
-    const { classifyTransient } = await import('../../extension/lib/transient-capture.js')
+    const { classifyTransient } = await import('../../extension/lib/page/transient-capture.js')
 
     const longText = 'A'.repeat(600)
     const el = createElement('div', { role: 'alert' }, { textContent: longText })
@@ -323,7 +323,7 @@ describe('classifyCandidates', () => {
   afterEach(teardownBrowserEnv)
 
   test('should classify element itself when it has ARIA role', async () => {
-    const { classifyCandidates } = await import('../../extension/lib/transient-capture.js')
+    const { classifyCandidates } = await import('../../extension/lib/page/transient-capture.js')
 
     const el = createElement('div', { role: 'alert' }, { textContent: 'Error!' })
     const result = classifyCandidates(el)
@@ -333,7 +333,7 @@ describe('classifyCandidates', () => {
   })
 
   test('should walk direct children to find transient signals', async () => {
-    const { classifyCandidates } = await import('../../extension/lib/transient-capture.js')
+    const { classifyCandidates } = await import('../../extension/lib/page/transient-capture.js')
 
     // Framework wrapper pattern: outer div has no ARIA, inner child has role="alert"
     const child = createElement('div', { role: 'alert' }, { textContent: 'Error inside wrapper' })
@@ -345,7 +345,7 @@ describe('classifyCandidates', () => {
   })
 
   test('should prioritize parent classification over child', async () => {
-    const { classifyCandidates } = await import('../../extension/lib/transient-capture.js')
+    const { classifyCandidates } = await import('../../extension/lib/page/transient-capture.js')
 
     // Parent has role="status" (toast), child has role="alert" — parent should win
     const child = createElement('div', { role: 'alert' }, { textContent: 'Error in child' })
@@ -357,7 +357,7 @@ describe('classifyCandidates', () => {
   })
 
   test('should return null when neither element nor children are transient', async () => {
-    const { classifyCandidates } = await import('../../extension/lib/transient-capture.js')
+    const { classifyCandidates } = await import('../../extension/lib/page/transient-capture.js')
 
     const child = createElement('div', {}, { textContent: 'Plain child' })
     const wrapper = createElement('div', {}, { textContent: 'Plain wrapper', children: [child] })

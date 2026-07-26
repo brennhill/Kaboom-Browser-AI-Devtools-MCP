@@ -4,7 +4,7 @@ feature_id: feature-backend-log-streaming
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-24
+last_reviewed: 2026-07-26
 code_paths:
   - internal/capture/accessor.go
   - internal/capture/buffer_clear.go
@@ -57,7 +57,7 @@ code_paths:
   - src/lib/network.ts
   - src/lib/websocket.ts
   - src/early-patch.ts
-  - src/lib/safe-global-patch.ts
+  - src/lib/page/safe-global-patch.ts
 test_paths:
   - internal/capture/sync_test.go
   - internal/capture/sync_test_helpers_test.go

@@ -199,7 +199,7 @@ queueCommandResult(result: SyncCommandResult): void {
 ### Critical Issues
 
 #### 2.1 Insufficient Sensitive Input Detection
-**File:** [`src/lib/serialize.ts`](src/lib/serialize.ts:143-173)  
+**File:** [`src/lib/page/serialize.ts`](src/lib/page/serialize.ts:143-173)  
 **Severity:** High  
 **Type:** Data Leak Risk
 
@@ -747,7 +747,7 @@ for (const key of Object.keys(obj).slice(0, 50)) {
 ---
 
 #### 8.2 Missing Type Guards
-**File:** [`src/lib/serialize.ts`](src/lib/serialize.ts:86-96)  
+**File:** [`src/lib/page/serialize.ts`](src/lib/page/serialize.ts:86-96)  
 **Severity:** Medium  
 **Type:** Type Safety
 
@@ -903,10 +903,10 @@ export const DOM_QUERY_MAX_ELEMENTS = 100  // Why 100?
 - `src/inject/observers.ts`
 - `src/lib/network.ts`
 - `src/lib/websocket.ts`
-- `src/lib/actions.ts`
-- `src/lib/serialize.ts`
+- `src/lib/page/actions.ts`
+- `src/lib/page/serialize.ts`
 - `src/lib/dom-queries.ts`
-- `src/lib/bridge.ts`
+- `src/lib/page/bridge.ts`
 
 ---
 

@@ -114,7 +114,7 @@ var INJECT_FORWARDED_SETTINGS = /* @__PURE__ */ new Set([
   SettingName.SERVER_URL
 ]);
 
-// extension/lib/serialize.js
+// extension/lib/page/serialize.js
 function serializePrimitive(value, type) {
   if (type === "string") {
     const s = value;
@@ -201,7 +201,7 @@ function isSensitiveInput(element) {
 // extension/lib/brand.js
 var KABOOM_LOG_PREFIX = "[KaBOOM!]";
 
-// extension/lib/context.js
+// extension/lib/page/context.js
 var contextAnnotations = /* @__PURE__ */ new Map();
 function getContextAnnotations() {
   if (contextAnnotations.size === 0)
@@ -242,7 +242,7 @@ function clearContextAnnotations() {
   contextAnnotations.clear();
 }
 
-// extension/lib/reproduction.js
+// extension/lib/page/reproduction.js
 var enhancedActionBuffer = [];
 var TAG_TO_ROLE = {
   button: "button",
@@ -506,7 +506,7 @@ function escapeString(str) {
   return str.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t").replace(/`/g, "\\`");
 }
 
-// extension/lib/actions.js
+// extension/lib/page/actions.js
 var actionBuffer = [];
 var lastScrollTime = 0;
 var actionCaptureEnabled = true;
@@ -1456,7 +1456,7 @@ function isPerformanceMarksEnabled() {
   return performanceMarksEnabled;
 }
 
-// extension/lib/bridge.js
+// extension/lib/page/bridge.js
 function postLog(payload) {
   const context = getContextAnnotations();
   const actions = payload.level === "error" ? getActionBuffer() : null;
@@ -1490,7 +1490,7 @@ function postLog(payload) {
   }, window.location.origin);
 }
 
-// extension/lib/console.js
+// extension/lib/page/console.js
 var originalConsole = {};
 function installConsoleCapture() {
   const methods = ["log", "warn", "error", "info", "debug"];
@@ -1826,7 +1826,7 @@ function setAiContextStateSnapshot(enabled) {
   aiContextStateSnapshotEnabled = enabled;
 }
 
-// extension/lib/exceptions.js
+// extension/lib/page/exceptions.js
 var originalOnerror = null;
 var unhandledrejectionHandler = null;
 function enrichAndPost(entry) {
@@ -2785,7 +2785,7 @@ function uninstallKaboomAPI() {
   }
 }
 
-// extension/lib/safe-global-patch.js
+// extension/lib/page/safe-global-patch.js
 function safeAssignGlobal(target, key, value) {
   try {
     target[key] = value;
@@ -2801,7 +2801,7 @@ function safeAssignGlobal(target, key, value) {
   }
 }
 
-// extension/lib/transient-capture.js
+// extension/lib/page/transient-capture.js
 var SKIP_TAGS = /* @__PURE__ */ new Set(["SCRIPT", "STYLE", "LINK", "META", "NOSCRIPT", "BR", "HR"]);
 var CLASS_FINGERPRINTS = [
   [/toast/i, "toast"],

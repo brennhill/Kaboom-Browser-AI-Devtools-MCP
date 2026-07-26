@@ -9,13 +9,13 @@
  */
 
 // Re-export barrel pattern for tests and consumers
-export { safeSerialize, getElementSelector, isSensitiveInput } from '../lib/serialize.js'
+export { safeSerialize, getElementSelector, isSensitiveInput } from '../lib/page/serialize.js'
 export {
   getContextAnnotations,
   setContextAnnotation,
   removeContextAnnotation,
   clearContextAnnotations
-} from '../lib/context.js'
+} from '../lib/page/context.js'
 export {
   getImplicitRole,
   isDynamicClass,
@@ -25,7 +25,7 @@ export {
   getEnhancedActionBuffer,
   clearEnhancedActionBuffer,
   generatePlaywrightScript
-} from '../lib/reproduction.js'
+} from '../lib/page/reproduction.js'
 export {
   recordAction,
   getActionBuffer,
@@ -40,7 +40,7 @@ export {
   setActionCaptureEnabled,
   installNavigationCapture,
   uninstallNavigationCapture
-} from '../lib/actions.js'
+} from '../lib/page/actions.js'
 export {
   parseResourceTiming,
   getNetworkWaterfall,
@@ -77,8 +77,8 @@ export {
   setPerformanceMarksEnabled,
   isPerformanceMarksEnabled
 } from '../lib/performance.js'
-export { postLog } from '../lib/bridge.js'
-export { installConsoleCapture, uninstallConsoleCapture } from '../lib/console.js'
+export { postLog } from '../lib/page/bridge.js'
+export { installConsoleCapture, uninstallConsoleCapture } from '../lib/page/console.js'
 export {
   parseStackFrames,
   parseSourceMap,
@@ -95,7 +95,7 @@ export {
   getSourceMapCache,
   getSourceMapCacheSize
 } from '../lib/ai-context.js'
-export { installExceptionCapture, uninstallExceptionCapture } from '../lib/exceptions.js'
+export { installExceptionCapture, uninstallExceptionCapture } from '../lib/page/exceptions.js'
 export {
   getSize,
   formatPayload,

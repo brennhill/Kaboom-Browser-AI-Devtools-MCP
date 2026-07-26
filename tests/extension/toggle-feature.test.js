@@ -309,7 +309,7 @@ describe('Capture Gate Functions', () => {
 
   test('actions: recordAction is gated by actionCaptureEnabled', async () => {
     const { recordAction, getActionBuffer, clearActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/lib/actions.js')
+      await import('../../extension/lib/page/actions.js')
 
     // Enabled by default
     clearActionBuffer()
@@ -330,7 +330,7 @@ describe('Capture Gate Functions', () => {
 
   test('actions: disabling clears the action buffer', async () => {
     const { recordAction, getActionBuffer, clearActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/lib/actions.js')
+      await import('../../extension/lib/page/actions.js')
 
     setActionCaptureEnabled(true)
     clearActionBuffer()
@@ -661,7 +661,7 @@ describe('Rapid Toggle Switching', () => {
 
   test('rapid action capture toggling preserves buffer integrity', async () => {
     const { recordAction, getActionBuffer, clearActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/lib/actions.js')
+      await import('../../extension/lib/page/actions.js')
 
     clearActionBuffer()
     setActionCaptureEnabled(true)

@@ -9,10 +9,10 @@
  * richer debugging context (e.g., user flow, feature flag, session info).
  */
 
-import { MAX_CONTEXT_SIZE, MAX_CONTEXT_VALUE_SIZE } from './constants.js'
-import { KABOOM_LOG_PREFIX } from './brand.js'
+import { MAX_CONTEXT_SIZE, MAX_CONTEXT_VALUE_SIZE } from '../constants.js'
+import { KABOOM_LOG_PREFIX } from '../brand.js'
 import { safeSerialize } from './serialize.js'
-import type { JsonValue } from '../types/index.js'
+import type { JsonValue } from '../../types/index.js'
 
 // Context annotations storage
 const contextAnnotations: Map<string, JsonValue> = new Map()

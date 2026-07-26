@@ -15,7 +15,7 @@ import {
   SELECTOR_TEXT_MAX_LENGTH,
   SCRIPT_MAX_SIZE,
   CLICKABLE_TAGS
-} from './constants.js'
+} from '../constants.js'
 import { isSensitiveInput } from './serialize.js'
 
 // Action types

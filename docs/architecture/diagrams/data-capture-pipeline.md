@@ -468,15 +468,15 @@ type BufferStats struct {
 
 **Page-Level Capture:**
 - `src/inject/observers.ts` - All event observers setup
-- `src/lib/console.ts` - Console capture
+- `src/lib/page/console.ts` - Console capture
 - `src/lib/network.ts` - Fetch/XHR capture
 - `src/lib/websocket.ts` - WebSocket capture
-- `src/lib/actions.ts` - Action capture
+- `src/lib/page/actions.ts` - Action capture
 - `src/lib/performance.ts` - Performance capture
-- `src/lib/exceptions.ts` - Error capture
+- `src/lib/page/exceptions.ts` - Error capture
 
 **Serialization & Enrichment:**
-- `src/lib/serialize.ts` - Safe JSON serialization
+- `src/lib/page/serialize.ts` - Safe JSON serialization
 - `src/background/dom/dom-queries.ts` - Selector generation
 - `src/lib/ai-context.ts` - Error enrichment
 - `internal/redaction/redaction.go` - PII masking

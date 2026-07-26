@@ -9,7 +9,7 @@
  * NOTE: This module has NO mutable state. All functions are pure and stateless.
  * No resetForTesting() function is needed.
  */
-import { MAX_STRING_LENGTH, MAX_DEPTH, SENSITIVE_INPUT_TYPES } from './constants.js';
+import { MAX_STRING_LENGTH, MAX_DEPTH, SENSITIVE_INPUT_TYPES } from '../constants.js';
 function serializePrimitive(value, type) {
     if (type === 'string') {
         const s = value;

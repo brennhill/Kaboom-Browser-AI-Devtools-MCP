@@ -2,7 +2,7 @@
  * Purpose: Key-value context annotations storage that attaches metadata (user flow, feature flags, session info) to captured events.
  * Docs: docs/features/feature/observe/index.md
  */
-import type { JsonValue } from '../types/index.js';
+import type { JsonValue } from '../../types/index.js';
 /**
  * Get current context annotations as an object
  */

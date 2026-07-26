@@ -10,7 +10,7 @@
  * replaceState, popstate) for enhanced reproduction scripts.
  */
 
-import { MAX_ACTION_BUFFER_SIZE, SCROLL_THROTTLE_MS, ACTIONABLE_KEYS } from './constants.js'
+import { MAX_ACTION_BUFFER_SIZE, SCROLL_THROTTLE_MS, ACTIONABLE_KEYS } from '../constants.js'
 import { getElementSelector, isSensitiveInput } from './serialize.js'
 import { recordEnhancedAction } from './reproduction.js'
 

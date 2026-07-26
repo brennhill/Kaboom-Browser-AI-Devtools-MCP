@@ -190,13 +190,13 @@ Files with too many lines of code (limit: 600 lines)
 - Line 387: Method getReactComponentAncestry has a cyclomatic complexity of 13 (limit is 8)
 - Line 437: Method captureStateSnapshot has a cyclomatic complexity of 22 (limit is 8)
 
-**src/lib/bridge.ts** (1 issues)
+**src/lib/page/bridge.ts** (1 issues)
 - Line 45: Method || has a cyclomatic complexity of 13 (limit is 8)
 
 **src/lib/dom-queries.ts** (1 issues)
 - Line 190: Method || has a cyclomatic complexity of 17 (limit is 8)
 
-**src/lib/exceptions.ts** (1 issues)
+**src/lib/page/exceptions.ts** (1 issues)
 - Line 31: Method window.onerror has a cyclomatic complexity of 11 (limit is 8)
 
 **src/lib/link-health.ts** (1 issues)
@@ -205,12 +205,12 @@ Files with too many lines of code (limit: 600 lines)
 **src/lib/network.ts** (1 issues)
 - Line 427: Method (anonymous) has a cyclomatic complexity of 9 (limit is 8)
 
-**src/lib/reproduction.ts** (3 issues)
+**src/lib/page/reproduction.ts** (3 issues)
 - Line 305: Method Date.now has a cyclomatic complexity of 25 (limit is 8)
 - Line 176: Method computeSelectors has a cyclomatic complexity of 29 (limit is 8)
 - Line 378: Method generatePlaywrightScript has a cyclomatic complexity of 11 (limit is 8)
 
-**src/lib/serialize.ts** (2 issues)
+**src/lib/page/serialize.ts** (2 issues)
 - Line 27: Method getAttribute? has a cyclomatic complexity of 18 (limit is 8)
 - Line 143: Method isSensitiveInput has a cyclomatic complexity of 18 (limit is 8)
 
