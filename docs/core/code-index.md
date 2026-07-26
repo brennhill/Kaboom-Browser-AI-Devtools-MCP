@@ -279,7 +279,10 @@ last_reviewed: 2026-02-16
 
 Each internal package now has `doc.go` with comprehensive package overview:
 
-- `internal/analysis/doc.go` - API schema inference, error clustering
+- `internal/analysis/apicontract/contract.go` - API contract baselines and drift detection
+- `internal/analysis/apischema/schema.go` - API schema inference from observed traffic
+- `internal/analysis/clustering/clustering.go` - Error clustering by root cause
+- `internal/analysis/thirdparty/audit.go` - Third-party origin auditing
 - `internal/capture/doc.go` - Real-time browser telemetry capture
 - `internal/pagination/doc.go` - Cursor-based pagination
 - `internal/security/scan/doc.go` - Aggregate security audit (credentials, PII, headers, cookies, transport)

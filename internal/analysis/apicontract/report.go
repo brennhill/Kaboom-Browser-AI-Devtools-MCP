@@ -2,7 +2,7 @@
 // Why: Keeps aggregation and response formatting separate from violation detection logic.
 // Docs: docs/features/feature/api-schema/index.md
 
-package analysis
+package apicontract
 
 import (
 	"fmt"

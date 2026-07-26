@@ -1,12 +1,7 @@
-// Purpose: Integration tests for error clustering and API schema analysis end-to-end flows.
-// Docs: docs/features/feature/api-schema/index.md
+// Purpose: End-to-end tests that binary format detection runs on ingest for network bodies and WS messages.
+// Docs: docs/features/feature/binary-format-detection/index.md
 
-//go:build integration
-// +build integration
-
-// binary_integration_test.go — Integration tests for binary format detection
-// Run with: go test -tags=integration ./internal/analysis/...
-package analysis
+package capture_test
 
 import (
 	"testing"

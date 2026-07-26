@@ -4,7 +4,7 @@
 // api_contract_test.go — Tests for API contract validation.
 // Tests schema learning, shape comparison, violation detection, and the MCP tool interface.
 // Design: TDD approach - tests written first to define expected behavior.
-package analysis
+package apicontract
 
 import (
 	"encoding/json"

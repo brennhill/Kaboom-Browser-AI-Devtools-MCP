@@ -2,7 +2,7 @@
 // Why: Establishes stable contract expectations before validation checks run.
 // Docs: docs/features/feature/api-schema/index.md
 
-package analysis
+package apicontract
 
 import (
 	"encoding/json"

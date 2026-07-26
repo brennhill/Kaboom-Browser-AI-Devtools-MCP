@@ -15,7 +15,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testgenhandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/apicontract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/thirdparty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/audit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
@@ -115,7 +115,7 @@ func NewToolHandler(server *Server, capture *capture.Store) *MCPHandler {
 	// Initialize security and audit tools.
 	handler.securityScannerImpl = scan.NewScanner()
 	handler.thirdPartyAuditorImpl = thirdparty.NewThirdPartyAuditor()
-	handler.apiContractValidator = analysis.NewAPIContractValidator()
+	handler.apiContractValidator = apicontract.NewAPIContractValidator()
 	handler.sessionManager = session.NewSessionManager(10, newToolCaptureStateReader(handler))
 	handler.auditTrail = audit.NewAuditTrail(audit.Config{
 		MaxEntries:   10000,

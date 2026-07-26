@@ -1,7 +1,7 @@
 // Purpose: Coverage-expansion tests for API contract validation edge cases and branch paths.
 // Docs: docs/features/feature/api-schema/index.md
 
-package analysis
+package apicontract
 
 import (
 	"testing"

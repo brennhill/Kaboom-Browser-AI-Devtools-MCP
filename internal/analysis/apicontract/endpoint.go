@@ -2,7 +2,7 @@
 // Why: Ensures dynamic IDs do not fragment endpoint-level learning and validation.
 // Docs: docs/features/feature/api-schema/index.md
 
-package analysis
+package apicontract
 
 import (
 	"net/url"

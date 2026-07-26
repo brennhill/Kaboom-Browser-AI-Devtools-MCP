@@ -2,7 +2,7 @@
 // Why: Isolates violation semantics from report assembly and filtering.
 // Docs: docs/features/feature/api-schema/index.md
 
-package analysis
+package apicontract
 
 import (
 	"encoding/json"

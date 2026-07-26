@@ -2,7 +2,7 @@
 // Why: Detects shape/type regressions and error spikes after baseline establishment.
 // Docs: docs/features/feature/api-schema/index.md
 
-package analysis
+package apicontract
 
 import (
 	"encoding/json"

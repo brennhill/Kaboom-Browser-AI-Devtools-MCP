@@ -2,7 +2,13 @@
 // Why: Keeps core model definitions stable while behavior is split into focused files.
 // Docs: docs/features/feature/api-schema/index.md
 
-package analysis
+// Package apicontract learns per-endpoint response baselines and detects drift against them.
+//
+// APIContractValidator normalizes endpoints (dynamic IDs collapsed to placeholders),
+// learns a response shape once an endpoint has been seen enough times, then reports
+// violations — missing/new fields, field and top-level type changes, and error-rate
+// spikes — through analyze and report result types consumed by the analyze MCP tool.
+package apicontract
 
 import (
 	"sync"
