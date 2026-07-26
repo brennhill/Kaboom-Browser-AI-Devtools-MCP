@@ -1,3 +1,4 @@
+// coverage_test.go — Branch tests for redaction, PII scanners and auth patterns.
 // Purpose: Coverage-expansion tests for security edge cases and branch paths.
 // Docs: docs/features/feature/security-hardening/index.md
 
@@ -5,7 +6,7 @@
 // Covers: redactSecret, networkFlagDescription, networkFlagRemediation,
 // scanForCreditCard, scanForSSN, scanForEmailPII, scanForPhonePII,
 // thirdPartySeverity, checkAuthPatterns.
-package security
+package scan
 
 import (
 	"testing"
@@ -266,7 +267,7 @@ func TestThirdPartySeverity(t *testing.T) {
 
 func TestCheckAuthPatterns_PIIWithoutAuth(t *testing.T) {
 	t.Parallel()
-	s := NewSecurityScanner()
+	s := NewScanner()
 	bodies := []capture.NetworkBody{
 		{
 			URL:           "https://api.example.com/users",
@@ -287,7 +288,7 @@ func TestCheckAuthPatterns_PIIWithoutAuth(t *testing.T) {
 
 func TestCheckAuthPatterns_PIIWithAuth(t *testing.T) {
 	t.Parallel()
-	s := NewSecurityScanner()
+	s := NewScanner()
 	bodies := []capture.NetworkBody{
 		{
 			URL:           "https://api.example.com/users",
@@ -305,7 +306,7 @@ func TestCheckAuthPatterns_PIIWithAuth(t *testing.T) {
 
 func TestCheckAuthPatterns_NoPII(t *testing.T) {
 	t.Parallel()
-	s := NewSecurityScanner()
+	s := NewScanner()
 	bodies := []capture.NetworkBody{
 		{
 			URL:           "https://api.example.com/status",
@@ -323,7 +324,7 @@ func TestCheckAuthPatterns_NoPII(t *testing.T) {
 
 func TestCheckAuthPatterns_EmptyResponse(t *testing.T) {
 	t.Parallel()
-	s := NewSecurityScanner()
+	s := NewScanner()
 	bodies := []capture.NetworkBody{
 		{
 			URL:           "https://api.example.com/ping",

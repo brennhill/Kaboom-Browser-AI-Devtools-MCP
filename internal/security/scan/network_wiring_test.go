@@ -1,7 +1,8 @@
+// network_wiring_test.go — Verifies the network check is reachable through the scan dispatcher.
 // Purpose: Tests that the network check is wired into the scan dispatcher.
 // Docs: docs/features/feature/security-hardening/index.md
 
-package security
+package scan
 
 import (
 	"strings"
@@ -15,9 +16,9 @@ import (
 // ============================================
 
 func TestScan_NetworkCheckDetectsSuspiciousTLD(t *testing.T) {
-	scanner := NewSecurityScanner()
+	scanner := NewScanner()
 
-	input := SecurityScanInput{
+	input := Input{
 		WaterfallEntries: []capture.NetworkWaterfallEntry{
 			{URL: "https://cdn-analytics.xyz/tracker.js", InitiatorType: "script"},
 		},
@@ -46,9 +47,9 @@ func TestScan_NetworkCheckDetectsSuspiciousTLD(t *testing.T) {
 }
 
 func TestScan_NetworkCheckDetectsTyposquatting(t *testing.T) {
-	scanner := NewSecurityScanner()
+	scanner := NewScanner()
 
-	input := SecurityScanInput{
+	input := Input{
 		WaterfallEntries: []capture.NetworkWaterfallEntry{
 			{URL: "https://unpkg.cm/library.js", InitiatorType: "script"},
 		},
@@ -70,9 +71,9 @@ func TestScan_NetworkCheckDetectsTyposquatting(t *testing.T) {
 }
 
 func TestScan_NetworkCheckDetectsMixedContent(t *testing.T) {
-	scanner := NewSecurityScanner()
+	scanner := NewScanner()
 
-	input := SecurityScanInput{
+	input := Input{
 		WaterfallEntries: []capture.NetworkWaterfallEntry{
 			{URL: "http://cdn.example.com/script.js", InitiatorType: "script"},
 		},
@@ -97,9 +98,9 @@ func TestScan_NetworkCheckDetectsMixedContent(t *testing.T) {
 }
 
 func TestScan_NetworkCheckSafeOriginNoFindings(t *testing.T) {
-	scanner := NewSecurityScanner()
+	scanner := NewScanner()
 
-	input := SecurityScanInput{
+	input := Input{
 		WaterfallEntries: []capture.NetworkWaterfallEntry{
 			{URL: "https://cdn.example.com/library.js", InitiatorType: "script"},
 		},
@@ -117,10 +118,10 @@ func TestScan_NetworkCheckSafeOriginNoFindings(t *testing.T) {
 }
 
 func TestScan_NetworkCheckIncludedByDefault(t *testing.T) {
-	scanner := NewSecurityScanner()
+	scanner := NewScanner()
 
 	// No explicit Checks — should run all including "network"
-	input := SecurityScanInput{
+	input := Input{
 		WaterfallEntries: []capture.NetworkWaterfallEntry{
 			{URL: "https://cdn-analytics.xyz/tracker.js", InitiatorType: "script"},
 		},

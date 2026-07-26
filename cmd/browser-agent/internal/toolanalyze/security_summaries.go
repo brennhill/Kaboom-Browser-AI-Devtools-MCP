@@ -8,11 +8,11 @@ import (
 	"sort"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
 )
 
 // BuildSecurityAuditSummary creates a compact summary from security scan results.
-func BuildSecurityAuditSummary(result security.ScanResult) map[string]any {
+func BuildSecurityAuditSummary(result scan.Result) map[string]any {
 	bySeverity := make(map[string]int)
 	for _, f := range result.Findings {
 		bySeverity[f.Severity]++
@@ -24,7 +24,7 @@ func BuildSecurityAuditSummary(result security.ScanResult) map[string]any {
 	}
 
 	// Sort findings by severity (critical first)
-	sorted := make([]security.Finding, len(result.Findings))
+	sorted := make([]scan.Finding, len(result.Findings))
 	copy(sorted, result.Findings)
 	sort.Slice(sorted, func(i, j int) bool {
 		return SeverityOrder[sorted[i].Severity] < SeverityOrder[sorted[j].Severity]

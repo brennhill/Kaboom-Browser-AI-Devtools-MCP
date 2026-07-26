@@ -1,7 +1,8 @@
+// unit_test.go — Unit tests for the individual security checks and credential scanner.
 // Purpose: Unit tests for security logic.
 // Docs: docs/features/feature/security-hardening/index.md
 
-package security
+package scan
 
 import (
 	"encoding/json"
@@ -13,7 +14,7 @@ import (
 
 func TestCheckCookies_FlagsMissingSessionCookieSecurityAttributes(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
+	scanner := NewScanner()
 
 	bodies := []capture.NetworkBody{
 		{
@@ -46,7 +47,7 @@ func TestCheckCookies_FlagsMissingSessionCookieSecurityAttributes(t *testing.T) 
 
 func TestCheckSecurityHeaders_SkipsHSTSOnLocalhost(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
+	scanner := NewScanner()
 
 	bodies := []capture.NetworkBody{
 		{
@@ -68,7 +69,7 @@ func TestCheckSecurityHeaders_SkipsHSTSOnLocalhost(t *testing.T) {
 
 func TestCheckTransport_HTTPJSOnHTTPSPageIncludesCriticalMixedContent(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
+	scanner := NewScanner()
 
 	bodies := []capture.NetworkBody{
 		{
@@ -93,7 +94,7 @@ func TestCheckTransport_HTTPJSOnHTTPSPageIncludesCriticalMixedContent(t *testing
 
 func TestScanForPII_ThirdPartyEscalatesSeverity(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
+	scanner := NewScanner()
 
 	content := `{"email":"person@example.com","ssn":"123-45-6789","phone":"+1-555-123-4567"}`
 	findings := scanner.scanForPII(content, "https://analytics.example.net/collect", "request body", true)
@@ -130,7 +131,7 @@ func TestHelperFunctions_FilterAndParsing(t *testing.T) {
 		t.Fatalf("filterBodiesByURL result = %+v", filteredBodies)
 	}
 
-	findings := []SecurityFinding{
+	findings := []Finding{
 		{Severity: "info", Check: "headers"},
 		{Severity: "warning", Check: "cookies"},
 		{Severity: "critical", Check: "credentials"},
@@ -169,7 +170,7 @@ func TestHelperFunctions_FilterAndParsing(t *testing.T) {
 
 func TestCredentialScanner_URLPatterns(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
+	scanner := NewScanner()
 
 	apiFindings := scanner.scanURLForCredentials(capture.NetworkBody{
 		Method: "GET",
@@ -206,7 +207,7 @@ func TestCredentialScanner_URLPatterns(t *testing.T) {
 
 func TestCredentialScanner_BodyPatternsAndTestKeyHandling(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
+	scanner := NewScanner()
 
 	body := `{
 		"aws":"AKIA1234567890ABCDEF",
@@ -242,7 +243,7 @@ func TestCredentialScanner_BodyPatternsAndTestKeyHandling(t *testing.T) {
 
 func TestCredentialScanner_ConsolePatterns(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
+	scanner := NewScanner()
 
 	bearerAndJWT := LogEntry{
 		"message": "Authorization: Bearer token_abcd1234efgh5678ijkl9012 with jwt eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.signature1234567890",
@@ -278,7 +279,7 @@ func TestSecurityHelpers_isTestKey(t *testing.T) {
 
 func TestHandleSecurityAudit_CredentialsOnlyPath(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
+	scanner := NewScanner()
 
 	params := json.RawMessage(`{"checks":["credentials"]}`)
 	bodies := []capture.NetworkBody{
@@ -299,9 +300,9 @@ func TestHandleSecurityAudit_CredentialsOnlyPath(t *testing.T) {
 		t.Fatalf("HandleSecurityAudit returned error: %v", err)
 	}
 
-	scanResult, ok := result.(SecurityScanResult)
+	scanResult, ok := result.(Result)
 	if !ok {
-		t.Fatalf("expected SecurityScanResult, got %T", result)
+		t.Fatalf("expected Result, got %T", result)
 	}
 	if len(scanResult.Findings) == 0 {
 		t.Fatal("expected credential findings")

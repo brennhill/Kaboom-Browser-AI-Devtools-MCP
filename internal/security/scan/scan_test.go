@@ -1,18 +1,22 @@
+// scan_test.go — End-to-end tests for security audit analysis and finding generation.
 // Purpose: Tests for security audit analysis and finding generation.
 // Docs: docs/features/feature/security-hardening/index.md
 
-//go:build integration
-// +build integration
-
-// NOTE: These tests use NetworkBody which needs to be imported from capture package.
-// Run with: go test -tags=integration ./internal/security/...
-package security
+// These were previously gated behind `//go:build integration` because "NetworkBody
+// needs to be imported from capture package". It is imported below, so the tag is
+// gone and the scanner's end-to-end tests run by default.
+package scan
 
 import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
+
+// NetworkBody keeps the test tables readable.
+type NetworkBody = capture.NetworkBody
 
 // Test fixtures: Stripe-like keys for security scanner tests.
 // Constructed via concatenation to avoid GitHub push protection flagging.
@@ -24,14 +28,14 @@ var (
 )
 
 // ============================================
-// SecurityScanner Construction Tests
+// Scanner Construction Tests
 // ============================================
 
-func TestNewSecurityScanner(t *testing.T) {
+func TestNewScanner(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
+	scanner := NewScanner()
 	if scanner == nil {
-		t.Fatal("NewSecurityScanner returned nil")
+		t.Fatal("NewScanner returned nil")
 	}
 }
 
@@ -41,8 +45,8 @@ func TestNewSecurityScanner(t *testing.T) {
 
 func TestSecurityScan_EmptyInput(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{}
+	scanner := NewScanner()
+	input := Input{}
 	result := scanner.Scan(input)
 
 	if len(result.Findings) != 0 {
@@ -58,9 +62,9 @@ func TestSecurityScan_EmptyInput(t *testing.T) {
 
 func TestSecurityScan_EmptyInput_NoError(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
-		NetworkBodies: []NetworkBody{},
+	scanner := NewScanner()
+	input := Input{
+		NetworkBodies:  []NetworkBody{},
 		ConsoleEntries: []LogEntry{},
 		PageURLs:       []string{},
 	}
@@ -77,8 +81,8 @@ func TestSecurityScan_EmptyInput_NoError(t *testing.T) {
 
 func TestSecurityScan_APIKeyInURL(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method: "GET",
@@ -103,8 +107,8 @@ func TestSecurityScan_APIKeyInURL(t *testing.T) {
 
 func TestSecurityScan_BearerTokenInResponseBody(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method:       "POST",
@@ -124,8 +128,8 @@ func TestSecurityScan_BearerTokenInResponseBody(t *testing.T) {
 
 func TestSecurityScan_AWSAccessKey(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method:       "GET",
@@ -145,8 +149,8 @@ func TestSecurityScan_AWSAccessKey(t *testing.T) {
 
 func TestSecurityScan_GitHubToken(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method:      "POST",
@@ -166,8 +170,8 @@ func TestSecurityScan_GitHubToken(t *testing.T) {
 
 func TestSecurityScan_JWTInURL(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method: "GET",
@@ -186,8 +190,8 @@ func TestSecurityScan_JWTInURL(t *testing.T) {
 
 func TestSecurityScan_StripeSecretKey(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method:       "GET",
@@ -207,8 +211,8 @@ func TestSecurityScan_StripeSecretKey(t *testing.T) {
 
 func TestSecurityScan_PrivateKeyMaterial(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method:       "GET",
@@ -228,8 +232,8 @@ func TestSecurityScan_PrivateKeyMaterial(t *testing.T) {
 
 func TestSecurityScan_CredentialInConsoleLog(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		ConsoleEntries: []LogEntry{
 			{
 				"level":   "log",
@@ -252,8 +256,8 @@ func TestSecurityScan_CredentialInConsoleLog(t *testing.T) {
 
 func TestSecurityScan_TestKeyNotFlagged(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method: "GET",
@@ -278,14 +282,14 @@ func TestSecurityScan_TestKeyNotFlagged(t *testing.T) {
 
 func TestSecurityScan_EmailInResponseToThirdParty(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
-				Method:       "POST",
-				URL:          "https://analytics.third-party.com/track",
-				Status:       200,
-				RequestBody:  `{"user_email": "john.doe@example.com", "event": "page_view"}`,
+				Method:      "POST",
+				URL:         "https://analytics.third-party.com/track",
+				Status:      200,
+				RequestBody: `{"user_email": "john.doe@example.com", "event": "page_view"}`,
 			},
 		},
 		PageURLs: []string{"https://myapp.example.com"},
@@ -300,8 +304,8 @@ func TestSecurityScan_EmailInResponseToThirdParty(t *testing.T) {
 
 func TestSecurityScan_SSNInResponseBody(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method:       "GET",
@@ -321,8 +325,8 @@ func TestSecurityScan_SSNInResponseBody(t *testing.T) {
 
 func TestSecurityScan_PhoneNumber(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method:       "GET",
@@ -342,8 +346,8 @@ func TestSecurityScan_PhoneNumber(t *testing.T) {
 
 func TestSecurityScan_CreditCardNumber(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method:       "POST",
@@ -367,8 +371,8 @@ func TestSecurityScan_CreditCardNumber(t *testing.T) {
 
 func TestSecurityScan_MissingHSTS(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method:      "GET",
@@ -392,8 +396,8 @@ func TestSecurityScan_MissingHSTS(t *testing.T) {
 
 func TestSecurityScan_MissingCSP(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method:      "GET",
@@ -416,8 +420,8 @@ func TestSecurityScan_MissingCSP(t *testing.T) {
 
 func TestSecurityScan_MissingXContentTypeOptions(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method:      "GET",
@@ -437,8 +441,8 @@ func TestSecurityScan_MissingXContentTypeOptions(t *testing.T) {
 
 func TestSecurityScan_MissingXFrameOptions(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method:      "GET",
@@ -458,8 +462,8 @@ func TestSecurityScan_MissingXFrameOptions(t *testing.T) {
 
 func TestSecurityScan_HeadersWithPresent(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method:      "GET",
@@ -489,8 +493,8 @@ func TestSecurityScan_HeadersWithPresent(t *testing.T) {
 
 func TestSecurityScan_LocalhostSkipsHSTS(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method:      "GET",
@@ -516,8 +520,8 @@ func TestSecurityScan_LocalhostSkipsHSTS(t *testing.T) {
 
 func TestSecurityScan_CookieMissingHttpOnly(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method:      "POST",
@@ -543,8 +547,8 @@ func TestSecurityScan_CookieMissingHttpOnly(t *testing.T) {
 
 func TestSecurityScan_CookieMissingSecure(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method:      "POST",
@@ -571,8 +575,8 @@ func TestSecurityScan_CookieMissingSecure(t *testing.T) {
 
 func TestSecurityScan_CookieMissingSameSite(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method:      "POST",
@@ -595,8 +599,8 @@ func TestSecurityScan_CookieMissingSameSite(t *testing.T) {
 
 func TestSecurityScan_SecureCookieNoFindings(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method:      "POST",
@@ -624,8 +628,8 @@ func TestSecurityScan_SecureCookieNoFindings(t *testing.T) {
 
 func TestSecurityScan_HTTPLoginEndpoint(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method: "POST",
@@ -644,8 +648,8 @@ func TestSecurityScan_HTTPLoginEndpoint(t *testing.T) {
 
 func TestSecurityScan_HTTPLocalhostNotFlagged(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method: "POST",
@@ -665,8 +669,8 @@ func TestSecurityScan_HTTPLocalhostNotFlagged(t *testing.T) {
 
 func TestSecurityScan_HTTP127NotFlagged(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method: "GET",
@@ -686,8 +690,8 @@ func TestSecurityScan_HTTP127NotFlagged(t *testing.T) {
 
 func TestSecurityScan_MixedContent(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method:      "GET",
@@ -712,9 +716,9 @@ func TestSecurityScan_MixedContent(t *testing.T) {
 
 func TestSecurityScan_EvidenceRedacted(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
+	scanner := NewScanner()
 	secretValue := "sk-proj-abcdefghijklmnopqrstuvwxyz1234567890"
-	input := SecurityScanInput{
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method: "GET",
@@ -749,8 +753,8 @@ func TestSecurityScan_EvidenceRedacted(t *testing.T) {
 
 func TestSecurityScan_SummaryAccuracy(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method: "GET",
@@ -800,8 +804,8 @@ func TestSecurityScan_SummaryAccuracy(t *testing.T) {
 
 func TestSecurityScan_URLFilter(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method: "GET",
@@ -832,8 +836,8 @@ func TestSecurityScan_URLFilter(t *testing.T) {
 
 func TestSecurityScan_CheckSelection(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method: "GET",
@@ -863,8 +867,8 @@ func TestSecurityScan_CheckSelection(t *testing.T) {
 
 func TestSecurityScan_SeverityFilter(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method: "GET",
@@ -895,14 +899,14 @@ func TestSecurityScan_SeverityFilter(t *testing.T) {
 
 func TestSecurityScan_MissingAuth(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
-				Method:       "GET",
-				URL:          "https://api.example.com/users/profile",
-				Status:       200,
-				ResponseBody: `{"email": "user@example.com", "name": "John Doe", "phone": "+15551234567"}`,
+				Method:        "GET",
+				URL:           "https://api.example.com/users/profile",
+				Status:        200,
+				ResponseBody:  `{"email": "user@example.com", "name": "John Doe", "phone": "+15551234567"}`,
 				HasAuthHeader: false,
 			},
 		},
@@ -917,8 +921,8 @@ func TestSecurityScan_MissingAuth(t *testing.T) {
 
 func TestSecurityScan_WithAuthNoFinding(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method:        "GET",
@@ -945,7 +949,7 @@ func TestSecurityScan_WithAuthNoFinding(t *testing.T) {
 
 func TestHandleSecurityAudit_EmptyParams(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
+	scanner := NewScanner()
 	params := json.RawMessage(`{}`)
 	result, err := scanner.HandleSecurityAudit(params, nil, nil, nil, nil)
 	if err != nil {
@@ -958,7 +962,7 @@ func TestHandleSecurityAudit_EmptyParams(t *testing.T) {
 
 func TestHandleSecurityAudit_WithChecksParam(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
+	scanner := NewScanner()
 	params := json.RawMessage(`{"checks": ["credentials", "transport"]}`)
 	bodies := []NetworkBody{
 		{
@@ -973,9 +977,9 @@ func TestHandleSecurityAudit_WithChecksParam(t *testing.T) {
 	}
 
 	// Should have findings from both credential and transport checks
-	resultMap, ok := result.(SecurityScanResult)
+	resultMap, ok := result.(Result)
 	if !ok {
-		t.Fatal("result should be SecurityScanResult")
+		t.Fatal("result should be Result")
 	}
 	if len(resultMap.Findings) == 0 {
 		t.Error("expected findings")
@@ -984,7 +988,7 @@ func TestHandleSecurityAudit_WithChecksParam(t *testing.T) {
 
 func TestHandleSecurityAudit_URLFilter(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
+	scanner := NewScanner()
 	params := json.RawMessage(`{"url": "api.example.com"}`)
 	bodies := []NetworkBody{
 		{
@@ -1003,7 +1007,7 @@ func TestHandleSecurityAudit_URLFilter(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	resultMap := result.(SecurityScanResult)
+	resultMap := result.(Result)
 	for _, f := range resultMap.Findings {
 		if f.Check == "credentials" && !strings.Contains(f.Location, "api.example.com") {
 			t.Errorf("URL filter should limit findings, got location: %s", f.Location)
@@ -1015,10 +1019,10 @@ func TestHandleSecurityAudit_URLFilter(t *testing.T) {
 // Concurrent Safety Tests
 // ============================================
 
-func TestSecurityScanner_ConcurrentSafe(t *testing.T) {
+func TestScanner_ConcurrentSafe(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method: "GET",
@@ -1048,10 +1052,10 @@ func TestSecurityScanner_ConcurrentSafe(t *testing.T) {
 // JSON Serialization Tests
 // ============================================
 
-func TestSecurityScanResult_JSONSerialization(t *testing.T) {
+func TestResult_JSONSerialization(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method: "GET",
@@ -1067,7 +1071,7 @@ func TestSecurityScanResult_JSONSerialization(t *testing.T) {
 		t.Fatalf("failed to marshal result: %v", err)
 	}
 
-	var decoded SecurityScanResult
+	var decoded Result
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		t.Fatalf("failed to unmarshal result: %v", err)
 	}
@@ -1128,9 +1132,9 @@ func TestRedactSecret(t *testing.T) {
 
 func TestSecurityScan_VeryLongURL(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
+	scanner := NewScanner()
 	longURL := "https://api.example.com/data?" + strings.Repeat("x", 10000)
-	input := SecurityScanInput{
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method: "GET",
@@ -1146,8 +1150,8 @@ func TestSecurityScan_VeryLongURL(t *testing.T) {
 
 func TestSecurityScan_InvalidURLFormat(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		NetworkBodies: []NetworkBody{
 			{
 				Method: "GET",
@@ -1163,8 +1167,8 @@ func TestSecurityScan_InvalidURLFormat(t *testing.T) {
 
 func TestSecurityScan_NilConsoleEntryFields(t *testing.T) {
 	t.Parallel()
-	scanner := NewSecurityScanner()
-	input := SecurityScanInput{
+	scanner := NewScanner()
+	input := Input{
 		ConsoleEntries: []LogEntry{
 			{}, // Empty entry
 			{"level": nil, "message": nil},
@@ -1179,7 +1183,7 @@ func TestSecurityScan_NilConsoleEntryFields(t *testing.T) {
 // Test Helpers
 // ============================================
 
-func findFinding(findings []SecurityFinding, check, severity string) *SecurityFinding {
+func findFinding(findings []Finding, check, severity string) *Finding {
 	for i, f := range findings {
 		if f.Check == check {
 			if severity == "" || f.Severity == severity {
@@ -1190,7 +1194,7 @@ func findFinding(findings []SecurityFinding, check, severity string) *SecurityFi
 	return nil
 }
 
-func findFindingByTitle(findings []SecurityFinding, titleSubstr string) *SecurityFinding {
+func findFindingByTitle(findings []Finding, titleSubstr string) *Finding {
 	for i, f := range findings {
 		if strings.Contains(f.Title, titleSubstr) {
 			return &findings[i]
@@ -1244,11 +1248,11 @@ func FuzzSecurityPatterns(f *testing.F) {
 		f.Add(s, s)
 	}
 
-	scanner := NewSecurityScanner()
+	scanner := NewScanner()
 
 	f.Fuzz(func(t *testing.T, urlData, bodyData string) {
 		// Exercise credential + PII patterns via network bodies
-		input := SecurityScanInput{
+		input := Input{
 			NetworkBodies: []NetworkBody{
 				{
 					URL:             urlData,

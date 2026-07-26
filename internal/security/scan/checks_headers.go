@@ -1,8 +1,9 @@
+// checks_headers.go — Required response security header checks.
 // Purpose: Evaluates required response security headers.
 // Why: Keeps header-policy enforcement independent from other check categories.
 // Docs: docs/features/feature/security-hardening/index.md
 
-package security
+package scan
 
 import (
 	"fmt"
@@ -38,14 +39,14 @@ func shouldSkipHSTS(headerName string, body capture.NetworkBody) bool {
 }
 
 // checkHeadersForOrigin checks a single HTML response for missing security headers.
-func checkHeadersForOrigin(body capture.NetworkBody, origin string) []SecurityFinding {
-	var findings []SecurityFinding
+func checkHeadersForOrigin(body capture.NetworkBody, origin string) []Finding {
+	var findings []Finding
 	for _, header := range requiredSecurityHeaders {
 		if shouldSkipHSTS(header.Name, body) {
 			continue
 		}
 		if body.ResponseHeaders == nil || body.ResponseHeaders[header.Name] == "" {
-			findings = append(findings, SecurityFinding{
+			findings = append(findings, Finding{
 				Check:       "headers",
 				Severity:    header.Severity,
 				Title:       fmt.Sprintf("Missing %s header", header.Name),
@@ -59,8 +60,8 @@ func checkHeadersForOrigin(body capture.NetworkBody, origin string) []SecurityFi
 	return findings
 }
 
-func (s *SecurityScanner) checkSecurityHeaders(bodies []capture.NetworkBody) []SecurityFinding {
-	var findings []SecurityFinding
+func (s *Scanner) checkSecurityHeaders(bodies []capture.NetworkBody) []Finding {
+	var findings []Finding
 	checkedOrigins := make(map[string]bool)
 
 	for _, body := range bodies {

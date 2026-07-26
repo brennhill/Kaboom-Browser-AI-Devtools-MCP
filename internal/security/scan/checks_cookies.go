@@ -1,8 +1,9 @@
+// checks_cookies.go — Session-cookie attribute checks (HttpOnly, Secure, SameSite).
 // Purpose: Validates cookie security attributes for session/sensitive cookies.
 // Why: Isolates cookie policy logic and findings from unrelated check categories.
 // Docs: docs/features/feature/security-hardening/index.md
 
-package security
+package scan
 
 import (
 	"fmt"
@@ -20,12 +21,12 @@ import (
 var sessionCookiePattern = regexp.MustCompile(`(?i)(session|token|auth|jwt|sid)`)
 
 // checkSingleCookie checks a single cookie for missing security attributes.
-func checkSingleCookie(cookie httpsec.CookieAttrs, bodyURL string, isHTTPS bool) []SecurityFinding {
-	var findings []SecurityFinding
+func checkSingleCookie(cookie httpsec.CookieAttrs, bodyURL string, isHTTPS bool) []Finding {
+	var findings []Finding
 	isSensitive := sessionCookiePattern.MatchString(cookie.Name)
 
 	if isSensitive && !cookie.HttpOnly {
-		findings = append(findings, SecurityFinding{
+		findings = append(findings, Finding{
 			Check: "cookies", Severity: "warning",
 			Title:       fmt.Sprintf("Session cookie '%s' missing HttpOnly flag", cookie.Name),
 			Description: fmt.Sprintf("The cookie '%s' appears to be a session cookie but lacks the HttpOnly flag, making it accessible to JavaScript (XSS risk).", cookie.Name),
@@ -35,7 +36,7 @@ func checkSingleCookie(cookie httpsec.CookieAttrs, bodyURL string, isHTTPS bool)
 		})
 	}
 	if isHTTPS && !cookie.Secure {
-		findings = append(findings, SecurityFinding{
+		findings = append(findings, Finding{
 			Check: "cookies", Severity: "warning",
 			Title:       fmt.Sprintf("Cookie '%s' missing Secure flag on HTTPS", cookie.Name),
 			Description: fmt.Sprintf("The cookie '%s' is set on an HTTPS page but lacks the Secure flag, meaning it could be sent over HTTP.", cookie.Name),
@@ -45,7 +46,7 @@ func checkSingleCookie(cookie httpsec.CookieAttrs, bodyURL string, isHTTPS bool)
 		})
 	}
 	if isSensitive && cookie.SameSite == "" {
-		findings = append(findings, SecurityFinding{
+		findings = append(findings, Finding{
 			Check: "cookies", Severity: "warning",
 			Title:       fmt.Sprintf("Cookie '%s' missing SameSite attribute", cookie.Name),
 			Description: fmt.Sprintf("The cookie '%s' lacks a SameSite attribute, which may allow cross-site request forgery.", cookie.Name),
@@ -57,8 +58,8 @@ func checkSingleCookie(cookie httpsec.CookieAttrs, bodyURL string, isHTTPS bool)
 	return findings
 }
 
-func (s *SecurityScanner) checkCookies(bodies []capture.NetworkBody) []SecurityFinding {
-	var findings []SecurityFinding
+func (s *Scanner) checkCookies(bodies []capture.NetworkBody) []Finding {
+	var findings []Finding
 	for _, body := range bodies {
 		if body.ResponseHeaders == nil {
 			continue

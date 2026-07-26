@@ -1,8 +1,9 @@
+// types.go — Finding, scan input/result and the scanner handle.
 // Purpose: Implements aggregate security scanning across captured network/log evidence.
 // Why: Centralizes security checks so risk findings are produced with one coherent severity model.
 // Docs: docs/features/feature/security-hardening/index.md
 
-package security
+package scan
 
 import (
 	"sync"
@@ -12,7 +13,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
-type SecurityFinding struct {
+type Finding struct {
 	Check       string `json:"check"`
 	Severity    string `json:"severity"`
 	Title       string `json:"title"`
@@ -24,7 +25,7 @@ type SecurityFinding struct {
 
 type LogEntry = types.LogEntry
 
-type SecurityScanInput struct {
+type Input struct {
 	NetworkBodies    []capture.NetworkBody
 	WaterfallEntries []capture.NetworkWaterfallEntry
 	ConsoleEntries   []LogEntry
@@ -34,25 +35,25 @@ type SecurityScanInput struct {
 	SeverityMin      string
 }
 
-type SecurityScanResult struct {
-	Findings  []SecurityFinding `json:"findings"`
-	Summary   ScanSummary       `json:"summary"`
-	ScannedAt time.Time         `json:"scanned_at"`
+type Result struct {
+	Findings  []Finding `json:"findings"`
+	Summary   Summary   `json:"summary"`
+	ScannedAt time.Time `json:"scanned_at"`
 }
 
-type ScanSummary struct {
+type Summary struct {
 	TotalFindings int            `json:"total_findings"`
 	BySeverity    map[string]int `json:"by_severity"`
 	ByCheck       map[string]int `json:"by_check"`
 	URLsScanned   int            `json:"urls_scanned"`
 }
 
-type SecurityScanner struct {
+type Scanner struct {
 	mu sync.RWMutex
 }
 
-var defaultSecurityChecks = []string{"credentials", "pii", "headers", "cookies", "transport", "auth", "network"}
+var defaultChecks = []string{"credentials", "pii", "headers", "cookies", "transport", "auth", "network"}
 
-func NewSecurityScanner() *SecurityScanner {
-	return &SecurityScanner{}
+func NewScanner() *Scanner {
+	return &Scanner{}
 }

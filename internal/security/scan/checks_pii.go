@@ -1,8 +1,9 @@
+// checks_pii.go — PII pattern detection in request/response payloads.
 // Purpose: Detects PII patterns in request/response payloads.
 // Why: Isolates PII heuristics and evidence shaping from other security checks.
 // Docs: docs/features/feature/security-hardening/index.md
 
-package security
+package scan
 
 import (
 	"fmt"
@@ -24,8 +25,8 @@ var (
 	ccPattern    = regexp.MustCompile(`\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b`)
 )
 
-func (s *SecurityScanner) checkPII(bodies []capture.NetworkBody, pageURLs []string) []SecurityFinding {
-	var findings []SecurityFinding
+func (s *Scanner) checkPII(bodies []capture.NetworkBody, pageURLs []string) []Finding {
+	var findings []Finding
 
 	for _, body := range bodies {
 		if body.RequestBody != "" {
@@ -42,7 +43,7 @@ func (s *SecurityScanner) checkPII(bodies []capture.NetworkBody, pageURLs []stri
 }
 
 // scanForSSN checks for Social Security Number patterns.
-func scanForSSN(content, sourceURL, location string, isThirdParty bool) *SecurityFinding {
+func scanForSSN(content, sourceURL, location string, isThirdParty bool) *Finding {
 	if !ssnPattern.MatchString(content) {
 		return nil
 	}
@@ -53,7 +54,7 @@ func scanForSSN(content, sourceURL, location string, isThirdParty bool) *Securit
 		severity = "critical"
 		desc = fmt.Sprintf("A Social Security Number pattern is being sent to a third-party endpoint in %s.", location)
 	}
-	return &SecurityFinding{
+	return &Finding{
 		Check: "pii", Severity: severity,
 		Title: "SSN pattern detected in " + location, Description: desc,
 		Location: sourceURL, Evidence: redactSecret(match),
@@ -62,7 +63,7 @@ func scanForSSN(content, sourceURL, location string, isThirdParty bool) *Securit
 }
 
 // scanForCreditCard checks for credit card number patterns.
-func scanForCreditCard(content, sourceURL, location string) *SecurityFinding {
+func scanForCreditCard(content, sourceURL, location string) *Finding {
 	if !ccPattern.MatchString(content) {
 		return nil
 	}
@@ -71,7 +72,7 @@ func scanForCreditCard(content, sourceURL, location string) *SecurityFinding {
 	if len(cleaned) < 13 || len(cleaned) > 19 || !looksLikeCreditCard(cleaned) {
 		return nil
 	}
-	return &SecurityFinding{
+	return &Finding{
 		Check: "pii", Severity: "critical",
 		Title:       "Credit card number detected in " + location,
 		Description: fmt.Sprintf("A credit card number pattern was detected in %s.", location),
@@ -89,11 +90,11 @@ func thirdPartySeverity(isThirdParty bool) string {
 }
 
 // scanForEmailPII checks for email address patterns.
-func scanForEmailPII(content, sourceURL, location string, isThirdParty bool) *SecurityFinding {
+func scanForEmailPII(content, sourceURL, location string, isThirdParty bool) *Finding {
 	if !emailPattern.MatchString(content) {
 		return nil
 	}
-	return &SecurityFinding{
+	return &Finding{
 		Check: "pii", Severity: thirdPartySeverity(isThirdParty),
 		Title:       "Email address in " + location,
 		Description: fmt.Sprintf("An email address was detected in %s.", location),
@@ -103,7 +104,7 @@ func scanForEmailPII(content, sourceURL, location string, isThirdParty bool) *Se
 }
 
 // scanForPhonePII checks for phone number patterns.
-func scanForPhonePII(content, sourceURL, location string, isThirdParty bool) *SecurityFinding {
+func scanForPhonePII(content, sourceURL, location string, isThirdParty bool) *Finding {
 	if !phonePattern.MatchString(content) {
 		return nil
 	}
@@ -112,7 +113,7 @@ func scanForPhonePII(content, sourceURL, location string, isThirdParty bool) *Se
 	if len(cleaned) < 10 {
 		return nil
 	}
-	return &SecurityFinding{
+	return &Finding{
 		Check: "pii", Severity: thirdPartySeverity(isThirdParty),
 		Title:       "Phone number in " + location,
 		Description: fmt.Sprintf("A phone number pattern was detected in %s.", location),
@@ -121,13 +122,13 @@ func scanForPhonePII(content, sourceURL, location string, isThirdParty bool) *Se
 	}
 }
 
-func (s *SecurityScanner) scanForPII(content, sourceURL, location string, isThirdParty bool) []SecurityFinding {
+func (s *Scanner) scanForPII(content, sourceURL, location string, isThirdParty bool) []Finding {
 	if len(content) > 10240 {
 		content = content[:10240]
 	}
 
-	var findings []SecurityFinding
-	piiChecks := []*SecurityFinding{
+	var findings []Finding
+	piiChecks := []*Finding{
 		scanForSSN(content, sourceURL, location, isThirdParty),
 		scanForCreditCard(content, sourceURL, location),
 		scanForEmailPII(content, sourceURL, location, isThirdParty),

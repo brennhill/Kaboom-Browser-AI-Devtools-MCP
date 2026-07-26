@@ -9,7 +9,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
 )
 
 // HandleSecurityAudit handles analyze(what="security_audit").
@@ -43,7 +43,7 @@ func HandleSecurityAudit(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 	}
 
 	if params.Summary {
-		if scanResult, ok := result.(security.ScanResult); ok {
+		if scanResult, ok := result.(scan.Result); ok {
 			return succeed(req, "Security audit summary", BuildSecurityAuditSummary(scanResult))
 		}
 	}

@@ -11,7 +11,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -109,7 +109,7 @@ type sharedPageData struct {
 	networkBodies    []capture.NetworkBody
 	waterfallEntries []capture.NetworkWaterfallEntry
 	logEntries       []LogEntry
-	consoleEntries   []security.LogEntry
+	consoleEntries   []scan.LogEntry
 	tabURL           string
 }
 
@@ -122,9 +122,9 @@ func (h *ToolHandler) prefetchSharedData(tabURL string) sharedPageData {
 	h.server.logs.mu.RLock()
 	logEntries := make([]LogEntry, len(h.server.logs.entries))
 	copy(logEntries, h.server.logs.entries)
-	consoleEntries := make([]security.LogEntry, len(h.server.logs.entries))
+	consoleEntries := make([]scan.LogEntry, len(h.server.logs.entries))
 	for i, e := range h.server.logs.entries {
-		consoleEntries[i] = security.LogEntry(e)
+		consoleEntries[i] = scan.LogEntry(e)
 	}
 	h.server.logs.mu.RUnlock()
 
@@ -353,7 +353,7 @@ func (h *ToolHandler) collectSecurityIssues(shared sharedPageData, limit int) ([
 		return nil, err
 	}
 
-	scanResult, ok := result.(security.ScanResult)
+	scanResult, ok := result.(scan.Result)
 	if !ok {
 		return nil, nil
 	}

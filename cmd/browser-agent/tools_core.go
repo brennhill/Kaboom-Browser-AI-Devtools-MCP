@@ -20,7 +20,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
@@ -62,7 +62,7 @@ type ToolHandler struct {
 	// These are used directly by tool handlers rather than through the interface fields above.
 	noiseConfig           *noise.NoiseConfig
 	sessionStoreImpl      *persistence.SessionStore
-	securityScannerImpl   *security.Scanner
+	securityScannerImpl   *scan.Scanner
 	thirdPartyAuditorImpl *analysis.ThirdPartyAuditor
 	sessionManager        *session.Manager
 	auditTrail            *audit.Trail

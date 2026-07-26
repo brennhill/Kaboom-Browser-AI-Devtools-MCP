@@ -1,6 +1,7 @@
+// credentials.go — URL, body and console credential scanning.
 // Purpose: Scans network bodies and console logs for exposed credentials using pattern matching.
 // Why: Separates credential scanning logic from pattern definitions and helper utilities.
-package security
+package scan
 
 import (
 	"fmt"
@@ -8,8 +9,8 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
-func (s *SecurityScanner) checkCredentials(bodies []capture.NetworkBody, entries []LogEntry) []SecurityFinding {
-	var findings []SecurityFinding
+func (s *Scanner) checkCredentials(bodies []capture.NetworkBody, entries []LogEntry) []Finding {
+	var findings []Finding
 
 	// Scan network bodies (URLs and body content)
 	for _, body := range bodies {
@@ -27,14 +28,14 @@ func (s *SecurityScanner) checkCredentials(bodies []capture.NetworkBody, entries
 }
 
 // scanURLForAPIKeys checks for API keys in URL query parameters.
-func (s *SecurityScanner) scanURLForAPIKeys(url string) []SecurityFinding {
-	var findings []SecurityFinding
+func (s *Scanner) scanURLForAPIKeys(url string) []Finding {
+	var findings []Finding
 	matches := apiKeyURLPattern.FindAllStringSubmatch(url, 10)
 	for _, m := range matches {
 		if len(m) < 3 || isTestKey(m[2]) {
 			continue
 		}
-		findings = append(findings, SecurityFinding{
+		findings = append(findings, Finding{
 			Check:       "credentials",
 			Severity:    "critical",
 			Title:       fmt.Sprintf("API key exposed in URL query parameter '%s'", m[1]),
@@ -48,17 +49,17 @@ func (s *SecurityScanner) scanURLForAPIKeys(url string) []SecurityFinding {
 }
 
 // scanURLForGenericSecrets checks for generic secret parameters in URL.
-func (s *SecurityScanner) scanURLForGenericSecrets(url string) []SecurityFinding {
+func (s *Scanner) scanURLForGenericSecrets(url string) []Finding {
 	if apiKeyURLPattern.MatchString(url) {
 		return nil // avoid duplicating apiKey findings
 	}
-	var findings []SecurityFinding
+	var findings []Finding
 	matches := genericSecretURL.FindAllStringSubmatch(url, 10)
 	for _, m := range matches {
 		if len(m) < 3 || isTestKey(m[2]) {
 			continue
 		}
-		findings = append(findings, SecurityFinding{
+		findings = append(findings, Finding{
 			Check:       "credentials",
 			Severity:    "critical",
 			Title:       "Secret value exposed in URL query parameter",
@@ -71,13 +72,13 @@ func (s *SecurityScanner) scanURLForGenericSecrets(url string) []SecurityFinding
 	return findings
 }
 
-func (s *SecurityScanner) scanURLForCredentials(body capture.NetworkBody) []SecurityFinding {
-	var findings []SecurityFinding
+func (s *Scanner) scanURLForCredentials(body capture.NetworkBody) []Finding {
+	var findings []Finding
 	findings = append(findings, s.scanURLForAPIKeys(body.URL)...)
 	findings = append(findings, s.scanURLForGenericSecrets(body.URL)...)
 
 	if jwtPattern.MatchString(body.URL) {
-		findings = append(findings, SecurityFinding{
+		findings = append(findings, Finding{
 			Check: "credentials", Severity: "critical",
 			Title:       "JWT token exposed in URL",
 			Description: "A JWT token was found in the request URL. URLs are logged in browser history, server logs, and may leak via Referer headers.",
@@ -86,7 +87,7 @@ func (s *SecurityScanner) scanURLForCredentials(body capture.NetworkBody) []Secu
 		})
 	}
 	if awsKeyPattern.MatchString(body.URL) {
-		findings = append(findings, SecurityFinding{
+		findings = append(findings, Finding{
 			Check: "credentials", Severity: "critical",
 			Title:       "AWS access key exposed in URL",
 			Description: "An AWS access key ID was found in the request URL.",
@@ -97,7 +98,7 @@ func (s *SecurityScanner) scanURLForCredentials(body capture.NetworkBody) []Secu
 	return findings
 }
 
-func (s *SecurityScanner) scanBodyForCredentials(bodyContent, sourceURL, location string) []SecurityFinding {
+func (s *Scanner) scanBodyForCredentials(bodyContent, sourceURL, location string) []Finding {
 	if bodyContent == "" {
 		return nil
 	}
@@ -106,7 +107,7 @@ func (s *SecurityScanner) scanBodyForCredentials(bodyContent, sourceURL, locatio
 		scanContent = scanContent[:10240]
 	}
 
-	var findings []SecurityFinding
+	var findings []Finding
 	for _, check := range bodyCredentialChecks() {
 		if !check.pattern.MatchString(scanContent) {
 			continue
@@ -119,7 +120,7 @@ func (s *SecurityScanner) scanBodyForCredentials(bodyContent, sourceURL, locatio
 		if evidence == "" {
 			evidence = redactSecret(match)
 		}
-		findings = append(findings, SecurityFinding{
+		findings = append(findings, Finding{
 			Check:       "credentials",
 			Severity:    check.severity,
 			Title:       fmt.Sprintf(check.titleFmt, location),
@@ -135,7 +136,7 @@ func (s *SecurityScanner) scanBodyForCredentials(bodyContent, sourceURL, locatio
 		if len(m) < 3 || isTestKey(m[2]) {
 			continue
 		}
-		findings = append(findings, SecurityFinding{
+		findings = append(findings, Finding{
 			Check:       "credentials",
 			Severity:    "warning",
 			Title:       fmt.Sprintf("API key '%s' in %s", m[1], location),
@@ -149,8 +150,8 @@ func (s *SecurityScanner) scanBodyForCredentials(bodyContent, sourceURL, locatio
 	return findings
 }
 
-func (s *SecurityScanner) scanConsoleForCredentials(entry LogEntry) []SecurityFinding {
-	var findings []SecurityFinding
+func (s *Scanner) scanConsoleForCredentials(entry LogEntry) []Finding {
+	var findings []Finding
 
 	msg := getEntryString(entry, "message")
 	if msg == "" {
@@ -167,7 +168,7 @@ func (s *SecurityScanner) scanConsoleForCredentials(entry LogEntry) []SecurityFi
 	// Check for Bearer tokens
 	if bearerPattern.MatchString(msg) {
 		match := bearerPattern.FindString(msg)
-		findings = append(findings, SecurityFinding{
+		findings = append(findings, Finding{
 			Check:       "credentials",
 			Severity:    "critical",
 			Title:       "Bearer token logged to console",
@@ -183,7 +184,7 @@ func (s *SecurityScanner) scanConsoleForCredentials(entry LogEntry) []SecurityFi
 		match := jwtPattern.FindString(msg)
 		// Don't double-count if already caught by bearer check
 		if !bearerPattern.MatchString(msg) {
-			findings = append(findings, SecurityFinding{
+			findings = append(findings, Finding{
 				Check:       "credentials",
 				Severity:    "critical",
 				Title:       "JWT token logged to console",
@@ -198,7 +199,7 @@ func (s *SecurityScanner) scanConsoleForCredentials(entry LogEntry) []SecurityFi
 	// AWS key in console
 	if awsKeyPattern.MatchString(msg) {
 		match := awsKeyPattern.FindString(msg)
-		findings = append(findings, SecurityFinding{
+		findings = append(findings, Finding{
 			Check:       "credentials",
 			Severity:    "critical",
 			Title:       "AWS access key logged to console",

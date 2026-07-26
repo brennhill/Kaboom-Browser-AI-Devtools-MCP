@@ -1,14 +1,15 @@
+// checks_network.go — Turns netflag origin flags into scan findings.
 // Purpose: Analyzes network waterfall entries for security issues (mixed content, insecure transport).
 // Why: Separates network-level security analysis from credential scanning and header checks.
-package security
+package scan
 
 import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/netflag"
 )
 
-func (s *SecurityScanner) checkNetworkSecurity(entries []capture.NetworkWaterfallEntry, pageURLs []string) []SecurityFinding {
-	var findings []SecurityFinding
+func (s *Scanner) checkNetworkSecurity(entries []capture.NetworkWaterfallEntry, pageURLs []string) []Finding {
+	var findings []Finding
 	pageURL := ""
 	if len(pageURLs) > 0 {
 		pageURL = pageURLs[0]
@@ -17,7 +18,7 @@ func (s *SecurityScanner) checkNetworkSecurity(entries []capture.NetworkWaterfal
 	for _, entry := range entries {
 		flags := netflag.Analyze(entry, pageURL)
 		for _, flag := range flags {
-			findings = append(findings, SecurityFinding{
+			findings = append(findings, Finding{
 				Check:       "network",
 				Severity:    flag.Severity,
 				Title:       flag.Message,

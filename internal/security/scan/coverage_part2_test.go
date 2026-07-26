@@ -1,3 +1,4 @@
+// coverage_part2_test.go — Branch tests for PII, headers, Luhn, console and cookie checks.
 // Purpose: Coverage-expansion tests for security edge cases and branch paths.
 // Docs: docs/features/feature/security-hardening/index.md
 
@@ -6,7 +7,7 @@
 // looksLikeCreditCard,
 // scanConsoleForCredentials, getEntryString, scanURLForGenericSecrets,
 // checkTransport, checkCookies.
-package security
+package scan
 
 import (
 	"strings"
@@ -21,7 +22,7 @@ import (
 
 func TestCheckPII_RequestBodyToThirdParty(t *testing.T) {
 	t.Parallel()
-	s := NewSecurityScanner()
+	s := NewScanner()
 	bodies := []capture.NetworkBody{
 		{
 			URL:         "https://analytics.external.com/collect",
@@ -39,7 +40,7 @@ func TestCheckPII_RequestBodyToThirdParty(t *testing.T) {
 
 func TestCheckPII_ResponseBody(t *testing.T) {
 	t.Parallel()
-	s := NewSecurityScanner()
+	s := NewScanner()
 	bodies := []capture.NetworkBody{
 		{
 			URL:          "https://api.myapp.com/users/1",
@@ -60,7 +61,7 @@ func TestCheckPII_ResponseBody(t *testing.T) {
 
 func TestCheckSecurityHeaders_MissingHeaders(t *testing.T) {
 	t.Parallel()
-	s := NewSecurityScanner()
+	s := NewScanner()
 	bodies := []capture.NetworkBody{
 		{
 			URL:             "https://example.com/page",
@@ -137,7 +138,7 @@ func TestLooksLikeCreditCard_NonDigit(t *testing.T) {
 
 func TestScanConsoleForCredentials_EmptyMessage(t *testing.T) {
 	t.Parallel()
-	s := NewSecurityScanner()
+	s := NewScanner()
 	entry := LogEntry{"source": "console", "message": ""}
 	findings := s.scanConsoleForCredentials(entry)
 	if len(findings) != 0 {
@@ -147,7 +148,7 @@ func TestScanConsoleForCredentials_EmptyMessage(t *testing.T) {
 
 func TestScanConsoleForCredentials_NilMessage(t *testing.T) {
 	t.Parallel()
-	s := NewSecurityScanner()
+	s := NewScanner()
 	entry := LogEntry{"source": "console"}
 	findings := s.scanConsoleForCredentials(entry)
 	if len(findings) != 0 {
@@ -157,7 +158,7 @@ func TestScanConsoleForCredentials_NilMessage(t *testing.T) {
 
 func TestScanConsoleForCredentials_NonStringMessage(t *testing.T) {
 	t.Parallel()
-	s := NewSecurityScanner()
+	s := NewScanner()
 	entry := LogEntry{"source": "console", "message": 42}
 	findings := s.scanConsoleForCredentials(entry)
 	if len(findings) != 0 {
@@ -167,7 +168,7 @@ func TestScanConsoleForCredentials_NonStringMessage(t *testing.T) {
 
 func TestScanConsoleForCredentials_LongMessage(t *testing.T) {
 	t.Parallel()
-	s := NewSecurityScanner()
+	s := NewScanner()
 	longMsg := "Bearer " + strings.Repeat("A", 11000)
 	entry := LogEntry{"source": "console", "message": longMsg}
 	findings := s.scanConsoleForCredentials(entry)
@@ -207,7 +208,7 @@ func TestGetEntryString_AllBranches(t *testing.T) {
 
 func TestScanURLForGenericSecrets_SkipsWhenAPIKeyMatches(t *testing.T) {
 	t.Parallel()
-	s := NewSecurityScanner()
+	s := NewScanner()
 	url := "https://api.example.com/data?api_key=abcdefghijklmnop"
 	findings := s.scanURLForGenericSecrets(url)
 	if len(findings) != 0 {
@@ -217,7 +218,7 @@ func TestScanURLForGenericSecrets_SkipsWhenAPIKeyMatches(t *testing.T) {
 
 func TestScanURLForGenericSecrets_GenericSecretParam(t *testing.T) {
 	t.Parallel()
-	s := NewSecurityScanner()
+	s := NewScanner()
 	url := "https://api.example.com/data?mysecret=longsecretvaluethatisnotapikey"
 	findings := s.scanURLForGenericSecrets(url)
 	if len(findings) == 0 {
@@ -231,7 +232,7 @@ func TestScanURLForGenericSecrets_GenericSecretParam(t *testing.T) {
 
 func TestCheckTransport_MixedContentJS(t *testing.T) {
 	t.Parallel()
-	s := NewSecurityScanner()
+	s := NewScanner()
 	bodies := []capture.NetworkBody{
 		{
 			URL:         "http://evil.example.com/inject.js",
@@ -260,7 +261,7 @@ func TestCheckTransport_MixedContentJS(t *testing.T) {
 
 func TestCheckTransport_LocalhostSkipped(t *testing.T) {
 	t.Parallel()
-	s := NewSecurityScanner()
+	s := NewScanner()
 	bodies := []capture.NetworkBody{
 		{URL: "http://localhost:3000/api", Method: "GET"},
 	}
@@ -277,7 +278,7 @@ func TestCheckTransport_LocalhostSkipped(t *testing.T) {
 
 func TestCheckCookies_SessionCookieMissingFlags(t *testing.T) {
 	t.Parallel()
-	s := NewSecurityScanner()
+	s := NewScanner()
 	bodies := []capture.NetworkBody{
 		{
 			URL: "https://example.com/login",
@@ -295,7 +296,7 @@ func TestCheckCookies_SessionCookieMissingFlags(t *testing.T) {
 
 func TestCheckCookies_NilHeaders(t *testing.T) {
 	t.Parallel()
-	s := NewSecurityScanner()
+	s := NewScanner()
 	bodies := []capture.NetworkBody{
 		{URL: "https://example.com", ResponseHeaders: nil},
 	}

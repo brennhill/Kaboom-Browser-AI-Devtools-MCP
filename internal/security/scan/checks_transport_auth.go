@@ -1,8 +1,9 @@
+// checks_transport_auth.go — Transport encryption and unauthenticated-PII checks.
 // Purpose: Validates transport encryption usage and auth-protected response patterns.
 // Why: Keeps network/auth exposure heuristics separate from header/cookie/PII checks.
 // Docs: docs/features/feature/security-hardening/index.md
 
-package security
+package scan
 
 import (
 	"fmt"
@@ -16,8 +17,8 @@ import (
 // Transport Security Check
 // ============================================
 
-func (s *SecurityScanner) checkTransport(bodies []capture.NetworkBody, pageURLs []string) []SecurityFinding {
-	var findings []SecurityFinding
+func (s *Scanner) checkTransport(bodies []capture.NetworkBody, pageURLs []string) []Finding {
+	var findings []Finding
 
 	pageIsHTTPS := false
 	for _, pageURL := range pageURLs {
@@ -35,7 +36,7 @@ func (s *SecurityScanner) checkTransport(bodies []capture.NetworkBody, pageURLs 
 			continue
 		}
 
-		findings = append(findings, SecurityFinding{
+		findings = append(findings, Finding{
 			Check:       "transport",
 			Severity:    "warning",
 			Title:       "API call over unencrypted HTTP",
@@ -50,7 +51,7 @@ func (s *SecurityScanner) checkTransport(bodies []capture.NetworkBody, pageURLs 
 			if httpsec.IsJavaScriptContent(body.ContentType) {
 				severity = "critical"
 			}
-			findings = append(findings, SecurityFinding{
+			findings = append(findings, Finding{
 				Check:       "transport",
 				Severity:    severity,
 				Title:       "Mixed content: HTTPS page loading HTTP resource",
@@ -69,8 +70,8 @@ func (s *SecurityScanner) checkTransport(bodies []capture.NetworkBody, pageURLs 
 // Auth Pattern Check
 // ============================================
 
-func (s *SecurityScanner) checkAuthPatterns(bodies []capture.NetworkBody) []SecurityFinding {
-	var findings []SecurityFinding
+func (s *Scanner) checkAuthPatterns(bodies []capture.NetworkBody) []Finding {
+	var findings []Finding
 
 	for _, body := range bodies {
 		if body.HasAuthHeader {
@@ -82,7 +83,7 @@ func (s *SecurityScanner) checkAuthPatterns(bodies []capture.NetworkBody) []Secu
 
 		piiFields := detectPIIFields(body.ResponseBody)
 		if len(piiFields) > 0 {
-			findings = append(findings, SecurityFinding{
+			findings = append(findings, Finding{
 				Check:       "auth",
 				Severity:    "warning",
 				Title:       "Endpoint returns sensitive data without authentication",
