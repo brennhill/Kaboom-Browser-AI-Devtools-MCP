@@ -21,6 +21,7 @@ on:
 permissions:
   contents: write
   packages: write
+  id-token: write # required for `npm publish --provenance` (OIDC attestation)
 
 jobs:
   build-and-release:
@@ -85,7 +86,7 @@ jobs:
             echo "Publishing platform package: $pkg"
             cd npm/$pkg
             set +e
-            OUTPUT=$(npm publish --access public 2>&1)
+            OUTPUT=$(npm publish --provenance --access public 2>&1)
             STATUS=$?
             set -e
             echo "$OUTPUT"
@@ -103,7 +104,7 @@ jobs:
           echo "Publishing aggregate package"
           cd npm/kaboom-agentic-browser
           set +e
-          OUTPUT=$(npm publish --access public 2>&1)
+          OUTPUT=$(npm publish --provenance --access public 2>&1)
           STATUS=$?
           set -e
           echo "$OUTPUT"
