@@ -42,7 +42,13 @@ last_verified_date: 2026-03-05
 
 > **Removed 2026-07-26 — dead code, never reachable.**
 >
-> API schema inference was never wired to an MCP surface. The package had zero importers outside its own tests, was absent from `go list -deps ./cmd/browser-agent/...`, and `InferSchema`/`RecordRequest` existed nowhere else — so no schema was ever inferred at runtime. Removed rather than left as `status: shipped`, which it never was.
+> API schema inference was never wired to an MCP surface. The package had zero importers outside its own tests and was absent from `go list -deps ./cmd/browser-agent/...`, so no schema was ever inferred at runtime. Removed rather than left as `status: shipped`, which it never was.
+>
+> *Evidence correction, same day:* this note originally cited `InferSchema`/`RecordRequest`
+> as "existing nowhere else." Those symbols never existed under those names — the real
+> entry points were `NewSchemaStore`/`Observe`/`BuildSchema`, and a grep returning zero for
+> a name that was never used proves nothing. The unreachability conclusion was verified
+> independently at symbol level and stands; the cited evidence did not.
 
 Note: the API *contract* checking in `internal/analysis/apicontract` is live and unaffected; only the schema-inference half was dead.
 
