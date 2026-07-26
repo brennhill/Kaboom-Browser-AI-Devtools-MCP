@@ -45,6 +45,7 @@ test_paths:
   - cmd/browser-agent/internal/bridge/bridge_detach_stdio_test.go
   - cmd/browser-agent/internal/bridge/bridge_deps_isolation_test.go
   - cmd/browser-agent/internal/daemonlife/lifecycle_takeover_test.go
+  - cmd/browser-agent/internal/daemonlife/lifecycle_policy_test.go
   - cmd/browser-agent/internal/daemonlife/install_epoch_test.go
   - cmd/browser-agent/internal/daemonlife/startup_throttle_test.go
   - cmd/browser-agent/internal/daemonlife/version_compare_test.go
