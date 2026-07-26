@@ -1,6 +1,6 @@
-// mode_specs_interact.go — interact tool per-mode parameter specs.
+// modespecs_interact.go — interact tool per-mode parameter specs.
 // Docs: docs/features/describe_capabilities.md
-package configure
+package capabilities
 
 import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema/interact"
 

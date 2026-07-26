@@ -1,6 +1,6 @@
-// mode_specs_test.go — Tests for per-mode parameter specs.
+// modespecs_test.go — Tests for per-mode parameter specs.
 // Docs: docs/features/describe_capabilities.md
-package configure
+package capabilities
 
 import (
 	"testing"

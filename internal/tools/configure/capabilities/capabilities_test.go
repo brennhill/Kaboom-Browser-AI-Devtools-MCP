@@ -2,7 +2,7 @@
 // Docs: docs/features/feature/enhanced-cli-config/index.md
 
 // capabilities_test.go — Tests for capability map building.
-package configure
+package capabilities
 
 import (
 	"sort"

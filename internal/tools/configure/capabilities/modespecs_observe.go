@@ -1,6 +1,6 @@
-// mode_specs_observe.go — observe tool per-mode parameter specs.
+// modespecs_observe.go — observe tool per-mode parameter specs.
 // Docs: docs/features/describe_capabilities.md
-package configure
+package capabilities
 
 var observeModeSpecs = map[string]modeParamSpec{
 	"errors": {
