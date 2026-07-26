@@ -50,6 +50,22 @@ func CategoryMatchesEvent(category, event string) bool {
 	return ok && cats[category]
 }
 
+// SeverityRank returns the numeric rank of a severity string.
+// It defines the ordering used by the severity_min filter below and by
+// consumers that sort alerts by priority.
+func SeverityRank(s string) int {
+	switch s {
+	case "error":
+		return 3
+	case "warning":
+		return 2
+	case "info":
+		return 1
+	default:
+		return 0
+	}
+}
+
 // passesFiltersLocked checks enabled, severity, and event filters.
 // Caller must hold s.Mu.
 func (s *StreamState) passesFiltersLocked(alert types.Alert) bool {

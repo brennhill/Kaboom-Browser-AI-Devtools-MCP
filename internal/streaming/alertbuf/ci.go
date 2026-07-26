@@ -2,7 +2,7 @@
 // Why: Separates CI-specific alert semantics from generic buffering and correlation logic.
 // Docs: docs/features/feature/push-alerts/index.md
 
-package streaming
+package alertbuf
 
 import (
 	"fmt"

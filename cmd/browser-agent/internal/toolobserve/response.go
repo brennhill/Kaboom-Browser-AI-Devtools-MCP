@@ -5,7 +5,7 @@ package toolobserve
 
 import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -20,7 +20,7 @@ func AppendAlertsToResponse(resp mcp.JSONRPCResponse, alerts []types.Alert) mcp.
 	return mcp.MutateToolResult(resp, func(r *mcp.MCPToolResult) {
 		r.Content = append(r.Content, mcp.MCPContentBlock{
 			Type: "text",
-			Text: streaming.FormatAlertsBlock(alerts),
+			Text: alertbuf.FormatAlertsBlock(alerts),
 		})
 	})
 }

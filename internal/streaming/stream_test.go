@@ -14,6 +14,23 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
+func TestSeverityRank(t *testing.T) {
+	t.Parallel()
+
+	if got := SeverityRank("error"); got != 3 {
+		t.Fatalf("SeverityRank(error) = %d, want 3", got)
+	}
+	if got := SeverityRank("warning"); got != 2 {
+		t.Fatalf("SeverityRank(warning) = %d, want 2", got)
+	}
+	if got := SeverityRank("info"); got != 1 {
+		t.Fatalf("SeverityRank(info) = %d, want 1", got)
+	}
+	if got := SeverityRank("unknown"); got != 0 {
+		t.Fatalf("SeverityRank(unknown) = %d, want 0", got)
+	}
+}
+
 func TestCategoryMatchesEvent(t *testing.T) {
 	t.Parallel()
 

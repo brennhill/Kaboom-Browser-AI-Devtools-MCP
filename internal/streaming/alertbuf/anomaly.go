@@ -2,12 +2,13 @@
 // Why: Isolates anomaly-detection policy from CI and formatting concerns for easier testing.
 // Docs: docs/features/feature/push-alerts/index.md
 
-package streaming
+package alertbuf
 
 import (
 	"fmt"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -15,7 +16,7 @@ import (
 // If error frequency exceeds 3x the rolling average in a 10-second window,
 // an anomaly alert is generated.
 func (ab *AlertBuffer) RecordErrorForAnomaly(t time.Time) {
-	newAlert, stream := func() (*types.Alert, *StreamState) {
+	newAlert, stream := func() (*types.Alert, *streaming.StreamState) {
 		ab.Mu.Lock()
 		defer ab.Mu.Unlock()
 

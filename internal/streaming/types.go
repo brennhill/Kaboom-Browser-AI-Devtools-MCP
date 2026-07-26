@@ -1,4 +1,4 @@
-// Purpose: Defines streaming and alert-buffer state/config model types.
+// Purpose: Defines streaming state/config model types for the MCP notification stream.
 // Why: Keeps push-alert streaming contracts explicit across configuration and emission paths.
 // Docs: docs/features/feature/push-alerts/index.md
 
@@ -24,18 +24,6 @@ const (
 	DedupWindow               = 30 * time.Second
 	MaxPendingBatch           = 100
 	NotificationLoggerName    = identity.MCPServerName
-)
-
-// ============================================
-// Alert Constants
-// ============================================
-
-const (
-	AlertBufferCap       = 50
-	CIResultsCap         = 10
-	CorrelationWindow    = 5 * time.Second
-	AnomalyWindowSeconds = 60
-	AnomalyBucketSeconds = 10
 )
 
 // ============================================
@@ -75,25 +63,4 @@ type NotificationParams struct {
 	Level  string `json:"level"`
 	Logger string `json:"logger"`
 	Data   any    `json:"data"`
-}
-
-// ============================================
-// AlertBuffer
-// ============================================
-
-// AlertBuffer owns the alert, CI, and anomaly state.
-// Fields are exported for test access (internal package only).
-type AlertBuffer struct {
-	Mu         sync.Mutex
-	Alerts     []types.Alert
-	CIResults  []types.CIResult
-	ErrorTimes []time.Time
-	Stream     *StreamState
-}
-
-// NewAlertBuffer creates an AlertBuffer with a default StreamState.
-func NewAlertBuffer() *AlertBuffer {
-	return &AlertBuffer{
-		Stream: NewStreamState(),
-	}
 }

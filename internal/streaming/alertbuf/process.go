@@ -2,7 +2,7 @@
 // Why: Keeps alert-shaping logic independent from alert producers (buffer, CI, anomaly).
 // Docs: docs/features/feature/push-alerts/index.md
 
-package streaming
+package alertbuf
 
 import (
 	"encoding/json"
@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -116,7 +117,7 @@ func CanCorrelate(a, b types.Alert) bool {
 // MergeAlerts combines two correlated alerts into one.
 func MergeAlerts(a, b types.Alert) types.Alert {
 	severity := a.Severity
-	if SeverityRank(b.Severity) > SeverityRank(a.Severity) {
+	if streaming.SeverityRank(b.Severity) > streaming.SeverityRank(a.Severity) {
 		severity = b.Severity
 	}
 
@@ -142,27 +143,13 @@ func MergeAlerts(a, b types.Alert) types.Alert {
 // SortAlertsByPriority sorts alerts by severity (descending) then timestamp (newest first).
 func SortAlertsByPriority(alerts []types.Alert) {
 	sort.SliceStable(alerts, func(i, j int) bool {
-		ri := SeverityRank(alerts[i].Severity)
-		rj := SeverityRank(alerts[j].Severity)
+		ri := streaming.SeverityRank(alerts[i].Severity)
+		rj := streaming.SeverityRank(alerts[j].Severity)
 		if ri != rj {
 			return ri > rj
 		}
 		return alerts[i].Timestamp > alerts[j].Timestamp
 	})
-}
-
-// SeverityRank returns the numeric rank of a severity string.
-func SeverityRank(s string) int {
-	switch s {
-	case "error":
-		return 3
-	case "warning":
-		return 2
-	case "info":
-		return 1
-	default:
-		return 0
-	}
 }
 
 // ============================================

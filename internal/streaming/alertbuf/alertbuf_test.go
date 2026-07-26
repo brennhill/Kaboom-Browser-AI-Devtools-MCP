@@ -1,8 +1,8 @@
 // Purpose: Tests for streaming alert event generation and throttling.
 // Docs: docs/features/feature/context-streaming/index.md
 
-// alerts_test.go — Unit tests for AlertBuffer methods and pure alert processing functions.
-package streaming
+// alertbuf_test.go — Unit tests for AlertBuffer methods and pure alert processing functions.
+package alertbuf
 
 import (
 	"encoding/json"
@@ -12,23 +12,6 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
-
-func TestSeverityRank(t *testing.T) {
-	t.Parallel()
-
-	if got := SeverityRank("error"); got != 3 {
-		t.Fatalf("SeverityRank(error) = %d, want 3", got)
-	}
-	if got := SeverityRank("warning"); got != 2 {
-		t.Fatalf("SeverityRank(warning) = %d, want 2", got)
-	}
-	if got := SeverityRank("info"); got != 1 {
-		t.Fatalf("SeverityRank(info) = %d, want 1", got)
-	}
-	if got := SeverityRank("unknown"); got != 0 {
-		t.Fatalf("SeverityRank(unknown) = %d, want 0", got)
-	}
-}
 
 func TestDeduplicateCorrelateAndSortAlerts(t *testing.T) {
 	t.Parallel()
