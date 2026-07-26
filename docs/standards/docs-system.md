@@ -53,8 +53,8 @@ Every feature spec file must include at least:
 5. Enforce feature bundle contract:
    - `node scripts/docs/features/check-feature-bundles.js`
 6. Enforce content writing/voice contract:
-   - `node scripts/docs/check-content-style-contract.mjs`
-   - `node scripts/docs/run-vale-on-changed.mjs`
+   - `node scripts/docs/site/check-content-style-contract.mjs`
+   - `node scripts/docs/site/run-vale-on-changed.mjs`
 
 ## Definition of Done (Docs)
 

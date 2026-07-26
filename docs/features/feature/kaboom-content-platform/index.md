@@ -49,30 +49,30 @@ code_paths:
   - gokaboom.dev/src/utils/markdownPaths.ts
   - gokaboom.dev/src/utils/siteVersion.ts
   - scripts/docs/features/check-docs-quality-gates.mjs
-  - scripts/docs/check-site-content-ids.mjs
-  - scripts/docs/check-gokaboom-content-contract.mjs
-  - scripts/docs/check-content-style-contract.mjs
-  - scripts/docs/check-downloads-page-contract.mjs
-  - scripts/docs/check-landing-layout-contract.mjs
+  - scripts/docs/site/check-site-content-ids.mjs
+  - scripts/docs/site/check-gokaboom-content-contract.mjs
+  - scripts/docs/site/check-content-style-contract.mjs
+  - scripts/docs/site/check-downloads-page-contract.mjs
+  - scripts/docs/site/check-landing-layout-contract.mjs
   - scripts/docs/generate-reference-executable-examples.mjs
-  - scripts/docs/normalize-site-tags.mjs
+  - scripts/docs/site/normalize-site-tags.mjs
   - scripts/docs/features/sync-verification-metadata.mjs
-  - scripts/docs/run-vale-on-changed.mjs
+  - scripts/docs/site/run-vale-on-changed.mjs
   - scripts/docs/check-reference-schema-sync.mjs
   - scripts/docs/features/check-feature-bundles.js
   - .github/workflows/ci.yml
 test_paths:
   - scripts/docs/features/check-docs-quality-gates.mjs
-  - scripts/docs/check-site-content-ids.mjs
+  - scripts/docs/site/check-site-content-ids.mjs
   - scripts/docs/features/check-feature-bundles.js
-  - scripts/docs/check-gokaboom-content-contract.mjs
-  - scripts/docs/check-content-style-contract.mjs
-  - scripts/docs/check-downloads-page-contract.mjs
-  - scripts/docs/check-landing-layout-contract.mjs
+  - scripts/docs/site/check-gokaboom-content-contract.mjs
+  - scripts/docs/site/check-content-style-contract.mjs
+  - scripts/docs/site/check-downloads-page-contract.mjs
+  - scripts/docs/site/check-landing-layout-contract.mjs
   - scripts/docs/generate-reference-executable-examples.mjs
-  - scripts/docs/normalize-site-tags.mjs
+  - scripts/docs/site/normalize-site-tags.mjs
   - scripts/docs/features/sync-verification-metadata.mjs
-  - scripts/docs/run-vale-on-changed.mjs
+  - scripts/docs/site/run-vale-on-changed.mjs
   - scripts/docs/check-reference-schema-sync.mjs
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05

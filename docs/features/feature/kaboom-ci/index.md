@@ -11,7 +11,7 @@ code_paths:
   - .golangci.yml
   - scripts/build/generate-wire-types.js
   - scripts/docs/features/check-feature-bundles.js
-  - scripts/docs/check-gokaboom-content-contract.mjs
+  - scripts/docs/site/check-gokaboom-content-contract.mjs
   - scripts/docs/check-reference-schema-sync.mjs
   - scripts/lint-documentation.py
   - package.json

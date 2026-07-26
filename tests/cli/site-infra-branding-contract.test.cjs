@@ -6,15 +6,15 @@ const path = require('node:path')
 const REPO_ROOT = path.resolve(__dirname, '../..')
 
 const FILES = [
-  'scripts/docs/run-vale-on-changed.mjs',
+  'scripts/docs/site/run-vale-on-changed.mjs',
   'scripts/docs/check-reference-schema-sync.mjs',
-  'scripts/docs/check-content-style-contract.mjs',
-  'scripts/docs/check-site-content-ids.mjs',
-  'scripts/docs/check-landing-layout-contract.mjs',
+  'scripts/docs/site/check-content-style-contract.mjs',
+  'scripts/docs/site/check-site-content-ids.mjs',
+  'scripts/docs/site/check-landing-layout-contract.mjs',
   'scripts/docs/features/sync-verification-metadata.mjs',
-  'scripts/docs/normalize-site-tags.mjs',
-  'scripts/docs/check-downloads-page-contract.mjs',
-  'scripts/docs/check-light-theme-contract.mjs',
+  'scripts/docs/site/normalize-site-tags.mjs',
+  'scripts/docs/site/check-downloads-page-contract.mjs',
+  'scripts/docs/site/check-light-theme-contract.mjs',
   'scripts/docs/features/check-docs-quality-gates.mjs',
   'scripts/docs/generate-reference-executable-examples.mjs',
   'scripts/docs/features/check-feature-bundles.js',
