@@ -1,6 +1,17 @@
+// policy.go — Persistent security config schema and the manual-only mutation guards.
 // Purpose: Manages persistent security configuration including whitelisted origins and flagging severity.
 // Why: Separates policy persistence and loading from runtime security mode management.
-package security
+// Docs: docs/features/feature/security-hardening/index.md
+
+// Package policy owns the security trust boundary: which execution mode the
+// process is in, whether a caller may mutate persistent security config (it may
+// not — every mutation entry point is deliberately blocked and audited), and the
+// in-memory audit trail of those decisions.
+//
+// Sibling packages depend on it one way: csp records whitelist overrides through
+// LogEvent and quotes EditInstruction in its remediation text. policy imports no
+// sibling.
+package policy
 
 import (
 	"errors"
@@ -10,14 +21,14 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
-type SecurityConfig struct {
+type Config struct {
 	Version             string            `json:"version"`
 	WhitelistedOrigins  []string          `json:"whitelisted_origins"`
 	MinFlaggingSeverity string            `json:"min_flagging_severity"`
 	Notes               map[string]string `json:"notes,omitempty"`
 }
 
-type SecurityAuditEvent struct {
+type AuditEvent struct {
 	Timestamp    time.Time `json:"timestamp"`
 	Action       string    `json:"action"`
 	Origin       string    `json:"origin,omitempty"`
@@ -27,11 +38,11 @@ type SecurityAuditEvent struct {
 	MCPSessionID string    `json:"mcp_session_id,omitempty"`
 }
 
-var securityConfigPath = ""
+var configPathOverride = ""
 
-func getSecurityConfigPath() string {
-	if securityConfigPath != "" {
-		return securityConfigPath
+func configPath() string {
+	if configPathOverride != "" {
+		return configPathOverride
 	}
 
 	path, err := state.SecurityConfigFile()
@@ -45,12 +56,12 @@ func getSecurityConfigPath() string {
 	return path
 }
 
-func setSecurityConfigPath(path string) {
-	securityConfigPath = path
+func setConfigPath(path string) {
+	configPathOverride = path
 }
 
-func securityConfigEditInstruction() string {
-	path := getSecurityConfigPath()
+func EditInstruction() string {
+	path := configPath()
 	if path == "" {
 		return "Edit the security configuration file manually"
 	}
@@ -60,29 +71,29 @@ func securityConfigEditInstruction() string {
 // AddToWhitelist is intentionally manual-only.
 // Security policy mutations must be reviewed and applied by a human editing the config file.
 func AddToWhitelist(origin string) error {
-	return blockSecurityConfigMutation("add_to_whitelist", origin, "")
+	return blockMutation("add_to_whitelist", origin, "")
 }
 
 // SetMinSeverity is intentionally manual-only.
 // Security policy mutations must be reviewed and applied by a human editing the config file.
 func SetMinSeverity(severity string) error {
-	return blockSecurityConfigMutation("set_min_severity", "", severity)
+	return blockMutation("set_min_severity", "", severity)
 }
 
 // ClearWhitelist is intentionally manual-only.
 // Security policy mutations must be reviewed and applied by a human editing the config file.
 func ClearWhitelist() error {
-	return blockSecurityConfigMutation("clear_whitelist", "", "")
+	return blockMutation("clear_whitelist", "", "")
 }
 
-func blockSecurityConfigMutation(action string, origin string, detail string) error {
-	reason := securityConfigMutationReason()
+func blockMutation(action string, origin string, detail string) error {
+	reason := mutationReason()
 	if detail != "" {
 		reason = fmt.Sprintf("%s (%s=%q)", reason, action, detail)
 	}
-	err := errors.New(reason + " - " + securityConfigEditInstruction())
+	err := errors.New(reason + " - " + EditInstruction())
 
-	logSecurityEvent(SecurityAuditEvent{
+	LogEvent(AuditEvent{
 		Timestamp:  time.Now(),
 		Action:     "security_config_mutation_blocked",
 		Origin:     origin,
@@ -94,7 +105,7 @@ func blockSecurityConfigMutation(action string, origin string, detail string) er
 	return err
 }
 
-func securityConfigMutationReason() string {
+func mutationReason() string {
 	if IsMCPMode() {
 		return "security config updates are manual-only in MCP mode and require human review"
 	}

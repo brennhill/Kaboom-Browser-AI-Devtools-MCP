@@ -1,8 +1,9 @@
+// mode.go — MCP-mode and interactive-terminal gating flags for the security boundary.
 // Purpose: Handles security scanner configuration loading, defaults, and policy persistence boundaries.
 // Why: Ensures scanners run with explicit, auditable config rather than scattered implicit constants.
 // Docs: docs/features/feature/security-hardening/index.md
 
-package security
+package policy
 
 import (
 	"os"

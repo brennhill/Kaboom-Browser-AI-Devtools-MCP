@@ -1,7 +1,8 @@
+// config_path_test.go — Tests for security config path resolution.
 // Purpose: Tests for security config path resolution.
 // Docs: docs/features/feature/security-hardening/index.md
 
-package security
+package policy
 
 import (
 	"path/filepath"
@@ -11,18 +12,18 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
-func TestGetSecurityConfigPathUsesStateDirectory(t *testing.T) {
+func TestGetConfigPathUsesStateDirectory(t *testing.T) {
 	stateRoot := t.TempDir()
 	t.Setenv(state.StateDirEnv, stateRoot)
 
-	original := getSecurityConfigPath()
-	setSecurityConfigPath("")
-	defer setSecurityConfigPath(original)
+	original := configPath()
+	setConfigPath("")
+	defer setConfigPath(original)
 
-	got := getSecurityConfigPath()
+	got := configPath()
 	want := filepath.Join(stateRoot, "security", "security.json")
 	if got != want {
-		t.Fatalf("getSecurityConfigPath() = %q, want %q", got, want)
+		t.Fatalf("configPath() = %q, want %q", got, want)
 	}
 }
 
@@ -31,9 +32,9 @@ func TestAddToWhitelistErrorIncludesResolvedConfigPath(t *testing.T) {
 	t.Setenv(state.StateDirEnv, stateRoot)
 	t.Setenv("MCP_MODE", "1")
 
-	original := getSecurityConfigPath()
-	setSecurityConfigPath("")
-	defer setSecurityConfigPath(original)
+	original := configPath()
+	setConfigPath("")
+	defer setConfigPath(original)
 
 	InitMode()
 	err := AddToWhitelist("https://cdn.example.com")

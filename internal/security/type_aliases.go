@@ -4,8 +4,6 @@
 package security
 
 type (
-	Config             = SecurityConfig
-	AuditEvent         = SecurityAuditEvent
 	DiffManager        = SecurityDiffManager
 	Snapshot           = SecuritySnapshot
 	Cookie             = SecurityCookie

@@ -4,11 +4,11 @@
 package security
 
 import (
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/policy"
 )
 
 // ============================================
@@ -19,92 +19,12 @@ import (
 // See: docs/specs/security-boundary-llm-trust.md
 
 // ============================================
-// MCP Mode Detection Tests
-// ============================================
-
-func TestIsMCPMode_DetectsEnvironmentVariable(t *testing.T) {
-	// Test: MCP_MODE=1 should enable MCP mode
-	t.Setenv("MCP_MODE", "1")
-	InitMode()
-
-	if !IsMCPMode() {
-		t.Error("MCP_MODE=1 should enable MCP mode")
-	}
-
-	if IsInteractiveTerminal() {
-		t.Error("MCP mode should never be interactive")
-	}
-}
-
-func TestIsMCPMode_DefaultsToFalse(t *testing.T) {
-	// Test: No MCP_MODE env var should default to false
-	t.Setenv("MCP_MODE", "")
-	InitMode()
-
-	if IsMCPMode() {
-		t.Error("Without MCP_MODE env var, should not be in MCP mode")
-	}
-}
-
-// ============================================
-// Security Config Modification Guard Tests
-// ============================================
-
-func TestAddToWhitelist_BlockedInMCPMode(t *testing.T) {
-	t.Setenv("MCP_MODE", "1")
-	InitMode()
-
-	// Test: MCP mode should block whitelist additions
-	err := AddToWhitelist("https://evil.xyz")
-
-	if err == nil {
-		t.Fatal("AddToWhitelist should return error in MCP mode")
-	}
-
-	if !strings.Contains(err.Error(), "human review") {
-		t.Errorf("Error should mention human review, got: %s", err.Error())
-	}
-}
-
-func TestSetMinSeverity_BlockedInMCPMode(t *testing.T) {
-	t.Setenv("MCP_MODE", "1")
-	InitMode()
-
-	// Test: MCP mode should block severity threshold changes
-	err := SetMinSeverity("critical")
-
-	if err == nil {
-		t.Fatal("SetMinSeverity should return error in MCP mode")
-	}
-
-	if !strings.Contains(err.Error(), "human review") {
-		t.Errorf("Error should mention human review, got: %s", err.Error())
-	}
-}
-
-func TestClearWhitelist_BlockedInMCPMode(t *testing.T) {
-	t.Setenv("MCP_MODE", "1")
-	InitMode()
-
-	// Test: MCP mode should block whitelist clearing
-	err := ClearWhitelist()
-
-	if err == nil {
-		t.Fatal("ClearWhitelist should return error in MCP mode")
-	}
-
-	if !strings.Contains(err.Error(), "human review") {
-		t.Errorf("Error should mention human review, got: %s", err.Error())
-	}
-}
-
-// ============================================
 // Session-Only Override Tests
 // ============================================
 
 func TestSessionOverride_NotPersisted(t *testing.T) {
 	// Clear audit log before test
-	ClearSecurityAuditEvents()
+	policy.ClearAuditEvents()
 
 	// Create CSP generator
 	gen := NewCSPGenerator()
@@ -130,7 +50,7 @@ func TestSessionOverride_NotPersisted(t *testing.T) {
 
 func TestSessionOverride_WarningIncluded(t *testing.T) {
 	// Clear audit log before test
-	ClearSecurityAuditEvents()
+	policy.ClearAuditEvents()
 
 	// Create CSP generator
 	gen := NewCSPGenerator()
@@ -156,7 +76,7 @@ func TestSessionOverride_WarningIncluded(t *testing.T) {
 
 func TestSessionOverride_AuditInfo(t *testing.T) {
 	// Clear audit log before test
-	ClearSecurityAuditEvents()
+	policy.ClearAuditEvents()
 
 	// Create CSP generator
 	gen := NewCSPGenerator()
@@ -181,50 +101,12 @@ func TestSessionOverride_AuditInfo(t *testing.T) {
 }
 
 // ============================================
-// Config File Immutability Tests
-// ============================================
-
-func TestMCPCalls_DoNotModifyConfigFile(t *testing.T) {
-	// Create temporary config file
-	tmpDir := t.TempDir()
-	configPath := tmpDir + "/security.json"
-	initialConfig := `{"version": "1.0", "whitelisted_origins": []}`
-
-	if err := os.WriteFile(configPath, []byte(initialConfig), 0644); err != nil {
-		t.Fatalf("Failed to create test config: %v", err)
-	}
-
-	// Setup MCP mode
-	t.Setenv("MCP_MODE", "1")
-	InitMode()
-
-	// Override config path
-	originalConfigPath := getSecurityConfigPath()
-	setSecurityConfigPath(configPath)
-	defer setSecurityConfigPath(originalConfigPath)
-
-	// Attempt to modify config via MCP tool (should fail)
-	_ = AddToWhitelist("https://evil.xyz")
-
-	// Read config file
-	configData, err := os.ReadFile(configPath) // nosemgrep: go_filesystem_rule-fileread -- test helper reads fixture/output file
-	if err != nil {
-		t.Fatalf("Failed to read config: %v", err)
-	}
-
-	// Verify config unchanged
-	if string(configData) != initialConfig {
-		t.Error("MCP calls should not modify security config file")
-	}
-}
-
-// ============================================
 // Audit Logging Tests
 // ============================================
 
 func TestAuditLog_RecordsSecurityDecisions(t *testing.T) {
 	// Clear audit log before test
-	ClearSecurityAuditEvents()
+	policy.ClearAuditEvents()
 
 	// Create CSP generator with audit logging
 	gen := NewCSPGenerator()
@@ -235,7 +117,7 @@ func TestAuditLog_RecordsSecurityDecisions(t *testing.T) {
 	})
 
 	// Verify audit log entry created
-	events := GetSecurityAuditEvents()
+	events := policy.AuditEvents()
 
 	if len(events) == 0 {
 		t.Fatal("Expected audit log entry for CSP generation with override")

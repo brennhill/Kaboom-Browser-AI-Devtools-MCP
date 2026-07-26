@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/policy"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -35,7 +36,7 @@ func (g *CSPGenerator) applyWhitelistOverrides(response *CSPResponse, overrides 
 				"   2. %s\n"+
 				"   3. Add to 'whitelisted_origins' array",
 			origin,
-			securityConfigEditInstruction(),
+			policy.EditInstruction(),
 		))
 	}
 
@@ -46,7 +47,7 @@ func (g *CSPGenerator) applyWhitelistOverrides(response *CSPResponse, overrides 
 	}
 
 	for _, origin := range overrides {
-		logSecurityEvent(SecurityAuditEvent{
+		policy.LogEvent(policy.AuditEvent{
 			Action:     "whitelist_override",
 			Origin:     origin,
 			Reason:     "CSP generation with session-only override",

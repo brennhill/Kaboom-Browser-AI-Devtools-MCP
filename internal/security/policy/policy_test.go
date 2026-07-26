@@ -1,7 +1,8 @@
+// policy_test.go — Unit tests for the manual-only config mutation guards and audit trail.
 // Purpose: Unit tests for security config logic.
 // Docs: docs/features/feature/security-hardening/index.md
 
-package security
+package policy
 
 import (
 	"strings"
@@ -24,10 +25,10 @@ func setModeForTest(mcp, interactive bool) func() {
 	}
 }
 
-func TestSecurityConfigGuardsNonInteractiveAndInteractivePaths(t *testing.T) {
-	restorePath := getSecurityConfigPath()
-	setSecurityConfigPath("/tmp/security-config-test.json")
-	defer setSecurityConfigPath(restorePath)
+func TestConfigGuardsNonInteractiveAndInteractivePaths(t *testing.T) {
+	restorePath := configPath()
+	setConfigPath("/tmp/security-config-test.json")
+	defer setConfigPath(restorePath)
 
 	restoreMode := setModeForTest(false, false)
 	err := AddToWhitelist("https://cdn.example.com")
@@ -61,25 +62,25 @@ func TestSecurityConfigGuardsNonInteractiveAndInteractivePaths(t *testing.T) {
 	}
 }
 
-func TestSecurityConfigEditInstructionUsesConfiguredPath(t *testing.T) {
-	original := getSecurityConfigPath()
-	setSecurityConfigPath("/tmp/custom-security.json")
-	defer setSecurityConfigPath(original)
+func TestConfigEditInstructionUsesConfiguredPath(t *testing.T) {
+	original := configPath()
+	setConfigPath("/tmp/custom-security.json")
+	defer setConfigPath(original)
 
-	got := securityConfigEditInstruction()
+	got := EditInstruction()
 	if !strings.Contains(got, "/tmp/custom-security.json") {
-		t.Fatalf("securityConfigEditInstruction() = %q, expected configured path", got)
+		t.Fatalf("EditInstruction() = %q, expected configured path", got)
 	}
 }
 
-func TestSecurityConfigMutationAttemptsAreAuditedInMemory(t *testing.T) {
+func TestConfigMutationAttemptsAreAuditedInMemory(t *testing.T) {
 	restoreMode := setModeForTest(false, true)
 	defer restoreMode()
-	ClearSecurityAuditEvents()
-	t.Cleanup(ClearSecurityAuditEvents)
+	ClearAuditEvents()
+	t.Cleanup(ClearAuditEvents)
 
 	_ = AddToWhitelist("https://cdn.example.com")
-	events := GetSecurityAuditEvents()
+	events := AuditEvents()
 	if len(events) == 0 {
 		t.Fatal("expected at least one audit event")
 	}
