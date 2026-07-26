@@ -22,6 +22,12 @@ import (
 // maxScrollback is the maximum size of the terminal output scrollback buffer (256 KB).
 const maxScrollback = 256 * 1024
 
+// sessionReapWait bounds each of Close's two waits for the reaper goroutine: the
+// first after SIGTERM + PTY close, the second after escalating to SIGKILL. A var
+// (not const) so tests can shorten it and exercise the give-up path without a
+// real multi-second wait — the same seam writeBufferCloseTimeout uses.
+var sessionReapWait = 2 * time.Second
+
 // Alt-screen escape sequences (e.g., vim, htop).
 var (
 	altScreenEnter = []byte("\x1b[?1049h")
@@ -288,9 +294,7 @@ func (s *Session) Close() error {
 	s.scrollMu.Unlock()
 
 	// Signal the child to terminate.
-	if s.cmd.Process != nil {
-		_ = s.cmd.Process.Signal(syscall.SIGTERM)
-	}
+	s.signalChild(syscall.SIGTERM)
 	// Close PTY master — this also signals EOF to the child.
 	err := s.ptmx.Close()
 
@@ -300,21 +304,47 @@ func (s *Session) Close() error {
 	select {
 	case <-s.reaped:
 		// Child exited cleanly.
-	case <-time.After(2 * time.Second):
+	case <-time.After(sessionReapWait):
 		// Escalate to SIGKILL.
-		if s.cmd.Process != nil {
-			_ = s.cmd.Process.Kill()
-		}
+		s.signalChild(syscall.SIGKILL)
 		// Bound the post-SIGKILL wait too. A child stuck in uninterruptible
 		// (D-state) sleep may not be reaped promptly; without this bound, Close —
 		// and StopAll during daemon shutdown — would block indefinitely. The
 		// reaper goroutine closes s.reaped whenever the kernel finally reaps it.
 		select {
 		case <-s.reaped:
-		case <-time.After(2 * time.Second):
+		case <-time.After(sessionReapWait):
+			// Giving up here leaves a live process holding the slave PTY after the
+			// daemon believes the session is gone. Nothing else observes this, so
+			// it must not be silent (rule 25).
+			diag(EventSessionReapTimeout, map[string]any{
+				"session_id": s.ID,
+				"pid":        s.Pid(),
+				"wait_ms":    (2 * sessionReapWait).Milliseconds(),
+			})
 		}
 	}
 	return err
+}
+
+// signalChild sends sig to the child and reports a genuine failure. An
+// already-exited child (os.ErrProcessDone) is the expected case on a clean exit,
+// not a failure — logging it would bury the real signal failures (EPERM, a PID
+// recycled out from under us) in noise. Caller holds s.mu.
+func (s *Session) signalChild(sig syscall.Signal) {
+	if s.cmd.Process == nil {
+		return
+	}
+	err := s.cmd.Process.Signal(sig)
+	if err == nil || errors.Is(err, os.ErrProcessDone) {
+		return
+	}
+	diag(EventSessionSignalFailed, map[string]any{
+		"session_id": s.ID,
+		"signal":     sig.String(),
+		"pid":        s.cmd.Process.Pid,
+		"error":      err.Error(),
+	})
 }
 
 // Wait blocks until the child process exits.

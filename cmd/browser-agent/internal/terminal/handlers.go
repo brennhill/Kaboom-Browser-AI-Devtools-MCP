@@ -84,6 +84,14 @@ func RegisterRoutes(mux *http.ServeMux, deps Deps, server ServerDeps, mgr *pty.M
 	// Route a stuck-writer write-buffer close timeout (a drain goroutine + fd leak
 	// that cannot be safely interrupted) to the structured log, so the leak is
 	// diagnosable instead of silent (finding M).
+	// Route PTY-internal state-mutating failures (a child that will not die, a PTY
+	// fd that will not close, a stranded stdin flush) to the structured log. The
+	// pty package has no logger of its own, so without this sink those failures are
+	// invisible in production (finding S8, rule 25).
+	pty.SetDiagnosticHook(func(event string, fields map[string]any) {
+		deps.logEvent(event, fields)
+	})
+
 	pty.SetWriteBufferCloseTimeoutHook(func(pending int) {
 		deps.logEvent("terminal_writebuffer_close_timeout", map[string]any{"pending_bytes": pending})
 		if deps.Stderrf != nil {

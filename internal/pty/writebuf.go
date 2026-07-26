@@ -76,21 +76,36 @@ type WriteBuffer struct {
 	notify  chan struct{}
 	done    chan struct{}
 	closed  bool
+	// sessionID labels diagnostic events so a stranded write can be traced back to
+	// a terminal session. Derived from the writer; empty for non-Session writers.
+	sessionID string
 }
 
 // NewWriteBuffer creates a buffered writer that drains asynchronously.
 func NewWriteBuffer(w io.Writer) *WriteBuffer {
 	wb := &WriteBuffer{
-		maxSize: writeBufferMax,
-		writer:  w,
-		notify:  make(chan struct{}, 1),
-		done:    make(chan struct{}),
+		maxSize:   writeBufferMax,
+		writer:    w,
+		notify:    make(chan struct{}, 1),
+		done:      make(chan struct{}),
+		sessionID: writerSessionID(w),
 	}
 	// Panic-recovered: the drain loop calls writer.Write on a hot path; a panic
 	// there must never crash the daemon. drain's own `defer close(wb.done)` still
 	// runs during unwind, so Close never hangs even if drain panics.
 	util.SafeGo(wb.drain)
 	return wb
+}
+
+// writerSessionID labels a buffer with the PTY session it drains into, which is
+// what production always passes. The constructor keeps the io.Writer seam (tests
+// pass plain writers, which simply log with an empty session id) rather than
+// threading an id through every call site.
+func writerSessionID(w io.Writer) string {
+	if s, ok := w.(*Session); ok {
+		return s.ID
+	}
+	return ""
 }
 
 // Write appends data to the buffer without blocking. Returns ErrWriteBufferFull
@@ -148,9 +163,18 @@ func (wb *WriteBuffer) flushAll() {
 
 		_, err := wb.writer.Write(chunk)
 		if err != nil {
-			// Leave data in buffer — caller can retry or Close will
-			// attempt a final flush. For PTY stdin this typically means
-			// the child process exited, so the data is undeliverable.
+			// Leave data in buffer — Close will attempt a final flush, and the next
+			// Write re-notifies the drain. Nothing retries on its own, so the bytes
+			// are stranded until then: for PTY stdin this usually means the child
+			// exited and they are undeliverable, but it can also be a transient
+			// write error, and either way the user's keystrokes just vanished. Log
+			// it (rule 25) rather than discarding the error.
+			diag(EventWriteBufferWriteFailed, map[string]any{
+				"session_id":    wb.sessionID,
+				"chunk_bytes":   len(chunk),
+				"pending_bytes": wb.Pending(),
+				"error":         err.Error(),
+			})
 			return
 		}
 

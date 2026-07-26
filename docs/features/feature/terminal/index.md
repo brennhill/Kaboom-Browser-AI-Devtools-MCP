@@ -38,6 +38,7 @@ code_paths:
   - internal/pty/writebuf.go
   - internal/pty/fanout.go
   - internal/pty/upload.go
+  - internal/pty/diag.go
   - npm/kaboom-agentic-browser/lib/kill-daemon.js
 test_paths:
   - tests/extension/terminal-html-liveness.test.js
@@ -75,6 +76,7 @@ test_paths:
   - internal/pty/session_test.go
   - internal/pty/writebuf_test.go
   - internal/pty/upload_test.go
+  - internal/pty/diag_test.go
   - cmd/browser-agent/internal/terminal/session_end_signal_test.go
   - cmd/browser-agent/internal/terminal/frame_writer_deadline_test.go
   - cmd/browser-agent/internal/terminal/handlers_fanout_test.go
@@ -119,6 +121,7 @@ last_verified_date: 2026-03-28
 - **Dead-session self-heal:** nothing removed a PTY session whose child exited on its own, so the next Start returned `ErrSessionExists` (409+old token) and the client reconnected onto a dead fanout → immediate `exited`, wedging the terminal forever. `Manager.Start` now evicts a session that is no longer `IsAlive` and spawns fresh (`StartResult.Replaced`, `terminal_session_healed` log); the handler drops the stale relay.
 - **Slow-drop ≠ exit:** a subscriber dropped for backpressure (big build, backgrounded tab) is no longer reported to the browser as `exited`. `Relay.ended` (set before the deferred `fanout.Close`) distinguishes a genuine end from a fanout drop; a drop closes the connection so the browser reconnects+replays instead of showing a dead terminal.
 - **Full-daemon-restart client recovery:** the iframe caps consecutive failed reconnects (`MAX_RECONNECT_ATTEMPTS`) and, on exhaustion, signals the parent `reconnect_exhausted` instead of looping forever on a dead token; the parent runs `redrawTerminal` (validate-then-rebuild) into a fresh session. Keystrokes typed during a reconnect gap are buffered (bounded) and flushed on `replay_end` rather than dropped.
+- **PTY failures are no longer silent (rule 25):** signalling, closing and flushing were all discarded with `_ =`. `internal/pty` now has one structured sink (`pty.SetDiagnosticHook`, wired to the daemon log in `RegisterRoutes`) and emits `pty_session_signal_failed`, `pty_session_reap_timeout` (child survived SIGKILL + both bounded waits), `pty_session_close_failed` (Start/StopAll discarded these) and `pty_writebuffer_write_failed` (stranded stdin bytes, with the undelivered byte count). Control flow is unchanged; an already-exited child (`os.ErrProcessDone`) is still treated as the expected case and is not logged.
 - **Start never freezes the manager:** `Manager.Start` used to `Close()` the session it evicts (self-heal) while holding `m.mu`. A child that is not `IsAlive` can still be unreapable, so that Close runs the full SIGTERM→2s→SIGKILL→2s escalation — freezing `Get`/`GetByToken`/`List` and therefore every terminal route for ~4s. All bookkeeping now happens in `startAndRegister` under the lock; every Close (the evicted corpse, and the fresh session on a token-generation failure) runs after the lock is released, matching `Stop`/`StopAll`.
 - **Bounded shutdown:** daemon teardown can no longer hang. `WriteBuffer.Close` is time-bounded (a drain blocked in `ptmx.Write` can't wait forever), shutdown order is `StopAll` (close PTYs) → `CloseAll` (drain write buffers) so the blocked write unblocks, and `Session.Close`'s post-SIGKILL reap wait is bounded.
 - WebSocket frame writes are serialized per-connection and bounded by `WSWriteTimeout`: a stalled reader (backgrounded-tab zero-window, hostile client) can no longer block the downstream pump or ping keepalive for up to `PongTimeout`.

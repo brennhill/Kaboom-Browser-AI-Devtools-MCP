@@ -95,10 +95,22 @@ func (m *Manager) Start(cfg StartConfig) (*StartResult, error) {
 	}
 
 	res, toClose, err := m.startAndRegister(cfg)
-	for _, sess := range toClose {
-		_ = sess.Close()
-	}
+	closeSessions(toClose)
 	return res, err
+}
+
+// closeSessions closes each session and reports any failure. A PTY fd that fails
+// to close is a leak the daemon would otherwise never hear about (rule 25); the
+// close is still best-effort, so the loop always runs to completion.
+func closeSessions(sessions []*Session) {
+	for _, sess := range sessions {
+		if err := sess.Close(); err != nil {
+			diag(EventSessionCloseFailed, map[string]any{
+				"session_id": sess.ID,
+				"error":      err.Error(),
+			})
+		}
+	}
 }
 
 // startAndRegister runs Start's whole critical section under m.mu and returns any
@@ -259,9 +271,7 @@ func (m *Manager) StopAll() {
 	m.repoIndex = make(map[SessionKey]string)
 	m.mu.Unlock()
 
-	for _, sess := range toClose {
-		_ = sess.Close()
-	}
+	closeSessions(toClose)
 }
 
 // List returns the IDs of all active sessions.
