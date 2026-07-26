@@ -1,4 +1,6 @@
 // Purpose: Attaches response metadata (data_age_ms, entry count, pagination cursors) to observe results.
+// Why: Every mode ends by stamping freshness onto its reply, so the plain, paginated and
+// paginated-with-summary spellings of that step belong together.
 // Docs: docs/features/feature/observe/index.md
 
 package observe
@@ -73,6 +75,32 @@ func BuildPaginatedResponseMetadata(cap *capture.Store, newestEntry time.Time, p
 	}
 	if pMeta.Warning != "" {
 		meta["warning"] = pMeta.Warning
+	}
+	return meta
+}
+
+// BuildPaginatedMetadataWithSummary adds a summary block to first-page paginated responses.
+func BuildPaginatedMetadataWithSummary(
+	cap *capture.Store, newestEntry time.Time,
+	pMeta *pagination.CursorPaginationMetadata,
+	isFirstPage bool,
+	summaryFn func() map[string]any,
+) map[string]any {
+	var meta map[string]any
+	if cap != nil {
+		meta = BuildPaginatedResponseMetadata(cap, newestEntry, pMeta)
+	} else {
+		// Nil capture — build minimal metadata for testing
+		meta = map[string]any{
+			"total":    pMeta.Total,
+			"has_more": pMeta.HasMore,
+		}
+		if pMeta.Cursor != "" {
+			meta["cursor"] = pMeta.Cursor
+		}
+	}
+	if isFirstPage && summaryFn != nil {
+		meta["summary"] = summaryFn()
 	}
 	return meta
 }

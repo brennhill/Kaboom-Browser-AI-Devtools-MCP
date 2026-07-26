@@ -112,3 +112,54 @@ func TestBuildResponseMetadata_DataAgeMs_InPaginatedMetadata(t *testing.T) {
 		t.Errorf("data_age_ms = %d, want ~2000 for 2s-old data", ageMs)
 	}
 }
+
+func TestBuildPaginatedMetadataWithSummary_FirstPage(t *testing.T) {
+	t.Parallel()
+	pMeta := &pagination.CursorPaginationMetadata{
+		Total:   50,
+		HasMore: true,
+		Cursor:  "cursor123",
+	}
+	summaryFn := func() map[string]any {
+		return map[string]any{"total": 50, "by_level": map[string]int{"info": 30, "error": 20}}
+	}
+
+	// isFirstPage=true
+	result := BuildPaginatedMetadataWithSummary(nil, time.Time{}, pMeta, true, summaryFn)
+
+	summary, ok := result["summary"]
+	if !ok {
+		t.Fatal("expected summary key on first page")
+	}
+	summaryMap, ok := summary.(map[string]any)
+	if !ok {
+		t.Fatal("summary not a map[string]any")
+	}
+	if summaryMap["total"] != 50 {
+		t.Errorf("summary total = %v, want 50", summaryMap["total"])
+	}
+}
+
+func TestBuildPaginatedMetadataWithSummary_SubsequentPage(t *testing.T) {
+	t.Parallel()
+	pMeta := &pagination.CursorPaginationMetadata{
+		Total:   50,
+		HasMore: true,
+		Cursor:  "cursor456",
+	}
+	called := false
+	summaryFn := func() map[string]any {
+		called = true
+		return map[string]any{"total": 50}
+	}
+
+	// isFirstPage=false
+	result := BuildPaginatedMetadataWithSummary(nil, time.Time{}, pMeta, false, summaryFn)
+
+	if _, ok := result["summary"]; ok {
+		t.Error("expected no summary key on subsequent page")
+	}
+	if called {
+		t.Error("summaryFn should not be called for subsequent pages")
+	}
+}

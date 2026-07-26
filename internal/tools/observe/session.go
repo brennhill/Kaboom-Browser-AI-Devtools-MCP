@@ -1,4 +1,7 @@
-// Purpose: Observe handlers for actions, transient UI elements, and pilot/performance status.
+// Purpose: The session-activity observe modes — actions, transients, history, vitals, tabs, pilot — plus analyze's performance check.
+// Why: These describe what the user and the page did during the session rather than one telemetry stream,
+// and they share the enhanced-action buffer and the tracking status.
+// Docs: docs/features/feature/observe/index.md
 
 package observe
 
@@ -162,4 +165,169 @@ func CheckPerformance(deps Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.
 		"snapshots": snapshots,
 		"count":     len(snapshots),
 	})
+}
+
+type historyEntry struct {
+	Timestamp string `json:"timestamp"`
+	FromURL   string `json:"from_url,omitempty"`
+	ToURL     string `json:"to_url"`
+	Type      string `json:"type"`
+}
+
+// AnalyzeHistory extracts navigation history from captured user actions.
+func AnalyzeHistory(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+	var params struct {
+		Limit   int  `json:"limit"`
+		Summary bool `json:"summary"`
+	}
+	mcp.LenientUnmarshal(args, &params)
+
+	actions := deps.GetCapture().GetAllEnhancedActions()
+	entries := buildHistoryEntries(actions)
+	entries = limitHistoryEntries(entries, clampLimit(params.Limit, 0))
+
+	responseMeta := BuildResponseMetadata(deps.GetCapture(), time.Now())
+	if params.Summary {
+		return mcp.Succeed(req, "History", buildHistorySummary(entries, responseMeta))
+	}
+
+	return mcp.Succeed(req, "History", map[string]any{
+		"entries":  entries,
+		"count":    len(entries),
+		"metadata": responseMeta,
+	})
+}
+
+func buildHistoryEntries(actions []capture.EnhancedAction) []historyEntry {
+	entries := make([]historyEntry, 0)
+	seenURLs := make(map[string]bool)
+
+	for _, a := range actions {
+		ts := time.UnixMilli(a.Timestamp).Format(time.RFC3339)
+		if a.Type == "navigate" && a.ToURL != "" && !seenURLs[a.ToURL] {
+			entries = append(entries, historyEntry{Timestamp: ts, FromURL: a.FromURL, ToURL: a.ToURL, Type: "navigate"})
+			seenURLs[a.ToURL] = true
+		}
+		if a.URL != "" && !seenURLs[a.URL] {
+			entries = append(entries, historyEntry{Timestamp: ts, ToURL: a.URL, Type: "page_visit"})
+			seenURLs[a.URL] = true
+		}
+	}
+	return entries
+}
+
+func limitHistoryEntries(entries []historyEntry, limit int) []historyEntry {
+	if limit <= 0 || len(entries) <= limit {
+		return entries
+	}
+	return entries[len(entries)-limit:]
+}
+
+func GetWebVitals(deps Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+	snapshots := deps.GetCapture().GetPerformanceSnapshots()
+	vitals := buildVitalsMap(snapshots)
+	return mcp.Succeed(req, "Web vitals", map[string]any{
+		"metrics":  vitals,
+		"metadata": BuildResponseMetadata(deps.GetCapture(), time.Now()),
+	})
+}
+
+func buildVitalsMap(snapshots []capture.PerformanceSnapshot) map[string]any {
+	if len(snapshots) == 0 {
+		return map[string]any{"has_data": false}
+	}
+	latest := snapshots[len(snapshots)-1]
+	vitals := map[string]any{
+		"has_data":         true,
+		"url":              latest.URL,
+		"timestamp":        latest.Timestamp,
+		"domContentLoaded": latest.Timing.DomContentLoaded,
+		"load":             latest.Timing.Load,
+	}
+	if latest.Timing.LargestContentfulPaint != nil {
+		vitals["lcp"] = *latest.Timing.LargestContentfulPaint
+	}
+	if latest.Timing.FirstContentfulPaint != nil {
+		vitals["fcp"] = *latest.Timing.FirstContentfulPaint
+	}
+	if latest.CLS != nil {
+		vitals["cls"] = *latest.CLS
+	}
+	return vitals
+}
+
+// GetTabs returns information about tracked browser tabs.
+
+func GetTabs(deps Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+	cap := deps.GetCapture()
+	enabled, tabID, tabURL := cap.GetTrackingStatus()
+
+	tabs := []any{}
+	if enabled && tabID > 0 {
+		tabs = append(tabs, map[string]any{
+			"id":      tabID,
+			"url":     tabURL,
+			"tracked": true,
+			"active":  true,
+		})
+	}
+
+	return mcp.Succeed(req, "Tabs", map[string]any{
+		"tabs":            tabs,
+		"tracking_active": enabled,
+		"metadata":        BuildResponseMetadata(cap, time.Now()),
+	})
+}
+
+func buildActionsSummary(actions []capture.EnhancedAction, meta ResponseMetadata) map[string]any {
+	byType := make(map[string]int)
+	var firstTS, lastTS int64
+	hasTS := false
+
+	for _, a := range actions {
+		byType[a.Type]++
+		if !hasTS || a.Timestamp < firstTS {
+			firstTS = a.Timestamp
+			hasTS = true
+		}
+		if a.Timestamp > lastTS {
+			lastTS = a.Timestamp
+		}
+	}
+
+	result := map[string]any{
+		"total":    len(actions),
+		"by_type":  byType,
+		"metadata": meta,
+	}
+	if hasTS {
+		result["time_range"] = map[string]string{
+			"first": time.UnixMilli(firstTS).Format(time.RFC3339),
+			"last":  time.UnixMilli(lastTS).Format(time.RFC3339),
+		}
+	}
+	return result
+}
+
+// buildHistorySummary returns {total, by_type, unique_urls, metadata}.
+
+func buildHistorySummary(entries []historyEntry, meta ResponseMetadata) map[string]any {
+	byType := make(map[string]int)
+	urls := make(map[string]bool)
+
+	for _, e := range entries {
+		if e.Type != "" {
+			byType[e.Type]++
+		}
+		if e.ToURL != "" {
+			urls[e.ToURL] = true
+		}
+	}
+
+	return map[string]any{
+		"total":       len(entries),
+		"by_type":     byType,
+		"unique_urls": len(urls),
+		"metadata":    meta,
+	}
 }

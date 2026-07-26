@@ -1,4 +1,6 @@
-// Purpose: Builds waterfall summaries and lightweight observe diagnostics (WS status, vitals, tabs).
+// Purpose: The network-stream observe modes — network_waterfall, network_bodies, websocket_events, websocket_status.
+// Why: All four read request and socket traffic out of the capture store and share the URL-filter and
+// summary-mode shape; their summary builders sit with the handlers that call them.
 // Docs: docs/features/feature/observe/index.md
 
 package observe
@@ -14,9 +16,167 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/hints"
 )
 
+// GetNetworkBodies returns captured HTTP response bodies with optional filtering.
+// #lizard forgives
+func GetNetworkBodies(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+	var params struct {
+		Limit     int    `json:"limit"`
+		URL       string `json:"url"`
+		Method    string `json:"method"`
+		StatusMin int    `json:"status_min"`
+		StatusMax int    `json:"status_max"`
+		BodyPath  string `json:"body_path"`
+		Summary   bool   `json:"summary"`
+	}
+	mcp.LenientUnmarshal(args, &params)
+	params.Limit = clampLimit(params.Limit, 100)
+
+	allBodies := deps.GetCapture().GetNetworkBodies()
+	var bodyFilterErr error
+	filtered := buffers.ReverseFilterLimit(allBodies, func(b capture.NetworkBody) bool {
+		if bodyFilterErr != nil {
+			return false
+		}
+		if params.URL != "" && !ContainsIgnoreCase(b.URL, params.URL) {
+			return false
+		}
+		if params.Method != "" && !ContainsIgnoreCase(b.Method, params.Method) {
+			return false
+		}
+		if params.StatusMin > 0 && b.Status < params.StatusMin {
+			return false
+		}
+		if params.StatusMax > 0 && b.Status > params.StatusMax {
+			return false
+		}
+		_, include, err := ApplyNetworkBodyFilter(b, params.BodyPath)
+		if err != nil {
+			bodyFilterErr = err
+			return false
+		}
+		return include
+	}, params.Limit)
+
+	if bodyFilterErr != nil {
+		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(
+			mcp.ErrInvalidParam,
+			"Invalid network body filter: "+bodyFilterErr.Error(),
+			"Use a valid body_path syntax like data.items[0].id",
+			mcp.WithParam("body_path"),
+		)}
+	}
+
+	// Re-apply body filter to transform matched entries (extract body_path).
+	if params.BodyPath != "" {
+		for i, b := range filtered {
+			filteredBody, _, _ := ApplyNetworkBodyFilter(b, params.BodyPath)
+			filtered[i] = filteredBody
+		}
+	}
+	var newestTS time.Time
+	if len(allBodies) > 0 {
+		newestTS, _ = time.Parse(time.RFC3339, allBodies[len(allBodies)-1].Timestamp)
+	}
+
+	waterfallCount := len(deps.GetCapture().GetNetworkWaterfallEntries())
+	responseMeta := BuildResponseMetadata(deps.GetCapture(), newestTS)
+	hintFilters := hints.NetworkBodiesFilters{
+		URL:       params.URL,
+		Method:    params.Method,
+		StatusMin: params.StatusMin,
+		StatusMax: params.StatusMax,
+		BodyPath:  params.BodyPath,
+	}
+	if params.Summary {
+		summary := buildNetworkBodiesSummary(filtered, responseMeta)
+		if len(filtered) == 0 {
+			summary["hint"] = hints.NetworkBodies(waterfallCount, len(allBodies), hintFilters)
+		}
+		return mcp.Succeed(req, "Network bodies", summary)
+	}
+
+	response := map[string]any{
+		"entries":  filtered,
+		"count":    len(filtered),
+		"metadata": responseMeta,
+	}
+
+	if len(filtered) == 0 {
+		response["hint"] = hints.NetworkBodies(waterfallCount, len(allBodies), hintFilters)
+	}
+
+	return mcp.Succeed(req, "Network bodies", response)
+}
+
+// GetWSEvents returns captured WebSocket events with optional filtering.
+func GetWSEvents(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+	var params struct {
+		Limit        int    `json:"limit"`
+		URL          string `json:"url"`
+		ConnectionID string `json:"connection_id"`
+		Direction    string `json:"direction"`
+		Summary      bool   `json:"summary"`
+	}
+	mcp.LenientUnmarshal(args, &params)
+
+	var paramHint string
+	if params.Direction != "" && params.Direction != "incoming" && params.Direction != "outgoing" {
+		paramHint = "Unknown direction " + params.Direction + " ignored (using default=all). Valid values: incoming, outgoing."
+		params.Direction = ""
+	}
+
+	params.Limit = clampLimit(params.Limit, 100)
+
+	allEvents := deps.GetCapture().GetAllWebSocketEvents()
+	filtered := buffers.ReverseFilterLimit(allEvents, func(evt capture.WebSocketEvent) bool {
+		if params.URL != "" && !ContainsIgnoreCase(evt.URL, params.URL) {
+			return false
+		}
+		if params.ConnectionID != "" && evt.ID != params.ConnectionID {
+			return false
+		}
+		if params.Direction != "" && evt.Direction != params.Direction {
+			return false
+		}
+		return true
+	}, params.Limit)
+	var newestTS time.Time
+	if len(allEvents) > 0 {
+		newestTS, _ = time.Parse(time.RFC3339, allEvents[len(allEvents)-1].Timestamp)
+	}
+
+	responseMeta := BuildResponseMetadata(deps.GetCapture(), newestTS)
+	if params.Summary {
+		summary := buildWSEventsSummary(filtered, responseMeta)
+		if paramHint != "" {
+			summary["param_hint"] = paramHint
+		}
+		if len(filtered) == 0 {
+			summary["hint"] = hints.WSEvents(len(allEvents), params.URL)
+		}
+		return mcp.Succeed(req, "WebSocket events", summary)
+	}
+
+	response := map[string]any{
+		"entries":  filtered,
+		"count":    len(filtered),
+		"metadata": responseMeta,
+	}
+	if paramHint != "" {
+		response["param_hint"] = paramHint
+	}
+
+	if len(filtered) == 0 {
+		response["hint"] = hints.WSEvents(len(allEvents), params.URL)
+	}
+
+	return mcp.Succeed(req, "WebSocket events", response)
+}
+
 const wsStatusSummarySampleLimit = 10
 
 // GetNetworkWaterfall returns network waterfall entries from the performance API.
+
 func GetNetworkWaterfall(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Limit     int    `json:"limit"`
@@ -136,6 +296,7 @@ func filterWaterfallSummaryEntries(allEntries []capture.NetworkWaterfallEntry, u
 }
 
 // GetWSStatus returns the current WebSocket connection status.
+
 func GetWSStatus(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var arguments struct {
 		URL          string `json:"url"`
@@ -227,57 +388,92 @@ func buildWSStatusSummary(status capture.WebSocketStatusResponse, metadata Respo
 }
 
 // GetWebVitals returns Core Web Vitals metrics from performance snapshots.
-func GetWebVitals(deps Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
-	snapshots := deps.GetCapture().GetPerformanceSnapshots()
-	vitals := buildVitalsMap(snapshots)
-	return mcp.Succeed(req, "Web vitals", map[string]any{
-		"metrics":  vitals,
-		"metadata": BuildResponseMetadata(deps.GetCapture(), time.Now()),
-	})
+
+// buildNetworkBodiesSummary returns {total, by_status_group, by_method, top_urls, metadata}.
+func buildNetworkBodiesSummary(bodies []capture.NetworkBody, meta ResponseMetadata) map[string]any {
+	byStatus := make(map[string]int)
+	byMethod := make(map[string]int)
+	seenURLs := make(map[string]bool)
+	urls := make([]string, 0)
+
+	for _, b := range bodies {
+		// Status grouping: 2xx, 3xx, 4xx, 5xx
+		group := statusGroup(b.Status)
+		byStatus[group]++
+
+		method := b.Method
+		if method == "" {
+			method = "GET"
+		}
+		byMethod[method]++
+
+		url := b.URL
+		if len([]rune(url)) > 80 {
+			url = string([]rune(url)[:80]) + "..."
+		}
+		if !seenURLs[url] {
+			seenURLs[url] = true
+			urls = append(urls, url)
+		}
+	}
+
+	topN := 5
+	if len(urls) < topN {
+		topN = len(urls)
+	}
+
+	return map[string]any{
+		"total":           len(bodies),
+		"by_status_group": byStatus,
+		"by_method":       byMethod,
+		"recent_urls":     urls[:topN],
+		"metadata":        meta,
+	}
 }
 
-func buildVitalsMap(snapshots []capture.PerformanceSnapshot) map[string]any {
-	if len(snapshots) == 0 {
-		return map[string]any{"has_data": false}
+// statusGroup converts an HTTP status code to a group string (2xx, 3xx, etc.).
+
+func statusGroup(status int) string {
+	switch {
+	case status >= 200 && status < 300:
+		return "2xx"
+	case status >= 300 && status < 400:
+		return "3xx"
+	case status >= 400 && status < 500:
+		return "4xx"
+	case status >= 500 && status < 600:
+		return "5xx"
+	default:
+		return "other"
 	}
-	latest := snapshots[len(snapshots)-1]
-	vitals := map[string]any{
-		"has_data":         true,
-		"url":              latest.URL,
-		"timestamp":        latest.Timestamp,
-		"domContentLoaded": latest.Timing.DomContentLoaded,
-		"load":             latest.Timing.Load,
-	}
-	if latest.Timing.LargestContentfulPaint != nil {
-		vitals["lcp"] = *latest.Timing.LargestContentfulPaint
-	}
-	if latest.Timing.FirstContentfulPaint != nil {
-		vitals["fcp"] = *latest.Timing.FirstContentfulPaint
-	}
-	if latest.CLS != nil {
-		vitals["cls"] = *latest.CLS
-	}
-	return vitals
 }
 
-// GetTabs returns information about tracked browser tabs.
-func GetTabs(deps Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
-	cap := deps.GetCapture()
-	enabled, tabID, tabURL := cap.GetTrackingStatus()
+// buildWSEventsSummary returns {total, by_direction, by_event_type, connection_count, metadata}.
 
-	tabs := []any{}
-	if enabled && tabID > 0 {
-		tabs = append(tabs, map[string]any{
-			"id":      tabID,
-			"url":     tabURL,
-			"tracked": true,
-			"active":  true,
-		})
+func buildWSEventsSummary(events []capture.WebSocketEvent, meta ResponseMetadata) map[string]any {
+	byDirection := make(map[string]int)
+	byEvent := make(map[string]int)
+	connIDs := make(map[string]bool)
+
+	for _, e := range events {
+		if e.Direction != "" {
+			byDirection[e.Direction]++
+		}
+		if e.Event != "" {
+			byEvent[e.Event]++
+		}
+		if e.ID != "" {
+			connIDs[e.ID] = true
+		}
 	}
 
-	return mcp.Succeed(req, "Tabs", map[string]any{
-		"tabs":            tabs,
-		"tracking_active": enabled,
-		"metadata":        BuildResponseMetadata(cap, time.Now()),
-	})
+	return map[string]any{
+		"total":            len(events),
+		"by_direction":     byDirection,
+		"by_event_type":    byEvent,
+		"connection_count": len(connIDs),
+		"metadata":         meta,
+	}
 }
+
+// buildActionsSummary returns {total, by_type, time_range, metadata}.
