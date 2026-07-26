@@ -18,20 +18,26 @@ func TestClassifyExistingDaemon(t *testing.T) {
 	}
 
 	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	oldNow, oldProbe, oldSleep, oldVer := daemonNow, daemonProbeHealth, daemonSleep, version
+	oldNow, oldProbe, oldSleep, oldVer, oldEpoch := daemonNow, daemonProbeHealth, daemonSleep, version, daemonInstallEpoch
 	defer func() {
 		daemonNow = oldNow
 		daemonProbeHealth = oldProbe
 		daemonSleep = oldSleep
 		version = oldVer
+		daemonInstallEpoch = oldEpoch
 	}()
 	daemonNow = func() time.Time { return base }
 	daemonSleep = func(time.Duration) {} // never really sleep in tests
 	version = "0.8.7"
+	// Neutralize the install-epoch tiebreaker for these version/grace/health cases:
+	// our epoch equals every lock's epoch, so same-version behavior is decided by the
+	// existing rules (not "latest install wins", which has its own test).
+	daemonInstallEpoch = func() int64 { return 1000 }
 
-	// Lock written a minute ago => outside the startup grace window.
+	// Lock written a minute ago => outside the startup grace window. Epoch matches
+	// ours (neutral tiebreaker).
 	oldLock := func(v string) *daemonLockRecord {
-		return &daemonLockRecord{PID: 1, Port: 7890, Version: v, UpdatedAt: base.Add(-time.Minute).Format(time.RFC3339)}
+		return &daemonLockRecord{PID: 1, Port: 7890, Version: v, InstallEpoch: 1000, UpdatedAt: base.Add(-time.Minute).Format(time.RFC3339)}
 	}
 
 	t.Run("healthy same version -> defer (never kill a healthy daemon)", func(t *testing.T) {
@@ -73,7 +79,7 @@ func TestClassifyExistingDaemon(t *testing.T) {
 	t.Run("young same-version daemon -> defer via grace, without probing", func(t *testing.T) {
 		probed := false
 		daemonProbeHealth = func(int) (bool, string, bool) { probed = true; return true, "0.8.7", false }
-		young := &daemonLockRecord{PID: 1, Port: 7890, Version: "0.8.7", UpdatedAt: base.Add(-time.Second).Format(time.RFC3339)}
+		young := &daemonLockRecord{PID: 1, Port: 7890, Version: "0.8.7", InstallEpoch: 1000, UpdatedAt: base.Add(-time.Second).Format(time.RFC3339)}
 		if err := classifyExistingDaemon(server, 7890, young); !errors.Is(err, errDeferToHealthyDaemon) {
 			t.Fatalf("young lock should defer (grace), got %v", err)
 		}
@@ -87,7 +93,7 @@ func TestClassifyExistingDaemon(t *testing.T) {
 		daemonProbeHealth = func(int) (bool, string, bool) { probed = true; return false, "", false }
 		// Lock timestamped 2s in the FUTURE (backward clock step): age is negative,
 		// which must still be treated as "brand new" and deferred, not taken over.
-		future := &daemonLockRecord{PID: 1, Port: 7890, Version: "0.8.7", UpdatedAt: base.Add(2 * time.Second).Format(time.RFC3339)}
+		future := &daemonLockRecord{PID: 1, Port: 7890, Version: "0.8.7", InstallEpoch: 1000, UpdatedAt: base.Add(2 * time.Second).Format(time.RFC3339)}
 		if err := classifyExistingDaemon(server, 7890, future); !errors.Is(err, errDeferToHealthyDaemon) {
 			t.Fatalf("future-dated (negative-age) lock should defer via grace, got %v", err)
 		}

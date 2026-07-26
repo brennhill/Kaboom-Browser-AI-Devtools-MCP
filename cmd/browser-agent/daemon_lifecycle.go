@@ -24,6 +24,9 @@ type daemonLockRecord struct {
 	StateDir  string `json:"state_dir"`
 	Version   string `json:"version,omitempty"`
 	UpdatedAt string `json:"updated_at"`
+	// InstallEpoch is the writer's install epoch (see install_epoch.go). At the same
+	// version it is the takeover tiebreaker: a strictly newer epoch supersedes.
+	InstallEpoch int64 `json:"install_epoch,omitempty"`
 }
 
 var (
@@ -35,6 +38,9 @@ var (
 	daemonNow                = time.Now
 	daemonFindProcessOnPort  = findProcessOnPort
 	daemonSleep              = time.Sleep
+	// daemonInstallEpoch reports THIS daemon's install epoch (the takeover
+	// tiebreaker at equal versions). Injectable for tests.
+	daemonInstallEpoch = resolveInstallEpoch
 
 	// daemonProbeHealth reports whether the daemon on port answers /health, its
 	// reported version, and whether the failure was connection-refused (nothing
@@ -96,6 +102,25 @@ func classifyExistingDaemon(server *Server, port int, rec *daemonLockRecord) err
 			"our_version":      version,
 		})
 		return nil
+	}
+
+	// Same version, but a strictly NEWER install supersedes an older one — the
+	// "latest install always wins" tiebreaker (install_epoch.go). Without it, two
+	// same-version installs (e.g. ~/.kaboom/bin vs an npm-global copy) have no way to
+	// pick a winner and thrash. Uses the registered epoch (no /health round-trip),
+	// and fires before the startup-grace defer so a fresh install takes over at once.
+	// An equal-or-older epoch never reaches the takeover here, so this cannot
+	// ping-pong: the older install always defers to the newer one.
+	if sameNonEmptyVersion(version, rec.Version) {
+		if ourEpoch := daemonInstallEpoch(); ourEpoch > 0 && ourEpoch > rec.InstallEpoch {
+			server.logLifecycle("daemon_takeover_newer_install", port, map[string]any{
+				"existing_pid":           rec.PID,
+				"existing_install_epoch": rec.InstallEpoch,
+				"our_install_epoch":      ourEpoch,
+				"version":                version,
+			})
+			return nil
+		}
 	}
 
 	// Not a known upgrade. Never kill a daemon that only just registered — it may
