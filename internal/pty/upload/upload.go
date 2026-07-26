@@ -1,7 +1,11 @@
 // upload.go — Terminal session image upload handler.
 // Why: Allows agents to upload images (screenshots, diagrams) through a terminal session.
 
-package pty
+// Lives in its own package because it shares no state with the PTY session
+// primitives — it references no Session, Manager, Fanout or WriteBuffer — and
+// keeping it here holds internal/pty within the 10-file folder limit.
+
+package upload
 
 import (
 	"errors"

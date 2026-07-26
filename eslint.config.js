@@ -164,6 +164,22 @@ export default [
     }
   },
 
+  // Scripts (CommonJS, run in Node.js). The repo is "type": "module", so a Node
+  // script that needs require/__dirname must be .cjs and linted as commonjs.
+  {
+    files: ['scripts/**/*.cjs'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'commonjs',
+      globals: {
+        ...globals.node
+      }
+    },
+    plugins: {
+      security
+    }
+  },
+
   // Scripts (ESM, run in Node.js)
   {
     files: ['scripts/**/*.js', 'scripts/**/*.mjs'],
