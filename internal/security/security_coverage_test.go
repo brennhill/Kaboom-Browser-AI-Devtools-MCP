@@ -3,7 +3,7 @@
 
 // security_coverage_test.go — Targeted coverage tests for uncovered security paths (part 1).
 // Covers: formatDuration, redactSecret, networkFlagDescription, networkFlagRemediation,
-// extractOrigin, scanForCreditCard, scanForSSN,
+// scanForCreditCard, scanForSSN,
 // scanForEmailPII, scanForPhonePII, thirdPartySeverity, checkAuthPatterns.
 package security
 
@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
 // ============================================
@@ -157,42 +156,6 @@ func TestNetworkFlagRemediation_AllTypes(t *testing.T) {
 		if got == "" {
 			t.Errorf("networkFlagRemediation(%q) returned empty string", typ)
 		}
-	}
-}
-
-// ============================================
-// extractOrigin — Edge cases
-// ============================================
-
-func TestExtractOrigin_DataURL(t *testing.T) {
-	t.Parallel()
-	got := util.ExtractOrigin("data:text/html,<h1>Hello</h1>")
-	if got != "" {
-		t.Errorf("extractOrigin(data:...) = %q, want empty", got)
-	}
-}
-
-func TestExtractOrigin_BlobURL(t *testing.T) {
-	t.Parallel()
-	got := util.ExtractOrigin("blob:https://example.com/uuid-here")
-	if got != "https://example.com" {
-		t.Errorf("extractOrigin(blob:...) = %q, want https://example.com", got)
-	}
-}
-
-func TestExtractOrigin_NoScheme(t *testing.T) {
-	t.Parallel()
-	got := util.ExtractOrigin("example.com/path")
-	if got != "" {
-		t.Errorf("extractOrigin(no scheme) = %q, want empty", got)
-	}
-}
-
-func TestExtractOrigin_NoHost(t *testing.T) {
-	t.Parallel()
-	got := util.ExtractOrigin("file:///path/to/file")
-	if got != "" {
-		t.Errorf("extractOrigin(file:///) = %q, want empty", got)
 	}
 }
 

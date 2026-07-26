@@ -1,6 +1,7 @@
+// helpers.go — SHA-384 hashing, content-type classification and tag templates.
 // Purpose: Computes SHA-384 hashes and provides URL/origin helper functions for SRI generation.
 // Why: Isolates cryptographic and URL utilities from SRI generation and tooling logic.
-package security
+package sri
 
 import (
 	"crypto/sha512"
@@ -18,8 +19,8 @@ func computeSHA384(content string) string {
 	return "sha384-" + b64
 }
 
-// sriResourceType returns "script" or "style" based on content type, or empty string if not applicable.
-func sriResourceType(contentType string) string {
+// classifyResourceType returns "script" or "style" based on content type, or empty string if not applicable.
+func classifyResourceType(contentType string) string {
 	ct := strings.ToLower(contentType)
 
 	// Strip parameters (e.g., "text/css; charset=utf-8" -> "text/css")

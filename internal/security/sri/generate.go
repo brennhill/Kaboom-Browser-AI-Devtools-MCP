@@ -1,6 +1,7 @@
+// generate.go — Third-party filtering and the SRI hash generation pipeline.
 // Purpose: Generates Subresource Integrity hashes with origin filtering and output formatting.
 // Why: Separates SRI generation logic from tooling integration and type definitions.
-package security
+package sri
 
 import (
 	"fmt"
@@ -10,12 +11,12 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
-// newSRIFilterConfig derives normalized filter state from params/page context.
+// newFilterConfig derives normalized filter state from params/page context.
 //
 // Failure semantics:
 // - Invalid page URLs simply do not contribute first-party origins.
-func newSRIFilterConfig(pageURLs []string, params SRIParams) sriFilterConfig {
-	cfg := sriFilterConfig{
+func newFilterConfig(pageURLs []string, params Params) filterConfig {
+	cfg := filterConfig{
 		firstPartyOrigins: make(map[string]bool),
 		originFilter:      make(map[string]bool),
 		includeScripts:    true,
@@ -45,7 +46,7 @@ func newSRIFilterConfig(pageURLs []string, params SRIParams) sriFilterConfig {
 }
 
 // shouldIncludeResourceType returns whether resource type passes requested filters.
-func (cfg sriFilterConfig) shouldIncludeResourceType(resType string) bool {
+func (cfg filterConfig) shouldIncludeResourceType(resType string) bool {
 	return (resType == "script" && cfg.includeScripts) || (resType == "style" && cfg.includeStyles)
 }
 
@@ -75,38 +76,38 @@ func isPlaceholderBody(body string) bool {
 //
 // Failure semantics:
 // - Placeholder/truncated bodies are surfaced as warnings and skipped from hash output.
-func (g *SRIGenerator) evaluateBody(body capture.NetworkBody, cfg sriFilterConfig, seenURLs map[string]bool) sriBodyOutcome {
+func (g *Generator) evaluateBody(body capture.NetworkBody, cfg filterConfig, seenURLs map[string]bool) bodyOutcome {
 	if body.ResponseBody == "" {
-		return sriBodyOutcome{skip: true}
+		return bodyOutcome{skip: true}
 	}
 	origin := util.ExtractOrigin(body.URL)
 	if origin == "" || cfg.firstPartyOrigins[origin] {
-		return sriBodyOutcome{skip: true}
+		return bodyOutcome{skip: true}
 	}
 
-	resType := sriResourceType(body.ContentType)
+	resType := classifyResourceType(body.ContentType)
 	if resType == "" {
-		return sriBodyOutcome{thirdParty: true, skip: true}
+		return bodyOutcome{thirdParty: true, skip: true}
 	}
 	if !cfg.shouldIncludeResourceType(resType) || (len(cfg.originFilter) > 0 && !cfg.originFilter[origin]) || seenURLs[body.URL] {
-		return sriBodyOutcome{thirdParty: true, resType: resType, skip: true}
+		return bodyOutcome{thirdParty: true, resType: resType, skip: true}
 	}
 	seenURLs[body.URL] = true
 
 	if isPlaceholderBody(body.ResponseBody) {
-		return sriBodyOutcome{thirdParty: true, resType: resType, placeholder: true}
+		return bodyOutcome{thirdParty: true, resType: resType, placeholder: true}
 	}
 
 	if body.ResponseTruncated {
-		return sriBodyOutcome{thirdParty: true, resType: resType, truncated: true}
+		return bodyOutcome{thirdParty: true, resType: resType, truncated: true}
 	}
 
 	hash := computeSHA384(body.ResponseBody)
-	return sriBodyOutcome{
+	return bodyOutcome{
 		thirdParty: true,
 		resType:    resType,
 		varyUA:     hasVaryUserAgent(body.ResponseHeaders),
-		resource: SRIResource{
+		resource: Resource{
 			URL: body.URL, Type: resType, Hash: hash,
 			Crossorigin: "anonymous", TagTemplate: generateTagTemplate(body.URL, hash, resType),
 			SizeBytes: len(body.ResponseBody), AlreadyHasSRI: false,
@@ -114,8 +115,8 @@ func (g *SRIGenerator) evaluateBody(body capture.NetworkBody, cfg sriFilterConfi
 	}
 }
 
-// buildSRIWarnings converts skip diagnostics into user-facing warning messages.
-func buildSRIWarnings(truncated, placeholder, varyUA []string) []string {
+// buildWarnings converts skip diagnostics into user-facing warning messages.
+func buildWarnings(truncated, placeholder, varyUA []string) []string {
 	warnings := make([]string, 0, len(truncated)+len(placeholder)+len(varyUA))
 	for _, u := range truncated {
 		warnings = append(warnings, fmt.Sprintf("%s — body was truncated, cannot compute SRI hash. Consider increasing capture limit.", u))
@@ -136,9 +137,9 @@ func buildSRIWarnings(truncated, placeholder, varyUA []string) []string {
 //
 // Failure semantics:
 // - Non-hashable resources are excluded with warnings instead of aborting the run.
-func (g *SRIGenerator) Generate(bodies []capture.NetworkBody, pageURLs []string, params SRIParams) SRIResult {
-	cfg := newSRIFilterConfig(pageURLs, params)
-	result := SRIResult{Resources: []SRIResource{}, Warnings: []string{}}
+func (g *Generator) Generate(bodies []capture.NetworkBody, pageURLs []string, params Params) Result {
+	cfg := newFilterConfig(pageURLs, params)
+	result := Result{Resources: []Resource{}, Warnings: []string{}}
 	seenURLs := make(map[string]bool)
 
 	var totalThirdParty, scriptsWithoutSRI, stylesWithoutSRI int
@@ -172,8 +173,8 @@ func (g *SRIGenerator) Generate(bodies []capture.NetworkBody, pageURLs []string,
 		result.Resources = append(result.Resources, out.resource)
 	}
 
-	result.Warnings = buildSRIWarnings(truncated, placeholder, varyUA)
-	result.Summary = SRISummary{
+	result.Warnings = buildWarnings(truncated, placeholder, varyUA)
+	result.Summary = Summary{
 		TotalThirdPartyResources: totalThirdParty,
 		ScriptsWithoutSRI:        scriptsWithoutSRI,
 		StylesWithoutSRI:         stylesWithoutSRI,

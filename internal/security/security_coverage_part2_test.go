@@ -4,7 +4,7 @@
 // security_coverage_part2_test.go — Targeted coverage tests for uncovered security paths (part 2).
 // Covers: checkPII integration, checkSecurityHeaders, shouldSkipHSTS,
 // diffSingleCookieFlag, flagAbsentValue, looksLikeCreditCard,
-// scanConsoleForCredentials, getEntryString, scanURLForGenericSecrets, SRI,
+// scanConsoleForCredentials, getEntryString, scanURLForGenericSecrets,
 // checkTransport, checkCookies.
 package security
 
@@ -13,7 +13,6 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
 // ============================================
@@ -336,64 +335,6 @@ func TestScanURLForGenericSecrets_GenericSecretParam(t *testing.T) {
 	findings := s.scanURLForGenericSecrets(url)
 	if len(findings) == 0 {
 		t.Fatal("expected finding for generic secret parameter")
-	}
-}
-
-// ============================================
-// SRI — extractOriginForSRI / generateTagTemplate
-// ============================================
-
-func TestExtractOriginForSRI_ValidURL(t *testing.T) {
-	t.Parallel()
-	got := util.ExtractOrigin("https://cdn.example.com/lib/app.js")
-	if got != "https://cdn.example.com" {
-		t.Errorf("extractOriginForSRI = %q, want https://cdn.example.com", got)
-	}
-}
-
-func TestExtractOriginForSRI_NoHost(t *testing.T) {
-	t.Parallel()
-	got := util.ExtractOrigin("/relative/path")
-	if got != "" {
-		t.Errorf("extractOriginForSRI(relative) = %q, want empty", got)
-	}
-}
-
-func TestExtractOriginForSRI_InvalidURL(t *testing.T) {
-	t.Parallel()
-	got := util.ExtractOrigin("://invalid")
-	if got != "" {
-		t.Errorf("extractOriginForSRI(invalid) = %q, want empty", got)
-	}
-}
-
-func TestGenerateTagTemplate_Script(t *testing.T) {
-	t.Parallel()
-	got := generateTagTemplate("https://cdn.example.com/app.js", "sha384-abc", "script")
-	if got == "" {
-		t.Fatal("expected non-empty script tag")
-	}
-	if !strings.Contains(got, "script") || !strings.Contains(got, "integrity") {
-		t.Errorf("unexpected tag: %q", got)
-	}
-}
-
-func TestGenerateTagTemplate_Style(t *testing.T) {
-	t.Parallel()
-	got := generateTagTemplate("https://cdn.example.com/app.css", "sha384-abc", "style")
-	if got == "" {
-		t.Fatal("expected non-empty link tag")
-	}
-	if !strings.Contains(got, "stylesheet") || !strings.Contains(got, "integrity") {
-		t.Errorf("unexpected tag: %q", got)
-	}
-}
-
-func TestGenerateTagTemplate_Unknown(t *testing.T) {
-	t.Parallel()
-	got := generateTagTemplate("https://cdn.example.com/data.json", "sha384-abc", "data")
-	if got != "" {
-		t.Errorf("expected empty for unknown type, got %q", got)
 	}
 }
 

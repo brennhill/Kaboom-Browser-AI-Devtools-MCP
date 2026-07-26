@@ -1,19 +1,23 @@
-// Purpose: Tests for Subresource Integrity hash generation.
+// sri_test.go — Tests for the SRI hash generator (generate_sri) MCP tool.
+// Purpose: Tests hash computation, resource filtering, third-party detection, and output formats.
 // Docs: docs/features/feature/security-hardening/index.md
-
-// sri_test.go — Tests for SRI Hash Generator (generate_sri) MCP tool.
-// Tests hash computation, resource filtering, third-party detection, and output formats.
-package security
+package sri
 
 import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
-func TestSRIGeneratorBasicHash(t *testing.T) {
+// NetworkBody keeps the test tables readable; the alias used to live in the
+// old flat security package.
+type NetworkBody = capture.NetworkBody
+
+func TestGeneratorBasicHash(t *testing.T) {
 	t.Parallel()
-	gen := NewSRIGenerator()
+	gen := NewGenerator()
 	bodies := []NetworkBody{
 		{
 			URL:          "https://cdn.example.com/app.js",
@@ -24,7 +28,7 @@ func TestSRIGeneratorBasicHash(t *testing.T) {
 	}
 	pageURLs := []string{"https://myapp.com/"}
 
-	result := gen.Generate(bodies, pageURLs, SRIParams{})
+	result := gen.Generate(bodies, pageURLs, Params{})
 
 	if len(result.Resources) != 1 {
 		t.Fatalf("expected 1 resource, got %d", len(result.Resources))
@@ -50,11 +54,11 @@ func TestSRIGeneratorBasicHash(t *testing.T) {
 	}
 }
 
-func TestSRIGeneratorKnownHash(t *testing.T) {
+func TestGeneratorKnownHash(t *testing.T) {
 	t.Parallel()
 	// Test with known content to verify SHA-384 computation
 	// "test content" SHA-384 hash is known
-	gen := NewSRIGenerator()
+	gen := NewGenerator()
 	bodies := []NetworkBody{
 		{
 			URL:          "https://cdn.example.com/test.js",
@@ -65,7 +69,7 @@ func TestSRIGeneratorKnownHash(t *testing.T) {
 	}
 	pageURLs := []string{"https://myapp.com/"}
 
-	result := gen.Generate(bodies, pageURLs, SRIParams{})
+	result := gen.Generate(bodies, pageURLs, Params{})
 
 	if len(result.Resources) != 1 {
 		t.Fatalf("expected 1 resource, got %d", len(result.Resources))
@@ -77,9 +81,9 @@ func TestSRIGeneratorKnownHash(t *testing.T) {
 	}
 }
 
-func TestSRIGeneratorOnlyScriptsAndStyles(t *testing.T) {
+func TestGeneratorOnlyScriptsAndStyles(t *testing.T) {
 	t.Parallel()
-	gen := NewSRIGenerator()
+	gen := NewGenerator()
 	bodies := []NetworkBody{
 		// Should be included
 		{URL: "https://cdn.example.com/app.js", ContentType: "application/javascript", ResponseBody: "js code"},
@@ -91,7 +95,7 @@ func TestSRIGeneratorOnlyScriptsAndStyles(t *testing.T) {
 	}
 	pageURLs := []string{"https://myapp.com/"}
 
-	result := gen.Generate(bodies, pageURLs, SRIParams{})
+	result := gen.Generate(bodies, pageURLs, Params{})
 
 	if len(result.Resources) != 2 {
 		t.Fatalf("expected 2 resources (script + style), got %d", len(result.Resources))
@@ -108,9 +112,9 @@ func TestSRIGeneratorOnlyScriptsAndStyles(t *testing.T) {
 	}
 }
 
-func TestSRIGeneratorOnlyThirdParty(t *testing.T) {
+func TestGeneratorOnlyThirdParty(t *testing.T) {
 	t.Parallel()
-	gen := NewSRIGenerator()
+	gen := NewGenerator()
 	bodies := []NetworkBody{
 		// Same origin - should be excluded
 		{URL: "https://myapp.com/app.js", ContentType: "application/javascript", ResponseBody: "first party"},
@@ -119,7 +123,7 @@ func TestSRIGeneratorOnlyThirdParty(t *testing.T) {
 	}
 	pageURLs := []string{"https://myapp.com/"}
 
-	result := gen.Generate(bodies, pageURLs, SRIParams{})
+	result := gen.Generate(bodies, pageURLs, Params{})
 
 	if len(result.Resources) != 1 {
 		t.Fatalf("expected 1 third-party resource, got %d", len(result.Resources))
@@ -129,16 +133,16 @@ func TestSRIGeneratorOnlyThirdParty(t *testing.T) {
 	}
 }
 
-func TestSRIGeneratorTagTemplates(t *testing.T) {
+func TestGeneratorTagTemplates(t *testing.T) {
 	t.Parallel()
-	gen := NewSRIGenerator()
+	gen := NewGenerator()
 	bodies := []NetworkBody{
 		{URL: "https://cdn.example.com/app.js", ContentType: "application/javascript", ResponseBody: "js"},
 		{URL: "https://cdn.example.com/style.css", ContentType: "text/css", ResponseBody: "css"},
 	}
 	pageURLs := []string{"https://myapp.com/"}
 
-	result := gen.Generate(bodies, pageURLs, SRIParams{})
+	result := gen.Generate(bodies, pageURLs, Params{})
 
 	if len(result.Resources) != 2 {
 		t.Fatalf("expected 2 resources, got %d", len(result.Resources))
@@ -173,9 +177,9 @@ func TestSRIGeneratorTagTemplates(t *testing.T) {
 	}
 }
 
-func TestSRIGeneratorVaryUserAgentWarning(t *testing.T) {
+func TestGeneratorVaryUserAgentWarning(t *testing.T) {
 	t.Parallel()
-	gen := NewSRIGenerator()
+	gen := NewGenerator()
 	bodies := []NetworkBody{
 		{
 			URL:          "https://fonts.googleapis.com/css2?family=Roboto",
@@ -188,7 +192,7 @@ func TestSRIGeneratorVaryUserAgentWarning(t *testing.T) {
 	}
 	pageURLs := []string{"https://myapp.com/"}
 
-	result := gen.Generate(bodies, pageURLs, SRIParams{})
+	result := gen.Generate(bodies, pageURLs, Params{})
 
 	if len(result.Warnings) == 0 {
 		t.Error("expected warning about Vary: User-Agent")
@@ -205,9 +209,9 @@ func TestSRIGeneratorVaryUserAgentWarning(t *testing.T) {
 	}
 }
 
-func TestSRIGeneratorTruncatedBody(t *testing.T) {
+func TestGeneratorTruncatedBody(t *testing.T) {
 	t.Parallel()
-	gen := NewSRIGenerator()
+	gen := NewGenerator()
 	bodies := []NetworkBody{
 		{
 			URL:               "https://cdn.example.com/large.js",
@@ -218,7 +222,7 @@ func TestSRIGeneratorTruncatedBody(t *testing.T) {
 	}
 	pageURLs := []string{"https://myapp.com/"}
 
-	result := gen.Generate(bodies, pageURLs, SRIParams{})
+	result := gen.Generate(bodies, pageURLs, Params{})
 
 	// Truncated bodies should not be included
 	if len(result.Resources) != 0 {
@@ -240,9 +244,9 @@ func TestSRIGeneratorTruncatedBody(t *testing.T) {
 	}
 }
 
-func TestSRIGeneratorEmptyBody(t *testing.T) {
+func TestGeneratorEmptyBody(t *testing.T) {
 	t.Parallel()
-	gen := NewSRIGenerator()
+	gen := NewGenerator()
 	bodies := []NetworkBody{
 		{
 			URL:          "https://cdn.example.com/empty.js",
@@ -252,7 +256,7 @@ func TestSRIGeneratorEmptyBody(t *testing.T) {
 	}
 	pageURLs := []string{"https://myapp.com/"}
 
-	result := gen.Generate(bodies, pageURLs, SRIParams{})
+	result := gen.Generate(bodies, pageURLs, Params{})
 
 	// Empty body should not generate SRI
 	if len(result.Resources) != 0 {
@@ -260,9 +264,9 @@ func TestSRIGeneratorEmptyBody(t *testing.T) {
 	}
 }
 
-func TestSRIGeneratorSummary(t *testing.T) {
+func TestGeneratorSummary(t *testing.T) {
 	t.Parallel()
-	gen := NewSRIGenerator()
+	gen := NewGenerator()
 	bodies := []NetworkBody{
 		{URL: "https://cdn1.example.com/a.js", ContentType: "application/javascript", ResponseBody: "a"},
 		{URL: "https://cdn2.example.com/b.js", ContentType: "application/javascript", ResponseBody: "b"},
@@ -272,7 +276,7 @@ func TestSRIGeneratorSummary(t *testing.T) {
 	}
 	pageURLs := []string{"https://myapp.com/"}
 
-	result := gen.Generate(bodies, pageURLs, SRIParams{})
+	result := gen.Generate(bodies, pageURLs, Params{})
 
 	if result.Summary.TotalThirdPartyResources != 4 {
 		t.Errorf("expected 4 total third party resources, got %d", result.Summary.TotalThirdPartyResources)
@@ -288,9 +292,9 @@ func TestSRIGeneratorSummary(t *testing.T) {
 	}
 }
 
-func TestSRIGeneratorResourceTypesFilter(t *testing.T) {
+func TestGeneratorResourceTypesFilter(t *testing.T) {
 	t.Parallel()
-	gen := NewSRIGenerator()
+	gen := NewGenerator()
 	bodies := []NetworkBody{
 		{URL: "https://cdn.example.com/app.js", ContentType: "application/javascript", ResponseBody: "js"},
 		{URL: "https://cdn.example.com/style.css", ContentType: "text/css", ResponseBody: "css"},
@@ -298,28 +302,28 @@ func TestSRIGeneratorResourceTypesFilter(t *testing.T) {
 	pageURLs := []string{"https://myapp.com/"}
 
 	// Only scripts
-	result := gen.Generate(bodies, pageURLs, SRIParams{ResourceTypes: []string{"scripts"}})
+	result := gen.Generate(bodies, pageURLs, Params{ResourceTypes: []string{"scripts"}})
 	if len(result.Resources) != 1 || result.Resources[0].Type != "script" {
 		t.Errorf("expected only script when filtering by scripts, got %d resources", len(result.Resources))
 	}
 
 	// Only styles
-	result = gen.Generate(bodies, pageURLs, SRIParams{ResourceTypes: []string{"styles"}})
+	result = gen.Generate(bodies, pageURLs, Params{ResourceTypes: []string{"styles"}})
 	if len(result.Resources) != 1 || result.Resources[0].Type != "style" {
 		t.Errorf("expected only style when filtering by styles, got %d resources", len(result.Resources))
 	}
 }
 
-func TestSRIGeneratorOriginsFilter(t *testing.T) {
+func TestGeneratorOriginsFilter(t *testing.T) {
 	t.Parallel()
-	gen := NewSRIGenerator()
+	gen := NewGenerator()
 	bodies := []NetworkBody{
 		{URL: "https://cdn1.example.com/app.js", ContentType: "application/javascript", ResponseBody: "js1"},
 		{URL: "https://cdn2.example.com/app.js", ContentType: "application/javascript", ResponseBody: "js2"},
 	}
 	pageURLs := []string{"https://myapp.com/"}
 
-	result := gen.Generate(bodies, pageURLs, SRIParams{Origins: []string{"https://cdn1.example.com"}})
+	result := gen.Generate(bodies, pageURLs, Params{Origins: []string{"https://cdn1.example.com"}})
 
 	if len(result.Resources) != 1 {
 		t.Fatalf("expected 1 resource with origin filter, got %d", len(result.Resources))
@@ -329,9 +333,9 @@ func TestSRIGeneratorOriginsFilter(t *testing.T) {
 	}
 }
 
-func TestSRIGeneratorSizeBytes(t *testing.T) {
+func TestGeneratorSizeBytes(t *testing.T) {
 	t.Parallel()
-	gen := NewSRIGenerator()
+	gen := NewGenerator()
 	content := "console.log('hello world');"
 	bodies := []NetworkBody{
 		{
@@ -342,7 +346,7 @@ func TestSRIGeneratorSizeBytes(t *testing.T) {
 	}
 	pageURLs := []string{"https://myapp.com/"}
 
-	result := gen.Generate(bodies, pageURLs, SRIParams{})
+	result := gen.Generate(bodies, pageURLs, Params{})
 
 	if len(result.Resources) != 1 {
 		t.Fatalf("expected 1 resource, got %d", len(result.Resources))
@@ -352,19 +356,19 @@ func TestSRIGeneratorSizeBytes(t *testing.T) {
 	}
 }
 
-func TestSRIGeneratorAlreadyHasSRI(t *testing.T) {
+func TestGeneratorAlreadyHasSRI(t *testing.T) {
 	t.Parallel()
 	// This tests that we track resources that already have SRI
 	// Note: In practice, Kaboom captures the response, not the HTML.
 	// AlreadyHasSRI would be set based on external data or heuristics.
 	// For now, we just ensure the field exists in the output.
-	gen := NewSRIGenerator()
+	gen := NewGenerator()
 	bodies := []NetworkBody{
 		{URL: "https://cdn.example.com/app.js", ContentType: "application/javascript", ResponseBody: "js"},
 	}
 	pageURLs := []string{"https://myapp.com/"}
 
-	result := gen.Generate(bodies, pageURLs, SRIParams{})
+	result := gen.Generate(bodies, pageURLs, Params{})
 
 	if len(result.Resources) != 1 {
 		t.Fatalf("expected 1 resource, got %d", len(result.Resources))
@@ -375,9 +379,9 @@ func TestSRIGeneratorAlreadyHasSRI(t *testing.T) {
 	}
 }
 
-func TestSRIGeneratorDeduplication(t *testing.T) {
+func TestGeneratorDeduplication(t *testing.T) {
 	t.Parallel()
-	gen := NewSRIGenerator()
+	gen := NewGenerator()
 	// Same URL loaded twice - should only appear once
 	bodies := []NetworkBody{
 		{URL: "https://cdn.example.com/app.js", ContentType: "application/javascript", ResponseBody: "js"},
@@ -385,16 +389,16 @@ func TestSRIGeneratorDeduplication(t *testing.T) {
 	}
 	pageURLs := []string{"https://myapp.com/"}
 
-	result := gen.Generate(bodies, pageURLs, SRIParams{})
+	result := gen.Generate(bodies, pageURLs, Params{})
 
 	if len(result.Resources) != 1 {
 		t.Errorf("expected 1 deduplicated resource, got %d", len(result.Resources))
 	}
 }
 
-func TestSRIGeneratorMultipleContentTypes(t *testing.T) {
+func TestGeneratorMultipleContentTypes(t *testing.T) {
 	t.Parallel()
-	gen := NewSRIGenerator()
+	gen := NewGenerator()
 	bodies := []NetworkBody{
 		// Various JavaScript content types
 		{URL: "https://cdn.example.com/a.js", ContentType: "application/javascript", ResponseBody: "a"},
@@ -405,40 +409,40 @@ func TestSRIGeneratorMultipleContentTypes(t *testing.T) {
 	}
 	pageURLs := []string{"https://myapp.com/"}
 
-	result := gen.Generate(bodies, pageURLs, SRIParams{})
+	result := gen.Generate(bodies, pageURLs, Params{})
 
 	if len(result.Resources) != 4 {
 		t.Errorf("expected 4 resources, got %d", len(result.Resources))
 	}
 }
 
-func TestSRIGeneratorHandleMCP(t *testing.T) {
+func TestGeneratorHandleMCP(t *testing.T) {
 	t.Parallel()
 	bodies := []NetworkBody{
 		{URL: "https://cdn.example.com/lib.js", ContentType: "application/javascript", ResponseBody: "code"},
 	}
 	pageURLs := []string{"https://myapp.com/"}
 
-	params := SRIParams{}
+	params := Params{}
 	raw, _ := json.Marshal(params)
 
-	result, err := HandleGenerateSRI(json.RawMessage(raw), bodies, pageURLs)
+	result, err := HandleGenerate(json.RawMessage(raw), bodies, pageURLs)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	sriResult, ok := result.(SRIResult)
+	sriResult, ok := result.(Result)
 	if !ok {
-		t.Fatal("expected SRIResult type")
+		t.Fatal("expected Result type")
 	}
 	if len(sriResult.Resources) != 1 {
 		t.Errorf("expected 1 resource, got %d", len(sriResult.Resources))
 	}
 }
 
-func TestSRIGeneratorEmptyInput(t *testing.T) {
+func TestGeneratorEmptyInput(t *testing.T) {
 	t.Parallel()
-	gen := NewSRIGenerator()
-	result := gen.Generate(nil, nil, SRIParams{})
+	gen := NewGenerator()
+	result := gen.Generate(nil, nil, Params{})
 
 	if len(result.Resources) != 0 {
 		t.Errorf("expected 0 resources for empty input, got %d", len(result.Resources))
@@ -448,7 +452,7 @@ func TestSRIGeneratorEmptyInput(t *testing.T) {
 	}
 }
 
-func TestSRIGeneratorInvalidParams(t *testing.T) {
+func TestGeneratorInvalidParams(t *testing.T) {
 	t.Parallel()
 	bodies := []NetworkBody{
 		{URL: "https://cdn.example.com/lib.js", ContentType: "application/javascript", ResponseBody: "code"},
@@ -456,15 +460,15 @@ func TestSRIGeneratorInvalidParams(t *testing.T) {
 	pageURLs := []string{"https://myapp.com/"}
 
 	// Invalid JSON params should return error
-	_, err := HandleGenerateSRI([]byte(`{invalid}`), bodies, pageURLs)
+	_, err := HandleGenerate([]byte(`{invalid}`), bodies, pageURLs)
 	if err == nil {
 		t.Error("expected error for invalid JSON params")
 	}
 }
 
-func TestSRIGeneratorPlaceholderBodies(t *testing.T) {
+func TestGeneratorPlaceholderBodies(t *testing.T) {
 	t.Parallel()
-	gen := NewSRIGenerator()
+	gen := NewGenerator()
 	bodies := []NetworkBody{
 		// Placeholder from body read timeout — should be skipped with warning
 		{URL: "https://cdn.example.com/timeout.js", ContentType: "application/javascript", ResponseBody: "[Skipped: body read timeout]"},
@@ -477,7 +481,7 @@ func TestSRIGeneratorPlaceholderBodies(t *testing.T) {
 	}
 	pageURLs := []string{"https://myapp.com/"}
 
-	result := gen.Generate(bodies, pageURLs, SRIParams{})
+	result := gen.Generate(bodies, pageURLs, Params{})
 
 	if len(result.Resources) != 1 {
 		t.Fatalf("expected 1 resource (only real body), got %d", len(result.Resources))
@@ -495,9 +499,9 @@ func TestSRIGeneratorPlaceholderBodies(t *testing.T) {
 	}
 }
 
-func TestSRIGeneratorSubdomainFirstParty(t *testing.T) {
+func TestGeneratorSubdomainFirstParty(t *testing.T) {
 	t.Parallel()
-	gen := NewSRIGenerator()
+	gen := NewGenerator()
 	bodies := []NetworkBody{
 		// Subdomain of first party - should be excluded
 		{URL: "https://cdn.myapp.com/app.js", ContentType: "application/javascript", ResponseBody: "first party cdn"},
@@ -507,7 +511,7 @@ func TestSRIGeneratorSubdomainFirstParty(t *testing.T) {
 	// Note: subdomain detection depends on implementation
 	pageURLs := []string{"https://myapp.com/"}
 
-	result := gen.Generate(bodies, pageURLs, SRIParams{})
+	result := gen.Generate(bodies, pageURLs, Params{})
 
 	// cdn.myapp.com is a different origin from myapp.com, so it should be included as third party
 	// (unless we implement subdomain matching, which the spec doesn't require)
