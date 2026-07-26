@@ -226,6 +226,21 @@ const CLIENT_DEFINITIONS = [
       return entry;
     },
   },
+  {
+    id: 'codex',
+    name: 'Codex CLI',
+    type: 'file',
+    // Codex config is TOML — handled by lib/codex-config.js, not the JSON path.
+    format: 'toml',
+    // config.toml is a shared settings file; never delete it.
+    // Auto-approve: default_tools_approval_mode = "approve" trusts all tools.
+    autoApprove: { kind: 'codex-toml' },
+    // $CODEX_HOME overrides ~/.codex when set (honored via envHome below).
+    envHome: 'CODEX_HOME',
+    envHomeFile: 'config.toml',
+    configPath: { all: '~/.codex/config.toml' },
+    detectDir: { all: '~/.codex' },
+  },
 ];
 
 /**
@@ -254,6 +269,19 @@ function expandPath(p) {
 }
 
 /**
+ * Resolve a client's env-var home override (e.g. $CODEX_HOME) when the
+ * definition declares one and the env var is set. Returns null otherwise, so
+ * all clients without `envHome` behave exactly as before.
+ * @param {Object} def Client definition
+ * @returns {string|null} Expanded override directory, or null
+ */
+function resolveEnvHome(def) {
+  if (!def.envHome) return null;
+  const val = process.env[def.envHome];
+  return val ? expandPath(val) : null;
+}
+
+/**
  * Get resolved config path for a file-type client definition
  * @param {Object} def Client definition
  * @param {string} [platform] Platform override (defaults to os.platform())
@@ -261,6 +289,10 @@ function expandPath(p) {
  */
 function getClientConfigPath(def, platform) {
   if (def.type === 'cli') return null;
+  const envHome = resolveEnvHome(def);
+  if (envHome && def.envHomeFile) {
+    return path.normalize(path.join(envHome, def.envHomeFile));
+  }
   const plat = platform || os.platform();
   const raw = def.configPath[plat] || def.configPath.all || null;
   return raw ? expandPath(raw) : null;
@@ -290,6 +322,8 @@ function getClientLegacyConfigPaths(def, platform) {
  */
 function getClientDetectDir(def, platform) {
   if (def.type === 'cli') return null;
+  const envHome = resolveEnvHome(def);
+  if (envHome) return envHome;
   const plat = platform || os.platform();
   const raw = def.detectDir[plat] || def.detectDir.all || null;
   return raw ? expandPath(raw) : null;
@@ -361,6 +395,7 @@ const CLIENT_ALIASES = {
   'opencode': 'opencode',
   'antigravity': 'antigravity',
   'zed': 'zed',
+  'codex': 'codex',
 };
 
 /**
@@ -392,11 +427,14 @@ function getValidAliases() {
 
 /**
  * Backward-compat: returns config file paths for detected file-type clients.
- * @returns {Array<string>} Array of config file paths
+ * Excludes non-JSON (TOML) clients like Codex — every consumer of this helper
+ * JSON-parses the returned paths, so a TOML path must never appear here. Codex
+ * is diagnosed/managed directly via CLIENT_DEFINITIONS instead.
+ * @returns {Array<string>} Array of JSON config file paths
  */
 function getConfigCandidates() {
   return CLIENT_DEFINITIONS
-    .filter(def => def.type === 'file')
+    .filter(def => def.type === 'file' && def.format !== 'toml')
     .map(def => getClientConfigPath(def))
     .filter(Boolean);
 }
@@ -424,6 +462,7 @@ function getToolNameFromPath(configPath) {
   if (normalized.includes('.gemini')) return 'Gemini CLI';
   if (normalized.includes(path.join('.config', 'opencode'))) return 'OpenCode';
   if (normalized.includes(path.join('.config', 'zed'))) return 'Zed';
+  if (normalized.includes('.codex')) return 'Codex CLI';
   if (normalized.includes('Code')) return 'VS Code';
   return 'Unknown';
 }

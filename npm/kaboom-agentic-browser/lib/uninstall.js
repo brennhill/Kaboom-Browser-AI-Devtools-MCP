@@ -20,6 +20,7 @@ const {
   writeConfigFile,
 } = require('./config');
 const autoApprove = require('./auto-approve');
+const codexConfig = require('./codex-config');
 const { cleanupInstalledSkills } = require('./skills');
 
 const LEGACY_UNINSTALL_SERVER_NAMES = [
@@ -245,6 +246,23 @@ function uninstallViaFile(def, options) {
 }
 
 /**
+ * Uninstall from a TOML-format client (Codex config.toml).
+ * @param {Object} def Client definition
+ * @param {Object} options {dryRun}
+ * @returns {Object} {status, name, id, method, path}
+ */
+function uninstallViaToml(def, options) {
+  const { dryRun = false } = options;
+  const cfgPath = getClientConfigPath(def);
+  if (!cfgPath) return { status: 'notConfigured', name: def.name, id: def.id };
+  const r = codexConfig.uninstallCodex({ configPath: cfgPath, dryRun });
+  if (r.status === 'removed') {
+    return { status: 'removed', name: def.name, id: def.id, method: 'file', path: cfgPath };
+  }
+  return { status: 'notConfigured', name: def.name, id: def.id };
+}
+
+/**
  * Uninstall from a single client (dispatches by type)
  * @param {Object} def Client definition
  * @param {Object} options {dryRun, verbose}
@@ -253,6 +271,9 @@ function uninstallViaFile(def, options) {
 function uninstallFromClient(def, options) {
   if (def.type === 'cli') {
     return uninstallViaCli(def, options);
+  }
+  if (def.format === 'toml') {
+    return uninstallViaToml(def, options);
   }
   return uninstallViaFile(def, options);
 }

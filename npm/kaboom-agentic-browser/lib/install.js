@@ -21,6 +21,7 @@ const {
   resolveManagedBinaryPath,
 } = require('./config');
 const autoApprove = require('./auto-approve');
+const codexConfig = require('./codex-config');
 const { resolveExtensionDir } = require('./extension');
 
 const LEGACY_INSTALL_SERVER_NAMES = [
@@ -227,6 +228,32 @@ function installViaFile(def, options) {
 }
 
 /**
+ * Install to a TOML-format client (Codex config.toml): server registration +
+ * whole-server tool auto-approve, handled by lib/codex-config.js.
+ * @param {Object} def Client definition
+ * @param {Object} options {dryRun, envVars, binaryCommand}
+ * @returns {Object} {success, name, method, path, isNew, autoApprove, message}
+ */
+function installViaToml(def, options) {
+  const { dryRun = false, envVars = {}, binaryCommand = resolveManagedBinaryPath() } = options;
+  const cfgPath = getClientConfigPath(def);
+  if (!cfgPath) {
+    return { success: false, name: def.name, id: def.id, method: 'file', message: 'No config path for this platform' };
+  }
+  const r = codexConfig.installCodex({ configPath: cfgPath, binaryCommand, envVars, dryRun });
+  return {
+    success: true,
+    name: def.name,
+    id: def.id,
+    method: 'file',
+    path: cfgPath,
+    isNew: r.isNew,
+    autoApprove: r.autoApprove,
+    message: dryRun ? `Would write to ${cfgPath}` : `Wrote to ${cfgPath}`,
+  };
+}
+
+/**
  * Install to a single client (dispatches by type)
  * @param {Object} def Client definition
  * @param {Object} options {dryRun, envVars}
@@ -235,6 +262,9 @@ function installViaFile(def, options) {
 function installToClient(def, options) {
   if (def.type === 'cli') {
     return installViaCli(def, options);
+  }
+  if (def.format === 'toml') {
+    return installViaToml(def, options);
   }
   return installViaFile(def, options);
 }
