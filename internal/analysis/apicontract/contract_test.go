@@ -1,7 +1,6 @@
 // Purpose: Tests for API contract validation and drift detection.
 // Docs: docs/features/feature/api-schema/index.md
 
-// api_contract_test.go — Tests for API contract validation.
 // Tests schema learning, shape comparison, violation detection, and the MCP tool interface.
 // Design: TDD approach - tests written first to define expected behavior.
 package apicontract
