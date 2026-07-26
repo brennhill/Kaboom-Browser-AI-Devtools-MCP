@@ -12,7 +12,7 @@ last_verified_date: 2026-03-05
 ## Architecture
 - Content-side detection logic: `src/lib/page/transient-capture.ts`
 - Daemon-side async wiring and retrieval: `cmd/browser-agent/tools_async_transient.go`
-- Observe integration tests: `internal/tools/observe/handlers_transients_test.go`
+- Observe integration tests: `internal/tools/observe/session_transients_test.go`
 
 ## Constraints
 - Snapshot extraction must be lightweight and bounded.

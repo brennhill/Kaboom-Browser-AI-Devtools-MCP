@@ -24,7 +24,7 @@ hint plus optional parameters register in `internal/tools/configure/capabilities
 The extension drives the CDP `Tracing` domain through the existing Chrome debugger lifecycle in
 `src/background/dom/cdp/cdp-dispatch.ts`. The daemon parses raw trace events into actionable insights and
 returns a compact summary. This is the on-demand counterpart to the passive Web Vitals path,
-which already lives in `internal/tools/observe/analysis.go` and `internal/performance/diff.go`;
+which already lives in `internal/tools/observe/session.go` and `internal/performance/diff.go`;
 Performance Trace reuses the same Web Vitals vocabulary (First Contentful Paint, Largest
 Contentful Paint, Cumulative Layout Shift) where the two overlap.
 
@@ -103,7 +103,7 @@ AI calls analyze({what: "performance_trace", action: "analyze", insight_id: "...
 
 **Reused components**:
 - Web Vitals vocabulary and rating helpers in `internal/performance/diff.go`.
-- The passive vitals path in `internal/tools/observe/analysis.go` (the always-on counterpart).
+- The passive vitals path in `internal/tools/observe/session.go` (the always-on counterpart).
 
 **Trade-offs**:
 - Single mode with `action` dispatch versus three separate tools: consolidating start, stop, and

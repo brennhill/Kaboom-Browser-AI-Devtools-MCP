@@ -9,7 +9,7 @@ code_paths:
   - cmd/browser-agent/tools_analyze_dispatch.go
   - internal/tools/configure/capabilities/modespecs_analyze.go
   - internal/performance/diff.go
-  - internal/tools/observe/analysis.go
+  - internal/tools/observe/session.go
   - src/background/dom/cdp/cdp-dispatch.ts
   - src/background/commands/analyze.ts
 test_paths: []
@@ -56,7 +56,7 @@ them into a sub-five-kilobyte summary the agent can act on.
 - Analyze dispatch registry: `cmd/browser-agent/tools_analyze_dispatch.go`
 - Mode hints and parameter specs: `internal/tools/configure/capabilities/modespecs_analyze.go`
 - Performance metrics and Web Vitals: `internal/performance/diff.go`
-- Passive vitals counterpart: `internal/tools/observe/analysis.go`
+- Passive vitals counterpart: `internal/tools/observe/session.go` (GetWebVitals)
 - CDP attach/detach lifecycle: `src/background/dom/cdp/cdp-dispatch.ts`
 
 ## Code and Tests
