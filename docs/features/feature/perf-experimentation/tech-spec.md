@@ -395,7 +395,7 @@ Rules:
 - `computeResourceDiff()` — added/removed/resized resources
 - `generateSummary()` — human-readable analysis string
 
-#### 2. `src/background/dom/dom-primitives.ts` (MODIFIED, ~100 lines added)
+#### 2. `src/background/dom/primitives/dom-primitives.ts` (MODIFIED, ~100 lines added)
 
 Inside the `domPrimitive` mega-function:
 
@@ -416,7 +416,7 @@ Inside the `domPrimitive` mega-function:
 - Add `mark` and `measure` to PerformanceObserver entry types
 - Include captured user timing in perf snapshot POST payload
 
-#### 5. `src/types/queries.ts` (MODIFIED, ~5 lines)
+#### 5. `src/types/runtime/queries.ts` (MODIFIED, ~5 lines)
 
 - Add `analyze?: boolean` to dom_action query params
 

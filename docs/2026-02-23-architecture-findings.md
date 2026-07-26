@@ -14,7 +14,7 @@ Architecture-focused review of Kaboom control-plane reliability and failure mode
 - Correct stdout serialization discipline for MCP responses (single write gate) (`cmd/browser-agent/mcp_stdout.go:17`).
 - Clear backpressure behavior in command queue (reject on saturation, no silent queue drops) (`internal/queries/dispatcher_queries.go:60`).
 - Command-loss reconciliation exists via in-progress heartbeat tracking (`internal/capture/sync.go:309`).
-- Contract-first wire typing with generation + drift checks (`Makefile:43`, `Makefile:243`, `internal/types/wire_network.go:1`, `src/types/wire-network.ts:1`).
+- Contract-first wire typing with generation + drift checks (`Makefile:43`, `Makefile:243`, `internal/types/wire_network.go:1`, `src/types/wire/wire-network.ts:1`).
 - Localhost boundary hardening with Host + Origin checks (`cmd/browser-agent/server_middleware.go:107`).
 - High automated test density (substantial Go + extension test coverage footprint).
 

@@ -99,9 +99,16 @@ src/
 
   types/                   TypeScript type definitions
     index.ts               Barrel re-exports
-    wire-*.ts              Wire types (generated from Go, CI-enforced)
-    runtime-messages.ts    Message type discriminated unions
-    network.ts, actions.ts, websocket.ts, performance.ts  Domain types
+    messages.ts            Inner barrel over capture/ + runtime/
+    runtime-messages.ts    Message type discriminated unions (rule 20 contract)
+    utils.ts               Generic type helpers and type guards
+    global.d.ts            Ambient globals (KaboomAPI, axe, Performance)
+    wire/                  Wire types (generated from Go, CI-enforced)
+    capture/               Shapes of page-derived telemetry
+      telemetry.ts, network.ts, websocket.ts, performance.ts,
+      actions.ts, accessibility.ts, ai-context.ts, dom.ts, sourcemap.ts
+    runtime/               The extension's own runtime state
+      chrome.ts, debug.ts, queries.ts, state.ts
 ```
 
 ## Key Patterns
@@ -110,7 +117,7 @@ src/
 - **Command registry** -- `commands/registry.ts` uses a `Map<string, CommandHandler>` for async command dispatch. Each command file calls `registerCommand()` at import time. The `CommandContext` bundles query, sync client, target tab, and wrapped result senders.
 - **Batcher pattern** -- `batcher-instances.ts` creates debounced batchers (one per data type) that accumulate entries and flush to the server on a timer. Each batcher is wrapped in a shared circuit breaker to back off on server failures.
 - **Sync client** -- A single `/sync` long-poll endpoint replaces individual POST endpoints for extension-to-server communication. The sync loop sends settings + extension logs upstream and receives commands downstream.
-- **Wire types** -- `src/types/wire-*.ts` are generated from `internal/types/wire_*.go`. CI runs `make check-wire-drift` to ensure they stay in sync. These define the exact HTTP payload shapes.
+- **Wire types** -- `src/types/wire/wire-*.ts` are generated from `internal/types/wire_*.go`. CI runs `make check-wire-drift` to ensure they stay in sync. These define the exact HTTP payload shapes.
 - **Nonce validation** -- Content script generates a cryptographic nonce per page load, passes it to inject via a `data-kaboom-nonce` attribute on the script element. All `window.postMessage` calls from content include the nonce; inject validates it before processing.
 - **Tab isolation** -- Content script's `window-message-listener.ts` filters captured data so only the tracked tab's telemetry is forwarded to background.
 
@@ -128,7 +135,7 @@ src/
 | Add a new capture type              | `src/lib/<capture>.ts`, `src/inject/index.ts` (install hook), `src/types/` (types), `src/background/sync/batcher-instances.ts` (new batcher) |
 | Add a new capture toggle            | `src/lib/constants.ts`, `src/types/runtime-messages.ts`, `src/inject/settings.ts`, `src/content/message-handlers.ts` (TOGGLE_MESSAGES set) |
 | Add a new async command             | `src/background/commands/<name>.ts` (handler + registerCommand), `src/background/commands/helpers.ts` (if new helper needed) |
-| Add a new DOM query type            | `src/background/dom/dom-primitives.ts` (self-contained function), `src/background/dom/dom-dispatch.ts` (dispatch case) |
+| Add a new DOM query type            | `src/background/dom/primitives/dom-primitives.ts` (self-contained function), `src/background/dom/dom-dispatch.ts` (dispatch case) |
 | Change server communication         | `src/background/sync/sync-client.ts`, `src/background/sync/server.ts`                                                |
 | Add UI overlay                      | `src/content/ui/<name>.ts`, `src/content/runtime-message-listener.ts` (add message handler)                 |
 | Add page instrumentation            | `src/inject/` + `src/lib/`, then `make compile-ts`                                                         |

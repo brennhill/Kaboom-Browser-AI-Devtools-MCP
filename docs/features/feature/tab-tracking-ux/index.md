@@ -17,9 +17,9 @@ code_paths:
   - src/content/ui/terminal-panel-bridge.ts
   - src/content/ui/tracked-hover-launcher.ts
   - src/popup.ts
-  - src/popup/logo-motion.ts
-  - src/popup/tab-tracking.ts
-  - src/popup/tab-tracking-api.ts
+  - src/popup/shell/logo-motion.ts
+  - src/popup/tabs/tab-tracking.ts
+  - src/popup/tabs/tab-tracking-api.ts
   - extension/popup.html
   - extension/popup.css
   - src/background/message-handlers.ts

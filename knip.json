@@ -10,7 +10,7 @@
   ],
   "project": ["src/**/*.ts"],
   "ignore": [
-    "src/background/dom/dom-primitives.ts",
+    "src/background/dom/primitives/dom-primitives.ts",
     "src/types/**/*.ts"
   ],
   "ignoreDependencies": [

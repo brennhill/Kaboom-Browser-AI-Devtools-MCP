@@ -11,7 +11,7 @@ import { registerCommand, type CommandContext } from './registry.js'
 import { isContentScriptUnreachableError, requireAiWebPilot } from './helpers.js'
 import { KABOOM_LOG_PREFIX } from '../../lib/brand.js'
 import { errorMessage } from '../../lib/error-utils.js'
-import { domFrameProbe } from '../dom/dom-frame-probe.js'
+import { domFrameProbe } from '../dom/primitives/dom-frame-probe.js'
 import { normalizeFrameArg, resolveMatchedFrameIds } from '../exec/frame-targeting.js'
 
 // =============================================================================

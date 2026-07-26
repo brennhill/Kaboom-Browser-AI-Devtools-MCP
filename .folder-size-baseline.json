@@ -24,9 +24,6 @@
     "internal/upload": 19,
     "internal/util": 16,
     "scripts": 13,
-    "scripts/docs": 16,
-    "src/background/dom": 11,
-    "src/popup": 14,
-    "src/types": 22
+    "scripts/docs": 16
   }
 }

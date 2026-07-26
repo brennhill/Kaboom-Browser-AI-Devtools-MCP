@@ -23,7 +23,7 @@ const RUNTIME_LOG_SOURCES = [
   'src/inject/observers.ts',
   'src/inject/settings.ts',
   'src/inject/state.ts',
-  'src/popup/tab-tracking-api.ts',
+  'src/popup/tabs/tab-tracking-api.ts',
   'src/popup.ts',
   'src/popup/ai-web-pilot.ts',
   'src/popup/feature-toggles.ts',

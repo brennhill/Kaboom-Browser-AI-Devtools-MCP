@@ -44,7 +44,7 @@ globalThis.chrome = {
   storage: { local: makeStorageArea(), session: makeStorageArea() }
 }
 
-const { isActionRecordingStillLive } = await import('../../extension/popup/action-recording.js')
+const { isActionRecordingStillLive } = await import('../../extension/popup/recording/action-recording.js')
 
 function healthWithPid(pid) {
   return { result: { content: [{ text: JSON.stringify({ server: { pid, uptime_seconds: 123 } }) }] } }

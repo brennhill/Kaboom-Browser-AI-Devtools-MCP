@@ -18,8 +18,8 @@ code_paths:
   - npm/kaboom-agentic-browser/skills/audit/SKILL.md
   - npm/kaboom-agentic-browser/skills/qa/SKILL.md
   - src/lib/tabs/request-audit.ts
-  - src/popup/tab-tracking.ts
-  - src/popup/tab-tracking-api.ts
+  - src/popup/tabs/tab-tracking.ts
+  - src/popup/tabs/tab-tracking-api.ts
   - src/content/ui/tracked-hover-launcher.ts
   - src/background/message-handlers.ts
   - src/types/runtime-messages.ts

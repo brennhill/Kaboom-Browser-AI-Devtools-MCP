@@ -112,7 +112,7 @@ Impact:
 
 Evidence:
 
-- `src/types/queries.ts` declares `BrowserActionParams` without newer action values such as `new_tab`.
+- `src/types/runtime/queries.ts` declares `BrowserActionParams` without newer action values such as `new_tab`.
 - `QueryType` and runtime handling are not strongly connected to generated/runtime validators.
 
 Impact:

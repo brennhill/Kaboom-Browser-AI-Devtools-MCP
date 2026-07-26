@@ -12,8 +12,8 @@ const RECORDING_SOURCES = [
   'src/background/recording/index.ts',
   'src/background/recording/listeners.ts',
   'src/offscreen/recording-worker.ts',
-  'src/popup/recording.ts',
-  'src/popup/recording-io.ts'
+  'src/popup/recording/recording.ts',
+  'src/popup/recording/recording-io.ts'
 ]
 
 describe('recording log branding', () => {

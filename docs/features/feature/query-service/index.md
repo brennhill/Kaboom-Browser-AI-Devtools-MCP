@@ -4,10 +4,14 @@ feature_id: feature-query-service
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-26
 code_paths:
   - internal/mcp/response_json.go
   - internal/mcp/response_builders.go
+  - src/types/index.ts
+  - src/types/messages.ts
+  - src/types/runtime-messages.ts
+  - src/types/runtime/queries.ts
 test_paths:
   - internal/mcp/response_test.go
 last_verified_version: 0.7.12

@@ -4,13 +4,17 @@ feature_id: feature-idl-migration
 status: draft
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-26
 code_paths:
   - scripts/generate-wire-types.js
   - scripts/check-wire-drift.js
   - internal/types/wire_enhanced_action.go
   - internal/types/wire_network.go
   - internal/schema/interact.go
+  - src/types/wire/wire-enhanced-action.ts
+  - src/types/wire/wire-network.ts
+  - src/types/wire/wire-websocket-event.ts
+  - src/types/wire/wire-performance-snapshot.ts
 test_paths:
   - internal/schema/invariants_test.go
 last_verified_version: 0.7.12

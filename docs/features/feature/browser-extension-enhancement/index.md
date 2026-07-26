@@ -7,8 +7,8 @@ owners: []
 last_reviewed: 2026-07-26
 code_paths:
   - src/popup.ts
-  - src/popup/status-display.ts
-  - src/popup/logo-motion.ts
+  - src/popup/shell/status-display.ts
+  - src/popup/shell/logo-motion.ts
   - src/options.ts
   - src/background/sync/version-check.ts
   - src/lib/daemon-http.ts
@@ -50,8 +50,8 @@ last_verified_date: 2026-03-28
 ## Code and Tests
 
 - `src/popup.ts` initializes popup-side UI wiring, including the shared Kaboom flame icon state.
-- `src/popup/status-display.ts` renders `Connected` only for heartbeat-confirmed daemon status and shows offline recovery hints otherwise.
-- `src/popup/logo-motion.ts` pins popup logo rendering to the shared flame asset without hover-only swaps.
+- `src/popup/shell/status-display.ts` renders `Connected` only for heartbeat-confirmed daemon status and shows offline recovery hints otherwise.
+- `src/popup/shell/logo-motion.ts` pins popup logo rendering to the shared flame asset without hover-only swaps.
 - `src/options.ts` uses shared daemon request/header helpers for health checks and active-codebase config sync.
 - `src/background/sync/version-check.ts` keeps the update badge/title and release download target aligned with Kaboom branding and the canonical Kaboom repo slug.
 - `src/lib/daemon-http.ts` defines the canonical extension-client header and JSON request init contract.

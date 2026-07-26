@@ -24,10 +24,10 @@ Interface Definition Language (IDL) source of truth, generating both sides autom
 The Go/TS boundary has two distinct contract surfaces:
 
 **Wire types** (data payloads between extension and daemon):
-- `internal/types/wire_enhanced_action.go` -> `src/types/wire-enhanced-action.ts`
-- `internal/types/wire_network.go` -> `src/types/wire-network.ts`
-- `internal/types/wire_websocket_event.go` -> `src/types/wire-websocket-event.ts`
-- `internal/performance/wire_performance.go` -> `src/types/wire-performance-snapshot.ts`
+- `internal/types/wire_enhanced_action.go` -> `src/types/wire/wire-enhanced-action.ts`
+- `internal/types/wire_network.go` -> `src/types/wire/wire-network.ts`
+- `internal/types/wire_websocket_event.go` -> `src/types/wire/wire-websocket-event.ts`
+- `internal/performance/wire_performance.go` -> `src/types/wire/wire-performance-snapshot.ts`
 
 These are already partially automated. Go structs are the source of truth.
 `scripts/generate-wire-types.js` generates the TS side. `scripts/check-wire-drift.js`
@@ -155,7 +155,7 @@ idl/
 | Source | Generated artifact | Replaces |
 |--------|-------------------|----------|
 | `idl/wire/*.schema.json` | `internal/types/wire_*.go` (Go structs) | Hand-written Go wire structs |
-| `idl/wire/*.schema.json` | `src/types/wire-*.ts` (TS interfaces) | Generated TS interfaces |
+| `idl/wire/*.schema.json` | `src/types/wire/wire-*.ts` (TS interfaces) | Generated TS interfaces |
 | `idl/tools/*.schema.json` | `internal/schema/*_gen.go` (schema constants) | Hand-written `map[string]any` |
 
 ### 3.3 What Stays Manual
@@ -173,7 +173,7 @@ Two generators, both Node scripts (consistent with existing `generate-wire-types
 **`scripts/generate-from-idl.js`** (replaces `generate-wire-types.js`):
 - Reads `idl/wire/*.schema.json`
 - Emits Go structs to `internal/types/wire_*_gen.go` and `internal/performance/wire_*_gen.go`
-- Emits TS interfaces to `src/types/wire-*.ts`
+- Emits TS interfaces to `src/types/wire/wire-*.ts`
 - Handles type mapping (JSON Schema -> Go types, JSON Schema -> TS types)
 - Server-only comments and override tables move into the schema files as
   `x-server-only` and `x-ts-type-override` extension fields

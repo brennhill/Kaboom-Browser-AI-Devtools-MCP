@@ -28,7 +28,7 @@ const launcher = readSrc('content/ui/tracked-hover-launcher.ts')
 const ast = (rel) => parseSource(join(SRC_ROOT, rel))
 const contextMenusAst = ast('background/ui/context-menus.ts')
 const keyboardAst = ast('background/ui/keyboard-shortcuts.ts')
-const trackingApiAst = ast('popup/tab-tracking-api.ts')
+const trackingApiAst = ast('popup/tabs/tab-tracking-api.ts')
 
 // `callsHelper` verifies an actual CallExpression exists — unlike a substring
 // check, it is NOT satisfied by an import or a same-named definition. That

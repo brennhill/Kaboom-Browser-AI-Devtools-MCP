@@ -2,7 +2,7 @@
  * Purpose: Handles file upload queries by fetching file data from the Go server and injecting it into DOM file inputs via DataTransfer or OS automation escalation.
  * Docs: docs/features/feature/interact-explore/index.md
  */
-import type { PendingQuery } from '../../types/queries.js';
+import type { PendingQuery } from '../../types/runtime/queries.js';
 import type { SyncClient } from '../sync/sync-client.js';
 import type { SendAsyncResultFn, ActionToastFn } from '../pending-queries.js';
 interface VerifyResult {

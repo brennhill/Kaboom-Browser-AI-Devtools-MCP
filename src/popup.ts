@@ -17,21 +17,21 @@
 
 import type { WebSocketCaptureMode } from './types/index.js'
 import type { components } from './generated/openapi-types.js'
-import type { PopupConnectionStatus, ToggleWarningConfig } from './popup/types.js'
+import type { PopupConnectionStatus, ToggleWarningConfig } from './popup/shell/types.js'
 import type { ShowTrackedHoverLauncherMessage } from './types/runtime-messages.js'
 import { RuntimeMessageName, StorageKey } from './lib/constants.js'
 import { getLocal, getLocals, setSession, getSession, onStorageChanged, persist } from './lib/storage-utils.js'
-import { updateConnectionStatus } from './popup/status-display.js'
+import { updateConnectionStatus } from './popup/shell/status-display.js'
 import { renderUpdateAvailableBanner } from './popup/update-button.js'
 import { DEFAULT_SERVER_URL } from './lib/constants.js'
 import { buildDaemonHeaders } from './lib/daemon-http.js'
-import { setupRecordingUI } from './popup/recording.js'
+import { setupRecordingUI } from './popup/recording/recording.js'
 import { setupDrawModeButton } from './popup/draw-mode.js'
-import { setupActionRecordingUI } from './popup/action-recording.js'
+import { setupActionRecordingUI } from './popup/recording/action-recording.js'
 import { FEATURE_TOGGLES as TOGGLE_DEFS, initFeatureToggles, applyFeatureToggles } from './popup/feature-toggles.js'
-import { initTrackPageButton } from './popup/tab-tracking.js'
+import { initTrackPageButton } from './popup/tabs/tab-tracking.js'
 import { initAiWebPilotToggle, applyAiWebPilotToggle } from './popup/ai-web-pilot.js'
-import { initPopupLogoMotion } from './popup/logo-motion.js'
+import { initPopupLogoMotion } from './popup/shell/logo-motion.js'
 import {
   initWebSocketModeSelector,
   applyWebSocketMode,
@@ -46,10 +46,10 @@ export { updateConnectionStatus }
 export { FEATURE_TOGGLES, initFeatureToggles, applyFeatureToggles } from './popup/feature-toggles.js'
 export { handleFeatureToggle } from './popup/feature-toggles.js'
 export { initAiWebPilotToggle, handleAiWebPilotToggle, applyAiWebPilotToggle } from './popup/ai-web-pilot.js'
-export { initTrackPageButton, handleTrackPageClick } from './popup/tab-tracking.js'
+export { initTrackPageButton, handleTrackPageClick } from './popup/tabs/tab-tracking.js'
 export { handleWebSocketModeChange } from './popup/settings.js'
 export { initWebSocketModeSelector, applyWebSocketMode } from './popup/settings.js'
-export { isInternalUrl } from './popup/ui-utils.js'
+export { isInternalUrl } from './popup/shell/ui-utils.js'
 
 // Apply theme early to prevent flash of unstyled content (moved from inline script for CSP compliance).
 void getLocal('theme').then((value) => {

@@ -46,7 +46,7 @@ describe('popup logo motion', () => {
   })
 
   test('keeps icon.svg in the popup without hover swapping', async () => {
-    const { initPopupLogoMotion } = await import(`../../extension/popup/logo-motion.js?v=${++importCounter}`)
+    const { initPopupLogoMotion } = await import(`../../extension/popup/shell/logo-motion.js?v=${++importCounter}`)
 
     initPopupLogoMotion()
 

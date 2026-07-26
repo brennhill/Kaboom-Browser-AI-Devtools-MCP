@@ -230,7 +230,7 @@
     return internalPrefixes.some((prefix) => url.startsWith(prefix));
   }
 
-  // extension/popup/ui-utils.js
+  // extension/popup/shell/ui-utils.js
   function formatFileSize(bytes) {
     if (bytes === 0)
       return "0 B";
@@ -240,7 +240,7 @@
     return `${value < 10 ? value.toFixed(1) : Math.round(value)} ${units[i]}`;
   }
 
-  // extension/popup/status-display.js
+  // extension/popup/shell/status-display.js
   var DEFAULT_MAX_ENTRIES = 1e3;
   function updateConnectionStatus(status) {
     const statusEl = document.getElementById("status");
@@ -582,7 +582,7 @@ The daemon will restart automatically.`;
     return fallback;
   }
 
-  // extension/popup/recording-io.js
+  // extension/popup/recording/recording-io.js
   var LOG = `${KABOOM_RECORDING_LOG_PREFIX} Popup:`;
   function sendRecordingGestureDecision(type) {
     chrome.runtime.sendMessage({ type }, () => {
@@ -666,7 +666,7 @@ The daemon will restart automatically.`;
     });
   }
 
-  // extension/popup/recording.js
+  // extension/popup/recording/recording.js
   var START_LABEL = "Record screen";
   var STOP_LABEL = "Stop recording";
   var HIGHLIGHT_LABEL = "\u25CF \xAB Click here to record";
@@ -1015,7 +1015,7 @@ The daemon will restart automatically.`;
     });
   }
 
-  // extension/popup/action-recording.js
+  // extension/popup/recording/action-recording.js
   var START_LABEL2 = "Record action workflow";
   var STOP_LABEL2 = "Stop recording";
   function showRecording2(els, state) {
@@ -1375,7 +1375,7 @@ The daemon will restart automatically.`;
     await chrome.runtime.sendMessage({ type: "qa_scan_requested", page_url: pageUrl });
   }
 
-  // extension/popup/tab-tracking-api.js
+  // extension/popup/tabs/tab-tracking-api.js
   async function handleAuditClick(pageUrl, tabId) {
     await requestAudit(pageUrl, tabId);
   }
@@ -1431,7 +1431,7 @@ The daemon will restart automatically.`;
     console.log(KABOOM_LOG_PREFIX, "Now tracking tab:", tab.id, tab.url);
   }
 
-  // extension/popup/tab-tracking.js
+  // extension/popup/tabs/tab-tracking.js
   var trackingStorageSyncInstalled = false;
   var AUDIT_BUTTON_ENABLED = false;
   function hideAuditButton() {
@@ -1603,7 +1603,7 @@ The daemon will restart automatically.`;
     });
   }
 
-  // extension/popup/logo-motion.js
+  // extension/popup/shell/logo-motion.js
   function initPopupLogoMotion() {
     const logo = document.querySelector(".logo");
     if (!logo)

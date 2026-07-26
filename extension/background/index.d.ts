@@ -20,7 +20,7 @@ export declare function debugLog(category: string, message: string, data?: unkno
 /**
  * Get all debug log entries
  */
-export declare function getDebugLog(): import("../types/debug.js").DebugLogEntry[];
+export declare function getDebugLog(): import("../types/index.js").DebugLogEntry[];
 /**
  * Clear debug log buffer
  */
@@ -36,13 +36,13 @@ export declare function setDebugMode(enabled: boolean): void;
 export declare const sharedServerCircuitBreaker: import("./sync/circuit-breaker.js").CircuitBreaker;
 export declare const logBatcherWithCB: import("./sync/batchers.js").BatcherWithCircuitBreaker<LogEntry>;
 export declare const logBatcher: import("./sync/batchers.js").Batcher<LogEntry>;
-export declare const wsBatcher: import("./sync/batchers.js").Batcher<import("../types/wire-websocket-event.js").WireWebSocketEvent>;
-export declare const enhancedActionBatcherWithCB: import("./sync/batchers.js").BatcherWithCircuitBreaker<import("../types/wire-enhanced-action.js").WireEnhancedAction>;
-export declare const enhancedActionBatcher: import("./sync/batchers.js").Batcher<import("../types/wire-enhanced-action.js").WireEnhancedAction>;
-export declare const networkBodyBatcherWithCB: import("./sync/batchers.js").BatcherWithCircuitBreaker<import("../types/wire-network.js").WireNetworkBody>;
-export declare const networkBodyBatcher: import("./sync/batchers.js").Batcher<import("../types/wire-network.js").WireNetworkBody>;
-export declare const perfBatcherWithCB: import("./sync/batchers.js").BatcherWithCircuitBreaker<import("../types/wire-performance-snapshot.js").WirePerformanceSnapshot>;
-export declare const perfBatcher: import("./sync/batchers.js").Batcher<import("../types/wire-performance-snapshot.js").WirePerformanceSnapshot>;
+export declare const wsBatcher: import("./sync/batchers.js").Batcher<import("../types/index.js").WebSocketEvent>;
+export declare const enhancedActionBatcherWithCB: import("./sync/batchers.js").BatcherWithCircuitBreaker<import("../types/index.js").EnhancedAction>;
+export declare const enhancedActionBatcher: import("./sync/batchers.js").Batcher<import("../types/index.js").EnhancedAction>;
+export declare const networkBodyBatcherWithCB: import("./sync/batchers.js").BatcherWithCircuitBreaker<import("../types/index.js").NetworkBodyPayload>;
+export declare const networkBodyBatcher: import("./sync/batchers.js").Batcher<import("../types/index.js").NetworkBodyPayload>;
+export declare const perfBatcherWithCB: import("./sync/batchers.js").BatcherWithCircuitBreaker<import("../types/index.js").PerformanceSnapshot>;
+export declare const perfBatcher: import("./sync/batchers.js").Batcher<import("../types/index.js").PerformanceSnapshot>;
 export declare function handleLogMessage(payload: LogEntry, sender: ChromeMessageSender, tabId?: number): Promise<void>;
 export declare function handleClearLogs(): Promise<{
     success: boolean;

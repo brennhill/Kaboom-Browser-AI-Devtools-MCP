@@ -7,8 +7,8 @@ feature_refs:
 last_reviewed: 2026-04-03
 code_anchors:
   - src/lib/tabs/request-audit.ts
-  - src/popup/tab-tracking.ts
-  - src/popup/tab-tracking-api.ts
+  - src/popup/tabs/tab-tracking.ts
+  - src/popup/tabs/tab-tracking-api.ts
   - src/content/ui/tracked-hover-launcher.ts
   - src/background/message-handlers.ts
   - cmd/browser-agent/handler_tools_call_postprocess.go
@@ -44,7 +44,7 @@ Related feature docs:
 ## Entrypoints
 
 - `extension/popup.html` tracked-state `Audit` button
-- `src/popup/tab-tracking.ts` tracked-state popup wiring
+- `src/popup/tabs/tab-tracking.ts` tracked-state popup wiring
 - `src/content/ui/tracked-hover-launcher.ts` hover-surface `Audit` action
 - `plugin/kaboom-workflows/commands/audit.md`
 - `npm/kaboom-agentic-browser/skills/audit/SKILL.md`
@@ -91,8 +91,8 @@ Related feature docs:
 ## Code Paths
 
 - `src/lib/tabs/request-audit.ts`
-- `src/popup/tab-tracking.ts`
-- `src/popup/tab-tracking-api.ts`
+- `src/popup/tabs/tab-tracking.ts`
+- `src/popup/tabs/tab-tracking-api.ts`
 - `src/content/ui/tracked-hover-launcher.ts`
 - `src/background/message-handlers.ts`
 - `cmd/browser-agent/handler_tools_call_postprocess.go`

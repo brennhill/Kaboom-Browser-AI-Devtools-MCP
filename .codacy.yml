@@ -17,7 +17,7 @@ engines:
       - 'extension/*.bundled.js.map'
       # Complex functions with justified complexity (CCN/NLOC above thresholds)
       # DOM action dispatcher — switch over 12+ action types
-      - 'src/background/dom/dom-primitives.ts'
+      - 'src/background/dom/primitives/dom-primitives.ts'
       # Service worker bootstrap — handles 17+ message types
       - 'src/background/index.ts'
       # UI fade-out with animation, fallback, and cleanup branches

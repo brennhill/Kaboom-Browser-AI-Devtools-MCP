@@ -58,7 +58,7 @@ echo "Checking DOM code generation invariants..."
 
 # INVARIANT 4: generated dom-primitives.ts must match template source.
 if ! node scripts/generate-dom-primitives.js --check > /dev/null 2>&1; then
-  echo "❌ REGRESSION: src/background/dom/dom-primitives.ts is out of date"
+  echo "❌ REGRESSION: src/background/dom/primitives/dom-primitives.ts is out of date"
   echo "   Run: node scripts/generate-dom-primitives.js"
   exit 1
 fi

@@ -4,7 +4,7 @@ feature_id: feature-analyze-tool
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-25
+last_reviewed: 2026-07-26
 code_paths:
   - cmd/browser-agent/tools_analyze_dispatch.go
   - cmd/browser-agent/tools_analyze_annotations_handlers.go
@@ -24,7 +24,7 @@ code_paths:
   - internal/schema/analyze.go
   - src/background/commands/analyze.ts
   - src/background/exec/frame-targeting.ts
-  - src/background/dom/dom-frame-probe.ts
+  - src/background/dom/primitives/dom-frame-probe.ts
   - src/background/commands/helpers.ts
   - src/content/message-handlers.ts
   - src/content/runtime-message-listener.ts
