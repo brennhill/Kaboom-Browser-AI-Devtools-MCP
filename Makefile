@@ -25,7 +25,7 @@ PLATFORMS := \
 	release-check install-hooks bench-baseline sync-version \
 	pypi-binaries pypi-build pypi-publish pypi-test-publish pypi-clean \
 	security-check pre-commit verify-all npm-binaries validate-semver \
-	verify-llm \
+	verify-llm check-folder-size check-structure folder-baseline-update \
 	test-upgrade-guards release-gate clean-test-daemons \
 	generate-wire-types generate-dom-primitives \
 	site-dev site-build site-preview \
@@ -160,9 +160,21 @@ verify-size:
 	if [ $$SIZE -gt $$MAX ]; then echo "FAIL: Binary size $${SIZE} bytes exceeds $${MAX} byte limit"; exit 1; \
 	else echo "OK: Binary size $${SIZE} bytes (limit: $${MAX})"; fi
 
-# Check file line limits (800 lines soft limit)
+# Check file line limits (800 lines, hand-written source only)
 check-file-length:
 	@bash scripts/check-file-length.sh
+
+# Ratcheting per-folder source-file limit (10 files; existing folders frozen at
+# their current count and may only shrink).
+check-folder-size:
+	@node scripts/check-folder-size.cjs
+
+# Re-freeze the folder baseline after reducing a folder's file count.
+folder-baseline-update:
+	@node scripts/check-folder-size.cjs --update
+
+# Both structural gates.
+check-structure: check-file-length check-folder-size
 
 # Validate strict semver (X.Y.Z format, no pre-release)
 validate-semver:

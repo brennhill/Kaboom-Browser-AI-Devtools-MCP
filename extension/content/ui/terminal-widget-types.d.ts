@@ -25,7 +25,36 @@ export declare const TERMINAL_WRITE_SUBMIT_DELAY_MS = 600;
 export declare const TERMINAL_TYPING_IDLE_MS = 1500;
 export declare const TERMINAL_GUARD_POLL_MS = 200;
 export declare const TERMINAL_GUARD_TOAST_INTERVAL_MS = 3000;
-export declare const TERMINAL_GUARD_MAX_WAIT_MS = 30000;
+/** Maximum number of agent writes held while the terminal is unreachable. */
+export declare const MAX_QUEUED_WRITES = 200;
+/**
+ * Maximum total SIZE of that backlog, in UTF-8 bytes.
+ *
+ * The entry count alone is not a bound on anything that matters: 200 one-megabyte
+ * writes is a legal state under it, i.e. ~200 MB pinned in the side panel with
+ * nothing to stop it (finding S14). Writes are only queued while the socket is
+ * down, so this also mirrors the daemon's own 1 MB PTY write-buffer cap — more
+ * than this could never be delivered in one go anyway.
+ */
+export declare const MAX_QUEUED_WRITE_BYTES: number;
+export declare const TERMINAL_RECONNECT_BASE_DELAY_MS = 1000;
+export declare const TERMINAL_RECONNECT_MAX_DELAY_MS = 10000;
+export declare const TERMINAL_MAX_RECONNECT_ATTEMPTS = 6;
+export declare const TERMINAL_RECONNECT_JITTER_RATIO = 0.25;
+/**
+ * WORST-CASE wall-clock time from the first disconnect until the iframe gives up
+ * and posts `reconnect_exhausted` (which is what triggers the parent's
+ * validate-and-rebuild recovery). The iframe waits before EVERY attempt, including
+ * the one that trips the cap — the `reconnectAttempts > MAX_RECONNECT_ATTEMPTS`
+ * check runs after the increment, inside the timer — so there are MAX+1 waits:
+ * 1+2+4+8+10+10+10 = 45s, and up to 25% more once jitter is applied.
+ *
+ * Worst case, not average, is the right number here: the write-guard budget must
+ * cover the slowest run, or it goes back to dropping the queue early.
+ */
+export declare function terminalReconnectExhaustionMs(): number;
+export declare const TERMINAL_GUARD_RECOVERY_GRACE_MS = 10000;
+export declare const TERMINAL_GUARD_MAX_WAIT_MS: number;
 export interface TerminalConfig {
     cmd?: string;
     args?: string[];
@@ -56,6 +85,27 @@ export interface TerminalWidgetState {
 export declare const state: TerminalWidgetState;
 /** Reset all mutable state to initial values. Used by tests to isolate module-cached state. */
 export declare function resetAllState(): void;
-/** Compute the terminal server URL from a base daemon URL (port + TERMINAL_PORT_OFFSET). */
+/** Clear the discovered-port cache (context teardown and tests). */
+export declare function resetTerminalPortDiscovery(): void;
+/**
+ * Compute the terminal server URL for a base daemon URL.
+ *
+ * Synchronous, so it can serve call sites that cannot await (notifyIframe's
+ * postMessage target origin). It uses the discovered port when this context has
+ * one and otherwise derives base + TERMINAL_PORT_OFFSET — the daemon's own
+ * default, so this is never worse than the old behaviour. Prefer
+ * resolveTerminalServerUrl wherever awaiting is possible.
+ */
 export declare function getTerminalServerUrl(baseUrl: string): string;
+/**
+ * Resolve the terminal server URL, discovering the daemon's real terminal port
+ * first (once per TTL). Discovery lives INSIDE this helper rather than at the call
+ * sites so no caller can forget it (rule 19).
+ *
+ * Every failure mode — daemon down, non-OK response, unparseable body, no
+ * `terminal_port` field (Windows, or a terminal server that failed to bind) —
+ * falls through to the derived port, so discovery can only ever improve on the
+ * old assumption, never break a working setup.
+ */
+export declare function resolveTerminalServerUrl(baseUrl: string): Promise<string>;
 //# sourceMappingURL=terminal-widget-types.d.ts.map

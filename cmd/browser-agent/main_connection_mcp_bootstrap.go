@@ -143,8 +143,20 @@ func preflightPortCheck(server *Server, port int) error {
 	testAddr := fmt.Sprintf("127.0.0.1:%d", port)
 	testLn, err := net.Listen("tcp", testAddr)
 	if err != nil {
-		server.logLifecycle("port_conflict_detected", port, map[string]any{"error": err.Error()})
-		return fmt.Errorf("port %d already in use (unknown process, try '%s'): %w", port, portKillHintForce(port), err)
+		// Name the holder rather than saying "unknown process". This is the message
+		// the user actually sees when the daemon refuses to start, and "unknown" sent
+		// them to a kill hint that may target something they did not want killed.
+		blockingPID, blockingCmd := identifyPortHolder(port)
+		server.logLifecycle("port_conflict_detected", port, map[string]any{
+			"error":          err.Error(),
+			"blocked_by_pid": blockingPID,
+			"blocked_by_cmd": blockingCmd,
+		})
+		if blockingPID > 0 {
+			return fmt.Errorf("port %d already in use by pid %d (%s); free that port or start Kaboom on a different one: %w",
+				port, blockingPID, blockingCmd, err)
+		}
+		return fmt.Errorf("port %d already in use (owner could not be identified, try '%s'): %w", port, portKillHintForce(port), err)
 	}
 	return testLn.Close()
 }

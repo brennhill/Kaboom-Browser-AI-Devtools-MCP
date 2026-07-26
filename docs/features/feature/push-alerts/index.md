@@ -41,12 +41,9 @@ last_verified_date: 2026-03-05
 - Product Spec: [product-spec.md](./product-spec.md)
 - Tech Spec: [tech-spec.md](./tech-spec.md)
 - QA Plan: [qa-plan.md](./qa-plan.md)
-- Flow Map: [flow-map.md](./flow-map.md)
 
 ## Related Architecture
 
-- [Push Alert Notification Emission](../../../architecture/flow-maps/push-alert-notification-emission.md)
-- [Push Inbox Screenshot Throttle](../../../architecture/flow-maps/push-inbox-screenshot-throttle.md)
 
 ## Requirement IDs
 

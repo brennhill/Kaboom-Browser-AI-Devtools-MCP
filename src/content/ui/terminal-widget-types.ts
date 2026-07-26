@@ -6,6 +6,10 @@
  */
 
 import { DEFAULT_SERVER_URL, TERMINAL_PORT_OFFSET } from '../../lib/constants.js'
+import { buildDaemonHeaders } from '../../lib/daemon-http.js'
+import type { components } from '../../generated/openapi-types.js'
+
+type HealthResponse = components['schemas']['HealthResponse']
 
 // ---------------------------------------------------------------------------
 // DOM element IDs
@@ -35,13 +39,77 @@ export const TERMINAL_WRITE_SUBMIT_DELAY_MS = 600
 export const TERMINAL_TYPING_IDLE_MS = 1500
 export const TERMINAL_GUARD_POLL_MS = 200
 export const TERMINAL_GUARD_TOAST_INTERVAL_MS = 3000
+
+// ---------------------------------------------------------------------------
+// Write-queue bounds
+// ---------------------------------------------------------------------------
+/** Maximum number of agent writes held while the terminal is unreachable. */
+export const MAX_QUEUED_WRITES = 200
+/**
+ * Maximum total SIZE of that backlog, in UTF-8 bytes.
+ *
+ * The entry count alone is not a bound on anything that matters: 200 one-megabyte
+ * writes is a legal state under it, i.e. ~200 MB pinned in the side panel with
+ * nothing to stop it (finding S14). Writes are only queued while the socket is
+ * down, so this also mirrors the daemon's own 1 MB PTY write-buffer cap — more
+ * than this could never be delivered in one go anyway.
+ */
+export const MAX_QUEUED_WRITE_BYTES = 1 << 20
+
+// ---------------------------------------------------------------------------
+// Reconnect schedule — mirrored from the terminal iframe (terminal.html).
+// ---------------------------------------------------------------------------
+// terminal.html is a hand-authored, Go-embedded asset, so it cannot import these
+// and they cannot import it. They are declared here because the write-guard's
+// give-up budget below is DERIVED from them; tests/extension/
+// terminal-reconnect-budget-contract.test.js pins these values to the literals
+// terminal.html actually uses, so the two cannot drift apart.
+export const TERMINAL_RECONNECT_BASE_DELAY_MS = 1000
+export const TERMINAL_RECONNECT_MAX_DELAY_MS = 10000
+export const TERMINAL_MAX_RECONNECT_ATTEMPTS = 6
+// The iframe jitters each backoff by up to this fraction (additive only) so that
+// panels dropped together by a daemon restart do not reconnect in lockstep.
+export const TERMINAL_RECONNECT_JITTER_RATIO = 0.25
+
+/**
+ * WORST-CASE wall-clock time from the first disconnect until the iframe gives up
+ * and posts `reconnect_exhausted` (which is what triggers the parent's
+ * validate-and-rebuild recovery). The iframe waits before EVERY attempt, including
+ * the one that trips the cap — the `reconnectAttempts > MAX_RECONNECT_ATTEMPTS`
+ * check runs after the increment, inside the timer — so there are MAX+1 waits:
+ * 1+2+4+8+10+10+10 = 45s, and up to 25% more once jitter is applied.
+ *
+ * Worst case, not average, is the right number here: the write-guard budget must
+ * cover the slowest run, or it goes back to dropping the queue early.
+ */
+export function terminalReconnectExhaustionMs(): number {
+  let delay = TERMINAL_RECONNECT_BASE_DELAY_MS
+  let total = 0
+  for (let attempt = 0; attempt <= TERMINAL_MAX_RECONNECT_ATTEMPTS; attempt++) {
+    total += delay
+    delay = Math.min(delay * 2, TERMINAL_RECONNECT_MAX_DELAY_MS)
+  }
+  return Math.ceil(total * (1 + TERMINAL_RECONNECT_JITTER_RATIO))
+}
+
+// Headroom on top of the iframe's schedule so the parent has time to actually run
+// its recovery (validate token → rebuild session → reconnect) after
+// `reconnect_exhausted` lands, instead of the guard expiring at the same instant.
+export const TERMINAL_GUARD_RECOVERY_GRACE_MS = 10000
+
 // Escape hatch: the maximum total time the write-guard will keep an agent write
 // "in flight" or a queued write "deferred" (waiting for the socket to reconnect
 // or the user to stop typing) before giving up LOUDLY. Without this bound a
 // permanently-down socket or a stuck `queuedWriteInFlight`/`terminalFocused`
 // flag would wedge the terminal forever — writes queue but never flush and the
-// poller spins silently. Generous so momentary blips still queue-and-flush.
-export const TERMINAL_GUARD_MAX_WAIT_MS = 30000
+// poller spins silently.
+//
+// DERIVED, not hand-picked (finding S1): the old fixed 30s expired 15s before the
+// iframe even reported `reconnect_exhausted` at ~45s, so the queue was thrown away
+// before the recovery it was waiting for could begin — the queue could never
+// survive the outage it exists for.
+export const TERMINAL_GUARD_MAX_WAIT_MS =
+  terminalReconnectExhaustionMs() + TERMINAL_GUARD_RECOVERY_GRACE_MS
 
 // ---------------------------------------------------------------------------
 // Types
@@ -117,14 +185,103 @@ export function resetAllState(): void {
   state.lastGuardToastAt = 0
   state.terminalConnected = false
   state.guardBlockedSince = 0
+  resetTerminalPortDiscovery()
 }
 
 // ---------------------------------------------------------------------------
-// Utility: compute terminal server URL from a base daemon URL.
+// Terminal server URL — discovered, with a derived fallback.
 // ---------------------------------------------------------------------------
-/** Compute the terminal server URL from a base daemon URL (port + TERMINAL_PORT_OFFSET). */
+// The daemon *prefers* base + TERMINAL_PORT_OFFSET but does not guarantee it: if
+// that port is taken it logs terminal_server_bind_failed, and it always reports
+// the port it actually bound as `terminal_port` in /health. Assuming base+1 (and
+// never reading the published value) sent every terminal request to a port
+// nothing was listening on, which looks to the user like a broken terminal
+// (finding S2).
+//
+// Cached per base URL and per extension context (content script, service worker,
+// side panel each hold their own module instance), with a TTL so a daemon that
+// restarts onto a different port is picked up.
+const TERMINAL_PORT_CACHE_TTL_MS = 60000
+
+interface DiscoveredTerminalPort {
+  baseUrl: string
+  port: number
+  discoveredAt: number
+}
+
+let discoveredTerminalPort: DiscoveredTerminalPort | null = null
+/** In-flight discovery, so concurrent callers share one /health request. */
+let terminalPortDiscovery: Promise<void> | null = null
+
+/** Clear the discovered-port cache (context teardown and tests). */
+export function resetTerminalPortDiscovery(): void {
+  discoveredTerminalPort = null
+  terminalPortDiscovery = null
+}
+
+/** The cached port for baseUrl, or null when absent or stale. */
+function cachedTerminalPort(baseUrl: string, nowMs: number): number | null {
+  if (!discoveredTerminalPort) return null
+  if (discoveredTerminalPort.baseUrl !== baseUrl) return null
+  if (nowMs - discoveredTerminalPort.discoveredAt > TERMINAL_PORT_CACHE_TTL_MS) return null
+  return discoveredTerminalPort.port
+}
+
+/**
+ * Compute the terminal server URL for a base daemon URL.
+ *
+ * Synchronous, so it can serve call sites that cannot await (notifyIframe's
+ * postMessage target origin). It uses the discovered port when this context has
+ * one and otherwise derives base + TERMINAL_PORT_OFFSET — the daemon's own
+ * default, so this is never worse than the old behaviour. Prefer
+ * resolveTerminalServerUrl wherever awaiting is possible.
+ */
 export function getTerminalServerUrl(baseUrl: string): string {
   const url = new URL(baseUrl)
-  url.port = String(parseInt(url.port || '7890', 10) + TERMINAL_PORT_OFFSET)
+  const basePort = parseInt(url.port || '7890', 10)
+  const port = cachedTerminalPort(baseUrl, Date.now()) ?? basePort + TERMINAL_PORT_OFFSET
+  url.port = String(port)
   return url.origin
+}
+
+/**
+ * Resolve the terminal server URL, discovering the daemon's real terminal port
+ * first (once per TTL). Discovery lives INSIDE this helper rather than at the call
+ * sites so no caller can forget it (rule 19).
+ *
+ * Every failure mode — daemon down, non-OK response, unparseable body, no
+ * `terminal_port` field (Windows, or a terminal server that failed to bind) —
+ * falls through to the derived port, so discovery can only ever improve on the
+ * old assumption, never break a working setup.
+ */
+export async function resolveTerminalServerUrl(baseUrl: string): Promise<string> {
+  if (cachedTerminalPort(baseUrl, Date.now()) === null) {
+    if (!terminalPortDiscovery) {
+      terminalPortDiscovery = discoverTerminalPort(baseUrl).finally(() => {
+        terminalPortDiscovery = null
+      })
+    }
+    await terminalPortDiscovery
+  }
+  return getTerminalServerUrl(baseUrl)
+}
+
+/** Read `terminal_port` from /health and cache it. Never throws. */
+async function discoverTerminalPort(baseUrl: string): Promise<void> {
+  try {
+    const resp = await fetch(`${baseUrl}/health`, {
+      headers: buildDaemonHeaders({ contentType: null }),
+      signal: AbortSignal.timeout(2000)
+    })
+    if (!resp.ok) return
+    const data = (await resp.json()) as HealthResponse
+    const port = data.terminal_port
+    // 0 / absent means the terminal server is not running (Windows, or a bind
+    // failure). Keep the derived fallback rather than caching a dead port.
+    if (typeof port !== 'number' || port <= 0) return
+    discoveredTerminalPort = { baseUrl, port, discoveredAt: Date.now() }
+  } catch {
+    // Daemon unreachable or the response was not JSON — the caller falls back to
+    // the derived port, which is the daemon's own default.
+  }
 }

@@ -41,12 +41,6 @@ Every feature spec file must include at least:
 - Product, tech, and QA specs must link to each other.
 - Shared component docs must link back to related feature bundles.
 - Top-level indexes must link only to canonical files.
-- For architecture flow maps, use hybrid linking:
-  - Canonical map in `docs/architecture/flow-maps/`
-  - Feature-local `flow-map.md` pointer in `docs/features/<group>/<feature>/`
-  - Feature `index.md` links to local `flow-map.md`
-
-See: [LLM Flow Map Placement Best Practice](./llm-flow-map-best-practice.md)
 
 ## Update Workflow
 

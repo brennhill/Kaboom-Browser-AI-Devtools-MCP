@@ -22,7 +22,7 @@ const iife = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]
 assert.ok(iife && iife.includes('replay_end'), 'could not extract terminal.html reconnect IIFE')
 
 /** Build a stubbed environment, run the IIFE, and expose the captured seams. */
-function runTerminalPage() {
+function runTerminalPage(random = Math.random) {
   const sends = [] // every ws.send arg, in order
   const parentMsgs = [] // every notifyParent postMessage payload
   const timers = [] // pending manual timers {id, fn}
@@ -87,9 +87,11 @@ function runTerminalPage() {
     URLSearchParams,
     TextEncoder,
     TextDecoder,
-    setTimeout: (fn) => { const id = timerSeq++; timers.push({ id, fn }); return id },
+    setTimeout: (fn, delay) => { const id = timerSeq++; timers.push({ id, fn, delay }); return id },
     clearTimeout: (id) => { const i = timers.findIndex((t) => t.id === id); if (i >= 0) timers.splice(i, 1) },
     Date: { now: () => nowMs },
+    // Own Math so the reconnect jitter is deterministic per page instance.
+    Math: Object.assign(Object.create(Math), { random }),
     console
   }
   vm.createContext(sandbox)
@@ -102,6 +104,7 @@ function runTerminalPage() {
     binarySends: () => sends.filter((d) => typeof d !== 'string').map(decode),
     parentEvents: () => parentMsgs.map((m) => m && m.event),
     clock: { advance: (ms) => { nowMs += ms } },
+    pendingDelays: () => timers.map((t) => t.delay),
     fireTimers: () => { const pending = timers.splice(0); for (const t of pending) t.fn() }
   }
 }
@@ -172,5 +175,100 @@ describe('terminal.html reconnect exhaustion (finding E-ii)', () => {
       exhausted,
       'a persistent open→drop flap must eventually signal reconnect_exhausted (total-within-window cap), not loop forever'
     )
+  })
+})
+
+describe('terminal.html reconnect jitter (finding S12)', () => {
+  test('the reconnect delay is jittered, so simultaneous panels do not stampede', () => {
+    // A daemon restart drops every open panel at once. With a fixed schedule they
+    // all reconnect at the same instants and hit the 32-subscriber fanout cap
+    // together; jitter spreads them out.
+    const lowJitter = runTerminalPage(() => 0)
+    const highJitter = runTerminalPage(() => 0.999)
+
+    lowJitter.ws.onclose()
+    highJitter.ws.onclose()
+
+    const [low] = lowJitter.pendingDelays()
+    const [high] = highJitter.pendingDelays()
+
+    assert.ok(typeof low === 'number' && typeof high === 'number', 'a reconnect must be scheduled with a delay')
+    assert.ok(
+      high > low,
+      `the reconnect delay must vary with Math.random (got ${low} and ${high}) — a fixed delay reconnects every panel in lockstep`
+    )
+  })
+
+  test('jitter only ever delays, and never past the declared ratio', () => {
+    const base = Number(iife.match(/var\s+reconnectDelay\s*=\s*(\d+)/)[1])
+    const ratio = Number(iife.match(/RECONNECT_JITTER_RATIO\s*=\s*([\d.]+)/)[1])
+
+    for (const r of [0, 0.25, 0.5, 0.75, 0.999]) {
+      const h = runTerminalPage(() => r)
+      h.ws.onclose()
+      const [delay] = h.pendingDelays()
+      assert.ok(
+        delay >= base,
+        `jitter must never fire EARLIER than the backoff (r=${r}: ${delay} < ${base}) — that would shorten the budget the write-guard derives from it`
+      )
+      assert.ok(
+        delay <= Math.round(base * (1 + ratio)),
+        `jitter must stay within the declared ratio (r=${r}: ${delay} > ${Math.round(base * (1 + ratio))})`
+      )
+    }
+  })
+})
+
+describe('terminal.html reconnect-gap input buffer (finding S13)', () => {
+  const MAX_PENDING_INPUT = Number(iife.match(/MAX_PENDING_INPUT\s*=\s*(\d+)/)[1])
+
+  test('a single paste larger than the cap is evicted, not kept forever', () => {
+    const h = runTerminalPage()
+    const paste = 'x'.repeat(MAX_PENDING_INPUT * 2)
+
+    h.typeKey(paste) // socket is still CONNECTING -> buffered
+
+    h.ws.readyState = 1
+    h.ws.onopen()
+    h.ws.onmessage({ data: JSON.stringify({ type: 'replay_end' }) })
+
+    assert.deepStrictEqual(
+      h.binarySends(),
+      [],
+      'an oversized single chunk must be evicted like any other — the `length > 1` guard made it un-evictable, so it sat in the buffer forever and was replayed whole'
+    )
+  })
+
+  test('the cap counts bytes actually sent, not UTF-16 code units', () => {
+    const h = runTerminalPage()
+    // '€' is ONE UTF-16 unit but THREE UTF-8 bytes: 4000 of them are 4000 by
+    // .length (under the cap, so nothing was evicted) and 12000 on the wire.
+    const chunks = 4000
+    for (let i = 0; i < chunks; i++) h.typeKey('€')
+
+    h.ws.readyState = 1
+    h.ws.onopen()
+    h.ws.onmessage({ data: JSON.stringify({ type: 'replay_end' }) })
+
+    const sent = h.binarySends()
+    assert.strictEqual(sent.length, 1, 'the buffered input should flush as one send')
+    const bytes = new TextEncoder().encode(sent[0]).length
+    assert.ok(
+      bytes <= MAX_PENDING_INPUT,
+      `the reconnect-gap buffer must be bounded by SENT bytes: flushed ${bytes} bytes with a ${MAX_PENDING_INPUT}-byte cap`
+    )
+    assert.ok(bytes > 0, 'eviction must not empty a buffer that still fits under the cap')
+  })
+
+  test('input that fits under the cap is preserved in full', () => {
+    const h = runTerminalPage()
+    h.typeKey('ls')
+    h.typeKey(' -la')
+
+    h.ws.readyState = 1
+    h.ws.onopen()
+    h.ws.onmessage({ data: JSON.stringify({ type: 'replay_end' }) })
+
+    assert.deepStrictEqual(h.binarySends(), ['ls -la'], 'small gap input must flush intact, in order')
   })
 })

@@ -35,7 +35,6 @@ last_verified_date: 2026-03-05
 - Product Spec: [product-spec.md](./product-spec.md)
 - Tech Spec: [tech-spec.md](./tech-spec.md)
 - QA Plan: [qa-plan.md](./qa-plan.md)
-- Flow Map Pointer: [flow-map.md](./flow-map.md)
 
 ## Canonical Note
 Upload is security-first: path validation and policy checks must pass before any OS-level dialog automation runs.

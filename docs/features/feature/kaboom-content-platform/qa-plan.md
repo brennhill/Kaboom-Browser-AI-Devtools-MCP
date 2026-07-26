@@ -40,4 +40,3 @@ last_verified_date: 2026-03-05
 
 ## Linked Architecture
 
-- Canonical flow map: [flow-map.md](./flow-map.md)

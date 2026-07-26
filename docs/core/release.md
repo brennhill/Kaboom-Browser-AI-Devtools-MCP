@@ -287,10 +287,14 @@ failed jobs** — do NOT cut a new tag. The publish step is idempotent.
 
 ### 4. Manual publish fallback
 
-If you need to (re)publish without cutting a tag, run the
-[`Publish Packages`](../../.github/workflows/publish.yml) workflow manually
-(`workflow_dispatch`). It runs the same test → build → publish steps against the
-current `VERSION`.
+Re-run the failed jobs of the tag's [`Release`](../../.github/workflows/release.yml)
+run. The publish steps are idempotent (an already-published version is treated as
+success), so a re-run safely fills in whatever did not land.
+
+There is deliberately no separate manual-publish workflow. `Publish Packages`
+(`publish.yml`) used to offer one, but a second publish path could ship a version
+that never passed the tag-on-STABLE gate and never ran post-publish verification —
+so it was removed in favour of a single publish path.
 
 ### 5. Chrome Web Store
 

@@ -6,22 +6,19 @@
 package terminal
 
 import (
-	"bufio"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/fs"
-	"net"
 	"net/http"
 	"os"
 	"os/exec"
-	"runtime/debug"
 	"strings"
-	"sync"
+	"syscall"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
+	ptyupload "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty/upload"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -75,6 +72,20 @@ const PromptChars = "$#>%"
 // the idle callback fires. Used to detect when an agent is waiting for input.
 const IdleTimeout = 30 * time.Second
 
+// ReapTimeout bounds how long the relay's readLoop waits for the child's exit
+// code before tearing the fanout down anyway. The PTY read has already failed by
+// then, so the child is normally gone and this returns instantly; the bound only
+// matters for a child that cannot be reaped, which must not hold every WebSocket
+// pump hostage. Matches Session.Close's own reap bound.
+const ReapTimeout = 2 * time.Second
+
+// RelayCloseTimeout bounds how long Relay.Close waits for readLoop to finish its
+// teardown. Worst case that teardown is ReapTimeout (waiting for the child's exit
+// code) plus the write buffer's own close bound, so this sits above their sum;
+// past it the caller gives up rather than letting one wedged session stall
+// /terminal/stop or daemon shutdown.
+const RelayCloseTimeout = 5 * time.Second
+
 // RegisterRoutes adds terminal-related routes to the mux.
 // NOT MCP — These are daemon-served endpoints for the in-browser terminal.
 func RegisterRoutes(mux *http.ServeMux, deps Deps, server ServerDeps, mgr *pty.Manager, cap *capture.Store) *Map {
@@ -83,6 +94,14 @@ func RegisterRoutes(mux *http.ServeMux, deps Deps, server ServerDeps, mgr *pty.M
 	// Route a stuck-writer write-buffer close timeout (a drain goroutine + fd leak
 	// that cannot be safely interrupted) to the structured log, so the leak is
 	// diagnosable instead of silent (finding M).
+	// Route PTY-internal state-mutating failures (a child that will not die, a PTY
+	// fd that will not close, a stranded stdin flush) to the structured log. The
+	// pty package has no logger of its own, so without this sink those failures are
+	// invisible in production (finding S8, rule 25).
+	pty.SetDiagnosticHook(func(event string, fields map[string]any) {
+		deps.logEvent(event, fields)
+	})
+
 	pty.SetWriteBufferCloseTimeoutHook(func(pending int) {
 		deps.logEvent("terminal_writebuffer_close_timeout", map[string]any{"pending_bytes": pending})
 		if deps.Stderrf != nil {
@@ -160,339 +179,6 @@ func HandleTerminalPage(w http.ResponseWriter, r *http.Request, deps Deps) {
 	_, _ = w.Write(data)
 }
 
-// HandleTerminalWS upgrades a GET /terminal/ws request to a WebSocket connection
-// that relays raw PTY I/O to/from the browser's xterm.js terminal emulator.
-func HandleTerminalWS(w http.ResponseWriter, r *http.Request, deps Deps, mgr *pty.Manager, relays *Map) {
-	token := r.URL.Query().Get("token")
-	if token == "" {
-		deps.JSONResponse(w, http.StatusUnauthorized, map[string]string{"error": "missing token"})
-		return
-	}
-
-	sess, err := mgr.GetByToken(token)
-	if err != nil {
-		deps.JSONResponse(w, http.StatusUnauthorized, map[string]string{"error": "invalid token"})
-		return
-	}
-
-	key := r.Header.Get("Sec-WebSocket-Key")
-	if key == "" || strings.ToLower(r.Header.Get("Upgrade")) != "websocket" {
-		deps.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "websocket upgrade required"})
-		return
-	}
-
-	hj, ok := w.(http.Hijacker)
-	if !ok {
-		deps.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": "server does not support hijacking"})
-		return
-	}
-
-	conn, bufrw, err := hj.Hijack()
-	if err != nil {
-		deps.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
-		return
-	}
-	// NOTE: After a successful handshake, conn.Close() is handled by closeConn
-	// inside wsLoop via sync.Once. We only close here on handshake failure.
-
-	// Send 101 handshake.
-	accept := deps.WSAcceptKey(key)
-	handshake := "HTTP/1.1 101 Switching Protocols\r\n" +
-		"Upgrade: websocket\r\n" +
-		"Connection: Upgrade\r\n" +
-		"Sec-WebSocket-Accept: " + accept + "\r\n\r\n"
-	if _, err := bufrw.WriteString(handshake); err != nil {
-		_ = conn.Close()
-		return
-	}
-	if err := bufrw.Flush(); err != nil {
-		_ = conn.Close()
-		return
-	}
-
-	// Build the deadline-aware frame writer immediately after the handshake and use
-	// it for EVERY write on this connection — the pre-wsLoop replay chunks,
-	// replay_end, and subscribe-failure frames, as well as wsLoop's own frames
-	// (threaded in below). The terminal server runs with WriteTimeout:0, so without
-	// this a client that stalls its reader mid-replay would block conn.Write forever
-	// and leak a goroutine+fd per connect (finding B). One writer is shared so all
-	// callers serialize on the same mutex.
-	writeFrame := NewFrameWriter(conn, bufrw, deps)
-
-	// Get or create relay for multi-subscriber fan-out.
-	relay := relays.GetOrCreate(sess.ID, sess, "")
-
-	// Snapshot scrollback and register the subscriber ATOMICALLY (one subMu hold in
-	// the relay) against the readLoop's append+broadcast. A plain two-step
-	// (Scrollback then Subscribe) lets a chunk arriving in the gap be both replayed
-	// AND broadcast (duplicate) or neither (lost) at the reconnect boundary — the
-	// readLoop appends under scrollMu then broadcasts under the fanout mutex, two
-	// separate locks this snapshot+subscribe would otherwise straddle (finding C).
-	subID := NextWSSubID()
-	history, sub, subErr := relay.SubscribeWithHistory(subID)
-
-	// Replay scrollback so the reconnecting (or first-connecting) terminal sees prior output.
-	if len(history) > 0 {
-		for off := 0; off < len(history); off += ReadBufSize {
-			end := off + ReadBufSize
-			if end > len(history) {
-				end = len(history)
-			}
-			if err := writeFrame(0x2, history[off:end]); err != nil {
-				if subErr == nil {
-					relay.fanout.Unsubscribe(subID)
-				}
-				_ = conn.Close()
-				return
-			}
-		}
-	}
-	replayEnd, _ := json.Marshal(map[string]string{"type": "replay_end"})
-	if err := writeFrame(0x1, replayEnd); err != nil {
-		if subErr == nil {
-			relay.fanout.Unsubscribe(subID)
-		}
-		_ = conn.Close()
-		return
-	}
-
-	// If subscribe failed, distinguish the two causes (Fanout.Subscribe returns
-	// both): ErrFanoutClosed means the shell already exited before this reconnect —
-	// send the final scrollback, an `exited` notification, and close, so the browser
-	// shows the death and stops reconnecting. ErrFanoutFull means the 32-subscriber
-	// cap was hit while the shell is HEALTHY — send a plain close (no `exited`) so
-	// the client's reconnect backoff retries instead of declaring a live terminal
-	// dead (finding A).
-	if subErr != nil {
-		if errors.Is(subErr, pty.ErrFanoutClosed) {
-			exitMsg, _ := json.Marshal(map[string]any{"type": "exited", "code": relay.exitCode})
-			_ = writeFrame(0x1, exitMsg)
-		}
-		_ = writeFrame(0x8, nil)
-		_ = conn.Close()
-		return
-	}
-
-	deps.logEvent("terminal_ws_connect", map[string]any{"session_id": sess.ID, "sub_id": subID})
-	wsLoop(conn, bufrw, deps, sess, relay, sub, writeFrame)
-	relay.fanout.Unsubscribe(subID)
-	deps.logEvent("terminal_ws_disconnect", map[string]any{"session_id": sess.ID, "sub_id": subID})
-}
-
-// wsLoop relays data between a WebSocket connection and a PTY session.
-// Downstream (fan-out -> browser): binary WebSocket frames with raw terminal output.
-// Upstream (browser -> PTY): binary frames as keystrokes via write buffer, text frames as JSON control.
-// Server sends ping frames every PingInterval; if no frame (data or pong) arrives
-// within PongTimeout the connection is considered dead and closed. The PTY session
-// survives so the browser can reconnect with scrollback replay.
-//
-// Coordinated shutdown: all three goroutines share a connDone channel and a sync.Once-guarded
-// closeConn function. Any goroutine that detects a terminal condition calls closeConn(),
-// which closes connDone (unblocking the others) then closes the underlying TCP connection
-// exactly once. This prevents double-close races and goroutine leaks.
-// writeFrame is the shared, deadline-bound frame writer created in
-// HandleTerminalWS right after the handshake and threaded through here, so the
-// pre-loop replay writes and wsLoop's downstream/ping/control writes all serialize
-// on ONE mutex (a second NewFrameWriter would double-serialize on a different
-// mutex and defeat the shared-writer invariant).
-func wsLoop(conn net.Conn, rw *bufio.ReadWriter, deps Deps, sess *pty.Session, relay *Relay, sub <-chan []byte, writeFrame func(opcode byte, payload []byte) error) {
-	// Coordinated shutdown: connDone signals all goroutines to exit,
-	// closeConn ensures conn.Close() is called exactly once.
-	connDone := make(chan struct{})
-	var connDoneOnce sync.Once
-	closeConn := func() {
-		connDoneOnce.Do(func() {
-			close(connDone)
-			_ = conn.Close()
-		})
-	}
-
-	// Fan-out -> WebSocket (downstream): read from subscriber channel and send as binary frames.
-	// Also tracks alt-screen state changes and notifies the frontend.
-	downstreamDone := make(chan struct{})
-	goConnWorker(deps, sess.ID, "downstream", closeConn, func() {
-		defer close(downstreamDone)
-		prevAltScreen := sess.AltScreenActive()
-		for {
-			select {
-			case data, ok := <-sub:
-				if !ok {
-					if relay.Ended() {
-						// Session genuinely ended — send exit notification so the
-						// browser can display the message and stop reconnecting.
-						exitMsg, _ := json.Marshal(map[string]any{"type": "exited", "code": relay.exitCode})
-						_ = writeFrame(0x1, exitMsg)
-					} else {
-						// This subscriber was dropped for being slow (fanout
-						// backpressure) while the shell is still running. Do NOT
-						// declare it `exited` — just close so the browser reconnects
-						// and replays scrollback instead of showing a dead terminal.
-						deps.logEvent("terminal_ws_subscriber_dropped", map[string]any{"session_id": sess.ID})
-					}
-					_ = writeFrame(0x8, nil)
-					closeConn()
-					return
-				}
-				if err := writeFrame(0x2, data); err != nil {
-					closeConn()
-					return
-				}
-				// Notify frontend of alt-screen state changes.
-				altScreen := sess.AltScreenActive()
-				if altScreen != prevAltScreen {
-					prevAltScreen = altScreen
-					ctrl, _ := json.Marshal(map[string]any{"type": "alt_screen", "active": altScreen})
-					_ = writeFrame(0x1, ctrl)
-				}
-			case <-connDone:
-				return
-			}
-		}
-	})
-
-	// Server-initiated ping keepalive — detects dead connections (browser crash,
-	// laptop sleep) without ever timing out idle users.
-	pingTicker := time.NewTicker(PingInterval)
-	goConnWorker(deps, sess.ID, "ping", closeConn, func() {
-		defer pingTicker.Stop()
-		for {
-			select {
-			case <-connDone:
-				return
-			case <-pingTicker.C:
-				if err := writeFrame(0x9, nil); err != nil {
-					closeConn()
-					return
-				}
-			}
-		}
-	})
-
-	// WebSocket -> PTY (upstream): read frames and dispatch.
-	// Uses relay.writeBuf for non-blocking writes with backpressure.
-	// NOTE: Do NOT call sess.Close() on WebSocket disconnect — the session
-	// must survive page refreshes so the browser can reconnect with scrollback replay.
-	// Sessions are only killed explicitly via POST /terminal/stop (the Exit button).
-	goConnWorker(deps, sess.ID, "upstream", closeConn, func() {
-		defer closeConn() // Close conn on exit so downstream detects it and browser auto-reconnects
-		for {
-			// Refresh read deadline on every iteration — any received frame
-			// (data, pong, ping) proves the connection is alive.
-			_ = conn.SetReadDeadline(time.Now().Add(PongTimeout))
-
-			fin, opcode, payload, err := deps.WSReadFrame(rw)
-			if err != nil {
-				// Read deadline expired or connection error — close silently.
-				// PTY stays alive for reconnection.
-				return
-			}
-
-			// Reject fragmented frames (FIN=0). Terminal messages are always
-			// single-frame; accepting fragments would require reassembly state
-			// and risks incomplete data being written to the PTY.
-			if !fin {
-				_ = writeFrame(0x8, nil) // Send close frame per RFC 6455.
-				return
-			}
-
-			switch opcode {
-			case 0x8: // Close
-				_ = writeFrame(0x8, nil)
-				return // WebSocket closed — stop relaying but keep PTY alive
-			case 0x9: // Ping -> Pong
-				_ = writeFrame(0xA, payload)
-			case 0xA: // Pong — no-op, deadline already refreshed above
-			case 0x2: // Binary — raw keystrokes -> PTY stdin via write buffer
-				_, _ = relay.writeBuf.Write(payload)
-			case 0x1: // Text — JSON control message
-				HandleControlMessage(payload, sess)
-			}
-		}
-	})
-
-	<-downstreamDone
-}
-
-// goConnWorker launches one per-connection wsLoop goroutine with panic recovery.
-// The daemon invariant is that nothing it is sent may crash the process: a panic
-// in the downstream pump, ping keepalive, or upstream reader (e.g. a write on a
-// closed pipe, a malformed frame, a nil deref on hostile input) must tear down
-// ONLY this connection. On panic it logs a structured, session-correlated event
-// (so the outage is diagnosable in ~/.kaboom/logs/kaboom.jsonl) and calls
-// closeConn so the sibling goroutines unwind and the browser can reconnect with
-// scrollback replay. fn's own deferred cleanup (e.g. close(downstreamDone)) still
-// runs during unwind because it is registered inside fn, below this recover.
-func goConnWorker(deps Deps, sessionID, role string, closeConn func(), fn func()) {
-	go func() { // lint:allow-bare-goroutine — recover-wrapped; bounded by connDone/channel close
-		defer func() {
-			if r := recover(); r != nil {
-				stack := debug.Stack()
-				deps.logEvent("terminal_ws_panic", map[string]any{
-					"session_id": sessionID,
-					"role":       role,
-					"panic":      fmt.Sprintf("%v", r),
-					"stack":      string(stack),
-				})
-				if deps.Stderrf != nil {
-					deps.Stderrf("[Kaboom] PANIC in terminal WS %s goroutine (session %s): %v\n%s\n", role, sessionID, r, stack)
-				}
-				closeConn()
-			}
-		}()
-		fn()
-	}()
-}
-
-// writeDeadliner is the subset of net.Conn that NewFrameWriter uses to bound
-// frame writes. Nil in tests that write to an in-memory buffer.
-type writeDeadliner interface {
-	SetWriteDeadline(time.Time) error
-}
-
-// NewFrameWriter returns a thread-safe frame writer for one WebSocket
-// connection. All callers for that connection must share this writer. When conn
-// is non-nil, each write is bounded by WSWriteTimeout so a stalled reader cannot
-// wedge the downstream/ping goroutines.
-func NewFrameWriter(conn writeDeadliner, rw *bufio.ReadWriter, deps Deps) func(opcode byte, payload []byte) error {
-	var wsWriteMu sync.Mutex
-	return func(opcode byte, payload []byte) error {
-		wsWriteMu.Lock()
-		defer wsWriteMu.Unlock()
-		if conn != nil {
-			// Refresh the deadline per frame: a slow-but-progressing connection
-			// keeps getting a fresh window; only a truly stalled write errors,
-			// and the caller tears the connection down on that error.
-			_ = conn.SetWriteDeadline(time.Now().Add(WSWriteTimeout))
-		}
-		return deps.WSWriteFrame(rw, opcode, payload)
-	}
-}
-
-// ControlMessage is a JSON control message from the browser terminal.
-type ControlMessage struct {
-	Type string `json:"type"`
-	Cols int    `json:"cols"`
-	Rows int    `json:"rows"`
-}
-
-// HandleControlMessage processes a JSON control message from the browser.
-func HandleControlMessage(payload []byte, sess *pty.Session) {
-	var msg ControlMessage
-	if err := json.Unmarshal(payload, &msg); err != nil {
-		return
-	}
-	switch msg.Type {
-	case "resize":
-		if msg.Cols > 0 && msg.Rows > 0 {
-			_ = sess.Resize(uint16(msg.Cols), uint16(msg.Rows))
-			// Always force SIGWINCH so TUI apps redraw — TIOCSWINSZ only
-			// sends SIGWINCH when dimensions actually change, but on reconnect
-			// the dimensions may match while the display is stale.
-			sess.ForceRedraw()
-		}
-	}
-}
-
 // HandleTerminalStart creates a new terminal session.
 // resolveStartDir applies the terminal CWD priority: an explicit request dir
 // wins, else the active codebase (set via MCP/extension), else auto-detection.
@@ -515,14 +201,11 @@ func resolveStartDir(reqDir, activeCodebase string, autoDetect func() string) st
 // distinct status. Bucketing them all as 409-with-token once silently reconnected
 // the client to the *old* cwd with no error ("terminal failed for no reason").
 func classifyStartError(err error, sessionID, token string) (int, map[string]any) {
-	// macOS sandbox restriction (an MCP stdio-spawned daemon cannot fork).
+	// fork/exec EPERM: the OS refused to spawn a child. A restricted sandbox profile
+	// is the usual cause, but it is an INFERENCE — sandboxPayload states it as such
+	// and always carries the underlying error in `detail` (see IsSandboxError).
 	if IsSandboxError(err) {
-		return http.StatusServiceUnavailable, map[string]any{
-			"error":       "sandbox_restricted",
-			"message":     "The daemon was started by an MCP client and cannot spawn terminal processes due to macOS sandbox restrictions.",
-			"instruction": "Run this command in a separate terminal to restart the daemon with full permissions:",
-			"command":     "kaboom-agentic-browser --stop && kaboom-agentic-browser --daemon",
-		}
+		return http.StatusServiceUnavailable, sandboxPayload(err)
 	}
 	if errors.Is(err, pty.ErrSessionExists) {
 		return http.StatusConflict, map[string]any{
@@ -582,7 +265,7 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 		return AutoDetectCWD(cap)
 	})
 
-	result, err := mgr.Start(pty.StartConfig{
+	startCfg := pty.StartConfig{
 		ID:        req.ID,
 		Cmd:       req.Cmd,
 		Args:      req.Args,
@@ -591,11 +274,31 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 		Rows:      uint16(req.Rows),
 		RepoPath:  req.RepoPath,
 		AgentType: req.AgentType,
-	})
+	}
+	// A fork/exec EPERM is often transient (fork pressure, AV/EDR interposition), so
+	// retry it briefly rather than sending the user to a "restart your daemon" dead
+	// end. Only that one typed error is retried; everything else fails immediately.
+	// The sleep hook doubles as the retry log — otherwise a recovered spawn would
+	// leave no trace and this whole path would be invisible in production.
+	result, err := startWithEPERMRetry(
+		func() (*pty.StartResult, error) { return mgr.Start(startCfg) },
+		func(d time.Duration) {
+			deps.logEvent("terminal_spawn_eperm_retry", map[string]any{
+				"session_id": req.ID,
+				"dir":        req.Dir,
+				"backoff_ms": d.Milliseconds(),
+			})
+			time.Sleep(d)
+		},
+	)
 	// On success: create relay (fan-out + write buffer), configure idle detection,
 	// and handle init_command via the relay instead of reading PTY directly.
 	if err == nil {
-		sess, _ := mgr.Get(result.SessionID)
+		// Use the session Start returned rather than looking it up again by ID: the
+		// old `sess, _ := mgr.Get(result.SessionID)` swallowed the error and then
+		// dereferenced the result, so a /terminal/stop landing between Start and Get
+		// nil-panicked this handler (finding S4).
+		sess := result.Session
 		var relay *Relay
 		if result.Replaced {
 			// The manager evicted a dead session with this ID and spawned a fresh
@@ -735,13 +438,40 @@ func HandleTerminalStop(w http.ResponseWriter, r *http.Request, deps Deps, mgr *
 	deps.JSONResponse(w, http.StatusOK, map[string]string{"status": "stopped"})
 }
 
-// IsSandboxError returns true if err looks like a macOS sandbox/fork restriction.
-// MCP stdio-spawned daemons inherit a restricted environment that blocks posix_spawn/fork.
+// IsSandboxError reports whether err is a fork/exec EPERM — the signature of a
+// daemon running under a restricted sandbox profile that cannot spawn children.
+//
+// The scope is deliberately narrow. Every syscall in the PTY spawn path can
+// return EPERM (open /dev/ptmx, TIOCPTYGRANT, TIOCPTYUNLK, opening the slave,
+// TIOCSWINSZ), so the old bare "not permitted" substring match attributed all of
+// them to sandboxing and discarded the real error. A transient PTY failure was
+// then reported as "restart your daemon", which fixes nothing and hides the
+// actual cause. Match the one shape that genuinely means "cannot fork".
 func IsSandboxError(err error) bool {
-	msg := err.Error()
-	return strings.Contains(msg, "operation not permitted") ||
-		strings.Contains(msg, "Operation not permitted") ||
-		strings.Contains(msg, "not permitted")
+	if err == nil {
+		return false
+	}
+	var pathErr *fs.PathError
+	if !errors.As(err, &pathErr) || pathErr.Op != "fork/exec" {
+		return false
+	}
+	return errors.Is(pathErr.Err, syscall.EPERM)
+}
+
+// sandboxPayload builds the 503 body for a fork/exec EPERM. The diagnosis is an
+// inference; the underlying error is the fact, so `detail` always carries it.
+func sandboxPayload(err error) map[string]any {
+	detail := ""
+	if err != nil {
+		detail = err.Error()
+	}
+	return map[string]any{
+		"error":       "sandbox_restricted",
+		"message":     "The daemon could not spawn a terminal process: the OS denied fork/exec. This usually means the daemon is running under a restricted sandbox profile.",
+		"instruction": "Run this command in a separate terminal to restart the daemon with full permissions:",
+		"command":     "kaboom-agentic-browser --stop && kaboom-agentic-browser --daemon",
+		"detail":      detail,
+	}
 }
 
 // HandleTerminalConfig returns terminal session details including alt-screen state and subscriber counts.
@@ -810,7 +540,7 @@ func HandleTerminalUpload(w http.ResponseWriter, r *http.Request, deps Deps, mgr
 	}
 
 	// Cap request body at the upload limit (+4KB for overhead) to prevent
-	// unbounded memory buffering before pty.Upload's own LimitReader kicks in.
+	// unbounded memory buffering before ptyupload.Upload's own LimitReader kicks in.
 	r.Body = http.MaxBytesReader(w, r.Body, 10<<20+4096)
 
 	// Verify session exists.
@@ -832,10 +562,10 @@ func HandleTerminalUpload(w http.ResponseWriter, r *http.Request, deps Deps, mgr
 	contentType := r.Header.Get("Content-Type")
 	filename := r.URL.Query().Get("filename")
 
-	result, err := pty.Upload(workspaceDir, sessionID, contentType, filename, r.Body)
+	result, err := ptyupload.Upload(workspaceDir, sessionID, contentType, filename, r.Body)
 	if err != nil {
 		status := http.StatusBadRequest
-		if err == pty.ErrUploadTooLarge {
+		if err == ptyupload.ErrUploadTooLarge {
 			status = http.StatusRequestEntityTooLarge
 		}
 		deps.JSONResponse(w, status, map[string]string{"error": err.Error()})

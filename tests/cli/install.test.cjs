@@ -147,3 +147,17 @@ test('install-bundled-skills.sh markers match the real bundled manifest versions
     fs.rmSync(tmp, { recursive: true, force: true })
   }
 })
+
+test('installer stamps the install epoch next to the binary (latest-install-wins tiebreaker)', () => {
+  const installSh = fs.readFileSync(path.join(REPO_ROOT, 'scripts/install.sh'), 'utf8')
+  // A per-install epoch stamp gives the daemon's single-instance takeover a
+  // deterministic tiebreaker at equal versions (see install_epoch.go): the latest
+  // install wins, so two same-version installs can't thrash into a takeover war.
+  assert.match(installSh, /\.kaboom-install-epoch/, 'install.sh must write the .kaboom-install-epoch stamp')
+  // Nanosecond units (to match the binary-mtime fallback), with a BSD/macOS
+  // whole-seconds fallback since their date lacks %N.
+  assert.match(installSh, /date \+%s%N/, 'stamp should prefer GNU date %N nanoseconds')
+  assert.match(installSh, /date \+%s\)000000000/, 'stamp needs a BSD/macOS seconds-scaled-to-nanos fallback')
+  // Next to the binary in BIN_DIR, where install_epoch.go looks for it.
+  assert.match(installSh, /"\$BIN_DIR\/\.kaboom-install-epoch"/, 'stamp must live next to the binary in BIN_DIR')
+})

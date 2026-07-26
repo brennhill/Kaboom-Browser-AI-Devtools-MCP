@@ -20,6 +20,8 @@ const {
   writeConfigFile,
   resolveManagedBinaryPath,
 } = require('./config');
+const autoApprove = require('./auto-approve');
+const codexConfig = require('./codex-config');
 const { resolveExtensionDir } = require('./extension');
 
 const LEGACY_INSTALL_SERVER_NAMES = [
@@ -66,10 +68,15 @@ function buildMcpEntry(envVars = {}, options = {}) {
  * @returns {Object} {success, name, method, message}
  */
 function installViaCli(def, options) {
-  const { dryRun = false, envVars = {}, binaryCommand = resolveManagedBinaryPath() } = options;
+  const { dryRun = false, envVars = {}, binaryCommand = resolveManagedBinaryPath(), claudeSettingsPath } = options;
   const entryJson = buildMcpEntry(envVars, { binaryCommand });
   const cmd = def.detectCommand;
-  const args = [...def.installArgs];
+  // `claude mcp add-json <name> '<json>'` takes the server JSON as the FINAL
+  // POSITIONAL argument. It was previously piped to stdin, so the CLI aborted
+  // with "missing required argument 'json'". installArgs already ends with the
+  // server name; append the JSON config after it.
+  const baseArgs = [...def.installArgs];
+  const args = [...baseArgs, entryJson];
 
   if (dryRun) {
     return {
@@ -77,7 +84,8 @@ function installViaCli(def, options) {
       name: def.name,
       id: def.id,
       method: 'cli',
-      message: `Would run: ${cmd} ${args.join(' ')} '<json>'`,
+      autoApprove: def.autoApprove && def.autoApprove.kind === 'claude-settings' ? 'would-apply' : undefined,
+      message: `Would run: ${cmd} ${baseArgs.join(' ')} '<json>'`,
     };
   }
 
@@ -87,19 +95,34 @@ function installViaCli(def, options) {
     delete env.CLAUDECODE;
 
     execFileSync(cmd, args, {
-      input: entryJson,
       env,
       stdio: ['pipe', 'pipe', 'pipe'],
       timeout: 15000,
     });
 
-    return {
+    // Auto-approve: after the server is registered, trust ALL of its tools by
+    // adding `mcp__<server>` to ~/.claude/settings.json permissions.allow. This
+    // is a separate merge-safe write (the CLI has no flag for it). A failure
+    // here is reported (not swallowed) and does not undo the successful server
+    // registration.
+    const result = {
       success: true,
       name: def.name,
       id: def.id,
       method: 'cli',
       message: `Installed via ${cmd} CLI`,
     };
+    if (def.autoApprove && def.autoApprove.kind === 'claude-settings') {
+      try {
+        const aa = autoApprove.applyClaudeSettingsAllow({ settingsPath: claudeSettingsPath });
+        result.autoApprove = aa.changed ? 'applied' : 'unchanged';
+        result.autoApprovePath = aa.path;
+      } catch (aaErr) {
+        result.autoApprove = 'failed';
+        result.autoApproveError = aaErr.message;
+      }
+    }
+    return result;
   } catch (err) {
     return {
       success: false,
@@ -177,6 +200,18 @@ function installViaFile(def, options) {
   }
   configData[configKey][MCP_SERVER_NAME] = kaboomEntry;
 
+  // Fold whole-server tool auto-approve into the SAME atomic write (Gemini
+  // trust, OpenCode permission, Zed tool_permissions). UI-only clients are
+  // left untouched. Default-ON: Kaboom trusts its own tools so the user is
+  // never prompted where a config mechanism exists.
+  let autoApproveStatus = def.autoApprove
+    ? (def.autoApprove.kind === 'ui-only' ? 'ui-only' : 'none')
+    : undefined;
+  if (autoApprove.isSameFileKind(def)) {
+    const applied = autoApprove.applyToConfig(def, configData);
+    autoApproveStatus = applied ? (dryRun ? 'would-apply' : 'applied') : 'skipped';
+  }
+
   const skipValidation = configKey !== 'mcpServers';
   writeConfigFile(cfgPath, configData, dryRun, { skipValidation });
 
@@ -187,6 +222,33 @@ function installViaFile(def, options) {
     method: 'file',
     path: cfgPath,
     isNew,
+    autoApprove: autoApproveStatus,
+    message: dryRun ? `Would write to ${cfgPath}` : `Wrote to ${cfgPath}`,
+  };
+}
+
+/**
+ * Install to a TOML-format client (Codex config.toml): server registration +
+ * whole-server tool auto-approve, handled by lib/codex-config.js.
+ * @param {Object} def Client definition
+ * @param {Object} options {dryRun, envVars, binaryCommand}
+ * @returns {Object} {success, name, method, path, isNew, autoApprove, message}
+ */
+function installViaToml(def, options) {
+  const { dryRun = false, envVars = {}, binaryCommand = resolveManagedBinaryPath() } = options;
+  const cfgPath = getClientConfigPath(def);
+  if (!cfgPath) {
+    return { success: false, name: def.name, id: def.id, method: 'file', message: 'No config path for this platform' };
+  }
+  const r = codexConfig.installCodex({ configPath: cfgPath, binaryCommand, envVars, dryRun });
+  return {
+    success: true,
+    name: def.name,
+    id: def.id,
+    method: 'file',
+    path: cfgPath,
+    isNew: r.isNew,
+    autoApprove: r.autoApprove,
     message: dryRun ? `Would write to ${cfgPath}` : `Wrote to ${cfgPath}`,
   };
 }
@@ -200,6 +262,9 @@ function installViaFile(def, options) {
 function installToClient(def, options) {
   if (def.type === 'cli') {
     return installViaCli(def, options);
+  }
+  if (def.format === 'toml') {
+    return installViaToml(def, options);
   }
   return installViaFile(def, options);
 }
@@ -247,7 +312,7 @@ function executeInstall(options = {}) {
 
   for (const def of clients) {
     try {
-      const installResult = installToClient(def, { dryRun, envVars, binaryCommand });
+      const installResult = installToClient(def, { dryRun, envVars, binaryCommand, claudeSettingsPath: options.claudeSettingsPath });
 
       if (installResult.success) {
         result.installed.push(installResult);

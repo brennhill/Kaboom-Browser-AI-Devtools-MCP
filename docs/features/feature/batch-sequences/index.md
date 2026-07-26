@@ -34,7 +34,6 @@ last_verified_date: 2026-03-05
 - Tech Spec: [tech-spec.md](./tech-spec.md)
 - QA Plan: [qa-plan.md](./qa-plan.md)
 - Design Reference: [design-spec.md](./design-spec.md)
-- Flow Map Pointer: [flow-map.md](./flow-map.md)
 
 ## Canonical Note
 Batch execution and reusable configure sequences share step semantics; sequence replay should remain a thin layer over the core batch runner to keep behavior DRY and predictable.

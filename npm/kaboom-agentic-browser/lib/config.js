@@ -100,11 +100,18 @@ const CLIENT_DEFINITIONS = [
     detectCommand: 'claude',
     installArgs: ['mcp', 'add-json', '--scope', 'user', MCP_SERVER_NAME],
     removeArgs: ['mcp', 'remove', '--scope', 'user', MCP_SERVER_NAME],
+    // Auto-approve: write `mcp__<server>` into ~/.claude/settings.json
+    // permissions.allow (a bare server rule approves ALL its tools).
+    autoApprove: { kind: 'claude-settings' },
   },
   {
     id: 'claude-desktop',
     name: 'Claude Desktop',
     type: 'file',
+    // No config-file auto-approve exists — claude_desktop_config.json has no
+    // official trust/autoApprove field (only third-party injection hacks add
+    // one). Tool approval is a UI action ("Allow for this chat"/"Always allow").
+    autoApprove: { kind: 'ui-only', note: 'Approve in-app; no config field' },
     // claude_desktop_config.json is a dedicated MCP config: safe to delete when emptied.
     dedicatedMcpFile: true,
     configPath: {
@@ -121,6 +128,9 @@ const CLIENT_DEFINITIONS = [
     name: 'Cursor',
     type: 'file',
     dedicatedMcpFile: true,
+    // No config-file auto-approve: mcp.json has no trust field; auto-run is a
+    // UI setting (Run Modes / "auto-run").
+    autoApprove: { kind: 'ui-only', note: 'Enable auto-run in Cursor settings' },
     configPath: { all: '~/.cursor/mcp.json' },
     detectDir: { all: '~/.cursor' },
   },
@@ -129,6 +139,9 @@ const CLIENT_DEFINITIONS = [
     name: 'Windsurf',
     type: 'file',
     dedicatedMcpFile: true,
+    // No config-file auto-approve: mcp_config.json has no trust field;
+    // auto-execution is a UI setting (Cascade Turbo / "allow every tool").
+    autoApprove: { kind: 'ui-only', note: 'Allow the server in Cascade (Turbo)' },
     configPath: { all: '~/.codeium/windsurf/mcp_config.json' },
     detectDir: { all: '~/.codeium/windsurf' },
   },
@@ -137,6 +150,12 @@ const CLIENT_DEFINITIONS = [
     name: 'VS Code',
     type: 'file',
     dedicatedMcpFile: true,
+    // No per-server config auto-approve: mcp.json has no trust field, and the
+    // only file-based auto-approve (settings.json `chat.tools.global.autoApprove`)
+    // trusts EVERY tool of EVERY server globally — out of scope for a
+    // Kaboom-scoped installer, so we don't write it. Per-server = UI ("Always
+    // Allow").
+    autoApprove: { kind: 'ui-only', note: 'Use "Always Allow"; only a global auto-approve exists' },
     // VS Code's mcp.json uses a top-level "servers" key; "mcpServers" entries
     // were written by older Kaboom versions and must still be cleaned up.
     configKey: 'servers',
@@ -156,6 +175,9 @@ const CLIENT_DEFINITIONS = [
     id: 'gemini',
     name: 'Gemini CLI',
     type: 'file',
+    // Auto-approve: `trust: true` on the server entry bypasses all tool-call
+    // confirmations for that server.
+    autoApprove: { kind: 'gemini-trust' },
     configPath: { all: '~/.gemini/settings.json' },
     detectDir: { all: '~/.gemini' },
   },
@@ -163,6 +185,8 @@ const CLIENT_DEFINITIONS = [
     id: 'opencode',
     name: 'OpenCode',
     type: 'file',
+    // Auto-approve: top-level `permission` map, `<server>_*` => "allow".
+    autoApprove: { kind: 'opencode-permission' },
     configPath: { all: '~/.config/opencode/opencode.json' },
     detectDir: { all: '~/.config/opencode' },
     configKey: 'mcp',
@@ -177,6 +201,9 @@ const CLIENT_DEFINITIONS = [
     name: 'Antigravity',
     type: 'file',
     dedicatedMcpFile: true,
+    // No config-file auto-approve for the IDE: mcp_config.json has no trust
+    // field, and auto-approve lives in a separate UI-managed permissions policy.
+    autoApprove: { kind: 'ui-only', note: 'Approve in Antigravity UI; mcp_config.json has no trust field' },
     // Antigravity uses the home-dir path on every OS (matches the Go installer).
     configPath: { all: '~/.gemini/antigravity/mcp_config.json' },
     detectDir: { all: '~/.gemini/antigravity' },
@@ -187,6 +214,9 @@ const CLIENT_DEFINITIONS = [
     id: 'zed',
     name: 'Zed',
     type: 'file',
+    // Auto-approve: agent.tool_permissions.tools["mcp:<server>:<tool>"] =
+    // {default:"allow"} for each tool (Zed has no server-level wildcard).
+    autoApprove: { kind: 'zed-tool-permissions' },
     configPath: { all: '~/.config/zed/settings.json' },
     detectDir: { all: '~/.config/zed' },
     configKey: 'context_servers',
@@ -195,6 +225,21 @@ const CLIENT_DEFINITIONS = [
       if (envVars && Object.keys(envVars).length > 0) entry.env = envVars;
       return entry;
     },
+  },
+  {
+    id: 'codex',
+    name: 'Codex CLI',
+    type: 'file',
+    // Codex config is TOML — handled by lib/codex-config.js, not the JSON path.
+    format: 'toml',
+    // config.toml is a shared settings file; never delete it.
+    // Auto-approve: default_tools_approval_mode = "approve" trusts all tools.
+    autoApprove: { kind: 'codex-toml' },
+    // $CODEX_HOME overrides ~/.codex when set (honored via envHome below).
+    envHome: 'CODEX_HOME',
+    envHomeFile: 'config.toml',
+    configPath: { all: '~/.codex/config.toml' },
+    detectDir: { all: '~/.codex' },
   },
 ];
 
@@ -224,6 +269,19 @@ function expandPath(p) {
 }
 
 /**
+ * Resolve a client's env-var home override (e.g. $CODEX_HOME) when the
+ * definition declares one and the env var is set. Returns null otherwise, so
+ * all clients without `envHome` behave exactly as before.
+ * @param {Object} def Client definition
+ * @returns {string|null} Expanded override directory, or null
+ */
+function resolveEnvHome(def) {
+  if (!def.envHome) return null;
+  const val = process.env[def.envHome];
+  return val ? expandPath(val) : null;
+}
+
+/**
  * Get resolved config path for a file-type client definition
  * @param {Object} def Client definition
  * @param {string} [platform] Platform override (defaults to os.platform())
@@ -231,6 +289,10 @@ function expandPath(p) {
  */
 function getClientConfigPath(def, platform) {
   if (def.type === 'cli') return null;
+  const envHome = resolveEnvHome(def);
+  if (envHome && def.envHomeFile) {
+    return path.normalize(path.join(envHome, def.envHomeFile));
+  }
   const plat = platform || os.platform();
   const raw = def.configPath[plat] || def.configPath.all || null;
   return raw ? expandPath(raw) : null;
@@ -260,6 +322,8 @@ function getClientLegacyConfigPaths(def, platform) {
  */
 function getClientDetectDir(def, platform) {
   if (def.type === 'cli') return null;
+  const envHome = resolveEnvHome(def);
+  if (envHome) return envHome;
   const plat = platform || os.platform();
   const raw = def.detectDir[plat] || def.detectDir.all || null;
   return raw ? expandPath(raw) : null;
@@ -331,6 +395,7 @@ const CLIENT_ALIASES = {
   'opencode': 'opencode',
   'antigravity': 'antigravity',
   'zed': 'zed',
+  'codex': 'codex',
 };
 
 /**
@@ -362,11 +427,14 @@ function getValidAliases() {
 
 /**
  * Backward-compat: returns config file paths for detected file-type clients.
- * @returns {Array<string>} Array of config file paths
+ * Excludes non-JSON (TOML) clients like Codex — every consumer of this helper
+ * JSON-parses the returned paths, so a TOML path must never appear here. Codex
+ * is diagnosed/managed directly via CLIENT_DEFINITIONS instead.
+ * @returns {Array<string>} Array of JSON config file paths
  */
 function getConfigCandidates() {
   return CLIENT_DEFINITIONS
-    .filter(def => def.type === 'file')
+    .filter(def => def.type === 'file' && def.format !== 'toml')
     .map(def => getClientConfigPath(def))
     .filter(Boolean);
 }
@@ -394,6 +462,7 @@ function getToolNameFromPath(configPath) {
   if (normalized.includes('.gemini')) return 'Gemini CLI';
   if (normalized.includes(path.join('.config', 'opencode'))) return 'OpenCode';
   if (normalized.includes(path.join('.config', 'zed'))) return 'Zed';
+  if (normalized.includes('.codex')) return 'Codex CLI';
   if (normalized.includes('Code')) return 'VS Code';
   return 'Unknown';
 }

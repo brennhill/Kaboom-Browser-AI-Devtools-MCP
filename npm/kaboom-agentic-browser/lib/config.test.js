@@ -86,11 +86,11 @@ test('resolveManagedBinaryPath falls back to the command name on an unknown plat
 
 // --- CLIENT_DEFINITIONS ---
 
-test('CLIENT_DEFINITIONS contains all 9 clients', () => {
+test('CLIENT_DEFINITIONS contains all 10 clients (Codex added)', () => {
   const ids = CLIENT_DEFINITIONS.map(c => c.id);
   assert.deepEqual(ids, [
     'claude-code', 'claude-desktop', 'cursor', 'windsurf', 'vscode',
-    'gemini', 'opencode', 'antigravity', 'zed',
+    'gemini', 'opencode', 'antigravity', 'zed', 'codex',
   ]);
 });
 
@@ -373,6 +373,50 @@ test('zed buildEntry produces correct format', () => {
   const zed = CLIENT_DEFINITIONS.find(c => c.id === 'zed');
   const entry = zed.buildEntry({});
   assert.deepEqual(entry, { source: 'custom', command: 'kaboom-agentic-browser', args: [] });
+});
+
+// --- Codex client ---
+
+test('codex is a TOML-format client at ~/.codex/config.toml', () => {
+  const codex = CLIENT_DEFINITIONS.find(c => c.id === 'codex');
+  assert.equal(codex.type, 'file');
+  assert.equal(codex.format, 'toml');
+  assert.ok(codex.configPath.all.includes('.codex/config.toml'));
+  assert.equal(codex.autoApprove.kind, 'codex-toml');
+  // config.toml is shared — must never be flagged for deletion.
+  assert.ok(!codex.dedicatedMcpFile);
+});
+
+test('codex honors $CODEX_HOME for config path and detection', () => {
+  const codex = CLIENT_DEFINITIONS.find(c => c.id === 'codex');
+  const prev = process.env.CODEX_HOME;
+  try {
+    const home = path.join(os.tmpdir(), 'kaboom-codex-home-test');
+    process.env.CODEX_HOME = home;
+    const cfg = getClientConfigPath(codex);
+    assert.equal(cfg, path.normalize(path.join(home, 'config.toml')));
+  } finally {
+    if (prev === undefined) delete process.env.CODEX_HOME;
+    else process.env.CODEX_HOME = prev;
+  }
+});
+
+test('codex falls back to ~/.codex when CODEX_HOME is unset', () => {
+  const codex = CLIENT_DEFINITIONS.find(c => c.id === 'codex');
+  const prev = process.env.CODEX_HOME;
+  try {
+    delete process.env.CODEX_HOME;
+    const cfg = getClientConfigPath(codex);
+    assert.ok(fwd(cfg).includes('.codex/config.toml'));
+  } finally {
+    if (prev !== undefined) process.env.CODEX_HOME = prev;
+  }
+});
+
+test('getClientByAlias resolves codex; getToolNameFromPath maps the codex path', () => {
+  assert.equal(getClientByAlias('codex').id, 'codex');
+  const homeDir = os.homedir();
+  assert.equal(getToolNameFromPath(path.join(homeDir, '.codex', 'config.toml')), 'Codex CLI');
 });
 
 // --- getClientByAlias ---

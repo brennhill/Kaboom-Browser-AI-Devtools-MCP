@@ -2131,6 +2131,57 @@
     await chrome.runtime.sendMessage({ type: "qa_scan_requested", page_url: pageUrl });
   }
 
+  // extension/content/ui/hover/screenshot-feedback.js
+  var shutterAudioCtx = null;
+  function primeShutterAudio() {
+    if (!shutterAudioCtx || shutterAudioCtx.state === "closed") {
+      try {
+        shutterAudioCtx = new AudioContext();
+      } catch {
+      }
+    }
+  }
+  function playShutterSound() {
+    try {
+      if (!shutterAudioCtx || shutterAudioCtx.state === "closed") {
+        shutterAudioCtx = new AudioContext();
+      }
+      const ctx = shutterAudioCtx;
+      if (ctx.state === "suspended")
+        void ctx.resume();
+      const duration = 0.08;
+      const buffer = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * duration), ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++) {
+        const t = i / data.length;
+        const envelope = t < 0.1 ? t * 10 : Math.exp(-12 * (t - 0.1));
+        data[i] = (Math.random() * 2 - 1) * envelope * 0.3;
+      }
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start();
+    } catch {
+    }
+  }
+  function showScreenshotFlash(success) {
+    const flash = document.createElement("div");
+    Object.assign(flash.style, {
+      position: "fixed",
+      inset: "0",
+      zIndex: "2147483647",
+      background: success ? "rgba(250,204,21,0.3)" : "rgba(239,68,68,0.25)",
+      pointerEvents: "none",
+      opacity: "1"
+    });
+    document.documentElement.appendChild(flash);
+    setTimeout(() => {
+      flash.style.transition = "opacity 300ms ease-out";
+      flash.style.opacity = "0";
+    }, 120);
+    setTimeout(() => flash.remove(), 450);
+  }
+
   // extension/content/ui/terminal-panel-bridge.js
   var panelVisible = false;
   var bridgeInitialized = false;
@@ -2422,7 +2473,7 @@
     }
     unmountLauncher();
   }
-  var ANNOTATION_TERMINAL_NUDGE = "Check kaboom annotations and handle the requests now";
+  var ANNOTATION_TERMINAL_NUDGE = "Check the kaboom annotations and add each comment to your todo list, then work through them";
   function handleAnnotationsReady(event) {
     const detail = event.detail;
     if (!annotationChannelNonce || detail?.nonce !== annotationChannelNonce)
@@ -2475,54 +2526,8 @@
       console.warn("[KaBOOM!] Draw mode failed to load: " + (err instanceof Error ? err.message : String(err)) + ". The extension may need to be reloaded at chrome://extensions.");
     }
   }
-  var shutterAudioCtx = null;
-  function playShutterSound() {
-    try {
-      if (!shutterAudioCtx || shutterAudioCtx.state === "closed") {
-        shutterAudioCtx = new AudioContext();
-      }
-      const ctx = shutterAudioCtx;
-      if (ctx.state === "suspended")
-        void ctx.resume();
-      const duration = 0.08;
-      const buffer = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * duration), ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < data.length; i++) {
-        const t = i / data.length;
-        const envelope = t < 0.1 ? t * 10 : Math.exp(-12 * (t - 0.1));
-        data[i] = (Math.random() * 2 - 1) * envelope * 0.3;
-      }
-      const source = ctx.createBufferSource();
-      source.buffer = buffer;
-      source.connect(ctx.destination);
-      source.start();
-    } catch {
-    }
-  }
-  function showScreenshotFlash(success) {
-    const flash = document.createElement("div");
-    Object.assign(flash.style, {
-      position: "fixed",
-      inset: "0",
-      zIndex: "2147483647",
-      background: success ? "rgba(250,204,21,0.3)" : "rgba(239,68,68,0.25)",
-      pointerEvents: "none",
-      opacity: "1"
-    });
-    document.documentElement.appendChild(flash);
-    setTimeout(() => {
-      flash.style.transition = "opacity 300ms ease-out";
-      flash.style.opacity = "0";
-    }, 120);
-    setTimeout(() => flash.remove(), 450);
-  }
   function runScreenshotCapture() {
-    if (!shutterAudioCtx || shutterAudioCtx.state === "closed") {
-      try {
-        shutterAudioCtx = new AudioContext();
-      } catch {
-      }
-    }
+    primeShutterAudio();
     try {
       chrome.runtime.sendMessage({ type: "capture_screenshot" }, (response) => {
         const err = chrome.runtime.lastError;

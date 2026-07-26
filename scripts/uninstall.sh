@@ -7,7 +7,7 @@
 # `kaboom-agentic-browser --install`: binaries, extension files, autostart
 # registrations, shell PATH lines, MCP client config entries, managed agent
 # skills, and daemon runtime state. See
-# docs/architecture/flow-maps/uninstall-and-cleanup.md for the artifact map.
+# docs/architecture/uninstall-and-cleanup.md for the artifact map.
 #
 # USAGE:
 #   curl -sSL https://raw.githubusercontent.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/STABLE/scripts/uninstall.sh | bash -s -- --yes

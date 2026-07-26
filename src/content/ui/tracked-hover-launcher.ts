@@ -8,6 +8,7 @@ import type { ShowTrackedHoverLauncherMessage, TrackUiFeatureMessage } from '../
 import { RuntimeMessageName, StorageKey } from '../../lib/constants.js'
 import { KABOOM_DOCS_URL, KABOOM_REPOSITORY_URL } from '../../lib/brand.js'
 import { requestAudit } from '../../lib/request-audit.js'
+import { playShutterSound, primeShutterAudio, showScreenshotFlash } from './hover/screenshot-feedback.js'
 
 /**
  * Audit launches the QA-scan workflow through the terminal side panel. Hidden
@@ -212,7 +213,12 @@ interface AnnotationDetail {
 // prompt, drive escape sequences, or wedge terminal input mid-session. The
 // annotations themselves already reach the agent through the normal path
 // (draw-mode -> daemon -> analyze(what="annotations")); this is only the nudge.
-const ANNOTATION_TERMINAL_NUDGE = 'Check kaboom annotations and handle the requests now'
+//
+// The nudge tells the agent to add each annotation to its TODO LIST rather than
+// "handle them now": queuing them means the agent works through every comment —
+// including older ones it hasn't addressed yet — instead of only acting on the
+// latest batch and dropping the rest.
+const ANNOTATION_TERMINAL_NUDGE = 'Check the kaboom annotations and add each comment to your todo list, then work through them'
 
 function handleAnnotationsReady(event: Event): void {
   const detail = (event as CustomEvent).detail as
@@ -280,59 +286,9 @@ async function startDrawMode(): Promise<void> {
   }
 }
 
-// Primed AudioContext — created during user gesture so it won't be blocked.
-// Reused across captures; closed lazily by the browser when the page unloads.
-let shutterAudioCtx: AudioContext | null = null
-
-function playShutterSound(): void {
-  try {
-    if (!shutterAudioCtx || shutterAudioCtx.state === 'closed') {
-      shutterAudioCtx = new AudioContext()
-    }
-    const ctx = shutterAudioCtx
-    // Resume in case the context was suspended (autoplay policy)
-    if (ctx.state === 'suspended') void ctx.resume()
-    const duration = 0.08
-    const buffer = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * duration), ctx.sampleRate)
-    const data = buffer.getChannelData(0)
-    for (let i = 0; i < data.length; i++) {
-      const t = i / data.length
-      const envelope = t < 0.1 ? t * 10 : Math.exp(-12 * (t - 0.1))
-      data[i] = (Math.random() * 2 - 1) * envelope * 0.3
-    }
-    const source = ctx.createBufferSource()
-    source.buffer = buffer
-    source.connect(ctx.destination)
-    source.start()
-  } catch {
-    // Audio unavailable — silent fallback
-  }
-}
-
-function showScreenshotFlash(success: boolean): void {
-  const flash = document.createElement('div')
-  Object.assign(flash.style, {
-    position: 'fixed',
-    inset: '0',
-    zIndex: '2147483647',
-    background: success ? 'rgba(250,204,21,0.3)' : 'rgba(239,68,68,0.25)',
-    pointerEvents: 'none',
-    opacity: '1'
-  })
-  document.documentElement.appendChild(flash)
-  // Hold the flash visible for 120ms before fading out
-  setTimeout(() => {
-    flash.style.transition = 'opacity 300ms ease-out'
-    flash.style.opacity = '0'
-  }, 120)
-  setTimeout(() => flash.remove(), 450)
-}
-
 function runScreenshotCapture(): void {
   // Prime the AudioContext during the user gesture (click) so Chrome allows playback.
-  if (!shutterAudioCtx || shutterAudioCtx.state === 'closed') {
-    try { shutterAudioCtx = new AudioContext() } catch { /* no audio */ }
-  }
+  primeShutterAudio()
 
   try {
     chrome.runtime.sendMessage(

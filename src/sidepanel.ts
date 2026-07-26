@@ -11,6 +11,7 @@ import {
   state,
   resetAllState,
   getTerminalServerUrl,
+  resolveTerminalServerUrl,
   WIDGET_ID,
   IFRAME_ID,
   HEADER_ID,
@@ -39,8 +40,10 @@ import {
   stopActiveSession
 } from './content/ui/terminal-widget-session.js'
 import { showActionToast } from './content/ui/toast.js'
+import { getHostTabId, startPageAnnotation, closeBrowserSidePanel } from './content/ui/panel/host-tab.js'
 import { createRootFolderBar } from './content/ui/terminal-root-folder.js'
-import { renderNoSessionState, renderStartFailure } from './content/ui/terminal-panel-states.js'
+import { renderNoSessionState, renderStartFailure, renderStartPending } from './content/ui/terminal-panel-states.js'
+import { createPanelShell as buildPanelShell } from './content/ui/panel/shell.js'
 import {
   notifyIframe,
   resetWriteGuardState,
@@ -48,7 +51,8 @@ import {
   maybeShowQueuedWriteToast,
   scheduleQueuedWriteFlush,
   scheduleQueuedSubmit,
-  flushQueuedWrites
+  flushQueuedWrites,
+  enqueueBoundedWrite
 } from './content/ui/terminal-write-guard.js'
 
 // =============================================================================
@@ -139,79 +143,6 @@ export function resetPanelUi(): void {
 /** Backoff before re-announcing presence after a service-worker restart. */
 const PRESENCE_RECONNECT_DELAY_MS = 500
 
-function getHostTabIdFromLocation(): number | undefined {
-  try {
-    const raw = new URLSearchParams(globalThis.location?.search ?? '').get('tabId')
-    if (!raw) return undefined
-    const parsed = Number(raw)
-    return Number.isFinite(parsed) ? parsed : undefined
-  } catch {
-    return undefined
-  }
-}
-
-async function getHostTabId(): Promise<number | undefined> {
-  const fromLocation = getHostTabIdFromLocation()
-  if (fromLocation !== undefined) return fromLocation
-  if (!chrome.tabs?.query) return undefined
-  try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-    return tab?.id
-  } catch {
-    return undefined
-  }
-}
-
-/**
- * Start page annotation (draw mode) on the terminal's host/tracked tab.
- *
- * Draw mode is otherwise only reachable via the right-click menu / keyboard
- * shortcut, which is hard to discover — the header button surfaces it right next
- * to the terminal. The terminal lives in the side panel but draw mode runs in
- * the tracked tab's content script, so we send the same kaboom_draw_mode_start
- * the popup and shortcut use directly to that tab.
- */
-async function startPageAnnotation(): Promise<void> {
-  const tabId = await getHostTabId()
-  if (typeof tabId !== 'number') {
-    showActionToast('No page to annotate', 'Annotate', 'warning', 2000)
-    return
-  }
-  try {
-    await chrome.tabs.sendMessage(tabId, { type: 'kaboom_draw_mode_start', started_by: 'user' })
-  } catch {
-    showActionToast('Refresh the page, then try Annotate again', 'Annotate', 'warning', 2600)
-  }
-}
-
-/**
- * Close the browser side panel.
- *
- * `chrome.sidePanel.close()` only exists in very recent Chrome. The old code
- * bailed out silently when it was missing, so the close button did nothing at
- * all — combined with unmountPanel() that left a blank panel the user could not
- * close *or* recover. `window.close()` works from the panel document itself on
- * every version that has side panels, so it is the fallback and the last word.
- */
-async function closeBrowserSidePanel(): Promise<void> {
-  if (chrome.sidePanel?.close) {
-    const tabId = await getHostTabId()
-    if (tabId !== undefined) {
-      try {
-        await chrome.sidePanel.close({ tabId })
-        return
-      } catch {
-        // Fall through to window.close().
-      }
-    }
-  }
-  try {
-    window.close()
-  } catch {
-    // Nothing else to try; the panel stays open but remains usable.
-  }
-}
-
 function setPanelVisible(visible: boolean): void {
   state.visible = visible
   if (!panel.rootEl) return
@@ -238,6 +169,37 @@ function showTerminalBody(): void {
 function showNoSessionState(): void {
   if (!panel.terminalBodyEl) return
   renderNoSessionState(panel.terminalBodyEl, () => { void bootTerminalPanel(true) })
+}
+
+const BOOT_PENDING_ID = 'kaboom-terminal-boot-pending'
+
+/**
+ * Show a standalone "starting…" overlay for the window where no panel exists.
+ *
+ * A boot resolves the session BEFORE it builds and mounts the shell, and a
+ * forceFresh boot unmounts the old panel first — so for the whole (network-bound,
+ * now retry-extended) `ensureTerminalSession()` call there is no terminal body to
+ * render into and the side panel sits empty. An empty panel is indistinguishable
+ * from a broken one, which is exactly the ambiguity the honest-error work is
+ * trying to remove.
+ *
+ * Deliberately NOT part of the panel shell: it owns its own element and lifecycle,
+ * so it cannot interact with the generation-based mount races that `panel.*`
+ * carefully guards.
+ */
+function showBootPending(): void {
+  if (document.getElementById(BOOT_PENDING_ID)) return
+  const host = document.body || document.documentElement
+  if (!host) return
+  const el = document.createElement('div')
+  el.id = BOOT_PENDING_ID
+  renderStartPending(el)
+  host.appendChild(el)
+}
+
+/** Remove the boot overlay. Safe to call when it was never shown. */
+function clearBootPending(): void {
+  document.getElementById(BOOT_PENDING_ID)?.remove()
 }
 
 /**
@@ -395,203 +357,27 @@ function handleIframeMessage(event: MessageEvent): void {
 }
 
 /**
- * Build one 24×24 icon button for the terminal header. All four header controls
- * (disconnect / redraw / minimize / close) share the same box, hover affordance,
- * and click-swallowing wrapper — only the id, glyph, tooltip, accent colour, and
- * action differ. One factory keeps them from drifting apart (repo rule 19/DRY).
+ * Wire the extracted shell builder to this module's panel/state fields.
+ *
+ * The builder owns no state, so every element it creates is routed back here. One
+ * adapter keeps that wiring in a single place and leaves call sites unchanged.
  */
-function createTerminalHeaderButton(opts: {
-  id: string
-  glyph: string
-  title: string
-  color: string
-  fontSize?: string
-  onClick: () => void
-}): HTMLButtonElement {
-  const button = document.createElement('button')
-  button.id = opts.id
-  button.textContent = opts.glyph
-  button.title = opts.title
-  button.type = 'button'
-  Object.assign(button.style, {
-    width: '24px',
-    height: '24px',
-    border: 'none',
-    background: 'transparent',
-    color: opts.color,
-    fontSize: opts.fontSize ?? '14px',
-    cursor: 'pointer',
-    borderRadius: '4px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: '0'
-  })
-  button.addEventListener('click', (e: MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    opts.onClick()
-  })
-  return button
-}
-
-function createTerminalHeader(): HTMLDivElement {
-  const header = document.createElement('div')
-  header.id = HEADER_ID
-  Object.assign(header.style, {
-    height: '38px',
-    background: '#16161e',
-    display: 'flex',
-    alignItems: 'center',
-    padding: '0 10px 0 12px',
-    gap: '8px',
-    borderBottom: '1px solid #292e42',
-    flexShrink: '0'
-  })
-
-  panel.statusDotEl = document.createElement('span')
-  panel.statusDotEl.className = 'kaboom-terminal-status-dot'
-  Object.assign(panel.statusDotEl.style, {
-    width: '8px',
-    height: '8px',
-    borderRadius: '50%',
-    background: '#565f89',
-    flexShrink: '0',
-    transition: 'background 200ms ease'
-  })
-
-  const titleSpan = document.createElement('span')
-  titleSpan.textContent = 'KaBOOM! Terminal'
-  Object.assign(titleSpan.style, {
-    color: '#d8dee9',
-    fontSize: '12px',
-    fontWeight: '600',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-    userSelect: 'none'
-  })
-
-  const spacer = document.createElement('div')
-  spacer.style.flex = '1'
-
-  const disconnectButton = createTerminalHeaderButton({
-    id: DISCONNECT_TERMINAL_BUTTON_ID,
-    glyph: '\u23FB',
-    title: 'End session — stops the shell and closes the panel',
-    color: '#f7768e',
-    fontSize: '12px',
-    onClick: () => void exitTerminalSession()
-  })
-
-  const annotateButton = createTerminalHeaderButton({
-    id: ANNOTATE_TERMINAL_BUTTON_ID,
-    glyph: '\u270E',
-    title: 'Annotate the page \u2014 draw and mark up elements for the agent',
-    color: '#7aa2f7',
-    onClick: () => void startPageAnnotation()
-  })
-
-  const redrawButton = createTerminalHeaderButton({
-    id: REDRAW_TERMINAL_BUTTON_ID,
-    glyph: '\u21BB',
-    title: 'Redraw terminal graphics',
-    color: '#565f89',
-    onClick: () => void redrawTerminal()
-  })
-
-  panel.minimizeButtonEl = createTerminalHeaderButton({
-    id: MINIMIZE_TERMINAL_BUTTON_ID,
-    glyph: '\u2581',
-    title: 'Minimize terminal',
-    color: '#565f89',
-    onClick: () => void minimizePanel()
-  })
-
-  const closeButton = createTerminalHeaderButton({
-    id: CLOSE_TERMINAL_BUTTON_ID,
-    glyph: '\u2715',
-    title: 'Close panel — the shell keeps running, reopen to come back',
-    color: '#c0caf5',
-    onClick: () => void closePanelKeepingSession()
-  })
-
-  header.appendChild(panel.statusDotEl)
-  header.appendChild(titleSpan)
-  header.appendChild(disconnectButton)
-  header.appendChild(spacer)
-  header.appendChild(annotateButton)
-  header.appendChild(redrawButton)
-  header.appendChild(panel.minimizeButtonEl)
-  // Rightmost, where every other close control on the platform lives.
-  header.appendChild(closeButton)
-
-  return header
-}
-
 function createPanelShell(token: string): HTMLDivElement {
-  const root = document.createElement('div')
-  root.id = WIDGET_ID
-  Object.assign(root.style, {
-    position: 'fixed',
-    inset: '0',
-    zIndex: '2147483644',
-    display: 'flex',
-    flexDirection: 'column',
-    background: '#0f1117',
-    color: '#e5e7eb',
-    opacity: '1',
-    pointerEvents: 'auto',
-    transition: 'opacity 180ms ease'
+  return buildPanelShell(token, {
+    serverUrl: state.serverUrl,
+    onExit: () => { void exitTerminalSession() },
+    onAnnotate: () => { void startPageAnnotation() },
+    onRedraw: () => { void redrawTerminal() },
+    onMinimize: () => { void minimizePanel() },
+    onClose: () => { void closePanelKeepingSession() },
+    createRootFolderBar: () => createRootFolderBarElement(),
+    setStatusDot: (el) => { panel.statusDotEl = el },
+    setMinimizeButton: (el) => { panel.minimizeButtonEl = el },
+    setTerminalShell: (el) => { panel.terminalShellEl = el },
+    setTerminalBody: (el) => { panel.terminalBodyEl = el },
+    setWidget: (el) => { state.widgetEl = el },
+    setIframe: (el) => { state.iframeEl = el }
   })
-
-  const terminalShell = document.createElement('div')
-  terminalShell.style.cssText = [
-    'flex:1 1 auto',
-    'height:100%',
-    'min-height:0',
-    'display:flex',
-    'flex-direction:column',
-    'background:#11131a'
-  ].join(';')
-
-  const header = createTerminalHeader()
-
-  const terminalBody = document.createElement('div')
-  terminalBody.id = TERMINAL_BODY_ID
-  terminalBody.style.cssText = [
-    'flex:1',
-    'min-height:0',
-    'display:block',
-    'background:#1a1b26'
-  ].join(';')
-
-  if (token) {
-    const iframe = document.createElement('iframe')
-    iframe.id = IFRAME_ID
-    iframe.src = `${getTerminalServerUrl(state.serverUrl)}/terminal?token=${encodeURIComponent(token)}`
-    iframe.setAttribute('allow', 'clipboard-write')
-    iframe.style.cssText = 'width:100%;height:100%;border:none;background:#1a1b26;display:block;'
-    terminalBody.appendChild(iframe)
-    state.iframeEl = iframe
-  } else {
-    state.iframeEl = null
-  }
-
-  terminalShell.appendChild(header)
-  // Above the terminal, always visible: the working directory is the single
-  // most consequential thing about a shell, and it used to be invisible unless
-  // the session had failed to start.
-  terminalShell.appendChild(createRootFolderBarElement())
-  terminalShell.appendChild(terminalBody)
-
-  root.appendChild(terminalShell)
-
-  panel.terminalShellEl = terminalShell
-  panel.terminalBodyEl = terminalBody
-  state.widgetEl = root
-
-  return root
 }
 
 function mountPanel(root: HTMLDivElement): void {
@@ -641,7 +427,7 @@ async function redrawTerminal(): Promise<void> {
   // Mark disconnected so a write in that reconnect gap queues instead of being
   // sent-and-dropped (the redraw sub-case of the write-connection race).
   state.terminalConnected = false
-  iframe.src = `${getTerminalServerUrl(state.serverUrl)}/terminal?token=${encodeURIComponent(currentToken)}`
+  iframe.src = `${await resolveTerminalServerUrl(state.serverUrl)}/terminal?token=${encodeURIComponent(currentToken)}`
   showTerminalBody()
   persistUIState('open')
 }
@@ -683,7 +469,7 @@ async function exitTerminalSession(): Promise<void> {
   panel.panelCloseIntent = 'clear'
   if (state.sessionState) {
     try {
-      const termUrl = getTerminalServerUrl(state.serverUrl)
+      const termUrl = await resolveTerminalServerUrl(state.serverUrl)
       await fetch(`${termUrl}/terminal/stop`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -710,24 +496,6 @@ async function closePanelKeepingSession(): Promise<void> {
 
 async function minimizePanel(): Promise<void> {
   await closePanelWithIntent('minimized')
-}
-
-const MAX_QUEUED_WRITES = 200
-
-/**
- * Enqueue a write, bounding the backlog at MAX_QUEUED_WRITES. Dropping the oldest
- * is a state-mutating loss, so it must not be silent (rule 25): warn to the console
- * (which the daemon captures via observe(what:"errors")) so an overflow is
- * diagnosable rather than a write vanishing without a trace.
- */
-function enqueueBoundedWrite(text: string): void {
-  if (state.queuedWrites.length >= MAX_QUEUED_WRITES) {
-    const dropped = state.queuedWrites.shift()
-    console.warn(
-      `[KaBOOM! terminal] write queue full (${MAX_QUEUED_WRITES}) — dropped oldest queued write: "${(dropped ?? '').slice(0, 40)}"`
-    )
-  }
-  state.queuedWrites.push(text)
 }
 
 function writeToTerminal(text: string): void {
@@ -920,6 +688,11 @@ async function bootTerminalPanelInner(forceFresh: boolean, gen: number): Promise
   panel.panelReady = true
   panel.panelCloseIntent = null
   panel.pendingSandboxError = null
+  // Nothing is mounted from here until mountPanel() below, and the session call in
+  // between is network-bound (and may now retry a transient EPERM). Show a live
+  // pending state for that gap. Cleared in `finally` so every exit — success, throw,
+  // and all three superseded-generation early returns — takes it down.
+  showBootPending()
   try {
     state.serverUrl = await getServerUrl()
     if (gen !== panel.bootGeneration) return // superseded by a newer boot
@@ -959,6 +732,10 @@ async function bootTerminalPanelInner(forceFresh: boolean, gen: number): Promise
       console.log('[KaBOOM! terminal] boot failed:', String(err))
       if (panel.terminalBodyEl) showNoSessionState()
     }
+  } finally {
+    // Must run on EVERY exit path, including the superseded-generation returns —
+    // a leaked overlay would sit on top of the panel the newer boot just mounted.
+    clearBootPending()
   }
 }
 

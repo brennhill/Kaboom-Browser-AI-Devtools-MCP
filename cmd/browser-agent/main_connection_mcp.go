@@ -57,6 +57,13 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonLaunchOption
 		}
 	}
 
+	// Crash-loop self-defense: if this SAME install (version + epoch) has restarted
+	// too many times too fast, log loudly and back off a bounded amount before binding
+	// so a pathological loop degrades gracefully instead of hammering launchd (which
+	// would throttle/disable the LaunchAgent and take the terminal server on port+1
+	// dark too). Never refuses to start; an upgrade/epoch takeover resets the counter.
+	applyStartupRestartThrottle(server, port)
+
 	srv, httpDone, err := startHTTPServer(server, port, apiKey, mux)
 	if err != nil {
 		return err
@@ -79,11 +86,24 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonLaunchOption
 		}
 	}
 	if termErr != nil {
+		// Identify whoever holds the port. "Port busy" is not actionable; "postgres
+		// (pid 4242) is on 7891" is. This is recorded into /health because the stderr
+		// lines below go to /dev/null for a bridge-spawned daemon (spawned with
+		// Stdout/Stderr = nil so it cannot die of SIGPIPE), making the health payload
+		// the only place a user or agent can learn what happened.
+		blockingPID, blockingCmd := identifyPortHolder(termPort)
+		server.setTerminalUnavailable(termPort, termErr.Error(), blockingPID, blockingCmd)
+
 		stderrf("[Kaboom] WARNING: terminal server failed to start on port %d: %v\n", termPort, termErr)
+		if blockingPID > 0 {
+			stderrf("[Kaboom] Port %d is held by pid %d (%s).\n", termPort, blockingPID, blockingCmd)
+		}
 		stderrf("[Kaboom] Terminal features are unavailable. Free port %d or use a different base port.\n", termPort)
 		server.logLifecycle("terminal_server_bind_failed", termPort, map[string]any{
-			"error":     termErr.Error(),
-			"term_port": termPort,
+			"error":          termErr.Error(),
+			"term_port":      termPort,
+			"blocked_by_pid": blockingPID,
+			"blocked_by_cmd": blockingCmd,
 		})
 	} else {
 		server.setTerminalPort(termPort)

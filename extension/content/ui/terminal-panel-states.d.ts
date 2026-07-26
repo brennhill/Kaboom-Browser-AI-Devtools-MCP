@@ -14,6 +14,15 @@
  */
 export declare function renderNoSessionState(container: HTMLElement, onStart: () => void): void;
 /**
+ * Render a live "starting…" state into `container`.
+ *
+ * The daemon retries a transient fork/exec EPERM before giving up, so a spawn can
+ * legitimately take a few hundred milliseconds. Without this the panel body was
+ * visually identical to a dead one for that whole window and the user could not
+ * tell "working on it" from "broken".
+ */
+export declare function renderStartPending(container: HTMLElement, label?: string): void;
+/**
  * Render a start failure: what happened, what to do, and the command to run.
  */
 export declare function renderStartFailure(container: HTMLElement, message: string, instruction: string, command: string): void;
