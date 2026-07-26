@@ -2,7 +2,7 @@
 // Why: Keeps cluster lifecycle state changes separate from manager entry points.
 // Docs: docs/features/feature/error-clustering/index.md
 
-package analysis
+package clustering
 
 import (
 	"fmt"

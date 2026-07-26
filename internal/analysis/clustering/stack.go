@@ -2,7 +2,7 @@
 // Why: Keeps clustering matches stable by centralizing fuzzy-match signal extraction rules.
 // Docs: docs/features/feature/error-clustering/index.md
 
-package analysis
+package clustering
 
 import (
 	"fmt"

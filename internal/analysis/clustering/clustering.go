@@ -2,7 +2,14 @@
 // Why: Reduces noisy error streams into actionable clusters for faster debugging triage.
 // Docs: docs/features/feature/error-clustering/index.md
 
-package analysis
+// Package clustering groups recurring error instances into root-cause clusters.
+//
+// Errors are fingerprinted by normalized message (IDs, UUIDs, URLs and timestamps
+// replaced with placeholders) plus parsed application stack frames; an incoming
+// error joins a cluster when at least two of {message, shared frame, temporal
+// proximity} agree. ClusterManager owns the whole lifecycle: matching, capping,
+// alerting at the third instance, and inactivity expiry.
+package clustering
 
 import (
 	"sync"

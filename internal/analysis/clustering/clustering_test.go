@@ -1,7 +1,7 @@
 // Purpose: Tests for error clustering and deduplication.
-// Docs: docs/features/feature/api-schema/index.md
+// Docs: docs/features/feature/error-clustering/index.md
 
-package analysis
+package clustering
 
 import (
 	"strings"
@@ -369,13 +369,13 @@ func TestClusterAlertAt3Instances(t *testing.T) {
 	t.Parallel()
 	cm := NewClusterManager()
 	cm.AddError(ErrorInstance{
-		Message: "Error",
-		Stack:   "    at func (a.js:1:1)",
+		Message:   "Error",
+		Stack:     "    at func (a.js:1:1)",
 		Timestamp: time.Now(),
 	})
 	cm.AddError(ErrorInstance{
-		Message: "Error",
-		Stack:   "    at func (a.js:1:1)",
+		Message:   "Error",
+		Stack:     "    at func (a.js:1:1)",
 		Timestamp: time.Now(),
 	})
 
@@ -386,8 +386,8 @@ func TestClusterAlertAt3Instances(t *testing.T) {
 	}
 
 	cm.AddError(ErrorInstance{
-		Message: "Error",
-		Stack:   "    at func (a.js:1:1)",
+		Message:   "Error",
+		Stack:     "    at func (a.js:1:1)",
 		Timestamp: time.Now(),
 	})
 

@@ -1,6 +1,8 @@
 // Purpose: Matches incoming errors to existing clusters using signal-counting heuristics.
 // Why: Isolates cluster matching logic from cluster lifecycle management.
-package analysis
+// Docs: docs/features/feature/error-clustering/index.md
+
+package clustering
 
 import (
 	"fmt"

@@ -1,8 +1,6 @@
-// Purpose: Unit tests for error clustering and API schema analysis clustering logic.
-// Docs: docs/features/feature/api-schema/index.md
-
-// clustering_unit_test.go — Unit tests for addUnclustered FIFO eviction.
-package analysis
+// Purpose: Unit tests for cluster mutation operations (addUnclustered FIFO eviction).
+// Docs: docs/features/feature/error-clustering/index.md
+package clustering
 
 import (
 	"fmt"

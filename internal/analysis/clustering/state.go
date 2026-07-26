@@ -2,7 +2,7 @@
 // Why: Separates read/report lifecycle methods from clustering mutation logic.
 // Docs: docs/features/feature/error-clustering/index.md
 
-package analysis
+package clustering
 
 import (
 	"fmt"
