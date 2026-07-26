@@ -93,7 +93,9 @@ func (r *Relay) appendAndBroadcast(data []byte) {
 // subscriber atomically under subMu (the same lock appendAndBroadcast holds), so
 // the reconnect boundary between replayed history and live channel output is
 // seamless: every chunk is in exactly one of the two. Returns the same errors as
-// Fanout.Subscribe — ErrFanoutClosed (session ended) or ErrFanoutFull (cap).
+// Fanout.Subscribe — ErrFanoutClosed (session ended), ErrFanoutFull (cap), or
+// ErrDuplicateSubscriber (a reused subID; WS ids come from NextWSSubID and are
+// unique by construction).
 func (r *Relay) SubscribeWithHistory(subID string) (history []byte, sub <-chan []byte, err error) {
 	r.subMu.Lock()
 	defer r.subMu.Unlock()
@@ -284,9 +286,10 @@ func NextWSSubID() string {
 // direct-PTY-read approach so the relay's readLoop owns all PTY reads.
 func WaitForPromptViaRelay(relay *Relay, initCmd string) {
 	// A UNIQUE id per call: a constant "init-cmd" makes two concurrent inits on one
-	// relay collide — the second Subscribe overwrites the first's map entry, and the
-	// first's deferred Unsubscribe then closes the second's channel, so the second
-	// bails without writing its init command (finding I).
+	// relay collide (finding I). Fanout.Subscribe now rejects a duplicate id outright
+	// (ErrDuplicateSubscriber) instead of silently replacing the incumbent, so the
+	// collision can no longer orphan a subscriber — but the second init would still
+	// fall through to the blind write below, so the unique id stays.
 	subID := NextWSSubID()
 	ch, err := relay.fanout.Subscribe(subID)
 	if err != nil {

@@ -3,6 +3,7 @@
 package pty
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"testing"
@@ -36,6 +37,44 @@ func TestFanout_SubscribeAndBroadcast(t *testing.T) {
 		case <-time.After(time.Second):
 			t.Fatalf("timeout on %s", tc.name)
 		}
+	}
+}
+
+// Subscribe used to overwrite a duplicate id's map entry WITHOUT closing the old
+// channel: the first subscriber's pump then blocked forever on a channel nothing
+// would ever write to or close, and the first Unsubscribe closed the SECOND
+// subscriber's channel out from under it. The guard lived in one caller
+// (WaitForPromptViaRelay's unique ids); per rule 19 the invariant belongs in the
+// primitive, where no caller can forget it (finding S7).
+func TestFanout_SubscribeRejectsDuplicateID(t *testing.T) {
+	f := NewFanout()
+	defer f.Close()
+
+	first, err := f.Subscribe("dup")
+	if err != nil {
+		t.Fatalf("first subscribe: %v", err)
+	}
+
+	second, err := f.Subscribe("dup")
+	if !errors.Is(err, ErrDuplicateSubscriber) {
+		t.Fatalf("duplicate subscribe: got %v, want ErrDuplicateSubscriber", err)
+	}
+	if second != nil {
+		t.Fatal("a rejected subscribe must not hand back a channel")
+	}
+	if f.Count() != 1 {
+		t.Fatalf("Count()=%d, want 1 — the duplicate must not replace the incumbent", f.Count())
+	}
+
+	// The incumbent is untouched: still registered, still receiving.
+	f.Broadcast([]byte("hello"))
+	select {
+	case msg := <-first:
+		if string(msg) != "hello" {
+			t.Fatalf("incumbent got %q, want %q", msg, "hello")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("the incumbent subscriber was orphaned by the duplicate Subscribe")
 	}
 }
 

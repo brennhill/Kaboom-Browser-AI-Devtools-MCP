@@ -5,6 +5,7 @@ package pty
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 )
 
@@ -19,6 +20,12 @@ var ErrFanoutFull = errors.New("pty: subscriber limit reached")
 
 // ErrFanoutClosed is returned when operating on a closed fanout.
 var ErrFanoutClosed = errors.New("pty: fanout closed")
+
+// ErrDuplicateSubscriber is returned when an id is already subscribed. The
+// incumbent keeps its channel — a duplicate id is a caller bug, and silently
+// replacing the incumbent orphans its goroutine on a channel that will never
+// close or receive again.
+var ErrDuplicateSubscriber = errors.New("pty: subscriber id already in use")
 
 // Fanout broadcasts data to multiple subscribers. Slow subscribers are dropped
 // rather than blocking the producer.
@@ -38,11 +45,21 @@ func NewFanout() *Fanout {
 }
 
 // Subscribe adds a subscriber and returns a channel for receiving data.
+//
+// A duplicate id is rejected with ErrDuplicateSubscriber rather than replacing the
+// incumbent. Overwriting the map entry left the incumbent's channel open but
+// unreachable: its pump goroutine blocked forever on a channel nothing would write
+// to or close, and the incumbent's Unsubscribe then closed the NEW subscriber's
+// channel instead. Callers used to have to guarantee unique ids themselves; per
+// rule 19 the invariant belongs here, where no caller can forget it (finding S7).
 func (f *Fanout) Subscribe(id string) (<-chan []byte, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.closed {
 		return nil, ErrFanoutClosed
+	}
+	if _, exists := f.subscribers[id]; exists {
+		return nil, fmt.Errorf("%w: %s", ErrDuplicateSubscriber, id)
 	}
 	if len(f.subscribers) >= f.maxSubs {
 		return nil, ErrFanoutFull
