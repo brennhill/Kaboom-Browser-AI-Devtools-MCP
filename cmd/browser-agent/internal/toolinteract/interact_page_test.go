@@ -172,12 +172,3 @@ func TestSetNestedElements_Nested(t *testing.T) {
 		t.Fatal("expected nested elements replaced")
 	}
 }
-
-func TestFormatIndexGenerationConflict(t *testing.T) {
-	if !contains(formatIndexGenerationConflict("", ""), "generation mismatch") {
-		t.Fatal("expected generic message")
-	}
-	if !contains(formatIndexGenerationConflict("old", "new"), "old") {
-		t.Fatal("expected message to include expected generation")
-	}
-}

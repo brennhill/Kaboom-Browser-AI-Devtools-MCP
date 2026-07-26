@@ -1,60 +1,96 @@
-// interact_state.go — StateInteractHandler: save/load/list/delete of page-state
-// snapshots, plus the browser-side capture and restore commands they queue.
+// state.go — Handler: save/load/list/delete of page-state snapshots, plus the
+// browser-side capture and restore commands they queue.
+//
+// Package interactstate owns the state-time-travel actions of the interact tool.
+// It is a separate package because it is a separate handler: it never touches
+// InteractActionHandler, its persistence dependency (a SessionStore) is nobody
+// else's, and its Deps is a nine-field contract rather than the twenty-five-field
+// one the action handler needs. Everything it asks for arrives through Deps as a
+// function value, which is what lets every branch here be tested with fakes and
+// no real browser, extension or disk.
+//
 // Docs: docs/features/feature/state-time-travel/index.md
-
-package toolinteract
+package interactstate
 
 import (
 	"encoding/json"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
-// StateInteractHandler handles state save/load/list/delete operations.
-type StateInteractHandler struct {
+// stateCaptureTimeout is the time to wait for the extension to execute
+// the state capture script and return form/scroll/storage data.
+const stateCaptureTimeout = 5 * time.Second
+
+// Deps are the host-owned seams this package needs. Each is a function value so
+// the host can rebuild it per construction and late-bind its own state; nothing
+// here reaches into the host's types.
+type Deps struct {
+	// IsPilotActionAllowed reports whether pilot mode permits driving the page.
+	IsPilotActionAllowed func() bool
+	// IsExtensionConnected reports whether the browser extension is attached.
+	IsExtensionConnected func() bool
+	// GetTrackingStatus returns (tracking, tabID, tabURL) for the tracked tab.
+	GetTrackingStatus func() (bool, int, string)
+	// GetTrackedTabTitle returns the tracked tab's title, or "" when unknown.
+	GetTrackedTabTitle func() string
+	// WaitForCommand blocks until the extension answers correlationID or timeout.
+	WaitForCommand func(correlationID string, timeout time.Duration) (*queries.CommandResult, bool)
+
+	// EnqueuePendingQuery queues a command for the extension.
+	EnqueuePendingQuery func(req mcp.JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (mcp.JSONRPCResponse, bool)
+	// RecordAIAction records an AI-driven action to the enhanced actions buffer.
+	RecordAIAction func(action, url string, extra map[string]any)
+	// RequireSessionStore checks that the session store is available.
+	RequireSessionStore func(req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool)
+	// DiagnosticHint returns a StructuredError option carrying diagnostic context.
+	DiagnosticHint func() func(*mcp.StructuredError)
+	// Redact scrubs sensitive values before a snapshot reaches disk. It must be
+	// total: when no redaction engine is configured the host returns m unchanged.
+	Redact func(m map[string]any) map[string]any
+}
+
+// Handler handles state save/load/list/delete operations.
+type Handler struct {
 	deps *Deps
 
 	// Concrete session store injected at construction.
 	sessionStoreImpl *persistence.SessionStore
 }
 
-// NewStateInteractHandler creates a new StateInteractHandler with the given dependencies.
-func NewStateInteractHandler(deps *Deps, store *persistence.SessionStore) *StateInteractHandler {
-	return &StateInteractHandler{
+// New creates a new Handler with the given dependencies.
+func New(deps *Deps, store *persistence.SessionStore) *Handler {
+	return &Handler{
 		deps:             deps,
 		sessionStoreImpl: store,
 	}
 }
 
-const (
-	// stateCaptureTimeout is the time to wait for the extension to execute
-	// the state capture script and return form/scroll/storage data.
-	stateCaptureTimeout = 5 * time.Second
-)
-
 // stateCaptureResult — type alias delegated to internal/tools/interact package.
 type stateCaptureResult = act.StateCaptureResult
 
-// captureState attempts to capture form values, scroll position, and web storage from the browser.
+// CaptureState attempts to capture form values, scroll position, and web storage from the browser.
 // Always returns a stateCaptureResult with an explicit Status the caller can surface to the LLM.
-func (h *StateInteractHandler) CaptureState(req JSONRPCRequest) stateCaptureResult {
-	if !h.deps.Capture().IsPilotActionAllowed() {
+func (h *Handler) CaptureState(req mcp.JSONRPCRequest) stateCaptureResult {
+	if !h.deps.IsPilotActionAllowed() {
 		return stateCaptureResult{Status: act.StateCaptureStatusPilotDisabled}
 	}
-	if !h.deps.Capture().IsExtensionConnected() {
+	if !h.deps.IsExtensionConnected() {
 		return stateCaptureResult{Status: act.StateCaptureStatusExtensionDisconnected}
 	}
 
-	correlationID := newCorrelationID("state_capture")
+	correlationID := toolresp.NewCorrelationID("state_capture")
 
-	scriptArgs := buildQueryParams(map[string]any{
+	scriptArgs := mcp.SafeMarshal(map[string]any{
 		"action": "execute_js",
 		"script": act.StateCaptureScript,
 		"world":  "main",
-	})
+	}, "{}")
 
 	query := queries.PendingQuery{
 		Type:          "execute",
@@ -65,7 +101,7 @@ func (h *StateInteractHandler) CaptureState(req JSONRPCRequest) stateCaptureResu
 		return stateCaptureResult{Status: act.StateCaptureStatusError}
 	}
 
-	cmd, found := h.deps.Capture().WaitForCommand(correlationID, stateCaptureTimeout)
+	cmd, found := h.deps.WaitForCommand(correlationID, stateCaptureTimeout)
 	if !found || cmd.Status == "pending" {
 		return stateCaptureResult{Status: act.StateCaptureStatusTimeout}
 	}
@@ -86,15 +122,15 @@ func (h *StateInteractHandler) CaptureState(req JSONRPCRequest) stateCaptureResu
 
 // queueStateRestore queues a JS execute command to restore form values, scroll position,
 // localStorage, sessionStorage, and cookies. This is fire-and-forget.
-func (h *StateInteractHandler) queueStateRestore(req JSONRPCRequest, formValues, scrollPos, localStorage, sessionStorage, cookies map[string]any) string {
-	correlationID := newCorrelationID("state_restore")
+func (h *Handler) queueStateRestore(req mcp.JSONRPCRequest, formValues, scrollPos, localStorage, sessionStorage, cookies map[string]any) string {
+	correlationID := toolresp.NewCorrelationID("state_restore")
 
 	script := act.BuildStateRestoreScript(formValues, scrollPos, localStorage, sessionStorage, cookies)
-	scriptArgs := buildQueryParams(map[string]any{
+	scriptArgs := mcp.SafeMarshal(map[string]any{
 		"action": "execute_js",
 		"script": script,
 		"world":  "main",
-	})
+	}, "{}")
 
 	query := queries.PendingQuery{
 		Type:          "execute",
@@ -108,16 +144,16 @@ func (h *StateInteractHandler) queueStateRestore(req JSONRPCRequest, formValues,
 	return correlationID
 }
 
-// queueStateNavigation queues a navigation to the saved URL if pilot is enabled
+// QueueStateNavigation queues a navigation to the saved URL if pilot is enabled
 // and the state contains a non-empty URL. Mutates stateData to add tracking fields.
-func (h *StateInteractHandler) QueueStateNavigation(req JSONRPCRequest, stateData map[string]any) {
+func (h *Handler) QueueStateNavigation(req mcp.JSONRPCRequest, stateData map[string]any) {
 	savedURL, ok := stateData["url"].(string)
-	if !ok || savedURL == "" || !h.deps.Capture().IsPilotActionAllowed() || !h.deps.Capture().IsExtensionConnected() {
+	if !ok || savedURL == "" || !h.deps.IsPilotActionAllowed() || !h.deps.IsExtensionConnected() {
 		return
 	}
-	correlationID := newCorrelationID("nav")
+	correlationID := toolresp.NewCorrelationID("nav")
 	// Error impossible: map contains only string values
-	navArgs := buildQueryParams(map[string]any{"action": "navigate", "url": savedURL})
+	navArgs := mcp.SafeMarshal(map[string]any{"action": "navigate", "url": savedURL}, "{}")
 	query := queries.PendingQuery{
 		Type:          "browser_action",
 		Params:        navArgs,
@@ -130,17 +166,18 @@ func (h *StateInteractHandler) QueueStateNavigation(req JSONRPCRequest, stateDat
 	stateData["correlation_id"] = correlationID
 }
 
-func (h *StateInteractHandler) HandleStateSave(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+// HandleStateSave persists a named snapshot of the tracked tab's page state.
+func (h *Handler) HandleStateSave(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		SnapshotName string `json:"snapshot_name"`
 		Name         string `json:"name"` // backward-compatible alias
 	}
-	if resp, stop := parseArgs(req, args, &params); stop {
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
 
 	snapshotName := resolveStateSnapshotName(params.SnapshotName, params.Name)
-	if resp, blocked := requireString(req, snapshotName, "snapshot_name", "Add the 'snapshot_name' parameter (legacy alias: 'name')"); blocked {
+	if resp, blocked := requireSnapshotName(req, snapshotName); blocked {
 		return resp
 	}
 
@@ -148,8 +185,8 @@ func (h *StateInteractHandler) HandleStateSave(req JSONRPCRequest, args json.Raw
 		return resp
 	}
 
-	_, tabID, tabURL := h.deps.Capture().GetTrackingStatus()
-	tabTitle := h.deps.Capture().GetTrackedTabTitle()
+	_, tabID, tabURL := h.deps.GetTrackingStatus()
+	tabTitle := h.deps.GetTrackedTabTitle()
 
 	stateData := map[string]any{
 		"url":      tabURL,
@@ -169,22 +206,20 @@ func (h *StateInteractHandler) HandleStateSave(req JSONRPCRequest, args json.Raw
 	}
 
 	// Server-side redaction: scrub sensitive values before persisting to disk (#132)
-	if re := h.deps.GetRedactionEngine(); re != nil {
-		stateData = re.RedactMapValues(stateData)
-	}
+	stateData = h.deps.Redact(stateData)
 
 	data, err := json.Marshal(stateData)
 	if err != nil {
-		return fail(req, ErrInternal, "Failed to serialize state: "+err.Error(), "Internal error — do not retry")
+		return mcp.Fail(req, mcp.ErrInternal, "Failed to serialize state: "+err.Error(), "Internal error — do not retry")
 	}
 
 	if err := h.sessionStoreImpl.Save(act.StateNamespace, snapshotName, data); err != nil {
-		return fail(req, ErrInternal, "Failed to save state: "+err.Error(), "Internal error — check storage")
+		return mcp.Fail(req, mcp.ErrInternal, "Failed to save state: "+err.Error(), "Internal error — check storage")
 	}
 
 	h.deps.RecordAIAction("save_state", tabURL, map[string]any{"snapshot_name": snapshotName})
 
-	return succeed(req, "State saved", map[string]any{
+	return mcp.Succeed(req, "State saved", map[string]any{
 		"status":        "saved",
 		"snapshot_name": snapshotName,
 		"state_capture": capture.Status,
@@ -195,18 +230,19 @@ func (h *StateInteractHandler) HandleStateSave(req JSONRPCRequest, args json.Raw
 	})
 }
 
-func (h *StateInteractHandler) HandleStateLoad(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+// HandleStateLoad restores a named snapshot into the tracked tab.
+func (h *Handler) HandleStateLoad(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		SnapshotName string `json:"snapshot_name"`
 		Name         string `json:"name"` // backward-compatible alias
 		IncludeURL   bool   `json:"include_url,omitempty"`
 	}
-	if resp, stop := parseArgs(req, args, &params); stop {
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
 
 	snapshotName := resolveStateSnapshotName(params.SnapshotName, params.Name)
-	if resp, blocked := requireString(req, snapshotName, "snapshot_name", "Add the 'snapshot_name' parameter (legacy alias: 'name')"); blocked {
+	if resp, blocked := requireSnapshotName(req, snapshotName); blocked {
 		return resp
 	}
 
@@ -216,12 +252,12 @@ func (h *StateInteractHandler) HandleStateLoad(req JSONRPCRequest, args json.Raw
 
 	data, err := h.sessionStoreImpl.Load(act.StateNamespace, snapshotName)
 	if err != nil {
-		return fail(req, ErrNoData, "State not found: "+snapshotName, "Use interact with action='list_states' to see available snapshots", h.deps.DiagnosticHint())
+		return mcp.Fail(req, mcp.ErrNoData, "State not found: "+snapshotName, "Use interact with action='list_states' to see available snapshots", h.deps.DiagnosticHint())
 	}
 
 	var stateData map[string]any
 	if err := json.Unmarshal(data, &stateData); err != nil {
-		return fail(req, ErrInternal, "Failed to parse state data", "Internal error — state may be corrupted")
+		return mcp.Fail(req, mcp.ErrInternal, "Failed to parse state data", "Internal error — state may be corrupted")
 	}
 
 	if params.IncludeURL {
@@ -244,9 +280,9 @@ func (h *StateInteractHandler) HandleStateLoad(req JSONRPCRequest, args json.Raw
 
 	if !hasData {
 		responseData["state_restore"] = act.StateRestoreStatusNoData
-	} else if !h.deps.Capture().IsPilotActionAllowed() {
+	} else if !h.deps.IsPilotActionAllowed() {
 		responseData["state_restore"] = act.StateRestoreStatusPilotDisabled
-	} else if !h.deps.Capture().IsExtensionConnected() {
+	} else if !h.deps.IsExtensionConnected() {
 		responseData["state_restore"] = act.StateRestoreStatusExtensionDown
 	} else {
 		restoreCorrelationID := h.queueStateRestore(req, formValues, scrollPos, localStorage, sessionStorage, cookies)
@@ -256,7 +292,7 @@ func (h *StateInteractHandler) HandleStateLoad(req JSONRPCRequest, args json.Raw
 
 	h.deps.RecordAIAction("load_state", "", map[string]any{"snapshot_name": snapshotName})
 
-	return succeed(req, "State loaded", responseData)
+	return mcp.Succeed(req, "State loaded", responseData)
 }
 
 func resolveStateSnapshotName(snapshotName, legacyName string) string {
@@ -266,14 +302,27 @@ func resolveStateSnapshotName(snapshotName, legacyName string) string {
 	return legacyName
 }
 
-func (h *StateInteractHandler) HandleStateList(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+// requireSnapshotName rejects a request that named no snapshot, with the same
+// message for every action so the recovery hint stays consistent.
+func requireSnapshotName(req mcp.JSONRPCRequest, snapshotName string) (mcp.JSONRPCResponse, bool) {
+	if snapshotName != "" {
+		return mcp.JSONRPCResponse{}, false
+	}
+	return mcp.Fail(req, mcp.ErrMissingParam,
+		"Required parameter 'snapshot_name' is missing",
+		"Add the 'snapshot_name' parameter (legacy alias: 'name')",
+		mcp.WithParam("snapshot_name")), true
+}
+
+// HandleStateList lists the saved snapshots with their metadata.
+func (h *Handler) HandleStateList(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	if resp, blocked := h.deps.RequireSessionStore(req); blocked {
 		return resp
 	}
 
 	keys, err := h.sessionStoreImpl.List(act.StateNamespace)
 	if err != nil {
-		return fail(req, ErrInternal, "Failed to list states: "+err.Error(), "Internal error — do not retry")
+		return mcp.Fail(req, mcp.ErrInternal, "Failed to list states: "+err.Error(), "Internal error — do not retry")
 	}
 
 	states := make([]map[string]any, 0, len(keys))
@@ -281,14 +330,14 @@ func (h *StateInteractHandler) HandleStateList(req JSONRPCRequest, args json.Raw
 		states = append(states, h.buildStateEntry(key))
 	}
 
-	return succeed(req, "States listed", map[string]any{
+	return mcp.Succeed(req, "States listed", map[string]any{
 		"states": states,
 		"count":  len(states),
 	})
 }
 
 // buildStateEntry loads metadata for a single saved state key and returns an entry map.
-func (h *StateInteractHandler) buildStateEntry(key string) map[string]any {
+func (h *Handler) buildStateEntry(key string) map[string]any {
 	entry := map[string]any{"name": key}
 	data, err := h.sessionStoreImpl.Load(act.StateNamespace, key)
 	if err != nil {
@@ -306,17 +355,18 @@ func (h *StateInteractHandler) buildStateEntry(key string) map[string]any {
 	return entry
 }
 
-func (h *StateInteractHandler) HandleStateDelete(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+// HandleStateDelete removes a saved snapshot.
+func (h *Handler) HandleStateDelete(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		SnapshotName string `json:"snapshot_name"`
 		Name         string `json:"name"` // backward-compatible alias
 	}
-	if resp, stop := parseArgs(req, args, &params); stop {
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
 
 	snapshotName := resolveStateSnapshotName(params.SnapshotName, params.Name)
-	if resp, blocked := requireString(req, snapshotName, "snapshot_name", "Add the 'snapshot_name' parameter (legacy alias: 'name')"); blocked {
+	if resp, blocked := requireSnapshotName(req, snapshotName); blocked {
 		return resp
 	}
 
@@ -325,12 +375,12 @@ func (h *StateInteractHandler) HandleStateDelete(req JSONRPCRequest, args json.R
 	}
 
 	if err := h.sessionStoreImpl.Delete(act.StateNamespace, snapshotName); err != nil {
-		return fail(req, ErrNoData, "State not found: "+snapshotName, "Use interact with action='list_states' to see available snapshots", h.deps.DiagnosticHint())
+		return mcp.Fail(req, mcp.ErrNoData, "State not found: "+snapshotName, "Use interact with action='list_states' to see available snapshots", h.deps.DiagnosticHint())
 	}
 
 	h.deps.RecordAIAction("delete_state", "", map[string]any{"snapshot_name": snapshotName})
 
-	return succeed(req, "State deleted", map[string]any{
+	return mcp.Succeed(req, "State deleted", map[string]any{
 		"status":        "deleted",
 		"snapshot_name": snapshotName,
 	})

@@ -19,7 +19,7 @@ code_paths:
   - cmd/browser-agent/internal/toolinteract/interact_evidence.go
   - cmd/browser-agent/internal/toolinteract/interact_retry_contract.go
   - cmd/browser-agent/internal/toolinteract/interact_batch.go
-  - cmd/browser-agent/internal/toolinteract/interact_index_scope.go
+  - cmd/browser-agent/internal/toolinteract/elemindex/registry.go
   - cmd/browser-agent/tools_interact_adapter.go
   - cmd/browser-agent/tools_interact_entrypoint.go
   - cmd/browser-agent/tools_interact_dispatch.go
@@ -64,6 +64,7 @@ test_paths:
   - cmd/browser-agent/internal/toolinteract/interact_page_test.go
   - cmd/browser-agent/internal/toolinteract/interact_storage_test.go
   - cmd/browser-agent/internal/toolinteract/interact_workflow_test.go
+  - cmd/browser-agent/internal/toolinteract/elemindex/registry_test.go
   - cmd/browser-agent/tools_interact_handler_test.go
   - cmd/browser-agent/tools_pending_query_enqueue_test.go
   - cmd/browser-agent/tools_interact_rich_test.go

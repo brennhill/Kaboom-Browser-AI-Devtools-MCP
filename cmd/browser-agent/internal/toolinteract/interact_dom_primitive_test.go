@@ -65,7 +65,7 @@ func TestHandleDOMPrimitive_ClickWithCoordsRoutesCDP(t *testing.T) {
 
 func TestHandleDOMPrimitive_IndexResolvesToSelector(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	h.elementIndexRegistry.store("client-test", 0, "gen_1", map[int]string{2: "#resolved"})
+	h.elementIndexRegistry.Store("client-test", 0, "gen_1", map[int]string{2: "#resolved"})
 	resp := h.HandleDOMPrimitive(testReq(), json.RawMessage(`{"index":2,"action":"click"}`), "click")
 	assertOK(t, resp)
 }

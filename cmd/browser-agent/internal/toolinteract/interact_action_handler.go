@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/elemindex"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
@@ -34,7 +35,7 @@ type InteractActionHandler struct {
 	retryByCommand  map[string]*commandRetryState
 
 	// Scoped element index registry used by list_interactive/index follow-up actions.
-	elementIndexRegistry *elementIndexRegistry
+	elementIndexRegistry *elemindex.Registry
 }
 
 // NewInteractActionHandler creates a new InteractActionHandler with the given dependencies.
@@ -43,7 +44,7 @@ func NewInteractActionHandler(deps *Deps) *InteractActionHandler {
 		deps:                 deps,
 		evidenceByCommand:    make(map[string]*commandEvidenceState),
 		retryByCommand:       make(map[string]*commandRetryState),
-		elementIndexRegistry: newElementIndexRegistry(),
+		elementIndexRegistry: elemindex.New(),
 	}
 }
 

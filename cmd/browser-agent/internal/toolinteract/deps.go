@@ -9,8 +9,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactstate"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactupload"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
@@ -123,4 +126,71 @@ type Deps struct {
 // RedactionEngine mirrors the main package's RedactionEngine interface.
 type RedactionEngine interface {
 	RedactMapValues(m map[string]any) map[string]any
+}
+
+// UploadInteractHandler handles file upload operations.
+// It lives in interactupload, which needs five of the seams above plus a single
+// method from the action handler; this alias keeps the caller's type name stable.
+type UploadInteractHandler = interactupload.Handler
+
+// NewUploadInteractHandler creates a new UploadInteractHandler with the given dependencies.
+func NewUploadInteractHandler(deps *Deps, actionHandler *InteractActionHandler) *UploadInteractHandler {
+	return interactupload.New(&interactupload.Deps{
+		RequirePilot: func(req mcp.JSONRPCRequest, opts ...func(*mcp.StructuredError)) (mcp.JSONRPCResponse, bool) {
+			return deps.RequirePilot(req, opts...)
+		},
+		RequireExtension: func(req mcp.JSONRPCRequest, opts ...func(*mcp.StructuredError)) (mcp.JSONRPCResponse, bool) {
+			return deps.RequireExtension(req, opts...)
+		},
+		RequireTabTracking: func(req mcp.JSONRPCRequest, opts ...func(*mcp.StructuredError)) (mcp.JSONRPCResponse, bool) {
+			return deps.RequireTabTracking(req, opts...)
+		},
+		EnqueuePendingQuery: func(req mcp.JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (mcp.JSONRPCResponse, bool) {
+			return deps.EnqueuePendingQuery(req, query, timeout)
+		},
+		RecordAIAction: func(action, url string, extra map[string]any) {
+			deps.RecordAIAction(action, url, extra)
+		},
+	}, actionHandler)
+}
+
+// StateInteractHandler handles state save/load/list/delete operations.
+// It lives in interactstate, which needs only nine of the seams above; this alias
+// keeps the caller's type name stable across that boundary.
+type StateInteractHandler = interactstate.Handler
+
+// NewStateInteractHandler creates a new StateInteractHandler with the given dependencies.
+//
+// The narrow interactstate.Deps is built here rather than by the caller, and every
+// field forwards through the wide *Deps pointer instead of copying the function
+// value out of it — so a test that swaps a seam on the shared Deps after
+// construction still wins, exactly as it did when this handler read h.deps directly.
+func NewStateInteractHandler(deps *Deps, store *persistence.SessionStore) *StateInteractHandler {
+	return interactstate.New(&interactstate.Deps{
+		IsPilotActionAllowed: func() bool { return deps.Capture().IsPilotActionAllowed() },
+		IsExtensionConnected: func() bool { return deps.Capture().IsExtensionConnected() },
+		GetTrackingStatus:    func() (bool, int, string) { return deps.Capture().GetTrackingStatus() },
+		GetTrackedTabTitle:   func() string { return deps.Capture().GetTrackedTabTitle() },
+		WaitForCommand: func(correlationID string, timeout time.Duration) (*queries.CommandResult, bool) {
+			return deps.Capture().WaitForCommand(correlationID, timeout)
+		},
+		EnqueuePendingQuery: func(req mcp.JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (mcp.JSONRPCResponse, bool) {
+			return deps.EnqueuePendingQuery(req, query, timeout)
+		},
+		RecordAIAction: func(action, url string, extra map[string]any) {
+			deps.RecordAIAction(action, url, extra)
+		},
+		RequireSessionStore: func(req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool) {
+			return deps.RequireSessionStore(req)
+		},
+		DiagnosticHint: func() func(*mcp.StructuredError) { return deps.DiagnosticHint() },
+		// interactstate asks for a total Redact; the nil-engine case is the host's
+		// to answer, so the "no engine configured" branch stays here.
+		Redact: func(m map[string]any) map[string]any {
+			if re := deps.GetRedactionEngine(); re != nil {
+				return re.RedactMapValues(m)
+			}
+			return m
+		},
+	}, store)
 }

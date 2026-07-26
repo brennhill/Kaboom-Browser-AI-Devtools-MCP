@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/elemindex"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
@@ -206,7 +207,7 @@ func (h *InteractActionHandler) resolveDOMSelectorFromIndex(req JSONRPCRequest, 
 	sel, ok, stale, latestGeneration := h.resolveIndexToSelector(req.ClientID, params.TabID, *params.Index, params.IndexGen)
 	if stale {
 		return args, fail(req, ErrInvalidParam,
-			formatIndexGenerationConflict(params.IndexGen, latestGeneration),
+			elemindex.FormatGenerationConflict(params.IndexGen, latestGeneration),
 			"Re-run interact with what='list_interactive' for the current page context, then retry with the returned index_generation.",
 			withParam("index_generation"), withParam("index"),
 		), true

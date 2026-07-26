@@ -3,10 +3,9 @@
   "max_files": 10,
   "folders": {
     "cmd/browser-agent": 175,
-    "cmd/browser-agent/internal/bridge": 22,
     "cmd/browser-agent/internal/toolconfigure": 14,
     "cmd/browser-agent/internal/toolgenerate": 13,
-    "cmd/browser-agent/internal/toolinteract": 42,
+    "cmd/browser-agent/internal/toolinteract": 13,
     "internal/capture": 21,
     "internal/checkpoint": 11,
     "internal/mcp": 12,
