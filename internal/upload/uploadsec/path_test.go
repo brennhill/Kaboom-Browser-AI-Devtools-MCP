@@ -2,7 +2,7 @@
 // Docs: docs/features/feature/file-upload/index.md
 
 // security_test.go — Tests for folder-scoped permissions and sensitive path denylist.
-package upload
+package uploadsec
 
 import (
 	"net"
@@ -533,46 +533,6 @@ func TestSecurity_IsWithinDir(t *testing.T) {
 				t.Errorf("IsWithinDir(%q, %q) = %v, want %v", tc.file, tc.dir, got, tc.expected)
 			}
 		})
-	}
-}
-
-// ============================================
-// 8. Handler-level integration with security
-// ============================================
-
-func TestSecurity_FileRead_DeniedPath(t *testing.T) {
-	dir := t.TempDir()
-	envFile := filepath.Join(dir, ".env")
-	os.WriteFile(envFile, []byte("SECRET=abc"), 0o644)
-
-	sec := &Security{}
-	resp := HandleFileRead(FileReadRequest{FilePath: envFile}, sec, false)
-	if resp.Success {
-		t.Error("reading .env file should be denied")
-	}
-	if !strings.Contains(resp.Error, ".env") {
-		t.Errorf("error should mention .env, got: %s", resp.Error)
-	}
-}
-
-func TestSecurity_FormSubmit_OutsideUploadDir(t *testing.T) {
-	uploadDir := t.TempDir()
-	otherDir := t.TempDir()
-	f := filepath.Join(otherDir, "data.txt")
-	os.WriteFile(f, []byte("test"), 0o644)
-
-	sec := testSecurityWithDir(t, uploadDir)
-	resp := HandleFormSubmit(FormSubmitRequest{
-		FormAction:    "https://example.com/upload",
-		FileInputName: "file",
-		FilePath:      f,
-	}, sec)
-
-	if resp.Success {
-		t.Error("file outside upload-dir should fail for Stage 3")
-	}
-	if !strings.Contains(resp.Error, "outside") {
-		t.Errorf("error should mention outside upload dir, got: %s", resp.Error)
 	}
 }
 

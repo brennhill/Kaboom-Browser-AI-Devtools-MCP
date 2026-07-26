@@ -11,7 +11,15 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
+
+// testSecurity returns a permissive Security config for tests.
+func testSecurity(t *testing.T) *uploadsec.Security {
+	t.Helper()
+	return uploadsec.NewSecurity("/", nil)
+}
 
 // createTestFile creates a temporary file with the given name and content.
 func createTestFile(t *testing.T, name, content string) string {

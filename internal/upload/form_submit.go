@@ -4,6 +4,7 @@
 package upload
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 	"context"
 	"fmt"
 	"io"
@@ -17,13 +18,11 @@ import (
 // UploadHTTPClient is a shared client for Stage 3 form submissions.
 // Reuses connections via the default transport pool.
 var UploadHTTPClient = &http.Client{
-	Timeout: 10 * time.Minute, // Large file uploads can take a while
-	Transport: NewSSRFSafeTransport(func() bool {
-		return skipSSRFCheckEnabled()
-	}),
+	Timeout:   10 * time.Minute, // Large file uploads can take a while
+	Transport: uploadsec.DefaultSSRFTransport(),
 	CheckRedirect: func(req *http.Request, via []*http.Request) error {
 		// Prevent redirect to private IPs (SSRF via redirect)
-		if err := ValidateFormActionURL(req.URL.String()); err != nil {
+		if err := uploadsec.ValidateFormActionURL(req.URL.String()); err != nil {
 			return fmt.Errorf("redirect blocked: %w", err)
 		}
 		if len(via) >= 10 {
@@ -33,7 +32,7 @@ var UploadHTTPClient = &http.Client{
 	},
 }
 
-func HandleFormSubmit(req FormSubmitRequest, sec *Security) StageResponse {
+func HandleFormSubmit(req FormSubmitRequest, sec *uploadsec.Security) StageResponse {
 	return HandleFormSubmitCtx(context.Background(), req, sec)
 }
 
@@ -55,7 +54,7 @@ func ExecuteFormSubmit(ctx context.Context, req FormSubmitRequest, file *os.File
 		httpReq.Header.Set("Cookie", req.Cookies)
 	}
 
-	// #nosec G704 -- req.FormAction is pre-validated by ValidateFormActionURL and redirect callback revalidates
+	// #nosec G704 -- req.FormAction is pre-validated by uploadsec.ValidateFormActionURL and redirect callback revalidates
 	httpResp, err := UploadHTTPClient.Do(httpReq)
 	if err != nil {
 		<-writeErrCh
@@ -86,7 +85,7 @@ func ExecuteFormSubmit(ctx context.Context, req FormSubmitRequest, file *os.File
 	}
 }
 
-func HandleFormSubmitCtx(ctx context.Context, req FormSubmitRequest, sec *Security) StageResponse {
+func HandleFormSubmitCtx(ctx context.Context, req FormSubmitRequest, sec *uploadsec.Security) StageResponse {
 	start := time.Now()
 
 	pathResult, err := ValidateFormSubmitFields(&req, sec)

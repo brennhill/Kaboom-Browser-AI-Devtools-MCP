@@ -1,7 +1,20 @@
 // Purpose: Enforces file path security: upload-dir scoping, symlink resolution, sensitive path denylist, and case-fold matching.
 // Docs: docs/features/feature/file-upload/index.md
 
-package upload
+// Package uploadsec is the safety kernel for the upload stages: everything that
+// decides whether an input may be acted on at all.
+//
+// It covers three kinds of check that share one property — they are pure policy
+// with no knowledge of upload wire types or stage orchestration:
+//
+//   - Path safety (Security, ValidateUploadDir, ValidateFilePath, denylist, hardlink).
+//   - Network safety (SSRF: DNS-pinned dialing, private-range rejection, safe transport).
+//   - Input safety (HTTP method/URL/cookie validation and the AppleScript, SendKeys
+//     and Content-Disposition sanitizers that keep untrusted text from breaking
+//     out of the syntax it is embedded in).
+//
+// uploadsec is a leaf: it imports nothing else from internal/upload.
+package uploadsec
 
 import (
 	"fmt"

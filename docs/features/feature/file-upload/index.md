@@ -4,19 +4,25 @@ feature_id: feature-file-upload
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-26
 code_paths:
   - cmd/browser-agent/internal/toolinteract/interact_upload_handler.go
   - cmd/browser-agent/internal/toolinteract/interact_upload.go
   - cmd/browser-agent/upload_handlers.go
   - internal/upload/handlers.go
-  - internal/upload/security.go
+  - internal/upload/types.go
+  - internal/upload/uploadsec/path.go
+  - internal/upload/uploadsec/denylist.go
+  - internal/upload/uploadsec/ssrf.go
+  - internal/upload/uploadsec/input.go
   - internal/upload/os_automation.go
   - scripts/smoke-tests/upload-server.py
 test_paths:
   - cmd/browser-agent/upload_integration_test.go
   - cmd/browser-agent/upload_handlers_test.go
-  - internal/upload/security_test.go
+  - internal/upload/handlers_test.go
+  - internal/upload/uploadsec/path_test.go
+  - internal/upload/uploadsec/ssrf_test.go
   - internal/upload/os_automation_test.go
   - scripts/smoke-tests/test-upload-server.py
   - scripts/smoke-tests/15-file-upload.sh

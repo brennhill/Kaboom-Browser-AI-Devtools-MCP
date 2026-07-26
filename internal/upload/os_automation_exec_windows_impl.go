@@ -3,6 +3,7 @@
 package upload
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 	"context"
 	"fmt"
 	"os/exec"
@@ -12,7 +13,7 @@ import (
 )
 
 func executeWindowsAutomation(req OSAutomationInjectRequest, start time.Time) StageResponse {
-	safePath := SanitizeForSendKeys(req.FilePath)
+	safePath := uploadsec.SanitizeForSendKeys(req.FilePath)
 	psPath := strings.ReplaceAll(safePath, `"`, "`\"")
 	script := fmt.Sprintf(`
 Add-Type -AssemblyName System.Windows.Forms

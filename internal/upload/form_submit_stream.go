@@ -3,6 +3,7 @@
 package upload
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -30,8 +31,8 @@ func StreamMultipartForm(pw *io.PipeWriter, writer *multipart.Writer, req FormSu
 	fileName := filepath.Base(req.FilePath)
 	mimeType := DetectMimeType(fileName)
 	partHeader := make(textproto.MIMEHeader)
-	safeName := SanitizeForContentDisposition(req.FileInputName)
-	safeFileName := SanitizeForContentDisposition(fileName)
+	safeName := uploadsec.SanitizeForContentDisposition(req.FileInputName)
+	safeFileName := uploadsec.SanitizeForContentDisposition(fileName)
 	partHeader.Set("Content-Disposition",
 		fmt.Sprintf(`form-data; name="%s"; filename="%s"`, safeName, safeFileName))
 	partHeader.Set("Content-Type", mimeType)

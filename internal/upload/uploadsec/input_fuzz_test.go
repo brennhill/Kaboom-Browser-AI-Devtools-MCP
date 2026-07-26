@@ -2,7 +2,7 @@
 // Docs: docs/features/feature/file-upload/index.md
 
 // validators_fuzz_test.go — Fuzz tests for OS automation path validation and sanitizers.
-package upload
+package uploadsec
 
 import (
 	"strings"

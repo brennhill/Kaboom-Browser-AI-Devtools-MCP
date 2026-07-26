@@ -1,7 +1,7 @@
 // Purpose: Validates HTTP methods, form action URLs, cookie headers, OS automation paths, and sanitizes inputs for safe embedding.
 // Docs: docs/features/feature/file-upload/index.md
 
-package upload
+package uploadsec
 
 import (
 	"context"

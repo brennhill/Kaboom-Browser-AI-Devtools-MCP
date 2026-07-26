@@ -1,7 +1,7 @@
 // Purpose: Blocks SSRF via DNS-pinned dialing: resolves hostnames, rejects private IPs, and provides SSRF-safe HTTP transport.
 // Docs: docs/features/feature/file-upload/index.md
 
-package upload
+package uploadsec
 
 import (
 	"context"
@@ -183,4 +183,11 @@ func NewSSRFSafeTransport(allowPrivateFn func() bool) *http.Transport {
 		return SSRFSafeDialContext(ctx, network, addr, allowPrivate)
 	}
 	return transport
+}
+
+// DefaultSSRFTransport returns an SSRF-safe transport that honours the
+// --ssrf-allow-host / skip-check test hooks. Callers outside this package use
+// this instead of reading the skip flag directly, so the flag stays private.
+func DefaultSSRFTransport() *http.Transport {
+	return NewSSRFSafeTransport(skipSSRFCheckEnabled)
 }

@@ -3,12 +3,13 @@
 package upload
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 	"fmt"
 	"os"
 	"strings"
 )
 
-func ValidateFormSubmitFields(req *FormSubmitRequest, sec *Security) (*PathValidationResult, error) {
+func ValidateFormSubmitFields(req *FormSubmitRequest, sec *uploadsec.Security) (*uploadsec.PathValidationResult, error) {
 	if req.FormAction == "" {
 		return nil, fmt.Errorf("missing required parameter: form_action")
 	}
@@ -24,16 +25,16 @@ func ValidateFormSubmitFields(req *FormSubmitRequest, sec *Security) (*PathValid
 		return nil, pathErr
 	}
 
-	if err := ValidateFormActionURL(req.FormAction); err != nil {
+	if err := uploadsec.ValidateFormActionURL(req.FormAction); err != nil {
 		return nil, fmt.Errorf("invalid form_action URL: %w", err)
 	}
 	if req.Method == "" {
 		req.Method = "POST"
 	}
-	if err := ValidateHTTPMethod(req.Method); err != nil {
+	if err := uploadsec.ValidateHTTPMethod(req.Method); err != nil {
 		return nil, err
 	}
-	if err := ValidateCookieHeader(req.Cookies); err != nil {
+	if err := uploadsec.ValidateCookieHeader(req.Cookies); err != nil {
 		return nil, err
 	}
 
@@ -47,7 +48,7 @@ func ValidateFormSubmitFields(req *FormSubmitRequest, sec *Security) (*PathValid
 }
 
 func OpenAndValidateFile(resolvedPath, displayPath string) (*os.File, os.FileInfo, error) {
-	// #nosec G304 -- file path validated by Security chain
+	// #nosec G304 -- file path validated by uploadsec.Security chain
 	file, err := os.Open(resolvedPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -62,7 +63,7 @@ func OpenAndValidateFile(resolvedPath, displayPath string) (*os.File, os.FileInf
 		return nil, nil, fmt.Errorf("failed to stat file: %s: %w", displayPath, err)
 	}
 
-	if err := CheckHardlink(info); err != nil {
+	if err := uploadsec.CheckHardlink(info); err != nil {
 		file.Close() //nolint:errcheck // closing on error path
 		return nil, nil, err
 	}

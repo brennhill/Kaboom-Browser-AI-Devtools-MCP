@@ -4,43 +4,43 @@
 
 package uploadhandler
 
-import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
+import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 
 // ============================================
 // Type Aliases
 // ============================================
 
-type Security = upload.Security
-type PathValidationResult = upload.PathValidationResult
-type PathDeniedError = upload.PathDeniedError
-type UploadDirRequiredError = upload.UploadDirRequiredError
+type Security = uploadsec.Security
+type PathValidationResult = uploadsec.PathValidationResult
+type PathDeniedError = uploadsec.PathDeniedError
+type UploadDirRequiredError = uploadsec.UploadDirRequiredError
 
 // ============================================
 // Function and Variable Aliases
 // ============================================
 
 // ValidateUploadDir validates the --upload-dir flag at startup.
-var ValidateUploadDir = upload.ValidateUploadDir
+var ValidateUploadDir = uploadsec.ValidateUploadDir
 
 var (
-	MatchesDenylist     = upload.MatchesDenylist
-	MatchesUserDenylist = upload.MatchesUserDenylist
-	IsWithinDir         = upload.IsWithinDir
-	PathsEqualFold      = upload.PathsEqualFold
-	PathHasPrefixFold   = upload.PathHasPrefixFold
+	MatchesDenylist     = uploadsec.MatchesDenylist
+	MatchesUserDenylist = uploadsec.MatchesUserDenylist
+	IsWithinDir         = uploadsec.IsWithinDir
+	PathsEqualFold      = uploadsec.PathsEqualFold
+	PathHasPrefixFold   = uploadsec.PathHasPrefixFold
 )
 
 // IsPrivateIP re-exports SSRF-safe IP validation.
-var IsPrivateIP = upload.IsPrivateIP
+var IsPrivateIP = uploadsec.IsPrivateIP
 
 // NewSecurity creates a new upload security configuration.
-var NewSecurity = upload.NewSecurity
+var NewSecurity = uploadsec.NewSecurity
 
 // SetSkipSSRFCheck enables/disables SSRF check bypass (for testing only).
-var SetSkipSSRFCheck = upload.SetSkipSSRFCheck
+var SetSkipSSRFCheck = uploadsec.SetSkipSSRFCheck
 
 // SetSSRFAllowedHosts configures the SSRF allowed-hosts list.
-var SetSSRFAllowedHosts = upload.SetSSRFAllowedHosts
+var SetSSRFAllowedHosts = uploadsec.SetSSRFAllowedHosts
 
 // NewSSRFSafeTransport creates an HTTP transport with SSRF protection.
-var NewSSRFSafeTransport = upload.NewSSRFSafeTransport
+var NewSSRFSafeTransport = uploadsec.NewSSRFSafeTransport

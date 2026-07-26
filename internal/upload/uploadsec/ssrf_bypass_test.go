@@ -2,7 +2,7 @@
 // Docs: docs/features/feature/file-upload/index.md
 
 // ssrf_bypass_test.go — Tests for SSRF bypass resistance.
-package upload
+package uploadsec
 
 import (
 	"context"

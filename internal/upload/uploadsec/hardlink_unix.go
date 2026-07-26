@@ -4,7 +4,7 @@
 // Purpose: Detects hardlink abuse on Unix by checking syscall.Stat_t.Nlink to block multi-linked sensitive files.
 // Docs: docs/features/feature/file-upload/index.md
 
-package upload
+package uploadsec
 
 import (
 	"fmt"

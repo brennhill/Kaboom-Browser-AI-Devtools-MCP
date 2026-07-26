@@ -2,7 +2,7 @@
 // Why: Keeps denylist construction/matching isolated from request-level validation flow.
 // Docs: docs/features/feature/file-upload/index.md
 
-package upload
+package uploadsec
 
 import (
 	"os"

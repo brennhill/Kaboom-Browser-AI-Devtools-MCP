@@ -4,13 +4,14 @@
 package upload
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 	"fmt"
 	"os"
 	"runtime"
 	"time"
 )
 
-func HandleOSAutomation(req OSAutomationInjectRequest, sec *Security) StageResponse {
+func HandleOSAutomation(req OSAutomationInjectRequest, sec *uploadsec.Security) StageResponse {
 	if req.FilePath == "" {
 		return StageResponse{
 			Success: false,
@@ -40,7 +41,7 @@ func HandleOSAutomation(req OSAutomationInjectRequest, sec *Security) StageRespo
 		}
 	}
 
-	if err := ValidatePathForOSAutomation(result.ResolvedPath); err != nil {
+	if err := uploadsec.ValidatePathForOSAutomation(result.ResolvedPath); err != nil {
 		return StageResponse{
 			Success: false,
 			Stage:   4,

@@ -2,7 +2,7 @@
 // Docs: docs/features/feature/file-upload/index.md
 
 // ssrf_test.go — Tests for SSRF-safe transport and dialer helpers.
-package upload
+package uploadsec
 
 import (
 	"context"

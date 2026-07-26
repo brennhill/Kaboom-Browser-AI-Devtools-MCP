@@ -4,7 +4,10 @@
 
 package uploadhandler
 
-import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
+import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
+)
 
 // Handler function aliases.
 var (
@@ -16,11 +19,11 @@ var (
 
 // Validator and sanitizer function aliases.
 var (
-	ValidatePathForOSAutomation   = upload.ValidatePathForOSAutomation
-	ValidateHTTPMethod            = upload.ValidateHTTPMethod
-	ValidateFormActionURL         = upload.ValidateFormActionURL
-	ValidateCookieHeader          = upload.ValidateCookieHeader
-	SanitizeForContentDisposition = upload.SanitizeForContentDisposition
-	SanitizeForAppleScript        = upload.SanitizeForAppleScript
-	SanitizeForSendKeys           = upload.SanitizeForSendKeys
+	ValidatePathForOSAutomation   = uploadsec.ValidatePathForOSAutomation
+	ValidateHTTPMethod            = uploadsec.ValidateHTTPMethod
+	ValidateFormActionURL         = uploadsec.ValidateFormActionURL
+	ValidateCookieHeader          = uploadsec.ValidateCookieHeader
+	SanitizeForContentDisposition = uploadsec.SanitizeForContentDisposition
+	SanitizeForAppleScript        = uploadsec.SanitizeForAppleScript
+	SanitizeForSendKeys           = uploadsec.SanitizeForSendKeys
 )

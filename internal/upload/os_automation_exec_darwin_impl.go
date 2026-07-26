@@ -3,6 +3,7 @@
 package upload
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 	"context"
 	"fmt"
 	"os"
@@ -12,7 +13,7 @@ import (
 )
 
 func executeMacOSAutomation(req OSAutomationInjectRequest, start time.Time) StageResponse {
-	safePath := SanitizeForAppleScript(req.FilePath)
+	safePath := uploadsec.SanitizeForAppleScript(req.FilePath)
 
 	script := fmt.Sprintf(`tell application "System Events"
 	delay 0.5
@@ -39,14 +40,14 @@ end tell`, safePath)
 		if termApp == "" {
 			termApp = "your terminal"
 		}
-		errMsg += fmt.Sprintf(". Fix: System Settings > Privacy & Security > Accessibility > enable %s", termApp)
+		errMsg += fmt.Sprintf(". Fix: System Settings > Privacy & uploadsec.Security > Accessibility > enable %s", termApp)
 		return StageResponse{
 			Success:    false,
 			Stage:      4,
 			Error:      errMsg,
 			DurationMs: time.Since(start).Milliseconds(),
 			Suggestions: []string{
-				fmt.Sprintf("Grant Accessibility permissions: System Settings > Privacy & Security > Accessibility > enable %s", termApp),
+				fmt.Sprintf("Grant Accessibility permissions: System Settings > Privacy & uploadsec.Security > Accessibility > enable %s", termApp),
 				"Ensure a file dialog is open in Chrome",
 			},
 		}

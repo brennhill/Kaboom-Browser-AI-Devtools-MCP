@@ -4,7 +4,7 @@
 // Purpose: Provides no-op CheckHardlink on Windows where Nlink detection is not reliably available.
 // Docs: docs/features/feature/file-upload/index.md
 
-package upload
+package uploadsec
 
 import "os"
 
