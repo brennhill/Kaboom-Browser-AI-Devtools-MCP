@@ -2,7 +2,6 @@
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
 // websocket_repair_test.go — Unit tests for wsEventEntry buffer consistency.
-//go:build !production
 
 package capture
 

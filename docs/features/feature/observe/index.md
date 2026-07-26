@@ -6,6 +6,12 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-26
 code_paths:
+  - internal/capture/accessors.go
+  - internal/capture/query_dispatcher.go
+  - internal/capture/sync.go
+  - internal/capture/websocket.go
+  - internal/capture/wsconn/status.go
+  - internal/capture/wsconn/tracker.go
   - cmd/browser-agent/tools_observe.go
   - cmd/browser-agent/tools_observe_registry.go
   - cmd/browser-agent/tools_observe_response.go
@@ -28,8 +34,6 @@ code_paths:
   - src/content/window-message-listener.ts
   - src/inject/observers.ts
   - src/lib/net/network.ts
-  - internal/capture/queries.go
-  - internal/capture/sync.go
 test_paths:
   - cmd/browser-agent/tools_observe_handler_test.go
   - cmd/browser-agent/tools_observe_blackbox_test.go

@@ -1,12 +1,16 @@
-// Purpose: Provides shared capture helper utilities for URL handling, slice operations, and ingest body processing.
+// Purpose: Provides shared capture request plumbing — URL helpers, ingest body reading, rate limiting and TTL filtering.
 // Why: Prevents repeated low-level helper logic across capture handlers and ingestion code paths.
 // Docs: docs/features/feature/backend-log-streaming/index.md
+// Docs: docs/features/feature/rate-limiting/index.md
+// Docs: docs/features/feature/ttl-retention/index.md
 
 package capture
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
@@ -14,20 +18,6 @@ import (
 // ExtractURLPath delegates to util.ExtractURLPath for cross-package callers.
 func ExtractURLPath(rawURL string) string {
 	return util.ExtractURLPath(rawURL)
-}
-
-// removeFromSlice removes the first occurrence of item from a string slice,
-// preserving the order of remaining elements. Allocates a new backing array to avoid GC pinning.
-func removeFromSlice(slice []string, item string) []string {
-	for i, v := range slice {
-		if v == item {
-			newSlice := make([]string, len(slice)-1)
-			copy(newSlice, slice[:i])
-			copy(newSlice[i:], slice[i+1:])
-			return newSlice
-		}
-	}
-	return slice
 }
 
 // readIngestBody handles rate-limit check and body reading for ingest endpoints.
@@ -56,4 +46,47 @@ func (c *Capture) recordAndRecheck(w http.ResponseWriter, count int) bool {
 		return false
 	}
 	return true
+}
+
+// RecordEvents delegates to CircuitBreaker.
+func (c *Capture) RecordEvents(count int) {
+	c.circuit.RecordEvents(count)
+}
+
+// CheckRateLimit delegates to CircuitBreaker.
+func (c *Capture) CheckRateLimit() bool {
+	return c.circuit.CheckRateLimit()
+}
+
+// GetHealthStatus delegates to CircuitBreaker.
+func (c *Capture) GetHealthStatus() HealthResponse {
+	return c.circuit.GetHealthStatus()
+}
+
+// WriteRateLimitResponse delegates to CircuitBreaker.
+func (c *Capture) WriteRateLimitResponse(w http.ResponseWriter) {
+	c.circuit.WriteRateLimitResponse(w)
+}
+
+// HandleHealth returns circuit breaker state as a JSON response (used by /health).
+func (c *Capture) HandleHealth(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		util.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		return
+	}
+
+	health := c.GetHealthStatus()
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	//nolint:errcheck // HTTP response encoding errors are logged by client
+	_ = json.NewEncoder(w).Encode(health)
+}
+
+// isExpiredByTTL checks if an entry is expired based on TTL.
+// Returns true if the entry should be filtered out.
+func isExpiredByTTL(addedAt time.Time, ttl time.Duration) bool {
+	if ttl == 0 {
+		return false
+	}
+	return time.Since(addedAt) >= ttl
 }

@@ -1,4 +1,4 @@
-// Purpose: Provides test-only capture mutation helpers for deterministic unit/integration setup.
+// Purpose: Provides test-only capture mutation helpers and threshold overrides for deterministic setup.
 // Why: Enables focused tests without exposing unsafe mutation primitives in production APIs.
 // Docs: docs/features/feature/self-testing/index.md
 
@@ -183,5 +183,17 @@ func (c *Capture) SimulateSyncForTest(extSessionID string, clientID string) {
 			"is_reconnect":       state.isReconnect,
 			"disconnect_seconds": state.timeSinceLastPoll.Seconds(),
 		})
+	}
+}
+
+// SetExtensionDisconnectThresholdForTesting overrides the disconnect threshold and
+// returns a restore function for test cleanup.
+// NOTE: Tests that mutate this var must NOT use t.Parallel() since it is a
+// package-level variable shared across all tests in the package.
+func SetExtensionDisconnectThresholdForTesting(d time.Duration) func() {
+	prev := extensionDisconnectThreshold
+	extensionDisconnectThreshold = d
+	return func() {
+		extensionDisconnectThreshold = prev
 	}
 }

@@ -7,7 +7,7 @@
     "cmd/browser-agent/internal/toolconfigure": 14,
     "cmd/browser-agent/internal/toolgenerate": 13,
     "cmd/browser-agent/internal/toolinteract": 42,
-    "internal/capture": 67,
+    "internal/capture": 21,
     "internal/checkpoint": 11,
     "internal/mcp": 12,
     "internal/tools/observe": 32

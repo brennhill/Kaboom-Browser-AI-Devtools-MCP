@@ -1,18 +1,54 @@
-// Purpose: Updates per-direction WebSocket connection statistics and recency windows.
-// Why: Isolates WebSocket status mutation helpers from connection tracking and event handlers.
-package capture
+// Purpose: Projects tracked WebSocket connection state into the observe-tool status response.
+// Why: Isolates status/rate formatting from the lifecycle state machine that feeds it.
+// Docs: docs/features/feature/observe/index.md
+
+package wsconn
 
 import (
+	"strings"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
+
+const rateWindow = 5 * time.Second // rolling window for msg/s calculation
+
+// Status builds websocket status response with optional URL/connection filters.
+func (t *Tracker) Status(filter types.WebSocketStatusFilter) types.WebSocketStatusResponse {
+	resp := types.WebSocketStatusResponse{
+		Connections: make([]types.WebSocketConnection, 0),
+		Closed:      make([]types.WebSocketClosedConnection, 0),
+	}
+
+	for _, conn := range t.connections {
+		if filter.URLFilter != "" && !strings.Contains(conn.url, filter.URLFilter) {
+			continue
+		}
+		if filter.ConnectionID != "" && conn.id != filter.ConnectionID {
+			continue
+		}
+		resp.Connections = append(resp.Connections, buildWSConnection(conn))
+	}
+
+	for _, closed := range t.closedConns {
+		if filter.URLFilter != "" && !strings.Contains(closed.URL, filter.URLFilter) {
+			continue
+		}
+		if filter.ConnectionID != "" && closed.ID != filter.ConnectionID {
+			continue
+		}
+		resp.Closed = append(resp.Closed, closed)
+	}
+
+	return resp
+}
 
 // updateDirectionStats mutates per-direction counters and recency windows.
 //
 // Invariants:
 // - recentTimes contains only timestamps within rateWindow after appendAndPrune.
-func updateDirectionStats(stats *directionStats, event WebSocketEvent, msgTime time.Time) {
+func updateDirectionStats(stats *directionStats, event types.WebSocketEvent, msgTime time.Time) {
 	stats.total++
 	stats.bytes += event.Size
 	stats.lastAt = event.Timestamp
@@ -74,45 +110,38 @@ func formatAge(ts string) string {
 }
 
 // buildWSConnection converts internal connection state to the API response type.
-func buildWSConnection(conn *connectionState) WebSocketConnection {
-	wc := WebSocketConnection{
+func buildWSConnection(conn *connectionState) types.WebSocketConnection {
+	wc := types.WebSocketConnection{
 		ID:       conn.id,
 		URL:      conn.url,
 		State:    conn.state,
 		OpenedAt: conn.openedAt,
-		MessageRate: WebSocketMessageRate{
-			Incoming: WebSocketDirectionStats{
+		MessageRate: types.WebSocketMessageRate{
+			Incoming: types.WebSocketDirectionStats{
 				PerSecond: calcRate(conn.incoming.recentTimes),
 				Total:     conn.incoming.total,
 				Bytes:     conn.incoming.bytes,
 			},
-			Outgoing: WebSocketDirectionStats{
+			Outgoing: types.WebSocketDirectionStats{
 				PerSecond: calcRate(conn.outgoing.recentTimes),
 				Total:     conn.outgoing.total,
 				Bytes:     conn.outgoing.bytes,
 			},
 		},
-		Sampling: WebSocketSamplingStatus{Active: conn.sampling},
+		Sampling: types.WebSocketSamplingStatus{Active: conn.sampling},
 	}
 	if openedTime := util.ParseTimestamp(conn.openedAt); !openedTime.IsZero() {
 		wc.Duration = formatDuration(time.Since(openedTime))
 	}
 	if conn.incoming.lastData != "" {
-		wc.LastMessage.Incoming = &WebSocketMessagePreview{
+		wc.LastMessage.Incoming = &types.WebSocketMessagePreview{
 			At: conn.incoming.lastAt, Age: formatAge(conn.incoming.lastAt), Preview: conn.incoming.lastData,
 		}
 	}
 	if conn.outgoing.lastData != "" {
-		wc.LastMessage.Outgoing = &WebSocketMessagePreview{
+		wc.LastMessage.Outgoing = &types.WebSocketMessagePreview{
 			At: conn.outgoing.lastAt, Age: formatAge(conn.outgoing.lastAt), Preview: conn.outgoing.lastData,
 		}
 	}
 	return wc
-}
-
-// GetWebSocketStatus returns current connection states
-func (c *Capture) GetWebSocketStatus(filter WebSocketStatusFilter) WebSocketStatusResponse {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.wsConnections.status(filter)
 }

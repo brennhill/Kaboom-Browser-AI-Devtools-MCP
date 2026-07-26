@@ -6,11 +6,11 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-26
 code_paths:
+  - internal/capture/types.go
+  - internal/capture/capture.go
   - cmd/browser-agent/client_registry_adapter.go
   - cmd/browser-agent/main_connection_mcp_bootstrap.go
   - cmd/browser-agent/server_routes_clients.go
-  - internal/capture/interfaces.go
-  - internal/capture/client_registry_setter.go
   - internal/session/clientreg/registry.go
   - internal/session/clientreg/state.go
   - internal/session/types.go

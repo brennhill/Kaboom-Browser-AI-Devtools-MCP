@@ -1,20 +1,84 @@
-// Purpose: Documents capture package type-module composition and import-hub role.
-// Why: Keeps package-level type organization discoverable after type decomposition refactors.
+// Purpose: Declares the capture package's local wire/state types and cross-package interfaces.
+// Why: Keeps every capture-owned type declaration in one place instead of a dozen prefix-named stubs.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
 package capture
 
-// This file now serves as a package-level import hub.
-// All types have been refactored into focused files:
-// - interfaces.go: Abstracted component interfaces
-// - type-aliases.go: Type aliases for imported packages
-// - session-types.go: Session tracking types
-// - security-types.go: Security threat flagging
-// - network-types.go: Network waterfall and body types
-// - websocket-types.go: WebSocket event and connection tracking types
-// - extension-logging-types.go: Extension logging types
-// - enhanced-actions-types.go: Enhanced actions types
-// - internal-types.go: Internal types used by Capture struct
-// - constants.go: Buffer capacity and configuration constants
-// - buffer-types.go: Ring buffer types for Capture composition
-// - capture-struct.go: Main Capture struct and factory function
+import (
+	"encoding/json"
+	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
+)
+
+// SecurityFlag represents a detected security issue detected from network waterfall analysis.
+type SecurityFlag struct {
+	Type      string    `json:"type"`      // "suspicious_tld", "non_standard_port", etc.
+	Severity  string    `json:"severity"`  // "low", "medium", "high", "critical"
+	Origin    string    `json:"origin"`    // The flagged origin
+	Message   string    `json:"message"`   // Human-readable explanation
+	Resource  string    `json:"resource"`  // Specific resource URL (optional)
+	PageURL   string    `json:"page_url"`  // Page that loaded this resource
+	Timestamp time.Time `json:"timestamp"` // When flagged
+}
+
+// PerformanceStore manages performance snapshots and baselines with LRU eviction.
+type PerformanceStore struct {
+	snapshots       map[string]performance.Snapshot
+	snapshotOrder   []string
+	baselines       map[string]performance.Baseline
+	baselineOrder   []string
+	beforeSnapshots map[string]performance.Snapshot // keyed by correlation_id, for perf_diff
+}
+
+// NetworkWaterfallBuffer groups network waterfall ring buffer fields.
+// Protected by parent Capture.mu (no separate lock).
+type NetworkWaterfallBuffer struct {
+	entries  []NetworkWaterfallEntry // Ring buffer of PerformanceResourceTiming data
+	capacity int                     // Configurable capacity (default DefaultNetworkWaterfallCapacity=1000)
+}
+
+// ExtensionLogBuffer groups extension log ring buffer fields.
+// Protected by parent Capture.mu (no separate lock).
+type ExtensionLogBuffer struct {
+	logs []ExtensionLog // Ring buffer of extension internal logs (max MaxExtensionLogs=500)
+}
+
+// SchemaStore defines the interface for API schema detection and tracking.
+// Implemented by *apischema.SchemaStore (internal/analysis/apischema). Methods called by
+// HTTP handlers and observers.
+// Has its own lock; safe to call outside Capture.mu.
+type SchemaStore interface {
+	// EndpointCount returns the number of unique endpoints observed
+	EndpointCount() int
+}
+
+// CSPGenerator defines the interface for Content-Security-Policy generation.
+// Implemented by *csp.Generator (internal/security/csp). Called by HTTP handlers.
+// Has its own lock; safe to call outside Capture.mu.
+type CSPGenerator interface {
+	// HandleGenerateCSP is the MCP tool handler for CSP generation.
+	// params is a JSON-encoded csp.Params; returns *csp.Response.
+	HandleGenerateCSP(params json.RawMessage) (any, error)
+}
+
+// ClientRegistry defines the interface for managing connected MCP clients.
+// Implemented by *session.ClientRegistry. Called by HTTP handlers.
+// Lock hierarchy: ClientRegistry.mu is position 1 (outermost), before Capture.mu.
+//
+// Return types use any to avoid an import cycle (session imports capture):
+//   - List() returns []session.ClientInfo
+//   - Register() returns *session.ClientState
+//   - Get() returns *session.ClientState (nil if not found)
+type ClientRegistry interface {
+	// Count returns the number of registered clients.
+	Count() int
+	// List returns all registered clients as []session.ClientInfo.
+	List() any
+	// Register creates or updates a client registration, returning *session.ClientState.
+	Register(cwd string) any
+	// Get returns a specific client by ID as *session.ClientState, or nil if not found.
+	Get(id string) any
+	// Unregister removes a client by ID and reports whether the client existed.
+	Unregister(id string) bool
+}
