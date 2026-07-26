@@ -6,6 +6,11 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-26
 code_paths:
+  - internal/pty/upload/upload.go
+  - src/content/ui/hover/screenshot-feedback.ts
+  - src/content/ui/panel/host-tab.ts
+  - src/content/ui/panel/shell.ts
+  - cmd/browser-agent/internal/terminal/ws.go
   - src/lib/brand.ts
   - cmd/browser-agent/internal/terminal/handlers.go
   - cmd/browser-agent/internal/terminal/spawn_retry.go
@@ -37,7 +42,6 @@ code_paths:
   - internal/pty/session.go
   - internal/pty/writebuf.go
   - internal/pty/fanout.go
-  - internal/pty/upload.go
   - internal/pty/diag.go
   - npm/kaboom-agentic-browser/lib/kill-daemon.js
 test_paths:

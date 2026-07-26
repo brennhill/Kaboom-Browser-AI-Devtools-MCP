@@ -1,6 +1,6 @@
 // upload_test.go — Tests for terminal session image upload.
 
-package pty
+package upload
 
 import (
 	"errors"
