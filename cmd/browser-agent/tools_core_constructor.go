@@ -12,6 +12,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testgenhandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis"
@@ -128,7 +129,7 @@ func NewToolHandler(server *Server, capture *capture.Store) *MCPHandler {
 	interactDeps := buildInteractDeps(handler)
 	handler.interactActionHandler = toolinteract.NewInteractActionHandler(interactDeps)
 	handler.uploadInteractHandler = toolinteract.NewUploadInteractHandler(interactDeps, handler.interactActionHandler)
-	handler.testGenHandler = newTestGenHandler(handler) // *ToolHandler satisfies testGenHandlerDeps
+	handler.testGenHandler = testgenhandler.New(handler) // *ToolHandler satisfies testgenhandler.Deps
 	handler.stateInteractHandler = toolinteract.NewStateInteractHandler(interactDeps, handler.sessionStoreImpl)
 	handler.configureSessionHandler = newConfigureSessionHandler(handler, handler.sessionStoreImpl, handler.sessionManager, handler.MCPHandler.server)
 

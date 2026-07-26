@@ -2,7 +2,7 @@
 // Why: Keeps compatibility surfaces centralized so handler files stay focused on request flow.
 // Docs: docs/features/feature/test-generation/index.md
 
-package main
+package testgenhandler
 
 import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testgen"

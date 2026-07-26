@@ -15,6 +15,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -28,6 +29,30 @@ func SucceedRaw(req mcp.JSONRPCRequest, result json.RawMessage) mcp.JSONRPCRespo
 // FailJSON builds an error JSONRPCResponse with a JSON data payload (isError=true).
 func FailJSON(req mcp.JSONRPCRequest, summary string, data any) mcp.JSONRPCResponse {
 	return mcp.JSONRPCResponse{JSONRPC: mcp.JSONRPCVersion, ID: req.ID, Result: mcp.JSONErrorResponse(summary, data)}
+}
+
+// RequireString returns (resp, true) when a required string parameter is empty,
+// short-circuiting the caller. Copies of this guard existed in package main and
+// in toolinteract; this is the one both now use.
+func RequireString(req mcp.JSONRPCRequest, value, paramName, hint string) (mcp.JSONRPCResponse, bool) {
+	if value == "" {
+		return mcp.Fail(req, mcp.ErrMissingParam,
+			fmt.Sprintf("Required parameter '%s' is missing", paramName),
+			hint, mcp.WithParam(paramName)), true
+	}
+	return mcp.JSONRPCResponse{}, false
+}
+
+// RequireOneOf returns (resp, true) when value is not in validValues.
+func RequireOneOf(req mcp.JSONRPCRequest, value string, paramName string, validValues []string, hint string) (mcp.JSONRPCResponse, bool) {
+	for _, v := range validValues {
+		if value == v {
+			return mcp.JSONRPCResponse{}, false
+		}
+	}
+	return mcp.Fail(req, mcp.ErrMissingParam,
+		fmt.Sprintf("Parameter '%s' must be one of: %s", paramName, strings.Join(validValues, ", ")),
+		hint, mcp.WithParam(paramName)), true
 }
 
 // NewCorrelationID generates a unique correlation ID with the given prefix.

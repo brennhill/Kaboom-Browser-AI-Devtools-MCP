@@ -3,34 +3,14 @@
 
 // testgen_generate_test.go — Tests for testgen.go pure/helper functions.
 // Only tests that cover behavior not already tested in internal/testgen/*_test.go.
-package main
+package testgenhandler
 
 import (
 	"strings"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
-
-// newTestToolHandler creates a minimal ToolHandler for unit tests.
-// It sets up a real Capture instance and a Server with empty entries.
-func newTestToolHandler() *ToolHandler {
-	cap := capture.NewCapture()
-	srv := &Server{
-		logs: &LogStore{
-			entries:    make([]LogEntry, 0),
-			addWarning: func(string) {},
-		},
-	}
-	h := &ToolHandler{
-		MCPHandler: &MCPHandler{server: srv},
-		capture:    cap,
-	}
-	h.testGenHandler = newTestGenHandler(h)
-	h.interactActionHandler = toolinteract.NewInteractActionHandler(buildInteractDeps(h))
-	return h
-}
 
 // ============================================
 // Tests for buildRegressionAssertions
