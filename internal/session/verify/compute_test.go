@@ -6,13 +6,14 @@
 // formatNetworkEntry, buildNetworkKeyMap, classifyNetworkErrorResolution,
 // diffNetworkErrors, computeLoadTimeDiff, computeVerification, determineVerdict,
 // requireVerifSessionID, HandleTool dispatch.
-package session
+package verify
 
 import (
 	"encoding/json"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session"
 )
 
 // ============================================
@@ -768,7 +769,7 @@ func TestVerifyHandleTool_CancelMissingSessionID(t *testing.T) {
 func TestVerifyHandleTool_StartReturnsFields(t *testing.T) {
 	t.Parallel()
 	mock := &mockVerifyState{
-		consoleErrors: []SnapshotError{{Type: "error", Message: "e", Count: 1}},
+		consoleErrors: []session.SnapshotError{{Type: "error", Message: "e", Count: 1}},
 		pageURL:       "http://localhost:3000",
 	}
 	vm := NewVerificationManager(mock)

@@ -3,7 +3,7 @@
 
 // verify_compute.go — Verification computation and MCP tool dispatch.
 // Contains: computeVerification, determineVerdict, HandleTool.
-package session
+package verify
 
 import (
 	"fmt"

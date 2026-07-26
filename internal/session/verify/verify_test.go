@@ -4,7 +4,7 @@
 // verify_test.go — Tests for the verify_fix MCP tool.
 // Tests the verification loop: start (baseline) -> watch -> compare workflow.
 // Covers session lifecycle, verdict determination, error normalization, and limits.
-package session
+package verify
 
 import (
 	"encoding/json"
@@ -13,46 +13,47 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session"
 )
 
 // ============================================
 // Mock VerifyStateReader
 // ============================================
 
-// mockVerifyState implements CaptureStateReader for verification testing
+// mockVerifyState implements session.CaptureStateReader for verification testing
 type mockVerifyState struct {
-	consoleErrors   []SnapshotError
-	consoleWarnings []SnapshotError
-	networkRequests []SnapshotNetworkRequest
-	wsConnections   []SnapshotWSConnection
+	consoleErrors   []session.SnapshotError
+	consoleWarnings []session.SnapshotError
+	networkRequests []session.SnapshotNetworkRequest
+	wsConnections   []session.SnapshotWSConnection
 	performance     *performance.Snapshot
 	pageURL         string
 }
 
-func (m *mockVerifyState) GetConsoleErrors() []SnapshotError {
+func (m *mockVerifyState) GetConsoleErrors() []session.SnapshotError {
 	if m.consoleErrors == nil {
-		return []SnapshotError{}
+		return []session.SnapshotError{}
 	}
 	return m.consoleErrors
 }
 
-func (m *mockVerifyState) GetConsoleWarnings() []SnapshotError {
+func (m *mockVerifyState) GetConsoleWarnings() []session.SnapshotError {
 	if m.consoleWarnings == nil {
-		return []SnapshotError{}
+		return []session.SnapshotError{}
 	}
 	return m.consoleWarnings
 }
 
-func (m *mockVerifyState) GetNetworkRequests() []SnapshotNetworkRequest {
+func (m *mockVerifyState) GetNetworkRequests() []session.SnapshotNetworkRequest {
 	if m.networkRequests == nil {
-		return []SnapshotNetworkRequest{}
+		return []session.SnapshotNetworkRequest{}
 	}
 	return m.networkRequests
 }
 
-func (m *mockVerifyState) GetWSConnections() []SnapshotWSConnection {
+func (m *mockVerifyState) GetWSConnections() []session.SnapshotWSConnection {
 	if m.wsConnections == nil {
-		return []SnapshotWSConnection{}
+		return []session.SnapshotWSConnection{}
 	}
 	return m.wsConnections
 }
@@ -72,11 +73,11 @@ func (m *mockVerifyState) GetCurrentPageURL() string {
 func TestVerificationManager_Start(t *testing.T) {
 	t.Parallel()
 	mock := &mockVerifyState{
-		consoleErrors: []SnapshotError{
+		consoleErrors: []session.SnapshotError{
 			{Type: "console", Message: "Cannot read property 'user' of undefined", Count: 2},
 			{Type: "console", Message: "Failed to load resource", Count: 1},
 		},
-		networkRequests: []SnapshotNetworkRequest{
+		networkRequests: []session.SnapshotNetworkRequest{
 			{Method: "POST", URL: "/api/login", Status: 500, Duration: 150},
 			{Method: "GET", URL: "/api/users", Status: 200, Duration: 50},
 		},
@@ -134,7 +135,7 @@ func TestVerificationManager_StartWithLabel(t *testing.T) {
 func TestVerificationManager_StartWithURLFilter(t *testing.T) {
 	t.Parallel()
 	mock := &mockVerifyState{
-		networkRequests: []SnapshotNetworkRequest{
+		networkRequests: []session.SnapshotNetworkRequest{
 			{Method: "POST", URL: "/api/login", Status: 500},
 			{Method: "GET", URL: "/api/users", Status: 200},
 			{Method: "GET", URL: "/static/main.js", Status: 200},
@@ -162,7 +163,7 @@ func TestVerificationManager_StartWithURLFilter(t *testing.T) {
 func TestVerificationManager_Watch(t *testing.T) {
 	t.Parallel()
 	mock := &mockVerifyState{
-		consoleErrors: []SnapshotError{
+		consoleErrors: []session.SnapshotError{
 			{Type: "console", Message: "Error in baseline", Count: 1},
 		},
 		pageURL: "http://localhost:3000",
@@ -229,10 +230,10 @@ func TestVerificationManager_WatchAlreadyWatching(t *testing.T) {
 func TestVerificationManager_Compare_Fixed(t *testing.T) {
 	t.Parallel()
 	mock := &mockVerifyState{
-		consoleErrors: []SnapshotError{
+		consoleErrors: []session.SnapshotError{
 			{Type: "console", Message: "Cannot read property 'user' of undefined", Count: 2},
 		},
-		networkRequests: []SnapshotNetworkRequest{
+		networkRequests: []session.SnapshotNetworkRequest{
 			{Method: "POST", URL: "/api/login", Status: 500},
 		},
 		pageURL: "http://localhost:3000",
@@ -245,7 +246,7 @@ func TestVerificationManager_Compare_Fixed(t *testing.T) {
 
 	// Simulate fix: clear all errors
 	mock.consoleErrors = nil
-	mock.networkRequests = []SnapshotNetworkRequest{
+	mock.networkRequests = []session.SnapshotNetworkRequest{
 		{Method: "POST", URL: "/api/login", Status: 200},
 	}
 
@@ -287,7 +288,7 @@ func TestVerificationManager_Compare_Fixed(t *testing.T) {
 func TestVerificationManager_Compare_Improved(t *testing.T) {
 	t.Parallel()
 	mock := &mockVerifyState{
-		consoleErrors: []SnapshotError{
+		consoleErrors: []session.SnapshotError{
 			{Type: "console", Message: "Error A", Count: 1},
 			{Type: "console", Message: "Error B", Count: 1},
 		},
@@ -298,7 +299,7 @@ func TestVerificationManager_Compare_Improved(t *testing.T) {
 	startResult, _ := vm.Start("improve-test", "")
 
 	// Simulate partial fix: only one error remains
-	mock.consoleErrors = []SnapshotError{
+	mock.consoleErrors = []session.SnapshotError{
 		{Type: "console", Message: "Error B", Count: 1},
 	}
 
@@ -316,7 +317,7 @@ func TestVerificationManager_Compare_Improved(t *testing.T) {
 func TestVerificationManager_Compare_Unchanged(t *testing.T) {
 	t.Parallel()
 	mock := &mockVerifyState{
-		consoleErrors: []SnapshotError{
+		consoleErrors: []session.SnapshotError{
 			{Type: "console", Message: "Persistent error", Count: 1},
 		},
 		pageURL: "http://localhost:3000",
@@ -340,7 +341,7 @@ func TestVerificationManager_Compare_Unchanged(t *testing.T) {
 func TestVerificationManager_Compare_DifferentIssue(t *testing.T) {
 	t.Parallel()
 	mock := &mockVerifyState{
-		consoleErrors: []SnapshotError{
+		consoleErrors: []session.SnapshotError{
 			{Type: "console", Message: "Original error", Count: 1},
 		},
 		pageURL: "http://localhost:3000",
@@ -350,7 +351,7 @@ func TestVerificationManager_Compare_DifferentIssue(t *testing.T) {
 	startResult, _ := vm.Start("different-test", "")
 
 	// Original fixed but new error appeared
-	mock.consoleErrors = []SnapshotError{
+	mock.consoleErrors = []session.SnapshotError{
 		{Type: "console", Message: "New different error", Count: 1},
 	}
 
@@ -371,7 +372,7 @@ func TestVerificationManager_Compare_DifferentIssue(t *testing.T) {
 func TestVerificationManager_Compare_Regressed(t *testing.T) {
 	t.Parallel()
 	mock := &mockVerifyState{
-		consoleErrors: []SnapshotError{
+		consoleErrors: []session.SnapshotError{
 			{Type: "console", Message: "Error A", Count: 1},
 		},
 		pageURL: "http://localhost:3000",
@@ -381,7 +382,7 @@ func TestVerificationManager_Compare_Regressed(t *testing.T) {
 	startResult, _ := vm.Start("regressed-test", "")
 
 	// More errors than before
-	mock.consoleErrors = []SnapshotError{
+	mock.consoleErrors = []session.SnapshotError{
 		{Type: "console", Message: "Error A", Count: 1},
 		{Type: "console", Message: "Error B", Count: 1},
 		{Type: "console", Message: "Error C", Count: 1},
@@ -402,7 +403,7 @@ func TestVerificationManager_Compare_NoIssuesDetected(t *testing.T) {
 	t.Parallel()
 	mock := &mockVerifyState{
 		consoleErrors: nil, // No errors
-		networkRequests: []SnapshotNetworkRequest{
+		networkRequests: []session.SnapshotNetworkRequest{
 			{Method: "GET", URL: "/api/users", Status: 200},
 		},
 		pageURL: "http://localhost:3000",
@@ -600,7 +601,7 @@ func TestNormalizeVerifyErrorMessage(t *testing.T) {
 func TestVerificationManager_ErrorMatchingNormalized(t *testing.T) {
 	t.Parallel()
 	mock := &mockVerifyState{
-		consoleErrors: []SnapshotError{
+		consoleErrors: []session.SnapshotError{
 			{Type: "console", Message: "Failed to load user 550e8400-e29b-41d4-a716-446655440000", Count: 1},
 		},
 		pageURL: "http://localhost:3000",
@@ -610,7 +611,7 @@ func TestVerificationManager_ErrorMatchingNormalized(t *testing.T) {
 	startResult, _ := vm.Start("normalization-test", "")
 
 	// Same error but different UUID
-	mock.consoleErrors = []SnapshotError{
+	mock.consoleErrors = []session.SnapshotError{
 		{Type: "console", Message: "Failed to load user a1b2c3d4-e5f6-7890-abcd-ef1234567890", Count: 1},
 	}
 
@@ -633,7 +634,7 @@ func TestVerificationManager_ErrorMatchingNormalized(t *testing.T) {
 func TestVerificationManager_NetworkStatusChange(t *testing.T) {
 	t.Parallel()
 	mock := &mockVerifyState{
-		networkRequests: []SnapshotNetworkRequest{
+		networkRequests: []session.SnapshotNetworkRequest{
 			{Method: "POST", URL: "/api/login", Status: 500},
 		},
 		pageURL: "http://localhost:3000",
@@ -643,7 +644,7 @@ func TestVerificationManager_NetworkStatusChange(t *testing.T) {
 	startResult, _ := vm.Start("network-test", "")
 
 	// Fix: endpoint now returns 200
-	mock.networkRequests = []SnapshotNetworkRequest{
+	mock.networkRequests = []session.SnapshotNetworkRequest{
 		{Method: "POST", URL: "/api/login", Status: 200},
 	}
 
@@ -786,7 +787,7 @@ func TestVerificationManager_SessionAutoCleanup(t *testing.T) {
 func TestVerificationManager_HandleTool_Start(t *testing.T) {
 	t.Parallel()
 	mock := &mockVerifyState{
-		consoleErrors: []SnapshotError{
+		consoleErrors: []session.SnapshotError{
 			{Type: "console", Message: "Test error", Count: 1},
 		},
 		pageURL: "http://localhost:3000",
@@ -815,7 +816,7 @@ func TestVerificationManager_HandleTool_Start(t *testing.T) {
 func TestVerificationManager_HandleTool_FullWorkflow(t *testing.T) {
 	t.Parallel()
 	mock := &mockVerifyState{
-		consoleErrors: []SnapshotError{
+		consoleErrors: []session.SnapshotError{
 			{Type: "console", Message: "Original error", Count: 1},
 		},
 		pageURL: "http://localhost:3000",
@@ -969,7 +970,7 @@ func TestVerificationManager_EmptyBaseline(t *testing.T) {
 func TestVerificationManager_CompareMultipleTimes(t *testing.T) {
 	t.Parallel()
 	mock := &mockVerifyState{
-		consoleErrors: []SnapshotError{
+		consoleErrors: []session.SnapshotError{
 			{Type: "console", Message: "Error", Count: 1},
 		},
 		pageURL: "http://localhost:3000",
@@ -990,7 +991,7 @@ func TestVerificationManager_CompareMultipleTimes(t *testing.T) {
 	}
 
 	// Add new error
-	mock.consoleErrors = []SnapshotError{
+	mock.consoleErrors = []session.SnapshotError{
 		{Type: "console", Message: "New error", Count: 1},
 	}
 

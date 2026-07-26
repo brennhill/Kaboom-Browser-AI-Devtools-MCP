@@ -2,7 +2,7 @@
 // Why: Isolates snapshot transformation logic from session action orchestration.
 // Docs: docs/features/feature/request-session-correlation/index.md
 
-package session
+package verify
 
 import (
 	"strings"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session"
 )
 
 // ============================================
@@ -17,7 +18,7 @@ import (
 // ============================================
 
 // convertConsoleErrors converts snapshot errors to verification errors.
-func convertConsoleErrors(errors []SnapshotError) []VerifyError {
+func convertConsoleErrors(errors []session.SnapshotError) []VerifyError {
 	result := make([]VerifyError, 0, len(errors))
 	for _, e := range errors {
 		result = append(result, VerifyError{
@@ -30,7 +31,7 @@ func convertConsoleErrors(errors []SnapshotError) []VerifyError {
 }
 
 // convertNetworkRequests converts and filters network requests, returning all requests and error-only requests.
-func convertNetworkRequests(network []SnapshotNetworkRequest, urlFilter string) ([]VerifyNetworkEntry, []VerifyNetworkEntry) {
+func convertNetworkRequests(network []session.SnapshotNetworkRequest, urlFilter string) ([]VerifyNetworkEntry, []VerifyNetworkEntry) {
 	allNetwork := make([]VerifyNetworkEntry, 0, len(network))
 	networkErrors := make([]VerifyNetworkEntry, 0)
 	for _, req := range network {

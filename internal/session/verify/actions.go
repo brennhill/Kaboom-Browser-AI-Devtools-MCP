@@ -2,7 +2,7 @@
 // Why: Separates action orchestration from shared types and snapshot helper logic.
 // Docs: docs/features/feature/request-session-correlation/index.md
 
-package session
+package verify
 
 import (
 	"fmt"

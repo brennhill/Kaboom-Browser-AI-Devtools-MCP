@@ -6,7 +6,23 @@
 // Provides before/after session comparison for fix verification.
 // AI captures state before a fix, applies fix, captures after, compares to verify.
 // Session lifecycle: start -> watch -> compare (or cancel at any point).
-package session
+
+// Package verify implements the verify_fix loop: capture a baseline of browser
+// state, watch while a fix is applied, then compare before/after to decide
+// whether console and network errors were resolved, unchanged, or made worse.
+//
+// It shares exactly one thing with the snapshot manager next door — the
+// session.CaptureStateReader interface it reads live state through — and keeps
+// its own snapshot shape (VerifSnapshot), its own normalization, and its own
+// verdict rules.
+//
+// NOTE: nothing constructs a VerificationManager outside this package's tests.
+// verify_fix is not registered in the configure tool registry
+// (cmd/browser-agent/tools_configure_registry.go), so the MCP surface it
+// implements is currently unreachable at runtime. That predates this refactor
+// and is left as-is here; it is reported separately rather than silently
+// deleted or wired up.
+package verify
 
 import (
 	"regexp"
@@ -14,6 +30,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session"
 )
 
 // ============================================
@@ -195,13 +212,13 @@ type VerificationManager struct {
 	mu       sync.RWMutex
 	sessions map[string]*VerificationSession
 	order    []string // Track insertion order
-	reader   CaptureStateReader
+	reader   session.CaptureStateReader
 	ttl      time.Duration
 	idSeq    int
 }
 
 // NewVerificationManager creates a new VerificationManager.
-func NewVerificationManager(reader CaptureStateReader) *VerificationManager {
+func NewVerificationManager(reader session.CaptureStateReader) *VerificationManager {
 	return &VerificationManager{
 		sessions: make(map[string]*VerificationSession),
 		order:    make([]string, 0),
@@ -211,7 +228,7 @@ func NewVerificationManager(reader CaptureStateReader) *VerificationManager {
 }
 
 // NewVerificationManagerWithTTL creates a new VerificationManager with custom TTL.
-func NewVerificationManagerWithTTL(reader CaptureStateReader, ttl time.Duration) *VerificationManager {
+func NewVerificationManagerWithTTL(reader session.CaptureStateReader, ttl time.Duration) *VerificationManager {
 	return &VerificationManager{
 		sessions: make(map[string]*VerificationSession),
 		order:    make([]string, 0),
