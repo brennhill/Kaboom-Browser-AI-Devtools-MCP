@@ -3,16 +3,14 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 )
 
-// newCorrelationID generates a unique correlation ID with the given prefix.
-// Format: prefix_timestamp_random (e.g., "nav_1708300000000000000_4821937562").
-func newCorrelationID(prefix string) string {
-	return fmt.Sprintf("%s_%d_%d", prefix, time.Now().UnixNano(), randomInt63())
-}
+// newCorrelationID delegates to internal/toolresp, the single implementation.
+var newCorrelationID = toolresp.NewCorrelationID
 
 func canonicalLifecycleStatus(status string) string {
 	switch strings.ToLower(strings.TrimSpace(status)) {

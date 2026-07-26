@@ -4,22 +4,15 @@
 package main
 
 import (
-	"crypto/rand"
-	"encoding/binary"
 	"sync"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 )
 
-// randomInt63 generates a random int64 for correlation IDs using crypto/rand.
-func randomInt63() int64 {
-	var b [8]byte
-	if _, err := rand.Read(b[:]); err != nil {
-		// Fallback to time-based if rand fails (should never happen).
-		return time.Now().UnixNano()
-	}
-	// #nosec G115 -- masked to the positive int63 range (top bit cleared); the uint64->int64 conversion cannot overflow.
-	return int64(binary.BigEndian.Uint64(b[:]) & 0x7FFFFFFFFFFFFFFF)
-}
+// randomInt63 generates a random non-negative int64 for correlation IDs.
+// It delegates to internal/toolresp, the single implementation.
+var randomInt63 = toolresp.RandomInt63
 
 // ToolCallLimiter implements a sliding window rate limiter for MCP tool calls.
 // Thread-safe: uses its own mutex independent of other locks.
