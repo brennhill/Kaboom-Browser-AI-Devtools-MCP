@@ -1,8 +1,9 @@
+// tool.go — MCP action dispatch for snapshot/compare/list.
 // Purpose: Exposes security snapshot and diff operations via the MCP tool contract.
 // Why: Keeps tool-specific request parsing separate from domain comparison logic.
 // Docs: docs/features/feature/security-hardening/index.md
 
-package security
+package diff
 
 import (
 	"encoding/json"
@@ -15,7 +16,7 @@ import (
 //
 // Failure semantics:
 // - Invalid JSON/action returns explicit error and performs no mutation.
-func (m *SecurityDiffManager) HandleDiffSecurity(params json.RawMessage, bodies []capture.NetworkBody) (any, error) {
+func (m *Manager) HandleDiffSecurity(params json.RawMessage, bodies []capture.NetworkBody) (any, error) {
 	var toolParams struct {
 		Action      string `json:"action"`
 		Name        string `json:"name"`

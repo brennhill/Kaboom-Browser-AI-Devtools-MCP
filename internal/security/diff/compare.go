@@ -1,8 +1,9 @@
+// compare.go — Computes regressions and improvements between two snapshots.
 // Purpose: Computes regressions and improvements between security snapshots.
 // Why: Isolates comparison logic so security findings remain deterministic and maintainable.
 // Docs: docs/features/feature/security-hardening/index.md
 
-package security
+package diff
 
 import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 
@@ -10,7 +11,7 @@ import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 //
 // Failure semantics:
 // - Missing/expired snapshot references return errors rather than partial comparisons.
-func (m *SecurityDiffManager) Compare(fromName, toName string, currentBodies []capture.NetworkBody) (*SecurityDiffResult, error) {
+func (m *Manager) Compare(fromName, toName string, currentBodies []capture.NetworkBody) (*Result, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -26,9 +27,9 @@ func (m *SecurityDiffManager) Compare(fromName, toName string, currentBodies []c
 
 	regressions, improvements := m.collectAllChanges(fromSnapshot, toSnapshot)
 	verdict := determineVerdict(regressions, improvements)
-	summary := buildDiffSummary(regressions, improvements)
+	summary := buildSummary(regressions, improvements)
 
-	return &SecurityDiffResult{
+	return &Result{
 		Verdict:      verdict,
 		Regressions:  regressions,
 		Improvements: improvements,
@@ -36,8 +37,8 @@ func (m *SecurityDiffManager) Compare(fromName, toName string, currentBodies []c
 	}, nil
 }
 
-func (m *SecurityDiffManager) compareHeaders(from, to *SecuritySnapshot) ([]SecurityChange, []SecurityChange) {
-	var regressions, improvements []SecurityChange
+func (m *Manager) compareHeaders(from, to *Snapshot) ([]Change, []Change) {
+	var regressions, improvements []Change
 	origins := collectMapKeys(from.Headers, to.Headers)
 
 	for origin := range origins {
@@ -58,8 +59,8 @@ func (m *SecurityDiffManager) compareHeaders(from, to *SecuritySnapshot) ([]Secu
 	return regressions, improvements
 }
 
-func (m *SecurityDiffManager) compareCookies(from, to *SecuritySnapshot) ([]SecurityChange, []SecurityChange) {
-	var regressions, improvements []SecurityChange
+func (m *Manager) compareCookies(from, to *Snapshot) ([]Change, []Change) {
+	var regressions, improvements []Change
 	origins := collectCookieMapKeys(from.Cookies, to.Cookies)
 
 	for origin := range origins {
@@ -80,8 +81,8 @@ func (m *SecurityDiffManager) compareCookies(from, to *SecuritySnapshot) ([]Secu
 	return regressions, improvements
 }
 
-func (m *SecurityDiffManager) compareAuth(from, to *SecuritySnapshot) ([]SecurityChange, []SecurityChange) {
-	var regressions, improvements []SecurityChange
+func (m *Manager) compareAuth(from, to *Snapshot) ([]Change, []Change) {
+	var regressions, improvements []Change
 	endpoints := collectBoolMapKeys(from.Auth, to.Auth)
 
 	for endpoint := range endpoints {
@@ -89,7 +90,7 @@ func (m *SecurityDiffManager) compareAuth(from, to *SecuritySnapshot) ([]Securit
 		toAuth := to.Auth[endpoint]
 
 		if fromAuth && !toAuth {
-			regressions = append(regressions, SecurityChange{
+			regressions = append(regressions, Change{
 				Category:       "auth",
 				Severity:       "critical",
 				Endpoint:       endpoint,
@@ -99,7 +100,7 @@ func (m *SecurityDiffManager) compareAuth(from, to *SecuritySnapshot) ([]Securit
 				Recommendation: "This endpoint previously required authentication but no longer does. Verify this is intentional.",
 			})
 		} else if !fromAuth && toAuth {
-			improvements = append(improvements, SecurityChange{
+			improvements = append(improvements, Change{
 				Category:       "auth",
 				Severity:       "info",
 				Endpoint:       endpoint,
@@ -114,8 +115,8 @@ func (m *SecurityDiffManager) compareAuth(from, to *SecuritySnapshot) ([]Securit
 	return regressions, improvements
 }
 
-func (m *SecurityDiffManager) compareTransport(from, to *SecuritySnapshot) ([]SecurityChange, []SecurityChange) {
-	var regressions, improvements []SecurityChange
+func (m *Manager) compareTransport(from, to *Snapshot) ([]Change, []Change) {
+	var regressions, improvements []Change
 
 	fromByHost := normalizeTransportByHost(from.Transport)
 	toByHost := normalizeTransportByHost(to.Transport)
@@ -126,7 +127,7 @@ func (m *SecurityDiffManager) compareTransport(from, to *SecuritySnapshot) ([]Se
 		toScheme := toByHost[host]
 
 		if fromScheme == "https" && toScheme == "http" {
-			regressions = append(regressions, SecurityChange{
+			regressions = append(regressions, Change{
 				Category:       "transport",
 				Severity:       "high",
 				Origin:         host,
@@ -136,7 +137,7 @@ func (m *SecurityDiffManager) compareTransport(from, to *SecuritySnapshot) ([]Se
 				Recommendation: "Origin downgraded from HTTPS to HTTP. Data in transit can be intercepted.",
 			})
 		} else if fromScheme == "http" && toScheme == "https" {
-			improvements = append(improvements, SecurityChange{
+			improvements = append(improvements, Change{
 				Category:       "transport",
 				Severity:       "info",
 				Origin:         host,
@@ -151,10 +152,10 @@ func (m *SecurityDiffManager) compareTransport(from, to *SecuritySnapshot) ([]Se
 	return regressions, improvements
 }
 
-func (m *SecurityDiffManager) collectAllChanges(from, to *SecuritySnapshot) ([]SecurityChange, []SecurityChange) {
-	var regressions, improvements []SecurityChange
+func (m *Manager) collectAllChanges(from, to *Snapshot) ([]Change, []Change) {
+	var regressions, improvements []Change
 
-	compareFns := []func(*SecuritySnapshot, *SecuritySnapshot) ([]SecurityChange, []SecurityChange){
+	compareFns := []func(*Snapshot, *Snapshot) ([]Change, []Change){
 		m.compareHeaders,
 		m.compareCookies,
 		m.compareAuth,
@@ -169,7 +170,7 @@ func (m *SecurityDiffManager) collectAllChanges(from, to *SecuritySnapshot) ([]S
 	return regressions, improvements
 }
 
-func determineVerdict(regressions, improvements []SecurityChange) string {
+func determineVerdict(regressions, improvements []Change) string {
 	if len(regressions) > 0 {
 		return "regressed"
 	}

@@ -2,85 +2,16 @@
 // Docs: docs/features/feature/security-hardening/index.md
 
 // security_coverage_test.go — Targeted coverage tests for uncovered security paths (part 1).
-// Covers: formatDuration, redactSecret, networkFlagDescription, networkFlagRemediation,
-// scanForCreditCard, scanForSSN,
-// scanForEmailPII, scanForPhonePII, thirdPartySeverity, checkAuthPatterns.
+// Covers: redactSecret, networkFlagDescription, networkFlagRemediation,
+// scanForCreditCard, scanForSSN, scanForEmailPII, scanForPhonePII,
+// thirdPartySeverity, checkAuthPatterns.
 package security
 
 import (
 	"testing"
-	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
-
-// ============================================
-// formatDuration — All time range branches
-// ============================================
-
-func TestFormatDuration_SubSecond(t *testing.T) {
-	t.Parallel()
-	got := formatDuration(500 * time.Millisecond)
-	if got != "0.5s" {
-		t.Errorf("formatDuration(500ms) = %q, want 0.5s", got)
-	}
-}
-
-func TestFormatDuration_Seconds(t *testing.T) {
-	t.Parallel()
-	got := formatDuration(30 * time.Second)
-	if got != "30s" {
-		t.Errorf("formatDuration(30s) = %q, want 30s", got)
-	}
-}
-
-func TestFormatDuration_MinutesOnly(t *testing.T) {
-	t.Parallel()
-	got := formatDuration(5 * time.Minute)
-	if got != "5m" {
-		t.Errorf("formatDuration(5m) = %q, want 5m", got)
-	}
-}
-
-func TestFormatDuration_MinutesAndSeconds(t *testing.T) {
-	t.Parallel()
-	got := formatDuration(5*time.Minute + 30*time.Second)
-	if got != "5m30s" {
-		t.Errorf("formatDuration(5m30s) = %q, want 5m30s", got)
-	}
-}
-
-func TestFormatDuration_HoursOnly(t *testing.T) {
-	t.Parallel()
-	got := formatDuration(2 * time.Hour)
-	if got != "2h" {
-		t.Errorf("formatDuration(2h) = %q, want 2h", got)
-	}
-}
-
-func TestFormatDuration_HoursAndMinutes(t *testing.T) {
-	t.Parallel()
-	got := formatDuration(2*time.Hour + 15*time.Minute)
-	if got != "2h15m" {
-		t.Errorf("formatDuration(2h15m) = %q, want 2h15m", got)
-	}
-}
-
-func TestFormatDuration_ExactSecondBoundary(t *testing.T) {
-	t.Parallel()
-	got := formatDuration(1 * time.Second)
-	if got != "1s" {
-		t.Errorf("formatDuration(1s) = %q, want 1s", got)
-	}
-}
-
-func TestFormatDuration_JustUnderMinute(t *testing.T) {
-	t.Parallel()
-	got := formatDuration(59 * time.Second)
-	if got != "59s" {
-		t.Errorf("formatDuration(59s) = %q, want 59s", got)
-	}
-}
 
 // ============================================
 // redactSecret — All length branches

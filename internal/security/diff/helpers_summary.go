@@ -1,6 +1,7 @@
+// helpers_summary.go — Severity-categorized summary construction and age formatting.
 // Purpose: Builds severity-categorized summaries from security diff regressions and improvements.
 // Why: Separates summary construction from individual diff comparison helpers.
-package security
+package diff
 
 import (
 	"time"
@@ -8,7 +9,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
-func buildDiffSummary(regressions, improvements []SecurityChange) SecurityDiffSummary {
+func buildSummary(regressions, improvements []Change) Summary {
 	bySeverity := make(map[string]int)
 	byCategory := make(map[string]int)
 
@@ -17,7 +18,7 @@ func buildDiffSummary(regressions, improvements []SecurityChange) SecurityDiffSu
 		byCategory[r.Category]++
 	}
 
-	return SecurityDiffSummary{
+	return Summary{
 		TotalRegressions:  len(regressions),
 		TotalImprovements: len(improvements),
 		BySeverity:        bySeverity,

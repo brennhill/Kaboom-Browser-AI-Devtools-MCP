@@ -1,8 +1,9 @@
+// snapshot.go — Snapshot capture, bounded retention and lookup.
 // Purpose: Manages security snapshot creation, retention, and lookup.
 // Why: Separates stateful snapshot lifecycle from diff computation logic.
 // Docs: docs/features/feature/security-hardening/index.md
 
-package security
+package diff
 
 import (
 	"fmt"
@@ -19,7 +20,7 @@ import (
 //
 // Failure semantics:
 // - Name validation failure returns error and leaves store unchanged.
-func (m *SecurityDiffManager) TakeSnapshot(name string, bodies []capture.NetworkBody) (*SecuritySnapshot, error) {
+func (m *Manager) TakeSnapshot(name string, bodies []capture.NetworkBody) (*Snapshot, error) {
 	if err := validateSnapshotName(name); err != nil {
 		return nil, err
 	}
@@ -45,17 +46,17 @@ func (m *SecurityDiffManager) TakeSnapshot(name string, bodies []capture.Network
 //
 // Failure semantics:
 // - Expired entries are reported with Expired=true; they are not auto-deleted here.
-func (m *SecurityDiffManager) ListSnapshots() []SecuritySnapshotListEntry {
+func (m *Manager) ListSnapshots() []SnapshotListEntry {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	entries := make([]SecuritySnapshotListEntry, 0, len(m.order))
+	entries := make([]SnapshotListEntry, 0, len(m.order))
 	for _, name := range m.order {
 		snapshot, ok := m.snapshots[name]
 		if !ok {
 			continue
 		}
-		entries = append(entries, SecuritySnapshotListEntry{
+		entries = append(entries, SnapshotListEntry{
 			Name:    snapshot.Name,
 			TakenAt: snapshot.TakenAt.Format(time.RFC3339),
 			Age:     formatDuration(time.Since(snapshot.TakenAt)),
@@ -78,18 +79,18 @@ func validateSnapshotName(name string) error {
 	return nil
 }
 
-func newEmptySnapshot(name string) *SecuritySnapshot {
-	return &SecuritySnapshot{
+func newEmptySnapshot(name string) *Snapshot {
+	return &Snapshot{
 		Name:      name,
 		TakenAt:   time.Now(),
 		Headers:   make(map[string]map[string]string),
-		Cookies:   make(map[string][]SecurityCookie),
+		Cookies:   make(map[string][]Cookie),
 		Auth:      make(map[string]bool),
 		Transport: make(map[string]string),
 	}
 }
 
-func populateSnapshotFromBodies(snapshot *SecuritySnapshot, bodies []capture.NetworkBody) {
+func populateSnapshotFromBodies(snapshot *Snapshot, bodies []capture.NetworkBody) {
 	for _, body := range bodies {
 		origin := extractSnapshotOrigin(body.URL)
 		populateHeaders(snapshot, origin, body)
@@ -101,21 +102,21 @@ func populateSnapshotFromBodies(snapshot *SecuritySnapshot, bodies []capture.Net
 	}
 }
 
-func populateHeaders(snapshot *SecuritySnapshot, origin string, body capture.NetworkBody) {
+func populateHeaders(snapshot *Snapshot, origin string, body capture.NetworkBody) {
 	if !httpsec.IsHTMLResponse(body) || body.ResponseHeaders == nil {
 		return
 	}
 	if snapshot.Headers[origin] == nil {
 		snapshot.Headers[origin] = make(map[string]string)
 	}
-	for _, header := range trackedSecurityHeaders {
+	for _, header := range trackedHeaders {
 		if value, ok := body.ResponseHeaders[header]; ok && value != "" {
 			snapshot.Headers[origin][header] = value
 		}
 	}
 }
 
-func populateCookies(snapshot *SecuritySnapshot, origin string, body capture.NetworkBody) {
+func populateCookies(snapshot *Snapshot, origin string, body capture.NetworkBody) {
 	if body.ResponseHeaders == nil {
 		return
 	}
@@ -129,11 +130,11 @@ func populateCookies(snapshot *SecuritySnapshot, origin string, body capture.Net
 	}
 }
 
-func (m *SecurityDiffManager) isExpired(snapshot *SecuritySnapshot) bool {
+func (m *Manager) isExpired(snapshot *Snapshot) bool {
 	return time.Since(snapshot.TakenAt) > m.ttl
 }
 
-func (m *SecurityDiffManager) removeFromOrder(name string) {
+func (m *Manager) removeFromOrder(name string) {
 	for i, current := range m.order {
 		if current == name {
 			newOrder := make([]string, len(m.order)-1)
@@ -145,7 +146,7 @@ func (m *SecurityDiffManager) removeFromOrder(name string) {
 	}
 }
 
-func (m *SecurityDiffManager) evictOldest() {
+func (m *Manager) evictOldest() {
 	for len(m.order) >= m.maxSnaps {
 		oldest := m.order[0]
 		newOrder := make([]string, len(m.order)-1)
@@ -155,7 +156,7 @@ func (m *SecurityDiffManager) evictOldest() {
 	}
 }
 
-func (m *SecurityDiffManager) resolveSnapshot(name string) (*SecuritySnapshot, error) {
+func (m *Manager) resolveSnapshot(name string) (*Snapshot, error) {
 	snapshot, ok := m.snapshots[name]
 	if !ok {
 		return nil, fmt.Errorf("snapshot %q not found", name)
@@ -166,7 +167,7 @@ func (m *SecurityDiffManager) resolveSnapshot(name string) (*SecuritySnapshot, e
 	return snapshot, nil
 }
 
-func (m *SecurityDiffManager) resolveToSnapshot(toName string, currentBodies []capture.NetworkBody) (*SecuritySnapshot, error) {
+func (m *Manager) resolveToSnapshot(toName string, currentBodies []capture.NetworkBody) (*Snapshot, error) {
 	if toName == "" || toName == "current" {
 		snapshot := newEmptySnapshot("current")
 		populateSnapshotFromBodies(snapshot, currentBodies)

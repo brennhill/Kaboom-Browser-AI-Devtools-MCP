@@ -1,18 +1,19 @@
+// helpers_headers_cookies.go — Header and cookie-flag change detection.
 // Purpose: Compares security headers and cookies between snapshots to detect regressions.
 // Why: Separates header/cookie diff logic from URL, transport, and summary diff helpers.
-package security
+package diff
 
 import "fmt"
 
-func diffHeadersForOrigin(origin string, fromHeaders, toHeaders map[string]string) ([]SecurityChange, []SecurityChange) {
-	var regressions, improvements []SecurityChange
+func diffHeadersForOrigin(origin string, fromHeaders, toHeaders map[string]string) ([]Change, []Change) {
+	var regressions, improvements []Change
 
-	for _, hdr := range trackedSecurityHeaders {
+	for _, hdr := range trackedHeaders {
 		fromVal, fromHas := fromHeaders[hdr]
 		toVal, toHas := toHeaders[hdr]
 
 		if fromHas && !toHas {
-			regressions = append(regressions, SecurityChange{
+			regressions = append(regressions, Change{
 				Category:       "headers",
 				Severity:       "warning",
 				Origin:         origin,
@@ -23,7 +24,7 @@ func diffHeadersForOrigin(origin string, fromHeaders, toHeaders map[string]strin
 				Recommendation: headerRemovedRecommendation(hdr),
 			})
 		} else if !fromHas && toHas {
-			improvements = append(improvements, SecurityChange{
+			improvements = append(improvements, Change{
 				Category:       "headers",
 				Severity:       "info",
 				Origin:         origin,
@@ -49,8 +50,8 @@ type cookieFlagSpec struct {
 	gainedMsg  string
 }
 
-func diffCookieFlags(origin, name string, from, to SecurityCookie) ([]SecurityChange, []SecurityChange) {
-	var regressions, improvements []SecurityChange
+func diffCookieFlags(origin, name string, from, to Cookie) ([]Change, []Change) {
+	var regressions, improvements []Change
 
 	flags := []cookieFlagSpec{
 		{
@@ -97,13 +98,13 @@ func diffCookieFlags(origin, name string, from, to SecurityCookie) ([]SecurityCh
 	return regressions, improvements
 }
 
-func diffSingleCookieFlag(origin, cookieName string, f cookieFlagSpec) *SecurityChange {
+func diffSingleCookieFlag(origin, cookieName string, f cookieFlagSpec) *Change {
 	if f.fromActive && !f.toActive {
 		before := f.fromVal
 		if f.flagName != "SameSite" {
 			before = "present"
 		}
-		return &SecurityChange{
+		return &Change{
 			Category: "cookies", Severity: "warning", Origin: origin,
 			Change: "flag_removed", CookieName: cookieName, Flag: f.flagName,
 			Before: before, After: flagAbsentValue(f.flagName, ""),
@@ -115,7 +116,7 @@ func diffSingleCookieFlag(origin, cookieName string, f cookieFlagSpec) *Security
 		if f.flagName != "SameSite" {
 			after = "present"
 		}
-		return &SecurityChange{
+		return &Change{
 			Category: "cookies", Severity: "info", Origin: origin,
 			Change: "flag_added", CookieName: cookieName, Flag: f.flagName,
 			Before: flagAbsentValue(f.flagName, ""), After: after,

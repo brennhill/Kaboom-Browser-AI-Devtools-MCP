@@ -1,6 +1,7 @@
+// helpers_maps_urls.go — Key-set union helpers and URL/origin normalization.
 // Purpose: Normalizes transport maps and compares URL security between diff snapshots.
 // Why: Separates URL and transport diff logic from header, cookie, and summary helpers.
-package security
+package diff
 
 import (
 	"net/url"
@@ -20,8 +21,8 @@ func normalizeTransportByHost(transport map[string]string) map[string]string {
 	return byHost
 }
 
-func cookieSliceToMap(cookies []SecurityCookie) map[string]SecurityCookie {
-	m := make(map[string]SecurityCookie, len(cookies))
+func cookieSliceToMap(cookies []Cookie) map[string]Cookie {
+	m := make(map[string]Cookie, len(cookies))
 	for _, c := range cookies {
 		m[c.Name] = c
 	}
@@ -39,7 +40,7 @@ func collectMapKeys[V any](a, b map[string]map[string]V) map[string]bool {
 	return keys
 }
 
-func collectCookieMapKeys(a, b map[string][]SecurityCookie) map[string]bool {
+func collectCookieMapKeys(a, b map[string][]Cookie) map[string]bool {
 	keys := make(map[string]bool, len(a)+len(b))
 	for k := range a {
 		keys[k] = true
@@ -96,8 +97,8 @@ func extractHostFromOrigin(origin string) string {
 	return parsed.Host
 }
 
-func parseSnapshotCookies(setCookieHeader string) []SecurityCookie {
-	var cookies []SecurityCookie
+func parseSnapshotCookies(setCookieHeader string) []Cookie {
+	var cookies []Cookie
 
 	lines := strings.Split(setCookieHeader, "\n")
 	for _, line := range lines {
@@ -106,7 +107,7 @@ func parseSnapshotCookies(setCookieHeader string) []SecurityCookie {
 			continue
 		}
 		parsed := httpsec.ParseSingleCookie(line)
-		cookies = append(cookies, SecurityCookie(parsed))
+		cookies = append(cookies, Cookie(parsed))
 	}
 
 	return cookies

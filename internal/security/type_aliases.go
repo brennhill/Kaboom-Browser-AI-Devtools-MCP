@@ -4,15 +4,8 @@
 package security
 
 type (
-	DiffManager        = SecurityDiffManager
-	Snapshot           = SecuritySnapshot
-	Cookie             = SecurityCookie
-	DiffResult         = SecurityDiffResult
-	Change             = SecurityChange
-	DiffSummary        = SecurityDiffSummary
-	SnapshotListEntry  = SecuritySnapshotListEntry
-	Finding            = SecurityFinding
-	ScanInput          = SecurityScanInput
-	ScanResult         = SecurityScanResult
-	Scanner            = SecurityScanner
+	Finding    = SecurityFinding
+	ScanInput  = SecurityScanInput
+	ScanResult = SecurityScanResult
+	Scanner    = SecurityScanner
 )
