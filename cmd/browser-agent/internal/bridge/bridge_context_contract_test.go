@@ -8,9 +8,42 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
+	"os"
 	"strings"
 	"testing"
 )
+
+// findFuncDecl locates a top-level func by name anywhere in this package's
+// sources. It deliberately does NOT name a file: pinning a source-contract test
+// to a filename makes the contract silently unenforceable the moment the file is
+// renamed or merged, which is the opposite of what a contract test is for.
+func findFuncDecl(t *testing.T, name string) (*ast.FuncDecl, *token.FileSet) {
+	t.Helper()
+
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatalf("read package dir: %v", err)
+	}
+	fset := token.NewFileSet()
+	for _, e := range entries {
+		fileName := e.Name()
+		if e.IsDir() || !strings.HasSuffix(fileName, ".go") || strings.HasSuffix(fileName, "_test.go") {
+			continue
+		}
+		file, parseErr := parser.ParseFile(fset, fileName, nil, 0)
+		if parseErr != nil {
+			t.Fatalf("failed to parse %s: %v", fileName, parseErr)
+		}
+		for _, decl := range file.Decls {
+			d, ok := decl.(*ast.FuncDecl)
+			if ok && d.Name.Name == name {
+				return d, fset
+			}
+		}
+	}
+	t.Fatalf("%s not found in any source file of package bridge", name)
+	return nil, nil
+}
 
 // TestBridgeForwardRequest_NoCancelReassignment enforces a safety contract:
 // the cancel func created with context.WithTimeout must not be reassigned.
@@ -18,23 +51,7 @@ import (
 func TestBridgeForwardRequest_NoCancelReassignment(t *testing.T) {
 	t.Parallel()
 
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, "bridge_forward.go", nil, 0)
-	if err != nil {
-		t.Fatalf("failed to parse bridge_forward.go: %v", err)
-	}
-
-	var fn *ast.FuncDecl
-	for _, decl := range file.Decls {
-		d, ok := decl.(*ast.FuncDecl)
-		if ok && d.Name.Name == "bridgeForwardRequest" {
-			fn = d
-			break
-		}
-	}
-	if fn == nil {
-		t.Fatal("bridgeForwardRequest not found in bridge_forward.go")
-	}
+	fn, _ := findFuncDecl(t, "bridgeForwardRequest")
 
 	reassigned := false
 	ast.Inspect(fn.Body, func(n ast.Node) bool {
@@ -59,23 +76,7 @@ func TestBridgeForwardRequest_NoCancelReassignment(t *testing.T) {
 func TestBridgeForwardRequest_NoRetryWithCtxCancelAssignmentPattern(t *testing.T) {
 	t.Parallel()
 
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, "bridge_forward.go", nil, 0)
-	if err != nil {
-		t.Fatalf("failed to parse bridge_forward.go: %v", err)
-	}
-
-	var fn *ast.FuncDecl
-	for _, decl := range file.Decls {
-		d, ok := decl.(*ast.FuncDecl)
-		if ok && d.Name.Name == "bridgeForwardRequest" {
-			fn = d
-			break
-		}
-	}
-	if fn == nil {
-		t.Fatal("bridgeForwardRequest not found in bridge_forward.go")
-	}
+	fn, fset := findFuncDecl(t, "bridgeForwardRequest")
 
 	for _, stmt := range fn.Body.List {
 		assign, ok := stmt.(*ast.AssignStmt)

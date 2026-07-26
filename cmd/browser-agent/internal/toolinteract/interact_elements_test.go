@@ -24,7 +24,7 @@ func TestResolveIndexToSelector_AfterBuild(t *testing.T) {
 	h := newTestToolHandler()
 
 	// Manually populate the store
-	h.interactAction().elementIndexRegistry.store("client-a", 0, "gen_1", map[int]string{
+	h.interactAction().elementIndexRegistry.Store("client-a", 0, "gen_1", map[int]string{
 		0: "#email",
 		1: "#password",
 		2: "button[type=submit]",
@@ -45,9 +45,9 @@ func TestResolveIndexToSelector_ScopedByClientAndTab(t *testing.T) {
 	t.Parallel()
 	h := newTestToolHandler()
 
-	h.interactAction().elementIndexRegistry.store("client-a", 0, "gen_a", map[int]string{1: "#a"})
-	h.interactAction().elementIndexRegistry.store("client-b", 0, "gen_b", map[int]string{1: "#b"})
-	h.interactAction().elementIndexRegistry.store("client-a", 9, "gen_a9", map[int]string{1: "#a9"})
+	h.interactAction().elementIndexRegistry.Store("client-a", 0, "gen_a", map[int]string{1: "#a"})
+	h.interactAction().elementIndexRegistry.Store("client-b", 0, "gen_b", map[int]string{1: "#b"})
+	h.interactAction().elementIndexRegistry.Store("client-a", 9, "gen_a9", map[int]string{1: "#a9"})
 
 	sel, ok, _, _ := h.interactAction().resolveIndexToSelector("client-a", 0, 1, "")
 	if !ok || sel != "#a" {
@@ -67,7 +67,7 @@ func TestResolveIndexToSelector_GenerationMismatch(t *testing.T) {
 	t.Parallel()
 	h := newTestToolHandler()
 
-	h.interactAction().elementIndexRegistry.store("client-a", 0, "gen_new", map[int]string{1: "#a"})
+	h.interactAction().elementIndexRegistry.Store("client-a", 0, "gen_new", map[int]string{1: "#a"})
 
 	_, ok, stale, latest := h.interactAction().resolveIndexToSelector("client-a", 0, 1, "gen_old")
 	if ok {
@@ -84,7 +84,7 @@ func TestResolveIndexToSelector_GenerationMismatch(t *testing.T) {
 func TestHandleDOMPrimitive_IndexGenerationMismatch(t *testing.T) {
 	t.Parallel()
 	h := newTestToolHandler()
-	h.interactAction().elementIndexRegistry.store("client-a", 7, "gen_new", map[int]string{1: "#submit"})
+	h.interactAction().elementIndexRegistry.Store("client-a", 7, "gen_new", map[int]string{1: "#submit"})
 
 	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1), ClientID: "client-a"}
 	resp := h.interactAction().HandleDOMPrimitive(req, json.RawMessage(`{"index":1,"tab_id":7,"index_generation":"gen_old"}`), "click")
@@ -172,7 +172,7 @@ func TestBuildElementIndexFromResponse_ErrorResponse(t *testing.T) {
 	h := newTestToolHandler()
 
 	// Pre-populate store
-	h.interactAction().elementIndexRegistry.store("client-a", 0, "gen_1", map[int]string{0: "old"})
+	h.interactAction().elementIndexRegistry.Store("client-a", 0, "gen_1", map[int]string{0: "old"})
 
 	// Error response should not clear the store
 	result := MCPToolResult{

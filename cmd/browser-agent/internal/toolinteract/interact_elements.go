@@ -5,9 +5,9 @@ package toolinteract
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/elemindex"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
@@ -85,9 +85,9 @@ func (h *InteractActionHandler) buildElementIndexFromResponse(clientID string, t
 			}
 		}
 		if h.elementIndexRegistry == nil {
-			h.elementIndexRegistry = newElementIndexRegistry()
+			h.elementIndexRegistry = elemindex.New()
 		}
-		return h.elementIndexRegistry.store(clientID, tabID, generation, indexMap)
+		return h.elementIndexRegistry.Store(clientID, tabID, generation, indexMap)
 	}
 	return ""
 }
@@ -197,12 +197,5 @@ func (h *InteractActionHandler) resolveIndexToSelector(clientID string, tabID in
 	if h.elementIndexRegistry == nil {
 		return "", false, false, ""
 	}
-	return h.elementIndexRegistry.resolve(clientID, tabID, index, generation)
-}
-
-func formatIndexGenerationConflict(expected, actual string) string {
-	if expected == "" || actual == "" {
-		return "Element index generation mismatch. Call list_interactive again and retry with the latest index_generation."
-	}
-	return fmt.Sprintf("Element index generation mismatch (expected %q, latest %q). Call list_interactive again and retry with the latest index_generation.", expected, actual)
+	return h.elementIndexRegistry.Resolve(clientID, tabID, index, generation)
 }

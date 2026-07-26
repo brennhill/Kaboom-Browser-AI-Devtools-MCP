@@ -4,12 +4,14 @@ feature_id: feature-mcp-persistent-server
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/mcp_identity.go
   - cmd/browser-agent/bridge_adapter.go
   - cmd/browser-agent/internal/bridge/bridge.go
-  - cmd/browser-agent/internal/bridge/bridge_startup_orchestration.go
+  - cmd/browser-agent/internal/bridge/bridge_startup.go
+  - cmd/browser-agent/internal/bridge/bridge_transport.go
+  - cmd/browser-agent/internal/bridge/stdioisolate/isolation.go
   - cmd/browser-agent/internal/daemonlife/lifecycle.go
   - cmd/browser-agent/internal/daemonlife/lock_file.go
   - cmd/browser-agent/internal/daemonlife/install_epoch.go
@@ -43,7 +45,10 @@ test_paths:
   - cmd/browser-agent/main_connection_diag_test.go
   - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
   - cmd/browser-agent/internal/bridge/bridge_detach_stdio_test.go
+  - cmd/browser-agent/internal/bridge/bridge_detach_contract_test.go
+  - cmd/browser-agent/internal/bridge/bridge_context_contract_test.go
   - cmd/browser-agent/internal/bridge/bridge_deps_isolation_test.go
+  - cmd/browser-agent/internal/bridge/stdioisolate/isolation_unix_test.go
   - cmd/browser-agent/internal/daemonlife/lifecycle_takeover_test.go
   - cmd/browser-agent/internal/daemonlife/lifecycle_policy_test.go
   - cmd/browser-agent/internal/daemonlife/install_epoch_test.go

@@ -4,13 +4,12 @@ feature_id: feature-state-time-travel
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-27
 code_paths:
-  - cmd/browser-agent/tools_interact_state_handler.go
-  - cmd/browser-agent/tools_interact_state_capture.go
-  - cmd/browser-agent/tools_interact_state_save_load.go
-  - cmd/browser-agent/tools_interact_state_list_delete.go
+  - cmd/browser-agent/internal/toolinteract/interactstate/state.go
+  - cmd/browser-agent/internal/toolinteract/deps.go
 test_paths:
+  - cmd/browser-agent/internal/toolinteract/interactstate/state_test.go
   - cmd/browser-agent/tools_interact_state_test.go
   - cmd/browser-agent/tools_interact_gate_test.go
 last_verified_version: 0.7.12

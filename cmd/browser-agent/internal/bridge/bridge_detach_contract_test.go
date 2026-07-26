@@ -5,8 +5,6 @@ package bridge
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"testing"
 )
 
@@ -17,23 +15,9 @@ import (
 func TestBridgeSpawnPathsSetDetachedProcess(t *testing.T) {
 	t.Parallel()
 
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, "bridge.go", nil, 0)
-	if err != nil {
-		t.Fatalf("failed to parse bridge.go: %v", err)
-	}
-
-	var fn *ast.FuncDecl
-	for _, decl := range file.Decls {
-		d, ok := decl.(*ast.FuncDecl)
-		if ok && d.Name.Name == "buildDaemonCmd" {
-			fn = d
-			break
-		}
-	}
-	if fn == nil {
-		t.Fatal("buildDaemonCmd not found in bridge.go")
-	}
+	// Located by symbol, not by filename: a contract test that can be silenced by
+	// moving code between files is not a contract test.
+	fn, _ := findFuncDecl(t, "buildDaemonCmd")
 
 	found := false
 	ast.Inspect(fn.Body, func(n ast.Node) bool {

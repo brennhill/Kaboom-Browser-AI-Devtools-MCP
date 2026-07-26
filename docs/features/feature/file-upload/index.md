@@ -4,10 +4,10 @@ feature_id: feature-file-upload
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 code_paths:
-  - cmd/browser-agent/internal/toolinteract/interact_upload_handler.go
-  - cmd/browser-agent/internal/toolinteract/interact_upload.go
+  - cmd/browser-agent/internal/toolinteract/interactupload/upload.go
+  - cmd/browser-agent/internal/toolinteract/deps.go
   - cmd/browser-agent/upload_handlers.go
   - internal/upload/handlers.go
   - internal/upload/types.go
@@ -19,6 +19,7 @@ code_paths:
   - internal/upload/osauto/pid.go
   - scripts/smoke-tests/upload-server.py
 test_paths:
+  - cmd/browser-agent/internal/toolinteract/interactupload/upload_test.go
   - cmd/browser-agent/upload_integration_test.go
   - cmd/browser-agent/upload_handlers_test.go
   - internal/upload/handlers_test.go
