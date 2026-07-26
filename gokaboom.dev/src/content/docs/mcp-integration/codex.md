@@ -25,7 +25,7 @@ If you installed KaBOOM with the `install.sh` / `install.ps1` script instead, us
 Add to `~/.codex/config.toml`:
 
 ```toml
-[mcp_servers.kaboom]
+[mcp_servers.kaboom-browser-devtools]
 command = "npx"
 args = ["-y", "kaboom-agentic-browser"]
 ```
@@ -33,7 +33,7 @@ args = ["-y", "kaboom-agentic-browser"]
 To trust every KaBOOM tool so Codex never prompts for approval:
 
 ```toml
-[mcp_servers.kaboom]
+[mcp_servers.kaboom-browser-devtools]
 command = "npx"
 args = ["-y", "kaboom-agentic-browser"]
 default_tools_approval_mode = "approve"
@@ -62,7 +62,7 @@ Codex gets all 5 KaBOOM tools: `observe`, `analyze`, `generate`, `configure`, an
 If port 7890 is occupied:
 
 ```toml
-[mcp_servers.kaboom]
+[mcp_servers.kaboom-browser-devtools]
 command = "npx"
 args = ["-y", "kaboom-agentic-browser", "--port", "7891"]
 ```

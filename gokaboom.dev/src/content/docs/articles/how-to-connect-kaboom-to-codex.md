@@ -31,7 +31,7 @@ npx -y kaboom-agentic-browser --help
 Codex reads MCP servers from `~/.codex/config.toml`, which is TOML rather than JSON. Add this block:
 
 ```toml
-[mcp_servers.kaboom]
+[mcp_servers.kaboom-browser-devtools]
 command = "npx"
 args = ["-y", "kaboom-agentic-browser"]
 ```
@@ -63,6 +63,6 @@ Now you have a repeatable baseline for debugging instead of one-off console chec
 
 ## Image and Diagram Callouts
 
-> [Image Idea] `~/.codex/config.toml` showing the `mcp_servers.kaboom` table.
+> [Image Idea] `~/.codex/config.toml` showing the `mcp_servers.kaboom-browser-devtools` table.
 
 > [Diagram Idea] Codex prompt -> KaBOOM observe/analyze -> fix + verification loop.
