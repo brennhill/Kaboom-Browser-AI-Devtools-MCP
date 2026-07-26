@@ -1,7 +1,7 @@
 // Purpose: Tests for test-generation context-based test creation.
 // Docs: docs/features/feature/test-generation/index.md
 
-// testgen_context_test.go — Tests for generateTestFromInteraction and generateTestFromRegression
+// context_test.go — Tests for generateTestFromInteraction and generateTestFromRegression
 // edge cases not covered by internal/testgen/generate_test.go.
 package testgenhandler
 

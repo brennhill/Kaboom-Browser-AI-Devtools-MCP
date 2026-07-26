@@ -1,7 +1,7 @@
 // Purpose: Tests for test-generation script output.
 // Docs: docs/features/feature/test-generation/index.md
 
-// testgen_generate_test.go — Tests for testgen.go pure/helper functions.
+// generate_test.go — Tests for generate.go pure/helper functions.
 // Only tests that cover behavior not already tested in internal/testgen/*_test.go.
 package testgenhandler
 
