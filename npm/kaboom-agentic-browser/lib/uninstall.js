@@ -19,6 +19,7 @@ const {
   readConfigFile,
   writeConfigFile,
 } = require('./config');
+const autoApprove = require('./auto-approve');
 const { cleanupInstalledSkills } = require('./skills');
 
 const LEGACY_UNINSTALL_SERVER_NAMES = [
@@ -39,9 +40,10 @@ function knownServerNames() {
  * @returns {Object} {status, name, method, message}
  */
 function uninstallViaCli(def, options) {
-  const { dryRun = false, verbose = false } = options;
+  const { dryRun = false, verbose = false, claudeSettingsPath } = options;
   const cmd = def.detectCommand;
   const canonicalArgs = [...def.removeArgs];
+  const hasSettingsAutoApprove = def.autoApprove && def.autoApprove.kind === 'claude-settings';
 
   if (dryRun) {
     if (verbose) {
@@ -83,22 +85,40 @@ function uninstallViaCli(def, options) {
       }
     }
   }
-  if (removedNames.length > 0) {
+
+  // Also strip the auto-approve allow rule this installer added to
+  // ~/.claude/settings.json. A read/write failure is surfaced (not swallowed).
+  let settingsRemoved = false;
+  let settingsErr = null;
+  if (hasSettingsAutoApprove) {
+    try {
+      const r = autoApprove.removeClaudeSettingsAllow({ settingsPath: claudeSettingsPath });
+      settingsRemoved = r.changed;
+    } catch (e) {
+      settingsErr = e;
+    }
+  }
+
+  if (removedNames.length > 0 || settingsRemoved) {
+    const parts = [];
+    if (removedNames.length > 0) parts.push(removedNames.join(', '));
+    if (settingsRemoved) parts.push('auto-approve');
     return {
       status: 'removed',
       name: def.name,
       id: def.id,
       method: 'cli',
-      message: `Removed via ${cmd} CLI (${removedNames.join(', ')})`,
+      message: `Removed via ${cmd} CLI (${parts.join('; ')})`,
     };
   }
-  if (unexpectedErr) {
+  if (unexpectedErr || settingsErr) {
+    const msg = (unexpectedErr && unexpectedErr.message) || (settingsErr && settingsErr.message);
     return {
       status: 'error',
       name: def.name,
       id: def.id,
       method: 'cli',
-      message: `CLI uninstall failed: ${unexpectedErr.message}`,
+      message: `CLI uninstall failed: ${msg}`,
     };
   }
   return {
@@ -138,10 +158,13 @@ function removeManagedEntriesFromConfigFile(cfgPath, def, options) {
 
   const configKeys = [def.configKey || 'mcpServers', ...(def.legacyConfigKeys || [])];
   const names = knownServerNames();
-  const present = configKeys.some((key) => {
+  const serverPresent = configKeys.some((key) => {
     const servers = readResult.data[key] || {};
     return names.some((name) => Object.prototype.hasOwnProperty.call(servers, name));
   });
+  // A config carrying only auto-approve keys (server entry already gone) is
+  // still ours to clean, so factor auto-approve presence into the decision.
+  const present = serverPresent || autoApprove.autoApprovePresent(def, readResult.data);
   if (!present) {
     return { status: 'notConfigured' };
   }
@@ -162,6 +185,10 @@ function removeManagedEntriesFromConfigFile(cfgPath, def, options) {
     }
     remainingEntries += Object.keys(modified[key]).length;
   }
+
+  // Remove the same-file auto-approve entries this installer added (OpenCode
+  // permission, Zed tool_permissions; Gemini trust rode on the deleted entry).
+  autoApprove.removeFromConfig(def, modified);
 
   if (remainingEntries === 0 && def.dedicatedMcpFile) {
     fs.unlinkSync(cfgPath);
@@ -251,7 +278,7 @@ function executeUninstall(options = {}) {
 
   for (const def of clients) {
     try {
-      const r = uninstallFromClient(def, { dryRun, verbose });
+      const r = uninstallFromClient(def, { dryRun, verbose, claudeSettingsPath: options.claudeSettingsPath });
 
       if (r.status === 'removed') {
         result.removed.push(r);
