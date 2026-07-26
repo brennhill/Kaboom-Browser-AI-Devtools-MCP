@@ -409,7 +409,7 @@ AI calls configure({action: 'store', data: {...}})
 - **Foundation:** `internal/types/*.go`
 - **Capture:** `internal/capture/*.go` (29 files)
 - **Session:** `internal/session/*.go` (6 files)
-- **Analysis:** `internal/analysis/*.go` (7 files)
+- **Analysis:** `internal/analysis/{apicontract,apischema,clustering,thirdparty}/*.go` (24 files)
 - **Security:** `internal/security/{scan,csp,sri,diff,policy,netflag,httpsec}/*.go` (38 files)
 - **Tools:** `cmd/browser-agent/tools_*.go` (8 files)
 - **HTTP Server:** `cmd/browser-agent/{main,handler,server,middleware,routes,health}.go`

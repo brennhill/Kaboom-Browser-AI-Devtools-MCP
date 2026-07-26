@@ -4,9 +4,18 @@ feature_id: feature-error-clustering
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-26
 code_paths:
-test_paths: []
+  - internal/analysis/clustering/clustering.go
+  - internal/analysis/clustering/cluster_ops.go
+  - internal/analysis/clustering/matching.go
+  - internal/analysis/clustering/normalize.go
+  - internal/analysis/clustering/stack.go
+  - internal/analysis/clustering/state.go
+test_paths:
+  - internal/analysis/clustering/clustering_test.go
+  - internal/analysis/clustering/cluster_ops_test.go
+  - internal/analysis/clustering/matching_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

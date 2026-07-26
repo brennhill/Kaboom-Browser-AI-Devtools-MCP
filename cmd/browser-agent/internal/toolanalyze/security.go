@@ -7,7 +7,7 @@ package toolanalyze
 import (
 	"encoding/json"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/thirdparty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
 )
@@ -66,13 +66,13 @@ func HandleThirdPartyAudit(d Deps, req mcp.JSONRPCRequest, args json.RawMessage)
 		pageURLs = append(pageURLs, tabURL)
 	}
 
-	result, err := analysis.HandleAuditThirdParties(args, networkBodies, pageURLs)
+	result, err := thirdparty.HandleAuditThirdParties(args, networkBodies, pageURLs)
 	if err != nil {
 		return fail(req, mcp.ErrInvalidJSON, err.Error(), "Fix JSON arguments and try again")
 	}
 
 	if params.Summary {
-		if tpResult, ok := result.(analysis.ThirdPartyResult); ok {
+		if tpResult, ok := result.(thirdparty.ThirdPartyResult); ok {
 			return succeed(req, "Third-party audit summary", BuildThirdPartySummary(tpResult))
 		}
 	}

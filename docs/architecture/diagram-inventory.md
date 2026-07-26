@@ -61,8 +61,8 @@ last_verified_date: 2026-03-05
 | **Buffer Architecture** | Ring buffer, TTL, eviction | internal/buffers/, internal/capture/ | Memory management strategy |
 | **Session/Client Registry** | Multi-client isolation | internal/session/ | How concurrent clients are managed |
 | **Security Analysis Pipeline** | CSP → SRI → Threat detection | internal/security/ | Security workflow |
-| **Error Clustering** | Error grouping by root cause | internal/analysis/clustering.go | How errors are deduplicated |
-| **API Contract Analysis** | Schema inference from network | internal/analysis/api_contract.go | How API contracts are learned |
+| **Error Clustering** | Error grouping by root cause | internal/analysis/clustering/clustering.go | How errors are deduplicated |
+| **API Contract Analysis** | Schema inference from network | internal/analysis/apicontract/contract.go | How API contracts are learned |
 | **Recording Lifecycle** | Start → Capture → Save → Persist | cmd/browser-agent/tools_recording_video.go + internal/recording/ | Full recording flow |
 
 ---

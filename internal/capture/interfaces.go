@@ -7,7 +7,8 @@ package capture
 import "encoding/json"
 
 // SchemaStore defines the interface for API schema detection and tracking.
-// Implemented by *analysis.SchemaStore. Methods called by HTTP handlers and observers.
+// Implemented by *apischema.SchemaStore (internal/analysis/apischema). Methods called by
+// HTTP handlers and observers.
 // Has its own lock; safe to call outside Capture.mu.
 type SchemaStore interface {
 	// EndpointCount returns the number of unique endpoints observed

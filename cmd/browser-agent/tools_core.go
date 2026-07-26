@@ -15,7 +15,8 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testgenhandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/apicontract"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/thirdparty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/audit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/issuereport"
@@ -65,7 +66,7 @@ type ToolHandler struct {
 	noiseConfig           *noise.NoiseConfig
 	sessionStoreImpl      *persistence.SessionStore
 	securityScannerImpl   *scan.Scanner
-	thirdPartyAuditorImpl *analysis.ThirdPartyAuditor
+	thirdPartyAuditorImpl *thirdparty.ThirdPartyAuditor
 	sessionManager        *session.Manager
 	auditTrail            *audit.Trail
 
@@ -78,7 +79,7 @@ type ToolHandler struct {
 
 	// API contract validation state (incremental over captured network bodies).
 	apiContractMu        sync.Mutex
-	apiContractValidator *analysis.APIContractValidator
+	apiContractValidator *apicontract.APIContractValidator
 	apiContractOffset    int
 
 	// Upload security config (folder-scoped permissions + denylist)

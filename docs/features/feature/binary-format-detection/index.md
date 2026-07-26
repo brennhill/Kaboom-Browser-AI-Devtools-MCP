@@ -4,9 +4,13 @@ feature_id: feature-binary-format-detection
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-26
 code_paths:
-test_paths: []
+  - internal/util/binary.go
+  - internal/capture/network_bodies.go
+  - internal/capture/websocket.go
+test_paths:
+  - internal/capture/binary_format_integration_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

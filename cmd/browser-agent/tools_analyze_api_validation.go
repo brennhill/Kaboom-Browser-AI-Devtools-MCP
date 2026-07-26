@@ -7,7 +7,7 @@ package main
 import (
 	"encoding/json"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/apicontract"
 )
 
 func (h *ToolHandler) toolValidateAPI(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
@@ -86,7 +86,7 @@ func (h *ToolHandler) processAPIValidationBodies() {
 	defer h.apiContractMu.Unlock()
 
 	if h.apiContractValidator == nil {
-		h.apiContractValidator = analysis.NewAPIContractValidator()
+		h.apiContractValidator = apicontract.NewAPIContractValidator()
 	}
 
 	bodies := h.capture.GetNetworkBodies()
@@ -101,30 +101,30 @@ func (h *ToolHandler) processAPIValidationBodies() {
 	h.apiContractOffset = len(bodies)
 }
 
-func (h *ToolHandler) apiValidationFilter(urlFilter string, ignore []string) analysis.APIContractFilter {
-	return analysis.APIContractFilter{
+func (h *ToolHandler) apiValidationFilter(urlFilter string, ignore []string) apicontract.APIContractFilter {
+	return apicontract.APIContractFilter{
 		URLFilter:       urlFilter,
 		IgnoreEndpoints: ignore,
 	}
 }
 
-func (h *ToolHandler) apiContractAnalyze(filter analysis.APIContractFilter) analysis.APIContractAnalyzeResult {
+func (h *ToolHandler) apiContractAnalyze(filter apicontract.APIContractFilter) apicontract.APIContractAnalyzeResult {
 	validator := h.apiContractValidatorSnapshot()
 	if validator == nil {
-		return analysis.APIContractAnalyzeResult{}
+		return apicontract.APIContractAnalyzeResult{}
 	}
 	return validator.Analyze(filter)
 }
 
-func (h *ToolHandler) apiContractReport(filter analysis.APIContractFilter) analysis.APIContractReportResult {
+func (h *ToolHandler) apiContractReport(filter apicontract.APIContractFilter) apicontract.APIContractReportResult {
 	validator := h.apiContractValidatorSnapshot()
 	if validator == nil {
-		return analysis.APIContractReportResult{}
+		return apicontract.APIContractReportResult{}
 	}
 	return validator.Report(filter)
 }
 
-func (h *ToolHandler) apiContractValidatorSnapshot() *analysis.APIContractValidator {
+func (h *ToolHandler) apiContractValidatorSnapshot() *apicontract.APIContractValidator {
 	h.apiContractMu.Lock()
 	defer h.apiContractMu.Unlock()
 	return h.apiContractValidator
@@ -134,6 +134,6 @@ func (h *ToolHandler) clearAPIValidationState() {
 	h.apiContractMu.Lock()
 	defer h.apiContractMu.Unlock()
 
-	h.apiContractValidator = analysis.NewAPIContractValidator()
+	h.apiContractValidator = apicontract.NewAPIContractValidator()
 	h.apiContractOffset = len(h.capture.GetNetworkBodies())
 }
