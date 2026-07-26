@@ -1,11 +1,10 @@
 // Purpose: Tests for SARIF accessibility report export.
 // Docs: docs/features/feature/har-export/index.md
 
-//go:build integration
-// +build integration
-
-// NOTE: These tests require MCP handler types that aren't exported.
-// Run with: go test -tags=integration ./internal/export/...
+// These were gated behind `//go:build integration` with a note saying they "require
+// MCP handler types that aren't exported". They reference no MCP type at all — the
+// imports below are stdlib only, and the file is in package export. The tag is gone
+// and these tests run by default.
 package export
 
 import (
