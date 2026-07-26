@@ -284,7 +284,7 @@ Response is identical to current behavior. No breaking changes.
 
 ## Dependencies
 
-- **Depends on:** Existing axe-core integration (`extension/lib/dom-queries.js`: `loadAxeCore`, `runAxeAudit`, `formatAxeResults`)
+- **Depends on:** Existing axe-core integration (`extension/lib/analysis/dom-queries.js`: `loadAxeCore`, `runAxeAudit`, `formatAxeResults`)
 - **Depends on:** Existing server-side a11y audit handler (`cmd/browser-agent/queries.go`: `toolRunA11yAudit`, a11y cache infrastructure)
 - **Depends on:** Existing pending query / result pipeline (`/pending-queries`, `/a11y-result`)
 - **Depended on by:** `generate {format: "sarif"}` -- SARIF export consumes cached a11y results; enhanced results should export with additional metadata when available

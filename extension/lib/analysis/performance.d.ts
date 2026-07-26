@@ -2,7 +2,7 @@
  * Purpose: Wraps performance.mark/measure to capture calls and uses PerformanceObserver for error-time performance snapshots.
  * Docs: docs/features/feature/performance-audit/index.md
  */
-import type { PerformanceMark, PerformanceMeasure } from '../types/index.js';
+import type { PerformanceMark, PerformanceMeasure } from '../../types/index.js';
 /**
  * Get performance marks
  */

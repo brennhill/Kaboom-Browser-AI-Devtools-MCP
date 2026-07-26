@@ -6,7 +6,7 @@ import { setContextAnnotation, removeContextAnnotation, clearContextAnnotations,
 import { computeSelectors, recordEnhancedAction, getEnhancedActionBuffer, clearEnhancedActionBuffer, generatePlaywrightScript } from '../lib/page/reproduction.js';
 import { getActionBuffer, clearActionBuffer, setActionCaptureEnabled } from '../lib/page/actions.js';
 import { getNetworkWaterfall, setNetworkWaterfallEnabled } from '../lib/net/network.js';
-import { getPerformanceMarks, getPerformanceMeasures, setPerformanceMarksEnabled } from '../lib/performance.js';
+import { getPerformanceMarks, getPerformanceMeasures, setPerformanceMarksEnabled } from '../lib/analysis/performance.js';
 import { enrichErrorWithAiContext, setAiContextEnabled, setAiContextStateSnapshot } from '../lib/ai-context/ai-context.js';
 function setWithNativeSetter(element, proto, prop, val) {
     const setter = Object.getOwnPropertyDescriptor(proto.prototype, prop)?.set;

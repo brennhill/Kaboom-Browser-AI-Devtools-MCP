@@ -365,7 +365,7 @@ describe('Capture Gate Functions', () => {
   })
 
   test('performance: setPerformanceMarksEnabled toggles capture gate', async () => {
-    const { setPerformanceMarksEnabled, isPerformanceMarksEnabled } = await import('../../extension/lib/performance.js')
+    const { setPerformanceMarksEnabled, isPerformanceMarksEnabled } = await import('../../extension/lib/analysis/performance.js')
 
     setPerformanceMarksEnabled(true)
     assert.strictEqual(isPerformanceMarksEnabled(), true)

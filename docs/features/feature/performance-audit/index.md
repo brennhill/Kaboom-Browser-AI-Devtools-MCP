@@ -4,12 +4,12 @@ feature_id: feature-performance-audit
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-26
 code_paths:
   - internal/performance/diff.go
   - internal/performance/types.go
-  - src/lib/perf-snapshot.ts
-  - src/lib/performance.ts
+  - src/lib/analysis/perf-snapshot.ts
+  - src/lib/analysis/performance.ts
 test_paths: []
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05

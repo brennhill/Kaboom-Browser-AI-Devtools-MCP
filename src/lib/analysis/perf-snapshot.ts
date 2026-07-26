@@ -9,7 +9,7 @@
  * to build comprehensive performance snapshots.
  */
 
-import { MAX_LONG_TASKS, MAX_SLOWEST_REQUESTS, MAX_URL_LENGTH } from './constants.js'
+import { MAX_LONG_TASKS, MAX_SLOWEST_REQUESTS, MAX_URL_LENGTH } from '../constants.js'
 
 interface ResourceByType {
   count: number

@@ -2,8 +2,8 @@
  * Purpose: Dispatches window.postMessage commands from the content script to specialized inject-context handlers (settings, state, JS execution, DOM/a11y queries).
  * Docs: docs/features/feature/interact-explore/index.md
  */
-import { executeDOMQuery, runAxeAuditWithTimeout } from '../lib/dom-queries.js';
-import { checkLinkHealth } from '../lib/link-health.js';
+import { executeDOMQuery, runAxeAuditWithTimeout } from '../lib/analysis/dom-queries.js';
+import { checkLinkHealth } from '../lib/analysis/link-health.js';
 import { queryComputedStyles } from './computed-styles.js';
 import { discoverForms } from './form-discovery.js';
 import { extractDataTables } from './data-table.js';

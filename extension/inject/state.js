@@ -2,7 +2,7 @@
  * Purpose: Captures and restores browser state snapshots (localStorage, cookies, scroll position) and manages element highlighting for the AI Web Pilot.
  * Docs: docs/features/feature/state-time-travel/index.md
  */
-import { sendPerformanceSnapshot } from '../lib/perf-snapshot.js';
+import { sendPerformanceSnapshot } from '../lib/analysis/perf-snapshot.js';
 /** Read the page nonce set by the content script on the inject script element */
 let pageNonce = '';
 if (typeof document !== 'undefined' && typeof document.querySelector === 'function') {

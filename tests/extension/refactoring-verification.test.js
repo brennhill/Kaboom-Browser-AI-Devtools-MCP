@@ -99,7 +99,7 @@ describe('Performance Capture After Refactoring', () => {
       }
     }
 
-    // Replace global performance object (used by extension/lib/performance.js)
+    // Replace global performance object (used by extension/lib/analysis/performance.js)
     globalThis.performance = mockPerformance
 
     // Create mock window with performance API

@@ -62,7 +62,7 @@ afterEach(() => {
 
 describe('link-health: checkLink fallback behavior', () => {
   test('HEAD 405 falls back to GET and returns ok for 200', async () => {
-    const { checkLinkHealth } = await import('../../extension/lib/link-health.js')
+    const { checkLinkHealth } = await import('../../extension/lib/analysis/link-health.js')
 
     // Set up a single link
     globalThis.document.querySelectorAll = mock.fn(() => [
@@ -103,7 +103,7 @@ describe('link-health: checkLink fallback behavior', () => {
   })
 
   test('HEAD status 0 (opaque CORS) falls back to GET', async () => {
-    const { checkLinkHealth } = await import('../../extension/lib/link-health.js')
+    const { checkLinkHealth } = await import('../../extension/lib/analysis/link-health.js')
 
     globalThis.document.querySelectorAll = mock.fn(() => [
       { href: 'http://localhost:3000/internal-link' }
@@ -139,7 +139,7 @@ describe('link-health: checkLink fallback behavior', () => {
   })
 
   test('fetch TypeError on external link classified as cors_blocked', async () => {
-    const { checkLinkHealth } = await import('../../extension/lib/link-health.js')
+    const { checkLinkHealth } = await import('../../extension/lib/analysis/link-health.js')
 
     globalThis.document.querySelectorAll = mock.fn(() => [
       { href: 'https://external.example.com/page' }
@@ -181,7 +181,7 @@ describe('link-health: checkLink fallback behavior', () => {
   })
 
   test('fetch TypeError on external link with no-cors also failing = unknown', async () => {
-    const { checkLinkHealth } = await import('../../extension/lib/link-health.js')
+    const { checkLinkHealth } = await import('../../extension/lib/analysis/link-health.js')
 
     globalThis.document.querySelectorAll = mock.fn(() => [
       { href: 'https://unreachable.example.com/page' }
@@ -200,7 +200,7 @@ describe('link-health: checkLink fallback behavior', () => {
   })
 
   test('genuine 404 on same-origin link classified as broken', async () => {
-    const { checkLinkHealth } = await import('../../extension/lib/link-health.js')
+    const { checkLinkHealth } = await import('../../extension/lib/analysis/link-health.js')
 
     globalThis.document.querySelectorAll = mock.fn(() => [
       { href: 'http://localhost:3000/missing-page' }
@@ -228,7 +228,7 @@ describe('link-health: checkLink fallback behavior', () => {
   })
 
   test('timeout is still classified as timeout', async () => {
-    const { checkLinkHealth } = await import('../../extension/lib/link-health.js')
+    const { checkLinkHealth } = await import('../../extension/lib/analysis/link-health.js')
 
     globalThis.document.querySelectorAll = mock.fn(() => [
       { href: 'http://localhost:3000/slow' }
@@ -246,7 +246,7 @@ describe('link-health: checkLink fallback behavior', () => {
   })
 
   test('summary correctly counts cors_blocked and needsServerVerification', async () => {
-    const { checkLinkHealth } = await import('../../extension/lib/link-health.js')
+    const { checkLinkHealth } = await import('../../extension/lib/analysis/link-health.js')
 
     globalThis.document.querySelectorAll = mock.fn(() => [
       { href: 'http://localhost:3000/ok-page' },
@@ -284,7 +284,7 @@ describe('link-health: checkLink fallback behavior', () => {
   })
 
   test('HEAD 405 on external link falls back to GET then to no-cors', async () => {
-    const { checkLinkHealth } = await import('../../extension/lib/link-health.js')
+    const { checkLinkHealth } = await import('../../extension/lib/analysis/link-health.js')
 
     globalThis.document.querySelectorAll = mock.fn(() => [
       { href: 'https://external.example.com/api' }
@@ -317,7 +317,7 @@ describe('link-health: checkLink fallback behavior', () => {
   })
 
   test('domain filter limits checks to matching host and subdomains', async () => {
-    const { checkLinkHealth } = await import('../../extension/lib/link-health.js')
+    const { checkLinkHealth } = await import('../../extension/lib/analysis/link-health.js')
 
     globalThis.document.querySelectorAll = mock.fn(() => [
       { href: 'https://example.com/home' },
@@ -342,7 +342,7 @@ describe('link-health: checkLink fallback behavior', () => {
   })
 
   test('domain filter accepts full URL values', async () => {
-    const { checkLinkHealth } = await import('../../extension/lib/link-health.js')
+    const { checkLinkHealth } = await import('../../extension/lib/analysis/link-health.js')
 
     globalThis.document.querySelectorAll = mock.fn(() => [
       { href: 'https://example.com/home' },

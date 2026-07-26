@@ -76,7 +76,7 @@ export {
   getPerformanceSnapshotForError,
   setPerformanceMarksEnabled,
   isPerformanceMarksEnabled
-} from '../lib/performance.js'
+} from '../lib/analysis/performance.js'
 export { postLog } from '../lib/page/bridge.js'
 export { installConsoleCapture, uninstallConsoleCapture } from '../lib/page/console.js'
 export {
@@ -114,7 +114,7 @@ export {
   runAxeAudit,
   runAxeAuditWithTimeout,
   formatAxeResults
-} from '../lib/dom-queries.js'
+} from '../lib/analysis/dom-queries.js'
 export {
   mapInitiatorType,
   aggregateResourceTiming,
@@ -129,7 +129,7 @@ export {
   sendPerformanceSnapshot,
   isPerformanceSnapshotEnabled,
   setPerformanceSnapshotEnabled
-} from '../lib/perf-snapshot.js'
+} from '../lib/analysis/perf-snapshot.js'
 
 // Re-export constants that tests import from inject.js
 export { MAX_WATERFALL_ENTRIES, MAX_PERFORMANCE_ENTRIES, SENSITIVE_HEADERS } from '../lib/constants.js'
@@ -173,7 +173,7 @@ import { installKaboomAPI } from './api.js'
 import { installPhase1 } from './observers.js'
 import { installMessageListener } from './message-handlers.js'
 import { captureState, restoreState, sendPerformanceSnapshotWrapper } from './state.js'
-import { sendPerformanceSnapshot } from '../lib/perf-snapshot.js'
+import { sendPerformanceSnapshot } from '../lib/analysis/perf-snapshot.js'
 
 /**
  * Auto-install when loaded in browser

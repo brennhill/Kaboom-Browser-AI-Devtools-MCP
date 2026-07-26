@@ -472,7 +472,7 @@ type BufferStats struct {
 - `src/lib/net/network.ts` - Fetch/XHR capture
 - `src/lib/net/websocket.ts` - WebSocket capture
 - `src/lib/page/actions.ts` - Action capture
-- `src/lib/performance.ts` - Performance capture
+- `src/lib/analysis/performance.ts` - Performance capture
 - `src/lib/page/exceptions.ts` - Error capture
 
 **Serialization & Enrichment:**

@@ -153,7 +153,7 @@ Even with CORS limitations, browser-based checking provides critical advantages:
 
 ## Implementation Details
 
-### Browser Extension Changes (`src/lib/link-health.ts`)
+### Browser Extension Changes (`src/lib/analysis/link-health.ts`)
 
 ```typescript
 // Detect CORS-blocked opaque responses (status 0)

@@ -158,7 +158,7 @@ describe('handleSetting', () => {
 
   test('dispatches performance marks setting', async () => {
     const { handleSetting } = await import('../../extension/inject/settings.js')
-    const { isPerformanceMarksEnabled, setPerformanceMarksEnabled } = await import('../../extension/lib/performance.js')
+    const { isPerformanceMarksEnabled, setPerformanceMarksEnabled } = await import('../../extension/lib/analysis/performance.js')
 
     setPerformanceMarksEnabled(false) // reset
     handleSetting({ setting: 'set_performance_marks_enabled', enabled: true })
@@ -167,7 +167,7 @@ describe('handleSetting', () => {
 
   test('dispatches performance snapshot setting', async () => {
     const { handleSetting } = await import('../../extension/inject/settings.js')
-    const { isPerformanceSnapshotEnabled } = await import('../../extension/lib/perf-snapshot.js')
+    const { isPerformanceSnapshotEnabled } = await import('../../extension/lib/analysis/perf-snapshot.js')
 
     handleSetting({ setting: 'set_performance_snapshot_enabled', enabled: true })
     assert.strictEqual(isPerformanceSnapshotEnabled(), true)

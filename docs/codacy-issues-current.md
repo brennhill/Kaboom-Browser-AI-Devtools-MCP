@@ -193,13 +193,13 @@ Files with too many lines of code (limit: 600 lines)
 **src/lib/page/bridge.ts** (1 issues)
 - Line 45: Method || has a cyclomatic complexity of 13 (limit is 8)
 
-**src/lib/dom-queries.ts** (1 issues)
+**src/lib/analysis/dom-queries.ts** (1 issues)
 - Line 190: Method || has a cyclomatic complexity of 17 (limit is 8)
 
 **src/lib/page/exceptions.ts** (1 issues)
 - Line 31: Method window.onerror has a cyclomatic complexity of 11 (limit is 8)
 
-**src/lib/link-health.ts** (1 issues)
+**src/lib/analysis/link-health.ts** (1 issues)
 - Line 42: Method checkLinkHealth has a cyclomatic complexity of 18 (limit is 8)
 
 **src/lib/net/network.ts** (1 issues)

@@ -30,7 +30,7 @@ const RUNTIME_LOG_SOURCES = [
   'src/lib/page/context.ts',
   'src/lib/page/exceptions.ts',
   'src/lib/net/network.ts',
-  'src/lib/performance.ts',
+  'src/lib/analysis/performance.ts',
   'src/lib/net/websocket.ts',
   'src/content/runtime-message-listener.ts'
 ]

@@ -1029,7 +1029,7 @@ function wrapFetchWithBodies(fetchFn) {
   };
 }
 
-// extension/lib/perf-snapshot.js
+// extension/lib/analysis/perf-snapshot.js
 var perfSnapshotEnabled = true;
 var longTaskEntries = [];
 var longTaskObserver = null;
@@ -1253,7 +1253,7 @@ function setPerformanceSnapshotEnabled(enabled) {
   perfSnapshotEnabled = enabled;
 }
 
-// extension/lib/performance.js
+// extension/lib/analysis/performance.js
 var performanceMarksEnabled = false;
 var capturedMarks = [];
 var capturedMeasures = [];
@@ -2338,7 +2338,7 @@ function resetForTesting() {
   }
 }
 
-// extension/lib/dom-queries.js
+// extension/lib/analysis/dom-queries.js
 async function executeDOMQuery(params) {
   const { selector, include_styles, properties, include_children, max_depth } = params;
   const elements = document.querySelectorAll(selector);
@@ -3125,7 +3125,7 @@ function setDeferralEnabled(enabled) {
   deferralEnabled = enabled;
 }
 
-// extension/lib/link-health.js
+// extension/lib/analysis/link-health.js
 function extractUniqueLinks(domainFilter) {
   const linkElements = document.querySelectorAll("a[href]");
   const urls = /* @__PURE__ */ new Set();

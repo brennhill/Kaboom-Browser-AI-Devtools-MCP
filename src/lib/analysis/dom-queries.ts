@@ -16,8 +16,8 @@ import {
   DOM_QUERY_MAX_HTML,
   A11Y_MAX_NODES_PER_VIOLATION,
   A11Y_AUDIT_TIMEOUT_MS
-} from './constants.js'
-import { scaleTimeout } from './timeouts.js'
+} from '../constants.js'
+import { scaleTimeout } from '../timeouts.js'
 
 // DOM query parameters
 export interface DOMQueryParams {

@@ -7,8 +7,8 @@
  * Provides structured DOM querying, page info extraction, and
  * accessibility auditing via axe-core.
  */
-import { DOM_QUERY_MAX_ELEMENTS, DOM_QUERY_MAX_TEXT, DOM_QUERY_MAX_DEPTH, DOM_QUERY_MAX_HTML, A11Y_MAX_NODES_PER_VIOLATION, A11Y_AUDIT_TIMEOUT_MS } from './constants.js';
-import { scaleTimeout } from './timeouts.js';
+import { DOM_QUERY_MAX_ELEMENTS, DOM_QUERY_MAX_TEXT, DOM_QUERY_MAX_DEPTH, DOM_QUERY_MAX_HTML, A11Y_MAX_NODES_PER_VIOLATION, A11Y_AUDIT_TIMEOUT_MS } from '../constants.js';
+import { scaleTimeout } from '../timeouts.js';
 /**
  * Execute a DOM query and return structured results
  */

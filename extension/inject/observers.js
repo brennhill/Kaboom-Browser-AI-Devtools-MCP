@@ -6,8 +6,8 @@
  * @fileoverview Observers - Observer registration and management for DOM, network,
  * performance, and WebSocket events.
  */
-import { installPerformanceCapture, uninstallPerformanceCapture } from '../lib/performance.js';
-import { installPerfObservers } from '../lib/perf-snapshot.js';
+import { installPerformanceCapture, uninstallPerformanceCapture } from '../lib/analysis/performance.js';
+import { installPerfObservers } from '../lib/analysis/perf-snapshot.js';
 import { installWebSocketCapture, uninstallWebSocketCapture } from '../lib/net/websocket.js';
 import { wrapFetchWithBodies, wrapXHRWithBodies, unwrapXHR, adoptEarlyBodies, sanitizeHeaders } from '../lib/net/network.js';
 import { installConsoleCapture, uninstallConsoleCapture } from '../lib/page/console.js';

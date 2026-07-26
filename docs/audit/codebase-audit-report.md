@@ -699,7 +699,7 @@ export function createConnectionTracker(id: string, url: string): ConnectionTrac
 ---
 
 #### 7.3 Redundant DOM Queries
-**File:** [`src/lib/dom-queries.ts`](src/lib/dom-queries.ts:151-173)  
+**File:** [`src/lib/analysis/dom-queries.ts`](src/lib/analysis/dom-queries.ts:151-173)  
 **Severity:** Low  
 **Type:** Performance
 
@@ -905,7 +905,7 @@ export const DOM_QUERY_MAX_ELEMENTS = 100  // Why 100?
 - `src/lib/net/websocket.ts`
 - `src/lib/page/actions.ts`
 - `src/lib/page/serialize.ts`
-- `src/lib/dom-queries.ts`
+- `src/lib/analysis/dom-queries.ts`
 - `src/lib/page/bridge.ts`
 
 ---

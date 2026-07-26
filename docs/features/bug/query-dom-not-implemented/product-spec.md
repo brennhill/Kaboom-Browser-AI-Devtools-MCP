@@ -139,7 +139,7 @@ Complete the message forwarding chain so that DOM queries flow from the MCP tool
 
 ## Notes
 
-- Existing implementation of `executeDOMQuery()` in `extension/lib/dom-queries.js` is complete and tested
+- Existing implementation of `executeDOMQuery()` in `extension/lib/analysis/dom-queries.js` is complete and tested
 - Backend server query executor in `cmd/browser-agent/queries.go` already handles DOM query creation and result posting
 - Only missing piece is the message forwarding in `extension/background.js` lines 2634-2640 (currently returns 'not_implemented')
 - Fix should follow the same pattern as accessibility queries (which work correctly)

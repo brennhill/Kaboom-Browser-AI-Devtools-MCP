@@ -12,7 +12,7 @@ import {
   setPerformanceMarksEnabled,
   installPerformanceCapture,
   uninstallPerformanceCapture
-} from '../lib/performance.js'
+} from '../lib/analysis/performance.js'
 import { setActionCaptureEnabled } from '../lib/page/actions.js'
 import {
   setWebSocketCaptureEnabled,
@@ -20,7 +20,7 @@ import {
   installWebSocketCapture,
   uninstallWebSocketCapture
 } from '../lib/net/websocket.js'
-import { setPerformanceSnapshotEnabled } from '../lib/perf-snapshot.js'
+import { setPerformanceSnapshotEnabled } from '../lib/analysis/perf-snapshot.js'
 import { setDeferralEnabled } from './observers.js'
 import { INJECT_FORWARDED_SETTINGS, SettingName } from '../lib/constants.js'
 import { errorMessage } from '../lib/error-utils.js'
