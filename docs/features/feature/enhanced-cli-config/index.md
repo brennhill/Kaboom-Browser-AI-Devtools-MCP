@@ -4,7 +4,7 @@ feature_id: feature-enhanced-cli-config
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-24
+last_reviewed: 2026-07-26
 code_paths:
   - Makefile
   - scripts/build-crx.js
@@ -26,12 +26,18 @@ code_paths:
   - npm/kaboom-agentic-browser/lib/install.js
   - npm/kaboom-agentic-browser/lib/uninstall.js
   - npm/kaboom-agentic-browser/lib/cli.js
+  - npm/kaboom-agentic-browser/lib/output.js
+  - npm/kaboom-agentic-browser/lib/auto-approve.js
+  - npm/kaboom-agentic-browser/lib/codex-config.js
   - docs/mcp-install-guide.md
 test_paths:
   - cmd/browser-agent/native_install_test.go
   - cmd/browser-agent/native_install_open_test.go
   - cmd/browser-agent/native_install_connect_test.go
   - npm/kaboom-agentic-browser/lib/config.test.js
+  - npm/kaboom-agentic-browser/lib/auto-approve.test.js
+  - npm/kaboom-agentic-browser/lib/codex-config.test.js
+  - npm/kaboom-agentic-browser/lib/output.test.js
   - npm/kaboom-agentic-browser/lib/extension.test.js
   - npm/kaboom-agentic-browser/lib/browser.test.js
   - npm/kaboom-agentic-browser/lib/health.test.js
@@ -84,3 +90,21 @@ last_verified_date: 2026-03-28
 - PyPI wrapper config helpers now converge on `merge_kaboom_config(...)`, and packaged `.egg-info` metadata now exposes only Kaboom package names, entry points, and repo URLs.
 - Platform npm packages now ship `kaboom-agentic-browser` and `kaboom-hooks` binaries while preserving legacy cleanup for customer machines.
 - Server postinstall now validates `kaboom-browser-devtools` on `/health` reuse checks and points manual extension loading at `KABOOM_EXTENSION_DIR` / `~/KaboomAgenticDevtoolExtension`.
+- Install now also fixes the Claude Code `claude mcp add-json` invocation (JSON passed as a positional arg, not stdin) and adds **Codex CLI** as a supported client (`~/.codex/config.toml`, TOML; honors `$CODEX_HOME`).
+
+## Tool Auto-Approve (default-ON)
+
+Install trusts **all** Kaboom MCP tools by default in every client that exposes a verified config-file mechanism, so the user is never prompted. It is merge-safe (preserves existing config, dedupes, creates keys/file when absent, fails loud on genuine write errors), and uninstall removes every entry it added.
+
+| Client | Config-file mechanism (verified) | Implemented |
+| --- | --- | --- |
+| Claude Code | `~/.claude/settings.json` → `permissions.allow += "mcp__kaboom-browser-devtools"` (bare rule = all tools) — [docs](https://code.claude.com/docs/en/permissions) | Yes |
+| Gemini CLI | `mcpServers.<name>.trust = true` — [docs](https://github.com/google-gemini/gemini-cli/blob/main/docs/tools/mcp-server.md) | Yes |
+| OpenCode | `permission["kaboom-browser-devtools_*"] = "allow"` — [docs](https://opencode.ai/docs/permissions/) | Yes |
+| Zed | `agent.tool_permissions.tools["mcp:kaboom-browser-devtools:<tool>"] = {default:"allow"}` (per-tool; no server wildcard) — [docs](https://zed.dev/docs/ai/tool-permissions) | Yes |
+| Codex CLI | `[mcp_servers.kaboom-browser-devtools] default_tools_approval_mode = "approve"` — [docs](https://developers.openai.com/codex/mcp) | Yes |
+| Claude Desktop | none (no official `autoApprove` field; UI approval only) | UI-only |
+| Cursor | none (mcp.json has no trust field; UI Run Modes) — [docs](https://cursor.com/docs/context/mcp) | UI-only |
+| Windsurf | none (mcp_config.json has no trust field; UI Turbo) | UI-only |
+| VS Code | only a **global** `chat.tools.global.autoApprove` (trusts every server) — out of scope for a Kaboom-scoped installer — [docs](https://code.visualstudio.com/docs/agents/approvals) | UI-only |
+| Antigravity | none in mcp_config.json (auto-approve is a separate UI-managed policy) | UI-only |

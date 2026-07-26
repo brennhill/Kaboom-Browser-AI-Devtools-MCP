@@ -31,8 +31,10 @@ function cleanupTestDir() {
 
 test('config.getConfigCandidates returns expected file-client paths', () => {
   const candidates = config.getConfigCandidates()
-  const fileClientCount = config.CLIENT_DEFINITIONS.filter((def) => def.type === 'file').length
-  assert.strictEqual(candidates.length, fileClientCount, 'Should return one config path per file-based client')
+  // getConfigCandidates excludes non-JSON (TOML) clients like Codex — every
+  // consumer JSON-parses these paths, so only JSON file clients are returned.
+  const fileClientCount = config.CLIENT_DEFINITIONS.filter((def) => def.type === 'file' && def.format !== 'toml').length
+  assert.strictEqual(candidates.length, fileClientCount, 'Should return one config path per JSON file-based client')
   assert.ok(candidates.some((p) => p.includes('Claude')), 'Should include Claude Desktop path')
   assert.ok(candidates.some((p) => p.includes('.cursor')), 'Should include Cursor path')
   assert.ok(candidates.some((p) => p.includes('.codeium')), 'Should include Windsurf path')

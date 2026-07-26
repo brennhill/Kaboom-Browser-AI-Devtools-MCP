@@ -21,6 +21,7 @@ const {
   readConfigFile,
   expandPath,
 } = require('./config');
+const codexConfig = require('./codex-config');
 const { fetchHealth, DEFAULT_PORT } = require('./health');
 
 // Node floor: the launcher and lib/*.js rely on modern Node built-ins
@@ -269,6 +270,70 @@ function diagnoseFileClient(def, verbose) {
 }
 
 /**
+ * Diagnose a TOML-format client (Codex config.toml). Parallels
+ * diagnoseFileClient but reads the TOML section instead of JSON.
+ * @param {Object} def Client definition
+ * @param {boolean} verbose
+ * @returns {Object} Tool diagnostic
+ */
+function diagnoseTomlClient(def, verbose) {
+  const cfgPath = getClientConfigPath(def);
+  const detected = isClientInstalled(def);
+  const tool = {
+    name: def.name,
+    id: def.id,
+    type: 'file',
+    path: cfgPath,
+    detected,
+    status: 'error',
+    issues: [],
+    suggestions: [],
+  };
+
+  if (verbose) {
+    console.log(`[DEBUG] Checking ${def.name} at ${cfgPath}`);
+  }
+
+  if (!detected) {
+    tool.status = 'info';
+    tool.issues.push('Not installed on this system');
+    return tool;
+  }
+  if (!cfgPath) {
+    tool.status = 'info';
+    tool.issues.push('No config path for this platform');
+    return tool;
+  }
+  if (!fs.existsSync(cfgPath)) {
+    tool.status = 'error';
+    tool.issues.push('Config file not found');
+    tool.suggestions.push('Run: kaboom-agentic-browser --install');
+    return tool;
+  }
+
+  const res = codexConfig.codexServerConfigured(cfgPath);
+  if (res.error) {
+    tool.issues.push(`Cannot read config: ${res.error}`);
+    tool.suggestions.push('Fix the file or run: kaboom-agentic-browser --install');
+    return tool;
+  }
+  if (!res.configured) {
+    tool.issues.push(`${MCP_SERVER_NAME} entry missing from mcp_servers`);
+    tool.suggestions.push('Run: kaboom-agentic-browser --install');
+    return tool;
+  }
+  if (res.matchedName !== MCP_SERVER_NAME) {
+    tool.status = 'error';
+    tool.issues.push(`Legacy MCP server name detected (${res.matchedName}); migrate to ${MCP_SERVER_NAME}`);
+    tool.suggestions.push('Run: kaboom-agentic-browser --install');
+    return tool;
+  }
+
+  tool.status = 'ok';
+  return tool;
+}
+
+/**
  * Diagnose a CLI-type client
  * @param {Object} def Client definition
  * @param {boolean} verbose
@@ -406,6 +471,8 @@ async function runDiagnostics(verbose = false, opts = {}) {
   for (const def of clients) {
     if (def.type === 'cli') {
       tools.push(diagnoseCliClient(def, verbose));
+    } else if (def.format === 'toml') {
+      tools.push(diagnoseTomlClient(def, verbose));
     } else {
       tools.push(diagnoseFileClient(def, verbose));
     }

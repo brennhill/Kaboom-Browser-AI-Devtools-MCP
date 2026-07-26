@@ -217,6 +217,49 @@ test('installToClient handles CLI type with dry-run', () => {
   assert.ok(result.message.includes('claude'));
 });
 
+test('installToClient passes the MCP server JSON as a positional arg to the CLI (not stdin)', () => {
+  // Regression: installArgs ended at the server NAME and the JSON was piped to
+  // stdin, so `claude mcp add-json` aborted with "missing required argument
+  // 'json'". The JSON config must be the FINAL positional argument.
+  if (process.platform === 'win32') return; // fake CLI uses a unix shebang
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-install-cli-'));
+  const argvLog = path.join(tmp, 'argv.json');
+  const fakeCli = path.join(tmp, 'fake-claude');
+  fs.writeFileSync(
+    fakeCli,
+    [
+      '#!/usr/bin/env node',
+      "const fs = require('fs');",
+      `fs.writeFileSync(${JSON.stringify(argvLog)}, JSON.stringify(process.argv.slice(2)));`,
+      'process.exit(0);',
+      '',
+    ].join('\n'),
+    { mode: 0o755 }
+  );
+
+  const def = {
+    id: 'claude-code',
+    name: 'Claude Code',
+    type: 'cli',
+    detectCommand: fakeCli,
+    installArgs: ['mcp', 'add-json', '--scope', 'user', 'kaboom-browser-devtools'],
+    removeArgs: ['mcp', 'remove', '--scope', 'user', 'kaboom-browser-devtools'],
+  };
+
+  const result = installToClient(def, { dryRun: false, envVars: {}, binaryCommand: '/tmp/kaboom-bin' });
+  assert.equal(result.success, true);
+
+  const argv = JSON.parse(fs.readFileSync(argvLog, 'utf8'));
+  assert.deepEqual(argv.slice(0, 5), ['mcp', 'add-json', '--scope', 'user', 'kaboom-browser-devtools']);
+  // The JSON config must be present as the final positional argument.
+  const jsonArg = argv[argv.length - 1];
+  const parsed = JSON.parse(jsonArg); // throws if the JSON was not passed as an arg
+  assert.equal(parsed.command, '/tmp/kaboom-bin');
+  assert.deepEqual(parsed.args, []);
+
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
 // --- executeInstall ---
 
 test('executeInstall installs to detected file-type clients', () => {
