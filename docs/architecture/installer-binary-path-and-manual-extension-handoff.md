@@ -2,7 +2,7 @@
 doc_type: flow_map
 flow_id: installer-binary-path-and-manual-extension-handoff
 status: active
-last_reviewed: 2026-07-24
+last_reviewed: 2026-07-26
 owners:
   - Brenn
 entrypoints:

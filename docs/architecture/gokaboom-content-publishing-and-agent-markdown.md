@@ -2,7 +2,7 @@
 doc_type: flow_map
 flow_id: gokaboom-content-publishing-and-agent-markdown
 status: active
-last_reviewed: 2026-03-28
+last_reviewed: 2026-07-26
 owners:
   - Brenn
 feature_ids:
