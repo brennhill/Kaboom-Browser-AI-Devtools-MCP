@@ -794,8 +794,8 @@ test('handles 401 response gracefully', async () => {
 
 | File | Changes |
 |------|---------|
-| `cmd/browser-agent/auth.go` | Replace existing middleware with enhanced version |
-| `cmd/browser-agent/auth_test.go` | New test file for auth middleware |
+| `cmd/browser-agent/internal/httpguard/apikey.go` | Replace existing middleware with enhanced version |
+| `cmd/browser-agent/internal/httpguard/apikey_test.go` | New test file for auth middleware |
 | `cmd/browser-agent/main.go` | Add CLI flags, wire up middleware |
 | `cmd/browser-agent/config.go` | Add auth config parsing (env, flags, key file) |
 | `cmd/browser-agent/audit.go` | Add auth attempt logging |

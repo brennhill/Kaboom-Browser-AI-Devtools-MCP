@@ -13,7 +13,7 @@ ensure_daemon
 # ── 8.1 — Extension endpoints reject without X-Kaboom-Client header ──
 begin_test "8.1" "Extension endpoints reject without X-Kaboom-Client header" \
     "Verify /sync returns 403 when no X-Kaboom-Client header is present" \
-    "extensionOnly middleware must actually block. Without it, any local process can inject data."
+    "httpguard.ExtensionOnly middleware must actually block. Without it, any local process can inject data."
 run_test_8_1() {
     local status
     status=$(get_http_status "http://localhost:${PORT}/sync")

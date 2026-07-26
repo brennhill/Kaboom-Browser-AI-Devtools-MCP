@@ -5,6 +5,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpguard"
 	"net/http"
 	"strings"
 
@@ -24,10 +25,10 @@ func resolveClientRegistry(cap *capture.Store, w http.ResponseWriter) (capture.C
 
 // registerClientRegistryRoutes binds the multi-client registry endpoints.
 func registerClientRegistryRoutes(mux *http.ServeMux, cap *capture.Store) {
-	mux.HandleFunc("/clients", corsMiddleware(extensionOnly(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/clients", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
 		handleClientsList(w, r, cap)
 	})))
-	mux.HandleFunc("/clients/", corsMiddleware(extensionOnly(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/clients/", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
 		handleClientByID(w, r, cap)
 	})))
 }

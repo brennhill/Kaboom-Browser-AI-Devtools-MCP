@@ -9,7 +9,7 @@ import (
 
 // fakeDeps satisfies Deps over a real capture.Store and an in-memory log buffer.
 // It replaces the old harness, which built a whole *ToolHandler (plus a *Server
-// and a *LogStore) just to reach these three methods.
+// and a *logstore.Store) just to reach these three methods.
 type fakeDeps struct {
 	cap     *capture.Store
 	entries []mcp.LogEntry

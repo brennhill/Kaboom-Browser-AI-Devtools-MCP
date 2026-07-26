@@ -34,7 +34,7 @@ code_paths:
   - cmd/browser-agent/internal/logstore/validate.go
   - cmd/browser-agent/internal/logstore/seed.go
   - cmd/browser-agent/main_connection_mcp_shutdown.go
-  - cmd/browser-agent/server_middleware.go
+  - cmd/browser-agent/internal/httpguard/middleware.go
   - cmd/browser-agent/handler_http.go
   - cmd/browser-agent/connect_mode.go
   - cmd/browser-agent/server_routes_media_screenshots.go
@@ -48,7 +48,7 @@ test_paths:
   - cmd/browser-agent/bridge_startup_contention_test.go
   - cmd/browser-agent/bridge_faststart_extended_test.go
   - cmd/browser-agent/handler_http_headers_test.go
-  - cmd/browser-agent/server_middleware_test.go
+  - cmd/browser-agent/internal/httpguard/middleware_test.go
   - cmd/browser-agent/connect_mode_run_test.go
   - cmd/browser-agent/handler_consistency_test.go
   - cmd/browser-agent/server_routes_unit_test.go

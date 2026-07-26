@@ -1,8 +1,8 @@
-// Purpose: Implements HTTP middleware for CORS handling, extension origin validation, and request logging.
+// middleware.go — HTTP middleware for CORS handling, extension origin validation, and request logging.
 // Why: Enforces browser extension origin checks and cross-origin policy at the middleware layer before handlers run.
 // Docs: docs/features/feature/security-hardening/index.md
 
-package main
+package httpguard
 
 import (
 	"net"
@@ -102,7 +102,7 @@ func isAllowedHost(host string) bool {
 //  1. Host header validation — rejects requests where Host is not a localhost variant.
 //  2. Origin validation — rejects requests from non-local, non-extension origins.
 //  3. CORS origin echo — returns the specific allowed origin, never wildcard "*".
-func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
+func CORS(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Layer 1: Validate Host header (DNS rebinding protection)
 		if !isAllowedHost(r.Host) {
@@ -134,7 +134,7 @@ func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// extensionOnly wraps a handler to require the X-Kaboom-Client header
+// ExtensionOnly wraps a handler to require the X-Kaboom-Client header
 // from the Kaboom browser extension. Accepts:
 //   - "kaboom-extension" (exact match)
 //   - "kaboom-extension/{version}" (e.g., kaboom-extension/6.0.3)
@@ -142,7 +142,7 @@ func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 //
 // Rejects with 403 if missing or invalid. This ensures only the Kaboom
 // browser extension can call extension-facing endpoints.
-func extensionOnly(next http.HandlerFunc) http.HandlerFunc {
+func ExtensionOnly(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		client := r.Header.Get("X-Kaboom-Client")
 		if client != "kaboom-extension" &&

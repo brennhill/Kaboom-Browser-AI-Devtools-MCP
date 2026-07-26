@@ -1,7 +1,7 @@
 // Purpose: Tests for platform error diagnostics with netstat.
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
-// platform_errors_netstat_test.go — Tests for parseNetstatPIDs function.
+// port_netstat_test.go — Tests for parseNetstatPIDs function.
 package procctl
 
 import (

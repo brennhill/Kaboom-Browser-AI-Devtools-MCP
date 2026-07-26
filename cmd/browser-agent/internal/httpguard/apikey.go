@@ -1,8 +1,8 @@
-// Purpose: Implements optional API-key HTTP middleware for daemon endpoint authentication.
+// apikey.go — Optional API-key HTTP middleware for daemon endpoint authentication.
 // Why: Provides lightweight access control for local/remote deployments without changing handler code.
 // Docs: docs/features/feature/api-key-auth/index.md
 
-package main
+package httpguard
 
 import (
 	"crypto/subtle"
@@ -10,11 +10,11 @@ import (
 	"net/http"
 )
 
-// AuthMiddleware returns a middleware function that checks the X-Kaboom-Key header.
+// APIKey returns a middleware function that checks the X-Kaboom-Key header.
 // If expectedKey is empty, no authentication is required (pass-through).
 // If expectedKey is set, requests must include the correct key or receive 401.
 // Key comparison uses crypto/subtle.ConstantTimeCompare to prevent timing attacks.
-func AuthMiddleware(expectedKey string) func(http.Handler) http.Handler {
+func APIKey(expectedKey string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// If no key is configured, auth is disabled

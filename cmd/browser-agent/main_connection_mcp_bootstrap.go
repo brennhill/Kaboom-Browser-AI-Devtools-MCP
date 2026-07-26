@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"net"
 	"net/http"
@@ -173,7 +174,7 @@ func startHTTPServer(server *Server, port int, apiKey string, mux *http.ServeMux
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 65 * time.Second, // Must accommodate blocking tool waits (screenshot 20s, interact 35s, annotations 55s)
 		IdleTimeout:  120 * time.Second,
-		Handler:      AuthMiddleware(apiKey)(mux),
+		Handler:      httpguard.APIKey(apiKey)(mux),
 	}
 	util.SafeGo(func() {
 		defer close(httpDone)

@@ -103,7 +103,7 @@ func TestUploadInteg_ConcurrentFormSubmit(t *testing.T) {
 }
 
 // ============================================
-// 2. extensionOnly middleware integration
+// 2. httpguard.ExtensionOnly middleware integration
 // ============================================
 
 func TestUploadInteg_ExtensionOnlyMiddleware(t *testing.T) {
