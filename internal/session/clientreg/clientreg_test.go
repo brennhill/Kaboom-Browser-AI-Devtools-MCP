@@ -1,7 +1,7 @@
 // Purpose: Tests for session client registry tracking.
 // Docs: docs/features/feature/pagination/index.md
 
-package session
+package clientreg
 
 import (
 	"sync"

@@ -1,4 +1,4 @@
-// Purpose: Adapts session.ClientRegistry to the capture.ClientRegistry interface without importing session into capture.
+// Purpose: Adapts clientreg.ClientRegistry to the capture.ClientRegistry interface without importing session into capture.
 // Why: Preserves package boundaries while allowing daemon bootstrap to inject a concrete registry implementation.
 // Docs: docs/features/feature/request-session-correlation/index.md
 
@@ -6,17 +6,17 @@ package main
 
 import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/clientreg"
 )
 
-// sessionClientRegistryAdapter bridges session.ClientRegistry to capture.ClientRegistry.
+// sessionClientRegistryAdapter bridges clientreg.ClientRegistry to capture.ClientRegistry.
 // Return values are widened to any by interface contract; concrete values remain
-// *session.ClientState and []session.ClientInfo.
+// *clientreg.ClientState and []clientreg.ClientInfo.
 type sessionClientRegistryAdapter struct {
-	reg *session.ClientRegistry
+	reg *clientreg.ClientRegistry
 }
 
-func newSessionClientRegistryAdapter(reg *session.ClientRegistry) capture.ClientRegistry {
+func newSessionClientRegistryAdapter(reg *clientreg.ClientRegistry) capture.ClientRegistry {
 	if reg == nil {
 		return nil
 	}

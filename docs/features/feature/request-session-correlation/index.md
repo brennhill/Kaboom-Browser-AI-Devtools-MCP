@@ -4,19 +4,20 @@ feature_id: feature-request-session-correlation
 status: active
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-26
 code_paths:
   - cmd/browser-agent/client_registry_adapter.go
   - cmd/browser-agent/main_connection_mcp_bootstrap.go
   - cmd/browser-agent/server_routes_clients.go
   - internal/capture/interfaces.go
   - internal/capture/client_registry_setter.go
-  - internal/session/client_registry.go
+  - internal/session/clientreg/registry.go
+  - internal/session/clientreg/state.go
   - internal/session/types.go
   - internal/session/verify_actions.go
 test_paths:
   - cmd/browser-agent/server_routes_clients_test.go
-  - internal/session/client_registry_test.go
+  - internal/session/clientreg/clientreg_test.go
   - internal/session/verify_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05

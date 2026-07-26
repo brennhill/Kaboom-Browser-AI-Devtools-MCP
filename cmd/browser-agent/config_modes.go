@@ -6,7 +6,7 @@ package main
 import (
 	"os"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/clientreg"
 )
 
 // handleEarlyExitModes handles --version, --help, --force, --check/--doctor, --stop, --connect.
@@ -46,7 +46,7 @@ func handleEarlyExitModes(f *parsedFlags) {
 		cwd, _ := os.Getwd()
 		id := *f.clientID
 		if id == "" {
-			id = session.DeriveClientID(cwd)
+			id = clientreg.DeriveClientID(cwd)
 		}
 		runConnectMode(*f.port, id, cwd)
 		os.Exit(0)

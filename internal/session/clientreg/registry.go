@@ -2,10 +2,22 @@
 // Why: Keeps registry operations isolated from per-client cursor/state methods.
 // Docs: docs/features/feature/request-session-correlation/index.md
 
-// client_registry.go — Multi-client session registry management.
+// registry.go — Multi-client session registry management.
 // Tracks connected MCP clients with LRU eviction and lookup behavior.
 // Thread-safe: all access guarded by RWMutex (see LOCKING.md for ordering).
-package session
+
+// Package clientreg provides multi-client session management for the Kaboom MCP
+// server: client registration and isolation, per-client ring-buffer cursors,
+// LRU eviction, and idle reaping.
+//
+// The ClientRegistry maintains state for multiple Claude Code sessions
+// connecting to a single Kaboom server instance. Each client is identified by
+// the X-Kaboom-Client header and keeps isolated state (working directory, last
+// poll time, per-buffer read positions). Clients that have not polled within
+// the idle timeout are reaped.
+//
+// clientreg is a leaf: it shares no state with snapshot capture or diffing.
+package clientreg
 
 import (
 	"sync"

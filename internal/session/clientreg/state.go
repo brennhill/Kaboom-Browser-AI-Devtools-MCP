@@ -2,7 +2,7 @@
 // Why: Keeps per-client mutable state behavior separate from registry orchestration.
 // Docs: docs/features/feature/request-session-correlation/index.md
 
-package session
+package clientreg
 
 import (
 	"crypto/sha256"
