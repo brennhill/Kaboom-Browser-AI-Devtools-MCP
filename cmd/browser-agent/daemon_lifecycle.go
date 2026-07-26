@@ -141,10 +141,16 @@ func classifyExistingDaemon(server *Server, port int, rec *daemonLockRecord) err
 	}
 
 	// Probe liveness, retried across the window so a momentarily busy-but-healthy
-	// daemon answers before we ever conclude it is stalled. But a connection-refused
-	// probe means nothing is listening — the daemon is definitively gone, not busy —
-	// so break immediately instead of burning the retry budget's sleeps on a
-	// certainty (finding L). Only a timeout/ambiguous failure warrants a retry.
+	// daemon answers before we ever conclude it is stalled. A connection-refused
+	// probe means nothing is accepting on the port right now — but that is only
+	// DEFINITIVE ("gone") when the incumbent PID is ALSO dead, in which case we break
+	// immediately instead of burning the retry budget's sleeps on a certainty
+	// (finding L's fast path). A refused probe while the PID is still ALIVE is NOT
+	// proof of death: a healthy daemon can transiently refuse (listen backlog full)
+	// or be mid graceful-shutdown, so we retry rather than SIGTERM a live, healthy
+	// peer on a single stray refusal (which would feed the takeover war). A
+	// persistently-wedged live daemon is still reclaimed once the retry budget is
+	// exhausted below.
 	reachable := false
 	liveVersion := ""
 	for attempt := 0; attempt < daemonHealthProbeRetries; attempt++ {
@@ -152,7 +158,7 @@ func classifyExistingDaemon(server *Server, port int, rec *daemonLockRecord) err
 		if reachable, liveVersion, refused = daemonProbeHealth(rec.Port); reachable {
 			break
 		}
-		if refused {
+		if refused && !daemonIsProcessAlive(rec.PID) {
 			break
 		}
 		if attempt < daemonHealthProbeRetries-1 {
