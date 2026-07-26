@@ -19,7 +19,7 @@ a real Google Lighthouse audit against the tracked tab and returns a trimmed res
 registers in the analyze dispatch registry (`analyzeHandlers` in
 `cmd/browser-agent/tools_analyze_dispatch.go`) alongside existing modes such as `audit`,
 `performance`, and `accessibility`. Its hint and optional parameters register in
-`internal/tools/configure/mode_specs_analyze.go`.
+`internal/tools/configure/capabilities/modespecs_analyze.go`.
 
 The feature reuses the asynchronous command pattern already used by the interact tool: the Go
 daemon enqueues a pending command, the extension executes it against the live browser, and the
@@ -95,7 +95,7 @@ Agent polls observe({what: "command_result"}) and receives the structured report
 - A result-trimming helper that maps the raw Lighthouse JSON to the structured response.
 
 **Modified server files**:
-- `internal/tools/configure/mode_specs_analyze.go`: add the `lighthouse_report` mode hint and
+- `internal/tools/configure/capabilities/modespecs_analyze.go`: add the `lighthouse_report` mode hint and
   its optional parameters (`categories`, `device`, `mode`).
 
 **Extension files**:

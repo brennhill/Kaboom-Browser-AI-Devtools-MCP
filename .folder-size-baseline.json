@@ -10,9 +10,6 @@
     "internal/capture": 67,
     "internal/checkpoint": 11,
     "internal/mcp": 12,
-    "internal/tools/analyze": 13,
-    "internal/tools/configure": 15,
-    "internal/tools/observe": 32,
-    "internal/util": 16
+    "internal/tools/observe": 32
   }
 }

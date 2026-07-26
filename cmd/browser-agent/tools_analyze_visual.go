@@ -13,6 +13,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	az "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/analyze"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/analyze/imagediff"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 )
 
@@ -108,7 +109,7 @@ func (h *ToolHandler) toolVisualDiff(req JSONRPCRequest, args json.RawMessage) J
 		return fail(req, ErrExtError, "Current screenshot path not available", "Try again")
 	}
 
-	diffResult, err := az.CompareImages(baseline.Path, currentPath, parsed.Threshold)
+	diffResult, err := imagediff.CompareImages(baseline.Path, currentPath, parsed.Threshold)
 	if err != nil {
 		return fail(req, ErrExtError, "Image comparison failed: "+err.Error(), "Check that baseline image exists at: "+baseline.Path)
 	}
@@ -118,11 +119,11 @@ func (h *ToolHandler) toolVisualDiff(req JSONRPCRequest, args json.RawMessage) J
 		screenshotsDir, err := state.ScreenshotsDir()
 		if err == nil {
 			diffPath = filepath.Join(screenshotsDir, fmt.Sprintf("diff-%s-%d.png", parsed.Baseline, time.Now().UnixMilli()))
-			baselineImg, err1 := az.LoadImage(baseline.Path)
-			currentImg, err2 := az.LoadImage(currentPath)
+			baselineImg, err1 := imagediff.LoadImage(baseline.Path)
+			currentImg, err2 := imagediff.LoadImage(currentPath)
 			if err1 == nil && err2 == nil {
-				changedGrid := az.RebuildChangedGrid(baselineImg, currentImg, parsed.Threshold)
-				az.WriteDiffImage(baselineImg, currentImg, changedGrid, diffPath)
+				changedGrid := imagediff.RebuildChangedGrid(baselineImg, currentImg, parsed.Threshold)
+				imagediff.WriteDiffImage(baselineImg, currentImg, changedGrid, diffPath)
 			}
 		}
 	}

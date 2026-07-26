@@ -115,9 +115,9 @@ Tutorial snippets (`configure(what:"examples")`) include a filtering example.
 
 | File | Purpose |
 |------|---------|
-| `internal/tools/configure/mode_specs.go` | `toolModeSpecs` — per-mode `{Hint, Required, Optional}` for all 5 tools |
-| `internal/tools/configure/capabilities.go` | `BuildCapabilitiesSummary`, `BuildCapabilitiesMap`, `BuildCapabilitiesForTool`, `FilterToolByMode` |
-| `internal/tools/configure/mode_specs_test.go` | Validates specs match schemas, all modes have hints, no unknown params |
+| `internal/tools/configure/capabilities/modespecs.go` | `toolModeSpecs` — per-mode `{Hint, Required, Optional}` for all 5 tools |
+| `internal/tools/configure/capabilities/capabilities.go` | `BuildCapabilitiesSummary`, `BuildCapabilitiesMap`, `BuildCapabilitiesForTool`, `FilterToolByMode` |
+| `internal/tools/configure/capabilities/modespecs_test.go` | Validates specs match schemas, all modes have hints, no unknown params |
 | `cmd/browser-agent/tools_configure.go` | `handleDescribeCapabilities` handler |
 | `cmd/browser-agent/tools_configure_capabilities_test.go` | Handler integration tests |
 | `cmd/browser-agent/playbooks.go` + `cmd/browser-agent/playbooks_*.go` | `capabilityIndex` plus capability-specific playbook content |
@@ -139,7 +139,7 @@ describe_capabilities(tool, mode)
 
 When a new mode is added to any tool schema:
 
-1. Add an entry to `toolModeSpecs` in `mode_specs.go` with `Hint`, `Required`, and `Optional` fields
+1. Add an entry to `toolModeSpecs` in `modespecs.go` with `Hint`, `Required`, and `Optional` fields
 2. Run `go test ./internal/tools/configure/...` — the `TestToolModeSpecs_AllModesHaveSpecs` and `TestToolModeSpecs_AllModesHaveHints` tests will fail if the entry is missing
 3. The `TestToolModeSpecs_NoUnknownParams` test will fail if you list a param that doesn't exist in the schema
 

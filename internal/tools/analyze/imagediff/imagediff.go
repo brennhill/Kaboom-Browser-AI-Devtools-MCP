@@ -1,7 +1,7 @@
 // Purpose: Computes pixel-level image diffs between two screenshots and identifies changed regions.
 // Docs: docs/features/feature/analyze-tool/index.md
 
-package analyze
+package imagediff
 
 import "fmt"
 
@@ -67,4 +67,21 @@ func CompareImages(baselinePath, currentPath string, threshold int) (*DiffResult
 	}
 
 	return result, nil
+}
+
+// DiffVerdict classifies a changed-pixel percentage into the verdict reported in
+// DiffResult.Verdict. It lives beside DiffResult rather than in a general "math"
+// file because CompareImages is its only caller and its output is part of the
+// public diff shape.
+func DiffVerdict(pct float64) string {
+	switch {
+	case pct == 0:
+		return "identical"
+	case pct < 5:
+		return "minor_changes"
+	case pct < 25:
+		return "major_changes"
+	default:
+		return "completely_different"
+	}
 }

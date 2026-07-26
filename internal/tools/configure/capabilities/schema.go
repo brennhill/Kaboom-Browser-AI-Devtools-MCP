@@ -1,6 +1,13 @@
-// Purpose: Infers the canonical dispatch parameter from tool input schemas.
-// Why: Separates schema analysis from mode mapping and parameter detail extraction.
-package configure
+// Purpose: Reads raw JSON tool schemas — dispatch parameter, mode enum, and per-parameter metadata.
+// Why: All schema introspection lives here so the assembly code in capabilities.go
+// never touches raw schema maps. Dispatch inference and parameter-detail extraction
+// share this file because both decode schema values through toStringSlice.
+package capabilities
+
+import (
+	"regexp"
+	"strings"
+)
 
 // inferDispatchParam selects the canonical mode/action parameter for a tool.
 // Primary source is schema.required[0]. For alias-friendly schemas that use
@@ -77,4 +84,72 @@ func toStringSlice(raw any) []string {
 	default:
 		return nil
 	}
+}
+
+var (
+	defaultParenPattern = regexp.MustCompile(`(?i)\(default[:\s]*([^)]+)\)`)
+	defaultsToPattern   = regexp.MustCompile(`(?i)defaults?\s+to\s+([a-zA-Z0-9_./:-]+)`)
+)
+
+func buildParamDetails(props map[string]any) map[string]any {
+	details := make(map[string]any, len(props))
+	for name, propRaw := range props {
+		prop, ok := propRaw.(map[string]any)
+		if !ok {
+			continue
+		}
+		meta := map[string]any{}
+
+		if typ, ok := prop["type"].(string); ok && typ != "" {
+			meta["type"] = typ
+		}
+
+		if enumVals := toStringSlice(prop["enum"]); len(enumVals) > 0 {
+			meta["enum"] = enumVals
+		}
+
+		if desc, ok := prop["description"].(string); ok && desc != "" {
+			meta["description"] = desc
+			if _, hasDefault := meta["default"]; !hasDefault {
+				if parsedDefault, ok := extractDefaultFromDescription(desc); ok {
+					meta["default"] = parsedDefault
+				}
+			}
+		}
+
+		if explicitDefault, ok := prop["default"]; ok {
+			meta["default"] = explicitDefault
+		}
+
+		if items, ok := prop["items"].(map[string]any); ok {
+			if itemType, ok := items["type"].(string); ok && itemType != "" {
+				meta["item_type"] = itemType
+			}
+		}
+
+		if len(meta) > 0 {
+			details[name] = meta
+		}
+	}
+	return details
+}
+
+func extractDefaultFromDescription(description string) (string, bool) {
+	if description == "" {
+		return "", false
+	}
+	if match := defaultParenPattern.FindStringSubmatch(description); len(match) == 2 {
+		return cleanDefaultText(match[1]), true
+	}
+	if match := defaultsToPattern.FindStringSubmatch(description); len(match) == 2 {
+		return cleanDefaultText(match[1]), true
+	}
+	return "", false
+}
+
+func cleanDefaultText(v string) string {
+	trimmed := strings.TrimSpace(v)
+	trimmed = strings.Trim(trimmed, "`'\"")
+	trimmed = strings.TrimRight(trimmed, ".,;")
+	return trimmed
 }

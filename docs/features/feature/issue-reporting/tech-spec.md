@@ -20,7 +20,7 @@ last_verified_date: 2026-03-05
 - Entry: `toolConfigureReportIssue` in `cmd/browser-agent/tools_configure_report_issue.go`
 - Registry: `configureHandlers["report_issue"]` in `tools_configure_registry.go`
 - Schema: `report_issue` in `internal/schema/configure/properties_runtime.go`
-- Mode spec: `report_issue` in `internal/tools/configure/mode_specs_configure.go`
+- Mode spec: `report_issue` in `internal/tools/configure/capabilities/modespecs_configure.go`
 
 ## Package: `internal/issuereport/`
 

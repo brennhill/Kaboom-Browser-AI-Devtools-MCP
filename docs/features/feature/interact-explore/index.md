@@ -34,7 +34,7 @@ code_paths:
   - internal/schema/interact/actions.go
   - internal/schema/interact/properties_targeting.go
   - internal/schema/interact/properties_output_batch.go
-  - internal/tools/configure/mode_specs_interact.go
+  - internal/tools/configure/capabilities/modespecs_interact.go
   - scripts/docs/reference/check-reference-schema-sync.mjs
   - src/background/pending-queries.ts
   - src/background/exec/query-execution.ts
@@ -77,7 +77,7 @@ test_paths:
   - tests/extension/action-toast-labels.test.js
   - tests/extension/execute-js.test.js
   - internal/tools/interact/workflow_test.go
-  - internal/tools/configure/mode_specs_test.go
+  - internal/tools/configure/capabilities/modespecs_test.go
   - extension/background/dom-primitives-overlay.test.js
   - cmd/browser-agent/tools_async_enrich_test.go
   - tests/extension/interact-content-fallback.test.js

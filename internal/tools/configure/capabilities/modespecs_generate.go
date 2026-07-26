@@ -1,6 +1,6 @@
-// mode_specs_generate.go — generate tool per-mode parameter specs.
+// modespecs_generate.go — generate tool per-mode parameter specs.
 // Docs: docs/features/describe_capabilities.md
-package configure
+package capabilities
 
 var generateModeSpecs = map[string]modeParamSpec{
 	"reproduction": {

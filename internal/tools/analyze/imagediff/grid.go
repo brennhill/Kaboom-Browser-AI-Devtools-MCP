@@ -1,6 +1,8 @@
 // Purpose: Builds a per-pixel boolean grid marking changed regions between baseline and current images.
 // Why: Separates grid construction from region detection, rendering, and I/O.
-package analyze
+// absDiff16 lives here rather than in a general "math" file: RebuildChangedGrid is
+// its only caller, and the 257x threshold scaling below is meaningless without it.
+package imagediff
 
 import "image"
 
@@ -55,4 +57,11 @@ func countChanged(changed [][]bool) int {
 		}
 	}
 	return n
+}
+
+func absDiff16(a, b uint32) uint32 {
+	if a > b {
+		return a - b
+	}
+	return b - a
 }

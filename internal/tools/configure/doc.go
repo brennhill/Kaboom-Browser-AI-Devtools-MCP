@@ -4,7 +4,7 @@
 
 /*
 Package configure provides the implementation for the configure MCP tool, which
-manages session settings, noise rules, test boundaries, and capabilities discovery.
+manages session settings, noise rules, and test boundaries.
 
 Key types:
   - Deps: interface declaring dependencies required from the host server.
@@ -13,7 +13,9 @@ Key types:
 Key functions:
   - SummarizeAuditEntries: aggregates audit entries into tool call counts and success rates.
   - RewriteNoiseRuleArgs: normalizes noise_action to the canonical action field.
-  - DescribeCapabilities: introspects tool schemas to build capability descriptions.
   - ParseTestBoundaryStart: validates test_boundary_start parameters.
+
+Subpackages:
+  - capabilities: builds the describe_capabilities response from MCP tool schemas.
 */
 package configure

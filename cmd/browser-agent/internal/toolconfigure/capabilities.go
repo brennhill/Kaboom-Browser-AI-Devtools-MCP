@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	cfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure"
+	caps "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure/capabilities"
 )
 
 // HandleDescribeCapabilities returns machine-readable tool metadata derived from ToolsList().
@@ -35,7 +35,7 @@ func HandleDescribeCapabilities(d Deps, req mcp.JSONRPCRequest, args json.RawMes
 
 	// Filter by tool + mode.
 	if params.Tool != "" {
-		toolCap, ok := cfg.BuildCapabilitiesForTool(tools, params.Tool)
+		toolCap, ok := caps.BuildCapabilitiesForTool(tools, params.Tool)
 		if !ok {
 			validNames := make([]string, 0, len(tools))
 			for _, t := range tools {
@@ -50,7 +50,7 @@ func HandleDescribeCapabilities(d Deps, req mcp.JSONRPCRequest, args json.RawMes
 		}
 
 		if params.Mode != "" {
-			modeCap, ok := cfg.FilterToolByMode(toolCap, params.Tool, params.Mode)
+			modeCap, ok := caps.FilterToolByMode(toolCap, params.Tool, params.Mode)
 			if !ok {
 				modes, _ := toolCap["modes"].([]string)
 				if modes == nil {
@@ -85,9 +85,9 @@ func HandleDescribeCapabilities(d Deps, req mcp.JSONRPCRequest, args json.RawMes
 	// Full or summary response (no filters).
 	var toolsMap map[string]any
 	if params.Summary {
-		toolsMap = cfg.BuildCapabilitiesSummary(tools)
+		toolsMap = caps.BuildCapabilitiesSummary(tools)
 	} else {
-		toolsMap = cfg.BuildCapabilitiesMap(tools)
+		toolsMap = caps.BuildCapabilitiesMap(tools)
 	}
 
 	return succeed(req, "Capabilities", map[string]any{

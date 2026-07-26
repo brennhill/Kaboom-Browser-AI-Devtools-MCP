@@ -1,6 +1,6 @@
-// mode_specs_configure.go — configure tool per-mode parameter specs.
+// modespecs_configure.go — configure tool per-mode parameter specs.
 // Docs: docs/features/describe_capabilities.md
-package configure
+package capabilities
 
 var configureModeSpecs = map[string]modeParamSpec{
 	"store": {
