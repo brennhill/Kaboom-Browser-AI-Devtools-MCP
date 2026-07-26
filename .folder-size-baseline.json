@@ -11,7 +11,6 @@
     "internal/capture": 67,
     "internal/checkpoint": 11,
     "internal/mcp": 12,
-    "internal/noise": 13,
     "internal/queries": 15,
     "internal/recording": 16,
     "internal/schema": 17,
