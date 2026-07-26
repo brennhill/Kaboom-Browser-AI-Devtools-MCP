@@ -1,6 +1,7 @@
+// distance.go — Levenshtein edit distance used by the typosquatting detector.
 // Purpose: Computes Levenshtein edit distance for typosquatting detection.
 // Why: Isolates string-distance calculation from detector logic and flagging data.
-package security
+package netflag
 
 func levenshteinDistance(a, b string) int {
 	if len(a) == 0 {

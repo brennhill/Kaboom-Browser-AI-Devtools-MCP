@@ -1,6 +1,7 @@
+// data.go — TLD reputation, known-legitimate origins, port sets and typosquat targets.
 // Purpose: Defines TLD reputation data and suspicious domain lists for security flagging.
 // Why: Separates static flagging data from detector logic and distance calculations.
-package security
+package netflag
 
 // TLDReputation defines risk level for a TLD.
 type TLDReputation struct {

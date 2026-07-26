@@ -2,7 +2,10 @@
 // Why: Separates network-level security analysis from credential scanning and header checks.
 package security
 
-import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/netflag"
+)
 
 func (s *SecurityScanner) checkNetworkSecurity(entries []capture.NetworkWaterfallEntry, pageURLs []string) []SecurityFinding {
 	var findings []SecurityFinding
@@ -12,7 +15,7 @@ func (s *SecurityScanner) checkNetworkSecurity(entries []capture.NetworkWaterfal
 	}
 
 	for _, entry := range entries {
-		flags := analyzeNetworkSecurity(entry, pageURL)
+		flags := netflag.Analyze(entry, pageURL)
 		for _, flag := range flags {
 			findings = append(findings, SecurityFinding{
 				Check:       "network",

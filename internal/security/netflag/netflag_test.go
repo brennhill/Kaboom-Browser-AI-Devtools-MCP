@@ -1,12 +1,12 @@
+// netflag_test.go — Tests for suspicious-origin detection and severity classification.
 // Purpose: Tests for security issue flagging and severity classification.
 // Docs: docs/features/feature/security-hardening/index.md
-
-//go:build integration
-// +build integration
-
-// NOTE: These tests require NetworkWaterfallEntry, NewCapture, SecurityFlag that aren't available.
-// Run with: go test -tags=integration ./internal/security/...
-package security
+//
+// These were previously gated behind `//go:build integration` with a note saying
+// NetworkWaterfallEntry/SecurityFlag "aren't available". That note is stale — the
+// types are exported from internal/capture and the tests compile and pass in a
+// normal run — so the tag is gone and the detectors are covered by default.
+package netflag
 
 import (
 	"testing"
@@ -89,10 +89,10 @@ func TestCheckNonStandardPort_FlagsUnusualPorts(t *testing.T) {
 func TestCheckNonStandardPort_AllowsStandardPorts(t *testing.T) {
 	t.Parallel()
 	standardOrigins := []string{
-		"https://example.com",      // Implicit 443
-		"https://example.com:443",  // Explicit 443
-		"http://example.com",       // Implicit 80
-		"http://example.com:80",    // Explicit 80
+		"https://example.com",     // Implicit 443
+		"https://example.com:443", // Explicit 443
+		"http://example.com",      // Implicit 80
+		"http://example.com:80",   // Explicit 80
 	}
 
 	for _, origin := range standardOrigins {
@@ -277,7 +277,7 @@ func TestAnalyzeNetworkSecurity_RunsAllChecks(t *testing.T) {
 	}
 	pageURL := "https://myapp.com"
 
-	flags := analyzeNetworkSecurity(entry, pageURL)
+	flags := Analyze(entry, pageURL)
 
 	// Should detect multiple issues:
 	// 1. Suspicious TLD (.xyz)
@@ -308,7 +308,7 @@ func TestAnalyzeNetworkSecurity_ReturnsEmptyForSafeOrigins(t *testing.T) {
 	}
 	pageURL := "https://myapp.com"
 
-	flags := analyzeNetworkSecurity(entry, pageURL)
+	flags := Analyze(entry, pageURL)
 
 	if len(flags) > 0 {
 		t.Error("Safe origin should not trigger any flags")

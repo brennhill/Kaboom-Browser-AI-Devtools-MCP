@@ -1,7 +1,8 @@
+// detectors_unit_test.go — Branch tests for the individual netflag detectors.
 // Purpose: Unit tests for security flagging logic.
 // Docs: docs/features/feature/security-hardening/index.md
 
-package security
+package netflag
 
 import (
 	"testing"
@@ -49,7 +50,7 @@ func TestFlaggingInputValidationBranches(t *testing.T) {
 		t.Fatalf("invalid resource URL should not produce mixed-content flag, got %+v", got)
 	}
 
-	flags := analyzeNetworkSecurity(capture.NetworkWaterfallEntry{URL: "://bad-url"}, "https://example.com")
+	flags := Analyze(capture.NetworkWaterfallEntry{URL: "://bad-url"}, "https://example.com")
 	if len(flags) != 0 {
 		t.Fatalf("invalid entry URL should return no flags, got %v", flags)
 	}
