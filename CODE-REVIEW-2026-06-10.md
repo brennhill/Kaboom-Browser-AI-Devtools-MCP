@@ -28,7 +28,7 @@ no JS tests, no docs gates. Combined with CR1, code can reach npm having never p
   `scripts/release/install-upgrade-regression.mjs:312` reference it; `docs/features/feature/enhanced-cli-config/index.md`
   lists 12 pypi paths. `make release-gate` would fail on this tree.
 - All 123 feature `index.md` files have `last_reviewed` older than the 30-day window enforced by
-  `scripts/docs/check-feature-bundles.js:96-140` — `npm run docs:check:strict` fails wholesale.
+  `scripts/docs/features/check-feature-bundles.js:96-140` — `npm run docs:check:strict` fails wholesale.
 
 ### CR4. `install.sh` deletes the live binaries before downloading; `--hooks-only` destroys a full install
 `scripts/install.sh:271-287, 423` — `purge_legacy_install_artifacts` includes the **canonical**

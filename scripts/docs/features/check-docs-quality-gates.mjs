@@ -6,7 +6,7 @@ import path from 'node:path'
 
 const phase = Number(process.argv[2] ?? 1)
 if (!Number.isInteger(phase) || phase < 1 || phase > 3) {
-  console.error('Usage: node scripts/docs/check-docs-quality-gates.mjs <phase:1|2|3>')
+  console.error('Usage: node scripts/docs/features/check-docs-quality-gates.mjs <phase:1|2|3>')
   process.exit(1)
 }
 

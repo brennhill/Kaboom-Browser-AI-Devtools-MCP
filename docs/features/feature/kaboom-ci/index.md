@@ -10,13 +10,13 @@ code_paths:
   - .github/workflows/ci.yml
   - .golangci.yml
   - scripts/build/generate-wire-types.js
-  - scripts/docs/check-feature-bundles.js
+  - scripts/docs/features/check-feature-bundles.js
   - scripts/docs/check-gokaboom-content-contract.mjs
   - scripts/docs/check-reference-schema-sync.mjs
   - scripts/lint-documentation.py
   - package.json
 test_paths:
-  - scripts/docs/check-feature-bundles.test.mjs
+  - scripts/docs/features/check-feature-bundles.test.mjs
   - cmd/browser-agent/tools_schema_parity_test.go
   - cmd/browser-agent/tools_interact_navigate_document_test.go
   - cmd/browser-agent/tools_contract_enforcement_test.go

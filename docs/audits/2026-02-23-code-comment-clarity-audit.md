@@ -52,7 +52,7 @@ Excluded generated artifacts (`*.map`, bundled extension outputs, `*.d.ts`, `nod
 
 ## Remaining Gaps (Unrelated Existing Docs)
 
-`node scripts/docs/check-feature-bundles.js` reports pre-existing missing files:
+`node scripts/docs/features/check-feature-bundles.js` reports pre-existing missing files:
 - `docs/features/feature/bridge-restart/qa-plan.md`
 - `docs/features/feature/multiline-rich-editor/index.md`
 - `docs/features/feature/playback-engine/tech-spec.md`

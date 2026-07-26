@@ -47,11 +47,11 @@ Every feature spec file must include at least:
 1. Update feature bundle docs first.
 2. Update `docs/components/*.md` for shared behavior changes.
 3. Regenerate feature/traceability indexes:
-   - `node scripts/docs/normalize-docs.js`
+   - `node scripts/docs/features/normalize-docs.js`
 4. Verify docs links and metadata:
    - `python3 scripts/lint-documentation.py`
 5. Enforce feature bundle contract:
-   - `node scripts/docs/check-feature-bundles.js`
+   - `node scripts/docs/features/check-feature-bundles.js`
 6. Enforce content writing/voice contract:
    - `node scripts/docs/check-content-style-contract.mjs`
    - `node scripts/docs/run-vale-on-changed.mjs`
