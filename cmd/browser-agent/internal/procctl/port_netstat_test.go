@@ -2,7 +2,7 @@
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
 // platform_errors_netstat_test.go — Tests for parseNetstatPIDs function.
-package main
+package procctl
 
 import (
 	"testing"

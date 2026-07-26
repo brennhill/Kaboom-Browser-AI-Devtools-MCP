@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -82,7 +83,7 @@ func terminateProcess(pid int) (int, int) {
 	if err := process.Signal(syscall.SIGTERM); err == nil {
 		fmt.Printf("  Sent SIGTERM to PID %d\n", pid)
 		time.Sleep(terminateSignalSettleDelay)
-		if !isProcessAlive(pid) {
+		if !procctl.IsProcessAlive(pid) {
 			return 1, 0
 		}
 	}
@@ -119,7 +120,7 @@ func cleanupPIDFiles() {
 		ports = append(ports, p)
 	}
 	for _, p := range ports {
-		removePIDFile(p)
+		procctl.RemovePIDFile(p)
 		removeLegacyPIDVariants(p)
 	}
 }

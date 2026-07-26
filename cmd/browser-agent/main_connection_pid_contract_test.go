@@ -4,6 +4,7 @@
 package main
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -39,9 +40,9 @@ func TestCleanupStalePIDFile_AliveUnrelatedProcessDoesNotBlock(t *testing.T) {
 		}
 	})
 
-	pidPath := pidFilePath(port)
+	pidPath := procctl.PIDFilePath(port)
 	if pidPath == "" {
-		t.Fatal("pidFilePath returned empty path")
+		t.Fatal("procctl.PIDFilePath returned empty path")
 	}
 	if err := os.MkdirAll(filepath.Dir(pidPath), 0o755); err != nil {
 		t.Fatalf("MkdirAll(%q) error = %v", filepath.Dir(pidPath), err)
@@ -76,9 +77,9 @@ func TestCleanupPIDFiles_CoversCrossWrapperKnownPorts(t *testing.T) {
 
 	ports := []int{7890, 7910, 17890}
 	for _, port := range ports {
-		pidPath := pidFilePath(port)
+		pidPath := procctl.PIDFilePath(port)
 		if pidPath == "" {
-			t.Fatalf("pidFilePath(%d) returned empty path", port)
+			t.Fatalf("procctl.PIDFilePath(%d) returned empty path", port)
 		}
 		if err := os.MkdirAll(filepath.Dir(pidPath), 0o755); err != nil {
 			t.Fatalf("MkdirAll(%q) error = %v", filepath.Dir(pidPath), err)
@@ -91,7 +92,7 @@ func TestCleanupPIDFiles_CoversCrossWrapperKnownPorts(t *testing.T) {
 	cleanupPIDFiles()
 
 	for _, port := range ports {
-		pidPath := pidFilePath(port)
+		pidPath := procctl.PIDFilePath(port)
 		if _, err := os.Stat(pidPath); !os.IsNotExist(err) {
 			t.Fatalf("expected cleanupPIDFiles to remove %q, stat err = %v", pidPath, err)
 		}

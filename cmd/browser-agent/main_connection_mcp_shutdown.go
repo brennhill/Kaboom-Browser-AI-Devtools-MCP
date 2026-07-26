@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"net/http"
 	"os"
 	"os/signal"
@@ -137,7 +138,7 @@ func awaitShutdownSignal(server *Server, srv *http.Server, port int, httpDone <-
 		}
 	}
 
-	removePIDFile(port)
+	procctl.RemovePIDFile(port)
 	daemonlife.RemoveLockIfOwned(os.Getpid())
 }
 

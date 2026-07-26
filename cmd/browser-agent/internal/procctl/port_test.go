@@ -1,7 +1,7 @@
 // Purpose: Tests for platform-specific error message formatting.
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
-package main
+package procctl
 
 import (
 	"os"
@@ -14,9 +14,9 @@ import (
 func TestPortKillHint(t *testing.T) {
 	t.Parallel()
 
-	hint := portKillHint(7890)
+	hint := PortKillHint(7890)
 	if hint == "" {
-		t.Fatal("portKillHint returned empty string")
+		t.Fatal("PortKillHint returned empty string")
 	}
 
 	switch runtime.GOOS {
@@ -43,9 +43,9 @@ func TestPortKillHint(t *testing.T) {
 func TestPortKillHintForce(t *testing.T) {
 	t.Parallel()
 
-	hint := portKillHintForce(7890)
+	hint := PortKillHintForce(7890)
 	if hint == "" {
-		t.Fatal("portKillHintForce returned empty string")
+		t.Fatal("PortKillHintForce returned empty string")
 	}
 
 	switch runtime.GOOS {
@@ -66,11 +66,11 @@ func TestPortKillHintForce(t *testing.T) {
 func TestFindProcessOnPort(t *testing.T) {
 	t.Parallel()
 
-	// findProcessOnPort should not panic on any platform
-	pids, err := findProcessOnPort(0)
+	// FindProcessOnPort should not panic on any platform
+	pids, err := FindProcessOnPort(0)
 	// Port 0 is unlikely to have a process; we just verify no panic
 	if err != nil {
-		t.Logf("findProcessOnPort(0) returned error (expected): %v", err)
+		t.Logf("FindProcessOnPort(0) returned error (expected): %v", err)
 	}
 	_ = pids // may be empty
 }
@@ -78,8 +78,8 @@ func TestFindProcessOnPort(t *testing.T) {
 func TestGetProcessCommand(t *testing.T) {
 	t.Parallel()
 
-	// getProcessCommand should not panic for an invalid PID
-	cmd := getProcessCommand(999999)
+	// GetProcessCommand should not panic for an invalid PID
+	cmd := GetProcessCommand(999999)
 	// Should return empty or some value, but not panic
 	_ = cmd
 }
@@ -87,12 +87,12 @@ func TestGetProcessCommand(t *testing.T) {
 func TestKillProcessByPID(t *testing.T) {
 	t.Parallel()
 
-	// killProcessByPID should not panic for an invalid PID
+	// KillProcessByPID should not panic for an invalid PID
 	// It should gracefully handle the error
-	err := killProcessByPID(999999)
+	err := KillProcessByPID(999999)
 	// We expect an error since process doesn't exist
 	if err == nil {
-		t.Log("killProcessByPID(999999) returned nil (process may exist)")
+		t.Log("KillProcessByPID(999999) returned nil (process may exist)")
 	}
 }
 
@@ -117,11 +117,29 @@ exit 1
 	}
 	t.Setenv("PATH", fakeBin+string(os.PathListSeparator)+os.Getenv("PATH"))
 
-	pids, err := findProcessOnPort(7890)
+	pids, err := FindProcessOnPort(7890)
 	if err != nil {
-		t.Fatalf("findProcessOnPort() error = %v", err)
+		t.Fatalf("FindProcessOnPort() error = %v", err)
 	}
 	if len(pids) != 1 || pids[0] != 43210 {
-		t.Fatalf("findProcessOnPort() = %v, want [43210]", pids)
+		t.Fatalf("FindProcessOnPort() = %v, want [43210]", pids)
+	}
+}
+
+// TestGetProcessCommand_LiveProcess pins the success path that the daemon's
+// port-conflict diagnostics depend on: for a PID that really exists, the OS
+// query must come back with a non-empty command line. The error path (unknown
+// PID) is covered by TestGetProcessCommand.
+func TestGetProcessCommand_LiveProcess(t *testing.T) {
+	t.Parallel()
+
+	got := GetProcessCommand(os.Getpid())
+	if strings.TrimSpace(got) == "" {
+		t.Fatalf("GetProcessCommand(self) = %q, want the running process's command line", got)
+	}
+	// The test binary's own command line must mention it — this is what makes the
+	// "port N is held by <command>" diagnostic actionable rather than blank.
+	if !strings.Contains(got, ".test") && !strings.Contains(got, "procctl") {
+		t.Fatalf("GetProcessCommand(self) = %q, want it to name the running test binary", got)
 	}
 }

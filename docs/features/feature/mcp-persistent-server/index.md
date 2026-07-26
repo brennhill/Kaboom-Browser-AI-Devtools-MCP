@@ -20,6 +20,9 @@ code_paths:
   - cmd/browser-agent/internal/daemonlife/deps.go
   - cmd/browser-agent/daemon_lifecycle_wiring.go
   - cmd/browser-agent/main_connection_mcp.go
+  - cmd/browser-agent/internal/procctl/pidfile.go
+  - cmd/browser-agent/internal/procctl/port.go
+  - cmd/browser-agent/internal/procctl/argv0.go
   - cmd/browser-agent/main_connection_mcp_bootstrap.go
   - cmd/browser-agent/main_connection_recovery.go
   - cmd/browser-agent/server_routes_health_diagnostics.go
@@ -65,6 +68,10 @@ test_paths:
   - cmd/browser-agent/daemon_lifecycle_policy_test.go
   - cmd/browser-agent/daemon_lifecycle_wiring_test.go
   - cmd/browser-agent/server_core_unit_test.go
+  - cmd/browser-agent/internal/procctl/pidfile_test.go
+  - cmd/browser-agent/internal/procctl/port_test.go
+  - cmd/browser-agent/internal/procctl/port_netstat_test.go
+  - cmd/browser-agent/internal/procctl/argv0_test.go
   - cmd/browser-agent/internal/logstore/store_test.go
   - cmd/browser-agent/internal/logstore/async_test.go
   - cmd/browser-agent/internal/logstore/validate_test.go

@@ -1,7 +1,7 @@
-// Purpose: Provides platform-specific port-kill hints, process lookup, and PID extraction for error recovery messages.
+// port.go — Platform-specific port-kill hints, process lookup, and PID extraction for error recovery messages.
 // Why: Generates actionable OS-native commands (lsof, netstat, taskkill) in error output across macOS/Linux/Windows.
 
-package main
+package procctl
 
 import (
 	"fmt"
@@ -13,20 +13,20 @@ import (
 	"syscall"
 )
 
-// portKillHint returns a platform-appropriate command to kill a process on the given port.
+// PortKillHint returns a platform-appropriate command to kill a process on the given port.
 // On macOS/Linux: lsof -ti :<port> | xargs kill
 // On Windows: netstat -ano | findstr :<port>  then  taskkill /F /PID <pid>
-func portKillHint(port int) string {
+func PortKillHint(port int) string {
 	if runtime.GOOS == "windows" {
 		return fmt.Sprintf("netstat -ano | findstr :%d  then  taskkill /F /PID <pid>", port)
 	}
 	return fmt.Sprintf("lsof -ti :%d | xargs kill", port)
 }
 
-// portKillHintForce returns a platform-appropriate forceful kill command.
+// PortKillHintForce returns a platform-appropriate forceful kill command.
 // On macOS/Linux: kill -9 $(lsof -ti :<port>)
 // On Windows: netstat -ano | findstr :<port>  then  taskkill /F /PID <pid>
-func portKillHintForce(port int) string {
+func PortKillHintForce(port int) string {
 	if runtime.GOOS == "windows" {
 		return fmt.Sprintf("netstat -ano | findstr :%d  then  taskkill /F /PID <pid>", port)
 	}
@@ -68,9 +68,9 @@ func parseLsofPIDs(output string) []int {
 	return pids
 }
 
-// findProcessOnPort returns the PIDs of processes listening on the given port.
+// FindProcessOnPort returns the PIDs of processes listening on the given port.
 // Uses lsof on macOS/Linux and netstat on Windows.
-func findProcessOnPort(port int) ([]int, error) {
+func FindProcessOnPort(port int) ([]int, error) {
 	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {
 		cmd = exec.Command("netstat", "-ano")
@@ -89,9 +89,9 @@ func findProcessOnPort(port int) ([]int, error) {
 	return parseLsofPIDs(string(output)), nil
 }
 
-// getProcessCommand returns the command line of a process by PID.
+// GetProcessCommand returns the command line of a process by PID.
 // Uses ps on macOS/Linux and wmic/tasklist on Windows.
-func getProcessCommand(pid int) string {
+func GetProcessCommand(pid int) string {
 	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {
 		cmd = exec.Command("tasklist", "/FI", fmt.Sprintf("PID eq %d", pid), "/FO", "CSV", "/NH")
@@ -116,9 +116,9 @@ func getProcessCommand(pid int) string {
 	return result
 }
 
-// killProcessByPID sends a termination signal to a process.
+// KillProcessByPID sends a termination signal to a process.
 // Uses SIGTERM on macOS/Linux and os.Process.Kill on Windows.
-func killProcessByPID(pid int) error {
+func KillProcessByPID(pid int) error {
 	process, err := os.FindProcess(pid)
 	if err != nil {
 		return fmt.Errorf("find process %d: %w", pid, err)

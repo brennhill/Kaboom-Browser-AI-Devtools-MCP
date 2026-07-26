@@ -7,6 +7,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -76,9 +77,9 @@ func readDaemonLockForTest(t *testing.T) *daemonLockForTest {
 
 func writeDaemonPIDFileForTest(t *testing.T, port int, pid int) {
 	t.Helper()
-	path := pidFilePath(port)
+	path := procctl.PIDFilePath(port)
 	if path == "" {
-		t.Fatal("pidFilePath returned empty path")
+		t.Fatal("procctl.PIDFilePath returned empty path")
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatalf("MkdirAll(%q) error = %v", filepath.Dir(path), err)
@@ -175,7 +176,7 @@ func TestEnforceDaemonStartupPolicy_DefaultTakeover(t *testing.T) {
 		t.Fatalf("daemon lock should be removed after takeover, got %+v", *lockAfter)
 	}
 
-	if _, err := os.Stat(pidFilePath(existingPort)); !os.IsNotExist(err) {
+	if _, err := os.Stat(procctl.PIDFilePath(existingPort)); !os.IsNotExist(err) {
 		t.Fatalf("pid file for existing port should be removed, stat err = %v", err)
 	}
 
@@ -349,7 +350,7 @@ func TestEnforceDaemonStartupPolicy_ReclaimsStaleLockOnPIDMismatchWhenPortIdle(t
 	if lockAfter != nil {
 		t.Fatalf("daemon lock should be removed after stale reclaim, got %+v", *lockAfter)
 	}
-	if _, err := os.Stat(pidFilePath(existingPort)); !os.IsNotExist(err) {
+	if _, err := os.Stat(procctl.PIDFilePath(existingPort)); !os.IsNotExist(err) {
 		t.Fatalf("pid file for stale lock port should be removed, stat err = %v", err)
 	}
 
