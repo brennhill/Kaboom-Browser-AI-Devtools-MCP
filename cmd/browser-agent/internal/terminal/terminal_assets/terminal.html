@@ -145,6 +145,16 @@
       var reconnectTimes = [];
       var RECONNECT_WINDOW_MS = 60000;
       var MAX_RECONNECTS_IN_WINDOW = 12;
+      // Jitter the backoff. A daemon restart drops EVERY open panel at the same
+      // instant, and an unjittered schedule sends them all back at the same
+      // instants too — straight into the fanout's 32-subscriber cap, where the
+      // losers are rejected and retry in lockstep again (finding S12). Additive
+      // only (never earlier than the backoff), so the write-guard budget derived
+      // from this schedule stays an upper bound.
+      var RECONNECT_JITTER_RATIO = 0.25;
+      function jitteredDelay(delay) {
+        return Math.round(delay * (1 + Math.random() * RECONNECT_JITTER_RATIO));
+      }
       // Keystrokes typed during a reconnect gap are buffered (bounded) and flushed
       // on reconnect instead of being silently dropped.
       var pendingInput = [];
@@ -344,7 +354,9 @@
           }
           connect();
           reconnectDelay = Math.min(reconnectDelay * 2, 10000);
-        }, reconnectDelay);
+          // Jitter is applied to the timer only — reconnectDelay itself keeps the
+          // clean doubling, so the randomness cannot compound across attempts.
+        }, jitteredDelay(reconnectDelay));
       }
 
       // Buffer keystrokes typed while the socket is not OPEN (reconnect gap) up to

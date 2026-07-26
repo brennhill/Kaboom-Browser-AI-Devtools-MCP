@@ -51,13 +51,20 @@ export const TERMINAL_GUARD_TOAST_INTERVAL_MS = 3000
 export const TERMINAL_RECONNECT_BASE_DELAY_MS = 1000
 export const TERMINAL_RECONNECT_MAX_DELAY_MS = 10000
 export const TERMINAL_MAX_RECONNECT_ATTEMPTS = 6
+// The iframe jitters each backoff by up to this fraction (additive only) so that
+// panels dropped together by a daemon restart do not reconnect in lockstep.
+export const TERMINAL_RECONNECT_JITTER_RATIO = 0.25
 
 /**
- * Wall-clock time from the first disconnect until the iframe gives up and posts
- * `reconnect_exhausted` (which is what triggers the parent's validate-and-rebuild
- * recovery). The iframe waits before EVERY attempt, including the one that trips
- * the cap — the `reconnectAttempts > MAX_RECONNECT_ATTEMPTS` check runs after the
- * increment, inside the timer — so there are MAX+1 waits: 1+2+4+8+10+10+10 = 45s.
+ * WORST-CASE wall-clock time from the first disconnect until the iframe gives up
+ * and posts `reconnect_exhausted` (which is what triggers the parent's
+ * validate-and-rebuild recovery). The iframe waits before EVERY attempt, including
+ * the one that trips the cap — the `reconnectAttempts > MAX_RECONNECT_ATTEMPTS`
+ * check runs after the increment, inside the timer — so there are MAX+1 waits:
+ * 1+2+4+8+10+10+10 = 45s, and up to 25% more once jitter is applied.
+ *
+ * Worst case, not average, is the right number here: the write-guard budget must
+ * cover the slowest run, or it goes back to dropping the queue early.
  */
 export function terminalReconnectExhaustionMs(): number {
   let delay = TERMINAL_RECONNECT_BASE_DELAY_MS
@@ -66,7 +73,7 @@ export function terminalReconnectExhaustionMs(): number {
     total += delay
     delay = Math.min(delay * 2, TERMINAL_RECONNECT_MAX_DELAY_MS)
   }
-  return total
+  return Math.ceil(total * (1 + TERMINAL_RECONNECT_JITTER_RATIO))
 }
 
 // Headroom on top of the iframe's schedule so the parent has time to actually run

@@ -24,6 +24,7 @@ import {
   TERMINAL_RECONNECT_BASE_DELAY_MS,
   TERMINAL_RECONNECT_MAX_DELAY_MS,
   TERMINAL_MAX_RECONNECT_ATTEMPTS,
+  TERMINAL_RECONNECT_JITTER_RATIO,
   terminalReconnectExhaustionMs
 } from '../../extension/content/ui/terminal-widget-types.js'
 
@@ -44,6 +45,10 @@ const htmlMaxDelay = htmlInt(
 )
 const htmlMaxAttempts = htmlInt(/var\s+MAX_RECONNECT_ATTEMPTS\s*=\s*(\d+)/, 'MAX_RECONNECT_ATTEMPTS')
 
+const jitterMatch = html.match(/RECONNECT_JITTER_RATIO\s*=\s*([\d.]+)/)
+assert.ok(jitterMatch, 'could not read RECONNECT_JITTER_RATIO from terminal.html')
+const htmlJitterRatio = Number(jitterMatch[1])
+
 /**
  * Wall-clock time terminal.html spends before it gives up, computed from its own
  * literals. It waits before EVERY attempt including the one that trips the cap
@@ -57,7 +62,8 @@ function htmlExhaustionMs() {
     total += delay
     delay = Math.min(delay * 2, htmlMaxDelay)
   }
-  return total
+  // Jitter is additive only, so the worst case is the full ratio on every wait.
+  return Math.ceil(total * (1 + htmlJitterRatio))
 }
 
 describe('terminal reconnect budget contract', () => {
@@ -85,6 +91,11 @@ describe('terminal reconnect budget contract', () => {
       TERMINAL_MAX_RECONNECT_ATTEMPTS,
       htmlMaxAttempts,
       'the declared reconnect attempt cap drifted from terminal.html'
+    )
+    assert.strictEqual(
+      TERMINAL_RECONNECT_JITTER_RATIO,
+      htmlJitterRatio,
+      'the declared reconnect jitter ratio drifted from terminal.html — the budget would under-cover the slowest run'
     )
   })
 
