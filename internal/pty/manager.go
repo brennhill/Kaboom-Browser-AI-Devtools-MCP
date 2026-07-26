@@ -67,6 +67,11 @@ type StartResult struct {
 	SessionID string
 	Token     string
 	Pid       int
+	// Session is the session Start just spawned. Callers need it to build the
+	// relay; returning it here removes the need to re-fetch it by ID, which raced
+	// a concurrent Stop and handed back a nil the caller then dereferenced
+	// (finding S4). Non-nil whenever Start returns a nil error.
+	Session *Session
 	// Replaced is true when Start evicted a dead session with the same ID and
 	// spawned a fresh one in its place (self-heal). The caller uses this to drop
 	// the stale relay bound to the old (dead) session before creating a new one.
@@ -178,6 +183,7 @@ func (m *Manager) startAndRegister(cfg StartConfig) (*StartResult, []*Session, e
 		Token:     token,
 		Pid:       sess.Pid(),
 		Replaced:  replaced,
+		Session:   sess,
 	}, toClose, nil
 }
 

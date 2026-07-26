@@ -628,7 +628,11 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 	// On success: create relay (fan-out + write buffer), configure idle detection,
 	// and handle init_command via the relay instead of reading PTY directly.
 	if err == nil {
-		sess, _ := mgr.Get(result.SessionID)
+		// Use the session Start returned rather than looking it up again by ID: the
+		// old `sess, _ := mgr.Get(result.SessionID)` swallowed the error and then
+		// dereferenced the result, so a /terminal/stop landing between Start and Get
+		// nil-panicked this handler (finding S4).
+		sess := result.Session
 		var relay *Relay
 		if result.Replaced {
 			// The manager evicted a dead session with this ID and spawned a fresh

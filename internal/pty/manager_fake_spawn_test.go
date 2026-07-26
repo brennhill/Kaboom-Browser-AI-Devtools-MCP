@@ -172,6 +172,41 @@ func TestManager_Start_DoesNotHoldLockDuringEvictedClose(t *testing.T) {
 	<-startDone
 }
 
+// Start must hand back the session it just spawned. Callers used to re-fetch it
+// with `sess, _ := mgr.Get(result.SessionID)` — swallowing the error and then
+// dereferencing the result — which races a concurrent Stop: the session is gone
+// from the map by the time the lookup runs, and the caller nil-derefs (finding
+// S4). The value exists inside Start; there is no reason to look it up again.
+func TestManager_StartReturnsTheSpawnedSession(t *testing.T) {
+	m := newFakeManager()
+
+	res, err := m.Start(StartConfig{ID: "s1"})
+	if err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	if res.Session == nil {
+		t.Fatal("StartResult.Session is nil — callers are forced back into a racy Get(result.SessionID)")
+	}
+	registered, err := m.Get("s1")
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if res.Session != registered {
+		t.Fatal("StartResult.Session must be the session registered under the ID")
+	}
+
+	// A concurrent Stop is exactly the race: the map no longer has the session, but
+	// the caller's handle from Start is still valid.
+	// (Stop's error is the fake session's nil-ptmx Close, not a bookkeeping failure.)
+	_ = m.Stop("s1")
+	if _, err := m.Get("s1"); err == nil {
+		t.Fatal("Get after Stop should fail — that is the window the caller used to deref through")
+	}
+	if res.Session.ID != "s1" {
+		t.Fatalf("the handle from Start must survive a Stop, got %q", res.Session.ID)
+	}
+}
+
 func TestManager_StartWithFakeSpawn_SpawnErrorPropagates(t *testing.T) {
 	m := NewManager()
 	sentinel := errors.New("spawn boom")
