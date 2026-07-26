@@ -14,6 +14,7 @@ code_paths:
   - cmd/browser-agent/startup_throttle.go
   - cmd/browser-agent/main_connection_mcp.go
   - cmd/browser-agent/main_connection_recovery.go
+  - cmd/browser-agent/server_routes_health_diagnostics.go
   - cmd/browser-agent/main_connection_mcp_shutdown.go
   - cmd/browser-agent/server_middleware.go
   - cmd/browser-agent/handler_http.go
@@ -23,6 +24,7 @@ code_paths:
   - internal/util/proc_unix.go
   - internal/util/proc_windows.go
 test_paths:
+  - cmd/browser-agent/terminal_availability_test.go
   - cmd/browser-agent/reclaim_port_identity_test.go
   - cmd/browser-agent/reclaim_port_test.go
   - cmd/browser-agent/bridge_startup_contention_test.go
