@@ -1,6 +1,7 @@
 // Purpose: Tests for checkpoint error classification and severity assignment.
 
-// ai_checkpoint_classify_test.go — Tests for WS classification, log extraction, action diffs, and JSON serialization.
+// Covers the per-stream classifiers in checkpoint_diff.go: WS classification, log extraction,
+// action diffs, and DiffResponse JSON serialization.
 package checkpoint
 
 import (

@@ -1,6 +1,8 @@
-// Purpose: Executes IndexedDB listing and entry queries via extension script dispatch.
-// Why: Separates query execution and result parsing from script generation.
-package observe
+// Purpose: Executes IndexedDB listing and entry queries via the extension execute channel.
+// Why: Separates query dispatch and reply normalization from the script templates in scripts.go.
+// Docs: docs/features/feature/observe/index.md
+
+package idbquery
 
 import (
 	"encoding/json"
@@ -13,8 +15,13 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
-func getIndexedDBListing(cap *capture.Store) (map[string]any, error) {
-	data, err := executeObserveScript(cap, indexedDBListingScript, "observe_storage_indexeddb", indexedDBQueryTimeout)
+// queryTimeout bounds a single IndexedDB round-trip through the extension.
+const queryTimeout = 10 * time.Second
+
+// Listing enumerates IndexedDB databases in the tracked tab, each with its object stores,
+// sorted by database name. A page without IndexedDB reports supported=false rather than erroring.
+func Listing(cap *capture.Store) (map[string]any, error) {
+	data, err := executeScript(cap, listingScript, "observe_storage_indexeddb", queryTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -40,15 +47,17 @@ func getIndexedDBListing(cap *capture.Store) (map[string]any, error) {
 	return data, nil
 }
 
-func getIndexedDBEntries(cap *capture.Store, database, store string, limit int) (map[string]any, error) {
-	script := buildIndexedDBEntriesScript(database, store, limit)
-	data, err := executeObserveScript(cap, script, "observe_indexeddb_entries", indexedDBQueryTimeout)
+// Entries reads up to limit rows from one object store. It returns an error when the page
+// reports failure (missing database, missing store, or a serialization fault).
+func Entries(cap *capture.Store, database, store string, limit int) (map[string]any, error) {
+	script := buildEntriesScript(database, store, limit)
+	data, err := executeScript(cap, script, "observe_indexeddb_entries", queryTimeout)
 	if err != nil {
 		return nil, err
 	}
 
 	if ok, hasOK := data["ok"].(bool); hasOK && !ok {
-		return nil, errors.New(executeResultErrorMessage(data))
+		return nil, errors.New(resultErrorMessage(data))
 	}
 
 	if _, ok := data["entries"]; !ok {
@@ -71,7 +80,7 @@ func getIndexedDBEntries(cap *capture.Store, database, store string, limit int) 
 	return data, nil
 }
 
-func executeObserveScript(cap *capture.Store, script, reason string, timeout time.Duration) (map[string]any, error) {
+func executeScript(cap *capture.Store, script, reason string, timeout time.Duration) (map[string]any, error) {
 	params, _ := json.Marshal(map[string]any{
 		"script":     script,
 		"timeout_ms": int(timeout.Milliseconds()),
@@ -104,7 +113,7 @@ func executeObserveScript(cap *capture.Store, script, reason string, timeout tim
 	if successRaw, hasSuccess := payload["success"]; hasSuccess {
 		success, _ := successRaw.(bool)
 		if !success {
-			return nil, errors.New(executeResultErrorMessage(payload))
+			return nil, errors.New(resultErrorMessage(payload))
 		}
 		if rawResult, ok := payload["result"].(map[string]any); ok {
 			return rawResult, nil
@@ -119,7 +128,7 @@ func executeObserveScript(cap *capture.Store, script, reason string, timeout tim
 	return payload, nil
 }
 
-func executeResultErrorMessage(payload map[string]any) string {
+func resultErrorMessage(payload map[string]any) string {
 	if errMsg, ok := payload["error"].(string); ok && errMsg != "" {
 		return errMsg
 	}
@@ -135,19 +144,4 @@ func executeResultErrorMessage(payload map[string]any) string {
 		}
 	}
 	return "extension execution failed"
-}
-
-func toInt(v any) (int, bool) {
-	switch n := v.(type) {
-	case int:
-		return n, true
-	case int32:
-		return int(n), true
-	case int64:
-		return int(n), true
-	case float64:
-		return int(n), true
-	default:
-		return 0, false
-	}
 }

@@ -20,11 +20,18 @@ code_paths:
   - cmd/browser-agent/tools_observe_bundling.go
   - cmd/browser-agent/observe_filtering.go
   - internal/a11ysummary/summary.go
-  - internal/tools/observe/analysis_a11y.go
-  - internal/tools/observe/analysis_screenshot.go
-  - internal/tools/observe/storage.go
-  - internal/tools/observe/handlers_extension_logs.go
-  - internal/tools/observe/handlers_logs.go
+  - internal/tools/observe/deps.go
+  - internal/tools/observe/filtering.go
+  - internal/tools/observe/metadata.go
+  - internal/tools/observe/logs.go
+  - internal/tools/observe/summarized_logs.go
+  - internal/tools/observe/network.go
+  - internal/tools/observe/session.go
+  - internal/tools/observe/correlation.go
+  - internal/tools/observe/page_state.go
+  - internal/tools/observe/hints/hints.go
+  - internal/tools/observe/idbquery/execute.go
+  - internal/tools/observe/idbquery/scripts.go
   - src/background/commands/observe.ts
   - src/lib/brand.ts
   - src/lib/page/context.ts
@@ -42,9 +49,18 @@ test_paths:
   - cmd/browser-agent/tools_observe_analysis_test.go
   - extension/background/commands/observe.fullpage.test.js
   - internal/a11ysummary/summary_test.go
-  - internal/tools/observe/analysis_test.go
-  - internal/tools/observe/analysis_save_test.go
-  - internal/tools/observe/storage_test.go
+  - internal/tools/observe/logs_test.go
+  - internal/tools/observe/metadata_test.go
+  - internal/tools/observe/network_test.go
+  - internal/tools/observe/session_test.go
+  - internal/tools/observe/session_transients_test.go
+  - internal/tools/observe/correlation_test.go
+  - internal/tools/observe/summarized_logs_test.go
+  - internal/tools/observe/validation_test.go
+  - internal/tools/observe/page_state_test.go
+  - internal/tools/observe/page_state_storage_test.go
+  - internal/tools/observe/page_state_screenshot_test.go
+  - internal/tools/observe/hints/hints_test.go
   - tests/extension/inject-console-network-exceptions.test.js
   - tests/extension/network-bodies.test.js
   - tests/extension/content.test.js

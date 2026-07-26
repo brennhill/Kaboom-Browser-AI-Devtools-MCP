@@ -11,7 +11,7 @@ last_verified_date: 2026-03-05
 
 ## Automated Coverage
 - `cmd/browser-agent/tools_async_transient_test.go`
-- `internal/tools/observe/handlers_transients_test.go`
+- `internal/tools/observe/session_transients_test.go`
 
 ## Required Scenarios
 1. Detect transient element appear/disappear sequence.

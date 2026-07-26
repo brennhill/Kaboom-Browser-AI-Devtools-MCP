@@ -1,6 +1,6 @@
 // Purpose: Tests for checkpoint resolution tracking and lifecycle.
 
-// ai_checkpoint_resolution_test.go — Tests for checkpoint resolution, namespacing, and multi-client isolation.
+// Covers checkpoint_manager.go: resolution, namespacing, multi-client isolation, and GetChangesSince.
 package checkpoint
 
 import (

@@ -1,6 +1,6 @@
 // Purpose: Tests for checkpoint metric computation and aggregation.
 
-// ai_checkpoint_compute_test.go — Tests for checkpoint diff computation, severity, and summaries.
+// Covers the computeXDiff methods in checkpoint_diff.go plus severity and summary assembly.
 package checkpoint
 
 import (
