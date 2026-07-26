@@ -153,15 +153,43 @@ func (m *Map) Get(id string) *Relay {
 	return m.relays[id]
 }
 
-// GetOrCreate returns the existing relay for id or creates a new one.
+// GetOrCreate returns the existing relay for id, or creates one. If an existing
+// relay is bound to a DIFFERENT session than the caller supplied, it is stale and
+// gets replaced rather than returned.
+//
+// That rebind is the fix for the permanent fake "exited": nothing removes a relay
+// when its shell dies, so the map keeps an entry whose fanout is closed. Manager.Start
+// evicts a dead session before spawning and discards `replaced` if the spawn then
+// fails, so a later successful Start reports Replaced=false and the caller lands
+// here — and this function used to ignore `sess` entirely and hand back the stale
+// dead-bound relay. Every WS connect then hit ErrFanoutClosed and shipped
+// {"type":"exited"}, which permanently disables reconnect in the browser: the panel
+// showed "[Process exited]" over a healthy shell until the daemon restarted.
+//
+// Keeping the invariant here rather than in the handler is deliberate (rule 19):
+// no caller should have to compute `Replaced` correctly for the relay map to stay
+// consistent with the session manager.
 func (m *Map) GetOrCreate(id string, sess *pty.Session, workspaceDir string) *Relay {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.Lock() // lint:manual-unlock — unlock before Close to avoid holding lock during I/O
 	if r := m.relays[id]; r != nil {
-		return r
+		// Rebind ONLY when the bound session is genuinely DEAD. The condition must be
+		// asymmetric: "the sessions differ" is symmetric, so a concurrent reconnect
+		// still holding the OLD session would rebind the map backwards and undo a
+		// just-completed ReplaceRelay — finding H in reverse. A corpse can never win
+		// that race, because a dead session is never something to rebind *to*.
+		if r.sess == sess || r.sess == nil || r.sess.IsAlive() {
+			m.mu.Unlock()
+			return r
+		}
+		fresh := NewRelay(sess, workspaceDir)
+		m.relays[id] = fresh
+		m.mu.Unlock()
+		r.Close() // outside the lock: Close can block briefly
+		return fresh
 	}
 	r := NewRelay(sess, workspaceDir)
 	m.relays[id] = r
+	m.mu.Unlock()
 	return r
 }
 
