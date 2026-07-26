@@ -351,7 +351,7 @@ fi
 # ─────────────────────────────────────────────
 bold "12. Checking bridge dispatch signal() coverage..."
 
-BRIDGE_FILE="cmd/browser-agent/internal/bridge/bridge_forward.go"
+BRIDGE_FILE="cmd/browser-agent/internal/bridge/bridge.go"
 if [ -f "$BRIDGE_FILE" ]; then
   BRIDGE_SIGNAL_ISSUES=""
   FUNC_START=$(grep -n 'func bridgeForwardRequest' "$BRIDGE_FILE" | head -1 | cut -d: -f1)

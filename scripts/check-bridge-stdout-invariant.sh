@@ -11,10 +11,10 @@ PATTERN='fmt\.Print(f|ln)?\(|fmt\.Fprintf\(os\.Stdout|fmt\.Fprint\(os\.Stdout|io
 TARGET_FILES=(
   "cmd/browser-agent/internal/bridge/bridge.go"
   "cmd/browser-agent/internal/bridge/bridge_fastpath.go"
-  "cmd/browser-agent/internal/bridge/bridge_forward.go"
-  "cmd/browser-agent/internal/bridge/bridge_io_isolation.go"
-  "cmd/browser-agent/internal/bridge/bridge_io_isolation_unix.go"
-  "cmd/browser-agent/internal/bridge/bridge_io_isolation_windows.go"
+  "cmd/browser-agent/internal/bridge/bridge.go"
+  "cmd/browser-agent/internal/bridge/stdioisolate/isolation.go"
+  "cmd/browser-agent/internal/bridge/stdioisolate/isolation_unix.go"
+  "cmd/browser-agent/internal/bridge/stdioisolate/isolation_windows.go"
   "cmd/browser-agent/main_connection.go"
   "cmd/browser-agent/main_connection_mcp.go"
   "cmd/browser-agent/mcp_stdout.go"
@@ -51,7 +51,7 @@ if ! rg -n 'sendStartupError\("Bridge stdio isolation failed:' cmd/browser-agent
   VIOLATIONS=1
 fi
 
-if ! rg -n 'syscall\.CloseOnExec\(fd\)' cmd/browser-agent/internal/bridge/bridge_io_isolation_unix.go >/dev/null 2>&1; then
+if ! rg -n 'syscall\.CloseOnExec\(fd\)' cmd/browser-agent/internal/bridge/stdioisolate/isolation_unix.go >/dev/null 2>&1; then
   echo "INVARIANT VIOLATION: duplicated MCP transport fd must be marked close-on-exec"
   VIOLATIONS=1
 fi

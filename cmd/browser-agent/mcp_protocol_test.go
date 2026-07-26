@@ -721,16 +721,16 @@ func TestMCPProtocol_HTTPHandler(t *testing.T) {
 // bodies through writeMCPPayload (single writer, framing-aware) and never uses
 // fmt.Println for raw response body forwarding.
 func TestMCPProtocol_BridgeCodeVerification(t *testing.T) {
-	// Read the bridge_forward.go source code (HTTP forwarding lives here).
+	// Read the bridge source that performs HTTP body forwarding.
 	//
 	// This previously read "bridge_forward.go" relative to this package and
 	// t.Skipf'd on failure. The file moved to internal/bridge/ in March, so the
 	// read has failed ever since and the test has been silently skipping — it
 	// reported as coverage while asserting nothing. Fatal, not Skip: if the
 	// source this test inspects cannot be found, the test has not passed.
-	bridgeSource, err := os.ReadFile(filepath.Join("internal", "bridge", "bridge_forward.go"))
+	bridgeSource, err := os.ReadFile(filepath.Join("internal", "bridge", "bridge.go"))
 	if err != nil {
-		t.Fatalf("could not read internal/bridge/bridge_forward.go (did it move?): %v", err)
+		t.Fatalf("could not read internal/bridge/bridge.go (did it move?): %v", err)
 	}
 
 	source := string(bridgeSource)
@@ -745,14 +745,14 @@ func TestMCPProtocol_BridgeCodeVerification(t *testing.T) {
 	// body is written any other way.
 	if !strings.Contains(source, "WriteMCPPayload(body, framing)") &&
 		!strings.Contains(source, "writeMCPPayload(body, framing)") {
-		t.Error("CRITICAL: bridge_forward.go must forward HTTP bodies via WriteMCPPayload(body, framing)")
+		t.Error("CRITICAL: bridge.go must forward HTTP bodies via WriteMCPPayload(body, framing)")
 	} else {
-		t.Log("bridge_forward.go forwards HTTP bodies via WriteMCPPayload")
+		t.Log("bridge.go forwards HTTP bodies via WriteMCPPayload")
 	}
 
 	// Verify no fmt.Println(string(body)) pattern
 	if strings.Contains(source, "fmt.Println(string(body))") {
-		t.Error("CRITICAL: Found fmt.Println(string(body)) in bridge_forward.go - this causes double newlines!")
+		t.Error("CRITICAL: Found fmt.Println(string(body)) in bridge.go - this causes double newlines!")
 	}
 }
 
