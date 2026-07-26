@@ -9,7 +9,7 @@
 
 import type { PendingQuery } from '../../types/index.js'
 import { createSyncClient, type SyncClient, type SyncCommand, type SyncSettings } from './sync-client.js'
-import { getLastCSPStatus } from '../browser-actions.js'
+import { getLastCSPStatus } from '../exec/browser-actions.js'
 import { DebugCategory } from '../debug.js'
 import { updateBadge } from './communication.js'
 import { isQueryProcessing, addProcessingQuery, removeProcessingQuery } from '../caches/state-manager.js'

@@ -7,8 +7,8 @@
 import { describe, test, beforeEach, mock } from 'node:test'
 import assert from 'node:assert'
 
-const { parseExpression } = await import('../../extension/background/csp-safe/parser.js')
-const { cspSafeExecutor } = await import('../../extension/background/csp-safe/executor.js')
+const { parseExpression } = await import('../../extension/background/exec/csp-safe/parser.js')
+const { cspSafeExecutor } = await import('../../extension/background/exec/csp-safe/executor.js')
 
 // =============================================================================
 // End-to-end: parse + execute
@@ -135,7 +135,7 @@ mock.module('../../extension/background/index.js', {
   }
 })
 
-const { executeWithWorldRouting } = await import('../../extension/background/query-execution.js')
+const { executeWithWorldRouting } = await import('../../extension/background/exec/query-execution.js')
 
 describe('CSP-safe integration: fallback chain', () => {
   beforeEach(() => {

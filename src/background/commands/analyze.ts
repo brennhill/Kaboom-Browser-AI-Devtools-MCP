@@ -12,7 +12,7 @@ import { isContentScriptUnreachableError, requireAiWebPilot } from './helpers.js
 import { KABOOM_LOG_PREFIX } from '../../lib/brand.js'
 import { errorMessage } from '../../lib/error-utils.js'
 import { domFrameProbe } from '../dom/dom-frame-probe.js'
-import { normalizeFrameArg, resolveMatchedFrameIds } from '../frame-targeting.js'
+import { normalizeFrameArg, resolveMatchedFrameIds } from '../exec/frame-targeting.js'
 
 // =============================================================================
 // FRAME ROUTING TYPES

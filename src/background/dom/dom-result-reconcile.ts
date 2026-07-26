@@ -6,7 +6,7 @@
 
 import type { DOMResult } from './dom-types.js'
 import type { ActionToastFn } from '../commands/helpers.js'
-import { isDomMutatingAction } from '../action-metadata.js'
+import { isDomMutatingAction } from '../exec/action-metadata.js'
 
 export function toDOMResult(value: unknown): DOMResult | null {
   if (!value || typeof value !== 'object') return null

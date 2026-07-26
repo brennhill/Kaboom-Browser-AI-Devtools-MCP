@@ -3,7 +3,7 @@
  * Why: Separates result shape validation and status derivation from chrome.scripting execution.
  * Docs: docs/features/feature/interact-explore/index.md
  */
-import { isDomMutatingAction } from '../action-metadata.js';
+import { isDomMutatingAction } from '../exec/action-metadata.js';
 export function toDOMResult(value) {
     if (!value || typeof value !== 'object')
         return null;

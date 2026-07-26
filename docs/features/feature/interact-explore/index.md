@@ -37,14 +37,14 @@ code_paths:
   - internal/tools/configure/mode_specs_interact.go
   - scripts/docs/check-reference-schema-sync.mjs
   - src/background/pending-queries.ts
-  - src/background/query-execution.ts
+  - src/background/exec/query-execution.ts
   - src/background/commands/helpers.ts
-  - src/background/browser-actions.ts
+  - src/background/exec/browser-actions.ts
   - src/background/dom/cdp/cdp-dispatch.ts
   - src/background/dom/dom-dispatch.ts
-  - src/background/frame-targeting.ts
-  - src/background/content-fallback-scripts.ts
-  - src/background/upload-handler.ts
+  - src/background/exec/frame-targeting.ts
+  - src/background/exec/content-fallback-scripts.ts
+  - src/background/exec/upload-handler.ts
   - src/lib/daemon-http.ts
   - src/background/ui/draw-mode-toggle.ts
   - src/background/dom/dom-types.ts

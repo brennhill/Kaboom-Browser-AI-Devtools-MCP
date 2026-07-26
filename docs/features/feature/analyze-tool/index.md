@@ -23,7 +23,7 @@ code_paths:
   - internal/tools/analyze/visual_diff.go
   - internal/schema/analyze.go
   - src/background/commands/analyze.ts
-  - src/background/frame-targeting.ts
+  - src/background/exec/frame-targeting.ts
   - src/background/dom/dom-frame-probe.ts
   - src/background/commands/helpers.ts
   - src/content/message-handlers.ts

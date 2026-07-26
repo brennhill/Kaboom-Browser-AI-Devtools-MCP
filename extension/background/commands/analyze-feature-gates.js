@@ -1,5 +1,5 @@
 // analyze-feature-gates.ts — Feature gate detection command handler (#345).
-import { analyzeFeatureGates } from '../analyze-feature-gates.js';
+import { analyzeFeatureGates } from '../exec/analyze-feature-gates.js';
 import { registerCommand } from './registry.js';
 import { errorMessage } from '../../lib/error-utils.js';
 // =============================================================================

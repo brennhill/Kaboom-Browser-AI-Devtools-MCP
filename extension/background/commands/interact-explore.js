@@ -3,7 +3,7 @@
 // links into a single extension response, reducing MCP round-trips for AI agents.
 import { domPrimitiveListInteractive } from '../dom/dom-primitives-list-interactive.js';
 import { domPrimitiveNavDiscovery } from '../dom/dom-primitives-nav-discovery.js';
-import { readableFallbackScript } from '../content-fallback-scripts.js';
+import { readableFallbackScript } from '../exec/content-fallback-scripts.js';
 import { registerCommand } from './registry.js';
 import { errorMessage } from '../../lib/error-utils.js';
 // =============================================================================

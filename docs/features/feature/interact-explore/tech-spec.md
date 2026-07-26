@@ -68,4 +68,4 @@ last_verified_date: 2026-03-05
 - `cmd/browser-agent/tools_interact_draw.go`
 - `cmd/browser-agent/tools_interact_upload.go`
 - `src/background/pending-queries.ts`
-- `src/background/query-execution.ts`
+- `src/background/exec/query-execution.ts`

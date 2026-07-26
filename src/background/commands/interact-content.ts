@@ -7,7 +7,7 @@ import { registerCommand } from './registry.js'
 import type { CommandHandler } from './registry.js'
 import { isContentScriptUnreachableError } from './helpers.js'
 import { errorMessage } from '../../lib/error-utils.js'
-import { FALLBACK_SCRIPTS } from '../content-fallback-scripts.js'
+import { FALLBACK_SCRIPTS } from '../exec/content-fallback-scripts.js'
 
 /**
  * Factory for content extraction command handlers.

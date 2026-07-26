@@ -1,1 +1,0 @@
-{"version":3,"file":"content-fallback-scripts.d.ts","sourceRoot":"","sources":["../../src/background/content-fallback-scripts.ts"],"names":[],"mappings":"AAAA;;;;GAIG;AAiFH,wBAAgB,sBAAsB,IAAI,MAAM,CAAC,MAAM,EAAE,OAAO,CAAC,CAyBhE;AA4HD,MAAM,MAAM,cAAc,GAAG,MAAM,MAAM,CAAC,MAAM,EAAE,OAAO,CAAC,CAAA;AAM1D,eAAO,MAAM,gBAAgB,EAAE,MAAM,CAAC,MAAM,EAAE,cAAc,CAI3D,CAAA"}

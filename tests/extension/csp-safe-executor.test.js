@@ -8,7 +8,7 @@
 import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert'
 
-const { cspSafeExecutor } = await import('../../extension/background/csp-safe/executor.js')
+const { cspSafeExecutor } = await import('../../extension/background/exec/csp-safe/executor.js')
 
 // =============================================================================
 // Value resolution

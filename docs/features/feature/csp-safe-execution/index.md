@@ -6,10 +6,10 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-25
 code_paths:
-  - src/background/csp-safe/types.ts
-  - src/background/csp-safe/parser.ts
-  - src/background/csp-safe/executor.ts
-  - src/background/query-execution.ts
+  - src/background/exec/csp-safe/types.ts
+  - src/background/exec/csp-safe/parser.ts
+  - src/background/exec/csp-safe/executor.ts
+  - src/background/exec/query-execution.ts
   - src/inject/execute-js.ts
 test_paths:
   - extension/background/__tests__/query-execution-serialization.test.js
@@ -43,10 +43,10 @@ Tier 2 is the big win: content scripts in ISOLATED world are exempt from page CS
 
 ## Code and Tests
 
-- Types: `src/background/csp-safe/types.ts`
-- Parser: `src/background/csp-safe/parser.ts`
-- Executor: `src/background/csp-safe/executor.ts`
-- Integration: `src/background/query-execution.ts`
+- Types: `src/background/exec/csp-safe/types.ts`
+- Parser: `src/background/exec/csp-safe/parser.ts`
+- Executor: `src/background/exec/csp-safe/executor.ts`
+- Integration: `src/background/exec/query-execution.ts`
 - Tests: `extension/background/__tests__/query-execution-serialization.test.js`
 
 ## Serialization Contract
