@@ -8,7 +8,7 @@ owners:
 entrypoints:
   - scripts/install.sh
   - scripts/install.ps1
-  - scripts/build-crx.js
+  - scripts/release/build-crx.js
   - cmd/browser-agent/native_install.go:runNativeInstall
   - cmd/browser-agent/native_install_connect.go:runExtensionConnectWait
   - npm/kaboom-agentic-browser/lib/install.js:executeInstall
@@ -16,7 +16,7 @@ entrypoints:
   - pypi/kaboom-agentic-browser/kaboom_agentic_browser/platform.py:run_install
 code_paths:
   - Makefile
-  - scripts/build-crx.js
+  - scripts/release/build-crx.js
   - scripts/install.sh
   - scripts/install.ps1
   - server/scripts/install.js
@@ -72,7 +72,7 @@ Covers installer behavior for shell, PowerShell, npm wrapper, and PyPI wrapper t
 ## Primary Flow
 
 1. Installer resolves platform and downloads/stages binary + extension artifacts.
-2. Extension release packaging (`make extension-zip` and `scripts/build-crx.js` fallback zip) archives the entire `extension/` directory.
+2. Extension release packaging (`make extension-zip` and `scripts/release/build-crx.js` fallback zip) archives the entire `extension/` directory.
 3. Binary installers verify SHA-256 against release `checksums.txt` (or fail immediately in strict mode).
 4. Extension is extracted into a staging directory and validated for required module files (`manifest.json`, `background/init.js`, `content/script-injection.js`, `inject/index.js`, `theme-bootstrap.js`).
 5. If the release extension zip is incomplete, installer falls back to source-zip extraction and validates again.
@@ -120,7 +120,7 @@ Covers installer behavior for shell, PowerShell, npm wrapper, and PyPI wrapper t
 ## Code Paths
 
 - `Makefile`
-- `scripts/build-crx.js`
+- `scripts/release/build-crx.js`
 - `scripts/install.sh`
 - `scripts/install.ps1`
 - `server/scripts/install.js`

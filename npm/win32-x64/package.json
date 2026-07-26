@@ -4,7 +4,7 @@
   "description": "Kaboom binary for Windows x64",
   "license": "AGPL-3.0-only",
   "scripts": {
-    "prepublishOnly": "node ../../scripts/verify-platform-binaries.js"
+    "prepublishOnly": "node ../../scripts/release/verify-platform-binaries.js"
   },
   "os": [
     "win32"

@@ -4,7 +4,7 @@ feature_id: feature-quality-gates
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-26
 code_paths:
   - cmd/browser-agent/tools_configure_quality_gates.go
   - internal/tools/configure/mode_specs_configure.go
@@ -26,7 +26,7 @@ test_paths:
   - internal/hook/convention_detect_test.go
   - internal/tracking/token_tracker_test.go
   - internal/tracking/stats_endpoint_test.go
-  - scripts/install-upgrade-regression.contract.test.mjs
+  - scripts/release/install-upgrade-regression.contract.test.mjs
   - scripts/test-install-hooks-only.sh
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-28

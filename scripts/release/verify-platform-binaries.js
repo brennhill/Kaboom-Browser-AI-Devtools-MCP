@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// scripts/verify-platform-binaries.js — Pre-publish guard for platform binary packages.
+// scripts/release/verify-platform-binaries.js — Pre-publish guard for platform binary packages.
 // Why: npm SILENTLY omits "files" entries that are absent on disk at publish time.
 //      @brennhill/kaboom-agentic-browser-darwin-arm64@0.8.2 shipped with only a 312-byte
 //      package.json (no Go binary), so `npx kaboom-agentic-browser` could not exec anything

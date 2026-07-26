@@ -1,7 +1,7 @@
-// scripts/verify-platform-binaries.test.mjs — Regression tests for the platform-binary publish guard.
+// scripts/release/verify-platform-binaries.test.mjs — Regression tests for the platform-binary publish guard.
 // Guards against the @brennhill/...@0.8.2 incident, where a platform package shipped with only a
 // 312-byte package.json (no Go binary), breaking `npx kaboom-agentic-browser` / the MCP server.
-// Run: node --test scripts/verify-platform-binaries.test.mjs
+// Run: node --test scripts/release/verify-platform-binaries.test.mjs
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -15,7 +15,7 @@ import { verifyPlatformPackage, MIN_BINARY_BYTES } from './verify-platform-binar
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const SCRIPT = path.join(__dirname, 'verify-platform-binaries.js')
-const ROOT = path.join(__dirname, '..')
+const ROOT = path.join(__dirname, '..', '..')
 const PLATFORM_DIRS = ['darwin-arm64', 'darwin-x64', 'linux-arm64', 'linux-x64', 'win32-x64']
 
 // Build a throwaway platform package directory. `binBytes === null` omits the binary entirely

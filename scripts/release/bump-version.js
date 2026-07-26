@@ -6,8 +6,8 @@
 /**
  * Comprehensive version bump script for Kaboom Agentic Browser
  *
- * Usage: node scripts/bump-version.js <new-version>
- * Example: node scripts/bump-version.js 6.1.0
+ * Usage: node scripts/release/bump-version.js <new-version>
+ * Example: node scripts/release/bump-version.js 6.1.0
  *
  * This script:
  * 1. Reads current version from VERSION file
@@ -24,7 +24,7 @@ import { fileURLToPath } from 'url'
 import { normalizeMainPyprojectFile, validateMainPyprojectContent } from './normalize-pypi-main-pyproject.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const ROOT = path.join(__dirname, '..')
+const ROOT = path.join(__dirname, '..', '..')
 const VERSION_FILE = path.join(ROOT, 'VERSION')
 
 // Color codes for terminal output
@@ -244,7 +244,7 @@ async function main() {
   // Step 2: Validate new version
   if (!newVersion) {
     // HTML-like content in CLI log output, not rendered in browser
-    log('red', 'ERROR:', 'No version provided. Usage: node scripts/bump-version.js <version>')
+    log('red', 'ERROR:', 'No version provided. Usage: node scripts/release/bump-version.js <version>')
     // CLI script exits with error status on validation failure
     process.exit(1)
   }
