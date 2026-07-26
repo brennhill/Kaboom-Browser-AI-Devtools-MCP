@@ -778,7 +778,7 @@ describe('terminal side panel host', () => {
     })
 
     const callStart = iframe.contentWindow.postMessage.mock.calls.length
-    module._terminalPanelForTests.writeToTerminal('Check kaboom annotations and handle the requests now')
+    module._terminalPanelForTests.writeToTerminal('Check the kaboom annotations and add each comment to your todo list, then work through them')
     await sleep(800)
 
     const payloads = getPostMessagePayloads(iframe, callStart)
