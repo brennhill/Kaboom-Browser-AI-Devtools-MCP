@@ -2,13 +2,13 @@
  * Purpose: Dispatches DOM actions (click, type, wait_for, list_interactive, query) to injected page scripts with frame targeting and CDP escalation.
  * Docs: docs/features/feature/interact-explore/index.md
  */
-import { domFrameProbe } from './dom-frame-probe.js';
-import { domPrimitive } from './dom-primitives.js';
-import { domPrimitiveListInteractive } from './dom-primitives-list-interactive.js';
-import { domPrimitiveQuery } from './dom-primitives-query.js';
-import { domPrimitiveWaitForStable, domPrimitiveActionDiff } from './dom-primitives-stability.js';
-import { domPrimitiveOverlay } from './dom-primitives-overlay.js';
-import { domPrimitiveIntent } from './dom-primitives-intent.js';
+import { domFrameProbe } from './primitives/dom-frame-probe.js';
+import { domPrimitive } from './primitives/dom-primitives.js';
+import { domPrimitiveListInteractive } from './primitives/dom-primitives-list-interactive.js';
+import { domPrimitiveQuery } from './primitives/dom-primitives-query.js';
+import { domPrimitiveWaitForStable, domPrimitiveActionDiff } from './primitives/dom-primitives-stability.js';
+import { domPrimitiveOverlay } from './primitives/dom-primitives-overlay.js';
+import { domPrimitiveIntent } from './primitives/dom-primitives-intent.js';
 import { shouldEscalateToCDP, tryCDPEscalation } from './cdp/cdp-dispatch.js';
 import { isReadOnlyAction } from '../exec/action-metadata.js';
 import { errorMessage } from '../../lib/error-utils.js';

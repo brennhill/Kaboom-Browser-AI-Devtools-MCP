@@ -6,7 +6,7 @@
  *   - dom-primitives-stability.ts (wait_for_stable, action_diff)
  * Docs: docs/features/feature/interact-explore/index.md
  */
-import type { DOMPrimitiveOptions, DOMResult } from './dom-types.js';
+import type { DOMPrimitiveOptions, DOMResult } from '../dom-types.js';
 export { domPrimitiveListInteractive } from './dom-primitives-list-interactive.js';
 /**
  * Single self-contained function for all DOM primitives.

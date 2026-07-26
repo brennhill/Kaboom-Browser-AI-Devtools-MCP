@@ -133,7 +133,7 @@ globalThis.ClipboardEvent = MockClipboardEvent
 // ---------------------------------------------------------------------------
 // Import domPrimitive AFTER globals are set up
 // ---------------------------------------------------------------------------
-const { domPrimitive } = await import('./dom/dom-primitives.js')
+const { domPrimitive } = await import('./dom/primitives/dom-primitives.js')
 
 // ---------------------------------------------------------------------------
 // Helpers

@@ -48,13 +48,13 @@ code_paths:
   - src/lib/daemon-http.ts
   - src/background/ui/draw-mode-toggle.ts
   - src/background/dom/dom-types.ts
-  - src/background/dom/dom-primitives.ts
+  - src/background/dom/primitives/dom-primitives.ts
   - src/inject/execute-js.ts
   - src/content/runtime-message-listener.ts
-  - src/background/dom/dom-primitives-list-interactive.ts
-  - src/background/dom/dom-primitives-intent.ts
-  - src/background/dom/dom-primitives-overlay.ts
-  - src/background/dom/dom-primitives-stability.ts
+  - src/background/dom/primitives/dom-primitives-list-interactive.ts
+  - src/background/dom/primitives/dom-primitives-intent.ts
+  - src/background/dom/primitives/dom-primitives-overlay.ts
+  - src/background/dom/primitives/dom-primitives-stability.ts
   - scripts/templates/partials/_dom-intent.tpl
   - scripts/templates/partials/_dom-selectors.tpl
   - scripts/templates/dom-primitives.ts.tpl

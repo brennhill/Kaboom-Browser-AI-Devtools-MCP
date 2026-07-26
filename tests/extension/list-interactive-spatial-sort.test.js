@@ -68,7 +68,7 @@ function setupDOM(elements) {
 // Dynamic import to get the function after globals are set
 async function getFunction() {
   // Force fresh import each test by using a cache-busting query
-  const mod = await import(`../../extension/background/dom/dom-primitives-list-interactive.js?t=${Date.now()}`)
+  const mod = await import(`../../extension/background/dom/primitives/dom-primitives-list-interactive.js?t=${Date.now()}`)
   return mod.domPrimitiveListInteractive
 }
 

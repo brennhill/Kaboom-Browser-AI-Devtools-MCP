@@ -395,7 +395,7 @@ Rules:
 - `computeResourceDiff()` — added/removed/resized resources
 - `generateSummary()` — human-readable analysis string
 
-#### 2. `src/background/dom/dom-primitives.ts` (MODIFIED, ~100 lines added)
+#### 2. `src/background/dom/primitives/dom-primitives.ts` (MODIFIED, ~100 lines added)
 
 Inside the `domPrimitive` mega-function:
 
