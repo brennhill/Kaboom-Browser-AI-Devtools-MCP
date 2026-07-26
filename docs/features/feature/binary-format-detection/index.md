@@ -10,6 +10,11 @@ code_paths:
   - internal/capture/network_bodies.go
   - internal/capture/websocket.go
 test_paths:
+  - internal/util/binary_test.go
+  - internal/util/binary_coverage_test.go
+  - internal/util/binary_fuzz_test.go
+  - internal/util/binary_property_test.go
+  - internal/util/binary_protobuf_bson_test.go
   - internal/capture/binary_format_integration_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05

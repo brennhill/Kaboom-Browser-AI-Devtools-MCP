@@ -19,7 +19,7 @@ a Chrome DevTools Protocol (CDP) performance trace and returns structured insigh
 `action` parameter drives the trace lifecycle (`start`, `stop`, `analyze`), keeping the entire
 workflow inside one mode rather than three separate tools. The mode registers in the analyze
 dispatch registry (`analyzeHandlers` in `cmd/browser-agent/tools_analyze_dispatch.go`), and its
-hint plus optional parameters register in `internal/tools/configure/mode_specs_analyze.go`.
+hint plus optional parameters register in `internal/tools/configure/capabilities/modespecs_analyze.go`.
 
 The extension drives the CDP `Tracing` domain through the existing Chrome debugger lifecycle in
 `src/background/dom/cdp/cdp-dispatch.ts`. The daemon parses raw trace events into actionable insights and
@@ -94,7 +94,7 @@ AI calls analyze({what: "performance_trace", action: "analyze", insight_id: "...
 - An in-memory insight cache keyed for `action: "analyze"` drill-down.
 
 **Modified server files**:
-- `internal/tools/configure/mode_specs_analyze.go`: add the `performance_trace` mode hint and its
+- `internal/tools/configure/capabilities/modespecs_analyze.go`: add the `performance_trace` mode hint and its
   optional parameters (`action`, `reload`, `auto_stop`, `insight_id`).
 
 **Extension files**:

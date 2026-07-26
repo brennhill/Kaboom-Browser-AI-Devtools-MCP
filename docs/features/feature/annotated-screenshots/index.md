@@ -4,7 +4,7 @@ feature_id: feature-annotated-screenshots
 status: active
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-25
+last_reviewed: 2026-07-26
 code_paths:
   - extension/content/draw-mode.js
   - internal/annotation/store.go
@@ -15,7 +15,7 @@ code_paths:
   - cmd/browser-agent/tools_generate_annotations_visual.go
   - cmd/browser-agent/annotation_store.go
   - internal/schema/analyze.go
-  - internal/tools/configure/mode_specs_analyze.go
+  - internal/tools/configure/capabilities/modespecs_analyze.go
   - scripts/smoke-tests/31-annotation-parity.sh
   - scripts/smoke-tests/annotation-parity-benchmark.sh
   - scripts/smoke-test.sh
@@ -66,7 +66,7 @@ last_verified_date: 2026-03-05
 - `cmd/browser-agent/tools_analyze_annotations_handlers.go` — detail response enrichment, error correlation, LLM hints, and cross-project scope safety metadata (`projects`, `scope_ambiguous`, `scope_warning`, `filter_applied`)
 - `cmd/browser-agent/tools_analyze_annotations_hints.go` — framework-aware detail hints (`design_system`, `runtime_framework`, `error_context`)
 - `cmd/browser-agent/tools_generate_annotations_visual.go` — resilient visual test generation via locator fallback candidates (`css`, `testid`, `role`, `label`, `placeholder`, `text`)
-- `internal/schema/analyze.go` + `internal/tools/configure/mode_specs_analyze.go` — analyze annotations schema/capability metadata for `url` / `url_pattern` filters
+- `internal/schema/analyze.go` + `internal/tools/configure/capabilities/modespecs_analyze.go` — analyze annotations schema/capability metadata for `url` / `url_pattern` filters
 
 ### Tests
 - `tests/extension/draw-mode.test.js` — "Element Detail Enrichment" describe block

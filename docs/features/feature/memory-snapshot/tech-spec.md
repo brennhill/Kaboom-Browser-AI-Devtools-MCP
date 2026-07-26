@@ -18,7 +18,7 @@ Memory Snapshot adds a new analyze mode, `analyze({what: "memory_snapshot"})`, t
 JavaScript heap snapshot through the Chrome DevTools Protocol (CDP) `HeapProfiler` domain and
 returns structured analysis. The mode registers in the analyze dispatch registry
 (`analyzeHandlers` in `cmd/browser-agent/tools_analyze_dispatch.go`), and its hint plus optional
-parameters register in `internal/tools/configure/mode_specs_analyze.go`.
+parameters register in `internal/tools/configure/capabilities/modespecs_analyze.go`.
 
 The central architectural decision is that analysis runs in the Go daemon, not in the agent.
 The extension captures the raw snapshot and transfers it to the daemon; the daemon parses it
@@ -103,7 +103,7 @@ Comparison: analyze({..., detail: "leak_suspects", compare_to: <other snapshot_i
 - The detail-mode analyzers listed above.
 
 **Modified server files**:
-- `internal/tools/configure/mode_specs_analyze.go`: add the `memory_snapshot` mode hint and its
+- `internal/tools/configure/capabilities/modespecs_analyze.go`: add the `memory_snapshot` mode hint and its
   optional parameters (`detail`, `snapshot_id`, `constructor`, `compare_to`,
   `include_detached_dom`, `save_path`, `top_n`).
 

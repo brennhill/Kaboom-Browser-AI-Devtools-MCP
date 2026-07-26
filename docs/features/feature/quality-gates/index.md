@@ -7,7 +7,7 @@ owners: []
 last_reviewed: 2026-07-26
 code_paths:
   - cmd/browser-agent/tools_configure_quality_gates.go
-  - internal/tools/configure/mode_specs_configure.go
+  - internal/tools/configure/capabilities/modespecs_configure.go
   - internal/schema/configure/properties_core.go
   - internal/schema/configure/properties_runtime.go
   - internal/hook/protocol.go

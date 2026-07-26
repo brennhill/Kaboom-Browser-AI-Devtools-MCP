@@ -13,7 +13,7 @@ code_paths:
   - cmd/browser-agent/internal/terminal/intent_store.go
   - cmd/browser-agent/internal/terminal/intent_handlers.go
   - internal/schema/analyze.go
-  - internal/tools/configure/mode_specs_analyze.go
+  - internal/tools/configure/capabilities/modespecs_analyze.go
   - plugin/kaboom-workflows/commands/audit.md
   - npm/kaboom-agentic-browser/skills/audit/SKILL.md
   - npm/kaboom-agentic-browser/skills/qa/SKILL.md

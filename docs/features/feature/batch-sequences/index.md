@@ -14,7 +14,7 @@ code_paths:
   - cmd/browser-agent/tools_configure_sequence_types.go
   - internal/schema/interact/actions.go
   - internal/schema/interact/properties_output_batch.go
-  - internal/tools/configure/mode_specs_interact.go
+  - internal/tools/configure/capabilities/modespecs_interact.go
 test_paths:
   - cmd/browser-agent/tools_interact_batch_test.go
   - cmd/browser-agent/tools_configure_sequence_test.go

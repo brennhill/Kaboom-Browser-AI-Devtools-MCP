@@ -20,7 +20,12 @@ code_paths:
   - internal/tools/analyze/args_parse.go
   - internal/tools/analyze/computed_styles.go
   - internal/tools/analyze/forms.go
+  - internal/tools/analyze/link_validation.go
   - internal/tools/analyze/visual_diff.go
+  - internal/tools/analyze/imagediff/imagediff.go
+  - internal/tools/analyze/imagediff/grid.go
+  - internal/tools/analyze/imagediff/regions.go
+  - internal/tools/analyze/imagediff/imageio.go
   - internal/schema/analyze.go
   - src/background/commands/analyze.ts
   - src/background/exec/frame-targeting.ts
@@ -40,7 +45,9 @@ test_paths:
   - internal/annotation/store_test.go
   - internal/tools/analyze/computed_styles_test.go
   - internal/tools/analyze/forms_test.go
+  - internal/tools/analyze/link_validation_test.go
   - internal/tools/analyze/visual_diff_test.go
+  - internal/tools/analyze/imagediff/imagediff_test.go
   - tests/extension/data-table.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05

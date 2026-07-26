@@ -4,10 +4,10 @@ feature_id: feature-performance-trace
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-25
+last_reviewed: 2026-07-26
 code_paths:
   - cmd/browser-agent/tools_analyze_dispatch.go
-  - internal/tools/configure/mode_specs_analyze.go
+  - internal/tools/configure/capabilities/modespecs_analyze.go
   - internal/performance/diff.go
   - internal/tools/observe/analysis.go
   - src/background/dom/cdp/cdp-dispatch.ts
@@ -54,7 +54,7 @@ them into a sub-five-kilobyte summary the agent can act on.
 ## Related Code
 
 - Analyze dispatch registry: `cmd/browser-agent/tools_analyze_dispatch.go`
-- Mode hints and parameter specs: `internal/tools/configure/mode_specs_analyze.go`
+- Mode hints and parameter specs: `internal/tools/configure/capabilities/modespecs_analyze.go`
 - Performance metrics and Web Vitals: `internal/performance/diff.go`
 - Passive vitals counterpart: `internal/tools/observe/analysis.go`
 - CDP attach/detach lifecycle: `src/background/dom/cdp/cdp-dispatch.ts`
