@@ -35,8 +35,8 @@ validates alignment. The TS files carry a `// THIS FILE IS GENERATED` header.
 
 **Tool schemas** (MCP tool input schemas, served to LLM clients):
 - `internal/schema/observe.go` — 200 lines of `map[string]any` literals
-- `internal/schema/interact.go` — 347 lines of `map[string]any` literals
-- `internal/schema/configure.go` — 271 lines of `map[string]any` literals
+- `internal/schema/interact/tool.go` — 347 lines of `map[string]any` literals
+- `internal/schema/configure/tool.go` — 271 lines of `map[string]any` literals
 - `internal/schema/analyze.go` — 159 lines of `map[string]any` literals
 - `internal/schema/generate.go` — 196 lines of `map[string]any` literals
 

@@ -74,7 +74,7 @@ func checkPropsForCombiners(t *testing.T, toolName string, props map[string]any,
 // (not in schema) and only 'min_level' is exposed.
 func TestObserveSchema_LevelNotExposed(t *testing.T) {
 	t.Parallel()
-	tool := ObserveToolSchema()
+	tool := observeToolSchema()
 	props, ok := tool.InputSchema["properties"].(map[string]any)
 	if !ok {
 		t.Fatal("observe schema missing properties")

@@ -7,7 +7,7 @@ owners: []
 last_reviewed: 2026-07-26
 code_paths:
   - cmd/browser-agent/tools_interact_dispatch.go
-  - internal/schema/interact_actions.go
+  - internal/schema/interact/actions.go
   - cmd/browser-agent/screenrec_bridge.go
   - cmd/browser-agent/internal/screenrec/deps.go
   - cmd/browser-agent/internal/screenrec/types.go

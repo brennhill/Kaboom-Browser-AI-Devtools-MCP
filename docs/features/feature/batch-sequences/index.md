@@ -4,7 +4,7 @@ feature_id: feature-batch-sequences
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-26
 code_paths:
   - cmd/browser-agent/internal/toolinteract/interact_batch.go
   - cmd/browser-agent/tools_interact_dispatch.go
@@ -12,8 +12,8 @@ code_paths:
   - cmd/browser-agent/tools_configure_sequence_replay.go
   - cmd/browser-agent/tools_configure_sequence_replay_steps.go
   - cmd/browser-agent/tools_configure_sequence_types.go
-  - internal/schema/interact_actions.go
-  - internal/schema/interact_properties_output_batch.go
+  - internal/schema/interact/actions.go
+  - internal/schema/interact/properties_output_batch.go
   - internal/tools/configure/mode_specs_interact.go
 test_paths:
   - cmd/browser-agent/tools_interact_batch_test.go

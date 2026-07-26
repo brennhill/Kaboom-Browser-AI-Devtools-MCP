@@ -10,9 +10,9 @@ last_verified_date: 2026-03-05
 # Playback Engine QA Plan
 
 ## Automated Coverage
-- `internal/recording/playback_test.go`
-- `internal/recording/playback_unit_test.go`
-- `internal/recording/playback_logdiff_test.go`
+- `internal/recording/types_test.go`
+- `internal/recording/playback/playback_test.go`
+- `internal/recording/logdiff/logdiff_test.go`
 
 ## Required Scenarios
 1. Basic replay of recorded action stream.

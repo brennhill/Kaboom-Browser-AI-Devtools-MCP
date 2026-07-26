@@ -794,7 +794,7 @@ All composable enrichment params (`include_screenshot`, `auto_dismiss`, `wait_fo
 
 #### 9.6.3 Schema Enum Changes Are Non-Breaking
 
-Adding `explore_page` to `interactActions` (`internal/schema/interact.go`, line 28) and `page_structure` / `navigation` to the analyze enum (`internal/schema/analyze.go`, line 19) are additive enum extensions. MCP clients that validate against the enum will accept new values. Clients that do not validate are unaffected.
+Adding `explore_page` to `interactActions` (`internal/schema/interact/tool.go`, line 28) and `page_structure` / `navigation` to the analyze enum (`internal/schema/analyze.go`, line 19) are additive enum extensions. MCP clients that validate against the enum will accept new values. Clients that do not validate are unaffected.
 
 #### 9.6.4 observe(what="screenshot") Is Unchanged
 
@@ -840,7 +840,7 @@ if composableParams.ActionDiff && resp.Error == nil && !isResponseError(resp) {
 }
 ```
 
-Also add `action_diff` to the interact schema (`internal/schema/interact.go`) as a documented parameter:
+Also add `action_diff` to the interact schema (`internal/schema/interact/tool.go`) as a documented parameter:
 ```go
 "action_diff": map[string]any{
     "type":        "boolean",

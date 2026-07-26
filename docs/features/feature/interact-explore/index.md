@@ -31,9 +31,9 @@ code_paths:
   - cmd/browser-agent/tools_interact_workflow_a11y_sarif.go
   - cmd/browser-agent/tools_interact_workflow_types.go
   - internal/tools/interact/workflow.go
-  - internal/schema/interact_actions.go
-  - internal/schema/interact_properties_targeting.go
-  - internal/schema/interact_properties_output_batch.go
+  - internal/schema/interact/actions.go
+  - internal/schema/interact/properties_targeting.go
+  - internal/schema/interact/properties_output_batch.go
   - internal/tools/configure/mode_specs_interact.go
   - scripts/docs/reference/check-reference-schema-sync.mjs
   - src/background/pending-queries.ts
@@ -113,6 +113,6 @@ This feature documents the shipped `interact` action surface (not a batched `int
 2. `metadata.workflow_trace` (`trace_id`, `status`, stage-level timing/status envelope).
 3. Explicit `tab_id` now requires an actively tracked tab and must match tracked context before click dispatch.
 
-Interact action metadata now has a single canonical registry in `internal/schema/interact_actions.go`, consumed by both schema enum generation and `describe_capabilities` mode specs.
+Interact action metadata now has a single canonical registry in `internal/schema/interact/actions.go`, consumed by both schema enum generation and `describe_capabilities` mode specs.
 
 Extension-dispatched interact actions now use shared enqueue fail-fast handling: when queue capacity is saturated, responses return structured `queue_full` immediately rather than entering async wait mode.

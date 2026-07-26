@@ -22,7 +22,7 @@ const TOOL_SPECS = [
   },
   {
     tool: 'configure',
-    schemaPath: 'internal/schema/configure_properties_core.go',
+    schemaPath: 'internal/schema/configure/properties_core.go',
     docPath: 'gokaboom.dev/src/content/docs/reference/configure.md',
     enumType: 'what'
   },
@@ -34,10 +34,10 @@ const TOOL_SPECS = [
   },
   {
     tool: 'interact',
-    schemaPath: 'internal/schema/interact_actions.go',
+    schemaPath: 'internal/schema/interact/actions.go',
     docPath: 'gokaboom.dev/src/content/docs/reference/interact.md',
     enumType: 'interactSpecs',
-    specsVar: 'interactActionSpecs',
+    specsVar: 'actionSpecs',
     ignore: INTERACT_ALIAS_ACTIONS
   }
 ]
@@ -72,7 +72,7 @@ function extractArrayVar(schemaSource, varName) {
 }
 
 function extractInteractSpecs(schemaSource, varName) {
-  const pattern = new RegExp(`var\\s+${escapeRegExp(varName)}\\s*=\\s*\\[\\]InteractActionSpec\\{([\\s\\S]*?)\\n\\}`, 'm')
+  const pattern = new RegExp(`var\\s+${escapeRegExp(varName)}\\s*=\\s*\\[\\]ActionSpec\\{([\\s\\S]*?)\\n\\}`, 'm')
   const match = schemaSource.match(pattern)
   if (!match) {
     throw new Error(`Could not find interact specs variable ${varName}`)

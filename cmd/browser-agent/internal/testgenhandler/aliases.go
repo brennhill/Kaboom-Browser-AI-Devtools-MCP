@@ -6,15 +6,16 @@ package testgenhandler
 
 import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testgen"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testgen/heal"
 )
 
 type TestFromContextRequest = testgen.TestFromContextRequest
 type GeneratedTest = testgen.GeneratedTest
-type TestHealRequest = testgen.TestHealRequest
-type HealedSelector = testgen.HealedSelector
-type HealResult = testgen.HealResult
-type HealSummary = testgen.HealSummary
-type BatchHealResult = testgen.BatchHealResult
+type TestHealRequest = heal.TestHealRequest
+type HealedSelector = heal.HealedSelector
+type HealResult = heal.HealResult
+type HealSummary = heal.HealSummary
+type BatchHealResult = heal.BatchHealResult
 type TestClassifyRequest = testgen.TestClassifyRequest
 type TestFailure = testgen.TestFailure
 type FailureClassification = testgen.FailureClassification
@@ -24,7 +25,7 @@ type BatchClassifyResult = testgen.BatchClassifyResult
 const (
 	ErrNoErrorContext          = testgen.ErrNoErrorContext
 	ErrNoActionsCaptured       = testgen.ErrNoActionsCaptured
-	ErrTestFileNotFound        = testgen.ErrTestFileNotFound
+	ErrTestFileNotFound        = heal.ErrTestFileNotFound
 	ErrClassificationUncertain = testgen.ErrClassificationUncertain
 	ErrBatchTooLarge           = testgen.ErrBatchTooLarge
 )
@@ -35,5 +36,5 @@ var (
 	deriveInteractionTestName   = testgen.DeriveInteractionTestName
 	buildRegressionAssertions   = testgen.BuildRegressionAssertions
 	insertAssertionsBeforeClose = testgen.InsertAssertionsBeforeClose
-	formatHealSummary           = testgen.FormatHealSummary
+	formatHealSummary           = heal.FormatHealSummary
 )

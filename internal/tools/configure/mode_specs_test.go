@@ -7,6 +7,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema/interact"
 )
 
 func TestToolModeSpecs_AllToolsPresent(t *testing.T) {
@@ -181,9 +182,9 @@ func TestBuildCapabilitiesSummary_ObserveHints(t *testing.T) {
 func TestInteractModeSpecs_DerivedFromSchemaRegistry(t *testing.T) {
 	t.Parallel()
 
-	actionSpecs := schema.InteractActionSpecs()
+	actionSpecs := interact.ActionSpecs()
 	if len(actionSpecs) == 0 {
-		t.Fatal("schema.InteractActionSpecs() should be non-empty")
+		t.Fatal("interact.ActionSpecs() should be non-empty")
 	}
 
 	for _, spec := range actionSpecs {

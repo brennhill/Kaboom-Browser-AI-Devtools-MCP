@@ -563,7 +563,7 @@ Handlers for all sequence actions:
 
 Add cases to the configure action switch for: `save_sequence`, `replay_sequence`, `get_sequence`, `list_sequences`, `delete_sequence`.
 
-#### Modified file: `internal/schema/configure.go` (~15 LOC)
+#### Modified file: `internal/schema/configure/tool.go` (~15 LOC)
 
 Add new actions to the configure tool schema enum and add parameter definitions for sequence-related fields.
 

@@ -69,7 +69,7 @@ function extractWhatEnum(schemaSource) {
 }
 
 function extractInteractActions(schemaSource) {
-  const match = schemaSource.match(/var\s+interactActionSpecs\s*=\s*\[\]InteractActionSpec\{([\s\S]*?)\n\}/m)
+  const match = schemaSource.match(/var\s+actionSpecs\s*=\s*\[\]ActionSpec\{([\s\S]*?)\n\}/m)
   if (!match) throw new Error('Could not find interact specs variable')
   const aliases = new Set(['state_save', 'state_load', 'state_list', 'state_delete'])
   return dedupe(
@@ -110,7 +110,7 @@ async function validateReferenceExamples() {
     },
     {
       tool: 'configure',
-      modes: extractWhatEnum(await fs.readFile(path.join(root, 'internal/schema/configure_properties_core.go'), 'utf8')),
+      modes: extractWhatEnum(await fs.readFile(path.join(root, 'internal/schema/configure/properties_core.go'), 'utf8')),
       doc: path.join(root, 'gokaboom.dev/src/content/docs/reference/examples/configure-examples.md')
     },
     {
@@ -120,7 +120,7 @@ async function validateReferenceExamples() {
     },
     {
       tool: 'interact',
-      modes: extractInteractActions(await fs.readFile(path.join(root, 'internal/schema/interact_actions.go'), 'utf8')),
+      modes: extractInteractActions(await fs.readFile(path.join(root, 'internal/schema/interact/actions.go'), 'utf8')),
       doc: path.join(root, 'gokaboom.dev/src/content/docs/reference/examples/interact-examples.md')
     }
   ]
