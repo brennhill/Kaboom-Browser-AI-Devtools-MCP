@@ -54,8 +54,8 @@ code_paths:
   - src/background/index.ts
   - src/background/sync-client.ts
   - src/lib/daemon-http.ts
-  - src/lib/network.ts
-  - src/lib/websocket.ts
+  - src/lib/net/network.ts
+  - src/lib/net/websocket.ts
   - src/early-patch.ts
   - src/lib/page/safe-global-patch.ts
 test_paths:

@@ -13,7 +13,7 @@
  * Re-exports all tracking primitives so existing importers are unaffected.
  */
 
-import type { WebSocketCaptureMode } from '../types/index.js'
+import type { WebSocketCaptureMode } from '../../types/index.js'
 
 import {
   type WebSocketMessageData,

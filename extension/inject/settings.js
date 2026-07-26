@@ -2,10 +2,10 @@
  * Purpose: Applies runtime setting changes (network capture, performance marks, WebSocket mode, action replay) and handles state save/load commands in the inject context.
  * Docs: docs/features/feature/state-time-travel/index.md
  */
-import { setNetworkWaterfallEnabled, setNetworkBodyCaptureEnabled, setServerUrl } from '../lib/network.js';
+import { setNetworkWaterfallEnabled, setNetworkBodyCaptureEnabled, setServerUrl } from '../lib/net/network.js';
 import { setPerformanceMarksEnabled, installPerformanceCapture, uninstallPerformanceCapture } from '../lib/performance.js';
 import { setActionCaptureEnabled } from '../lib/page/actions.js';
-import { setWebSocketCaptureEnabled, setWebSocketCaptureMode, installWebSocketCapture, uninstallWebSocketCapture } from '../lib/websocket.js';
+import { setWebSocketCaptureEnabled, setWebSocketCaptureMode, installWebSocketCapture, uninstallWebSocketCapture } from '../lib/net/websocket.js';
 import { setPerformanceSnapshotEnabled } from '../lib/perf-snapshot.js';
 import { setDeferralEnabled } from './observers.js';
 import { INJECT_FORWARDED_SETTINGS, SettingName } from '../lib/constants.js';

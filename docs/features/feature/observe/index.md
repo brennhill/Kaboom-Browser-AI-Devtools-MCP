@@ -27,7 +27,7 @@ code_paths:
   - src/content/runtime-message-listener.ts
   - src/content/window-message-listener.ts
   - src/inject/observers.ts
-  - src/lib/network.ts
+  - src/lib/net/network.ts
   - internal/capture/queries.go
   - internal/capture/sync.go
 test_paths:

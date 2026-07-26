@@ -469,8 +469,8 @@ type BufferStats struct {
 **Page-Level Capture:**
 - `src/inject/observers.ts` - All event observers setup
 - `src/lib/page/console.ts` - Console capture
-- `src/lib/network.ts` - Fetch/XHR capture
-- `src/lib/websocket.ts` - WebSocket capture
+- `src/lib/net/network.ts` - Fetch/XHR capture
+- `src/lib/net/websocket.ts` - WebSocket capture
 - `src/lib/page/actions.ts` - Action capture
 - `src/lib/performance.ts` - Performance capture
 - `src/lib/page/exceptions.ts` - Error capture

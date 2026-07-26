@@ -202,7 +202,7 @@ Files with too many lines of code (limit: 600 lines)
 **src/lib/link-health.ts** (1 issues)
 - Line 42: Method checkLinkHealth has a cyclomatic complexity of 18 (limit is 8)
 
-**src/lib/network.ts** (1 issues)
+**src/lib/net/network.ts** (1 issues)
 - Line 427: Method (anonymous) has a cyclomatic complexity of 9 (limit is 8)
 
 **src/lib/page/reproduction.ts** (3 issues)
@@ -214,7 +214,7 @@ Files with too many lines of code (limit: 600 lines)
 - Line 27: Method getAttribute? has a cyclomatic complexity of 18 (limit is 8)
 - Line 143: Method isSensitiveInput has a cyclomatic complexity of 18 (limit is 8)
 
-**src/lib/websocket.ts** (1 issues)
+**src/lib/net/websocket.ts** (1 issues)
 - Line 380: Method Array.from.sort has a cyclomatic complexity of 9 (limit is 8)
 
 **src/popup.ts** (1 issues)
@@ -247,8 +247,8 @@ Files with too many lines of code (limit: 600 lines)
 **src/inject/message-handlers.ts** (1 issues)
 - Line 1: File src/inject/message-handlers.ts has 580 non-comment lines of code
 
-**src/lib/websocket.ts** (1 issues)
-- Line 1: File src/lib/websocket.ts has 523 non-comment lines of code
+**src/lib/net/websocket.ts** (1 issues)
+- Line 1: File src/lib/net/websocket.ts has 523 non-comment lines of code
 
 
 ### Lizard_nloc-medium (24 issues)

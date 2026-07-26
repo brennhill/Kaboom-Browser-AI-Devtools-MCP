@@ -23,7 +23,7 @@ last-verified: 2026-02-08
 | `internal/capture/types.go` | 653 | < 500 | ❌ Exceeds |
 | `internal/session/sessions.go` | 694 | < 500 | ❌ Exceeds |
 | `src/background/message-handlers.ts` | 552 | < 500 | ❌ Exceeds |
-| `src/lib/websocket.ts` | 776 | < 500 | ⚠️ Near limit |
+| `src/lib/net/websocket.ts` | 776 | < 500 | ⚠️ Near limit |
 
 ---
 
@@ -265,7 +265,7 @@ last-verified: 2026-02-08
 
 ---
 
-## 5. `src/lib/websocket.ts` (776 LOC → ~500 LOC)
+## 5. `src/lib/net/websocket.ts` (776 LOC → ~500 LOC)
 
 **Current concerns:**
 - Connection tracking (createConnectionTracker)
@@ -314,7 +314,7 @@ last-verified: 2026-02-08
    - `formatPayload()` - Payload formatting
    - `getSize()` - Size calculation
 
-7. `src/lib/websocket.ts` (~200 LOC)
+7. `src/lib/net/websocket.ts` (~200 LOC)
    - Main exports
    - Constants
    - Connection state management

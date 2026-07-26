@@ -64,7 +64,7 @@ export {
   wrapXHRWithBodies,
   unwrapXHR,
   adoptEarlyBodies
-} from '../lib/network.js'
+} from '../lib/net/network.js'
 export {
   getPerformanceMarks,
   getPerformanceMeasures,
@@ -107,7 +107,7 @@ export {
   getWebSocketCaptureMode,
   uninstallWebSocketCapture,
   resetForTesting
-} from '../lib/websocket.js'
+} from '../lib/net/websocket.js'
 export {
   executeDOMQuery,
   getPageInfo,

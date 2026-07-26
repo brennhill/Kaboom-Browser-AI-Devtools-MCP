@@ -11,8 +11,8 @@
  * formatting utilities used by the WebSocket capture instrumentation layer.
  */
 
-import { WS_MAX_BODY_SIZE, WS_PREVIEW_LIMIT } from './constants.js'
-import type { WebSocketCaptureMode } from '../types/index.js'
+import { WS_MAX_BODY_SIZE, WS_PREVIEW_LIMIT } from '../constants.js'
+import type { WebSocketCaptureMode } from '../../types/index.js'
 
 // =============================================================================
 // TYPE DEFINITIONS

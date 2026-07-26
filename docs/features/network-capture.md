@@ -106,7 +106,7 @@ observe({what: "network_waterfall", limit: 50})
 Wraps the native `window.fetch()` function:
 
 ```typescript
-// src/lib/network.ts
+// src/lib/net/network.ts
 export function wrapFetchWithBodies(fetchFn: typeof fetch): any {
   return async function (input: any, init?: RequestInit): Promise<Response> {
     // Clone request/response to capture bodies
@@ -249,7 +249,7 @@ These would require Chrome Extension API changes or violate Web Store policies:
 ## Reference
 
 - **UAT Issue #4:** [UAT-ISSUES-TRACKER.md](../core/in-progress/UAT-ISSUES-TRACKER.md#-issue-4-network_bodies-no-data-captured-documented)
-- **Implementation:** [src/lib/network.ts](../../src/lib/network.ts) (lines 420-498)
+- **Implementation:** [src/lib/net/network.ts](../../src/lib/net/network.ts) (lines 420-498)
 - **MCP Tool:** `observe({what: "network_bodies"})`
 - **Related Tools:** `observe({what: "network_waterfall"})`, `observe({what: "api"})`
 

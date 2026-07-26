@@ -7,7 +7,7 @@
 
 import type { BrowserStateSnapshot, StateAction, WebSocketCaptureMode } from '../types/index.js'
 
-import { setNetworkWaterfallEnabled, setNetworkBodyCaptureEnabled, setServerUrl } from '../lib/network.js'
+import { setNetworkWaterfallEnabled, setNetworkBodyCaptureEnabled, setServerUrl } from '../lib/net/network.js'
 import {
   setPerformanceMarksEnabled,
   installPerformanceCapture,
@@ -19,7 +19,7 @@ import {
   setWebSocketCaptureMode,
   installWebSocketCapture,
   uninstallWebSocketCapture
-} from '../lib/websocket.js'
+} from '../lib/net/websocket.js'
 import { setPerformanceSnapshotEnabled } from '../lib/perf-snapshot.js'
 import { setDeferralEnabled } from './observers.js'
 import { INJECT_FORWARDED_SETTINGS, SettingName } from '../lib/constants.js'

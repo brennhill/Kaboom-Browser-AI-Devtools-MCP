@@ -692,7 +692,7 @@ function uninstallNavigationCapture() {
   }
 }
 
-// extension/lib/network.js
+// extension/lib/net/network.js
 var configuredServerUrl = "";
 var networkWaterfallEnabled = false;
 var pendingRequests = /* @__PURE__ */ new Map();
@@ -1894,7 +1894,7 @@ function uninstallExceptionCapture() {
   }
 }
 
-// extension/lib/websocket-tracking.js
+// extension/lib/net/websocket-tracking.js
 var _textEncoder = typeof TextEncoder !== "undefined" ? new TextEncoder() : null;
 var webSocketCaptureMode = "medium";
 function setWebSocketCaptureModeInternal(mode) {
@@ -2174,7 +2174,7 @@ function createConnectionTracker(id, url) {
   return tracker;
 }
 
-// extension/lib/websocket.js
+// extension/lib/net/websocket.js
 var originalWebSocket = null;
 var webSocketCaptureEnabled = true;
 function postLifecycleEvent(event, connectionId, urlString, extra) {

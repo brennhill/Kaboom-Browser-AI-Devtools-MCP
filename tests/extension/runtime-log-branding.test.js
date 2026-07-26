@@ -29,9 +29,9 @@ const RUNTIME_LOG_SOURCES = [
   'src/popup/feature-toggles.ts',
   'src/lib/page/context.ts',
   'src/lib/page/exceptions.ts',
-  'src/lib/network.ts',
+  'src/lib/net/network.ts',
   'src/lib/performance.ts',
-  'src/lib/websocket.ts',
+  'src/lib/net/websocket.ts',
   'src/content/runtime-message-listener.ts'
 ]
 
@@ -48,11 +48,11 @@ describe('runtime log branding', () => {
   })
 
   test('websocket capture internals use Kaboom names', async () => {
-    const contents = await readFile(new URL('../../src/lib/websocket.ts', import.meta.url), 'utf8')
+    const contents = await readFile(new URL('../../src/lib/net/websocket.ts', import.meta.url), 'utf8')
 
-    assert.doesNotMatch(contents, /\bGasolineWsMessage\b|\bStrumWsMessage\b/, 'src/lib/websocket.ts still uses a legacy message type')
-    assert.doesNotMatch(contents, /\bGasolineWebSocket\b|\bStrumWebSocket\b/, 'src/lib/websocket.ts still uses a legacy constructor name')
-    assert.match(contents, /\bKaboomWsMessage\b/, 'src/lib/websocket.ts should use KaboomWsMessage')
-    assert.match(contents, /\bKaboomWebSocket\b/, 'src/lib/websocket.ts should use KaboomWebSocket')
+    assert.doesNotMatch(contents, /\bGasolineWsMessage\b|\bStrumWsMessage\b/, 'src/lib/net/websocket.ts still uses a legacy message type')
+    assert.doesNotMatch(contents, /\bGasolineWebSocket\b|\bStrumWebSocket\b/, 'src/lib/net/websocket.ts still uses a legacy constructor name')
+    assert.match(contents, /\bKaboomWsMessage\b/, 'src/lib/net/websocket.ts should use KaboomWsMessage')
+    assert.match(contents, /\bKaboomWebSocket\b/, 'src/lib/net/websocket.ts should use KaboomWebSocket')
   })
 })

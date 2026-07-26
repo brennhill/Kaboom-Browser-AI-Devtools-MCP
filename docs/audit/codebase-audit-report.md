@@ -450,7 +450,7 @@ if (!response.ok) {
 ---
 
 #### 4.4 Network Capture Error Swallowing
-**File:** [`src/lib/network.ts`](src/lib/network.ts:159-161)  
+**File:** [`src/lib/net/network.ts`](src/lib/net/network.ts:159-161)  
 **Severity:** Medium  
 **Type:** Error Suppression
 
@@ -484,7 +484,7 @@ if (!response.ok) {
 | `internal/capture/types.go` | 653 | ❌ Exceeds |
 | `internal/session/sessions.go` | 694 | ❌ Exceeds |
 | `src/background/message-handlers.ts` | 552 | ❌ Exceeds |
-| `src/lib/websocket.ts` | 776 | ⚠️ Near limit |
+| `src/lib/net/websocket.ts` | 776 | ⚠️ Near limit |
 
 **Recommendation:** Refactor large files into smaller, focused modules following single responsibility principle.
 
@@ -671,7 +671,7 @@ for i := int64(0); i < entriesAvailable; i++ {
 ---
 
 #### 7.2 Unnecessary Object Creation
-**File:** [`src/lib/websocket.ts`](src/lib/websocket.ts:152-169)  
+**File:** [`src/lib/net/websocket.ts`](src/lib/net/websocket.ts:152-169)  
 **Severity:** Medium  
 **Type:** Performance
 
@@ -833,8 +833,8 @@ export const DOM_QUERY_MAX_ELEMENTS = 100  // Why 100?
 | Location | Timeout | Purpose |
 |-----------|----------|----------|
 | `src/background/pending-queries.ts` | 60000ms | Async execute |
-| `src/lib/network.ts` | BODY_READ_TIMEOUT_MS | Body read |
-| `src/lib/websocket.ts` | WS_MAX_BODY_SIZE | Message size |
+| `src/lib/net/network.ts` | BODY_READ_TIMEOUT_MS | Body read |
+| `src/lib/net/websocket.ts` | WS_MAX_BODY_SIZE | Message size |
 
 **Recommendation:** Consolidate timeout configuration and document rationale for each.
 
@@ -901,8 +901,8 @@ export const DOM_QUERY_MAX_ELEMENTS = 100  // Why 100?
 - `src/content/request-tracking.ts`
 - `src/inject/message-handlers.ts`
 - `src/inject/observers.ts`
-- `src/lib/network.ts`
-- `src/lib/websocket.ts`
+- `src/lib/net/network.ts`
+- `src/lib/net/websocket.ts`
 - `src/lib/page/actions.ts`
 - `src/lib/page/serialize.ts`
 - `src/lib/dom-queries.ts`

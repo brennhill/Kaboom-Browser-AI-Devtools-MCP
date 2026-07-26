@@ -87,7 +87,7 @@ function inferDocs(rel) {
   if (rel.startsWith('src/lib/dom-queries')) add('query-dom')
   if (rel.startsWith('src/lib/link-health')) add('link-health')
   if (rel.startsWith('src/lib/perf') || rel.startsWith('src/lib/performance')) add('performance-audit')
-  if (rel.startsWith('src/lib/network') || rel.startsWith('src/lib/websocket')) add('backend-log-streaming')
+  if (rel.startsWith('src/lib/net/network') || rel.startsWith('src/lib/net/websocket')) add('backend-log-streaming')
   if (rel.startsWith('src/background/')) {
     add('analyze-tool')
     add('interact-explore')

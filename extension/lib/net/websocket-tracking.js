@@ -8,7 +8,7 @@
  * Connection statistics, adaptive sampling, schema inference, and message
  * formatting utilities used by the WebSocket capture instrumentation layer.
  */
-import { WS_MAX_BODY_SIZE, WS_PREVIEW_LIMIT } from './constants.js';
+import { WS_MAX_BODY_SIZE, WS_PREVIEW_LIMIT } from '../constants.js';
 // Cached TextEncoder instance to avoid per-call allocation in getSize() hot path
 const _textEncoder = typeof TextEncoder !== 'undefined' ? new TextEncoder() : null;
 // =============================================================================
