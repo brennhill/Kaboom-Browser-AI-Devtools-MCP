@@ -1,5 +1,5 @@
 // Purpose: Tests for session tool handler dispatch.
-// Docs: docs/features/feature/pagination/index.md
+// Docs: docs/features/feature/request-session-correlation/index.md
 
 // tool_handler_test.go — Tests for tool-handler.go (SessionManager.HandleTool).
 // Covers: diffSessionsParams parsing, capture/compare/list/delete dispatching,

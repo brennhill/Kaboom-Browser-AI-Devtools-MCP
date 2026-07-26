@@ -23,7 +23,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/redaction"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
 
@@ -79,7 +79,7 @@ func NewToolHandler(server *Server, capture *capture.Store) *MCPHandler {
 	// Initialize health metrics.
 	handler.healthMetrics = health.NewMetrics()
 	handler.toolCallLimiter = NewToolCallLimiter(500, time.Minute)
-	handler.alertBuffer = streaming.NewAlertBuffer()
+	handler.alertBuffer = alertbuf.NewAlertBuffer()
 
 	// Initialize session store (use current working directory as project path).
 	cwd, err := os.Getwd()

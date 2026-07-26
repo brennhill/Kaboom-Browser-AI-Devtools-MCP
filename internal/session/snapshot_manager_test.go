@@ -1,5 +1,5 @@
 // Purpose: Tests for session snapshot capture and restoration.
-// Docs: docs/features/feature/pagination/index.md
+// Docs: docs/features/feature/request-session-correlation/index.md
 
 // snapshot_manager_test.go — Tests for snapshot-manager.go.
 // Covers: NewSessionManager defaults, Capture, captureCurrentState,

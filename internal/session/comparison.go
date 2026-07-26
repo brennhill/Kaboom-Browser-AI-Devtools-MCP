@@ -2,15 +2,17 @@
 // Docs: docs/features/feature/request-session-correlation/index.md
 
 // comparison.go — Main comparison logic.
-// Compare function and related comparison orchestration.
+// Compare resolves the two snapshot operands and delegates the arithmetic to snapdiff.
 package session
 
 import (
 	"fmt"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/snapdiff"
 )
 
 // Compare diffs two snapshots. Use "current" as b to compare against live state.
-func (sm *SessionManager) Compare(a, b string) (*SessionDiffResult, error) {
+func (sm *SessionManager) Compare(a, b string) (*snapdiff.Result, error) {
 	sm.mu.RLock()
 	snapA, existsA := sm.snaps[a]
 	sm.mu.RUnlock()
@@ -33,22 +35,15 @@ func (sm *SessionManager) Compare(a, b string) (*SessionDiffResult, error) {
 		snapB = found
 	}
 
-	result := &SessionDiffResult{
+	result := &snapdiff.Result{
 		A: a,
 		B: b,
 	}
 
-	// Compute error diff
-	result.Errors = sm.diffErrors(snapA, snapB)
-
-	// Compute network diff
-	result.Network = sm.diffNetwork(snapA, snapB)
-
-	// Compute performance diff
-	result.Performance = sm.diffPerformance(snapA, snapB)
-
-	// Compute summary and verdict
-	result.Summary = sm.computeSummary(result)
+	result.Errors = snapdiff.Errors(snapA, snapB)
+	result.Network = snapdiff.Network(snapA, snapB)
+	result.Performance = snapdiff.Performance(snapA, snapB)
+	result.Summary = snapdiff.Summarize(result)
 
 	return result, nil
 }

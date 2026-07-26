@@ -1,5 +1,5 @@
 // Purpose: Tests for session lifecycle management.
-// Docs: docs/features/feature/pagination/index.md
+// Docs: docs/features/feature/request-session-correlation/index.md
 
 package session
 
@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/snapdiff"
 )
 
 // ============================================
@@ -970,7 +971,7 @@ func TestSessionDiff_JSONSerialization(t *testing.T) {
 		t.Fatalf("JSON marshal failed: %v", err)
 	}
 
-	var parsed SessionDiffResult
+	var parsed snapdiff.Result
 	if err := json.Unmarshal(data, &parsed); err != nil {
 		t.Fatalf("JSON unmarshal failed: %v", err)
 	}

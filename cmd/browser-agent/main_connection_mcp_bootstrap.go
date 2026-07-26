@@ -16,14 +16,14 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/clientreg"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
 // initCapture creates and configures the capture buffers with lifecycle logging.
 func initCapture(server *Server, port int) *capture.Store {
 	cap := capture.NewCapture()
-	cap.SetClientRegistry(newSessionClientRegistryAdapter(session.NewClientRegistry()))
+	cap.SetClientRegistry(newSessionClientRegistryAdapter(clientreg.NewClientRegistry()))
 	cap.SetServerVersion(version)
 	cap.SetLifecycleCallback(func(event string, data map[string]any) {
 		entry := LogEntry{

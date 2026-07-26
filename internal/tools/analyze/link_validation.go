@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -78,7 +78,7 @@ func ClassifyHTTPStatus(status int) string {
 func NewLinkValidationClient(timeout time.Duration) *http.Client {
 	return &http.Client{
 		Timeout:   timeout,
-		Transport: upload.NewSSRFSafeTransport(nil),
+		Transport: uploadsec.NewSSRFSafeTransport(nil),
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 5 {
 				return http.ErrUseLastResponse

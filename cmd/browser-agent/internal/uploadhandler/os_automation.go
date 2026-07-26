@@ -4,23 +4,26 @@
 
 package uploadhandler
 
-import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
+import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/osauto"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
+)
 
 // Handler function aliases.
 var (
-	HandleOSAutomation = upload.HandleOSAutomation
-	DetectBrowserPID   = upload.DetectBrowserPID
-	DismissFileDialog  = upload.DismissFileDialog
-	ExecuteOSAutomation = upload.ExecuteOSAutomation
+	HandleOSAutomation = osauto.HandleOSAutomation
+	DetectBrowserPID   = osauto.DetectBrowserPID
+	DismissFileDialog  = osauto.DismissFileDialog
+	ExecuteOSAutomation = osauto.ExecuteOSAutomation
 )
 
 // Validator and sanitizer function aliases.
 var (
-	ValidatePathForOSAutomation   = upload.ValidatePathForOSAutomation
-	ValidateHTTPMethod            = upload.ValidateHTTPMethod
-	ValidateFormActionURL         = upload.ValidateFormActionURL
-	ValidateCookieHeader          = upload.ValidateCookieHeader
-	SanitizeForContentDisposition = upload.SanitizeForContentDisposition
-	SanitizeForAppleScript        = upload.SanitizeForAppleScript
-	SanitizeForSendKeys           = upload.SanitizeForSendKeys
+	ValidatePathForOSAutomation   = uploadsec.ValidatePathForOSAutomation
+	ValidateHTTPMethod            = uploadsec.ValidateHTTPMethod
+	ValidateFormActionURL         = uploadsec.ValidateFormActionURL
+	ValidateCookieHeader          = uploadsec.ValidateCookieHeader
+	SanitizeForContentDisposition = uploadsec.SanitizeForContentDisposition
+	SanitizeForAppleScript        = uploadsec.SanitizeForAppleScript
+	SanitizeForSendKeys           = uploadsec.SanitizeForSendKeys
 )

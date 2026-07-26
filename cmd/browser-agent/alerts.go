@@ -6,6 +6,7 @@ package main
 
 import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -27,11 +28,11 @@ type CIFailure = types.CIFailure
 // ============================================
 
 const (
-	alertBufferCap       = streaming.AlertBufferCap
-	ciResultsCap         = streaming.CIResultsCap
-	correlationWindow    = streaming.CorrelationWindow
-	anomalyWindowSeconds = streaming.AnomalyWindowSeconds
-	anomalyBucketSeconds = streaming.AnomalyBucketSeconds
+	alertBufferCap       = alertbuf.AlertBufferCap
+	ciResultsCap         = alertbuf.CIResultsCap
+	correlationWindow    = alertbuf.CorrelationWindow
+	anomalyWindowSeconds = alertbuf.AnomalyWindowSeconds
+	anomalyBucketSeconds = alertbuf.AnomalyBucketSeconds
 )
 
 // ============================================
@@ -39,14 +40,14 @@ const (
 // ============================================
 
 var (
-	deduplicateAlerts    = streaming.DeduplicateAlerts
-	correlateAlerts      = streaming.CorrelateAlerts
-	canCorrelate         = streaming.CanCorrelate
-	mergeAlerts          = streaming.MergeAlerts
-	sortAlertsByPriority = streaming.SortAlertsByPriority
+	deduplicateAlerts    = alertbuf.DeduplicateAlerts
+	correlateAlerts      = alertbuf.CorrelateAlerts
+	canCorrelate         = alertbuf.CanCorrelate
+	mergeAlerts          = alertbuf.MergeAlerts
+	sortAlertsByPriority = alertbuf.SortAlertsByPriority
 	severityRank         = streaming.SeverityRank
-	formatAlertsBlock    = streaming.FormatAlertsBlock
-	buildAlertSummary    = streaming.BuildAlertSummary
+	formatAlertsBlock    = alertbuf.FormatAlertsBlock
+	buildAlertSummary    = alertbuf.BuildAlertSummary
 )
 
 // ============================================

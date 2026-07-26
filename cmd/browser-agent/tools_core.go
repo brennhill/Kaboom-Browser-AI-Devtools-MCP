@@ -24,7 +24,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
 
@@ -58,7 +58,7 @@ type ToolHandler struct {
 	toolCallLimiter *ToolCallLimiter
 
 	// Alert system + context streaming (delegates to internal/streaming)
-	alertBuffer *streaming.AlertBuffer
+	alertBuffer *alertbuf.AlertBuffer
 
 	// Concrete implementations (interface signatures differ from types package)
 	// These are used directly by tool handlers rather than through the interface fields above.

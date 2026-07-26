@@ -8,6 +8,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
 // ============================================
@@ -17,7 +19,7 @@ import (
 // HandleFileRead is the core logic for file read, testable without HTTP.
 // Opens the file first, then fstats the open handle to avoid TOCTOU races.
 // #lizard forgives
-func HandleFileRead(req FileReadRequest, sec *Security, requireUploadDir bool) FileReadResponse {
+func HandleFileRead(req FileReadRequest, sec *uploadsec.Security, requireUploadDir bool) FileReadResponse {
 	if req.FilePath == "" {
 		return FileReadResponse{
 			Success: false,
@@ -25,7 +27,7 @@ func HandleFileRead(req FileReadRequest, sec *Security, requireUploadDir bool) F
 		}
 	}
 
-	// Security: full validation chain (Clean → IsAbs → EvalSymlinks → denylist → upload-dir)
+	// uploadsec.Security: full validation chain (Clean → IsAbs → EvalSymlinks → denylist → upload-dir)
 	result, err := sec.ValidateFilePath(req.FilePath, requireUploadDir)
 	if err != nil {
 		return FileReadResponse{
@@ -35,7 +37,7 @@ func HandleFileRead(req FileReadRequest, sec *Security, requireUploadDir bool) F
 	}
 
 	// Open the resolved path (symlink-free, TOCTOU safe)
-	// #nosec G304 -- file path validated by Security chain
+	// #nosec G304 -- file path validated by uploadsec.Security chain
 	file, err := os.Open(result.ResolvedPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -72,7 +74,7 @@ func HandleFileRead(req FileReadRequest, sec *Security, requireUploadDir bool) F
 		}
 	}
 
-	if err := CheckHardlink(info); err != nil {
+	if err := uploadsec.CheckHardlink(info); err != nil {
 		return FileReadResponse{
 			Success: false,
 			Error:   err.Error(),
@@ -113,7 +115,7 @@ func HandleFileRead(req FileReadRequest, sec *Security, requireUploadDir bool) F
 // HandleDialogInject is the core logic for dialog injection, testable without HTTP.
 // Stage 2 requires --upload-dir.
 // #lizard forgives
-func HandleDialogInject(req FileDialogInjectRequest, sec *Security) StageResponse {
+func HandleDialogInject(req FileDialogInjectRequest, sec *uploadsec.Security) StageResponse {
 	if req.FilePath == "" {
 		return StageResponse{
 			Success: false,
@@ -130,7 +132,7 @@ func HandleDialogInject(req FileDialogInjectRequest, sec *Security) StageRespons
 		}
 	}
 
-	// Security: full validation chain (requires upload-dir for Stage 2)
+	// uploadsec.Security: full validation chain (requires upload-dir for Stage 2)
 	result, err := sec.ValidateFilePath(req.FilePath, true)
 	if err != nil {
 		return StageResponse{

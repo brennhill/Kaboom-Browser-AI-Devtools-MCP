@@ -15,13 +15,10 @@
     "internal/queries": 15,
     "internal/recording": 16,
     "internal/schema": 17,
-    "internal/session": 20,
-    "internal/streaming": 11,
     "internal/testgen": 11,
     "internal/tools/analyze": 13,
     "internal/tools/configure": 15,
     "internal/tools/observe": 32,
-    "internal/upload": 19,
     "internal/util": 16
   }
 }

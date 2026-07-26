@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/osauto"
 )
 
 // JSONResponder writes a JSON response with the given HTTP status code.
@@ -26,8 +27,8 @@ var (
 	fileReadFn      = upload.HandleFileRead
 	dialogInjectFn  = upload.HandleDialogInject
 	formSubmitFn    = upload.HandleFormSubmit
-	osAutomationFn  = upload.HandleOSAutomation
-	dismissDialogFn = upload.DismissFileDialog
+	osAutomationFn  = osauto.HandleOSAutomation
+	dismissDialogFn = osauto.DismissFileDialog
 )
 
 // ============================================

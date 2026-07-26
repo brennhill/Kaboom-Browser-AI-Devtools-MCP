@@ -12,17 +12,20 @@ Stages:
   - Stage 3 (Form Submit): streams multipart form submission with SSRF-safe transport.
   - Stage 4 (OS Automation): injects file path into native dialogs via AppleScript/xdotool/SendKeys.
 
+This package owns the wire vocabulary shared by every stage (the request and
+response types, MIME detection, progress tiers, size caps) plus the Stage 1 and
+Stage 2 handlers. The rest lives in subpackages that depend on it:
+
+  - uploadsec: the safety kernel — path validation, denylist, SSRF, input sanitizers.
+  - formsubmit: Stage 3, multipart streaming form submission.
+  - osauto: Stage 4, platform-specific native dialog automation.
+
 Key types:
-  - Security: immutable upload security configuration (upload-dir, deny patterns).
-  - PathValidationResult: validated, symlink-resolved absolute path safe to open.
   - StageResponse: generic response for all upload stage operations.
+  - FileReadRequest / FileReadResponse: Stage 1 wire contract.
 
 Key functions:
-  - ValidateUploadDir: validates the --upload-dir flag at startup.
-  - ValidateFilePath: runs the full path validation chain (clean, resolve, denylist, scope).
   - HandleFileRead: Stage 1 handler.
-  - HandleFormSubmit: Stage 3 handler with streaming multipart upload.
-  - HandleOSAutomation: Stage 4 handler with platform-specific automation.
-  - NewSSRFSafeTransport: returns an HTTP transport that blocks private/internal targets.
+  - HandleDialogInject: Stage 2 handler.
 */
 package upload
