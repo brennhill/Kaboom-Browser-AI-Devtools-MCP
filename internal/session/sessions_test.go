@@ -1,5 +1,5 @@
 // Purpose: Tests for session lifecycle management.
-// Docs: docs/features/feature/pagination/index.md
+// Docs: docs/features/feature/request-session-correlation/index.md
 
 package session
 

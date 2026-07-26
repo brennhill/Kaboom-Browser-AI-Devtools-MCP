@@ -1,5 +1,5 @@
 // Purpose: Tests for session state verification and integrity checks.
-// Docs: docs/features/feature/pagination/index.md
+// Docs: docs/features/feature/request-session-correlation/index.md
 
 // verify_test.go — Tests for the verify_fix MCP tool.
 // Tests the verification loop: start (baseline) -> watch -> compare workflow.

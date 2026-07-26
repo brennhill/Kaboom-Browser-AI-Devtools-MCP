@@ -1,5 +1,5 @@
-// Purpose: Tests for session actions diff computation.
-// Docs: docs/features/feature/pagination/index.md
+// Purpose: Tests for snapshot console-error diffing and verdict summarization.
+// Docs: docs/features/feature/request-session-correlation/index.md
 
 // errors_test.go — Tests for errors.go.
 // Covers: Errors, countPerfRegressions, hasStatusRegression, Summarize.

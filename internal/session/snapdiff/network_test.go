@@ -1,8 +1,8 @@
 // Purpose: Tests for session network diff computation.
-// Docs: docs/features/feature/pagination/index.md
+// Docs: docs/features/feature/request-session-correlation/index.md
 
-// network_diff_test.go — Tests for network-diff.go.
-// Covers: buildEndpointMap, formatDurationChange, diffNetwork with all change types.
+// network_test.go — Tests for network.go.
+// Covers: buildEndpointMap, formatDurationChange, Network with all change types.
 package snapdiff
 
 import (

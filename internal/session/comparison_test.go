@@ -1,5 +1,5 @@
 // Purpose: Tests for session state comparison and diff output.
-// Docs: docs/features/feature/pagination/index.md
+// Docs: docs/features/feature/request-session-correlation/index.md
 
 // comparison_test.go — Tests for comparison.go Compare function.
 // Covers: snapshot lookup errors, "current" reserved name, full diff result fields.

@@ -1,8 +1,8 @@
 // Purpose: Tests for session performance diff computation.
-// Docs: docs/features/feature/pagination/index.md
+// Docs: docs/features/feature/request-session-correlation/index.md
 
-// performance_diff_test.go — Tests for performance-diff.go.
-// Covers: computeMetricIfNonZero, computeMetricChange, formatPctChange, diffPerformance.
+// performance_test.go — Tests for performance.go.
+// Covers: computeMetricIfNonZero, computeMetricChange, formatPctChange, Performance.
 package snapdiff
 
 import (
