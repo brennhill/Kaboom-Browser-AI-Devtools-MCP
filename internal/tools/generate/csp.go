@@ -4,6 +4,7 @@
 package generate
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
@@ -31,6 +32,11 @@ func BuildCSPDirectives(networkBodies []capture.NetworkBody) map[string][]string
 			originList = append(originList, origin)
 		}
 		if len(originList) > 0 {
+			// Sort: Go randomizes map iteration, so without this the origins
+			// inside a directive come out in a different order every call for
+			// identical input, making the generated policy undiffable.
+			// 'self' is prepended after sorting so it stays pinned at the front.
+			sort.Strings(originList)
 			directives[directive] = append([]string{"'self'"}, originList...)
 		}
 	}
@@ -38,10 +44,27 @@ func BuildCSPDirectives(networkBodies []capture.NetworkBody) map[string][]string
 }
 
 // BuildCSPPolicyString serializes CSP directives into a semicolon-separated policy string.
+//
+// Directive order is stable: default-src first (it is the fallback every other
+// directive narrows, so a reader should meet it first), then the rest
+// alphabetically. Ranging the map directly produced a different order on every
+// call for identical input, which made the output undiffable across runs and
+// impossible to pin with a golden test.
 func BuildCSPPolicyString(directives map[string][]string) string {
-	var policyParts []string
-	for directive, sources := range directives {
-		policyParts = append(policyParts, directive+" "+strings.Join(sources, " "))
+	names := make([]string, 0, len(directives))
+	for directive := range directives {
+		names = append(names, directive)
+	}
+	sort.Slice(names, func(i, j int) bool {
+		if names[i] == "default-src" != (names[j] == "default-src") {
+			return names[i] == "default-src"
+		}
+		return names[i] < names[j]
+	})
+
+	policyParts := make([]string, 0, len(names))
+	for _, directive := range names {
+		policyParts = append(policyParts, directive+" "+strings.Join(directives[directive], " "))
 	}
 	return strings.Join(policyParts, "; ")
 }

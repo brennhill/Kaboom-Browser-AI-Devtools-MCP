@@ -1,24 +1,20 @@
 ---
 doc_type: feature_index
 feature_id: feature-error-clustering
-status: shipped
+status: superseded
 feature_type: feature
 owners: []
 last_reviewed: 2026-07-26
-code_paths:
-  - internal/analysis/clustering/clustering.go
-  - internal/analysis/clustering/cluster_ops.go
-  - internal/analysis/clustering/matching.go
-  - internal/analysis/clustering/normalize.go
-  - internal/analysis/clustering/stack.go
-  - internal/analysis/clustering/state.go
-test_paths:
-  - internal/analysis/clustering/clustering_test.go
-  - internal/analysis/clustering/cluster_ops_test.go
-  - internal/analysis/clustering/matching_test.go
+code_paths: []
+test_paths: []
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
+
+> **Removed 2026-07-26 — dead code, never reachable.**
+>
+> Error clustering was never wired to an MCP surface. The package had zero importers outside its own tests, was absent from `go list -deps ./cmd/browser-agent/...`, and `ClusterErrors` existed nowhere else in the tree — so nothing was clustering anything at runtime. Removed rather than left as `status: shipped`, which it never was.
+
 
 # Error Clustering
 

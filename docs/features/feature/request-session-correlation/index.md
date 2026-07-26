@@ -14,17 +14,18 @@ code_paths:
   - internal/session/clientreg/registry.go
   - internal/session/clientreg/state.go
   - internal/session/types.go
-  - internal/session/verify/verify.go
-  - internal/session/verify/actions.go
-  - internal/session/verify/compute.go
 test_paths:
   - cmd/browser-agent/server_routes_clients_test.go
   - internal/session/clientreg/clientreg_test.go
-  - internal/session/verify/verify_test.go
-  - internal/session/verify/compute_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
+
+> **2026-07-26:** the `verify_fix` half of this feature was removed as dead code.
+> `internal/session/verify` had zero importers outside its own tests and `verify_fix`
+> was never registered as an MCP action, so the before/after verification loop was
+> unreachable at runtime. The session-correlation paths below are live and unaffected.
+
 
 # Request Session Correlation
 
