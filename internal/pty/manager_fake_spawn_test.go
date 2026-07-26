@@ -11,7 +11,9 @@ package pty
 import (
 	"errors"
 	"os/exec"
+	"sync"
 	"testing"
+	"time"
 )
 
 // fakeSpawn returns a minimal Session that survives Pid() (cmd non-nil, Process
@@ -108,6 +110,66 @@ func TestManager_StartWithFakeSpawn_TokenAndRepoIndex(t *testing.T) {
 	if _, err := m.GetByToken("nope"); !errors.Is(err, ErrInvalidToken) {
 		t.Fatalf("GetByToken(bad) = %v, want ErrInvalidToken", err)
 	}
+}
+
+// Start must not hold m.mu while Close()-ing the session it evicts. Session.Close
+// blocks for up to ~4s (SIGTERM → 2s → SIGKILL → 2s) when the child is wedged, and
+// holding the manager lock across that freezes Get/GetByToken/List — i.e. every
+// terminal route — for the whole teardown (finding S3).
+//
+// The first fake session's `reaped` channel stays open until the test closes it, so
+// its Close() parks inside the reap wait. The assertion is that the self-heal Start
+// publishes the new token (i.e. released m.mu) long before that wait can finish.
+func TestManager_Start_DoesNotHoldLockDuringEvictedClose(t *testing.T) {
+	m := NewManager()
+	release := make(chan struct{})
+	spawns := 0
+	m.spawn = func(cfg SpawnConfig) (*Session, error) {
+		spawns++
+		reaped := release // first session: Close parks until the test releases it
+		if spawns > 1 {
+			ch := make(chan struct{})
+			close(ch)
+			reaped = ch
+		}
+		return &Session{ID: cfg.ID, cmd: &exec.Cmd{}, done: make(chan struct{}), reaped: reaped}, nil
+	}
+	var releaseOnce sync.Once
+	unblockClose := func() { releaseOnce.Do(func() { close(release) }) }
+	defer unblockClose() // also runs on t.Fatal, so the parked Close never leaks
+
+	first, err := m.Start(StartConfig{ID: "s1"})
+	if err != nil {
+		t.Fatalf("first Start: %v", err)
+	}
+
+	startDone := make(chan struct{})
+	go func() {
+		defer close(startDone)
+		_, _ = m.Start(StartConfig{ID: "s1"}) // self-heal: evicts + closes the first session
+	}()
+
+	// Poll from a separate goroutine: with the lock held across Close, this call
+	// blocks rather than returning, so the deadline below is the only way out.
+	swapped := make(chan struct{})
+	go func() {
+		for {
+			if tok := m.GetTokenForSession("s1"); tok != "" && tok != first.Token {
+				close(swapped)
+				return
+			}
+			time.Sleep(time.Millisecond)
+		}
+	}()
+
+	select {
+	case <-swapped:
+	case <-time.After(time.Second):
+		t.Fatal("Start held m.mu across the evicted session's Close: manager reads blocked > 1s")
+	}
+
+	unblockClose()
+	<-startDone
 }
 
 func TestManager_StartWithFakeSpawn_SpawnErrorPropagates(t *testing.T) {
