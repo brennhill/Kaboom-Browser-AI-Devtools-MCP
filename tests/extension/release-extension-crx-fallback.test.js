@@ -12,11 +12,11 @@ import { fileURLToPath } from 'node:url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const REPO_ROOT = path.resolve(__dirname, '../..')
-const BUILD_CRX = path.join(REPO_ROOT, 'scripts', 'build-crx.js')
+const BUILD_CRX = path.join(REPO_ROOT, 'scripts', 'release', 'build-crx.js')
 
 function getFallbackZipBlock(fileText) {
   const start = fileText.indexOf("console.log('📦 Creating extension zip...')")
-  assert.notStrictEqual(start, -1, 'Fallback zip section should exist in scripts/build-crx.js')
+  assert.notStrictEqual(start, -1, 'Fallback zip section should exist in scripts/release/build-crx.js')
 
   const end = fileText.indexOf('if (!fs.existsSync(TEMP_ZIP))', start)
   assert.notStrictEqual(end, -1, 'Fallback zip section should include TEMP_ZIP existence check')

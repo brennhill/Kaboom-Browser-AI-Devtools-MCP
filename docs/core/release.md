@@ -172,7 +172,7 @@ Go `wire_*.go` and TS `wire-*.ts` payload contracts must stay in sync.
 
 ```bash
 make check-wire-drift
-node scripts/check-sync-wire-drift.js
+node scripts/contracts/check-sync-wire-drift.js
 ```
 
 ## One-Click Release (recommended)

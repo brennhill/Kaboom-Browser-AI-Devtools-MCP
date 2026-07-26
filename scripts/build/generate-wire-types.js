@@ -7,8 +7,8 @@
 // Go structs are the source of truth; this script produces matching TS interfaces.
 //
 // Usage:
-//   node scripts/generate-wire-types.js          # Generate TS files
-//   node scripts/generate-wire-types.js --check   # Check for drift (exit non-zero if different)
+//   node scripts/build/generate-wire-types.js          # Generate TS files
+//   node scripts/build/generate-wire-types.js --check   # Check for drift (exit non-zero if different)
 
 import fs from 'fs'
 import path from 'path'
@@ -16,7 +16,7 @@ import { fileURLToPath } from 'url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-const ROOT = path.resolve(__dirname, '..')
+const ROOT = path.resolve(__dirname, '..', '..')
 
 // ============================================
 // Configuration
@@ -302,7 +302,7 @@ function generateTSFile(goContent, goPath, _tsPath) {
   // Generated header
   lines.push('// THIS FILE IS GENERATED — do not edit by hand.')
   lines.push('// Source: ' + goPath)
-  lines.push('// Generator: scripts/generate-wire-types.js')
+  lines.push('// Generator: scripts/build/generate-wire-types.js')
   lines.push('')
 
   // @fileoverview block
@@ -391,7 +391,7 @@ for (const pair of WIRE_PAIRS) {
 if (isCheck) {
   if (driftCount > 0) {
     console.error(`\nFAIL: ${driftCount} file(s) have wire type drift`)
-    console.error('Run `node scripts/generate-wire-types.js` to regenerate')
+    console.error('Run `node scripts/build/generate-wire-types.js` to regenerate')
     process.exit(1)
   } else {
     console.log(`\nOK: ${WIRE_PAIRS.length} wire type files verified, zero drift`)

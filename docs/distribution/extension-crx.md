@@ -198,7 +198,7 @@ openssl genrsa 2048 > ~/.kaboom/extension-signing-key.pem
 
 ### Extension ID doesn't match
 - Different key = different ID
-- Verify key file path in `scripts/build-crx.js`
+- Verify key file path in `scripts/release/build-crx.js`
 
 ### CRX file corrupted
 - Check `extension/manifest.json` exists

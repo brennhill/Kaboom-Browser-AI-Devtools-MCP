@@ -7,7 +7,7 @@
 // Compares json tags in wire_*.go files against interface fields in wire-*.ts files.
 // Exits non-zero if drift is detected.
 //
-// Usage: node scripts/check-wire-drift.js
+// Usage: node scripts/contracts/check-wire-drift.js
 
 import fs from 'fs'
 import path from 'path'
@@ -150,7 +150,7 @@ function extractTsFields(content, typeName) {
 // Main
 // ============================================
 
-const rootDir = path.resolve(__dirname, '..')
+const rootDir = path.resolve(__dirname, '..', '..')
 let errors = 0
 let checked = 0
 

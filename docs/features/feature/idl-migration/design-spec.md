@@ -30,7 +30,7 @@ The Go/TS boundary has two distinct contract surfaces:
 - `internal/performance/wire_performance.go` -> `src/types/wire/wire-performance-snapshot.ts`
 
 These are already partially automated. Go structs are the source of truth.
-`scripts/generate-wire-types.js` generates the TS side. `scripts/check-wire-drift.js`
+`scripts/build/generate-wire-types.js` generates the TS side. `scripts/contracts/check-wire-drift.js`
 validates alignment. The TS files carry a `// THIS FILE IS GENERATED` header.
 
 **Tool schemas** (MCP tool input schemas, served to LLM clients):
@@ -215,7 +215,7 @@ schema itself, co-locating intent with definition.
    to what exists today.
 3. Validate: `diff` generated output against current files. Must be byte-identical
    (modulo the `_gen.go` suffix and updated header comments).
-4. Delete `scripts/generate-wire-types.js` and `scripts/check-wire-drift.js`.
+4. Delete `scripts/build/generate-wire-types.js` and `scripts/contracts/check-wire-drift.js`.
    The new generator subsumes both.
 5. Update `Makefile` targets: `generate-wire-types` -> `generate-from-idl`.
 

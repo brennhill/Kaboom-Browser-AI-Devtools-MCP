@@ -4,11 +4,11 @@ feature_id: feature-custom-event-api
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-26
 code_paths:
   - src/inject/api.ts
   - src/inject.ts
-  - scripts/bundle-content.js
+  - scripts/build/bundle-content.js
 test_paths:
   - tests/extension/inject-context-api-actions.test.js
   - tests/extension/inject-v5-wiring.test.js
@@ -41,4 +41,4 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-The Kaboom developer API is exposed through `window.__kaboom`, and the injected bundle version contract is defined through the `__KABOOM_VERSION__` build symbol in `scripts/bundle-content.js`.
+The Kaboom developer API is exposed through `window.__kaboom`, and the injected bundle version contract is defined through the `__KABOOM_VERSION__` build symbol in `scripts/build/bundle-content.js`.

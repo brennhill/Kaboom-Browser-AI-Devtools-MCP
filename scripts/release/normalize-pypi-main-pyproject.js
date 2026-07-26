@@ -13,7 +13,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const ROOT = path.join(__dirname, '..')
+const ROOT = path.join(__dirname, '..', '..')
 const MAIN_PYPROJECT = path.join(ROOT, 'pypi', 'kaboom-agentic-browser', 'pyproject.toml')
 const VERSION_FILE = path.join(ROOT, 'VERSION')
 const MAIN_SCRIPT_ENTRYPOINT = 'kaboom_agentic_browser.__main__:main'

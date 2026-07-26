@@ -27,11 +27,11 @@ last_verified_date: 2026-03-05
 
 ## Contracts and Validation
 
-- Content contract: `scripts/docs/check-gokaboom-content-contract.mjs`
-- Style contract: `scripts/docs/check-content-style-contract.mjs`
-- Vale style gate: `scripts/docs/run-vale-on-changed.mjs` + `.vale/styles/Kaboom/*`
-- Reference schema sync contract: `scripts/docs/check-reference-schema-sync.mjs`
-- Feature bundle contract: `scripts/docs/check-feature-bundles.js`
+- Content contract: `scripts/docs/site/check-gokaboom-content-contract.mjs`
+- Style contract: `scripts/docs/site/check-content-style-contract.mjs`
+- Vale style gate: `scripts/docs/site/run-vale-on-changed.mjs` + `.vale/styles/Kaboom/*`
+- Reference schema sync contract: `scripts/docs/reference/check-reference-schema-sync.mjs`
+- Feature bundle contract: `scripts/docs/features/check-feature-bundles.js`
 - Version surface contract: `check-gokaboom-content-contract.mjs` enforces global docs version references in footer + markdown/LLM outputs.
 
 ## Data/Content Sources

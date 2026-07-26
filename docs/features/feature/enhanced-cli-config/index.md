@@ -7,7 +7,7 @@ owners: []
 last_reviewed: 2026-07-26
 code_paths:
   - Makefile
-  - scripts/build-crx.js
+  - scripts/release/build-crx.js
   - cmd/browser-agent/native_install.go
   - cmd/browser-agent/native_install_connect.go
   - npm/kaboom-agentic-browser/lib/extension.js

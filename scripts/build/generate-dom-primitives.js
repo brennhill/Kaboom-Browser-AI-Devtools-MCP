@@ -23,8 +23,8 @@
  * Each directive is replaced with the contents of scripts/templates/partials/<filename>.
  *
  * Usage:
- *   node scripts/generate-dom-primitives.js         # write/update generated file
- *   node scripts/generate-dom-primitives.js --check # exit non-zero if out of date
+ *   node scripts/build/generate-dom-primitives.js         # write/update generated file
+ *   node scripts/build/generate-dom-primitives.js --check # exit non-zero if out of date
  */
 
 import fs from 'node:fs'
@@ -32,7 +32,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const ROOT = path.join(__dirname, '..')
+const ROOT = path.join(__dirname, '..', '..')
 
 const TEMPLATE_PATH = path.join(ROOT, 'scripts', 'templates', 'dom-primitives.ts.tpl')
 const PARTIALS_DIR = path.join(ROOT, 'scripts', 'templates', 'partials')
@@ -45,7 +45,7 @@ const GENERATED_BANNER = `// AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
 //   _dom-intent.tpl, _dom-intent-actions.tpl, _dom-ranking.tpl,
 //   _dom-action-helpers.tpl, _dom-action-handlers-core.tpl,
 //   _dom-action-handlers-input.tpl, _dom-action-handlers-overlay.tpl
-// Generator: scripts/generate-dom-primitives.js
+// Generator: scripts/build/generate-dom-primitives.js
 
 `
 
@@ -84,7 +84,7 @@ function main() {
   if (CHECK_ONLY) {
     if (isDrifted) {
       console.error('dom-primitives.ts is out of date.')
-      console.error('Run: node scripts/generate-dom-primitives.js')
+      console.error('Run: node scripts/build/generate-dom-primitives.js')
       process.exit(1)
     }
     console.log('dom-primitives.ts is up to date.')

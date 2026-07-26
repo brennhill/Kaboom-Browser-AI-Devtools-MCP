@@ -45,7 +45,7 @@ jobs:
           echo "Changed files:"
           echo "$CHANGED_FILES"
 
-          if echo "$CHANGED_FILES" | grep -Eq '^(cmd/browser-agent/|internal/schema/|internal/types/|internal/performance/|scripts/docs/|scripts/generate-wire-types\.js|docs/features/|docs/architecture/flow-maps/|package\.json|Makefile|\.github/workflows/ci\.yml)'; then
+          if echo "$CHANGED_FILES" | grep -Eq '^(cmd/browser-agent/|internal/schema/|internal/types/|internal/performance/|scripts/docs/|scripts/build/generate-wire-types\.js|docs/features/|docs/architecture/flow-maps/|package\.json|Makefile|\.github/workflows/ci\.yml)'; then
             echo "run_gate=true" >> "$GITHUB_OUTPUT"
             echo "verify-llm gate enabled for this PR."
           else
@@ -123,19 +123,19 @@ jobs:
         run: go test ./cmd/browser-agent -run TestConnectWithRetriesRejectsVersionMismatch -count=1
 
       - name: Upgrade script contract tests
-        run: node --test scripts/install-upgrade-regression.contract.test.mjs
+        run: node --test scripts/release/install-upgrade-regression.contract.test.mjs
 
       - name: npm wrapper tests
-        run: node scripts/run-npm-wrapper-tests.js
+        run: node scripts/release/run-npm-wrapper-tests.js
 
       - name: Platform-binary publish guard tests
-        run: node --test scripts/verify-platform-binaries.test.mjs
+        run: node --test scripts/release/verify-platform-binaries.test.mjs
 
       # PyPI cleanup tests removed: pypi/ packaging tree no longer exists in this repo.
-      # scripts/install-upgrade-regression.mjs skips its PyPI stage when pypi/ is absent.
+      # scripts/release/install-upgrade-regression.mjs skips its PyPI stage when pypi/ is absent.
 
       - name: End-to-end upgrade regression
-        run: node scripts/install-upgrade-regression.mjs
+        run: node scripts/release/install-upgrade-regression.mjs
 
   go:
     name: Go Checks
@@ -242,7 +242,7 @@ jobs:
       - name: Wire drift gate (Go <-> TS payload contracts)
         run: |
           make check-wire-drift
-          node scripts/check-sync-wire-drift.js
+          node scripts/contracts/check-sync-wire-drift.js
 
       - name: ESLint (errors only)
         run: npx eslint extension/ tests/extension/ --max-warnings=50

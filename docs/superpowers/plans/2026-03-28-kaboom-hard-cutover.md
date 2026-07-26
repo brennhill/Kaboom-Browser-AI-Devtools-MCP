@@ -53,7 +53,7 @@
 - `gokaboom.dev/src/content/docs/*.mdx`
 - `gokaboom.dev/src/pages/*.ts`
 - `gokaboom.dev/src/pages/markdown/[...slug].md.ts`
-- `scripts/docs/check-gokaboom-content-contract.mjs`
+- `scripts/docs/site/check-gokaboom-content-contract.mjs`
 
 ### Root Metadata And Build Paths
 
@@ -252,7 +252,7 @@
 - Modify: `gokaboom.dev/src/pages/llms-full.txt.ts`
 - Modify: `gokaboom.dev/src/pages/llms.txt.ts`
 - Modify: `gokaboom.dev/src/pages/markdown/[...slug].md.ts`
-- Move: `scripts/docs/check-gokaboom-content-contract.mjs` -> `scripts/docs/check-gokaboom-content-contract.mjs`
+- Move: `scripts/docs/site/check-gokaboom-content-contract.mjs` -> `scripts/docs/site/check-gokaboom-content-contract.mjs`
 - Create: `tests/site/gokaboom-domain-contract.test.js`
 
 - [ ] **Step 1: Write the failing test**

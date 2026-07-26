@@ -14,7 +14,7 @@ test('operator scripts use Kaboom binary names and cleanup semantics', () => {
   const mcpComprehensive = read('scripts/test-mcp-comprehensive.sh')
   const cursorSimulation = read('scripts/test-cursor-simulation.sh')
   const rebuild = read('scripts/rebuild.sh')
-  const buildCrx = read('scripts/build-crx.js')
+  const buildCrx = read('scripts/release/build-crx.js')
   const killTestServers = read('scripts/kill-test-servers.sh')
 
   assert.match(stdioSilence, /WRAPPER="kaboom-agentic-browser"/)

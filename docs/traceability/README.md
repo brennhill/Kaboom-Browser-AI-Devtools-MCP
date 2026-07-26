@@ -14,4 +14,4 @@ Use this directory to map requirements to implementation and tests.
 
 ## Generation
 
-- Run `node scripts/docs/normalize-docs.js`.
+- Run `node scripts/docs/features/normalize-docs.js`.

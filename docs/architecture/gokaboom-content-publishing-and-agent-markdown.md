@@ -2,7 +2,7 @@
 doc_type: flow_map
 flow_id: gokaboom-content-publishing-and-agent-markdown
 status: active
-last_reviewed: 2026-03-28
+last_reviewed: 2026-07-26
 owners:
   - Brenn
 feature_ids:
@@ -12,15 +12,15 @@ entrypoints:
   - gokaboom.dev/src/content/docs/downloads.md
   - gokaboom.dev/src/pages/[...slug].md.ts
   - gokaboom.dev/src/pages/search-synonyms.json.ts
-  - scripts/docs/check-docs-quality-gates.mjs
-  - scripts/docs/check-site-content-ids.mjs
-  - scripts/docs/check-gokaboom-content-contract.mjs
-  - scripts/docs/check-content-style-contract.mjs
-  - scripts/docs/check-downloads-page-contract.mjs
-  - scripts/docs/check-landing-layout-contract.mjs
-  - scripts/docs/check-light-theme-contract.mjs
-  - scripts/docs/check-reference-schema-sync.mjs
-  - scripts/docs/run-vale-on-changed.mjs
+  - scripts/docs/features/check-docs-quality-gates.mjs
+  - scripts/docs/site/check-site-content-ids.mjs
+  - scripts/docs/site/check-gokaboom-content-contract.mjs
+  - scripts/docs/site/check-content-style-contract.mjs
+  - scripts/docs/site/check-downloads-page-contract.mjs
+  - scripts/docs/site/check-landing-layout-contract.mjs
+  - scripts/docs/site/check-light-theme-contract.mjs
+  - scripts/docs/reference/check-reference-schema-sync.mjs
+  - scripts/docs/site/run-vale-on-changed.mjs
   - .vale.ini
 code_paths:
   - package.json
@@ -66,34 +66,34 @@ code_paths:
   - gokaboom.dev/src/pages/search-synonyms.json.ts
   - gokaboom.dev/src/utils/markdownPaths.ts
   - gokaboom.dev/src/utils/siteVersion.ts
-  - scripts/docs/check-docs-quality-gates.mjs
-  - scripts/docs/check-site-content-ids.mjs
-  - scripts/docs/check-gokaboom-content-contract.mjs
-  - scripts/docs/check-content-style-contract.mjs
-  - scripts/docs/check-downloads-page-contract.mjs
-  - scripts/docs/check-landing-layout-contract.mjs
-  - scripts/docs/check-light-theme-contract.mjs
-  - scripts/docs/check-reference-schema-sync.mjs
-  - scripts/docs/generate-reference-executable-examples.mjs
-  - scripts/docs/normalize-site-tags.mjs
-  - scripts/docs/sync-verification-metadata.mjs
-  - scripts/docs/run-vale-on-changed.mjs
-  - scripts/docs/check-feature-bundles.js
+  - scripts/docs/features/check-docs-quality-gates.mjs
+  - scripts/docs/site/check-site-content-ids.mjs
+  - scripts/docs/site/check-gokaboom-content-contract.mjs
+  - scripts/docs/site/check-content-style-contract.mjs
+  - scripts/docs/site/check-downloads-page-contract.mjs
+  - scripts/docs/site/check-landing-layout-contract.mjs
+  - scripts/docs/site/check-light-theme-contract.mjs
+  - scripts/docs/reference/check-reference-schema-sync.mjs
+  - scripts/docs/reference/generate-reference-executable-examples.mjs
+  - scripts/docs/site/normalize-site-tags.mjs
+  - scripts/docs/features/sync-verification-metadata.mjs
+  - scripts/docs/site/run-vale-on-changed.mjs
+  - scripts/docs/features/check-feature-bundles.js
   - .github/workflows/ci.yml
 test_paths:
-  - scripts/docs/check-docs-quality-gates.mjs
-  - scripts/docs/check-site-content-ids.mjs
-  - scripts/docs/check-feature-bundles.js
-  - scripts/docs/check-gokaboom-content-contract.mjs
-  - scripts/docs/check-content-style-contract.mjs
-  - scripts/docs/check-downloads-page-contract.mjs
-  - scripts/docs/check-landing-layout-contract.mjs
-  - scripts/docs/check-light-theme-contract.mjs
-  - scripts/docs/check-reference-schema-sync.mjs
-  - scripts/docs/generate-reference-executable-examples.mjs
-  - scripts/docs/normalize-site-tags.mjs
-  - scripts/docs/sync-verification-metadata.mjs
-  - scripts/docs/run-vale-on-changed.mjs
+  - scripts/docs/features/check-docs-quality-gates.mjs
+  - scripts/docs/site/check-site-content-ids.mjs
+  - scripts/docs/features/check-feature-bundles.js
+  - scripts/docs/site/check-gokaboom-content-contract.mjs
+  - scripts/docs/site/check-content-style-contract.mjs
+  - scripts/docs/site/check-downloads-page-contract.mjs
+  - scripts/docs/site/check-landing-layout-contract.mjs
+  - scripts/docs/site/check-light-theme-contract.mjs
+  - scripts/docs/reference/check-reference-schema-sync.mjs
+  - scripts/docs/reference/generate-reference-executable-examples.mjs
+  - scripts/docs/site/normalize-site-tags.mjs
+  - scripts/docs/features/sync-verification-metadata.mjs
+  - scripts/docs/site/run-vale-on-changed.mjs
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-28
 ---
@@ -110,15 +110,15 @@ Covers complete homepage theme/layout replacement and messaging updates (includi
 - Downloads page content in `gokaboom.dev/src/content/docs/downloads.md`
 - Agent markdown mirror route in `gokaboom.dev/src/pages/[...slug].md.ts`
 - Synonym dictionary endpoint in `gokaboom.dev/src/pages/search-synonyms.json.ts`
-- Phase-based docs quality gate in `scripts/docs/check-docs-quality-gates.mjs`
-- Duplicate content-ID guard in `scripts/docs/check-site-content-ids.mjs`
-- Content contract gate in `scripts/docs/check-gokaboom-content-contract.mjs`
-- Downloads page contract gate in `scripts/docs/check-downloads-page-contract.mjs`
-- Landing layout contract gate in `scripts/docs/check-landing-layout-contract.mjs`
-- Light-theme contract gate in `scripts/docs/check-light-theme-contract.mjs`
-- Reference/schema sync gate in `scripts/docs/check-reference-schema-sync.mjs`
-- Style contract gate in `scripts/docs/check-content-style-contract.mjs`
-- Vale plain-language gate in `scripts/docs/run-vale-on-changed.mjs`
+- Phase-based docs quality gate in `scripts/docs/features/check-docs-quality-gates.mjs`
+- Duplicate content-ID guard in `scripts/docs/site/check-site-content-ids.mjs`
+- Content contract gate in `scripts/docs/site/check-gokaboom-content-contract.mjs`
+- Downloads page contract gate in `scripts/docs/site/check-downloads-page-contract.mjs`
+- Landing layout contract gate in `scripts/docs/site/check-landing-layout-contract.mjs`
+- Light-theme contract gate in `scripts/docs/site/check-light-theme-contract.mjs`
+- Reference/schema sync gate in `scripts/docs/reference/check-reference-schema-sync.mjs`
+- Style contract gate in `scripts/docs/site/check-content-style-contract.mjs`
+- Vale plain-language gate in `scripts/docs/site/run-vale-on-changed.mjs`
 
 ## Primary Flow
 
@@ -186,28 +186,28 @@ Covers complete homepage theme/layout replacement and messaging updates (includi
 - `gokaboom.dev/src/pages/markdown/[...slug].md.ts`
 - `gokaboom.dev/src/utils/markdownPaths.ts`
 - `gokaboom.dev/src/utils/siteVersion.ts`
-- `scripts/docs/check-gokaboom-content-contract.mjs`
-- `scripts/docs/check-content-style-contract.mjs`
-- `scripts/docs/check-downloads-page-contract.mjs`
-- `scripts/docs/check-landing-layout-contract.mjs`
-- `scripts/docs/check-light-theme-contract.mjs`
-- `scripts/docs/check-reference-schema-sync.mjs`
-- `scripts/docs/run-vale-on-changed.mjs`
-- `scripts/docs/check-feature-bundles.js`
+- `scripts/docs/site/check-gokaboom-content-contract.mjs`
+- `scripts/docs/site/check-content-style-contract.mjs`
+- `scripts/docs/site/check-downloads-page-contract.mjs`
+- `scripts/docs/site/check-landing-layout-contract.mjs`
+- `scripts/docs/site/check-light-theme-contract.mjs`
+- `scripts/docs/reference/check-reference-schema-sync.mjs`
+- `scripts/docs/site/run-vale-on-changed.mjs`
+- `scripts/docs/features/check-feature-bundles.js`
 - `.vale.ini`
 - `.vale/styles/*.yml`
 - `.github/workflows/ci.yml`
 
 ## Test Paths
 
-- `scripts/docs/check-gokaboom-content-contract.mjs`
-- `scripts/docs/check-content-style-contract.mjs`
-- `scripts/docs/check-downloads-page-contract.mjs`
-- `scripts/docs/check-landing-layout-contract.mjs`
-- `scripts/docs/check-light-theme-contract.mjs`
-- `scripts/docs/check-reference-schema-sync.mjs`
-- `scripts/docs/check-feature-bundles.js`
-- `scripts/docs/run-vale-on-changed.mjs`
+- `scripts/docs/site/check-gokaboom-content-contract.mjs`
+- `scripts/docs/site/check-content-style-contract.mjs`
+- `scripts/docs/site/check-downloads-page-contract.mjs`
+- `scripts/docs/site/check-landing-layout-contract.mjs`
+- `scripts/docs/site/check-light-theme-contract.mjs`
+- `scripts/docs/reference/check-reference-schema-sync.mjs`
+- `scripts/docs/features/check-feature-bundles.js`
+- `scripts/docs/site/run-vale-on-changed.mjs`
 
 ## Edit Guardrails
 

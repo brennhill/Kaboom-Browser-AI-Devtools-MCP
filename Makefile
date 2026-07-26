@@ -46,10 +46,10 @@ clean:
 
 # Generate TypeScript wire types from Go source of truth
 generate-wire-types:
-	@node scripts/generate-wire-types.js
+	@node scripts/build/generate-wire-types.js
 
 generate-dom-primitives:
-	@node scripts/generate-dom-primitives.js
+	@node scripts/build/generate-dom-primitives.js
 
 # Compile TypeScript to JavaScript (REQUIRED before tests)
 compile-ts: generate-wire-types generate-dom-primitives
@@ -60,7 +60,7 @@ compile-ts: generate-wire-types generate-dom-primitives
 		exit 1; \
 	fi
 	@echo "=== Bundling extension scripts ==="
-	@node scripts/bundle-content.js
+	@node scripts/build/bundle-content.js
 	@if [ ! -f extension/content.bundled.js ]; then \
 		echo "❌ ERROR: Content script bundling failed"; \
 		exit 1; \
@@ -246,7 +246,7 @@ npm-binaries: build compile-ts
 	fi
 	@echo "=== Verifying every platform package ships its binaries (publish guard) ==="
 	@for d in darwin-arm64 darwin-x64 linux-arm64 linux-x64 win32-x64; do \
-		node scripts/verify-platform-binaries.js npm/$$d || exit 1; \
+		node scripts/release/verify-platform-binaries.js npm/$$d || exit 1; \
 	done
 	@echo "✅ NPM binaries and extension ready with version $(VERSION)"
 
@@ -326,13 +326,13 @@ typecheck:
 check: check-file-length lint lint-boundaries lint-json-casing format typecheck check-invariants
 
 check-wire-drift:
-	@node scripts/generate-wire-types.js --check
+	@node scripts/build/generate-wire-types.js --check
 
 check-ts-json-casing:
-	@node scripts/check-ts-json-casing.js
+	@node scripts/contracts/check-ts-json-casing.js
 
 check-invariants: check-wire-drift check-ts-json-casing
-	@node scripts/check-sync-wire-drift.js
+	@node scripts/contracts/check-sync-wire-drift.js
 	@./scripts/check-esm-extensions.sh
 	@./scripts/check-sync-invariants.sh
 	@./scripts/check-bridge-stdout-invariant.sh
@@ -362,7 +362,7 @@ extension-zip:
 	@ls -lh $(BUILD_DIR)/kaboom-extension-v$(VERSION).zip
 
 extension-crx:
-	@node scripts/build-crx.js
+	@node scripts/release/build-crx.js
 
 release-check: ci-local ci-e2e smoke-mcp-transport
 	@echo "All release checks passed (CI + E2E)"
@@ -431,7 +431,7 @@ verify-all: lint security-check test-cover test-js
 # Typical runtime target: ~60-120 seconds on a warm cache.
 verify-llm:
 	@echo "Running verify-llm fast gate (schema + docs + core contracts)..."
-	@node scripts/generate-wire-types.js --check
+	@node scripts/build/generate-wire-types.js --check
 	@npm run docs:lint:integrity
 	@npm run docs:check:strict
 	@npm run docs:lint:content-contract
@@ -463,15 +463,15 @@ quality-gate: check-file-length lint lint-hardening lint-dead lint-circular lint
 # Upgrade/install guardrail suite: prevents stale daemons from surviving release upgrades.
 test-upgrade-guards:
 	go test ./cmd/browser-agent -run 'TestConnectWithRetriesRejectsVersionMismatch' -count=1
-	node --test scripts/install-upgrade-regression.contract.test.mjs
-	node scripts/run-npm-wrapper-tests.js
-	node --test scripts/verify-platform-binaries.test.mjs
+	node --test scripts/release/install-upgrade-regression.contract.test.mjs
+	node scripts/release/run-npm-wrapper-tests.js
+	node --test scripts/release/verify-platform-binaries.test.mjs
 	@if [ -d pypi/kaboom-agentic-browser/tests ]; then \
 		python3 -m unittest discover -s pypi/kaboom-agentic-browser/tests -p 'test_*.py'; \
 	else \
 		echo "pypi/ not present; skipping PyPI cleanup tests"; \
 	fi
-	node scripts/install-upgrade-regression.mjs
+	node scripts/release/install-upgrade-regression.mjs
 
 # Release gate for daemon cleanup/version safety.
 release-gate: quality-gate test-upgrade-guards
@@ -585,7 +585,7 @@ pypi-preflight:
 
 pypi-schema-check:
 	@echo "Checking PyPI main pyproject normalization..."
-	@node scripts/normalize-pypi-main-pyproject.js --check --validate
+	@node scripts/release/normalize-pypi-main-pyproject.js --check --validate
 	@python3 -c 'import sys,tomllib; p="pypi/kaboom-agentic-browser/pyproject.toml"; d=tomllib.load(open(p,"rb")); project=d.get("project", {}); scripts=project.get("scripts", {}); \
 	(isinstance(scripts, dict) or (print("ERROR: [project.scripts] must be a TOML table"), sys.exit(1))); \
 	("dependencies" not in scripts or (print("ERROR: project.scripts.dependencies must not exist"), sys.exit(1))); \
@@ -594,9 +594,9 @@ pypi-schema-check:
 pypi-build: pypi-preflight pypi-schema-check
 	@$(MAKE) pypi-binaries
 	@echo "Normalizing PyPI main pyproject metadata..."
-	@node scripts/normalize-pypi-main-pyproject.js
+	@node scripts/release/normalize-pypi-main-pyproject.js
 	@echo "Validating PyPI main pyproject metadata..."
-	@node scripts/normalize-pypi-main-pyproject.js --validate
+	@node scripts/release/normalize-pypi-main-pyproject.js --validate
 	@echo "Building PyPI wheels..."
 	@for pkg in pypi/kaboom-agentic-browser-*/; do \
 		echo "Building $$pkg..."; \

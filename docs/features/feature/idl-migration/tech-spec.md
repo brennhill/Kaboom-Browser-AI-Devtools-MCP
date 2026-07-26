@@ -10,7 +10,7 @@ last_verified_date: 2026-03-05
 # IDL Migration Tech Spec
 
 ## Current State
-- Wire TS files are generated from Go structs (`scripts/generate-wire-types.js`).
+- Wire TS files are generated from Go structs (`scripts/build/generate-wire-types.js`).
 - Tool schemas are still hand-authored Go `map[string]any` structures.
 
 ## Target Direction

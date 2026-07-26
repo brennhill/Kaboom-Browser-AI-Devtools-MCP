@@ -9,7 +9,8 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
-const libDir = path.join(here, '..', 'npm', 'kaboom-agentic-browser', 'lib')
+const repoRoot = path.join(here, '..', '..')
+const libDir = path.join(repoRoot, 'npm', 'kaboom-agentic-browser', 'lib')
 
 const files = readdirSync(libDir)
   .filter((name) => name.endsWith('.test.js'))

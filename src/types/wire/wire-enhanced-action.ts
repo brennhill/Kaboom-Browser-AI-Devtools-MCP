@@ -1,6 +1,6 @@
 // THIS FILE IS GENERATED — do not edit by hand.
 // Source: internal/types/wire_enhanced_action.go
-// Generator: scripts/generate-wire-types.js
+// Generator: scripts/build/generate-wire-types.js
 
 /**
  * @fileoverview Wire type for enhanced actions — matches internal/types/wire_enhanced_action.go
