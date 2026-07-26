@@ -10,13 +10,15 @@ Key types:
   - Deps: interface declaring dependencies required from the host server.
   - ComputedStylesArgs: parsed arguments for computed styles queries.
   - FormsArgs: parsed arguments for form discovery queries.
-  - Region: rectangular area of changed pixels in image diffs.
+  - LinkValidationParams: parameters for server-side link verification.
 
 Key functions:
   - ParseComputedStylesArgs: validates computed styles query parameters.
   - ParseFormsArgs: validates form discovery query parameters.
-  - DiffImages: computes pixel-level differences between two screenshots.
-  - ValidateURLs: validates batches of URLs concurrently with SSRF-safe transport.
+  - ValidateLinksServerSide: validates batches of URLs concurrently with SSRF-safe transport.
   - ParseVisualBaselineArgs: validates visual baseline save/diff parameters.
+
+Subpackages:
+  - imagediff: pure-Go screenshot pixel diffing behind CompareImages/WriteDiffImage.
 */
 package analyze

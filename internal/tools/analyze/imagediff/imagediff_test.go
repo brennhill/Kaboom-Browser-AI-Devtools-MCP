@@ -1,8 +1,8 @@
 // Purpose: Tests for image pixel-diff computation.
 // Docs: docs/features/feature/analyze-tool/index.md
 
-// image_diff_test.go — Tests for pure Go pixel-diff comparison.
-package analyze
+// imagediff_test.go — Tests for pure Go pixel-diff comparison.
+package imagediff
 
 import (
 	"image"
@@ -212,5 +212,30 @@ func TestFindChangedRegions_MultipleDisjoint(t *testing.T) {
 	regions := findChangedRegions(changed, 1)
 	if len(regions) != 2 {
 		t.Fatalf("expected 2 regions, got %d", len(regions))
+	}
+}
+
+// Moved here from analyze/visual_diff_test.go: it exercises DiffVerdict, which is
+// image-diff code, not visual-baseline argument parsing. Leaving it behind would
+// have left DiffVerdict reading 0.0% in this package's coverage profile.
+func TestVisualDiffVerdict(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		pct     float64
+		verdict string
+	}{
+		{0, "identical"},
+		{0.5, "minor_changes"},
+		{4.9, "minor_changes"},
+		{5.0, "major_changes"},
+		{24.9, "major_changes"},
+		{25.0, "completely_different"},
+		{100, "completely_different"},
+	}
+	for _, tc := range tests {
+		v := DiffVerdict(tc.pct)
+		if v != tc.verdict {
+			t.Errorf("DiffVerdict(%.1f) = %q, want %q", tc.pct, v, tc.verdict)
+		}
 	}
 }

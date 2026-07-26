@@ -1,13 +1,26 @@
-// Purpose: Renders side-by-side diff images with highlighted change regions to PNG files.
-// Why: Separates visual output rendering from grid construction, region detection, and I/O.
-package analyze
+// Purpose: Reads baseline/current screenshots from disk and writes the rendered diff PNG.
+// Why: Concentrates every filesystem touch in the package into one file, so the diff
+// computation in imagediff.go, grid.go and regions.go stays pure and testable in memory.
+package imagediff
 
 import (
 	"image"
 	"image/color"
+	_ "image/jpeg" // Register JPEG decoder.
 	"image/png"
 	"os"
 )
+
+// LoadImage decodes a PNG or JPEG image from the given file path.
+func LoadImage(path string) (image.Image, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	img, _, err := image.Decode(f)
+	return img, err
+}
 
 // WriteDiffImage renders a side-by-side diff image highlighting changed pixels and saves it to path.
 func WriteDiffImage(baseline, current image.Image, changed [][]bool, path string) error {

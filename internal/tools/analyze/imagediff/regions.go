@@ -1,6 +1,6 @@
 // Purpose: Detects contiguous changed regions in the pixel diff grid via flood-fill.
 // Why: Separates region detection from grid construction, rendering, and I/O.
-package analyze
+package imagediff
 
 func findChangedRegions(changed [][]bool, minSize int) []Region {
 	h := len(changed)

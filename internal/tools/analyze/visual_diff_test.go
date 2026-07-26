@@ -65,25 +65,3 @@ func TestGetVisualDiff_DefaultThreshold(t *testing.T) {
 		t.Errorf("expected default threshold 30, got %d", parsed.Threshold)
 	}
 }
-
-func TestVisualDiffVerdict(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		pct     float64
-		verdict string
-	}{
-		{0, "identical"},
-		{0.5, "minor_changes"},
-		{4.9, "minor_changes"},
-		{5.0, "major_changes"},
-		{24.9, "major_changes"},
-		{25.0, "completely_different"},
-		{100, "completely_different"},
-	}
-	for _, tc := range tests {
-		v := DiffVerdict(tc.pct)
-		if v != tc.verdict {
-			t.Errorf("DiffVerdict(%.1f) = %q, want %q", tc.pct, v, tc.verdict)
-		}
-	}
-}
