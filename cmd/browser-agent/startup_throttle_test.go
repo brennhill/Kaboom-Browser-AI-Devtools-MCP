@@ -171,3 +171,75 @@ func TestApplyStartupRestartThrottle_EngagesPastThreshold(t *testing.T) {
 		t.Fatalf("injected sleep must receive the delay, got %s", slept)
 	}
 }
+
+// TestCleanShutdownResetsRestartThrottle is the regression for the release-gate break:
+// legitimate rapid stop/start cycles (which the test suite and real users perform) must
+// NOT accumulate toward the throttle. A clean shutdown clears the history, so a rapid
+// restart right after a clean stop is never throttled — only an uncleared (crash) run is.
+func TestCleanShutdownResetsRestartThrottle(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("KABOOM_STATE_DIR", dir)
+
+	oldNow, oldEpoch, oldSleep, oldVer := daemonNow, daemonInstallEpoch, daemonThrottleSleep, version
+	defer func() {
+		daemonNow = oldNow
+		daemonInstallEpoch = oldEpoch
+		daemonThrottleSleep = oldSleep
+		version = oldVer
+	}()
+	version = "9.9.9"
+	daemonInstallEpoch = func() int64 { return 777 }
+	base := time.Unix(1_700_000_000, 0)
+	fakeNow := base
+	daemonNow = func() time.Time { return fakeNow }
+	daemonThrottleSleep = func(time.Duration) {}
+
+	server, err := NewServer(filepath.Join(dir, "throttle-reset.log"), 100)
+	if err != nil {
+		t.Fatalf("NewServer error = %v", err)
+	}
+	defer server.logs.shutdownAsyncLogger(2 * time.Second)
+
+	// Drive rapid starts past the threshold so the backoff is engaged.
+	for i := 0; i <= restartThrottleMax; i++ {
+		fakeNow = base.Add(time.Duration(i) * time.Second)
+		_ = applyStartupRestartThrottle(server, 7890)
+	}
+	fakeNow = base.Add(time.Duration(restartThrottleMax+1) * time.Second)
+	if d := applyStartupRestartThrottle(server, 7890); d <= 0 {
+		t.Fatalf("precondition: throttle should be engaged before the clean shutdown, got %s", d)
+	}
+
+	// A clean shutdown clears the history...
+	clearRestartHistoryOnCleanShutdown(server, 7890)
+
+	// ...so the very next rapid start is NOT throttled (counter reset).
+	fakeNow = base.Add(time.Duration(restartThrottleMax+2) * time.Second)
+	if d := applyStartupRestartThrottle(server, 7890); d != 0 {
+		t.Fatalf("after a clean shutdown, a rapid restart must not be throttled, got %s", d)
+	}
+}
+
+// TestClearRestartHistoryOnCleanShutdown asserts the clear removes the history file and
+// is a no-op (no error/log) when the file is already absent.
+func TestClearRestartHistoryOnCleanShutdown(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("KABOOM_STATE_DIR", dir)
+
+	server, err := NewServer(filepath.Join(dir, "clear.log"), 100)
+	if err != nil {
+		t.Fatalf("NewServer error = %v", err)
+	}
+	defer server.logs.shutdownAsyncLogger(2 * time.Second)
+
+	path := restartHistoryPath(dir)
+	if err := saveRestartHistory(path, restartHistory{Version: "1.0.0", Timestamps: []int64{1, 2, 3}}); err != nil {
+		t.Fatalf("saveRestartHistory error = %v", err)
+	}
+	clearRestartHistoryOnCleanShutdown(server, 7890)
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("clear must remove the history file, stat err = %v", err)
+	}
+	// Idempotent: clearing an already-absent history is a no-op.
+	clearRestartHistoryOnCleanShutdown(server, 7890)
+}

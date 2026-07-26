@@ -110,6 +110,24 @@ func saveRestartHistory(path string, h restartHistory) error {
 	return os.WriteFile(path, b, 0o600)
 }
 
+// clearRestartHistoryOnCleanShutdown removes the restart history after a graceful,
+// signal-initiated shutdown. A clean shutdown means we are NOT crash-looping, so the
+// restart counter resets — this is what keeps legitimate stop/start cycles (a user
+// restart, or a test suite's rapid --stop/spawn) from ever engaging the backoff. A
+// crash (uncaught SIGPIPE, panic, or an unexpected http_listener_died) never runs this
+// path, so its restart still counts toward the storm threshold. Best effort: a failure
+// to remove the file is logged, never fatal.
+func clearRestartHistoryOnCleanShutdown(server *Server, port int) {
+	stateDir, err := state.RootDir()
+	if err != nil {
+		return
+	}
+	path := restartHistoryPath(stateDir)
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		server.logLifecycle("restart_history_clear_failed", port, map[string]any{"error": err.Error()})
+	}
+}
+
 // applyStartupRestartThrottle records this daemon start and, if the same install has
 // restarted too many times too fast, logs loudly and waits a bounded delay before
 // returning. It NEVER refuses to start. Returns the delay applied (0 if none). Any
