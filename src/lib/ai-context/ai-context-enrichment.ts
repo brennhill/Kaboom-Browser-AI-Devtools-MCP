@@ -12,7 +12,7 @@
  * the full error enrichment pipeline with timeout guards.
  */
 
-import type { LogEntry, AiContextData } from '../types/index.js'
+import type { LogEntry, AiContextData } from '../../types/index.js'
 
 import {
   AI_CONTEXT_MAX_ANCESTRY_DEPTH,
@@ -21,7 +21,7 @@ import {
   AI_CONTEXT_MAX_RELEVANT_SLICE,
   AI_CONTEXT_MAX_VALUE_LENGTH,
   AI_CONTEXT_PIPELINE_TIMEOUT_MS
-} from './constants.js'
+} from '../constants.js'
 
 import { parseStackFrames, extractSourceSnippets, getSourceMapCache } from './ai-context-parsing.js'
 

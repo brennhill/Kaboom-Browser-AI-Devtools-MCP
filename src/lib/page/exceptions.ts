@@ -10,7 +10,7 @@
  */
 
 import { postLog, type BridgePayload } from './bridge.js'
-import { enrichErrorWithAiContext } from '../ai-context.js'
+import { enrichErrorWithAiContext } from '../ai-context/ai-context.js'
 
 interface ExceptionEntry extends Record<string, unknown> {
   level: 'error'

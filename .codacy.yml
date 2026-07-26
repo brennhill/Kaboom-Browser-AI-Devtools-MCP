@@ -23,7 +23,7 @@ engines:
       # UI fade-out with animation, fallback, and cleanup branches
       - 'src/content/runtime-message-listener.ts'
       # React fiber traversal — inherently recursive with many node types
-      - 'src/lib/ai-context.ts'
+      - 'src/lib/ai-context/ai-context.ts'
       # Multi-strategy CSS selector computation — 6 strategies, each with branches
       - 'src/lib/page/reproduction.ts'
       # Install script — cross-platform process cleanup (Windows + Unix + fallbacks)

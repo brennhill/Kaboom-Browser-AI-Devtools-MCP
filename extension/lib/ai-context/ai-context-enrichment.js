@@ -2,7 +2,7 @@
  * Purpose: Detects UI frameworks (React/Vue/Svelte), captures state snapshots, and generates AI-friendly error summaries with timeout guards.
  * Docs: docs/features/feature/error-bundling/index.md
  */
-import { AI_CONTEXT_MAX_ANCESTRY_DEPTH, AI_CONTEXT_MAX_PROP_KEYS, AI_CONTEXT_MAX_STATE_KEYS, AI_CONTEXT_MAX_RELEVANT_SLICE, AI_CONTEXT_MAX_VALUE_LENGTH, AI_CONTEXT_PIPELINE_TIMEOUT_MS } from './constants.js';
+import { AI_CONTEXT_MAX_ANCESTRY_DEPTH, AI_CONTEXT_MAX_PROP_KEYS, AI_CONTEXT_MAX_STATE_KEYS, AI_CONTEXT_MAX_RELEVANT_SLICE, AI_CONTEXT_MAX_VALUE_LENGTH, AI_CONTEXT_PIPELINE_TIMEOUT_MS } from '../constants.js';
 import { parseStackFrames, extractSourceSnippets, getSourceMapCache } from './ai-context-parsing.js';
 // =============================================================================
 // MODULE STATE

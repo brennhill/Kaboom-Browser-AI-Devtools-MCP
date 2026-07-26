@@ -8,7 +8,7 @@
  * enriching errors with AI context before posting via bridge.
  */
 import { postLog } from './bridge.js';
-import { enrichErrorWithAiContext } from '../ai-context.js';
+import { enrichErrorWithAiContext } from '../ai-context/ai-context.js';
 // Exception capture state
 let originalOnerror = null;
 let unhandledrejectionHandler = null;

@@ -2,7 +2,7 @@
  * Purpose: Parses Chrome/Firefox stack traces into structured frames, resolves inline source maps, and extracts code snippets around error lines.
  * Docs: docs/features/feature/error-bundling/index.md
  */
-import { AI_CONTEXT_SNIPPET_LINES, AI_CONTEXT_MAX_LINE_LENGTH, AI_CONTEXT_MAX_SNIPPETS_SIZE, AI_CONTEXT_SOURCE_MAP_CACHE_SIZE } from './constants.js';
+import { AI_CONTEXT_SNIPPET_LINES, AI_CONTEXT_MAX_LINE_LENGTH, AI_CONTEXT_MAX_SNIPPETS_SIZE, AI_CONTEXT_SOURCE_MAP_CACHE_SIZE } from '../constants.js';
 // =============================================================================
 // MODULE STATE
 // =============================================================================

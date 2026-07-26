@@ -1513,7 +1513,7 @@ function uninstallConsoleCapture() {
   originalConsole = {};
 }
 
-// extension/lib/ai-context-parsing.js
+// extension/lib/ai-context/ai-context-parsing.js
 var aiSourceMapCache = /* @__PURE__ */ new Map();
 var CHROME_FRAME_RE = /^at\s+(?:(.+?)\s+\()?(.+?):(\d+):(\d+)\)?$/;
 var FIREFOX_FRAME_RE = /^(.+?)@(.+?):(\d+):(\d+)$/;
@@ -1637,7 +1637,7 @@ function getSourceMapCacheSize() {
   return aiSourceMapCache.size;
 }
 
-// extension/lib/ai-context-enrichment.js
+// extension/lib/ai-context/ai-context-enrichment.js
 var aiContextEnabled = true;
 var aiContextStateSnapshotEnabled = false;
 function detectFramework(element) {

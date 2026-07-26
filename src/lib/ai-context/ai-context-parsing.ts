@@ -12,14 +12,14 @@
  * an LRU source map cache.
  */
 
-import type { StackFrame, SourceSnippet, ParsedSourceMap } from '../types/index.js'
+import type { StackFrame, SourceSnippet, ParsedSourceMap } from '../../types/index.js'
 
 import {
   AI_CONTEXT_SNIPPET_LINES,
   AI_CONTEXT_MAX_LINE_LENGTH,
   AI_CONTEXT_MAX_SNIPPETS_SIZE,
   AI_CONTEXT_SOURCE_MAP_CACHE_SIZE
-} from './constants.js'
+} from '../constants.js'
 
 // =============================================================================
 // TYPE DEFINITIONS

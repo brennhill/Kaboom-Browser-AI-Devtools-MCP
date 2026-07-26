@@ -94,7 +94,7 @@ export {
   setSourceMapCache,
   getSourceMapCache,
   getSourceMapCacheSize
-} from '../lib/ai-context.js'
+} from '../lib/ai-context/ai-context.js'
 export { installExceptionCapture, uninstallExceptionCapture } from '../lib/page/exceptions.js'
 export {
   getSize,

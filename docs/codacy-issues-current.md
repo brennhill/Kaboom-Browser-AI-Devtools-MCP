@@ -183,7 +183,7 @@ Files with too many lines of code (limit: 600 lines)
 - Line 47: Method Date.now has a cyclomatic complexity of 12 (limit is 8)
 - Line 95: Method restoreState has a cyclomatic complexity of 14 (limit is 8)
 
-**src/lib/ai-context.ts** (5 issues)
+**src/lib/ai-context/ai-context.ts** (5 issues)
 - Line 266: Method extractSnippet has a cyclomatic complexity of 10 (limit is 8)
 - Line 235: Method parseSourceMap has a cyclomatic complexity of 9 (limit is 8)
 - Line 591: Method (anonymous) has a cyclomatic complexity of 17 (limit is 8)
