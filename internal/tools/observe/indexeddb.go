@@ -8,9 +8,8 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/idbquery"
 )
-
-const indexedDBQueryTimeout = 10 * time.Second
 
 // GetIndexedDB returns rows from one IndexedDB object store.
 func GetIndexedDB(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
@@ -50,7 +49,7 @@ func GetIndexedDB(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 		)}
 	}
 
-	storeData, err := getIndexedDBEntries(cap, params.Database, params.Store, params.Limit)
+	storeData, err := idbquery.Entries(cap, params.Database, params.Store, params.Limit)
 	if err != nil {
 		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(
 			mcp.ErrExtError,
@@ -79,4 +78,21 @@ func GetIndexedDB(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 	}
 
 	return mcp.Succeed(req, "IndexedDB entries", response)
+}
+
+// toInt reads a count out of the page's reply, which arrives as float64 through
+// encoding/json but may be any numeric kind when the value is synthesized server-side.
+func toInt(v any) (int, bool) {
+	switch n := v.(type) {
+	case int:
+		return n, true
+	case int32:
+		return int(n), true
+	case int64:
+		return int(n), true
+	case float64:
+		return int(n), true
+	default:
+		return 0, false
+	}
 }

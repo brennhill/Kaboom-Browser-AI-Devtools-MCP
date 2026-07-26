@@ -1,13 +1,15 @@
-// Purpose: Generates JavaScript scripts for querying IndexedDB databases and object stores.
-// Why: Separates script templates from query execution and result handling.
-package observe
+// Purpose: Generates the JavaScript that enumerates IndexedDB databases and reads object-store rows.
+// Why: Separates script templates from dispatch and reply handling in execute.go.
+// Docs: docs/features/feature/observe/index.md
+
+package idbquery
 
 import (
 	"encoding/json"
 	"fmt"
 )
 
-func buildIndexedDBEntriesScript(database, store string, limit int) string {
+func buildEntriesScript(database, store string, limit int) string {
 	return fmt.Sprintf(`(() => (async () => {
   const database = %s;
   const store = %s;
@@ -112,7 +114,7 @@ func buildIndexedDBEntriesScript(database, store string, limit int) string {
 })())()`, jsStringLiteral(database), jsStringLiteral(store), limit)
 }
 
-const indexedDBListingScript = `(() => (async () => {
+const listingScript = `(() => (async () => {
   try {
     if (typeof indexedDB === "undefined") {
       return { supported: false, databases: [] };

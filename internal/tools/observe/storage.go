@@ -9,6 +9,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/idbquery"
 )
 
 // summarizeStorageMap returns a summary of a key-value storage map.
@@ -218,7 +219,7 @@ func GetStorage(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSO
 
 	// IndexedDB listing is best-effort (skip if storage_type filter excludes it)
 	if params.StorageType == "" {
-		if indexeddb, err := getIndexedDBListing(cap); err != nil {
+		if indexeddb, err := idbquery.Listing(cap); err != nil {
 			response["indexeddb"] = map[string]any{
 				"supported": false,
 				"databases": []any{},
