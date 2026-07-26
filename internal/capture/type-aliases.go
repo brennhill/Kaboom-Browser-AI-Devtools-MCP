@@ -9,6 +9,8 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/logdiff"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/playback"
 )
 
 // Type aliases for imported packages to avoid qualifying every use.
@@ -43,15 +45,19 @@ type (
 	RateLimitResponse = circuit.RateLimitResponse // 429 response body
 
 	// Recording subsystem types — moved to internal/recording package.
-	RecordingManager = recording.Manager          // Recording lifecycle, playback, and log-diff engine
-	StorageInfo      = recording.StorageInfo      // Recording storage usage info
-	PlaybackSession  = recording.PlaybackSession  // Active playback session state
-	PlaybackResult   = recording.PlaybackResult   // Result of executing a single recorded action
-	Coordinates      = recording.Coordinates      // X/Y position on the page
-	LogDiffResult    = recording.LogDiffResult    // Comparison of two recordings
-	DiffLogEntry     = recording.DiffLogEntry     // Single log entry for diff comparison
-	ValueChange      = recording.ValueChange      // Field value change between recordings
-	ActionComparison = recording.ActionComparison // Action counts and types between recordings
+	RecordingManager = recording.Manager     // Recording lifecycle, persistence, and storage quotas
+	StorageInfo      = recording.StorageInfo // Recording storage usage info
+
+	// Replay subsystem types — moved to internal/recording/playback package.
+	PlaybackSession = playback.Session     // Active playback session state
+	PlaybackResult  = playback.Result      // Result of executing a single recorded action
+	Coordinates     = playback.Coordinates // X/Y position on the page
+
+	// Log-diff subsystem types — moved to internal/recording/logdiff package.
+	LogDiffResult    = logdiff.Result           // Comparison of two recordings
+	DiffLogEntry     = logdiff.LogEntry         // Single log entry for diff comparison
+	ValueChange      = logdiff.ValueChange      // Field value change between recordings
+	ActionComparison = logdiff.ActionComparison // Action counts and types between recordings
 )
 
 // NewCircuitBreaker is re-exported from internal/circuit for backward compatibility.

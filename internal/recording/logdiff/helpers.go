@@ -1,8 +1,12 @@
 // Purpose: Counts action types and builds type-value maps for recording diff analysis.
 // Why: Provides reusable helper functions shared by diff comparison and report generation.
-package recording
+package logdiff
 
-func CountActionTypes(actions []RecordingAction) (errors, clicks, types, navigates int) {
+import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
+
+// CountActionTypes returns the number of error, click, type, and navigate
+// actions in the slice.
+func CountActionTypes(actions []recording.Action) (errors, clicks, types, navigates int) {
 	for _, action := range actions {
 		switch action.Type {
 		case "error":
@@ -18,7 +22,8 @@ func CountActionTypes(actions []RecordingAction) (errors, clicks, types, navigat
 	return
 }
 
-func BuildTypeValueMap(actions []RecordingAction) map[string]string {
+// BuildTypeValueMap maps each typed-into selector to the last text typed there.
+func BuildTypeValueMap(actions []recording.Action) map[string]string {
 	values := make(map[string]string)
 	for _, action := range actions {
 		if action.Type == "type" && action.Selector != "" {
@@ -28,9 +33,10 @@ func BuildTypeValueMap(actions []RecordingAction) map[string]string {
 	return values
 }
 
-func (r *RecordingManager) CategorizeActionTypes(recording *Recording) map[string]int {
+// CategorizeActionTypes counts every action type present in a recording.
+func CategorizeActionTypes(rec *recording.Item) map[string]int {
 	counts := make(map[string]int)
-	for _, action := range recording.Actions {
+	for _, action := range rec.Actions {
 		counts[action.Type]++
 	}
 	return counts

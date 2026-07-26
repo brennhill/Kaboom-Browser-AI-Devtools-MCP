@@ -1,10 +1,13 @@
 // Purpose: Detects fragile selectors by analyzing failure rates across multiple playback sessions.
 // Why: Isolates selector reliability analysis from action execution and session management.
-package recording
+package playback
 
 import "fmt"
 
-func (r *RecordingManager) DetectFragileSelectors(sessions []*PlaybackSession) map[string]bool {
+// DetectFragileSelectors flags selectors that failed in more than half of their
+// click attempts across two or more sessions. A single session is not enough
+// evidence and always yields an empty result.
+func DetectFragileSelectors(sessions []*Session) map[string]bool {
 	fragile := make(map[string]bool)
 	if len(sessions) < 2 {
 		return fragile

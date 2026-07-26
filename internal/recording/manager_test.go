@@ -456,64 +456,81 @@ func TestNewCalculateRecordingSize_LargeRecording(t *testing.T) {
 }
 
 // ============================================
-// CategorizeActionTypes Tests
+// GetRecording / LookupRecording Tests
 // ============================================
 
-func TestNewCategorizeActionTypes_MixedActions(t *testing.T) {
-	t.Parallel()
+// TestGetRecording_ValidatesIDAndReadsDisk covers the disk read path the
+// log-diff engine reaches through its RecordingSource seam. It used to be
+// covered incidentally by the log-diff tests, which now run against a fake.
+func TestGetRecording_ValidatesIDAndReadsDisk(t *testing.T) {
+	t.Setenv(state.StateDirEnv, t.TempDir())
 
 	mgr := NewRecordingManager()
 
-	rec := &Recording{
-		Actions: []RecordingAction{
-			{Type: "click"}, {Type: "click"}, {Type: "type"},
-			{Type: "navigate"}, {Type: "scroll"}, {Type: "click"}, {Type: "error"},
-		},
+	if _, err := mgr.GetRecording("../escape"); err == nil ||
+		!strings.Contains(err.Error(), "recording_id_invalid") {
+		t.Fatalf("GetRecording(traversal) error = %v, want recording_id_invalid", err)
+	}
+	if _, err := mgr.GetRecording(""); err == nil ||
+		!strings.Contains(err.Error(), "recording_id_empty") {
+		t.Fatalf("GetRecording(empty) error = %v, want recording_id_empty", err)
+	}
+	if _, err := mgr.GetRecording("never-recorded"); err == nil ||
+		!strings.Contains(err.Error(), "read_failed") {
+		t.Fatalf("GetRecording(missing) error = %v, want read_failed", err)
 	}
 
-	counts := mgr.CategorizeActionTypes(rec)
+	id, err := mgr.StartRecording("disk-flow", "https://app.example.com", true)
+	if err != nil {
+		t.Fatalf("StartRecording() error = %v", err)
+	}
+	if err := mgr.AddRecordingAction(RecordingAction{Type: "click", Selector: "#go", TimestampMs: 7}); err != nil {
+		t.Fatalf("AddRecordingAction() error = %v", err)
+	}
+	if _, _, err := mgr.StopRecording(id); err != nil {
+		t.Fatalf("StopRecording() error = %v", err)
+	}
 
-	if counts["click"] != 3 {
-		t.Errorf("click count = %d, want 3", counts["click"])
+	got, err := mgr.GetRecording(id)
+	if err != nil {
+		t.Fatalf("GetRecording(%q) error = %v", id, err)
 	}
-	if counts["type"] != 1 {
-		t.Errorf("type count = %d, want 1", counts["type"])
-	}
-	if counts["navigate"] != 1 {
-		t.Errorf("navigate count = %d, want 1", counts["navigate"])
-	}
-	if counts["scroll"] != 1 {
-		t.Errorf("scroll count = %d, want 1", counts["scroll"])
-	}
-	if counts["error"] != 1 {
-		t.Errorf("error count = %d, want 1", counts["error"])
+	if got.ID != id || len(got.Actions) != 1 || got.Actions[0].Selector != "#go" {
+		t.Fatalf("GetRecording(%q) = %+v, want the persisted single-click recording", id, got)
 	}
 }
 
-func TestNewCategorizeActionTypes_EmptyRecording(t *testing.T) {
-	t.Parallel()
+// TestLookupRecording_PrefersInMemoryOverDisk pins the one behavior that makes
+// LookupRecording distinct from GetRecording: the replay engine must see an
+// in-flight recording that has not been written to disk yet.
+func TestLookupRecording_PrefersInMemoryOverDisk(t *testing.T) {
+	t.Setenv(state.StateDirEnv, t.TempDir())
 
 	mgr := NewRecordingManager()
-	counts := mgr.CategorizeActionTypes(&Recording{Actions: []RecordingAction{}})
 
-	if len(counts) != 0 {
-		t.Errorf("counts len = %d, want 0 for empty recording", len(counts))
+	id, err := mgr.StartRecording("live-flow", "https://app.example.com", true)
+	if err != nil {
+		t.Fatalf("StartRecording() error = %v", err)
 	}
-}
-
-func TestNewCategorizeActionTypes_SingleType(t *testing.T) {
-	t.Parallel()
-
-	mgr := NewRecordingManager()
-	rec := &Recording{
-		Actions: []RecordingAction{{Type: "click"}, {Type: "click"}, {Type: "click"}},
+	if err := mgr.AddRecordingAction(RecordingAction{Type: "type", Selector: "#q", Text: "unsaved"}); err != nil {
+		t.Fatalf("AddRecordingAction() error = %v", err)
 	}
 
-	counts := mgr.CategorizeActionTypes(rec)
-	if counts["click"] != 3 {
-		t.Errorf("click count = %d, want 3", counts["click"])
+	// Nothing is on disk yet, so only the in-memory branch can answer this.
+	if _, err := mgr.GetRecording(id); err == nil {
+		t.Fatal("GetRecording() should not see an unpersisted recording")
 	}
-	if len(counts) != 1 {
-		t.Errorf("counts has %d types, want 1", len(counts))
+
+	live, err := mgr.LookupRecording(id)
+	if err != nil {
+		t.Fatalf("LookupRecording(%q) error = %v", id, err)
+	}
+	if live == nil || len(live.Actions) != 1 || live.Actions[0].Text != "unsaved" {
+		t.Fatalf("LookupRecording(%q) = %+v, want the in-memory recording", id, live)
+	}
+
+	if _, err := mgr.LookupRecording("never-recorded"); err == nil ||
+		!strings.Contains(err.Error(), "read_failed") {
+		t.Fatalf("LookupRecording(missing) error = %v, want read_failed from the disk fallback", err)
 	}
 }

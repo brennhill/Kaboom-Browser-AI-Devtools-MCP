@@ -1,17 +1,19 @@
 // Purpose: Executes individual recording actions (navigate, click, type) during playback.
 // Why: Separates per-action execution from session lifecycle and fragile-selector detection.
-package recording
+package playback
 
 import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
 )
 
-func (r *RecordingManager) executeAction(index int, action RecordingAction) PlaybackResult {
+func executeAction(index int, action recording.Action) Result {
 	startTime := time.Now()
 
-	result := PlaybackResult{
+	result := Result{
 		Status:      "ok",
 		ActionIndex: index,
 		ActionType:  action.Type,
@@ -24,7 +26,7 @@ func (r *RecordingManager) executeAction(index int, action RecordingAction) Play
 		result.SelectorUsed = "navigate"
 		result.Error = ""
 	case "click":
-		result = r.executeClickWithHealing(action)
+		result = executeClickWithHealing(action)
 	case "type":
 		result.Status = "ok"
 		result.SelectorUsed = "type"
@@ -40,8 +42,8 @@ func (r *RecordingManager) executeAction(index int, action RecordingAction) Play
 	return result
 }
 
-func (r *RecordingManager) executeClickWithHealing(action RecordingAction) PlaybackResult {
-	result := PlaybackResult{
+func executeClickWithHealing(action recording.Action) Result {
+	result := Result{
 		Status:      "error",
 		ActionType:  "click",
 		ExecutedAt:  time.Now(),
@@ -50,7 +52,7 @@ func (r *RecordingManager) executeClickWithHealing(action RecordingAction) Playb
 
 	if action.DataTestID != "" {
 		selector := fmt.Sprintf("[data-testid=%s]", action.DataTestID)
-		if r.tryClickSelector(selector, action) {
+		if tryClickSelector(selector) {
 			result.Status = "ok"
 			result.SelectorUsed = "data-testid"
 			return result
@@ -58,7 +60,7 @@ func (r *RecordingManager) executeClickWithHealing(action RecordingAction) Playb
 	}
 
 	if action.Selector != "" {
-		if r.tryClickSelector(action.Selector, action) {
+		if tryClickSelector(action.Selector) {
 			result.Status = "ok"
 			result.SelectorUsed = "css"
 			return result
@@ -83,7 +85,7 @@ func (r *RecordingManager) executeClickWithHealing(action RecordingAction) Playb
 	return result
 }
 
-func (r *RecordingManager) tryClickSelector(selector string, action RecordingAction) bool {
+func tryClickSelector(selector string) bool {
 	if selector == "" {
 		return false
 	}

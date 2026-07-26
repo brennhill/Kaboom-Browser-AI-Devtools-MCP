@@ -156,6 +156,23 @@ func (r *RecordingManager) GetRecording(recordingID string) (*Recording, error) 
 	return r.loadRecordingFromDisk(recordingID)
 }
 
+// LookupRecording returns a recording by ID, preferring the in-memory copy (an
+// active or just-stopped recording) and falling back to disk.
+//
+// Unlike GetRecording this does not run ValidateRecordingID: an in-memory
+// recording is addressed by the ID the manager itself minted, never by a
+// caller-supplied path. It exists for the replay engine in
+// internal/recording/playback, which must see unpersisted in-memory state.
+func (r *RecordingManager) LookupRecording(recordingID string) (*Recording, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if rec, ok := r.recordings[recordingID]; ok {
+		return rec, nil
+	}
+	return r.loadRecordingFromDisk(recordingID)
+}
+
 // loadRecordingFromDisk reads metadata.json and returns the Recording.
 func (r *RecordingManager) loadRecordingFromDisk(recordingID string) (*Recording, error) {
 	roots, err := r.recordingReadRoots()

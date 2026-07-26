@@ -1,60 +1,49 @@
 // Purpose: Manages playback session lifecycle including start, result collection, and completion.
 // Why: Separates session orchestration from individual action execution.
-package recording
+package playback
 
 import (
 	"fmt"
 	"time"
 )
 
-func (r *RecordingManager) StartPlayback(recordingID string) (*PlaybackSession, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	recording, exists := r.recordings[recordingID]
-	if !exists {
-		loaded, err := r.loadRecordingFromDisk(recordingID)
-		if err != nil {
-			return nil, fmt.Errorf("playback_recording_not_found: Recording %s not found: %w", recordingID, err)
-		}
-		recording = loaded
+// Start opens a playback session for a recording, rejecting recordings that
+// cannot be loaded or that captured no actions.
+func Start(src RecordingSource, recordingID string) (*Session, error) {
+	rec, err := src.LookupRecording(recordingID)
+	if err != nil {
+		return nil, fmt.Errorf("playback_recording_not_found: Recording %s not found: %w", recordingID, err)
 	}
 
-	if recording == nil || len(recording.Actions) == 0 {
+	if rec == nil || len(rec.Actions) == 0 {
 		return nil, fmt.Errorf("playback_no_actions: Recording has no actions to replay")
 	}
 
-	session := &PlaybackSession{
+	session := &Session{
 		RecordingID:      recordingID,
 		StartedAt:        time.Now(),
-		Results:          make([]PlaybackResult, 0),
+		Results:          make([]Result, 0),
 		SelectorFailures: make(map[string]int),
 	}
 
 	return session, nil
 }
 
-func (r *RecordingManager) ExecutePlayback(recordingID string) (*PlaybackSession, error) {
-	session, err := r.StartPlayback(recordingID)
+// Execute opens a session and replays every action in the recording into it.
+func Execute(src RecordingSource, recordingID string) (*Session, error) {
+	session, err := Start(src, recordingID)
 	if err != nil {
 		return nil, err
 	}
 
-	recording := func() *Recording {
-		r.mu.Lock()
-		defer r.mu.Unlock()
-		current, exists := r.recordings[recordingID]
-		if !exists {
-			current, _ = r.loadRecordingFromDisk(recordingID)
-		}
-		return current
-	}()
-	if recording == nil {
+	// Re-read: the recording can be deleted between Start and here.
+	rec, _ := src.LookupRecording(recordingID)
+	if rec == nil {
 		return nil, fmt.Errorf("playback_load_failed: Could not load recording")
 	}
 
-	for i, action := range recording.Actions {
-		result := r.executeAction(i, action)
+	for i, action := range rec.Actions {
+		result := executeAction(i, action)
 		session.Results = append(session.Results, result)
 
 		if result.Status == "error" {
@@ -71,7 +60,8 @@ func (r *RecordingManager) ExecutePlayback(recordingID string) (*PlaybackSession
 	return session, nil
 }
 
-func (r *RecordingManager) GetPlaybackStatus(session *PlaybackSession) map[string]any {
+// Status summarizes a session for the MCP response.
+func Status(session *Session) map[string]any {
 	totalTime := time.Since(session.StartedAt)
 
 	status := "ok"

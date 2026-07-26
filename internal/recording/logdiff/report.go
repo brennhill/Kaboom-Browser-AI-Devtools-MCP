@@ -1,10 +1,11 @@
 // Purpose: Formats log diff results into a human-readable regression report string.
 // Why: Separates report rendering from diff computation and helper utilities.
-package recording
+package logdiff
 
 import "fmt"
 
-func (result *LogDiffResult) GetRegressionReport() string {
+// GetRegressionReport renders the diff as human-readable report text.
+func (result *Result) GetRegressionReport() string {
 	report := "Log Diff Report\n"
 	report += "===============\n"
 	report += fmt.Sprintf("Status: %s\n", result.Status)

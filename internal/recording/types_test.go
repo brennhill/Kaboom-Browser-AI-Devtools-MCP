@@ -1,4 +1,4 @@
-// Purpose: Tests for recording playback replay fidelity.
+// Purpose: Tests for the core recording data types and their methods.
 // Docs: docs/features/feature/playback-engine/index.md
 
 package recording

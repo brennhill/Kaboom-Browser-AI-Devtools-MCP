@@ -3,6 +3,8 @@
 
 package recording
 
+import "fmt"
+
 // ============================================
 // Recording Types (Flow Recording & Playback)
 // ============================================
@@ -32,6 +34,17 @@ type Recording struct {
 	Actions              []RecordingAction `json:"actions"`                // Ordered list of actions
 	SensitiveDataEnabled bool              `json:"sensitive_data_enabled"` // Whether to capture full text (default false)
 	TestID               string            `json:"test_id,omitempty"`      // Test boundary ID if recording was part of a test
+}
+
+// IsFragileSelectorAction reports whether this action's selector is listed as
+// fragile by a prior playback fragility analysis.
+func (action RecordingAction) IsFragileSelectorAction(fragileSelectors map[string]bool) bool {
+	if action.Selector == "" {
+		return false
+	}
+
+	key := fmt.Sprintf("%s:%s", "css", action.Selector)
+	return fragileSelectors[key]
 }
 
 // ViewportInfo captures the browser viewport dimensions
