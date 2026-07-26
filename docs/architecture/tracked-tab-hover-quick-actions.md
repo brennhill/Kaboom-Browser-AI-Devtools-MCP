@@ -17,7 +17,7 @@ code_paths:
   - src/content/ui/tracked-hover-launcher.ts
   - src/content/ui/terminal-panel-bridge.ts
   - src/popup.ts
-  - src/popup/logo-motion.ts
+  - src/popup/shell/logo-motion.ts
   - src/popup/tab-tracking.ts
   - src/popup/tab-tracking-api.ts
   - src/background/message-handlers.ts
@@ -64,7 +64,7 @@ Related feature docs:
 9. `Audit` action calls `requestAudit(location.href)`, which opens the side panel and then sends `qa_scan_requested`.
 10. Terminal action sends `open_terminal_panel`; the background worker resolves the workspace host tab and opens the panel there.
 11. `Hide Kaboom Devtool` sets `StorageKey.TRACKED_HOVER_LAUNCHER_HIDDEN=true` and unmounts the launcher.
-12. On next popup open, `initPopup` sends `kaboom_show_tracked_hover_launcher` to the active tab and rehydrates popup logo state through `src/popup/logo-motion.ts`.
+12. On next popup open, `initPopup` sends `kaboom_show_tracked_hover_launcher` to the active tab and rehydrates popup logo state through `src/popup/shell/logo-motion.ts`.
 13. Content script clears persisted hidden state and remounts launcher if tracking is still enabled and the side panel is not open.
 14. Record button state stays aligned with `chrome.storage.local[kaboom_recording]` via initial read plus `chrome.storage.onChanged`.
 15. Popup tab-tracking API logs use `KABOOM_LOG_PREFIX` so tracking diagnostics stay aligned with the rebrand.
@@ -100,7 +100,7 @@ Related feature docs:
 - `src/content/ui/tracked-hover-launcher.ts`
 - `src/lib/tabs/request-audit.ts`
 - `src/popup.ts`
-- `src/popup/logo-motion.ts`
+- `src/popup/shell/logo-motion.ts`
 - `src/popup/tab-tracking.ts`
 - `src/popup/tab-tracking-api.ts`
 - `src/background/message-handlers.ts`

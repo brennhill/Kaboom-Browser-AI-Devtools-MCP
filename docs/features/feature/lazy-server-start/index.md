@@ -4,7 +4,7 @@ feature_id: feature-lazy-server-start
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-26
 code_paths:
   - cmd/browser-agent/internal/bridge/bridge_startup_orchestration.go
   - cmd/browser-agent/internal/bridge/bridge_forward.go
@@ -13,7 +13,7 @@ code_paths:
   - cmd/browser-agent/launch_mode.go
   - cmd/browser-agent/tools_errors_guards.go
   - src/popup/tab-tracking.ts
-  - src/popup/status-display.ts
+  - src/popup/shell/status-display.ts
   - extension/popup.html
 test_paths:
   - cmd/browser-agent/internal/bridge/bridge_spawn_race_test.go

@@ -230,7 +230,7 @@
     return internalPrefixes.some((prefix) => url.startsWith(prefix));
   }
 
-  // extension/popup/ui-utils.js
+  // extension/popup/shell/ui-utils.js
   function formatFileSize(bytes) {
     if (bytes === 0)
       return "0 B";
@@ -240,7 +240,7 @@
     return `${value < 10 ? value.toFixed(1) : Math.round(value)} ${units[i]}`;
   }
 
-  // extension/popup/status-display.js
+  // extension/popup/shell/status-display.js
   var DEFAULT_MAX_ENTRIES = 1e3;
   function updateConnectionStatus(status) {
     const statusEl = document.getElementById("status");
@@ -1603,7 +1603,7 @@ The daemon will restart automatically.`;
     });
   }
 
-  // extension/popup/logo-motion.js
+  // extension/popup/shell/logo-motion.js
   function initPopupLogoMotion() {
     const logo = document.querySelector(".logo");
     if (!logo)

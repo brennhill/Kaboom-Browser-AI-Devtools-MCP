@@ -7,7 +7,7 @@
  * @fileoverview Popup Types
  * Type definitions for popup UI
  */
-import type { ConnectionStatus, MemoryPressureState, ContextWarning } from '../types/index.js';
+import type { ConnectionStatus, MemoryPressureState, ContextWarning } from '../../types/index.js';
 /**
  * Extended connection status for popup
  */
