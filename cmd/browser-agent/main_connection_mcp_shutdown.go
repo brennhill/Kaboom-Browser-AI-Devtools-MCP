@@ -54,6 +54,14 @@ func awaitShutdownSignal(server *Server, srv *http.Server, port int, httpDone <-
 		"shutdown_source": shutdownSource,
 		"uptime_seconds":  time.Since(startTime).Seconds(),
 	})
+
+	// Reset the crash-loop restart counter on a clean, signal-initiated shutdown: a
+	// controlled stop is not a crash, so legitimate stop/start cycles never accumulate
+	// toward the startup throttle. An unexpected listener death (http_listener_died) is
+	// crash-like and must NOT clear — it should count toward the storm threshold.
+	if shutdownSource != "http_listener_died" {
+		clearRestartHistoryOnCleanShutdown(server, port)
+	}
 	if diagPath := appendExitDiagnostic("daemon_shutdown", map[string]any{
 		"port":            port,
 		"signal":          s.String(),

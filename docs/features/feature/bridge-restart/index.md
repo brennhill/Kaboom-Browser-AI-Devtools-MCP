@@ -4,13 +4,13 @@ feature_id: feature-bridge-restart
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-26
 code_paths:
   - cmd/browser-agent/bridge.go
   - cmd/browser-agent/bridge_startup.go
   - cmd/browser-agent/bridge_startup_orchestration.go
   - cmd/browser-agent/bridge_startup_lock.go
-  - cmd/browser-agent/bridge_startup_state.go
+  - cmd/browser-agent/internal/bridge/bridge_startup_state.go
   - cmd/browser-agent/bridge_startup_status.go
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/tools_schema.go
@@ -21,6 +21,7 @@ test_paths:
   - cmd/browser-agent/bridge_startup_contention_test.go
   - cmd/browser-agent/bridge_faststart_extended_test.go
   - cmd/browser-agent/bridge_fastpath_unit_test.go
+  - cmd/browser-agent/internal/bridge/bridge_respawn_backoff_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

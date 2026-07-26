@@ -24,6 +24,9 @@ type daemonLockRecord struct {
 	StateDir  string `json:"state_dir"`
 	Version   string `json:"version,omitempty"`
 	UpdatedAt string `json:"updated_at"`
+	// InstallEpoch is the writer's install epoch (see install_epoch.go). At the same
+	// version it is the takeover tiebreaker: a strictly newer epoch supersedes.
+	InstallEpoch int64 `json:"install_epoch,omitempty"`
 }
 
 var (
@@ -35,6 +38,9 @@ var (
 	daemonNow                = time.Now
 	daemonFindProcessOnPort  = findProcessOnPort
 	daemonSleep              = time.Sleep
+	// daemonInstallEpoch reports THIS daemon's install epoch (the takeover
+	// tiebreaker at equal versions). Injectable for tests.
+	daemonInstallEpoch = resolveInstallEpoch
 
 	// daemonProbeHealth reports whether the daemon on port answers /health, its
 	// reported version, and whether the failure was connection-refused (nothing
@@ -98,6 +104,25 @@ func classifyExistingDaemon(server *Server, port int, rec *daemonLockRecord) err
 		return nil
 	}
 
+	// Same version, but a strictly NEWER install supersedes an older one — the
+	// "latest install always wins" tiebreaker (install_epoch.go). Without it, two
+	// same-version installs (e.g. ~/.kaboom/bin vs an npm-global copy) have no way to
+	// pick a winner and thrash. Uses the registered epoch (no /health round-trip),
+	// and fires before the startup-grace defer so a fresh install takes over at once.
+	// An equal-or-older epoch never reaches the takeover here, so this cannot
+	// ping-pong: the older install always defers to the newer one.
+	if sameNonEmptyVersion(version, rec.Version) {
+		if ourEpoch := daemonInstallEpoch(); ourEpoch > 0 && ourEpoch > rec.InstallEpoch {
+			server.logLifecycle("daemon_takeover_newer_install", port, map[string]any{
+				"existing_pid":           rec.PID,
+				"existing_install_epoch": rec.InstallEpoch,
+				"our_install_epoch":      ourEpoch,
+				"version":                version,
+			})
+			return nil
+		}
+	}
+
 	// Not a known upgrade. Never kill a daemon that only just registered — it may
 	// still be binding its ports, and killing it is how two near-simultaneous
 	// launches ping-pong (A kills B, B's respawn kills A). A negative age (lock
@@ -116,10 +141,16 @@ func classifyExistingDaemon(server *Server, port int, rec *daemonLockRecord) err
 	}
 
 	// Probe liveness, retried across the window so a momentarily busy-but-healthy
-	// daemon answers before we ever conclude it is stalled. But a connection-refused
-	// probe means nothing is listening — the daemon is definitively gone, not busy —
-	// so break immediately instead of burning the retry budget's sleeps on a
-	// certainty (finding L). Only a timeout/ambiguous failure warrants a retry.
+	// daemon answers before we ever conclude it is stalled. A connection-refused
+	// probe means nothing is accepting on the port right now — but that is only
+	// DEFINITIVE ("gone") when the incumbent PID is ALSO dead, in which case we break
+	// immediately instead of burning the retry budget's sleeps on a certainty
+	// (finding L's fast path). A refused probe while the PID is still ALIVE is NOT
+	// proof of death: a healthy daemon can transiently refuse (listen backlog full)
+	// or be mid graceful-shutdown, so we retry rather than SIGTERM a live, healthy
+	// peer on a single stray refusal (which would feed the takeover war). A
+	// persistently-wedged live daemon is still reclaimed once the retry budget is
+	// exhausted below.
 	reachable := false
 	liveVersion := ""
 	for attempt := 0; attempt < daemonHealthProbeRetries; attempt++ {
@@ -127,7 +158,7 @@ func classifyExistingDaemon(server *Server, port int, rec *daemonLockRecord) err
 		if reachable, liveVersion, refused = daemonProbeHealth(rec.Port); reachable {
 			break
 		}
-		if refused {
+		if refused && !daemonIsProcessAlive(rec.PID) {
 			break
 		}
 		if attempt < daemonHealthProbeRetries-1 {

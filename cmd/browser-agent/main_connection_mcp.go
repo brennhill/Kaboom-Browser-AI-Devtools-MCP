@@ -57,6 +57,13 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonLaunchOption
 		}
 	}
 
+	// Crash-loop self-defense: if this SAME install (version + epoch) has restarted
+	// too many times too fast, log loudly and back off a bounded amount before binding
+	// so a pathological loop degrades gracefully instead of hammering launchd (which
+	// would throttle/disable the LaunchAgent and take the terminal server on port+1
+	// dark too). Never refuses to start; an upgrade/epoch takeover resets the counter.
+	applyStartupRestartThrottle(server, port)
+
 	srv, httpDone, err := startHTTPServer(server, port, apiKey, mux)
 	if err != nil {
 		return err

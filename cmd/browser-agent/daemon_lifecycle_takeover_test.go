@@ -18,20 +18,31 @@ func TestClassifyExistingDaemon(t *testing.T) {
 	}
 
 	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	oldNow, oldProbe, oldSleep, oldVer := daemonNow, daemonProbeHealth, daemonSleep, version
+	oldNow, oldProbe, oldSleep, oldVer, oldEpoch, oldAlive := daemonNow, daemonProbeHealth, daemonSleep, version, daemonInstallEpoch, daemonIsProcessAlive
 	defer func() {
 		daemonNow = oldNow
 		daemonProbeHealth = oldProbe
 		daemonSleep = oldSleep
 		version = oldVer
+		daemonInstallEpoch = oldEpoch
+		daemonIsProcessAlive = oldAlive
 	}()
 	daemonNow = func() time.Time { return base }
 	daemonSleep = func(time.Duration) {} // never really sleep in tests
 	version = "0.8.7"
+	// Default: the incumbent PID is alive. classifyExistingDaemon only consults this
+	// seam on the connection-refused path (a refused probe while the PID is alive is
+	// not proof of death, so it is retried). Refused-path subtests override it.
+	daemonIsProcessAlive = func(int) bool { return true }
+	// Neutralize the install-epoch tiebreaker for these version/grace/health cases:
+	// our epoch equals every lock's epoch, so same-version behavior is decided by the
+	// existing rules (not "latest install wins", which has its own test).
+	daemonInstallEpoch = func() int64 { return 1000 }
 
-	// Lock written a minute ago => outside the startup grace window.
+	// Lock written a minute ago => outside the startup grace window. Epoch matches
+	// ours (neutral tiebreaker).
 	oldLock := func(v string) *daemonLockRecord {
-		return &daemonLockRecord{PID: 1, Port: 7890, Version: v, UpdatedAt: base.Add(-time.Minute).Format(time.RFC3339)}
+		return &daemonLockRecord{PID: 1, Port: 7890, Version: v, InstallEpoch: 1000, UpdatedAt: base.Add(-time.Minute).Format(time.RFC3339)}
 	}
 
 	t.Run("healthy same version -> defer (never kill a healthy daemon)", func(t *testing.T) {
@@ -73,7 +84,7 @@ func TestClassifyExistingDaemon(t *testing.T) {
 	t.Run("young same-version daemon -> defer via grace, without probing", func(t *testing.T) {
 		probed := false
 		daemonProbeHealth = func(int) (bool, string, bool) { probed = true; return true, "0.8.7", false }
-		young := &daemonLockRecord{PID: 1, Port: 7890, Version: "0.8.7", UpdatedAt: base.Add(-time.Second).Format(time.RFC3339)}
+		young := &daemonLockRecord{PID: 1, Port: 7890, Version: "0.8.7", InstallEpoch: 1000, UpdatedAt: base.Add(-time.Second).Format(time.RFC3339)}
 		if err := classifyExistingDaemon(server, 7890, young); !errors.Is(err, errDeferToHealthyDaemon) {
 			t.Fatalf("young lock should defer (grace), got %v", err)
 		}
@@ -87,7 +98,7 @@ func TestClassifyExistingDaemon(t *testing.T) {
 		daemonProbeHealth = func(int) (bool, string, bool) { probed = true; return false, "", false }
 		// Lock timestamped 2s in the FUTURE (backward clock step): age is negative,
 		// which must still be treated as "brand new" and deferred, not taken over.
-		future := &daemonLockRecord{PID: 1, Port: 7890, Version: "0.8.7", UpdatedAt: base.Add(2 * time.Second).Format(time.RFC3339)}
+		future := &daemonLockRecord{PID: 1, Port: 7890, Version: "0.8.7", InstallEpoch: 1000, UpdatedAt: base.Add(2 * time.Second).Format(time.RFC3339)}
 		if err := classifyExistingDaemon(server, 7890, future); !errors.Is(err, errDeferToHealthyDaemon) {
 			t.Fatalf("future-dated (negative-age) lock should defer via grace, got %v", err)
 		}
@@ -104,17 +115,60 @@ func TestClassifyExistingDaemon(t *testing.T) {
 		}
 	})
 
-	// finding L: a connection-refused probe is definitive (nothing is listening), so
-	// takeover must NOT burn the retry budget's sleeps on it. Only an ambiguous
-	// timeout warrants retrying.
-	t.Run("connection-refused probe takes over WITHOUT retrying (L)", func(t *testing.T) {
+	// finding L (refined): a connection-refused probe is only DEFINITIVE ("gone")
+	// when the incumbent PID is also dead — then takeover must NOT burn the retry
+	// budget's sleeps. But a refused probe while the PID is still ALIVE is not proof
+	// of death (a healthy daemon can transiently refuse: listen backlog full, or a
+	// graceful-shutdown drain), so it is retried to avoid falsely SIGTERM'ing a live
+	// peer and feeding the takeover war.
+	t.Run("refused + DEAD pid takes over WITHOUT retrying (L)", func(t *testing.T) {
+		daemonIsProcessAlive = func(int) bool { return false } // genuinely gone
+		defer func() { daemonIsProcessAlive = func(int) bool { return true } }()
 		probeCalls := 0
-		daemonProbeHealth = func(int) (bool, string, bool) { probeCalls++; return false, "", true } // refused = gone
+		daemonProbeHealth = func(int) (bool, string, bool) { probeCalls++; return false, "", true } // refused
 		if err := classifyExistingDaemon(server, 7890, oldLock("0.8.7")); err != nil {
-			t.Fatalf("a refused (gone) daemon should take over, got %v", err)
+			t.Fatalf("a refused daemon whose PID is dead should take over, got %v", err)
 		}
 		if probeCalls != 1 {
-			t.Fatalf("connection-refused is definitive — want exactly 1 probe, got %d", probeCalls)
+			t.Fatalf("refused + dead PID is definitive — want exactly 1 probe, got %d", probeCalls)
+		}
+	})
+
+	// Regression for the false-takeover risk in finding L: a healthy daemon that
+	// transiently refuses ONE probe (PID alive) must be retried, see health on the
+	// retry, and be DEFERRED to — never taken over on a single stray refusal.
+	t.Run("refused-then-healthy + ALIVE pid -> defer (no false takeover)", func(t *testing.T) {
+		daemonIsProcessAlive = func(int) bool { return true } // incumbent is alive
+		defer func() { daemonIsProcessAlive = func(int) bool { return true } }()
+		call := 0
+		daemonProbeHealth = func(int) (bool, string, bool) {
+			call++
+			if call == 1 {
+				return false, "", true // transient connection-refused
+			}
+			return true, "0.8.7", false // healthy on retry
+		}
+		if err := classifyExistingDaemon(server, 7890, oldLock("0.8.7")); !errors.Is(err, errDeferToHealthyDaemon) {
+			t.Fatalf("a transiently-refusing but healthy live daemon must be deferred to, got %v", err)
+		}
+		if call < 2 {
+			t.Fatalf("want a retry after the first refused probe (PID alive), got %d probes", call)
+		}
+	})
+
+	// A live daemon whose listener stays wedged (refused across the whole window) is
+	// still reclaimed after the retry budget — the alive-PID retry must not protect a
+	// genuinely stalled daemon forever.
+	t.Run("refused-persistently + ALIVE pid -> takeover after full retry budget (L)", func(t *testing.T) {
+		daemonIsProcessAlive = func(int) bool { return true }
+		defer func() { daemonIsProcessAlive = func(int) bool { return true } }()
+		probeCalls := 0
+		daemonProbeHealth = func(int) (bool, string, bool) { probeCalls++; return false, "", true } // always refused
+		if err := classifyExistingDaemon(server, 7890, oldLock("0.8.7")); err != nil {
+			t.Fatalf("a persistently-wedged live daemon should take over after retries, got %v", err)
+		}
+		if probeCalls != daemonHealthProbeRetries {
+			t.Fatalf("refused + alive PID must retry the full budget, want %d probes, got %d", daemonHealthProbeRetries, probeCalls)
 		}
 	})
 

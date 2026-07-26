@@ -30,6 +30,14 @@ func parseVersionParts(v string) []int {
 	return parts
 }
 
+// sameNonEmptyVersion reports whether a and b are both non-empty and parse to the
+// same semver (neither strictly newer). Used to gate the install-epoch takeover
+// tiebreaker to genuinely equal versions — a blank/unparseable version is never
+// treated as "same", so the epoch rule can't fire on unknown data.
+func sameNonEmptyVersion(a, b string) bool {
+	return a != "" && b != "" && !isNewerVersion(a, b) && !isNewerVersion(b, a)
+}
+
 // isNewerVersion returns true if candidate is strictly newer than current.
 // Both strings are parsed as semver (with optional "v" prefix).
 // Returns false for equal versions, malformed input, or empty strings.

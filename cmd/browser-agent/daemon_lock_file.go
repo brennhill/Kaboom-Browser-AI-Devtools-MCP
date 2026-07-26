@@ -89,10 +89,11 @@ func persistCurrentDaemonLock(port int) error {
 		return err
 	}
 	return writeDaemonLockFile(daemonLockRecord{
-		PID:       os.Getpid(),
-		Port:      port,
-		StateDir:  stateDir,
-		Version:   version,
-		UpdatedAt: daemonNow().UTC().Format(time.RFC3339),
+		PID:          os.Getpid(),
+		Port:         port,
+		StateDir:     stateDir,
+		Version:      version,
+		UpdatedAt:    daemonNow().UTC().Format(time.RFC3339),
+		InstallEpoch: resolveInstallEpoch(),
 	})
 }
