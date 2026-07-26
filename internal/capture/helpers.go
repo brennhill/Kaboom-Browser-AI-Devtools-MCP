@@ -1,4 +1,4 @@
-// Purpose: Provides shared capture helper utilities for URL handling, slice operations, and ingest body processing.
+// Purpose: Provides shared capture helper utilities for URL handling and ingest body processing.
 // Why: Prevents repeated low-level helper logic across capture handlers and ingestion code paths.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
@@ -14,20 +14,6 @@ import (
 // ExtractURLPath delegates to util.ExtractURLPath for cross-package callers.
 func ExtractURLPath(rawURL string) string {
 	return util.ExtractURLPath(rawURL)
-}
-
-// removeFromSlice removes the first occurrence of item from a string slice,
-// preserving the order of remaining elements. Allocates a new backing array to avoid GC pinning.
-func removeFromSlice(slice []string, item string) []string {
-	for i, v := range slice {
-		if v == item {
-			newSlice := make([]string, len(slice)-1)
-			copy(newSlice, slice[:i])
-			copy(newSlice[i:], slice[i+1:])
-			return newSlice
-		}
-	}
-	return slice
 }
 
 // readIngestBody handles rate-limit check and body reading for ingest endpoints.

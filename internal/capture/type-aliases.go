@@ -5,6 +5,7 @@
 package capture
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/wsconn"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -43,6 +44,9 @@ type (
 	CircuitBreaker    = circuit.CircuitBreaker    // Rate limiting + circuit breaker state machine
 	HealthResponse    = circuit.HealthResponse    // GET /health response
 	RateLimitResponse = circuit.RateLimitResponse // 429 response body
+
+	// WebSocket connection tracking — moved to internal/capture/wsconn package.
+	WSConnectionTracker = wsconn.Tracker // Active + closed WS connections, LRU eviction order. Guarded by Capture.mu.
 
 	// Recording subsystem types — moved to internal/recording package.
 	RecordingManager = recording.Manager     // Recording lifecycle, persistence, and storage quotas

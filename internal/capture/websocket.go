@@ -50,7 +50,7 @@ func (c *Capture) AddWebSocketEvents(events []WebSocketEvent) {
 		activeTestIDs = append(activeTestIDs, testID)
 	}
 
-	c.buffers.appendWebSocketEvents(events, activeTestIDs, now, c.wsConnections.trackEvent)
+	c.buffers.appendWebSocketEvents(events, activeTestIDs, now, c.wsConnections.TrackEvent)
 }
 
 // GetWebSocketEventCount returns the current number of buffered events

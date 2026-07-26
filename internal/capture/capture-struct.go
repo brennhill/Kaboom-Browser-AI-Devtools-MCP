@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/wsconn"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/redaction"
 )
@@ -54,7 +55,7 @@ type Capture struct {
 	// WebSocket Connection Tracking
 	// ============================================
 
-	wsConnections WSConnectionTracker // Active + closed WS connections, LRU eviction order. Protected by parent mu (no separate lock).
+	wsConnections wsconn.Tracker // Active + closed WS connections, LRU eviction order. Protected by parent mu (no separate lock).
 
 	// ============================================
 	// Query Dispatch (Own Locks)
@@ -130,11 +131,7 @@ func NewCapture() *Capture {
 		extensionLogs: ExtensionLogBuffer{
 			logs: make([]ExtensionLog, 0, MaxExtensionLogs),
 		},
-		wsConnections: WSConnectionTracker{
-			connections: make(map[string]*connectionState),
-			closedConns: make([]WebSocketClosedConnection, 0),
-			connOrder:   make([]string, 0),
-		},
+		wsConnections: wsconn.NewTracker(),
 		extensionState: ExtensionState{
 			activeTestIDs:           make(map[string]bool),
 			missingInProgressByCorr: make(map[string]int),

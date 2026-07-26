@@ -5,8 +5,6 @@
 package capture
 
 import (
-	"time"
-
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -48,23 +46,3 @@ type WebSocketSchema = types.WebSocketSchema
 
 // WebSocketSamplingStatus is an alias to canonical definition in internal/types/network.go
 type WebSocketSamplingStatus = types.WebSocketSamplingStatus
-
-// connectionState tracks state for an active connection
-type connectionState struct {
-	id         string
-	url        string
-	state      string
-	openedAt   string
-	incoming   directionStats
-	outgoing   directionStats
-	sampling   bool
-	lastSample *SamplingInfo
-}
-
-type directionStats struct {
-	total       int
-	bytes       int
-	lastAt      string
-	lastData    string
-	recentTimes []time.Time // timestamps within rate window for rate calculation
-}

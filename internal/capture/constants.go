@@ -20,9 +20,6 @@ const (
 	// RateLimitThreshold is re-exported from internal/circuit for backward compatibility.
 	RateLimitThreshold = circuit.RateLimitThreshold
 
-	maxActiveConns = 20
-	maxClosedConns = 10
-
 	// Network waterfall capacity configuration
 	DefaultNetworkWaterfallCapacity = 1000
 	MinNetworkWaterfallCapacity     = 100
@@ -35,8 +32,6 @@ const (
 	maxResponseBodySize  = 16384           // 16KB
 	wsBufferMemoryLimit  = 4 * 1024 * 1024 // 4MB
 	nbBufferMemoryLimit  = 8 * 1024 * 1024 // 8MB
-	rateWindow           = 5 * time.Second // rolling window for msg/s calculation
-
 )
 
 // ExtensionReadinessTimeout is how long requireExtension will wait for a cold-start
