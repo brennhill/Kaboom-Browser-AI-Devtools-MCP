@@ -1,6 +1,7 @@
-// Purpose: Implements the interact upload action with 4-stage escalation (extension inject, form submit, direct API, OS automation).
-// Why: Provides reliable file upload across diverse page architectures by cascading through progressively more aggressive strategies.
+// interact_upload.go — UploadInteractHandler: validates an upload request and queues
+// it for the extension's 4-stage escalation.
 // Docs: docs/features/feature/file-upload/index.md
+
 package toolinteract
 
 import (
@@ -12,6 +13,17 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	uploadhandler "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
 )
+
+// UploadInteractHandler handles file upload operations.
+type UploadInteractHandler struct {
+	deps          *Deps
+	actionHandler *InteractActionHandler
+}
+
+// NewUploadInteractHandler creates a new UploadInteractHandler with the given dependencies.
+func NewUploadInteractHandler(deps *Deps, actionHandler *InteractActionHandler) *UploadInteractHandler {
+	return &UploadInteractHandler{deps: deps, actionHandler: actionHandler}
+}
 
 var (
 	defaultEscalationTimeoutMs = uploadhandler.DefaultEscalationTimeoutMs

@@ -1,4 +1,6 @@
-// interact_content_misc_test.go — Tests for content extraction, composable, clipboard, draw, list.
+// interact_page_test.go — Tests for the page-level interact actions in
+// interact_page.go (content extraction, composable steps, clipboard, draw) plus the
+// list_interactive response shaping in interact_elements.go.
 package toolinteract
 
 import (

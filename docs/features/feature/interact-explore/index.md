@@ -4,32 +4,26 @@ feature_id: feature-interact-explore
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 code_paths:
-  - cmd/browser-agent/tools_interact_command_builder.go
-  - cmd/browser-agent/tools_interact_action_handler.go
+  - cmd/browser-agent/internal/toolinteract/deps.go
+  - cmd/browser-agent/internal/toolinteract/helpers.go
+  - cmd/browser-agent/internal/toolinteract/interact_action_handler.go
+  - cmd/browser-agent/internal/toolinteract/interact_command_builder.go
+  - cmd/browser-agent/internal/toolinteract/interact_browser.go
+  - cmd/browser-agent/internal/toolinteract/interact_dom.go
+  - cmd/browser-agent/internal/toolinteract/interact_elements.go
+  - cmd/browser-agent/internal/toolinteract/interact_page.go
+  - cmd/browser-agent/internal/toolinteract/interact_storage.go
+  - cmd/browser-agent/internal/toolinteract/interact_workflow.go
+  - cmd/browser-agent/internal/toolinteract/interact_evidence.go
+  - cmd/browser-agent/internal/toolinteract/interact_retry_contract.go
+  - cmd/browser-agent/internal/toolinteract/interact_batch.go
+  - cmd/browser-agent/internal/toolinteract/interact_index_scope.go
+  - cmd/browser-agent/tools_interact_adapter.go
   - cmd/browser-agent/tools_interact_entrypoint.go
   - cmd/browser-agent/tools_interact_dispatch.go
   - cmd/browser-agent/tools_pending_query_enqueue.go
-  - cmd/browser-agent/tools_interact_browser_navigation_impl.go
-  - cmd/browser-agent/tools_interact_browser_script_impl.go
-  - cmd/browser-agent/tools_interact_browser_tabs.go
-  - cmd/browser-agent/tools_interact_browser_util_impl.go
-  - cmd/browser-agent/tools_interact_response_helpers.go
-  - cmd/browser-agent/tools_interact_draw.go
-  - cmd/browser-agent/tools_interact_dom.go
-  - cmd/browser-agent/tools_interact_elements.go
-  - cmd/browser-agent/tools_interact_storage.go
-  - cmd/browser-agent/tools_interact_upload.go
-  - cmd/browser-agent/tools_interact_evidence.go
-  - cmd/browser-agent/tools_interact_retry_contract_strategy.go
-  - cmd/browser-agent/tools_interact_retry_contract_state.go
-  - cmd/browser-agent/tools_interact_retry_contract_response.go
-  - cmd/browser-agent/tools_interact_workflow_navigate.go
-  - cmd/browser-agent/tools_interact_workflow_navigate_document.go
-  - cmd/browser-agent/tools_interact_workflow_forms.go
-  - cmd/browser-agent/tools_interact_workflow_a11y_sarif.go
-  - cmd/browser-agent/tools_interact_workflow_types.go
   - internal/tools/interact/workflow.go
   - internal/schema/interact/actions.go
   - internal/schema/interact/properties_targeting.go
@@ -62,14 +56,19 @@ code_paths:
   - cmd/browser-agent/tools_async_formatting.go
   - cmd/browser-agent/tools_summary_pref.go
 test_paths:
-  - cmd/browser-agent/tools_interact_command_builder_test.go
+  - cmd/browser-agent/internal/toolinteract/fake_deps_test.go
+  - cmd/browser-agent/internal/toolinteract/test_helpers_test.go
+  - cmd/browser-agent/internal/toolinteract/interact_browser_actions_test.go
+  - cmd/browser-agent/internal/toolinteract/interact_dom_primitive_test.go
+  - cmd/browser-agent/internal/toolinteract/interact_elements_test.go
+  - cmd/browser-agent/internal/toolinteract/interact_page_test.go
+  - cmd/browser-agent/internal/toolinteract/interact_storage_test.go
+  - cmd/browser-agent/internal/toolinteract/interact_workflow_test.go
   - cmd/browser-agent/tools_interact_handler_test.go
   - cmd/browser-agent/tools_pending_query_enqueue_test.go
   - cmd/browser-agent/tools_interact_rich_test.go
-  - cmd/browser-agent/tools_interact_upload_test.go
   - cmd/browser-agent/tools_interact_navigate_document_test.go
   - cmd/browser-agent/tools_schema_parity_test.go
-  - cmd/browser-agent/tools_interact_retry_contract_test.go
   - cmd/browser-agent/tools_interact_evidence_test.go
   - cmd/browser-agent/tools_interact_state_test.go
   - extension/background/__tests__/dom-dispatch-structured.test.js
