@@ -47,9 +47,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request, cap *captu
 			"dropped_count": s.logs.getLogDropCount(),
 		},
 	}
-	if termPort := s.getTerminalPort(); termPort > 0 {
-		resp["terminal_port"] = termPort
-	}
+	s.addTerminalHealth(resp)
 
 	successReads, failedReads := bridge.SnapshotFastPathResourceReadCounters()
 	resp["bridge_fastpath"] = map[string]any{
@@ -111,4 +109,38 @@ func (s *Server) handleShutdown(w http.ResponseWriter, r *http.Request) {
 		p, _ := os.FindProcess(os.Getpid())
 		_ = p.Signal(syscall.SIGTERM)
 	})
+}
+
+// addTerminalHealth writes the terminal server's state into a health payload.
+//
+// terminal_available is ALWAYS present so a caller can branch on it without having
+// to infer meaning from an absent field — the old payload simply omitted
+// terminal_port on a bind failure, which is indistinguishable from "this build has
+// no terminal". The diagnosis fields appear only when something is wrong: noise on
+// the happy path trains people to ignore the field.
+func (s *Server) addTerminalHealth(resp map[string]any) {
+	st := s.getTerminalStatus()
+	resp["terminal_available"] = st.Available
+	if st.Port > 0 {
+		resp["terminal_port"] = st.Port
+	}
+	if st.Available {
+		return
+	}
+	if st.Error != "" {
+		resp["terminal_error"] = st.Error
+	}
+	if st.BlockedByPID > 0 || st.BlockedByCommand != "" {
+		resp["terminal_blocked_by"] = map[string]any{
+			"pid":     st.BlockedByPID,
+			"command": st.BlockedByCommand,
+		}
+	}
+}
+
+// buildHealthPayload exposes the terminal portion of the health payload for tests.
+func (s *Server) buildHealthPayload() map[string]any {
+	resp := map[string]any{}
+	s.addTerminalHealth(resp)
+	return resp
 }

@@ -228,3 +228,21 @@ func reclaimPort(server *Server, port int, purpose string) bool {
 	server.logLifecycle("port_reclaimed", port, map[string]any{"purpose": purpose, "killed_pids": killed, "freed": freed})
 	return freed
 }
+
+// identifyPortHolder returns the PID and command line of whatever is listening on
+// port, or (0, "") if that cannot be determined. Best effort and never fatal: it
+// exists purely to turn "port busy" into something the user can act on.
+func identifyPortHolder(port int) (int, string) {
+	owners, err := daemonFindProcessOnPort(port)
+	if err != nil || len(owners) == 0 {
+		return 0, ""
+	}
+	self := os.Getpid()
+	for _, pid := range owners {
+		if pid <= 0 || pid == self {
+			continue
+		}
+		return pid, daemonProcessCommand(pid)
+	}
+	return 0, ""
+}
