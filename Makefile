@@ -25,7 +25,7 @@ PLATFORMS := \
 	release-check install-hooks bench-baseline sync-version \
 	pypi-binaries pypi-build pypi-publish pypi-test-publish pypi-clean \
 	security-check pre-commit verify-all npm-binaries validate-semver \
-	verify-llm check-folder-size check-structure folder-baseline-update \
+	verify-llm check-folder-size check-structure check-dormant-tests folder-baseline-update \
 	test-upgrade-guards release-gate clean-test-daemons \
 	generate-wire-types generate-dom-primitives \
 	site-dev site-build site-preview \
@@ -173,8 +173,12 @@ check-folder-size:
 folder-baseline-update:
 	@node scripts/check-folder-size.cjs --update
 
-# Both structural gates.
-check-structure: check-file-length check-folder-size
+# Go tests excluded from the default suite (stale build tags, *_test.go.* files).
+check-dormant-tests:
+	@bash scripts/check-dormant-tests.sh
+
+# All structural gates.
+check-structure: check-file-length check-folder-size check-dormant-tests
 
 # Validate strict semver (X.Y.Z format, no pre-release)
 validate-semver:
