@@ -16,5 +16,15 @@ Key functions:
   - SafeMarshal: defensive JSON marshaling with fallback.
   - getJSONFieldNames: extracts known JSON field names from struct tags for validation.
   - NewToolError: creates a structured error with diagnostic hints.
+
+File layout:
+  - protocol.go: JSON-RPC 2.0 request/response types and the MCPTool schema struct.
+  - types.go: MCP content blocks, tool results, and resource/initialize payloads.
+  - errors.go: error codes, StructuredError, and the With* option functions.
+  - validation.go: reflection-based unknown-parameter detection.
+  - deps.go: provider interfaces tools require from the host server.
+  - response.go: JSON marshal helpers plus Succeed/SucceedText/Fail/ParseArgs.
+  - response_content.go: image/warning content-block utilities.
+  - response_clamp.go: payload-size clamping with JSON-aware boundary truncation.
 */
 package mcp
