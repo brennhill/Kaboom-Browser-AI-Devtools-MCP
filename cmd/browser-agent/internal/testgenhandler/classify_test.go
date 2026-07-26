@@ -1,7 +1,7 @@
 // Purpose: Tests for test-generation classify dispatch routing.
 // Docs: docs/features/feature/test-generation/index.md
 
-// testgen_classify_dispatch_test.go — Tests for classify dispatch functions at 0% coverage.
+// classify_test.go — Tests for classify dispatch functions.
 // Covers: dispatchClassifyAction, classifySingleFailure, classifyBatchFailures.
 package testgenhandler
 

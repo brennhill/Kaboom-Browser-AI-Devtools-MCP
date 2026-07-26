@@ -95,3 +95,37 @@ func TestRandomInt63IsNonNegative(t *testing.T) {
 		}
 	}
 }
+
+func TestRequireString(t *testing.T) {
+	t.Parallel()
+
+	if _, blocked := RequireString(mcp.JSONRPCRequest{ID: 1}, "value", "name", "hint"); blocked {
+		t.Fatal("a non-empty value must not block")
+	}
+
+	resp, blocked := RequireString(mcp.JSONRPCRequest{ID: 1}, "", "name", "add it")
+	if !blocked {
+		t.Fatal("an empty value must block")
+	}
+	if !strings.Contains(string(resp.Result), "name") {
+		t.Fatalf("error must name the missing param: %s", string(resp.Result))
+	}
+}
+
+func TestRequireOneOf(t *testing.T) {
+	t.Parallel()
+
+	valid := []string{"a", "b"}
+	if _, blocked := RequireOneOf(mcp.JSONRPCRequest{ID: 1}, "b", "mode", valid, "hint"); blocked {
+		t.Fatal("a listed value must not block")
+	}
+
+	resp, blocked := RequireOneOf(mcp.JSONRPCRequest{ID: 1}, "z", "mode", valid, "pick one")
+	if !blocked {
+		t.Fatal("an unlisted value must block")
+	}
+	// The message enumerates the accepted values so the caller can self-correct.
+	if !strings.Contains(string(resp.Result), "a, b") {
+		t.Fatalf("error must list the valid values: %s", string(resp.Result))
+	}
+}

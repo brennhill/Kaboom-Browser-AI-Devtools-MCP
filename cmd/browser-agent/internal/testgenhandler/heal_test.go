@@ -1,7 +1,7 @@
 // Purpose: Tests for test-generation self-healing repair.
 // Docs: docs/features/feature/test-generation/index.md
 
-// testgen_heal_test.go — Tests for testgen_heal.go functions at 0% coverage.
+// heal_test.go — Tests for heal.go functions.
 // Covers: mapAnalyzeError, handleHealRepair, handleHealBatch, mapBatchError, formatHealSummary.
 package testgenhandler
 
