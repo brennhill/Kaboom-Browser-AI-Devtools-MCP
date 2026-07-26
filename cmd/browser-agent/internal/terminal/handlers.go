@@ -365,6 +365,17 @@ func wsLoop(conn net.Conn, rw *bufio.ReadWriter, deps Deps, sess *pty.Session, r
 					closeConn()
 					return
 				}
+				// Also send an application-level keepalive the BROWSER can observe.
+				// The ping above is a WebSocket control frame: the browser answers it
+				// automatically but never surfaces it to JS, so page code has no way
+				// to tell a live-but-idle terminal from a half-open socket (suspend,
+				// NAT rebind — no FIN/RST, readyState stays OPEN). Without an
+				// observable signal the client shows a connected dot while keystrokes
+				// vanish. A text frame is visible to onmessage, so the client can run
+				// its own liveness watchdog. Non-fatal: the ping already governs
+				// connection health, so a failed keepalive must not tear down a
+				// connection the ping considers fine.
+				_ = writeFrame(0x1, []byte(`{"type":"keepalive"}`))
 			}
 		}
 	})
