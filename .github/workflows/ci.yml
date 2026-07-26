@@ -45,7 +45,7 @@ jobs:
           echo "Changed files:"
           echo "$CHANGED_FILES"
 
-          if echo "$CHANGED_FILES" | grep -Eq '^(cmd/browser-agent/|internal/schema/|internal/types/|internal/performance/|scripts/docs/|scripts/generate-wire-types\.js|docs/features/|docs/architecture/|package\.json|Makefile|\.github/workflows/ci\.yml)'; then
+          if echo "$CHANGED_FILES" | grep -Eq '^(cmd/browser-agent/|internal/schema/|internal/types/|internal/performance/|scripts/docs/|scripts/generate-wire-types\.js|docs/features/|docs/architecture/flow-maps/|package\.json|Makefile|\.github/workflows/ci\.yml)'; then
             echo "run_gate=true" >> "$GITHUB_OUTPUT"
             echo "verify-llm gate enabled for this PR."
           else
@@ -60,6 +60,41 @@ jobs:
       - name: Skip verify-llm gate
         if: steps.scope.outputs.run_gate != 'true'
         run: echo "Skipping verify-llm (out of scope for this PR)."
+
+  structure:
+    name: Structure Gates
+    needs: versions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: "20"
+
+      # 800 lines per hand-written source file. Generated code and build output are
+      # excluded by the script — splitting those is meaningless.
+      - name: File length (800 lines)
+        run: bash scripts/check-file-length.sh
+
+      # Ratcheting per-folder limit: 10 source files, with folders already over it
+      # frozen at their current count so they can only shrink. Fails if any folder
+      # grows past its budget, or a folder not on the baseline exceeds 10.
+      - name: Folder size (ratcheting)
+        run: node scripts/check-folder-size.cjs
+
+      # The baseline must reflect reality: if a folder improved, the committed
+      # baseline is stale and should be re-frozen so the ratchet keeps tightening.
+      - name: Folder baseline is current
+        run: |
+          node scripts/check-folder-size.cjs --update
+          if ! git diff --quiet .folder-size-baseline.json; then
+            echo "::error::A folder shrank but .folder-size-baseline.json was not updated."
+            echo "Run 'make folder-baseline-update' and commit the result so the ratchet tightens."
+            git --no-pager diff .folder-size-baseline.json
+            exit 1
+          fi
+          echo "OK: folder baseline is current"
 
   upgrade-guards:
     name: Upgrade Guards (${{ matrix.os }})
