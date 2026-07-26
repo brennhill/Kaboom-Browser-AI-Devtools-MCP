@@ -7,7 +7,7 @@
  * Manages error group tracking, deduplication within configurable windows,
  * and cleanup of stale error groups.
  */
-import type { LogEntry } from '../types/index.js';
+import type { LogEntry } from '../../types/index.js';
 /** Error group max age - cleanup after 1 hour */
 export declare const ERROR_GROUP_MAX_AGE_MS = 3600000;
 /** Internal error group structure */

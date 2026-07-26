@@ -133,7 +133,7 @@ Files with too many lines of code (limit: 600 lines)
 **src/background/sync/batchers.ts** (1 issues)
 - Line 125: Method flushWithCircuitBreaker has a cyclomatic complexity of 10 (limit is 8)
 
-**src/background/cache-limits.ts** (1 issues)
+**src/background/caches/cache-limits.ts** (1 issues)
 - Line 147: Method estimateBufferMemory has a cyclomatic complexity of 9 (limit is 8)
 
 **src/background/connection-state.ts** (1 issues)
@@ -144,7 +144,7 @@ Files with too many lines of code (limit: 600 lines)
 - Line 584: Method sendAsyncResult has a cyclomatic complexity of 21 (limit is 8)
 - Line 63: Method isVisible has a cyclomatic complexity of 22 (limit is 8)
 
-**src/background/error-groups.ts** (1 issues)
+**src/background/caches/error-groups.ts** (1 issues)
 - Line 101: Method processErrorGroup has a cyclomatic complexity of 10 (limit is 8)
 
 **src/background/event-listeners.ts** (1 issues)
@@ -160,7 +160,7 @@ Files with too many lines of code (limit: 600 lines)
 - Line 402: Method stopRecording has a cyclomatic complexity of 11 (limit is 8)
 - Line 518: Method (anonymous) has a cyclomatic complexity of 11 (limit is 8)
 
-**src/background/snapshots.ts** (1 issues)
+**src/background/caches/snapshots.ts** (1 issues)
 - Line 261: Method findOriginalLocation has a cyclomatic complexity of 20 (limit is 8)
 
 **src/content/favicon-replacer.ts** (1 issues)

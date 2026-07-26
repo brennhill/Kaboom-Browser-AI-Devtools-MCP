@@ -8,8 +8,8 @@
  * VLQ decoding, and stack trace resolution for better error messages.
  */
 import { getSourceMapCacheEntry, setSourceMapCacheEntry, isSourceMapEnabled } from './cache-limits.js';
-import { errorMessage } from '../lib/error-utils.js';
-import { fetchWithTimeout } from '../lib/timeout-utils.js';
+import { errorMessage } from '../../lib/error-utils.js';
+import { fetchWithTimeout } from '../../lib/timeout-utils.js';
 // =============================================================================
 // CONSTANTS
 // =============================================================================

@@ -6,7 +6,7 @@ import { createSyncClient } from './sync-client.js';
 import { getLastCSPStatus } from '../browser-actions.js';
 import { DebugCategory } from '../debug.js';
 import { updateBadge } from './communication.js';
-import { isQueryProcessing, addProcessingQuery, removeProcessingQuery } from '../state-manager.js';
+import { isQueryProcessing, addProcessingQuery, removeProcessingQuery } from '../caches/state-manager.js';
 import { getTrackedTabInfo } from '../event-listeners.js';
 import { handlePendingQuery as handlePendingQueryImpl } from '../pending-queries.js';
 import { errorMessage } from '../../lib/error-utils.js';

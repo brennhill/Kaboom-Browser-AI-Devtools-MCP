@@ -9,9 +9,9 @@
  * and cleanup of stale error groups.
  */
 
-import type { LogEntry } from '../types/index.js'
-import { StorageKey } from '../lib/constants.js'
-import { getSession, setSession, persist } from '../lib/storage-utils.js'
+import type { LogEntry } from '../../types/index.js'
+import { StorageKey } from '../../lib/constants.js'
+import { getSession, setSession, persist } from '../../lib/storage-utils.js'
 
 // =============================================================================
 // CONSTANTS

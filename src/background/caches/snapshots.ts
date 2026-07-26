@@ -15,9 +15,9 @@ import {
   SOURCE_MAP_CACHE_SIZE,
   isSourceMapEnabled
 } from './cache-limits.js'
-import type { LogEntry, ParsedSourceMap, ContextWarning } from '../types/index.js'
-import { errorMessage } from '../lib/error-utils.js'
-import { fetchWithTimeout } from '../lib/timeout-utils.js'
+import type { LogEntry, ParsedSourceMap, ContextWarning } from '../../types/index.js'
+import { errorMessage } from '../../lib/error-utils.js'
+import { fetchWithTimeout } from '../../lib/timeout-utils.js'
 
 // =============================================================================
 // CONSTANTS

@@ -63,7 +63,7 @@ export {
 // DEBUG LOG BUFFER
 // =============================================================================
 
-import type { DebugLogEntry } from '../types/index.js'
+import type { DebugLogEntry } from '../../types/index.js'
 
 /** Debug log buffer */
 const debugLogBuffer: DebugLogEntry[] = []

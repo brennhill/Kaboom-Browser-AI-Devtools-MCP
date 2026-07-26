@@ -11,7 +11,7 @@
 
 import type { MemoryPressureState, TimeoutId, CircuitBreakerState, CircuitBreakerStats } from '../../types/index.js'
 import { createCircuitBreaker, type CircuitBreaker } from './circuit-breaker.js'
-import { MAX_PENDING_BUFFER } from '../state-manager.js'
+import { MAX_PENDING_BUFFER } from '../caches/state-manager.js'
 
 const DEFAULT_DEBOUNCE_MS = 100
 const DEFAULT_MAX_BATCH_SIZE = 50

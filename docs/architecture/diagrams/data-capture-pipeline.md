@@ -484,7 +484,7 @@ type BufferStats struct {
 **Batching & Transport:**
 - `src/background/sync/batchers.ts` - Event batching
 - `src/background/sync/sync-client.ts` - HTTP POST /sync
-- `src/background/state-manager.ts` - State storage
+- `src/background/caches/state-manager.ts` - State storage
 
 **Server-Side Storage:**
 - `internal/capture/types.go` - Capture struct

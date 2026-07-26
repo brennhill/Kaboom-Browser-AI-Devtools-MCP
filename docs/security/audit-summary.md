@@ -481,7 +481,7 @@ Document existing rate limiting and DoS protection mechanisms.
 
 ### Solution: Comprehensive Documentation
 
-**File:** `/Users/brenn/dev/kaboom/src/background/cache-limits.ts`
+**File:** `/Users/brenn/dev/kaboom/src/background/caches/cache-limits.ts`
 
 Added detailed documentation explaining:
 
@@ -558,7 +558,7 @@ const ERROR_GROUP_CLEANUP_INTERVAL_MINUTES = 10;
 - Prevents connection storms
 
 ### Affected Files
-- `/Users/brenn/dev/kaboom/src/background/cache-limits.ts` - Enhanced documentation
+- `/Users/brenn/dev/kaboom/src/background/caches/cache-limits.ts` - Enhanced documentation
 - `/Users/brenn/dev/kaboom/src/background/event-listeners.ts` - Alarm documentation
 
 ---
@@ -631,7 +631,7 @@ All existing tests pass with no regressions:
    - Added sender ID validation to background message listener
    - Enhanced postMessage documentation
 
-5. **`/Users/brenn/dev/kaboom/src/background/cache-limits.ts`**
+5. **`/Users/brenn/dev/kaboom/src/background/caches/cache-limits.ts`**
    - Added comprehensive rate limiting documentation
    - Added memory enforcement documentation
    - Added security properties documentation

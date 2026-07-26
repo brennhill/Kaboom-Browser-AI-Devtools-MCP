@@ -2,7 +2,7 @@
  * Purpose: Fetches and caches source maps, parses stack frames with VLQ decoding, and resolves stack traces for better error messages.
  * Docs: docs/features/feature/observe/index.md
  */
-import type { LogEntry, ParsedSourceMap, ContextWarning } from '../types/index.js';
+import type { LogEntry, ParsedSourceMap, ContextWarning } from '../../types/index.js';
 /** Parsed stack frame */
 interface ParsedStackFrame {
     functionName: string;

@@ -37,7 +37,7 @@ export {
   MEMORY_AVG_WS_EVENT_SIZE,
   MEMORY_AVG_NETWORK_BODY_SIZE,
   MEMORY_AVG_ACTION_SIZE
-} from './background/state-manager.js'
+} from './background/caches/state-manager.js'
 
 // Rate limiting constants
 export { RATE_LIMIT_CONFIG } from './background/sync/communication.js'
@@ -129,7 +129,7 @@ export {
   resetMemoryPressureState,
   getProcessingQueriesState,
   cleanupStaleProcessingQueries
-} from './background/state-manager.js'
+} from './background/caches/state-manager.js'
 
 // Context and annotations
 export {
@@ -137,10 +137,10 @@ export {
   checkContextAnnotations,
   getContextWarning,
   resetContextWarning
-} from './background/state-manager.js'
+} from './background/caches/state-manager.js'
 
 // Source map management
-export { setSourceMapEnabled, isSourceMapEnabled, clearSourceMapCache } from './background/state-manager.js'
+export { setSourceMapEnabled, isSourceMapEnabled, clearSourceMapCache } from './background/caches/state-manager.js'
 
 // Cache limits and source map cache
 export {
@@ -148,7 +148,7 @@ export {
   setSourceMapCacheEntry,
   getSourceMapCacheEntry,
   getSourceMapCacheSize
-} from './background/cache-limits.js'
+} from './background/caches/cache-limits.js'
 
 // =============================================================================
 // === PUBLIC API: COMMUNICATION (Tests)

@@ -42,7 +42,7 @@ import {
   processErrorGroup,
   canTakeScreenshot,
   recordScreenshot
-} from './state-manager.js'
+} from './caches/state-manager.js'
 import {
   createCircuitBreaker,
   RATE_LIMIT_CONFIG,

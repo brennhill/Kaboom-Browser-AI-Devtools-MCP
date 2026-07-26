@@ -56,7 +56,7 @@ mock.module('../../extension/background/sync/communication.js', {
   }
 })
 
-mock.module('../../extension/background/state-manager.js', {
+mock.module('../../extension/background/caches/state-manager.js', {
   namedExports: {
     addDebugLogEntry: mock.fn(),
     getDebugLog: mock.fn(() => []),

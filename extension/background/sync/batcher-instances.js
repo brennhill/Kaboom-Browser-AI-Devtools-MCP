@@ -4,7 +4,7 @@
  * Docs: docs/features/feature/backend-log-streaming/index.md
  */
 import { updateBadge, createBatcherWithCircuitBreaker, sendLogsToServer, sendWSEventsToServer, sendEnhancedActionsToServer, sendNetworkBodiesToServer, sendPerformanceSnapshotsToServer } from './communication.js';
-import { checkContextAnnotations } from '../state-manager.js';
+import { checkContextAnnotations } from '../caches/state-manager.js';
 // =============================================================================
 // CONNECTION STATUS WRAPPER
 // =============================================================================

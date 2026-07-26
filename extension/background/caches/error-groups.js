@@ -2,8 +2,8 @@
  * Purpose: Deduplicates and groups identical errors within configurable time windows to reduce server traffic.
  * Docs: docs/features/feature/error-clustering/index.md
  */
-import { StorageKey } from '../lib/constants.js';
-import { getSession, setSession, persist } from '../lib/storage-utils.js';
+import { StorageKey } from '../../lib/constants.js';
+import { getSession, setSession, persist } from '../../lib/storage-utils.js';
 // =============================================================================
 // CONSTANTS
 // =============================================================================

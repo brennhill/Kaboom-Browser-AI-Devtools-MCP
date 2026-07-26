@@ -60,7 +60,7 @@ import {
   flushErrorGroups,
   cleanupStaleErrorGroups,
   clearScreenshotTimestamps
-} from './state-manager.js'
+} from './caches/state-manager.js'
 import {
   loadDebugModeState,
   installStartupListener,

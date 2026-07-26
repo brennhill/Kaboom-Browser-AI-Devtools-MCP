@@ -12,7 +12,7 @@
 export { createErrorSignature, processErrorGroup, cleanupStaleErrorGroups, flushErrorGroups, type ProcessedLogEntry, } from './error-groups.js';
 export { canTakeScreenshot, recordScreenshot, clearScreenshotTimestamps, estimateBufferMemory, checkMemoryPressure, getMemoryPressureState, resetMemoryPressureState, isNetworkBodyCaptureDisabled, setSourceMapEnabled, isSourceMapEnabled, clearSourceMapCache, MEMORY_SOFT_LIMIT, MEMORY_HARD_LIMIT, MEMORY_CHECK_INTERVAL_MS, MEMORY_AVG_LOG_ENTRY_SIZE, MEMORY_AVG_WS_EVENT_SIZE, MEMORY_AVG_NETWORK_BODY_SIZE, MEMORY_AVG_ACTION_SIZE, MAX_PENDING_BUFFER } from './cache-limits.js';
 export { measureContextSize, checkContextAnnotations, getContextWarning, resetContextWarning, resolveStackTrace, getProcessingQueriesState, addProcessingQuery, removeProcessingQuery, isQueryProcessing, cleanupStaleProcessingQueries } from './snapshots.js';
-import type { DebugLogEntry } from '../types/index.js';
+import type { DebugLogEntry } from '../../types/index.js';
 /**
  * Get all debug log entries
  */

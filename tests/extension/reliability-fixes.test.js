@@ -147,7 +147,7 @@ describe('Issue 1: _processingQueries TTL-based cleanup', () => {
 
   test('should remove stale queries older than 60 seconds', async () => {
     // addProcessingQuery is exported from the sub-module, not the facade
-    const { addProcessingQuery } = await import('../../extension/background/snapshots.js')
+    const { addProcessingQuery } = await import('../../extension/background/caches/snapshots.js')
 
     const oldTimestamp = Date.now() - 70000 // 70 seconds ago
     addProcessingQuery('stale-query-1', oldTimestamp)
@@ -162,7 +162,7 @@ describe('Issue 1: _processingQueries TTL-based cleanup', () => {
   })
 
   test('should not remove queries less than 60 seconds old', async () => {
-    const { addProcessingQuery } = await import('../../extension/background/snapshots.js')
+    const { addProcessingQuery } = await import('../../extension/background/caches/snapshots.js')
 
     addProcessingQuery('recent-query-1', Date.now() - 30000) // 30 seconds ago
 
@@ -372,7 +372,7 @@ describe('Issue 6: errorGroups periodic cleanup', () => {
   beforeEach(async () => {
     mock.reset()
     bgModule = await import('../../extension/background.js')
-    errorGroupsModule = await import('../../extension/background/error-groups.js')
+    errorGroupsModule = await import('../../extension/background/caches/error-groups.js')
     // Clear error groups
     bgModule.flushErrorGroups()
     bgModule.flushErrorGroups()
@@ -442,7 +442,7 @@ describe('Issue 6: errorGroups periodic cleanup', () => {
 describe('Integration: Memory and reliability safeguards', () => {
   test('Maps should have bounded growth', async () => {
     const bgModule = await import('../../extension/background.js')
-    const { getErrorGroupsState } = await import('../../extension/background/error-groups.js')
+    const { getErrorGroupsState } = await import('../../extension/background/caches/error-groups.js')
 
     // sourceMapCache should be bounded to 50
     const size = bgModule.getSourceMapCacheSize()

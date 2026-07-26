@@ -896,7 +896,7 @@ export const DOM_QUERY_MAX_ELEMENTS = 100  // Why 100?
 - `src/background/sync/batchers.ts`
 - `src/background/connection-state.ts`
 - `src/background/pending-queries.ts`
-- `src/background/state-manager.ts`
+- `src/background/caches/state-manager.ts`
 - `src/content/message-handlers.ts`
 - `src/content/request-tracking.ts`
 - `src/inject/message-handlers.ts`
