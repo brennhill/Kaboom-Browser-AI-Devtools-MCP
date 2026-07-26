@@ -110,11 +110,21 @@ func urlAt(s string, i int) int {
 	for j < len(s) && !isSpaceByte(s[j]) && s[j] != '"' && s[j] != '\'' {
 		j++
 	}
+	// The reference's [^\s"']+ is one-or-more, so a bare scheme with nothing after it
+	// ("http://" at end of message) is not a url and must be left alone.
+	if j == i+scheme {
+		return -1
+	}
 	return j
 }
 
+// isSpaceByte matches Go's regexp \s class exactly: [\t\n\f\r ].
+//
+// Note the omission: Go's \s does NOT include \v (0x0B), unlike PCRE and most other
+// engines. Including it here made "http://\v" stop at the vertical tab while the
+// reference regex swallowed it — caught by FuzzNormalizeErrorMessage, not by hand.
 func isSpaceByte(c byte) bool {
-	return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\v' || c == '\f'
+	return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f'
 }
 
 // timestampAt returns the end index of an ISO-8601 timestamp starting at i, or -1.

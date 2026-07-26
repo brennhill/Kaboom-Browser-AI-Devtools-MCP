@@ -79,24 +79,31 @@ func TestNormalizeErrorMessage_Table(t *testing.T) {
 	}
 }
 
+var normalizeFragments = []string{
+	"Cannot read property", "of undefined", "at /users/", "12345", "42", "7",
+	"https://api.example.com/v2/x?y=1", "http://a.b/c",
+	"3f8a1c2e-9b4d-4f1a-8c7e-2d5b6a9f0e31", "deadbeef-0000-1111-2222-333344445555",
+	"2026-07-26T14:33:00Z", "ver2026-01-02T00:00:00", "TypeError:",
+	"abc123", "x_9999", "999", "1.2.3", "id=00042", "  ", "\"", "'",
+}
+
 // TestNormalizeErrorMessage_MatchesReference is the real guard. The scanner collapses
 // four sequential global regex passes into one left-to-right pass, and that collapse has
 // non-obvious edge cases: a rewritten span manufactures a word boundary that the original
 // text lacks, and an earlier pass can claim a match starting partway inside a digit run.
 // Both bugs were present in the first draft and both were caught here, not by the table above.
+//
+// The case count is deliberately modest. An earlier revision ran 200,000 cases, which cost
+// ~10s of saturated CPU under -race locally and considerably more on a two-core CI runner —
+// enough contention to push the timing-sensitive daemon tests in cmd/browser-agent from 206s
+// past their 600s package timeout. Both known divergences reproduce within the first few
+// hundred cases; exhaustive search belongs in FuzzNormalizeErrorMessage, which runs on demand.
 func TestNormalizeErrorMessage_MatchesReference(t *testing.T) {
 	rng := rand.New(rand.NewSource(42))
-	fragments := []string{
-		"Cannot read property", "of undefined", "at /users/", "12345", "42", "7",
-		"https://api.example.com/v2/x?y=1", "http://a.b/c",
-		"3f8a1c2e-9b4d-4f1a-8c7e-2d5b6a9f0e31", "deadbeef-0000-1111-2222-333344445555",
-		"2026-07-26T14:33:00Z", "ver2026-01-02T00:00:00", "TypeError:",
-		"abc123", "x_9999", "999", "1.2.3", "id=00042", "  ", "\"", "'",
-	}
-	for n := 0; n < 200000; n++ {
+	for n := 0; n < 3000; n++ {
 		var sb strings.Builder
 		for k := rng.Intn(6); k >= 0; k-- {
-			sb.WriteString(fragments[rng.Intn(len(fragments))])
+			sb.WriteString(normalizeFragments[rng.Intn(len(normalizeFragments))])
 			if rng.Intn(2) == 0 {
 				sb.WriteByte(' ')
 			}
@@ -106,6 +113,24 @@ func TestNormalizeErrorMessage_MatchesReference(t *testing.T) {
 			t.Fatalf("scanner diverged from reference on %q:\n  reference=%q\n  scanner  =%q", in, want, got)
 		}
 	}
+}
+
+// FuzzNormalizeErrorMessage is where unbounded search lives. Under plain `go test` it
+// replays only the seed corpus (cheap); run `go test -fuzz=FuzzNormalizeErrorMessage
+// ./internal/tools/observe/errorcluster/` to search properly.
+func FuzzNormalizeErrorMessage(f *testing.F) {
+	for _, s := range normalizeFragments {
+		f.Add(s)
+	}
+	f.Add("deadbeef-0000-1111-2222-333344445555999 42") // boundary manufactured by a rewrite
+	f.Add("9992026-07-26T14:33:00Z")                    // earlier pass claims the tail of a digit run
+	f.Add("")
+
+	f.Fuzz(func(t *testing.T, in string) {
+		if want, got := referenceNormalize(in), normalizeErrorMessage(in); want != got {
+			t.Fatalf("scanner diverged from reference on %q:\n  reference=%q\n  scanner  =%q", in, want, got)
+		}
+	})
 }
 
 func BenchmarkNormalizeErrorMessage(b *testing.B) {
