@@ -1,8 +1,8 @@
-// annotations_builder.go — Provides small shared string-builder helpers for annotation artifact generation.
+// builder.go — Provides small shared string-builder helpers for annotation artifact generation.
 // Why: Avoids duplicated line/format append logic across report and visual-test emitters.
 // Docs: docs/features/feature/annotated-screenshots/index.md
 
-package toolgenerate
+package annotations
 
 import "fmt"
 

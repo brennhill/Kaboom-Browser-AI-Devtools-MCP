@@ -6,8 +6,9 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-26
 code_paths:
-  - internal/mcp/response_json.go
-  - internal/mcp/response_builders.go
+  - internal/mcp/response.go
+  - internal/mcp/response_content.go
+  - internal/mcp/response_clamp.go
   - internal/queries/dispatcher.go
   - internal/queries/dispatcher_commands.go
   - internal/queries/dispatcher_queries.go
@@ -52,7 +53,8 @@ last_verified_date: 2026-03-05
 ## Code and Tests
 
 - Query response assembly:
-  - `internal/mcp/response_json.go`
-  - `internal/mcp/response_builders.go`
+  - `internal/mcp/response.go` — marshal helpers plus the canonical `Succeed`/`SucceedText`/`Fail`/`ParseArgs` vocabulary
+  - `internal/mcp/response_content.go` — image and warning content blocks
+  - `internal/mcp/response_clamp.go` — JSON-aware payload clamping
 - Tests:
   - `internal/mcp/response_test.go`

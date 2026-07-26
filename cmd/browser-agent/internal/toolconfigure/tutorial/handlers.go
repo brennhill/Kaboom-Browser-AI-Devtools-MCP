@@ -1,8 +1,8 @@
-// tutorial.go — Generates context-aware tutorial content for configure(what="tutorial").
+// handlers.go — Generates context-aware tutorial content for configure(what="tutorial").
 // Why: Provides onboarding help and CSP navigation fallback guidance without requiring external documentation.
 // Docs: docs/features/feature/enhanced-cli-config/index.md
 
-package toolconfigure
+package tutorial
 
 import (
 	"encoding/json"
@@ -10,13 +10,30 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
+// Deps is everything the tutorial handler needs from the host server: the three
+// runtime signals that shape the context block and its diagnostics. It is
+// deliberately narrower than toolconfigure.Deps, which carries the noise,
+// security, telemetry and jitter accessors this package never touches.
+// *ToolHandler in cmd/browser-agent/ satisfies it, as does any
+// toolconfigure.Deps value. A nil Deps is valid and yields default context.
+type Deps interface {
+	// GetTrackingStatus returns (enabled, tabID, tabURL) for the tracked tab.
+	GetTrackingStatus() (bool, int, string)
+
+	// GetPilotStatus returns the AI Web Pilot status.
+	GetPilotStatus() any
+
+	// IsExtensionConnected returns whether the extension is connected.
+	IsExtensionConnected() bool
+}
+
 // HandleTutorial handles configure(what="tutorial") and configure(what="examples").
 // failureRecoveryPlaybooks is injected from the caller (lives in playbooks sub-package).
 func HandleTutorial(d Deps, req mcp.JSONRPCRequest, args json.RawMessage, failureRecoveryPlaybooks map[string]any) mcp.JSONRPCResponse {
 	var params struct {
 		What string `json:"what"`
 	}
-	lenientUnmarshal(args, &params)
+	mcp.LenientUnmarshal(args, &params)
 
 	mode := "tutorial"
 	if params.What == "examples" {
@@ -24,7 +41,7 @@ func HandleTutorial(d Deps, req mcp.JSONRPCRequest, args json.RawMessage, failur
 	}
 
 	context := TutorialContext(d)
-	return succeed(req, "Tutorial", map[string]any{
+	return mcp.Succeed(req, "Tutorial", map[string]any{
 		"status":                     "ok",
 		"mode":                       mode,
 		"message":                    "Quickstart snippets and context-aware guidance",

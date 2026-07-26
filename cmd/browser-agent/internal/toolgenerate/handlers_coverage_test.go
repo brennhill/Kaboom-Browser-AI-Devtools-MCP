@@ -1,6 +1,6 @@
 // handlers_coverage_test.go — Unit tests for the generate-local MCP artifact handlers.
 // Exercises param parsing, no-data vs with-data branches, validation and error paths
-// for each generate handler using a fake Deps backed by real capture/annotation stores.
+// for each generate artifact handler using a fake Deps backed by real capture stores.
 
 package toolgenerate
 
@@ -27,10 +27,10 @@ type fakeGenerateDeps struct {
 	a11yErr      error
 }
 
-func (f *fakeGenerateDeps) GetCapture() *capture.Store              { return f.cap }
-func (f *fakeGenerateDeps) GetAnnotationStore() *annotation.Store   { return f.annStore }
-func (f *fakeGenerateDeps) GetVersion() string                     { return f.version }
-func (f *fakeGenerateDeps) IsExtensionConnected() bool             { return f.extConnected }
+func (f *fakeGenerateDeps) GetCapture() *capture.Store            { return f.cap }
+func (f *fakeGenerateDeps) GetAnnotationStore() *annotation.Store { return f.annStore }
+func (f *fakeGenerateDeps) GetVersion() string                    { return f.version }
+func (f *fakeGenerateDeps) IsExtensionConnected() bool            { return f.extConnected }
 func (f *fakeGenerateDeps) ExecuteA11yQuery(_ string, _ []string, _ any, _ bool) (json.RawMessage, error) {
 	return f.a11yResult, f.a11yErr
 }
@@ -62,113 +62,6 @@ func parseResult(t *testing.T, resp mcp.JSONRPCResponse) (bool, string) {
 		text = r.Content[0].Text
 	}
 	return r.IsError, text
-}
-
-// ---------------------------------------------------------------------------
-// Annotation handlers (visual_test / annotation_report / annotation_issues)
-// ---------------------------------------------------------------------------
-
-func addAnonymousSession(d *fakeGenerateDeps) {
-	d.annStore.StoreSession(1, &annotation.Session{
-		PageURL:        "https://example.com/page",
-		ScreenshotPath: "/tmp/shot.png",
-		Timestamp:      time.Now().UnixMilli(),
-		Annotations: []annotation.Annotation{
-			{ID: "a1", Text: "Fix header", ElementSummary: "h1 'Welcome'", CorrelationID: "c1"},
-		},
-	})
-}
-
-func TestHandleVisualTest(t *testing.T) {
-	t.Run("no annotations returns no_data", func(t *testing.T) {
-		d := newGenDeps()
-		resp := HandleVisualTest(d, genReq(), json.RawMessage(`{}`))
-		if isErr, text := parseResult(t, resp); isErr {
-			t.Fatalf("no_data path should not be an error response: %s", text)
-		}
-	})
-
-	t.Run("with annotations generates script", func(t *testing.T) {
-		d := newGenDeps()
-		addAnonymousSession(d)
-		resp := HandleVisualTest(d, genReq(), json.RawMessage(`{"test_name":"My Test"}`))
-		isErr, text := parseResult(t, resp)
-		if isErr {
-			t.Fatalf("visual test should succeed: %s", text)
-		}
-		if len(text) == 0 {
-			t.Error("expected non-empty script text")
-		}
-	})
-
-	t.Run("default test name when empty", func(t *testing.T) {
-		d := newGenDeps()
-		addAnonymousSession(d)
-		resp := HandleVisualTest(d, genReq(), nil)
-		if isErr, _ := parseResult(t, resp); isErr {
-			t.Fatal("should succeed with default test name")
-		}
-	})
-
-	t.Run("named session not found", func(t *testing.T) {
-		d := newGenDeps()
-		resp := HandleVisualTest(d, genReq(), json.RawMessage(`{"annot_session":"ghost"}`))
-		if isErr, _ := parseResult(t, resp); isErr {
-			t.Fatal("missing named session yields no_data success, not error")
-		}
-	})
-
-	t.Run("named session found", func(t *testing.T) {
-		d := newGenDeps()
-		d.annStore.AppendToNamedSession("flow", &annotation.Session{
-			PageURL:     "https://example.com/x",
-			Annotations: []annotation.Annotation{{ID: "n1", Text: "note"}},
-		})
-		resp := HandleVisualTest(d, genReq(), json.RawMessage(`{"annot_session":"flow"}`))
-		if isErr, text := parseResult(t, resp); isErr {
-			t.Fatalf("named session should generate script: %s", text)
-		}
-	})
-}
-
-func TestHandleAnnotationReport(t *testing.T) {
-	t.Run("no data", func(t *testing.T) {
-		d := newGenDeps()
-		resp := HandleAnnotationReport(d, genReq(), json.RawMessage(`{}`))
-		if isErr, _ := parseResult(t, resp); isErr {
-			t.Fatal("no data path should be success no_data")
-		}
-	})
-	t.Run("with data", func(t *testing.T) {
-		d := newGenDeps()
-		addAnonymousSession(d)
-		resp := HandleAnnotationReport(d, genReq(), nil)
-		isErr, text := parseResult(t, resp)
-		if isErr {
-			t.Fatalf("report should succeed: %s", text)
-		}
-		if len(text) == 0 {
-			t.Error("expected markdown report text")
-		}
-	})
-}
-
-func TestHandleAnnotationIssues(t *testing.T) {
-	t.Run("no data", func(t *testing.T) {
-		d := newGenDeps()
-		resp := HandleAnnotationIssues(d, genReq(), json.RawMessage(`{}`))
-		if isErr, _ := parseResult(t, resp); isErr {
-			t.Fatal("no data path should be success no_data")
-		}
-	})
-	t.Run("with data", func(t *testing.T) {
-		d := newGenDeps()
-		addAnonymousSession(d)
-		resp := HandleAnnotationIssues(d, genReq(), nil)
-		if isErr, text := parseResult(t, resp); isErr {
-			t.Fatalf("issues should succeed: %s", text)
-		}
-	})
 }
 
 // ---------------------------------------------------------------------------

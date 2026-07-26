@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/tutorial"
 	cfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure"
 )
 
@@ -57,10 +58,10 @@ var configureHandlers = map[string]ModeHandler{
 		return toolconfigure.HandleDescribeCapabilities(h, req, args, version)
 	},
 	"tutorial": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-		return toolconfigure.HandleTutorial(h, req, args, tutorialFailureRecoveryPlaybooks())
+		return tutorial.HandleTutorial(h, req, args, tutorialFailureRecoveryPlaybooks())
 	},
 	"examples": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-		return toolconfigure.HandleTutorial(h, req, args, tutorialFailureRecoveryPlaybooks())
+		return tutorial.HandleTutorial(h, req, args, tutorialFailureRecoveryPlaybooks())
 	},
 	"save_sequence":       method((*ToolHandler).toolConfigureSaveSequence),
 	"get_sequence":        method((*ToolHandler).toolConfigureGetSequence),

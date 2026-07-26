@@ -13,6 +13,11 @@ import (
 
 // Deps provides all dependencies the configure-local handlers need.
 // *ToolHandler in cmd/browser-agent/ satisfies this interface.
+//
+// The tutorial and netrecord sub-packages declare their own, narrower Deps —
+// see tutorial.Deps and netrecord.NetworkBodyProvider. This interface covers
+// only the handlers that remain here (noise, capabilities, security mode,
+// telemetry, action jitter).
 type Deps interface {
 	// NoiseConfig returns the noise filtering configuration.
 	NoiseConfig() *noise.NoiseConfig
@@ -25,15 +30,6 @@ type Deps interface {
 
 	// AllWebSocketEvents returns captured WebSocket events.
 	AllWebSocketEvents() []capture.WebSocketEvent
-
-	// GetTrackingStatus returns (enabled, tabID, tabURL) for the tracked tab.
-	GetTrackingStatus() (bool, int, string)
-
-	// GetPilotStatus returns the AI Web Pilot status.
-	GetPilotStatus() any
-
-	// IsExtensionConnected returns whether the extension is connected.
-	IsExtensionConnected() bool
 
 	// ToolsList returns the list of registered MCP tools.
 	ToolsList() []mcp.MCPTool

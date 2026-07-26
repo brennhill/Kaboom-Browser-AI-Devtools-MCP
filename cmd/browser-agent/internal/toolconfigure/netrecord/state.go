@@ -1,7 +1,7 @@
-// network_recording_state.go — In-memory state container for network recording lifecycle.
+// state.go — In-memory state container for network recording lifecycle.
 // Why: Keeps concurrency-safe start/stop/status state transitions separate from tool handler orchestration.
 
-package toolconfigure
+package netrecord
 
 import (
 	"sync"

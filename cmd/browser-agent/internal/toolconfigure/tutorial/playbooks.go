@@ -1,8 +1,8 @@
-// tutorial_playbooks.go — Tutorial playbooks for safe automation loops and CSP fallback flows.
+// playbooks.go — Tutorial playbooks for safe automation loops and CSP fallback flows.
 // Why: Separates static playbook guidance from configure tutorial runtime logic.
 // Docs: docs/features/feature/enhanced-cli-config/index.md
 
-package toolconfigure
+package tutorial
 
 const (
 	// CSPRetryNavigationGuidance is the user-facing guidance for CSP-blocked pages.

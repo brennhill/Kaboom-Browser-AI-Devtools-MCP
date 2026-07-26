@@ -18,17 +18,12 @@ import (
 // Test fakes
 // ---------------------------------------------------------------------------
 
-// fakeConfigureDeps implements toolconfigure.Deps and NetworkBodyProvider.
+// fakeConfigureDeps implements toolconfigure.Deps.
 type fakeConfigureDeps struct {
 	noiseConfig      *noise.NoiseConfig
 	consoleEntries   []noise.LogEntry
 	networkBodies    []types.NetworkBody
 	wsEvents         []capture.WebSocketEvent
-	trackingEnabled  bool
-	tabID            int
-	tabURL           string
-	pilotStatus      any
-	extConnected     bool
 	tools            []mcp.MCPTool
 	moduleExamples   any
 	hasCapture       bool
@@ -45,18 +40,13 @@ type fakeConfigureDeps struct {
 	setJitterCalled       int
 }
 
-func (f *fakeConfigureDeps) NoiseConfig() *noise.NoiseConfig            { return f.noiseConfig }
-func (f *fakeConfigureDeps) ConsoleEntries() []noise.LogEntry           { return f.consoleEntries }
-func (f *fakeConfigureDeps) NetworkBodies() []types.NetworkBody         { return f.networkBodies }
+func (f *fakeConfigureDeps) NoiseConfig() *noise.NoiseConfig              { return f.noiseConfig }
+func (f *fakeConfigureDeps) ConsoleEntries() []noise.LogEntry             { return f.consoleEntries }
+func (f *fakeConfigureDeps) NetworkBodies() []types.NetworkBody           { return f.networkBodies }
 func (f *fakeConfigureDeps) AllWebSocketEvents() []capture.WebSocketEvent { return f.wsEvents }
-func (f *fakeConfigureDeps) GetTrackingStatus() (bool, int, string) {
-	return f.trackingEnabled, f.tabID, f.tabURL
-}
-func (f *fakeConfigureDeps) GetPilotStatus() any             { return f.pilotStatus }
-func (f *fakeConfigureDeps) IsExtensionConnected() bool      { return f.extConnected }
-func (f *fakeConfigureDeps) ToolsList() []mcp.MCPTool        { return f.tools }
-func (f *fakeConfigureDeps) GetToolModuleExamples(string) any { return f.moduleExamples }
-func (f *fakeConfigureDeps) HasCapture() bool                { return f.hasCapture }
+func (f *fakeConfigureDeps) ToolsList() []mcp.MCPTool                     { return f.tools }
+func (f *fakeConfigureDeps) GetToolModuleExamples(string) any             { return f.moduleExamples }
+func (f *fakeConfigureDeps) HasCapture() bool                             { return f.hasCapture }
 func (f *fakeConfigureDeps) GetSecurityMode() (string, bool, []string) {
 	return f.securityMode, f.productionParity, f.rewrites
 }
@@ -75,9 +65,6 @@ func (f *fakeConfigureDeps) InteractActionSetJitter(ms int) {
 	f.jitterMs = ms
 }
 func (f *fakeConfigureDeps) InteractActionGetJitter() int { return f.jitterMs }
-
-// GetNetworkBodies satisfies NetworkBodyProvider.
-func (f *fakeConfigureDeps) GetNetworkBodies() []types.NetworkBody { return f.networkBodies }
 
 // parseResp decodes an MCP tool result into (isError, text).
 func parseResp(t *testing.T, resp mcp.JSONRPCResponse) (bool, string) {
@@ -121,11 +108,11 @@ func sampleTool() mcp.MCPTool {
 
 func TestHandleActionJitter(t *testing.T) {
 	tests := []struct {
-		name     string
-		start    int
-		args     string
-		wantSet  bool
-		wantVal  int
+		name    string
+		start   int
+		args    string
+		wantSet bool
+		wantVal int
 	}{
 		{"no args returns current", 42, ``, false, 42},
 		{"set value", 0, `{"action_jitter_ms":100}`, true, 100},
@@ -271,91 +258,6 @@ func TestHandleSecurityMode(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// HandleNetworkRecording
-// ---------------------------------------------------------------------------
-
-func TestHandleNetworkRecording(t *testing.T) {
-	t.Run("status when inactive", func(t *testing.T) {
-		d := &fakeConfigureDeps{}
-		state := &NetworkRecordingState{}
-		resp := HandleNetworkRecording(d, state, newReq(), json.RawMessage(`{"operation":"status"}`))
-		isErr, _ := parseResp(t, resp)
-		if isErr {
-			t.Fatal("status should not error")
-		}
-	})
-
-	t.Run("empty operation is status", func(t *testing.T) {
-		d := &fakeConfigureDeps{}
-		state := &NetworkRecordingState{}
-		resp := HandleNetworkRecording(d, state, newReq(), nil)
-		isErr, _ := parseResp(t, resp)
-		if isErr {
-			t.Fatal("empty operation should be treated as status")
-		}
-	})
-
-	t.Run("start then start again errors", func(t *testing.T) {
-		d := &fakeConfigureDeps{}
-		state := &NetworkRecordingState{}
-		resp := HandleNetworkRecording(d, state, newReq(), json.RawMessage(`{"operation":"start","domain":"example.com","method":"POST"}`))
-		if isErr, text := parseResp(t, resp); isErr {
-			t.Fatalf("first start should succeed: %s", text)
-		}
-		// status while active should report active + filters
-		statusResp := HandleNetworkRecording(d, state, newReq(), json.RawMessage(`{"operation":"status"}`))
-		if isErr, _ := parseResp(t, statusResp); isErr {
-			t.Fatal("status while active should not error")
-		}
-		resp2 := HandleNetworkRecording(d, state, newReq(), json.RawMessage(`{"operation":"start"}`))
-		if isErr, _ := parseResp(t, resp2); !isErr {
-			t.Fatal("second start should error (already active)")
-		}
-	})
-
-	t.Run("stop when active returns recorded requests", func(t *testing.T) {
-		future := "2999-01-01T00:00:00Z"
-		d := &fakeConfigureDeps{networkBodies: []types.NetworkBody{
-			{Timestamp: future, URL: "https://example.com/api", Method: "POST", Status: 200},
-		}}
-		state := &NetworkRecordingState{}
-		HandleNetworkRecording(d, state, newReq(), json.RawMessage(`{"operation":"start","domain":"example.com"}`))
-		resp := HandleNetworkRecording(d, state, newReq(), json.RawMessage(`{"operation":"stop"}`))
-		isErr, text := parseResp(t, resp)
-		if isErr {
-			t.Fatalf("stop should succeed: %s", text)
-		}
-	})
-
-	t.Run("stop when inactive errors", func(t *testing.T) {
-		d := &fakeConfigureDeps{}
-		state := &NetworkRecordingState{}
-		resp := HandleNetworkRecording(d, state, newReq(), json.RawMessage(`{"operation":"stop"}`))
-		if isErr, _ := parseResp(t, resp); !isErr {
-			t.Fatal("stop when inactive should error")
-		}
-	})
-
-	t.Run("unknown operation errors", func(t *testing.T) {
-		d := &fakeConfigureDeps{}
-		state := &NetworkRecordingState{}
-		resp := HandleNetworkRecording(d, state, newReq(), json.RawMessage(`{"operation":"frobnicate"}`))
-		if isErr, _ := parseResp(t, resp); !isErr {
-			t.Fatal("unknown operation should error")
-		}
-	})
-
-	t.Run("invalid JSON errors", func(t *testing.T) {
-		d := &fakeConfigureDeps{}
-		state := &NetworkRecordingState{}
-		resp := HandleNetworkRecording(d, state, newReq(), json.RawMessage(`{not json`))
-		if isErr, _ := parseResp(t, resp); !isErr {
-			t.Fatal("invalid JSON should error")
-		}
-	})
-}
-
-// ---------------------------------------------------------------------------
 // HandleNoise (+ dispatch and action handlers)
 // ---------------------------------------------------------------------------
 
@@ -456,145 +358,6 @@ func TestHandleNoise_Actions(t *testing.T) {
 			t.Fatal("unknown action should error")
 		}
 	})
-}
-
-// ---------------------------------------------------------------------------
-// HandleTutorial + TutorialContext / TutorialIssues / TutorialNextSteps
-// ---------------------------------------------------------------------------
-
-func TestHandleTutorial(t *testing.T) {
-	d := &fakeConfigureDeps{
-		extConnected:    true,
-		trackingEnabled: true,
-		tabID:           5,
-		tabURL:          "https://example.com",
-		pilotStatus:     map[string]any{"enabled": true, "state": "enabled", "authoritative": true},
-	}
-	playbooks := map[string]any{"foo": "bar"}
-
-	for _, what := range []string{"tutorial", "examples"} {
-		resp := HandleTutorial(d, newReq(), json.RawMessage(`{"what":"`+what+`"}`), playbooks)
-		if isErr, text := parseResp(t, resp); isErr {
-			t.Fatalf("HandleTutorial(%s) should succeed: %s", what, text)
-		}
-	}
-}
-
-func TestTutorialContext_NilDeps(t *testing.T) {
-	ctx := TutorialContext(nil)
-	if ctx["extension_connected"] != false {
-		t.Error("nil deps should default extension_connected to false")
-	}
-	if ctx["pilot_enabled"] != true {
-		t.Error("nil deps should default pilot_enabled to true")
-	}
-}
-
-func TestTutorialContext_WithDeps(t *testing.T) {
-	d := &fakeConfigureDeps{
-		extConnected:    true,
-		trackingEnabled: true,
-		tabID:           9,
-		tabURL:          "https://x.test",
-		pilotStatus:     map[string]any{"enabled": false, "state": "explicitly_disabled", "authoritative": true},
-	}
-	ctx := TutorialContext(d)
-	if ctx["extension_connected"] != true {
-		t.Error("extension_connected should reflect deps")
-	}
-	if ctx["pilot_enabled"] != false {
-		t.Error("pilot_enabled should reflect status map")
-	}
-	if ctx["pilot_state"] != "explicitly_disabled" {
-		t.Errorf("pilot_state = %v", ctx["pilot_state"])
-	}
-	if ctx["tracked_tab_id"] != 9 {
-		t.Errorf("tracked_tab_id = %v", ctx["tracked_tab_id"])
-	}
-}
-
-func TestTutorialContext_NonMapPilotStatus(t *testing.T) {
-	d := &fakeConfigureDeps{pilotStatus: "not-a-map"}
-	ctx := TutorialContext(d)
-	// Falls back to defaults for pilot fields.
-	if ctx["pilot_enabled"] != true {
-		t.Error("non-map pilot status should keep default pilot_enabled")
-	}
-}
-
-func TestTutorialIssues(t *testing.T) {
-	tests := []struct {
-		name     string
-		ctx      map[string]any
-		wantCode string
-	}{
-		{
-			name:     "pilot disabled",
-			ctx:      map[string]any{"pilot_enabled": false, "pilot_state": "explicitly_disabled"},
-			wantCode: "pilot_disabled",
-		},
-		{
-			name:     "extension disconnected",
-			ctx:      map[string]any{"pilot_enabled": true, "pilot_state": "enabled", "extension_connected": false},
-			wantCode: "extension_disconnected",
-		},
-		{
-			name: "no tracked tab",
-			ctx: map[string]any{
-				"pilot_enabled": true, "pilot_state": "enabled",
-				"extension_connected": true, "tracking_enabled": false,
-				"tracked_tab_id": 0, "tracked_tab_url": "",
-			},
-			wantCode: "no_tracked_tab",
-		},
-		{
-			name: "all good yields no issues",
-			ctx: map[string]any{
-				"pilot_enabled": true, "pilot_state": "enabled",
-				"extension_connected": true, "tracking_enabled": true,
-				"tracked_tab_id": 3, "tracked_tab_url": "https://ok.test",
-			},
-			wantCode: "",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			issues := TutorialIssues(tt.ctx)
-			if tt.wantCode == "" {
-				if len(issues) != 0 {
-					t.Fatalf("expected no issues, got %v", issues)
-				}
-				return
-			}
-			if len(issues) == 0 {
-				t.Fatalf("expected an issue with code %q", tt.wantCode)
-			}
-			if issues[0]["code"] != tt.wantCode {
-				t.Errorf("code = %v, want %v", issues[0]["code"], tt.wantCode)
-			}
-		})
-	}
-}
-
-func TestTutorialNextSteps(t *testing.T) {
-	withIssue := map[string]any{"pilot_enabled": false, "pilot_state": "explicitly_disabled"}
-	steps := TutorialNextSteps(withIssue)
-	if len(steps) == 0 {
-		t.Fatal("expected next steps")
-	}
-	if steps[0] != "Run configure doctor to verify environment status" {
-		t.Errorf("unexpected first step for issue context: %q", steps[0])
-	}
-
-	healthy := map[string]any{
-		"pilot_enabled": true, "pilot_state": "enabled",
-		"extension_connected": true, "tracking_enabled": true,
-		"tracked_tab_id": 1, "tracked_tab_url": "https://ok.test",
-	}
-	steps2 := TutorialNextSteps(healthy)
-	if steps2[0] != "Run observe errors to inspect current page issues" {
-		t.Errorf("unexpected first step for healthy context: %q", steps2[0])
-	}
 }
 
 // ---------------------------------------------------------------------------

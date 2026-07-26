@@ -1,5 +1,5 @@
 // Purpose: Thin adapter bridging toolgenerate annotation handlers to ToolHandler.
-// Why: Keeps ToolHandler methods as thin wrappers while implementation lives in the toolgenerate sub-package.
+// Why: Keeps ToolHandler methods as thin wrappers while implementation lives in the toolgenerate/annotations sub-package.
 // Docs: docs/features/feature/annotated-screenshots/index.md
 
 package main
@@ -7,17 +7,17 @@ package main
 import (
 	"encoding/json"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate/annotations"
 )
 
 func (h *ToolHandler) toolGenerateVisualTest(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-	return toolgenerate.HandleVisualTest(h.generateDeps(), req, args)
+	return annotations.HandleVisualTest(h, req, args)
 }
 
 func (h *ToolHandler) toolGenerateAnnotationReport(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-	return toolgenerate.HandleAnnotationReport(h.generateDeps(), req, args)
+	return annotations.HandleAnnotationReport(h, req, args)
 }
 
 func (h *ToolHandler) toolGenerateAnnotationIssues(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-	return toolgenerate.HandleAnnotationIssues(h.generateDeps(), req, args)
+	return annotations.HandleAnnotationIssues(h, req, args)
 }
