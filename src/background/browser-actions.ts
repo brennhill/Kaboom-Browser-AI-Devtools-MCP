@@ -18,7 +18,7 @@ import { ASYNC_COMMAND_TIMEOUT_MS } from '../lib/constants.js'
 import type { SendAsyncResultFn, ActionToastFn } from './pending-queries.js'
 import { persistTrackedTab } from './commands/helpers.js'
 import { errorMessage } from '../lib/error-utils.js'
-import { focusTabAndWindow } from '../lib/tab-focus.js'
+import { focusTabAndWindow } from '../lib/tabs/tab-focus.js'
 import { delay } from '../lib/timeout-utils.js'
 
 // =============================================================================

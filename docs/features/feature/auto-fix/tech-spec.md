@@ -14,7 +14,7 @@ code_paths:
   - cmd/browser-agent/handler_tools_call_postprocess.go
   - cmd/browser-agent/internal/terminal/intent_store.go
   - cmd/browser-agent/internal/terminal/intent_handlers.go
-  - src/lib/request-audit.ts
+  - src/lib/tabs/request-audit.ts
   - src/background/message-handlers.ts
 test_paths:
   - cmd/browser-agent/tools_analyze_page_issues_test.go
@@ -71,7 +71,7 @@ In `cmd/browser-agent/internal/toolanalyze/page_issues_summary.go`. When `summar
 
 ### Shared trigger — `requestAudit`
 
-In `src/lib/request-audit.ts`. Both the popup `Audit` button and the on-page hover launcher call this one helper, which:
+In `src/lib/tabs/request-audit.ts`. Both the popup `Audit` button and the on-page hover launcher call this one helper, which:
 1. Opens the terminal side panel first (`open_terminal_panel`), treating open failures as best-effort.
 2. Sends the existing `qa_scan_requested` runtime message with the tracked page URL.
 
@@ -85,7 +85,7 @@ The terminal server injects the prompt into the active PTY when possible. When P
 
 ```
 User clicks Audit (popup or hover)
-  -> requestAudit (src/lib/request-audit.ts)
+  -> requestAudit (src/lib/tabs/request-audit.ts)
        1. open terminal side panel (best-effort)
        2. send qa_scan_requested runtime message (with tracked URL)
   -> message-handlers.ts builds audit prompt text

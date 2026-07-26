@@ -6,10 +6,10 @@
 import { KABOOM_LOG_PREFIX } from '../lib/brand.js';
 import { StorageKey } from '../lib/constants.js';
 import { getLocal, persist } from '../lib/storage-utils.js';
-import { clearTrackedTab } from '../lib/tracked-tab-storage.js';
-import { trackTab, untrackTab } from '../lib/tab-tracking-core.js';
-import { focusTabAndWindow } from '../lib/tab-focus.js';
-import { requestAudit } from '../lib/request-audit.js';
+import { clearTrackedTab } from '../lib/tabs/tracked-tab-storage.js';
+import { trackTab, untrackTab } from '../lib/tabs/tab-tracking-core.js';
+import { focusTabAndWindow } from '../lib/tabs/tab-focus.js';
+import { requestAudit } from '../lib/tabs/request-audit.js';
 /**
  * Handle launching the tracked-site audit workflow from popup controls.
  */

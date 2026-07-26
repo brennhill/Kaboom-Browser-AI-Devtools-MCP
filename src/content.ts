@@ -19,7 +19,7 @@
  * cross-frame injection. Attaches tabId to all forwarded messages.
  */
 
-import { isDomainCloaked } from './lib/cloaked-domains.js'
+import { isDomainCloaked } from './lib/tabs/cloaked-domains.js'
 import { initTabTracking } from './content/tab-tracking.js'
 import { initScriptInjection } from './content/script-injection.js'
 import {

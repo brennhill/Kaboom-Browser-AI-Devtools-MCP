@@ -17,7 +17,7 @@ describe('requestAudit', () => {
   })
 
   test('opens the terminal panel before requesting the audit bridge', async () => {
-    const { requestAudit } = await import('../../extension/lib/request-audit.js')
+    const { requestAudit } = await import('../../extension/lib/tabs/request-audit.js')
 
     await requestAudit('https://tracked.example/')
 

@@ -222,7 +222,7 @@
     return () => chrome.storage.onChanged.removeListener(listener);
   }
 
-  // extension/lib/internal-url.js
+  // extension/lib/tabs/internal-url.js
   function isInternalUrl(url) {
     if (!url)
       return true;
@@ -1269,7 +1269,7 @@ The daemon will restart automatically.`;
     applyFeatureToggles(result);
   }
 
-  // extension/lib/cloaked-domains.js
+  // extension/lib/tabs/cloaked-domains.js
   var BUILTIN_CLOAKED = [
     "cloudflare.com",
     "dash.cloudflare.com"
@@ -1298,7 +1298,7 @@ The daemon will restart automatically.`;
     return false;
   }
 
-  // extension/lib/tracked-tab-storage.js
+  // extension/lib/tabs/tracked-tab-storage.js
   var TRACKED_TAB_STORAGE_KEYS = [
     StorageKey.TRACKED_TAB_ID,
     StorageKey.TRACKED_TAB_URL,
@@ -1317,7 +1317,7 @@ The daemon will restart automatically.`;
     await removeLocals(TRACKED_TAB_STORAGE_KEYS);
   }
 
-  // extension/lib/tab-tracking-core.js
+  // extension/lib/tabs/tab-tracking-core.js
   function hostnameOf(url) {
     try {
       return url ? new URL(url).hostname : "";
@@ -1356,7 +1356,7 @@ The daemon will restart automatically.`;
       notifyTrackingState(prevTabId, false);
   }
 
-  // extension/lib/tab-focus.js
+  // extension/lib/tabs/tab-focus.js
   async function focusTabAndWindow(tabId) {
     const updated = await chrome.tabs.update(tabId, { active: true });
     const tab = updated ?? await chrome.tabs.get(tabId);
@@ -1366,7 +1366,7 @@ The daemon will restart automatically.`;
     return tab;
   }
 
-  // extension/lib/request-audit.js
+  // extension/lib/tabs/request-audit.js
   async function requestAudit(pageUrl, tabId) {
     try {
       await chrome.runtime.sendMessage({ type: "open_terminal_panel", tab_id: tabId });

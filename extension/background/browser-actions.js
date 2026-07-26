@@ -11,7 +11,7 @@ import { executeWithWorldRouting, probeCSPStatus } from './query-execution.js';
 import { ASYNC_COMMAND_TIMEOUT_MS } from '../lib/constants.js';
 import { persistTrackedTab } from './commands/helpers.js';
 import { errorMessage } from '../lib/error-utils.js';
-import { focusTabAndWindow } from '../lib/tab-focus.js';
+import { focusTabAndWindow } from '../lib/tabs/tab-focus.js';
 import { delay } from '../lib/timeout-utils.js';
 // =============================================================================
 // TIMEOUT CONFIGURATION

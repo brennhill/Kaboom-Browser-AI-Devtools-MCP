@@ -211,7 +211,7 @@
     return () => chrome.storage.onChanged.removeListener(listener);
   }
 
-  // extension/lib/cloaked-domains.js
+  // extension/lib/tabs/cloaked-domains.js
   var BUILTIN_CLOAKED = [
     "cloudflare.com",
     "dash.cloudflare.com"
@@ -2122,7 +2122,7 @@
     }
   }
 
-  // extension/lib/request-audit.js
+  // extension/lib/tabs/request-audit.js
   async function requestAudit(pageUrl, tabId) {
     try {
       await chrome.runtime.sendMessage({ type: "open_terminal_panel", tab_id: tabId });

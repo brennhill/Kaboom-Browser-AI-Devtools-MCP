@@ -4,8 +4,8 @@
  *      so background and popup never drift (e.g., leaving a stale TRACKED_TAB_TITLE behind).
  * Docs: docs/features/feature/tab-tracking-ux/index.md
  */
-import { StorageKey } from './constants.js';
-import { setLocals, removeLocals } from './storage-utils.js';
+import { StorageKey } from '../constants.js';
+import { setLocals, removeLocals } from '../storage-utils.js';
 /** All storage keys that make up tracked-tab state. Always read/cleared together. */
 export const TRACKED_TAB_STORAGE_KEYS = [
     StorageKey.TRACKED_TAB_ID,

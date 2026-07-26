@@ -9,7 +9,7 @@ import type { ScreenRecordingHandlers, RecordingShortcutHandlers } from './keybo
 import { toggleScreenRecording, toggleActionSequenceRecording } from './keyboard-shortcuts.js'
 import { errorMessage } from '../lib/error-utils.js'
 import { toggleDrawModeForTab } from './draw-mode-toggle.js'
-import { trackTab, untrackTab } from '../lib/tab-tracking-core.js'
+import { trackTab, untrackTab } from '../lib/tabs/tab-tracking-core.js'
 import { trackUIFeature } from './ui-usage-tracker.js'
 import { toggleTerminalSidePanel, isTerminalPanelOpenSync } from './terminal-panel.js'
 

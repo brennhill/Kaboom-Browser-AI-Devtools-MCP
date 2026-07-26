@@ -2,7 +2,7 @@
  * Purpose: Tab-state accessors, settings persistence, and content-script helpers.
  * Split from event-listeners.ts to keep files under 800 LOC.
  */
-export { setTrackedTab, clearTrackedTab, TRACKED_TAB_STORAGE_KEYS } from '../lib/tracked-tab-storage.js';
+export { setTrackedTab, clearTrackedTab, TRACKED_TAB_STORAGE_KEYS } from '../lib/tabs/tracked-tab-storage.js';
 /**
  * Ping content script to check if it's loaded
  */

@@ -27,7 +27,6 @@
     "scripts/docs": 16,
     "src/background": 35,
     "src/background/dom": 11,
-    "src/lib": 35,
     "src/popup": 14,
     "src/types": 22
   }

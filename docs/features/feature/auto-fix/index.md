@@ -4,7 +4,7 @@ feature_id: feature-auto-fix
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-26
 code_paths:
   - cmd/browser-agent/tools_analyze_page_issues.go
   - cmd/browser-agent/internal/toolanalyze/page_issues_summary.go
@@ -17,7 +17,7 @@ code_paths:
   - plugin/kaboom-workflows/commands/audit.md
   - npm/kaboom-agentic-browser/skills/audit/SKILL.md
   - npm/kaboom-agentic-browser/skills/qa/SKILL.md
-  - src/lib/request-audit.ts
+  - src/lib/tabs/request-audit.ts
   - src/popup/tab-tracking.ts
   - src/popup/tab-tracking-api.ts
   - src/content/ui/tracked-hover-launcher.ts

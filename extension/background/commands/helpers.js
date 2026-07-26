@@ -8,7 +8,7 @@ import { KABOOM_LOG_PREFIX } from '../../lib/brand.js';
 import { errorMessage, isNoReceiverError } from '../../lib/error-utils.js';
 import { delay } from '../../lib/timeout-utils.js';
 import { setLocals } from '../../lib/storage-utils.js';
-import { isInternalUrl } from '../../lib/internal-url.js';
+import { isInternalUrl } from '../../lib/tabs/internal-url.js';
 export function debugLog(category, message, data = null) {
     const globalLogger = globalThis
         .__KABOOM_DEBUG_LOG__;
