@@ -57,6 +57,77 @@ export function renderNoSessionState(container: HTMLElement, onStart: () => void
   container.appendChild(wrap)
 }
 
+const SPIN_KEYFRAMES_ID = 'kaboom-terminal-spin-style'
+
+/**
+ * Inject the spinner keyframes once per document.
+ *
+ * Guarded by id rather than a module-level flag: the side panel can reload this
+ * module (fresh import, same document), and a per-module flag would then believe
+ * the rule was already present when it wasn't — a spinner that silently stops
+ * spinning. Checking the DOM asks the only source of truth.
+ */
+function ensureSpinKeyframes(): void {
+  if (document.getElementById(SPIN_KEYFRAMES_ID)) return
+  const style = document.createElement('style')
+  style.id = SPIN_KEYFRAMES_ID
+  // Reduced motion still needs a *live* signal — a frozen spinner reads as a hung
+  // panel — so it degrades to a pulse rather than to nothing.
+  style.textContent = `
+@keyframes kaboom-terminal-spin { to { transform: rotate(360deg); } }
+@keyframes kaboom-terminal-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) {
+  .kaboom-terminal-spinner { animation: kaboom-terminal-pulse 1.4s ease-in-out infinite !important; }
+}`
+  document.head.appendChild(style)
+}
+
+/**
+ * Render a live "starting…" state into `container`.
+ *
+ * The daemon retries a transient fork/exec EPERM before giving up, so a spawn can
+ * legitimately take a few hundred milliseconds. Without this the panel body was
+ * visually identical to a dead one for that whole window and the user could not
+ * tell "working on it" from "broken".
+ */
+export function renderStartPending(container: HTMLElement, label = 'Starting terminal…'): void {
+  ensureSpinKeyframes()
+
+  const wrap = document.createElement('div')
+  Object.assign(wrap.style, {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    padding: '16px',
+    color: '#a9b1d6',
+    fontSize: '12px'
+  })
+
+  const spinner = document.createElement('div')
+  spinner.className = 'kaboom-terminal-spinner'
+  Object.assign(spinner.style, {
+    width: '14px',
+    height: '14px',
+    flex: '0 0 auto',
+    borderRadius: '50%',
+    border: '2px solid #292e42',
+    borderTopColor: '#7aa2f7',
+    animation: 'kaboom-terminal-spin 0.7s linear infinite'
+  })
+  // The spinner is decorative; the label carries the meaning for screen readers.
+  spinner.setAttribute('aria-hidden', 'true')
+
+  const text = document.createElement('div')
+  text.textContent = label
+  text.style.color = '#c0caf5'
+
+  wrap.setAttribute('role', 'status')
+  wrap.setAttribute('aria-live', 'polite')
+  wrap.appendChild(spinner)
+  wrap.appendChild(text)
+  container.replaceChildren(wrap)
+}
+
 /**
  * Render a start failure: what happened, what to do, and the command to run.
  */
