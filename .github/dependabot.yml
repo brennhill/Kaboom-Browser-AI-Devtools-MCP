@@ -6,6 +6,10 @@ updates:
   # Go modules
   - package-ecosystem: "gomod"
     directory: "/"
+    # Contributions flow into UNSTABLE; STABLE is reached only by the release
+    # squash. Without this, dependabot uses the repo default branch (STABLE) and
+    # resets the base on every rebase, so retargeting a PR by hand never sticks.
+    target-branch: "UNSTABLE"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -22,6 +26,10 @@ updates:
   # Root npm dependencies (MCP server wrapper)
   - package-ecosystem: "npm"
     directory: "/"
+    # Contributions flow into UNSTABLE; STABLE is reached only by the release
+    # squash. Without this, dependabot uses the repo default branch (STABLE) and
+    # resets the base on every rebase, so retargeting a PR by hand never sticks.
+    target-branch: "UNSTABLE"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -38,6 +46,10 @@ updates:
   # Browser extension
   - package-ecosystem: "npm"
     directory: "/extension"
+    # Contributions flow into UNSTABLE; STABLE is reached only by the release
+    # squash. Without this, dependabot uses the repo default branch (STABLE) and
+    # resets the base on every rebase, so retargeting a PR by hand never sticks.
+    target-branch: "UNSTABLE"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -55,6 +67,10 @@ updates:
   # E2E tests
   - package-ecosystem: "npm"
     directory: "/tests/e2e"
+    # Contributions flow into UNSTABLE; STABLE is reached only by the release
+    # squash. Without this, dependabot uses the repo default branch (STABLE) and
+    # resets the base on every rebase, so retargeting a PR by hand never sticks.
+    target-branch: "UNSTABLE"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -72,6 +88,10 @@ updates:
   # Playwright package
   - package-ecosystem: "npm"
     directory: "/packages/gasoline-playwright"
+    # Contributions flow into UNSTABLE; STABLE is reached only by the release
+    # squash. Without this, dependabot uses the repo default branch (STABLE) and
+    # resets the base on every rebase, so retargeting a PR by hand never sticks.
+    target-branch: "UNSTABLE"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -89,6 +109,10 @@ updates:
   # CI package
   - package-ecosystem: "npm"
     directory: "/packages/gasoline-ci"
+    # Contributions flow into UNSTABLE; STABLE is reached only by the release
+    # squash. Without this, dependabot uses the repo default branch (STABLE) and
+    # resets the base on every rebase, so retargeting a PR by hand never sticks.
+    target-branch: "UNSTABLE"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -106,6 +130,10 @@ updates:
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
+    # Contributions flow into UNSTABLE; STABLE is reached only by the release
+    # squash. Without this, dependabot uses the repo default branch (STABLE) and
+    # resets the base on every rebase, so retargeting a PR by hand never sticks.
+    target-branch: "UNSTABLE"
     schedule:
       interval: "weekly"
       day: "monday"
