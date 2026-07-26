@@ -764,7 +764,7 @@ The manifest (`extension/manifest.json`) declares:
 - Background: `service_worker: "background.js"` with `type: "module"` (lines 21-22)
 - Content scripts: `early-patch.bundled.js` (MAIN world), `content.bundled.js` (ISOLATED world)
 
-The build script (`scripts/bundle-content.js`) bundles content scripts (IIFE) and inject script (ESM) via esbuild. The background service worker is **not** bundled -- it uses native ES module imports. This is correct for Chromium 120+ targets.
+The build script (`scripts/build/bundle-content.js`) bundles content scripts (IIFE) and inject script (ESM) via esbuild. The background service worker is **not** bundled -- it uses native ES module imports. This is correct for Chromium 120+ targets.
 
 Command handler modules (`interact-explore.ts`, `analyze-page-structure.ts`, etc.) register themselves via `registerCommand()` as import side effects. The background service worker must import all command modules for registration to occur. This works with native modules but would break if the service worker were tree-shaken (dead code elimination would remove "unused" imports that only have side effects).
 

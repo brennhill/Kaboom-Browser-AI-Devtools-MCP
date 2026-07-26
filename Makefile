@@ -46,10 +46,10 @@ clean:
 
 # Generate TypeScript wire types from Go source of truth
 generate-wire-types:
-	@node scripts/generate-wire-types.js
+	@node scripts/build/generate-wire-types.js
 
 generate-dom-primitives:
-	@node scripts/generate-dom-primitives.js
+	@node scripts/build/generate-dom-primitives.js
 
 # Compile TypeScript to JavaScript (REQUIRED before tests)
 compile-ts: generate-wire-types generate-dom-primitives
@@ -60,7 +60,7 @@ compile-ts: generate-wire-types generate-dom-primitives
 		exit 1; \
 	fi
 	@echo "=== Bundling extension scripts ==="
-	@node scripts/bundle-content.js
+	@node scripts/build/bundle-content.js
 	@if [ ! -f extension/content.bundled.js ]; then \
 		echo "❌ ERROR: Content script bundling failed"; \
 		exit 1; \
@@ -326,7 +326,7 @@ typecheck:
 check: check-file-length lint lint-boundaries lint-json-casing format typecheck check-invariants
 
 check-wire-drift:
-	@node scripts/generate-wire-types.js --check
+	@node scripts/build/generate-wire-types.js --check
 
 check-ts-json-casing:
 	@node scripts/check-ts-json-casing.js
@@ -431,7 +431,7 @@ verify-all: lint security-check test-cover test-js
 # Typical runtime target: ~60-120 seconds on a warm cache.
 verify-llm:
 	@echo "Running verify-llm fast gate (schema + docs + core contracts)..."
-	@node scripts/generate-wire-types.js --check
+	@node scripts/build/generate-wire-types.js --check
 	@npm run docs:lint:integrity
 	@npm run docs:check:strict
 	@npm run docs:lint:content-contract

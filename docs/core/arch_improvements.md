@@ -230,7 +230,7 @@ Eliminate manual duplication/drift in injected executeScript helpers.
 
 1. `src/background/dom/primitives/dom-primitives.ts` is generated.
 2. Template source exists: `scripts/templates/dom-primitives.ts.tpl`.
-3. Generator exists with `--check`: `scripts/generate-dom-primitives.js`.
+3. Generator exists with `--check`: `scripts/build/generate-dom-primitives.js`.
 4. Invariant check added in `scripts/check-sync-invariants.sh`.
 
 ### Next step

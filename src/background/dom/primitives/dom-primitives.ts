@@ -4,7 +4,7 @@
 //   _dom-intent.tpl, _dom-intent-actions.tpl, _dom-ranking.tpl,
 //   _dom-action-helpers.tpl, _dom-action-handlers-core.tpl,
 //   _dom-action-handlers-input.tpl, _dom-action-handlers-overlay.tpl
-// Generator: scripts/generate-dom-primitives.js
+// Generator: scripts/build/generate-dom-primitives.js
 
 // eslint-disable max-lines - Auto-generated from template + partials; must be a single self-contained function for chrome.scripting.executeScript.
 /**

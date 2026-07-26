@@ -1,6 +1,6 @@
 // THIS FILE IS GENERATED — do not edit by hand.
 // Source: internal/types/wire_network.go
-// Generator: scripts/generate-wire-types.js
+// Generator: scripts/build/generate-wire-types.js
 
 /**
  * @fileoverview Wire types for network telemetry — matches internal/types/wire_network.go

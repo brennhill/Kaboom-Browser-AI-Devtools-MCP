@@ -4,12 +4,12 @@ feature_id: feature-kaboom-ci
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-26
 code_paths:
   - Makefile
   - .github/workflows/ci.yml
   - .golangci.yml
-  - scripts/generate-wire-types.js
+  - scripts/build/generate-wire-types.js
   - scripts/docs/check-feature-bundles.js
   - scripts/docs/check-gokaboom-content-contract.mjs
   - scripts/docs/check-reference-schema-sync.mjs

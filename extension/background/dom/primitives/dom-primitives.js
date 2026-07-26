@@ -4,7 +4,7 @@
 //   _dom-intent.tpl, _dom-intent-actions.tpl, _dom-ranking.tpl,
 //   _dom-action-helpers.tpl, _dom-action-handlers-core.tpl,
 //   _dom-action-handlers-input.tpl, _dom-action-handlers-overlay.tpl
-// Generator: scripts/generate-dom-primitives.js
+// Generator: scripts/build/generate-dom-primitives.js
 // Re-export list_interactive primitive for backward compatibility
 export { domPrimitiveListInteractive } from './dom-primitives-list-interactive.js';
 /**
