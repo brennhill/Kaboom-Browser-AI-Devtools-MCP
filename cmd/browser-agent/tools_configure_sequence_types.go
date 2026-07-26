@@ -6,13 +6,14 @@ import (
 	"sync"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
 )
 
 // Type aliases for backward compatibility.
 type Sequence = toolconfigure.Sequence
 type SequenceSummary = toolconfigure.SequenceSummary
 type SequenceStepResult = toolconfigure.SequenceStepResult
-type RecordingSnapshot = toolconfigure.RecordingSnapshot
+type RecordingSnapshot = netrecord.RecordingSnapshot
 
 // Re-exported constants.
 const (

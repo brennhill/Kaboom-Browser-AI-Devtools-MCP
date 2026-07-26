@@ -6,6 +6,9 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-26
 code_paths:
+  - cmd/browser-agent/internal/toolconfigure/tutorial/handlers.go
+  - cmd/browser-agent/internal/toolconfigure/tutorial/snippets.go
+  - cmd/browser-agent/internal/toolconfigure/tutorial/playbooks.go
   - Makefile
   - scripts/release/build-crx.js
   - cmd/browser-agent/native_install.go
@@ -31,6 +34,7 @@ code_paths:
   - npm/kaboom-agentic-browser/lib/codex-config.js
   - docs/mcp-install-guide.md
 test_paths:
+  - cmd/browser-agent/internal/toolconfigure/tutorial/tutorial_test.go
   - cmd/browser-agent/native_install_test.go
   - cmd/browser-agent/native_install_open_test.go
   - cmd/browser-agent/native_install_connect_test.go

@@ -6,6 +6,10 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-26
 code_paths:
+  - cmd/browser-agent/tools_configure_network_recording.go
+  - cmd/browser-agent/internal/toolconfigure/netrecord/handlers.go
+  - cmd/browser-agent/internal/toolconfigure/netrecord/state.go
+  - cmd/browser-agent/internal/toolconfigure/netrecord/filters.go
   - internal/capture/accessors.go
   - internal/capture/aliases.go
   - internal/capture/buffer_store.go
@@ -39,6 +43,8 @@ code_paths:
   - src/early-patch.ts
   - src/lib/page/safe-global-patch.ts
 test_paths:
+  - cmd/browser-agent/tools_configure_network_recording_test.go
+  - cmd/browser-agent/internal/toolconfigure/netrecord/netrecord_test.go
   - internal/capture/sync_test.go
   - internal/capture/sync_test_helpers_test.go
   - internal/capture/settings_path_test.go

@@ -1,8 +1,8 @@
-// network_recording.go — Implements passive network traffic recording handler.
+// handlers.go — Implements passive network traffic recording handler.
 // Why: Captures network baseline snapshots so agents can compare traffic patterns before and after code changes.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
-package toolconfigure
+package netrecord
 
 import (
 	"encoding/json"
@@ -26,7 +26,7 @@ func HandleNetworkRecording(d NetworkBodyProvider, state *NetworkRecordingState,
 	}
 	if len(args) > 0 {
 		if err := json.Unmarshal(args, &params); err != nil {
-			return fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
+			return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 		}
 	}
 
@@ -34,7 +34,7 @@ func HandleNetworkRecording(d NetworkBodyProvider, state *NetworkRecordingState,
 	case "start":
 		startedAt, ok := state.TryStart(params.Domain, params.Method)
 		if !ok {
-			return fail(req, mcp.ErrInvalidParam,
+			return mcp.Fail(req, mcp.ErrInvalidParam,
 				"Network recording already active",
 				"Stop the current recording first with operation='stop'.")
 		}
@@ -48,12 +48,12 @@ func HandleNetworkRecording(d NetworkBodyProvider, state *NetworkRecordingState,
 		if params.Method != "" {
 			result["method_filter"] = params.Method
 		}
-		return succeed(req, "Network recording started", result)
+		return mcp.Succeed(req, "Network recording started", result)
 
 	case "stop":
 		snap, wasActive := state.Stop()
 		if !wasActive {
-			return fail(req, mcp.ErrInvalidParam,
+			return mcp.Fail(req, mcp.ErrInvalidParam,
 				"No active network recording",
 				"Start a recording first with operation='start'.")
 		}
@@ -68,7 +68,7 @@ func HandleNetworkRecording(d NetworkBodyProvider, state *NetworkRecordingState,
 			"requests":    recorded,
 			"count":       len(recorded),
 		}
-		return succeed(req, "Network recording stopped", result)
+		return mcp.Succeed(req, "Network recording stopped", result)
 
 	case "status", "":
 		snap := state.Info()
@@ -85,10 +85,10 @@ func HandleNetworkRecording(d NetworkBodyProvider, state *NetworkRecordingState,
 				result["method_filter"] = snap.Method
 			}
 		}
-		return succeed(req, "Network recording status", result)
+		return mcp.Succeed(req, "Network recording status", result)
 
 	default:
-		return fail(req, mcp.ErrInvalidParam,
+		return mcp.Fail(req, mcp.ErrInvalidParam,
 			"Unknown operation: "+params.Operation,
 			"Use 'start', 'stop', or 'status'.")
 	}

@@ -13,7 +13,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testgenhandler"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/apicontract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/thirdparty"
@@ -58,7 +58,7 @@ func NewToolHandler(server *Server, capture *capture.Store) *MCPHandler {
 		coldStartTimeout:          defaultColdStartTimeout,
 		extensionReadinessTimeout: defaultExtensionReadinessTimeout(),
 		playbackSessions:          newPlaybackSessionsMap(),
-		networkRecording:          &toolconfigure.NetworkRecordingState{},
+		networkRecording:          &netrecord.NetworkRecordingState{},
 	}
 
 	// Initialize usage tracker for structured telemetry beacons.

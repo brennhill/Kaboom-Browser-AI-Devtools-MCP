@@ -1,7 +1,7 @@
-// network_recording_filters.go — Filtering and projection helpers for network recording snapshots.
+// filters.go — Filtering and projection helpers for network recording snapshots.
 // Why: Keeps request selection/serialization logic out of handler control flow.
 
-package toolconfigure
+package netrecord
 
 import (
 	"strconv"
