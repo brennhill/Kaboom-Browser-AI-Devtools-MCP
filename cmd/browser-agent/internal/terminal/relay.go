@@ -247,10 +247,11 @@ func (m *Map) WriteToFirst(data []byte) bool {
 		return false
 	}
 	if _, err := relay.writeBuf.Write(data); err != nil {
-		// A full/closed write buffer means the shell has exited or is wedged under
-		// backpressure — the data did NOT land. Report failure so the caller falls
-		// through to its fallback (e.g. the in-page Audit prompt stores the intent)
-		// instead of being told the write succeeded and silently losing it.
+		// ErrWriteBufferClosed (the shell exited) and ErrWriteBufferFull (wedged
+		// under backpressure) are distinct, but both mean the data did NOT land.
+		// Report failure so the caller falls through to its fallback (e.g. the
+		// in-page Audit prompt stores the intent) instead of being told the write
+		// succeeded and silently losing it.
 		return false
 	}
 	return true

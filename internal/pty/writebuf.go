@@ -57,8 +57,17 @@ func fireWriteBufferCloseTimeout(pending int) {
 	}
 }
 
-// ErrWriteBufferFull is returned when the write buffer exceeds the backpressure cap.
+// ErrWriteBufferFull is returned when the write buffer exceeds the backpressure
+// cap: the shell is alive but is not draining its stdin fast enough, so this write
+// was discarded. Retrying later can succeed.
 var ErrWriteBufferFull = errors.New("pty: write buffer full")
+
+// ErrWriteBufferClosed is returned when writing to a closed buffer: the session is
+// gone and no write will ever succeed. Distinct from ErrWriteBufferFull because the
+// two mean opposite things to a caller — "the terminal is behind, back off" versus
+// "the terminal is gone, stop trying" — and reporting both as Full made them
+// indistinguishable (finding S9).
+var ErrWriteBufferClosed = errors.New("pty: write buffer closed")
 
 // ErrWriteBufferCloseTimeout is returned by Close when the drain goroutine did not
 // exit within writeBufferCloseTimeout (the underlying writer is stuck). Surfaced so
@@ -108,8 +117,9 @@ func writerSessionID(w io.Writer) string {
 	return ""
 }
 
-// Write appends data to the buffer without blocking. Returns ErrWriteBufferFull
-// if the buffer exceeds the backpressure cap.
+// Write appends data to the buffer without blocking. Returns ErrWriteBufferClosed
+// if the session is gone, or ErrWriteBufferFull if the buffer exceeds the
+// backpressure cap. Either way the data was NOT accepted.
 func (wb *WriteBuffer) Write(data []byte) (int, error) {
 	// The notify signal is sent while holding mu, together with the `closed`
 	// check: Close closes wb.notify under the same lock, so a Write can never
@@ -118,7 +128,7 @@ func (wb *WriteBuffer) Write(data []byte) (int, error) {
 	wb.mu.Lock()
 	defer wb.mu.Unlock()
 	if wb.closed {
-		return 0, ErrWriteBufferFull
+		return 0, ErrWriteBufferClosed
 	}
 	if len(wb.buf)+len(data) > wb.maxSize {
 		return 0, ErrWriteBufferFull

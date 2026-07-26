@@ -430,7 +430,17 @@ func wsLoop(conn net.Conn, rw *bufio.ReadWriter, deps Deps, sess *pty.Session, r
 				_ = writeFrame(0xA, payload)
 			case 0xA: // Pong — no-op, deadline already refreshed above
 			case 0x2: // Binary — raw keystrokes -> PTY stdin via write buffer
-				_, _ = relay.writeBuf.Write(payload)
+				if _, werr := relay.writeBuf.Write(payload); werr != nil {
+					// The keystrokes did NOT reach the shell. Dropping them silently
+					// is exactly the "typed input vanished" report we cannot diagnose
+					// afterwards (rule 25), and the two causes need different
+					// responses, so the reason is recorded, not just the drop.
+					deps.logEvent("terminal_input_dropped", map[string]any{
+						"session_id": sess.ID,
+						"bytes":      len(payload),
+						"reason":     writeDropReason(werr),
+					})
+				}
 			case 0x1: // Text — JSON control message
 				HandleControlMessage(payload, sess)
 			}
@@ -438,6 +448,20 @@ func wsLoop(conn net.Conn, rw *bufio.ReadWriter, deps Deps, sess *pty.Session, r
 	})
 
 	<-downstreamDone
+}
+
+// writeDropReason names why a PTY write was refused, so the log distinguishes a
+// session that has ended from one that is merely wedged under backpressure
+// (finding S9 — both used to surface as ErrWriteBufferFull).
+func writeDropReason(err error) string {
+	switch {
+	case errors.Is(err, pty.ErrWriteBufferClosed):
+		return "session_ended"
+	case errors.Is(err, pty.ErrWriteBufferFull):
+		return "backpressure"
+	default:
+		return "write_error"
+	}
 }
 
 // goConnWorker launches one per-connection wsLoop goroutine with panic recovery.
