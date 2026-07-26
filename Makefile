@@ -329,10 +329,10 @@ check-wire-drift:
 	@node scripts/build/generate-wire-types.js --check
 
 check-ts-json-casing:
-	@node scripts/check-ts-json-casing.js
+	@node scripts/contracts/check-ts-json-casing.js
 
 check-invariants: check-wire-drift check-ts-json-casing
-	@node scripts/check-sync-wire-drift.js
+	@node scripts/contracts/check-sync-wire-drift.js
 	@./scripts/check-esm-extensions.sh
 	@./scripts/check-sync-invariants.sh
 	@./scripts/check-bridge-stdout-invariant.sh

@@ -4,7 +4,7 @@
 //      optionality, and missing-field drift before it reaches production.
 //
 // Usage:
-//   node scripts/check-sync-wire-drift.js        # Check for drift (exit non-zero if found)
+//   node scripts/contracts/check-sync-wire-drift.js        # Check for drift (exit non-zero if found)
 
 import fs from 'fs'
 import path from 'path'
@@ -12,7 +12,7 @@ import { fileURLToPath } from 'url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-const ROOT = path.resolve(__dirname, '..')
+const ROOT = path.resolve(__dirname, '..', '..')
 
 const GO_FILE = 'internal/capture/sync.go'
 const TS_FILE = 'src/background/sync/sync-client.ts'

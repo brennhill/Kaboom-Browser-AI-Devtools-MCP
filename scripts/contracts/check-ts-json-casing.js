@@ -8,7 +8,7 @@
 // Allowlist: Keys that are part of external specs (e.g., JSON-RPC "jsonrpc", "params")
 // can be annotated with // WIRE-OK on the same line, or added to ALLOWED_KEYS below.
 //
-// Usage: node scripts/check-ts-json-casing.js
+// Usage: node scripts/contracts/check-ts-json-casing.js
 // Exit code: 0 if clean, 1 if violations found.
 
 import fs from 'fs'
@@ -17,7 +17,7 @@ import { fileURLToPath } from 'url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-const rootDir = path.resolve(__dirname, '..')
+const rootDir = path.resolve(__dirname, '..', '..')
 
 // Keys exempt from snake_case requirement (external protocol fields)
 const ALLOWED_KEYS = new Set([

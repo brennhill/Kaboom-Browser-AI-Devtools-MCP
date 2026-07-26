@@ -7,7 +7,7 @@ owners: []
 last_reviewed: 2026-07-26
 code_paths:
   - scripts/build/generate-wire-types.js
-  - scripts/check-wire-drift.js
+  - scripts/contracts/check-wire-drift.js
   - internal/types/wire_enhanced_action.go
   - internal/types/wire_network.go
   - internal/schema/interact.go

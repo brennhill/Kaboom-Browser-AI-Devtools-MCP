@@ -100,7 +100,7 @@ jobs:
       - name: Wire drift gate (Go <-> TS payload contracts)
         run: |
           make check-wire-drift
-          node scripts/check-sync-wire-drift.js
+          node scripts/contracts/check-sync-wire-drift.js
 
       - name: Go tests (short)
         run: go test -short ./...
