@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/httpsec"
 )
 
 // TakeSnapshot captures and stores a named snapshot.
@@ -101,7 +102,7 @@ func populateSnapshotFromBodies(snapshot *SecuritySnapshot, bodies []capture.Net
 }
 
 func populateHeaders(snapshot *SecuritySnapshot, origin string, body capture.NetworkBody) {
-	if !isHTMLResponse(body) || body.ResponseHeaders == nil {
+	if !httpsec.IsHTMLResponse(body) || body.ResponseHeaders == nil {
 		return
 	}
 	if snapshot.Headers[origin] == nil {

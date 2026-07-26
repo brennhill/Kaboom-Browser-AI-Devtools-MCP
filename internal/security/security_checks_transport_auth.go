@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/httpsec"
 )
 
 // ============================================
@@ -30,7 +31,7 @@ func (s *SecurityScanner) checkTransport(bodies []capture.NetworkBody, pageURLs 
 		if !strings.HasPrefix(body.URL, "http://") {
 			continue
 		}
-		if isLocalhostURL(body.URL) {
+		if httpsec.IsLocalhostURL(body.URL) {
 			continue
 		}
 
@@ -46,7 +47,7 @@ func (s *SecurityScanner) checkTransport(bodies []capture.NetworkBody, pageURLs 
 
 		if pageIsHTTPS {
 			severity := "warning"
-			if isJavaScriptContent(body.ContentType) {
+			if httpsec.IsJavaScriptContent(body.ContentType) {
 				severity = "critical"
 			}
 			findings = append(findings, SecurityFinding{

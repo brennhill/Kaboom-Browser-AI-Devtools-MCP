@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/httpsec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -33,7 +34,7 @@ func shouldSkipHSTS(headerName string, body capture.NetworkBody) bool {
 	if headerName != "Strict-Transport-Security" {
 		return false
 	}
-	return isLocalhostURL(body.URL) || !strings.HasPrefix(body.URL, "https://")
+	return httpsec.IsLocalhostURL(body.URL) || !strings.HasPrefix(body.URL, "https://")
 }
 
 // checkHeadersForOrigin checks a single HTML response for missing security headers.
@@ -63,7 +64,7 @@ func (s *SecurityScanner) checkSecurityHeaders(bodies []capture.NetworkBody) []S
 	checkedOrigins := make(map[string]bool)
 
 	for _, body := range bodies {
-		if !isHTMLResponse(body) {
+		if !httpsec.IsHTMLResponse(body) {
 			continue
 		}
 		origin := util.ExtractOrigin(body.URL)

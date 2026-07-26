@@ -1,21 +1,28 @@
+// cookie.go — Set-Cookie header parsing into normalized attribute structs.
 // Purpose: Parses Set-Cookie header strings into normalized attribute structs.
 // Why: Shares cookie parsing across checks and diff computation without duplication.
 // Docs: docs/features/feature/security-hardening/index.md
 
-package security
+// Package httpsec holds the HTTP-level primitives — URL classification and
+// Set-Cookie parsing — shared by the security scan and diff analyzers.
+//
+// It is a leaf package by design: it must not import any sibling package under
+// internal/security, which is what keeps scan and diff free of a cycle.
+package httpsec
 
 import "strings"
 
-// cookieAttrs represents parsed Set-Cookie attributes.
-type cookieAttrs struct {
+// CookieAttrs represents parsed Set-Cookie attributes.
+type CookieAttrs struct {
 	Name     string
 	HttpOnly bool
 	Secure   bool
 	SameSite string
 }
 
-func parseCookies(setCookieHeader string) []cookieAttrs {
-	var cookies []cookieAttrs
+// ParseCookies splits a newline-joined Set-Cookie header block into attributes.
+func ParseCookies(setCookieHeader string) []CookieAttrs {
+	var cookies []CookieAttrs
 
 	lines := strings.Split(setCookieHeader, "\n")
 	for _, line := range lines {
@@ -23,16 +30,17 @@ func parseCookies(setCookieHeader string) []cookieAttrs {
 		if line == "" {
 			continue
 		}
-		cookie := parseSingleCookie(line)
+		cookie := ParseSingleCookie(line)
 		cookies = append(cookies, cookie)
 	}
 
 	return cookies
 }
 
-func parseSingleCookie(raw string) cookieAttrs {
+// ParseSingleCookie parses one Set-Cookie value into its security attributes.
+func ParseSingleCookie(raw string) CookieAttrs {
 	parts := strings.Split(raw, ";")
-	cookie := cookieAttrs{}
+	cookie := CookieAttrs{}
 
 	if len(parts) > 0 {
 		nameValue := strings.TrimSpace(parts[0])

@@ -3,7 +3,7 @@
 
 // security_coverage_test.go — Targeted coverage tests for uncovered security paths (part 1).
 // Covers: formatDuration, redactSecret, networkFlagDescription, networkFlagRemediation,
-// extractOrigin, isThirdPartyURL, isLocalhostURL, scanForCreditCard, scanForSSN,
+// extractOrigin, scanForCreditCard, scanForSSN,
 // scanForEmailPII, scanForPhonePII, thirdPartySeverity, checkAuthPatterns.
 package security
 
@@ -193,83 +193,6 @@ func TestExtractOrigin_NoHost(t *testing.T) {
 	got := util.ExtractOrigin("file:///path/to/file")
 	if got != "" {
 		t.Errorf("extractOrigin(file:///) = %q, want empty", got)
-	}
-}
-
-// ============================================
-// isThirdPartyURL — Edge cases
-// ============================================
-
-func TestIsThirdPartyURL_EmptyPageURLs(t *testing.T) {
-	t.Parallel()
-	got := isThirdPartyURL("https://example.com/api", nil)
-	if got {
-		t.Error("isThirdPartyURL with empty pageURLs should return false")
-	}
-}
-
-func TestIsThirdPartyURL_InvalidRequestURL(t *testing.T) {
-	t.Parallel()
-	got := isThirdPartyURL("://invalid", []string{"https://example.com"})
-	if got {
-		t.Error("isThirdPartyURL with invalid request URL should return false")
-	}
-}
-
-func TestIsThirdPartyURL_SubdomainMatch(t *testing.T) {
-	t.Parallel()
-	got := isThirdPartyURL("https://api.example.com/data", []string{"https://example.com"})
-	if got {
-		t.Error("api.example.com should be first-party relative to example.com")
-	}
-}
-
-func TestIsThirdPartyURL_ReverseSubdomain(t *testing.T) {
-	t.Parallel()
-	got := isThirdPartyURL("https://example.com/data", []string{"https://api.example.com"})
-	if got {
-		t.Error("example.com should be first-party relative to api.example.com")
-	}
-}
-
-func TestIsThirdPartyURL_ThirdParty(t *testing.T) {
-	t.Parallel()
-	got := isThirdPartyURL("https://analytics.google.com/collect", []string{"https://example.com"})
-	if !got {
-		t.Error("analytics.google.com should be third-party relative to example.com")
-	}
-}
-
-func TestIsThirdPartyURL_InvalidPageURL(t *testing.T) {
-	t.Parallel()
-	got := isThirdPartyURL("https://example.com/api", []string{"://invalid"})
-	if !got {
-		t.Error("should be third-party when page URL is invalid")
-	}
-}
-
-// ============================================
-// isLocalhostURL — Edge cases
-// ============================================
-
-func TestIsLocalhostURL_Variants(t *testing.T) {
-	t.Parallel()
-	cases := []struct {
-		url  string
-		want bool
-	}{
-		{"http://localhost:3000/api", true},
-		{"http://127.0.0.1:8080/test", true},
-		{"http://[::1]:3000/api", true},
-		{"http://0.0.0.0:5000/test", true},
-		{"https://example.com/api", false},
-		{"://invalid", false},
-	}
-	for _, tc := range cases {
-		got := isLocalhostURL(tc.url)
-		if got != tc.want {
-			t.Errorf("isLocalhostURL(%q) = %v, want %v", tc.url, got, tc.want)
-		}
 	}
 }
 

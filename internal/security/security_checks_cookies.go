@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/httpsec"
 )
 
 // ============================================
@@ -19,7 +20,7 @@ import (
 var sessionCookiePattern = regexp.MustCompile(`(?i)(session|token|auth|jwt|sid)`)
 
 // checkSingleCookie checks a single cookie for missing security attributes.
-func checkSingleCookie(cookie cookieAttrs, bodyURL string, isHTTPS bool) []SecurityFinding {
+func checkSingleCookie(cookie httpsec.CookieAttrs, bodyURL string, isHTTPS bool) []SecurityFinding {
 	var findings []SecurityFinding
 	isSensitive := sessionCookiePattern.MatchString(cookie.Name)
 
@@ -67,7 +68,7 @@ func (s *SecurityScanner) checkCookies(bodies []capture.NetworkBody) []SecurityF
 			continue
 		}
 		isHTTPS := strings.HasPrefix(body.URL, "https://")
-		for _, cookie := range parseCookies(setCookie) {
+		for _, cookie := range httpsec.ParseCookies(setCookie) {
 			findings = append(findings, checkSingleCookie(cookie, body.URL, isHTTPS)...)
 		}
 	}

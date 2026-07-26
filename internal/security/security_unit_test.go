@@ -11,24 +11,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
-func TestParseCookies_MultipleLinesAndAttributes(t *testing.T) {
-	t.Parallel()
-
-	raw := "session_id=abc123; HttpOnly; Secure; SameSite=Strict\nprefs=dark; samesite=lax"
-	cookies := parseCookies(raw)
-
-	if len(cookies) != 2 {
-		t.Fatalf("parseCookies len = %d, want 2", len(cookies))
-	}
-
-	if cookies[0].Name != "session_id" || !cookies[0].HttpOnly || !cookies[0].Secure || cookies[0].SameSite != "strict" {
-		t.Fatalf("first cookie parse mismatch: %+v", cookies[0])
-	}
-	if cookies[1].Name != "prefs" || cookies[1].SameSite != "lax" {
-		t.Fatalf("second cookie parse mismatch: %+v", cookies[1])
-	}
-}
-
 func TestCheckCookies_FlagsMissingSessionCookieSecurityAttributes(t *testing.T) {
 	t.Parallel()
 	scanner := NewSecurityScanner()
@@ -281,7 +263,9 @@ func TestCredentialScanner_ConsolePatterns(t *testing.T) {
 	}
 }
 
-func TestSecurityHelpers_isTestKeyAndThirdParty(t *testing.T) {
+// First/third-party URL classification now lives in internal/security/httpsec
+// and is covered by httpsec/url_test.go.
+func TestSecurityHelpers_isTestKey(t *testing.T) {
 	t.Parallel()
 
 	if !isTestKey("my_TEST_token_123") {
@@ -289,14 +273,6 @@ func TestSecurityHelpers_isTestKeyAndThirdParty(t *testing.T) {
 	}
 	if isTestKey("production_abc987654321") {
 		t.Fatal("isTestKey should not classify production-like tokens as test keys")
-	}
-
-	pageURLs := []string{"https://app.example.com/dashboard"}
-	if isThirdPartyURL("https://api.app.example.com/users", pageURLs) {
-		t.Fatal("subdomain should not be treated as third-party")
-	}
-	if !isThirdPartyURL("https://evil-example.net/collect", pageURLs) {
-		t.Fatal("different domain should be treated as third-party")
 	}
 }
 

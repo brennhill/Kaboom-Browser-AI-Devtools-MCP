@@ -5,6 +5,8 @@ package security
 import (
 	"net/url"
 	"strings"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/httpsec"
 )
 
 func normalizeTransportByHost(transport map[string]string) map[string]string {
@@ -103,7 +105,7 @@ func parseSnapshotCookies(setCookieHeader string) []SecurityCookie {
 		if line == "" {
 			continue
 		}
-		parsed := parseSingleCookie(line)
+		parsed := httpsec.ParseSingleCookie(line)
 		cookies = append(cookies, SecurityCookie(parsed))
 	}
 

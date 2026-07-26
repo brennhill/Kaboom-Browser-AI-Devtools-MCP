@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/httpsec"
 )
 
 // ============================================
@@ -28,7 +29,7 @@ func (s *SecurityScanner) checkPII(bodies []capture.NetworkBody, pageURLs []stri
 
 	for _, body := range bodies {
 		if body.RequestBody != "" {
-			isThirdParty := isThirdPartyURL(body.URL, pageURLs)
+			isThirdParty := httpsec.IsThirdPartyURL(body.URL, pageURLs)
 			findings = append(findings, s.scanForPII(body.RequestBody, body.URL, "request body", isThirdParty)...)
 		}
 

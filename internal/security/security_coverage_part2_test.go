@@ -584,32 +584,3 @@ func TestCheckCookies_NilHeaders(t *testing.T) {
 		t.Errorf("expected 0 findings for nil headers, got %d", len(findings))
 	}
 }
-
-// ============================================
-// parseSingleCookie — edge cases
-// ============================================
-
-func TestParseSingleCookie_SameSiteNoValue(t *testing.T) {
-	t.Parallel()
-	cookie := parseSingleCookie("name=val; SameSite")
-	if cookie.SameSite != "unspecified" {
-		t.Errorf("SameSite = %q, want unspecified", cookie.SameSite)
-	}
-}
-
-func TestParseSingleCookie_AllFlags(t *testing.T) {
-	t.Parallel()
-	cookie := parseSingleCookie("token=xyz; HttpOnly; Secure; SameSite=Strict")
-	if cookie.Name != "token" {
-		t.Errorf("Name = %q, want token", cookie.Name)
-	}
-	if !cookie.HttpOnly {
-		t.Error("HttpOnly = false, want true")
-	}
-	if !cookie.Secure {
-		t.Error("Secure = false, want true")
-	}
-	if cookie.SameSite != "strict" {
-		t.Errorf("SameSite = %q, want strict", cookie.SameSite)
-	}
-}
