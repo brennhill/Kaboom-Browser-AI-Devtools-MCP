@@ -1,7 +1,7 @@
-// Purpose: Async logging pipeline and in-memory entry bookkeeping.
+// async.go — Async logging pipeline and in-memory entry bookkeeping.
 // Why: Separates log ingestion/rotation mechanics from server construction and API surface.
 
-package main
+package logstore
 
 import (
 	"encoding/json"
@@ -11,14 +11,14 @@ import (
 	"time"
 )
 
-// addEntries adds new entries to the in-memory window and queues them for
+// AddEntries adds new entries to the in-memory window and queues them for
 // append-only persistence. The hot path performs no file I/O: all file writes
 // (appends, compaction rewrites, size rotation) happen on the async logger
 // worker goroutine, which is the single file writer.
-func (ls *LogStore) addEntries(newEntries []LogEntry) int {
+func (ls *Store) AddEntries(newEntries []Entry) int {
 	appendOnly, cb := ls.addEntriesInMemory(newEntries)
 
-	if err := ls.appendToFile(appendOnly); err != nil {
+	if err := ls.AppendToFile(appendOnly); err != nil {
 		ls.addWarning(fmt.Sprintf("log_append_failed: %v", err))
 	}
 
@@ -34,7 +34,7 @@ func (ls *LogStore) addEntries(newEntries []LogEntry) int {
 // new entries for async file I/O outside the lock. The in-memory window is
 // trimmed to maxEntries here; the file is compacted separately by the async
 // worker (see maybeCompactLogFile) so steady-state ingest stays append-only.
-func (ls *LogStore) addEntriesInMemory(newEntries []LogEntry) (appendOnly []LogEntry, cb func([]LogEntry)) {
+func (ls *Store) addEntriesInMemory(newEntries []Entry) (appendOnly []Entry, cb func([]Entry)) {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
 
@@ -54,7 +54,7 @@ func (ls *LogStore) addEntriesInMemory(newEntries []LogEntry) (appendOnly []LogE
 
 	// Trim the in-memory window — copy to new slice to allow GC of evicted entries
 	if len(ls.entries) > ls.maxEntries {
-		kept := make([]LogEntry, ls.maxEntries)
+		kept := make([]Entry, ls.maxEntries)
 		copy(kept, ls.entries[len(ls.entries)-ls.maxEntries:])
 		ls.entries = kept
 		keptAt := make([]time.Time, ls.maxEntries)
@@ -63,16 +63,16 @@ func (ls *LogStore) addEntriesInMemory(newEntries []LogEntry) (appendOnly []LogE
 	}
 
 	// Snapshot new entries for file I/O outside the lock
-	appendOnly = make([]LogEntry, len(newEntries))
+	appendOnly = make([]Entry, len(newEntries))
 	copy(appendOnly, newEntries)
 	cb = ls.onEntries
 	return appendOnly, cb
 }
 
-// asyncLoggerWorker runs in a background goroutine and is the single writer
+// RunWorker runs in a background goroutine and is the single writer
 // for the log file: it appends queued batches and performs occasional
 // compaction rewrites. No other goroutine writes the file on the hot path.
-func (ls *LogStore) asyncLoggerWorker() {
+func (ls *Store) RunWorker() {
 	defer close(ls.logDone)
 
 	for entries := range ls.logChan {
@@ -85,7 +85,7 @@ func (ls *LogStore) asyncLoggerWorker() {
 }
 
 // appendToFileSync does synchronous file I/O (called by async worker only).
-func (ls *LogStore) appendToFileSync(entries []LogEntry) error {
+func (ls *Store) appendToFileSync(entries []Entry) error {
 	if ls.logFile == "" {
 		return nil
 	}
@@ -125,7 +125,7 @@ func (ls *LogStore) appendToFileSync(entries []LogEntry) error {
 // maybeRotateLogFile checks the log file size and rotates if it exceeds maxFileSize.
 // Rotation renames the current file to .jsonl.old and lets the next write create a fresh file.
 // Called only from the async logger worker, so no additional locking is needed for file I/O.
-func (ls *LogStore) maybeRotateLogFile(f *os.File) {
+func (ls *Store) maybeRotateLogFile(f *os.File) {
 	if ls.maxFileSize <= 0 {
 		return
 	}
@@ -150,16 +150,16 @@ func (ls *LogStore) maybeRotateLogFile(f *os.File) {
 }
 
 // maybeCompactLogFile rewrites the log file with the in-memory window once the
-// file has accumulated more than logCompactionFactor*maxEntries entries.
+// file has accumulated more than compactionFactor*maxEntries entries.
 // Hysteresis keeps steady-state ingest append-only (append-only I/O on hot
 // paths); the rewrite runs on the async worker goroutine so the file has a
 // single writer. Compaction is deferred while batches are still queued:
 // rewriting from memory would re-append queued entries afterwards (duplicates).
-func (ls *LogStore) maybeCompactLogFile() {
+func (ls *Store) maybeCompactLogFile() {
 	if ls.logFile == "" || ls.maxEntries <= 0 {
 		return
 	}
-	if ls.fileEntryCount.Load() <= int64(logCompactionFactor*ls.maxEntries) {
+	if ls.fileEntryCount.Load() <= int64(compactionFactor*ls.maxEntries) {
 		return
 	}
 	if len(ls.logChan) > 0 {
@@ -167,12 +167,12 @@ func (ls *LogStore) maybeCompactLogFile() {
 	}
 
 	gen := ls.clearGen.Load()
-	snapshot := ls.getEntries()
+	snapshot := ls.Entries()
 
 	ls.fileMu.Lock()
 	defer ls.fileMu.Unlock()
 	if ls.clearGen.Load() != gen {
-		// clearEntries ran after the snapshot was taken; writing the snapshot
+		// ClearEntries ran after the snapshot was taken; writing the snapshot
 		// would resurrect cleared entries. The file was already truncated.
 		return
 	}
@@ -183,8 +183,8 @@ func (ls *LogStore) maybeCompactLogFile() {
 	ls.fileEntryCount.Store(int64(len(snapshot)))
 }
 
-// appendToFile queues log entries for async writing (never blocks).
-func (ls *LogStore) appendToFile(entries []LogEntry) error {
+// AppendToFile queues log entries for async writing (never blocks).
+func (ls *Store) AppendToFile(entries []Entry) error {
 	if ls.logChanClosed.Load() {
 		return fmt.Errorf("log channel closed, %d entries dropped", len(entries))
 	}
@@ -198,21 +198,21 @@ func (ls *LogStore) appendToFile(entries []LogEntry) error {
 
 		// Alert to stderr (but don't spam)
 		if dropped%1000 == 1 { // Alert on 1st, 1001st, 2001st, etc.
-			stderrf("[Kaboom] WARNING: Log buffer full, %d logs dropped\n", dropped)
+			ls.stderrf("[Kaboom] WARNING: Log buffer full, %d logs dropped\n", dropped)
 		}
 
 		return fmt.Errorf("log buffer full (%d total drops)", dropped)
 	}
 }
 
-// clearEntries removes all entries from memory and truncates the log file.
+// ClearEntries removes all entries from memory and truncates the log file.
 // The truncate synchronizes with the async worker via fileMu so it cannot
 // interleave with an in-progress append or compaction, and the clear
 // generation bump makes the worker discard compaction snapshots taken before
 // the clear. Batches already queued in logChan before the clear may still be
 // appended afterwards; that window is short and the next compaction rewrites
 // the file from (cleared) memory.
-func (ls *LogStore) clearEntries() {
+func (ls *Store) ClearEntries() {
 	ls.clearEntriesInMemory()
 	if ls.logFile == "" {
 		return
@@ -227,7 +227,7 @@ func (ls *LogStore) clearEntries() {
 	ls.fileEntryCount.Store(0)
 }
 
-func (ls *LogStore) clearEntriesInMemory() {
+func (ls *Store) clearEntriesInMemory() {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
 	ls.entries = nil
@@ -235,9 +235,9 @@ func (ls *LogStore) clearEntriesInMemory() {
 	ls.clearGen.Add(1)
 }
 
-// shutdownAsyncLogger gracefully shuts down the async logger, draining remaining logs.
+// Shutdown gracefully shuts down the async logger, draining remaining logs.
 // Safe to call multiple times (e.g., from both Server.Close and awaitShutdownSignal).
-func (ls *LogStore) shutdownAsyncLogger(timeout time.Duration) {
+func (ls *Store) Shutdown(timeout time.Duration) {
 	// Guard against double-close panic: only the first caller closes the channel.
 	if !ls.logChanClosed.CompareAndSwap(false, true) {
 		return

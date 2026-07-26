@@ -140,7 +140,7 @@ func (h *ToolHandler) clearConfiguredBuffer(buffer string) (any, bool) {
 	case "all":
 		// ClearAll now clears extension logs too and returns the count.
 		extensionLogsCleared := h.capture.ClearAll()
-		h.server.logs.clearEntries()
+		h.server.logs.ClearEntries()
 		cleared := map[string]any{
 			"buffers":                "all",
 			"extension_logs_cleared": extensionLogsCleared,
@@ -169,8 +169,8 @@ func (h *ToolHandler) clearConfiguredBuffer(buffer string) (any, bool) {
 		counts := h.capture.ClearActionBuffer()
 		return map[string]int{"actions": counts.Actions}, true
 	case "logs":
-		logCount := h.server.logs.getEntryCount()
-		h.server.logs.clearEntries()
+		logCount := h.server.logs.EntryCount()
+		h.server.logs.ClearEntries()
 		return map[string]int{"logs": logCount}, true
 	case "inbox":
 		if h.server.pushInbox != nil {

@@ -110,9 +110,7 @@ func TestObserveErrors_EndToEnd(t *testing.T) {
 	_ = body // Payload would be POSTed to /logs in real scenario
 
 	// Use the server's /logs handler
-	server.logs.mu.Lock()
-	server.logs.entries = append(server.logs.entries, logsPayload["entries"].([]LogEntry)...)
-	server.logs.mu.Unlock()
+	server.logs.SeedEntries(logsPayload["entries"].([]LogEntry), nil)
 
 	// Step 2: Call observe errors via MCP tool
 	mcpReq := JSONRPCRequest{
@@ -177,9 +175,11 @@ func TestObserveLogs_EndToEnd(t *testing.T) {
 	handler := NewToolHandler(server, cap)
 
 	// POST logs
-	server.logs.mu.Lock()
-	server.logs.entries = append(server.logs.entries, sampleConsoleError, sampleConsoleWarning, sampleConsoleLog)
-	server.logs.mu.Unlock()
+	server.logs.SeedEntries([]LogEntry{
+		sampleConsoleError,
+		sampleConsoleWarning,
+		sampleConsoleLog,
+	}, nil)
 
 	// Call observe logs
 	mcpReq := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
@@ -217,9 +217,11 @@ func TestObserveLogs_LevelFilter(t *testing.T) {
 	cap := capture.NewCapture()
 	handler := NewToolHandler(server, cap)
 
-	server.logs.mu.Lock()
-	server.logs.entries = append(server.logs.entries, sampleConsoleError, sampleConsoleWarning, sampleConsoleLog)
-	server.logs.mu.Unlock()
+	server.logs.SeedEntries([]LogEntry{
+		sampleConsoleError,
+		sampleConsoleWarning,
+		sampleConsoleLog,
+	}, nil)
 
 	// "level" is a quiet alias for "min_level" (threshold): warn returns warn+error.
 	th := handler.toolHandler.(*ToolHandler)
@@ -599,9 +601,9 @@ func TestMCPToolsCall_ObserveErrors_FullFlow(t *testing.T) {
 	handler := NewToolHandler(server, cap)
 
 	// Populate with test data
-	server.logs.mu.Lock()
-	server.logs.entries = append(server.logs.entries, sampleConsoleError)
-	server.logs.mu.Unlock()
+	server.logs.SeedEntries([]LogEntry{
+		sampleConsoleError,
+	}, nil)
 
 	// Create MCP request exactly as client would send it
 	mcpRequest := JSONRPCRequest{

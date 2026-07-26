@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
@@ -23,7 +24,7 @@ type Server struct {
 	mu         sync.RWMutex
 
 	// Log subsystem — owns entries, TTL rotation, async channel, file persistence.
-	logs *LogStore
+	logs *logstore.Store
 
 	// One-shot warnings surfaced via MCP tool responses.
 	warningsMu  sync.Mutex
@@ -87,7 +88,13 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 	}
 
 	// Create log store with warning callback wired to server
-	s.logs = NewLogStore(logFile, maxEntries, s.AddWarning)
+	s.logs = logstore.New(logstore.Config{
+		LogFile:       logFile,
+		MaxEntries:    maxEntries,
+		TelemetryMode: telemetryModeAuto,
+		AddWarning:    s.AddWarning,
+		Stderrf:       stderrf,
+	})
 
 	// Initialize push router with capability sync callback
 	caps := getPushClientCapabilities()
@@ -97,35 +104,35 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 	})
 
 	// Start async logger goroutine
-	util.SafeGo(func() { s.logs.asyncLoggerWorker() })
+	util.SafeGo(func() { s.logs.RunWorker() })
 
 	// Ensure log directory exists
-	if s.logs.logFile != "" {
-		dir := filepath.Dir(s.logs.logFile)
+	if s.logs.LogFile() != "" {
+		dir := filepath.Dir(s.logs.LogFile())
 		// #nosec G301 -- log directory: owner rwx, group rx for diagnostics
 		if err := os.MkdirAll(dir, 0o750); err != nil {
-			fallback := fallbackLogFilePath()
+			fallback := logstore.FallbackFilePath()
 			s.AddWarning(fmt.Sprintf("state_dir_not_writable: %v; falling back to %s", err, fallback))
-			s.logs.logFile = fallback
-			_ = os.MkdirAll(filepath.Dir(s.logs.logFile), 0o750)
+			s.logs.SetLogFile(fallback)
+			_ = os.MkdirAll(filepath.Dir(s.logs.LogFile()), 0o750)
 		}
-		if err := ensureLogFileWritable(s.logs.logFile); err != nil {
-			fallback := fallbackLogFilePath()
+		if err := logstore.EnsureFileWritable(s.logs.LogFile()); err != nil {
+			fallback := logstore.FallbackFilePath()
 			s.AddWarning(fmt.Sprintf("state_dir_not_writable: %v; falling back to %s", err, fallback))
-			s.logs.logFile = fallback
-			if err := os.MkdirAll(filepath.Dir(s.logs.logFile), 0o750); err != nil {
+			s.logs.SetLogFile(fallback)
+			if err := os.MkdirAll(filepath.Dir(s.logs.LogFile()), 0o750); err != nil {
 				s.AddWarning(fmt.Sprintf("log_persistence_disabled: %v", err))
-				s.logs.logFile = ""
-			} else if err := ensureLogFileWritable(s.logs.logFile); err != nil {
+				s.logs.SetLogFile("")
+			} else if err := logstore.EnsureFileWritable(s.logs.LogFile()); err != nil {
 				s.AddWarning(fmt.Sprintf("log_persistence_disabled: %v", err))
-				s.logs.logFile = ""
+				s.logs.SetLogFile("")
 			}
 		}
 	}
 
 	// Load existing entries
-	if s.logs.logFile != "" {
-		if err := s.logs.loadEntries(); err != nil {
+	if s.logs.LogFile() != "" {
+		if err := s.logs.LoadEntries(); err != nil {
 			// File might not exist yet, that's OK
 			if !os.IsNotExist(err) {
 				s.AddWarning(fmt.Sprintf("log_load_failed: %v", err))
@@ -266,12 +273,6 @@ func (s *Server) SetActiveCodebase(path string) {
 
 // Close gracefully shuts down the server, draining the async log writer.
 func (s *Server) Close() {
-	s.logs.shutdownAsyncLogger(asyncLoggerDrainTimeout)
+	s.logs.Shutdown(asyncLoggerDrainTimeout)
 	s.closeAnnotationStore()
-}
-
-// SetOnEntries sets the callback invoked when new log entries are added.
-// Thread-safe: acquires the write lock to avoid racing with addEntries.
-func (s *Server) SetOnEntries(cb func([]LogEntry)) {
-	s.logs.SetOnEntries(cb)
 }

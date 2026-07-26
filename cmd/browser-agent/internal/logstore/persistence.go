@@ -1,7 +1,7 @@
-// Purpose: Log-file persistence helpers for loading, saving, and writability checks.
+// persistence.go — Log-file persistence helpers for loading, saving, and writability checks.
 // Why: Isolates disk persistence logic from in-memory server state orchestration.
 
-package main
+package logstore
 
 import (
 	"bufio"
@@ -12,8 +12,8 @@ import (
 	"time"
 )
 
-// loadEntries reads existing log entries from file.
-func (ls *LogStore) loadEntries() error {
+// LoadEntries reads existing log entries from file.
+func (ls *Store) LoadEntries() error {
 	file, err := os.Open(ls.logFile)
 	if err != nil {
 		return err
@@ -28,7 +28,7 @@ func (ls *LogStore) loadEntries() error {
 			continue
 		}
 
-		var entry LogEntry
+		var entry Entry
 		if err := json.Unmarshal([]byte(line), &entry); err != nil {
 			continue // Skip malformed lines
 		}
@@ -36,7 +36,7 @@ func (ls *LogStore) loadEntries() error {
 	}
 
 	// Seed the file entry count for compaction hysteresis: if the file already
-	// holds more than logCompactionFactor*maxEntries entries, the async worker
+	// holds more than compactionFactor*maxEntries entries, the async worker
 	// compacts it after the next append.
 	ls.fileEntryCount.Store(int64(len(ls.entries)))
 
@@ -46,7 +46,7 @@ func (ls *LogStore) loadEntries() error {
 
 	// Bound entries (file may have more from append-only writes between rotations)
 	if len(ls.entries) > ls.maxEntries {
-		kept := make([]LogEntry, ls.maxEntries)
+		kept := make([]Entry, ls.maxEntries)
 		copy(kept, ls.entries[len(ls.entries)-ls.maxEntries:])
 		ls.entries = kept
 		ls.logAddedAt = make([]time.Time, ls.maxEntries)
@@ -59,7 +59,7 @@ func (ls *LogStore) loadEntries() error {
 // Uses atomic write pattern: write to temp file then rename for crash safety.
 // Called only from the async logger worker (maybeCompactLogFile); the caller
 // must hold fileMu so the rewrite cannot interleave with appends or clears.
-func (ls *LogStore) saveEntriesCopy(entries []LogEntry) error {
+func (ls *Store) saveEntriesCopy(entries []Entry) error {
 	if ls.logFile == "" {
 		return nil
 	}
@@ -103,11 +103,14 @@ func (ls *LogStore) saveEntriesCopy(entries []LogEntry) error {
 	return nil
 }
 
-func fallbackLogFilePath() string {
+// FallbackFilePath is the log destination used when the configured directory
+// is not writable.
+func FallbackFilePath() string {
 	return filepath.Join(os.TempDir(), "kaboom", "logs", "kaboom.jsonl")
 }
 
-func ensureLogFileWritable(path string) error {
+// EnsureFileWritable verifies the process can append to path.
+func EnsureFileWritable(path string) error {
 	if path == "" {
 		return fmt.Errorf("log_init: log file path is empty. Set a valid path via --log-file or KABOOM_LOG_FILE")
 	}

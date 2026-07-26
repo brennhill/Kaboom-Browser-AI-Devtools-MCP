@@ -10,6 +10,9 @@ import (
 // JSONRPCVersion is the JSON-RPC protocol version string re-exported from internal/mcp.
 const JSONRPCVersion = mcp.JSONRPCVersion
 
+// LogEntry represents a single log entry (alias to internal/mcp).
+type LogEntry = mcp.LogEntry
+
 // Core wire types
 type JSONRPCRequest = mcp.JSONRPCRequest
 type JSONRPCResponse = mcp.JSONRPCResponse

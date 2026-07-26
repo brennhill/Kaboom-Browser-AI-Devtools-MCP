@@ -102,7 +102,7 @@ func awaitShutdownSignal(server *Server, srv *http.Server, port int, httpDone <-
 		server.logLifecycle("http_shutdown_error", port, map[string]any{"error": err.Error()})
 	}
 
-	server.logs.shutdownAsyncLogger(asyncLoggerDrainTimeout)
+	server.logs.Shutdown(asyncLoggerDrainTimeout)
 	server.closeAnnotationStore()
 	// Close capture store to stop background cleanup goroutines (QueryDispatcher).
 	if mcpHandler != nil && mcpHandler.toolHandler != nil {

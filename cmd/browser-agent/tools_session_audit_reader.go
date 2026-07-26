@@ -36,9 +36,7 @@ func (r *toolCaptureStateReader) collectConsoleByLevel(levels map[string]bool) [
 		return []session.SnapshotError{}
 	}
 
-	r.h.server.logs.mu.RLock()
-	entries := append([]LogEntry(nil), r.h.server.logs.entries...)
-	r.h.server.logs.mu.RUnlock()
+	entries := r.h.server.logs.Entries()
 
 	type key struct {
 		level string

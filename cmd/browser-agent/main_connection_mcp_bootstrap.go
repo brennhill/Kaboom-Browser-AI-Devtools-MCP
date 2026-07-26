@@ -36,7 +36,7 @@ func initCapture(server *Server, port int) *capture.Store {
 		for k, v := range data {
 			entry[k] = v
 		}
-		server.logs.addEntries([]LogEntry{entry})
+		server.logs.AddEntries([]LogEntry{entry})
 	})
 
 	server.logLifecycle("loading_settings", port, nil)

@@ -48,7 +48,7 @@ func TestMCPHandler_PassiveTelemetrySummaryDeltas(t *testing.T) {
 	cap.SetTrackingStatusForTest(42, "https://tracked.test")
 
 	// Seed baseline data before first call; first response should still report zero deltas.
-	srv.logs.addEntries([]LogEntry{{"level": "error", "message": "baseline error"}})
+	srv.logs.AddEntries([]LogEntry{{"level": "error", "message": "baseline error"}})
 	cap.AddNetworkBodies([]capture.NetworkBody{
 		{Method: "GET", URL: "https://api.test/ok", Status: 200},
 		{Method: "GET", URL: "https://api.test/fail", Status: 500},
@@ -91,7 +91,7 @@ func TestMCPHandler_PassiveTelemetrySummaryDeltas(t *testing.T) {
 	}
 
 	// Add new activity between calls; second response should report these deltas.
-	srv.logs.addEntries([]LogEntry{
+	srv.logs.AddEntries([]LogEntry{
 		{"level": "error", "message": "TypeError"},
 		{"level": "info", "message": "noise"},
 	})
@@ -179,7 +179,7 @@ func TestMCPHandler_PassiveTelemetryIsPerClient(t *testing.T) {
 		t.Fatal("client-a first call should omit telemetry_summary in auto mode")
 	}
 
-	srv.logs.addEntries([]LogEntry{{"level": "error", "message": "new error"}})
+	srv.logs.AddEntries([]LogEntry{{"level": "error", "message": "new error"}})
 
 	reqA.ID = 2
 	respA2 := h.HandleRequest(reqA)
@@ -222,7 +222,7 @@ func TestMCPHandler_PassiveTelemetryModeFullIncludesSummaryWithoutChanges(t *tes
 		t.Fatalf("NewServer() error = %v", err)
 	}
 	t.Cleanup(srv.Close)
-	srv.logs.setTelemetryMode(telemetryModeFull)
+	srv.logs.SetTelemetryMode(telemetryModeFull)
 
 	h := NewMCPHandler(srv, "v-test")
 	h.SetToolHandler(&fakeToolHandlerForMCP{
@@ -263,7 +263,7 @@ func TestMCPHandler_PassiveTelemetryModeOffSuppressesTelemetryMetadata(t *testin
 		t.Fatalf("NewServer() error = %v", err)
 	}
 	t.Cleanup(srv.Close)
-	srv.logs.setTelemetryMode(telemetryModeOff)
+	srv.logs.SetTelemetryMode(telemetryModeOff)
 
 	h := NewMCPHandler(srv, "v-test")
 	h.SetToolHandler(&fakeToolHandlerForMCP{
@@ -310,7 +310,7 @@ func TestMCPHandler_PassiveTelemetryModePerCallOverride(t *testing.T) {
 		t.Fatalf("NewServer() error = %v", err)
 	}
 	t.Cleanup(srv.Close)
-	srv.logs.setTelemetryMode(telemetryModeFull)
+	srv.logs.SetTelemetryMode(telemetryModeFull)
 
 	h := NewMCPHandler(srv, "v-test")
 	h.SetToolHandler(&fakeToolHandlerForMCP{

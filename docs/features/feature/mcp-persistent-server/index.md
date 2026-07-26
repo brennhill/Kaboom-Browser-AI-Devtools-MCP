@@ -23,6 +23,13 @@ code_paths:
   - cmd/browser-agent/main_connection_mcp_bootstrap.go
   - cmd/browser-agent/main_connection_recovery.go
   - cmd/browser-agent/server_routes_health_diagnostics.go
+  - cmd/browser-agent/server_routes_logs.go
+  - cmd/browser-agent/internal/logstore/store.go
+  - cmd/browser-agent/internal/logstore/async.go
+  - cmd/browser-agent/internal/logstore/accessors.go
+  - cmd/browser-agent/internal/logstore/persistence.go
+  - cmd/browser-agent/internal/logstore/validate.go
+  - cmd/browser-agent/internal/logstore/seed.go
   - cmd/browser-agent/main_connection_mcp_shutdown.go
   - cmd/browser-agent/server_middleware.go
   - cmd/browser-agent/handler_http.go
@@ -57,6 +64,10 @@ test_paths:
   - cmd/browser-agent/internal/daemonlife/helpers_test.go
   - cmd/browser-agent/daemon_lifecycle_policy_test.go
   - cmd/browser-agent/daemon_lifecycle_wiring_test.go
+  - cmd/browser-agent/server_core_unit_test.go
+  - cmd/browser-agent/internal/logstore/store_test.go
+  - cmd/browser-agent/internal/logstore/async_test.go
+  - cmd/browser-agent/internal/logstore/validate_test.go
   - tests/regression/08-fast-start/test-fast-start.sh
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-29

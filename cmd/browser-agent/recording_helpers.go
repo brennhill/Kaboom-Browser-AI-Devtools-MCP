@@ -16,5 +16,5 @@ func (h *ToolHandler) buildPlaybackResult(req JSONRPCRequest, recordingID string
 // appendServerLog appends one entry to bounded in-memory daemon logs.
 // Delegates to LogStore.addEntries to maintain counters, rotation, and onEntries callback.
 func (h *ToolHandler) appendServerLog(entry LogEntry) {
-	h.server.logs.addEntries([]LogEntry{entry})
+	h.server.logs.AddEntries([]LogEntry{entry})
 }

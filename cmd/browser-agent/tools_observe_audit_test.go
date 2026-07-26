@@ -74,9 +74,9 @@ func (e *observeTestEnv) callObserve(t *testing.T, what string) (MCPToolResult, 
 
 // addLogEntry adds a log entry to the server (simulates extension POST)
 func (e *observeTestEnv) addLogEntry(entry LogEntry) {
-	e.server.logs.mu.Lock()
-	e.server.logs.entries = append(e.server.logs.entries, entry)
-	e.server.logs.mu.Unlock()
+	e.server.logs.SeedEntries([]LogEntry{
+		entry,
+	}, nil)
 }
 
 // ============================================

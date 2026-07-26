@@ -59,7 +59,7 @@ func TestCleanupStalePIDFile_AliveUnrelatedProcessDoesNotBlock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewServer() error = %v", err)
 	}
-	defer server.logs.shutdownAsyncLogger(2 * time.Second)
+	defer server.logs.Shutdown(2 * time.Second)
 
 	err = cleanupStalePIDFile(server, port)
 	if err != nil {

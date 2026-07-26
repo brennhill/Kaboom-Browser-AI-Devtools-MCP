@@ -7,6 +7,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"net/http/httptest"
 	"regexp"
 	"strings"
@@ -392,10 +393,7 @@ func assertIsError(t *testing.T, resp JSONRPCResponse, contains string) {
 func newTestToolHandler() *ToolHandler {
 	cap := capture.NewCapture()
 	srv := &Server{
-		logs: &LogStore{
-			entries:    make([]LogEntry, 0),
-			addWarning: func(string) {},
-		},
+		logs: logstore.New(logstore.Config{AddWarning: func(string) {}}),
 	}
 	h := &ToolHandler{
 		MCPHandler: &MCPHandler{server: srv},

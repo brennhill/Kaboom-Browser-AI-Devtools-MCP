@@ -76,8 +76,8 @@ func handleStatusAPI(server *Server, cap *capture.Store, mcpHandler *MCPHandler)
 		}
 
 		buffers := map[string]any{
-			"console_entries":  server.logs.getEntryCount(),
-			"console_capacity": server.logs.maxEntries,
+			"console_entries":  server.logs.EntryCount(),
+			"console_capacity": server.logs.MaxEntries(),
 		}
 
 		if cap != nil {
