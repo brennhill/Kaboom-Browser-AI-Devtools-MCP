@@ -18,8 +18,8 @@ code_paths:
   - src/content/ui/terminal-panel-bridge.ts
   - src/popup.ts
   - src/popup/shell/logo-motion.ts
-  - src/popup/tab-tracking.ts
-  - src/popup/tab-tracking-api.ts
+  - src/popup/tabs/tab-tracking.ts
+  - src/popup/tabs/tab-tracking-api.ts
   - src/background/message-handlers.ts
   - src/background/recording/listeners.ts
 test_paths:
@@ -101,8 +101,8 @@ Related feature docs:
 - `src/lib/tabs/request-audit.ts`
 - `src/popup.ts`
 - `src/popup/shell/logo-motion.ts`
-- `src/popup/tab-tracking.ts`
-- `src/popup/tab-tracking-api.ts`
+- `src/popup/tabs/tab-tracking.ts`
+- `src/popup/tabs/tab-tracking-api.ts`
 - `src/background/message-handlers.ts`
 - `src/background/recording/listeners.ts`
 

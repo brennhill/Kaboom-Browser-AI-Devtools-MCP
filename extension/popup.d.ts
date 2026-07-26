@@ -12,7 +12,7 @@ export { updateConnectionStatus };
 export { FEATURE_TOGGLES, initFeatureToggles, applyFeatureToggles } from './popup/feature-toggles.js';
 export { handleFeatureToggle } from './popup/feature-toggles.js';
 export { initAiWebPilotToggle, handleAiWebPilotToggle, applyAiWebPilotToggle } from './popup/ai-web-pilot.js';
-export { initTrackPageButton, handleTrackPageClick } from './popup/tab-tracking.js';
+export { initTrackPageButton, handleTrackPageClick } from './popup/tabs/tab-tracking.js';
 export { handleWebSocketModeChange } from './popup/settings.js';
 export { initWebSocketModeSelector, applyWebSocketMode } from './popup/settings.js';
 export { isInternalUrl } from './popup/shell/ui-utils.js';

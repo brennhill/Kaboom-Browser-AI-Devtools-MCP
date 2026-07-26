@@ -1375,7 +1375,7 @@ The daemon will restart automatically.`;
     await chrome.runtime.sendMessage({ type: "qa_scan_requested", page_url: pageUrl });
   }
 
-  // extension/popup/tab-tracking-api.js
+  // extension/popup/tabs/tab-tracking-api.js
   async function handleAuditClick(pageUrl, tabId) {
     await requestAudit(pageUrl, tabId);
   }
@@ -1431,7 +1431,7 @@ The daemon will restart automatically.`;
     console.log(KABOOM_LOG_PREFIX, "Now tracking tab:", tab.id, tab.url);
   }
 
-  // extension/popup/tab-tracking.js
+  // extension/popup/tabs/tab-tracking.js
   var trackingStorageSyncInstalled = false;
   var AUDIT_BUTTON_ENABLED = false;
   function hideAuditButton() {

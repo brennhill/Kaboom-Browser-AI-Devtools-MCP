@@ -12,7 +12,7 @@ code_paths:
   - cmd/browser-agent/internal/bridge/bridge_fastpath.go
   - cmd/browser-agent/launch_mode.go
   - cmd/browser-agent/tools_errors_guards.go
-  - src/popup/tab-tracking.ts
+  - src/popup/tabs/tab-tracking.ts
   - src/popup/shell/status-display.ts
   - extension/popup.html
 test_paths:

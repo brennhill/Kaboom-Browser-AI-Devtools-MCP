@@ -96,7 +96,7 @@ describe('popup audit button', () => {
     }
   })
 
-  // AUDIT_BUTTON_ENABLED in src/popup/tab-tracking.ts is currently false: the CTA
+  // AUDIT_BUTTON_ENABLED in src/popup/tabs/tab-tracking.ts is currently false: the CTA
   // is hidden until the terminal side-panel path is fully verified. The helper it
   // would call is still covered by tests/extension/request-audit.test.js.
   // When the flag flips back to true, restore the shown-state assertions kept in
@@ -105,7 +105,7 @@ describe('popup audit button', () => {
     const auditButton = document.getElementById('tracking-bar-audit')
     assert.strictEqual(auditButton.style.display, 'none')
 
-    const { initTrackPageButton } = await import(`../../extension/popup/tab-tracking.js?v=${++importCounter}`)
+    const { initTrackPageButton } = await import(`../../extension/popup/tabs/tab-tracking.js?v=${++importCounter}`)
     initTrackPageButton()
     await new Promise((resolve) => setTimeout(resolve, 0))
 
@@ -124,7 +124,7 @@ describe('popup audit button', () => {
   // Skipped rather than deleted so the intended behavior isn't lost.
   test.skip('shows an Audit CTA while tracked and routes through the shared audit helper (re-enable with AUDIT_BUTTON_ENABLED)', async () => {
     const auditButton = document.getElementById('tracking-bar-audit')
-    const { initTrackPageButton } = await import(`../../extension/popup/tab-tracking.js?v=${++importCounter}`)
+    const { initTrackPageButton } = await import(`../../extension/popup/tabs/tab-tracking.js?v=${++importCounter}`)
     initTrackPageButton()
     await new Promise((resolve) => setTimeout(resolve, 0))
 

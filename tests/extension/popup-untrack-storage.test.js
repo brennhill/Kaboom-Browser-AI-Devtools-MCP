@@ -70,7 +70,7 @@ function buildChromeMock() {
   }
 }
 
-const { handleStopTracking, handleTrackPageClick } = await import('../../extension/popup/tab-tracking-api.js')
+const { handleStopTracking, handleTrackPageClick } = await import('../../extension/popup/tabs/tab-tracking-api.js')
 
 describe('popup untrack clears all tracked-tab keys', () => {
   beforeEach(() => {

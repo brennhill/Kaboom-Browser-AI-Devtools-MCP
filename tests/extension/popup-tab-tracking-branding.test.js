@@ -47,7 +47,7 @@ describe('popup tab-tracking branding', () => {
   })
 
   test('cloaked-domain button title uses Kaboom copy', async () => {
-    const { initTrackPageButton } = await import('../../extension/popup/tab-tracking.js')
+    const { initTrackPageButton } = await import('../../extension/popup/tabs/tab-tracking.js')
 
     initTrackPageButton()
     await new Promise((resolve) => setTimeout(resolve, 0))
