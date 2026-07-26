@@ -7,7 +7,7 @@ const REPO_ROOT = path.resolve(__dirname, '../..')
 
 const FILES = [
   'scripts/docs/site/run-vale-on-changed.mjs',
-  'scripts/docs/check-reference-schema-sync.mjs',
+  'scripts/docs/reference/check-reference-schema-sync.mjs',
   'scripts/docs/site/check-content-style-contract.mjs',
   'scripts/docs/site/check-site-content-ids.mjs',
   'scripts/docs/site/check-landing-layout-contract.mjs',
@@ -16,7 +16,7 @@ const FILES = [
   'scripts/docs/site/check-downloads-page-contract.mjs',
   'scripts/docs/site/check-light-theme-contract.mjs',
   'scripts/docs/features/check-docs-quality-gates.mjs',
-  'scripts/docs/generate-reference-executable-examples.mjs',
+  'scripts/docs/reference/generate-reference-executable-examples.mjs',
   'scripts/docs/features/check-feature-bundles.js',
   'gokaboom.dev/package.json',
   'docs/standards/content-style-voice-guide.md',

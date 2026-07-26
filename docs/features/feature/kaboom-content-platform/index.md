@@ -54,11 +54,11 @@ code_paths:
   - scripts/docs/site/check-content-style-contract.mjs
   - scripts/docs/site/check-downloads-page-contract.mjs
   - scripts/docs/site/check-landing-layout-contract.mjs
-  - scripts/docs/generate-reference-executable-examples.mjs
+  - scripts/docs/reference/generate-reference-executable-examples.mjs
   - scripts/docs/site/normalize-site-tags.mjs
   - scripts/docs/features/sync-verification-metadata.mjs
   - scripts/docs/site/run-vale-on-changed.mjs
-  - scripts/docs/check-reference-schema-sync.mjs
+  - scripts/docs/reference/check-reference-schema-sync.mjs
   - scripts/docs/features/check-feature-bundles.js
   - .github/workflows/ci.yml
 test_paths:
@@ -69,11 +69,11 @@ test_paths:
   - scripts/docs/site/check-content-style-contract.mjs
   - scripts/docs/site/check-downloads-page-contract.mjs
   - scripts/docs/site/check-landing-layout-contract.mjs
-  - scripts/docs/generate-reference-executable-examples.mjs
+  - scripts/docs/reference/generate-reference-executable-examples.mjs
   - scripts/docs/site/normalize-site-tags.mjs
   - scripts/docs/features/sync-verification-metadata.mjs
   - scripts/docs/site/run-vale-on-changed.mjs
-  - scripts/docs/check-reference-schema-sync.mjs
+  - scripts/docs/reference/check-reference-schema-sync.mjs
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

@@ -12,7 +12,7 @@ code_paths:
   - scripts/build/generate-wire-types.js
   - scripts/docs/features/check-feature-bundles.js
   - scripts/docs/site/check-gokaboom-content-contract.mjs
-  - scripts/docs/check-reference-schema-sync.mjs
+  - scripts/docs/reference/check-reference-schema-sync.mjs
   - scripts/lint-documentation.py
   - package.json
 test_paths:

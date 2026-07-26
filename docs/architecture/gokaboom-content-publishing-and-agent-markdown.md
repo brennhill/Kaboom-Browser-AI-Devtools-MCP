@@ -19,7 +19,7 @@ entrypoints:
   - scripts/docs/site/check-downloads-page-contract.mjs
   - scripts/docs/site/check-landing-layout-contract.mjs
   - scripts/docs/site/check-light-theme-contract.mjs
-  - scripts/docs/check-reference-schema-sync.mjs
+  - scripts/docs/reference/check-reference-schema-sync.mjs
   - scripts/docs/site/run-vale-on-changed.mjs
   - .vale.ini
 code_paths:
@@ -73,8 +73,8 @@ code_paths:
   - scripts/docs/site/check-downloads-page-contract.mjs
   - scripts/docs/site/check-landing-layout-contract.mjs
   - scripts/docs/site/check-light-theme-contract.mjs
-  - scripts/docs/check-reference-schema-sync.mjs
-  - scripts/docs/generate-reference-executable-examples.mjs
+  - scripts/docs/reference/check-reference-schema-sync.mjs
+  - scripts/docs/reference/generate-reference-executable-examples.mjs
   - scripts/docs/site/normalize-site-tags.mjs
   - scripts/docs/features/sync-verification-metadata.mjs
   - scripts/docs/site/run-vale-on-changed.mjs
@@ -89,8 +89,8 @@ test_paths:
   - scripts/docs/site/check-downloads-page-contract.mjs
   - scripts/docs/site/check-landing-layout-contract.mjs
   - scripts/docs/site/check-light-theme-contract.mjs
-  - scripts/docs/check-reference-schema-sync.mjs
-  - scripts/docs/generate-reference-executable-examples.mjs
+  - scripts/docs/reference/check-reference-schema-sync.mjs
+  - scripts/docs/reference/generate-reference-executable-examples.mjs
   - scripts/docs/site/normalize-site-tags.mjs
   - scripts/docs/features/sync-verification-metadata.mjs
   - scripts/docs/site/run-vale-on-changed.mjs
@@ -116,7 +116,7 @@ Covers complete homepage theme/layout replacement and messaging updates (includi
 - Downloads page contract gate in `scripts/docs/site/check-downloads-page-contract.mjs`
 - Landing layout contract gate in `scripts/docs/site/check-landing-layout-contract.mjs`
 - Light-theme contract gate in `scripts/docs/site/check-light-theme-contract.mjs`
-- Reference/schema sync gate in `scripts/docs/check-reference-schema-sync.mjs`
+- Reference/schema sync gate in `scripts/docs/reference/check-reference-schema-sync.mjs`
 - Style contract gate in `scripts/docs/site/check-content-style-contract.mjs`
 - Vale plain-language gate in `scripts/docs/site/run-vale-on-changed.mjs`
 
@@ -191,7 +191,7 @@ Covers complete homepage theme/layout replacement and messaging updates (includi
 - `scripts/docs/site/check-downloads-page-contract.mjs`
 - `scripts/docs/site/check-landing-layout-contract.mjs`
 - `scripts/docs/site/check-light-theme-contract.mjs`
-- `scripts/docs/check-reference-schema-sync.mjs`
+- `scripts/docs/reference/check-reference-schema-sync.mjs`
 - `scripts/docs/site/run-vale-on-changed.mjs`
 - `scripts/docs/features/check-feature-bundles.js`
 - `.vale.ini`
@@ -205,7 +205,7 @@ Covers complete homepage theme/layout replacement and messaging updates (includi
 - `scripts/docs/site/check-downloads-page-contract.mjs`
 - `scripts/docs/site/check-landing-layout-contract.mjs`
 - `scripts/docs/site/check-light-theme-contract.mjs`
-- `scripts/docs/check-reference-schema-sync.mjs`
+- `scripts/docs/reference/check-reference-schema-sync.mjs`
 - `scripts/docs/features/check-feature-bundles.js`
 - `scripts/docs/site/run-vale-on-changed.mjs`
 

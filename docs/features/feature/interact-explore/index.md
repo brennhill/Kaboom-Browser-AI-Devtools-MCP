@@ -35,7 +35,7 @@ code_paths:
   - internal/schema/interact_properties_targeting.go
   - internal/schema/interact_properties_output_batch.go
   - internal/tools/configure/mode_specs_interact.go
-  - scripts/docs/check-reference-schema-sync.mjs
+  - scripts/docs/reference/check-reference-schema-sync.mjs
   - src/background/pending-queries.ts
   - src/background/exec/query-execution.ts
   - src/background/commands/helpers.ts
