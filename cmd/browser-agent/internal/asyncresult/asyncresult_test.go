@@ -1,11 +1,11 @@
-// tools_async_enrich_test.go — Tests for enrichCommandResponseData tab deduplication and slim response output.
-package main
+// asyncresult_test.go — Tests for async command result enrichment,
+// normalization and the agent-facing lifecycle_status vocabulary.
+
+package asyncresult
 
 import (
 	"encoding/json"
 	"testing"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
 func TestEnrichCommandResponseData_SameURLOmitsRedundantFields(t *testing.T) {
@@ -24,7 +24,7 @@ func TestEnrichCommandResponseData_SameURLOmitsRedundantFields(t *testing.T) {
 	}`)
 
 	responseData := map[string]any{}
-	embeddedErr, hasErr := enrichCommandResponseData(result, responseData)
+	embeddedErr, hasErr := EnrichCommandResponseData(result, responseData)
 	if hasErr {
 		t.Fatalf("unexpected embedded error: %s", embeddedErr)
 	}
@@ -77,7 +77,7 @@ func TestEnrichCommandResponseData_DifferentURLIncludesNavFields(t *testing.T) {
 	}`)
 
 	responseData := map[string]any{}
-	embeddedErr, hasErr := enrichCommandResponseData(result, responseData)
+	embeddedErr, hasErr := EnrichCommandResponseData(result, responseData)
 	if hasErr {
 		t.Fatalf("unexpected embedded error: %s", embeddedErr)
 	}
@@ -114,7 +114,7 @@ func TestEnrichCommandResponseData_NoTabFields(t *testing.T) {
 	}`)
 
 	responseData := map[string]any{}
-	embeddedErr, hasErr := enrichCommandResponseData(result, responseData)
+	embeddedErr, hasErr := EnrichCommandResponseData(result, responseData)
 	if hasErr {
 		t.Fatalf("unexpected embedded error: %s", embeddedErr)
 	}
@@ -144,7 +144,7 @@ func TestEnrichCommandResponseData_ErrorStillSurfaced(t *testing.T) {
 	}`)
 
 	responseData := map[string]any{}
-	embeddedErr, hasErr := enrichCommandResponseData(result, responseData)
+	embeddedErr, hasErr := EnrichCommandResponseData(result, responseData)
 	if !hasErr {
 		t.Fatal("expected embedded error")
 	}
@@ -163,7 +163,7 @@ func TestEnrichCommandResponseData_ReturnValueSurfaced(t *testing.T) {
 	}`)
 
 	responseData := map[string]any{}
-	embeddedErr, hasErr := enrichCommandResponseData(result, responseData, "exec_test_123")
+	embeddedErr, hasErr := EnrichCommandResponseData(result, responseData, "exec_test_123")
 	if hasErr {
 		t.Fatalf("unexpected embedded error: %s", embeddedErr)
 	}
@@ -193,7 +193,7 @@ func TestEnrichCommandResponseData_ReturnValueNil(t *testing.T) {
 	}`)
 
 	responseData := map[string]any{}
-	enrichCommandResponseData(result, responseData, "exec_test_456")
+	EnrichCommandResponseData(result, responseData, "exec_test_456")
 
 	// return_value should still be surfaced even when null
 	if _, ok := responseData["return_value"]; !ok {
@@ -211,7 +211,7 @@ func TestEnrichCommandResponseData_NoResultField(t *testing.T) {
 	}`)
 
 	responseData := map[string]any{}
-	enrichCommandResponseData(result, responseData)
+	EnrichCommandResponseData(result, responseData)
 
 	// return_value should NOT be surfaced when there's no "result" field in extension response
 	if _, ok := responseData["return_value"]; ok {
@@ -235,7 +235,7 @@ func TestEnrichCommandResponseData_MatchedSurfacedTopLevel(t *testing.T) {
 	}`)
 
 	responseData := map[string]any{}
-	embeddedErr, hasErr := enrichCommandResponseData(result, responseData)
+	embeddedErr, hasErr := EnrichCommandResponseData(result, responseData)
 	if hasErr {
 		t.Fatalf("unexpected embedded error: %s", embeddedErr)
 	}
@@ -260,7 +260,7 @@ func TestEnrichCommandResponseData_MatchedSurfacedTopLevel(t *testing.T) {
 }
 
 // ============================================
-// stripEnrichedFieldsFromResult tests
+// StripEnrichedFieldsFromResult tests
 // ============================================
 
 func TestStripEnrichedFieldsFromResult_RemovesDuplicates(t *testing.T) {
@@ -287,7 +287,7 @@ func TestStripEnrichedFieldsFromResult_RemovesDuplicates(t *testing.T) {
 		}`),
 	}
 
-	stripEnrichedFieldsFromResult(responseData)
+	StripEnrichedFieldsFromResult(responseData)
 
 	var resultMap map[string]any
 	if err := json.Unmarshal(responseData["result"].(json.RawMessage), &resultMap); err != nil {
@@ -317,13 +317,13 @@ func TestStripEnrichedFieldsFromResult_NoResultField(t *testing.T) {
 	t.Parallel()
 	responseData := map[string]any{"status": "complete"}
 	// Should not panic
-	stripEnrichedFieldsFromResult(responseData)
+	StripEnrichedFieldsFromResult(responseData)
 }
 
 func TestStripEnrichedFieldsFromResult_EmptyResult(t *testing.T) {
 	t.Parallel()
 	responseData := map[string]any{"result": json.RawMessage(`{}`)}
-	stripEnrichedFieldsFromResult(responseData)
+	StripEnrichedFieldsFromResult(responseData)
 
 	var resultMap map[string]any
 	if err := json.Unmarshal(responseData["result"].(json.RawMessage), &resultMap); err != nil {
@@ -338,7 +338,7 @@ func TestStripEnrichedFieldsFromResult_InvalidJSON(t *testing.T) {
 	t.Parallel()
 	responseData := map[string]any{"result": json.RawMessage(`not json`)}
 	// Should not panic, should leave result unchanged
-	stripEnrichedFieldsFromResult(responseData)
+	StripEnrichedFieldsFromResult(responseData)
 	if string(responseData["result"].(json.RawMessage)) != "not json" {
 		t.Error("invalid JSON result should be left unchanged")
 	}
@@ -346,52 +346,6 @@ func TestStripEnrichedFieldsFromResult_InvalidJSON(t *testing.T) {
 
 // ============================================
 // attachTraceSummary slim output tests
-// ============================================
-
-func TestAttachTraceSummary_OmitsEvents(t *testing.T) {
-	t.Parallel()
-
-	cmd := queries.CommandResult{
-		TraceID:       "dom_click_123",
-		TraceTimeline: "queued -> sent -> started -> resolved",
-		TraceEvents: []queries.CommandTraceEvent{
-			{Stage: "queued"},
-			{Stage: "sent"},
-			{Stage: "started"},
-			{Stage: "resolved"},
-		},
-		QueryID: "q-22",
-	}
-
-	responseData := map[string]any{}
-	attachTraceSummary(responseData, cmd)
-
-	trace, ok := responseData["trace"].(map[string]any)
-	if !ok {
-		t.Fatal("trace should be present")
-	}
-
-	if trace["trace_id"] != "dom_click_123" {
-		t.Errorf("expected trace_id dom_click_123, got %v", trace["trace_id"])
-	}
-	if trace["timeline"] != "queued -> sent -> started -> resolved" {
-		t.Errorf("unexpected timeline: %v", trace["timeline"])
-	}
-	if trace["query_id"] != "q-22" {
-		t.Errorf("expected query_id q-22, got %v", trace["query_id"])
-	}
-	if trace["last_stage"] != "resolved" {
-		t.Errorf("expected last_stage resolved, got %v", trace["last_stage"])
-	}
-
-	// events must NOT be present (token savings)
-	if _, ok := trace["events"]; ok {
-		t.Error("trace.events should be omitted for token efficiency")
-	}
-}
-
-// ============================================
-// stripSuccessOnlyFields tests
 // ============================================
 
 func TestStripSuccessOnlyFields_RemovesRoutingFields(t *testing.T) {
@@ -406,7 +360,7 @@ func TestStripSuccessOnlyFields_RemovesRoutingFields(t *testing.T) {
 		"effective_url":         "https://example.com",
 	}
 
-	stripSuccessOnlyFields(responseData)
+	StripSuccessOnlyFields(responseData)
 
 	for _, key := range []string{"target_context", "content_script_status", "created_at", "trace_id"} {
 		if _, ok := responseData[key]; ok {
@@ -431,7 +385,7 @@ func TestStripRetryContextOnSuccess_RemovesAttempt1_Int(t *testing.T) {
 		},
 	}
 
-	stripRetryContextOnSuccess(responseData)
+	StripRetryContextOnSuccess(responseData)
 
 	if _, ok := responseData["retry_context"]; ok {
 		t.Error("retry_context should be stripped when attempt=1 on success (int)")
@@ -449,7 +403,7 @@ func TestStripRetryContextOnSuccess_RemovesAttempt1_Float(t *testing.T) {
 		},
 	}
 
-	stripRetryContextOnSuccess(responseData)
+	StripRetryContextOnSuccess(responseData)
 
 	if _, ok := responseData["retry_context"]; ok {
 		t.Error("retry_context should be stripped when attempt=1 on success (float64)")
@@ -467,7 +421,7 @@ func TestStripRetryContextOnSuccess_KeepsAttempt2(t *testing.T) {
 		},
 	}
 
-	stripRetryContextOnSuccess(responseData)
+	StripRetryContextOnSuccess(responseData)
 
 	if _, ok := responseData["retry_context"]; !ok {
 		t.Error("retry_context should be kept when attempt > 1")
@@ -478,46 +432,12 @@ func TestStripRetryContextOnSuccess_NoRetryContext(t *testing.T) {
 	t.Parallel()
 	responseData := map[string]any{"status": "complete"}
 	// Should not panic
-	stripRetryContextOnSuccess(responseData)
+	StripRetryContextOnSuccess(responseData)
 }
 
 // ============================================
 // blocked_by_overlay playbook tests (#319)
 // ============================================
-
-func TestLookupInteractFailurePlaybook_BlockedByOverlay(t *testing.T) {
-	t.Parallel()
-	canonical, playbook, ok := lookupInteractFailurePlaybook("blocked_by_overlay")
-	if !ok {
-		t.Fatal("blocked_by_overlay playbook should exist")
-	}
-	if canonical != "blocked_by_overlay" {
-		t.Errorf("expected canonical code 'blocked_by_overlay', got %q", canonical)
-	}
-	if playbook.RetrySuggestion == "" {
-		t.Error("blocked_by_overlay should have a retry suggestion")
-	}
-}
-
-func TestNormalizeInteractFailureCode_OverlayVariants(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		input    string
-		expected string
-	}{
-		{"blocked_by_overlay", "blocked_by_overlay"},
-		{"BLOCKED_BY_OVERLAY", "blocked_by_overlay"},
-		{"Element is blocked_by_overlay: click intercepted", "blocked_by_overlay"},
-		{"unrelated_error", ""},
-	}
-	for _, tt := range tests {
-		got := normalizeInteractFailureCode(tt.input)
-		if got != tt.expected {
-			t.Errorf("normalizeInteractFailureCode(%q) = %q, want %q", tt.input, got, tt.expected)
-		}
-	}
-}
 
 func TestAnnotateInteractFailureRecovery_BlockedByOverlay(t *testing.T) {
 	t.Parallel()
@@ -529,7 +449,7 @@ func TestAnnotateInteractFailureRecovery_BlockedByOverlay(t *testing.T) {
 	}`)
 
 	responseData := map[string]any{}
-	annotateInteractFailureRecovery(responseData, "blocked_by_overlay", result)
+	AnnotateInteractFailureRecovery(responseData, "blocked_by_overlay", result)
 
 	if responseData["error_code"] != "blocked_by_overlay" {
 		t.Errorf("expected error_code 'blocked_by_overlay', got %v", responseData["error_code"])
@@ -550,7 +470,7 @@ func TestAnnotateInteractFailureRecovery_BlockedByOverlay(t *testing.T) {
 }
 
 // ============================================
-// stripSummaryModeFields tests (#447)
+// StripSummaryModeFields tests (#447)
 // ============================================
 
 func TestStripSummaryModeFields_RemovesVerboseFields(t *testing.T) {
@@ -569,7 +489,7 @@ func TestStripSummaryModeFields_RemovesVerboseFields(t *testing.T) {
 		"effective_url":      "https://example.com",
 	}
 
-	stripSummaryModeFields(responseData)
+	StripSummaryModeFields(responseData)
 
 	for _, key := range []string{"dom_summary", "dom_mutations", "perf_diff", "evidence", "transient_elements", "trace"} {
 		if _, ok := responseData[key]; ok {
@@ -595,7 +515,7 @@ func TestStripSummaryModeFields_KeepsErrorFields(t *testing.T) {
 		"hint":    "diagnostic hint",
 	}
 
-	stripSummaryModeFields(responseData)
+	StripSummaryModeFields(responseData)
 
 	for _, key := range []string{"error", "message", "retry", "hint"} {
 		if _, ok := responseData[key]; !ok {
@@ -608,7 +528,7 @@ func TestStripSummaryModeFields_NoOpOnEmptyData(t *testing.T) {
 	t.Parallel()
 	responseData := map[string]any{"status": "complete"}
 	// Should not panic
-	stripSummaryModeFields(responseData)
+	StripSummaryModeFields(responseData)
 	if _, ok := responseData["status"]; !ok {
 		t.Error("status should survive")
 	}

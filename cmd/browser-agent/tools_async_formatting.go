@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/asyncresult"
 	"strings"
 	"time"
 
@@ -30,7 +31,7 @@ func (h *ToolHandler) formatCommandResult(req JSONRPCRequest, cmd queries.Comman
 		"correlation_id":   cmd.CorrelationID,
 		"trace_id":         traceID,
 		"status":           cmd.Status,
-		"lifecycle_status": canonicalLifecycleStatus(cmd.Status),
+		"lifecycle_status": asyncresult.CanonicalLifecycleStatus(cmd.Status),
 		"queued":           false,
 		"created_at":       cmd.CreatedAt.Format(time.RFC3339),
 		"elapsed_ms":       cmd.ElapsedMs(),
@@ -69,11 +70,11 @@ func (h *ToolHandler) formatErrorCommandResult(req JSONRPCRequest, cmd queries.C
 	responseData["error"] = cmd.Error
 	if len(cmd.Result) > 0 {
 		responseData["result"] = cmd.Result
-		_, _ = enrichCommandResponseData(cmd.Result, responseData)
-		stripEnrichedFieldsFromResult(responseData)
+		_, _ = asyncresult.EnrichCommandResponseData(cmd.Result, responseData)
+		asyncresult.StripEnrichedFieldsFromResult(responseData)
 	}
-	annotateCSPFailure(responseData, cmd.Error, cmd.Result)
-	annotateInteractFailureRecovery(responseData, cmd.Error, cmd.Result)
+	asyncresult.AnnotateCSPFailure(responseData, cmd.Error, cmd.Result)
+	asyncresult.AnnotateInteractFailureRecovery(responseData, cmd.Error, cmd.Result)
 
 	// Add corrective hints for common out-of-order errors.
 	if strings.Contains(cmd.Error, "No active recording") {
@@ -149,7 +150,7 @@ func attachTraceSummary(responseData map[string]any, cmd queries.CommandResult) 
 }
 
 func (h *ToolHandler) formatCompleteCommand(req JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) JSONRPCResponse {
-	normalizedResult, normalizedErr := normalizeCompleteCommandResult(corrID, cmd.Result)
+	normalizedResult, normalizedErr := asyncresult.NormalizeCompleteCommandResult(corrID, cmd.Result)
 	responseData["result"] = normalizedResult
 	responseData["completed_at"] = cmd.CompletedAt.Format(time.RFC3339)
 	responseData["timing_ms"] = cmd.CompletedAt.Sub(cmd.CreatedAt).Milliseconds()
@@ -158,27 +159,27 @@ func (h *ToolHandler) formatCompleteCommand(req JSONRPCRequest, cmd queries.Comm
 		cmd.Error = normalizedErr
 	}
 
-	if embeddedErr, hasEmbeddedErr := enrichCommandResponseData(normalizedResult, responseData, corrID); cmd.Error == "" && hasEmbeddedErr {
+	if embeddedErr, hasEmbeddedErr := asyncresult.EnrichCommandResponseData(normalizedResult, responseData, corrID); cmd.Error == "" && hasEmbeddedErr {
 		cmd.Error = embeddedErr
 	}
-	stripEnrichedFieldsFromResult(responseData)
+	asyncresult.StripEnrichedFieldsFromResult(responseData)
 	h.attachPerfDiffIfAvailable(corrID, responseData)
 
 	if cmd.Error != "" {
 		responseData["error"] = cmd.Error
-		annotateCSPFailure(responseData, cmd.Error, normalizedResult)
-		annotateInteractFailureRecovery(responseData, cmd.Error, normalizedResult)
+		asyncresult.AnnotateCSPFailure(responseData, cmd.Error, normalizedResult)
+		asyncresult.AnnotateInteractFailureRecovery(responseData, cmd.Error, normalizedResult)
 		h.finalizeResponseEnrichment(corrID, responseData, cmd)
 		summary := fmt.Sprintf("FAILED — Command %s completed with error: %s", corrID, cmd.Error)
 		return failJSON(req, summary, responseData)
 	}
 
 	h.finalizeResponseEnrichment(corrID, responseData, cmd)
-	stripSuccessOnlyFields(responseData)
-	stripRetryContextOnSuccess(responseData)
+	asyncresult.StripSuccessOnlyFields(responseData)
+	asyncresult.StripRetryContextOnSuccess(responseData)
 	// #447: Strip verbose fields when summary mode is active
 	if h.loadSummaryPref() {
-		stripSummaryModeFields(responseData)
+		asyncresult.StripSummaryModeFields(responseData)
 	}
 	summary := fmt.Sprintf("Command %s: complete", corrID)
 	return succeed(req, summary, responseData)

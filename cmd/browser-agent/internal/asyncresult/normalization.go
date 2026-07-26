@@ -1,15 +1,17 @@
-// Purpose: Normalizes async command payloads before they are exposed to agents.
+// normalization.go — Normalizes async command payloads before they are exposed to agents.
 // Why: Keeps schema hardening and token-focused pruning isolated from transport flow.
 
-package main
+package asyncresult
 
 import (
 	"bytes"
 	"encoding/json"
 	"strings"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
-func normalizeCompleteCommandResult(corrID string, result json.RawMessage) (json.RawMessage, string) {
+func NormalizeCompleteCommandResult(corrID string, result json.RawMessage) (json.RawMessage, string) {
 	if strings.HasPrefix(corrID, "dom_list_") {
 		return normalizeListInteractiveResult(result)
 	}
@@ -20,7 +22,7 @@ func normalizeListInteractiveResult(result json.RawMessage) (json.RawMessage, st
 	trimmed := bytes.TrimSpace(result)
 	if len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null")) {
 		payload := buildListInteractiveMissingPayload(nil, "list_interactive returned empty payload")
-		return safeMarshal(payload, `{"success":false,"error":"list_interactive_missing_payload","elements":[]}`), "list_interactive_missing_payload"
+		return mcp.SafeMarshal(payload, `{"success":false,"error":"list_interactive_missing_payload","elements":[]}`), "list_interactive_missing_payload"
 	}
 
 	var parsed any
@@ -31,28 +33,28 @@ func normalizeListInteractiveResult(result json.RawMessage) (json.RawMessage, st
 	m, ok := parsed.(map[string]any)
 	if !ok {
 		payload := buildListInteractiveMissingPayload(nil, "list_interactive returned non-object payload")
-		return safeMarshal(payload, `{"success":false,"error":"list_interactive_missing_payload","elements":[]}`), "list_interactive_missing_payload"
+		return mcp.SafeMarshal(payload, `{"success":false,"error":"list_interactive_missing_payload","elements":[]}`), "list_interactive_missing_payload"
 	}
 
 	if elems, exists := m["elements"]; exists {
 		if elems == nil {
 			m["elements"] = []any{}
-			return safeMarshal(m, string(trimmed)), ""
+			return mcp.SafeMarshal(m, string(trimmed)), ""
 		}
 		if _, isArray := elems.([]any); isArray {
 			return result, ""
 		}
 		payload := buildListInteractiveMissingPayload(m, "list_interactive returned invalid elements payload")
-		return safeMarshal(payload, `{"success":false,"error":"list_interactive_missing_payload","elements":[]}`), "list_interactive_missing_payload"
+		return mcp.SafeMarshal(payload, `{"success":false,"error":"list_interactive_missing_payload","elements":[]}`), "list_interactive_missing_payload"
 	}
 
 	if value, hasValue := m["value"]; hasValue && value == nil {
 		payload := buildListInteractiveMissingPayload(m, "list_interactive returned value:null without elements")
-		return safeMarshal(payload, `{"success":false,"error":"list_interactive_missing_payload","elements":[]}`), "list_interactive_missing_payload"
+		return mcp.SafeMarshal(payload, `{"success":false,"error":"list_interactive_missing_payload","elements":[]}`), "list_interactive_missing_payload"
 	}
 
 	payload := buildListInteractiveMissingPayload(m, "list_interactive response missing elements")
-	return safeMarshal(payload, `{"success":false,"error":"list_interactive_missing_payload","elements":[]}`), "list_interactive_missing_payload"
+	return mcp.SafeMarshal(payload, `{"success":false,"error":"list_interactive_missing_payload","elements":[]}`), "list_interactive_missing_payload"
 }
 
 func buildListInteractiveMissingPayload(existing map[string]any, message string) map[string]any {
@@ -79,10 +81,10 @@ func buildListInteractiveMissingPayload(existing map[string]any, message string)
 	return payload
 }
 
-// stripEnrichedFieldsFromResult removes fields from the inner "result" that
-// enrichCommandResponseData() already surfaced to the top level. This eliminates
+// StripEnrichedFieldsFromResult removes fields from the inner "result" that
+// EnrichCommandResponseData() already surfaced to the top level. This eliminates
 // token-wasting duplication — the agent sees each field exactly once.
-func stripEnrichedFieldsFromResult(responseData map[string]any) {
+func StripEnrichedFieldsFromResult(responseData map[string]any) {
 	resultRaw, ok := responseData["result"].(json.RawMessage)
 	if !ok || len(resultRaw) == 0 {
 		return
@@ -92,7 +94,7 @@ func stripEnrichedFieldsFromResult(responseData map[string]any) {
 		return
 	}
 
-	// Strip keys shared with enrichCommandResponseData, plus result-only keys
+	// Strip keys shared with EnrichCommandResponseData, plus result-only keys
 	// (URL/tab fields and "result") that are surfaced separately.
 	for _, key := range enrichedFieldKeys {
 		delete(resultMap, key)
@@ -110,19 +112,19 @@ func stripEnrichedFieldsFromResult(responseData map[string]any) {
 	}
 }
 
-// stripSuccessOnlyFields removes internal routing fields that are not useful to
+// StripSuccessOnlyFields removes internal routing fields that are not useful to
 // agents on successful responses. Error responses keep these for debugging.
-func stripSuccessOnlyFields(responseData map[string]any) {
+func StripSuccessOnlyFields(responseData map[string]any) {
 	delete(responseData, "target_context")
 	delete(responseData, "content_script_status")
 	delete(responseData, "created_at")
 	delete(responseData, "trace_id")
 }
 
-// stripSummaryModeFields removes verbose fields from interact responses when
+// StripSummaryModeFields removes verbose fields from interact responses when
 // summary mode is active. Keeps essential fields (status, timing, matched, errors)
 // while stripping detailed diagnostics and large payloads (#447).
-func stripSummaryModeFields(responseData map[string]any) {
+func StripSummaryModeFields(responseData map[string]any) {
 	for _, key := range []string{
 		"dom_summary",        // text description of mutations — dom_changes counts suffice
 		"dom_mutations",      // individual mutation entries
@@ -137,9 +139,9 @@ func stripSummaryModeFields(responseData map[string]any) {
 	}
 }
 
-// stripRetryContextOnSuccess removes retry_context when the command succeeded
+// StripRetryContextOnSuccess removes retry_context when the command succeeded
 // on the first attempt (no retry occurred), saving ~50 tokens per response.
-func stripRetryContextOnSuccess(responseData map[string]any) {
+func StripRetryContextOnSuccess(responseData map[string]any) {
 	rc, ok := responseData["retry_context"].(map[string]any)
 	if !ok {
 		return

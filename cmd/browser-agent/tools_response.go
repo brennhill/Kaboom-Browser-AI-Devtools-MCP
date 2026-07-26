@@ -11,6 +11,9 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
+// newCorrelationID delegates to internal/toolresp, the single implementation.
+var newCorrelationID = toolresp.NewCorrelationID
+
 func safeMarshal(v any, fallback string) json.RawMessage {
 	return mcp.SafeMarshal(v, fallback)
 }

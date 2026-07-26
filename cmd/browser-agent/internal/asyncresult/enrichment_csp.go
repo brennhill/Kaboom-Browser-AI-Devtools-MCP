@@ -1,7 +1,7 @@
-// Purpose: Detects CSP-related failures and enriches async command responses with CSP guidance.
+// enrichment_csp.go — Detects CSP-related failures and enriches async command responses with CSP guidance.
 // Why: Keeps CSP heuristics and retry annotation logic separate from generic result enrichment.
 
-package main
+package asyncresult
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/tutorial"
 )
 
-func annotateCSPFailure(responseData map[string]any, cmdError string, result json.RawMessage) {
+func AnnotateCSPFailure(responseData map[string]any, cmdError string, result json.RawMessage) {
 	cspBlocked, errorCode, message := detectCSPFailure(cmdError, result)
 	if !cspBlocked {
 		return

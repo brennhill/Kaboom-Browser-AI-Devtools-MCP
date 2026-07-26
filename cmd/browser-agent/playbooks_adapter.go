@@ -14,22 +14,9 @@ var (
 	demoScripts       = playbooks.DemoScripts
 )
 
-// interactFailurePlaybook is a type alias for the sub-package type.
-type interactFailurePlaybook = playbooks.InteractFailurePlaybook
-
 // resolveResourceContent delegates to the playbooks sub-package.
 func resolveResourceContent(uri string) (string, string, bool) {
 	return playbooks.ResolveResourceContent(uri)
-}
-
-// lookupInteractFailurePlaybook delegates to the playbooks sub-package.
-func lookupInteractFailurePlaybook(rawCode string) (string, interactFailurePlaybook, bool) {
-	return playbooks.LookupInteractFailurePlaybook(rawCode)
-}
-
-// normalizeInteractFailureCode delegates to the playbooks sub-package.
-func normalizeInteractFailureCode(raw string) string {
-	return playbooks.NormalizeInteractFailureCode(raw)
 }
 
 // tutorialFailureRecoveryPlaybooks delegates to the playbooks sub-package.
