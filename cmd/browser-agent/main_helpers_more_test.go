@@ -49,38 +49,6 @@ func TestFindMCPConfigResolutionClaudePath(t *testing.T) {
 	}
 }
 
-func TestPIDFileLifecycleAndLegacyFallback(t *testing.T) {
-	// Do not run in parallel; uses Setenv.
-	stateRoot := t.TempDir()
-	home := t.TempDir()
-	t.Setenv(state.StateDirEnv, stateRoot)
-	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
-
-	const port = 56789
-	if err := writePIDFile(port); err != nil {
-		t.Fatalf("writePIDFile(%d) error = %v", port, err)
-	}
-	if got := readPIDFile(port); got != os.Getpid() {
-		t.Fatalf("readPIDFile(%d) = %d, want current pid %d", port, got, os.Getpid())
-	}
-	removePIDFile(port)
-	if got := readPIDFile(port); got != 0 {
-		t.Fatalf("readPIDFile(%d) after remove = %d, want 0", port, got)
-	}
-
-	legacyPath, err := state.LegacyPIDFile(43210)
-	if err != nil {
-		t.Fatalf("LegacyPIDFile() error = %v", err)
-	}
-	if err := os.WriteFile(legacyPath, []byte("12345"), 0o600); err != nil {
-		t.Fatalf("WriteFile(legacy pid) error = %v", err)
-	}
-	if got := readPIDFile(43210); got != 12345 {
-		t.Fatalf("readPIDFile(legacy) = %d, want 12345", got)
-	}
-}
-
 func TestRunSetupCheckPrintsDiagnostics(t *testing.T) {
 	// Do not run in parallel; test redirects os.Stdout.
 	ln, err := net.Listen("tcp", "127.0.0.1:0")

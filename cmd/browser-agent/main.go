@@ -9,12 +9,20 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/cli"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
 
 // version is set at build time via -ldflags "-X main.version=..."
 // Fallback used for `go run` and `make dev` (no ldflags).
 var version = "0.8.8"
+
+// daemonProcessArgv0 binds the build-time version to the process-title builder in
+// internal/procctl. It lives beside `version` because that is the only reason it
+// exists — bridge.Deps and cli.Deps both take a plain func(string) string.
+func daemonProcessArgv0(exePath string) string {
+	return procctl.Argv0ForVersion(exePath, version)
+}
 
 func init() {
 	// Sync telemetry version from main for go run (no ldflags) fallback.

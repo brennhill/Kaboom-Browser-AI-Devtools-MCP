@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"io"
 	"net"
 	"net/http"
@@ -50,7 +51,7 @@ func diagnosePortStatus(diagnostics map[string]any, port int) {
 
 // diagnoseProcessOnPort identifies what process is using the port.
 func diagnoseProcessOnPort(diagnostics map[string]any, port int) {
-	pids, err := findProcessOnPort(port)
+	pids, err := procctl.FindProcessOnPort(port)
 	if err != nil || len(pids) == 0 {
 		diagnostics["process_info"] = "no process found on port"
 		return
@@ -62,7 +63,7 @@ func diagnoseProcessOnPort(diagnostics map[string]any, port int) {
 	}
 	diagnostics["process_pids"] = strings.Join(pidStrs, "\n")
 
-	cmdLine := getProcessCommand(pids[0])
+	cmdLine := procctl.GetProcessCommand(pids[0])
 	if cmdLine == "" {
 		return
 	}

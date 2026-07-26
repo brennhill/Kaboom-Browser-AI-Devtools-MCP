@@ -20,11 +20,21 @@ code_paths:
   - cmd/browser-agent/internal/daemonlife/deps.go
   - cmd/browser-agent/daemon_lifecycle_wiring.go
   - cmd/browser-agent/main_connection_mcp.go
+  - cmd/browser-agent/internal/procctl/pidfile.go
+  - cmd/browser-agent/internal/procctl/port.go
+  - cmd/browser-agent/internal/procctl/argv0.go
   - cmd/browser-agent/main_connection_mcp_bootstrap.go
   - cmd/browser-agent/main_connection_recovery.go
   - cmd/browser-agent/server_routes_health_diagnostics.go
+  - cmd/browser-agent/server_routes_logs.go
+  - cmd/browser-agent/internal/logstore/store.go
+  - cmd/browser-agent/internal/logstore/async.go
+  - cmd/browser-agent/internal/logstore/accessors.go
+  - cmd/browser-agent/internal/logstore/persistence.go
+  - cmd/browser-agent/internal/logstore/validate.go
+  - cmd/browser-agent/internal/logstore/seed.go
   - cmd/browser-agent/main_connection_mcp_shutdown.go
-  - cmd/browser-agent/server_middleware.go
+  - cmd/browser-agent/internal/httpguard/middleware.go
   - cmd/browser-agent/handler_http.go
   - cmd/browser-agent/connect_mode.go
   - cmd/browser-agent/server_routes_media_screenshots.go
@@ -38,7 +48,7 @@ test_paths:
   - cmd/browser-agent/bridge_startup_contention_test.go
   - cmd/browser-agent/bridge_faststart_extended_test.go
   - cmd/browser-agent/handler_http_headers_test.go
-  - cmd/browser-agent/server_middleware_test.go
+  - cmd/browser-agent/internal/httpguard/middleware_test.go
   - cmd/browser-agent/connect_mode_run_test.go
   - cmd/browser-agent/handler_consistency_test.go
   - cmd/browser-agent/server_routes_unit_test.go
@@ -57,6 +67,14 @@ test_paths:
   - cmd/browser-agent/internal/daemonlife/helpers_test.go
   - cmd/browser-agent/daemon_lifecycle_policy_test.go
   - cmd/browser-agent/daemon_lifecycle_wiring_test.go
+  - cmd/browser-agent/server_core_unit_test.go
+  - cmd/browser-agent/internal/procctl/pidfile_test.go
+  - cmd/browser-agent/internal/procctl/port_test.go
+  - cmd/browser-agent/internal/procctl/port_netstat_test.go
+  - cmd/browser-agent/internal/procctl/argv0_test.go
+  - cmd/browser-agent/internal/logstore/store_test.go
+  - cmd/browser-agent/internal/logstore/async_test.go
+  - cmd/browser-agent/internal/logstore/validate_test.go
   - tests/regression/08-fast-start/test-fast-start.sh
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-29

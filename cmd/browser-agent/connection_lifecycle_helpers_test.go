@@ -7,6 +7,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"io"
 	"net"
 	"os"
@@ -139,13 +140,13 @@ func stopTestServer(binary string, port int, stateDir string) {
 	_ = stopCmd.Run()
 
 	// Best-effort fallback if stop mode could not terminate all listeners.
-	pids, err := findProcessOnPort(port)
+	pids, err := procctl.FindProcessOnPort(port)
 	if err == nil {
 		for _, pid := range pids {
-			_ = killProcessByPID(pid)
+			_ = procctl.KillProcessByPID(pid)
 		}
 	}
-	removePIDFile(port)
+	procctl.RemovePIDFile(port)
 }
 
 func checkSingleServerProcess(t *testing.T, port int) {

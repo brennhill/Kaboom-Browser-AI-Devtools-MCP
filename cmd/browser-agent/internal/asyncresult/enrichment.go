@@ -1,7 +1,7 @@
-// Purpose: Enriches async command payloads with agent-facing context and recovery hints.
+// enrichment.go — Enriches async command payloads with agent-facing context and recovery hints.
 // Why: Centralizes response metadata promotion and failure diagnosis in one module.
 
-package main
+package asyncresult
 
 import (
 	"encoding/json"
@@ -9,9 +9,9 @@ import (
 	"strings"
 )
 
-// enrichedFieldKeys lists the fields that enrichCommandResponseData() surfaces
+// enrichedFieldKeys lists the fields that EnrichCommandResponseData() surfaces
 // from the inner extension result to the top-level response. Both the enrichment
-// loop and stripEnrichedFieldsFromResult() reference this slice so the two sides
+// loop and StripEnrichedFieldsFromResult() reference this slice so the two sides
 // cannot diverge.
 var enrichedFieldKeys = []string{
 	"timing", "dom_changes", "dom_summary", "dom_mutations", "analysis",
@@ -22,7 +22,7 @@ var enrichedFieldKeys = []string{
 	"viewport",
 }
 
-func enrichCommandResponseData(result json.RawMessage, responseData map[string]any, corrID ...string) (embeddedErr string, hasEmbeddedErr bool) {
+func EnrichCommandResponseData(result json.RawMessage, responseData map[string]any, corrID ...string) (embeddedErr string, hasEmbeddedErr bool) {
 	if len(result) == 0 {
 		return "", false
 	}

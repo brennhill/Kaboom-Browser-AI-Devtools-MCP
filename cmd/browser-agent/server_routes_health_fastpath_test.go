@@ -5,6 +5,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -21,11 +22,11 @@ func TestHandleHealthIncludesBridgeFastPathCounters(t *testing.T) {
 	bridge.RecordFastPathResourceRead("kaboom://playbook/nonexistent/quick", false, -32002)
 
 	s := &Server{
-		logs: &LogStore{
-			maxEntries: 100,
-			logFile:    filepath.Join(t.TempDir(), "kaboom.jsonl"),
-			addWarning: func(string) {},
-		},
+		logs: logstore.New(logstore.Config{
+			MaxEntries: 100,
+			LogFile:    filepath.Join(t.TempDir(), "kaboom.jsonl"),
+			AddWarning: func(string) {},
+		}),
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)

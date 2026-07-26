@@ -22,7 +22,7 @@ func newAvailabilityServer(t *testing.T) *Server {
 	if err != nil {
 		t.Fatalf("NewServer() error = %v", err)
 	}
-	t.Cleanup(func() { server.logs.shutdownAsyncLogger(2 * time.Second) })
+	t.Cleanup(func() { server.logs.Shutdown(2 * time.Second) })
 	return server
 }
 

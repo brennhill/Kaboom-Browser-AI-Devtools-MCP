@@ -1,8 +1,8 @@
-// Purpose: PID file and liveness helpers for daemon lifecycle management.
+// pidfile.go — PID file and liveness helpers for daemon lifecycle management.
 // Why: Centralizes process identity operations used by startup/stop flows and lifecycle tests.
 // Docs: docs/features/architecture/index.md
 
-package main
+package procctl
 
 import (
 	"fmt"
@@ -15,8 +15,8 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
-// pidFilePath returns the path to the PID file for a given port.
-func pidFilePath(port int) string {
+// PIDFilePath returns the path to the PID file for a given port.
+func PIDFilePath(port int) string {
 	path, err := state.PIDFile(port)
 	if err != nil {
 		return ""
@@ -24,8 +24,8 @@ func pidFilePath(port int) string {
 	return path
 }
 
-// legacyPIDFilePath returns the old PID path used in previous releases.
-func legacyPIDFilePath(port int) string {
+// LegacyPIDFilePath returns the old PID path used in previous releases.
+func LegacyPIDFilePath(port int) string {
 	path, err := state.LegacyPIDFile(port)
 	if err != nil {
 		return ""
@@ -33,9 +33,9 @@ func legacyPIDFilePath(port int) string {
 	return path
 }
 
-// writePIDFile writes the current process ID to the PID file.
-func writePIDFile(port int) error {
-	path := pidFilePath(port)
+// WritePIDFile writes the current process ID to the PID file.
+func WritePIDFile(port int) error {
+	path := PIDFilePath(port)
 	if path == "" {
 		return fmt.Errorf("cannot determine PID file path")
 	}
@@ -46,9 +46,9 @@ func writePIDFile(port int) error {
 	return os.WriteFile(path, []byte(strconv.Itoa(os.Getpid())), 0600)
 }
 
-// readPIDFile reads the PID from the PID file, returns 0 if not found or invalid.
-func readPIDFile(port int) int {
-	paths := []string{pidFilePath(port), legacyPIDFilePath(port)}
+// ReadPIDFile reads the PID from the PID file, returns 0 if not found or invalid.
+func ReadPIDFile(port int) int {
+	paths := []string{PIDFilePath(port), LegacyPIDFilePath(port)}
 	for _, path := range paths {
 		if path == "" {
 			continue
@@ -65,9 +65,9 @@ func readPIDFile(port int) int {
 	return 0
 }
 
-// removePIDFile removes the PID file for a given port.
-func removePIDFile(port int) {
-	paths := []string{pidFilePath(port), legacyPIDFilePath(port)}
+// RemovePIDFile removes the PID file for a given port.
+func RemovePIDFile(port int) {
+	paths := []string{PIDFilePath(port), LegacyPIDFilePath(port)}
 	for _, path := range paths {
 		if path != "" {
 			_ = os.Remove(path)
@@ -75,8 +75,8 @@ func removePIDFile(port int) {
 	}
 }
 
-// isProcessAlive checks if a process with the given PID is still running.
-func isProcessAlive(pid int) bool {
+// IsProcessAlive checks if a process with the given PID is still running.
+func IsProcessAlive(pid int) bool {
 	if pid <= 0 {
 		return false
 	}

@@ -6,6 +6,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"sync"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -36,11 +37,11 @@ func initBridge() {
 		// Stdout transport
 		WriteMCPPayload:      writeMCPPayload,
 		SyncStdoutBestEffort: syncStdoutBestEffort,
-		SetStderrSink: setStderrSink,
+		SetStderrSink:        setStderrSink,
 
 		// Push state
-		GetBridgeFraming:      getBridgeFraming,
-		StoreBridgeFraming:    storeBridgeFraming,
+		GetBridgeFraming:   getBridgeFraming,
+		StoreBridgeFraming: storeBridgeFraming,
 		SetPushClientCapabilities: func(caps push.ClientCapabilities) {
 			setPushClientCapabilities(caps)
 			if caps.ClientName != "" {
@@ -62,10 +63,10 @@ func initBridge() {
 		ResolveResourceContent: resolveResourceContent,
 
 		// Daemon lifecycle
-		DaemonProcessArgv0:  daemonProcessArgv0,
+		DaemonProcessArgv0:   daemonProcessArgv0,
 		StopServerForUpgrade: stopServerForUpgrade,
-		FindProcessOnPort:    findProcessOnPort,
-		IsProcessAlive:       isProcessAlive,
+		FindProcessOnPort:    procctl.FindProcessOnPort,
+		IsProcessAlive:       procctl.IsProcessAlive,
 		VersionsMatch:        versionsMatch,
 		DecodeHealthMetadata: func(body []byte) (bridgepkg.HealthMeta, bool) {
 			meta, ok := decodeHealthMetadata(body)

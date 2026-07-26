@@ -1,7 +1,7 @@
 // Purpose: Tests for process name resolution.
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
-package main
+package procctl
 
 import "testing"
 
@@ -50,9 +50,9 @@ func TestDaemonProcessArgv0ForVersion(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got := daemonProcessArgv0ForVersion(tc.exePath, tc.version)
+			got := Argv0ForVersion(tc.exePath, tc.version)
 			if got != tc.expected {
-				t.Fatalf("daemonProcessArgv0ForVersion(%q, %q) = %q, want %q", tc.exePath, tc.version, got, tc.expected)
+				t.Fatalf("Argv0ForVersion(%q, %q) = %q, want %q", tc.exePath, tc.version, got, tc.expected)
 			}
 		})
 	}

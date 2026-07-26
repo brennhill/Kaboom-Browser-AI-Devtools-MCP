@@ -1,16 +1,18 @@
-// Purpose: Detects interact failure codes and annotates command results with recovery playbooks.
+// enrichment_recovery.go — Detects interact failure codes and annotates command results with recovery playbooks.
 // Why: Isolates recovery-specific enrichment logic from generic async response promotion.
 
-package main
+package asyncresult
 
 import (
 	"encoding/json"
 	"strings"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks"
 )
 
-func annotateInteractFailureRecovery(responseData map[string]any, cmdError string, result json.RawMessage) {
+func AnnotateInteractFailureRecovery(responseData map[string]any, cmdError string, result json.RawMessage) {
 	code := detectInteractFailureCode(responseData, cmdError, result)
-	canonical, playbook, ok := lookupInteractFailurePlaybook(code)
+	canonical, playbook, ok := playbooks.LookupInteractFailurePlaybook(code)
 	if !ok {
 		return
 	}
@@ -84,7 +86,7 @@ func detectInteractFailureCode(responseData map[string]any, cmdError string, res
 	}
 
 	for _, candidate := range candidates {
-		if normalized := normalizeInteractFailureCode(candidate); normalized != "" {
+		if normalized := playbooks.NormalizeInteractFailureCode(candidate); normalized != "" {
 			return normalized
 		}
 	}

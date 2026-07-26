@@ -42,10 +42,11 @@ func newBundleTestEnv(t *testing.T) *bundleTestEnv {
 }
 
 func (e *bundleTestEnv) addLogEntry(entry LogEntry) {
-	e.server.logs.mu.Lock()
-	e.server.logs.entries = append(e.server.logs.entries, entry)
-	e.server.logs.logAddedAt = append(e.server.logs.logAddedAt, time.Now())
-	e.server.logs.mu.Unlock()
+	e.server.logs.SeedEntries([]LogEntry{
+		entry,
+	}, []time.Time{
+		time.Now(),
+	})
 }
 
 func (e *bundleTestEnv) callErrorBundles(t *testing.T, args string) (MCPToolResult, bool) {

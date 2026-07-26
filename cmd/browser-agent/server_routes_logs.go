@@ -6,6 +6,8 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 )
 
 // handleLogs serves the /logs endpoint for ingesting and clearing log entries.
@@ -15,7 +17,7 @@ func (s *Server) handleLogs(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		s.handleLogsPost(w, r)
 	case "DELETE":
-		s.logs.clearEntries()
+		s.logs.ClearEntries()
 		jsonResponse(w, http.StatusOK, map[string]bool{"cleared": true})
 	default:
 		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
@@ -38,11 +40,11 @@ func (s *Server) handleLogsPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	valid, rejected := validateLogEntries(body.Entries)
-	received := s.logs.addEntries(valid)
+	valid, rejected := logstore.ValidateEntries(body.Entries)
+	received := s.logs.AddEntries(valid)
 	jsonResponse(w, http.StatusOK, map[string]int{
 		"received": received,
 		"rejected": rejected,
-		"entries":  s.logs.getEntryCount(),
+		"entries":  s.logs.EntryCount(),
 	})
 }

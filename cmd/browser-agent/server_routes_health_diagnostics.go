@@ -28,7 +28,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request, cap *captu
 	}
 
 	logFileSize := int64(0)
-	if fi, err := os.Stat(s.logs.logFile); err == nil {
+	if fi, err := os.Stat(s.logs.LogFile()); err == nil {
 		logFileSize = fi.Size()
 	}
 
@@ -40,11 +40,11 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request, cap *captu
 		"name":         mcpServerName,
 		"version":      version,
 		"logs": map[string]any{
-			"entries":       s.logs.getEntryCount(),
-			"max_entries":   s.logs.maxEntries,
-			"log_file":      s.logs.logFile,
+			"entries":       s.logs.EntryCount(),
+			"max_entries":   s.logs.MaxEntries(),
+			"log_file":      s.logs.LogFile(),
 			"log_file_size": logFileSize,
-			"dropped_count": s.logs.getLogDropCount(),
+			"dropped_count": s.logs.DropCount(),
 		},
 	}
 	s.addTerminalHealth(resp)
@@ -87,7 +87,7 @@ func (s *Server) handleShutdown(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = s.logs.appendToFile([]LogEntry{{
+	_ = s.logs.AppendToFile([]LogEntry{{
 		"type":      "lifecycle",
 		"event":     "shutdown_requested",
 		"source":    "http",

@@ -5,6 +5,7 @@
 package main
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpguard"
 	"net/http"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
@@ -17,7 +18,7 @@ import (
 func terminalDeps() terminal.Deps {
 	return terminal.Deps{
 		JSONResponse:   jsonResponse,
-		CORSMiddleware: corsMiddleware,
+		CORSMiddleware: httpguard.CORS,
 		Stderrf:        stderrf,
 		MaxPostBody:    maxPostBodySize,
 		WSReadFrame:    wsframe.ReadFrame,

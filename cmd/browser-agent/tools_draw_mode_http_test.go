@@ -19,7 +19,7 @@ import (
 )
 
 // createDrawModeTestServer creates an httptest server with just the draw-mode endpoint.
-// Bypasses extensionOnly middleware for unit testing the handler directly.
+// Bypasses httpguard.ExtensionOnly middleware for unit testing the handler directly.
 func createDrawModeTestServer(t *testing.T) (*httptest.Server, *AnnotationStore) {
 	t.Helper()
 

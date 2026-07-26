@@ -52,7 +52,11 @@ code_paths:
   - scripts/templates/partials/_dom-intent.tpl
   - scripts/templates/partials/_dom-selectors.tpl
   - scripts/templates/dom-primitives.ts.tpl
-  - cmd/browser-agent/tools_async_result_normalization.go
+  - cmd/browser-agent/internal/asyncresult/normalization.go
+  - cmd/browser-agent/internal/asyncresult/enrichment.go
+  - cmd/browser-agent/internal/asyncresult/enrichment_csp.go
+  - cmd/browser-agent/internal/asyncresult/enrichment_recovery.go
+  - cmd/browser-agent/internal/asyncresult/lifecycle.go
   - cmd/browser-agent/tools_async_formatting.go
   - cmd/browser-agent/tools_summary_pref.go
 test_paths:
@@ -79,7 +83,8 @@ test_paths:
   - internal/tools/interact/workflow_test.go
   - internal/tools/configure/capabilities/modespecs_test.go
   - extension/background/dom-primitives-overlay.test.js
-  - cmd/browser-agent/tools_async_enrich_test.go
+  - cmd/browser-agent/internal/asyncresult/asyncresult_test.go
+  - cmd/browser-agent/tools_async_formatting_test.go
   - tests/extension/interact-content-fallback.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05

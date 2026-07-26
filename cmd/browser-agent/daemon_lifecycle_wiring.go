@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
@@ -36,8 +37,8 @@ func daemonlifeDeps(server *Server) daemonlife.Deps {
 		WaitForPortRelease: daemonWaitForPortRelease,
 		TerminatePID:       daemonTerminatePID,
 		FetchHealth:        fetchDaemonHealth,
-		ReadPIDFile:        readPIDFile,
-		RemovePIDFile:      removePIDFile,
+		ReadPIDFile:        procctl.ReadPIDFile,
+		RemovePIDFile:      procctl.RemovePIDFile,
 	}
 }
 

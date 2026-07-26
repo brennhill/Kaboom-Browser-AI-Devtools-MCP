@@ -152,9 +152,9 @@ fi
 # ─────────────────────────────────────────────
 # 5. Extension-only middleware check
 # ─────────────────────────────────────────────
-bold "5. Checking extensionOnly middleware on ingest endpoints..."
+bold "5. Checking httpguard.ExtensionOnly middleware on ingest endpoints..."
 
-# These endpoints MUST have extensionOnly (extension-facing, data ingest)
+# These endpoints MUST have httpguard.ExtensionOnly (extension-facing, data ingest)
 MUST_HAVE_EXTENSION_ONLY=(
   "/websocket-events"
   "/network-bodies"
@@ -182,14 +182,14 @@ for ep in "${MUST_HAVE_EXTENSION_ONLY[@]}"; do
   if [ -z "$line" ]; then
     continue  # Route not found (might be registered differently)
   fi
-  if ! echo "$line" | grep -q 'extensionOnly'; then
-    fail "Endpoint $ep missing extensionOnly middleware"
+  if ! echo "$line" | grep -q 'httpguard\.ExtensionOnly'; then
+    fail "Endpoint $ep missing httpguard.ExtensionOnly middleware"
     EXT_ONLY_OK=false
   fi
 done
 
 if [ "$EXT_ONLY_OK" = true ]; then
-  pass "All ingest/extension endpoints have extensionOnly middleware"
+  pass "All ingest/extension endpoints have httpguard.ExtensionOnly middleware"
 fi
 
 # ─────────────────────────────────────────────
@@ -335,7 +335,7 @@ bold "11. Checking for http.Error() in handler files..."
 HTTP_ERROR_CALLS=$(grep -rn 'http\.Error(' cmd/browser-agent/ \
   --include='*.go' \
   | grep -v '_test.go' \
-  | grep -v 'server_middleware.go' \
+  | grep -v 'internal/httpguard/middleware.go' \
   | grep -v '// lint:http-error-ok' \
   || true)
 

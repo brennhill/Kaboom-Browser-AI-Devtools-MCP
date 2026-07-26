@@ -9,6 +9,14 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
+// Wait/poll cadence for the sync-by-default async path. Package-level vars
+// rather than consts so tests can shorten them; production never mutates them.
+var (
+	asyncInitialWait  = 15 * time.Second
+	asyncRetryWait    = 5 * time.Second
+	asyncPollInterval = 500 * time.Millisecond
+)
+
 func (h *ToolHandler) waitForCommandWithConnectivity(correlationID string, timeout time.Duration) (*queries.CommandResult, bool, bool, int64) {
 	deadline := time.Now().Add(timeout)
 	waited := int64(0)

@@ -23,7 +23,7 @@ func newTestServerForHandlers(t *testing.T) *Server {
 		t.Fatalf("NewServer() error = %v", err)
 	}
 	t.Cleanup(func() {
-		s.logs.shutdownAsyncLogger(2 * time.Second)
+		s.logs.Shutdown(2 * time.Second)
 	})
 	return s
 }
@@ -56,7 +56,7 @@ func TestHandleSnapshot_WithStatsAndActiveTestIDFallback(t *testing.T) {
 	srv := newTestServerForHandlers(t)
 	cap := capture.NewCapture()
 
-	srv.logs.addEntries([]LogEntry{
+	srv.logs.AddEntries([]LogEntry{
 		{"level": "error", "message": "boom", "ts": time.Now().UTC().Format(time.RFC3339Nano)},
 		{"level": "warn", "message": "warn", "ts": time.Now().UTC().Format(time.RFC3339Nano)},
 		{"level": "info", "message": "info", "ts": time.Now().UTC().Format(time.RFC3339Nano)},
@@ -121,7 +121,7 @@ func TestHandleSnapshot_SinceFilter(t *testing.T) {
 	oldTS := time.Now().UTC().Add(-10 * time.Second)
 	cutoff := time.Now().UTC().Add(-5 * time.Second)
 	newTS := time.Now().UTC().Add(-1 * time.Second)
-	srv.logs.addEntries([]LogEntry{
+	srv.logs.AddEntries([]LogEntry{
 		{"level": "error", "message": "old", "ts": oldTS.Format(time.RFC3339Nano)},
 		{"level": "error", "message": "new", "ts": newTS.Format(time.RFC3339Nano)},
 	})
@@ -151,7 +151,7 @@ func TestHandleClearAndTestBoundaryHandlers(t *testing.T) {
 	srv := newTestServerForHandlers(t)
 	cap := capture.NewCapture()
 
-	srv.logs.addEntries([]LogEntry{{"level": "error", "message": "x"}})
+	srv.logs.AddEntries([]LogEntry{{"level": "error", "message": "x"}})
 	cap.AddNetworkBodies([]capture.NetworkBody{{URL: "https://example.test", Status: 200}})
 
 	clearHandler := handleClear(srv, cap)
@@ -169,8 +169,8 @@ func TestHandleClearAndTestBoundaryHandlers(t *testing.T) {
 	if postRR.Code != http.StatusOK {
 		t.Fatalf("POST /clear status = %d, want %d", postRR.Code, http.StatusOK)
 	}
-	if srv.logs.getEntryCount() != 0 {
-		t.Fatalf("server entry count = %d, want 0 after clear", srv.logs.getEntryCount())
+	if srv.logs.EntryCount() != 0 {
+		t.Fatalf("server entry count = %d, want 0 after clear", srv.logs.EntryCount())
 	}
 	if len(cap.GetNetworkBodies()) != 0 {
 		t.Fatalf("network bodies len = %d, want 0 after clear", len(cap.GetNetworkBodies()))

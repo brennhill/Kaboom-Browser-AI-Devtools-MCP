@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -212,21 +213,19 @@ func TestHealthEndpointExposesDroppedCount(t *testing.T) {
 	// Create a server with a channel of size 1 and NO async worker,
 	// so the channel stays full when we manually fill it.
 	tinyLogSrv := &Server{
-		logs: &LogStore{
-			logFile:    filepath.Join(t.TempDir(), "drop.jsonl"),
-			maxEntries: 100,
-			entries:    make([]LogEntry, 0),
-			logChan:    make(chan []LogEntry, 1),
-			logDone:    make(chan struct{}),
-			addWarning: func(string) {},
-		},
+		logs: logstore.New(logstore.Config{
+			LogFile:    filepath.Join(t.TempDir(), "drop.jsonl"),
+			MaxEntries: 100,
+			ChanSize:   1,
+			AddWarning: func(string) {},
+		}),
 	}
 
 	tinyMux, _ := setupHTTPRoutes(tinyLogSrv, cap)
 
-	// Fill channel (no worker draining it), then trigger a drop
-	tinyLogSrv.logs.logChan <- []LogEntry{{"level": "info", "message": "fill"}}
-	_ = tinyLogSrv.logs.appendToFile([]LogEntry{{"level": "info", "message": "drop"}})
+	// Fill queue (no worker draining it), then trigger a drop
+	_ = tinyLogSrv.logs.AppendToFile([]LogEntry{{"level": "info", "message": "fill"}})
+	_ = tinyLogSrv.logs.AppendToFile([]LogEntry{{"level": "info", "message": "drop"}})
 
 	healthReq := localRequest(http.MethodGet, "/health", nil)
 	healthRR := httptest.NewRecorder()
@@ -249,9 +248,8 @@ func TestHealthEndpointExposesDroppedCount(t *testing.T) {
 		t.Fatalf("dropped_count = %v, want 1", droppedCount)
 	}
 
-	// Drain the channel and shut down cleanly
-	<-tinyLogSrv.logs.logChan
-	close(tinyLogSrv.logs.logDone)
+	// Shut down cleanly (no worker was started, so Shutdown times out fast)
+	tinyLogSrv.logs.Shutdown(10 * time.Millisecond)
 
 	// Verify zero-state too: fresh server should have 0 dropped_count
 	freshReq := localRequest(http.MethodGet, "/health", nil)

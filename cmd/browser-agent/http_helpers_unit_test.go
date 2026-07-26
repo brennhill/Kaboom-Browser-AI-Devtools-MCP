@@ -5,6 +5,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpguard"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -16,7 +17,7 @@ func TestAuthMiddleware(t *testing.T) {
 	t.Parallel()
 
 	// No configured key: pass-through.
-	pass := AuthMiddleware("")(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	pass := httpguard.APIKey("")(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	}))
 	passRR := httptest.NewRecorder()
@@ -26,7 +27,7 @@ func TestAuthMiddleware(t *testing.T) {
 	}
 
 	// Configured key: wrong key rejected.
-	protected := AuthMiddleware("secret")(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	protected := httpguard.APIKey("secret")(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusAccepted)
 	}))
 	wrongReq := httptest.NewRequest(http.MethodGet, "/", nil)

@@ -6,6 +6,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpguard"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"net"
 	"net/http"
 	"os"
@@ -36,7 +38,7 @@ func initCapture(server *Server, port int) *capture.Store {
 		for k, v := range data {
 			entry[k] = v
 		}
-		server.logs.addEntries([]LogEntry{entry})
+		server.logs.AddEntries([]LogEntry{entry})
 	})
 
 	server.logLifecycle("loading_settings", port, nil)
@@ -74,7 +76,7 @@ func (s *Server) startScreenshotRateLimiterCleanup(ctx context.Context) {
 // cleanupStalePIDFile checks for an existing PID file and removes it if the
 // process is dead. Returns an error if a live process already holds the port.
 func cleanupStalePIDFile(server *Server, port int) error {
-	pidFile := pidFilePath(port)
+	pidFile := procctl.PIDFilePath(port)
 	if _, err := os.Stat(pidFile); err != nil {
 		return nil // No PID file
 	}
@@ -97,7 +99,7 @@ func cleanupStalePIDFile(server *Server, port int) error {
 	// A live PID alone is not enough: PID reuse can point to an unrelated process.
 	// Only treat it as a conflict if that PID actually owns the target port.
 	if process.Signal(syscall.Signal(0)) == nil {
-		ownerPIDs, findErr := findProcessOnPort(port)
+		ownerPIDs, findErr := procctl.FindProcessOnPort(port)
 		if findErr == nil {
 			for _, ownerPID := range ownerPIDs {
 				if ownerPID == pid {
@@ -157,7 +159,7 @@ func preflightPortCheck(server *Server, port int) error {
 			return fmt.Errorf("port %d already in use by pid %d (%s); free that port or start Kaboom on a different one: %w",
 				port, blockingPID, blockingCmd, err)
 		}
-		return fmt.Errorf("port %d already in use (owner could not be identified, try '%s'): %w", port, portKillHintForce(port), err)
+		return fmt.Errorf("port %d already in use (owner could not be identified, try '%s'): %w", port, procctl.PortKillHintForce(port), err)
 	}
 	return testLn.Close()
 }
@@ -172,7 +174,7 @@ func startHTTPServer(server *Server, port int, apiKey string, mux *http.ServeMux
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 65 * time.Second, // Must accommodate blocking tool waits (screenshot 20s, interact 35s, annotations 55s)
 		IdleTimeout:  120 * time.Second,
-		Handler:      AuthMiddleware(apiKey)(mux),
+		Handler:      httpguard.APIKey(apiKey)(mux),
 	}
 	util.SafeGo(func() {
 		defer close(httpDone)
@@ -204,7 +206,7 @@ func startHTTPServer(server *Server, port int, apiKey string, mux *http.ServeMux
 
 // persistDaemonRuntimeState records process metadata used by lifecycle/stop flows.
 func persistDaemonRuntimeState(server *Server, port int) {
-	if err := writePIDFile(port); err != nil {
+	if err := procctl.WritePIDFile(port); err != nil {
 		server.logLifecycle("pid_file_error", port, map[string]any{"error": err.Error()})
 	}
 	if err := daemonlife.PersistCurrentLock(port, version); err != nil {

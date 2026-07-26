@@ -7,7 +7,7 @@
 // response format, and content-type header.
 //
 // Run: go test ./cmd/browser-agent -run "TestAuth" -v
-package main
+package httpguard
 
 import (
 	"crypto/subtle"
@@ -23,7 +23,7 @@ import (
 // ============================================
 
 func TestAuth_NoKeyConfigured_PassThrough(t *testing.T) {
-	middleware := AuthMiddleware("")
+	middleware := APIKey("")
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
@@ -42,7 +42,7 @@ func TestAuth_NoKeyConfigured_PassThrough(t *testing.T) {
 }
 
 func TestAuth_NoKeyConfigured_IgnoresProvidedKey(t *testing.T) {
-	middleware := AuthMiddleware("")
+	middleware := APIKey("")
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -63,7 +63,7 @@ func TestAuth_NoKeyConfigured_IgnoresProvidedKey(t *testing.T) {
 
 func TestAuth_CorrectKey_Accepted(t *testing.T) {
 	const secret = "sk-test-abc123"
-	middleware := AuthMiddleware(secret)
+	middleware := APIKey(secret)
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("authorized"))
@@ -84,7 +84,7 @@ func TestAuth_CorrectKey_Accepted(t *testing.T) {
 
 func TestAuth_CorrectKey_AllHTTPMethods(t *testing.T) {
 	const secret = "method-test-key"
-	middleware := AuthMiddleware(secret)
+	middleware := APIKey(secret)
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -110,7 +110,7 @@ func TestAuth_CorrectKey_AllHTTPMethods(t *testing.T) {
 
 func TestAuth_WrongKey_Rejected(t *testing.T) {
 	const secret = "correct-key-123"
-	middleware := AuthMiddleware(secret)
+	middleware := APIKey(secret)
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("handler should not be called with wrong key")
 	}))
@@ -127,7 +127,7 @@ func TestAuth_WrongKey_Rejected(t *testing.T) {
 
 func TestAuth_WrongKey_ResponseFormat(t *testing.T) {
 	const secret = "correct-key"
-	middleware := AuthMiddleware(secret)
+	middleware := APIKey(secret)
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("handler should not be called with wrong key")
 	}))
@@ -155,7 +155,7 @@ func TestAuth_WrongKey_ResponseFormat(t *testing.T) {
 
 func TestAuth_WrongKey_Variants(t *testing.T) {
 	const secret = "correct-key-abc"
-	middleware := AuthMiddleware(secret)
+	middleware := APIKey(secret)
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("handler should not be called")
 	}))
@@ -195,7 +195,7 @@ func TestAuth_WrongKey_Variants(t *testing.T) {
 
 func TestAuth_MissingKey_Rejected(t *testing.T) {
 	const secret = "required-key"
-	middleware := AuthMiddleware(secret)
+	middleware := APIKey(secret)
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("handler should not be called without key")
 	}))
@@ -224,7 +224,7 @@ func TestAuth_MissingKey_Rejected(t *testing.T) {
 
 func TestAuth_EmptyKeyHeader_Rejected(t *testing.T) {
 	const secret = "non-empty-secret"
-	middleware := AuthMiddleware(secret)
+	middleware := APIKey(secret)
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("handler should not be called with empty key")
 	}))
@@ -273,7 +273,7 @@ func TestAuth_DifferentLengthKeys_Rejected(t *testing.T) {
 	// ConstantTimeCompare returns 0 for different-length inputs,
 	// which is the correct security behavior.
 	const secret = "exact-length-key"
-	middleware := AuthMiddleware(secret)
+	middleware := APIKey(secret)
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("handler should not be called")
 	}))
@@ -307,7 +307,7 @@ func TestAuth_HeaderCaseSensitivity(t *testing.T) {
 	// HTTP headers are case-insensitive per RFC 7230.
 	// Go's http.Header.Get() normalizes header names.
 	const secret = "case-test-key"
-	middleware := AuthMiddleware(secret)
+	middleware := APIKey(secret)
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -337,7 +337,7 @@ func TestAuth_HeaderCaseSensitivity(t *testing.T) {
 func TestAuth_MultipleHeaderValues(t *testing.T) {
 	// When multiple values for the same header exist, Get() returns the first.
 	const secret = "multi-value-key"
-	middleware := AuthMiddleware(secret)
+	middleware := APIKey(secret)
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -357,7 +357,7 @@ func TestAuth_MultipleHeaderValues(t *testing.T) {
 func TestAuth_WrongHeaderName(t *testing.T) {
 	// Key in wrong header should not authenticate
 	const secret = "header-name-test"
-	middleware := AuthMiddleware(secret)
+	middleware := APIKey(secret)
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("handler should not be called with wrong header name")
 	}))
@@ -392,7 +392,7 @@ func TestAuth_MiddlewareChaining(t *testing.T) {
 	const secret = "chain-test"
 	var called bool
 
-	middleware := AuthMiddleware(secret)
+	middleware := APIKey(secret)
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		called = true
 		w.WriteHeader(http.StatusOK)
@@ -442,7 +442,7 @@ func TestAuth_SpecialCharacterKeys(t *testing.T) {
 	for i, key := range specialKeys {
 		t.Run("special_"+strings.Replace(key[:min(len(key), 15)], " ", "_", -1), func(t *testing.T) {
 			_ = i // avoid unused
-			middleware := AuthMiddleware(key)
+			middleware := APIKey(key)
 			handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			}))

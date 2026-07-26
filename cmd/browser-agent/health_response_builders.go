@@ -27,10 +27,7 @@ func (a *serverDepsAdapter) GetConsoleStats() (int, int, int64) {
 	if a.s == nil || a.s.logs == nil {
 		return 0, defaultMaxEntries, 0
 	}
-	a.s.logs.mu.RLock()
-	entries := len(a.s.logs.entries)
-	a.s.logs.mu.RUnlock()
-	return entries, a.s.logs.maxEntries, a.s.logs.getLogDropCount()
+	return a.s.logs.EntryCount(), a.s.logs.MaxEntries(), a.s.logs.DropCount()
 }
 
 // defaultMaxEntries mirrors the health package's default for nil servers.

@@ -4,6 +4,7 @@
 package main
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -37,7 +38,7 @@ func cleanupGoTestDaemons() {
 	// Clean known test PID file ranges used by shell and regression tests.
 	cleanupPIDFiles()
 	for port := 17890; port <= 17999; port++ {
-		removePIDFile(port)
+		procctl.RemovePIDFile(port)
 	}
 }
 

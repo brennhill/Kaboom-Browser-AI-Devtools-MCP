@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -36,16 +37,16 @@ const (
 func stopServerForUpgrade(port int) bool {
 	_ = tryShutdownViaHTTP(port)
 	if waitForPortRelease(port, recoveryFastPortWait) {
-		removePIDFile(port)
+		procctl.RemovePIDFile(port)
 		return true
 	}
 
-	pid := readPIDFile(port)
+	pid := procctl.ReadPIDFile(port)
 	if pid > 0 && pid != os.Getpid() {
 		terminatePIDQuiet(pid, false)
 	}
 
-	pids, err := findProcessOnPort(port)
+	pids, err := procctl.FindProcessOnPort(port)
 	if err == nil {
 		for _, pid := range pids {
 			if pid == os.Getpid() {
@@ -56,11 +57,11 @@ func stopServerForUpgrade(port int) bool {
 	}
 
 	if waitForPortRelease(port, recoverySlowPortWait) {
-		removePIDFile(port)
+		procctl.RemovePIDFile(port)
 		return true
 	}
 
-	pids, err = findProcessOnPort(port)
+	pids, err = procctl.FindProcessOnPort(port)
 	if err == nil {
 		for _, pid := range pids {
 			if pid == os.Getpid() {
@@ -72,7 +73,7 @@ func stopServerForUpgrade(port int) bool {
 
 	released := waitForPortRelease(port, recoverySlowPortWait)
 	if released {
-		removePIDFile(port)
+		procctl.RemovePIDFile(port)
 	}
 	return released
 }
@@ -117,7 +118,7 @@ func terminatePIDQuiet(pid int, force bool) {
 
 	_ = process.Signal(syscall.SIGTERM)
 	time.Sleep(recoveryTermGracePeriod)
-	if isProcessAlive(pid) {
+	if procctl.IsProcessAlive(pid) {
 		_ = process.Kill()
 	}
 }
@@ -130,9 +131,9 @@ func terminatePIDQuiet(pid int, force bool) {
 // them through daemonlifeDeps (see daemon_lifecycle_wiring.go).
 var (
 	// daemonProcessCommand looks up a PID's command line.
-	daemonProcessCommand = getProcessCommand
+	daemonProcessCommand = procctl.GetProcessCommand
 	// daemonIsProcessAlive reports whether a PID is still running.
-	daemonIsProcessAlive = isProcessAlive
+	daemonIsProcessAlive = procctl.IsProcessAlive
 	// daemonIsServerRunning reports whether something is accepting on a port.
 	daemonIsServerRunning = bridge.IsServerRunning
 	// daemonTryShutdown asks the daemon on a port to shut down over HTTP.
@@ -142,7 +143,7 @@ var (
 	// daemonTerminatePID signals a PID (SIGTERM, or SIGKILL when force is set).
 	daemonTerminatePID = terminatePIDQuiet
 	// daemonFindProcessOnPort lists the PIDs holding a port.
-	daemonFindProcessOnPort = findProcessOnPort
+	daemonFindProcessOnPort = procctl.FindProcessOnPort
 )
 
 // ourDaemonBinaryNames are the binary names this project ships or builds. A

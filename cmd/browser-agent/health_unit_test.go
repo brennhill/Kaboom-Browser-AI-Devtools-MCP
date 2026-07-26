@@ -5,8 +5,10 @@
 package main
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
@@ -88,19 +90,17 @@ func TestHealthResponseIncludesDroppedCount(t *testing.T) {
 	// Create a server with a channel of size 1 and NO async worker,
 	// so the channel stays full when we manually fill it.
 	srv := &Server{
-		logs: &LogStore{
-			maxEntries: 100,
-			entries:    make([]LogEntry, 0),
-			logChan:    make(chan []LogEntry, 1),
-			logDone:    make(chan struct{}),
-			addWarning: func(string) {},
-		},
+		logs: logstore.New(logstore.Config{
+			MaxEntries: 100,
+			ChanSize:   1,
+			AddWarning: func(string) {},
+		}),
 	}
 
-	// Fill channel (no worker draining it), then trigger two drops
-	srv.logs.logChan <- []LogEntry{{"level": "info", "message": "fill"}}
-	_ = srv.logs.appendToFile([]LogEntry{{"level": "info", "message": "drop1"}})
-	_ = srv.logs.appendToFile([]LogEntry{{"level": "info", "message": "drop2"}})
+	// Fill queue (no worker draining it), then trigger two drops
+	_ = srv.logs.AppendToFile([]LogEntry{{"level": "info", "message": "fill"}})
+	_ = srv.logs.AppendToFile([]LogEntry{{"level": "info", "message": "drop1"}})
+	_ = srv.logs.AppendToFile([]LogEntry{{"level": "info", "message": "drop2"}})
 
 	resp := getHealthResponse(hm, nil, srv, "test")
 
@@ -119,9 +119,8 @@ func TestHealthResponseIncludesDroppedCount(t *testing.T) {
 		t.Fatalf("Actions.DroppedCount = %d, want 0", resp.Buffers.Actions.DroppedCount)
 	}
 
-	// Clean up: drain channel and close done signal
-	<-srv.logs.logChan
-	close(srv.logs.logDone)
+	// Clean up: no worker was started, so Shutdown returns after a short timeout
+	srv.logs.Shutdown(10 * time.Millisecond)
 }
 
 func TestHealthResponseZeroDroppedCount(t *testing.T) {
@@ -129,13 +128,11 @@ func TestHealthResponseZeroDroppedCount(t *testing.T) {
 
 	hm := NewHealthMetrics()
 	srv := &Server{
-		logs: &LogStore{
-			maxEntries: 100,
-			entries:    make([]LogEntry, 0),
-			logChan:    make(chan []LogEntry, 10),
-			logDone:    make(chan struct{}),
-			addWarning: func(string) {},
-		},
+		logs: logstore.New(logstore.Config{
+			MaxEntries: 100,
+			ChanSize:   10,
+			AddWarning: func(string) {},
+		}),
 	}
 
 	resp := getHealthResponse(hm, nil, srv, "test")
@@ -144,7 +141,7 @@ func TestHealthResponseZeroDroppedCount(t *testing.T) {
 		t.Fatalf("Console.DroppedCount = %d, want 0 for fresh server", resp.Buffers.Console.DroppedCount)
 	}
 
-	close(srv.logs.logDone)
+	srv.logs.Shutdown(10 * time.Millisecond)
 }
 
 func TestBuildPilotInfo_AssumedEnabledStartupState(t *testing.T) {

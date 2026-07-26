@@ -41,7 +41,7 @@ func handleTelemetry(server *Server, cap *capture.Store) http.HandlerFunc {
 
 		switch telType {
 		case "logs":
-			entries := server.logs.getEntries()
+			entries := server.logs.Entries()
 			if limit > 0 && len(entries) > limit {
 				entries = entries[len(entries)-limit:]
 			}

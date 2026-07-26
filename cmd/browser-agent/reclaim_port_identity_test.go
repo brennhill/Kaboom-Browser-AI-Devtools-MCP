@@ -51,7 +51,7 @@ func TestReclaimPort_NeverKillsAForeignProcess(t *testing.T) {
 		t.Fatalf("a foreign process must NEVER be killed, got kills for %v", killed)
 	}
 
-	server.logs.shutdownAsyncLogger(2 * time.Second)
+	server.logs.Shutdown(2 * time.Second)
 	// Declining to reclaim is a real, diagnosable outcome — it must not be silent
 	// (rule 25), or "the terminal port is busy" becomes unexplainable.
 	events := readLifecycleEventsFromLogFile(t, logFile)
@@ -101,7 +101,7 @@ func TestReclaimPort_StillKillsOurOwnDaemon(t *testing.T) {
 	if len(killed) != 1 || killed[0] != 4242 {
 		t.Fatalf("our own leftover daemon must still be reclaimed, got kills %v", killed)
 	}
-	server.logs.shutdownAsyncLogger(2 * time.Second)
+	server.logs.Shutdown(2 * time.Second)
 }
 
 func TestReclaimPort_UnknownCommandIsNotKilled(t *testing.T) {
@@ -128,7 +128,7 @@ func TestReclaimPort_UnknownCommandIsNotKilled(t *testing.T) {
 	if len(killed) != 0 {
 		t.Fatalf("an unidentifiable process must not be killed, got kills %v", killed)
 	}
-	server.logs.shutdownAsyncLogger(2 * time.Second)
+	server.logs.Shutdown(2 * time.Second)
 }
 
 func TestProcessLooksLikeOurDaemon(t *testing.T) {

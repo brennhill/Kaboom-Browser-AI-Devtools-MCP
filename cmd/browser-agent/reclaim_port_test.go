@@ -66,7 +66,7 @@ func TestReclaimPort_KillsOwnersSkipsSelfAndReportsFreed(t *testing.T) {
 		t.Fatalf("no force-kill expected when the port frees gracefully, got %v", forced)
 	}
 
-	server.logs.shutdownAsyncLogger(2 * time.Second)
+	server.logs.Shutdown(2 * time.Second)
 	events := readLifecycleEventsFromLogFile(t, logFile)
 	var reclaimed map[string]any
 	for _, evt := range events {
@@ -117,7 +117,7 @@ func TestReclaimPort_ForceKillsWhenGracefulFails(t *testing.T) {
 	if len(forced) != 1 || forced[0] != 4242 {
 		t.Fatalf("force kill = %v, want [4242] after the graceful wait fails", forced)
 	}
-	server.logs.shutdownAsyncLogger(2 * time.Second)
+	server.logs.Shutdown(2 * time.Second)
 }
 
 func TestReclaimPort_NoOwnersIsNoOp(t *testing.T) {
@@ -141,5 +141,5 @@ func TestReclaimPort_NoOwnersIsNoOp(t *testing.T) {
 	if terminated != 0 {
 		t.Fatalf("nothing should be killed when no process owns the port, got %d kills", terminated)
 	}
-	server.logs.shutdownAsyncLogger(2 * time.Second)
+	server.logs.Shutdown(2 * time.Second)
 }

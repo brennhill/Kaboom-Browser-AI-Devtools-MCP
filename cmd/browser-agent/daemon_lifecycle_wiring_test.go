@@ -25,7 +25,7 @@ func TestDaemonlifeDeps_AllSeamsWired(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewServer() error = %v", err)
 	}
-	defer server.logs.shutdownAsyncLogger(2 * time.Second)
+	defer server.logs.Shutdown(2 * time.Second)
 
 	deps := daemonlifeDeps(server)
 	v := reflect.ValueOf(deps)
@@ -53,7 +53,7 @@ func TestDaemonlifeDeps_ReadsSeamsAtCallTime(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewServer() error = %v", err)
 	}
-	defer server.logs.shutdownAsyncLogger(2 * time.Second)
+	defer server.logs.Shutdown(2 * time.Second)
 
 	oldAlive := daemonIsProcessAlive
 	defer func() { daemonIsProcessAlive = oldAlive }()

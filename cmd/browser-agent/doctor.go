@@ -6,6 +6,7 @@ package main
 import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 )
 
 func isLocalPortAvailable(port int) bool {
@@ -17,7 +18,7 @@ func suggestAvailablePort(startPort, maxOffset int) (int, bool) {
 }
 
 func checkPortAvailability(port int) {
-	health.CheckPortAvailability(port, portKillHint)
+	health.CheckPortAvailability(port, procctl.PortKillHint)
 }
 
 func checkStateDirectory() {
@@ -30,7 +31,7 @@ func runSetupCheckWithOptions(port int, options setupCheckOptions) bool {
 		MaxFailureRatio: options.maxFailureRatio,
 	}, health.SetupDeps{
 		Version:                  version,
-		PortKillHint:             portKillHint,
+		PortKillHint:             procctl.PortKillHint,
 		FastPathTelemetryLogPath: bridge.FastPathTelemetryLogPath,
 	})
 }

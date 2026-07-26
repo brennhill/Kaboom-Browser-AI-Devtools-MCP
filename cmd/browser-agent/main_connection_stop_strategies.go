@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"net/http"
 	"os"
 	"syscall"
@@ -29,8 +30,8 @@ const (
 // stopViaPIDFile attempts to stop the server using the PID file (fast path).
 // Returns true if the server was stopped successfully.
 func stopViaPIDFile(port int) bool {
-	pid := readPIDFile(port)
-	if pid <= 0 || !isProcessAlive(pid) {
+	pid := procctl.ReadPIDFile(port)
+	if pid <= 0 || !procctl.IsProcessAlive(pid) {
 		return false
 	}
 
@@ -47,16 +48,16 @@ func stopViaPIDFile(port int) bool {
 
 	for i := 0; i < 20; i++ {
 		time.Sleep(stopPollInterval)
-		if !isProcessAlive(pid) {
+		if !procctl.IsProcessAlive(pid) {
 			fmt.Println("Server stopped successfully")
-			removePIDFile(port)
+			procctl.RemovePIDFile(port)
 			return true
 		}
 	}
 
 	fmt.Println("Server did not exit within 2 seconds, sending SIGKILL")
 	_ = process.Kill()
-	removePIDFile(port)
+	procctl.RemovePIDFile(port)
 	fmt.Println("Server killed")
 	return true
 }
@@ -71,7 +72,7 @@ func stopViaHTTP(port int) bool {
 	if err == nil && resp.StatusCode == http.StatusOK {
 		_ = resp.Body.Close() // lint:body-close-ok immediate close on success path
 		fmt.Println("Server stopped via HTTP endpoint")
-		removePIDFile(port)
+		procctl.RemovePIDFile(port)
 		return true
 	}
 	if resp != nil {
@@ -83,23 +84,23 @@ func stopViaHTTP(port int) bool {
 // stopViaProcessLookup finds processes on the port and terminates them.
 func stopViaProcessLookup(port int) {
 	fmt.Println("Trying process lookup fallback...")
-	pids, findErr := findProcessOnPort(port)
+	pids, findErr := procctl.FindProcessOnPort(port)
 	if findErr != nil || len(pids) == 0 {
 		fmt.Printf("No server found on port %d\n", port)
-		removePIDFile(port)
+		procctl.RemovePIDFile(port)
 		return
 	}
 
 	for _, pidNum := range pids {
 		fmt.Printf("Sending termination signal to PID %d\n", pidNum)
-		_ = killProcessByPID(pidNum)
+		_ = procctl.KillProcessByPID(pidNum)
 	}
 
 	time.Sleep(stopProcessLookupSettleDelay)
 	if !bridge.IsServerRunning(port) {
 		fmt.Println("Server stopped successfully")
-		removePIDFile(port)
+		procctl.RemovePIDFile(port)
 	} else {
-		fmt.Printf("Server may still be running, try: %s\n", portKillHintForce(port))
+		fmt.Printf("Server may still be running, try: %s\n", procctl.PortKillHintForce(port))
 	}
 }

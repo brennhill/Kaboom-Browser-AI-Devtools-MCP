@@ -2,7 +2,7 @@
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
 // server_middleware_test.go — Unit tests for HTTP middleware functions.
-package main
+package httpguard
 
 import (
 	"net/http"
@@ -81,7 +81,7 @@ func TestCorsMiddleware(t *testing.T) {
 	t.Setenv("KABOOM_EXTENSION_ID", "")
 	t.Setenv("KABOOM_FIREFOX_EXTENSION_ID", "")
 
-	handler := corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
+	handler := CORS(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 
@@ -131,7 +131,7 @@ func TestCorsMiddleware(t *testing.T) {
 }
 
 func TestExtensionOnly(t *testing.T) {
-	handler := extensionOnly(func(w http.ResponseWriter, r *http.Request) {
+	handler := ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 
