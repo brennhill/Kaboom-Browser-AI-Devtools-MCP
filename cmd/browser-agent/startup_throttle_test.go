@@ -18,7 +18,7 @@ func TestRecordRestartAndComputeDelay_ThrottlesRapidRestarts(t *testing.T) {
 	// The first restartThrottleMax restarts, all inside the window, are free.
 	for i := 0; i < restartThrottleMax; i++ {
 		var delay time.Duration
-		h, delay = recordRestartAndComputeDelay(h, base.Add(time.Duration(i)*time.Second), "1.0.0", 100)
+		h, delay = recordRestartAndComputeDelay(h, base.Add(time.Duration(i)*time.Second), "1.0.0", 100, throttleTestPort)
 		if delay != 0 {
 			t.Fatalf("restart %d within threshold: want delay 0, got %s", i+1, delay)
 		}
@@ -26,20 +26,20 @@ func TestRecordRestartAndComputeDelay_ThrottlesRapidRestarts(t *testing.T) {
 
 	// The (max+1)-th rapid restart engages the backoff: one step.
 	var delay time.Duration
-	h, delay = recordRestartAndComputeDelay(h, base.Add(time.Duration(restartThrottleMax)*time.Second), "1.0.0", 100)
+	h, delay = recordRestartAndComputeDelay(h, base.Add(time.Duration(restartThrottleMax)*time.Second), "1.0.0", 100, throttleTestPort)
 	if delay != restartThrottleStep {
 		t.Fatalf("first over-threshold restart: want delay %s, got %s", restartThrottleStep, delay)
 	}
 
 	// The next one escalates by another step.
-	h, delay = recordRestartAndComputeDelay(h, base.Add(time.Duration(restartThrottleMax+1)*time.Second), "1.0.0", 100)
+	h, delay = recordRestartAndComputeDelay(h, base.Add(time.Duration(restartThrottleMax+1)*time.Second), "1.0.0", 100, throttleTestPort)
 	if delay != 2*restartThrottleStep {
 		t.Fatalf("second over-threshold restart: want delay %s, got %s", 2*restartThrottleStep, delay)
 	}
 
 	// Escalation is capped.
 	for i := 0; i < 20; i++ {
-		h, delay = recordRestartAndComputeDelay(h, base.Add(time.Duration(restartThrottleMax+2+i)*time.Second), "1.0.0", 100)
+		h, delay = recordRestartAndComputeDelay(h, base.Add(time.Duration(restartThrottleMax+2+i)*time.Second), "1.0.0", 100, throttleTestPort)
 	}
 	if delay != restartThrottleCap {
 		t.Fatalf("escalating delay must be capped at %s, got %s", restartThrottleCap, delay)
@@ -56,7 +56,7 @@ func TestRecordRestartAndComputeDelay_SpacedOutNeverThrottles(t *testing.T) {
 		// Each restart is a full window + 1s after the previous, so pruning keeps
 		// the count at 1 every time.
 		now := base.Add(time.Duration(i) * (restartThrottleWindow + time.Second))
-		h, delay = recordRestartAndComputeDelay(h, now, "1.0.0", 100)
+		h, delay = recordRestartAndComputeDelay(h, now, "1.0.0", 100, throttleTestPort)
 		if delay != 0 {
 			t.Fatalf("spaced-out restart %d must not throttle, got delay %s", i+1, delay)
 		}
@@ -72,11 +72,11 @@ func TestRecordRestartAndComputeDelay_UpgradeResetsCounter(t *testing.T) {
 	// Build a history that is deep in throttle territory for install (1.0.0, epoch 100).
 	h := restartHistory{}
 	for i := 0; i < restartThrottleMax+5; i++ {
-		h, _ = recordRestartAndComputeDelay(h, base.Add(time.Duration(i)*time.Second), "1.0.0", 100)
+		h, _ = recordRestartAndComputeDelay(h, base.Add(time.Duration(i)*time.Second), "1.0.0", 100, throttleTestPort)
 	}
 
 	// An upgrade to a new VERSION at the same instant must reset -> no throttle.
-	next, delay := recordRestartAndComputeDelay(h, base.Add(time.Duration(restartThrottleMax+5)*time.Second), "1.1.0", 100)
+	next, delay := recordRestartAndComputeDelay(h, base.Add(time.Duration(restartThrottleMax+5)*time.Second), "1.1.0", 100, throttleTestPort)
 	if delay != 0 {
 		t.Fatalf("upgrade (new version) must not be throttled, got delay %s", delay)
 	}
@@ -85,9 +85,53 @@ func TestRecordRestartAndComputeDelay_UpgradeResetsCounter(t *testing.T) {
 	}
 
 	// A same-version but new-EPOCH takeover must likewise reset.
-	_, delay = recordRestartAndComputeDelay(h, base.Add(time.Duration(restartThrottleMax+6)*time.Second), "1.0.0", 200)
+	_, delay = recordRestartAndComputeDelay(h, base.Add(time.Duration(restartThrottleMax+6)*time.Second), "1.0.0", 200, throttleTestPort)
 	if delay != 0 {
 		t.Fatalf("epoch takeover (new epoch) must not be throttled, got delay %s", delay)
+	}
+}
+
+// throttleTestPort is the port used by the pure-function tests. The throttle is
+// scoped per listening port, so tests that are not specifically about port scoping
+// must all use the same one.
+const throttleTestPort = 7890
+
+// TestRecordRestartAndComputeDelay_DifferentPortIsADifferentInstance is the
+// regression for the CI break this scoping fixes.
+//
+// A restart storm is about ONE endpoint being restarted over and over — that is
+// what launchd throttles. Counting every daemon that happens to share a state dir
+// conflated unrelated instances: the Go test suite spawns many short-lived daemons
+// on distinct random ports inside one state dir, crossed the threshold, and then
+// every subsequent start slept up to the 3s cap — so ~25 integration tests failed
+// with "Server failed to start" on CI while passing locally (the -race suite is
+// slow enough to spread restarts past the 30s window; the coverage run is not).
+//
+// Production is unaffected: the daemon always uses the same port, so a genuine
+// crash loop still accumulates and still backs off.
+func TestRecordRestartAndComputeDelay_DifferentPortIsADifferentInstance(t *testing.T) {
+	base := time.Unix(1_700_000_000, 0)
+
+	// Drive one port deep into throttle territory.
+	h := restartHistory{}
+	for i := 0; i < restartThrottleMax+5; i++ {
+		h, _ = recordRestartAndComputeDelay(h, base.Add(time.Duration(i)*time.Second), "1.0.0", 100, 7890)
+	}
+
+	// A start on a DIFFERENT port at the same instant is a different daemon
+	// instance, not a restart of the throttled one — it must not be penalized.
+	next, delay := recordRestartAndComputeDelay(h, base.Add(time.Duration(restartThrottleMax+5)*time.Second), "1.0.0", 100, 45291)
+	if delay != 0 {
+		t.Fatalf("a different port is a different instance and must not be throttled, got delay %s", delay)
+	}
+	if next.Port != 45291 || len(next.Timestamps) != 1 {
+		t.Fatalf("a different port must start a fresh history, got port=%d timestamps=%d", next.Port, len(next.Timestamps))
+	}
+
+	// And the same port keeps accumulating — the guard must not disable the defense.
+	_, delay = recordRestartAndComputeDelay(h, base.Add(time.Duration(restartThrottleMax+6)*time.Second), "1.0.0", 100, 7890)
+	if delay == 0 {
+		t.Fatal("the same port must still accumulate toward the storm threshold")
 	}
 }
 

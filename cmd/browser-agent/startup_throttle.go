@@ -1,13 +1,13 @@
 // startup_throttle.go — self-defense against crash-loop restart storms.
-// If the SAME install (version + install epoch) restarts too many times within a
-// short window, the daemon logs LOUDLY and waits a bounded delay before binding, so
+// If the SAME daemon instance (version + install epoch + port) restarts too many
+// times within a short window, the daemon logs LOUDLY and waits a bounded delay before binding, so
 // a pathological loop degrades gracefully instead of hammering launchd (which throttles
 // or disables the LaunchAgent, taking the whole service — including the terminal
 // server on port+1 — dark). It NEVER refuses to start: it only warns and delays.
 //
 // A legitimate upgrade or install-epoch takeover is NOT a crash-restart: those change
-// the (version, epoch) identity, which resets the counter so a real deploy is never
-// penalized.
+// the identity, which resets the counter so a real deploy is never penalized. Port is
+// part of that identity too — see restartHistory.
 
 package main
 
@@ -36,25 +36,34 @@ const (
 )
 
 // restartHistory is the persisted record of this install's recent restarts. It is
-// keyed by (Version, InstallEpoch) so a different install (upgrade / epoch takeover)
-// starts from a clean slate rather than inheriting the previous install's restarts.
+// keyed by (Version, InstallEpoch, Port) so a different install (upgrade / epoch
+// takeover) — or a different daemon instance — starts from a clean slate rather than
+// inheriting unrelated restarts.
+//
+// Port is part of the identity because a restart storm is about ONE endpoint being
+// restarted repeatedly, which is what launchd throttles. Without it, every daemon
+// sharing a state dir was counted together: the Go test suite spawns many short-lived
+// daemons on distinct random ports in one state dir, crossed the threshold, and then
+// throttled every subsequent start into "Server failed to start". Production always
+// binds the same port, so a genuine crash loop still accumulates.
 type restartHistory struct {
 	Version      string  `json:"version"`
 	InstallEpoch int64   `json:"install_epoch"`
+	Port         int     `json:"port"`
 	Timestamps   []int64 `json:"restart_unixnano"`
 }
 
 // daemonThrottleSleep is the injectable sleep used by the startup restart throttle.
 var daemonThrottleSleep = time.Sleep
 
-// recordRestartAndComputeDelay appends `now` to the restart history for (ver, epoch)
-// and returns the updated history plus the bounded startup delay to apply. It never
-// signals refusal — only a delay (0 when under the threshold). A history whose
-// identity differs from (ver, epoch) is reset first: an upgrade or epoch takeover is
-// not a crash-restart. Timestamps older than the window are pruned.
-func recordRestartAndComputeDelay(prev restartHistory, now time.Time, ver string, epoch int64) (restartHistory, time.Duration) {
-	if prev.Version != ver || prev.InstallEpoch != epoch {
-		prev = restartHistory{Version: ver, InstallEpoch: epoch}
+// recordRestartAndComputeDelay appends `now` to the restart history for
+// (ver, epoch, port) and returns the updated history plus the bounded startup delay
+// to apply. It never signals refusal — only a delay (0 when under the threshold). A
+// history whose identity differs is reset first: an upgrade, an epoch takeover, or a
+// different port is not a restart of this instance. Older timestamps are pruned.
+func recordRestartAndComputeDelay(prev restartHistory, now time.Time, ver string, epoch int64, port int) (restartHistory, time.Duration) {
+	if prev.Version != ver || prev.InstallEpoch != epoch || prev.Port != port {
+		prev = restartHistory{Version: ver, InstallEpoch: epoch, Port: port}
 	}
 	cutoff := now.Add(-restartThrottleWindow)
 	kept := make([]int64, 0, len(prev.Timestamps)+1)
@@ -64,7 +73,7 @@ func recordRestartAndComputeDelay(prev restartHistory, now time.Time, ver string
 		}
 	}
 	kept = append(kept, now.UnixNano())
-	next := restartHistory{Version: ver, InstallEpoch: epoch, Timestamps: kept}
+	next := restartHistory{Version: ver, InstallEpoch: epoch, Port: port, Timestamps: kept}
 
 	// Under the threshold: no delay. Only the (max+1)-th and beyond within the window
 	// back off, escalating one step per excess restart, capped so startup never stalls.
@@ -140,7 +149,7 @@ func applyStartupRestartThrottle(server *Server, port int) time.Duration {
 	}
 	path := restartHistoryPath(stateDir)
 	prev := loadRestartHistory(path)
-	next, delay := recordRestartAndComputeDelay(prev, daemonNow(), version, daemonInstallEpoch())
+	next, delay := recordRestartAndComputeDelay(prev, daemonNow(), version, daemonInstallEpoch(), port)
 	if err := saveRestartHistory(path, next); err != nil {
 		server.logLifecycle("restart_history_write_failed", port, map[string]any{"error": err.Error()})
 	}
