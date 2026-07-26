@@ -6,50 +6,30 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-26
 code_paths:
-  - internal/capture/accessor.go
-  - internal/capture/buffer_clear.go
-  - internal/capture/buffer-types.go
-  - internal/capture/capture-struct.go
-  - internal/capture/circuit_breaker.go
+  - internal/capture/accessors.go
+  - internal/capture/aliases.go
+  - internal/capture/buffer_store.go
+  - internal/capture/capture.go
   - internal/capture/constants.go
-  - internal/capture/debug_logger.go
   - internal/capture/debug.go
+  - internal/capture/doc.go
   - internal/capture/enhanced_actions.go
-  - internal/capture/enhanced-actions-types.go
-  - internal/capture/extension_log_redaction.go
-  - internal/capture/extension_log_store.go
   - internal/capture/extension_logs.go
   - internal/capture/extension_state.go
-  - internal/capture/extension-logging-types.go
   - internal/capture/handlers.go
   - internal/capture/helpers.go
-  - internal/capture/http_debug_redaction.go
-  - internal/capture/interfaces.go
-  - internal/capture/internal-types.go
-  - internal/capture/log-diff.go
-  - internal/capture/memory.go
-  - internal/capture/network_bodies.go
-  - internal/capture/network_waterfall.go
-  - internal/capture/network-types.go
-  - internal/capture/playback.go
-  - internal/capture/queries.go
+  - internal/capture/network.go
   - internal/capture/query_dispatcher.go
-  - internal/capture/rate_limit.go
   - internal/capture/recording_manager.go
-  - internal/capture/recording.go
-  - internal/capture/security-types.go
-  - internal/capture/session-types.go
   - internal/capture/settings.go
-  - internal/capture/status.go
   - internal/capture/sync.go
-  - internal/capture/sync_processing.go
+  - internal/capture/sync_state.go
   - internal/capture/test_helpers.go
-  - internal/capture/testhelpers.go
-  - internal/capture/ttl.go
-  - internal/capture/type-aliases.go
   - internal/capture/types.go
-  - internal/capture/websocket-types.go
   - internal/capture/websocket.go
+  - internal/capture/wsconn/doc.go
+  - internal/capture/wsconn/status.go
+  - internal/capture/wsconn/tracker.go
   - src/background/sync/server.ts
   - src/background/index.ts
   - src/background/sync/sync-client.ts
@@ -66,6 +46,7 @@ test_paths:
   - internal/capture/api_contract_test.go
   - internal/capture/extension_log_store_test.go
   - internal/capture/buffer_clear_test.go
+  - internal/capture/testhelpers_test.go
   - tests/extension/sync-client.test.js
   - tests/extension/server.test.js
   - tests/extension/background-batching.test.js

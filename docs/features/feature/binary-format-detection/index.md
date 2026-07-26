@@ -6,9 +6,9 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-26
 code_paths:
-  - internal/util/binary.go
-  - internal/capture/network_bodies.go
+  - internal/capture/network.go
   - internal/capture/websocket.go
+  - internal/util/binary.go
 test_paths:
   - internal/util/binary_test.go
   - internal/util/binary_coverage_test.go
