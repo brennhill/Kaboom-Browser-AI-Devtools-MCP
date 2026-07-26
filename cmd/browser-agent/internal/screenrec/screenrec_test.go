@@ -1,7 +1,7 @@
 // Purpose: Tests for tool dispatch and handling.
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
-package main
+package screenrec
 
 import (
 	"bytes"
@@ -15,34 +15,61 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
+// videoTestEnv drives screenrec against a real capture.Store through the same
+// Deps struct the host builds. It deliberately does NOT construct a Server or a
+// ToolHandler: everything these tests assert on (pending queries, command
+// results, pilot gating) is capture state, and building the god object only to
+// reach it is what kept this feature pinned to package main.
 type videoTestEnv struct {
-	handler *ToolHandler
-	server  *Server
+	handler *InteractHandler
 	capture *capture.Store
 }
 
 func newVideoTestEnv(t *testing.T) *videoTestEnv {
 	t.Helper()
 
-	logPath := filepath.Join(t.TempDir(), "server.jsonl")
-	srv, err := NewServer(logPath, 100)
-	if err != nil {
-		t.Fatalf("NewServer() error = %v", err)
-	}
 	cap := capture.NewCapture()
 	cap.SetPilotEnabled(false) // explicit default for pilot-disabled recording tests
 	mockConnectedTrackedTab(t, cap)
-	mcp := NewToolHandler(srv, cap)
-	handler, ok := mcp.toolHandler.(*ToolHandler)
-	if !ok {
-		t.Fatalf("tool handler type = %T, want *ToolHandler", mcp.toolHandler)
+	return &videoTestEnv{handler: NewInteractHandler(testDeps(cap)), capture: cap}
+}
+
+// testDeps mirrors the host's screenrecDeps() wiring in ToolHandler, minus the
+// cold-start wait: the gates read the same capture flags the real ones read.
+func testDeps(cap *capture.Store) Deps {
+	return Deps{
+		EnqueuePendingQuery: func(req mcp.JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (mcp.JSONRPCResponse, bool) {
+			if _, err := cap.CreatePendingQueryWithTimeout(query, timeout, req.ClientID); err != nil {
+				return mcp.Fail(req, mcp.ErrQueueFull, err.Error(), "Wait for in-flight commands to complete, then retry."), true
+			}
+			return mcp.JSONRPCResponse{}, false
+		},
+		RequirePilot: func(req mcp.JSONRPCRequest, opts ...func(*mcp.StructuredError)) (mcp.JSONRPCResponse, bool) {
+			if cap.IsPilotActionAllowed() {
+				return mcp.JSONRPCResponse{}, false
+			}
+			return mcp.Fail(req, mcp.ErrCodePilotDisabled, "AI Web Pilot is explicitly disabled",
+				"Enable AI Web Pilot in the extension popup", opts...), true
+		},
+		RequireExtension: func(req mcp.JSONRPCRequest, opts ...func(*mcp.StructuredError)) (mcp.JSONRPCResponse, bool) {
+			if cap.IsExtensionConnected() {
+				return mcp.JSONRPCResponse{}, false
+			}
+			return mcp.Fail(req, mcp.ErrNotInitialized, "Browser extension is not connected",
+				"Open a tab with the Kaboom extension enabled", opts...), true
+		},
+		RecordAIAction:   func(action, url string, extra map[string]any) {},
+		DiagnosticHint:   func() func(*mcp.StructuredError) { return func(*mcp.StructuredError) {} },
+		GetCommandResult: cap.GetCommandResult,
 	}
-	return &videoTestEnv{handler: handler, server: srv, capture: cap}
 }
 
 func decodeMapResponse(t *testing.T, rr *httptest.ResponseRecorder) map[string]any {
@@ -53,8 +80,6 @@ func decodeMapResponse(t *testing.T, rr *httptest.ResponseRecorder) map[string]a
 	}
 	return body
 }
-
-// parseToolResult is in tools_test_helpers_test.go.
 
 func buildRecordingSaveRequest(t *testing.T, method string, video []byte, metadata string, queryID string) *http.Request {
 	t.Helper()
@@ -90,7 +115,7 @@ func buildRecordingSaveRequest(t *testing.T, method string, video []byte, metada
 	return req
 }
 
-func writeVideoMetadataFile(t *testing.T, dir string, meta VideoRecordingMetadata) {
+func writeVideoMetadataFile(t *testing.T, dir string, meta Metadata) {
 	t.Helper()
 	data, err := json.Marshal(meta)
 	if err != nil {
@@ -169,15 +194,15 @@ func TestRecordingsReadDirsIncludesLegacyWhenPresent(t *testing.T) {
 		t.Fatalf("MkdirAll(legacy) error = %v", err)
 	}
 
-	dirs := recordingsReadDirs()
+	dirs := ReadDirs()
 	if len(dirs) != 2 {
-		t.Fatalf("recordingsReadDirs() len = %d, want 2 (primary + legacy)", len(dirs))
+		t.Fatalf("ReadDirs() len = %d, want 2 (primary + legacy)", len(dirs))
 	}
 	if dirs[0] != primary {
-		t.Fatalf("recordingsReadDirs()[0] = %q, want primary %q", dirs[0], primary)
+		t.Fatalf("ReadDirs()[0] = %q, want primary %q", dirs[0], primary)
 	}
 	if dirs[1] != legacy {
-		t.Fatalf("recordingsReadDirs()[1] = %q, want legacy %q", dirs[1], legacy)
+		t.Fatalf("ReadDirs()[1] = %q, want legacy %q", dirs[1], legacy)
 	}
 }
 
@@ -189,7 +214,7 @@ func TestHandleVideoRecordingSaveValidationAndSuccess(t *testing.T) {
 	// Method guard.
 	methodReq := httptest.NewRequest(http.MethodGet, "/recordings/save", nil)
 	methodRR := httptest.NewRecorder()
-	env.server.handleVideoRecordingSave(methodRR, methodReq, env.capture)
+	HandleSave(methodRR, methodReq, env.capture)
 	if methodRR.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("method guard status = %d, want 405", methodRR.Code)
 	}
@@ -197,7 +222,7 @@ func TestHandleVideoRecordingSaveValidationAndSuccess(t *testing.T) {
 	// Missing metadata.
 	missingMetaReq := buildRecordingSaveRequest(t, http.MethodPost, []byte("video-bytes"), "", "")
 	missingMetaRR := httptest.NewRecorder()
-	env.server.handleVideoRecordingSave(missingMetaRR, missingMetaReq, env.capture)
+	HandleSave(missingMetaRR, missingMetaReq, env.capture)
 	if missingMetaRR.Code != http.StatusBadRequest {
 		t.Fatalf("missing metadata status = %d, want 400", missingMetaRR.Code)
 	}
@@ -205,7 +230,7 @@ func TestHandleVideoRecordingSaveValidationAndSuccess(t *testing.T) {
 	// Invalid metadata JSON.
 	invalidMetaReq := buildRecordingSaveRequest(t, http.MethodPost, []byte("video-bytes"), "{bad json", "")
 	invalidMetaRR := httptest.NewRecorder()
-	env.server.handleVideoRecordingSave(invalidMetaRR, invalidMetaReq, env.capture)
+	HandleSave(invalidMetaRR, invalidMetaReq, env.capture)
 	if invalidMetaRR.Code != http.StatusBadRequest {
 		t.Fatalf("invalid metadata status = %d, want 400", invalidMetaRR.Code)
 	}
@@ -214,7 +239,7 @@ func TestHandleVideoRecordingSaveValidationAndSuccess(t *testing.T) {
 	traversalMeta := `{"name":"../escape","created_at":"2026-01-01T00:00:00Z"}`
 	traversalReq := buildRecordingSaveRequest(t, http.MethodPost, []byte("video-bytes"), traversalMeta, "")
 	traversalRR := httptest.NewRecorder()
-	env.server.handleVideoRecordingSave(traversalRR, traversalReq, env.capture)
+	HandleSave(traversalRR, traversalReq, env.capture)
 	if traversalRR.Code != http.StatusBadRequest {
 		t.Fatalf("path traversal status = %d, want 400", traversalRR.Code)
 	}
@@ -223,7 +248,7 @@ func TestHandleVideoRecordingSaveValidationAndSuccess(t *testing.T) {
 	okMeta := `{"name":"e2e-checkout","display_name":"Checkout","created_at":"2026-01-01T00:00:00Z","duration_seconds":7,"url":"https://app.example.com/checkout"}`
 	req := buildRecordingSaveRequest(t, http.MethodPost, []byte("video-bytes-123"), okMeta, "query-1")
 	rr := httptest.NewRecorder()
-	env.server.handleVideoRecordingSave(rr, req, env.capture)
+	HandleSave(rr, req, env.capture)
 
 	if rr.Code != http.StatusOK {
 		t.Fatalf("success status = %d, want 200; body=%s", rr.Code, rr.Body.String())
@@ -237,13 +262,13 @@ func TestHandleVideoRecordingSaveValidationAndSuccess(t *testing.T) {
 		t.Fatalf("response path = %v, want non-empty string", resp["path"])
 	}
 
-	recordingsDir, err := state.RecordingsDir()
+	Dir, err := state.RecordingsDir()
 	if err != nil {
 		t.Fatalf("state.RecordingsDir() error = %v", err)
 	}
 	videoPath := responsePath
-	if !pathWithinDir(videoPath, recordingsDir) {
-		t.Fatalf("video path %q is outside recordings dir %q", videoPath, recordingsDir)
+	if !pathWithinDir(videoPath, Dir) {
+		t.Fatalf("video path %q is outside recordings dir %q", videoPath, Dir)
 	}
 	metaPath := strings.TrimSuffix(videoPath, ".webm") + "_meta.json"
 
@@ -276,15 +301,15 @@ func TestHandleVideoRecordingSaveRejectsOversizedUpload(t *testing.T) {
 	t.Setenv(state.StateDirEnv, stateRoot)
 	env := newVideoTestEnv(t)
 
-	originalLimit := maxRecordingUploadSizeBytes
-	maxRecordingUploadSizeBytes = 1024
-	t.Cleanup(func() { maxRecordingUploadSizeBytes = originalLimit })
+	originalLimit := MaxUploadSizeBytes
+	MaxUploadSizeBytes = 1024
+	t.Cleanup(func() { MaxUploadSizeBytes = originalLimit })
 
 	largeVideo := bytes.Repeat([]byte("a"), 2048)
 	meta := `{"name":"oversized-recording","created_at":"2026-01-01T00:00:00Z"}`
 	req := buildRecordingSaveRequest(t, http.MethodPost, largeVideo, meta, "")
 	rr := httptest.NewRecorder()
-	env.server.handleVideoRecordingSave(rr, req, env.capture)
+	HandleSave(rr, req, env.capture)
 
 	if rr.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("oversized upload status = %d, want %d (body=%q)", rr.Code, http.StatusRequestEntityTooLarge, rr.Body.String())
@@ -298,7 +323,7 @@ func TestHandleRevealRecordingValidation(t *testing.T) {
 	// Method guard.
 	req := httptest.NewRequest(http.MethodGet, "/recordings/reveal", nil)
 	rr := httptest.NewRecorder()
-	handleRevealRecording(rr, req)
+	HandleReveal(rr, req)
 	if rr.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("method guard status = %d, want 405", rr.Code)
 	}
@@ -306,7 +331,7 @@ func TestHandleRevealRecordingValidation(t *testing.T) {
 	// Invalid JSON.
 	invalidReq := httptest.NewRequest(http.MethodPost, "/recordings/reveal", strings.NewReader("{bad"))
 	invalidRR := httptest.NewRecorder()
-	handleRevealRecording(invalidRR, invalidReq)
+	HandleReveal(invalidRR, invalidReq)
 	if invalidRR.Code != http.StatusBadRequest {
 		t.Fatalf("invalid json status = %d, want 400", invalidRR.Code)
 	}
@@ -314,7 +339,7 @@ func TestHandleRevealRecordingValidation(t *testing.T) {
 	// Missing path.
 	missingReq := httptest.NewRequest(http.MethodPost, "/recordings/reveal", strings.NewReader(`{}`))
 	missingRR := httptest.NewRecorder()
-	handleRevealRecording(missingRR, missingReq)
+	HandleReveal(missingRR, missingReq)
 	if missingRR.Code != http.StatusBadRequest {
 		t.Fatalf("missing path status = %d, want 400", missingRR.Code)
 	}
@@ -322,7 +347,7 @@ func TestHandleRevealRecordingValidation(t *testing.T) {
 	// Forbidden path outside recordings directory.
 	forbiddenReq := httptest.NewRequest(http.MethodPost, "/recordings/reveal", strings.NewReader(`{"path":"/tmp/not-allowed.webm"}`))
 	forbiddenRR := httptest.NewRecorder()
-	handleRevealRecording(forbiddenRR, forbiddenReq)
+	HandleReveal(forbiddenRR, forbiddenReq)
 	if forbiddenRR.Code != http.StatusForbidden {
 		t.Fatalf("forbidden status = %d, want 403; body=%s", forbiddenRR.Code, forbiddenRR.Body.String())
 	}
@@ -350,20 +375,20 @@ func TestToolObserveSavedVideosListsSortsFiltersAndDedupes(t *testing.T) {
 		t.Fatalf("MkdirAll(legacy) error = %v", err)
 	}
 
-	writeVideoMetadataFile(t, primaryDir, VideoRecordingMetadata{
+	writeVideoMetadataFile(t, primaryDir, Metadata{
 		Name:      "alpha",
 		CreatedAt: "2026-01-01T00:00:00Z",
 		URL:       "https://app.example.com/alpha",
 		SizeBytes: 10,
 	})
-	writeVideoMetadataFile(t, primaryDir, VideoRecordingMetadata{
+	writeVideoMetadataFile(t, primaryDir, Metadata{
 		Name:      "beta",
 		CreatedAt: "2026-01-02T00:00:00Z",
 		URL:       "https://app.example.com/beta",
 		SizeBytes: 20,
 	})
 	// Duplicate name in legacy should be ignored due dedupe-by-name.
-	writeVideoMetadataFile(t, legacyDir, VideoRecordingMetadata{
+	writeVideoMetadataFile(t, legacyDir, Metadata{
 		Name:      "beta",
 		CreatedAt: "2026-01-03T00:00:00Z",
 		URL:       "https://legacy.example.com/beta",
@@ -374,10 +399,9 @@ func TestToolObserveSavedVideosListsSortsFiltersAndDedupes(t *testing.T) {
 		t.Fatalf("WriteFile(bad_meta.json) error = %v", err)
 	}
 
-	env := newVideoTestEnv(t)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 
-	resp := env.handler.toolObserveSavedVideos(req, json.RawMessage(`{}`))
+	resp := HandleObserveSavedVideos(req, json.RawMessage(`{}`))
 	toolResult := parseToolResult(t, resp)
 	data := parseResponseJSON(t, toolResult)
 
@@ -402,7 +426,7 @@ func TestToolObserveSavedVideosListsSortsFiltersAndDedupes(t *testing.T) {
 	}
 
 	// Filter down to alpha and enforce last_n.
-	filteredResp := env.handler.toolObserveSavedVideos(req, json.RawMessage(`{"url":"alpha","last_n":1}`))
+	filteredResp := HandleObserveSavedVideos(req, json.RawMessage(`{"url":"alpha","last_n":1}`))
 	filteredResult := parseToolResult(t, filteredResp)
 	filtered := parseResponseJSON(t, filteredResult)
 
@@ -513,9 +537,9 @@ func TestHandleRecordStartAndStop(t *testing.T) {
 	t.Setenv(state.StateDirEnv, stateRoot)
 	env := newVideoTestEnv(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 99, ClientID: "client-a"}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 99, ClientID: "client-a"}
 
-	disabled := env.handler.recordingInteractHandler.handleRecordStart(req, json.RawMessage(`{"name":"x"}`))
+	disabled := env.handler.HandleRecordStart(req, json.RawMessage(`{"name":"x"}`))
 	disabledResult := parseToolResult(t, disabled)
 	if !disabledResult.IsError {
 		t.Fatal("expected screen_recording_start to fail when pilot is disabled")
@@ -523,13 +547,13 @@ func TestHandleRecordStartAndStop(t *testing.T) {
 
 	env.capture.SetPilotEnabled(true)
 
-	invalidAudio := env.handler.recordingInteractHandler.handleRecordStart(req, json.RawMessage(`{"audio":"speaker"}`))
+	invalidAudio := env.handler.HandleRecordStart(req, json.RawMessage(`{"audio":"speaker"}`))
 	invalidAudioResult := parseToolResult(t, invalidAudio)
 	if !invalidAudioResult.IsError {
 		t.Fatal("expected invalid audio mode to return error")
 	}
 
-	startResp := env.handler.recordingInteractHandler.handleRecordStart(req, json.RawMessage(`{"name":"My Video","fps":120,"audio":"tab","tab_id":7}`))
+	startResp := env.handler.HandleRecordStart(req, json.RawMessage(`{"name":"My Video","fps":120,"audio":"tab","tab_id":7}`))
 	startResult := parseToolResult(t, startResp)
 	startData := parseResponseJSON(t, startResult)
 
@@ -574,7 +598,7 @@ func TestHandleRecordStartAndStop(t *testing.T) {
 		t.Fatalf("start query params = %s, want screen_recording_start action", string(paramsJSON))
 	}
 
-	stopBeforeReady := env.handler.recordingInteractHandler.handleRecordStop(req, json.RawMessage(`{"tab_id":7}`))
+	stopBeforeReady := env.handler.HandleRecordStop(req, json.RawMessage(`{"tab_id":7}`))
 	stopBeforeReadyResult := parseToolResult(t, stopBeforeReady)
 	if !stopBeforeReadyResult.IsError {
 		t.Fatal("screen_recording_stop should fail fast while screen_recording_start is still awaiting user gesture")
@@ -590,7 +614,7 @@ func TestHandleRecordStartAndStop(t *testing.T) {
 
 	env.capture.ApplyCommandResult(startCorrelationID, "complete", json.RawMessage(`{"status":"recording","name":"My Video"}`), "")
 
-	stopResp := env.handler.recordingInteractHandler.handleRecordStop(req, json.RawMessage(`{"tab_id":7}`))
+	stopResp := env.handler.HandleRecordStop(req, json.RawMessage(`{"tab_id":7}`))
 	stopResult := parseToolResult(t, stopResp)
 	stopData := parseResponseJSON(t, stopResult)
 	if stopData["status"] != "queued" {
@@ -607,4 +631,47 @@ func TestHandleRecordStartAndStop(t *testing.T) {
 	if stopQuery.Type != "screen_recording_stop" || stopQuery.TabID != 7 {
 		t.Fatalf("unexpected stop query: %+v", *stopQuery)
 	}
+}
+
+// ============================================
+// Local response assertions
+// ============================================
+//
+// package main's tools_test_helpers_test.go cannot be imported across a package
+// boundary, so the two helpers this file used come along as unexported copies.
+
+func mockConnectedTrackedTab(t *testing.T, cap *capture.Store) {
+	t.Helper()
+	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
+	httpReq.Header.Set("X-Kaboom-Client", "test-client")
+	cap.HandleSync(httptest.NewRecorder(), httpReq)
+	cap.SetTrackingStatusForTest(42, "https://example.com")
+}
+
+func parseToolResult(t *testing.T, resp mcp.JSONRPCResponse) mcp.MCPToolResult {
+	t.Helper()
+	var result mcp.MCPToolResult
+	if err := json.Unmarshal(resp.Result, &result); err != nil {
+		t.Fatalf("parseToolResult: %v; raw=%s", err, string(resp.Result))
+	}
+	return result
+}
+
+func parseResponseJSON(t *testing.T, result mcp.MCPToolResult) map[string]any {
+	t.Helper()
+	if len(result.Content) == 0 {
+		t.Fatal("parseResponseJSON: no content blocks")
+	}
+	text := result.Content[0].Text
+	for i, ch := range text {
+		if ch == '{' || ch == '[' {
+			text = text[i:]
+			break
+		}
+	}
+	var data map[string]any
+	if err := json.Unmarshal([]byte(text), &data); err != nil {
+		t.Fatalf("parseResponseJSON: %v; text=%q", err, text)
+	}
+	return data
 }

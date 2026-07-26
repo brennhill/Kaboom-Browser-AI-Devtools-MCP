@@ -160,16 +160,16 @@ func buildInteractHandlers() map[string]ModeHandler {
 			return th.interactAction().HandleListInteractive(req, args)
 		},
 		"screen_recording_start": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-			return th.recordingInteractHandler.handleRecordStart(req, args)
+			return th.recordingInteractHandler.HandleRecordStart(req, args)
 		},
 		"record_start": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-			return th.recordingInteractHandler.handleRecordStart(req, args)
+			return th.recordingInteractHandler.HandleRecordStart(req, args)
 		},
 		"screen_recording_stop": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-			return th.recordingInteractHandler.handleRecordStop(req, args)
+			return th.recordingInteractHandler.HandleRecordStop(req, args)
 		},
 		"record_stop": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-			return th.recordingInteractHandler.handleRecordStop(req, args)
+			return th.recordingInteractHandler.HandleRecordStop(req, args)
 		},
 		"upload": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 			return th.uploadInteractHandler.HandleUpload(req, args)

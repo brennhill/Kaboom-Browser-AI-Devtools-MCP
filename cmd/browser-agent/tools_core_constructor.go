@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis"
@@ -54,8 +55,8 @@ func NewToolHandler(server *Server, capture *capture.Store) *MCPHandler {
 		shutdownCancel:            shutdownCancel,
 		coldStartTimeout:          defaultColdStartTimeout,
 		extensionReadinessTimeout: defaultExtensionReadinessTimeout(),
-		playbackSessions: newPlaybackSessionsMap(),
-		networkRecording: &toolconfigure.NetworkRecordingState{},
+		playbackSessions:          newPlaybackSessionsMap(),
+		networkRecording:          &toolconfigure.NetworkRecordingState{},
 	}
 
 	// Initialize usage tracker for structured telemetry beacons.
@@ -123,7 +124,7 @@ func NewToolHandler(server *Server, capture *capture.Store) *MCPHandler {
 
 	// Initialize upload security config from package-level var set by CLI.
 	handler.uploadSecurity = uploadSecurityConfig
-	handler.recordingInteractHandler = newRecordingInteractHandler(handler) // *ToolHandler satisfies recordingDeps
+	handler.recordingInteractHandler = screenrec.NewInteractHandler(handler.screenrecDeps())
 	interactDeps := buildInteractDeps(handler)
 	handler.interactActionHandler = toolinteract.NewInteractActionHandler(interactDeps)
 	handler.uploadInteractHandler = toolinteract.NewUploadInteractHandler(interactDeps, handler.interactActionHandler)

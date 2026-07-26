@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testpages"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tracking"
@@ -49,14 +50,14 @@ func registerCaptureRoutes(mux *http.ServeMux, server *Server, cap *capture.Stor
 
 	// NOT MCP — Video recording binary upload (extension → daemon file storage)
 	mux.HandleFunc("/recordings/save", corsMiddleware(extensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		server.handleVideoRecordingSave(w, r, cap)
+		screenrec.HandleSave(w, r, cap)
 	})))
 
 	// NOT MCP — Recording storage management (extension UI)
 	mux.HandleFunc("/recordings/storage", corsMiddleware(extensionOnly(cap.HandleRecordingStorage)))
 
 	// NOT MCP — OS file manager integration (opens Finder/Explorer)
-	mux.HandleFunc("/recordings/reveal", corsMiddleware(extensionOnly(handleRevealRecording)))
+	mux.HandleFunc("/recordings/reveal", corsMiddleware(extensionOnly(screenrec.HandleReveal)))
 
 	// NOT MCP — Unified telemetry read (extension and legacy HTTP clients)
 	mux.HandleFunc("/telemetry", corsMiddleware(handleTelemetry(server, cap)))

@@ -2,11 +2,11 @@
 // Why: Keeps durable contracts (state names, metadata schema, command timeouts) centralized.
 // Docs: docs/features/feature/tab-recording/index.md
 
-package main
+package screenrec
 
 import "time"
 
-var maxRecordingUploadSizeBytes int64 = 1 << 30 // 1 GiB
+var MaxUploadSizeBytes int64 = 1 << 30 // 1 GiB
 
 const (
 	recordingStateIdle            = "idle"
@@ -18,16 +18,16 @@ const (
 	recordStopCommandTimeout  = 90 * time.Second
 )
 
-// interactRecordingState tracks interact(screen_recording_start/screen_recording_stop) lifecycle.
-type interactRecordingState struct {
+// State tracks interact(screen_recording_start/screen_recording_stop) lifecycle.
+type State struct {
 	State              string
 	StartCorrelationID string
 	StopCorrelationID  string
 	UpdatedAt          time.Time
 }
 
-// VideoRecordingMetadata is the sidecar JSON written next to each .webm file.
-type VideoRecordingMetadata struct {
+// Metadata is the sidecar JSON written next to each .webm file.
+type Metadata struct {
 	Name            string `json:"name"`
 	DisplayName     string `json:"display_name"`
 	CreatedAt       string `json:"created_at"`

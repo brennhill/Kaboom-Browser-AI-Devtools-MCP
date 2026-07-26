@@ -2,18 +2,21 @@
 // Why: Separates request validation/queueing from path helpers and state-machine logic.
 // Docs: docs/features/feature/tab-recording/index.md
 
-package main
+package screenrec
 
 import (
 	"encoding/json"
 	"fmt"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // queueRecordStart creates the pending query and returns the response for a screen_recording_start action.
-func (r *recordingInteractHandler) queueRecordStart(req JSONRPCRequest, fullName, audio, videoPath string, fps, tabID int) JSONRPCResponse {
-	correlationID := newCorrelationID("rec")
+func (r *InteractHandler) queueRecordStart(req mcp.JSONRPCRequest, fullName, audio, videoPath string, fps, tabID int) mcp.JSONRPCResponse {
+	correlationID := toolresp.NewCorrelationID("rec")
 
 	extParams := map[string]any{"action": "screen_recording_start", "name": fullName, "fps": fps, "audio": audio}
 	// Error impossible: map contains only primitive types from input
@@ -30,9 +33,9 @@ func (r *recordingInteractHandler) queueRecordStart(req JSONRPCRequest, fullName
 	}
 	r.setInteractRecordingStart(correlationID)
 
-	r.deps.recordAIAction("screen_recording_start", "", map[string]any{"name": fullName, "fps": fps, "audio": audio})
+	r.deps.RecordAIAction("screen_recording_start", "", map[string]any{"name": fullName, "fps": fps, "audio": audio})
 
-	return succeed(req, "Recording queued", map[string]any{
+	return mcp.Succeed(req, "Recording queued", map[string]any{
 		"status":                "queued",
 		"recording_state":       recordingStateAwaitingGesture,
 		"correlation_id":        correlationID,
@@ -46,31 +49,31 @@ func (r *recordingInteractHandler) queueRecordStart(req JSONRPCRequest, fullName
 	})
 }
 
-// handleRecordStart processes interact({action: "screen_recording_start"}).
+// HandleRecordStart processes interact({action: "screen_recording_start"}).
 // Generates the filename, forwards to extension via PendingQuery.
 // Recording targets the browser, not a specific tab -- no requireTabTracking gate needed.
-func (r *recordingInteractHandler) handleRecordStart(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (r *InteractHandler) HandleRecordStart(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Name  string `json:"name"`
 		FPS   int    `json:"fps,omitempty"`
 		TabID int    `json:"tab_id,omitempty"`
 		Audio string `json:"audio,omitempty"`
 	}
-	if resp, stop := parseArgs(req, args, &params); stop {
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
 
-	if resp, blocked := r.deps.requirePilot(req); blocked {
+	if resp, blocked := r.deps.RequirePilot(req); blocked {
 		return resp
 	}
-	if resp, blocked := r.deps.requireExtension(req); blocked {
+	if resp, blocked := r.deps.RequireExtension(req); blocked {
 		return resp
 	}
 
 	fps := clampFPS(params.FPS)
 
 	if !validAudioModes[params.Audio] {
-		return fail(req, ErrInvalidJSON, "Invalid audio mode: must be 'tab', 'mic', 'both', or omitted", "Use audio: 'tab', 'mic', 'both', or omit for no audio")
+		return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid audio mode: must be 'tab', 'mic', 'both', or omitted", "Use audio: 'tab', 'mic', 'both', or omit for no audio")
 	}
 
 	name := params.Name
@@ -78,29 +81,29 @@ func (r *recordingInteractHandler) handleRecordStart(req JSONRPCRequest, args js
 		name = "recording"
 	}
 
-	dir, err := recordingsDir()
+	dir, err := Dir()
 	if err != nil {
-		return fail(req, ErrInternal, err.Error(), "Check disk permissions")
+		return mcp.Fail(req, mcp.ErrInternal, err.Error(), "Check disk permissions")
 	}
 
 	fullName, videoPath := resolveRecordingPath(dir, name)
 	return r.queueRecordStart(req, fullName, params.Audio, videoPath, fps, params.TabID)
 }
 
-// handleRecordStop processes interact({action: "screen_recording_stop"}).
+// HandleRecordStop processes interact({action: "screen_recording_stop"}).
 // Recording targets the browser, not a specific tab -- no requireTabTracking gate needed.
-func (r *recordingInteractHandler) handleRecordStop(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (r *InteractHandler) HandleRecordStop(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		TabID int `json:"tab_id,omitempty"`
 	}
-	if resp, stop := parseArgs(req, args, &params); stop {
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
 
-	if resp, blocked := r.deps.requirePilot(req); blocked {
+	if resp, blocked := r.deps.RequirePilot(req); blocked {
 		return resp
 	}
-	if resp, blocked := r.deps.requireExtension(req); blocked {
+	if resp, blocked := r.deps.RequireExtension(req); blocked {
 		return resp
 	}
 
@@ -117,10 +120,10 @@ func (r *recordingInteractHandler) handleRecordStop(req JSONRPCRequest, args jso
 		if recordingState.StartCorrelationID == "" {
 			msg = "Cannot stop recording: no active interact(screen_recording_start) session found"
 		}
-		return fail(req, ErrNoData, msg, retry, r.deps.diagnosticHint())
+		return mcp.Fail(req, mcp.ErrNoData, msg, retry, r.deps.DiagnosticHint())
 	}
 
-	correlationID := newCorrelationID("recstop")
+	correlationID := toolresp.NewCorrelationID("recstop")
 
 	extParams := map[string]any{
 		"action": "screen_recording_stop",
@@ -139,9 +142,9 @@ func (r *recordingInteractHandler) handleRecordStop(req JSONRPCRequest, args jso
 	}
 	r.setInteractRecordingStopping(correlationID)
 
-	r.deps.recordAIAction("screen_recording_stop", "", nil)
+	r.deps.RecordAIAction("screen_recording_stop", "", nil)
 
-	return succeed(req, "Recording stop queued", map[string]any{
+	return mcp.Succeed(req, "Recording stop queued", map[string]any{
 		"status":          "queued",
 		"recording_state": recordingStateStopping,
 		"correlation_id":  correlationID,

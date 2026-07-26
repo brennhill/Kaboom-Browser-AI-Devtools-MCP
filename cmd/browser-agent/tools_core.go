@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis"
@@ -100,7 +101,7 @@ type ToolHandler struct {
 	playbackMu       sync.RWMutex
 	playbackSessions map[string]*capture.PlaybackSession
 
-	recordingInteractHandler *recordingInteractHandler
+	recordingInteractHandler *screenrec.InteractHandler
 	uploadInteractHandler    *toolinteract.UploadInteractHandler
 	testGenHandler           *testGenHandler
 	stateInteractHandler     *toolinteract.StateInteractHandler
