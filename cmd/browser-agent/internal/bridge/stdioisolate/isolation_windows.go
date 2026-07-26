@@ -1,11 +1,11 @@
 //go:build windows
 // +build windows
 
-// bridge_io_isolation_windows.go -- Windows fallback for stdout duplication -- reuses the existing stdout handle since Windows lacks dup2.
+// isolation_windows.go -- Windows fallback for stdout duplication -- reuses the existing stdout handle since Windows lacks dup2.
 // Why: Provides a no-op platform shim so bridge IO isolation compiles on Windows without syscall dependencies.
 // Docs: docs/features/feature/bridge-restart/index.md
 
-package bridge
+package stdioisolate
 
 import "os"
 

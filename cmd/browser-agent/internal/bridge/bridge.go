@@ -17,12 +17,29 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge/stdioisolate"
 	internbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
+
+// BridgeWrapperLogFileName is the name of the bridge wrapper log file.
+const BridgeWrapperLogFileName = stdioisolate.WrapperLogFileName
+
+// ActiveMCPTransportWriter returns the file used for MCP JSON-RPC transport.
+func ActiveMCPTransportWriter() *os.File { return stdioisolate.ActiveMCPTransportWriter() }
+
+// EnsureIOIsolation configures bridge mode so stdout/stderr noise cannot
+// corrupt MCP JSON-RPC framing on stdout. The host's diagnostic seams are
+// resolved from deps here, at call time, so a test that swaps deps still wins.
+func EnsureIOIsolation(logFileHint string) error {
+	return stdioisolate.Ensure(logFileHint,
+		func(w io.Writer) { deps.SetStderrSink(w) },
+		func(format string, args ...any) { deps.Stderrf(format, args...) },
+	)
+}
 
 // IsKaboomService accepts canonical and legacy server names for compatibility.
 func IsKaboomService(name string) bool {

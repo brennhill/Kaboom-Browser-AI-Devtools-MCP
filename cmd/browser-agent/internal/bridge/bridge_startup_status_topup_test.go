@@ -1,5 +1,5 @@
 // bridge_startup_status_topup_test.go — Focused unit tests for the pure/HTTP-probe
-// helpers in bridge_startup_status.go and the wrapper-log path resolver.
+// helpers in the startup status path.
 
 package bridge
 
@@ -23,15 +23,6 @@ func portOfURL(t *testing.T, rawURL string) int {
 func TestIsServerRunning_NotListening(t *testing.T) {
 	if IsServerRunning(59991) {
 		t.Fatal("IsServerRunning(59991) = true, want false (nothing listening)")
-	}
-}
-
-func TestResolveBridgeWrapperLogPath_ReturnsWrapperFile(t *testing.T) {
-	for _, hint := range []string{"", "/tmp/hintdir/wrapper.log"} {
-		got := resolveBridgeWrapperLogPath(hint)
-		if !strings.HasSuffix(got, bridgeWrapperLogFileName) {
-			t.Fatalf("resolveBridgeWrapperLogPath(%q) = %q, want suffix %q", hint, got, bridgeWrapperLogFileName)
-		}
 	}
 }
 

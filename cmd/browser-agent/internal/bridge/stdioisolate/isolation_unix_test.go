@@ -3,7 +3,7 @@
 
 //go:build !windows
 
-package bridge
+package stdioisolate
 
 import (
 	"os"

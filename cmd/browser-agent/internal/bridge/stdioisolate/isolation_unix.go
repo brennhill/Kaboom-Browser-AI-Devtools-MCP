@@ -1,11 +1,11 @@
 //go:build !windows
 // +build !windows
 
-// bridge_io_isolation_unix.go -- Unix implementation of stdout duplication for bridge MCP transport isolation via dup2/dup3 syscalls.
+// isolation_unix.go -- Unix implementation of stdout duplication for bridge MCP transport isolation via dup2/dup3 syscalls.
 // Why: Separates the MCP transport fd from Go's os.Stdout so stderr/log output cannot corrupt JSON-RPC framing.
 // Docs: docs/features/feature/bridge-restart/index.md
 
-package bridge
+package stdioisolate
 
 import (
 	"fmt"
