@@ -14,7 +14,11 @@ test('clean-old-daemons script uses Kaboom copy while targeting legacy processes
 
   assert.match(source, /gasoline.*--daemon|gasoline\.exe|lsof -c gasoline/)
   assert.match(source, /strum.*--daemon|strum\.exe|lsof -c strum/)
-  assert.match(source, /for legacy_name in gasoline strum; do/)
+  // Pin the coverage, not the exact list. The script has since added `kaboom`
+  // to this sweep so it also clears stale current-brand PID files, which is a
+  // strict improvement — but the old exact-match assertion failed on it. This
+  // still goes red if gasoline or strum is dropped from the loop.
+  assert.match(source, /for legacy_name in [^;]*\bgasoline\b[^;]*\bstrum\b[^;]*; do/)
   assert.match(source, /\.\\?\$\{legacy_name\}-\$port\.pid/)
 
   assert.doesNotMatch(source, /STRUM Daemon Cleanup/)
