@@ -1,11 +1,11 @@
 // Purpose: Tests for PII and credential redaction correctness.
 // Docs: docs/features/feature/redaction-patterns/index.md
 
-//go:build integration
-// +build integration
-
-// NOTE: These tests use raceEnabled which needs to be exported or defined here.
-// Run with: go test -tags=integration ./internal/redaction/...
+// These were gated behind `//go:build integration` with a note saying raceEnabled
+// "needs to be exported or defined here". It is defined here — race_enabled_test.go
+// and race_disabled_test.go declare it as a build-tag-selected constant in this same
+// package, so the stated blocker was already solved. The tag is gone and these tests
+// run by default.
 package redaction
 
 import (
