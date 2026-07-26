@@ -218,3 +218,57 @@ describe('terminal.html reconnect jitter (finding S12)', () => {
     }
   })
 })
+
+describe('terminal.html reconnect-gap input buffer (finding S13)', () => {
+  const MAX_PENDING_INPUT = Number(iife.match(/MAX_PENDING_INPUT\s*=\s*(\d+)/)[1])
+
+  test('a single paste larger than the cap is evicted, not kept forever', () => {
+    const h = runTerminalPage()
+    const paste = 'x'.repeat(MAX_PENDING_INPUT * 2)
+
+    h.typeKey(paste) // socket is still CONNECTING -> buffered
+
+    h.ws.readyState = 1
+    h.ws.onopen()
+    h.ws.onmessage({ data: JSON.stringify({ type: 'replay_end' }) })
+
+    assert.deepStrictEqual(
+      h.binarySends(),
+      [],
+      'an oversized single chunk must be evicted like any other — the `length > 1` guard made it un-evictable, so it sat in the buffer forever and was replayed whole'
+    )
+  })
+
+  test('the cap counts bytes actually sent, not UTF-16 code units', () => {
+    const h = runTerminalPage()
+    // '€' is ONE UTF-16 unit but THREE UTF-8 bytes: 4000 of them are 4000 by
+    // .length (under the cap, so nothing was evicted) and 12000 on the wire.
+    const chunks = 4000
+    for (let i = 0; i < chunks; i++) h.typeKey('€')
+
+    h.ws.readyState = 1
+    h.ws.onopen()
+    h.ws.onmessage({ data: JSON.stringify({ type: 'replay_end' }) })
+
+    const sent = h.binarySends()
+    assert.strictEqual(sent.length, 1, 'the buffered input should flush as one send')
+    const bytes = new TextEncoder().encode(sent[0]).length
+    assert.ok(
+      bytes <= MAX_PENDING_INPUT,
+      `the reconnect-gap buffer must be bounded by SENT bytes: flushed ${bytes} bytes with a ${MAX_PENDING_INPUT}-byte cap`
+    )
+    assert.ok(bytes > 0, 'eviction must not empty a buffer that still fits under the cap')
+  })
+
+  test('input that fits under the cap is preserved in full', () => {
+    const h = runTerminalPage()
+    h.typeKey('ls')
+    h.typeKey(' -la')
+
+    h.ws.readyState = 1
+    h.ws.onopen()
+    h.ws.onmessage({ data: JSON.stringify({ type: 'replay_end' }) })
+
+    assert.deepStrictEqual(h.binarySends(), ['ls -la'], 'small gap input must flush intact, in order')
+  })
+})

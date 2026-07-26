@@ -156,9 +156,14 @@
         return Math.round(delay * (1 + Math.random() * RECONNECT_JITTER_RATIO));
       }
       // Keystrokes typed during a reconnect gap are buffered (bounded) and flushed
-      // on reconnect instead of being silently dropped.
+      // on reconnect instead of being silently dropped. Entries are
+      // {text, bytes} and pendingInputBytes is the running total, so the cap is
+      // enforced in the unit that is actually sent (UTF-8 bytes) without rescanning
+      // the whole queue on every keystroke (finding S13).
       var pendingInput = [];
+      var pendingInputBytes = 0;
       var MAX_PENDING_INPUT = 8192;
+      var inputEncoder = new TextEncoder();
 
       function notifyFocusState(focused) {
         notifyParent('focus', { focused: !!focused });
@@ -362,21 +367,41 @@
       // Buffer keystrokes typed while the socket is not OPEN (reconnect gap) up to
       // a bounded size, dropping the OLDEST if the outage is long. flushPendingInput
       // sends them once the socket is back and the shell state has been replayed.
+      //
+      // Three things this gets right that the previous version did not (S13):
+      //  - `length > 0`, not `> 1`: a single paste bigger than the cap was
+      //    un-evictable and sat in the buffer forever, then replayed whole.
+      //  - bytes, not `String.length`: the cap has to be in the unit that goes on
+      //    the wire, or non-ASCII input overshoots it (a '€' is 1 UTF-16 unit and
+      //    3 UTF-8 bytes).
+      //  - a running total instead of re-summing the queue on every keystroke.
+      // An oversized chunk is dropped rather than truncated on purpose: a
+      // half-a-paste command that the user then submits with Enter is worse than
+      // no paste at all.
       function bufferInput(data) {
-        pendingInput.push(data);
-        var total = 0;
-        for (var i = 0; i < pendingInput.length; i++) total += pendingInput[i].length;
-        while (total > MAX_PENDING_INPUT && pendingInput.length > 1) {
-          total -= pendingInput.shift().length;
+        var bytes = inputEncoder.encode(data).length;
+        pendingInput.push({ text: data, bytes: bytes });
+        pendingInputBytes += bytes;
+        var dropped = 0;
+        while (pendingInputBytes > MAX_PENDING_INPUT && pendingInput.length > 0) {
+          var evicted = pendingInput.shift();
+          pendingInputBytes -= evicted.bytes;
+          dropped += evicted.bytes;
+        }
+        if (dropped > 0) {
+          // Losing typed input must not be silent.
+          console.warn('[KaBOOM! terminal] dropped ' + dropped + ' byte(s) of input typed while disconnected (buffer cap ' + MAX_PENDING_INPUT + ' bytes)');
         }
       }
 
       function flushPendingInput() {
         if (!pendingInput.length) return;
         if (!(ws && ws.readyState === WebSocket.OPEN)) return;
-        var joined = pendingInput.join('');
+        var joined = '';
+        for (var i = 0; i < pendingInput.length; i++) joined += pendingInput[i].text;
         pendingInput = [];
-        ws.send(new TextEncoder().encode(joined));
+        pendingInputBytes = 0;
+        ws.send(inputEncoder.encode(joined));
       }
 
       // Terminal input → WebSocket (binary)
