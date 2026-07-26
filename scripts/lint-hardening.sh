@@ -351,7 +351,7 @@ fi
 # ─────────────────────────────────────────────
 bold "12. Checking bridge dispatch signal() coverage..."
 
-BRIDGE_FILE="cmd/browser-agent/bridge_forward.go"
+BRIDGE_FILE="cmd/browser-agent/internal/bridge/bridge_forward.go"
 if [ -f "$BRIDGE_FILE" ]; then
   BRIDGE_SIGNAL_ISSUES=""
   FUNC_START=$(grep -n 'func bridgeForwardRequest' "$BRIDGE_FILE" | head -1 | cut -d: -f1)
@@ -378,7 +378,11 @@ if [ -f "$BRIDGE_FILE" ]; then
     pass "All bridge dispatch return paths call signal()"
   fi
 else
-  pass "bridge.go not found (skipped)"
+  # Do NOT pass here. This check silently reported "PASS: bridge.go not found
+  # (skipped)" for ~4 months after the file moved to internal/bridge/, so a
+  # green run meant nothing. A check whose target has vanished has not passed —
+  # it has stopped running, and that must be loud (repo rule 25).
+  fail "bridge dispatch check cannot run: $BRIDGE_FILE not found (did it move?)"
 fi
 
 # ─────────────────────────────────────────────

@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -720,20 +721,33 @@ func TestMCPProtocol_HTTPHandler(t *testing.T) {
 // bodies through writeMCPPayload (single writer, framing-aware) and never uses
 // fmt.Println for raw response body forwarding.
 func TestMCPProtocol_BridgeCodeVerification(t *testing.T) {
-	// Read the bridge_forward.go source code (HTTP forwarding lives here)
-	bridgeSource, err := os.ReadFile("bridge_forward.go")
+	// Read the bridge_forward.go source code (HTTP forwarding lives here).
+	//
+	// This previously read "bridge_forward.go" relative to this package and
+	// t.Skipf'd on failure. The file moved to internal/bridge/ in March, so the
+	// read has failed ever since and the test has been silently skipping — it
+	// reported as coverage while asserting nothing. Fatal, not Skip: if the
+	// source this test inspects cannot be found, the test has not passed.
+	bridgeSource, err := os.ReadFile(filepath.Join("internal", "bridge", "bridge_forward.go"))
 	if err != nil {
-		t.Skipf("Could not read bridge_forward.go: %v", err)
+		t.Fatalf("could not read internal/bridge/bridge_forward.go (did it move?): %v", err)
 	}
 
 	source := string(bridgeSource)
 
 	// CRITICAL: forwarding must go through writeMCPPayload so stdout framing stays
 	// consistent (line-delimited vs Content-Length) and writes remain serialized.
-	if !strings.Contains(source, "writeMCPPayload(body, framing)") {
-		t.Error("CRITICAL: bridge_forward.go should forward HTTP bodies via writeMCPPayload(body, framing)")
+	//
+	// Matched case-insensitively on the call rather than on a bare `writeMCPPayload(`:
+	// the bridge extraction moved this behind a Deps struct, so the call site is now
+	// `deps.WriteMCPPayload(body, framing)`. The invariant is unchanged — the body
+	// must reach the framing-aware serialized writer — and this still fails if the
+	// body is written any other way.
+	if !strings.Contains(source, "WriteMCPPayload(body, framing)") &&
+		!strings.Contains(source, "writeMCPPayload(body, framing)") {
+		t.Error("CRITICAL: bridge_forward.go must forward HTTP bodies via WriteMCPPayload(body, framing)")
 	} else {
-		t.Log("bridge_forward.go forwards HTTP bodies via writeMCPPayload")
+		t.Log("bridge_forward.go forwards HTTP bodies via WriteMCPPayload")
 	}
 
 	// Verify no fmt.Println(string(body)) pattern
