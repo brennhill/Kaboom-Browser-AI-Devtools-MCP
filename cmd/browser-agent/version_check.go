@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -88,7 +89,7 @@ func updateAvailableVersion(newVersion string, now time.Time) {
 	versionCheckMu.Lock()
 	defer versionCheckMu.Unlock()
 
-	if isNewerVersion(newVersion, version) {
+	if daemonlife.IsNewerVersion(newVersion, version) {
 		availableVersion = newVersion
 	} else {
 		// Do not advertise older/equal releases as available updates.

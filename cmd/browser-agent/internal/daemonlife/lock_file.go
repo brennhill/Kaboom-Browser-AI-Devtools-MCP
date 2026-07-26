@@ -1,7 +1,7 @@
-// Purpose: Owns daemon lock-file persistence and ownership marker helpers.
+// lock_file.go — Owns daemon lock-file persistence and ownership marker helpers.
 // Why: Isolates filesystem metadata operations from startup/takeover policy logic.
 
-package main
+package daemonlife
 
 import (
 	"encoding/json"
@@ -73,7 +73,9 @@ func removeDaemonLockFile() error {
 	return nil
 }
 
-func removeDaemonLockIfOwned(pid int) {
+// RemoveLockIfOwned deletes the daemon lock only when pid still owns it, so a
+// shutting-down daemon never clears a successor's lock.
+func RemoveLockIfOwned(pid int) {
 	rec, err := readDaemonLockFile()
 	if err != nil || rec == nil {
 		return
@@ -83,7 +85,9 @@ func removeDaemonLockIfOwned(pid int) {
 	}
 }
 
-func persistCurrentDaemonLock(port int) error {
+// PersistCurrentLock registers this process as the owner of port, stamping the
+// record with version and this install's epoch so later launches can classify it.
+func PersistCurrentLock(port int, version string) error {
 	stateDir, err := state.RootDir()
 	if err != nil {
 		return err

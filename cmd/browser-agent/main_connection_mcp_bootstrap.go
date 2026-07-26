@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
@@ -206,7 +207,7 @@ func persistDaemonRuntimeState(server *Server, port int) {
 	if err := writePIDFile(port); err != nil {
 		server.logLifecycle("pid_file_error", port, map[string]any{"error": err.Error()})
 	}
-	if err := persistCurrentDaemonLock(port); err != nil {
+	if err := daemonlife.PersistCurrentLock(port, version); err != nil {
 		server.logLifecycle("daemon_lock_write_failed", port, map[string]any{"error": err.Error()})
 	}
 }

@@ -1,7 +1,7 @@
 // Purpose: Tests for semantic version comparison logic.
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
-package main
+package daemonlife
 
 import "testing"
 
@@ -22,14 +22,14 @@ func TestParseVersionParts(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got := parseVersionParts(tt.input)
+		got := ParseVersionParts(tt.input)
 		if len(got) != len(tt.want) {
-			t.Errorf("parseVersionParts(%q) = %v, want %v", tt.input, got, tt.want)
+			t.Errorf("ParseVersionParts(%q) = %v, want %v", tt.input, got, tt.want)
 			continue
 		}
 		for i := range got {
 			if got[i] != tt.want[i] {
-				t.Errorf("parseVersionParts(%q)[%d] = %d, want %d", tt.input, i, got[i], tt.want[i])
+				t.Errorf("ParseVersionParts(%q)[%d] = %d, want %d", tt.input, i, got[i], tt.want[i])
 			}
 		}
 	}
@@ -39,14 +39,14 @@ func TestParseVersionParts_Malformed(t *testing.T) {
 	t.Parallel()
 
 	for _, input := range []string{"", "abc", "v", "1.2.abc", "..."} {
-		got := parseVersionParts(input)
+		got := ParseVersionParts(input)
 		if got == nil {
 			continue // nil is acceptable for malformed
 		}
 		// Any returned parts should be valid ints (no negative)
 		for _, v := range got {
 			if v < 0 {
-				t.Errorf("parseVersionParts(%q) returned negative part: %d", input, v)
+				t.Errorf("ParseVersionParts(%q) returned negative part: %d", input, v)
 			}
 		}
 	}
@@ -91,9 +91,9 @@ func TestIsNewerVersion(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got := isNewerVersion(tt.candidate, tt.current)
+		got := IsNewerVersion(tt.candidate, tt.current)
 		if got != tt.want {
-			t.Errorf("isNewerVersion(%q, %q) = %v, want %v", tt.candidate, tt.current, got, tt.want)
+			t.Errorf("IsNewerVersion(%q, %q) = %v, want %v", tt.candidate, tt.current, got, tt.want)
 		}
 	}
 }

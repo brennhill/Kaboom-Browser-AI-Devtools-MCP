@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
 
@@ -75,7 +76,7 @@ func dispatchMode(server *Server, cfg *serverConfig) {
 	switch mode {
 	case modeDaemon:
 		server.logLifecycle("daemon_mode_start", cfg.port, nil)
-		if err := runMCPMode(server, cfg.port, cfg.apiKey, daemonLaunchOptions{Parallel: cfg.parallelMode}); err != nil {
+		if err := runMCPMode(server, cfg.port, cfg.apiKey, daemonlife.LaunchOptions{Parallel: cfg.parallelMode}); err != nil {
 			telemetry.AppError("daemon_start_failed", nil)
 			diagPath := appendExitDiagnostic("daemon_start_failed", map[string]any{
 				"port":  cfg.port,

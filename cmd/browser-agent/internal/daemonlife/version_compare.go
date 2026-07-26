@@ -1,16 +1,16 @@
-// Purpose: Parses and compares semver version strings for upgrade detection and version mismatch checks.
-// Why: Supports the version check and binary watcher features without depending on external semver libraries.
+// version_compare.go — Parses and compares semver version strings for upgrade detection and version mismatch checks.
+// Why: Supports the takeover policy, version check, and binary watcher features without depending on external semver libraries.
 
-package main
+package daemonlife
 
 import (
 	"strconv"
 	"strings"
 )
 
-// parseVersionParts splits a version string like "0.7.5" or "v0.7.5" into integer parts.
+// ParseVersionParts splits a version string like "0.7.5" or "v0.7.5" into integer parts.
 // Returns nil if the version string is empty or contains no valid numeric parts.
-func parseVersionParts(v string) []int {
+func ParseVersionParts(v string) []int {
 	v = strings.TrimPrefix(v, "v")
 	if v == "" {
 		return nil
@@ -35,15 +35,15 @@ func parseVersionParts(v string) []int {
 // tiebreaker to genuinely equal versions — a blank/unparseable version is never
 // treated as "same", so the epoch rule can't fire on unknown data.
 func sameNonEmptyVersion(a, b string) bool {
-	return a != "" && b != "" && !isNewerVersion(a, b) && !isNewerVersion(b, a)
+	return a != "" && b != "" && !IsNewerVersion(a, b) && !IsNewerVersion(b, a)
 }
 
-// isNewerVersion returns true if candidate is strictly newer than current.
+// IsNewerVersion returns true if candidate is strictly newer than current.
 // Both strings are parsed as semver (with optional "v" prefix).
 // Returns false for equal versions, malformed input, or empty strings.
-func isNewerVersion(candidate, current string) bool {
-	cParts := parseVersionParts(candidate)
-	rParts := parseVersionParts(current)
+func IsNewerVersion(candidate, current string) bool {
+	cParts := ParseVersionParts(candidate)
+	rParts := ParseVersionParts(current)
 	if cParts == nil || rParts == nil {
 		return false
 	}

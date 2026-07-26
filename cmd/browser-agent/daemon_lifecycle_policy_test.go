@@ -1,4 +1,6 @@
-// Purpose: Tests for daemon lifecycle policy and shutdown.
+// Purpose: Tests for daemon lifecycle policy and shutdown, exercised through the
+// REAL main-side wiring (daemonlifeDeps) so the seams this package hands to
+// daemonlife — pid files, port probes, the Server logger — stay connected.
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
 package main
@@ -12,8 +14,65 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
+
+// daemonLockForTest mirrors the on-disk daemon lock record. This test writes and
+// reads the file directly rather than reaching into daemonlife's unexported
+// helpers, so it verifies the persisted contract instead of package internals.
+type daemonLockForTest struct {
+	PID          int    `json:"pid"`
+	Port         int    `json:"port"`
+	StateDir     string `json:"state_dir"`
+	Version      string `json:"version,omitempty"`
+	UpdatedAt    string `json:"updated_at"`
+	InstallEpoch int64  `json:"install_epoch,omitempty"`
+}
+
+func daemonLockPathForTest(t *testing.T) string {
+	t.Helper()
+	path, err := state.InRoot("run", "daemon.lock.json")
+	if err != nil {
+		t.Fatalf("state.InRoot() error = %v", err)
+	}
+	return path
+}
+
+func writeDaemonLockForTest(t *testing.T, rec daemonLockForTest) {
+	t.Helper()
+	if rec.UpdatedAt == "" {
+		rec.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	}
+	path := daemonLockPathForTest(t)
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+		t.Fatalf("MkdirAll(%q) error = %v", filepath.Dir(path), err)
+	}
+	data, err := json.Marshal(rec)
+	if err != nil {
+		t.Fatalf("json.Marshal(lock) error = %v", err)
+	}
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		t.Fatalf("WriteFile(%q) error = %v", path, err)
+	}
+}
+
+// readDaemonLockForTest returns nil when no lock file exists.
+func readDaemonLockForTest(t *testing.T) *daemonLockForTest {
+	t.Helper()
+	data, err := os.ReadFile(daemonLockPathForTest(t))
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		t.Fatalf("ReadFile(daemon lock) error = %v", err)
+	}
+	var rec daemonLockForTest
+	if err := json.Unmarshal(data, &rec); err != nil {
+		t.Fatalf("json.Unmarshal(daemon lock) error = %v", err)
+	}
+	return &rec
+}
 
 func writeDaemonPIDFileForTest(t *testing.T, port int, pid int) {
 	t.Helper()
@@ -60,14 +119,12 @@ func TestEnforceDaemonStartupPolicy_DefaultTakeover(t *testing.T) {
 	const existingPort = 7890
 	const requestedPort = 7891
 
-	if err := writeDaemonLockFile(daemonLockRecord{
+	writeDaemonLockForTest(t, daemonLockForTest{
 		PID:      existingPID,
 		Port:     existingPort,
 		StateDir: stateRoot,
 		Version:  "0.7.7",
-	}); err != nil {
-		t.Fatalf("writeDaemonLockFile() error = %v", err)
-	}
+	})
 	writeDaemonPIDFileForTest(t, existingPort, existingPID)
 
 	logFile := filepath.Join(t.TempDir(), "daemon-policy.log")
@@ -105,18 +162,15 @@ func TestEnforceDaemonStartupPolicy_DefaultTakeover(t *testing.T) {
 		terminatedPIDs = append(terminatedPIDs, pid)
 	}
 
-	if err := enforceDaemonStartupPolicy(server, requestedPort, daemonLaunchOptions{}); err != nil {
-		t.Fatalf("enforceDaemonStartupPolicy() error = %v", err)
+	if err := daemonlife.EnforceStartupPolicy(daemonlifeDeps(server), requestedPort, daemonlife.LaunchOptions{}); err != nil {
+		t.Fatalf("daemonlife.EnforceStartupPolicy() error = %v", err)
 	}
 
 	if len(terminatedPIDs) != 1 || terminatedPIDs[0] != existingPID {
 		t.Fatalf("terminate calls = %v, want [%d]", terminatedPIDs, existingPID)
 	}
 
-	lockAfter, err := readDaemonLockFile()
-	if err != nil {
-		t.Fatalf("readDaemonLockFile() error = %v", err)
-	}
+	lockAfter := readDaemonLockForTest(t)
 	if lockAfter != nil {
 		t.Fatalf("daemon lock should be removed after takeover, got %+v", *lockAfter)
 	}
@@ -161,14 +215,12 @@ func TestEnforceDaemonStartupPolicy_SafetyGuardRejectsPIDMismatch(t *testing.T) 
 	const existingPID = 51515
 	const existingPort = 7900
 
-	if err := writeDaemonLockFile(daemonLockRecord{
+	writeDaemonLockForTest(t, daemonLockForTest{
 		PID:      existingPID,
 		Port:     existingPort,
 		StateDir: stateRoot,
 		Version:  "0.7.7",
-	}); err != nil {
-		t.Fatalf("writeDaemonLockFile() error = %v", err)
-	}
+	})
 
 	writeDaemonPIDFileForTest(t, existingPort, existingPID+1)
 
@@ -192,9 +244,9 @@ func TestEnforceDaemonStartupPolicy_SafetyGuardRejectsPIDMismatch(t *testing.T) 
 	terminated := false
 	daemonTerminatePID = func(_ int, _ bool) { terminated = true }
 
-	err = enforceDaemonStartupPolicy(server, 7901, daemonLaunchOptions{})
+	err = daemonlife.EnforceStartupPolicy(daemonlifeDeps(server), 7901, daemonlife.LaunchOptions{})
 	if err == nil {
-		t.Fatal("enforceDaemonStartupPolicy() error = nil, want ownership mismatch error")
+		t.Fatal("daemonlife.EnforceStartupPolicy() error = nil, want ownership mismatch error")
 	}
 	if !strings.Contains(err.Error(), "ownership mismatch") {
 		t.Fatalf("error = %q, want ownership mismatch guidance", err.Error())
@@ -208,14 +260,12 @@ func TestEnforceDaemonStartupPolicy_ParallelRequiresIsolatedStateDir(t *testing.
 	stateRoot := t.TempDir()
 	t.Setenv(state.StateDirEnv, stateRoot)
 
-	if err := writeDaemonLockFile(daemonLockRecord{
+	writeDaemonLockForTest(t, daemonLockForTest{
 		PID:      30303,
 		Port:     7920,
 		StateDir: stateRoot,
 		Version:  "0.7.7",
-	}); err != nil {
-		t.Fatalf("writeDaemonLockFile() error = %v", err)
-	}
+	})
 
 	logFile := filepath.Join(t.TempDir(), "daemon-policy-parallel.log")
 	server, err := NewServer(logFile, 200)
@@ -241,9 +291,9 @@ func TestEnforceDaemonStartupPolicy_ParallelRequiresIsolatedStateDir(t *testing.
 		return false
 	}
 
-	err = enforceDaemonStartupPolicy(server, 7921, daemonLaunchOptions{Parallel: true})
+	err = daemonlife.EnforceStartupPolicy(daemonlifeDeps(server), 7921, daemonlife.LaunchOptions{Parallel: true})
 	if err == nil {
-		t.Fatal("enforceDaemonStartupPolicy() error = nil, want isolated state-dir error")
+		t.Fatal("daemonlife.EnforceStartupPolicy() error = nil, want isolated state-dir error")
 	}
 	if !strings.Contains(err.Error(), "isolated --state-dir") {
 		t.Fatalf("error = %q, want isolated state-dir guidance", err.Error())
@@ -260,14 +310,12 @@ func TestEnforceDaemonStartupPolicy_ReclaimsStaleLockOnPIDMismatchWhenPortIdle(t
 	const existingPID = 61616
 	const existingPort = 7930
 
-	if err := writeDaemonLockFile(daemonLockRecord{
+	writeDaemonLockForTest(t, daemonLockForTest{
 		PID:      existingPID,
 		Port:     existingPort,
 		StateDir: stateRoot,
 		Version:  "0.7.7",
-	}); err != nil {
-		t.Fatalf("writeDaemonLockFile() error = %v", err)
-	}
+	})
 
 	// PID mismatch: port pid file does not match lock owner.
 	writeDaemonPIDFileForTest(t, existingPort, existingPID+1)
@@ -291,16 +339,13 @@ func TestEnforceDaemonStartupPolicy_ReclaimsStaleLockOnPIDMismatchWhenPortIdle(t
 	terminated := false
 	daemonTerminatePID = func(_ int, _ bool) { terminated = true }
 
-	if err := enforceDaemonStartupPolicy(server, 7931, daemonLaunchOptions{}); err != nil {
-		t.Fatalf("enforceDaemonStartupPolicy() error = %v, want stale lock reclaimed", err)
+	if err := daemonlife.EnforceStartupPolicy(daemonlifeDeps(server), 7931, daemonlife.LaunchOptions{}); err != nil {
+		t.Fatalf("daemonlife.EnforceStartupPolicy() error = %v, want stale lock reclaimed", err)
 	}
 	if terminated {
 		t.Fatal("stale lock reclaim should not terminate any process")
 	}
-	lockAfter, err := readDaemonLockFile()
-	if err != nil {
-		t.Fatalf("readDaemonLockFile() error = %v", err)
-	}
+	lockAfter := readDaemonLockForTest(t)
 	if lockAfter != nil {
 		t.Fatalf("daemon lock should be removed after stale reclaim, got %+v", *lockAfter)
 	}

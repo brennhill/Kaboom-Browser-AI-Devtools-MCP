@@ -1,7 +1,7 @@
-// Purpose: Manages daemon lock file, process liveness checks, and stale-daemon cleanup for singleton enforcement.
+// lifecycle.go — Manages daemon lock ownership, liveness classification, and stale-daemon takeover for singleton enforcement.
 // Why: Prevents port conflicts and zombie daemons by coordinating lifecycle via PID-based lock records.
 
-package main
+package daemonlife
 
 import (
 	"context"
@@ -10,11 +10,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
-type daemonLaunchOptions struct {
+// LaunchOptions describes how this daemon instance was launched.
+type LaunchOptions struct {
 	Parallel bool
 }
 
@@ -29,29 +29,14 @@ type daemonLockRecord struct {
 	InstallEpoch int64 `json:"install_epoch,omitempty"`
 }
 
+// This package's OWN seams (see deps.go for the rule): daemonlife can satisfy
+// these itself, so they stay package-local and are swapped by its own tests.
 var (
-	daemonIsProcessAlive     = isProcessAlive
-	daemonIsServerRunning    = bridge.IsServerRunning
-	daemonTryShutdown        = tryShutdownViaHTTP
-	daemonWaitForPortRelease = waitForPortRelease
-	daemonTerminatePID       = terminatePIDQuiet
-	daemonNow                = time.Now
-	daemonFindProcessOnPort  = findProcessOnPort
-	daemonSleep              = time.Sleep
+	daemonNow   = time.Now
+	daemonSleep = time.Sleep
 	// daemonInstallEpoch reports THIS daemon's install epoch (the takeover
 	// tiebreaker at equal versions). Injectable for tests.
 	daemonInstallEpoch = resolveInstallEpoch
-
-	// daemonProbeHealth reports whether the daemon on port answers /health, its
-	// reported version, and whether the failure was connection-refused (nothing
-	// listening — definitively gone, so retrying is pointless). Injectable for
-	// tests. Never blocks past the timeout.
-	daemonProbeHealth = func(port int) (reachable bool, version string, refused bool) {
-		ctx, cancel := context.WithTimeout(context.Background(), daemonHealthProbeTimeout)
-		defer cancel()
-		h := fetchInstallHealth(ctx, port, daemonHealthProbeTimeout)
-		return h.reachable, h.version, h.refused
-	}
 )
 
 const (
@@ -65,11 +50,22 @@ const (
 	daemonHealthProbeBackoff = 500 * time.Millisecond
 )
 
-// errDeferToHealthyDaemon signals that an existing healthy, version-compatible
+// ErrDeferToHealthyDaemon signals that an existing healthy, version-compatible
 // daemon is already serving, so this newly-launched daemon must exit cleanly
 // (exit 0) instead of taking over. This is what keeps a healthy daemon alive
 // when a redundant instance is launched (bridge respawn, second MCP client).
-var errDeferToHealthyDaemon = errors.New("existing healthy daemon is serving; deferring")
+var ErrDeferToHealthyDaemon = errors.New("existing healthy daemon is serving; deferring")
+
+// daemonProbeHealth reports whether the daemon on port answers /health, its
+// reported version, and whether the failure was connection-refused (nothing
+// listening — definitively gone, so retrying is pointless). Never blocks past
+// the timeout. The transport itself is a host seam (Deps.FetchHealth); the
+// timeout policy is ours.
+func daemonProbeHealth(d Deps, port int) (reachable bool, version string, refused bool) {
+	ctx, cancel := context.WithTimeout(context.Background(), daemonHealthProbeTimeout)
+	defer cancel()
+	return d.FetchHealth(ctx, port, daemonHealthProbeTimeout)
+}
 
 // daemonLockAge returns how long ago the lock was written (its registration
 // time), and whether that could be determined.
@@ -85,21 +81,21 @@ func daemonLockAge(rec *daemonLockRecord) (time.Duration, bool) {
 }
 
 // classifyExistingDaemon decides whether a starting daemon should DEFER to the
-// daemon described by rec (returns errDeferToHealthyDaemon) or TAKE OVER from it
+// daemon described by rec (returns ErrDeferToHealthyDaemon) or TAKE OVER from it
 // (returns nil). Invariant: a HEALTHY daemon whose version is >= ours is never
 // killed. It is taken over only when it is STALLED (no /health after retries) or
 // strictly OLDER than us (a real upgrade). A daemon still inside the startup
 // grace window is always deferred to.
-func classifyExistingDaemon(server *Server, port int, rec *daemonLockRecord) error {
+func classifyExistingDaemon(d Deps, port int, rec *daemonLockRecord) error {
 	// A strict version upgrade always replaces the incumbent — even one still
 	// inside the startup grace window — because running the newer binary is the
 	// whole point of the install. Uses the registered version so we needn't wait
 	// on a /health round-trip for the common upgrade case.
-	if rec.Version != "" && isNewerVersion(version, rec.Version) {
-		server.logLifecycle("daemon_takeover_upgrade", port, map[string]any{
+	if rec.Version != "" && IsNewerVersion(d.Version, rec.Version) {
+		d.Log.LogLifecycle("daemon_takeover_upgrade", port, map[string]any{
 			"existing_pid":     rec.PID,
 			"existing_version": rec.Version,
-			"our_version":      version,
+			"our_version":      d.Version,
 		})
 		return nil
 	}
@@ -111,13 +107,13 @@ func classifyExistingDaemon(server *Server, port int, rec *daemonLockRecord) err
 	// and fires before the startup-grace defer so a fresh install takes over at once.
 	// An equal-or-older epoch never reaches the takeover here, so this cannot
 	// ping-pong: the older install always defers to the newer one.
-	if sameNonEmptyVersion(version, rec.Version) {
+	if sameNonEmptyVersion(d.Version, rec.Version) {
 		if ourEpoch := daemonInstallEpoch(); ourEpoch > 0 && ourEpoch > rec.InstallEpoch {
-			server.logLifecycle("daemon_takeover_newer_install", port, map[string]any{
+			d.Log.LogLifecycle("daemon_takeover_newer_install", port, map[string]any{
 				"existing_pid":           rec.PID,
 				"existing_install_epoch": rec.InstallEpoch,
 				"our_install_epoch":      ourEpoch,
-				"version":                version,
+				"version":                d.Version,
 			})
 			return nil
 		}
@@ -132,12 +128,12 @@ func classifyExistingDaemon(server *Server, port int, rec *daemonLockRecord) err
 	// daemon. A far-future/corrupt timestamp erring toward defer is the safe choice
 	// (never kill on bad data).
 	if age, ok := daemonLockAge(rec); ok && age < daemonStartupGrace {
-		server.logLifecycle("daemon_defer_starting", port, map[string]any{
+		d.Log.LogLifecycle("daemon_defer_starting", port, map[string]any{
 			"existing_pid":  rec.PID,
 			"existing_port": rec.Port,
 			"age_ms":        age.Milliseconds(),
 		})
-		return errDeferToHealthyDaemon
+		return ErrDeferToHealthyDaemon
 	}
 
 	// Probe liveness, retried across the window so a momentarily busy-but-healthy
@@ -155,10 +151,10 @@ func classifyExistingDaemon(server *Server, port int, rec *daemonLockRecord) err
 	liveVersion := ""
 	for attempt := 0; attempt < daemonHealthProbeRetries; attempt++ {
 		var refused bool
-		if reachable, liveVersion, refused = daemonProbeHealth(rec.Port); reachable {
+		if reachable, liveVersion, refused = daemonProbeHealth(d, rec.Port); reachable {
 			break
 		}
-		if refused && !daemonIsProcessAlive(rec.PID) {
+		if refused && !d.IsProcessAlive(rec.PID) {
 			break
 		}
 		if attempt < daemonHealthProbeRetries-1 {
@@ -168,7 +164,7 @@ func classifyExistingDaemon(server *Server, port int, rec *daemonLockRecord) err
 
 	if !reachable {
 		// Stalled: alive PID, owns the port, but never answered /health. Replace it.
-		server.logLifecycle("daemon_takeover_stalled", port, map[string]any{
+		d.Log.LogLifecycle("daemon_takeover_stalled", port, map[string]any{
 			"existing_pid":  rec.PID,
 			"existing_port": rec.Port,
 		})
@@ -183,24 +179,28 @@ func classifyExistingDaemon(server *Server, port int, rec *daemonLockRecord) err
 	// Healthy. If the live version turns out older than us (registered version was
 	// blank/stale), treat it as an upgrade; otherwise a healthy same-or-newer
 	// daemon is never killed — defer and exit cleanly.
-	if existingVersion != "" && isNewerVersion(version, existingVersion) {
-		server.logLifecycle("daemon_takeover_upgrade", port, map[string]any{
+	if existingVersion != "" && IsNewerVersion(d.Version, existingVersion) {
+		d.Log.LogLifecycle("daemon_takeover_upgrade", port, map[string]any{
 			"existing_pid":     rec.PID,
 			"existing_version": existingVersion,
-			"our_version":      version,
+			"our_version":      d.Version,
 		})
 		return nil
 	}
 
-	server.logLifecycle("daemon_defer_healthy", port, map[string]any{
+	d.Log.LogLifecycle("daemon_defer_healthy", port, map[string]any{
 		"existing_pid":     rec.PID,
 		"existing_version": existingVersion,
-		"our_version":      version,
+		"our_version":      d.Version,
 	})
-	return errDeferToHealthyDaemon
+	return ErrDeferToHealthyDaemon
 }
 
-func enforceDaemonStartupPolicy(server *Server, port int, opts daemonLaunchOptions) error {
+// EnforceStartupPolicy is the single-instance gate a starting daemon must pass.
+// It returns nil when this daemon may proceed, ErrDeferToHealthyDaemon when a
+// healthy incumbent should keep serving (the caller must exit 0), or an error
+// describing why startup cannot safely continue.
+func EnforceStartupPolicy(d Deps, port int, opts LaunchOptions) error {
 	stateDir, err := state.RootDir()
 	if err != nil {
 		return fmt.Errorf("cannot resolve state dir: %w", err)
@@ -214,12 +214,12 @@ func enforceDaemonStartupPolicy(server *Server, port int, opts daemonLaunchOptio
 	}
 
 	if opts.Parallel {
-		return validateParallelIsolation(rec)
+		return validateParallelIsolation(d, rec)
 	}
-	return performDefaultTakeover(server, stateDir, port, rec)
+	return performDefaultTakeover(d, stateDir, port, rec)
 }
 
-func validateParallelIsolation(rec *daemonLockRecord) error {
+func validateParallelIsolation(d Deps, rec *daemonLockRecord) error {
 	if rec.PID <= 0 || rec.Port <= 0 {
 		return fmt.Errorf(
 			"parallel mode requires isolated --state-dir; invalid daemon lock metadata (pid=%d, port=%d) at %s",
@@ -231,7 +231,7 @@ func validateParallelIsolation(rec *daemonLockRecord) error {
 	if rec.PID == os.Getpid() {
 		return nil
 	}
-	if !daemonIsProcessAlive(rec.PID) {
+	if !d.IsProcessAlive(rec.PID) {
 		return removeDaemonLockFile()
 	}
 	return fmt.Errorf(
@@ -242,7 +242,7 @@ func validateParallelIsolation(rec *daemonLockRecord) error {
 	)
 }
 
-func performDefaultTakeover(server *Server, stateDir string, port int, rec *daemonLockRecord) error {
+func performDefaultTakeover(d Deps, stateDir string, port int, rec *daemonLockRecord) error {
 	if rec.PID <= 0 || rec.Port <= 0 {
 		return fmt.Errorf(
 			"invalid daemon lock metadata for state_dir=%s (pid=%d, port=%d). remove %s and retry",
@@ -255,16 +255,16 @@ func performDefaultTakeover(server *Server, stateDir string, port int, rec *daem
 	if rec.PID == os.Getpid() {
 		return nil
 	}
-	if !daemonIsProcessAlive(rec.PID) {
+	if !d.IsProcessAlive(rec.PID) {
 		return removeDaemonLockFile()
 	}
 
-	pidFromPortFile := readPIDFile(rec.Port)
+	pidFromPortFile := d.ReadPIDFile(rec.Port)
 	if pidFromPortFile != rec.PID {
 		// Safety guard: if the lock PID mismatches the PID file, never kill blindly.
 		// But if the target port is not serving, this is stale lock state and we can reclaim it.
-		if !daemonIsServerRunning(rec.Port) {
-			server.logLifecycle("daemon_lock_reclaimed_stale_mismatch", port, map[string]any{
+		if !d.IsServerRunning(rec.Port) {
+			d.Log.LogLifecycle("daemon_lock_reclaimed_stale_mismatch", port, map[string]any{
 				"state_dir":      stateDir,
 				"lock_pid":       rec.PID,
 				"lock_port":      rec.Port,
@@ -272,7 +272,7 @@ func performDefaultTakeover(server *Server, stateDir string, port int, rec *daem
 				"port_in_use":    false,
 				"reclaimed_lock": true,
 			})
-			removePIDFile(rec.Port)
+			d.RemovePIDFile(rec.Port)
 			return removeDaemonLockFile()
 		}
 		return fmt.Errorf(
@@ -288,11 +288,11 @@ func performDefaultTakeover(server *Server, stateDir string, port int, rec *daem
 	// defer to a healthy, version-compatible one; take over only a stalled or
 	// older instance. This is the guard against killing a healthy daemon and
 	// against launch-vs-launch restart storms.
-	if decision := classifyExistingDaemon(server, port, rec); decision != nil {
+	if decision := classifyExistingDaemon(d, port, rec); decision != nil {
 		return decision
 	}
 
-	server.logLifecycle("daemon_takeover", port, map[string]any{
+	d.Log.LogLifecycle("daemon_takeover", port, map[string]any{
 		"existing_pid":  rec.PID,
 		"existing_port": rec.Port,
 		"takeover":      true,
@@ -300,12 +300,12 @@ func performDefaultTakeover(server *Server, stateDir string, port int, rec *daem
 		"new_pid":       os.Getpid(),
 	})
 
-	_ = daemonTryShutdown(rec.Port)
-	if !daemonWaitForPortRelease(rec.Port, 2*time.Second) {
-		daemonTerminatePID(rec.PID, false)
-		if !daemonWaitForPortRelease(rec.Port, 2*time.Second) {
-			daemonTerminatePID(rec.PID, true)
-			if !daemonWaitForPortRelease(rec.Port, 2*time.Second) {
+	_ = d.TryShutdown(rec.Port)
+	if !d.WaitForPortRelease(rec.Port, 2*time.Second) {
+		d.TerminatePID(rec.PID, false)
+		if !d.WaitForPortRelease(rec.Port, 2*time.Second) {
+			d.TerminatePID(rec.PID, true)
+			if !d.WaitForPortRelease(rec.Port, 2*time.Second) {
 				return fmt.Errorf(
 					"failed to takeover existing daemon for state_dir=%s (existing_pid=%d existing_port=%d)",
 					stateDir,
@@ -316,6 +316,6 @@ func performDefaultTakeover(server *Server, stateDir string, port int, rec *daem
 		}
 	}
 
-	removePIDFile(rec.Port)
+	d.RemovePIDFile(rec.Port)
 	return removeDaemonLockFile()
 }

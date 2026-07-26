@@ -1,9 +1,8 @@
 // startup_throttle_test.go -- Tests for crash-loop restart-storm self-defense.
-package main
+package daemonlife
 
 import (
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 )
@@ -171,33 +170,22 @@ func TestApplyStartupRestartThrottle_EngagesPastThreshold(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("KABOOM_STATE_DIR", dir)
 
-	oldNow, oldEpoch, oldSleep, oldVer := daemonNow, daemonInstallEpoch, daemonThrottleSleep, version
-	defer func() {
-		daemonNow = oldNow
-		daemonInstallEpoch = oldEpoch
-		daemonThrottleSleep = oldSleep
-		version = oldVer
-	}()
-	version = "9.9.9"
-	daemonInstallEpoch = func() int64 { return 777 }
-
 	base := time.Unix(1_700_000_000, 0)
-	fakeNow := base
-	daemonNow = func() time.Time { return fakeNow }
+	fakeNow := freezeClock(t, base)
+	stubInstallEpoch(t, 777)
 
+	oldSleep := daemonThrottleSleep
+	defer func() { daemonThrottleSleep = oldSleep }()
 	var slept time.Duration
 	daemonThrottleSleep = func(d time.Duration) { slept += d }
 
-	server, err := NewServer(filepath.Join(dir, "throttle.log"), 100)
-	if err != nil {
-		t.Fatalf("NewServer error = %v", err)
-	}
-	defer server.logs.shutdownAsyncLogger(2 * time.Second)
+	deps, _ := newTestDeps(t)
+	deps.Version = "9.9.9"
 
 	// The first restartThrottleMax rapid starts do not throttle.
 	for i := 0; i < restartThrottleMax; i++ {
-		fakeNow = base.Add(time.Duration(i) * time.Second)
-		if d := applyStartupRestartThrottle(server, 7890); d != 0 {
+		*fakeNow = base.Add(time.Duration(i) * time.Second)
+		if d := ApplyStartupRestartThrottle(deps, 7890); d != 0 {
 			t.Fatalf("start %d within threshold: want no delay, got %s", i+1, d)
 		}
 	}
@@ -206,8 +194,8 @@ func TestApplyStartupRestartThrottle_EngagesPastThreshold(t *testing.T) {
 	}
 
 	// The next rapid start engages the backoff, and the injected sleep receives it.
-	fakeNow = base.Add(time.Duration(restartThrottleMax) * time.Second)
-	d := applyStartupRestartThrottle(server, 7890)
+	*fakeNow = base.Add(time.Duration(restartThrottleMax) * time.Second)
+	d := ApplyStartupRestartThrottle(deps, 7890)
 	if d != restartThrottleStep {
 		t.Fatalf("over-threshold start: want delay %s, got %s", restartThrottleStep, d)
 	}
@@ -224,42 +212,33 @@ func TestCleanShutdownResetsRestartThrottle(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("KABOOM_STATE_DIR", dir)
 
-	oldNow, oldEpoch, oldSleep, oldVer := daemonNow, daemonInstallEpoch, daemonThrottleSleep, version
-	defer func() {
-		daemonNow = oldNow
-		daemonInstallEpoch = oldEpoch
-		daemonThrottleSleep = oldSleep
-		version = oldVer
-	}()
-	version = "9.9.9"
-	daemonInstallEpoch = func() int64 { return 777 }
 	base := time.Unix(1_700_000_000, 0)
-	fakeNow := base
-	daemonNow = func() time.Time { return fakeNow }
+	fakeNow := freezeClock(t, base)
+	stubInstallEpoch(t, 777)
+
+	oldSleep := daemonThrottleSleep
+	defer func() { daemonThrottleSleep = oldSleep }()
 	daemonThrottleSleep = func(time.Duration) {}
 
-	server, err := NewServer(filepath.Join(dir, "throttle-reset.log"), 100)
-	if err != nil {
-		t.Fatalf("NewServer error = %v", err)
-	}
-	defer server.logs.shutdownAsyncLogger(2 * time.Second)
+	deps, _ := newTestDeps(t)
+	deps.Version = "9.9.9"
 
 	// Drive rapid starts past the threshold so the backoff is engaged.
 	for i := 0; i <= restartThrottleMax; i++ {
-		fakeNow = base.Add(time.Duration(i) * time.Second)
-		_ = applyStartupRestartThrottle(server, 7890)
+		*fakeNow = base.Add(time.Duration(i) * time.Second)
+		_ = ApplyStartupRestartThrottle(deps, 7890)
 	}
-	fakeNow = base.Add(time.Duration(restartThrottleMax+1) * time.Second)
-	if d := applyStartupRestartThrottle(server, 7890); d <= 0 {
+	*fakeNow = base.Add(time.Duration(restartThrottleMax+1) * time.Second)
+	if d := ApplyStartupRestartThrottle(deps, 7890); d <= 0 {
 		t.Fatalf("precondition: throttle should be engaged before the clean shutdown, got %s", d)
 	}
 
 	// A clean shutdown clears the history...
-	clearRestartHistoryOnCleanShutdown(server, 7890)
+	ClearRestartHistoryOnCleanShutdown(deps, 7890)
 
 	// ...so the very next rapid start is NOT throttled (counter reset).
-	fakeNow = base.Add(time.Duration(restartThrottleMax+2) * time.Second)
-	if d := applyStartupRestartThrottle(server, 7890); d != 0 {
+	*fakeNow = base.Add(time.Duration(restartThrottleMax+2) * time.Second)
+	if d := ApplyStartupRestartThrottle(deps, 7890); d != 0 {
 		t.Fatalf("after a clean shutdown, a rapid restart must not be throttled, got %s", d)
 	}
 }
@@ -270,20 +249,19 @@ func TestClearRestartHistoryOnCleanShutdown(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("KABOOM_STATE_DIR", dir)
 
-	server, err := NewServer(filepath.Join(dir, "clear.log"), 100)
-	if err != nil {
-		t.Fatalf("NewServer error = %v", err)
-	}
-	defer server.logs.shutdownAsyncLogger(2 * time.Second)
+	deps, log := newTestDeps(t)
 
 	path := restartHistoryPath(dir)
 	if err := saveRestartHistory(path, restartHistory{Version: "1.0.0", Timestamps: []int64{1, 2, 3}}); err != nil {
 		t.Fatalf("saveRestartHistory error = %v", err)
 	}
-	clearRestartHistoryOnCleanShutdown(server, 7890)
+	ClearRestartHistoryOnCleanShutdown(deps, 7890)
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		t.Fatalf("clear must remove the history file, stat err = %v", err)
 	}
-	// Idempotent: clearing an already-absent history is a no-op.
-	clearRestartHistoryOnCleanShutdown(server, 7890)
+	// Idempotent: clearing an already-absent history is a no-op — and silent.
+	ClearRestartHistoryOnCleanShutdown(deps, 7890)
+	if evt := log.find("restart_history_clear_failed"); evt != nil {
+		t.Fatalf("clearing an absent history must not log a failure, got %+v", *evt)
+	}
 }

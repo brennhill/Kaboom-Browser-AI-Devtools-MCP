@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
@@ -60,7 +61,7 @@ func awaitShutdownSignal(server *Server, srv *http.Server, port int, httpDone <-
 	// toward the startup throttle. An unexpected listener death (http_listener_died) is
 	// crash-like and must NOT clear — it should count toward the storm threshold.
 	if shutdownSource != "http_listener_died" {
-		clearRestartHistoryOnCleanShutdown(server, port)
+		daemonlife.ClearRestartHistoryOnCleanShutdown(daemonlifeDeps(server), port)
 	}
 	if diagPath := appendExitDiagnostic("daemon_shutdown", map[string]any{
 		"port":            port,
@@ -137,7 +138,7 @@ func awaitShutdownSignal(server *Server, srv *http.Server, port int, httpDone <-
 	}
 
 	removePIDFile(port)
-	removeDaemonLockIfOwned(os.Getpid())
+	daemonlife.RemoveLockIfOwned(os.Getpid())
 }
 
 // mapSignalSource returns a human-readable description for a termination signal.
