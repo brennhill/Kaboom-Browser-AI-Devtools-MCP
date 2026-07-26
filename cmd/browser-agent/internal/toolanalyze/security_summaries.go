@@ -7,7 +7,7 @@ package toolanalyze
 import (
 	"sort"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/thirdparty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
 )
 
@@ -47,7 +47,7 @@ func BuildSecurityAuditSummary(result scan.Result) map[string]any {
 }
 
 // BuildThirdPartySummary creates a compact summary from third-party audit results.
-func BuildThirdPartySummary(result analysis.ThirdPartyResult) map[string]any {
+func BuildThirdPartySummary(result thirdparty.ThirdPartyResult) map[string]any {
 	byRisk := map[string]int{
 		"critical": result.Summary.CriticalRisk,
 		"high":     result.Summary.HighRisk,
@@ -61,7 +61,7 @@ func BuildThirdPartySummary(result analysis.ThirdPartyResult) map[string]any {
 	}
 
 	// Sort by risk (critical first)
-	sorted := make([]analysis.ThirdPartyEntry, len(result.ThirdParties))
+	sorted := make([]thirdparty.ThirdPartyEntry, len(result.ThirdParties))
 	copy(sorted, result.ThirdParties)
 	sort.Slice(sorted, func(i, j int) bool {
 		return SeverityOrder[sorted[i].RiskLevel] < SeverityOrder[sorted[j].RiskLevel]

@@ -2,7 +2,7 @@
 // Why: Provides consistent risk labeling for domains to prioritize review of suspicious origins.
 // Docs: docs/features/feature/enterprise-audit/index.md
 
-package analysis
+package thirdparty
 
 import (
 	"math"

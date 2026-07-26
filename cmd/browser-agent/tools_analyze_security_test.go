@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/thirdparty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
 )
 
@@ -93,13 +93,13 @@ func TestBuildSecuritySummary_LimitTo5(t *testing.T) {
 
 func TestBuildThirdPartySummary_Basic(t *testing.T) {
 	t.Parallel()
-	result := analysis.ThirdPartyResult{
-		ThirdParties: []analysis.ThirdPartyEntry{
+	result := thirdparty.ThirdPartyResult{
+		ThirdParties: []thirdparty.ThirdPartyEntry{
 			{Origin: "https://cdn.evil.com", RiskLevel: "high", RiskReason: "unknown CDN"},
 			{Origin: "https://analytics.google.com", RiskLevel: "low", RiskReason: "known tracker"},
 			{Origin: "https://malware.xyz", RiskLevel: "critical", RiskReason: "suspicious domain"},
 		},
-		Summary: analysis.ThirdPartySummary{
+		Summary: thirdparty.ThirdPartySummary{
 			TotalThirdParties: 3,
 			CriticalRisk:      1,
 			HighRisk:          1,
@@ -136,7 +136,7 @@ func TestBuildThirdPartySummary_Basic(t *testing.T) {
 
 func TestBuildThirdPartySummary_Empty(t *testing.T) {
 	t.Parallel()
-	result := analysis.ThirdPartyResult{}
+	result := thirdparty.ThirdPartyResult{}
 	summary := toolanalyze.BuildThirdPartySummary(result)
 	if summary["total_origins"] != 0 {
 		t.Errorf("total_origins = %v, want 0", summary["total_origins"])

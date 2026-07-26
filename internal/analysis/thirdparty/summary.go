@@ -2,7 +2,7 @@
 // Why: Converts detailed third-party findings into prioritized, actionable guidance.
 // Docs: docs/features/feature/enterprise-audit/index.md
 
-package analysis
+package thirdparty
 
 import (
 	"fmt"

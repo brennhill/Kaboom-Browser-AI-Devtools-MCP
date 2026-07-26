@@ -2,7 +2,7 @@
 // Why: Isolates origin-level classification heuristics from high-level audit orchestration.
 // Docs: docs/features/feature/enterprise-audit/index.md
 
-package analysis
+package thirdparty
 
 import (
 	"encoding/json"

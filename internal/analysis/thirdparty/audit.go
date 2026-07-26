@@ -2,7 +2,13 @@
 // Why: Surfaces supply-chain and data-exfiltration risks introduced by non-first-party dependencies.
 // Docs: docs/features/feature/enterprise-audit/index.md
 
-package analysis
+// Package thirdparty audits non-first-party origins seen in captured network traffic.
+//
+// Requests are grouped by origin, classified by what they carry (scripts, cookies,
+// outbound data including detected PII fields), scored for reputation (known CDN,
+// abuse TLD, DGA-like hostname entropy, user-supplied allow/deny lists) and rolled
+// up into a risk-ranked summary with remediation recommendations.
+package thirdparty
 
 import (
 	"encoding/json"

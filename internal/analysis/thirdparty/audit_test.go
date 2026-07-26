@@ -1,14 +1,19 @@
 // Purpose: Tests for third-party script origin analysis.
-// Docs: docs/features/feature/api-schema/index.md
+// Docs: docs/features/feature/enterprise-audit/index.md
 
-package analysis
+package thirdparty
 
 import (
 	"encoding/json"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
+
+// NetworkBody keeps the test tables terse; the audit API takes capture.NetworkBody.
+type NetworkBody = capture.NetworkBody
 
 func TestThirdPartyBasicClassification(t *testing.T) {
 	t.Parallel()
@@ -444,12 +449,12 @@ func TestThirdPartyShannonEntropy(t *testing.T) {
 		input    string
 		wantHigh bool // entropy > 3.5
 	}{
-		{"aaaa", false},            // Low entropy, repetitive
-		{"abcdefghijklm", true},    // High entropy, 13 unique chars (log2(13)=3.7)
-		{"xk7q9mzp3fab", true},     // DGA-like, 12 unique chars (log2(12)=3.58)
-		{"www", false},             // Low entropy
-		{"cdn", false},             // Short, low entropy
-		{"abcdefghij", false},      // 10 unique chars, entropy=log2(10)=3.32, below 3.5
+		{"aaaa", false},         // Low entropy, repetitive
+		{"abcdefghijklm", true}, // High entropy, 13 unique chars (log2(13)=3.7)
+		{"xk7q9mzp3fab", true},  // DGA-like, 12 unique chars (log2(12)=3.58)
+		{"www", false},          // Low entropy
+		{"cdn", false},          // Short, low entropy
+		{"abcdefghij", false},   // 10 unique chars, entropy=log2(10)=3.32, below 3.5
 	}
 	for _, tc := range tests {
 		ent := shannonEntropy(tc.input)

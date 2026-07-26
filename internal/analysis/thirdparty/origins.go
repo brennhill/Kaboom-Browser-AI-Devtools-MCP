@@ -2,7 +2,7 @@
 // Why: Separates origin-scoping/filtering from entry-level risk classification logic.
 // Docs: docs/features/feature/enterprise-audit/index.md
 
-package analysis
+package thirdparty
 
 import (
 	"sort"
