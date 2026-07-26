@@ -94,6 +94,5 @@ for the install-side flow):
 ## Related
 
 - Feature docs: `docs/features/feature/enhanced-cli-config/`
-  ([flow-map pointer](../../features/feature/enhanced-cli-config/flow-map.md))
 - Install-side canonical map:
   [Installer Binary Path and Manual Extension Handoff](./installer-binary-path-and-manual-extension-handoff.md)

@@ -40,8 +40,6 @@ last_verified_date: 2026-03-05
 - Product Spec: [product-spec.md](./product-spec.md)
 - Tech Spec: [tech-spec.md](./tech-spec.md)
 - Test Plan: [test-plan.md](./test-plan.md)
-- Flow Map Pointer: [flow-map.md](./flow-map.md)
-- Canonical Startup Flow: [Bridge Startup Contention and Convergence](../../../architecture/flow-maps/bridge-startup-contention-and-convergence.md)
 
 ## Requirement IDs
 

@@ -9,7 +9,6 @@ last_verified_date: 2026-03-05
 
 # Bridge Restart — Product Spec
 
-Related startup flow map: [Bridge Startup Contention and Convergence](../../../architecture/flow-maps/bridge-startup-contention-and-convergence.md)
 
 ## Problem
 

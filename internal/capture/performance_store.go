@@ -1,6 +1,6 @@
 // Purpose: Encapsulates performance snapshot map operations behind focused store methods.
 // Why: Reduces Capture method complexity during god-object decomposition while preserving behavior.
-// Docs: docs/architecture/flow-maps/capture-buffer-store.md
+// Docs: docs/features/feature/observe/index.md
 
 package capture
 

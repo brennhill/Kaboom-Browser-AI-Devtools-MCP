@@ -14,8 +14,6 @@ last_verified_date: 2026-03-28
 
 This flow covers the terminal side panel host, the page hover launcher terminal button, the workspace-group resolver that decides which tab should host the panel, and the bridge that keeps launcher visibility in sync with side panel open/closed state.
 
-The terminal server isolation flow remains a separate concern and is still documented in [Terminal Server Isolation](./terminal-server-isolation.md).
-
 ## Entrypoints
 
 - `src/content/ui/tracked-hover-launcher.ts`

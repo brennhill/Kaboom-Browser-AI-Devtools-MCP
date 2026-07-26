@@ -30,7 +30,6 @@ This folder contains the architecture contract used to make safe edits.
 - [Extension Message Protocol](../core/extension-message-protocol.md)
 - [MCP Command Option Matrix](../core/mcp-command-option-matrix.md)
 - [Code Index](../core/code-index.md)
-- [Flow Maps](./flow-maps/README.md)
 - ADRs in this folder (`ADR-00x-*`)
 
 ## Comments in Code Files

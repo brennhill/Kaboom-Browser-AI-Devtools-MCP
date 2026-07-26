@@ -52,5 +52,3 @@ last_verified_date: 2026-03-28
 - Product Spec: [product-spec.md](./product-spec.md)
 - QA Plan: [qa-plan.md](./qa-plan.md)
 - Feature Index: [index.md](./index.md)
-- Flow Map Pointer: [flow-map.md](./flow-map.md)
-- Canonical Flow Maps: [terminal-side-panel-host.md](../../../architecture/flow-maps/terminal-side-panel-host.md), [terminal-server-isolation.md](../../../architecture/flow-maps/terminal-server-isolation.md)

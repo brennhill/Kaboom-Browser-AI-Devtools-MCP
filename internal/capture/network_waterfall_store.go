@@ -1,6 +1,6 @@
 // Purpose: Encapsulates network-waterfall ring-buffer operations behind focused store methods.
 // Why: Keeps append/eviction/copy/clear behavior out of Capture methods during god-object decomposition.
-// Docs: docs/architecture/flow-maps/capture-buffer-store.md
+// Docs: docs/features/feature/observe/index.md
 
 package capture
 

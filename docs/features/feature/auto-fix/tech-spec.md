@@ -7,8 +7,6 @@ last_reviewed: 2026-07-05
 links:
   index: ./index.md
   product: ./product-spec.md
-  flow_map: ./flow-map.md
-  canonical_flow_map: ../../../architecture/flow-maps/audit-workflow.md
 code_paths:
   - cmd/browser-agent/tools_analyze_page_issues.go
   - cmd/browser-agent/internal/toolanalyze/page_issues_summary.go

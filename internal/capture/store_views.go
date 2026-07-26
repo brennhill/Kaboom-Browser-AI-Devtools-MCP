@@ -1,6 +1,6 @@
 // Purpose: Exposes focused capture sub-store interfaces backed by lock-safe snapshot accessors.
 // Why: Lets callers depend on narrow contracts instead of the full Capture god object.
-// Docs: docs/architecture/flow-maps/capture-buffer-store.md
+// Docs: docs/features/feature/observe/index.md
 
 package capture
 

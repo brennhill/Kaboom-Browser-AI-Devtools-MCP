@@ -1,6 +1,6 @@
 // Purpose: Encapsulates websocket connection-tracker view/reset helpers behind focused methods.
 // Why: Reduces direct map/slice manipulation across Capture methods during god-object decomposition.
-// Docs: docs/architecture/flow-maps/capture-buffer-store.md
+// Docs: docs/features/feature/observe/index.md
 
 package capture
 
