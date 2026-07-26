@@ -1,5 +1,8 @@
 #!/bin/bash
-# check-file-length.sh — Enforce 800-line soft limit on source files
+# check-file-length.sh — Enforce the 800-line limit on hand-written source files.
+# Generated code (*/generated/*), build output (extension/), vendored deps and agent
+# worktrees (.claude/) are excluded: they are not organized by hand, so splitting them
+# is meaningless and an unfixable violation just teaches people to ignore the gate.
 #
 # Standard: 800 lines per file (soft limit)
 # Exceptions: Files with justification comment in first 20 lines
@@ -57,6 +60,8 @@ done < <(find . -name "*.go" \
     -not -path "*/vendor/*" \
     -not -name "*_test.go" \
     -not -path "*/node_modules/*" \
+    -not -path "*/.claude/*" \
+    -not -path "*/generated/*" \
     -not -name "*.pb.go" \
     -type f -print0 2>/dev/null || true)
 
@@ -68,6 +73,10 @@ while IFS= read -r -d '' file; do
 done < <(find . -name "*.ts" \
     -not -path "*/node_modules/*" \
     -not -path "*/dist/*" \
+    -not -path "*/.claude/*" \
+    -not -path "*/generated/*" \
+    -not -path "./extension/*" \
+    -not -path "./gokaboom.dev/*" \
     -not -name "*.test.ts" \
     -not -name "*.spec.ts" \
     -type f -print0 2>/dev/null || true)

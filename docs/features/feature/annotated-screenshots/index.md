@@ -49,10 +49,6 @@ last_verified_date: 2026-03-05
 - Tech Spec: [tech-spec.md](./tech-spec.md)
 - QA Plan: [qa-plan.md](./qa-plan.md)
 
-## Flow Maps
-
-- [flow-map.md](./flow-map.md) — pointers to canonical flow maps
-
 ## Requirement IDs
 
 - FEATURE_ANNOTATED_SCREENSHOTS_001

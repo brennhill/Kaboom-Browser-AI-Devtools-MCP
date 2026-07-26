@@ -6,7 +6,6 @@ owners: []
 last_reviewed: 2026-07-05
 links:
   index: ./index.md
-  flow_map: ./flow-map.md
   setup_guide: ./setup-guide.md
 ---
 

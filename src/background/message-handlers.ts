@@ -34,7 +34,7 @@ import { openTerminalSidePanel } from './terminal-panel.js'
 import { trackUIFeature } from './ui-usage-tracker.js'
 // Static import: dynamic import() is not allowed in MV3 service workers.
 // terminal-widget-types.js is a pure helper module (constants + types, no DOM access at load time).
-import { getTerminalServerUrl } from '../content/ui/terminal-widget-types.js'
+import { resolveTerminalServerUrl } from '../content/ui/terminal-widget-types.js'
 
 // =============================================================================
 // TYPE DEFINITIONS
@@ -693,7 +693,7 @@ async function handleQaScanRequestedAsync(
   sendResponse: (response: Record<string, unknown>) => void,
   deps: MessageHandlerDependencies
 ): Promise<void> {
-  const termUrl = getTerminalServerUrl(deps.getServerUrl())
+  const termUrl = await resolveTerminalServerUrl(deps.getServerUrl())
 
   // Try PTY injection first — works whether the side panel is open or closed.
   try {

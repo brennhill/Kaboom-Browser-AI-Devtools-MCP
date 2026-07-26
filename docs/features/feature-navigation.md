@@ -35,7 +35,7 @@ Features with active code implementations referencing their feature docs.
 
 | Feature | Folder | Files | Purpose |
 |---------|--------|-------|---------|
-| auto-fix | `feature/auto-fix/` | index.md, flow-map.md | Phase 1 tracked-site audit workflow, `/kaboom/audit` assets, and shared popup/hover Audit bridge |
+| auto-fix | `feature/auto-fix/` | index.md | Phase 1 tracked-site audit workflow, `/kaboom/audit` assets, and shared popup/hover Audit bridge |
 | ai-capture-control | `feature/ai-capture-control/` | product-spec.md, qa-plan.md, tech-spec.md | AI-driven capture control for selective telemetry |
 | ai-web-pilot | `feature/ai-web-pilot/` | product-spec.md, qa-plan.md, tech-spec.md, test-plan.md | AI Web Pilot browser automation framework |
 | analyze-tool | `feature/analyze-tool/` | product-spec.md, qa-plan.md, tech-spec.md, uat-guide.md, MIGRATION.md | Analyze tool for DOM, accessibility, security, and performance |
@@ -68,7 +68,7 @@ Features with active code implementations referencing their feature docs.
 | observe | `feature/observe/` | product-spec.md, qa-plan.md, tech-spec.md | Core observe tool for browser telemetry retrieval |
 | pagination | `feature/pagination/` | product-spec.md, qa-plan.md, tech-spec.md | Cursor-based pagination for large result sets |
 | performance-audit | `feature/performance-audit/` | product-spec.md, qa-plan.md, tech-spec.md | Performance auditing and Web Vitals analysis |
-| quality-gates | `feature/quality-gates/` | flow-map.md | Automated code quality gates via configure(what="setup_quality_gates") |
+| quality-gates | `feature/quality-gates/` | index.md | Automated code quality gates via configure(what="setup_quality_gates") |
 | persistent-memory | `feature/persistent-memory/` | product-spec.md, qa-plan.md, tech-spec.md | Persistent key-value store across sessions |
 | playback-engine | `feature/playback-engine/` | product-spec.md | Recording playback and replay engine |
 | project-isolation | `feature/project-isolation/` | product-spec.md, qa-plan.md, tech-spec.md | Per-project data isolation |
@@ -84,7 +84,7 @@ Features with active code implementations referencing their feature docs.
 | self-testing | `feature/self-testing/` | product-spec.md, qa-plan.md, tech-spec.md | Self-testing and health check infrastructure |
 | tab-recording | `feature/tab-recording/` | product-spec.md, qa-plan.md, tech-spec.md | Tab video/audio recording capture |
 | tab-tracking-ux | `feature/tab-tracking-ux/` | product-spec.md, qa-plan.md, tech-spec.md | Tab tracking UX and multi-tab management |
-| terminal | `feature/terminal/` | index.md, flow-map.md | In-browser terminal widget with dedicated server on port+1 |
+| terminal | `feature/terminal/` | index.md | In-browser terminal widget with dedicated server on port+1 |
 | test-generation | `feature/test-generation/` | product-spec.md, qa-plan.md, tech-spec.md, uat-guide.md | E2E test generation from browser sessions |
 | transient-capture | `feature/transient-capture/` | index.md | Capture transient UI elements (tooltips, toasts) |
 | ttl-retention | `feature/ttl-retention/` | product-spec.md, qa-plan.md, tech-spec.md | TTL-based data retention and eviction |

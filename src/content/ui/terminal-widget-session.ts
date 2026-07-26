@@ -9,7 +9,7 @@ import { getDaemonStartHint } from '../../lib/brand.js'
 import { getLocal, setSession, getSession, removeSessions, setLocal, persist } from '../../lib/storage-utils.js'
 import {
   state,
-  getTerminalServerUrl,
+  resolveTerminalServerUrl,
   type TerminalConfig,
   type TerminalSessionState,
   type TerminalUIState
@@ -129,7 +129,7 @@ export async function loadPersistedSession(): Promise<{ session: TerminalSession
 export async function validateSession(token: string): Promise<boolean> {
   try {
     const base = await getServerUrl()
-    const termUrl = getTerminalServerUrl(base)
+    const termUrl = await resolveTerminalServerUrl(base)
     const resp = await fetch(
       `${termUrl}/terminal/validate?token=${encodeURIComponent(token)}`,
       { signal: AbortSignal.timeout(2000) }
@@ -189,7 +189,7 @@ export async function listTerminalDirs(path: string): Promise<TerminalDirsResult
   let resp: Response
   try {
     const base = await getServerUrl()
-    const termUrl = getTerminalServerUrl(base)
+    const termUrl = await resolveTerminalServerUrl(base)
     resp = await fetch(
       `${termUrl}/terminal/dirs?path=${encodeURIComponent(path)}`,
       { signal: AbortSignal.timeout(3000) }
@@ -285,7 +285,7 @@ export async function stopActiveSession(): Promise<void> {
   if (!sessionId) return
   try {
     const base = await getServerUrl()
-    const termUrl = getTerminalServerUrl(base)
+    const termUrl = await resolveTerminalServerUrl(base)
     const resp = await fetch(`${termUrl}/terminal/stop`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -305,7 +305,7 @@ export async function startSession(
   onSandboxError?: TerminalSandboxErrorHandler
 ): Promise<TerminalSessionState | null> {
   const base = await getServerUrl()
-  const termUrl = getTerminalServerUrl(base)
+  const termUrl = await resolveTerminalServerUrl(base)
   const aiCommand = await getTerminalAICommand()
   const devRoot = await getTerminalDevRoot()
   try {

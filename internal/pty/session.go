@@ -22,6 +22,12 @@ import (
 // maxScrollback is the maximum size of the terminal output scrollback buffer (256 KB).
 const maxScrollback = 256 * 1024
 
+// sessionReapWait bounds each of Close's two waits for the reaper goroutine: the
+// first after SIGTERM + PTY close, the second after escalating to SIGKILL. A var
+// (not const) so tests can shorten it and exercise the give-up path without a
+// real multi-second wait — the same seam writeBufferCloseTimeout uses.
+var sessionReapWait = 2 * time.Second
+
 // Alt-screen escape sequences (e.g., vim, htop).
 var (
 	altScreenEnter = []byte("\x1b[?1049h")
@@ -61,6 +67,11 @@ type Session struct {
 	idleTimeout time.Duration
 	idleCb      func(string)
 	idleTimer   stoppableTimer
+	// idleStopped is set by Close under scrollMu. It is a separate flag from
+	// `closed` (which lives under mu) so the idle path never has to take mu while
+	// holding scrollMu — Close takes them in the opposite order, so that would be
+	// a lock-order inversion.
+	idleStopped bool
 
 	// clk is the time source for idle detection + last-output/-input timestamps.
 	// nil means the real clock (see clock()); tests inject a fake for determinism.
@@ -86,6 +97,10 @@ type winsize struct {
 
 // ErrSessionClosed is returned when operating on a closed session.
 var ErrSessionClosed = errors.New("pty: session closed")
+
+// ErrReapTimeout is returned by Wait when the child was not reaped within the
+// caller's bound. The child (and its PTY fd) may still be alive.
+var ErrReapTimeout = errors.New("pty: timed out waiting for the child to be reaped")
 
 // SpawnConfig configures a new PTY session.
 type SpawnConfig struct {
@@ -280,7 +295,12 @@ func (s *Session) Close() error {
 	close(s.done)
 
 	// Stop idle timer if running. Lock ordering: mu (held) → scrollMu (safe).
+	// idleStopped is the durable part: Stop() alone loses the race against a timer
+	// that has ALREADY fired (its callback is queued or running), and it does not
+	// prevent a late AppendScrollback from arming a fresh one. The flag closes both
+	// holes — the callback re-checks it, and AppendScrollback refuses to re-arm.
 	s.scrollMu.Lock()
+	s.idleStopped = true
 	if s.idleTimer != nil {
 		s.idleTimer.Stop()
 		s.idleTimer = nil
@@ -288,9 +308,7 @@ func (s *Session) Close() error {
 	s.scrollMu.Unlock()
 
 	// Signal the child to terminate.
-	if s.cmd.Process != nil {
-		_ = s.cmd.Process.Signal(syscall.SIGTERM)
-	}
+	s.signalChild(syscall.SIGTERM)
 	// Close PTY master — this also signals EOF to the child.
 	err := s.ptmx.Close()
 
@@ -300,27 +318,72 @@ func (s *Session) Close() error {
 	select {
 	case <-s.reaped:
 		// Child exited cleanly.
-	case <-time.After(2 * time.Second):
+	case <-time.After(sessionReapWait):
 		// Escalate to SIGKILL.
-		if s.cmd.Process != nil {
-			_ = s.cmd.Process.Kill()
-		}
+		s.signalChild(syscall.SIGKILL)
 		// Bound the post-SIGKILL wait too. A child stuck in uninterruptible
 		// (D-state) sleep may not be reaped promptly; without this bound, Close —
 		// and StopAll during daemon shutdown — would block indefinitely. The
 		// reaper goroutine closes s.reaped whenever the kernel finally reaps it.
 		select {
 		case <-s.reaped:
-		case <-time.After(2 * time.Second):
+		case <-time.After(sessionReapWait):
+			// Giving up here leaves a live process holding the slave PTY after the
+			// daemon believes the session is gone. Nothing else observes this, so
+			// it must not be silent (rule 25).
+			diag(EventSessionReapTimeout, map[string]any{
+				"session_id": s.ID,
+				"pid":        s.Pid(),
+				"phase":      "close",
+				"wait_ms":    (2 * sessionReapWait).Milliseconds(),
+			})
 		}
 	}
 	return err
 }
 
-// Wait blocks until the child process exits.
-func (s *Session) Wait() error {
-	<-s.reaped
-	return nil
+// signalChild sends sig to the child and reports a genuine failure. An
+// already-exited child (os.ErrProcessDone) is the expected case on a clean exit,
+// not a failure — logging it would bury the real signal failures (EPERM, a PID
+// recycled out from under us) in noise. Caller holds s.mu.
+func (s *Session) signalChild(sig syscall.Signal) {
+	if s.cmd.Process == nil {
+		return
+	}
+	err := s.cmd.Process.Signal(sig)
+	if err == nil || errors.Is(err, os.ErrProcessDone) {
+		return
+	}
+	diag(EventSessionSignalFailed, map[string]any{
+		"session_id": s.ID,
+		"signal":     sig.String(),
+		"pid":        s.cmd.Process.Pid,
+		"error":      err.Error(),
+	})
+}
+
+// Wait blocks until the child process exits or timeout elapses, returning
+// ErrReapTimeout in the latter case.
+//
+// The bound is not optional. Wait's caller (Relay.reapExitCode) runs after the PTY
+// read fails and BEFORE the deferred fanout.Close(), so an unreapable child — a
+// D-state process, or a reaper that never completes — used to park the readLoop
+// permanently: the fanout never closed, and every WebSocket pump blocked forever on
+// a subscriber channel that would never close (finding S6). Close already bounds
+// its reap wait the same way.
+func (s *Session) Wait(timeout time.Duration) error {
+	select {
+	case <-s.reaped:
+		return nil
+	case <-time.After(timeout):
+		diag(EventSessionReapTimeout, map[string]any{
+			"session_id": s.ID,
+			"pid":        s.Pid(),
+			"phase":      "wait",
+			"wait_ms":    timeout.Milliseconds(),
+		})
+		return ErrReapTimeout
+	}
 }
 
 // AppendScrollback appends data to the scrollback buffer, evicting oldest bytes
@@ -340,16 +403,16 @@ func (s *Session) AppendScrollback(data []byte) {
 		s.altScreen = false
 	}
 
-	// Track output time and reset idle timer.
+	// Track output time and reset idle timer. A closed session never re-arms: a
+	// chunk can still land here after Close (readLoop's final read, or a broadcast
+	// racing teardown), and arming then created a timer nothing would ever stop —
+	// firing "session X is idle" for a shell that exited 30s earlier (finding S10).
 	s.lastOutputAt = s.clock().Now()
-	if s.idleCb != nil && s.idleTimeout > 0 {
+	if s.idleCb != nil && s.idleTimeout > 0 && !s.idleStopped {
 		if s.idleTimer != nil {
 			s.idleTimer.Reset(s.idleTimeout)
 		} else {
-			id := s.ID
-			cb := s.idleCb
-			timeout := s.idleTimeout
-			s.idleTimer = s.clock().AfterFunc(timeout, func() { cb(id) })
+			s.idleTimer = s.clock().AfterFunc(s.idleTimeout, s.fireIdle)
 		}
 	}
 
@@ -363,6 +426,22 @@ func (s *Session) AppendScrollback(data []byte) {
 		s.scrollback = trimmed
 	}
 	s.scrollMu.Unlock()
+}
+
+// fireIdle is the idle timer's callback. It re-reads the callback and the stopped
+// flag under scrollMu at FIRE time rather than capturing them at arm time, because
+// Close's idleTimer.Stop() cannot un-fire a timer whose deadline has already
+// passed: without this check the callback still reports a session that is already
+// gone. Invoking cb outside the lock keeps a slow callback from blocking output.
+func (s *Session) fireIdle() {
+	s.scrollMu.Lock()
+	cb := s.idleCb
+	stopped := s.idleStopped
+	s.scrollMu.Unlock()
+	if cb == nil || stopped {
+		return
+	}
+	cb(s.ID)
 }
 
 // Scrollback returns a copy of the current scrollback buffer.

@@ -40,4 +40,3 @@ Keep `gokaboom.dev` aligned with current product capabilities while preserving a
 
 ## Linked Architecture
 
-- Canonical flow map: [flow-map.md](./flow-map.md)

@@ -28,6 +28,87 @@ type daemonState struct {
 	port       int
 	logFile    string
 	maxEntries int
+
+	// Respawn throttle state. Bounds how often the real spawn (cmd.Start) can fire
+	// so a repeatedly-dying daemon cannot become a launchd-throttling spawn storm.
+	// Guarded by respawnMu (independent of mu, which markReady/markFailed take).
+	respawnMu       sync.Mutex
+	lastRespawnAt   time.Time
+	respawnInterval time.Duration
+}
+
+// bridgeNow is the injectable clock for respawn throttling (mirrors daemonNow in
+// the main package). Overridden in tests for deterministic backoff assertions.
+var bridgeNow = time.Now
+
+const (
+	// respawnMinInterval is the minimum gap between real daemon spawns. The first
+	// respawn after a death is immediate; only rapid repeats are throttled.
+	respawnMinInterval = 1 * time.Second
+	// respawnMaxBackoff caps the exponential backoff between rapid respawns and
+	// also marks when a storm has "cooled" (a respawn this long after the last is
+	// treated as isolated and resets the escalation).
+	respawnMaxBackoff = 8 * time.Second
+)
+
+// respawnSpawnFn performs the actual daemon (re)spawn: build the command, start it
+// detached, and wait for readiness. Injectable so tests can count/stub real spawns
+// without launching processes.
+var respawnSpawnFn = performDaemonRespawn
+
+// reserveRespawnSlot reports whether a real daemon spawn is permitted at `now`, and
+// if so records the attempt and advances the (capped, exponential) backoff. It never
+// blocks: a throttled caller is told "no" and backs off instead of hammering
+// cmd.Start(). The first respawn after a death is always granted; only rapid repeats
+// are throttled. A respawn arriving after a full cool-down (>= respawnMaxBackoff since
+// the last) is treated as isolated and resets the escalation, so a lone respawn is
+// never penalized.
+func (s *daemonState) reserveRespawnSlot(now time.Time) bool {
+	s.respawnMu.Lock()
+	defer s.respawnMu.Unlock()
+
+	if s.lastRespawnAt.IsZero() {
+		s.lastRespawnAt = now
+		s.respawnInterval = respawnMinInterval
+		return true
+	}
+	elapsed := now.Sub(s.lastRespawnAt)
+	if elapsed >= respawnMaxBackoff {
+		// Storm has cooled — treat as a fresh, isolated respawn.
+		s.lastRespawnAt = now
+		s.respawnInterval = respawnMinInterval
+		return true
+	}
+	if elapsed < s.respawnInterval {
+		return false // too soon; throttle
+	}
+	// Interval satisfied but still inside the storm window: permit and escalate.
+	s.lastRespawnAt = now
+	s.respawnInterval *= 2
+	if s.respawnInterval > respawnMaxBackoff {
+		s.respawnInterval = respawnMaxBackoff
+	}
+	return true
+}
+
+// performDaemonRespawn is the default (real) spawn implementation behind respawnSpawnFn.
+func performDaemonRespawn(s *daemonState) bool {
+	cmd, err := s.buildDaemonCmd()
+	if err != nil {
+		s.markFailed(err.Error())
+		return false
+	}
+	if err := cmd.Start(); err != nil {
+		s.markFailed("Failed to start daemon: " + err.Error())
+		return false
+	}
+	if waitForServer(s.port, daemonStartupReadyTimeout) {
+		s.markReady()
+		deps.Stderrf("[Kaboom] daemon respawned successfully on port %d\n", s.port)
+		return true
+	}
+	s.markFailed(fmt.Sprintf("Daemon respawned but not responding on port %d after %s", s.port, daemonStartupReadyTimeout))
+	return false
 }
 
 type respawnPlan struct {
@@ -191,26 +272,22 @@ func (s *daemonState) respawnIfNeeded() bool {
 		return false
 	}
 
+	// Bounded respawn backoff: never fire cmd.Start() faster than the (capped,
+	// exponential) throttle interval, so a repeatedly-dying daemon cannot become a
+	// spawn storm that launchd throttles into oblivion. Fail loud when throttled —
+	// never silently drop the request. If a prior spawn actually did come up while
+	// we were being throttled, adopt it as ready instead of reporting failure.
+	if !s.reserveRespawnSlot(bridgeNow()) {
+		if isServerRunning(s.port) {
+			s.markReady()
+			return true
+		}
+		s.markFailed(fmt.Sprintf("daemon respawn throttled on port %d; backing off to avoid a restart storm", s.port))
+		return false
+	}
+
 	deps.Stderrf("[Kaboom] daemon not responding, respawning on port %d\n", s.port)
-
-	cmd, err := s.buildDaemonCmd()
-	if err != nil {
-		s.markFailed(err.Error())
-		return false
-	}
-	if err := cmd.Start(); err != nil {
-		s.markFailed("Failed to start daemon: " + err.Error())
-		return false
-	}
-
-	if waitForServer(s.port, daemonStartupReadyTimeout) {
-		s.markReady()
-		deps.Stderrf("[Kaboom] daemon respawned successfully on port %d\n", s.port)
-		return true
-	}
-
-	s.markFailed(fmt.Sprintf("Daemon respawned but not responding on port %d after %s", s.port, daemonStartupReadyTimeout))
-	return false
+	return respawnSpawnFn(s)
 }
 
 func spawnDaemonAsync(state *daemonState) {

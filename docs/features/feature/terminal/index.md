@@ -4,10 +4,16 @@ feature_id: feature-terminal
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-25
+last_reviewed: 2026-07-26
 code_paths:
+  - internal/pty/upload/upload.go
+  - src/content/ui/hover/screenshot-feedback.ts
+  - src/content/ui/panel/host-tab.ts
+  - src/content/ui/panel/shell.ts
+  - cmd/browser-agent/internal/terminal/ws.go
   - src/lib/brand.ts
   - cmd/browser-agent/internal/terminal/handlers.go
+  - cmd/browser-agent/internal/terminal/spawn_retry.go
   - cmd/browser-agent/internal/terminal/relay.go
   - cmd/browser-agent/internal/terminal/dirs.go
   - cmd/browser-agent/internal/terminal/server.go
@@ -36,9 +42,15 @@ code_paths:
   - internal/pty/session.go
   - internal/pty/writebuf.go
   - internal/pty/fanout.go
-  - internal/pty/upload.go
+  - internal/pty/diag.go
   - npm/kaboom-agentic-browser/lib/kill-daemon.js
 test_paths:
+  - tests/extension/terminal-html-liveness.test.js
+  - cmd/browser-agent/internal/terminal/relay_rebind_test.go
+  - cmd/browser-agent/internal/terminal/spawn_retry_test.go
+  - cmd/browser-agent/internal/terminal/sandbox_error_test.go
+  - cmd/browser-agent/internal/terminal/handlers_start_decisions_test.go
+  - tests/extension/terminal-start-pending.test.js
   - tests/extension/brand-metadata.test.js
   - tests/extension/terminal-write-guard.test.js
   - cmd/browser-agent/internal/terminal/dirs_test.go
@@ -68,18 +80,22 @@ test_paths:
   - internal/pty/session_test.go
   - internal/pty/writebuf_test.go
   - internal/pty/upload_test.go
+  - internal/pty/diag_test.go
   - cmd/browser-agent/internal/terminal/session_end_signal_test.go
   - cmd/browser-agent/internal/terminal/frame_writer_deadline_test.go
   - cmd/browser-agent/internal/terminal/handlers_fanout_test.go
   - cmd/browser-agent/internal/terminal/handlers_replay_deadline_test.go
   - cmd/browser-agent/internal/terminal/relay_boundary_test.go
   - cmd/browser-agent/internal/terminal/relay_replace_test.go
+  - cmd/browser-agent/internal/terminal/relay_close_test.go
   - cmd/browser-agent/internal/terminal/relay_init_test.go
   - cmd/browser-agent/internal/terminal/intent_handlers_test.go
   - cmd/browser-agent/daemon_lifecycle_takeover_test.go
   - cmd/browser-agent/native_install_connect_refused_test.go
   - tests/extension/terminal-html-reconnect.test.js
   - tests/extension/terminal-reconnect-recovery-contract.test.js
+  - tests/extension/terminal-reconnect-budget-contract.test.js
+  - tests/extension/terminal-port-discovery.test.js
   - tests/extension/terminal-iframe-message-contract.test.js
   - npm/kaboom-agentic-browser/lib/kill-daemon.test.js
 last_verified_version: 0.8.1
@@ -108,10 +124,23 @@ last_verified_date: 2026-03-28
 - Annotation auto-send now uses a typing-aware write queue: if the user is active in terminal, writes wait until ~1.5s idle
 - Annotation→terminal writes are delivery-verified: `terminal_panel_write` is acked by the side-panel document (the background never replies to this type), so the bridge tells a delivered write from one that vanished. A missing ack surfaces a toast (fail-loud) and reconciles the stale `TERMINAL_UI_STATE` visibility mirror to `false` (rule 18) so the gate stops firing at a panel that was closed with Chrome's own X.
 - Queued submit is reconnect-safe: if WS drops before Enter, submit waits until connection is back
-- Write-guard escape hatch: the genuine wedge — a socket that stays DOWN (`!terminalConnected`) — is bounded by `TERMINAL_GUARD_MAX_WAIT_MS` (30s); the poller gives up LOUDLY (error toast + `resetWriteGuardState`). The typing-defer branch is self-limiting and reachable, so it resets `guardBlockedSince` and never trips the hatch — continuous typing no longer drops a healthy write with a false "terminal not reachable". Momentary blips still queue-and-flush within the window. Queue backlog is bounded (`MAX_QUEUED_WRITES`), and an overflow drop is logged (not silent).
+- Write-guard escape hatch: the genuine wedge — a socket that stays DOWN (`!terminalConnected`) — is bounded by `TERMINAL_GUARD_MAX_WAIT_MS` (derived from the iframe reconnect schedule, see below); the poller gives up LOUDLY (error toast + `resetWriteGuardState`). The typing-defer branch is self-limiting and reachable, so it resets `guardBlockedSince` and never trips the hatch — continuous typing no longer drops a healthy write with a false "terminal not reachable". Momentary blips still queue-and-flush within the window. Queue backlog is bounded (`MAX_QUEUED_WRITES`), and an overflow drop is logged (not silent).
 - **Dead-session self-heal:** nothing removed a PTY session whose child exited on its own, so the next Start returned `ErrSessionExists` (409+old token) and the client reconnected onto a dead fanout → immediate `exited`, wedging the terminal forever. `Manager.Start` now evicts a session that is no longer `IsAlive` and spawns fresh (`StartResult.Replaced`, `terminal_session_healed` log); the handler drops the stale relay.
 - **Slow-drop ≠ exit:** a subscriber dropped for backpressure (big build, backgrounded tab) is no longer reported to the browser as `exited`. `Relay.ended` (set before the deferred `fanout.Close`) distinguishes a genuine end from a fanout drop; a drop closes the connection so the browser reconnects+replays instead of showing a dead terminal.
 - **Full-daemon-restart client recovery:** the iframe caps consecutive failed reconnects (`MAX_RECONNECT_ATTEMPTS`) and, on exhaustion, signals the parent `reconnect_exhausted` instead of looping forever on a dead token; the parent runs `redrawTerminal` (validate-then-rebuild) into a fresh session. Keystrokes typed during a reconnect gap are buffered (bounded) and flushed on `replay_end` rather than dropped.
+- **The write queue is bounded by bytes, not just entries:** `MAX_QUEUED_WRITES` (200) bounded nothing that matters — 200 one-megabyte writes was a legal state, ~200 MB pinned in the side panel. `enqueueBoundedWrite` now also enforces `MAX_QUEUED_WRITE_BYTES` (1 MB, mirroring the daemon's PTY write-buffer cap) in UTF-8 bytes, evicting oldest-first down to empty so an oversized single write cannot lodge in the queue. Both drop paths warn (rule 25). The helper moved from `sidepanel.ts` into `terminal-write-guard.ts`, which owns the rest of the queue lifecycle, so the bound cannot be bypassed by a second enqueue site (rule 19).
+- **Reconnect-gap input buffer is correctly bounded:** eviction used `while (total > MAX && pendingInput.length > 1)`, so a single paste larger than the 8192 cap could never be evicted — it sat in the buffer for the whole outage and was replayed whole. It also counted UTF-16 code units rather than the UTF-8 bytes actually sent (a `€` is 1 vs 3), and re-summed the entire queue on every keystroke. Entries are now `{text, bytes}` with a running `pendingInputBytes` total, eviction runs down to empty, and a drop logs `[KaBOOM! terminal] dropped N byte(s)…` instead of being silent. An oversized chunk is dropped rather than truncated on purpose: half a pasted command, then Enter, is worse than no paste.
+- **Reconnect backoff is jittered:** a daemon restart drops every open panel at the same instant, and the unjittered schedule sent them all back at the same instants — straight into the fanout's 32-subscriber cap, where the rejected ones retried in lockstep again. `terminal.html` now jitters each wait by up to `RECONNECT_JITTER_RATIO` (25%), additive only so the derived write-guard budget stays an upper bound (`terminalReconnectExhaustionMs()` multiplies by the same ratio, and the contract test pins the two ratios together).
+- **The terminal port is discovered, not assumed:** the browser derived it as `main_port + 1` and never read `terminal_port` from `/health`, which is what the daemon actually publishes after binding (it logs `terminal_server_bind_failed` when base+1 is taken). Every request then went to a port nothing was listening on and the terminal just looked broken. `resolveTerminalServerUrl()` performs the discovery inside the helper (rule 19 — no caller can forget it), caches it per base URL with a 60s TTL, and falls back to base+1 on any failure (daemon down, non-OK, no `terminal_port`, Windows), so it can only improve on the old assumption. The synchronous `getTerminalServerUrl()` remains for call sites that cannot await (postMessage target origin, `createPanelShell`) and reads the same cache.
+- **Write-guard budget is derived, not guessed:** `TERMINAL_GUARD_MAX_WAIT_MS` was a hand-picked 30s while the iframe does not emit `reconnect_exhausted` until ~45s (delays 1,2,4,8,10,10,10), so the guard discarded queued agent writes 15s *before* the parent's recovery even began — the queue could never survive the outage it exists for. The schedule is now declared in `terminal-widget-types.ts` (`TERMINAL_RECONNECT_BASE_DELAY_MS`, `_MAX_DELAY_MS`, `TERMINAL_MAX_RECONNECT_ATTEMPTS`) and the budget is computed from it (`terminalReconnectExhaustionMs()` + `TERMINAL_GUARD_RECOVERY_GRACE_MS`). `terminal-reconnect-budget-contract.test.js` pins those declarations to terminal.html's own literals so the two cannot drift.
+- **`Relay.Close` actually tears the relay down:** it used to close only the write buffer, so readLoop stayed blocked in `sess.Read` — the goroutine, the PTY fd and the open fanout all survived `/terminal/stop` and daemon shutdown. Close now closes the session (which is what breaks readLoop out), waits up to `RelayCloseTimeout` (5s) for the teardown defers, and re-closes the write buffer as defense in depth; every step is idempotent. Relays also evict themselves from the `Map` when their session ends on its own (`onExit` → `removeIfCurrent`, which never evicts a replacement), so an ordinary `exit` no longer leaks a map entry bound to a dead fanout.
+- **Duplicate fanout ids are rejected, not swallowed:** `Fanout.Subscribe` overwrote an existing id's map entry without closing the old channel, orphaning that subscriber's goroutine on a channel nothing would write to or close (and the incumbent's `Unsubscribe` then closed the *new* subscriber's channel). The guard lived in one caller (`WaitForPromptViaRelay`'s unique ids); per rule 19 it now lives in the primitive — a duplicate id returns `pty.ErrDuplicateSubscriber` and the incumbent is untouched.
+- **"Terminal gone" ≠ "terminal behind":** `WriteBuffer.Write` returned `ErrWriteBufferFull` both when the buffer overflowed the backpressure cap AND when it was closed, so no caller could tell a session that ended from one that is wedged. Writing to a closed buffer now returns `pty.ErrWriteBufferClosed`. The WS upstream loop no longer discards the error either — a refused keystroke frame logs `terminal_input_dropped` with `reason: session_ended | backpressure | write_error` (`writeDropReason`).
+- **Idle timer cannot outlive the session:** `AppendScrollback` never checked whether the session was closed, so a chunk landing after `Close` armed a fresh 30s timer nothing would stop, and `Close`'s `idleTimer.Stop()` could not un-fire a timer whose deadline had already passed. Either way the callback logged "session X is idle" for a shell that had already exited. `Session` now carries an `idleStopped` flag (under `scrollMu`, so the idle path never has to take `mu` and invert Close's lock order): `AppendScrollback` refuses to re-arm, and the callback (`fireIdle`) re-reads the flag at fire time.
+- **Bounded reap in the relay:** `Relay.reapExitCode` called `sess.Wait()`, which blocked on the reaper channel with no timeout. It runs *before* readLoop's deferred `fanout.Close()`, so an unreapable child parked readLoop forever — the fanout never closed and every WebSocket pump hung on a channel that would never close. `Session.Wait(timeout)` now mirrors `Close`'s bound (`terminal.ReapTimeout`, 2s), returns `pty.ErrReapTimeout` and logs `pty_session_reap_timeout` with `phase: wait`; teardown then proceeds with exit code -1 (unknown).
+- **No re-lookup after Start:** `HandleTerminalStart` used to do `sess, _ := mgr.Get(result.SessionID)` and then dereference `sess` (`SetIdleConfig`, `NewRelay`). A `/terminal/stop` landing in that window removed the session from the map, so the swallowed error became a nil-pointer panic in the handler. `pty.StartResult` now carries the spawned `Session`, so there is no second lookup and no window.
+- **PTY failures are no longer silent (rule 25):** signalling, closing and flushing were all discarded with `_ =`. `internal/pty` now has one structured sink (`pty.SetDiagnosticHook`, wired to the daemon log in `RegisterRoutes`) and emits `pty_session_signal_failed`, `pty_session_reap_timeout` (child survived SIGKILL + both bounded waits), `pty_session_close_failed` (Start/StopAll discarded these) and `pty_writebuffer_write_failed` (stranded stdin bytes, with the undelivered byte count). Control flow is unchanged; an already-exited child (`os.ErrProcessDone`) is still treated as the expected case and is not logged.
+- **Start never freezes the manager:** `Manager.Start` used to `Close()` the session it evicts (self-heal) while holding `m.mu`. A child that is not `IsAlive` can still be unreapable, so that Close runs the full SIGTERM→2s→SIGKILL→2s escalation — freezing `Get`/`GetByToken`/`List` and therefore every terminal route for ~4s. All bookkeeping now happens in `startAndRegister` under the lock; every Close (the evicted corpse, and the fresh session on a token-generation failure) runs after the lock is released, matching `Stop`/`StopAll`.
 - **Bounded shutdown:** daemon teardown can no longer hang. `WriteBuffer.Close` is time-bounded (a drain blocked in `ptmx.Write` can't wait forever), shutdown order is `StopAll` (close PTYs) → `CloseAll` (drain write buffers) so the blocked write unblocks, and `Session.Close`'s post-SIGKILL reap wait is bounded.
 - WebSocket frame writes are serialized per-connection and bounded by `WSWriteTimeout`: a stalled reader (backgrounded-tab zero-window, hostile client) can no longer block the downstream pump or ping keepalive for up to `PongTimeout`.
 - Per-connection WS goroutines (downstream pump, ping keepalive, upstream reader) are panic-recovered via `goConnWorker`: a fault tears down only that connection (structured `terminal_ws_panic` log + `closeConn`), never the daemon process. `WriteBuffer.drain` and the init goroutine are `util.SafeGo`-wrapped for the same invariant.
@@ -119,8 +148,6 @@ last_verified_date: 2026-03-28
 - Upload paths sanitize the session id to a single segment (`sanitizeSessionID`) so a `../` id can't escape the uploads directory.
 - Scrollback buffer capped at 256 KB for memory safety
 - PTY session tests share a bounded `readUntilContains` helper to keep echo/size assertions consistent
-- Canonical flow maps: [terminal-side-panel-host.md](../../../architecture/flow-maps/terminal-side-panel-host.md), [terminal-server-isolation.md](../../../architecture/flow-maps/terminal-server-isolation.md)
-- Feature flow-map pointer: [flow-map.md](./flow-map.md)
 
 ---
 
@@ -129,7 +156,6 @@ last_verified_date: 2026-03-28
 - Product Spec: [product-spec.md](./product-spec.md)
 - Tech Spec: [tech-spec.md](./tech-spec.md)
 - QA Plan: [qa-plan.md](./qa-plan.md)
-- Flow Map Pointer: [flow-map.md](./flow-map.md)
 
 ## Architecture
 

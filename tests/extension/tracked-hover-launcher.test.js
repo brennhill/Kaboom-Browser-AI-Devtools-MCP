@@ -555,9 +555,10 @@ describe('tracked hover launcher', () => {
     // The injection is a short, fixed nudge — NOT the annotation text — so nothing
     // fragile (multi-line, control chars) is pasted into the live xterm. The
     // annotations themselves reach the agent via draw-mode -> daemon -> analyze.
-    // The nudge is an IMPERATIVE — it must both point the agent at the annotations
-    // AND tell it to act, or the agent just acknowledges and waits.
-    assert.match(write.text, /check kaboom annotations and handle the requests now/i, 'the nudge tells the agent to fetch AND act on the annotations')
+    // The nudge is an IMPERATIVE — it must point the agent at the annotations AND
+    // queue every one on its todo list, so it works through older comments too
+    // instead of only acting on the latest batch and dropping the rest.
+    assert.match(write.text, /check the kaboom annotations and add each comment to your todo list/i, 'the nudge queues every annotation on the agent todo list')
     assert.doesNotMatch(write.text, /Make the header bigger/, 'the raw annotation text is NOT pasted into the terminal')
   })
 
@@ -630,7 +631,7 @@ describe('tracked hover launcher', () => {
       .map((c) => c.arguments[0])
       .find((m) => m?.type === 'terminal_panel_write')
     assert.ok(write, 'the nudge is injected when the panel is open')
-    assert.match(write.text, /check kaboom annotations and handle the requests now/i, 'only the fixed nudge is sent')
+    assert.match(write.text, /check the kaboom annotations and add each comment to your todo list/i, 'only the fixed nudge is sent')
     assert.doesNotMatch(write.text, /pwned/, 'the annotation label never reaches the terminal - the payload is not pasted')
   })
 

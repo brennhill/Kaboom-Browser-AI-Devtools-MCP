@@ -8,7 +8,10 @@ package terminal
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
@@ -48,18 +51,71 @@ func TestResolveStartDir(t *testing.T) {
 	}
 }
 
+// A keystroke frame that the write buffer refuses is user input that vanished. The
+// WS loop used to discard the error entirely, and the buffer reported "full" for
+// both causes anyway — so the log could not say whether the shell had exited or was
+// merely wedged (finding S9).
+func TestWriteDropReason(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		err  error
+		want string
+	}{
+		"closed buffer means the session ended": {pty.ErrWriteBufferClosed, "session_ended"},
+		"full buffer means backpressure":        {pty.ErrWriteBufferFull, "backpressure"},
+		"wrapped errors still classify":         {fmt.Errorf("ws upstream: %w", pty.ErrWriteBufferClosed), "session_ended"},
+		"anything else is an opaque failure":    {errors.New("boom"), "write_error"},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			if got := writeDropReason(tc.err); got != tc.want {
+				t.Errorf("writeDropReason(%v) = %q, want %q", tc.err, got, tc.want)
+			}
+		})
+	}
+}
+
 func TestClassifyStartError(t *testing.T) {
 	t.Parallel()
 
 	const sessionID, token = "sess-1", "tok-abc"
 
-	t.Run("sandbox restriction -> 503", func(t *testing.T) {
-		status, body := classifyStartError(errors.New("fork/exec: operation not permitted"), sessionID, token)
+	t.Run("fork/exec EPERM -> 503 carrying the real error", func(t *testing.T) {
+		status, body := classifyStartError(forkExecErr(syscall.EPERM), sessionID, token)
 		if status != http.StatusServiceUnavailable {
 			t.Fatalf("status = %d, want 503", status)
 		}
 		if body["error"] != "sandbox_restricted" {
 			t.Errorf("error = %v, want sandbox_restricted", body["error"])
+		}
+		// The diagnosis is an inference; the underlying error is the fact and must
+		// survive so the panel/logs can show what actually failed.
+		if detail, _ := body["detail"].(string); !strings.Contains(detail, "fork/exec") {
+			t.Errorf("detail must preserve the underlying error, got %q", detail)
+		}
+	})
+
+	// Regression: the old classifier substring-matched "not permitted" anywhere, so a
+	// PTY-layer EPERM (grantpt/unlockpt/ptmx/winsize) was reported as sandboxing and
+	// the user was told to restart a daemon that was never at fault. These must fall
+	// through to an ordinary error, not 503.
+	t.Run("non-fork/exec 'not permitted' is NOT sandbox", func(t *testing.T) {
+		for name, err := range map[string]error{
+			"prose":   errors.New("fork/exec: operation not permitted"),
+			"grantpt": fmt.Errorf("grantpt: %w", syscall.EPERM),
+			"ptmx":    fmt.Errorf("open /dev/ptmx: %w", syscall.EPERM),
+			"winsize": fmt.Errorf("set winsize: %w", syscall.EPERM),
+		} {
+			t.Run(name, func(t *testing.T) {
+				status, body := classifyStartError(err, sessionID, token)
+				if status == http.StatusServiceUnavailable {
+					t.Fatalf("%v must not be classified as a sandbox restriction", err)
+				}
+				if body["error"] == "sandbox_restricted" {
+					t.Fatalf("%v must not be labelled sandbox_restricted", err)
+				}
+			})
 		}
 	})
 

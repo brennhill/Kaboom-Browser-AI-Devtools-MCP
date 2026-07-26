@@ -16,8 +16,16 @@ import (
 
 
 // initTestDeps sets up minimal bridge deps for testing.
+//
+// It restores the previous package-global deps (installed by TestMain, or by an
+// enclosing test) via t.Cleanup so this stub cannot leak into tests that run after
+// this one. Without the restore, the minimal stub below (protocol 2024-11-05, no real
+// resources, a spaces-only Content-Length writer) leaks and breaks every later test
+// that relies on the real deps — the FastPath failures + framed-init hang we hit once.
 func initTestDeps(t *testing.T) {
 	t.Helper()
+	prev := deps
+	t.Cleanup(func() { deps = prev })
 	Init(Deps{
 		Version:              "0.0.0-test",
 		MaxPostBodySize:      10 * 1024 * 1024,

@@ -286,10 +286,15 @@ function showHelp() {
   console.log('  Gemini CLI            config file');
   console.log('  OpenCode              config file');
   console.log('  Antigravity           config file');
-  console.log('  Zed                   config file\n');
+  console.log('  Zed                   config file');
+  console.log('  Codex CLI             config file (TOML)\n');
+  console.log('Install auto-approves all Kaboom tools where a client supports it via config');
+  console.log('(Claude Code, Gemini, OpenCode, Zed, Codex), so you are never prompted.');
+  console.log('Cursor, Windsurf, VS Code, Claude Desktop, and Antigravity need an in-app');
+  console.log('approval (no config option); the installer reports which is which.\n');
   console.log('Tool aliases for --install <tool>:');
   console.log('  claude, claude-desktop, cursor, windsurf, vscode, gemini, opencode,');
-  console.log('  antigravity, zed\n');
+  console.log('  antigravity, zed, codex\n');
   console.log('Options (with --install):');
   console.log('  --dry-run             Preview changes without writing');
   console.log('  --env KEY=VALUE       Add environment variables to config (multiple allowed)');
