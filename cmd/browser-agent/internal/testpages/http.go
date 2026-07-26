@@ -2,7 +2,7 @@
 // Why: Provides self-contained smoke-test HTTP fixtures (404, 500, CORS, slow) without external dependencies.
 // Docs: docs/features/feature/self-testing/index.md
 
-package main
+package testpages
 
 import (
 	"embed"
@@ -13,9 +13,11 @@ import (
 	"path"
 	"strings"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
-//go:embed testpages
+//go:embed pages
 var testPagesFS embed.FS
 
 // handleTestPages serves embedded test pages at /tests/.
@@ -25,8 +27,8 @@ var testPagesFS embed.FS
 // GET /tests/500       → 500 response (network error test).
 // GET /tests/cors-test → 200 JSON, no CORS headers (CORS-block test).
 // GET /tests/slow      → 200 after 3 s delay (latency/waterfall test).
-func handleTestPages() http.HandlerFunc {
-	sub, err := fs.Sub(testPagesFS, "testpages")
+func Handler() http.HandlerFunc {
+	sub, err := fs.Sub(testPagesFS, "pages")
 	if err != nil {
 		panic(fmt.Sprintf("testpages: embed misconfigured: %v", err))
 	}
@@ -34,7 +36,7 @@ func handleTestPages() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
-			jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+			util.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 			return
 		}
 
@@ -73,9 +75,9 @@ func handleTestPages() http.HandlerFunc {
 // File names and labels are HTML-escaped to prevent injection from any
 // unexpected entries in the embedded filesystem.
 func serveTestIndex(w http.ResponseWriter) {
-	entries, err := fs.ReadDir(testPagesFS, "testpages")
+	entries, err := fs.ReadDir(testPagesFS, "pages")
 	if err != nil {
-		jsonResponse(w, http.StatusInternalServerError, map[string]string{
+		util.JSONResponse(w, http.StatusInternalServerError, map[string]string{
 			"error":   "internal_error",
 			"message": "failed to read test pages",
 		})

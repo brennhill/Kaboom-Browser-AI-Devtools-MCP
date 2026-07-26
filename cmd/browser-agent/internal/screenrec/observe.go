@@ -2,7 +2,7 @@
 // Why: Keeps read-only metadata scanning separate from upload/reveal HTTP handlers.
 // Docs: docs/features/feature/tab-recording/index.md
 
-package main
+package screenrec
 
 import (
 	"encoding/json"
@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // collectRecordingMetadata scans recording directories and returns deduplicated metadata files.
@@ -34,8 +36,8 @@ func collectRecordingMetadata(dirs []string) []string {
 }
 
 // loadAndFilterRecordings reads metadata files, deduplicates by name, and applies URL filter.
-func loadAndFilterRecordings(matches []string, urlFilter string) ([]VideoRecordingMetadata, int64) {
-	var recordings []VideoRecordingMetadata
+func loadAndFilterRecordings(matches []string, urlFilter string) ([]Metadata, int64) {
+	var recordings []Metadata
 	var totalSize int64
 	seenByName := make(map[string]bool)
 
@@ -44,7 +46,7 @@ func loadAndFilterRecordings(matches []string, urlFilter string) ([]VideoRecordi
 		if err != nil {
 			continue
 		}
-		var meta VideoRecordingMetadata
+		var meta Metadata
 		if err := json.Unmarshal(data, &meta); err != nil {
 			continue
 		}
@@ -69,31 +71,31 @@ func loadAndFilterRecordings(matches []string, urlFilter string) ([]VideoRecordi
 }
 
 // recordingMatchesFilter checks if a recording's name or URL contains the filter string (case-insensitive).
-func recordingMatchesFilter(meta VideoRecordingMetadata, filter string) bool {
+func recordingMatchesFilter(meta Metadata, filter string) bool {
 	lower := strings.ToLower(filter)
 	return strings.Contains(strings.ToLower(meta.Name), lower) ||
 		strings.Contains(strings.ToLower(meta.URL), lower)
 }
 
-// toolObserveSavedVideos handles observe({what: "saved_videos"}).
+// HandleObserveSavedVideos handles observe({what: "saved_videos"}).
 // Globs state recordings metadata files and returns recording metadata.
-func (h *ToolHandler) toolObserveSavedVideos(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func HandleObserveSavedVideos(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		URL   string `json:"url"`
 		LastN int    `json:"last_n,omitempty"`
 	}
-	if resp, stop := parseArgs(req, args, &params); stop {
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
 
-	dirs := recordingsReadDirs()
+	dirs := ReadDirs()
 	if len(dirs) == 0 {
-		return fail(req, ErrInternal, "Could not resolve recordings directory", "Check disk permissions")
+		return mcp.Fail(req, mcp.ErrInternal, "Could not resolve recordings directory", "Check disk permissions")
 	}
 
 	matches := collectRecordingMetadata(dirs)
 	if len(matches) == 0 {
-		return succeed(req, "No saved videos", map[string]any{
+		return mcp.Succeed(req, "No saved videos", map[string]any{
 			"recordings":         []any{},
 			"total":              0,
 			"storage_used_bytes": int64(0),
@@ -106,7 +108,7 @@ func (h *ToolHandler) toolObserveSavedVideos(req JSONRPCRequest, args json.RawMe
 		recordings = recordings[:params.LastN]
 	}
 
-	return succeed(req, fmt.Sprintf("%d saved videos", len(recordings)), map[string]any{
+	return mcp.Succeed(req, fmt.Sprintf("%d saved videos", len(recordings)), map[string]any{
 		"recordings":         recordings,
 		"total":              len(recordings),
 		"storage_used_bytes": totalSize,

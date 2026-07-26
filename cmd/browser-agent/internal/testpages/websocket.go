@@ -2,7 +2,7 @@
 // Why: Keeps protocol parsing/echo logic isolated from HTTP page routing for easier testing and maintenance.
 // Docs: docs/features/feature/self-testing/index.md
 
-package main
+package testpages
 
 import (
 	"bufio"
@@ -11,10 +11,11 @@ import (
 	"net/http"
 	"strings"
 	"time"
-)
 
-// maxWSPayload caps incoming frame payloads to prevent DoS via oversized allocation.
-const maxWSPayload = 1 << 20 // 1 MiB
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/wsframe"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
+)
 
 // wsIdleTimeout is the per-read deadline, reset after every successful frame.
 // This is an idle timeout — an active connection that keeps sending frames will
@@ -26,10 +27,10 @@ const wsIdleTimeout = 60 * time.Second
 // Note: CORS headers set by corsMiddleware are buffered in http.ResponseWriter
 // but are not included in the 101 handshake written directly to the hijacked
 // connection. This is intentional — WebSocket upgrade bypasses HTTP CORS.
-func handleTestHarnessWS(w http.ResponseWriter, r *http.Request) {
+func HandlerWS(w http.ResponseWriter, r *http.Request) {
 	key := r.Header.Get("Sec-WebSocket-Key")
 	if key == "" || strings.ToLower(r.Header.Get("Upgrade")) != "websocket" {
-		jsonResponse(w, http.StatusBadRequest, map[string]string{
+		util.JSONResponse(w, http.StatusBadRequest, map[string]string{
 			"error":   "bad_request",
 			"message": "websocket upgrade required",
 		})
@@ -38,7 +39,7 @@ func handleTestHarnessWS(w http.ResponseWriter, r *http.Request) {
 
 	hj, ok := w.(http.Hijacker)
 	if !ok {
-		jsonResponse(w, http.StatusInternalServerError, map[string]string{
+		util.JSONResponse(w, http.StatusInternalServerError, map[string]string{
 			"error":   "internal_error",
 			"message": "server does not support hijacking",
 		})
@@ -47,7 +48,7 @@ func handleTestHarnessWS(w http.ResponseWriter, r *http.Request) {
 
 	conn, bufrw, err := hj.Hijack()
 	if err != nil {
-		jsonResponse(w, http.StatusInternalServerError, map[string]string{
+		util.JSONResponse(w, http.StatusInternalServerError, map[string]string{
 			"error":   "internal_error",
 			"message": err.Error(),
 		})
@@ -56,7 +57,7 @@ func handleTestHarnessWS(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 
 	// Send the 101 handshake.
-	accept := wsAcceptKey(key)
+	accept := wsframe.AcceptKey(key)
 	handshake := fmt.Sprintf(
 		"HTTP/1.1 101 Switching Protocols\r\n"+
 			"Upgrade: websocket\r\n"+
@@ -89,7 +90,7 @@ func wsEchoLoop(conn net.Conn, rw *bufio.ReadWriter) {
 		// at least one frame per wsIdleTimeout period is never disconnected.
 		_ = conn.SetReadDeadline(time.Now().Add(wsIdleTimeout))
 
-		fin, opcode, payload, err := wsReadFrame(rw)
+		fin, opcode, payload, err := wsframe.ReadFrame(rw)
 		if err != nil {
 			return
 		}
@@ -99,10 +100,10 @@ func wsEchoLoop(conn net.Conn, rw *bufio.ReadWriter) {
 		if opcode >= 0x8 {
 			switch opcode {
 			case 0x8: // Close — echo close frame and exit.
-				_ = wsWriteFrame(rw, 0x8, nil)
+				_ = wsframe.WriteFrame(rw, 0x8, nil)
 				return
 			case 0x9: // Ping → Pong
-				if err := wsWriteFrame(rw, 0xA, payload); err != nil {
+				if err := wsframe.WriteFrame(rw, 0xA, payload); err != nil {
 					return
 				}
 			}
@@ -134,17 +135,17 @@ func wsEchoLoop(conn net.Conn, rw *bufio.ReadWriter) {
 		// Dispatch complete (possibly reassembled) message.
 		switch opcode {
 		case 0x1: // Text → echo as JSON envelope
-			reply := buildQueryParams(map[string]any{
+			reply := mcp.SafeMarshal(map[string]any{
 				"type":   "echo",
 				"echo":   string(payload),
 				"server": "kaboom-test-harness",
 				"ts":     time.Now().UnixMilli(),
-			})
-			if err := wsWriteFrame(rw, 0x1, reply); err != nil {
+			}, "{}")
+			if err := wsframe.WriteFrame(rw, 0x1, reply); err != nil {
 				return
 			}
 		case 0x2: // Binary → echo binary
-			if err := wsWriteFrame(rw, 0x2, payload); err != nil {
+			if err := wsframe.WriteFrame(rw, 0x2, payload); err != nil {
 				return
 			}
 		}

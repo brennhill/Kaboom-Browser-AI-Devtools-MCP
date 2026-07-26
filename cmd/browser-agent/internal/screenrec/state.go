@@ -2,7 +2,7 @@
 // Why: Keeps command-result interpretation and state transitions isolated from request handlers.
 // Docs: docs/features/feature/tab-recording/index.md
 
-package main
+package screenrec
 
 import (
 	"encoding/json"
@@ -26,7 +26,7 @@ func extractRecordingLifecycleStatus(result json.RawMessage) string {
 }
 
 // resolveInteractRecordingState refreshes state using latest command results.
-func (r *recordingInteractHandler) resolveInteractRecordingState() interactRecordingState {
+func (r *InteractHandler) resolveInteractRecordingState() State {
 	r.recordInteractMu.Lock()
 	defer r.recordInteractMu.Unlock()
 
@@ -36,7 +36,7 @@ func (r *recordingInteractHandler) resolveInteractRecordingState() interactRecor
 	}
 
 	if state.StopCorrelationID != "" {
-		if stopCmd, found := r.deps.getCommandResult(state.StopCorrelationID); found {
+		if stopCmd, found := r.deps.GetCommandResult(state.StopCorrelationID); found {
 			if stopCmd.Status == "pending" {
 				state.State = recordingStateStopping
 				state.UpdatedAt = time.Now()
@@ -44,7 +44,7 @@ func (r *recordingInteractHandler) resolveInteractRecordingState() interactRecor
 				return state
 			}
 			// Any terminal stop result returns the state machine to idle.
-			state = interactRecordingState{State: recordingStateIdle, UpdatedAt: time.Now()}
+			state = State{State: recordingStateIdle, UpdatedAt: time.Now()}
 			r.recordInteract = state
 			return state
 		}
@@ -57,7 +57,7 @@ func (r *recordingInteractHandler) resolveInteractRecordingState() interactRecor
 		return state
 	}
 
-	startCmd, found := r.deps.getCommandResult(state.StartCorrelationID)
+	startCmd, found := r.deps.GetCommandResult(state.StartCorrelationID)
 	if !found {
 		// Keep queued state until command result appears.
 		if state.State == "" {
@@ -78,11 +78,11 @@ func (r *recordingInteractHandler) resolveInteractRecordingState() interactRecor
 		case recordingStateAwaitingGesture:
 			state.State = recordingStateAwaitingGesture
 		default:
-			state = interactRecordingState{State: recordingStateIdle}
+			state = State{State: recordingStateIdle}
 		}
 	default:
 		// error/timeout/expired/cancelled and unknown statuses are terminal.
-		state = interactRecordingState{State: recordingStateIdle}
+		state = State{State: recordingStateIdle}
 	}
 
 	state.UpdatedAt = time.Now()
@@ -90,17 +90,17 @@ func (r *recordingInteractHandler) resolveInteractRecordingState() interactRecor
 	return state
 }
 
-func (r *recordingInteractHandler) setInteractRecordingStart(correlationID string) {
+func (r *InteractHandler) setInteractRecordingStart(correlationID string) {
 	r.recordInteractMu.Lock()
 	defer r.recordInteractMu.Unlock()
-	r.recordInteract = interactRecordingState{
+	r.recordInteract = State{
 		State:              recordingStateAwaitingGesture,
 		StartCorrelationID: correlationID,
 		UpdatedAt:          time.Now(),
 	}
 }
 
-func (r *recordingInteractHandler) setInteractRecordingStopping(correlationID string) {
+func (r *InteractHandler) setInteractRecordingStopping(correlationID string) {
 	r.recordInteractMu.Lock()
 	defer r.recordInteractMu.Unlock()
 	state := r.recordInteract

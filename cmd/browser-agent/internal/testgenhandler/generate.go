@@ -2,7 +2,7 @@
 // Why: Converts runtime telemetry into executable test artifacts for reproduction and regression coverage.
 // Docs: docs/features/feature/test-generation/index.md
 
-package main
+package testgenhandler
 
 import (
 	"encoding/json"
@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testgen"
 )
@@ -19,10 +20,10 @@ import (
 // ============================================
 
 // testGenContextDispatch maps context values to their generator functions.
-var testGenContextDispatch = map[string]func(h *testGenHandler, params TestFromContextRequest) (*GeneratedTest, error){
-	"error":       (*testGenHandler).generateTestFromError,
-	"interaction": (*testGenHandler).generateTestFromInteraction,
-	"regression":  (*testGenHandler).generateTestFromRegression,
+var testGenContextDispatch = map[string]func(h *Handler, params TestFromContextRequest) (*GeneratedTest, error){
+	"error":       (*Handler).generateTestFromError,
+	"interaction": (*Handler).generateTestFromInteraction,
+	"regression":  (*Handler).generateTestFromRegression,
 }
 
 // testGenErrorMapping type for MCP error responses.
@@ -43,12 +44,12 @@ func init() {
 	}
 }
 
-func (h *testGenHandler) handleGenerateTestFromContext(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *Handler) HandleGenerateTestFromContext(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params TestFromContextRequest
 
 	warnings, err := mcp.UnmarshalWithWarnings(args, &params)
 	if err != nil {
-		return fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
+		return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 	}
 	warnings = toolgenerate.FilterGenerateDispatchWarnings(warnings)
 
@@ -79,37 +80,37 @@ func (h *testGenHandler) handleGenerateTestFromContext(req JSONRPCRequest, args 
 		"metadata": generatedTest.Metadata,
 	}
 
-	resp := succeed(req, summary, data)
+	resp := mcp.Succeed(req, summary, data)
 
-	return appendWarningsToResponse(resp, warnings)
+	return mcp.AppendWarningsToResponse(resp, warnings)
 }
 
 var validTestGenContexts = []string{"error", "interaction", "regression"}
 
-func validateTestFromContextParams(req JSONRPCRequest, params TestFromContextRequest) (JSONRPCResponse, bool) {
-	if resp, blocked := requireString(req, params.Context, "context", "Add the 'context' parameter and call again"); blocked {
+func validateTestFromContextParams(req mcp.JSONRPCRequest, params TestFromContextRequest) (mcp.JSONRPCResponse, bool) {
+	if resp, blocked := toolresp.RequireString(req, params.Context, "context", "Add the 'context' parameter and call again"); blocked {
 		return resp, true
 	}
-	if resp, blocked := requireOneOf(req, params.Context, "context", validTestGenContexts, "Use a valid context value"); blocked {
+	if resp, blocked := toolresp.RequireOneOf(req, params.Context, "context", validTestGenContexts, "Use a valid context value"); blocked {
 		return resp, true
 	}
-	return JSONRPCResponse{}, false
+	return mcp.JSONRPCResponse{}, false
 }
 
-func testGenErrorToResponse(reqID any, err error) JSONRPCResponse {
+func testGenErrorToResponse(reqID any, err error) mcp.JSONRPCResponse {
 	errStr := err.Error()
 	for _, m := range testGenErrorMappings {
 		if strings.Contains(errStr, m.code) {
-			return JSONRPCResponse{
-				JSONRPC: JSONRPCVersion,
+			return mcp.JSONRPCResponse{
+				JSONRPC: mcp.JSONRPCVersion,
 				ID:      reqID,
-				Result:  mcpStructuredError(m.code, m.message, m.retry, withHint(m.hint)),
+				Result:  mcp.StructuredErrorResponse(m.code, m.message, m.retry, mcp.WithHint(m.hint)),
 			}
 		}
 	}
-	return JSONRPCResponse{
-		JSONRPC: JSONRPCVersion,
+	return mcp.JSONRPCResponse{
+		JSONRPC: mcp.JSONRPCVersion,
 		ID:      reqID,
-		Result:  mcpStructuredError(ErrInternal, "Failed to generate test: "+err.Error(), "Check the input parameters and ensure captured data is available, then retry"),
+		Result:  mcp.StructuredErrorResponse(mcp.ErrInternal, "Failed to generate test: "+err.Error(), "Check the input parameters and ensure captured data is available, then retry"),
 	}
 }

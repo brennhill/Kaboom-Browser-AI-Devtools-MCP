@@ -85,8 +85,13 @@ _resolve_harness_root() {
         return 1
     fi
 
+    # The harness pages moved under internal/testpages/pages when the fixture
+    # server was extracted into its own package — go:embed requires the assets
+    # to live inside the package directory. The pre-move path is kept so this
+    # script still works when checked out against an older tree.
     local candidates=(
         "$SMOKE_FRAMEWORK_DIR/../../tests/pages"
+        "$SMOKE_FRAMEWORK_DIR/../../cmd/browser-agent/internal/testpages/pages"
         "$SMOKE_FRAMEWORK_DIR/../../cmd/browser-agent/testpages"
     )
     local candidate

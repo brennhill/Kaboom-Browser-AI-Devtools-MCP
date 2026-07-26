@@ -2,7 +2,7 @@
 // Why: Keeps side-effectful file manager behavior isolated from upload/list logic.
 // Docs: docs/features/feature/tab-recording/index.md
 
-package main
+package screenrec
 
 import (
 	"encoding/json"
@@ -11,7 +11,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
+
+// maxRevealRequestBytes caps the /recordings/reveal JSON request body. It mirrors
+// the host's maxPostBodySize (10 MB); the body is a single {"path": "..."} object,
+// so the limit exists only to bound a hostile request, not to fit real payloads.
+const maxRevealRequestBytes int64 = 10 * 1024 * 1024
 
 // resolveRevealPath resolves and validates a path against recordings directories.
 // Returns the resolved path, an HTTP status code, and an error message.
@@ -49,15 +56,15 @@ func isPathInAnyDir(absPath string, dirs []string) bool {
 // validateRevealPath checks that the path is valid and within a recordings directory.
 // Returns the resolved absolute path or writes an HTTP error and returns empty string.
 func validateRevealPath(w http.ResponseWriter, rawPath string) string {
-	dirs := recordingsReadDirs()
+	dirs := ReadDirs()
 	if len(dirs) == 0 {
-		jsonResponse(w, http.StatusInternalServerError, map[string]string{"error": "Could not resolve recordings directory"})
+		util.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": "Could not resolve recordings directory"})
 		return ""
 	}
 
 	absPath, status, errMsg := resolveRevealPath(rawPath, dirs)
 	if status != 0 {
-		jsonResponse(w, status, map[string]string{"error": errMsg})
+		util.JSONResponse(w, status, map[string]string{"error": errMsg})
 		return ""
 	}
 
@@ -93,23 +100,23 @@ func revealInFileManager(absPath string) error {
 	return revealInFileManagerWithRunner(runtime.GOOS, absPath, defaultRevealCommandRunner)
 }
 
-// handleRevealRecording handles POST /recordings/reveal — opens Finder/Explorer to the file.
-func handleRevealRecording(w http.ResponseWriter, r *http.Request) {
+// HandleReveal handles POST /recordings/reveal — opens Finder/Explorer to the file.
+func HandleReveal(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
-		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		util.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, maxPostBodySize)
+	r.Body = http.MaxBytesReader(w, r.Body, maxRevealRequestBytes)
 	var body struct {
 		Path string `json:"path"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return
 	}
 	if body.Path == "" {
-		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Missing path"})
+		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Missing path"})
 		return
 	}
 
@@ -119,9 +126,9 @@ func handleRevealRecording(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := revealInFileManager(absPath); err != nil {
-		jsonResponse(w, http.StatusInternalServerError, map[string]string{"error": "Failed to reveal file: " + err.Error()})
+		util.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": "Failed to reveal file: " + err.Error()})
 		return
 	}
 
-	jsonResponse(w, http.StatusOK, map[string]string{"status": "revealed", "path": absPath})
+	util.JSONResponse(w, http.StatusOK, map[string]string{"status": "revealed", "path": absPath})
 }

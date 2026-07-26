@@ -1,15 +1,17 @@
 // Purpose: Tests for test-generation classify dispatch routing.
 // Docs: docs/features/feature/test-generation/index.md
 
-// testgen_classify_dispatch_test.go — Tests for classify dispatch functions at 0% coverage.
+// classify_test.go — Tests for classify dispatch functions.
 // Covers: dispatchClassifyAction, classifySingleFailure, classifyBatchFailures.
-package main
+package testgenhandler
 
 import (
 	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -18,7 +20,7 @@ import (
 
 func TestDispatchClassifyAction_Failure(t *testing.T) {
 	t.Parallel()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
 	params := TestClassifyRequest{
 		Action: "failure",
@@ -28,7 +30,7 @@ func TestDispatchClassifyAction_Failure(t *testing.T) {
 		},
 	}
 
-	result, summary, errResp := h.testGen().dispatchClassifyAction(1, params)
+	result, summary, errResp := h.dispatchClassifyAction(1, params)
 	if errResp != nil {
 		t.Fatalf("dispatchClassifyAction(failure) returned error response: %v", errResp)
 	}
@@ -54,7 +56,7 @@ func TestDispatchClassifyAction_Failure(t *testing.T) {
 
 func TestDispatchClassifyAction_Batch(t *testing.T) {
 	t.Parallel()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
 	params := TestClassifyRequest{
 		Action: "batch",
@@ -64,7 +66,7 @@ func TestDispatchClassifyAction_Batch(t *testing.T) {
 		},
 	}
 
-	result, summary, errResp := h.testGen().dispatchClassifyAction(1, params)
+	result, summary, errResp := h.dispatchClassifyAction(1, params)
 	if errResp != nil {
 		t.Fatalf("dispatchClassifyAction(batch) returned error response: %v", errResp)
 	}
@@ -86,13 +88,13 @@ func TestDispatchClassifyAction_Batch(t *testing.T) {
 
 func TestDispatchClassifyAction_UnknownAction(t *testing.T) {
 	t.Parallel()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
 	params := TestClassifyRequest{
 		Action: "nonexistent",
 	}
 
-	result, summary, errResp := h.testGen().dispatchClassifyAction(1, params)
+	result, summary, errResp := h.dispatchClassifyAction(1, params)
 	// Unknown action falls through without error
 	if errResp != nil {
 		t.Fatalf("unknown action should not return error; got %v", errResp)
@@ -107,42 +109,42 @@ func TestDispatchClassifyAction_UnknownAction(t *testing.T) {
 
 func TestDispatchClassifyAction_FailureMissingParam(t *testing.T) {
 	t.Parallel()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
 	params := TestClassifyRequest{
 		Action:  "failure",
 		Failure: nil, // missing
 	}
 
-	_, _, errResp := h.testGen().dispatchClassifyAction(42, params)
+	_, _, errResp := h.dispatchClassifyAction(42, params)
 	if errResp == nil {
 		t.Fatal("dispatchClassifyAction(failure, nil) should return error response")
 	}
 	if errResp.ID != 42 {
 		t.Fatalf("error response ID = %v, want 42", errResp.ID)
 	}
-	assertResultContains(t, errResp.Result, ErrMissingParam)
+	assertResultContains(t, errResp.Result, mcp.ErrMissingParam)
 }
 
 func TestDispatchClassifyAction_BatchMissingParam(t *testing.T) {
 	t.Parallel()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
 	params := TestClassifyRequest{
 		Action:   "batch",
 		Failures: nil, // empty
 	}
 
-	_, _, errResp := h.testGen().dispatchClassifyAction(99, params)
+	_, _, errResp := h.dispatchClassifyAction(99, params)
 	if errResp == nil {
 		t.Fatal("dispatchClassifyAction(batch, nil failures) should return error response")
 	}
-	assertResultContains(t, errResp.Result, ErrMissingParam)
+	assertResultContains(t, errResp.Result, mcp.ErrMissingParam)
 }
 
 func TestDispatchClassifyAction_BatchTooLarge(t *testing.T) {
 	t.Parallel()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
 	failures := make([]TestFailure, maxFailuresPerBatch+1)
 	for i := range failures {
@@ -157,7 +159,7 @@ func TestDispatchClassifyAction_BatchTooLarge(t *testing.T) {
 		Failures: failures,
 	}
 
-	_, _, errResp := h.testGen().dispatchClassifyAction(1, params)
+	_, _, errResp := h.dispatchClassifyAction(1, params)
 	if errResp == nil {
 		t.Fatal("dispatchClassifyAction should reject batch > maxFailuresPerBatch")
 	}
@@ -170,24 +172,24 @@ func TestDispatchClassifyAction_BatchTooLarge(t *testing.T) {
 
 func TestClassifySingleFailure_NilFailure(t *testing.T) {
 	t.Parallel()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
-	_, _, resp, ok := h.testGen().classifySingleFailure(1, TestClassifyRequest{
+	_, _, resp, ok := h.classifySingleFailure(1, TestClassifyRequest{
 		Action:  "failure",
 		Failure: nil,
 	})
 	if ok {
 		t.Fatal("classifySingleFailure(nil) should return ok=false")
 	}
-	assertResultContains(t, resp.Result, ErrMissingParam)
+	assertResultContains(t, resp.Result, mcp.ErrMissingParam)
 	assertResultContains(t, resp.Result, "failure")
 }
 
 func TestClassifySingleFailure_HighConfidence(t *testing.T) {
 	t.Parallel()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
-	result, summary, _, ok := h.testGen().classifySingleFailure(1, TestClassifyRequest{
+	result, summary, _, ok := h.classifySingleFailure(1, TestClassifyRequest{
 		Action: "failure",
 		Failure: &TestFailure{
 			TestName:   "broken selector test",
@@ -229,9 +231,9 @@ func TestClassifySingleFailure_HighConfidence(t *testing.T) {
 
 func TestClassifySingleFailure_LowConfidence(t *testing.T) {
 	t.Parallel()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
-	_, _, resp, ok := h.testGen().classifySingleFailure(7, TestClassifyRequest{
+	_, _, resp, ok := h.classifySingleFailure(7, TestClassifyRequest{
 		Action: "failure",
 		Failure: &TestFailure{
 			TestName: "unknown failure",
@@ -249,10 +251,10 @@ func TestClassifySingleFailure_LowConfidence(t *testing.T) {
 
 func TestClassifySingleFailure_NoSuggestedFix(t *testing.T) {
 	t.Parallel()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
 	// Real bug category has no suggested fix
-	result, _, _, ok := h.testGen().classifySingleFailure(1, TestClassifyRequest{
+	result, _, _, ok := h.classifySingleFailure(1, TestClassifyRequest{
 		Action: "failure",
 		Failure: &TestFailure{
 			TestName: "assertion test",
@@ -275,42 +277,42 @@ func TestClassifySingleFailure_NoSuggestedFix(t *testing.T) {
 
 func TestClassifyBatchFailures_EmptyFailures(t *testing.T) {
 	t.Parallel()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
-	_, _, resp, ok := h.testGen().classifyBatchFailures(1, TestClassifyRequest{
+	_, _, resp, ok := h.classifyBatchFailures(1, TestClassifyRequest{
 		Action:   "batch",
 		Failures: nil,
 	})
 	if ok {
 		t.Fatal("classifyBatchFailures(nil) should return ok=false")
 	}
-	assertResultContains(t, resp.Result, ErrMissingParam)
+	assertResultContains(t, resp.Result, mcp.ErrMissingParam)
 }
 
 func TestClassifyBatchFailures_EmptySlice(t *testing.T) {
 	t.Parallel()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
-	_, _, resp, ok := h.testGen().classifyBatchFailures(1, TestClassifyRequest{
+	_, _, resp, ok := h.classifyBatchFailures(1, TestClassifyRequest{
 		Action:   "batch",
 		Failures: []TestFailure{},
 	})
 	if ok {
 		t.Fatal("classifyBatchFailures([]) should return ok=false")
 	}
-	assertResultContains(t, resp.Result, ErrMissingParam)
+	assertResultContains(t, resp.Result, mcp.ErrMissingParam)
 }
 
 func TestClassifyBatchFailures_ExceedsMaxBatch(t *testing.T) {
 	t.Parallel()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
 	failures := make([]TestFailure, maxFailuresPerBatch+1)
 	for i := range failures {
 		failures[i] = TestFailure{TestName: fmt.Sprintf("t%d", i), Error: "error"}
 	}
 
-	_, _, resp, ok := h.testGen().classifyBatchFailures(1, TestClassifyRequest{
+	_, _, resp, ok := h.classifyBatchFailures(1, TestClassifyRequest{
 		Action:   "batch",
 		Failures: failures,
 	})
@@ -323,14 +325,14 @@ func TestClassifyBatchFailures_ExceedsMaxBatch(t *testing.T) {
 
 func TestClassifyBatchFailures_ExactMax(t *testing.T) {
 	t.Parallel()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
 	failures := make([]TestFailure, maxFailuresPerBatch)
 	for i := range failures {
 		failures[i] = TestFailure{TestName: fmt.Sprintf("t%d", i), Error: "net::ERR_CONNECTION_REFUSED"}
 	}
 
-	result, summary, _, ok := h.testGen().classifyBatchFailures(1, TestClassifyRequest{
+	result, summary, _, ok := h.classifyBatchFailures(1, TestClassifyRequest{
 		Action:   "batch",
 		Failures: failures,
 	})
@@ -347,7 +349,7 @@ func TestClassifyBatchFailures_ExactMax(t *testing.T) {
 
 func TestClassifyBatchFailures_MixedResults(t *testing.T) {
 	t.Parallel()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
 	failures := []TestFailure{
 		{TestName: "t1", Error: `Timeout waiting for selector "#btn"`},
@@ -356,12 +358,12 @@ func TestClassifyBatchFailures_MixedResults(t *testing.T) {
 		{TestName: "t4", Error: "Element is outside viewport"},
 	}
 
-	result, summary, _, ok := h.testGen().classifyBatchFailures(1, TestClassifyRequest{
+	result, summary, _, ok := h.classifyBatchFailures(1, TestClassifyRequest{
 		Action:   "batch",
 		Failures: failures,
 	})
 	if !ok {
-		t.Fatal("classifyBatchFailures should succeed")
+		t.Fatal("classifyBatchFailures should mcp.Succeed")
 	}
 
 	data, _ := result.(map[string]any)
@@ -396,16 +398,16 @@ func TestClassifyBatchFailures_MixedResults(t *testing.T) {
 
 func TestClassifyBatchFailures_SingleFailure(t *testing.T) {
 	t.Parallel()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
-	result, summary, _, ok := h.testGen().classifyBatchFailures(1, TestClassifyRequest{
+	result, summary, _, ok := h.classifyBatchFailures(1, TestClassifyRequest{
 		Action: "batch",
 		Failures: []TestFailure{
 			{TestName: "only", Error: "net::ERR_TIMEOUT"},
 		},
 	})
 	if !ok {
-		t.Fatal("should succeed with single failure")
+		t.Fatal("should mcp.Succeed with single failure")
 	}
 	if result == nil {
 		t.Fatal("result should not be nil")
@@ -417,15 +419,15 @@ func TestClassifyBatchFailures_SingleFailure(t *testing.T) {
 
 func TestClassifyBatchFailures_PreservesRequestID(t *testing.T) {
 	t.Parallel()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
 	// Test with nil failures to trigger error response with specific ID
-	_, _, resp, ok := h.testGen().classifyBatchFailures("req-abc-123", TestClassifyRequest{
+	_, _, resp, ok := h.classifyBatchFailures("req-abc-123", TestClassifyRequest{
 		Action:   "batch",
 		Failures: nil,
 	})
 	if ok {
-		t.Fatal("should fail with nil failures")
+		t.Fatal("should mcp.Fail with nil failures")
 	}
 	if resp.ID != "req-abc-123" {
 		t.Fatalf("error response ID = %v, want req-abc-123", resp.ID)

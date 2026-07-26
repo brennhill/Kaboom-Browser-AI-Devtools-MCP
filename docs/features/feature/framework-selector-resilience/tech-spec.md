@@ -17,7 +17,7 @@ last_verified_date: 2026-03-05
    - Vue bundle (`esbuild`)
    - Svelte bundle (`svelte/compiler` + `esbuild`)
    - Next.js static export (`next build` with `output: "export"`)
-3. Output target is `cmd/browser-agent/testpages/frameworks/`.
+3. Output target is `cmd/browser-agent/internal/testpages/pages/frameworks/`.
 4. Smoke module `29-framework-selector-resilience.sh` runs a shared hard-case matrix per framework.
 
 ## Fixture Contract

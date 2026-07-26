@@ -25,13 +25,13 @@ var generateHandlers = map[string]ModeHandler{
 	"annotation_issues": method((*ToolHandler).toolGenerateAnnotationIssues),
 	// Sub-handler delegates (require closures — testGen() accessor)
 	"test_from_context": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-		return h.testGen().handleGenerateTestFromContext(req, args)
+		return h.testGen().HandleGenerateTestFromContext(req, args)
 	},
 	"test_heal": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-		return h.testGen().handleGenerateTestHeal(req, args)
+		return h.testGen().HandleGenerateTestHeal(req, args)
 	},
 	"test_classify": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-		return h.testGen().handleGenerateTestClassify(req, args)
+		return h.testGen().HandleGenerateTestClassify(req, args)
 	},
 }
 

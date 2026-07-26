@@ -8,8 +8,15 @@ last_reviewed: 2026-07-26
 code_paths:
   - cmd/browser-agent/tools_interact_dispatch.go
   - internal/schema/interact_actions.go
-  - cmd/browser-agent/tools_recording_video.go
-  - cmd/browser-agent/tools_recording_video_handlers.go
+  - cmd/browser-agent/screenrec_bridge.go
+  - cmd/browser-agent/internal/screenrec/deps.go
+  - cmd/browser-agent/internal/screenrec/types.go
+  - cmd/browser-agent/internal/screenrec/handlers.go
+  - cmd/browser-agent/internal/screenrec/state.go
+  - cmd/browser-agent/internal/screenrec/paths.go
+  - cmd/browser-agent/internal/screenrec/save.go
+  - cmd/browser-agent/internal/screenrec/reveal.go
+  - cmd/browser-agent/internal/screenrec/observe.go
   - src/background/event-listeners.ts
   - src/background/init.ts
   - src/background/ui/context-menus.ts
@@ -25,7 +32,7 @@ code_paths:
   - extension/popup.css
 test_paths:
   - cmd/browser-agent/tools_interact_handler_test.go
-  - cmd/browser-agent/tools_recording_video_test.go
+  - cmd/browser-agent/internal/screenrec/screenrec_test.go
   - tests/extension/recording-shortcut-command.test.js
   - tests/extension/context-menus-labels.test.js
   - tests/extension/recording-listeners-target-tab.test.js

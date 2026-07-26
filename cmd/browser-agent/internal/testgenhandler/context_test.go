@@ -1,9 +1,9 @@
 // Purpose: Tests for test-generation context-based test creation.
 // Docs: docs/features/feature/test-generation/index.md
 
-// testgen_context_test.go — Tests for generateTestFromInteraction and generateTestFromRegression
+// context_test.go — Tests for generateTestFromInteraction and generateTestFromRegression
 // edge cases not covered by internal/testgen/generate_test.go.
-package main
+package testgenhandler
 
 import (
 	"strings"
@@ -18,13 +18,13 @@ import (
 
 func TestGenerateTestFromInteraction_VitestFramework(t *testing.T) {
 	t.Parallel()
-	h := newTestToolHandler()
+	env := newTestEnv()
 
-	h.capture.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	env.cap.AddEnhancedActionsForTest([]capture.EnhancedAction{
 		{Type: "click", URL: "https://example.com"},
 	})
 
-	result, err := h.testGen().generateTestFromInteraction(TestFromContextRequest{
+	result, err := env.h.generateTestFromInteraction(TestFromContextRequest{
 		Framework: "vitest",
 	})
 	if err != nil {
@@ -40,13 +40,13 @@ func TestGenerateTestFromInteraction_VitestFramework(t *testing.T) {
 
 func TestGenerateTestFromInteraction_Selectors(t *testing.T) {
 	t.Parallel()
-	h := newTestToolHandler()
+	env := newTestEnv()
 
-	h.capture.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	env.cap.AddEnhancedActionsForTest([]capture.EnhancedAction{
 		{Type: "click", Selectors: map[string]any{"testId": "login-btn", "id": "loginBtn"}},
 	})
 
-	result, err := h.testGen().generateTestFromInteraction(TestFromContextRequest{
+	result, err := env.h.generateTestFromInteraction(TestFromContextRequest{
 		Framework: "playwright",
 	})
 	if err != nil {
@@ -59,13 +59,13 @@ func TestGenerateTestFromInteraction_Selectors(t *testing.T) {
 
 func TestGenerateTestFromInteraction_NoMocksContextUsed(t *testing.T) {
 	t.Parallel()
-	h := newTestToolHandler()
+	env := newTestEnv()
 
-	h.capture.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	env.cap.AddEnhancedActionsForTest([]capture.EnhancedAction{
 		{Type: "click", Selectors: map[string]any{"target": "#btn"}},
 	})
 
-	result, err := h.testGen().generateTestFromInteraction(TestFromContextRequest{
+	result, err := env.h.generateTestFromInteraction(TestFromContextRequest{
 		Framework:    "playwright",
 		IncludeMocks: false,
 	})
@@ -86,13 +86,13 @@ func TestGenerateTestFromInteraction_NoMocksContextUsed(t *testing.T) {
 
 func TestGenerateTestFromRegression_WithMocks(t *testing.T) {
 	t.Parallel()
-	h := newTestToolHandler()
+	env := newTestEnv()
 
-	h.capture.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	env.cap.AddEnhancedActionsForTest([]capture.EnhancedAction{
 		{Type: "click", Selectors: map[string]any{"target": "#x"}},
 	})
 
-	result, err := h.testGen().generateTestFromRegression(TestFromContextRequest{
+	result, err := env.h.generateTestFromRegression(TestFromContextRequest{
 		Framework:    "playwright",
 		IncludeMocks: true,
 	})
@@ -106,13 +106,13 @@ func TestGenerateTestFromRegression_WithMocks(t *testing.T) {
 
 func TestGenerateTestFromRegression_JestFramework(t *testing.T) {
 	t.Parallel()
-	h := newTestToolHandler()
+	env := newTestEnv()
 
-	h.capture.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	env.cap.AddEnhancedActionsForTest([]capture.EnhancedAction{
 		{Type: "click", Selectors: map[string]any{"target": "#a"}},
 	})
 
-	result, err := h.testGen().generateTestFromRegression(TestFromContextRequest{
+	result, err := env.h.generateTestFromRegression(TestFromContextRequest{
 		Framework: "jest",
 	})
 	if err != nil {
@@ -128,13 +128,13 @@ func TestGenerateTestFromRegression_JestFramework(t *testing.T) {
 
 func TestGenerateTestFromRegression_SelectorsExtracted(t *testing.T) {
 	t.Parallel()
-	h := newTestToolHandler()
+	env := newTestEnv()
 
-	h.capture.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	env.cap.AddEnhancedActionsForTest([]capture.EnhancedAction{
 		{Type: "click", Selectors: map[string]any{"testId": "save-btn", "id": "saveBtn"}},
 	})
 
-	result, err := h.testGen().generateTestFromRegression(TestFromContextRequest{
+	result, err := env.h.generateTestFromRegression(TestFromContextRequest{
 		Framework: "playwright",
 	})
 	if err != nil {
@@ -147,14 +147,14 @@ func TestGenerateTestFromRegression_SelectorsExtracted(t *testing.T) {
 
 func TestGenerateTestFromRegression_ContentHasActions(t *testing.T) {
 	t.Parallel()
-	h := newTestToolHandler()
+	env := newTestEnv()
 
-	h.capture.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	env.cap.AddEnhancedActionsForTest([]capture.EnhancedAction{
 		{Type: "click", Selectors: map[string]any{"id": "go"}, URL: "https://example.com"},
 		{Type: "input", Selectors: map[string]any{"id": "name"}, Value: "test"},
 	})
 
-	result, err := h.testGen().generateTestFromRegression(TestFromContextRequest{
+	result, err := env.h.generateTestFromRegression(TestFromContextRequest{
 		Framework: "playwright",
 		BaseURL:   "https://example.com",
 	})

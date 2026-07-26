@@ -12,6 +12,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testgenhandler"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
@@ -378,4 +380,28 @@ func assertIsError(t *testing.T, resp JSONRPCResponse, contains string) {
 	if !strings.Contains(string(raw), contains) {
 		t.Errorf("error response doesn't contain %q: %s", contains, raw)
 	}
+}
+
+// newTestToolHandler creates a minimal ToolHandler for unit tests.
+// It sets up a real Capture instance and a Server with empty entries.
+//
+// This lived in testgen_generate_test.go until the testgen cluster moved to
+// internal/testgenhandler. Four unrelated test files (configure capabilities,
+// generate validation, interact workflows, observe scope) depend on it, so it
+// belongs with the other shared fixtures, not with one feature's tests.
+func newTestToolHandler() *ToolHandler {
+	cap := capture.NewCapture()
+	srv := &Server{
+		logs: &LogStore{
+			entries:    make([]LogEntry, 0),
+			addWarning: func(string) {},
+		},
+	}
+	h := &ToolHandler{
+		MCPHandler: &MCPHandler{server: srv},
+		capture:    cap,
+	}
+	h.testGenHandler = testgenhandler.New(h)
+	h.interactActionHandler = toolinteract.NewInteractActionHandler(buildInteractDeps(h))
+	return h
 }

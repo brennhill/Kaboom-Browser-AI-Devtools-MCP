@@ -4,7 +4,7 @@ feature_id: feature-self-testing
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-26
 code_paths:
   - scripts/smoke-test.sh
   - scripts/smoke-tests/framework-smoke.sh
@@ -18,8 +18,9 @@ code_paths:
   - scripts/uat-result-lib.sh
   - scripts/tests/framework.sh
   - cmd/browser-agent/server_routes.go
-  - cmd/browser-agent/testpages_http.go
-  - cmd/browser-agent/testpages_websocket.go
+  - cmd/browser-agent/internal/testpages/http.go
+  - cmd/browser-agent/internal/testpages/websocket.go
+  - cmd/browser-agent/internal/wsframe/frame.go
 test_paths:
   - scripts/smoke-tests/14-browser-push.sh
   - scripts/smoke-tests/15-file-upload.sh
@@ -58,7 +59,8 @@ test_paths:
   - scripts/tests/cat-30-recording-automation.sh
   - scripts/tests/cat-31-link-crawling.sh
   - scripts/tests/cat-32-auto-detect.sh
-  - cmd/browser-agent/testpages_test.go
+  - cmd/browser-agent/internal/testpages/testpages_test.go
+  - cmd/browser-agent/internal/wsframe/frame_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -92,6 +94,7 @@ last_verified_date: 2026-03-05
 - Shared UAT result parsing: `scripts/uat-result-lib.sh`
 - Category daemon lifecycle and result-file contract: `scripts/tests/framework.sh`
 - UAT category suites: `scripts/tests/cat-*.sh`
-- HTTP fixtures and embedded test pages: `cmd/browser-agent/testpages_http.go`
-- WebSocket harness and frame handling: `cmd/browser-agent/testpages_websocket.go`
-- Behavior tests: `cmd/browser-agent/testpages_test.go`
+- HTTP fixtures and embedded test pages: `cmd/browser-agent/internal/testpages/http.go`
+- WebSocket harness: `cmd/browser-agent/internal/testpages/websocket.go`
+- RFC 6455 frame codec (shared with the terminal relay): `cmd/browser-agent/internal/wsframe/frame.go`
+- Behavior tests: `cmd/browser-agent/internal/testpages/testpages_test.go`, `cmd/browser-agent/internal/wsframe/frame_test.go`

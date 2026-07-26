@@ -1,9 +1,9 @@
 // Purpose: Tests for test-generation self-healing repair.
 // Docs: docs/features/feature/test-generation/index.md
 
-// testgen_heal_test.go — Tests for testgen_heal.go functions at 0% coverage.
+// heal_test.go — Tests for heal.go functions.
 // Covers: mapAnalyzeError, handleHealRepair, handleHealBatch, mapBatchError, formatHealSummary.
-package main
+package testgenhandler
 
 import (
 	"errors"
@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -21,7 +23,7 @@ import (
 func TestMapAnalyzeError_FileNotFound(t *testing.T) {
 	t.Parallel()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	params := TestHealRequest{TestFile: "tests/missing.spec.ts"}
 	err := fmt.Errorf("%s: %s", ErrTestFileNotFound, "tests/missing.spec.ts")
 
@@ -40,29 +42,29 @@ func TestMapAnalyzeError_FileNotFound(t *testing.T) {
 func TestMapAnalyzeError_PathNotAllowed(t *testing.T) {
 	t.Parallel()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: "req-42"}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: "req-42"}
 	params := TestHealRequest{TestFile: "../etc/passwd"}
-	err := fmt.Errorf("%s: path contains '..'", ErrPathNotAllowed)
+	err := fmt.Errorf("%s: path contains '..'", mcp.ErrPathNotAllowed)
 
 	resp := mapAnalyzeError(req, params, err)
 
 	if resp.ID != "req-42" {
 		t.Fatalf("ID = %v, want req-42", resp.ID)
 	}
-	assertResultContains(t, resp.Result, ErrPathNotAllowed)
+	assertResultContains(t, resp.Result, mcp.ErrPathNotAllowed)
 	assertResultContains(t, resp.Result, "within the project directory")
 }
 
 func TestMapAnalyzeError_GenericError(t *testing.T) {
 	t.Parallel()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 99}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 99}
 	params := TestHealRequest{TestFile: "test.spec.ts"}
 	err := errors.New("permission denied")
 
 	resp := mapAnalyzeError(req, params, err)
 
-	assertResultContains(t, resp.Result, ErrInternal)
+	assertResultContains(t, resp.Result, mcp.ErrInternal)
 	assertResultContains(t, resp.Result, "permission denied")
 	assertResultContains(t, resp.Result, "Failed to analyze test file")
 }
@@ -81,7 +83,7 @@ func TestMapAnalyzeError_PreservesRequestID(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			req := JSONRPCRequest{JSONRPC: "2.0", ID: tc.id}
+			req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: tc.id}
 			resp := mapAnalyzeError(req, TestHealRequest{}, errors.New("some error"))
 			if resp.ID != tc.id {
 				t.Fatalf("ID = %v, want %v", resp.ID, tc.id)
@@ -96,46 +98,46 @@ func TestMapAnalyzeError_PreservesRequestID(t *testing.T) {
 
 func TestHandleHealRepair_NoBrokenSelectors(t *testing.T) {
 	t.Parallel()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	params := TestHealRequest{Action: "repair", BrokenSelectors: nil}
 
-	_, resp, isErr := h.testGen().handleHealRepair(req, params, t.TempDir())
+	_, resp, isErr := h.handleHealRepair(req, params, t.TempDir())
 	if !isErr {
 		t.Fatal("handleHealRepair should return error when broken_selectors is empty")
 	}
-	assertResultContains(t, resp.Result, ErrMissingParam)
+	assertResultContains(t, resp.Result, mcp.ErrMissingParam)
 	assertResultContains(t, resp.Result, "broken_selectors")
 }
 
 func TestHandleHealRepair_EmptyBrokenSelectors(t *testing.T) {
 	t.Parallel()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	params := TestHealRequest{Action: "repair", BrokenSelectors: []string{}}
 
-	_, resp, isErr := h.testGen().handleHealRepair(req, params, t.TempDir())
+	_, resp, isErr := h.handleHealRepair(req, params, t.TempDir())
 	if !isErr {
 		t.Fatal("handleHealRepair should return error when broken_selectors is empty")
 	}
-	assertResultContains(t, resp.Result, ErrMissingParam)
+	assertResultContains(t, resp.Result, mcp.ErrMissingParam)
 }
 
 func TestHandleHealRepair_ValidSelectors(t *testing.T) {
 	t.Parallel()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	params := TestHealRequest{
 		Action:          "repair",
 		BrokenSelectors: []string{"#login", ".button"},
 	}
 
-	result, _, isErr := h.testGen().handleHealRepair(req, params, t.TempDir())
+	result, _, isErr := h.handleHealRepair(req, params, t.TempDir())
 	if isErr {
-		t.Fatal("handleHealRepair should succeed with valid selectors")
+		t.Fatal("handleHealRepair should mcp.Succeed with valid selectors")
 	}
 
 	healResult, ok := result.(*HealResult)
@@ -152,18 +154,18 @@ func TestHandleHealRepair_ValidSelectors(t *testing.T) {
 
 func TestHandleHealRepair_MixedSelectors(t *testing.T) {
 	t.Parallel()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	params := TestHealRequest{
 		Action:          "repair",
 		BrokenSelectors: []string{"#valid", "", "javascript:alert(1)", ".class"},
 		AutoApply:       true,
 	}
 
-	result, _, isErr := h.testGen().handleHealRepair(req, params, t.TempDir())
+	result, _, isErr := h.handleHealRepair(req, params, t.TempDir())
 	if isErr {
-		t.Fatal("handleHealRepair should succeed even with some invalid selectors")
+		t.Fatal("handleHealRepair should mcp.Succeed even with some invalid selectors")
 	}
 
 	healResult := result.(*HealResult)
@@ -180,12 +182,12 @@ func TestHandleHealRepair_MixedSelectors(t *testing.T) {
 
 func TestHandleHealRepair_PreservesRequestID(t *testing.T) {
 	t.Parallel()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: "heal-req-42"}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: "heal-req-42"}
 	params := TestHealRequest{Action: "repair", BrokenSelectors: nil}
 
-	_, resp, isErr := h.testGen().handleHealRepair(req, params, t.TempDir())
+	_, resp, isErr := h.handleHealRepair(req, params, t.TempDir())
 	if !isErr {
 		t.Fatal("expected error for nil selectors")
 	}
@@ -200,22 +202,22 @@ func TestHandleHealRepair_PreservesRequestID(t *testing.T) {
 
 func TestHandleHealBatch_NoTestDir(t *testing.T) {
 	t.Parallel()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	params := TestHealRequest{Action: "batch", TestDir: ""}
 
-	_, resp, isErr := h.testGen().handleHealBatch(req, params, t.TempDir())
+	_, resp, isErr := h.handleHealBatch(req, params, t.TempDir())
 	if !isErr {
 		t.Fatal("handleHealBatch should return error when test_dir is empty")
 	}
-	assertResultContains(t, resp.Result, ErrMissingParam)
+	assertResultContains(t, resp.Result, mcp.ErrMissingParam)
 	assertResultContains(t, resp.Result, "test_dir")
 }
 
 func TestHandleHealBatch_ValidDir(t *testing.T) {
 	projectDir := t.TempDir()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
 	testDir := filepath.Join(projectDir, "tests")
 	if err := os.MkdirAll(testDir, 0o755); err != nil {
@@ -228,12 +230,12 @@ func TestHandleHealBatch_ValidDir(t *testing.T) {
 		t.Fatalf("WriteFile error = %v", err)
 	}
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	params := TestHealRequest{Action: "batch", TestDir: testDir}
 
-	result, _, isErr := h.testGen().handleHealBatch(req, params, projectDir)
+	result, _, isErr := h.handleHealBatch(req, params, projectDir)
 	if isErr {
-		t.Fatal("handleHealBatch should succeed with valid directory")
+		t.Fatal("handleHealBatch should mcp.Succeed with valid directory")
 	}
 
 	batchResult, ok := result.(*BatchHealResult)
@@ -250,41 +252,41 @@ func TestHandleHealBatch_ValidDir(t *testing.T) {
 
 func TestHandleHealBatch_NonexistentDir(t *testing.T) {
 	projectDir := t.TempDir()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
 	missingDir := filepath.Join(projectDir, "nonexistent-dir")
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	params := TestHealRequest{Action: "batch", TestDir: missingDir}
 
-	_, resp, isErr := h.testGen().handleHealBatch(req, params, projectDir)
+	_, resp, isErr := h.handleHealBatch(req, params, projectDir)
 	if !isErr {
-		t.Fatal("handleHealBatch should fail for nonexistent directory")
+		t.Fatal("handleHealBatch should mcp.Fail for nonexistent directory")
 	}
 	assertResultContains(t, resp.Result, ErrTestFileNotFound)
 }
 
 func TestHandleHealBatch_PathTraversal(t *testing.T) {
 	t.Parallel()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	params := TestHealRequest{Action: "batch", TestDir: "../../../etc"}
 
-	_, resp, isErr := h.testGen().handleHealBatch(req, params, t.TempDir())
+	_, resp, isErr := h.handleHealBatch(req, params, t.TempDir())
 	if !isErr {
-		t.Fatal("handleHealBatch should fail for path traversal")
+		t.Fatal("handleHealBatch should mcp.Fail for path traversal")
 	}
-	assertResultContains(t, resp.Result, ErrPathNotAllowed)
+	assertResultContains(t, resp.Result, mcp.ErrPathNotAllowed)
 }
 
 func TestHandleHealBatch_PreservesRequestID(t *testing.T) {
 	t.Parallel()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: "batch-99"}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: "batch-99"}
 	params := TestHealRequest{Action: "batch", TestDir: ""}
 
-	_, resp, isErr := h.testGen().handleHealBatch(req, params, t.TempDir())
+	_, resp, isErr := h.handleHealBatch(req, params, t.TempDir())
 	if !isErr {
 		t.Fatal("expected error for empty test_dir")
 	}
@@ -295,19 +297,19 @@ func TestHandleHealBatch_PreservesRequestID(t *testing.T) {
 
 func TestHandleHealBatch_EmptyDir(t *testing.T) {
 	projectDir := t.TempDir()
-	h := &ToolHandler{}
+	h := newPureHandler()
 
 	testDir := filepath.Join(projectDir, "empty-tests")
 	if err := os.MkdirAll(testDir, 0o755); err != nil {
 		t.Fatalf("MkdirAll error = %v", err)
 	}
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	params := TestHealRequest{Action: "batch", TestDir: testDir}
 
-	result, _, isErr := h.testGen().handleHealBatch(req, params, projectDir)
+	result, _, isErr := h.handleHealBatch(req, params, projectDir)
 	if isErr {
-		t.Fatal("handleHealBatch should succeed on empty directory (zero files)")
+		t.Fatal("handleHealBatch should mcp.Succeed on empty directory (zero files)")
 	}
 
 	batchResult := result.(*BatchHealResult)
@@ -326,19 +328,19 @@ func TestHandleHealBatch_EmptyDir(t *testing.T) {
 func TestMapBatchError_PathNotAllowed(t *testing.T) {
 	t.Parallel()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	err := fmt.Errorf("%s: path contains '..'", ErrPathNotAllowed)
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	err := fmt.Errorf("%s: path contains '..'", mcp.ErrPathNotAllowed)
 
 	resp := mapBatchError(req, err)
 
-	assertResultContains(t, resp.Result, ErrPathNotAllowed)
+	assertResultContains(t, resp.Result, mcp.ErrPathNotAllowed)
 	assertResultContains(t, resp.Result, "within the project directory")
 }
 
 func TestMapBatchError_BatchTooLarge(t *testing.T) {
 	t.Parallel()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 2}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	err := fmt.Errorf("%s: too many files", ErrBatchTooLarge)
 
 	resp := mapBatchError(req, err)
@@ -350,12 +352,12 @@ func TestMapBatchError_BatchTooLarge(t *testing.T) {
 func TestMapBatchError_GenericError(t *testing.T) {
 	t.Parallel()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 3}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 3}
 	err := errors.New("unexpected filesystem error")
 
 	resp := mapBatchError(req, err)
 
-	assertResultContains(t, resp.Result, ErrInternal)
+	assertResultContains(t, resp.Result, mcp.ErrInternal)
 	assertResultContains(t, resp.Result, "unexpected filesystem error")
 	assertResultContains(t, resp.Result, "Failed to heal test batch")
 }
@@ -373,7 +375,7 @@ func TestMapBatchError_PreservesRequestID(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			req := JSONRPCRequest{JSONRPC: "2.0", ID: tc.id}
+			req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: tc.id}
 			resp := mapBatchError(req, errors.New("some error"))
 			if resp.ID != tc.id {
 				t.Fatalf("ID = %v, want %v", resp.ID, tc.id)

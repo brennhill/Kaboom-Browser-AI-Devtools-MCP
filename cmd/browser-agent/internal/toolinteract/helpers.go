@@ -5,11 +5,9 @@
 package toolinteract
 
 import (
-	crand "crypto/rand"
 	"encoding/json"
-	"fmt"
-	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -44,23 +42,12 @@ const (
 	ErrExportFailed         = mcp.ErrExportFailed
 )
 
-// succeed builds a success JSONRPCResponse with a JSON summary + data payload.
-func succeed(req JSONRPCRequest, summary string, data any) JSONRPCResponse {
-	return JSONRPCResponse{JSONRPC: JSONRPCVersion, ID: req.ID, Result: mcp.JSONResponse(summary, data)}
-}
-
-// fail builds an error JSONRPCResponse with a structured error payload (isError=true).
-func fail(req JSONRPCRequest, code, message, retry string, opts ...func(*StructuredError)) JSONRPCResponse {
-	return JSONRPCResponse{JSONRPC: JSONRPCVersion, ID: req.ID, Result: mcp.StructuredErrorResponse(code, message, retry, opts...)}
-}
-
-// parseArgs unmarshals JSON args into v. Returns (resp, true) if parsing failed.
-func parseArgs(req JSONRPCRequest, args json.RawMessage, v any) (JSONRPCResponse, bool) {
-	if err := json.Unmarshal(args, v); err != nil {
-		return fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again"), true
-	}
-	return JSONRPCResponse{}, false
-}
+// succeed, fail and parseArgs delegate to internal/mcp, the source of truth.
+var (
+	succeed   = mcp.Succeed
+	fail      = mcp.Fail
+	parseArgs = mcp.ParseArgs
+)
 
 // requireString validates that a string parameter is non-empty.
 func requireString(req JSONRPCRequest, value, paramName, hint string) (JSONRPCResponse, bool) {
@@ -142,13 +129,5 @@ func appendWarningsToResponse(resp JSONRPCResponse, warnings []string) JSONRPCRe
 	return mcp.AppendWarningsToResponse(resp, warnings)
 }
 
-// newCorrelationID generates a unique correlation ID with the given prefix.
-func newCorrelationID(prefix string) string {
-	var b [8]byte
-	if _, err := crand.Read(b[:]); err != nil {
-		return fmt.Sprintf("%s_%d_%d", prefix, time.Now().UnixNano(), time.Now().UnixNano())
-	}
-	n := int64(b[0]) | int64(b[1])<<8 | int64(b[2])<<16 | int64(b[3])<<24 |
-		int64(b[4])<<32 | int64(b[5])<<40 | int64(b[6])<<48 | int64(b[7]&0x7f)<<56
-	return fmt.Sprintf("%s_%d_%d", prefix, time.Now().UnixNano(), n)
-}
+// newCorrelationID delegates to internal/toolresp, the single implementation.
+var newCorrelationID = toolresp.NewCorrelationID

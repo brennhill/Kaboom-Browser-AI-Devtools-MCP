@@ -2,7 +2,7 @@
 // Why: Isolates slug/path safety and filename generation from recording state orchestration.
 // Docs: docs/features/feature/tab-recording/index.md
 
-package main
+package screenrec
 
 import (
 	"fmt"
@@ -14,8 +14,8 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
-// recordingsDir returns the runtime recordings directory, creating it if needed.
-func recordingsDir() (string, error) {
+// Dir returns the runtime recordings directory, creating it if needed.
+func Dir() (string, error) {
 	dir, err := state.RecordingsDir()
 	if err != nil {
 		return "", fmt.Errorf("cannot determine recordings directory: %w", err)
@@ -27,8 +27,8 @@ func recordingsDir() (string, error) {
 	return dir, nil
 }
 
-func recordingsReadDirs() []string {
-	primaryDir, err := recordingsDir()
+func ReadDirs() []string {
+	primaryDir, err := Dir()
 	if err != nil {
 		return nil
 	}

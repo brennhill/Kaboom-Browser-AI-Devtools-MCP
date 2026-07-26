@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testgenhandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -89,4 +90,9 @@ func (h *ToolHandler) GetRedactionEngine() RedactionEngine {
 // Separated to avoid the parameter name "capture" shadowing the package import.
 func newPlaybackSessionsMap() map[string]*capture.PlaybackSession {
 	return make(map[string]*capture.PlaybackSession)
+}
+
+// testGen returns the test-generation sub-handler (internal/testgenhandler).
+func (h *ToolHandler) testGen() *testgenhandler.Handler {
+	return h.testGenHandler
 }

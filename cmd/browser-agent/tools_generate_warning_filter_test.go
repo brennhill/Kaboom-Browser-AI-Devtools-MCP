@@ -59,7 +59,7 @@ func TestHandleGenerateTestFromContext_FiltersOnlyDispatchWarnings(t *testing.T)
 	})
 
 	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.testGen().handleGenerateTestFromContext(req, json.RawMessage(`{"what":"test_from_context","context":"interaction","typo_field":true}`))
+	resp := h.testGen().HandleGenerateTestFromContext(req, json.RawMessage(`{"what":"test_from_context","context":"interaction","typo_field":true}`))
 	result := parseToolResult(t, resp)
 	if result.IsError {
 		t.Fatalf("handleGenerateTestFromContext should succeed, got error: %s", firstText(result))
@@ -100,7 +100,7 @@ func TestHandleGenerateTestHeal_FiltersOnlyDispatchWarnings(t *testing.T) {
 	testDir := makeProjectTempDir(t)
 
 	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.testGen().handleGenerateTestHeal(req, json.RawMessage(fmt.Sprintf(`{"what":"test_heal","action":"batch","test_dir":%q,"typo_field":true}`, testDir)))
+	resp := h.testGen().HandleGenerateTestHeal(req, json.RawMessage(fmt.Sprintf(`{"what":"test_heal","action":"batch","test_dir":%q,"typo_field":true}`, testDir)))
 	result := parseToolResult(t, resp)
 	if result.IsError {
 		t.Fatalf("handleGenerateTestHeal should succeed, got error: %s", firstText(result))
@@ -124,7 +124,7 @@ func TestHandleGenerateTestClassify_FiltersOnlyDispatchWarnings(t *testing.T) {
 	h := newTestToolHandler()
 
 	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.testGen().handleGenerateTestClassify(req, json.RawMessage(`{"what":"test_classify","action":"failure","failure":{"test_name":"login test","error":"Timeout waiting for selector \"#login-btn\""},"typo_field":true}`))
+	resp := h.testGen().HandleGenerateTestClassify(req, json.RawMessage(`{"what":"test_classify","action":"failure","failure":{"test_name":"login test","error":"Timeout waiting for selector \"#login-btn\""},"typo_field":true}`))
 	result := parseToolResult(t, resp)
 	if result.IsError {
 		t.Fatalf("handleGenerateTestClassify should succeed, got error: %s", firstText(result))
