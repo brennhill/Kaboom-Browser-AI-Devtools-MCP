@@ -1,5 +1,5 @@
-// Purpose: Re-exports subsystem type aliases so capture can compose extracted packages without churn.
-// Why: Preserves capture package API/readability during modularization into circuit/queries/recording packages.
+// Purpose: Re-exports subsystem types, constants and helpers extracted out of capture.
+// Why: Keeps the capture package API stable for its ~212 importers after each subsystem extraction.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
 package capture
@@ -12,7 +12,78 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/logdiff"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/playback"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
+
+// ============================================
+// Canonical wire types — declared in internal/types
+// ============================================
+
+// WebSocketEvent is an alias to canonical definition in internal/types/network.go
+type WebSocketEvent = types.WebSocketEvent
+
+// SamplingInfo is an alias to canonical definition in internal/types/network.go
+type SamplingInfo = types.SamplingInfo
+
+// WebSocketEventFilter is an alias to canonical definition in internal/types/network.go
+type WebSocketEventFilter = types.WebSocketEventFilter
+
+// WebSocketStatusFilter is an alias to canonical definition in internal/types/network.go
+type WebSocketStatusFilter = types.WebSocketStatusFilter
+
+// WebSocketStatusResponse is an alias to canonical definition in internal/types/network.go
+type WebSocketStatusResponse = types.WebSocketStatusResponse
+
+// WebSocketConnection is an alias to canonical definition in internal/types/network.go
+type WebSocketConnection = types.WebSocketConnection
+
+// WebSocketClosedConnection is an alias to canonical definition in internal/types/network.go
+type WebSocketClosedConnection = types.WebSocketClosedConnection
+
+// WebSocketMessageRate is an alias to canonical definition in internal/types/network.go
+type WebSocketMessageRate = types.WebSocketMessageRate
+
+// WebSocketDirectionStats is an alias to canonical definition in internal/types/network.go
+type WebSocketDirectionStats = types.WebSocketDirectionStats
+
+// WebSocketLastMessage is an alias to canonical definition in internal/types/network.go
+type WebSocketLastMessage = types.WebSocketLastMessage
+
+// WebSocketMessagePreview is an alias to canonical definition in internal/types/network.go
+type WebSocketMessagePreview = types.WebSocketMessagePreview
+
+// WebSocketSchema is an alias to canonical definition in internal/types/network.go
+type WebSocketSchema = types.WebSocketSchema
+
+// WebSocketSamplingStatus is an alias to canonical definition in internal/types/network.go
+type WebSocketSamplingStatus = types.WebSocketSamplingStatus
+
+// NetworkWaterfallEntry is an alias to canonical definition in internal/types/network.go
+type NetworkWaterfallEntry = types.NetworkWaterfallEntry
+
+// NetworkWaterfallPayload is an alias to canonical definition in internal/types/network.go
+type NetworkWaterfallPayload = types.NetworkWaterfallPayload
+
+// NetworkBody is an alias to canonical definition in internal/types/network.go
+type NetworkBody = types.NetworkBody
+
+// NetworkBodyFilter is an alias to canonical definition in internal/types/network.go
+type NetworkBodyFilter = types.NetworkBodyFilter
+
+// EnhancedAction is an alias to canonical definition in internal/types/network.go
+type EnhancedAction = types.EnhancedAction
+
+// EnhancedActionFilter is an alias to canonical definition in internal/types/network.go
+type EnhancedActionFilter = types.EnhancedActionFilter
+
+// ExtensionLog is an alias to canonical definition in internal/types/log.go
+type ExtensionLog = types.ExtensionLog
+
+// PollingLogEntry is an alias to canonical definition in internal/types/log.go
+type PollingLogEntry = types.PollingLogEntry
+
+// HTTPDebugEntry is an alias to canonical definition in internal/types/log.go
+type HTTPDebugEntry = types.HTTPDebugEntry
 
 // Type aliases for imported packages to avoid qualifying every use.
 // These are real type aliases (= syntax), not any forward declarations.
@@ -71,3 +142,18 @@ var NewCircuitBreaker = circuit.NewCircuitBreaker
 // - internal/lifecycle (LifecycleObserver, LifecycleEvent, LifecycleListener) — see lifecycle_observer.go
 // - internal/debuglog (DebugLogger) — see debug_logger.go
 
+const (
+	queryResultTTL = queries.QueryResultTTL // Re-export for queries_lifecycle_test.go
+)
+
+// Constants re-exported as unexported for capture-package test compatibility.
+const (
+	recordingStorageMax   = recording.RecordingStorageMax
+	recordingWarningLevel = recording.RecordingWarningLevel
+)
+
+// Function re-exports for capture-package test compatibility.
+var (
+	validateRecordingID    = recording.ValidateRecordingID
+	calculateRecordingSize = recording.CalculateRecordingSize
+)
