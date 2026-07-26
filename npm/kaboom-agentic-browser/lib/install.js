@@ -69,7 +69,12 @@ function installViaCli(def, options) {
   const { dryRun = false, envVars = {}, binaryCommand = resolveManagedBinaryPath() } = options;
   const entryJson = buildMcpEntry(envVars, { binaryCommand });
   const cmd = def.detectCommand;
-  const args = [...def.installArgs];
+  // `claude mcp add-json <name> '<json>'` takes the server JSON as the FINAL
+  // POSITIONAL argument. It was previously piped to stdin, so the CLI aborted
+  // with "missing required argument 'json'". installArgs already ends with the
+  // server name; append the JSON config after it.
+  const baseArgs = [...def.installArgs];
+  const args = [...baseArgs, entryJson];
 
   if (dryRun) {
     return {
@@ -77,7 +82,7 @@ function installViaCli(def, options) {
       name: def.name,
       id: def.id,
       method: 'cli',
-      message: `Would run: ${cmd} ${args.join(' ')} '<json>'`,
+      message: `Would run: ${cmd} ${baseArgs.join(' ')} '<json>'`,
     };
   }
 
@@ -87,7 +92,6 @@ function installViaCli(def, options) {
     delete env.CLAUDECODE;
 
     execFileSync(cmd, args, {
-      input: entryJson,
       env,
       stdio: ['pipe', 'pipe', 'pipe'],
       timeout: 15000,
