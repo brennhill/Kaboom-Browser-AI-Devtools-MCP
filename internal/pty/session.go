@@ -67,6 +67,11 @@ type Session struct {
 	idleTimeout time.Duration
 	idleCb      func(string)
 	idleTimer   stoppableTimer
+	// idleStopped is set by Close under scrollMu. It is a separate flag from
+	// `closed` (which lives under mu) so the idle path never has to take mu while
+	// holding scrollMu — Close takes them in the opposite order, so that would be
+	// a lock-order inversion.
+	idleStopped bool
 
 	// clk is the time source for idle detection + last-output/-input timestamps.
 	// nil means the real clock (see clock()); tests inject a fake for determinism.
@@ -290,7 +295,12 @@ func (s *Session) Close() error {
 	close(s.done)
 
 	// Stop idle timer if running. Lock ordering: mu (held) → scrollMu (safe).
+	// idleStopped is the durable part: Stop() alone loses the race against a timer
+	// that has ALREADY fired (its callback is queued or running), and it does not
+	// prevent a late AppendScrollback from arming a fresh one. The flag closes both
+	// holes — the callback re-checks it, and AppendScrollback refuses to re-arm.
 	s.scrollMu.Lock()
+	s.idleStopped = true
 	if s.idleTimer != nil {
 		s.idleTimer.Stop()
 		s.idleTimer = nil
@@ -393,16 +403,16 @@ func (s *Session) AppendScrollback(data []byte) {
 		s.altScreen = false
 	}
 
-	// Track output time and reset idle timer.
+	// Track output time and reset idle timer. A closed session never re-arms: a
+	// chunk can still land here after Close (readLoop's final read, or a broadcast
+	// racing teardown), and arming then created a timer nothing would ever stop —
+	// firing "session X is idle" for a shell that exited 30s earlier (finding S10).
 	s.lastOutputAt = s.clock().Now()
-	if s.idleCb != nil && s.idleTimeout > 0 {
+	if s.idleCb != nil && s.idleTimeout > 0 && !s.idleStopped {
 		if s.idleTimer != nil {
 			s.idleTimer.Reset(s.idleTimeout)
 		} else {
-			id := s.ID
-			cb := s.idleCb
-			timeout := s.idleTimeout
-			s.idleTimer = s.clock().AfterFunc(timeout, func() { cb(id) })
+			s.idleTimer = s.clock().AfterFunc(s.idleTimeout, s.fireIdle)
 		}
 	}
 
@@ -416,6 +426,22 @@ func (s *Session) AppendScrollback(data []byte) {
 		s.scrollback = trimmed
 	}
 	s.scrollMu.Unlock()
+}
+
+// fireIdle is the idle timer's callback. It re-reads the callback and the stopped
+// flag under scrollMu at FIRE time rather than capturing them at arm time, because
+// Close's idleTimer.Stop() cannot un-fire a timer whose deadline has already
+// passed: without this check the callback still reports a session that is already
+// gone. Invoking cb outside the lock keeps a slow callback from blocking output.
+func (s *Session) fireIdle() {
+	s.scrollMu.Lock()
+	cb := s.idleCb
+	stopped := s.idleStopped
+	s.scrollMu.Unlock()
+	if cb == nil || stopped {
+		return
+	}
+	cb(s.ID)
 }
 
 // Scrollback returns a copy of the current scrollback buffer.
