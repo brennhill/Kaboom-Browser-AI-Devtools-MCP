@@ -91,6 +91,50 @@ func TestSession_CloseDoesNotLogAlreadyExitedChild(t *testing.T) {
 	}
 }
 
+// Session.Wait had no bound: it blocked on `reaped` forever. Its one caller is
+// Relay.reapExitCode, which runs after the PTY read fails and BEFORE the deferred
+// fanout.Close() — so an unreapable child parked readLoop permanently, the fanout
+// never closed, and every WebSocket pump hung waiting for a channel that would
+// never close (finding S6). Close already bounds its reap wait; Wait must too.
+func TestSession_WaitIsBounded(t *testing.T) {
+	read := captureDiag(t)
+
+	s := &Session{ID: "unreapable", cmd: &exec.Cmd{}, done: make(chan struct{}), reaped: make(chan struct{})}
+
+	returned := make(chan error, 1)
+	go func() { returned <- s.Wait(30 * time.Millisecond) }()
+
+	select {
+	case err := <-returned:
+		if !errors.Is(err, ErrReapTimeout) {
+			t.Fatalf("Wait on an unreapable child should report ErrReapTimeout, got %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Session.Wait is unbounded — an unreapable child parks the relay's readLoop forever")
+	}
+
+	if _, ok := findEvent(read(), EventSessionReapTimeout); !ok {
+		t.Fatalf("a give-up in Wait must be logged, got %v", read())
+	}
+}
+
+// A child that has already exited must return from Wait immediately with no error
+// and no timeout log — the overwhelmingly common case.
+func TestSession_WaitReturnsImmediatelyForReapedChild(t *testing.T) {
+	read := captureDiag(t)
+
+	reaped := make(chan struct{})
+	close(reaped)
+	s := &Session{ID: "done", cmd: &exec.Cmd{}, done: make(chan struct{}), reaped: reaped}
+
+	if err := s.Wait(time.Hour); err != nil {
+		t.Fatalf("Wait on a reaped child: %v", err)
+	}
+	if ev, ok := findEvent(read(), EventSessionReapTimeout); ok {
+		t.Fatalf("a reaped child must not log a timeout, got %v", ev.fields)
+	}
+}
+
 // StopAll discards every Close error. A PTY fd that fails to close is a leak, so
 // the failure has to reach the log.
 func TestManager_StopAllLogsCloseFailure(t *testing.T) {

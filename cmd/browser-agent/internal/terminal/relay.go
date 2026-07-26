@@ -102,11 +102,17 @@ func (r *Relay) SubscribeWithHistory(subID string) (history []byte, sub <-chan [
 	return history, sub, err
 }
 
-// reapExitCode waits for the child process exit code. Called after PTY read
-// returns an error (typically EOF when the child exits), so the Session's
+// reapExitCode waits (bounded) for the child process exit code. Called after PTY
+// read returns an error (typically EOF when the child exits), so the Session's
 // reaper goroutine has usually already captured the exit code.
+//
+// The bound matters: this runs BEFORE readLoop's deferred fanout.Close(), so an
+// unreapable child would otherwise park readLoop forever — the fanout never
+// closes and every WebSocket pump hangs on a channel that never closes (S6). On
+// timeout, ExitCode() reports -1 (unknown) and teardown proceeds; the session
+// layer logs the give-up.
 func (r *Relay) reapExitCode() {
-	r.sess.Wait() // blocks until child exits — usually instant since PTY EOF already received
+	_ = r.sess.Wait(ReapTimeout)
 	r.exitCode = r.sess.ExitCode()
 }
 

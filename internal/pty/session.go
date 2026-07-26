@@ -93,6 +93,10 @@ type winsize struct {
 // ErrSessionClosed is returned when operating on a closed session.
 var ErrSessionClosed = errors.New("pty: session closed")
 
+// ErrReapTimeout is returned by Wait when the child was not reaped within the
+// caller's bound. The child (and its PTY fd) may still be alive.
+var ErrReapTimeout = errors.New("pty: timed out waiting for the child to be reaped")
+
 // SpawnConfig configures a new PTY session.
 type SpawnConfig struct {
 	ID   string   // Session identifier.
@@ -320,6 +324,7 @@ func (s *Session) Close() error {
 			diag(EventSessionReapTimeout, map[string]any{
 				"session_id": s.ID,
 				"pid":        s.Pid(),
+				"phase":      "close",
 				"wait_ms":    (2 * sessionReapWait).Milliseconds(),
 			})
 		}
@@ -347,10 +352,28 @@ func (s *Session) signalChild(sig syscall.Signal) {
 	})
 }
 
-// Wait blocks until the child process exits.
-func (s *Session) Wait() error {
-	<-s.reaped
-	return nil
+// Wait blocks until the child process exits or timeout elapses, returning
+// ErrReapTimeout in the latter case.
+//
+// The bound is not optional. Wait's caller (Relay.reapExitCode) runs after the PTY
+// read fails and BEFORE the deferred fanout.Close(), so an unreapable child — a
+// D-state process, or a reaper that never completes — used to park the readLoop
+// permanently: the fanout never closed, and every WebSocket pump blocked forever on
+// a subscriber channel that would never close (finding S6). Close already bounds
+// its reap wait the same way.
+func (s *Session) Wait(timeout time.Duration) error {
+	select {
+	case <-s.reaped:
+		return nil
+	case <-time.After(timeout):
+		diag(EventSessionReapTimeout, map[string]any{
+			"session_id": s.ID,
+			"pid":        s.Pid(),
+			"phase":      "wait",
+			"wait_ms":    timeout.Milliseconds(),
+		})
+		return ErrReapTimeout
+	}
 }
 
 // AppendScrollback appends data to the scrollback buffer, evicting oldest bytes

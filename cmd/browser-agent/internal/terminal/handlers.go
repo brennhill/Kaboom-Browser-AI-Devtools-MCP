@@ -76,6 +76,13 @@ const PromptChars = "$#>%"
 // the idle callback fires. Used to detect when an agent is waiting for input.
 const IdleTimeout = 30 * time.Second
 
+// ReapTimeout bounds how long the relay's readLoop waits for the child's exit
+// code before tearing the fanout down anyway. The PTY read has already failed by
+// then, so the child is normally gone and this returns instantly; the bound only
+// matters for a child that cannot be reaped, which must not hold every WebSocket
+// pump hostage. Matches Session.Close's own reap bound.
+const ReapTimeout = 2 * time.Second
+
 // RegisterRoutes adds terminal-related routes to the mux.
 // NOT MCP — These are daemon-served endpoints for the in-browser terminal.
 func RegisterRoutes(mux *http.ServeMux, deps Deps, server ServerDeps, mgr *pty.Manager, cap *capture.Store) *Map {
