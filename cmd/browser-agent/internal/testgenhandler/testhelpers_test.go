@@ -23,13 +23,15 @@ func (f *fakeDeps) GetLogTotalAdded() int64                      { return int64(
 // testEnv pairs a Handler with the capture store its Deps read from, so tests can
 // seed actions/bodies and then assert on generated output.
 type testEnv struct {
-	h   *Handler
-	cap *capture.Store
+	h    *Handler
+	cap  *capture.Store
+	deps *fakeDeps
 }
 
 func newTestEnv() *testEnv {
 	cap := capture.NewCapture()
-	return &testEnv{h: New(&fakeDeps{cap: cap}), cap: cap}
+	deps := &fakeDeps{cap: cap}
+	return &testEnv{h: New(deps), cap: cap, deps: deps}
 }
 
 // newPureHandler builds a Handler for the classification/healing paths, which are

@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -58,6 +59,39 @@ func TestHandleGenerateTestFromContext(t *testing.T) {
 		r := toolResult(t, env.h.HandleGenerateTestFromContext(req(), json.RawMessage(`{"context":"nope"}`)))
 		if !r.IsError {
 			t.Fatal("expected an error result for an unknown context value")
+		}
+	})
+
+	t.Run("error context routes to the error generator", func(t *testing.T) {
+		t.Parallel()
+		// context="error" must reach generateTestFromError, which reads the log
+		// buffer (not the action buffer) to find the error to reproduce. With no
+		// error-level entry it reports no error context; with one, it generates.
+		const errorTS = "2026-01-01T00:00:00Z"
+		errorMillis := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli()
+
+		env := newTestEnv()
+		// The action must fall inside the generator's 5s window around the error.
+		env.cap.AddEnhancedActionsForTest([]capture.EnhancedAction{
+			{Type: "click", URL: "https://example.com", Timestamp: errorMillis},
+		})
+
+		noErrors := toolResult(t, env.h.HandleGenerateTestFromContext(req(), json.RawMessage(`{"context":"error"}`)))
+		if !noErrors.IsError {
+			t.Fatal("expected an error result when no error-level log entry exists")
+		}
+
+		env.deps.entries = []mcp.LogEntry{
+			{"level": "error", "message": "TypeError: undefined is not a function", "ts": errorTS},
+		}
+		withError := toolResult(t, env.h.HandleGenerateTestFromContext(req(), json.RawMessage(`{"context":"error"}`)))
+		if withError.IsError {
+			t.Fatalf("unexpected error result once an error entry exists: %s", withError.Content[0].Text)
+		}
+		test := decodedTest(t, withError)
+		// The reproduction script is built around the captured error message.
+		if content, _ := test["content"].(string); !strings.Contains(content, "undefined is not a function") {
+			t.Fatalf("generated test should reproduce the captured error; got %q", content)
 		}
 	})
 
