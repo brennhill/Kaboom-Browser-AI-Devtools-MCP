@@ -149,6 +149,18 @@ cmd/browser-agent/
 ├── testgen_classify.go                  # test_classify
 ├── testgen_provider_adapter.go          # capture/log adapter to internal/testgen
 └── tools_core.go                        # ToolHandler composition
+
+internal/testgen/
+├── generate.go / helpers.go             # test_from_context generation engine
+├── classify.go                          # test_classify failure classification
+├── types.go                             # generation + classification contracts
+└── heal/                                # test_heal engine (self-contained subpackage)
+    ├── types.go                         # heal request/result contracts, limits
+    ├── paths.go                         # project-boundary path validation
+    ├── selectors.go                     # selector extraction + safety checks
+    ├── repair.go                         # single-selector repair strategies
+    ├── batch.go                         # directory walk + aggregate healing
+    └── summary.go                       # user-facing summary formatting
 ```
 
 #### Current handler boundaries:

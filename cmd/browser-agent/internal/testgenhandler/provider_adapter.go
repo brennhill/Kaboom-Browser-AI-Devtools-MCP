@@ -7,6 +7,7 @@ package testgenhandler
 import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testgen"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testgen/heal"
 )
 
 // dataProviderAdapter adapts Deps to testgen.DataProvider.
@@ -45,15 +46,15 @@ func (h *Handler) generateTestFromRegression(req TestFromContextRequest) (*Gener
 }
 
 func (h *Handler) analyzeTestFile(req TestHealRequest, projectDir string) ([]string, error) {
-	return testgen.AnalyzeTestFile(req, projectDir)
+	return heal.AnalyzeTestFile(req, projectDir)
 }
 
 func (h *Handler) repairSelectors(req TestHealRequest, _ string) (*HealResult, error) {
-	return testgen.RepairSelectors(req)
+	return heal.RepairSelectors(req)
 }
 
 func (h *Handler) healTestBatch(req TestHealRequest, projectDir string) (*BatchHealResult, error) {
-	return testgen.HealTestBatch(req, projectDir)
+	return heal.HealTestBatch(req, projectDir)
 }
 
 func (h *Handler) classifyFailure(failure *TestFailure) *FailureClassification {

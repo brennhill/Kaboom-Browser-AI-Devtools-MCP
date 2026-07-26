@@ -2,7 +2,7 @@
 // Docs: docs/features/feature/test-generation/index.md
 
 // heal_test.go — Tests for test healing functions.
-package testgen
+package heal
 
 import (
 	"os"

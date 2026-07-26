@@ -1,6 +1,6 @@
 // Purpose: Heals broken selectors across a batch of test files in a directory.
 // Why: Separates batch-mode directory scanning from single-file repair and analysis.
-package testgen
+package heal
 
 import (
 	"fmt"
