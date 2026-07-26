@@ -19,7 +19,7 @@ import (
 // All fields are protected by mu (sync.RWMutex) unless noted otherwise.
 // Lock hierarchy: Capture.mu is position 3 (after ClientRegistry, ClientState).
 // Release locks before calling external callbacks. Use RLock() for read-only access.
-// Sub-struct locks: a11y, perf, session, mem use parent mu.
+// Sub-struct locks: perf and the buffer stores use parent mu.
 //
 // Ring buffers (wsEvents, networkBodies, enhancedActions) use entry wrapper structs that
 // bundle each datum with its ingestion timestamp, eliminating parallel-array desync risk:
@@ -91,9 +91,7 @@ type Capture struct {
 	// Composed Sub-Structures
 	// ============================================
 
-	a11y    A11yCache        // Accessibility audit cache. Protected by parent mu (no separate lock). Accessed via getA11yCacheEntry/setA11yCacheEntry.
-	perf    PerformanceStore // Performance snapshots and baselines. Protected by parent mu (no separate lock).
-	session SessionTracker   // Session-level performance aggregation. Protected by parent mu (no separate lock).
+	perf PerformanceStore // Performance snapshots and baselines. Protected by parent mu (no separate lock).
 
 	// ============================================
 	// Multi-Client Support
@@ -144,14 +142,6 @@ func NewCapture() *Capture {
 			baselines:       make(map[string]performance.Baseline),
 			baselineOrder:   make([]string, 0),
 			beforeSnapshots: make(map[string]performance.Snapshot),
-		},
-		session: SessionTracker{
-			FirstSnapshots: make(map[string]performance.Snapshot),
-		},
-		a11y: A11yCache{
-			cache:      make(map[string]*a11yCacheEntry),
-			cacheOrder: make([]string, 0),
-			inflight:   make(map[string]*a11yInflightEntry),
 		},
 		debug:            NewDebugLogger(),
 		recordingManager: NewRecordingManager(),
