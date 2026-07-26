@@ -7,6 +7,8 @@ package capture
 import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/wsconn"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/debuglog"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
@@ -138,9 +140,15 @@ type (
 // NewCircuitBreaker is re-exported from internal/circuit for backward compatibility.
 var NewCircuitBreaker = circuit.NewCircuitBreaker
 
-// Lifecycle and debug logger subsystem types are re-exported from:
-// - internal/lifecycle (LifecycleObserver, LifecycleEvent, LifecycleListener) — see lifecycle_observer.go
-// - internal/debuglog (DebugLogger) — see debug_logger.go
+// Debug logger subsystem types — moved to internal/debuglog package.
+
+// DebugLogger is an alias to the canonical type in internal/debuglog.
+type DebugLogger = debuglog.Logger
+
+// NewDebugLogger re-exports debuglog.NewLogger for backward compatibility.
+var NewDebugLogger = debuglog.NewLogger
+
+const debugLogSize = debuglog.LogSize
 
 const (
 	queryResultTTL = queries.QueryResultTTL // Re-export for queries_lifecycle_test.go
@@ -157,3 +165,29 @@ var (
 	validateRecordingID    = recording.ValidateRecordingID
 	calculateRecordingSize = recording.CalculateRecordingSize
 )
+
+// Type aliases for backward compatibility — all types now live in internal/lifecycle.
+type (
+	LifecycleEvent    = lifecycle.Event
+	LifecycleListener = lifecycle.Listener
+	LifecycleObserver = lifecycle.Observer
+)
+
+// Event constant aliases for backward compatibility.
+const (
+	EventUnknown               = lifecycle.EventUnknown
+	EventCircuitOpened         = lifecycle.EventCircuitOpened
+	EventCircuitClosed         = lifecycle.EventCircuitClosed
+	EventExtensionConnected    = lifecycle.EventExtensionConnected
+	EventExtensionDisconnected = lifecycle.EventExtensionDisconnected
+	EventBufferEviction        = lifecycle.EventBufferEviction
+	EventRateLimitTriggered    = lifecycle.EventRateLimitTriggered
+	EventCommandStateDesync    = lifecycle.EventCommandStateDesync
+	EventSyncSnapshot          = lifecycle.EventSyncSnapshot
+)
+
+// NewLifecycleObserver re-exports lifecycle.NewObserver for backward compatibility.
+var NewLifecycleObserver = lifecycle.NewObserver
+
+// ParseLifecycleEvent re-exports lifecycle.ParseEvent for backward compatibility.
+var ParseLifecycleEvent = lifecycle.ParseEvent

@@ -1,5 +1,5 @@
-// Purpose: Defines extension status payloads and applies status updates into capture extension-tracking state.
-// Why: Keeps extension tracking metadata synchronized for health and routing decisions.
+// Purpose: Persists and restores the extension pilot-settings cache to/from disk.
+// Why: Lets pilot enablement survive a daemon restart without waiting for the next /sync.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
 package capture
