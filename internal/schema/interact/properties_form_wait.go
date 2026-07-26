@@ -1,8 +1,8 @@
 // Purpose: Defines form-filling and wait-condition properties for the interact tool.
 // Why: Separates form and wait properties from targeting, output, and core action properties.
-package schema
+package interact
 
-func interactFormAndWaitProperties() map[string]any {
+func formAndWaitProperties() map[string]any {
 	return map[string]any{
 		"fields": map[string]any{
 			"type":        "array",

@@ -39,9 +39,9 @@ last_verified_date: 2026-03-05
 - Tool mode/action enums are sourced from:
   - `internal/schema/observe.go`
   - `internal/schema/analyze.go`
-  - `internal/schema/configure_properties_core.go`
+  - `internal/schema/configure/properties_core.go`
   - `internal/schema/generate.go`
-  - `internal/schema/interact_actions.go`
+  - `internal/schema/interact/actions.go`
 
 ## Failure Modes
 

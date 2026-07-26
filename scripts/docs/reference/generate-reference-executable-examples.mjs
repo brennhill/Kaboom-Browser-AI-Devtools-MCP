@@ -24,7 +24,7 @@ function extractWhatEnum(schemaSource) {
 }
 
 function extractInteractActions(schemaSource) {
-  const match = schemaSource.match(/var\s+interactActionSpecs\s*=\s*\[\]InteractActionSpec\{([\s\S]*?)\n\}/m)
+  const match = schemaSource.match(/var\s+actionSpecs\s*=\s*\[\]ActionSpec\{([\s\S]*?)\n\}/m)
   if (!match) throw new Error('Could not find interact action specs')
   return dedupe(
     [...match[1].matchAll(/Name:\s*"([^"]+)"/g)]
@@ -262,8 +262,8 @@ async function readModes() {
   const observeSource = await fs.readFile(path.join(repoRoot, 'internal/schema/observe.go'), 'utf8')
   const analyzeSource = await fs.readFile(path.join(repoRoot, 'internal/schema/analyze.go'), 'utf8')
   const generateSource = await fs.readFile(path.join(repoRoot, 'internal/schema/generate.go'), 'utf8')
-  const configureSource = await fs.readFile(path.join(repoRoot, 'internal/schema/configure_properties_core.go'), 'utf8')
-  const interactSource = await fs.readFile(path.join(repoRoot, 'internal/schema/interact_actions.go'), 'utf8')
+  const configureSource = await fs.readFile(path.join(repoRoot, 'internal/schema/configure/properties_core.go'), 'utf8')
+  const interactSource = await fs.readFile(path.join(repoRoot, 'internal/schema/interact/actions.go'), 'utf8')
 
   return {
     observe: extractWhatEnum(observeSource),

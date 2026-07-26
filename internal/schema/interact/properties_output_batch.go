@@ -1,8 +1,8 @@
 // Purpose: Defines output enrichment and batch execution properties for the interact tool.
 // Why: Separates output/batch properties from targeting, form, and core action properties.
-package schema
+package interact
 
-func interactOutputAndBatchProperties() map[string]any {
+func outputAndBatchProperties() map[string]any {
 	return map[string]any{
 		"include_screenshot": map[string]any{
 			"type":        "boolean",

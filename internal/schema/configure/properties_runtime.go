@@ -1,8 +1,8 @@
 // Purpose: Defines runtime MCP schema properties for the configure tool (buffer, streaming, sequences).
 // Why: Separates runtime-specific properties from core dispatch properties.
-package schema
+package configure
 
-func configureRuntimeProperties() map[string]any {
+func runtimeProperties() map[string]any {
 	return map[string]any{
 		"buffer": map[string]any{
 			"type":        "string",

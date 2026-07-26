@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/cli"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
+	interactschema "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema/interact"
 )
 
 func TestSchemaParity_AnalyzeWhatEnumMatchesHandlers(t *testing.T) {
@@ -113,7 +113,7 @@ func sortedInteractRuntimeActions(h *ToolHandler) []string {
 	// Build set of alias action names to exclude from parity check.
 	// Aliases are hidden from the schema enum but still routed at runtime.
 	aliasSet := make(map[string]bool)
-	for _, spec := range schema.InteractActionSpecs() {
+	for _, spec := range interactschema.ActionSpecs() {
 		if spec.IsAlias {
 			aliasSet[spec.Name] = true
 		}

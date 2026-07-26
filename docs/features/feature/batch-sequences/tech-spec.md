@@ -16,7 +16,7 @@ last_verified_date: 2026-03-05
 - Replay step execution helpers: `cmd/browser-agent/tools_configure_sequence_replay_steps.go`
 
 ## Contract Notes
-- Batch step schema is part of interact tool schema (`internal/schema/interact_properties_output_batch.go`).
+- Batch step schema is part of interact tool schema (`internal/schema/interact/properties_output_batch.go`).
 - Replay should reuse batch execution internals rather than reimplementing per-step behavior.
 
 ## Reliability Constraints

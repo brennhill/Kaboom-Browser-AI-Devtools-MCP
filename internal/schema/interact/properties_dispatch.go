@@ -1,13 +1,13 @@
 // Purpose: Defines dispatch properties for the interact tool (what, action, telemetry_mode, sync).
 // Why: Separates dispatch/routing properties from action-specific and targeting properties.
-package schema
+package interact
 
-func interactDispatchProperties() map[string]any {
+func dispatchProperties() map[string]any {
 	return map[string]any{
 		"what": map[string]any{
 			"type":        "string",
 			"description": "Browser action to perform",
-			"enum":        interactActions,
+			"enum":        actionEnum,
 		},
 		"action": map[string]any{
 			"type":        "string",

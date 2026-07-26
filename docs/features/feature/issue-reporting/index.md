@@ -4,9 +4,10 @@ feature_id: feature-issue-reporting
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-26
 code_paths:
   - cmd/browser-agent/tools_configure_report_issue.go
+  - internal/schema/configure/properties_runtime.go
   - internal/issuereport/types.go
   - internal/issuereport/templates.go
   - internal/issuereport/sanitize.go
@@ -27,7 +28,7 @@ last_verified_date: 2026-03-05
 | **Status**    | shipped                                 |
 | **Tool**      | configure                               |
 | **Mode**      | `what="report_issue"`                   |
-| **Schema**    | `internal/schema/configure_properties_runtime.go` |
+| **Schema**    | `internal/schema/configure/properties_runtime.go` |
 
 ## Specs
 

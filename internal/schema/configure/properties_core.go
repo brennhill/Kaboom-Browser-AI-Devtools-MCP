@@ -1,8 +1,8 @@
 // Purpose: Defines core MCP schema properties for the configure tool (what, action, mode, tool).
 // Why: Separates core dispatch properties from runtime configuration properties.
-package schema
+package configure
 
-func configureCoreProperties() map[string]any {
+func coreProperties() map[string]any {
 	return map[string]any{
 		"what": map[string]any{
 			"type":        "string",

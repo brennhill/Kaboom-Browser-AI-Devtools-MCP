@@ -1,10 +1,10 @@
 // Purpose: Defines the canonical list of interact tool action values for the what/action enum.
 // Why: Centralizes the action enum so schema definition and action dispatch share a single source.
-package schema
+package interact
 
-// InteractActionSpec defines per-action metadata used across schema + runtime capability docs.
+// ActionSpec defines per-action metadata used across schema + runtime capability docs.
 // Keep this as the single source of truth for interact action surface metadata.
-type InteractActionSpec struct {
+type ActionSpec struct {
 	Name     string
 	Hint     string
 	Required []string
@@ -12,11 +12,11 @@ type InteractActionSpec struct {
 	IsAlias  bool
 }
 
-// interactActionSpecs is the canonical interact action registry.
+// actionSpecs is the canonical interact action registry.
 // Fields are consumed by:
 // - interact schema enum (`what`/`action`)
 // - describe_capabilities interact mode specs
-var interactActionSpecs = []InteractActionSpec{
+var actionSpecs = []ActionSpec{
 	{Name: "highlight", Hint: "Visually highlight an element with a colored overlay", Optional: []string{"selector", "element_id", "index", "nth", "scope_selector", "frame", "duration_ms"}},
 	{Name: "subtitle", Hint: "Display a status subtitle in the extension UI", Optional: []string{"text"}},
 	{Name: "save_state", Hint: "Snapshot cookies/storage/URL for later restore", Required: []string{"snapshot_name"}, Optional: []string{"storage_type", "include_url"}},
@@ -84,11 +84,11 @@ var interactActionSpecs = []InteractActionSpec{
 	{Name: "clipboard_write", Hint: "Write text to the clipboard", Optional: []string{"text"}},
 }
 
-// interactActions is the canonical list of values accepted by the 'what' parameter.
+// actionEnum is the canonical list of values accepted by the 'what' parameter.
 // The deprecated 'action' alias references this same slice — do not mutate it at runtime.
-var interactActions = interactActionNames(interactActionSpecs)
+var actionEnum = actionNames(actionSpecs)
 
-func interactActionNames(specs []InteractActionSpec) []string {
+func actionNames(specs []ActionSpec) []string {
 	out := make([]string, 0, len(specs))
 	for _, spec := range specs {
 		if spec.IsAlias {
@@ -99,11 +99,11 @@ func interactActionNames(specs []InteractActionSpec) []string {
 	return out
 }
 
-// InteractActionSpecs returns a defensive copy of canonical interact action specs.
-func InteractActionSpecs() []InteractActionSpec {
-	out := make([]InteractActionSpec, 0, len(interactActionSpecs))
-	for _, spec := range interactActionSpecs {
-		out = append(out, InteractActionSpec{
+// ActionSpecs returns a defensive copy of canonical interact action specs.
+func ActionSpecs() []ActionSpec {
+	out := make([]ActionSpec, 0, len(actionSpecs))
+	for _, spec := range actionSpecs {
+		out = append(out, ActionSpec{
 			Name:     spec.Name,
 			Hint:     spec.Hint,
 			Required: append([]string(nil), spec.Required...),

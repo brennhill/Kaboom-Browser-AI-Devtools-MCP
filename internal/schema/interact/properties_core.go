@@ -1,8 +1,8 @@
 // Purpose: Defines core action properties for the interact tool (highlight, state, script, storage).
 // Why: Separates action-specific properties from targeting, form, and output properties.
-package schema
+package interact
 
-func interactCoreActionProperties() map[string]any {
+func coreActionProperties() map[string]any {
 	return map[string]any{
 		"duration_ms": map[string]any{
 			"type":        "number",

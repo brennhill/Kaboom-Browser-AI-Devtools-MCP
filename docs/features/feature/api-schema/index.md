@@ -20,7 +20,23 @@ code_paths:
   - internal/analysis/apischema/path.go
   - internal/analysis/apischema/observe_http.go
   - internal/analysis/apischema/observe_ws.go
+  - internal/schema/schema.go
   - internal/schema/observe.go
+  - internal/schema/analyze.go
+  - internal/schema/generate.go
+  - internal/schema/configure/tool.go
+  - internal/schema/configure/properties.go
+  - internal/schema/configure/properties_core.go
+  - internal/schema/configure/properties_runtime.go
+  - internal/schema/interact/tool.go
+  - internal/schema/interact/actions.go
+  - internal/schema/interact/properties.go
+  - internal/schema/interact/properties_core.go
+  - internal/schema/interact/properties_dispatch.go
+  - internal/schema/interact/properties_form_wait.go
+  - internal/schema/interact/properties_output_batch.go
+  - internal/schema/interact/properties_targeting.go
+  - cmd/browser-agent/tools_schema.go
 test_paths:
   - internal/analysis/apicontract/contract_test.go
   - internal/analysis/apicontract/branch_coverage_test.go
@@ -28,6 +44,9 @@ test_paths:
   - internal/analysis/apischema/infer_test.go
   - internal/analysis/apischema/observe_http_test.go
   - internal/analysis/apischema/openapi_test.go
+  - internal/schema/invariants_test.go
+  - internal/schema/interact/schema_test.go
+  - cmd/browser-agent/tools_schema_parity_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -55,4 +74,21 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-Add concrete implementation and test links here as this feature evolves.
+Observed-traffic API schema inference (`observe {what: "api"}`):
+
+- Schema inference and OpenAPI emission: `internal/analysis/apischema/`
+- Contract learning and violation reporting: `internal/analysis/apicontract/`
+- OpenAPI export surface: `cmd/browser-agent/openapi.go`
+
+MCP tool schemas (the `tools/list` contract, `internal/schema`):
+
+- tools/list assembly: `internal/schema/schema.go` (`AllTools`, in tools/list order)
+- Single-file tool schemas: `internal/schema/observe.go`, `internal/schema/analyze.go`, `internal/schema/generate.go`
+- Configure tool schema + property groups: `internal/schema/configure/`
+- Interact tool schema, property groups, and canonical action registry: `internal/schema/interact/`
+  (`interact.ActionSpecs` is the single source of truth consumed by `internal/tools/configure`
+  for `describe_capabilities` mode specs)
+- Daemon delegation: `cmd/browser-agent/tools_schema.go`
+- Claude-API schema invariants (no top-level/nested combiners, valid JSON round-trip): `internal/schema/invariants_test.go`
+- Interact enum/alias/registry invariants: `internal/schema/interact/schema_test.go`
+- Schema/runtime dispatch parity: `cmd/browser-agent/tools_schema_parity_test.go`

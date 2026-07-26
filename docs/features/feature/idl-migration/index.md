@@ -10,7 +10,7 @@ code_paths:
   - scripts/contracts/check-wire-drift.js
   - internal/types/wire_enhanced_action.go
   - internal/types/wire_network.go
-  - internal/schema/interact.go
+  - internal/schema/interact/tool.go
   - src/types/wire/wire-enhanced-action.ts
   - src/types/wire/wire-network.ts
   - src/types/wire/wire-websocket-event.ts

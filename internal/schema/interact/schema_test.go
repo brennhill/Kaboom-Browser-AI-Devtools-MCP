@@ -1,11 +1,11 @@
-package schema
+package interact
 
 import "testing"
 
 func TestInteractToolSchema_RequiresWhat_ActionIsRuntimeAlias(t *testing.T) {
 	t.Parallel()
 
-	tool := InteractToolSchema()
+	tool := ToolSchema()
 	props, ok := tool.InputSchema["properties"].(map[string]any)
 	if !ok {
 		t.Fatal("interact schema missing properties")
@@ -56,7 +56,7 @@ func TestInteractToolSchema_RequiresWhat_ActionIsRuntimeAlias(t *testing.T) {
 
 func TestInteractToolSchema_AutoDismissParam(t *testing.T) {
 	t.Parallel()
-	tool := InteractToolSchema()
+	tool := ToolSchema()
 	props, ok := tool.InputSchema["properties"].(map[string]any)
 	if !ok {
 		t.Fatal("schema properties missing")
@@ -72,7 +72,7 @@ func TestInteractToolSchema_AutoDismissParam(t *testing.T) {
 
 func TestInteractToolSchema_StabilityMsParam(t *testing.T) {
 	t.Parallel()
-	tool := InteractToolSchema()
+	tool := ToolSchema()
 	props, ok := tool.InputSchema["properties"].(map[string]any)
 	if !ok {
 		t.Fatal("schema properties missing")
@@ -89,26 +89,26 @@ func TestInteractToolSchema_StabilityMsParam(t *testing.T) {
 func TestInteractActionSpecs_EnumParity(t *testing.T) {
 	t.Parallel()
 
-	specs := InteractActionSpecs()
+	specs := ActionSpecs()
 	if len(specs) == 0 {
-		t.Fatal("InteractActionSpecs should be non-empty")
+		t.Fatal("ActionSpecs should be non-empty")
 	}
 
-	// interactActions excludes IsAlias specs; build the non-alias subset for comparison.
-	nonAlias := make([]InteractActionSpec, 0, len(specs))
+	// actionEnum excludes IsAlias specs; build the non-alias subset for comparison.
+	nonAlias := make([]ActionSpec, 0, len(specs))
 	for _, s := range specs {
 		if !s.IsAlias {
 			nonAlias = append(nonAlias, s)
 		}
 	}
 
-	if len(interactActions) != len(nonAlias) {
-		t.Fatalf("interactActions/non-alias spec count mismatch: actions=%d specs=%d", len(interactActions), len(nonAlias))
+	if len(actionEnum) != len(nonAlias) {
+		t.Fatalf("actionEnum/non-alias spec count mismatch: actions=%d specs=%d", len(actionEnum), len(nonAlias))
 	}
 
 	for i, spec := range nonAlias {
-		if interactActions[i] != spec.Name {
-			t.Fatalf("interact action order mismatch at %d: enum=%q spec=%q", i, interactActions[i], spec.Name)
+		if actionEnum[i] != spec.Name {
+			t.Fatalf("interact action order mismatch at %d: enum=%q spec=%q", i, actionEnum[i], spec.Name)
 		}
 	}
 }
@@ -116,10 +116,10 @@ func TestInteractActionSpecs_EnumParity(t *testing.T) {
 func TestInteractActionSpecs_NoDuplicateNamesOrEmptyHints(t *testing.T) {
 	t.Parallel()
 
-	seen := make(map[string]bool, len(interactActionSpecs))
-	for i, spec := range interactActionSpecs {
+	seen := make(map[string]bool, len(actionSpecs))
+	for i, spec := range actionSpecs {
 		if spec.Name == "" {
-			t.Fatalf("interactActionSpecs[%d] has empty Name", i)
+			t.Fatalf("actionSpecs[%d] has empty Name", i)
 		}
 		if seen[spec.Name] {
 			t.Fatalf("duplicate interact action name: %q", spec.Name)
@@ -151,8 +151,8 @@ func TestInteractActionSpecs_RequiredMatchesRuntimeValidation(t *testing.T) {
 		"delete_cookie":           {"name"},
 	}
 
-	specs := InteractActionSpecs()
-	specMap := make(map[string]InteractActionSpec, len(specs))
+	specs := ActionSpecs()
+	specMap := make(map[string]ActionSpec, len(specs))
 	for _, s := range specs {
 		specMap[s.Name] = s
 	}
@@ -188,7 +188,7 @@ func TestInteractActionSpecs_RequiredMatchesRuntimeValidation(t *testing.T) {
 func TestInteractEnum_ExcludesAliases(t *testing.T) {
 	t.Parallel()
 
-	tool := InteractToolSchema()
+	tool := ToolSchema()
 	props, ok := tool.InputSchema["properties"].(map[string]any)
 	if !ok {
 		t.Fatal("interact schema missing properties")
@@ -223,7 +223,7 @@ func TestInteractDispatch_AliasStillWorks(t *testing.T) {
 	t.Parallel()
 
 	// Verify alias specs are still in the full registry (used by dispatch)
-	specs := InteractActionSpecs()
+	specs := ActionSpecs()
 	specNames := make(map[string]bool, len(specs))
 	for _, s := range specs {
 		specNames[s.Name] = true
@@ -232,7 +232,7 @@ func TestInteractDispatch_AliasStillWorks(t *testing.T) {
 	aliases := []string{"state_save", "state_load", "state_list", "state_delete"}
 	for _, alias := range aliases {
 		if !specNames[alias] {
-			t.Errorf("alias %q should still be in InteractActionSpecs for dispatch", alias)
+			t.Errorf("alias %q should still be in ActionSpecs for dispatch", alias)
 		}
 	}
 }

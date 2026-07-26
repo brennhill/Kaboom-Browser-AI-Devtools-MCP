@@ -1,8 +1,8 @@
 // Purpose: Defines element targeting properties for the interact tool (selector, scope, index, nth).
 // Why: Separates targeting properties from action-specific and output properties.
-package schema
+package interact
 
-func interactTargetingProperties() map[string]any {
+func targetingProperties() map[string]any {
 	return map[string]any{
 		"selector": map[string]any{
 			"type":        "string",

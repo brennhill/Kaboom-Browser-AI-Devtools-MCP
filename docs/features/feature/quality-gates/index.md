@@ -8,8 +8,8 @@ last_reviewed: 2026-07-26
 code_paths:
   - cmd/browser-agent/tools_configure_quality_gates.go
   - internal/tools/configure/mode_specs_configure.go
-  - internal/schema/configure_properties_core.go
-  - internal/schema/configure_properties_runtime.go
+  - internal/schema/configure/properties_core.go
+  - internal/schema/configure/properties_runtime.go
   - internal/hook/protocol.go
   - internal/hook/compress_output.go
   - internal/hook/quality_gate.go
@@ -39,7 +39,7 @@ last_verified_date: 2026-03-28
 | **Status**    | in-progress                             |
 | **Tool**      | configure                               |
 | **Mode**      | `what="setup_quality_gates"`            |
-| **Schema**    | `internal/schema/configure_properties_runtime.go` |
+| **Schema**    | `internal/schema/configure/properties_runtime.go` |
 | **Issue**     | [#506](https://github.com/brennhill/kaboom-agentic-browser-devtools-mcp/issues/506) |
 
 ## Specs
