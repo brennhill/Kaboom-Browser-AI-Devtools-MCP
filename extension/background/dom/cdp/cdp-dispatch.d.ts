@@ -4,7 +4,7 @@
  *      CDP Input.dispatch* commands produce true hardware events indistinguishable from real user input.
  * Docs: docs/features/feature/interact-explore/index.md
  */
-import type { PendingQuery } from '../../../types/queries.js';
+import type { PendingQuery } from '../../../types/runtime/queries.js';
 import type { SyncClient } from '../../sync/sync-client.js';
 import type { DOMActionParams, DOMResult } from '../dom-types.js';
 import type { SendAsyncResultFn, ActionToastFn } from '../../commands/helpers.js';

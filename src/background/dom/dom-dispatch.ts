@@ -8,7 +8,7 @@
 // Script builders stay self-contained because chrome.scripting.executeScript
 // serializes injected functions independently.
 
-import type { PendingQuery } from '../../types/queries.js'
+import type { PendingQuery } from '../../types/runtime/queries.js'
 import type { SyncClient } from '../sync/sync-client.js'
 import type { DOMActionParams, DOMResult } from './dom-types.js'
 import type { SendAsyncResultFn, ActionToastFn } from '../commands/helpers.js'

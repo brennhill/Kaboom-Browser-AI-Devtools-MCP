@@ -24,7 +24,6 @@
     "internal/upload": 19,
     "internal/util": 16,
     "scripts": 13,
-    "scripts/docs": 16,
-    "src/types": 22
+    "scripts/docs": 16
   }
 }

@@ -99,9 +99,16 @@ src/
 
   types/                   TypeScript type definitions
     index.ts               Barrel re-exports
-    wire-*.ts              Wire types (generated from Go, CI-enforced)
-    runtime-messages.ts    Message type discriminated unions
-    network.ts, actions.ts, websocket.ts, performance.ts  Domain types
+    messages.ts            Inner barrel over capture/ + runtime/
+    runtime-messages.ts    Message type discriminated unions (rule 20 contract)
+    utils.ts               Generic type helpers and type guards
+    global.d.ts            Ambient globals (KaboomAPI, axe, Performance)
+    wire/                  Wire types (generated from Go, CI-enforced)
+    capture/               Shapes of page-derived telemetry
+      telemetry.ts, network.ts, websocket.ts, performance.ts,
+      actions.ts, accessibility.ts, ai-context.ts, dom.ts, sourcemap.ts
+    runtime/               The extension's own runtime state
+      chrome.ts, debug.ts, queries.ts, state.ts
 ```
 
 ## Key Patterns

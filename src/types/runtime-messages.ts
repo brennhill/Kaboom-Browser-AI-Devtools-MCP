@@ -9,16 +9,16 @@
  * Chrome runtime messages for background, content, and inject script communication
  */
 
-import type { LogEntry, ScreenshotLogEntry } from './telemetry.js'
-import type { WebSocketEvent, WebSocketCaptureMode } from './websocket.js'
-import type { NetworkBodyPayload, WaterfallEntry } from './network.js'
-import type { EnhancedAction } from './actions.js'
-import type { PerformanceSnapshot } from './performance.js'
-import type { LogLevelFilter } from './telemetry.js'
-import type { ConnectionStatus } from './state.js'
-import type { BrowserStateSnapshot, StateAction } from './state.js'
-import type { DomQueryResult } from './dom.js'
-import type { A11yAuditResult } from './accessibility.js'
+import type { LogEntry, ScreenshotLogEntry } from './capture/telemetry.js'
+import type { WebSocketEvent, WebSocketCaptureMode } from './capture/websocket.js'
+import type { NetworkBodyPayload, WaterfallEntry } from './capture/network.js'
+import type { EnhancedAction } from './capture/actions.js'
+import type { PerformanceSnapshot } from './capture/performance.js'
+import type { LogLevelFilter } from './capture/telemetry.js'
+import type { ConnectionStatus } from './runtime/state.js'
+import type { BrowserStateSnapshot, StateAction } from './runtime/state.js'
+import type { DomQueryResult } from './capture/dom.js'
+import type { A11yAuditResult } from './capture/accessibility.js'
 import type { RuntimeMessageName } from '../lib/constants.js'
 
 // =============================================================================

@@ -416,7 +416,7 @@ Inside the `domPrimitive` mega-function:
 - Add `mark` and `measure` to PerformanceObserver entry types
 - Include captured user timing in perf snapshot POST payload
 
-#### 5. `src/types/queries.ts` (MODIFIED, ~5 lines)
+#### 5. `src/types/runtime/queries.ts` (MODIFIED, ~5 lines)
 
 - Add `analyze?: boolean` to dom_action query params
 

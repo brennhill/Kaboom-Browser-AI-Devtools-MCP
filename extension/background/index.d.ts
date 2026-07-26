@@ -20,7 +20,7 @@ export declare function debugLog(category: string, message: string, data?: unkno
 /**
  * Get all debug log entries
  */
-export declare function getDebugLog(): import("../types/debug.js").DebugLogEntry[];
+export declare function getDebugLog(): import("../types/index.js").DebugLogEntry[];
 /**
  * Clear debug log buffer
  */
