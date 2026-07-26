@@ -9,11 +9,20 @@ import (
 
 // swapReclaimDeps installs fakes for reclaimPort's injectable dependencies and
 // returns a restore func.
+//
+// It also stubs daemonProcessCommand so every owning PID reports OUR daemon.
+// reclaimPort now refuses to kill a process it cannot identify as ours, so without
+// this the fake PIDs below (which do not exist) would be treated as foreign and
+// skipped — these tests are about the kill/force-kill/self-skip mechanics, not
+// about identity, which reclaim_port_identity_test.go covers directly.
 func swapReclaimDeps(find func(int) ([]int, error), term func(int, bool), wait func(int, time.Duration) bool, running func(int) bool) func() {
 	of, ot, ow, or := daemonFindProcessOnPort, daemonTerminatePID, daemonWaitForPortRelease, daemonIsServerRunning
+	oc := daemonProcessCommand
 	daemonFindProcessOnPort, daemonTerminatePID, daemonWaitForPortRelease, daemonIsServerRunning = find, term, wait, running
+	daemonProcessCommand = func(int) string { return "/usr/local/bin/kaboom-agentic-browser --daemon" }
 	return func() {
 		daemonFindProcessOnPort, daemonTerminatePID, daemonWaitForPortRelease, daemonIsServerRunning = of, ot, ow, or
+		daemonProcessCommand = oc
 	}
 }
 
