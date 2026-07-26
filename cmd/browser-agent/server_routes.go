@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testpages"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tracking"
 )
@@ -168,9 +169,9 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, cap *capture.Store) 
 	// NOT MCP — WebSocket echo server for test harness (must be registered before /tests/ subtree).
 	// corsMiddleware sets headers on http.ResponseWriter pre-hijack; those headers are not included
 	// in the manually-written 101 response (intentional — WS upgrade bypasses HTTP CORS).
-	mux.HandleFunc("/tests/ws", corsMiddleware(handleTestHarnessWS))
+	mux.HandleFunc("/tests/ws", corsMiddleware(testpages.HandlerWS))
 	// NOT MCP — Embedded test/demo pages for self-testing
-	mux.HandleFunc("/tests/", corsMiddleware(handleTestPages()))
+	mux.HandleFunc("/tests/", corsMiddleware(testpages.Handler()))
 
 	// NOT MCP — Screenshot binary upload from extension (MCP reads via observe(what: "screenshot"))
 	mux.HandleFunc("/screenshots", corsMiddleware(extensionOnly(func(w http.ResponseWriter, r *http.Request) {

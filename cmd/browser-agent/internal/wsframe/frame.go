@@ -1,7 +1,10 @@
-// Purpose: Implements low-level WebSocket frame codec helpers for the test harness.
-// Why: Separates RFC 6455 wire parsing/serialization from connection lifecycle and echo dispatch.
+// frame.go — RFC 6455 WebSocket frame codec (read, write, handshake accept key).
+// Why: This is shared wire infrastructure, not a self-test fixture. It was named
+// testpages_websocket_codec.go, but the production terminal relay consumes the same
+// three functions through terminal.Deps, so it lives in a package with exactly one
+// job: turning bytes into frames and back.
 
-package main
+package wsframe
 
 import (
 	"bufio"
@@ -12,10 +15,13 @@ import (
 	"io"
 )
 
-// wsReadFrame reads one complete WebSocket frame, handling masking.
+// MaxPayload caps incoming frame payloads to prevent DoS via oversized allocation.
+const MaxPayload = 1 << 20 // 1 MiB
+
+// ReadFrame reads one complete WebSocket frame, handling masking.
 // Returns the FIN bit, opcode, unmasked payload, and any I/O error.
-// Payloads larger than maxWSPayload are rejected to prevent DoS.
-func wsReadFrame(r io.Reader) (fin bool, opcode byte, payload []byte, err error) {
+// Payloads larger than MaxPayload are rejected to prevent DoS.
+func ReadFrame(r io.Reader) (fin bool, opcode byte, payload []byte, err error) {
 	header := make([]byte, 2)
 	if _, err = io.ReadFull(r, header); err != nil {
 		return
@@ -40,8 +46,8 @@ func wsReadFrame(r io.Reader) (fin bool, opcode byte, payload []byte, err error)
 		length = binary.BigEndian.Uint64(ext)
 	}
 
-	if length > maxWSPayload {
-		err = fmt.Errorf("ws: frame payload %d bytes exceeds limit %d", length, uint64(maxWSPayload))
+	if length > MaxPayload {
+		err = fmt.Errorf("ws: frame payload %d bytes exceeds limit %d", length, uint64(MaxPayload))
 		return
 	}
 
@@ -64,10 +70,10 @@ func wsReadFrame(r io.Reader) (fin bool, opcode byte, payload []byte, err error)
 	return
 }
 
-// wsWriteFrame writes one unmasked WebSocket frame (FIN=1, server→client).
+// WriteFrame writes one unmasked WebSocket frame (FIN=1, server→client).
 // Payload length is encoded per RFC 6455 §5.2, including the full 8-byte
 // big-endian form for payloads ≥ 65536 bytes.
-func wsWriteFrame(w *bufio.ReadWriter, opcode byte, payload []byte) error {
+func WriteFrame(w *bufio.ReadWriter, opcode byte, payload []byte) error {
 	length := uint64(len(payload))
 	header := []byte{0x80 | opcode}
 	switch {
@@ -88,8 +94,8 @@ func wsWriteFrame(w *bufio.ReadWriter, opcode byte, payload []byte) error {
 	return w.Flush()
 }
 
-// wsAcceptKey computes the Sec-WebSocket-Accept value per RFC 6455.
-func wsAcceptKey(key string) string {
+// AcceptKey computes the Sec-WebSocket-Accept value per RFC 6455.
+func AcceptKey(key string) string {
 	const guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 	h := sha1.New()
 	h.Write([]byte(key + guid))
