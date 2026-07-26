@@ -25,7 +25,19 @@ export declare const TERMINAL_WRITE_SUBMIT_DELAY_MS = 600;
 export declare const TERMINAL_TYPING_IDLE_MS = 1500;
 export declare const TERMINAL_GUARD_POLL_MS = 200;
 export declare const TERMINAL_GUARD_TOAST_INTERVAL_MS = 3000;
-export declare const TERMINAL_GUARD_MAX_WAIT_MS = 30000;
+export declare const TERMINAL_RECONNECT_BASE_DELAY_MS = 1000;
+export declare const TERMINAL_RECONNECT_MAX_DELAY_MS = 10000;
+export declare const TERMINAL_MAX_RECONNECT_ATTEMPTS = 6;
+/**
+ * Wall-clock time from the first disconnect until the iframe gives up and posts
+ * `reconnect_exhausted` (which is what triggers the parent's validate-and-rebuild
+ * recovery). The iframe waits before EVERY attempt, including the one that trips
+ * the cap — the `reconnectAttempts > MAX_RECONNECT_ATTEMPTS` check runs after the
+ * increment, inside the timer — so there are MAX+1 waits: 1+2+4+8+10+10+10 = 45s.
+ */
+export declare function terminalReconnectExhaustionMs(): number;
+export declare const TERMINAL_GUARD_RECOVERY_GRACE_MS = 10000;
+export declare const TERMINAL_GUARD_MAX_WAIT_MS: number;
 export interface TerminalConfig {
     cmd?: string;
     args?: string[];

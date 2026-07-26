@@ -32,13 +32,49 @@ export const TERMINAL_WRITE_SUBMIT_DELAY_MS = 600;
 export const TERMINAL_TYPING_IDLE_MS = 1500;
 export const TERMINAL_GUARD_POLL_MS = 200;
 export const TERMINAL_GUARD_TOAST_INTERVAL_MS = 3000;
+// ---------------------------------------------------------------------------
+// Reconnect schedule — mirrored from the terminal iframe (terminal.html).
+// ---------------------------------------------------------------------------
+// terminal.html is a hand-authored, Go-embedded asset, so it cannot import these
+// and they cannot import it. They are declared here because the write-guard's
+// give-up budget below is DERIVED from them; tests/extension/
+// terminal-reconnect-budget-contract.test.js pins these values to the literals
+// terminal.html actually uses, so the two cannot drift apart.
+export const TERMINAL_RECONNECT_BASE_DELAY_MS = 1000;
+export const TERMINAL_RECONNECT_MAX_DELAY_MS = 10000;
+export const TERMINAL_MAX_RECONNECT_ATTEMPTS = 6;
+/**
+ * Wall-clock time from the first disconnect until the iframe gives up and posts
+ * `reconnect_exhausted` (which is what triggers the parent's validate-and-rebuild
+ * recovery). The iframe waits before EVERY attempt, including the one that trips
+ * the cap — the `reconnectAttempts > MAX_RECONNECT_ATTEMPTS` check runs after the
+ * increment, inside the timer — so there are MAX+1 waits: 1+2+4+8+10+10+10 = 45s.
+ */
+export function terminalReconnectExhaustionMs() {
+    let delay = TERMINAL_RECONNECT_BASE_DELAY_MS;
+    let total = 0;
+    for (let attempt = 0; attempt <= TERMINAL_MAX_RECONNECT_ATTEMPTS; attempt++) {
+        total += delay;
+        delay = Math.min(delay * 2, TERMINAL_RECONNECT_MAX_DELAY_MS);
+    }
+    return total;
+}
+// Headroom on top of the iframe's schedule so the parent has time to actually run
+// its recovery (validate token → rebuild session → reconnect) after
+// `reconnect_exhausted` lands, instead of the guard expiring at the same instant.
+export const TERMINAL_GUARD_RECOVERY_GRACE_MS = 10000;
 // Escape hatch: the maximum total time the write-guard will keep an agent write
 // "in flight" or a queued write "deferred" (waiting for the socket to reconnect
 // or the user to stop typing) before giving up LOUDLY. Without this bound a
 // permanently-down socket or a stuck `queuedWriteInFlight`/`terminalFocused`
 // flag would wedge the terminal forever — writes queue but never flush and the
-// poller spins silently. Generous so momentary blips still queue-and-flush.
-export const TERMINAL_GUARD_MAX_WAIT_MS = 30000;
+// poller spins silently.
+//
+// DERIVED, not hand-picked (finding S1): the old fixed 30s expired 15s before the
+// iframe even reported `reconnect_exhausted` at ~45s, so the queue was thrown away
+// before the recovery it was waiting for could begin — the queue could never
+// survive the outage it exists for.
+export const TERMINAL_GUARD_MAX_WAIT_MS = terminalReconnectExhaustionMs() + TERMINAL_GUARD_RECOVERY_GRACE_MS;
 export const state = {
     widgetEl: null,
     iframeEl: null,
