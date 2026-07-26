@@ -49,7 +49,8 @@ import {
   maybeShowQueuedWriteToast,
   scheduleQueuedWriteFlush,
   scheduleQueuedSubmit,
-  flushQueuedWrites
+  flushQueuedWrites,
+  enqueueBoundedWrite
 } from './content/ui/terminal-write-guard.js'
 
 // =============================================================================
@@ -745,24 +746,6 @@ async function closePanelKeepingSession(): Promise<void> {
 
 async function minimizePanel(): Promise<void> {
   await closePanelWithIntent('minimized')
-}
-
-const MAX_QUEUED_WRITES = 200
-
-/**
- * Enqueue a write, bounding the backlog at MAX_QUEUED_WRITES. Dropping the oldest
- * is a state-mutating loss, so it must not be silent (rule 25): warn to the console
- * (which the daemon captures via observe(what:"errors")) so an overflow is
- * diagnosable rather than a write vanishing without a trace.
- */
-function enqueueBoundedWrite(text: string): void {
-  if (state.queuedWrites.length >= MAX_QUEUED_WRITES) {
-    const dropped = state.queuedWrites.shift()
-    console.warn(
-      `[KaBOOM! terminal] write queue full (${MAX_QUEUED_WRITES}) — dropped oldest queued write: "${(dropped ?? '').slice(0, 40)}"`
-    )
-  }
-  state.queuedWrites.push(text)
 }
 
 function writeToTerminal(text: string): void {

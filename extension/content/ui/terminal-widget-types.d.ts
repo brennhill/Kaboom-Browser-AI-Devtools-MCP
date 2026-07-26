@@ -25,6 +25,18 @@ export declare const TERMINAL_WRITE_SUBMIT_DELAY_MS = 600;
 export declare const TERMINAL_TYPING_IDLE_MS = 1500;
 export declare const TERMINAL_GUARD_POLL_MS = 200;
 export declare const TERMINAL_GUARD_TOAST_INTERVAL_MS = 3000;
+/** Maximum number of agent writes held while the terminal is unreachable. */
+export declare const MAX_QUEUED_WRITES = 200;
+/**
+ * Maximum total SIZE of that backlog, in UTF-8 bytes.
+ *
+ * The entry count alone is not a bound on anything that matters: 200 one-megabyte
+ * writes is a legal state under it, i.e. ~200 MB pinned in the side panel with
+ * nothing to stop it (finding S14). Writes are only queued while the socket is
+ * down, so this also mirrors the daemon's own 1 MB PTY write-buffer cap — more
+ * than this could never be delivered in one go anyway.
+ */
+export declare const MAX_QUEUED_WRITE_BYTES: number;
 export declare const TERMINAL_RECONNECT_BASE_DELAY_MS = 1000;
 export declare const TERMINAL_RECONNECT_MAX_DELAY_MS = 10000;
 export declare const TERMINAL_MAX_RECONNECT_ATTEMPTS = 6;

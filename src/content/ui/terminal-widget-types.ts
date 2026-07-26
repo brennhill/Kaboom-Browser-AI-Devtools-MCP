@@ -41,6 +41,22 @@ export const TERMINAL_GUARD_POLL_MS = 200
 export const TERMINAL_GUARD_TOAST_INTERVAL_MS = 3000
 
 // ---------------------------------------------------------------------------
+// Write-queue bounds
+// ---------------------------------------------------------------------------
+/** Maximum number of agent writes held while the terminal is unreachable. */
+export const MAX_QUEUED_WRITES = 200
+/**
+ * Maximum total SIZE of that backlog, in UTF-8 bytes.
+ *
+ * The entry count alone is not a bound on anything that matters: 200 one-megabyte
+ * writes is a legal state under it, i.e. ~200 MB pinned in the side panel with
+ * nothing to stop it (finding S14). Writes are only queued while the socket is
+ * down, so this also mirrors the daemon's own 1 MB PTY write-buffer cap — more
+ * than this could never be delivered in one go anyway.
+ */
+export const MAX_QUEUED_WRITE_BYTES = 1 << 20
+
+// ---------------------------------------------------------------------------
 // Reconnect schedule — mirrored from the terminal iframe (terminal.html).
 // ---------------------------------------------------------------------------
 // terminal.html is a hand-authored, Go-embedded asset, so it cannot import these

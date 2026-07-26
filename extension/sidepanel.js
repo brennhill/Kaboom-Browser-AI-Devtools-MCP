@@ -11,7 +11,7 @@ import { getServerUrl, getTerminalConfig, persistUIState, loadPersistedSession, 
 import { showActionToast } from './content/ui/toast.js';
 import { createRootFolderBar } from './content/ui/terminal-root-folder.js';
 import { renderNoSessionState, renderStartFailure, renderStartPending } from './content/ui/terminal-panel-states.js';
-import { notifyIframe, resetWriteGuardState, shouldDeferQueuedWrite, maybeShowQueuedWriteToast, scheduleQueuedWriteFlush, scheduleQueuedSubmit } from './content/ui/terminal-write-guard.js';
+import { notifyIframe, resetWriteGuardState, shouldDeferQueuedWrite, maybeShowQueuedWriteToast, scheduleQueuedWriteFlush, scheduleQueuedSubmit, enqueueBoundedWrite } from './content/ui/terminal-write-guard.js';
 function freshPanelUi() {
     return {
         rootEl: null,
@@ -636,20 +636,6 @@ async function closePanelKeepingSession() {
 }
 async function minimizePanel() {
     await closePanelWithIntent('minimized');
-}
-const MAX_QUEUED_WRITES = 200;
-/**
- * Enqueue a write, bounding the backlog at MAX_QUEUED_WRITES. Dropping the oldest
- * is a state-mutating loss, so it must not be silent (rule 25): warn to the console
- * (which the daemon captures via observe(what:"errors")) so an overflow is
- * diagnosable rather than a write vanishing without a trace.
- */
-function enqueueBoundedWrite(text) {
-    if (state.queuedWrites.length >= MAX_QUEUED_WRITES) {
-        const dropped = state.queuedWrites.shift();
-        console.warn(`[KaBOOM! terminal] write queue full (${MAX_QUEUED_WRITES}) — dropped oldest queued write: "${(dropped ?? '').slice(0, 40)}"`);
-    }
-    state.queuedWrites.push(text);
 }
 function writeToTerminal(text) {
     if (!state.visible || !state.iframeEl)
