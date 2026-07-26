@@ -1,18 +1,20 @@
 // Purpose: Injects file paths into macOS native file dialogs via AppleScript automation.
 // Why: Provides the macOS-specific implementation of OS-level upload automation.
-package upload
+package osauto
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
-func executeMacOSAutomation(req OSAutomationInjectRequest, start time.Time) StageResponse {
+func executeMacOSAutomation(req upload.OSAutomationInjectRequest, start time.Time) upload.StageResponse {
 	safePath := uploadsec.SanitizeForAppleScript(req.FilePath)
 
 	script := fmt.Sprintf(`tell application "System Events"
@@ -41,7 +43,7 @@ end tell`, safePath)
 			termApp = "your terminal"
 		}
 		errMsg += fmt.Sprintf(". Fix: System Settings > Privacy & uploadsec.Security > Accessibility > enable %s", termApp)
-		return StageResponse{
+		return upload.StageResponse{
 			Success:    false,
 			Stage:      4,
 			Error:      errMsg,
@@ -53,7 +55,7 @@ end tell`, safePath)
 		}
 	}
 
-	return StageResponse{
+	return upload.StageResponse{
 		Success:    true,
 		Stage:      4,
 		Status:     "OS automation: file path injected via AppleScript",

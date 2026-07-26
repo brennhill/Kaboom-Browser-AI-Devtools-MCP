@@ -4,7 +4,6 @@
 package upload
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 	"context"
 	"fmt"
 	"io"
@@ -13,6 +12,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
 // UploadHTTPClient is a shared client for Stage 3 form submissions.

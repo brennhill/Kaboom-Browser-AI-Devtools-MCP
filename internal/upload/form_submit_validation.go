@@ -3,10 +3,11 @@
 package upload
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
 func ValidateFormSubmitFields(req *FormSubmitRequest, sec *uploadsec.Security) (*uploadsec.PathValidationResult, error) {

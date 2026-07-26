@@ -2,7 +2,7 @@
 // Docs: docs/features/feature/file-upload/index.md
 
 // os_automation_test.go — Tests for Chrome PID auto-detection and OS automation.
-package upload
+package osauto
 
 import (
 	"os"
@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
@@ -91,7 +92,7 @@ func TestOSAutomation_BrowserPID_Zero_CallsDetection(t *testing.T) {
 	sec := testSecurity(t)
 	testFile := createTestFile(t, "pid-test.txt", "test content for PID detection")
 
-	resp := HandleOSAutomation(OSAutomationInjectRequest{
+	resp := HandleOSAutomation(upload.OSAutomationInjectRequest{
 		FilePath:   testFile,
 		BrowserPID: 0,
 	}, sec)
@@ -108,7 +109,7 @@ func TestOSAutomation_BrowserPID_Positive_SkipsDetection(t *testing.T) {
 	sec := testSecurity(t)
 	testFile := createTestFile(t, "pid-positive.txt", "test content")
 
-	resp := HandleOSAutomation(OSAutomationInjectRequest{
+	resp := HandleOSAutomation(upload.OSAutomationInjectRequest{
 		FilePath:   testFile,
 		BrowserPID: 99999,
 	}, sec)
@@ -138,7 +139,7 @@ func TestOSAutomation_MacOS_ErrorIncludesTermProgram(t *testing.T) {
 	})
 
 	testFile := createTestFile(t, "term-test.txt", "test content")
-	resp := executeMacOSAutomation(OSAutomationInjectRequest{
+	resp := executeMacOSAutomation(upload.OSAutomationInjectRequest{
 		FilePath:   testFile,
 		BrowserPID: 1,
 	}, time.Now())
@@ -154,7 +155,7 @@ func TestOSAutomation_Linux_ErrorIncludesXdotoolInstall(t *testing.T) {
 	if runtime.GOOS != "linux" {
 		t.Skip("Linux-only test")
 	}
-	resp := executeLinuxAutomation(OSAutomationInjectRequest{
+	resp := executeLinuxAutomation(upload.OSAutomationInjectRequest{
 		FilePath:   "/tmp/test.txt",
 		BrowserPID: 1,
 	}, time.Now())

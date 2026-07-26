@@ -100,7 +100,7 @@ const (
 )
 
 const (
-	ProgressThresholdSmall = 100 * 1024 * 1024     // 100MB
+	ProgressThresholdSmall = 100 * 1024 * 1024      // 100MB
 	ProgressThresholdLarge = 2 * 1024 * 1024 * 1024 // 2GB
 )
 
@@ -180,12 +180,12 @@ var MimeTypes = map[string]string{
 	".yml":  "application/x-yaml",
 
 	// Archive
-	".zip":  "application/zip",
-	".gz":   "application/gzip",
-	".tar":  "application/x-tar",
-	".rar":  "application/x-rar-compressed",
-	".7z":   "application/x-7z-compressed",
-	".bz2":  "application/x-bzip2",
+	".zip": "application/zip",
+	".gz":  "application/gzip",
+	".tar": "application/x-tar",
+	".rar": "application/x-rar-compressed",
+	".7z":  "application/x-7z-compressed",
+	".bz2": "application/x-bzip2",
 
 	// Other
 	".wasm": "application/wasm",

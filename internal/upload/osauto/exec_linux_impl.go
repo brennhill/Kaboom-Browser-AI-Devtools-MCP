@@ -1,6 +1,6 @@
 // Purpose: Injects file paths into Linux native file dialogs via xdotool automation.
 // Why: Provides the Linux-specific implementation of OS-level upload automation.
-package upload
+package osauto
 
 import (
 	"context"
@@ -8,11 +8,13 @@ import (
 	"os/exec"
 	"path/filepath"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
 )
 
-func executeLinuxAutomation(req OSAutomationInjectRequest, start time.Time) StageResponse {
+func executeLinuxAutomation(req upload.OSAutomationInjectRequest, start time.Time) upload.StageResponse {
 	if _, err := exec.LookPath("xdotool"); err != nil {
-		return StageResponse{
+		return upload.StageResponse{
 			Success: false,
 			Stage:   4,
 			Error:   "xdotool not found. Install: sudo apt install xdotool (Debian/Ubuntu) or sudo dnf install xdotool (Fedora).",
@@ -40,7 +42,7 @@ func executeLinuxAutomation(req OSAutomationInjectRequest, start time.Time) Stag
 	for _, c := range commands {
 		cmd := exec.CommandContext(ctx, c.name, c.args...) // #nosec G204 -- xdotool path from LookPath
 		if output, err := cmd.CombinedOutput(); err != nil {
-			return StageResponse{
+			return upload.StageResponse{
 				Success:    false,
 				Stage:      4,
 				Error:      fmt.Sprintf("xdotool command failed: %v. Output: %s", err, string(output)),
@@ -54,7 +56,7 @@ func executeLinuxAutomation(req OSAutomationInjectRequest, start time.Time) Stag
 		time.Sleep(200 * time.Millisecond)
 	}
 
-	return StageResponse{
+	return upload.StageResponse{
 		Success:    true,
 		Stage:      4,
 		Status:     "OS automation: file path injected via xdotool",

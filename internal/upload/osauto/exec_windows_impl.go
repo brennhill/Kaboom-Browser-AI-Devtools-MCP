@@ -1,18 +1,20 @@
 // Purpose: Injects file paths into Windows native file dialogs via PowerShell SendKeys automation.
 // Why: Provides the Windows-specific implementation of OS-level upload automation.
-package upload
+package osauto
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 	"context"
 	"fmt"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
-func executeWindowsAutomation(req OSAutomationInjectRequest, start time.Time) StageResponse {
+func executeWindowsAutomation(req upload.OSAutomationInjectRequest, start time.Time) upload.StageResponse {
 	safePath := uploadsec.SanitizeForSendKeys(req.FilePath)
 	psPath := strings.ReplaceAll(safePath, `"`, "`\"")
 	script := fmt.Sprintf(`
@@ -30,7 +32,7 @@ Start-Sleep -Milliseconds 300
 	cmd := exec.CommandContext(ctx, "powershell", "-NoProfile", "-Command", script) // #nosec G204 -- path sanitized
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return StageResponse{
+		return upload.StageResponse{
 			Success:    false,
 			Stage:      4,
 			Error:      fmt.Sprintf("PowerShell automation failed: %v. Output: %s", err, string(output)),
@@ -42,7 +44,7 @@ Start-Sleep -Milliseconds 300
 		}
 	}
 
-	return StageResponse{
+	return upload.StageResponse{
 		Success:    true,
 		Stage:      4,
 		Status:     "OS automation: file path injected via PowerShell/SendKeys",

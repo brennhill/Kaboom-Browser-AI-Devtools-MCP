@@ -3,13 +3,14 @@
 package upload
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"net/textproto"
 	"os"
 	"path/filepath"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
 // StreamMultipartForm writes the multipart form data to the pipe writer.

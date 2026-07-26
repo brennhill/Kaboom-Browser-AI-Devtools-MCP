@@ -5,16 +5,16 @@
 package uploadhandler
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/osauto"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
 // Handler function aliases.
 var (
-	HandleOSAutomation = upload.HandleOSAutomation
-	DetectBrowserPID   = upload.DetectBrowserPID
-	DismissFileDialog  = upload.DismissFileDialog
-	ExecuteOSAutomation = upload.ExecuteOSAutomation
+	HandleOSAutomation = osauto.HandleOSAutomation
+	DetectBrowserPID   = osauto.DetectBrowserPID
+	DismissFileDialog  = osauto.DismissFileDialog
+	ExecuteOSAutomation = osauto.ExecuteOSAutomation
 )
 
 // Validator and sanitizer function aliases.

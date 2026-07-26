@@ -15,7 +15,8 @@ code_paths:
   - internal/upload/uploadsec/denylist.go
   - internal/upload/uploadsec/ssrf.go
   - internal/upload/uploadsec/input.go
-  - internal/upload/os_automation.go
+  - internal/upload/osauto/inject.go
+  - internal/upload/osauto/pid.go
   - scripts/smoke-tests/upload-server.py
 test_paths:
   - cmd/browser-agent/upload_integration_test.go
@@ -23,7 +24,7 @@ test_paths:
   - internal/upload/handlers_test.go
   - internal/upload/uploadsec/path_test.go
   - internal/upload/uploadsec/ssrf_test.go
-  - internal/upload/os_automation_test.go
+  - internal/upload/osauto/osauto_test.go
   - scripts/smoke-tests/test-upload-server.py
   - scripts/smoke-tests/15-file-upload.sh
 last_verified_version: 0.7.12

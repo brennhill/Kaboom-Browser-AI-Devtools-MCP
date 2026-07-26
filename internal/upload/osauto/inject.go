@@ -1,19 +1,32 @@
 // Purpose: Handles Stage 4 OS automation: browser PID detection, AppleScript/xdotool/SendKeys file dialog injection.
 // Docs: docs/features/feature/file-upload/index.md
 
-package upload
+// Package osauto implements upload Stage 4: driving the browser's *native* file
+// dialog from outside the browser, when Stages 1-3 cannot complete the upload.
+//
+// Everything here is per-OS shell-out work (AppleScript, xdotool, PowerShell
+// SendKeys) plus the browser PID detection it needs. The exec_*_impl.go files
+// deliberately keep the _impl suffix: without it, Go's implicit GOOS filename
+// constraint would compile only the current platform's file and DetectBrowserPID
+// / ExecuteOSAutomation would fail to resolve their other branches.
+//
+// osauto depends on upload (wire types) and uploadsec (path + script-injection
+// validation); neither depends on osauto.
+package osauto
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 	"fmt"
 	"os"
 	"runtime"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
-func HandleOSAutomation(req OSAutomationInjectRequest, sec *uploadsec.Security) StageResponse {
+func HandleOSAutomation(req upload.OSAutomationInjectRequest, sec *uploadsec.Security) upload.StageResponse {
 	if req.FilePath == "" {
-		return StageResponse{
+		return upload.StageResponse{
 			Success: false,
 			Stage:   4,
 			Error:   "Missing required parameter: file_path",
@@ -23,7 +36,7 @@ func HandleOSAutomation(req OSAutomationInjectRequest, sec *uploadsec.Security) 
 	if req.BrowserPID <= 0 {
 		detectedPID, err := DetectBrowserPID()
 		if err != nil {
-			return StageResponse{
+			return upload.StageResponse{
 				Success: false,
 				Stage:   4,
 				Error:   err.Error(),
@@ -34,7 +47,7 @@ func HandleOSAutomation(req OSAutomationInjectRequest, sec *uploadsec.Security) 
 
 	result, err := sec.ValidateFilePath(req.FilePath, true)
 	if err != nil {
-		return StageResponse{
+		return upload.StageResponse{
 			Success: false,
 			Stage:   4,
 			Error:   err.Error(),
@@ -42,7 +55,7 @@ func HandleOSAutomation(req OSAutomationInjectRequest, sec *uploadsec.Security) 
 	}
 
 	if err := uploadsec.ValidatePathForOSAutomation(result.ResolvedPath); err != nil {
-		return StageResponse{
+		return upload.StageResponse{
 			Success: false,
 			Stage:   4,
 			Error:   "Invalid file path for OS automation: " + err.Error(),
@@ -51,13 +64,13 @@ func HandleOSAutomation(req OSAutomationInjectRequest, sec *uploadsec.Security) 
 
 	if _, err := os.Stat(result.ResolvedPath); err != nil {
 		if os.IsNotExist(err) {
-			return StageResponse{
+			return upload.StageResponse{
 				Success: false,
 				Stage:   4,
 				Error:   "File not found: " + req.FilePath,
 			}
 		}
-		return StageResponse{
+		return upload.StageResponse{
 			Success: false,
 			Stage:   4,
 			Error:   "Failed to access file: " + req.FilePath,
@@ -82,7 +95,7 @@ func DetectBrowserPID() (int, error) {
 	}
 }
 
-func ExecuteOSAutomation(req OSAutomationInjectRequest) StageResponse {
+func ExecuteOSAutomation(req upload.OSAutomationInjectRequest) upload.StageResponse {
 	start := time.Now()
 	switch runtime.GOOS {
 	case "darwin":
@@ -92,7 +105,7 @@ func ExecuteOSAutomation(req OSAutomationInjectRequest) StageResponse {
 	case "linux":
 		return executeLinuxAutomation(req, start)
 	default:
-		return StageResponse{
+		return upload.StageResponse{
 			Success: false,
 			Stage:   4,
 			Error:   fmt.Sprintf("OS automation not supported on %s", runtime.GOOS),
