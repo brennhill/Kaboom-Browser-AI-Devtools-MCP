@@ -477,8 +477,13 @@ describe('message routing', () => {
     assert.strictEqual(result, true)
     await new Promise((resolve) => setTimeout(resolve, 10))
 
-    assert.strictEqual(globalThis.fetch.mock.calls.length, 1)
-    const [url, options] = globalThis.fetch.mock.calls[0].arguments
+    // Two calls now: the terminal port is DISCOVERED from /health (finding S2)
+    // before the inject is addressed, instead of being assumed to be base+1.
+    const urls = globalThis.fetch.mock.calls.map((c) => String(c.arguments[0]))
+    assert.ok(urls.some((u) => /\/health$/.test(u)), `expected a /health discovery call, saw ${JSON.stringify(urls)}`)
+    const injectCall = globalThis.fetch.mock.calls.find((c) => /\/terminal\/inject$/.test(String(c.arguments[0])))
+    assert.ok(injectCall, `expected a /terminal/inject call, saw ${JSON.stringify(urls)}`)
+    const [url, options] = injectCall.arguments
     assert.match(url, /\/terminal\/inject$/)
 
     const payload = JSON.parse(options.body)

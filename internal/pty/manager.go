@@ -67,6 +67,11 @@ type StartResult struct {
 	SessionID string
 	Token     string
 	Pid       int
+	// Session is the session Start just spawned. Callers need it to build the
+	// relay; returning it here removes the need to re-fetch it by ID, which raced
+	// a concurrent Stop and handed back a nil the caller then dereferenced
+	// (finding S4). Non-nil whenever Start returns a nil error.
+	Session *Session
 	// Replaced is true when Start evicted a dead session with the same ID and
 	// spawned a fresh one in its place (self-heal). The caller uses this to drop
 	// the stale relay bound to the old (dead) session before creating a new one.
@@ -83,18 +88,48 @@ var ErrSessionNotFound = errors.New("pty: session not found")
 var ErrInvalidToken = errors.New("pty: invalid token")
 
 // Start creates and starts a new PTY session. Returns the session token for WebSocket auth.
+//
+// The bookkeeping runs under m.mu (startAndRegister); every Close runs AFTER the
+// lock is released. Session.Close blocks for up to ~4s on a wedged child (SIGTERM →
+// 2s → SIGKILL → 2s), and holding m.mu across that freezes Get/GetByToken/List and
+// therefore every terminal route (finding S3). Stop and StopAll already close
+// outside the lock — this follows the same pattern.
 func (m *Manager) Start(cfg StartConfig) (*StartResult, error) {
 	if cfg.ID == "" {
 		cfg.ID = "default"
 	}
 
+	res, toClose, err := m.startAndRegister(cfg)
+	closeSessions(toClose)
+	return res, err
+}
+
+// closeSessions closes each session and reports any failure. A PTY fd that fails
+// to close is a leak the daemon would otherwise never hear about (rule 25); the
+// close is still best-effort, so the loop always runs to completion.
+func closeSessions(sessions []*Session) {
+	for _, sess := range sessions {
+		if err := sess.Close(); err != nil {
+			diag(EventSessionCloseFailed, map[string]any{
+				"session_id": sess.ID,
+				"error":      err.Error(),
+			})
+		}
+	}
+}
+
+// startAndRegister runs Start's whole critical section under m.mu and returns any
+// sessions the caller MUST Close() outside the lock (the evicted corpse on the
+// self-heal path, and the freshly spawned session when token generation fails).
+func (m *Manager) startAndRegister(cfg StartConfig) (*StartResult, []*Session, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	var toClose []*Session
 	replaced := false
 	if existing, exists := m.sessions[cfg.ID]; exists {
 		if existing.IsAlive() {
-			return nil, fmt.Errorf("%w: %s", ErrSessionExists, cfg.ID)
+			return nil, nil, fmt.Errorf("%w: %s", ErrSessionExists, cfg.ID)
 		}
 		// Self-heal a dead session. Nothing removes a session except an explicit
 		// Stop/StopAll, so when the child exits on its own (user types `exit`, the
@@ -102,16 +137,19 @@ func (m *Manager) Start(cfg StartConfig) (*StartResult, error) {
 		// this, the next Start returns ErrSessionExists forever and the client
 		// treats it as a benign 409-reconnect onto a dead session (closed fanout)
 		// → immediate `exited`, so the terminal never recovers until an explicit
-		// Exit or a daemon restart. Evict the corpse and spawn fresh. Close is
-		// immediate here (the child is already reaped, so it does not block the
-		// lock the way a live session's 2s teardown would).
+		// Exit or a daemon restart. Evict the corpse and spawn fresh.
+		//
+		// "Dead" here only means IsAlive() is false — the child may still be
+		// unreapable (D-state, or a stuck reaper), in which case its Close runs the
+		// full SIGTERM/SIGKILL escalation. That is why the Close is deferred to the
+		// caller instead of running here under the lock.
 		m.deleteSessionLocked(cfg.ID)
-		_ = existing.Close()
+		toClose = append(toClose, existing)
 		replaced = true
 	}
 
 	if len(m.sessions) >= maxSessions {
-		return nil, fmt.Errorf("%w: limit %d", ErrMaxSessions, maxSessions)
+		return nil, toClose, fmt.Errorf("%w: limit %d", ErrMaxSessions, maxSessions)
 	}
 
 	sess, err := m.spawn(SpawnConfig{
@@ -124,13 +162,13 @@ func (m *Manager) Start(cfg StartConfig) (*StartResult, error) {
 		Rows: cfg.Rows,
 	})
 	if err != nil {
-		return nil, err
+		return nil, toClose, err
 	}
 
 	token, err := generateToken()
 	if err != nil {
-		sess.Close()
-		return nil, fmt.Errorf("generate token: %w", err)
+		toClose = append(toClose, sess)
+		return nil, toClose, fmt.Errorf("generate token: %w", err)
 	}
 
 	m.sessions[cfg.ID] = sess
@@ -145,14 +183,14 @@ func (m *Manager) Start(cfg StartConfig) (*StartResult, error) {
 		Token:     token,
 		Pid:       sess.Pid(),
 		Replaced:  replaced,
-	}, nil
+		Session:   sess,
+	}, toClose, nil
 }
 
 // deleteSessionLocked removes all map entries (session, token, repo index) for a
 // session ID and returns the removed session (nil if absent). The caller MUST
-// hold m.mu and is responsible for Close()-ing the returned session (Stop does so
-// outside the lock; Start's self-heal does so inline because the session is
-// already dead and Close returns immediately).
+// hold m.mu and is responsible for Close()-ing the returned session OUTSIDE the
+// lock (Stop, StopAll and Start all do so).
 func (m *Manager) deleteSessionLocked(id string) *Session {
 	sess := m.sessions[id]
 	for token, sid := range m.tokens {
@@ -239,9 +277,7 @@ func (m *Manager) StopAll() {
 	m.repoIndex = make(map[SessionKey]string)
 	m.mu.Unlock()
 
-	for _, sess := range toClose {
-		_ = sess.Close()
-	}
+	closeSessions(toClose)
 }
 
 // List returns the IDs of all active sessions.

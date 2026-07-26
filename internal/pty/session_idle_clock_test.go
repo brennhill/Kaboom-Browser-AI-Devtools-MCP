@@ -5,6 +5,7 @@
 package pty
 
 import (
+	"os/exec"
 	"sync"
 	"testing"
 	"time"
@@ -135,6 +136,75 @@ func TestSession_IdleTimerResetsOnNewOutput(t *testing.T) {
 		t.Fatalf("idle should fire once, 50ms after the LAST output, got %d", fired)
 	}
 	mu.Unlock()
+}
+
+// AppendScrollback never checked whether the session was closed, so a chunk that
+// lands after Close (readLoop's last read, or a racing broadcast) re-armed a fresh
+// 30s idle timer that nothing would ever stop — the callback then fired against a
+// dead session, logging "session X is idle" for a shell that exited half a minute
+// earlier (finding S10).
+func TestSession_ClosedSessionDoesNotRearmIdleTimer(t *testing.T) {
+	clk := newFakeClock(time.Unix(1000, 0))
+	s := &Session{ID: "gone", cmd: &exec.Cmd{}, done: make(chan struct{}), reaped: closedChan(), clk: clk}
+
+	var mu sync.Mutex
+	fired := 0
+	s.SetIdleConfig(IdleConfig{Timeout: 50 * time.Millisecond, Callback: func(string) {
+		mu.Lock()
+		fired++
+		mu.Unlock()
+	}})
+
+	_ = s.Close()
+	s.AppendScrollback([]byte("trailing output after close"))
+	clk.Advance(time.Hour)
+
+	mu.Lock()
+	defer mu.Unlock()
+	if fired != 0 {
+		t.Fatalf("a closed session must not arm an idle timer; callback fired %d time(s)", fired)
+	}
+}
+
+// Close stops the idle timer, but Stop loses the race if the timer has already
+// fired: the callback is already queued (or running) and will report a dead
+// session as idle. The callback itself must re-check the closed flag.
+func TestSession_IdleCallbackSuppressedWhenTimerFiresDuringClose(t *testing.T) {
+	clk := newFakeClock(time.Unix(1000, 0))
+	s := &Session{ID: "racy", cmd: &exec.Cmd{}, done: make(chan struct{}), reaped: closedChan(), clk: clk}
+
+	var mu sync.Mutex
+	fired := 0
+	s.SetIdleConfig(IdleConfig{Timeout: 50 * time.Millisecond, Callback: func(string) {
+		mu.Lock()
+		fired++
+		mu.Unlock()
+	}})
+	s.AppendScrollback([]byte("output")) // arms the timer
+
+	// Simulate "the deadline already passed, so Stop() can no longer un-fire it" by
+	// detaching the armed timer from the session before Close can stop it. The
+	// timer stays live in the clock and fires after Close returns.
+	s.scrollMu.Lock()
+	s.idleTimer = nil
+	s.scrollMu.Unlock()
+
+	_ = s.Close()
+	clk.Advance(time.Hour) // the un-stopped timer fires now, after Close
+
+	mu.Lock()
+	defer mu.Unlock()
+	if fired != 0 {
+		t.Fatalf("an idle callback that fires after Close must be suppressed; fired %d time(s)", fired)
+	}
+}
+
+// closedChan returns an already-closed channel so a hand-built Session can Close
+// without waiting on a reaper that does not exist.
+func closedChan() chan struct{} {
+	ch := make(chan struct{})
+	close(ch)
+	return ch
 }
 
 func TestSession_LastOutputAtUsesInjectedClock(t *testing.T) {

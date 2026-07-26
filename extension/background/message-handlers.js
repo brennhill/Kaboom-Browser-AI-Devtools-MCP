@@ -13,7 +13,7 @@ import { openTerminalSidePanel } from './terminal-panel.js';
 import { trackUIFeature } from './ui-usage-tracker.js';
 // Static import: dynamic import() is not allowed in MV3 service workers.
 // terminal-widget-types.js is a pure helper module (constants + types, no DOM access at load time).
-import { getTerminalServerUrl } from '../content/ui/terminal-widget-types.js';
+import { resolveTerminalServerUrl } from '../content/ui/terminal-widget-types.js';
 // =============================================================================
 // MESSAGE HANDLER
 // =============================================================================
@@ -504,7 +504,7 @@ export async function deleteStateSnapshot(name) {
 const QA_SCAN_PROMPT = 'The user clicked "Audit". Run the KaBOOM! audit workflow for the tracked site. Use /kaboom/audit if available, otherwise /audit, and produce the six-lane Phase 1 report.';
 const QA_SCAN_FETCH_TIMEOUT_MS = 3000;
 async function handleQaScanRequestedAsync(message, sendResponse, deps) {
-    const termUrl = getTerminalServerUrl(deps.getServerUrl());
+    const termUrl = await resolveTerminalServerUrl(deps.getServerUrl());
     // Try PTY injection first — works whether the side panel is open or closed.
     try {
         const controller = new AbortController();

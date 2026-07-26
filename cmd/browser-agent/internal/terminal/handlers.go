@@ -76,6 +76,20 @@ const PromptChars = "$#>%"
 // the idle callback fires. Used to detect when an agent is waiting for input.
 const IdleTimeout = 30 * time.Second
 
+// ReapTimeout bounds how long the relay's readLoop waits for the child's exit
+// code before tearing the fanout down anyway. The PTY read has already failed by
+// then, so the child is normally gone and this returns instantly; the bound only
+// matters for a child that cannot be reaped, which must not hold every WebSocket
+// pump hostage. Matches Session.Close's own reap bound.
+const ReapTimeout = 2 * time.Second
+
+// RelayCloseTimeout bounds how long Relay.Close waits for readLoop to finish its
+// teardown. Worst case that teardown is ReapTimeout (waiting for the child's exit
+// code) plus the write buffer's own close bound, so this sits above their sum;
+// past it the caller gives up rather than letting one wedged session stall
+// /terminal/stop or daemon shutdown.
+const RelayCloseTimeout = 5 * time.Second
+
 // RegisterRoutes adds terminal-related routes to the mux.
 // NOT MCP — These are daemon-served endpoints for the in-browser terminal.
 func RegisterRoutes(mux *http.ServeMux, deps Deps, server ServerDeps, mgr *pty.Manager, cap *capture.Store) *Map {
@@ -84,6 +98,14 @@ func RegisterRoutes(mux *http.ServeMux, deps Deps, server ServerDeps, mgr *pty.M
 	// Route a stuck-writer write-buffer close timeout (a drain goroutine + fd leak
 	// that cannot be safely interrupted) to the structured log, so the leak is
 	// diagnosable instead of silent (finding M).
+	// Route PTY-internal state-mutating failures (a child that will not die, a PTY
+	// fd that will not close, a stranded stdin flush) to the structured log. The
+	// pty package has no logger of its own, so without this sink those failures are
+	// invisible in production (finding S8, rule 25).
+	pty.SetDiagnosticHook(func(event string, fields map[string]any) {
+		deps.logEvent(event, fields)
+	})
+
 	pty.SetWriteBufferCloseTimeoutHook(func(pending int) {
 		deps.logEvent("terminal_writebuffer_close_timeout", map[string]any{"pending_bytes": pending})
 		if deps.Stderrf != nil {
@@ -415,7 +437,17 @@ func wsLoop(conn net.Conn, rw *bufio.ReadWriter, deps Deps, sess *pty.Session, r
 				_ = writeFrame(0xA, payload)
 			case 0xA: // Pong — no-op, deadline already refreshed above
 			case 0x2: // Binary — raw keystrokes -> PTY stdin via write buffer
-				_, _ = relay.writeBuf.Write(payload)
+				if _, werr := relay.writeBuf.Write(payload); werr != nil {
+					// The keystrokes did NOT reach the shell. Dropping them silently
+					// is exactly the "typed input vanished" report we cannot diagnose
+					// afterwards (rule 25), and the two causes need different
+					// responses, so the reason is recorded, not just the drop.
+					deps.logEvent("terminal_input_dropped", map[string]any{
+						"session_id": sess.ID,
+						"bytes":      len(payload),
+						"reason":     writeDropReason(werr),
+					})
+				}
 			case 0x1: // Text — JSON control message
 				HandleControlMessage(payload, sess)
 			}
@@ -423,6 +455,20 @@ func wsLoop(conn net.Conn, rw *bufio.ReadWriter, deps Deps, sess *pty.Session, r
 	})
 
 	<-downstreamDone
+}
+
+// writeDropReason names why a PTY write was refused, so the log distinguishes a
+// session that has ended from one that is merely wedged under backpressure
+// (finding S9 — both used to surface as ErrWriteBufferFull).
+func writeDropReason(err error) string {
+	switch {
+	case errors.Is(err, pty.ErrWriteBufferClosed):
+		return "session_ended"
+	case errors.Is(err, pty.ErrWriteBufferFull):
+		return "backpressure"
+	default:
+		return "write_error"
+	}
 }
 
 // goConnWorker launches one per-connection wsLoop goroutine with panic recovery.
@@ -620,7 +666,11 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 	// On success: create relay (fan-out + write buffer), configure idle detection,
 	// and handle init_command via the relay instead of reading PTY directly.
 	if err == nil {
-		sess, _ := mgr.Get(result.SessionID)
+		// Use the session Start returned rather than looking it up again by ID: the
+		// old `sess, _ := mgr.Get(result.SessionID)` swallowed the error and then
+		// dereferenced the result, so a /terminal/stop landing between Start and Get
+		// nil-panicked this handler (finding S4).
+		sess := result.Session
 		var relay *Relay
 		if result.Replaced {
 			// The manager evicted a dead session with this ID and spawned a fresh

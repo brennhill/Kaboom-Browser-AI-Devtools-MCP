@@ -11,6 +11,7 @@ import {
   state,
   resetAllState,
   getTerminalServerUrl,
+  resolveTerminalServerUrl,
   WIDGET_ID,
   IFRAME_ID,
   HEADER_ID,
@@ -48,7 +49,8 @@ import {
   maybeShowQueuedWriteToast,
   scheduleQueuedWriteFlush,
   scheduleQueuedSubmit,
-  flushQueuedWrites
+  flushQueuedWrites,
+  enqueueBoundedWrite
 } from './content/ui/terminal-write-guard.js'
 
 // =============================================================================
@@ -600,6 +602,9 @@ function createPanelShell(token: string): HTMLDivElement {
   if (token) {
     const iframe = document.createElement('iframe')
     iframe.id = IFRAME_ID
+    // Synchronous accessor: this builder is not async, but ensureTerminalSession()
+    // has already run (it is what produced `token`) and its daemon calls perform
+    // the terminal-port discovery, so the cache is warm by the time we get here.
     iframe.src = `${getTerminalServerUrl(state.serverUrl)}/terminal?token=${encodeURIComponent(token)}`
     iframe.setAttribute('allow', 'clipboard-write')
     iframe.style.cssText = 'width:100%;height:100%;border:none;background:#1a1b26;display:block;'
@@ -672,7 +677,7 @@ async function redrawTerminal(): Promise<void> {
   // Mark disconnected so a write in that reconnect gap queues instead of being
   // sent-and-dropped (the redraw sub-case of the write-connection race).
   state.terminalConnected = false
-  iframe.src = `${getTerminalServerUrl(state.serverUrl)}/terminal?token=${encodeURIComponent(currentToken)}`
+  iframe.src = `${await resolveTerminalServerUrl(state.serverUrl)}/terminal?token=${encodeURIComponent(currentToken)}`
   showTerminalBody()
   persistUIState('open')
 }
@@ -714,7 +719,7 @@ async function exitTerminalSession(): Promise<void> {
   panel.panelCloseIntent = 'clear'
   if (state.sessionState) {
     try {
-      const termUrl = getTerminalServerUrl(state.serverUrl)
+      const termUrl = await resolveTerminalServerUrl(state.serverUrl)
       await fetch(`${termUrl}/terminal/stop`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -741,24 +746,6 @@ async function closePanelKeepingSession(): Promise<void> {
 
 async function minimizePanel(): Promise<void> {
   await closePanelWithIntent('minimized')
-}
-
-const MAX_QUEUED_WRITES = 200
-
-/**
- * Enqueue a write, bounding the backlog at MAX_QUEUED_WRITES. Dropping the oldest
- * is a state-mutating loss, so it must not be silent (rule 25): warn to the console
- * (which the daemon captures via observe(what:"errors")) so an overflow is
- * diagnosable rather than a write vanishing without a trace.
- */
-function enqueueBoundedWrite(text: string): void {
-  if (state.queuedWrites.length >= MAX_QUEUED_WRITES) {
-    const dropped = state.queuedWrites.shift()
-    console.warn(
-      `[KaBOOM! terminal] write queue full (${MAX_QUEUED_WRITES}) — dropped oldest queued write: "${(dropped ?? '').slice(0, 40)}"`
-    )
-  }
-  state.queuedWrites.push(text)
 }
 
 function writeToTerminal(text: string): void {

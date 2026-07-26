@@ -17,11 +17,14 @@ import {
   state,
   resetAllState,
   TERMINAL_GUARD_MAX_WAIT_MS,
-  TERMINAL_TYPING_IDLE_MS
+  TERMINAL_TYPING_IDLE_MS,
+  MAX_QUEUED_WRITES,
+  MAX_QUEUED_WRITE_BYTES
 } from '../../extension/content/ui/terminal-widget-types.js'
 import {
   flushQueuedWrites,
-  resetWriteGuardState
+  resetWriteGuardState,
+  enqueueBoundedWrite
 } from '../../extension/content/ui/terminal-write-guard.js'
 
 // --- portable fake timers (setTimeout/clearTimeout/Date.now) -----------------
@@ -193,5 +196,75 @@ describe('terminal write-guard escape hatch', () => {
     assert.equal(state.queuedWrites.length, 1, 'a healthy write must NOT be dropped during continuous typing')
     assert.equal(state.guardBlockedSince, 0, 'no unreachable-time accrues while connected')
     assert.notEqual(state.queuedWriteFlushTimer, null, 'the flush poller keeps deferring, never gives up')
+  })
+})
+
+/**
+ * Finding S14: the queue was bounded by COUNT only (200 entries), so 200
+ * one-megabyte writes were a legal state — ~200 MB pinned in the side panel with
+ * nothing to stop it. It must be bounded by bytes as well.
+ */
+describe('terminal write queue byte bound (S14)', () => {
+  beforeEach(() => {
+    resetAllState()
+  })
+  afterEach(() => {
+    resetWriteGuardState()
+  })
+
+  test('the queue is bounded by bytes, not just entry count', () => {
+    // Each write is well under the 200-entry cap, so only a byte bound can stop
+    // this: 8 x 512 KB = 4 MB queued in 8 entries.
+    const chunk = 'x'.repeat(512 * 1024)
+    for (let i = 0; i < 8; i++) enqueueBoundedWrite(chunk)
+
+    const queuedBytes = state.queuedWrites.reduce((n, w) => n + w.length, 0)
+    assert.ok(
+      state.queuedWrites.length < 8,
+      `entry count alone cannot bound this (${state.queuedWrites.length} entries held)`
+    )
+    assert.ok(
+      queuedBytes <= MAX_QUEUED_WRITE_BYTES,
+      `queued backlog must stay within ${MAX_QUEUED_WRITE_BYTES} bytes, held ${queuedBytes}`
+    )
+  })
+
+  test('the entry-count bound still applies to small writes', () => {
+    for (let i = 0; i < MAX_QUEUED_WRITES + 50; i++) enqueueBoundedWrite(`echo ${i}\r`)
+    assert.equal(
+      state.queuedWrites.length,
+      MAX_QUEUED_WRITES,
+      'the pre-existing count cap must survive the byte cap'
+    )
+    // Oldest-first eviction: the newest write is always the one kept.
+    assert.equal(state.queuedWrites[state.queuedWrites.length - 1], `echo ${MAX_QUEUED_WRITES + 49}\r`)
+  })
+
+  test('a single write larger than the byte cap does not lodge in the queue forever', () => {
+    enqueueBoundedWrite('y'.repeat(MAX_QUEUED_WRITE_BYTES * 2))
+    assert.equal(
+      state.queuedWrites.length,
+      0,
+      'an oversized write must be evicted like any other, not held forever (the S13 shape)'
+    )
+  })
+
+  test('the byte cap counts UTF-8 bytes, not UTF-16 code units', () => {
+    // '€' is 1 UTF-16 unit and 3 UTF-8 bytes. A queue measured in code units
+    // would accept 3x more than the cap allows on the wire.
+    const chunk = '€'.repeat(200 * 1024) // 200K units, 600 KB
+    for (let i = 0; i < 6; i++) enqueueBoundedWrite(chunk)
+
+    const utf8 = state.queuedWrites.reduce((n, w) => n + new TextEncoder().encode(w).length, 0)
+    assert.ok(
+      utf8 <= MAX_QUEUED_WRITE_BYTES,
+      `the cap must be in UTF-8 bytes: held ${utf8} against a ${MAX_QUEUED_WRITE_BYTES}-byte cap`
+    )
+  })
+
+  test('normal-sized writes are never dropped', () => {
+    enqueueBoundedWrite('run the tests\r')
+    enqueueBoundedWrite('git status\r')
+    assert.deepEqual(state.queuedWrites, ['run the tests\r', 'git status\r'])
   })
 })

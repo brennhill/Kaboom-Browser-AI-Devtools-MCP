@@ -57,8 +57,17 @@ func fireWriteBufferCloseTimeout(pending int) {
 	}
 }
 
-// ErrWriteBufferFull is returned when the write buffer exceeds the backpressure cap.
+// ErrWriteBufferFull is returned when the write buffer exceeds the backpressure
+// cap: the shell is alive but is not draining its stdin fast enough, so this write
+// was discarded. Retrying later can succeed.
 var ErrWriteBufferFull = errors.New("pty: write buffer full")
+
+// ErrWriteBufferClosed is returned when writing to a closed buffer: the session is
+// gone and no write will ever succeed. Distinct from ErrWriteBufferFull because the
+// two mean opposite things to a caller — "the terminal is behind, back off" versus
+// "the terminal is gone, stop trying" — and reporting both as Full made them
+// indistinguishable (finding S9).
+var ErrWriteBufferClosed = errors.New("pty: write buffer closed")
 
 // ErrWriteBufferCloseTimeout is returned by Close when the drain goroutine did not
 // exit within writeBufferCloseTimeout (the underlying writer is stuck). Surfaced so
@@ -76,15 +85,19 @@ type WriteBuffer struct {
 	notify  chan struct{}
 	done    chan struct{}
 	closed  bool
+	// sessionID labels diagnostic events so a stranded write can be traced back to
+	// a terminal session. Derived from the writer; empty for non-Session writers.
+	sessionID string
 }
 
 // NewWriteBuffer creates a buffered writer that drains asynchronously.
 func NewWriteBuffer(w io.Writer) *WriteBuffer {
 	wb := &WriteBuffer{
-		maxSize: writeBufferMax,
-		writer:  w,
-		notify:  make(chan struct{}, 1),
-		done:    make(chan struct{}),
+		maxSize:   writeBufferMax,
+		writer:    w,
+		notify:    make(chan struct{}, 1),
+		done:      make(chan struct{}),
+		sessionID: writerSessionID(w),
 	}
 	// Panic-recovered: the drain loop calls writer.Write on a hot path; a panic
 	// there must never crash the daemon. drain's own `defer close(wb.done)` still
@@ -93,8 +106,20 @@ func NewWriteBuffer(w io.Writer) *WriteBuffer {
 	return wb
 }
 
-// Write appends data to the buffer without blocking. Returns ErrWriteBufferFull
-// if the buffer exceeds the backpressure cap.
+// writerSessionID labels a buffer with the PTY session it drains into, which is
+// what production always passes. The constructor keeps the io.Writer seam (tests
+// pass plain writers, which simply log with an empty session id) rather than
+// threading an id through every call site.
+func writerSessionID(w io.Writer) string {
+	if s, ok := w.(*Session); ok {
+		return s.ID
+	}
+	return ""
+}
+
+// Write appends data to the buffer without blocking. Returns ErrWriteBufferClosed
+// if the session is gone, or ErrWriteBufferFull if the buffer exceeds the
+// backpressure cap. Either way the data was NOT accepted.
 func (wb *WriteBuffer) Write(data []byte) (int, error) {
 	// The notify signal is sent while holding mu, together with the `closed`
 	// check: Close closes wb.notify under the same lock, so a Write can never
@@ -103,7 +128,7 @@ func (wb *WriteBuffer) Write(data []byte) (int, error) {
 	wb.mu.Lock()
 	defer wb.mu.Unlock()
 	if wb.closed {
-		return 0, ErrWriteBufferFull
+		return 0, ErrWriteBufferClosed
 	}
 	if len(wb.buf)+len(data) > wb.maxSize {
 		return 0, ErrWriteBufferFull
@@ -148,9 +173,18 @@ func (wb *WriteBuffer) flushAll() {
 
 		_, err := wb.writer.Write(chunk)
 		if err != nil {
-			// Leave data in buffer — caller can retry or Close will
-			// attempt a final flush. For PTY stdin this typically means
-			// the child process exited, so the data is undeliverable.
+			// Leave data in buffer — Close will attempt a final flush, and the next
+			// Write re-notifies the drain. Nothing retries on its own, so the bytes
+			// are stranded until then: for PTY stdin this usually means the child
+			// exited and they are undeliverable, but it can also be a transient
+			// write error, and either way the user's keystrokes just vanished. Log
+			// it (rule 25) rather than discarding the error.
+			diag(EventWriteBufferWriteFailed, map[string]any{
+				"session_id":    wb.sessionID,
+				"chunk_bytes":   len(chunk),
+				"pending_bytes": wb.Pending(),
+				"error":         err.Error(),
+			})
 			return
 		}
 

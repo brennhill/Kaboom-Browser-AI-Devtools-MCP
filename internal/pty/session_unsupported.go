@@ -45,6 +45,9 @@ type SpawnConfig struct {
 // ErrSessionClosed is returned when operating on a closed session.
 var ErrSessionClosed = errors.New("pty: session closed")
 
+// ErrReapTimeout keeps API parity with the Unix session implementation.
+var ErrReapTimeout = errors.New("pty: timed out waiting for the child to be reaped")
+
 var errUnsupportedPTY = errors.New("pty: unsupported platform")
 
 // Spawn returns unsupported on non-Unix platforms.
@@ -73,7 +76,7 @@ func (s *Session) Close() error {
 }
 
 // Wait is a no-op for unsupported platform stubs.
-func (s *Session) Wait() error {
+func (s *Session) Wait(timeout time.Duration) error {
 	return nil
 }
 

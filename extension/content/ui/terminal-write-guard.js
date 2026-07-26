@@ -6,7 +6,7 @@
  * Docs: docs/features/feature/terminal/index.md
  */
 import { showActionToast } from './toast.js';
-import { state, getTerminalServerUrl, TERMINAL_WRITE_SUBMIT_DELAY_MS, TERMINAL_TYPING_IDLE_MS, TERMINAL_GUARD_POLL_MS, TERMINAL_GUARD_TOAST_INTERVAL_MS, TERMINAL_GUARD_MAX_WAIT_MS } from './terminal-widget-types.js';
+import { state, getTerminalServerUrl, TERMINAL_WRITE_SUBMIT_DELAY_MS, TERMINAL_TYPING_IDLE_MS, TERMINAL_GUARD_POLL_MS, TERMINAL_GUARD_TOAST_INTERVAL_MS, TERMINAL_GUARD_MAX_WAIT_MS, MAX_QUEUED_WRITES, MAX_QUEUED_WRITE_BYTES } from './terminal-widget-types.js';
 /**
  * Post a command to the terminal iframe. No-op when it is not mounted.
  *
@@ -29,6 +29,58 @@ export function notifyIframe(command, data = {}) {
         // Unparseable server URL — fall back to wildcard so the write still lands.
     }
     state.iframeEl.contentWindow.postMessage({ target: 'kaboom-terminal', command, ...data }, origin);
+}
+/**
+ * UTF-8 byte length of a string, counted without allocating an encoded copy.
+ * TextEncoder().encode(s).length would materialise a second megabyte-sized buffer
+ * for exactly the writes this bound exists to reject.
+ */
+function utf8ByteLength(text) {
+    let bytes = 0;
+    for (let i = 0; i < text.length; i++) {
+        const code = text.charCodeAt(i);
+        if (code < 0x80)
+            bytes += 1;
+        else if (code < 0x800)
+            bytes += 2;
+        else if (code >= 0xd800 && code <= 0xdbff && i + 1 < text.length) {
+            bytes += 4; // surrogate pair -> one 4-byte code point
+            i++;
+        }
+        else
+            bytes += 3;
+    }
+    return bytes;
+}
+/**
+ * Enqueue a write, bounding the backlog by BOTH entry count and total bytes.
+ *
+ * The count cap alone bounded nothing that matters — 200 one-megabyte writes was a
+ * legal state (finding S14). Eviction is oldest-first and runs down to empty, so a
+ * single write larger than the byte cap is evicted like any other rather than
+ * lodging in the queue forever.
+ *
+ * Dropping a write is a state-mutating loss, so it must not be silent (rule 25):
+ * warn to the console (which the daemon captures via observe(what:"errors")) so an
+ * overflow is diagnosable rather than a write vanishing without a trace.
+ *
+ * Lives here, with the rest of the queue's lifecycle (reset, drain, drop-on-give-up),
+ * so the bound cannot be bypassed by a second enqueue site (rule 19).
+ */
+export function enqueueBoundedWrite(text) {
+    state.queuedWrites.push(text);
+    while (state.queuedWrites.length > MAX_QUEUED_WRITES) {
+        const dropped = state.queuedWrites.shift();
+        console.warn(`[KaBOOM! terminal] write queue full (${MAX_QUEUED_WRITES} entries) — dropped oldest queued write: "${(dropped ?? '').slice(0, 40)}"`);
+    }
+    let queuedBytes = 0;
+    for (const queued of state.queuedWrites)
+        queuedBytes += utf8ByteLength(queued);
+    while (queuedBytes > MAX_QUEUED_WRITE_BYTES && state.queuedWrites.length > 0) {
+        const dropped = state.queuedWrites.shift() ?? '';
+        queuedBytes -= utf8ByteLength(dropped);
+        console.warn(`[KaBOOM! terminal] write queue over ${MAX_QUEUED_WRITE_BYTES} bytes — dropped oldest queued write (${utf8ByteLength(dropped)} bytes): "${dropped.slice(0, 40)}"`);
+    }
 }
 export function resetWriteGuardState() {
     state.queuedWrites = [];

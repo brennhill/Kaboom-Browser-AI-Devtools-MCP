@@ -161,15 +161,36 @@ func TestWriteBuffer_DoubleClose(t *testing.T) {
 	}
 }
 
-func TestWriteBuffer_WriteAfterClose(t *testing.T) {
+// A write to a CLOSED buffer (the shell exited) and a write that overflows the
+// backpressure cap (the child stopped draining stdin) are different failures with
+// different remedies, and both used to return ErrWriteBufferFull — so no caller
+// could tell "your terminal is gone" from "your terminal is behind" (finding S9).
+func TestWriteBuffer_ClosedIsDistinctFromFull(t *testing.T) {
 	var dest bytes.Buffer
-	wb := NewWriteBuffer(&dest)
-	wb.Close()
+	closed := NewWriteBuffer(&dest)
+	closed.Close()
 
-	_, err := wb.Write([]byte("x"))
-	if err != ErrWriteBufferFull {
-		t.Fatalf("expected ErrWriteBufferFull after close, got: %v", err)
+	_, err := closed.Write([]byte("x"))
+	if !errors.Is(err, ErrWriteBufferClosed) {
+		t.Fatalf("write after close: got %v, want ErrWriteBufferClosed", err)
 	}
+	if errors.Is(err, ErrWriteBufferFull) {
+		t.Fatal("a closed buffer must not report backpressure — callers cannot tell the two apart")
+	}
+
+	gw := &gatedWriter{gate: make(chan struct{})} // never drains
+	full := NewWriteBuffer(gw)
+	if _, err := full.Write(make([]byte, writeBufferMax)); err != nil {
+		t.Fatalf("filling the buffer: %v", err)
+	}
+	_, err = full.Write([]byte("overflow"))
+	if !errors.Is(err, ErrWriteBufferFull) {
+		t.Fatalf("write past the cap: got %v, want ErrWriteBufferFull", err)
+	}
+	if errors.Is(err, ErrWriteBufferClosed) {
+		t.Fatal("a full buffer must not report itself closed — the shell is still alive")
+	}
+	close(gw.gate)
 }
 
 func TestWriteBuffer_LargeWrite(t *testing.T) {

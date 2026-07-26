@@ -17,6 +17,22 @@
  * only when the URL is unparseable.
  */
 export declare function notifyIframe(command: string, data?: Record<string, unknown>): void;
+/**
+ * Enqueue a write, bounding the backlog by BOTH entry count and total bytes.
+ *
+ * The count cap alone bounded nothing that matters — 200 one-megabyte writes was a
+ * legal state (finding S14). Eviction is oldest-first and runs down to empty, so a
+ * single write larger than the byte cap is evicted like any other rather than
+ * lodging in the queue forever.
+ *
+ * Dropping a write is a state-mutating loss, so it must not be silent (rule 25):
+ * warn to the console (which the daemon captures via observe(what:"errors")) so an
+ * overflow is diagnosable rather than a write vanishing without a trace.
+ *
+ * Lives here, with the rest of the queue's lifecycle (reset, drain, drop-on-give-up),
+ * so the bound cannot be bypassed by a second enqueue site (rule 19).
+ */
+export declare function enqueueBoundedWrite(text: string): void;
 export declare function resetWriteGuardState(): void;
 export declare function shouldDeferQueuedWrite(nowMs?: number): boolean;
 export declare function maybeShowQueuedWriteToast(nowMs?: number): void;

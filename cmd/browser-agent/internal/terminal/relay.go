@@ -29,26 +29,50 @@ type Relay struct {
 	// snapshot and channel registration never straddle a chunk — every chunk lands
 	// in exactly one of the two (no duplicate, no gap) at the reconnect boundary.
 	subMu sync.Mutex
+	// onExit, when set, runs once readLoop has finished tearing the relay down. The
+	// Map uses it to drop a relay whose session ended on its own; without it the
+	// entry (plus its fanout and write buffer) lingered until an explicit
+	// /terminal/stop that may never come.
+	onExit func(*Relay)
 }
 
 // NewRelay creates a relay and starts the PTY reader loop.
 func NewRelay(sess *pty.Session, workspaceDir string) *Relay {
-	r := &Relay{
+	r := newRelay(sess, workspaceDir, nil)
+	r.start()
+	return r
+}
+
+// newRelay builds a relay WITHOUT starting its reader loop, so the Map can publish
+// it before the loop (which may exit and self-remove immediately) can run. Callers
+// must call start exactly once.
+func newRelay(sess *pty.Session, workspaceDir string, onExit func(*Relay)) *Relay {
+	return &Relay{
 		sess:         sess,
 		fanout:       pty.NewFanout(),
 		writeBuf:     pty.NewWriteBuffer(sess),
 		workspaceDir: workspaceDir,
 		done:         make(chan struct{}),
+		onExit:       onExit,
 	}
-	util.SafeGo(r.readLoop)
-	return r
 }
+
+// start launches the PTY reader loop.
+func (r *Relay) start() { util.SafeGo(r.readLoop) }
 
 // readLoop continuously reads PTY output, appends to scrollback, and broadcasts
 // to all subscribers. Exits when the session closes or the process exits.
 // Before closing the fanout, it reaps the child process to capture the exit code
 // so downstream subscribers can notify the browser.
 func (r *Relay) readLoop() {
+	// Defers unwind bottom-up: write buffer, then fanout, then r.done, then the
+	// Map's self-removal — so by the time onExit runs (and by the time Close's wait
+	// on r.done returns) the relay is fully torn down.
+	defer func() {
+		if r.onExit != nil {
+			r.onExit(r)
+		}
+	}()
 	defer close(r.done)
 	defer r.fanout.Close()
 	defer r.writeBuf.Close()
@@ -93,7 +117,9 @@ func (r *Relay) appendAndBroadcast(data []byte) {
 // subscriber atomically under subMu (the same lock appendAndBroadcast holds), so
 // the reconnect boundary between replayed history and live channel output is
 // seamless: every chunk is in exactly one of the two. Returns the same errors as
-// Fanout.Subscribe — ErrFanoutClosed (session ended) or ErrFanoutFull (cap).
+// Fanout.Subscribe — ErrFanoutClosed (session ended), ErrFanoutFull (cap), or
+// ErrDuplicateSubscriber (a reused subID; WS ids come from NextWSSubID and are
+// unique by construction).
 func (r *Relay) SubscribeWithHistory(subID string) (history []byte, sub <-chan []byte, err error) {
 	r.subMu.Lock()
 	defer r.subMu.Unlock()
@@ -102,17 +128,46 @@ func (r *Relay) SubscribeWithHistory(subID string) (history []byte, sub <-chan [
 	return history, sub, err
 }
 
-// reapExitCode waits for the child process exit code. Called after PTY read
-// returns an error (typically EOF when the child exits), so the Session's
+// reapExitCode waits (bounded) for the child process exit code. Called after PTY
+// read returns an error (typically EOF when the child exits), so the Session's
 // reaper goroutine has usually already captured the exit code.
+//
+// The bound matters: this runs BEFORE readLoop's deferred fanout.Close(), so an
+// unreapable child would otherwise park readLoop forever — the fanout never
+// closes and every WebSocket pump hangs on a channel that never closes (S6). On
+// timeout, ExitCode() reports -1 (unknown) and teardown proceeds; the session
+// layer logs the give-up.
 func (r *Relay) reapExitCode() {
-	r.sess.Wait() // blocks until child exits — usually instant since PTY EOF already received
+	_ = r.sess.Wait(ReapTimeout)
 	r.exitCode = r.sess.ExitCode()
 }
 
-// Close stops the write buffer. The readLoop exits when the session closes,
-// which triggers fanout and writeBuf cleanup via defers.
+// Close tears the relay down and waits (bounded) for that teardown to finish.
+//
+// It used to close only the write buffer, which stopped nothing: readLoop stayed
+// blocked in sess.Read, so the goroutine, the PTY fd and the open fanout all
+// survived a /terminal/stop or a daemon shutdown (finding S5). Closing the session
+// is what actually breaks readLoop out — its Read returns ErrSessionClosed and its
+// defers close the fanout and write buffer and then r.done.
+//
+// Every step is idempotent (Session.Close, WriteBuffer.Close and Fanout.Close all
+// no-op when already closed), so Close is safe to call twice and safe to call
+// concurrently with readLoop's own teardown. In production the session is normally
+// already stopped by the time we get here (Manager.Stop in /terminal/stop, StopAll
+// at shutdown), which makes the session close a no-op and r.done already closed.
 func (r *Relay) Close() {
+	_ = r.sess.Close()
+
+	select {
+	case <-r.done:
+	case <-time.After(RelayCloseTimeout):
+		// readLoop is wedged (an unreapable child, or a write buffer whose drain is
+		// stuck). Do not block the caller — shutdown and /terminal/stop must still
+		// make progress; the session-layer diagnostics record the underlying stall.
+	}
+
+	// Defense in depth: if the wait above timed out, readLoop has not run its
+	// defers, so at least stop accepting writes that can never be delivered.
 	r.writeBuf.Close()
 }
 
@@ -187,10 +242,31 @@ func (m *Map) GetOrCreate(id string, sess *pty.Session, workspaceDir string) *Re
 		r.Close() // outside the lock: Close can block briefly
 		return fresh
 	}
-	r := NewRelay(sess, workspaceDir)
-	m.relays[id] = r
+	fresh := m.installLocked(id, sess, workspaceDir)
 	m.mu.Unlock()
+	return fresh
+}
+
+// installLocked registers a fresh relay under id and only THEN starts its reader
+// loop. Order matters: the loop can exit immediately (a session that is already
+// dead) and self-remove, and a self-removal that ran before the registration would
+// leave the dead relay in the map forever. Caller holds m.mu.
+func (m *Map) installLocked(id string, sess *pty.Session, workspaceDir string) *Relay {
+	r := newRelay(sess, workspaceDir, func(dead *Relay) { m.removeIfCurrent(id, dead) })
+	m.relays[id] = r
+	r.start()
 	return r
+}
+
+// removeIfCurrent drops id's entry only when it still points at r. A relay that
+// has already been replaced (ReplaceRelay) or removed must not evict its
+// successor when its own readLoop finally unwinds.
+func (m *Map) removeIfCurrent(id string, r *Relay) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.relays[id] == r {
+		delete(m.relays, id)
+	}
 }
 
 // ReplaceRelay atomically drops any existing relay for id and installs a fresh one
@@ -205,8 +281,7 @@ func (m *Map) GetOrCreate(id string, sess *pty.Session, workspaceDir string) *Re
 func (m *Map) ReplaceRelay(id string, sess *pty.Session, workspaceDir string) *Relay {
 	m.mu.Lock() // lint:manual-unlock — unlock before Close to avoid holding lock during I/O
 	old := m.relays[id]
-	r := NewRelay(sess, workspaceDir)
-	m.relays[id] = r
+	r := m.installLocked(id, sess, workspaceDir)
 	m.mu.Unlock()
 	if old != nil {
 		old.Close()
@@ -241,10 +316,11 @@ func (m *Map) WriteToFirst(data []byte) bool {
 		return false
 	}
 	if _, err := relay.writeBuf.Write(data); err != nil {
-		// A full/closed write buffer means the shell has exited or is wedged under
-		// backpressure — the data did NOT land. Report failure so the caller falls
-		// through to its fallback (e.g. the in-page Audit prompt stores the intent)
-		// instead of being told the write succeeded and silently losing it.
+		// ErrWriteBufferClosed (the shell exited) and ErrWriteBufferFull (wedged
+		// under backpressure) are distinct, but both mean the data did NOT land.
+		// Report failure so the caller falls through to its fallback (e.g. the
+		// in-page Audit prompt stores the intent) instead of being told the write
+		// succeeded and silently losing it.
 		return false
 	}
 	return true
@@ -277,9 +353,10 @@ func NextWSSubID() string {
 // direct-PTY-read approach so the relay's readLoop owns all PTY reads.
 func WaitForPromptViaRelay(relay *Relay, initCmd string) {
 	// A UNIQUE id per call: a constant "init-cmd" makes two concurrent inits on one
-	// relay collide — the second Subscribe overwrites the first's map entry, and the
-	// first's deferred Unsubscribe then closes the second's channel, so the second
-	// bails without writing its init command (finding I).
+	// relay collide (finding I). Fanout.Subscribe now rejects a duplicate id outright
+	// (ErrDuplicateSubscriber) instead of silently replacing the incumbent, so the
+	// collision can no longer orphan a subscriber — but the second init would still
+	// fall through to the blind write below, so the unique id stays.
 	subID := NextWSSubID()
 	ch, err := relay.fanout.Subscribe(subID)
 	if err != nil {
