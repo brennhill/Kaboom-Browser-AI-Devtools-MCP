@@ -9,6 +9,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/buffers"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/hints"
 )
 
 // GetEnhancedActions returns captured user actions (clicks, inputs, navigations).
@@ -55,7 +56,7 @@ func GetEnhancedActions(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage)
 		"metadata": responseMeta,
 	}
 	if len(filtered) == 0 {
-		response["hint"] = actionsEmptyHint()
+		response["hint"] = hints.Actions()
 	}
 	return mcp.Succeed(req, "Enhanced actions", response)
 }
@@ -122,7 +123,7 @@ func GetTransients(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.
 		response["param_hint"] = paramHint
 	}
 	if len(filtered) == 0 {
-		response["hint"] = transientsEmptyHint(params.Classification)
+		response["hint"] = hints.Transients(params.Classification)
 	}
 	return mcp.Succeed(req, "Transient elements", response)
 }

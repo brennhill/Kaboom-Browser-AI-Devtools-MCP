@@ -1,18 +1,26 @@
-// empty_hints.go — Diagnostic hint builders for empty observe results.
-// Purpose: Generates contextual hints when observe modes return 0 entries.
-// Why: When an observe mode returns 0 entries, the hint field explains why
-// the buffer may be empty and suggests remediation. Fixes #278 and #287.
+// Purpose: Package hints — the "why is this empty?" copy observe attaches when a mode returns 0 entries.
+// Why: These strings are the tool's user-facing guidance and the main thing an agent reads when a call comes
+// back empty; keeping them in one package keeps the wording consistent and independently testable, and lets
+// call sites read as hints.Logs(scope, minLevel) instead of logsEmptyHint(scope, minLevel).
+// Originally fixes #278 and #287.
 // Docs: docs/features/feature/observe/index.md
 
-package observe
+/*
+Package hints builds the diagnostic "hint" field observe attaches to an
+otherwise-empty response. Each function corresponds to one observe mode and
+explains the most likely reason that mode has nothing to report — capture
+started after the events happened, a filter excluded everything, or the
+extension is not tracking — followed by the call that would fix it.
+*/
+package hints
 
 import (
 	"fmt"
 	"strings"
 )
 
-// NetworkBodiesHintFilters captures active network_bodies filters for hint generation.
-type NetworkBodiesHintFilters struct {
+// NetworkBodiesFilters captures active network_bodies filters for hint generation.
+type NetworkBodiesFilters struct {
 	URL       string
 	Method    string
 	StatusMin int
@@ -20,12 +28,12 @@ type NetworkBodiesHintFilters struct {
 	BodyPath  string
 }
 
-// networkBodiesEmptyHint returns a diagnostic hint when GetNetworkBodies returns
+// NetworkBodies returns a diagnostic hint when GetNetworkBodies returns
 // 0 filtered entries. It cross-references the waterfall count to explain
 // whether the issue is prospective-only capture, a URL filter mismatch, or no data at all.
 // waterfallCount is the number of entries in the network waterfall buffer.
-func networkBodiesEmptyHint(waterfallCount int, unfilteredCount int, filters NetworkBodiesHintFilters) string {
-	activeFilterSummary := formatNetworkBodiesFilterSummary(filters)
+func NetworkBodies(waterfallCount int, unfilteredCount int, filters NetworkBodiesFilters) string {
+	activeFilterSummary := formatNetworkBodiesFilters(filters)
 
 	// Case 1: Filter reduced non-empty results to zero
 	if unfilteredCount > 0 && activeFilterSummary != "" {
@@ -52,7 +60,7 @@ func networkBodiesEmptyHint(waterfallCount int, unfilteredCount int, filters Net
 		"Bodies are captured for requests made after tracking starts. Check observe({what: \"pilot\"}) for extension status."
 }
 
-func formatNetworkBodiesFilterSummary(filters NetworkBodiesHintFilters) string {
+func formatNetworkBodiesFilters(filters NetworkBodiesFilters) string {
 	parts := make([]string, 0, 5)
 	if filters.URL != "" {
 		parts = append(parts, fmt.Sprintf("url~%q", filters.URL))
@@ -73,8 +81,8 @@ func formatNetworkBodiesFilterSummary(filters NetworkBodiesHintFilters) string {
 	return strings.Join(parts, ", ")
 }
 
-// wsEventsEmptyHint returns a diagnostic hint when GetWSEvents returns 0 filtered entries.
-func wsEventsEmptyHint(unfilteredCount int, urlFilter string) string {
+// WSEvents returns a diagnostic hint when GetWSEvents returns 0 filtered entries.
+func WSEvents(unfilteredCount int, urlFilter string) string {
 	// Case 1: Filter reduced non-empty results to zero
 	if unfilteredCount > 0 && urlFilter != "" {
 		return fmt.Sprintf(
@@ -90,15 +98,15 @@ func wsEventsEmptyHint(unfilteredCount int, urlFilter string) string {
 		"Navigate to the page again (or refresh) while tracking is active to capture WebSocket traffic."
 }
 
-// wsStatusEmptyHint returns a diagnostic hint when GetWSStatus returns 0 connections.
-func wsStatusEmptyHint() string {
+// WSStatus returns a diagnostic hint when GetWSStatus returns 0 connections.
+func WSStatus() string {
 	return "No WebSocket connections found. WebSocket interception must be active before connections open. " +
 		"If the page was loaded before tracking started, existing connections are not visible. " +
 		"Navigate to the page again (or refresh) while tracking is active to detect WebSocket connections."
 }
 
-// errorsEmptyHint returns a diagnostic hint when GetBrowserErrors returns 0 entries.
-func errorsEmptyHint(scope string) string {
+// Errors returns a diagnostic hint when GetBrowserErrors returns 0 entries.
+func Errors(scope string) string {
 	if scope == "current_page" {
 		return "No errors on the current page. If you expected errors, try observe({what: \"errors\", scope: \"all\"}) " +
 			"to check all tabs, or observe({what: \"logs\", min_level: \"warn\"}) for warnings. " +
@@ -109,8 +117,8 @@ func errorsEmptyHint(scope string) string {
 		"Check observe({what: \"pilot\"}) to verify the extension is connected and tracking."
 }
 
-// logsEmptyHint returns a diagnostic hint when GetBrowserLogs returns 0 entries.
-func logsEmptyHint(scope, minLevel string) string {
+// Logs returns a diagnostic hint when GetBrowserLogs returns 0 entries.
+func Logs(scope, minLevel string) string {
 	if minLevel != "" {
 		return fmt.Sprintf("No logs at level '%s' or above. Try a lower threshold: "+
 			"observe({what: \"logs\", min_level: \"debug\"}) to see all logs, "+
@@ -124,29 +132,29 @@ func logsEmptyHint(scope, minLevel string) string {
 		"Interact with the page to generate logs. Check observe({what: \"pilot\"}) for extension status."
 }
 
-// actionsEmptyHint returns a diagnostic hint when GetEnhancedActions returns 0 entries.
-func actionsEmptyHint() string {
+// Actions returns a diagnostic hint when GetEnhancedActions returns 0 entries.
+func Actions() string {
 	return "No user actions captured yet. Actions (clicks, inputs, navigations, form submissions) are recorded " +
 		"in real-time as the user interacts with the page. Interact with the page, then re-check. " +
 		"Check observe({what: \"pilot\"}) to verify the extension is connected and tracking."
 }
 
-// timelineEmptyHint returns a diagnostic hint when GetSessionTimeline returns 0 entries.
-func timelineEmptyHint() string {
+// Timeline returns a diagnostic hint when GetSessionTimeline returns 0 entries.
+func Timeline() string {
 	return "No timeline events captured. The timeline merges errors, actions, network requests, and WebSocket events. " +
 		"Interact with the page to generate activity, then call observe({what: \"timeline\"}) again. " +
 		"Check observe({what: \"pilot\"}) for extension status."
 }
 
-// errorBundlesEmptyHint returns a diagnostic hint when GetErrorBundles returns 0 bundles.
-func errorBundlesEmptyHint() string {
+// ErrorBundles returns a diagnostic hint when GetErrorBundles returns 0 bundles.
+func ErrorBundles() string {
 	return "No error bundles — no errors captured in the current window. Error bundles are assembled around each " +
 		"console error with surrounding network/action context. Trigger the error scenario, then re-check. " +
 		"Try observe({what: \"errors\"}) to see if individual errors exist without bundle context."
 }
 
-// transientsEmptyHint returns a diagnostic hint when GetTransients returns 0 entries.
-func transientsEmptyHint(classification string) string {
+// Transients returns a diagnostic hint when GetTransients returns 0 entries.
+func Transients(classification string) string {
 	if classification != "" {
 		return fmt.Sprintf("No transient elements with classification '%s'. "+
 			"Try observe({what: \"transients\"}) without a classification filter to see all types, "+
@@ -156,8 +164,8 @@ func transientsEmptyHint(classification string) string {
 		"in real-time as they appear in the DOM. Interact with the page to trigger transient UI, then re-check."
 }
 
-// networkWaterfallEmptyHint returns a diagnostic hint when GetNetworkWaterfall returns 0 entries.
-func networkWaterfallEmptyHint(urlFilter string) string {
+// NetworkWaterfall returns a diagnostic hint when GetNetworkWaterfall returns 0 entries.
+func NetworkWaterfall(urlFilter string) string {
 	if urlFilter != "" {
 		return fmt.Sprintf("No network requests matched URL filter %q. "+
 			"Try observe({what: \"network_waterfall\"}) without a url filter to see all requests.", urlFilter)

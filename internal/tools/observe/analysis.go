@@ -11,6 +11,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/hints"
 )
 
 const wsStatusSummarySampleLimit = 10
@@ -48,7 +49,7 @@ func GetNetworkWaterfall(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage
 		"metadata": BuildResponseMetadata(deps.GetCapture(), newestTS),
 	}
 	if len(entries) == 0 {
-		response["hint"] = networkWaterfallEmptyHint(params.URLFilter)
+		response["hint"] = hints.NetworkWaterfall(params.URLFilter)
 	}
 	return mcp.Succeed(req, "Network waterfall", response)
 }
@@ -157,7 +158,7 @@ func GetWSStatus(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JS
 	if arguments.Summary {
 		response := buildWSStatusSummary(status, metadata)
 		if len(status.Connections) == 0 && len(status.Closed) == 0 {
-			response["hint"] = wsStatusEmptyHint()
+			response["hint"] = hints.WSStatus()
 		}
 		return mcp.Succeed(req, "WebSocket status", response)
 	}
@@ -171,7 +172,7 @@ func GetWSStatus(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JS
 	}
 
 	if len(status.Connections) == 0 && len(status.Closed) == 0 {
-		response["hint"] = wsStatusEmptyHint()
+		response["hint"] = hints.WSStatus()
 	}
 
 	return mcp.Succeed(req, "WebSocket status", response)

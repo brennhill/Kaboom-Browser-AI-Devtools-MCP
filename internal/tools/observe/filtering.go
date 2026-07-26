@@ -180,4 +180,3 @@ func parseJSONPath(path string) ([]jsonPathToken, error) {
 
 	return tokens, nil
 }
-

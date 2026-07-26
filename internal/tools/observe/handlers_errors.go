@@ -8,6 +8,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/buffers"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/hints"
 )
 
 // GetBrowserErrors returns error-level log entries from the capture buffer.
@@ -102,7 +103,7 @@ func GetBrowserErrors(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 		response["param_hint"] = paramHint
 	}
 	if len(errors) == 0 {
-		response["hint"] = errorsEmptyHint(params.Scope)
+		response["hint"] = hints.Errors(params.Scope)
 	}
 	return mcp.Succeed(req, "Browser errors", response)
 }

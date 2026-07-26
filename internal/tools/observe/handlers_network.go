@@ -9,6 +9,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/buffers"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/hints"
 )
 
 // GetNetworkBodies returns captured HTTP response bodies with optional filtering.
@@ -75,7 +76,7 @@ func GetNetworkBodies(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 
 	waterfallCount := len(deps.GetCapture().GetNetworkWaterfallEntries())
 	responseMeta := BuildResponseMetadata(deps.GetCapture(), newestTS)
-	hintFilters := NetworkBodiesHintFilters{
+	hintFilters := hints.NetworkBodiesFilters{
 		URL:       params.URL,
 		Method:    params.Method,
 		StatusMin: params.StatusMin,
@@ -85,7 +86,7 @@ func GetNetworkBodies(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 	if params.Summary {
 		summary := buildNetworkBodiesSummary(filtered, responseMeta)
 		if len(filtered) == 0 {
-			summary["hint"] = networkBodiesEmptyHint(waterfallCount, len(allBodies), hintFilters)
+			summary["hint"] = hints.NetworkBodies(waterfallCount, len(allBodies), hintFilters)
 		}
 		return mcp.Succeed(req, "Network bodies", summary)
 	}
@@ -97,7 +98,7 @@ func GetNetworkBodies(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 	}
 
 	if len(filtered) == 0 {
-		response["hint"] = networkBodiesEmptyHint(waterfallCount, len(allBodies), hintFilters)
+		response["hint"] = hints.NetworkBodies(waterfallCount, len(allBodies), hintFilters)
 	}
 
 	return mcp.Succeed(req, "Network bodies", response)
@@ -147,7 +148,7 @@ func GetWSEvents(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JS
 			summary["param_hint"] = paramHint
 		}
 		if len(filtered) == 0 {
-			summary["hint"] = wsEventsEmptyHint(len(allEvents), params.URL)
+			summary["hint"] = hints.WSEvents(len(allEvents), params.URL)
 		}
 		return mcp.Succeed(req, "WebSocket events", summary)
 	}
@@ -162,7 +163,7 @@ func GetWSEvents(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JS
 	}
 
 	if len(filtered) == 0 {
-		response["hint"] = wsEventsEmptyHint(len(allEvents), params.URL)
+		response["hint"] = hints.WSEvents(len(allEvents), params.URL)
 	}
 
 	return mcp.Succeed(req, "WebSocket events", response)

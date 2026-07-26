@@ -9,6 +9,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/hints"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -112,7 +113,7 @@ func GetErrorBundles(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mc
 		response["param_hint"] = paramHint
 	}
 	if len(bundles) == 0 {
-		response["hint"] = errorBundlesEmptyHint()
+		response["hint"] = hints.ErrorBundles()
 	}
 	return mcp.Succeed(req, "Error bundles", response)
 }
@@ -174,12 +175,12 @@ func buildBundles(errors []timedEntry, ctx bundleContext) []map[string]any {
 	for _, e := range errors {
 		windowStart := e.ts.Add(-window)
 		bundles = append(bundles, map[string]any{
-			"error":                   errorEntryToMap(e.data),
-			"network":                 matchNetworkBodies(ctx.networkBodies, windowStart, e.ts),
-			"waterfall":               matchWaterfall(ctx.waterfallEntries, windowStart, e.ts),
-			"actions":                 matchActions(ctx.actions, windowStart, e.ts),
-			"logs":                    matchLogs(ctx.logs, windowStart, e.ts),
-			"context_window_seconds":  ctx.windowSeconds,
+			"error":                  errorEntryToMap(e.data),
+			"network":                matchNetworkBodies(ctx.networkBodies, windowStart, e.ts),
+			"waterfall":              matchWaterfall(ctx.waterfallEntries, windowStart, e.ts),
+			"actions":                matchActions(ctx.actions, windowStart, e.ts),
+			"logs":                   matchLogs(ctx.logs, windowStart, e.ts),
+			"context_window_seconds": ctx.windowSeconds,
 		})
 	}
 	return bundles

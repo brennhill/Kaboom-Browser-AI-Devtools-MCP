@@ -12,6 +12,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/hints"
 )
 
 type timelineEntry struct {
@@ -86,7 +87,7 @@ func GetSessionTimeline(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage)
 		"metadata": BuildResponseMetadata(deps.GetCapture(), time.Now()),
 	}
 	if len(entries) == 0 {
-		response["hint"] = timelineEmptyHint()
+		response["hint"] = hints.Timeline()
 	}
 	return mcp.Succeed(req, "Timeline", response)
 }

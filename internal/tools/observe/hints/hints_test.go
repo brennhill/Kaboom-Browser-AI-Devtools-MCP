@@ -1,5 +1,5 @@
 // empty_hints_test.go — Unit tests for diagnostic hint builders.
-package observe
+package hints
 
 import (
 	"strings"
@@ -7,12 +7,12 @@ import (
 )
 
 // ============================================
-// networkBodiesEmptyHint
+// NetworkBodies
 // ============================================
 
 func TestNetworkBodiesEmptyHint_FilterMismatch(t *testing.T) {
 	t.Parallel()
-	hint := networkBodiesEmptyHint(0, 5, NetworkBodiesHintFilters{URL: "github.com"})
+	hint := NetworkBodies(0, 5, NetworkBodiesFilters{URL: "github.com"})
 
 	if !strings.Contains(hint, "github.com") {
 		t.Errorf("hint should mention the URL filter, got: %s", hint)
@@ -24,7 +24,7 @@ func TestNetworkBodiesEmptyHint_FilterMismatch(t *testing.T) {
 
 func TestNetworkBodiesEmptyHint_WaterfallOnly(t *testing.T) {
 	t.Parallel()
-	hint := networkBodiesEmptyHint(10, 0, NetworkBodiesHintFilters{})
+	hint := NetworkBodies(10, 0, NetworkBodiesFilters{})
 
 	if !strings.Contains(hint, "waterfall") {
 		t.Errorf("hint should mention waterfall, got: %s", hint)
@@ -39,7 +39,7 @@ func TestNetworkBodiesEmptyHint_WaterfallOnly(t *testing.T) {
 
 func TestNetworkBodiesEmptyHint_NothingCaptured(t *testing.T) {
 	t.Parallel()
-	hint := networkBodiesEmptyHint(0, 0, NetworkBodiesHintFilters{})
+	hint := NetworkBodies(0, 0, NetworkBodiesFilters{})
 
 	if !strings.Contains(hint, "pilot") {
 		t.Errorf("hint should suggest checking pilot status, got: %s", hint)
@@ -52,7 +52,7 @@ func TestNetworkBodiesEmptyHint_NothingCaptured(t *testing.T) {
 func TestNetworkBodiesEmptyHint_FilterWithZeroUnfiltered(t *testing.T) {
 	t.Parallel()
 	// URL filter present but unfilteredCount is 0 — should fall through to case 2/3
-	hint := networkBodiesEmptyHint(0, 0, NetworkBodiesHintFilters{URL: "github.com"})
+	hint := NetworkBodies(0, 0, NetworkBodiesFilters{URL: "github.com"})
 
 	// Should NOT mention the filter (case 1 requires unfilteredCount > 0)
 	if strings.Contains(hint, "filter") {
@@ -62,7 +62,7 @@ func TestNetworkBodiesEmptyHint_FilterWithZeroUnfiltered(t *testing.T) {
 
 func TestNetworkBodiesEmptyHint_FilterMismatch_MultipleFilters(t *testing.T) {
 	t.Parallel()
-	hint := networkBodiesEmptyHint(0, 3, NetworkBodiesHintFilters{
+	hint := NetworkBodies(0, 3, NetworkBodiesFilters{
 		URL:       "api.example.com",
 		Method:    "post",
 		StatusMin: 400,
@@ -83,12 +83,12 @@ func TestNetworkBodiesEmptyHint_FilterMismatch_MultipleFilters(t *testing.T) {
 }
 
 // ============================================
-// wsEventsEmptyHint
+// WSEvents
 // ============================================
 
 func TestWSEventsEmptyHint_FilterMismatch(t *testing.T) {
 	t.Parallel()
-	hint := wsEventsEmptyHint(8, "stream.example.com")
+	hint := WSEvents(8, "stream.example.com")
 
 	if !strings.Contains(hint, "stream.example.com") {
 		t.Errorf("hint should mention the URL filter, got: %s", hint)
@@ -100,7 +100,7 @@ func TestWSEventsEmptyHint_FilterMismatch(t *testing.T) {
 
 func TestWSEventsEmptyHint_NoEvents(t *testing.T) {
 	t.Parallel()
-	hint := wsEventsEmptyHint(0, "")
+	hint := WSEvents(0, "")
 
 	if !strings.Contains(strings.ToLower(hint), "websocket") {
 		t.Errorf("hint should mention WebSocket, got: %s", hint)
@@ -111,12 +111,12 @@ func TestWSEventsEmptyHint_NoEvents(t *testing.T) {
 }
 
 // ============================================
-// wsStatusEmptyHint
+// WSStatus
 // ============================================
 
 func TestWSStatusEmptyHint_Content(t *testing.T) {
 	t.Parallel()
-	hint := wsStatusEmptyHint()
+	hint := WSStatus()
 
 	if !strings.Contains(strings.ToLower(hint), "websocket") {
 		t.Errorf("hint should mention WebSocket, got: %s", hint)
@@ -130,12 +130,12 @@ func TestWSStatusEmptyHint_Content(t *testing.T) {
 }
 
 // ============================================
-// errorsEmptyHint
+// Errors
 // ============================================
 
 func TestErrorsEmptyHint_CurrentPage(t *testing.T) {
 	t.Parallel()
-	hint := errorsEmptyHint("current_page")
+	hint := Errors("current_page")
 	if !strings.Contains(hint, "current page") {
 		t.Errorf("hint should mention current page scope, got: %s", hint)
 	}
@@ -146,7 +146,7 @@ func TestErrorsEmptyHint_CurrentPage(t *testing.T) {
 
 func TestErrorsEmptyHint_All(t *testing.T) {
 	t.Parallel()
-	hint := errorsEmptyHint("all")
+	hint := Errors("all")
 	if !strings.Contains(hint, "any tab") {
 		t.Errorf("hint should mention all tabs, got: %s", hint)
 	}
@@ -156,12 +156,12 @@ func TestErrorsEmptyHint_All(t *testing.T) {
 }
 
 // ============================================
-// logsEmptyHint
+// Logs
 // ============================================
 
 func TestLogsEmptyHint_WithMinLevel(t *testing.T) {
 	t.Parallel()
-	hint := logsEmptyHint("current_page", "error")
+	hint := Logs("current_page", "error")
 	if !strings.Contains(hint, "error") {
 		t.Errorf("hint should mention the min_level filter, got: %s", hint)
 	}
@@ -172,7 +172,7 @@ func TestLogsEmptyHint_WithMinLevel(t *testing.T) {
 
 func TestLogsEmptyHint_CurrentPage(t *testing.T) {
 	t.Parallel()
-	hint := logsEmptyHint("current_page", "")
+	hint := Logs("current_page", "")
 	if !strings.Contains(hint, "current page") {
 		t.Errorf("hint should mention current page scope, got: %s", hint)
 	}
@@ -180,19 +180,19 @@ func TestLogsEmptyHint_CurrentPage(t *testing.T) {
 
 func TestLogsEmptyHint_All(t *testing.T) {
 	t.Parallel()
-	hint := logsEmptyHint("all", "")
+	hint := Logs("all", "")
 	if !strings.Contains(hint, "pilot") {
 		t.Errorf("hint should suggest checking pilot, got: %s", hint)
 	}
 }
 
 // ============================================
-// actionsEmptyHint
+// Actions
 // ============================================
 
 func TestActionsEmptyHint_Content(t *testing.T) {
 	t.Parallel()
-	hint := actionsEmptyHint()
+	hint := Actions()
 	if hint == "" {
 		t.Fatal("hint should not be empty")
 	}
@@ -202,12 +202,12 @@ func TestActionsEmptyHint_Content(t *testing.T) {
 }
 
 // ============================================
-// timelineEmptyHint
+// Timeline
 // ============================================
 
 func TestTimelineEmptyHint_Content(t *testing.T) {
 	t.Parallel()
-	hint := timelineEmptyHint()
+	hint := Timeline()
 	if hint == "" {
 		t.Fatal("hint should not be empty")
 	}
@@ -217,12 +217,12 @@ func TestTimelineEmptyHint_Content(t *testing.T) {
 }
 
 // ============================================
-// errorBundlesEmptyHint
+// ErrorBundles
 // ============================================
 
 func TestErrorBundlesEmptyHint_Content(t *testing.T) {
 	t.Parallel()
-	hint := errorBundlesEmptyHint()
+	hint := ErrorBundles()
 	if hint == "" {
 		t.Fatal("hint should not be empty")
 	}
@@ -232,12 +232,12 @@ func TestErrorBundlesEmptyHint_Content(t *testing.T) {
 }
 
 // ============================================
-// transientsEmptyHint
+// Transients
 // ============================================
 
 func TestTransientsEmptyHint_WithClassification(t *testing.T) {
 	t.Parallel()
-	hint := transientsEmptyHint("toast")
+	hint := Transients("toast")
 	if !strings.Contains(hint, "toast") {
 		t.Errorf("hint should mention the classification filter, got: %s", hint)
 	}
@@ -245,19 +245,19 @@ func TestTransientsEmptyHint_WithClassification(t *testing.T) {
 
 func TestTransientsEmptyHint_NoFilter(t *testing.T) {
 	t.Parallel()
-	hint := transientsEmptyHint("")
+	hint := Transients("")
 	if !strings.Contains(hint, "transient") || !strings.Contains(hint, "toasts") {
 		t.Errorf("hint should describe transients, got: %s", hint)
 	}
 }
 
 // ============================================
-// networkWaterfallEmptyHint
+// NetworkWaterfall
 // ============================================
 
 func TestNetworkWaterfallEmptyHint_WithURL(t *testing.T) {
 	t.Parallel()
-	hint := networkWaterfallEmptyHint("api.example.com")
+	hint := NetworkWaterfall("api.example.com")
 	if !strings.Contains(hint, "api.example.com") {
 		t.Errorf("hint should mention the URL filter, got: %s", hint)
 	}
@@ -265,7 +265,7 @@ func TestNetworkWaterfallEmptyHint_WithURL(t *testing.T) {
 
 func TestNetworkWaterfallEmptyHint_NoFilter(t *testing.T) {
 	t.Parallel()
-	hint := networkWaterfallEmptyHint("")
+	hint := NetworkWaterfall("")
 	if !strings.Contains(hint, "Performance API") {
 		t.Errorf("hint should explain capture source, got: %s", hint)
 	}

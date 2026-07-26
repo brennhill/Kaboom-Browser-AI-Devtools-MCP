@@ -8,6 +8,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pagination"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/hints"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -178,7 +179,7 @@ func GetBrowserLogs(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 		response["param_hint"] = paramHint
 	}
 	if len(logs) == 0 {
-		response["hint"] = logsEmptyHint(params.Scope, params.MinLevel)
+		response["hint"] = hints.Logs(params.Scope, params.MinLevel)
 	}
 
 	if params.IncludeExtension {
