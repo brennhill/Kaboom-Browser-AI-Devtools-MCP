@@ -527,6 +527,11 @@ describe('terminal side panel host', () => {
 
     const priorSrc = iframe.src
     redrawButton.dispatch('click')
+    // The click handler is async (it revalidates the token and discovers the
+    // terminal port before touching iframe.src). Let it settle INSIDE this test:
+    // an un-awaited redraw finishes after the test returns, against the next
+    // test's fetchHandler, and its session start is then counted there.
+    await sleep(0)
 
     assert.strictEqual(iframe.src, priorSrc, 'redraw should keep the same token URL')
     assert.strictEqual(startCount, 1, 'redraw should not start a new session')

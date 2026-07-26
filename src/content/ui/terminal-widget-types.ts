@@ -6,6 +6,10 @@
  */
 
 import { DEFAULT_SERVER_URL, TERMINAL_PORT_OFFSET } from '../../lib/constants.js'
+import { buildDaemonHeaders } from '../../lib/daemon-http.js'
+import type { components } from '../../generated/openapi-types.js'
+
+type HealthResponse = components['schemas']['HealthResponse']
 
 // ---------------------------------------------------------------------------
 // DOM element IDs
@@ -158,14 +162,103 @@ export function resetAllState(): void {
   state.lastGuardToastAt = 0
   state.terminalConnected = false
   state.guardBlockedSince = 0
+  resetTerminalPortDiscovery()
 }
 
 // ---------------------------------------------------------------------------
-// Utility: compute terminal server URL from a base daemon URL.
+// Terminal server URL — discovered, with a derived fallback.
 // ---------------------------------------------------------------------------
-/** Compute the terminal server URL from a base daemon URL (port + TERMINAL_PORT_OFFSET). */
+// The daemon *prefers* base + TERMINAL_PORT_OFFSET but does not guarantee it: if
+// that port is taken it logs terminal_server_bind_failed, and it always reports
+// the port it actually bound as `terminal_port` in /health. Assuming base+1 (and
+// never reading the published value) sent every terminal request to a port
+// nothing was listening on, which looks to the user like a broken terminal
+// (finding S2).
+//
+// Cached per base URL and per extension context (content script, service worker,
+// side panel each hold their own module instance), with a TTL so a daemon that
+// restarts onto a different port is picked up.
+const TERMINAL_PORT_CACHE_TTL_MS = 60000
+
+interface DiscoveredTerminalPort {
+  baseUrl: string
+  port: number
+  discoveredAt: number
+}
+
+let discoveredTerminalPort: DiscoveredTerminalPort | null = null
+/** In-flight discovery, so concurrent callers share one /health request. */
+let terminalPortDiscovery: Promise<void> | null = null
+
+/** Clear the discovered-port cache (context teardown and tests). */
+export function resetTerminalPortDiscovery(): void {
+  discoveredTerminalPort = null
+  terminalPortDiscovery = null
+}
+
+/** The cached port for baseUrl, or null when absent or stale. */
+function cachedTerminalPort(baseUrl: string, nowMs: number): number | null {
+  if (!discoveredTerminalPort) return null
+  if (discoveredTerminalPort.baseUrl !== baseUrl) return null
+  if (nowMs - discoveredTerminalPort.discoveredAt > TERMINAL_PORT_CACHE_TTL_MS) return null
+  return discoveredTerminalPort.port
+}
+
+/**
+ * Compute the terminal server URL for a base daemon URL.
+ *
+ * Synchronous, so it can serve call sites that cannot await (notifyIframe's
+ * postMessage target origin). It uses the discovered port when this context has
+ * one and otherwise derives base + TERMINAL_PORT_OFFSET — the daemon's own
+ * default, so this is never worse than the old behaviour. Prefer
+ * resolveTerminalServerUrl wherever awaiting is possible.
+ */
 export function getTerminalServerUrl(baseUrl: string): string {
   const url = new URL(baseUrl)
-  url.port = String(parseInt(url.port || '7890', 10) + TERMINAL_PORT_OFFSET)
+  const basePort = parseInt(url.port || '7890', 10)
+  const port = cachedTerminalPort(baseUrl, Date.now()) ?? basePort + TERMINAL_PORT_OFFSET
+  url.port = String(port)
   return url.origin
+}
+
+/**
+ * Resolve the terminal server URL, discovering the daemon's real terminal port
+ * first (once per TTL). Discovery lives INSIDE this helper rather than at the call
+ * sites so no caller can forget it (rule 19).
+ *
+ * Every failure mode — daemon down, non-OK response, unparseable body, no
+ * `terminal_port` field (Windows, or a terminal server that failed to bind) —
+ * falls through to the derived port, so discovery can only ever improve on the
+ * old assumption, never break a working setup.
+ */
+export async function resolveTerminalServerUrl(baseUrl: string): Promise<string> {
+  if (cachedTerminalPort(baseUrl, Date.now()) === null) {
+    if (!terminalPortDiscovery) {
+      terminalPortDiscovery = discoverTerminalPort(baseUrl).finally(() => {
+        terminalPortDiscovery = null
+      })
+    }
+    await terminalPortDiscovery
+  }
+  return getTerminalServerUrl(baseUrl)
+}
+
+/** Read `terminal_port` from /health and cache it. Never throws. */
+async function discoverTerminalPort(baseUrl: string): Promise<void> {
+  try {
+    const resp = await fetch(`${baseUrl}/health`, {
+      headers: buildDaemonHeaders({ contentType: null }),
+      signal: AbortSignal.timeout(2000)
+    })
+    if (!resp.ok) return
+    const data = (await resp.json()) as HealthResponse
+    const port = data.terminal_port
+    // 0 / absent means the terminal server is not running (Windows, or a bind
+    // failure). Keep the derived fallback rather than caching a dead port.
+    if (typeof port !== 'number' || port <= 0) return
+    discoveredTerminalPort = { baseUrl, port, discoveredAt: Date.now() }
+  } catch {
+    // Daemon unreachable or the response was not JSON — the caller falls back to
+    // the derived port, which is the daemon's own default.
+  }
 }

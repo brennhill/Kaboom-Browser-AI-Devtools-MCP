@@ -6,7 +6,7 @@
  */
 import { StorageKey, TERMINAL_PANEL_PORT } from './lib/constants.js';
 import { onStorageChanged } from './lib/storage-utils.js';
-import { state, resetAllState, getTerminalServerUrl, WIDGET_ID, IFRAME_ID, HEADER_ID, TERMINAL_BODY_ID, DISCONNECT_TERMINAL_BUTTON_ID, ANNOTATE_TERMINAL_BUTTON_ID, CLOSE_TERMINAL_BUTTON_ID, REDRAW_TERMINAL_BUTTON_ID, MINIMIZE_TERMINAL_BUTTON_ID, TERMINAL_WRITE_SUBMIT_DELAY_MS, TERMINAL_GUARD_POLL_MS } from './content/ui/terminal-widget-types.js';
+import { state, resetAllState, getTerminalServerUrl, resolveTerminalServerUrl, WIDGET_ID, IFRAME_ID, HEADER_ID, TERMINAL_BODY_ID, DISCONNECT_TERMINAL_BUTTON_ID, ANNOTATE_TERMINAL_BUTTON_ID, CLOSE_TERMINAL_BUTTON_ID, REDRAW_TERMINAL_BUTTON_ID, MINIMIZE_TERMINAL_BUTTON_ID, TERMINAL_WRITE_SUBMIT_DELAY_MS, TERMINAL_GUARD_POLL_MS } from './content/ui/terminal-widget-types.js';
 import { getServerUrl, getTerminalConfig, persistUIState, loadPersistedSession, clearPersistedSession, validateSession, startSession, getTerminalDevRoot, setTerminalDevRoot, stopActiveSession } from './content/ui/terminal-widget-session.js';
 import { showActionToast } from './content/ui/toast.js';
 import { createRootFolderBar } from './content/ui/terminal-root-folder.js';
@@ -496,6 +496,9 @@ function createPanelShell(token) {
     if (token) {
         const iframe = document.createElement('iframe');
         iframe.id = IFRAME_ID;
+        // Synchronous accessor: this builder is not async, but ensureTerminalSession()
+        // has already run (it is what produced `token`) and its daemon calls perform
+        // the terminal-port discovery, so the cache is warm by the time we get here.
         iframe.src = `${getTerminalServerUrl(state.serverUrl)}/terminal?token=${encodeURIComponent(token)}`;
         iframe.setAttribute('allow', 'clipboard-write');
         iframe.style.cssText = 'width:100%;height:100%;border:none;background:#1a1b26;display:block;';
@@ -566,7 +569,7 @@ async function redrawTerminal() {
     // Mark disconnected so a write in that reconnect gap queues instead of being
     // sent-and-dropped (the redraw sub-case of the write-connection race).
     state.terminalConnected = false;
-    iframe.src = `${getTerminalServerUrl(state.serverUrl)}/terminal?token=${encodeURIComponent(currentToken)}`;
+    iframe.src = `${await resolveTerminalServerUrl(state.serverUrl)}/terminal?token=${encodeURIComponent(currentToken)}`;
     showTerminalBody();
     persistUIState('open');
 }
@@ -607,7 +610,7 @@ async function exitTerminalSession() {
     panel.panelCloseIntent = 'clear';
     if (state.sessionState) {
         try {
-            const termUrl = getTerminalServerUrl(state.serverUrl);
+            const termUrl = await resolveTerminalServerUrl(state.serverUrl);
             await fetch(`${termUrl}/terminal/stop`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

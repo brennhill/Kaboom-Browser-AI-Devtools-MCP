@@ -6,7 +6,7 @@
 import { DEFAULT_SERVER_URL, StorageKey } from '../../lib/constants.js';
 import { getDaemonStartHint } from '../../lib/brand.js';
 import { getLocal, setSession, getSession, removeSessions, setLocal, persist } from '../../lib/storage-utils.js';
-import { state, getTerminalServerUrl } from './terminal-widget-types.js';
+import { state, resolveTerminalServerUrl } from './terminal-widget-types.js';
 // =============================================================================
 // CONFIG HELPERS — read/write chrome.storage.local
 // =============================================================================
@@ -98,7 +98,7 @@ export async function loadPersistedSession() {
 export async function validateSession(token) {
     try {
         const base = await getServerUrl();
-        const termUrl = getTerminalServerUrl(base);
+        const termUrl = await resolveTerminalServerUrl(base);
         const resp = await fetch(`${termUrl}/terminal/validate?token=${encodeURIComponent(token)}`, { signal: AbortSignal.timeout(2000) });
         if (!resp.ok)
             return false;
@@ -124,7 +124,7 @@ export async function listTerminalDirs(path) {
     let resp;
     try {
         const base = await getServerUrl();
-        const termUrl = getTerminalServerUrl(base);
+        const termUrl = await resolveTerminalServerUrl(base);
         resp = await fetch(`${termUrl}/terminal/dirs?path=${encodeURIComponent(path)}`, { signal: AbortSignal.timeout(3000) });
     }
     catch {
@@ -219,7 +219,7 @@ export async function stopActiveSession() {
         return;
     try {
         const base = await getServerUrl();
-        const termUrl = getTerminalServerUrl(base);
+        const termUrl = await resolveTerminalServerUrl(base);
         const resp = await fetch(`${termUrl}/terminal/stop`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -238,7 +238,7 @@ export async function stopActiveSession() {
 }
 export async function startSession(config, onSandboxError) {
     const base = await getServerUrl();
-    const termUrl = getTerminalServerUrl(base);
+    const termUrl = await resolveTerminalServerUrl(base);
     const aiCommand = await getTerminalAICommand();
     const devRoot = await getTerminalDevRoot();
     try {
