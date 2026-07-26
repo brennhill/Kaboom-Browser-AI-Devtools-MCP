@@ -580,7 +580,7 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 		return AutoDetectCWD(cap)
 	})
 
-	result, err := mgr.Start(pty.StartConfig{
+	startCfg := pty.StartConfig{
 		ID:        req.ID,
 		Cmd:       req.Cmd,
 		Args:      req.Args,
@@ -589,7 +589,23 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 		Rows:      uint16(req.Rows),
 		RepoPath:  req.RepoPath,
 		AgentType: req.AgentType,
-	})
+	}
+	// A fork/exec EPERM is often transient (fork pressure, AV/EDR interposition), so
+	// retry it briefly rather than sending the user to a "restart your daemon" dead
+	// end. Only that one typed error is retried; everything else fails immediately.
+	// The sleep hook doubles as the retry log — otherwise a recovered spawn would
+	// leave no trace and this whole path would be invisible in production.
+	result, err := startWithEPERMRetry(
+		func() (*pty.StartResult, error) { return mgr.Start(startCfg) },
+		func(d time.Duration) {
+			deps.logEvent("terminal_spawn_eperm_retry", map[string]any{
+				"session_id": req.ID,
+				"dir":        req.Dir,
+				"backoff_ms": d.Milliseconds(),
+			})
+			time.Sleep(d)
+		},
+	)
 	// On success: create relay (fan-out + write buffer), configure idle detection,
 	// and handle init_command via the relay instead of reading PTY directly.
 	if err == nil {
