@@ -1,5 +1,7 @@
-// Purpose: Provides thread-safe accessors for monotonic network, WebSocket, and action counters.
-// Why: Separates health/count accessors from event and performance accessors to limit file scope.
+// Purpose: Provides the thread-safe read accessors over buffered counters, timestamps, events and performance snapshots.
+// Why: One lock-taking read layer over the stores, rather than four files split by which counter they return.
+// Docs: docs/features/feature/backend-log-streaming/index.md
+
 package capture
 
 import "time"
@@ -123,4 +125,84 @@ func (c *Capture) GetHealthSnapshot() HealthSnapshot {
 		ActiveTestIDCount:     len(c.extensionState.activeTestIDs),
 		QueryTimeout:          querySnap.QueryTimeout,
 	}
+}
+
+// GetNetworkTimestamps returns a copy of the network body timestamps
+func (c *Capture) GetNetworkTimestamps() []time.Time {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.buffers.networkTimestamps()
+}
+
+// GetWebSocketTimestamps returns a copy of the WebSocket event timestamps
+func (c *Capture) GetWebSocketTimestamps() []time.Time {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.buffers.webSocketTimestamps()
+}
+
+// GetActionTimestamps returns a copy of the action timestamps
+func (c *Capture) GetActionTimestamps() []time.Time {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.buffers.actionTimestamps()
+}
+
+// GetNetworkBodies returns a copy of the network bodies slice (thread-safe)
+func (c *Capture) GetNetworkBodies() []NetworkBody {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.buffers.networkBodiesCopy()
+}
+
+// GetAllWebSocketEvents returns a copy of all WebSocket events slice (thread-safe)
+func (c *Capture) GetAllWebSocketEvents() []WebSocketEvent {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.buffers.webSocketEventsCopy()
+}
+
+// GetAllEnhancedActions returns a copy of all enhanced actions slice (thread-safe)
+func (c *Capture) GetAllEnhancedActions() []EnhancedAction {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.buffers.enhancedActionsCopy()
+}
+
+// AddPerformanceSnapshots stores performance snapshots from the extension.
+// Snapshots are keyed by URL with LRU eviction (max 100 entries).
+func (c *Capture) AddPerformanceSnapshots(snapshots []PerformanceSnapshot) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.perf.appendSnapshots(snapshots)
+}
+
+// GetPerformanceSnapshots returns all stored performance snapshots (thread-safe)
+func (c *Capture) GetPerformanceSnapshots() []PerformanceSnapshot {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.perf.snapshotsList()
+}
+
+// GetPerformanceSnapshotByURL returns a specific snapshot by URL key (thread-safe).
+func (c *Capture) GetPerformanceSnapshotByURL(url string) (PerformanceSnapshot, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.perf.snapshotByURL(url)
+}
+
+// StoreBeforeSnapshot stores a performance snapshot keyed by correlation_id
+// for later perf_diff computation. Max 50 entries with oldest eviction.
+func (c *Capture) StoreBeforeSnapshot(correlationID string, snapshot PerformanceSnapshot) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.perf.storeBeforeSnapshot(correlationID, snapshot)
+}
+
+// GetAndDeleteBeforeSnapshot retrieves and removes a before-snapshot by correlation_id.
+// Consume-on-read: the snapshot is deleted after retrieval to prevent memory leaks.
+func (c *Capture) GetAndDeleteBeforeSnapshot(correlationID string) (PerformanceSnapshot, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.perf.takeBeforeSnapshot(correlationID)
 }
