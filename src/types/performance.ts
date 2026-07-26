@@ -33,4 +33,4 @@ export interface PerformanceMeasure {
  * The stale interface previously used camelCase fields (vitals, longTasks, totalSize, etc.)
  * that didn't match the actual runtime data or Go server expectations.
  */
-export type { WirePerformanceSnapshot as PerformanceSnapshot } from './wire-performance-snapshot.js'
+export type { WirePerformanceSnapshot as PerformanceSnapshot } from './wire/wire-performance-snapshot.js'

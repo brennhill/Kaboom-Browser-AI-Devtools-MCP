@@ -23,12 +23,12 @@ const __dirname = path.dirname(__filename)
 const WIRE_PAIRS = [
   {
     go: 'internal/types/wire_enhanced_action.go',
-    ts: 'src/types/wire-enhanced-action.ts',
+    ts: 'src/types/wire/wire-enhanced-action.ts',
     types: [{ go: 'WireEnhancedAction', ts: 'WireEnhancedAction' }]
   },
   {
     go: 'internal/types/wire_network.go',
-    ts: 'src/types/wire-network.ts',
+    ts: 'src/types/wire/wire-network.ts',
     types: [
       { go: 'WireNetworkBody', ts: 'WireNetworkBody' },
       { go: 'WireNetworkWaterfallEntry', ts: 'WireNetworkWaterfallEntry' },
@@ -37,12 +37,12 @@ const WIRE_PAIRS = [
   },
   {
     go: 'internal/types/wire_websocket_event.go',
-    ts: 'src/types/wire-websocket-event.ts',
+    ts: 'src/types/wire/wire-websocket-event.ts',
     types: [{ go: 'WireWebSocketEvent', ts: 'WireWebSocketEvent' }]
   },
   {
     go: 'internal/performance/wire_performance.go',
-    ts: 'src/types/wire-performance-snapshot.ts',
+    ts: 'src/types/wire/wire-performance-snapshot.ts',
     types: [
       { go: 'WirePerformanceTiming', ts: 'WirePerformanceTiming' },
       { go: 'WireNetworkSummary', ts: 'WireNetworkSummary' },

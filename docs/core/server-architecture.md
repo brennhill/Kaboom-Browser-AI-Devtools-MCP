@@ -125,7 +125,7 @@ internal/
 
 **Dependency interfaces** -- `internal/mcp/deps.go` defines small composable interfaces (`CaptureProvider`, `LogBufferReader`, `A11yQueryExecutor`, etc.). Each `internal/tools/*` package defines its own `Deps` interface by embedding only the sub-interfaces it needs. `*ToolHandler` satisfies all of them with zero adapter code.
 
-**Wire types** -- `internal/types/wire_*.go` are the source of truth for HTTP payload shapes between extension and server. TypeScript counterparts in `src/types/wire-*.ts` are generated from Go. CI enforces drift detection via `make check-wire-drift`.
+**Wire types** -- `internal/types/wire_*.go` are the source of truth for HTTP payload shapes between extension and server. TypeScript counterparts in `src/types/wire/wire-*.ts` are generated from Go. CI enforces drift detection via `make check-wire-drift`.
 
 **Zero external dependencies** -- The entire Go server uses only stdlib. No logging library, no HTTP framework, no JSON library. `fmt.Fprintf(os.Stderr, ...)` for errors, append-only file I/O for lifecycle logs.
 

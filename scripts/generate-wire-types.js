@@ -23,10 +23,10 @@ const ROOT = path.resolve(__dirname, '..')
 // ============================================
 
 const WIRE_PAIRS = [
-  { go: 'internal/types/wire_enhanced_action.go', ts: 'src/types/wire-enhanced-action.ts' },
-  { go: 'internal/types/wire_network.go', ts: 'src/types/wire-network.ts' },
-  { go: 'internal/types/wire_websocket_event.go', ts: 'src/types/wire-websocket-event.ts' },
-  { go: 'internal/performance/wire_performance.go', ts: 'src/types/wire-performance-snapshot.ts' }
+  { go: 'internal/types/wire_enhanced_action.go', ts: 'src/types/wire/wire-enhanced-action.ts' },
+  { go: 'internal/types/wire_network.go', ts: 'src/types/wire/wire-network.ts' },
+  { go: 'internal/types/wire_websocket_event.go', ts: 'src/types/wire/wire-websocket-event.ts' },
+  { go: 'internal/performance/wire_performance.go', ts: 'src/types/wire/wire-performance-snapshot.ts' }
 ]
 
 /**

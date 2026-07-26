@@ -20,5 +20,5 @@ export type WebSocketEventType = 'open' | 'close' | 'error' | 'message';
  * The stale interface previously used camelCase fields (connectionId, direction: 'sent'|'received')
  * that didn't match the actual runtime data or Go server expectations.
  */
-export type { WireWebSocketEvent as WebSocketEvent } from './wire-websocket-event.js';
+export type { WireWebSocketEvent as WebSocketEvent } from './wire/wire-websocket-event.js';
 //# sourceMappingURL=websocket.d.ts.map

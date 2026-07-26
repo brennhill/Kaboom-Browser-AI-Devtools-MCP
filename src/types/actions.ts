@@ -41,4 +41,4 @@ export interface SelectorStrategies {
  * The stale interface previously used camelCase fields (ts, scrollPosition, modifiers)
  * that didn't match the actual runtime data or Go server expectations.
  */
-export type { WireEnhancedAction as EnhancedAction } from './wire-enhanced-action.js'
+export type { WireEnhancedAction as EnhancedAction } from './wire/wire-enhanced-action.js'

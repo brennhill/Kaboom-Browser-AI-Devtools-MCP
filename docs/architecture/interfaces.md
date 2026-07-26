@@ -24,7 +24,7 @@ This file defines externally meaningful contracts and the compatibility policy f
 | MCP tool schemas (`observe`, `analyze`, `generate`, `configure`, `interact`) | `cmd/browser-agent/tools_schema.go` + `tools_*_schema.go` | No breaking parameter/result changes without versioned plan | `go test ./cmd/browser-agent/...` |
 | MCP JSON-RPC request/response envelope | `cmd/browser-agent/handler.go`, `internal/mcp/` | Must remain valid JSON-RPC 2.0 | MCP handler tests |
 | Extension sync protocol (`/sync` and related result posts) | `internal/capture/sync.go`, `internal/capture/handlers.go`, `src/background/sync/sync-client.ts` | Server/extension changes are coordinated in same PR | Go + extension tests |
-| Go/TypeScript wire types | `internal/types/wire_*.go`, `src/types/wire-*.ts` | Must stay generated/synchronized | `make check-wire-drift` |
+| Go/TypeScript wire types | `internal/types/wire_*.go`, `src/types/wire/wire-*.ts` | Must stay generated/synchronized | `make check-wire-drift` |
 | Extension message protocol (background <-> content/popup) | `src/background/message-handlers.ts`, `src/content.ts`, docs in `docs/core/extension-message-protocol.md` | Preserve existing message semantics unless versioned | Extension tests |
 | CLI mode behavior | `cmd/browser-agent/cli.go`, `cli_commands.go` | Existing command behavior/output should not regress silently | CLI-focused Go tests |
 
