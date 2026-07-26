@@ -77,6 +77,27 @@ function installResult(result) {
         output += `   ✅ ${entry.name} (at ${entry.path})\n`;
       }
     });
+
+    // Auto-approve transparency: report EXACTLY which clients had all Kaboom
+    // tools trusted via config (no more prompts), which can only be done in-app,
+    // and any that failed — so the default-ON behavior is never a surprise.
+    const approved = installed
+      .filter(e => e.autoApprove === 'applied' || e.autoApprove === 'would-apply' || e.autoApprove === 'unchanged')
+      .map(e => e.name);
+    const uiOnly = installed.filter(e => e.autoApprove === 'ui-only').map(e => e.name);
+    const failed = installed.filter(e => e.autoApprove === 'failed');
+    if (approved.length > 0 || uiOnly.length > 0 || failed.length > 0) {
+      output += '\n🔓 Tool auto-approve (Kaboom trusts its own tools — no approval prompts):\n';
+      if (approved.length > 0) {
+        output += `   ✅ Auto-approved via config: ${approved.join(', ')}\n`;
+      }
+      if (uiOnly.length > 0) {
+        output += `   🖱  Manual in-app approval (no config option): ${uiOnly.join(', ')}\n`;
+      }
+      failed.forEach(e => {
+        output += `   ⚠️  ${e.name}: could not write auto-approve (${e.autoApproveError || 'unknown error'})\n`;
+      });
+    }
   }
 
   if (result.errors && result.errors.length > 0) {
