@@ -1,8 +1,8 @@
-// annotations.go — Generates annotation-derived artifacts — visual_test (Playwright), annotation_report (Markdown), and annotation_issues (JSON).
+// handlers.go — Generates annotation-derived artifacts — visual_test (Playwright), annotation_report (Markdown), and annotation_issues (JSON).
 // Why: Converts draw-mode annotations into actionable test scripts and structured issue reports.
 // Docs: docs/features/feature/annotated-screenshots/index.md
 
-package toolgenerate
+package annotations
 
 import (
 	"encoding/json"
@@ -12,6 +12,15 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
+// Deps is everything the annotation artifact handlers need from the host server.
+// It is deliberately narrower than toolgenerate.Deps: these handlers read the
+// annotation store and nothing else. *ToolHandler in cmd/browser-agent/ satisfies
+// it, as does any toolgenerate.Deps value.
+type Deps interface {
+	// GetAnnotationStore returns the annotation store.
+	GetAnnotationStore() *annotation.Store
+}
+
 // HandleVisualTest generates a Playwright test from annotation session data.
 func HandleVisualTest(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
@@ -19,7 +28,7 @@ func HandleVisualTest(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.
 		AnnotSession string `json:"annot_session"`
 	}
 	if len(args) > 0 {
-		lenientUnmarshal(args, &params)
+		mcp.LenientUnmarshal(args, &params)
 	}
 
 	pages, noDataResp, noData := resolveAnnotationPages(d, req, params.AnnotSession)
@@ -33,7 +42,7 @@ func HandleVisualTest(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.
 	}
 
 	script := GeneratePlaywrightFromAnnotations(testName, pages, d.GetAnnotationStore())
-	return succeedText(req, script)
+	return mcp.SucceedText(req, script)
 }
 
 // HandleAnnotationReport generates a Markdown report from annotation session data.
@@ -42,7 +51,7 @@ func HandleAnnotationReport(d Deps, req mcp.JSONRPCRequest, args json.RawMessage
 		AnnotSession string `json:"annot_session"`
 	}
 	if len(args) > 0 {
-		lenientUnmarshal(args, &params)
+		mcp.LenientUnmarshal(args, &params)
 	}
 
 	pages, noDataResp, noData := resolveAnnotationPages(d, req, params.AnnotSession)
@@ -51,7 +60,7 @@ func HandleAnnotationReport(d Deps, req mcp.JSONRPCRequest, args json.RawMessage
 	}
 
 	report := GenerateMarkdownReport(pages, d.GetAnnotationStore())
-	return succeedText(req, report)
+	return mcp.SucceedText(req, report)
 }
 
 // HandleAnnotationIssues generates a structured JSON issue list from annotations.
@@ -60,7 +69,7 @@ func HandleAnnotationIssues(d Deps, req mcp.JSONRPCRequest, args json.RawMessage
 		AnnotSession string `json:"annot_session"`
 	}
 	if len(args) > 0 {
-		lenientUnmarshal(args, &params)
+		mcp.LenientUnmarshal(args, &params)
 	}
 
 	pages, noDataResp, noData := resolveAnnotationPages(d, req, params.AnnotSession)
@@ -76,7 +85,7 @@ func HandleAnnotationIssues(d Deps, req mcp.JSONRPCRequest, args json.RawMessage
 	}
 
 	summary := fmt.Sprintf("Annotation issues (%d issues across %d pages)", len(issues), len(pages))
-	return succeed(req, summary, result)
+	return mcp.Succeed(req, summary, result)
 }
 
 func resolveAnnotationPages(d Deps, req mcp.JSONRPCRequest, sessionName string) ([]*annotation.Session, mcp.JSONRPCResponse, bool) {
@@ -84,7 +93,7 @@ func resolveAnnotationPages(d Deps, req mcp.JSONRPCRequest, sessionName string) 
 	if err == "" {
 		return pages, mcp.JSONRPCResponse{}, false
 	}
-	return nil, succeed(req, "No annotations", map[string]any{
+	return nil, mcp.Succeed(req, "No annotations", map[string]any{
 		"status":  "no_data",
 		"message": err,
 	}), true

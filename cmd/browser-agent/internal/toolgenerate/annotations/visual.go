@@ -1,8 +1,8 @@
-// annotations_visual.go — Renders annotation data into Playwright visual test source.
+// visual.go — Renders annotation data into Playwright visual test source.
 // Why: Keeps Playwright script generation isolated from JSON-RPC request orchestration.
 // Docs: docs/features/feature/annotated-screenshots/index.md
 
-package toolgenerate
+package annotations
 
 import (
 	"fmt"

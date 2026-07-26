@@ -1,8 +1,8 @@
-// annotations_issues.go — Converts annotation sessions into structured issue payloads.
+// issues.go — Converts annotation sessions into structured issue payloads.
 // Why: Isolates issue-shape construction so tool handlers stay focused on response orchestration.
 // Docs: docs/features/feature/annotated-screenshots/index.md
 
-package toolgenerate
+package annotations
 
 import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 

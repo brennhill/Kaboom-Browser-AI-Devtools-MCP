@@ -1,8 +1,8 @@
-// annotations_report.go — Renders annotation sessions into a human-readable Markdown report.
+// report.go — Renders annotation sessions into a human-readable Markdown report.
 // Why: Separates report formatting concerns from artifact dispatch and storage traversal.
 // Docs: docs/features/feature/annotated-screenshots/index.md
 
-package toolgenerate
+package annotations
 
 import (
 	"time"
