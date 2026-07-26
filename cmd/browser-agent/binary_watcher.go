@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -118,7 +119,7 @@ func (s *BinaryWatcherState) checkForUpgrade(currentVersion string) bool {
 		return false
 	}
 
-	if !isNewerVersion(newVer, currentVersion) {
+	if !daemonlife.IsNewerVersion(newVer, currentVersion) {
 		return false
 	}
 
@@ -167,7 +168,7 @@ func parseVersionOutput(output string) (string, error) {
 	}
 	output = strings.TrimPrefix(output, "v")
 
-	parts := parseVersionParts(output)
+	parts := daemonlife.ParseVersionParts(output)
 	if parts == nil {
 		return "", fmt.Errorf("invalid version output: %q", output)
 	}

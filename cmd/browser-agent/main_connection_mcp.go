@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"runtime"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
@@ -19,7 +20,7 @@ import (
 // If stdin closes (EOF), the HTTP server keeps running until killed.
 // Returns error if port binding fails (race condition with another client).
 // Never returns on success (blocks forever serving MCP protocol).
-func runMCPMode(server *Server, port int, apiKey string, opts daemonLaunchOptions) error {
+func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchOptions) error {
 	server.setListenPort(port)
 	cap := initCapture(server, port)
 	mux, mcpHandler := setupHTTPRoutes(server, cap)
@@ -31,8 +32,8 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonLaunchOption
 	server.startScreenshotRateLimiterCleanup(ctx)
 	configureBinaryUpgradeMonitoring(ctx, server, port)
 
-	if err := enforceDaemonStartupPolicy(server, port, opts); err != nil {
-		if errors.Is(err, errDeferToHealthyDaemon) {
+	if err := daemonlife.EnforceStartupPolicy(daemonlifeDeps(server), port, opts); err != nil {
+		if errors.Is(err, daemonlife.ErrDeferToHealthyDaemon) {
 			// A healthy, compatible daemon already owns this port. Exit cleanly
 			// (exit 0) and let it keep serving — do NOT start a rival server or
 			// kill the incumbent. Returning nil unwinds to a graceful exit.
@@ -62,7 +63,7 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonLaunchOption
 	// so a pathological loop degrades gracefully instead of hammering launchd (which
 	// would throttle/disable the LaunchAgent and take the terminal server on port+1
 	// dark too). Never refuses to start; an upgrade/epoch takeover resets the counter.
-	applyStartupRestartThrottle(server, port)
+	daemonlife.ApplyStartupRestartThrottle(daemonlifeDeps(server), port)
 
 	srv, httpDone, err := startHTTPServer(server, port, apiKey, mux)
 	if err != nil {

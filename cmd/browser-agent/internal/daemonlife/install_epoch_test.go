@@ -4,9 +4,10 @@
 // deterministic winner instead of thrashing.
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
-package main
+package daemonlife
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -87,19 +88,15 @@ func TestSameNonEmptyVersion(t *testing.T) {
 // --- classifyExistingDaemon epoch tiebreaker ----------------------------------
 
 func TestClassifyExistingDaemon_InstallEpoch(t *testing.T) {
-	server, err := NewServer(filepath.Join(t.TempDir(), "epoch.log"), 200)
-	if err != nil {
-		t.Fatalf("NewServer() error = %v", err)
-	}
-
 	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	oldNow, oldProbe, oldSleep, oldVer, oldEpoch := daemonNow, daemonProbeHealth, daemonSleep, version, daemonInstallEpoch
-	defer func() {
-		daemonNow, daemonProbeHealth, daemonSleep, version, daemonInstallEpoch = oldNow, oldProbe, oldSleep, oldVer, oldEpoch
-	}()
-	daemonNow = func() time.Time { return base }
-	daemonSleep = func(time.Duration) {}
-	version = "0.8.8"
+	freezeClock(t, base)
+
+	deps, _ := newTestDeps(t)
+	deps.Version = "0.8.8"
+
+	probe := func(d *Deps, fn func() (bool, string, bool)) {
+		d.FetchHealth = func(context.Context, int, time.Duration) (bool, string, bool) { return fn() }
+	}
 
 	// A record written a minute ago (outside grace) at the same version, with a
 	// given install epoch.
@@ -118,45 +115,50 @@ func TestClassifyExistingDaemon_InstallEpoch(t *testing.T) {
 	}
 
 	t.Run("same version, NEWER install epoch -> take over (latest install wins)", func(t *testing.T) {
-		daemonInstallEpoch = func() int64 { return 2000 }
-		daemonProbeHealth = func(int) (bool, string, bool) { return true, "0.8.8", false } // incumbent is healthy
-		if err := classifyExistingDaemon(server, 7890, lock(1000)); err != nil {
+		stubInstallEpoch(t, 2000)
+		d := deps
+		probe(&d, func() (bool, string, bool) { return true, "0.8.8", false }) // incumbent is healthy
+		if err := classifyExistingDaemon(d, 7890, lock(1000)); err != nil {
 			t.Fatalf("newer install should take over a healthy same-version incumbent, got %v", err)
 		}
 	})
 
 	t.Run("same version, OLDER install epoch, healthy -> defer", func(t *testing.T) {
-		daemonInstallEpoch = func() int64 { return 1000 }
-		daemonProbeHealth = func(int) (bool, string, bool) { return true, "0.8.8", false }
-		if err := classifyExistingDaemon(server, 7890, lock(2000)); !errors.Is(err, errDeferToHealthyDaemon) {
+		stubInstallEpoch(t, 1000)
+		d := deps
+		probe(&d, func() (bool, string, bool) { return true, "0.8.8", false })
+		if err := classifyExistingDaemon(d, 7890, lock(2000)); !errors.Is(err, ErrDeferToHealthyDaemon) {
 			t.Fatalf("older install must defer to a healthy newer install, got %v", err)
 		}
 	})
 
 	t.Run("same version, EQUAL install epoch, healthy -> defer (no thrash)", func(t *testing.T) {
-		daemonInstallEpoch = func() int64 { return 1000 }
-		daemonProbeHealth = func(int) (bool, string, bool) { return true, "0.8.8", false }
-		if err := classifyExistingDaemon(server, 7890, lock(1000)); !errors.Is(err, errDeferToHealthyDaemon) {
+		stubInstallEpoch(t, 1000)
+		d := deps
+		probe(&d, func() (bool, string, bool) { return true, "0.8.8", false })
+		if err := classifyExistingDaemon(d, 7890, lock(1000)); !errors.Is(err, ErrDeferToHealthyDaemon) {
 			t.Fatalf("equal epoch must defer (never ping-pong same install), got %v", err)
 		}
 	})
 
 	t.Run("newer install epoch fires even inside the startup grace window", func(t *testing.T) {
-		daemonInstallEpoch = func() int64 { return 2000 }
+		stubInstallEpoch(t, 2000)
+		d := deps
 		// No health probe needed — epoch takeover uses the registered record.
-		daemonProbeHealth = func(int) (bool, string, bool) {
+		probe(&d, func() (bool, string, bool) {
 			t.Fatal("should not probe: epoch decides first")
 			return false, "", false
-		}
-		if err := classifyExistingDaemon(server, 7890, youngLock(1000)); err != nil {
+		})
+		if err := classifyExistingDaemon(d, 7890, youngLock(1000)); err != nil {
 			t.Fatalf("newer install should supersede even a just-started older one, got %v", err)
 		}
 	})
 
 	t.Run("our epoch 0 (unknown) never takes over on epoch alone", func(t *testing.T) {
-		daemonInstallEpoch = func() int64 { return 0 }
-		daemonProbeHealth = func(int) (bool, string, bool) { return true, "0.8.8", false }
-		if err := classifyExistingDaemon(server, 7890, lock(0)); !errors.Is(err, errDeferToHealthyDaemon) {
+		stubInstallEpoch(t, 0)
+		d := deps
+		probe(&d, func() (bool, string, bool) { return true, "0.8.8", false })
+		if err := classifyExistingDaemon(d, 7890, lock(0)); !errors.Is(err, ErrDeferToHealthyDaemon) {
 			t.Fatalf("unknown epoch must not trigger takeover; got %v", err)
 		}
 	})

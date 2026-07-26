@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
@@ -117,7 +118,7 @@ func maybeAddUpdateAvailableWarning(resp JSONRPCResponse) JSONRPCResponse {
 
 	availVer := getAvailableVersion()
 
-	if availVer == "" || !isNewerVersion(availVer, version) {
+	if availVer == "" || !daemonlife.IsNewerVersion(availVer, version) {
 		return resp
 	}
 	// Atomic check-and-set of the 24h throttle so concurrent requests don't race.

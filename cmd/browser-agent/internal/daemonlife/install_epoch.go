@@ -10,7 +10,7 @@
 //     comparable value), else
 //  3. 0 (unknown — treated as "oldest", so a stamped install always wins).
 
-package main
+package daemonlife
 
 import (
 	"os"

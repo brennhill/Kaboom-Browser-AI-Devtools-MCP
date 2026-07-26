@@ -9,7 +9,7 @@
 // the identity, which resets the counter so a real deploy is never penalized. Port is
 // part of that identity too — see restartHistory.
 
-package main
+package daemonlife
 
 import (
 	"encoding/json"
@@ -119,51 +119,51 @@ func saveRestartHistory(path string, h restartHistory) error {
 	return os.WriteFile(path, b, 0o600)
 }
 
-// clearRestartHistoryOnCleanShutdown removes the restart history after a graceful,
+// ClearRestartHistoryOnCleanShutdown removes the restart history after a graceful,
 // signal-initiated shutdown. A clean shutdown means we are NOT crash-looping, so the
 // restart counter resets — this is what keeps legitimate stop/start cycles (a user
 // restart, or a test suite's rapid --stop/spawn) from ever engaging the backoff. A
 // crash (uncaught SIGPIPE, panic, or an unexpected http_listener_died) never runs this
 // path, so its restart still counts toward the storm threshold. Best effort: a failure
 // to remove the file is logged, never fatal.
-func clearRestartHistoryOnCleanShutdown(server *Server, port int) {
+func ClearRestartHistoryOnCleanShutdown(d Deps, port int) {
 	stateDir, err := state.RootDir()
 	if err != nil {
 		return
 	}
 	path := restartHistoryPath(stateDir)
 	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-		server.logLifecycle("restart_history_clear_failed", port, map[string]any{"error": err.Error()})
+		d.Log.LogLifecycle("restart_history_clear_failed", port, map[string]any{"error": err.Error()})
 	}
 }
 
-// applyStartupRestartThrottle records this daemon start and, if the same install has
+// ApplyStartupRestartThrottle records this daemon start and, if the same install has
 // restarted too many times too fast, logs loudly and waits a bounded delay before
 // returning. It NEVER refuses to start. Returns the delay applied (0 if none). Any
 // state-dir / IO problem is non-fatal (best effort: startup proceeds without a delay).
-func applyStartupRestartThrottle(server *Server, port int) time.Duration {
+func ApplyStartupRestartThrottle(d Deps, port int) time.Duration {
 	stateDir, err := state.RootDir()
 	if err != nil {
-		server.logLifecycle("restart_history_statedir_failed", port, map[string]any{"error": err.Error()})
+		d.Log.LogLifecycle("restart_history_statedir_failed", port, map[string]any{"error": err.Error()})
 		return 0
 	}
 	path := restartHistoryPath(stateDir)
 	prev := loadRestartHistory(path)
-	next, delay := recordRestartAndComputeDelay(prev, daemonNow(), version, daemonInstallEpoch(), port)
+	next, delay := recordRestartAndComputeDelay(prev, daemonNow(), d.Version, daemonInstallEpoch(), port)
 	if err := saveRestartHistory(path, next); err != nil {
-		server.logLifecycle("restart_history_write_failed", port, map[string]any{"error": err.Error()})
+		d.Log.LogLifecycle("restart_history_write_failed", port, map[string]any{"error": err.Error()})
 	}
 	if delay <= 0 {
 		return 0
 	}
-	server.logLifecycle("restart_storm_throttle", port, map[string]any{
+	d.Log.LogLifecycle("restart_storm_throttle", port, map[string]any{
 		"restarts_in_window": len(next.Timestamps),
 		"window_seconds":     int(restartThrottleWindow.Seconds()),
 		"delay_ms":           delay.Milliseconds(),
-		"version":            version,
+		"version":            d.Version,
 		"install_epoch":      next.InstallEpoch,
 	})
-	stderrf("[Kaboom] WARNING: this install restarted %d times within %s — possible crash loop. "+
+	d.Warnf("[Kaboom] WARNING: this install restarted %d times within %s — possible crash loop. "+
 		"Backing off %s before binding to avoid launchd throttling.\n",
 		len(next.Timestamps), restartThrottleWindow, delay)
 	daemonThrottleSleep(delay)

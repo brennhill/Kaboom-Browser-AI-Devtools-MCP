@@ -19,7 +19,7 @@ code_paths:
   - cmd/browser-agent/internal/terminal/server.go
   - cmd/browser-agent/terminal_supervisor.go
   - cmd/browser-agent/main_connection_mcp_shutdown.go
-  - cmd/browser-agent/daemon_lifecycle.go
+  - cmd/browser-agent/internal/daemonlife/lifecycle.go
   - cmd/browser-agent/native_install_connect.go
   - cmd/browser-agent/internal/terminal/intent_handlers.go
   - cmd/browser-agent/internal/terminal/static.go
@@ -90,7 +90,7 @@ test_paths:
   - cmd/browser-agent/internal/terminal/relay_close_test.go
   - cmd/browser-agent/internal/terminal/relay_init_test.go
   - cmd/browser-agent/internal/terminal/intent_handlers_test.go
-  - cmd/browser-agent/daemon_lifecycle_takeover_test.go
+  - cmd/browser-agent/internal/daemonlife/lifecycle_takeover_test.go
   - cmd/browser-agent/native_install_connect_refused_test.go
   - tests/extension/terminal-html-reconnect.test.js
   - tests/extension/terminal-reconnect-recovery-contract.test.js

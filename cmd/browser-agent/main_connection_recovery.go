@@ -122,8 +122,28 @@ func terminatePIDQuiet(pid int, force bool) {
 	}
 }
 
-// daemonProcessCommand looks up a PID's command line. Injectable for tests.
-var daemonProcessCommand = getProcessCommand
+// The injectable process/port seams. They wrap the primitives defined above (and
+// in main_helpers_pid.go / platform_errors.go), so they live here, next to those
+// implementations, rather than in the daemonlife package that also consumes them:
+// daemonlife owns the single-instance POLICY, this package owns the mechanics.
+// reclaimPort and identifyPortHolder below use them directly; daemonlife receives
+// them through daemonlifeDeps (see daemon_lifecycle_wiring.go).
+var (
+	// daemonProcessCommand looks up a PID's command line.
+	daemonProcessCommand = getProcessCommand
+	// daemonIsProcessAlive reports whether a PID is still running.
+	daemonIsProcessAlive = isProcessAlive
+	// daemonIsServerRunning reports whether something is accepting on a port.
+	daemonIsServerRunning = bridge.IsServerRunning
+	// daemonTryShutdown asks the daemon on a port to shut down over HTTP.
+	daemonTryShutdown = tryShutdownViaHTTP
+	// daemonWaitForPortRelease blocks until a port is free or the timeout elapses.
+	daemonWaitForPortRelease = waitForPortRelease
+	// daemonTerminatePID signals a PID (SIGTERM, or SIGKILL when force is set).
+	daemonTerminatePID = terminatePIDQuiet
+	// daemonFindProcessOnPort lists the PIDs holding a port.
+	daemonFindProcessOnPort = findProcessOnPort
+)
 
 // ourDaemonBinaryNames are the binary names this project ships or builds. A
 // leftover daemon may come from a different install path or an older version, so
