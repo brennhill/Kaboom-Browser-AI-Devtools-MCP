@@ -25,7 +25,13 @@ test('root README uses Kaboom install and repo branding', () => {
   assert.match(readme, /Kaboom/)
   assert.match(readme, /gokaboom\.dev/)
   assert.match(readme, /window\.__kaboom\.annotate\(\)/)
-  assert.match(readme, /~\/\.kaboom\/extension/)
+  // The install directory is whatever native_install.go builds — currently
+  // ~/KaboomAgenticDevtoolExtension, overridable via KABOOM_EXTENSION_DIR.
+  // This previously asserted ~/.kaboom/extension, a path that appears nowhere
+  // in the product; the test was pinning a convention that never shipped, so
+  // it failed against a README that was correct.
+  assert.match(readme, /~\/KaboomAgenticDevtoolExtension/)
+  assert.match(readme, /KABOOM_EXTENSION_DIR/)
   assert.match(readme, /github\.com\/brennhill\/Kaboom-Browser-AI-Devtools-MCP/)
   assert.doesNotMatch(
     readme,
@@ -63,7 +69,11 @@ test('extension shell pages publish only Kaboom branding', () => {
 
   for (const file of files) {
     const source = read(file)
-    assert.match(source, /Kaboom/)
+    // The user-visible brand is styled "KaBOOM!"; "Kaboom" is the prose form.
+    // Accept either rather than forcing the shell pages to restyle the product
+    // name to satisfy a test. The invariant that matters is the second one:
+    // no residue from the Strum/Gasoline eras.
+    assert.match(source, /KaBOOM|Kaboom/)
     assert.doesNotMatch(source, /STRUM|Gasoline|Strum|getstrum|cookwithgasoline/)
   }
 })
