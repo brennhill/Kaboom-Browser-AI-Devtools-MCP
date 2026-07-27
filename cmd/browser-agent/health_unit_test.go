@@ -5,18 +5,19 @@
 package main
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 func TestHealthMetrics_IncrementAndGet(t *testing.T) {
 	t.Parallel()
 
-	hm := NewHealthMetrics()
+	hm := health.NewMetrics()
 
 	hm.IncrementRequest("observe")
 	hm.IncrementRequest("observe")
@@ -43,7 +44,7 @@ func TestHealthMetrics_IncrementAndGet(t *testing.T) {
 func TestHealthMetrics_Totals(t *testing.T) {
 	t.Parallel()
 
-	hm := NewHealthMetrics()
+	hm := health.NewMetrics()
 
 	hm.IncrementRequest("observe")
 	hm.IncrementRequest("configure")
@@ -62,7 +63,7 @@ func TestHealthMetrics_Totals(t *testing.T) {
 func TestHealthMetrics_EmptyTotals(t *testing.T) {
 	t.Parallel()
 
-	hm := NewHealthMetrics()
+	hm := health.NewMetrics()
 
 	if got := hm.GetTotalRequests(); got != 0 {
 		t.Fatalf("GetTotalRequests() on empty = %d, want 0", got)
@@ -75,7 +76,7 @@ func TestHealthMetrics_EmptyTotals(t *testing.T) {
 func TestHealthMetrics_Uptime(t *testing.T) {
 	t.Parallel()
 
-	hm := NewHealthMetrics()
+	hm := health.NewMetrics()
 	uptime := hm.GetUptime()
 	if uptime < 0 {
 		t.Fatalf("GetUptime() = %v, expected positive", uptime)
@@ -85,7 +86,7 @@ func TestHealthMetrics_Uptime(t *testing.T) {
 func TestHealthResponseIncludesDroppedCount(t *testing.T) {
 	t.Parallel()
 
-	hm := NewHealthMetrics()
+	hm := health.NewMetrics()
 
 	// Create a server with a channel of size 1 and NO async worker,
 	// so the channel stays full when we manually fill it.
@@ -126,7 +127,7 @@ func TestHealthResponseIncludesDroppedCount(t *testing.T) {
 func TestHealthResponseZeroDroppedCount(t *testing.T) {
 	t.Parallel()
 
-	hm := NewHealthMetrics()
+	hm := health.NewMetrics()
 	srv := &Server{
 		logs: logstore.New(logstore.Config{
 			MaxEntries: 100,
@@ -209,7 +210,7 @@ func TestCalcUtilization_NegativeCapacity(t *testing.T) {
 func TestHealthMetrics_ConcurrentAccess(t *testing.T) {
 	t.Parallel()
 
-	hm := NewHealthMetrics()
+	hm := health.NewMetrics()
 	var wg sync.WaitGroup
 
 	for i := 0; i < 100; i++ {
@@ -242,7 +243,7 @@ func TestBuildServerInfo_IncludesLaunchModeMetadata(t *testing.T) {
 	})
 	t.Cleanup(func() { setCurrentLaunchMode(previous) })
 
-	hm := NewHealthMetrics()
+	hm := health.NewMetrics()
 	resp := getHealthResponse(hm, nil, nil, "test-version")
 	info := resp.Server
 	if info.LaunchMode != launchModeLikelyTransient {

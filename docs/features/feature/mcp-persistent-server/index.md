@@ -54,6 +54,8 @@ code_paths:
   - internal/util/proc_unix.go
   - internal/util/proc_windows.go
 test_paths:
+  - cmd/browser-agent/health_unit_test.go
+  - cmd/browser-agent/command_execution_readiness_test.go
   - cmd/browser-agent/handler_unit_test.go
   - cmd/browser-agent/main_connection_stop_test.go
   - cmd/browser-agent/test_daemon_cleanup_test.go

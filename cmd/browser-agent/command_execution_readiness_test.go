@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
@@ -118,7 +119,7 @@ func TestRunDoctorChecks_IncludesCommandExecution(t *testing.T) {
 func TestHealthResponse_IncludesCommandExecution(t *testing.T) {
 	t.Parallel()
 
-	hm := NewHealthMetrics()
+	hm := health.NewMetrics()
 	cap := capture.NewCapture()
 	addCommandResultForTest(cap, "warn-timeout", "timeout")
 
