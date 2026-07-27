@@ -17,7 +17,7 @@ last_verified_date: 2026-03-05
 
 ## Dispatcher
 
-- Entry: `toolConfigureReportIssue` in `cmd/browser-agent/tools_configure_report_issue.go`
+- Entry: `issuereport.Handle` in `internal/issuereport/handler.go`
 - Registry: `configureHandlers["report_issue"]` in `tools_configure.go`
 - Schema: `report_issue` in `internal/schema/configure/properties_runtime.go`
 - Mode spec: `report_issue` in `internal/tools/configure/capabilities/modespecs_configure.go`
@@ -27,13 +27,14 @@ last_verified_date: 2026-03-05
 | File | Purpose |
 |------|---------|
 | `types.go` | Core types: IssueTemplate, IssueReport, DiagnosticData, SubmitResult |
+| `handler.go` | Operation routing, validation, preview shaping, and submission orchestration |
 | `templates.go` | 5 hardcoded templates + GetTemplate lookup |
 | `sanitize.go` | Sanitizer wrapping Redactor interface |
 | `submit.go` | gh CLI submission with manual fallback |
 
 ## Diagnostics Collection
 
-`collectIssueReport()` gathers:
+`ToolHandler.CollectIssueReport()` gathers:
 1. Server version from `version` global
 2. Platform from `runtime.GOOS/GOARCH/Version()`
 3. Uptime and audit stats from `healthMetrics`
@@ -42,7 +43,7 @@ last_verified_date: 2026-03-05
 
 ## Redaction
 
-`sanitizeIssueReport()` creates an `issuereport.Sanitizer` backed by the handler's `RedactionEngine` interface. Redacts:
+`ToolHandler.SanitizeIssueReport()` creates an `issuereport.Sanitizer` backed by the handler's `RedactionEngine` interface. Redacts:
 - Title string
 - UserContext string
 - Extension source string
@@ -58,8 +59,10 @@ The `Redact(string) string` method was added to the `RedactionEngine` interface 
 
 ## Code Anchors
 
-- `cmd/browser-agent/tools_configure_report_issue.go`
+- `cmd/browser-agent/tools_configure.go`
 - `cmd/browser-agent/tools_configure_report_issue_test.go`
+- `internal/issuereport/handler.go`
+- `internal/issuereport/handler_test.go`
 - `internal/issuereport/types.go`
 - `internal/issuereport/templates.go`
 - `internal/issuereport/sanitize.go`

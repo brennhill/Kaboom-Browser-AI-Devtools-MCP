@@ -7,7 +7,7 @@ owners: []
 last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/tools_configure.go
-  - cmd/browser-agent/tools_configure_report_issue.go
+  - internal/issuereport/handler.go
   - internal/schema/configure/properties_runtime.go
   - internal/issuereport/types.go
   - internal/issuereport/templates.go
@@ -15,6 +15,7 @@ code_paths:
   - internal/issuereport/submit.go
 test_paths:
   - cmd/browser-agent/tools_configure_report_issue_test.go
+  - internal/issuereport/handler_test.go
   - internal/issuereport/templates_test.go
   - internal/issuereport/sanitize_test.go
   - internal/issuereport/submit_test.go

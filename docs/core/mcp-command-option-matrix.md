@@ -144,7 +144,7 @@ All 5 tools use `what` as the primary dispatch parameter. `action`, `mode`, and 
 | `security_mode` | `toolConfigureSecurityMode` | Get or set security mode (normal / insecure_proxy) |
 | `network_recording` | `toolConfigureNetworkRecording` | Configure network request recording filters |
 | `action_jitter` | `toolConfigureActionJitter` | Set random delay before interact actions |
-| `report_issue` | `toolConfigureReportIssue` | Submit a bug report or issue template |
+| `report_issue` | `issuereport.Handle` | Submit a bug report or issue template |
 
 #### Deprecated aliases
 
