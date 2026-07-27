@@ -7,6 +7,7 @@ owners: []
 last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/handler.go
+  - cmd/browser-agent/handler_tools_call.go
   - cmd/browser-agent/bridge_adapter.go
   - cmd/browser-agent/tools_core.go
   - internal/session/snapshot-manager.go
@@ -56,6 +57,7 @@ test_paths:
   - cmd/browser-agent/health_unit_test.go
   - cmd/browser-agent/command_execution_readiness_test.go
   - cmd/browser-agent/handler_unit_test.go
+  - cmd/browser-agent/handler_unit_telemetry_test.go
   - cmd/browser-agent/main_connection_stop_test.go
   - cmd/browser-agent/test_daemon_cleanup_test.go
   - cmd/browser-agent/main_connection_pid_contract_test.go
