@@ -9,7 +9,6 @@ code_paths:
   - extension/content/draw-mode.js
   - internal/annotation/store.go
   - cmd/browser-agent/tools_analyze_annotations_handlers.go
-  - cmd/browser-agent/tools_analyze_annotations_hints.go
   - cmd/browser-agent/server_routes_media_draw_mode.go
   - cmd/browser-agent/tools_generate.go
   - cmd/browser-agent/internal/toolgenerate/annotations/handlers.go
@@ -68,7 +67,7 @@ last_verified_date: 2026-03-05
 - `internal/annotation/store.go` — `Detail` struct with ParentContext, Siblings, CSSFramework fields; session TTL = 2 hours
 - `internal/annotation/store_clear.go` — `ClearAll()` resets anonymous sessions, named sessions, details, and waiters (used by `configure(what:"clear", buffer:"all")` to prevent stale replay)
 - `cmd/browser-agent/tools_analyze_annotations_handlers.go` — detail response enrichment, error correlation, LLM hints, and cross-project scope safety metadata (`projects`, `scope_ambiguous`, `scope_warning`, `filter_applied`)
-- `cmd/browser-agent/tools_analyze_annotations_hints.go` — framework-aware detail hints (`design_system`, `runtime_framework`, `error_context`)
+- `cmd/browser-agent/tools_analyze_annotations_handlers.go` — annotation retrieval, error correlation, and detail response shaping
 - `cmd/browser-agent/internal/toolgenerate/annotations/visual.go` — resilient visual test generation via locator fallback candidates (`css`, `testid`, `role`, `label`, `placeholder`, `text`)
 - `cmd/browser-agent/internal/toolgenerate/annotations/handlers.go` — the three MCP entry points (`visual_test`, `annotation_report`, `annotation_issues`) and session resolution
 - `cmd/browser-agent/internal/toolgenerate/annotations/report.go` / `issues.go` / `builder.go` — Markdown report rendering, structured issue payloads, and the shared line builder

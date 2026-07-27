@@ -453,3 +453,25 @@ func (h *ToolHandler) toolGetAnnotationDetail(req JSONRPCRequest, args json.RawM
 
 	return succeed(req, "Annotation detail", result)
 }
+
+func (h *ToolHandler) findErrorsNearTimestamp(timestampMillis int64, window time.Duration) []map[string]string {
+	entries, _ := h.GetLogEntries()
+	annotationTime := time.UnixMilli(timestampMillis)
+	windowStart, windowEnd := annotationTime.Add(-window), annotationTime.Add(window)
+	var matched []map[string]string
+	for index := len(entries) - 1; index >= 0 && len(matched) < 5; index-- {
+		entry := entries[index]
+		level, _ := entry["level"].(string)
+		timestamp, _ := entry["ts"].(string)
+		if level != "error" || timestamp == "" {
+			continue
+		}
+		entryTime, err := time.Parse(time.RFC3339, timestamp)
+		if err != nil || entryTime.Before(windowStart) || entryTime.After(windowEnd) {
+			continue
+		}
+		message, _ := entry["message"].(string)
+		matched = append(matched, map[string]string{"message": message, "ts": timestamp})
+	}
+	return matched
+}
