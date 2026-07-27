@@ -81,7 +81,7 @@ func awaitShutdownSignal(server *Server, srv *http.Server, port int, httpDone <-
 	// CURRENT server (which may be a restarted instance, not the original termSrv).
 	if server.terminalSupervisor != nil {
 		termCtx, termCancel := context.WithTimeout(context.Background(), terminalShutdownTimeout)
-		server.terminalSupervisor.shutdown(termCtx)
+		server.terminalSupervisor.Shutdown(termCtx)
 		termCancel()
 	} else if termSrv != nil {
 		termCtx, termCancel := context.WithTimeout(context.Background(), terminalShutdownTimeout)

@@ -12,6 +12,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
+	terminalsupervisor "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/supervisor"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -58,7 +59,7 @@ type Server struct {
 
 	// terminalSupervisor watches and auto-restarts the terminal HTTP server.
 	// nil if the terminal server never bound (Windows, or bind failure).
-	terminalSupervisor *terminalSupervisor
+	terminalSupervisor *terminalsupervisor.Supervisor
 
 	// Active codebase path — set via MCP configure(what='store', key='active_codebase')
 	// or via the extension options page. Used as default CWD for terminal sessions.

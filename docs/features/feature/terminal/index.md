@@ -17,7 +17,8 @@ code_paths:
   - cmd/browser-agent/internal/terminal/relay.go
   - cmd/browser-agent/internal/terminal/dirs.go
   - cmd/browser-agent/internal/terminal/server.go
-  - cmd/browser-agent/terminal_supervisor.go
+  - cmd/browser-agent/internal/terminal/supervisor/supervisor.go
+  - cmd/browser-agent/main_connection_mcp.go
   - cmd/browser-agent/main_connection_mcp_shutdown.go
   - cmd/browser-agent/internal/daemonlife/lifecycle.go
   - cmd/browser-agent/internal/nativeinstall/installer.go
@@ -56,7 +57,7 @@ test_paths:
   - cmd/browser-agent/internal/terminal/dirs_test.go
   - cmd/browser-agent/internal/terminal/handlers_test.go
   - cmd/browser-agent/internal/terminal/ws_panic_test.go
-  - cmd/browser-agent/terminal_supervisor_test.go
+  - cmd/browser-agent/internal/terminal/supervisor/supervisor_test.go
   - tests/extension/sidepanel-terminal.test.js
   - tests/extension/terminal-widget-session-branding.test.js
   - tests/extension/terminal-root-folder.test.js
@@ -192,7 +193,7 @@ If the terminal server dies at runtime:
 - Logged as `terminal_server_died`
 - `terminal_port` set to 0
 - Main daemon is **not** affected
-- **Auto-restart**: a `terminalSupervisor` reclaims the port and rebinds with exponential backoff (500ms → 30s, up to 8 attempts). On success it logs `terminal_server_restarted` and restores `terminal_port`; if all attempts fail it logs `terminal_server_restart_giveup` and leaves the terminal unavailable until a daemon restart. The supervisor never restarts during graceful daemon shutdown (`terminalSupervisor.shutdown` stops the loop and closes the current server).
+- **Auto-restart**: the terminal supervisor reclaims the port and rebinds with exponential backoff (500ms → 30s, up to 8 attempts). On success it logs `terminal_server_restarted` and restores `terminal_port`; if all attempts fail it logs `terminal_server_restart_giveup` and leaves the terminal unavailable until a daemon restart. The supervisor never restarts during graceful daemon shutdown (`Supervisor.Shutdown` stops the loop and closes the current server).
 
 ---
 
@@ -448,7 +449,8 @@ Note: `/config/active-codebase` is on the **main** daemon server (not terminal s
 
 | File | Responsibility |
 |------|---------------|
-| `cmd/browser-agent/terminal_supervisor.go` | Dedicated server setup, package adapters, restart supervision, and graceful shutdown |
+| `cmd/browser-agent/internal/terminal/supervisor/supervisor.go` | Restart/backoff supervision and graceful shutdown behind explicit host callbacks |
+| `cmd/browser-agent/main_connection_mcp.go` | Dedicated terminal-server bootstrap and root package adapters |
 | `cmd/browser-agent/terminal_handlers.go` | All HTTP handlers: page, WS, start, stop, validate, config |
 | `cmd/browser-agent/terminal_assets/terminal.html` | xterm.js terminal page with WS reconnect and postMessage bridge |
 | `extension/sidepanel.html` | Side panel shell that loads the terminal host |

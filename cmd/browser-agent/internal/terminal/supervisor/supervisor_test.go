@@ -1,8 +1,8 @@
-// terminal_supervisor_test.go -- Deterministic tests for the terminal-server
+// supervisor_test.go — Deterministic tests for the terminal-server
 // auto-restart supervisor. All timing/binding is injected so the tests never
 // touch a real port or sleep.
 
-package main
+package supervisor
 
 import (
 	"context"
@@ -14,22 +14,25 @@ import (
 
 // newTestSupervisor builds a supervisor with all external seams stubbed and an
 // event recorder wired to logFn.
-func newTestSupervisor(t *testing.T, initialDone <-chan struct{}) (*terminalSupervisor, *supEvents) {
+func newTestSupervisor(t *testing.T, initialDone <-chan struct{}) (*Supervisor, *supEvents, *int) {
 	t.Helper()
 	ev := &supEvents{}
-	ts := &terminalSupervisor{
-		server:      &Server{},
+	currentPort := 0
+	ts := &Supervisor{
+		deps: Dependencies{
+			Start:   func(int, *http.ServeMux) (*http.Server, <-chan struct{}, error) { return nil, nil, nil },
+			Reclaim: func(int) {},
+			SetPort: func(port int) { currentPort = port },
+			Log:     ev.record,
+			Warn:    func(string, ...any) {},
+			After:   func(time.Duration) <-chan time.Time { return closedTimer() },
+		},
 		port:        7891,
-		startFn:     func(int, *http.ServeMux) (*http.Server, <-chan struct{}, error) { return nil, nil, nil },
-		reclaimFn:   func(int) {},
-		logFn:       ev.record,
-		warnFn:      func(string, ...any) {},
-		afterFn:     func(time.Duration) <-chan time.Time { return closedTimer() }, // no real sleep
 		stop:        make(chan struct{}),
 		loopDone:    make(chan struct{}),
 		initialDone: initialDone,
 	}
-	return ts, ev
+	return ts, ev, &currentPort
 }
 
 // closedTimer returns an already-fired timer channel so backoff waits resolve
@@ -79,12 +82,12 @@ func (e *supEvents) waitFor(t *testing.T, event string, want int) {
 // server dies, the supervisor restarts it and marks the port live again.
 func TestSupervisor_RestartsAfterUnexpectedDeath(t *testing.T) {
 	initialDone := make(chan struct{})
-	ts, ev := newTestSupervisor(t, initialDone)
+	ts, ev, currentPort := newTestSupervisor(t, initialDone)
 
 	// startFn succeeds and hands back a fresh (never-closed) done channel, so the
 	// supervisor settles into watching a healthy restarted server.
 	restarted := make(chan struct{})
-	ts.startFn = func(int, *http.ServeMux) (*http.Server, <-chan struct{}, error) {
+	ts.deps.Start = func(int, *http.ServeMux) (*http.Server, <-chan struct{}, error) {
 		return &http.Server{}, restarted, nil
 	}
 
@@ -96,25 +99,25 @@ func TestSupervisor_RestartsAfterUnexpectedDeath(t *testing.T) {
 	ev.waitFor(t, "terminal_server_died", 1)
 	ev.waitFor(t, "terminal_server_restarted", 1)
 
-	if got := ts.server.getTerminalPort(); got != ts.port {
+	if got := *currentPort; got != ts.port {
 		t.Fatalf("expected terminal port restored to %d after restart, got %d", ts.port, got)
 	}
 
 	// Clean up the loop.
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	ts.shutdown(ctx)
+	ts.Shutdown(ctx)
 }
 
 // TestSupervisor_GivesUpAfterMaxAttempts verifies bounded restart attempts: if
 // every rebind fails, the supervisor logs a giveup and stops (never spins).
 func TestSupervisor_GivesUpAfterMaxAttempts(t *testing.T) {
 	initialDone := make(chan struct{})
-	ts, ev := newTestSupervisor(t, initialDone)
+	ts, ev, _ := newTestSupervisor(t, initialDone)
 
 	var attempts int
 	var amu sync.Mutex
-	ts.startFn = func(int, *http.ServeMux) (*http.Server, <-chan struct{}, error) {
+	ts.deps.Start = func(int, *http.ServeMux) (*http.Server, <-chan struct{}, error) {
 		amu.Lock()
 		attempts++
 		amu.Unlock()
@@ -135,13 +138,13 @@ func TestSupervisor_GivesUpAfterMaxAttempts(t *testing.T) {
 	if ev.count("terminal_server_restart_giveup") != 1 {
 		t.Fatalf("expected exactly one giveup event, got %d", ev.count("terminal_server_restart_giveup"))
 	}
-	if ev.count("terminal_server_restart_failed") != terminalRestartMaxAttempts {
-		t.Fatalf("expected %d failed attempts, got %d", terminalRestartMaxAttempts, ev.count("terminal_server_restart_failed"))
+	if ev.count("terminal_server_restart_failed") != restartMaxAttempts {
+		t.Fatalf("expected %d failed attempts, got %d", restartMaxAttempts, ev.count("terminal_server_restart_failed"))
 	}
 	amu.Lock()
 	defer amu.Unlock()
-	if attempts != terminalRestartMaxAttempts {
-		t.Fatalf("expected %d bind attempts, got %d", terminalRestartMaxAttempts, attempts)
+	if attempts != restartMaxAttempts {
+		t.Fatalf("expected %d bind attempts, got %d", restartMaxAttempts, attempts)
 	}
 }
 
@@ -150,11 +153,11 @@ func TestSupervisor_GivesUpAfterMaxAttempts(t *testing.T) {
 // supervisor must NOT treat it as an unexpected death or attempt a restart.
 func TestSupervisor_NoRestartDuringShutdown(t *testing.T) {
 	initialDone := make(chan struct{})
-	ts, ev := newTestSupervisor(t, initialDone)
+	ts, ev, _ := newTestSupervisor(t, initialDone)
 
 	var restartAttempted bool
 	var rmu sync.Mutex
-	ts.startFn = func(int, *http.ServeMux) (*http.Server, <-chan struct{}, error) {
+	ts.deps.Start = func(int, *http.ServeMux) (*http.Server, <-chan struct{}, error) {
 		rmu.Lock()
 		restartAttempted = true
 		rmu.Unlock()
@@ -197,9 +200,9 @@ func TestSupervisor_NoRestartDuringShutdown(t *testing.T) {
 // down rather than left orphaned.
 func TestSupervisor_RestartRacingShutdownDoesNotPublishNewServer(t *testing.T) {
 	initialDone := make(chan struct{})
-	ts, ev := newTestSupervisor(t, initialDone)
+	ts, ev, currentPort := newTestSupervisor(t, initialDone)
 
-	ts.startFn = func(int, *http.ServeMux) (*http.Server, <-chan struct{}, error) {
+	ts.deps.Start = func(int, *http.ServeMux) (*http.Server, <-chan struct{}, error) {
 		// Shutdown arrives while we are binding (after the backoff select passed).
 		ts.stopOnce.Do(func() { close(ts.stop) })
 		return &http.Server{}, make(chan struct{}), nil
@@ -217,7 +220,7 @@ func TestSupervisor_RestartRacingShutdownDoesNotPublishNewServer(t *testing.T) {
 	if ev.count("terminal_server_restarted") != 0 {
 		t.Fatalf("a server bound after shutdown must NOT be published as restarted, got %d", ev.count("terminal_server_restarted"))
 	}
-	if got := ts.server.getTerminalPort(); got != 0 {
+	if got := *currentPort; got != 0 {
 		t.Fatalf("terminal port must stay 0 when shutdown raced the restart, got %d", got)
 	}
 }

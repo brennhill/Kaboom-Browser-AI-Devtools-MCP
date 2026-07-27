@@ -21,14 +21,56 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
+	terminalsupervisor "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/supervisor"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/wsframe"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/clientreg"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
+
+func terminalDeps() terminal.Deps {
+	return terminal.Deps{
+		JSONResponse:   jsonResponse,
+		CORSMiddleware: httpguard.CORS,
+		Stderrf:        diag.Printf,
+		MaxPostBody:    maxPostBodySize,
+		WSReadFrame:    wsframe.ReadFrame,
+		WSWriteFrame:   wsframe.WriteFrame,
+		WSAcceptKey:    wsframe.AcceptKey,
+	}
+}
+
+type serverIntentDeps struct{ server *Server }
+
+func (deps *serverIntentDeps) GetPtyRelays() terminal.RelayMap {
+	if deps.server.ptyRelays == nil {
+		return nil
+	}
+	return deps.server.ptyRelays
+}
+
+func (deps *serverIntentDeps) GetIntentStore() *terminal.IntentStore {
+	return deps.server.intentStore
+}
+
+func setupTerminalMux(server *Server, manager *pty.Manager, store *capture.Store) (*http.ServeMux, *terminal.Map) {
+	deps := terminalDeps()
+	deps.LogEvent = func(event string, fields map[string]any) { server.logLifecycle(event, 0, fields) }
+	return terminal.SetupMux(deps, server, &serverIntentDeps{server: server}, manager, store)
+}
+
+func startTerminalServer(port int, mux *http.ServeMux) (*http.Server, <-chan struct{}, error) {
+	return terminal.StartServer(terminalDeps(), port, mux)
+}
+
+func handleActiveCodebase(w http.ResponseWriter, r *http.Request, server *Server) {
+	terminal.HandleActiveCodebase(w, r, terminalDeps(), server)
+}
 
 // runMCPMode runs the server in MCP mode:
 // - HTTP server runs in a goroutine (for browser extension)
@@ -156,9 +198,15 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 		// unexpectedly, so a transient terminal-server death does not leave the
 		// terminal permanently dead until a full daemon restart. Never brings
 		// down the main daemon; never restarts during graceful shutdown.
-		sup := newTerminalSupervisor(server, termPort, termMux, termSrv, termDone)
+		sup := terminalsupervisor.New(terminalsupervisor.Dependencies{
+			Start:   startTerminalServer,
+			Reclaim: func(port int) { reclaimPort(server, port, "terminal") },
+			SetPort: server.setTerminalPort,
+			Log:     func(event string, fields map[string]any) { server.logLifecycle(event, termPort, fields) },
+			Warn:    diag.Printf,
+		}, termPort, termMux, termSrv, termDone)
 		server.terminalSupervisor = sup
-		sup.superviseAsync()
+		sup.Start()
 	}
 
 	server.logLifecycle("startup", port, map[string]any{
