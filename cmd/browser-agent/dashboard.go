@@ -5,9 +5,11 @@ package main
 
 import (
 	_ "embed"
+	"encoding/json"
 	"net/http"
 	"os"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -140,4 +142,105 @@ func serveEmbeddedHTML(w http.ResponseWriter, r *http.Request, content []byte, n
 	if _, err := w.Write(content); err != nil {
 		diag.Printf("[Kaboom] failed to write %s response: %v\n", name, err)
 	}
+}
+
+type recentCommand struct {
+	Timestamp  time.Time `json:"timestamp"`
+	Tool       string    `json:"tool"`
+	Params     string    `json:"params"`
+	Status     int       `json:"status"`
+	DurationMs int64     `json:"duration_ms"`
+}
+
+func buildRecentCommands(entries []capture.HTTPDebugEntry) []recentCommand {
+	var result []recentCommand
+	for _, entry := range entries {
+		if entry.Timestamp.IsZero() {
+			continue
+		}
+		tool, params := parseMCPCommand(entry.RequestBody)
+		result = append(result, recentCommand{
+			Timestamp:  entry.Timestamp,
+			Tool:       tool,
+			Params:     params,
+			Status:     entry.ResponseStatus,
+			DurationMs: entry.DurationMs,
+		})
+	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Timestamp.After(result[j].Timestamp)
+	})
+	if len(result) > 15 {
+		result = result[:15]
+	}
+	return result
+}
+
+func parseMCPCommand(body string) (string, string) {
+	if body == "" {
+		return "unknown", ""
+	}
+	var request struct {
+		Method string `json:"method"`
+		Params struct {
+			Name      string         `json:"name"`
+			Arguments map[string]any `json:"arguments"`
+		} `json:"params"`
+	}
+	if err := json.Unmarshal([]byte(body), &request); err != nil {
+		return "unknown", ""
+	}
+	if request.Method != "tools/call" || request.Params.Name == "" {
+		return request.Method, ""
+	}
+
+	tool := request.Params.Name
+	args := request.Params.Arguments
+	if len(args) == 0 {
+		return tool, ""
+	}
+	var parts []string
+	switch tool {
+	case "observe":
+		appendDashboardParam(&parts, args, "what")
+	case "interact":
+		appendDashboardParam(&parts, args, "what")
+		appendDashboardParam(&parts, args, "url")
+		appendDashboardParam(&parts, args, "selector")
+	case "analyze":
+		appendDashboardParam(&parts, args, "what")
+		appendDashboardParam(&parts, args, "selector")
+	case "generate":
+		appendDashboardParam(&parts, args, "what")
+	case "configure":
+		appendDashboardParam(&parts, args, "what")
+		appendDashboardParam(&parts, args, "buffer")
+		appendDashboardParam(&parts, args, "noise_action")
+	default:
+		for key, value := range args {
+			if text, ok := value.(string); ok && text != "" {
+				parts = append(parts, key+"="+truncateDashboardParam(text))
+				break
+			}
+		}
+	}
+	return tool, strings.Join(parts, " ")
+}
+
+func appendDashboardParam(parts *[]string, args map[string]any, key string) {
+	value, ok := args[key]
+	if !ok {
+		return
+	}
+	text, ok := value.(string)
+	if ok && text != "" {
+		*parts = append(*parts, key+"="+truncateDashboardParam(text))
+	}
+}
+
+func truncateDashboardParam(value string) string {
+	if len(value) > 40 {
+		return value[:37] + "..."
+	}
+	return value
 }

@@ -34,6 +34,7 @@ code_paths:
   - cmd/browser-agent/main_connection_mcp_bootstrap.go
   - cmd/browser-agent/main_connection_recovery.go
   - cmd/browser-agent/server_routes_diagnostics.go
+  - cmd/browser-agent/dashboard.go
   - cmd/browser-agent/internal/logstore/store.go
   - cmd/browser-agent/internal/logstore/async.go
   - cmd/browser-agent/internal/logstore/accessors.go
@@ -72,6 +73,7 @@ test_paths:
   - cmd/browser-agent/handler_consistency_test.go
   - cmd/browser-agent/server_routes_unit_test.go
   - cmd/browser-agent/server_routes_debug_usage_test.go
+  - cmd/browser-agent/dashboard_test.go
   - cmd/browser-agent/main_connection_diag_test.go
   - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
   - cmd/browser-agent/internal/bridge/bridge_detach_stdio_test.go
