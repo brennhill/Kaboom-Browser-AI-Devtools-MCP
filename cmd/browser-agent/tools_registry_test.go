@@ -6,6 +6,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"strings"
 	"testing"
 )
@@ -26,7 +27,7 @@ func (m *stubToolModule) Execute(req JSONRPCRequest, args json.RawMessage) JSONR
 	return JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      req.ID,
-		Result:  mcpJSONResponse("stub module executed", map[string]any{"status": "ok"}),
+		Result:  mcp.JSONResponse("stub module executed", map[string]any{"status": "ok"}),
 	}
 }
 

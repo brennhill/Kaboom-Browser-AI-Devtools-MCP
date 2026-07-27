@@ -2,14 +2,18 @@
 
 package main
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+)
 
 func (h *ToolHandler) toolConfigureClear(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 	var params struct {
 		Buffer string `json:"buffer"`
 	}
 	if len(args) > 0 {
-		if resp, stop := parseArgs(req, args, &params); stop {
+		if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 			return resp
 		}
 	}
@@ -21,11 +25,11 @@ func (h *ToolHandler) toolConfigureClear(req JSONRPCRequest, args json.RawMessag
 
 	cleared, ok := h.clearConfiguredBuffer(buffer)
 	if !ok {
-		return fail(req, ErrInvalidParam, "Unknown buffer: "+buffer, "Use a valid buffer value", withParam("buffer"), withHint("all, network, websocket, actions, logs, inbox"))
+		return mcp.Fail(req, ErrInvalidParam, "Unknown buffer: "+buffer, "Use a valid buffer value", withParam("buffer"), withHint("all, network, websocket, actions, logs, inbox"))
 	}
 
 	responseData := map[string]any{"status": "ok", "buffer": buffer, "cleared": cleared}
-	return succeed(req, "Buffer cleared", responseData)
+	return mcp.Succeed(req, "Buffer cleared", responseData)
 }
 
 // clearConfiguredBuffer performs the actual buffer clearing and returns what was cleared.

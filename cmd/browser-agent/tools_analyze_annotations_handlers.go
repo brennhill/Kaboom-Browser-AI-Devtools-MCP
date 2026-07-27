@@ -12,6 +12,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // annotationWaitCommandTTL is how long pending annotation commands remain active.
@@ -41,7 +42,7 @@ func (h *ToolHandler) toolGetAnnotations(req JSONRPCRequest, args json.RawMessag
 		URLPattern   string `json:"url_pattern"`
 	}
 	if len(args) > 0 {
-		lenientUnmarshal(args, &params)
+		mcp.LenientUnmarshal(args, &params)
 	}
 	// Canonical param is "background" (false = block). "wait" is a quiet alias.
 	// Default to wait=true when both background and wait are omitted.
@@ -60,7 +61,7 @@ func (h *ToolHandler) toolGetAnnotations(req JSONRPCRequest, args json.RawMessag
 	operation := strings.ToLower(strings.TrimSpace(params.Operation))
 	if operation != "" {
 		if operation != "flush" {
-			return fail(req, ErrInvalidParam, "Invalid annotations operation: "+params.Operation, "Use operation='flush' for annotation waiter recovery.", withParam("operation"), withHint("flush"))
+			return mcp.Fail(req, ErrInvalidParam, "Invalid annotations operation: "+params.Operation, "Use operation='flush' for annotation waiter recovery.", withParam("operation"), withHint("flush"))
 		}
 		return h.toolFlushAnnotations(req, params.Correlation, urlFilter)
 	}
@@ -97,7 +98,7 @@ func (h *ToolHandler) getAnonymousAnnotations(req JSONRPCRequest, wait bool, wai
 		h.capture.RegisterCommand(corrID, "", annotationWaitCommandTTL)
 		h.annotationStore.RegisterWaiter(corrID, "", urlFilter)
 
-		return succeed(req, "Waiting for annotations", map[string]any{
+		return mcp.Succeed(req, "Waiting for annotations", map[string]any{
 			"status":         "waiting_for_user",
 			"correlation_id": corrID,
 			"annotations":    []any{},
@@ -109,7 +110,7 @@ func (h *ToolHandler) getAnonymousAnnotations(req JSONRPCRequest, wait bool, wai
 
 	session := h.annotationStore.GetLatestSession()
 	if session == nil {
-		return succeed(req, "No annotations", map[string]any{
+		return mcp.Succeed(req, "No annotations", map[string]any{
 			"annotations":    []any{},
 			"count":          0,
 			"filter_applied": annotation.FilterAppliedValue(urlFilter),
@@ -120,7 +121,7 @@ func (h *ToolHandler) getAnonymousAnnotations(req JSONRPCRequest, wait bool, wai
 }
 
 func (h *ToolHandler) formatAnnotationSession(req JSONRPCRequest, session *AnnotationSession, urlFilter string) JSONRPCResponse {
-	return succeed(req, "Annotations retrieved", buildAnnotationSessionResult(session, urlFilter))
+	return mcp.Succeed(req, "Annotations retrieved", buildAnnotationSessionResult(session, urlFilter))
 }
 
 // #lizard forgives
@@ -138,7 +139,7 @@ func (h *ToolHandler) getNamedAnnotations(req JSONRPCRequest, sessionName string
 		h.capture.RegisterCommand(corrID, "", annotationWaitCommandTTL)
 		h.annotationStore.RegisterWaiter(corrID, sessionName, urlFilter)
 
-		return succeed(req, "Waiting for annotations", map[string]any{
+		return mcp.Succeed(req, "Waiting for annotations", map[string]any{
 			"status":             "waiting_for_user",
 			"correlation_id":     corrID,
 			"annot_session_name": sessionName,
@@ -152,7 +153,7 @@ func (h *ToolHandler) getNamedAnnotations(req JSONRPCRequest, sessionName string
 
 	ns := h.annotationStore.GetNamedSession(sessionName)
 	if ns == nil {
-		return succeed(req, "No annotations", map[string]any{
+		return mcp.Succeed(req, "No annotations", map[string]any{
 			"annot_session_name": sessionName,
 			"pages":              []any{},
 			"page_count":         0,
@@ -166,7 +167,7 @@ func (h *ToolHandler) getNamedAnnotations(req JSONRPCRequest, sessionName string
 }
 
 func (h *ToolHandler) formatNamedAnnotationSession(req JSONRPCRequest, ns *NamedAnnotationSession, urlFilter string) JSONRPCResponse {
-	return succeed(req, "Annotations retrieved", buildNamedAnnotationSessionResult(ns, urlFilter))
+	return mcp.Succeed(req, "Annotations retrieved", buildNamedAnnotationSessionResult(ns, urlFilter))
 }
 
 func buildAnnotationSessionResult(session *AnnotationSession, urlFilter string) map[string]any {
@@ -254,7 +255,7 @@ func resolveAnnotationURLFilter(req JSONRPCRequest, urlValue, urlPatternValue st
 	urlValue = strings.TrimSpace(urlValue)
 	urlPatternValue = strings.TrimSpace(urlPatternValue)
 	if urlValue != "" && urlPatternValue != "" && urlValue != urlPatternValue {
-		return "", fail(req, ErrInvalidParam,
+		return "", mcp.Fail(req, ErrInvalidParam,
 			"Conflicting annotation scope filters: 'url' and 'url_pattern' differ",
 			"Provide only one annotation scope filter, or set both to the same value.",
 			withParam("url"), withParam("url_pattern"),
@@ -284,13 +285,13 @@ func filterAnnotationPages(pages []*AnnotationSession, urlFilter string) []*Anno
 func (h *ToolHandler) toolFlushAnnotations(req JSONRPCRequest, correlationID string, fallbackURLFilter string) JSONRPCResponse {
 	correlationID = strings.TrimSpace(correlationID)
 	if correlationID == "" {
-		return fail(req, ErrMissingParam,
+		return mcp.Fail(req, ErrMissingParam,
 			"Required parameter 'correlation_id' is missing for operation='flush'",
 			"Pass the correlation_id returned by analyze({what:'annotations',wait:true}).",
 			withParam("correlation_id"))
 	}
 	if !strings.HasPrefix(correlationID, "ann_") {
-		return fail(req, ErrInvalidParam,
+		return mcp.Fail(req, ErrInvalidParam,
 			"Invalid annotation correlation_id: "+correlationID,
 			"Use an annotation correlation_id (prefix ann_) from analyze({what:'annotations',wait:true}).",
 			withParam("correlation_id"))
@@ -325,7 +326,7 @@ func (h *ToolHandler) toolFlushAnnotations(req JSONRPCRequest, correlationID str
 	data["final"] = true
 	data["correlation_id"] = correlationID
 	data["lifecycle_status"] = "complete"
-	return succeed(req, "Annotation flush completed", data)
+	return mcp.Succeed(req, "Annotation flush completed", data)
 }
 
 func (h *ToolHandler) buildFlushedAnnotationResult(sessionName string, urlFilter string) json.RawMessage {
@@ -338,7 +339,7 @@ func (h *ToolHandler) buildFlushedAnnotationResult(sessionName string, urlFilter
 			return encoded
 		}
 
-		encoded := buildQueryParams(map[string]any{
+		encoded := mcp.SafeMarshal(map[string]any{
 			"status":             "complete",
 			"annot_session_name": sessionName,
 			"pages":              []any{},
@@ -347,7 +348,7 @@ func (h *ToolHandler) buildFlushedAnnotationResult(sessionName string, urlFilter
 			"filter_applied":     annotation.FilterAppliedValue(urlFilter),
 			"terminal_reason":    "abandoned",
 			"message":            "Annotation waiter flushed with no named-session annotations available.",
-		})
+		}, "{}")
 		return encoded
 	}
 
@@ -359,14 +360,14 @@ func (h *ToolHandler) buildFlushedAnnotationResult(sessionName string, urlFilter
 		return encoded
 	}
 
-	encoded := buildQueryParams(map[string]any{
+	encoded := mcp.SafeMarshal(map[string]any{
 		"status":          "complete",
 		"annotations":     []any{},
 		"count":           0,
 		"filter_applied":  annotation.FilterAppliedValue(urlFilter),
 		"terminal_reason": "abandoned",
 		"message":         "Annotation waiter flushed with no captured annotations available.",
-	})
+	}, "{}")
 	return encoded
 }
 
@@ -376,7 +377,7 @@ func (h *ToolHandler) toolGetAnnotationDetail(req JSONRPCRequest, args json.RawM
 		CorrelationID string `json:"correlation_id"`
 	}
 	if len(args) > 0 {
-		if resp, stop := parseArgs(req, args, &params); stop {
+		if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 			return resp
 		}
 	}
@@ -387,7 +388,7 @@ func (h *ToolHandler) toolGetAnnotationDetail(req JSONRPCRequest, args json.RawM
 
 	detail, found := h.annotationStore.GetDetail(params.CorrelationID)
 	if !found {
-		return fail(req, ErrNoData, "Annotation detail not found or expired for correlation_id: "+params.CorrelationID, "Detail data expires after 10 minutes. Re-run draw mode to capture fresh data.")
+		return mcp.Fail(req, ErrNoData, "Annotation detail not found or expired for correlation_id: "+params.CorrelationID, "Detail data expires after 10 minutes. Re-run draw mode to capture fresh data.")
 	}
 
 	result := map[string]any{
@@ -452,7 +453,7 @@ func (h *ToolHandler) toolGetAnnotationDetail(req JSONRPCRequest, args json.RawM
 		result["hints"] = detailHints
 	}
 
-	return succeed(req, "Annotation detail", result)
+	return mcp.Succeed(req, "Annotation detail", result)
 }
 
 func (h *ToolHandler) findErrorsNearTimestamp(timestampMillis int64, window time.Duration) []map[string]string {

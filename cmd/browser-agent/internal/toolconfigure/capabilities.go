@@ -8,8 +8,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	caps "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure/capabilities"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // HandleDescribeCapabilities returns machine-readable tool metadata derived from ToolsList().

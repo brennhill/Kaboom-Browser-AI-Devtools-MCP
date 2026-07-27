@@ -25,6 +25,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/tutorial"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/issuereport"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
 	cfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
@@ -58,7 +59,7 @@ var configureHandlers = map[string]ModeHandler{
 	"noise_rule": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 		rewrittenArgs, err := cfg.RewriteNoiseRuleArgs(args)
 		if err != nil {
-			return fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
+			return mcp.Fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 		}
 		return toolconfigure.HandleNoise(h, req, rewrittenArgs)
 	},
@@ -107,10 +108,10 @@ func getValidConfigureActions() string { return sortedMapKeys(configureHandlers)
 
 func (h *ToolHandler) toolGetHealth(req JSONRPCRequest) JSONRPCResponse {
 	if h.healthMetrics == nil {
-		return fail(req, ErrInternal, "Health metrics not initialized", "Internal server error — do not retry")
+		return mcp.Fail(req, ErrInternal, "Health metrics not initialized", "Internal server error — do not retry")
 	}
 	response := getHealthResponse(h.healthMetrics, h.capture, h.server, version)
-	return succeed(req, "Server health", response)
+	return mcp.Succeed(req, "Server health", response)
 }
 
 func (h *ToolHandler) toolDoctor(req JSONRPCRequest) JSONRPCResponse {
@@ -133,7 +134,7 @@ func (h *ToolHandler) toolDoctor(req JSONRPCRequest) JSONRPCResponse {
 			readyForInteraction = false
 		}
 	}
-	return succeed(req, "Doctor: "+overallStatus, map[string]any{
+	return mcp.Succeed(req, "Doctor: "+overallStatus, map[string]any{
 		"status": overallStatus, "ready_for_interaction": readyForInteraction,
 		"checks": checks, "hint": h.DiagnosticHintString(),
 	})
@@ -384,13 +385,13 @@ func (h *ToolHandler) toolGetAuditLog(req JSONRPCRequest, args json.RawMessage) 
 	if problem != nil {
 		switch problem.Kind {
 		case auditlog.Unavailable:
-			return fail(req, ErrNotInitialized, problem.Message, "Internal error — do not retry")
+			return mcp.Fail(req, ErrNotInitialized, problem.Message, "Internal error — do not retry")
 		case auditlog.InvalidJSON:
-			return fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+problem.Message, "Fix JSON syntax and call again")
+			return mcp.Fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+problem.Message, "Fix JSON syntax and call again")
 		case auditlog.InvalidOperation:
-			return fail(req, ErrInvalidParam, problem.Message, "Use operation: analyze, report, or clear", withParam("operation"))
+			return mcp.Fail(req, ErrInvalidParam, problem.Message, "Use operation: analyze, report, or clear", withParam("operation"))
 		default:
-			return fail(req, ErrInvalidParam, problem.Message, "Use RFC3339 format, for example 2026-02-17T15:04:05Z", withParam("since"))
+			return mcp.Fail(req, ErrInvalidParam, problem.Message, "Use RFC3339 format, for example 2026-02-17T15:04:05Z", withParam("since"))
 		}
 	}
 
@@ -399,15 +400,15 @@ func (h *ToolHandler) toolGetAuditLog(req JSONRPCRequest, args json.RawMessage) 
 		h.auditMu.Lock()
 		h.auditSessionMap = make(map[string]string)
 		h.auditMu.Unlock()
-		return succeed(req, "Audit log cleared", map[string]any{
+		return mcp.Succeed(req, "Audit log cleared", map[string]any{
 			"status": "ok", "operation": result.Operation, "cleared": result.Cleared,
 		})
 	case "analyze":
-		return succeed(req, "Audit log analysis", map[string]any{
+		return mcp.Succeed(req, "Audit log analysis", map[string]any{
 			"status": "ok", "operation": result.Operation, "summary": result.Summary,
 		})
 	default:
-		return succeed(req, "Audit log entries", map[string]any{
+		return mcp.Succeed(req, "Audit log entries", map[string]any{
 			"status": "ok", "operation": result.Operation, "entries": result.Entries, "count": result.Count,
 		})
 	}
@@ -416,7 +417,7 @@ func (h *ToolHandler) toolGetAuditLog(req JSONRPCRequest, args json.RawMessage) 
 func (h *ToolHandler) toolConfigureStreaming(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 	rewritten, err := cfg.RewriteStreamingArgs(args)
 	if err != nil {
-		return fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
+		return mcp.Fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 	}
 	var params struct {
 		Action          string   `json:"action"`
@@ -425,7 +426,7 @@ func (h *ToolHandler) toolConfigureStreaming(req JSONRPCRequest, args json.RawMe
 		URLFilter       string   `json:"url"`
 		SeverityMin     string   `json:"severity_min"`
 	}
-	if resp, stop := parseArgs(req, rewritten, &params); stop {
+	if resp, stop := mcp.ParseArgs(req, rewritten, &params); stop {
 		return resp
 	}
 	if resp, blocked := requireString(req, params.Action, "action", "Add the 'action' parameter and call again"); blocked {
@@ -438,11 +439,11 @@ func (h *ToolHandler) toolConfigureStreaming(req JSONRPCRequest, args json.RawMe
 		params.URLFilter,
 		params.SeverityMin,
 	)
-	return succeed(req, "Streaming configuration", result)
+	return mcp.Succeed(req, "Streaming configuration", result)
 }
 
 func (h *ToolHandler) toolConfigureRestart(req JSONRPCRequest) JSONRPCResponse {
-	resp := succeed(req, "Daemon restarting", map[string]any{
+	resp := mcp.Succeed(req, "Daemon restarting", map[string]any{
 		"status":    "ok",
 		"restarted": true,
 		"message":   "Daemon shutting down — bridge will respawn automatically",
@@ -483,7 +484,7 @@ func (h *ToolHandler) toolConfigureTestBoundaryEnd(req JSONRPCRequest, args json
 	}
 	h.activeBoundariesMu.Unlock()
 	if !wasActive {
-		return fail(req, ErrInvalidParam,
+		return mcp.Fail(req, ErrInvalidParam,
 			"No active test boundary for test_id '"+result.TestID+"'",
 			"Call configure({what: 'test_boundary_start', test_id: '"+result.TestID+"'}) first",
 			withParam("test_id"))

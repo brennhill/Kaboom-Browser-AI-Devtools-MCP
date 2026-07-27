@@ -11,6 +11,8 @@ package toolinteract
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"net/url"
 	"strings"
 	"time"
@@ -35,7 +37,7 @@ func (h *InteractActionHandler) HandleContentExtraction(req JSONRPCRequest, args
 		TabID     int `json:"tab_id,omitempty"`
 		TimeoutMs int `json:"timeout_ms,omitempty"`
 	}
-	lenientUnmarshal(args, &params)
+	mcp.LenientUnmarshal(args, &params)
 
 	if params.TimeoutMs <= 0 {
 		params.TimeoutMs = 10_000
@@ -82,7 +84,7 @@ func (h *InteractActionHandler) HandleExplorePage(req JSONRPCRequest, args json.
 		Limit       int    `json:"limit,omitempty"`
 	}
 	if len(args) > 0 {
-		if resp, stop := parseArgs(req, args, &params); stop {
+		if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 			return resp
 		}
 	}
@@ -91,10 +93,10 @@ func (h *InteractActionHandler) HandleExplorePage(req JSONRPCRequest, args json.
 	if params.URL != "" {
 		parsed, err := url.Parse(params.URL)
 		if err != nil || parsed.Scheme == "" {
-			return fail(req, ErrInvalidParam, "Invalid URL: "+params.URL, "Provide a valid http or https URL", withParam("url"))
+			return mcp.Fail(req, ErrInvalidParam, "Invalid URL: "+params.URL, "Provide a valid http or https URL", withParam("url"))
 		}
 		if parsed.Scheme != "http" && parsed.Scheme != "https" {
-			return fail(req, ErrInvalidParam, "Only http and https URLs are allowed, got: "+parsed.Scheme, "Use an http or https URL", withParam("url"))
+			return mcp.Fail(req, ErrInvalidParam, "Only http and https URLs are allowed, got: "+parsed.Scheme, "Use an http or https URL", withParam("url"))
 		}
 	}
 
@@ -122,7 +124,7 @@ func (h *InteractActionHandler) HandleExplorePage(req JSONRPCRequest, args json.
 // site_menus section. Elements claimed by menus are removed from the
 // interactive_elements list so there is no overlap.
 func enrichExploreWithMenus(resp JSONRPCResponse) JSONRPCResponse {
-	return mutateToolResult(resp, func(r *MCPToolResult) {
+	return mcp.MutateToolResult(resp, func(r *MCPToolResult) {
 		if len(r.Content) == 0 || r.Content[0].Type != "text" {
 			return
 		}
@@ -242,7 +244,7 @@ func (h *InteractActionHandler) HandleClipboardWrite(req JSONRPCRequest, args js
 	var params struct {
 		Text string `json:"text"`
 	}
-	if resp, stop := parseArgs(req, args, &params); stop {
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
 	if resp, blocked := requireString(req, params.Text, "text", "Add the 'text' parameter with the content to write to clipboard"); blocked {
@@ -278,7 +280,7 @@ func (h *InteractActionHandler) HandleDrawModeStart(req JSONRPCRequest, args jso
 		AnnotSession string `json:"annot_session,omitempty"`
 	}
 	if len(args) > 0 {
-		lenientUnmarshal(args, &params)
+		mcp.LenientUnmarshal(args, &params)
 	}
 
 	if resp, blocked := checkGuards(req, h.deps.RequirePilot, h.deps.RequireExtension); blocked {
@@ -288,7 +290,7 @@ func (h *InteractActionHandler) HandleDrawModeStart(req JSONRPCRequest, args jso
 		return resp
 	}
 
-	correlationID := newCorrelationID("draw")
+	correlationID := toolresp.NewCorrelationID("draw")
 
 	queryParams := map[string]string{"action": "start"}
 	if params.AnnotSession != "" {
@@ -314,7 +316,7 @@ func (h *InteractActionHandler) HandleDrawModeStart(req JSONRPCRequest, args jso
 	// Record AI action
 	h.deps.RecordAIAction("draw_mode_start", "", nil)
 
-	return succeed(req, "Draw mode activated", map[string]any{
+	return mcp.Succeed(req, "Draw mode activated", map[string]any{
 		"status":         "queued",
 		"correlation_id": correlationID,
 		"message":        "Draw mode activation queued. The user can now draw annotations on the page. Use analyze({what: 'annotations', wait: true}) to block until the user finishes drawing.",
@@ -330,7 +332,7 @@ func (h *InteractActionHandler) HandleWaitForStable(req JSONRPCRequest, args jso
 		TimeoutMs   int `json:"timeout_ms,omitempty"`
 		TabID       int `json:"tab_id,omitempty"`
 	}
-	lenientUnmarshal(args, &params)
+	mcp.LenientUnmarshal(args, &params)
 
 	// Apply defaults
 	if params.StabilityMs <= 0 {
@@ -362,8 +364,8 @@ func (h *InteractActionHandler) HandleAutoDismissOverlays(req JSONRPCRequest, ar
 // queueComposableAutoDismiss queues an auto_dismiss_overlays command as a side effect.
 // Used when auto_dismiss=true is passed as a composable param on navigate.
 func (h *InteractActionHandler) QueueComposableAutoDismiss(req JSONRPCRequest) {
-	dismissArgs := buildQueryParams(map[string]any{"action": "auto_dismiss_overlays"})
-	correlationID := newCorrelationID("dom_auto_dismiss_overlays")
+	dismissArgs := marshalQueryParams(map[string]any{"action": "auto_dismiss_overlays"})
+	correlationID := toolresp.NewCorrelationID("dom_auto_dismiss_overlays")
 
 	query := queries.PendingQuery{
 		Type:          "dom_action",
@@ -380,11 +382,11 @@ func (h *InteractActionHandler) QueueComposableAutoDismiss(req JSONRPCRequest) {
 // The extension instruments a MutationObserver after the main action, captures mutations,
 // and returns a structured summary of what changed (overlays, toasts, form errors, etc.).
 func (h *InteractActionHandler) QueueComposableActionDiff(req JSONRPCRequest) {
-	diffArgs := buildQueryParams(map[string]any{
+	diffArgs := marshalQueryParams(map[string]any{
 		"action":     "action_diff",
 		"timeout_ms": 3000,
 	})
-	correlationID := newCorrelationID("dom_action_diff")
+	correlationID := toolresp.NewCorrelationID("dom_action_diff")
 
 	query := queries.PendingQuery{
 		Type:          "dom_action",
@@ -404,12 +406,12 @@ func (h *InteractActionHandler) QueueComposableWaitForStable(req JSONRPCRequest,
 	}
 	timeoutMs := 5000
 
-	stableArgs := buildQueryParams(map[string]any{
+	stableArgs := marshalQueryParams(map[string]any{
 		"action":       "wait_for_stable",
 		"stability_ms": stabilityMs,
 		"timeout_ms":   timeoutMs,
 	})
-	correlationID := newCorrelationID("dom_wait_for_stable")
+	correlationID := toolresp.NewCorrelationID("dom_wait_for_stable")
 
 	query := queries.PendingQuery{
 		Type:          "dom_action",
@@ -423,11 +425,11 @@ func (h *InteractActionHandler) QueueComposableWaitForStable(req JSONRPCRequest,
 
 // queueComposableSubtitle queues a subtitle command as a side effect of another action.
 func (h *InteractActionHandler) QueueComposableSubtitle(req JSONRPCRequest, text string) {
-	subtitleArgs := buildQueryParams(map[string]any{"text": text})
+	subtitleArgs := marshalQueryParams(map[string]any{"text": text})
 	subtitleQuery := queries.PendingQuery{
 		Type:          "subtitle",
 		Params:        subtitleArgs,
-		CorrelationID: newCorrelationID("subtitle"),
+		CorrelationID: toolresp.NewCorrelationID("subtitle"),
 	}
 	if _, blocked := h.deps.EnqueuePendingQuery(req, subtitleQuery, queries.AsyncCommandTimeout); blocked {
 		return

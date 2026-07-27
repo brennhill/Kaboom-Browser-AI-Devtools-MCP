@@ -132,7 +132,7 @@ func (h *MCPHandler) applyToolResponsePostProcessing(resp JSONRPCResponse, clien
 		resp.Result = redactor.RedactJSON(resp.Result)
 	}
 	if h.server != nil {
-		resp = appendWarningsToResponse(resp, h.server.TakeWarnings())
+		resp = mcp.AppendWarningsToResponse(resp, h.server.TakeWarnings())
 	}
 	resp = h.maybeAddSecurityModeWarning(resp)
 	resp = h.maybeAddVersionWarning(resp)
@@ -172,7 +172,7 @@ func (h *MCPHandler) maybeAddSecurityModeWarning(resp JSONRPCResponse) JSONRPCRe
 		return resp
 	}
 	resp = prependWarningToResponse(resp, "[ALTERED ENVIRONMENT] security_mode=insecure_proxy; production_parity=false. CSP headers are rewritten for debugging.\n\n")
-	return mutateToolResult(resp, func(result *MCPToolResult) {
+	return mcp.MutateToolResult(resp, func(result *MCPToolResult) {
 		if result.Metadata == nil {
 			result.Metadata = make(map[string]any)
 		}

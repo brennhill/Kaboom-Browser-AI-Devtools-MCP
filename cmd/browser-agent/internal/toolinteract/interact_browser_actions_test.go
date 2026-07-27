@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 func TestHandleNavigate_Success(t *testing.T) {
@@ -136,7 +137,7 @@ func TestHandleSwitchTab_AppliesTrackingOnComplete(t *testing.T) {
 	fs.waitFn = func(req JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) JSONRPCResponse {
 		fs.cap.RegisterCommand(correlationID, correlationID, time.Minute)
 		fs.cap.CompleteCommand(correlationID, json.RawMessage(`{"success":true,"tab_id":42,"url":"https://switched.example","title":"Switched"}`), "")
-		return succeed(req, queuedSummary, map[string]any{"status": "complete", "correlation_id": correlationID})
+		return mcp.Succeed(req, queuedSummary, map[string]any{"status": "complete", "correlation_id": correlationID})
 	}
 	resp := h.HandleBrowserActionSwitchTabImpl(testReq(), json.RawMessage(`{"tab_id":42}`))
 	assertOK(t, resp)

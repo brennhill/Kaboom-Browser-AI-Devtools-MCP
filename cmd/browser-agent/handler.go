@@ -5,11 +5,12 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"sync"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
 
@@ -162,7 +163,7 @@ func (h *MCPHandler) HandleRequest(request JSONRPCRequest) *JSONRPCResponse {
 		return &response
 	}
 	if staticResult, ok := mcpStaticResponses[request.Method]; ok {
-		response := succeedRaw(request, json.RawMessage(staticResult))
+		response := toolresp.SucceedRaw(request, json.RawMessage(staticResult))
 		return &response
 	}
 	response := JSONRPCResponse{
@@ -187,12 +188,12 @@ func (h *MCPHandler) handleInitialize(request JSONRPCRequest) JSONRPCResponse {
 		Instructions: serverInstructions,
 	}
 	resultJSON, _ := json.Marshal(result)
-	return succeedRaw(request, resultJSON)
+	return toolresp.SucceedRaw(request, resultJSON)
 }
 
 func (h *MCPHandler) handleResourcesList(request JSONRPCRequest) JSONRPCResponse {
 	resultJSON, _ := json.Marshal(MCPResourcesListResult{Resources: playbooks.Resources()})
-	return succeedRaw(request, resultJSON)
+	return toolresp.SucceedRaw(request, resultJSON)
 }
 
 func (h *MCPHandler) handleResourcesRead(request JSONRPCRequest) JSONRPCResponse {
@@ -218,14 +219,14 @@ func (h *MCPHandler) handleResourcesRead(request JSONRPCRequest) JSONRPCResponse
 		URI: canonicalURI, MimeType: "text/markdown", Text: text,
 	}}}
 	resultJSON, _ := json.Marshal(result)
-	return succeedRaw(request, resultJSON)
+	return toolresp.SucceedRaw(request, resultJSON)
 }
 
 func (h *MCPHandler) handleResourcesTemplatesList(request JSONRPCRequest) JSONRPCResponse {
 	resultJSON, _ := json.Marshal(MCPResourceTemplatesListResult{
 		ResourceTemplates: playbooks.ResourceTemplates(),
 	})
-	return succeedRaw(request, resultJSON)
+	return toolresp.SucceedRaw(request, resultJSON)
 }
 
 func (h *MCPHandler) handleToolsList(request JSONRPCRequest) JSONRPCResponse {
@@ -234,5 +235,5 @@ func (h *MCPHandler) handleToolsList(request JSONRPCRequest) JSONRPCResponse {
 		tools = h.toolHandler.ToolsList()
 	}
 	resultJSON, _ := json.Marshal(MCPToolsListResult{Tools: tools})
-	return succeedRaw(request, resultJSON)
+	return toolresp.SucceedRaw(request, resultJSON)
 }

@@ -8,10 +8,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
-
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
 // queueRecordStart creates the pending query and returns the response for a screen_recording_start action.

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/versioncheck"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 func useReleaseChecker(t *testing.T, tag string) {
@@ -43,7 +44,7 @@ func TestMaybeAddUpgradeWarning_NoPending(t *testing.T) {
 	resp := JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      1,
-		Result:  mcpTextResponse("hello"),
+		Result:  mcp.TextResponse("hello"),
 	}
 	got := maybeAddUpgradeWarning(resp)
 	var result MCPToolResult
@@ -61,7 +62,7 @@ func TestMaybeAddUpdateAvailableWarning_NoUpdate(t *testing.T) {
 	resp := JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      1,
-		Result:  mcpTextResponse("hello"),
+		Result:  mcp.TextResponse("hello"),
 	}
 	got := maybeAddUpdateAvailableWarning(resp)
 	var result MCPToolResult
@@ -87,7 +88,7 @@ func TestMaybeAddUpdateAvailableWarning_NewerAvailable(t *testing.T) {
 	resp := JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      1,
-		Result:  mcpTextResponse("data"),
+		Result:  mcp.TextResponse("data"),
 	}
 	got := maybeAddUpdateAvailableWarning(resp)
 	var result MCPToolResult
@@ -118,7 +119,7 @@ func TestMaybeAddUpdateAvailableWarning_DailyCooldown(t *testing.T) {
 	resp := JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      1,
-		Result:  mcpTextResponse("data"),
+		Result:  mcp.TextResponse("data"),
 	}
 	got := maybeAddUpdateAvailableWarning(resp)
 	var result MCPToolResult
@@ -144,7 +145,7 @@ func TestMaybeAddUpdateAvailableWarning_SameVersionNoWarning(t *testing.T) {
 	resp := JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      1,
-		Result:  mcpTextResponse("data"),
+		Result:  mcp.TextResponse("data"),
 	}
 	got := maybeAddUpdateAvailableWarning(resp)
 	var result MCPToolResult
@@ -166,7 +167,7 @@ func TestMaybeAddUpgradeWarning_WithPending(t *testing.T) {
 	resp := JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      1,
-		Result:  mcpTextResponse("data here"),
+		Result:  mcp.TextResponse("data here"),
 	}
 	got := maybeAddUpgradeWarning(resp)
 	var result MCPToolResult

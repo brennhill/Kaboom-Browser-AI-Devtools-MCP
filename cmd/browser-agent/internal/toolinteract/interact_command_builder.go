@@ -6,6 +6,8 @@ package toolinteract
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -43,20 +45,20 @@ type commandBuilder struct {
 	reasonStr  string // reason for armEvidenceForCommand
 
 	// Query
-	qType     string          // pending query type (e.g. "execute", "browser_action", "dom_action")
-	qParams   json.RawMessage // serialized query params; nil = use waitArgs from execute()
-	qTabID    int             // tab ID for the pending query
-	qTimeout  time.Duration   // enqueue timeout; zero = queries.AsyncCommandTimeout
+	qType    string          // pending query type (e.g. "execute", "browser_action", "dom_action")
+	qParams  json.RawMessage // serialized query params; nil = use waitArgs from execute()
+	qTabID   int             // tab ID for the pending query
+	qTimeout time.Duration   // enqueue timeout; zero = queries.AsyncCommandTimeout
 
 	// Guards
 	guardFns  []GuardCheck
 	guardOpts []func(*StructuredError) // optional opts passed to checkGuardsWithOpts
 
 	// AI recording (optional)
-	doRecord     bool
-	recAction    string
-	recURL       string
-	recExtra     map[string]any
+	doRecord  bool
+	recAction string
+	recURL    string
+	recExtra  map[string]any
 
 	// CSP guard (optional)
 	cspWorld string // world value for requireCSPClear; empty = skip
@@ -108,9 +110,9 @@ func (b *commandBuilder) queryParams(p json.RawMessage) *commandBuilder {
 	return b
 }
 
-// buildParams constructs query parameters from a map (calls buildQueryParams).
+// buildParams constructs query parameters with the package's empty-object fallback policy.
 func (b *commandBuilder) buildParams(m map[string]any) *commandBuilder {
-	b.qParams = buildQueryParams(m)
+	b.qParams = marshalQueryParams(m)
 	return b
 }
 
@@ -189,7 +191,7 @@ func (b *commandBuilder) executeWithCorrelation(req JSONRPCRequest, waitArgs jso
 		b.corrPrefix = b.name // fall back to builder name
 	}
 	if b.qType == "" {
-		return fail(req, ErrMissingParam, "commandBuilder: queryType is required", "Set queryType before calling execute"), ""
+		return mcp.Fail(req, ErrMissingParam, "commandBuilder: queryType is required", "Set queryType before calling execute"), ""
 	}
 
 	// 1. Run guards
@@ -211,7 +213,7 @@ func (b *commandBuilder) executeWithCorrelation(req JSONRPCRequest, waitArgs jso
 	}
 
 	// 2. Generate correlation ID and arm evidence
-	correlationID := newCorrelationID(b.corrPrefix)
+	correlationID := toolresp.NewCorrelationID(b.corrPrefix)
 	b.handler.ArmEvidenceForCommand(correlationID, b.reasonStr, waitArgs, req.ClientID)
 
 	// 2b. Pre-enqueue callback (e.g. stash perf snapshot)

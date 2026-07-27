@@ -6,6 +6,7 @@ package main
 import (
 	"encoding/json"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session"
 	cfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure"
@@ -41,7 +42,7 @@ func (h *configureSessionHandler) handleConfigureStore(req JSONRPCRequest, args 
 		Value       json.RawMessage `json:"value"`
 	}
 	if len(args) > 0 {
-		if resp, stop := parseArgs(req, args, &params); stop {
+		if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 			return resp
 		}
 	}
@@ -67,7 +68,7 @@ func (h *configureSessionHandler) handleConfigureStore(req JSONRPCRequest, args 
 		Action: action, Namespace: namespace, Key: params.Key, Data: data,
 	})
 	if err != nil {
-		return fail(req, ErrInvalidParam, err.Error(), "Fix the request parameters and try again")
+		return mcp.Fail(req, ErrInvalidParam, err.Error(), "Fix the request parameters and try again")
 	}
 	if namespace == "session" && params.Key == "response_mode" {
 		h.deps.invalidateSummaryPref()
@@ -82,12 +83,12 @@ func (h *configureSessionHandler) handleConfigureStore(req JSONRPCRequest, args 
 	if json.Unmarshal(result, &responseData) != nil {
 		responseData = map[string]any{"raw": string(result)}
 	}
-	return succeed(req, "Store operation complete", responseData)
+	return mcp.Succeed(req, "Store operation complete", responseData)
 }
 
 func (h *configureSessionHandler) handleLoadSessionContext(req JSONRPCRequest, _ json.RawMessage) JSONRPCResponse {
 	if h.sessionStoreImpl == nil {
-		return fail(req, ErrNotInitialized, "Session store not initialized", "Internal error — do not retry")
+		return mcp.Fail(req, ErrNotInitialized, "Session store not initialized", "Internal error — do not retry")
 	}
 	ctx := h.sessionStoreImpl.LoadSessionContext()
 	responseData := map[string]any{
@@ -103,26 +104,26 @@ func (h *configureSessionHandler) handleLoadSessionContext(req JSONRPCRequest, _
 	if ctx.Performance != nil {
 		responseData["performance"] = ctx.Performance
 	}
-	return succeed(req, "Session context loaded", responseData)
+	return mcp.Succeed(req, "Session context loaded", responseData)
 }
 
 // handleDiffSessionsWrapper repackages verif_session_action -> action for handleDiffSessions.
 func (h *configureSessionHandler) handleDiffSessionsWrapper(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 	rewritten, err := cfg.RewriteDiffSessionsArgs(args)
 	if err != nil {
-		return fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
+		return mcp.Fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 	}
 	return h.handleDiffSessions(req, rewritten)
 }
 
 func (h *configureSessionHandler) handleDiffSessions(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 	if h.sessionManager == nil {
-		return fail(req, ErrNotInitialized, "Session manager not initialized", "Internal error — do not retry")
+		return mcp.Fail(req, ErrNotInitialized, "Session manager not initialized", "Internal error — do not retry")
 	}
 
 	result, err := h.sessionManager.HandleTool(args)
 	if err != nil {
-		return fail(req, ErrInvalidParam, err.Error(), "Fix request parameters and retry")
+		return mcp.Fail(req, ErrInvalidParam, err.Error(), "Fix request parameters and retry")
 	}
 
 	responseData := map[string]any{"status": "ok"}
@@ -134,5 +135,5 @@ func (h *configureSessionHandler) handleDiffSessions(req JSONRPCRequest, args js
 		responseData["result"] = result
 	}
 
-	return succeed(req, "Session diff", responseData)
+	return mcp.Succeed(req, "Session diff", responseData)
 }

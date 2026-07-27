@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/replay"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
@@ -36,16 +37,16 @@ func (h *InteractActionHandler) HandleBatch(req JSONRPCRequest, args json.RawMes
 		ContinueOnErr *bool             `json:"continue_on_error"`
 		StopAfterStep int               `json:"stop_after_step"`
 	}
-	if resp, stop := parseArgs(req, args, &params); stop {
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
 
 	// Validate steps
 	if len(params.Steps) == 0 {
-		return fail(req, ErrInvalidParam, "Steps must be a non-empty array", "Add at least one step", withParam("steps"))
+		return mcp.Fail(req, ErrInvalidParam, "Steps must be a non-empty array", "Add at least one step", withParam("steps"))
 	}
 	if len(params.Steps) > maxSequenceSteps {
-		return fail(req, ErrInvalidParam, fmt.Sprintf("Steps exceeds maximum of %d", maxSequenceSteps), "Split into smaller batches", withParam("steps"))
+		return mcp.Fail(req, ErrInvalidParam, fmt.Sprintf("Steps exceeds maximum of %d", maxSequenceSteps), "Split into smaller batches", withParam("steps"))
 	}
 
 	// Validate each step has a what (or action) field
@@ -55,7 +56,7 @@ func (h *InteractActionHandler) HandleBatch(req JSONRPCRequest, args json.RawMes
 			Action string `json:"action"`
 		}
 		if err := json.Unmarshal(step, &s); err != nil || (s.What == "" && s.Action == "") {
-			return fail(req, ErrInvalidParam, fmt.Sprintf("Step[%d] missing required 'what' field", i), "Add a 'what' field to each step", withParam("steps"))
+			return mcp.Fail(req, ErrInvalidParam, fmt.Sprintf("Step[%d] missing required 'what' field", i), "Add a 'what' field to each step", withParam("steps"))
 		}
 	}
 
@@ -75,7 +76,7 @@ func (h *InteractActionHandler) HandleBatch(req JSONRPCRequest, args json.RawMes
 		mu = &ReplayMu
 	}
 	if !mu.TryLock() {
-		return fail(req, ErrInvalidParam, "Another batch or sequence is currently executing", "Wait for it to complete")
+		return mcp.Fail(req, ErrInvalidParam, "Another batch or sequence is currently executing", "Wait for it to complete")
 	}
 	defer mu.Unlock()
 
@@ -212,7 +213,7 @@ func (h *InteractActionHandler) HandleBatch(req JSONRPCRequest, args json.RawMes
 		"message":        message,
 	}
 
-	return succeed(req, "Batch execution", responseData)
+	return mcp.Succeed(req, "Batch execution", responseData)
 }
 
 // StripComposableScreenshotFromStep removes include_screenshot from batch step args

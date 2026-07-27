@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/elemindex"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
@@ -79,7 +80,7 @@ func toFloat64(v any) (float64, bool) {
 func (h *InteractActionHandler) HandleDOMPrimitive(req JSONRPCRequest, args json.RawMessage, action string) JSONRPCResponse {
 	params, err := ParseDOMPrimitiveParams(args)
 	if err != nil {
-		return fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
+		return mcp.Fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 	}
 
 	// If x/y coordinates provided on a click action, escalate to CDP for hardware-level click
@@ -206,14 +207,14 @@ func (h *InteractActionHandler) resolveDOMSelectorFromIndex(req JSONRPCRequest, 
 
 	sel, ok, stale, latestGeneration := h.resolveIndexToSelector(req.ClientID, params.TabID, *params.Index, params.IndexGen)
 	if stale {
-		return args, fail(req, ErrInvalidParam,
+		return args, mcp.Fail(req, ErrInvalidParam,
 			elemindex.FormatGenerationConflict(params.IndexGen, latestGeneration),
 			"Re-run interact with what='list_interactive' for the current page context, then retry with the returned index_generation.",
 			withParam("index_generation"), withParam("index"),
 		), true
 	}
 	if !ok {
-		return args, fail(req, ErrInvalidParam,
+		return args, mcp.Fail(req, ErrInvalidParam,
 			fmt.Sprintf("Element index %d not found for tab_id=%d. Call list_interactive first to refresh the element index for this tab/client scope.", *params.Index, params.TabID),
 			"Call interact with what='list_interactive' first (same tab/client scope), then use the returned index.",
 			withParam("index"), withParam("tab_id"),
@@ -230,7 +231,7 @@ func validateDOMSelectorRequirement(req JSONRPCRequest, action string, params DO
 		return JSONRPCResponse{}, false
 	}
 
-	return fail(req, ErrMissingParam,
+	return mcp.Fail(req, ErrMissingParam,
 		"Required parameter 'selector', 'element_id', or 'index' is missing",
 		"Add 'selector' (CSS or semantic selector), or use 'element_id'/'index' from list_interactive results.",
 		withParam("selector"),
@@ -258,20 +259,20 @@ func validateWaitForConditions(req JSONRPCRequest, action string, params DOMPrim
 	}
 
 	if conditionCount == 0 {
-		return fail(req, ErrMissingParam,
+		return mcp.Fail(req, ErrMissingParam,
 			"wait_for requires at least one condition: selector, text, or url_contains",
 			"Provide 'selector' (wait for element), 'text' (wait for text), or 'url_contains' (wait for URL change).",
 			withParam("selector"),
 		), true
 	}
 	if conditionCount > 1 {
-		return fail(req, ErrInvalidParam,
+		return mcp.Fail(req, ErrInvalidParam,
 			"wait_for conditions are mutually exclusive: use only one of selector, text, or url_contains",
 			"Choose a single wait condition per call.",
 		), true
 	}
 	if params.Absent && !hasSelector {
-		return fail(req, ErrMissingParam,
+		return mcp.Fail(req, ErrMissingParam,
 			"wait_for with absent requires a selector",
 			"Provide 'selector' to specify which element to wait to disappear.",
 			withParam("selector"),
@@ -306,7 +307,7 @@ func ValidateDOMActionParams(req JSONRPCRequest, action, text, value, name strin
 		paramValue = name
 	}
 	if paramValue == "" {
-		return fail(req, ErrMissingParam, rule.Message, rule.Retry, withParam(rule.Field)), true
+		return mcp.Fail(req, ErrMissingParam, rule.Message, rule.Retry, withParam(rule.Field)), true
 	}
 	return JSONRPCResponse{}, false
 }
@@ -316,14 +317,14 @@ func ValidateDOMActionParams(req JSONRPCRequest, action, text, value, name strin
 func (h *InteractActionHandler) HandleHardwareClick(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 	params, err := parseHardwareClickParams(args)
 	if err != nil {
-		return fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
+		return mcp.Fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 	}
 
 	if params.X == nil {
-		return fail(req, ErrMissingParam, "Required parameter 'x' is missing", "Add the 'x' coordinate (pixels from left)", withParam("x"))
+		return mcp.Fail(req, ErrMissingParam, "Required parameter 'x' is missing", "Add the 'x' coordinate (pixels from left)", withParam("x"))
 	}
 	if params.Y == nil {
-		return fail(req, ErrMissingParam, "Required parameter 'y' is missing", "Add the 'y' coordinate (pixels from top)", withParam("y"))
+		return mcp.Fail(req, ErrMissingParam, "Required parameter 'y' is missing", "Add the 'y' coordinate (pixels from top)", withParam("y"))
 	}
 
 	return h.HandleCDPClick(req, args, "hardware_click", *params.X, *params.Y, params.TabID)
@@ -356,7 +357,7 @@ func (h *InteractActionHandler) HandleListInteractive(req JSONRPCRequest, args j
 		VisibleOnly bool `json:"visible_only,omitempty"`
 		Limit       int  `json:"limit,omitempty"`
 	}
-	if resp, stop := parseArgs(req, args, &params); stop {
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
 

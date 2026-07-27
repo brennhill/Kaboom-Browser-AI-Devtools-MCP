@@ -40,7 +40,7 @@ import (
 )
 
 // Note: Response helpers, error codes, and validation functions have been moved to:
-// - tools_response.go — Response formatting helpers
+// - internal/mcp and internal/toolresp — Canonical response formatting
 // - tools_errors.go — Error codes and structured error handling
 // - tools_validation.go — Parameter validation utilities
 
@@ -174,9 +174,9 @@ func (h *ToolHandler) HandleToolCall(req JSONRPCRequest, name string, args json.
 		if schema := h.getToolSchema(name); schema != nil {
 			if warnings := mcp.ValidateParamsAgainstSchema(args, schema); len(warnings) > 0 {
 				if parsedOK && mcp.AppendWarningsToToolResult(parsedResult, warnings) {
-					resp.Result = safeMarshal(parsedResult, string(resp.Result))
+					resp.Result = mcp.SafeMarshal(parsedResult, string(resp.Result))
 				} else {
-					resp = appendWarningsToResponse(resp, warnings)
+					resp = mcp.AppendWarningsToResponse(resp, warnings)
 				}
 			}
 		}

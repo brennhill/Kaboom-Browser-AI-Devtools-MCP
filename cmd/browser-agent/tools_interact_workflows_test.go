@@ -16,6 +16,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -172,7 +173,7 @@ func TestIsNotTypeableError_TrueForNotTypeable(t *testing.T) {
 	resp := JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      json.RawMessage(`1`),
-		Result: mcpJSONErrorResponse("FAILED", map[string]any{
+		Result: mcp.JSONErrorResponse("FAILED", map[string]any{
 			"status": "complete",
 			"result": map[string]any{
 				"success": false,
@@ -191,7 +192,7 @@ func TestIsNotTypeableError_FalseForOtherErrors(t *testing.T) {
 	resp := JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      json.RawMessage(`1`),
-		Result: mcpJSONErrorResponse("FAILED", map[string]any{
+		Result: mcp.JSONErrorResponse("FAILED", map[string]any{
 			"status": "complete",
 			"result": map[string]any{
 				"success": false,
@@ -210,7 +211,7 @@ func TestIsNotTypeableError_FalseForSuccess(t *testing.T) {
 	resp := JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      json.RawMessage(`1`),
-		Result: mcpJSONResponse("OK", map[string]any{
+		Result: mcp.JSONResponse("OK", map[string]any{
 			"status": "complete",
 			"result": map[string]any{"success": true},
 		}),

@@ -5,11 +5,45 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
+
+// injectCSPBlockedActions adds CSP-blocked action guidance to JSON tool results.
+func (h *ToolHandler) injectCSPBlockedActions(resp JSONRPCResponse) JSONRPCResponse {
+	restricted, level := h.capture.GetCSPStatus()
+	if !restricted {
+		return resp
+	}
+	actions, reason := capture.CSPBlockedActions(level)
+	if actions == nil {
+		return resp
+	}
+	return mcp.MutateToolResult(resp, func(result *MCPToolResult) {
+		if len(result.Content) == 0 {
+			return
+		}
+		text := result.Content[0].Text
+		jsonStart := strings.IndexByte(text, '{')
+		if jsonStart < 0 {
+			return
+		}
+		var data map[string]any
+		if json.Unmarshal([]byte(text[jsonStart:]), &data) != nil {
+			return
+		}
+		data["blocked_actions"] = actions
+		data["blocked_reason"] = reason
+		dataJSON, err := json.Marshal(data)
+		if err == nil {
+			result.Content[0].Text = text[:jsonStart] + string(dataJSON)
+		}
+	})
+}
 
 // guardCheck is a precondition that returns (response, true) to short-circuit the caller.
 type guardCheck func(req JSONRPCRequest, opts ...func(*StructuredError)) (JSONRPCResponse, bool)
@@ -107,7 +141,7 @@ func (h *ToolHandler) requirePilot(req JSONRPCRequest, extraOpts ...func(*Struct
 			"arguments": map[string]any{"what": "pilot"},
 		}),
 	}, extraOpts...)
-	return fail(req, ErrCodePilotDisabled, "AI Web Pilot is explicitly disabled",
+	return mcp.Fail(req, ErrCodePilotDisabled, "AI Web Pilot is explicitly disabled",
 		"Enable AI Web Pilot in the extension popup", opts...,
 	), true
 }
@@ -140,7 +174,7 @@ func (h *ToolHandler) requireExtension(req JSONRPCRequest, extraOpts ...func(*St
 			"arguments": map[string]any{"what": "pilot"},
 		}),
 	}, extraOpts...)
-	return fail(req, ErrNoData, "Extension not connected. Commands cannot be dispatched.",
+	return mcp.Fail(req, ErrNoData, "Extension not connected. Commands cannot be dispatched.",
 		"Check that the Kaboom browser extension is installed and the page is open.",
 		opts...,
 	), true
@@ -164,7 +198,7 @@ func (h *ToolHandler) requireCSPClear(req JSONRPCRequest, world string) (JSONRPC
 	}
 	// Recovery template: LLM should re-send its original call with world='auto'.
 	// The 'script' param is intentionally omitted — the LLM fills it from its original call.
-	return fail(req, ErrExtError,
+	return mcp.Fail(req, ErrExtError,
 		fmt.Sprintf("Page CSP blocks MAIN world script execution (level: %s). Use world='auto' or world='isolated' to bypass.", level),
 		"Retry with world='auto' (falls back to isolated/structured), world='isolated' (DOM access, no page JS), or use DOM primitives (click, type).",
 		h.diagnosticHint(),
@@ -181,7 +215,7 @@ func (h *ToolHandler) requireSessionStore(req JSONRPCRequest) (JSONRPCResponse, 
 	if h.sessionStoreImpl != nil {
 		return JSONRPCResponse{}, false
 	}
-	return fail(req, ErrNotInitialized, "Session store not initialized", "Internal error — do not retry"), true
+	return mcp.Fail(req, ErrNotInitialized, "Session store not initialized", "Internal error — do not retry"), true
 }
 
 // requireTabTracking returns (resp, true) if no tab is being tracked,
@@ -198,7 +232,7 @@ func (h *ToolHandler) requireTabTracking(req JSONRPCRequest, extraOpts ...func(*
 		withRetryable(true),
 		withRetryAfterMs(2000),
 	}, extraOpts...)
-	return fail(req, ErrNoData, "No tab is being tracked. Navigate to a page first.",
+	return mcp.Fail(req, ErrNoData, "No tab is being tracked. Navigate to a page first.",
 		"Open a page in the browser, or call interact(what='navigate', url='...').",
 		opts...,
 	), true
@@ -208,7 +242,7 @@ func (h *ToolHandler) requireTabTracking(req JSONRPCRequest, extraOpts ...func(*
 // Usage: if resp, blocked := requireString(req, params.Name, "name", "Add the 'name' parameter"); blocked { return resp }
 func requireString(req JSONRPCRequest, value, paramName, hint string) (JSONRPCResponse, bool) {
 	if value == "" {
-		return fail(req, ErrMissingParam,
+		return mcp.Fail(req, ErrMissingParam,
 			fmt.Sprintf("Required parameter '%s' is missing", paramName),
 			hint, withParam(paramName)), true
 	}
@@ -219,7 +253,7 @@ func requireString(req JSONRPCRequest, value, paramName, hint string) (JSONRPCRe
 // Usage: if resp, blocked := requirePositiveInt(req, params.Count, "count", "Add a positive 'count'"); blocked { return resp }
 func requirePositiveInt(req JSONRPCRequest, value int, paramName, hint string) (JSONRPCResponse, bool) {
 	if value <= 0 {
-		return fail(req, ErrMissingParam,
+		return mcp.Fail(req, ErrMissingParam,
 			fmt.Sprintf("Required parameter '%s' must be a positive integer", paramName),
 			hint, withParam(paramName)), true
 	}
@@ -234,7 +268,7 @@ func requireOneOf(req JSONRPCRequest, value string, paramName string, validValue
 			return JSONRPCResponse{}, false
 		}
 	}
-	return fail(req, ErrMissingParam,
+	return mcp.Fail(req, ErrMissingParam,
 		fmt.Sprintf("Parameter '%s' must be one of: %s", paramName, strings.Join(validValues, ", ")),
 		hint, withParam(paramName)), true
 }

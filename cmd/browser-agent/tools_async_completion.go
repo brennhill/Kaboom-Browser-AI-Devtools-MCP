@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"strings"
 	"time"
 
@@ -32,7 +34,7 @@ func (h *ToolHandler) EnqueuePendingQuery(req JSONRPCRequest, query queries.Pend
 		return JSONRPCResponse{}, false
 	}
 	if errors.Is(err, queries.ErrQueueFull) {
-		return fail(req, ErrQueueFull,
+		return mcp.Fail(req, ErrQueueFull,
 			fmt.Sprintf("Command queue is full; unable to enqueue action type=%q", query.Type),
 			"Wait for in-flight commands to complete, then retry.",
 			withRetryable(true), withRetryAfterMs(1000), h.diagnosticHint(),
@@ -41,7 +43,7 @@ func (h *ToolHandler) EnqueuePendingQuery(req JSONRPCRequest, query queries.Pend
 			}),
 		), true
 	}
-	return fail(req, ErrInternal,
+	return mcp.Fail(req, ErrInternal,
 		fmt.Sprintf("Failed to enqueue command type=%q: %v", query.Type, err),
 		"Internal error — do not retry until server health is restored.",
 		h.diagnosticHint(),
@@ -121,7 +123,7 @@ func (h *ToolHandler) formatCommandResult(req JSONRPCRequest, cmd queries.Comman
 	default:
 		responseData["final"] = false
 		summary := fmt.Sprintf("Command %s: %s", corrID, cmd.Status)
-		return succeed(req, summary, responseData)
+		return mcp.Succeed(req, summary, responseData)
 	}
 }
 
@@ -146,7 +148,7 @@ func (h *ToolHandler) formatErrorCommandResult(req JSONRPCRequest, cmd queries.C
 
 	h.finalizeResponseEnrichment(corrID, responseData, cmd)
 	summary := fmt.Sprintf("FAILED — Command %s error: %s", corrID, cmd.Error)
-	return failJSON(req, summary, responseData)
+	return toolresp.FailJSON(req, summary, responseData)
 }
 
 func (h *ToolHandler) formatExpiredCommandResult(req JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) JSONRPCResponse {
@@ -158,7 +160,7 @@ func (h *ToolHandler) formatExpiredCommandResult(req JSONRPCRequest, cmd queries
 
 	h.finalizeResponseEnrichment(corrID, responseData, cmd)
 	summary := fmt.Sprintf("FAILED — Command %s expired: %s", corrID, cmd.Error)
-	return failJSON(req, summary, responseData)
+	return toolresp.FailJSON(req, summary, responseData)
 }
 
 func (h *ToolHandler) formatTimeoutCommandResult(req JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) JSONRPCResponse {
@@ -174,7 +176,7 @@ func (h *ToolHandler) formatTimeoutCommandResult(req JSONRPCRequest, cmd queries
 
 	h.finalizeResponseEnrichment(corrID, responseData, cmd)
 	summary := fmt.Sprintf("FAILED — Command %s timed out: %s", corrID, cmd.Error)
-	return failJSON(req, summary, responseData)
+	return toolresp.FailJSON(req, summary, responseData)
 }
 
 func (h *ToolHandler) formatCancelledCommandResult(req JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) JSONRPCResponse {
@@ -187,7 +189,7 @@ func (h *ToolHandler) formatCancelledCommandResult(req JSONRPCRequest, cmd queri
 
 	h.finalizeResponseEnrichment(corrID, responseData, cmd)
 	summary := fmt.Sprintf("FAILED — Command %s cancelled", corrID)
-	return failJSON(req, summary, responseData)
+	return toolresp.FailJSON(req, summary, responseData)
 }
 
 func attachTraceSummary(responseData map[string]any, cmd queries.CommandResult) {
@@ -234,7 +236,7 @@ func (h *ToolHandler) formatCompleteCommand(req JSONRPCRequest, cmd queries.Comm
 		asyncresult.AnnotateInteractFailureRecovery(responseData, cmd.Error, normalizedResult)
 		h.finalizeResponseEnrichment(corrID, responseData, cmd)
 		summary := fmt.Sprintf("FAILED — Command %s completed with error: %s", corrID, cmd.Error)
-		return failJSON(req, summary, responseData)
+		return toolresp.FailJSON(req, summary, responseData)
 	}
 
 	h.finalizeResponseEnrichment(corrID, responseData, cmd)
@@ -245,7 +247,7 @@ func (h *ToolHandler) formatCompleteCommand(req JSONRPCRequest, cmd queries.Comm
 		asyncresult.StripSummaryModeFields(responseData)
 	}
 	summary := fmt.Sprintf("Command %s: complete", corrID)
-	return succeed(req, summary, responseData)
+	return mcp.Succeed(req, summary, responseData)
 }
 
 func (h *ToolHandler) attachPerfDiffIfAvailable(corrID string, responseData map[string]any) {
@@ -319,7 +321,7 @@ func (h *ToolHandler) finalizePendingDisconnect(req JSONRPCRequest, correlationI
 	if cmd, found := h.capture.GetCommandResult(correlationID); found && cmd != nil {
 		return h.formatCommandResult(req, *cmd, correlationID)
 	}
-	return fail(req, ErrNoData,
+	return mcp.Fail(req, ErrNoData,
 		"Extension disconnected while command was pending",
 		"Ensure the extension is connected, then retry the action.",
 		h.diagnosticHint(),
@@ -335,21 +337,21 @@ func (h *ToolHandler) MaybeWaitForCommand(req JSONRPCRequest, correlationID stri
 		Background bool  `json:"background"`
 		TimeoutMs  int   `json:"timeout_ms"`
 	}
-	lenientUnmarshal(args, &params)
+	mcp.LenientUnmarshal(args, &params)
 
 	isSync := true
 	if params.Background || (params.Sync != nil && !*params.Sync) || (params.Wait != nil && !*params.Wait) {
 		isSync = false
 	}
 	if !isSync {
-		return succeed(req, queuedSummary, map[string]any{
+		return mcp.Succeed(req, queuedSummary, map[string]any{
 			"status": "queued", "lifecycle_status": "queued",
 			"correlation_id": correlationID, "trace_id": correlationID,
 			"queued": true, "final": false,
 		})
 	}
 	if !h.capture.IsExtensionConnected() {
-		return fail(req, ErrNoData, "Extension is not connected", "Ensure the Kaboom extension shows 'Connected' and a tab is tracked.", h.diagnosticHint())
+		return mcp.Fail(req, ErrNoData, "Extension is not connected", "Ensure the Kaboom extension shows 'Connected' and a tab is tracked.", h.diagnosticHint())
 	}
 
 	initialWait, retryWait := asyncInitialWait, asyncRetryWait
@@ -370,7 +372,7 @@ func (h *ToolHandler) MaybeWaitForCommand(req JSONRPCRequest, correlationID stri
 	cmd, found, disconnected, waitedMs := h.waitForCommandWithConnectivity(correlationID, initialWait)
 	totalWaitMs += waitedMs
 	if !found {
-		return fail(req, ErrInternal, "Command not found after queuing", "Internal error — do not retry")
+		return mcp.Fail(req, ErrInternal, "Command not found after queuing", "Internal error — do not retry")
 	}
 	if disconnected {
 		return h.finalizePendingDisconnect(req, correlationID)
@@ -380,7 +382,7 @@ func (h *ToolHandler) MaybeWaitForCommand(req JSONRPCRequest, correlationID stri
 		cmd, found, disconnected, waitedMs = h.waitForCommandWithConnectivity(correlationID, retryWait)
 		totalWaitMs += waitedMs
 		if !found {
-			return fail(req, ErrInternal, "Command not found after retry", "Internal error — do not retry")
+			return mcp.Fail(req, ErrInternal, "Command not found after retry", "Internal error — do not retry")
 		}
 		if disconnected {
 			return h.finalizePendingDisconnect(req, correlationID)
@@ -405,7 +407,7 @@ func (h *ToolHandler) MaybeWaitForCommand(req JSONRPCRequest, correlationID stri
 		if pos := h.capture.QueuePosition(correlationID); pos >= 0 {
 			stillProcessing["queue_position"] = pos
 		}
-		return succeed(req, "Action still processing", stillProcessing)
+		return mcp.Succeed(req, "Action still processing", stillProcessing)
 	}
 	return h.formatCommandResult(req, *cmd, correlationID)
 }

@@ -11,7 +11,6 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactstate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactupload"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
@@ -214,32 +213,18 @@ const (
 	ErrExportFailed         = mcp.ErrExportFailed
 )
 
-var (
-	succeed   = mcp.Succeed
-	fail      = mcp.Fail
-	parseArgs = mcp.ParseArgs
-)
-
 func requireString(req JSONRPCRequest, value, paramName, hint string) (JSONRPCResponse, bool) {
 	if value != "" {
 		return JSONRPCResponse{}, false
 	}
-	return fail(req, ErrMissingParam,
+	return mcp.Fail(req, ErrMissingParam,
 		"Required parameter '"+paramName+"' is missing",
 		hint,
 		withParam(paramName)), true
 }
 
-func lenientUnmarshal(args json.RawMessage, v any) {
-	mcp.LenientUnmarshal(args, v)
-}
-
-func buildQueryParams(fields map[string]any) json.RawMessage {
+func marshalQueryParams(fields map[string]any) json.RawMessage {
 	return mcp.SafeMarshal(fields, "{}")
-}
-
-func safeMarshal(v any, fallback string) json.RawMessage {
-	return mcp.SafeMarshal(v, fallback)
 }
 
 func withParam(p string) func(*StructuredError)    { return mcp.WithParam(p) }
@@ -272,23 +257,3 @@ func checkGuardsWithOpts(req JSONRPCRequest, opts []func(*StructuredError), guar
 	}
 	return JSONRPCResponse{}, false
 }
-
-func mutateToolResult(resp JSONRPCResponse, fn func(*MCPToolResult)) JSONRPCResponse {
-	var result MCPToolResult
-	if err := json.Unmarshal(resp.Result, &result); err != nil {
-		return resp
-	}
-	fn(&result)
-	resultJSON, err := json.Marshal(result)
-	if err != nil {
-		return resp
-	}
-	resp.Result = json.RawMessage(resultJSON)
-	return resp
-}
-
-func appendWarningsToResponse(resp JSONRPCResponse, warnings []string) JSONRPCResponse {
-	return mcp.AppendWarningsToResponse(resp, warnings)
-}
-
-var newCorrelationID = toolresp.NewCorrelationID

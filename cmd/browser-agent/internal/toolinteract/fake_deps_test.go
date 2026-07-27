@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
@@ -33,16 +34,16 @@ type fakeState struct {
 	drawStarted     int
 
 	// Pluggable overrides (nil => default behavior).
-	waitFn      func(req JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) JSONRPCResponse
-	interactFn  func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse
-	screenshot  func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse
-	pageInfo    func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse
-	analyzeFn   func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse
-	sarifFn     func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse
-	enrichFn    func(resp JSONRPCResponse, req JSONRPCRequest, tabID int) JSONRPCResponse
-	redaction   RedactionEngine
-	listenPort  int
-	evidenceFn  func(clientID string) EvidenceShot
+	waitFn     func(req JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) JSONRPCResponse
+	interactFn func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse
+	screenshot func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse
+	pageInfo   func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse
+	analyzeFn  func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse
+	sarifFn    func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse
+	enrichFn   func(resp JSONRPCResponse, req JSONRPCRequest, tabID int) JSONRPCResponse
+	redaction  RedactionEngine
+	listenPort int
+	evidenceFn func(clientID string) EvidenceShot
 }
 
 // newFakeState builds a fakeState with pilot enabled, a tracked tab, and a connected extension.
@@ -81,7 +82,7 @@ func (fs *fakeState) recordedCount() int {
 func guardFn(block *bool, code, msg string) GuardCheck {
 	return func(req JSONRPCRequest, opts ...func(*StructuredError)) (JSONRPCResponse, bool) {
 		if *block {
-			return fail(req, code, msg, "adjust and retry", opts...), true
+			return mcp.Fail(req, code, msg, "adjust and retry", opts...), true
 		}
 		return JSONRPCResponse{}, false
 	}
@@ -95,7 +96,7 @@ func (fs *fakeState) deps() *Deps {
 		RequireTabTracking: guardFn(&fs.blockTab, ErrNotInitialized, "Tab tracking not active"),
 		RequireCSPClear: func(req JSONRPCRequest, world string) (JSONRPCResponse, bool) {
 			if fs.blockCSP {
-				return fail(req, ErrInvalidParam, "CSP restricted for world "+world, "use isolated world"), true
+				return mcp.Fail(req, ErrInvalidParam, "CSP restricted for world "+world, "use isolated world"), true
 			}
 			return JSONRPCResponse{}, false
 		},
@@ -103,7 +104,7 @@ func (fs *fakeState) deps() *Deps {
 		EnqueuePendingQuery: func(req JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (JSONRPCResponse, bool) {
 			fs.enqueue(query)
 			if fs.blockEnqueue {
-				return fail(req, ErrQueueFull, "Queue full", "retry later"), true
+				return mcp.Fail(req, ErrQueueFull, "Queue full", "retry later"), true
 			}
 			return JSONRPCResponse{}, false
 		},
@@ -112,7 +113,7 @@ func (fs *fakeState) deps() *Deps {
 			if fs.waitFn != nil {
 				return fs.waitFn(req, correlationID, args, queuedSummary)
 			}
-			return succeed(req, queuedSummary, map[string]any{
+			return mcp.Succeed(req, queuedSummary, map[string]any{
 				"status":         "complete",
 				"correlation_id": correlationID,
 			})
@@ -120,27 +121,27 @@ func (fs *fakeState) deps() *Deps {
 
 		Capture: func() *capture.Store { return fs.cap },
 
-		RecordAIAction: func(action, url string, extra map[string]any) { fs.record(action) },
-		RecordAIEnhancedAction: func(action capture.EnhancedAction) { fs.record("enhanced") },
+		RecordAIAction:           func(action, url string, extra map[string]any) { fs.record(action) },
+		RecordAIEnhancedAction:   func(action capture.EnhancedAction) { fs.record("enhanced") },
 		RecordDOMPrimitiveAction: func(action, selector, text, value string) { fs.record("dom:" + action) },
 
 		ToolInteract: func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 			if fs.interactFn != nil {
 				return fs.interactFn(req, args)
 			}
-			return succeed(req, "nested interact", map[string]any{"status": "complete"})
+			return mcp.Succeed(req, "nested interact", map[string]any{"status": "complete"})
 		},
 		ToolAnalyze: func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 			if fs.analyzeFn != nil {
 				return fs.analyzeFn(req, args)
 			}
-			return succeed(req, "analyze", map[string]any{"issues": []any{}})
+			return mcp.Succeed(req, "analyze", map[string]any{"issues": []any{}})
 		},
 		ToolExportSARIF: func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 			if fs.sarifFn != nil {
 				return fs.sarifFn(req, args)
 			}
-			return succeed(req, "sarif", map[string]any{"status": "exported"})
+			return mcp.Succeed(req, "sarif", map[string]any{"status": "exported"})
 		},
 
 		EnrichNavigateResponse: func(resp JSONRPCResponse, req JSONRPCRequest, tabID int) JSONRPCResponse {
@@ -159,13 +160,13 @@ func (fs *fakeState) deps() *Deps {
 				{Type: "text", Text: "screenshot"},
 				{Type: "image", Data: "QUJD", MimeType: "image/png"},
 			}}
-			return JSONRPCResponse{JSONRPC: JSONRPCVersion, ID: req.ID, Result: safeMarshal(result, "{}")}
+			return JSONRPCResponse{JSONRPC: JSONRPCVersion, ID: req.ID, Result: mcp.SafeMarshal(result, "{}")}
 		},
 		GetPageInfo: func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 			if fs.pageInfo != nil {
 				return fs.pageInfo(req, args)
 			}
-			return succeed(req, "page", map[string]any{
+			return mcp.Succeed(req, "page", map[string]any{
 				"url": "https://example.com/page", "title": "Example", "tab_id": 1,
 			})
 		},
@@ -182,7 +183,7 @@ func (fs *fakeState) deps() *Deps {
 
 		RequireSessionStore: func(req JSONRPCRequest) (JSONRPCResponse, bool) {
 			if fs.blockSession {
-				return fail(req, ErrNotInitialized, "Session store unavailable", "enable persistence"), true
+				return mcp.Fail(req, ErrNotInitialized, "Session store unavailable", "enable persistence"), true
 			}
 			return JSONRPCResponse{}, false
 		},

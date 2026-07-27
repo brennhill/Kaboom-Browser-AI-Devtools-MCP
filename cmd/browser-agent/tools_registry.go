@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -178,7 +179,7 @@ func (h *ToolHandler) dispatchViaModules(req JSONRPCRequest, name string, args j
 	}
 
 	if err := module.Validate(args); err != nil {
-		return fail(req, ErrInvalidParam, fmt.Sprintf("Invalid %s arguments: %v", name, err), "Fix the request parameters and try again"), true
+		return mcp.Fail(req, ErrInvalidParam, fmt.Sprintf("Invalid %s arguments: %v", name, err), "Fix the request parameters and try again"), true
 	}
 
 	return module.Execute(req, args), true

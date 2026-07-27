@@ -14,6 +14,8 @@ import (
 	"time"
 
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // handleFillFormAndSubmit fills multiple form fields and clicks a submit button.
@@ -26,14 +28,14 @@ func (h *InteractActionHandler) HandleFillFormAndSubmit(req JSONRPCRequest, args
 		TabID          int             `json:"tab_id,omitempty"`
 		TimeoutMs      int             `json:"timeout_ms,omitempty"`
 	}
-	if resp, stop := parseArgs(req, args, &params); stop {
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
 	if len(params.Fields) == 0 {
-		return fail(req, ErrMissingParam, "Required parameter 'fields' is empty", "Provide at least one {selector, value} field entry", withParam("fields"))
+		return mcp.Fail(req, ErrMissingParam, "Required parameter 'fields' is empty", "Provide at least one {selector, value} field entry", withParam("fields"))
 	}
 	if params.SubmitSelector == "" && params.SubmitIndex == nil {
-		return fail(req, ErrMissingParam, "Required parameter 'submit_selector' or 'submit_index' is missing", "Add the selector or index of the submit button", withParam("submit_selector"))
+		return mcp.Fail(req, ErrMissingParam, "Required parameter 'submit_selector' or 'submit_index' is missing", "Add the selector or index of the submit button", withParam("submit_selector"))
 	}
 	if params.TimeoutMs <= 0 {
 		params.TimeoutMs = 15_000
@@ -78,11 +80,11 @@ func (h *InteractActionHandler) HandleFillForm(req JSONRPCRequest, args json.Raw
 		TabID     int             `json:"tab_id,omitempty"`
 		TimeoutMs int             `json:"timeout_ms,omitempty"`
 	}
-	if resp, stop := parseArgs(req, args, &params); stop {
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
 	if len(params.Fields) == 0 {
-		return fail(req, ErrMissingParam, "Required parameter 'fields' is empty", "Provide at least one {selector, value} field entry", withParam("fields"))
+		return mcp.Fail(req, ErrMissingParam, "Required parameter 'fields' is empty", "Provide at least one {selector, value} field entry", withParam("fields"))
 	}
 	if params.TimeoutMs <= 0 {
 		params.TimeoutMs = 15_000
@@ -96,7 +98,7 @@ func (h *InteractActionHandler) HandleFillForm(req JSONRPCRequest, args json.Raw
 		return *errResp
 	}
 
-	lastResp := succeed(req, "Form filled", map[string]any{
+	lastResp := mcp.Succeed(req, "Form filled", map[string]any{
 		"status":       "filled",
 		"fields_count": len(params.Fields),
 	})
@@ -112,7 +114,7 @@ func (h *InteractActionHandler) fillWorkflowFields(req JSONRPCRequest, workflowN
 				Status: "error",
 				Detail: "Missing selector and index",
 			})
-			resp := act.WorkflowResult(req, workflowName, trace, fail(req, ErrMissingParam,
+			resp := act.WorkflowResult(req, workflowName, trace, mcp.Fail(req, ErrMissingParam,
 				fmt.Sprintf("Field %d missing 'selector' or 'index'", i),
 				"Each field needs a 'selector' or 'index'",
 				withParam("fields")), workflowStart)
@@ -198,7 +200,7 @@ func (h *InteractActionHandler) HandleNavigateAndWaitFor(req JSONRPCRequest, arg
 		TimeoutMs      int    `json:"timeout_ms,omitempty"`
 		IncludeContent bool   `json:"include_content,omitempty"`
 	}
-	if resp, stop := parseArgs(req, args, &params); stop {
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
 	if resp, blocked := requireString(req, params.URL, "url", "Add 'url' to navigate to"); blocked {
@@ -215,7 +217,7 @@ func (h *InteractActionHandler) HandleNavigateAndWaitFor(req JSONRPCRequest, arg
 	workflowStart := time.Now()
 
 	// Step 1: Navigate.
-	navArgs := buildQueryParams(map[string]any{
+	navArgs := marshalQueryParams(map[string]any{
 		"action": "navigate",
 		"url":    params.URL,
 		"tab_id": params.TabID,
@@ -238,7 +240,7 @@ func (h *InteractActionHandler) HandleNavigateAndWaitFor(req JSONRPCRequest, arg
 	if waitTimeout < 1000 {
 		waitTimeout = 1000
 	}
-	waitArgs := buildQueryParams(map[string]any{
+	waitArgs := marshalQueryParams(map[string]any{
 		"action":     "wait_for",
 		"selector":   params.WaitFor,
 		"timeout_ms": waitTimeout,
@@ -284,7 +286,7 @@ func (h *InteractActionHandler) HandleNavigateAndDocument(req JSONRPCRequest, ar
 		WaitForStable    *bool `json:"wait_for_stable,omitempty"`
 	}
 	if err := json.Unmarshal(args, &params); err != nil {
-		return fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
+		return mcp.Fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 	}
 
 	waitForURLChange := true
@@ -353,7 +355,7 @@ func (h *InteractActionHandler) HandleNavigateAndDocument(req JSONRPCRequest, ar
 		}
 		lastURL, changed := h.waitForTrackedURLChange(req, beforeURL, timeoutMs)
 		if !changed {
-			failResp := fail(req, ErrExtTimeout,
+			failResp := mcp.Fail(req, ErrExtTimeout,
 				"URL did not change after click within timeout",
 				"Increase timeout_ms, disable wait_for_url_change, or verify the click target triggers navigation.",
 				withParam("wait_for_url_change"),
@@ -488,7 +490,7 @@ func (h *InteractActionHandler) validateNavigateAndDocumentTab(req JSONRPCReques
 
 	enabled, trackedTabID, _ := h.deps.Capture().GetTrackingStatus()
 	if !enabled || trackedTabID <= 0 {
-		return fail(req, ErrInvalidParam,
+		return mcp.Fail(req, ErrInvalidParam,
 			fmt.Sprintf("navigate_and_document with tab_id=%d requires an actively tracked tab", tabID),
 			"Switch tracking to the target tab first (interact what=switch_tab), then retry navigate_and_document.",
 			withParam("tab_id"),
@@ -498,7 +500,7 @@ func (h *InteractActionHandler) validateNavigateAndDocumentTab(req JSONRPCReques
 		return JSONRPCResponse{}, false
 	}
 
-	return fail(req, ErrInvalidParam,
+	return mcp.Fail(req, ErrInvalidParam,
 		fmt.Sprintf("navigate_and_document requires tracked tab_id=%d; got tab_id=%d", trackedTabID, tabID),
 		"Switch tracking to the target tab first (interact what=switch_tab) or omit tab_id.",
 		withParam("tab_id"),
@@ -519,7 +521,7 @@ func remainingNavigateAndDocumentTimeoutMs(workflowStart time.Time, totalTimeout
 }
 
 func navigateAndDocumentTimeoutBudgetExceeded(req JSONRPCRequest, stage string) JSONRPCResponse {
-	return fail(req, ErrExtTimeout,
+	return mcp.Fail(req, ErrExtTimeout,
 		fmt.Sprintf("timeout_ms exhausted before %s stage", stage),
 		"Increase timeout_ms or disable one of the workflow wait stages.",
 		withParam("timeout_ms"),
@@ -534,7 +536,7 @@ func (h *InteractActionHandler) HandleRunA11yAndExportSARIF(req JSONRPCRequest, 
 		SaveTo string `json:"save_to,omitempty"`
 		TabID  int    `json:"tab_id,omitempty"`
 	}
-	if resp, stop := parseArgs(req, args, &params); stop {
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
 
@@ -542,7 +544,7 @@ func (h *InteractActionHandler) HandleRunA11yAndExportSARIF(req JSONRPCRequest, 
 	workflowStart := time.Now()
 
 	// Step 1: Run accessibility audit.
-	a11yArgs := buildQueryParams(map[string]any{
+	a11yArgs := marshalQueryParams(map[string]any{
 		"what":   "accessibility",
 		"scope":  params.Scope,
 		"tab_id": params.TabID,

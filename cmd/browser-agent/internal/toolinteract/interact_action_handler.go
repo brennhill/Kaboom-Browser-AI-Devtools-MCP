@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/elemindex"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
@@ -70,13 +71,13 @@ func parseRetryParentCorrelationID(args json.RawMessage) string {
 	var params struct {
 		CorrelationID string `json:"correlation_id"`
 	}
-	lenientUnmarshal(args, &params)
+	mcp.LenientUnmarshal(args, &params)
 	return strings.TrimSpace(params.CorrelationID)
 }
 
 func deriveRetryStrategy(action string, args json.RawMessage) (strategy string, fingerprint string) {
 	var payload map[string]any
-	lenientUnmarshal(args, &payload)
+	mcp.LenientUnmarshal(args, &payload)
 
 	fingerprintFields := map[string]any{
 		"action": strings.ToLower(strings.TrimSpace(action)),
@@ -446,7 +447,7 @@ func (h *InteractActionHandler) AppendScreenshotToResponse(resp JSONRPCResponse,
 // appendInteractiveToResponse appends list_interactive text to the response.
 func (h *InteractActionHandler) AppendInteractiveToResponse(resp JSONRPCResponse, req JSONRPCRequest) JSONRPCResponse {
 	listReq := JSONRPCRequest{JSONRPC: JSONRPCVersion, ID: req.ID, ClientID: req.ClientID}
-	listArgs := buildQueryParams(map[string]any{"what": "list_interactive", "visible_only": true})
+	listArgs := marshalQueryParams(map[string]any{"what": "list_interactive", "visible_only": true})
 	listResp := h.HandleListInteractive(listReq, listArgs)
 
 	var listResult MCPToolResult

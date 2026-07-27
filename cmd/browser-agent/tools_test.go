@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -571,7 +572,7 @@ func TestToolsList(t *testing.T) {
 // ============================================
 
 func TestMcpTextResponse(t *testing.T) {
-	resp := mcpTextResponse("Hello, World!")
+	resp := mcp.TextResponse("Hello, World!")
 
 	var result MCPToolResult
 	if err := json.Unmarshal(resp, &result); err != nil {
@@ -600,7 +601,7 @@ func TestMcpJSONResponse(t *testing.T) {
 		"status": "ok",
 		"count":  42,
 	}
-	resp := mcpJSONResponse("Test summary", data)
+	resp := mcp.JSONResponse("Test summary", data)
 
 	var result MCPToolResult
 	if err := json.Unmarshal(resp, &result); err != nil {

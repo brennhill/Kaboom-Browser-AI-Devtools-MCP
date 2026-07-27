@@ -12,6 +12,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolobserve"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	observe "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 	wiretypes "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
@@ -120,7 +121,7 @@ func (h *ToolHandler) toolObserveCommandResult(req JSONRPCRequest, args json.Raw
 		CorrelationID string `json:"correlation_id"`
 	}
 	if err := json.Unmarshal(args, &params); err != nil && len(args) > 0 {
-		return fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
+		return mcp.Fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 	}
 	if response, blocked := requireString(req, params.CorrelationID, "correlation_id", "Add the 'correlation_id' parameter and call again"); blocked {
 		return response
@@ -129,7 +130,7 @@ func (h *ToolHandler) toolObserveCommandResult(req JSONRPCRequest, args json.Raw
 	if strings.HasPrefix(correlationID, "ann_") {
 		command, found := h.capture.WaitForCommand(correlationID, annotationCommandWaitTimeout)
 		if !found {
-			return fail(req, ErrNoData,
+			return mcp.Fail(req, ErrNoData,
 				"Annotation command not found: "+correlationID,
 				"The command may have expired (10 min TTL). Start a new draw mode session.",
 				withFinal(true), h.diagnosticHint())
@@ -138,7 +139,7 @@ func (h *ToolHandler) toolObserveCommandResult(req JSONRPCRequest, args json.Raw
 	}
 	command, found := h.capture.GetCommandResult(correlationID)
 	if !found {
-		return fail(req, ErrNoData,
+		return mcp.Fail(req, ErrNoData,
 			"Command not found: "+correlationID,
 			"The command may have already completed and been cleaned up (60s TTL), or the correlation_id is invalid. Use observe with what='pending_commands' to see active commands.",
 			withFinal(true), h.diagnosticHint())
@@ -157,16 +158,16 @@ func (h *ToolHandler) toolObservePendingCommands(req JSONRPCRequest, _ json.RawM
 	}
 	summary := fmt.Sprintf("Pending: %d, Completed: %d, Failed: %d, Extension in-progress: %d",
 		len(pending), len(completed), len(failed), len(inProgress))
-	return succeed(req, summary, data)
+	return mcp.Succeed(req, summary, data)
 }
 
 func (h *ToolHandler) toolObserveFailedCommands(req JSONRPCRequest, _ json.RawMessage) JSONRPCResponse {
 	failed := h.capture.GetFailedCommands()
 	data := map[string]any{"commands": failed, "count": len(failed)}
 	if len(failed) == 0 {
-		return succeed(req, "No failed commands found", data)
+		return mcp.Succeed(req, "No failed commands found", data)
 	}
-	return succeed(req, fmt.Sprintf("Found %d failed/expired commands", len(failed)), data)
+	return mcp.Succeed(req, fmt.Sprintf("Found %d failed/expired commands", len(failed)), data)
 }
 
 func (h *ToolHandler) toolObserveSavedVideos(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {

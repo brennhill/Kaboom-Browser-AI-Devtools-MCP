@@ -6,6 +6,7 @@ package toolinteract
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 var validStorageTypes = map[string]string{
@@ -18,7 +19,7 @@ var validStorageTypes = map[string]string{
 func validateStorageType(req JSONRPCRequest, storageType string) (string, JSONRPCResponse, bool) {
 	storageExpr, ok := validStorageTypes[storageType]
 	if !ok {
-		return "", fail(req, ErrInvalidParam, "Invalid 'storage_type' value: "+storageType, "Use 'localStorage' or 'sessionStorage'", withParam("storage_type")), false
+		return "", mcp.Fail(req, ErrInvalidParam, "Invalid 'storage_type' value: "+storageType, "Use 'localStorage' or 'sessionStorage'", withParam("storage_type")), false
 	}
 	return storageExpr, JSONRPCResponse{}, true
 }
@@ -32,7 +33,7 @@ func (h *InteractActionHandler) HandleSetStorage(req JSONRPCRequest, args json.R
 		TimeoutMs   int     `json:"timeout_ms,omitempty"`
 		World       string  `json:"world,omitempty"`
 	}
-	if resp, stop := parseArgs(req, args, &params); stop {
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
 
@@ -44,7 +45,7 @@ func (h *InteractActionHandler) HandleSetStorage(req JSONRPCRequest, args json.R
 		return resp
 	}
 	if params.Value == nil {
-		return fail(req, ErrMissingParam, "Required parameter 'value' is missing for set_storage action", "Add the 'value' parameter and call again", withParam("value"))
+		return mcp.Fail(req, ErrMissingParam, "Required parameter 'value' is missing for set_storage action", "Add the 'value' parameter and call again", withParam("value"))
 	}
 
 	script := fmt.Sprintf(`(() => { try { %s.setItem(%s, %s); return { ok: true, action: "set_storage", storage_type: %s, key: %s }; } catch (e) { return { ok: false, error: String((e && e.message) || e) }; } })()`,
@@ -60,7 +61,7 @@ func (h *InteractActionHandler) HandleDeleteStorage(req JSONRPCRequest, args jso
 		TimeoutMs   int    `json:"timeout_ms,omitempty"`
 		World       string `json:"world,omitempty"`
 	}
-	if resp, stop := parseArgs(req, args, &params); stop {
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
 
@@ -84,7 +85,7 @@ func (h *InteractActionHandler) HandleClearStorage(req JSONRPCRequest, args json
 		TimeoutMs   int    `json:"timeout_ms,omitempty"`
 		World       string `json:"world,omitempty"`
 	}
-	if resp, stop := parseArgs(req, args, &params); stop {
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
 
@@ -108,14 +109,14 @@ func (h *InteractActionHandler) HandleSetCookie(req JSONRPCRequest, args json.Ra
 		TimeoutMs int     `json:"timeout_ms,omitempty"`
 		World     string  `json:"world,omitempty"`
 	}
-	if resp, stop := parseArgs(req, args, &params); stop {
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
 	if resp, blocked := requireString(req, params.Name, "name", "Add the 'name' parameter and call again"); blocked {
 		return resp
 	}
 	if params.Value == nil {
-		return fail(req, ErrMissingParam, "Required parameter 'value' is missing for set_cookie action", "Add the 'value' parameter and call again", withParam("value"))
+		return mcp.Fail(req, ErrMissingParam, "Required parameter 'value' is missing for set_cookie action", "Add the 'value' parameter and call again", withParam("value"))
 	}
 
 	cookie := params.Name + "=" + *params.Value
@@ -142,7 +143,7 @@ func (h *InteractActionHandler) HandleDeleteCookie(req JSONRPCRequest, args json
 		TimeoutMs int    `json:"timeout_ms,omitempty"`
 		World     string `json:"world,omitempty"`
 	}
-	if resp, stop := parseArgs(req, args, &params); stop {
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
 	if resp, blocked := requireString(req, params.Name, "name", "Add the 'name' parameter and call again"); blocked {
@@ -175,7 +176,7 @@ func (h *InteractActionHandler) queueExecuteScript(
 		world = "auto"
 	}
 	if !validWorldValues[world] {
-		return fail(req, ErrInvalidParam, "Invalid 'world' value: "+world, "Use 'auto' (default), 'main', or 'isolated'", withParam("world"))
+		return mcp.Fail(req, ErrInvalidParam, "Invalid 'world' value: "+world, "Use 'auto' (default), 'main', or 'isolated'", withParam("world"))
 	}
 	if timeoutMs <= 0 {
 		timeoutMs = 5000

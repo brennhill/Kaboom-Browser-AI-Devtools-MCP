@@ -9,6 +9,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate/annotations"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/reproduction"
 )
 
@@ -119,11 +120,11 @@ func (h *ToolHandler) toolGenerateAnnotationIssues(req JSONRPCRequest, args json
 func (h *ToolHandler) toolGetReproductionScript(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 	params := reproduction.ParseParams(args)
 	if err := reproduction.ValidateOutputFormat(params.OutputFormat); err != "" {
-		return fail(req, ErrInvalidParam, err, "Use 'kaboom' or 'playwright'", withParam("output_format"))
+		return mcp.Fail(req, ErrInvalidParam, err, "Use 'kaboom' or 'playwright'", withParam("output_format"))
 	}
 	allActions := h.capture.GetAllEnhancedActions()
 	actions := reproduction.FilterLastN(allActions, params.LastN)
 	script := reproduction.GenerateScript(actions, params)
 	result := reproduction.BuildResult(script, params, actions, allActions)
-	return succeed(req, fmt.Sprintf("Reproduction script (%s, %d actions)", params.OutputFormat, len(actions)), result)
+	return mcp.Succeed(req, fmt.Sprintf("Reproduction script (%s, %d actions)", params.OutputFormat, len(actions)), result)
 }

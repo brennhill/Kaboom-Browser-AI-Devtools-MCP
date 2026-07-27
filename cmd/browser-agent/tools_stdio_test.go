@@ -30,6 +30,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // captureStdout runs fn while capturing stdout output.
@@ -305,21 +306,21 @@ func TestToolHandler_ToolsList_NoStdout(t *testing.T) {
 
 // TestToolHandler_ResponseHelpers_NoStdout verifies MCP response helpers produce no stdout
 func TestToolHandler_ResponseHelpers_NoStdout(t *testing.T) {
-	t.Run("mcpTextResponse", func(t *testing.T) {
+	t.Run("mcp.TextResponse", func(t *testing.T) {
 		output := captureStdout(t, func() {
-			_ = mcpTextResponse("test message")
+			_ = mcp.TextResponse("test message")
 		})
 		if output != "" {
-			t.Errorf("INVARIANT VIOLATION: mcpTextResponse wrote to stdout: %q", output)
+			t.Errorf("INVARIANT VIOLATION: mcp.TextResponse wrote to stdout: %q", output)
 		}
 	})
 
-	t.Run("mcpJSONResponse", func(t *testing.T) {
+	t.Run("mcp.JSONResponse", func(t *testing.T) {
 		output := captureStdout(t, func() {
-			_ = mcpJSONResponse("summary", map[string]string{"key": "value"})
+			_ = mcp.JSONResponse("summary", map[string]string{"key": "value"})
 		})
 		if output != "" {
-			t.Errorf("INVARIANT VIOLATION: mcpJSONResponse wrote to stdout: %q", output)
+			t.Errorf("INVARIANT VIOLATION: mcp.JSONResponse wrote to stdout: %q", output)
 		}
 	})
 
@@ -340,11 +341,11 @@ func TestToolHandler_MarshalFailure_NoStdout(t *testing.T) {
 	unmarshalable := make(chan int)
 
 	output := captureStdout(t, func() {
-		_ = safeMarshal(unmarshalable, `{"fallback":true}`)
+		_ = mcp.SafeMarshal(unmarshalable, `{"fallback":true}`)
 	})
 
 	if output != "" {
-		t.Errorf("INVARIANT VIOLATION: safeMarshal failure wrote to stdout: %q", output)
+		t.Errorf("INVARIANT VIOLATION: mcp.SafeMarshal failure wrote to stdout: %q", output)
 		t.Error("Marshal errors should only go to stderr, not stdout")
 	}
 }
@@ -354,7 +355,7 @@ func TestToolHandler_StderrAllowed(t *testing.T) {
 	// This is a documentation test - stderr is intentionally allowed
 	// because MCP clients only parse stdout for JSON-RPC messages.
 	//
-	// The safeMarshal function writes errors to stderr:
+	// mcp.SafeMarshal writes errors to stderr:
 	//   fmt.Fprintf(os.Stderr, "[Kaboom] JSON marshal error: %v\n", err)
 	//
 	// This is CORRECT behavior - stderr doesn't pollute MCP protocol.

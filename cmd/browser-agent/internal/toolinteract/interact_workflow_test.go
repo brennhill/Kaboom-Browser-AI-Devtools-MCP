@@ -7,6 +7,8 @@ import (
 	"time"
 
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 func TestHandleFillForm_Success(t *testing.T) {
@@ -74,9 +76,9 @@ func TestHandleFillForm_SelectFallback(t *testing.T) {
 	fs.waitFn = func(req JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) JSONRPCResponse {
 		call++
 		if call == 1 {
-			return succeed(req, "type", map[string]any{"status": "complete", "error": "not_typeable"})
+			return mcp.Succeed(req, "type", map[string]any{"status": "complete", "error": "not_typeable"})
 		}
-		return succeed(req, queuedSummary, map[string]any{"status": "complete"})
+		return mcp.Succeed(req, queuedSummary, map[string]any{"status": "complete"})
 	}
 	// Note: not_typeable is detected via response body substring, not IsError.
 	resp := h.HandleFillForm(testReq(), json.RawMessage(`{"fields":[{"selector":"#s","value":"opt"}]}`))
@@ -140,7 +142,7 @@ func TestHandleNavigateAndDocument_TabMismatch(t *testing.T) {
 func TestHandleNavigateAndDocument_ClickError(t *testing.T) {
 	h, fs := newFakeHandler(t)
 	fs.waitFn = func(req JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) JSONRPCResponse {
-		return fail(req, ErrExtError, "click failed", "retry")
+		return mcp.Fail(req, ErrExtError, "click failed", "retry")
 	}
 	args := `{"selector":"#link","wait_for_url_change":false,"wait_for_stable":false}`
 	assertErr(t, h.HandleNavigateAndDocument(testReq(), json.RawMessage(args)), ErrExtError)
@@ -154,7 +156,7 @@ func TestHandleRunA11yAndExportSARIF_Success(t *testing.T) {
 func TestHandleRunA11yAndExportSARIF_A11yError(t *testing.T) {
 	h, fs := newFakeHandler(t)
 	fs.analyzeFn = func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-		return fail(req, ErrExtError, "audit failed", "retry")
+		return mcp.Fail(req, ErrExtError, "audit failed", "retry")
 	}
 	assertErr(t, h.HandleRunA11yAndExportSARIF(testReq(), json.RawMessage(`{}`)), ErrExtError)
 }
@@ -165,7 +167,7 @@ func TestHandleRunA11yAndExportSARIF_InvalidJSON(t *testing.T) {
 }
 
 func TestExtractMCPResponseJSONPayload(t *testing.T) {
-	resp := succeed(testReq(), "summary", map[string]any{"k": "v"})
+	resp := mcp.Succeed(testReq(), "summary", map[string]any{"k": "v"})
 	payload := extractMCPResponseJSONPayload(resp)
 	if payload == nil || !contains(string(payload), "\"k\":\"v\"") {
 		t.Fatalf("expected extracted payload, got %s", payload)
@@ -192,7 +194,7 @@ func TestIsNotTypeableError(t *testing.T) {
 	if !IsNotTypeableError(yes) {
 		t.Fatal("expected not_typeable detected")
 	}
-	no := succeed(testReq(), "ok", map[string]any{"status": "complete"})
+	no := mcp.Succeed(testReq(), "ok", map[string]any{"status": "complete"})
 	if IsNotTypeableError(no) {
 		t.Fatal("expected no not_typeable for clean response")
 	}

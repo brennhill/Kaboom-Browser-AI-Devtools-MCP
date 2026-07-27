@@ -5,6 +5,7 @@ package toolinteract
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"testing"
 )
 
@@ -120,7 +121,7 @@ func TestHandleListInteractive_Success(t *testing.T) {
 	h, fs := newFakeHandler(t)
 	// Return a response with elements so index metadata is built.
 	fs.waitFn = func(req JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) JSONRPCResponse {
-		return succeed(req, "list_interactive results", map[string]any{
+		return mcp.Succeed(req, "list_interactive results", map[string]any{
 			"elements": []any{
 				map[string]any{"index": float64(0), "selector": "#a", "tag": "input"},
 				map[string]any{"index": float64(1), "selector": "#b", "tag": "button"},
@@ -147,7 +148,7 @@ func TestHandleListInteractive_Truncation(t *testing.T) {
 		for i := range elems {
 			elems[i] = map[string]any{"index": float64(i), "selector": "#e", "tag": "div"}
 		}
-		return succeed(req, "list_interactive results", map[string]any{"elements": elems})
+		return mcp.Succeed(req, "list_interactive results", map[string]any{"elements": elems})
 	}
 	resp := h.HandleListInteractive(testReq(), json.RawMessage(`{"limit":3}`))
 	result := assertOK(t, resp)

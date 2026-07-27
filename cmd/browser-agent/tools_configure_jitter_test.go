@@ -227,7 +227,7 @@ func TestToolConfigureActionJitter_InvalidJSON_LenientFallback(t *testing.T) {
 	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := toolconfigure.HandleActionJitter(h, req, json.RawMessage(`{bad json`))
 
-	// lenientUnmarshal silently ignores parse errors — invalid JSON is treated
+	// mcp.LenientUnmarshal silently ignores parse errors — invalid JSON is treated
 	// as "no params" and returns current jitter value (not an error).
 	result := parseToolResult(t, resp)
 	if result.IsError {

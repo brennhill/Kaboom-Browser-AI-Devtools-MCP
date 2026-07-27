@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 type testLimiter struct {
@@ -456,7 +457,7 @@ func TestMCPHandler_AppendsServerWarningsToToolResponse(t *testing.T) {
 			return JSONRPCResponse{
 				JSONRPC: "2.0",
 				ID:      req.ID,
-				Result:  mcpTextResponse("ok"),
+				Result:  mcp.TextResponse("ok"),
 			}, true
 		},
 	})
@@ -532,7 +533,7 @@ func TestMCPHandler_WarnsOnUnknownToolArguments(t *testing.T) {
 			if name != "observe" {
 				return JSONRPCResponse{}, false
 			}
-			return JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcpTextResponse("ok")}, true
+			return JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.TextResponse("ok")}, true
 		},
 	})
 
@@ -589,7 +590,7 @@ func TestMCPHandler_DoesNotWarnOnKnownToolArguments(t *testing.T) {
 			if name != "observe" {
 				return JSONRPCResponse{}, false
 			}
-			return JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcpTextResponse("ok")}, true
+			return JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.TextResponse("ok")}, true
 		},
 	})
 

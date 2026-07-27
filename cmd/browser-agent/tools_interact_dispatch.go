@@ -15,6 +15,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
@@ -50,7 +51,7 @@ var interactRegistry = toolRegistry{
 
 		// Validate evidence mode.
 		if _, err := toolinteract.ParseEvidenceMode(args); err != nil {
-			resp := fail(req, ErrInvalidParam,
+			resp := mcp.Fail(req, ErrInvalidParam,
 				"Invalid 'evidence' value",
 				"Use evidence='off' (default), 'on_mutation', or 'always'",
 				withParam("evidence"))
@@ -262,7 +263,7 @@ func (h *ToolHandler) toolInteract(req JSONRPCRequest, args json.RawMessage) JSO
 		StabilityMs        int     `json:"stability_ms,omitempty"`
 		ActionDiff         bool    `json:"action_diff"`
 	}
-	lenientUnmarshal(args, &composable)
+	mcp.LenientUnmarshal(args, &composable)
 
 	registry := interactRegistry
 	registry.Handlers = getInteractHandlers()
@@ -390,7 +391,7 @@ func (h *ToolHandler) enrichNavigateResponse(resp JSONRPCResponse, req JSONRPCRe
 	tabTitle := h.capture.GetTrackedTabTitle()
 	vitals := h.capture.GetPerformanceSnapshots()
 	correlationID := toolresp.NewCorrelationID("nav_content")
-	params := buildQueryParams(map[string]any{"timeout_ms": 4000})
+	params := mcp.SafeMarshal(map[string]any{"timeout_ms": 4000}, "{}")
 	query := queries.PendingQuery{
 		Type: "page_summary", Params: params, TabID: tabID, CorrelationID: correlationID,
 	}

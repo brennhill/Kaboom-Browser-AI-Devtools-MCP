@@ -4,6 +4,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ModeHandler is the unified function signature for all tool mode handlers.
@@ -35,7 +36,7 @@ func (h *ToolHandler) dispatchTool(req JSONRPCRequest, args json.RawMessage, reg
 	handler, ok := reg.Handlers[what]
 	if !ok {
 		validModes := reg.Resolution.ValidModes
-		resp := fail(req, ErrUnknownMode, "Unknown "+reg.Resolution.ToolName+" mode: "+what,
+		resp := mcp.Fail(req, ErrUnknownMode, "Unknown "+reg.Resolution.ToolName+" mode: "+what,
 			"Use a valid mode from the 'what' enum", withParam("what"), withHint("Valid values: "+validModes), describeCapabilitiesRecovery(reg.Resolution.ToolName))
 		return appendCanonicalWhatAliasWarning(resp, usedAliasParam, what, deprecatedIn, removeIn)
 	}
@@ -126,7 +127,7 @@ func resolveToolMode(
 	if len(args) > 0 {
 		var raw map[string]json.RawMessage
 		if err := json.Unmarshal(args, &raw); err != nil {
-			resp := fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
+			resp := mcp.Fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 			return "", "", &resp
 		}
 		for _, key := range append([]string{"what"}, aliasFieldNames(aliasDefs)...) {
@@ -172,7 +173,7 @@ func resolveToolMode(
 
 	// Missing mode.
 	if what == "" {
-		resp := fail(req, ErrMissingParam,
+		resp := mcp.Fail(req, ErrMissingParam,
 			"Required parameter 'what' is missing",
 			"Add the 'what' parameter and call again",
 			withParam("what"),

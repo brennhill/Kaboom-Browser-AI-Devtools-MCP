@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // failReader always returns an error on Read.
@@ -67,7 +68,7 @@ func TestMCPHandler_PassiveTelemetrySummaryDeltas(t *testing.T) {
 			return JSONRPCResponse{
 				JSONRPC: "2.0",
 				ID:      req.ID,
-				Result:  mcpTextResponse("ok"),
+				Result:  mcp.TextResponse("ok"),
 			}, true
 		},
 	})
@@ -156,7 +157,7 @@ func TestMCPHandler_PassiveTelemetryIsPerClient(t *testing.T) {
 			return JSONRPCResponse{
 				JSONRPC: "2.0",
 				ID:      req.ID,
-				Result:  mcpTextResponse("ok"),
+				Result:  mcp.TextResponse("ok"),
 			}, true
 		},
 	})
@@ -232,7 +233,7 @@ func TestMCPHandler_PassiveTelemetryModeFullIncludesSummaryWithoutChanges(t *tes
 			if name != "observe" {
 				return JSONRPCResponse{}, false
 			}
-			return JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcpTextResponse("ok")}, true
+			return JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.TextResponse("ok")}, true
 		},
 	})
 
@@ -273,7 +274,7 @@ func TestMCPHandler_PassiveTelemetryModeOffSuppressesTelemetryMetadata(t *testin
 			if name != "observe" {
 				return JSONRPCResponse{}, false
 			}
-			return JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcpTextResponse("ok")}, true
+			return JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.TextResponse("ok")}, true
 		},
 	})
 
@@ -320,7 +321,7 @@ func TestMCPHandler_PassiveTelemetryModePerCallOverride(t *testing.T) {
 			if name != "observe" {
 				return JSONRPCResponse{}, false
 			}
-			return JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcpTextResponse("ok")}, true
+			return JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.TextResponse("ok")}, true
 		},
 	})
 

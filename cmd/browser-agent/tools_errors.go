@@ -75,7 +75,7 @@ func appendCanonicalWhatAliasWarning(resp JSONRPCResponse, aliasParam, mode, dep
 	} else {
 		warning = fmt.Sprintf("Accepted alias parameter '%s'; canonical parameter is 'what' (use what=%q).", aliasParam, mode)
 	}
-	return appendWarningsToResponse(resp, []string{warning})
+	return mcp.AppendWarningsToResponse(resp, []string{warning})
 }
 
 func whatAliasConflictResponse(req JSONRPCRequest, aliasParam, whatValue, aliasValue, validValues string) JSONRPCResponse {
@@ -83,7 +83,7 @@ func whatAliasConflictResponse(req JSONRPCRequest, aliasParam, whatValue, aliasV
 	if strings.TrimSpace(validValues) != "" {
 		hint += " Valid values: " + validValues
 	}
-	return fail(req, ErrInvalidParam,
+	return mcp.Fail(req, ErrInvalidParam,
 		fmt.Sprintf("Conflicting parameters: what=%q and %s=%q", whatValue, aliasParam, aliasValue),
 		"Send only the canonical 'what' parameter and retry.",
 		withParam("what"), withHint(hint),
