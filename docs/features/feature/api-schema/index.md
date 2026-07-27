@@ -6,7 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-27
 code_paths:
-  - cmd/browser-agent/tools_core_accessors.go
+  - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/server_routes.go
   - internal/analysis/apicontract/contract.go
   - internal/analysis/apicontract/runtime_handler.go
@@ -82,7 +82,7 @@ Observed-traffic API schema inference (`observe {what: "api"}`):
 
 - Schema inference and OpenAPI emission: `internal/analysis/apischema/`
 - Contract learning and violation reporting: `internal/analysis/apicontract/`
-- MCP tool-list adapter: `cmd/browser-agent/tools_core_accessors.go`
+- MCP tool-list adapter: `cmd/browser-agent/tools_core.go`
 - OpenAPI HTTP route: `cmd/browser-agent/server_routes.go`
 
 MCP tool schemas (the `tools/list` contract, `internal/schema`):
@@ -93,7 +93,7 @@ MCP tool schemas (the `tools/list` contract, `internal/schema`):
 - Interact tool schema, property groups, and canonical action registry: `internal/schema/interact/`
   (`interact.ActionSpecs` is the single source of truth consumed by `internal/tools/configure`
   for `describe_capabilities` mode specs)
-- Daemon delegation: `cmd/browser-agent/tools_core_accessors.go`
+- Daemon delegation: `cmd/browser-agent/tools_core.go`
 - Claude-API schema invariants (no top-level/nested combiners, valid JSON round-trip): `internal/schema/invariants_test.go`
 - Interact enum/alias/registry invariants: `internal/schema/interact/schema_test.go`
 - Schema/runtime dispatch parity: `cmd/browser-agent/tools_schema_parity_test.go`

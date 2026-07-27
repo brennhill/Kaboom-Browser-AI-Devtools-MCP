@@ -57,7 +57,7 @@ code_paths:
   - cmd/browser-agent/internal/asyncresult/lifecycle.go
   - cmd/browser-agent/tools_async_completion.go
   - cmd/browser-agent/internal/summarypref/cache.go
-  - cmd/browser-agent/tools_core_accessors.go
+  - cmd/browser-agent/tools_core.go
 test_paths:
   - cmd/browser-agent/internal/summarypref/cache_test.go
   - cmd/browser-agent/tools_summary_pref_test.go

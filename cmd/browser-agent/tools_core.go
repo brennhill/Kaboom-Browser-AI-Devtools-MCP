@@ -27,6 +27,9 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
@@ -288,4 +291,82 @@ func isToolResultError(raw json.RawMessage) bool {
 		return false
 	}
 	return result.IsError
+}
+
+// Close cancels readiness gates and other in-flight work owned by this handler.
+func (h *ToolHandler) Close() {
+	if h.shutdownCancel != nil {
+		h.shutdownCancel()
+	}
+}
+
+func (h *ToolHandler) GetCapture() *capture.Store {
+	return h.capture
+}
+
+func (h *ToolHandler) GetLogEntries() ([]LogEntry, []time.Time) {
+	return h.server.logs.EntriesWithAddedAt()
+}
+
+func (h *ToolHandler) GetLogTotalAdded() int64 {
+	return h.server.logs.TotalAdded()
+}
+
+func (h *ToolHandler) ToolsList() []MCPTool {
+	return schema.AllTools()
+}
+
+func (h *ToolHandler) summaryPreference() *summarypref.Cache {
+	if h.summaryPrefs == nil {
+		return summarypref.New(nil)
+	}
+	return h.summaryPrefs
+}
+
+func (h *ToolHandler) loadSummaryPref() bool {
+	return h.summaryPreference().Enabled()
+}
+
+func (h *ToolHandler) invalidateSummaryPref() {
+	h.summaryPreference().Invalidate()
+}
+
+func (h *ToolHandler) maybeInjectSummary(args json.RawMessage) json.RawMessage {
+	return h.summaryPreference().Inject(args)
+}
+
+func (h *ToolHandler) armEvidenceForCommand(correlationID, action string, args json.RawMessage, clientID string) {
+	h.interactAction().ArmEvidenceForCommand(correlationID, action, args, clientID)
+}
+
+func (h *ToolHandler) getCommandResult(correlationID string) (*queries.CommandResult, bool) {
+	return h.capture.GetCommandResult(correlationID)
+}
+
+func (h *ToolHandler) IsExtensionConnected() bool {
+	return h.capture.IsExtensionConnected()
+}
+
+func (h *ToolHandler) PushInbox() *push.PushInbox {
+	return h.server.pushInbox
+}
+
+func (h *ToolHandler) GetAnnotationStore() *AnnotationStore {
+	return h.annotationStore
+}
+
+func (h *ToolHandler) GetVersion() string {
+	return version
+}
+
+func (h *ToolHandler) GetToolCallLimiter() RateLimiter {
+	return h.toolCallLimiter
+}
+
+func (h *ToolHandler) GetRedactionEngine() RedactionEngine {
+	return h.redactionEngine
+}
+
+func (h *ToolHandler) testGen() *testgenhandler.Handler {
+	return h.testGenHandler
 }
