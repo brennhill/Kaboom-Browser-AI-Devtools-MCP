@@ -397,9 +397,7 @@ func (h *ToolHandler) toolGetAuditLog(req mcp.JSONRPCRequest, args json.RawMessa
 
 	switch result.Operation {
 	case "clear":
-		h.auditMu.Lock()
-		h.auditSessionMap = make(map[string]string)
-		h.auditMu.Unlock()
+		h.auditRecorder.ResetSessions()
 		return mcp.Succeed(req, "Audit log cleared", map[string]any{
 			"status": "ok", "operation": result.Operation, "cleared": result.Cleared,
 		})

@@ -4,11 +4,11 @@ feature_id: feature-enterprise-audit
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
   - internal/session/runtime_reader.go
   - cmd/browser-agent/tools_core.go
-  - cmd/browser-agent/tools_session_audit_recording.go
+  - internal/audit/recorder.go
   - internal/analysis/thirdparty/audit.go
   - internal/analysis/thirdparty/entries.go
   - internal/analysis/thirdparty/origins.go
@@ -16,6 +16,9 @@ code_paths:
   - internal/analysis/thirdparty/summary.go
   - internal/audit/audit_trail.go
 test_paths:
+  - internal/audit/audit_trail_test.go
+  - cmd/browser-agent/tools_configure_audit_test.go
+  - cmd/browser-agent/tools_configure_wave_abc_tdd_test.go
   - internal/session/runtime_reader_test.go
   - internal/analysis/thirdparty/audit_test.go
 last_verified_version: 0.7.12
@@ -45,4 +48,6 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-Add concrete implementation and test links here as this feature evolves.
+`internal/audit/recorder.go` owns tool-call filtering, error interpretation,
+per-client audit sessions, and session reset. `ToolHandler` retains only the
+canonical recorder and trail references needed by dispatch and configure.

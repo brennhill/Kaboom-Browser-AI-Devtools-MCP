@@ -83,10 +83,7 @@ type ToolHandler struct {
 	thirdPartyAuditorImpl *thirdparty.ThirdPartyAuditor
 	sessionManager        *session.SessionManager
 	auditTrail            *audit.Trail
-
-	// Per-client audit session mapping (client_id -> session_id).
-	auditMu         sync.Mutex
-	auditSessionMap map[string]string
+	auditRecorder         *audit.Recorder
 
 	// Draw mode annotation store (in-memory, TTL-based)
 	annotationStore *annotation.Store
@@ -206,7 +203,7 @@ func (h *ToolHandler) HandleToolCall(req mcp.JSONRPCRequest, name string, args j
 	// Piggyback push inbox hint if events are pending
 	resp = h.appendPushPiggyback(resp)
 
-	h.recordAuditToolCall(req, name, args, resp, start)
+	h.auditRecorder.Record(req, name, args, resp, start)
 
 	// Usage tracker: per-call telemetry beaconed immediately + aggregated every 5 min.
 	// Separate from healthMetrics — different lifecycle and purpose.
@@ -476,7 +473,7 @@ func NewToolHandler(server *Server, captureStore *capture.Store) *MCPHandler {
 		Enabled:      true,
 		RedactParams: true,
 	})
-	handler.auditSessionMap = make(map[string]string)
+	handler.auditRecorder = audit.NewRecorder(handler.auditTrail)
 
 	handler.uploadSecurity = uploadSecurityConfig
 	handler.recordingInteractHandler = screenrec.NewInteractHandler(handler.screenrecDeps())
