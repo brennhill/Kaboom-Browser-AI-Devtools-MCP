@@ -78,7 +78,6 @@ test_paths:
   - cmd/browser-agent/server_routes_unit_test.go
   - cmd/browser-agent/server_routes_debug_usage_test.go
   - cmd/browser-agent/dashboard_test.go
-  - cmd/browser-agent/main_connection_diag_test.go
   - cmd/browser-agent/exit_diagnostics_test.go
   - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
   - cmd/browser-agent/internal/bridge/bridge_detach_stdio_test.go
@@ -109,6 +108,11 @@ last_verified_date: 2026-03-29
 ---
 
 # MCP Persistent Server
+
+> **2026-07-27:** Removed the unreachable `main_connection_diag.go`
+> connection-probing path and its dedicated tests. No production caller invoked
+> it. Two unrelated stop-mode tests in the same file were also obsolete because
+> they asserted human diagnostics on protocol stdout.
 
 ## TL;DR
 - Status: shipped

@@ -257,7 +257,6 @@ Files with too many lines of code (limit: 600 lines)
 - Line 291: Method handleCIWebhook has 65 lines of code (limit is 50)
 
 **cmd/browser-agent/main_connection.go** (1 issues)
-- Line 317: Method gatherConnectionDiagnostics has 104 lines of code (limit is 50)
 
 **cmd/browser-agent/mcp_protocol_test.go** (1 issues)
 - Line 512: Method TestMCPProtocol_ToolsListStructure has 58 lines of code (limit is 50)
@@ -322,4 +321,3 @@ Files with too many lines of code (limit: 600 lines)
 
 **src/popup.ts** (1 issues)
 - Line 61: Method updateConnectionStatus has 58 lines of code (limit is 50)
-
