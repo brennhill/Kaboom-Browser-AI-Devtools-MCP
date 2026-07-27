@@ -10,8 +10,10 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/combinedaudit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/inspect"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/visual"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
@@ -41,9 +43,9 @@ var analyzeHandlers = map[string]ModeHandler{
 	"form_state":        azInspect(inspect.HandleFormState),
 	"form_validation":   azInspect(inspect.HandleFormValidation),
 	"data_table":        azInspect(inspect.HandleDataTable),
-	"visual_baseline":   method((*ToolHandler).toolVisualBaseline),
-	"visual_diff":       method((*ToolHandler).toolVisualDiff),
-	"visual_baselines":  method((*ToolHandler).toolListVisualBaselines),
+	"visual_baseline":   azVisual(visual.SaveBaseline),
+	"visual_diff":       azVisual(visual.DiffBaseline),
+	"visual_baselines":  azVisual(visual.ListBaselines),
 	"navigation":        azLocal(toolanalyze.HandleNavigation),
 	"page_structure":    azLocal(toolanalyze.HandlePageStructure),
 	"audit": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
@@ -75,6 +77,30 @@ func azInspect(fn func(inspect.Deps, JSONRPCRequest, json.RawMessage) JSONRPCRes
 	return func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 		return fn(h, req, args)
 	}
+}
+
+func azVisual(fn func(visual.Deps, JSONRPCRequest, json.RawMessage) JSONRPCResponse) ModeHandler {
+	return func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		return fn(visualAnalyzeDeps{h: h}, req, args)
+	}
+}
+
+type visualAnalyzeDeps struct{ h *ToolHandler }
+
+func (d visualAnalyzeDeps) CaptureScreenshot(req JSONRPCRequest) JSONRPCResponse {
+	return observe.GetScreenshot(d.h, req, json.RawMessage(`{}`))
+}
+
+func (d visualAnalyzeDeps) GetTrackingStatus() (bool, int, string) {
+	return d.h.capture.GetTrackingStatus()
+}
+
+func (d visualAnalyzeDeps) HasSessionStore() bool {
+	return d.h.sessionStoreImpl != nil
+}
+
+func (d visualAnalyzeDeps) HandleSessionStore(args persistence.SessionStoreArgs) (json.RawMessage, error) {
+	return d.h.sessionStoreImpl.HandleSessionStore(args)
 }
 
 // getValidAnalyzeModes returns a sorted, comma-separated list of valid analyze modes.

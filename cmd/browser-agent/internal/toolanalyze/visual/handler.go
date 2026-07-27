@@ -1,8 +1,8 @@
-// Purpose: Implements visual regression analyze modes (visual_baseline, visual_diff, visual_baselines).
+// handler.go — Implements visual regression analyze modes.
 // Why: Isolates screenshot-baseline and image diff behavior from other inspect analysis paths.
 // Docs: docs/features/feature/analyze-tool/index.md
 
-package main
+package visual
 
 import (
 	"encoding/json"
@@ -10,35 +10,38 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	az "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/analyze"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/analyze/imagediff"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 )
 
-// ============================================
-// Visual Regression (#82)
-// ============================================
+type Deps interface {
+	CaptureScreenshot(req mcp.JSONRPCRequest) mcp.JSONRPCResponse
+	GetTrackingStatus() (bool, int, string)
+	HasSessionStore() bool
+	HandleSessionStore(args persistence.SessionStoreArgs) (json.RawMessage, error)
+}
 
-func (h *ToolHandler) toolVisualBaseline(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func SaveBaseline(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	parsed, err := az.ParseVisualBaselineArgs(args)
 	if err != nil {
-		return fail(req, ErrMissingParam, err.Error(), "Add the 'name' parameter for the baseline", withParam("name"))
+		return mcp.Fail(req, mcp.ErrMissingParam, err.Error(), "Add the 'name' parameter for the baseline", mcp.WithParam("name"))
 	}
 
-	screenshotResp := observe.GetScreenshot(h, req, json.RawMessage(`{}`))
-	if isErrorResponse(screenshotResp) {
+	screenshotResp := d.CaptureScreenshot(req)
+	if responseIsError(screenshotResp) {
 		return screenshotResp
 	}
 
 	screenshotPath := extractScreenshotPath(screenshotResp)
 	if screenshotPath == "" {
-		return fail(req, ErrExtError, "Screenshot captured but path not available", "Try again or check extension connection")
+		return mcp.Fail(req, mcp.ErrExtError, "Screenshot captured but path not available", "Try again or check extension connection")
 	}
 
 	now := time.Now()
-	_, _, trackedURL := h.capture.GetTrackingStatus()
+	_, _, trackedURL := d.GetTrackingStatus()
 	metadata := az.BaselineMetadata{
 		Path:      screenshotPath,
 		URL:       trackedURL,
@@ -48,19 +51,19 @@ func (h *ToolHandler) toolVisualBaseline(req JSONRPCRequest, args json.RawMessag
 	}
 	metadataJSON, _ := json.Marshal(metadata)
 
-	if h.sessionStoreImpl != nil {
+	if d.HasSessionStore() {
 		storeArgs := persistence.SessionStoreArgs{
 			Action:    "save",
 			Namespace: "visual_baselines",
 			Key:       parsed.Name,
 			Data:      metadataJSON,
 		}
-		if _, err := h.sessionStoreImpl.HandleSessionStore(storeArgs); err != nil {
-			return fail(req, ErrInvalidParam, "Failed to store baseline: "+err.Error(), "Check session store configuration")
+		if _, err := d.HandleSessionStore(storeArgs); err != nil {
+			return mcp.Fail(req, mcp.ErrInvalidParam, "Failed to store baseline: "+err.Error(), "Check session store configuration")
 		}
 	}
 
-	return succeed(req, "Visual baseline saved", map[string]any{
+	return mcp.Succeed(req, "Visual baseline saved", map[string]any{
 		"status":   "saved",
 		"name":     parsed.Name,
 		"path":     screenshotPath,
@@ -69,14 +72,14 @@ func (h *ToolHandler) toolVisualBaseline(req JSONRPCRequest, args json.RawMessag
 	})
 }
 
-func (h *ToolHandler) toolVisualDiff(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func DiffBaseline(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	parsed, err := az.ParseVisualDiffArgs(args)
 	if err != nil {
-		return fail(req, ErrMissingParam, err.Error(), "Add the 'baseline' parameter with the baseline name", withParam("baseline"))
+		return mcp.Fail(req, mcp.ErrMissingParam, err.Error(), "Add the 'baseline' parameter with the baseline name", mcp.WithParam("baseline"))
 	}
 
-	if resp, blocked := h.requireSessionStore(req); blocked {
-		return resp
+	if !d.HasSessionStore() {
+		return mcp.Fail(req, mcp.ErrNotInitialized, "Session store not initialized", "Internal error — do not retry")
 	}
 
 	loadArgs := persistence.SessionStoreArgs{
@@ -84,9 +87,9 @@ func (h *ToolHandler) toolVisualDiff(req JSONRPCRequest, args json.RawMessage) J
 		Namespace: "visual_baselines",
 		Key:       parsed.Baseline,
 	}
-	loadResult, err := h.sessionStoreImpl.HandleSessionStore(loadArgs)
+	loadResult, err := d.HandleSessionStore(loadArgs)
 	if err != nil {
-		return fail(req, ErrInvalidParam, "Baseline '"+parsed.Baseline+"' not found: "+err.Error(), "Save a baseline first with analyze(what='visual_baseline', name='"+parsed.Baseline+"')")
+		return mcp.Fail(req, mcp.ErrInvalidParam, "Baseline '"+parsed.Baseline+"' not found: "+err.Error(), "Save a baseline first with analyze(what='visual_baseline', name='"+parsed.Baseline+"')")
 	}
 
 	var storeResp struct {
@@ -96,22 +99,22 @@ func (h *ToolHandler) toolVisualDiff(req JSONRPCRequest, args json.RawMessage) J
 
 	var baseline az.BaselineMetadata
 	if err := json.Unmarshal(storeResp.Data, &baseline); err != nil {
-		return fail(req, ErrInvalidJSON, "Failed to parse baseline metadata: "+err.Error(), "Re-save the baseline")
+		return mcp.Fail(req, mcp.ErrInvalidJSON, "Failed to parse baseline metadata: "+err.Error(), "Re-save the baseline")
 	}
 
-	screenshotResp := observe.GetScreenshot(h, req, json.RawMessage(`{}`))
-	if isErrorResponse(screenshotResp) {
+	screenshotResp := d.CaptureScreenshot(req)
+	if responseIsError(screenshotResp) {
 		return screenshotResp
 	}
 
 	currentPath := extractScreenshotPath(screenshotResp)
 	if currentPath == "" {
-		return fail(req, ErrExtError, "Current screenshot path not available", "Try again")
+		return mcp.Fail(req, mcp.ErrExtError, "Current screenshot path not available", "Try again")
 	}
 
 	diffResult, err := imagediff.CompareImages(baseline.Path, currentPath, parsed.Threshold)
 	if err != nil {
-		return fail(req, ErrExtError, "Image comparison failed: "+err.Error(), "Check that baseline image exists at: "+baseline.Path)
+		return mcp.Fail(req, mcp.ErrExtError, "Image comparison failed: "+err.Error(), "Check that baseline image exists at: "+baseline.Path)
 	}
 
 	var diffPath string
@@ -154,33 +157,33 @@ func (h *ToolHandler) toolVisualDiff(req JSONRPCRequest, args json.RawMessage) J
 		}
 	}
 
-	return succeed(req, "Visual diff complete", response)
+	return mcp.Succeed(req, "Visual diff complete", response)
 }
 
-func (h *ToolHandler) toolListVisualBaselines(req JSONRPCRequest, _ json.RawMessage) JSONRPCResponse {
-	if resp, blocked := h.requireSessionStore(req); blocked {
-		return resp
+func ListBaselines(d Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+	if !d.HasSessionStore() {
+		return mcp.Fail(req, mcp.ErrNotInitialized, "Session store not initialized", "Internal error — do not retry")
 	}
 
 	listArgs := persistence.SessionStoreArgs{
 		Action:    "list",
 		Namespace: "visual_baselines",
 	}
-	listResult, err := h.sessionStoreImpl.HandleSessionStore(listArgs)
+	listResult, err := d.HandleSessionStore(listArgs)
 	if err != nil {
-		return fail(req, ErrInvalidParam, "Failed to list baselines: "+err.Error(), "Check session store")
+		return mcp.Fail(req, mcp.ErrInvalidParam, "Failed to list baselines: "+err.Error(), "Check session store")
 	}
 
 	var listData map[string]any
 	if err := json.Unmarshal(listResult, &listData); err != nil {
 		listData = map[string]any{"raw": string(listResult)}
 	}
-	return succeed(req, "Visual baselines", listData)
+	return mcp.Succeed(req, "Visual baselines", listData)
 }
 
 // extractScreenshotPath extracts the file path from a screenshot response.
-func extractScreenshotPath(resp JSONRPCResponse) string {
-	var result MCPToolResult
+func extractScreenshotPath(resp mcp.JSONRPCResponse) string {
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil || len(result.Content) == 0 {
 		return ""
 	}
@@ -207,4 +210,9 @@ func extractScreenshotPath(resp JSONRPCResponse) string {
 		}
 	}
 	return ""
+}
+
+func responseIsError(resp mcp.JSONRPCResponse) bool {
+	var result mcp.MCPToolResult
+	return json.Unmarshal(resp.Result, &result) != nil || result.IsError
 }

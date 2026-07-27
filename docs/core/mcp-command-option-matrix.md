@@ -93,9 +93,9 @@ All 5 tools use `what` as the primary dispatch parameter. `action`, `mode`, and 
 | `form_state` | `toolFormState` | Current values of form fields |
 | `form_validation` | `toolFormValidation` | Validation state of form fields |
 | `data_table` | `toolDataTable` | Extract tabular data from the page |
-| `visual_baseline` | `toolVisualBaseline` | Capture a visual baseline screenshot |
-| `visual_diff` | `toolVisualDiff` | Compare current page against a baseline |
-| `visual_baselines` | `toolListVisualBaselines` | List all saved visual baselines |
+| `visual_baseline` | `visual.SaveBaseline` | Capture a visual baseline screenshot |
+| `visual_diff` | `visual.DiffBaseline` | Compare current page against a baseline |
+| `visual_baselines` | `visual.ListBaselines` | List all saved visual baselines |
 | `navigation` | `toolAnalyzeNavigation` | Analyze navigation structure |
 | `page_structure` | `toolAnalyzePageStructure` | Analyze semantic page structure |
 | `audit` | `combinedaudit.Handle` | Multi-category Lighthouse-style audit |
