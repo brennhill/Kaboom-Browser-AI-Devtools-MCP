@@ -6,7 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-27
 code_paths:
-  - cmd/browser-agent/internal/toolinteract/interact_browser.go
+  - cmd/browser-agent/internal/toolinteract/interact_storage.go
 test_paths:
   - cmd/browser-agent/internal/toolinteract/interact_storage_test.go
 last_verified_version: 0.7.12

@@ -1,8 +1,7 @@
-// interact_action_handler.go — InteractActionHandler: the type every interact action
-// hangs off, its jitter policy, and the response enrichment applied on the way out
-// (screenshot, interactive elements, page context, workflow trace).
-// Why one file: enrichment is not a subsystem — it is what this handler does to a
-// response before returning it, and it reads only h.deps.
+// interact_action_handler.go — InteractActionHandler state, retry policy, jitter,
+// and response enrichment applied on the way out.
+// Why one file: these policies share the handler's mutex-protected lifecycle state
+// and decorate every command response through the same boundary.
 // Docs: docs/features/feature/interact-explore/index.md
 
 package toolinteract
@@ -46,6 +45,282 @@ func NewInteractActionHandler(deps *Deps) *InteractActionHandler {
 		retryByCommand:       make(map[string]*commandRetryState),
 		elementIndexRegistry: elemindex.New(),
 	}
+}
+
+const maxRetryAttemptsPerStep = 2
+
+type commandRetryState struct {
+	Attempt             int
+	MaxAttempts         int
+	Action              string
+	Strategy            string
+	StrategyFingerprint string
+	ChangedStrategy     bool
+	PolicyViolation     string
+	ParentCorrelationID string
+	CreatedAt           time.Time
+}
+
+type retryTerminalDecision struct {
+	Terminal bool
+	Cause    string
+}
+
+func parseRetryParentCorrelationID(args json.RawMessage) string {
+	var params struct {
+		CorrelationID string `json:"correlation_id"`
+	}
+	lenientUnmarshal(args, &params)
+	return strings.TrimSpace(params.CorrelationID)
+}
+
+func deriveRetryStrategy(action string, args json.RawMessage) (strategy string, fingerprint string) {
+	var payload map[string]any
+	lenientUnmarshal(args, &payload)
+
+	fingerprintFields := map[string]any{
+		"action": strings.ToLower(strings.TrimSpace(action)),
+	}
+	for _, key := range []string{
+		"selector",
+		"scope_selector",
+		"scope_rect",
+		"annotation_rect",
+		"element_id",
+		"index",
+		"frame",
+		"world",
+		"text",
+		"value",
+		"wait_for",
+	} {
+		if value, ok := payload[key]; ok {
+			fingerprintFields[key] = value
+		}
+	}
+	fingerprint = stableMarshalForRetry(fingerprintFields)
+
+	switch {
+	case payload["element_id"] != nil:
+		return "element_handle", fingerprint
+	case payload["scope_selector"] != nil || payload["scope_rect"] != nil || payload["annotation_rect"] != nil:
+		return "scoped_selector", fingerprint
+	case payload["frame"] != nil:
+		return "frame_targeted", fingerprint
+	case payload["selector"] != nil:
+		return "selector", fingerprint
+	case payload["index"] != nil:
+		return "indexed", fingerprint
+	case payload["world"] != nil:
+		return "world_switch", fingerprint
+	default:
+		return "default", fingerprint
+	}
+}
+
+func stableMarshalForRetry(value map[string]any) string {
+	if value == nil {
+		return ""
+	}
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		return ""
+	}
+	return string(encoded)
+}
+
+func (h *InteractActionHandler) armRetryContract(correlationID, action string, args json.RawMessage) {
+	if h == nil || correlationID == "" {
+		return
+	}
+
+	if action == "" {
+		action = canonicalActionFromInteractArgs(args)
+	}
+	action = strings.ToLower(strings.TrimSpace(action))
+	strategy, fingerprint := deriveRetryStrategy(action, args)
+	parentCorrelationID := parseRetryParentCorrelationID(args)
+
+	state := &commandRetryState{
+		Attempt:             1,
+		MaxAttempts:         maxRetryAttemptsPerStep,
+		Action:              action,
+		Strategy:            strategy,
+		StrategyFingerprint: fingerprint,
+		ChangedStrategy:     true,
+		ParentCorrelationID: parentCorrelationID,
+		CreatedAt:           time.Now(),
+	}
+
+	if parentCorrelationID != "" {
+		if parent, ok := h.getRetryState(parentCorrelationID); ok {
+			state.Attempt = parent.Attempt + 1
+			if state.Attempt > state.MaxAttempts {
+				state.Attempt = state.MaxAttempts
+				state.PolicyViolation = "attempt_limit_exceeded"
+			}
+			state.ChangedStrategy = state.StrategyFingerprint != parent.StrategyFingerprint
+			if !state.ChangedStrategy {
+				state.PolicyViolation = "strategy_unchanged"
+			}
+		} else {
+			state.Attempt = 2
+			state.PolicyViolation = "parent_context_missing"
+		}
+	}
+
+	h.storeRetryState(correlationID, state)
+}
+
+func (h *InteractActionHandler) getRetryState(correlationID string) (*commandRetryState, bool) {
+	h.retryContractMu.Lock()
+	defer h.retryContractMu.Unlock()
+	state, ok := h.retryByCommand[correlationID]
+	return state, ok
+}
+
+func (h *InteractActionHandler) storeRetryState(correlationID string, state *commandRetryState) {
+	h.retryContractMu.Lock()
+	defer h.retryContractMu.Unlock()
+
+	if h.retryByCommand == nil {
+		h.retryByCommand = make(map[string]*commandRetryState)
+	}
+	h.retryByCommand[correlationID] = state
+	h.pruneRetryStatesLocked(2048)
+}
+
+func (h *InteractActionHandler) pruneRetryStatesLocked(maxEntries int) {
+	if len(h.retryByCommand) <= maxEntries {
+		return
+	}
+
+	var oldestKey string
+	var oldestTime time.Time
+	for key, state := range h.retryByCommand {
+		if oldestKey == "" || state.CreatedAt.Before(oldestTime) {
+			oldestKey = key
+			oldestTime = state.CreatedAt
+		}
+	}
+	if oldestKey != "" {
+		delete(h.retryByCommand, oldestKey)
+	}
+}
+
+func deriveRetryReason(responseData map[string]any, fallback string) string {
+	if responseData != nil {
+		if code, ok := responseData["error_code"].(string); ok && strings.TrimSpace(code) != "" {
+			return strings.TrimSpace(code)
+		}
+		if errorCode, ok := responseData["error"].(string); ok && strings.TrimSpace(errorCode) != "" {
+			return strings.TrimSpace(errorCode)
+		}
+	}
+	if strings.TrimSpace(fallback) != "" {
+		return strings.TrimSpace(fallback)
+	}
+	return "unknown"
+}
+
+func (h *InteractActionHandler) AttachRetryContext(correlationID string, responseData map[string]any, status string, fallbackReason string) retryTerminalDecision {
+	if h == nil || correlationID == "" || responseData == nil {
+		return retryTerminalDecision{}
+	}
+
+	state, ok := h.getRetryState(correlationID)
+	if !ok || state == nil {
+		return retryTerminalDecision{}
+	}
+
+	reason := deriveRetryReason(responseData, fallbackReason)
+	if strings.EqualFold(status, "complete") && reason == "unknown" {
+		reason = "success"
+	}
+
+	retryContext := map[string]any{
+		"attempt":          state.Attempt,
+		"max_attempts":     state.MaxAttempts,
+		"strategy":         state.Strategy,
+		"changed_strategy": state.ChangedStrategy,
+		"reason":           reason,
+	}
+	if state.ParentCorrelationID != "" {
+		retryContext["parent_correlation_id"] = state.ParentCorrelationID
+	}
+	if state.PolicyViolation != "" {
+		retryContext["policy_violation"] = state.PolicyViolation
+	}
+
+	decision := retryTerminalDecision{}
+	failureStatus := status == "error" || status == "timeout" || status == "expired" || status == "cancelled"
+	if failureStatus {
+		if state.Attempt >= state.MaxAttempts {
+			decision.Terminal = true
+			decision.Cause = "max_attempts_reached"
+		}
+		if state.Attempt > 1 && !state.ChangedStrategy {
+			decision.Terminal = true
+			decision.Cause = "strategy_not_changed"
+		}
+	}
+
+	retryContext["terminal_stop"] = decision.Terminal
+	if decision.Cause != "" {
+		retryContext["terminal_cause"] = decision.Cause
+	}
+	responseData["retry_context"] = retryContext
+
+	if !failureStatus {
+		return decision
+	}
+
+	if decision.Terminal {
+		responseData["terminal"] = true
+		responseData["retryable"] = false
+		if _, exists := responseData["retry"]; !exists {
+			responseData["retry"] = "Terminal after two attempts. Stop retrying this step and report evidence_summary."
+		}
+		responseData["evidence_summary"] = buildRetryEvidenceSummary(correlationID, reason, retryContext, responseData)
+		return decision
+	}
+
+	if _, exists := responseData["retryable"]; !exists {
+		responseData["retryable"] = true
+	}
+	if _, exists := responseData["retry"]; !exists {
+		responseData["retry"] = "Retry once with a changed strategy (scope_selector/scope_rect/element_id/index/frame/world). If the second attempt fails, stop and report evidence_summary."
+	}
+
+	return decision
+}
+
+func buildRetryEvidenceSummary(correlationID, reason string, retryContext map[string]any, responseData map[string]any) map[string]any {
+	summary := map[string]any{
+		"correlation_id": correlationID,
+		"failure_reason": reason,
+		"next_action":    "Stop retries for this step and report this bundle.",
+		"required": []string{
+			"command_result",
+			"screenshot",
+			"scoped_list_interactive_output",
+		},
+	}
+
+	if retryContext != nil {
+		summary["retry_context"] = retryContext
+	}
+	if responseData != nil {
+		if evidence, ok := responseData["evidence"]; ok {
+			summary["captured_evidence"] = evidence
+		}
+		if url, ok := responseData["effective_url"].(string); ok && strings.TrimSpace(url) != "" {
+			summary["url"] = url
+		} else if url, ok := responseData["resolved_url"].(string); ok && strings.TrimSpace(url) != "" {
+			summary["url"] = url
+		}
+	}
+	return summary
 }
 
 // SetJitter sets the maximum jitter delay in milliseconds.

@@ -11,10 +11,10 @@ code_paths:
   - cmd/browser-agent/internal/toolinteract/interact_command_builder.go
   - cmd/browser-agent/internal/toolinteract/interact_browser.go
   - cmd/browser-agent/internal/toolinteract/interact_dom.go
+  - cmd/browser-agent/internal/toolinteract/interact_storage.go
   - cmd/browser-agent/internal/toolinteract/interact_page.go
   - cmd/browser-agent/internal/toolinteract/interact_workflow.go
   - cmd/browser-agent/internal/toolinteract/interact_evidence.go
-  - cmd/browser-agent/internal/toolinteract/interact_retry_contract.go
   - cmd/browser-agent/internal/toolinteract/interact_batch.go
   - cmd/browser-agent/internal/toolinteract/elemindex/registry.go
   - cmd/browser-agent/tools_interact_adapter.go
