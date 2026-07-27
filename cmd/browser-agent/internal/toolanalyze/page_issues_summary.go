@@ -93,14 +93,15 @@ func collectAllIssuesFlat(sections map[string]any) []flatIssue {
 			all = append(all, flatIssue{
 				category: category,
 				severity: sev,
-				message:  extractIssueMessage(issue),
+				message:  ExtractIssueMessage(issue),
 			})
 		}
 	}
 	return all
 }
 
-func extractIssueMessage(issue map[string]any) string {
+// ExtractIssueMessage returns the first populated human-readable issue field.
+func ExtractIssueMessage(issue map[string]any) string {
 	for _, key := range []string{"message", "title", "description", "rule", "url"} {
 		if v, ok := issue[key].(string); ok && v != "" {
 			return v
