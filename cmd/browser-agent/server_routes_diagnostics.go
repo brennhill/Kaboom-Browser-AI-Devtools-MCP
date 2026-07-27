@@ -1,15 +1,103 @@
-// Purpose: Implements diagnostics response assembly for /diagnostics endpoints.
-// Why: Keeps debug payload shaping separate from health/shutdown endpoint behavior.
+// server_routes_diagnostics.go — Serves operational health, diagnostics, and shutdown routes.
 
 package main
 
 import (
 	"net/http"
+	"os"
 	"runtime"
+	"syscall"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
+
+const shutdownSignalDelay = 100 * time.Millisecond
+
+func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request, cap *capture.Store) {
+	if r.Method != http.MethodGet {
+		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		return
+	}
+	logFileSize := int64(0)
+	if info, err := os.Stat(s.logs.LogFile()); err == nil {
+		logFileSize = info.Size()
+	}
+	response := map[string]any{
+		"status": "ok", "service-name": mcpServerName, "name": mcpServerName, "version": version,
+		"logs": map[string]any{
+			"entries": s.logs.EntryCount(), "max_entries": s.logs.MaxEntries(),
+			"log_file": s.logs.LogFile(), "log_file_size": logFileSize, "dropped_count": s.logs.DropCount(),
+		},
+	}
+	s.addTerminalHealth(response)
+	successReads, failedReads := bridge.SnapshotFastPathResourceReadCounters()
+	response["bridge_fastpath"] = map[string]any{"resources_read_success": successReads, "resources_read_failure": failedReads}
+	if availableVersion := getAvailableVersion(); availableVersion != "" {
+		response["available_version"] = availableVersion
+	}
+	if info := buildUpgradeInfo(); info != nil {
+		response["upgrade_pending"] = info
+	}
+	if cap != nil {
+		extension := cap.GetExtensionStatus()
+		pilot, _ := cap.GetPilotStatus().(map[string]any)
+		pilotState, _ := pilot["state"].(string)
+		securityMode, productionParity, rewrites := cap.GetSecurityMode()
+		response["capture"] = map[string]any{
+			"available": true, "pilot_enabled": cap.IsPilotActionAllowed(), "pilot_state": pilotState,
+			"extension_connected": cap.IsExtensionConnected(), "extension_last_seen": extension["last_seen"],
+			"extension_client_id": extension["client_id"], "security_mode": securityMode,
+			"production_parity": productionParity, "insecure_rewrites": rewrites,
+		}
+	}
+	jsonResponse(w, http.StatusOK, response)
+}
+
+func (s *Server) handleShutdown(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		return
+	}
+	_ = s.logs.AppendToFile([]LogEntry{{
+		"type": "lifecycle", "event": "shutdown_requested", "source": "http",
+		"pid": os.Getpid(), "timestamp": time.Now().UTC().Format(time.RFC3339),
+	}})
+	jsonResponse(w, http.StatusOK, map[string]string{"status": "shutting_down", "message": "Server shutdown initiated"})
+	if flusher, ok := w.(http.Flusher); ok {
+		flusher.Flush()
+	}
+	util.SafeGo(func() {
+		time.Sleep(shutdownSignalDelay)
+		process, _ := os.FindProcess(os.Getpid())
+		_ = process.Signal(syscall.SIGTERM)
+	})
+}
+
+func (s *Server) addTerminalHealth(response map[string]any) {
+	status := s.getTerminalStatus()
+	response["terminal_available"] = status.Available
+	if status.Port > 0 {
+		response["terminal_port"] = status.Port
+	}
+	if status.Available {
+		return
+	}
+	if status.Error != "" {
+		response["terminal_error"] = status.Error
+	}
+	if status.BlockedByPID > 0 || status.BlockedByCommand != "" {
+		response["terminal_blocked_by"] = map[string]any{"pid": status.BlockedByPID, "command": status.BlockedByCommand}
+	}
+}
+
+func (s *Server) buildHealthPayload() map[string]any {
+	response := map[string]any{}
+	s.addTerminalHealth(response)
+	return response
+}
 
 // lastConsoleEvent returns a summary of the most recent console log entry.
 func (s *Server) lastConsoleEvent() map[string]any {
