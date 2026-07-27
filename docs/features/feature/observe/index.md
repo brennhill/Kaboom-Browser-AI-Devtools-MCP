@@ -13,7 +13,6 @@ code_paths:
   - internal/capture/wsconn/status.go
   - internal/capture/wsconn/tracker.go
   - cmd/browser-agent/tools_observe.go
-  - cmd/browser-agent/tools_observe_registry.go
   - cmd/browser-agent/internal/toolobserve/response.go
   - cmd/browser-agent/internal/toolobserve/inbox.go
   - cmd/browser-agent/internal/toolobserve/registry.go
