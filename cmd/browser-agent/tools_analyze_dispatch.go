@@ -7,6 +7,7 @@ package main
 import (
 	"encoding/json"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mediaapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/combinedaudit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/inspect"
@@ -135,12 +136,12 @@ func (h *ToolHandler) toolValidateAPI(req mcp.JSONRPCRequest, args json.RawMessa
 }
 
 func (h *ToolHandler) toolListDrawHistory(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
-	dir, err := screenshotsDir()
+	dir, err := mediaapi.ScreenshotsDir()
 	return annotation.ListDrawHistory(req, dir, err)
 }
 
 func (h *ToolHandler) toolGetDrawSession(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	dir, err := screenshotsDir()
+	dir, err := mediaapi.ScreenshotsDir()
 	return annotation.LoadDrawSession(h.annotationStore, req, args, dir, err)
 }
 

@@ -15,6 +15,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/insecureproxy"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mediaapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testpages"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
@@ -131,6 +132,7 @@ func handleTelemetry(server *Server, cap *capture.Store) http.HandlerFunc {
 // setupHTTPRoutes configures the HTTP routes (extracted for reuse).
 // Returns both the mux and the MCPHandler so the caller can wire shutdown.
 func setupHTTPRoutes(server *Server, cap *capture.Store) (*http.ServeMux, *MCPHandler) {
+	server.mediaHTTP = mediaapi.New(cap, server.annotationStore, server.pushRouter)
 	mux := http.NewServeMux()
 
 	if cap != nil {
@@ -379,12 +381,12 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, cap *capture.Store) 
 
 	// NOT MCP — Screenshot binary upload from extension (MCP reads via observe(what: "screenshot"))
 	mux.HandleFunc("/screenshots", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		server.handleScreenshot(w, r, cap)
+		server.mediaHTTP.HandleScreenshot(w, r)
 	})))
 
 	// NOT MCP — Draw mode completion callback from extension (MCP uses analyze(what: "annotations"))
 	mux.HandleFunc("/draw-mode/complete", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		server.handleDrawModeComplete(w, r, cap)
+		server.mediaHTTP.HandleDrawModeComplete(w, r)
 	})))
 
 	// NOT MCP — Push pipeline endpoints (extension → daemon → AI client)

@@ -2,7 +2,7 @@
 // Why: Isolates annotation/draw session parsing and persistence from screenshot upload logic.
 // Docs: docs/features/feature/tab-recording/index.md
 
-package main
+package mediaapi
 
 import (
 	"encoding/json"
@@ -15,7 +15,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/pushapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
@@ -33,7 +32,7 @@ func saveDrawScreenshot(dataURL string, tabID int) (string, error) {
 	timestamp := time.Now().Format("20060102-150405")
 	filename := fmt.Sprintf("draw_%s_tab%d_%d.png", util.SanitizeForFilename(timestamp), tabID, toolresp.RandomInt63()%10000)
 
-	dir, dirErr := screenshotsDir()
+	dir, dirErr := ScreenshotsDir()
 	if dirErr != nil {
 		return "", dirErr
 	}
@@ -105,7 +104,7 @@ type drawModeRequest struct {
 // persistDrawSession writes the full draw session (annotations + element details) to disk
 // as a JSON file alongside the screenshot. Files are retained until manually cleared.
 func persistDrawSession(body *drawModeRequest, screenshotPath string, annotations []annotation.Annotation) {
-	dir, err := screenshotsDir()
+	dir, err := ScreenshotsDir()
 	if err != nil {
 		return
 	}
@@ -153,20 +152,20 @@ func storeAnnotationSessionInStore(store *annotation.Store, body *drawModeReques
 
 // handleDrawModeComplete receives annotation data and screenshot from the extension
 // when the user finishes a draw mode session.
-func (s *Server) handleDrawModeComplete(w http.ResponseWriter, r *http.Request, cap *capture.Store) {
+func (h *Handler) HandleDrawModeComplete(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
-		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		util.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, maxPostBodySize)
 	var body drawModeRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return
 	}
 	if body.TabID <= 0 {
-		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "tab_id is required and must be > 0"})
+		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "tab_id is required and must be > 0"})
 		return
 	}
 
@@ -174,14 +173,14 @@ func (s *Server) handleDrawModeComplete(w http.ResponseWriter, r *http.Request, 
 	if body.ScreenshotDataURL != "" {
 		path, err := saveDrawScreenshot(body.ScreenshotDataURL, body.TabID)
 		if err != nil {
-			jsonResponse(w, http.StatusInternalServerError, map[string]string{"error": "Failed to resolve screenshots directory"})
+			util.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": "Failed to resolve screenshots directory"})
 			return
 		}
 		screenshotPath = path
 	}
 
 	parsedAnnotations, parseWarnings := parseAnnotations(body.Annotations)
-	store := s.getAnnotationStore()
+	store := h.annotations
 	// T6 fix: store element details BEFORE the session. StoreSession triggers
 	// waiter completion which signals the AI agent; if the agent immediately
 	// calls annotation_detail the details must already be present.
@@ -202,13 +201,13 @@ func (s *Server) handleDrawModeComplete(w http.ResponseWriter, r *http.Request, 
 
 	// Complete the pending command — unblocks WaitForCommand in tools_async_completion.go.
 	// so the LLM can retrieve results via correlation_id.
-	if body.CorrelationID != "" && cap != nil {
+	if body.CorrelationID != "" && h.capture != nil {
 		resultJSON, _ := json.Marshal(result)
-		cap.CompleteCommand(body.CorrelationID, resultJSON, "")
+		h.capture.CompleteCommand(body.CorrelationID, resultJSON, "")
 	}
 
 	// Auto-push annotations to AI client via push pipeline
-	pushapi.DeliverAnnotations(s.pushRouter, body.PageURL, body.TabID, body.AnnotSessionName, parsedAnnotations)
+	pushapi.DeliverAnnotations(h.pushRouter, body.PageURL, body.TabID, body.AnnotSessionName, parsedAnnotations)
 
-	jsonResponse(w, http.StatusOK, result)
+	util.JSONResponse(w, http.StatusOK, result)
 }

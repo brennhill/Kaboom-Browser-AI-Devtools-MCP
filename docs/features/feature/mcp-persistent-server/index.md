@@ -64,7 +64,7 @@ code_paths:
   - cmd/browser-agent/internal/versioncheck/checker.go
   - internal/diag/output.go
   - internal/diag/debug_file.go
-  - cmd/browser-agent/server_routes_media_screenshots.go
+  - cmd/browser-agent/internal/mediaapi/screenshots.go
   - internal/identity/mcp.go
   - internal/util/proc_unix.go
   - internal/util/proc_windows.go

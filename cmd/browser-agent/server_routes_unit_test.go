@@ -12,7 +12,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -355,16 +354,6 @@ func TestHandleScreenshotRoutes(t *testing.T) {
 	cap := capture.NewCapture()
 	mux, _ := setupHTTPRoutes(srv, cap)
 
-	// Reset server rate limiter map for deterministic tests.
-	srv.screenshotRateMu.Lock()
-	srv.screenshotRateLimiter = make(map[string]time.Time)
-	srv.screenshotRateMu.Unlock()
-	t.Cleanup(func() {
-		srv.screenshotRateMu.Lock()
-		srv.screenshotRateLimiter = make(map[string]time.Time)
-		srv.screenshotRateMu.Unlock()
-	})
-
 	methodReq := localRequest(http.MethodGet, "/screenshots", nil)
 	methodReq.Header.Set("X-Kaboom-Client", "kaboom-extension")
 	methodRR := httptest.NewRecorder()
@@ -445,19 +434,4 @@ func TestHandleScreenshotRoutes(t *testing.T) {
 		t.Fatalf("rate-limit second request status = %d, want %d", rlRR2.Code, http.StatusTooManyRequests)
 	}
 
-	// Capacity branch.
-	srv.screenshotRateMu.Lock()
-	srv.screenshotRateLimiter = make(map[string]time.Time, 10000)
-	for i := 0; i < 10000; i++ {
-		srv.screenshotRateLimiter["client-"+strconv.Itoa(i)] = time.Now()
-	}
-	srv.screenshotRateMu.Unlock()
-
-	capReq := localRequest(http.MethodPost, "/screenshots", bytes.NewBufferString(validBody))
-	capReq.Header.Set("X-Kaboom-Client", "kaboom-extension/brand-new-client")
-	capRR := httptest.NewRecorder()
-	mux.ServeHTTP(capRR, capReq)
-	if capRR.Code != http.StatusServiceUnavailable {
-		t.Fatalf("rate-limiter capacity status = %d, want %d", capRR.Code, http.StatusServiceUnavailable)
-	}
 }

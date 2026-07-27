@@ -2,7 +2,7 @@
 // Why: Isolates screenshot upload flow from draw-mode annotation session logic.
 // Docs: docs/features/feature/tab-recording/index.md
 
-package main
+package mediaapi
 
 import (
 	"encoding/json"
@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/pushapi"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
@@ -23,7 +22,7 @@ import (
 
 const screenshotMinInterval = time.Second
 
-func screenshotsDir() (string, error) {
+func ScreenshotsDir() (string, error) {
 	dir, err := state.ScreenshotsDir()
 	if err != nil {
 		return "", fmt.Errorf("cannot determine screenshots directory: %w", err)
@@ -36,36 +35,36 @@ func screenshotsDir() (string, error) {
 
 // checkScreenshotRateLimit enforces per-client screenshot rate limiting.
 // Returns an HTTP status code (0 means allowed) and an error message.
-func (s *Server) checkScreenshotRateLimit(clientID string) (int, string) {
+func (h *Handler) checkScreenshotRateLimit(clientID string) (int, string) {
 	if clientID == "" {
 		return 0, ""
 	}
-	s.screenshotRateMu.Lock()
-	defer s.screenshotRateMu.Unlock()
+	h.rateMu.Lock()
+	defer h.rateMu.Unlock()
 
-	lastUpload, exists := s.screenshotRateLimiter[clientID]
+	lastUpload, exists := h.rateByClient[clientID]
 	if exists && time.Since(lastUpload) < screenshotMinInterval {
 		return http.StatusTooManyRequests, "Rate limit exceeded: max 1 screenshot per second"
 	}
-	if len(s.screenshotRateLimiter) >= 10000 && !exists {
+	if len(h.rateByClient) >= 10000 && !exists {
 		// Inline eviction: purge stale entries before rejecting.
-		for id, ts := range s.screenshotRateLimiter {
+		for id, ts := range h.rateByClient {
 			if time.Since(ts) > screenshotMinInterval {
-				delete(s.screenshotRateLimiter, id)
+				delete(h.rateByClient, id)
 			}
 		}
-		if len(s.screenshotRateLimiter) >= 10000 {
+		if len(h.rateByClient) >= 10000 {
 			return http.StatusServiceUnavailable, "Rate limiter capacity exceeded"
 		}
 	}
-	s.screenshotRateLimiter[clientID] = time.Now()
+	h.rateByClient[clientID] = time.Now()
 	return 0, ""
 }
 
 // saveImageToScreenshotsDir writes image data to the screenshots directory.
 // Returns the full path on success, or an HTTP status and error message on failure.
 func saveImageToScreenshotsDir(filename string, imageData []byte) (string, int, string) {
-	dir, dirErr := screenshotsDir()
+	dir, dirErr := ScreenshotsDir()
 	if dirErr != nil {
 		return "", http.StatusInternalServerError, "Failed to resolve screenshots directory"
 	}
@@ -82,14 +81,14 @@ func saveImageToScreenshotsDir(filename string, imageData []byte) (string, int, 
 
 // handleScreenshot saves a screenshot JPEG to disk and returns the filename.
 // If query_id is provided, resolves the pending query directly (on-demand screenshot flow).
-func (s *Server) handleScreenshot(w http.ResponseWriter, r *http.Request, cap *capture.Store) {
+func (h *Handler) HandleScreenshot(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
-		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		util.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
 	}
 
-	if status, msg := s.checkScreenshotRateLimit(r.Header.Get("X-Kaboom-Client")); status != 0 {
-		jsonResponse(w, status, map[string]string{"error": msg})
+	if status, msg := h.checkScreenshotRateLimit(r.Header.Get("X-Kaboom-Client")); status != 0 {
+		util.JSONResponse(w, status, map[string]string{"error": msg})
 		return
 	}
 
@@ -101,20 +100,20 @@ func (s *Server) handleScreenshot(w http.ResponseWriter, r *http.Request, cap *c
 		QueryID       string `json:"query_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return
 	}
 
 	imageData, err := util.DecodeDataURL(body.DataURL)
 	if err != nil {
-		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
 
 	filename := util.BuildScreenshotFilename(body.URL, body.CorrelationID)
 	savePath, status, saveErr := saveImageToScreenshotsDir(filename, imageData)
 	if status != 0 {
-		jsonResponse(w, status, map[string]string{"error": saveErr})
+		util.JSONResponse(w, status, map[string]string{"error": saveErr})
 		return
 	}
 
@@ -123,7 +122,7 @@ func (s *Server) handleScreenshot(w http.ResponseWriter, r *http.Request, cap *c
 		"path":           savePath,
 		"correlation_id": body.CorrelationID,
 	}
-	if body.QueryID != "" && cap != nil {
+	if body.QueryID != "" && h.capture != nil {
 		// Include data_url in query result so observe(what="screenshot") can return inline image.
 		// The HTTP response intentionally omits it to keep the /screenshots response lean.
 		queryResult := map[string]string{
@@ -134,12 +133,12 @@ func (s *Server) handleScreenshot(w http.ResponseWriter, r *http.Request, cap *c
 		}
 		// Error impossible: map contains only primitive types from input
 		resultJSON, _ := json.Marshal(queryResult)
-		cap.SetQueryResult(body.QueryID, resultJSON)
+		h.capture.SetQueryResult(body.QueryID, resultJSON)
 	}
 
 	// Push screenshot notification to MCP inbox for non-query screenshots
 	// (hover launcher, error-triggered). Query screenshots are already delivered via query result.
-	if body.QueryID == "" && s.pushRouter != nil {
+	if body.QueryID == "" && h.pushRouter != nil {
 		b64 := body.DataURL
 		if idx := strings.Index(b64, ","); idx >= 0 {
 			b64 = b64[idx+1:]
@@ -151,8 +150,8 @@ func (s *Server) handleScreenshot(w http.ResponseWriter, r *http.Request, cap *c
 			PageURL:       body.URL,
 			ScreenshotB64: b64,
 		}
-		_, _ = s.pushRouter.DeliverPush(ev)
+		_, _ = h.pushRouter.DeliverPush(ev)
 	}
 
-	jsonResponse(w, http.StatusOK, result)
+	util.JSONResponse(w, http.StatusOK, result)
 }

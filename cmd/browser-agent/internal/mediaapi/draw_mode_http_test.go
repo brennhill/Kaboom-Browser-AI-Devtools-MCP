@@ -4,7 +4,7 @@
 // tools_draw_mode_http_test.go — HTTP endpoint tests for draw mode completion.
 // Tests the POST /draw-mode/complete handler end-to-end: JSON parsing,
 // screenshot decoding/saving, annotation + detail storage.
-package main
+package mediaapi
 
 import (
 	"bytes"
@@ -14,6 +14,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
@@ -24,17 +25,14 @@ import (
 func createDrawModeTestServer(t *testing.T) (*httptest.Server, *annotation.Store) {
 	t.Helper()
 
-	server, err := NewServer(t.TempDir()+"/test.jsonl", 100)
-	if err != nil {
-		t.Fatalf("Failed to create server: %v", err)
-	}
-	store := server.getAnnotationStore()
+	store := annotation.NewStore(10 * time.Minute)
 	t.Cleanup(func() { store.Close() })
 
 	cap := capture.NewCapture()
+	handler := New(cap, store, nil)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/draw-mode/complete", func(w http.ResponseWriter, r *http.Request) {
-		server.handleDrawModeComplete(w, r, cap)
+		handler.HandleDrawModeComplete(w, r)
 	})
 	return httptest.NewServer(mux), store
 }

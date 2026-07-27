@@ -288,16 +288,7 @@ func (s *Server) startScreenshotRateLimiterCleanup(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				func() {
-					s.screenshotRateMu.Lock()
-					defer s.screenshotRateMu.Unlock()
-					now := time.Now()
-					for clientID, lastUpload := range s.screenshotRateLimiter {
-						if now.Sub(lastUpload) > time.Minute {
-							delete(s.screenshotRateLimiter, clientID)
-						}
-					}
-				}()
+				s.mediaHTTP.CleanupRateLimits(time.Now(), time.Minute)
 			}
 		}
 	})

@@ -9,8 +9,8 @@ code_paths:
   - internal/push/
   - cmd/browser-agent/internal/pushapi/runtime.go
   - cmd/browser-agent/internal/pushapi/handler.go
-  - cmd/browser-agent/server_routes_media_screenshots.go
-  - cmd/browser-agent/server_routes_media_draw_mode.go
+  - cmd/browser-agent/internal/mediaapi/screenshots.go
+  - cmd/browser-agent/internal/mediaapi/draw_mode.go
   - cmd/browser-agent/tools_observe.go
   - cmd/browser-agent/internal/toolobserve/inbox.go
   - src/background/push-handler.ts

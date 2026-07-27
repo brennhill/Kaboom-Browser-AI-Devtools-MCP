@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mediaapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/pushapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
 	terminalsupervisor "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/supervisor"
@@ -43,6 +44,7 @@ type Server struct {
 	pushInbox  *push.PushInbox
 	pushRouter *push.Router
 	pushHTTP   *pushapi.Handler
+	mediaHTTP  *mediaapi.Handler
 
 	// Terminal PTY session manager
 	ptyManager  *pty.Manager
@@ -74,10 +76,6 @@ type Server struct {
 	// Push drain authentication token. When non-empty, /push/drain requires
 	// Authorization: Bearer <token>. Set via --push-drain-token flag.
 	pushDrainToken string
-
-	// Screenshot rate limiting: prevent DoS by limiting uploads to 1/second per client
-	screenshotRateLimiter map[string]time.Time
-	screenshotRateMu      sync.Mutex
 }
 
 // AddWarning stores a unique one-shot warning for the next tool response.
@@ -128,14 +126,13 @@ func (s *Server) logLifecycle(event string, port int, fields map[string]any) {
 // NewServer creates a new server instance.
 func NewServer(logFile string, maxEntries int) (*Server, error) {
 	s := &Server{
-		listenPort:            defaultPort,
-		warningSeen:           make(map[string]struct{}),
-		annotationStore:       annotation.NewStore(10 * time.Minute),
-		pushInbox:             push.NewPushInbox(50),
-		ptyManager:            pty.NewManager(),
-		tokenTracker:          tracking.NewTokenTracker(),
-		intentStore:           terminal.NewIntentStore(),
-		screenshotRateLimiter: make(map[string]time.Time),
+		listenPort:      defaultPort,
+		warningSeen:     make(map[string]struct{}),
+		annotationStore: annotation.NewStore(10 * time.Minute),
+		pushInbox:       push.NewPushInbox(50),
+		ptyManager:      pty.NewManager(),
+		tokenTracker:    tracking.NewTokenTracker(),
+		intentStore:     terminal.NewIntentStore(),
 	}
 
 	// Create log store with warning callback wired to server

@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mediaapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
@@ -233,7 +234,7 @@ func TestToolGetDrawSession_HydratesStoreForGenerators(t *testing.T) {
 	t.Cleanup(func() { h.annotationStore.Close() })
 
 	t.Setenv("KABOOM_STATE_DIR", t.TempDir())
-	dir, err := screenshotsDir()
+	dir, err := mediaapi.ScreenshotsDir()
 	if err != nil {
 		t.Fatalf("screenshotsDir: %v", err)
 	}

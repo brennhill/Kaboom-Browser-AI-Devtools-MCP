@@ -4,14 +4,15 @@ feature_id: feature-annotated-screenshots
 status: active
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
   - extension/content/draw-mode.js
   - internal/annotation/store.go
   - internal/annotation/draw_sessions_handler.go
   - cmd/browser-agent/tools_analyze_annotations_handlers.go
-  - cmd/browser-agent/server_routes_media_draw_mode.go
-  - cmd/browser-agent/server_routes_media_screenshots.go
+  - cmd/browser-agent/internal/mediaapi/draw_mode.go
+  - cmd/browser-agent/internal/mediaapi/screenshots.go
+  - cmd/browser-agent/internal/mediaapi/handler.go
   - cmd/browser-agent/tools_generate.go
   - cmd/browser-agent/internal/toolgenerate/annotations/handlers.go
   - cmd/browser-agent/internal/toolgenerate/annotations/visual.go
@@ -29,6 +30,9 @@ test_paths:
   - internal/annotation/store_test.go
   - internal/annotation/draw_sessions_handler_test.go
   - cmd/browser-agent/tools_analyze_annotations_draw_test.go
+  - cmd/browser-agent/internal/mediaapi/annotation_store_test.go
+  - cmd/browser-agent/internal/mediaapi/draw_mode_http_test.go
+  - cmd/browser-agent/internal/mediaapi/handler_test.go
   - cmd/browser-agent/tools_analyze_annotations_test.go
   - cmd/browser-agent/tools_generate_annotations_test.go
   - cmd/browser-agent/internal/toolgenerate/annotations/annotations_test.go

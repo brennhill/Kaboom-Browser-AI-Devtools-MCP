@@ -3,7 +3,7 @@
 
 // annotation_store_test.go — Tests for annotation HTTP route helpers.
 // Pure store tests live in internal/annotation/store_test.go.
-package main
+package mediaapi
 
 import (
 	"encoding/json"
