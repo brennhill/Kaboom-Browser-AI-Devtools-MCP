@@ -17,7 +17,7 @@ func HandleGenerateCSP(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 		Mode string `json:"mode"`
 	}
 	if len(args) > 0 {
-		if resp, stop := parseArgs(req, args, &arguments); stop {
+		if resp, stop := mcp.ParseArgs(req, args, &arguments); stop {
 			return resp
 		}
 	}
@@ -30,13 +30,13 @@ func HandleGenerateCSP(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 	case "strict", "moderate", "report_only":
 		// valid
 	default:
-		return fail(req, mcp.ErrInvalidParam, "Invalid mode: "+mode, "Use strict, moderate, or report_only",
+		return mcp.Fail(req, mcp.ErrInvalidParam, "Invalid mode: "+mode, "Use strict, moderate, or report_only",
 			mcp.WithParam("mode"))
 	}
 
 	networkBodies := d.GetCapture().GetNetworkBodies()
 	if len(networkBodies) == 0 {
-		return succeed(req, "CSP policy unavailable", map[string]any{
+		return mcp.Succeed(req, "CSP policy unavailable", map[string]any{
 			"status": "unavailable", "mode": mode, "policy": "",
 			"reason": "No network requests captured yet. CSP generation requires observing network traffic to identify resource origins.",
 			"hint":   "Navigate the tracked page to load resources (scripts, stylesheets, images, fonts), then call generate(csp) again.",
@@ -46,7 +46,7 @@ func HandleGenerateCSP(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 	directives := gen.BuildCSPDirectives(networkBodies)
 	policy := gen.BuildCSPPolicyString(directives)
 
-	return succeed(req, "CSP policy generated", map[string]any{
+	return mcp.Succeed(req, "CSP policy generated", map[string]any{
 		"status": "ok", "mode": mode, "policy": policy,
 		"directives": directives, "origins_observed": len(networkBodies),
 	})
@@ -57,7 +57,7 @@ func HandleGenerateSRI(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 	cap := d.GetCapture()
 	networkBodies := cap.GetNetworkBodies()
 	if len(networkBodies) == 0 {
-		return succeed(req, "SRI unavailable", map[string]any{
+		return mcp.Succeed(req, "SRI unavailable", map[string]any{
 			"status": "unavailable",
 			"hint":   "Navigate pages to capture network traffic first.",
 		})
@@ -67,8 +67,8 @@ func HandleGenerateSRI(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 	pageURLs := []string{tabURL}
 	result, err := sri.HandleGenerate(args, networkBodies, pageURLs)
 	if err != nil {
-		return fail(req, mcp.ErrInvalidParam, "SRI generation failed: "+err.Error(), "Fix parameters and call again")
+		return mcp.Fail(req, mcp.ErrInvalidParam, "SRI generation failed: "+err.Error(), "Fix parameters and call again")
 	}
 
-	return succeed(req, "SRI hashes generated", result)
+	return mcp.Succeed(req, "SRI hashes generated", result)
 }

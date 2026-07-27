@@ -109,7 +109,7 @@ func ValidateGenerateParams(req mcp.JSONRPCRequest, format string, args json.Raw
 		validList = append(validList, k)
 	}
 	sort.Strings(validList)
-	resp := fail(req, mcp.ErrInvalidParam,
+	resp := mcp.Fail(req, mcp.ErrInvalidParam,
 		fmt.Sprintf("Unknown parameter(s) for format '%s': %s", format, strings.Join(unknown, ", ")),
 		"Remove unknown parameters and call again",
 		mcp.WithParam(unknown[0]),

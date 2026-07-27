@@ -53,7 +53,7 @@ func HandlePRSummary(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 	if totalActivity == 0 {
 		sb.WriteString("No activity captured during this session.\n\n")
 		sb.WriteString("Navigate to a page or interact with the browser to generate activity.\n")
-		return succeed(req, "PR summary generated", map[string]any{
+		return mcp.Succeed(req, "PR summary generated", map[string]any{
 			"summary": sb.String(),
 			"reason":  "no_activity_captured",
 			"hint":    "Navigate to a page or interact with the browser first, then call generate(pr_summary) again.",
@@ -87,7 +87,7 @@ func HandlePRSummary(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 	sb.WriteString(fmt.Sprintf("- **Network Requests Captured:** %d\n", len(networkBodies)))
 
 	summary := sb.String()
-	return succeed(req, "PR summary generated", map[string]any{
+	return mcp.Succeed(req, "PR summary generated", map[string]any{
 		"summary": summary,
 		"stats": map[string]any{
 			"actions":            len(actions),

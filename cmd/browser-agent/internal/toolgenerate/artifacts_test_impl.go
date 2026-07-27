@@ -15,7 +15,7 @@ import (
 // HandleGenerateTest generates a Playwright test from captured browser actions.
 func HandleGenerateTest(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params gen.TestGenParams
-	if resp, stop := parseArgs(req, args, &params); stop {
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
 	if params.TestName == "" {
@@ -45,5 +45,5 @@ func HandleGenerateTest(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mc
 	}
 
 	summary := fmt.Sprintf("Playwright test '%s' (%d actions)", params.TestName, len(actions))
-	return succeed(req, summary, result)
+	return mcp.Succeed(req, summary, result)
 }

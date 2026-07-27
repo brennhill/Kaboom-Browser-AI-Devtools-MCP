@@ -21,7 +21,7 @@ func HandleExportHAR(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 		StatusMax int    `json:"status_max"`
 		SaveTo    string `json:"save_to"`
 	}
-	if resp, stop := parseArgs(req, args, &params); stop {
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
 
@@ -40,12 +40,12 @@ func HandleExportHAR(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 	if params.SaveTo != "" {
 		result, err := export.ExportHARMergedToFile(bodies, waterfall, filter, ver, params.SaveTo)
 		if err != nil {
-			return fail(req, mcp.ErrExportFailed, "HAR file export failed: "+err.Error(), "Check the save_to path and try again")
+			return mcp.Fail(req, mcp.ErrExportFailed, "HAR file export failed: "+err.Error(), "Check the save_to path and try again")
 		}
-		return succeed(req, fmt.Sprintf("HAR exported to %s (%d entries)", result.SavedTo, result.EntriesCount), result)
+		return mcp.Succeed(req, fmt.Sprintf("HAR exported to %s (%d entries)", result.SavedTo, result.EntriesCount), result)
 	}
 
 	harLog := export.ExportHARMerged(bodies, waterfall, filter, ver)
 	summary := fmt.Sprintf("HAR export (%d entries)", len(harLog.Log.Entries))
-	return succeed(req, summary, harLog)
+	return mcp.Succeed(req, summary, harLog)
 }

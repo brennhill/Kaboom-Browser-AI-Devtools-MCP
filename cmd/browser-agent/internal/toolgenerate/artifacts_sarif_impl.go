@@ -20,7 +20,7 @@ func HandleExportSARIF(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 		A11yResult json.RawMessage `json:"a11y_result"`
 	}
 	if len(args) > 0 {
-		if resp, stop := parseArgs(req, args, &arguments); stop {
+		if resp, stop := mcp.ParseArgs(req, args, &arguments); stop {
 			return resp
 		}
 	}
@@ -46,18 +46,18 @@ func HandleExportSARIF(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 		SaveTo:        arguments.SaveTo,
 	})
 	if err != nil {
-		return fail(req, mcp.ErrNoData, "SARIF export failed: "+err.Error(), "Check a11y audit results and try again.")
+		return mcp.Fail(req, mcp.ErrNoData, "SARIF export failed: "+err.Error(), "Check a11y audit results and try again.")
 	}
 
 	// Marshal SARIFLog to a generic map for the MCP response.
 	sarifJSON, err := json.Marshal(sarifLog)
 	if err != nil {
-		return fail(req, mcp.ErrNoData, "SARIF marshal failed: "+err.Error(), "Report this bug.")
+		return mcp.Fail(req, mcp.ErrNoData, "SARIF marshal failed: "+err.Error(), "Report this bug.")
 	}
 	var sarifMap map[string]any
 	if err := json.Unmarshal(sarifJSON, &sarifMap); err != nil {
-		return fail(req, mcp.ErrNoData, "SARIF unmarshal failed: "+err.Error(), "Report this bug.")
+		return mcp.Fail(req, mcp.ErrNoData, "SARIF unmarshal failed: "+err.Error(), "Report this bug.")
 	}
 
-	return succeed(req, "SARIF export complete", sarifMap)
+	return mcp.Succeed(req, "SARIF export complete", sarifMap)
 }
