@@ -7,7 +7,9 @@ import (
 	"encoding/json"
 	"sync"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
 
@@ -101,4 +103,136 @@ func (h *MCPHandler) GetUsageTracker() *telemetry.UsageTracker {
 		return th.usageTracker
 	}
 	return nil
+}
+
+type mcpMethodHandler func(handler *MCPHandler, request JSONRPCRequest) JSONRPCResponse
+
+var mcpMethodHandlers = map[string]mcpMethodHandler{
+	"initialize": func(handler *MCPHandler, request JSONRPCRequest) JSONRPCResponse {
+		return handler.handleInitialize(request)
+	},
+	"tools/list": func(handler *MCPHandler, request JSONRPCRequest) JSONRPCResponse {
+		return handler.handleToolsList(request)
+	},
+	"tools/call": func(handler *MCPHandler, request JSONRPCRequest) JSONRPCResponse {
+		return handler.handleToolsCall(request)
+	},
+	"resources/list": func(handler *MCPHandler, request JSONRPCRequest) JSONRPCResponse {
+		return handler.handleResourcesList(request)
+	},
+	"resources/read": func(handler *MCPHandler, request JSONRPCRequest) JSONRPCResponse {
+		return handler.handleResourcesRead(request)
+	},
+	"resources/templates/list": func(handler *MCPHandler, request JSONRPCRequest) JSONRPCResponse {
+		return handler.handleResourcesTemplatesList(request)
+	},
+}
+
+var mcpStaticResponses = map[string]string{
+	"initialized":  `{}`,
+	"ping":         `{}`,
+	"prompts/list": `{"prompts":[]}`,
+}
+
+// HandleRequest validates and routes one JSON-RPC request.
+func (h *MCPHandler) HandleRequest(request JSONRPCRequest) *JSONRPCResponse {
+	if request.HasInvalidID() {
+		response := JSONRPCResponse{
+			JSONRPC: JSONRPCVersion,
+			ID:      nil,
+			Error:   &JSONRPCError{Code: -32600, Message: "Invalid Request: id must be string or number when present"},
+		}
+		return &response
+	}
+	if !request.HasID() {
+		return nil
+	}
+	if request.JSONRPC != JSONRPCVersion {
+		return &JSONRPCResponse{
+			JSONRPC: JSONRPCVersion,
+			ID:      request.ID,
+			Error:   &JSONRPCError{Code: -32600, Message: `Invalid Request: jsonrpc must be "2.0"`},
+		}
+	}
+	if methodHandler, ok := mcpMethodHandlers[request.Method]; ok {
+		response := methodHandler(h, request)
+		if response.Result != nil {
+			response.Result = mcp.ClampResponseSize(response.Result)
+		}
+		return &response
+	}
+	if staticResult, ok := mcpStaticResponses[request.Method]; ok {
+		response := succeedRaw(request, json.RawMessage(staticResult))
+		return &response
+	}
+	response := JSONRPCResponse{
+		JSONRPC: JSONRPCVersion,
+		ID:      request.ID,
+		Error:   &JSONRPCError{Code: -32601, Message: "Method not found: " + request.Method},
+	}
+	return &response
+}
+
+func (h *MCPHandler) handleInitialize(request JSONRPCRequest) JSONRPCResponse {
+	result := MCPInitializeResult{
+		ProtocolVersion: negotiateProtocolVersion(request.Params),
+		ServerInfo: MCPServerInfo{
+			Name:    mcpServerName,
+			Version: h.version,
+		},
+		Capabilities: MCPCapabilities{
+			Tools:     MCPToolsCapability{},
+			Resources: MCPResourcesCapability{},
+		},
+		Instructions: serverInstructions,
+	}
+	resultJSON, _ := json.Marshal(result)
+	return succeedRaw(request, resultJSON)
+}
+
+func (h *MCPHandler) handleResourcesList(request JSONRPCRequest) JSONRPCResponse {
+	resultJSON, _ := json.Marshal(MCPResourcesListResult{Resources: playbooks.Resources()})
+	return succeedRaw(request, resultJSON)
+}
+
+func (h *MCPHandler) handleResourcesRead(request JSONRPCRequest) JSONRPCResponse {
+	var params struct {
+		URI string `json:"uri"`
+	}
+	if err := json.Unmarshal(request.Params, &params); err != nil {
+		return JSONRPCResponse{
+			JSONRPC: JSONRPCVersion,
+			ID:      request.ID,
+			Error:   &JSONRPCError{Code: -32602, Message: "Invalid params: " + err.Error()},
+		}
+	}
+	canonicalURI, text, ok := playbooks.ResolveResourceContent(params.URI)
+	if !ok {
+		return JSONRPCResponse{
+			JSONRPC: JSONRPCVersion,
+			ID:      request.ID,
+			Error:   &JSONRPCError{Code: -32002, Message: "Resource not found: " + params.URI},
+		}
+	}
+	result := MCPResourcesReadResult{Contents: []MCPResourceContent{{
+		URI: canonicalURI, MimeType: "text/markdown", Text: text,
+	}}}
+	resultJSON, _ := json.Marshal(result)
+	return succeedRaw(request, resultJSON)
+}
+
+func (h *MCPHandler) handleResourcesTemplatesList(request JSONRPCRequest) JSONRPCResponse {
+	resultJSON, _ := json.Marshal(MCPResourceTemplatesListResult{
+		ResourceTemplates: playbooks.ResourceTemplates(),
+	})
+	return succeedRaw(request, resultJSON)
+}
+
+func (h *MCPHandler) handleToolsList(request JSONRPCRequest) JSONRPCResponse {
+	var tools []MCPTool
+	if h.toolHandler != nil {
+		tools = h.toolHandler.ToolsList()
+	}
+	resultJSON, _ := json.Marshal(MCPToolsListResult{Tools: tools})
+	return succeedRaw(request, resultJSON)
 }

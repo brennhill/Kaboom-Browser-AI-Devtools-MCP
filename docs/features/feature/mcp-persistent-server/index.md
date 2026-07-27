@@ -6,6 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-27
 code_paths:
+  - cmd/browser-agent/handler.go
   - cmd/browser-agent/mcp_stdout.go
   - cmd/browser-agent/tools_core.go
   - internal/session/snapshot-manager.go
@@ -53,6 +54,7 @@ code_paths:
   - internal/util/proc_unix.go
   - internal/util/proc_windows.go
 test_paths:
+  - cmd/browser-agent/handler_unit_test.go
   - cmd/browser-agent/main_connection_stop_test.go
   - cmd/browser-agent/test_daemon_cleanup_test.go
   - cmd/browser-agent/main_connection_pid_contract_test.go
