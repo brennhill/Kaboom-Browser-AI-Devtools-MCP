@@ -11,7 +11,7 @@ code_paths:
   - cmd/browser-agent/internal/bridge/bridge.go
   - cmd/browser-agent/internal/bridge/bridge_fastpath.go
   - cmd/browser-agent/internal/launchmode/launch_mode.go
-  - cmd/browser-agent/tools_errors_guards.go
+  - cmd/browser-agent/internal/toolguard/guards.go
   - src/popup/tabs/tab-tracking.ts
   - src/popup/shell/status-display.ts
   - extension/popup.html
@@ -73,7 +73,7 @@ When the daemon starts (or restarts), the extension's sync client reconnects aut
 5. `requireExtension` guard waits up to 5 seconds for extension connectivity
 
 The runtime guard checks and the diagnostic state rendered in their recovery
-responses are intentionally colocated in `tools_errors_guards.go`; changes to a
+responses are intentionally colocated in `internal/toolguard/guards.go`; changes to a
 guard and its user-facing recovery context must ship together.
 
 ## UX Contract

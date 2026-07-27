@@ -38,7 +38,7 @@ func (h *ToolHandler) EnqueuePendingQuery(req mcp.JSONRPCRequest, query queries.
 		return mcp.Fail(req, mcp.ErrQueueFull,
 			fmt.Sprintf("Command queue is full; unable to enqueue action type=%q", query.Type),
 			"Wait for in-flight commands to complete, then retry.",
-			mcp.WithRetryable(true), mcp.WithRetryAfterMs(1000), h.diagnosticHint(),
+			mcp.WithRetryable(true), mcp.WithRetryAfterMs(1000), h.Guards.DiagnosticHint(),
 			mcp.WithRecoveryToolCall(map[string]any{
 				"tool": "observe", "arguments": map[string]any{"what": "pending_commands"},
 			}),
@@ -47,7 +47,7 @@ func (h *ToolHandler) EnqueuePendingQuery(req mcp.JSONRPCRequest, query queries.
 	return mcp.Fail(req, mcp.ErrInternal,
 		fmt.Sprintf("Failed to enqueue command type=%q: %v", query.Type, err),
 		"Internal error — do not retry until server health is restored.",
-		h.diagnosticHint(),
+		h.Guards.DiagnosticHint(),
 	), true
 }
 
@@ -157,7 +157,7 @@ func (h *ToolHandler) formatExpiredCommandResult(req mcp.JSONRPCRequest, cmd que
 	responseData["error"] = mcp.ErrExtTimeout
 	responseData["message"] = fmt.Sprintf("Command %s expired before the extension could execute it. Error: %s", corrID, cmd.Error)
 	responseData["retry"] = "The browser extension may be disconnected or the page is not active. Check observe with what='pilot' to verify extension status, then retry the command."
-	responseData["hint"] = h.DiagnosticHintString()
+	responseData["hint"] = h.Guards.DiagnosticHintString()
 
 	h.finalizeResponseEnrichment(corrID, responseData, cmd)
 	summary := fmt.Sprintf("FAILED — Command %s expired: %s", corrID, cmd.Error)
@@ -173,7 +173,7 @@ func (h *ToolHandler) formatTimeoutCommandResult(req mcp.JSONRPCRequest, cmd que
 		retryMsg = "Extension is disconnected. Ensure the Kaboom extension shows 'Connected' and a tab is tracked, then retry."
 	}
 	responseData["retry"] = retryMsg
-	responseData["hint"] = h.DiagnosticHintString()
+	responseData["hint"] = h.Guards.DiagnosticHintString()
 
 	h.finalizeResponseEnrichment(corrID, responseData, cmd)
 	summary := fmt.Sprintf("FAILED — Command %s timed out: %s", corrID, cmd.Error)
@@ -325,7 +325,7 @@ func (h *ToolHandler) finalizePendingDisconnect(req mcp.JSONRPCRequest, correlat
 	return mcp.Fail(req, mcp.ErrNoData,
 		"Extension disconnected while command was pending",
 		"Ensure the extension is connected, then retry the action.",
-		h.diagnosticHint(),
+		h.Guards.DiagnosticHint(),
 		mcp.WithFinal(true))
 }
 
@@ -352,7 +352,7 @@ func (h *ToolHandler) MaybeWaitForCommand(req mcp.JSONRPCRequest, correlationID 
 		})
 	}
 	if !h.capture.IsExtensionConnected() {
-		return mcp.Fail(req, mcp.ErrNoData, "Extension is not connected", "Ensure the Kaboom extension shows 'Connected' and a tab is tracked.", h.diagnosticHint())
+		return mcp.Fail(req, mcp.ErrNoData, "Extension is not connected", "Ensure the Kaboom extension shows 'Connected' and a tab is tracked.", h.Guards.DiagnosticHint())
 	}
 
 	initialWait, retryWait := asyncInitialWait, asyncRetryWait

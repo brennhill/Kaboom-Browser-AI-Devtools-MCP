@@ -12,6 +12,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolobserve"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	observe "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 	wiretypes "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
@@ -123,7 +124,7 @@ func (h *ToolHandler) toolObserveCommandResult(req mcp.JSONRPCRequest, args json
 	if err := json.Unmarshal(args, &params); err != nil && len(args) > 0 {
 		return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 	}
-	if response, blocked := requireString(req, params.CorrelationID, "correlation_id", "Add the 'correlation_id' parameter and call again"); blocked {
+	if response, blocked := toolresp.RequireString(req, params.CorrelationID, "correlation_id", "Add the 'correlation_id' parameter and call again"); blocked {
 		return response
 	}
 	correlationID := params.CorrelationID
@@ -133,7 +134,7 @@ func (h *ToolHandler) toolObserveCommandResult(req mcp.JSONRPCRequest, args json
 			return mcp.Fail(req, mcp.ErrNoData,
 				"Annotation command not found: "+correlationID,
 				"The command may have expired (10 min TTL). Start a new draw mode session.",
-				mcp.WithFinal(true), h.diagnosticHint())
+				mcp.WithFinal(true), h.Guards.DiagnosticHint())
 		}
 		return h.formatCommandResult(req, *command, correlationID)
 	}
@@ -142,7 +143,7 @@ func (h *ToolHandler) toolObserveCommandResult(req mcp.JSONRPCRequest, args json
 		return mcp.Fail(req, mcp.ErrNoData,
 			"Command not found: "+correlationID,
 			"The command may have already completed and been cleaned up (60s TTL), or the correlation_id is invalid. Use observe with what='pending_commands' to see active commands.",
-			mcp.WithFinal(true), h.diagnosticHint())
+			mcp.WithFinal(true), h.Guards.DiagnosticHint())
 	}
 	return h.formatCommandResult(req, *command, correlationID)
 }

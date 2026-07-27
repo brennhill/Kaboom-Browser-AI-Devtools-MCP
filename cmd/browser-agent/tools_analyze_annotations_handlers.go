@@ -382,7 +382,7 @@ func (h *ToolHandler) toolGetAnnotationDetail(req mcp.JSONRPCRequest, args json.
 		}
 	}
 
-	if resp, blocked := requireString(req, params.CorrelationID, "correlation_id", "Add the 'correlation_id' from the annotation you want detail for"); blocked {
+	if resp, blocked := toolresp.RequireString(req, params.CorrelationID, "correlation_id", "Add the 'correlation_id' from the annotation you want detail for"); blocked {
 		return resp
 	}
 

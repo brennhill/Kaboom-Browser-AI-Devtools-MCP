@@ -199,7 +199,7 @@ func TestSmoke_RequireExtension_ErrorContainsDiagnosticHint(t *testing.T) {
 	env := newGateTestEnv(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	resp, blocked := env.handler.requireExtension(req)
+	resp, blocked := env.handler.Guards.RequireExtension(req)
 	if !blocked {
 		t.Fatal("expected requireExtension to block when extension is disconnected")
 	}
@@ -221,7 +221,7 @@ func TestSmoke_RequirePilot_ErrorContainsDiagnosticHint(t *testing.T) {
 	env.capture.SetPilotEnabled(false)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	resp, blocked := env.handler.requirePilot(req)
+	resp, blocked := env.handler.Guards.RequirePilot(req)
 	if !blocked {
 		t.Fatal("expected requirePilot to block when pilot is disabled")
 	}
@@ -241,7 +241,7 @@ func TestSmoke_RequireTabTracking_ErrorContainsDiagnosticHint(t *testing.T) {
 	// No tab tracking set
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	resp, blocked := env.handler.requireTabTracking(req)
+	resp, blocked := env.handler.Guards.RequireTabTracking(req)
 	if !blocked {
 		t.Fatal("expected requireTabTracking to block when no tab is tracked")
 	}
@@ -261,7 +261,7 @@ func TestSmoke_RequireCSPClear_ErrorContainsDiagnosticHint(t *testing.T) {
 	env.capture.SetCSPStatusForTest(true, "script_exec")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	resp, blocked := env.handler.requireCSPClear(req, "main")
+	resp, blocked := env.handler.Guards.RequireCSPClear(req, "main")
 	if !blocked {
 		t.Fatal("expected requireCSPClear to block world=main when CSP restricts script_exec")
 	}

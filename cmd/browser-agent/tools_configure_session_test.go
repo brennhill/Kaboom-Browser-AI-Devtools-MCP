@@ -42,7 +42,9 @@ func TestToolLoadSessionContext_NilStore(t *testing.T) {
 	// Force the canonical session handler's nil-store path.
 	env.handler.sessionStoreImpl = nil
 	env.handler.configureSessions = toolconfigure.NewSessionHandler(toolconfigure.SessionDeps{
-		RequireStore:      env.handler.requireSessionStore,
+		RequireStore: func(req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool) {
+			return sessionStoreGuard(env.handler.sessionStoreImpl, req)
+		},
 		InvalidateSummary: env.handler.invalidateSummaryPref,
 		SetActiveCodebase: env.server.SetActiveCodebase,
 	}, nil, env.handler.sessionManager)

@@ -45,7 +45,7 @@ func newGateTestEnv(t *testing.T) *gateTestEnv {
 	mcpHandler := NewToolHandler(server, cap)
 	handler := mcpHandler.toolHandler.(*ToolHandler)
 	// Keep disconnect tests fast — override the 5s production readiness timeout.
-	handler.extensionReadinessTimeout = 100 * time.Millisecond
+	handler.Guards.SetExtensionReadinessTimeout(100 * time.Millisecond)
 	return &gateTestEnv{handler: handler, server: server, capture: cap}
 }
 
@@ -54,7 +54,7 @@ func newGateTestEnv(t *testing.T) *gateTestEnv {
 func newGateTestEnvWithTimeout(t *testing.T, timeout time.Duration) *gateTestEnv {
 	t.Helper()
 	env := newGateTestEnv(t)
-	env.handler.extensionReadinessTimeout = timeout
+	env.handler.Guards.SetExtensionReadinessTimeout(timeout)
 	return env
 }
 
@@ -117,7 +117,7 @@ func TestRequireExtension_Disconnected(t *testing.T) {
 	env := newGateTestEnv(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	resp, blocked := env.handler.requireExtension(req)
+	resp, blocked := env.handler.Guards.RequireExtension(req)
 	if !blocked {
 		t.Fatal("expected requireExtension to block when extension is disconnected")
 	}
@@ -133,7 +133,7 @@ func TestRequireExtension_Connected(t *testing.T) {
 	env.simulateConnection(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	resp, blocked := env.handler.requireExtension(req)
+	resp, blocked := env.handler.Guards.RequireExtension(req)
 	if blocked {
 		t.Fatalf("expected requireExtension to pass when connected, got blocked with: %v", resp)
 	}
@@ -149,7 +149,7 @@ func TestRequireCSPClear_MainWorldBlocked(t *testing.T) {
 	env.capture.SetCSPStatusForTest(true, "script_exec")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	resp, blocked := env.handler.requireCSPClear(req, "main")
+	resp, blocked := env.handler.Guards.RequireCSPClear(req, "main")
 	if !blocked {
 		t.Fatal("expected requireCSPClear to block world=main when CSP restricts script_exec")
 	}
@@ -165,7 +165,7 @@ func TestRequireCSPClear_AutoWorldPasses(t *testing.T) {
 	env.capture.SetCSPStatusForTest(true, "script_exec")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	_, blocked := env.handler.requireCSPClear(req, "auto")
+	_, blocked := env.handler.Guards.RequireCSPClear(req, "auto")
 	if blocked {
 		t.Fatal("expected requireCSPClear to pass for world=auto (extension handles fallback)")
 	}
@@ -177,7 +177,7 @@ func TestRequireCSPClear_IsolatedWorldPasses(t *testing.T) {
 	env.capture.SetCSPStatusForTest(true, "script_exec")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	_, blocked := env.handler.requireCSPClear(req, "isolated")
+	_, blocked := env.handler.Guards.RequireCSPClear(req, "isolated")
 	if blocked {
 		t.Fatal("expected requireCSPClear to pass for world=isolated (bypasses page CSP)")
 	}
@@ -189,7 +189,7 @@ func TestRequireCSPClear_PageBlocked(t *testing.T) {
 	env.capture.SetCSPStatusForTest(true, "page_blocked")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	_, blocked := env.handler.requireCSPClear(req, "main")
+	_, blocked := env.handler.Guards.RequireCSPClear(req, "main")
 	if !blocked {
 		t.Fatal("expected requireCSPClear to block world=main when CSP level is page_blocked")
 	}
@@ -201,7 +201,7 @@ func TestRequireCSPClear_None(t *testing.T) {
 	env.capture.SetCSPStatusForTest(false, "none")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	_, blocked := env.handler.requireCSPClear(req, "main")
+	_, blocked := env.handler.Guards.RequireCSPClear(req, "main")
 	if blocked {
 		t.Fatal("expected requireCSPClear to pass when CSP is not restricted")
 	}
@@ -214,7 +214,7 @@ func TestRequireCSPClear_NotRestricted(t *testing.T) {
 	env.capture.SetCSPStatusForTest(false, "script_exec")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	_, blocked := env.handler.requireCSPClear(req, "main")
+	_, blocked := env.handler.Guards.RequireCSPClear(req, "main")
 	if blocked {
 		t.Fatal("expected requireCSPClear to pass when restricted flag is false (flag wins)")
 	}
@@ -317,7 +317,7 @@ func TestRequireTabTracking_NoTabTracked(t *testing.T) {
 	// No tab tracking set — default state
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	resp, blocked := env.handler.requireTabTracking(req)
+	resp, blocked := env.handler.Guards.RequireTabTracking(req)
 	if !blocked {
 		t.Fatal("expected requireTabTracking to block when no tab is tracked")
 	}
@@ -333,7 +333,7 @@ func TestRequireTabTracking_TabTracked(t *testing.T) {
 	env.simulateTabTracking(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	_, blocked := env.handler.requireTabTracking(req)
+	_, blocked := env.handler.Guards.RequireTabTracking(req)
 	if blocked {
 		t.Fatal("expected requireTabTracking to pass when a tab is tracked")
 	}
@@ -351,7 +351,7 @@ func TestRequireTabTracking_NoRecoveryToolCall(t *testing.T) {
 	// No tab tracking set
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	resp, blocked := env.handler.requireTabTracking(req)
+	resp, blocked := env.handler.Guards.RequireTabTracking(req)
 	if !blocked {
 		t.Fatal("expected requireTabTracking to block")
 	}
@@ -578,7 +578,7 @@ func TestRequirePilot_RecoveryToolCall(t *testing.T) {
 	env.capture.SetPilotEnabled(false)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	resp, blocked := env.handler.requirePilot(req)
+	resp, blocked := env.handler.Guards.RequirePilot(req)
 	if !blocked {
 		t.Fatal("expected requirePilot to block when pilot is disabled")
 	}
@@ -604,7 +604,7 @@ func TestRequireExtension_RecoveryToolCall(t *testing.T) {
 	env := newGateTestEnv(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	resp, blocked := env.handler.requireExtension(req)
+	resp, blocked := env.handler.Guards.RequireExtension(req)
 	if !blocked {
 		t.Fatal("expected requireExtension to block when extension is disconnected")
 	}
@@ -624,7 +624,7 @@ func TestRequireCSPClear_RecoveryToolCall(t *testing.T) {
 	env.capture.SetCSPStatusForTest(true, "script_exec")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	resp, blocked := env.handler.requireCSPClear(req, "main")
+	resp, blocked := env.handler.Guards.RequireCSPClear(req, "main")
 	if !blocked {
 		t.Fatal("expected requireCSPClear to block when CSP restricts main world")
 	}
@@ -665,7 +665,7 @@ func TestRequireExtension_ConnectsDuringWait(t *testing.T) {
 	}()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	resp, blocked := env.handler.requireExtension(req)
+	resp, blocked := env.handler.Guards.RequireExtension(req)
 	<-done // ensure goroutine finished before test returns
 	if blocked {
 		t.Fatalf("expected requireExtension to pass after late connection, got blocked: %v", resp)
@@ -677,7 +677,7 @@ func TestDiagnosticHint_IncludesCSP(t *testing.T) {
 	env := newGateTestEnv(t)
 	env.capture.SetCSPStatusForTest(true, "script_exec")
 
-	hint := env.handler.DiagnosticHintString()
+	hint := env.handler.Guards.DiagnosticHintString()
 	if !strings.Contains(hint, "csp=") {
 		t.Fatalf("expected diagnostic hint to include CSP status, got: %s", hint)
 	}

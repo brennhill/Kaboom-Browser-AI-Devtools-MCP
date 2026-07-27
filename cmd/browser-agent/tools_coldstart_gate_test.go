@@ -20,7 +20,7 @@ import (
 func TestRequireExtension_ColdStart_WaitsForConnection(t *testing.T) {
 	t.Parallel()
 	env := newGateTestEnv(t)
-	env.handler.extensionReadinessTimeout = 500 * time.Millisecond
+	env.handler.Guards.SetExtensionReadinessTimeout(500 * time.Millisecond)
 
 	// Simulate extension connecting after 100ms
 	go func() {
@@ -30,7 +30,7 @@ func TestRequireExtension_ColdStart_WaitsForConnection(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	start := time.Now()
-	_, blocked := env.handler.requireExtension(req)
+	_, blocked := env.handler.Guards.RequireExtension(req)
 	elapsed := time.Since(start)
 
 	if blocked {
@@ -47,12 +47,12 @@ func TestRequireExtension_ColdStart_WaitsForConnection(t *testing.T) {
 func TestRequireExtension_ColdStart_TimesOut(t *testing.T) {
 	t.Parallel()
 	env := newGateTestEnv(t)
-	env.handler.extensionReadinessTimeout = 200 * time.Millisecond
+	env.handler.Guards.SetExtensionReadinessTimeout(200 * time.Millisecond)
 
 	// Extension never connects
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	start := time.Now()
-	resp, blocked := env.handler.requireExtension(req)
+	resp, blocked := env.handler.Guards.RequireExtension(req)
 	elapsed := time.Since(start)
 
 	if !blocked {
@@ -71,12 +71,12 @@ func TestRequireExtension_AlreadyConnected_NoWait(t *testing.T) {
 	t.Parallel()
 	env := newGateTestEnv(t)
 	env.simulateConnection(t)
-	env.handler.extensionReadinessTimeout = 5 * time.Second
+	env.handler.Guards.SetExtensionReadinessTimeout(5 * time.Second)
 
 	// Even with a long timeout, already-connected should be instant
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	start := time.Now()
-	_, blocked := env.handler.requireExtension(req)
+	_, blocked := env.handler.Guards.RequireExtension(req)
 	elapsed := time.Since(start)
 
 	if blocked {

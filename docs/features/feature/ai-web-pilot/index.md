@@ -4,9 +4,13 @@ feature_id: feature-ai-web-pilot
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-28
 code_paths:
-test_paths: []
+  - cmd/browser-agent/internal/toolguard/guards.go
+  - cmd/browser-agent/tools_interact_adapter.go
+test_paths:
+  - cmd/browser-agent/tools_interact_gate_test.go
+  - cmd/browser-agent/tools_coldstart_gate_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -34,4 +38,6 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-Add concrete implementation and test links here as this feature evolves.
+Pilot, extension-connectivity, tracked-tab, and CSP preconditions are owned by
+`internal/toolguard`. Tool adapters receive those canonical guard methods
+directly; package-main no longer carries a duplicate guard surface.

@@ -4,7 +4,7 @@ feature_id: feature-csp-safe-execution
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
   - src/background/exec/csp-safe/types.ts
   - src/background/exec/csp-safe/parser.ts
@@ -12,10 +12,12 @@ code_paths:
   - src/background/exec/query-execution.ts
   - src/inject/execute-js.ts
   - cmd/browser-agent/internal/insecureproxy/handler.go
+  - cmd/browser-agent/internal/toolguard/guards.go
 test_paths:
   - extension/background/exec/__tests__/query-execution-serialization.test.js
   - tests/extension/execute-js.test.js
   - cmd/browser-agent/internal/insecureproxy/handler_test.go
+  - cmd/browser-agent/tools_interact_gate_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

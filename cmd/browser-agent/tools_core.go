@@ -18,6 +18,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testgenhandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactstate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactupload"
@@ -72,6 +73,7 @@ type ToolHandler struct {
 
 	// Rate limiter for MCP tool calls (sliding window)
 	toolCallLimiter *toolresp.ToolCallLimiter
+	*toolguard.Guards
 
 	// Alert system + context streaming (delegates to internal/streaming)
 	alertBuffer *alertbuf.AlertBuffer
@@ -129,10 +131,6 @@ type ToolHandler struct {
 
 	// Session-level response-mode preference.
 	summaryPrefs *summarypref.Cache
-
-	// extensionReadinessTimeout overrides the cold-start wait duration for requireExtension.
-	// Zero uses capture.ExtensionReadinessTimeout (5s). Tests set this to 100ms.
-	extensionReadinessTimeout time.Duration
 
 	// noiseFirstConnectFn overrides the noise auto-detect function for first-connection.
 	// When nil, the canonical noiseautorun detector is used.
@@ -396,18 +394,25 @@ func defaultExtensionReadinessTimeout() time.Duration {
 	return capture.ExtensionReadinessTimeout
 }
 
+func sessionStoreGuard(store *persistence.SessionStore, req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool) {
+	if store != nil {
+		return mcp.JSONRPCResponse{}, false
+	}
+	return mcp.Fail(req, mcp.ErrNotInitialized, "Session store not initialized", "Internal error — do not retry"), true
+}
+
 // NewToolHandler constructs the composite five-tool backend and its MCP adapter.
 func NewToolHandler(server *Server, captureStore *capture.Store) *MCPHandler {
 	shutdownContext, shutdownCancel := context.WithCancel(context.Background())
 	handler := &ToolHandler{
-		MCPHandler:                NewMCPHandler(server, version),
-		capture:                   captureStore,
-		shutdownCtx:               shutdownContext,
-		shutdownCancel:            shutdownCancel,
-		coldStartTimeout:          defaultColdStartTimeout,
-		extensionReadinessTimeout: defaultExtensionReadinessTimeout(),
-		networkRecording:          &netrecord.NetworkRecordingState{},
+		MCPHandler:       NewMCPHandler(server, version),
+		capture:          captureStore,
+		shutdownCtx:      shutdownContext,
+		shutdownCancel:   shutdownCancel,
+		coldStartTimeout: defaultColdStartTimeout,
+		networkRecording: &netrecord.NetworkRecordingState{},
 	}
+	handler.Guards = toolguard.New(captureStore, shutdownContext, defaultExtensionReadinessTimeout())
 	handler.recordingHandler = toolrecording.NewHandler(captureStore, handler.appendServerLog)
 	handler.usageTracker = telemetry.NewUsageTracker()
 	if captureStore != nil {
@@ -484,7 +489,9 @@ func NewToolHandler(server *Server, captureStore *capture.Store) *MCPHandler {
 	handler.testGenHandler = testgenhandler.New(handler)
 	handler.stateInteractHandler = toolinteract.NewStateInteractHandler(interactDeps, handler.sessionStoreImpl)
 	handler.configureSessions = toolconfigure.NewSessionHandler(toolconfigure.SessionDeps{
-		RequireStore:      handler.requireSessionStore,
+		RequireStore: func(req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool) {
+			return sessionStoreGuard(handler.sessionStoreImpl, req)
+		},
 		InvalidateSummary: handler.invalidateSummaryPref,
 		SetActiveCodebase: handler.MCPHandler.server.SetActiveCodebase,
 	},
@@ -498,12 +505,15 @@ func NewToolHandler(server *Server, captureStore *capture.Store) *MCPHandler {
 }
 
 func (h *ToolHandler) screenrecDeps() screenrec.Deps {
+	if h.Guards == nil {
+		h.Guards = toolguard.New(h.capture, h.shutdownCtx, defaultExtensionReadinessTimeout())
+	}
 	return screenrec.Deps{
 		EnqueuePendingQuery: h.EnqueuePendingQuery,
-		RequirePilot:        h.requirePilot,
-		RequireExtension:    h.requireExtension,
+		RequirePilot:        h.Guards.RequirePilot,
+		RequireExtension:    h.Guards.RequireExtension,
 		RecordAIAction:      h.recordAIAction,
-		DiagnosticHint:      h.diagnosticHint,
+		DiagnosticHint:      h.Guards.DiagnosticHint,
 		GetCommandResult:    h.getCommandResult,
 	}
 }

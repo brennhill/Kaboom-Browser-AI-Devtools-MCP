@@ -13,7 +13,7 @@ code_paths:
   - internal/identity/mcp.go
   - cmd/browser-agent/internal/toolresp/rate_limiter.go
   - cmd/browser-agent/internal/toolresp/toolresp.go
-  - cmd/browser-agent/tools_errors_guards.go
+  - cmd/browser-agent/internal/toolguard/guards.go
   - cmd/browser-agent/tool_dispatch_helpers.go
   - cmd/browser-agent/handler.go
   - cmd/browser-agent/handler_tools_call.go

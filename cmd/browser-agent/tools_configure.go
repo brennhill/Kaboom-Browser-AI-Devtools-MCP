@@ -23,6 +23,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/qualitygates"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/tutorial"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/issuereport"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -146,7 +147,7 @@ func (h *ToolHandler) toolDoctor(req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
 	}
 	return mcp.Succeed(req, "Doctor: "+overallStatus, map[string]any{
 		"status": overallStatus, "ready_for_interaction": readyForInteraction,
-		"checks": checks, "hint": h.DiagnosticHintString(),
+		"checks": checks, "hint": h.Guards.DiagnosticHintString(),
 	})
 }
 
@@ -428,7 +429,7 @@ func (h *ToolHandler) toolConfigureStreaming(req mcp.JSONRPCRequest, args json.R
 	if resp, stop := mcp.ParseArgs(req, rewritten, &params); stop {
 		return resp
 	}
-	if resp, blocked := requireString(req, params.Action, "action", "Add the 'action' parameter and call again"); blocked {
+	if resp, blocked := toolresp.RequireString(req, params.Action, "action", "Add the 'action' parameter and call again"); blocked {
 		return resp
 	}
 	result := h.alertBuffer.Stream.Configure(

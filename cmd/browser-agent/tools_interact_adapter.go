@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactstate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
@@ -19,12 +20,15 @@ import (
 
 // buildInteractDeps constructs a toolinteract.Deps wired to the given ToolHandler.
 func buildInteractDeps(h *ToolHandler) *toolinteract.Deps {
+	if h.Guards == nil {
+		h.Guards = toolguard.New(h.capture, h.shutdownCtx, defaultExtensionReadinessTimeout())
+	}
 	return &toolinteract.Deps{
 		// Gate checks
-		RequirePilot:       h.requirePilot,
-		RequireExtension:   h.requireExtension,
-		RequireTabTracking: h.requireTabTracking,
-		RequireCSPClear:    h.requireCSPClear,
+		RequirePilot:       h.Guards.RequirePilot,
+		RequireExtension:   h.Guards.RequireExtension,
+		RequireTabTracking: h.Guards.RequireTabTracking,
+		RequireCSPClear:    h.Guards.RequireCSPClear,
 
 		// Command dispatch
 		EnqueuePendingQuery: h.EnqueuePendingQuery,
@@ -47,7 +51,7 @@ func buildInteractDeps(h *ToolHandler) *toolinteract.Deps {
 
 		// Response enrichment
 		EnrichNavigateResponse:  h.enrichNavigateResponse,
-		InjectCSPBlockedActions: h.injectCSPBlockedActions,
+		InjectCSPBlockedActions: h.Guards.InjectCSPBlockedActions,
 
 		// Screenshot/observe proxies
 		GetScreenshot: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
@@ -78,8 +82,10 @@ func buildInteractDeps(h *ToolHandler) *toolinteract.Deps {
 		},
 
 		// Session store
-		RequireSessionStore: h.requireSessionStore,
-		DiagnosticHint:      h.diagnosticHint,
+		RequireSessionStore: func(req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool) {
+			return sessionStoreGuard(h.sessionStoreImpl, req)
+		},
+		DiagnosticHint: h.Guards.DiagnosticHint,
 		GetRedactionEngine: func() toolinteract.RedactionEngine {
 			return h.GetRedactionEngine()
 		},
