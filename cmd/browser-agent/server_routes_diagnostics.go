@@ -13,6 +13,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -284,4 +285,57 @@ func (s *Server) handleLogsPost(w http.ResponseWriter, r *http.Request) {
 		"rejected": rejected,
 		"entries":  s.logs.EntryCount(),
 	})
+}
+
+// debugEndpointsEnabled reports whether non-production telemetry inspection routes are enabled.
+func debugEndpointsEnabled() bool {
+	return os.Getenv("KABOOM_DEBUG") == "1"
+}
+
+func handleDebugUsage(mcp *MCPHandler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			jsonResponse(w, http.StatusMethodNotAllowed, map[string]any{"error": "method not allowed"})
+			return
+		}
+		tracker := mcp.GetUsageTracker()
+		if tracker == nil {
+			jsonResponse(w, http.StatusOK, map[string]any{"counts": map[string]int{}})
+			return
+		}
+		jsonResponse(w, http.StatusOK, map[string]any{"counts": tracker.Peek()})
+	}
+}
+
+// handleDebugBeaconFlush returns the usage payload that a beacon would send without transmitting it.
+func handleDebugBeaconFlush(mcp *MCPHandler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			jsonResponse(w, http.StatusMethodNotAllowed, map[string]any{"error": "method not allowed"})
+			return
+		}
+		tracker := mcp.GetUsageTracker()
+		if tracker == nil {
+			jsonResponse(w, http.StatusOK, map[string]any{
+				"payload": nil,
+				"flushed": 0,
+				"message": "no usage tracker available",
+			})
+			return
+		}
+		snapshot := tracker.SwapAndReset()
+		if snapshot == nil {
+			jsonResponse(w, http.StatusOK, map[string]any{
+				"payload": nil,
+				"flushed": 0,
+				"message": "no activity since last flush",
+			})
+			return
+		}
+		payload := telemetry.BuildUsageSummaryPayload(0, snapshot)
+		jsonResponse(w, http.StatusOK, map[string]any{
+			"payload": payload,
+			"flushed": len(snapshot.ToolStats),
+		})
+	}
 }

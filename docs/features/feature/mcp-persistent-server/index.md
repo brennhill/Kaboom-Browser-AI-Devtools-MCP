@@ -71,6 +71,7 @@ test_paths:
   - cmd/browser-agent/connect_mode_run_test.go
   - cmd/browser-agent/handler_consistency_test.go
   - cmd/browser-agent/server_routes_unit_test.go
+  - cmd/browser-agent/server_routes_debug_usage_test.go
   - cmd/browser-agent/main_connection_diag_test.go
   - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
   - cmd/browser-agent/internal/bridge/bridge_detach_stdio_test.go
