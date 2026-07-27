@@ -1,4 +1,4 @@
-// push_handlers.go — HTTP handlers for push screenshot, chat, and capabilities.
+// push_handlers.go — Push capability state, MCP delivery, and HTTP handlers.
 package main
 
 import (
@@ -8,10 +8,106 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 )
+
+var pushState struct {
+	mu       sync.RWMutex
+	caps     push.ClientCapabilities
+	framing  bridge.StdioFraming
+	onChange func(push.ClientCapabilities)
+}
+
+func setPushClientCapabilities(caps push.ClientCapabilities) {
+	cb := func() func(push.ClientCapabilities) {
+		pushState.mu.Lock()
+		defer pushState.mu.Unlock()
+		pushState.caps = caps
+		return pushState.onChange
+	}()
+	if cb != nil {
+		cb(caps)
+	}
+}
+
+func getPushClientCapabilities() push.ClientCapabilities {
+	pushState.mu.RLock()
+	defer pushState.mu.RUnlock()
+	return pushState.caps
+}
+
+func onPushCapabilitiesChange(fn func(push.ClientCapabilities)) {
+	pushState.mu.Lock()
+	defer pushState.mu.Unlock()
+	pushState.onChange = fn
+}
+
+func storeBridgeFraming(f bridge.StdioFraming) {
+	pushState.mu.Lock()
+	defer pushState.mu.Unlock()
+	pushState.framing = f
+}
+
+func getBridgeFraming() bridge.StdioFraming {
+	pushState.mu.RLock()
+	defer pushState.mu.RUnlock()
+	return pushState.framing
+}
+
+func extractClientCapabilities(rawParams json.RawMessage) push.ClientCapabilities {
+	if len(rawParams) == 0 {
+		return push.ClientCapabilities{}
+	}
+	var params struct {
+		Capabilities struct {
+			Sampling json.RawMessage `json:"sampling"`
+		} `json:"capabilities"`
+		ClientInfo struct {
+			Name string `json:"name"`
+		} `json:"clientInfo"` // SPEC:MCP initialize params
+	}
+	if err := json.Unmarshal(rawParams, &params); err != nil {
+		return push.ClientCapabilities{}
+	}
+	caps := push.ClientCapabilities{ClientName: params.ClientInfo.Name}
+	if len(params.Capabilities.Sampling) > 0 && string(params.Capabilities.Sampling) != "null" {
+		caps.SupportsSampling = true
+	}
+	if caps.ClientName != "" {
+		caps.SupportsNotifications = true
+	}
+	return caps
+}
+
+type stdioSamplingSender struct{}
+
+func (s *stdioSamplingSender) SendSampling(req push.SamplingRequest) error {
+	payload, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+	writeMCPPayload(payload, getBridgeFraming())
+	return nil
+}
+
+type stdioNotifier struct{}
+
+func (n *stdioNotifier) SendNotification(method string, params map[string]any) {
+	notif := map[string]any{
+		"jsonrpc": JSONRPCVersion,
+		"method":  method,
+		"params":  params,
+	}
+	payload, err := json.Marshal(notif)
+	if err != nil {
+		return
+	}
+	writeMCPPayload(payload, getBridgeFraming())
+}
 
 // pushEventID generates a unique event ID with the given prefix.
 func pushEventID(prefix string) string {

@@ -7,8 +7,6 @@ owners: []
 last_reviewed: 2026-07-05
 code_paths:
   - internal/push/
-  - cmd/browser-agent/push_state.go
-  - cmd/browser-agent/push_sender.go
   - cmd/browser-agent/push_handlers.go
   - cmd/browser-agent/tools_observe_inbox.go
   - src/background/push-handler.ts
@@ -63,9 +61,7 @@ Push browser content (annotations, screenshots, chat messages) to the AI automat
 | `internal/push/inbox.go` | Bounded FIFO queue (50 events) | `inbox_test.go` (8 tests) |
 | `internal/push/router.go` | Delivery router: sampling→notification→inbox | `router_test.go` (6 tests) |
 | `internal/push/sampling.go` | MCP sampling/createMessage builder | `sampling_test.go` (5 tests) |
-| `cmd/browser-agent/push_state.go` | Bridge↔daemon shared capability state | `push_state_test.go` (5 tests) |
-| `cmd/browser-agent/push_sender.go` | Stdio sampling sender and notifier | — |
-| `cmd/browser-agent/push_handlers.go` | HTTP endpoint handlers | `push_handlers_test.go` (10 tests) |
+| `cmd/browser-agent/push_handlers.go` | Capability state, stdio delivery, and HTTP endpoints | `push_state_test.go`, `push_handlers_test.go` |
 | `cmd/browser-agent/tools_observe_inbox.go` | observe(inbox) handler + piggyback | `tools_observe_inbox_test.go` (6 tests) |
 
 ### TypeScript (extension)
