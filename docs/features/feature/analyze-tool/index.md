@@ -9,7 +9,7 @@ code_paths:
   - cmd/browser-agent/tools_analyze_dispatch.go
   - cmd/browser-agent/tools_analyze_annotations_handlers.go
   - cmd/browser-agent/tools_analyze_api_validation.go
-  - cmd/browser-agent/tools_analyze_inspect_forms.go
+  - cmd/browser-agent/internal/toolanalyze/inspect/forms.go
   - cmd/browser-agent/tools_pending_query_enqueue.go
   - cmd/browser-agent/tools_async_observe_commands.go
   - cmd/browser-agent/tools_async_completion.go
@@ -39,6 +39,7 @@ code_paths:
 test_paths:
   - cmd/browser-agent/tools_analyze_annotations_test.go
   - cmd/browser-agent/tools_analyze_inspect_test.go
+  - cmd/browser-agent/internal/toolanalyze/inspect/forms_test.go
   - cmd/browser-agent/tools_analyze_structured_extraction_test.go
   - cmd/browser-agent/tools_analyze_handler_test.go
   - cmd/browser-agent/tools_pending_query_enqueue_test.go

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/inspect"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
@@ -33,11 +34,11 @@ var analyzeHandlers = map[string]ModeHandler{
 	"annotation_detail": method((*ToolHandler).toolGetAnnotationDetail),
 	"draw_history":      method((*ToolHandler).toolListDrawHistory),
 	"draw_session":      method((*ToolHandler).toolGetDrawSession),
-	"computed_styles":   toolComputedStyles,
-	"forms":             toolFormDiscovery,
-	"form_state":        toolFormState,
-	"form_validation":   toolFormValidation,
-	"data_table":        toolDataTable,
+	"computed_styles":   azInspect(inspect.HandleComputedStyles),
+	"forms":             azInspect(inspect.HandleFormDiscovery),
+	"form_state":        azInspect(inspect.HandleFormState),
+	"form_validation":   azInspect(inspect.HandleFormValidation),
+	"data_table":        azInspect(inspect.HandleDataTable),
 	"visual_baseline":   method((*ToolHandler).toolVisualBaseline),
 	"visual_diff":       method((*ToolHandler).toolVisualDiff),
 	"visual_baselines":  method((*ToolHandler).toolListVisualBaselines),
@@ -61,6 +62,12 @@ var analyzeAliasParams = defaultModeActionAliases
 
 // azLocal wraps a toolanalyze.Deps-accepting function as a ModeHandler.
 func azLocal(fn func(toolanalyze.Deps, JSONRPCRequest, json.RawMessage) JSONRPCResponse) ModeHandler {
+	return func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		return fn(h, req, args)
+	}
+}
+
+func azInspect(fn func(inspect.Deps, JSONRPCRequest, json.RawMessage) JSONRPCResponse) ModeHandler {
 	return func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 		return fn(h, req, args)
 	}

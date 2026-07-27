@@ -8,6 +8,8 @@ package main
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/inspect"
 )
 
 func TestBuildFormValidationSummary_Basic(t *testing.T) {
@@ -28,7 +30,7 @@ func TestBuildFormValidationSummary_Basic(t *testing.T) {
 	resultJSON, _ := json.Marshal(result)
 	resp := JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
 
-	summarized := buildFormValidationSummary(resp)
+	summarized := inspect.BuildFormValidationSummary(resp)
 
 	var summaryResult MCPToolResult
 	if err := json.Unmarshal(summarized.Result, &summaryResult); err != nil {
@@ -71,7 +73,7 @@ func TestBuildFormValidationSummary_ErrorResponse(t *testing.T) {
 	resp := JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
 
 	// Should return original response unchanged
-	summarized := buildFormValidationSummary(resp)
+	summarized := inspect.BuildFormValidationSummary(resp)
 	if string(summarized.Result) != string(resp.Result) {
 		t.Error("error response should be returned unchanged")
 	}
@@ -87,7 +89,7 @@ func TestBuildFormValidationSummary_EmptyTextBlock_NoPanic(t *testing.T) {
 	resp := JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
 
 	// Regression guard: empty text blocks must be ignored safely.
-	summarized := buildFormValidationSummary(resp)
+	summarized := inspect.BuildFormValidationSummary(resp)
 	if string(summarized.Result) != string(resp.Result) {
 		t.Error("expected unchanged response for empty text block")
 	}
@@ -98,7 +100,7 @@ func TestExtractFormsList_Direct(t *testing.T) {
 	data := map[string]any{
 		"forms": []any{map[string]any{"id": "f1"}},
 	}
-	forms := extractFormsList(data)
+	forms := inspect.ExtractFormsList(data)
 	if len(forms) != 1 {
 		t.Errorf("expected 1 form, got %d", len(forms))
 	}
@@ -111,7 +113,7 @@ func TestExtractFormsList_Nested(t *testing.T) {
 			"forms": []any{map[string]any{"id": "f1"}},
 		},
 	}
-	forms := extractFormsList(data)
+	forms := inspect.ExtractFormsList(data)
 	if len(forms) != 1 {
 		t.Errorf("expected 1 form from nested result, got %d", len(forms))
 	}
@@ -120,7 +122,7 @@ func TestExtractFormsList_Nested(t *testing.T) {
 func TestExtractFormsList_NoForms(t *testing.T) {
 	t.Parallel()
 	data := map[string]any{"foo": "bar"}
-	forms := extractFormsList(data)
+	forms := inspect.ExtractFormsList(data)
 	if forms != nil {
 		t.Error("expected nil for data without forms")
 	}
