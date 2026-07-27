@@ -12,10 +12,12 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testgen"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testgen/heal"
 )
 
 func (h *Handler) HandleGenerateTestHeal(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	var params TestHealRequest
+	var params heal.TestHealRequest
 
 	warnings, err := mcp.UnmarshalWithWarnings(args, &params)
 	if err != nil {
@@ -35,7 +37,7 @@ func (h *Handler) HandleGenerateTestHeal(req mcp.JSONRPCRequest, args json.RawMe
 		return errResp
 	}
 
-	summary := formatHealSummary(params, result)
+	summary := heal.FormatHealSummary(params, result)
 	data := map[string]any{"result": result}
 	resp := mcp.Succeed(req, summary, data)
 	return mcp.AppendWarningsToResponse(resp, warnings)
@@ -43,7 +45,7 @@ func (h *Handler) HandleGenerateTestHeal(req mcp.JSONRPCRequest, args json.RawMe
 
 var validHealActions = []string{"analyze", "repair", "batch"}
 
-func validateHealParams(req mcp.JSONRPCRequest, params TestHealRequest) (mcp.JSONRPCResponse, bool) {
+func validateHealParams(req mcp.JSONRPCRequest, params heal.TestHealRequest) (mcp.JSONRPCResponse, bool) {
 	if resp, blocked := toolresp.RequireString(req, params.Action, "action", "Add the 'action' parameter and call again"); blocked {
 		return resp, true
 	}
@@ -53,7 +55,7 @@ func validateHealParams(req mcp.JSONRPCRequest, params TestHealRequest) (mcp.JSO
 	return mcp.JSONRPCResponse{}, false
 }
 
-func (h *Handler) dispatchHealAction(req mcp.JSONRPCRequest, params TestHealRequest, projectDir string) (any, mcp.JSONRPCResponse, bool) {
+func (h *Handler) dispatchHealAction(req mcp.JSONRPCRequest, params heal.TestHealRequest, projectDir string) (any, mcp.JSONRPCResponse, bool) {
 	switch params.Action {
 	case "analyze":
 		return h.handleHealAnalyze(req, params, projectDir)
@@ -65,7 +67,7 @@ func (h *Handler) dispatchHealAction(req mcp.JSONRPCRequest, params TestHealRequ
 	return nil, mcp.JSONRPCResponse{}, false
 }
 
-func (h *Handler) handleHealAnalyze(req mcp.JSONRPCRequest, params TestHealRequest, projectDir string) (any, mcp.JSONRPCResponse, bool) {
+func (h *Handler) handleHealAnalyze(req mcp.JSONRPCRequest, params heal.TestHealRequest, projectDir string) (any, mcp.JSONRPCResponse, bool) {
 	if resp, blocked := toolresp.RequireString(req, params.TestFile, "test_file", "Add the 'test_file' parameter and call again"); blocked {
 		return nil, resp, true
 	}
@@ -80,10 +82,10 @@ func (h *Handler) handleHealAnalyze(req mcp.JSONRPCRequest, params TestHealReque
 	return result, mcp.JSONRPCResponse{}, false
 }
 
-func mapAnalyzeError(req mcp.JSONRPCRequest, params TestHealRequest, err error) mcp.JSONRPCResponse {
+func mapAnalyzeError(req mcp.JSONRPCRequest, params heal.TestHealRequest, err error) mcp.JSONRPCResponse {
 	errMsg := err.Error()
-	if strings.Contains(errMsg, ErrTestFileNotFound) {
-		return mcp.Fail(req, ErrTestFileNotFound, "Test file not found: "+params.TestFile, "Check the file path and try again")
+	if strings.Contains(errMsg, heal.ErrTestFileNotFound) {
+		return mcp.Fail(req, heal.ErrTestFileNotFound, "Test file not found: "+params.TestFile, "Check the file path and try again")
 	}
 	if strings.Contains(errMsg, mcp.ErrPathNotAllowed) {
 		return mcp.Fail(req, mcp.ErrPathNotAllowed, errMsg, "Use a path within the project directory")
@@ -91,7 +93,7 @@ func mapAnalyzeError(req mcp.JSONRPCRequest, params TestHealRequest, err error) 
 	return mcp.Fail(req, mcp.ErrInternal, "Failed to analyze test file: "+errMsg, "Check that the test file path is valid and readable")
 }
 
-func (h *Handler) handleHealRepair(req mcp.JSONRPCRequest, params TestHealRequest, projectDir string) (any, mcp.JSONRPCResponse, bool) {
+func (h *Handler) handleHealRepair(req mcp.JSONRPCRequest, params heal.TestHealRequest, projectDir string) (any, mcp.JSONRPCResponse, bool) {
 	if len(params.BrokenSelectors) == 0 {
 		return nil, mcp.Fail(req, mcp.ErrMissingParam,
 			"Required parameter 'broken_selectors' is missing for repair action",
@@ -106,7 +108,7 @@ func (h *Handler) handleHealRepair(req mcp.JSONRPCRequest, params TestHealReques
 	return healResult, mcp.JSONRPCResponse{}, false
 }
 
-func (h *Handler) handleHealBatch(req mcp.JSONRPCRequest, params TestHealRequest, projectDir string) (any, mcp.JSONRPCResponse, bool) {
+func (h *Handler) handleHealBatch(req mcp.JSONRPCRequest, params heal.TestHealRequest, projectDir string) (any, mcp.JSONRPCResponse, bool) {
 	if resp, blocked := toolresp.RequireString(req, params.TestDir, "test_dir", "Add the 'test_dir' parameter and call again"); blocked {
 		return nil, resp, true
 	}
@@ -122,8 +124,8 @@ func mapBatchError(req mcp.JSONRPCRequest, err error) mcp.JSONRPCResponse {
 	if strings.Contains(errMsg, mcp.ErrPathNotAllowed) {
 		return mcp.Fail(req, mcp.ErrPathNotAllowed, errMsg, "Use a path within the project directory")
 	}
-	if strings.Contains(errMsg, ErrBatchTooLarge) {
-		return mcp.Fail(req, ErrBatchTooLarge, errMsg, "Reduce the number or size of test files")
+	if strings.Contains(errMsg, testgen.ErrBatchTooLarge) {
+		return mcp.Fail(req, testgen.ErrBatchTooLarge, errMsg, "Reduce the number or size of test files")
 	}
 	return mcp.Fail(req, mcp.ErrInternal, "Failed to heal test batch: "+errMsg, "Check the test_dir path and file permissions, then retry")
 }

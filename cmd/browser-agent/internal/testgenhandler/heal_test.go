@@ -2,7 +2,7 @@
 // Docs: docs/features/feature/test-generation/index.md
 
 // heal_test.go — Tests for heal.go functions.
-// Covers: mapAnalyzeError, handleHealRepair, handleHealBatch, mapBatchError, formatHealSummary.
+// Covers: mapAnalyzeError, handleHealRepair, handleHealBatch, mapBatchError, heal.FormatHealSummary.
 package testgenhandler
 
 import (
@@ -14,6 +14,8 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testgen"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testgen/heal"
 )
 
 // ============================================
@@ -24,8 +26,8 @@ func TestMapAnalyzeError_FileNotFound(t *testing.T) {
 	t.Parallel()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	params := TestHealRequest{TestFile: "tests/missing.spec.ts"}
-	err := fmt.Errorf("%s: %s", ErrTestFileNotFound, "tests/missing.spec.ts")
+	params := heal.TestHealRequest{TestFile: "tests/missing.spec.ts"}
+	err := fmt.Errorf("%s: %s", heal.ErrTestFileNotFound, "tests/missing.spec.ts")
 
 	resp := mapAnalyzeError(req, params, err)
 
@@ -35,7 +37,7 @@ func TestMapAnalyzeError_FileNotFound(t *testing.T) {
 	if resp.ID != 1 {
 		t.Fatalf("ID = %v, want 1", resp.ID)
 	}
-	assertResultContains(t, resp.Result, ErrTestFileNotFound)
+	assertResultContains(t, resp.Result, heal.ErrTestFileNotFound)
 	assertResultContains(t, resp.Result, "tests/missing.spec.ts")
 }
 
@@ -43,7 +45,7 @@ func TestMapAnalyzeError_PathNotAllowed(t *testing.T) {
 	t.Parallel()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: "req-42"}
-	params := TestHealRequest{TestFile: "../etc/passwd"}
+	params := heal.TestHealRequest{TestFile: "../etc/passwd"}
 	err := fmt.Errorf("%s: path contains '..'", mcp.ErrPathNotAllowed)
 
 	resp := mapAnalyzeError(req, params, err)
@@ -59,7 +61,7 @@ func TestMapAnalyzeError_GenericError(t *testing.T) {
 	t.Parallel()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 99}
-	params := TestHealRequest{TestFile: "test.spec.ts"}
+	params := heal.TestHealRequest{TestFile: "test.spec.ts"}
 	err := errors.New("permission denied")
 
 	resp := mapAnalyzeError(req, params, err)
@@ -84,7 +86,7 @@ func TestMapAnalyzeError_PreservesRequestID(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: tc.id}
-			resp := mapAnalyzeError(req, TestHealRequest{}, errors.New("some error"))
+			resp := mapAnalyzeError(req, heal.TestHealRequest{}, errors.New("some error"))
 			if resp.ID != tc.id {
 				t.Fatalf("ID = %v, want %v", resp.ID, tc.id)
 			}
@@ -101,7 +103,7 @@ func TestHandleHealRepair_NoBrokenSelectors(t *testing.T) {
 	h := newPureHandler()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	params := TestHealRequest{Action: "repair", BrokenSelectors: nil}
+	params := heal.TestHealRequest{Action: "repair", BrokenSelectors: nil}
 
 	_, resp, isErr := h.handleHealRepair(req, params, t.TempDir())
 	if !isErr {
@@ -116,7 +118,7 @@ func TestHandleHealRepair_EmptyBrokenSelectors(t *testing.T) {
 	h := newPureHandler()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	params := TestHealRequest{Action: "repair", BrokenSelectors: []string{}}
+	params := heal.TestHealRequest{Action: "repair", BrokenSelectors: []string{}}
 
 	_, resp, isErr := h.handleHealRepair(req, params, t.TempDir())
 	if !isErr {
@@ -130,7 +132,7 @@ func TestHandleHealRepair_ValidSelectors(t *testing.T) {
 	h := newPureHandler()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	params := TestHealRequest{
+	params := heal.TestHealRequest{
 		Action:          "repair",
 		BrokenSelectors: []string{"#login", ".button"},
 	}
@@ -140,9 +142,9 @@ func TestHandleHealRepair_ValidSelectors(t *testing.T) {
 		t.Fatal("handleHealRepair should mcp.Succeed with valid selectors")
 	}
 
-	healResult, ok := result.(*HealResult)
+	healResult, ok := result.(*heal.HealResult)
 	if !ok {
-		t.Fatalf("result type = %T, want *HealResult", result)
+		t.Fatalf("result type = %T, want *heal.HealResult", result)
 	}
 	if len(healResult.Healed) != 2 {
 		t.Fatalf("Healed len = %d, want 2", len(healResult.Healed))
@@ -157,7 +159,7 @@ func TestHandleHealRepair_MixedSelectors(t *testing.T) {
 	h := newPureHandler()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	params := TestHealRequest{
+	params := heal.TestHealRequest{
 		Action:          "repair",
 		BrokenSelectors: []string{"#valid", "", "javascript:alert(1)", ".class"},
 		AutoApply:       true,
@@ -168,7 +170,7 @@ func TestHandleHealRepair_MixedSelectors(t *testing.T) {
 		t.Fatal("handleHealRepair should mcp.Succeed even with some invalid selectors")
 	}
 
-	healResult := result.(*HealResult)
+	healResult := result.(*heal.HealResult)
 	if len(healResult.Healed) != 2 {
 		t.Fatalf("Healed len = %d, want 2 (#valid and .class)", len(healResult.Healed))
 	}
@@ -185,7 +187,7 @@ func TestHandleHealRepair_PreservesRequestID(t *testing.T) {
 	h := newPureHandler()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: "heal-req-42"}
-	params := TestHealRequest{Action: "repair", BrokenSelectors: nil}
+	params := heal.TestHealRequest{Action: "repair", BrokenSelectors: nil}
 
 	_, resp, isErr := h.handleHealRepair(req, params, t.TempDir())
 	if !isErr {
@@ -205,7 +207,7 @@ func TestHandleHealBatch_NoTestDir(t *testing.T) {
 	h := newPureHandler()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	params := TestHealRequest{Action: "batch", TestDir: ""}
+	params := heal.TestHealRequest{Action: "batch", TestDir: ""}
 
 	_, resp, isErr := h.handleHealBatch(req, params, t.TempDir())
 	if !isErr {
@@ -231,16 +233,16 @@ func TestHandleHealBatch_ValidDir(t *testing.T) {
 	}
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	params := TestHealRequest{Action: "batch", TestDir: testDir}
+	params := heal.TestHealRequest{Action: "batch", TestDir: testDir}
 
 	result, _, isErr := h.handleHealBatch(req, params, projectDir)
 	if isErr {
 		t.Fatal("handleHealBatch should mcp.Succeed with valid directory")
 	}
 
-	batchResult, ok := result.(*BatchHealResult)
+	batchResult, ok := result.(*heal.BatchHealResult)
 	if !ok {
-		t.Fatalf("result type = %T, want *BatchHealResult", result)
+		t.Fatalf("result type = %T, want *heal.BatchHealResult", result)
 	}
 	if batchResult.FilesProcessed != 1 {
 		t.Fatalf("FilesProcessed = %d, want 1", batchResult.FilesProcessed)
@@ -256,13 +258,13 @@ func TestHandleHealBatch_NonexistentDir(t *testing.T) {
 
 	missingDir := filepath.Join(projectDir, "nonexistent-dir")
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	params := TestHealRequest{Action: "batch", TestDir: missingDir}
+	params := heal.TestHealRequest{Action: "batch", TestDir: missingDir}
 
 	_, resp, isErr := h.handleHealBatch(req, params, projectDir)
 	if !isErr {
 		t.Fatal("handleHealBatch should mcp.Fail for nonexistent directory")
 	}
-	assertResultContains(t, resp.Result, ErrTestFileNotFound)
+	assertResultContains(t, resp.Result, heal.ErrTestFileNotFound)
 }
 
 func TestHandleHealBatch_PathTraversal(t *testing.T) {
@@ -270,7 +272,7 @@ func TestHandleHealBatch_PathTraversal(t *testing.T) {
 	h := newPureHandler()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	params := TestHealRequest{Action: "batch", TestDir: "../../../etc"}
+	params := heal.TestHealRequest{Action: "batch", TestDir: "../../../etc"}
 
 	_, resp, isErr := h.handleHealBatch(req, params, t.TempDir())
 	if !isErr {
@@ -284,7 +286,7 @@ func TestHandleHealBatch_PreservesRequestID(t *testing.T) {
 	h := newPureHandler()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: "batch-99"}
-	params := TestHealRequest{Action: "batch", TestDir: ""}
+	params := heal.TestHealRequest{Action: "batch", TestDir: ""}
 
 	_, resp, isErr := h.handleHealBatch(req, params, t.TempDir())
 	if !isErr {
@@ -305,14 +307,14 @@ func TestHandleHealBatch_EmptyDir(t *testing.T) {
 	}
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	params := TestHealRequest{Action: "batch", TestDir: testDir}
+	params := heal.TestHealRequest{Action: "batch", TestDir: testDir}
 
 	result, _, isErr := h.handleHealBatch(req, params, projectDir)
 	if isErr {
 		t.Fatal("handleHealBatch should mcp.Succeed on empty directory (zero files)")
 	}
 
-	batchResult := result.(*BatchHealResult)
+	batchResult := result.(*heal.BatchHealResult)
 	if batchResult.FilesProcessed != 0 {
 		t.Fatalf("FilesProcessed = %d, want 0", batchResult.FilesProcessed)
 	}
@@ -341,11 +343,11 @@ func TestMapBatchError_BatchTooLarge(t *testing.T) {
 	t.Parallel()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
-	err := fmt.Errorf("%s: too many files", ErrBatchTooLarge)
+	err := fmt.Errorf("%s: too many files", testgen.ErrBatchTooLarge)
 
 	resp := mapBatchError(req, err)
 
-	assertResultContains(t, resp.Result, ErrBatchTooLarge)
+	assertResultContains(t, resp.Result, testgen.ErrBatchTooLarge)
 	assertResultContains(t, resp.Result, "Reduce the number or size")
 }
 
@@ -388,19 +390,19 @@ func TestMapBatchError_PreservesRequestID(t *testing.T) {
 }
 
 // ============================================
-// Tests for formatHealSummary
+// Tests for heal.FormatHealSummary
 // ============================================
 
 func TestFormatHealSummary_Analyze(t *testing.T) {
 	t.Parallel()
 
-	params := TestHealRequest{Action: "analyze", TestFile: "tests/login.spec.ts"}
+	params := heal.TestHealRequest{Action: "analyze", TestFile: "tests/login.spec.ts"}
 	result := map[string]any{
 		"broken_selectors": []string{"#btn", ".submit"},
 		"count":            2,
 	}
 
-	summary := formatHealSummary(params, result)
+	summary := heal.FormatHealSummary(params, result)
 
 	if !strings.Contains(summary, "Found 2 selectors") {
 		t.Fatalf("summary = %q, want to contain 'Found 2 selectors'", summary)
@@ -413,12 +415,12 @@ func TestFormatHealSummary_Analyze(t *testing.T) {
 func TestFormatHealSummary_AnalyzeZeroCount(t *testing.T) {
 	t.Parallel()
 
-	params := TestHealRequest{Action: "analyze", TestFile: "tests/clean.spec.ts"}
+	params := heal.TestHealRequest{Action: "analyze", TestFile: "tests/clean.spec.ts"}
 	result := map[string]any{
 		"count": 0,
 	}
 
-	summary := formatHealSummary(params, result)
+	summary := heal.FormatHealSummary(params, result)
 
 	if !strings.Contains(summary, "Found 0 selectors") {
 		t.Fatalf("summary = %q, want to contain 'Found 0 selectors'", summary)
@@ -428,9 +430,9 @@ func TestFormatHealSummary_AnalyzeZeroCount(t *testing.T) {
 func TestFormatHealSummary_AnalyzeNonMapResult(t *testing.T) {
 	t.Parallel()
 
-	params := TestHealRequest{Action: "analyze", TestFile: "test.spec.ts"}
+	params := heal.TestHealRequest{Action: "analyze", TestFile: "test.spec.ts"}
 	// When result is not a map, count defaults to 0
-	summary := formatHealSummary(params, "not a map")
+	summary := heal.FormatHealSummary(params, "not a map")
 
 	if !strings.Contains(summary, "Found 0 selectors") {
 		t.Fatalf("summary = %q, want 'Found 0 selectors' for non-map result", summary)
@@ -440,11 +442,11 @@ func TestFormatHealSummary_AnalyzeNonMapResult(t *testing.T) {
 func TestFormatHealSummary_Repair(t *testing.T) {
 	t.Parallel()
 
-	params := TestHealRequest{Action: "repair"}
-	result := &HealResult{
-		Healed:   []HealedSelector{{OldSelector: "#a", NewSelector: "#b"}},
+	params := heal.TestHealRequest{Action: "repair"}
+	result := &heal.HealResult{
+		Healed:   []heal.HealedSelector{{OldSelector: "#a", NewSelector: "#b"}},
 		Unhealed: []string{".broken"},
-		Summary: HealSummary{
+		Summary: heal.HealSummary{
 			TotalBroken:  3,
 			HealedAuto:   1,
 			HealedManual: 0,
@@ -452,7 +454,7 @@ func TestFormatHealSummary_Repair(t *testing.T) {
 		},
 	}
 
-	summary := formatHealSummary(params, result)
+	summary := heal.FormatHealSummary(params, result)
 
 	if !strings.Contains(summary, "Healed 1/3") {
 		t.Fatalf("summary = %q, want to contain 'Healed 1/3'", summary)
@@ -468,11 +470,11 @@ func TestFormatHealSummary_Repair(t *testing.T) {
 func TestFormatHealSummary_RepairAllHealed(t *testing.T) {
 	t.Parallel()
 
-	params := TestHealRequest{Action: "repair"}
-	result := &HealResult{
-		Healed:   []HealedSelector{{}, {}, {}},
+	params := heal.TestHealRequest{Action: "repair"}
+	result := &heal.HealResult{
+		Healed:   []heal.HealedSelector{{}, {}, {}},
 		Unhealed: []string{},
-		Summary: HealSummary{
+		Summary: heal.HealSummary{
 			TotalBroken:  3,
 			HealedAuto:   3,
 			HealedManual: 0,
@@ -480,7 +482,7 @@ func TestFormatHealSummary_RepairAllHealed(t *testing.T) {
 		},
 	}
 
-	summary := formatHealSummary(params, result)
+	summary := heal.FormatHealSummary(params, result)
 
 	if !strings.Contains(summary, "Healed 3/3") {
 		t.Fatalf("summary = %q, want 'Healed 3/3'", summary)
@@ -493,8 +495,8 @@ func TestFormatHealSummary_RepairAllHealed(t *testing.T) {
 func TestFormatHealSummary_Batch(t *testing.T) {
 	t.Parallel()
 
-	params := TestHealRequest{Action: "batch"}
-	result := &BatchHealResult{
+	params := heal.TestHealRequest{Action: "batch"}
+	result := &heal.BatchHealResult{
 		FilesProcessed: 5,
 		FilesSkipped:   2,
 		TotalSelectors: 20,
@@ -502,7 +504,7 @@ func TestFormatHealSummary_Batch(t *testing.T) {
 		TotalUnhealed:  5,
 	}
 
-	summary := formatHealSummary(params, result)
+	summary := heal.FormatHealSummary(params, result)
 
 	if !strings.Contains(summary, "Healed 15/20 selectors") {
 		t.Fatalf("summary = %q, want to contain 'Healed 15/20 selectors'", summary)
@@ -521,8 +523,8 @@ func TestFormatHealSummary_Batch(t *testing.T) {
 func TestFormatHealSummary_BatchEmpty(t *testing.T) {
 	t.Parallel()
 
-	params := TestHealRequest{Action: "batch"}
-	result := &BatchHealResult{
+	params := heal.TestHealRequest{Action: "batch"}
+	result := &heal.BatchHealResult{
 		FilesProcessed: 0,
 		FilesSkipped:   0,
 		TotalSelectors: 0,
@@ -530,7 +532,7 @@ func TestFormatHealSummary_BatchEmpty(t *testing.T) {
 		TotalUnhealed:  0,
 	}
 
-	summary := formatHealSummary(params, result)
+	summary := heal.FormatHealSummary(params, result)
 
 	if !strings.Contains(summary, "Healed 0/0 selectors") {
 		t.Fatalf("summary = %q, want 'Healed 0/0 selectors'", summary)
@@ -543,21 +545,21 @@ func TestFormatHealSummary_BatchEmpty(t *testing.T) {
 func TestFormatHealSummary_UnknownAction(t *testing.T) {
 	t.Parallel()
 
-	params := TestHealRequest{Action: "unknown"}
-	summary := formatHealSummary(params, nil)
+	params := heal.TestHealRequest{Action: "unknown"}
+	summary := heal.FormatHealSummary(params, nil)
 
 	if summary != "" {
-		t.Fatalf("formatHealSummary(unknown) = %q, want empty string", summary)
+		t.Fatalf("heal.FormatHealSummary(unknown) = %q, want empty string", summary)
 	}
 }
 
 func TestFormatHealSummary_EmptyAction(t *testing.T) {
 	t.Parallel()
 
-	params := TestHealRequest{Action: ""}
-	summary := formatHealSummary(params, nil)
+	params := heal.TestHealRequest{Action: ""}
+	summary := heal.FormatHealSummary(params, nil)
 
 	if summary != "" {
-		t.Fatalf("formatHealSummary(empty) = %q, want empty string", summary)
+		t.Fatalf("heal.FormatHealSummary(empty) = %q, want empty string", summary)
 	}
 }

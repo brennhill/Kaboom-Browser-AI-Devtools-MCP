@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testgen"
 )
 
 // ============================================
@@ -24,7 +25,7 @@ func TestGenerateTestFromInteraction_VitestFramework(t *testing.T) {
 		{Type: "click", URL: "https://example.com"},
 	})
 
-	result, err := env.h.generateTestFromInteraction(TestFromContextRequest{
+	result, err := env.h.generateTestFromInteraction(testgen.TestFromContextRequest{
 		Framework: "vitest",
 	})
 	if err != nil {
@@ -46,7 +47,7 @@ func TestGenerateTestFromInteraction_Selectors(t *testing.T) {
 		{Type: "click", Selectors: map[string]any{"testId": "login-btn", "id": "loginBtn"}},
 	})
 
-	result, err := env.h.generateTestFromInteraction(TestFromContextRequest{
+	result, err := env.h.generateTestFromInteraction(testgen.TestFromContextRequest{
 		Framework: "playwright",
 	})
 	if err != nil {
@@ -65,7 +66,7 @@ func TestGenerateTestFromInteraction_NoMocksContextUsed(t *testing.T) {
 		{Type: "click", Selectors: map[string]any{"target": "#btn"}},
 	})
 
-	result, err := env.h.generateTestFromInteraction(TestFromContextRequest{
+	result, err := env.h.generateTestFromInteraction(testgen.TestFromContextRequest{
 		Framework:    "playwright",
 		IncludeMocks: false,
 	})
@@ -92,7 +93,7 @@ func TestGenerateTestFromRegression_WithMocks(t *testing.T) {
 		{Type: "click", Selectors: map[string]any{"target": "#x"}},
 	})
 
-	result, err := env.h.generateTestFromRegression(TestFromContextRequest{
+	result, err := env.h.generateTestFromRegression(testgen.TestFromContextRequest{
 		Framework:    "playwright",
 		IncludeMocks: true,
 	})
@@ -112,7 +113,7 @@ func TestGenerateTestFromRegression_JestFramework(t *testing.T) {
 		{Type: "click", Selectors: map[string]any{"target": "#a"}},
 	})
 
-	result, err := env.h.generateTestFromRegression(TestFromContextRequest{
+	result, err := env.h.generateTestFromRegression(testgen.TestFromContextRequest{
 		Framework: "jest",
 	})
 	if err != nil {
@@ -134,7 +135,7 @@ func TestGenerateTestFromRegression_SelectorsExtracted(t *testing.T) {
 		{Type: "click", Selectors: map[string]any{"testId": "save-btn", "id": "saveBtn"}},
 	})
 
-	result, err := env.h.generateTestFromRegression(TestFromContextRequest{
+	result, err := env.h.generateTestFromRegression(testgen.TestFromContextRequest{
 		Framework: "playwright",
 	})
 	if err != nil {
@@ -154,7 +155,7 @@ func TestGenerateTestFromRegression_ContentHasActions(t *testing.T) {
 		{Type: "input", Selectors: map[string]any{"id": "name"}, Value: "test"},
 	})
 
-	result, err := env.h.generateTestFromRegression(TestFromContextRequest{
+	result, err := env.h.generateTestFromRegression(testgen.TestFromContextRequest{
 		Framework: "playwright",
 		BaseURL:   "https://example.com",
 	})

@@ -7,7 +7,6 @@ owners: []
 last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/internal/testgenhandler/handler.go
-  - cmd/browser-agent/internal/testgenhandler/aliases.go
   - cmd/browser-agent/internal/testgenhandler/provider_adapter.go
   - cmd/browser-agent/internal/testgenhandler/classify.go
   - cmd/browser-agent/internal/testgenhandler/heal.go
@@ -66,7 +65,7 @@ last_verified_date: 2026-03-05
 
 - Sub-handler wiring: `cmd/browser-agent/internal/testgenhandler/handler.go`
 - Context dispatch: `cmd/browser-agent/internal/testgenhandler/generate.go`
-- Alias/contracts: `cmd/browser-agent/internal/testgenhandler/aliases.go`
+- Canonical contracts: `internal/testgen/types.go`, `internal/testgen/heal/types.go`
 - Provider delegation: `cmd/browser-agent/internal/testgenhandler/provider_adapter.go`
 - Heal and classify handlers: `cmd/browser-agent/internal/testgenhandler/heal.go`, `cmd/browser-agent/internal/testgenhandler/classify.go`
 - Test generation and failure classification engine: `internal/testgen/`

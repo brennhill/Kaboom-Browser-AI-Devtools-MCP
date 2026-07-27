@@ -10,10 +10,11 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testgen"
 )
 
 // ============================================
-// Tests for buildRegressionAssertions
+// Tests for testgen.BuildRegressionAssertions
 // ============================================
 
 func TestBuildRegressionAssertions_ErrorsWithNetwork(t *testing.T) {
@@ -23,7 +24,7 @@ func TestBuildRegressionAssertions_ErrorsWithNetwork(t *testing.T) {
 	bodies := []capture.NetworkBody{
 		{Method: "GET", URL: "/api/data", Status: 200},
 	}
-	assertions, count := buildRegressionAssertions(errors, bodies)
+	assertions, count := testgen.BuildRegressionAssertions(errors, bodies)
 
 	// 0 for baseline with errors + 1 network assertion
 	if count != 1 {
@@ -39,14 +40,14 @@ func TestBuildRegressionAssertions_ErrorsWithNetwork(t *testing.T) {
 }
 
 // ============================================
-// Tests for insertAssertionsBeforeClose
+// Tests for testgen.InsertAssertionsBeforeClose
 // ============================================
 
 func TestInsertAssertionsBeforeClose_EmptyAssertions(t *testing.T) {
 	t.Parallel()
 
 	script := "test('test', () => {\n});\n"
-	result := insertAssertionsBeforeClose(script, nil)
+	result := testgen.InsertAssertionsBeforeClose(script, nil)
 
 	if !strings.Contains(result, "});") {
 		t.Fatal("result should still contain closing brace")
@@ -59,7 +60,7 @@ func TestInsertAssertionsBeforeClose_MultipleClosingBraces(t *testing.T) {
 	script := "test('outer', () => {\n  test('inner', () => {\n  });\n});\n"
 	assertions := []string{"  // final assertion"}
 
-	result := insertAssertionsBeforeClose(script, assertions)
+	result := testgen.InsertAssertionsBeforeClose(script, assertions)
 
 	lastClose := strings.LastIndex(result, "});")
 	assertIdx := strings.LastIndex(result, "// final assertion")

@@ -11,10 +11,11 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testgen"
 )
 
 func (h *Handler) HandleGenerateTestClassify(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	var params TestClassifyRequest
+	var params testgen.TestClassifyRequest
 
 	warnings, err := mcp.UnmarshalWithWarnings(args, &params)
 	if err != nil {
@@ -36,7 +37,7 @@ func (h *Handler) HandleGenerateTestClassify(req mcp.JSONRPCRequest, args json.R
 	return mcp.AppendWarningsToResponse(resp, warnings)
 }
 
-func (h *Handler) dispatchClassifyAction(reqID any, params TestClassifyRequest) (any, string, *mcp.JSONRPCResponse) {
+func (h *Handler) dispatchClassifyAction(reqID any, params testgen.TestClassifyRequest) (any, string, *mcp.JSONRPCResponse) {
 	switch params.Action {
 	case "failure":
 		result, summary, errResp, ok := h.classifySingleFailure(reqID, params)
@@ -56,7 +57,7 @@ func (h *Handler) dispatchClassifyAction(reqID any, params TestClassifyRequest) 
 
 var validClassifyActions = []string{"failure", "batch"}
 
-func validateClassifyParams(req mcp.JSONRPCRequest, params TestClassifyRequest) (mcp.JSONRPCResponse, bool) {
+func validateClassifyParams(req mcp.JSONRPCRequest, params testgen.TestClassifyRequest) (mcp.JSONRPCResponse, bool) {
 	if resp, blocked := toolresp.RequireString(req, params.Action, "action", "Add the 'action' parameter and call again"); blocked {
 		return resp, true
 	}
@@ -66,7 +67,7 @@ func validateClassifyParams(req mcp.JSONRPCRequest, params TestClassifyRequest) 
 	return mcp.JSONRPCResponse{}, false
 }
 
-func (h *Handler) classifySingleFailure(reqID any, params TestClassifyRequest) (any, string, mcp.JSONRPCResponse, bool) {
+func (h *Handler) classifySingleFailure(reqID any, params testgen.TestClassifyRequest) (any, string, mcp.JSONRPCResponse, bool) {
 	if params.Failure == nil {
 		return nil, "", mcp.JSONRPCResponse{
 			JSONRPC: mcp.JSONRPCVersion,
@@ -87,7 +88,7 @@ func (h *Handler) classifySingleFailure(reqID any, params TestClassifyRequest) (
 			JSONRPC: mcp.JSONRPCVersion,
 			ID:      reqID,
 			Result: mcp.StructuredErrorResponse(
-				ErrClassificationUncertain,
+				testgen.ErrClassificationUncertain,
 				fmt.Sprintf("Could not classify failure with sufficient confidence (%.2f < 0.50)", classification.Confidence),
 				"Provide more context or manually review the failure",
 				mcp.WithHint("Category: "+classification.Category),
@@ -107,7 +108,7 @@ func (h *Handler) classifySingleFailure(reqID any, params TestClassifyRequest) (
 	return data, summary, mcp.JSONRPCResponse{}, true
 }
 
-func (h *Handler) classifyBatchFailures(reqID any, params TestClassifyRequest) (any, string, mcp.JSONRPCResponse, bool) {
+func (h *Handler) classifyBatchFailures(reqID any, params testgen.TestClassifyRequest) (any, string, mcp.JSONRPCResponse, bool) {
 	if len(params.Failures) == 0 {
 		return nil, "", mcp.JSONRPCResponse{
 			JSONRPC: mcp.JSONRPCVersion,
@@ -121,13 +122,13 @@ func (h *Handler) classifyBatchFailures(reqID any, params TestClassifyRequest) (
 		}, false
 	}
 
-	if len(params.Failures) > maxFailuresPerBatch {
+	if len(params.Failures) > testgen.MaxFailuresPerBatch {
 		return nil, "", mcp.JSONRPCResponse{
 			JSONRPC: mcp.JSONRPCVersion,
 			ID:      reqID,
 			Result: mcp.StructuredErrorResponse(
-				ErrBatchTooLarge,
-				fmt.Sprintf("Batch contains %d failures, max is %d", len(params.Failures), maxFailuresPerBatch),
+				testgen.ErrBatchTooLarge,
+				fmt.Sprintf("Batch contains %d failures, max is %d", len(params.Failures), testgen.MaxFailuresPerBatch),
 				"Reduce the number of failures and try again",
 			),
 		}, false

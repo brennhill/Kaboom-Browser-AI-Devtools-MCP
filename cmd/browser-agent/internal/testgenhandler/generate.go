@@ -20,7 +20,7 @@ import (
 // ============================================
 
 // testGenContextDispatch maps context values to their generator functions.
-var testGenContextDispatch = map[string]func(h *Handler, params TestFromContextRequest) (*GeneratedTest, error){
+var testGenContextDispatch = map[string]func(h *Handler, params testgen.TestFromContextRequest) (*testgen.GeneratedTest, error){
 	"error":       (*Handler).generateTestFromError,
 	"interaction": (*Handler).generateTestFromInteraction,
 	"regression":  (*Handler).generateTestFromRegression,
@@ -45,7 +45,7 @@ func init() {
 }
 
 func (h *Handler) HandleGenerateTestFromContext(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	var params TestFromContextRequest
+	var params testgen.TestFromContextRequest
 
 	warnings, err := mcp.UnmarshalWithWarnings(args, &params)
 	if err != nil {
@@ -87,7 +87,7 @@ func (h *Handler) HandleGenerateTestFromContext(req mcp.JSONRPCRequest, args jso
 
 var validTestGenContexts = []string{"error", "interaction", "regression"}
 
-func validateTestFromContextParams(req mcp.JSONRPCRequest, params TestFromContextRequest) (mcp.JSONRPCResponse, bool) {
+func validateTestFromContextParams(req mcp.JSONRPCRequest, params testgen.TestFromContextRequest) (mcp.JSONRPCResponse, bool) {
 	if resp, blocked := toolresp.RequireString(req, params.Context, "context", "Add the 'context' parameter and call again"); blocked {
 		return resp, true
 	}

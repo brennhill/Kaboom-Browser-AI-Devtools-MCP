@@ -33,34 +33,34 @@ func (h *Handler) dataProvider() testgen.DataProvider {
 	return &dataProviderAdapter{deps: h.deps}
 }
 
-func (h *Handler) generateTestFromError(req TestFromContextRequest) (*GeneratedTest, error) {
+func (h *Handler) generateTestFromError(req testgen.TestFromContextRequest) (*testgen.GeneratedTest, error) {
 	return testgen.GenerateTestFromError(h.dataProvider(), req)
 }
 
-func (h *Handler) generateTestFromInteraction(req TestFromContextRequest) (*GeneratedTest, error) {
+func (h *Handler) generateTestFromInteraction(req testgen.TestFromContextRequest) (*testgen.GeneratedTest, error) {
 	return testgen.GenerateTestFromInteraction(h.dataProvider(), req)
 }
 
-func (h *Handler) generateTestFromRegression(req TestFromContextRequest) (*GeneratedTest, error) {
+func (h *Handler) generateTestFromRegression(req testgen.TestFromContextRequest) (*testgen.GeneratedTest, error) {
 	return testgen.GenerateTestFromRegression(h.dataProvider(), req)
 }
 
-func (h *Handler) analyzeTestFile(req TestHealRequest, projectDir string) ([]string, error) {
+func (h *Handler) analyzeTestFile(req heal.TestHealRequest, projectDir string) ([]string, error) {
 	return heal.AnalyzeTestFile(req, projectDir)
 }
 
-func (h *Handler) repairSelectors(req TestHealRequest, _ string) (*HealResult, error) {
+func (h *Handler) repairSelectors(req heal.TestHealRequest, _ string) (*heal.HealResult, error) {
 	return heal.RepairSelectors(req)
 }
 
-func (h *Handler) healTestBatch(req TestHealRequest, projectDir string) (*BatchHealResult, error) {
+func (h *Handler) healTestBatch(req heal.TestHealRequest, projectDir string) (*heal.BatchHealResult, error) {
 	return heal.HealTestBatch(req, projectDir)
 }
 
-func (h *Handler) classifyFailure(failure *TestFailure) *FailureClassification {
+func (h *Handler) classifyFailure(failure *testgen.TestFailure) *testgen.FailureClassification {
 	return testgen.ClassifyFailure(failure)
 }
 
-func (h *Handler) classifyFailureBatch(failures []TestFailure) *BatchClassifyResult {
+func (h *Handler) classifyFailureBatch(failures []testgen.TestFailure) *testgen.BatchClassifyResult {
 	return testgen.ClassifyFailureBatch(failures)
 }
