@@ -1,7 +1,7 @@
 ---
 doc_type: legacy_doc
 status: reference
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-27
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -89,7 +89,7 @@ last_verified_date: 2026-03-05
 
 - **Test:** Missing upgrade marker file
   - **Given:** No marker file exists
-  - **When:** `readAndClearUpgradeMarker` called
+  - **When:** `binarywatch.ReadAndClearMarker` is called
   - **Then:** Returns nil, no error
 
 ---
@@ -101,17 +101,17 @@ last_verified_date: 2026-03-05
 #### Coverage Areas:
 - `parseVersionParts()`: valid semver, v-prefix, malformed, empty
 - `isNewerVersion()`: newer/older/same/prefix/empty/malformed
-- `BinaryWatcherState.binaryChanged()`: modtime+size change, no change, missing file
+- `binarywatch.State.binaryChanged()`: modtime+size change, no change, missing file
 - `verifyBinaryVersion()`: valid output, invalid output, timeout
 - `checkForUpgrade()`: newer/older/same
-- `writeUpgradeMarker()` / `readAndClearUpgradeMarker()`: round-trip, invalid JSON, missing file
+- `binarywatch.WriteMarker()` / `binarywatch.ReadAndClearMarker()`: round-trip, invalid JSON, missing file
 - `maybeAddUpgradeWarning()`: with/without pending upgrade
 - `buildUpgradeInfo()`: with/without pending upgrade
 - `UpgradeMarkerFile()`: path correctness
 
 **Test Files:**
 - `cmd/browser-agent/internal/daemonlife/version_compare_test.go`
-- `cmd/browser-agent/binary_watcher_test.go`
+- `cmd/browser-agent/internal/binarywatch/watcher_test.go`
 - `cmd/browser-agent/handler_unit_test.go`
 - `internal/state/paths_coverage_test.go`
 
@@ -138,7 +138,7 @@ last_verified_date: 2026-03-05
 | Test Type | File | Status | Notes |
 |-----------|------|--------|-------|
 | Unit (version) | `cmd/browser-agent/internal/daemonlife/version_compare_test.go` | Passing | 3 test functions |
-| Unit (watcher) | `cmd/browser-agent/binary_watcher_test.go` | Passing | 14 test functions |
+| Unit (watcher) | `cmd/browser-agent/internal/binarywatch/watcher_test.go` | Passing | 14 test functions |
 | Unit (handler) | `cmd/browser-agent/handler_unit_test.go` | Passing | 2 upgrade test functions |
 | Unit (paths) | `internal/state/paths_coverage_test.go` | Passing | 2 test functions |
 | Integration | Manual | Pending | Requires two-binary setup |

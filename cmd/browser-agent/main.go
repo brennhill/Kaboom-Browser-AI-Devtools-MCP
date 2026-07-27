@@ -25,6 +25,12 @@ var version = "0.8.8"
 
 var exitDiagnostics = exitdiag.New(exitdiag.Options{Version: version})
 
+type upgradeInfoProvider interface {
+	UpgradeInfo() (pending bool, version string, detectedAt time.Time)
+}
+
+var binaryUpgradeState upgradeInfoProvider
+
 var releaseChecker = versioncheck.New(versioncheck.Options{
 	CurrentVersion: version,
 	ReleaseURL:     os.Getenv("KABOOM_RELEASES_URL"),

@@ -1,7 +1,7 @@
 // Purpose: Tests for binary file change detection.
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
-package main
+package binarywatch
 
 import (
 	"context"
@@ -17,7 +17,7 @@ const testVersionCheckTimeout = 15 * time.Second
 
 func TestBinaryWatcherState_UpgradeInfo_Default(t *testing.T) {
 	t.Parallel()
-	s := &BinaryWatcherState{}
+	s := &State{}
 	pending, ver, at := s.UpgradeInfo()
 	if pending || ver != "" || !at.IsZero() {
 		t.Fatalf("default state: pending=%v ver=%q at=%v, want false/empty/zero", pending, ver, at)
@@ -27,7 +27,7 @@ func TestBinaryWatcherState_UpgradeInfo_Default(t *testing.T) {
 func TestBinaryWatcherState_UpgradeInfo_AfterDetection(t *testing.T) {
 	t.Parallel()
 	now := time.Now()
-	s := &BinaryWatcherState{}
+	s := &State{}
 	s.mu.Lock()
 	s.upgradePending = true
 	s.detectedVersion = "0.8.0"
@@ -47,7 +47,7 @@ func TestBinaryChanged_DetectsModtime(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s := &BinaryWatcherState{execPath: tmp}
+	s := &State{execPath: tmp}
 	// First call always returns false (caches initial state)
 	changed, err := s.binaryChanged()
 	if err != nil {
@@ -78,7 +78,7 @@ func TestBinaryChanged_NoChangeWhenSame(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s := &BinaryWatcherState{execPath: tmp}
+	s := &State{execPath: tmp}
 	s.binaryChanged() // cache initial
 
 	changed, err := s.binaryChanged()
@@ -92,7 +92,7 @@ func TestBinaryChanged_NoChangeWhenSame(t *testing.T) {
 
 func TestBinaryChanged_ErrorWhenMissing(t *testing.T) {
 	t.Parallel()
-	s := &BinaryWatcherState{execPath: "/nonexistent/binary"}
+	s := &State{execPath: "/nonexistent/binary"}
 	_, err := s.binaryChanged()
 	if err == nil {
 		t.Fatal("expected error for missing binary")
@@ -119,7 +119,7 @@ func TestCheckForUpgrade_DetectsNewer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s := &BinaryWatcherState{execPath: tmp, versionCheckTimeout: testVersionCheckTimeout}
+	s := &State{execPath: tmp, versionCheckTimeout: testVersionCheckTimeout}
 	got := s.checkForUpgrade("0.7.5")
 	if !got {
 		t.Fatal("checkForUpgrade should detect newer version")
@@ -137,7 +137,7 @@ func TestCheckForUpgrade_IgnoresOlder(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s := &BinaryWatcherState{execPath: tmp, versionCheckTimeout: testVersionCheckTimeout}
+	s := &State{execPath: tmp, versionCheckTimeout: testVersionCheckTimeout}
 	got := s.checkForUpgrade("0.7.5")
 	if got {
 		t.Fatal("checkForUpgrade should not detect older version")
@@ -151,7 +151,7 @@ func TestCheckForUpgrade_IgnoresSame(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s := &BinaryWatcherState{execPath: tmp, versionCheckTimeout: testVersionCheckTimeout}
+	s := &State{execPath: tmp, versionCheckTimeout: testVersionCheckTimeout}
 	got := s.checkForUpgrade("0.7.5")
 	if got {
 		t.Fatal("checkForUpgrade should not detect same version")
@@ -164,8 +164,8 @@ func TestCheckForUpgrade_TimeoutIsolationAcrossParallelStates(t *testing.T) {
 	timeouts := make(chan time.Duration, 2)
 	nowFn := func() time.Time { return time.Unix(1_700_000_000, 0) }
 
-	makeState := func(timeout time.Duration, reportedVersion string) *BinaryWatcherState {
-		return &BinaryWatcherState{
+	makeState := func(timeout time.Duration, reportedVersion string) *State {
+		return &State{
 			execPath:            "/tmp/ignored",
 			versionCheckTimeout: timeout,
 			verifyVersion: func(_ string, gotTimeout time.Duration) (string, error) {
@@ -211,9 +211,9 @@ func TestStartBinaryWatcher_ContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	var called bool
-	s := startBinaryWatcher(ctx, "0.7.5", func(string) { called = true }, func() {})
+	s := Start(ctx, "0.7.5", func(string) { called = true }, func() {})
 	if s == nil {
-		t.Fatal("startBinaryWatcher returned nil")
+		t.Fatal("Start returned nil")
 	}
 
 	cancel()
@@ -228,9 +228,9 @@ func TestStartBinaryWatcher_ContextCancellation(t *testing.T) {
 func TestStartBinaryWatcher_DisabledByEnvVar(t *testing.T) {
 	t.Setenv("KABOOM_NO_AUTO_UPGRADE", "1")
 
-	s := startBinaryWatcher(context.Background(), "0.7.5", func(string) {}, func() {})
+	s := Start(context.Background(), "0.7.5", func(string) {}, func() {})
 	if s != nil {
-		t.Fatal("startBinaryWatcher should return nil when disabled")
+		t.Fatal("Start should return nil when disabled")
 	}
 }
 
@@ -268,7 +268,7 @@ func TestStartBinaryWatcher_DetectsUpgrade(t *testing.T) {
 		},
 	)
 	if s == nil {
-		t.Fatal("startBinaryWatcher returned nil")
+		t.Fatal("Start returned nil")
 	}
 
 	// Wait until watcher caches baseline file state to avoid a race where the
@@ -328,13 +328,13 @@ func TestUpgradeMarker_RoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	markerPath := filepath.Join(dir, "last-upgrade.json")
 
-	if err := writeUpgradeMarker("0.7.5", "0.8.0", markerPath); err != nil {
-		t.Fatalf("writeUpgradeMarker() error = %v", err)
+	if err := WriteMarker("0.7.5", "0.8.0", markerPath); err != nil {
+		t.Fatalf("WriteMarker() error = %v", err)
 	}
 
-	marker, err := readAndClearUpgradeMarker(markerPath)
+	marker, err := ReadAndClearMarker(markerPath)
 	if err != nil {
-		t.Fatalf("readAndClearUpgradeMarker() error = %v", err)
+		t.Fatalf("ReadAndClearMarker() error = %v", err)
 	}
 	if marker == nil {
 		t.Fatal("expected non-nil marker")
@@ -349,9 +349,9 @@ func TestUpgradeMarker_RoundTrip(t *testing.T) {
 	}
 
 	// Second read returns nil
-	marker2, err := readAndClearUpgradeMarker(markerPath)
+	marker2, err := ReadAndClearMarker(markerPath)
 	if err != nil {
-		t.Fatalf("second readAndClearUpgradeMarker() error = %v", err)
+		t.Fatalf("second ReadAndClearMarker() error = %v", err)
 	}
 	if marker2 != nil {
 		t.Fatal("expected nil on second read")
@@ -367,9 +367,9 @@ func TestUpgradeMarker_InvalidJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	marker, err := readAndClearUpgradeMarker(markerPath)
+	marker, err := ReadAndClearMarker(markerPath)
 	if err != nil {
-		t.Fatalf("readAndClearUpgradeMarker() should not error on invalid JSON, got %v", err)
+		t.Fatalf("ReadAndClearMarker() should not error on invalid JSON, got %v", err)
 	}
 	if marker != nil {
 		t.Fatal("expected nil for invalid JSON")
@@ -385,15 +385,15 @@ func TestUpgradeMarker_ValidJSON(t *testing.T) {
 	dir := t.TempDir()
 	markerPath := filepath.Join(dir, "last-upgrade.json")
 
-	data := upgradeMarker{FromVersion: "0.7.0", ToVersion: "0.8.0", Timestamp: time.Now().UTC().Format(time.RFC3339)}
+	data := Marker{FromVersion: "0.7.0", ToVersion: "0.8.0", Timestamp: time.Now().UTC().Format(time.RFC3339)}
 	b, _ := json.Marshal(data)
 	if err := os.WriteFile(markerPath, b, 0o644); err != nil {
 		t.Fatal(err)
 	}
 
-	marker, err := readAndClearUpgradeMarker(markerPath)
+	marker, err := ReadAndClearMarker(markerPath)
 	if err != nil {
-		t.Fatalf("readAndClearUpgradeMarker() error = %v", err)
+		t.Fatalf("ReadAndClearMarker() error = %v", err)
 	}
 	if marker == nil || marker.FromVersion != "0.7.0" || marker.ToVersion != "0.8.0" {
 		t.Fatalf("marker = %+v", marker)
@@ -403,7 +403,7 @@ func TestUpgradeMarker_ValidJSON(t *testing.T) {
 func TestBinaryWatcherState_ThreadSafety(t *testing.T) {
 	t.Parallel()
 
-	s := &BinaryWatcherState{}
+	s := &State{}
 	var wg sync.WaitGroup
 	for i := 0; i < 10; i++ {
 		wg.Add(1)

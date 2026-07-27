@@ -2,7 +2,7 @@
 // Why: Detects on-disk binary upgrades so long-lived daemons can surface restart guidance safely.
 // Docs: docs/features/feature/deployment-watchdog/index.md
 
-package main
+package binarywatch
 
 import (
 	"bytes"
@@ -14,11 +14,9 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -27,42 +25,6 @@ const (
 	defaultUpgradeGracePeriod   = 5 * time.Second
 	defaultVersionVerifyTimeout = 5 * time.Second
 )
-
-var binaryUpgradeState *BinaryWatcherState
-
-func configureBinaryUpgradeMonitoring(ctx context.Context, server *Server, port int) {
-	binaryUpgradeState = startBinaryWatcher(ctx, version,
-		func(newVersion string) {
-			server.logLifecycle("binary_upgrade_detected", port, map[string]any{
-				"current_version": version,
-				"new_version":     newVersion,
-			})
-			server.AddWarning("UPGRADE DETECTED: v" + newVersion + " installed. Auto-restart in ~5s.")
-		},
-		func() {
-			if binaryUpgradeState != nil {
-				if _, newVersion, _ := binaryUpgradeState.UpgradeInfo(); newVersion != "" {
-					if markerPath, err := state.UpgradeMarkerFile(); err == nil {
-						_ = writeUpgradeMarker(version, newVersion, markerPath)
-					}
-				}
-			}
-			server.logLifecycle("binary_upgrade_shutdown", port, map[string]any{"version": version})
-			process, _ := os.FindProcess(os.Getpid())
-			_ = process.Signal(syscall.SIGTERM)
-		},
-	)
-
-	if markerPath, err := state.UpgradeMarkerFile(); err == nil {
-		if marker, err := readAndClearUpgradeMarker(markerPath); err == nil && marker != nil {
-			server.AddWarning(fmt.Sprintf("Upgraded from v%s to v%s", marker.FromVersion, marker.ToVersion))
-			server.logLifecycle("binary_upgrade_complete", port, map[string]any{
-				"from_version": marker.FromVersion,
-				"to_version":   marker.ToVersion,
-			})
-		}
-	}
-}
 
 type binaryVersionVerifier func(path string, timeout time.Duration) (string, error)
 
@@ -97,8 +59,8 @@ func normalizedBinaryWatcherConfig(cfg binaryWatcherConfig) binaryWatcherConfig 
 	return cfg
 }
 
-// BinaryWatcherState tracks the on-disk binary state for upgrade detection.
-type BinaryWatcherState struct {
+// State tracks the on-disk binary state for upgrade detection.
+type State struct {
 	mu                  sync.Mutex
 	execPath            string
 	lastModTime         time.Time
@@ -112,7 +74,7 @@ type BinaryWatcherState struct {
 }
 
 // UpgradeInfo returns the current upgrade detection state (thread-safe).
-func (s *BinaryWatcherState) UpgradeInfo() (pending bool, version string, detectedAt time.Time) {
+func (s *State) UpgradeInfo() (pending bool, version string, detectedAt time.Time) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.upgradePending, s.detectedVersion, s.detectedAt
@@ -120,7 +82,7 @@ func (s *BinaryWatcherState) UpgradeInfo() (pending bool, version string, detect
 
 // binaryChanged checks if the binary at execPath has changed since the last check.
 // The first call always returns false and caches the initial file state.
-func (s *BinaryWatcherState) binaryChanged() (bool, error) {
+func (s *State) binaryChanged() (bool, error) {
 	fi, err := os.Stat(s.execPath)
 	if err != nil {
 		return false, fmt.Errorf("stat binary: %w", err)
@@ -149,7 +111,7 @@ func (s *BinaryWatcherState) binaryChanged() (bool, error) {
 
 // checkForUpgrade verifies whether the binary reports a newer version than current.
 // Returns true if an upgrade is detected and sets the upgrade-pending state.
-func (s *BinaryWatcherState) checkForUpgrade(currentVersion string) bool {
+func (s *State) checkForUpgrade(currentVersion string) bool {
 	verifyVersion := s.verifyVersion
 	if verifyVersion == nil {
 		verifyVersion = verifyBinaryVersionWithTimeout
@@ -243,7 +205,7 @@ func parseVersionCommandOutput(stdout string, stderr string) (string, error) {
 	return "", fmt.Errorf("invalid version output: stdout=%q stderr=%q", trimmedStdout, trimmedStderr)
 }
 
-// startBinaryWatcher starts a background goroutine that watches the daemon binary for changes.
+// Start starts a background goroutine that watches the daemon binary for changes.
 // Returns nil if auto-upgrade is disabled via KABOOM_NO_AUTO_UPGRADE=1.
 //
 // Detection loop (every binaryWatchInterval):
@@ -251,7 +213,7 @@ func parseVersionCommandOutput(stdout string, stderr string) (string, error) {
 //  2. If changed: run --version, parse output
 //  3. If newer: set upgrade_pending, call onUpgrade
 //  4. After grace period: call triggerShutdown
-func startBinaryWatcher(ctx context.Context, currentVersion string, onUpgrade func(string), triggerShutdown func()) *BinaryWatcherState {
+func Start(ctx context.Context, currentVersion string, onUpgrade func(string), triggerShutdown func()) *State {
 	return startBinaryWatcherWithConfig(ctx, currentVersion, onUpgrade, triggerShutdown, binaryWatcherConfig{})
 }
 
@@ -261,7 +223,7 @@ func startBinaryWatcherWithConfig(
 	onUpgrade func(string),
 	triggerShutdown func(),
 	cfg binaryWatcherConfig,
-) *BinaryWatcherState {
+) *State {
 	if os.Getenv("KABOOM_NO_AUTO_UPGRADE") == "1" {
 		return nil
 	}
@@ -273,7 +235,7 @@ func startBinaryWatcherWithConfig(
 		return nil
 	}
 
-	state := &BinaryWatcherState{
+	state := &State{
 		execPath:            execPath,
 		versionCheckTimeout: cfg.versionCheckTimeout,
 		verifyVersion:       cfg.verifyVersion,
@@ -323,14 +285,14 @@ func startBinaryWatcherWithConfig(
 }
 
 // upgradeMarker persists the completed version transition across daemon restart.
-type upgradeMarker struct {
+type Marker struct {
 	FromVersion string `json:"from_version"`
 	ToVersion   string `json:"to_version"`
 	Timestamp   string `json:"timestamp"`
 }
 
-func writeUpgradeMarker(fromVersion, toVersion, path string) error {
-	marker := upgradeMarker{
+func WriteMarker(fromVersion, toVersion, path string) error {
+	marker := Marker{
 		FromVersion: fromVersion,
 		ToVersion:   toVersion,
 		Timestamp:   time.Now().UTC().Format(time.RFC3339),
@@ -345,9 +307,9 @@ func writeUpgradeMarker(fromVersion, toVersion, path string) error {
 	return os.WriteFile(path, data, 0o644)
 }
 
-// readAndClearUpgradeMarker consumes the marker exactly once. Invalid marker
+// ReadAndClearMarker consumes the marker exactly once. Invalid marker
 // contents are cleared and treated as absent so they cannot poison startup.
-func readAndClearUpgradeMarker(path string) (*upgradeMarker, error) {
+func ReadAndClearMarker(path string) (*Marker, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -357,7 +319,7 @@ func readAndClearUpgradeMarker(path string) (*upgradeMarker, error) {
 	}
 	_ = os.Remove(path)
 
-	var marker upgradeMarker
+	var marker Marker
 	if err := json.Unmarshal(data, &marker); err != nil {
 		return nil, nil
 	}

@@ -161,13 +161,7 @@ func TestMaybeAddUpgradeWarning_WithPending(t *testing.T) {
 	orig := binaryUpgradeState
 	defer func() { binaryUpgradeState = orig }()
 
-	state := &BinaryWatcherState{}
-	state.mu.Lock()
-	state.upgradePending = true
-	state.detectedVersion = "0.8.0"
-	state.detectedAt = time.Now()
-	state.mu.Unlock()
-	binaryUpgradeState = state
+	binaryUpgradeState = fixedUpgradeInfo{pending: true, version: "0.8.0", detectedAt: time.Now()}
 
 	resp := JSONRPCResponse{
 		JSONRPC: "2.0",
@@ -189,4 +183,14 @@ func TestMaybeAddUpgradeWarning_WithPending(t *testing.T) {
 	if !strings.Contains(text, "data here") {
 		t.Fatalf("expected original content preserved, got %q", text)
 	}
+}
+
+type fixedUpgradeInfo struct {
+	pending    bool
+	version    string
+	detectedAt time.Time
+}
+
+func (f fixedUpgradeInfo) UpgradeInfo() (bool, string, time.Time) {
+	return f.pending, f.version, f.detectedAt
 }
