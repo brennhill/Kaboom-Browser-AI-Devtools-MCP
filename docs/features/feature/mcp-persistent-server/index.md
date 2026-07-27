@@ -10,6 +10,7 @@ code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/tools_registry.go
   - cmd/browser-agent/types.go
+  - cmd/browser-agent/server.go
   - cmd/browser-agent/internal/playbooks/resource_catalog.go
   - cmd/browser-agent/internal/playbooks/playbooks_resolver.go
   - cmd/browser-agent/bridge_adapter.go
@@ -44,7 +45,6 @@ code_paths:
   - cmd/browser-agent/internal/httpguard/middleware.go
   - cmd/browser-agent/handler_http.go
   - cmd/browser-agent/connect_mode.go
-  - cmd/browser-agent/mcp_stdout.go
   - internal/diag/output.go
   - cmd/browser-agent/server_routes_media_screenshots.go
   - internal/identity/mcp.go

@@ -74,6 +74,35 @@ type Server struct {
 	screenshotRateMu      sync.Mutex
 }
 
+// AddWarning stores a unique one-shot warning for the next tool response.
+func (s *Server) AddWarning(message string) {
+	if message == "" {
+		return
+	}
+	s.warningsMu.Lock()
+	defer s.warningsMu.Unlock()
+	if s.warningSeen == nil {
+		s.warningSeen = make(map[string]struct{})
+	}
+	if _, exists := s.warningSeen[message]; exists {
+		return
+	}
+	s.warningSeen[message] = struct{}{}
+	s.warnings = append(s.warnings, message)
+}
+
+// TakeWarnings drains pending warnings.
+func (s *Server) TakeWarnings() []string {
+	s.warningsMu.Lock()
+	defer s.warningsMu.Unlock()
+	if len(s.warnings) == 0 {
+		return nil
+	}
+	warnings := append([]string(nil), s.warnings...)
+	s.warnings = nil
+	return warnings
+}
+
 // NewServer creates a new server instance.
 func NewServer(logFile string, maxEntries int) (*Server, error) {
 	s := &Server{
