@@ -129,7 +129,7 @@ the folder-gate numbers as evidence that it did.
 | | Current |
 | --- | --- |
 | `Capture` methods behind one `sync.RWMutex` | 165 |
-| `cmd/browser-agent` production source files (package `main`) | 62 |
+| `cmd/browser-agent` production source files (package `main`) | 61 |
 | …of which declare `*ToolHandler` methods | 20 |
 
 Both remain structurally constrained: Go only permits methods on a type in the

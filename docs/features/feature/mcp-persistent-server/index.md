@@ -34,7 +34,6 @@ code_paths:
   - cmd/browser-agent/main_connection_mcp_bootstrap.go
   - cmd/browser-agent/main_connection_recovery.go
   - cmd/browser-agent/server_routes_diagnostics.go
-  - cmd/browser-agent/server_routes_logs.go
   - cmd/browser-agent/internal/logstore/store.go
   - cmd/browser-agent/internal/logstore/async.go
   - cmd/browser-agent/internal/logstore/accessors.go
