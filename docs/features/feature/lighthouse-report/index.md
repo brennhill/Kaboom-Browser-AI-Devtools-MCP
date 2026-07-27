@@ -4,11 +4,10 @@ feature_id: feature-lighthouse-report
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/tools_analyze_dispatch.go
   - cmd/browser-agent/tools_analyze_audit.go
-  - cmd/browser-agent/tools_analyze_audit_runner.go
   - internal/tools/configure/capabilities/modespecs_analyze.go
   - src/background/dom/cdp/cdp-dispatch.ts
   - src/background/commands/analyze.ts
