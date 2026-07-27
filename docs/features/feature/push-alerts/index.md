@@ -6,8 +6,6 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-27
 code_paths:
-  - cmd/browser-agent/alerts.go
-  - cmd/browser-agent/streaming.go
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/tools_observe.go
   - cmd/browser-agent/internal/toolobserve/inbox.go
@@ -27,6 +25,8 @@ test_paths:
   - internal/streaming/alertbuf/alertbuf_test.go
   - internal/push/inbox_test.go
   - cmd/browser-agent/tools_observe_inbox_test.go
+  - cmd/browser-agent/tools_observe_unit_test.go
+  - cmd/browser-agent/tools_contract_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

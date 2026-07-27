@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	wiretypes "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 func TestAppendAlertsToResponse(t *testing.T) {
@@ -37,7 +38,7 @@ func TestAppendAlertsToResponse(t *testing.T) {
 			Result:  json.RawMessage(resultJSON),
 		}
 
-		alerts := []Alert{
+		alerts := []wiretypes.Alert{
 			{Severity: "error", Category: "regression", Title: "Something broke"},
 		}
 
@@ -72,7 +73,7 @@ func TestAppendAlertsToResponse(t *testing.T) {
 			Result:  json.RawMessage(resultJSON),
 		}
 
-		got := h.appendAlertsToResponse(resp, []Alert{})
+		got := h.appendAlertsToResponse(resp, []wiretypes.Alert{})
 
 		var result MCPToolResult
 		if err := json.Unmarshal(got.Result, &result); err != nil {
@@ -91,7 +92,7 @@ func TestAppendAlertsToResponse(t *testing.T) {
 			Result:  json.RawMessage(`"not an object"`),
 		}
 
-		got := h.appendAlertsToResponse(resp, []Alert{{Title: "alert"}})
+		got := h.appendAlertsToResponse(resp, []wiretypes.Alert{{Title: "alert"}})
 		// Should return the original response unchanged
 		if string(got.Result) != `"not an object"` {
 			t.Fatalf("malformed result should be returned unchanged, got: %s", got.Result)

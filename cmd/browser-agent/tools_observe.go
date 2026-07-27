@@ -13,6 +13,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolobserve"
 	observe "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
+	wiretypes "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 func obs(fn func(observe.Deps, JSONRPCRequest, json.RawMessage) JSONRPCResponse) ModeHandler {
@@ -84,7 +85,7 @@ var observeRegistry = toolRegistry{
 			resp = toolobserve.PrependDisconnectWarning(resp)
 		}
 		// Piggyback alerts: append as second content block if any pending
-		if alerts := h.drainAlerts(); len(alerts) > 0 {
+		if alerts := h.alertBuffer.DrainAlerts(); len(alerts) > 0 {
 			resp = toolobserve.AppendAlertsToResponse(resp, alerts)
 		}
 		return resp
@@ -110,7 +111,7 @@ func (h *ToolHandler) prependDisconnectWarning(resp JSONRPCResponse) JSONRPCResp
 	return toolobserve.PrependDisconnectWarning(resp)
 }
 
-func (h *ToolHandler) appendAlertsToResponse(resp JSONRPCResponse, alerts []Alert) JSONRPCResponse {
+func (h *ToolHandler) appendAlertsToResponse(resp JSONRPCResponse, alerts []wiretypes.Alert) JSONRPCResponse {
 	return toolobserve.AppendAlertsToResponse(resp, alerts)
 }
 

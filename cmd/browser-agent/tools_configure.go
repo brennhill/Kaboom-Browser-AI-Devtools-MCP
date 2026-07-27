@@ -340,6 +340,34 @@ func (h *ToolHandler) toolGetAuditLog(req JSONRPCRequest, args json.RawMessage) 
 	}
 }
 
+func (h *ToolHandler) toolConfigureStreaming(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	rewritten, err := cfg.RewriteStreamingArgs(args)
+	if err != nil {
+		return fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
+	}
+	var params struct {
+		Action          string   `json:"action"`
+		Events          []string `json:"events"`
+		ThrottleSeconds int      `json:"throttle_seconds"`
+		URLFilter       string   `json:"url"`
+		SeverityMin     string   `json:"severity_min"`
+	}
+	if resp, stop := parseArgs(req, rewritten, &params); stop {
+		return resp
+	}
+	if resp, blocked := requireString(req, params.Action, "action", "Add the 'action' parameter and call again"); blocked {
+		return resp
+	}
+	result := h.alertBuffer.Stream.Configure(
+		params.Action,
+		params.Events,
+		params.ThrottleSeconds,
+		params.URLFilter,
+		params.SeverityMin,
+	)
+	return succeed(req, "Streaming configuration", result)
+}
+
 func (h *ToolHandler) toolConfigureRestart(req JSONRPCRequest) JSONRPCResponse {
 	resp := succeed(req, "Daemon restarting", map[string]any{
 		"status":    "ok",
