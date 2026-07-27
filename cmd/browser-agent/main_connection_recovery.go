@@ -4,8 +4,8 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 )
 
@@ -129,7 +131,7 @@ func terminatePIDQuiet(pid int, force bool) {
 // implementations, rather than in the daemonlife package that also consumes them:
 // daemonlife owns the single-instance POLICY, this package owns the mechanics.
 // reclaimPort and identifyPortHolder below use them directly; daemonlife receives
-// them through daemonlifeDeps (see daemon_lifecycle_wiring.go).
+// them through daemonlifeDeps below.
 var (
 	// daemonProcessCommand looks up a PID's command line.
 	daemonProcessCommand = procctl.GetProcessCommand
@@ -267,4 +269,35 @@ func identifyPortHolder(port int) (int, string) {
 		return pid, daemonProcessCommand(pid)
 	}
 	return 0, ""
+}
+
+// lifecycleLogger adapts Server to daemonlife.Logger.
+type lifecycleLogger struct{ server *Server }
+
+func (l lifecycleLogger) LogLifecycle(event string, port int, fields map[string]any) {
+	l.server.logLifecycle(event, port, fields)
+}
+
+// daemonlifeDeps binds the recovery process and port seams to daemonlife.
+func daemonlifeDeps(server *Server) daemonlife.Deps {
+	return daemonlife.Deps{
+		Log:     lifecycleLogger{server: server},
+		Version: version,
+		Warnf:   diag.Printf,
+
+		IsProcessAlive:     daemonIsProcessAlive,
+		IsServerRunning:    daemonIsServerRunning,
+		TryShutdown:        daemonTryShutdown,
+		WaitForPortRelease: daemonWaitForPortRelease,
+		TerminatePID:       daemonTerminatePID,
+		FetchHealth:        fetchDaemonHealth,
+		ReadPIDFile:        procctl.ReadPIDFile,
+		RemovePIDFile:      procctl.RemovePIDFile,
+	}
+}
+
+// fetchDaemonHealth reduces a health probe to the facts the takeover policy needs.
+func fetchDaemonHealth(ctx context.Context, port int, timeout time.Duration) (reachable bool, version string, refused bool) {
+	h := fetchInstallHealth(ctx, port, timeout)
+	return h.reachable, h.version, h.refused
 }
