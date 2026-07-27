@@ -10,7 +10,8 @@ code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/tools_registry.go
   - cmd/browser-agent/types.go
-  - cmd/browser-agent/mcp_resources.go
+  - cmd/browser-agent/internal/playbooks/resource_catalog.go
+  - cmd/browser-agent/internal/playbooks/playbooks_resolver.go
   - cmd/browser-agent/bridge_adapter.go
   - cmd/browser-agent/internal/bridge/bridge.go
   - cmd/browser-agent/internal/bridge/bridge_startup.go
@@ -50,6 +51,7 @@ code_paths:
   - internal/util/proc_unix.go
   - internal/util/proc_windows.go
 test_paths:
+  - cmd/browser-agent/internal/playbooks/resource_catalog_test.go
   - cmd/browser-agent/stdout_protocol_boundary_test.go
   - cmd/browser-agent/mcp_protocol_test.go
   - cmd/browser-agent/stdout_sync_unit_test.go

@@ -6,6 +6,7 @@ package main
 import (
 	"encoding/json"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -108,7 +109,7 @@ func (h *MCPHandler) handleInitialize(req JSONRPCRequest) JSONRPCResponse {
 }
 
 func (h *MCPHandler) handleResourcesList(req JSONRPCRequest) JSONRPCResponse {
-	result := MCPResourcesListResult{Resources: mcpResources()}
+	result := MCPResourcesListResult{Resources: playbooks.Resources()}
 	// Error impossible: MCPResourcesListResult is a simple struct with no circular refs or unsupported types
 	resultJSON, _ := json.Marshal(result)
 	return succeedRaw(req, resultJSON)
@@ -129,7 +130,7 @@ func (h *MCPHandler) handleResourcesRead(req JSONRPCRequest) JSONRPCResponse {
 		}
 	}
 
-	canonicalURI, text, ok := resolveResourceContent(params.URI)
+	canonicalURI, text, ok := playbooks.ResolveResourceContent(params.URI)
 	if !ok {
 		return JSONRPCResponse{
 			JSONRPC: JSONRPCVersion,
@@ -150,7 +151,7 @@ func (h *MCPHandler) handleResourcesRead(req JSONRPCRequest) JSONRPCResponse {
 }
 
 func (h *MCPHandler) handleResourcesTemplatesList(req JSONRPCRequest) JSONRPCResponse {
-	result := MCPResourceTemplatesListResult{ResourceTemplates: mcpResourceTemplates()}
+	result := MCPResourceTemplatesListResult{ResourceTemplates: playbooks.ResourceTemplates()}
 	// Error impossible: MCPResourceTemplatesListResult is a simple struct with no circular refs or unsupported types
 	resultJSON, _ := json.Marshal(result)
 	return succeedRaw(req, resultJSON)

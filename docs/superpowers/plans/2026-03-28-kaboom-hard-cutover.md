@@ -98,7 +98,7 @@
 - `src/inject/index.ts`
 - `src/inject/settings.ts`
 - `src/options.ts`
-- `cmd/browser-agent/mcp_resources.go`
+- `cmd/browser-agent/internal/playbooks/resource_catalog.go`
 - `cmd/browser-agent/openapi.json`
 - `cmd/browser-agent/openapi.go`
 - `cmd/browser-agent/setup.html`
@@ -482,7 +482,7 @@
 **Budget:** <=500 changed LOC
 
 **Files:**
-- Modify: `cmd/browser-agent/mcp_resources.go`
+- Modify: `cmd/browser-agent/internal/playbooks/resource_catalog.go`
 - Modify: `cmd/browser-agent/openapi.go`
 - Modify: `cmd/browser-agent/openapi.json`
 - Modify: `cmd/browser-agent/setup.html`

@@ -6,9 +6,10 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"sync"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
@@ -55,12 +56,12 @@ func initBridge() {
 		// MCP content
 		NegotiateProtocolVersion: negotiateProtocolVersion,
 		MCPResources: func() []mcp.MCPResource {
-			return mcpResources()
+			return playbooks.Resources()
 		},
 		MCPResourceTemplates: func() []any {
-			return mcpResourceTemplates()
+			return playbooks.ResourceTemplates()
 		},
-		ResolveResourceContent: resolveResourceContent,
+		ResolveResourceContent: playbooks.ResolveResourceContent,
 
 		// Daemon lifecycle
 		DaemonProcessArgv0:   daemonProcessArgv0,

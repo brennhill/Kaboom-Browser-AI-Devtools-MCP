@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/replay"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/sequencehandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
@@ -74,10 +75,10 @@ var configureHandlers = map[string]ModeHandler{
 		return toolconfigure.HandleDescribeCapabilities(h, req, args, version)
 	},
 	"tutorial": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-		return tutorial.HandleTutorial(h, req, args, tutorialFailureRecoveryPlaybooks())
+		return tutorial.HandleTutorial(h, req, args, playbooks.TutorialFailureRecoveryPlaybooks())
 	},
 	"examples": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-		return tutorial.HandleTutorial(h, req, args, tutorialFailureRecoveryPlaybooks())
+		return tutorial.HandleTutorial(h, req, args, playbooks.TutorialFailureRecoveryPlaybooks())
 	},
 	"save_sequence":     method((*ToolHandler).toolConfigureSaveSequence),
 	"get_sequence":      method((*ToolHandler).toolConfigureGetSequence),

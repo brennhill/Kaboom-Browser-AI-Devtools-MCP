@@ -1,20 +1,11 @@
-// Purpose: Declares MCP resource URIs (capabilities, guide, quickstart) and URI templates (playbooks, demos) for client discovery.
-// Why: Exposes token-efficient documentation resources that MCP clients can read on demand.
+// resource_catalog.go — Declares the MCP resource catalog and URI templates served by playbooks.
 
-package main
+package playbooks
 
-import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks"
+import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 
-func resolveResourceContent(uri string) (string, string, bool) {
-	return playbooks.ResolveResourceContent(uri)
-}
-
-func tutorialFailureRecoveryPlaybooks() map[string]any {
-	return playbooks.TutorialFailureRecoveryPlaybooks()
-}
-
-func mcpResources() []MCPResource {
-	return []MCPResource{
+func Resources() []mcp.MCPResource {
+	return []mcp.MCPResource{
 		{
 			URI:         "kaboom://capabilities",
 			Name:        "Kaboom Capability Index",
@@ -36,7 +27,7 @@ func mcpResources() []MCPResource {
 	}
 }
 
-func mcpResourceTemplates() []any {
+func ResourceTemplates() []any {
 	return []any{
 		map[string]any{
 			"uriTemplate": "kaboom://playbook/{capability}/{level}",
