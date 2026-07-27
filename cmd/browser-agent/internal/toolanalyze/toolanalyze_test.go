@@ -349,16 +349,16 @@ func TestBuildSessionHints(t *testing.T) {
 
 func TestBuildDetailHints(t *testing.T) {
 	tests := []struct {
-		name            string
-		css             string
-		js              string
-		a11y            []string
-		errors          bool
-		wantNil         bool
-		wantDesignKey   bool
-		wantRuntimeKey  bool
-		wantA11yKey     bool
-		wantErrorKey    bool
+		name           string
+		css            string
+		js             string
+		a11y           []string
+		errors         bool
+		wantNil        bool
+		wantDesignKey  bool
+		wantRuntimeKey bool
+		wantA11yKey    bool
+		wantErrorKey   bool
 	}{
 		{"all empty", "", "", nil, false, true, false, false, false, false},
 		{"tailwind", "tailwind", "", nil, false, false, true, false, false, false},

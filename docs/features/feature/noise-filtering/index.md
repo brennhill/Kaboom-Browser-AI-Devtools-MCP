@@ -4,9 +4,10 @@ feature_id: feature-noise-filtering
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/internal/toolconfigure/noise_actions.go
+  - internal/mcp/response.go
   - cmd/browser-agent/noise_autorun.go
   - cmd/browser-agent/internal/toolconfigure/auditlog/handler.go
   - cmd/browser-agent/tools_configure.go

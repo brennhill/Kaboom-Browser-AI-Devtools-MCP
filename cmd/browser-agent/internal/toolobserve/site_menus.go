@@ -7,6 +7,7 @@ package toolobserve
 import (
 	"encoding/json"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/menus"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -27,7 +28,7 @@ func HandleSiteMenus(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 		"visible_only": true,
 	}, "{}")
 
-	correlationID := newCorrelationID("site_menus")
+	correlationID := toolresp.NewCorrelationID("site_menus")
 	query := queries.PendingQuery{
 		Type:          "dom_action",
 		Params:        queryArgs,
@@ -49,7 +50,7 @@ func HandleSiteMenus(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 	// Parse the list_interactive result to extract elements.
 	rawElements := parseListInteractiveResult(toolResult)
 	if rawElements == nil {
-		return succeed(req, "Site menus", menus.Result{
+		return mcp.Succeed(req, "Site menus", menus.Result{
 			Main: []menus.MenuGroup{}, Sidebar: []menus.MenuGroup{},
 			Footer: []menus.MenuGroup{}, Other: []menus.MenuGroup{},
 			Ungrouped: []menus.MenuItem{},
@@ -60,9 +61,9 @@ func HandleSiteMenus(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 	result := menus.Discover(rawElements, cfg)
 
 	if params.Summary {
-		return succeed(req, "Site menus summary", buildSiteMenusSummary(result))
+		return mcp.Succeed(req, "Site menus summary", buildSiteMenusSummary(result))
 	}
-	return succeed(req, "Site menus", result)
+	return mcp.Succeed(req, "Site menus", result)
 }
 
 // parseListInteractiveResult extracts raw elements from a list_interactive tool response.

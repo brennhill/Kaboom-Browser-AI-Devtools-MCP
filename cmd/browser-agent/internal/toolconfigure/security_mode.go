@@ -14,7 +14,7 @@ import (
 // HandleSecurityMode handles configure(what="security_mode").
 func HandleSecurityMode(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	if !d.HasCapture() {
-		return fail(req, mcp.ErrNotInitialized,
+		return mcp.Fail(req, mcp.ErrNotInitialized,
 			"Capture subsystem not initialized",
 			"Internal error — do not retry")
 	}
@@ -23,12 +23,12 @@ func HandleSecurityMode(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mc
 		Mode    string `json:"mode"`
 		Confirm bool   `json:"confirm"`
 	}
-	lenientUnmarshal(args, &params)
+	mcp.LenientUnmarshal(args, &params)
 
 	mode := strings.ToLower(strings.TrimSpace(params.Mode))
 	if mode == "" {
 		current, productionParity, rewrites := d.GetSecurityMode()
-		return succeed(req, "Security mode", map[string]any{
+		return mcp.Succeed(req, "Security mode", map[string]any{
 			"status":                    "ok",
 			"security_mode":             current,
 			"production_parity":         productionParity,
@@ -40,7 +40,7 @@ func HandleSecurityMode(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mc
 	switch mode {
 	case capture.SecurityModeNormal:
 		d.SetSecurityMode(capture.SecurityModeNormal, nil)
-		return succeed(req, "Security mode updated", map[string]any{
+		return mcp.Succeed(req, "Security mode updated", map[string]any{
 			"status":                    "ok",
 			"security_mode":             capture.SecurityModeNormal,
 			"production_parity":         true,
@@ -48,14 +48,14 @@ func HandleSecurityMode(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mc
 		})
 	case capture.SecurityModeInsecureProxy:
 		if !params.Confirm {
-			return fail(req, mcp.ErrInvalidParam,
+			return mcp.Fail(req, mcp.ErrInvalidParam,
 				"security_mode=insecure_proxy requires explicit confirmation",
 				"Retry with confirm=true to acknowledge altered-environment debugging mode",
 				mcp.WithParam("confirm"))
 		}
 		rewrites := []string{"csp_headers"}
 		d.SetSecurityMode(capture.SecurityModeInsecureProxy, rewrites)
-		return succeed(req, "Security mode updated", map[string]any{
+		return mcp.Succeed(req, "Security mode updated", map[string]any{
 			"status":                    "ok",
 			"security_mode":             capture.SecurityModeInsecureProxy,
 			"production_parity":         false,
@@ -63,7 +63,7 @@ func HandleSecurityMode(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mc
 			"warning":                   "Altered environment active. Findings are not production-parity evidence.",
 		})
 	default:
-		return fail(req, mcp.ErrInvalidParam,
+		return mcp.Fail(req, mcp.ErrInvalidParam,
 			"Invalid security mode: "+params.Mode,
 			"Use mode: normal or insecure_proxy",
 			mcp.WithParam("mode"))

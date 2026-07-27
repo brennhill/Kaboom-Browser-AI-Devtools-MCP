@@ -8,6 +8,7 @@ last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/tools_generate.go
   - cmd/browser-agent/internal/toolgenerate/artifacts_security_impl.go
+  - cmd/browser-agent/internal/toolconfigure/security_mode.go
   - internal/mcp/response.go
   - internal/security/diff/types.go
   - internal/security/diff/compare.go

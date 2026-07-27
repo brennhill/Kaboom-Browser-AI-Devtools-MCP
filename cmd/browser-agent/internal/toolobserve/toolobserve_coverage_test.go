@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -33,8 +34,8 @@ type fakeDeps struct {
 	waitCorrelation string
 }
 
-func (f *fakeDeps) PushInbox() *push.PushInbox   { return f.inbox }
-func (f *fakeDeps) IsExtensionConnected() bool   { return f.connected }
+func (f *fakeDeps) PushInbox() *push.PushInbox { return f.inbox }
+func (f *fakeDeps) IsExtensionConnected() bool { return f.connected }
 
 func (f *fakeDeps) EnqueuePendingQuery(req mcp.JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (mcp.JSONRPCResponse, bool) {
 	f.enqueued = true
@@ -383,8 +384,8 @@ func TestParseListInteractiveResult_Valid(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestNewCorrelationID_UniqueAndPrefixed(t *testing.T) {
-	a := newCorrelationID("obs")
-	b := newCorrelationID("obs")
+	a := toolresp.NewCorrelationID("obs")
+	b := toolresp.NewCorrelationID("obs")
 	if !strings.HasPrefix(a, "obs_") {
 		t.Errorf("expected prefix, got %q", a)
 	}

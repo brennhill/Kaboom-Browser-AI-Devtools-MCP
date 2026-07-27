@@ -20,11 +20,11 @@ func HandleSecurityAudit(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 		URLFilter   string   `json:"url"`
 		Summary     bool     `json:"summary"`
 	}
-	lenientUnmarshal(args, &params)
+	mcp.LenientUnmarshal(args, &params)
 
 	scanner := d.SecurityScanner()
 	if scanner == nil {
-		return fail(req, mcp.ErrNotInitialized, "Security scanner not initialized", "Internal error — do not retry")
+		return mcp.Fail(req, mcp.ErrNotInitialized, "Security scanner not initialized", "Internal error — do not retry")
 	}
 
 	networkBodies := d.NetworkBodies()
@@ -39,16 +39,16 @@ func HandleSecurityAudit(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 
 	result, err := scanner.HandleSecurityAudit(args, networkBodies, consoleEntries, pageURLs, waterfallEntries)
 	if err != nil {
-		return fail(req, mcp.ErrInternal, err.Error(), "Internal error — do not retry")
+		return mcp.Fail(req, mcp.ErrInternal, err.Error(), "Internal error — do not retry")
 	}
 
 	if params.Summary {
 		if scanResult, ok := result.(scan.Result); ok {
-			return succeed(req, "Security audit summary", BuildSecurityAuditSummary(scanResult))
+			return mcp.Succeed(req, "Security audit summary", BuildSecurityAuditSummary(scanResult))
 		}
 	}
 
-	return succeed(req, "Security audit complete", result)
+	return mcp.Succeed(req, "Security audit complete", result)
 }
 
 // HandleThirdPartyAudit handles analyze(what="third_party_audit").
@@ -56,7 +56,7 @@ func HandleThirdPartyAudit(d Deps, req mcp.JSONRPCRequest, args json.RawMessage)
 	var params struct {
 		Summary bool `json:"summary"`
 	}
-	lenientUnmarshal(args, &params)
+	mcp.LenientUnmarshal(args, &params)
 
 	networkBodies := d.NetworkBodies()
 
@@ -68,14 +68,14 @@ func HandleThirdPartyAudit(d Deps, req mcp.JSONRPCRequest, args json.RawMessage)
 
 	result, err := thirdparty.HandleAuditThirdParties(args, networkBodies, pageURLs)
 	if err != nil {
-		return fail(req, mcp.ErrInvalidJSON, err.Error(), "Fix JSON arguments and try again")
+		return mcp.Fail(req, mcp.ErrInvalidJSON, err.Error(), "Fix JSON arguments and try again")
 	}
 
 	if params.Summary {
 		if tpResult, ok := result.(thirdparty.ThirdPartyResult); ok {
-			return succeed(req, "Third-party audit summary", BuildThirdPartySummary(tpResult))
+			return mcp.Succeed(req, "Third-party audit summary", BuildThirdPartySummary(tpResult))
 		}
 	}
 
-	return succeed(req, "Third-party audit complete", result)
+	return mcp.Succeed(req, "Third-party audit complete", result)
 }

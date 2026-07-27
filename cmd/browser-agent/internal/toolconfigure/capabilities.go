@@ -21,13 +21,13 @@ func HandleDescribeCapabilities(d Deps, req mcp.JSONRPCRequest, args json.RawMes
 		Tool    string `json:"tool"`
 		Mode    string `json:"mode"`
 	}
-	lenientUnmarshal(args, &params)
+	mcp.LenientUnmarshal(args, &params)
 
 	tools := d.ToolsList()
 
 	// mode without tool is an error.
 	if params.Mode != "" && params.Tool == "" {
-		return fail(req, mcp.ErrInvalidParam,
+		return mcp.Fail(req, mcp.ErrInvalidParam,
 			"'mode' requires 'tool' to be set",
 			"Add the 'tool' parameter to filter by mode",
 			mcp.WithParam("tool"))
@@ -42,7 +42,7 @@ func HandleDescribeCapabilities(d Deps, req mcp.JSONRPCRequest, args json.RawMes
 				validNames = append(validNames, t.Name)
 			}
 			sort.Strings(validNames)
-			return fail(req, mcp.ErrInvalidParam,
+			return mcp.Fail(req, mcp.ErrInvalidParam,
 				"Unknown tool: "+params.Tool,
 				"Use a valid tool name",
 				mcp.WithParam("tool"),
@@ -62,13 +62,13 @@ func HandleDescribeCapabilities(d Deps, req mcp.JSONRPCRequest, args json.RawMes
 						}
 					}
 				}
-				return fail(req, mcp.ErrInvalidParam,
+				return mcp.Fail(req, mcp.ErrInvalidParam,
 					"Unknown mode '"+params.Mode+"' for tool '"+params.Tool+"'",
 					"Use a valid mode for this tool",
 					mcp.WithParam("mode"),
 					mcp.WithHint("Valid modes: "+strings.Join(modes, ", ")))
 			}
-			return succeed(req, "Capabilities", modeCap)
+			return mcp.Succeed(req, "Capabilities", modeCap)
 		}
 
 		result := map[string]any{
@@ -79,7 +79,7 @@ func HandleDescribeCapabilities(d Deps, req mcp.JSONRPCRequest, args json.RawMes
 		if examples := d.GetToolModuleExamples(params.Tool); examples != nil {
 			result["examples"] = examples
 		}
-		return succeed(req, "Capabilities", result)
+		return mcp.Succeed(req, "Capabilities", result)
 	}
 
 	// Full or summary response (no filters).
@@ -90,7 +90,7 @@ func HandleDescribeCapabilities(d Deps, req mcp.JSONRPCRequest, args json.RawMes
 		toolsMap = caps.BuildCapabilitiesMap(tools)
 	}
 
-	return succeed(req, "Capabilities", map[string]any{
+	return mcp.Succeed(req, "Capabilities", map[string]any{
 		"version":          version,
 		"protocol_version": "2024-11-05",
 		"tools":            toolsMap,

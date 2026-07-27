@@ -14,7 +14,7 @@ import (
 func HandleInbox(d Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
 	inbox := d.PushInbox()
 	if inbox == nil {
-		return succeed(req, "Push inbox empty", map[string]any{
+		return mcp.Succeed(req, "Push inbox empty", map[string]any{
 			"events": []any{},
 			"count":  0,
 		})
@@ -22,13 +22,13 @@ func HandleInbox(d Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCR
 
 	events := inbox.DrainAll()
 	if events == nil {
-		return succeed(req, "Push inbox empty", map[string]any{
+		return mcp.Succeed(req, "Push inbox empty", map[string]any{
 			"events": []any{},
 			"count":  0,
 		})
 	}
 
-	return succeed(req, "Push inbox drained", map[string]any{
+	return mcp.Succeed(req, "Push inbox drained", map[string]any{
 		"events": events,
 		"count":  len(events),
 	})

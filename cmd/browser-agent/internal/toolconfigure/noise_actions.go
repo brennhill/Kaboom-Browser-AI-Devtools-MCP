@@ -33,11 +33,11 @@ type NoiseRuleArgs struct {
 // HandleNoise handles configure(what="noise_rule") after arg rewriting.
 func HandleNoise(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var arguments NoiseRuleArgs
-	lenientUnmarshal(args, &arguments)
+	mcp.LenientUnmarshal(args, &arguments)
 
 	nc := d.NoiseConfig()
 	if nc == nil {
-		return fail(req, mcp.ErrNotInitialized, "Noise configuration not initialized", "Internal error — do not retry")
+		return mcp.Fail(req, mcp.ErrNotInitialized, "Noise configuration not initialized", "Internal error — do not retry")
 	}
 
 	responseData, errResp := dispatchNoiseAction(d, nc, req, arguments)
@@ -45,7 +45,7 @@ func HandleNoise(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONR
 		return *errResp
 	}
 
-	return succeed(req, "Noise configuration updated", responseData)
+	return mcp.Succeed(req, "Noise configuration updated", responseData)
 }
 
 func dispatchNoiseAction(d Deps, nc *noise.NoiseConfig, req mcp.JSONRPCRequest, args NoiseRuleArgs) (any, *mcp.JSONRPCResponse) {
@@ -61,7 +61,7 @@ func dispatchNoiseAction(d Deps, nc *noise.NoiseConfig, req mcp.JSONRPCRequest, 
 	case "auto_detect":
 		return noiseActionAutoDetect(d, nc), nil
 	default:
-		resp := fail(req, mcp.ErrUnknownMode, "Unknown noise action: "+args.Action, "Use a valid action: add, remove, list, reset, auto_detect", mcp.WithParam("noise_action"))
+		resp := mcp.Fail(req, mcp.ErrUnknownMode, "Unknown noise action: "+args.Action, "Use a valid action: add, remove, list, reset, auto_detect", mcp.WithParam("noise_action"))
 		return nil, &resp
 	}
 }
@@ -84,7 +84,7 @@ func noiseActionAdd(nc *noise.NoiseConfig, req mcp.JSONRPCRequest, args NoiseRul
 		}
 	}
 	if err := nc.AddRules(rules); err != nil {
-		resp := fail(req, mcp.ErrInvalidParam, err.Error(), "Fix the rule pattern and try again")
+		resp := mcp.Fail(req, mcp.ErrInvalidParam, err.Error(), "Fix the rule pattern and try again")
 		return nil, &resp
 	}
 	return map[string]any{
@@ -96,11 +96,11 @@ func noiseActionAdd(nc *noise.NoiseConfig, req mcp.JSONRPCRequest, args NoiseRul
 
 func noiseActionRemove(nc *noise.NoiseConfig, req mcp.JSONRPCRequest, args NoiseRuleArgs) (any, *mcp.JSONRPCResponse) {
 	if args.RuleID == "" {
-		resp := fail(req, mcp.ErrMissingParam, "Missing required parameter: rule_id", "Add the 'rule_id' parameter", mcp.WithParam("rule_id"))
+		resp := mcp.Fail(req, mcp.ErrMissingParam, "Missing required parameter: rule_id", "Add the 'rule_id' parameter", mcp.WithParam("rule_id"))
 		return nil, &resp
 	}
 	if err := nc.RemoveRule(args.RuleID); err != nil {
-		resp := fail(req, mcp.ErrInvalidParam, err.Error(), "Use a valid rule ID from list action")
+		resp := mcp.Fail(req, mcp.ErrInvalidParam, err.Error(), "Use a valid rule ID from list action")
 		return nil, &resp
 	}
 	return map[string]any{"status": "ok", "removed": args.RuleID}, nil

@@ -18,6 +18,11 @@ code_paths:
   - cmd/browser-agent/tools_observe.go
   - cmd/browser-agent/tools_async_completion.go
   - cmd/browser-agent/internal/toolanalyze/combinedaudit/handler.go
+  - cmd/browser-agent/internal/toolanalyze/navigation.go
+  - cmd/browser-agent/internal/toolanalyze/link_validation.go
+  - cmd/browser-agent/internal/toolanalyze/security.go
+  - cmd/browser-agent/internal/toolresp/toolresp.go
+  - internal/mcp/response.go
   - internal/annotation/store.go
   - internal/annotation/store_results.go
   - internal/annotation/store_wait.go

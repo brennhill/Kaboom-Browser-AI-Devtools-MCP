@@ -7,6 +7,7 @@ package toolanalyze
 import (
 	"encoding/json"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
@@ -18,11 +19,11 @@ func HandleNavigation(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.
 	}
 	if len(args) > 0 {
 		if err := json.Unmarshal(args, &params); err != nil {
-			return fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
+			return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 		}
 	}
 
-	correlationID := newCorrelationID("navigation")
+	correlationID := toolresp.NewCorrelationID("navigation")
 	query := queries.PendingQuery{
 		Type:          "navigation",
 		Params:        args,
@@ -43,11 +44,11 @@ func HandlePageStructure(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 	}
 	if len(args) > 0 {
 		if err := json.Unmarshal(args, &params); err != nil {
-			return fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
+			return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 		}
 	}
 
-	correlationID := newCorrelationID("page_structure")
+	correlationID := toolresp.NewCorrelationID("page_structure")
 	query := queries.PendingQuery{
 		Type:          "page_structure",
 		Params:        args,
@@ -63,7 +64,7 @@ func HandlePageStructure(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 
 // HandleLinkHealth handles analyze(what="link_health").
 func HandleLinkHealth(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	correlationID := newCorrelationID("link_health")
+	correlationID := toolresp.NewCorrelationID("link_health")
 	query := queries.PendingQuery{
 		Type:          "link_health",
 		Params:        args,

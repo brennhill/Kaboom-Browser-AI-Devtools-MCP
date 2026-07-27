@@ -15,10 +15,10 @@ func HandleTelemetry(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 	var params struct {
 		TelemetryMode string `json:"telemetry_mode"`
 	}
-	lenientUnmarshal(args, &params)
+	mcp.LenientUnmarshal(args, &params)
 
 	if params.TelemetryMode == "" {
-		return succeed(req, "Telemetry mode", map[string]any{
+		return mcp.Succeed(req, "Telemetry mode", map[string]any{
 			"status":         "ok",
 			"telemetry_mode": d.GetTelemetryMode(),
 		})
@@ -26,14 +26,14 @@ func HandleTelemetry(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 
 	mode, ok := NormalizeTelemetryMode(params.TelemetryMode)
 	if !ok {
-		return fail(req, mcp.ErrInvalidParam,
+		return mcp.Fail(req, mcp.ErrInvalidParam,
 			"Invalid telemetry_mode: "+params.TelemetryMode,
 			"Use telemetry_mode: off, auto, or full",
 			mcp.WithParam("telemetry_mode"))
 	}
 
 	d.SetTelemetryMode(mode)
-	return succeed(req, "Telemetry mode updated", map[string]any{
+	return mcp.Succeed(req, "Telemetry mode updated", map[string]any{
 		"status":         "ok",
 		"telemetry_mode": mode,
 	})
