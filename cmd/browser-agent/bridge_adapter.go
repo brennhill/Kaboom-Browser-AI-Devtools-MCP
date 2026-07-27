@@ -17,6 +17,7 @@ import (
 	cmbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/pushapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
@@ -28,6 +29,7 @@ import (
 // mcpStdoutMu serializes all writes to stdout so concurrent bridgeForwardRequest
 // goroutines cannot interleave JSON-RPC responses.
 var mcpStdoutMu sync.Mutex
+var pushRuntime = pushapi.NewRuntime(writeMCPPayload)
 
 // initBridge wires the bridge sub-package to main-package dependencies.
 // Must be called before any bridge function is used.
@@ -50,17 +52,15 @@ func initBridge() {
 		SetStderrSink:        diag.SetSink,
 
 		// Push state
-		GetBridgeFraming:   getBridgeFraming,
-		StoreBridgeFraming: storeBridgeFraming,
+		GetBridgeFraming:   pushRuntime.Framing,
+		StoreBridgeFraming: pushRuntime.StoreFraming,
 		SetPushClientCapabilities: func(caps push.ClientCapabilities) {
-			setPushClientCapabilities(caps)
+			pushRuntime.SetCapabilities(caps)
 			if caps.ClientName != "" {
 				telemetry.SetLLMName(caps.ClientName)
 			}
 		},
-		ExtractClientCapabilities: func(rawParams json.RawMessage) push.ClientCapabilities {
-			return extractClientCapabilities(rawParams)
-		},
+		ExtractClientCapabilities: pushapi.ExtractClientCapabilities,
 
 		// MCP content
 		NegotiateProtocolVersion: mcp.NegotiateProtocolVersion,

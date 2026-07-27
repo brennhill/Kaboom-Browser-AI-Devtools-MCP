@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/pushapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
@@ -207,7 +208,7 @@ func (s *Server) handleDrawModeComplete(w http.ResponseWriter, r *http.Request, 
 	}
 
 	// Auto-push annotations to AI client via push pipeline
-	s.pushDrawModeCompletion(&body, screenshotPath, parsedAnnotations)
+	pushapi.DeliverAnnotations(s.pushRouter, body.PageURL, body.TabID, body.AnnotSessionName, parsedAnnotations)
 
 	jsonResponse(w, http.StatusOK, result)
 }

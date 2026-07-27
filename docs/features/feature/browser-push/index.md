@@ -4,10 +4,13 @@ feature_id: browser-push
 status: implementation
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
   - internal/push/
-  - cmd/browser-agent/push_handlers.go
+  - cmd/browser-agent/internal/pushapi/runtime.go
+  - cmd/browser-agent/internal/pushapi/handler.go
+  - cmd/browser-agent/server_routes_media_screenshots.go
+  - cmd/browser-agent/server_routes_media_draw_mode.go
   - cmd/browser-agent/tools_observe.go
   - cmd/browser-agent/internal/toolobserve/inbox.go
   - src/background/push-handler.ts
@@ -16,8 +19,9 @@ test_paths:
   - internal/push/inbox_test.go
   - internal/push/router_test.go
   - internal/push/sampling_test.go
-  - cmd/browser-agent/push_state_test.go
-  - cmd/browser-agent/push_handlers_test.go
+  - cmd/browser-agent/internal/pushapi/runtime_test.go
+  - cmd/browser-agent/internal/pushapi/handler_test.go
+  - cmd/browser-agent/tools_analyze_annotations_draw_test.go
   - cmd/browser-agent/tools_observe_inbox_test.go
   - tests/extension/push-handler-branding.test.js
 last_verified_version: 0.7.12
@@ -62,7 +66,8 @@ Push browser content (annotations, screenshots, chat messages) to the AI automat
 | `internal/push/inbox.go` | Bounded FIFO queue (50 events) | `inbox_test.go` (8 tests) |
 | `internal/push/router.go` | Delivery router: sampling→notification→inbox | `router_test.go` (6 tests) |
 | `internal/push/sampling.go` | MCP sampling/createMessage builder | `sampling_test.go` (5 tests) |
-| `cmd/browser-agent/push_handlers.go` | Capability state, stdio delivery, and HTTP endpoints | `push_state_test.go`, `push_handlers_test.go` |
+| `cmd/browser-agent/internal/pushapi/runtime.go` | Negotiated capability/framing state and MCP outbound delivery | `runtime_test.go` |
+| `cmd/browser-agent/internal/pushapi/handler.go` | Push HTTP parsing, event delivery, draining, and annotation routing | `handler_test.go` |
 | `cmd/browser-agent/tools_observe.go` | observe(inbox) adapter + piggyback wiring | `tools_observe_inbox_test.go` (6 tests) |
 | `cmd/browser-agent/internal/toolobserve/inbox.go` | inbox response and piggyback behavior | `tools_observe_inbox_test.go` (6 tests) |
 

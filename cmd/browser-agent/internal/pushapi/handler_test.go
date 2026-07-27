@@ -1,5 +1,5 @@
-// push_handlers_test.go — Tests for push HTTP handlers.
-package main
+// handler_test.go — Tests for push HTTP parsing and delivery.
+package pushapi
 
 import (
 	"encoding/json"
@@ -8,15 +8,28 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 )
 
-func newTestPushServer() *Server {
+type testPushServer struct {
+	inbox   *push.PushInbox
+	router  *push.Router
+	runtime *Runtime
+	handler *Handler
+}
+
+func testJSONResponse(w http.ResponseWriter, status int, value any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(value)
+}
+
+func newTestPushServer() *testPushServer {
 	inbox := push.NewPushInbox(50)
-	return &Server{
-		pushInbox:  inbox,
-		pushRouter: push.NewRouter(inbox, nil, nil, push.ClientCapabilities{}),
-	}
+	router := push.NewRouter(inbox, nil, nil, push.ClientCapabilities{})
+	runtime := NewRuntime(func([]byte, bridge.StdioFraming) {})
+	return &testPushServer{inbox: inbox, router: router, runtime: runtime, handler: NewHandler(router, inbox, runtime, testJSONResponse, 1<<20)}
 }
 
 type testPushNotifier struct {
@@ -38,7 +51,7 @@ func TestHandlePushMessage_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	s.handlePushMessage(w, req)
+	s.handler.HandleMessage(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
@@ -65,7 +78,7 @@ func TestHandlePushMessage_EmptyMessage(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	s.handlePushMessage(w, req)
+	s.handler.HandleMessage(w, req)
 
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 for empty message, got %d", w.Code)
@@ -78,7 +91,7 @@ func TestHandlePushMessage_InvalidJSON(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	s.handlePushMessage(w, req)
+	s.handler.HandleMessage(w, req)
 
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 for invalid JSON, got %d", w.Code)
@@ -90,7 +103,7 @@ func TestHandlePushMessage_WrongMethod(t *testing.T) {
 	req := httptest.NewRequest("GET", "/push/message", nil)
 	w := httptest.NewRecorder()
 
-	s.handlePushMessage(w, req)
+	s.handler.HandleMessage(w, req)
 
 	if w.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("expected 405, got %d", w.Code)
@@ -103,7 +116,7 @@ func TestHandlePushMessage_WrongContentType(t *testing.T) {
 	req.Header.Set("Content-Type", "text/plain")
 	w := httptest.NewRecorder()
 
-	s.handlePushMessage(w, req)
+	s.handler.HandleMessage(w, req)
 
 	if w.Code != http.StatusUnsupportedMediaType {
 		t.Fatalf("expected 415, got %d", w.Code)
@@ -125,7 +138,7 @@ func TestHandlePushScreenshot_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	s.handlePushScreenshot(w, req)
+	s.handler.HandleScreenshot(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
@@ -146,13 +159,13 @@ func TestHandlePushScreenshot_StripsDataPrefix(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	s.handlePushScreenshot(w, req)
+	s.handler.HandleScreenshot(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", w.Code)
 	}
 	// Verify the event in inbox has stripped prefix
-	events := s.pushInbox.DrainAll()
+	events := s.inbox.DrainAll()
 	if len(events) != 1 {
 		t.Fatalf("expected 1 event, got %d", len(events))
 	}
@@ -164,11 +177,7 @@ func TestHandlePushScreenshot_StripsDataPrefix(t *testing.T) {
 func TestHandlePushCapabilities(t *testing.T) {
 	s := newTestPushServer()
 
-	// Save and restore push state
-	orig := getPushClientCapabilities()
-	defer setPushClientCapabilities(orig)
-
-	setPushClientCapabilities(push.ClientCapabilities{
+	s.runtime.SetCapabilities(push.ClientCapabilities{
 		SupportsSampling: true,
 		ClientName:       "test-client",
 	})
@@ -176,7 +185,7 @@ func TestHandlePushCapabilities(t *testing.T) {
 	req := httptest.NewRequest("GET", "/push/capabilities", nil)
 	w := httptest.NewRecorder()
 
-	s.handlePushCapabilities(w, req)
+	s.handler.HandleCapabilities(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", w.Code)
@@ -202,17 +211,15 @@ func TestHandlePushMessage_NotificationRouting(t *testing.T) {
 		SupportsNotifications: true,
 		ClientName:            "codex",
 	})
-	s := &Server{
-		pushInbox:  inbox,
-		pushRouter: router,
-	}
+	runtime := NewRuntime(func([]byte, bridge.StdioFraming) {})
+	s := &testPushServer{inbox: inbox, router: router, runtime: runtime, handler: NewHandler(router, inbox, runtime, testJSONResponse, 1<<20)}
 
 	body := `{"message":"notify me","page_url":"https://example.com","tab_id":1}`
 	req := httptest.NewRequest("POST", "/push/message", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	s.handlePushMessage(w, req)
+	s.handler.HandleMessage(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
@@ -242,7 +249,7 @@ func TestHandlePushMessage_NotificationRouting(t *testing.T) {
 func TestPushEventID_Unique(t *testing.T) {
 	seen := make(map[string]bool)
 	for i := 0; i < 100; i++ {
-		id := pushEventID("push-test")
+		id := EventID("push-test")
 		if seen[id] {
 			t.Fatalf("duplicate ID: %s", id)
 		}
@@ -251,7 +258,7 @@ func TestPushEventID_Unique(t *testing.T) {
 }
 
 func TestPushEventID_HasPrefix(t *testing.T) {
-	id := pushEventID("push-chat")
+	id := EventID("push-chat")
 	if !strings.HasPrefix(id, "push-chat-") {
 		t.Fatalf("expected push-chat- prefix, got %s", id)
 	}

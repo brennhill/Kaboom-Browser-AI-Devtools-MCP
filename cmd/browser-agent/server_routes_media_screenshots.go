@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/pushapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
@@ -144,7 +145,7 @@ func (s *Server) handleScreenshot(w http.ResponseWriter, r *http.Request, cap *c
 			b64 = b64[idx+1:]
 		}
 		ev := push.PushEvent{
-			ID:            pushEventID("push-ss"),
+			ID:            pushapi.EventID("push-ss"),
 			Type:          "screenshot",
 			Timestamp:     time.Now(),
 			PageURL:       body.URL,

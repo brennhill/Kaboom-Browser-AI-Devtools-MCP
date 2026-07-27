@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/pushapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
 	terminalsupervisor "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/supervisor"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
@@ -41,6 +42,7 @@ type Server struct {
 	// Push delivery pipeline
 	pushInbox  *push.PushInbox
 	pushRouter *push.Router
+	pushHTTP   *pushapi.Handler
 
 	// Terminal PTY session manager
 	ptyManager  *pty.Manager
@@ -146,9 +148,10 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 	})
 
 	// Initialize push router with capability sync callback
-	caps := getPushClientCapabilities()
-	s.pushRouter = push.NewRouter(s.pushInbox, &stdioSamplingSender{}, &stdioNotifier{}, caps)
-	onPushCapabilitiesChange(func(newCaps push.ClientCapabilities) {
+	caps := pushRuntime.Capabilities()
+	s.pushRouter = push.NewRouter(s.pushInbox, pushRuntime, pushRuntime, caps)
+	s.pushHTTP = pushapi.NewHandler(s.pushRouter, s.pushInbox, pushRuntime, jsonResponse, maxPostBodySize)
+	pushRuntime.OnCapabilitiesChange(func(newCaps push.ClientCapabilities) {
 		s.pushRouter.UpdateCapabilities(newCaps)
 	})
 

@@ -389,13 +389,13 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, cap *capture.Store) 
 
 	// NOT MCP — Push pipeline endpoints (extension → daemon → AI client)
 	mux.HandleFunc("/push/screenshot", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		server.handlePushScreenshot(w, r)
+		server.pushHTTP.HandleScreenshot(w, r)
 	})))
 	mux.HandleFunc("/push/message", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		server.handlePushMessage(w, r)
+		server.pushHTTP.HandleMessage(w, r)
 	})))
 	mux.HandleFunc("/push/capabilities", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		server.handlePushCapabilities(w, r)
+		server.pushHTTP.HandleCapabilities(w, r)
 	})))
 	// Bridge push relay: internal endpoint for the bridge process to drain push events.
 	// No httpguard.ExtensionOnly — called by the bridge process, not the browser extension.
@@ -409,7 +409,7 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, cap *capture.Store) 
 				return
 			}
 		}
-		server.handlePushDrain(w, r)
+		server.pushHTTP.HandleDrain(w, r)
 	})
 
 	// NOT MCP — Active codebase GET/PUT — extension reads/writes the default terminal CWD.

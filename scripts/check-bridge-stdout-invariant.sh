@@ -18,7 +18,7 @@ TARGET_FILES=(
   "cmd/browser-agent/config.go"
   "cmd/browser-agent/internal/connectmode/runner.go"
   "cmd/browser-agent/main_connection_mcp.go"
-  "cmd/browser-agent/push_handlers.go"
+  "cmd/browser-agent/internal/pushapi/runtime.go"
 )
 
 VIOLATIONS=0
