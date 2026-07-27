@@ -7,8 +7,6 @@ owners: []
 last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/tools_configure.go
-  - cmd/browser-agent/tools_configure_session_handler.go
-  - cmd/browser-agent/tools_configure_state_impl.go
   - cmd/browser-agent/tools_configure_sessions.go
   - internal/tools/configure/audit.go
   - internal/tools/configure/boundaries.go
@@ -54,8 +52,6 @@ last_verified_date: 2026-03-05
 - Configure dispatch and action registry:
   - `cmd/browser-agent/tools_configure.go`
 - Session/store sub-handler and implementations:
-  - `cmd/browser-agent/tools_configure_session_handler.go`
-  - `cmd/browser-agent/tools_configure_state_impl.go`
   - `cmd/browser-agent/tools_configure_sessions.go`
 - Shared configure argument normalization/parsing:
   - `internal/tools/configure/boundaries.go`
