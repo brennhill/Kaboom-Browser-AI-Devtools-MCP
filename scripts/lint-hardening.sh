@@ -426,14 +426,14 @@ fi
 bold "14. Checking for forbidden stdout writes in production code..."
 
 # Files that are ALLOWED to write to stdout (transport layer only):
-#   mcp_stdout.go      — centralized writeMCPPayload()
+#   bridge_adapter.go  — centralized writeMCPPayload()
 #   connect_mode.go    — MCP forwarding (uses os.Stdout.Write)
 #   bridge_io_isolation*.go — FD duplication setup
 #   cli.go / cli_output.go — CLI mode (not MCP)
 #   main.go            — startup / background spawn
 #   main_connection.go — MCP pipe writes
 #   main_connection_stop*.go — CLI stop/force command output
-STDOUT_ALLOWLIST="mcp_stdout.go|connect_mode.go|bridge_io_isolation|cli\.go|cli_output\.go|config\.go|main(_.*)?\.go|main_connection\.go|main_connection_stop(_.*)?\.go|main_helpers\.go|doctor(_.*)?\.go"
+STDOUT_ALLOWLIST="connect_mode.go|bridge_io_isolation|cli\.go|cli_output\.go|config\.go|main(_.*)?\.go|main_connection_stop(_.*)?\.go|main_helpers\.go|doctor(_.*)?\.go"
 
 # Pattern: fmt.Print/Println/Printf (writes to stdout), or direct os.Stdout usage
 # Excludes: fmt.Fprintf(os.Stderr, ...) which is safe, and fmt.Sprintf which returns a string

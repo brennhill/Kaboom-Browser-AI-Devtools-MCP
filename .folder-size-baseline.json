@@ -2,6 +2,6 @@
   "_comment": "Ratcheting baseline for scripts/check-folder-size.cjs. A folder may never exceed its recorded count; folders absent here are held to the 10-file limit. Counts may only go DOWN — run `make folder-baseline-update` after reducing one.",
   "max_files": 10,
   "folders": {
-    "cmd/browser-agent": 50
+    "cmd/browser-agent": 49
   }
 }

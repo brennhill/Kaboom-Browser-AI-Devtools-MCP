@@ -7,7 +7,7 @@ owners: []
 last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/handler.go
-  - cmd/browser-agent/mcp_stdout.go
+  - cmd/browser-agent/bridge_adapter.go
   - cmd/browser-agent/tools_core.go
   - internal/session/snapshot-manager.go
   - cmd/browser-agent/tools_registry.go

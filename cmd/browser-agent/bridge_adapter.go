@@ -5,17 +5,23 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
 	"sync"
+	"syscall"
+	"time"
 
+	cmbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
-
-	bridgepkg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 )
 
 // mcpStdoutMu serializes all writes to stdout so concurrent bridgeForwardRequest
@@ -26,7 +32,7 @@ var mcpStdoutMu sync.Mutex
 // Must be called before any bridge function is used.
 func initBridge() {
 	debugLogger := diag.NewDebugFileFromEnv()
-	bridgepkg.Init(bridgepkg.Deps{
+	cmbridge.Init(cmbridge.Deps{
 		Version:              version,
 		MaxPostBodySize:      maxPostBodySize,
 		MCPServerName:        mcpServerName,
@@ -74,5 +80,72 @@ func initBridge() {
 	})
 }
 
-// Note: writeMCPPayload and mcpStdoutMu remain in mcp_stdout.go.
-// The bridge package calls deps.WriteMCPPayload which routes back to main's writeMCPPayload.
+func syncStdoutBestEffort() {
+	if err := cmbridge.ActiveMCPTransportWriter().Sync(); err != nil && !isIgnorableStdoutSyncError(err) {
+		diag.Printf("[Kaboom] warning: stdout.Sync failed: %v\n", err)
+	}
+}
+
+func isIgnorableStdoutSyncError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, syscall.EINVAL) || errors.Is(err, syscall.EBADF) {
+		return true
+	}
+	var pathErr *os.PathError
+	if errors.As(err, &pathErr) {
+		return errors.Is(pathErr.Err, syscall.EINVAL) || errors.Is(pathErr.Err, syscall.EBADF)
+	}
+	return false
+}
+
+// writeMCPPayload is the only stdout emitter used by MCP wrapper responses.
+func writeMCPPayload(payload []byte, framing bridge.StdioFraming) {
+	normalized := normalizeMCPPayload(payload)
+	out := cmbridge.ActiveMCPTransportWriter()
+	mcpStdoutMu.Lock()
+	defer mcpStdoutMu.Unlock()
+	if framing == bridge.StdioFramingContentLength {
+		_, _ = fmt.Fprintf(out, "Content-Length: %d\r\nContent-Type: application/json\r\n\r\n%s", len(normalized), normalized)
+	} else {
+		_, _ = out.Write(normalized)
+		_, _ = out.Write([]byte("\n"))
+	}
+	cmbridge.FlushStdout()
+}
+
+func normalizeMCPPayload(payload []byte) []byte {
+	trimmed := bytes.TrimSpace(payload)
+	if len(trimmed) > 0 && json.Valid(trimmed) {
+		return trimmed
+	}
+
+	diag.Printf("[kaboom-bridge] ERROR: stdout invariant violation: invalid JSON payload (len=%d)\n", len(payload))
+	errResp := JSONRPCResponse{
+		JSONRPC: JSONRPCVersion,
+		ID:      nil,
+		Error: &JSONRPCError{
+			Code:    -32603,
+			Message: "Wrapper emitted invalid JSON payload",
+		},
+	}
+	respJSON, _ := json.Marshal(errResp)
+	return respJSON
+}
+
+// sendStartupError sends a JSON-RPC error response before exiting.
+func sendStartupError(message string) {
+	errResp := JSONRPCResponse{
+		JSONRPC: JSONRPCVersion,
+		ID:      "startup",
+		Error: &JSONRPCError{
+			Code:    -32603,
+			Message: message,
+		},
+	}
+	respJSON, _ := json.Marshal(errResp)
+	writeMCPPayload(respJSON, bridge.StdioFramingLine)
+	syncStdoutBestEffort()
+	time.Sleep(100 * time.Millisecond)
+}
