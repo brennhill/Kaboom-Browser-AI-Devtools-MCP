@@ -19,11 +19,11 @@ type configureSessionDeps interface {
 type configureSessionHandler struct {
 	deps             configureSessionDeps
 	sessionStoreImpl *persistence.SessionStore
-	sessionManager   *session.Manager
+	sessionManager   *session.SessionManager
 	server           *Server
 }
 
-func newConfigureSessionHandler(deps configureSessionDeps, store *persistence.SessionStore, manager *session.Manager, server *Server) *configureSessionHandler {
+func newConfigureSessionHandler(deps configureSessionDeps, store *persistence.SessionStore, manager *session.SessionManager, server *Server) *configureSessionHandler {
 	return &configureSessionHandler{deps: deps, sessionStoreImpl: store, sessionManager: manager, server: server}
 }
 

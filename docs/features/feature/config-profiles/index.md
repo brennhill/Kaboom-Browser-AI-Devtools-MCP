@@ -8,6 +8,7 @@ last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/tools_configure_sessions.go
+  - internal/session/snapshot-manager.go
   - internal/tools/configure/audit.go
   - internal/tools/configure/boundaries.go
   - internal/tools/configure/rewrite.go

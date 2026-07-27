@@ -69,7 +69,7 @@ type ToolHandler struct {
 	sessionStoreImpl      *persistence.SessionStore
 	securityScannerImpl   *scan.Scanner
 	thirdPartyAuditorImpl *thirdparty.ThirdPartyAuditor
-	sessionManager        *session.Manager
+	sessionManager        *session.SessionManager
 	auditTrail            *audit.Trail
 
 	// Per-client audit session mapping (client_id -> session_id).
