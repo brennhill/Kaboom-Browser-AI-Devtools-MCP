@@ -14,7 +14,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpguard"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/wsframe"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -27,6 +32,45 @@ const (
 	// death before the supervisor gives up loudly (terminal marked unavailable).
 	terminalRestartMaxAttempts = 8
 )
+
+func terminalDeps() terminal.Deps {
+	return terminal.Deps{
+		JSONResponse:   jsonResponse,
+		CORSMiddleware: httpguard.CORS,
+		Stderrf:        diag.Printf,
+		MaxPostBody:    maxPostBodySize,
+		WSReadFrame:    wsframe.ReadFrame,
+		WSWriteFrame:   wsframe.WriteFrame,
+		WSAcceptKey:    wsframe.AcceptKey,
+	}
+}
+
+type serverIntentDeps struct{ server *Server }
+
+func (deps *serverIntentDeps) GetPtyRelays() terminal.RelayMap {
+	if deps.server.ptyRelays == nil {
+		return nil
+	}
+	return deps.server.ptyRelays
+}
+
+func (deps *serverIntentDeps) GetIntentStore() *terminal.IntentStore {
+	return deps.server.intentStore
+}
+
+func setupTerminalMux(server *Server, manager *pty.Manager, store *capture.Store) (*http.ServeMux, *terminal.Map) {
+	deps := terminalDeps()
+	deps.LogEvent = func(event string, fields map[string]any) { server.logLifecycle(event, 0, fields) }
+	return terminal.SetupMux(deps, server, &serverIntentDeps{server: server}, manager, store)
+}
+
+func startTerminalServer(port int, mux *http.ServeMux) (*http.Server, <-chan struct{}, error) {
+	return terminal.StartServer(terminalDeps(), port, mux)
+}
+
+func handleActiveCodebase(w http.ResponseWriter, r *http.Request, server *Server) {
+	terminal.HandleActiveCodebase(w, r, terminalDeps(), server)
+}
 
 // terminalSupervisor owns the lifecycle of the terminal HTTP server after its
 // initial bind: it watches the current server, restarts it on unexpected death,

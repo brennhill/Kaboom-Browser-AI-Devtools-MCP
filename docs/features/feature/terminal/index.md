@@ -448,7 +448,7 @@ Note: `/config/active-codebase` is on the **main** daemon server (not terminal s
 
 | File | Responsibility |
 |------|---------------|
-| `cmd/browser-agent/terminal_server.go` | Dedicated server setup: `setupTerminalMux()`, `startTerminalServer()` |
+| `cmd/browser-agent/terminal_supervisor.go` | Dedicated server setup, package adapters, restart supervision, and graceful shutdown |
 | `cmd/browser-agent/terminal_handlers.go` | All HTTP handlers: page, WS, start, stop, validate, config |
 | `cmd/browser-agent/terminal_assets/terminal.html` | xterm.js terminal page with WS reconnect and postMessage bridge |
 | `extension/sidepanel.html` | Side panel shell that loads the terminal host |
