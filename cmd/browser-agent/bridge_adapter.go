@@ -10,6 +10,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
@@ -32,13 +33,13 @@ func initBridge() {
 		ServerInstructions:   serverInstructions,
 
 		// Logging
-		Stderrf: stderrf,
+		Stderrf: diag.Printf,
 		Debugf:  debugf,
 
 		// Stdout transport
 		WriteMCPPayload:      writeMCPPayload,
 		SyncStdoutBestEffort: syncStdoutBestEffort,
-		SetStderrSink:        setStderrSink,
+		SetStderrSink:        diag.SetSink,
 
 		// Push state
 		GetBridgeFraming:   getBridgeFraming,

@@ -39,12 +39,12 @@ func buildInteractDeps(h *ToolHandler) *toolinteract.Deps {
 		RecordDOMPrimitiveAction: h.recordDOMPrimitiveAction,
 
 		// Cross-tool dispatch
-		ToolInteract:  h.toolInteract,
-		ToolAnalyze:   h.toolAnalyze,
+		ToolInteract:    h.toolInteract,
+		ToolAnalyze:     h.toolAnalyze,
 		ToolExportSARIF: h.toolExportSARIF,
 
 		// Response enrichment
-		EnrichNavigateResponse: h.enrichNavigateResponse,
+		EnrichNavigateResponse:  h.enrichNavigateResponse,
 		InjectCSPBlockedActions: h.injectCSPBlockedActions,
 
 		// Screenshot/observe proxies

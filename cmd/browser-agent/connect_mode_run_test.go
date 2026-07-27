@@ -13,6 +13,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 )
 
 type connectModeServerState struct {
@@ -98,11 +100,11 @@ func TestRunConnectModeHappyPath(t *testing.T) {
 	oldIn := os.Stdin
 	oldOut := os.Stdout
 	oldErr := os.Stderr
-	oldSink := stderrSink
+	oldSink := diag.Sink()
 	os.Stdin = inR
 	os.Stdout = outW
 	os.Stderr = errW
-	setStderrSink(errW)
+	diag.SetSink(errW)
 
 	_, _ = io.WriteString(inW, `{"jsonrpc":"2.0","id":99,"method":"ping","params":{}}`+"\n")
 	_ = inW.Close()
@@ -112,7 +114,7 @@ func TestRunConnectModeHappyPath(t *testing.T) {
 	os.Stdin = oldIn
 	os.Stdout = oldOut
 	os.Stderr = oldErr
-	stderrSink = oldSink
+	diag.SetSink(oldSink)
 	_ = inR.Close()
 	_ = outW.Close()
 	_ = errW.Close()

@@ -14,11 +14,12 @@ import (
 
 	cmbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 )
 
 func syncStdoutBestEffort() {
 	if err := cmbridge.ActiveMCPTransportWriter().Sync(); err != nil && !isIgnorableStdoutSyncError(err) {
-		stderrf("[Kaboom] warning: stdout.Sync failed: %v\n", err)
+		diag.Printf("[Kaboom] warning: stdout.Sync failed: %v\n", err)
 	}
 }
 
@@ -60,7 +61,7 @@ func normalizeMCPPayload(payload []byte) []byte {
 		return trimmed
 	}
 
-	stderrf("[kaboom-bridge] ERROR: stdout invariant violation: invalid JSON payload (len=%d)\n", len(payload))
+	diag.Printf("[kaboom-bridge] ERROR: stdout invariant violation: invalid JSON payload (len=%d)\n", len(payload))
 	errResp := JSONRPCResponse{
 		JSONRPC: JSONRPCVersion,
 		ID:      nil,

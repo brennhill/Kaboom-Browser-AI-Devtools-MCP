@@ -162,7 +162,7 @@ func TestToolsAnalyzeAudit_ScoringFunctions(t *testing.T) {
 	t.Parallel()
 
 	t.Run("PerformanceNoIssues", func(t *testing.T) {
-		r := toolanalyze.ScoreAuditCategory("performance",map[string]any{"status": "ok"})
+		r := toolanalyze.ScoreAuditCategory("performance", map[string]any{"status": "ok"})
 		if r.Score != 100 {
 			t.Errorf("perf with no issues should score 100, got %d", r.Score)
 		}
@@ -172,7 +172,7 @@ func TestToolsAnalyzeAudit_ScoringFunctions(t *testing.T) {
 	})
 
 	t.Run("PerformanceWithIssues", func(t *testing.T) {
-		r := toolanalyze.ScoreAuditCategory("performance",map[string]any{"issues": []any{"slow load", "large bundle"}})
+		r := toolanalyze.ScoreAuditCategory("performance", map[string]any{"issues": []any{"slow load", "large bundle"}})
 		if r.Score != 80 {
 			t.Errorf("perf with 2 issues should score 80, got %d", r.Score)
 		}
@@ -186,14 +186,14 @@ func TestToolsAnalyzeAudit_ScoringFunctions(t *testing.T) {
 		for i := range issues {
 			issues[i] = "issue"
 		}
-		r := toolanalyze.ScoreAuditCategory("performance",map[string]any{"issues": issues})
+		r := toolanalyze.ScoreAuditCategory("performance", map[string]any{"issues": issues})
 		if r.Score != 0 {
 			t.Errorf("perf with many issues should floor at 0, got %d", r.Score)
 		}
 	})
 
 	t.Run("SecuritySeverityScoring", func(t *testing.T) {
-		r := toolanalyze.ScoreAuditCategory("security",map[string]any{
+		r := toolanalyze.ScoreAuditCategory("security", map[string]any{
 			"findings": []any{
 				map[string]any{"severity": "critical"},
 				map[string]any{"severity": "low"},
@@ -205,7 +205,7 @@ func TestToolsAnalyzeAudit_ScoringFunctions(t *testing.T) {
 	})
 
 	t.Run("AccessibilityScoring", func(t *testing.T) {
-		r := toolanalyze.ScoreAuditCategory("accessibility",map[string]any{
+		r := toolanalyze.ScoreAuditCategory("accessibility", map[string]any{
 			"violations": []any{"v1", "v2", "v3"},
 		})
 		if r.Score != 85 {
@@ -214,7 +214,7 @@ func TestToolsAnalyzeAudit_ScoringFunctions(t *testing.T) {
 	})
 
 	t.Run("BestPracticesScoring", func(t *testing.T) {
-		r := toolanalyze.ScoreAuditCategory("best_practices",map[string]any{
+		r := toolanalyze.ScoreAuditCategory("best_practices", map[string]any{
 			"third_parties": []any{"tp1", "tp2"},
 		})
 		if r.Score != 94 {

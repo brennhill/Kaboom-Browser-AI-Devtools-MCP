@@ -92,7 +92,7 @@ Use this as a hard checklist during design, coding, and review.
 ## 11) MCP Stdout Boundary
 
 - Reserve browser-agent stdout exclusively for MCP JSON-RPC payloads emitted through `writeMCPPayload(...)`.
-- Route help, stop/doctor status, CLI rendering, warnings, and diagnostics to stderr through `internal/diag` or the injected `stderrf` sink.
+- Route help, stop/doctor status, CLI rendering, warnings, and diagnostics through the canonical `internal/diag` sink.
 - Do not write connect-mode responses directly to `os.Stdout`; use the shared MCP framing path.
 - Keep `stdout_protocol_boundary_test.go` green when adding new output.
 

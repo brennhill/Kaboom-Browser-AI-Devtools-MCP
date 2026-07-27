@@ -12,6 +12,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tracking"
@@ -122,7 +123,7 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 		MaxEntries:    maxEntries,
 		TelemetryMode: telemetryModeAuto,
 		AddWarning:    s.AddWarning,
-		Stderrf:       stderrf,
+		Stderrf:       diag.Printf,
 	})
 
 	// Initialize push router with capability sync callback

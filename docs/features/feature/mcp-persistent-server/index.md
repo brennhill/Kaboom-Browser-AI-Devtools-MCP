@@ -51,6 +51,7 @@ code_paths:
   - internal/util/proc_unix.go
   - internal/util/proc_windows.go
 test_paths:
+  - internal/diag/output_test.go
   - cmd/browser-agent/internal/playbooks/resource_catalog_test.go
   - cmd/browser-agent/stdout_protocol_boundary_test.go
   - cmd/browser-agent/mcp_protocol_test.go

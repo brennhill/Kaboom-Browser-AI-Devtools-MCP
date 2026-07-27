@@ -94,7 +94,7 @@ func TestMergeJSONConfig_RemovesLegacyKeys(t *testing.T) {
 		"mcpServers": map[string]any{
 			"kaboom":                 map[string]any{"command": "old"},
 			"kaboom-agentic-browser": map[string]any{"command": "older"},
-			"github":                   map[string]any{"command": "github-mcp"},
+			"github":                 map[string]any{"command": "github-mcp"},
 		},
 	}
 	data, _ := json.MarshalIndent(existing, "", "  ")

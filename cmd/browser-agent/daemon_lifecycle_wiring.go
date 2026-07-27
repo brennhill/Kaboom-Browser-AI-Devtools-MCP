@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 )
 
 // lifecycleLogger adapts *Server to daemonlife.Logger so the package never has to
@@ -29,7 +30,7 @@ func daemonlifeDeps(server *Server) daemonlife.Deps {
 	return daemonlife.Deps{
 		Log:     lifecycleLogger{server: server},
 		Version: version,
-		Warnf:   stderrf,
+		Warnf:   diag.Printf,
 
 		IsProcessAlive:     daemonIsProcessAlive,
 		IsServerRunning:    daemonIsServerRunning,

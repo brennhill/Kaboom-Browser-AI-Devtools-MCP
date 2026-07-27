@@ -98,10 +98,10 @@ type modeValueAlias struct {
 
 // modeResolution bundles context needed for mode resolution error messages.
 type modeResolution struct {
-	ToolName      string                     // For error messages (e.g. "observe", "analyze")
-	ValidModes    string                     // Sorted comma-separated list for hints
-	Aliases       map[string]string          // Mode aliases (e.g. "network" -> "network_waterfall") — legacy, used when ValueAliases is nil
-	ValueAliases  map[string]modeValueAlias  // Mode aliases with deprecation metadata — preferred over Aliases
+	ToolName     string                    // For error messages (e.g. "observe", "analyze")
+	ValidModes   string                    // Sorted comma-separated list for hints
+	Aliases      map[string]string         // Mode aliases (e.g. "network" -> "network_waterfall") — legacy, used when ValueAliases is nil
+	ValueAliases map[string]modeValueAlias // Mode aliases with deprecation metadata — preferred over Aliases
 }
 
 // resolveToolMode extracts and resolves the 'what' parameter from args, checking alias params

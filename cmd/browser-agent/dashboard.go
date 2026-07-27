@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 )
 
 //go:embed dashboard.html
@@ -56,7 +57,7 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write(dashboardHTML); err != nil {
-		stderrf("[Kaboom] failed to write dashboard response: %v\n", err)
+		diag.Printf("[Kaboom] failed to write dashboard response: %v\n", err)
 	}
 }
 
@@ -137,6 +138,6 @@ func serveEmbeddedHTML(w http.ResponseWriter, r *http.Request, content []byte, n
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write(content); err != nil {
-		stderrf("[Kaboom] failed to write %s response: %v\n", name, err)
+		diag.Printf("[Kaboom] failed to write %s response: %v\n", name, err)
 	}
 }

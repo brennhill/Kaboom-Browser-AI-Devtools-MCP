@@ -18,6 +18,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/clientreg"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
@@ -210,7 +211,7 @@ func startHTTPServer(server *Server, port int, apiKey string, mux *http.ServeMux
 				"port":  port,
 				"error": err.Error(),
 			})
-			stderrf("[Kaboom] HTTP server error: %v\n", err)
+			diag.Printf("[Kaboom] HTTP server error: %v\n", err)
 		}
 	})
 

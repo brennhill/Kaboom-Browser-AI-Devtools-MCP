@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 )
 
 const (
@@ -39,13 +40,13 @@ func runConnectMode(port int, clientID string, cwd string) {
 	connectCheckHealth(serverURL, port)
 	connectRegisterClient(serverURL, clientID, cwd)
 
-	stderrf("[Kaboom] Connected to %s (client: %s)\n", serverURL, clientID)
+	diag.Printf("[Kaboom] Connected to %s (client: %s)\n", serverURL, clientID)
 
 	connectForwardLoop(serverURL+"/mcp", clientID)
 
 	connectUnregisterClient(serverURL, clientID)
 
-	stderrf("[Kaboom] Disconnected from %s\n", serverURL)
+	diag.Printf("[Kaboom] Disconnected from %s\n", serverURL)
 }
 
 // connectCheckHealth verifies the server is running. Exits on failure.
@@ -55,20 +56,20 @@ func connectCheckHealth(serverURL string, port int) {
 
 	req, err := http.NewRequestWithContext(ctx, "GET", serverURL+"/health", nil)
 	if err != nil {
-		stderrf("[Kaboom] Failed to create health check request: %v\n", err)
+		diag.Printf("[Kaboom] Failed to create health check request: %v\n", err)
 		os.Exit(1)
 	}
 
 	resp, err := http.DefaultClient.Do(req) // #nosec G107,G704 -- localhost URL constructed from trusted port flag
 	if err != nil {
-		stderrf("[Kaboom] Cannot connect to server at %s: %v\n", serverURL, err)
-		stderrf("[Kaboom] Start a server first: kaboom --server --port %d\n", port)
+		diag.Printf("[Kaboom] Cannot connect to server at %s: %v\n", serverURL, err)
+		diag.Printf("[Kaboom] Start a server first: kaboom --server --port %d\n", port)
 		os.Exit(1)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		stderrf("[Kaboom] Server health check failed: %d\n", resp.StatusCode)
+		diag.Printf("[Kaboom] Server health check failed: %d\n", resp.StatusCode)
 		os.Exit(1)
 	}
 }
@@ -83,7 +84,7 @@ func connectRegisterClient(serverURL, clientID, cwd string) {
 
 	req, err := http.NewRequestWithContext(ctx, "POST", serverURL+"/clients", strings.NewReader(string(regBody)))
 	if err != nil {
-		stderrf("[Kaboom] Warning: could not create registration request: %v\n", err)
+		diag.Printf("[Kaboom] Warning: could not create registration request: %v\n", err)
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
@@ -91,7 +92,7 @@ func connectRegisterClient(serverURL, clientID, cwd string) {
 
 	resp, err := http.DefaultClient.Do(req) // #nosec G704 -- request targets localhost-only serverURL
 	if err != nil {
-		stderrf("[Kaboom] Warning: could not register client: %v\n", err)
+		diag.Printf("[Kaboom] Warning: could not register client: %v\n", err)
 		return
 	}
 	_ = resp.Body.Close() //nolint:errcheck // best-effort cleanup after client registration

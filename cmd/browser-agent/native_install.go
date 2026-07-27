@@ -19,6 +19,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
@@ -61,9 +62,9 @@ func printManualExtensionSetupChecklist(extDir string) {
 	if len(lines) == 0 {
 		return
 	}
-	stderrf("\033[1;33m%s\033[0m\n", lines[0])
+	diag.Printf("\033[1;33m%s\033[0m\n", lines[0])
 	for _, line := range lines[1:] {
-		stderrf("%s\n", line)
+		diag.Printf("%s\n", line)
 	}
 }
 
@@ -131,13 +132,13 @@ func openExtensionFolder(extDir string) bool {
 
 func printInstallerPanel(title string, lines []string) {
 	const border = "+----------------------------------------------------------+"
-	stderrf("\033[1;36m%s\033[0m\n", border)
-	stderrf("\033[1;36m| \033[1m%-56s\033[1;36m |\033[0m\n", title)
-	stderrf("\033[1;36m%s\033[0m\n", border)
+	diag.Printf("\033[1;36m%s\033[0m\n", border)
+	diag.Printf("\033[1;36m| \033[1m%-56s\033[1;36m |\033[0m\n", title)
+	diag.Printf("\033[1;36m%s\033[0m\n", border)
 	for _, line := range lines {
-		stderrf("\033[1;36m|\033[0m %-58s \033[1;36m|\033[0m\n", line)
+		diag.Printf("\033[1;36m|\033[0m %-58s \033[1;36m|\033[0m\n", line)
 	}
-	stderrf("\033[1;36m%s\033[0m\n", border)
+	diag.Printf("\033[1;36m%s\033[0m\n", border)
 }
 
 // mcpFileConfig describes one file-based MCP client config target.
@@ -205,7 +206,7 @@ func runNativeInstall() {
 
 	// 2. Claude Code
 	if err := installClaudeCode(exe); err != nil {
-		stderrf("  ⚠️  Claude Code: %v\n", err)
+		diag.Printf("  ⚠️  Claude Code: %v\n", err)
 	}
 
 	// 3. File-based configs
@@ -213,7 +214,7 @@ func runNativeInstall() {
 	if home == "" {
 		// Without a home directory every relative target would resolve to
 		// cwd-relative junk paths, so skip the file-based configs entirely.
-		stderrf("  ⚠️  Could not determine home directory (%v); skipping file-based MCP client configs\n", homeErr)
+		diag.Printf("  ⚠️  Could not determine home directory (%v); skipping file-based MCP client configs\n", homeErr)
 	} else {
 		for _, cfg := range fileConfigTargets(home) {
 			path := cfg.path
@@ -229,7 +230,7 @@ func runNativeInstall() {
 
 			if err := mergeJSONConfig(path, cfg.key, exe, cfg.isCustom); err != nil {
 				telemetry.AppError("install_config_error", nil)
-				stderrf("  ⚠️  %s: %v\n", cfg.name, err)
+				diag.Printf("  ⚠️  %s: %v\n", cfg.name, err)
 			} else {
 				clientsConfigured++
 			}
@@ -242,27 +243,27 @@ func runNativeInstall() {
 	// 4. Start the Daemon
 	// We start the daemon so the extension works immediately and the user
 	// can verify the install with a health check.
-	stderrf("🚀 Starting Kaboom server...")
+	diag.Printf("🚀 Starting Kaboom server...")
 	startDaemonSilently(exe)
 
 	// 5. BIG SUCCESS MESSAGE
-	stderrf("\n\033[1;32m✅ KABOOM INSTALLED & RUNNING!\033[0m\n")
+	diag.Printf("\n\033[1;32m✅ KABOOM INSTALLED & RUNNING!\033[0m\n")
 	printInstallerPanel("INSTALL SUMMARY", []string{
 		"Kaboom server started in background on port 7890.",
 		"MCP clients are configured with direct binary path (no npx).",
 		fmt.Sprintf("Binary path: %s", exe),
 	})
-	stderrf("\n")
+	diag.Printf("\n")
 	printManualExtensionSetupChecklist(extDir)
 	if openExtensionFolder(extDir) {
-		stderrf("   \033[1;32m📂 Opened the extension folder for you — select it in Load unpacked.\033[0m\n")
+		diag.Printf("   \033[1;32m📂 Opened the extension folder for you — select it in Load unpacked.\033[0m\n")
 	}
 	// Confirm the extension actually connects to the daemon we just started.
 	runExtensionConnectWait(7890, extDir)
-	stderrf("\033[1;33mREADY TO COOK:\033[0m\n")
-	stderrf("   The Kaboom server is active on port 7890.\n")
-	stderrf("   Your AI tool (Claude, Cursor, etc.) is now configured.\n")
-	stderrf("\033[1;36m+----------------------------------------------------------+\033[0m\n")
+	diag.Printf("\033[1;33mREADY TO COOK:\033[0m\n")
+	diag.Printf("   The Kaboom server is active on port 7890.\n")
+	diag.Printf("   Your AI tool (Claude, Cursor, etc.) is now configured.\n")
+	diag.Printf("\033[1;36m+----------------------------------------------------------+\033[0m\n")
 }
 
 func startDaemonSilently(exe string) {
@@ -279,9 +280,9 @@ func startDaemonSilently(exe string) {
 	util.SetDetachedProcess(cmd)
 
 	if err := cmd.Start(); err != nil {
-		stderrf(" ⚠️  (could not start background server: %v)\n", err)
+		diag.Printf(" ⚠️  (could not start background server: %v)\n", err)
 	} else {
-		stderrf(" ✅\n")
+		diag.Printf(" ✅\n")
 	}
 }
 
@@ -539,18 +540,18 @@ func runExtensionConnectWait(port int, extDir string) {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
-	stderrf("\n\033[1;33m⏳ Waiting for the browser extension to connect (Ctrl-C to skip)…\033[0m\n")
+	diag.Printf("\n\033[1;33m⏳ Waiting for the browser extension to connect (Ctrl-C to skip)…\033[0m\n")
 	res := waitForExtensionConnected(ctx, port, connectWaitTimeout, connectPollEvery, connectWaitDeps{
 		fetch: func(c context.Context, p int) installHealth { return fetchInstallHealth(c, p, connectHealthRead) },
 		now:   time.Now,
 		after: time.After,
-		sink:  func(line string) { stderrf("%s\n", line) },
+		sink:  func(line string) { diag.Printf("%s\n", line) },
 	})
 	if res.connected {
-		stderrf("\033[1;32m✅ Extension connected — Kaboom is fully wired up!\033[0m\n")
+		diag.Printf("\033[1;32m✅ Extension connected — Kaboom is fully wired up!\033[0m\n")
 	} else if res.aborted {
-		stderrf("\033[1;33m⏭️  Skipped waiting — the Kaboom server is running; load the extension and it will connect.\033[0m\n")
+		diag.Printf("\033[1;33m⏭️  Skipped waiting — the Kaboom server is running; load the extension and it will connect.\033[0m\n")
 	} else {
-		stderrf("\033[1;33m⚠️  %s\033[0m\n", connectHintLine(res.lastPhase, port, extDir))
+		diag.Printf("\033[1;33m⚠️  %s\033[0m\n", connectHintLine(res.lastPhase, port, extDir))
 	}
 }

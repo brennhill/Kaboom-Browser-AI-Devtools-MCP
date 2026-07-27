@@ -6,6 +6,7 @@ package main
 import (
 	"os"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/clientreg"
 )
 
@@ -13,7 +14,7 @@ import (
 // Calls os.Exit for any matched mode; returns normally if none matched.
 func handleEarlyExitModes(f *parsedFlags) {
 	if *f.showVersion {
-		stderrf("kaboom v%s\n", version)
+		diag.Printf("kaboom v%s\n", version)
 		os.Exit(0)
 	}
 	if *f.showHelp {

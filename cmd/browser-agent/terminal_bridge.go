@@ -11,6 +11,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/wsframe"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 )
 
@@ -19,7 +20,7 @@ func terminalDeps() terminal.Deps {
 	return terminal.Deps{
 		JSONResponse:   jsonResponse,
 		CORSMiddleware: httpguard.CORS,
-		Stderrf:        stderrf,
+		Stderrf:        diag.Printf,
 		MaxPostBody:    maxPostBodySize,
 		WSReadFrame:    wsframe.ReadFrame,
 		WSWriteFrame:   wsframe.WriteFrame,

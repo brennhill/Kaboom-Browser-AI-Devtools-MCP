@@ -10,6 +10,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
 
@@ -43,7 +44,7 @@ func dispatchMode(server *Server, cfg *serverConfig) {
 	launchInfo := classifyLaunchMode(cfg, isTTY)
 	setCurrentLaunchMode(launchInfo)
 	if mode == modeDaemon {
-		setStderrSink(os.Stderr)
+		diag.SetSink(os.Stderr)
 	}
 
 	server.logLifecycle("mode_detection", cfg.port, map[string]any{
@@ -64,12 +65,12 @@ func dispatchMode(server *Server, cfg *serverConfig) {
 
 	if warning := buildLaunchModeWarning(launchInfo, cfg.port); warning != "" {
 		server.AddWarning(warning)
-		stderrf("[Kaboom] Kaboom appears to be running in non-persistent mode (%s).\n", launchInfo.Reason)
-		stderrf("[Kaboom] This will disconnect the extension when the process exits.\n")
-		stderrf("[Kaboom] Start persistently: kaboom-agentic-browser --daemon --port %d\n", cfg.port)
+		diag.Printf("[Kaboom] Kaboom appears to be running in non-persistent mode (%s).\n", launchInfo.Reason)
+		diag.Printf("[Kaboom] This will disconnect the extension when the process exits.\n")
+		diag.Printf("[Kaboom] Start persistently: kaboom-agentic-browser --daemon --port %d\n", cfg.port)
 	}
 	if err := enforcePersistentMode(launchInfo); err != nil {
-		stderrf("[Kaboom] %v\n", err)
+		diag.Printf("[Kaboom] %v\n", err)
 		os.Exit(1)
 	}
 
@@ -83,9 +84,9 @@ func dispatchMode(server *Server, cfg *serverConfig) {
 				"error": err.Error(),
 			})
 			if diagPath != "" {
-				stderrf("[Kaboom] Startup diagnostics written to: %s\n", diagPath)
+				diag.Printf("[Kaboom] Startup diagnostics written to: %s\n", diagPath)
 			}
-			stderrf("[Kaboom] Daemon error: %v\n", err)
+			diag.Printf("[Kaboom] Daemon error: %v\n", err)
 			os.Exit(1)
 		}
 		return
@@ -96,11 +97,11 @@ func dispatchMode(server *Server, cfg *serverConfig) {
 		}
 		server.logLifecycle("bridge_mode_start", cfg.port, bridge.LaunchFingerprint())
 		if cfg.bridgeMode {
-			stderrf("[Kaboom] Starting in bridge mode (stdio -> HTTP)\n")
+			diag.Printf("[Kaboom] Starting in bridge mode (stdio -> HTTP)\n")
 		} else if isTTY && mcpConfigPath != "" {
-			stderrf("[Kaboom] MCP config detected at %s; running in bridge mode for tool compatibility.\n", mcpConfigPath)
+			diag.Printf("[Kaboom] MCP config detected at %s; running in bridge mode for tool compatibility.\n", mcpConfigPath)
 		} else if isTTY {
-			stderrf("[Kaboom] Running in bridge mode by default. Use --daemon for server-only mode.\n")
+			diag.Printf("[Kaboom] Running in bridge mode by default. Use --daemon for server-only mode.\n")
 		}
 		if os.Getenv("KABOOM_TEST_BRIDGE_NOISE") == "1" {
 			// Test-only probe: verifies transport isolation prevents accidental

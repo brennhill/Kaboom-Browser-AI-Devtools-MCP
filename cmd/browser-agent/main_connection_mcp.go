@@ -11,6 +11,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
 
@@ -38,7 +39,7 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 			// (exit 0) and let it keep serving — do NOT start a rival server or
 			// kill the incumbent. Returning nil unwinds to a graceful exit.
 			server.logLifecycle("daemon_deferred_exit", port, nil)
-			stderrf("[Kaboom] A healthy daemon is already serving on port %d; this instance is exiting.\n", port)
+			diag.Printf("[Kaboom] A healthy daemon is already serving on port %d; this instance is exiting.\n", port)
 			return nil
 		}
 		return err
@@ -95,11 +96,11 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 		blockingPID, blockingCmd := identifyPortHolder(termPort)
 		server.setTerminalUnavailable(termPort, termErr.Error(), blockingPID, blockingCmd)
 
-		stderrf("[Kaboom] WARNING: terminal server failed to start on port %d: %v\n", termPort, termErr)
+		diag.Printf("[Kaboom] WARNING: terminal server failed to start on port %d: %v\n", termPort, termErr)
 		if blockingPID > 0 {
-			stderrf("[Kaboom] Port %d is held by pid %d (%s).\n", termPort, blockingPID, blockingCmd)
+			diag.Printf("[Kaboom] Port %d is held by pid %d (%s).\n", termPort, blockingPID, blockingCmd)
 		}
-		stderrf("[Kaboom] Terminal features are unavailable. Free port %d or use a different base port.\n", termPort)
+		diag.Printf("[Kaboom] Terminal features are unavailable. Free port %d or use a different base port.\n", termPort)
 		server.logLifecycle("terminal_server_bind_failed", termPort, map[string]any{
 			"error":          termErr.Error(),
 			"term_port":      termPort,

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 )
 
 // httpRequestContext collects metadata from an HTTP request for debug logging.
@@ -41,7 +42,7 @@ func newHTTPRequestContext(r *http.Request, serverVersion string) httpRequestCon
 	}
 
 	if extVer := r.Header.Get("X-Kaboom-Extension-Version"); extVer != "" && extVer != serverVersion {
-		stderrf("[Kaboom] Version mismatch: server=%s extension=%s\n", serverVersion, extVer)
+		diag.Printf("[Kaboom] Version mismatch: server=%s extension=%s\n", serverVersion, extVer)
 	}
 
 	return ctx
@@ -149,6 +150,6 @@ func jsonResponse(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		stderrf("[Kaboom] Error encoding JSON response: %v\n", err)
+		diag.Printf("[Kaboom] Error encoding JSON response: %v\n", err)
 	}
 }

@@ -129,7 +129,7 @@ func TestNoiseAutoDetectOnFirstSync_EmitsLogEntry(t *testing.T) {
 	// Give async callback time to fire and complete.
 	waitForNoiseFirstConnectCallback()
 
-	// The stderrf log is written to stderr; we mainly verify no panic occurs
+	// The diagnostic log is written to the configured stderr sink; verify no panic occurs.
 	// and the auto-detect function executes (covered by count tests above)
 }
 

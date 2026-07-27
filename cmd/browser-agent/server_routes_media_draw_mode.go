@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -72,7 +73,7 @@ func storeElementDetails(store *AnnotationStore, details map[string]json.RawMess
 				if len(rawStr) > 200 {
 					rawStr = rawStr[:200] + "..."
 				}
-				stderrf("[Kaboom] draw detail %s: empty (raw=%s)\n", correlationID, rawStr)
+				diag.Printf("[Kaboom] draw detail %s: empty (raw=%s)\n", correlationID, rawStr)
 			}
 			detail.CorrelationID = correlationID
 			store.StoreDetail(correlationID, detail)
@@ -81,7 +82,7 @@ func storeElementDetails(store *AnnotationStore, details map[string]json.RawMess
 			if len(rawStr) > 200 {
 				rawStr = rawStr[:200] + "..."
 			}
-			stderrf("[Kaboom] draw detail %s: unmarshal error: %v (raw=%s)\n", correlationID, err, rawStr)
+			diag.Printf("[Kaboom] draw detail %s: unmarshal error: %v (raw=%s)\n", correlationID, err, rawStr)
 		}
 	}
 }

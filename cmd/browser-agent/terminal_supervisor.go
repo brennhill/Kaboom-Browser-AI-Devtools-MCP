@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -61,7 +62,7 @@ func newTerminalSupervisor(server *Server, port int, mux *http.ServeMux, initial
 		startFn:     startTerminalServer,
 		reclaimFn:   func(p int) { reclaimPort(server, p, "terminal") },
 		logFn:       func(event string, fields map[string]any) { server.logLifecycle(event, port, fields) },
-		warnFn:      stderrf,
+		warnFn:      diag.Printf,
 		afterFn:     time.After,
 		stop:        make(chan struct{}),
 		loopDone:    make(chan struct{}),

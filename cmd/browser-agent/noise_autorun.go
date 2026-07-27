@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
@@ -123,7 +124,7 @@ func wireNoiseAutoDetect(h *ToolHandler) {
 		runner.schedule()
 	})
 
-	stderrf("[Kaboom] noise auto-detect enabled (triggers after navigation, debounce=%s)\n", noiseAutoDetectInterval)
+	diag.Printf("[Kaboom] noise auto-detect enabled (triggers after navigation, debounce=%s)\n", noiseAutoDetectInterval)
 }
 
 // wireNoiseFirstConnect sets up a lifecycle callback to run noise auto-detection
@@ -160,7 +161,7 @@ func wireNoiseFirstConnect(h *ToolHandler) {
 					return
 				}
 				h.runNoiseAutoDetect()
-				stderrf("[Kaboom] noise auto-detect: ran on first extension connection\n")
+				diag.Printf("[Kaboom] noise auto-detect: ran on first extension connection\n")
 			})
 		})
 	})
@@ -203,6 +204,6 @@ func (h *ToolHandler) runNoiseAutoDetect() {
 		if len(toApply) > 0 {
 			_ = h.noiseConfig.AddRules(toApply)
 		}
-		stderrf("[Kaboom] noise auto-detect: %d proposals, %d auto-applied\n", len(proposals), len(toApply))
+		diag.Printf("[Kaboom] noise auto-detect: %d proposals, %d auto-applied\n", len(proposals), len(toApply))
 	}
 }

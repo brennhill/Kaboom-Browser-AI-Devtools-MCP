@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 )
 
 const (
@@ -228,7 +229,7 @@ func reclaimPort(server *Server, port int, purpose string) bool {
 			server.logLifecycle("port_reclaim_skipped_foreign", port, map[string]any{
 				"purpose": purpose, "owner_pid": pid, "owner_command": cmdline,
 			})
-			stderrf("[Kaboom] port %d is held by another process (pid %d: %s) — not reclaiming it. "+
+			diag.Printf("[Kaboom] port %d is held by another process (pid %d: %s) — not reclaiming it. "+
 				"Free that port or start Kaboom on a different one.\n", port, pid, cmdline)
 			continue
 		}
