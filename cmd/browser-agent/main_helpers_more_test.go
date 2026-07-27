@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/configdiscovery"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
@@ -29,8 +30,8 @@ func TestFindMCPConfigResolution(t *testing.T) {
 	if err := os.WriteFile(continuePath, []byte(`{"tool":"kaboom-agentic-browser"}`), 0o600); err != nil {
 		t.Fatalf("WriteFile(%q) error = %v", continuePath, err)
 	}
-	if got := findMCPConfig(); got != continuePath {
-		t.Fatalf("findMCPConfig() = %q, want %q", got, continuePath)
+	if got := configdiscovery.Find(); got != continuePath {
+		t.Fatalf("configdiscovery.Find() = %q, want %q", got, continuePath)
 	}
 }
 
@@ -44,8 +45,8 @@ func TestFindMCPConfigResolutionClaudePath(t *testing.T) {
 	if err := os.WriteFile(claudePath, []byte(`{"mcpServers":{"kaboom-browser-devtools":{"command":"kaboom-agentic-browser"}}}`), 0o600); err != nil {
 		t.Fatalf("WriteFile(%q) error = %v", claudePath, err)
 	}
-	if got := findMCPConfig(); got != claudePath {
-		t.Fatalf("findMCPConfig() = %q, want %q", got, claudePath)
+	if got := configdiscovery.Find(); got != claudePath {
+		t.Fatalf("configdiscovery.Find() = %q, want %q", got, claudePath)
 	}
 }
 

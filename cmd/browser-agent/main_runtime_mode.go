@@ -10,6 +10,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/configdiscovery"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
@@ -39,7 +40,7 @@ func selectRuntimeMode(cfg *serverConfig, _ bool) runtimeMode {
 // dispatchMode selects and runs the appropriate runtime mode based on config and stdin.
 func dispatchMode(server *Server, cfg *serverConfig) {
 	isTTY, stdinMode := detectStdinMode()
-	mcpConfigPath := findMCPConfig()
+	mcpConfigPath := configdiscovery.Find()
 	mode := selectRuntimeMode(cfg, isTTY)
 	launchInfo := classifyLaunchMode(cfg, isTTY)
 	setCurrentLaunchMode(launchInfo)
