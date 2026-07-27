@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/clientreg"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
@@ -210,4 +211,46 @@ func resolveDefaultLogFile(logFile *string) {
 		return
 	}
 	*logFile = defaultLogFile
+}
+
+func handleEarlyExitModes(flags *parsedFlags) {
+	if *flags.showVersion {
+		diag.Printf("kaboom v%s\n", version)
+		os.Exit(0)
+	}
+	if *flags.showHelp {
+		printHelp()
+		os.Exit(0)
+	}
+	if *flags.forceCleanup {
+		runForceCleanup()
+		os.Exit(0)
+	}
+	if *flags.checkSetup || *flags.doctorMode {
+		ok := runSetupCheckWithOptions(*flags.port, setupCheckOptions{
+			minSamples:      *flags.fastPathMinSamples,
+			maxFailureRatio: *flags.fastPathMaxFailureRatio,
+		})
+		if !ok {
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+	if *flags.stopMode {
+		runStopMode(*flags.port)
+		os.Exit(0)
+	}
+	if *flags.installMode {
+		runNativeInstall()
+		os.Exit(0)
+	}
+	if *flags.connectMode {
+		cwd, _ := os.Getwd()
+		id := *flags.clientID
+		if id == "" {
+			id = clientreg.DeriveClientID(cwd)
+		}
+		runConnectMode(*flags.port, id, cwd)
+		os.Exit(0)
+	}
 }
