@@ -16,7 +16,7 @@ TARGET_FILES=(
   "cmd/browser-agent/internal/bridge/stdioisolate/isolation_windows.go"
   "cmd/browser-agent/bridge_adapter.go"
   "cmd/browser-agent/config.go"
-  "cmd/browser-agent/connect_mode.go"
+  "cmd/browser-agent/internal/connectmode/runner.go"
   "cmd/browser-agent/main_connection_mcp.go"
   "cmd/browser-agent/push_handlers.go"
 )

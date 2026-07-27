@@ -6,12 +6,14 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/connectmode"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/launchmode"
@@ -266,7 +268,10 @@ func handleEarlyExitModes(flags *parsedFlags) {
 		if id == "" {
 			id = clientreg.DeriveClientID(cwd)
 		}
-		runConnectMode(*flags.port, id, cwd)
+		connectmode.New(connectmode.Deps{
+			Input: os.Stdin, HTTPClient: http.DefaultClient,
+			Diagnosticf: diag.Printf, WriteMCP: writeMCPPayload, Exit: os.Exit,
+		}).Run(*flags.port, id, cwd)
 		os.Exit(0)
 	}
 }
