@@ -15,7 +15,7 @@ last_verified_date: 2026-03-05
 
 Replace the `toolGetReproductionScript()` stub in [tools_generate.go](cmd/browser-agent/tools_generate.go) with a complete implementation that generates reproduction scripts from captured `EnhancedAction` data. Two output formats: Playwright (test code) and Kaboom (natural language).
 
-All logic lives in a single new file: `cmd/browser-agent/reproduction.go` (~250 LOC).
+The daemon-side logic lives with the generate boundary in `cmd/browser-agent/tools_generate.go`.
 
 ---
 
@@ -69,7 +69,7 @@ The generation code reads from this map to produce the best possible description
 
 ## Implementation
 
-### New File: `cmd/browser-agent/reproduction.go`
+### Generate Boundary: `cmd/browser-agent/tools_generate.go`
 
 **Size target:** ~250 LOC
 
@@ -279,7 +279,7 @@ func selectorRole(selectors map[string]any) (role, name string) {
 
 | File | Change | LOC |
 |------|--------|-----|
-| `cmd/browser-agent/reproduction.go` | **NEW** — Core generation logic | ~250 |
+| `cmd/browser-agent/tools_generate.go` | Generate adapter and reproduction formatting | <800 |
 | `cmd/browser-agent/reproduction_test.go` | **NEW** — Tests | ~300 |
 | `cmd/browser-agent/tools_generate.go` | Update `toolGetReproductionScript()` to delegate to reproduction.go | ~5 |
 

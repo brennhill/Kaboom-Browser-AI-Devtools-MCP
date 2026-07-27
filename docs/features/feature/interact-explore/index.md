@@ -92,7 +92,7 @@ last_verified_date: 2026-03-05
 - Status: shipped
 - Tool: `interact`
 - Mode key: `what` (deprecated alias: `action`)
-- Contract source: `cmd/browser-agent/tools_schema.go`
+- Contract source: `internal/schema/interact/tool.go`
 
 ## Specs
 - Product: `product-spec.md`

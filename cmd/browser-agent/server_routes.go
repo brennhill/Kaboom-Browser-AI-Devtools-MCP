@@ -4,6 +4,7 @@
 package main
 
 import (
+	_ "embed"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpguard"
 	"net/http"
 	"strings"
@@ -14,6 +15,21 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tracking"
 )
+
+//go:embed openapi.json
+var openapiJSON []byte
+
+func handleOpenAPI(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if _, err := w.Write(openapiJSON); err != nil {
+		stderrf("[kaboom] failed to write /openapi.json response: %v\n", err)
+	}
+}
 
 // setupHTTPRoutes configures the HTTP routes (extracted for reuse).
 // Returns both the mux and the MCPHandler so the caller can wire shutdown.

@@ -1,18 +1,11 @@
-// Purpose: Shared correlation-id and tool-call rate-limiting utilities for ToolHandler.
-// Why: Keeps reusable concurrency/time primitives separate from core handler wiring.
+// rate_limiter.go — Sliding-window rate limiting for tool calls.
 
-package main
+package toolresp
 
 import (
 	"sync"
 	"time"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 )
-
-// randomInt63 generates a random non-negative int64 for correlation IDs.
-// It delegates to internal/toolresp, the single implementation.
-var randomInt63 = toolresp.RandomInt63
 
 // ToolCallLimiter implements a sliding window rate limiter for MCP tool calls.
 // Thread-safe: uses its own mutex independent of other locks.

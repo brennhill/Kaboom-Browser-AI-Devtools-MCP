@@ -197,7 +197,7 @@ case "error_bundles":
 
 Update the valid modes hint string to include `error_bundles`.
 
-#### 3. `cmd/browser-agent/tools_schema.go` (~2 lines)
+#### 3. `internal/schema/analyze.go` (~2 lines)
 
 Add `"error_bundles"` to the `what` enum and description.
 

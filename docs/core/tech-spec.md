@@ -24,7 +24,7 @@ canonical: true
 Primary components:
 - Transport + MCP routing: `cmd/browser-agent/handler.go`
 - Tool dispatch: `cmd/browser-agent/tools_core.go`
-- Tool schemas: `cmd/browser-agent/tools_schema.go`
+- Tool schemas: `internal/schema/schema.go`
 - Queue/command lifecycle: `internal/capture/queries.go`
 - Unified extension sync channel: `internal/capture/sync.go`
 - Extension sync client: `src/background/sync/sync-client.ts`
@@ -69,7 +69,7 @@ Primary components:
 
 ## Resource and Capability Surfaces
 - MCP resources are served from `handler.go` through `resources/list/read`.
-- Tool schemas and descriptions are server-owned in `tools_schema.go`.
+- Tool schemas and descriptions are server-owned in `internal/schema/`.
 
 ## Known Compatibility Surface
 - `/sync` is the primary bidirectional extension channel.

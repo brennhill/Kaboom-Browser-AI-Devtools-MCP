@@ -11,6 +11,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 )
 
 // Close cancels the shutdown context, unblocking any in-flight readiness gates.
@@ -34,6 +35,10 @@ func (h *ToolHandler) GetLogEntries() ([]LogEntry, []time.Time) {
 // GetLogTotalAdded returns the monotonic counter of total log entries ever added.
 func (h *ToolHandler) GetLogTotalAdded() int64 {
 	return h.server.logs.TotalAdded()
+}
+
+func (h *ToolHandler) ToolsList() []MCPTool {
+	return schema.AllTools()
 }
 
 // armEvidenceForCommand delegates evidence arming to the interactActionHandler.

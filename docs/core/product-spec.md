@@ -62,9 +62,9 @@ Define the user-visible, canonical behavior of the Kaboom MCP surface. This spec
 - `CORE_MCP_PROD_005`: Observe pagination cursors (`after_cursor`, `before_cursor`, `since_cursor`) must be stable and documented.
 - `CORE_MCP_PROD_006`: Tool responses must include structured errors for invalid params/modes/actions.
 - `CORE_MCP_PROD_007`: Commands that cannot run due to extension state must return actionable diagnostics.
-- `CORE_MCP_PROD_008`: Documentation must stay aligned with `cmd/browser-agent/tools_schema.go`.
+- `CORE_MCP_PROD_008`: Documentation must stay aligned with `internal/schema/schema.go`.
 
 ## Canonical References
-- Schema: `cmd/browser-agent/tools_schema.go`
+- Schema: `internal/schema/schema.go`
 - Dispatcher: `cmd/browser-agent/tools_core.go`
 - Command/mode matrix: `docs/core/mcp-command-option-matrix.md`

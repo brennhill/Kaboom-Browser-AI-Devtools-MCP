@@ -28,7 +28,7 @@ last-verified: 2026-02-17
 
 ## Canonical Code Anchors
 - MCP request handling: `cmd/browser-agent/handler.go`
-- Tool schemas: `cmd/browser-agent/tools_schema.go`
+- Tool schemas: `internal/schema/schema.go`
 - Tool dispatch: `cmd/browser-agent/tools_core.go`
 - Extension background runtime: `src/background/index.ts`
 - Extension sync client: `src/background/sync/sync-client.ts`

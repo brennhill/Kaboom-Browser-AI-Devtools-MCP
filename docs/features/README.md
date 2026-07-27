@@ -28,7 +28,7 @@ Each feature under `docs/features/feature/<feature-name>/` should keep:
 - `qa-plan.md` (verification contract)
 
 ## Canonical MCP References
-- Tool schemas: `cmd/browser-agent/tools_schema.go`
+- Tool schemas: `internal/schema/schema.go`
 - Tool dispatch: `cmd/browser-agent/tools_core.go`
 - Observe handlers: `cmd/browser-agent/tools_observe.go`
 - Analyze handlers: `cmd/browser-agent/tools_analyze.go`

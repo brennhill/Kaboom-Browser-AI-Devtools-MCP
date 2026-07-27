@@ -422,7 +422,7 @@ Inside the `domPrimitive` mega-function:
 
 ### Go (daemon)
 
-#### 6. `cmd/browser-agent/tools_schema.go` (MODIFIED, ~5 lines)
+#### 6. `internal/schema/analyze.go` (MODIFIED, ~5 lines)
 
 - Add `analyze` boolean param to interact tool:
 

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -19,6 +20,10 @@ const (
 )
 
 var legacyMCPServerNames = append([]string(nil), identity.LegacyMCPServerNames...)
+var randomInt63 = toolresp.RandomInt63
+var NewToolCallLimiter = toolresp.NewToolCallLimiter
+
+type ToolCallLimiter = toolresp.ToolCallLimiter
 
 type AnnotationRect = annotation.Rect
 type Annotation = annotation.Annotation

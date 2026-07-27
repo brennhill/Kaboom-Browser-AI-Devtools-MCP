@@ -98,20 +98,7 @@ investigating the daemon itself.
 
 ## Test coverage gaps
 
-### 5. `generateDeps()` lacks an all-seams-wired guard — MEDIUM
-
-`daemonlifeDeps()` is guarded by `TestDaemonlifeDeps_AllSeamsWired`
-(`cmd/browser-agent/daemon_lifecycle_wiring_test.go`), and `screenrecDeps()` is
-now guarded by `TestScreenrecDeps_AllSeamsWired`
-(`cmd/browser-agent/screenrec_wiring_test.go`). The remaining unguarded builder
-is `generateDeps()` in `cmd/browser-agent/tools_generate_adapter.go`.
-
-A `Deps` struct of function fields fails silently when a field is left nil or
-mis-wired: the seam still compiles and the feature simply stops doing something.
-
-**Fix direction:** copy the `AllSeamsWired` pattern for `generateDeps()`.
-
-### 6. Per-package coverage numbers under-report cross-package tests — INFO
+### 5. Per-package coverage numbers under-report cross-package tests — INFO
 
 Go measures coverage per package. When a function's tests live in a *different*
 package — very common here, because `cmd/browser-agent` tests exercise
@@ -133,7 +120,7 @@ produced a false claim in a feature doc during the July 2026 audit. Untested
 
 ## Architecture
 
-### 7. God objects remain, despite the folder counts — INFO
+### 6. God objects remain, despite the folder counts — INFO
 
 The July 2026 refactor series reduced *per-folder file counts* and satisfied the
 ratcheting folder gate, but it did not decompose the two large types. Do not read
@@ -142,8 +129,8 @@ the folder-gate numbers as evidence that it did.
 | | Current |
 | --- | --- |
 | `Capture` methods behind one `sync.RWMutex` | 165 |
-| `cmd/browser-agent` production source files (package `main`) | 81 |
-| …of which declare `*ToolHandler` methods | 26 |
+| `cmd/browser-agent` production source files (package `main`) | 78 |
+| …of which declare `*ToolHandler` methods | 25 |
 
 Both remain structurally constrained: Go only permits methods on a type in the
 package that declares it. Extracted `tool*` packages therefore expose handlers
@@ -157,7 +144,7 @@ unchanged. The folder gate counts files per directory, so nesting satisfies it.
 
 ## Release / tooling
 
-### 8. Repo token lacks `workflow` scope — MEDIUM
+### 7. Repo token lacks `workflow` scope — MEDIUM
 
 Any PR touching `.github/workflows/` cannot be merged, or have its branch
 updated, via `gh`:
@@ -169,7 +156,7 @@ GraphQL: refusing to allow an OAuth App to create or update workflow
 
 Such PRs must go through the GitHub web UI.
 
-### 9. PR #591 would revert the repository if merged — HIGH
+### 8. PR #591 would revert the repository if merged — HIGH
 
 The open dependabot PR (`@playwright/test` 1.59.1 → 1.62.0) is **115 commits
 behind UNSTABLE**. Its real payload is one line in `tests/e2e/package.json`, but
@@ -182,12 +169,12 @@ git diff --stat origin/UNSTABLE..pr591 | tail -1
 ```
 
 GitHub reports `mergeable=MERGEABLE`, which means *no conflicts* — not *safe*.
-The branch cannot be updated via `gh` because of issue 10.
+The branch cannot be updated via `gh` because of issue 9.
 
 **Do not merge it.** Close it and let dependabot regenerate against UNSTABLE
 (#637 already retargeted dependabot), or apply the one-line bump by hand.
 
-### 10. Non-blocking CI checks that are permanently red — INFO
+### 9. Non-blocking CI checks that are permanently red — INFO
 
 These appear on every PR and are not caused by the branch under review:
 
@@ -202,12 +189,12 @@ under `extension/` or `tests/`.
 
 ## Runtime (product)
 
-### 11. Extension timeout on first `interact()` — MEDIUM
+### 10. Extension timeout on first `interact()` — MEDIUM
 
 The content script may not be fully loaded when the first `interact()` command
 arrives after navigation. **Workaround:** retry after 2-3 seconds.
 
-### 12. Tracking loss during cross-origin navigation — MEDIUM
+### 11. Tracking loss during cross-origin navigation — MEDIUM
 
 The extension can lose tab tracking state during an AI-initiated cross-origin
 navigation via `interact({action: "navigate"})`. **Workaround:** re-enable

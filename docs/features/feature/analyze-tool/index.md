@@ -72,7 +72,7 @@ last_verified_date: 2026-03-05
 - Status: shipped
 - Tool: `analyze`
 - Mode key: `what`
-- Contract source: `cmd/browser-agent/tools_schema.go`
+- Contract source: `internal/schema/analyze.go`
 
 ## Specs
 - Product: `product-spec.md`

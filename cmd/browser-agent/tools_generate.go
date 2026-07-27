@@ -5,10 +5,22 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate/annotations"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/reproduction"
 	gen "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/generate"
+)
+
+var (
+	filterLastN       = reproduction.FilterLastN
+	escapeJS          = reproduction.EscapeJS
+	chopString        = reproduction.ChopString
+	writePauseComment = reproduction.WritePauseComment
+	playwrightStep    = reproduction.PlaywrightStep
+	playwrightLocator = reproduction.PlaywrightLocator
+	describeElement   = reproduction.DescribeElement
 )
 
 // generateHandlers maps generate format names to their handler functions.
@@ -116,4 +128,16 @@ func (h *ToolHandler) toolGenerateAnnotationReport(req JSONRPCRequest, args json
 
 func (h *ToolHandler) toolGenerateAnnotationIssues(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 	return annotations.HandleAnnotationIssues(h, req, args)
+}
+
+func (h *ToolHandler) toolGetReproductionScript(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	params := reproduction.ParseParams(args)
+	if err := reproduction.ValidateOutputFormat(params.OutputFormat); err != "" {
+		return fail(req, ErrInvalidParam, err, "Use 'kaboom' or 'playwright'", withParam("output_format"))
+	}
+	allActions := h.capture.GetAllEnhancedActions()
+	actions := reproduction.FilterLastN(allActions, params.LastN)
+	script := reproduction.GenerateScript(actions, params)
+	result := reproduction.BuildResult(script, params, actions, allActions)
+	return succeed(req, fmt.Sprintf("Reproduction script (%s, %d actions)", params.OutputFormat, len(actions)), result)
 }
