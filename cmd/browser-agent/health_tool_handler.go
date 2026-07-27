@@ -5,11 +5,39 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
+
+func isLocalPortAvailable(port int) bool {
+	return health.IsLocalPortAvailable(port)
+}
+
+func suggestAvailablePort(startPort, maxOffset int) (int, bool) {
+	return health.SuggestAvailablePort(startPort, maxOffset)
+}
+
+func checkPortAvailability(port int) {
+	health.CheckPortAvailability(port, procctl.PortKillHint)
+}
+
+func checkStateDirectory() {
+	health.CheckStateDirectory()
+}
+
+func runSetupCheckWithOptions(port int, options setupCheckOptions) bool {
+	return health.RunSetupCheckWithOptions(port, health.SetupCheckOptions{
+		MinSamples: options.minSamples, MaxFailureRatio: options.maxFailureRatio,
+	}, health.SetupDeps{
+		Version: version, PortKillHint: procctl.PortKillHint,
+		FastPathTelemetryLogPath: bridge.FastPathTelemetryLogPath,
+	})
+}
 
 // toolGetHealth is the MCP tool handler for get_health.
 // It returns comprehensive server health metrics.
@@ -20,6 +48,32 @@ func (h *ToolHandler) toolGetHealth(req JSONRPCRequest) JSONRPCResponse {
 
 	response := getHealthResponse(h.healthMetrics, h.capture, h.server, version)
 	return succeed(req, "Server health", response)
+}
+
+func (h *ToolHandler) toolDoctor(req JSONRPCRequest) JSONRPCResponse {
+	checks := health.RunDoctorChecks(h.capture)
+	if h.healthMetrics != nil {
+		uptime := h.healthMetrics.GetUptime()
+		checks = append(checks, health.DoctorCheck{
+			Name: "server_uptime", Status: "pass",
+			Detail: fmt.Sprintf("Server running for %s (version %s)", uptime.Round(time.Second), version),
+		})
+	}
+	overallStatus := "healthy"
+	readyForInteraction := true
+	for _, check := range checks {
+		if check.Status == "fail" {
+			overallStatus = "unhealthy"
+			readyForInteraction = false
+		} else if check.Status == "warn" && overallStatus != "unhealthy" {
+			overallStatus = "degraded"
+			readyForInteraction = false
+		}
+	}
+	return succeed(req, "Doctor: "+overallStatus, map[string]any{
+		"status": overallStatus, "ready_for_interaction": readyForInteraction,
+		"checks": checks, "hint": h.DiagnosticHintString(),
+	})
 }
 
 type serverDepsAdapter struct {

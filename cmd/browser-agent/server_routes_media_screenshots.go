@@ -6,6 +6,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -14,8 +15,22 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
+
+const screenshotMinInterval = time.Second
+
+func screenshotsDir() (string, error) {
+	dir, err := state.ScreenshotsDir()
+	if err != nil {
+		return "", fmt.Errorf("cannot determine screenshots directory: %w", err)
+	}
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		return "", fmt.Errorf("cannot create screenshots directory: %w", err)
+	}
+	return dir, nil
+}
 
 // checkScreenshotRateLimit enforces per-client screenshot rate limiting.
 // Returns an HTTP status code (0 means allowed) and an error message.

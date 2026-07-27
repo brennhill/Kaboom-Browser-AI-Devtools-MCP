@@ -9,6 +9,7 @@ code_paths:
   - cmd/browser-agent/main.go
   - cmd/browser-agent/internal/cli/cli_output.go
   - cmd/browser-agent/internal/health/doctor.go
+  - cmd/browser-agent/health_tool_handler.go
   - cmd/browser-agent/internal/health/doctor_fastpath_telemetry.go
   - internal/diag/output.go
   - cmd/browser-agent/internal/toolconfigure/tutorial/handlers.go
