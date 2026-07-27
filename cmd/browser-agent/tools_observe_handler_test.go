@@ -15,6 +15,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolobserve"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -865,18 +866,18 @@ func TestToolsObserve_StructuredErrorFields(t *testing.T) {
 	text := result.Content[0].Text
 	errorJSON := extractJSONFromText(text)
 
-	var se StructuredError
+	var se mcp.StructuredError
 	if err := json.Unmarshal([]byte(errorJSON), &se); err != nil {
 		t.Fatalf("structured error JSON parse failed: %v\nraw: %s", err, text)
 	}
 	if se.ErrorCode == "" {
-		t.Error("StructuredError.ErrorCode should not be empty")
+		t.Error("mcp.StructuredError.ErrorCode should not be empty")
 	}
 	if se.Message == "" {
-		t.Error("StructuredError.Message should not be empty")
+		t.Error("mcp.StructuredError.Message should not be empty")
 	}
 	if se.RecoveryPlaybook == "" {
-		t.Error("StructuredError.RecoveryPlaybook should not be empty")
+		t.Error("mcp.StructuredError.RecoveryPlaybook should not be empty")
 	}
 
 	// Verify JSON fields are snake_case

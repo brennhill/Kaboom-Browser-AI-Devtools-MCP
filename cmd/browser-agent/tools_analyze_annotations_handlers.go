@@ -61,7 +61,7 @@ func (h *ToolHandler) toolGetAnnotations(req JSONRPCRequest, args json.RawMessag
 	operation := strings.ToLower(strings.TrimSpace(params.Operation))
 	if operation != "" {
 		if operation != "flush" {
-			return mcp.Fail(req, ErrInvalidParam, "Invalid annotations operation: "+params.Operation, "Use operation='flush' for annotation waiter recovery.", withParam("operation"), withHint("flush"))
+			return mcp.Fail(req, mcp.ErrInvalidParam, "Invalid annotations operation: "+params.Operation, "Use operation='flush' for annotation waiter recovery.", mcp.WithParam("operation"), mcp.WithHint("flush"))
 		}
 		return h.toolFlushAnnotations(req, params.Correlation, urlFilter)
 	}
@@ -255,10 +255,10 @@ func resolveAnnotationURLFilter(req JSONRPCRequest, urlValue, urlPatternValue st
 	urlValue = strings.TrimSpace(urlValue)
 	urlPatternValue = strings.TrimSpace(urlPatternValue)
 	if urlValue != "" && urlPatternValue != "" && urlValue != urlPatternValue {
-		return "", mcp.Fail(req, ErrInvalidParam,
+		return "", mcp.Fail(req, mcp.ErrInvalidParam,
 			"Conflicting annotation scope filters: 'url' and 'url_pattern' differ",
 			"Provide only one annotation scope filter, or set both to the same value.",
-			withParam("url"), withParam("url_pattern"),
+			mcp.WithParam("url"), mcp.WithParam("url_pattern"),
 		), true
 	}
 	if urlPatternValue != "" {
@@ -285,16 +285,16 @@ func filterAnnotationPages(pages []*AnnotationSession, urlFilter string) []*Anno
 func (h *ToolHandler) toolFlushAnnotations(req JSONRPCRequest, correlationID string, fallbackURLFilter string) JSONRPCResponse {
 	correlationID = strings.TrimSpace(correlationID)
 	if correlationID == "" {
-		return mcp.Fail(req, ErrMissingParam,
+		return mcp.Fail(req, mcp.ErrMissingParam,
 			"Required parameter 'correlation_id' is missing for operation='flush'",
 			"Pass the correlation_id returned by analyze({what:'annotations',wait:true}).",
-			withParam("correlation_id"))
+			mcp.WithParam("correlation_id"))
 	}
 	if !strings.HasPrefix(correlationID, "ann_") {
-		return mcp.Fail(req, ErrInvalidParam,
+		return mcp.Fail(req, mcp.ErrInvalidParam,
 			"Invalid annotation correlation_id: "+correlationID,
 			"Use an annotation correlation_id (prefix ann_) from analyze({what:'annotations',wait:true}).",
-			withParam("correlation_id"))
+			mcp.WithParam("correlation_id"))
 	}
 
 	// Remove waiter first so later session writes cannot re-complete the same flush target.
@@ -388,7 +388,7 @@ func (h *ToolHandler) toolGetAnnotationDetail(req JSONRPCRequest, args json.RawM
 
 	detail, found := h.annotationStore.GetDetail(params.CorrelationID)
 	if !found {
-		return mcp.Fail(req, ErrNoData, "Annotation detail not found or expired for correlation_id: "+params.CorrelationID, "Detail data expires after 10 minutes. Re-run draw mode to capture fresh data.")
+		return mcp.Fail(req, mcp.ErrNoData, "Annotation detail not found or expired for correlation_id: "+params.CorrelationID, "Detail data expires after 10 minutes. Re-run draw mode to capture fresh data.")
 	}
 
 	result := map[string]any{

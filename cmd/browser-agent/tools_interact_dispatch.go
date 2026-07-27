@@ -51,10 +51,10 @@ var interactRegistry = toolRegistry{
 
 		// Validate evidence mode.
 		if _, err := toolinteract.ParseEvidenceMode(args); err != nil {
-			resp := mcp.Fail(req, ErrInvalidParam,
+			resp := mcp.Fail(req, mcp.ErrInvalidParam,
 				"Invalid 'evidence' value",
 				"Use evidence='off' (default), 'on_mutation', or 'always'",
-				withParam("evidence"))
+				mcp.WithParam("evidence"))
 			return args, &resp
 		}
 		// Quiet alias: async → background.

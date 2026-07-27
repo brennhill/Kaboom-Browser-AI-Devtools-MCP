@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
@@ -111,30 +112,30 @@ func TestContractBadPath_Observe_CommandResult_NotFound(t *testing.T) {
 // ============================================
 
 func TestContractEnforcement_ErrorsHaveRetryableField(t *testing.T) {
-	// Verify that all error responses from mcpStructuredError include the retryable field.
+	// Verify that all error responses from mcp.StructuredErrorResponse include the retryable field.
 	// This ensures the LLM always knows whether an error is worth retrying.
 	testCases := []struct {
 		code    string
 		message string
 		retry   string
 	}{
-		{ErrInvalidJSON, "bad json", "Fix JSON"},
-		{ErrMissingParam, "missing what", "Add 'what'"},
-		{ErrInvalidParam, "bad param", "Fix param"},
-		{ErrUnknownMode, "unknown mode", "Use valid mode"},
-		{ErrExtTimeout, "timeout", "Retry later"},
-		{ErrExtError, "error", "Retry later"},
-		{ErrInternal, "internal", "Do not retry"},
-		{ErrNoData, "no data", "Check state"},
-		{ErrRateLimited, "rate limited", "Wait"},
-		{ErrNotInitialized, "not init", "Initialize first"},
-		{ErrCursorExpired, "cursor expired", "Restart"},
-		{ErrMarshalFailed, "marshal failed", "Do not retry"},
+		{mcp.ErrInvalidJSON, "bad json", "Fix JSON"},
+		{mcp.ErrMissingParam, "missing what", "Add 'what'"},
+		{mcp.ErrInvalidParam, "bad param", "Fix param"},
+		{mcp.ErrUnknownMode, "unknown mode", "Use valid mode"},
+		{mcp.ErrExtTimeout, "timeout", "Retry later"},
+		{mcp.ErrExtError, "error", "Retry later"},
+		{mcp.ErrInternal, "internal", "Do not retry"},
+		{mcp.ErrNoData, "no data", "Check state"},
+		{mcp.ErrRateLimited, "rate limited", "Wait"},
+		{mcp.ErrNotInitialized, "not init", "Initialize first"},
+		{mcp.ErrCursorExpired, "cursor expired", "Restart"},
+		{mcp.ErrMarshalFailed, "marshal failed", "Do not retry"},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.code, func(t *testing.T) {
-			raw := mcpStructuredError(tc.code, tc.message, tc.retry)
+			raw := mcp.StructuredErrorResponse(tc.code, tc.message, tc.retry)
 			var result MCPToolResult
 			if err := json.Unmarshal(raw, &result); err != nil {
 				t.Fatalf("failed to unmarshal: %v", err)

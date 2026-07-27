@@ -4,12 +4,53 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
+
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ModeHandler is the unified function signature for all tool mode handlers.
 // All five tools (observe, analyze, configure, generate, interact) use this signature.
 type ModeHandler func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse
+
+// describeCapabilitiesRecovery points callers at the canonical tool-mode registry.
+func describeCapabilitiesRecovery(toolName string) func(*mcp.StructuredError) {
+	return mcp.WithRecoveryToolCall(map[string]any{
+		"tool": "configure",
+		"arguments": map[string]any{
+			"what": "describe_capabilities",
+			"tool": toolName,
+		},
+	})
+}
+
+func appendCanonicalWhatAliasWarning(resp JSONRPCResponse, aliasParam, mode, deprecatedIn, removeIn string) JSONRPCResponse {
+	if strings.TrimSpace(aliasParam) == "" || strings.TrimSpace(mode) == "" {
+		return resp
+	}
+	var warning string
+	if deprecatedIn != "" && removeIn != "" {
+		warning = fmt.Sprintf("Parameter '%s' is deprecated (since %s, removal planned %s); use what=%q.", aliasParam, deprecatedIn, removeIn, mode)
+	} else if deprecatedIn != "" {
+		warning = fmt.Sprintf("Parameter '%s' is deprecated (since %s); use what=%q.", aliasParam, deprecatedIn, mode)
+	} else {
+		warning = fmt.Sprintf("Accepted alias parameter '%s'; canonical parameter is 'what' (use what=%q).", aliasParam, mode)
+	}
+	return mcp.AppendWarningsToResponse(resp, []string{warning})
+}
+
+func whatAliasConflictResponse(req JSONRPCRequest, aliasParam, whatValue, aliasValue, validValues string) JSONRPCResponse {
+	hint := "Use only 'what' when specifying tool mode/action."
+	if strings.TrimSpace(validValues) != "" {
+		hint += " Valid values: " + validValues
+	}
+	return mcp.Fail(req, mcp.ErrInvalidParam,
+		fmt.Sprintf("Conflicting parameters: what=%q and %s=%q", whatValue, aliasParam, aliasValue),
+		"Send only the canonical 'what' parameter and retry.",
+		mcp.WithParam("what"), mcp.WithHint(hint),
+	)
+}
 
 // toolRegistry bundles the handler map, alias definitions, and metadata for a tool.
 type toolRegistry struct {
@@ -36,8 +77,8 @@ func (h *ToolHandler) dispatchTool(req JSONRPCRequest, args json.RawMessage, reg
 	handler, ok := reg.Handlers[what]
 	if !ok {
 		validModes := reg.Resolution.ValidModes
-		resp := mcp.Fail(req, ErrUnknownMode, "Unknown "+reg.Resolution.ToolName+" mode: "+what,
-			"Use a valid mode from the 'what' enum", withParam("what"), withHint("Valid values: "+validModes), describeCapabilitiesRecovery(reg.Resolution.ToolName))
+		resp := mcp.Fail(req, mcp.ErrUnknownMode, "Unknown "+reg.Resolution.ToolName+" mode: "+what,
+			"Use a valid mode from the 'what' enum", mcp.WithParam("what"), mcp.WithHint("Valid values: "+validModes), describeCapabilitiesRecovery(reg.Resolution.ToolName))
 		return appendCanonicalWhatAliasWarning(resp, usedAliasParam, what, deprecatedIn, removeIn)
 	}
 
@@ -127,7 +168,7 @@ func resolveToolMode(
 	if len(args) > 0 {
 		var raw map[string]json.RawMessage
 		if err := json.Unmarshal(args, &raw); err != nil {
-			resp := mcp.Fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
+			resp := mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 			return "", "", &resp
 		}
 		for _, key := range append([]string{"what"}, aliasFieldNames(aliasDefs)...) {
@@ -173,11 +214,11 @@ func resolveToolMode(
 
 	// Missing mode.
 	if what == "" {
-		resp := mcp.Fail(req, ErrMissingParam,
+		resp := mcp.Fail(req, mcp.ErrMissingParam,
 			"Required parameter 'what' is missing",
 			"Add the 'what' parameter and call again",
-			withParam("what"),
-			withHint("Valid values: "+res.ValidModes))
+			mcp.WithParam("what"),
+			mcp.WithHint("Valid values: "+res.ValidModes))
 		return "", usedAliasParam, &resp
 	}
 

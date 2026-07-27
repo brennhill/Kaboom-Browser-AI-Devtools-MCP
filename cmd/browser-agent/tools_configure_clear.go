@@ -25,7 +25,7 @@ func (h *ToolHandler) toolConfigureClear(req JSONRPCRequest, args json.RawMessag
 
 	cleared, ok := h.clearConfiguredBuffer(buffer)
 	if !ok {
-		return mcp.Fail(req, ErrInvalidParam, "Unknown buffer: "+buffer, "Use a valid buffer value", withParam("buffer"), withHint("all, network, websocket, actions, logs, inbox"))
+		return mcp.Fail(req, mcp.ErrInvalidParam, "Unknown buffer: "+buffer, "Use a valid buffer value", mcp.WithParam("buffer"), mcp.WithHint("all, network, websocket, actions, logs, inbox"))
 	}
 
 	responseData := map[string]any{"status": "ok", "buffer": buffer, "cleared": cleared}

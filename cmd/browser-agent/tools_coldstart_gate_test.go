@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -58,8 +59,8 @@ func TestRequireExtension_ColdStart_TimesOut(t *testing.T) {
 		t.Fatal("expected requireExtension to block after cold-start timeout expires")
 	}
 	code := extractErrorCode(t, resp)
-	if code != ErrNoData {
-		t.Fatalf("expected error code %q, got %q", ErrNoData, code)
+	if code != mcp.ErrNoData {
+		t.Fatalf("expected error code %q, got %q", mcp.ErrNoData, code)
 	}
 	if elapsed < 150*time.Millisecond {
 		t.Fatalf("should have waited near timeout, only waited %v", elapsed)
@@ -144,8 +145,8 @@ func TestMaybeWaitForCommand_ExtensionNotConnected_InstantError(t *testing.T) {
 
 	// Should get instant no_data error (no blocking wait)
 	se := extractStructuredErrorJSON(t, resp.Result)
-	if se["error_code"] != ErrNoData {
-		t.Errorf("expected error code %q, got %v", ErrNoData, se["error_code"])
+	if se["error_code"] != mcp.ErrNoData {
+		t.Errorf("expected error code %q, got %v", mcp.ErrNoData, se["error_code"])
 	}
 	if elapsed > 100*time.Millisecond {
 		t.Fatalf("should be instant (no blocking wait), took %v", elapsed)

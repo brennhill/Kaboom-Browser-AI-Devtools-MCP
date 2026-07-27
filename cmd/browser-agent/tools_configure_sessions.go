@@ -68,7 +68,7 @@ func (h *configureSessionHandler) handleConfigureStore(req JSONRPCRequest, args 
 		Action: action, Namespace: namespace, Key: params.Key, Data: data,
 	})
 	if err != nil {
-		return mcp.Fail(req, ErrInvalidParam, err.Error(), "Fix the request parameters and try again")
+		return mcp.Fail(req, mcp.ErrInvalidParam, err.Error(), "Fix the request parameters and try again")
 	}
 	if namespace == "session" && params.Key == "response_mode" {
 		h.deps.invalidateSummaryPref()
@@ -88,7 +88,7 @@ func (h *configureSessionHandler) handleConfigureStore(req JSONRPCRequest, args 
 
 func (h *configureSessionHandler) handleLoadSessionContext(req JSONRPCRequest, _ json.RawMessage) JSONRPCResponse {
 	if h.sessionStoreImpl == nil {
-		return mcp.Fail(req, ErrNotInitialized, "Session store not initialized", "Internal error — do not retry")
+		return mcp.Fail(req, mcp.ErrNotInitialized, "Session store not initialized", "Internal error — do not retry")
 	}
 	ctx := h.sessionStoreImpl.LoadSessionContext()
 	responseData := map[string]any{
@@ -111,19 +111,19 @@ func (h *configureSessionHandler) handleLoadSessionContext(req JSONRPCRequest, _
 func (h *configureSessionHandler) handleDiffSessionsWrapper(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 	rewritten, err := cfg.RewriteDiffSessionsArgs(args)
 	if err != nil {
-		return mcp.Fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
+		return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 	}
 	return h.handleDiffSessions(req, rewritten)
 }
 
 func (h *configureSessionHandler) handleDiffSessions(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 	if h.sessionManager == nil {
-		return mcp.Fail(req, ErrNotInitialized, "Session manager not initialized", "Internal error — do not retry")
+		return mcp.Fail(req, mcp.ErrNotInitialized, "Session manager not initialized", "Internal error — do not retry")
 	}
 
 	result, err := h.sessionManager.HandleTool(args)
 	if err != nil {
-		return mcp.Fail(req, ErrInvalidParam, err.Error(), "Fix request parameters and retry")
+		return mcp.Fail(req, mcp.ErrInvalidParam, err.Error(), "Fix request parameters and retry")
 	}
 
 	responseData := map[string]any{"status": "ok"}

@@ -650,7 +650,7 @@ func TestMcpJSONResponse(t *testing.T) {
 }
 
 func TestMcpStructuredError(t *testing.T) {
-	resp := mcpStructuredError(ErrMissingParam, "Missing parameter 'what'", "Add the 'what' parameter", withParam("what"), withHint("Valid values: logs, errors"))
+	resp := mcp.StructuredErrorResponse(mcp.ErrMissingParam, "Missing parameter 'what'", "Add the 'what' parameter", mcp.WithParam("what"), mcp.WithHint("Valid values: logs, errors"))
 
 	var result MCPToolResult
 	if err := json.Unmarshal(resp, &result); err != nil {

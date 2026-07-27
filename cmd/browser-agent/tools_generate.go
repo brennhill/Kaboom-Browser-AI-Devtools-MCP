@@ -120,7 +120,7 @@ func (h *ToolHandler) toolGenerateAnnotationIssues(req JSONRPCRequest, args json
 func (h *ToolHandler) toolGetReproductionScript(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 	params := reproduction.ParseParams(args)
 	if err := reproduction.ValidateOutputFormat(params.OutputFormat); err != "" {
-		return mcp.Fail(req, ErrInvalidParam, err, "Use 'kaboom' or 'playwright'", withParam("output_format"))
+		return mcp.Fail(req, mcp.ErrInvalidParam, err, "Use 'kaboom' or 'playwright'", mcp.WithParam("output_format"))
 	}
 	allActions := h.capture.GetAllEnhancedActions()
 	actions := reproduction.FilterLastN(allActions, params.LastN)

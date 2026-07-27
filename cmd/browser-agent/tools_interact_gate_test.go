@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -90,7 +91,7 @@ func extractErrorCode(t *testing.T, resp JSONRPCResponse) string {
 	if idx < 0 {
 		t.Fatalf("no JSON found in error text: %s", text)
 	}
-	var se StructuredError
+	var se mcp.StructuredError
 	if err := json.Unmarshal([]byte(text[idx:]), &se); err != nil {
 		t.Fatalf("unmarshal structured error: %v\nraw: %s", err, text[idx:])
 	}
@@ -121,8 +122,8 @@ func TestRequireExtension_Disconnected(t *testing.T) {
 		t.Fatal("expected requireExtension to block when extension is disconnected")
 	}
 	code := extractErrorCode(t, resp)
-	if code != ErrNoData {
-		t.Fatalf("expected error code %q, got %q", ErrNoData, code)
+	if code != mcp.ErrNoData {
+		t.Fatalf("expected error code %q, got %q", mcp.ErrNoData, code)
 	}
 }
 
@@ -153,8 +154,8 @@ func TestRequireCSPClear_MainWorldBlocked(t *testing.T) {
 		t.Fatal("expected requireCSPClear to block world=main when CSP restricts script_exec")
 	}
 	code := extractErrorCode(t, resp)
-	if code != ErrExtError {
-		t.Fatalf("expected error code %q, got %q", ErrExtError, code)
+	if code != mcp.ErrExtError {
+		t.Fatalf("expected error code %q, got %q", mcp.ErrExtError, code)
 	}
 }
 
@@ -234,8 +235,8 @@ func TestNavigate_ExtDisconnected_FastFail(t *testing.T) {
 	resp := env.handler.interactAction().HandleBrowserActionNavigateImpl(req, args)
 
 	code := extractErrorCode(t, resp)
-	if code != ErrNoData {
-		t.Fatalf("expected %q error for navigate with ext disconnected, got %q", ErrNoData, code)
+	if code != mcp.ErrNoData {
+		t.Fatalf("expected %q error for navigate with ext disconnected, got %q", mcp.ErrNoData, code)
 	}
 }
 
@@ -252,8 +253,8 @@ func TestExecuteJS_CSP_MainWorld_FastFail(t *testing.T) {
 	resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
 
 	code := extractErrorCode(t, resp)
-	if code != ErrExtError {
-		t.Fatalf("expected %q error for execute_js world=main with CSP restricted, got %q", ErrExtError, code)
+	if code != mcp.ErrExtError {
+		t.Fatalf("expected %q error for execute_js world=main with CSP restricted, got %q", mcp.ErrExtError, code)
 	}
 }
 
@@ -286,8 +287,8 @@ func TestClick_ExtDisconnected_FastFail(t *testing.T) {
 	resp := env.handler.interactAction().HandleDOMPrimitive(req, args, "click")
 
 	code := extractErrorCode(t, resp)
-	if code != ErrNoData {
-		t.Fatalf("expected %q error for click with ext disconnected, got %q", ErrNoData, code)
+	if code != mcp.ErrNoData {
+		t.Fatalf("expected %q error for click with ext disconnected, got %q", mcp.ErrNoData, code)
 	}
 }
 
@@ -321,8 +322,8 @@ func TestRequireTabTracking_NoTabTracked(t *testing.T) {
 		t.Fatal("expected requireTabTracking to block when no tab is tracked")
 	}
 	code := extractErrorCode(t, resp)
-	if code != ErrNoData {
-		t.Fatalf("expected error code %q, got %q", ErrNoData, code)
+	if code != mcp.ErrNoData {
+		t.Fatalf("expected error code %q, got %q", mcp.ErrNoData, code)
 	}
 }
 
@@ -399,8 +400,8 @@ func TestClick_NoTabTracking_FastFail(t *testing.T) {
 	resp := env.handler.interactAction().HandleDOMPrimitive(req, args, "click")
 
 	code := extractErrorCode(t, resp)
-	if code != ErrNoData {
-		t.Fatalf("expected %q error for click without tab tracking, got %q", ErrNoData, code)
+	if code != mcp.ErrNoData {
+		t.Fatalf("expected %q error for click without tab tracking, got %q", mcp.ErrNoData, code)
 	}
 }
 
@@ -435,10 +436,10 @@ func TestSaveState_NoTabTracking_NoGate(t *testing.T) {
 	args := json.RawMessage(`{"what":"save_state","snapshot_name":"test-state","sync":false}`)
 	resp := env.handler.stateInteract().HandleStateSave(req, args)
 
-	// If it is an error, it must NOT be the tab tracking error (ErrNoData with "tab" message).
+	// If it is an error, it must NOT be the tab tracking error (mcp.ErrNoData with "tab" message).
 	if !isSuccessOrQueued(t, resp) {
 		se := extractStructuredError(t, resp)
-		if se.ErrorCode == ErrNoData && strings.Contains(se.Message, "tab") {
+		if se.ErrorCode == mcp.ErrNoData && strings.Contains(se.Message, "tab") {
 			t.Fatalf("save_state was blocked by tab tracking gate — it should bypass this gate. Error: %s", se.Message)
 		}
 		// Other errors (e.g. session store not initialized) are fine — they are not gate errors.
@@ -460,8 +461,8 @@ func TestGateOrder_ParamValidation_BeforeExtension(t *testing.T) {
 	resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
 
 	code := extractErrorCode(t, resp)
-	if code != ErrMissingParam {
-		t.Fatalf("expected %q (param validation first), got %q", ErrMissingParam, code)
+	if code != mcp.ErrMissingParam {
+		t.Fatalf("expected %q (param validation first), got %q", mcp.ErrMissingParam, code)
 	}
 }
 
@@ -476,8 +477,8 @@ func TestGateOrder_Pilot_BeforeExtension(t *testing.T) {
 	resp := env.handler.interactAction().HandleBrowserActionNavigateImpl(req, args)
 
 	code := extractErrorCode(t, resp)
-	if code != ErrCodePilotDisabled {
-		t.Fatalf("expected %q (pilot before extension), got %q", ErrCodePilotDisabled, code)
+	if code != mcp.ErrCodePilotDisabled {
+		t.Fatalf("expected %q (pilot before extension), got %q", mcp.ErrCodePilotDisabled, code)
 	}
 }
 
@@ -492,10 +493,10 @@ func TestGateOrder_Extension_BeforeTabTracking(t *testing.T) {
 	resp := env.handler.interactAction().HandleDOMPrimitive(req, args, "click")
 
 	code := extractErrorCode(t, resp)
-	if code != ErrNoData {
-		t.Fatalf("expected error code %q, got %q", ErrNoData, code)
+	if code != mcp.ErrNoData {
+		t.Fatalf("expected error code %q, got %q", mcp.ErrNoData, code)
 	}
-	// Both extension disconnect and tab tracking return ErrNoData,
+	// Both extension disconnect and tab tracking return mcp.ErrNoData,
 	// but extension gate should fire first. Verify via message.
 	se := extractStructuredError(t, resp)
 	if !strings.Contains(se.Message, "Extension") {
@@ -516,8 +517,8 @@ func TestGateOrder_TabTracking_BeforeCSP(t *testing.T) {
 	resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
 
 	code := extractErrorCode(t, resp)
-	if code != ErrNoData {
-		t.Fatalf("expected %q (tab tracking before CSP), got %q", ErrNoData, code)
+	if code != mcp.ErrNoData {
+		t.Fatalf("expected %q (tab tracking before CSP), got %q", mcp.ErrNoData, code)
 	}
 	se := extractStructuredError(t, resp)
 	if !strings.Contains(se.Message, "tab") {
@@ -537,8 +538,8 @@ func TestGateOrder_Extension_BeforeCSP(t *testing.T) {
 	resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
 
 	code := extractErrorCode(t, resp)
-	if code != ErrNoData {
-		t.Fatalf("expected %q (extension before CSP), got %q", ErrNoData, code)
+	if code != mcp.ErrNoData {
+		t.Fatalf("expected %q (extension before CSP), got %q", mcp.ErrNoData, code)
 	}
 }
 
@@ -546,8 +547,8 @@ func TestGateOrder_Extension_BeforeCSP(t *testing.T) {
 // Recovery tool call tests
 // ============================================
 
-// extractStructuredError parses the full StructuredError from a JSONRPCResponse result.
-func extractStructuredError(t *testing.T, resp JSONRPCResponse) StructuredError {
+// extractStructuredError parses the full mcp.StructuredError from a JSONRPCResponse result.
+func extractStructuredError(t *testing.T, resp JSONRPCResponse) mcp.StructuredError {
 	t.Helper()
 	var result MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -564,7 +565,7 @@ func extractStructuredError(t *testing.T, resp JSONRPCResponse) StructuredError 
 	if idx < 0 {
 		t.Fatalf("no JSON found in error text: %s", text)
 	}
-	var se StructuredError
+	var se mcp.StructuredError
 	if err := json.Unmarshal([]byte(text[idx:]), &se); err != nil {
 		t.Fatalf("unmarshal structured error: %v\nraw: %s", err, text[idx:])
 	}
@@ -707,8 +708,8 @@ func TestSmoke_AllGates_SequentialFiring_ExecuteJS(t *testing.T) {
 		resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
 
 		code := extractErrorCode(t, resp)
-		if code != ErrMissingParam {
-			t.Fatalf("step 1: expected %q (param validation first), got %q", ErrMissingParam, code)
+		if code != mcp.ErrMissingParam {
+			t.Fatalf("step 1: expected %q (param validation first), got %q", mcp.ErrMissingParam, code)
 		}
 	})
 
@@ -723,8 +724,8 @@ func TestSmoke_AllGates_SequentialFiring_ExecuteJS(t *testing.T) {
 		resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
 
 		code := extractErrorCode(t, resp)
-		if code != ErrCodePilotDisabled {
-			t.Fatalf("step 2: expected %q (pilot before extension), got %q", ErrCodePilotDisabled, code)
+		if code != mcp.ErrCodePilotDisabled {
+			t.Fatalf("step 2: expected %q (pilot before extension), got %q", mcp.ErrCodePilotDisabled, code)
 		}
 	})
 
@@ -739,8 +740,8 @@ func TestSmoke_AllGates_SequentialFiring_ExecuteJS(t *testing.T) {
 		resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
 
 		code := extractErrorCode(t, resp)
-		if code != ErrNoData {
-			t.Fatalf("step 3: expected %q (extension gate), got %q", ErrNoData, code)
+		if code != mcp.ErrNoData {
+			t.Fatalf("step 3: expected %q (extension gate), got %q", mcp.ErrNoData, code)
 		}
 		se := extractStructuredError(t, resp)
 		if !strings.Contains(se.Message, "Extension") {
@@ -760,8 +761,8 @@ func TestSmoke_AllGates_SequentialFiring_ExecuteJS(t *testing.T) {
 		resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
 
 		code := extractErrorCode(t, resp)
-		if code != ErrNoData {
-			t.Fatalf("step 4: expected %q (tab tracking gate), got %q", ErrNoData, code)
+		if code != mcp.ErrNoData {
+			t.Fatalf("step 4: expected %q (tab tracking gate), got %q", mcp.ErrNoData, code)
 		}
 		se := extractStructuredError(t, resp)
 		if !strings.Contains(se.Message, "tab") {
@@ -781,8 +782,8 @@ func TestSmoke_AllGates_SequentialFiring_ExecuteJS(t *testing.T) {
 		resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
 
 		code := extractErrorCode(t, resp)
-		if code != ErrExtError {
-			t.Fatalf("step 5: expected %q (CSP gate), got %q", ErrExtError, code)
+		if code != mcp.ErrExtError {
+			t.Fatalf("step 5: expected %q (CSP gate), got %q", mcp.ErrExtError, code)
 		}
 	})
 }

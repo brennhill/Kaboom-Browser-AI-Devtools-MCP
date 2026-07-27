@@ -10,6 +10,7 @@ code_paths:
   - internal/mcp/response_content.go
   - cmd/browser-agent/internal/toolresp/toolresp.go
   - cmd/browser-agent/tools_errors_guards.go
+  - cmd/browser-agent/tool_dispatch_helpers.go
   - cmd/browser-agent/handler.go
   - cmd/browser-agent/handler_tools_call.go
   - cmd/browser-agent/bridge_adapter.go
@@ -67,6 +68,7 @@ code_paths:
 test_paths:
   - internal/mcp/response_test.go
   - cmd/browser-agent/internal/toolresp/toolresp_test.go
+  - cmd/browser-agent/tools_errors_test.go
   - cmd/browser-agent/health_unit_test.go
   - cmd/browser-agent/command_execution_readiness_test.go
   - cmd/browser-agent/handler_unit_test.go

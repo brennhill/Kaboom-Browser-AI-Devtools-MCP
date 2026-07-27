@@ -34,16 +34,16 @@ func (h *ToolHandler) EnqueuePendingQuery(req JSONRPCRequest, query queries.Pend
 		return JSONRPCResponse{}, false
 	}
 	if errors.Is(err, queries.ErrQueueFull) {
-		return mcp.Fail(req, ErrQueueFull,
+		return mcp.Fail(req, mcp.ErrQueueFull,
 			fmt.Sprintf("Command queue is full; unable to enqueue action type=%q", query.Type),
 			"Wait for in-flight commands to complete, then retry.",
-			withRetryable(true), withRetryAfterMs(1000), h.diagnosticHint(),
-			withRecoveryToolCall(map[string]any{
+			mcp.WithRetryable(true), mcp.WithRetryAfterMs(1000), h.diagnosticHint(),
+			mcp.WithRecoveryToolCall(map[string]any{
 				"tool": "observe", "arguments": map[string]any{"what": "pending_commands"},
 			}),
 		), true
 	}
-	return mcp.Fail(req, ErrInternal,
+	return mcp.Fail(req, mcp.ErrInternal,
 		fmt.Sprintf("Failed to enqueue command type=%q: %v", query.Type, err),
 		"Internal error — do not retry until server health is restored.",
 		h.diagnosticHint(),
@@ -153,7 +153,7 @@ func (h *ToolHandler) formatErrorCommandResult(req JSONRPCRequest, cmd queries.C
 
 func (h *ToolHandler) formatExpiredCommandResult(req JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) JSONRPCResponse {
 	responseData["final"] = true
-	responseData["error"] = ErrExtTimeout
+	responseData["error"] = mcp.ErrExtTimeout
 	responseData["message"] = fmt.Sprintf("Command %s expired before the extension could execute it. Error: %s", corrID, cmd.Error)
 	responseData["retry"] = "The browser extension may be disconnected or the page is not active. Check observe with what='pilot' to verify extension status, then retry the command."
 	responseData["hint"] = h.DiagnosticHintString()
@@ -165,7 +165,7 @@ func (h *ToolHandler) formatExpiredCommandResult(req JSONRPCRequest, cmd queries
 
 func (h *ToolHandler) formatTimeoutCommandResult(req JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) JSONRPCResponse {
 	responseData["final"] = true
-	responseData["error"] = ErrExtTimeout
+	responseData["error"] = mcp.ErrExtTimeout
 	responseData["message"] = fmt.Sprintf("Command %s timed out waiting for the extension to respond. Error: %s", corrID, cmd.Error)
 	retryMsg := "Extension connected but page execution timed out. This page may block content scripts (common on Google, Chrome Web Store, etc.). Try navigating to a different page: interact({what: 'navigate', url: 'https://example.com'})"
 	if !h.capture.IsExtensionConnected() {
@@ -181,7 +181,7 @@ func (h *ToolHandler) formatTimeoutCommandResult(req JSONRPCRequest, cmd queries
 
 func (h *ToolHandler) formatCancelledCommandResult(req JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) JSONRPCResponse {
 	responseData["final"] = true
-	responseData["error"] = ErrExtError
+	responseData["error"] = mcp.ErrExtError
 	responseData["message"] = fmt.Sprintf("Command %s was cancelled before completion.", corrID)
 	if cmd.Error != "" {
 		responseData["detail"] = cmd.Error
@@ -321,11 +321,11 @@ func (h *ToolHandler) finalizePendingDisconnect(req JSONRPCRequest, correlationI
 	if cmd, found := h.capture.GetCommandResult(correlationID); found && cmd != nil {
 		return h.formatCommandResult(req, *cmd, correlationID)
 	}
-	return mcp.Fail(req, ErrNoData,
+	return mcp.Fail(req, mcp.ErrNoData,
 		"Extension disconnected while command was pending",
 		"Ensure the extension is connected, then retry the action.",
 		h.diagnosticHint(),
-		withFinal(true))
+		mcp.WithFinal(true))
 }
 
 // MaybeWaitForCommand implements sync-by-default command completion. Explicit
@@ -351,7 +351,7 @@ func (h *ToolHandler) MaybeWaitForCommand(req JSONRPCRequest, correlationID stri
 		})
 	}
 	if !h.capture.IsExtensionConnected() {
-		return mcp.Fail(req, ErrNoData, "Extension is not connected", "Ensure the Kaboom extension shows 'Connected' and a tab is tracked.", h.diagnosticHint())
+		return mcp.Fail(req, mcp.ErrNoData, "Extension is not connected", "Ensure the Kaboom extension shows 'Connected' and a tab is tracked.", h.diagnosticHint())
 	}
 
 	initialWait, retryWait := asyncInitialWait, asyncRetryWait
@@ -372,7 +372,7 @@ func (h *ToolHandler) MaybeWaitForCommand(req JSONRPCRequest, correlationID stri
 	cmd, found, disconnected, waitedMs := h.waitForCommandWithConnectivity(correlationID, initialWait)
 	totalWaitMs += waitedMs
 	if !found {
-		return mcp.Fail(req, ErrInternal, "Command not found after queuing", "Internal error — do not retry")
+		return mcp.Fail(req, mcp.ErrInternal, "Command not found after queuing", "Internal error — do not retry")
 	}
 	if disconnected {
 		return h.finalizePendingDisconnect(req, correlationID)
@@ -382,7 +382,7 @@ func (h *ToolHandler) MaybeWaitForCommand(req JSONRPCRequest, correlationID stri
 		cmd, found, disconnected, waitedMs = h.waitForCommandWithConnectivity(correlationID, retryWait)
 		totalWaitMs += waitedMs
 		if !found {
-			return mcp.Fail(req, ErrInternal, "Command not found after retry", "Internal error — do not retry")
+			return mcp.Fail(req, mcp.ErrInternal, "Command not found after retry", "Internal error — do not retry")
 		}
 		if disconnected {
 			return h.finalizePendingDisconnect(req, correlationID)

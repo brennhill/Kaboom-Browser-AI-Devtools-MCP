@@ -324,12 +324,12 @@ func TestToolHandler_ResponseHelpers_NoStdout(t *testing.T) {
 		}
 	})
 
-	t.Run("mcpStructuredError", func(t *testing.T) {
+	t.Run("mcp.StructuredErrorResponse", func(t *testing.T) {
 		output := captureStdout(t, func() {
-			_ = mcpStructuredError(ErrInvalidParam, "test", "retry hint")
+			_ = mcp.StructuredErrorResponse(mcp.ErrInvalidParam, "test", "retry hint")
 		})
 		if output != "" {
-			t.Errorf("INVARIANT VIOLATION: mcpStructuredError wrote to stdout: %q", output)
+			t.Errorf("INVARIANT VIOLATION: mcp.StructuredErrorResponse wrote to stdout: %q", output)
 		}
 	})
 }

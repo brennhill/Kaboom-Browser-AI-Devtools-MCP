@@ -46,7 +46,7 @@ func (h *ToolHandler) injectCSPBlockedActions(resp JSONRPCResponse) JSONRPCRespo
 }
 
 // guardCheck is a precondition that returns (response, true) to short-circuit the caller.
-type guardCheck func(req JSONRPCRequest, opts ...func(*StructuredError)) (JSONRPCResponse, bool)
+type guardCheck func(req JSONRPCRequest, opts ...func(*mcp.StructuredError)) (JSONRPCResponse, bool)
 
 // checkGuards runs each guard in order, returning the first blocking response.
 // Eliminates the repeated 6-line requirePilot+requireExtension boilerplate:
@@ -63,10 +63,10 @@ func checkGuards(req JSONRPCRequest, guards ...guardCheck) (JSONRPCResponse, boo
 	return JSONRPCResponse{}, false
 }
 
-// checkGuardsWithOpts runs each guard in order with extra StructuredError options,
+// checkGuardsWithOpts runs each guard in order with extra mcp.StructuredError options,
 // returning the first blocking response. Used by handlers like handleDOMPrimitive
 // that need to pass contextOpts (action, selector) through to guard error responses.
-func checkGuardsWithOpts(req JSONRPCRequest, opts []func(*StructuredError), guards ...guardCheck) (JSONRPCResponse, bool) {
+func checkGuardsWithOpts(req JSONRPCRequest, opts []func(*mcp.StructuredError), guards ...guardCheck) (JSONRPCResponse, bool) {
 	for _, g := range guards {
 		if resp, blocked := g(req, opts...); blocked {
 			return resp, true
@@ -124,24 +124,24 @@ func (h *ToolHandler) DiagnosticHintString() string {
 	return "Current state: " + strings.Join(parts, ", ")
 }
 
-func (h *ToolHandler) diagnosticHint() func(*StructuredError) {
-	return withHint(h.DiagnosticHintString())
+func (h *ToolHandler) diagnosticHint() func(*mcp.StructuredError) {
+	return mcp.WithHint(h.DiagnosticHintString())
 }
 
 // requirePilot returns (resp, true) if AI Web Pilot is disabled, short-circuiting the caller.
 // Usage: if resp, blocked := h.requirePilot(req); blocked { return resp }
-func (h *ToolHandler) requirePilot(req JSONRPCRequest, extraOpts ...func(*StructuredError)) (JSONRPCResponse, bool) {
+func (h *ToolHandler) requirePilot(req JSONRPCRequest, extraOpts ...func(*mcp.StructuredError)) (JSONRPCResponse, bool) {
 	if h.capture.IsPilotActionAllowed() {
 		return JSONRPCResponse{}, false
 	}
-	opts := append([]func(*StructuredError){
+	opts := append([]func(*mcp.StructuredError){
 		h.diagnosticHint(),
-		withRecoveryToolCall(map[string]any{
+		mcp.WithRecoveryToolCall(map[string]any{
 			"tool":      "observe",
 			"arguments": map[string]any{"what": "pilot"},
 		}),
 	}, extraOpts...)
-	return mcp.Fail(req, ErrCodePilotDisabled, "AI Web Pilot is explicitly disabled",
+	return mcp.Fail(req, mcp.ErrCodePilotDisabled, "AI Web Pilot is explicitly disabled",
 		"Enable AI Web Pilot in the extension popup", opts...,
 	), true
 }
@@ -150,7 +150,7 @@ func (h *ToolHandler) requirePilot(req JSONRPCRequest, extraOpts ...func(*Struct
 // short-circuiting the caller with a structured error. On cold starts it waits up to
 // ExtensionReadinessTimeout (5s) for the extension to connect before giving up.
 // Usage: if resp, blocked := h.requireExtension(req); blocked { return resp }
-func (h *ToolHandler) requireExtension(req JSONRPCRequest, extraOpts ...func(*StructuredError)) (JSONRPCResponse, bool) {
+func (h *ToolHandler) requireExtension(req JSONRPCRequest, extraOpts ...func(*mcp.StructuredError)) (JSONRPCResponse, bool) {
 	timeout := h.extensionReadinessTimeout
 	if timeout <= 0 {
 		timeout = capture.ExtensionReadinessTimeout
@@ -165,16 +165,16 @@ func (h *ToolHandler) requireExtension(req JSONRPCRequest, extraOpts ...func(*St
 	if h.capture.WaitForExtensionConnected(ctx, timeout) {
 		return JSONRPCResponse{}, false
 	}
-	opts := append([]func(*StructuredError){
+	opts := append([]func(*mcp.StructuredError){
 		h.diagnosticHint(),
-		withRetryable(true),
-		withRetryAfterMs(3000),
-		withRecoveryToolCall(map[string]any{
+		mcp.WithRetryable(true),
+		mcp.WithRetryAfterMs(3000),
+		mcp.WithRecoveryToolCall(map[string]any{
 			"tool":      "observe",
 			"arguments": map[string]any{"what": "pilot"},
 		}),
 	}, extraOpts...)
-	return mcp.Fail(req, ErrNoData, "Extension not connected. Commands cannot be dispatched.",
+	return mcp.Fail(req, mcp.ErrNoData, "Extension not connected. Commands cannot be dispatched.",
 		"Check that the Kaboom browser extension is installed and the page is open.",
 		opts...,
 	), true
@@ -198,11 +198,11 @@ func (h *ToolHandler) requireCSPClear(req JSONRPCRequest, world string) (JSONRPC
 	}
 	// Recovery template: LLM should re-send its original call with world='auto'.
 	// The 'script' param is intentionally omitted — the LLM fills it from its original call.
-	return mcp.Fail(req, ErrExtError,
+	return mcp.Fail(req, mcp.ErrExtError,
 		fmt.Sprintf("Page CSP blocks MAIN world script execution (level: %s). Use world='auto' or world='isolated' to bypass.", level),
 		"Retry with world='auto' (falls back to isolated/structured), world='isolated' (DOM access, no page JS), or use DOM primitives (click, type).",
 		h.diagnosticHint(),
-		withRecoveryToolCall(map[string]any{
+		mcp.WithRecoveryToolCall(map[string]any{
 			"tool":      "interact",
 			"arguments": map[string]any{"what": "execute_js", "world": "auto"},
 		}),
@@ -215,24 +215,24 @@ func (h *ToolHandler) requireSessionStore(req JSONRPCRequest) (JSONRPCResponse, 
 	if h.sessionStoreImpl != nil {
 		return JSONRPCResponse{}, false
 	}
-	return mcp.Fail(req, ErrNotInitialized, "Session store not initialized", "Internal error — do not retry"), true
+	return mcp.Fail(req, mcp.ErrNotInitialized, "Session store not initialized", "Internal error — do not retry"), true
 }
 
 // requireTabTracking returns (resp, true) if no tab is being tracked,
 // short-circuiting the caller with an immediate structured error (~5ms) instead of
 // queuing a command that would time out or target the wrong tab.
 // Usage: if resp, blocked := h.requireTabTracking(req); blocked { return resp }
-func (h *ToolHandler) requireTabTracking(req JSONRPCRequest, extraOpts ...func(*StructuredError)) (JSONRPCResponse, bool) {
+func (h *ToolHandler) requireTabTracking(req JSONRPCRequest, extraOpts ...func(*mcp.StructuredError)) (JSONRPCResponse, bool) {
 	enabled, _, _ := h.capture.GetTrackingStatus()
 	if enabled {
 		return JSONRPCResponse{}, false
 	}
-	opts := append([]func(*StructuredError){
+	opts := append([]func(*mcp.StructuredError){
 		h.diagnosticHint(),
-		withRetryable(true),
-		withRetryAfterMs(2000),
+		mcp.WithRetryable(true),
+		mcp.WithRetryAfterMs(2000),
 	}, extraOpts...)
-	return mcp.Fail(req, ErrNoData, "No tab is being tracked. Navigate to a page first.",
+	return mcp.Fail(req, mcp.ErrNoData, "No tab is being tracked. Navigate to a page first.",
 		"Open a page in the browser, or call interact(what='navigate', url='...').",
 		opts...,
 	), true
@@ -242,9 +242,9 @@ func (h *ToolHandler) requireTabTracking(req JSONRPCRequest, extraOpts ...func(*
 // Usage: if resp, blocked := requireString(req, params.Name, "name", "Add the 'name' parameter"); blocked { return resp }
 func requireString(req JSONRPCRequest, value, paramName, hint string) (JSONRPCResponse, bool) {
 	if value == "" {
-		return mcp.Fail(req, ErrMissingParam,
+		return mcp.Fail(req, mcp.ErrMissingParam,
 			fmt.Sprintf("Required parameter '%s' is missing", paramName),
-			hint, withParam(paramName)), true
+			hint, mcp.WithParam(paramName)), true
 	}
 	return JSONRPCResponse{}, false
 }
@@ -253,9 +253,9 @@ func requireString(req JSONRPCRequest, value, paramName, hint string) (JSONRPCRe
 // Usage: if resp, blocked := requirePositiveInt(req, params.Count, "count", "Add a positive 'count'"); blocked { return resp }
 func requirePositiveInt(req JSONRPCRequest, value int, paramName, hint string) (JSONRPCResponse, bool) {
 	if value <= 0 {
-		return mcp.Fail(req, ErrMissingParam,
+		return mcp.Fail(req, mcp.ErrMissingParam,
 			fmt.Sprintf("Required parameter '%s' must be a positive integer", paramName),
-			hint, withParam(paramName)), true
+			hint, mcp.WithParam(paramName)), true
 	}
 	return JSONRPCResponse{}, false
 }
@@ -268,7 +268,7 @@ func requireOneOf(req JSONRPCRequest, value string, paramName string, validValue
 			return JSONRPCResponse{}, false
 		}
 	}
-	return mcp.Fail(req, ErrMissingParam,
+	return mcp.Fail(req, mcp.ErrMissingParam,
 		fmt.Sprintf("Parameter '%s' must be one of: %s", paramName, strings.Join(validValues, ", ")),
-		hint, withParam(paramName)), true
+		hint, mcp.WithParam(paramName)), true
 }

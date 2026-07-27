@@ -59,7 +59,7 @@ var configureHandlers = map[string]ModeHandler{
 	"noise_rule": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 		rewrittenArgs, err := cfg.RewriteNoiseRuleArgs(args)
 		if err != nil {
-			return mcp.Fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
+			return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 		}
 		return toolconfigure.HandleNoise(h, req, rewrittenArgs)
 	},
@@ -108,7 +108,7 @@ func getValidConfigureActions() string { return sortedMapKeys(configureHandlers)
 
 func (h *ToolHandler) toolGetHealth(req JSONRPCRequest) JSONRPCResponse {
 	if h.healthMetrics == nil {
-		return mcp.Fail(req, ErrInternal, "Health metrics not initialized", "Internal server error — do not retry")
+		return mcp.Fail(req, mcp.ErrInternal, "Health metrics not initialized", "Internal server error — do not retry")
 	}
 	response := getHealthResponse(h.healthMetrics, h.capture, h.server, version)
 	return mcp.Succeed(req, "Server health", response)
@@ -385,13 +385,13 @@ func (h *ToolHandler) toolGetAuditLog(req JSONRPCRequest, args json.RawMessage) 
 	if problem != nil {
 		switch problem.Kind {
 		case auditlog.Unavailable:
-			return mcp.Fail(req, ErrNotInitialized, problem.Message, "Internal error — do not retry")
+			return mcp.Fail(req, mcp.ErrNotInitialized, problem.Message, "Internal error — do not retry")
 		case auditlog.InvalidJSON:
-			return mcp.Fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+problem.Message, "Fix JSON syntax and call again")
+			return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+problem.Message, "Fix JSON syntax and call again")
 		case auditlog.InvalidOperation:
-			return mcp.Fail(req, ErrInvalidParam, problem.Message, "Use operation: analyze, report, or clear", withParam("operation"))
+			return mcp.Fail(req, mcp.ErrInvalidParam, problem.Message, "Use operation: analyze, report, or clear", mcp.WithParam("operation"))
 		default:
-			return mcp.Fail(req, ErrInvalidParam, problem.Message, "Use RFC3339 format, for example 2026-02-17T15:04:05Z", withParam("since"))
+			return mcp.Fail(req, mcp.ErrInvalidParam, problem.Message, "Use RFC3339 format, for example 2026-02-17T15:04:05Z", mcp.WithParam("since"))
 		}
 	}
 
@@ -417,7 +417,7 @@ func (h *ToolHandler) toolGetAuditLog(req JSONRPCRequest, args json.RawMessage) 
 func (h *ToolHandler) toolConfigureStreaming(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 	rewritten, err := cfg.RewriteStreamingArgs(args)
 	if err != nil {
-		return mcp.Fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
+		return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 	}
 	var params struct {
 		Action          string   `json:"action"`
@@ -484,10 +484,10 @@ func (h *ToolHandler) toolConfigureTestBoundaryEnd(req JSONRPCRequest, args json
 	}
 	h.activeBoundariesMu.Unlock()
 	if !wasActive {
-		return mcp.Fail(req, ErrInvalidParam,
+		return mcp.Fail(req, mcp.ErrInvalidParam,
 			"No active test boundary for test_id '"+result.TestID+"'",
 			"Call configure({what: 'test_boundary_start', test_id: '"+result.TestID+"'}) first",
-			withParam("test_id"))
+			mcp.WithParam("test_id"))
 	}
 	return cfg.BuildTestBoundaryEndResponse(req.ID, result, wasActive)
 }
