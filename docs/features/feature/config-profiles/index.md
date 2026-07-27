@@ -4,10 +4,9 @@ feature_id: feature-config-profiles
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/tools_configure.go
-  - cmd/browser-agent/tools_configure_registry.go
   - cmd/browser-agent/tools_configure_session_handler.go
   - cmd/browser-agent/tools_configure_state_impl.go
   - cmd/browser-agent/tools_configure_sessions.go
@@ -54,7 +53,6 @@ last_verified_date: 2026-03-05
 
 - Configure dispatch and action registry:
   - `cmd/browser-agent/tools_configure.go`
-  - `cmd/browser-agent/tools_configure_registry.go`
 - Session/store sub-handler and implementations:
   - `cmd/browser-agent/tools_configure_session_handler.go`
   - `cmd/browser-agent/tools_configure_state_impl.go`

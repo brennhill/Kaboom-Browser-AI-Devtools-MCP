@@ -1,4 +1,4 @@
-// Purpose: Dispatches configure tool modes (health, clear, store, streaming, restart, doctor, security_mode, etc.) to sub-handlers.
+// tools_configure.go — Defines the configure MCP mode boundary and its narrow dependencies.
 // Why: Acts as the top-level router for all session/runtime configuration actions under the configure tool.
 // Docs: docs/features/feature/config-profiles/index.md
 
@@ -6,7 +6,80 @@ package main
 
 import (
 	"encoding/json"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/tutorial"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
+	cfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
+
+const defaultStoreNamespace = "session"
+
+var configureHandlers = map[string]ModeHandler{
+	"store": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		return h.configureSession().handleConfigureStore(req, args)
+	},
+	"load": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		return h.configureSession().handleLoadSessionContext(req, args)
+	},
+	"diff_sessions": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		return h.configureSession().handleDiffSessionsWrapper(req, args)
+	},
+	"health": func(h *ToolHandler, req JSONRPCRequest, _ json.RawMessage) JSONRPCResponse {
+		return h.toolGetHealth(req)
+	},
+	"restart": func(h *ToolHandler, req JSONRPCRequest, _ json.RawMessage) JSONRPCResponse {
+		return h.toolConfigureRestart(req)
+	},
+	"doctor": func(h *ToolHandler, req JSONRPCRequest, _ json.RawMessage) JSONRPCResponse {
+		return h.toolDoctor(req)
+	},
+	"noise_rule": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		rewrittenArgs, err := cfg.RewriteNoiseRuleArgs(args)
+		if err != nil {
+			return fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
+		}
+		return toolconfigure.HandleNoise(h, req, rewrittenArgs)
+	},
+	"clear":                 method((*ToolHandler).toolConfigureClear),
+	"audit_log":             method((*ToolHandler).toolGetAuditLog),
+	"streaming":             method((*ToolHandler).toolConfigureStreaming),
+	"test_boundary_start":   method((*ToolHandler).toolConfigureTestBoundaryStart),
+	"test_boundary_end":     method((*ToolHandler).toolConfigureTestBoundaryEnd),
+	"event_recording_start": method((*ToolHandler).toolConfigureEventRecordingStart),
+	"event_recording_stop":  method((*ToolHandler).toolConfigureEventRecordingStop),
+	"playback":              method((*ToolHandler).toolConfigurePlayback),
+	"log_diff":              method((*ToolHandler).toolConfigureLogDiff),
+	"telemetry":             cfgLocal(toolconfigure.HandleTelemetry),
+	"describe_capabilities": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		return toolconfigure.HandleDescribeCapabilities(h, req, args, version)
+	},
+	"tutorial": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		return tutorial.HandleTutorial(h, req, args, tutorialFailureRecoveryPlaybooks())
+	},
+	"examples": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		return tutorial.HandleTutorial(h, req, args, tutorialFailureRecoveryPlaybooks())
+	},
+	"save_sequence":       method((*ToolHandler).toolConfigureSaveSequence),
+	"get_sequence":        method((*ToolHandler).toolConfigureGetSequence),
+	"list_sequences":      method((*ToolHandler).toolConfigureListSequences),
+	"delete_sequence":     method((*ToolHandler).toolConfigureDeleteSequence),
+	"replay_sequence":     method((*ToolHandler).toolConfigureReplaySequence),
+	"security_mode":       cfgLocal(toolconfigure.HandleSecurityMode),
+	"network_recording":   method((*ToolHandler).toolConfigureNetworkRecording),
+	"action_jitter":       cfgLocal(toolconfigure.HandleActionJitter),
+	"report_issue":        method((*ToolHandler).toolConfigureReportIssue),
+	"setup_quality_gates": method((*ToolHandler).toolConfigureSetupQualityGates),
+}
+
+func cfgLocal(fn func(toolconfigure.Deps, JSONRPCRequest, json.RawMessage) JSONRPCResponse) ModeHandler {
+	return func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		return fn(h, req, args)
+	}
+}
+
+func getValidConfigureActions() string { return sortedMapKeys(configureHandlers) }
 
 // configureAliasParams defines the deprecated alias parameters for the configure tool.
 // "mode" is included for parity with observe and analyze. Both "mode" and "action" have
@@ -51,4 +124,71 @@ func isStoreAction(action string) bool {
 	default:
 		return false
 	}
+}
+
+func (h *ToolHandler) NoiseConfig() *noise.NoiseConfig {
+	return h.noiseConfig
+}
+
+func (h *ToolHandler) ConsoleEntries() []noise.LogEntry {
+	snapshot := h.server.logs.Entries()
+	entries := make([]noise.LogEntry, len(snapshot))
+	for i, entry := range snapshot {
+		entries[i] = noise.LogEntry(entry)
+	}
+	return entries
+}
+
+func (h *ToolHandler) NetworkBodies() []types.NetworkBody {
+	return h.capture.GetNetworkBodies()
+}
+
+func (h *ToolHandler) AllWebSocketEvents() []types.WebSocketEvent {
+	return h.capture.GetAllWebSocketEvents()
+}
+
+func (h *ToolHandler) GetTrackingStatus() (bool, int, string) {
+	return h.capture.GetTrackingStatus()
+}
+
+func (h *ToolHandler) GetPilotStatus() any {
+	return h.capture.GetPilotStatus()
+}
+
+func (h *ToolHandler) GetToolModuleExamples(toolName string) any {
+	h.ensureToolModules()
+	if module, ok := h.toolModules.get(toolName); ok {
+		if examples := module.Examples(); len(examples) > 0 {
+			return examples
+		}
+	}
+	return nil
+}
+
+func (h *ToolHandler) GetSecurityMode() (string, bool, []string) {
+	return h.capture.GetSecurityMode()
+}
+
+func (h *ToolHandler) SetSecurityMode(mode string, rewrites []string) {
+	h.capture.SetSecurityMode(mode, rewrites)
+}
+
+func (h *ToolHandler) GetTelemetryMode() string {
+	return h.server.logs.TelemetryMode()
+}
+
+func (h *ToolHandler) SetTelemetryMode(mode string) {
+	h.server.logs.SetTelemetryMode(mode)
+}
+
+func (h *ToolHandler) InteractActionSetJitter(ms int) {
+	h.interactAction().SetJitter(ms)
+}
+
+func (h *ToolHandler) InteractActionGetJitter() int {
+	return h.interactAction().GetJitter()
+}
+
+func (h *ToolHandler) HasCapture() bool {
+	return h.capture != nil
 }

@@ -7,8 +7,8 @@ Use this as a hard checklist during design, coding, and review.
 
 - Server dispatch and mode resolution:
   - `cmd/browser-agent/tool_dispatch_helpers.go`
-  - `cmd/browser-agent/tools_observe_registry.go`
-  - `cmd/browser-agent/tools_configure_registry.go`
+  - `cmd/browser-agent/tools_observe.go`
+  - `cmd/browser-agent/tools_configure.go`
 - Shared async query path:
   - `cmd/browser-agent/tools_pending_query_enqueue.go`
   - `cmd/browser-agent/tools_shared_queries.go`

@@ -3,7 +3,7 @@ doc_type: tech-spec
 feature_id: feature-issue-reporting
 status: shipped
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-27
 links:
   product: ./product-spec.md
   tech: ./tech-spec.md
@@ -18,7 +18,7 @@ last_verified_date: 2026-03-05
 ## Dispatcher
 
 - Entry: `toolConfigureReportIssue` in `cmd/browser-agent/tools_configure_report_issue.go`
-- Registry: `configureHandlers["report_issue"]` in `tools_configure_registry.go`
+- Registry: `configureHandlers["report_issue"]` in `tools_configure.go`
 - Schema: `report_issue` in `internal/schema/configure/properties_runtime.go`
 - Mode spec: `report_issue` in `internal/tools/configure/capabilities/modespecs_configure.go`
 

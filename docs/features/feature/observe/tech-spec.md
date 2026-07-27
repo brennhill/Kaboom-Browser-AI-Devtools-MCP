@@ -3,7 +3,7 @@ doc_type: tech-spec
 feature_id: feature-observe
 status: shipped
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-27
 links:
   product: ./product-spec.md
   tech: ./tech-spec.md
@@ -17,7 +17,7 @@ last_verified_date: 2026-03-05
 
 ## Dispatcher
 - Entry: `toolObserve` in `cmd/browser-agent/tools_observe.go`
-- Dispatch map: `observeHandlers` in `cmd/browser-agent/tools_observe_registry.go`, keyed by `what`
+- Dispatch map: `observeHandlers` in `cmd/browser-agent/tools_observe.go`, keyed by `what`
 - Response augmentation helpers: `cmd/browser-agent/tools_observe_response.go`
 
 ## Data Sources
@@ -56,7 +56,7 @@ last_verified_date: 2026-03-05
 
 ## Code Anchors
 - `cmd/browser-agent/tools_observe.go`
-- `cmd/browser-agent/tools_observe_registry.go`
+- `cmd/browser-agent/tools_observe.go`
 - `cmd/browser-agent/tools_observe_response.go`
 - `cmd/browser-agent/tools_observe_analysis.go`
 - `cmd/browser-agent/tools_observe_bundling.go`

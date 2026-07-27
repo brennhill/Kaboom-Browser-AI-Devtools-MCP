@@ -11,7 +11,7 @@ import (
 )
 
 // NetworkBodies satisfies toolanalyze.Deps (also used by toolconfigure.Deps).
-// Already defined in tools_configure_deps_adapter.go.
+// Already defined at the shared configure boundary in tools_configure.go.
 
 // NetworkWaterfallEntries satisfies toolanalyze.Deps.
 func (h *ToolHandler) NetworkWaterfallEntries() []capture.NetworkWaterfallEntry {

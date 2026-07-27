@@ -4,8 +4,9 @@ feature_id: feature-issue-reporting
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 code_paths:
+  - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/tools_configure_report_issue.go
   - internal/schema/configure/properties_runtime.go
   - internal/issuereport/types.go
