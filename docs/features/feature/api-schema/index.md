@@ -6,7 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-26
 code_paths:
-  - cmd/browser-agent/openapi.go
+  - cmd/browser-agent/tools_schema.go
   - internal/analysis/apicontract/contract.go
   - internal/analysis/apicontract/report.go
   - internal/analysis/apicontract/endpoint.go
@@ -80,7 +80,7 @@ Observed-traffic API schema inference (`observe {what: "api"}`):
 
 - Schema inference and OpenAPI emission: `internal/analysis/apischema/`
 - Contract learning and violation reporting: `internal/analysis/apicontract/`
-- OpenAPI export surface: `cmd/browser-agent/openapi.go`
+- MCP and OpenAPI export adapters: `cmd/browser-agent/tools_schema.go`
 
 MCP tool schemas (the `tools/list` contract, `internal/schema`):
 
