@@ -4,8 +4,12 @@ feature_id: feature-enhanced-cli-config
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 code_paths:
+  - cmd/browser-agent/internal/cli/cli_output.go
+  - cmd/browser-agent/internal/health/doctor.go
+  - cmd/browser-agent/internal/health/doctor_fastpath_telemetry.go
+  - internal/diag/output.go
   - cmd/browser-agent/internal/toolconfigure/tutorial/handlers.go
   - cmd/browser-agent/internal/toolconfigure/tutorial/snippets.go
   - cmd/browser-agent/internal/toolconfigure/tutorial/playbooks.go
@@ -34,6 +38,7 @@ code_paths:
   - npm/kaboom-agentic-browser/lib/codex-config.js
   - docs/mcp-install-guide.md
 test_paths:
+  - cmd/browser-agent/stdout_protocol_boundary_test.go
   - cmd/browser-agent/internal/toolconfigure/tutorial/tutorial_test.go
   - cmd/browser-agent/native_install_test.go
   - cmd/browser-agent/native_install_open_test.go

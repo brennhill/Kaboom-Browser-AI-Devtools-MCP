@@ -89,6 +89,13 @@ Use this as a hard checklist during design, coding, and review.
 - Reuse `src/background/commands/helpers.ts` for parsing, target resolution, action toasts, and result envelopes.
 - Avoid reintroducing monolithic `if/else` router logic in `pending-queries.ts`.
 
+## 11) MCP Stdout Boundary
+
+- Reserve browser-agent stdout exclusively for MCP JSON-RPC payloads emitted through `writeMCPPayload(...)`.
+- Route help, stop/doctor status, CLI rendering, warnings, and diagnostics to stderr through `internal/diag` or the injected `stderrf` sink.
+- Do not write connect-mode responses directly to `os.Stdout`; use the shared MCP framing path.
+- Keep `stdout_protocol_boundary_test.go` green when adding new output.
+
 ## 11) Response Shaping Pattern
 
 - Keep composable response enrichment (`include_screenshot`, `include_interactive`, content/metadata shaping) in shared response helper files.

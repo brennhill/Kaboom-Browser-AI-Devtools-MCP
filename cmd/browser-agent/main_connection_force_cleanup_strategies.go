@@ -4,8 +4,8 @@
 package main
 
 import (
-	"fmt"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -81,14 +81,14 @@ func terminateProcess(pid int) (int, int) {
 		return 0, 0
 	}
 	if err := process.Signal(syscall.SIGTERM); err == nil {
-		fmt.Printf("  Sent SIGTERM to PID %d\n", pid)
+		diag.Printf("  Sent SIGTERM to PID %d\n", pid)
 		time.Sleep(terminateSignalSettleDelay)
 		if !procctl.IsProcessAlive(pid) {
 			return 1, 0
 		}
 	}
 	if err := process.Kill(); err == nil {
-		fmt.Printf("  Sent SIGKILL to PID %d\n", pid)
+		diag.Printf("  Sent SIGKILL to PID %d\n", pid)
 		return 1, 0
 	}
 	return 0, 1
@@ -177,18 +177,18 @@ func removeLegacyPIDVariants(port int) {
 
 // printForceCleanupSummary outputs the results of the force cleanup operation.
 func printForceCleanupSummary(killed, failedToKill int) {
-	fmt.Println()
+	diag.Println()
 	if killed > 0 {
-		fmt.Printf("✓ Successfully killed %d Kaboom/legacy process(es)\n", killed)
+		diag.Printf("✓ Successfully killed %d Kaboom/legacy process(es)\n", killed)
 	}
 	if failedToKill > 0 {
-		fmt.Printf("⚠ Failed to kill %d process(es) (may have already exited)\n", failedToKill)
+		diag.Printf("⚠ Failed to kill %d process(es) (may have already exited)\n", failedToKill)
 	}
 	if killed == 0 && failedToKill == 0 {
-		fmt.Println("✓ No running Kaboom/legacy processes found")
+		diag.Println("✓ No running Kaboom/legacy processes found")
 	}
-	fmt.Println()
-	fmt.Println("Cleaned up PID files. Safe to proceed with installation.")
+	diag.Println()
+	diag.Println("Cleaned up PID files. Safe to proceed with installation.")
 }
 
 func runForceCleanupQuietly() error {

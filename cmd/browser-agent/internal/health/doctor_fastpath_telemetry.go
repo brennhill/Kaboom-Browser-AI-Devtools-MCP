@@ -11,6 +11,8 @@ import (
 	"os"
 	"sort"
 	"strings"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 )
 
 // FastPathTelemetrySummary holds aggregated fast-path telemetry stats.
@@ -103,32 +105,32 @@ func EvaluateFastPathFailureThreshold(summary FastPathTelemetrySummary, minSampl
 
 // PrintFastPathTelemetryDiagnostics prints fast-path telemetry stats to stdout.
 func PrintFastPathTelemetryDiagnostics(maxLines int, logPathFn func() (string, error)) (FastPathTelemetrySummary, bool) {
-	fmt.Print("Checking bridge fast-path telemetry... ")
+	diag.Print("Checking bridge fast-path telemetry... ")
 	path, err := logPathFn()
 	if err != nil {
-		fmt.Println("FAILED")
-		fmt.Printf("  Cannot resolve telemetry log path: %v\n", err)
-		fmt.Println()
+		diag.Println("FAILED")
+		diag.Printf("  Cannot resolve telemetry log path: %v\n", err)
+		diag.Println()
 		return FastPathTelemetrySummary{ErrorCodes: map[int]int{}, Methods: map[string]int{}}, false
 	}
 	if _, statErr := os.Stat(path); statErr != nil {
 		if errors.Is(statErr, os.ErrNotExist) {
-			fmt.Println("OK")
-			fmt.Printf("  Telemetry log: %s\n", path)
-			fmt.Println("  Status: no fast-path telemetry recorded yet")
-			fmt.Println()
+			diag.Println("OK")
+			diag.Printf("  Telemetry log: %s\n", path)
+			diag.Println("  Status: no fast-path telemetry recorded yet")
+			diag.Println()
 			return FastPathTelemetrySummary{ErrorCodes: map[int]int{}, Methods: map[string]int{}}, false
 		}
-		fmt.Println("FAILED")
-		fmt.Printf("  Telemetry log read error: %v\n", statErr)
-		fmt.Println()
+		diag.Println("FAILED")
+		diag.Printf("  Telemetry log read error: %v\n", statErr)
+		diag.Println()
 		return FastPathTelemetrySummary{ErrorCodes: map[int]int{}, Methods: map[string]int{}}, false
 	}
 
 	summary := SummarizeFastPathTelemetryLog(path, maxLines)
-	fmt.Println("OK")
-	fmt.Printf("  Telemetry log: %s\n", path)
-	fmt.Printf("  Last %d events: total=%d success=%d failure=%d\n", maxLines, summary.Total, summary.Success, summary.Failure)
+	diag.Println("OK")
+	diag.Printf("  Telemetry log: %s\n", path)
+	diag.Printf("  Last %d events: total=%d success=%d failure=%d\n", maxLines, summary.Total, summary.Success, summary.Failure)
 
 	if len(summary.Methods) > 0 {
 		methods := make([]string, 0, len(summary.Methods))
@@ -140,7 +142,7 @@ func PrintFastPathTelemetryDiagnostics(maxLines int, logPathFn func() (string, e
 		for _, method := range methods {
 			parts = append(parts, fmt.Sprintf("%s=%d", method, summary.Methods[method]))
 		}
-		fmt.Printf("  Methods: %s\n", strings.Join(parts, ", "))
+		diag.Printf("  Methods: %s\n", strings.Join(parts, ", "))
 	}
 
 	if len(summary.ErrorCodes) > 0 {
@@ -153,10 +155,10 @@ func PrintFastPathTelemetryDiagnostics(maxLines int, logPathFn func() (string, e
 		for _, code := range codes {
 			parts = append(parts, fmt.Sprintf("%d=%d", code, summary.ErrorCodes[code]))
 		}
-		fmt.Printf("  Error codes: %s\n", strings.Join(parts, ", "))
+		diag.Printf("  Error codes: %s\n", strings.Join(parts, ", "))
 	} else {
-		fmt.Println("  Error codes: none")
+		diag.Println("  Error codes: none")
 	}
-	fmt.Println()
+	diag.Println()
 	return summary, true
 }

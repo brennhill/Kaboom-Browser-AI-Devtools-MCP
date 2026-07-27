@@ -15,6 +15,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
@@ -27,7 +28,7 @@ const (
 // runStopMode gracefully stops a running server on the specified port.
 // Uses hybrid approach: PID file (fast) -> HTTP /shutdown (graceful) -> platform-aware process kill (fallback).
 func runStopMode(port int) {
-	fmt.Printf("Stopping kaboom server on port %d...\n", port)
+	diag.Printf("Stopping kaboom server on port %d...\n", port)
 	logCommandInvocation("stop_command_invoked", "kaboom --stop", port)
 
 	if stopViaPIDFile(port) {
@@ -42,7 +43,7 @@ func runStopMode(port int) {
 // runForceCleanup kills ALL running kaboom daemons across all ports.
 // Used during package install to ensure clean upgrade from older versions.
 func runForceCleanup() {
-	fmt.Println("Force cleanup: Killing all running kaboom daemons...")
+	diag.Println("Force cleanup: Killing all running kaboom daemons...")
 
 	logFile := resolveLogFile()
 	cleanupEntry := map[string]any{
@@ -111,7 +112,7 @@ func stopViaPIDFile(port int) bool {
 	if pid <= 0 || !procctl.IsProcessAlive(pid) {
 		return false
 	}
-	fmt.Printf("Found server (PID %d) via PID file\n", pid)
+	diag.Printf("Found server (PID %d) via PID file\n", pid)
 	process, err := os.FindProcess(pid)
 	if err != nil {
 		return false
@@ -119,19 +120,19 @@ func stopViaPIDFile(port int) bool {
 	if err := process.Signal(syscall.SIGTERM); err != nil {
 		return false
 	}
-	fmt.Printf("Sent SIGTERM to PID %d\n", pid)
+	diag.Printf("Sent SIGTERM to PID %d\n", pid)
 	for i := 0; i < 20; i++ {
 		time.Sleep(stopPollInterval)
 		if !procctl.IsProcessAlive(pid) {
-			fmt.Println("Server stopped successfully")
+			diag.Println("Server stopped successfully")
 			procctl.RemovePIDFile(port)
 			return true
 		}
 	}
-	fmt.Println("Server did not exit within 2 seconds, sending SIGKILL")
+	diag.Println("Server did not exit within 2 seconds, sending SIGKILL")
 	_ = process.Kill()
 	procctl.RemovePIDFile(port)
-	fmt.Println("Server killed")
+	diag.Println("Server killed")
 	return true
 }
 
@@ -142,7 +143,7 @@ func stopViaHTTP(port int) bool {
 	resp, err := client.Do(req) // #nosec G704 -- shutdownURL is localhost-only from trusted port
 	if err == nil && resp.StatusCode == http.StatusOK {
 		_ = resp.Body.Close() // lint:body-close-ok immediate close on success path
-		fmt.Println("Server stopped via HTTP endpoint")
+		diag.Println("Server stopped via HTTP endpoint")
 		procctl.RemovePIDFile(port)
 		return true
 	}
@@ -153,22 +154,22 @@ func stopViaHTTP(port int) bool {
 }
 
 func stopViaProcessLookup(port int) {
-	fmt.Println("Trying process lookup fallback...")
+	diag.Println("Trying process lookup fallback...")
 	pids, findErr := procctl.FindProcessOnPort(port)
 	if findErr != nil || len(pids) == 0 {
-		fmt.Printf("No server found on port %d\n", port)
+		diag.Printf("No server found on port %d\n", port)
 		procctl.RemovePIDFile(port)
 		return
 	}
 	for _, pidNum := range pids {
-		fmt.Printf("Sending termination signal to PID %d\n", pidNum)
+		diag.Printf("Sending termination signal to PID %d\n", pidNum)
 		_ = procctl.KillProcessByPID(pidNum)
 	}
 	time.Sleep(stopProcessLookupSettleDelay)
 	if !bridge.IsServerRunning(port) {
-		fmt.Println("Server stopped successfully")
+		diag.Println("Server stopped successfully")
 		procctl.RemovePIDFile(port)
 	} else {
-		fmt.Printf("Server may still be running, try: %s\n", procctl.PortKillHintForce(port))
+		diag.Printf("Server may still be running, try: %s\n", procctl.PortKillHintForce(port))
 	}
 }

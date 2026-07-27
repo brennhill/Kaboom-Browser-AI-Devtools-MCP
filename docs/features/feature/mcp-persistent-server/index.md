@@ -41,11 +41,14 @@ code_paths:
   - cmd/browser-agent/internal/httpguard/middleware.go
   - cmd/browser-agent/handler_http.go
   - cmd/browser-agent/connect_mode.go
+  - cmd/browser-agent/mcp_stdout.go
+  - internal/diag/output.go
   - cmd/browser-agent/server_routes_media_screenshots.go
   - internal/identity/mcp.go
   - internal/util/proc_unix.go
   - internal/util/proc_windows.go
 test_paths:
+  - cmd/browser-agent/stdout_protocol_boundary_test.go
   - cmd/browser-agent/mcp_protocol_test.go
   - cmd/browser-agent/stdout_sync_unit_test.go
   - cmd/browser-agent/tools_registry_test.go

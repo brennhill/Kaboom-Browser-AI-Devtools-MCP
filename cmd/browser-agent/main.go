@@ -10,6 +10,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/cli"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
 
@@ -79,7 +80,7 @@ func main() {
 
 // #lizard forgives
 func printHelp() {
-	fmt.Print(`
+	diag.Print(`
 Kaboom - Agentic Browser Devtools - rapid e2e web development
 
 Usage: kaboom [options]

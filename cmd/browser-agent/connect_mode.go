@@ -12,6 +12,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
 )
 
 const (
@@ -142,11 +144,7 @@ func connectForwardRequest(mcpURL, clientID, line string) {
 	}
 	_ = resp.Body.Close() //nolint:errcheck // best-effort cleanup after successful decode
 
-	// Write MCP response with exactly one trailing newline.
-	// Do NOT use fmt.Println — it adds \n via fmt internals which is not
-	// guaranteed to be atomic and bypasses any future stdout serialization.
-	_, _ = os.Stdout.Write(respData)
-	_, _ = os.Stdout.Write([]byte("\n"))
+	writeMCPPayload(respData, bridge.StdioFramingLine)
 }
 
 // extractRequestID attempts to extract the JSON-RPC ID from a request string.
@@ -178,7 +176,7 @@ func connectUnregisterClient(serverURL, clientID string) {
 	}
 }
 
-// sendMCPError sends a JSON-RPC error response to stdout (used in connect mode)
+// sendMCPError sends a framed JSON-RPC error response in connect mode.
 func sendMCPError(id any, code int, message string) {
 	resp := JSONRPCResponse{
 		JSONRPC: JSONRPCVersion,
@@ -190,6 +188,5 @@ func sendMCPError(id any, code int, message string) {
 	}
 	// Error impossible: simple struct with no circular refs or unsupported types
 	respJSON, _ := json.Marshal(resp)
-	_, _ = os.Stdout.Write(respJSON)
-	_, _ = os.Stdout.Write([]byte("\n"))
+	writeMCPPayload(respJSON, bridge.StdioFramingLine)
 }

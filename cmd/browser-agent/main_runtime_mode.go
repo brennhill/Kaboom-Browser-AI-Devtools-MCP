@@ -105,7 +105,7 @@ func dispatchMode(server *Server, cfg *serverConfig) {
 		if os.Getenv("KABOOM_TEST_BRIDGE_NOISE") == "1" {
 			// Test-only probe: verifies transport isolation prevents accidental
 			// stdout/stderr writes from corrupting MCP responses.
-			fmt.Fprintln(os.Stdout, "KABOOM_TEST_NOISE_STDOUT")
+			fmt.Fprintln(os.Stderr, "KABOOM_TEST_NOISE_STDOUT")
 			fmt.Fprintln(os.Stderr, "KABOOM_TEST_NOISE_STDERR")
 		}
 		bridge.RunMode(cfg.port, cfg.logFile, cfg.maxEntries)

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
@@ -36,40 +37,40 @@ func SuggestAvailablePort(startPort, maxOffset int) (int, bool) {
 
 // CheckPortAvailability prints port availability status.
 func CheckPortAvailability(port int, portKillHint func(int) string) {
-	fmt.Print("Checking port availability... ")
+	diag.Print("Checking port availability... ")
 	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 	if err != nil {
-		fmt.Println("FAILED")
-		fmt.Printf("  Port %d is already in use.\n", port)
-		fmt.Printf("  Fix: %s\n", portKillHint(port))
-		fmt.Printf("  Quick stop (Kaboom): kaboom --stop --port %d\n", port)
+		diag.Println("FAILED")
+		diag.Printf("  Port %d is already in use.\n", port)
+		diag.Printf("  Fix: %s\n", portKillHint(port))
+		diag.Printf("  Quick stop (Kaboom): kaboom --stop --port %d\n", port)
 		if suggested, ok := SuggestAvailablePort(port+1, 25); ok {
-			fmt.Printf("  Suggested free port: --port %d\n", suggested)
+			diag.Printf("  Suggested free port: --port %d\n", suggested)
 		} else {
-			fmt.Printf("  Or use a different port: --port %d\n", port+1)
+			diag.Printf("  Or use a different port: --port %d\n", port+1)
 		}
 	} else {
 		_ = ln.Close() //nolint:errcheck // pre-flight check; port availability test only
-		fmt.Println("OK")
-		fmt.Printf("  Port %d is available.\n", port)
+		diag.Println("OK")
+		diag.Printf("  Port %d is available.\n", port)
 	}
-	fmt.Println()
+	diag.Println()
 }
 
 // CheckStateDirectory prints runtime state directory status.
 func CheckStateDirectory() {
-	fmt.Print("Checking runtime state directory... ")
+	diag.Print("Checking runtime state directory... ")
 	rootDir, err := state.RootDir()
 	if err != nil {
-		fmt.Println("FAILED")
-		fmt.Printf("  Cannot determine runtime state directory: %v\n", err)
+		diag.Println("FAILED")
+		diag.Printf("  Cannot determine runtime state directory: %v\n", err)
 	} else {
 		logFile, _ := state.DefaultLogFile()
-		fmt.Println("OK")
-		fmt.Printf("  State dir: %s\n", rootDir)
-		fmt.Printf("  Log file: %s\n", logFile)
+		diag.Println("OK")
+		diag.Printf("  State dir: %s\n", rootDir)
+		diag.Printf("  Log file: %s\n", logFile)
 	}
-	fmt.Println()
+	diag.Println()
 }
 
 // RunSetupCheckWithOptions runs the full setup check and returns whether all thresholds pass.
@@ -81,13 +82,13 @@ func RunSetupCheckWithOptions(port int, options SetupCheckOptions, deps SetupDep
 		options.MinSamples = 50
 	}
 
-	fmt.Println()
-	fmt.Println("KABOOM SETUP CHECK")
-	fmt.Println("────────────────────────────────────────────────────────────────")
-	fmt.Println()
-	fmt.Printf("Version: %s\n", deps.Version)
-	fmt.Printf("Port:    %d\n", port)
-	fmt.Println()
+	diag.Println()
+	diag.Println("KABOOM SETUP CHECK")
+	diag.Println("────────────────────────────────────────────────────────────────")
+	diag.Println()
+	diag.Printf("Version: %s\n", deps.Version)
+	diag.Printf("Port:    %d\n", port)
+	diag.Println()
 
 	CheckPortAvailability(port, deps.PortKillHint)
 	CheckStateDirectory()
@@ -95,35 +96,35 @@ func RunSetupCheckWithOptions(port int, options SetupCheckOptions, deps SetupDep
 
 	thresholdOK := true
 	if options.MaxFailureRatio >= 0 {
-		fmt.Print("Checking fast-path failure threshold... ")
+		diag.Print("Checking fast-path failure threshold... ")
 		if err := EvaluateFastPathFailureThreshold(summary, options.MinSamples, options.MaxFailureRatio); err != nil {
-			fmt.Println("FAILED")
-			fmt.Printf("  %v\n", err)
-			fmt.Println()
+			diag.Println("FAILED")
+			diag.Printf("  %v\n", err)
+			diag.Println()
 			thresholdOK = false
 		} else {
 			ratio := 0.0
 			if summary.Total > 0 {
 				ratio = float64(summary.Failure) / float64(summary.Total)
 			}
-			fmt.Println("OK")
-			fmt.Printf("  Ratio %.4f within threshold %.4f (samples=%d)\n", ratio, options.MaxFailureRatio, summary.Total)
-			fmt.Println()
+			diag.Println("OK")
+			diag.Printf("  Ratio %.4f within threshold %.4f (samples=%d)\n", ratio, options.MaxFailureRatio, summary.Total)
+			diag.Println()
 		}
 	}
 
-	fmt.Println("────────────────────────────────────────────────────────────────")
-	fmt.Println()
-	fmt.Println("Next steps:")
-	fmt.Println("  1. Start server:    npx kaboom-agentic-browser")
-	fmt.Println("  2. Install extension:")
-	fmt.Println("     - Open chrome://extensions")
-	fmt.Println("     - Enable Developer mode")
-	fmt.Println("     - Click 'Load unpacked' → select extension/ folder")
-	fmt.Println("  3. Open any website")
-	fmt.Println("  4. Extension popup should show 'Connected'")
-	fmt.Println()
-	fmt.Printf("Verify:  curl http://localhost:%d/health\n", port)
-	fmt.Println()
+	diag.Println("────────────────────────────────────────────────────────────────")
+	diag.Println()
+	diag.Println("Next steps:")
+	diag.Println("  1. Start server:    npx kaboom-agentic-browser")
+	diag.Println("  2. Install extension:")
+	diag.Println("     - Open chrome://extensions")
+	diag.Println("     - Enable Developer mode")
+	diag.Println("     - Click 'Load unpacked' → select extension/ folder")
+	diag.Println("  3. Open any website")
+	diag.Println("  4. Extension popup should show 'Connected'")
+	diag.Println()
+	diag.Printf("Verify:  curl http://localhost:%d/health\n", port)
+	diag.Println()
 	return thresholdOK
 }

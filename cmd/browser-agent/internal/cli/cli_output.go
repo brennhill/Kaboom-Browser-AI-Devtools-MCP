@@ -26,18 +26,18 @@ type CLIResult struct {
 	Data        map[string]any
 }
 
-// FormatResult formats the MCP tool result and writes to stdout. Returns exit code.
+// FormatResult formats the MCP tool result as human-facing stderr output.
 func FormatResult(format, tool, action string, result *mcp.MCPToolResult) int {
 	cliRes := BuildCLIResult(tool, action, result)
 	var err error
 
 	switch format {
 	case "json":
-		err = FormatJSON(os.Stdout, cliRes)
+		err = FormatJSON(os.Stderr, cliRes)
 	case "csv":
-		err = FormatCSV(os.Stdout, cliRes)
+		err = FormatCSV(os.Stderr, cliRes)
 	default:
-		err = FormatHuman(os.Stdout, cliRes)
+		err = FormatHuman(os.Stderr, cliRes)
 	}
 
 	if err != nil {
