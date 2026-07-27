@@ -55,7 +55,7 @@ The call **blocks for up to 55 seconds** waiting for annotations to arrive. This
 
 1. **Server** (`tools_analyze_annotations.go`): When `wait: true`, checks if annotations are already available. If not, generates `ann_<timestamp>_<random>` correlation_id, registers it as a pending command in CommandTracker and as a waiter in AnnotationStore, returns immediately.
 
-2. **AnnotationStore** (`annotation_store.go`): Maintains a list of `annotationWaiter` structs. When `StoreSession()` or `AppendToNamedSession()` is called (annotations arrive), it completes all matching waiters via the `completeCommand` callback.
+2. **AnnotationStore** (`internal/annotation/store_wait.go`): Maintains annotation waiters. When `StoreSession()` or `AppendToNamedSession()` receives annotations, it completes matching waiters through the command-completion callback.
 
 3. **CommandTracker** (`internal/capture/queries.go`): Provides `WaitForCommand(correlationID, timeout)` which blocks using a `commandNotify` channel. `CompleteCommand()` closes the channel to wake all waiters. The waiter registration uses a 10-minute TTL to give users ample drawing time.
 

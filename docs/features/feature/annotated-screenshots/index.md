@@ -17,7 +17,7 @@ code_paths:
   - cmd/browser-agent/internal/toolgenerate/annotations/report.go
   - cmd/browser-agent/internal/toolgenerate/annotations/issues.go
   - cmd/browser-agent/internal/toolgenerate/annotations/builder.go
-  - cmd/browser-agent/annotation_store.go
+  - cmd/browser-agent/types.go
   - internal/schema/analyze.go
   - internal/tools/configure/capabilities/modespecs_analyze.go
   - scripts/smoke-tests/31-annotation-parity.sh

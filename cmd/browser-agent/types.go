@@ -5,7 +5,9 @@ package main
 
 import (
 	"encoding/json"
+	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
@@ -17,6 +19,17 @@ const (
 )
 
 var legacyMCPServerNames = append([]string(nil), identity.LegacyMCPServerNames...)
+
+type AnnotationRect = annotation.Rect
+type Annotation = annotation.Annotation
+type AnnotationDetail = annotation.Detail
+type AnnotationSession = annotation.Session
+type NamedAnnotationSession = annotation.NamedSession
+type AnnotationStore = annotation.Store
+
+func NewAnnotationStore(detailTTL time.Duration) *annotation.Store {
+	return annotation.NewStore(detailTTL)
+}
 
 func negotiateProtocolVersion(rawParams json.RawMessage) string {
 	var params struct {

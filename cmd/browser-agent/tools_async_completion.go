@@ -5,6 +5,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -16,11 +17,63 @@ import (
 
 const maxTransientsPerResult = asyncresult.MaxTransientsPerResult
 
+const a11yQueryTimeout = 30 * time.Second
+
 func (h *ToolHandler) attachTransientElements(responseData map[string]any, since time.Time) {
 	if h == nil || responseData == nil {
 		return
 	}
 	asyncresult.AttachTransientElements(responseData, h.capture.GetAllEnhancedActions(), since)
+}
+
+func (h *ToolHandler) EnqueuePendingQuery(req JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (JSONRPCResponse, bool) {
+	_, err := h.capture.CreatePendingQueryWithTimeout(query, timeout, req.ClientID)
+	if err == nil {
+		return JSONRPCResponse{}, false
+	}
+	if errors.Is(err, queries.ErrQueueFull) {
+		return fail(req, ErrQueueFull,
+			fmt.Sprintf("Command queue is full; unable to enqueue action type=%q", query.Type),
+			"Wait for in-flight commands to complete, then retry.",
+			withRetryable(true), withRetryAfterMs(1000), h.diagnosticHint(),
+			withRecoveryToolCall(map[string]any{
+				"tool": "observe", "arguments": map[string]any{"what": "pending_commands"},
+			}),
+		), true
+	}
+	return fail(req, ErrInternal,
+		fmt.Sprintf("Failed to enqueue command type=%q: %v", query.Type, err),
+		"Internal error — do not retry until server health is restored.",
+		h.diagnosticHint(),
+	), true
+}
+
+func buildA11yQueryParams(scope string, tags []string, frame any, forceRefresh bool) map[string]any {
+	params := map[string]any{}
+	if scope != "" {
+		params["scope"] = scope
+	}
+	if len(tags) > 0 {
+		params["tags"] = tags
+	}
+	if forceRefresh {
+		params["force_refresh"] = true
+	}
+	if frame != nil {
+		params["frame"] = frame
+	}
+	return params
+}
+
+func (h *ToolHandler) ExecuteA11yQuery(scope string, tags []string, frame any, forceRefresh bool) (json.RawMessage, error) {
+	paramsJSON, _ := json.Marshal(buildA11yQueryParams(scope, tags, frame, forceRefresh))
+	queryID, err := h.capture.CreatePendingQueryWithTimeout(queries.PendingQuery{
+		Type: "a11y", Params: paramsJSON,
+	}, a11yQueryTimeout, "")
+	if err != nil {
+		return nil, err
+	}
+	return h.capture.WaitForResult(queryID, a11yQueryTimeout)
 }
 
 // finalizeResponseEnrichment attaches evidence, transient elements, and retry context

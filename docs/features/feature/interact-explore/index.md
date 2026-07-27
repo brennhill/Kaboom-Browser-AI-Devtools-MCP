@@ -19,7 +19,7 @@ code_paths:
   - cmd/browser-agent/internal/toolinteract/elemindex/registry.go
   - cmd/browser-agent/tools_interact_adapter.go
   - cmd/browser-agent/tools_interact_dispatch.go
-  - cmd/browser-agent/tools_pending_query_enqueue.go
+  - cmd/browser-agent/tools_async_completion.go
   - internal/tools/interact/workflow.go
   - internal/schema/interact/actions.go
   - internal/schema/interact/properties_targeting.go

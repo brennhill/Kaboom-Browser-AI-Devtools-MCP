@@ -23,7 +23,7 @@ tools_configure_recording.go # was recording_handlers.go (configure half)
 ...
 ```
 
-Shared test helpers consolidated into `tools_test_helpers_test.go`. Shared cross-tool functions in `tools_shared_queries.go` or `tools_core.go`.
+Shared test helpers consolidated into `tools_test_helpers_test.go`. Shared cross-tool query functions live with the async command protocol in `tools_async_completion.go`; other shared tool state lives in `tools_core.go`.
 
 **Status**: In progress. Test helpers consolidated, schema split planned.
 

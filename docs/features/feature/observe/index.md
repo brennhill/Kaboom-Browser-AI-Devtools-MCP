@@ -16,7 +16,7 @@ code_paths:
   - cmd/browser-agent/internal/toolobserve/response.go
   - cmd/browser-agent/internal/toolobserve/inbox.go
   - cmd/browser-agent/internal/toolobserve/registry.go
-  - cmd/browser-agent/tools_shared_queries.go
+  - cmd/browser-agent/tools_async_completion.go
   - internal/a11ysummary/summary.go
   - internal/tools/observe/deps.go
   - internal/tools/observe/filtering.go

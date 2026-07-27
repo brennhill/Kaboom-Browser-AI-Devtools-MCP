@@ -10,10 +10,10 @@ Use this as a hard checklist during design, coding, and review.
   - `cmd/browser-agent/tools_observe.go`
   - `cmd/browser-agent/tools_configure.go`
 - Shared async query path:
-  - `cmd/browser-agent/tools_pending_query_enqueue.go`
-  - `cmd/browser-agent/tools_shared_queries.go`
+  - `cmd/browser-agent/tools_async_completion.go`
 - Interact response shaping:
-  - `cmd/browser-agent/tools_interact_response_helpers.go`
+  - `cmd/browser-agent/tools_interact_dispatch.go`
+  - `cmd/browser-agent/internal/toolinteract/interact_evidence.go`
 - Recording helper seams:
   - `cmd/browser-agent/internal/toolrecording/helpers.go`
 - Extension command routing:
