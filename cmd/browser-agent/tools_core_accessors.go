@@ -78,12 +78,6 @@ func (h *ToolHandler) GetRedactionEngine() RedactionEngine {
 	return h.redactionEngine
 }
 
-// newPlaybackSessionsMap returns an initialized playback sessions map.
-// Separated to avoid the parameter name "capture" shadowing the package import.
-func newPlaybackSessionsMap() map[string]*capture.PlaybackSession {
-	return make(map[string]*capture.PlaybackSession)
-}
-
 // testGen returns the test-generation sub-handler (internal/testgenhandler).
 func (h *ToolHandler) testGen() *testgenhandler.Handler {
 	return h.testGenHandler

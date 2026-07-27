@@ -4,8 +4,12 @@ feature_id: feature-flow-recording
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 code_paths:
+  - cmd/browser-agent/recording_handlers.go
+  - cmd/browser-agent/internal/toolrecording/handler.go
+  - cmd/browser-agent/internal/toolrecording/helpers.go
+  - internal/capture/handlers.go
   - src/background/recording/index.ts
   - src/background/recording/capture.ts
   - src/background/recording/listeners.ts
@@ -20,6 +24,10 @@ code_paths:
   - src/lib/brand.ts
   - src/lib/daemon-http.ts
 test_paths:
+  - cmd/browser-agent/internal/toolrecording/handler_test.go
+  - cmd/browser-agent/internal/toolrecording/toolrecording_test.go
+  - cmd/browser-agent/recording_playback_result_test.go
+  - internal/capture/recording_delegation_test.go
   - tests/extension/recording.test.js
   - tests/extension/recording-listeners-target-tab.test.js
   - tests/extension/recording-capture-branding.test.js
@@ -56,6 +64,10 @@ last_verified_date: 2026-03-05
 ## Code and Tests
 
 - Core recording lifecycle and listener wiring:
+  - `cmd/browser-agent/recording_handlers.go`
+  - `cmd/browser-agent/internal/toolrecording/handler.go`
+  - `cmd/browser-agent/internal/toolrecording/helpers.go`
+  - `internal/capture/handlers.go`
   - `src/background/recording/index.ts`
   - `src/background/recording/capture.ts`
   - `src/background/recording/listeners.ts`
@@ -67,6 +79,10 @@ last_verified_date: 2026-03-05
   - `src/popup/recording/recording-io.ts`
   - `src/lib/brand.ts`
 - Core tests:
+  - `cmd/browser-agent/internal/toolrecording/handler_test.go`
+  - `cmd/browser-agent/internal/toolrecording/toolrecording_test.go`
+  - `cmd/browser-agent/recording_playback_result_test.go`
+  - `internal/capture/recording_delegation_test.go`
   - `tests/extension/recording.test.js`
   - `tests/extension/recording-listeners-target-tab.test.js`
   - `tests/extension/recording-capture-branding.test.js`

@@ -15,6 +15,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testgenhandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolrecording"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/apicontract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/thirdparty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/audit"
@@ -99,11 +100,8 @@ type ToolHandler struct {
 	activeBoundariesMu sync.Mutex
 	activeBoundaries   map[string]time.Time
 
-	// Playback results store: recording_id → session after playback completes.
-	playbackMu       sync.RWMutex
-	playbackSessions map[string]*capture.PlaybackSession
-
 	recordingInteractHandler *screenrec.InteractHandler
+	recordingHandler         *toolrecording.Handler
 	uploadInteractHandler    *toolinteract.UploadInteractHandler
 	testGenHandler           *testgenhandler.Handler
 	stateInteractHandler     *toolinteract.StateInteractHandler

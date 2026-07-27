@@ -15,7 +15,7 @@ Use this as a hard checklist during design, coding, and review.
 - Interact response shaping:
   - `cmd/browser-agent/tools_interact_response_helpers.go`
 - Recording helper seams:
-  - `cmd/browser-agent/recording_helpers.go`
+  - `cmd/browser-agent/internal/toolrecording/helpers.go`
 - Extension command routing:
   - `src/background/commands/registry.ts`
   - `src/background/commands/helpers.ts`
