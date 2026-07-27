@@ -4,7 +4,7 @@ feature_id: feature-observe
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
   - internal/capture/accessors.go
   - internal/capture/query_dispatcher.go
@@ -12,7 +12,7 @@ code_paths:
   - internal/capture/events.go
   - internal/capture/wsconn/status.go
   - internal/capture/wsconn/tracker.go
-  - cmd/browser-agent/tools_observe.go
+  - cmd/browser-agent/internal/toolobserve/dispatcher.go
   - cmd/browser-agent/internal/toolobserve/response.go
   - cmd/browser-agent/internal/toolobserve/inbox.go
   - cmd/browser-agent/internal/toolobserve/registry.go

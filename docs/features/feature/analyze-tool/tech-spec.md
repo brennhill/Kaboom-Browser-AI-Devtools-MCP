@@ -16,7 +16,7 @@ last_verified_date: 2026-03-05
 - Mode routing table: `analyzeHandlers` in `cmd/browser-agent/tools_analyze_dispatch.go`.
 - Annotation handlers: `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go`.
 - API validation runtime and handlers: `internal/analysis/apicontract/runtime_handler.go`.
-- Async command-result polling: `cmd/browser-agent/tools_observe.go`.
+- Async command-result polling: `cmd/browser-agent/internal/toolobserve/dispatcher.go`.
 
 ## Query-Type Mapping
 - `dom` -> pending query type `dom`
@@ -61,7 +61,7 @@ last_verified_date: 2026-03-05
 ## Code Anchors
 - `cmd/browser-agent/tools_analyze_dispatch.go`
 - `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go`
-- `cmd/browser-agent/tools_observe.go`
+- `cmd/browser-agent/internal/toolobserve/dispatcher.go`
 - `cmd/browser-agent/tools_async_completion.go`
 - `internal/annotation/store.go`
 - `internal/annotation/store_results.go`

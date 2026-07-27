@@ -626,7 +626,7 @@ func TestMCPToolsCall_ObserveErrors_FullFlow(t *testing.T) {
 
 	// Dispatch to observe tool
 	th := handler.toolHandler.(*ToolHandler)
-	resp := th.toolObserve(mcpRequest, params.Arguments)
+	resp := th.observeDispatcher.Handle(mcpRequest, params.Arguments)
 
 	// Verify response structure
 	if resp.ID != 42 {

@@ -30,7 +30,7 @@ cmd/browser-agent/               Main binary
   server_routes.go             HTTP route registration (extension + MCP + admin)
   handler.go                   MCPHandler: JSON-RPC dispatch, initialize/tools/list
   tools_core.go                ToolHandler struct, rate limiter, response helpers
-  tools_observe.go             observe tool: dispatches to internal/tools/observe
+  internal/toolobserve/dispatcher.go             observe tool: dispatches to internal/tools/observe
   tools_analyze.go             analyze tool: DOM, a11y, security, performance
   internal/toolgenerate/dispatcher.go            generate tool: Playwright tests, HAR, CSP, SARIF
   tools_configure.go           configure tool: noise rules, storage, streaming, health
@@ -121,7 +121,7 @@ internal/
 
 ## Key Patterns
 
-**ToolHandler facade** -- `ToolHandler` in `tools_core.go` embeds `*MCPHandler` and holds all subsystem references (capture, streaming, security, annotations, etc.). Each tool file (`tools_observe.go`, etc.) registers a handler map. Tool dispatch is a two-level lookup: tool name -> action/mode name -> handler function.
+**Tool composition root** -- `ToolHandler` in `tools_core.go` constructs the concrete feature owners and injects their narrow dependencies. Canonical dispatchers such as `internal/toolobserve/dispatcher.go` own their mode registries; the root does not mirror or forward those APIs.
 
 **Dependency interfaces** -- `internal/mcp/deps.go` defines small composable interfaces (`CaptureProvider`, `LogBufferReader`, `A11yQueryExecutor`, etc.). Each `internal/tools/*` package defines its own `Deps` interface by embedding only the sub-interfaces it needs. `*ToolHandler` satisfies all of them with zero adapter code.
 
@@ -138,7 +138,7 @@ internal/
 | Want to...                              | Edit these files                                                                                          |
 |-----------------------------------------|-----------------------------------------------------------------------------------------------------------|
 | Add a new MCP tool                      | `tools_<name>.go` (handler), `tools_<name>_schema.go` (schema), `tools_core.go` (register in ToolHandler) |
-| Add a new observe mode                  | `internal/tools/observe/` (handler), `tools_observe.go` (register in observeHandlers map)                 |
+| Add a new observe mode                  | `internal/tools/observe/` (handler), `internal/toolobserve/dispatcher.go` (register in its private mode map)                 |
 | Add a new analyze/generate/etc. action  | `internal/tools/<tool>/` (logic), `tools_<tool>.go` (register in dispatch map)                            |
 | Add an HTTP endpoint for the extension  | `internal/capture/` (handler), `server_routes.go` (register in setupHTTPRoutes)                           |
 | Change sync protocol                    | `internal/capture/sync.go` (server), `src/background/sync/sync-client.ts` (extension)                         |

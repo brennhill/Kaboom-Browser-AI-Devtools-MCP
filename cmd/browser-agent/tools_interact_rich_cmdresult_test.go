@@ -41,7 +41,7 @@ func TestCommandResult_ExpiredSetsIsError(t *testing.T) {
 	// Observe the expired command
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
@@ -80,7 +80,7 @@ func TestCommandResult_CompleteWithErrorSetsIsError(t *testing.T) {
 	// Observe the failed command
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
@@ -117,7 +117,7 @@ func TestCommandResult_EmbeddedFailureSetsIsError(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
@@ -153,7 +153,7 @@ func TestCommandResult_EmbeddedCSPFailureAddsCSPMarkers(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
@@ -190,7 +190,7 @@ func TestCommandResult_ErrorStatusCSPFailureIncludesRetryHint(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
@@ -279,7 +279,7 @@ func TestCommandResult_InteractFailureCodesIncludeRecoveryRetryGuidance(t *testi
 
 			req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 			args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-			resp := env.handler.toolObserveCommandResult(req, args)
+			resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 			var observeResult mcp.MCPToolResult
 			if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
@@ -326,7 +326,7 @@ func TestCommandResult_SuccessDoesNotSetIsError(t *testing.T) {
 	// Observe the successful command
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
@@ -384,7 +384,7 @@ func TestCommandResult_CompleteHasFinalTrue(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
@@ -417,7 +417,7 @@ func TestCommandResult_ErrorHasFinalTrue(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
@@ -462,7 +462,7 @@ func TestCommandResult_EffectiveContextSurfaced(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
@@ -504,7 +504,7 @@ func TestCommandResult_CompleteHasQueuedFalse(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
@@ -540,7 +540,7 @@ func TestCommandResult_ExpiredHasFinalTrue(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
@@ -603,7 +603,7 @@ func TestCommandResult_NotFoundHasFinalTrue(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"missing_corr_123"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
@@ -630,7 +630,7 @@ func TestCommandResult_AnnotationNotFoundHasFinalTrue(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"ann_missing_123"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
@@ -667,7 +667,7 @@ func TestCommandResult_ExpiredIncludesDiagnosticHint(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
@@ -806,7 +806,7 @@ func TestCommandResult_AmbiguousTarget_CandidatesPromotedToTopLevel(t *testing.T
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
@@ -865,7 +865,7 @@ func TestCommandResult_AmbiguousTarget_SuggestedElementID(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
@@ -910,7 +910,7 @@ func TestCommandResult_AmbiguousTarget_RetryGuidanceMentionsCandidates(t *testin
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
@@ -955,7 +955,7 @@ func TestCommandResult_AmbiguousTarget_NoCandidates_NoSuggestedElementID(t *test
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {

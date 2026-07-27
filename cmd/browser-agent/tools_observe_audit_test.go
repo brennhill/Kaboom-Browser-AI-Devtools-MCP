@@ -60,7 +60,7 @@ func (e *observeTestEnv) callObserve(t *testing.T, what string) (mcp.MCPToolResu
 
 	args := json.RawMessage(`{"what":"` + what + `"}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := e.handler.toolObserve(req, args)
+	resp := e.handler.observeDispatcher.Handle(req, args)
 
 	if resp.Result == nil {
 		return mcp.MCPToolResult{}, false
@@ -284,7 +284,7 @@ func TestObserveAudit_MissingWhat_ReturnsError(t *testing.T) {
 	// Call with empty args (missing "what" parameter)
 	args := json.RawMessage(`{}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := env.handler.toolObserve(req, args)
+	resp := env.handler.observeDispatcher.Handle(req, args)
 
 	if resp.Result == nil {
 		t.Fatal("missing 'what' should return result with error")
@@ -306,7 +306,7 @@ func TestObserveAudit_InvalidJSON_ReturnsParseError(t *testing.T) {
 
 	args := json.RawMessage(`{invalid json here}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := env.handler.toolObserve(req, args)
+	resp := env.handler.observeDispatcher.Handle(req, args)
 
 	// ASSERTION: Returns some response (not nil/panic)
 	if resp.Result == nil && resp.Error == nil {
@@ -360,7 +360,7 @@ func TestObserveAudit_AllModes_NoPanic(t *testing.T) {
 
 			args := json.RawMessage(`{"what":"` + mode + `"}`)
 			req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-			resp := env.handler.toolObserve(req, args)
+			resp := env.handler.observeDispatcher.Handle(req, args)
 
 			// ASSERTION: Returns something
 			if resp.Result == nil && resp.Error == nil {

@@ -4,7 +4,7 @@ feature_id: feature-playback-engine
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
   - internal/recording/types.go
   - internal/recording/manager.go
@@ -20,7 +20,7 @@ code_paths:
   - internal/recording/logdiff/report.go
   - internal/capture/handlers.go
   - cmd/browser-agent/tools_configure.go
-  - cmd/browser-agent/tools_observe.go
+  - cmd/browser-agent/internal/toolobserve/dispatcher.go
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/internal/toolrecording/handler.go
   - cmd/browser-agent/internal/toolrecording/helpers.go
@@ -75,7 +75,7 @@ last_verified_date: 2026-03-05
   for diffing), so neither depends on the manager type and both are tested
   against in-memory fakes.
 - Delegation surface: `internal/capture/handlers.go`
-- MCP adapters: `cmd/browser-agent/tools_configure.go`, `tools_observe.go`, and `tools_core.go`
+- MCP owners: `cmd/browser-agent/tools_configure.go`, `cmd/browser-agent/internal/toolobserve/dispatcher.go`, and the composition root in `tools_core.go`
 - Recording and playback MCP behavior/state: `cmd/browser-agent/internal/toolrecording/`
 - Still a stub: `playback.executeAction` returns synthetic results and is not yet
   wired to the PendingQuery/interact system, so replay does not drive a browser.

@@ -257,7 +257,7 @@ func (s *scenario) callObserveWithArgs(t *testing.T, argsJSON string) (mcp.MCPTo
 	t.Helper()
 	args := json.RawMessage(argsJSON)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := s.handler.toolObserve(req, args)
+	resp := s.handler.observeDispatcher.Handle(req, args)
 	if resp.Result == nil {
 		return mcp.MCPToolResult{}, false
 	}

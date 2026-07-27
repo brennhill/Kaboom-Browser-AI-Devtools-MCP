@@ -168,11 +168,11 @@ func callToolRaw(h *ToolHandler, name string, argsJSON string) mcp.JSONRPCRespon
 	return resp
 }
 
-// callObserveRaw invokes toolObserve directly and returns the raw JSONRPCResponse.
+// callObserveRaw invokes the canonical observe dispatcher and returns the raw JSONRPCResponse.
 func callObserveRaw(h *ToolHandler, what string) mcp.JSONRPCResponse {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"what":"` + what + `"}`)
-	return h.toolObserve(req, args)
+	return h.observeDispatcher.Handle(req, args)
 }
 
 // callAnalyzeRaw invokes toolAnalyze with async normalization.

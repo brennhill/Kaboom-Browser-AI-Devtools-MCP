@@ -11,7 +11,7 @@ code_paths:
   - cmd/browser-agent/internal/pushapi/handler.go
   - cmd/browser-agent/internal/mediaapi/screenshots.go
   - cmd/browser-agent/internal/mediaapi/draw_mode.go
-  - cmd/browser-agent/tools_observe.go
+  - cmd/browser-agent/internal/toolobserve/dispatcher.go
   - cmd/browser-agent/internal/toolobserve/inbox.go
   - src/background/push-handler.ts
   - src/content/ui/chat-widget.ts
@@ -68,7 +68,7 @@ Push browser content (annotations, screenshots, chat messages) to the AI automat
 | `internal/push/sampling.go` | MCP sampling/createMessage builder | `sampling_test.go` (5 tests) |
 | `cmd/browser-agent/internal/pushapi/runtime.go` | Negotiated capability/framing state and MCP outbound delivery | `runtime_test.go` |
 | `cmd/browser-agent/internal/pushapi/handler.go` | Push HTTP parsing, event delivery, draining, and annotation routing | `handler_test.go` |
-| `cmd/browser-agent/tools_observe.go` | observe(inbox) adapter + piggyback wiring | `tools_observe_inbox_test.go` (6 tests) |
+| `cmd/browser-agent/internal/toolobserve/dispatcher.go` | observe(inbox) adapter + piggyback wiring | `tools_observe_inbox_test.go` (6 tests) |
 | `cmd/browser-agent/internal/toolobserve/inbox.go` | inbox response and piggyback behavior | `tools_observe_inbox_test.go` (6 tests) |
 
 ### TypeScript (extension)

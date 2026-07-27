@@ -53,7 +53,7 @@ func TestCommandResult_EvidenceAlwaysIncludesBeforeAfterPaths(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 	observe := parseToolResult(t, resp)
 	if observe.IsError {
 		t.Fatalf("observe command_result should be success, got: %s", firstText(observe))
@@ -109,7 +109,7 @@ func TestCommandResult_EvidenceOnMutationSkipsReadOnlyAction(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 	observe := parseToolResult(t, resp)
 	if observe.IsError {
 		t.Fatalf("observe command_result should be success, got: %s", firstText(observe))
@@ -177,7 +177,7 @@ func TestCommandResult_EvidencePartialWhenAfterCaptureFails(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 	observe := parseToolResult(t, resp)
 	if !observe.IsError {
 		t.Fatalf("observe command_result should be error for failed action, got: %s", firstText(observe))

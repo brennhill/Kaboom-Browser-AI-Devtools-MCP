@@ -240,7 +240,7 @@ func TestToolObserve_MissingWhat(t *testing.T) {
 		ID:      json.RawMessage(`"test-id"`),
 	}
 
-	resp := toolHandler.toolObserve(req, json.RawMessage(`{}`))
+	resp := toolHandler.observeDispatcher.Handle(req, json.RawMessage(`{}`))
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -269,7 +269,7 @@ func TestToolObserve_UnknownMode(t *testing.T) {
 		ID:      json.RawMessage(`"test-id"`),
 	}
 
-	resp := toolHandler.toolObserve(req, json.RawMessage(`{"what": "invalid_mode"}`))
+	resp := toolHandler.observeDispatcher.Handle(req, json.RawMessage(`{"what": "invalid_mode"}`))
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -301,7 +301,7 @@ func TestToolObserve_NetworkBodies(t *testing.T) {
 		ID:      json.RawMessage(`"test-id"`),
 	}
 
-	resp := toolHandler.toolObserve(req, json.RawMessage(`{"what": "network_bodies"}`))
+	resp := toolHandler.observeDispatcher.Handle(req, json.RawMessage(`{"what": "network_bodies"}`))
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {

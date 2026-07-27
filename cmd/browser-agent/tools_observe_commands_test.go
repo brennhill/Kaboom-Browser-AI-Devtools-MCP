@@ -23,7 +23,7 @@ func TestToolObserveFailedCommands_NoFailed(t *testing.T) {
 
 	args := json.RawMessage(`{}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := env.handler.toolObserveFailedCommands(req, args)
+	resp := env.handler.observeDispatcher.FailedCommands(req, args)
 
 	result := parseToolResult(t, resp)
 	if result.IsError {
@@ -58,7 +58,7 @@ func TestToolObserveFailedCommands_WithFailed(t *testing.T) {
 
 	args := json.RawMessage(`{}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := env.handler.toolObserveFailedCommands(req, args)
+	resp := env.handler.observeDispatcher.FailedCommands(req, args)
 
 	result := parseToolResult(t, resp)
 	if result.IsError {

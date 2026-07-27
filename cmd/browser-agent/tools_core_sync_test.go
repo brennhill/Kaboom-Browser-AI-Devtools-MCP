@@ -77,8 +77,7 @@ func TestMaybeWaitForCommand_BackgroundOverride(t *testing.T) {
 }
 
 func TestToolObserveCommandResult_IncludesTraceTimeline(t *testing.T) {
-	cap := capture.NewCapture()
-	handler := &ToolHandler{capture: cap}
+	handler, _, cap := makeToolHandler(t)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	correlationID := "test-trace-obs-123"
 
@@ -95,7 +94,7 @@ func TestToolObserveCommandResult_IncludesTraceTimeline(t *testing.T) {
 	cap.AcknowledgePendingQuery(queryID)
 	cap.CompleteCommand(correlationID, json.RawMessage(`{"success":true}`), "")
 
-	resp := handler.toolObserveCommandResult(req, json.RawMessage(`{"correlation_id":"test-trace-obs-123"}`))
+	resp := handler.observeDispatcher.CommandResult(req, json.RawMessage(`{"correlation_id":"test-trace-obs-123"}`))
 	data := parseMCPResponseData(t, resp.Result)
 
 	trace, ok := data["trace"].(map[string]any)

@@ -16,9 +16,9 @@ last_verified_date: 2026-03-05
 # Observe Tech Spec (TARGET)
 
 ## Dispatcher
-- Entry: `toolObserve` in `cmd/browser-agent/tools_observe.go`
-- Dispatch map: `observeHandlers` in `cmd/browser-agent/tools_observe.go`, keyed by `what`
-- Response augmentation helpers: `cmd/browser-agent/tools_observe_response.go`
+- Entry: `(*toolobserve.Dispatcher).Handle` in `cmd/browser-agent/internal/toolobserve/dispatcher.go`
+- The dispatcher owns its mode registry, keyed by `what`; callers do not access a second registry surface.
+- Response augmentation helpers: `cmd/browser-agent/internal/toolobserve/response.go`
 
 ## Data Sources
 1. Server log buffers (`errors`, `logs`, `timeline`, `error_bundles`)
@@ -29,7 +29,7 @@ last_verified_date: 2026-03-05
 
 ## Async Command Observation Path
 - Command IDs are registered when active commands are queued.
-- `toolObserveCommandResult` reads from command tracker.
+- `(*toolobserve.Dispatcher).CommandResult` reads from the command tracker.
 - Annotation wait path supports blocking retrieval for draw mode correlation IDs (`ann_*`).
 
 ## Pagination and Filtering
@@ -55,10 +55,9 @@ last_verified_date: 2026-03-05
 - If expansion script execution fails, screenshot capture degrades to CDP layout-only sizing; if CDP attach/capture fails, behavior degrades to viewport capture.
 
 ## Code Anchors
-- `cmd/browser-agent/tools_observe.go`
-- `cmd/browser-agent/tools_observe.go`
-- `cmd/browser-agent/tools_observe_response.go`
-- `cmd/browser-agent/tools_observe_analysis.go`
-- `cmd/browser-agent/tools_observe_bundling.go`
-- `internal/capture/queries.go`
+- `cmd/browser-agent/internal/toolobserve/dispatcher.go`
+- `cmd/browser-agent/internal/toolobserve/response.go`
+- `cmd/browser-agent/internal/toolobserve/inbox.go`
+- `internal/capture/query_dispatcher.go`
+- `internal/queries/dispatcher_commands.go`
 - `src/background/commands/observe.ts`

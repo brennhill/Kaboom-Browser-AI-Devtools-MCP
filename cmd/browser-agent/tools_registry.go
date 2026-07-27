@@ -131,7 +131,7 @@ func (h *ToolHandler) buildToolModuleRegistry() *toolModuleRegistry {
 		"Read captured browser state: logs, network, screenshots, and async results",
 		[]json.RawMessage{json.RawMessage(`{"what":"logs"}`), json.RawMessage(`{"what":"screenshot"}`)},
 		validateJSONObjectArgs,
-		h.toolObserve,
+		h.observeDispatcher.Handle,
 	))
 	registry.register("analyze", newToolMethodModule(
 		"analyze",

@@ -57,9 +57,9 @@ func TestSchemaParity_ObserveWhatEnumMatchesHandlers(t *testing.T) {
 	h, _, _ := makeToolHandler(t)
 
 	schemaModes := mustToolEnumValues(t, h.ToolsList(), "observe", "what")
-	runtimeModes := sortedKeysObserveHandlers()
+	runtimeModes := sortedKeysObserveHandlers(h)
 
-	assertSameStringSet(t, "observe.what enum vs observeHandlers", schemaModes, runtimeModes)
+	assertSameStringSet(t, "observe.what enum vs observe dispatcher", schemaModes, runtimeModes)
 }
 
 func sortedKeysGenerateHandlers() []string {
@@ -94,15 +94,13 @@ var observeSilentModes = map[string]bool{
 	"draw_session":      true,
 }
 
-func sortedKeysObserveHandlers() []string {
-	keys := make([]string, 0, len(observeHandlers))
-	for mode := range observeHandlers {
-		if observeSilentModes[mode] {
-			continue
+func sortedKeysObserveHandlers(h *ToolHandler) []string {
+	keys := make([]string, 0)
+	for _, mode := range h.observeDispatcher.ValidModes() {
+		if !observeSilentModes[mode] {
+			keys = append(keys, mode)
 		}
-		keys = append(keys, mode)
 	}
-	sort.Strings(keys)
 	return keys
 }
 

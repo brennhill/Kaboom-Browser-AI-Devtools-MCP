@@ -133,7 +133,7 @@ func TestToolHandler_Observe_NoStdout(t *testing.T) {
 			}
 
 			output := captureStdout(t, func() {
-				_ = handler.toolObserve(req, args)
+				_ = handler.observeDispatcher.Handle(req, args)
 			})
 
 			if output != "" {

@@ -60,7 +60,7 @@ func TestCSP_BlockedActions_None_Omitted(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"page"}`)
-	resp := env.handler.toolObserve(req, args)
+	resp := env.handler.observeDispatcher.Handle(req, args)
 
 	data := parsePageInfoResponse(t, resp)
 
@@ -86,7 +86,7 @@ func TestCSP_BlockedActions_ScriptExec(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"page"}`)
-	resp := env.handler.toolObserve(req, args)
+	resp := env.handler.observeDispatcher.Handle(req, args)
 
 	data := parsePageInfoResponse(t, resp)
 
@@ -130,7 +130,7 @@ func TestCSP_BlockedActions_PageBlocked(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"page"}`)
-	resp := env.handler.toolObserve(req, args)
+	resp := env.handler.observeDispatcher.Handle(req, args)
 
 	data := parsePageInfoResponse(t, resp)
 
@@ -192,7 +192,7 @@ func TestCSP_Page_IncludesBlockedActions(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"page"}`)
-	resp := env.handler.toolObserve(req, args)
+	resp := env.handler.observeDispatcher.Handle(req, args)
 
 	data := parsePageInfoResponse(t, resp)
 

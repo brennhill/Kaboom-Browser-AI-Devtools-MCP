@@ -398,7 +398,7 @@ func TestRichAction_AnalyzeFieldsSurfacedTopLevel(t *testing.T) {
 	// Observe command_result
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
@@ -464,7 +464,7 @@ func TestRichAction_NoAnalyzeFieldsWhenAbsent(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
@@ -515,7 +515,7 @@ func TestRichAction_MatchedDiagnosticsSurfacedTopLevel(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
@@ -583,7 +583,7 @@ func TestRichAction_TargetContextSurfacedTopLevel(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
@@ -654,7 +654,7 @@ func TestRichAction_DomSummaryPassthrough(t *testing.T) {
 	// Observe command_result — verify extension fields pass through
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {

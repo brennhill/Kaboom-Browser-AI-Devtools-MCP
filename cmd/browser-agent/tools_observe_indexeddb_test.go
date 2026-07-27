@@ -19,7 +19,7 @@ func TestObserveIndexedDB_MissingDatabase(t *testing.T) {
 	cap.SetTrackingStatusForTest(11, "https://app.example.com")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolObserve(req, json.RawMessage(`{"what":"indexeddb","store":"users"}`))
+	resp := h.observeDispatcher.Handle(req, json.RawMessage(`{"what":"indexeddb","store":"users"}`))
 	result := parseToolResult(t, resp)
 	if !result.IsError {
 		t.Fatal("missing database should return error")
@@ -36,7 +36,7 @@ func TestObserveIndexedDB_MissingStore(t *testing.T) {
 	cap.SetTrackingStatusForTest(11, "https://app.example.com")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolObserve(req, json.RawMessage(`{"what":"indexeddb","database":"app-cache"}`))
+	resp := h.observeDispatcher.Handle(req, json.RawMessage(`{"what":"indexeddb","database":"app-cache"}`))
 	result := parseToolResult(t, resp)
 	if !result.IsError {
 		t.Fatal("missing store should return error")
@@ -73,7 +73,7 @@ func TestObserveIndexedDB_ReturnsEntries(t *testing.T) {
 	}()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolObserve(req, json.RawMessage(`{"what":"indexeddb","database":"app-cache","store":"users","limit":10}`))
+	resp := h.observeDispatcher.Handle(req, json.RawMessage(`{"what":"indexeddb","database":"app-cache","store":"users","limit":10}`))
 	result := parseToolResult(t, resp)
 	if result.IsError {
 		t.Fatalf("indexeddb should succeed, got: %s", firstText(result))
@@ -147,7 +147,7 @@ func TestObserveStorage_IncludesIndexedDBListing(t *testing.T) {
 	}()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolObserve(req, json.RawMessage(`{"what":"storage"}`))
+	resp := h.observeDispatcher.Handle(req, json.RawMessage(`{"what":"storage"}`))
 	result := parseToolResult(t, resp)
 	if result.IsError {
 		t.Fatalf("storage should succeed, got: %s", firstText(result))

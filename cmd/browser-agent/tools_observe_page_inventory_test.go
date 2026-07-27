@@ -21,7 +21,7 @@ func TestToolsObservePageInventory_DispatchesQuery(t *testing.T) {
 	h, _, cap := makeToolHandler(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolObserve(req, normalizeObserveArgsForAsync(`{"what":"page_inventory"}`))
+	resp := h.observeDispatcher.Handle(req, normalizeObserveArgsForAsync(`{"what":"page_inventory"}`))
 	result := parseToolResult(t, resp)
 	if result.IsError {
 		t.Fatalf("page_inventory should queue successfully, got: %s", result.Content[0].Text)
@@ -50,7 +50,8 @@ func TestToolsObservePageInventory_DispatchesQuery(t *testing.T) {
 func TestToolsObservePageInventory_InValidModes(t *testing.T) {
 	t.Parallel()
 
-	modes := getValidObserveModes()
+	h, _, _ := makeToolHandler(t)
+	modes := strings.Join(h.observeDispatcher.ValidModes(), ", ")
 	if !strings.Contains(modes, "page_inventory") {
 		t.Errorf("valid observe modes should include 'page_inventory': %s", modes)
 	}
@@ -130,7 +131,7 @@ func TestToolsObservePageInventory_ResponseStructure(t *testing.T) {
 	h, _, _ := makeToolHandler(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolObserve(req, normalizeObserveArgsForAsync(`{"what":"page_inventory"}`))
+	resp := h.observeDispatcher.Handle(req, normalizeObserveArgsForAsync(`{"what":"page_inventory"}`))
 	if resp.Result == nil {
 		t.Fatal("observe(page_inventory) returned nil result")
 	}
@@ -155,7 +156,7 @@ func TestToolsObservePageInventory_ForwardsParams(t *testing.T) {
 	h, _, cap := makeToolHandler(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolObserve(req, normalizeObserveArgsForAsync(`{"what":"page_inventory","visible_only":true,"limit":50}`))
+	resp := h.observeDispatcher.Handle(req, normalizeObserveArgsForAsync(`{"what":"page_inventory","visible_only":true,"limit":50}`))
 	result := parseToolResult(t, resp)
 	if result.IsError {
 		t.Fatalf("page_inventory with params should succeed, got: %s", result.Content[0].Text)

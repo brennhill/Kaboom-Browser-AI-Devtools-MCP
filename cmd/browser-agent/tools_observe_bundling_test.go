@@ -514,7 +514,7 @@ func TestErrorBundles_ViaObserveDispatcher(t *testing.T) {
 	// Call via the observe dispatcher (as a real client would)
 	args := json.RawMessage(`{"what":"error_bundles"}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := env.handler.toolObserve(req, args)
+	resp := env.handler.observeDispatcher.Handle(req, args)
 
 	if resp.Result == nil {
 		t.Fatal("observe error_bundles should return result")

@@ -15,7 +15,7 @@ code_paths:
   - cmd/browser-agent/internal/toolanalyze/pageissues/handler.go
   - internal/annotation/draw_sessions_handler.go
   - cmd/browser-agent/tools_async_completion.go
-  - cmd/browser-agent/tools_observe.go
+  - cmd/browser-agent/internal/toolobserve/dispatcher.go
   - cmd/browser-agent/tools_async_completion.go
   - cmd/browser-agent/internal/toolanalyze/combinedaudit/handler.go
   - cmd/browser-agent/internal/toolanalyze/navigation.go

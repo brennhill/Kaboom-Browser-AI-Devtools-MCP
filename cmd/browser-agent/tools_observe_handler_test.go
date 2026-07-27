@@ -27,7 +27,7 @@ func TestToolsObserveDispatch_InvalidJSON(t *testing.T) {
 	h, _, _ := makeToolHandler(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolObserve(req, json.RawMessage(`{bad json`))
+	resp := h.observeDispatcher.Handle(req, json.RawMessage(`{bad json`))
 
 	result := parseToolResult(t, resp)
 	if !result.IsError {
@@ -43,7 +43,7 @@ func TestToolsObserveDispatch_MissingWhat(t *testing.T) {
 	h, _, _ := makeToolHandler(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolObserve(req, json.RawMessage(`{}`))
+	resp := h.observeDispatcher.Handle(req, json.RawMessage(`{}`))
 
 	result := parseToolResult(t, resp)
 	if !result.IsError {
@@ -80,7 +80,7 @@ func TestToolsObserveDispatch_UnknownModeAliasAddsCanonicalWhatWarning(t *testin
 	h, _, _ := makeToolHandler(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolObserve(req, json.RawMessage(`{"mode":"nonexistent_mode"}`))
+	resp := h.observeDispatcher.Handle(req, json.RawMessage(`{"mode":"nonexistent_mode"}`))
 	result := parseToolResult(t, resp)
 	if !result.IsError {
 		t.Fatal("unknown mode alias should return isError:true")
@@ -102,7 +102,7 @@ func TestToolsObserveDispatch_EmptyArgs(t *testing.T) {
 	h, _, _ := makeToolHandler(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolObserve(req, nil)
+	resp := h.observeDispatcher.Handle(req, nil)
 
 	result := parseToolResult(t, resp)
 	if !result.IsError {
@@ -115,7 +115,7 @@ func TestToolsObserveDispatch_ModeAliasAddsCanonicalWhatWarning(t *testing.T) {
 	h, _, _ := makeToolHandler(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolObserve(req, json.RawMessage(`{"mode":"pilot"}`))
+	resp := h.observeDispatcher.Handle(req, json.RawMessage(`{"mode":"pilot"}`))
 	result := parseToolResult(t, resp)
 	if result.IsError {
 		t.Fatalf("mode alias should be accepted, got: %s", result.Content[0].Text)
@@ -137,7 +137,7 @@ func TestToolsObserveDispatch_ConflictingWhatAndMode(t *testing.T) {
 	h, _, _ := makeToolHandler(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolObserve(req, json.RawMessage(`{"what":"pilot","mode":"errors"}`))
+	resp := h.observeDispatcher.Handle(req, json.RawMessage(`{"what":"pilot","mode":"errors"}`))
 	result := parseToolResult(t, resp)
 	if !result.IsError {
 		t.Fatal("conflicting what/mode should return isError:true")
@@ -262,7 +262,7 @@ func TestToolsObserveErrors_URLFilter(t *testing.T) {
 	}, nil)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolObserve(req, json.RawMessage(`{"what":"errors","url":"example.com"}`))
+	resp := h.observeDispatcher.Handle(req, json.RawMessage(`{"what":"errors","url":"example.com"}`))
 	result := parseToolResult(t, resp)
 	data := extractResultJSON(t, result)
 
@@ -282,7 +282,7 @@ func TestToolsObserveErrors_LimitParam(t *testing.T) {
 	}
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolObserve(req, json.RawMessage(`{"what":"errors","limit":2}`))
+	resp := h.observeDispatcher.Handle(req, json.RawMessage(`{"what":"errors","limit":2}`))
 	result := parseToolResult(t, resp)
 	data := extractResultJSON(t, result)
 
@@ -456,7 +456,7 @@ func TestToolsObserveNetworkBodies_Filters(t *testing.T) {
 
 	// Filter by URL
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolObserve(req, json.RawMessage(`{"what":"network_bodies","url":"example.com"}`))
+	resp := h.observeDispatcher.Handle(req, json.RawMessage(`{"what":"network_bodies","url":"example.com"}`))
 	result := parseToolResult(t, resp)
 	data := extractResultJSON(t, result)
 	count, _ := data["count"].(float64)
@@ -465,7 +465,7 @@ func TestToolsObserveNetworkBodies_Filters(t *testing.T) {
 	}
 
 	// Filter by method
-	resp = h.toolObserve(req, json.RawMessage(`{"what":"network_bodies","method":"POST"}`))
+	resp = h.observeDispatcher.Handle(req, json.RawMessage(`{"what":"network_bodies","method":"POST"}`))
 	result = parseToolResult(t, resp)
 	data = extractResultJSON(t, result)
 	count, _ = data["count"].(float64)
@@ -474,7 +474,7 @@ func TestToolsObserveNetworkBodies_Filters(t *testing.T) {
 	}
 
 	// Filter by status_min
-	resp = h.toolObserve(req, json.RawMessage(`{"what":"network_bodies","status_min":400}`))
+	resp = h.observeDispatcher.Handle(req, json.RawMessage(`{"what":"network_bodies","status_min":400}`))
 	result = parseToolResult(t, resp)
 	data = extractResultJSON(t, result)
 	count, _ = data["count"].(float64)
@@ -506,7 +506,7 @@ func TestToolsObserveNetworkBodies_BodyPathFilter(t *testing.T) {
 	})
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolObserve(req, json.RawMessage(`{"what":"network_bodies","body_path":"data.viewer.roles[0]"}`))
+	resp := h.observeDispatcher.Handle(req, json.RawMessage(`{"what":"network_bodies","body_path":"data.viewer.roles[0]"}`))
 	result := parseToolResult(t, resp)
 	if result.IsError {
 		t.Fatalf("network_bodies with body_path should not error, got: %s", result.Content[0].Text)
@@ -549,7 +549,7 @@ func TestToolsObserveNetworkBodies_BodyPathValidation(t *testing.T) {
 	})
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolObserve(req, json.RawMessage(`{"what":"network_bodies","body_path":"data.items["}`))
+	resp := h.observeDispatcher.Handle(req, json.RawMessage(`{"what":"network_bodies","body_path":"data.items["}`))
 	result := parseToolResult(t, resp)
 	if !result.IsError {
 		t.Fatal("invalid body_path syntax should return isError:true")
@@ -832,7 +832,8 @@ func TestToolsObserve_IsServerSideObserveMode(t *testing.T) {
 func TestToolsObserve_GetValidObserveModes(t *testing.T) {
 	t.Parallel()
 
-	modes := getValidObserveModes()
+	h, _, _ := makeToolHandler(t)
+	modes := strings.Join(h.observeDispatcher.ValidModes(), ", ")
 	// Should be sorted
 	modeList := strings.Split(modes, ", ")
 	for i := 1; i < len(modeList); i++ {

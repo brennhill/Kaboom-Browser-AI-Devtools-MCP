@@ -9,21 +9,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolobserve"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	wiretypes "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 func TestAppendAlertsToResponse(t *testing.T) {
 	t.Parallel()
-
-	cap := capture.NewCapture()
-	server, err := NewServer(t.TempDir()+"/test-observe-alerts.jsonl", 100)
-	if err != nil {
-		t.Fatalf("NewServer: %v", err)
-	}
-	mcpHandler := NewToolHandler(server, cap)
-	h := mcpHandler.toolHandler.(*ToolHandler)
 
 	t.Run("appends alert block", func(t *testing.T) {
 		// Build a valid MCP response with one content block
@@ -43,7 +35,7 @@ func TestAppendAlertsToResponse(t *testing.T) {
 			{Severity: "error", Category: "regression", Title: "Something broke"},
 		}
 
-		got := h.appendAlertsToResponse(resp, alerts)
+		got := toolobserve.AppendAlertsToResponse(resp, alerts)
 
 		var result mcp.MCPToolResult
 		if err := json.Unmarshal(got.Result, &result); err != nil {
@@ -74,7 +66,7 @@ func TestAppendAlertsToResponse(t *testing.T) {
 			Result:  json.RawMessage(resultJSON),
 		}
 
-		got := h.appendAlertsToResponse(resp, []wiretypes.Alert{})
+		got := toolobserve.AppendAlertsToResponse(resp, []wiretypes.Alert{})
 
 		var result mcp.MCPToolResult
 		if err := json.Unmarshal(got.Result, &result); err != nil {
@@ -93,7 +85,7 @@ func TestAppendAlertsToResponse(t *testing.T) {
 			Result:  json.RawMessage(`"not an object"`),
 		}
 
-		got := h.appendAlertsToResponse(resp, []wiretypes.Alert{{Title: "alert"}})
+		got := toolobserve.AppendAlertsToResponse(resp, []wiretypes.Alert{{Title: "alert"}})
 		// Should return the original response unchanged
 		if string(got.Result) != `"not an object"` {
 			t.Fatalf("malformed result should be returned unchanged, got: %s", got.Result)

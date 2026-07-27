@@ -30,7 +30,7 @@ Each feature under `docs/features/feature/<feature-name>/` should keep:
 ## Canonical MCP References
 - Tool schemas: `internal/schema/schema.go`
 - Tool dispatch: `cmd/browser-agent/tools_core.go`
-- Observe handlers: `cmd/browser-agent/tools_observe.go`
+- Observe handlers: `cmd/browser-agent/internal/toolobserve/dispatcher.go`
 - Analyze handlers: `cmd/browser-agent/tools_analyze.go`
 - Configure handlers: `cmd/browser-agent/tools_configure.go`
 - Interact handlers: `cmd/browser-agent/tools_interact.go`

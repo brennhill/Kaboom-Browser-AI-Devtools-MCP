@@ -28,10 +28,10 @@ var analyzeHandlers = map[string]toolrouting.Handler[*ToolHandler]{
 	"dom":                 azInspect(inspect.HandleDOM),
 	"api_validation":      (*ToolHandler).toolValidateAPI,
 	"page_summary":        (*ToolHandler).toolAnalyzePageSummary,
-	"performance":         obs(observe.CheckPerformance),
-	"accessibility":       obs(observe.RunA11yAudit),
-	"error_clusters":      obs(observe.AnalyzeErrors),
-	"navigation_patterns": obs(observe.AnalyzeHistory),
+	"performance":         azObserve(observe.CheckPerformance),
+	"accessibility":       azObserve(observe.RunA11yAudit),
+	"error_clusters":      azObserve(observe.AnalyzeErrors),
+	"navigation_patterns": azObserve(observe.AnalyzeHistory),
 	"security_audit":      azLocal(toolanalyze.HandleSecurityAudit),
 	"third_party_audit":   azLocal(toolanalyze.HandleThirdPartyAudit),
 	"link_health":         azLocal(toolanalyze.HandleLinkHealth),
@@ -69,6 +69,12 @@ var analyzeHandlers = map[string]toolrouting.Handler[*ToolHandler]{
 	"feature_gates": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return h.interactAction().HandleContentExtraction(req, args, "feature_gates", "feature_gates")
 	},
+}
+
+func azObserve(fn func(observe.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) toolrouting.Handler[*ToolHandler] {
+	return func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		return fn(h, req, args)
+	}
 }
 
 // analyzeValueAliases maps shorthand names to their canonical analyze mode names with deprecation metadata.

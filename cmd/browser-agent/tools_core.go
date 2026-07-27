@@ -24,6 +24,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactstate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactupload"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolobserve"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolrecording"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/apicontract"
@@ -118,6 +119,7 @@ type ToolHandler struct {
 	uploadInteractHandler    *interactupload.Handler
 	testGenHandler           *testgenhandler.Handler
 	generateDispatcher       *toolgenerate.Dispatcher
+	observeDispatcher        *toolobserve.Dispatcher
 	stateInteractHandler     *interactstate.Handler
 	configureSessions        *toolconfigure.SessionHandler
 	annotationAnalysis       *annotationanalysis.Handler
@@ -204,7 +206,7 @@ func (h *ToolHandler) HandleToolCall(req mcp.JSONRPCRequest, name string, args j
 	}
 
 	// Piggyback push inbox hint if events are pending
-	resp = h.appendPushPiggyback(resp)
+	resp = toolobserve.AppendPushPiggyback(h, resp)
 
 	h.auditRecorder.Record(req, name, args, resp, start)
 
@@ -498,6 +500,29 @@ func NewToolHandler(server *Server, captureStore *capture.Store) *MCPHandler {
 	handler.uploadInteractHandler = toolinteract.NewUploadInteractHandler(interactDeps, handler.interactActionHandler)
 	handler.testGenHandler = testgenhandler.New(handler)
 	handler.generateDispatcher = toolgenerate.NewDispatcher(handler, handler.testGenHandler)
+	handler.observeDispatcher = toolobserve.NewDispatcher(toolobserve.Config{
+		Host: handler, Commands: handler.capture, AnnotationStore: handler.annotationStore,
+		Annotations: func(_ toolobserve.Host, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return handler.annotationAnalysis.GetAnnotations(req, args)
+		},
+		AnnotationDetail: func(_ toolobserve.Host, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return handler.annotationAnalysis.GetAnnotationDetail(req, args)
+		},
+		Recordings: func(_ toolobserve.Host, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return handler.recordingHandler.Recordings(req, args)
+		},
+		RecordingActions: func(_ toolobserve.Host, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return handler.recordingHandler.RecordingActions(req, args)
+		},
+		PlaybackResults: func(_ toolobserve.Host, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return handler.recordingHandler.PlaybackResults(req, args)
+		},
+		LogDiffReport: func(_ toolobserve.Host, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return handler.recordingHandler.LogDiffReport(req, args)
+		},
+		FormatCommand: handler.formatCommandResult, InjectSummary: handler.maybeInjectSummary,
+		DrainAlerts: handler.alertBuffer.DrainAlerts, DiagnosticHint: handler.Guards.DiagnosticHint(),
+	})
 	handler.stateInteractHandler = toolinteract.NewStateInteractHandler(interactDeps, handler.sessionStoreImpl)
 	handler.configureSessions = toolconfigure.NewSessionHandler(toolconfigure.SessionDeps{
 		RequireStore: func(req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool) {

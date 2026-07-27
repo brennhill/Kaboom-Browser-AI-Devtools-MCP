@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolobserve"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 )
@@ -22,7 +23,7 @@ func piggybackTestResponse(t *testing.T, h *ToolHandler, baseText string) mcp.MC
 	result := mcp.MCPToolResult{Content: []mcp.MCPContentBlock{{Type: "text", Text: baseText}}}
 	resultJSON, _ := json.Marshal(result)
 	resp := mcp.JSONRPCResponse{JSONRPC: "2.0", Result: json.RawMessage(resultJSON)}
-	out := h.appendPushPiggyback(resp)
+	out := toolobserve.AppendPushPiggyback(h, resp)
 	var outResult mcp.MCPToolResult
 	if err := json.Unmarshal(out.Result, &outResult); err != nil {
 		t.Fatal(err)
@@ -33,7 +34,7 @@ func piggybackTestResponse(t *testing.T, h *ToolHandler, baseText string) mcp.MC
 func TestToolObserveInbox_Empty(t *testing.T) {
 	h := newPushTestToolHandler(push.NewPushInbox(10))
 
-	resp := h.toolObserveInbox(mcp.JSONRPCRequest{ID: json.RawMessage(`1`)}, nil)
+	resp := toolobserve.HandleInbox(h, mcp.JSONRPCRequest{ID: json.RawMessage(`1`)}, nil)
 	if resp.Error != nil {
 		t.Fatalf("unexpected error: %v", resp.Error)
 	}
@@ -61,7 +62,7 @@ func TestToolObserveInbox_WithEvents(t *testing.T) {
 	})
 
 	h := newPushTestToolHandler(inbox)
-	resp := h.toolObserveInbox(mcp.JSONRPCRequest{ID: json.RawMessage(`2`)}, nil)
+	resp := toolobserve.HandleInbox(h, mcp.JSONRPCRequest{ID: json.RawMessage(`2`)}, nil)
 	if resp.Error != nil {
 		t.Fatalf("unexpected error: %v", resp.Error)
 	}
@@ -74,7 +75,7 @@ func TestToolObserveInbox_WithEvents(t *testing.T) {
 
 func TestToolObserveInbox_NilInbox(t *testing.T) {
 	h := newPushTestToolHandler(nil)
-	resp := h.toolObserveInbox(mcp.JSONRPCRequest{ID: json.RawMessage(`3`)}, nil)
+	resp := toolobserve.HandleInbox(h, mcp.JSONRPCRequest{ID: json.RawMessage(`3`)}, nil)
 	if resp.Error != nil {
 		t.Fatal("nil inbox should not error")
 	}
@@ -203,7 +204,7 @@ func TestAppendPushPiggyback_NilInbox(t *testing.T) {
 	h := newPushTestToolHandler(nil)
 
 	resp := mcp.JSONRPCResponse{JSONRPC: "2.0", Result: json.RawMessage(`{}`)}
-	out := h.appendPushPiggyback(resp)
+	out := toolobserve.AppendPushPiggyback(h, resp)
 	if string(out.Result) != `{}` {
 		t.Fatal("nil inbox piggyback should be no-op")
 	}

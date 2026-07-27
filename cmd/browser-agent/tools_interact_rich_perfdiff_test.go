@@ -143,7 +143,7 @@ func TestRichAction_CommandResultEnrichedWithPerfDiff(t *testing.T) {
 	// Now observe the command_result — should include perf_diff
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	if resp.Result == nil {
 		t.Fatal("No result from toolObserveCommandResult")
@@ -214,7 +214,7 @@ func TestRichAction_CommandResultNoPerfDiffWhenNoSnapshots(t *testing.T) {
 	// Observe — should return without perf_diff (no crash)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
@@ -250,7 +250,7 @@ func TestRichAction_CommandResultIncludesTimingMs(t *testing.T) {
 	// Observe command_result
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
 		t.Fatalf("json.Unmarshal error: %v", err)
@@ -329,7 +329,7 @@ func TestRichAction_PerfDiffWithFullWebVitals(t *testing.T) {
 	// Observe command_result
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
@@ -424,7 +424,7 @@ func TestRichAction_CompactClickMissingDomSummary_WhenExtensionHangs(t *testing.
 	// Observe the expired command
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
@@ -476,7 +476,7 @@ func TestRichAction_CompactClickHasDomSummary_WhenExtensionResponds(t *testing.T
 	// Observe command_result
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
-	resp := env.handler.toolObserveCommandResult(req, args)
+	resp := env.handler.observeDispatcher.CommandResult(req, args)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {

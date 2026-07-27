@@ -12,7 +12,7 @@ Keep each MCP tool's package-main surface concentrated in its dispatch boundary,
 with implementations delegated to focused internal packages:
 
 ```
-tools_observe.go            # observe routing and thin result adapters
+internal/toolobserve/dispatcher.go            # observe routing and thin result adapters
 tools_analyze_dispatch.go   # analyze routing
 tools_configure.go          # configure routing and thin adapters
 tools_interact_dispatch.go  # interact routing and boundary glue
