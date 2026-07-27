@@ -4,8 +4,9 @@ package main
 
 import (
 	"encoding/json"
-	"strings"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/replay"
 )
 
 func resolveReplayStepArgs(seq *Sequence, params sequenceReplayParams, idx int) json.RawMessage {
@@ -18,7 +19,7 @@ func resolveReplayStepArgs(seq *Sequence, params sequenceReplayParams, idx int) 
 
 func (h *ToolHandler) executeReplayStep(req JSONRPCRequest, stepArgs json.RawMessage, stepIndex int, stepTimeout time.Duration) (SequenceStepResult, bool) {
 	actionName := extractReplayActionName(stepArgs)
-	replayStepArgs := forceReplayAsyncInteractStep(stepArgs)
+	replayStepArgs := replay.ForceAsync(stepArgs)
 
 	stepStart := time.Now()
 	stepResp := h.toolInteract(req, replayStepArgs)
@@ -30,7 +31,7 @@ func (h *ToolHandler) executeReplayStep(req JSONRPCRequest, stepArgs json.RawMes
 		DurationMs: stepDuration,
 	}
 
-	if corrID := extractCorrelationIDFromToolResponse(stepResp); corrID != "" {
+	if corrID := replay.CorrelationID(stepResp); corrID != "" {
 		stepResult.CorrelationID = corrID
 		if stepTimeout > 0 {
 			cmd, found := h.capture.WaitForCommand(corrID, stepTimeout)
@@ -82,57 +83,18 @@ func extractReplayActionName(stepArgs json.RawMessage) string {
 // extension execution. This keeps replay_sequence deterministic and avoids
 // transport-level timeouts for long-running actions.
 func forceReplayAsyncInteractStep(stepArgs json.RawMessage) json.RawMessage {
-	var argsMap map[string]any
-	if err := json.Unmarshal(stepArgs, &argsMap); err != nil {
-		return stepArgs
-	}
-	argsMap["sync"] = false
-	argsMap["wait"] = false
-	updated, err := json.Marshal(argsMap)
-	if err != nil {
-		return stepArgs
-	}
-	return updated
+	return replay.ForceAsync(stepArgs)
 }
 
 // extractCorrelationIDFromToolResponse returns correlation_id from JSON tool responses.
 func extractCorrelationIDFromToolResponse(resp JSONRPCResponse) string {
-	var result MCPToolResult
-	if err := json.Unmarshal(resp.Result, &result); err != nil || len(result.Content) == 0 {
-		return ""
-	}
-	text := result.Content[0].Text
-	jsonStart := strings.Index(text, "{")
-	if jsonStart < 0 {
-		return ""
-	}
-	var data map[string]any
-	if err := json.Unmarshal([]byte(text[jsonStart:]), &data); err != nil {
-		return ""
-	}
-	correlationID, _ := data["correlation_id"].(string)
-	return correlationID
+	return replay.CorrelationID(resp)
 }
 
 // extractErrorMessage extracts the error message text from an error response.
 func extractErrorMessage(resp JSONRPCResponse) string {
-	var result MCPToolResult
-	if err := json.Unmarshal(resp.Result, &result); err != nil {
-		return "unknown error"
-	}
-	if len(result.Content) > 0 {
-		text := result.Content[0].Text
-		// Try to extract message from structured error JSON.
-		var errData struct {
-			Message string `json:"message"`
-		}
-		jsonStart := strings.Index(text, "{")
-		if jsonStart >= 0 {
-			if json.Unmarshal([]byte(text[jsonStart:]), &errData) == nil && errData.Message != "" {
-				return errData.Message
-			}
-		}
-		return text
+	if message := replay.ErrorMessage(resp); message != "" {
+		return message
 	}
 	return "unknown error"
 }

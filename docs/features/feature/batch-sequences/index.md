@@ -6,6 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-26
 code_paths:
+  - cmd/browser-agent/internal/replay/contract.go
   - cmd/browser-agent/internal/toolinteract/interact_batch.go
   - cmd/browser-agent/tools_interact_dispatch.go
   - cmd/browser-agent/tools_configure_sequence.go
@@ -16,6 +17,7 @@ code_paths:
   - internal/schema/interact/properties_output_batch.go
   - internal/tools/configure/capabilities/modespecs_interact.go
 test_paths:
+  - cmd/browser-agent/internal/replay/contract_test.go
   - cmd/browser-agent/tools_interact_batch_test.go
   - cmd/browser-agent/tools_configure_sequence_test.go
 last_verified_version: 0.7.12

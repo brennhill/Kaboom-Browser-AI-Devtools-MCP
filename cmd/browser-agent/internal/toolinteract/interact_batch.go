@@ -7,99 +7,21 @@ package toolinteract
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/replay"
 )
 
-// Batch/replay shared constants and state.
-// NOTE: These duplicate toolconfigure.MaxSequenceSteps and toolconfigure.DefaultStepTimeout.
-// Keep both in sync. A cross-package import is avoided to prevent a dependency cycle.
 const (
-	maxSequenceSteps   = 50
-	defaultStepTimeout = 10_000
+	maxSequenceSteps   = replay.MaxSteps
+	defaultStepTimeout = replay.DefaultStepTimeout
 )
 
 // ReplayMu prevents concurrent batch/replay execution.
 var ReplayMu sync.Mutex
 
-// SequenceStepResult holds the result of a single step in a batch/sequence.
-type SequenceStepResult struct {
-	StepIndex     int    `json:"step_index"`
-	Action        string `json:"action"`
-	CorrelationID string `json:"correlation_id,omitempty"`
-	Status        string `json:"status"`
-	Error         string `json:"error,omitempty"`
-	DurationMs    int64  `json:"duration_ms"`
-}
-
-// forceReplayAsyncInteractStep ensures replayed interact steps do not block on
-// MaybeWaitForCommand. Batch handles its own result polling via WaitForCommand.
-func forceReplayAsyncInteractStep(stepArgs json.RawMessage) json.RawMessage {
-	var argsMap map[string]any
-	if err := json.Unmarshal(stepArgs, &argsMap); err != nil {
-		return stepArgs
-	}
-	argsMap["sync"] = false
-	argsMap["wait"] = false
-	updated, err := json.Marshal(argsMap)
-	if err != nil {
-		return stepArgs
-	}
-	return updated
-}
-
-// extractCorrelationIDFromToolResponse extracts correlation_id from a tool response.
-func extractCorrelationIDFromToolResponse(resp JSONRPCResponse) string {
-	if resp.Result == nil {
-		return ""
-	}
-	var result MCPToolResult
-	if json.Unmarshal(resp.Result, &result) != nil || len(result.Content) == 0 {
-		return ""
-	}
-	for _, block := range result.Content {
-		if block.Type != "text" || block.Text == "" {
-			continue
-		}
-		text := block.Text
-		if idx := strings.Index(text, "\n{"); idx >= 0 {
-			text = text[idx+1:]
-		}
-		var data map[string]any
-		if json.Unmarshal([]byte(text), &data) != nil {
-			continue
-		}
-		if cid, ok := data["correlation_id"].(string); ok && cid != "" {
-			return cid
-		}
-	}
-	return ""
-}
-
-// extractErrorMessage extracts an error message from a tool response.
-func extractErrorMessage(resp JSONRPCResponse) string {
-	if resp.Result == nil {
-		return ""
-	}
-	var result MCPToolResult
-	if json.Unmarshal(resp.Result, &result) != nil {
-		return ""
-	}
-	for _, block := range result.Content {
-		if block.Type != "text" || block.Text == "" {
-			continue
-		}
-		var data map[string]any
-		if json.Unmarshal([]byte(block.Text), &data) == nil {
-			if msg, ok := data["message"].(string); ok {
-				return msg
-			}
-		}
-		return block.Text
-	}
-	return ""
-}
+type SequenceStepResult = replay.StepResult
 
 // handleBatch executes a sequence of interact steps provided inline.
 func (h *InteractActionHandler) HandleBatch(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
@@ -189,7 +111,7 @@ func (h *InteractActionHandler) HandleBatch(req JSONRPCRequest, args json.RawMes
 		// but then discarded in the aggregate response, wasting CPU on base64 encoding (#9.2.2).
 		stepArgs = StripComposableScreenshotFromStep(stepArgs)
 
-		replayStepArgs := forceReplayAsyncInteractStep(stepArgs)
+		replayStepArgs := replay.ForceAsync(stepArgs)
 		stepStart := time.Now()
 		stepResp := h.deps.ToolInteract(req, replayStepArgs)
 		stepDuration := time.Since(stepStart).Milliseconds()
@@ -200,7 +122,7 @@ func (h *InteractActionHandler) HandleBatch(req JSONRPCRequest, args json.RawMes
 			DurationMs: stepDuration,
 		}
 
-		if corrID := extractCorrelationIDFromToolResponse(stepResp); corrID != "" {
+		if corrID := replay.CorrelationID(stepResp); corrID != "" {
 			stepResult.CorrelationID = corrID
 			timeout := time.Duration(params.StepTimeoutMs) * time.Millisecond
 			if timeout > 0 {
@@ -232,11 +154,11 @@ func (h *InteractActionHandler) HandleBatch(req JSONRPCRequest, args json.RawMes
 			// Only count as failed if not already counted by the correlation path above (#9.R1).
 			// In the contradictory case where correlation resolved to "ok" but isErrorResponse
 			// is true, we trust the correlation result since it reflects the actual extension-side
-			// outcome. This cannot happen in practice because forceReplayAsyncInteractStep generates
+			// outcome. This cannot happen in practice because replay.ForceAsync generates
 			// a fresh correlation ID per step.
 			if stepResult.Status == "" {
 				stepResult.Status = "error"
-				stepResult.Error = extractErrorMessage(stepResp)
+				stepResult.Error = replay.ErrorMessage(stepResp)
 				stepsFailed++
 			}
 			results = append(results, stepResult)
