@@ -5,13 +5,22 @@ package main
 
 import (
 	"fmt"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/asyncresult"
 	"strings"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/asyncresult"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
+
+const maxTransientsPerResult = asyncresult.MaxTransientsPerResult
+
+func (h *ToolHandler) attachTransientElements(responseData map[string]any, since time.Time) {
+	if h == nil || responseData == nil {
+		return
+	}
+	asyncresult.AttachTransientElements(responseData, h.capture.GetAllEnhancedActions(), since)
+}
 
 // finalizeResponseEnrichment attaches evidence, transient elements, and retry context
 // to the response data in a single call. Consolidates the repeated triplet pattern.

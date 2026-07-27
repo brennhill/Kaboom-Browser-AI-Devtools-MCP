@@ -4,9 +4,10 @@ feature_id: feature-transient-capture
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 code_paths:
-  - cmd/browser-agent/tools_async_transient.go
+  - cmd/browser-agent/tools_async_formatting.go
+  - cmd/browser-agent/internal/asyncresult/transients.go
   - src/lib/page/transient-capture.ts
 test_paths:
   - cmd/browser-agent/tools_async_transient_test.go
