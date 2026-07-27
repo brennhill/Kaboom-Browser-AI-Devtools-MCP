@@ -108,6 +108,7 @@ satisfied. (Flow maps are no longer required — do not create or update them.)
 22. Duplicate code checks are required for refactors touching `src/background` or `src/popup` (`npx jscpd src/background src/popup --min-lines 8 --min-tokens 60`), and each non-trivial clone must be either extracted or documented as intentional.
 23. Behavior-replacing refactors must update or delete obsolete tests in the same change (for example, replacing watermark behavior with badge behavior).
 24. See `docs/core/common-patterns.md` for the canonical patterns and review checklist.
+25. **Compatibility facades are prohibited.** Migrations are atomic: move every caller to the canonical API and delete the obsolete aliases, wrappers, shims, tests, and documentation in the same change. If the migration cannot be completed end-to-end, do not begin it. Never preserve an old internal surface merely to reduce migration effort.
 
 ## Finding Things
 

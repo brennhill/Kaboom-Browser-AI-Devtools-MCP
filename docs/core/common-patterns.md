@@ -108,6 +108,14 @@ Use this as a hard checklist during design, coding, and review.
 - Use pagination and sync helper suites for cursor/transport assertions to avoid drift between modules.
 - Contract changes must be reflected in smoke/UAT modules that validate the same behavior.
 
+## 13) Atomic Migration Pattern
+
+- Do not add or retain compatibility facades, pass-through wrappers, alias-only modules, transitional shims, or duplicate old/new entry points.
+- A migration must update every production caller, test, schema, and documentation reference to the canonical API and delete the obsolete surface in the same change.
+- If an end-to-end migration cannot be completed safely in the current change, leave the existing design intact and plan the complete migration instead.
+- A re-export used only to avoid updating callers is a failed migration, not a module boundary.
+- Public wire-protocol compatibility is maintained in the canonical implementation; it does not justify a second internal API surface.
+
 ## Review Checklist
 
 - [ ] Storage access follows helper/module boundaries.
@@ -120,3 +128,4 @@ Use this as a hard checklist during design, coding, and review.
 - [ ] Response shape changes are reflected in docs/examples/smoke checks.
 - [ ] `jscpd` run completed and clones were resolved or documented.
 - [ ] Unit + e2e/smoke tests reflect current behavior and pass.
+- [ ] Migrations are complete: no compatibility facade, alias-only module, old caller, stale test, or stale documentation remains.
