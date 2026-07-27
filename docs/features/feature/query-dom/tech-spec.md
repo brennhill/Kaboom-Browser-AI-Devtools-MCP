@@ -3,7 +3,7 @@ doc_type: tech-spec
 feature_id: feature-query-dom
 status: shipped
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-27
 links:
   product: ./product-spec.md
   tech: ./tech-spec.md
@@ -16,7 +16,7 @@ last_verified_date: 2026-03-05
 # Query DOM Tech Spec (TARGET)
 
 ## Server Path
-1. `toolQueryDOM` in `cmd/browser-agent/tools_analyze.go` validates `selector`.
+1. `HandleDOM` in `cmd/browser-agent/internal/toolanalyze/inspect/dom.go` validates arguments and defaults an omitted `selector` to `"*"`.
 2. Server queues pending query type `dom` with correlation ID.
 3. Wait/queue behavior is governed by `maybeWaitForCommand`.
 
@@ -38,12 +38,13 @@ last_verified_date: 2026-03-05
 
 ## Failure Modes
 - Invalid JSON args -> structured server error.
-- Missing selector -> structured server error.
+- Missing selector -> full DOM query using the `"*"` default.
 - Invalid frame target -> `invalid_frame` / `frame_not_found` path.
 - Content/inject failure -> structured command error in command result payload.
 
 ## Code Anchors
-- `cmd/browser-agent/tools_analyze.go`
+- `cmd/browser-agent/internal/toolanalyze/inspect/dom.go`
+- `cmd/browser-agent/tools_analyze_dispatch.go`
 - `src/background/pending-queries.ts`
 - `src/content/message-handlers.ts`
 - `src/inject/message-handlers.ts`

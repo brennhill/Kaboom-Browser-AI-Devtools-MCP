@@ -73,7 +73,7 @@ All 5 tools use `what` as the primary dispatch parameter. `action`, `mode`, and 
 
 | Mode | Handler / File | Description |
 |---|---|---|
-| `dom` | `toolQueryDOM` | Query DOM structure and elements |
+| `dom` | `inspect.HandleDOM` | Query DOM structure and elements |
 | `performance` | `observe.CheckPerformance` | Performance metrics and timing |
 | `accessibility` | `observe.RunA11yAudit` | WCAG accessibility audit |
 | `error_clusters` | `observe.AnalyzeErrors` | Cluster and categorize errors |

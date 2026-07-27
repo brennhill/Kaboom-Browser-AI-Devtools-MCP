@@ -17,7 +17,7 @@ import (
 
 // analyzeHandlers maps analyze mode names to their handler functions.
 var analyzeHandlers = map[string]ModeHandler{
-	"dom":                 method((*ToolHandler).toolQueryDOM),
+	"dom":                 azInspect(inspect.HandleDOM),
 	"api_validation":      method((*ToolHandler).toolValidateAPI),
 	"page_summary":        method((*ToolHandler).toolAnalyzePageSummary),
 	"performance":         obs(observe.CheckPerformance),
@@ -92,6 +92,10 @@ func (h *ToolHandler) toolAnalyze(req JSONRPCRequest, args json.RawMessage) JSON
 	reg := analyzeRegistry
 	reg.Resolution.ValidModes = getValidAnalyzeModes()
 	return h.dispatchTool(req, args, reg)
+}
+
+func (h *ToolHandler) toolAnalyzePageSummary(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return h.interactAction().HandleContentExtraction(req, args, "page_summary", "page_summary")
 }
 
 func (h *ToolHandler) NetworkWaterfallEntries() []capture.NetworkWaterfallEntry {

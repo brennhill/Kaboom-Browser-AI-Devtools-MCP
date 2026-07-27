@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/inspect"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
@@ -37,7 +38,7 @@ func TestToolQueryDOM_QueueFullFailsFast(t *testing.T) {
 	saturatePendingQueryQueue(t, env.capture)
 
 	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := env.handler.toolQueryDOM(req, json.RawMessage(`{"selector":"#target"}`))
+	resp := inspect.HandleDOM(env.handler, req, json.RawMessage(`{"selector":"#target"}`))
 	result := parseToolResult(t, resp)
 	assertStructuredErrorCode(t, "toolQueryDOM queue full", result, ErrQueueFull)
 }
