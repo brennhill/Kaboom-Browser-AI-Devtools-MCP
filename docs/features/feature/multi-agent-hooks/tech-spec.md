@@ -3,14 +3,15 @@ doc_type: tech-spec
 feature_id: feature-multi-agent-hooks
 status: proposed
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-27
 links:
   index: ./index.md
   product: ./product-spec.md
 code_paths:
   - internal/hook/protocol.go
   - cmd/hooks/main.go
-  - cmd/browser-agent/tools_configure_quality_gates.go
+  - cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go
+  - cmd/browser-agent/tools_configure.go
 test_paths:
   - internal/hook/protocol_test.go
   - cmd/hooks/main_test.go
@@ -31,7 +32,7 @@ test_paths:
 - MULTI_AGENT_002 -> `internal/hook/protocol.go:WriteOutput()` switch on agent
 - MULTI_AGENT_003 -> No change needed — input format is already compatible
 - MULTI_AGENT_004 -> `internal/hook/session_store.go:SessionID()` checks env vars first
-- MULTI_AGENT_005 -> `cmd/browser-agent/tools_configure_quality_gates.go` writes to both config files
+- MULTI_AGENT_005 -> `cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go` writes the managed hook configuration
 - MULTI_AGENT_006 -> Future work, tracked separately
 - MULTI_AGENT_007 -> No change needed — already one binary
 

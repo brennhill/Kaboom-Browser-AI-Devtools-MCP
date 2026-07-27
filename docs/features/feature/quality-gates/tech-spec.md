@@ -3,7 +3,7 @@ doc_type: tech-spec
 feature_id: feature-quality-gates
 status: proposed
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-27
 links:
   index: ./index.md
   product: ./product-spec.md
@@ -14,9 +14,11 @@ code_paths:
   - internal/hook/convention_detect.go
   - internal/hook/compress_output.go
   - internal/hook/protocol.go
-  - cmd/browser-agent/tools_configure_quality_gates.go
+  - cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go
+  - cmd/browser-agent/tools_configure.go
   - internal/tracking/token_tracker.go
 test_paths:
+  - cmd/browser-agent/internal/toolconfigure/qualitygates/handler_test.go
   - cmd/hooks/main_test.go
   - internal/hook/quality_gate_test.go
   - internal/hook/convention_detect_test.go
@@ -74,9 +76,9 @@ Documented in detail in the convention-engine tech spec. In short: it merges aut
 
 On Bash, `CompressOutput(input)` inspects the command and its output, detects the tool family (go test, jest/vitest, pytest, cargo test/build, go build/vet, make, tsc, npm/webpack), and collapses output to a summary plus the failing lines. Generic output over a threshold is reduced to head plus tail. It fires only when output exceeds the line threshold (so short output is untouched) and returns a `CompressResult` with category and before/after token counts.
 
-### Setup handler — `cmd/browser-agent/tools_configure_quality_gates.go`
+### Setup handler — `cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go`
 
-`toolConfigureSetupQualityGates`:
+`qualitygates.Handle`:
 
 1. Resolves the project directory from `GetActiveCodebase`; validates `target_dir` is within the project (path-traversal guard).
 2. Writes `.kaboom.json` if missing (never overwrites); reads the configured `code_standards` path.

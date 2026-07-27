@@ -1,8 +1,8 @@
-// tools_configure_quality_gates.go — Handler for configure(what="setup_quality_gates").
+// handler.go — Handler for configure(what="setup_quality_gates").
 // Scaffolds .kaboom.json and kaboom-code-standards.md for code quality gate enforcement.
 // Docs: docs/features/feature/quality-gates/index.md
 
-package main
+package qualitygates
 
 import (
 	"encoding/json"
@@ -12,7 +12,12 @@ import (
 	"strings"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/hook"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
+
+type Deps interface {
+	GetActiveCodebase() string
+}
 
 const defaultDuplicateThreshold = 3
 
@@ -24,20 +29,20 @@ const kaboomHookDecisionGuard = "kaboom-hooks decision-guard"
 
 // toolConfigureSetupQualityGates handles configure(what="setup_quality_gates").
 // Creates .kaboom.json and kaboom-code-standards.md in the target directory.
-func (h *ToolHandler) toolConfigureSetupQualityGates(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func Handle(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		TargetDir string `json:"target_dir"`
 	}
 	if len(args) > 0 {
-		if resp, stop := parseArgs(req, args, &params); stop {
+		if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 			return resp
 		}
 	}
 
 	// Resolve the project root directory.
-	projectDir := h.server.GetActiveCodebase()
+	projectDir := d.GetActiveCodebase()
 	if projectDir == "" {
-		return fail(req, ErrNotInitialized,
+		return mcp.Fail(req, mcp.ErrNotInitialized,
 			"No active codebase set. Cannot determine project directory.",
 			"Set active_codebase via configure(what='store', key='active_codebase', data='<path>') first")
 	}
@@ -50,20 +55,20 @@ func (h *ToolHandler) toolConfigureSetupQualityGates(req JSONRPCRequest, args js
 	// Security: target_dir must be within the project directory.
 	absTarget, err := filepath.Abs(targetDir)
 	if err != nil {
-		return fail(req, ErrInvalidParam, "Invalid target_dir: "+err.Error(), "Provide a valid directory path", withParam("target_dir"))
+		return mcp.Fail(req, mcp.ErrInvalidParam, "Invalid target_dir: "+err.Error(), "Provide a valid directory path", mcp.WithParam("target_dir"))
 	}
 	absProject, _ := filepath.Abs(projectDir)
 	if !strings.HasPrefix(absTarget+string(filepath.Separator), absProject+string(filepath.Separator)) && absTarget != absProject {
-		return fail(req, ErrPathNotAllowed,
+		return mcp.Fail(req, mcp.ErrPathNotAllowed,
 			"target_dir is outside the project directory",
-			"Use a path within "+absProject, withParam("target_dir"))
+			"Use a path within "+absProject, mcp.WithParam("target_dir"))
 	}
 
 	// Ensure target directory exists.
 	if stat, err := os.Stat(absTarget); err != nil || !stat.IsDir() {
-		return fail(req, ErrInvalidParam,
+		return mcp.Fail(req, mcp.ErrInvalidParam,
 			"target_dir does not exist or is not a directory: "+absTarget,
-			"Provide an existing directory path", withParam("target_dir"))
+			"Provide an existing directory path", mcp.WithParam("target_dir"))
 	}
 
 	configPath := filepath.Join(absTarget, hook.KaboomConfigFile)
@@ -82,11 +87,11 @@ func (h *ToolHandler) toolConfigureSetupQualityGates(req JSONRPCRequest, args js
 		}
 		cfgJSON, err := json.MarshalIndent(cfg, "", "  ")
 		if err != nil {
-			return fail(req, ErrInternal, "Failed to marshal config: "+err.Error(), "Internal error — do not retry")
+			return mcp.Fail(req, mcp.ErrInternal, "Failed to marshal config: "+err.Error(), "Internal error — do not retry")
 		}
 		cfgJSON = append(cfgJSON, '\n')
 		if err := os.WriteFile(configPath, cfgJSON, 0644); err != nil {
-			return fail(req, ErrInternal, "Failed to write "+hook.KaboomConfigFile+": "+err.Error(), "Check file system permissions")
+			return mcp.Fail(req, mcp.ErrInternal, "Failed to write "+hook.KaboomConfigFile+": "+err.Error(), "Check file system permissions")
 		}
 	}
 
@@ -107,7 +112,7 @@ func (h *ToolHandler) toolConfigureSetupQualityGates(req JSONRPCRequest, args js
 		standardsPath = filepath.Join(absTarget, hook.DefaultCodeStandardsFile)
 		if _, err := os.Stat(standardsPath); err != nil {
 			if err := os.WriteFile(standardsPath, []byte(defaultCodeStandardsContent), 0644); err != nil {
-				return fail(req, ErrInternal, "Failed to write "+hook.DefaultCodeStandardsFile+": "+err.Error(), "Check file system permissions")
+				return mcp.Fail(req, mcp.ErrInternal, "Failed to write "+hook.DefaultCodeStandardsFile+": "+err.Error(), "Check file system permissions")
 			}
 			standardsCreated = true
 		}
@@ -143,7 +148,7 @@ func (h *ToolHandler) toolConfigureSetupQualityGates(req JSONRPCRequest, args js
 
 	summary := buildSetupSummary(configExisted, hooksInstalled, hookErr)
 
-	return succeed(req, summary, responseData)
+	return mcp.Succeed(req, summary, responseData)
 }
 
 // buildQualityGateSuggestions returns contextual suggestions based on setup state.

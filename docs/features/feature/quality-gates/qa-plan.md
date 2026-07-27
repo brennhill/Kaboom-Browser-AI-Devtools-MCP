@@ -3,7 +3,7 @@ doc_type: qa-plan
 feature_id: feature-quality-gates
 status: proposed
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-27
 links:
   index: ./index.md
   product: ./product-spec.md
@@ -113,7 +113,7 @@ tags: [testing, qa, hooks]
 
 ### 4.2 Setup Tests
 
-Source: `cmd/browser-agent/tools_configure_quality_gates.go`. Tests: `tools_configure_quality_gates_test.go`.
+Source: `cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go`. Tests: `qualitygates/handler_test.go` and `tools_configure_quality_gates_test.go`.
 
 | # | Test Case | Input | Expected Behavior | Priority |
 |---|-----------|-------|-------------------|----------|

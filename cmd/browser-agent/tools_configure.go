@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/qualitygates"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/tutorial"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
 	cfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure"
@@ -61,16 +62,18 @@ var configureHandlers = map[string]ModeHandler{
 	"examples": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 		return tutorial.HandleTutorial(h, req, args, tutorialFailureRecoveryPlaybooks())
 	},
-	"save_sequence":       method((*ToolHandler).toolConfigureSaveSequence),
-	"get_sequence":        method((*ToolHandler).toolConfigureGetSequence),
-	"list_sequences":      method((*ToolHandler).toolConfigureListSequences),
-	"delete_sequence":     method((*ToolHandler).toolConfigureDeleteSequence),
-	"replay_sequence":     method((*ToolHandler).toolConfigureReplaySequence),
-	"security_mode":       cfgLocal(toolconfigure.HandleSecurityMode),
-	"network_recording":   method((*ToolHandler).toolConfigureNetworkRecording),
-	"action_jitter":       cfgLocal(toolconfigure.HandleActionJitter),
-	"report_issue":        method((*ToolHandler).toolConfigureReportIssue),
-	"setup_quality_gates": method((*ToolHandler).toolConfigureSetupQualityGates),
+	"save_sequence":     method((*ToolHandler).toolConfigureSaveSequence),
+	"get_sequence":      method((*ToolHandler).toolConfigureGetSequence),
+	"list_sequences":    method((*ToolHandler).toolConfigureListSequences),
+	"delete_sequence":   method((*ToolHandler).toolConfigureDeleteSequence),
+	"replay_sequence":   method((*ToolHandler).toolConfigureReplaySequence),
+	"security_mode":     cfgLocal(toolconfigure.HandleSecurityMode),
+	"network_recording": method((*ToolHandler).toolConfigureNetworkRecording),
+	"action_jitter":     cfgLocal(toolconfigure.HandleActionJitter),
+	"report_issue":      method((*ToolHandler).toolConfigureReportIssue),
+	"setup_quality_gates": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		return qualitygates.Handle(h.server, req, args)
+	},
 }
 
 func cfgLocal(fn func(toolconfigure.Deps, JSONRPCRequest, json.RawMessage) JSONRPCResponse) ModeHandler {

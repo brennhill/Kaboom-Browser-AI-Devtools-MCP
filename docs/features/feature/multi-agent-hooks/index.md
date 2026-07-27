@@ -4,15 +4,18 @@ feature_id: feature-multi-agent-hooks
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-27
 code_paths:
   - internal/hook/protocol.go
   - internal/hook/session_store.go
   - cmd/hooks/main.go
+  - cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go
+  - cmd/browser-agent/tools_configure.go
 test_paths:
   - internal/hook/protocol_test.go
   - internal/hook/session_store_test.go
   - cmd/hooks/main_test.go
+  - cmd/browser-agent/tools_configure_quality_gates_test.go
 ---
 
 # Multi-Agent Hook Protocol

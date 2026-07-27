@@ -6,7 +6,8 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-27
 code_paths:
-  - cmd/browser-agent/tools_configure_quality_gates.go
+  - cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go
+  - cmd/browser-agent/tools_configure.go
   - internal/tools/configure/capabilities/modespecs_configure.go
   - internal/schema/configure/properties_core.go
   - internal/schema/configure/properties_runtime.go
@@ -21,6 +22,7 @@ code_paths:
   - package.json
   - .github/workflows/ci.yml
 test_paths:
+  - cmd/browser-agent/internal/toolconfigure/qualitygates/handler_test.go
   - cmd/browser-agent/tools_configure_quality_gates_test.go
   - cmd/hooks/main_test.go
   - internal/hook/protocol_test.go
