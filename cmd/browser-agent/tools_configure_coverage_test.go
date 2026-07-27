@@ -9,11 +9,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
-// toolConfigureClear — 60% → 90%+
+// toolconfigure.HandleClear — clear-mode coverage
 // ============================================
 
 func TestToolConfigureClear_AllBuffers(t *testing.T) {
@@ -122,7 +123,16 @@ func TestToolConfigureClear_InvalidJSON(t *testing.T) {
 
 	args := json.RawMessage(`{bad json}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := env.handler.toolConfigureClear(req, args)
+	resp := toolconfigure.HandleClear(toolconfigure.ClearTargets{
+		Capture: env.capture,
+		ClearLogs: func() int {
+			count := env.server.logs.EntryCount()
+			env.server.logs.ClearEntries()
+			return count
+		},
+		Inbox:       env.server.pushInbox,
+		Annotations: env.handler.annotationStore,
+	}, req, args)
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {

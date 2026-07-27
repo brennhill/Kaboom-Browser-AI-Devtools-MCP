@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 )
@@ -405,7 +406,16 @@ func TestToolsConfigureClear_InvalidJSON(t *testing.T) {
 	h, _, _ := makeToolHandler(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolConfigureClear(req, json.RawMessage(`{bad}`))
+	resp := toolconfigure.HandleClear(toolconfigure.ClearTargets{
+		Capture: h.capture,
+		ClearLogs: func() int {
+			count := h.server.logs.EntryCount()
+			h.server.logs.ClearEntries()
+			return count
+		},
+		Inbox:       h.server.pushInbox,
+		Annotations: h.annotationStore,
+	}, req, json.RawMessage(`{bad}`))
 	result := parseToolResult(t, resp)
 	if !result.IsError {
 		t.Fatal("invalid JSON should return isError:true")

@@ -63,7 +63,18 @@ var configureHandlers = map[string]ModeHandler{
 		}
 		return toolconfigure.HandleNoise(h, req, rewrittenArgs)
 	},
-	"clear":                 method((*ToolHandler).toolConfigureClear),
+	"clear": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		return toolconfigure.HandleClear(toolconfigure.ClearTargets{
+			Capture: h.capture,
+			ClearLogs: func() int {
+				count := h.server.logs.EntryCount()
+				h.server.logs.ClearEntries()
+				return count
+			},
+			Inbox:       h.server.pushInbox,
+			Annotations: h.annotationStore,
+		}, req, args)
+	},
 	"audit_log":             method((*ToolHandler).toolGetAuditLog),
 	"streaming":             method((*ToolHandler).toolConfigureStreaming),
 	"test_boundary_start":   method((*ToolHandler).toolConfigureTestBoundaryStart),
