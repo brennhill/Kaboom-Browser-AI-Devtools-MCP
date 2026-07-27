@@ -8,7 +8,7 @@ last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/alerts.go
   - cmd/browser-agent/streaming.go
-  - cmd/browser-agent/tools_configure_runtime_impl.go
+  - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/tools_observe.go
   - cmd/browser-agent/internal/toolobserve/inbox.go
   - cmd/browser-agent/tools_configure_clear.go

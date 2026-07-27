@@ -6,8 +6,11 @@ package main
 
 import (
 	"encoding/json"
+	"os"
 	"runtime"
 	"sync"
+	"syscall"
+	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/replay"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/sequencehandler"
@@ -19,9 +22,11 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
 	cfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
 const defaultStoreNamespace = "session"
+const restartSelfSignalDelay = 100 * time.Millisecond
 
 type RecordingSnapshot = netrecord.RecordingSnapshot
 type Sequence = toolconfigure.Sequence
@@ -298,4 +303,54 @@ func (h *ToolHandler) toolConfigurePlayback(req JSONRPCRequest, args json.RawMes
 
 func (h *ToolHandler) toolConfigureLogDiff(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 	return h.recordingHandler.LogDiff(req, args)
+}
+
+func (h *ToolHandler) toolConfigureRestart(req JSONRPCRequest) JSONRPCResponse {
+	resp := succeed(req, "Daemon restarting", map[string]any{
+		"status":    "ok",
+		"restarted": true,
+		"message":   "Daemon shutting down — bridge will respawn automatically",
+	})
+	util.SafeGo(func() {
+		time.Sleep(restartSelfSignalDelay)
+		process, _ := os.FindProcess(os.Getpid())
+		_ = process.Signal(syscall.SIGTERM)
+	})
+	return resp
+}
+
+func (h *ToolHandler) toolConfigureTestBoundaryStart(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	result, errResp := cfg.ParseTestBoundaryStart(req.ID, args)
+	if errResp != nil {
+		return *errResp
+	}
+
+	h.activeBoundariesMu.Lock()
+	defer h.activeBoundariesMu.Unlock()
+	if h.activeBoundaries == nil {
+		h.activeBoundaries = make(map[string]time.Time)
+	}
+	h.activeBoundaries[result.TestID] = time.Now()
+	return cfg.BuildTestBoundaryStartResponse(req.ID, result)
+}
+
+func (h *ToolHandler) toolConfigureTestBoundaryEnd(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	result, errResp := cfg.ParseTestBoundaryEnd(req.ID, args)
+	if errResp != nil {
+		return *errResp
+	}
+
+	h.activeBoundariesMu.Lock()
+	_, wasActive := h.activeBoundaries[result.TestID]
+	if wasActive {
+		delete(h.activeBoundaries, result.TestID)
+	}
+	h.activeBoundariesMu.Unlock()
+	if !wasActive {
+		return fail(req, ErrInvalidParam,
+			"No active test boundary for test_id '"+result.TestID+"'",
+			"Call configure({what: 'test_boundary_start', test_id: '"+result.TestID+"'}) first",
+			withParam("test_id"))
+	}
+	return cfg.BuildTestBoundaryEndResponse(req.ID, result, wasActive)
 }
