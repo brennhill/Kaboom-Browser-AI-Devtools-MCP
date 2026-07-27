@@ -25,20 +25,20 @@ func TestHandleNavigate_Success(t *testing.T) {
 func TestHandleNavigate_MissingURL(t *testing.T) {
 	h, _ := newFakeHandler(t)
 	resp := h.HandleBrowserActionNavigateImpl(testReq(), json.RawMessage(`{}`))
-	assertErr(t, resp, ErrMissingParam)
+	assertErr(t, resp, mcp.ErrMissingParam)
 }
 
 func TestHandleNavigate_InvalidJSON(t *testing.T) {
 	h, _ := newFakeHandler(t)
 	resp := h.HandleBrowserActionNavigateImpl(testReq(), json.RawMessage(`{bad`))
-	assertErr(t, resp, ErrInvalidJSON)
+	assertErr(t, resp, mcp.ErrInvalidJSON)
 }
 
 func TestHandleNavigate_PilotBlocked(t *testing.T) {
 	h, fs := newFakeHandler(t)
 	fs.blockPilot = true
 	resp := h.HandleBrowserActionNavigateImpl(testReq(), json.RawMessage(`{"url":"https://example.org"}`))
-	assertErr(t, resp, ErrCodePilotDisabled)
+	assertErr(t, resp, mcp.ErrCodePilotDisabled)
 	if fs.enqueuedCount() != 0 {
 		t.Fatalf("blocked guard should not enqueue, got %d", fs.enqueuedCount())
 	}
@@ -47,7 +47,7 @@ func TestHandleNavigate_PilotBlocked(t *testing.T) {
 func TestHandleNavigate_IncludeContent(t *testing.T) {
 	h, fs := newFakeHandler(t)
 	enriched := false
-	fs.enrichFn = func(resp JSONRPCResponse, req JSONRPCRequest, tabID int) JSONRPCResponse {
+	fs.enrichFn = func(resp mcp.JSONRPCResponse, req mcp.JSONRPCRequest, tabID int) mcp.JSONRPCResponse {
 		enriched = true
 		return resp
 	}
@@ -62,7 +62,7 @@ func TestHandleNavigate_InsecureURLRejected(t *testing.T) {
 	h, _ := newFakeHandler(t)
 	// security mode is Normal by default => insecure prefix rejected.
 	resp := h.HandleBrowserActionNavigateImpl(testReq(), json.RawMessage(`{"url":"kaboom-insecure://http://internal"}`))
-	assertErr(t, resp, ErrInvalidParam)
+	assertErr(t, resp, mcp.ErrInvalidParam)
 }
 
 func TestHandleRefresh_Success(t *testing.T) {
@@ -78,7 +78,7 @@ func TestHandleRefresh_TabBlocked(t *testing.T) {
 	h, fs := newFakeHandler(t)
 	fs.blockTab = true
 	resp := h.HandleBrowserActionRefreshImpl(testReq(), json.RawMessage(`{}`))
-	assertErr(t, resp, ErrNotInitialized)
+	assertErr(t, resp, mcp.ErrNotInitialized)
 }
 
 func TestHandleBackForward(t *testing.T) {
@@ -107,19 +107,19 @@ func TestHandleNewTab_NoURL(t *testing.T) {
 
 func TestHandleNewTab_InvalidJSON(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleBrowserActionNewTabImpl(testReq(), json.RawMessage(`nope`)), ErrInvalidJSON)
+	assertErr(t, h.HandleBrowserActionNewTabImpl(testReq(), json.RawMessage(`nope`)), mcp.ErrInvalidJSON)
 }
 
 func TestHandleSwitchTab_MissingTarget(t *testing.T) {
 	h, _ := newFakeHandler(t)
 	resp := h.HandleBrowserActionSwitchTabImpl(testReq(), json.RawMessage(`{}`))
-	assertErr(t, resp, ErrMissingParam)
+	assertErr(t, resp, mcp.ErrMissingParam)
 }
 
 func TestHandleSwitchTab_NegativeIndex(t *testing.T) {
 	h, _ := newFakeHandler(t)
 	resp := h.HandleBrowserActionSwitchTabImpl(testReq(), json.RawMessage(`{"tab_index":-1}`))
-	assertErr(t, resp, ErrInvalidParam)
+	assertErr(t, resp, mcp.ErrInvalidParam)
 }
 
 func TestHandleSwitchTab_Success(t *testing.T) {
@@ -134,7 +134,7 @@ func TestHandleSwitchTab_Success(t *testing.T) {
 func TestHandleSwitchTab_AppliesTrackingOnComplete(t *testing.T) {
 	h, fs := newFakeHandler(t)
 	// Complete the switch_tab command so ApplySwitchTabTracking updates the tracked tab.
-	fs.waitFn = func(req JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) JSONRPCResponse {
+	fs.waitFn = func(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse {
 		fs.cap.RegisterCommand(correlationID, correlationID, time.Minute)
 		fs.cap.CompleteCommand(correlationID, json.RawMessage(`{"success":true,"tab_id":42,"url":"https://switched.example","title":"Switched"}`), "")
 		return mcp.Succeed(req, queuedSummary, map[string]any{"status": "complete", "correlation_id": correlationID})
@@ -158,7 +158,7 @@ func TestHandleActivateAndCloseTab(t *testing.T) {
 
 func TestHandleCloseTab_InvalidJSON(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleBrowserActionCloseTabImpl(testReq(), json.RawMessage(`x`)), ErrInvalidJSON)
+	assertErr(t, h.HandleBrowserActionCloseTabImpl(testReq(), json.RawMessage(`x`)), mcp.ErrInvalidJSON)
 }
 
 func TestHandleHighlight_Success(t *testing.T) {
@@ -168,7 +168,7 @@ func TestHandleHighlight_Success(t *testing.T) {
 
 func TestHandleHighlight_MissingSelector(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleHighlightImpl(testReq(), json.RawMessage(`{}`)), ErrMissingParam)
+	assertErr(t, h.HandleHighlightImpl(testReq(), json.RawMessage(`{}`)), mcp.ErrMissingParam)
 }
 
 func TestHandleExecuteJS_Success(t *testing.T) {
@@ -178,19 +178,19 @@ func TestHandleExecuteJS_Success(t *testing.T) {
 
 func TestHandleExecuteJS_MissingScript(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleExecuteJSImpl(testReq(), json.RawMessage(`{}`)), ErrMissingParam)
+	assertErr(t, h.HandleExecuteJSImpl(testReq(), json.RawMessage(`{}`)), mcp.ErrMissingParam)
 }
 
 func TestHandleExecuteJS_InvalidWorld(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleExecuteJSImpl(testReq(), json.RawMessage(`{"script":"1","world":"moon"}`)), ErrInvalidParam)
+	assertErr(t, h.HandleExecuteJSImpl(testReq(), json.RawMessage(`{"script":"1","world":"moon"}`)), mcp.ErrInvalidParam)
 }
 
 func TestHandleExecuteJS_MainWorldCSPBlocked(t *testing.T) {
 	h, fs := newFakeHandler(t)
 	fs.blockCSP = true
 	resp := h.HandleExecuteJSImpl(testReq(), json.RawMessage(`{"script":"1","world":"main"}`))
-	assertErr(t, resp, ErrInvalidParam)
+	assertErr(t, resp, mcp.ErrInvalidParam)
 }
 
 func TestHandleSubtitle_SetAndClear(t *testing.T) {
@@ -201,7 +201,7 @@ func TestHandleSubtitle_SetAndClear(t *testing.T) {
 
 func TestHandleSubtitle_MissingText(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleSubtitleImpl(testReq(), json.RawMessage(`{}`)), ErrMissingParam)
+	assertErr(t, h.HandleSubtitleImpl(testReq(), json.RawMessage(`{}`)), mcp.ErrMissingParam)
 }
 
 func TestHandleScreenshotAlias(t *testing.T) {

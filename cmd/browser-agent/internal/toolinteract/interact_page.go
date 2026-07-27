@@ -32,7 +32,7 @@ const (
 // handleContentExtraction is the shared handler for get_readable, get_markdown, and page_summary.
 // All three use the same pattern: gate checks, timeout validation, create a pending query with
 // the dedicated query type, and wait for the content script to respond.
-func (h *InteractActionHandler) HandleContentExtraction(req JSONRPCRequest, args json.RawMessage, queryType string, correlationPrefix string) JSONRPCResponse {
+func (h *InteractActionHandler) HandleContentExtraction(req mcp.JSONRPCRequest, args json.RawMessage, queryType string, correlationPrefix string) mcp.JSONRPCResponse {
 	var params struct {
 		TabID     int `json:"tab_id,omitempty"`
 		TimeoutMs int `json:"timeout_ms,omitempty"`
@@ -59,11 +59,11 @@ func (h *InteractActionHandler) HandleContentExtraction(req JSONRPCRequest, args
 		execute(req, args)
 }
 
-func (h *InteractActionHandler) HandleGetReadable(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *InteractActionHandler) HandleGetReadable(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return h.HandleContentExtraction(req, args, "get_readable", "readable")
 }
 
-func (h *InteractActionHandler) HandleGetMarkdown(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *InteractActionHandler) HandleGetMarkdown(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return h.HandleContentExtraction(req, args, "get_markdown", "markdown")
 }
 
@@ -76,7 +76,7 @@ const NavigatePageSummaryWait = navigatePageSummaryWait
 // If url is provided, the extension navigates first before collecting data.
 // Screenshot is appended server-side after the extension returns.
 // Post-processes the result to separate menus from ungrouped page elements.
-func (h *InteractActionHandler) HandleExplorePage(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *InteractActionHandler) HandleExplorePage(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		URL         string `json:"url,omitempty"`
 		TabID       int    `json:"tab_id,omitempty"`
@@ -93,10 +93,10 @@ func (h *InteractActionHandler) HandleExplorePage(req JSONRPCRequest, args json.
 	if params.URL != "" {
 		parsed, err := url.Parse(params.URL)
 		if err != nil || parsed.Scheme == "" {
-			return mcp.Fail(req, ErrInvalidParam, "Invalid URL: "+params.URL, "Provide a valid http or https URL", withParam("url"))
+			return mcp.Fail(req, mcp.ErrInvalidParam, "Invalid URL: "+params.URL, "Provide a valid http or https URL", mcp.WithParam("url"))
 		}
 		if parsed.Scheme != "http" && parsed.Scheme != "https" {
-			return mcp.Fail(req, ErrInvalidParam, "Only http and https URLs are allowed, got: "+parsed.Scheme, "Use an http or https URL", withParam("url"))
+			return mcp.Fail(req, mcp.ErrInvalidParam, "Only http and https URLs are allowed, got: "+parsed.Scheme, "Use an http or https URL", mcp.WithParam("url"))
 		}
 	}
 
@@ -123,8 +123,8 @@ func (h *InteractActionHandler) HandleExplorePage(req JSONRPCRequest, args json.
 // enrichExploreWithMenus post-processes an explore_page response to add a
 // site_menus section. Elements claimed by menus are removed from the
 // interactive_elements list so there is no overlap.
-func enrichExploreWithMenus(resp JSONRPCResponse) JSONRPCResponse {
-	return mcp.MutateToolResult(resp, func(r *MCPToolResult) {
+func enrichExploreWithMenus(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
+	return mcp.MutateToolResult(resp, func(r *mcp.MCPToolResult) {
 		if len(r.Content) == 0 || r.Content[0].Type != "text" {
 			return
 		}
@@ -219,7 +219,7 @@ func enrichExploreWithMenus(resp JSONRPCResponse) JSONRPCResponse {
 }
 
 // handleClipboardRead reads text from the clipboard via navigator.clipboard.readText().
-func (h *InteractActionHandler) HandleClipboardRead(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *InteractActionHandler) HandleClipboardRead(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	script := `(async () => {
   try {
     const text = await navigator.clipboard.readText();
@@ -240,14 +240,14 @@ func (h *InteractActionHandler) HandleClipboardRead(req JSONRPCRequest, args jso
 }
 
 // handleClipboardWrite writes text to the clipboard via navigator.clipboard.writeText().
-func (h *InteractActionHandler) HandleClipboardWrite(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *InteractActionHandler) HandleClipboardWrite(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Text string `json:"text"`
 	}
 	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
-	if resp, blocked := requireString(req, params.Text, "text", "Add the 'text' parameter with the content to write to clipboard"); blocked {
+	if resp, blocked := toolresp.RequireString(req, params.Text, "text", "Add the 'text' parameter with the content to write to clipboard"); blocked {
 		return resp
 	}
 
@@ -274,7 +274,7 @@ func (h *InteractActionHandler) HandleClipboardWrite(req JSONRPCRequest, args js
 }
 
 // handleDrawModeStart queues a draw_mode query for the extension to activate draw mode.
-func (h *InteractActionHandler) HandleDrawModeStart(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *InteractActionHandler) HandleDrawModeStart(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		TabID        int    `json:"tab_id,omitempty"`
 		AnnotSession string `json:"annot_session,omitempty"`
@@ -326,7 +326,7 @@ func (h *InteractActionHandler) HandleDrawModeStart(req JSONRPCRequest, args jso
 // handleWaitForStable is the named handler for the standalone wait_for_stable action.
 // It injects default stability_ms and timeout_ms if not provided, then delegates
 // to the standard DOM primitive dispatch.
-func (h *InteractActionHandler) HandleWaitForStable(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *InteractActionHandler) HandleWaitForStable(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		StabilityMs int `json:"stability_ms,omitempty"`
 		TimeoutMs   int `json:"timeout_ms,omitempty"`
@@ -357,13 +357,13 @@ func (h *InteractActionHandler) HandleWaitForStable(req JSONRPCRequest, args jso
 // handleAutoDismissOverlays is the named handler for the standalone auto_dismiss_overlays action.
 // It delegates to the DOM primitive dispatch, which runs consent framework selectors
 // followed by the existing dismiss_top_overlay multi-strategy approach on the extension side.
-func (h *InteractActionHandler) HandleAutoDismissOverlays(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *InteractActionHandler) HandleAutoDismissOverlays(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return h.HandleDOMPrimitive(req, args, "auto_dismiss_overlays")
 }
 
 // queueComposableAutoDismiss queues an auto_dismiss_overlays command as a side effect.
 // Used when auto_dismiss=true is passed as a composable param on navigate.
-func (h *InteractActionHandler) QueueComposableAutoDismiss(req JSONRPCRequest) {
+func (h *InteractActionHandler) QueueComposableAutoDismiss(req mcp.JSONRPCRequest) {
 	dismissArgs := marshalQueryParams(map[string]any{"action": "auto_dismiss_overlays"})
 	correlationID := toolresp.NewCorrelationID("dom_auto_dismiss_overlays")
 
@@ -381,7 +381,7 @@ func (h *InteractActionHandler) QueueComposableAutoDismiss(req JSONRPCRequest) {
 // Used when action_diff=true is passed as a composable param on any mutating action.
 // The extension instruments a MutationObserver after the main action, captures mutations,
 // and returns a structured summary of what changed (overlays, toasts, form errors, etc.).
-func (h *InteractActionHandler) QueueComposableActionDiff(req JSONRPCRequest) {
+func (h *InteractActionHandler) QueueComposableActionDiff(req mcp.JSONRPCRequest) {
 	diffArgs := marshalQueryParams(map[string]any{
 		"action":     "action_diff",
 		"timeout_ms": 3000,
@@ -400,7 +400,7 @@ func (h *InteractActionHandler) QueueComposableActionDiff(req JSONRPCRequest) {
 
 // queueComposableWaitForStable queues a wait_for_stable command as a side effect.
 // Used when wait_for_stable=true is passed as a composable param on navigate or click.
-func (h *InteractActionHandler) QueueComposableWaitForStable(req JSONRPCRequest, stabilityMs int) {
+func (h *InteractActionHandler) QueueComposableWaitForStable(req mcp.JSONRPCRequest, stabilityMs int) {
 	if stabilityMs <= 0 {
 		stabilityMs = 500
 	}
@@ -424,7 +424,7 @@ func (h *InteractActionHandler) QueueComposableWaitForStable(req JSONRPCRequest,
 }
 
 // queueComposableSubtitle queues a subtitle command as a side effect of another action.
-func (h *InteractActionHandler) QueueComposableSubtitle(req JSONRPCRequest, text string) {
+func (h *InteractActionHandler) QueueComposableSubtitle(req mcp.JSONRPCRequest, text string) {
 	subtitleArgs := marshalQueryParams(map[string]any{"text": text})
 	subtitleQuery := queries.PendingQuery{
 		Type:          "subtitle",

@@ -24,7 +24,7 @@ const (
 var ReplayMu sync.Mutex
 
 // handleBatch executes a sequence of interact steps provided inline.
-func (h *InteractActionHandler) HandleBatch(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *InteractActionHandler) HandleBatch(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	// Fail fast if pilot/extension are not available — avoids acquiring replayMu
 	// and iterating steps that would all fail individually (#9.R3.9).
 	if resp, blocked := checkGuards(req, h.deps.RequirePilot, h.deps.RequireExtension); blocked {
@@ -43,10 +43,10 @@ func (h *InteractActionHandler) HandleBatch(req JSONRPCRequest, args json.RawMes
 
 	// Validate steps
 	if len(params.Steps) == 0 {
-		return mcp.Fail(req, ErrInvalidParam, "Steps must be a non-empty array", "Add at least one step", withParam("steps"))
+		return mcp.Fail(req, mcp.ErrInvalidParam, "Steps must be a non-empty array", "Add at least one step", mcp.WithParam("steps"))
 	}
 	if len(params.Steps) > maxSequenceSteps {
-		return mcp.Fail(req, ErrInvalidParam, fmt.Sprintf("Steps exceeds maximum of %d", maxSequenceSteps), "Split into smaller batches", withParam("steps"))
+		return mcp.Fail(req, mcp.ErrInvalidParam, fmt.Sprintf("Steps exceeds maximum of %d", maxSequenceSteps), "Split into smaller batches", mcp.WithParam("steps"))
 	}
 
 	// Validate each step has a what (or action) field
@@ -56,7 +56,7 @@ func (h *InteractActionHandler) HandleBatch(req JSONRPCRequest, args json.RawMes
 			Action string `json:"action"`
 		}
 		if err := json.Unmarshal(step, &s); err != nil || (s.What == "" && s.Action == "") {
-			return mcp.Fail(req, ErrInvalidParam, fmt.Sprintf("Step[%d] missing required 'what' field", i), "Add a 'what' field to each step", withParam("steps"))
+			return mcp.Fail(req, mcp.ErrInvalidParam, fmt.Sprintf("Step[%d] missing required 'what' field", i), "Add a 'what' field to each step", mcp.WithParam("steps"))
 		}
 	}
 
@@ -76,7 +76,7 @@ func (h *InteractActionHandler) HandleBatch(req JSONRPCRequest, args json.RawMes
 		mu = &ReplayMu
 	}
 	if !mu.TryLock() {
-		return mcp.Fail(req, ErrInvalidParam, "Another batch or sequence is currently executing", "Wait for it to complete")
+		return mcp.Fail(req, mcp.ErrInvalidParam, "Another batch or sequence is currently executing", "Wait for it to complete")
 	}
 	defer mu.Unlock()
 

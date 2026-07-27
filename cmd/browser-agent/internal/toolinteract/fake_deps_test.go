@@ -5,6 +5,10 @@ package toolinteract
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -13,6 +17,38 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
+
+func TestDepsDoesNotReexportMCPProtocolSurface(t *testing.T) {
+	_, testFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("resolve test source path")
+	}
+	source, err := os.ReadFile(filepath.Join(filepath.Dir(testFile), "deps.go"))
+	if err != nil {
+		t.Fatalf("read deps.go: %v", err)
+	}
+	for _, forbidden := range []string{
+		"type JSONRPCRequest =",
+		"type JSONRPCResponse =",
+		"type MCPToolResult =",
+		"type MCPContentBlock =",
+		"type StructuredError =",
+		"const JSONRPCVersion =",
+		"ErrInvalidJSON =",
+		"func withParam(",
+		"func withHint(",
+		"func withAction(",
+		"func withSelector(",
+		"func withRetryable(",
+		"func withRetryAfterMs(",
+		"func withFinal(",
+		"func withRecoveryToolCall(",
+	} {
+		if strings.Contains(string(source), forbidden) {
+			t.Errorf("deps.go retains MCP compatibility facade %q", forbidden)
+		}
+	}
+}
 
 // fakeState captures interactions with the injected Deps and exposes behavior toggles.
 type fakeState struct {
@@ -34,13 +70,13 @@ type fakeState struct {
 	drawStarted     int
 
 	// Pluggable overrides (nil => default behavior).
-	waitFn     func(req JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) JSONRPCResponse
-	interactFn func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse
-	screenshot func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse
-	pageInfo   func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse
-	analyzeFn  func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse
-	sarifFn    func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse
-	enrichFn   func(resp JSONRPCResponse, req JSONRPCRequest, tabID int) JSONRPCResponse
+	waitFn     func(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse
+	interactFn func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
+	screenshot func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
+	pageInfo   func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
+	analyzeFn  func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
+	sarifFn    func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
+	enrichFn   func(resp mcp.JSONRPCResponse, req mcp.JSONRPCRequest, tabID int) mcp.JSONRPCResponse
 	redaction  RedactionEngine
 	listenPort int
 	evidenceFn func(clientID string) EvidenceShot
@@ -80,36 +116,36 @@ func (fs *fakeState) recordedCount() int {
 }
 
 func guardFn(block *bool, code, msg string) GuardCheck {
-	return func(req JSONRPCRequest, opts ...func(*StructuredError)) (JSONRPCResponse, bool) {
+	return func(req mcp.JSONRPCRequest, opts ...func(*mcp.StructuredError)) (mcp.JSONRPCResponse, bool) {
 		if *block {
 			return mcp.Fail(req, code, msg, "adjust and retry", opts...), true
 		}
-		return JSONRPCResponse{}, false
+		return mcp.JSONRPCResponse{}, false
 	}
 }
 
 // deps builds a fully-populated *Deps wired to this fakeState.
 func (fs *fakeState) deps() *Deps {
 	return &Deps{
-		RequirePilot:       guardFn(&fs.blockPilot, ErrCodePilotDisabled, "Pilot mode disabled"),
-		RequireExtension:   guardFn(&fs.blockExt, ErrNotInitialized, "Extension not connected"),
-		RequireTabTracking: guardFn(&fs.blockTab, ErrNotInitialized, "Tab tracking not active"),
-		RequireCSPClear: func(req JSONRPCRequest, world string) (JSONRPCResponse, bool) {
+		RequirePilot:       guardFn(&fs.blockPilot, mcp.ErrCodePilotDisabled, "Pilot mode disabled"),
+		RequireExtension:   guardFn(&fs.blockExt, mcp.ErrNotInitialized, "Extension not connected"),
+		RequireTabTracking: guardFn(&fs.blockTab, mcp.ErrNotInitialized, "Tab tracking not active"),
+		RequireCSPClear: func(req mcp.JSONRPCRequest, world string) (mcp.JSONRPCResponse, bool) {
 			if fs.blockCSP {
-				return mcp.Fail(req, ErrInvalidParam, "CSP restricted for world "+world, "use isolated world"), true
+				return mcp.Fail(req, mcp.ErrInvalidParam, "CSP restricted for world "+world, "use isolated world"), true
 			}
-			return JSONRPCResponse{}, false
+			return mcp.JSONRPCResponse{}, false
 		},
 
-		EnqueuePendingQuery: func(req JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (JSONRPCResponse, bool) {
+		EnqueuePendingQuery: func(req mcp.JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (mcp.JSONRPCResponse, bool) {
 			fs.enqueue(query)
 			if fs.blockEnqueue {
-				return mcp.Fail(req, ErrQueueFull, "Queue full", "retry later"), true
+				return mcp.Fail(req, mcp.ErrQueueFull, "Queue full", "retry later"), true
 			}
-			return JSONRPCResponse{}, false
+			return mcp.JSONRPCResponse{}, false
 		},
 
-		MaybeWaitForCommand: func(req JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) JSONRPCResponse {
+		MaybeWaitForCommand: func(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse {
 			if fs.waitFn != nil {
 				return fs.waitFn(req, correlationID, args, queuedSummary)
 			}
@@ -125,44 +161,44 @@ func (fs *fakeState) deps() *Deps {
 		RecordAIEnhancedAction:   func(action capture.EnhancedAction) { fs.record("enhanced") },
 		RecordDOMPrimitiveAction: func(action, selector, text, value string) { fs.record("dom:" + action) },
 
-		ToolInteract: func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		ToolInteract: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			if fs.interactFn != nil {
 				return fs.interactFn(req, args)
 			}
 			return mcp.Succeed(req, "nested interact", map[string]any{"status": "complete"})
 		},
-		ToolAnalyze: func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		ToolAnalyze: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			if fs.analyzeFn != nil {
 				return fs.analyzeFn(req, args)
 			}
 			return mcp.Succeed(req, "analyze", map[string]any{"issues": []any{}})
 		},
-		ToolExportSARIF: func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		ToolExportSARIF: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			if fs.sarifFn != nil {
 				return fs.sarifFn(req, args)
 			}
 			return mcp.Succeed(req, "sarif", map[string]any{"status": "exported"})
 		},
 
-		EnrichNavigateResponse: func(resp JSONRPCResponse, req JSONRPCRequest, tabID int) JSONRPCResponse {
+		EnrichNavigateResponse: func(resp mcp.JSONRPCResponse, req mcp.JSONRPCRequest, tabID int) mcp.JSONRPCResponse {
 			if fs.enrichFn != nil {
 				return fs.enrichFn(resp, req, tabID)
 			}
 			return resp
 		},
-		InjectCSPBlockedActions: func(resp JSONRPCResponse) JSONRPCResponse { return resp },
+		InjectCSPBlockedActions: func(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse { return resp },
 
-		GetScreenshot: func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		GetScreenshot: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			if fs.screenshot != nil {
 				return fs.screenshot(req, args)
 			}
-			result := MCPToolResult{Content: []MCPContentBlock{
+			result := mcp.MCPToolResult{Content: []mcp.MCPContentBlock{
 				{Type: "text", Text: "screenshot"},
 				{Type: "image", Data: "QUJD", MimeType: "image/png"},
 			}}
-			return JSONRPCResponse{JSONRPC: JSONRPCVersion, ID: req.ID, Result: mcp.SafeMarshal(result, "{}")}
+			return mcp.JSONRPCResponse{JSONRPC: mcp.JSONRPCVersion, ID: req.ID, Result: mcp.SafeMarshal(result, "{}")}
 		},
-		GetPageInfo: func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		GetPageInfo: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			if fs.pageInfo != nil {
 				return fs.pageInfo(req, args)
 			}
@@ -181,13 +217,13 @@ func (fs *fakeState) deps() *Deps {
 			return EvidenceShot{Path: "/tmp/evidence-" + clientID + ".png", Filename: "evidence.png"}
 		},
 
-		RequireSessionStore: func(req JSONRPCRequest) (JSONRPCResponse, bool) {
+		RequireSessionStore: func(req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool) {
 			if fs.blockSession {
-				return mcp.Fail(req, ErrNotInitialized, "Session store unavailable", "enable persistence"), true
+				return mcp.Fail(req, mcp.ErrNotInitialized, "Session store unavailable", "enable persistence"), true
 			}
-			return JSONRPCResponse{}, false
+			return mcp.JSONRPCResponse{}, false
 		},
-		DiagnosticHint:     func() func(*StructuredError) { return withHint("diagnostic hint") },
+		DiagnosticHint:     func() func(*mcp.StructuredError) { return mcp.WithHint("diagnostic hint") },
 		GetRedactionEngine: func() RedactionEngine { return fs.redaction },
 		GetCommandResult: func(correlationID string) (*queries.CommandResult, bool) {
 			return fs.cap.GetCommandResult(correlationID)
@@ -205,12 +241,12 @@ func newFakeHandler(t *testing.T) (*InteractActionHandler, *fakeState) {
 }
 
 // testReq returns a standard JSON-RPC request for interact handler tests.
-func testReq() JSONRPCRequest {
-	return JSONRPCRequest{JSONRPC: JSONRPCVersion, ID: float64(1), ClientID: "client-test"}
+func testReq() mcp.JSONRPCRequest {
+	return mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: float64(1), ClientID: "client-test"}
 }
 
 // assertErr fails the test unless resp is an MCP error whose text contains codeSubstr.
-func assertErr(t *testing.T, resp JSONRPCResponse, codeSubstr string) {
+func assertErr(t *testing.T, resp mcp.JSONRPCResponse, codeSubstr string) {
 	t.Helper()
 	result := parseToolResult(t, resp)
 	if !result.IsError {
@@ -222,7 +258,7 @@ func assertErr(t *testing.T, resp JSONRPCResponse, codeSubstr string) {
 }
 
 // assertOK fails the test unless resp is a non-error MCP result.
-func assertOK(t *testing.T, resp JSONRPCResponse) MCPToolResult {
+func assertOK(t *testing.T, resp mcp.JSONRPCResponse) mcp.MCPToolResult {
 	t.Helper()
 	result := parseToolResult(t, resp)
 	if result.IsError {

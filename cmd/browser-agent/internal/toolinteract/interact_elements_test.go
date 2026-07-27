@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 func TestResolveIndexToSelector_Empty(t *testing.T) {
@@ -86,7 +88,7 @@ func TestHandleDOMPrimitive_IndexGenerationMismatch(t *testing.T) {
 	h := newTestToolHandler()
 	h.interactAction().elementIndexRegistry.Store("client-a", 7, "gen_new", map[int]string{1: "#submit"})
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1), ClientID: "client-a"}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1), ClientID: "client-a"}
 	resp := h.interactAction().HandleDOMPrimitive(req, json.RawMessage(`{"index":1,"tab_id":7,"index_generation":"gen_old"}`), "click")
 	result := parseToolResult(t, resp)
 	if !result.IsError {
@@ -112,11 +114,11 @@ func TestBuildElementIndexFromResponse_ValidElements(t *testing.T) {
 	}
 	elemJSON, _ := json.Marshal(elemData)
 
-	result := MCPToolResult{
-		Content: []MCPContentBlock{{Type: "text", Text: "list_interactive results\n" + string(elemJSON)}},
+	result := mcp.MCPToolResult{
+		Content: []mcp.MCPContentBlock{{Type: "text", Text: "list_interactive results\n" + string(elemJSON)}},
 	}
 	resultJSON, _ := json.Marshal(result)
-	resp := JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
+	resp := mcp.JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
 
 	h.interactAction().buildElementIndexFromResponse("client-a", 0, "gen_1", resp)
 
@@ -153,11 +155,11 @@ func TestBuildElementIndexFromResponse_NestedResult(t *testing.T) {
 	}
 	nestedJSON, _ := json.Marshal(nestedData)
 
-	result := MCPToolResult{
-		Content: []MCPContentBlock{{Type: "text", Text: string(nestedJSON)}},
+	result := mcp.MCPToolResult{
+		Content: []mcp.MCPContentBlock{{Type: "text", Text: string(nestedJSON)}},
 	}
 	resultJSON, _ := json.Marshal(result)
-	resp := JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
+	resp := mcp.JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
 
 	h.interactAction().buildElementIndexFromResponse("client-a", 0, "gen_1", resp)
 
@@ -175,12 +177,12 @@ func TestBuildElementIndexFromResponse_ErrorResponse(t *testing.T) {
 	h.interactAction().elementIndexRegistry.Store("client-a", 0, "gen_1", map[int]string{0: "old"})
 
 	// Error response should not clear the store
-	result := MCPToolResult{
-		Content: []MCPContentBlock{{Type: "text", Text: "error"}},
+	result := mcp.MCPToolResult{
+		Content: []mcp.MCPContentBlock{{Type: "text", Text: "error"}},
 		IsError: true,
 	}
 	resultJSON, _ := json.Marshal(result)
-	resp := JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
+	resp := mcp.JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
 
 	h.interactAction().buildElementIndexFromResponse("client-a", 0, "gen_2", resp)
 
@@ -241,16 +243,16 @@ func TestTruncateListInteractiveResponse_Basic(t *testing.T) {
 	elemData := map[string]any{"elements": elements}
 	elemJSON, _ := json.Marshal(elemData)
 
-	result := MCPToolResult{
-		Content: []MCPContentBlock{{Type: "text", Text: "list_interactive results\n" + string(elemJSON)}},
+	result := mcp.MCPToolResult{
+		Content: []mcp.MCPContentBlock{{Type: "text", Text: "list_interactive results\n" + string(elemJSON)}},
 	}
 	resultJSON, _ := json.Marshal(result)
-	resp := JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
+	resp := mcp.JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
 
 	truncated := truncateListInteractiveResponse(resp, 5)
 
 	// Parse truncated response
-	var truncResult MCPToolResult
+	var truncResult mcp.MCPToolResult
 	if err := json.Unmarshal(truncated.Result, &truncResult); err != nil {
 		t.Fatal(err)
 	}
@@ -294,11 +296,11 @@ func TestTruncateListInteractiveResponse_NoTruncationNeeded(t *testing.T) {
 	}
 	elemJSON, _ := json.Marshal(elemData)
 
-	result := MCPToolResult{
-		Content: []MCPContentBlock{{Type: "text", Text: string(elemJSON)}},
+	result := mcp.MCPToolResult{
+		Content: []mcp.MCPContentBlock{{Type: "text", Text: string(elemJSON)}},
 	}
 	resultJSON, _ := json.Marshal(result)
-	resp := JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
+	resp := mcp.JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
 
 	truncated := truncateListInteractiveResponse(resp, 10)
 
@@ -311,12 +313,12 @@ func TestTruncateListInteractiveResponse_NoTruncationNeeded(t *testing.T) {
 func TestTruncateListInteractiveResponse_ErrorResponse(t *testing.T) {
 	t.Parallel()
 
-	result := MCPToolResult{
-		Content: []MCPContentBlock{{Type: "text", Text: "error"}},
+	result := mcp.MCPToolResult{
+		Content: []mcp.MCPContentBlock{{Type: "text", Text: "error"}},
 		IsError: true,
 	}
 	resultJSON, _ := json.Marshal(result)
-	resp := JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
+	resp := mcp.JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
 
 	truncated := truncateListInteractiveResponse(resp, 5)
 	if string(truncated.Result) != string(resp.Result) {

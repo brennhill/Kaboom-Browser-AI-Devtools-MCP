@@ -52,7 +52,7 @@ type commandBuilder struct {
 
 	// Guards
 	guardFns  []GuardCheck
-	guardOpts []func(*StructuredError) // optional opts passed to checkGuardsWithOpts
+	guardOpts []func(*mcp.StructuredError) // optional opts passed to checkGuardsWithOpts
 
 	// AI recording (optional)
 	doRecord  bool
@@ -129,11 +129,11 @@ func (b *commandBuilder) guards(fns ...GuardCheck) *commandBuilder {
 	return b
 }
 
-// guardsWithOpts adds guard checks with StructuredError options.
+// guardsWithOpts adds guard checks with mcp.StructuredError options.
 // This is used by handlers like handleDOMPrimitive that need to pass
 // contextOpts (action, selector) through to guard error responses.
 // Note: opts are accumulated, not replaced — multiple calls are safe.
-func (b *commandBuilder) guardsWithOpts(opts []func(*StructuredError), fns ...GuardCheck) *commandBuilder {
+func (b *commandBuilder) guardsWithOpts(opts []func(*mcp.StructuredError), fns ...GuardCheck) *commandBuilder {
 	b.guardOpts = append(b.guardOpts, opts...)
 	b.guardFns = append(b.guardFns, fns...)
 	return b
@@ -177,7 +177,7 @@ func (b *commandBuilder) queuedMessage(msg string) *commandBuilder {
 
 // execute runs the full command sequence: guards → correlate → arm → enqueue → record → wait.
 // waitArgs is the original args passed to MaybeWaitForCommand for sync/background resolution.
-func (b *commandBuilder) execute(req JSONRPCRequest, waitArgs json.RawMessage) JSONRPCResponse {
+func (b *commandBuilder) execute(req mcp.JSONRPCRequest, waitArgs json.RawMessage) mcp.JSONRPCResponse {
 	resp, _ := b.executeWithCorrelation(req, waitArgs)
 	return resp
 }
@@ -185,13 +185,13 @@ func (b *commandBuilder) execute(req JSONRPCRequest, waitArgs json.RawMessage) J
 // executeWithCorrelation is like execute but also returns the generated correlation ID.
 // Useful for handlers that need the correlation ID for post-processing (e.g. element index).
 // Returns empty string if guards blocked before correlation ID generation.
-func (b *commandBuilder) executeWithCorrelation(req JSONRPCRequest, waitArgs json.RawMessage) (JSONRPCResponse, string) {
+func (b *commandBuilder) executeWithCorrelation(req mcp.JSONRPCRequest, waitArgs json.RawMessage) (mcp.JSONRPCResponse, string) {
 	// 0. Validate required fields
 	if b.corrPrefix == "" {
 		b.corrPrefix = b.name // fall back to builder name
 	}
 	if b.qType == "" {
-		return mcp.Fail(req, ErrMissingParam, "commandBuilder: queryType is required", "Set queryType before calling execute"), ""
+		return mcp.Fail(req, mcp.ErrMissingParam, "commandBuilder: queryType is required", "Set queryType before calling execute"), ""
 	}
 
 	// 1. Run guards

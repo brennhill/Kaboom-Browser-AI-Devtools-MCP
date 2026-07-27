@@ -107,7 +107,7 @@ type Deps struct {
 	// RequireSessionStore checks that the session store is available.
 	RequireSessionStore func(req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool)
 
-	// DiagnosticHint returns a StructuredError option for diagnostic hints.
+	// DiagnosticHint returns a structured-error option carrying diagnostic context.
 	DiagnosticHint func() func(*mcp.StructuredError)
 
 	// GetRedactionEngine returns the redaction engine (may be nil).
@@ -185,75 +185,24 @@ func NewStateInteractHandler(deps *Deps, store *persistence.SessionStore) *inter
 	}, store)
 }
 
-type JSONRPCRequest = mcp.JSONRPCRequest
-type JSONRPCResponse = mcp.JSONRPCResponse
-type MCPToolResult = mcp.MCPToolResult
-type MCPContentBlock = mcp.MCPContentBlock
-type StructuredError = mcp.StructuredError
-
-const JSONRPCVersion = mcp.JSONRPCVersion
-
-const (
-	ErrInvalidJSON          = mcp.ErrInvalidJSON
-	ErrMissingParam         = mcp.ErrMissingParam
-	ErrInvalidParam         = mcp.ErrInvalidParam
-	ErrUnknownMode          = mcp.ErrUnknownMode
-	ErrPathNotAllowed       = mcp.ErrPathNotAllowed
-	ErrNotInitialized       = mcp.ErrNotInitialized
-	ErrNoData               = mcp.ErrNoData
-	ErrCodePilotDisabled    = mcp.ErrCodePilotDisabled
-	ErrOsAutomationDisabled = mcp.ErrOsAutomationDisabled
-	ErrRateLimited          = mcp.ErrRateLimited
-	ErrCursorExpired        = mcp.ErrCursorExpired
-	ErrExtTimeout           = mcp.ErrExtTimeout
-	ErrExtError             = mcp.ErrExtError
-	ErrQueueFull            = mcp.ErrQueueFull
-	ErrInternal             = mcp.ErrInternal
-	ErrMarshalFailed        = mcp.ErrMarshalFailed
-	ErrExportFailed         = mcp.ErrExportFailed
-)
-
-func requireString(req JSONRPCRequest, value, paramName, hint string) (JSONRPCResponse, bool) {
-	if value != "" {
-		return JSONRPCResponse{}, false
-	}
-	return mcp.Fail(req, ErrMissingParam,
-		"Required parameter '"+paramName+"' is missing",
-		hint,
-		withParam(paramName)), true
-}
-
 func marshalQueryParams(fields map[string]any) json.RawMessage {
 	return mcp.SafeMarshal(fields, "{}")
 }
 
-func withParam(p string) func(*StructuredError)    { return mcp.WithParam(p) }
-func withHint(h string) func(*StructuredError)     { return mcp.WithHint(h) }
-func withAction(a string) func(*StructuredError)   { return mcp.WithAction(a) }
-func withSelector(s string) func(*StructuredError) { return mcp.WithSelector(s) }
-func withRetryable(retryable bool) func(*StructuredError) {
-	return mcp.WithRetryable(retryable)
-}
-func withRetryAfterMs(ms int) func(*StructuredError) { return mcp.WithRetryAfterMs(ms) }
-func withFinal(final bool) func(*StructuredError)    { return mcp.WithFinal(final) }
-func withRecoveryToolCall(toolCall map[string]any) func(*StructuredError) {
-	return mcp.WithRecoveryToolCall(toolCall)
-}
-
-func checkGuards(req JSONRPCRequest, guards ...GuardCheck) (JSONRPCResponse, bool) {
+func checkGuards(req mcp.JSONRPCRequest, guards ...GuardCheck) (mcp.JSONRPCResponse, bool) {
 	for _, guard := range guards {
 		if resp, blocked := guard(req); blocked {
 			return resp, true
 		}
 	}
-	return JSONRPCResponse{}, false
+	return mcp.JSONRPCResponse{}, false
 }
 
-func checkGuardsWithOpts(req JSONRPCRequest, opts []func(*StructuredError), guards ...GuardCheck) (JSONRPCResponse, bool) {
+func checkGuardsWithOpts(req mcp.JSONRPCRequest, opts []func(*mcp.StructuredError), guards ...GuardCheck) (mcp.JSONRPCResponse, bool) {
 	for _, guard := range guards {
 		if resp, blocked := guard(req, opts...); blocked {
 			return resp, true
 		}
 	}
-	return JSONRPCResponse{}, false
+	return mcp.JSONRPCResponse{}, false
 }

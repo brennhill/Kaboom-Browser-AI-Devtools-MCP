@@ -19,24 +19,24 @@ func TestHandleFillForm_Success(t *testing.T) {
 
 func TestHandleFillForm_EmptyFields(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleFillForm(testReq(), json.RawMessage(`{"fields":[]}`)), ErrMissingParam)
+	assertErr(t, h.HandleFillForm(testReq(), json.RawMessage(`{"fields":[]}`)), mcp.ErrMissingParam)
 }
 
 func TestHandleFillForm_InvalidJSON(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleFillForm(testReq(), json.RawMessage(`bad`)), ErrInvalidJSON)
+	assertErr(t, h.HandleFillForm(testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
 }
 
 func TestHandleFillForm_FieldMissingSelectorAndIndex(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleFillForm(testReq(), json.RawMessage(`{"fields":[{"value":"x"}]}`)), ErrMissingParam)
+	assertErr(t, h.HandleFillForm(testReq(), json.RawMessage(`{"fields":[{"value":"x"}]}`)), mcp.ErrMissingParam)
 }
 
 func TestHandleFillForm_ByIndex_NotInRegistry(t *testing.T) {
 	// Without a prior list_interactive to populate the element-index registry,
 	// resolving field index 0 returns an invalid_param "call list_interactive first" error.
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleFillForm(testReq(), json.RawMessage(`{"fields":[{"index":0,"value":"x"}]}`)), ErrInvalidParam)
+	assertErr(t, h.HandleFillForm(testReq(), json.RawMessage(`{"fields":[{"index":0,"value":"x"}]}`)), mcp.ErrInvalidParam)
 }
 
 func TestHandleFillFormAndSubmit_Success(t *testing.T) {
@@ -50,30 +50,30 @@ func TestHandleFillFormAndSubmit_BySubmitIndex_NotInRegistry(t *testing.T) {
 	// without it, the submit step returns an invalid_param error.
 	h, _ := newFakeHandler(t)
 	args := `{"fields":[{"selector":"#name","value":"Ada"}],"submit_index":2}`
-	assertErr(t, h.HandleFillFormAndSubmit(testReq(), json.RawMessage(args)), ErrInvalidParam)
+	assertErr(t, h.HandleFillFormAndSubmit(testReq(), json.RawMessage(args)), mcp.ErrInvalidParam)
 }
 
 func TestHandleFillFormAndSubmit_MissingSubmit(t *testing.T) {
 	h, _ := newFakeHandler(t)
 	args := `{"fields":[{"selector":"#name","value":"Ada"}]}`
-	assertErr(t, h.HandleFillFormAndSubmit(testReq(), json.RawMessage(args)), ErrMissingParam)
+	assertErr(t, h.HandleFillFormAndSubmit(testReq(), json.RawMessage(args)), mcp.ErrMissingParam)
 }
 
 func TestHandleFillFormAndSubmit_EmptyFields(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleFillFormAndSubmit(testReq(), json.RawMessage(`{"fields":[],"submit_selector":"#go"}`)), ErrMissingParam)
+	assertErr(t, h.HandleFillFormAndSubmit(testReq(), json.RawMessage(`{"fields":[],"submit_selector":"#go"}`)), mcp.ErrMissingParam)
 }
 
 func TestHandleFillFormAndSubmit_InvalidJSON(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleFillFormAndSubmit(testReq(), json.RawMessage(`bad`)), ErrInvalidJSON)
+	assertErr(t, h.HandleFillFormAndSubmit(testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
 }
 
 func TestHandleFillForm_SelectFallback(t *testing.T) {
 	h, fs := newFakeHandler(t)
 	// First type returns not_typeable, forcing a select fallback.
 	call := 0
-	fs.waitFn = func(req JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) JSONRPCResponse {
+	fs.waitFn = func(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse {
 		call++
 		if call == 1 {
 			return mcp.Succeed(req, "type", map[string]any{"status": "complete", "error": "not_typeable"})
@@ -93,23 +93,23 @@ func TestHandleNavigateAndWaitFor_Success(t *testing.T) {
 
 func TestHandleNavigateAndWaitFor_MissingURL(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleNavigateAndWaitFor(testReq(), json.RawMessage(`{"wait_for":"#x"}`)), ErrMissingParam)
+	assertErr(t, h.HandleNavigateAndWaitFor(testReq(), json.RawMessage(`{"wait_for":"#x"}`)), mcp.ErrMissingParam)
 }
 
 func TestHandleNavigateAndWaitFor_MissingWaitFor(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleNavigateAndWaitFor(testReq(), json.RawMessage(`{"url":"https://x.io"}`)), ErrMissingParam)
+	assertErr(t, h.HandleNavigateAndWaitFor(testReq(), json.RawMessage(`{"url":"https://x.io"}`)), mcp.ErrMissingParam)
 }
 
 func TestHandleNavigateAndWaitFor_InvalidJSON(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleNavigateAndWaitFor(testReq(), json.RawMessage(`bad`)), ErrInvalidJSON)
+	assertErr(t, h.HandleNavigateAndWaitFor(testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
 }
 
 func TestHandleNavigateAndWaitFor_IncludeContent(t *testing.T) {
 	h, fs := newFakeHandler(t)
 	enriched := false
-	fs.enrichFn = func(resp JSONRPCResponse, req JSONRPCRequest, tabID int) JSONRPCResponse {
+	fs.enrichFn = func(resp mcp.JSONRPCResponse, req mcp.JSONRPCRequest, tabID int) mcp.JSONRPCResponse {
 		enriched = true
 		return resp
 	}
@@ -128,7 +128,7 @@ func TestHandleNavigateAndDocument_WaitsDisabled(t *testing.T) {
 
 func TestHandleNavigateAndDocument_InvalidJSON(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleNavigateAndDocument(testReq(), json.RawMessage(`bad`)), ErrInvalidJSON)
+	assertErr(t, h.HandleNavigateAndDocument(testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
 }
 
 func TestHandleNavigateAndDocument_TabMismatch(t *testing.T) {
@@ -136,16 +136,16 @@ func TestHandleNavigateAndDocument_TabMismatch(t *testing.T) {
 	// tracked tab is 1; request tab_id 2 should mismatch.
 	fs.cap.SetTrackingStatusForTest(1, "https://example.com/page")
 	args := `{"selector":"#link","tab_id":2,"wait_for_url_change":false,"wait_for_stable":false}`
-	assertErr(t, h.HandleNavigateAndDocument(testReq(), json.RawMessage(args)), ErrInvalidParam)
+	assertErr(t, h.HandleNavigateAndDocument(testReq(), json.RawMessage(args)), mcp.ErrInvalidParam)
 }
 
 func TestHandleNavigateAndDocument_ClickError(t *testing.T) {
 	h, fs := newFakeHandler(t)
-	fs.waitFn = func(req JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) JSONRPCResponse {
-		return mcp.Fail(req, ErrExtError, "click failed", "retry")
+	fs.waitFn = func(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse {
+		return mcp.Fail(req, mcp.ErrExtError, "click failed", "retry")
 	}
 	args := `{"selector":"#link","wait_for_url_change":false,"wait_for_stable":false}`
-	assertErr(t, h.HandleNavigateAndDocument(testReq(), json.RawMessage(args)), ErrExtError)
+	assertErr(t, h.HandleNavigateAndDocument(testReq(), json.RawMessage(args)), mcp.ErrExtError)
 }
 
 func TestHandleRunA11yAndExportSARIF_Success(t *testing.T) {
@@ -155,15 +155,15 @@ func TestHandleRunA11yAndExportSARIF_Success(t *testing.T) {
 
 func TestHandleRunA11yAndExportSARIF_A11yError(t *testing.T) {
 	h, fs := newFakeHandler(t)
-	fs.analyzeFn = func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-		return mcp.Fail(req, ErrExtError, "audit failed", "retry")
+	fs.analyzeFn = func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		return mcp.Fail(req, mcp.ErrExtError, "audit failed", "retry")
 	}
-	assertErr(t, h.HandleRunA11yAndExportSARIF(testReq(), json.RawMessage(`{}`)), ErrExtError)
+	assertErr(t, h.HandleRunA11yAndExportSARIF(testReq(), json.RawMessage(`{}`)), mcp.ErrExtError)
 }
 
 func TestHandleRunA11yAndExportSARIF_InvalidJSON(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleRunA11yAndExportSARIF(testReq(), json.RawMessage(`bad`)), ErrInvalidJSON)
+	assertErr(t, h.HandleRunA11yAndExportSARIF(testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
 }
 
 func TestExtractMCPResponseJSONPayload(t *testing.T) {
@@ -173,7 +173,7 @@ func TestExtractMCPResponseJSONPayload(t *testing.T) {
 		t.Fatalf("expected extracted payload, got %s", payload)
 	}
 	// Non-JSON content returns nil.
-	plain := JSONRPCResponse{Result: json.RawMessage(`{"content":[{"type":"text","text":"no json here"}]}`)}
+	plain := mcp.JSONRPCResponse{Result: json.RawMessage(`{"content":[{"type":"text","text":"no json here"}]}`)}
 	if extractMCPResponseJSONPayload(plain) != nil {
 		t.Fatal("expected nil for text without JSON")
 	}
@@ -190,7 +190,7 @@ func TestWorkflowFieldLabel(t *testing.T) {
 }
 
 func TestIsNotTypeableError(t *testing.T) {
-	yes := JSONRPCResponse{Result: json.RawMessage(`{"content":[{"type":"text","text":"not_typeable"}]}`)}
+	yes := mcp.JSONRPCResponse{Result: json.RawMessage(`{"content":[{"type":"text","text":"not_typeable"}]}`)}
 	if !IsNotTypeableError(yes) {
 		t.Fatal("expected not_typeable detected")
 	}

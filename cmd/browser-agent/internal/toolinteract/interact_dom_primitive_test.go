@@ -4,6 +4,8 @@ package toolinteract
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 func TestHandleDOMPrimitive_ClickSuccess(t *testing.T) {
@@ -21,19 +23,19 @@ func TestHandleDOMPrimitive_ClickSuccess(t *testing.T) {
 
 func TestHandleDOMPrimitive_InvalidJSON(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleDOMPrimitive(testReq(), json.RawMessage(`{bad`), "click"), ErrInvalidJSON)
+	assertErr(t, h.HandleDOMPrimitive(testReq(), json.RawMessage(`{bad`), "click"), mcp.ErrInvalidJSON)
 }
 
 func TestHandleDOMPrimitive_MissingSelector(t *testing.T) {
 	h, _ := newFakeHandler(t)
 	// click requires a selector/element_id/index.
-	assertErr(t, h.HandleDOMPrimitive(testReq(), json.RawMessage(`{"action":"click"}`), "click"), ErrMissingParam)
+	assertErr(t, h.HandleDOMPrimitive(testReq(), json.RawMessage(`{"action":"click"}`), "click"), mcp.ErrMissingParam)
 }
 
 func TestHandleDOMPrimitive_TypeRequiresText(t *testing.T) {
 	h, _ := newFakeHandler(t)
 	// type action requires text field.
-	assertErr(t, h.HandleDOMPrimitive(testReq(), json.RawMessage(`{"selector":"#i","action":"type"}`), "type"), ErrMissingParam)
+	assertErr(t, h.HandleDOMPrimitive(testReq(), json.RawMessage(`{"selector":"#i","action":"type"}`), "type"), mcp.ErrMissingParam)
 }
 
 func TestHandleDOMPrimitive_TypeSuccess(t *testing.T) {
@@ -73,7 +75,7 @@ func TestHandleDOMPrimitive_IndexResolvesToSelector(t *testing.T) {
 func TestHandleDOMPrimitive_IndexNotFound(t *testing.T) {
 	h, _ := newFakeHandler(t)
 	resp := h.HandleDOMPrimitive(testReq(), json.RawMessage(`{"index":9,"action":"click"}`), "click")
-	assertErr(t, resp, ErrInvalidParam)
+	assertErr(t, resp, mcp.ErrInvalidParam)
 }
 
 func TestHandleHardwareClick_Success(t *testing.T) {
@@ -83,23 +85,23 @@ func TestHandleHardwareClick_Success(t *testing.T) {
 
 func TestHandleHardwareClick_MissingX(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleHardwareClick(testReq(), json.RawMessage(`{"y":6}`)), ErrMissingParam)
+	assertErr(t, h.HandleHardwareClick(testReq(), json.RawMessage(`{"y":6}`)), mcp.ErrMissingParam)
 }
 
 func TestHandleHardwareClick_MissingY(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleHardwareClick(testReq(), json.RawMessage(`{"x":6}`)), ErrMissingParam)
+	assertErr(t, h.HandleHardwareClick(testReq(), json.RawMessage(`{"x":6}`)), mcp.ErrMissingParam)
 }
 
 func TestHandleHardwareClick_InvalidJSON(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleHardwareClick(testReq(), json.RawMessage(`bad`)), ErrInvalidJSON)
+	assertErr(t, h.HandleHardwareClick(testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
 }
 
 func TestHandleCDPClick_PilotBlocked(t *testing.T) {
 	h, fs := newFakeHandler(t)
 	fs.blockPilot = true
-	assertErr(t, h.HandleCDPClick(testReq(), json.RawMessage(`{}`), "hardware_click", 1, 2, 0), ErrCodePilotDisabled)
+	assertErr(t, h.HandleCDPClick(testReq(), json.RawMessage(`{}`), "hardware_click", 1, 2, 0), mcp.ErrCodePilotDisabled)
 }
 
 func TestNormalizeDOMActionArgs_SetsAction(t *testing.T) {

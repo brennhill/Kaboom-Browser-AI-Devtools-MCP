@@ -25,7 +25,7 @@ func TestHandleGetMarkdown(t *testing.T) {
 func TestHandleContentExtraction_TabBlocked(t *testing.T) {
 	h, fs := newFakeHandler(t)
 	fs.blockTab = true
-	assertErr(t, h.HandleContentExtraction(testReq(), json.RawMessage(`{}`), "get_readable", "readable"), ErrNotInitialized)
+	assertErr(t, h.HandleContentExtraction(testReq(), json.RawMessage(`{}`), "get_readable", "readable"), mcp.ErrNotInitialized)
 }
 
 func TestHandleWaitForStable(t *testing.T) {
@@ -71,18 +71,18 @@ func TestHandleClipboardWrite(t *testing.T) {
 
 func TestHandleClipboardWrite_MissingText(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleClipboardWrite(testReq(), json.RawMessage(`{}`)), ErrMissingParam)
+	assertErr(t, h.HandleClipboardWrite(testReq(), json.RawMessage(`{}`)), mcp.ErrMissingParam)
 }
 
 func TestHandleClipboardWrite_InvalidJSON(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleClipboardWrite(testReq(), json.RawMessage(`bad`)), ErrInvalidJSON)
+	assertErr(t, h.HandleClipboardWrite(testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
 }
 
 func TestHandleClipboardRead_PilotBlockedNoRecord(t *testing.T) {
 	h, fs := newFakeHandler(t)
 	fs.blockPilot = true
-	assertErr(t, h.HandleClipboardRead(testReq(), json.RawMessage(`{}`)), ErrCodePilotDisabled)
+	assertErr(t, h.HandleClipboardRead(testReq(), json.RawMessage(`{}`)), mcp.ErrCodePilotDisabled)
 	if fs.recordedCount() != 0 {
 		t.Fatalf("blocked clipboard read should not record, got %d", fs.recordedCount())
 	}
@@ -105,7 +105,7 @@ func TestHandleDrawModeStart_NoArgs(t *testing.T) {
 func TestHandleDrawModeStart_ExtensionBlocked(t *testing.T) {
 	h, fs := newFakeHandler(t)
 	fs.blockExt = true
-	assertErr(t, h.HandleDrawModeStart(testReq(), json.RawMessage(`{}`)), ErrNotInitialized)
+	assertErr(t, h.HandleDrawModeStart(testReq(), json.RawMessage(`{}`)), mcp.ErrNotInitialized)
 	if fs.drawStarted != 0 {
 		t.Fatalf("blocked draw should not mark started, got %d", fs.drawStarted)
 	}
@@ -114,13 +114,13 @@ func TestHandleDrawModeStart_ExtensionBlocked(t *testing.T) {
 func TestHandleDrawModeStart_TabBlocked(t *testing.T) {
 	h, fs := newFakeHandler(t)
 	fs.blockTab = true
-	assertErr(t, h.HandleDrawModeStart(testReq(), json.RawMessage(`{}`)), ErrNotInitialized)
+	assertErr(t, h.HandleDrawModeStart(testReq(), json.RawMessage(`{}`)), mcp.ErrNotInitialized)
 }
 
 func TestHandleListInteractive_Success(t *testing.T) {
 	h, fs := newFakeHandler(t)
 	// Return a response with elements so index metadata is built.
-	fs.waitFn = func(req JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) JSONRPCResponse {
+	fs.waitFn = func(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse {
 		return mcp.Succeed(req, "list_interactive results", map[string]any{
 			"elements": []any{
 				map[string]any{"index": float64(0), "selector": "#a", "tag": "input"},
@@ -143,7 +143,7 @@ func TestHandleListInteractive_Success(t *testing.T) {
 
 func TestHandleListInteractive_Truncation(t *testing.T) {
 	h, fs := newFakeHandler(t)
-	fs.waitFn = func(req JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) JSONRPCResponse {
+	fs.waitFn = func(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse {
 		elems := make([]any, 8)
 		for i := range elems {
 			elems[i] = map[string]any{"index": float64(i), "selector": "#e", "tag": "div"}

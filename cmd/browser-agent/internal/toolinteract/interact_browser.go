@@ -17,6 +17,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
@@ -90,7 +91,7 @@ type browserActionOpts struct {
 // queueBrowserAction is the shared helper for simple browser actions that follow
 // the guard → correlate → arm evidence → enqueue → record → wait pattern.
 // Uses commandBuilder to eliminate repeated boilerplate.
-func (h *InteractActionHandler) queueBrowserAction(req JSONRPCRequest, args json.RawMessage, opts browserActionOpts) JSONRPCResponse {
+func (h *InteractActionHandler) queueBrowserAction(req mcp.JSONRPCRequest, args json.RawMessage, opts browserActionOpts) mcp.JSONRPCResponse {
 	actionParams := opts.params
 	if actionParams == nil {
 		actionParams = marshalQueryParams(map[string]any{"action": opts.action})
@@ -121,11 +122,11 @@ func (h *InteractActionHandler) queueBrowserAction(req JSONRPCRequest, args json
 
 // handleScreenshotAliasImpl provides backward compatibility for clients that call
 // interact({action:"screenshot"}). The canonical API remains observe({what:"screenshot"}).
-func (h *InteractActionHandler) HandleScreenshotAliasImpl(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *InteractActionHandler) HandleScreenshotAliasImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return h.deps.GetScreenshot(req, args)
 }
 
-func (h *InteractActionHandler) HandleSubtitleImpl(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *InteractActionHandler) HandleSubtitleImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Text *string `json:"text"`
 	}
@@ -134,7 +135,7 @@ func (h *InteractActionHandler) HandleSubtitleImpl(req JSONRPCRequest, args json
 	}
 
 	if params.Text == nil {
-		return mcp.Fail(req, ErrMissingParam, "Required parameter 'text' is missing for subtitle action", "Add the 'text' parameter with subtitle text, or empty string to clear", withParam("text"))
+		return mcp.Fail(req, mcp.ErrMissingParam, "Required parameter 'text' is missing for subtitle action", "Add the 'text' parameter with subtitle text, or empty string to clear", mcp.WithParam("text"))
 	}
 
 	queuedMsg := "Subtitle set"
@@ -151,7 +152,7 @@ func (h *InteractActionHandler) HandleSubtitleImpl(req JSONRPCRequest, args json
 		execute(req, args)
 }
 
-func (h *InteractActionHandler) HandleBrowserActionNavigateImpl(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *InteractActionHandler) HandleBrowserActionNavigateImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		URL            string `json:"url"`
 		TabID          int    `json:"tab_id,omitempty"`
@@ -161,15 +162,15 @@ func (h *InteractActionHandler) HandleBrowserActionNavigateImpl(req JSONRPCReque
 		return resp
 	}
 
-	if resp, blocked := requireString(req, params.URL, "url", "Add the 'url' parameter and call again"); blocked {
+	if resp, blocked := toolresp.RequireString(req, params.URL, "url", "Add the 'url' parameter and call again"); blocked {
 		return resp
 	}
 	resolvedURL, err := h.ResolveNavigateURLImpl(params.URL)
 	if err != nil {
-		return mcp.Fail(req, ErrInvalidParam,
+		return mcp.Fail(req, mcp.ErrInvalidParam,
 			err.Error(),
 			"Enable configure(what='security_mode', mode='insecure_proxy', confirm=true), or use a standard http(s) URL.",
-			withParam("url"))
+			mcp.WithParam("url"))
 	}
 
 	actionParams := make(map[string]any)
@@ -206,7 +207,7 @@ func (h *InteractActionHandler) HandleBrowserActionNavigateImpl(req JSONRPCReque
 	return resp
 }
 
-func (h *InteractActionHandler) HandleBrowserActionRefreshImpl(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *InteractActionHandler) HandleBrowserActionRefreshImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		TabID int `json:"tab_id,omitempty"`
 	}
@@ -227,7 +228,7 @@ func (h *InteractActionHandler) HandleBrowserActionRefreshImpl(req JSONRPCReques
 		execute(req, args)
 }
 
-func (h *InteractActionHandler) HandleBrowserActionBackImpl(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *InteractActionHandler) HandleBrowserActionBackImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return h.queueBrowserAction(req, args, browserActionOpts{
 		action:         "back",
 		correlationPfx: "back",
@@ -235,7 +236,7 @@ func (h *InteractActionHandler) HandleBrowserActionBackImpl(req JSONRPCRequest, 
 	})
 }
 
-func (h *InteractActionHandler) HandleBrowserActionForwardImpl(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *InteractActionHandler) HandleBrowserActionForwardImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return h.queueBrowserAction(req, args, browserActionOpts{
 		action:         "forward",
 		correlationPfx: "forward",
@@ -243,7 +244,7 @@ func (h *InteractActionHandler) HandleBrowserActionForwardImpl(req JSONRPCReques
 	})
 }
 
-func (h *InteractActionHandler) HandleBrowserActionNewTabImpl(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *InteractActionHandler) HandleBrowserActionNewTabImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		URL string `json:"url"`
 	}
@@ -255,10 +256,10 @@ func (h *InteractActionHandler) HandleBrowserActionNewTabImpl(req JSONRPCRequest
 	if params.URL != "" {
 		rewriteURL, err := h.ResolveNavigateURLImpl(params.URL)
 		if err != nil {
-			return mcp.Fail(req, ErrInvalidParam,
+			return mcp.Fail(req, mcp.ErrInvalidParam,
 				err.Error(),
 				"Enable configure(what='security_mode', mode='insecure_proxy', confirm=true), or use a standard http(s) URL.",
-				withParam("url"))
+				mcp.WithParam("url"))
 		}
 		resolvedURL = rewriteURL
 	}
@@ -285,7 +286,7 @@ func (h *InteractActionHandler) HandleBrowserActionNewTabImpl(req JSONRPCRequest
 		execute(req, args)
 }
 
-func (h *InteractActionHandler) HandleBrowserActionSwitchTabImpl(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *InteractActionHandler) HandleBrowserActionSwitchTabImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		TabID      int   `json:"tab_id,omitempty"`
 		TabIndex   *int  `json:"tab_index,omitempty"`
@@ -295,17 +296,17 @@ func (h *InteractActionHandler) HandleBrowserActionSwitchTabImpl(req JSONRPCRequ
 		return resp
 	}
 	if params.TabID <= 0 && params.TabIndex == nil {
-		return mcp.Fail(req, ErrMissingParam,
+		return mcp.Fail(req, mcp.ErrMissingParam,
 			"switch_tab requires tab_id or tab_index",
 			"Provide tab_id from observe(what='tabs') or tab_index from your tab list ordering.",
-			withParam("tab_id"),
-			withHint("Alternative: provide tab_index"))
+			mcp.WithParam("tab_id"),
+			mcp.WithHint("Alternative: provide tab_index"))
 	}
 	if params.TabIndex != nil && *params.TabIndex < 0 {
-		return mcp.Fail(req, ErrInvalidParam,
+		return mcp.Fail(req, mcp.ErrInvalidParam,
 			"tab_index must be >= 0",
 			"Provide a non-negative tab_index (0-based).",
-			withParam("tab_index"))
+			mcp.WithParam("tab_index"))
 	}
 
 	// Default set_tracked to true so subsequent commands target the new tab.
@@ -345,7 +346,7 @@ func (h *InteractActionHandler) HandleBrowserActionSwitchTabImpl(req JSONRPCRequ
 	return resp
 }
 
-func (h *InteractActionHandler) HandleActivateTabImpl(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *InteractActionHandler) HandleActivateTabImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return h.queueBrowserAction(req, args, browserActionOpts{
 		action:         "activate_tab",
 		correlationPfx: "activate",
@@ -353,7 +354,7 @@ func (h *InteractActionHandler) HandleActivateTabImpl(req JSONRPCRequest, args j
 	})
 }
 
-func (h *InteractActionHandler) HandleBrowserActionCloseTabImpl(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *InteractActionHandler) HandleBrowserActionCloseTabImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		TabID int `json:"tab_id,omitempty"`
 	}
@@ -384,7 +385,7 @@ var validWorldValues = act.ValidWorldValues
 // truncateToLen delegates to the interact package.
 var truncateToLen = act.TruncateToLen
 
-func (h *InteractActionHandler) HandleHighlightImpl(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *InteractActionHandler) HandleHighlightImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Selector   string `json:"selector"`
 		DurationMs int    `json:"duration_ms,omitempty"`
@@ -394,7 +395,7 @@ func (h *InteractActionHandler) HandleHighlightImpl(req JSONRPCRequest, args jso
 		return resp
 	}
 
-	if resp, blocked := requireString(req, params.Selector, "selector", "Add the 'selector' parameter"); blocked {
+	if resp, blocked := toolresp.RequireString(req, params.Selector, "selector", "Add the 'selector' parameter"); blocked {
 		return resp
 	}
 
@@ -410,7 +411,7 @@ func (h *InteractActionHandler) HandleHighlightImpl(req JSONRPCRequest, args jso
 		execute(req, args)
 }
 
-func (h *InteractActionHandler) HandleExecuteJSImpl(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *InteractActionHandler) HandleExecuteJSImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Script    string `json:"script"`
 		TimeoutMs int    `json:"timeout_ms,omitempty"`
@@ -421,7 +422,7 @@ func (h *InteractActionHandler) HandleExecuteJSImpl(req JSONRPCRequest, args jso
 		return resp
 	}
 
-	if resp, blocked := requireString(req, params.Script, "script", "Add the 'script' parameter and call again"); blocked {
+	if resp, blocked := toolresp.RequireString(req, params.Script, "script", "Add the 'script' parameter and call again"); blocked {
 		return resp
 	}
 
@@ -429,7 +430,7 @@ func (h *InteractActionHandler) HandleExecuteJSImpl(req JSONRPCRequest, args jso
 		params.World = "auto"
 	}
 	if !validWorldValues[params.World] {
-		return mcp.Fail(req, ErrInvalidParam, "Invalid 'world' value: "+params.World, "Use 'auto' (default, tries main then isolated), 'main' (page JS access), or 'isolated' (bypasses CSP, DOM only)", withParam("world"))
+		return mcp.Fail(req, mcp.ErrInvalidParam, "Invalid 'world' value: "+params.World, "Use 'auto' (default, tries main then isolated), 'main' (page JS access), or 'isolated' (bypasses CSP, DOM only)", mcp.WithParam("world"))
 	}
 
 	return h.newCommand("execute_js").

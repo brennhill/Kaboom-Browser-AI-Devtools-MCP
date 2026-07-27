@@ -383,11 +383,11 @@ func (h *InteractActionHandler) ApplyJitter(action string) int {
 }
 
 // isResponseQueued checks if an MCP response is a queued async response.
-func isResponseQueued(resp JSONRPCResponse) bool {
+func isResponseQueued(resp mcp.JSONRPCResponse) bool {
 	if resp.Result == nil {
 		return false
 	}
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		return false
 	}
@@ -415,11 +415,11 @@ func isResponseQueued(resp JSONRPCResponse) bool {
 }
 
 // appendScreenshotToResponse captures a screenshot and appends it as an inline image block.
-func (h *InteractActionHandler) AppendScreenshotToResponse(resp JSONRPCResponse, req JSONRPCRequest) JSONRPCResponse {
-	screenshotReq := JSONRPCRequest{JSONRPC: JSONRPCVersion, ID: req.ID}
+func (h *InteractActionHandler) AppendScreenshotToResponse(resp mcp.JSONRPCResponse, req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
+	screenshotReq := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: req.ID}
 	screenshotResp := h.deps.GetScreenshot(screenshotReq, nil)
 
-	var screenshotResult MCPToolResult
+	var screenshotResult mcp.MCPToolResult
 	if err := json.Unmarshal(screenshotResp.Result, &screenshotResult); err != nil {
 		return resp // best effort: keep original response on parse failure
 	}
@@ -428,7 +428,7 @@ func (h *InteractActionHandler) AppendScreenshotToResponse(resp JSONRPCResponse,
 		if block.Type != "image" || block.Data == "" {
 			continue
 		}
-		var result MCPToolResult
+		var result mcp.MCPToolResult
 		if err := json.Unmarshal(resp.Result, &result); err != nil {
 			return resp
 		}
@@ -445,12 +445,12 @@ func (h *InteractActionHandler) AppendScreenshotToResponse(resp JSONRPCResponse,
 }
 
 // appendInteractiveToResponse appends list_interactive text to the response.
-func (h *InteractActionHandler) AppendInteractiveToResponse(resp JSONRPCResponse, req JSONRPCRequest) JSONRPCResponse {
-	listReq := JSONRPCRequest{JSONRPC: JSONRPCVersion, ID: req.ID, ClientID: req.ClientID}
+func (h *InteractActionHandler) AppendInteractiveToResponse(resp mcp.JSONRPCResponse, req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
+	listReq := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: req.ID, ClientID: req.ClientID}
 	listArgs := marshalQueryParams(map[string]any{"what": "list_interactive", "visible_only": true})
 	listResp := h.HandleListInteractive(listReq, listArgs)
 
-	var listResult MCPToolResult
+	var listResult mcp.MCPToolResult
 	if err := json.Unmarshal(listResp.Result, &listResult); err != nil || listResult.IsError {
 		return resp
 	}
@@ -459,11 +459,11 @@ func (h *InteractActionHandler) AppendInteractiveToResponse(resp JSONRPCResponse
 		if block.Type != "text" || block.Text == "" {
 			continue
 		}
-		var result MCPToolResult
+		var result mcp.MCPToolResult
 		if err := json.Unmarshal(resp.Result, &result); err != nil {
 			return resp
 		}
-		result.Content = append(result.Content, MCPContentBlock{
+		result.Content = append(result.Content, mcp.MCPContentBlock{
 			Type: "text",
 			Text: "\n--- Interactive Elements ---\n" + block.Text,
 		})
@@ -478,11 +478,11 @@ func (h *InteractActionHandler) AppendInteractiveToResponse(resp JSONRPCResponse
 }
 
 // readPageContext returns a compact page context payload (url/title/tab_id) from observe(what="page").
-func (h *InteractActionHandler) readPageContext(req JSONRPCRequest) (map[string]any, bool) {
-	pageReq := JSONRPCRequest{JSONRPC: JSONRPCVersion, ID: req.ID}
+func (h *InteractActionHandler) readPageContext(req mcp.JSONRPCRequest) (map[string]any, bool) {
+	pageReq := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: req.ID}
 	pageResp := h.deps.GetPageInfo(pageReq, nil)
 
-	var pageResult MCPToolResult
+	var pageResult mcp.MCPToolResult
 	if err := json.Unmarshal(pageResp.Result, &pageResult); err != nil || pageResult.IsError {
 		return nil, false
 	}
@@ -521,7 +521,7 @@ func (h *InteractActionHandler) readPageContext(req JSONRPCRequest) (map[string]
 }
 
 // appendPageContextToResponse appends a compact page context block to the response.
-func (h *InteractActionHandler) AppendPageContextToResponse(resp JSONRPCResponse, req JSONRPCRequest) JSONRPCResponse {
+func (h *InteractActionHandler) AppendPageContextToResponse(resp mcp.JSONRPCResponse, req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
 	pageCtx, ok := h.readPageContext(req)
 	if !ok {
 		return resp
@@ -532,7 +532,7 @@ func (h *InteractActionHandler) AppendPageContextToResponse(resp JSONRPCResponse
 		return resp
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		return resp
 	}
@@ -541,7 +541,7 @@ func (h *InteractActionHandler) AppendPageContextToResponse(resp JSONRPCResponse
 	}
 	result.Metadata["page_context"] = pageCtx
 
-	result.Content = append(result.Content, MCPContentBlock{
+	result.Content = append(result.Content, mcp.MCPContentBlock{
 		Type: "text",
 		Text: "\n--- Page Context ---\n" + string(ctxJSON),
 	})
@@ -556,13 +556,13 @@ func (h *InteractActionHandler) AppendPageContextToResponse(resp JSONRPCResponse
 // appendWorkflowTraceToResponse appends a normalized workflow trace envelope
 // into MCP metadata while preserving the existing response shape/content.
 func (h *InteractActionHandler) AppendWorkflowTraceToResponse(
-	resp JSONRPCResponse,
+	resp mcp.JSONRPCResponse,
 	workflow string,
 	trace []act.WorkflowStep,
 	start time.Time,
 	status string,
-) JSONRPCResponse {
-	var result MCPToolResult
+) mcp.JSONRPCResponse {
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		return resp
 	}

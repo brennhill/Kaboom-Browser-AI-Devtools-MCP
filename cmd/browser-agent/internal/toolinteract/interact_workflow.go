@@ -13,14 +13,14 @@ import (
 	"strings"
 	"time"
 
-	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
-
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
 // handleFillFormAndSubmit fills multiple form fields and clicks a submit button.
 // Gates (requirePilot, requireExtension, requireTabTracking) are applied by the delegated handlers.
-func (h *InteractActionHandler) HandleFillFormAndSubmit(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *InteractActionHandler) HandleFillFormAndSubmit(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Fields         []act.FormField `json:"fields"`
 		SubmitSelector string          `json:"submit_selector"`
@@ -32,10 +32,10 @@ func (h *InteractActionHandler) HandleFillFormAndSubmit(req JSONRPCRequest, args
 		return resp
 	}
 	if len(params.Fields) == 0 {
-		return mcp.Fail(req, ErrMissingParam, "Required parameter 'fields' is empty", "Provide at least one {selector, value} field entry", withParam("fields"))
+		return mcp.Fail(req, mcp.ErrMissingParam, "Required parameter 'fields' is empty", "Provide at least one {selector, value} field entry", mcp.WithParam("fields"))
 	}
 	if params.SubmitSelector == "" && params.SubmitIndex == nil {
-		return mcp.Fail(req, ErrMissingParam, "Required parameter 'submit_selector' or 'submit_index' is missing", "Add the selector or index of the submit button", withParam("submit_selector"))
+		return mcp.Fail(req, mcp.ErrMissingParam, "Required parameter 'submit_selector' or 'submit_index' is missing", "Add the selector or index of the submit button", mcp.WithParam("submit_selector"))
 	}
 	if params.TimeoutMs <= 0 {
 		params.TimeoutMs = 15_000
@@ -74,7 +74,7 @@ func (h *InteractActionHandler) HandleFillFormAndSubmit(req JSONRPCRequest, args
 
 // handleFillForm fills multiple form fields without submitting.
 // Gates (requirePilot, requireExtension, requireTabTracking) are applied by the delegated handlers.
-func (h *InteractActionHandler) HandleFillForm(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *InteractActionHandler) HandleFillForm(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Fields    []act.FormField `json:"fields"`
 		TabID     int             `json:"tab_id,omitempty"`
@@ -84,7 +84,7 @@ func (h *InteractActionHandler) HandleFillForm(req JSONRPCRequest, args json.Raw
 		return resp
 	}
 	if len(params.Fields) == 0 {
-		return mcp.Fail(req, ErrMissingParam, "Required parameter 'fields' is empty", "Provide at least one {selector, value} field entry", withParam("fields"))
+		return mcp.Fail(req, mcp.ErrMissingParam, "Required parameter 'fields' is empty", "Provide at least one {selector, value} field entry", mcp.WithParam("fields"))
 	}
 	if params.TimeoutMs <= 0 {
 		params.TimeoutMs = 15_000
@@ -106,7 +106,7 @@ func (h *InteractActionHandler) HandleFillForm(req JSONRPCRequest, args json.Raw
 }
 
 // fillWorkflowFields executes all field entry steps for fill_form* workflows.
-func (h *InteractActionHandler) fillWorkflowFields(req JSONRPCRequest, workflowName string, fields []act.FormField, tabID int, trace []act.WorkflowStep, workflowStart time.Time) ([]act.WorkflowStep, *JSONRPCResponse) {
+func (h *InteractActionHandler) fillWorkflowFields(req mcp.JSONRPCRequest, workflowName string, fields []act.FormField, tabID int, trace []act.WorkflowStep, workflowStart time.Time) ([]act.WorkflowStep, *mcp.JSONRPCResponse) {
 	for i, field := range fields {
 		if field.Selector == "" && field.Index == nil {
 			trace = append(trace, act.WorkflowStep{
@@ -114,10 +114,10 @@ func (h *InteractActionHandler) fillWorkflowFields(req JSONRPCRequest, workflowN
 				Status: "error",
 				Detail: "Missing selector and index",
 			})
-			resp := act.WorkflowResult(req, workflowName, trace, mcp.Fail(req, ErrMissingParam,
+			resp := act.WorkflowResult(req, workflowName, trace, mcp.Fail(req, mcp.ErrMissingParam,
 				fmt.Sprintf("Field %d missing 'selector' or 'index'", i),
 				"Each field needs a 'selector' or 'index'",
-				withParam("fields")), workflowStart)
+				mcp.WithParam("fields")), workflowStart)
 			return trace, &resp
 		}
 
@@ -138,7 +138,7 @@ func (h *InteractActionHandler) fillWorkflowFields(req JSONRPCRequest, workflowN
 }
 
 // executeFillFieldStep sends a type action and falls back to select for non-typeable elements.
-func (h *InteractActionHandler) executeFillFieldStep(req JSONRPCRequest, field act.FormField, tabID int) (string, JSONRPCResponse) {
+func (h *InteractActionHandler) executeFillFieldStep(req mcp.JSONRPCRequest, field act.FormField, tabID int) (string, mcp.JSONRPCResponse) {
 	typeArgs := map[string]any{
 		"action": "type",
 		"text":   field.Value,
@@ -182,7 +182,7 @@ func workflowFieldLabel(field act.FormField) string {
 }
 
 // IsNotTypeableError checks whether response payload indicates extension-side not_typeable.
-func IsNotTypeableError(resp JSONRPCResponse) bool {
+func IsNotTypeableError(resp mcp.JSONRPCResponse) bool {
 	if resp.Error != nil || resp.Result == nil {
 		return false
 	}
@@ -192,7 +192,7 @@ func IsNotTypeableError(resp JSONRPCResponse) bool {
 // handleNavigateAndWaitFor navigates to a URL, waits for a CSS selector to appear,
 // and optionally returns page content — all in one call.
 // Gates (requirePilot, requireExtension, requireTabTracking) are applied by the delegated handlers.
-func (h *InteractActionHandler) HandleNavigateAndWaitFor(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *InteractActionHandler) HandleNavigateAndWaitFor(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		URL            string `json:"url"`
 		WaitFor        string `json:"wait_for"`
@@ -203,10 +203,10 @@ func (h *InteractActionHandler) HandleNavigateAndWaitFor(req JSONRPCRequest, arg
 	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
-	if resp, blocked := requireString(req, params.URL, "url", "Add 'url' to navigate to"); blocked {
+	if resp, blocked := toolresp.RequireString(req, params.URL, "url", "Add 'url' to navigate to"); blocked {
 		return resp
 	}
-	if resp, blocked := requireString(req, params.WaitFor, "wait_for", "Add a CSS selector to wait for after navigation"); blocked {
+	if resp, blocked := toolresp.RequireString(req, params.WaitFor, "wait_for", "Add a CSS selector to wait for after navigation"); blocked {
 		return resp
 	}
 	if params.TimeoutMs <= 0 {
@@ -274,7 +274,7 @@ func (h *InteractActionHandler) HandleNavigateAndWaitFor(req JSONRPCRequest, arg
 
 // handleNavigateAndDocument performs click-based navigation, waits for URL/stability,
 // then enriches the response with compact page context (url/title/tab_id).
-func (h *InteractActionHandler) HandleNavigateAndDocument(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *InteractActionHandler) HandleNavigateAndDocument(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	workflowStart := time.Now()
 	trace := make([]act.WorkflowStep, 0, 4)
 
@@ -286,7 +286,7 @@ func (h *InteractActionHandler) HandleNavigateAndDocument(req JSONRPCRequest, ar
 		WaitForStable    *bool `json:"wait_for_stable,omitempty"`
 	}
 	if err := json.Unmarshal(args, &params); err != nil {
-		return mcp.Fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
+		return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 	}
 
 	waitForURLChange := true
@@ -355,10 +355,10 @@ func (h *InteractActionHandler) HandleNavigateAndDocument(req JSONRPCRequest, ar
 		}
 		lastURL, changed := h.waitForTrackedURLChange(req, beforeURL, timeoutMs)
 		if !changed {
-			failResp := mcp.Fail(req, ErrExtTimeout,
+			failResp := mcp.Fail(req, mcp.ErrExtTimeout,
 				"URL did not change after click within timeout",
 				"Increase timeout_ms, disable wait_for_url_change, or verify the click target triggers navigation.",
-				withParam("wait_for_url_change"),
+				mcp.WithParam("wait_for_url_change"),
 			)
 			trace = append(trace, act.WorkflowStep{
 				Action:   "wait_for_url_change",
@@ -451,7 +451,7 @@ func filterNavigateAndDocumentClickArgs(args json.RawMessage) json.RawMessage {
 	return encoded
 }
 
-func (h *InteractActionHandler) currentTrackedURL(req JSONRPCRequest) string {
+func (h *InteractActionHandler) currentTrackedURL(req mcp.JSONRPCRequest) string {
 	_, _, trackedURL := h.deps.Capture().GetTrackingStatus()
 	if trackedURL != "" {
 		return trackedURL
@@ -464,7 +464,7 @@ func (h *InteractActionHandler) currentTrackedURL(req JSONRPCRequest) string {
 	return ""
 }
 
-func (h *InteractActionHandler) waitForTrackedURLChange(req JSONRPCRequest, beforeURL string, timeoutMs int) (string, bool) {
+func (h *InteractActionHandler) waitForTrackedURLChange(req mcp.JSONRPCRequest, beforeURL string, timeoutMs int) (string, bool) {
 	if timeoutMs <= 0 {
 		timeoutMs = 5000
 	}
@@ -483,27 +483,27 @@ func (h *InteractActionHandler) waitForTrackedURLChange(req JSONRPCRequest, befo
 // validateNavigateAndDocumentTab ensures workflow-level waits and page context are
 // scoped to the currently tracked tab. Unlike plain click, this workflow derives
 // post-action state from tracked page metadata.
-func (h *InteractActionHandler) validateNavigateAndDocumentTab(req JSONRPCRequest, tabID int) (JSONRPCResponse, bool) {
+func (h *InteractActionHandler) validateNavigateAndDocumentTab(req mcp.JSONRPCRequest, tabID int) (mcp.JSONRPCResponse, bool) {
 	if tabID <= 0 {
-		return JSONRPCResponse{}, false
+		return mcp.JSONRPCResponse{}, false
 	}
 
 	enabled, trackedTabID, _ := h.deps.Capture().GetTrackingStatus()
 	if !enabled || trackedTabID <= 0 {
-		return mcp.Fail(req, ErrInvalidParam,
+		return mcp.Fail(req, mcp.ErrInvalidParam,
 			fmt.Sprintf("navigate_and_document with tab_id=%d requires an actively tracked tab", tabID),
 			"Switch tracking to the target tab first (interact what=switch_tab), then retry navigate_and_document.",
-			withParam("tab_id"),
+			mcp.WithParam("tab_id"),
 		), true
 	}
 	if trackedTabID == tabID {
-		return JSONRPCResponse{}, false
+		return mcp.JSONRPCResponse{}, false
 	}
 
-	return mcp.Fail(req, ErrInvalidParam,
+	return mcp.Fail(req, mcp.ErrInvalidParam,
 		fmt.Sprintf("navigate_and_document requires tracked tab_id=%d; got tab_id=%d", trackedTabID, tabID),
 		"Switch tracking to the target tab first (interact what=switch_tab) or omit tab_id.",
-		withParam("tab_id"),
+		mcp.WithParam("tab_id"),
 	), true
 }
 
@@ -520,17 +520,17 @@ func remainingNavigateAndDocumentTimeoutMs(workflowStart time.Time, totalTimeout
 	return remaining, true
 }
 
-func navigateAndDocumentTimeoutBudgetExceeded(req JSONRPCRequest, stage string) JSONRPCResponse {
-	return mcp.Fail(req, ErrExtTimeout,
+func navigateAndDocumentTimeoutBudgetExceeded(req mcp.JSONRPCRequest, stage string) mcp.JSONRPCResponse {
+	return mcp.Fail(req, mcp.ErrExtTimeout,
 		fmt.Sprintf("timeout_ms exhausted before %s stage", stage),
 		"Increase timeout_ms or disable one of the workflow wait stages.",
-		withParam("timeout_ms"),
+		mcp.WithParam("timeout_ms"),
 	)
 }
 
 // handleRunA11yAndExportSARIF runs accessibility audit then exports SARIF in one call.
 // Gates (requirePilot, requireExtension, requireTabTracking) are applied by the delegated handlers.
-func (h *InteractActionHandler) HandleRunA11yAndExportSARIF(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *InteractActionHandler) HandleRunA11yAndExportSARIF(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Scope  string `json:"scope,omitempty"`
 		SaveTo string `json:"save_to,omitempty"`
@@ -581,8 +581,8 @@ func (h *InteractActionHandler) HandleRunA11yAndExportSARIF(req JSONRPCRequest, 
 }
 
 // extractMCPResponseJSONPayload extracts JSON payload from first text block in MCP response.
-func extractMCPResponseJSONPayload(resp JSONRPCResponse) json.RawMessage {
-	var result MCPToolResult
+func extractMCPResponseJSONPayload(resp mcp.JSONRPCResponse) json.RawMessage {
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil || len(result.Content) == 0 {
 		return nil
 	}

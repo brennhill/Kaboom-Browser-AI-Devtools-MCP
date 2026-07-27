@@ -4,6 +4,8 @@ package toolinteract
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 func TestHandleSetStorage_Success(t *testing.T) {
@@ -17,27 +19,27 @@ func TestHandleSetStorage_Success(t *testing.T) {
 
 func TestHandleSetStorage_InvalidType(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleSetStorage(testReq(), json.RawMessage(`{"storage_type":"cookies","key":"k","value":"v"}`)), ErrInvalidParam)
+	assertErr(t, h.HandleSetStorage(testReq(), json.RawMessage(`{"storage_type":"cookies","key":"k","value":"v"}`)), mcp.ErrInvalidParam)
 }
 
 func TestHandleSetStorage_MissingKey(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleSetStorage(testReq(), json.RawMessage(`{"storage_type":"localStorage","value":"v"}`)), ErrMissingParam)
+	assertErr(t, h.HandleSetStorage(testReq(), json.RawMessage(`{"storage_type":"localStorage","value":"v"}`)), mcp.ErrMissingParam)
 }
 
 func TestHandleSetStorage_MissingValue(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleSetStorage(testReq(), json.RawMessage(`{"storage_type":"localStorage","key":"k"}`)), ErrMissingParam)
+	assertErr(t, h.HandleSetStorage(testReq(), json.RawMessage(`{"storage_type":"localStorage","key":"k"}`)), mcp.ErrMissingParam)
 }
 
 func TestHandleSetStorage_InvalidJSON(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleSetStorage(testReq(), json.RawMessage(`bad`)), ErrInvalidJSON)
+	assertErr(t, h.HandleSetStorage(testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
 }
 
 func TestHandleSetStorage_InvalidWorld(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleSetStorage(testReq(), json.RawMessage(`{"storage_type":"localStorage","key":"k","value":"v","world":"moon"}`)), ErrInvalidParam)
+	assertErr(t, h.HandleSetStorage(testReq(), json.RawMessage(`{"storage_type":"localStorage","key":"k","value":"v","world":"moon"}`)), mcp.ErrInvalidParam)
 }
 
 func TestHandleDeleteStorage_Success(t *testing.T) {
@@ -47,12 +49,12 @@ func TestHandleDeleteStorage_Success(t *testing.T) {
 
 func TestHandleDeleteStorage_MissingKey(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleDeleteStorage(testReq(), json.RawMessage(`{"storage_type":"sessionStorage"}`)), ErrMissingParam)
+	assertErr(t, h.HandleDeleteStorage(testReq(), json.RawMessage(`{"storage_type":"sessionStorage"}`)), mcp.ErrMissingParam)
 }
 
 func TestHandleDeleteStorage_InvalidType(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleDeleteStorage(testReq(), json.RawMessage(`{"storage_type":"bogus","key":"k"}`)), ErrInvalidParam)
+	assertErr(t, h.HandleDeleteStorage(testReq(), json.RawMessage(`{"storage_type":"bogus","key":"k"}`)), mcp.ErrInvalidParam)
 }
 
 func TestHandleClearStorage_Success(t *testing.T) {
@@ -62,12 +64,12 @@ func TestHandleClearStorage_Success(t *testing.T) {
 
 func TestHandleClearStorage_InvalidType(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleClearStorage(testReq(), json.RawMessage(`{"storage_type":"bogus"}`)), ErrInvalidParam)
+	assertErr(t, h.HandleClearStorage(testReq(), json.RawMessage(`{"storage_type":"bogus"}`)), mcp.ErrInvalidParam)
 }
 
 func TestHandleClearStorage_InvalidJSON(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleClearStorage(testReq(), json.RawMessage(`bad`)), ErrInvalidJSON)
+	assertErr(t, h.HandleClearStorage(testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
 }
 
 func TestHandleSetCookie_Success(t *testing.T) {
@@ -85,12 +87,12 @@ func TestHandleSetCookie_DefaultPath(t *testing.T) {
 
 func TestHandleSetCookie_MissingName(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleSetCookie(testReq(), json.RawMessage(`{"value":"abc"}`)), ErrMissingParam)
+	assertErr(t, h.HandleSetCookie(testReq(), json.RawMessage(`{"value":"abc"}`)), mcp.ErrMissingParam)
 }
 
 func TestHandleSetCookie_MissingValue(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleSetCookie(testReq(), json.RawMessage(`{"name":"sid"}`)), ErrMissingParam)
+	assertErr(t, h.HandleSetCookie(testReq(), json.RawMessage(`{"name":"sid"}`)), mcp.ErrMissingParam)
 }
 
 func TestHandleDeleteCookie_Success(t *testing.T) {
@@ -105,7 +107,7 @@ func TestHandleDeleteCookie_DefaultPath(t *testing.T) {
 
 func TestHandleDeleteCookie_MissingName(t *testing.T) {
 	h, _ := newFakeHandler(t)
-	assertErr(t, h.HandleDeleteCookie(testReq(), json.RawMessage(`{}`)), ErrMissingParam)
+	assertErr(t, h.HandleDeleteCookie(testReq(), json.RawMessage(`{}`)), mcp.ErrMissingParam)
 }
 
 func TestValidateStorageType(t *testing.T) {

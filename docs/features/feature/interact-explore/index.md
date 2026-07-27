@@ -120,6 +120,11 @@ Workflow types and response classification come directly from
 `internal/tools/interact/workflow.go`; browser-agent layers do not maintain
 aliases or pass-through response helpers.
 
+Interact handlers and their dependency seams use `internal/mcp` and
+`internal/toolresp` directly. Package-local protocol type, error-code, and
+structured-error option aliases are prohibited so the canonical contract stays
+visible at every call site.
+
 `navigate_and_document` now returns structured metadata for machine consumers:
 1. `metadata.page_context` (`url`, `title`, `tab_id`) while preserving the legacy text block.
 2. `metadata.workflow_trace` (`trace_id`, `status`, stage-level timing/status envelope).
