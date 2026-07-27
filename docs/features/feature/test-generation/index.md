@@ -13,7 +13,7 @@ code_paths:
   - cmd/browser-agent/internal/testgenhandler/heal.go
   - cmd/browser-agent/internal/testgenhandler/generate.go
   - cmd/browser-agent/tools_generate.go
-  - cmd/browser-agent/tools_generate_artifacts.go
+  - cmd/browser-agent/tools_generate.go
   - cmd/browser-agent/internal/toolgenerate/artifacts_test_impl.go
   - internal/testgen/generate.go
   - internal/testgen/helpers.go

@@ -6,7 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-27
 code_paths:
-  - cmd/browser-agent/tools_generate_artifacts.go
+  - cmd/browser-agent/tools_generate.go
   - cmd/browser-agent/internal/toolgenerate/artifacts_security_impl.go
   - internal/security/diff/types.go
   - internal/security/diff/compare.go

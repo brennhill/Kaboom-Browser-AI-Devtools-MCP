@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate/annotations"
 	gen "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/generate"
 )
 
@@ -75,3 +76,44 @@ func (h *ToolHandler) toolGenerate(req JSONRPCRequest, args json.RawMessage) JSO
 
 // TestGenParams delegates to internal/tools/generate.
 type TestGenParams = gen.TestGenParams
+
+// generateDeps exposes the narrow generate package contract at the MCP boundary.
+func (h *ToolHandler) generateDeps() toolgenerate.Deps {
+	return h
+}
+
+func (h *ToolHandler) toolExportHAR(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return toolgenerate.HandleExportHAR(h.generateDeps(), req, args)
+}
+
+func (h *ToolHandler) toolGeneratePRSummary(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return toolgenerate.HandlePRSummary(h.generateDeps(), req, args)
+}
+
+func (h *ToolHandler) toolExportSARIF(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return toolgenerate.HandleExportSARIF(h.generateDeps(), req, args)
+}
+
+func (h *ToolHandler) toolGenerateCSP(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return toolgenerate.HandleGenerateCSP(h.generateDeps(), req, args)
+}
+
+func (h *ToolHandler) toolGenerateSRI(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return toolgenerate.HandleGenerateSRI(h.generateDeps(), req, args)
+}
+
+func (h *ToolHandler) toolGenerateTest(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return toolgenerate.HandleGenerateTest(h.generateDeps(), req, args)
+}
+
+func (h *ToolHandler) toolGenerateVisualTest(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return annotations.HandleVisualTest(h, req, args)
+}
+
+func (h *ToolHandler) toolGenerateAnnotationReport(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return annotations.HandleAnnotationReport(h, req, args)
+}
+
+func (h *ToolHandler) toolGenerateAnnotationIssues(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return annotations.HandleAnnotationIssues(h, req, args)
+}

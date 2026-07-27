@@ -11,7 +11,7 @@ code_paths:
   - cmd/browser-agent/tools_analyze_annotations_handlers.go
   - cmd/browser-agent/tools_analyze_annotations_hints.go
   - cmd/browser-agent/server_routes_media_draw_mode.go
-  - cmd/browser-agent/tools_generate_annotations.go
+  - cmd/browser-agent/tools_generate.go
   - cmd/browser-agent/internal/toolgenerate/annotations/handlers.go
   - cmd/browser-agent/internal/toolgenerate/annotations/visual.go
   - cmd/browser-agent/internal/toolgenerate/annotations/report.go
