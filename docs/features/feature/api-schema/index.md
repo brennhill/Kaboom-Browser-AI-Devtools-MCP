@@ -4,10 +4,11 @@ feature_id: feature-api-schema
 status: superseded
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/tools_schema.go
   - internal/analysis/apicontract/contract.go
+  - internal/analysis/apicontract/runtime_handler.go
   - internal/analysis/apicontract/report.go
   - internal/analysis/apicontract/endpoint.go
   - internal/analysis/apicontract/learning.go
@@ -31,6 +32,7 @@ code_paths:
   - internal/schema/interact/properties_targeting.go
   - cmd/browser-agent/tools_schema.go
 test_paths:
+  - internal/analysis/apicontract/runtime_handler_test.go
   - internal/analysis/apicontract/contract_test.go
   - internal/analysis/apicontract/branch_coverage_test.go
   - internal/schema/invariants_test.go

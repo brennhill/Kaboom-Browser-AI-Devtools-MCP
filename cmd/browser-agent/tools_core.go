@@ -79,9 +79,7 @@ type ToolHandler struct {
 	annotationStore *AnnotationStore
 
 	// API contract validation state (incremental over captured network bodies).
-	apiContractMu        sync.Mutex
-	apiContractValidator *apicontract.APIContractValidator
-	apiContractOffset    int
+	apiContractRuntime *apicontract.Runtime
 
 	// Upload security config (folder-scoped permissions + denylist)
 	uploadSecurity *UploadSecurity

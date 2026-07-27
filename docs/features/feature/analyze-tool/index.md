@@ -8,7 +8,7 @@ last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/tools_analyze_dispatch.go
   - cmd/browser-agent/tools_analyze_annotations_handlers.go
-  - cmd/browser-agent/tools_analyze_api_validation.go
+  - internal/analysis/apicontract/runtime_handler.go
   - cmd/browser-agent/internal/toolanalyze/inspect/forms.go
   - cmd/browser-agent/internal/toolanalyze/inspect/dom.go
   - cmd/browser-agent/internal/toolanalyze/visual/handler.go
@@ -41,6 +41,7 @@ code_paths:
   - src/inject/message-handlers.ts
   - src/types/runtime-messages.ts
 test_paths:
+  - internal/analysis/apicontract/runtime_handler_test.go
   - cmd/browser-agent/tools_analyze_annotations_test.go
   - cmd/browser-agent/tools_analyze_inspect_test.go
   - cmd/browser-agent/internal/toolanalyze/inspect/forms_test.go

@@ -85,7 +85,7 @@ All 5 tools use `what` as the primary dispatch parameter. `action`, `mode`, and 
 | `page_summary` | `toolAnalyzePageSummary` | AI-ready page summary via script execution |
 | `annotations` | `toolGetAnnotations` | Retrieve draw-mode annotation sessions |
 | `annotation_detail` | `toolGetAnnotationDetail` | Full computed styles/DOM for one annotation |
-| `api_validation` | `toolValidateAPI` | API endpoint contract validation |
+| `api_validation` | `apicontract.Runtime.Handle` | API endpoint contract validation |
 | `draw_history` | `toolListDrawHistory` | List persisted draw session files |
 | `draw_session` | `toolGetDrawSession` | Load a specific draw session file |
 | `computed_styles` | `toolComputedStyles` | Computed CSS styles for an element |

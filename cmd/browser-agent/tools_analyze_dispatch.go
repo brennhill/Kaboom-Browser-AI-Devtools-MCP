@@ -129,6 +129,10 @@ func (h *ToolHandler) toolAnalyzePageSummary(req JSONRPCRequest, args json.RawMe
 	return h.interactAction().HandleContentExtraction(req, args, "page_summary", "page_summary")
 }
 
+func (h *ToolHandler) toolValidateAPI(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return h.apiContractRuntime.Handle(req, args, h.capture.GetNetworkBodies())
+}
+
 func (h *ToolHandler) toolListDrawHistory(req JSONRPCRequest, _ json.RawMessage) JSONRPCResponse {
 	dir, err := screenshotsDir()
 	return annotation.ListDrawHistory(req, dir, err)
