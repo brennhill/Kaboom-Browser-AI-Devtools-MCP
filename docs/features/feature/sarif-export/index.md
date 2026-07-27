@@ -4,11 +4,15 @@ feature_id: feature-sarif-export
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-27
 code_paths:
+  - cmd/browser-agent/tools_generate_artifacts.go
+  - cmd/browser-agent/internal/toolgenerate/artifacts_sarif_impl.go
   - internal/export/export_sarif.go
   - internal/export/export_sarif_file.go
 test_paths:
+  - cmd/browser-agent/internal/toolgenerate/handlers_coverage_test.go
+  - cmd/browser-agent/tools_generate_audit_test.go
   - internal/export/export_sarif_test.go
   - internal/export/export_sarif_unit_test.go
 last_verified_version: 0.7.12
@@ -38,4 +42,6 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-Add concrete implementation and test links here as this feature evolves.
+- MCP adapter: `cmd/browser-agent/tools_generate_artifacts.go`
+- Generate handler: `cmd/browser-agent/internal/toolgenerate/artifacts_sarif_impl.go`
+- Export implementation and tests: `internal/export/`

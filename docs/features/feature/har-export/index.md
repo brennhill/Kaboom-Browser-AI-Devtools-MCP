@@ -4,11 +4,15 @@ feature_id: feature-har-export
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-27
 code_paths:
+  - cmd/browser-agent/tools_generate_artifacts.go
+  - cmd/browser-agent/internal/toolgenerate/artifacts_har_impl.go
   - internal/export/export_har.go
   - internal/export/export_sarif.go
-test_paths: []
+test_paths:
+  - cmd/browser-agent/internal/toolgenerate/handlers_coverage_test.go
+  - cmd/browser-agent/tools_generate_har_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -36,4 +40,6 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-Add concrete implementation and test links here as this feature evolves.
+- MCP adapter: `cmd/browser-agent/tools_generate_artifacts.go`
+- Generate handler: `cmd/browser-agent/internal/toolgenerate/artifacts_har_impl.go`
+- Export implementation: `internal/export/export_har.go`

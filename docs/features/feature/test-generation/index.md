@@ -4,7 +4,7 @@ feature_id: feature-test-generation
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/internal/testgenhandler/handler.go
   - cmd/browser-agent/internal/testgenhandler/aliases.go
@@ -13,6 +13,8 @@ code_paths:
   - cmd/browser-agent/internal/testgenhandler/heal.go
   - cmd/browser-agent/internal/testgenhandler/generate.go
   - cmd/browser-agent/tools_generate.go
+  - cmd/browser-agent/tools_generate_artifacts.go
+  - cmd/browser-agent/internal/toolgenerate/artifacts_test_impl.go
   - internal/testgen/generate.go
   - internal/testgen/helpers.go
   - internal/testgen/classify.go
@@ -25,6 +27,8 @@ code_paths:
   - internal/testgen/heal/types.go
   - internal/schema/generate.go
 test_paths:
+  - cmd/browser-agent/internal/toolgenerate/handlers_coverage_test.go
+  - cmd/browser-agent/tools_generate_handler_test.go
   - cmd/browser-agent/internal/testgenhandler/context_test.go
   - cmd/browser-agent/internal/testgenhandler/generate_test.go
   - cmd/browser-agent/internal/testgenhandler/heal_test.go
