@@ -54,8 +54,11 @@ code_paths:
   - cmd/browser-agent/internal/asyncresult/enrichment_recovery.go
   - cmd/browser-agent/internal/asyncresult/lifecycle.go
   - cmd/browser-agent/tools_async_completion.go
-  - cmd/browser-agent/tools_summary_pref.go
+  - cmd/browser-agent/internal/summarypref/cache.go
+  - cmd/browser-agent/tools_core_accessors.go
 test_paths:
+  - cmd/browser-agent/internal/summarypref/cache_test.go
+  - cmd/browser-agent/tools_summary_pref_test.go
   - cmd/browser-agent/internal/toolinteract/fake_deps_test.go
   - cmd/browser-agent/internal/toolinteract/test_helpers_test.go
   - cmd/browser-agent/internal/toolinteract/interact_browser_actions_test.go

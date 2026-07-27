@@ -12,6 +12,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/summarypref"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testgenhandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
@@ -90,6 +91,12 @@ func NewToolHandler(server *Server, capture *capture.Store) *MCPHandler {
 			handler.sessionStoreImpl = store
 		}
 	}
+	handler.summaryPrefs = summarypref.New(func() ([]byte, error) {
+		if handler.sessionStoreImpl == nil {
+			return nil, nil
+		}
+		return handler.sessionStoreImpl.Load("session", "response_mode")
+	})
 
 	// Initialize noise filtering with persistence support.
 	if handler.sessionStoreImpl != nil {

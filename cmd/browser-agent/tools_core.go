@@ -12,6 +12,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/summarypref"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testgenhandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
@@ -116,10 +117,8 @@ type ToolHandler struct {
 	toolSchemasOnce sync.Once
 	toolSchemas     map[string]map[string]any
 
-	// Session-level summary preference cache.
-	summaryPrefMu    sync.RWMutex
-	summaryPrefValue bool
-	summaryPrefReady bool
+	// Session-level response-mode preference.
+	summaryPrefs *summarypref.Cache
 
 	// extensionReadinessTimeout overrides the cold-start wait duration for requireExtension.
 	// Zero uses capture.ExtensionReadinessTimeout (5s). Tests set this to 100ms.

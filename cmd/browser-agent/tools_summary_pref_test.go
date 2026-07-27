@@ -3,13 +3,24 @@ package main
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/summarypref"
 )
+
+func handlerWithSummaryPreference(enabled bool) *ToolHandler {
+	value := []byte(`{"summary":false}`)
+	if enabled {
+		value = []byte(`{"summary":true}`)
+	}
+	return &ToolHandler{summaryPrefs: summarypref.New(func() ([]byte, error) {
+		return value, nil
+	})}
+}
 
 func TestMaybeInjectSummary_NoPreference(t *testing.T) {
 	t.Parallel()
 
-	h := &ToolHandler{}
-	// No preference set (summaryPrefReady=false, summaryPrefValue=false)
+	h := handlerWithSummaryPreference(false)
 	args := json.RawMessage(`{"what":"errors","limit":10}`)
 	result := h.maybeInjectSummary(args)
 
@@ -26,9 +37,7 @@ func TestMaybeInjectSummary_NoPreference(t *testing.T) {
 func TestMaybeInjectSummary_PreferenceSet(t *testing.T) {
 	t.Parallel()
 
-	h := &ToolHandler{}
-	h.summaryPrefReady = true
-	h.summaryPrefValue = true
+	h := handlerWithSummaryPreference(true)
 
 	args := json.RawMessage(`{"what":"errors","limit":10}`)
 	result := h.maybeInjectSummary(args)
@@ -49,9 +58,7 @@ func TestMaybeInjectSummary_PreferenceSet(t *testing.T) {
 func TestMaybeInjectSummary_ExplicitSummaryFalse(t *testing.T) {
 	t.Parallel()
 
-	h := &ToolHandler{}
-	h.summaryPrefReady = true
-	h.summaryPrefValue = true
+	h := handlerWithSummaryPreference(true)
 
 	args := json.RawMessage(`{"what":"errors","summary":false}`)
 	result := h.maybeInjectSummary(args)
@@ -73,9 +80,7 @@ func TestMaybeInjectSummary_ExplicitSummaryFalse(t *testing.T) {
 func TestMaybeInjectSummary_ExplicitFullTrue(t *testing.T) {
 	t.Parallel()
 
-	h := &ToolHandler{}
-	h.summaryPrefReady = true
-	h.summaryPrefValue = true
+	h := handlerWithSummaryPreference(true)
 
 	args := json.RawMessage(`{"what":"errors","full":true}`)
 	result := h.maybeInjectSummary(args)
@@ -93,23 +98,28 @@ func TestMaybeInjectSummary_ExplicitFullTrue(t *testing.T) {
 func TestInvalidateSummaryPref(t *testing.T) {
 	t.Parallel()
 
-	h := &ToolHandler{}
-	h.summaryPrefReady = true
-	h.summaryPrefValue = true
+	loads := 0
+	h := &ToolHandler{summaryPrefs: summarypref.New(func() ([]byte, error) {
+		loads++
+		return []byte(`{"summary":true}`), nil
+	})}
 
+	if !h.loadSummaryPref() {
+		t.Fatal("expected initial preference load")
+	}
 	h.invalidateSummaryPref()
-
-	if h.summaryPrefReady {
-		t.Error("expected summaryPrefReady to be false after invalidation")
+	if !h.loadSummaryPref() {
+		t.Fatal("expected preference reload after invalidation")
+	}
+	if loads != 2 {
+		t.Fatalf("expected two loads after invalidation, got %d", loads)
 	}
 }
 
 func TestMaybeInjectSummary_NilArgs(t *testing.T) {
 	t.Parallel()
 
-	h := &ToolHandler{}
-	h.summaryPrefReady = true
-	h.summaryPrefValue = true
+	h := handlerWithSummaryPreference(true)
 
 	// nil args should get summary injected
 	result := h.maybeInjectSummary(nil)
@@ -126,9 +136,7 @@ func TestMaybeInjectSummary_NilArgs(t *testing.T) {
 func TestMaybeInjectSummary_EmptyArgs(t *testing.T) {
 	t.Parallel()
 
-	h := &ToolHandler{}
-	h.summaryPrefReady = true
-	h.summaryPrefValue = true
+	h := handlerWithSummaryPreference(true)
 
 	result := h.maybeInjectSummary(json.RawMessage(`{}`))
 

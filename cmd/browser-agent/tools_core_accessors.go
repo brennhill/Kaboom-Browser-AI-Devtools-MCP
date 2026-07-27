@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/summarypref"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testgenhandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
@@ -39,6 +40,25 @@ func (h *ToolHandler) GetLogTotalAdded() int64 {
 
 func (h *ToolHandler) ToolsList() []MCPTool {
 	return schema.AllTools()
+}
+
+func (h *ToolHandler) summaryPreference() *summarypref.Cache {
+	if h.summaryPrefs == nil {
+		return summarypref.New(nil)
+	}
+	return h.summaryPrefs
+}
+
+func (h *ToolHandler) loadSummaryPref() bool {
+	return h.summaryPreference().Enabled()
+}
+
+func (h *ToolHandler) invalidateSummaryPref() {
+	h.summaryPreference().Invalidate()
+}
+
+func (h *ToolHandler) maybeInjectSummary(args json.RawMessage) json.RawMessage {
+	return h.summaryPreference().Inject(args)
 }
 
 // armEvidenceForCommand delegates evidence arming to the interactActionHandler.
