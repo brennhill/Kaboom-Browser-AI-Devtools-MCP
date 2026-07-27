@@ -71,6 +71,8 @@ test_paths:
   - cmd/browser-agent/internal/toolinteract/interact_workflow_test.go
   - cmd/browser-agent/internal/toolinteract/elemindex/registry_test.go
   - cmd/browser-agent/tools_interact_handler_test.go
+  - cmd/browser-agent/tools_interact_dom_params_test.go
+  - cmd/browser-agent/tools_interact_workflows_test.go
   - cmd/browser-agent/tools_pending_query_enqueue_test.go
   - cmd/browser-agent/tools_interact_rich_test.go
   - cmd/browser-agent/tools_interact_navigate_document_test.go

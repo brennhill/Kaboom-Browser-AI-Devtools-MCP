@@ -19,6 +19,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
 // ============================================
@@ -263,8 +265,8 @@ func TestUploadInteg_IsPrivateIP(t *testing.T) {
 			if ip == nil {
 				t.Fatalf("failed to parse IP %q", ipStr)
 			}
-			if !isPrivateIP(ip) {
-				t.Errorf("isPrivateIP(%s) = false, want true", ipStr)
+			if !uploadsec.IsPrivateIP(ip) {
+				t.Errorf("uploadsec.IsPrivateIP(%s) = false, want true", ipStr)
 			}
 		})
 	}
@@ -278,8 +280,8 @@ func TestUploadInteg_IsPrivateIP(t *testing.T) {
 			if ip == nil {
 				t.Fatalf("failed to parse IP %q", ipStr)
 			}
-			if isPrivateIP(ip) {
-				t.Errorf("isPrivateIP(%s) = true, want false", ipStr)
+			if uploadsec.IsPrivateIP(ip) {
+				t.Errorf("uploadsec.IsPrivateIP(%s) = true, want false", ipStr)
 			}
 		})
 	}

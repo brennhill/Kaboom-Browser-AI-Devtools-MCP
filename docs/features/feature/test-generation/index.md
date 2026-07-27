@@ -28,6 +28,7 @@ code_paths:
 test_paths:
   - cmd/browser-agent/internal/toolgenerate/handlers_coverage_test.go
   - cmd/browser-agent/tools_generate_handler_test.go
+  - cmd/browser-agent/tools_generate_validation_test.go
   - cmd/browser-agent/internal/testgenhandler/context_test.go
   - cmd/browser-agent/internal/testgenhandler/generate_test.go
   - cmd/browser-agent/internal/testgenhandler/heal_test.go

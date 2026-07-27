@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
@@ -180,7 +181,7 @@ func TestIsNotTypeableError_TrueForNotTypeable(t *testing.T) {
 			},
 		}),
 	}
-	if !isNotTypeableError(resp) {
+	if !toolinteract.IsNotTypeableError(resp) {
 		t.Error("expected isNotTypeableError to return true for not_typeable error")
 	}
 }
@@ -199,7 +200,7 @@ func TestIsNotTypeableError_FalseForOtherErrors(t *testing.T) {
 			},
 		}),
 	}
-	if isNotTypeableError(resp) {
+	if toolinteract.IsNotTypeableError(resp) {
 		t.Error("expected isNotTypeableError to return false for non-not_typeable errors")
 	}
 }
@@ -214,7 +215,7 @@ func TestIsNotTypeableError_FalseForSuccess(t *testing.T) {
 			"result": map[string]any{"success": true},
 		}),
 	}
-	if isNotTypeableError(resp) {
+	if toolinteract.IsNotTypeableError(resp) {
 		t.Error("expected isNotTypeableError to return false for success response")
 	}
 }
@@ -226,7 +227,7 @@ func TestIsNotTypeableError_FalseForJSONRPCError(t *testing.T) {
 		ID:      json.RawMessage(`1`),
 		Error:   &JSONRPCError{Code: -32600, Message: "not_typeable in error"},
 	}
-	if isNotTypeableError(resp) {
+	if toolinteract.IsNotTypeableError(resp) {
 		t.Error("expected isNotTypeableError to return false for JSON-RPC errors")
 	}
 }

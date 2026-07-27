@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 )
 
 // ============================================
@@ -994,38 +996,38 @@ func TestToolsValidateDOMActionParams(t *testing.T) {
 
 	// Actions without special required params should pass
 	for _, action := range []string{"click", "check", "focus", "scroll_to", "wait_for", "key_press"} {
-		_, failed := validateDOMActionParams(req, action, "", "", "")
+		_, failed := toolinteract.ValidateDOMActionParams(req, action, "", "", "")
 		if failed {
-			t.Errorf("validateDOMActionParams(%q) should not fail for actions without required params", action)
+			t.Errorf("toolinteract.ValidateDOMActionParams(%q) should not fail for actions without required params", action)
 		}
 	}
 
 	// "type" requires "text"
-	_, failed := validateDOMActionParams(req, "type", "", "", "")
+	_, failed := toolinteract.ValidateDOMActionParams(req, "type", "", "", "")
 	if !failed {
 		t.Error("type without text should fail validation")
 	}
-	_, failed = validateDOMActionParams(req, "type", "hello", "", "")
+	_, failed = toolinteract.ValidateDOMActionParams(req, "type", "hello", "", "")
 	if failed {
 		t.Error("type with text should pass validation")
 	}
 
 	// "select" requires "value"
-	_, failed = validateDOMActionParams(req, "select", "", "", "")
+	_, failed = toolinteract.ValidateDOMActionParams(req, "select", "", "", "")
 	if !failed {
 		t.Error("select without value should fail validation")
 	}
-	_, failed = validateDOMActionParams(req, "select", "", "opt1", "")
+	_, failed = toolinteract.ValidateDOMActionParams(req, "select", "", "opt1", "")
 	if failed {
 		t.Error("select with value should pass validation")
 	}
 
 	// "get_attribute" requires "name"
-	_, failed = validateDOMActionParams(req, "get_attribute", "", "", "")
+	_, failed = toolinteract.ValidateDOMActionParams(req, "get_attribute", "", "", "")
 	if !failed {
 		t.Error("get_attribute without name should fail validation")
 	}
-	_, failed = validateDOMActionParams(req, "get_attribute", "", "", "href")
+	_, failed = toolinteract.ValidateDOMActionParams(req, "get_attribute", "", "", "href")
 	if failed {
 		t.Error("get_attribute with name should pass validation")
 	}

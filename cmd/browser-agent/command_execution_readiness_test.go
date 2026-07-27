@@ -20,13 +20,13 @@ func addCommandResultForTest(cap *capture.Store, correlationID string, status st
 	cap.ApplyCommandResult(correlationID, status, nil, errText)
 }
 
-func findDoctorCheck(checks []doctorCheck, name string) (doctorCheck, bool) {
+func findDoctorCheck(checks []health.DoctorCheck, name string) (health.DoctorCheck, bool) {
 	for _, check := range checks {
 		if check.Name == name {
 			return check, true
 		}
 	}
-	return doctorCheck{}, false
+	return health.DoctorCheck{}, false
 }
 
 func TestCommandExecutionInfo_NoFailuresPass(t *testing.T) {
@@ -103,7 +103,7 @@ func TestRunDoctorChecks_IncludesCommandExecution(t *testing.T) {
 	cap := capture.NewCapture()
 	addCommandResultForTest(cap, "warn-expired", "expired")
 
-	checks := runDoctorChecks(cap)
+	checks := health.RunDoctorChecks(cap)
 	check, ok := findDoctorCheck(checks, "command_execution")
 	if !ok {
 		t.Fatal("expected command_execution check in doctor output")

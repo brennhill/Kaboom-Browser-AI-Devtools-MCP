@@ -10,6 +10,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 )
 
 // ============================================
@@ -356,7 +358,7 @@ func TestToolsInteractBatch_Execution(t *testing.T) {
 func TestStripComposableScreenshotFromStep_RemovesFlag(t *testing.T) {
 	t.Parallel()
 	input := json.RawMessage(`{"what":"click","selector":"btn","include_screenshot":true}`)
-	output := stripComposableScreenshotFromStep(input)
+	output := toolinteract.StripComposableScreenshotFromStep(input)
 
 	var result map[string]any
 	if err := json.Unmarshal(output, &result); err != nil {
@@ -376,7 +378,7 @@ func TestStripComposableScreenshotFromStep_RemovesFlag(t *testing.T) {
 func TestStripComposableScreenshotFromStep_NoOp(t *testing.T) {
 	t.Parallel()
 	input := json.RawMessage(`{"what":"click","selector":"btn"}`)
-	output := stripComposableScreenshotFromStep(input)
+	output := toolinteract.StripComposableScreenshotFromStep(input)
 
 	if string(output) != string(input) {
 		t.Errorf("output should be unchanged when no include_screenshot present\ninput:  %s\noutput: %s", input, output)
@@ -386,7 +388,7 @@ func TestStripComposableScreenshotFromStep_NoOp(t *testing.T) {
 func TestStripComposableScreenshotFromStep_InvalidJSON(t *testing.T) {
 	t.Parallel()
 	input := json.RawMessage(`{invalid json`)
-	output := stripComposableScreenshotFromStep(input)
+	output := toolinteract.StripComposableScreenshotFromStep(input)
 
 	if string(output) != string(input) {
 		t.Errorf("invalid JSON should be returned unchanged\ninput:  %s\noutput: %s", input, output)
@@ -396,7 +398,7 @@ func TestStripComposableScreenshotFromStep_InvalidJSON(t *testing.T) {
 func TestStripComposableScreenshotFromStep_PreservesOtherFields(t *testing.T) {
 	t.Parallel()
 	input := json.RawMessage(`{"what":"type","selector":"input","text":"hello","clear":true,"include_screenshot":true}`)
-	output := stripComposableScreenshotFromStep(input)
+	output := toolinteract.StripComposableScreenshotFromStep(input)
 
 	var result map[string]any
 	if err := json.Unmarshal(output, &result); err != nil {
@@ -424,7 +426,7 @@ func TestStripComposableScreenshotFromStep_FalseValue(t *testing.T) {
 	t.Parallel()
 	// Even include_screenshot:false should be stripped (it's wasteful to send)
 	input := json.RawMessage(`{"what":"click","include_screenshot":false}`)
-	output := stripComposableScreenshotFromStep(input)
+	output := toolinteract.StripComposableScreenshotFromStep(input)
 
 	var result map[string]any
 	if err := json.Unmarshal(output, &result); err != nil {

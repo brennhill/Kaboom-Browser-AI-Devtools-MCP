@@ -7,6 +7,8 @@ package main
 
 import (
 	"testing"
+
+	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
 // ============================================
@@ -33,24 +35,24 @@ func TestParseSelectorForReproduction(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			result := parseSelectorForReproduction(tc.selector)
+			result := act.ParseSelectorForReproduction(tc.selector)
 			if tc.wantKey == "role" {
 				// Role is a nested map
 				roleData, ok := result["role"]
 				if !ok {
-					t.Errorf("parseSelectorForReproduction(%q) missing 'role' key", tc.selector)
+					t.Errorf("act.ParseSelectorForReproduction(%q) missing 'role' key", tc.selector)
 				}
 				roleMap, ok := roleData.(map[string]any)
 				if !ok {
-					t.Errorf("parseSelectorForReproduction(%q) role not a map", tc.selector)
+					t.Errorf("act.ParseSelectorForReproduction(%q) role not a map", tc.selector)
 				}
 				if roleMap["role"] != "button" {
-					t.Errorf("parseSelectorForReproduction(%q) role.role = %v, want 'button'", tc.selector, roleMap["role"])
+					t.Errorf("act.ParseSelectorForReproduction(%q) role.role = %v, want 'button'", tc.selector, roleMap["role"])
 				}
 			} else {
 				val, ok := result[tc.wantKey].(string)
 				if !ok || val != tc.wantVal {
-					t.Errorf("parseSelectorForReproduction(%q)[%q] = %q, want %q", tc.selector, tc.wantKey, val, tc.wantVal)
+					t.Errorf("act.ParseSelectorForReproduction(%q)[%q] = %q, want %q", tc.selector, tc.wantKey, val, tc.wantVal)
 				}
 			}
 		})
@@ -77,7 +79,7 @@ func TestDomActionToReproType(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.domAction, func(t *testing.T) {
-			reproType, ok := domActionToReproType[tc.domAction]
+			reproType, ok := act.DOMActionToReproType[tc.domAction]
 			if ok != tc.wantOK {
 				t.Errorf("domActionToReproType[%q] ok = %v, want %v", tc.domAction, ok, tc.wantOK)
 			}

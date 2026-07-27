@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
 )
 
 func TestGenerateRejectsUnknownParams(t *testing.T) {
@@ -41,7 +43,7 @@ func TestGenerateRejectsUnknownParams(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			argsJSON, _ := json.Marshal(tt.args)
-			resp := validateGenerateParams(
+			resp := toolgenerate.ValidateGenerateParams(
 				JSONRPCRequest{ID: 1},
 				tt.format,
 				argsJSON,
@@ -89,7 +91,7 @@ func TestGenerateAcceptsValidParams(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			argsJSON, _ := json.Marshal(tt.args)
-			resp := validateGenerateParams(
+			resp := toolgenerate.ValidateGenerateParams(
 				JSONRPCRequest{ID: 1},
 				tt.format,
 				argsJSON,

@@ -3,10 +3,12 @@ package main
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 )
 
 func TestParseDOMPrimitiveParams_ParsesNth(t *testing.T) {
-	params, err := parseDOMPrimitiveParams(json.RawMessage(`{"selector":"text=Edit & post","nth":-1}`))
+	params, err := toolinteract.ParseDOMPrimitiveParams(json.RawMessage(`{"selector":"text=Edit & post","nth":-1}`))
 	if err != nil {
 		t.Fatalf("parseDOMPrimitiveParams returned error: %v", err)
 	}
@@ -19,14 +21,14 @@ func TestParseDOMPrimitiveParams_ParsesNth(t *testing.T) {
 }
 
 func TestParseDOMPrimitiveParams_RejectsFractionalNth(t *testing.T) {
-	_, err := parseDOMPrimitiveParams(json.RawMessage(`{"selector":"text=Edit & post","nth":1.5}`))
+	_, err := toolinteract.ParseDOMPrimitiveParams(json.RawMessage(`{"selector":"text=Edit & post","nth":1.5}`))
 	if err == nil {
 		t.Fatal("expected fractional nth to be rejected")
 	}
 }
 
 func TestParseDOMPrimitiveParams_ParsesScrollDirection(t *testing.T) {
-	params, err := parseDOMPrimitiveParams(json.RawMessage(`{"selector":"#modal","direction":"bottom"}`))
+	params, err := toolinteract.ParseDOMPrimitiveParams(json.RawMessage(`{"selector":"#modal","direction":"bottom"}`))
 	if err != nil {
 		t.Fatalf("parseDOMPrimitiveParams returned error: %v", err)
 	}
@@ -36,7 +38,7 @@ func TestParseDOMPrimitiveParams_ParsesScrollDirection(t *testing.T) {
 }
 
 func TestParseDOMPrimitiveParams_ParsesStructuredFlag(t *testing.T) {
-	params, err := parseDOMPrimitiveParams(json.RawMessage(`{"selector":".accordion","structured":true}`))
+	params, err := toolinteract.ParseDOMPrimitiveParams(json.RawMessage(`{"selector":".accordion","structured":true}`))
 	if err != nil {
 		t.Fatalf("parseDOMPrimitiveParams returned error: %v", err)
 	}

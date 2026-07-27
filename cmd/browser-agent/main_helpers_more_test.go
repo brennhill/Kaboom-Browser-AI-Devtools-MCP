@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/configdiscovery"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
@@ -85,20 +86,20 @@ func TestRunSetupCheckPrintsDiagnostics(t *testing.T) {
 func TestEvaluateFastPathFailureThreshold(t *testing.T) {
 	t.Parallel()
 
-	summary := fastPathTelemetrySummary{
+	summary := health.FastPathTelemetrySummary{
 		Total:      10,
 		Success:    9,
 		Failure:    1,
 		ErrorCodes: map[int]int{-32002: 1},
 		Methods:    map[string]int{"resources/read": 10},
 	}
-	if err := evaluateFastPathFailureThreshold(summary, 5, 0.2); err != nil {
+	if err := health.EvaluateFastPathFailureThreshold(summary, 5, 0.2); err != nil {
 		t.Fatalf("expected threshold pass, got err=%v", err)
 	}
-	if err := evaluateFastPathFailureThreshold(summary, 5, 0.05); err == nil {
+	if err := health.EvaluateFastPathFailureThreshold(summary, 5, 0.05); err == nil {
 		t.Fatal("expected threshold failure error, got nil")
 	}
-	if err := evaluateFastPathFailureThreshold(summary, 20, 0.2); err == nil {
+	if err := health.EvaluateFastPathFailureThreshold(summary, 20, 0.2); err == nil {
 		t.Fatal("expected insufficient samples error, got nil")
 	}
 }
