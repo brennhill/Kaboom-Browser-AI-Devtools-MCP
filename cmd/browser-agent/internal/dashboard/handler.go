@@ -1,7 +1,7 @@
 // Purpose: Serves embedded HTML dashboard, diagnostics, logs, setup, and docs pages at browser-accessible routes.
 // Why: Provides a local web UI for inspecting server state without requiring MCP client tooling.
 
-package main
+package dashboard
 
 import (
 	_ "embed"
@@ -32,61 +32,69 @@ var setupHTML []byte
 //go:embed docs.html
 var docsHTML []byte
 
-// handleDashboard serves the HTML dashboard for browser access.
-// If the client sends Accept: application/json, falls back to the JSON discovery response.
-func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		jsonResponse(w, http.StatusNotFound, map[string]string{"error": "Not found"})
-		return
-	}
-	if r.Method != "GET" {
-		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
-		return
-	}
+type JSONResponse func(http.ResponseWriter, int, any)
 
-	// Content negotiation: JSON for programmatic clients, HTML for browsers
-	accept := r.Header.Get("Accept")
-	if accept == "application/json" || (!strings.Contains(accept, "text/html") && strings.Contains(accept, "application/json")) {
-		jsonResponse(w, http.StatusOK, map[string]string{
-			"name":    mcpServerName,
-			"version": version,
-			"health":  "/health",
-			"logs":    "/logs",
-		})
-		return
-	}
+type RootOptions struct {
+	Name         string
+	Version      string
+	JSONResponse JSONResponse
+}
 
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	if _, err := w.Write(dashboardHTML); err != nil {
-		diag.Printf("[Kaboom] failed to write dashboard response: %v\n", err)
+type StatusOptions struct {
+	Version      string
+	StartedAt    time.Time
+	Capture      *capture.Store
+	Logs         func() (entries, capacity int)
+	Terminal     func() (port, sessions int, sessionIDs []string)
+	ListenPort   func() int
+	Audit        func() any
+	JSONResponse JSONResponse
+}
+
+// Root serves the HTML dashboard with a JSON discovery fallback.
+func Root(options RootOptions) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			options.JSONResponse(w, http.StatusNotFound, map[string]string{"error": "Not found"})
+			return
+		}
+		if r.Method != http.MethodGet {
+			options.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+			return
+		}
+		accept := r.Header.Get("Accept")
+		if strings.Contains(accept, "application/json") {
+			options.JSONResponse(w, http.StatusOK, map[string]string{
+				"name": options.Name, "version": options.Version, "health": "/health", "logs": "/logs",
+			})
+			return
+		}
+		serveHTML(w, dashboardHTML, "dashboard")
 	}
 }
 
-// handleStatusAPI serves GET /api/status with aggregated data for the dashboard.
-func handleStatusAPI(server *Server, cap *capture.Store, mcpHandler *MCPHandler) http.HandlerFunc {
+// Status serves GET /api/status with aggregated dashboard data.
+func Status(options StatusOptions) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "GET" {
-			jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		if r.Method != http.MethodGet {
+			options.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 			return
 		}
 
 		resp := map[string]any{
-			"version":        version,
-			"uptime_seconds": int(time.Since(startTime).Seconds()),
+			"version":        options.Version,
+			"uptime_seconds": int(time.Since(options.StartedAt).Seconds()),
 			"pid":            os.Getpid(),
 			"platform":       runtime.GOOS + "/" + runtime.GOARCH,
 		}
 
-		buffers := map[string]any{
-			"console_entries":  server.logs.EntryCount(),
-			"console_capacity": server.logs.MaxEntries(),
-		}
+		logEntries, logCapacity := options.Logs()
+		buffers := map[string]any{"console_entries": logEntries, "console_capacity": logCapacity}
 
-		if cap != nil {
-			snap := cap.GetHealthSnapshot()
+		if options.Capture != nil {
+			snap := options.Capture.GetHealthSnapshot()
 
-			resp["extension_connected"] = cap.IsExtensionConnected()
+			resp["extension_connected"] = options.Capture.IsExtensionConnected()
 			resp["pilot_enabled"] = snap.PilotEnabled
 			if !snap.LastPollTime.IsZero() {
 				resp["last_poll_at"] = snap.LastPollTime.Format(time.RFC3339)
@@ -99,7 +107,7 @@ func handleStatusAPI(server *Server, cap *capture.Store, mcpHandler *MCPHandler)
 			buffers["action_entries"] = snap.ActionCount
 			buffers["action_capacity"] = capture.MaxEnhancedActions
 
-			resp["recent_commands"] = buildRecentCommands(cap.GetHTTPDebugLog())
+			resp["recent_commands"] = buildRecentCommands(options.Capture.GetHTTPDebugLog())
 		} else {
 			resp["extension_connected"] = false
 			resp["pilot_enabled"] = false
@@ -108,41 +116,52 @@ func handleStatusAPI(server *Server, cap *capture.Store, mcpHandler *MCPHandler)
 		resp["buffers"] = buffers
 
 		// Terminal server status
-		termPort := server.getTerminalPort()
+		termPort, sessions, sessionIDs := options.Terminal()
 		termInfo := map[string]any{
 			"port":     termPort,
 			"running":  termPort > 0,
-			"sessions": 0,
+			"sessions": sessions,
 		}
-		if server.ptyManager != nil {
-			termInfo["sessions"] = server.ptyManager.Count()
-			termInfo["session_ids"] = server.ptyManager.List()
+		if sessionIDs != nil {
+			termInfo["session_ids"] = sessionIDs
 		}
 		resp["terminal"] = termInfo
-		resp["listen_port"] = server.getListenPort()
+		resp["listen_port"] = options.ListenPort()
 
-		if mcpHandler != nil && mcpHandler.toolHandler != nil {
-			if th, ok := mcpHandler.toolHandler.(*ToolHandler); ok && th.healthMetrics != nil {
-				resp["audit"] = th.healthMetrics.BuildAuditInfo()
-			}
+		if audit := options.Audit(); audit != nil {
+			resp["audit"] = audit
 		}
 
-		jsonResponse(w, http.StatusOK, resp)
+		options.JSONResponse(w, http.StatusOK, resp)
 	}
 }
 
-// serveEmbeddedHTML is a helper that serves an embedded HTML page.
-func serveEmbeddedHTML(w http.ResponseWriter, r *http.Request, content []byte, name string) {
-	if r.Method != "GET" {
-		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
-		return
-	}
+func serveHTML(w http.ResponseWriter, content []byte, name string) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write(content); err != nil {
 		diag.Printf("[Kaboom] failed to write %s response: %v\n", name, err)
 	}
 }
+
+func page(content []byte, name string, respond JSONResponse) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			respond(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+			return
+		}
+		serveHTML(w, content, name)
+	}
+}
+
+func Diagnostics(respond JSONResponse) http.HandlerFunc {
+	return page(diagnosticsHTML, "diagnostics", respond)
+}
+func Logs(respond JSONResponse) http.HandlerFunc { return page(logsHTML, "logs", respond) }
+func Setup(respond JSONResponse) http.HandlerFunc {
+	return page(setupHTML, "setup", respond)
+}
+func Docs(respond JSONResponse) http.HandlerFunc { return page(docsHTML, "docs", respond) }
 
 type recentCommand struct {
 	Timestamp  time.Time `json:"timestamp"`

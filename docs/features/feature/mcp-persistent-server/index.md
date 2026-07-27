@@ -36,7 +36,12 @@ code_paths:
   - cmd/browser-agent/internal/procctl/argv0.go
   - cmd/browser-agent/main_connection_recovery.go
   - cmd/browser-agent/server_routes_diagnostics.go
-  - cmd/browser-agent/dashboard.go
+  - cmd/browser-agent/internal/dashboard/handler.go
+  - cmd/browser-agent/internal/dashboard/dashboard.html
+  - cmd/browser-agent/internal/dashboard/diagnostics.html
+  - cmd/browser-agent/internal/dashboard/logs.html
+  - cmd/browser-agent/internal/dashboard/setup.html
+  - cmd/browser-agent/internal/dashboard/docs.html
   - cmd/browser-agent/internal/logstore/store.go
   - cmd/browser-agent/internal/logstore/async.go
   - cmd/browser-agent/internal/logstore/accessors.go
@@ -82,9 +87,10 @@ test_paths:
   - scripts/check-bridge-stdout-invariant.sh
   - cmd/browser-agent/handler_consistency_test.go
   - cmd/browser-agent/server_routes_unit_test.go
-  - cmd/browser-agent/static_branding_test.go
+  - cmd/browser-agent/internal/dashboard/branding_test.go
+  - cmd/browser-agent/openapi_branding_test.go
   - cmd/browser-agent/server_routes_debug_usage_test.go
-  - cmd/browser-agent/dashboard_test.go
+  - cmd/browser-agent/internal/dashboard/handler_test.go
   - cmd/browser-agent/exit_diagnostics_test.go
   - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
   - cmd/browser-agent/internal/bridge/bridge_detach_stdio_test.go

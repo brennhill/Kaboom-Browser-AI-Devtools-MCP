@@ -1,15 +1,67 @@
 // Purpose: Tests for dashboard HTML rendering.
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
-// dashboard_test.go — Tests for dashboard helpers.
-package main
+// handler_test.go — Tests for dashboard helpers.
+package dashboard
 
 import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
+
+func testJSONResponse(w http.ResponseWriter, status int, value any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(value)
+}
+
+func TestRootNegotiatesHTMLAndJSON(t *testing.T) {
+	handler := Root(RootOptions{Name: "kaboom", Version: "1.2.3", JSONResponse: testJSONResponse})
+
+	htmlRequest := httptest.NewRequest(http.MethodGet, "/", nil)
+	htmlResponse := httptest.NewRecorder()
+	handler(htmlResponse, htmlRequest)
+	if htmlResponse.Code != http.StatusOK || htmlResponse.Header().Get("Content-Type") != "text/html; charset=utf-8" {
+		t.Fatalf("HTML response status=%d content-type=%q", htmlResponse.Code, htmlResponse.Header().Get("Content-Type"))
+	}
+
+	jsonRequest := httptest.NewRequest(http.MethodGet, "/", nil)
+	jsonRequest.Header.Set("Accept", "application/json")
+	jsonResponse := httptest.NewRecorder()
+	handler(jsonResponse, jsonRequest)
+	var discovery map[string]string
+	if err := json.Unmarshal(jsonResponse.Body.Bytes(), &discovery); err != nil {
+		t.Fatalf("JSON discovery decode failed: %v", err)
+	}
+	if discovery["name"] != "kaboom" || discovery["version"] != "1.2.3" {
+		t.Fatalf("discovery = %v", discovery)
+	}
+}
+
+func TestStatusUsesInjectedRuntimeFacts(t *testing.T) {
+	handler := Status(StatusOptions{
+		Version: "1.2.3", StartedAt: time.Now().Add(-time.Minute), JSONResponse: testJSONResponse,
+		Logs:       func() (int, int) { return 3, 100 },
+		Terminal:   func() (int, int, []string) { return 7891, 2, []string{"one", "two"} },
+		ListenPort: func() int { return 7890 },
+		Audit:      func() any { return map[string]any{"score": 1} },
+	})
+	response := httptest.NewRecorder()
+	handler(response, httptest.NewRequest(http.MethodGet, "/api/status", nil))
+
+	var body map[string]any
+	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
+		t.Fatalf("status decode failed: %v", err)
+	}
+	if body["version"] != "1.2.3" || body["listen_port"] != float64(7890) {
+		t.Fatalf("status response = %v", body)
+	}
+}
 
 func TestParseMCPCommand_ToolCalls(t *testing.T) {
 	tests := []struct {

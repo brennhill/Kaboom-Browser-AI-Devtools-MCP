@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/ciapi"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/dashboard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/insecureproxy"
@@ -291,7 +292,30 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, cap *capture.Store) 
 	mux.HandleFunc("/mcp", httpguard.CORS(mcp.HandleHTTP))
 
 	// NOT MCP — Dashboard status API (JSON feed for the HTML dashboard)
-	mux.HandleFunc("/api/status", httpguard.CORS(handleStatusAPI(server, cap, mcp)))
+	mux.HandleFunc("/api/status", httpguard.CORS(dashboard.Status(dashboard.StatusOptions{
+		Version: version, StartedAt: startTime, Capture: cap, JSONResponse: jsonResponse,
+		Logs: func() (int, int) {
+			return server.logs.EntryCount(), server.logs.MaxEntries()
+		},
+		Terminal: func() (int, int, []string) {
+			port := server.getTerminalPort()
+			if server.ptyManager == nil {
+				return port, 0, nil
+			}
+			return port, server.ptyManager.Count(), server.ptyManager.List()
+		},
+		ListenPort: server.getListenPort,
+		Audit: func() any {
+			if mcp.toolHandler == nil {
+				return nil
+			}
+			handler, ok := mcp.toolHandler.(*ToolHandler)
+			if !ok || handler.healthMetrics == nil {
+				return nil
+			}
+			return handler.healthMetrics.BuildAuditInfo()
+		},
+	})))
 
 	// NOT MCP — Health check for extension and monitoring (MCP uses configure(action: "health"))
 	mux.HandleFunc("/health", httpguard.CORS(func(w http.ResponseWriter, r *http.Request) {
@@ -326,7 +350,7 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, cap *capture.Store) 
 	mux.HandleFunc("/diagnostics", httpguard.CORS(func(w http.ResponseWriter, r *http.Request) {
 		accept := r.Header.Get("Accept")
 		if strings.Contains(accept, "text/html") && !strings.Contains(accept, "application/json") {
-			serveEmbeddedHTML(w, r, diagnosticsHTML, "diagnostics")
+			dashboard.Diagnostics(jsonResponse)(w, r)
 			return
 		}
 		server.handleDiagnostics(w, r, cap)
@@ -341,15 +365,9 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, cap *capture.Store) 
 	})))
 
 	// NOT MCP — HTML pages for human navigation
-	mux.HandleFunc("/logs.html", httpguard.CORS(func(w http.ResponseWriter, r *http.Request) {
-		serveEmbeddedHTML(w, r, logsHTML, "logs")
-	}))
-	mux.HandleFunc("/setup", httpguard.CORS(func(w http.ResponseWriter, r *http.Request) {
-		serveEmbeddedHTML(w, r, setupHTML, "setup")
-	}))
-	mux.HandleFunc("/docs", httpguard.CORS(func(w http.ResponseWriter, r *http.Request) {
-		serveEmbeddedHTML(w, r, docsHTML, "docs")
-	}))
+	mux.HandleFunc("/logs.html", httpguard.CORS(dashboard.Logs(jsonResponse)))
+	mux.HandleFunc("/setup", httpguard.CORS(dashboard.Setup(jsonResponse)))
+	mux.HandleFunc("/docs", httpguard.CORS(dashboard.Docs(jsonResponse)))
 
 	// NOT MCP — WebSocket echo server for test harness (must be registered before /tests/ subtree).
 	// httpguard.CORS sets headers on http.ResponseWriter pre-hijack; those headers are not included
@@ -399,9 +417,9 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, cap *capture.Store) 
 	})))
 
 	// NOT MCP — HTML dashboard (browser) with JSON fallback (Accept: application/json)
-	mux.HandleFunc("/", httpguard.CORS(func(w http.ResponseWriter, r *http.Request) {
-		server.handleDashboard(w, r)
-	}))
+	mux.HandleFunc("/", httpguard.CORS(dashboard.Root(dashboard.RootOptions{
+		Name: mcpServerName, Version: version, JSONResponse: jsonResponse,
+	})))
 
 	return mcp
 }
