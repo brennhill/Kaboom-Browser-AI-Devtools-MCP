@@ -9,23 +9,24 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate/annotations"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolrouting"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/reproduction"
 )
 
 // generateHandlers maps generate format names to their handler functions.
-var generateHandlers = map[string]ModeHandler{
+var generateHandlers = map[string]toolrouting.Handler[*ToolHandler]{
 	// Direct method delegates
-	"reproduction":      method((*ToolHandler).toolGetReproductionScript),
-	"test":              method((*ToolHandler).toolGenerateTest),
-	"pr_summary":        method((*ToolHandler).toolGeneratePRSummary),
-	"sarif":             method((*ToolHandler).toolExportSARIF),
-	"har":               method((*ToolHandler).toolExportHAR),
-	"csp":               method((*ToolHandler).toolGenerateCSP),
-	"sri":               method((*ToolHandler).toolGenerateSRI),
-	"visual_test":       method((*ToolHandler).toolGenerateVisualTest),
-	"annotation_report": method((*ToolHandler).toolGenerateAnnotationReport),
-	"annotation_issues": method((*ToolHandler).toolGenerateAnnotationIssues),
+	"reproduction":      (*ToolHandler).toolGetReproductionScript,
+	"test":              (*ToolHandler).toolGenerateTest,
+	"pr_summary":        (*ToolHandler).toolGeneratePRSummary,
+	"sarif":             (*ToolHandler).toolExportSARIF,
+	"har":               (*ToolHandler).toolExportHAR,
+	"csp":               (*ToolHandler).toolGenerateCSP,
+	"sri":               (*ToolHandler).toolGenerateSRI,
+	"visual_test":       (*ToolHandler).toolGenerateVisualTest,
+	"annotation_report": (*ToolHandler).toolGenerateAnnotationReport,
+	"annotation_issues": (*ToolHandler).toolGenerateAnnotationIssues,
 	// Sub-handler delegates (require closures — testGen() accessor)
 	"test_from_context": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return h.testGen().HandleGenerateTestFromContext(req, args)
@@ -48,7 +49,7 @@ func isGenerateMode(v string) bool {
 // "action" is only treated as a mode alias when its value matches a known generate mode,
 // since "action" can also be a sub-action parameter (e.g. test_heal action=analyze).
 // Both ConflictFn and FallbackFn are gated to handler membership.
-var generateAliasParams = []modeAlias{
+var generateAliasParams = []toolrouting.Alias{
 	{JSONField: "format", DeprecatedIn: "0.7.0", RemoveIn: "0.9.0"},
 	{JSONField: "action", ConflictFn: isGenerateMode, FallbackFn: isGenerateMode, DeprecatedIn: "0.7.0", RemoveIn: "0.9.0"},
 }
@@ -57,10 +58,10 @@ var generateAliasParams = []modeAlias{
 func getValidGenerateFormats() string { return sortedMapKeys(generateHandlers) }
 
 // generateRegistry is the tool registry for generate dispatch.
-var generateRegistry = toolRegistry{
+var generateRegistry = toolrouting.Registry[*ToolHandler]{
 	Handlers:  generateHandlers,
 	AliasDefs: generateAliasParams,
-	Resolution: modeResolution{
+	Resolution: toolrouting.Resolution{
 		ToolName:   "generate",
 		ValidModes: "", // populated lazily
 	},
@@ -73,7 +74,7 @@ var generateRegistry = toolRegistry{
 func (h *ToolHandler) toolGenerate(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	reg := generateRegistry
 	reg.Resolution.ValidModes = getValidGenerateFormats()
-	return h.dispatchTool(req, args, reg)
+	return toolrouting.Dispatch(h, req, args, reg)
 }
 
 // generateDeps exposes the narrow generate package contract at the MCP boundary.

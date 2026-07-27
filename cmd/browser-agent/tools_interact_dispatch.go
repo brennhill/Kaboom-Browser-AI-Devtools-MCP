@@ -14,6 +14,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolrouting"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -30,7 +31,7 @@ func randIntn(n int) int {
 }
 
 // interactAliasParams defines the deprecated alias parameters for the interact tool.
-var interactAliasParams = []modeAlias{
+var interactAliasParams = []toolrouting.Alias{
 	{JSONField: "action", DeprecatedIn: "0.7.0", RemoveIn: "0.9.0"},
 }
 
@@ -38,10 +39,10 @@ var interactAliasParams = []modeAlias{
 // PreDispatch handles evidence mode validation and async→background alias rewriting.
 // PostDispatch handles composable side effects (subtitle, auto_dismiss, wait_for_stable,
 // action_diff, include_screenshot, include_interactive).
-var interactRegistry = toolRegistry{
+var interactRegistry = toolrouting.Registry[*ToolHandler]{
 	Handlers:  nil, // populated lazily per-call in toolInteract
 	AliasDefs: interactAliasParams,
-	Resolution: modeResolution{
+	Resolution: toolrouting.Resolution{
 		ToolName:   "interact",
 		ValidModes: "", // populated lazily per-call in toolInteract
 	},
@@ -71,12 +72,12 @@ var interactHandlersOnce sync.Once
 
 // cachedInteractHandlers is the lazily-initialized handler map for interact actions.
 // Populated once via sync.Once on first call to getInteractHandlers() and reused thereafter.
-var cachedInteractHandlers map[string]ModeHandler
+var cachedInteractHandlers map[string]toolrouting.Handler[*ToolHandler]
 
 // getInteractHandlers returns the cached unified handler map for interact actions.
-// Merges both named handlers and DOM primitive actions into a single map[string]ModeHandler.
+// Merges both named handlers and DOM primitive actions into a single map[string]toolrouting.Handler[*ToolHandler].
 // The map is built once and cached for the process lifetime.
-func getInteractHandlers() map[string]ModeHandler {
+func getInteractHandlers() map[string]toolrouting.Handler[*ToolHandler] {
 	interactHandlersOnce.Do(func() {
 		cachedInteractHandlers = buildInteractHandlers()
 	})
@@ -84,8 +85,8 @@ func getInteractHandlers() map[string]ModeHandler {
 }
 
 // buildInteractHandlers constructs the full interact handler map.
-func buildInteractHandlers() map[string]ModeHandler {
-	handlers := map[string]ModeHandler{
+func buildInteractHandlers() map[string]toolrouting.Handler[*ToolHandler] {
+	handlers := map[string]toolrouting.Handler[*ToolHandler]{
 		"highlight": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleHighlightImpl(req, args)
 		},
@@ -269,7 +270,7 @@ func (h *ToolHandler) toolInteract(req mcp.JSONRPCRequest, args json.RawMessage)
 	registry.Handlers = getInteractHandlers()
 	registry.Resolution.ValidModes = getValidInteractActions()
 	what := resolveWhatForComposable(args, interactAliasParams)
-	response := h.dispatchTool(req, args, registry)
+	response := toolrouting.Dispatch(h, req, args, registry)
 
 	if composable.Subtitle != nil && what != "subtitle" && response.Error == nil {
 		h.interactAction().QueueComposableSubtitle(req, *composable.Subtitle)
@@ -299,7 +300,7 @@ func (h *ToolHandler) toolInteract(req mcp.JSONRPCRequest, args json.RawMessage)
 	return response
 }
 
-func resolveWhatForComposable(args json.RawMessage, aliases []modeAlias) string {
+func resolveWhatForComposable(args json.RawMessage, aliases []toolrouting.Alias) string {
 	if len(args) == 0 {
 		return ""
 	}

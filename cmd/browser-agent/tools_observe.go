@@ -14,25 +14,26 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolobserve"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolrouting"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	observe "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 	wiretypes "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
-func obs(fn func(observe.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) ModeHandler {
+func obs(fn func(observe.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) toolrouting.Handler[*ToolHandler] {
 	return func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return fn(h, req, args)
 	}
 }
 
-func obsLocal(fn func(toolobserve.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) ModeHandler {
+func obsLocal(fn func(toolobserve.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) toolrouting.Handler[*ToolHandler] {
 	return func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return fn(h, req, args)
 	}
 }
 
-var observeHandlers = map[string]ModeHandler{
+var observeHandlers = map[string]toolrouting.Handler[*ToolHandler]{
 	"errors": obs(observe.GetBrowserErrors), "logs": obs(observe.GetBrowserLogs),
 	"extension_logs": obs(observe.GetExtensionLogs), "network_waterfall": obs(observe.GetNetworkWaterfall),
 	"network_bodies": obs(observe.GetNetworkBodies), "websocket_events": obs(observe.GetWSEvents),
@@ -59,17 +60,17 @@ var observeHandlers = map[string]ModeHandler{
 	},
 	"page_inventory": obsLocal(toolobserve.HandlePageInventory), "inbox": obsLocal(toolobserve.HandleInbox),
 	"site_menus":        obsLocal(toolobserve.HandleSiteMenus),
-	"command_result":    method((*ToolHandler).toolObserveCommandResult),
-	"pending_commands":  method((*ToolHandler).toolObservePendingCommands),
-	"failed_commands":   method((*ToolHandler).toolObserveFailedCommands),
-	"saved_videos":      method((*ToolHandler).toolObserveSavedVideos),
-	"recordings":        method((*ToolHandler).toolGetRecordings),
-	"recording_actions": method((*ToolHandler).toolGetRecordingActions),
-	"playback_results":  method((*ToolHandler).toolGetPlaybackResults),
-	"log_diff_report":   method((*ToolHandler).toolGetLogDiffReport),
+	"command_result":    (*ToolHandler).toolObserveCommandResult,
+	"pending_commands":  (*ToolHandler).toolObservePendingCommands,
+	"failed_commands":   (*ToolHandler).toolObserveFailedCommands,
+	"saved_videos":      (*ToolHandler).toolObserveSavedVideos,
+	"recordings":        (*ToolHandler).toolGetRecordings,
+	"recording_actions": (*ToolHandler).toolGetRecordingActions,
+	"playback_results":  (*ToolHandler).toolGetPlaybackResults,
+	"log_diff_report":   (*ToolHandler).toolGetLogDiffReport,
 }
 
-var observeValueAliases = map[string]modeValueAlias{
+var observeValueAliases = map[string]toolrouting.ValueAlias{
 	"network": {Canonical: "network_waterfall", DeprecatedIn: "0.7.0", RemoveIn: "0.9.0"},
 	"ws":      {Canonical: "websocket_events", DeprecatedIn: "0.7.0", RemoveIn: "0.9.0"},
 }
@@ -77,13 +78,13 @@ var observeValueAliases = map[string]modeValueAlias{
 func getValidObserveModes() string { return sortedMapKeys(observeHandlers) }
 
 // observeAliasParams references the shared default mode/action aliases.
-var observeAliasParams = defaultModeActionAliases
+var observeAliasParams = toolrouting.DefaultModeActionAliases
 
 // observeRegistry is the tool registry for observe dispatch.
-var observeRegistry = toolRegistry{
+var observeRegistry = toolrouting.Registry[*ToolHandler]{
 	Handlers:  observeHandlers,
 	AliasDefs: observeAliasParams,
-	Resolution: modeResolution{
+	Resolution: toolrouting.Resolution{
 		ToolName:     "observe",
 		ValidModes:   "", // populated lazily
 		ValueAliases: observeValueAliases,
@@ -108,7 +109,7 @@ var observeRegistry = toolRegistry{
 func (h *ToolHandler) toolObserve(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	reg := observeRegistry
 	reg.Resolution.ValidModes = getValidObserveModes()
-	return h.dispatchTool(req, args, reg)
+	return toolrouting.Dispatch(h, req, args, reg)
 }
 
 func (h *ToolHandler) toolObserveInbox(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {

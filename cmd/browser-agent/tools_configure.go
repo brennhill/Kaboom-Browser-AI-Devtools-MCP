@@ -24,6 +24,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/qualitygates"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/tutorial"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolrouting"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/issuereport"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -37,7 +38,7 @@ const restartSelfSignalDelay = 100 * time.Millisecond
 
 var replayMu sync.Mutex
 
-var configureHandlers = map[string]ModeHandler{
+var configureHandlers = map[string]toolrouting.Handler[*ToolHandler]{
 	"store": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return h.configureSessions.Store(req, args)
 	},
@@ -75,14 +76,14 @@ var configureHandlers = map[string]ModeHandler{
 			Annotations: h.annotationStore,
 		}, req, args)
 	},
-	"audit_log":             method((*ToolHandler).toolGetAuditLog),
-	"streaming":             method((*ToolHandler).toolConfigureStreaming),
-	"test_boundary_start":   method((*ToolHandler).toolConfigureTestBoundaryStart),
-	"test_boundary_end":     method((*ToolHandler).toolConfigureTestBoundaryEnd),
-	"event_recording_start": method((*ToolHandler).toolConfigureEventRecordingStart),
-	"event_recording_stop":  method((*ToolHandler).toolConfigureEventRecordingStop),
-	"playback":              method((*ToolHandler).toolConfigurePlayback),
-	"log_diff":              method((*ToolHandler).toolConfigureLogDiff),
+	"audit_log":             (*ToolHandler).toolGetAuditLog,
+	"streaming":             (*ToolHandler).toolConfigureStreaming,
+	"test_boundary_start":   (*ToolHandler).toolConfigureTestBoundaryStart,
+	"test_boundary_end":     (*ToolHandler).toolConfigureTestBoundaryEnd,
+	"event_recording_start": (*ToolHandler).toolConfigureEventRecordingStart,
+	"event_recording_stop":  (*ToolHandler).toolConfigureEventRecordingStop,
+	"playback":              (*ToolHandler).toolConfigurePlayback,
+	"log_diff":              (*ToolHandler).toolConfigureLogDiff,
 	"telemetry":             cfgLocal(toolconfigure.HandleTelemetry),
 	"describe_capabilities": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return toolconfigure.HandleDescribeCapabilities(h, req, args, version)
@@ -93,13 +94,13 @@ var configureHandlers = map[string]ModeHandler{
 	"examples": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return tutorial.HandleTutorial(h, req, args, playbooks.TutorialFailureRecoveryPlaybooks())
 	},
-	"save_sequence":     method((*ToolHandler).toolConfigureSaveSequence),
-	"get_sequence":      method((*ToolHandler).toolConfigureGetSequence),
-	"list_sequences":    method((*ToolHandler).toolConfigureListSequences),
-	"delete_sequence":   method((*ToolHandler).toolConfigureDeleteSequence),
-	"replay_sequence":   method((*ToolHandler).toolConfigureReplaySequence),
+	"save_sequence":     (*ToolHandler).toolConfigureSaveSequence,
+	"get_sequence":      (*ToolHandler).toolConfigureGetSequence,
+	"list_sequences":    (*ToolHandler).toolConfigureListSequences,
+	"delete_sequence":   (*ToolHandler).toolConfigureDeleteSequence,
+	"replay_sequence":   (*ToolHandler).toolConfigureReplaySequence,
 	"security_mode":     cfgLocal(toolconfigure.HandleSecurityMode),
-	"network_recording": method((*ToolHandler).toolConfigureNetworkRecording),
+	"network_recording": (*ToolHandler).toolConfigureNetworkRecording,
 	"action_jitter":     cfgLocal(toolconfigure.HandleActionJitter),
 	"report_issue": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return issuereport.Handle(h, req, args)
@@ -109,7 +110,7 @@ var configureHandlers = map[string]ModeHandler{
 	},
 }
 
-func cfgLocal(fn func(toolconfigure.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) ModeHandler {
+func cfgLocal(fn func(toolconfigure.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) toolrouting.Handler[*ToolHandler] {
 	return func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return fn(h, req, args)
 	}
@@ -193,7 +194,7 @@ func getLaunchModeInfo() health.LaunchModeInfo {
 // ConflictFn and FallbackFn gates because these fields also serve as sub-parameters
 // (e.g. security_mode uses "mode" as a field, playback uses "action" as a sub-action).
 // Conflicts and fallbacks are only triggered when the value is a known top-level configure mode.
-var configureAliasParams = []modeAlias{
+var configureAliasParams = []toolrouting.Alias{
 	{JSONField: "mode", ConflictFn: func(v string) bool {
 		_, ok := configureHandlers[v]
 		return ok
@@ -208,10 +209,10 @@ var configureAliasParams = []modeAlias{
 }
 
 // configureRegistry is the tool registry for configure dispatch.
-var configureRegistry = toolRegistry{
+var configureRegistry = toolrouting.Registry[*ToolHandler]{
 	Handlers:  configureHandlers,
 	AliasDefs: configureAliasParams,
-	Resolution: modeResolution{
+	Resolution: toolrouting.Resolution{
 		ToolName:   "configure",
 		ValidModes: "", // populated lazily
 	},
@@ -221,7 +222,7 @@ var configureRegistry = toolRegistry{
 func (h *ToolHandler) toolConfigure(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	reg := configureRegistry
 	reg.Resolution.ValidModes = getValidConfigureActions()
-	return h.dispatchTool(req, args, reg)
+	return toolrouting.Dispatch(h, req, args, reg)
 }
 
 func (h *ToolHandler) NoiseConfig() *noise.NoiseConfig {

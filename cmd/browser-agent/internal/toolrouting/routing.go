@@ -1,6 +1,6 @@
-// tool_dispatch_helpers.go — Shared alias-resolution, mode-list helpers, and generic dispatch for tool routing.
+// routing.go — Shared alias resolution and generic dispatch for all MCP tools.
 
-package main
+package toolrouting
 
 import (
 	"encoding/json"
@@ -10,9 +10,9 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
-// ModeHandler is the unified function signature for all tool mode handlers.
+// Handler is the unified function signature for tool mode handlers.
 // All five tools (observe, analyze, configure, generate, interact) use this signature.
-type ModeHandler func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
+type Handler[H any] func(h H, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
 
 // describeCapabilitiesRecovery points callers at the canonical tool-mode registry.
 func describeCapabilitiesRecovery(toolName string) func(*mcp.StructuredError) {
@@ -52,21 +52,21 @@ func whatAliasConflictResponse(req mcp.JSONRPCRequest, aliasParam, whatValue, al
 	)
 }
 
-// toolRegistry bundles the handler map, alias definitions, and metadata for a tool.
-type toolRegistry struct {
-	Handlers   map[string]ModeHandler
-	AliasDefs  []modeAlias
-	Resolution modeResolution
+// Registry bundles the handler map, alias definitions, and metadata for a tool.
+type Registry[H any] struct {
+	Handlers   map[string]Handler[H]
+	AliasDefs  []Alias
+	Resolution Resolution
 	// PreDispatch is called after mode resolution but before handler dispatch.
 	// Returns modified args and optional response (non-nil short-circuits dispatch).
-	PreDispatch func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage, what string) (json.RawMessage, *mcp.JSONRPCResponse)
+	PreDispatch func(h H, req mcp.JSONRPCRequest, args json.RawMessage, what string) (json.RawMessage, *mcp.JSONRPCResponse)
 	// PostDispatch is called after the handler returns, before alias warning.
-	PostDispatch func(h *ToolHandler, req mcp.JSONRPCRequest, resp mcp.JSONRPCResponse, what string) mcp.JSONRPCResponse
+	PostDispatch func(h H, req mcp.JSONRPCRequest, resp mcp.JSONRPCResponse, what string) mcp.JSONRPCResponse
 }
 
-// dispatchTool resolves the mode, looks up the handler, and dispatches.
+// Dispatch resolves the mode, looks up the handler, and dispatches.
 // Handles the resolve→lookup→not-found→call→alias-warning pattern shared by all 4 registry tools.
-func (h *ToolHandler) dispatchTool(req mcp.JSONRPCRequest, args json.RawMessage, reg toolRegistry) mcp.JSONRPCResponse {
+func Dispatch[H any](h H, req mcp.JSONRPCRequest, args json.RawMessage, reg Registry[H]) mcp.JSONRPCResponse {
 	what, usedAliasParam, errResp := resolveToolMode(req, args, reg.AliasDefs, reg.Resolution)
 	if errResp != nil {
 		return *errResp
@@ -99,23 +99,14 @@ func (h *ToolHandler) dispatchTool(req mcp.JSONRPCRequest, args json.RawMessage,
 	return appendCanonicalWhatAliasWarning(resp, usedAliasParam, what, deprecatedIn, removeIn)
 }
 
-// method adapts a ToolHandler method (that takes req, args) into a ModeHandler.
-// This eliminates the one-line closure boilerplate in registries:
-//
-//	Before: "dom": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse { return h.toolQueryDOM(req, args) },
-//	After:  "dom": method((*ToolHandler).toolQueryDOM),
-func method(fn func(*ToolHandler, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) ModeHandler {
-	return fn
-}
-
-// defaultModeActionAliases defines the standard deprecated alias parameters ("mode", "action")
+// DefaultModeActionAliases defines the standard deprecated alias parameters ("mode", "action")
 // shared by observe and analyze tools. Reference this from tool registries instead of duplicating.
-var defaultModeActionAliases = []modeAlias{
+var DefaultModeActionAliases = []Alias{
 	{JSONField: "mode", DeprecatedIn: "0.7.0", RemoveIn: "0.9.0"},
 	{JSONField: "action", DeprecatedIn: "0.7.0", RemoveIn: "0.9.0"},
 }
 
-// modeAlias defines a deprecated parameter that can substitute for the canonical 'what' param.
+// Alias defines a deprecated parameter that can substitute for the canonical 'what' param.
 //
 // ConflictFn gates the conflict check: when set, a conflict is only raised if ConflictFn returns true.
 // This supports tools where a param like "action" doubles as both a mode selector and a sub-action
@@ -123,7 +114,7 @@ var defaultModeActionAliases = []modeAlias{
 //
 // FallbackFn gates the fallback: when set, the alias value is only used as a mode selector when
 // FallbackFn returns true. When nil, any non-empty alias value is accepted as a fallback.
-type modeAlias struct {
+type Alias struct {
 	JSONField    string            // JSON field name in args (e.g. "action", "mode", "format")
 	ConflictFn   func(string) bool // Optional: only raise conflict when this returns true
 	FallbackFn   func(string) bool // Optional: only use as fallback mode when this returns true
@@ -131,19 +122,19 @@ type modeAlias struct {
 	RemoveIn     string            // Semver when removal is planned (e.g. "0.9.0"); empty = not tracked
 }
 
-// modeValueAlias maps a shorthand mode value to its canonical name with deprecation tracking.
-type modeValueAlias struct {
+// ValueAlias maps a shorthand mode value to its canonical name with deprecation tracking.
+type ValueAlias struct {
 	Canonical    string // Canonical mode name (e.g. "network_waterfall")
 	DeprecatedIn string // Semver when deprecated (e.g. "0.7.0")
 	RemoveIn     string // Semver when removal is planned (e.g. "0.9.0")
 }
 
-// modeResolution bundles context needed for mode resolution error messages.
-type modeResolution struct {
-	ToolName     string                    // For error messages (e.g. "observe", "analyze")
-	ValidModes   string                    // Sorted comma-separated list for hints
-	Aliases      map[string]string         // Mode aliases (e.g. "network" -> "network_waterfall") — legacy, used when ValueAliases is nil
-	ValueAliases map[string]modeValueAlias // Mode aliases with deprecation metadata — preferred over Aliases
+// Resolution bundles context needed for mode resolution error messages.
+type Resolution struct {
+	ToolName     string                // For error messages (e.g. "observe", "analyze")
+	ValidModes   string                // Sorted comma-separated list for hints
+	Aliases      map[string]string     // Mode aliases (e.g. "network" -> "network_waterfall") — legacy, used when ValueAliases is nil
+	ValueAliases map[string]ValueAlias // Mode aliases with deprecation metadata — preferred over Aliases
 }
 
 // resolveToolMode extracts and resolves the 'what' parameter from args, checking alias params
@@ -159,8 +150,8 @@ type modeResolution struct {
 func resolveToolMode(
 	req mcp.JSONRPCRequest,
 	args json.RawMessage,
-	aliasDefs []modeAlias,
-	res modeResolution,
+	aliasDefs []Alias,
+	res Resolution,
 ) (what string, usedAliasParam string, errResp *mcp.JSONRPCResponse) {
 
 	// Parse all potential mode fields into a map.
@@ -237,7 +228,7 @@ func resolveToolMode(
 }
 
 // findAliasParamDeprecation returns the deprecation metadata for a used alias param.
-func findAliasParamDeprecation(usedAliasParam string, aliasDefs []modeAlias) (deprecatedIn, removeIn string) {
+func findAliasParamDeprecation(usedAliasParam string, aliasDefs []Alias) (deprecatedIn, removeIn string) {
 	if usedAliasParam == "" {
 		return "", ""
 	}
@@ -250,7 +241,7 @@ func findAliasParamDeprecation(usedAliasParam string, aliasDefs []modeAlias) (de
 }
 
 // aliasFieldNames extracts JSON field names from alias definitions.
-func aliasFieldNames(defs []modeAlias) []string {
+func aliasFieldNames(defs []Alias) []string {
 	names := make([]string, len(defs))
 	for i, d := range defs {
 		names[i] = d.JSONField

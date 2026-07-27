@@ -6,7 +6,7 @@ Use this as a hard checklist during design, coding, and review.
 ## 0) 0.8 Helper Inventory (Use These First)
 
 - Server dispatch and mode resolution:
-  - `cmd/browser-agent/tool_dispatch_helpers.go`
+  - `cmd/browser-agent/internal/toolrouting/routing.go`
   - `cmd/browser-agent/tools_observe.go`
   - `cmd/browser-agent/tools_configure.go`
 - Shared async query path:

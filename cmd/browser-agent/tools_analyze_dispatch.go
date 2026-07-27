@@ -13,6 +13,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/inspect"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/pageissues"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/visual"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolrouting"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -23,10 +24,10 @@ import (
 )
 
 // analyzeHandlers maps analyze mode names to their handler functions.
-var analyzeHandlers = map[string]ModeHandler{
+var analyzeHandlers = map[string]toolrouting.Handler[*ToolHandler]{
 	"dom":                 azInspect(inspect.HandleDOM),
-	"api_validation":      method((*ToolHandler).toolValidateAPI),
-	"page_summary":        method((*ToolHandler).toolAnalyzePageSummary),
+	"api_validation":      (*ToolHandler).toolValidateAPI,
+	"page_summary":        (*ToolHandler).toolAnalyzePageSummary,
 	"performance":         obs(observe.CheckPerformance),
 	"accessibility":       obs(observe.RunA11yAudit),
 	"error_clusters":      obs(observe.AnalyzeErrors),
@@ -71,28 +72,28 @@ var analyzeHandlers = map[string]ModeHandler{
 }
 
 // analyzeValueAliases maps shorthand names to their canonical analyze mode names with deprecation metadata.
-var analyzeValueAliases = map[string]modeValueAlias{
+var analyzeValueAliases = map[string]toolrouting.ValueAlias{
 	"a11y":    {Canonical: "accessibility", DeprecatedIn: "0.7.0", RemoveIn: "0.9.0"},
 	"history": {Canonical: "navigation_patterns", DeprecatedIn: "0.7.0", RemoveIn: "0.9.0"},
 }
 
 // analyzeAliasParams references the shared default mode/action aliases.
-var analyzeAliasParams = defaultModeActionAliases
+var analyzeAliasParams = toolrouting.DefaultModeActionAliases
 
-// azLocal wraps a toolanalyze.Deps-accepting function as a ModeHandler.
-func azLocal(fn func(toolanalyze.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) ModeHandler {
+// azLocal wraps a toolanalyze.Deps-accepting function as a toolrouting.Handler[*ToolHandler].
+func azLocal(fn func(toolanalyze.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) toolrouting.Handler[*ToolHandler] {
 	return func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return fn(h, req, args)
 	}
 }
 
-func azInspect(fn func(inspect.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) ModeHandler {
+func azInspect(fn func(inspect.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) toolrouting.Handler[*ToolHandler] {
 	return func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return fn(h, req, args)
 	}
 }
 
-func azVisual(fn func(visual.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) ModeHandler {
+func azVisual(fn func(visual.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) toolrouting.Handler[*ToolHandler] {
 	return func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return fn(visualAnalyzeDeps{h: h}, req, args)
 	}
@@ -120,10 +121,10 @@ func (d visualAnalyzeDeps) HandleSessionStore(args persistence.SessionStoreArgs)
 func getValidAnalyzeModes() string { return sortedMapKeys(analyzeHandlers) }
 
 // analyzeRegistry is the tool registry for analyze dispatch.
-var analyzeRegistry = toolRegistry{
+var analyzeRegistry = toolrouting.Registry[*ToolHandler]{
 	Handlers:  analyzeHandlers,
 	AliasDefs: analyzeAliasParams,
-	Resolution: modeResolution{
+	Resolution: toolrouting.Resolution{
 		ToolName:     "analyze",
 		ValidModes:   "", // populated lazily
 		ValueAliases: analyzeValueAliases,
@@ -134,7 +135,7 @@ var analyzeRegistry = toolRegistry{
 func (h *ToolHandler) toolAnalyze(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	reg := analyzeRegistry
 	reg.Resolution.ValidModes = getValidAnalyzeModes()
-	return h.dispatchTool(req, args, reg)
+	return toolrouting.Dispatch(h, req, args, reg)
 }
 
 func (h *ToolHandler) toolAnalyzePageSummary(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
