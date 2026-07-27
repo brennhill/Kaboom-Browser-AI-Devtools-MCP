@@ -10,9 +10,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mediaapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolobserve"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	observe "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 	wiretypes "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
@@ -40,12 +42,22 @@ var observeHandlers = map[string]ModeHandler{
 	"timeline": obs(observe.GetSessionTimeline), "error_bundles": obs(observe.GetErrorBundles),
 	"screenshot": obs(observe.GetScreenshot), "storage": obs(observe.GetStorage),
 	"indexeddb": obs(observe.GetIndexedDB), "summarized_logs": obs(observe.GetSummarizedLogs),
-	"transients":        obs(observe.GetTransients),
-	"annotations":       method((*ToolHandler).toolGetAnnotations),
-	"annotation_detail": method((*ToolHandler).toolGetAnnotationDetail),
-	"draw_history":      method((*ToolHandler).toolListDrawHistory),
-	"draw_session":      method((*ToolHandler).toolGetDrawSession),
-	"page_inventory":    obsLocal(toolobserve.HandlePageInventory), "inbox": obsLocal(toolobserve.HandleInbox),
+	"transients": obs(observe.GetTransients),
+	"annotations": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		return h.annotationAnalysis.GetAnnotations(req, args)
+	},
+	"annotation_detail": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		return h.annotationAnalysis.GetAnnotationDetail(req, args)
+	},
+	"draw_history": func(_ *ToolHandler, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+		dir, err := mediaapi.ScreenshotsDir()
+		return annotation.ListDrawHistory(req, dir, err)
+	},
+	"draw_session": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		dir, err := mediaapi.ScreenshotsDir()
+		return annotation.LoadDrawSession(h.annotationStore, req, args, dir, err)
+	},
+	"page_inventory": obsLocal(toolobserve.HandlePageInventory), "inbox": obsLocal(toolobserve.HandleInbox),
 	"site_menus":        obsLocal(toolobserve.HandleSiteMenus),
 	"command_result":    method((*ToolHandler).toolObserveCommandResult),
 	"pending_commands":  method((*ToolHandler).toolObservePendingCommands),

@@ -16,6 +16,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/summarypref"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testgenhandler"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/annotationanalysis"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
@@ -117,6 +118,7 @@ type ToolHandler struct {
 	testGenHandler           *testgenhandler.Handler
 	stateInteractHandler     *interactstate.Handler
 	configureSessions        *toolconfigure.SessionHandler
+	annotationAnalysis       *annotationanalysis.Handler
 
 	// Passive network traffic recording state (start/stop capture).
 	networkRecording *netrecord.NetworkRecordingState
@@ -449,6 +451,12 @@ func NewToolHandler(server *Server, captureStore *capture.Store) *MCPHandler {
 	handler.redactionEngine = redaction.NewRedactionEngine("")
 
 	handler.annotationStore = server.getAnnotationStore()
+	handler.annotationAnalysis = annotationanalysis.New(
+		handler.annotationStore,
+		handler.capture,
+		handler.formatCommandResult,
+		handler.server.logs.Entries,
+	)
 	if handler.capture != nil {
 		handler.annotationStore.SetCommandCompleter(func(correlationID string, result json.RawMessage) {
 			handler.capture.CompleteCommand(correlationID, result, "")

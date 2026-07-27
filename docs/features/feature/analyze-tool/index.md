@@ -4,10 +4,10 @@ feature_id: feature-analyze-tool
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/tools_analyze_dispatch.go
-  - cmd/browser-agent/tools_analyze_annotations_handlers.go
+  - cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go
   - internal/analysis/apicontract/runtime_handler.go
   - cmd/browser-agent/internal/toolanalyze/inspect/forms.go
   - cmd/browser-agent/internal/toolanalyze/inspect/dom.go

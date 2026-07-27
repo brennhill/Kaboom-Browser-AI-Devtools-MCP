@@ -70,7 +70,7 @@ func TestGetAnnotationDetail_MalformedJSON(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{not valid json`)
 
-	resp := h.toolGetAnnotationDetail(req, args)
+	resp := h.annotationAnalysis.GetAnnotationDetail(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
 	if !strings.Contains(text, "Invalid JSON") {

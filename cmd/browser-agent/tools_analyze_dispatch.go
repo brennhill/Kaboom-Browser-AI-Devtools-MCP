@@ -37,20 +37,30 @@ var analyzeHandlers = map[string]ModeHandler{
 	"link_validation": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return toolanalyze.HandleLinkValidation(req, args, version)
 	},
-	"annotations":       method((*ToolHandler).toolGetAnnotations),
-	"annotation_detail": method((*ToolHandler).toolGetAnnotationDetail),
-	"draw_history":      method((*ToolHandler).toolListDrawHistory),
-	"draw_session":      method((*ToolHandler).toolGetDrawSession),
-	"computed_styles":   azInspect(inspect.HandleComputedStyles),
-	"forms":             azInspect(inspect.HandleFormDiscovery),
-	"form_state":        azInspect(inspect.HandleFormState),
-	"form_validation":   azInspect(inspect.HandleFormValidation),
-	"data_table":        azInspect(inspect.HandleDataTable),
-	"visual_baseline":   azVisual(visual.SaveBaseline),
-	"visual_diff":       azVisual(visual.DiffBaseline),
-	"visual_baselines":  azVisual(visual.ListBaselines),
-	"navigation":        azLocal(toolanalyze.HandleNavigation),
-	"page_structure":    azLocal(toolanalyze.HandlePageStructure),
+	"annotations": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		return h.annotationAnalysis.GetAnnotations(req, args)
+	},
+	"annotation_detail": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		return h.annotationAnalysis.GetAnnotationDetail(req, args)
+	},
+	"draw_history": func(_ *ToolHandler, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+		dir, err := mediaapi.ScreenshotsDir()
+		return annotation.ListDrawHistory(req, dir, err)
+	},
+	"draw_session": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		dir, err := mediaapi.ScreenshotsDir()
+		return annotation.LoadDrawSession(h.annotationStore, req, args, dir, err)
+	},
+	"computed_styles":  azInspect(inspect.HandleComputedStyles),
+	"forms":            azInspect(inspect.HandleFormDiscovery),
+	"form_state":       azInspect(inspect.HandleFormState),
+	"form_validation":  azInspect(inspect.HandleFormValidation),
+	"data_table":       azInspect(inspect.HandleDataTable),
+	"visual_baseline":  azVisual(visual.SaveBaseline),
+	"visual_diff":      azVisual(visual.DiffBaseline),
+	"visual_baselines": azVisual(visual.ListBaselines),
+	"navigation":       azLocal(toolanalyze.HandleNavigation),
+	"page_structure":   azLocal(toolanalyze.HandlePageStructure),
 	"audit": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return combinedaudit.Handle(h, req, args)
 	},
@@ -133,16 +143,6 @@ func (h *ToolHandler) toolAnalyzePageSummary(req mcp.JSONRPCRequest, args json.R
 
 func (h *ToolHandler) toolValidateAPI(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return h.apiContractRuntime.Handle(req, args, h.capture.GetNetworkBodies())
-}
-
-func (h *ToolHandler) toolListDrawHistory(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
-	dir, err := mediaapi.ScreenshotsDir()
-	return annotation.ListDrawHistory(req, dir, err)
-}
-
-func (h *ToolHandler) toolGetDrawSession(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	dir, err := mediaapi.ScreenshotsDir()
-	return annotation.LoadDrawSession(h.annotationStore, req, args, dir, err)
 }
 
 func (h *ToolHandler) NetworkWaterfallEntries() []capture.NetworkWaterfallEntry {

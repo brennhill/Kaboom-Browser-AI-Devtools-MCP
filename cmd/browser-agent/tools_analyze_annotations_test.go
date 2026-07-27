@@ -33,7 +33,7 @@ func TestToolGetAnnotations_NoSession(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"annotations","wait":false}`)
 
-	resp := h.toolGetAnnotations(req, args)
+	resp := h.annotationAnalysis.GetAnnotations(req, args)
 
 	text := unmarshalMCPText(t, resp.Result)
 	if !strings.Contains(text, "No annotation") {
@@ -65,7 +65,7 @@ func TestToolGetAnnotations_WithSession(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "annotations"}`)
 
-	resp := h.toolGetAnnotations(req, args)
+	resp := h.annotationAnalysis.GetAnnotations(req, args)
 
 	text := unmarshalMCPText(t, resp.Result)
 	if !strings.Contains(text, "make this darker") {
@@ -82,7 +82,7 @@ func TestToolGetAnnotationDetail_Missing(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "annotation_detail", "correlation_id": "nonexistent"}`)
 
-	resp := h.toolGetAnnotationDetail(req, args)
+	resp := h.annotationAnalysis.GetAnnotationDetail(req, args)
 
 	text := unmarshalMCPText(t, resp.Result)
 	if !strings.Contains(text, "not found") && !strings.Contains(text, "expired") {
@@ -106,7 +106,7 @@ func TestToolGetAnnotationDetail_Found(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_1"}`)
 
-	resp := h.toolGetAnnotationDetail(req, args)
+	resp := h.annotationAnalysis.GetAnnotationDetail(req, args)
 
 	text := unmarshalMCPText(t, resp.Result)
 	if !strings.Contains(text, "button.primary") {
@@ -148,7 +148,7 @@ func TestToolGetAnnotations_FullResponseShape(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "annotations"}`)
 
-	resp := h.toolGetAnnotations(req, args)
+	resp := h.annotationAnalysis.GetAnnotations(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -216,7 +216,7 @@ func TestToolGetAnnotationDetail_FullResponseShape(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_full"}`)
 
-	resp := h.toolGetAnnotationDetail(req, args)
+	resp := h.annotationAnalysis.GetAnnotationDetail(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -283,7 +283,7 @@ func TestToolGetAnnotations_ZeroAnnotationsFlow(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "annotations"}`)
 
-	resp := h.toolGetAnnotations(req, args)
+	resp := h.annotationAnalysis.GetAnnotations(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -325,7 +325,7 @@ func TestToolGetAnnotations_WaitTrue_ImmediateReturn(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "annotations", "wait": true, "timeout_ms": 10}`)
 
-	resp := h.toolGetAnnotations(req, args)
+	resp := h.annotationAnalysis.GetAnnotations(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
 	if !strings.Contains(text, "wait-immediate") {
@@ -343,7 +343,7 @@ func TestToolGetAnnotations_WaitTrue_ReturnsCorrelationID(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "annotations", "wait": true, "timeout_ms": 10}`)
 
-	resp := h.toolGetAnnotations(req, args)
+	resp := h.annotationAnalysis.GetAnnotations(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -376,7 +376,7 @@ func TestToolGetAnnotations_Flush_CompletesPendingCommand_WithEmptyResultReason(
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 
-	waitResp := h.toolGetAnnotations(req, json.RawMessage(`{"what":"annotations","wait":true,"timeout_ms":10}`))
+	waitResp := h.annotationAnalysis.GetAnnotations(req, json.RawMessage(`{"what":"annotations","wait":true,"timeout_ms":10}`))
 	waitText := unmarshalMCPText(t, waitResp.Result)
 	waitJSON := extractJSONFromText(waitText)
 
@@ -389,7 +389,7 @@ func TestToolGetAnnotations_Flush_CompletesPendingCommand_WithEmptyResultReason(
 		t.Fatalf("expected correlation_id in wait response, got: %v", waiting["correlation_id"])
 	}
 
-	flushResp := h.toolGetAnnotations(req, json.RawMessage(`{"what":"annotations","operation":"flush","correlation_id":"`+corrID+`"}`))
+	flushResp := h.annotationAnalysis.GetAnnotations(req, json.RawMessage(`{"what":"annotations","operation":"flush","correlation_id":"`+corrID+`"}`))
 	flushText := unmarshalMCPText(t, flushResp.Result)
 	flushJSON := extractJSONFromText(flushText)
 
@@ -442,7 +442,7 @@ func TestToolGetAnnotations_Flush_IsIdempotent(t *testing.T) {
 	h.annotationStore.MarkDrawStarted()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	waitResp := h.toolGetAnnotations(req, json.RawMessage(`{"what":"annotations","wait":true,"timeout_ms":10}`))
+	waitResp := h.annotationAnalysis.GetAnnotations(req, json.RawMessage(`{"what":"annotations","wait":true,"timeout_ms":10}`))
 	waitText := unmarshalMCPText(t, waitResp.Result)
 	waitJSON := extractJSONFromText(waitText)
 
@@ -453,8 +453,8 @@ func TestToolGetAnnotations_Flush_IsIdempotent(t *testing.T) {
 	corrID := waiting["correlation_id"].(string)
 
 	flushArgs := json.RawMessage(`{"what":"annotations","operation":"flush","correlation_id":"` + corrID + `"}`)
-	first := h.toolGetAnnotations(req, flushArgs)
-	second := h.toolGetAnnotations(req, flushArgs)
+	first := h.annotationAnalysis.GetAnnotations(req, flushArgs)
+	second := h.annotationAnalysis.GetAnnotations(req, flushArgs)
 
 	firstText := unmarshalMCPText(t, first.Result)
 	secondText := unmarshalMCPText(t, second.Result)
@@ -493,7 +493,7 @@ func TestToolGetAnnotations_Flush_MissingCorrelationID(t *testing.T) {
 	defer h.annotationStore.Close()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := h.toolGetAnnotations(req, json.RawMessage(`{"what":"annotations","operation":"flush"}`))
+	resp := h.annotationAnalysis.GetAnnotations(req, json.RawMessage(`{"what":"annotations","operation":"flush"}`))
 
 	text := unmarshalMCPText(t, resp.Result)
 	if !strings.Contains(text, "correlation_id") {
@@ -507,7 +507,7 @@ func TestToolGetAnnotations_InvalidOperation(t *testing.T) {
 	defer h.annotationStore.Close()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := h.toolGetAnnotations(req, json.RawMessage(`{"what":"annotations","operation":"invalid"}`))
+	resp := h.annotationAnalysis.GetAnnotations(req, json.RawMessage(`{"what":"annotations","operation":"invalid"}`))
 
 	text := unmarshalMCPText(t, resp.Result)
 	if !strings.Contains(text, "Invalid annotations operation") {
@@ -534,7 +534,7 @@ func TestToolGetAnnotations_WaitTrue_ImmediateIfDataReady(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "annotations", "wait": true, "timeout_ms": 10}`)
 
-	resp := h.toolGetAnnotations(req, args)
+	resp := h.annotationAnalysis.GetAnnotations(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
 	if !strings.Contains(text, "already-done") {
@@ -562,7 +562,7 @@ func TestToolGetAnnotations_WaitTrue_BlocksAndReturnsSessionWithinTimeout(t *tes
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"annotations","wait":true,"timeout_ms":250}`)
 
-	resp := h.toolGetAnnotations(req, args)
+	resp := h.annotationAnalysis.GetAnnotations(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
 	if !strings.Contains(text, "arrived-during-blocking-wait") {
@@ -583,7 +583,7 @@ func TestToolGetAnnotations_WaitTrue_TimesOutToCorrelationFallback(t *testing.T)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"annotations","wait":true,"timeout_ms":10}`)
 
-	resp := h.toolGetAnnotations(req, args)
+	resp := h.annotationAnalysis.GetAnnotations(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -618,7 +618,7 @@ func TestToolGetAnnotations_WaitTrue_WaiterCompletedOnStore(t *testing.T) {
 	// Call wait=true — returns correlation_id immediately
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "annotations", "wait": true}`)
-	resp := h.toolGetAnnotations(req, args)
+	resp := h.annotationAnalysis.GetAnnotations(req, args)
 
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
@@ -658,7 +658,7 @@ func TestToolGetAnnotations_WaitTrue_WaiterCompletedOnStore_UsesURLFilter(t *tes
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"annotations","wait":true,"timeout_ms":10,"url":"http://localhost:3000/*"}`)
-	resp := h.toolGetAnnotations(req, args)
+	resp := h.annotationAnalysis.GetAnnotations(req, args)
 
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
@@ -703,7 +703,7 @@ func TestToolGetAnnotations_WaitTrue_NamedWaiterCompletedOnStore_UsesURLFilter(t
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"annotations","annot_session":"qa","wait":true,"timeout_ms":10,"url_pattern":"http://localhost:3000/*"}`)
-	resp := h.toolGetAnnotations(req, args)
+	resp := h.annotationAnalysis.GetAnnotations(req, args)
 
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
@@ -746,7 +746,7 @@ func TestToolGetAnnotations_WaitFalse_DefaultBehavior(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "annotations", "wait": false}`)
 
-	resp := h.toolGetAnnotations(req, args)
+	resp := h.annotationAnalysis.GetAnnotations(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
 	if !strings.Contains(text, "No annotation") {
@@ -776,7 +776,7 @@ func TestToolGetAnnotations_NamedSession(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "annotations", "annot_session": "qa"}`)
 
-	resp := h.toolGetAnnotations(req, args)
+	resp := h.annotationAnalysis.GetAnnotations(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -817,7 +817,7 @@ func TestToolGetAnnotations_NamedSession_NotFound(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"annotations","annot_session":"nonexistent","wait":false}`)
 
-	resp := h.toolGetAnnotations(req, args)
+	resp := h.annotationAnalysis.GetAnnotations(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
 	if !strings.Contains(text, "not found") {
@@ -844,7 +844,7 @@ func TestToolGetAnnotations_NamedSession_MultiProjectScopeWarningWithoutFilter(t
 	})
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := h.toolGetAnnotations(req, json.RawMessage(`{"what":"annotations","annot_session":"qa"}`))
+	resp := h.annotationAnalysis.GetAnnotations(req, json.RawMessage(`{"what":"annotations","annot_session":"qa"}`))
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -884,7 +884,7 @@ func TestToolGetAnnotations_NamedSession_URLFilterScoped(t *testing.T) {
 	})
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := h.toolGetAnnotations(req, json.RawMessage(`{"what":"annotations","annot_session":"qa","url":"http://localhost:5173/*"}`))
+	resp := h.annotationAnalysis.GetAnnotations(req, json.RawMessage(`{"what":"annotations","annot_session":"qa","url":"http://localhost:5173/*"}`))
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -920,7 +920,7 @@ func TestToolGetAnnotations_AnonymousURLFilterNoMatch(t *testing.T) {
 	})
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := h.toolGetAnnotations(req, json.RawMessage(`{"what":"annotations","url":"http://localhost:5173/*"}`))
+	resp := h.annotationAnalysis.GetAnnotations(req, json.RawMessage(`{"what":"annotations","url":"http://localhost:5173/*"}`))
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -950,7 +950,7 @@ func TestToolGetAnnotations_AnonymousBaseURLFilter_DoesNotCrossPortPrefix(t *tes
 	})
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := h.toolGetAnnotations(req, json.RawMessage(`{"what":"annotations","url":"http://localhost:3000"}`))
+	resp := h.annotationAnalysis.GetAnnotations(req, json.RawMessage(`{"what":"annotations","url":"http://localhost:3000"}`))
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -970,7 +970,7 @@ func TestToolGetAnnotations_ConflictingURLFilterParams(t *testing.T) {
 	defer h.annotationStore.Close()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := h.toolGetAnnotations(req, json.RawMessage(`{"what":"annotations","url":"http://localhost:3000/*","url_pattern":"http://localhost:5173/*"}`))
+	resp := h.annotationAnalysis.GetAnnotations(req, json.RawMessage(`{"what":"annotations","url":"http://localhost:3000/*","url_pattern":"http://localhost:5173/*"}`))
 	text := unmarshalMCPText(t, resp.Result)
 
 	if !strings.Contains(text, "Conflicting annotation scope filters") {
@@ -991,10 +991,10 @@ func TestToolGetAnnotations_Flush_UsesExplicitURLFilterWhenWaiterMissing(t *test
 	})
 
 	corrID := "ann_flush_filter_fallback"
-	h.capture.RegisterCommand(corrID, "", annotationWaitCommandTTL)
+	h.capture.RegisterCommand(corrID, "", 10*time.Minute)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := h.toolGetAnnotations(req, json.RawMessage(`{"what":"annotations","operation":"flush","correlation_id":"`+corrID+`","url":"http://localhost:3000/*"}`))
+	resp := h.annotationAnalysis.GetAnnotations(req, json.RawMessage(`{"what":"annotations","operation":"flush","correlation_id":"`+corrID+`","url":"http://localhost:3000/*"}`))
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -1028,7 +1028,7 @@ func TestToolGetAnnotationDetail_WithA11yFlags(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_a11y"}`)
 
-	resp := h.toolGetAnnotationDetail(req, args)
+	resp := h.annotationAnalysis.GetAnnotationDetail(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -1063,7 +1063,7 @@ func TestToolGetAnnotationDetail_NoA11yFlags(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_clean"}`)
 
-	resp := h.toolGetAnnotationDetail(req, args)
+	resp := h.annotationAnalysis.GetAnnotationDetail(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -1084,7 +1084,7 @@ func TestToolGetAnnotationDetail_MissingCorrelationID(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "annotation_detail"}`)
 
-	resp := h.toolGetAnnotationDetail(req, args)
+	resp := h.annotationAnalysis.GetAnnotationDetail(req, args)
 
 	text := unmarshalMCPText(t, resp.Result)
 	if !strings.Contains(text, "correlation_id") {
@@ -1114,7 +1114,7 @@ func TestToolGetAnnotationDetail_NewEnrichmentFields(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_enriched"}`)
 
-	resp := h.toolGetAnnotationDetail(req, args)
+	resp := h.annotationAnalysis.GetAnnotationDetail(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -1213,7 +1213,7 @@ func TestToolGetAnnotationDetail_ErrorCorrelation(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_corr"}`)
 
-	resp := h.toolGetAnnotationDetail(req, args)
+	resp := h.annotationAnalysis.GetAnnotationDetail(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -1251,7 +1251,7 @@ func TestToolGetAnnotationDetail_ErrorCorrelation_NoErrors(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_no_err"}`)
 
-	resp := h.toolGetAnnotationDetail(req, args)
+	resp := h.annotationAnalysis.GetAnnotationDetail(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -1303,7 +1303,7 @@ func TestToolGetAnnotationDetail_ErrorCorrelation_NamedSession(t *testing.T) {
 	})
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := h.toolGetAnnotationDetail(req, json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_ns"}`))
+	resp := h.annotationAnalysis.GetAnnotationDetail(req, json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_ns"}`))
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -1362,7 +1362,7 @@ func TestToolGetAnnotationDetail_ErrorCorrelation_NonLatestTab(t *testing.T) {
 	})
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := h.toolGetAnnotationDetail(req, json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_t1"}`))
+	resp := h.annotationAnalysis.GetAnnotationDetail(req, json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_t1"}`))
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -1392,7 +1392,7 @@ func TestToolGetAnnotationDetail_NewFieldsAbsentWhenEmpty(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_minimal"}`)
 
-	resp := h.toolGetAnnotationDetail(req, args)
+	resp := h.annotationAnalysis.GetAnnotationDetail(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -1439,7 +1439,7 @@ func TestToolGetAnnotations_SessionHints_WithScreenshot(t *testing.T) {
 	h.annotationStore.StoreSession(1, session)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := h.toolGetAnnotations(req, json.RawMessage(`{"what": "annotations"}`))
+	resp := h.annotationAnalysis.GetAnnotations(req, json.RawMessage(`{"what": "annotations"}`))
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -1475,7 +1475,7 @@ func TestToolGetAnnotations_SessionHints_NoScreenshot(t *testing.T) {
 	h.annotationStore.StoreSession(1, session)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := h.toolGetAnnotations(req, json.RawMessage(`{"what": "annotations"}`))
+	resp := h.annotationAnalysis.GetAnnotations(req, json.RawMessage(`{"what": "annotations"}`))
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -1509,7 +1509,7 @@ func TestToolGetAnnotationDetail_Hints_DesignSystem(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_tw"}`)
 
-	resp := h.toolGetAnnotationDetail(req, args)
+	resp := h.annotationAnalysis.GetAnnotationDetail(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -1544,7 +1544,7 @@ func TestToolGetAnnotationDetail_Hints_Accessibility(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_a11y_hint"}`)
 
-	resp := h.toolGetAnnotationDetail(req, args)
+	resp := h.annotationAnalysis.GetAnnotationDetail(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -1590,7 +1590,7 @@ func TestToolGetAnnotationDetail_Hints_ErrorContext(t *testing.T) {
 	})
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := h.toolGetAnnotationDetail(req, json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_ec"}`))
+	resp := h.annotationAnalysis.GetAnnotationDetail(req, json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_ec"}`))
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -1621,7 +1621,7 @@ func TestToolGetAnnotationDetail_NoHints_WhenNoSpecialData(t *testing.T) {
 	h.annotationStore.StoreDetail("detail_plain", detail)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := h.toolGetAnnotationDetail(req, json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_plain"}`))
+	resp := h.annotationAnalysis.GetAnnotationDetail(req, json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_plain"}`))
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -1650,7 +1650,7 @@ func TestToolGetAnnotations_NamedSessionHints(t *testing.T) {
 	})
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := h.toolGetAnnotations(req, json.RawMessage(`{"what": "annotations", "annot_session": "pm-review"}`))
+	resp := h.annotationAnalysis.GetAnnotations(req, json.RawMessage(`{"what": "annotations", "annot_session": "pm-review"}`))
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -1695,7 +1695,7 @@ func TestToolGetAnnotationDetail_ErrorCorrelation_CapsAt5(t *testing.T) {
 	}
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := h.toolGetAnnotationDetail(req, json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_cap"}`))
+	resp := h.annotationAnalysis.GetAnnotationDetail(req, json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_cap"}`))
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -1724,7 +1724,7 @@ func TestToolGetAnnotationDetail_Hints_BootstrapFramework(t *testing.T) {
 	h.annotationStore.StoreDetail("detail_bs", detail)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := h.toolGetAnnotationDetail(req, json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_bs"}`))
+	resp := h.annotationAnalysis.GetAnnotationDetail(req, json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_bs"}`))
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -1760,7 +1760,7 @@ func TestToolGetAnnotationDetail_Hints_RuntimeFramework(t *testing.T) {
 	h.annotationStore.StoreDetail("detail_runtime", detail)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := h.toolGetAnnotationDetail(req, json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_runtime"}`))
+	resp := h.annotationAnalysis.GetAnnotationDetail(req, json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_runtime"}`))
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -1792,7 +1792,7 @@ func TestToolGetAnnotationDetail_Hints_UnknownFramework(t *testing.T) {
 	h.annotationStore.StoreDetail("detail_unk", detail)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := h.toolGetAnnotationDetail(req, json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_unk"}`))
+	resp := h.annotationAnalysis.GetAnnotationDetail(req, json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_unk"}`))
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -1845,7 +1845,7 @@ func TestToolGetAnnotationDetail_ErrorCorrelation_BoundaryAndShape(t *testing.T)
 	})
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := h.toolGetAnnotationDetail(req, json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_bnd"}`))
+	resp := h.annotationAnalysis.GetAnnotationDetail(req, json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_bnd"}`))
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -1895,7 +1895,7 @@ func TestToolGetAnnotationDetail_ErrorCorrelation_TimestampFoundEmptyLogs(t *tes
 	// No log entries injected — h.server.logs.entries is empty
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := h.toolGetAnnotationDetail(req, json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_el"}`))
+	resp := h.annotationAnalysis.GetAnnotationDetail(req, json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_el"}`))
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -1924,7 +1924,7 @@ func TestToolGetAnnotations_ZeroAnnotations_NoHints(t *testing.T) {
 	h.annotationStore.StoreSession(5, session)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := h.toolGetAnnotations(req, json.RawMessage(`{"what": "annotations"}`))
+	resp := h.annotationAnalysis.GetAnnotations(req, json.RawMessage(`{"what": "annotations"}`))
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 

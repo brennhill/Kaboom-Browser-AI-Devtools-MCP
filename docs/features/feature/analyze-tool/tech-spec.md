@@ -14,7 +14,7 @@ last_verified_date: 2026-03-05
 ## Dispatcher and Handler Topology
 - Dispatch entrypoint: `toolAnalyze` in `cmd/browser-agent/tools_analyze_dispatch.go`.
 - Mode routing table: `analyzeHandlers` in `cmd/browser-agent/tools_analyze_dispatch.go`.
-- Annotation handlers: `cmd/browser-agent/tools_analyze_annotations_handlers.go`.
+- Annotation handlers: `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go`.
 - API validation runtime and handlers: `internal/analysis/apicontract/runtime_handler.go`.
 - Async command-result polling: `cmd/browser-agent/tools_observe.go`.
 
@@ -60,7 +60,7 @@ last_verified_date: 2026-03-05
 
 ## Code Anchors
 - `cmd/browser-agent/tools_analyze_dispatch.go`
-- `cmd/browser-agent/tools_analyze_annotations_handlers.go`
+- `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go`
 - `cmd/browser-agent/tools_observe.go`
 - `cmd/browser-agent/tools_async_completion.go`
 - `internal/annotation/store.go`

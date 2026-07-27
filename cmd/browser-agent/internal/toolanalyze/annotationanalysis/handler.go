@@ -2,7 +2,7 @@
 // Why: Keeps annotation retrieval and detail formatting separate from draw-session file I/O.
 // Docs: docs/features/feature/annotated-screenshots/index.md
 
-package main
+package annotationanalysis
 
 import (
 	"encoding/json"
@@ -12,8 +12,33 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
+
+// Handler owns annotation analysis over the shared annotation and command stores.
+type Handler struct {
+	annotationStore *annotation.Store
+	capture         *capture.Store
+	formatCommand   func(mcp.JSONRPCRequest, queries.CommandResult, string) mcp.JSONRPCResponse
+	logEntries      func() []mcp.LogEntry
+}
+
+// New constructs annotation analysis with explicit runtime dependencies.
+func New(
+	annotationStore *annotation.Store,
+	captureStore *capture.Store,
+	formatCommand func(mcp.JSONRPCRequest, queries.CommandResult, string) mcp.JSONRPCResponse,
+	logEntries func() []mcp.LogEntry,
+) *Handler {
+	return &Handler{
+		annotationStore: annotationStore,
+		capture:         captureStore,
+		formatCommand:   formatCommand,
+		logEntries:      logEntries,
+	}
+}
 
 // annotationWaitCommandTTL is how long pending annotation commands remain active.
 const annotationWaitCommandTTL = 10 * time.Minute
@@ -30,7 +55,7 @@ const annotationErrorCorrelationWindow = 5 * time.Second
 const annotationBlockingWaitMax = 10 * time.Minute
 
 // toolGetAnnotations returns latest annotation session or a named multi-page session.
-func (h *ToolHandler) toolGetAnnotations(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *Handler) GetAnnotations(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Wait         *bool  `json:"wait"`
 		Background   *bool  `json:"background"`
@@ -84,7 +109,7 @@ func annotationBlockingWaitDuration(timeoutMs int) time.Duration {
 	return waitDuration
 }
 
-func (h *ToolHandler) getAnonymousAnnotations(req mcp.JSONRPCRequest, wait bool, waitTimeout time.Duration, urlFilter string) mcp.JSONRPCResponse {
+func (h *Handler) getAnonymousAnnotations(req mcp.JSONRPCRequest, wait bool, waitTimeout time.Duration, urlFilter string) mcp.JSONRPCResponse {
 	if wait {
 		if session := h.annotationStore.GetLatestSessionSinceDraw(); session != nil {
 			return h.formatAnnotationSession(req, session, urlFilter)
@@ -120,12 +145,12 @@ func (h *ToolHandler) getAnonymousAnnotations(req mcp.JSONRPCRequest, wait bool,
 	return h.formatAnnotationSession(req, session, urlFilter)
 }
 
-func (h *ToolHandler) formatAnnotationSession(req mcp.JSONRPCRequest, session *annotation.Session, urlFilter string) mcp.JSONRPCResponse {
+func (h *Handler) formatAnnotationSession(req mcp.JSONRPCRequest, session *annotation.Session, urlFilter string) mcp.JSONRPCResponse {
 	return mcp.Succeed(req, "Annotations retrieved", buildAnnotationSessionResult(session, urlFilter))
 }
 
 // #lizard forgives
-func (h *ToolHandler) getNamedAnnotations(req mcp.JSONRPCRequest, sessionName string, wait bool, waitTimeout time.Duration, urlFilter string) mcp.JSONRPCResponse {
+func (h *Handler) getNamedAnnotations(req mcp.JSONRPCRequest, sessionName string, wait bool, waitTimeout time.Duration, urlFilter string) mcp.JSONRPCResponse {
 	if wait {
 		if ns := h.annotationStore.GetNamedSessionSinceDraw(sessionName); ns != nil {
 			return h.formatNamedAnnotationSession(req, ns, urlFilter)
@@ -166,7 +191,7 @@ func (h *ToolHandler) getNamedAnnotations(req mcp.JSONRPCRequest, sessionName st
 	return h.formatNamedAnnotationSession(req, ns, urlFilter)
 }
 
-func (h *ToolHandler) formatNamedAnnotationSession(req mcp.JSONRPCRequest, ns *annotation.NamedSession, urlFilter string) mcp.JSONRPCResponse {
+func (h *Handler) formatNamedAnnotationSession(req mcp.JSONRPCRequest, ns *annotation.NamedSession, urlFilter string) mcp.JSONRPCResponse {
 	return mcp.Succeed(req, "Annotations retrieved", buildNamedAnnotationSessionResult(ns, urlFilter))
 }
 
@@ -282,7 +307,7 @@ func filterAnnotationPages(pages []*annotation.Session, urlFilter string) []*ann
 
 // toolFlushAnnotations forces completion of a pending annotation waiter.
 // This is a recovery path for stuck waiters that would otherwise remain pending.
-func (h *ToolHandler) toolFlushAnnotations(req mcp.JSONRPCRequest, correlationID string, fallbackURLFilter string) mcp.JSONRPCResponse {
+func (h *Handler) toolFlushAnnotations(req mcp.JSONRPCRequest, correlationID string, fallbackURLFilter string) mcp.JSONRPCResponse {
 	correlationID = strings.TrimSpace(correlationID)
 	if correlationID == "" {
 		return mcp.Fail(req, mcp.ErrMissingParam,
@@ -302,7 +327,7 @@ func (h *ToolHandler) toolFlushAnnotations(req mcp.JSONRPCRequest, correlationID
 
 	// Idempotent behavior: if the command is already terminal, return current state.
 	if cmd, found := h.capture.GetCommandResult(correlationID); found && cmd != nil && cmd.Status != "pending" {
-		return h.formatCommandResult(req, *cmd, correlationID)
+		return h.formatCommand(req, *cmd, correlationID)
 	}
 
 	effectiveURLFilter := waiterURLFilter
@@ -315,7 +340,7 @@ func (h *ToolHandler) toolFlushAnnotations(req mcp.JSONRPCRequest, correlationID
 
 	// Normal path: return canonical command_result envelope.
 	if cmd, found := h.capture.GetCommandResult(correlationID); found && cmd != nil {
-		return h.formatCommandResult(req, *cmd, correlationID)
+		return h.formatCommand(req, *cmd, correlationID)
 	}
 
 	// Recovery fallback: command tracker no longer has this correlation_id.
@@ -329,7 +354,7 @@ func (h *ToolHandler) toolFlushAnnotations(req mcp.JSONRPCRequest, correlationID
 	return mcp.Succeed(req, "Annotation flush completed", data)
 }
 
-func (h *ToolHandler) buildFlushedAnnotationResult(sessionName string, urlFilter string) json.RawMessage {
+func (h *Handler) buildFlushedAnnotationResult(sessionName string, urlFilter string) json.RawMessage {
 	if sessionName != "" {
 		if ns := h.annotationStore.GetNamedSession(sessionName); ns != nil {
 			data := buildNamedAnnotationSessionResult(ns, urlFilter)
@@ -372,7 +397,7 @@ func (h *ToolHandler) buildFlushedAnnotationResult(sessionName string, urlFilter
 }
 
 // toolGetAnnotationDetail returns full DOM/style detail for a specific annotation.
-func (h *ToolHandler) toolGetAnnotationDetail(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *Handler) GetAnnotationDetail(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		CorrelationID string `json:"correlation_id"`
 	}
@@ -456,8 +481,8 @@ func (h *ToolHandler) toolGetAnnotationDetail(req mcp.JSONRPCRequest, args json.
 	return mcp.Succeed(req, "Annotation detail", result)
 }
 
-func (h *ToolHandler) findErrorsNearTimestamp(timestampMillis int64, window time.Duration) []map[string]string {
-	entries, _ := h.GetLogEntries()
+func (h *Handler) findErrorsNearTimestamp(timestampMillis int64, window time.Duration) []map[string]string {
+	entries := h.logEntries()
 	annotationTime := time.UnixMilli(timestampMillis)
 	windowStart, windowEnd := annotationTime.Add(-window), annotationTime.Add(window)
 	var matched []map[string]string

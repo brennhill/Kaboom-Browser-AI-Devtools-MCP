@@ -39,7 +39,7 @@ func TestToolGetAnnotationDetail_EnrichedFields(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_enriched"}`)
 
-	resp := h.toolGetAnnotationDetail(req, args)
+	resp := h.annotationAnalysis.GetAnnotationDetail(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -106,7 +106,7 @@ func TestToolGetAnnotationDetail_OmitsEmptyEnrichedFields(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_basic"}`)
 
-	resp := h.toolGetAnnotationDetail(req, args)
+	resp := h.annotationAnalysis.GetAnnotationDetail(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -128,7 +128,7 @@ func TestToolListDrawHistory_EmptyDir(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "draw_history"}`)
 
-	resp := h.toolListDrawHistory(req, args)
+	resp := analyzeHandlers["draw_history"](h, req, args)
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -160,7 +160,7 @@ func TestToolListDrawHistory_WithSessions(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "draw_history"}`)
 
-	resp := h.toolListDrawHistory(req, args)
+	resp := analyzeHandlers["draw_history"](h, req, args)
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -192,7 +192,7 @@ func TestToolGetDrawSession_MissingFile(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"file": "draw-session-nonexistent.json"}`)
 
-	resp := h.toolGetDrawSession(req, args)
+	resp := analyzeHandlers["draw_session"](h, req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
 	if !strings.Contains(text, "not found") {
@@ -206,7 +206,7 @@ func TestToolGetDrawSession_PathTraversal(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"file": "../../../etc/passwd"}`)
 
-	resp := h.toolGetDrawSession(req, args)
+	resp := analyzeHandlers["draw_session"](h, req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
 	if !strings.Contains(text, "path traversal") {
@@ -220,7 +220,7 @@ func TestToolGetDrawSession_MissingParam(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{}`)
 
-	resp := h.toolGetDrawSession(req, args)
+	resp := analyzeHandlers["draw_session"](h, req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
 	if !strings.Contains(text, "Required parameter 'file'") {
@@ -273,7 +273,7 @@ func TestToolGetDrawSession_HydratesStoreForGenerators(t *testing.T) {
 	}
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	loadResp := h.toolGetDrawSession(req, json.RawMessage(`{"file":"`+fileName+`"}`))
+	loadResp := analyzeHandlers["draw_session"](h, req, json.RawMessage(`{"file":"`+fileName+`"}`))
 	loadText := unmarshalMCPText(t, loadResp.Result)
 	if !strings.Contains(loadText, `"annot_session":"qa-review"`) {
 		t.Fatalf("draw_session should expose annot_session alias, got: %s", loadText)
@@ -288,7 +288,7 @@ func TestToolGetDrawSession_HydratesStoreForGenerators(t *testing.T) {
 		t.Fatalf("annotation_report missing loaded annotation text, got: %s", reportText)
 	}
 
-	detailResp := h.toolGetAnnotationDetail(req, json.RawMessage(`{"correlation_id":"corr-qa-1"}`))
+	detailResp := h.annotationAnalysis.GetAnnotationDetail(req, json.RawMessage(`{"correlation_id":"corr-qa-1"}`))
 	detailText := unmarshalMCPText(t, detailResp.Result)
 	if !strings.Contains(detailText, `"selector":"button.checkout"`) {
 		t.Fatalf("annotation detail should be hydrated from file, got: %s", detailText)
