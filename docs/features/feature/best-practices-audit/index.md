@@ -4,10 +4,10 @@ feature_id: feature-best-practices-audit
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/internal/toolanalyze/combinedaudit/handler.go
-  - cmd/browser-agent/tools_analyze_dispatch.go
+  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
   - cmd/browser-agent/internal/toolanalyze/audit_scoring.go
 test_paths:
   - cmd/browser-agent/internal/toolanalyze/combinedaudit/handler_test.go

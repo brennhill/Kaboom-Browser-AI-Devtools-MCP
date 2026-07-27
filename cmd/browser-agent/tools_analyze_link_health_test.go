@@ -45,7 +45,7 @@ func (e *analyzeTestEnv) callAnalyze(t *testing.T, argsJSON string) (mcp.MCPTool
 
 	args := normalizeAnalyzeArgsForAsync(argsJSON)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := e.handler.toolAnalyze(req, args)
+	resp := e.handler.analyzeDispatcher.Handle(req, args)
 
 	if resp.Result == nil {
 		return mcp.MCPToolResult{}, false

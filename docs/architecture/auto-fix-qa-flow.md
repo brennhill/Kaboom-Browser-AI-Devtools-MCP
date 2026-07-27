@@ -65,7 +65,7 @@ User clicks "Find Problems" on hover widget
 
 ```
 analyze(what:"page_issues")
-  → tools_analyze_dispatch.go → toolAnalyzePageIssues
+  → internal/toolanalyze/analyzedispatch/dispatcher.go → toolAnalyzePageIssues
   → prefetchSharedData: single copy of logs, network bodies, waterfall
   → Parallel fan-out (4 goroutines, 5s timeout each):
       ├── collectConsoleErrors(shared.logEntries)

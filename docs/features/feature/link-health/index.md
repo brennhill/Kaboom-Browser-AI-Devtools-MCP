@@ -4,9 +4,9 @@ feature_id: feature-link-health
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-28
 code_paths:
-  - cmd/browser-agent/tools_analyze_dispatch.go
+  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
   - src/lib/analysis/link-health.ts
   - src/background/pending-queries.ts
   - src/content/message-handlers.ts

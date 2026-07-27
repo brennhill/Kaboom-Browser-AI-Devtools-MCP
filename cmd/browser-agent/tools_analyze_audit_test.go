@@ -41,7 +41,8 @@ func TestToolsAnalyzeAudit_Dispatches(t *testing.T) {
 func TestToolsAnalyzeAudit_InValidModes(t *testing.T) {
 	t.Parallel()
 
-	modes := getValidAnalyzeModes()
+	h, _, _ := makeToolHandler(t)
+	modes := strings.Join(h.analyzeDispatcher.ValidModes(), ", ")
 	if !strings.Contains(modes, "audit") {
 		t.Errorf("valid analyze modes should include 'audit': %s", modes)
 	}

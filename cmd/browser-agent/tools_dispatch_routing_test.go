@@ -16,7 +16,7 @@ func TestAnalyzeDispatch_NavigationPatterns(t *testing.T) {
 	h, _, _ := makeToolHandler(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolAnalyze(req, json.RawMessage(`{"what":"navigation_patterns"}`))
+	resp := h.analyzeDispatcher.Handle(req, json.RawMessage(`{"what":"navigation_patterns"}`))
 	result := parseToolResult(t, resp)
 	// Should not be an "unknown mode" error
 	if result.IsError && strings.Contains(result.Content[0].Text, "unknown_mode") {
@@ -29,7 +29,7 @@ func TestAnalyzeDispatch_HistoryAlias(t *testing.T) {
 	h, _, _ := makeToolHandler(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolAnalyze(req, json.RawMessage(`{"what":"history"}`))
+	resp := h.analyzeDispatcher.Handle(req, json.RawMessage(`{"what":"history"}`))
 	result := parseToolResult(t, resp)
 	// Should not be an "unknown mode" error — history is an alias for navigation_patterns
 	if result.IsError && strings.Contains(result.Content[0].Text, "unknown_mode") {
@@ -55,7 +55,7 @@ func TestUnknownMode_IncludesRecoveryToolCall_Analyze(t *testing.T) {
 	h, _, _ := makeToolHandler(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolAnalyze(req, json.RawMessage(`{"what":"nonexistent_mode"}`))
+	resp := h.analyzeDispatcher.Handle(req, json.RawMessage(`{"what":"nonexistent_mode"}`))
 	result := parseToolResult(t, resp)
 	if !result.IsError {
 		t.Fatal("expected error for unknown mode")

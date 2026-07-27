@@ -47,7 +47,8 @@ func TestToolsAnalyzeNavigation_DispatchesQuery(t *testing.T) {
 func TestToolsAnalyzeNavigation_InValidModes(t *testing.T) {
 	t.Parallel()
 
-	modes := getValidAnalyzeModes()
+	h, _, _ := makeToolHandler(t)
+	modes := strings.Join(h.analyzeDispatcher.ValidModes(), ", ")
 	if !strings.Contains(modes, "navigation") {
 		t.Errorf("valid analyze modes should include 'navigation': %s", modes)
 	}

@@ -175,10 +175,10 @@ func callObserveRaw(h *ToolHandler, what string) mcp.JSONRPCResponse {
 	return h.observeDispatcher.Handle(req, args)
 }
 
-// callAnalyzeRaw invokes toolAnalyze with async normalization.
+// callAnalyzeRaw invokes the canonical analyze dispatcher with async normalization.
 func callAnalyzeRaw(h *ToolHandler, argsJSON string) mcp.JSONRPCResponse {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	return h.toolAnalyze(req, normalizeAnalyzeArgsForAsync(argsJSON))
+	return h.analyzeDispatcher.Handle(req, normalizeAnalyzeArgsForAsync(argsJSON))
 }
 
 // callConfigureRaw invokes toolConfigure directly.

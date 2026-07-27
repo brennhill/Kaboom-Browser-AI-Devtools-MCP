@@ -6,7 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-28
 code_paths:
-  - cmd/browser-agent/tools_analyze_dispatch.go
+  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
   - cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go
   - internal/analysis/apicontract/runtime_handler.go
   - cmd/browser-agent/internal/toolanalyze/inspect/forms.go
@@ -88,7 +88,7 @@ last_verified_date: 2026-03-05
 ## Canonical Note
 `analyze` is the active analysis surface. `analyze({what:"dom"})` is the canonical DOM query API.
 The mode registry, alias policy, and narrow `toolanalyze.Deps` adaptation are
-colocated in `tools_analyze_dispatch.go`; feature implementations remain in
+owned by `internal/toolanalyze/analyzedispatch/dispatcher.go`; feature implementations remain in
 their dedicated modules.
 
 Structured extraction modes:

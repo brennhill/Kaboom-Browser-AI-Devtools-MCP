@@ -46,7 +46,7 @@ func buildInteractDeps(h *ToolHandler) *toolinteract.Deps {
 
 		// Cross-tool dispatch
 		ToolInteract:    h.toolInteract,
-		ToolAnalyze:     h.toolAnalyze,
+		ToolAnalyze:     h.analyzeDispatcher.Handle,
 		ToolExportSARIF: h.generateDispatcher.ExportSARIF,
 
 		// Response enrichment

@@ -16,8 +16,8 @@ last_verified_date: 2026-06-29
 
 Lighthouse Report adds a new analyze mode, `analyze({what: "lighthouse_report"})`, that runs
 a real Google Lighthouse audit against the tracked tab and returns a trimmed result. The mode
-registers in the analyze dispatch registry (`analyzeHandlers` in
-`cmd/browser-agent/tools_analyze_dispatch.go`) alongside existing modes such as `audit`,
+registers in the analyze dispatch registry (the private analyze mode registry in
+`cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`) alongside existing modes such as `audit`,
 `performance`, and `accessibility`. Its hint and optional parameters register in
 `internal/tools/configure/capabilities/modespecs_analyze.go`.
 
@@ -35,7 +35,7 @@ dependency but duplicates work the existing `audit` mode already approximates.
 
 ## Key Components
 
-**Analyze mode handler (Go)**: A new handler registered in `analyzeHandlers` validates the
+**Analyze mode handler (Go)**: A new handler registered in the private analyze mode registry validates the
 request parameters (`categories`, `device`, `mode`), then either invokes the Lighthouse CLI as
 a subprocess or dispatches an asynchronous CDP command to the extension. The handler follows
 the same registration and dispatch conventions as the existing `combinedaudit.Handle` handler in
@@ -90,8 +90,8 @@ Agent polls observe({what: "command_result"}) and receives the structured report
 ## Implementation Strategy
 
 **New server files**:
-- A `lighthouse_report` handler wired into `analyzeHandlers` in
-  `cmd/browser-agent/tools_analyze_dispatch.go`.
+- A `lighthouse_report` handler wired into the private analyze mode registry in
+  `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`.
 - A result-trimming helper that maps the raw Lighthouse JSON to the structured response.
 
 **Modified server files**:
@@ -167,7 +167,7 @@ Agent polls observe({what: "command_result"}) and receives the structured report
 ## Dependencies
 
 ### Depends on:
-- The analyze dispatch registry (`cmd/browser-agent/tools_analyze_dispatch.go`).
+- The analyze dispatch registry (`cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`).
 - The CDP attach/detach lifecycle (`src/background/dom/cdp/cdp-dispatch.ts`).
 - The asynchronous command pattern and command-result polling
   (`cmd/browser-agent/internal/toolinteract/interact_command_builder.go`,

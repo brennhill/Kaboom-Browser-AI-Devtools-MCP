@@ -129,7 +129,7 @@ func TestToolListDrawHistory_EmptyDir(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "draw_history"}`)
 
-	resp := analyzeHandlers["draw_history"](h, req, args)
+	resp := h.analyzeDispatcher.DrawHistory(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -161,7 +161,7 @@ func TestToolListDrawHistory_WithSessions(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "draw_history"}`)
 
-	resp := analyzeHandlers["draw_history"](h, req, args)
+	resp := h.analyzeDispatcher.DrawHistory(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 	jsonText := extractJSONFromText(text)
 
@@ -193,7 +193,7 @@ func TestToolGetDrawSession_MissingFile(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"file": "draw-session-nonexistent.json"}`)
 
-	resp := analyzeHandlers["draw_session"](h, req, args)
+	resp := h.analyzeDispatcher.DrawSession(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
 	if !strings.Contains(text, "not found") {
@@ -207,7 +207,7 @@ func TestToolGetDrawSession_PathTraversal(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"file": "../../../etc/passwd"}`)
 
-	resp := analyzeHandlers["draw_session"](h, req, args)
+	resp := h.analyzeDispatcher.DrawSession(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
 	if !strings.Contains(text, "path traversal") {
@@ -221,7 +221,7 @@ func TestToolGetDrawSession_MissingParam(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{}`)
 
-	resp := analyzeHandlers["draw_session"](h, req, args)
+	resp := h.analyzeDispatcher.DrawSession(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
 	if !strings.Contains(text, "Required parameter 'file'") {
@@ -274,7 +274,7 @@ func TestToolGetDrawSession_HydratesStoreForGenerators(t *testing.T) {
 	}
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	loadResp := analyzeHandlers["draw_session"](h, req, json.RawMessage(`{"file":"`+fileName+`"}`))
+	loadResp := h.analyzeDispatcher.DrawSession(req, json.RawMessage(`{"file":"`+fileName+`"}`))
 	loadText := unmarshalMCPText(t, loadResp.Result)
 	if !strings.Contains(loadText, `"annot_session":"qa-review"`) {
 		t.Fatalf("draw_session should expose annot_session alias, got: %s", loadText)

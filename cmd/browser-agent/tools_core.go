@@ -16,6 +16,8 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/summarypref"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testgenhandler"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/analyzedispatch"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/annotationanalysis"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
@@ -45,6 +47,8 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
+	observe "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
@@ -123,6 +127,7 @@ type ToolHandler struct {
 	stateInteractHandler     *interactstate.Handler
 	configureSessions        *toolconfigure.SessionHandler
 	annotationAnalysis       *annotationanalysis.Handler
+	analyzeDispatcher        *analyzedispatch.Dispatcher
 
 	// Passive network traffic recording state (start/stop capture).
 	networkRecording *netrecord.NetworkRecordingState
@@ -498,6 +503,20 @@ func NewToolHandler(server *Server, captureStore *capture.Store) *MCPHandler {
 	interactDeps := buildInteractDeps(handler)
 	handler.interactActionHandler = toolinteract.NewInteractActionHandler(interactDeps)
 	handler.uploadInteractHandler = toolinteract.NewUploadInteractHandler(interactDeps, handler.interactActionHandler)
+	handler.analyzeDispatcher = analyzedispatch.NewDispatcher(analyzedispatch.Config{
+		Host: handler, Version: version, AnnotationStore: handler.annotationStore,
+		Visual: visualAnalyzeDeps{h: handler},
+		ValidateAPI: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return handler.apiContractRuntime.Handle(req, args, handler.capture.GetNetworkBodies())
+		},
+		PageSummary: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return handler.interactAction().HandleContentExtraction(req, args, "page_summary", "page_summary")
+		},
+		Annotations: handler.annotationAnalysis.GetAnnotations, AnnotationDetail: handler.annotationAnalysis.GetAnnotationDetail,
+		FeatureGates: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return handler.interactAction().HandleContentExtraction(req, args, "feature_gates", "feature_gates")
+		},
+	})
 	handler.testGenHandler = testgenhandler.New(handler)
 	handler.generateDispatcher = toolgenerate.NewDispatcher(handler, handler.testGenHandler)
 	handler.observeDispatcher = toolobserve.NewDispatcher(toolobserve.Config{
@@ -538,6 +557,47 @@ func NewToolHandler(server *Server, captureStore *capture.Store) *MCPHandler {
 	handler.ensureToolSchemas()
 
 	return &MCPHandler{server: server, toolHandler: handler}
+}
+
+type visualAnalyzeDeps struct{ h *ToolHandler }
+
+func (d visualAnalyzeDeps) CaptureScreenshot(req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
+	return observe.GetScreenshot(d.h, req, json.RawMessage(`{}`))
+}
+
+func (d visualAnalyzeDeps) GetTrackingStatus() (bool, int, string) {
+	return d.h.capture.GetTrackingStatus()
+}
+
+func (d visualAnalyzeDeps) HasSessionStore() bool { return d.h.sessionStoreImpl != nil }
+
+func (d visualAnalyzeDeps) HandleSessionStore(args persistence.SessionStoreArgs) (json.RawMessage, error) {
+	return d.h.sessionStoreImpl.HandleSessionStore(args)
+}
+
+func (h *ToolHandler) NetworkWaterfallEntries() []capture.NetworkWaterfallEntry {
+	return h.capture.GetNetworkWaterfallEntries()
+}
+
+func (h *ToolHandler) ConsoleSecurityEntries() []scan.LogEntry {
+	snapshot := h.server.logs.Entries()
+	entries := make([]scan.LogEntry, len(snapshot))
+	for index, entry := range snapshot {
+		entries[index] = scan.LogEntry(entry)
+	}
+	return entries
+}
+
+func (h *ToolHandler) SecurityScanner() toolanalyze.SecurityScannerInterface {
+	if h.securityScannerImpl == nil {
+		return nil
+	}
+	return h.securityScannerImpl
+}
+
+func (h *ToolHandler) LogEntries() []types.LogEntry {
+	entries, _ := h.GetLogEntries()
+	return entries
 }
 
 func (h *ToolHandler) screenrecDeps() screenrec.Deps {

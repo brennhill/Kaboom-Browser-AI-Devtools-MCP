@@ -296,7 +296,7 @@ func TestToolValidateAPI_Analyze(t *testing.T) {
 
 	args := json.RawMessage(`{"operation":"analyze"}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := env.handler.toolValidateAPI(req, args)
+	resp := env.handler.analyzeDispatcher.ValidateAPI(req, args)
 
 	result := parseToolResult(t, resp)
 	if result.IsError {
@@ -318,7 +318,7 @@ func TestToolValidateAPI_Report(t *testing.T) {
 
 	args := json.RawMessage(`{"operation":"report"}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := env.handler.toolValidateAPI(req, args)
+	resp := env.handler.analyzeDispatcher.ValidateAPI(req, args)
 
 	result := parseToolResult(t, resp)
 	if result.IsError {
@@ -332,7 +332,7 @@ func TestToolValidateAPI_Clear(t *testing.T) {
 
 	args := json.RawMessage(`{"operation":"clear"}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := env.handler.toolValidateAPI(req, args)
+	resp := env.handler.analyzeDispatcher.ValidateAPI(req, args)
 
 	result := parseToolResult(t, resp)
 	if result.IsError {
@@ -346,7 +346,7 @@ func TestToolValidateAPI_UnknownOperation(t *testing.T) {
 
 	args := json.RawMessage(`{"operation":"invalid"}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := env.handler.toolValidateAPI(req, args)
+	resp := env.handler.analyzeDispatcher.ValidateAPI(req, args)
 
 	result := parseToolResult(t, resp)
 	if !result.IsError {
@@ -364,7 +364,7 @@ func TestToolValidateAPI_InvalidJSON(t *testing.T) {
 
 	args := json.RawMessage(`{bad json}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := env.handler.toolValidateAPI(req, args)
+	resp := env.handler.analyzeDispatcher.ValidateAPI(req, args)
 
 	result := parseToolResult(t, resp)
 	if !result.IsError {

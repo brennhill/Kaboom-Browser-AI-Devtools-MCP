@@ -12,8 +12,8 @@ last_verified_date: 2026-03-05
 # Analyze Tech Spec
 
 ## Dispatcher and Handler Topology
-- Dispatch entrypoint: `toolAnalyze` in `cmd/browser-agent/tools_analyze_dispatch.go`.
-- Mode routing table: `analyzeHandlers` in `cmd/browser-agent/tools_analyze_dispatch.go`.
+- Dispatch entrypoint: `(*analyzedispatch.Dispatcher).Handle` in `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`.
+- Mode routing table: the private analyze mode registry in `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`.
 - Annotation handlers: `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go`.
 - API validation runtime and handlers: `internal/analysis/apicontract/runtime_handler.go`.
 - Async command-result polling: `cmd/browser-agent/internal/toolobserve/dispatcher.go`.
@@ -59,7 +59,7 @@ last_verified_date: 2026-03-05
   - `annotations`: `flush`
 
 ## Code Anchors
-- `cmd/browser-agent/tools_analyze_dispatch.go`
+- `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`
 - `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go`
 - `cmd/browser-agent/internal/toolobserve/dispatcher.go`
 - `cmd/browser-agent/tools_async_completion.go`

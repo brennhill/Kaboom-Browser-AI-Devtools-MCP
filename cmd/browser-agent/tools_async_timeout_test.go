@@ -19,8 +19,8 @@ import (
 func TestMaybeWaitForCommand_TimeoutMs_CustomTimeout(t *testing.T) {
 	t.Parallel()
 
-	cap := capture.NewCapture()
-	handler := &ToolHandler{capture: cap, coldStartTimeout: 0}
+	handler, _, cap := makeToolHandler(t)
+	handler.coldStartTimeout = 0
 	req := mcp.JSONRPCRequest{ID: 1, ClientID: "test-client"}
 	correlationID := "test-timeout-ms-123"
 	cap.RegisterCommand(correlationID, "q-timeout-ms-123", 60*time.Second)
@@ -56,8 +56,8 @@ func TestMaybeWaitForCommand_TimeoutMs_ShortTimeout(t *testing.T) {
 		asyncPollInterval = prevPoll
 	}()
 
-	cap := capture.NewCapture()
-	handler := &ToolHandler{capture: cap, coldStartTimeout: 0}
+	handler, _, cap := makeToolHandler(t)
+	handler.coldStartTimeout = 0
 	req := mcp.JSONRPCRequest{ID: 1, ClientID: "test-client"}
 	correlationID := "test-short-timeout-123"
 	cap.RegisterCommand(correlationID, "q-short-123", 60*time.Second)
@@ -87,8 +87,8 @@ func TestMaybeWaitForCommand_TimeoutMs_ShortTimeout(t *testing.T) {
 func TestMaybeWaitForCommand_TimeoutMs_ZeroUsesDefault(t *testing.T) {
 	t.Parallel()
 
-	cap := capture.NewCapture()
-	handler := &ToolHandler{capture: cap, coldStartTimeout: 0}
+	handler, _, _ := makeToolHandler(t)
+	handler.coldStartTimeout = 0
 	req := mcp.JSONRPCRequest{ID: 1}
 	correlationID := "test-zero-timeout-123"
 
@@ -149,8 +149,8 @@ func TestMaybeWaitForCommand_TimeoutMs_NegativeIgnored(t *testing.T) {
 func TestAnalyze_LinkHealth_SyncTrue_WaitsForResult(t *testing.T) {
 	t.Parallel()
 
-	cap := capture.NewCapture()
-	handler := &ToolHandler{capture: cap, coldStartTimeout: 0}
+	handler, _, cap := makeToolHandler(t)
+	handler.coldStartTimeout = 0
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1, ClientID: "test-client"}
 
 	// Connect extension (fast path — no long-poll)
@@ -171,7 +171,7 @@ func TestAnalyze_LinkHealth_SyncTrue_WaitsForResult(t *testing.T) {
 
 	// sync=true (default) should wait for the result
 	args := json.RawMessage(`{"what":"link_health","domain":"example.com"}`)
-	resp := handler.toolAnalyze(req, args)
+	resp := handler.analyzeDispatcher.Handle(req, args)
 
 	result := parseMCPResponseData(t, resp.Result)
 	status, _ := result["status"].(string)
@@ -185,13 +185,13 @@ func TestAnalyze_LinkHealth_SyncTrue_WaitsForResult(t *testing.T) {
 func TestAnalyze_LinkHealth_SyncFalse_ReturnsCorrelationID(t *testing.T) {
 	t.Parallel()
 
-	cap := capture.NewCapture()
-	handler := &ToolHandler{capture: cap, coldStartTimeout: 0}
+	handler, _, _ := makeToolHandler(t)
+	handler.coldStartTimeout = 0
 
 	// Don't need extension connected for sync=false
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"what":"link_health","sync":false}`)
-	resp := handler.toolAnalyze(req, args)
+	resp := handler.analyzeDispatcher.Handle(req, args)
 
 	result := parseMCPResponseData(t, resp.Result)
 	if result["status"] != "queued" {
@@ -214,8 +214,8 @@ func TestAnalyze_Dom_TimeoutMs_Respected(t *testing.T) {
 		asyncPollInterval = prevPoll
 	}()
 
-	cap := capture.NewCapture()
-	handler := &ToolHandler{capture: cap, coldStartTimeout: 0}
+	handler, _, cap := makeToolHandler(t)
+	handler.coldStartTimeout = 0
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1, ClientID: "test-client"}
 
 	// Connect extension (fast path — no long-poll)
@@ -235,7 +235,7 @@ func TestAnalyze_Dom_TimeoutMs_Respected(t *testing.T) {
 
 	// Set timeout_ms=1000 — should be enough to catch the 200ms result
 	args := json.RawMessage(`{"what":"dom","selector":"div","timeout_ms":1000}`)
-	resp := handler.toolAnalyze(req, args)
+	resp := handler.analyzeDispatcher.Handle(req, args)
 
 	result := parseMCPResponseData(t, resp.Result)
 	status, _ := result["status"].(string)

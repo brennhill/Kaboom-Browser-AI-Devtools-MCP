@@ -47,7 +47,8 @@ func TestToolsAnalyzePageStructure_DispatchesQuery(t *testing.T) {
 func TestToolsAnalyzePageStructure_InValidModes(t *testing.T) {
 	t.Parallel()
 
-	modes := getValidAnalyzeModes()
+	h, _, _ := makeToolHandler(t)
+	modes := strings.Join(h.analyzeDispatcher.ValidModes(), ", ")
 	if !strings.Contains(modes, "page_structure") {
 		t.Errorf("valid analyze modes should include 'page_structure': %s", modes)
 	}

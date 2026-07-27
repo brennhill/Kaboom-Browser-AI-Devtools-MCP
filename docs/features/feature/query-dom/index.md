@@ -4,10 +4,10 @@ feature_id: feature-query-dom
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/internal/toolanalyze/inspect/dom.go
-  - cmd/browser-agent/tools_analyze_dispatch.go
+  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
   - src/background/pending-queries.ts
   - src/content/message-handlers.ts
   - src/inject/message-handlers.ts

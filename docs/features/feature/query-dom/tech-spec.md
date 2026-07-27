@@ -44,7 +44,7 @@ last_verified_date: 2026-03-05
 
 ## Code Anchors
 - `cmd/browser-agent/internal/toolanalyze/inspect/dom.go`
-- `cmd/browser-agent/tools_analyze_dispatch.go`
+- `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`
 - `src/background/pending-queries.ts`
 - `src/content/message-handlers.ts`
 - `src/inject/message-handlers.ts`

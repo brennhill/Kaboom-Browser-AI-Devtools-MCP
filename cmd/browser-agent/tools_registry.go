@@ -138,7 +138,7 @@ func (h *ToolHandler) buildToolModuleRegistry() *toolModuleRegistry {
 		"Run analysis checks over DOM, links, accessibility, and audits",
 		[]json.RawMessage{json.RawMessage(`{"what":"dom","selector":"body","background":true}`)},
 		validateJSONObjectArgs,
-		h.toolAnalyze,
+		h.analyzeDispatcher.Handle,
 	))
 	registry.register("generate", newToolMethodModule(
 		"generate",

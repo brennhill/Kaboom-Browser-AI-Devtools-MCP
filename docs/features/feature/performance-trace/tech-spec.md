@@ -18,7 +18,7 @@ Performance Trace adds a new analyze mode, `analyze({what: "performance_trace"})
 a Chrome DevTools Protocol (CDP) performance trace and returns structured insights. A single
 `action` parameter drives the trace lifecycle (`start`, `stop`, `analyze`), keeping the entire
 workflow inside one mode rather than three separate tools. The mode registers in the analyze
-dispatch registry (`analyzeHandlers` in `cmd/browser-agent/tools_analyze_dispatch.go`), and its
+dispatch registry (the private analyze mode registry in `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`), and its
 hint plus optional parameters register in `internal/tools/configure/capabilities/modespecs_analyze.go`.
 
 The extension drives the CDP `Tracing` domain through the existing Chrome debugger lifecycle in
@@ -88,8 +88,8 @@ AI calls analyze({what: "performance_trace", action: "analyze", insight_id: "...
 ## Implementation Strategy
 
 **New server files**:
-- A `performance_trace` handler wired into `analyzeHandlers` in
-  `cmd/browser-agent/tools_analyze_dispatch.go`, with `action` sub-dispatch for start/stop/analyze.
+- A `performance_trace` handler wired into the private analyze mode registry in
+  `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`, with `action` sub-dispatch for start/stop/analyze.
 - A trace-event parser that derives insights and the main-thread breakdown.
 - An in-memory insight cache keyed for `action: "analyze"` drill-down.
 
@@ -163,7 +163,7 @@ AI calls analyze({what: "performance_trace", action: "analyze", insight_id: "...
 ## Dependencies
 
 ### Depends on:
-- The analyze dispatch registry (`cmd/browser-agent/tools_analyze_dispatch.go`).
+- The analyze dispatch registry (`cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`).
 - The CDP attach/detach lifecycle and `Tracing` domain (`src/background/dom/cdp/cdp-dispatch.ts`).
 - The asynchronous command pattern and command-result polling
   (`cmd/browser-agent/internal/toolinteract/interact_command_builder.go`,

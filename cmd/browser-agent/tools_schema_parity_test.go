@@ -21,9 +21,9 @@ func TestSchemaParity_AnalyzeWhatEnumMatchesHandlers(t *testing.T) {
 	h, _, _ := makeToolHandler(t)
 
 	schemaModes := mustToolEnumValues(t, h.ToolsList(), "analyze", "what")
-	runtimeModes := sortedKeysAnalyzeHandlers()
+	runtimeModes := h.analyzeDispatcher.ValidModes()
 
-	assertSameStringSet(t, "analyze.what enum vs analyzeHandlers", schemaModes, runtimeModes)
+	assertSameStringSet(t, "analyze.what enum vs analyze dispatcher", schemaModes, runtimeModes)
 }
 
 func TestSchemaParity_GenerateWhatEnumMatchesHandlers(t *testing.T) {
@@ -70,15 +70,6 @@ func sortedKeysConfigureHandlers() []string {
 	keys := make([]string, 0, len(configureHandlers))
 	for action := range configureHandlers {
 		keys = append(keys, action)
-	}
-	sort.Strings(keys)
-	return keys
-}
-
-func sortedKeysAnalyzeHandlers() []string {
-	keys := make([]string, 0, len(analyzeHandlers))
-	for mode := range analyzeHandlers {
-		keys = append(keys, mode)
 	}
 	sort.Strings(keys)
 	return keys

@@ -13,7 +13,7 @@ with implementations delegated to focused internal packages:
 
 ```
 internal/toolobserve/dispatcher.go            # observe routing and thin result adapters
-tools_analyze_dispatch.go   # analyze routing
+internal/toolanalyze/analyzedispatch/dispatcher.go   # analyze routing
 tools_configure.go          # configure routing and thin adapters
 tools_interact_dispatch.go  # interact routing and boundary glue
 internal/tool*/             # feature implementations

@@ -98,7 +98,7 @@ func TestToolsAnalyzeDispatch_EmptyArgs(t *testing.T) {
 	h, _, _ := makeToolHandler(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolAnalyze(req, nil)
+	resp := h.analyzeDispatcher.Handle(req, nil)
 	result := parseToolResult(t, resp)
 	if !result.IsError {
 		t.Fatal("nil args (no 'what') should return isError:true")
@@ -145,13 +145,14 @@ func TestToolsAnalyzeDispatch_ConflictingWhatAndMode(t *testing.T) {
 }
 
 // ============================================
-// getValidAnalyzeModes Tests
+// analyze dispatcher ValidModes Tests
 // ============================================
 
 func TestToolsAnalyze_GetValidAnalyzeModes(t *testing.T) {
 	t.Parallel()
 
-	modes := getValidAnalyzeModes()
+	h, _, _ := makeToolHandler(t)
+	modes := strings.Join(h.analyzeDispatcher.ValidModes(), ", ")
 	modeList := strings.Split(modes, ", ")
 	for i := 1; i < len(modeList); i++ {
 		if modeList[i-1] > modeList[i] {
@@ -638,7 +639,7 @@ func TestToolsAnalyze_AllModes_ResponseStructure(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	// All modes from analyzeHandlers that can run without extension
+	// All modes from the analyze dispatcher that can run without extension
 	modes := []struct {
 		what string
 		args string

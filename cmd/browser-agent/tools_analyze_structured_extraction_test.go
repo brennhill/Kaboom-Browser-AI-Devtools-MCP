@@ -68,7 +68,8 @@ func TestToolsAnalyzeDataTable_DispatchesQuery(t *testing.T) {
 func TestToolsAnalyzeStructuredExtraction_InValidModes(t *testing.T) {
 	t.Parallel()
 
-	modes := getValidAnalyzeModes()
+	h, _, _ := makeToolHandler(t)
+	modes := strings.Join(h.analyzeDispatcher.ValidModes(), ", ")
 	if !strings.Contains(modes, "form_state") {
 		t.Errorf("valid analyze modes should include 'form_state': %s", modes)
 	}

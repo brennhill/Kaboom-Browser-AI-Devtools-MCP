@@ -4,9 +4,9 @@ feature_id: feature-lighthouse-report
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
-  - cmd/browser-agent/tools_analyze_dispatch.go
+  - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
   - cmd/browser-agent/internal/toolanalyze/combinedaudit/handler.go
   - internal/tools/configure/capabilities/modespecs_analyze.go
   - src/background/dom/cdp/cdp-dispatch.ts
@@ -51,7 +51,7 @@ pipelines, and stakeholders reference before shipping.
 
 ## Related Code
 
-- Analyze dispatch registry: `cmd/browser-agent/tools_analyze_dispatch.go`
+- Analyze dispatch registry: `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`
 - Existing heuristic audit (contrast): `cmd/browser-agent/internal/toolanalyze/combinedaudit/handler.go`
 - Mode hints and parameter specs: `internal/tools/configure/capabilities/modespecs_analyze.go`
 - CDP attach/detach lifecycle: `src/background/dom/cdp/cdp-dispatch.ts`
