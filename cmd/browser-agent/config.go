@@ -11,9 +11,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/configdiscovery"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/clientreg"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
@@ -252,5 +256,99 @@ func handleEarlyExitModes(flags *parsedFlags) {
 		}
 		runConnectMode(*flags.port, id, cwd)
 		os.Exit(0)
+	}
+}
+
+func detectStdinMode() (isTTY bool, stdinMode os.FileMode) {
+	stat, err := os.Stdin.Stat()
+	if err == nil {
+		isTTY = (stat.Mode() & os.ModeCharDevice) != 0
+		stdinMode = stat.Mode()
+	}
+	return isTTY, stdinMode
+}
+
+func selectRuntimeMode(config *serverConfig, _ bool) runtimeMode {
+	if config.bridgeMode {
+		return modeBridge
+	}
+	if config.daemonMode {
+		return modeDaemon
+	}
+	return modeBridge
+}
+
+func dispatchMode(server *Server, config *serverConfig) {
+	isTTY, stdinMode := detectStdinMode()
+	mcpConfigPath := configdiscovery.Find()
+	mode := selectRuntimeMode(config, isTTY)
+	launchInfo := classifyLaunchMode(config, isTTY)
+	setCurrentLaunchMode(launchInfo)
+	if mode == modeDaemon {
+		diag.SetSink(os.Stderr)
+	}
+
+	server.logLifecycle("mode_detection", config.port, map[string]any{
+		"is_tty":           isTTY,
+		"stdin_mode":       fmt.Sprintf("%v", stdinMode),
+		"has_mcp_config":   mcpConfigPath != "",
+		"selected_runtime": mode,
+	})
+	server.logLifecycle("launch_mode_classified", config.port, map[string]any{
+		"launch_mode":      launchInfo.Mode,
+		"launch_reason":    launchInfo.Reason,
+		"parent_process":   launchInfo.ParentProcess,
+		"is_tty":           launchInfo.IsTTY,
+		"strict_required":  launchInfo.StrictRequired,
+		"under_supervisor": launchInfo.UnderSupervisor,
+		"selected_runtime": mode,
+	})
+
+	if warning := buildLaunchModeWarning(launchInfo, config.port); warning != "" {
+		server.AddWarning(warning)
+		diag.Printf("[Kaboom] Kaboom appears to be running in non-persistent mode (%s).\n", launchInfo.Reason)
+		diag.Println("[Kaboom] This will disconnect the extension when the process exits.")
+		diag.Printf("[Kaboom] Start persistently: kaboom-agentic-browser --daemon --port %d\n", config.port)
+	}
+	if err := enforcePersistentMode(launchInfo); err != nil {
+		diag.Printf("[Kaboom] %v\n", err)
+		os.Exit(1)
+	}
+
+	switch mode {
+	case modeDaemon:
+		server.logLifecycle("daemon_mode_start", config.port, nil)
+		if err := runMCPMode(server, config.port, config.apiKey, daemonlife.LaunchOptions{Parallel: config.parallelMode}); err != nil {
+			telemetry.AppError("daemon_start_failed", nil)
+			diagnosticPath := appendExitDiagnostic("daemon_start_failed", map[string]any{
+				"port":  config.port,
+				"error": err.Error(),
+			})
+			if diagnosticPath != "" {
+				diag.Printf("[Kaboom] Startup diagnostics written to: %s\n", diagnosticPath)
+			}
+			diag.Printf("[Kaboom] Daemon error: %v\n", err)
+			os.Exit(1)
+		}
+	case modeBridge:
+		if err := bridge.EnsureIOIsolation(config.logFile); err != nil {
+			sendStartupError("Bridge stdio isolation failed: " + err.Error())
+			os.Exit(1)
+		}
+		server.logLifecycle("bridge_mode_start", config.port, bridge.LaunchFingerprint())
+		if config.bridgeMode {
+			diag.Println("[Kaboom] Starting in bridge mode (stdio -> HTTP)")
+		} else if isTTY && mcpConfigPath != "" {
+			diag.Printf("[Kaboom] MCP config detected at %s; running in bridge mode for tool compatibility.\n", mcpConfigPath)
+		} else if isTTY {
+			diag.Println("[Kaboom] Running in bridge mode by default. Use --daemon for server-only mode.")
+		}
+		if os.Getenv("KABOOM_TEST_BRIDGE_NOISE") == "1" {
+			fmt.Fprintln(os.Stderr, "KABOOM_TEST_NOISE_STDOUT")
+			fmt.Fprintln(os.Stderr, "KABOOM_TEST_NOISE_STDERR")
+		}
+		bridge.RunMode(config.port, config.logFile, config.maxEntries)
+	default:
+		bridge.RunMode(config.port, config.logFile, config.maxEntries)
 	}
 }

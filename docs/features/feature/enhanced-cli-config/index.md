@@ -83,6 +83,7 @@ last_verified_date: 2026-03-28
 - Tool: configure
 - Mode/Action: cli
 - Location: `docs/features/feature/enhanced-cli-config`
+- `cmd/browser-agent/config.go` owns both flag parsing and the runtime mode policy those flags drive.
 
 ## Specs
 
