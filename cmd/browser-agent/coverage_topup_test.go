@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
@@ -72,11 +73,11 @@ func TestAttachTraceSummary_Branches(t *testing.T) {
 
 func TestCalcUtilization(t *testing.T) {
 	// Returns a percentage: entries/capacity*100.
-	if got := calcUtilization(5, 10); got != 50 {
-		t.Fatalf("calcUtilization(5,10) = %v, want 50", got)
+	if got := health.CalcUtilization(5, 10); got != 50 {
+		t.Fatalf("health.CalcUtilization(5,10) = %v, want 50", got)
 	}
 	// capacity <= 0 short-circuits to 0.
-	if got := calcUtilization(3, 0); got != 0 {
-		t.Fatalf("calcUtilization(3,0) = %v, want 0", got)
+	if got := health.CalcUtilization(3, 0); got != 0 {
+		t.Fatalf("health.CalcUtilization(3,0) = %v, want 0", got)
 	}
 }

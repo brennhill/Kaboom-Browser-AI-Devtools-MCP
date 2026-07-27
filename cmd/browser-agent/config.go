@@ -13,6 +13,8 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/configdiscovery"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/clientreg"
@@ -23,6 +25,15 @@ import (
 
 // multiFlag implements flag.Value for repeatable string flags (e.g., --upload-deny-pattern).
 type multiFlag []string
+
+func runSetupCheckWithOptions(port int, options setupCheckOptions) bool {
+	return health.RunSetupCheckWithOptions(port, health.SetupCheckOptions{
+		MinSamples: options.minSamples, MaxFailureRatio: options.maxFailureRatio,
+	}, health.SetupDeps{
+		Version: version, PortKillHint: procctl.PortKillHint,
+		FastPathTelemetryLogPath: bridge.FastPathTelemetryLogPath,
+	})
+}
 
 func (f *multiFlag) String() string { return strings.Join(*f, ", ") }
 func (f *multiFlag) Set(value string) error {

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
@@ -18,6 +19,13 @@ import (
 )
 
 const shutdownSignalDelay = 100 * time.Millisecond
+
+func buildUpgradeInfo() *health.UpgradeInfo {
+	if binaryUpgradeState == nil {
+		return nil
+	}
+	return health.BuildUpgradeInfo(binaryUpgradeState)
+}
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request, cap *capture.Store) {
 	if r.Method != http.MethodGet {

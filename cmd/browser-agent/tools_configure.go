@@ -6,12 +6,14 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"runtime"
 	"sync"
 	"syscall"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/replay"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/sequencehandler"
@@ -20,6 +22,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/qualitygates"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/tutorial"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/issuereport"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
 	cfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure"
@@ -100,6 +103,77 @@ func cfgLocal(fn func(toolconfigure.Deps, JSONRPCRequest, json.RawMessage) JSONR
 }
 
 func getValidConfigureActions() string { return sortedMapKeys(configureHandlers) }
+
+func (h *ToolHandler) toolGetHealth(req JSONRPCRequest) JSONRPCResponse {
+	if h.healthMetrics == nil {
+		return fail(req, ErrInternal, "Health metrics not initialized", "Internal server error — do not retry")
+	}
+	response := getHealthResponse(h.healthMetrics, h.capture, h.server, version)
+	return succeed(req, "Server health", response)
+}
+
+func (h *ToolHandler) toolDoctor(req JSONRPCRequest) JSONRPCResponse {
+	checks := health.RunDoctorChecks(h.capture)
+	if h.healthMetrics != nil {
+		uptime := h.healthMetrics.GetUptime()
+		checks = append(checks, health.DoctorCheck{
+			Name: "server_uptime", Status: "pass",
+			Detail: fmt.Sprintf("Server running for %s (version %s)", uptime.Round(time.Second), version),
+		})
+	}
+	overallStatus := "healthy"
+	readyForInteraction := true
+	for _, check := range checks {
+		if check.Status == "fail" {
+			overallStatus = "unhealthy"
+			readyForInteraction = false
+		} else if check.Status == "warn" && overallStatus != "unhealthy" {
+			overallStatus = "degraded"
+			readyForInteraction = false
+		}
+	}
+	return succeed(req, "Doctor: "+overallStatus, map[string]any{
+		"status": overallStatus, "ready_for_interaction": readyForInteraction,
+		"checks": checks, "hint": h.DiagnosticHintString(),
+	})
+}
+
+type serverDepsAdapter struct{ s *Server }
+
+func (a *serverDepsAdapter) GetTerminalPort() int {
+	if a.s == nil {
+		return 0
+	}
+	return a.s.getTerminalPort()
+}
+
+func (a *serverDepsAdapter) GetConsoleStats() (int, int, int64) {
+	if a.s == nil || a.s.logs == nil {
+		return 0, defaultMaxEntries, 0
+	}
+	return a.s.logs.EntryCount(), a.s.logs.MaxEntries(), a.s.logs.DropCount()
+}
+
+const defaultMaxEntries = 1000
+
+func getHealthResponse(hm *health.Metrics, cap *capture.Store, server *Server, ver string) health.MCPHealthResponse {
+	var serverDeps health.ServerDeps
+	if server != nil {
+		serverDeps = &serverDepsAdapter{s: server}
+	}
+	var upgrade health.UpgradeProvider
+	if binaryUpgradeState != nil {
+		upgrade = binaryUpgradeState
+	}
+	return hm.GetHealth(cap, serverDeps, upgrade, getLaunchModeInfo, ver)
+}
+
+func getLaunchModeInfo() health.LaunchModeInfo {
+	lm := getCurrentLaunchMode()
+	return health.LaunchModeInfo{
+		Mode: lm.Mode, Reason: lm.Reason, ParentProcess: lm.ParentProcess,
+	}
+}
 
 // configureAliasParams defines the deprecated alias parameters for the configure tool.
 // "mode" is included for parity with observe and analyze. Both "mode" and "action" have
