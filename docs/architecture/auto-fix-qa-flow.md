@@ -3,7 +3,7 @@ doc_type: canonical_flow_map
 flow_id: auto-fix-qa-flow
 feature_refs:
   - feature-auto-fix
-last_reviewed: 2026-03-28
+last_reviewed: 2026-07-27
 code_anchors:
   - cmd/browser-agent/tools_analyze_page_issues.go
   - cmd/browser-agent/intent_store.go
@@ -55,7 +55,7 @@ User clicks "Find Problems" on hover widget
             → intent_handlers.go: handleIntentCreate
             → intent_store.go: Add (with TTL + correlation ID)
             → On next AI tool call:
-                handler_tools_call_postprocess.go: maybeAddPendingIntents
+                handler_tools_call.go: maybeAddPendingIntents
                 → intentStore.NudgeAndClean()
                 → Prepends "ACTION REQUIRED" nudge to response
                 → Nudges up to 3 times before discarding

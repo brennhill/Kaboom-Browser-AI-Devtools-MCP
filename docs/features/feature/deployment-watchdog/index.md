@@ -11,7 +11,7 @@ code_paths:
   - cmd/browser-agent/config_modes.go
   - cmd/browser-agent/health_tool_handler.go
   - cmd/browser-agent/server_routes_health_diagnostics.go
-  - cmd/browser-agent/handler_tools_call_postprocess.go
+  - cmd/browser-agent/handler_tools_call.go
 test_paths:
   - cmd/browser-agent/binary_watcher_test.go
 last_verified_version: 0.7.12
