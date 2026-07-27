@@ -44,3 +44,19 @@ func (h *ToolHandler) toolObserve(req JSONRPCRequest, args json.RawMessage) JSON
 	reg.Resolution.ValidModes = getValidObserveModes()
 	return h.dispatchTool(req, args, reg)
 }
+
+func (h *ToolHandler) toolObserveInbox(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return toolobserve.HandleInbox(h, req, args)
+}
+
+func (h *ToolHandler) appendPushPiggyback(resp JSONRPCResponse) JSONRPCResponse {
+	return toolobserve.AppendPushPiggyback(h, resp)
+}
+
+func (h *ToolHandler) prependDisconnectWarning(resp JSONRPCResponse) JSONRPCResponse {
+	return toolobserve.PrependDisconnectWarning(resp)
+}
+
+func (h *ToolHandler) appendAlertsToResponse(resp JSONRPCResponse, alerts []Alert) JSONRPCResponse {
+	return toolobserve.AppendAlertsToResponse(resp, alerts)
+}

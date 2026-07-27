@@ -9,7 +9,8 @@ code_paths:
   - cmd/browser-agent/alerts.go
   - cmd/browser-agent/streaming.go
   - cmd/browser-agent/tools_configure_runtime_impl.go
-  - cmd/browser-agent/tools_observe_inbox.go
+  - cmd/browser-agent/tools_observe.go
+  - cmd/browser-agent/internal/toolobserve/inbox.go
   - cmd/browser-agent/tools_configure_state_impl.go
   - internal/streaming/stream.go
   - internal/streaming/stream_emit.go

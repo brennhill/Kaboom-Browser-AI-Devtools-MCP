@@ -4,11 +4,12 @@ feature_id: browser-push
 status: implementation
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-27
 code_paths:
   - internal/push/
   - cmd/browser-agent/push_handlers.go
-  - cmd/browser-agent/tools_observe_inbox.go
+  - cmd/browser-agent/tools_observe.go
+  - cmd/browser-agent/internal/toolobserve/inbox.go
   - src/background/push-handler.ts
   - src/content/ui/chat-widget.ts
 test_paths:
@@ -62,7 +63,8 @@ Push browser content (annotations, screenshots, chat messages) to the AI automat
 | `internal/push/router.go` | Delivery router: sampling→notification→inbox | `router_test.go` (6 tests) |
 | `internal/push/sampling.go` | MCP sampling/createMessage builder | `sampling_test.go` (5 tests) |
 | `cmd/browser-agent/push_handlers.go` | Capability state, stdio delivery, and HTTP endpoints | `push_state_test.go`, `push_handlers_test.go` |
-| `cmd/browser-agent/tools_observe_inbox.go` | observe(inbox) handler + piggyback | `tools_observe_inbox_test.go` (6 tests) |
+| `cmd/browser-agent/tools_observe.go` | observe(inbox) adapter + piggyback wiring | `tools_observe_inbox_test.go` (6 tests) |
+| `cmd/browser-agent/internal/toolobserve/inbox.go` | inbox response and piggyback behavior | `tools_observe_inbox_test.go` (6 tests) |
 
 ### TypeScript (extension)
 

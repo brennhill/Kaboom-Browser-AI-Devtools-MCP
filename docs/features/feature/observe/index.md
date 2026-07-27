@@ -14,7 +14,9 @@ code_paths:
   - internal/capture/wsconn/tracker.go
   - cmd/browser-agent/tools_observe.go
   - cmd/browser-agent/tools_observe_registry.go
-  - cmd/browser-agent/tools_observe_response.go
+  - cmd/browser-agent/internal/toolobserve/response.go
+  - cmd/browser-agent/internal/toolobserve/inbox.go
+  - cmd/browser-agent/internal/toolobserve/registry.go
   - cmd/browser-agent/tools_shared_queries.go
   - internal/a11ysummary/summary.go
   - internal/tools/observe/deps.go
