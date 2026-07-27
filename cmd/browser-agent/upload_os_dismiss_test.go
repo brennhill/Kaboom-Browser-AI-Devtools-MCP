@@ -10,8 +10,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/httpapi"
 )
 
 // ============================================
@@ -19,11 +21,9 @@ import (
 // ============================================
 
 func TestHandleOSAutomationDismiss_MethodNotAllowed_GET(t *testing.T) {
-	server := newDismissTestServer(t)
-
 	req := httptest.NewRequest("GET", "/api/os-automation/dismiss", nil)
 	w := httptest.NewRecorder()
-	server.handleOSAutomationDismiss(w, req, true)
+	httpapi.HandleOSAutomationDismissHTTP(w, req, true, jsonResponse)
 
 	resp := w.Result()
 	defer resp.Body.Close()
@@ -48,11 +48,9 @@ func TestHandleOSAutomationDismiss_MethodNotAllowed_GET(t *testing.T) {
 }
 
 func TestHandleOSAutomationDismiss_MethodNotAllowed_PUT(t *testing.T) {
-	server := newDismissTestServer(t)
-
 	req := httptest.NewRequest("PUT", "/api/os-automation/dismiss", nil)
 	w := httptest.NewRecorder()
-	server.handleOSAutomationDismiss(w, req, true)
+	httpapi.HandleOSAutomationDismissHTTP(w, req, true, jsonResponse)
 
 	resp := w.Result()
 	defer resp.Body.Close()
@@ -63,11 +61,9 @@ func TestHandleOSAutomationDismiss_MethodNotAllowed_PUT(t *testing.T) {
 }
 
 func TestHandleOSAutomationDismiss_MethodNotAllowed_DELETE(t *testing.T) {
-	server := newDismissTestServer(t)
-
 	req := httptest.NewRequest("DELETE", "/api/os-automation/dismiss", nil)
 	w := httptest.NewRecorder()
-	server.handleOSAutomationDismiss(w, req, true)
+	httpapi.HandleOSAutomationDismissHTTP(w, req, true, jsonResponse)
 
 	resp := w.Result()
 	defer resp.Body.Close()
@@ -78,11 +74,9 @@ func TestHandleOSAutomationDismiss_MethodNotAllowed_DELETE(t *testing.T) {
 }
 
 func TestHandleOSAutomationDismiss_Disabled(t *testing.T) {
-	server := newDismissTestServer(t)
-
 	req := httptest.NewRequest("POST", "/api/os-automation/dismiss", nil)
 	w := httptest.NewRecorder()
-	server.handleOSAutomationDismiss(w, req, false)
+	httpapi.HandleOSAutomationDismissHTTP(w, req, false, jsonResponse)
 
 	resp := w.Result()
 	defer resp.Body.Close()
@@ -91,7 +85,7 @@ func TestHandleOSAutomationDismiss_Disabled(t *testing.T) {
 		t.Fatalf("expected status 403, got %d", resp.StatusCode)
 	}
 
-	var data UploadStageResponse
+	var data upload.StageResponse
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
@@ -107,16 +101,14 @@ func TestHandleOSAutomationDismiss_Disabled(t *testing.T) {
 }
 
 func TestHandleOSAutomationDismiss_Enabled_POST(t *testing.T) {
-	server := newDismissTestServer(t)
-
 	req := httptest.NewRequest("POST", "/api/os-automation/dismiss", nil)
 	w := httptest.NewRecorder()
-	server.handleOSAutomationDismiss(w, req, true)
+	httpapi.HandleOSAutomationDismissHTTP(w, req, true, jsonResponse)
 
 	resp := w.Result()
 	defer resp.Body.Close()
 
-	// When enabled, the handler calls dismissFileDialogInternal() which runs
+	// When enabled, the handler calls osauto.DismissFileDialog() which runs
 	// a platform command (osascript/xdotool/powershell). In CI it may succeed
 	// or fail depending on the environment. We verify:
 	// 1. Response is valid JSON
@@ -125,7 +117,7 @@ func TestHandleOSAutomationDismiss_Enabled_POST(t *testing.T) {
 		t.Fatalf("expected status 200 or 500, got %d", resp.StatusCode)
 	}
 
-	var data UploadStageResponse
+	var data upload.StageResponse
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
@@ -143,16 +135,4 @@ func TestHandleOSAutomationDismiss_Enabled_POST(t *testing.T) {
 			t.Error("expected non-empty error message for failed dismiss")
 		}
 	}
-}
-
-// newDismissTestServer creates a minimal Server for testing handleOSAutomationDismiss.
-func newDismissTestServer(t *testing.T) *Server {
-	t.Helper()
-	logFile := filepath.Join(t.TempDir(), "test-dismiss.jsonl")
-	server, err := NewServer(logFile, 100)
-	if err != nil {
-		t.Fatalf("NewServer failed: %v", err)
-	}
-	t.Cleanup(func() { server.Close() })
-	return server
 }

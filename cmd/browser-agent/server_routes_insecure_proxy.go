@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/uploadhandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
 const (
@@ -39,7 +39,7 @@ func getInsecureProxyClient() *http.Client {
 	insecureProxyClientOnce.Do(func() {
 		insecureProxyClient = &http.Client{
 			Timeout:   insecureProxyTimeout,
-			Transport: uploadhandler.NewSSRFSafeTransport(func() bool { return !ssrfCheckEnabled }),
+			Transport: uploadsec.NewSSRFSafeTransport(func() bool { return !ssrfCheckEnabled }),
 		}
 	})
 	return insecureProxyClient

@@ -9,8 +9,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/uploadhandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/osauto"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
 type uploadTestEnv struct {
@@ -20,8 +22,8 @@ type uploadTestEnv struct {
 // newUploadTestEnv creates a test environment with upload automation enabled.
 func newUploadTestEnv(t *testing.T) *uploadTestEnv {
 	t.Helper()
-	uploadhandler.SetSkipSSRFCheck(true)
-	t.Cleanup(func() { uploadhandler.SetSkipSSRFCheck(false) })
+	uploadsec.SetSkipSSRFCheck(true)
+	t.Cleanup(func() { uploadsec.SetSkipSSRFCheck(false) })
 
 	server, err := NewServer(filepath.Join(t.TempDir(), "test-upload.jsonl"), 100)
 	if err != nil {
@@ -32,7 +34,7 @@ func newUploadTestEnv(t *testing.T) *uploadTestEnv {
 	mcpHandler := NewToolHandler(server, cap)
 	handler := mcpHandler.toolHandler.(*ToolHandler)
 
-	handler.uploadSecurity = uploadhandler.NewSecurity("/", nil)
+	handler.uploadSecurity = uploadsec.NewSecurity("/", nil)
 
 	return &uploadTestEnv{
 		interactTestEnv: &interactTestEnv{handler: handler, server: server, capture: cap},
@@ -51,25 +53,25 @@ func createTestFile(t *testing.T, name, content string) string {
 }
 
 // handleFileRead directly calls the file read handler for unit testing.
-func (e *uploadTestEnv) handleFileRead(t *testing.T, req FileReadRequest) FileReadResponse {
+func (e *uploadTestEnv) handleFileRead(t *testing.T, req upload.FileReadRequest) upload.FileReadResponse {
 	t.Helper()
-	return handleFileReadInternal(req, e.handler.uploadSecurity, false)
+	return upload.HandleFileRead(req, e.handler.uploadSecurity, false)
 }
 
 // handleDialogInject directly calls the dialog inject handler for unit testing.
-func (e *uploadTestEnv) handleDialogInject(t *testing.T, req FileDialogInjectRequest) UploadStageResponse {
+func (e *uploadTestEnv) handleDialogInject(t *testing.T, req upload.FileDialogInjectRequest) upload.StageResponse {
 	t.Helper()
-	return handleDialogInjectInternal(req, e.handler.uploadSecurity)
+	return upload.HandleDialogInject(req, e.handler.uploadSecurity)
 }
 
 // handleFormSubmit directly calls the form submit handler for unit testing.
-func (e *uploadTestEnv) handleFormSubmit(t *testing.T, req FormSubmitRequest) UploadStageResponse {
+func (e *uploadTestEnv) handleFormSubmit(t *testing.T, req upload.FormSubmitRequest) upload.StageResponse {
 	t.Helper()
-	return handleFormSubmitInternal(req, e.handler.uploadSecurity)
+	return upload.HandleFormSubmit(req, e.handler.uploadSecurity)
 }
 
 // handleOSAutomation directly calls the OS automation handler for unit testing.
-func (e *uploadTestEnv) handleOSAutomation(t *testing.T, req OSAutomationInjectRequest) UploadStageResponse {
+func (e *uploadTestEnv) handleOSAutomation(t *testing.T, req upload.OSAutomationInjectRequest) upload.StageResponse {
 	t.Helper()
-	return handleOSAutomationInternal(req, e.handler.uploadSecurity)
+	return osauto.HandleOSAutomation(req, e.handler.uploadSecurity)
 }

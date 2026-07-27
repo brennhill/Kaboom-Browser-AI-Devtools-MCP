@@ -20,13 +20,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
-	uploadhandler "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
-)
-
-var (
-	defaultEscalationTimeoutMs = uploadhandler.DefaultEscalationTimeoutMs
-	getProgressTier            = uploadhandler.GetProgressTier
-	detectMimeType             = uploadhandler.DetectMimeType
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
 )
 
 // Guard mirrors the host's guard-check shape.
@@ -152,13 +146,13 @@ func uploadFileStatError(req mcp.JSONRPCRequest, filePath string, err error) mcp
 // queueUpload builds the upload payload and queues it for the extension.
 func (u *Handler) queueUpload(req mcp.JSONRPCRequest, args json.RawMessage, params uploadParams, info os.FileInfo) mcp.JSONRPCResponse {
 	if params.EscalationTimeoutMs <= 0 {
-		params.EscalationTimeoutMs = defaultEscalationTimeoutMs
+		params.EscalationTimeoutMs = upload.DefaultEscalationTimeoutMs
 	}
 
 	fileName := filepath.Base(params.FilePath)
-	mimeType := detectMimeType(fileName)
+	mimeType := upload.DetectMimeType(fileName)
 	fileSize := info.Size()
-	progressTier := getProgressTier(fileSize)
+	progressTier := upload.GetProgressTier(fileSize)
 	correlationID := toolresp.NewCorrelationID("upload")
 	u.evidence.ArmEvidenceForCommand(correlationID, "upload", args, req.ClientID)
 

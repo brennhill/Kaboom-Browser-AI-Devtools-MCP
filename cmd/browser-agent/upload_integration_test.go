@@ -22,39 +22,40 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/uploadhandler"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
 // allowTestSSRF enables private IP access for tests using httptest.NewServer (127.0.0.1).
 func allowTestSSRF(t *testing.T) {
 	t.Helper()
-	uploadhandler.SetSkipSSRFCheck(true)
-	t.Cleanup(func() { uploadhandler.SetSkipSSRFCheck(false) })
+	uploadsec.SetSkipSSRFCheck(true)
+	t.Cleanup(func() { uploadsec.SetSkipSSRFCheck(false) })
 }
 
 // testUploadSecurity returns a permissive UploadSecurity config for tests.
 // The upload-dir is set to "/" so any absolute path is allowed.
 // The denylist is still active (it's hardcoded).
-func testUploadSecurity(t *testing.T) *UploadSecurity {
+func testUploadSecurity(t *testing.T) *uploadsec.Security {
 	t.Helper()
-	return uploadhandler.NewSecurity("/", nil)
+	return uploadsec.NewSecurity("/", nil)
 }
 
 // testUploadSecurityWithDir returns an UploadSecurity scoped to a specific directory.
 // Resolves symlinks so it matches the EvalSymlinks output in ValidateFilePath.
-func testUploadSecurityWithDir(t *testing.T, dir string) *UploadSecurity {
+func testUploadSecurityWithDir(t *testing.T, dir string) *uploadsec.Security {
 	t.Helper()
 	resolved, err := filepath.EvalSymlinks(dir)
 	if err != nil {
 		t.Fatalf("testUploadSecurityWithDir: EvalSymlinks(%s) failed: %v", dir, err)
 	}
-	return uploadhandler.NewSecurity(resolved, nil)
+	return uploadsec.NewSecurity(resolved, nil)
 }
 
 // testUploadSecurityNoDir returns an UploadSecurity with no upload-dir (Stage 1 only).
-func testUploadSecurityNoDir(t *testing.T) *UploadSecurity {
+func testUploadSecurityNoDir(t *testing.T) *uploadsec.Security {
 	t.Helper()
-	return uploadhandler.NewSecurity("", nil)
+	return uploadsec.NewSecurity("", nil)
 }
 
 // ============================================
@@ -79,7 +80,7 @@ func TestUploadInteg_ConcurrentFormSubmit(t *testing.T) {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			resp := handleFormSubmitInternal(FormSubmitRequest{
+			resp := upload.HandleFormSubmit(upload.FormSubmitRequest{
 				FormAction:    ts.URL,
 				Method:        "POST",
 				FileInputName: fmt.Sprintf("file_%d", idx),
@@ -241,9 +242,9 @@ func TestUploadInteg_ContentDisposition_SafeFilename(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := sanitizeForContentDisposition(tc.input)
+			got := uploadsec.SanitizeForContentDisposition(tc.input)
 			if got != tc.expected {
-				t.Errorf("sanitizeForContentDisposition(%q) = %q, want %q", tc.input, got, tc.expected)
+				t.Errorf("uploadsec.SanitizeForContentDisposition(%q) = %q, want %q", tc.input, got, tc.expected)
 			}
 		})
 	}
@@ -274,7 +275,7 @@ func TestUploadInteg_ContentDisposition_PreservedInMultipart(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	resp := handleFormSubmitInternal(FormSubmitRequest{
+	resp := upload.HandleFormSubmit(upload.FormSubmitRequest{
 		FormAction:    ts.URL,
 		Method:        "POST",
 		FileInputName: "Filedata",
@@ -316,7 +317,7 @@ func TestUploadInteg_FormSubmit_FileDeletedDuringUpload(t *testing.T) {
 	// We can't reliably trigger a read error, but concurrent deletion during
 	// the multipart write may produce a write error. The key assertion: no panic.
 	sec := testUploadSecurity(t)
-	resp := handleFormSubmitInternal(FormSubmitRequest{
+	resp := upload.HandleFormSubmit(upload.FormSubmitRequest{
 		FormAction:    ts.URL,
 		Method:        "POST",
 		FileInputName: "file",
@@ -334,7 +335,7 @@ func TestUploadInteg_FormSubmit_FileDeletedDuringUpload(t *testing.T) {
 // ============================================
 
 func TestUploadInteg_MaxBytesReader_FileRead(t *testing.T) {
-	ts, _ := newUploadHTTPServer(t, true)
+	ts := newUploadHTTPServer(t, true)
 	defer ts.Close()
 
 	// Send a body larger than 1MB (the MaxBytesReader limit for /api/file/read)
@@ -352,7 +353,7 @@ func TestUploadInteg_MaxBytesReader_FileRead(t *testing.T) {
 }
 
 func TestUploadInteg_MaxBytesReader_FormSubmit(t *testing.T) {
-	ts, _ := newUploadHTTPServer(t, true)
+	ts := newUploadHTTPServer(t, true)
 	defer ts.Close()
 
 	// Send a body larger than 10MB (the MaxBytesReader limit for /api/form/submit)
@@ -420,7 +421,7 @@ func TestUploadInteg_DialogInject_ResponseShape(t *testing.T) {
 	env := newUploadTestEnv(t)
 	testFile := createTestFile(t, "shape-check.mp4", "fake video for shape")
 
-	resp := env.handleDialogInject(t, FileDialogInjectRequest{
+	resp := env.handleDialogInject(t, upload.FileDialogInjectRequest{
 		FilePath:   testFile,
 		BrowserPID: 12345,
 	})
@@ -455,7 +456,7 @@ func TestUploadInteg_HTTP_FormSubmit_SuccessPath(t *testing.T) {
 	}))
 	defer target.Close()
 
-	ts, _ := newUploadHTTPServer(t, true)
+	ts := newUploadHTTPServer(t, true)
 	defer ts.Close()
 
 	testFile := createTestFile(t, "http-form.txt", "form submit content")
@@ -468,7 +469,7 @@ func TestUploadInteg_HTTP_FormSubmit_SuccessPath(t *testing.T) {
 		t.Errorf("form submit success path should be 200, got %d", resp.StatusCode)
 	}
 
-	var result UploadStageResponse
+	var result upload.StageResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		t.Fatal(err)
 	}
@@ -481,7 +482,7 @@ func TestUploadInteg_HTTP_FormSubmit_SuccessPath(t *testing.T) {
 }
 
 func TestUploadInteg_HTTP_OSAutomation_SuccessPath(t *testing.T) {
-	ts, _ := newUploadHTTPServer(t, true)
+	ts := newUploadHTTPServer(t, true)
 	defer ts.Close()
 
 	testFile := createTestFile(t, "os-auto.mp4", "fake video")
@@ -495,7 +496,7 @@ func TestUploadInteg_HTTP_OSAutomation_SuccessPath(t *testing.T) {
 		t.Errorf("expected 200 or 400, got %d", resp.StatusCode)
 	}
 
-	var result UploadStageResponse
+	var result upload.StageResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		t.Fatal(err)
 	}
@@ -517,7 +518,7 @@ func TestUploadInteg_FormSubmit_FilePermissionDenied(t *testing.T) {
 	t.Cleanup(func() { _ = os.Chmod(path, 0o644) })
 
 	sec := testUploadSecurity(t)
-	resp := handleFormSubmitInternal(FormSubmitRequest{
+	resp := upload.HandleFormSubmit(upload.FormSubmitRequest{
 		FormAction:    "https://example.com/upload",
 		FileInputName: "file",
 		FilePath:      path,

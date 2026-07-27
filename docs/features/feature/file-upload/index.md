@@ -8,13 +8,12 @@ last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/internal/toolinteract/interactupload/upload.go
   - cmd/browser-agent/internal/toolinteract/deps.go
-  - cmd/browser-agent/upload_handlers.go
-  - cmd/browser-agent/internal/uploadhandler/handlers.go
-  - cmd/browser-agent/internal/uploadhandler/types.go
-  - cmd/browser-agent/internal/uploadhandler/security.go
-  - cmd/browser-agent/internal/uploadhandler/os_automation.go
-  - cmd/browser-agent/internal/uploadhandler/form_submit.go
+  - cmd/browser-agent/server_routes.go
+  - cmd/browser-agent/config.go
+  - cmd/browser-agent/tools_core.go
+  - internal/upload/httpapi/handlers.go
   - internal/upload/handlers.go
+  - internal/upload/form_submit.go
   - internal/upload/types.go
   - internal/upload/uploadsec/path.go
   - internal/upload/uploadsec/denylist.go
@@ -25,8 +24,8 @@ code_paths:
   - scripts/smoke-tests/upload-server.py
 test_paths:
   - cmd/browser-agent/internal/toolinteract/interactupload/upload_test.go
-  - cmd/browser-agent/internal/uploadhandler/uploadhandler_test.go
-  - cmd/browser-agent/internal/uploadhandler/handlers_http_test.go
+  - internal/upload/httpapi/contracts_test.go
+  - internal/upload/httpapi/handlers_test.go
   - cmd/browser-agent/upload_integration_test.go
   - cmd/browser-agent/upload_handlers_test.go
   - internal/upload/handlers_test.go
@@ -40,6 +39,11 @@ last_verified_date: 2026-03-05
 ---
 
 # File Upload
+
+> **2026-07-27:** Fully migrated upload callers and tests to the canonical
+> `internal/upload`, `internal/upload/httpapi`, `internal/upload/osauto`, and
+> `internal/upload/uploadsec` owners. The root aliases and the
+> `cmd/browser-agent/internal/uploadhandler` compatibility package were deleted.
 
 ## TL;DR
 - Status: shipped

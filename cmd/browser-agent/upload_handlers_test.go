@@ -24,7 +24,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/uploadhandler"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/httpapi"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
 // ============================================
@@ -89,7 +91,7 @@ func TestUploadHandler_FileRead_Base64Roundtrip(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp := env.handleFileRead(t, FileReadRequest{FilePath: path})
+	resp := env.handleFileRead(t, upload.FileReadRequest{FilePath: path})
 	if !resp.Success {
 		t.Fatalf("file read failed: %s", resp.Error)
 	}
@@ -114,8 +116,8 @@ func TestUploadHandler_FileRead_Base64Roundtrip(t *testing.T) {
 // ============================================
 
 func TestUploadHandler_FormSubmit_WithTestServer(t *testing.T) {
-	uploadhandler.SetSkipSSRFCheck(true)
-	t.Cleanup(func() { uploadhandler.SetSkipSSRFCheck(false) })
+	uploadsec.SetSkipSSRFCheck(true)
+	t.Cleanup(func() { uploadsec.SetSkipSSRFCheck(false) })
 	testFile := createTestFile(t, "upload.txt", "file content for form submit")
 
 	var (
@@ -166,7 +168,7 @@ func TestUploadHandler_FormSubmit_WithTestServer(t *testing.T) {
 	defer ts.Close()
 
 	sec := testUploadSecurity(t)
-	resp := handleFormSubmitInternal(FormSubmitRequest{
+	resp := upload.HandleFormSubmit(upload.FormSubmitRequest{
 		FormAction:    ts.URL,
 		Method:        "POST",
 		FileInputName: "Filedata",
@@ -213,42 +215,37 @@ func TestUploadHandler_FormSubmit_WithTestServer(t *testing.T) {
 
 // newUploadHTTPServer creates a test HTTP server with the 4 upload routes registered.
 // osAutomationEnabled controls Stage 4 gating; Stages 1-3 are always available.
-func newUploadHTTPServer(t *testing.T, osAutomationEnabled bool) (*httptest.Server, *Server) {
+func newUploadHTTPServer(t *testing.T, osAutomationEnabled bool) *httptest.Server {
 	t.Helper()
 	// Allow private IPs in tests (httptest.NewServer uses 127.0.0.1)
-	uploadhandler.SetSkipSSRFCheck(true)
-	t.Cleanup(func() { uploadhandler.SetSkipSSRFCheck(false) })
+	uploadsec.SetSkipSSRFCheck(true)
+	t.Cleanup(func() { uploadsec.SetSkipSSRFCheck(false) })
 	// Set permissive upload security for HTTP handler tests
 	prev := uploadSecurityConfig
-	uploadSecurityConfig = uploadhandler.NewSecurity("/", nil)
+	uploadSecurityConfig = uploadsec.NewSecurity("/", nil)
 	t.Cleanup(func() { uploadSecurityConfig = prev })
-
-	server, err := NewServer(filepath.Join(t.TempDir(), "upload-http.jsonl"), 100)
-	if err != nil {
-		t.Fatalf("NewServer failed: %v", err)
-	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/file/read", func(w http.ResponseWriter, r *http.Request) {
-		server.handleFileRead(w, r)
+		httpapi.HandleFileReadHTTP(w, r, uploadSecurityConfig, jsonResponse)
 	})
 	mux.HandleFunc("/api/file/dialog/inject", func(w http.ResponseWriter, r *http.Request) {
-		server.handleFileDialogInject(w, r)
+		httpapi.HandleFileDialogInjectHTTP(w, r, uploadSecurityConfig, jsonResponse)
 	})
 	mux.HandleFunc("/api/form/submit", func(w http.ResponseWriter, r *http.Request) {
-		server.handleFormSubmit(w, r)
+		httpapi.HandleFormSubmitHTTP(w, r, uploadSecurityConfig, jsonResponse)
 	})
 	mux.HandleFunc("/api/os-automation/inject", func(w http.ResponseWriter, r *http.Request) {
-		server.handleOSAutomation(w, r, osAutomationEnabled)
+		httpapi.HandleOSAutomationHTTP(w, r, osAutomationEnabled, uploadSecurityConfig, jsonResponse)
 	})
 
-	return httptest.NewServer(mux), server
+	return httptest.NewServer(mux)
 }
 
 // --- /api/file/read ---
 
 func TestUploadHandler_HTTP_FileRead_MethodNotAllowed(t *testing.T) {
-	ts, _ := newUploadHTTPServer(t, true)
+	ts := newUploadHTTPServer(t, true)
 	defer ts.Close()
 
 	resp, err := http.Get(ts.URL + "/api/file/read")
@@ -263,7 +260,7 @@ func TestUploadHandler_HTTP_FileRead_MethodNotAllowed(t *testing.T) {
 }
 
 func TestUploadHandler_HTTP_FileRead_Success(t *testing.T) {
-	ts, _ := newUploadHTTPServer(t, true)
+	ts := newUploadHTTPServer(t, true)
 	defer ts.Close()
 
 	testFile := createTestFile(t, "http-read.txt", "http test content")
@@ -275,7 +272,7 @@ func TestUploadHandler_HTTP_FileRead_Success(t *testing.T) {
 		t.Fatalf("POST /api/file/read with valid file should be 200, got %d", resp.StatusCode)
 	}
 
-	var body FileReadResponse
+	var body upload.FileReadResponse
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
 		t.Fatal(err)
 	}
@@ -295,7 +292,7 @@ func TestUploadHandler_HTTP_FileRead_Success(t *testing.T) {
 }
 
 func TestUploadHandler_HTTP_FileRead_NotFound(t *testing.T) {
-	ts, _ := newUploadHTTPServer(t, true)
+	ts := newUploadHTTPServer(t, true)
 	defer ts.Close()
 
 	resp := postJSON(t, ts.URL+"/api/file/read", `{"file_path":"/nonexistent/file.txt"}`)
@@ -307,7 +304,7 @@ func TestUploadHandler_HTTP_FileRead_NotFound(t *testing.T) {
 }
 
 func TestUploadHandler_HTTP_FileRead_InvalidJSON(t *testing.T) {
-	ts, _ := newUploadHTTPServer(t, true)
+	ts := newUploadHTTPServer(t, true)
 	defer ts.Close()
 
 	resp := postJSON(t, ts.URL+"/api/file/read", `{not valid json}`)
@@ -321,7 +318,7 @@ func TestUploadHandler_HTTP_FileRead_InvalidJSON(t *testing.T) {
 // --- /api/file/dialog/inject ---
 
 func TestUploadHandler_HTTP_DialogInject_Success(t *testing.T) {
-	ts, _ := newUploadHTTPServer(t, true)
+	ts := newUploadHTTPServer(t, true)
 	defer ts.Close()
 
 	testFile := createTestFile(t, "dialog.mp4", "fake video")
@@ -337,7 +334,7 @@ func TestUploadHandler_HTTP_DialogInject_Success(t *testing.T) {
 // --- /api/form/submit ---
 
 func TestUploadHandler_HTTP_FormSubmit_MissingRequired(t *testing.T) {
-	ts, _ := newUploadHTTPServer(t, true)
+	ts := newUploadHTTPServer(t, true)
 	defer ts.Close()
 
 	// Missing form_action
@@ -353,7 +350,7 @@ func TestUploadHandler_HTTP_FormSubmit_MissingRequired(t *testing.T) {
 // --- /api/os-automation/inject ---
 
 func TestUploadHandler_HTTP_OSAutomation_Disabled(t *testing.T) {
-	ts, _ := newUploadHTTPServer(t, false)
+	ts := newUploadHTTPServer(t, false)
 	defer ts.Close()
 
 	resp := postJSON(t, ts.URL+"/api/os-automation/inject",
@@ -364,7 +361,7 @@ func TestUploadHandler_HTTP_OSAutomation_Disabled(t *testing.T) {
 		t.Errorf("OS automation when disabled should be 403, got %d", resp.StatusCode)
 	}
 
-	var body UploadStageResponse
+	var body upload.StageResponse
 	_ = json.NewDecoder(resp.Body).Decode(&body)
 	if !strings.Contains(body.Error, "enable-os-upload-automation") {
 		t.Errorf("error should mention --enable-os-upload-automation, got: %s", body.Error)

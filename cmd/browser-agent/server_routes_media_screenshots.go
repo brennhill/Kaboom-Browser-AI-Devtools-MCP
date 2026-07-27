@@ -16,6 +16,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -68,7 +69,7 @@ func saveImageToScreenshotsDir(filename string, imageData []byte) (string, int, 
 		return "", http.StatusInternalServerError, "Failed to resolve screenshots directory"
 	}
 	savePath := filepath.Join(dir, filename)
-	if !isWithinDir(savePath, dir) {
+	if !uploadsec.IsWithinDir(savePath, dir) {
 		return "", http.StatusBadRequest, "Invalid screenshot path"
 	}
 	// #nosec G306 -- path is validated to remain within screenshots dir

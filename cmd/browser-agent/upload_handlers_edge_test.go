@@ -16,7 +16,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/uploadhandler"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
 // ============================================
@@ -27,7 +28,7 @@ func TestUploadHandler_FileRead_DirectoryRejected(t *testing.T) {
 	env := newUploadTestEnv(t)
 	dir := t.TempDir()
 
-	resp := env.handleFileRead(t, FileReadRequest{FilePath: dir})
+	resp := env.handleFileRead(t, upload.FileReadRequest{FilePath: dir})
 
 	if resp.Success {
 		t.Error("reading a directory should fail")
@@ -59,7 +60,7 @@ func TestUploadHandler_AppleScriptSanitization(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			result := sanitizeForAppleScript(tc.input)
+			result := uploadsec.SanitizeForAppleScript(tc.input)
 			if tc.contains != "" && !strings.Contains(result, tc.contains) {
 				t.Errorf("expected result to contain %q, got %q", tc.contains, result)
 			}
@@ -88,9 +89,9 @@ func TestUploadHandler_SendKeysSanitization(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			result := sanitizeForSendKeys(tc.input)
+			result := uploadsec.SanitizeForSendKeys(tc.input)
 			if result != tc.expected {
-				t.Errorf("sanitizeForSendKeys(%q) = %q, want %q", tc.input, result, tc.expected)
+				t.Errorf("uploadsec.SanitizeForSendKeys(%q) = %q, want %q", tc.input, result, tc.expected)
 			}
 		})
 	}
@@ -113,7 +114,7 @@ func TestUploadHandler_PathValidation_RejectsMetachars(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			err := validatePathForOSAutomation(tc.path)
+			err := uploadsec.ValidatePathForOSAutomation(tc.path)
 			if tc.wantErr && err == nil {
 				t.Errorf("expected error for path %q, got nil", tc.path)
 			}
@@ -130,7 +131,7 @@ func TestUploadHandler_PathValidation_RejectsMetachars(t *testing.T) {
 
 func TestUploadHandler_WindowsDoubleEscape(t *testing.T) {
 	// Verifies the two-layer escaping applied in executeWindowsAutomation:
-	// Layer 1: sanitizeForSendKeys escapes SendKeys metacharacters (+^%~(){})
+	// Layer 1: uploadsec.SanitizeForSendKeys escapes SendKeys metacharacters (+^%~(){})
 	// Layer 2: strings.ReplaceAll escapes " → `" for PowerShell string literals
 	tests := []struct {
 		name     string
@@ -170,7 +171,7 @@ func TestUploadHandler_WindowsDoubleEscape(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			// Layer 1: SendKeys escaping
-			sendKeysEscaped := sanitizeForSendKeys(tc.input)
+			sendKeysEscaped := uploadsec.SanitizeForSendKeys(tc.input)
 			// Layer 2: PowerShell quote escaping
 			psEscaped := strings.ReplaceAll(sendKeysEscaped, `"`, "`\"")
 
@@ -187,12 +188,12 @@ func TestUploadHandler_WindowsDoubleEscape(t *testing.T) {
 }
 
 // ============================================
-// maxBase64FileSize threshold
+// upload.MaxBase64FileSize threshold
 // ============================================
 
 func TestUploadHandler_FileRead_LargeFileSkipsBase64(t *testing.T) {
 	// Create a sparse file that appears large but doesn't use disk space.
-	// We only need the file to be > maxBase64FileSize for the stat check.
+	// We only need the file to be > upload.MaxBase64FileSize for the stat check.
 	dir := t.TempDir()
 	path := filepath.Join(dir, "large.bin")
 
@@ -201,7 +202,7 @@ func TestUploadHandler_FileRead_LargeFileSkipsBase64(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Seek to just past the threshold and write 1 byte to make the file "large"
-	if _, err := f.Seek(maxBase64FileSize+1, 0); err != nil {
+	if _, err := f.Seek(upload.MaxBase64FileSize+1, 0); err != nil {
 		f.Close()
 		t.Fatal(err)
 	}
@@ -211,15 +212,15 @@ func TestUploadHandler_FileRead_LargeFileSkipsBase64(t *testing.T) {
 	}
 	f.Close()
 
-	resp := handleFileReadInternal(FileReadRequest{FilePath: path}, testUploadSecurity(t), false)
+	resp := upload.HandleFileRead(upload.FileReadRequest{FilePath: path}, testUploadSecurity(t), false)
 	if !resp.Success {
 		t.Fatalf("file read should succeed for large file, got error: %s", resp.Error)
 	}
 	if resp.DataBase64 != "" {
-		t.Error("file > maxBase64FileSize should NOT include base64 data")
+		t.Error("file > upload.MaxBase64FileSize should NOT include base64 data")
 	}
-	if resp.FileSize <= maxBase64FileSize {
-		t.Errorf("file size should be > %d, got %d", maxBase64FileSize, resp.FileSize)
+	if resp.FileSize <= upload.MaxBase64FileSize {
+		t.Errorf("file size should be > %d, got %d", upload.MaxBase64FileSize, resp.FileSize)
 	}
 	if resp.FileName != "large.bin" {
 		t.Errorf("file_name should be 'large.bin', got %q", resp.FileName)
@@ -235,8 +236,8 @@ func TestUploadHandler_FileRead_ExactThresholdIncludesBase64(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Seek to threshold and write 1 byte (total size = maxBase64FileSize)
-	if _, err := f.Seek(maxBase64FileSize-1, 0); err != nil {
+	// Seek to threshold and write 1 byte (total size = upload.MaxBase64FileSize)
+	if _, err := f.Seek(upload.MaxBase64FileSize-1, 0); err != nil {
 		f.Close()
 		t.Fatal(err)
 	}
@@ -246,13 +247,13 @@ func TestUploadHandler_FileRead_ExactThresholdIncludesBase64(t *testing.T) {
 	}
 	f.Close()
 
-	resp := handleFileReadInternal(FileReadRequest{FilePath: path}, testUploadSecurity(t), false)
+	resp := upload.HandleFileRead(upload.FileReadRequest{FilePath: path}, testUploadSecurity(t), false)
 	if !resp.Success {
 		t.Fatalf("file read should succeed, got error: %s", resp.Error)
 	}
 	// File exactly at 100MB should include base64 (<=)
 	if resp.DataBase64 == "" {
-		t.Error("file at exactly maxBase64FileSize should include base64 data")
+		t.Error("file at exactly upload.MaxBase64FileSize should include base64 data")
 	}
 }
 
@@ -273,30 +274,30 @@ func TestUploadHandler_MimeType_CaseInsensitive(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.filename, func(t *testing.T) {
-			got := detectMimeType(tc.filename)
+			got := upload.DetectMimeType(tc.filename)
 			if got != tc.expected {
-				t.Errorf("detectMimeType(%q) = %q, want %q", tc.filename, got, tc.expected)
+				t.Errorf("upload.DetectMimeType(%q) = %q, want %q", tc.filename, got, tc.expected)
 			}
 		})
 	}
 }
 
 func TestUploadHandler_MimeType_NoExtension(t *testing.T) {
-	got := detectMimeType("Makefile")
+	got := upload.DetectMimeType("Makefile")
 	if got != "application/octet-stream" {
 		t.Errorf("file without extension should be octet-stream, got %q", got)
 	}
 }
 
 func TestUploadHandler_MimeType_DotFile(t *testing.T) {
-	got := detectMimeType(".gitignore")
+	got := upload.DetectMimeType(".gitignore")
 	if got != "application/octet-stream" {
 		t.Errorf(".gitignore should be octet-stream, got %q", got)
 	}
 }
 
 func TestUploadHandler_MimeType_DoubleExtension(t *testing.T) {
-	got := detectMimeType("archive.tar.gz")
+	got := upload.DetectMimeType("archive.tar.gz")
 	if got != "application/gzip" {
 		t.Errorf("archive.tar.gz should detect .gz, got %q", got)
 	}
@@ -307,8 +308,8 @@ func TestUploadHandler_MimeType_DoubleExtension(t *testing.T) {
 // ============================================
 
 func TestUploadHandler_ProgressTier_ZeroBytes(t *testing.T) {
-	tier := getProgressTier(0)
-	if tier != ProgressTierSimple {
+	tier := upload.GetProgressTier(0)
+	if tier != upload.ProgressTierSimple {
 		t.Errorf("0 bytes should use simple tier, got %s", tier)
 	}
 }
@@ -318,7 +319,7 @@ func TestUploadHandler_ProgressTier_ZeroBytes(t *testing.T) {
 // ============================================
 
 func TestUploadHandler_FormSubmit_RelativePathRejected(t *testing.T) {
-	resp := handleFormSubmitInternal(FormSubmitRequest{
+	resp := upload.HandleFormSubmit(upload.FormSubmitRequest{
 		FormAction:    "https://example.com/upload",
 		FileInputName: "file",
 		FilePath:      "../../../etc/passwd",
@@ -333,7 +334,7 @@ func TestUploadHandler_FormSubmit_RelativePathRejected(t *testing.T) {
 }
 
 func TestUploadHandler_DialogInject_RelativePathRejected(t *testing.T) {
-	resp := handleDialogInjectInternal(FileDialogInjectRequest{
+	resp := upload.HandleDialogInject(upload.FileDialogInjectRequest{
 		FilePath:   "../../../etc/passwd",
 		BrowserPID: 1234,
 	}, testUploadSecurity(t))
@@ -347,7 +348,7 @@ func TestUploadHandler_DialogInject_RelativePathRejected(t *testing.T) {
 }
 
 func TestUploadHandler_FileRead_RelativePathRejected(t *testing.T) {
-	resp := handleFileReadInternal(FileReadRequest{
+	resp := upload.HandleFileRead(upload.FileReadRequest{
 		FilePath: "../../../etc/passwd",
 	}, testUploadSecurity(t), false)
 
@@ -364,8 +365,8 @@ func TestUploadHandler_FileRead_RelativePathRejected(t *testing.T) {
 // ============================================
 
 func TestUploadHandler_FormSubmit_HTTP401Response(t *testing.T) {
-	uploadhandler.SetSkipSSRFCheck(true)
-	t.Cleanup(func() { uploadhandler.SetSkipSSRFCheck(false) })
+	uploadsec.SetSkipSSRFCheck(true)
+	t.Cleanup(func() { uploadsec.SetSkipSSRFCheck(false) })
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(401)
 	}))
@@ -373,7 +374,7 @@ func TestUploadHandler_FormSubmit_HTTP401Response(t *testing.T) {
 
 	testFile := createTestFile(t, "auth.txt", "test content")
 	sec := testUploadSecurity(t)
-	resp := handleFormSubmitInternal(FormSubmitRequest{
+	resp := upload.HandleFormSubmit(upload.FormSubmitRequest{
 		FormAction:    ts.URL,
 		Method:        "POST",
 		FileInputName: "file",
@@ -389,8 +390,8 @@ func TestUploadHandler_FormSubmit_HTTP401Response(t *testing.T) {
 }
 
 func TestUploadHandler_FormSubmit_HTTP403Response(t *testing.T) {
-	uploadhandler.SetSkipSSRFCheck(true)
-	t.Cleanup(func() { uploadhandler.SetSkipSSRFCheck(false) })
+	uploadsec.SetSkipSSRFCheck(true)
+	t.Cleanup(func() { uploadsec.SetSkipSSRFCheck(false) })
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(403)
 	}))
@@ -398,7 +399,7 @@ func TestUploadHandler_FormSubmit_HTTP403Response(t *testing.T) {
 
 	testFile := createTestFile(t, "csrf.txt", "test content")
 	sec := testUploadSecurity(t)
-	resp := handleFormSubmitInternal(FormSubmitRequest{
+	resp := upload.HandleFormSubmit(upload.FormSubmitRequest{
 		FormAction:    ts.URL,
 		Method:        "POST",
 		FileInputName: "file",
@@ -414,8 +415,8 @@ func TestUploadHandler_FormSubmit_HTTP403Response(t *testing.T) {
 }
 
 func TestUploadHandler_FormSubmit_HTTP422Response(t *testing.T) {
-	uploadhandler.SetSkipSSRFCheck(true)
-	t.Cleanup(func() { uploadhandler.SetSkipSSRFCheck(false) })
+	uploadsec.SetSkipSSRFCheck(true)
+	t.Cleanup(func() { uploadsec.SetSkipSSRFCheck(false) })
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(422)
 	}))
@@ -423,7 +424,7 @@ func TestUploadHandler_FormSubmit_HTTP422Response(t *testing.T) {
 
 	testFile := createTestFile(t, "validation.txt", "test content")
 	sec := testUploadSecurity(t)
-	resp := handleFormSubmitInternal(FormSubmitRequest{
+	resp := upload.HandleFormSubmit(upload.FormSubmitRequest{
 		FormAction:    ts.URL,
 		Method:        "POST",
 		FileInputName: "file",

@@ -14,6 +14,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
 )
 
 type fake struct {
@@ -171,8 +172,8 @@ func TestHandleUpload_QueuesWithDefaultsAndArmsEvidence(t *testing.T) {
 	if err := json.Unmarshal(f.enqueued[0].Params, &payload); err != nil {
 		t.Fatalf("unmarshal queued params: %v", err)
 	}
-	if payload["escalation_timeout_ms"] != float64(defaultEscalationTimeoutMs) {
-		t.Fatalf("escalation_timeout_ms = %v, want the default %d applied", payload["escalation_timeout_ms"], defaultEscalationTimeoutMs)
+	if payload["escalation_timeout_ms"] != float64(upload.DefaultEscalationTimeoutMs) {
+		t.Fatalf("escalation_timeout_ms = %v, want the default %d applied", payload["escalation_timeout_ms"], upload.DefaultEscalationTimeoutMs)
 	}
 	if payload["file_size"] != float64(10) {
 		t.Fatalf("file_size = %v, want 10 (the real size on disk)", payload["file_size"])

@@ -20,6 +20,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/osauto"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
@@ -32,7 +34,7 @@ func TestUploadInteg_OSAutomation_PathWithNewline(t *testing.T) {
 	// The newline causes EvalSymlinks to fail (file doesn't exist),
 	// so we verify rejection happens regardless.
 	sec := testUploadSecurity(t)
-	resp := handleOSAutomationInternal(OSAutomationInjectRequest{
+	resp := osauto.HandleOSAutomation(upload.OSAutomationInjectRequest{
 		FilePath:   "/tmp/safe\ninjection",
 		BrowserPID: 12345,
 	}, sec)
@@ -44,7 +46,7 @@ func TestUploadInteg_OSAutomation_PathWithNewline(t *testing.T) {
 
 func TestUploadInteg_OSAutomation_PathWithNullByte(t *testing.T) {
 	sec := testUploadSecurity(t)
-	resp := handleOSAutomationInternal(OSAutomationInjectRequest{
+	resp := osauto.HandleOSAutomation(upload.OSAutomationInjectRequest{
 		FilePath:   "/tmp/safe\x00injection",
 		BrowserPID: 12345,
 	}, sec)
@@ -56,13 +58,13 @@ func TestUploadInteg_OSAutomation_PathWithNullByte(t *testing.T) {
 
 func TestUploadInteg_OSAutomation_PathWithBacktick(t *testing.T) {
 	// Create a real file so EvalSymlinks succeeds, then verify
-	// validatePathForOSAutomation catches the backtick.
+	// uploadsec.ValidatePathForOSAutomation catches the backtick.
 	dir := t.TempDir()
 	path := filepath.Join(dir, "safe`whoami`.mp4")
 	os.WriteFile(path, []byte("test"), 0o644)
 
 	sec := testUploadSecurityWithDir(t, dir)
-	resp := handleOSAutomationInternal(OSAutomationInjectRequest{
+	resp := osauto.HandleOSAutomation(upload.OSAutomationInjectRequest{
 		FilePath:   path,
 		BrowserPID: 12345,
 	}, sec)
@@ -81,7 +83,7 @@ func TestUploadInteg_OSAutomation_PathWithBacktick(t *testing.T) {
 
 func TestUploadInteg_OSAutomation_ValidPathPassesThrough(t *testing.T) {
 	// Paths with unusual but valid characters should pass validation
-	// and reach executeOSAutomation (which may fail on this OS but
+	// and reach osauto.ExecuteOSAutomation (which may fail on this OS but
 	// shouldn't fail at validation). Tests that the -- terminator
 	// in xdotool args doesn't break valid paths.
 	validPaths := []string{
@@ -95,7 +97,7 @@ func TestUploadInteg_OSAutomation_ValidPathPassesThrough(t *testing.T) {
 
 	for _, p := range validPaths {
 		t.Run(filepath.Base(p), func(t *testing.T) {
-			err := validatePathForOSAutomation(p)
+			err := uploadsec.ValidatePathForOSAutomation(p)
 			if err != nil {
 				t.Errorf("valid path %q should pass validation, got: %v", p, err)
 			}
@@ -119,9 +121,9 @@ func TestUploadInteg_ContentDisposition_InputNameInjection(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := sanitizeForContentDisposition(tc.inputName)
+			got := uploadsec.SanitizeForContentDisposition(tc.inputName)
 			if got != tc.expected {
-				t.Errorf("sanitizeForContentDisposition(%q) = %q, want %q",
+				t.Errorf("uploadsec.SanitizeForContentDisposition(%q) = %q, want %q",
 					tc.inputName, got, tc.expected)
 			}
 		})
@@ -136,8 +138,8 @@ func TestUploadInteg_ValidateHTTPMethod(t *testing.T) {
 	allowed := []string{"POST", "PUT", "PATCH", "post", "put", "patch", "Post"}
 	for _, m := range allowed {
 		t.Run("allow_"+m, func(t *testing.T) {
-			if err := validateHTTPMethod(m); err != nil {
-				t.Errorf("validateHTTPMethod(%q) should allow, got: %v", m, err)
+			if err := uploadsec.ValidateHTTPMethod(m); err != nil {
+				t.Errorf("uploadsec.ValidateHTTPMethod(%q) should allow, got: %v", m, err)
 			}
 		})
 	}
@@ -149,8 +151,8 @@ func TestUploadInteg_ValidateHTTPMethod(t *testing.T) {
 			name = "empty"
 		}
 		t.Run("block_"+name, func(t *testing.T) {
-			if err := validateHTTPMethod(m); err == nil {
-				t.Errorf("validateHTTPMethod(%q) should block, got nil", m)
+			if err := uploadsec.ValidateHTTPMethod(m); err == nil {
+				t.Errorf("uploadsec.ValidateHTTPMethod(%q) should block, got nil", m)
 			}
 		})
 	}
@@ -174,8 +176,8 @@ func TestUploadInteg_ValidateCookieHeader(t *testing.T) {
 			name = "empty"
 		}
 		t.Run("allow_"+name, func(t *testing.T) {
-			if err := validateCookieHeader(c); err != nil {
-				t.Errorf("validateCookieHeader(%q) should allow, got: %v", c, err)
+			if err := uploadsec.ValidateCookieHeader(c); err != nil {
+				t.Errorf("uploadsec.ValidateCookieHeader(%q) should allow, got: %v", c, err)
 			}
 		})
 	}
@@ -192,15 +194,15 @@ func TestUploadInteg_ValidateCookieHeader(t *testing.T) {
 	}
 	for _, tc := range injections {
 		t.Run("block_"+tc.name, func(t *testing.T) {
-			if err := validateCookieHeader(tc.cookie); err == nil {
-				t.Errorf("validateCookieHeader(%q) should block header injection, got nil", tc.cookie)
+			if err := uploadsec.ValidateCookieHeader(tc.cookie); err == nil {
+				t.Errorf("uploadsec.ValidateCookieHeader(%q) should block header injection, got nil", tc.cookie)
 			}
 		})
 	}
 }
 
 // ============================================
-// 17. SSRF Validation (validateFormActionURL)
+// 17. SSRF Validation (uploadsec.ValidateFormActionURL)
 // ============================================
 
 func TestUploadInteg_ValidateFormActionURL(t *testing.T) {
@@ -218,8 +220,8 @@ func TestUploadInteg_ValidateFormActionURL(t *testing.T) {
 	}
 	for _, tc := range schemeBlocked {
 		t.Run("scheme_"+tc.name, func(t *testing.T) {
-			if err := validateFormActionURL(tc.url); err == nil {
-				t.Errorf("validateFormActionURL(%q) should block non-http scheme, got nil", tc.url)
+			if err := uploadsec.ValidateFormActionURL(tc.url); err == nil {
+				t.Errorf("uploadsec.ValidateFormActionURL(%q) should block non-http scheme, got nil", tc.url)
 			}
 		})
 	}
@@ -235,15 +237,15 @@ func TestUploadInteg_ValidateFormActionURL(t *testing.T) {
 	}
 	for _, tc := range hostBlocked {
 		t.Run("host_"+tc.name, func(t *testing.T) {
-			if err := validateFormActionURL(tc.url); err == nil {
-				t.Errorf("validateFormActionURL(%q) should block, got nil", tc.url)
+			if err := uploadsec.ValidateFormActionURL(tc.url); err == nil {
+				t.Errorf("uploadsec.ValidateFormActionURL(%q) should block, got nil", tc.url)
 			}
 		})
 	}
 
 	// Empty / missing hostname
 	t.Run("no_hostname", func(t *testing.T) {
-		if err := validateFormActionURL("http:///path"); err == nil {
+		if err := uploadsec.ValidateFormActionURL("http:///path"); err == nil {
 			t.Error("should reject URL with empty hostname")
 		}
 	})
@@ -309,7 +311,7 @@ func TestUploadInteg_FormSubmit_ContextCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // cancel immediately
 
-	req := FormSubmitRequest{
+	req := upload.FormSubmitRequest{
 		FormAction:    slow.URL + "/upload",
 		Method:        "POST",
 		FileInputName: "file",
@@ -319,7 +321,7 @@ func TestUploadInteg_FormSubmit_ContextCancelled(t *testing.T) {
 	// Should fail fast due to cancelled context, not leak goroutines.
 	// The race detector (-race) validates no goroutine leak.
 	sec := testUploadSecurityWithDir(t, tmp)
-	resp := handleFormSubmitInternalCtx(ctx, req, sec)
+	resp := upload.HandleFormSubmitCtx(ctx, req, sec)
 	if resp.Success {
 		t.Error("expected failure with cancelled context")
 	}
@@ -340,7 +342,7 @@ func TestUploadInteg_FormSubmit_ServerError_DrainChannel(t *testing.T) {
 	f := filepath.Join(tmp, "test.txt")
 	os.WriteFile(f, []byte("some content"), 0644)
 
-	req := FormSubmitRequest{
+	req := upload.FormSubmitRequest{
 		FormAction:    srv.URL + "/upload",
 		Method:        "POST",
 		FileInputName: "file",
@@ -348,7 +350,7 @@ func TestUploadInteg_FormSubmit_ServerError_DrainChannel(t *testing.T) {
 	}
 
 	sec := testUploadSecurityWithDir(t, tmp)
-	resp := handleFormSubmitInternalCtx(context.Background(), req, sec)
+	resp := upload.HandleFormSubmitCtx(context.Background(), req, sec)
 	if resp.Success {
 		t.Error("expected failure on 500 response")
 	}

@@ -1,6 +1,6 @@
-// handlers_http_test.go — Drives each HTTP handler through success + error branches using stubbed stage functions.
+// handlers_test.go — Drives each upload HTTP endpoint through success and error branches.
 
-package uploadhandler
+package httpapi
 
 import (
 	"net/http"
@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
 // withStubbedStageFns swaps the package-level stage function variables for the
@@ -16,11 +17,11 @@ import (
 // through which the HTTP handlers delegate real work; stubbing them keeps the
 // tests deterministic (no filesystem, no OS automation).
 type stageStubs struct {
-	fileRead     func(FileReadRequest, *Security, bool) FileReadResponse
-	dialogInject func(FileDialogInjectRequest, *Security) StageResponse
-	formSubmit   func(FormSubmitRequest, *Security) StageResponse
-	osAutomation func(OSAutomationInjectRequest, *Security) StageResponse
-	dismiss      func() StageResponse
+	fileRead     func(upload.FileReadRequest, *uploadsec.Security, bool) upload.FileReadResponse
+	dialogInject func(upload.FileDialogInjectRequest, *uploadsec.Security) upload.StageResponse
+	formSubmit   func(upload.FormSubmitRequest, *uploadsec.Security) upload.StageResponse
+	osAutomation func(upload.OSAutomationInjectRequest, *uploadsec.Security) upload.StageResponse
+	dismiss      func() upload.StageResponse
 }
 
 func withStubbedStageFns(t *testing.T, s stageStubs) {
@@ -65,8 +66,8 @@ func postJSON(path, body string) (*httptest.ResponseRecorder, *http.Request) {
 
 func TestHandleFileReadHTTP_Success(t *testing.T) {
 	withStubbedStageFns(t, stageStubs{
-		fileRead: func(_ FileReadRequest, _ *Security, _ bool) FileReadResponse {
-			return FileReadResponse{Success: true, FileName: "a.txt", FileSize: 3}
+		fileRead: func(_ upload.FileReadRequest, _ *uploadsec.Security, _ bool) upload.FileReadResponse {
+			return upload.FileReadResponse{Success: true, FileName: "a.txt", FileSize: 3}
 		},
 	})
 	w, req := postJSON("/api/file/read", `{"file_path":"/x/a.txt"}`)
@@ -78,9 +79,9 @@ func TestHandleFileReadHTTP_Success(t *testing.T) {
 
 func TestHandleFileReadHTTP_ErrorStatusMapping(t *testing.T) {
 	cases := []struct {
-		name    string
-		errMsg  string
-		want    int
+		name   string
+		errMsg string
+		want   int
 	}{
 		{"not found", "file not found", http.StatusNotFound},
 		{"no such file", "open /x: no such file or directory", http.StatusNotFound},
@@ -90,8 +91,8 @@ func TestHandleFileReadHTTP_ErrorStatusMapping(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			withStubbedStageFns(t, stageStubs{
-				fileRead: func(_ FileReadRequest, _ *Security, _ bool) FileReadResponse {
-					return FileReadResponse{Success: false, Error: tc.errMsg}
+				fileRead: func(_ upload.FileReadRequest, _ *uploadsec.Security, _ bool) upload.FileReadResponse {
+					return upload.FileReadResponse{Success: false, Error: tc.errMsg}
 				},
 			})
 			w, req := postJSON("/api/file/read", `{"file_path":"/x/a.txt"}`)
@@ -109,8 +110,8 @@ func TestHandleFileReadHTTP_ErrorStatusMapping(t *testing.T) {
 
 func TestHandleFileDialogInjectHTTP_Success(t *testing.T) {
 	withStubbedStageFns(t, stageStubs{
-		dialogInject: func(_ FileDialogInjectRequest, _ *Security) StageResponse {
-			return StageResponse{Success: true, Stage: 2}
+		dialogInject: func(_ upload.FileDialogInjectRequest, _ *uploadsec.Security) upload.StageResponse {
+			return upload.StageResponse{Success: true, Stage: 2}
 		},
 	})
 	w, req := postJSON("/api/file/dialog/inject", `{"file_path":"/x/a.txt","browser_pid":1}`)
@@ -122,8 +123,8 @@ func TestHandleFileDialogInjectHTTP_Success(t *testing.T) {
 
 func TestHandleFileDialogInjectHTTP_Failure(t *testing.T) {
 	withStubbedStageFns(t, stageStubs{
-		dialogInject: func(_ FileDialogInjectRequest, _ *Security) StageResponse {
-			return StageResponse{Success: false, Error: "bad pid"}
+		dialogInject: func(_ upload.FileDialogInjectRequest, _ *uploadsec.Security) upload.StageResponse {
+			return upload.StageResponse{Success: false, Error: "bad pid"}
 		},
 	})
 	w, req := postJSON("/api/file/dialog/inject", `{"file_path":"/x/a.txt"}`)
@@ -147,8 +148,8 @@ func TestHandleFileDialogInjectHTTP_InvalidJSON(t *testing.T) {
 
 func TestHandleFormSubmitHTTP_Success(t *testing.T) {
 	withStubbedStageFns(t, stageStubs{
-		formSubmit: func(_ FormSubmitRequest, _ *Security) StageResponse {
-			return StageResponse{Success: true, Stage: 3, Status: "ok"}
+		formSubmit: func(_ upload.FormSubmitRequest, _ *uploadsec.Security) upload.StageResponse {
+			return upload.StageResponse{Success: true, Stage: 3, Status: "ok"}
 		},
 	})
 	w, req := postJSON("/api/form/submit", `{"form_action":"https://h/x","file_path":"/x/a"}`)
@@ -160,8 +161,8 @@ func TestHandleFormSubmitHTTP_Success(t *testing.T) {
 
 func TestHandleFormSubmitHTTP_Failure(t *testing.T) {
 	withStubbedStageFns(t, stageStubs{
-		formSubmit: func(_ FormSubmitRequest, _ *Security) StageResponse {
-			return StageResponse{Success: false, Error: "blocked url"}
+		formSubmit: func(_ upload.FormSubmitRequest, _ *uploadsec.Security) upload.StageResponse {
+			return upload.StageResponse{Success: false, Error: "blocked url"}
 		},
 	})
 	w, req := postJSON("/api/form/submit", `{"form_action":"https://h/x"}`)
@@ -177,8 +178,8 @@ func TestHandleFormSubmitHTTP_Failure(t *testing.T) {
 
 func TestHandleOSAutomationHTTP_Success(t *testing.T) {
 	withStubbedStageFns(t, stageStubs{
-		osAutomation: func(_ OSAutomationInjectRequest, _ *Security) StageResponse {
-			return StageResponse{Success: true, Stage: 4}
+		osAutomation: func(_ upload.OSAutomationInjectRequest, _ *uploadsec.Security) upload.StageResponse {
+			return upload.StageResponse{Success: true, Stage: 4}
 		},
 	})
 	w, req := postJSON("/api/os-automation/inject", `{"file_path":"/x/a","browser_pid":2}`)
@@ -190,8 +191,8 @@ func TestHandleOSAutomationHTTP_Success(t *testing.T) {
 
 func TestHandleOSAutomationHTTP_Failure(t *testing.T) {
 	withStubbedStageFns(t, stageStubs{
-		osAutomation: func(_ OSAutomationInjectRequest, _ *Security) StageResponse {
-			return StageResponse{Success: false, Stage: 4, Error: "automation failed"}
+		osAutomation: func(_ upload.OSAutomationInjectRequest, _ *uploadsec.Security) upload.StageResponse {
+			return upload.StageResponse{Success: false, Stage: 4, Error: "automation failed"}
 		},
 	})
 	w, req := postJSON("/api/os-automation/inject", `{"file_path":"/x/a"}`)
@@ -215,8 +216,8 @@ func TestHandleOSAutomationHTTP_InvalidJSON(t *testing.T) {
 
 func TestHandleOSAutomationDismissHTTP_Success(t *testing.T) {
 	withStubbedStageFns(t, stageStubs{
-		dismiss: func() StageResponse {
-			return StageResponse{Success: true, Stage: 4, Status: "dismissed"}
+		dismiss: func() upload.StageResponse {
+			return upload.StageResponse{Success: true, Stage: 4, Status: "dismissed"}
 		},
 	})
 	req := httptest.NewRequest("POST", "/api/os-automation/dismiss", nil)
@@ -229,8 +230,8 @@ func TestHandleOSAutomationDismissHTTP_Success(t *testing.T) {
 
 func TestHandleOSAutomationDismissHTTP_Failure(t *testing.T) {
 	withStubbedStageFns(t, stageStubs{
-		dismiss: func() StageResponse {
-			return StageResponse{Success: false, Error: "no dialog"}
+		dismiss: func() upload.StageResponse {
+			return upload.StageResponse{Success: false, Error: "no dialog"}
 		},
 	})
 	req := httptest.NewRequest("POST", "/api/os-automation/dismiss", nil)
@@ -243,4 +244,3 @@ func TestHandleOSAutomationDismissHTTP_Failure(t *testing.T) {
 
 // Ensure the upload package alias import is exercised (compile-time guard that
 // the stubbed signatures match the real stage function types).
-var _ = upload.HandleFileRead

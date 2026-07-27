@@ -1,6 +1,6 @@
-// uploadhandler_test.go — Unit tests for the uploadhandler sub-package exported API.
+// contracts_test.go — HTTP method, gating, and invalid-payload contracts.
 
-package uploadhandler
+package httpapi
 
 import (
 	"encoding/json"
@@ -9,97 +9,6 @@ import (
 	"strings"
 	"testing"
 )
-
-// ---------------------------------------------------------------------------
-// Re-exported function variables are non-nil
-// ---------------------------------------------------------------------------
-
-func TestReExportedFunctions_NonNil(t *testing.T) {
-	functions := map[string]any{
-		"HandleFileRead":     HandleFileRead,
-		"HandleDialogInject": HandleDialogInject,
-		"HandleFormSubmit":   HandleFormSubmit,
-		"HandleFormSubmitCtx": HandleFormSubmitCtx,
-		"ValidateFormSubmitFields": ValidateFormSubmitFields,
-		"OpenAndValidateFile":      OpenAndValidateFile,
-		"StreamMultipartForm":      StreamMultipartForm,
-		"ExecuteFormSubmit":        ExecuteFormSubmit,
-		"HandleOSAutomation":       HandleOSAutomation,
-		"DetectBrowserPID":         DetectBrowserPID,
-		"DismissFileDialog":        DismissFileDialog,
-		"ExecuteOSAutomation":      ExecuteOSAutomation,
-		"GetProgressTier":          GetProgressTier,
-		"DetectMimeType":           DetectMimeType,
-	}
-	for name, fn := range functions {
-		if fn == nil {
-			t.Errorf("re-exported function %s should not be nil", name)
-		}
-	}
-}
-
-func TestSecurityFunctions_NonNil(t *testing.T) {
-	functions := map[string]any{
-		"ValidateUploadDir":     ValidateUploadDir,
-		"MatchesDenylist":       MatchesDenylist,
-		"MatchesUserDenylist":   MatchesUserDenylist,
-		"IsWithinDir":           IsWithinDir,
-		"PathsEqualFold":        PathsEqualFold,
-		"PathHasPrefixFold":     PathHasPrefixFold,
-		"IsPrivateIP":           IsPrivateIP,
-		"NewSecurity":           NewSecurity,
-		"SetSkipSSRFCheck":      SetSkipSSRFCheck,
-		"SetSSRFAllowedHosts":   SetSSRFAllowedHosts,
-		"NewSSRFSafeTransport":  NewSSRFSafeTransport,
-	}
-	for name, fn := range functions {
-		if fn == nil {
-			t.Errorf("security function %s should not be nil", name)
-		}
-	}
-}
-
-func TestValidatorFunctions_NonNil(t *testing.T) {
-	functions := map[string]any{
-		"ValidatePathForOSAutomation":   ValidatePathForOSAutomation,
-		"ValidateHTTPMethod":            ValidateHTTPMethod,
-		"ValidateFormActionURL":         ValidateFormActionURL,
-		"ValidateCookieHeader":          ValidateCookieHeader,
-		"SanitizeForContentDisposition": SanitizeForContentDisposition,
-		"SanitizeForAppleScript":        SanitizeForAppleScript,
-		"SanitizeForSendKeys":           SanitizeForSendKeys,
-	}
-	for name, fn := range functions {
-		if fn == nil {
-			t.Errorf("validator function %s should not be nil", name)
-		}
-	}
-}
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-func TestConstants_SaneValues(t *testing.T) {
-	if MaxBase64FileSize <= 0 {
-		t.Errorf("MaxBase64FileSize should be positive, got %d", MaxBase64FileSize)
-	}
-	if DefaultEscalationTimeoutMs <= 0 {
-		t.Errorf("DefaultEscalationTimeoutMs should be positive, got %d", DefaultEscalationTimeoutMs)
-	}
-}
-
-func TestProgressTierConstants(t *testing.T) {
-	// Verify the tier constants are distinct.
-	tiers := map[ProgressTier]bool{
-		ProgressTierSimple:   true,
-		ProgressTierPeriodic: true,
-		ProgressTierDetailed: true,
-	}
-	if len(tiers) != 3 {
-		t.Error("expected 3 distinct ProgressTier values")
-	}
-}
 
 // ---------------------------------------------------------------------------
 // HTTP handlers: method enforcement

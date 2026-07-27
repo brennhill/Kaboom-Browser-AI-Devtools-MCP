@@ -14,6 +14,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -34,7 +35,7 @@ func saveDrawScreenshot(dataURL string, tabID int) (string, error) {
 		return "", dirErr
 	}
 	path := filepath.Join(dir, filename)
-	if !isWithinDir(path, dir) {
+	if !uploadsec.IsWithinDir(path, dir) {
 		return "", nil
 	}
 	// #nosec G306 -- path is validated to remain within screenshots dir

@@ -13,6 +13,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
 // version is set at build time via -ldflags "-X main.version=..."
@@ -58,8 +59,8 @@ const (
 
 var (
 	// Upload automation security flags (set by CLI flags, consumed by ToolHandler)
-	osUploadAutomationFlag bool            // --enable-os-upload-automation (Stage 4 only)
-	uploadSecurityConfig   *UploadSecurity // validated upload security config
+	osUploadAutomationFlag bool                // --enable-os-upload-automation (Stage 4 only)
+	uploadSecurityConfig   *uploadsec.Security // validated upload security config
 
 	startupWarnings []string
 )

@@ -1,8 +1,8 @@
-// handlers.go — HTTP handler functions for upload route dispatch, delegating core logic to internal/upload.
-// Why: Provides the HTTP-facing upload endpoints while keeping validation and streaming in a testable internal package.
+// handlers.go — HTTP endpoint adapters for the canonical upload stages.
+// Why: Keeps upload transport and stage behavior together without compatibility layers.
 // Docs: docs/features/feature/file-upload/index.md
 
-package uploadhandler
+package httpapi
 
 import (
 	"encoding/json"
@@ -11,16 +11,11 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/osauto"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
 // JSONResponder writes a JSON response with the given HTTP status code.
 type JSONResponder func(w http.ResponseWriter, status int, data any)
-
-// Exported function variables for direct calls by test helpers and adapters.
-var (
-	HandleFileRead    = upload.HandleFileRead
-	HandleDialogInject = upload.HandleDialogInject
-)
 
 // Internal function variables for HTTP handler delegation (testable via replacement).
 var (
@@ -40,16 +35,16 @@ var (
 // Failure semantics:
 // - Invalid JSON/body size violations return 400.
 // - File-not-found maps to 404; permission errors map to 403; other validation errors map to 400.
-func HandleFileReadHTTP(w http.ResponseWriter, r *http.Request, securityConfig *Security, jsonResponse JSONResponder) {
+func HandleFileReadHTTP(w http.ResponseWriter, r *http.Request, securityConfig *uploadsec.Security, jsonResponse JSONResponder) {
 	if r.Method != "POST" {
 		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, 1024*1024) // 1MB max for request body
-	var req FileReadRequest
+	var req upload.FileReadRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonResponse(w, http.StatusBadRequest, FileReadResponse{
+		jsonResponse(w, http.StatusBadRequest, upload.FileReadResponse{
 			Success: false,
 			Error:   "Invalid JSON: " + err.Error(),
 		})
@@ -78,16 +73,16 @@ func HandleFileReadHTTP(w http.ResponseWriter, r *http.Request, securityConfig *
 //
 // Failure semantics:
 // - Invalid payloads return 400; stage implementation errors are returned as validation failures.
-func HandleFileDialogInjectHTTP(w http.ResponseWriter, r *http.Request, securityConfig *Security, jsonResponse JSONResponder) {
+func HandleFileDialogInjectHTTP(w http.ResponseWriter, r *http.Request, securityConfig *uploadsec.Security, jsonResponse JSONResponder) {
 	if r.Method != "POST" {
 		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, 1024*1024)
-	var req FileDialogInjectRequest
+	var req upload.FileDialogInjectRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonResponse(w, http.StatusBadRequest, StageResponse{
+		jsonResponse(w, http.StatusBadRequest, upload.StageResponse{
 			Success: false,
 			Error:   "Invalid JSON: " + err.Error(),
 		})
@@ -110,16 +105,16 @@ func HandleFileDialogInjectHTTP(w http.ResponseWriter, r *http.Request, security
 //
 // Failure semantics:
 // - Request decode errors return 400; internal stage failures are returned as 400 to keep client retry semantics explicit.
-func HandleFormSubmitHTTP(w http.ResponseWriter, r *http.Request, securityConfig *Security, jsonResponse JSONResponder) {
+func HandleFormSubmitHTTP(w http.ResponseWriter, r *http.Request, securityConfig *uploadsec.Security, jsonResponse JSONResponder) {
 	if r.Method != "POST" {
 		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, 10*1024*1024) // 10MB max for form metadata
-	var req FormSubmitRequest
+	var req upload.FormSubmitRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonResponse(w, http.StatusBadRequest, StageResponse{
+		jsonResponse(w, http.StatusBadRequest, upload.StageResponse{
 			Success: false,
 			Error:   "Invalid JSON: " + err.Error(),
 		})
@@ -145,7 +140,7 @@ func HandleFormSubmitHTTP(w http.ResponseWriter, r *http.Request, securityConfig
 //
 // Failure semantics:
 // - Disabled mode returns 403 and does not attempt automation primitives.
-func HandleOSAutomationHTTP(w http.ResponseWriter, r *http.Request, osAutomationEnabled bool, securityConfig *Security, jsonResponse JSONResponder) {
+func HandleOSAutomationHTTP(w http.ResponseWriter, r *http.Request, osAutomationEnabled bool, securityConfig *uploadsec.Security, jsonResponse JSONResponder) {
 	if r.Method != "POST" {
 		w.Header().Set("Allow", "POST")
 		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
@@ -153,7 +148,7 @@ func HandleOSAutomationHTTP(w http.ResponseWriter, r *http.Request, osAutomation
 	}
 
 	if !osAutomationEnabled {
-		jsonResponse(w, http.StatusForbidden, StageResponse{
+		jsonResponse(w, http.StatusForbidden, upload.StageResponse{
 			Success: false,
 			Stage:   4,
 			Error:   "OS-level upload automation is disabled. Start server with --enable-os-upload-automation flag.",
@@ -162,9 +157,9 @@ func HandleOSAutomationHTTP(w http.ResponseWriter, r *http.Request, osAutomation
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, 1024*1024)
-	var req OSAutomationInjectRequest
+	var req upload.OSAutomationInjectRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonResponse(w, http.StatusBadRequest, StageResponse{
+		jsonResponse(w, http.StatusBadRequest, upload.StageResponse{
 			Success: false,
 			Stage:   4,
 			Error:   "Invalid JSON: " + err.Error(),
@@ -193,7 +188,7 @@ func HandleOSAutomationDismissHTTP(w http.ResponseWriter, r *http.Request, osAut
 	}
 
 	if !osAutomationEnabled {
-		jsonResponse(w, http.StatusForbidden, StageResponse{
+		jsonResponse(w, http.StatusForbidden, upload.StageResponse{
 			Success: false,
 			Stage:   4,
 			Error:   "OS automation is disabled.",

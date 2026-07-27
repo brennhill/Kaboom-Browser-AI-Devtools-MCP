@@ -36,6 +36,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
 // Note: Response helpers, error codes, and validation functions have been moved to:
@@ -90,7 +91,7 @@ type ToolHandler struct {
 	apiContractRuntime *apicontract.Runtime
 
 	// Upload security config (folder-scoped permissions + denylist)
-	uploadSecurity *UploadSecurity
+	uploadSecurity *uploadsec.Security
 
 	// Cold-start readiness gate timeout: how long requireExtension waits
 	// for the extension to connect before failing. MaybeWaitForCommand only

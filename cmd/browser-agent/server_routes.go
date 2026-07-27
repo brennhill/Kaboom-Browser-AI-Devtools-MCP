@@ -17,6 +17,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tracking"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/httpapi"
 )
 
 //go:embed openapi.json
@@ -43,7 +44,7 @@ func setupHTTPRoutes(server *Server, cap *capture.Store) (*http.ServeMux, *MCPHa
 		registerCaptureRoutes(mux, server, cap)
 	}
 
-	registerUploadRoutes(mux, server)
+	registerUploadRoutes(mux)
 	mcpHandler := registerCoreRoutes(mux, server, cap)
 
 	return mux, mcpHandler
@@ -165,26 +166,26 @@ func handleClientByID(w http.ResponseWriter, r *http.Request, cap *capture.Store
 // NOT MCP — These are extension-to-daemon escalation stages for file upload automation.
 // AI agents use interact(action: "upload") via MCP instead.
 // Stages 1-3 are always available; Stage 4 requires --enable-os-upload-automation.
-func registerUploadRoutes(mux *http.ServeMux, server *Server) {
+func registerUploadRoutes(mux *http.ServeMux) {
 	// NOT MCP — File read metadata (upload escalation stage 1, always available)
 	mux.HandleFunc("/api/file/read", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		server.handleFileRead(w, r)
+		httpapi.HandleFileReadHTTP(w, r, uploadSecurityConfig, jsonResponse)
 	})))
 	// NOT MCP — File dialog injection (upload escalation stage 2, always available)
 	mux.HandleFunc("/api/file/dialog/inject", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		server.handleFileDialogInject(w, r)
+		httpapi.HandleFileDialogInjectHTTP(w, r, uploadSecurityConfig, jsonResponse)
 	})))
 	// NOT MCP — Form submit helper (upload escalation stage 3, always available)
 	mux.HandleFunc("/api/form/submit", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		server.handleFormSubmit(w, r)
+		httpapi.HandleFormSubmitHTTP(w, r, uploadSecurityConfig, jsonResponse)
 	})))
 	// NOT MCP — OS-level file dialog automation (upload escalation stage 4, requires --enable-os-upload-automation)
 	mux.HandleFunc("/api/os-automation/inject", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		server.handleOSAutomation(w, r, osUploadAutomationFlag)
+		httpapi.HandleOSAutomationHTTP(w, r, osUploadAutomationFlag, uploadSecurityConfig, jsonResponse)
 	})))
 	// NOT MCP — Dismiss dangling file dialog via Escape key (cleanup after failed Stage 4)
 	mux.HandleFunc("/api/os-automation/dismiss", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		server.handleOSAutomationDismiss(w, r, osUploadAutomationFlag)
+		httpapi.HandleOSAutomationDismissHTTP(w, r, osUploadAutomationFlag, jsonResponse)
 	})))
 }
 
