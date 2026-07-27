@@ -8,6 +8,7 @@ last_reviewed: 2026-07-27
 code_paths:
   - extension/content/draw-mode.js
   - internal/annotation/store.go
+  - internal/annotation/draw_sessions_handler.go
   - cmd/browser-agent/tools_analyze_annotations_handlers.go
   - cmd/browser-agent/server_routes_media_draw_mode.go
   - cmd/browser-agent/tools_generate.go
@@ -26,10 +27,11 @@ code_paths:
 test_paths:
   - tests/extension/draw-mode.test.js
   - internal/annotation/store_test.go
+  - internal/annotation/draw_sessions_handler_test.go
+  - cmd/browser-agent/tools_analyze_annotations_draw_test.go
   - cmd/browser-agent/tools_analyze_annotations_test.go
   - cmd/browser-agent/tools_generate_annotations_test.go
   - cmd/browser-agent/internal/toolgenerate/annotations/annotations_test.go
-  - scripts/smoke-tests/31-annotation-parity.sh
   - tests/extension/entry-point-parity.test.js
   - scripts/smoke-tests/31-annotation-parity.sh
   - scripts/smoke-tests/annotation-parity-benchmark.sh
@@ -66,6 +68,7 @@ last_verified_date: 2026-03-05
 ### Go (store + handler)
 - `internal/annotation/store.go` — `Detail` struct with ParentContext, Siblings, CSSFramework fields; session TTL = 2 hours
 - `internal/annotation/store_clear.go` — `ClearAll()` resets anonymous sessions, named sessions, details, and waiters (used by `configure(what:"clear", buffer:"all")` to prevent stale replay)
+- `internal/annotation/draw_sessions_handler.go` — persisted draw history, traversal-safe loading, and annotation-store hydration
 - `cmd/browser-agent/tools_analyze_annotations_handlers.go` — detail response enrichment, error correlation, LLM hints, and cross-project scope safety metadata (`projects`, `scope_ambiguous`, `scope_warning`, `filter_applied`)
 - `cmd/browser-agent/tools_analyze_annotations_handlers.go` — annotation retrieval, error correlation, and detail response shaping
 - `cmd/browser-agent/internal/toolgenerate/annotations/visual.go` — resilient visual test generation via locator fallback candidates (`css`, `testid`, `role`, `label`, `placeholder`, `text`)
@@ -76,6 +79,7 @@ last_verified_date: 2026-03-05
 ### Tests
 - `tests/extension/draw-mode.test.js` — "Element Detail Enrichment" describe block
 - `internal/annotation/store_test.go` — `TestStore_SessionTTL_Is2Hours`
+- `internal/annotation/draw_sessions_handler_test.go` and `cmd/browser-agent/tools_analyze_annotations_draw_test.go` — safe persisted-session loading and end-to-end store hydration
 - `cmd/browser-agent/tools_analyze_annotations_test.go` — enrichment fields (`selector_candidates`, `js_framework`, `component`), error correlation, hints tests
 - `cmd/browser-agent/tools_generate_annotations_test.go` — resilient locator fallback generation tests
 - `cmd/browser-agent/internal/toolgenerate/annotations/annotations_test.go` — generator unit tests (JS escaping, locator candidates, Markdown report, issue list, Playwright script) and handler no-data/named-session paths

@@ -10,6 +10,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/combinedaudit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/inspect"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
@@ -99,6 +100,16 @@ func (h *ToolHandler) toolAnalyze(req JSONRPCRequest, args json.RawMessage) JSON
 
 func (h *ToolHandler) toolAnalyzePageSummary(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 	return h.interactAction().HandleContentExtraction(req, args, "page_summary", "page_summary")
+}
+
+func (h *ToolHandler) toolListDrawHistory(req JSONRPCRequest, _ json.RawMessage) JSONRPCResponse {
+	dir, err := screenshotsDir()
+	return annotation.ListDrawHistory(req, dir, err)
+}
+
+func (h *ToolHandler) toolGetDrawSession(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	dir, err := screenshotsDir()
+	return annotation.LoadDrawSession(h.annotationStore, req, args, dir, err)
 }
 
 func (h *ToolHandler) NetworkWaterfallEntries() []capture.NetworkWaterfallEntry {
