@@ -82,6 +82,7 @@ test_paths:
   - scripts/check-bridge-stdout-invariant.sh
   - cmd/browser-agent/handler_consistency_test.go
   - cmd/browser-agent/server_routes_unit_test.go
+  - cmd/browser-agent/static_branding_test.go
   - cmd/browser-agent/server_routes_debug_usage_test.go
   - cmd/browser-agent/dashboard_test.go
   - cmd/browser-agent/exit_diagnostics_test.go

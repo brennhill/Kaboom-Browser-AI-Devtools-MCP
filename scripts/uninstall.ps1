@@ -29,7 +29,7 @@ $EXT_DIR = if ($env:KABOOM_EXTENSION_DIR) { $env:KABOOM_EXTENSION_DIR } else { J
 $APPDATA_DIR = if ($env:APPDATA) { $env:APPDATA } else { Join-Path $HOME "AppData\Roaming" }
 
 # Canonical MCP server key plus every legacy key older installs may have
-# written (must match installerLegacyServerKeys in native_install.go).
+# written (must match installerLegacyServerKeys in internal/nativeinstall/installer.go).
 $SERVER_NAMES = @(
     'kaboom-browser-devtools',
     'kaboom-agentic-browser',

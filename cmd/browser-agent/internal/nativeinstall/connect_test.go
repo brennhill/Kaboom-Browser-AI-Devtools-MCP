@@ -1,5 +1,5 @@
-// native_install_connect_test.go — Tests for the post-install extension connect loop.
-package main
+// connect_test.go — Tests for the post-install extension connect loop.
+package nativeinstall
 
 import (
 	"context"
@@ -29,12 +29,12 @@ func portFromURL(t *testing.T, raw string) int {
 
 func TestConnectPhase(t *testing.T) {
 	cases := []struct {
-		h    installHealth
+		h    Health
 		want string
 	}{
-		{installHealth{}, "daemon_unreachable"},
-		{installHealth{reachable: true}, "waiting_extension"},
-		{installHealth{reachable: true, extensionConnected: true}, "connected"},
+		{Health{}, "daemon_unreachable"},
+		{Health{Reachable: true}, "waiting_extension"},
+		{Health{Reachable: true, ExtensionConnected: true}, "connected"},
 	}
 	for _, tc := range cases {
 		if got := connectPhase(tc.h); got != tc.want {
@@ -60,15 +60,15 @@ func fakeClock() (func() time.Time, func(time.Duration) <-chan time.Time) {
 func TestWaitForExtensionConnected_ConnectsAfterPolls(t *testing.T) {
 	now, after := fakeClock()
 	// unreachable → up-but-waiting → connected
-	seq := []installHealth{
+	seq := []Health{
 		{},
-		{reachable: true},
-		{reachable: true, extensionConnected: true},
+		{Reachable: true},
+		{Reachable: true, ExtensionConnected: true},
 	}
 	i := 0
 	var lines []string
 	res := waitForExtensionConnected(context.Background(), 7890, 30*time.Second, 750*time.Millisecond, connectWaitDeps{
-		fetch: func(context.Context, int) installHealth {
+		fetch: func(context.Context, int) Health {
 			h := seq[i]
 			if i < len(seq)-1 {
 				i++
@@ -94,7 +94,7 @@ func TestWaitForExtensionConnected_ConnectsAfterPolls(t *testing.T) {
 func TestWaitForExtensionConnected_Timeout(t *testing.T) {
 	now, after := fakeClock()
 	res := waitForExtensionConnected(context.Background(), 7890, 2*time.Second, 750*time.Millisecond, connectWaitDeps{
-		fetch: func(context.Context, int) installHealth { return installHealth{reachable: true} },
+		fetch: func(context.Context, int) Health { return Health{Reachable: true} },
 		now:   now,
 		after: after,
 	})
@@ -109,7 +109,7 @@ func TestWaitForExtensionConnected_Timeout(t *testing.T) {
 func TestWaitForExtensionConnected_TimeoutUnreachable(t *testing.T) {
 	now, after := fakeClock()
 	res := waitForExtensionConnected(context.Background(), 7890, 1500*time.Millisecond, 750*time.Millisecond, connectWaitDeps{
-		fetch: func(context.Context, int) installHealth { return installHealth{} },
+		fetch: func(context.Context, int) Health { return Health{} },
 		now:   now,
 		after: after,
 	})
@@ -124,7 +124,7 @@ func TestWaitForExtensionConnected_AbortSkips(t *testing.T) {
 	cancel() // Ctrl-C before the first poll: must skip, not poll.
 	polled := false
 	res := waitForExtensionConnected(ctx, 7890, 30*time.Second, 750*time.Millisecond, connectWaitDeps{
-		fetch: func(context.Context, int) installHealth { polled = true; return installHealth{} },
+		fetch: func(context.Context, int) Health { polled = true; return Health{} },
 		now:   now,
 		after: after,
 	})
@@ -145,10 +145,10 @@ func TestWaitForExtensionConnected_AbortDuringWaitReturnsPromptly(t *testing.T) 
 	neverAfter := func(time.Duration) <-chan time.Time { return make(chan time.Time) }
 	polls := 0
 	res := waitForExtensionConnected(ctx, 7890, 30*time.Second, 750*time.Millisecond, connectWaitDeps{
-		fetch: func(context.Context, int) installHealth {
+		fetch: func(context.Context, int) Health {
 			polls++
 			cancel() // Ctrl-C arrives mid-wait, right after the first poll.
-			return installHealth{reachable: true}
+			return Health{Reachable: true}
 		},
 		now:   now,
 		after: neverAfter,
@@ -211,9 +211,9 @@ func TestFetchInstallHealth_LiveServer(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	h := fetchInstallHealth(context.Background(), portFromURL(t, srv.URL), 2*time.Second)
-	if !h.reachable || !h.extensionConnected || h.version != "0.8.6" {
-		t.Fatalf("fetchInstallHealth = %+v, want reachable+connected+v0.8.6", h)
+	h := FetchHealth(context.Background(), portFromURL(t, srv.URL), 2*time.Second)
+	if !h.Reachable || !h.ExtensionConnected || h.Version != "0.8.6" {
+		t.Fatalf("FetchHealth = %+v, want reachable+connected+v0.8.6", h)
 	}
 }
 
@@ -223,9 +223,9 @@ func TestFetchInstallHealth_UpButExtensionNotConnected(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	h := fetchInstallHealth(context.Background(), portFromURL(t, srv.URL), 2*time.Second)
-	if !h.reachable || h.extensionConnected {
-		t.Fatalf("fetchInstallHealth = %+v, want reachable but not connected", h)
+	h := FetchHealth(context.Background(), portFromURL(t, srv.URL), 2*time.Second)
+	if !h.Reachable || h.ExtensionConnected {
+		t.Fatalf("FetchHealth = %+v, want reachable but not connected", h)
 	}
 }
 
@@ -235,9 +235,9 @@ func TestFetchInstallHealth_NonOKIsReachableOnly(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	h := fetchInstallHealth(context.Background(), portFromURL(t, srv.URL), 2*time.Second)
-	if !h.reachable || h.extensionConnected {
-		t.Fatalf("fetchInstallHealth(503) = %+v, want reachable only", h)
+	h := FetchHealth(context.Background(), portFromURL(t, srv.URL), 2*time.Second)
+	if !h.Reachable || h.ExtensionConnected {
+		t.Fatalf("FetchHealth(503) = %+v, want reachable only", h)
 	}
 }
 
@@ -247,9 +247,9 @@ func TestFetchInstallHealth_UnreachableIsZeroValue(t *testing.T) {
 	port := portFromURL(t, srv.URL)
 	srv.Close()
 
-	h := fetchInstallHealth(context.Background(), port, 500*time.Millisecond)
-	if h.reachable {
-		t.Fatalf("fetchInstallHealth(closed) = %+v, want unreachable", h)
+	h := FetchHealth(context.Background(), port, 500*time.Millisecond)
+	if h.Reachable {
+		t.Fatalf("FetchHealth(closed) = %+v, want unreachable", h)
 	}
 }
 

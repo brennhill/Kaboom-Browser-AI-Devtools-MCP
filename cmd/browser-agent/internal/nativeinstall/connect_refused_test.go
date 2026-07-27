@@ -1,8 +1,8 @@
-// native_install_connect_refused_test.go — fetchInstallHealth must distinguish a
+// connect_refused_test.go — FetchHealth must distinguish a
 // connection-refused failure (nothing listening → definitively gone) from other
 // failures, so the takeover probe can skip its retry budget on a certainty (L).
 
-package main
+package nativeinstall
 
 import (
 	"context"
@@ -24,12 +24,12 @@ func TestFetchInstallHealth_RefusedOnClosedPort(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	h := fetchInstallHealth(ctx, port, time.Second)
+	h := FetchHealth(ctx, port, time.Second)
 
-	if h.reachable {
+	if h.Reachable {
 		t.Fatal("a closed port must not be reachable")
 	}
-	if !h.refused {
+	if !h.Refused {
 		t.Fatal("a closed port must be reported as connection-refused (refused=true) so the probe skips retries")
 	}
 }

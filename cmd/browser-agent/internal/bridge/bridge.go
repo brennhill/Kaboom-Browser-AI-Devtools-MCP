@@ -94,7 +94,7 @@ func (s *daemonState) buildDaemonCmd() (*exec.Cmd, error) {
 	// close, and the daemon's next stderr write dies with SIGPIPE on fd 2 (Go
 	// terminates on a broken pipe to fd 1/2). /dev/null never breaks, so the
 	// spawned daemon stays persistent across the bridge's exit. This mirrors the
-	// installer's startDaemonSilently (native_install.go), which already uses nil.
+	// installer's startDaemonSilently (internal/nativeinstall/installer.go), which already uses nil.
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 	cmd.Stdin = nil

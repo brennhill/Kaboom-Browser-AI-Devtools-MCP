@@ -1,5 +1,5 @@
-// native_install_open_test.go — Tests for the install-time extension folder open.
-package main
+// open_test.go — Tests for the install-time extension folder open.
+package nativeinstall
 
 import (
 	"path/filepath"

@@ -16,6 +16,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/nativeinstall"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 )
@@ -298,6 +299,6 @@ func daemonlifeDeps(server *Server) daemonlife.Deps {
 
 // fetchDaemonHealth reduces a health probe to the facts the takeover policy needs.
 func fetchDaemonHealth(ctx context.Context, port int, timeout time.Duration) (reachable bool, version string, refused bool) {
-	h := fetchInstallHealth(ctx, port, timeout)
-	return h.reachable, h.version, h.refused
+	h := nativeinstall.FetchHealth(ctx, port, timeout)
+	return h.Reachable, h.Version, h.Refused
 }

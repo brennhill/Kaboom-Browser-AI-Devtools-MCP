@@ -19,7 +19,7 @@ code_paths:
   - cmd/browser-agent/internal/toolconfigure/tutorial/playbooks.go
   - Makefile
   - scripts/release/build-crx.js
-  - cmd/browser-agent/native_install.go
+  - cmd/browser-agent/internal/nativeinstall/installer.go
   - npm/kaboom-agentic-browser/lib/extension.js
   - npm/kaboom-agentic-browser/lib/browser.js
   - npm/kaboom-agentic-browser/lib/health.js
@@ -45,9 +45,10 @@ test_paths:
   - internal/configdiscovery/mcp_test.go
   - cmd/browser-agent/stdout_protocol_boundary_test.go
   - cmd/browser-agent/internal/toolconfigure/tutorial/tutorial_test.go
-  - cmd/browser-agent/native_install_test.go
-  - cmd/browser-agent/native_install_open_test.go
-  - cmd/browser-agent/native_install_connect_test.go
+  - cmd/browser-agent/internal/nativeinstall/installer_test.go
+  - cmd/browser-agent/internal/nativeinstall/config_test.go
+  - cmd/browser-agent/internal/nativeinstall/open_test.go
+  - cmd/browser-agent/internal/nativeinstall/connect_test.go
   - npm/kaboom-agentic-browser/lib/config.test.js
   - npm/kaboom-agentic-browser/lib/auto-approve.test.js
   - npm/kaboom-agentic-browser/lib/codex-config.test.js

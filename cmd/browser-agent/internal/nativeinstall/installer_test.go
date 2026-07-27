@@ -1,4 +1,4 @@
-package main
+package nativeinstall
 
 import (
 	"path/filepath"

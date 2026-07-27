@@ -44,7 +44,7 @@ BIN_DIR="$INSTALL_DIR/bin"
 EXT_DIR="${KABOOM_EXTENSION_DIR:-$HOME/KaboomAgenticDevtoolExtension}"
 
 # Canonical MCP server key plus every legacy key older installs may have
-# written (must match installerLegacyServerKeys in native_install.go).
+# written (must match installerLegacyServerKeys in internal/nativeinstall/installer.go).
 SERVER_NAMES="kaboom-browser-devtools kaboom-agentic-browser kaboom gasoline-browser-devtools gasoline-agentic-browser gasoline strum-browser-devtools strum-agentic-browser strum"
 
 # Managed skill files start with one of these markers (see lib/skills.js).

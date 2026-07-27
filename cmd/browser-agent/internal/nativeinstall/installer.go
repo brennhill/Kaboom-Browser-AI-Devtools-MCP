@@ -1,7 +1,7 @@
 // Purpose: Auto-detects and configures MCP client integrations (Claude Code, Cursor, Windsurf, etc.) during --install.
 // Why: Provides zero-config onboarding by writing the correct JSON config for each supported MCP client.
 
-package main
+package nativeinstall
 
 import (
 	"context"
@@ -20,12 +20,13 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
 // installerLegacyServerKeys are historical MCP config IDs that are migrated
-// to the canonical mcpServerName during install.
+// to the canonical identity.MCPServerName during install.
 var installerLegacyServerKeys = []string{
 	"kaboom-agentic-browser",
 	"kaboom",
@@ -185,12 +186,14 @@ func fileConfigTargets(home string) []mcpFileConfig {
 	return configs
 }
 
-// runNativeInstall detects and configures all supported MCP clients.
-func runNativeInstall() {
+// Run detects and configures all supported MCP clients.
+func Run(forceCleanup func() error) {
 	// 1. Silent Reset (Kill stale instances)
 	// We do this first to ensure config files aren't being held open
 	// and no old versions are interfering.
-	_ = runForceCleanupQuietly()
+	if forceCleanup != nil {
+		_ = forceCleanup()
+	}
 
 	exe, err := os.Executable()
 	if err != nil {
@@ -296,7 +299,7 @@ func installClaudeCode(exePath string) error {
 	// add-json fails if the server is already registered; remove any previous
 	// registration first so reinstalls stay idempotent. Failures are ignored:
 	// "not registered" is the expected first-install outcome.
-	removeCmd := exec.Command("claude", "mcp", "remove", "--scope", "user", mcpServerName)
+	removeCmd := exec.Command("claude", "mcp", "remove", "--scope", "user", identity.MCPServerName)
 	removeCmd.Env = env
 	_ = removeCmd.Run() //nolint:errcheck // best-effort cleanup before re-adding
 
@@ -306,7 +309,7 @@ func installClaudeCode(exePath string) error {
 	}
 	data, _ := json.Marshal(entry)
 
-	cmd := exec.Command("claude", "mcp", "add-json", "--scope", "user", mcpServerName)
+	cmd := exec.Command("claude", "mcp", "add-json", "--scope", "user", identity.MCPServerName)
 	cmd.Stdin = strings.NewReader(string(data))
 	cmd.Env = env
 
@@ -356,20 +359,20 @@ func mergeJSONConfig(path, key, exePath string, isCustom bool) error {
 
 	if isCustom {
 		if key == "mcp" { // OpenCode
-			servers[mcpServerName] = map[string]any{
+			servers[identity.MCPServerName] = map[string]any{
 				"type":    "local",
 				"command": []string{exePath},
 				"enabled": true,
 			}
 		} else if key == "context_servers" { // Zed
-			servers[mcpServerName] = map[string]any{
+			servers[identity.MCPServerName] = map[string]any{
 				"source":  "custom",
 				"command": exePath,
 				"args":    []string{},
 			}
 		}
 	} else {
-		servers[mcpServerName] = map[string]any{
+		servers[identity.MCPServerName] = map[string]any{
 			"command": exePath,
 			"args":    []string{},
 		}
@@ -401,22 +404,22 @@ const (
 	connectHealthRead  = 800 * time.Millisecond
 )
 
-type installHealth struct {
-	reachable          bool
-	extensionConnected bool
-	version            string
-	refused            bool
+type Health struct {
+	Reachable          bool
+	ExtensionConnected bool
+	Version            string
+	Refused            bool
 }
 
 func isConnRefused(err error) bool {
 	return errors.Is(err, syscall.ECONNREFUSED)
 }
 
-func connectPhase(h installHealth) string {
-	if h.extensionConnected {
+func connectPhase(h Health) string {
+	if h.ExtensionConnected {
 		return "connected"
 	}
-	if h.reachable {
+	if h.Reachable {
 		return "waiting_extension"
 	}
 	return "daemon_unreachable"
@@ -447,7 +450,7 @@ func connectHintLine(lastPhase string, port int, extDir string) string {
 }
 
 type connectWaitDeps struct {
-	fetch func(ctx context.Context, port int) installHealth
+	fetch func(ctx context.Context, port int) Health
 	now   func() time.Time
 	after func(time.Duration) <-chan time.Time
 	sink  func(string)
@@ -489,23 +492,23 @@ func waitForExtensionConnected(ctx context.Context, port int, timeout, poll time
 	}
 }
 
-func fetchInstallHealth(ctx context.Context, port int, timeout time.Duration) installHealth {
+func FetchHealth(ctx context.Context, port int, timeout time.Duration) Health {
 	client := &http.Client{Timeout: timeout}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://127.0.0.1:%d/health", port), nil)
 	if err != nil {
-		return installHealth{}
+		return Health{}
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return installHealth{refused: isConnRefused(err)}
+		return Health{Refused: isConnRefused(err)}
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
-		return installHealth{reachable: true}
+		return Health{Reachable: true}
 	}
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 256*1024))
 	if err != nil {
-		return installHealth{reachable: true}
+		return Health{Reachable: true}
 	}
 	var parsed struct {
 		Version string `json:"version"`
@@ -514,9 +517,9 @@ func fetchInstallHealth(ctx context.Context, port int, timeout time.Duration) in
 		} `json:"capture"`
 	}
 	if err := json.Unmarshal(body, &parsed); err != nil {
-		return installHealth{reachable: true}
+		return Health{Reachable: true}
 	}
-	return installHealth{reachable: true, extensionConnected: parsed.Capture.ExtensionConnected, version: parsed.Version}
+	return Health{Reachable: true, ExtensionConnected: parsed.Capture.ExtensionConnected, Version: parsed.Version}
 }
 
 func installWaitDisabled() bool {
@@ -542,7 +545,7 @@ func runExtensionConnectWait(port int, extDir string) {
 	defer stop()
 	diag.Printf("\n\033[1;33m⏳ Waiting for the browser extension to connect (Ctrl-C to skip)…\033[0m\n")
 	res := waitForExtensionConnected(ctx, port, connectWaitTimeout, connectPollEvery, connectWaitDeps{
-		fetch: func(c context.Context, p int) installHealth { return fetchInstallHealth(c, p, connectHealthRead) },
+		fetch: func(c context.Context, p int) Health { return FetchHealth(c, p, connectHealthRead) },
 		now:   time.Now,
 		after: time.After,
 		sink:  func(line string) { diag.Printf("%s\n", line) },
