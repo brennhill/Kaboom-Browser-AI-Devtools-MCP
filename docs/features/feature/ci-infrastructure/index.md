@@ -4,9 +4,17 @@ feature_id: feature-ci-infrastructure
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-27
 code_paths:
-test_paths: []
+  - cmd/browser-agent/ci.go
+  - cmd/browser-agent/internal/ciapi/handlers.go
+  - cmd/browser-agent/internal/ciapi/snapshot.go
+  - cmd/browser-agent/internal/ciapi/types.go
+  - cmd/browser-agent/server_routes.go
+test_paths:
+  - cmd/browser-agent/internal/ciapi/snapshot_test.go
+  - cmd/browser-agent/ci_test.go
+  - cmd/browser-agent/ci_unit_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -34,4 +42,12 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-Add concrete implementation and test links here as this feature evolves.
+- HTTP route adapters: `cmd/browser-agent/ci.go`
+- Snapshot, clear, and test-boundary endpoint behavior:
+  `cmd/browser-agent/internal/ciapi/handlers.go`
+- Snapshot filtering, statistics, and payload contracts:
+  `cmd/browser-agent/internal/ciapi/snapshot.go`,
+  `cmd/browser-agent/internal/ciapi/types.go`
+- Characterization and route tests:
+  `cmd/browser-agent/internal/ciapi/snapshot_test.go`,
+  `cmd/browser-agent/ci_test.go`, `cmd/browser-agent/ci_unit_test.go`

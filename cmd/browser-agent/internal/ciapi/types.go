@@ -1,15 +1,18 @@
-// Purpose: Shared request/response payload types for CI endpoints.
-// Why: Keeps HTTP handler code concise and gives snapshot contracts a single definition site.
+// types.go — CI snapshot and test-boundary HTTP payload contracts.
+// Docs: docs/features/feature/ci-infrastructure/index.md
 
-package main
+package ciapi
 
-import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+)
 
 // SnapshotResponse is the aggregated state returned by GET /snapshot.
 type SnapshotResponse struct {
 	Timestamp       string                   `json:"timestamp"`
 	TestID          string                   `json:"test_id,omitempty"`
-	Logs            []LogEntry               `json:"logs"`
+	Logs            []mcp.LogEntry           `json:"logs"`
 	WebSocket       []capture.WebSocketEvent `json:"websocket_events"`
 	NetworkBodies   []capture.NetworkBody    `json:"network_bodies"`
 	EnhancedActions []capture.EnhancedAction `json:"enhanced_actions,omitempty"`
@@ -28,5 +31,5 @@ type SnapshotStats struct {
 // TestBoundaryRequest is the request body for POST /test-boundary.
 type TestBoundaryRequest struct {
 	TestID string `json:"test_id"`
-	Action string `json:"action"` // "start" or "end"
+	Action string `json:"action"`
 }
