@@ -8,7 +8,7 @@ last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/internal/toolconfigure/noise_actions.go
   - internal/mcp/response.go
-  - cmd/browser-agent/noise_autorun.go
+  - cmd/browser-agent/internal/noiseautorun/autorun.go
   - cmd/browser-agent/internal/toolconfigure/auditlog/handler.go
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/tools_configure_sessions.go
@@ -20,6 +20,8 @@ code_paths:
   - internal/noise/noise_rules.go
   - internal/noise/noise_stats.go
 test_paths:
+  - cmd/browser-agent/internal/noiseautorun/autorun_test.go
+  - cmd/browser-agent/noise_first_connect_test.go
   - cmd/browser-agent/internal/toolconfigure/auditlog/handler_test.go
   - internal/noise/noise_test.go
   - internal/noise/noise_detect_test.go
@@ -53,4 +55,7 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-Add concrete implementation and test links here as this feature evolves.
+Automatic detection scheduling, navigation debouncing, first-connect lifecycle
+wiring, and telemetry adaptation are owned together by
+`cmd/browser-agent/internal/noiseautorun`. The root handler retains only its
+required `mcp.NoiseFilterer` method and initialization wiring.

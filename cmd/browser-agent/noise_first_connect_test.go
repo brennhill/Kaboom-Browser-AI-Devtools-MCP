@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/noiseautorun"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
@@ -21,7 +22,7 @@ func simulateExtensionConnect(cap *capture.Store) {
 }
 
 func waitForNoiseFirstConnectCallback() {
-	time.Sleep(noiseFirstConnectDelay() + 150*time.Millisecond)
+	time.Sleep(noiseautorun.FirstConnectDelay() + 150*time.Millisecond)
 }
 
 func TestNoiseAutoDetectOnFirstSync_TriggersOnce(t *testing.T) {
@@ -39,7 +40,7 @@ func TestNoiseAutoDetectOnFirstSync_TriggersOnce(t *testing.T) {
 	mcpHandler := NewToolHandler(server, cap)
 	handler := mcpHandler.toolHandler.(*ToolHandler)
 
-	// Override runNoiseAutoDetect to count invocations
+	// Override first-connect detection to count invocations.
 	handler.noiseFirstConnectFn = func() { detectCount.Add(1) }
 
 	// Simulate first extension connection
@@ -68,7 +69,7 @@ func TestNoiseAutoDetectOnFirstSync_DoesNotRepeat(t *testing.T) {
 	mcpHandler := NewToolHandler(server, cap)
 	handler := mcpHandler.toolHandler.(*ToolHandler)
 
-	// Override runNoiseAutoDetect to count invocations
+	// Override first-connect detection to count invocations.
 	handler.noiseFirstConnectFn = func() { detectCount.Add(1) }
 
 	// Simulate multiple connections (extension polls repeatedly)

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/noiseautorun"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/summarypref"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testgenhandler"
@@ -26,6 +27,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/audit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/issuereport"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
@@ -135,7 +137,7 @@ type ToolHandler struct {
 	extensionReadinessTimeout time.Duration
 
 	// noiseFirstConnectFn overrides the noise auto-detect function for first-connection.
-	// When nil, runNoiseAutoDetect() is used. Set in tests to inject counting stubs.
+	// When nil, the canonical noiseautorun detector is used.
 	noiseFirstConnectFn func()
 
 	// issueCommandRunner overrides the exec runner for issue submission.
@@ -145,6 +147,14 @@ type ToolHandler struct {
 	// usageCounter tracks tool:action call counts for periodic usage beacons.
 	// When nil, usage counting is disabled (backwards compatible).
 	usageTracker *telemetry.UsageTracker
+}
+
+// IsConsoleNoise implements mcp.NoiseFilterer.
+func (h *ToolHandler) IsConsoleNoise(entry map[string]any) bool {
+	if h.noiseConfig == nil {
+		return false
+	}
+	return h.noiseConfig.IsConsoleNoise(entry)
 }
 
 // maybeWaitForCommand, formatCommandResult, and related async infrastructure
@@ -441,8 +451,18 @@ func NewToolHandler(server *Server, captureStore *capture.Store) *MCPHandler {
 			handler.capture.CompleteCommand(correlationID, result, "")
 		})
 	}
-	wireNoiseAutoDetect(handler)
-	wireNoiseFirstConnect(handler)
+	detectNoise := func() {
+		noiseautorun.Detect(handler.noiseConfig, handler.capture, handler.server.logs.Entries())
+	}
+	noiseautorun.WireNavigation(handler.capture, detectNoise)
+	noiseautorun.WireFirstConnect(handler.capture, handler.shutdownCtx.Done(), func() {
+		if handler.noiseFirstConnectFn != nil {
+			handler.noiseFirstConnectFn()
+			return
+		}
+		detectNoise()
+		diag.Printf("[Kaboom] noise auto-detect: ran on first extension connection\n")
+	})
 
 	handler.securityScannerImpl = scan.NewScanner()
 	handler.thirdPartyAuditorImpl = thirdparty.NewThirdPartyAuditor()
