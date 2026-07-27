@@ -6,6 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-27
 code_paths:
+  - cmd/browser-agent/main.go
   - cmd/browser-agent/internal/cli/cli_output.go
   - cmd/browser-agent/internal/health/doctor.go
   - cmd/browser-agent/internal/health/doctor_fastpath_telemetry.go

@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/cli"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
@@ -23,6 +24,17 @@ var version = "0.8.8"
 // exists — bridge.Deps and cli.Deps both take a plain func(string) string.
 func daemonProcessArgv0(exePath string) string {
 	return procctl.Argv0ForVersion(exePath, version)
+}
+
+func cliRuntimeConfig() cli.RuntimeConfig {
+	return cli.RuntimeConfig{
+		DefaultPort: defaultPort, MaxPostBodySize: maxPostBodySize,
+		IsServerRunning: bridge.IsServerRunning,
+		WaitForServer: func(port int, timeout time.Duration) bool {
+			return bridge.WaitForServer(port, timeout)
+		},
+		DaemonProcessArgv0: daemonProcessArgv0,
+	}
 }
 
 func init() {

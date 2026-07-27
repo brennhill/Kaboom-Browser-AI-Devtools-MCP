@@ -4,8 +4,34 @@
 package main
 
 import (
+	"encoding/json"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
+
+const (
+	mcpServerName            = identity.MCPServerName
+	mcpProtocolVersionLatest = "2025-06-18"
+	mcpProtocolVersionLegacy = "2024-11-05"
+)
+
+var legacyMCPServerNames = append([]string(nil), identity.LegacyMCPServerNames...)
+
+func negotiateProtocolVersion(rawParams json.RawMessage) string {
+	var params struct {
+		ProtocolVersion string `json:"protocolVersion"` // SPEC:MCP
+	}
+	if len(rawParams) > 0 {
+		_ = json.Unmarshal(rawParams, &params)
+	}
+	switch params.ProtocolVersion {
+	case mcpProtocolVersionLatest, mcpProtocolVersionLegacy:
+		return params.ProtocolVersion
+	default:
+		return mcpProtocolVersionLatest
+	}
+}
 
 // JSONRPCVersion is the JSON-RPC protocol version string re-exported from internal/mcp.
 const JSONRPCVersion = mcp.JSONRPCVersion

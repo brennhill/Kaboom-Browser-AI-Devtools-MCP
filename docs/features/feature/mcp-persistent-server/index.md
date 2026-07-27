@@ -9,7 +9,8 @@ code_paths:
   - cmd/browser-agent/mcp_stdout.go
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/tools_registry.go
-  - cmd/browser-agent/mcp_identity.go
+  - cmd/browser-agent/types.go
+  - cmd/browser-agent/mcp_resources.go
   - cmd/browser-agent/bridge_adapter.go
   - cmd/browser-agent/internal/bridge/bridge.go
   - cmd/browser-agent/internal/bridge/bridge_startup.go

@@ -3,6 +3,16 @@
 
 package main
 
+import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks"
+
+func resolveResourceContent(uri string) (string, string, bool) {
+	return playbooks.ResolveResourceContent(uri)
+}
+
+func tutorialFailureRecoveryPlaybooks() map[string]any {
+	return playbooks.TutorialFailureRecoveryPlaybooks()
+}
+
 func mcpResources() []MCPResource {
 	return []MCPResource{
 		{

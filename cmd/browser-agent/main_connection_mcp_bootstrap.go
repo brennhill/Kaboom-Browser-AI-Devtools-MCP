@@ -22,6 +22,25 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
+type sessionClientRegistryAdapter struct {
+	reg *clientreg.ClientRegistry
+}
+
+func newSessionClientRegistryAdapter(reg *clientreg.ClientRegistry) capture.ClientRegistry {
+	if reg == nil {
+		return nil
+	}
+	return &sessionClientRegistryAdapter{reg: reg}
+}
+
+func (a *sessionClientRegistryAdapter) Count() int              { return a.reg.Count() }
+func (a *sessionClientRegistryAdapter) List() any               { return a.reg.List() }
+func (a *sessionClientRegistryAdapter) Register(cwd string) any { return a.reg.Register(cwd) }
+func (a *sessionClientRegistryAdapter) Get(id string) any       { return a.reg.Get(id) }
+func (a *sessionClientRegistryAdapter) Unregister(id string) bool {
+	return a.reg.Unregister(id)
+}
+
 // initCapture creates and configures the capture buffers with lifecycle logging.
 func initCapture(server *Server, port int) *capture.Store {
 	cap := capture.NewCapture()
