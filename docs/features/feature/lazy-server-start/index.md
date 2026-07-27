@@ -72,6 +72,10 @@ When the daemon starts (or restarts), the extension's sync client reconnects aut
 4. Tracked tab state is sent on the reconnection sync
 5. `requireExtension` guard waits up to 5 seconds for extension connectivity
 
+The runtime guard checks and the diagnostic state rendered in their recovery
+responses are intentionally colocated in `tools_errors_guards.go`; changes to a
+guard and its user-facing recovery context must ship together.
+
 ## UX Contract
 
 | Server State | Popup Status | Status Color | Track Button | Troubleshooting |

@@ -41,6 +41,59 @@ func checkGuardsWithOpts(req JSONRPCRequest, opts []func(*StructuredError), guar
 	return JSONRPCResponse{}, false
 }
 
+// DiagnosticHintString renders the runtime state that explains guard failures.
+func (h *ToolHandler) DiagnosticHintString() string {
+	extConnected := h.capture.IsExtensionConnected()
+	pilotEnabled := h.capture.IsPilotEnabled()
+	pilotState := ""
+	if status, ok := h.capture.GetPilotStatus().(map[string]any); ok {
+		if state, ok := status["state"].(string); ok {
+			pilotState = state
+		}
+		if effective, ok := status["enabled"].(bool); ok {
+			pilotEnabled = effective
+		}
+	}
+	enabled, tabID, tabURL := h.capture.GetTrackingStatus()
+
+	var parts []string
+	if extConnected {
+		parts = append(parts, "extension=connected")
+	} else {
+		parts = append(parts, "extension=DISCONNECTED")
+	}
+	pilotStatus := "pilot=DISABLED"
+	switch pilotState {
+	case "assumed_enabled":
+		pilotStatus = "pilot=ASSUMED_ENABLED(startup)"
+	case "explicitly_disabled":
+		pilotStatus = "pilot=DISABLED(explicit)"
+	case "enabled":
+		pilotStatus = "pilot=enabled"
+	default:
+		if pilotEnabled {
+			pilotStatus = "pilot=enabled"
+		}
+	}
+	parts = append(parts, pilotStatus)
+	if enabled && tabURL != "" {
+		parts = append(parts, fmt.Sprintf("tracked_tab=%q (id=%d)", tabURL, tabID))
+	} else {
+		parts = append(parts, "tracked_tab=NONE")
+	}
+	cspRestricted, cspLevel := h.capture.GetCSPStatus()
+	if cspRestricted {
+		parts = append(parts, fmt.Sprintf("csp=RESTRICTED(%s)", cspLevel))
+	} else {
+		parts = append(parts, "csp=clear")
+	}
+	return "Current state: " + strings.Join(parts, ", ")
+}
+
+func (h *ToolHandler) diagnosticHint() func(*StructuredError) {
+	return withHint(h.DiagnosticHintString())
+}
+
 // requirePilot returns (resp, true) if AI Web Pilot is disabled, short-circuiting the caller.
 // Usage: if resp, blocked := h.requirePilot(req); blocked { return resp }
 func (h *ToolHandler) requirePilot(req JSONRPCRequest, extraOpts ...func(*StructuredError)) (JSONRPCResponse, bool) {
