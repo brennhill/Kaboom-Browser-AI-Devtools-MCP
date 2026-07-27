@@ -5,27 +5,27 @@ status: in_progress
 feature_type: feature
 owners:
   - Brenn
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 code_paths:
   - package.json
   - .vale.ini
-  - .vale/styles/Kaboom/*.yml
+  - .vale/styles/Gasoline
   - gokaboom.dev/astro.config.mjs
   - gokaboom.dev/src/content.config.ts
-  - gokaboom.dev/public/images/integrations/*.svg
-  - gokaboom.dev/public/images/landing/*.svg
+  - gokaboom.dev/public/images/integrations
+  - gokaboom.dev/public/images/landing
   - gokaboom.dev/public/images/solutions-seo-signal.svg
-  - gokaboom.dev/src/content/docs/articles/*.md
-  - gokaboom.dev/src/content/docs/blog/*.md
+  - gokaboom.dev/src/content/docs/articles
+  - gokaboom.dev/src/content/docs/blog
   - gokaboom.dev/src/content/docs/downloads.md
   - gokaboom.dev/src/content/docs/guides/start-here-by-role.md
-  - gokaboom.dev/src/content/docs/guides/tracks/*.md
+  - gokaboom.dev/src/content/docs/guides/tracks
   - gokaboom.dev/src/content/docs/guides/visual-evidence-standards.md
   - gokaboom.dev/src/content/docs/guides/seo-analysis.md
   - gokaboom.dev/src/content/docs/guides/annotation-skill-terminal-workflow.md
   - gokaboom.dev/src/content/docs/index.mdx
   - gokaboom.dev/src/content/docs/reference/index.md
-  - gokaboom.dev/src/content/docs/reference/examples/*.md
+  - gokaboom.dev/src/content/docs/reference/examples
   - gokaboom.dev/src/content/docs/reference/observe.md
   - gokaboom.dev/src/content/docs/reference/analyze.md
   - gokaboom.dev/src/content/docs/reference/interact.md

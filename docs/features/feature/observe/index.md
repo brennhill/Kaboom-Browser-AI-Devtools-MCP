@@ -4,7 +4,7 @@ feature_id: feature-observe
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 code_paths:
   - internal/capture/accessors.go
   - internal/capture/query_dispatcher.go
@@ -15,10 +15,7 @@ code_paths:
   - cmd/browser-agent/tools_observe.go
   - cmd/browser-agent/tools_observe_registry.go
   - cmd/browser-agent/tools_observe_response.go
-  - cmd/browser-agent/tools_observe_analysis.go
   - cmd/browser-agent/tools_shared_queries.go
-  - cmd/browser-agent/tools_observe_bundling.go
-  - cmd/browser-agent/observe_filtering.go
   - internal/a11ysummary/summary.go
   - internal/tools/observe/deps.go
   - internal/tools/observe/filtering.go

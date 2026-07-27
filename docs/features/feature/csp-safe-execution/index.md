@@ -4,7 +4,7 @@ feature_id: feature-csp-safe-execution
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-25
+last_reviewed: 2026-07-27
 code_paths:
   - src/background/exec/csp-safe/types.ts
   - src/background/exec/csp-safe/parser.ts
@@ -12,7 +12,7 @@ code_paths:
   - src/background/exec/query-execution.ts
   - src/inject/execute-js.ts
 test_paths:
-  - extension/background/__tests__/query-execution-serialization.test.js
+  - extension/background/exec/__tests__/query-execution-serialization.test.js
   - tests/extension/execute-js.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05

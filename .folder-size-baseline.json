@@ -3,7 +3,6 @@
   "max_files": 10,
   "folders": {
     "cmd/browser-agent": 160,
-    "cmd/browser-agent/internal/toolinteract": 13,
     "internal/capture": 21
   }
 }

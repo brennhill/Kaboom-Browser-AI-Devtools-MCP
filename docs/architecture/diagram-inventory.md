@@ -59,7 +59,7 @@ last_verified_date: 2026-03-05
 | **Capture Data Pipeline** | WS → Network → Actions → Logs | internal/capture/ | How telemetry flows from tab to server |
 | **Query Dispatcher** | Query routing logic | internal/capture/query_dispatcher.go | How commands route to extension |
 | **Buffer Architecture** | Ring buffer, TTL, eviction | internal/buffers/, internal/capture/ | Memory management strategy |
-| **Session/Client Registry** | Multi-client isolation | internal/session/ | How concurrent clients are managed |
+| **Session/Client Registry** | Multi-client isolation | internal/session/clientreg/ | How concurrent clients are managed |
 | **Security Analysis Pipeline** | CSP → SRI → Threat detection | internal/security/ | Security workflow |
 | **Error Clustering** | Error grouping by root cause | internal/analysis/clustering/clustering.go | How errors are deduplicated |
 | **API Contract Analysis** | Schema inference from network | internal/analysis/apicontract/contract.go | How API contracts are learned |

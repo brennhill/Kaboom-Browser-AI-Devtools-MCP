@@ -4,13 +4,12 @@ feature_id: feature-cursor-pagination
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-27
 code_paths:
   - internal/pagination/cursor.go
   - internal/pagination/pagination.go
   - internal/pagination/pagination_actions.go
   - internal/pagination/pagination_websocket.go
-  - internal/pagination/serialization.go
   - internal/pagination/test_helpers_test.go
 test_paths:
   - internal/pagination/cursor_test.go

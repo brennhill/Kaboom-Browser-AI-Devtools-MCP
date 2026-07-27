@@ -4,7 +4,7 @@ feature_id: feature-terminal
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 code_paths:
   - internal/pty/upload/upload.go
   - src/content/ui/hover/screenshot-feedback.ts
@@ -79,7 +79,7 @@ test_paths:
   - internal/pty/manager_selfheal_test.go
   - internal/pty/session_test.go
   - internal/pty/writebuf_test.go
-  - internal/pty/upload_test.go
+  - internal/pty/upload/upload_test.go
   - internal/pty/diag_test.go
   - cmd/browser-agent/internal/terminal/session_end_signal_test.go
   - cmd/browser-agent/internal/terminal/frame_writer_deadline_test.go

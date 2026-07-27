@@ -7,14 +7,11 @@ owners: []
 last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/internal/toolinteract/deps.go
-  - cmd/browser-agent/internal/toolinteract/helpers.go
   - cmd/browser-agent/internal/toolinteract/interact_action_handler.go
   - cmd/browser-agent/internal/toolinteract/interact_command_builder.go
   - cmd/browser-agent/internal/toolinteract/interact_browser.go
   - cmd/browser-agent/internal/toolinteract/interact_dom.go
-  - cmd/browser-agent/internal/toolinteract/interact_elements.go
   - cmd/browser-agent/internal/toolinteract/interact_page.go
-  - cmd/browser-agent/internal/toolinteract/interact_storage.go
   - cmd/browser-agent/internal/toolinteract/interact_workflow.go
   - cmd/browser-agent/internal/toolinteract/interact_evidence.go
   - cmd/browser-agent/internal/toolinteract/interact_retry_contract.go
@@ -77,12 +74,12 @@ test_paths:
   - cmd/browser-agent/tools_interact_evidence_test.go
   - cmd/browser-agent/tools_interact_state_test.go
   - extension/background/__tests__/dom-dispatch-structured.test.js
-  - extension/background/dom-primitives.test.js
+  - tests/extension/dom-primitives-branding.test.js
   - tests/extension/action-toast-labels.test.js
   - tests/extension/execute-js.test.js
   - internal/tools/interact/workflow_test.go
   - internal/tools/configure/capabilities/modespecs_test.go
-  - extension/background/dom-primitives-overlay.test.js
+  - tests/extension/toggle-overlay.test.js
   - cmd/browser-agent/internal/asyncresult/asyncresult_test.go
   - cmd/browser-agent/tools_async_formatting_test.go
   - tests/extension/interact-content-fallback.test.js

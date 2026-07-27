@@ -5,7 +5,6 @@
 package capture
 
 import (
-	"encoding/json"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
@@ -42,24 +41,6 @@ type NetworkWaterfallBuffer struct {
 // Protected by parent Capture.mu (no separate lock).
 type ExtensionLogBuffer struct {
 	logs []ExtensionLog // Ring buffer of extension internal logs (max MaxExtensionLogs=500)
-}
-
-// SchemaStore defines the interface for API schema detection and tracking.
-// Implemented by *apischema.SchemaStore (internal/analysis/apischema). Methods called by
-// HTTP handlers and observers.
-// Has its own lock; safe to call outside Capture.mu.
-type SchemaStore interface {
-	// EndpointCount returns the number of unique endpoints observed
-	EndpointCount() int
-}
-
-// CSPGenerator defines the interface for Content-Security-Policy generation.
-// Implemented by *csp.Generator (internal/security/csp). Called by HTTP handlers.
-// Has its own lock; safe to call outside Capture.mu.
-type CSPGenerator interface {
-	// HandleGenerateCSP is the MCP tool handler for CSP generation.
-	// params is a JSON-encoded csp.Params; returns *csp.Response.
-	HandleGenerateCSP(params json.RawMessage) (any, error)
 }
 
 // ClientRegistry defines the interface for managing connected MCP clients.

@@ -82,7 +82,6 @@ npm/kaboom-agentic-browser/extension/
 #Ignore marketing
 docs/marketing
 docs/marketing-plan.md
-.gitnexus
 
 # Astro site (gokaboom.dev)
 gokaboom.dev/node_modules/

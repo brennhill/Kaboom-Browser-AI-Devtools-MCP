@@ -4,7 +4,7 @@ feature_id: feature-self-testing
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 code_paths:
   - scripts/smoke-test.sh
   - scripts/smoke-tests/framework-smoke.sh
@@ -42,17 +42,10 @@ test_paths:
   - scripts/tests/cat-14-extension-startup.sh
   - scripts/tests/cat-15-pilot-success-path.sh
   - scripts/tests/cat-16-api-contract.sh
-  - scripts/tests/cat-17-generation-logic.sh
-  - scripts/tests/cat-17-healing-logic.sh
   - scripts/tests/cat-17-performance.sh
   - scripts/tests/cat-18-recording.sh
-  - scripts/tests/cat-18-recording-logic.sh
-  - scripts/tests/cat-18-playback-logic.sh
   - scripts/tests/cat-19-link-health.sh
-  - scripts/tests/cat-19-extended.sh
   - scripts/tests/cat-20-noise-persistence.sh
-  - scripts/tests/cat-20-security.sh
-  - scripts/tests/cat-20-filtering-logic.sh
   - scripts/tests/cat-21-stress.sh
   - scripts/tests/cat-22-advanced.sh
   - scripts/tests/cat-29-reproduction.sh

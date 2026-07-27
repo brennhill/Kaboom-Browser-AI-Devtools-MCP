@@ -4,7 +4,7 @@ feature_id: feature-push-alerts
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/alerts.go
   - cmd/browser-agent/streaming.go
@@ -20,10 +20,10 @@ code_paths:
   - internal/streaming/alertbuf/process.go
   - internal/identity/mcp.go
   - internal/push/inbox.go
+  - internal/types/alert.go
 test_paths:
   - internal/streaming/stream_test.go
   - internal/streaming/alertbuf/alertbuf_test.go
-  - cmd/browser-agent/alerts_unit_test.go
   - internal/push/inbox_test.go
   - cmd/browser-agent/tools_observe_inbox_test.go
 last_verified_version: 0.7.12

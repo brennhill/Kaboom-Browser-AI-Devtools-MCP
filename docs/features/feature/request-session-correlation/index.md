@@ -4,7 +4,7 @@ feature_id: feature-request-session-correlation
 status: active
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 code_paths:
   - internal/capture/types.go
   - internal/capture/capture.go

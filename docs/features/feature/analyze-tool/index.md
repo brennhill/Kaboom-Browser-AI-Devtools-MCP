@@ -4,7 +4,7 @@ feature_id: feature-analyze-tool
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/tools_analyze_dispatch.go
   - cmd/browser-agent/tools_analyze_annotations_handlers.go
@@ -13,7 +13,7 @@ code_paths:
   - cmd/browser-agent/tools_pending_query_enqueue.go
   - cmd/browser-agent/tools_async_observe_commands.go
   - cmd/browser-agent/tools_async_formatting.go
-  - cmd/browser-agent/tools_security_audit.go
+  - cmd/browser-agent/tools_analyze_audit.go
   - internal/annotation/store.go
   - internal/annotation/store_results.go
   - internal/annotation/store_wait.go

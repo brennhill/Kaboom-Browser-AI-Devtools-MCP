@@ -133,41 +133,9 @@ go test ./cmd/browser-agent/ -run TestToolAnalyzeErrors \
 produced a false claim in a feature doc during the July 2026 audit. Untested
 *behaviour* and uncounted *coverage* are different problems with different fixes.
 
-## Documentation
-
-### 7. Feature docs reference files that do not exist — LOW
-
-13 paths cited in feature `index.md` files no longer resolve, mostly fallout from
-the July 2026 package extractions (`cmd/browser-agent/bridge*.go` →
-`cmd/browser-agent/internal/bridge/`, `terminal_*.go` → `internal/terminal/`).
-
-```bash
-for p in $(rg -oN '`[a-zA-Z0-9_./-]+\.(go|ts|js|sh|cjs)`' \
-    docs/features/feature/*/index.md | sed 's/.*://' | tr -d '`' | sort -u); do
-  [ -e "$p" ] || echo "MISSING: $p"
-done
-```
-
-Affected features include `bridge-restart`, `terminal`, and `csp-safe-execution`.
-No gate blocks a dangling code path in a feature doc, which is why these
-accumulate silently — the docs cross-reference contract in `CLAUDE.md` is
-enforced by convention only.
-
-### 8. Collateral orphans from deleted packages — LOW
-
-Left behind when four unreachable packages were removed in #657:
-
-- `internal/types/alert.go:54,68` — `PerformanceAlert`, `AlertMetricDelta`
-- `internal/session/doc.go:14-19`
-- `internal/capture/types.go:47-54`
-- `docs/core/code-index.md:283-284`
-- `docs/architecture/diagram-inventory.md:64`
-- `.github/workflows/ci.yml:48` — path filter still references the removed
-  `docs/architecture/flow-maps/` directory
-
 ## Architecture
 
-### 9. God objects remain, despite the folder counts — INFO
+### 7. God objects remain, despite the folder counts — INFO
 
 The July 2026 refactor series reduced *per-folder file counts* and satisfied the
 ratcheting folder gate, but it did not decompose the two large types. Do not read
@@ -190,7 +158,7 @@ unchanged. The folder gate counts files per directory, so nesting satisfies it.
 
 ## Release / tooling
 
-### 10. Repo token lacks `workflow` scope — MEDIUM
+### 8. Repo token lacks `workflow` scope — MEDIUM
 
 Any PR touching `.github/workflows/` cannot be merged, or have its branch
 updated, via `gh`:
@@ -202,7 +170,7 @@ GraphQL: refusing to allow an OAuth App to create or update workflow
 
 Such PRs must go through the GitHub web UI.
 
-### 11. PR #591 would revert the repository if merged — HIGH
+### 9. PR #591 would revert the repository if merged — HIGH
 
 The open dependabot PR (`@playwright/test` 1.59.1 → 1.62.0) is **115 commits
 behind UNSTABLE**. Its real payload is one line in `tests/e2e/package.json`, but
@@ -220,7 +188,7 @@ The branch cannot be updated via `gh` because of issue 10.
 **Do not merge it.** Close it and let dependabot regenerate against UNSTABLE
 (#637 already retargeted dependabot), or apply the one-line bump by hand.
 
-### 12. Non-blocking CI checks that are permanently red — INFO
+### 10. Non-blocking CI checks that are permanently red — INFO
 
 These appear on every PR and are not caused by the branch under review:
 
@@ -235,12 +203,12 @@ under `extension/` or `tests/`.
 
 ## Runtime (product)
 
-### 13. Extension timeout on first `interact()` — MEDIUM
+### 11. Extension timeout on first `interact()` — MEDIUM
 
 The content script may not be fully loaded when the first `interact()` command
 arrives after navigation. **Workaround:** retry after 2-3 seconds.
 
-### 14. Tracking loss during cross-origin navigation — MEDIUM
+### 12. Tracking loss during cross-origin navigation — MEDIUM
 
 The extension can lose tab tracking state during an AI-initiated cross-origin
 navigation via `interact({action: "navigate"})`. **Workaround:** re-enable

@@ -4,10 +4,11 @@ feature_id: feature-historical-snapshots
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 code_paths:
   - internal/types/snapshot.go
   - internal/session/types.go
+  - internal/session/doc.go
   - internal/session/snapshot-manager.go
   - internal/session/comparison.go
   - internal/session/snapdiff/types.go

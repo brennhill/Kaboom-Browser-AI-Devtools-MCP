@@ -4,9 +4,11 @@ feature_id: feature-environment-manipulation
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-27
 code_paths:
-test_paths: []
+  - cmd/browser-agent/internal/toolinteract/interact_browser.go
+test_paths:
+  - cmd/browser-agent/internal/toolinteract/interact_storage_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

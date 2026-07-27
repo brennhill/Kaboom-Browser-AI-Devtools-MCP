@@ -4,7 +4,7 @@ feature_id: feature-framework-selector-resilience
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 code_paths:
   - scripts/smoke-tests/29-framework-selector-resilience.sh
   - scripts/smoke-tests/build-framework-fixtures.mjs
@@ -17,8 +17,7 @@ code_paths:
   - scripts/smoke-tests/framework-fixtures/README.md
 test_paths:
   - scripts/smoke-tests/29-framework-selector-resilience.sh
-  - scripts/smoke-test.sh --only 29
-  - npm run smoke:framework-parity
+  - scripts/smoke-tests/29-framework-selector-resilience.sh
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

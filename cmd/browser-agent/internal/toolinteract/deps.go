@@ -1,6 +1,6 @@
-// deps.go — Dependency injection for the toolinteract sub-package.
-// Purpose: Declares the external dependencies interact handlers need from the main package.
-// Why: Decouples interact handlers from the main package's god object without circular imports.
+// deps.go — Dependency injection and MCP boundary aliases for toolinteract.
+// Purpose: Declares external seams and package-local protocol helpers.
+// Why: Decouples handlers from the main package without circular imports.
 
 package toolinteract
 
@@ -11,6 +11,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactstate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactupload"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
@@ -194,3 +195,110 @@ func NewStateInteractHandler(deps *Deps, store *persistence.SessionStore) *State
 		},
 	}, store)
 }
+
+type JSONRPCRequest = mcp.JSONRPCRequest
+type JSONRPCResponse = mcp.JSONRPCResponse
+type MCPToolResult = mcp.MCPToolResult
+type MCPContentBlock = mcp.MCPContentBlock
+type StructuredError = mcp.StructuredError
+
+const JSONRPCVersion = mcp.JSONRPCVersion
+
+const (
+	ErrInvalidJSON          = mcp.ErrInvalidJSON
+	ErrMissingParam         = mcp.ErrMissingParam
+	ErrInvalidParam         = mcp.ErrInvalidParam
+	ErrUnknownMode          = mcp.ErrUnknownMode
+	ErrPathNotAllowed       = mcp.ErrPathNotAllowed
+	ErrNotInitialized       = mcp.ErrNotInitialized
+	ErrNoData               = mcp.ErrNoData
+	ErrCodePilotDisabled    = mcp.ErrCodePilotDisabled
+	ErrOsAutomationDisabled = mcp.ErrOsAutomationDisabled
+	ErrRateLimited          = mcp.ErrRateLimited
+	ErrCursorExpired        = mcp.ErrCursorExpired
+	ErrExtTimeout           = mcp.ErrExtTimeout
+	ErrExtError             = mcp.ErrExtError
+	ErrQueueFull            = mcp.ErrQueueFull
+	ErrInternal             = mcp.ErrInternal
+	ErrMarshalFailed        = mcp.ErrMarshalFailed
+	ErrExportFailed         = mcp.ErrExportFailed
+)
+
+var (
+	succeed   = mcp.Succeed
+	fail      = mcp.Fail
+	parseArgs = mcp.ParseArgs
+)
+
+func requireString(req JSONRPCRequest, value, paramName, hint string) (JSONRPCResponse, bool) {
+	if value != "" {
+		return JSONRPCResponse{}, false
+	}
+	return fail(req, ErrMissingParam,
+		"Required parameter '"+paramName+"' is missing",
+		hint,
+		withParam(paramName)), true
+}
+
+func lenientUnmarshal(args json.RawMessage, v any) {
+	mcp.LenientUnmarshal(args, v)
+}
+
+func buildQueryParams(fields map[string]any) json.RawMessage {
+	return mcp.SafeMarshal(fields, "{}")
+}
+
+func safeMarshal(v any, fallback string) json.RawMessage {
+	return mcp.SafeMarshal(v, fallback)
+}
+
+func withParam(p string) func(*StructuredError)    { return mcp.WithParam(p) }
+func withHint(h string) func(*StructuredError)     { return mcp.WithHint(h) }
+func withAction(a string) func(*StructuredError)   { return mcp.WithAction(a) }
+func withSelector(s string) func(*StructuredError) { return mcp.WithSelector(s) }
+func withRetryable(retryable bool) func(*StructuredError) {
+	return mcp.WithRetryable(retryable)
+}
+func withRetryAfterMs(ms int) func(*StructuredError) { return mcp.WithRetryAfterMs(ms) }
+func withFinal(final bool) func(*StructuredError)    { return mcp.WithFinal(final) }
+func withRecoveryToolCall(toolCall map[string]any) func(*StructuredError) {
+	return mcp.WithRecoveryToolCall(toolCall)
+}
+
+func checkGuards(req JSONRPCRequest, guards ...GuardCheck) (JSONRPCResponse, bool) {
+	for _, guard := range guards {
+		if resp, blocked := guard(req); blocked {
+			return resp, true
+		}
+	}
+	return JSONRPCResponse{}, false
+}
+
+func checkGuardsWithOpts(req JSONRPCRequest, opts []func(*StructuredError), guards ...GuardCheck) (JSONRPCResponse, bool) {
+	for _, guard := range guards {
+		if resp, blocked := guard(req, opts...); blocked {
+			return resp, true
+		}
+	}
+	return JSONRPCResponse{}, false
+}
+
+func mutateToolResult(resp JSONRPCResponse, fn func(*MCPToolResult)) JSONRPCResponse {
+	var result MCPToolResult
+	if err := json.Unmarshal(resp.Result, &result); err != nil {
+		return resp
+	}
+	fn(&result)
+	resultJSON, err := json.Marshal(result)
+	if err != nil {
+		return resp
+	}
+	resp.Result = json.RawMessage(resultJSON)
+	return resp
+}
+
+func appendWarningsToResponse(resp JSONRPCResponse, warnings []string) JSONRPCResponse {
+	return mcp.AppendWarningsToResponse(resp, warnings)
+}
+
+var newCorrelationID = toolresp.NewCorrelationID

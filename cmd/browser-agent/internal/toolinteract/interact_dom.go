@@ -1,6 +1,5 @@
-// interact_dom.go — The DOM primitive action: parse its parameters, validate them,
-// resolve an index to a selector, then dispatch either the extension DOM path or
-// the CDP hardware-click path.
+// interact_dom.go — DOM primitive and list_interactive actions: parse, validate,
+// resolve indexed selectors, and dispatch through extension or CDP paths.
 // Why one file: parsing, validation and dispatch were three files, but they share
 // DOMPrimitiveParams and are only ever entered through HandleDOMPrimitive — no
 // caller outside this file uses the validators except HandleDOMPrimitive itself.
@@ -11,6 +10,7 @@ package toolinteract
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/elemindex"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
@@ -108,8 +108,8 @@ func (h *InteractActionHandler) HandleDOMPrimitive(req JSONRPCRequest, args json
 
 	args = normalizeDOMActionArgs(args, action)
 
-	return h.newCommand("dom_" + action).
-		correlationPrefix("dom_" + action).
+	return h.newCommand("dom_"+action).
+		correlationPrefix("dom_"+action).
 		reason(action).
 		queryType("dom_action").
 		queryParams(args).
@@ -121,7 +121,7 @@ func (h *InteractActionHandler) HandleDOMPrimitive(req JSONRPCRequest, args json
 		postEnqueue(func() {
 			h.deps.RecordDOMPrimitiveAction(action, params.Selector, params.Text, params.Value)
 		}).
-		queuedMessage(action + " queued").
+		queuedMessage(action+" queued").
 		execute(req, args)
 }
 
@@ -346,6 +346,172 @@ func (h *InteractActionHandler) HandleCDPClick(req JSONRPCRequest, args json.Raw
 			h.deps.RequirePilot, h.deps.RequireExtension, h.deps.RequireTabTracking,
 		).
 		recordAction(action, "", map[string]any{"x": x, "y": y, "method": "cdp"}).
-		queuedMessage(action + " queued").
+		queuedMessage(action+" queued").
 		execute(req, args)
+}
+
+func (h *InteractActionHandler) HandleListInteractive(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	var params struct {
+		TabID       int  `json:"tab_id,omitempty"`
+		VisibleOnly bool `json:"visible_only,omitempty"`
+		Limit       int  `json:"limit,omitempty"`
+	}
+	if resp, stop := parseArgs(req, args, &params); stop {
+		return resp
+	}
+
+	args = normalizeDOMActionArgs(args, "list_interactive")
+	resp, correlationID := h.newCommand("list_interactive").
+		correlationPrefix("dom_list").
+		reason("list_interactive").
+		queryType("dom_action").
+		queryParams(args).
+		tabID(params.TabID).
+		guards(h.deps.RequirePilot, h.deps.RequireExtension, h.deps.RequireTabTracking).
+		recordAction("dom_list_interactive", "", nil).
+		queuedMessage("list_interactive queued").
+		executeWithCorrelation(req, args)
+
+	indexGeneration := h.buildElementIndexFromResponse(req.ClientID, params.TabID, correlationID, resp)
+	if indexGeneration != "" {
+		resp = annotateListInteractiveIndexMetadata(resp, params.TabID, indexGeneration)
+	}
+	if params.Limit > 0 {
+		resp = truncateListInteractiveResponse(resp, params.Limit)
+	}
+	return resp
+}
+
+func (h *InteractActionHandler) buildElementIndexFromResponse(clientID string, tabID int, generation string, resp JSONRPCResponse) string {
+	var result MCPToolResult
+	if err := json.Unmarshal(resp.Result, &result); err != nil || result.IsError {
+		return ""
+	}
+
+	for _, block := range result.Content {
+		idx := strings.Index(block.Text, "{")
+		if idx < 0 {
+			continue
+		}
+		var data map[string]any
+		if json.Unmarshal([]byte(block.Text[idx:]), &data) != nil {
+			continue
+		}
+		elements := extractElementList(data)
+		if elements == nil {
+			continue
+		}
+
+		indexMap := make(map[int]string, len(elements))
+		for _, elem := range elements {
+			elemMap, ok := elem.(map[string]any)
+			if !ok {
+				continue
+			}
+			indexVal, _ := elemMap["index"].(float64)
+			selector, _ := elemMap["selector"].(string)
+			if selector != "" {
+				indexMap[int(indexVal)] = selector
+			}
+		}
+		if h.elementIndexRegistry == nil {
+			h.elementIndexRegistry = elemindex.New()
+		}
+		return h.elementIndexRegistry.Store(clientID, tabID, generation, indexMap)
+	}
+	return ""
+}
+
+func annotateListInteractiveIndexMetadata(resp JSONRPCResponse, tabID int, generation string) JSONRPCResponse {
+	if generation == "" {
+		return resp
+	}
+	var result MCPToolResult
+	if err := json.Unmarshal(resp.Result, &result); err != nil || result.IsError {
+		return resp
+	}
+	for i, block := range result.Content {
+		idx := strings.Index(block.Text, "{")
+		if idx < 0 {
+			continue
+		}
+		var data map[string]any
+		if json.Unmarshal([]byte(block.Text[idx:]), &data) != nil {
+			continue
+		}
+		data["index_generation"] = generation
+		data["index_scope_tab_id"] = tabID
+		newJSON, err := json.Marshal(data)
+		if err != nil {
+			continue
+		}
+		result.Content[i].Text = block.Text[:idx] + string(newJSON)
+		newResult, _ := json.Marshal(result)
+		resp.Result = newResult
+		return resp
+	}
+	return resp
+}
+
+func truncateListInteractiveResponse(resp JSONRPCResponse, limit int) JSONRPCResponse {
+	var result MCPToolResult
+	if err := json.Unmarshal(resp.Result, &result); err != nil || result.IsError {
+		return resp
+	}
+
+	for i, block := range result.Content {
+		idx := strings.Index(block.Text, "{")
+		if idx < 0 {
+			continue
+		}
+		var data map[string]any
+		if json.Unmarshal([]byte(block.Text[idx:]), &data) != nil {
+			continue
+		}
+		elements := extractElementList(data)
+		if elements == nil || len(elements) <= limit {
+			continue
+		}
+
+		total := len(elements)
+		setNestedElements(data, elements[:limit])
+		data["total"] = total
+		data["truncated"] = true
+		newJSON, err := json.Marshal(data)
+		if err != nil {
+			continue
+		}
+		result.Content[i].Text = block.Text[:idx] + string(newJSON)
+		newResult, _ := json.Marshal(result)
+		resp.Result = newResult
+		return resp
+	}
+	return resp
+}
+
+func setNestedElements(data map[string]any, elements []any) {
+	if _, ok := data["elements"]; ok {
+		data["elements"] = elements
+		return
+	}
+	if result, ok := data["result"].(map[string]any); ok {
+		if _, ok := result["elements"]; ok {
+			result["elements"] = elements
+			return
+		}
+		if nested, ok := result["result"].(map[string]any); ok {
+			if _, ok := nested["elements"]; ok {
+				nested["elements"] = elements
+			}
+		}
+	}
+}
+
+var extractElementList = act.ExtractElementList
+
+func (h *InteractActionHandler) resolveIndexToSelector(clientID string, tabID int, index int, generation string) (string, bool, bool, string) {
+	if h.elementIndexRegistry == nil {
+		return "", false, false, ""
+	}
+	return h.elementIndexRegistry.Resolve(clientID, tabID, index, generation)
 }

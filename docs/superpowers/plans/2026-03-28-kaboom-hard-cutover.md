@@ -23,7 +23,7 @@
 - After every `src/**` edit, run `make compile-ts`.
 - For any runtime contract change touching TS/Go payloads, run `make check-wire-drift`.
 - For tasks touching `src/background/**` or `src/popup/**`, run `npx jscpd src/background src/popup --min-lines 8 --min-tokens 60`.
-- Before each implementation task, prefer GitNexus impact analysis if available; if unavailable in the harness, inspect direct callers with `rg`.
+- Before each implementation task, inspect direct callers and related tests with `rg`.
 
 ## File Map
 

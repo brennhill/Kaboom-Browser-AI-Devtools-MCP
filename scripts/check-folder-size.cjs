@@ -26,7 +26,7 @@ const BASELINE_PATH = path.join(REPO_ROOT, '.folder-size-baseline.json')
 const SOURCE_EXT = new Set(['.go', '.ts', '.tsx', '.js', '.mjs', '.cjs'])
 const EXCLUDED_DIR = new Set([
   'node_modules', '.git', '.claude', 'dist', 'build', 'vendor',
-  'generated', 'coverage', '.gitnexus', '.beads', 'testdata'
+  'generated', 'coverage', '.beads', 'testdata'
 ])
 // Compiled/bundled output and third-party sites are not authored here.
 const EXCLUDED_PREFIX = ['extension/', 'npm/', 'gokaboom.dev/', 'scratchpad/']

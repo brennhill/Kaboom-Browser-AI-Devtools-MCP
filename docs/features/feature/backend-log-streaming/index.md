@@ -4,7 +4,7 @@ feature_id: feature-backend-log-streaming
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/tools_configure_network_recording.go
   - cmd/browser-agent/internal/toolconfigure/netrecord/handlers.go

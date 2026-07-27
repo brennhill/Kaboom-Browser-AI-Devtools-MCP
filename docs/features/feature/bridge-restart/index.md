@@ -8,7 +8,7 @@ last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/internal/bridge/bridge.go
   - cmd/browser-agent/internal/bridge/bridge_startup_state.go
-  - cmd/browser-agent/internal/bridge/bridge_startup_orchestration.go
+  - cmd/browser-agent/internal/bridge/bridge_startup.go
   - cmd/browser-agent/internal/bridge/bridge_transport.go
   - cmd/browser-agent/internal/bridge/bridge_fingerprint.go
   - cmd/browser-agent/internal/bridge/stdioisolate/isolation.go
@@ -23,7 +23,7 @@ test_paths:
   - cmd/browser-agent/bridge_startup_contention_test.go
   - cmd/browser-agent/bridge_faststart_extended_test.go
   - cmd/browser-agent/internal/bridge/bridge_spawn_race_test.go
-  - cmd/browser-agent/internal/bridge/bridge_startup_lock_test.go
+  - cmd/browser-agent/internal/bridge/lazy_server_start_test.go
   - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
   - cmd/browser-agent/internal/bridge/bridge_respawn_backoff_test.go
   - cmd/browser-agent/internal/bridge/bridge_fingerprint_test.go

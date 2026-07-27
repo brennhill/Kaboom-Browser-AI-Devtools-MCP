@@ -41,22 +41,21 @@ test('root README uses Kaboom install and repo branding', () => {
 
 test('root contributor and agent docs publish only Kaboom naming', () => {
   const contributing = read('CONTRIBUTING.md')
+  const agents = read('AGENTS.md')
   const claude = read('CLAUDE.md')
   const codex = read('CODEX.md')
 
-  for (const source of [contributing, claude, codex]) {
+  for (const source of [contributing, agents, claude, codex]) {
     assert.match(source, /Kaboom/)
     assert.doesNotMatch(source, /STRUM|Gasoline|cookwithgasoline\.com|getstrum/)
+    assert.doesNotMatch(source, new RegExp('git' + 'nexus', 'i'))
   }
 
   assert.match(contributing, /github\.com\/brennhill\/Kaboom-Browser-AI-Devtools-MCP/)
   assert.match(contributing, /https:\/\/gokaboom\.dev/)
 
   assert.match(claude, /`kaboom-mcp` from PATH/)
-  assert.match(claude, /gitnexus:\/\/repo\/kaboom\//)
-
   assert.match(codex, /`kaboom-mcp` from PATH/)
-  assert.match(codex, /gitnexus:\/\/repo\/kaboom\//)
 })
 
 test('extension shell pages publish only Kaboom branding', () => {
