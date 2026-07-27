@@ -4,10 +4,10 @@ feature_id: feature-config-profiles
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/tools_configure.go
-  - cmd/browser-agent/tools_configure_sessions.go
+  - cmd/browser-agent/internal/toolconfigure/session.go
   - internal/session/snapshot-manager.go
   - internal/tools/configure/audit.go
   - internal/tools/configure/boundaries.go
@@ -53,7 +53,7 @@ last_verified_date: 2026-03-05
 - Configure dispatch and action registry:
   - `cmd/browser-agent/tools_configure.go`
 - Session/store sub-handler and implementations:
-  - `cmd/browser-agent/tools_configure_sessions.go`
+  - `cmd/browser-agent/internal/toolconfigure/session.go`
 - Shared configure argument normalization/parsing:
   - `internal/tools/configure/boundaries.go`
   - `internal/tools/configure/rewrite.go`

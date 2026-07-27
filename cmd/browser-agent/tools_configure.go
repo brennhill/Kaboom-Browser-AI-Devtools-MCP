@@ -32,20 +32,19 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
-const defaultStoreNamespace = "session"
 const restartSelfSignalDelay = 100 * time.Millisecond
 
 var replayMu sync.Mutex
 
 var configureHandlers = map[string]ModeHandler{
 	"store": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return h.configureSession().handleConfigureStore(req, args)
+		return h.configureSessions.Store(req, args)
 	},
 	"load": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return h.configureSession().handleLoadSessionContext(req, args)
+		return h.configureSessions.Load(req, args)
 	},
 	"diff_sessions": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return h.configureSession().handleDiffSessionsWrapper(req, args)
+		return h.configureSessions.Diff(req, args)
 	},
 	"health": func(h *ToolHandler, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
 		return h.toolGetHealth(req)
@@ -222,15 +221,6 @@ func (h *ToolHandler) toolConfigure(req mcp.JSONRPCRequest, args json.RawMessage
 	reg := configureRegistry
 	reg.Resolution.ValidModes = getValidConfigureActions()
 	return h.dispatchTool(req, args, reg)
-}
-
-func isStoreAction(action string) bool {
-	switch action {
-	case "save", "load", "list", "delete", "stats":
-		return true
-	default:
-		return false
-	}
 }
 
 func (h *ToolHandler) NoiseConfig() *noise.NoiseConfig {

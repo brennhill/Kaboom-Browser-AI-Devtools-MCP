@@ -1,7 +1,6 @@
-// tools_configure_sessions.go — Owns configure store, load, and session-diff flows.
-// Docs: docs/features/feature/noise-filtering/index.md
+// session.go — Configure store, load, and session-diff flows.
 
-package main
+package toolconfigure
 
 import (
 	"encoding/json"
@@ -12,27 +11,29 @@ import (
 	cfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure"
 )
 
-type configureSessionDeps interface {
-	requireSessionStore(req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool)
-	invalidateSummaryPref()
+const defaultStoreNamespace = "session"
+
+// SessionDeps are the host operations required by configure session flows.
+type SessionDeps struct {
+	RequireStore      func(req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool)
+	InvalidateSummary func()
+	SetActiveCodebase func(path string)
 }
 
-type configureSessionHandler struct {
-	deps             configureSessionDeps
-	sessionStoreImpl *persistence.SessionStore
-	sessionManager   *session.SessionManager
-	server           *Server
+// SessionHandler owns configure session persistence and diff behavior.
+type SessionHandler struct {
+	deps    SessionDeps
+	store   *persistence.SessionStore
+	manager *session.SessionManager
 }
 
-func newConfigureSessionHandler(deps configureSessionDeps, store *persistence.SessionStore, manager *session.SessionManager, server *Server) *configureSessionHandler {
-	return &configureSessionHandler{deps: deps, sessionStoreImpl: store, sessionManager: manager, server: server}
+// NewSessionHandler creates a configure session handler.
+func NewSessionHandler(deps SessionDeps, store *persistence.SessionStore, manager *session.SessionManager) *SessionHandler {
+	return &SessionHandler{deps: deps, store: store, manager: manager}
 }
 
-func (h *ToolHandler) configureSession() *configureSessionHandler {
-	return h.configureSessionHandler
-}
-
-func (h *configureSessionHandler) handleConfigureStore(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+// Store executes a namespaced persistence operation.
+func (handler *SessionHandler) Store(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		StoreAction string          `json:"store_action"`
 		Action      string          `json:"action"`
@@ -42,8 +43,8 @@ func (h *configureSessionHandler) handleConfigureStore(req mcp.JSONRPCRequest, a
 		Value       json.RawMessage `json:"value"`
 	}
 	if len(args) > 0 {
-		if resp, stop := mcp.ParseArgs(req, args, &params); stop {
-			return resp
+		if response, stop := mcp.ParseArgs(req, args, &params); stop {
+			return response
 		}
 	}
 	action := params.StoreAction
@@ -61,22 +62,22 @@ func (h *configureSessionHandler) handleConfigureStore(req mcp.JSONRPCRequest, a
 	if len(data) == 0 && len(params.Value) > 0 {
 		data = params.Value
 	}
-	if resp, blocked := h.deps.requireSessionStore(req); blocked {
-		return resp
+	if response, blocked := handler.deps.RequireStore(req); blocked {
+		return response
 	}
-	result, err := h.sessionStoreImpl.HandleSessionStore(persistence.SessionStoreArgs{
+	result, err := handler.store.HandleSessionStore(persistence.SessionStoreArgs{
 		Action: action, Namespace: namespace, Key: params.Key, Data: data,
 	})
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrInvalidParam, err.Error(), "Fix the request parameters and try again")
 	}
 	if namespace == "session" && params.Key == "response_mode" {
-		h.deps.invalidateSummaryPref()
+		handler.deps.InvalidateSummary()
 	}
-	if params.Key == "active_codebase" && action == "save" && h.server != nil {
+	if params.Key == "active_codebase" && action == "save" && handler.deps.SetActiveCodebase != nil {
 		var path string
 		if json.Unmarshal(data, &path) == nil {
-			h.server.SetActiveCodebase(path)
+			handler.deps.SetActiveCodebase(path)
 		}
 	}
 	var responseData map[string]any
@@ -86,11 +87,12 @@ func (h *configureSessionHandler) handleConfigureStore(req mcp.JSONRPCRequest, a
 	return mcp.Succeed(req, "Store operation complete", responseData)
 }
 
-func (h *configureSessionHandler) handleLoadSessionContext(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
-	if h.sessionStoreImpl == nil {
+// Load returns the persisted session context.
+func (handler *SessionHandler) Load(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+	if handler.store == nil {
 		return mcp.Fail(req, mcp.ErrNotInitialized, "Session store not initialized", "Internal error — do not retry")
 	}
-	ctx := h.sessionStoreImpl.LoadSessionContext()
+	ctx := handler.store.LoadSessionContext()
 	responseData := map[string]any{
 		"status": "ok", "project_id": ctx.ProjectID, "session_count": ctx.SessionCount,
 		"baselines": ctx.Baselines, "error_history": ctx.ErrorHistory,
@@ -107,33 +109,35 @@ func (h *configureSessionHandler) handleLoadSessionContext(req mcp.JSONRPCReques
 	return mcp.Succeed(req, "Session context loaded", responseData)
 }
 
-// handleDiffSessionsWrapper repackages verif_session_action -> action for handleDiffSessions.
-func (h *configureSessionHandler) handleDiffSessionsWrapper(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+// Diff rewrites the public arguments and executes session comparison.
+func (handler *SessionHandler) Diff(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	rewritten, err := cfg.RewriteDiffSessionsArgs(args)
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 	}
-	return h.handleDiffSessions(req, rewritten)
-}
-
-func (h *configureSessionHandler) handleDiffSessions(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	if h.sessionManager == nil {
+	if handler.manager == nil {
 		return mcp.Fail(req, mcp.ErrNotInitialized, "Session manager not initialized", "Internal error — do not retry")
 	}
-
-	result, err := h.sessionManager.HandleTool(args)
+	result, err := handler.manager.HandleTool(rewritten)
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrInvalidParam, err.Error(), "Fix request parameters and retry")
 	}
-
 	responseData := map[string]any{"status": "ok"}
-	if m, ok := result.(map[string]any); ok {
-		for k, v := range m {
-			responseData[k] = v
+	if fields, ok := result.(map[string]any); ok {
+		for key, value := range fields {
+			responseData[key] = value
 		}
 	} else {
 		responseData["result"] = result
 	}
-
 	return mcp.Succeed(req, "Session diff", responseData)
+}
+
+func isStoreAction(action string) bool {
+	switch action {
+	case "save", "load", "list", "delete", "stats":
+		return true
+	default:
+		return false
+	}
 }

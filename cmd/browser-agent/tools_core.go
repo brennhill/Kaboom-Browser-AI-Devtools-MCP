@@ -16,6 +16,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/summarypref"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testgenhandler"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactstate"
@@ -113,7 +114,7 @@ type ToolHandler struct {
 	uploadInteractHandler    *interactupload.Handler
 	testGenHandler           *testgenhandler.Handler
 	stateInteractHandler     *interactstate.Handler
-	configureSessionHandler  *configureSessionHandler
+	configureSessions        *toolconfigure.SessionHandler
 
 	// Passive network traffic recording state (start/stop capture).
 	networkRecording *netrecord.NetworkRecordingState
@@ -482,11 +483,13 @@ func NewToolHandler(server *Server, captureStore *capture.Store) *MCPHandler {
 	handler.uploadInteractHandler = toolinteract.NewUploadInteractHandler(interactDeps, handler.interactActionHandler)
 	handler.testGenHandler = testgenhandler.New(handler)
 	handler.stateInteractHandler = toolinteract.NewStateInteractHandler(interactDeps, handler.sessionStoreImpl)
-	handler.configureSessionHandler = newConfigureSessionHandler(
-		handler,
+	handler.configureSessions = toolconfigure.NewSessionHandler(toolconfigure.SessionDeps{
+		RequireStore:      handler.requireSessionStore,
+		InvalidateSummary: handler.invalidateSummaryPref,
+		SetActiveCodebase: handler.MCPHandler.server.SetActiveCodebase,
+	},
 		handler.sessionStoreImpl,
 		handler.sessionManager,
-		handler.MCPHandler.server,
 	)
 	handler.ensureToolModules()
 	handler.ensureToolSchemas()

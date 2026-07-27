@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -38,13 +39,17 @@ func TestToolLoadSessionContext_NilStore(t *testing.T) {
 	t.Parallel()
 	env := newConfigureTestEnv(t)
 
-	// Force error path by setting sessionStoreImpl to nil on both the handler and sub-handler.
+	// Force the canonical session handler's nil-store path.
 	env.handler.sessionStoreImpl = nil
-	env.handler.configureSessionHandler.sessionStoreImpl = nil
+	env.handler.configureSessions = toolconfigure.NewSessionHandler(toolconfigure.SessionDeps{
+		RequireStore:      env.handler.requireSessionStore,
+		InvalidateSummary: env.handler.invalidateSummaryPref,
+		SetActiveCodebase: env.server.SetActiveCodebase,
+	}, nil, env.handler.sessionManager)
 
 	args := json.RawMessage(`{"what":"load"}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := env.handler.configureSession().handleLoadSessionContext(req, args)
+	resp := env.handler.configureSessions.Load(req, args)
 
 	result := parseToolResult(t, resp)
 	if !result.IsError {
