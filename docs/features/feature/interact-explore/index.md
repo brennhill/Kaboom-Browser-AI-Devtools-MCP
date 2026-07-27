@@ -20,6 +20,7 @@ code_paths:
   - cmd/browser-agent/tools_interact_adapter.go
   - cmd/browser-agent/tools_interact_entrypoint.go
   - cmd/browser-agent/tools_interact_dispatch.go
+  - cmd/browser-agent/tools_interact_recording.go
   - cmd/browser-agent/tools_pending_query_enqueue.go
   - internal/tools/interact/workflow.go
   - internal/schema/interact/actions.go
