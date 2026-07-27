@@ -4,7 +4,7 @@ feature_id: feature-flow-recording
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/tools_observe.go
@@ -12,6 +12,8 @@ code_paths:
   - cmd/browser-agent/internal/toolrecording/handler.go
   - cmd/browser-agent/internal/toolrecording/helpers.go
   - internal/capture/handlers.go
+  - internal/recording/types.go
+  - internal/recording/manager.go
   - src/background/recording/index.ts
   - src/background/recording/capture.ts
   - src/background/recording/listeners.ts
@@ -30,6 +32,7 @@ test_paths:
   - cmd/browser-agent/internal/toolrecording/toolrecording_test.go
   - cmd/browser-agent/recording_playback_result_test.go
   - internal/capture/recording_delegation_test.go
+  - internal/recording/no_facade_test.go
   - tests/extension/recording.test.js
   - tests/extension/recording-listeners-target-tab.test.js
   - tests/extension/recording-capture-branding.test.js
@@ -64,6 +67,11 @@ last_verified_date: 2026-03-05
 - FEATURE_FLOW_RECORDING_003
 
 ## Code and Tests
+
+Go callers use the canonical `Recording`, `RecordingAction`,
+`RecordingMetadata`, and `RecordingManager` contracts from
+`internal/recording`; alias-only recording and capture re-exports are
+prohibited.
 
 - Core recording lifecycle and listener wiring:
   - `cmd/browser-agent/tools_configure.go`

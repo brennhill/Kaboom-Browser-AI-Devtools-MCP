@@ -37,7 +37,7 @@ func Compare(src RecordingSource, originalRecordingID, replayRecordingID string)
 	return result, nil
 }
 
-func compareActions(original, replay *recording.Item) ActionComparison {
+func compareActions(original, replay *recording.Recording) ActionComparison {
 	stats := ActionComparison{
 		OriginalCount: original.ActionCount,
 		ReplayCount:   replay.ActionCount,
@@ -47,7 +47,7 @@ func compareActions(original, replay *recording.Item) ActionComparison {
 	return stats
 }
 
-func detectRegressions(original, replay *recording.Item, result *Result) {
+func detectRegressions(original, replay *recording.Recording, result *Result) {
 	originalErrors := make(map[string]bool)
 	for _, action := range original.Actions {
 		if action.Type == "error" {
@@ -70,7 +70,7 @@ func detectRegressions(original, replay *recording.Item, result *Result) {
 	}
 }
 
-func detectFixes(original, replay *recording.Item, result *Result) {
+func detectFixes(original, replay *recording.Recording, result *Result) {
 	replayErrors := make(map[string]bool)
 	for _, action := range replay.Actions {
 		if action.Type == "error" {
@@ -93,7 +93,7 @@ func detectFixes(original, replay *recording.Item, result *Result) {
 	}
 }
 
-func detectValueChanges(original, replay *recording.Item, result *Result) {
+func detectValueChanges(original, replay *recording.Recording, result *Result) {
 	originalValues := BuildTypeValueMap(original.Actions)
 
 	for _, action := range replay.Actions {

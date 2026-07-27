@@ -104,8 +104,6 @@ type (
 	ResourceEntry        = performance.ResourceEntry    // Alias for convenience
 	ResourceDiff         = performance.ResourceDiff     // Alias for convenience
 	CausalDiffResult     = performance.CausalDiffResult // Alias for convenience
-	Recording            = recording.Item               // Alias for convenience (avoid qualifying as recording.Item everywhere)
-	RecordingAction      = recording.Action             // Alias for convenience
 	PendingQueryResponse = queries.PendingQueryResponse // Alias for convenience (avoid qualifying as queries.PendingQueryResponse everywhere)
 	PendingQuery         = queries.PendingQuery         // Alias for convenience
 	CommandResult        = queries.CommandResult        // Alias for convenience (avoid qualifying as queries.CommandResult everywhere)
@@ -121,10 +119,6 @@ type (
 
 	// WebSocket connection tracking — moved to internal/capture/wsconn package.
 	WSConnectionTracker = wsconn.Tracker // Active + closed WS connections, LRU eviction order. Guarded by Capture.mu.
-
-	// Recording subsystem types — moved to internal/recording package.
-	RecordingManager = recording.Manager     // Recording lifecycle, persistence, and storage quotas
-	StorageInfo      = recording.StorageInfo // Recording storage usage info
 
 	// Replay subsystem types — moved to internal/recording/playback package.
 	PlaybackSession = playback.Session     // Active playback session state

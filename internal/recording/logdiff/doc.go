@@ -7,7 +7,7 @@ Package logdiff compares an original recording against a replay recording and
 reports what changed between the two runs.
 
 It reads recordings through the one-method RecordingSource interface (satisfied
-by *recording.Manager) so diffing can be exercised without touching disk.
+by *recording.RecordingManager) so diffing can be exercised without touching disk.
 
 Layout:
   - types.go: Result and its constituent entry types

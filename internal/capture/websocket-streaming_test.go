@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	recordingmodel "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
 )
 
 // Module 1: WebSocket Streaming Tests (for Flow Recording feature)
@@ -44,7 +46,7 @@ func TestRecordingWebSocketConnectionEstablished(t *testing.T) {
 	}
 
 	// Verify recording can queue actions (simulating WS telemetry)
-	action := RecordingAction{
+	action := recordingmodel.RecordingAction{
 		Type:        "click",
 		Selector:    "button",
 		TimestampMs: 1000,
@@ -75,7 +77,7 @@ func TestRecordingWebSocketRealTimeStreaming(t *testing.T) {
 	// Simulate rapid-fire events (10ms apart)
 	startTime := time.Now()
 	for i := 1; i <= 5; i++ {
-		action := RecordingAction{
+		action := recordingmodel.RecordingAction{
 			Type:        "click",
 			TimestampMs: startTime.Add(time.Duration(i*10) * time.Millisecond).UnixMilli(),
 			Selector:    fmt.Sprintf("button#action-%d", i),
@@ -131,7 +133,7 @@ func TestRecordingWebSocketBufferOverflow(t *testing.T) {
 	// Add 101 actions rapidly
 	startTime := time.Now()
 	for i := 1; i <= 101; i++ {
-		action := RecordingAction{
+		action := recordingmodel.RecordingAction{
 			Type:        "click",
 			TimestampMs: startTime.Add(time.Duration(i*5) * time.Millisecond).UnixMilli(),
 			Selector:    fmt.Sprintf("button#action-%d", i),
@@ -179,7 +181,7 @@ func TestRecordingWebSocketConnectionDropFallback(t *testing.T) {
 
 	// Simulate events before connection drop
 	for i := 1; i <= 3; i++ {
-		action := RecordingAction{
+		action := recordingmodel.RecordingAction{
 			Type:        "click",
 			TimestampMs: time.Now().UnixMilli(),
 			Selector:    fmt.Sprintf("button#pre-drop-%d", i),
@@ -189,7 +191,7 @@ func TestRecordingWebSocketConnectionDropFallback(t *testing.T) {
 
 	// Simulate events after fallback to polling (should still be captured)
 	for i := 1; i <= 3; i++ {
-		action := RecordingAction{
+		action := recordingmodel.RecordingAction{
 			Type:        "type",
 			TimestampMs: time.Now().UnixMilli(),
 			Selector:    fmt.Sprintf("input#post-drop-%d", i),
@@ -243,7 +245,7 @@ func TestRecordingWebSocketReconnectBackoff(t *testing.T) {
 	// Simulate events across connection cycles
 	// Cycle 1: Initial connection
 	for i := 1; i <= 2; i++ {
-		action := RecordingAction{
+		action := recordingmodel.RecordingAction{
 			Type:        "click",
 			TimestampMs: time.Now().UnixMilli(),
 			Selector:    fmt.Sprintf("button#cycle1-%d", i),
@@ -253,7 +255,7 @@ func TestRecordingWebSocketReconnectBackoff(t *testing.T) {
 
 	// Cycle 2: After connection drop and reconnect
 	for i := 1; i <= 2; i++ {
-		action := RecordingAction{
+		action := recordingmodel.RecordingAction{
 			Type:        "click",
 			TimestampMs: time.Now().UnixMilli(),
 			Selector:    fmt.Sprintf("button#cycle2-%d", i),
@@ -263,7 +265,7 @@ func TestRecordingWebSocketReconnectBackoff(t *testing.T) {
 
 	// Cycle 3: After another reconnect cycle
 	for i := 1; i <= 2; i++ {
-		action := RecordingAction{
+		action := recordingmodel.RecordingAction{
 			Type:        "click",
 			TimestampMs: time.Now().UnixMilli(),
 			Selector:    fmt.Sprintf("button#cycle3-%d", i),
@@ -379,7 +381,7 @@ func TestRecordingAddActions(t *testing.T) {
 	}
 
 	// Add 5 actions
-	actions := []RecordingAction{
+	actions := []recordingmodel.RecordingAction{
 		{Type: "navigate", URL: "https://example.com/checkout", X: 0, Y: 0},
 		{Type: "click", Selector: "[data-testid=email]", X: 100, Y: 50},
 		{Type: "type", Selector: "[data-testid=email]", Text: "test@example.com"},
@@ -437,7 +439,7 @@ func TestRecordingPersistToDisk(t *testing.T) {
 
 	// Add 10 actions
 	for i := 0; i < 10; i++ {
-		action := RecordingAction{
+		action := recordingmodel.RecordingAction{
 			Type:        "click",
 			Selector:    "[data-testid=btn]",
 			TimestampMs: int64((i + 1) * 1000),
@@ -494,7 +496,7 @@ func TestRecordingSensitiveDataRedaction(t *testing.T) {
 	}
 
 	// Add type action with sensitive text
-	action := RecordingAction{
+	action := recordingmodel.RecordingAction{
 		Type:     "type",
 		Selector: "input[type=password]",
 		Text:     "my_password_123",
@@ -539,7 +541,7 @@ func TestRecordingSensitiveDataOptIn(t *testing.T) {
 	}
 
 	// Add type action with sensitive text
-	action := RecordingAction{
+	action := recordingmodel.RecordingAction{
 		Type:     "type",
 		Selector: "input[type=password]",
 		Text:     "test_password",
@@ -643,7 +645,7 @@ func TestRecordingStorageWarning(t *testing.T) {
 	}
 
 	// Verify we can still add actions (non-blocking)
-	action := RecordingAction{Type: "click", Selector: "button", TimestampMs: int64(1000)}
+	action := recordingmodel.RecordingAction{Type: "click", Selector: "button", TimestampMs: int64(1000)}
 	err = capture.AddRecordingAction(action)
 	if err != nil {
 		t.Errorf("Expected to add actions at warning level, got error: %v", err)
@@ -678,7 +680,7 @@ func TestRecordingListRecordings(t *testing.T) {
 	}
 
 	// Add an action
-	err = capture.AddRecordingAction(RecordingAction{Type: "click", Selector: "btn"})
+	err = capture.AddRecordingAction(recordingmodel.RecordingAction{Type: "click", Selector: "btn"})
 	if err != nil {
 		t.Fatalf("Failed to add action: %v", err)
 	}
@@ -732,7 +734,7 @@ func TestRecordingQueryActions(t *testing.T) {
 	}
 
 	for i := 0; i < 10; i++ {
-		action := RecordingAction{
+		action := recordingmodel.RecordingAction{
 			Type:        "click",
 			Selector:    "button",
 			TimestampMs: int64((i + 1) * 1000),
@@ -797,7 +799,7 @@ func TestPlaybackLoadRecording(t *testing.T) {
 	// Create and persist a recording
 	recordingID, _ := capture.StartRecording("playback-test", "https://example.com", false)
 	for i := 0; i < 8; i++ {
-		capture.AddRecordingAction(RecordingAction{
+		capture.AddRecordingAction(recordingmodel.RecordingAction{
 			Type:        "click",
 			Selector:    "button",
 			TimestampMs: int64((i + 1) * 1000),
@@ -840,7 +842,7 @@ func TestPlaybackNavigateAction(t *testing.T) {
 
 	// Create a recording with navigate action
 	recordingID, _ := capture.StartRecording("nav-test", "https://example.com", false)
-	capture.AddRecordingAction(RecordingAction{
+	capture.AddRecordingAction(recordingmodel.RecordingAction{
 		Type:        "navigate",
 		URL:         "https://example.com/checkout",
 		TimestampMs: 1000,
@@ -881,7 +883,7 @@ func TestPlaybackClickAction(t *testing.T) {
 
 	// Create a recording with click action
 	recordingID, _ := capture.StartRecording("click-test", "https://example.com", false)
-	capture.AddRecordingAction(RecordingAction{
+	capture.AddRecordingAction(recordingmodel.RecordingAction{
 		Type:        "click",
 		Selector:    "[data-testid=add-to-cart]",
 		X:           500,
@@ -920,7 +922,7 @@ func TestPlaybackClickSelfHealing(t *testing.T) {
 
 	// Create action with data-testid (primary selector)
 	recordingID, _ := capture.StartRecording("healing-test", "https://example.com", false)
-	capture.AddRecordingAction(RecordingAction{
+	capture.AddRecordingAction(recordingmodel.RecordingAction{
 		Type:        "click",
 		Selector:    "[data-testid=add-to-cart]",
 		DataTestID:  "add-to-cart",
@@ -958,7 +960,7 @@ func TestPlaybackFragileSelectorDetection(t *testing.T) {
 
 	// Add click actions (could have fragile selectors)
 	for i := 0; i < 3; i++ {
-		capture.AddRecordingAction(RecordingAction{
+		capture.AddRecordingAction(recordingmodel.RecordingAction{
 			Type:        "click",
 			Selector:    ".button-" + string(rune('a'+i)),
 			X:           100 + (i * 50),
@@ -989,7 +991,7 @@ func TestPlaybackNonBlockingError(t *testing.T) {
 	// Create a recording with 5 actions
 	recordingID, _ := capture.StartRecording("error-test", "https://example.com", false)
 	for i := 0; i < 5; i++ {
-		capture.AddRecordingAction(RecordingAction{
+		capture.AddRecordingAction(recordingmodel.RecordingAction{
 			Type:        "click",
 			Selector:    ".btn",
 			TimestampMs: int64((i + 1) * 1000),
@@ -1036,7 +1038,7 @@ func TestLogDiffMatch(t *testing.T) {
 
 	// Add 5 click actions (happy path - no errors)
 	for i := 0; i < 5; i++ {
-		action := RecordingAction{
+		action := recordingmodel.RecordingAction{
 			Type:        "click",
 			Selector:    "button.checkout",
 			TimestampMs: int64((i + 1) * 1000),
@@ -1093,7 +1095,7 @@ func TestLogDiffNewErrors(t *testing.T) {
 		t.Fatalf("Failed to start original recording: %v", err)
 	}
 	for i := 0; i < 3; i++ {
-		action := RecordingAction{
+		action := recordingmodel.RecordingAction{
 			Type:        "click",
 			Selector:    "button",
 			TimestampMs: int64((i + 1) * 1000),
@@ -1105,7 +1107,7 @@ func TestLogDiffNewErrors(t *testing.T) {
 	// Create replay recording with more actions (simulating a regression)
 	recordingID2, _ := capture.StartRecording("replay", "https://example.com", false)
 	for i := 0; i < 3; i++ {
-		action := RecordingAction{
+		action := recordingmodel.RecordingAction{
 			Type:        "click",
 			Selector:    "button",
 			TimestampMs: int64((i + 1) * 1000),
@@ -1113,7 +1115,7 @@ func TestLogDiffNewErrors(t *testing.T) {
 		_ = capture.AddRecordingAction(action)
 	}
 	// Add extra action to simulate regression/new error condition
-	extraAction := RecordingAction{
+	extraAction := recordingmodel.RecordingAction{
 		Type:        "error",
 		Selector:    "button.broken",
 		TimestampMs: int64(4 * 1000),
@@ -1163,7 +1165,7 @@ func TestLogDiffFixed(t *testing.T) {
 
 	// Create original recording with error
 	recordingID1, _ := capture.StartRecording("buggy", "https://example.com", false)
-	errorAction := RecordingAction{
+	errorAction := recordingmodel.RecordingAction{
 		Type:        "error",
 		Selector:    "button.broken",
 		TimestampMs: int64(1000),
@@ -1171,7 +1173,7 @@ func TestLogDiffFixed(t *testing.T) {
 	}
 	_ = capture.AddRecordingAction(errorAction)
 	for i := 0; i < 2; i++ {
-		action := RecordingAction{
+		action := recordingmodel.RecordingAction{
 			Type:        "click",
 			Selector:    "button",
 			TimestampMs: int64((i + 2) * 1000),
@@ -1183,7 +1185,7 @@ func TestLogDiffFixed(t *testing.T) {
 	// Create replay recording without error (bug fixed)
 	recordingID2, _ := capture.StartRecording("fixed", "https://example.com", false)
 	for i := 0; i < 3; i++ {
-		action := RecordingAction{
+		action := recordingmodel.RecordingAction{
 			Type:        "click",
 			Selector:    "button",
 			TimestampMs: int64((i + 1) * 1000),
@@ -1241,7 +1243,7 @@ func TestLogDiffValueChanges(t *testing.T) {
 	// Create recording with type action that has specific value
 	recordingID, _ := capture.StartRecording("value-test", "https://example.com", true)
 
-	action := RecordingAction{
+	action := recordingmodel.RecordingAction{
 		Type:        "type",
 		Selector:    "input.cart-count",
 		TimestampMs: int64(1000),
@@ -1291,7 +1293,7 @@ func TestLogDiffCategorize(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to start original recording: %v", err)
 	}
-	actions1 := []RecordingAction{
+	actions1 := []recordingmodel.RecordingAction{
 		{Type: "navigate", Selector: "", TimestampMs: 1000, Text: "https://example.com"},
 		{Type: "click", Selector: "button.login", TimestampMs: 2000},
 		{Type: "type", Selector: "input.username", TimestampMs: 3000, Text: "[redacted]"},
@@ -1312,7 +1314,7 @@ func TestLogDiffCategorize(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to start replay recording: %v", err)
 	}
-	actions2 := []RecordingAction{
+	actions2 := []recordingmodel.RecordingAction{
 		{Type: "navigate", Selector: "", TimestampMs: 1000, Text: "https://example.com"},
 		{Type: "click", Selector: "button.login", TimestampMs: 2000},
 		{Type: "error", Selector: "input.username", TimestampMs: 3000, Text: "Invalid credentials"},
@@ -1433,7 +1435,7 @@ func TestExtensionStartRecording(t *testing.T) {
 	}
 
 	// Verify we can add actions after starting
-	testAction := RecordingAction{Type: "click", Selector: "button", TimestampMs: int64(1000)}
+	testAction := recordingmodel.RecordingAction{Type: "click", Selector: "button", TimestampMs: int64(1000)}
 	err = capture.AddRecordingAction(testAction)
 	if err != nil {
 		t.Errorf("Expected to be able to add action after starting recording: %v", err)
@@ -1464,7 +1466,7 @@ func TestExtensionStopRecording(t *testing.T) {
 
 	// Add 12 actions as described in test case
 	for i := 0; i < 12; i++ {
-		action := RecordingAction{
+		action := recordingmodel.RecordingAction{
 			Type:        "click",
 			Selector:    fmt.Sprintf("button#action-%d", i+1),
 			TimestampMs: int64((i + 1) * 1000), // 1s, 2s, 3s, ... 12s apart
@@ -1536,7 +1538,7 @@ func TestExtensionAutoNameRecording(t *testing.T) {
 	}
 
 	// Add an action
-	_ = capture.AddRecordingAction(RecordingAction{Type: "click", Selector: "button"})
+	_ = capture.AddRecordingAction(recordingmodel.RecordingAction{Type: "click", Selector: "button"})
 
 	// Stop recording
 	_, _, err = capture.StopRecording(recordingID)

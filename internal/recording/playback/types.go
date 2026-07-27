@@ -9,12 +9,12 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
 )
 
-// RecordingSource supplies recordings to the replay engine. *recording.Manager
+// RecordingSource supplies recordings to the replay engine. *recording.RecordingManager
 // satisfies it; tests can substitute an in-memory fake.
 type RecordingSource interface {
 	// LookupRecording returns the recording with the given ID, preferring the
 	// in-memory copy over the on-disk one.
-	LookupRecording(recordingID string) (*recording.Item, error)
+	LookupRecording(recordingID string) (*recording.Recording, error)
 }
 
 // Result is the outcome of replaying a single recorded action.

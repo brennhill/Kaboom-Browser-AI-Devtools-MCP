@@ -6,7 +6,7 @@
 Package playback replays recorded user flows.
 
 It reads recordings through the one-method RecordingSource interface (satisfied
-by *recording.Manager) so replay can be exercised without touching disk.
+by *recording.RecordingManager) so replay can be exercised without touching disk.
 
 Layout:
   - types.go: Session/Result/Coordinates

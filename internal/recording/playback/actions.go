@@ -10,7 +10,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
 )
 
-func executeAction(index int, action recording.Action) Result {
+func executeAction(index int, action recording.RecordingAction) Result {
 	startTime := time.Now()
 
 	result := Result{
@@ -42,7 +42,7 @@ func executeAction(index int, action recording.Action) Result {
 	return result
 }
 
-func executeClickWithHealing(action recording.Action) Result {
+func executeClickWithHealing(action recording.RecordingAction) Result {
 	result := Result{
 		Status:      "error",
 		ActionType:  "click",

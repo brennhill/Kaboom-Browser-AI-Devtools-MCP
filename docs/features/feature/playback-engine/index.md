@@ -71,7 +71,7 @@ last_verified_date: 2026-03-05
 - Replay engine (session lifecycle, action execution, selector fragility): `internal/recording/playback/`
 - Recording comparison and regression reporting: `internal/recording/logdiff/`
 - Both engines read recordings through a one-method source interface that
-  `*recording.Manager` satisfies (`LookupRecording` for replay, `GetRecording`
+  `*recording.RecordingManager` satisfies (`LookupRecording` for replay, `GetRecording`
   for diffing), so neither depends on the manager type and both are tested
   against in-memory fakes.
 - Delegation surface: `internal/capture/handlers.go`

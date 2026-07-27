@@ -15,21 +15,21 @@ import (
 // fakeSource is an in-memory RecordingSource so diffing can be exercised
 // without touching disk.
 type fakeSource struct {
-	recordings map[string]*recording.Item
+	recordings map[string]*recording.Recording
 }
 
-func (f *fakeSource) GetRecording(id string) (*recording.Item, error) {
+func (f *fakeSource) GetRecording(id string) (*recording.Recording, error) {
 	if rec, ok := f.recordings[id]; ok {
 		return rec, nil
 	}
 	return nil, errors.New("read_failed: recording not found: " + id)
 }
 
-func sourceWith(t *testing.T, entries map[string][]recording.Action) *fakeSource {
+func sourceWith(t *testing.T, entries map[string][]recording.RecordingAction) *fakeSource {
 	t.Helper()
-	src := &fakeSource{recordings: make(map[string]*recording.Item, len(entries))}
+	src := &fakeSource{recordings: make(map[string]*recording.Recording, len(entries))}
 	for id, actions := range entries {
-		src.recordings[id] = &recording.Item{
+		src.recordings[id] = &recording.Recording{
 			ID:          id,
 			Name:        id,
 			StartURL:    "https://app.example.com",
@@ -43,7 +43,7 @@ func sourceWith(t *testing.T, entries map[string][]recording.Action) *fakeSource
 func TestDiffRecordingsRegressionAndValueChanges(t *testing.T) {
 	t.Parallel()
 
-	src := sourceWith(t, map[string][]recording.Action{
+	src := sourceWith(t, map[string][]recording.RecordingAction{
 		"orig": {
 			{Type: "click", Selector: "#submit", TimestampMs: 10},
 			{Type: "type", Selector: "#email", Text: "before@example.com", TimestampMs: 20},
@@ -93,7 +93,7 @@ func TestDiffRecordingsRegressionAndValueChanges(t *testing.T) {
 func TestDiffRecordingsLoadError(t *testing.T) {
 	t.Parallel()
 
-	src := sourceWith(t, map[string][]recording.Action{
+	src := sourceWith(t, map[string][]recording.RecordingAction{
 		"present": {{Type: "click", Selector: "#a"}},
 	})
 
@@ -136,17 +136,17 @@ func TestLogDiffStatusBranchesAndHelpers(t *testing.T) {
 	}
 
 	stats := compareActions(
-		&recording.Item{
+		&recording.Recording{
 			ActionCount: 3,
-			Actions: []recording.Action{
+			Actions: []recording.RecordingAction{
 				{Type: "error"},
 				{Type: "click"},
 				{Type: "navigate"},
 			},
 		},
-		&recording.Item{
+		&recording.Recording{
 			ActionCount: 2,
-			Actions: []recording.Action{
+			Actions: []recording.RecordingAction{
 				{Type: "type"},
 				{Type: "click"},
 			},
@@ -170,8 +170,8 @@ func TestLogDiffStatusBranchesAndHelpers(t *testing.T) {
 func TestNewCategorizeActionTypes_MixedActions(t *testing.T) {
 	t.Parallel()
 
-	rec := &recording.Item{
-		Actions: []recording.Action{
+	rec := &recording.Recording{
+		Actions: []recording.RecordingAction{
 			{Type: "click"}, {Type: "click"}, {Type: "type"},
 			{Type: "navigate"}, {Type: "scroll"}, {Type: "click"}, {Type: "error"},
 		},
@@ -199,7 +199,7 @@ func TestNewCategorizeActionTypes_MixedActions(t *testing.T) {
 func TestNewCategorizeActionTypes_EmptyRecording(t *testing.T) {
 	t.Parallel()
 
-	counts := CategorizeActionTypes(&recording.Item{Actions: []recording.Action{}})
+	counts := CategorizeActionTypes(&recording.Recording{Actions: []recording.RecordingAction{}})
 
 	if len(counts) != 0 {
 		t.Errorf("counts len = %d, want 0 for empty recording", len(counts))
@@ -209,8 +209,8 @@ func TestNewCategorizeActionTypes_EmptyRecording(t *testing.T) {
 func TestNewCategorizeActionTypes_SingleType(t *testing.T) {
 	t.Parallel()
 
-	rec := &recording.Item{
-		Actions: []recording.Action{{Type: "click"}, {Type: "click"}, {Type: "click"}},
+	rec := &recording.Recording{
+		Actions: []recording.RecordingAction{{Type: "click"}, {Type: "click"}, {Type: "click"}},
 	}
 
 	counts := CategorizeActionTypes(rec)
@@ -350,7 +350,7 @@ func TestNewLogDiffResult_FixedReport(t *testing.T) {
 func TestNewCountActionTypes(t *testing.T) {
 	t.Parallel()
 
-	actions := []recording.Action{
+	actions := []recording.RecordingAction{
 		{Type: "error"}, {Type: "click"}, {Type: "click"},
 		{Type: "type"}, {Type: "navigate"}, {Type: "navigate"},
 		{Type: "navigate"}, {Type: "scroll"},
@@ -375,7 +375,7 @@ func TestNewCountActionTypes(t *testing.T) {
 func TestNewCountActionTypes_Empty(t *testing.T) {
 	t.Parallel()
 
-	errs, clicks, types, navigates := CountActionTypes([]recording.Action{})
+	errs, clicks, types, navigates := CountActionTypes([]recording.RecordingAction{})
 
 	if errs != 0 || clicks != 0 || types != 0 || navigates != 0 {
 		t.Errorf("all counts should be 0, got errors=%d, clicks=%d, types=%d, navigates=%d",
@@ -386,7 +386,7 @@ func TestNewCountActionTypes_Empty(t *testing.T) {
 func TestNewCountActionTypes_UnknownTypes(t *testing.T) {
 	t.Parallel()
 
-	actions := []recording.Action{
+	actions := []recording.RecordingAction{
 		{Type: "scroll"}, {Type: "unknown"}, {Type: "custom"},
 	}
 
@@ -405,7 +405,7 @@ func TestNewCountActionTypes_UnknownTypes(t *testing.T) {
 func TestNewBuildTypeValueMap(t *testing.T) {
 	t.Parallel()
 
-	actions := []recording.Action{
+	actions := []recording.RecordingAction{
 		{Type: "type", Selector: "#email", Text: "user@test.com"},
 		{Type: "type", Selector: "#password", Text: "secret123"},
 		{Type: "click", Selector: "#submit"},
@@ -431,7 +431,7 @@ func TestNewBuildTypeValueMap(t *testing.T) {
 func TestNewBuildTypeValueMap_Empty(t *testing.T) {
 	t.Parallel()
 
-	values := BuildTypeValueMap([]recording.Action{})
+	values := BuildTypeValueMap([]recording.RecordingAction{})
 	if len(values) != 0 {
 		t.Errorf("values len = %d, want 0", len(values))
 	}

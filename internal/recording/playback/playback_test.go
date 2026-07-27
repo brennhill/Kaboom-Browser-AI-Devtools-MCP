@@ -16,10 +16,10 @@ import (
 // fakeSource is an in-memory RecordingSource so replay can be exercised
 // without touching disk.
 type fakeSource struct {
-	recordings map[string]*recording.Item
+	recordings map[string]*recording.Recording
 }
 
-func (f *fakeSource) LookupRecording(id string) (*recording.Item, error) {
+func (f *fakeSource) LookupRecording(id string) (*recording.Recording, error) {
 	if rec, ok := f.recordings[id]; ok {
 		return rec, nil
 	}
@@ -29,20 +29,20 @@ func (f *fakeSource) LookupRecording(id string) (*recording.Item, error) {
 func TestPlaybackStartAndExecute(t *testing.T) {
 	t.Parallel()
 
-	src := &fakeSource{recordings: map[string]*recording.Item{}}
+	src := &fakeSource{recordings: map[string]*recording.Recording{}}
 
 	if _, err := Start(src, "missing-recording"); err == nil || !strings.Contains(err.Error(), "playback_recording_not_found") {
 		t.Fatalf("Start(missing) error = %v, want playback_recording_not_found", err)
 	}
 
-	src.recordings["empty"] = &recording.Item{ID: "empty", Actions: nil}
+	src.recordings["empty"] = &recording.Recording{ID: "empty", Actions: nil}
 	if _, err := Start(src, "empty"); err == nil || !strings.Contains(err.Error(), "playback_no_actions") {
 		t.Fatalf("Start(empty) error = %v, want playback_no_actions", err)
 	}
 
-	src.recordings["flow"] = &recording.Item{
+	src.recordings["flow"] = &recording.Recording{
 		ID: "flow",
-		Actions: []recording.Action{
+		Actions: []recording.RecordingAction{
 			{Type: "navigate"},
 			{Type: "click", Selector: "#submit"},
 			{Type: "type", Text: "hello"},
@@ -71,11 +71,11 @@ func TestPlaybackStartAndExecute(t *testing.T) {
 // vanishingSource returns the recording once and then reports it missing,
 // reproducing a delete landing between Start and the replay read.
 type vanishingSource struct {
-	rec  *recording.Item
+	rec  *recording.Recording
 	seen int
 }
 
-func (v *vanishingSource) LookupRecording(string) (*recording.Item, error) {
+func (v *vanishingSource) LookupRecording(string) (*recording.Recording, error) {
 	v.seen++
 	if v.seen == 1 {
 		return v.rec, nil
@@ -86,7 +86,7 @@ func (v *vanishingSource) LookupRecording(string) (*recording.Item, error) {
 func TestExecuteRecordingDeletedAfterStart(t *testing.T) {
 	t.Parallel()
 
-	src := &vanishingSource{rec: &recording.Item{ID: "flow", Actions: []recording.Action{{Type: "navigate"}}}}
+	src := &vanishingSource{rec: &recording.Recording{ID: "flow", Actions: []recording.RecordingAction{{Type: "navigate"}}}}
 	_, err := Execute(src, "flow")
 	if err == nil || !strings.Contains(err.Error(), "playback_load_failed") {
 		t.Fatalf("Execute(deleted mid-run) error = %v, want playback_load_failed", err)
@@ -96,27 +96,27 @@ func TestExecuteRecordingDeletedAfterStart(t *testing.T) {
 func TestExecuteClickWithHealingStrategies(t *testing.T) {
 	t.Parallel()
 
-	dataTestID := executeClickWithHealing(recording.Action{Type: "click", DataTestID: "login"})
+	dataTestID := executeClickWithHealing(recording.RecordingAction{Type: "click", DataTestID: "login"})
 	if dataTestID.Status != "ok" || dataTestID.SelectorUsed != "data-testid" {
 		t.Fatalf("data-testid strategy failed: %+v", dataTestID)
 	}
 
-	css := executeClickWithHealing(recording.Action{Type: "click", Selector: ".primary-button"})
+	css := executeClickWithHealing(recording.RecordingAction{Type: "click", Selector: ".primary-button"})
 	if css.Status != "ok" || css.SelectorUsed != "css" {
 		t.Fatalf("css strategy failed: %+v", css)
 	}
 
-	nearby := executeClickWithHealing(recording.Action{Type: "click", X: 10, Y: 20})
+	nearby := executeClickWithHealing(recording.RecordingAction{Type: "click", X: 10, Y: 20})
 	if nearby.Status != "ok" || nearby.SelectorUsed != "nearby_xy" {
 		t.Fatalf("nearby strategy failed: %+v", nearby)
 	}
 
-	lastKnown := executeClickWithHealing(recording.Action{Type: "click", ScreenshotPath: "shot.png"})
+	lastKnown := executeClickWithHealing(recording.RecordingAction{Type: "click", ScreenshotPath: "shot.png"})
 	if lastKnown.Status != "ok" || lastKnown.SelectorUsed != "last_known" {
 		t.Fatalf("last-known strategy failed: %+v", lastKnown)
 	}
 
-	failed := executeClickWithHealing(recording.Action{Type: "click"})
+	failed := executeClickWithHealing(recording.RecordingAction{Type: "click"})
 	if failed.Status != "error" || !strings.Contains(failed.Error, "selector_not_found") {
 		t.Fatalf("failed strategy result = %+v, want selector_not_found error", failed)
 	}

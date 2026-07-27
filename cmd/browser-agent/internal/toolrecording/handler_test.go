@@ -9,13 +9,14 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
 )
 
 type fakeCapture struct {
 	startName      string
 	startURL       string
 	startSensitive bool
-	recordings     []capture.Recording
+	recordings     []recording.Recording
 }
 
 func (f *fakeCapture) StartRecording(name, pageURL string, sensitive bool) (string, error) {
@@ -29,12 +30,12 @@ func (f *fakeCapture) StopRecording(string) (int, int64, error) {
 	return 3, 125, nil
 }
 
-func (f *fakeCapture) ListRecordings(int) ([]capture.Recording, error) {
+func (f *fakeCapture) ListRecordings(int) ([]recording.Recording, error) {
 	return f.recordings, nil
 }
 
-func (f *fakeCapture) GetRecording(string) (*capture.Recording, error) {
-	return &capture.Recording{}, nil
+func (f *fakeCapture) GetRecording(string) (*recording.Recording, error) {
+	return &recording.Recording{}, nil
 }
 
 func (f *fakeCapture) ExecutePlayback(string) (*capture.PlaybackSession, error) {

@@ -13,14 +13,15 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
 )
 
 // Capture is the recording-specific subset of capture.Store used by Handler.
 type Capture interface {
 	StartRecording(name, pageURL string, sensitiveDataEnabled bool) (string, error)
 	StopRecording(recordingID string) (int, int64, error)
-	ListRecordings(limit int) ([]capture.Recording, error)
-	GetRecording(recordingID string) (*capture.Recording, error)
+	ListRecordings(limit int) ([]recording.Recording, error)
+	GetRecording(recordingID string) (*recording.Recording, error)
 	ExecutePlayback(recordingID string) (*capture.PlaybackSession, error)
 	DiffRecordings(originalID, replayID string) (*capture.LogDiffResult, error)
 }

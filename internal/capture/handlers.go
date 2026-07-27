@@ -1,6 +1,6 @@
 // handlers.go — HTTP ingestion, request plumbing, and recording service delegation.
 // Purpose: Owns capture's external request boundary and recording/storage operations.
-// Why: Recording HTTP handlers and their delegated service methods evolve together.
+// Why: recording.Recording HTTP handlers and their delegated service methods evolve together.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 // Docs: docs/features/feature/query-service/index.md
 
@@ -279,15 +279,15 @@ func (c *Capture) StopRecording(recordingID string) (int, int64, error) {
 	return c.recordingManager.StopRecording(recordingID)
 }
 
-func (c *Capture) AddRecordingAction(action RecordingAction) error {
+func (c *Capture) AddRecordingAction(action recording.RecordingAction) error {
 	return c.recordingManager.AddRecordingAction(action)
 }
 
-func (c *Capture) ListRecordings(limit int) ([]Recording, error) {
+func (c *Capture) ListRecordings(limit int) ([]recording.Recording, error) {
 	return c.recordingManager.ListRecordings(limit)
 }
 
-func (c *Capture) GetRecording(recordingID string) (*Recording, error) {
+func (c *Capture) GetRecording(recordingID string) (*recording.Recording, error) {
 	return c.recordingManager.GetRecording(recordingID)
 }
 
@@ -311,11 +311,11 @@ func (c *Capture) DiffRecordings(originalID, replayID string) (*LogDiffResult, e
 	return logdiff.Compare(c.recordingManager, originalID, replayID)
 }
 
-func (c *Capture) CategorizeActionTypes(recordingItem *Recording) map[string]int {
+func (c *Capture) CategorizeActionTypes(recordingItem *recording.Recording) map[string]int {
 	return logdiff.CategorizeActionTypes(recordingItem)
 }
 
-func (c *Capture) GetStorageInfo() (StorageInfo, error) {
+func (c *Capture) GetStorageInfo() (recording.StorageInfo, error) {
 	return c.recordingManager.GetStorageInfo()
 }
 

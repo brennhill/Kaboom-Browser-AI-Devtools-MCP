@@ -13,6 +13,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/wsconn"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/redaction"
 )
 
@@ -87,8 +88,8 @@ type Capture struct {
 	// Redaction engine for scrubbing sensitive values from extension debug logs.
 	logRedactor *redaction.RedactionEngine
 
-	// Recording Management — delegates to RecordingManager sub-struct (aliased from internal/recording).
-	recordingManager *RecordingManager // Recording lifecycle, playback, and log-diff. Has own sync.Mutex — independent of Capture.mu.
+	// recording.Recording Management — delegates to recording.RecordingManager sub-struct (aliased from internal/recording).
+	recordingManager *recording.RecordingManager // recording.Recording lifecycle, playback, and log-diff. Has own sync.Mutex — independent of Capture.mu.
 
 	// ============================================
 	// Composed Sub-Structures

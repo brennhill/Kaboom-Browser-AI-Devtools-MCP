@@ -5,11 +5,11 @@ package logdiff
 
 import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
 
-// RecordingSource supplies recordings to the diff engine. *recording.Manager
+// RecordingSource supplies recordings to the diff engine. *recording.RecordingManager
 // satisfies it; tests can substitute an in-memory fake.
 type RecordingSource interface {
 	// GetRecording loads a recording by ID, validating the ID first.
-	GetRecording(recordingID string) (*recording.Item, error)
+	GetRecording(recordingID string) (*recording.Recording, error)
 }
 
 // Result is the comparison of an original recording against a replay recording.

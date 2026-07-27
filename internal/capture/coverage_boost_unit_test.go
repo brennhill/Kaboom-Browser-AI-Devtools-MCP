@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
@@ -315,7 +316,7 @@ func TestCoverageBoost_RecordingStorageHandlerAndDelegations(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartRecording() error = %v", err)
 	}
-	if err := c.AddRecordingAction(RecordingAction{Type: "click", Selector: "#btn"}); err != nil {
+	if err := c.AddRecordingAction(recording.RecordingAction{Type: "click", Selector: "#btn"}); err != nil {
 		t.Fatalf("AddRecordingAction() error = %v", err)
 	}
 	if _, _, err := c.StopRecording(recordingID); err != nil {
@@ -366,8 +367,8 @@ func TestCoverageBoost_RecordingStorageHandlerAndDelegations(t *testing.T) {
 	if _, err := c.DiffRecordings("orig", "replay"); err == nil {
 		t.Fatal("DiffRecordings(orig,replay) expected error for missing recordings")
 	}
-	cats := c.CategorizeActionTypes(&Recording{
-		Actions: []RecordingAction{{Type: "click"}, {Type: "type"}, {Type: "click"}},
+	cats := c.CategorizeActionTypes(&recording.Recording{
+		Actions: []recording.RecordingAction{{Type: "click"}, {Type: "type"}, {Type: "click"}},
 	})
 	if cats["click"] != 2 || cats["type"] != 1 {
 		t.Fatalf("CategorizeActionTypes() = %+v, want click=2,type=1", cats)

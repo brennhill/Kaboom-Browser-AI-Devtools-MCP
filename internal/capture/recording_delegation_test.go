@@ -1,12 +1,13 @@
 // Purpose: Tests for capture recording delegation to recording manager.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
-// recording_delegation_test.go — Tests for Capture delegation to RecordingManager.
+// recording_delegation_test.go — Tests for Capture delegation to recording.RecordingManager.
 package capture
 
 import (
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
@@ -25,7 +26,7 @@ func TestNewCaptureDelegation_RecordingManager(t *testing.T) {
 		t.Fatal("StartRecording returned empty id")
 	}
 
-	err = c.AddRecordingAction(RecordingAction{Type: "click", Selector: "#btn"})
+	err = c.AddRecordingAction(recording.RecordingAction{Type: "click", Selector: "#btn"})
 	if err != nil {
 		t.Fatalf("AddRecordingAction error = %v", err)
 	}
@@ -57,8 +58,8 @@ func TestNewCaptureDelegation_RecordingManager(t *testing.T) {
 		t.Fatalf("RecalculateStorageUsed error = %v", err)
 	}
 
-	rec := &Recording{
-		Actions: []RecordingAction{{Type: "click"}, {Type: "type"}},
+	rec := &recording.Recording{
+		Actions: []recording.RecordingAction{{Type: "click"}, {Type: "type"}},
 	}
 	counts := c.CategorizeActionTypes(rec)
 	if counts["click"] != 1 || counts["type"] != 1 {
