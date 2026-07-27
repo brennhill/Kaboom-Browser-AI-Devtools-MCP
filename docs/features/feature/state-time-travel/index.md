@@ -8,6 +8,7 @@ last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/internal/toolinteract/interactstate/state.go
   - cmd/browser-agent/internal/toolinteract/deps.go
+  - internal/tools/interact/workflow.go
 test_paths:
   - cmd/browser-agent/internal/toolinteract/interactstate/state_test.go
   - cmd/browser-agent/tools_interact_state_test.go

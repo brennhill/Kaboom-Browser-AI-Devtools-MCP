@@ -71,17 +71,14 @@ func New(deps *Deps, store *persistence.SessionStore) *Handler {
 	}
 }
 
-// stateCaptureResult — type alias delegated to internal/tools/interact package.
-type stateCaptureResult = act.StateCaptureResult
-
 // CaptureState attempts to capture form values, scroll position, and web storage from the browser.
-// Always returns a stateCaptureResult with an explicit Status the caller can surface to the LLM.
-func (h *Handler) CaptureState(req mcp.JSONRPCRequest) stateCaptureResult {
+// It always returns the canonical result with an explicit status the caller can surface to the LLM.
+func (h *Handler) CaptureState(req mcp.JSONRPCRequest) act.StateCaptureResult {
 	if !h.deps.IsPilotActionAllowed() {
-		return stateCaptureResult{Status: act.StateCaptureStatusPilotDisabled}
+		return act.StateCaptureResult{Status: act.StateCaptureStatusPilotDisabled}
 	}
 	if !h.deps.IsExtensionConnected() {
-		return stateCaptureResult{Status: act.StateCaptureStatusExtensionDisconnected}
+		return act.StateCaptureResult{Status: act.StateCaptureStatusExtensionDisconnected}
 	}
 
 	correlationID := toolresp.NewCorrelationID("state_capture")
@@ -98,26 +95,26 @@ func (h *Handler) CaptureState(req mcp.JSONRPCRequest) stateCaptureResult {
 		CorrelationID: correlationID,
 	}
 	if _, blocked := h.deps.EnqueuePendingQuery(req, query, queries.AsyncCommandTimeout); blocked {
-		return stateCaptureResult{Status: act.StateCaptureStatusError}
+		return act.StateCaptureResult{Status: act.StateCaptureStatusError}
 	}
 
 	cmd, found := h.deps.WaitForCommand(correlationID, stateCaptureTimeout)
 	if !found || cmd.Status == "pending" {
-		return stateCaptureResult{Status: act.StateCaptureStatusTimeout}
+		return act.StateCaptureResult{Status: act.StateCaptureStatusTimeout}
 	}
 	if cmd.Error != "" {
-		return stateCaptureResult{Status: act.StateCaptureStatusError}
+		return act.StateCaptureResult{Status: act.StateCaptureStatusError}
 	}
 	if cmd.Status != "complete" || len(cmd.Result) == 0 {
-		return stateCaptureResult{Status: act.StateCaptureStatusError}
+		return act.StateCaptureResult{Status: act.StateCaptureStatusError}
 	}
 
 	captureData, err := act.ParseCapturedStatePayload(cmd.Result)
 	if err != nil {
-		return stateCaptureResult{Status: act.StateCaptureStatusError}
+		return act.StateCaptureResult{Status: act.StateCaptureStatusError}
 	}
 
-	return stateCaptureResult{Status: act.StateCaptureStatusCaptured, Data: captureData}
+	return act.StateCaptureResult{Status: act.StateCaptureStatusCaptured, Data: captureData}
 }
 
 // queueStateRestore queues a JS execute command to restore form values, scroll position,
