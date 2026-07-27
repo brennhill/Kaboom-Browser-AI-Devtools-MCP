@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/combinedaudit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/inspect"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
@@ -44,8 +45,10 @@ var analyzeHandlers = map[string]ModeHandler{
 	"visual_baselines":  method((*ToolHandler).toolListVisualBaselines),
 	"navigation":        azLocal(toolanalyze.HandleNavigation),
 	"page_structure":    azLocal(toolanalyze.HandlePageStructure),
-	"audit":             method((*ToolHandler).toolAnalyzeAudit),
-	"page_issues":       method((*ToolHandler).toolAnalyzePageIssues),
+	"audit": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		return combinedaudit.Handle(h, req, args)
+	},
+	"page_issues": method((*ToolHandler).toolAnalyzePageIssues),
 	"feature_gates": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 		return h.interactAction().HandleContentExtraction(req, args, "feature_gates", "feature_gates")
 	},

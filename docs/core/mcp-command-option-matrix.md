@@ -98,7 +98,7 @@ All 5 tools use `what` as the primary dispatch parameter. `action`, `mode`, and 
 | `visual_baselines` | `toolListVisualBaselines` | List all saved visual baselines |
 | `navigation` | `toolAnalyzeNavigation` | Analyze navigation structure |
 | `page_structure` | `toolAnalyzePageStructure` | Analyze semantic page structure |
-| `audit` | `toolAnalyzeAudit` | Multi-category Lighthouse-style audit |
+| `audit` | `combinedaudit.Handle` | Multi-category Lighthouse-style audit |
 | `feature_gates` | `handleContentExtraction` (inline) | Feature gate status from page context |
 
 #### Deprecated aliases

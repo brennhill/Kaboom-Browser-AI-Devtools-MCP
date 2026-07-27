@@ -14,7 +14,7 @@ code_paths:
   - cmd/browser-agent/tools_pending_query_enqueue.go
   - cmd/browser-agent/tools_async_observe_commands.go
   - cmd/browser-agent/tools_async_completion.go
-  - cmd/browser-agent/tools_analyze_audit.go
+  - cmd/browser-agent/internal/toolanalyze/combinedaudit/handler.go
   - internal/annotation/store.go
   - internal/annotation/store_results.go
   - internal/annotation/store_wait.go
@@ -43,6 +43,7 @@ test_paths:
   - cmd/browser-agent/internal/toolanalyze/inspect/forms_test.go
   - cmd/browser-agent/internal/toolanalyze/inspect/dom_test.go
   - cmd/browser-agent/tools_analyze_structured_extraction_test.go
+  - cmd/browser-agent/internal/toolanalyze/combinedaudit/handler_test.go
   - cmd/browser-agent/tools_analyze_handler_test.go
   - cmd/browser-agent/tools_pending_query_enqueue_test.go
   - internal/annotation/store_test.go

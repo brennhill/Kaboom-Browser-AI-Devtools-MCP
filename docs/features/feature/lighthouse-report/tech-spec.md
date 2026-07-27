@@ -3,7 +3,7 @@ feature: lighthouse-report
 status: proposed
 doc_type: tech-spec
 feature_id: feature-lighthouse-report
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-27
 last_verified_version: 0.8.6
 last_verified_date: 2026-06-29
 ---
@@ -38,8 +38,8 @@ dependency but duplicates work the existing `audit` mode already approximates.
 **Analyze mode handler (Go)**: A new handler registered in `analyzeHandlers` validates the
 request parameters (`categories`, `device`, `mode`), then either invokes the Lighthouse CLI as
 a subprocess or dispatches an asynchronous CDP command to the extension. The handler follows
-the same registration and dispatch conventions as the existing `toolAnalyzeAudit` handler in
-`cmd/browser-agent/tools_analyze_audit.go`.
+the same registration and dispatch conventions as the existing `combinedaudit.Handle` handler in
+`cmd/browser-agent/internal/toolanalyze/combinedaudit/handler.go`.
 
 **CDP attach lifecycle (extension)**: The extension already manages the Chrome debugger
 attach and detach lifecycle in `src/background/dom/cdp/cdp-dispatch.ts`, using

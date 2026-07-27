@@ -6,9 +6,11 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-27
 code_paths:
-  - cmd/browser-agent/tools_analyze_audit.go
+  - cmd/browser-agent/internal/toolanalyze/combinedaudit/handler.go
+  - cmd/browser-agent/tools_analyze_dispatch.go
   - cmd/browser-agent/internal/toolanalyze/audit_scoring.go
 test_paths:
+  - cmd/browser-agent/internal/toolanalyze/combinedaudit/handler_test.go
   - cmd/browser-agent/tools_analyze_audit_test.go
   - cmd/browser-agent/internal/toolanalyze/toolanalyze_test.go
 last_verified_version: 0.7.12

@@ -2,37 +2,43 @@
 // Why: Provides a Lighthouse-style combined score without requiring agents to call each analyzer separately.
 // Docs: docs/features/feature/best-practices-audit/index.md
 
-package main
+package combinedaudit
 
 import (
 	"encoding/json"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 )
+
+type Deps interface {
+	toolanalyze.Deps
+	observe.Deps
+}
 
 // auditCategory defines a category for the combined audit.
 type auditCategory struct {
 	Name    string
-	Handler func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse
+	Handler func(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
 	Weight  float64
 }
 
 // defaultAuditCategories returns the available audit categories.
 func defaultAuditCategories() []auditCategory {
 	return []auditCategory{
-		{Name: "performance", Handler: func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-			return observe.CheckPerformance(h, req, args)
+		{Name: "performance", Handler: func(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return observe.CheckPerformance(d, req, args)
 		}, Weight: 1.0},
-		{Name: "accessibility", Handler: func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-			return observe.RunA11yAudit(h, req, args)
+		{Name: "accessibility", Handler: func(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return observe.RunA11yAudit(d, req, args)
 		}, Weight: 1.0},
-		{Name: "security", Handler: func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-			return toolanalyze.HandleSecurityAudit(h, req, args)
+		{Name: "security", Handler: func(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return toolanalyze.HandleSecurityAudit(d, req, args)
 		}, Weight: 1.0},
-		{Name: "best_practices", Handler: func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-			return toolanalyze.HandleThirdPartyAudit(h, req, args)
+		{Name: "best_practices", Handler: func(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return toolanalyze.HandleThirdPartyAudit(d, req, args)
 		}, Weight: 1.0},
 	}
 }
@@ -48,29 +54,24 @@ var validAuditCategories = map[string]bool{
 // toolanalyze.AuditCategoryResult is defined in tools_analyze_audit_scoring.go as an alias
 // for toolanalyze.AuditCategoryResult.
 
-func (h *ToolHandler) toolAnalyzeAudit(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func Handle(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Categories []string `json:"categories"`
 		Summary    bool     `json:"summary"`
 	}
 	if len(args) > 0 {
-		if resp, stop := parseArgs(req, args, &params); stop {
+		if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 			return resp
 		}
 	}
 
 	// Validate categories
-	requestedCategories := params.Categories
-	if len(requestedCategories) == 0 {
-		requestedCategories = []string{"performance", "accessibility", "security", "best_practices"}
-	}
-	for _, cat := range requestedCategories {
-		if !validAuditCategories[cat] {
-			return fail(req, ErrInvalidParam,
-				"Unknown audit category: "+cat,
-				"Use valid categories: performance, accessibility, security, best_practices",
-				withParam("categories"))
-		}
+	requestedCategories, invalid := validateCategories(params.Categories)
+	if invalid != "" {
+		return mcp.Fail(req, mcp.ErrInvalidParam,
+			"Unknown audit category: "+invalid,
+			"Use valid categories: performance, accessibility, security, best_practices",
+			mcp.WithParam("categories"))
 	}
 
 	// Build category set for filtering
@@ -90,7 +91,7 @@ func (h *ToolHandler) toolAnalyzeAudit(req JSONRPCRequest, args json.RawMessage)
 			continue
 		}
 
-		catResult := runAuditCategory(h, req, args, cat)
+		catResult := runAuditCategory(d, req, args, cat)
 		categoryResults[cat.Name] = catResult
 		totalScore += float64(catResult.Score) * cat.Weight
 		totalWeight += cat.Weight
@@ -101,7 +102,7 @@ func (h *ToolHandler) toolAnalyzeAudit(req JSONRPCRequest, args json.RawMessage)
 		overallScore = int(totalScore / totalWeight)
 	}
 
-	_, _, trackedURL := h.capture.GetTrackingStatus()
+	_, _, trackedURL := d.GetTrackingStatus()
 
 	// When summary=true, strip findings to reduce output size
 	catOutput := make(map[string]any, len(categoryResults))
@@ -129,7 +130,19 @@ func (h *ToolHandler) toolAnalyzeAudit(req JSONRPCRequest, args json.RawMessage)
 		"recommendations": auditRecommendations(),
 	}
 
-	return succeed(req, "Combined audit report", responseData)
+	return mcp.Succeed(req, "Combined audit report", responseData)
+}
+
+func validateCategories(categories []string) ([]string, string) {
+	if len(categories) == 0 {
+		categories = []string{"performance", "accessibility", "security", "best_practices"}
+	}
+	for _, category := range categories {
+		if !validAuditCategories[category] {
+			return nil, category
+		}
+	}
+	return categories, ""
 }
 
 // auditRecommendations returns best-practice recommendations surfaced with every audit.
@@ -152,10 +165,10 @@ func auditRecommendations() []map[string]any {
 
 // runAuditCategory executes one category and normalizes its MCP response into
 // the scoring contract used by the combined audit.
-func runAuditCategory(h *ToolHandler, req JSONRPCRequest, args json.RawMessage, cat auditCategory) toolanalyze.AuditCategoryResult {
-	resp := cat.Handler(h, req, args)
+func runAuditCategory(d Deps, req mcp.JSONRPCRequest, args json.RawMessage, cat auditCategory) toolanalyze.AuditCategoryResult {
+	resp := cat.Handler(d, req, args)
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		return toolanalyze.AuditCategoryResult{Score: 0, Findings: []any{}, Summary: "Failed to parse result", Error: err.Error()}
 	}
