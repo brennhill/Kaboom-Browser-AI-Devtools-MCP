@@ -15,12 +15,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // createDrawModeTestServer creates an httptest server with just the draw-mode endpoint.
 // Bypasses httpguard.ExtensionOnly middleware for unit testing the handler directly.
-func createDrawModeTestServer(t *testing.T) (*httptest.Server, *AnnotationStore) {
+func createDrawModeTestServer(t *testing.T) (*httptest.Server, *annotation.Store) {
 	t.Helper()
 
 	server, err := NewServer(t.TempDir()+"/test.jsonl", 100)

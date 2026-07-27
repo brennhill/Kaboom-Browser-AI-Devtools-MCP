@@ -27,6 +27,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -55,18 +56,18 @@ func newConfigureTestEnv(t *testing.T) *configureTestEnv {
 }
 
 // callConfigure invokes the configure tool and returns parsed result
-func (e *configureTestEnv) callConfigure(t *testing.T, argsJSON string) (MCPToolResult, bool) {
+func (e *configureTestEnv) callConfigure(t *testing.T, argsJSON string) (mcp.MCPToolResult, bool) {
 	t.Helper()
 
 	args := json.RawMessage(argsJSON)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := e.handler.toolConfigure(req, args)
 
 	if resp.Result == nil {
-		return MCPToolResult{}, false
+		return mcp.MCPToolResult{}, false
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("failed to parse result: %v", err)
 	}
@@ -361,7 +362,7 @@ func TestConfigureAudit_InvalidJSON_ReturnsParseError(t *testing.T) {
 	env := newConfigureTestEnv(t)
 
 	args := json.RawMessage(`{invalid json here}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.toolConfigure(req, args)
 
 	// ASSERTION: Returns some response (not nil/panic)
@@ -371,7 +372,7 @@ func TestConfigureAudit_InvalidJSON_ReturnsParseError(t *testing.T) {
 
 	// If result, should be error
 	if resp.Result != nil {
-		var result MCPToolResult
+		var result mcp.MCPToolResult
 		_ = json.Unmarshal(resp.Result, &result)
 		if !result.IsError {
 			t.Error("invalid JSON MUST return isError:true")
@@ -428,7 +429,7 @@ func TestConfigureAudit_EmptyState_ReturnsEmptyNotError(t *testing.T) {
 // ============================================
 
 // validateConfigureResponse checks response validity
-func validateConfigureResponse(t *testing.T, action string, resp JSONRPCResponse) {
+func validateConfigureResponse(t *testing.T, action string, resp mcp.JSONRPCResponse) {
 	t.Helper()
 
 	if resp.Result == nil && resp.Error == nil {
@@ -480,7 +481,7 @@ func TestConfigureAudit_AllActions(t *testing.T) {
 	for _, tc := range actions {
 		t.Run(tc.action, func(t *testing.T) {
 			args := json.RawMessage(tc.args)
-			req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+			req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 			resp := handler.toolConfigure(req, args)
 			validateConfigureResponse(t, tc.action, resp)
 		})
@@ -505,7 +506,7 @@ func TestConfigureAudit_NoiseRule_AllOperations(t *testing.T) {
 	for _, tc := range operations {
 		t.Run("noise_rule_"+tc.op, func(t *testing.T) {
 			args := json.RawMessage(tc.args)
-			req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+			req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 			resp := handler.toolConfigure(req, args)
 			validateConfigureResponse(t, "noise_rule:"+tc.op, resp)
 		})
@@ -528,7 +529,7 @@ func TestConfigureAudit_AuditLog_AllOperations(t *testing.T) {
 	for _, tc := range operations {
 		t.Run("audit_log_"+tc.op, func(t *testing.T) {
 			args := json.RawMessage(tc.args)
-			req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+			req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 			resp := handler.toolConfigure(req, args)
 			validateConfigureResponse(t, "audit_log:"+tc.op, resp)
 		})
@@ -540,14 +541,14 @@ func TestConfigureAudit_Health_Detailed(t *testing.T) {
 	handler := createConfigureTestHandler(t)
 
 	args := json.RawMessage(`{"what":"health"}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := handler.toolConfigure(req, args)
 
 	if resp.Result == nil {
 		t.Fatal("health should return result")
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("failed to parse result: %v", err)
 	}
@@ -562,12 +563,12 @@ func TestConfigureAudit_UnknownAction(t *testing.T) {
 	handler := createConfigureTestHandler(t)
 
 	args := json.RawMessage(`{"what":"nonexistent_action_xyz"}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := handler.toolConfigure(req, args)
 
 	// Should return error, not panic
 	if resp.Result != nil {
-		var result MCPToolResult
+		var result mcp.MCPToolResult
 		if err := json.Unmarshal(resp.Result, &result); err == nil {
 			if !result.IsError {
 				t.Error("unknown action should return isError:true")
@@ -581,7 +582,7 @@ func TestConfigureAudit_EmptyArgs(t *testing.T) {
 	handler := createConfigureTestHandler(t)
 
 	args := json.RawMessage(`{}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := handler.toolConfigure(req, args)
 
 	validateConfigureResponse(t, "empty", resp)
@@ -592,7 +593,7 @@ func TestConfigureAudit_InvalidJSON(t *testing.T) {
 	handler := createConfigureTestHandler(t)
 
 	args := json.RawMessage(`{invalid}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := handler.toolConfigure(req, args)
 
 	if resp.Error == nil && resp.Result == nil {

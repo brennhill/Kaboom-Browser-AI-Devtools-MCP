@@ -11,7 +11,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 )
 
@@ -98,7 +100,7 @@ type stdioNotifier struct{}
 
 func (n *stdioNotifier) SendNotification(method string, params map[string]any) {
 	notif := map[string]any{
-		"jsonrpc": JSONRPCVersion,
+		"jsonrpc": mcp.JSONRPCVersion,
 		"method":  method,
 		"params":  params,
 	}
@@ -287,7 +289,7 @@ func (s *Server) handlePushDrain(w http.ResponseWriter, r *http.Request) {
 }
 
 // pushDrawModeCompletion builds an annotation PushEvent and routes it.
-func (s *Server) pushDrawModeCompletion(body *drawModeRequest, screenshotPath string, annotations []Annotation) {
+func (s *Server) pushDrawModeCompletion(body *drawModeRequest, screenshotPath string, annotations []annotation.Annotation) {
 	if s.pushRouter == nil {
 		return
 	}

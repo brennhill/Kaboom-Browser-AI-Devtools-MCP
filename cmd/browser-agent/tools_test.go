@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
@@ -63,7 +64,7 @@ func TestHandleToolCall_UnknownTool(t *testing.T) {
 	// Get the tool handler
 	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
 
-	req := JSONRPCRequest{
+	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      json.RawMessage(`"test-id"`),
 		Method:  "tools/call",
@@ -89,7 +90,7 @@ func TestHandleToolCall_ObserveTool(t *testing.T) {
 	mcpHandler := NewToolHandler(server, cap)
 	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
 
-	req := JSONRPCRequest{
+	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      json.RawMessage(`"test-id"`),
 		Method:  "tools/call",
@@ -106,7 +107,7 @@ func TestHandleToolCall_ObserveTool(t *testing.T) {
 	}
 
 	// Result should be valid JSON
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("Invalid result JSON: %v", err)
 	}
@@ -127,7 +128,7 @@ func TestHandleToolCall_GenerateTool(t *testing.T) {
 	mcpHandler := NewToolHandler(server, cap)
 	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
 
-	req := JSONRPCRequest{
+	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      json.RawMessage(`"test-id"`),
 		Method:  "tools/call",
@@ -143,7 +144,7 @@ func TestHandleToolCall_GenerateTool(t *testing.T) {
 		t.Errorf("Expected JSON-RPC version 2.0, got %s", resp.JSONRPC)
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("Invalid result JSON: %v", err)
 	}
@@ -161,7 +162,7 @@ func TestHandleToolCall_ConfigureTool(t *testing.T) {
 	mcpHandler := NewToolHandler(server, cap)
 	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
 
-	req := JSONRPCRequest{
+	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      json.RawMessage(`"test-id"`),
 		Method:  "tools/call",
@@ -177,7 +178,7 @@ func TestHandleToolCall_ConfigureTool(t *testing.T) {
 		t.Errorf("Expected JSON-RPC version 2.0, got %s", resp.JSONRPC)
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("Invalid result JSON: %v", err)
 	}
@@ -195,7 +196,7 @@ func TestHandleToolCall_InteractTool(t *testing.T) {
 	mcpHandler := NewToolHandler(server, cap)
 	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
 
-	req := JSONRPCRequest{
+	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      json.RawMessage(`"test-id"`),
 		Method:  "tools/call",
@@ -212,7 +213,7 @@ func TestHandleToolCall_InteractTool(t *testing.T) {
 		t.Errorf("Expected JSON-RPC version 2.0, got %s", resp.JSONRPC)
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("Invalid result JSON: %v", err)
 	}
@@ -234,14 +235,14 @@ func TestToolObserve_MissingWhat(t *testing.T) {
 	mcpHandler := NewToolHandler(server, cap)
 	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
 
-	req := JSONRPCRequest{
+	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      json.RawMessage(`"test-id"`),
 	}
 
 	resp := toolHandler.toolObserve(req, json.RawMessage(`{}`))
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("Failed to unmarshal result: %v", err)
 	}
@@ -263,14 +264,14 @@ func TestToolObserve_UnknownMode(t *testing.T) {
 	mcpHandler := NewToolHandler(server, cap)
 	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
 
-	req := JSONRPCRequest{
+	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      json.RawMessage(`"test-id"`),
 	}
 
 	resp := toolHandler.toolObserve(req, json.RawMessage(`{"what": "invalid_mode"}`))
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("Failed to unmarshal result: %v", err)
 	}
@@ -295,14 +296,14 @@ func TestToolObserve_NetworkBodies(t *testing.T) {
 	mcpHandler := NewToolHandler(server, cap)
 	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
 
-	req := JSONRPCRequest{
+	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      json.RawMessage(`"test-id"`),
 	}
 
 	resp := toolHandler.toolObserve(req, json.RawMessage(`{"what": "network_bodies"}`))
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("Failed to unmarshal result: %v", err)
 	}
@@ -328,14 +329,14 @@ func TestToolGenerate_MissingFormat(t *testing.T) {
 	mcpHandler := NewToolHandler(server, cap)
 	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
 
-	req := JSONRPCRequest{
+	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      json.RawMessage(`"test-id"`),
 	}
 
 	resp := toolHandler.toolGenerate(req, json.RawMessage(`{}`))
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("Failed to unmarshal result: %v", err)
 	}
@@ -354,14 +355,14 @@ func TestToolGenerate_UnknownFormat(t *testing.T) {
 	mcpHandler := NewToolHandler(server, cap)
 	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
 
-	req := JSONRPCRequest{
+	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      json.RawMessage(`"test-id"`),
 	}
 
 	resp := toolHandler.toolGenerate(req, json.RawMessage(`{"what": "invalid_format"}`))
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("Failed to unmarshal result: %v", err)
 	}
@@ -387,14 +388,14 @@ func TestToolConfigure_MissingAction(t *testing.T) {
 	mcpHandler := NewToolHandler(server, cap)
 	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
 
-	req := JSONRPCRequest{
+	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      json.RawMessage(`"test-id"`),
 	}
 
 	resp := toolHandler.toolConfigure(req, json.RawMessage(`{}`))
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("Failed to unmarshal result: %v", err)
 	}
@@ -413,14 +414,14 @@ func TestToolConfigure_UnknownAction(t *testing.T) {
 	mcpHandler := NewToolHandler(server, cap)
 	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
 
-	req := JSONRPCRequest{
+	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      json.RawMessage(`"test-id"`),
 	}
 
 	resp := toolHandler.toolConfigure(req, json.RawMessage(`{"what": "invalid_action"}`))
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("Failed to unmarshal result: %v", err)
 	}
@@ -442,14 +443,14 @@ func TestToolConfigure_Health(t *testing.T) {
 	mcpHandler := NewToolHandler(server, cap)
 	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
 
-	req := JSONRPCRequest{
+	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      json.RawMessage(`"test-id"`),
 	}
 
 	resp := toolHandler.toolConfigure(req, json.RawMessage(`{"what": "health"}`))
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("Failed to unmarshal result: %v", err)
 	}
@@ -479,14 +480,14 @@ func TestToolInteract_MissingAction(t *testing.T) {
 	mcpHandler := NewToolHandler(server, cap)
 	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
 
-	req := JSONRPCRequest{
+	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      json.RawMessage(`"test-id"`),
 	}
 
 	resp := toolHandler.toolInteract(req, json.RawMessage(`{}`))
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("Failed to unmarshal result: %v", err)
 	}
@@ -505,14 +506,14 @@ func TestToolInteract_UnknownAction(t *testing.T) {
 	mcpHandler := NewToolHandler(server, cap)
 	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
 
-	req := JSONRPCRequest{
+	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      json.RawMessage(`"test-id"`),
 	}
 
 	resp := toolHandler.toolInteract(req, json.RawMessage(`{"what": "invalid_action"}`))
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("Failed to unmarshal result: %v", err)
 	}
@@ -574,7 +575,7 @@ func TestToolsList(t *testing.T) {
 func TestMcpTextResponse(t *testing.T) {
 	resp := mcp.TextResponse("Hello, World!")
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp, &result); err != nil {
 		t.Fatalf("Failed to unmarshal: %v", err)
 	}
@@ -603,7 +604,7 @@ func TestMcpJSONResponse(t *testing.T) {
 	}
 	resp := mcp.JSONResponse("Test summary", data)
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp, &result); err != nil {
 		t.Fatalf("Failed to unmarshal: %v", err)
 	}
@@ -652,7 +653,7 @@ func TestMcpJSONResponse(t *testing.T) {
 func TestMcpStructuredError(t *testing.T) {
 	resp := mcp.StructuredErrorResponse(mcp.ErrMissingParam, "Missing parameter 'what'", "Add the 'what' parameter", mcp.WithParam("what"), mcp.WithHint("Valid values: logs, errors"))
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp, &result); err != nil {
 		t.Fatalf("Failed to unmarshal: %v", err)
 	}
@@ -720,7 +721,7 @@ func TestMcpStructuredError(t *testing.T) {
 // ============================================
 
 func TestToolCallLimiter_Allow(t *testing.T) {
-	limiter := NewToolCallLimiter(3, time.Second) // 3 calls per second
+	limiter := toolresp.NewToolCallLimiter(3, time.Second) // 3 calls per second
 
 	// First 3 calls should be allowed
 	for i := 0; i < 3; i++ {

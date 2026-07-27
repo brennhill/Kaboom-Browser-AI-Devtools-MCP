@@ -10,6 +10,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -19,16 +22,16 @@ import (
 func seedAnnotationSession(t *testing.T, h *ToolHandler) {
 	t.Helper()
 	// Fresh store to avoid global state pollution from other tests
-	h.annotationStore = NewAnnotationStore(10 * time.Minute)
+	h.annotationStore = annotation.NewStore(10 * time.Minute)
 	t.Cleanup(func() { h.annotationStore.Close() })
-	session := &AnnotationSession{
-		Annotations: []Annotation{
+	session := &annotation.Session{
+		Annotations: []annotation.Annotation{
 			{
 				ID:             "ann_1",
 				Text:           "make this button darker",
 				ElementSummary: "button.btn-primary 'Submit'",
 				CorrelationID:  "detail_1",
-				Rect:           AnnotationRect{X: 100, Y: 200, Width: 150, Height: 50},
+				Rect:           annotation.Rect{X: 100, Y: 200, Width: 150, Height: 50},
 				PageURL:        "https://example.com/checkout",
 			},
 			{
@@ -36,7 +39,7 @@ func seedAnnotationSession(t *testing.T, h *ToolHandler) {
 				Text:           "font too small here",
 				ElementSummary: "p.description 'Product details...'",
 				CorrelationID:  "detail_2",
-				Rect:           AnnotationRect{X: 50, Y: 400, Width: 300, Height: 100},
+				Rect:           annotation.Rect{X: 50, Y: 400, Width: 300, Height: 100},
 				PageURL:        "https://example.com/checkout",
 			},
 		},
@@ -48,7 +51,7 @@ func seedAnnotationSession(t *testing.T, h *ToolHandler) {
 	h.annotationStore.StoreSession(1, session)
 
 	// Store details with a11y flags
-	h.annotationStore.StoreDetail("detail_1", AnnotationDetail{
+	h.annotationStore.StoreDetail("detail_1", annotation.Detail{
 		CorrelationID:  "detail_1",
 		Selector:       "button.btn-primary",
 		Tag:            "button",
@@ -57,10 +60,10 @@ func seedAnnotationSession(t *testing.T, h *ToolHandler) {
 		ID:             "submit-btn",
 		ComputedStyles: map[string]string{"background-color": "rgb(59, 130, 246)", "color": "rgb(255, 255, 255)", "font-size": "14px"},
 		ParentSelector: "form.checkout-form > div.actions",
-		BoundingRect:   AnnotationRect{X: 100, Y: 200, Width: 150, Height: 50},
+		BoundingRect:   annotation.Rect{X: 100, Y: 200, Width: 150, Height: 50},
 		A11yFlags:      []string{},
 	})
-	h.annotationStore.StoreDetail("detail_2", AnnotationDetail{
+	h.annotationStore.StoreDetail("detail_2", annotation.Detail{
 		CorrelationID:  "detail_2",
 		Selector:       "p.description",
 		Tag:            "p",
@@ -68,7 +71,7 @@ func seedAnnotationSession(t *testing.T, h *ToolHandler) {
 		Classes:        []string{"description", "text-sm"},
 		ComputedStyles: map[string]string{"font-size": "12px", "color": "rgb(100, 100, 100)"},
 		ParentSelector: "div.product-info",
-		BoundingRect:   AnnotationRect{X: 50, Y: 400, Width: 300, Height: 100},
+		BoundingRect:   annotation.Rect{X: 50, Y: 400, Width: 300, Height: 100},
 		A11yFlags:      []string{"low-contrast"},
 	})
 }
@@ -79,10 +82,10 @@ func seedAnnotationSession(t *testing.T, h *ToolHandler) {
 
 func TestGenerate_VisualTest_NoAnnotations(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = NewAnnotationStore(10 * time.Minute)
+	h.annotationStore = annotation.NewStore(10 * time.Minute)
 	defer h.annotationStore.Close()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"visual_test"}`)
 
 	resp := h.toolGenerate(req, args)
@@ -97,7 +100,7 @@ func TestGenerate_VisualTest_GeneratesPlaywright(t *testing.T) {
 	h := createTestToolHandler(t)
 	seedAnnotationSession(t, h)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"visual_test"}`)
 
 	resp := h.toolGenerate(req, args)
@@ -122,7 +125,7 @@ func TestGenerate_VisualTest_UsesSelectorCandidates(t *testing.T) {
 	h := createTestToolHandler(t)
 	seedAnnotationSession(t, h)
 
-	h.annotationStore.StoreDetail("detail_1", AnnotationDetail{
+	h.annotationStore.StoreDetail("detail_1", annotation.Detail{
 		CorrelationID:      "detail_1",
 		Selector:           "button.btn-primary",
 		Tag:                "button",
@@ -133,10 +136,10 @@ func TestGenerate_VisualTest_UsesSelectorCandidates(t *testing.T) {
 		SelectorCandidates: []string{"testid=checkout-submit", "role=button|Submit", "css=button.btn-primary"},
 		JSFramework:        "react",
 		ParentSelector:     "form.checkout-form > div.actions",
-		BoundingRect:       AnnotationRect{X: 100, Y: 200, Width: 150, Height: 50},
+		BoundingRect:       annotation.Rect{X: 100, Y: 200, Width: 150, Height: 50},
 	})
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	resp := h.toolGenerateVisualTest(req, nil)
 	text := unmarshalMCPText(t, resp.Result)
 
@@ -158,13 +161,13 @@ func TestGenerate_VisualTest_IncludesAnnotationComments(t *testing.T) {
 	h := createTestToolHandler(t)
 	seedAnnotationSession(t, h)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"visual_test"}`)
 
 	resp := h.toolGenerate(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
-	// Annotation text should appear as comments in the test
+	// annotation.Annotation text should appear as comments in the test
 	if !strings.Contains(text, "make this button darker") {
 		t.Errorf("expected annotation text in generated test, got %q", text)
 	}
@@ -177,7 +180,7 @@ func TestGenerate_VisualTest_CustomTestName(t *testing.T) {
 	h := createTestToolHandler(t)
 	seedAnnotationSession(t, h)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"visual_test","test_name":"checkout visual review"}`)
 
 	resp := h.toolGenerate(req, args)
@@ -192,7 +195,7 @@ func TestGenerate_VisualTest_IncludesA11yAssertions(t *testing.T) {
 	h := createTestToolHandler(t)
 	seedAnnotationSession(t, h)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"visual_test"}`)
 
 	resp := h.toolGenerate(req, args)
@@ -208,14 +211,14 @@ func TestGenerate_VisualTest_NamedSession(t *testing.T) {
 	h := createTestToolHandler(t)
 
 	// Create a named session with 2 pages
-	page1 := &AnnotationSession{
-		Annotations: []Annotation{{ID: "ann_p1", Text: "fix header", ElementSummary: "header.main 'Logo'", CorrelationID: "d_p1", PageURL: "https://example.com/"}},
+	page1 := &annotation.Session{
+		Annotations: []annotation.Annotation{{ID: "ann_p1", Text: "fix header", ElementSummary: "header.main 'Logo'", CorrelationID: "d_p1", PageURL: "https://example.com/"}},
 		PageURL:     "https://example.com/",
 		TabID:       1,
 		Timestamp:   1000,
 	}
-	page2 := &AnnotationSession{
-		Annotations: []Annotation{{ID: "ann_p2", Text: "fix footer", ElementSummary: "footer.main 'Copyright'", CorrelationID: "d_p2", PageURL: "https://example.com/about"}},
+	page2 := &annotation.Session{
+		Annotations: []annotation.Annotation{{ID: "ann_p2", Text: "fix footer", ElementSummary: "footer.main 'Copyright'", CorrelationID: "d_p2", PageURL: "https://example.com/about"}},
 		PageURL:     "https://example.com/about",
 		TabID:       2,
 		Timestamp:   2000,
@@ -223,7 +226,7 @@ func TestGenerate_VisualTest_NamedSession(t *testing.T) {
 	h.annotationStore.AppendToNamedSession("qa-review", page1)
 	h.annotationStore.AppendToNamedSession("qa-review", page2)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"visual_test","annot_session":"qa-review"}`)
 
 	resp := h.toolGenerate(req, args)
@@ -244,10 +247,10 @@ func TestGenerate_VisualTest_NamedSession(t *testing.T) {
 
 func TestGenerate_AnnotationReport_NoAnnotations(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = NewAnnotationStore(10 * time.Minute)
+	h.annotationStore = annotation.NewStore(10 * time.Minute)
 	defer h.annotationStore.Close()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"annotation_report"}`)
 
 	resp := h.toolGenerate(req, args)
@@ -262,7 +265,7 @@ func TestGenerate_AnnotationReport_GeneratesMarkdown(t *testing.T) {
 	h := createTestToolHandler(t)
 	seedAnnotationSession(t, h)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"annotation_report"}`)
 
 	resp := h.toolGenerate(req, args)
@@ -285,7 +288,7 @@ func TestGenerate_AnnotationReport_IncludesScreenshotRef(t *testing.T) {
 	h := createTestToolHandler(t)
 	seedAnnotationSession(t, h)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"annotation_report"}`)
 
 	resp := h.toolGenerate(req, args)
@@ -300,7 +303,7 @@ func TestGenerate_AnnotationReport_IncludesA11yFlags(t *testing.T) {
 	h := createTestToolHandler(t)
 	seedAnnotationSession(t, h)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"annotation_report"}`)
 
 	resp := h.toolGenerate(req, args)
@@ -317,10 +320,10 @@ func TestGenerate_AnnotationReport_IncludesA11yFlags(t *testing.T) {
 
 func TestGenerate_AnnotationIssues_NoAnnotations(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = NewAnnotationStore(10 * time.Minute)
+	h.annotationStore = annotation.NewStore(10 * time.Minute)
 	defer h.annotationStore.Close()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"annotation_issues"}`)
 
 	resp := h.toolGenerate(req, args)
@@ -335,7 +338,7 @@ func TestGenerate_AnnotationIssues_ReturnsStructuredJSON(t *testing.T) {
 	h := createTestToolHandler(t)
 	seedAnnotationSession(t, h)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"annotation_issues"}`)
 
 	resp := h.toolGenerate(req, args)
@@ -354,7 +357,7 @@ func TestGenerate_AnnotationIssues_IncludesElementInfo(t *testing.T) {
 	h := createTestToolHandler(t)
 	seedAnnotationSession(t, h)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"annotation_issues"}`)
 
 	resp := h.toolGenerate(req, args)
@@ -370,7 +373,7 @@ func TestGenerate_AnnotationIssues_CountsCorrect(t *testing.T) {
 	h := createTestToolHandler(t)
 	seedAnnotationSession(t, h)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"annotation_issues"}`)
 
 	resp := h.toolGenerate(req, args)
@@ -388,18 +391,18 @@ func TestGenerate_AnnotationIssues_CountsCorrect(t *testing.T) {
 
 func TestGenerate_VisualTest_ExpiredDetailFallsBackToBody(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = NewAnnotationStore(10 * time.Minute)
+	h.annotationStore = annotation.NewStore(10 * time.Minute)
 	t.Cleanup(func() { h.annotationStore.Close() })
 
 	// Store a session but DON'T store any detail — simulates expired detail
-	session := &AnnotationSession{
-		Annotations: []Annotation{
+	session := &annotation.Session{
+		Annotations: []annotation.Annotation{
 			{
 				ID:             "ann_expired",
 				Text:           "fix this",
 				ElementSummary: "div.foo 'bar'",
 				CorrelationID:  "detail_gone",
-				Rect:           AnnotationRect{X: 10, Y: 20, Width: 30, Height: 40},
+				Rect:           annotation.Rect{X: 10, Y: 20, Width: 30, Height: 40},
 				PageURL:        "https://example.com",
 			},
 		},
@@ -409,7 +412,7 @@ func TestGenerate_VisualTest_ExpiredDetailFallsBackToBody(t *testing.T) {
 	}
 	h.annotationStore.StoreSession(1, session)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	resp := h.toolGenerateVisualTest(req, nil)
 	text := unmarshalMCPText(t, resp.Result)
 
@@ -425,17 +428,17 @@ func TestGenerate_VisualTest_ExpiredDetailFallsBackToBody(t *testing.T) {
 
 func TestGenerate_VisualTest_EscapesSingleQuotes(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = NewAnnotationStore(10 * time.Minute)
+	h.annotationStore = annotation.NewStore(10 * time.Minute)
 	t.Cleanup(func() { h.annotationStore.Close() })
 
-	session := &AnnotationSession{
-		Annotations: []Annotation{
+	session := &annotation.Session{
+		Annotations: []annotation.Annotation{
 			{
 				ID:             "ann_esc",
 				Text:           "make this button's color darker",
 				ElementSummary: "div.o'malley 'Submit'",
 				CorrelationID:  "detail_esc",
-				Rect:           AnnotationRect{X: 10, Y: 20, Width: 30, Height: 40},
+				Rect:           annotation.Rect{X: 10, Y: 20, Width: 30, Height: 40},
 				PageURL:        "https://example.com/it's-a-test",
 			},
 		},
@@ -445,13 +448,13 @@ func TestGenerate_VisualTest_EscapesSingleQuotes(t *testing.T) {
 		Timestamp:      time.Now().UnixMilli(),
 	}
 	h.annotationStore.StoreSession(1, session)
-	h.annotationStore.StoreDetail("detail_esc", AnnotationDetail{
+	h.annotationStore.StoreDetail("detail_esc", annotation.Detail{
 		Selector: "div.o'malley",
 		Tag:      "div",
 		ID:       "btn-it's",
 	})
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	resp := h.toolGenerateVisualTest(req, nil)
 	text := unmarshalMCPText(t, resp.Result)
 
@@ -487,7 +490,7 @@ func TestGenerate_AnnotationFormats_NoPanic(t *testing.T) {
 				}
 			}()
 
-			req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+			req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 			resp := h.toolGenerate(req, json.RawMessage(tc.args))
 			if resp.Result == nil {
 				t.Errorf("generate(%s) returned nil Result", tc.name)

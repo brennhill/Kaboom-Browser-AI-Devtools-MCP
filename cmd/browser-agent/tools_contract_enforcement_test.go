@@ -136,7 +136,7 @@ func TestContractEnforcement_ErrorsHaveRetryableField(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.code, func(t *testing.T) {
 			raw := mcp.StructuredErrorResponse(tc.code, tc.message, tc.retry)
-			var result MCPToolResult
+			var result mcp.MCPToolResult
 			if err := json.Unmarshal(raw, &result); err != nil {
 				t.Fatalf("failed to unmarshal: %v", err)
 			}
@@ -215,13 +215,13 @@ func TestContractEnforcement_UnknownParams_ProduceWarnings(t *testing.T) {
 
 	for _, tc := range tools {
 		t.Run(tc.name, func(t *testing.T) {
-			req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+			req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 			resp, handled := h.HandleToolCall(req, tc.name, json.RawMessage(tc.args))
 			if !handled {
 				t.Fatalf("%s: not handled", tc.name)
 			}
 
-			var result MCPToolResult
+			var result mcp.MCPToolResult
 			if err := json.Unmarshal(resp.Result, &result); err != nil {
 				t.Fatalf("%s: failed to unmarshal: %v", tc.name, err)
 			}
@@ -253,15 +253,15 @@ func TestContractEnforcement_UnknownParams_ProduceWarnings(t *testing.T) {
 // assertNonErrorResponse and firstText are in tools_test_helpers_test.go.
 
 // callObserveWithArgs is a helper to call observe with custom JSON args.
-func (s *scenario) callObserveWithArgs(t *testing.T, argsJSON string) (MCPToolResult, bool) {
+func (s *scenario) callObserveWithArgs(t *testing.T, argsJSON string) (mcp.MCPToolResult, bool) {
 	t.Helper()
 	args := json.RawMessage(argsJSON)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := s.handler.toolObserve(req, args)
 	if resp.Result == nil {
-		return MCPToolResult{}, false
+		return mcp.MCPToolResult{}, false
 	}
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("failed to parse result: %v", err)
 	}

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -628,7 +629,7 @@ func TestToolConfigureNetworkRecording_StartSuccess(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"operation":"start"}`)
 	resp := h.toolConfigureNetworkRecording(req, args)
 
@@ -655,7 +656,7 @@ func TestToolConfigureNetworkRecording_StartWithFilters(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"operation":"start","domain":"api.example.com","method":"POST"}`)
 	resp := h.toolConfigureNetworkRecording(req, args)
 
@@ -680,7 +681,7 @@ func TestToolConfigureNetworkRecording_StartAlreadyActive(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"operation":"start"}`)
 
 	// First start should succeed
@@ -709,7 +710,7 @@ func TestToolConfigureNetworkRecording_StopNotActive(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"operation":"stop"}`)
 	resp := h.toolConfigureNetworkRecording(req, args)
 
@@ -730,7 +731,7 @@ func TestToolConfigureNetworkRecording_StopSuccess(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 
 	// Start recording first
 	startArgs := json.RawMessage(`{"operation":"start"}`)
@@ -766,7 +767,7 @@ func TestToolConfigureNetworkRecording_StatusInactive(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"operation":"status"}`)
 	resp := h.toolConfigureNetworkRecording(req, args)
 
@@ -792,7 +793,7 @@ func TestToolConfigureNetworkRecording_StatusActive(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 
 	// Start recording with filters
 	startArgs := json.RawMessage(`{"operation":"start","domain":"test.com","method":"GET"}`)
@@ -833,7 +834,7 @@ func TestToolConfigureNetworkRecording_UnknownOperation(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"operation":"restart"}`)
 	resp := h.toolConfigureNetworkRecording(req, args)
 
@@ -857,7 +858,7 @@ func TestToolConfigureNetworkRecording_InvalidJSON(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{bad json`)
 	resp := h.toolConfigureNetworkRecording(req, args)
 

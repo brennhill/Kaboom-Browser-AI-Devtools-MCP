@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // extensionRequest creates a localhost request with the required extension header.
@@ -145,14 +146,14 @@ func TestCorrelationID_AsyncCommands(t *testing.T) {
 
 	for _, tc := range asyncActions {
 		t.Run(tc.name, func(t *testing.T) {
-			req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+			req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 			resp := handler.toolInteract(req, json.RawMessage(tc.args))
 
 			if resp.Result == nil {
 				t.Fatal("response result is nil")
 			}
 
-			var result MCPToolResult
+			var result mcp.MCPToolResult
 			if err := json.Unmarshal(resp.Result, &result); err != nil {
 				t.Fatalf("failed to parse MCPToolResult: %v", err)
 			}

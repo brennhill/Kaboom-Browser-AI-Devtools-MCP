@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
@@ -20,7 +21,7 @@ func TestMaybeWaitForCommand_TimeoutMs_CustomTimeout(t *testing.T) {
 
 	cap := capture.NewCapture()
 	handler := &ToolHandler{capture: cap, coldStartTimeout: 0}
-	req := JSONRPCRequest{ID: 1, ClientID: "test-client"}
+	req := mcp.JSONRPCRequest{ID: 1, ClientID: "test-client"}
 	correlationID := "test-timeout-ms-123"
 	cap.RegisterCommand(correlationID, "q-timeout-ms-123", 60*time.Second)
 
@@ -57,7 +58,7 @@ func TestMaybeWaitForCommand_TimeoutMs_ShortTimeout(t *testing.T) {
 
 	cap := capture.NewCapture()
 	handler := &ToolHandler{capture: cap, coldStartTimeout: 0}
-	req := JSONRPCRequest{ID: 1, ClientID: "test-client"}
+	req := mcp.JSONRPCRequest{ID: 1, ClientID: "test-client"}
 	correlationID := "test-short-timeout-123"
 	cap.RegisterCommand(correlationID, "q-short-123", 60*time.Second)
 
@@ -88,7 +89,7 @@ func TestMaybeWaitForCommand_TimeoutMs_ZeroUsesDefault(t *testing.T) {
 
 	cap := capture.NewCapture()
 	handler := &ToolHandler{capture: cap, coldStartTimeout: 0}
-	req := JSONRPCRequest{ID: 1}
+	req := mcp.JSONRPCRequest{ID: 1}
 	correlationID := "test-zero-timeout-123"
 
 	// With no extension connected and timeout_ms=0, should use default behavior
@@ -111,7 +112,7 @@ func TestMaybeWaitForCommand_SyncFalse_ReturnsCorrelationID(t *testing.T) {
 
 	cap := capture.NewCapture()
 	handler := &ToolHandler{capture: cap}
-	req := JSONRPCRequest{ID: 1}
+	req := mcp.JSONRPCRequest{ID: 1}
 	correlationID := "test-async-275"
 
 	// sync=false should return queued with correlation_id
@@ -131,7 +132,7 @@ func TestMaybeWaitForCommand_TimeoutMs_NegativeIgnored(t *testing.T) {
 
 	cap := capture.NewCapture()
 	handler := &ToolHandler{capture: cap, coldStartTimeout: 0}
-	req := JSONRPCRequest{ID: 1}
+	req := mcp.JSONRPCRequest{ID: 1}
 	correlationID := "test-neg-timeout-123"
 
 	// Negative timeout_ms should be treated as default (not infinite)
@@ -150,7 +151,7 @@ func TestAnalyze_LinkHealth_SyncTrue_WaitsForResult(t *testing.T) {
 
 	cap := capture.NewCapture()
 	handler := &ToolHandler{capture: cap, coldStartTimeout: 0}
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1, ClientID: "test-client"}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1, ClientID: "test-client"}
 
 	// Connect extension (fast path — no long-poll)
 	cap.SimulateExtensionConnectForTest()
@@ -188,7 +189,7 @@ func TestAnalyze_LinkHealth_SyncFalse_ReturnsCorrelationID(t *testing.T) {
 	handler := &ToolHandler{capture: cap, coldStartTimeout: 0}
 
 	// Don't need extension connected for sync=false
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"what":"link_health","sync":false}`)
 	resp := handler.toolAnalyze(req, args)
 
@@ -215,7 +216,7 @@ func TestAnalyze_Dom_TimeoutMs_Respected(t *testing.T) {
 
 	cap := capture.NewCapture()
 	handler := &ToolHandler{capture: cap, coldStartTimeout: 0}
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1, ClientID: "test-client"}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1, ClientID: "test-client"}
 
 	// Connect extension (fast path — no long-poll)
 	cap.SimulateExtensionConnectForTest()

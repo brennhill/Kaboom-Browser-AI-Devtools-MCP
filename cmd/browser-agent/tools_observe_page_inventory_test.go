@@ -8,6 +8,8 @@ package main
 import (
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -18,7 +20,7 @@ func TestToolsObservePageInventory_DispatchesQuery(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolObserve(req, normalizeObserveArgsForAsync(`{"what":"page_inventory"}`))
 	result := parseToolResult(t, resp)
 	if result.IsError {
@@ -127,7 +129,7 @@ func TestToolsObservePageInventory_ResponseStructure(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolObserve(req, normalizeObserveArgsForAsync(`{"what":"page_inventory"}`))
 	if resp.Result == nil {
 		t.Fatal("observe(page_inventory) returned nil result")
@@ -152,7 +154,7 @@ func TestToolsObservePageInventory_ForwardsParams(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolObserve(req, normalizeObserveArgsForAsync(`{"what":"page_inventory","visible_only":true,"limit":50}`))
 	result := parseToolResult(t, resp)
 	if result.IsError {

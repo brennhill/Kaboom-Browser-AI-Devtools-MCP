@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 func TestToolResponsePostProcessing_AddsSecurityModeMetadataAndWarning(t *testing.T) {
@@ -24,7 +25,7 @@ func TestToolResponsePostProcessing_AddsSecurityModeMetadataAndWarning(t *testin
 	handler := NewToolHandler(server, cap)
 	toolHandler := handler.toolHandler.(*ToolHandler)
 
-	enableReq := JSONRPCRequest{
+	enableReq := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "tools/call",
@@ -36,7 +37,7 @@ func TestToolResponsePostProcessing_AddsSecurityModeMetadataAndWarning(t *testin
 	}
 
 	resp, handled := toolHandler.HandleToolCall(
-		JSONRPCRequest{JSONRPC: "2.0", ID: 2, ClientID: "test-client"},
+		mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2, ClientID: "test-client"},
 		"configure",
 		json.RawMessage(`{"what":"health"}`),
 	)
@@ -46,7 +47,7 @@ func TestToolResponsePostProcessing_AddsSecurityModeMetadataAndWarning(t *testin
 
 	post := handler.applyToolResponsePostProcessing(resp, "test-client", "configure", "")
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(post.Result, &result); err != nil {
 		t.Fatalf("unmarshal result: %v", err)
 	}

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 func TestGenerateRejectsUnknownParams(t *testing.T) {
@@ -44,14 +45,14 @@ func TestGenerateRejectsUnknownParams(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			argsJSON, _ := json.Marshal(tt.args)
 			resp := toolgenerate.ValidateGenerateParams(
-				JSONRPCRequest{ID: 1},
+				mcp.JSONRPCRequest{ID: 1},
 				tt.format,
 				argsJSON,
 			)
 			if resp == nil {
 				t.Fatal("expected error response for unknown params, got nil")
 			}
-			var result MCPToolResult
+			var result mcp.MCPToolResult
 			if err := json.Unmarshal(resp.Result, &result); err != nil {
 				t.Fatalf("failed to unmarshal result: %v", err)
 			}
@@ -92,7 +93,7 @@ func TestGenerateAcceptsValidParams(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			argsJSON, _ := json.Marshal(tt.args)
 			resp := toolgenerate.ValidateGenerateParams(
-				JSONRPCRequest{ID: 1},
+				mcp.JSONRPCRequest{ID: 1},
 				tt.format,
 				argsJSON,
 			)
@@ -108,9 +109,9 @@ func TestGenerateEmptyOutputIncludesReason(t *testing.T) {
 
 	// Call generate(test) with no actions captured → should include reason
 	args, _ := json.Marshal(map[string]any{"what": "test"})
-	resp := h.toolGenerate(JSONRPCRequest{ID: 1}, args)
+	resp := h.toolGenerate(mcp.JSONRPCRequest{ID: 1}, args)
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("failed to unmarshal: %v", err)
 	}
@@ -128,9 +129,9 @@ func TestGeneratePRSummaryEmptyIncludesReason(t *testing.T) {
 	h := newTestToolHandler()
 
 	args, _ := json.Marshal(map[string]any{"what": "pr_summary"})
-	resp := h.toolGenerate(JSONRPCRequest{ID: 1}, args)
+	resp := h.toolGenerate(mcp.JSONRPCRequest{ID: 1}, args)
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("failed to unmarshal: %v", err)
 	}

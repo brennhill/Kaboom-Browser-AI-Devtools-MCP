@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
 
@@ -148,8 +149,8 @@ func TestHandleToolCall_NilUsageTracker(t *testing.T) {
 	handler := createTestToolHandler(t)
 	// usageTracker is nil by default.
 
-	req := JSONRPCRequest{
-		JSONRPC: JSONRPCVersion,
+	req := mcp.JSONRPCRequest{
+		JSONRPC: mcp.JSONRPCVersion,
 		ID:      1,
 		Method:  "tools/call",
 	}
@@ -162,8 +163,8 @@ func TestHandleToolCall_NilUsageTracker(t *testing.T) {
 	}
 
 	// Verify the response is a valid JSON-RPC response (tool ran, not a panic).
-	if resp.JSONRPC != JSONRPCVersion {
-		t.Errorf("response JSONRPC = %q, want %q", resp.JSONRPC, JSONRPCVersion)
+	if resp.JSONRPC != mcp.JSONRPCVersion {
+		t.Errorf("response JSONRPC = %q, want %q", resp.JSONRPC, mcp.JSONRPCVersion)
 	}
 }
 
@@ -173,8 +174,8 @@ func TestHandleToolCall_IncrementsUsageTracker(t *testing.T) {
 	counter := telemetry.NewUsageTracker()
 	handler.usageTracker = counter
 
-	req := JSONRPCRequest{
-		JSONRPC: JSONRPCVersion,
+	req := mcp.JSONRPCRequest{
+		JSONRPC: mcp.JSONRPCVersion,
 		ID:      1,
 		Method:  "tools/call",
 	}
@@ -200,8 +201,8 @@ func TestHandleToolCall_IncrementsUsageTracker_NoWhatParam(t *testing.T) {
 	counter := telemetry.NewUsageTracker()
 	handler.usageTracker = counter
 
-	req := JSONRPCRequest{
-		JSONRPC: JSONRPCVersion,
+	req := mcp.JSONRPCRequest{
+		JSONRPC: mcp.JSONRPCVersion,
 		ID:      1,
 		Method:  "tools/call",
 	}
@@ -226,8 +227,8 @@ func TestHandleToolCall_RecordsLatency(t *testing.T) {
 	counter := telemetry.NewUsageTracker()
 	handler.usageTracker = counter
 
-	req := JSONRPCRequest{
-		JSONRPC: JSONRPCVersion,
+	req := mcp.JSONRPCRequest{
+		JSONRPC: mcp.JSONRPCVersion,
 		ID:      1,
 		Method:  "tools/call",
 	}
@@ -260,8 +261,8 @@ func TestHandleToolCall_RecordsErrorRate(t *testing.T) {
 	counter := telemetry.NewUsageTracker()
 	handler.usageTracker = counter
 
-	req := JSONRPCRequest{
-		JSONRPC: JSONRPCVersion,
+	req := mcp.JSONRPCRequest{
+		JSONRPC: mcp.JSONRPCVersion,
 		ID:      1,
 		Method:  "tools/call",
 	}
@@ -285,8 +286,8 @@ func TestHandleToolCall_TracksSessionDepth(t *testing.T) {
 	counter := telemetry.NewUsageTracker()
 	handler.usageTracker = counter
 
-	req := JSONRPCRequest{
-		JSONRPC: JSONRPCVersion,
+	req := mcp.JSONRPCRequest{
+		JSONRPC: mcp.JSONRPCVersion,
 		ID:      1,
 		Method:  "tools/call",
 	}
@@ -314,8 +315,8 @@ func TestHandleToolCall_NilUsageTracker_NoPanic(t *testing.T) {
 	handler := createTestToolHandler(t)
 	// usageTracker is nil by default — should not panic.
 
-	req := JSONRPCRequest{
-		JSONRPC: JSONRPCVersion,
+	req := mcp.JSONRPCRequest{
+		JSONRPC: mcp.JSONRPCVersion,
 		ID:      1,
 		Method:  "tools/call",
 	}

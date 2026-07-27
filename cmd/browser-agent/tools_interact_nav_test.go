@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -158,10 +160,10 @@ func TestHandleBrowserActionNewTab_InvalidJSON(t *testing.T) {
 	env := newInteractTestEnv(t)
 
 	args := json.RawMessage(`{bad json}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.interactAction().HandleBrowserActionNewTabImpl(req, args)
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -311,11 +313,11 @@ func TestSwitchTab_UpdatesTrackedTabOnSuccess(t *testing.T) {
 	}`), "")
 
 	// Call switch_tab synchronously (sync=true is the default).
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.interactAction().HandleBrowserActionSwitchTabImpl(req, json.RawMessage(`{"tab_id":200}`))
 
 	// Verify the command completed (not an error).
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("unmarshal result: %v", err)
 	}
@@ -356,7 +358,7 @@ func TestSwitchTab_SetTrackedFalse_NoUpdate(t *testing.T) {
 		"title": "Other Page"
 	}`), "")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	_ = env.handler.interactAction().HandleBrowserActionSwitchTabImpl(req, json.RawMessage(`{"tab_id":300,"set_tracked":false}`))
 
 	// Tracked tab should remain 100 because set_tracked=false.
@@ -384,7 +386,7 @@ func TestSwitchTab_FailedCommand_NoUpdate(t *testing.T) {
 		"message": "No matching tab found"
 	}`), "tab_not_found")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	_ = env.handler.interactAction().HandleBrowserActionSwitchTabImpl(req, json.RawMessage(`{"tab_id":999}`))
 
 	// Tracked tab should remain 100 because the command failed.
@@ -415,7 +417,7 @@ func TestSwitchTab_TabIDZero_NoUpdate(t *testing.T) {
 		"title": "Zero Tab"
 	}`), "")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	_ = env.handler.interactAction().HandleBrowserActionSwitchTabImpl(req, json.RawMessage(`{"tab_id":42}`))
 
 	// Tracked tab should remain 100 because tab_id=0 is invalid.
@@ -444,7 +446,7 @@ func TestSwitchTab_TabIDMissing_NoUpdate(t *testing.T) {
 		"title": "Missing Tab"
 	}`), "")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	_ = env.handler.interactAction().HandleBrowserActionSwitchTabImpl(req, json.RawMessage(`{"tab_id":42}`))
 
 	// Tracked tab should remain 100 because tab_id is absent (defaults to 0).
@@ -468,12 +470,12 @@ func TestSwitchTab_AsyncMode_NoImmediateTrackingUpdate(t *testing.T) {
 	env.capture.SetTrackingStatusForTest(100, "https://old-page.example.com")
 
 	// Call switch_tab with background=true (async mode).
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"tab_id":200,"background":true}`)
 	resp := env.handler.interactAction().HandleBrowserActionSwitchTabImpl(req, args)
 
 	// Should return immediately with a queued response (not an error).
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("unmarshal result: %v", err)
 	}

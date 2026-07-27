@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 )
 
@@ -41,23 +42,23 @@ func newBundleTestEnv(t *testing.T) *bundleTestEnv {
 	return &bundleTestEnv{handler: handler, server: server, capture: cap}
 }
 
-func (e *bundleTestEnv) addLogEntry(entry LogEntry) {
-	e.server.logs.SeedEntries([]LogEntry{
+func (e *bundleTestEnv) addLogEntry(entry mcp.LogEntry) {
+	e.server.logs.SeedEntries([]mcp.LogEntry{
 		entry,
 	}, []time.Time{
 		time.Now(),
 	})
 }
 
-func (e *bundleTestEnv) callErrorBundles(t *testing.T, args string) (MCPToolResult, bool) {
+func (e *bundleTestEnv) callErrorBundles(t *testing.T, args string) (mcp.MCPToolResult, bool) {
 	t.Helper()
 	rawArgs := json.RawMessage(args)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := observe.GetErrorBundles(e.handler, req, rawArgs)
 	if resp.Result == nil {
-		return MCPToolResult{}, false
+		return mcp.MCPToolResult{}, false
 	}
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("failed to parse result: %v", err)
 	}
@@ -65,7 +66,7 @@ func (e *bundleTestEnv) callErrorBundles(t *testing.T, args string) (MCPToolResu
 }
 
 // parseBundles extracts the bundles array from an MCP response
-func (e *bundleTestEnv) parseBundles(t *testing.T, result MCPToolResult) []map[string]any {
+func (e *bundleTestEnv) parseBundles(t *testing.T, result mcp.MCPToolResult) []map[string]any {
 	t.Helper()
 	if len(result.Content) == 0 {
 		t.Fatal("expected content in result")
@@ -117,7 +118,7 @@ func TestErrorBundles_ErrorWithNoContext(t *testing.T) {
 
 	// Add an error with no matching network/actions/logs
 	now := time.Now().UTC()
-	env.addLogEntry(LogEntry{
+	env.addLogEntry(mcp.LogEntry{
 		"type":      "console",
 		"level":     "error",
 		"message":   "ReferenceError: foo is not defined",
@@ -187,7 +188,7 @@ func TestErrorBundles_ErrorWithNetwork(t *testing.T) {
 	})
 
 	// Add the error
-	env.addLogEntry(LogEntry{
+	env.addLogEntry(mcp.LogEntry{
 		"type":      "console",
 		"level":     "error",
 		"message":   "Failed to load users",
@@ -238,7 +239,7 @@ func TestErrorBundles_ErrorWithAction(t *testing.T) {
 	})
 
 	// Add the error
-	env.addLogEntry(LogEntry{
+	env.addLogEntry(mcp.LogEntry{
 		"type":      "console",
 		"level":     "error",
 		"message":   "Submit failed",
@@ -276,7 +277,7 @@ func TestErrorBundles_ErrorWithLog(t *testing.T) {
 	now := time.Now().UTC()
 
 	// Add a warning log 1 second before the error
-	env.addLogEntry(LogEntry{
+	env.addLogEntry(mcp.LogEntry{
 		"type":      "console",
 		"level":     "warn",
 		"message":   "Cache miss for user profile",
@@ -284,7 +285,7 @@ func TestErrorBundles_ErrorWithLog(t *testing.T) {
 	})
 
 	// Add the error
-	env.addLogEntry(LogEntry{
+	env.addLogEntry(mcp.LogEntry{
 		"type":      "console",
 		"level":     "error",
 		"message":   "TypeError in UserProfile render",
@@ -340,7 +341,7 @@ func TestErrorBundles_WindowBoundary(t *testing.T) {
 	})
 
 	// Add the error
-	env.addLogEntry(LogEntry{
+	env.addLogEntry(mcp.LogEntry{
 		"type":      "console",
 		"level":     "error",
 		"message":   "Window test error",
@@ -382,7 +383,7 @@ func TestErrorBundles_CustomWindow(t *testing.T) {
 	})
 
 	// Add the error
-	env.addLogEntry(LogEntry{
+	env.addLogEntry(mcp.LogEntry{
 		"type":      "console",
 		"level":     "error",
 		"message":   "Custom window test",
@@ -423,7 +424,7 @@ func TestErrorBundles_Limit(t *testing.T) {
 
 	// Add 5 errors
 	for i := 0; i < 5; i++ {
-		env.addLogEntry(LogEntry{
+		env.addLogEntry(mcp.LogEntry{
 			"type":      "console",
 			"level":     "error",
 			"message":   "Error number",
@@ -463,13 +464,13 @@ func TestErrorBundles_SharedContext(t *testing.T) {
 	})
 
 	// Add two errors within 1 second — both should see the same network body
-	env.addLogEntry(LogEntry{
+	env.addLogEntry(mcp.LogEntry{
 		"type":      "console",
 		"level":     "error",
 		"message":   "Error A",
 		"timestamp": now.Format(time.RFC3339),
 	})
-	env.addLogEntry(LogEntry{
+	env.addLogEntry(mcp.LogEntry{
 		"type":      "console",
 		"level":     "error",
 		"message":   "Error B",
@@ -503,7 +504,7 @@ func TestErrorBundles_ViaObserveDispatcher(t *testing.T) {
 	env := newBundleTestEnv(t)
 
 	now := time.Now().UTC()
-	env.addLogEntry(LogEntry{
+	env.addLogEntry(mcp.LogEntry{
 		"type":      "console",
 		"level":     "error",
 		"message":   "Dispatcher test error",
@@ -512,14 +513,14 @@ func TestErrorBundles_ViaObserveDispatcher(t *testing.T) {
 
 	// Call via the observe dispatcher (as a real client would)
 	args := json.RawMessage(`{"what":"error_bundles"}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.toolObserve(req, args)
 
 	if resp.Result == nil {
 		t.Fatal("observe error_bundles should return result")
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("failed to parse: %v", err)
 	}
@@ -541,7 +542,7 @@ func TestErrorBundles_TsField(t *testing.T) {
 	now := time.Now().UTC()
 
 	// Extension-originated entries use "ts" instead of "timestamp"
-	env.addLogEntry(LogEntry{
+	env.addLogEntry(mcp.LogEntry{
 		"type":    "console",
 		"level":   "error",
 		"message": "Extension error with ts field",

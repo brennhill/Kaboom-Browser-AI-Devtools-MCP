@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
@@ -75,10 +76,10 @@ func TestNavigateAndDocument_URLChangeTimeout(t *testing.T) {
 	env.capture.SimulateExtensionConnectForTest()
 	env.capture.SetTrackingStatusForTest(42, "https://example.com/old")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"selector":"a.nav","wait_for_url_change":true,"wait_for_stable":false,"timeout_ms":50}`)
 
-	var resp JSONRPCResponse
+	var resp mcp.JSONRPCResponse
 	done := make(chan struct{})
 	go func() {
 		resp = env.handler.interactAction().HandleNavigateAndDocument(req, args)
@@ -123,10 +124,10 @@ func TestNavigateAndDocument_AppendsPageContext(t *testing.T) {
 	env.capture.SimulateExtensionConnectForTest()
 	env.capture.UpdateTrackedTab(42, "https://example.com/old", "Old")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"selector":"a.nav","wait_for_url_change":true,"wait_for_stable":false,"timeout_ms":500}`)
 
-	var resp JSONRPCResponse
+	var resp mcp.JSONRPCResponse
 	done := make(chan struct{})
 	go func() {
 		resp = env.handler.interactAction().HandleNavigateAndDocument(req, args)
@@ -203,7 +204,7 @@ func TestNavigateAndDocument_TabIDMismatchReturnsError(t *testing.T) {
 	env.capture.SimulateExtensionConnectForTest()
 	env.capture.SetTrackingStatusForTest(42, "https://example.com/old")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"selector":"a.nav","tab_id":99,"wait_for_url_change":true,"wait_for_stable":false}`)
 
 	resp := env.handler.interactAction().HandleNavigateAndDocument(req, args)
@@ -228,7 +229,7 @@ func TestNavigateAndDocument_TabIDRequiresTracking(t *testing.T) {
 	env.capture.SetPilotEnabled(true)
 	env.capture.SimulateExtensionConnectForTest()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"selector":"a.nav","tab_id":42,"wait_for_url_change":true,"wait_for_stable":false}`)
 
 	resp := env.handler.interactAction().HandleNavigateAndDocument(req, args)
@@ -246,10 +247,10 @@ func TestNavigateAndDocument_TimeoutBudgetExhaustedBeforeStable(t *testing.T) {
 	env.capture.SimulateExtensionConnectForTest()
 	env.capture.SetTrackingStatusForTest(42, "https://example.com/old")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"selector":"a.nav","timeout_ms":40,"wait_for_url_change":false,"wait_for_stable":true}`)
 
-	var resp JSONRPCResponse
+	var resp mcp.JSONRPCResponse
 	done := make(chan struct{})
 	go func() {
 		resp = env.handler.interactAction().HandleNavigateAndDocument(req, args)
@@ -309,10 +310,10 @@ func TestInteract_NavigateAndDocument_IncludeScreenshot(t *testing.T) {
 	env.capture.HandleSync(httptest.NewRecorder(), httpReq)
 	env.capture.SetTrackingStatusForTest(42, "https://example.com")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"navigate_and_document","selector":"button","wait_for_url_change":false,"wait_for_stable":false,"include_screenshot":true}`)
 
-	var resp JSONRPCResponse
+	var resp mcp.JSONRPCResponse
 	done := make(chan struct{})
 	go func() {
 		resp = env.handler.toolInteract(req, args)

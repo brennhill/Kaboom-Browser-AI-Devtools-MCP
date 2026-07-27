@@ -15,6 +15,8 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/launchmode"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
@@ -38,7 +40,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request, cap *captu
 		logFileSize = info.Size()
 	}
 	response := map[string]any{
-		"status": "ok", "service-name": mcpServerName, "name": mcpServerName, "version": version,
+		"status": "ok", "service-name": identity.MCPServerName, "name": identity.MCPServerName, "version": version,
 		"logs": map[string]any{
 			"entries": s.logs.EntryCount(), "max_entries": s.logs.MaxEntries(),
 			"log_file": s.logs.LogFile(), "log_file_size": logFileSize, "dropped_count": s.logs.DropCount(),
@@ -73,7 +75,7 @@ func (s *Server) handleShutdown(w http.ResponseWriter, r *http.Request) {
 		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
 	}
-	_ = s.logs.AppendToFile([]LogEntry{{
+	_ = s.logs.AppendToFile([]mcp.LogEntry{{
 		"type": "lifecycle", "event": "shutdown_requested", "source": "http",
 		"pid": os.Getpid(), "timestamp": time.Now().UTC().Format(time.RFC3339),
 	}})
@@ -276,7 +278,7 @@ func (s *Server) handleLogs(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleLogsPost(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxPostBodySize)
 	var body struct {
-		Entries []LogEntry `json:"entries"`
+		Entries []mcp.LogEntry `json:"entries"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})

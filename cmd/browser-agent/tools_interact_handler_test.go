@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -149,7 +150,7 @@ func TestToolsInteractDispatch_EmptyArgs(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolInteract(req, nil)
 	result := parseToolResult(t, resp)
 	if !result.IsError {
@@ -992,7 +993,7 @@ func TestToolsInteractGetText_StructuredPassthrough(t *testing.T) {
 func TestToolsValidateDOMActionParams(t *testing.T) {
 	t.Parallel()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 
 	// Actions without special required params should pass
 	for _, action := range []string{"click", "check", "focus", "scroll_to", "wait_for", "key_press"} {

@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -39,18 +40,18 @@ func newAnalyzeTestEnv(t *testing.T) *analyzeTestEnv {
 }
 
 // callAnalyze invokes the analyze tool and returns parsed result
-func (e *analyzeTestEnv) callAnalyze(t *testing.T, argsJSON string) (MCPToolResult, bool) {
+func (e *analyzeTestEnv) callAnalyze(t *testing.T, argsJSON string) (mcp.MCPToolResult, bool) {
 	t.Helper()
 
 	args := normalizeAnalyzeArgsForAsync(argsJSON)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := e.handler.toolAnalyze(req, args)
 
 	if resp.Result == nil {
-		return MCPToolResult{}, false
+		return mcp.MCPToolResult{}, false
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("failed to parse result: %v", err)
 	}

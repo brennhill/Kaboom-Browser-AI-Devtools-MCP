@@ -12,7 +12,7 @@ import (
 
 // ModeHandler is the unified function signature for all tool mode handlers.
 // All five tools (observe, analyze, configure, generate, interact) use this signature.
-type ModeHandler func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse
+type ModeHandler func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
 
 // describeCapabilitiesRecovery points callers at the canonical tool-mode registry.
 func describeCapabilitiesRecovery(toolName string) func(*mcp.StructuredError) {
@@ -25,7 +25,7 @@ func describeCapabilitiesRecovery(toolName string) func(*mcp.StructuredError) {
 	})
 }
 
-func appendCanonicalWhatAliasWarning(resp JSONRPCResponse, aliasParam, mode, deprecatedIn, removeIn string) JSONRPCResponse {
+func appendCanonicalWhatAliasWarning(resp mcp.JSONRPCResponse, aliasParam, mode, deprecatedIn, removeIn string) mcp.JSONRPCResponse {
 	if strings.TrimSpace(aliasParam) == "" || strings.TrimSpace(mode) == "" {
 		return resp
 	}
@@ -40,7 +40,7 @@ func appendCanonicalWhatAliasWarning(resp JSONRPCResponse, aliasParam, mode, dep
 	return mcp.AppendWarningsToResponse(resp, []string{warning})
 }
 
-func whatAliasConflictResponse(req JSONRPCRequest, aliasParam, whatValue, aliasValue, validValues string) JSONRPCResponse {
+func whatAliasConflictResponse(req mcp.JSONRPCRequest, aliasParam, whatValue, aliasValue, validValues string) mcp.JSONRPCResponse {
 	hint := "Use only 'what' when specifying tool mode/action."
 	if strings.TrimSpace(validValues) != "" {
 		hint += " Valid values: " + validValues
@@ -59,14 +59,14 @@ type toolRegistry struct {
 	Resolution modeResolution
 	// PreDispatch is called after mode resolution but before handler dispatch.
 	// Returns modified args and optional response (non-nil short-circuits dispatch).
-	PreDispatch func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage, what string) (json.RawMessage, *JSONRPCResponse)
+	PreDispatch func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage, what string) (json.RawMessage, *mcp.JSONRPCResponse)
 	// PostDispatch is called after the handler returns, before alias warning.
-	PostDispatch func(h *ToolHandler, req JSONRPCRequest, resp JSONRPCResponse, what string) JSONRPCResponse
+	PostDispatch func(h *ToolHandler, req mcp.JSONRPCRequest, resp mcp.JSONRPCResponse, what string) mcp.JSONRPCResponse
 }
 
 // dispatchTool resolves the mode, looks up the handler, and dispatches.
 // Handles the resolve→lookup→not-found→call→alias-warning pattern shared by all 4 registry tools.
-func (h *ToolHandler) dispatchTool(req JSONRPCRequest, args json.RawMessage, reg toolRegistry) JSONRPCResponse {
+func (h *ToolHandler) dispatchTool(req mcp.JSONRPCRequest, args json.RawMessage, reg toolRegistry) mcp.JSONRPCResponse {
 	what, usedAliasParam, errResp := resolveToolMode(req, args, reg.AliasDefs, reg.Resolution)
 	if errResp != nil {
 		return *errResp
@@ -83,7 +83,7 @@ func (h *ToolHandler) dispatchTool(req JSONRPCRequest, args json.RawMessage, reg
 	}
 
 	if reg.PreDispatch != nil {
-		var preResp *JSONRPCResponse
+		var preResp *mcp.JSONRPCResponse
 		args, preResp = reg.PreDispatch(h, req, args, what)
 		if preResp != nil {
 			return appendCanonicalWhatAliasWarning(*preResp, usedAliasParam, what, deprecatedIn, removeIn)
@@ -104,7 +104,7 @@ func (h *ToolHandler) dispatchTool(req JSONRPCRequest, args json.RawMessage, reg
 //
 //	Before: "dom": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse { return h.toolQueryDOM(req, args) },
 //	After:  "dom": method((*ToolHandler).toolQueryDOM),
-func method(fn func(*ToolHandler, JSONRPCRequest, json.RawMessage) JSONRPCResponse) ModeHandler {
+func method(fn func(*ToolHandler, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) ModeHandler {
 	return fn
 }
 
@@ -157,11 +157,11 @@ type modeResolution struct {
 //  4. Return missing-param error if no mode found.
 //  5. Apply mode aliases (e.g. "network" -> "network_waterfall").
 func resolveToolMode(
-	req JSONRPCRequest,
+	req mcp.JSONRPCRequest,
 	args json.RawMessage,
 	aliasDefs []modeAlias,
 	res modeResolution,
-) (what string, usedAliasParam string, errResp *JSONRPCResponse) {
+) (what string, usedAliasParam string, errResp *mcp.JSONRPCResponse) {
 
 	// Parse all potential mode fields into a map.
 	fields := make(map[string]string, len(aliasDefs)+1)

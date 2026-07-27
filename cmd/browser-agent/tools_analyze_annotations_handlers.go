@@ -30,7 +30,7 @@ const annotationErrorCorrelationWindow = 5 * time.Second
 const annotationBlockingWaitMax = 10 * time.Minute
 
 // toolGetAnnotations returns latest annotation session or a named multi-page session.
-func (h *ToolHandler) toolGetAnnotations(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolGetAnnotations(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Wait         *bool  `json:"wait"`
 		Background   *bool  `json:"background"`
@@ -84,7 +84,7 @@ func annotationBlockingWaitDuration(timeoutMs int) time.Duration {
 	return waitDuration
 }
 
-func (h *ToolHandler) getAnonymousAnnotations(req JSONRPCRequest, wait bool, waitTimeout time.Duration, urlFilter string) JSONRPCResponse {
+func (h *ToolHandler) getAnonymousAnnotations(req mcp.JSONRPCRequest, wait bool, waitTimeout time.Duration, urlFilter string) mcp.JSONRPCResponse {
 	if wait {
 		if session := h.annotationStore.GetLatestSessionSinceDraw(); session != nil {
 			return h.formatAnnotationSession(req, session, urlFilter)
@@ -120,12 +120,12 @@ func (h *ToolHandler) getAnonymousAnnotations(req JSONRPCRequest, wait bool, wai
 	return h.formatAnnotationSession(req, session, urlFilter)
 }
 
-func (h *ToolHandler) formatAnnotationSession(req JSONRPCRequest, session *AnnotationSession, urlFilter string) JSONRPCResponse {
+func (h *ToolHandler) formatAnnotationSession(req mcp.JSONRPCRequest, session *annotation.Session, urlFilter string) mcp.JSONRPCResponse {
 	return mcp.Succeed(req, "Annotations retrieved", buildAnnotationSessionResult(session, urlFilter))
 }
 
 // #lizard forgives
-func (h *ToolHandler) getNamedAnnotations(req JSONRPCRequest, sessionName string, wait bool, waitTimeout time.Duration, urlFilter string) JSONRPCResponse {
+func (h *ToolHandler) getNamedAnnotations(req mcp.JSONRPCRequest, sessionName string, wait bool, waitTimeout time.Duration, urlFilter string) mcp.JSONRPCResponse {
 	if wait {
 		if ns := h.annotationStore.GetNamedSessionSinceDraw(sessionName); ns != nil {
 			return h.formatNamedAnnotationSession(req, ns, urlFilter)
@@ -166,15 +166,15 @@ func (h *ToolHandler) getNamedAnnotations(req JSONRPCRequest, sessionName string
 	return h.formatNamedAnnotationSession(req, ns, urlFilter)
 }
 
-func (h *ToolHandler) formatNamedAnnotationSession(req JSONRPCRequest, ns *NamedAnnotationSession, urlFilter string) JSONRPCResponse {
+func (h *ToolHandler) formatNamedAnnotationSession(req mcp.JSONRPCRequest, ns *annotation.NamedSession, urlFilter string) mcp.JSONRPCResponse {
 	return mcp.Succeed(req, "Annotations retrieved", buildNamedAnnotationSessionResult(ns, urlFilter))
 }
 
-func buildAnnotationSessionResult(session *AnnotationSession, urlFilter string) map[string]any {
+func buildAnnotationSessionResult(session *annotation.Session, urlFilter string) map[string]any {
 	matched := annotation.URLMatches(urlFilter, session.PageURL)
 	annotations := session.Annotations
 	if !matched {
-		annotations = []Annotation{}
+		annotations = []annotation.Annotation{}
 	}
 
 	result := map[string]any{
@@ -186,7 +186,7 @@ func buildAnnotationSessionResult(session *AnnotationSession, urlFilter string) 
 	if session.ScreenshotPath != "" && matched {
 		result["screenshot"] = session.ScreenshotPath
 	}
-	projects := toolanalyze.BuildProjectSummaries([]*AnnotationSession{session})
+	projects := toolanalyze.BuildProjectSummaries([]*annotation.Session{session})
 	if len(projects) > 0 {
 		result["projects"] = projects
 	}
@@ -199,7 +199,7 @@ func buildAnnotationSessionResult(session *AnnotationSession, urlFilter string) 
 	return result
 }
 
-func buildNamedAnnotationSessionResult(ns *NamedAnnotationSession, urlFilter string) map[string]any {
+func buildNamedAnnotationSessionResult(ns *annotation.NamedSession, urlFilter string) map[string]any {
 	allProjects := toolanalyze.BuildProjectSummaries(ns.Pages)
 	filteredPages := filterAnnotationPages(ns.Pages, urlFilter)
 
@@ -251,7 +251,7 @@ func buildNamedAnnotationSessionResult(ns *NamedAnnotationSession, urlFilter str
 	return result
 }
 
-func resolveAnnotationURLFilter(req JSONRPCRequest, urlValue, urlPatternValue string) (string, JSONRPCResponse, bool) {
+func resolveAnnotationURLFilter(req mcp.JSONRPCRequest, urlValue, urlPatternValue string) (string, mcp.JSONRPCResponse, bool) {
 	urlValue = strings.TrimSpace(urlValue)
 	urlPatternValue = strings.TrimSpace(urlPatternValue)
 	if urlValue != "" && urlPatternValue != "" && urlValue != urlPatternValue {
@@ -262,16 +262,16 @@ func resolveAnnotationURLFilter(req JSONRPCRequest, urlValue, urlPatternValue st
 		), true
 	}
 	if urlPatternValue != "" {
-		return urlPatternValue, JSONRPCResponse{}, false
+		return urlPatternValue, mcp.JSONRPCResponse{}, false
 	}
-	return urlValue, JSONRPCResponse{}, false
+	return urlValue, mcp.JSONRPCResponse{}, false
 }
 
-func filterAnnotationPages(pages []*AnnotationSession, urlFilter string) []*AnnotationSession {
+func filterAnnotationPages(pages []*annotation.Session, urlFilter string) []*annotation.Session {
 	if strings.TrimSpace(urlFilter) == "" {
 		return pages
 	}
-	filtered := make([]*AnnotationSession, 0, len(pages))
+	filtered := make([]*annotation.Session, 0, len(pages))
 	for _, page := range pages {
 		if annotation.URLMatches(urlFilter, page.PageURL) {
 			filtered = append(filtered, page)
@@ -282,7 +282,7 @@ func filterAnnotationPages(pages []*AnnotationSession, urlFilter string) []*Anno
 
 // toolFlushAnnotations forces completion of a pending annotation waiter.
 // This is a recovery path for stuck waiters that would otherwise remain pending.
-func (h *ToolHandler) toolFlushAnnotations(req JSONRPCRequest, correlationID string, fallbackURLFilter string) JSONRPCResponse {
+func (h *ToolHandler) toolFlushAnnotations(req mcp.JSONRPCRequest, correlationID string, fallbackURLFilter string) mcp.JSONRPCResponse {
 	correlationID = strings.TrimSpace(correlationID)
 	if correlationID == "" {
 		return mcp.Fail(req, mcp.ErrMissingParam,
@@ -372,7 +372,7 @@ func (h *ToolHandler) buildFlushedAnnotationResult(sessionName string, urlFilter
 }
 
 // toolGetAnnotationDetail returns full DOM/style detail for a specific annotation.
-func (h *ToolHandler) toolGetAnnotationDetail(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolGetAnnotationDetail(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		CorrelationID string `json:"correlation_id"`
 	}

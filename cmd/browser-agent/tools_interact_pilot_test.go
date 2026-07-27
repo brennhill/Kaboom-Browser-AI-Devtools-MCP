@@ -7,6 +7,8 @@ package main
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -56,10 +58,10 @@ func TestHandleBrowserActionNavigate_InvalidJSON(t *testing.T) {
 	env := newInteractTestEnv(t)
 
 	args := json.RawMessage(`{bad json}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.interactAction().HandleBrowserActionNavigateImpl(req, args)
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -108,10 +110,10 @@ func TestHandlePilotExecuteJS_InvalidJSON(t *testing.T) {
 	env := newInteractTestEnv(t)
 
 	args := json.RawMessage(`{bad json}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}

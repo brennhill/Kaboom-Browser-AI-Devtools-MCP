@@ -6,9 +6,10 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 type stubToolModule struct {
@@ -22,9 +23,9 @@ func (m *stubToolModule) Validate(args json.RawMessage) error {
 	return m.validateErr
 }
 
-func (m *stubToolModule) Execute(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (m *stubToolModule) Execute(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	m.executeCalled = true
-	return JSONRPCResponse{
+	return mcp.JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      req.ID,
 		Result:  mcp.JSONResponse("stub module executed", map[string]any{"status": "ok"}),
@@ -65,7 +66,7 @@ func TestHandleToolCall_DispatchesRegisteredModule(t *testing.T) {
 	stub := &stubToolModule{}
 	env.handler.toolModules.register("stub_tool", stub)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`"test-id"`), Method: "tools/call"}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`"test-id"`), Method: "tools/call"}
 	resp, handled := env.handler.HandleToolCall(req, "stub_tool", json.RawMessage(`{"x":1}`))
 
 	if !handled {
@@ -92,7 +93,7 @@ func TestHandleToolCall_ModuleValidationError(t *testing.T) {
 	stub := &stubToolModule{validateErr: errors.New("bad params")}
 	env.handler.toolModules.register("stub_tool", stub)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`"test-id"`), Method: "tools/call"}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`"test-id"`), Method: "tools/call"}
 	resp, handled := env.handler.HandleToolCall(req, "stub_tool", json.RawMessage(`{"x":1}`))
 
 	if !handled {

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -21,7 +22,7 @@ func TestToolGenerateCSP_NoNetworkBodies(t *testing.T) {
 	env := newObserveTestEnv(t)
 
 	args := json.RawMessage(`{"mode":"strict"}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.toolGenerateCSP(req, args)
 
 	result := parseToolResult(t, resp)
@@ -43,7 +44,7 @@ func TestToolGenerateCSP_DefaultMode(t *testing.T) {
 	env := newObserveTestEnv(t)
 
 	args := json.RawMessage(`{}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.toolGenerateCSP(req, args)
 
 	result := parseToolResult(t, resp)
@@ -66,7 +67,7 @@ func TestToolGenerateCSP_WithNetworkBodies(t *testing.T) {
 	})
 
 	args := json.RawMessage(`{"mode":"strict"}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.toolGenerateCSP(req, args)
 
 	result := parseToolResult(t, resp)
@@ -103,7 +104,7 @@ func TestToolGenerateCSP_InvalidJSON(t *testing.T) {
 	env := newObserveTestEnv(t)
 
 	args := json.RawMessage(`{bad json}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.toolGenerateCSP(req, args)
 
 	result := parseToolResult(t, resp)

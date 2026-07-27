@@ -13,6 +13,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -524,7 +526,7 @@ func TestDOMPrimitive_AllActions_NoPanic(t *testing.T) {
 			}()
 
 			args := json.RawMessage(tc.args)
-			req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+			req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 			resp := env.handler.toolInteract(req, args)
 
 			if resp.Result == nil && resp.Error == nil {

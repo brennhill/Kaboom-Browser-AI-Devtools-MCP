@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -44,14 +45,14 @@ func TestBuildPlaybackResult_AllActionsSucceeded(t *testing.T) {
 		SelectorFailures: map[string]int{},
 	}
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`42`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`42`)}
 	resp := handler.buildPlaybackResult(req, "rec-001", session)
 
 	if resp.JSONRPC != "2.0" {
 		t.Errorf("expected jsonrpc '2.0', got %q", resp.JSONRPC)
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("failed to parse result: %v", err)
 	}
@@ -106,10 +107,10 @@ func TestBuildPlaybackResult_PartialFailure(t *testing.T) {
 		},
 	}
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp := handler.buildPlaybackResult(req, "rec-002", session)
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("failed to parse result: %v", err)
 	}
@@ -151,10 +152,10 @@ func TestBuildPlaybackResult_ZeroActions(t *testing.T) {
 		SelectorFailures: map[string]int{},
 	}
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp := handler.buildPlaybackResult(req, "rec-003", session)
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("failed to parse result: %v", err)
 	}
@@ -190,10 +191,10 @@ func TestBuildPlaybackResult_DurationIsPositive(t *testing.T) {
 		SelectorFailures: map[string]int{},
 	}
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp := handler.buildPlaybackResult(req, "rec-004", session)
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("failed to parse result: %v", err)
 	}
@@ -227,10 +228,10 @@ func TestBuildPlaybackResult_SnakeCaseFields(t *testing.T) {
 		SelectorFailures: map[string]int{},
 	}
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp := handler.buildPlaybackResult(req, "rec-005", session)
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("failed to parse result: %v", err)
 	}
@@ -266,10 +267,10 @@ func TestBuildPlaybackResult_MessageFormat(t *testing.T) {
 		SelectorFailures: map[string]int{},
 	}
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp := handler.buildPlaybackResult(req, "rec-006", session)
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("failed to parse result: %v", err)
 	}

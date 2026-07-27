@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -19,7 +21,7 @@ func TestClipboard_Write_MissingText(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"what":"clipboard_write"}`)
 	resp := h.toolInteract(req, args)
 
@@ -42,7 +44,7 @@ func TestClipboard_Write_InvalidJSON(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	// The interact dispatcher parses the top-level "what" first, then delegates
 	// to interactAction().handleClipboardWrite which re-parses args. We need to pass valid
 	// top-level JSON so the dispatcher can route, but the clipboard handler
@@ -73,7 +75,7 @@ func TestClipboard_Read_PilotGating(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"what":"clipboard_read"}`)
 	resp := h.toolInteract(req, args)
 
@@ -96,7 +98,7 @@ func TestClipboard_Write_PilotGating(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"what":"clipboard_write","text":"hello"}`)
 	resp := h.toolInteract(req, args)
 

@@ -71,7 +71,7 @@ func TestGetScreenshot_InlineImageInResponse(t *testing.T) {
 		t.Fatal("GetScreenshot timed out")
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("failed to parse result: %v", err)
 	}
@@ -90,7 +90,7 @@ func TestGetScreenshot_InlineImageInResponse(t *testing.T) {
 	}
 
 	// Find the image content block
-	var imageBlock *MCPContentBlock
+	var imageBlock *mcp.MCPContentBlock
 	for i := range result.Content {
 		if result.Content[i].Type == "image" {
 			imageBlock = &result.Content[i]
@@ -171,12 +171,12 @@ func TestGetScreenshot_InlineImage_PNGFormat(t *testing.T) {
 		t.Fatal("GetScreenshot timed out")
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("failed to parse result: %v", err)
 	}
 
-	var imageBlock *MCPContentBlock
+	var imageBlock *mcp.MCPContentBlock
 	for i := range result.Content {
 		if result.Content[i].Type == "image" {
 			imageBlock = &result.Content[i]
@@ -240,7 +240,7 @@ func TestGetScreenshot_NoDataURL_StillReturnsTextResult(t *testing.T) {
 		t.Fatal("GetScreenshot timed out")
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("failed to parse result: %v", err)
 	}
@@ -305,7 +305,7 @@ func TestGetScreenshot_SaveTo_WritesFileAndReturnsPath(t *testing.T) {
 		t.Fatal("GetScreenshot timed out")
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("failed to parse result: %v", err)
 	}
@@ -382,7 +382,7 @@ func TestGetScreenshot_SaveTo_InvalidExtensionReturnsSaveError(t *testing.T) {
 		t.Fatal("GetScreenshot timed out")
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("failed to parse result: %v", err)
 	}

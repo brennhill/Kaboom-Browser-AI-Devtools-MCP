@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -41,7 +43,7 @@ func TestToolLoadSessionContext_NilStore(t *testing.T) {
 	env.handler.configureSessionHandler.sessionStoreImpl = nil
 
 	args := json.RawMessage(`{"what":"load"}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.configureSession().handleLoadSessionContext(req, args)
 
 	result := parseToolResult(t, resp)
@@ -113,7 +115,7 @@ func TestToolConfigureTestBoundaryEnd_InvalidJSON(t *testing.T) {
 	env := newConfigureTestEnv(t)
 
 	args := json.RawMessage(`{bad json}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.toolConfigureTestBoundaryEnd(req, args)
 
 	result := parseToolResult(t, resp)

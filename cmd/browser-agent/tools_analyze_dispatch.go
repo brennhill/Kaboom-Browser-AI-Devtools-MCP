@@ -14,6 +14,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/visual"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
@@ -32,7 +33,7 @@ var analyzeHandlers = map[string]ModeHandler{
 	"security_audit":      azLocal(toolanalyze.HandleSecurityAudit),
 	"third_party_audit":   azLocal(toolanalyze.HandleThirdPartyAudit),
 	"link_health":         azLocal(toolanalyze.HandleLinkHealth),
-	"link_validation": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	"link_validation": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return toolanalyze.HandleLinkValidation(req, args, version)
 	},
 	"annotations":       method((*ToolHandler).toolGetAnnotations),
@@ -49,11 +50,11 @@ var analyzeHandlers = map[string]ModeHandler{
 	"visual_baselines":  azVisual(visual.ListBaselines),
 	"navigation":        azLocal(toolanalyze.HandleNavigation),
 	"page_structure":    azLocal(toolanalyze.HandlePageStructure),
-	"audit": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	"audit": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return combinedaudit.Handle(h, req, args)
 	},
 	"page_issues": azLocal(pageissues.Handle),
-	"feature_gates": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	"feature_gates": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return h.interactAction().HandleContentExtraction(req, args, "feature_gates", "feature_gates")
 	},
 }
@@ -68,27 +69,27 @@ var analyzeValueAliases = map[string]modeValueAlias{
 var analyzeAliasParams = defaultModeActionAliases
 
 // azLocal wraps a toolanalyze.Deps-accepting function as a ModeHandler.
-func azLocal(fn func(toolanalyze.Deps, JSONRPCRequest, json.RawMessage) JSONRPCResponse) ModeHandler {
-	return func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func azLocal(fn func(toolanalyze.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) ModeHandler {
+	return func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return fn(h, req, args)
 	}
 }
 
-func azInspect(fn func(inspect.Deps, JSONRPCRequest, json.RawMessage) JSONRPCResponse) ModeHandler {
-	return func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func azInspect(fn func(inspect.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) ModeHandler {
+	return func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return fn(h, req, args)
 	}
 }
 
-func azVisual(fn func(visual.Deps, JSONRPCRequest, json.RawMessage) JSONRPCResponse) ModeHandler {
-	return func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func azVisual(fn func(visual.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) ModeHandler {
+	return func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return fn(visualAnalyzeDeps{h: h}, req, args)
 	}
 }
 
 type visualAnalyzeDeps struct{ h *ToolHandler }
 
-func (d visualAnalyzeDeps) CaptureScreenshot(req JSONRPCRequest) JSONRPCResponse {
+func (d visualAnalyzeDeps) CaptureScreenshot(req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
 	return observe.GetScreenshot(d.h, req, json.RawMessage(`{}`))
 }
 
@@ -119,26 +120,26 @@ var analyzeRegistry = toolRegistry{
 }
 
 // toolAnalyze dispatches analyze requests based on the 'what' parameter.
-func (h *ToolHandler) toolAnalyze(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolAnalyze(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	reg := analyzeRegistry
 	reg.Resolution.ValidModes = getValidAnalyzeModes()
 	return h.dispatchTool(req, args, reg)
 }
 
-func (h *ToolHandler) toolAnalyzePageSummary(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolAnalyzePageSummary(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return h.interactAction().HandleContentExtraction(req, args, "page_summary", "page_summary")
 }
 
-func (h *ToolHandler) toolValidateAPI(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolValidateAPI(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return h.apiContractRuntime.Handle(req, args, h.capture.GetNetworkBodies())
 }
 
-func (h *ToolHandler) toolListDrawHistory(req JSONRPCRequest, _ json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolListDrawHistory(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
 	dir, err := screenshotsDir()
 	return annotation.ListDrawHistory(req, dir, err)
 }
 
-func (h *ToolHandler) toolGetDrawSession(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolGetDrawSession(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	dir, err := screenshotsDir()
 	return annotation.LoadDrawSession(h.annotationStore, req, args, dir, err)
 }

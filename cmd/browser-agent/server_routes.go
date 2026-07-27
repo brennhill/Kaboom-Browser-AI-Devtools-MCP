@@ -19,6 +19,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testpages"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tracking"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/httpapi"
 )
@@ -418,7 +419,7 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, cap *capture.Store) 
 
 	// NOT MCP — HTML dashboard (browser) with JSON fallback (Accept: application/json)
 	mux.HandleFunc("/", httpguard.CORS(dashboard.Root(dashboard.RootOptions{
-		Name: mcpServerName, Version: version, JSONResponse: jsonResponse,
+		Name: identity.MCPServerName, Version: version, JSONResponse: jsonResponse,
 	})))
 
 	return mcp

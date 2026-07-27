@@ -9,17 +9,18 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 )
 
 func TestGetBrowserErrors_InvalidScope(t *testing.T) {
 	t.Parallel()
 	h := newTestToolHandler()
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args, _ := json.Marshal(map[string]any{"scope": "bogus"})
 	resp := observe.GetBrowserErrors(h, req, args)
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -34,12 +35,12 @@ func TestGetBrowserErrors_InvalidScope(t *testing.T) {
 func TestGetBrowserErrors_ValidScopes(t *testing.T) {
 	t.Parallel()
 	h := newTestToolHandler()
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 
 	for _, scope := range []string{"current_page", "all", ""} {
 		args, _ := json.Marshal(map[string]any{"scope": scope})
 		resp := observe.GetBrowserErrors(h, req, args)
-		var result MCPToolResult
+		var result mcp.MCPToolResult
 		if err := json.Unmarshal(resp.Result, &result); err != nil {
 			t.Fatalf("scope=%q unmarshal: %v", scope, err)
 		}
@@ -52,11 +53,11 @@ func TestGetBrowserErrors_ValidScopes(t *testing.T) {
 func TestGetBrowserLogs_InvalidScope(t *testing.T) {
 	t.Parallel()
 	h := newTestToolHandler()
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args, _ := json.Marshal(map[string]any{"scope": "invalid"})
 	resp := observe.GetBrowserLogs(h, req, args)
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -71,12 +72,12 @@ func TestGetBrowserLogs_InvalidScope(t *testing.T) {
 func TestGetBrowserLogs_ValidScopes(t *testing.T) {
 	t.Parallel()
 	h := newTestToolHandler()
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 
 	for _, scope := range []string{"current_page", "all", ""} {
 		args, _ := json.Marshal(map[string]any{"scope": scope})
 		resp := observe.GetBrowserLogs(h, req, args)
-		var result MCPToolResult
+		var result mcp.MCPToolResult
 		if err := json.Unmarshal(resp.Result, &result); err != nil {
 			t.Fatalf("scope=%q unmarshal: %v", scope, err)
 		}
@@ -89,11 +90,11 @@ func TestGetBrowserLogs_ValidScopes(t *testing.T) {
 func TestGetBrowserErrors_ScopeInResponse(t *testing.T) {
 	t.Parallel()
 	h := newTestToolHandler()
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 
 	args, _ := json.Marshal(map[string]any{"scope": "all"})
 	resp := observe.GetBrowserErrors(h, req, args)
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}

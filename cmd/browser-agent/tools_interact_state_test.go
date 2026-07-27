@@ -12,13 +12,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
 // extractResponseData parses the JSON payload from an MCPToolResult's text content.
-func extractResponseData(t *testing.T, resp JSONRPCResponse) map[string]any {
+func extractResponseData(t *testing.T, resp mcp.JSONRPCResponse) map[string]any {
 	t.Helper()
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("unmarshal MCPToolResult: %v", err)
 	}
@@ -57,7 +58,7 @@ func TestSaveState_LegacyNameParamSupported(t *testing.T) {
 	env := newInteractHelpersTestEnv(t)
 	requireSessionStore(t, env)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), ClientID: "test-client"}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), ClientID: "test-client"}
 	resp := env.handler.stateInteract().HandleStateSave(req, json.RawMessage(`{"name":"legacy_name_save"}`))
 	data := extractResponseData(t, resp)
 
@@ -79,7 +80,7 @@ func TestLoadState_LegacyNameParamSupported(t *testing.T) {
 		t.Fatalf("seed state: %v", err)
 	}
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), ClientID: "test-client"}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), ClientID: "test-client"}
 	resp := env.handler.stateInteract().HandleStateLoad(req, json.RawMessage(`{"name":"legacy_name_load"}`))
 	data := extractResponseData(t, resp)
 
@@ -101,7 +102,7 @@ func TestDeleteState_LegacyNameParamSupported(t *testing.T) {
 		t.Fatalf("seed state: %v", err)
 	}
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), ClientID: "test-client"}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), ClientID: "test-client"}
 	resp := env.handler.stateInteract().HandleStateDelete(req, json.RawMessage(`{"name":"legacy_name_delete"}`))
 	data := extractResponseData(t, resp)
 
@@ -121,7 +122,7 @@ func TestCaptureState_Status_PilotDisabled(t *testing.T) {
 	t.Parallel()
 	env := newInteractHelpersTestEnv(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	result := env.handler.stateInteract().CaptureState(req)
 	if result.Status != act.StateCaptureStatusPilotDisabled {
 		t.Errorf("status = %q, want %q", result.Status, act.StateCaptureStatusPilotDisabled)
@@ -137,7 +138,7 @@ func TestCaptureState_Status_ExtensionDisconnected(t *testing.T) {
 	env.enablePilot(t)
 	env.capture.SimulateExtensionDisconnectForTest()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	result := env.handler.stateInteract().CaptureState(req)
 	if result.Status != act.StateCaptureStatusExtensionDisconnected {
 		t.Errorf("status = %q, want %q", result.Status, act.StateCaptureStatusExtensionDisconnected)
@@ -176,7 +177,7 @@ func TestSaveState_StateCapture_Captured(t *testing.T) {
 		}
 	}()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), ClientID: "test-client"}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), ClientID: "test-client"}
 	resp := env.handler.stateInteract().HandleStateSave(req, json.RawMessage(`{"snapshot_name":"form_test"}`))
 	data := extractResponseData(t, resp)
 
@@ -227,7 +228,7 @@ func TestSaveState_CapturesStorage(t *testing.T) {
 		}
 	}()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), ClientID: "test-client"}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), ClientID: "test-client"}
 	resp := env.handler.stateInteract().HandleStateSave(req, json.RawMessage(`{"snapshot_name":"storage_test"}`))
 	data := extractResponseData(t, resp)
 
@@ -300,7 +301,7 @@ func TestSaveState_ServerRedaction_RedactsSensitiveFormValues(t *testing.T) {
 		}
 	}()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), ClientID: "test-client"}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), ClientID: "test-client"}
 	resp := env.handler.stateInteract().HandleStateSave(req, json.RawMessage(`{"snapshot_name":"redaction_server_side"}`))
 	data := extractResponseData(t, resp)
 	if data["status"] != "saved" {
@@ -373,7 +374,7 @@ func TestSaveState_ServerRedaction_RedactsLegacyFormValueShapes(t *testing.T) {
 		}
 	}()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), ClientID: "test-client"}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), ClientID: "test-client"}
 	resp := env.handler.stateInteract().HandleStateSave(req, json.RawMessage(`{"snapshot_name":"redaction_legacy_shape"}`))
 	data := extractResponseData(t, resp)
 	if data["status"] != "saved" {
@@ -400,7 +401,7 @@ func TestSaveState_StateCapture_SkippedPilotDisabled(t *testing.T) {
 	env := newInteractHelpersTestEnv(t)
 	requireSessionStore(t, env)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp := env.handler.stateInteract().HandleStateSave(req, json.RawMessage(`{"snapshot_name":"no_pilot"}`))
 	data := extractResponseData(t, resp)
 
@@ -420,7 +421,7 @@ func TestSaveState_StateCapture_SkippedExtensionDisconnected(t *testing.T) {
 	// Force extension to appear disconnected despite test env default connection.
 	env.capture.SimulateExtensionDisconnectForTest()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp := env.handler.stateInteract().HandleStateSave(req, json.RawMessage(`{"snapshot_name":"no_ext"}`))
 	data := extractResponseData(t, resp)
 
@@ -455,7 +456,7 @@ func TestSaveState_StateCapture_SkippedErrorOnExecuteFailure(t *testing.T) {
 		}
 	}()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), ClientID: "test-client"}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), ClientID: "test-client"}
 	resp := env.handler.stateInteract().HandleStateSave(req, json.RawMessage(`{"snapshot_name":"capture_failure"}`))
 	data := extractResponseData(t, resp)
 
@@ -486,7 +487,7 @@ func TestLoadState_StateRestore_Queued(t *testing.T) {
 		t.Fatalf("seed state save failed: %v", err)
 	}
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp := env.handler.stateInteract().HandleStateLoad(req, json.RawMessage(`{"snapshot_name":"with_forms"}`))
 	data := extractResponseData(t, resp)
 
@@ -541,7 +542,7 @@ func TestLoadState_RestoresStorage(t *testing.T) {
 		t.Fatalf("seed state save failed: %v", err)
 	}
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp := env.handler.stateInteract().HandleStateLoad(req, json.RawMessage(`{"snapshot_name":"with_storage"}`))
 	data := extractResponseData(t, resp)
 
@@ -601,7 +602,7 @@ func TestLoadState_StateRestore_SkippedNoData(t *testing.T) {
 		t.Fatalf("seed state save failed: %v", err)
 	}
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp := env.handler.stateInteract().HandleStateLoad(req, json.RawMessage(`{"snapshot_name":"no_data"}`))
 	data := extractResponseData(t, resp)
 
@@ -628,7 +629,7 @@ func TestLoadState_StateRestore_SkippedPilotDisabled(t *testing.T) {
 		t.Fatalf("seed state save failed: %v", err)
 	}
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp := env.handler.stateInteract().HandleStateLoad(req, json.RawMessage(`{"snapshot_name":"has_forms"}`))
 	data := extractResponseData(t, resp)
 
@@ -657,7 +658,7 @@ func TestLoadState_StateRestore_SkippedExtensionDisconnected(t *testing.T) {
 		t.Fatalf("seed state save failed: %v", err)
 	}
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp := env.handler.stateInteract().HandleStateLoad(req, json.RawMessage(`{"snapshot_name":"has_forms_disconnected"}`))
 	data := extractResponseData(t, resp)
 
@@ -684,7 +685,7 @@ func TestLoadState_StorageOnly_QueuesRestore(t *testing.T) {
 		t.Fatalf("seed state save failed: %v", err)
 	}
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp := env.handler.stateInteract().HandleStateLoad(req, json.RawMessage(`{"snapshot_name":"storage_only"}`))
 	data := extractResponseData(t, resp)
 
@@ -711,7 +712,7 @@ func TestLoadState_IncludeURL_SkipsNavigationWhenExtensionDisconnected(t *testin
 		t.Fatalf("seed state save failed: %v", err)
 	}
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp := env.handler.stateInteract().HandleStateLoad(req, json.RawMessage(`{"snapshot_name":"nav_disconnected","include_url":true}`))
 	data := extractResponseData(t, resp)
 
@@ -738,7 +739,7 @@ func TestLoadState_IncludeURL_QueuesNavigationWhenConnected(t *testing.T) {
 		t.Fatalf("seed state save failed: %v", err)
 	}
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp := env.handler.stateInteract().HandleStateLoad(req, json.RawMessage(`{"snapshot_name":"nav_connected","include_url":true}`))
 	data := extractResponseData(t, resp)
 

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	wiretypes "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -26,13 +27,13 @@ func TestAppendAlertsToResponse(t *testing.T) {
 
 	t.Run("appends alert block", func(t *testing.T) {
 		// Build a valid MCP response with one content block
-		original := MCPToolResult{
-			Content: []MCPContentBlock{
+		original := mcp.MCPToolResult{
+			Content: []mcp.MCPContentBlock{
 				{Type: "text", Text: "original data"},
 			},
 		}
 		resultJSON, _ := json.Marshal(original)
-		resp := JSONRPCResponse{
+		resp := mcp.JSONRPCResponse{
 			JSONRPC: "2.0",
 			ID:      1,
 			Result:  json.RawMessage(resultJSON),
@@ -44,7 +45,7 @@ func TestAppendAlertsToResponse(t *testing.T) {
 
 		got := h.appendAlertsToResponse(resp, alerts)
 
-		var result MCPToolResult
+		var result mcp.MCPToolResult
 		if err := json.Unmarshal(got.Result, &result); err != nil {
 			t.Fatalf("unmarshal result: %v", err)
 		}
@@ -61,13 +62,13 @@ func TestAppendAlertsToResponse(t *testing.T) {
 	})
 
 	t.Run("empty alerts still appends block", func(t *testing.T) {
-		original := MCPToolResult{
-			Content: []MCPContentBlock{
+		original := mcp.MCPToolResult{
+			Content: []mcp.MCPContentBlock{
 				{Type: "text", Text: "data"},
 			},
 		}
 		resultJSON, _ := json.Marshal(original)
-		resp := JSONRPCResponse{
+		resp := mcp.JSONRPCResponse{
 			JSONRPC: "2.0",
 			ID:      1,
 			Result:  json.RawMessage(resultJSON),
@@ -75,7 +76,7 @@ func TestAppendAlertsToResponse(t *testing.T) {
 
 		got := h.appendAlertsToResponse(resp, []wiretypes.Alert{})
 
-		var result MCPToolResult
+		var result mcp.MCPToolResult
 		if err := json.Unmarshal(got.Result, &result); err != nil {
 			t.Fatalf("unmarshal: %v", err)
 		}
@@ -86,7 +87,7 @@ func TestAppendAlertsToResponse(t *testing.T) {
 	})
 
 	t.Run("malformed result returns unchanged", func(t *testing.T) {
-		resp := JSONRPCResponse{
+		resp := mcp.JSONRPCResponse{
 			JSONRPC: "2.0",
 			ID:      1,
 			Result:  json.RawMessage(`"not an object"`),

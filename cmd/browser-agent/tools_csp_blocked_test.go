@@ -8,15 +8,17 @@ package main
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
 // Helper: parse observe(what:"page") response
 // ============================================
 
-func parsePageInfoResponse(t *testing.T, resp JSONRPCResponse) map[string]any {
+func parsePageInfoResponse(t *testing.T, resp mcp.JSONRPCResponse) map[string]any {
 	t.Helper()
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("unmarshal MCPToolResult: %v", err)
 	}
@@ -56,7 +58,7 @@ func TestCSP_BlockedActions_None_Omitted(t *testing.T) {
 	env.simulateTabTracking(t)
 	env.capture.SetCSPStatusForTest(false, "none")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"page"}`)
 	resp := env.handler.toolObserve(req, args)
 
@@ -82,7 +84,7 @@ func TestCSP_BlockedActions_ScriptExec(t *testing.T) {
 	env.simulateTabTracking(t)
 	env.capture.SetCSPStatusForTest(true, "script_exec")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"page"}`)
 	resp := env.handler.toolObserve(req, args)
 
@@ -126,7 +128,7 @@ func TestCSP_BlockedActions_PageBlocked(t *testing.T) {
 	env.simulateTabTracking(t)
 	env.capture.SetCSPStatusForTest(true, "page_blocked")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"page"}`)
 	resp := env.handler.toolObserve(req, args)
 
@@ -188,7 +190,7 @@ func TestCSP_Page_IncludesBlockedActions(t *testing.T) {
 	env.simulateTabTracking(t)
 	env.capture.SetCSPStatusForTest(true, "script_exec")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"page"}`)
 	resp := env.handler.toolObserve(req, args)
 
@@ -225,12 +227,12 @@ func TestCSP_Navigate_IncludesBlockedActions(t *testing.T) {
 	env.simulateConnection(t)
 	env.capture.SetCSPStatusForTest(true, "script_exec")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"navigate","url":"https://example.com","sync":false}`)
 	resp := env.handler.interactAction().HandleBrowserActionNavigateImpl(req, args)
 
 	// Parse the queued response
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("unmarshal MCPToolResult: %v", err)
 	}
@@ -292,11 +294,11 @@ func TestCSP_Navigate_OmitsBlockedActions_WhenClear(t *testing.T) {
 	env.simulateConnection(t)
 	env.capture.SetCSPStatusForTest(false, "none")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"navigate","url":"https://example.com","sync":false}`)
 	resp := env.handler.interactAction().HandleBrowserActionNavigateImpl(req, args)
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("unmarshal MCPToolResult: %v", err)
 	}

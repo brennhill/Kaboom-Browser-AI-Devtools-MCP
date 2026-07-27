@@ -45,7 +45,7 @@ var interactRegistry = toolRegistry{
 		ToolName:   "interact",
 		ValidModes: "", // populated lazily per-call in toolInteract
 	},
-	PreDispatch: func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage, what string) (json.RawMessage, *JSONRPCResponse) {
+	PreDispatch: func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage, what string) (json.RawMessage, *mcp.JSONRPCResponse) {
 		// Apply jitter before dispatch (moved here from handler wrapping to avoid concurrent map writes).
 		h.interactAction().ApplyJitter(what)
 
@@ -86,142 +86,142 @@ func getInteractHandlers() map[string]ModeHandler {
 // buildInteractHandlers constructs the full interact handler map.
 func buildInteractHandlers() map[string]ModeHandler {
 	handlers := map[string]ModeHandler{
-		"highlight": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"highlight": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleHighlightImpl(req, args)
 		},
-		"save_state": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"save_state": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.stateInteract().HandleStateSave(req, args)
 		},
-		"state_save": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"state_save": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.stateInteract().HandleStateSave(req, args)
 		},
-		"load_state": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"load_state": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.stateInteract().HandleStateLoad(req, args)
 		},
-		"state_load": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"state_load": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.stateInteract().HandleStateLoad(req, args)
 		},
-		"list_states": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"list_states": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.stateInteract().HandleStateList(req, args)
 		},
-		"state_list": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"state_list": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.stateInteract().HandleStateList(req, args)
 		},
-		"delete_state": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"delete_state": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.stateInteract().HandleStateDelete(req, args)
 		},
-		"state_delete": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"state_delete": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.stateInteract().HandleStateDelete(req, args)
 		},
-		"set_storage": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"set_storage": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleSetStorage(req, args)
 		},
-		"delete_storage": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"delete_storage": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleDeleteStorage(req, args)
 		},
-		"clear_storage": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"clear_storage": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleClearStorage(req, args)
 		},
-		"set_cookie": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"set_cookie": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleSetCookie(req, args)
 		},
-		"delete_cookie": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"delete_cookie": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleDeleteCookie(req, args)
 		},
-		"execute_js": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"execute_js": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleExecuteJSImpl(req, args)
 		},
-		"navigate": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"navigate": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleBrowserActionNavigateImpl(req, args)
 		},
-		"refresh": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"refresh": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleBrowserActionRefreshImpl(req, args)
 		},
-		"back": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"back": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleBrowserActionBackImpl(req, args)
 		},
-		"forward": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"forward": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleBrowserActionForwardImpl(req, args)
 		},
-		"new_tab": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"new_tab": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleBrowserActionNewTabImpl(req, args)
 		},
-		"switch_tab": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"switch_tab": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleBrowserActionSwitchTabImpl(req, args)
 		},
-		"close_tab": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"close_tab": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleBrowserActionCloseTabImpl(req, args)
 		},
-		"screenshot": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"screenshot": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleScreenshotAliasImpl(req, args)
 		},
-		"subtitle": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"subtitle": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleSubtitleImpl(req, args)
 		},
-		"list_interactive": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"list_interactive": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleListInteractive(req, args)
 		},
-		"screen_recording_start": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"screen_recording_start": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.recordingInteractHandler.HandleRecordStart(req, args)
 		},
-		"record_start": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"record_start": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.recordingInteractHandler.HandleRecordStart(req, args)
 		},
-		"screen_recording_stop": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"screen_recording_stop": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.recordingInteractHandler.HandleRecordStop(req, args)
 		},
-		"record_stop": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"record_stop": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.recordingInteractHandler.HandleRecordStop(req, args)
 		},
-		"upload": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"upload": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.uploadInteractHandler.HandleUpload(req, args)
 		},
-		"draw_mode_start": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"draw_mode_start": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleDrawModeStart(req, args)
 		},
-		"hardware_click": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"hardware_click": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleHardwareClick(req, args)
 		},
-		"activate_tab": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"activate_tab": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleActivateTabImpl(req, args)
 		},
-		"get_readable": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"get_readable": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleGetReadable(req, args)
 		},
-		"get_markdown": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"get_markdown": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleGetMarkdown(req, args)
 		},
-		"navigate_and_wait_for": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"navigate_and_wait_for": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleNavigateAndWaitFor(req, args)
 		},
-		"navigate_and_document": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"navigate_and_document": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleNavigateAndDocument(req, args)
 		},
-		"fill_form_and_submit": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"fill_form_and_submit": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleFillFormAndSubmit(req, args)
 		},
-		"fill_form": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"fill_form": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleFillForm(req, args)
 		},
-		"run_a11y_and_export_sarif": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"run_a11y_and_export_sarif": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleRunA11yAndExportSARIF(req, args)
 		},
-		"explore_page": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"explore_page": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleExplorePage(req, args)
 		},
-		"wait_for_stable": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"wait_for_stable": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleWaitForStable(req, args)
 		},
-		"auto_dismiss_overlays": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"auto_dismiss_overlays": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleAutoDismissOverlays(req, args)
 		},
-		"batch": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"batch": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleBatch(req, args)
 		},
-		"clipboard_read": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"clipboard_read": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleClipboardRead(req, args)
 		},
-		"clipboard_write": func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		"clipboard_write": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleClipboardWrite(req, args)
 		},
 	}
@@ -232,7 +232,7 @@ func buildInteractHandlers() map[string]ModeHandler {
 			continue // named handler takes precedence (e.g. wait_for_stable, auto_dismiss_overlays)
 		}
 		action := action // capture for closure
-		handlers[action] = func(th *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		handlers[action] = func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleDOMPrimitive(req, args, action)
 		}
 	}
@@ -253,7 +253,7 @@ func getValidInteractActions() string {
 
 const composableSideEffectDelay = 300 * time.Millisecond
 
-func (h *ToolHandler) toolInteract(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolInteract(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var composable struct {
 		Subtitle           *string `json:"subtitle"`
 		IncludeScreenshot  bool    `json:"include_screenshot"`
@@ -382,8 +382,8 @@ func (h *ToolHandler) recordDOMPrimitiveAction(action, selector, text, value str
 	h.recordAIEnhancedAction(enhanced)
 }
 
-func (h *ToolHandler) enrichNavigateResponse(resp JSONRPCResponse, req JSONRPCRequest, tabID int) JSONRPCResponse {
-	var result MCPToolResult
+func (h *ToolHandler) enrichNavigateResponse(resp mcp.JSONRPCResponse, req mcp.JSONRPCRequest, tabID int) mcp.JSONRPCResponse {
+	var result mcp.MCPToolResult
 	if json.Unmarshal(resp.Result, &result) != nil || result.IsError {
 		return resp
 	}
@@ -412,7 +412,7 @@ func (h *ToolHandler) enrichNavigateResponse(resp JSONRPCResponse, req JSONRPCRe
 			enrichment["vitals"] = vitals[len(vitals)-1]
 		}
 		enrichmentJSON, _ := json.Marshal(enrichment)
-		result.Content = append(result.Content, MCPContentBlock{
+		result.Content = append(result.Content, mcp.MCPContentBlock{
 			Type: "text", Text: "Page content:\n" + string(enrichmentJSON),
 		})
 	}

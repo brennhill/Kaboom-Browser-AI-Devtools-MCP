@@ -7,13 +7,15 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 func TestAnalyzeDispatch_NavigationPatterns(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolAnalyze(req, json.RawMessage(`{"what":"navigation_patterns"}`))
 	result := parseToolResult(t, resp)
 	// Should not be an "unknown mode" error
@@ -26,7 +28,7 @@ func TestAnalyzeDispatch_HistoryAlias(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolAnalyze(req, json.RawMessage(`{"what":"history"}`))
 	result := parseToolResult(t, resp)
 	// Should not be an "unknown mode" error — history is an alias for navigation_patterns
@@ -39,7 +41,7 @@ func TestUnknownMode_IncludesRecoveryToolCall_Observe(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolObserve(req, json.RawMessage(`{"what":"nonexistent_mode"}`))
 	result := parseToolResult(t, resp)
 	if !result.IsError {
@@ -52,7 +54,7 @@ func TestUnknownMode_IncludesRecoveryToolCall_Analyze(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolAnalyze(req, json.RawMessage(`{"what":"nonexistent_mode"}`))
 	result := parseToolResult(t, resp)
 	if !result.IsError {
@@ -65,7 +67,7 @@ func TestUnknownMode_IncludesRecoveryToolCall_Generate(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolGenerate(req, json.RawMessage(`{"what":"nonexistent_format"}`))
 	result := parseToolResult(t, resp)
 	if !result.IsError {
@@ -78,7 +80,7 @@ func TestUnknownMode_IncludesRecoveryToolCall_Configure(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolConfigure(req, json.RawMessage(`{"what":"nonexistent_action"}`))
 	result := parseToolResult(t, resp)
 	if !result.IsError {
@@ -91,7 +93,7 @@ func TestUnknownMode_IncludesRecoveryToolCall_Interact(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolInteract(req, json.RawMessage(`{"what":"nonexistent_action"}`))
 	result := parseToolResult(t, resp)
 	if !result.IsError {
@@ -102,7 +104,7 @@ func TestUnknownMode_IncludesRecoveryToolCall_Interact(t *testing.T) {
 
 // assertRecoveryToolCall checks that the error response contains a recovery_tool_call
 // pointing to configure/describe_capabilities for the given tool.
-func assertRecoveryToolCall(t *testing.T, result MCPToolResult, toolName string) {
+func assertRecoveryToolCall(t *testing.T, result mcp.MCPToolResult, toolName string) {
 	t.Helper()
 	if len(result.Content) == 0 {
 		t.Fatal("no content blocks in error response")

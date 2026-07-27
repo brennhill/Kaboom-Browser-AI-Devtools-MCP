@@ -12,12 +12,15 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 func TestToolGetAnnotationDetail_EnrichedFields(t *testing.T) {
 	h := createTestToolHandler(t)
 
-	detail := AnnotationDetail{
+	detail := annotation.Detail{
 		CorrelationID:  "detail_enriched",
 		Selector:       "button.primary",
 		Tag:            "button",
@@ -32,7 +35,7 @@ func TestToolGetAnnotationDetail_EnrichedFields(t *testing.T) {
 	}
 	h.annotationStore.StoreDetail("detail_enriched", detail)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_enriched"}`)
 
 	resp := h.toolGetAnnotationDetail(req, args)
@@ -89,7 +92,7 @@ func TestToolGetAnnotationDetail_EnrichedFields(t *testing.T) {
 func TestToolGetAnnotationDetail_OmitsEmptyEnrichedFields(t *testing.T) {
 	h := createTestToolHandler(t)
 
-	detail := AnnotationDetail{
+	detail := annotation.Detail{
 		CorrelationID:  "detail_basic",
 		Selector:       "div.wrapper",
 		Tag:            "div",
@@ -99,7 +102,7 @@ func TestToolGetAnnotationDetail_OmitsEmptyEnrichedFields(t *testing.T) {
 	}
 	h.annotationStore.StoreDetail("detail_basic", detail)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "annotation_detail", "correlation_id": "detail_basic"}`)
 
 	resp := h.toolGetAnnotationDetail(req, args)
@@ -121,7 +124,7 @@ func TestToolGetAnnotationDetail_OmitsEmptyEnrichedFields(t *testing.T) {
 func TestToolListDrawHistory_EmptyDir(t *testing.T) {
 	h := createTestToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "draw_history"}`)
 
 	resp := h.toolListDrawHistory(req, args)
@@ -153,7 +156,7 @@ func TestToolListDrawHistory_EmptyDir(t *testing.T) {
 func TestToolListDrawHistory_WithSessions(t *testing.T) {
 	h := createTestToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what": "draw_history"}`)
 
 	resp := h.toolListDrawHistory(req, args)
@@ -185,7 +188,7 @@ func TestToolListDrawHistory_WithSessions(t *testing.T) {
 func TestToolGetDrawSession_MissingFile(t *testing.T) {
 	h := createTestToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"file": "draw-session-nonexistent.json"}`)
 
 	resp := h.toolGetDrawSession(req, args)
@@ -199,7 +202,7 @@ func TestToolGetDrawSession_MissingFile(t *testing.T) {
 func TestToolGetDrawSession_PathTraversal(t *testing.T) {
 	h := createTestToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"file": "../../../etc/passwd"}`)
 
 	resp := h.toolGetDrawSession(req, args)
@@ -213,7 +216,7 @@ func TestToolGetDrawSession_PathTraversal(t *testing.T) {
 func TestToolGetDrawSession_MissingParam(t *testing.T) {
 	h := createTestToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{}`)
 
 	resp := h.toolGetDrawSession(req, args)
@@ -226,7 +229,7 @@ func TestToolGetDrawSession_MissingParam(t *testing.T) {
 
 func TestToolGetDrawSession_HydratesStoreForGenerators(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = NewAnnotationStore(10 * time.Minute)
+	h.annotationStore = annotation.NewStore(10 * time.Minute)
 	t.Cleanup(func() { h.annotationStore.Close() })
 
 	t.Setenv("KABOOM_STATE_DIR", t.TempDir())
@@ -268,7 +271,7 @@ func TestToolGetDrawSession_HydratesStoreForGenerators(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	loadResp := h.toolGetDrawSession(req, json.RawMessage(`{"file":"`+fileName+`"}`))
 	loadText := unmarshalMCPText(t, loadResp.Result)
 	if !strings.Contains(loadText, `"annot_session":"qa-review"`) {

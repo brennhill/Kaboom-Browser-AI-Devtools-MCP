@@ -10,6 +10,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 type contentionClient struct {
@@ -133,7 +135,7 @@ func runContentionClientStartupFlow(client contentionClient) error {
 	return nil
 }
 
-func readJSONRPCWithTimeout(reader *bufio.Reader, timeout time.Duration) (JSONRPCResponse, error) {
+func readJSONRPCWithTimeout(reader *bufio.Reader, timeout time.Duration) (mcp.JSONRPCResponse, error) {
 	lineCh := make(chan string, 1)
 	errCh := make(chan error, 1)
 	go func() {
@@ -147,14 +149,14 @@ func readJSONRPCWithTimeout(reader *bufio.Reader, timeout time.Duration) (JSONRP
 
 	select {
 	case line := <-lineCh:
-		var resp JSONRPCResponse
+		var resp mcp.JSONRPCResponse
 		if err := json.Unmarshal([]byte(line), &resp); err != nil {
-			return JSONRPCResponse{}, err
+			return mcp.JSONRPCResponse{}, err
 		}
 		return resp, nil
 	case err := <-errCh:
-		return JSONRPCResponse{}, err
+		return mcp.JSONRPCResponse{}, err
 	case <-time.After(timeout):
-		return JSONRPCResponse{}, fmt.Errorf("timeout after %s", timeout)
+		return mcp.JSONRPCResponse{}, fmt.Errorf("timeout after %s", timeout)
 	}
 }

@@ -8,11 +8,13 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
-func callInteractStorageAction(t *testing.T, env *interactHelpersTestEnv, argsJSON string) MCPToolResult {
+func callInteractStorageAction(t *testing.T, env *interactHelpersTestEnv, argsJSON string) mcp.MCPToolResult {
 	t.Helper()
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.toolInteract(req, normalizeInteractArgsForAsync(argsJSON))
 	return parseToolResult(t, resp)
 }

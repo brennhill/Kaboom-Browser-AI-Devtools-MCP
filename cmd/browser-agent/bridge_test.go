@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -20,7 +21,7 @@ func TestExtractToolAction_ConfigureRestart(t *testing.T) {
 		"name":      "configure",
 		"arguments": map[string]any{"what": "restart"},
 	})
-	req := JSONRPCRequest{
+	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      float64(1),
 		Method:  "tools/call",
@@ -40,7 +41,7 @@ func TestExtractToolAction_ConfigureHealth(t *testing.T) {
 		"name":      "configure",
 		"arguments": map[string]any{"what": "health"},
 	})
-	req := JSONRPCRequest{
+	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      float64(2),
 		Method:  "tools/call",
@@ -72,7 +73,7 @@ func TestExtractToolAction_NonConfigure(t *testing.T) {
 				"name":      tc.tool,
 				"arguments": map[string]any{"what": "errors"},
 			})
-			req := JSONRPCRequest{
+			req := mcp.JSONRPCRequest{
 				JSONRPC: "2.0",
 				ID:      float64(1),
 				Method:  tc.method,
@@ -90,7 +91,7 @@ func TestExtractToolAction_NonConfigure(t *testing.T) {
 }
 
 func TestExtractToolAction_NonToolsCall(t *testing.T) {
-	req := JSONRPCRequest{
+	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      float64(1),
 		Method:  "initialize",
@@ -118,7 +119,7 @@ func TestExtractToolAction_MalformedJSON(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			req := JSONRPCRequest{
+			req := mcp.JSONRPCRequest{
 				JSONRPC: "2.0",
 				ID:      float64(1),
 				Method:  "tools/call",
@@ -138,7 +139,7 @@ func TestExtractToolAction_ConfigureNoAction(t *testing.T) {
 		"name":      "configure",
 		"arguments": map[string]any{"buffer": "all"},
 	})
-	req := JSONRPCRequest{
+	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      float64(1),
 		Method:  "tools/call",

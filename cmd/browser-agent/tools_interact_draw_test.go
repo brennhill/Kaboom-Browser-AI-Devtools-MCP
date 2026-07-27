@@ -8,13 +8,15 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 func TestHandleDrawModeStart_PilotDisabled(t *testing.T) {
 	h := createTestToolHandler(t)
 
 	// Pilot is disabled by default in test handler
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{}`)
 
 	resp := h.interactAction().HandleDrawModeStart(req, args)
@@ -32,7 +34,7 @@ func TestHandleDrawModeStart_Success(t *testing.T) {
 	h.capture.SetPilotEnabled(true)
 	mockConnectedTrackedTab(t, h.capture)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{}`)
 
 	resp := h.interactAction().HandleDrawModeStart(req, args)
@@ -48,7 +50,7 @@ func TestHandleDrawModeStart_WithSession(t *testing.T) {
 	h.capture.SetPilotEnabled(true)
 	mockConnectedTrackedTab(t, h.capture)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"annot_session":"my-review"}`)
 
 	resp := h.interactAction().HandleDrawModeStart(req, args)
@@ -65,7 +67,7 @@ func TestHandleDrawModeStart_WithSession(t *testing.T) {
 func TestGetAnnotationDetail_MalformedJSON(t *testing.T) {
 	h := createTestToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{not valid json`)
 
 	resp := h.toolGetAnnotationDetail(req, args)

@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -54,18 +55,18 @@ func newObserveTestEnv(t *testing.T) *observeTestEnv {
 }
 
 // callObserve invokes the observe tool and returns parsed result
-func (e *observeTestEnv) callObserve(t *testing.T, what string) (MCPToolResult, bool) {
+func (e *observeTestEnv) callObserve(t *testing.T, what string) (mcp.MCPToolResult, bool) {
 	t.Helper()
 
 	args := json.RawMessage(`{"what":"` + what + `"}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := e.handler.toolObserve(req, args)
 
 	if resp.Result == nil {
-		return MCPToolResult{}, false
+		return mcp.MCPToolResult{}, false
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("failed to parse result: %v", err)
 	}
@@ -73,8 +74,8 @@ func (e *observeTestEnv) callObserve(t *testing.T, what string) (MCPToolResult, 
 }
 
 // addLogEntry adds a log entry to the server (simulates extension POST)
-func (e *observeTestEnv) addLogEntry(entry LogEntry) {
-	e.server.logs.SeedEntries([]LogEntry{
+func (e *observeTestEnv) addLogEntry(entry mcp.LogEntry) {
+	e.server.logs.SeedEntries([]mcp.LogEntry{
 		entry,
 	}, nil)
 }
@@ -89,7 +90,7 @@ func TestObserveAudit_Errors_DataFlow(t *testing.T) {
 	env := newObserveTestEnv(t)
 
 	// 1. Add error log entry (simulating browser extension POST)
-	errorEntry := LogEntry{
+	errorEntry := mcp.LogEntry{
 		"type":    "console",
 		"level":   "error",
 		"message": "UniqueErrorMessage12345",
@@ -124,8 +125,8 @@ func TestObserveAudit_Logs_DataFlow(t *testing.T) {
 	env := newObserveTestEnv(t)
 
 	// Add multiple log entries
-	env.addLogEntry(LogEntry{"type": "console", "level": "log", "message": "LogTestEntry1", "ts": time.Now().UTC().Format(time.RFC3339)})
-	env.addLogEntry(LogEntry{"type": "console", "level": "warn", "message": "LogTestEntry2", "ts": time.Now().UTC().Format(time.RFC3339)})
+	env.addLogEntry(mcp.LogEntry{"type": "console", "level": "log", "message": "LogTestEntry1", "ts": time.Now().UTC().Format(time.RFC3339)})
+	env.addLogEntry(mcp.LogEntry{"type": "console", "level": "warn", "message": "LogTestEntry2", "ts": time.Now().UTC().Format(time.RFC3339)})
 
 	// Call observe logs
 	result, ok := env.callObserve(t, "logs")
@@ -282,14 +283,14 @@ func TestObserveAudit_MissingWhat_ReturnsError(t *testing.T) {
 
 	// Call with empty args (missing "what" parameter)
 	args := json.RawMessage(`{}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.toolObserve(req, args)
 
 	if resp.Result == nil {
 		t.Fatal("missing 'what' should return result with error")
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("json.Unmarshal error: %v", err)
 	}
@@ -304,7 +305,7 @@ func TestObserveAudit_InvalidJSON_ReturnsParseError(t *testing.T) {
 	env := newObserveTestEnv(t)
 
 	args := json.RawMessage(`{invalid json here}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.toolObserve(req, args)
 
 	// ASSERTION: Returns some response (not nil/panic)
@@ -314,7 +315,7 @@ func TestObserveAudit_InvalidJSON_ReturnsParseError(t *testing.T) {
 
 	// If result, should be error
 	if resp.Result != nil {
-		var result MCPToolResult
+		var result mcp.MCPToolResult
 		if err := json.Unmarshal(resp.Result, &result); err != nil {
 			t.Fatalf("json.Unmarshal error: %v", err)
 		}
@@ -358,7 +359,7 @@ func TestObserveAudit_AllModes_NoPanic(t *testing.T) {
 			}()
 
 			args := json.RawMessage(`{"what":"` + mode + `"}`)
-			req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+			req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 			resp := env.handler.toolObserve(req, args)
 
 			// ASSERTION: Returns something

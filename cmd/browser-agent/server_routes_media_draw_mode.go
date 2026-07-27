@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
@@ -28,7 +30,7 @@ func saveDrawScreenshot(dataURL string, tabID int) (string, error) {
 	}
 
 	timestamp := time.Now().Format("20060102-150405")
-	filename := fmt.Sprintf("draw_%s_tab%d_%d.png", util.SanitizeForFilename(timestamp), tabID, randomInt63()%10000)
+	filename := fmt.Sprintf("draw_%s_tab%d_%d.png", util.SanitizeForFilename(timestamp), tabID, toolresp.RandomInt63()%10000)
 
 	dir, dirErr := screenshotsDir()
 	if dirErr != nil {
@@ -47,11 +49,11 @@ func saveDrawScreenshot(dataURL string, tabID int) (string, error) {
 
 // parseAnnotations unmarshals raw annotation JSON, collecting warnings for
 // entries that fail to parse.
-func parseAnnotations(rawAnnotations []json.RawMessage) ([]Annotation, []string) {
-	parsed := make([]Annotation, 0, len(rawAnnotations))
+func parseAnnotations(rawAnnotations []json.RawMessage) ([]annotation.Annotation, []string) {
+	parsed := make([]annotation.Annotation, 0, len(rawAnnotations))
 	var warnings []string
 	for i, raw := range rawAnnotations {
-		var ann Annotation
+		var ann annotation.Annotation
 		if err := json.Unmarshal(raw, &ann); err != nil {
 			warnings = append(warnings, fmt.Sprintf("annotation[%d]: %v", i, err))
 		} else {
@@ -62,12 +64,12 @@ func parseAnnotations(rawAnnotations []json.RawMessage) ([]Annotation, []string)
 }
 
 // storeElementDetails persists annotation element details into the provided store.
-func storeElementDetails(store *AnnotationStore, details map[string]json.RawMessage) {
+func storeElementDetails(store *annotation.Store, details map[string]json.RawMessage) {
 	if store == nil {
 		return
 	}
 	for correlationID, rawDetail := range details {
-		var detail AnnotationDetail
+		var detail annotation.Detail
 		if err := json.Unmarshal(rawDetail, &detail); err == nil {
 			if detail.Selector == "" && detail.Tag == "" {
 				rawStr := string(rawDetail)
@@ -101,7 +103,7 @@ type drawModeRequest struct {
 
 // persistDrawSession writes the full draw session (annotations + element details) to disk
 // as a JSON file alongside the screenshot. Files are retained until manually cleared.
-func persistDrawSession(body *drawModeRequest, screenshotPath string, annotations []Annotation) {
+func persistDrawSession(body *drawModeRequest, screenshotPath string, annotations []annotation.Annotation) {
 	dir, err := screenshotsDir()
 	if err != nil {
 		return
@@ -131,11 +133,11 @@ func persistDrawSession(body *drawModeRequest, screenshotPath string, annotation
 	_ = os.WriteFile(path, data, 0o600)
 }
 
-func storeAnnotationSessionInStore(store *AnnotationStore, body *drawModeRequest, screenshotPath string, annotations []Annotation) {
+func storeAnnotationSessionInStore(store *annotation.Store, body *drawModeRequest, screenshotPath string, annotations []annotation.Annotation) {
 	if store == nil || body == nil {
 		return
 	}
-	session := &AnnotationSession{
+	session := &annotation.Session{
 		Annotations:    annotations,
 		ScreenshotPath: screenshotPath,
 		PageURL:        body.PageURL,

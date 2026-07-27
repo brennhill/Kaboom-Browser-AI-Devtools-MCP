@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/issuereport"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // fakeIssueRunner implements issuereport.CommandRunner for handler tests.
@@ -222,7 +223,7 @@ func TestReportIssue_InvalidJSON(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := issuereport.Handle(h, req, json.RawMessage(`{invalid`))
 	result := parseToolResult(t, resp)
 	if !result.IsError {

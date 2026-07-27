@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/cli"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	interactschema "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema/interact"
 )
 
@@ -133,10 +134,10 @@ func sortedInteractRuntimeActions(h *ToolHandler) []string {
 	return keys
 }
 
-func mustToolEnumValues(t *testing.T, tools []MCPTool, toolName, propertyName string) []string {
+func mustToolEnumValues(t *testing.T, tools []mcp.MCPTool, toolName, propertyName string) []string {
 	t.Helper()
 
-	var tool *MCPTool
+	var tool *mcp.MCPTool
 	for i := range tools {
 		if tools[i].Name == toolName {
 			tool = &tools[i]

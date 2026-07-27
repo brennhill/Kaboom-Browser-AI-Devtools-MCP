@@ -13,7 +13,7 @@ import (
 )
 
 type configureSessionDeps interface {
-	requireSessionStore(req JSONRPCRequest) (JSONRPCResponse, bool)
+	requireSessionStore(req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool)
 	invalidateSummaryPref()
 }
 
@@ -32,7 +32,7 @@ func (h *ToolHandler) configureSession() *configureSessionHandler {
 	return h.configureSessionHandler
 }
 
-func (h *configureSessionHandler) handleConfigureStore(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *configureSessionHandler) handleConfigureStore(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		StoreAction string          `json:"store_action"`
 		Action      string          `json:"action"`
@@ -86,7 +86,7 @@ func (h *configureSessionHandler) handleConfigureStore(req JSONRPCRequest, args 
 	return mcp.Succeed(req, "Store operation complete", responseData)
 }
 
-func (h *configureSessionHandler) handleLoadSessionContext(req JSONRPCRequest, _ json.RawMessage) JSONRPCResponse {
+func (h *configureSessionHandler) handleLoadSessionContext(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
 	if h.sessionStoreImpl == nil {
 		return mcp.Fail(req, mcp.ErrNotInitialized, "Session store not initialized", "Internal error — do not retry")
 	}
@@ -108,7 +108,7 @@ func (h *configureSessionHandler) handleLoadSessionContext(req JSONRPCRequest, _
 }
 
 // handleDiffSessionsWrapper repackages verif_session_action -> action for handleDiffSessions.
-func (h *configureSessionHandler) handleDiffSessionsWrapper(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *configureSessionHandler) handleDiffSessionsWrapper(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	rewritten, err := cfg.RewriteDiffSessionsArgs(args)
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
@@ -116,7 +116,7 @@ func (h *configureSessionHandler) handleDiffSessionsWrapper(req JSONRPCRequest, 
 	return h.handleDiffSessions(req, rewritten)
 }
 
-func (h *configureSessionHandler) handleDiffSessions(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *configureSessionHandler) handleDiffSessions(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	if h.sessionManager == nil {
 		return mcp.Fail(req, mcp.ErrNotInitialized, "Session manager not initialized", "Internal error — do not retry")
 	}

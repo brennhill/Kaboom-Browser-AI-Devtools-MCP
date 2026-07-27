@@ -7,10 +7,11 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
-func mkToolResp(t *testing.T, text string) JSONRPCResponse {
+func mkToolResp(t *testing.T, text string) mcp.JSONRPCResponse {
 	t.Helper()
 	inner, err := json.Marshal(map[string]any{
 		"content": []map[string]any{{"type": "text", "text": text}},
@@ -18,17 +19,17 @@ func mkToolResp(t *testing.T, text string) JSONRPCResponse {
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
-	return JSONRPCResponse{Result: json.RawMessage(inner)}
+	return mcp.JSONRPCResponse{Result: json.RawMessage(inner)}
 }
 
 func TestExtractErrorMessage_Branches(t *testing.T) {
 	// Invalid result JSON -> "unknown error".
-	if got := extractErrorMessage(JSONRPCResponse{Result: json.RawMessage("{bad")}); got != "unknown error" {
+	if got := extractErrorMessage(mcp.JSONRPCResponse{Result: json.RawMessage("{bad")}); got != "unknown error" {
 		t.Fatalf("invalid result: got %q, want %q", got, "unknown error")
 	}
 	// Well-formed result with empty content -> "unknown error".
 	empty, _ := json.Marshal(map[string]any{"content": []map[string]any{}})
-	if got := extractErrorMessage(JSONRPCResponse{Result: json.RawMessage(empty)}); got != "unknown error" {
+	if got := extractErrorMessage(mcp.JSONRPCResponse{Result: json.RawMessage(empty)}); got != "unknown error" {
 		t.Fatalf("empty content: got %q, want %q", got, "unknown error")
 	}
 	// Text containing a structured error JSON -> the message field.

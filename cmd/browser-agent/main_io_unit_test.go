@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 func TestSendStartupErrorWritesJSONRPCError(t *testing.T) {
@@ -20,7 +22,7 @@ func TestSendStartupErrorWritesJSONRPCError(t *testing.T) {
 		t.Fatal("sendStartupError produced empty output")
 	}
 
-	var resp JSONRPCResponse
+	var resp mcp.JSONRPCResponse
 	if err := json.Unmarshal([]byte(line), &resp); err != nil {
 		t.Fatalf("json.Unmarshal(output) error = %v; output=%q", err, line)
 	}

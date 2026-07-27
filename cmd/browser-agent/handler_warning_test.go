@@ -41,13 +41,13 @@ func TestMaybeAddUpgradeWarning_NoPending(t *testing.T) {
 	binaryUpgradeState = nil
 	defer func() { binaryUpgradeState = orig }()
 
-	resp := JSONRPCResponse{
+	resp := mcp.JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      1,
 		Result:  mcp.TextResponse("hello"),
 	}
 	got := maybeAddUpgradeWarning(resp)
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(got.Result, &result); err != nil {
 		t.Fatal(err)
 	}
@@ -59,13 +59,13 @@ func TestMaybeAddUpgradeWarning_NoPending(t *testing.T) {
 func TestMaybeAddUpdateAvailableWarning_NoUpdate(t *testing.T) {
 	useReleaseChecker(t, "")
 
-	resp := JSONRPCResponse{
+	resp := mcp.JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      1,
 		Result:  mcp.TextResponse("hello"),
 	}
 	got := maybeAddUpdateAvailableWarning(resp)
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(got.Result, &result); err != nil {
 		t.Fatal(err)
 	}
@@ -85,13 +85,13 @@ func TestMaybeAddUpdateAvailableWarning_NewerAvailable(t *testing.T) {
 		updateNotifyLastShown = origLastNotify
 	}()
 
-	resp := JSONRPCResponse{
+	resp := mcp.JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      1,
 		Result:  mcp.TextResponse("data"),
 	}
 	got := maybeAddUpdateAvailableWarning(resp)
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(got.Result, &result); err != nil {
 		t.Fatal(err)
 	}
@@ -116,13 +116,13 @@ func TestMaybeAddUpdateAvailableWarning_DailyCooldown(t *testing.T) {
 		updateNotifyLastShown = origLastNotify
 	}()
 
-	resp := JSONRPCResponse{
+	resp := mcp.JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      1,
 		Result:  mcp.TextResponse("data"),
 	}
 	got := maybeAddUpdateAvailableWarning(resp)
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(got.Result, &result); err != nil {
 		t.Fatal(err)
 	}
@@ -142,13 +142,13 @@ func TestMaybeAddUpdateAvailableWarning_SameVersionNoWarning(t *testing.T) {
 		updateNotifyLastShown = origLastNotify
 	}()
 
-	resp := JSONRPCResponse{
+	resp := mcp.JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      1,
 		Result:  mcp.TextResponse("data"),
 	}
 	got := maybeAddUpdateAvailableWarning(resp)
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(got.Result, &result); err != nil {
 		t.Fatal(err)
 	}
@@ -164,13 +164,13 @@ func TestMaybeAddUpgradeWarning_WithPending(t *testing.T) {
 
 	binaryUpgradeState = fixedUpgradeInfo{pending: true, version: "0.8.0", detectedAt: time.Now()}
 
-	resp := JSONRPCResponse{
+	resp := mcp.JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      1,
 		Result:  mcp.TextResponse("data here"),
 	}
 	got := maybeAddUpgradeWarning(resp)
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(got.Result, &result); err != nil {
 		t.Fatal(err)
 	}

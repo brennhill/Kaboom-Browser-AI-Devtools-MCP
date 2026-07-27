@@ -19,6 +19,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
@@ -35,8 +36,8 @@ func initBridge() {
 	cmbridge.Init(cmbridge.Deps{
 		Version:              version,
 		MaxPostBodySize:      maxPostBodySize,
-		MCPServerName:        mcpServerName,
-		LegacyMCPServerNames: legacyMCPServerNames,
+		MCPServerName:        identity.MCPServerName,
+		LegacyMCPServerNames: identity.LegacyMCPServerNames,
 		ServerInstructions:   serverInstructions,
 
 		// Logging
@@ -62,7 +63,7 @@ func initBridge() {
 		},
 
 		// MCP content
-		NegotiateProtocolVersion: negotiateProtocolVersion,
+		NegotiateProtocolVersion: mcp.NegotiateProtocolVersion,
 		MCPResources: func() []mcp.MCPResource {
 			return playbooks.Resources()
 		},
@@ -122,10 +123,10 @@ func normalizeMCPPayload(payload []byte) []byte {
 	}
 
 	diag.Printf("[kaboom-bridge] ERROR: stdout invariant violation: invalid JSON payload (len=%d)\n", len(payload))
-	errResp := JSONRPCResponse{
-		JSONRPC: JSONRPCVersion,
+	errResp := mcp.JSONRPCResponse{
+		JSONRPC: mcp.JSONRPCVersion,
 		ID:      nil,
-		Error: &JSONRPCError{
+		Error: &mcp.JSONRPCError{
 			Code:    -32603,
 			Message: "Wrapper emitted invalid JSON payload",
 		},
@@ -136,10 +137,10 @@ func normalizeMCPPayload(payload []byte) []byte {
 
 // sendStartupError sends a JSON-RPC error response before exiting.
 func sendStartupError(message string) {
-	errResp := JSONRPCResponse{
-		JSONRPC: JSONRPCVersion,
+	errResp := mcp.JSONRPCResponse{
+		JSONRPC: mcp.JSONRPCVersion,
 		ID:      "startup",
-		Error: &JSONRPCError{
+		Error: &mcp.JSONRPCError{
 			Code:    -32603,
 			Message: message,
 		},

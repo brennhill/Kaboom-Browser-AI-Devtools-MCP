@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
@@ -24,7 +25,7 @@ func TestInteract_IncludeScreenshot_Schema(t *testing.T) {
 	// Send a click action with include_screenshot=true
 	// The action will timeout since no extension is processing, but the schema should accept the param
 	args := json.RawMessage(`{"what":"click","selector":"button","include_screenshot":true,"sync":false}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.toolInteract(req, args)
 
 	result := parseToolResult(t, resp)
@@ -48,9 +49,9 @@ func TestInteract_IncludeScreenshot_AppendsImageBlock(t *testing.T) {
 	env.capture.SimulateExtensionConnectForTest()
 
 	args := json.RawMessage(`{"what":"click","selector":"button","include_screenshot":true}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 
-	var resp JSONRPCResponse
+	var resp mcp.JSONRPCResponse
 	done := make(chan struct{})
 	go func() {
 		resp = env.handler.toolInteract(req, args)
@@ -104,7 +105,7 @@ func TestInteract_IncludeScreenshot_AppendsImageBlock(t *testing.T) {
 		select {
 		case <-done:
 			// Response came back - check if it has an image block
-			var result MCPToolResult
+			var result mcp.MCPToolResult
 			if err := json.Unmarshal(resp.Result, &result); err != nil {
 				t.Fatalf("failed to parse result: %v", err)
 			}
@@ -130,7 +131,7 @@ func TestInteract_IncludeScreenshot_AppendsImageBlock(t *testing.T) {
 		t.Fatal("toolInteract timed out")
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("failed to parse result: %v", err)
 	}
@@ -164,9 +165,9 @@ func TestInteract_IncludeScreenshot_DefaultFalse(t *testing.T) {
 	env.capture.SimulateExtensionConnectForTest()
 
 	args := json.RawMessage(`{"what":"click","selector":"button"}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 
-	var resp JSONRPCResponse
+	var resp mcp.JSONRPCResponse
 	done := make(chan struct{})
 	go func() {
 		resp = env.handler.toolInteract(req, args)
@@ -202,7 +203,7 @@ func TestInteract_IncludeScreenshot_DefaultFalse(t *testing.T) {
 		t.Fatal("toolInteract timed out")
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("failed to parse result: %v", err)
 	}
@@ -216,7 +217,7 @@ func TestInteract_IncludeScreenshot_DefaultFalse(t *testing.T) {
 }
 
 // contentBlockTypes returns the types of all content blocks for diagnostic output.
-func contentBlockTypes(blocks []MCPContentBlock) []string {
+func contentBlockTypes(blocks []mcp.MCPContentBlock) []string {
 	types := make([]string, len(blocks))
 	for i, b := range blocks {
 		types[i] = b.Type

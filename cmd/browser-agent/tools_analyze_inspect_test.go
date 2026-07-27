@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/inspect"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 func TestBuildFormValidationSummary_Basic(t *testing.T) {
@@ -24,15 +25,15 @@ func TestBuildFormValidationSummary_Basic(t *testing.T) {
 	}
 	formsJSON, _ := json.Marshal(formsData)
 
-	result := MCPToolResult{
-		Content: []MCPContentBlock{{Type: "text", Text: "Form validation results\n" + string(formsJSON)}},
+	result := mcp.MCPToolResult{
+		Content: []mcp.MCPContentBlock{{Type: "text", Text: "Form validation results\n" + string(formsJSON)}},
 	}
 	resultJSON, _ := json.Marshal(result)
-	resp := JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
+	resp := mcp.JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
 
 	summarized := inspect.BuildFormValidationSummary(resp)
 
-	var summaryResult MCPToolResult
+	var summaryResult mcp.MCPToolResult
 	if err := json.Unmarshal(summarized.Result, &summaryResult); err != nil {
 		t.Fatal(err)
 	}
@@ -65,12 +66,12 @@ func TestBuildFormValidationSummary_Basic(t *testing.T) {
 func TestBuildFormValidationSummary_ErrorResponse(t *testing.T) {
 	t.Parallel()
 
-	result := MCPToolResult{
-		Content: []MCPContentBlock{{Type: "text", Text: "error occurred"}},
+	result := mcp.MCPToolResult{
+		Content: []mcp.MCPContentBlock{{Type: "text", Text: "error occurred"}},
 		IsError: true,
 	}
 	resultJSON, _ := json.Marshal(result)
-	resp := JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
+	resp := mcp.JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
 
 	// Should return original response unchanged
 	summarized := inspect.BuildFormValidationSummary(resp)
@@ -82,11 +83,11 @@ func TestBuildFormValidationSummary_ErrorResponse(t *testing.T) {
 func TestBuildFormValidationSummary_EmptyTextBlock_NoPanic(t *testing.T) {
 	t.Parallel()
 
-	result := MCPToolResult{
-		Content: []MCPContentBlock{{Type: "text", Text: ""}},
+	result := mcp.MCPToolResult{
+		Content: []mcp.MCPContentBlock{{Type: "text", Text: ""}},
 	}
 	resultJSON, _ := json.Marshal(result)
-	resp := JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
+	resp := mcp.JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
 
 	// Regression guard: empty text blocks must be ignored safely.
 	summarized := inspect.BuildFormValidationSummary(resp)

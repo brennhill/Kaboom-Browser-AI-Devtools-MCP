@@ -21,23 +21,23 @@ import (
 // Failure semantics:
 // - Invalid JSON args, missing tool handler, unknown tool, and rate-limit breaches are explicit errors.
 // - Tool post-processing (redaction/warnings/telemetry) is best-effort and never blocks success path.
-func (h *MCPHandler) handleToolsCall(req JSONRPCRequest) JSONRPCResponse {
+func (h *MCPHandler) handleToolsCall(req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
 	var params struct {
 		Name      string          `json:"name"`
 		Arguments json.RawMessage `json:"arguments"`
 	}
 
 	if err := json.Unmarshal(req.Params, &params); err != nil {
-		return JSONRPCResponse{
-			JSONRPC: JSONRPCVersion, ID: req.ID,
-			Error: &JSONRPCError{Code: -32602, Message: "Invalid params: " + err.Error()},
+		return mcp.JSONRPCResponse{
+			JSONRPC: mcp.JSONRPCVersion, ID: req.ID,
+			Error: &mcp.JSONRPCError{Code: -32602, Message: "Invalid params: " + err.Error()},
 		}
 	}
 
 	if h.toolHandler == nil {
-		return JSONRPCResponse{
-			JSONRPC: JSONRPCVersion, ID: req.ID,
-			Error: &JSONRPCError{Code: -32601, Message: "Unknown tool: " + params.Name},
+		return mcp.JSONRPCResponse{
+			JSONRPC: mcp.JSONRPCVersion, ID: req.ID,
+			Error: &mcp.JSONRPCError{Code: -32601, Message: "Unknown tool: " + params.Name},
 		}
 	}
 
@@ -45,14 +45,14 @@ func (h *MCPHandler) handleToolsCall(req JSONRPCRequest) JSONRPCResponse {
 
 	if err := h.checkToolRateLimit(); err != nil {
 		telemetry.AppError("tool_rate_limited", nil)
-		return JSONRPCResponse{JSONRPC: JSONRPCVersion, ID: req.ID, Error: err}
+		return mcp.JSONRPCResponse{JSONRPC: mcp.JSONRPCVersion, ID: req.ID, Error: err}
 	}
 
 	resp, handled := h.toolHandler.HandleToolCall(req, params.Name, params.Arguments)
 	if !handled {
-		return JSONRPCResponse{
-			JSONRPC: JSONRPCVersion, ID: req.ID,
-			Error: &JSONRPCError{Code: -32601, Message: "Unknown tool: " + params.Name},
+		return mcp.JSONRPCResponse{
+			JSONRPC: mcp.JSONRPCVersion, ID: req.ID,
+			Error: &mcp.JSONRPCError{Code: -32601, Message: "Unknown tool: " + params.Name},
 		}
 	}
 
@@ -65,10 +65,10 @@ func (h *MCPHandler) handleToolsCall(req JSONRPCRequest) JSONRPCResponse {
 //
 // Failure semantics:
 // - Nil limiter means unlimited mode.
-func (h *MCPHandler) checkToolRateLimit() *JSONRPCError {
+func (h *MCPHandler) checkToolRateLimit() *mcp.JSONRPCError {
 	limiter := h.toolHandler.GetToolCallLimiter()
 	if limiter != nil && !limiter.Allow() {
-		return &JSONRPCError{
+		return &mcp.JSONRPCError{
 			Code:    -32603,
 			Message: "Tool call rate limit exceeded (500 calls/minute). Please wait before retrying.",
 		}
@@ -126,7 +126,7 @@ func (h *MCPHandler) allowedToolArgumentKeys(toolName string, rawArgs map[string
 	return nil
 }
 
-func (h *MCPHandler) applyToolResponsePostProcessing(resp JSONRPCResponse, clientID, toolName, telemetryModeOverride string) JSONRPCResponse {
+func (h *MCPHandler) applyToolResponsePostProcessing(resp mcp.JSONRPCResponse, clientID, toolName, telemetryModeOverride string) mcp.JSONRPCResponse {
 	redactor := h.toolHandler.GetRedactionEngine()
 	if redactor != nil && resp.Result != nil {
 		resp.Result = redactor.RedactJSON(resp.Result)
@@ -142,7 +142,7 @@ func (h *MCPHandler) applyToolResponsePostProcessing(resp JSONRPCResponse, clien
 	return h.maybeAddTelemetrySummary(resp, clientID, toolName, telemetryModeOverride)
 }
 
-func (h *MCPHandler) maybeAddPendingIntents(resp JSONRPCResponse) JSONRPCResponse {
+func (h *MCPHandler) maybeAddPendingIntents(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
 	if h.server == nil || h.server.intentStore == nil || resp.Result == nil {
 		return resp
 	}
@@ -155,11 +155,11 @@ func (h *MCPHandler) maybeAddPendingIntents(resp JSONRPCResponse) JSONRPCRespons
 	return prependWarningToResponse(resp, warning)
 }
 
-func prependWarningToResponse(resp JSONRPCResponse, warning string) JSONRPCResponse {
+func prependWarningToResponse(resp mcp.JSONRPCResponse, warning string) mcp.JSONRPCResponse {
 	return mcp.PrependWarningToResponse(resp, warning)
 }
 
-func (h *MCPHandler) maybeAddSecurityModeWarning(resp JSONRPCResponse) JSONRPCResponse {
+func (h *MCPHandler) maybeAddSecurityModeWarning(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
 	if h.toolHandler == nil || resp.Result == nil {
 		return resp
 	}
@@ -172,7 +172,7 @@ func (h *MCPHandler) maybeAddSecurityModeWarning(resp JSONRPCResponse) JSONRPCRe
 		return resp
 	}
 	resp = prependWarningToResponse(resp, "[ALTERED ENVIRONMENT] security_mode=insecure_proxy; production_parity=false. CSP headers are rewritten for debugging.\n\n")
-	return mcp.MutateToolResult(resp, func(result *MCPToolResult) {
+	return mcp.MutateToolResult(resp, func(result *mcp.MCPToolResult) {
 		if result.Metadata == nil {
 			result.Metadata = make(map[string]any)
 		}
@@ -182,7 +182,7 @@ func (h *MCPHandler) maybeAddSecurityModeWarning(resp JSONRPCResponse) JSONRPCRe
 	})
 }
 
-func (h *MCPHandler) maybeAddVersionWarning(resp JSONRPCResponse) JSONRPCResponse {
+func (h *MCPHandler) maybeAddVersionWarning(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
 	if h.toolHandler == nil || resp.Result == nil {
 		return resp
 	}
@@ -203,7 +203,7 @@ var (
 	updateNotifyMu        sync.Mutex
 )
 
-func maybeAddUpdateAvailableWarning(resp JSONRPCResponse) JSONRPCResponse {
+func maybeAddUpdateAvailableWarning(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
 	if resp.Result == nil {
 		return resp
 	}
@@ -229,7 +229,7 @@ func maybeAddUpdateAvailableWarning(resp JSONRPCResponse) JSONRPCResponse {
 	return prependWarningToResponse(resp, warning)
 }
 
-func maybeAddUpgradeWarning(resp JSONRPCResponse) JSONRPCResponse {
+func maybeAddUpgradeWarning(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
 	if binaryUpgradeState == nil || resp.Result == nil {
 		return resp
 	}
@@ -262,7 +262,7 @@ type passiveTelemetryCursor struct {
 	lastSeen          time.Time
 }
 
-func (h *MCPHandler) maybeAddTelemetrySummary(resp JSONRPCResponse, clientID, toolName, modeOverride string) JSONRPCResponse {
+func (h *MCPHandler) maybeAddTelemetrySummary(resp mcp.JSONRPCResponse, clientID, toolName, modeOverride string) mcp.JSONRPCResponse {
 	if h.toolHandler == nil || resp.Result == nil {
 		return resp
 	}
@@ -273,7 +273,7 @@ func (h *MCPHandler) maybeAddTelemetrySummary(resp JSONRPCResponse, clientID, to
 		return resp
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		return resp
 	}

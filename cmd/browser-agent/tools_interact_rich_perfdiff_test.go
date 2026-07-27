@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 )
 
@@ -140,7 +141,7 @@ func TestRichAction_CommandResultEnrichedWithPerfDiff(t *testing.T) {
 	env.capture.CompleteCommand(corrID, json.RawMessage(`{"success":true,"action":"refresh"}`), "")
 
 	// Now observe the command_result — should include perf_diff
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 2}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
 	resp := env.handler.toolObserveCommandResult(req, args)
 
@@ -148,7 +149,7 @@ func TestRichAction_CommandResultEnrichedWithPerfDiff(t *testing.T) {
 		t.Fatal("No result from toolObserveCommandResult")
 	}
 
-	var observeResult MCPToolResult
+	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
 		t.Fatalf("Failed to parse observe result: %v", err)
 	}
@@ -211,11 +212,11 @@ func TestRichAction_CommandResultNoPerfDiffWhenNoSnapshots(t *testing.T) {
 	env.capture.CompleteCommand(corrID, json.RawMessage(`{"success":true,"action":"refresh"}`), "")
 
 	// Observe — should return without perf_diff (no crash)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 2}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
 	resp := env.handler.toolObserveCommandResult(req, args)
 
-	var observeResult MCPToolResult
+	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
 		t.Fatalf("json.Unmarshal error: %v", err)
 	}
@@ -247,10 +248,10 @@ func TestRichAction_CommandResultIncludesTimingMs(t *testing.T) {
 	env.capture.CompleteCommand(corrID, json.RawMessage(`{"success":true,"action":"click"}`), "")
 
 	// Observe command_result
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 2}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
 	resp := env.handler.toolObserveCommandResult(req, args)
-	var observeResult MCPToolResult
+	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
 		t.Fatalf("json.Unmarshal error: %v", err)
 	}
@@ -326,11 +327,11 @@ func TestRichAction_PerfDiffWithFullWebVitals(t *testing.T) {
 	env.capture.CompleteCommand(corrID, json.RawMessage(`{"success":true,"action":"refresh"}`), "")
 
 	// Observe command_result
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 2}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
 	resp := env.handler.toolObserveCommandResult(req, args)
 
-	var observeResult MCPToolResult
+	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
 		t.Fatalf("json.Unmarshal error: %v", err)
 	}
@@ -421,11 +422,11 @@ func TestRichAction_CompactClickMissingDomSummary_WhenExtensionHangs(t *testing.
 	env.capture.ExpireCommand(corrID)
 
 	// Observe the expired command
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 2}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
 	resp := env.handler.toolObserveCommandResult(req, args)
 
-	var observeResult MCPToolResult
+	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
 		t.Fatalf("Failed to parse result: %v", err)
 	}
@@ -473,11 +474,11 @@ func TestRichAction_CompactClickHasDomSummary_WhenExtensionResponds(t *testing.T
 	env.capture.CompleteCommand(corrID, extensionResult, "")
 
 	// Observe command_result
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 2}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
 	resp := env.handler.toolObserveCommandResult(req, args)
 
-	var observeResult MCPToolResult
+	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
 		t.Fatalf("json.Unmarshal error: %v", err)
 	}

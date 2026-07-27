@@ -13,6 +13,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // httpRequestContext collects metadata from an HTTP request for debug logging.
@@ -111,7 +112,7 @@ func (h *MCPHandler) HandleHTTP(w http.ResponseWriter, r *http.Request) {
 
 	requestPreview := truncatePreview(string(bodyBytes))
 
-	var req JSONRPCRequest
+	var req mcp.JSONRPCRequest
 	if err := json.Unmarshal(bodyBytes, &req); err != nil {
 		h.logDebugEntry(ctx, requestPreview, http.StatusBadRequest, "", fmt.Sprintf("Parse error: %v", err))
 		h.writeJSONRPCError(w, nil, -32700, "Parse error: "+err.Error())
@@ -136,10 +137,10 @@ func (h *MCPHandler) HandleHTTP(w http.ResponseWriter, r *http.Request) {
 
 // writeJSONRPCError writes a JSON-RPC error response to the HTTP response writer.
 func (h *MCPHandler) writeJSONRPCError(w http.ResponseWriter, id any, code int, message string) {
-	resp := JSONRPCResponse{
-		JSONRPC: JSONRPCVersion,
+	resp := mcp.JSONRPCResponse{
+		JSONRPC: mcp.JSONRPCVersion,
 		ID:      id,
-		Error:   &JSONRPCError{Code: code, Message: message},
+		Error:   &mcp.JSONRPCError{Code: code, Message: message},
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(resp) //nolint:errcheck // best-effort HTTP error response write

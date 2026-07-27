@@ -73,9 +73,9 @@ func (e *gateTestEnv) enablePilot(t *testing.T) {
 }
 
 // extractErrorCode parses the structured error code from a JSONRPCResponse result.
-func extractErrorCode(t *testing.T, resp JSONRPCResponse) string {
+func extractErrorCode(t *testing.T, resp mcp.JSONRPCResponse) string {
 	t.Helper()
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("unmarshal result: %v", err)
 	}
@@ -99,9 +99,9 @@ func extractErrorCode(t *testing.T, resp JSONRPCResponse) string {
 }
 
 // isSuccessOrQueued returns true if the response is not a structured error.
-func isSuccessOrQueued(t *testing.T, resp JSONRPCResponse) bool {
+func isSuccessOrQueued(t *testing.T, resp mcp.JSONRPCResponse) bool {
 	t.Helper()
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("unmarshal result: %v", err)
 	}
@@ -116,7 +116,7 @@ func TestRequireExtension_Disconnected(t *testing.T) {
 	t.Parallel()
 	env := newGateTestEnv(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp, blocked := env.handler.requireExtension(req)
 	if !blocked {
 		t.Fatal("expected requireExtension to block when extension is disconnected")
@@ -132,7 +132,7 @@ func TestRequireExtension_Connected(t *testing.T) {
 	env := newGateTestEnv(t)
 	env.simulateConnection(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp, blocked := env.handler.requireExtension(req)
 	if blocked {
 		t.Fatalf("expected requireExtension to pass when connected, got blocked with: %v", resp)
@@ -148,7 +148,7 @@ func TestRequireCSPClear_MainWorldBlocked(t *testing.T) {
 	env := newGateTestEnv(t)
 	env.capture.SetCSPStatusForTest(true, "script_exec")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp, blocked := env.handler.requireCSPClear(req, "main")
 	if !blocked {
 		t.Fatal("expected requireCSPClear to block world=main when CSP restricts script_exec")
@@ -164,7 +164,7 @@ func TestRequireCSPClear_AutoWorldPasses(t *testing.T) {
 	env := newGateTestEnv(t)
 	env.capture.SetCSPStatusForTest(true, "script_exec")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	_, blocked := env.handler.requireCSPClear(req, "auto")
 	if blocked {
 		t.Fatal("expected requireCSPClear to pass for world=auto (extension handles fallback)")
@@ -176,7 +176,7 @@ func TestRequireCSPClear_IsolatedWorldPasses(t *testing.T) {
 	env := newGateTestEnv(t)
 	env.capture.SetCSPStatusForTest(true, "script_exec")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	_, blocked := env.handler.requireCSPClear(req, "isolated")
 	if blocked {
 		t.Fatal("expected requireCSPClear to pass for world=isolated (bypasses page CSP)")
@@ -188,7 +188,7 @@ func TestRequireCSPClear_PageBlocked(t *testing.T) {
 	env := newGateTestEnv(t)
 	env.capture.SetCSPStatusForTest(true, "page_blocked")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	_, blocked := env.handler.requireCSPClear(req, "main")
 	if !blocked {
 		t.Fatal("expected requireCSPClear to block world=main when CSP level is page_blocked")
@@ -200,7 +200,7 @@ func TestRequireCSPClear_None(t *testing.T) {
 	env := newGateTestEnv(t)
 	env.capture.SetCSPStatusForTest(false, "none")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	_, blocked := env.handler.requireCSPClear(req, "main")
 	if blocked {
 		t.Fatal("expected requireCSPClear to pass when CSP is not restricted")
@@ -213,7 +213,7 @@ func TestRequireCSPClear_NotRestricted(t *testing.T) {
 	// restricted=false takes precedence even with a non-none level
 	env.capture.SetCSPStatusForTest(false, "script_exec")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	_, blocked := env.handler.requireCSPClear(req, "main")
 	if blocked {
 		t.Fatal("expected requireCSPClear to pass when restricted flag is false (flag wins)")
@@ -230,7 +230,7 @@ func TestNavigate_ExtDisconnected_FastFail(t *testing.T) {
 	env.enablePilot(t)
 	// Extension NOT connected — no simulateConnection call
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"navigate","url":"https://example.com","sync":false}`)
 	resp := env.handler.interactAction().HandleBrowserActionNavigateImpl(req, args)
 
@@ -248,7 +248,7 @@ func TestExecuteJS_CSP_MainWorld_FastFail(t *testing.T) {
 	env.simulateTabTracking(t)
 	env.capture.SetCSPStatusForTest(true, "script_exec")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"execute_js","script":"return 1","world":"main","sync":false}`)
 	resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
 
@@ -266,7 +266,7 @@ func TestExecuteJS_CSP_AutoWorld_PassesThrough(t *testing.T) {
 	env.simulateTabTracking(t)
 	env.capture.SetCSPStatusForTest(true, "script_exec")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"execute_js","script":"return 1","sync":false}`)
 	resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
 
@@ -282,7 +282,7 @@ func TestClick_ExtDisconnected_FastFail(t *testing.T) {
 	env.enablePilot(t)
 	// Extension NOT connected
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"click","selector":"#btn","sync":false}`)
 	resp := env.handler.interactAction().HandleDOMPrimitive(req, args, "click")
 
@@ -297,7 +297,7 @@ func TestSubtitle_NoExtensionGate(t *testing.T) {
 	env := newGateTestEnv(t)
 	// Extension NOT connected, pilot not needed for subtitle
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"subtitle","text":"hello","sync":false}`)
 	resp := env.handler.interactAction().HandleSubtitleImpl(req, args)
 
@@ -316,7 +316,7 @@ func TestRequireTabTracking_NoTabTracked(t *testing.T) {
 	env := newGateTestEnv(t)
 	// No tab tracking set — default state
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp, blocked := env.handler.requireTabTracking(req)
 	if !blocked {
 		t.Fatal("expected requireTabTracking to block when no tab is tracked")
@@ -332,7 +332,7 @@ func TestRequireTabTracking_TabTracked(t *testing.T) {
 	env := newGateTestEnv(t)
 	env.simulateTabTracking(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	_, blocked := env.handler.requireTabTracking(req)
 	if blocked {
 		t.Fatal("expected requireTabTracking to pass when a tab is tracked")
@@ -350,7 +350,7 @@ func TestRequireTabTracking_NoRecoveryToolCall(t *testing.T) {
 	env := newGateTestEnv(t)
 	// No tab tracking set
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp, blocked := env.handler.requireTabTracking(req)
 	if !blocked {
 		t.Fatal("expected requireTabTracking to block")
@@ -378,7 +378,7 @@ func TestNavigate_NoTabTracking_NotBlocked(t *testing.T) {
 	env.simulateConnection(t)
 	// No tab tracking — navigate should NOT be blocked (it creates tracking)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"navigate","url":"https://example.com","sync":false}`)
 	resp := env.handler.interactAction().HandleBrowserActionNavigateImpl(req, args)
 
@@ -395,7 +395,7 @@ func TestClick_NoTabTracking_FastFail(t *testing.T) {
 	env.simulateConnection(t)
 	// No tab tracking — click should be blocked
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"click","selector":"#btn","sync":false}`)
 	resp := env.handler.interactAction().HandleDOMPrimitive(req, args, "click")
 
@@ -413,7 +413,7 @@ func TestSwitchTab_NoTabTracking_NotBlocked(t *testing.T) {
 	// No tab tracking — switch_tab should NOT be blocked because it IS how
 	// you establish tracking for an existing tab (P1-2 fix).
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"switch_tab","tab_id":42,"sync":false}`)
 	resp := env.handler.interactAction().HandleBrowserActionSwitchTabImpl(req, args)
 
@@ -432,7 +432,7 @@ func TestSaveState_NoTabTracking_NoGate(t *testing.T) {
 	// It may fail for other reasons (e.g. session store not initialized) but that is
 	// unrelated to the gate — the important thing is that it is NOT a tab tracking error.
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"save_state","snapshot_name":"test-state","sync":false}`)
 	resp := env.handler.stateInteract().HandleStateSave(req, args)
 
@@ -456,7 +456,7 @@ func TestGateOrder_ParamValidation_BeforeExtension(t *testing.T) {
 	env.enablePilot(t)
 	// Extension NOT connected + missing required 'script' param
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"execute_js","sync":false}`)
 	resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
 
@@ -472,7 +472,7 @@ func TestGateOrder_Pilot_BeforeExtension(t *testing.T) {
 	env.capture.SetPilotEnabled(false)
 	// Extension NOT connected + pilot disabled
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"navigate","url":"https://example.com","sync":false}`)
 	resp := env.handler.interactAction().HandleBrowserActionNavigateImpl(req, args)
 
@@ -488,7 +488,7 @@ func TestGateOrder_Extension_BeforeTabTracking(t *testing.T) {
 	env.enablePilot(t)
 	// Extension NOT connected + no tab tracking — extension gate should fire first
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"click","selector":"#btn","sync":false}`)
 	resp := env.handler.interactAction().HandleDOMPrimitive(req, args, "click")
 
@@ -512,7 +512,7 @@ func TestGateOrder_TabTracking_BeforeCSP(t *testing.T) {
 	// No tab tracking + CSP restricted — tab tracking gate should fire before CSP
 	env.capture.SetCSPStatusForTest(true, "script_exec")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"execute_js","script":"return 1","world":"main","sync":false}`)
 	resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
 
@@ -533,7 +533,7 @@ func TestGateOrder_Extension_BeforeCSP(t *testing.T) {
 	// Extension NOT connected + CSP restricted
 	env.capture.SetCSPStatusForTest(true, "script_exec")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"execute_js","script":"return 1","world":"main","sync":false}`)
 	resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
 
@@ -548,9 +548,9 @@ func TestGateOrder_Extension_BeforeCSP(t *testing.T) {
 // ============================================
 
 // extractStructuredError parses the full mcp.StructuredError from a JSONRPCResponse result.
-func extractStructuredError(t *testing.T, resp JSONRPCResponse) mcp.StructuredError {
+func extractStructuredError(t *testing.T, resp mcp.JSONRPCResponse) mcp.StructuredError {
 	t.Helper()
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("unmarshal result: %v", err)
 	}
@@ -577,7 +577,7 @@ func TestRequirePilot_RecoveryToolCall(t *testing.T) {
 	env := newGateTestEnv(t)
 	env.capture.SetPilotEnabled(false)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp, blocked := env.handler.requirePilot(req)
 	if !blocked {
 		t.Fatal("expected requirePilot to block when pilot is disabled")
@@ -603,7 +603,7 @@ func TestRequireExtension_RecoveryToolCall(t *testing.T) {
 	t.Parallel()
 	env := newGateTestEnv(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp, blocked := env.handler.requireExtension(req)
 	if !blocked {
 		t.Fatal("expected requireExtension to block when extension is disconnected")
@@ -623,7 +623,7 @@ func TestRequireCSPClear_RecoveryToolCall(t *testing.T) {
 	env := newGateTestEnv(t)
 	env.capture.SetCSPStatusForTest(true, "script_exec")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp, blocked := env.handler.requireCSPClear(req, "main")
 	if !blocked {
 		t.Fatal("expected requireCSPClear to block when CSP restricts main world")
@@ -664,7 +664,7 @@ func TestRequireExtension_ConnectsDuringWait(t *testing.T) {
 		env.simulateConnection(t)
 	}()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp, blocked := env.handler.requireExtension(req)
 	<-done // ensure goroutine finished before test returns
 	if blocked {
@@ -703,7 +703,7 @@ func TestSmoke_AllGates_SequentialFiring_ExecuteJS(t *testing.T) {
 		// No script param, pilot off, ext off, no tab, CSP on
 		env.capture.SetCSPStatusForTest(true, "script_exec")
 
-		req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+		req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 		args := json.RawMessage(`{"what":"execute_js","world":"main","sync":false}`)
 		resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
 
@@ -719,7 +719,7 @@ func TestSmoke_AllGates_SequentialFiring_ExecuteJS(t *testing.T) {
 		// Script present, pilot off, ext off, no tab, CSP on
 		env.capture.SetCSPStatusForTest(true, "script_exec")
 
-		req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+		req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 		args := json.RawMessage(`{"what":"execute_js","script":"return 1","world":"main","sync":false}`)
 		resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
 
@@ -735,7 +735,7 @@ func TestSmoke_AllGates_SequentialFiring_ExecuteJS(t *testing.T) {
 		// Pilot on, ext off, no tab, CSP on
 		env.capture.SetCSPStatusForTest(true, "script_exec")
 
-		req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+		req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 		args := json.RawMessage(`{"what":"execute_js","script":"return 1","world":"main","sync":false}`)
 		resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
 
@@ -756,7 +756,7 @@ func TestSmoke_AllGates_SequentialFiring_ExecuteJS(t *testing.T) {
 		// Ext on, no tab, CSP on
 		env.capture.SetCSPStatusForTest(true, "script_exec")
 
-		req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+		req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 		args := json.RawMessage(`{"what":"execute_js","script":"return 1","world":"main","sync":false}`)
 		resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
 
@@ -777,7 +777,7 @@ func TestSmoke_AllGates_SequentialFiring_ExecuteJS(t *testing.T) {
 		env.simulateTabTracking(t)
 		env.capture.SetCSPStatusForTest(true, "script_exec")
 
-		req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+		req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 		args := json.RawMessage(`{"what":"execute_js","script":"return 1","world":"main","sync":false}`)
 		resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
 

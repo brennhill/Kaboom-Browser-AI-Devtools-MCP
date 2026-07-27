@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -179,7 +180,7 @@ func TestToolConfigureNoise_InvalidJSON(t *testing.T) {
 	env := newConfigureTestEnv(t)
 
 	args := json.RawMessage(`{bad json}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := toolconfigure.HandleNoise(env.handler, req, args)
 
 	result := parseToolResult(t, resp)
@@ -278,7 +279,7 @@ func TestToolConfigureNoise_FullLifecycle(t *testing.T) {
 	// Step 6: Also test the wire-format JSON-RPC response (what the smoke test would see)
 	// This simulates what the HTTP endpoint returns
 	listArgs := json.RawMessage(`{"what":"noise_rule","noise_action":"list"}`)
-	listReq := JSONRPCRequest{JSONRPC: "2.0", ID: 42}
+	listReq := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 42}
 	listResp := env.handler.toolConfigure(listReq, listArgs)
 	wireJSON, _ := json.Marshal(listResp)
 	t.Logf("Wire-format JSON-RPC response: %s", string(wireJSON))
@@ -294,7 +295,7 @@ func TestToolValidateAPI_Analyze(t *testing.T) {
 	env := newConfigureTestEnv(t)
 
 	args := json.RawMessage(`{"operation":"analyze"}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.toolValidateAPI(req, args)
 
 	result := parseToolResult(t, resp)
@@ -316,7 +317,7 @@ func TestToolValidateAPI_Report(t *testing.T) {
 	env := newConfigureTestEnv(t)
 
 	args := json.RawMessage(`{"operation":"report"}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.toolValidateAPI(req, args)
 
 	result := parseToolResult(t, resp)
@@ -330,7 +331,7 @@ func TestToolValidateAPI_Clear(t *testing.T) {
 	env := newConfigureTestEnv(t)
 
 	args := json.RawMessage(`{"operation":"clear"}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.toolValidateAPI(req, args)
 
 	result := parseToolResult(t, resp)
@@ -344,7 +345,7 @@ func TestToolValidateAPI_UnknownOperation(t *testing.T) {
 	env := newConfigureTestEnv(t)
 
 	args := json.RawMessage(`{"operation":"invalid"}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.toolValidateAPI(req, args)
 
 	result := parseToolResult(t, resp)
@@ -362,7 +363,7 @@ func TestToolValidateAPI_InvalidJSON(t *testing.T) {
 	env := newConfigureTestEnv(t)
 
 	args := json.RawMessage(`{bad json}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.toolValidateAPI(req, args)
 
 	result := parseToolResult(t, resp)

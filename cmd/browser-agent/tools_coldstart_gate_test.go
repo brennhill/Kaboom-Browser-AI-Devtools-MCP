@@ -28,7 +28,7 @@ func TestRequireExtension_ColdStart_WaitsForConnection(t *testing.T) {
 		env.capture.SimulateExtensionConnectForTest()
 	}()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	start := time.Now()
 	_, blocked := env.handler.requireExtension(req)
 	elapsed := time.Since(start)
@@ -50,7 +50,7 @@ func TestRequireExtension_ColdStart_TimesOut(t *testing.T) {
 	env.handler.extensionReadinessTimeout = 200 * time.Millisecond
 
 	// Extension never connects
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	start := time.Now()
 	resp, blocked := env.handler.requireExtension(req)
 	elapsed := time.Since(start)
@@ -74,7 +74,7 @@ func TestRequireExtension_AlreadyConnected_NoWait(t *testing.T) {
 	env.handler.extensionReadinessTimeout = 5 * time.Second
 
 	// Even with a long timeout, already-connected should be instant
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	start := time.Now()
 	_, blocked := env.handler.requireExtension(req)
 	elapsed := time.Since(start)
@@ -112,7 +112,7 @@ func TestMaybeWaitForCommand_ExtensionConnected_WaitsForResult(t *testing.T) {
 		cap.CompleteCommand(correlationID, json.RawMessage(`{"success":true}`), "")
 	}()
 
-	req := JSONRPCRequest{ID: 1, ClientID: "test-client"}
+	req := mcp.JSONRPCRequest{ID: 1, ClientID: "test-client"}
 	start := time.Now()
 	resp := handler.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{}`), "Queued")
 	elapsed := time.Since(start)
@@ -138,7 +138,7 @@ func TestMaybeWaitForCommand_ExtensionNotConnected_InstantError(t *testing.T) {
 	cap.RegisterCommand(correlationID, "q-instant-fail", 15*time.Second)
 
 	// Extension NOT connected — MaybeWaitForCommand does instant check (no blocking wait)
-	req := JSONRPCRequest{ID: 1, ClientID: "test-client"}
+	req := mcp.JSONRPCRequest{ID: 1, ClientID: "test-client"}
 	start := time.Now()
 	resp := handler.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{}`), "Queued")
 	elapsed := time.Since(start)
@@ -161,7 +161,7 @@ func TestMaybeWaitForCommand_Background_SkipsColdStartGate(t *testing.T) {
 	correlationID := "test-bg-skip"
 
 	// Extension NOT connected, background mode
-	req := JSONRPCRequest{ID: 1}
+	req := mcp.JSONRPCRequest{ID: 1}
 	start := time.Now()
 	resp := handler.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"background":true}`), "Queued")
 	elapsed := time.Since(start)

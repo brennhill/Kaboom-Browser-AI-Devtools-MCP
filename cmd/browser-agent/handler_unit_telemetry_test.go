@@ -49,7 +49,7 @@ func TestMCPHandler_PassiveTelemetrySummaryDeltas(t *testing.T) {
 	cap.SetTrackingStatusForTest(42, "https://tracked.test")
 
 	// Seed baseline data before first call; first response should still report zero deltas.
-	srv.logs.AddEntries([]LogEntry{{"level": "error", "message": "baseline error"}})
+	srv.logs.AddEntries([]mcp.LogEntry{{"level": "error", "message": "baseline error"}})
 	cap.AddNetworkBodies([]capture.NetworkBody{
 		{Method: "GET", URL: "https://api.test/ok", Status: 200},
 		{Method: "GET", URL: "https://api.test/fail", Status: 500},
@@ -61,11 +61,11 @@ func TestMCPHandler_PassiveTelemetrySummaryDeltas(t *testing.T) {
 	h.SetToolHandler(&fakeToolHandlerForMCP{
 		cap:     cap,
 		limiter: testLimiter{allowed: true},
-		handleFn: func(req JSONRPCRequest, name string, _ json.RawMessage) (JSONRPCResponse, bool) {
+		handleFn: func(req mcp.JSONRPCRequest, name string, _ json.RawMessage) (mcp.JSONRPCResponse, bool) {
 			if name != "observe" {
-				return JSONRPCResponse{}, false
+				return mcp.JSONRPCResponse{}, false
 			}
-			return JSONRPCResponse{
+			return mcp.JSONRPCResponse{
 				JSONRPC: "2.0",
 				ID:      req.ID,
 				Result:  mcp.TextResponse("ok"),
@@ -73,7 +73,7 @@ func TestMCPHandler_PassiveTelemetrySummaryDeltas(t *testing.T) {
 		},
 	})
 
-	req := JSONRPCRequest{
+	req := mcp.JSONRPCRequest{
 		JSONRPC:  "2.0",
 		ID:       1,
 		Method:   "tools/call",
@@ -92,7 +92,7 @@ func TestMCPHandler_PassiveTelemetrySummaryDeltas(t *testing.T) {
 	}
 
 	// Add new activity between calls; second response should report these deltas.
-	srv.logs.AddEntries([]LogEntry{
+	srv.logs.AddEntries([]mcp.LogEntry{
 		{"level": "error", "message": "TypeError"},
 		{"level": "info", "message": "noise"},
 	})
@@ -150,11 +150,11 @@ func TestMCPHandler_PassiveTelemetryIsPerClient(t *testing.T) {
 	h.SetToolHandler(&fakeToolHandlerForMCP{
 		cap:     cap,
 		limiter: testLimiter{allowed: true},
-		handleFn: func(req JSONRPCRequest, name string, _ json.RawMessage) (JSONRPCResponse, bool) {
+		handleFn: func(req mcp.JSONRPCRequest, name string, _ json.RawMessage) (mcp.JSONRPCResponse, bool) {
 			if name != "observe" {
-				return JSONRPCResponse{}, false
+				return mcp.JSONRPCResponse{}, false
 			}
-			return JSONRPCResponse{
+			return mcp.JSONRPCResponse{
 				JSONRPC: "2.0",
 				ID:      req.ID,
 				Result:  mcp.TextResponse("ok"),
@@ -162,7 +162,7 @@ func TestMCPHandler_PassiveTelemetryIsPerClient(t *testing.T) {
 		},
 	})
 
-	reqA := JSONRPCRequest{
+	reqA := mcp.JSONRPCRequest{
 		JSONRPC:  "2.0",
 		ID:       1,
 		Method:   "tools/call",
@@ -180,7 +180,7 @@ func TestMCPHandler_PassiveTelemetryIsPerClient(t *testing.T) {
 		t.Fatal("client-a first call should omit telemetry_summary in auto mode")
 	}
 
-	srv.logs.AddEntries([]LogEntry{{"level": "error", "message": "new error"}})
+	srv.logs.AddEntries([]mcp.LogEntry{{"level": "error", "message": "new error"}})
 
 	reqA.ID = 2
 	respA2 := h.HandleRequest(reqA)
@@ -195,7 +195,7 @@ func TestMCPHandler_PassiveTelemetryIsPerClient(t *testing.T) {
 		t.Fatalf("client-a new_errors_since_last_call = %d, want 1", got)
 	}
 
-	reqB := JSONRPCRequest{
+	reqB := mcp.JSONRPCRequest{
 		JSONRPC:  "2.0",
 		ID:       3,
 		Method:   "tools/call",
@@ -229,15 +229,15 @@ func TestMCPHandler_PassiveTelemetryModeFullIncludesSummaryWithoutChanges(t *tes
 	h.SetToolHandler(&fakeToolHandlerForMCP{
 		cap:     capture.NewCapture(),
 		limiter: testLimiter{allowed: true},
-		handleFn: func(req JSONRPCRequest, name string, _ json.RawMessage) (JSONRPCResponse, bool) {
+		handleFn: func(req mcp.JSONRPCRequest, name string, _ json.RawMessage) (mcp.JSONRPCResponse, bool) {
 			if name != "observe" {
-				return JSONRPCResponse{}, false
+				return mcp.JSONRPCResponse{}, false
 			}
-			return JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.TextResponse("ok")}, true
+			return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.TextResponse("ok")}, true
 		},
 	})
 
-	resp := h.HandleRequest(JSONRPCRequest{
+	resp := h.HandleRequest(mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "tools/call",
@@ -270,15 +270,15 @@ func TestMCPHandler_PassiveTelemetryModeOffSuppressesTelemetryMetadata(t *testin
 	h.SetToolHandler(&fakeToolHandlerForMCP{
 		cap:     capture.NewCapture(),
 		limiter: testLimiter{allowed: true},
-		handleFn: func(req JSONRPCRequest, name string, _ json.RawMessage) (JSONRPCResponse, bool) {
+		handleFn: func(req mcp.JSONRPCRequest, name string, _ json.RawMessage) (mcp.JSONRPCResponse, bool) {
 			if name != "observe" {
-				return JSONRPCResponse{}, false
+				return mcp.JSONRPCResponse{}, false
 			}
-			return JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.TextResponse("ok")}, true
+			return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.TextResponse("ok")}, true
 		},
 	})
 
-	resp := h.HandleRequest(JSONRPCRequest{
+	resp := h.HandleRequest(mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "tools/call",
@@ -288,7 +288,7 @@ func TestMCPHandler_PassiveTelemetryModeOffSuppressesTelemetryMetadata(t *testin
 		t.Fatalf("tools/call response = %+v, want success", resp)
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("json.Unmarshal(MCPToolResult) error = %v", err)
 	}
@@ -317,15 +317,15 @@ func TestMCPHandler_PassiveTelemetryModePerCallOverride(t *testing.T) {
 	h.SetToolHandler(&fakeToolHandlerForMCP{
 		cap:     capture.NewCapture(),
 		limiter: testLimiter{allowed: true},
-		handleFn: func(req JSONRPCRequest, name string, _ json.RawMessage) (JSONRPCResponse, bool) {
+		handleFn: func(req mcp.JSONRPCRequest, name string, _ json.RawMessage) (mcp.JSONRPCResponse, bool) {
 			if name != "observe" {
-				return JSONRPCResponse{}, false
+				return mcp.JSONRPCResponse{}, false
 			}
-			return JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.TextResponse("ok")}, true
+			return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.TextResponse("ok")}, true
 		},
 	})
 
-	resp := h.HandleRequest(JSONRPCRequest{
+	resp := h.HandleRequest(mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "tools/call",
@@ -335,7 +335,7 @@ func TestMCPHandler_PassiveTelemetryModePerCallOverride(t *testing.T) {
 		t.Fatalf("tools/call response = %+v, want success", resp)
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("json.Unmarshal(MCPToolResult) error = %v", err)
 	}
@@ -356,11 +356,11 @@ func TestMCPHandlerHandleHTTP(t *testing.T) {
 	h.SetToolHandler(&fakeToolHandlerForMCP{
 		cap:     capture.NewCapture(),
 		limiter: testLimiter{allowed: true},
-		handleFn: func(req JSONRPCRequest, name string, _ json.RawMessage) (JSONRPCResponse, bool) {
+		handleFn: func(req mcp.JSONRPCRequest, name string, _ json.RawMessage) (mcp.JSONRPCResponse, bool) {
 			if name != "observe" {
-				return JSONRPCResponse{}, false
+				return mcp.JSONRPCResponse{}, false
 			}
-			return JSONRPCResponse{
+			return mcp.JSONRPCResponse{
 				JSONRPC: "2.0",
 				ID:      req.ID,
 				Result:  json.RawMessage(`{"ok":true}`),
@@ -378,7 +378,7 @@ func TestMCPHandlerHandleHTTP(t *testing.T) {
 	parseReq := httptest.NewRequest(http.MethodPost, "/mcp", bytes.NewBufferString(`{"jsonrpc":"2.0","id":1,`))
 	parseRR := httptest.NewRecorder()
 	h.HandleHTTP(parseRR, parseReq)
-	var parseResp JSONRPCResponse
+	var parseResp mcp.JSONRPCResponse
 	if err := json.Unmarshal(parseRR.Body.Bytes(), &parseResp); err != nil {
 		t.Fatalf("json.Unmarshal(parse error response) error = %v", err)
 	}
@@ -396,7 +396,7 @@ func TestMCPHandlerHandleHTTP(t *testing.T) {
 	callReq := httptest.NewRequest(http.MethodPost, "/mcp", bytes.NewBufferString(`{"jsonrpc":"2.0","id":99,"method":"tools/call","params":{"name":"observe","arguments":{"what":"errors"}}}`))
 	callRR := httptest.NewRecorder()
 	h.HandleHTTP(callRR, callReq)
-	var callResp JSONRPCResponse
+	var callResp mcp.JSONRPCResponse
 	if err := json.Unmarshal(callRR.Body.Bytes(), &callResp); err != nil {
 		t.Fatalf("json.Unmarshal(call response) error = %v", err)
 	}
@@ -408,7 +408,7 @@ func TestMCPHandlerHandleHTTP(t *testing.T) {
 	readErrReq.Body = ioNopCloser{Reader: failReader{}}
 	readErrRR := httptest.NewRecorder()
 	h.HandleHTTP(readErrRR, readErrReq)
-	var readErrResp JSONRPCResponse
+	var readErrResp mcp.JSONRPCResponse
 	if err := json.Unmarshal(readErrRR.Body.Bytes(), &readErrResp); err != nil {
 		t.Fatalf("json.Unmarshal(read error response) error = %v", err)
 	}
@@ -426,19 +426,19 @@ func TestHandleRequest_RejectsInvalidJSONRPCVersion(t *testing.T) {
 	h := NewMCPHandler(nil, "v-test")
 
 	// jsonrpc: "1.0" should be rejected
-	resp := h.HandleRequest(JSONRPCRequest{JSONRPC: "1.0", ID: 1, Method: "ping"})
+	resp := h.HandleRequest(mcp.JSONRPCRequest{JSONRPC: "1.0", ID: 1, Method: "ping"})
 	if resp == nil || resp.Error == nil || resp.Error.Code != -32600 {
 		t.Fatalf("expected -32600 Invalid Request for jsonrpc 1.0, got %+v", resp)
 	}
 
 	// Empty jsonrpc should be rejected
-	resp2 := h.HandleRequest(JSONRPCRequest{JSONRPC: "", ID: 2, Method: "ping"})
+	resp2 := h.HandleRequest(mcp.JSONRPCRequest{JSONRPC: "", ID: 2, Method: "ping"})
 	if resp2 == nil || resp2.Error == nil || resp2.Error.Code != -32600 {
 		t.Fatalf("expected -32600 Invalid Request for empty jsonrpc, got %+v", resp2)
 	}
 
 	// jsonrpc: "2.0" should be accepted
-	resp3 := h.HandleRequest(JSONRPCRequest{JSONRPC: "2.0", ID: 3, Method: "ping"})
+	resp3 := h.HandleRequest(mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 3, Method: "ping"})
 	if resp3 == nil || resp3.Error != nil {
 		t.Fatalf("expected success for jsonrpc 2.0, got %+v", resp3)
 	}
@@ -454,7 +454,7 @@ func TestHandleHTTP_RejectsNonJSONContentType(t *testing.T) {
 	rr := httptest.NewRecorder()
 	h.HandleHTTP(rr, req)
 
-	var resp JSONRPCResponse
+	var resp mcp.JSONRPCResponse
 	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("json.Unmarshal error = %v", err)
 	}
@@ -467,7 +467,7 @@ func TestHandleHTTP_RejectsNonJSONContentType(t *testing.T) {
 	rr2 := httptest.NewRecorder()
 	h.HandleHTTP(rr2, req2)
 
-	var resp2 JSONRPCResponse
+	var resp2 mcp.JSONRPCResponse
 	if err := json.Unmarshal(rr2.Body.Bytes(), &resp2); err != nil {
 		t.Fatalf("json.Unmarshal error = %v", err)
 	}
@@ -481,7 +481,7 @@ func TestHandleHTTP_RejectsNonJSONContentType(t *testing.T) {
 	rr3 := httptest.NewRecorder()
 	h.HandleHTTP(rr3, req3)
 
-	var resp3 JSONRPCResponse
+	var resp3 mcp.JSONRPCResponse
 	if err := json.Unmarshal(rr3.Body.Bytes(), &resp3); err != nil {
 		t.Fatalf("json.Unmarshal error = %v", err)
 	}
@@ -495,7 +495,7 @@ func TestHandleHTTP_RejectsNonJSONContentType(t *testing.T) {
 	rr4 := httptest.NewRecorder()
 	h.HandleHTTP(rr4, req4)
 
-	var resp4 JSONRPCResponse
+	var resp4 mcp.JSONRPCResponse
 	if err := json.Unmarshal(rr4.Body.Bytes(), &resp4); err != nil {
 		t.Fatalf("json.Unmarshal error = %v", err)
 	}
@@ -525,7 +525,7 @@ func TestHandleInitialize_NegotiatesProtocolVersion(t *testing.T) {
 			if tt.clientVersion == "" {
 				params = `{}`
 			}
-			resp := h.HandleRequest(JSONRPCRequest{
+			resp := h.HandleRequest(mcp.JSONRPCRequest{
 				JSONRPC: "2.0",
 				ID:      1,
 				Method:  "initialize",
@@ -534,7 +534,7 @@ func TestHandleInitialize_NegotiatesProtocolVersion(t *testing.T) {
 			if resp == nil || resp.Error != nil {
 				t.Fatalf("initialize response = %+v, want success", resp)
 			}
-			data := mustDecodeJSON[MCPInitializeResult](t, resp.Result)
+			data := mustDecodeJSON[mcp.MCPInitializeResult](t, resp.Result)
 			if data.ProtocolVersion != tt.expectedVersion {
 				t.Fatalf("ProtocolVersion = %q, want %q", data.ProtocolVersion, tt.expectedVersion)
 			}
@@ -550,17 +550,17 @@ func TestHandleRequest_NotificationDetection(t *testing.T) {
 	// req.ID == nil is the sole notification check.
 
 	// Case 1: nil ID, non-notification method -> notification (no response)
-	if resp := h.HandleRequest(JSONRPCRequest{JSONRPC: "2.0", ID: nil, Method: "some/method"}); resp != nil {
+	if resp := h.HandleRequest(mcp.JSONRPCRequest{JSONRPC: "2.0", ID: nil, Method: "some/method"}); resp != nil {
 		t.Fatalf("nil ID should be treated as notification, got response: %+v", resp)
 	}
 
 	// Case 2: nil ID, notifications/ prefix -> notification (no response)
-	if resp := h.HandleRequest(JSONRPCRequest{JSONRPC: "2.0", ID: nil, Method: "notifications/initialized"}); resp != nil {
+	if resp := h.HandleRequest(mcp.JSONRPCRequest{JSONRPC: "2.0", ID: nil, Method: "notifications/initialized"}); resp != nil {
 		t.Fatalf("nil ID with notifications/ prefix should be notification, got response: %+v", resp)
 	}
 
 	// Case 3: non-nil ID, notifications/ prefix -> NOT a notification (should get response)
-	resp := h.HandleRequest(JSONRPCRequest{JSONRPC: "2.0", ID: 1, Method: "notifications/initialized"})
+	resp := h.HandleRequest(mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1, Method: "notifications/initialized"})
 	if resp == nil {
 		t.Fatal("non-nil ID with notifications/ prefix should NOT be treated as notification — should get response")
 	}
@@ -580,7 +580,7 @@ func TestMCPHandlerHandleHTTP_ReadErrorUsesNullID(t *testing.T) {
 	readErrRR := httptest.NewRecorder()
 	h.HandleHTTP(readErrRR, readErrReq)
 
-	var readErrResp JSONRPCResponse
+	var readErrResp mcp.JSONRPCResponse
 	if err := json.Unmarshal(readErrRR.Body.Bytes(), &readErrResp); err != nil {
 		t.Fatalf("json.Unmarshal(read error response) error = %v", err)
 	}
@@ -608,7 +608,7 @@ func TestMCPHandlerHandleHTTP_IDNullIsInvalidRequest(t *testing.T) {
 		t.Fatalf("id:null request status = %d, want %d", nullIDRR.Code, http.StatusOK)
 	}
 
-	var nullIDResp JSONRPCResponse
+	var nullIDResp mcp.JSONRPCResponse
 	if err := json.Unmarshal(nullIDRR.Body.Bytes(), &nullIDResp); err != nil {
 		t.Fatalf("json.Unmarshal(id:null response) error = %v", err)
 	}

@@ -7,9 +7,11 @@
 package main
 
 import (
+	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -37,4 +39,35 @@ func TestLintHardening(t *testing.T) {
 		t.Fatalf("lint-hardening.sh failed (exit %v):\n%s", err, output)
 	}
 	t.Logf("lint-hardening.sh passed:\n%s", output)
+}
+
+func TestRootDoesNotReexportCanonicalTypes(t *testing.T) {
+	rootFiles, err := filepath.Glob(filepath.Join(projectRoot(), "cmd", "browser-agent", "*.go"))
+	if err != nil {
+		t.Fatalf("list browser-agent root files: %v", err)
+	}
+	for _, forbidden := range []string{
+		"type JSONRPCRequest =",
+		"type JSONRPCResponse =",
+		"type MCPToolResult =",
+		"type Annotation =",
+		"type AnnotationStore =",
+		"type ToolCallLimiter =",
+		"var NewToolCallLimiter =",
+		"var randomInt63 =",
+		"var legacyMCPServerNames =",
+	} {
+		for _, path := range rootFiles {
+			if strings.HasSuffix(path, "_test.go") {
+				continue
+			}
+			source, readErr := os.ReadFile(path)
+			if readErr != nil {
+				t.Fatalf("read %s: %v", path, readErr)
+			}
+			if strings.Contains(string(source), forbidden) {
+				t.Errorf("%s re-exports canonical API %q", filepath.Base(path), forbidden)
+			}
+		}
+	}
 }

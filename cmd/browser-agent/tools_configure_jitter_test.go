@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -17,7 +18,7 @@ func TestToolConfigureActionJitter_SetValue(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"action_jitter_ms":200}`)
 	resp := toolconfigure.HandleActionJitter(h, req, args)
 
@@ -36,7 +37,7 @@ func TestToolConfigureActionJitter_ResponseContainsSummary(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"action_jitter_ms":100}`)
 	resp := toolconfigure.HandleActionJitter(h, req, args)
 
@@ -57,7 +58,7 @@ func TestToolConfigureActionJitter_NegativeClampedToZero(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"action_jitter_ms":-100}`)
 	resp := toolconfigure.HandleActionJitter(h, req, args)
 
@@ -102,7 +103,7 @@ func TestToolConfigureActionJitter_MaxClamp(t *testing.T) {
 			t.Parallel()
 			h, _, _ := makeToolHandler(t)
 
-			req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+			req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 			resp := toolconfigure.HandleActionJitter(h, req, json.RawMessage(tt.args))
 
 			result := parseToolResult(t, resp)
@@ -122,7 +123,7 @@ func TestToolConfigureActionJitter_ZeroPreserved(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"action_jitter_ms":0}`)
 	resp := toolconfigure.HandleActionJitter(h, req, args)
 
@@ -144,7 +145,7 @@ func TestToolConfigureActionJitter_PartialUpdate(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 
 	// Set initial value
 	args1 := json.RawMessage(`{"action_jitter_ms":300}`)
@@ -176,7 +177,7 @@ func TestToolConfigureActionJitter_EmptyJSON_ReturnsCurrentValues(t *testing.T) 
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 
 	// Set known value first
 	args1 := json.RawMessage(`{"action_jitter_ms":250}`)
@@ -203,7 +204,7 @@ func TestToolConfigureActionJitter_NilArgs_ReturnsDefaults(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := toolconfigure.HandleActionJitter(h, req, nil)
 	result := parseToolResult(t, resp)
 	if result.IsError {
@@ -224,7 +225,7 @@ func TestToolConfigureActionJitter_InvalidJSON_LenientFallback(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := toolconfigure.HandleActionJitter(h, req, json.RawMessage(`{bad json`))
 
 	// mcp.LenientUnmarshal silently ignores parse errors — invalid JSON is treated
@@ -243,7 +244,7 @@ func TestToolConfigureActionJitter_ResponseID_Matches(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 42}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 42}
 	args := json.RawMessage(`{"action_jitter_ms":100}`)
 	resp := toolconfigure.HandleActionJitter(h, req, args)
 
@@ -283,7 +284,7 @@ func TestToolConfigureActionJitter_UnknownParamsIgnored(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	// Unknown params should be ignored without error
 	args := json.RawMessage(`{"action_jitter_ms":200,"unknown_param":999}`)
 	resp := toolconfigure.HandleActionJitter(h, req, args)

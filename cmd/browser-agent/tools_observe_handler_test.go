@@ -26,7 +26,7 @@ func TestToolsObserveDispatch_InvalidJSON(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolObserve(req, json.RawMessage(`{bad json`))
 
 	result := parseToolResult(t, resp)
@@ -42,7 +42,7 @@ func TestToolsObserveDispatch_MissingWhat(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolObserve(req, json.RawMessage(`{}`))
 
 	result := parseToolResult(t, resp)
@@ -79,7 +79,7 @@ func TestToolsObserveDispatch_UnknownModeAliasAddsCanonicalWhatWarning(t *testin
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolObserve(req, json.RawMessage(`{"mode":"nonexistent_mode"}`))
 	result := parseToolResult(t, resp)
 	if !result.IsError {
@@ -101,7 +101,7 @@ func TestToolsObserveDispatch_EmptyArgs(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolObserve(req, nil)
 
 	result := parseToolResult(t, resp)
@@ -114,7 +114,7 @@ func TestToolsObserveDispatch_ModeAliasAddsCanonicalWhatWarning(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolObserve(req, json.RawMessage(`{"mode":"pilot"}`))
 	result := parseToolResult(t, resp)
 	if result.IsError {
@@ -136,7 +136,7 @@ func TestToolsObserveDispatch_ConflictingWhatAndMode(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolObserve(req, json.RawMessage(`{"what":"pilot","mode":"errors"}`))
 	result := parseToolResult(t, resp)
 	if !result.IsError {
@@ -161,8 +161,8 @@ func TestToolsObserveErrors_ResponseFields(t *testing.T) {
 	_ = cap
 
 	ts := time.Now().UTC().Format(time.RFC3339)
-	server.logs.SeedEntries([]LogEntry{
-		LogEntry{
+	server.logs.SeedEntries([]mcp.LogEntry{
+		mcp.LogEntry{
 			"level":   "error",
 			"message": "Test error message",
 			"source":  "https://example.com/app.js",
@@ -256,12 +256,12 @@ func TestToolsObserveErrors_URLFilter(t *testing.T) {
 	h, server, _ := makeToolHandler(t)
 
 	ts := time.Now().UTC().Format(time.RFC3339)
-	server.logs.SeedEntries([]LogEntry{
-		LogEntry{"level": "error", "message": "Error A", "url": "https://example.com/a.js", "ts": ts},
-		LogEntry{"level": "error", "message": "Error B", "url": "https://other.com/b.js", "ts": ts},
+	server.logs.SeedEntries([]mcp.LogEntry{
+		mcp.LogEntry{"level": "error", "message": "Error A", "url": "https://example.com/a.js", "ts": ts},
+		mcp.LogEntry{"level": "error", "message": "Error B", "url": "https://other.com/b.js", "ts": ts},
 	}, nil)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolObserve(req, json.RawMessage(`{"what":"errors","url":"example.com"}`))
 	result := parseToolResult(t, resp)
 	data := extractResultJSON(t, result)
@@ -278,10 +278,10 @@ func TestToolsObserveErrors_LimitParam(t *testing.T) {
 
 	ts := time.Now().UTC().Format(time.RFC3339)
 	for i := 0; i < 5; i++ {
-		server.logs.SeedEntries([]LogEntry{{"level": "error", "message": "err", "ts": ts}}, nil)
+		server.logs.SeedEntries([]mcp.LogEntry{{"level": "error", "message": "err", "ts": ts}}, nil)
 	}
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolObserve(req, json.RawMessage(`{"what":"errors","limit":2}`))
 	result := parseToolResult(t, resp)
 	data := extractResultJSON(t, result)
@@ -301,8 +301,8 @@ func TestToolsObserveLogs_ResponseFields(t *testing.T) {
 	h, server, _ := makeToolHandler(t)
 
 	ts := time.Now().UTC().Format(time.RFC3339)
-	server.logs.SeedEntries([]LogEntry{
-		LogEntry{
+	server.logs.SeedEntries([]mcp.LogEntry{
+		mcp.LogEntry{
 			"type":    "console",
 			"level":   "warn",
 			"message": "deprecation warning",
@@ -455,7 +455,7 @@ func TestToolsObserveNetworkBodies_Filters(t *testing.T) {
 	})
 
 	// Filter by URL
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolObserve(req, json.RawMessage(`{"what":"network_bodies","url":"example.com"}`))
 	result := parseToolResult(t, resp)
 	data := extractResultJSON(t, result)
@@ -505,7 +505,7 @@ func TestToolsObserveNetworkBodies_BodyPathFilter(t *testing.T) {
 		},
 	})
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolObserve(req, json.RawMessage(`{"what":"network_bodies","body_path":"data.viewer.roles[0]"}`))
 	result := parseToolResult(t, resp)
 	if result.IsError {
@@ -548,7 +548,7 @@ func TestToolsObserveNetworkBodies_BodyPathValidation(t *testing.T) {
 		},
 	})
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolObserve(req, json.RawMessage(`{"what":"network_bodies","body_path":"data.items["}`))
 	result := parseToolResult(t, resp)
 	if !result.IsError {
@@ -780,8 +780,8 @@ func TestToolsObserveErrors_DataAgeMs_Present(t *testing.T) {
 	h, server, _ := makeToolHandler(t)
 
 	ts := time.Now().UTC().Format(time.RFC3339)
-	server.logs.SeedEntries([]LogEntry{
-		LogEntry{
+	server.logs.SeedEntries([]mcp.LogEntry{
+		mcp.LogEntry{
 			"level": "error", "message": "Test error", "ts": ts,
 		},
 	}, nil)

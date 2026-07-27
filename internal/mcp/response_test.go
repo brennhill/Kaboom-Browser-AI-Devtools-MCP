@@ -10,6 +10,29 @@ import (
 	"testing"
 )
 
+func TestNegotiateProtocolVersion(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name   string
+		params json.RawMessage
+		want   string
+	}{
+		{name: "latest", params: json.RawMessage(`{"protocolVersion":"2025-06-18"}`), want: ProtocolVersionLatest},
+		{name: "legacy", params: json.RawMessage(`{"protocolVersion":"2024-11-05"}`), want: ProtocolVersionLegacy},
+		{name: "unsupported", params: json.RawMessage(`{"protocolVersion":"1999-01-01"}`), want: ProtocolVersionLatest},
+		{name: "invalid", params: json.RawMessage(`{`), want: ProtocolVersionLatest},
+		{name: "empty", want: ProtocolVersionLatest},
+	} {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := NegotiateProtocolVersion(tc.params); got != tc.want {
+				t.Fatalf("NegotiateProtocolVersion() = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
 // buildRawToolResult creates an MCPToolResult JSON without clamping.
 func buildRawToolResult(text string) json.RawMessage {
 	result := MCPToolResult{

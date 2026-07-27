@@ -7,6 +7,8 @@ package main
 import (
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 )
 
 func TestToolsConfigureClear_AllBuffers_ClearsAnnotationState(t *testing.T) {
@@ -14,11 +16,11 @@ func TestToolsConfigureClear_AllBuffers_ClearsAnnotationState(t *testing.T) {
 	h, _, _ := makeToolHandler(t)
 
 	now := time.Now().UnixMilli()
-	h.annotationStore.StoreSession(7, &AnnotationSession{
+	h.annotationStore.StoreSession(7, &annotation.Session{
 		TabID:     7,
 		Timestamp: now,
 		PageURL:   "https://example.com/current",
-		Annotations: []Annotation{
+		Annotations: []annotation.Annotation{
 			{
 				ID:            "ann_old",
 				Text:          "old note",
@@ -27,11 +29,11 @@ func TestToolsConfigureClear_AllBuffers_ClearsAnnotationState(t *testing.T) {
 			},
 		},
 	})
-	h.annotationStore.AppendToNamedSession("qa-review", &AnnotationSession{
+	h.annotationStore.AppendToNamedSession("qa-review", &annotation.Session{
 		TabID:     7,
 		Timestamp: now,
 		PageURL:   "https://example.com/current",
-		Annotations: []Annotation{
+		Annotations: []annotation.Annotation{
 			{
 				ID:            "ann_named",
 				Text:          "named stale note",
@@ -40,7 +42,7 @@ func TestToolsConfigureClear_AllBuffers_ClearsAnnotationState(t *testing.T) {
 			},
 		},
 	})
-	h.annotationStore.StoreDetail("detail_old", AnnotationDetail{
+	h.annotationStore.StoreDetail("detail_old", annotation.Detail{
 		CorrelationID: "detail_old",
 		Selector:      "#old-node",
 		Tag:           "div",

@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 var updateGolden = os.Getenv("UPDATE_GOLDEN") == "1"
@@ -87,7 +88,7 @@ func TestGoldenInitialize(t *testing.T) {
 	mcpHandler, _ := newGoldenHandlers(t)
 
 	// Create initialize request
-	req := JSONRPCRequest{
+	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "initialize",

@@ -12,9 +12,11 @@ import (
 	"io"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
-func readJSONRPCLine(t *testing.T, reader *bufio.Reader, timeout time.Duration) JSONRPCResponse {
+func readJSONRPCLine(t *testing.T, reader *bufio.Reader, timeout time.Duration) mcp.JSONRPCResponse {
 	t.Helper()
 	lineCh := make(chan string, 1)
 	errCh := make(chan error, 1)
@@ -29,7 +31,7 @@ func readJSONRPCLine(t *testing.T, reader *bufio.Reader, timeout time.Duration) 
 
 	select {
 	case line := <-lineCh:
-		var resp JSONRPCResponse
+		var resp mcp.JSONRPCResponse
 		if err := json.Unmarshal([]byte(line), &resp); err != nil {
 			t.Fatalf("failed to parse JSON-RPC response: %v", err)
 		}
@@ -39,7 +41,7 @@ func readJSONRPCLine(t *testing.T, reader *bufio.Reader, timeout time.Duration) 
 	case <-time.After(timeout):
 		t.Fatalf("timeout waiting for response after %v", timeout)
 	}
-	return JSONRPCResponse{}
+	return mcp.JSONRPCResponse{}
 }
 
 func writeJSONRPCLine(t *testing.T, w io.Writer, raw string) {
@@ -124,7 +126,7 @@ func TestFastStart_InitializeRespondsImmediately(t *testing.T) {
 		}
 
 		// Verify response structure
-		var rpcResp JSONRPCResponse
+		var rpcResp mcp.JSONRPCResponse
 		if err := json.Unmarshal([]byte(resp), &rpcResp); err != nil {
 			t.Fatalf("Failed to parse response: %v", err)
 		}
@@ -234,7 +236,7 @@ func TestFastStart_ToolsListRespondsImmediately(t *testing.T) {
 		}
 
 		// Verify response has tools
-		var rpcResp JSONRPCResponse
+		var rpcResp mcp.JSONRPCResponse
 		if err := json.Unmarshal([]byte(resp), &rpcResp); err != nil {
 			t.Fatalf("Failed to parse response: %v", err)
 		}
@@ -409,7 +411,7 @@ func TestFastStart_OtherMethodsReturnQuickly(t *testing.T) {
 			}
 
 			// Verify valid JSON-RPC response
-			var rpcResp JSONRPCResponse
+			var rpcResp mcp.JSONRPCResponse
 			if err := json.Unmarshal([]byte(line), &rpcResp); err != nil {
 				t.Errorf("Invalid JSON-RPC response for %s: %v", tc.name, err)
 			}

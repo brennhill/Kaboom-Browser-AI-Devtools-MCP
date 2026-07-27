@@ -19,6 +19,7 @@ import (
 
 	cmbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ⚠️ CRITICAL MCP PROTOCOL COMPLIANCE TESTS - DO NOT MODIFY WITHOUT PRINCIPAL REVIEW
@@ -605,29 +606,29 @@ func TestMCPProtocol_HandlerUnit(t *testing.T) {
 
 	testCases := []struct {
 		name           string
-		request        JSONRPCRequest
+		request        mcp.JSONRPCRequest
 		expectResponse bool
 		expectError    bool
 	}{
 		{
 			name:           "notification returns nil",
-			request:        JSONRPCRequest{JSONRPC: "2.0", Method: "notifications/initialized"},
+			request:        mcp.JSONRPCRequest{JSONRPC: "2.0", Method: "notifications/initialized"},
 			expectResponse: false,
 		},
 		{
 			name:           "notification with nil ID returns nil",
-			request:        JSONRPCRequest{JSONRPC: "2.0", ID: nil, Method: "some/method"},
+			request:        mcp.JSONRPCRequest{JSONRPC: "2.0", ID: nil, Method: "some/method"},
 			expectResponse: false,
 		},
 		{
 			name:           "request with ID returns response",
-			request:        JSONRPCRequest{JSONRPC: "2.0", ID: 1, Method: "ping"},
+			request:        mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1, Method: "ping"},
 			expectResponse: true,
 			expectError:    false,
 		},
 		{
 			name:           "unknown method returns error",
-			request:        JSONRPCRequest{JSONRPC: "2.0", ID: 2, Method: "unknown/method"},
+			request:        mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2, Method: "unknown/method"},
 			expectResponse: true,
 			expectError:    true,
 		},

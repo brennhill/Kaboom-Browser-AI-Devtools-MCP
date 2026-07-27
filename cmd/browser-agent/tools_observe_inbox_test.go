@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 )
 
@@ -16,13 +17,13 @@ func newPushTestToolHandler(inbox *push.PushInbox) *ToolHandler {
 }
 
 // piggybackTestResponse creates a base tool response, runs appendPushPiggyback, and returns the parsed result.
-func piggybackTestResponse(t *testing.T, h *ToolHandler, baseText string) MCPToolResult {
+func piggybackTestResponse(t *testing.T, h *ToolHandler, baseText string) mcp.MCPToolResult {
 	t.Helper()
-	result := MCPToolResult{Content: []MCPContentBlock{{Type: "text", Text: baseText}}}
+	result := mcp.MCPToolResult{Content: []mcp.MCPContentBlock{{Type: "text", Text: baseText}}}
 	resultJSON, _ := json.Marshal(result)
-	resp := JSONRPCResponse{JSONRPC: "2.0", Result: json.RawMessage(resultJSON)}
+	resp := mcp.JSONRPCResponse{JSONRPC: "2.0", Result: json.RawMessage(resultJSON)}
 	out := h.appendPushPiggyback(resp)
-	var outResult MCPToolResult
+	var outResult mcp.MCPToolResult
 	if err := json.Unmarshal(out.Result, &outResult); err != nil {
 		t.Fatal(err)
 	}
@@ -32,11 +33,11 @@ func piggybackTestResponse(t *testing.T, h *ToolHandler, baseText string) MCPToo
 func TestToolObserveInbox_Empty(t *testing.T) {
 	h := newPushTestToolHandler(push.NewPushInbox(10))
 
-	resp := h.toolObserveInbox(JSONRPCRequest{ID: json.RawMessage(`1`)}, nil)
+	resp := h.toolObserveInbox(mcp.JSONRPCRequest{ID: json.RawMessage(`1`)}, nil)
 	if resp.Error != nil {
 		t.Fatalf("unexpected error: %v", resp.Error)
 	}
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatal(err)
 	}
@@ -60,7 +61,7 @@ func TestToolObserveInbox_WithEvents(t *testing.T) {
 	})
 
 	h := newPushTestToolHandler(inbox)
-	resp := h.toolObserveInbox(JSONRPCRequest{ID: json.RawMessage(`2`)}, nil)
+	resp := h.toolObserveInbox(mcp.JSONRPCRequest{ID: json.RawMessage(`2`)}, nil)
 	if resp.Error != nil {
 		t.Fatalf("unexpected error: %v", resp.Error)
 	}
@@ -73,7 +74,7 @@ func TestToolObserveInbox_WithEvents(t *testing.T) {
 
 func TestToolObserveInbox_NilInbox(t *testing.T) {
 	h := newPushTestToolHandler(nil)
-	resp := h.toolObserveInbox(JSONRPCRequest{ID: json.RawMessage(`3`)}, nil)
+	resp := h.toolObserveInbox(mcp.JSONRPCRequest{ID: json.RawMessage(`3`)}, nil)
 	if resp.Error != nil {
 		t.Fatal("nil inbox should not error")
 	}
@@ -201,7 +202,7 @@ func TestAppendPushPiggyback_SingleScreenshotNoSkipSummary(t *testing.T) {
 func TestAppendPushPiggyback_NilInbox(t *testing.T) {
 	h := newPushTestToolHandler(nil)
 
-	resp := JSONRPCResponse{JSONRPC: "2.0", Result: json.RawMessage(`{}`)}
+	resp := mcp.JSONRPCResponse{JSONRPC: "2.0", Result: json.RawMessage(`{}`)}
 	out := h.appendPushPiggyback(resp)
 	if string(out.Result) != `{}` {
 		t.Fatal("nil inbox piggyback should be no-op")

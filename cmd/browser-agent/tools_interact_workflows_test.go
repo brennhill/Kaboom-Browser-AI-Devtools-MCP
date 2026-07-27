@@ -26,7 +26,7 @@ import (
 func TestNavigateAndWaitFor_MissingURL(t *testing.T) {
 	t.Parallel()
 	h := newTestToolHandler()
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args, _ := json.Marshal(map[string]any{
 		"wait_for": ".content",
 	})
@@ -37,7 +37,7 @@ func TestNavigateAndWaitFor_MissingURL(t *testing.T) {
 func TestNavigateAndWaitFor_MissingWaitFor(t *testing.T) {
 	t.Parallel()
 	h := newTestToolHandler()
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args, _ := json.Marshal(map[string]any{
 		"url": "https://example.com",
 	})
@@ -48,7 +48,7 @@ func TestNavigateAndWaitFor_MissingWaitFor(t *testing.T) {
 func TestNavigateAndWaitFor_InvalidJSON(t *testing.T) {
 	t.Parallel()
 	h := newTestToolHandler()
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp := h.interactAction().HandleNavigateAndWaitFor(req, json.RawMessage(`{bad`))
 	assertIsError(t, resp, "JSON")
 }
@@ -60,7 +60,7 @@ func TestNavigateAndWaitFor_InvalidJSON(t *testing.T) {
 func TestFillFormAndSubmit_EmptyFields(t *testing.T) {
 	t.Parallel()
 	h := newTestToolHandler()
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args, _ := json.Marshal(map[string]any{
 		"fields":          []any{},
 		"submit_selector": "button[type=submit]",
@@ -72,7 +72,7 @@ func TestFillFormAndSubmit_EmptyFields(t *testing.T) {
 func TestFillFormAndSubmit_MissingSubmit(t *testing.T) {
 	t.Parallel()
 	h := newTestToolHandler()
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args, _ := json.Marshal(map[string]any{
 		"fields": []map[string]string{
 			{"selector": "#email", "value": "test@example.com"},
@@ -85,7 +85,7 @@ func TestFillFormAndSubmit_MissingSubmit(t *testing.T) {
 func TestFillFormAndSubmit_FieldMissingSelectorAndIndex(t *testing.T) {
 	t.Parallel()
 	h := newTestToolHandler()
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args, _ := json.Marshal(map[string]any{
 		"fields": []map[string]string{
 			{"value": "test@example.com"},
@@ -99,7 +99,7 @@ func TestFillFormAndSubmit_FieldMissingSelectorAndIndex(t *testing.T) {
 func TestFillFormAndSubmit_InvalidJSON(t *testing.T) {
 	t.Parallel()
 	h := newTestToolHandler()
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp := h.interactAction().HandleFillFormAndSubmit(req, json.RawMessage(`{bad`))
 	assertIsError(t, resp, "JSON")
 }
@@ -111,7 +111,7 @@ func TestFillFormAndSubmit_InvalidJSON(t *testing.T) {
 func TestFillForm_EmptyFields(t *testing.T) {
 	t.Parallel()
 	h := newTestToolHandler()
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args, _ := json.Marshal(map[string]any{
 		"fields": []any{},
 	})
@@ -122,7 +122,7 @@ func TestFillForm_EmptyFields(t *testing.T) {
 func TestFillForm_MissingFieldSelectorAndIndex(t *testing.T) {
 	t.Parallel()
 	h := newTestToolHandler()
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args, _ := json.Marshal(map[string]any{
 		"fields": []map[string]string{
 			{"value": "test@example.com"},
@@ -135,7 +135,7 @@ func TestFillForm_MissingFieldSelectorAndIndex(t *testing.T) {
 func TestFillForm_InvalidJSON(t *testing.T) {
 	t.Parallel()
 	h := newTestToolHandler()
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp := h.interactAction().HandleFillForm(req, json.RawMessage(`{bad`))
 	assertIsError(t, resp, "JSON")
 }
@@ -143,7 +143,7 @@ func TestFillForm_InvalidJSON(t *testing.T) {
 func TestFillForm_NoSubmitRequired(t *testing.T) {
 	t.Parallel()
 	h := newTestToolHandler()
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	// Valid fields with selector — should not error about submit_selector
 	args, _ := json.Marshal(map[string]any{
 		"fields": []map[string]string{
@@ -170,7 +170,7 @@ func contains(s, substr string) bool {
 func TestIsNotTypeableError_TrueForNotTypeable(t *testing.T) {
 	t.Parallel()
 	// Simulate a response like the extension returns for <select> elements
-	resp := JSONRPCResponse{
+	resp := mcp.JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      json.RawMessage(`1`),
 		Result: mcp.JSONErrorResponse("FAILED", map[string]any{
@@ -189,7 +189,7 @@ func TestIsNotTypeableError_TrueForNotTypeable(t *testing.T) {
 
 func TestIsNotTypeableError_FalseForOtherErrors(t *testing.T) {
 	t.Parallel()
-	resp := JSONRPCResponse{
+	resp := mcp.JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      json.RawMessage(`1`),
 		Result: mcp.JSONErrorResponse("FAILED", map[string]any{
@@ -208,7 +208,7 @@ func TestIsNotTypeableError_FalseForOtherErrors(t *testing.T) {
 
 func TestIsNotTypeableError_FalseForSuccess(t *testing.T) {
 	t.Parallel()
-	resp := JSONRPCResponse{
+	resp := mcp.JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      json.RawMessage(`1`),
 		Result: mcp.JSONResponse("OK", map[string]any{
@@ -223,10 +223,10 @@ func TestIsNotTypeableError_FalseForSuccess(t *testing.T) {
 
 func TestIsNotTypeableError_FalseForJSONRPCError(t *testing.T) {
 	t.Parallel()
-	resp := JSONRPCResponse{
+	resp := mcp.JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      json.RawMessage(`1`),
-		Error:   &JSONRPCError{Code: -32600, Message: "not_typeable in error"},
+		Error:   &mcp.JSONRPCError{Code: -32600, Message: "not_typeable in error"},
 	}
 	if toolinteract.IsNotTypeableError(resp) {
 		t.Error("expected isNotTypeableError to return false for JSON-RPC errors")
@@ -240,7 +240,7 @@ func TestIsNotTypeableError_FalseForJSONRPCError(t *testing.T) {
 func TestRunA11yAndExportSARIF_InvalidJSON(t *testing.T) {
 	t.Parallel()
 	h := newTestToolHandler()
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp := h.interactAction().HandleRunA11yAndExportSARIF(req, json.RawMessage(`{bad`))
 	assertIsError(t, resp, "JSON")
 }
@@ -252,7 +252,7 @@ func TestRunA11yAndExportSARIF_InvalidJSON(t *testing.T) {
 func TestRunA11yAndExportSARIF_ValidParams(t *testing.T) {
 	t.Parallel()
 	h := newTestToolHandler()
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args, _ := json.Marshal(map[string]any{
 		"scope": "page",
 	})
@@ -272,7 +272,7 @@ func TestRunA11yAndExportSARIF_ValidParams(t *testing.T) {
 func TestRunA11yAndExportSARIF_ReusesAnalyzePayload(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 
 	cap.UpdateExtensionStatus(capture.ExtensionStatus{
 		TrackingEnabled: true,

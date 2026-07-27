@@ -42,8 +42,8 @@ type fakeToolHandlerForMCP struct {
 	cap      *capture.Store
 	limiter  RateLimiter
 	redactor RedactionEngine
-	tools    []MCPTool
-	handleFn func(req JSONRPCRequest, name string, arguments json.RawMessage) (JSONRPCResponse, bool)
+	tools    []mcp.MCPTool
+	handleFn func(req mcp.JSONRPCRequest, name string, arguments json.RawMessage) (mcp.JSONRPCResponse, bool)
 }
 
 func (f *fakeToolHandlerForMCP) GetCapture() *capture.Store { return f.cap }
@@ -53,10 +53,10 @@ func (f *fakeToolHandlerForMCP) GetToolCallLimiter() RateLimiter {
 func (f *fakeToolHandlerForMCP) GetRedactionEngine() RedactionEngine {
 	return f.redactor
 }
-func (f *fakeToolHandlerForMCP) ToolsList() []MCPTool { return f.tools }
-func (f *fakeToolHandlerForMCP) HandleToolCall(req JSONRPCRequest, name string, arguments json.RawMessage) (JSONRPCResponse, bool) {
+func (f *fakeToolHandlerForMCP) ToolsList() []mcp.MCPTool { return f.tools }
+func (f *fakeToolHandlerForMCP) HandleToolCall(req mcp.JSONRPCRequest, name string, arguments json.RawMessage) (mcp.JSONRPCResponse, bool) {
 	if f.handleFn == nil {
-		return JSONRPCResponse{}, false
+		return mcp.JSONRPCResponse{}, false
 	}
 	return f.handleFn(req, name, arguments)
 }
@@ -72,7 +72,7 @@ func mustDecodeJSON[T any](t *testing.T, raw json.RawMessage) T {
 
 func mustTelemetryMetadata(t *testing.T, raw json.RawMessage) map[string]any {
 	t.Helper()
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(raw, &result); err != nil {
 		t.Fatalf("json.Unmarshal(MCPToolResult) error = %v", err)
 	}
@@ -134,20 +134,20 @@ func TestMCPHandlerHandleRequestCorePaths(t *testing.T) {
 
 	h := NewMCPHandler(nil, "v1.2.3")
 
-	if resp := h.HandleRequest(JSONRPCRequest{JSONRPC: "2.0", Method: "ping"}); resp != nil {
+	if resp := h.HandleRequest(mcp.JSONRPCRequest{JSONRPC: "2.0", Method: "ping"}); resp != nil {
 		t.Fatalf("notification without ID should return nil, got %+v", resp)
 	}
-	notifyRequest := h.HandleRequest(JSONRPCRequest{JSONRPC: "2.0", ID: 1, Method: "notifications/initialized"})
+	notifyRequest := h.HandleRequest(mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1, Method: "notifications/initialized"})
 	if notifyRequest == nil || notifyRequest.Error == nil || notifyRequest.Error.Code != -32601 {
 		t.Fatalf("notifications/* request with id should return method-not-found, got %+v", notifyRequest)
 	}
 
-	unknown := h.HandleRequest(JSONRPCRequest{JSONRPC: "2.0", ID: 1, Method: "not/method"})
+	unknown := h.HandleRequest(mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1, Method: "not/method"})
 	if unknown == nil || unknown.Error == nil || unknown.Error.Code != -32601 {
 		t.Fatalf("unknown method response = %+v, want method-not-found error", unknown)
 	}
 
-	initReq := JSONRPCRequest{
+	initReq := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      2,
 		Method:  "initialize",
@@ -157,7 +157,7 @@ func TestMCPHandlerHandleRequestCorePaths(t *testing.T) {
 	if initResp == nil || initResp.Error != nil {
 		t.Fatalf("initialize response = %+v, want success", initResp)
 	}
-	initData := mustDecodeJSON[MCPInitializeResult](t, initResp.Result)
+	initData := mustDecodeJSON[mcp.MCPInitializeResult](t, initResp.Result)
 	if initData.ProtocolVersion != "2024-11-05" {
 		t.Fatalf("ProtocolVersion = %q, want %q", initData.ProtocolVersion, "2024-11-05")
 	}
@@ -165,24 +165,24 @@ func TestMCPHandlerHandleRequestCorePaths(t *testing.T) {
 		t.Fatalf("server version = %q, want v1.2.3", initData.ServerInfo.Version)
 	}
 
-	initFallback := h.HandleRequest(JSONRPCRequest{
+	initFallback := h.HandleRequest(mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      3,
 		Method:  "initialize",
 		Params:  json.RawMessage(`{"protocolVersion":"2023-01-01"}`),
 	})
-	initFallbackData := mustDecodeJSON[MCPInitializeResult](t, initFallback.Result)
+	initFallbackData := mustDecodeJSON[mcp.MCPInitializeResult](t, initFallback.Result)
 	if initFallbackData.ProtocolVersion != "2025-06-18" {
 		t.Fatalf("fallback protocol = %q, want latest supported version 2025-06-18", initFallbackData.ProtocolVersion)
 	}
 
-	initLatest := h.HandleRequest(JSONRPCRequest{
+	initLatest := h.HandleRequest(mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      4,
 		Method:  "initialize",
 		Params:  json.RawMessage(`{"protocolVersion":"2025-06-18"}`),
 	})
-	initLatestData := mustDecodeJSON[MCPInitializeResult](t, initLatest.Result)
+	initLatestData := mustDecodeJSON[mcp.MCPInitializeResult](t, initLatest.Result)
 	if initLatestData.ProtocolVersion != "2025-06-18" {
 		t.Fatalf("latest protocol = %q, want %q", initLatestData.ProtocolVersion, "2025-06-18")
 	}
@@ -197,14 +197,14 @@ func TestMCPHandlerResourceAndToolMethods(t *testing.T) {
 	th := &fakeToolHandlerForMCP{
 		cap:     capture.NewCapture(),
 		limiter: testLimiter{allowed: true},
-		tools: []MCPTool{
+		tools: []mcp.MCPTool{
 			{Name: "observe"},
 		},
-		handleFn: func(req JSONRPCRequest, name string, _ json.RawMessage) (JSONRPCResponse, bool) {
+		handleFn: func(req mcp.JSONRPCRequest, name string, _ json.RawMessage) (mcp.JSONRPCResponse, bool) {
 			if name != "observe" {
-				return JSONRPCResponse{}, false
+				return mcp.JSONRPCResponse{}, false
 			}
-			return JSONRPCResponse{
+			return mcp.JSONRPCResponse{
 				JSONRPC: "2.0",
 				ID:      req.ID,
 				Result:  json.RawMessage(`{"ok":true,"secret":"value"}`),
@@ -214,11 +214,11 @@ func TestMCPHandlerResourceAndToolMethods(t *testing.T) {
 	}
 	h.SetToolHandler(th)
 
-	resources := h.HandleRequest(JSONRPCRequest{JSONRPC: "2.0", ID: 1, Method: "resources/list"})
+	resources := h.HandleRequest(mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1, Method: "resources/list"})
 	if resources == nil || resources.Error != nil {
 		t.Fatalf("resources/list response = %+v, want success", resources)
 	}
-	resourceData := mustDecodeJSON[MCPResourcesListResult](t, resources.Result)
+	resourceData := mustDecodeJSON[mcp.MCPResourcesListResult](t, resources.Result)
 	if len(resourceData.Resources) != 3 {
 		t.Fatalf("resources/list result = %+v, want 3 resources", resourceData)
 	}
@@ -232,7 +232,7 @@ func TestMCPHandlerResourceAndToolMethods(t *testing.T) {
 		t.Fatalf("resources/list third resource = %q, want kaboom://quickstart", resourceData.Resources[2].URI)
 	}
 
-	readCapabilities := h.HandleRequest(JSONRPCRequest{
+	readCapabilities := h.HandleRequest(mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      40,
 		Method:  "resources/read",
@@ -241,12 +241,12 @@ func TestMCPHandlerResourceAndToolMethods(t *testing.T) {
 	if readCapabilities == nil || readCapabilities.Error != nil {
 		t.Fatalf("resources/read capabilities response = %+v, want success", readCapabilities)
 	}
-	readCapabilitiesData := mustDecodeJSON[MCPResourcesReadResult](t, readCapabilities.Result)
+	readCapabilitiesData := mustDecodeJSON[mcp.MCPResourcesReadResult](t, readCapabilities.Result)
 	if len(readCapabilitiesData.Contents) != 1 || readCapabilitiesData.Contents[0].URI != "kaboom://capabilities" {
 		t.Fatalf("resources/read capabilities result = %+v, want one capabilities content entry", readCapabilitiesData)
 	}
 
-	readInvalid := h.HandleRequest(JSONRPCRequest{
+	readInvalid := h.HandleRequest(mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      2,
 		Method:  "resources/read",
@@ -256,7 +256,7 @@ func TestMCPHandlerResourceAndToolMethods(t *testing.T) {
 		t.Fatalf("resources/read invalid params response = %+v", readInvalid)
 	}
 
-	readNotFound := h.HandleRequest(JSONRPCRequest{
+	readNotFound := h.HandleRequest(mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      3,
 		Method:  "resources/read",
@@ -266,7 +266,7 @@ func TestMCPHandlerResourceAndToolMethods(t *testing.T) {
 		t.Fatalf("resources/read not-found response = %+v", readNotFound)
 	}
 
-	readOK := h.HandleRequest(JSONRPCRequest{
+	readOK := h.HandleRequest(mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      4,
 		Method:  "resources/read",
@@ -275,12 +275,12 @@ func TestMCPHandlerResourceAndToolMethods(t *testing.T) {
 	if readOK == nil || readOK.Error != nil {
 		t.Fatalf("resources/read response = %+v, want success", readOK)
 	}
-	readData := mustDecodeJSON[MCPResourcesReadResult](t, readOK.Result)
+	readData := mustDecodeJSON[mcp.MCPResourcesReadResult](t, readOK.Result)
 	if len(readData.Contents) != 1 || readData.Contents[0].URI != "kaboom://guide" {
 		t.Fatalf("resources/read result = %+v, want one guide content entry", readData)
 	}
 
-	readQuickstart := h.HandleRequest(JSONRPCRequest{
+	readQuickstart := h.HandleRequest(mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      5,
 		Method:  "resources/read",
@@ -289,12 +289,12 @@ func TestMCPHandlerResourceAndToolMethods(t *testing.T) {
 	if readQuickstart == nil || readQuickstart.Error != nil {
 		t.Fatalf("resources/read quickstart response = %+v, want success", readQuickstart)
 	}
-	readQuickData := mustDecodeJSON[MCPResourcesReadResult](t, readQuickstart.Result)
+	readQuickData := mustDecodeJSON[mcp.MCPResourcesReadResult](t, readQuickstart.Result)
 	if len(readQuickData.Contents) != 1 || readQuickData.Contents[0].URI != "kaboom://quickstart" {
 		t.Fatalf("resources/read quickstart result = %+v, want one quickstart content entry", readQuickData)
 	}
 
-	readDemo := h.HandleRequest(JSONRPCRequest{
+	readDemo := h.HandleRequest(mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      6,
 		Method:  "resources/read",
@@ -303,12 +303,12 @@ func TestMCPHandlerResourceAndToolMethods(t *testing.T) {
 	if readDemo == nil || readDemo.Error != nil {
 		t.Fatalf("resources/read demo response = %+v, want success", readDemo)
 	}
-	readDemoData := mustDecodeJSON[MCPResourcesReadResult](t, readDemo.Result)
+	readDemoData := mustDecodeJSON[mcp.MCPResourcesReadResult](t, readDemo.Result)
 	if len(readDemoData.Contents) != 1 || readDemoData.Contents[0].URI != "kaboom://demo/ws" {
 		t.Fatalf("resources/read demo result = %+v, want demo content entry", readDemoData)
 	}
 
-	readPlaybook := h.HandleRequest(JSONRPCRequest{
+	readPlaybook := h.HandleRequest(mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      61,
 		Method:  "resources/read",
@@ -317,12 +317,12 @@ func TestMCPHandlerResourceAndToolMethods(t *testing.T) {
 	if readPlaybook == nil || readPlaybook.Error != nil {
 		t.Fatalf("resources/read playbook response = %+v, want success", readPlaybook)
 	}
-	readPlaybookData := mustDecodeJSON[MCPResourcesReadResult](t, readPlaybook.Result)
+	readPlaybookData := mustDecodeJSON[mcp.MCPResourcesReadResult](t, readPlaybook.Result)
 	if len(readPlaybookData.Contents) != 1 || readPlaybookData.Contents[0].URI != "kaboom://playbook/performance/quick" {
 		t.Fatalf("resources/read playbook result = %+v, want playbook content entry", readPlaybookData)
 	}
 
-	readSecurityPlaybook := h.HandleRequest(JSONRPCRequest{
+	readSecurityPlaybook := h.HandleRequest(mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      62,
 		Method:  "resources/read",
@@ -331,12 +331,12 @@ func TestMCPHandlerResourceAndToolMethods(t *testing.T) {
 	if readSecurityPlaybook == nil || readSecurityPlaybook.Error != nil {
 		t.Fatalf("resources/read security playbook response = %+v, want success", readSecurityPlaybook)
 	}
-	readSecurityPlaybookData := mustDecodeJSON[MCPResourcesReadResult](t, readSecurityPlaybook.Result)
+	readSecurityPlaybookData := mustDecodeJSON[mcp.MCPResourcesReadResult](t, readSecurityPlaybook.Result)
 	if len(readSecurityPlaybookData.Contents) != 1 || readSecurityPlaybookData.Contents[0].URI != "kaboom://playbook/security/full" {
 		t.Fatalf("resources/read security playbook result = %+v, want security playbook content entry", readSecurityPlaybookData)
 	}
 
-	readAliasedPlaybook := h.HandleRequest(JSONRPCRequest{
+	readAliasedPlaybook := h.HandleRequest(mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      63,
 		Method:  "resources/read",
@@ -345,12 +345,12 @@ func TestMCPHandlerResourceAndToolMethods(t *testing.T) {
 	if readAliasedPlaybook == nil || readAliasedPlaybook.Error != nil {
 		t.Fatalf("resources/read aliased playbook response = %+v, want success", readAliasedPlaybook)
 	}
-	readAliasedPlaybookData := mustDecodeJSON[MCPResourcesReadResult](t, readAliasedPlaybook.Result)
+	readAliasedPlaybookData := mustDecodeJSON[mcp.MCPResourcesReadResult](t, readAliasedPlaybook.Result)
 	if len(readAliasedPlaybookData.Contents) != 1 || readAliasedPlaybookData.Contents[0].URI != "kaboom://playbook/security/quick" {
 		t.Fatalf("resources/read aliased playbook result = %+v, want canonical security/quick content entry", readAliasedPlaybookData)
 	}
 
-	readBareCapability := h.HandleRequest(JSONRPCRequest{
+	readBareCapability := h.HandleRequest(mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      64,
 		Method:  "resources/read",
@@ -359,12 +359,12 @@ func TestMCPHandlerResourceAndToolMethods(t *testing.T) {
 	if readBareCapability == nil || readBareCapability.Error != nil {
 		t.Fatalf("resources/read bare capability response = %+v, want success defaulting to quick", readBareCapability)
 	}
-	readBareCapabilityData := mustDecodeJSON[MCPResourcesReadResult](t, readBareCapability.Result)
+	readBareCapabilityData := mustDecodeJSON[mcp.MCPResourcesReadResult](t, readBareCapability.Result)
 	if len(readBareCapabilityData.Contents) != 1 || readBareCapabilityData.Contents[0].URI != "kaboom://playbook/security/quick" {
 		t.Fatalf("resources/read bare capability result = %+v, want canonical security/quick content entry", readBareCapabilityData)
 	}
 
-	readInvalidPlaybook := h.HandleRequest(JSONRPCRequest{
+	readInvalidPlaybook := h.HandleRequest(mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      65,
 		Method:  "resources/read",
@@ -374,7 +374,7 @@ func TestMCPHandlerResourceAndToolMethods(t *testing.T) {
 		t.Fatalf("resources/read invalid playbook response = %+v, want -32002 error", readInvalidPlaybook)
 	}
 
-	readInvalidDemo := h.HandleRequest(JSONRPCRequest{
+	readInvalidDemo := h.HandleRequest(mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      66,
 		Method:  "resources/read",
@@ -384,21 +384,21 @@ func TestMCPHandlerResourceAndToolMethods(t *testing.T) {
 		t.Fatalf("resources/read invalid demo response = %+v, want -32002 error", readInvalidDemo)
 	}
 
-	templates := h.HandleRequest(JSONRPCRequest{JSONRPC: "2.0", ID: 7, Method: "resources/templates/list"})
+	templates := h.HandleRequest(mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 7, Method: "resources/templates/list"})
 	if templates == nil || templates.Error != nil {
 		t.Fatalf("resources/templates/list response = %+v, want success", templates)
 	}
 
-	toolsList := h.HandleRequest(JSONRPCRequest{JSONRPC: "2.0", ID: 6, Method: "tools/list"})
+	toolsList := h.HandleRequest(mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 6, Method: "tools/list"})
 	if toolsList == nil || toolsList.Error != nil {
 		t.Fatalf("tools/list response = %+v, want success", toolsList)
 	}
-	toolsData := mustDecodeJSON[MCPToolsListResult](t, toolsList.Result)
+	toolsData := mustDecodeJSON[mcp.MCPToolsListResult](t, toolsList.Result)
 	if len(toolsData.Tools) != 1 || toolsData.Tools[0].Name != "observe" {
 		t.Fatalf("tools/list result = %+v, want observe tool", toolsData)
 	}
 
-	callInvalid := h.HandleRequest(JSONRPCRequest{
+	callInvalid := h.HandleRequest(mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      7,
 		Method:  "tools/call",
@@ -408,7 +408,7 @@ func TestMCPHandlerResourceAndToolMethods(t *testing.T) {
 		t.Fatalf("tools/call invalid params response = %+v", callInvalid)
 	}
 
-	callUnknown := h.HandleRequest(JSONRPCRequest{
+	callUnknown := h.HandleRequest(mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      8,
 		Method:  "tools/call",
@@ -418,7 +418,7 @@ func TestMCPHandlerResourceAndToolMethods(t *testing.T) {
 		t.Fatalf("tools/call unknown response = %+v", callUnknown)
 	}
 
-	callObserve := h.HandleRequest(JSONRPCRequest{
+	callObserve := h.HandleRequest(mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      9,
 		Method:  "tools/call",
@@ -450,11 +450,11 @@ func TestMCPHandler_AppendsServerWarningsToToolResponse(t *testing.T) {
 	h.SetToolHandler(&fakeToolHandlerForMCP{
 		cap:     capture.NewCapture(),
 		limiter: testLimiter{allowed: true},
-		handleFn: func(req JSONRPCRequest, name string, _ json.RawMessage) (JSONRPCResponse, bool) {
+		handleFn: func(req mcp.JSONRPCRequest, name string, _ json.RawMessage) (mcp.JSONRPCResponse, bool) {
 			if name != "observe" {
-				return JSONRPCResponse{}, false
+				return mcp.JSONRPCResponse{}, false
 			}
-			return JSONRPCResponse{
+			return mcp.JSONRPCResponse{
 				JSONRPC: "2.0",
 				ID:      req.ID,
 				Result:  mcp.TextResponse("ok"),
@@ -462,7 +462,7 @@ func TestMCPHandler_AppendsServerWarningsToToolResponse(t *testing.T) {
 		},
 	})
 
-	resp := h.HandleRequest(JSONRPCRequest{
+	resp := h.HandleRequest(mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "tools/call",
@@ -471,7 +471,7 @@ func TestMCPHandler_AppendsServerWarningsToToolResponse(t *testing.T) {
 	if resp == nil || resp.Error != nil {
 		t.Fatalf("tools/call response = %+v, want success", resp)
 	}
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("result unmarshal error = %v", err)
 	}
@@ -484,7 +484,7 @@ func TestMCPHandler_AppendsServerWarningsToToolResponse(t *testing.T) {
 	}
 
 	// Warning should be one-shot.
-	resp2 := h.HandleRequest(JSONRPCRequest{
+	resp2 := h.HandleRequest(mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      2,
 		Method:  "tools/call",
@@ -493,7 +493,7 @@ func TestMCPHandler_AppendsServerWarningsToToolResponse(t *testing.T) {
 	if resp2 == nil || resp2.Error != nil {
 		t.Fatalf("second tools/call response = %+v, want success", resp2)
 	}
-	var result2 MCPToolResult
+	var result2 mcp.MCPToolResult
 	if err := json.Unmarshal(resp2.Result, &result2); err != nil {
 		t.Fatalf("second result unmarshal error = %v", err)
 	}
@@ -518,7 +518,7 @@ func TestMCPHandler_WarnsOnUnknownToolArguments(t *testing.T) {
 	h.SetToolHandler(&fakeToolHandlerForMCP{
 		cap:     capture.NewCapture(),
 		limiter: testLimiter{allowed: true},
-		tools: []MCPTool{
+		tools: []mcp.MCPTool{
 			{
 				Name: "observe",
 				InputSchema: map[string]any{
@@ -529,15 +529,15 @@ func TestMCPHandler_WarnsOnUnknownToolArguments(t *testing.T) {
 				},
 			},
 		},
-		handleFn: func(req JSONRPCRequest, name string, _ json.RawMessage) (JSONRPCResponse, bool) {
+		handleFn: func(req mcp.JSONRPCRequest, name string, _ json.RawMessage) (mcp.JSONRPCResponse, bool) {
 			if name != "observe" {
-				return JSONRPCResponse{}, false
+				return mcp.JSONRPCResponse{}, false
 			}
-			return JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.TextResponse("ok")}, true
+			return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.TextResponse("ok")}, true
 		},
 	})
 
-	resp := h.HandleRequest(JSONRPCRequest{
+	resp := h.HandleRequest(mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "tools/call",
@@ -547,7 +547,7 @@ func TestMCPHandler_WarnsOnUnknownToolArguments(t *testing.T) {
 		t.Fatalf("tools/call response = %+v, want success", resp)
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("result unmarshal error = %v", err)
 	}
@@ -575,7 +575,7 @@ func TestMCPHandler_DoesNotWarnOnKnownToolArguments(t *testing.T) {
 	h.SetToolHandler(&fakeToolHandlerForMCP{
 		cap:     capture.NewCapture(),
 		limiter: testLimiter{allowed: true},
-		tools: []MCPTool{
+		tools: []mcp.MCPTool{
 			{
 				Name: "observe",
 				InputSchema: map[string]any{
@@ -586,15 +586,15 @@ func TestMCPHandler_DoesNotWarnOnKnownToolArguments(t *testing.T) {
 				},
 			},
 		},
-		handleFn: func(req JSONRPCRequest, name string, _ json.RawMessage) (JSONRPCResponse, bool) {
+		handleFn: func(req mcp.JSONRPCRequest, name string, _ json.RawMessage) (mcp.JSONRPCResponse, bool) {
 			if name != "observe" {
-				return JSONRPCResponse{}, false
+				return mcp.JSONRPCResponse{}, false
 			}
-			return JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.TextResponse("ok")}, true
+			return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.TextResponse("ok")}, true
 		},
 	})
 
-	resp := h.HandleRequest(JSONRPCRequest{
+	resp := h.HandleRequest(mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "tools/call",
@@ -604,7 +604,7 @@ func TestMCPHandler_DoesNotWarnOnKnownToolArguments(t *testing.T) {
 		t.Fatalf("tools/call response = %+v, want success", resp)
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("result unmarshal error = %v", err)
 	}
@@ -624,7 +624,7 @@ func TestMCPHandlerToolRateLimit(t *testing.T) {
 		limiter: testLimiter{allowed: false},
 	})
 
-	resp := h.HandleRequest(JSONRPCRequest{
+	resp := h.HandleRequest(mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "tools/call",

@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
@@ -21,7 +22,7 @@ func TestToolObserveFailedCommands_NoFailed(t *testing.T) {
 	env := newObserveTestEnv(t)
 
 	args := json.RawMessage(`{}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.toolObserveFailedCommands(req, args)
 
 	result := parseToolResult(t, resp)
@@ -56,7 +57,7 @@ func TestToolObserveFailedCommands_WithFailed(t *testing.T) {
 	env.capture.ExpireCommand("test-fail-cmd")
 
 	args := json.RawMessage(`{}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.toolObserveFailedCommands(req, args)
 
 	result := parseToolResult(t, resp)

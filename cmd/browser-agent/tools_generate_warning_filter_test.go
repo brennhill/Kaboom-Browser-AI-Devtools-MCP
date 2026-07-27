@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 func TestGenerateTestFromContext_NoWarningsForDispatchParams(t *testing.T) {
@@ -58,7 +59,7 @@ func TestHandleGenerateTestFromContext_FiltersOnlyDispatchWarnings(t *testing.T)
 		{Type: "click", Timestamp: 1200, URL: "https://example.com", Selectors: map[string]any{"text": "Login"}},
 	})
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.testGen().HandleGenerateTestFromContext(req, json.RawMessage(`{"what":"test_from_context","context":"interaction","typo_field":true}`))
 	result := parseToolResult(t, resp)
 	if result.IsError {
@@ -99,7 +100,7 @@ func TestHandleGenerateTestHeal_FiltersOnlyDispatchWarnings(t *testing.T) {
 	h := newTestToolHandler()
 	testDir := makeProjectTempDir(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.testGen().HandleGenerateTestHeal(req, json.RawMessage(fmt.Sprintf(`{"what":"test_heal","action":"batch","test_dir":%q,"typo_field":true}`, testDir)))
 	result := parseToolResult(t, resp)
 	if result.IsError {
@@ -123,7 +124,7 @@ func TestHandleGenerateTestClassify_FiltersOnlyDispatchWarnings(t *testing.T) {
 
 	h := newTestToolHandler()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.testGen().HandleGenerateTestClassify(req, json.RawMessage(`{"what":"test_classify","action":"failure","failure":{"test_name":"login test","error":"Timeout waiting for selector \"#login-btn\""},"typo_field":true}`))
 	result := parseToolResult(t, resp)
 	if result.IsError {
@@ -154,7 +155,7 @@ func makeProjectTempDir(t *testing.T) string {
 	return dir
 }
 
-func warningsBlock(result MCPToolResult) (string, bool) {
+func warningsBlock(result mcp.MCPToolResult) (string, bool) {
 	for _, block := range result.Content {
 		if strings.HasPrefix(block.Text, "_warnings:") {
 			return block.Text, true

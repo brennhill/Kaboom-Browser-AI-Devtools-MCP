@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 func TestCommandResult_EvidenceAlwaysIncludesBeforeAfterPaths(t *testing.T) {
@@ -49,7 +51,7 @@ func TestCommandResult_EvidenceAlwaysIncludesBeforeAfterPaths(t *testing.T) {
 
 	env.capture.CompleteCommand(corrID, json.RawMessage(`{"success":true}`), "")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 2}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
 	resp := env.handler.toolObserveCommandResult(req, args)
 	observe := parseToolResult(t, resp)
@@ -105,7 +107,7 @@ func TestCommandResult_EvidenceOnMutationSkipsReadOnlyAction(t *testing.T) {
 
 	env.capture.CompleteCommand(corrID, json.RawMessage(`{"success":true,"value":"headline"}`), "")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 2}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
 	resp := env.handler.toolObserveCommandResult(req, args)
 	observe := parseToolResult(t, resp)
@@ -173,7 +175,7 @@ func TestCommandResult_EvidencePartialWhenAfterCaptureFails(t *testing.T) {
 
 	env.capture.ApplyCommandResult(corrID, "error", json.RawMessage(`{"success":false,"error":"element_not_found"}`), "element_not_found")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 2}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
 	resp := env.handler.toolObserveCommandResult(req, args)
 	observe := parseToolResult(t, resp)

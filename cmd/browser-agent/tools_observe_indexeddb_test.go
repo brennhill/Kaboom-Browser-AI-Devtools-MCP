@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 func TestObserveIndexedDB_MissingDatabase(t *testing.T) {
@@ -16,7 +18,7 @@ func TestObserveIndexedDB_MissingDatabase(t *testing.T) {
 	h, _, cap := makeToolHandler(t)
 	cap.SetTrackingStatusForTest(11, "https://app.example.com")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolObserve(req, json.RawMessage(`{"what":"indexeddb","store":"users"}`))
 	result := parseToolResult(t, resp)
 	if !result.IsError {
@@ -33,7 +35,7 @@ func TestObserveIndexedDB_MissingStore(t *testing.T) {
 	h, _, cap := makeToolHandler(t)
 	cap.SetTrackingStatusForTest(11, "https://app.example.com")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolObserve(req, json.RawMessage(`{"what":"indexeddb","database":"app-cache"}`))
 	result := parseToolResult(t, resp)
 	if !result.IsError {
@@ -70,7 +72,7 @@ func TestObserveIndexedDB_ReturnsEntries(t *testing.T) {
 		scriptCh <- ""
 	}()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolObserve(req, json.RawMessage(`{"what":"indexeddb","database":"app-cache","store":"users","limit":10}`))
 	result := parseToolResult(t, resp)
 	if result.IsError {
@@ -144,7 +146,7 @@ func TestObserveStorage_IncludesIndexedDBListing(t *testing.T) {
 		scriptCh <- ""
 	}()
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolObserve(req, json.RawMessage(`{"what":"storage"}`))
 	result := parseToolResult(t, resp)
 	if result.IsError {

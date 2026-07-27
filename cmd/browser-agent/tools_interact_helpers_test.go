@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -62,7 +63,7 @@ func TestQueueComposableSubtitle_QueuesPendingQuery(t *testing.T) {
 	t.Parallel()
 	env := newInteractHelpersTestEnv(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	env.handler.interactAction().QueueComposableSubtitle(req, "Test subtitle text")
 
 	// Verify a pending query was created
@@ -91,7 +92,7 @@ func TestQueueComposableSubtitle_CorrelationIDHasPrefix(t *testing.T) {
 	t.Parallel()
 	env := newInteractHelpersTestEnv(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	env.handler.interactAction().QueueComposableSubtitle(req, "text")
 
 	queries := env.capture.GetPendingQueries()
@@ -110,7 +111,7 @@ func TestQueueComposableSubtitle_EmptyText(t *testing.T) {
 	t.Parallel()
 	env := newInteractHelpersTestEnv(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	// Empty text is valid (clears the subtitle)
 	env.handler.interactAction().QueueComposableSubtitle(req, "")
 
@@ -137,7 +138,7 @@ func TestQueueComposableSubtitle_UniqueCorrelationIDs(t *testing.T) {
 	t.Parallel()
 	env := newInteractHelpersTestEnv(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	env.handler.interactAction().QueueComposableSubtitle(req, "first")
 	env.handler.interactAction().QueueComposableSubtitle(req, "second")
 
@@ -164,7 +165,7 @@ func TestQueueComposableActionDiff_QueuesPendingQuery(t *testing.T) {
 	t.Parallel()
 	env := newInteractHelpersTestEnv(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	env.handler.interactAction().QueueComposableActionDiff(req)
 
 	// Verify a pending query was created with type "dom_action"
@@ -192,7 +193,7 @@ func TestQueueComposableActionDiff_CorrelationIDPrefix(t *testing.T) {
 	t.Parallel()
 	env := newInteractHelpersTestEnv(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	env.handler.interactAction().QueueComposableActionDiff(req)
 
 	queries := env.capture.GetPendingQueries()
@@ -218,7 +219,7 @@ func TestQueueComposableActionDiff_HasTimeoutParam(t *testing.T) {
 	t.Parallel()
 	env := newInteractHelpersTestEnv(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	env.handler.interactAction().QueueComposableActionDiff(req)
 
 	queries := env.capture.GetPendingQueries()
@@ -255,7 +256,7 @@ func TestQueueStateNavigation_QueuesBrowserAction(t *testing.T) {
 		"url":   "https://example.com/page",
 		"title": "Test Page",
 	}
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	env.handler.stateInteract().QueueStateNavigation(req, stateData)
 
 	// Should have queued a browser_action query
@@ -299,7 +300,7 @@ func TestQueueStateNavigation_SkipsWhenPilotDisabled(t *testing.T) {
 		"url":   "https://example.com/page",
 		"title": "Test Page",
 	}
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	env.handler.stateInteract().QueueStateNavigation(req, stateData)
 
 	queries := env.capture.GetPendingQueries()
@@ -323,7 +324,7 @@ func TestQueueStateNavigation_SkipsWhenURLEmpty(t *testing.T) {
 		"url":   "",
 		"title": "No URL",
 	}
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	env.handler.stateInteract().QueueStateNavigation(req, stateData)
 
 	queries := env.capture.GetPendingQueries()
@@ -342,7 +343,7 @@ func TestQueueStateNavigation_SkipsWhenURLMissing(t *testing.T) {
 	stateData := map[string]any{
 		"title": "No URL key",
 	}
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	env.handler.stateInteract().QueueStateNavigation(req, stateData)
 
 	queries := env.capture.GetPendingQueries()
@@ -361,7 +362,7 @@ func TestQueueStateNavigation_SkipsWhenURLNotString(t *testing.T) {
 	stateData := map[string]any{
 		"url": 12345, // not a string
 	}
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	env.handler.stateInteract().QueueStateNavigation(req, stateData)
 
 	queries := env.capture.GetPendingQueries()
@@ -381,7 +382,7 @@ func TestQueueStateNavigation_CorrelationIDHasNavPrefix(t *testing.T) {
 	stateData := map[string]any{
 		"url": "https://example.com",
 	}
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	env.handler.stateInteract().QueueStateNavigation(req, stateData)
 
 	corrID, ok := stateData["correlation_id"].(string)

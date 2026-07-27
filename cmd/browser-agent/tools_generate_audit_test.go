@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -51,18 +52,18 @@ func newGenerateTestEnv(t *testing.T) *generateTestEnv {
 }
 
 // callGenerate invokes the generate tool and returns parsed result
-func (e *generateTestEnv) callGenerate(t *testing.T, argsJSON string) (MCPToolResult, bool) {
+func (e *generateTestEnv) callGenerate(t *testing.T, argsJSON string) (mcp.MCPToolResult, bool) {
 	t.Helper()
 
 	args := json.RawMessage(argsJSON)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := e.handler.toolGenerate(req, args)
 
 	if resp.Result == nil {
-		return MCPToolResult{}, false
+		return mcp.MCPToolResult{}, false
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("failed to parse result: %v", err)
 	}
@@ -352,7 +353,7 @@ func TestGenerateAudit_InvalidJSON_ReturnsParseError(t *testing.T) {
 	env := newGenerateTestEnv(t)
 
 	args := json.RawMessage(`{invalid json here}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.toolGenerate(req, args)
 
 	// ASSERTION: Returns some response (not nil/panic)
@@ -362,7 +363,7 @@ func TestGenerateAudit_InvalidJSON_ReturnsParseError(t *testing.T) {
 
 	// If result, should be error
 	if resp.Result != nil {
-		var result MCPToolResult
+		var result mcp.MCPToolResult
 		_ = json.Unmarshal(resp.Result, &result)
 		if !result.IsError {
 			t.Error("invalid JSON MUST return isError:true")
@@ -448,7 +449,7 @@ func TestGenerateAudit_AllFormats_NoPanic(t *testing.T) {
 			}()
 
 			args := json.RawMessage(tc.args)
-			req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+			req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 			resp := env.handler.toolGenerate(req, args)
 
 			// ASSERTION: Returns something

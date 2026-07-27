@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 )
@@ -96,7 +97,7 @@ func TestToolAnalyzeErrors_NoErrors(t *testing.T) {
 	t.Parallel()
 	env := newObserveTestEnv(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := observe.AnalyzeErrors(env.handler, req, nil)
 
 	result := parseToolResult(t, resp)
@@ -111,24 +112,24 @@ func TestToolAnalyzeErrors_WithClusters(t *testing.T) {
 	t.Parallel()
 	env := newObserveTestEnv(t)
 
-	env.addLogEntry(LogEntry{
+	env.addLogEntry(mcp.LogEntry{
 		"level":     "error",
 		"message":   "TypeError: Cannot read property 'foo' of null",
 		"timestamp": "2024-01-01T00:00:01Z",
 		"url":       "https://example.com/app.js",
 	})
-	env.addLogEntry(LogEntry{
+	env.addLogEntry(mcp.LogEntry{
 		"level":     "error",
 		"message":   "TypeError: Cannot read property 'foo' of null",
 		"timestamp": "2024-01-01T00:00:02Z",
 		"url":       "https://example.com/app.js",
 	})
-	env.addLogEntry(LogEntry{
+	env.addLogEntry(mcp.LogEntry{
 		"level":   "info",
 		"message": "Application loaded",
 	})
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := observe.AnalyzeErrors(env.handler, req, nil)
 
 	result := parseToolResult(t, resp)
@@ -158,7 +159,7 @@ func TestToolAnalyzeHistory_Empty(t *testing.T) {
 	env := newObserveTestEnv(t)
 
 	args := json.RawMessage(`{"what":"history"}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := observe.AnalyzeHistory(env.handler, req, args)
 
 	result := parseToolResult(t, resp)
@@ -180,7 +181,7 @@ func TestToolAnalyzeHistory_WithNavigations(t *testing.T) {
 	})
 
 	args := json.RawMessage(`{"what":"history"}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := observe.AnalyzeHistory(env.handler, req, args)
 
 	result := parseToolResult(t, resp)
@@ -200,7 +201,7 @@ func TestToolGetScreenshot_TrackingDisabled(t *testing.T) {
 	env := newObserveTestEnv(t)
 
 	args := json.RawMessage(`{"what":"screenshot"}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := observe.GetScreenshot(env.handler, req, args)
 
 	result := parseToolResult(t, resp)
@@ -222,7 +223,7 @@ func TestToolRunA11yAudit_TrackingDisabled(t *testing.T) {
 	env := newObserveTestEnv(t)
 
 	args := json.RawMessage(`{"what":"accessibility"}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := observe.RunA11yAudit(env.handler, req, args)
 
 	result := parseToolResult(t, resp)

@@ -14,6 +14,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -406,7 +408,7 @@ func TestInteract_AutoDismiss_NoPanic(t *testing.T) {
 	}()
 
 	args := json.RawMessage(`{"what":"auto_dismiss_overlays"}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.toolInteract(req, args)
 	if resp.Result == nil && resp.Error == nil {
 		t.Error("interact(auto_dismiss_overlays) returned nil response")
@@ -424,7 +426,7 @@ func TestInteract_WaitForStable_NoPanic(t *testing.T) {
 	}()
 
 	args := json.RawMessage(`{"what":"wait_for_stable"}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.toolInteract(req, args)
 	if resp.Result == nil && resp.Error == nil {
 		t.Error("interact(wait_for_stable) returned nil response")

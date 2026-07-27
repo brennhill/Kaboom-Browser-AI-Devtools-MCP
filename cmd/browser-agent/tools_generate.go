@@ -27,13 +27,13 @@ var generateHandlers = map[string]ModeHandler{
 	"annotation_report": method((*ToolHandler).toolGenerateAnnotationReport),
 	"annotation_issues": method((*ToolHandler).toolGenerateAnnotationIssues),
 	// Sub-handler delegates (require closures — testGen() accessor)
-	"test_from_context": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	"test_from_context": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return h.testGen().HandleGenerateTestFromContext(req, args)
 	},
-	"test_heal": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	"test_heal": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return h.testGen().HandleGenerateTestHeal(req, args)
 	},
-	"test_classify": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	"test_classify": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return h.testGen().HandleGenerateTestClassify(req, args)
 	},
 }
@@ -64,13 +64,13 @@ var generateRegistry = toolRegistry{
 		ToolName:   "generate",
 		ValidModes: "", // populated lazily
 	},
-	PreDispatch: func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage, what string) (json.RawMessage, *JSONRPCResponse) {
+	PreDispatch: func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage, what string) (json.RawMessage, *mcp.JSONRPCResponse) {
 		return args, toolgenerate.ValidateGenerateParams(req, what, args)
 	},
 }
 
 // toolGenerate dispatches generate requests based on the 'what' parameter.
-func (h *ToolHandler) toolGenerate(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolGenerate(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	reg := generateRegistry
 	reg.Resolution.ValidModes = getValidGenerateFormats()
 	return h.dispatchTool(req, args, reg)
@@ -81,43 +81,43 @@ func (h *ToolHandler) generateDeps() toolgenerate.Deps {
 	return h
 }
 
-func (h *ToolHandler) toolExportHAR(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolExportHAR(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return toolgenerate.HandleExportHAR(h.generateDeps(), req, args)
 }
 
-func (h *ToolHandler) toolGeneratePRSummary(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolGeneratePRSummary(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return toolgenerate.HandlePRSummary(h.generateDeps(), req, args)
 }
 
-func (h *ToolHandler) toolExportSARIF(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolExportSARIF(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return toolgenerate.HandleExportSARIF(h.generateDeps(), req, args)
 }
 
-func (h *ToolHandler) toolGenerateCSP(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolGenerateCSP(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return toolgenerate.HandleGenerateCSP(h.generateDeps(), req, args)
 }
 
-func (h *ToolHandler) toolGenerateSRI(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolGenerateSRI(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return toolgenerate.HandleGenerateSRI(h.generateDeps(), req, args)
 }
 
-func (h *ToolHandler) toolGenerateTest(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolGenerateTest(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return toolgenerate.HandleGenerateTest(h.generateDeps(), req, args)
 }
 
-func (h *ToolHandler) toolGenerateVisualTest(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolGenerateVisualTest(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return annotations.HandleVisualTest(h, req, args)
 }
 
-func (h *ToolHandler) toolGenerateAnnotationReport(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolGenerateAnnotationReport(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return annotations.HandleAnnotationReport(h, req, args)
 }
 
-func (h *ToolHandler) toolGenerateAnnotationIssues(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolGenerateAnnotationIssues(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return annotations.HandleAnnotationIssues(h, req, args)
 }
 
-func (h *ToolHandler) toolGetReproductionScript(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolGetReproductionScript(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	params := reproduction.ParseParams(args)
 	if err := reproduction.ValidateOutputFormat(params.OutputFormat); err != "" {
 		return mcp.Fail(req, mcp.ErrInvalidParam, err, "Use 'kaboom' or 'playwright'", mcp.WithParam("output_format"))

@@ -7,10 +7,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"strings"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/asyncresult"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
@@ -28,10 +29,10 @@ func (h *ToolHandler) attachTransientElements(responseData map[string]any, since
 	asyncresult.AttachTransientElements(responseData, h.capture.GetAllEnhancedActions(), since)
 }
 
-func (h *ToolHandler) EnqueuePendingQuery(req JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (JSONRPCResponse, bool) {
+func (h *ToolHandler) EnqueuePendingQuery(req mcp.JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (mcp.JSONRPCResponse, bool) {
 	_, err := h.capture.CreatePendingQueryWithTimeout(query, timeout, req.ClientID)
 	if err == nil {
-		return JSONRPCResponse{}, false
+		return mcp.JSONRPCResponse{}, false
 	}
 	if errors.Is(err, queries.ErrQueueFull) {
 		return mcp.Fail(req, mcp.ErrQueueFull,
@@ -86,7 +87,7 @@ func (h *ToolHandler) finalizeResponseEnrichment(corrID string, responseData map
 	h.interactAction().AttachRetryContext(corrID, responseData, cmd.Status, cmd.Error)
 }
 
-func (h *ToolHandler) formatCommandResult(req JSONRPCRequest, cmd queries.CommandResult, corrID string) JSONRPCResponse {
+func (h *ToolHandler) formatCommandResult(req mcp.JSONRPCRequest, cmd queries.CommandResult, corrID string) mcp.JSONRPCResponse {
 	traceID := cmd.TraceID
 	if traceID == "" {
 		traceID = cmd.CorrelationID
@@ -127,7 +128,7 @@ func (h *ToolHandler) formatCommandResult(req JSONRPCRequest, cmd queries.Comman
 	}
 }
 
-func (h *ToolHandler) formatErrorCommandResult(req JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) JSONRPCResponse {
+func (h *ToolHandler) formatErrorCommandResult(req mcp.JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) mcp.JSONRPCResponse {
 	responseData["final"] = true
 	if cmd.Error == "" {
 		cmd.Error = "Command failed in extension"
@@ -151,7 +152,7 @@ func (h *ToolHandler) formatErrorCommandResult(req JSONRPCRequest, cmd queries.C
 	return toolresp.FailJSON(req, summary, responseData)
 }
 
-func (h *ToolHandler) formatExpiredCommandResult(req JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) JSONRPCResponse {
+func (h *ToolHandler) formatExpiredCommandResult(req mcp.JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) mcp.JSONRPCResponse {
 	responseData["final"] = true
 	responseData["error"] = mcp.ErrExtTimeout
 	responseData["message"] = fmt.Sprintf("Command %s expired before the extension could execute it. Error: %s", corrID, cmd.Error)
@@ -163,7 +164,7 @@ func (h *ToolHandler) formatExpiredCommandResult(req JSONRPCRequest, cmd queries
 	return toolresp.FailJSON(req, summary, responseData)
 }
 
-func (h *ToolHandler) formatTimeoutCommandResult(req JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) JSONRPCResponse {
+func (h *ToolHandler) formatTimeoutCommandResult(req mcp.JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) mcp.JSONRPCResponse {
 	responseData["final"] = true
 	responseData["error"] = mcp.ErrExtTimeout
 	responseData["message"] = fmt.Sprintf("Command %s timed out waiting for the extension to respond. Error: %s", corrID, cmd.Error)
@@ -179,7 +180,7 @@ func (h *ToolHandler) formatTimeoutCommandResult(req JSONRPCRequest, cmd queries
 	return toolresp.FailJSON(req, summary, responseData)
 }
 
-func (h *ToolHandler) formatCancelledCommandResult(req JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) JSONRPCResponse {
+func (h *ToolHandler) formatCancelledCommandResult(req mcp.JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) mcp.JSONRPCResponse {
 	responseData["final"] = true
 	responseData["error"] = mcp.ErrExtError
 	responseData["message"] = fmt.Sprintf("Command %s was cancelled before completion.", corrID)
@@ -214,7 +215,7 @@ func attachTraceSummary(responseData map[string]any, cmd queries.CommandResult) 
 	responseData["trace"] = trace
 }
 
-func (h *ToolHandler) formatCompleteCommand(req JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) JSONRPCResponse {
+func (h *ToolHandler) formatCompleteCommand(req mcp.JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) mcp.JSONRPCResponse {
 	normalizedResult, normalizedErr := asyncresult.NormalizeCompleteCommandResult(corrID, cmd.Result)
 	responseData["result"] = normalizedResult
 	responseData["completed_at"] = cmd.CompletedAt.Format(time.RFC3339)
@@ -316,7 +317,7 @@ func (h *ToolHandler) waitForCommandWithConnectivity(correlationID string, timeo
 	}
 }
 
-func (h *ToolHandler) finalizePendingDisconnect(req JSONRPCRequest, correlationID string) JSONRPCResponse {
+func (h *ToolHandler) finalizePendingDisconnect(req mcp.JSONRPCRequest, correlationID string) mcp.JSONRPCResponse {
 	h.capture.ApplyCommandResult(correlationID, "error", nil, "extension_disconnected")
 	if cmd, found := h.capture.GetCommandResult(correlationID); found && cmd != nil {
 		return h.formatCommandResult(req, *cmd, correlationID)
@@ -330,7 +331,7 @@ func (h *ToolHandler) finalizePendingDisconnect(req JSONRPCRequest, correlationI
 
 // MaybeWaitForCommand implements sync-by-default command completion. Explicit
 // background/async requests return a polling handle immediately.
-func (h *ToolHandler) MaybeWaitForCommand(req JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) JSONRPCResponse {
+func (h *ToolHandler) MaybeWaitForCommand(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse {
 	var params struct {
 		Sync       *bool `json:"sync"`
 		Wait       *bool `json:"wait"`

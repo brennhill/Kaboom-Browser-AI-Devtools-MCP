@@ -8,6 +8,28 @@ import (
 	"encoding/json"
 )
 
+const (
+	ProtocolVersionLatest = "2025-06-18"
+	ProtocolVersionLegacy = "2024-11-05"
+)
+
+// NegotiateProtocolVersion selects the newest protocol version supported by both
+// the client request and this server.
+func NegotiateProtocolVersion(rawParams json.RawMessage) string {
+	var params struct {
+		ProtocolVersion string `json:"protocolVersion"` // SPEC:MCP
+	}
+	if len(rawParams) > 0 {
+		_ = json.Unmarshal(rawParams, &params)
+	}
+	switch params.ProtocolVersion {
+	case ProtocolVersionLatest, ProtocolVersionLegacy:
+		return params.ProtocolVersion
+	default:
+		return ProtocolVersionLatest
+	}
+}
+
 // JSONRPCRequest represents an incoming JSON-RPC 2.0 request.
 type JSONRPCRequest struct {
 	JSONRPC string `json:"jsonrpc"` // camelCase: JSON-RPC 2.0 spec standard

@@ -23,6 +23,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/clientreg"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
@@ -209,7 +210,7 @@ func initCapture(server *Server, port int) *capture.Store {
 	cap.SetClientRegistry(newSessionClientRegistryAdapter(clientreg.NewClientRegistry()))
 	cap.SetServerVersion(version)
 	cap.SetLifecycleCallback(func(event string, data map[string]any) {
-		entry := LogEntry{
+		entry := mcp.LogEntry{
 			"type":      "lifecycle",
 			"event":     event,
 			"pid":       os.Getpid(),
@@ -219,7 +220,7 @@ func initCapture(server *Server, port int) *capture.Store {
 		for k, v := range data {
 			entry[k] = v
 		}
-		server.logs.AddEntries([]LogEntry{entry})
+		server.logs.AddEntries([]mcp.LogEntry{entry})
 	})
 
 	server.logLifecycle("loading_settings", port, nil)

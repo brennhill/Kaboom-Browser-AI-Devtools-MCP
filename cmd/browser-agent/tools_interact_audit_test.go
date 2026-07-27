@@ -28,6 +28,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -63,18 +64,18 @@ func newInteractTestEnv(t *testing.T) *interactTestEnv {
 }
 
 // callInteract invokes the interact tool and returns parsed result
-func (e *interactTestEnv) callInteract(t *testing.T, argsJSON string) (MCPToolResult, bool) {
+func (e *interactTestEnv) callInteract(t *testing.T, argsJSON string) (mcp.MCPToolResult, bool) {
 	t.Helper()
 
 	args := normalizeInteractArgsForAsync(argsJSON)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := e.handler.toolInteract(req, args)
 
 	if resp.Result == nil {
-		return MCPToolResult{}, false
+		return mcp.MCPToolResult{}, false
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("failed to parse result: %v", err)
 	}
@@ -453,7 +454,7 @@ func TestInteractAudit_InvalidJSON_ReturnsParseError(t *testing.T) {
 	env := newInteractTestEnv(t)
 
 	args := json.RawMessage(`{invalid json here}`)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := env.handler.toolInteract(req, args)
 
 	// ASSERTION: Returns some response (not nil/panic)
@@ -463,7 +464,7 @@ func TestInteractAudit_InvalidJSON_ReturnsParseError(t *testing.T) {
 
 	// If result, should be error
 	if resp.Result != nil {
-		var result MCPToolResult
+		var result mcp.MCPToolResult
 		_ = json.Unmarshal(resp.Result, &result)
 		if !result.IsError {
 			t.Error("invalid JSON MUST return isError:true")
@@ -549,7 +550,7 @@ func TestInteractAudit_AllActions_NoPanic(t *testing.T) {
 			}()
 
 			args := json.RawMessage(tc.args)
-			req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+			req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 			resp := env.handler.toolInteract(req, args)
 
 			// ASSERTION: Returns something

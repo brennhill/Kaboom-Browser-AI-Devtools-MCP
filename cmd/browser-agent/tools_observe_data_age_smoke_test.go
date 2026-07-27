@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -56,8 +57,8 @@ func TestSmoke_ObserveErrors_DataAgeMs_IsNumeric(t *testing.T) {
 	h, server, _ := makeToolHandler(t)
 
 	ts := time.Now().UTC().Format(time.RFC3339)
-	server.logs.SeedEntries([]LogEntry{
-		LogEntry{
+	server.logs.SeedEntries([]mcp.LogEntry{
+		mcp.LogEntry{
 			"level": "error", "message": "Test error for data_age_ms", "ts": ts,
 		},
 	}, nil)

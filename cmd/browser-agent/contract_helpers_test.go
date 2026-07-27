@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -37,7 +38,7 @@ func newScenario(t *testing.T) *scenario {
 func (s *scenario) loadConsoleData(t *testing.T) {
 	t.Helper()
 	now := time.Now().UTC().Format(time.RFC3339)
-	s.addLogEntry(LogEntry{
+	s.addLogEntry(mcp.LogEntry{
 		"type": "console", "level": "error",
 		"message":   "Uncaught TypeError: Cannot read property 'id' of undefined",
 		"source":    "https://app.example.com/main.js",
@@ -47,7 +48,7 @@ func (s *scenario) loadConsoleData(t *testing.T) {
 		"stack":     "TypeError: Cannot read property 'id' of undefined\n    at render (main.js:42:15)",
 		"timestamp": now,
 	})
-	s.addLogEntry(LogEntry{
+	s.addLogEntry(mcp.LogEntry{
 		"type": "console", "level": "warn",
 		"message":   "componentWillMount is deprecated",
 		"source":    "https://app.example.com/vendor.js",
@@ -55,7 +56,7 @@ func (s *scenario) loadConsoleData(t *testing.T) {
 		"line":      float64(100),
 		"timestamp": now,
 	})
-	s.addLogEntry(LogEntry{
+	s.addLogEntry(mcp.LogEntry{
 		"type": "console", "level": "log",
 		"message":   "App initialized successfully",
 		"source":    "https://app.example.com/main.js",
@@ -208,7 +209,7 @@ func optional(key, kind string) fieldSpec {
 
 // assertResponseShape parses an MCP tool result's text content as JSON
 // and verifies field presence and types against the given spec.
-func assertResponseShape(t *testing.T, mode string, result MCPToolResult, fields []fieldSpec) {
+func assertResponseShape(t *testing.T, mode string, result mcp.MCPToolResult, fields []fieldSpec) {
 	t.Helper()
 	data := parseResponseJSON(t, result)
 	assertObjectShape(t, mode, data, fields)
@@ -245,14 +246,14 @@ func assertObjectShape(t *testing.T, label string, data map[string]any, fields [
 }
 
 // assertStructuredError verifies the structured error shape on an isError response.
-func assertStructuredError(t *testing.T, label string, result MCPToolResult) {
+func assertStructuredError(t *testing.T, label string, result mcp.MCPToolResult) {
 	t.Helper()
 	assertStructuredErrorCode(t, label, result, "")
 }
 
 // assertStructuredErrorCode verifies the structured error shape and optionally
 // checks the error code matches expectedCode. Pass "" to skip code check.
-func assertStructuredErrorCode(t *testing.T, label string, result MCPToolResult, expectedCode string) {
+func assertStructuredErrorCode(t *testing.T, label string, result mcp.MCPToolResult, expectedCode string) {
 	t.Helper()
 
 	if !result.IsError {
@@ -284,7 +285,7 @@ func assertStructuredErrorCode(t *testing.T, label string, result MCPToolResult,
 }
 
 // parseResponseJSON extracts the JSON object from an MCPToolResult's text content.
-func parseResponseJSON(t *testing.T, result MCPToolResult) map[string]any {
+func parseResponseJSON(t *testing.T, result mcp.MCPToolResult) map[string]any {
 	t.Helper()
 
 	if len(result.Content) == 0 {

@@ -12,6 +12,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	az "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/analyze"
 )
 
@@ -30,9 +31,9 @@ func newAnalyzeValidationHandler(t *testing.T) *ToolHandler {
 	return mcpHandler.toolHandler.(*ToolHandler)
 }
 
-func decodeToolResult(t *testing.T, raw json.RawMessage) MCPToolResult {
+func decodeToolResult(t *testing.T, raw json.RawMessage) mcp.MCPToolResult {
 	t.Helper()
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(raw, &result); err != nil {
 		t.Fatalf("json.Unmarshal(MCPToolResult) error = %v", err)
 	}
@@ -42,7 +43,7 @@ func decodeToolResult(t *testing.T, raw json.RawMessage) MCPToolResult {
 	return result
 }
 
-func decodeToolJSONPayload(t *testing.T, result MCPToolResult) map[string]any {
+func decodeToolJSONPayload(t *testing.T, result mcp.MCPToolResult) map[string]any {
 	t.Helper()
 	text := result.Content[0].Text
 	idx := strings.IndexByte(text, '\n')
@@ -58,7 +59,7 @@ func decodeToolJSONPayload(t *testing.T, result MCPToolResult) map[string]any {
 
 func TestToolValidateLinksValidationErrors(t *testing.T) {
 	_ = newAnalyzeValidationHandler(t)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 
 	t.Run("invalid JSON", func(t *testing.T) {
 		resp := toolanalyze.HandleLinkValidation(req, json.RawMessage(`{invalid`), version)
@@ -96,7 +97,7 @@ func TestToolValidateLinksValidationErrors(t *testing.T) {
 
 func TestToolValidateLinksExecutesAndReturnsResults(t *testing.T) {
 	_ = newAnalyzeValidationHandler(t)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 2}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 
 	// timeout_ms and max_workers intentionally out-of-bounds to exercise clamping.
 	args := json.RawMessage(`{"urls":["http://127.0.0.1:1"],"timeout_ms":5,"max_workers":999}`)

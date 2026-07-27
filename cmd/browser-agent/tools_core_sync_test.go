@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
@@ -19,7 +20,7 @@ func TestMaybeWaitForCommand_SyncByDefault(t *testing.T) {
 	cap := capture.NewCapture()
 	// coldStartTimeout=0 disables cold-start gate; extension is pre-connected via HandleSync below.
 	handler := &ToolHandler{capture: cap, coldStartTimeout: 0}
-	req := JSONRPCRequest{ID: 1, ClientID: "test-client"}
+	req := mcp.JSONRPCRequest{ID: 1, ClientID: "test-client"}
 	correlationID := "test-sync-123"
 	cap.RegisterCommand(correlationID, "q-sync-123", 15*time.Second)
 
@@ -56,7 +57,7 @@ func TestMaybeWaitForCommand_SyncByDefault(t *testing.T) {
 func TestMaybeWaitForCommand_BackgroundOverride(t *testing.T) {
 	cap := capture.NewCapture()
 	handler := &ToolHandler{capture: cap}
-	req := JSONRPCRequest{ID: 1}
+	req := mcp.JSONRPCRequest{ID: 1}
 	correlationID := "test-bg-123"
 
 	// Call with background: true
@@ -78,7 +79,7 @@ func TestMaybeWaitForCommand_BackgroundOverride(t *testing.T) {
 func TestToolObserveCommandResult_IncludesTraceTimeline(t *testing.T) {
 	cap := capture.NewCapture()
 	handler := &ToolHandler{capture: cap}
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	correlationID := "test-trace-obs-123"
 
 	queryID, _ := cap.CreatePendingQueryWithTimeout(queries.PendingQuery{
@@ -129,7 +130,7 @@ func TestToolObserveCommandResult_IncludesTraceTimeline(t *testing.T) {
 func TestMaybeWaitForCommand_TimeoutGracefulFallback(t *testing.T) {
 	cap := capture.NewCapture()
 	handler := &ToolHandler{capture: cap, coldStartTimeout: 0} // Disable cold-start gate for fast-fail test
-	req := JSONRPCRequest{ID: 1}
+	req := mcp.JSONRPCRequest{ID: 1}
 	correlationID := "test-timeout-123"
 
 	// Note: We'd need to mock the 15s timeout to be shorter for testing,
@@ -166,7 +167,7 @@ func TestMaybeWaitForCommand_PendingDisconnectReturnsTerminalError(t *testing.T)
 
 	cap := capture.NewCapture()
 	handler := &ToolHandler{capture: cap}
-	req := JSONRPCRequest{ID: 1}
+	req := mcp.JSONRPCRequest{ID: 1}
 	correlationID := "test-disconnect-midwait-123"
 	cap.RegisterCommand(correlationID, "q-disconnect-midwait-123", 5*time.Second)
 	cap.CreatePendingQueryWithTimeout(queries.PendingQuery{
@@ -197,7 +198,7 @@ func TestMaybeWaitForCommand_PendingDisconnectReturnsTerminalError(t *testing.T)
 // MCPToolResult wraps data as Content[0].Text = "summary\n{json...}".
 func parseMCPResponseData(t *testing.T, rawResult json.RawMessage) map[string]any {
 	t.Helper()
-	var toolResult MCPToolResult
+	var toolResult mcp.MCPToolResult
 	if err := json.Unmarshal(rawResult, &toolResult); err != nil {
 		t.Fatalf("Failed to unmarshal MCPToolResult: %v", err)
 	}
@@ -215,7 +216,7 @@ func parseMCPResponseData(t *testing.T, rawResult json.RawMessage) map[string]an
 func TestFormatCommandResult_FinalField(t *testing.T) {
 	cap := capture.NewCapture()
 	handler := &ToolHandler{capture: cap}
-	req := JSONRPCRequest{ID: 1}
+	req := mcp.JSONRPCRequest{ID: 1}
 	now := time.Now()
 
 	t.Run("complete has final true", func(t *testing.T) {
@@ -274,7 +275,7 @@ func TestFormatCommandResult_FinalField(t *testing.T) {
 			CreatedAt:     now,
 		}
 		resp := handler.formatCommandResult(req, cmd, cmd.CorrelationID)
-		var toolResult MCPToolResult
+		var toolResult mcp.MCPToolResult
 		if err := json.Unmarshal(resp.Result, &toolResult); err != nil {
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
@@ -291,7 +292,7 @@ func TestFormatCommandResult_FinalField(t *testing.T) {
 			CreatedAt:     now,
 		}
 		resp := handler.formatCommandResult(req, cmd, cmd.CorrelationID)
-		var toolResult MCPToolResult
+		var toolResult mcp.MCPToolResult
 		if err := json.Unmarshal(resp.Result, &toolResult); err != nil {
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
@@ -304,7 +305,7 @@ func TestFormatCommandResult_FinalField(t *testing.T) {
 func TestFormatCommandResult_ElapsedMs(t *testing.T) {
 	cap := capture.NewCapture()
 	handler := &ToolHandler{capture: cap}
-	req := JSONRPCRequest{ID: 1}
+	req := mcp.JSONRPCRequest{ID: 1}
 	now := time.Now()
 
 	t.Run("complete has elapsed_ms", func(t *testing.T) {
@@ -368,7 +369,7 @@ func TestFormatCommandResult_ElapsedMs(t *testing.T) {
 func TestFormatCommandResult_ListInteractivePayloadHardening(t *testing.T) {
 	cap := capture.NewCapture()
 	handler := &ToolHandler{capture: cap}
-	req := JSONRPCRequest{ID: 1}
+	req := mcp.JSONRPCRequest{ID: 1}
 	now := time.Now()
 
 	t.Run("null payload is surfaced as explicit error", func(t *testing.T) {
@@ -382,7 +383,7 @@ func TestFormatCommandResult_ListInteractivePayloadHardening(t *testing.T) {
 
 		resp := handler.formatCommandResult(req, cmd, cmd.CorrelationID)
 
-		var toolResult MCPToolResult
+		var toolResult mcp.MCPToolResult
 		if err := json.Unmarshal(resp.Result, &toolResult); err != nil {
 			t.Fatalf("json.Unmarshal(resp.Result) error = %v", err)
 		}
@@ -415,7 +416,7 @@ func TestFormatCommandResult_ListInteractivePayloadHardening(t *testing.T) {
 
 		resp := handler.formatCommandResult(req, cmd, cmd.CorrelationID)
 
-		var toolResult MCPToolResult
+		var toolResult mcp.MCPToolResult
 		if err := json.Unmarshal(resp.Result, &toolResult); err != nil {
 			t.Fatalf("json.Unmarshal(resp.Result) error = %v", err)
 		}

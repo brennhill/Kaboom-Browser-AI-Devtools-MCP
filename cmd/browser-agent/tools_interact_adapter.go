@@ -12,6 +12,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactstate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 )
@@ -49,14 +50,14 @@ func buildInteractDeps(h *ToolHandler) *toolinteract.Deps {
 		InjectCSPBlockedActions: h.injectCSPBlockedActions,
 
 		// Screenshot/observe proxies
-		GetScreenshot: func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		GetScreenshot: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return observe.GetScreenshot(h, req, args)
 		},
-		GetPageInfo: func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+		GetPageInfo: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return observe.GetPageInfo(h, req, args)
 		},
 
-		// Annotation store
+		// annotation.Annotation store
 		MarkDrawStarted: func() {
 			if h.annotationStore != nil {
 				h.annotationStore.MarkDrawStarted()

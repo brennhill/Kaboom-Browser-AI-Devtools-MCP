@@ -17,8 +17,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
@@ -28,7 +30,7 @@ import (
 // ============================================
 
 // Sample console error from browser
-var sampleConsoleError = LogEntry{
+var sampleConsoleError = mcp.LogEntry{
 	"type":    "console",
 	"level":   "error",
 	"message": "Uncaught TypeError: Cannot read property 'foo' of undefined",
@@ -41,7 +43,7 @@ var sampleConsoleError = LogEntry{
 }
 
 // Sample console warning
-var sampleConsoleWarning = LogEntry{
+var sampleConsoleWarning = mcp.LogEntry{
 	"type":    "console",
 	"level":   "warn",
 	"message": "Deprecation warning: componentWillMount is deprecated",
@@ -52,7 +54,7 @@ var sampleConsoleWarning = LogEntry{
 }
 
 // Sample console log
-var sampleConsoleLog = LogEntry{
+var sampleConsoleLog = mcp.LogEntry{
 	"type":    "console",
 	"level":   "log",
 	"message": "User clicked button",
@@ -102,7 +104,7 @@ func TestObserveErrors_EndToEnd(t *testing.T) {
 
 	// Step 1: POST console errors (simulating browser extension)
 	logsPayload := map[string]any{
-		"entries": []LogEntry{sampleConsoleError, sampleConsoleWarning, sampleConsoleLog},
+		"entries": []mcp.LogEntry{sampleConsoleError, sampleConsoleWarning, sampleConsoleLog},
 	}
 	body, _ := json.Marshal(logsPayload)
 
@@ -110,10 +112,10 @@ func TestObserveErrors_EndToEnd(t *testing.T) {
 	_ = body // Payload would be POSTed to /logs in real scenario
 
 	// Use the server's /logs handler
-	server.logs.SeedEntries(logsPayload["entries"].([]LogEntry), nil)
+	server.logs.SeedEntries(logsPayload["entries"].([]mcp.LogEntry), nil)
 
 	// Step 2: Call observe errors via MCP tool
-	mcpReq := JSONRPCRequest{
+	mcpReq := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "tools/call",
@@ -175,14 +177,14 @@ func TestObserveLogs_EndToEnd(t *testing.T) {
 	handler := NewToolHandler(server, cap)
 
 	// POST logs
-	server.logs.SeedEntries([]LogEntry{
+	server.logs.SeedEntries([]mcp.LogEntry{
 		sampleConsoleError,
 		sampleConsoleWarning,
 		sampleConsoleLog,
 	}, nil)
 
 	// Call observe logs
-	mcpReq := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	mcpReq := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	th := handler.toolHandler.(*ToolHandler)
 	resp := observe.GetBrowserLogs(th, mcpReq, json.RawMessage(`{}`))
 
@@ -217,7 +219,7 @@ func TestObserveLogs_LevelFilter(t *testing.T) {
 	cap := capture.NewCapture()
 	handler := NewToolHandler(server, cap)
 
-	server.logs.SeedEntries([]LogEntry{
+	server.logs.SeedEntries([]mcp.LogEntry{
 		sampleConsoleError,
 		sampleConsoleWarning,
 		sampleConsoleLog,
@@ -225,7 +227,7 @@ func TestObserveLogs_LevelFilter(t *testing.T) {
 
 	// "level" is a quiet alias for "min_level" (threshold): warn returns warn+error.
 	th := handler.toolHandler.(*ToolHandler)
-	resp := observe.GetBrowserLogs(th, JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{"level":"warn"}`))
+	resp := observe.GetBrowserLogs(th, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{"level":"warn"}`))
 
 	var result map[string]any
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -262,7 +264,7 @@ func TestObserveNetworkWaterfall_EndToEnd(t *testing.T) {
 
 	// Call observe network_waterfall
 	th := handler.toolHandler.(*ToolHandler)
-	resp := observe.GetNetworkWaterfall(th, JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	resp := observe.GetNetworkWaterfall(th, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 	var result map[string]any
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -311,7 +313,7 @@ func TestObserveNetworkWaterfall_URLFilter(t *testing.T) {
 
 	// Filter by "api.example.com"
 	th := handler.toolHandler.(*ToolHandler)
-	resp := observe.GetNetworkWaterfall(th, JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{"url":"api.example.com"}`))
+	resp := observe.GetNetworkWaterfall(th, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{"url":"api.example.com"}`))
 
 	var result map[string]any
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -348,7 +350,7 @@ func TestObserveExtensionLogs_EndToEnd(t *testing.T) {
 
 	// Call observe extension_logs
 	th := handler.toolHandler.(*ToolHandler)
-	resp := observe.GetExtensionLogs(th, JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	resp := observe.GetExtensionLogs(th, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 	var result map[string]any
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -392,7 +394,7 @@ func TestObservePage_ExtractsFromWaterfall(t *testing.T) {
 
 	// Call observe page
 	th := handler.toolHandler.(*ToolHandler)
-	resp := observe.GetPageInfo(th, JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	resp := observe.GetPageInfo(th, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 	var result map[string]any
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -455,7 +457,7 @@ func TestObservePage_PrioritizesTrackedURL(t *testing.T) {
 
 	// Call observe page - should return tracked URL, NOT waterfall URL
 	th := handler.toolHandler.(*ToolHandler)
-	resp := observe.GetPageInfo(th, JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	resp := observe.GetPageInfo(th, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 	var result map[string]any
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -510,7 +512,7 @@ func TestObserveNetworkBodies_EndToEnd(t *testing.T) {
 
 	// Call observe network_bodies
 	th := handler.toolHandler.(*ToolHandler)
-	resp := observe.GetNetworkBodies(th, JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	resp := observe.GetNetworkBodies(th, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 	var result map[string]any
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -564,7 +566,7 @@ func TestObserveWebSocketEvents_EndToEnd(t *testing.T) {
 
 	// Call observe websocket_events
 	th := handler.toolHandler.(*ToolHandler)
-	resp := observe.GetWSEvents(th, JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	resp := observe.GetWSEvents(th, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 	var result map[string]any
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -601,12 +603,12 @@ func TestMCPToolsCall_ObserveErrors_FullFlow(t *testing.T) {
 	handler := NewToolHandler(server, cap)
 
 	// Populate with test data
-	server.logs.SeedEntries([]LogEntry{
+	server.logs.SeedEntries([]mcp.LogEntry{
 		sampleConsoleError,
 	}, nil)
 
 	// Create MCP request exactly as client would send it
-	mcpRequest := JSONRPCRequest{
+	mcpRequest := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      42,
 		Method:  "tools/call",

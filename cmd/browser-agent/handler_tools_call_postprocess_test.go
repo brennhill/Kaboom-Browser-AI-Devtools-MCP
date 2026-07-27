@@ -9,19 +9,20 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
-func makeTextResultResponse(t *testing.T, text string) JSONRPCResponse {
+func makeTextResultResponse(t *testing.T, text string) mcp.JSONRPCResponse {
 	t.Helper()
-	raw, err := json.Marshal(MCPToolResult{
-		Content: []MCPContentBlock{{Type: "text", Text: text}},
+	raw, err := json.Marshal(mcp.MCPToolResult{
+		Content: []mcp.MCPContentBlock{{Type: "text", Text: text}},
 		IsError: false,
 	})
 	if err != nil {
 		t.Fatalf("json.Marshal(MCPToolResult): %v", err)
 	}
-	return JSONRPCResponse{
-		JSONRPC: JSONRPCVersion,
+	return mcp.JSONRPCResponse{
+		JSONRPC: mcp.JSONRPCVersion,
 		ID:      1,
 		Result:  raw,
 	}

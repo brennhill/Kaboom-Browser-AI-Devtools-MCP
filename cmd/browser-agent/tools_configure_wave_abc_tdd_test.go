@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 func configureSchemaPropertiesForTest(t *testing.T) map[string]any {
@@ -34,7 +35,7 @@ func configureSchemaPropertiesForTest(t *testing.T) map[string]any {
 	return nil
 }
 
-func callHandledTool(t *testing.T, h *ToolHandler, req JSONRPCRequest, name, argsJSON string) JSONRPCResponse {
+func callHandledTool(t *testing.T, h *ToolHandler, req mcp.JSONRPCRequest, name, argsJSON string) mcp.JSONRPCResponse {
 	t.Helper()
 	resp, handled := h.HandleToolCall(req, name, json.RawMessage(argsJSON))
 	if !handled {
@@ -97,7 +98,7 @@ func TestWaveB_AuditLogOperationAnalyzeAndClear(t *testing.T) {
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
 	h := mcpHandler.toolHandler.(*ToolHandler)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1, ClientID: "wave-b-test"}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1, ClientID: "wave-b-test"}
 
 	callHandledTool(t, h, req, "configure", `{"what":"health"}`)
 	callHandledTool(t, h, req, "observe", `{"what":"logs"}`)
@@ -141,7 +142,7 @@ func TestWaveB_AuditLogClear_DoesNotReinsertClearCall(t *testing.T) {
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
 	h := mcpHandler.toolHandler.(*ToolHandler)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1, ClientID: "audit-clear-test"}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1, ClientID: "audit-clear-test"}
 
 	// Seed at least one entry.
 	callHandledTool(t, h, req, "configure", `{"what":"health"}`)
@@ -176,7 +177,7 @@ func TestWaveB_AuditLogClear_ResetsToolHandlerSessionMap(t *testing.T) {
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
 	h := mcpHandler.toolHandler.(*ToolHandler)
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1, ClientID: "session-reset-client"}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1, ClientID: "session-reset-client"}
 
 	callHandledTool(t, h, req, "configure", `{"what":"health"}`)
 	oldSessionID := h.auditSessionMap["session-reset-client"]
@@ -214,7 +215,7 @@ func TestWaveC_RedactionEngineIsWiredAndApplied(t *testing.T) {
 		t.Fatal("tool handler should provide a redaction engine")
 	}
 
-	input := JSONRPCResponse{
+	input := mcp.JSONRPCResponse{
 		JSONRPC: "2.0",
 		ID:      1,
 		Result:  json.RawMessage(`{"content":[{"type":"text","text":"Authorization: Bearer ghp_1234567890abcdef"}],"isError":false}`),

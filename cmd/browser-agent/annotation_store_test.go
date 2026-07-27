@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 )
 
 // --- parseAnnotations edge case tests ---
@@ -206,7 +208,7 @@ func TestPersistDrawSession_WithSessionName(t *testing.T) {
 		TabID:            42,
 		AnnotSessionName: "qa-review",
 	}
-	annotations := []Annotation{
+	annotations := []annotation.Annotation{
 		{ID: "a1", Text: "fix this"},
 	}
 
@@ -219,7 +221,7 @@ func TestPersistDrawSession_WithoutSessionName(t *testing.T) {
 		PageURL: "https://example.com",
 		TabID:   43,
 	}
-	annotations := []Annotation{
+	annotations := []annotation.Annotation{
 		{ID: "a1", Text: "fix that"},
 	}
 
@@ -234,13 +236,13 @@ func TestPersistDrawSession_EmptyAnnotations(t *testing.T) {
 	}
 
 	// Should not panic with empty annotations
-	persistDrawSession(body, "", []Annotation{})
+	persistDrawSession(body, "", []annotation.Annotation{})
 }
 
 // --- storeElementDetails edge cases ---
 
 func TestStoreElementDetails_MultipleDetails(t *testing.T) {
-	store := NewAnnotationStore(10 * time.Minute)
+	store := annotation.NewStore(10 * time.Minute)
 	defer store.Close()
 
 	details := map[string]json.RawMessage{
@@ -264,7 +266,7 @@ func TestStoreElementDetails_MultipleDetails(t *testing.T) {
 }
 
 func TestStoreElementDetails_InvalidJSON(t *testing.T) {
-	store := NewAnnotationStore(10 * time.Minute)
+	store := annotation.NewStore(10 * time.Minute)
 	defer store.Close()
 
 	details := map[string]json.RawMessage{
@@ -280,7 +282,7 @@ func TestStoreElementDetails_InvalidJSON(t *testing.T) {
 }
 
 func TestStoreElementDetails_Empty(t *testing.T) {
-	store := NewAnnotationStore(10 * time.Minute)
+	store := annotation.NewStore(10 * time.Minute)
 	defer store.Close()
 
 	// Should not panic with empty map

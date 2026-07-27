@@ -12,7 +12,9 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tracking"
@@ -33,7 +35,7 @@ type Server struct {
 	warningSeen map[string]struct{}
 
 	// Annotation store is server-scoped to avoid cross-session contamination.
-	annotationStore *AnnotationStore
+	annotationStore *annotation.Store
 
 	// Push delivery pipeline
 	pushInbox  *push.PushInbox
@@ -105,7 +107,7 @@ func (s *Server) TakeWarnings() []string {
 }
 
 func (s *Server) logLifecycle(event string, port int, fields map[string]any) {
-	entry := LogEntry{
+	entry := mcp.LogEntry{
 		"type":      "lifecycle",
 		"event":     event,
 		"pid":       os.Getpid(),
@@ -117,7 +119,7 @@ func (s *Server) logLifecycle(event string, port int, fields map[string]any) {
 	for key, value := range fields {
 		entry[key] = value
 	}
-	s.logs.AddEntries([]LogEntry{entry})
+	s.logs.AddEntries([]mcp.LogEntry{entry})
 }
 
 // NewServer creates a new server instance.
@@ -125,7 +127,7 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 	s := &Server{
 		listenPort:            defaultPort,
 		warningSeen:           make(map[string]struct{}),
-		annotationStore:       NewAnnotationStore(10 * time.Minute),
+		annotationStore:       annotation.NewStore(10 * time.Minute),
 		pushInbox:             push.NewPushInbox(50),
 		ptyManager:            pty.NewManager(),
 		tokenTracker:          tracking.NewTokenTracker(),
@@ -208,11 +210,11 @@ func (s *Server) getListenPort() int {
 	return s.listenPort
 }
 
-func (s *Server) getAnnotationStore() *AnnotationStore {
+func (s *Server) getAnnotationStore() *annotation.Store {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.annotationStore == nil {
-		s.annotationStore = NewAnnotationStore(10 * time.Minute)
+		s.annotationStore = annotation.NewStore(10 * time.Minute)
 	}
 	return s.annotationStore
 }
@@ -221,7 +223,7 @@ func (s *Server) closeAnnotationStore() {
 	if s == nil {
 		return
 	}
-	store := func() *AnnotationStore {
+	store := func() *annotation.Store {
 		s.mu.Lock()
 		defer s.mu.Unlock()
 		store := s.annotationStore

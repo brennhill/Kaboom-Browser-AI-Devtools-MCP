@@ -13,6 +13,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // TestFastStart_ClientCompatibilityMatrix validates immediate resources/read behavior
@@ -221,7 +223,7 @@ func TestFastStart_ToolsCallWaitsForDaemonBoot(t *testing.T) {
 	}
 
 	// Verify response structure - should be a result, not an error
-	var rpcResp JSONRPCResponse
+	var rpcResp mcp.JSONRPCResponse
 	if err := json.Unmarshal([]byte(line), &rpcResp); err != nil {
 		t.Fatalf("Failed to parse response: %v", err)
 	}
@@ -296,7 +298,7 @@ func TestFastStart_VersionInResponse(t *testing.T) {
 		t.Fatalf("Failed to read response: %v", err)
 	}
 
-	var rpcResp JSONRPCResponse
+	var rpcResp mcp.JSONRPCResponse
 	if err := json.Unmarshal([]byte(line), &rpcResp); err != nil {
 		t.Fatalf("Failed to parse response: %v", err)
 	}
@@ -379,7 +381,7 @@ func TestFastStart_ResourceWorkflowBeforeDaemonReady(t *testing.T) {
 		t.Fatalf("resources/read capabilities elapsed = %v, want < 500ms", elapsed)
 	}
 
-	var capResult MCPResourcesReadResult
+	var capResult mcp.MCPResourcesReadResult
 	if err := json.Unmarshal(capResp.Result, &capResult); err != nil {
 		t.Fatalf("capabilities result parse error: %v", err)
 	}
@@ -396,7 +398,7 @@ func TestFastStart_ResourceWorkflowBeforeDaemonReady(t *testing.T) {
 	if elapsed := time.Since(start); elapsed > 500*time.Millisecond {
 		t.Fatalf("resources/read playbook elapsed = %v, want < 500ms", elapsed)
 	}
-	var playbookResult MCPResourcesReadResult
+	var playbookResult mcp.MCPResourcesReadResult
 	if err := json.Unmarshal(playbookResp.Result, &playbookResult); err != nil {
 		t.Fatalf("playbook result parse error: %v", err)
 	}

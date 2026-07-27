@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -297,12 +298,12 @@ func TestEnrichNavigate_UsesPageSummaryQueryType(t *testing.T) {
 	env := newContentTestEnv(t)
 
 	// Build a successful navigate response to enrich
-	successResult := MCPToolResult{
-		Content: []MCPContentBlock{{Type: "text", Text: "Navigate success"}},
+	successResult := mcp.MCPToolResult{
+		Content: []mcp.MCPContentBlock{{Type: "text", Text: "Navigate success"}},
 	}
 	resultJSON, _ := json.Marshal(successResult)
-	resp := JSONRPCResponse{JSONRPC: "2.0", ID: 1, Result: resultJSON}
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	resp := mcp.JSONRPCResponse{JSONRPC: "2.0", ID: 1, Result: resultJSON}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 
 	// This should create a page_summary query internally
 	env.handler.enrichNavigateResponse(resp, req, 42)

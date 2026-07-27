@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 )
 
@@ -97,7 +98,7 @@ func TestToolsConfigureDispatch_EmptyArgs(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolConfigure(req, nil)
 	result := parseToolResult(t, resp)
 	if !result.IsError {
@@ -403,7 +404,7 @@ func TestToolsConfigureClear_InvalidJSON(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.toolConfigureClear(req, json.RawMessage(`{bad}`))
 	result := parseToolResult(t, resp)
 	if !result.IsError {
@@ -557,7 +558,7 @@ func TestToolsConfigureStore_InvalidJSON(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := h.configureSession().handleConfigureStore(req, json.RawMessage(`{bad}`))
 	result := parseToolResult(t, resp)
 	if !result.IsError {

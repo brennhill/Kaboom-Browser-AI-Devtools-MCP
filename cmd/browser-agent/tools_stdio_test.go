@@ -126,7 +126,7 @@ func TestToolHandler_Observe_NoStdout(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			args := json.RawMessage(`{"what":"` + tc.what + `"}`)
-			req := JSONRPCRequest{
+			req := mcp.JSONRPCRequest{
 				JSONRPC: "2.0",
 				ID:      1,
 				Method:  "tools/call",
@@ -162,7 +162,7 @@ func TestToolHandler_Configure_NoStdout(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			args := json.RawMessage(tc.args)
-			req := JSONRPCRequest{
+			req := mcp.JSONRPCRequest{
 				JSONRPC: "2.0",
 				ID:      1,
 				Method:  "tools/call",
@@ -199,7 +199,7 @@ func TestToolHandler_Generate_NoStdout(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			args := json.RawMessage(tc.args)
-			req := JSONRPCRequest{
+			req := mcp.JSONRPCRequest{
 				JSONRPC: "2.0",
 				ID:      1,
 				Method:  "tools/call",
@@ -235,7 +235,7 @@ func TestToolHandler_Interact_NoStdout(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			args := json.RawMessage(tc.args)
-			req := JSONRPCRequest{
+			req := mcp.JSONRPCRequest{
 				JSONRPC: "2.0",
 				ID:      1,
 				Method:  "tools/call",
@@ -272,7 +272,7 @@ func TestToolHandler_HandleToolCall_NoStdout(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			args := json.RawMessage(tc.args)
-			req := JSONRPCRequest{
+			req := mcp.JSONRPCRequest{
 				JSONRPC: "2.0",
 				ID:      1,
 				Method:  "tools/call",

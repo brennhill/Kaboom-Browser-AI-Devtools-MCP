@@ -12,6 +12,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -394,11 +396,11 @@ func TestRichAction_AnalyzeFieldsSurfacedTopLevel(t *testing.T) {
 	env.capture.CompleteCommand(corrID, extensionResult, "")
 
 	// Observe command_result
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 2}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
 	resp := env.handler.toolObserveCommandResult(req, args)
 
-	var observeResult MCPToolResult
+	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
 		t.Fatalf("json.Unmarshal error: %v", err)
 	}
@@ -460,11 +462,11 @@ func TestRichAction_NoAnalyzeFieldsWhenAbsent(t *testing.T) {
 	extensionResult := json.RawMessage(`{"success": true, "action": "click", "dom_summary": "1 added"}`)
 	env.capture.CompleteCommand(corrID, extensionResult, "")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 2}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
 	resp := env.handler.toolObserveCommandResult(req, args)
 
-	var observeResult MCPToolResult
+	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
 		t.Fatalf("json.Unmarshal error: %v", err)
 	}
@@ -511,11 +513,11 @@ func TestRichAction_MatchedDiagnosticsSurfacedTopLevel(t *testing.T) {
 	}`)
 	env.capture.CompleteCommand(corrID, extensionResult, "")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 2}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
 	resp := env.handler.toolObserveCommandResult(req, args)
 
-	var observeResult MCPToolResult
+	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
 		t.Fatalf("json.Unmarshal error: %v", err)
 	}
@@ -579,11 +581,11 @@ func TestRichAction_TargetContextSurfacedTopLevel(t *testing.T) {
 	}`)
 	env.capture.CompleteCommand(corrID, extensionResult, "")
 
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 2}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
 	resp := env.handler.toolObserveCommandResult(req, args)
 
-	var observeResult MCPToolResult
+	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
 		t.Fatalf("json.Unmarshal error: %v", err)
 	}
@@ -650,11 +652,11 @@ func TestRichAction_DomSummaryPassthrough(t *testing.T) {
 	env.capture.CompleteCommand(corrID, extensionResult, "")
 
 	// Observe command_result — verify extension fields pass through
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 2}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
 	resp := env.handler.toolObserveCommandResult(req, args)
 
-	var observeResult MCPToolResult
+	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {
 		t.Fatalf("json.Unmarshal error: %v", err)
 	}

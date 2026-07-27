@@ -13,6 +13,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/export"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -35,14 +36,14 @@ func TestToolExportHAR_ReturnsHARJSON(t *testing.T) {
 	})
 
 	args, _ := json.Marshal(map[string]any{})
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), Method: "tools/call"}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), Method: "tools/call"}
 	resp := handler.toolExportHAR(req, args)
 
 	if resp.Error != nil {
 		t.Fatalf("unexpected error: %v", resp.Error)
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("failed to parse result: %v", err)
 	}
@@ -81,14 +82,14 @@ func TestToolExportHAR_SaveToFile(t *testing.T) {
 	tmpFile := filepath.Join(tmpDir, "test-tool-export.har")
 
 	args, _ := json.Marshal(map[string]any{"save_to": tmpFile})
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`2`), Method: "tools/call"}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`2`), Method: "tools/call"}
 	resp := handler.toolExportHAR(req, args)
 
 	if resp.Error != nil {
 		t.Fatalf("unexpected error: %v", resp.Error)
 	}
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("failed to parse result: %v", err)
 	}
@@ -123,10 +124,10 @@ func TestToolExportHAR_Filters(t *testing.T) {
 	})
 
 	args, _ := json.Marshal(map[string]any{"method": "POST", "status_min": 400})
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`3`), Method: "tools/call"}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`3`), Method: "tools/call"}
 	resp := handler.toolExportHAR(req, args)
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("json.Unmarshal error: %v", err)
 	}
@@ -154,10 +155,10 @@ func TestToolExportHAR_PathTraversal(t *testing.T) {
 	handler := setupHARTestHandler(t)
 
 	args, _ := json.Marshal(map[string]any{"save_to": "../../etc/passwd"})
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`5`), Method: "tools/call"}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`5`), Method: "tools/call"}
 	resp := handler.toolExportHAR(req, args)
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("json.Unmarshal error: %v", err)
 	}
@@ -171,10 +172,10 @@ func TestToolExportHAR_EmptyCapture(t *testing.T) {
 	handler := setupHARTestHandler(t)
 
 	args, _ := json.Marshal(map[string]any{})
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), Method: "tools/call"}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), Method: "tools/call"}
 	resp := handler.toolExportHAR(req, args)
 
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("json.Unmarshal error: %v", err)
 	}

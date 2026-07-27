@@ -17,14 +17,14 @@ import (
 	wiretypes "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
-func obs(fn func(observe.Deps, JSONRPCRequest, json.RawMessage) JSONRPCResponse) ModeHandler {
-	return func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func obs(fn func(observe.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) ModeHandler {
+	return func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return fn(h, req, args)
 	}
 }
 
-func obsLocal(fn func(toolobserve.Deps, JSONRPCRequest, json.RawMessage) JSONRPCResponse) ModeHandler {
-	return func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func obsLocal(fn func(toolobserve.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) ModeHandler {
+	return func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return fn(h, req, args)
 	}
 }
@@ -75,10 +75,10 @@ var observeRegistry = toolRegistry{
 		ValidModes:   "", // populated lazily
 		ValueAliases: observeValueAliases,
 	},
-	PreDispatch: func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage, _ string) (json.RawMessage, *JSONRPCResponse) {
+	PreDispatch: func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage, _ string) (json.RawMessage, *mcp.JSONRPCResponse) {
 		return h.maybeInjectSummary(args), nil
 	},
-	PostDispatch: func(h *ToolHandler, req JSONRPCRequest, resp JSONRPCResponse, what string) JSONRPCResponse {
+	PostDispatch: func(h *ToolHandler, req mcp.JSONRPCRequest, resp mcp.JSONRPCResponse, what string) mcp.JSONRPCResponse {
 		// Warn when extension is disconnected (except for server-side modes that don't need it)
 		if !h.IsExtensionConnected() && !toolobserve.ServerSideObserveModes[what] {
 			resp = toolobserve.PrependDisconnectWarning(resp)
@@ -92,31 +92,31 @@ var observeRegistry = toolRegistry{
 }
 
 // toolObserve dispatches observe requests based on the 'what' parameter.
-func (h *ToolHandler) toolObserve(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolObserve(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	reg := observeRegistry
 	reg.Resolution.ValidModes = getValidObserveModes()
 	return h.dispatchTool(req, args, reg)
 }
 
-func (h *ToolHandler) toolObserveInbox(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolObserveInbox(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return toolobserve.HandleInbox(h, req, args)
 }
 
-func (h *ToolHandler) appendPushPiggyback(resp JSONRPCResponse) JSONRPCResponse {
+func (h *ToolHandler) appendPushPiggyback(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
 	return toolobserve.AppendPushPiggyback(h, resp)
 }
 
-func (h *ToolHandler) prependDisconnectWarning(resp JSONRPCResponse) JSONRPCResponse {
+func (h *ToolHandler) prependDisconnectWarning(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
 	return toolobserve.PrependDisconnectWarning(resp)
 }
 
-func (h *ToolHandler) appendAlertsToResponse(resp JSONRPCResponse, alerts []wiretypes.Alert) JSONRPCResponse {
+func (h *ToolHandler) appendAlertsToResponse(resp mcp.JSONRPCResponse, alerts []wiretypes.Alert) mcp.JSONRPCResponse {
 	return toolobserve.AppendAlertsToResponse(resp, alerts)
 }
 
 const annotationCommandWaitTimeout = 55 * time.Second
 
-func (h *ToolHandler) toolObserveCommandResult(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolObserveCommandResult(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		CorrelationID string `json:"correlation_id"`
 	}
@@ -147,7 +147,7 @@ func (h *ToolHandler) toolObserveCommandResult(req JSONRPCRequest, args json.Raw
 	return h.formatCommandResult(req, *command, correlationID)
 }
 
-func (h *ToolHandler) toolObservePendingCommands(req JSONRPCRequest, _ json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolObservePendingCommands(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
 	pending := h.capture.GetPendingCommands()
 	completed := h.capture.GetCompletedCommands()
 	failed := h.capture.GetFailedCommands()
@@ -161,7 +161,7 @@ func (h *ToolHandler) toolObservePendingCommands(req JSONRPCRequest, _ json.RawM
 	return mcp.Succeed(req, summary, data)
 }
 
-func (h *ToolHandler) toolObserveFailedCommands(req JSONRPCRequest, _ json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolObserveFailedCommands(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
 	failed := h.capture.GetFailedCommands()
 	data := map[string]any{"commands": failed, "count": len(failed)}
 	if len(failed) == 0 {
@@ -170,22 +170,22 @@ func (h *ToolHandler) toolObserveFailedCommands(req JSONRPCRequest, _ json.RawMe
 	return mcp.Succeed(req, fmt.Sprintf("Found %d failed/expired commands", len(failed)), data)
 }
 
-func (h *ToolHandler) toolObserveSavedVideos(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolObserveSavedVideos(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return screenrec.HandleObserveSavedVideos(req, args)
 }
 
-func (h *ToolHandler) toolGetRecordings(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolGetRecordings(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return h.recordingHandler.Recordings(req, args)
 }
 
-func (h *ToolHandler) toolGetRecordingActions(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolGetRecordingActions(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return h.recordingHandler.RecordingActions(req, args)
 }
 
-func (h *ToolHandler) toolGetPlaybackResults(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolGetPlaybackResults(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return h.recordingHandler.PlaybackResults(req, args)
 }
 
-func (h *ToolHandler) toolGetLogDiffReport(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (h *ToolHandler) toolGetLogDiffReport(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return h.recordingHandler.LogDiffReport(req, args)
 }

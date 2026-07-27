@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // contentLengthFrame wraps a JSON payload in Content-Length framing.
@@ -25,9 +26,9 @@ func contentLengthFrame(payload string) string {
 }
 
 // parseMCPResponses parses MCP responses from mixed line/content-length framed output.
-func parseMCPResponses(t *testing.T, output string) []JSONRPCResponse {
+func parseMCPResponses(t *testing.T, output string) []mcp.JSONRPCResponse {
 	t.Helper()
-	var responses []JSONRPCResponse
+	var responses []mcp.JSONRPCResponse
 	reader := bufio.NewReader(strings.NewReader(output))
 	for {
 		line, err := reader.ReadString('\n')
@@ -58,12 +59,12 @@ func parseMCPResponses(t *testing.T, output string) []JSONRPCResponse {
 					break
 				}
 			}
-			var resp JSONRPCResponse
+			var resp mcp.JSONRPCResponse
 			if jErr := json.Unmarshal([]byte(body.String()), &resp); jErr == nil {
 				responses = append(responses, resp)
 			}
 		} else {
-			var resp JSONRPCResponse
+			var resp mcp.JSONRPCResponse
 			if jErr := json.Unmarshal([]byte(line), &resp); jErr == nil {
 				responses = append(responses, resp)
 			}

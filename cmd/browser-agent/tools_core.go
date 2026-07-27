@@ -20,8 +20,10 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactstate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactupload"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolrecording"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/apicontract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/thirdparty"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/audit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/issuereport"
@@ -66,7 +68,7 @@ type ToolHandler struct {
 	redactionEngine RedactionEngine
 
 	// Rate limiter for MCP tool calls (sliding window)
-	toolCallLimiter *ToolCallLimiter
+	toolCallLimiter *toolresp.ToolCallLimiter
 
 	// Alert system + context streaming (delegates to internal/streaming)
 	alertBuffer *alertbuf.AlertBuffer
@@ -85,7 +87,7 @@ type ToolHandler struct {
 	auditSessionMap map[string]string
 
 	// Draw mode annotation store (in-memory, TTL-based)
-	annotationStore *AnnotationStore
+	annotationStore *annotation.Store
 
 	// API contract validation state (incremental over captured network bodies).
 	apiContractRuntime *apicontract.Runtime
@@ -150,14 +152,14 @@ type ToolHandler struct {
 // they call lives in internal/asyncresult.
 
 // handleToolCall dispatches composite tool calls by mode parameter.
-func (h *ToolHandler) HandleToolCall(req JSONRPCRequest, name string, args json.RawMessage) (JSONRPCResponse, bool) {
+func (h *ToolHandler) HandleToolCall(req mcp.JSONRPCRequest, name string, args json.RawMessage) (mcp.JSONRPCResponse, bool) {
 	start := time.Now()
 
 	h.ensureToolModules()
 	h.ensureToolSchemas()
 	resp, handled := h.dispatchViaModules(req, name, args)
 	if !handled {
-		return JSONRPCResponse{}, false
+		return mcp.JSONRPCResponse{}, false
 	}
 
 	parsedResult, parsedOK := parseToolResultForPostProcessing(resp.Result)
@@ -274,11 +276,11 @@ func (h *ToolHandler) ensureToolSchemas() {
 	})
 }
 
-func parseToolResultForPostProcessing(raw json.RawMessage) (*MCPToolResult, bool) {
+func parseToolResultForPostProcessing(raw json.RawMessage) (*mcp.MCPToolResult, bool) {
 	if len(raw) == 0 {
 		return nil, false
 	}
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(raw, &result); err != nil {
 		return nil, false
 	}
@@ -289,7 +291,7 @@ func isToolResultError(raw json.RawMessage) bool {
 	if len(raw) == 0 {
 		return false
 	}
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(raw, &result); err != nil {
 		return false
 	}
@@ -307,7 +309,7 @@ func (h *ToolHandler) GetCapture() *capture.Store {
 	return h.capture
 }
 
-func (h *ToolHandler) GetLogEntries() ([]LogEntry, []time.Time) {
+func (h *ToolHandler) GetLogEntries() ([]mcp.LogEntry, []time.Time) {
 	return h.server.logs.EntriesWithAddedAt()
 }
 
@@ -315,7 +317,7 @@ func (h *ToolHandler) GetLogTotalAdded() int64 {
 	return h.server.logs.TotalAdded()
 }
 
-func (h *ToolHandler) ToolsList() []MCPTool {
+func (h *ToolHandler) ToolsList() []mcp.MCPTool {
 	return schema.AllTools()
 }
 
@@ -354,7 +356,7 @@ func (h *ToolHandler) PushInbox() *push.PushInbox {
 	return h.server.pushInbox
 }
 
-func (h *ToolHandler) GetAnnotationStore() *AnnotationStore {
+func (h *ToolHandler) GetAnnotationStore() *annotation.Store {
 	return h.annotationStore
 }
 
@@ -412,7 +414,7 @@ func NewToolHandler(server *Server, captureStore *capture.Store) *MCPHandler {
 	}
 
 	handler.healthMetrics = health.NewMetrics()
-	handler.toolCallLimiter = NewToolCallLimiter(500, time.Minute)
+	handler.toolCallLimiter = toolresp.NewToolCallLimiter(500, time.Minute)
 	handler.alertBuffer = alertbuf.NewAlertBuffer()
 
 	if currentDirectory, err := os.Getwd(); err == nil {
@@ -486,10 +488,10 @@ func (h *ToolHandler) screenrecDeps() screenrec.Deps {
 	}
 }
 
-func (h *ToolHandler) buildPlaybackResult(request JSONRPCRequest, recordingID string, playback *capture.PlaybackSession) JSONRPCResponse {
+func (h *ToolHandler) buildPlaybackResult(request mcp.JSONRPCRequest, recordingID string, playback *capture.PlaybackSession) mcp.JSONRPCResponse {
 	return toolrecording.BuildPlaybackResult(request, recordingID, playback)
 }
 
-func (h *ToolHandler) appendServerLog(entry LogEntry) {
-	h.server.logs.AddEntries([]LogEntry{entry})
+func (h *ToolHandler) appendServerLog(entry mcp.LogEntry) {
+	h.server.logs.AddEntries([]mcp.LogEntry{entry})
 }

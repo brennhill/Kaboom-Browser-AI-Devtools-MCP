@@ -10,6 +10,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/ciapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 func TestComputeSnapshotStats(t *testing.T) {
@@ -24,7 +25,7 @@ func TestComputeSnapshotStats(t *testing.T) {
 	})
 
 	t.Run("counts errors and warnings", func(t *testing.T) {
-		logs := []LogEntry{
+		logs := []mcp.LogEntry{
 			{"level": "error", "msg": "crash"},
 			{"level": "error", "msg": "timeout"},
 			{"level": "warn", "msg": "slow query"},
@@ -74,7 +75,7 @@ func TestComputeSnapshotStats(t *testing.T) {
 	})
 
 	t.Run("combined stats", func(t *testing.T) {
-		logs := []LogEntry{
+		logs := []mcp.LogEntry{
 			{"level": "error", "msg": "err1"},
 			{"level": "info", "msg": "info1"},
 		}
@@ -96,7 +97,7 @@ func TestFilterLogsSince(t *testing.T) {
 	t.Parallel()
 
 	base := time.Date(2026, 2, 11, 10, 0, 0, 0, time.UTC)
-	logs := []LogEntry{
+	logs := []mcp.LogEntry{
 		{"ts": base.Add(-2 * time.Second).Format(time.RFC3339Nano), "msg": "old"},
 		{"ts": base.Add(-1 * time.Second).Format(time.RFC3339Nano), "msg": "before"},
 		{"ts": base.Add(1 * time.Second).Format(time.RFC3339Nano), "msg": "after1"},
@@ -136,7 +137,7 @@ func TestFilterLogsSince(t *testing.T) {
 	})
 
 	t.Run("skips entries without ts field", func(t *testing.T) {
-		logsWithMissing := []LogEntry{
+		logsWithMissing := []mcp.LogEntry{
 			{"msg": "no timestamp"},
 			{"ts": base.Add(1 * time.Second).Format(time.RFC3339Nano), "msg": "has ts"},
 		}
@@ -147,7 +148,7 @@ func TestFilterLogsSince(t *testing.T) {
 	})
 
 	t.Run("skips entries with invalid ts", func(t *testing.T) {
-		logsWithBadTS := []LogEntry{
+		logsWithBadTS := []mcp.LogEntry{
 			{"ts": "not-a-timestamp", "msg": "bad ts"},
 			{"ts": base.Add(1 * time.Second).Format(time.RFC3339Nano), "msg": "good ts"},
 		}

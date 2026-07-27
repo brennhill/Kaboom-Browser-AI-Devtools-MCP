@@ -30,13 +30,13 @@ type ToolModuleDescription struct {
 // Describe and Examples provide module metadata and representative calls.
 type ToolModule interface {
 	Validate(args json.RawMessage) error
-	Execute(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse
+	Execute(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
 	Describe() ToolModuleDescription
 	Examples() []json.RawMessage
 }
 
 type moduleValidateFunc func(args json.RawMessage) error
-type moduleExecuteFunc func(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse
+type moduleExecuteFunc func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
 
 type toolMethodModule struct {
 	name     string
@@ -69,7 +69,7 @@ func (m *toolMethodModule) Validate(args json.RawMessage) error {
 	return m.validate(args)
 }
 
-func (m *toolMethodModule) Execute(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func (m *toolMethodModule) Execute(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return m.execute(req, args)
 }
 
@@ -172,10 +172,10 @@ func (h *ToolHandler) buildToolModuleRegistry() *toolModuleRegistry {
 }
 
 // dispatchViaModules routes a request through the module registry when available.
-func (h *ToolHandler) dispatchViaModules(req JSONRPCRequest, name string, args json.RawMessage) (JSONRPCResponse, bool) {
+func (h *ToolHandler) dispatchViaModules(req mcp.JSONRPCRequest, name string, args json.RawMessage) (mcp.JSONRPCResponse, bool) {
 	module, ok := h.toolModules.get(name)
 	if !ok {
-		return JSONRPCResponse{}, false
+		return mcp.JSONRPCResponse{}, false
 	}
 
 	if err := module.Validate(args); err != nil {

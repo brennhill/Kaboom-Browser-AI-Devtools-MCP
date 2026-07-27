@@ -7,15 +7,17 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"net/http/httptest"
 	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
+
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testgenhandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
@@ -96,9 +98,9 @@ func extractJSONFromText(text string) string {
 // ============================================
 
 // parseToolResult unmarshals an MCPToolResult from a JSONRPCResponse.
-func parseToolResult(t *testing.T, resp JSONRPCResponse) MCPToolResult {
+func parseToolResult(t *testing.T, resp mcp.JSONRPCResponse) mcp.MCPToolResult {
 	t.Helper()
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("parseToolResult: %v; raw=%s", err, string(resp.Result))
 	}
@@ -106,7 +108,7 @@ func parseToolResult(t *testing.T, resp JSONRPCResponse) MCPToolResult {
 }
 
 // extractResultJSON extracts the JSON body from the first content block of an MCP result.
-func extractResultJSON(t *testing.T, result MCPToolResult) map[string]any {
+func extractResultJSON(t *testing.T, result mcp.MCPToolResult) map[string]any {
 	t.Helper()
 	if len(result.Content) == 0 {
 		t.Fatal("extractResultJSON: no content blocks")
@@ -127,7 +129,7 @@ func extractResultJSON(t *testing.T, result MCPToolResult) map[string]any {
 // extractStructuredErrorJSON parses the JSON from an MCP error response.
 func extractStructuredErrorJSON(t *testing.T, raw json.RawMessage) map[string]any {
 	t.Helper()
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(raw, &result); err != nil {
 		t.Fatalf("extractStructuredErrorJSON: failed to parse MCPToolResult: %v", err)
 	}
@@ -147,7 +149,7 @@ func extractStructuredErrorJSON(t *testing.T, raw json.RawMessage) map[string]an
 }
 
 // firstText extracts the first text block from a result, or "".
-func firstText(result MCPToolResult) string {
+func firstText(result mcp.MCPToolResult) string {
 	if len(result.Content) > 0 {
 		return result.Content[0].Text
 	}
@@ -159,40 +161,40 @@ func firstText(result MCPToolResult) string {
 // ============================================
 
 // callToolRaw dispatches through HandleToolCall (goes through validation/audit).
-func callToolRaw(h *ToolHandler, name string, argsJSON string) JSONRPCResponse {
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+func callToolRaw(h *ToolHandler, name string, argsJSON string) mcp.JSONRPCResponse {
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp, _ := h.HandleToolCall(req, name, json.RawMessage(argsJSON))
 	return resp
 }
 
 // callObserveRaw invokes toolObserve directly and returns the raw JSONRPCResponse.
-func callObserveRaw(h *ToolHandler, what string) JSONRPCResponse {
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+func callObserveRaw(h *ToolHandler, what string) mcp.JSONRPCResponse {
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"what":"` + what + `"}`)
 	return h.toolObserve(req, args)
 }
 
 // callAnalyzeRaw invokes toolAnalyze with async normalization.
-func callAnalyzeRaw(h *ToolHandler, argsJSON string) JSONRPCResponse {
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+func callAnalyzeRaw(h *ToolHandler, argsJSON string) mcp.JSONRPCResponse {
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	return h.toolAnalyze(req, normalizeAnalyzeArgsForAsync(argsJSON))
 }
 
 // callConfigureRaw invokes toolConfigure directly.
-func callConfigureRaw(h *ToolHandler, argsJSON string) JSONRPCResponse {
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+func callConfigureRaw(h *ToolHandler, argsJSON string) mcp.JSONRPCResponse {
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	return h.toolConfigure(req, json.RawMessage(argsJSON))
 }
 
 // callGenerateRaw invokes toolGenerate directly.
-func callGenerateRaw(h *ToolHandler, argsJSON string) JSONRPCResponse {
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+func callGenerateRaw(h *ToolHandler, argsJSON string) mcp.JSONRPCResponse {
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	return h.toolGenerate(req, json.RawMessage(argsJSON))
 }
 
 // callInteractRaw invokes toolInteract with async normalization.
-func callInteractRaw(h *ToolHandler, argsJSON string) JSONRPCResponse {
-	req := JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+func callInteractRaw(h *ToolHandler, argsJSON string) mcp.JSONRPCResponse {
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	return h.toolInteract(req, normalizeInteractArgsForAsync(argsJSON))
 }
 
@@ -348,7 +350,7 @@ func checkSnakeCaseRecursive(t *testing.T, v any, path string) {
 }
 
 // assertNonErrorResponse verifies a result has content and is not an error.
-func assertNonErrorResponse(t *testing.T, label string, result MCPToolResult) {
+func assertNonErrorResponse(t *testing.T, label string, result mcp.MCPToolResult) {
 	t.Helper()
 	if result.IsError {
 		t.Errorf("%s: unexpected error response: %s", label, firstText(result))
@@ -364,10 +366,10 @@ func assertNonErrorResponse(t *testing.T, label string, result MCPToolResult) {
 }
 
 // assertIsError verifies the response is an error containing the expected substring.
-func assertIsError(t *testing.T, resp JSONRPCResponse, contains string) {
+func assertIsError(t *testing.T, resp mcp.JSONRPCResponse, contains string) {
 	t.Helper()
 	if !act.IsErrorResponse(resp) {
-		var result MCPToolResult
+		var result mcp.MCPToolResult
 		if err := json.Unmarshal(resp.Result, &result); err == nil {
 			for _, c := range result.Content {
 				if strings.Contains(c.Text, contains) {

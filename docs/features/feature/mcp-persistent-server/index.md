@@ -8,6 +8,10 @@ last_reviewed: 2026-07-27
 code_paths:
   - internal/mcp/response.go
   - internal/mcp/response_content.go
+  - internal/mcp/protocol.go
+  - internal/mcp/types.go
+  - internal/identity/mcp.go
+  - cmd/browser-agent/internal/toolresp/rate_limiter.go
   - cmd/browser-agent/internal/toolresp/toolresp.go
   - cmd/browser-agent/tools_errors_guards.go
   - cmd/browser-agent/tool_dispatch_helpers.go
@@ -17,7 +21,6 @@ code_paths:
   - cmd/browser-agent/tools_core.go
   - internal/session/snapshot-manager.go
   - cmd/browser-agent/tools_registry.go
-  - cmd/browser-agent/types.go
   - cmd/browser-agent/server.go
   - cmd/browser-agent/server_routes.go
   - cmd/browser-agent/internal/playbooks/resource_catalog.go
@@ -129,6 +132,11 @@ last_verified_date: 2026-03-29
 ---
 
 # MCP Persistent Server
+
+> **2026-07-27:** Deleted the package-main type facade. MCP wire contracts and
+> protocol negotiation now come directly from `internal/mcp`; server identity,
+> annotations, and tool-call limiting come directly from their canonical owner
+> packages. Root handlers no longer re-export these APIs.
 
 > **2026-07-27:** Removed the unreachable `main_connection_diag.go`
 > connection-probing path and its dedicated tests. No production caller invoked

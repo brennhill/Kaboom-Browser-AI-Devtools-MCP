@@ -10,13 +10,14 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/audit"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 func (h *ToolHandler) recordAuditToolCall(
-	req JSONRPCRequest,
+	req mcp.JSONRPCRequest,
 	toolName string,
 	args json.RawMessage,
-	resp JSONRPCResponse,
+	resp mcp.JSONRPCResponse,
 	started time.Time,
 ) {
 	if h == nil || h.auditTrail == nil {
@@ -81,11 +82,11 @@ func normalizeAuditClientID(clientID string) string {
 	return trimmed
 }
 
-func auditErrorMessage(resp JSONRPCResponse) string {
+func auditErrorMessage(resp mcp.JSONRPCResponse) string {
 	if resp.Error != nil && resp.Error.Message != "" {
 		return resp.Error.Message
 	}
-	var result MCPToolResult
+	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		return ""
 	}
