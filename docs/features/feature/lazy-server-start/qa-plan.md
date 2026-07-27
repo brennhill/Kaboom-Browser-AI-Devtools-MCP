@@ -91,7 +91,7 @@ last_reviewed: 2026-07-05
 | UT-7 | Fast-path tools/list | `tools/list` request | `handleFastPath` returns handled with the tool list | must |
 | UT-8 | tools/call waits | `tools/call` during `"starting"` | Forwarded (waited on), not instant-errored | must |
 | UT-9 | Retryable on 5xx | Forwarded response status >= 500 | Structured error with `retryable: true` | must |
-| UT-10 | Launch mode: daemon flag | `classifyLaunchMode` with `daemonMode` true | `persistent`, reason `daemon_flag_enabled` | must |
+| UT-10 | Launch mode: daemon flag | `launchmode.Classify` with `daemonMode` true | `persistent`, reason `daemon_flag_enabled` | must |
 | UT-11 | Launch mode: supervisor | Supervisor env var set | `persistent`, reason `supervisor_detected` | must |
 | UT-12 | Launch mode: interactive shell | TTY with `zsh` parent | `likely_transient` | must |
 | UT-13 | Require persistent enforced | `KABOOM_REQUIRE_PERSISTENT` + transient | `enforcePersistentMode` returns an error | should |

@@ -1,7 +1,7 @@
-// Purpose: Classifies startup launch mode (persistent vs likely transient) and enforces strict policy when configured.
+// launch_mode.go — Classifies persistent versus likely-transient startup contexts.
 // Why: Reduces setup churn by warning users when runtime context is likely to disconnect after process exit.
 
-package main
+package launchmode
 
 import (
 	"fmt"
@@ -15,11 +15,11 @@ import (
 )
 
 const (
-	launchModePersistent      = "persistent"
-	launchModeLikelyTransient = "likely_transient"
+	Persistent      = "persistent"
+	LikelyTransient = "likely_transient"
 )
 
-type launchModeInfo struct {
+type Info struct {
 	Mode            string
 	Reason          string
 	ParentProcess   string
@@ -30,31 +30,28 @@ type launchModeInfo struct {
 
 var (
 	launchModeMu      sync.RWMutex
-	currentLaunchMode = launchModeInfo{Mode: launchModePersistent, Reason: "default"}
+	currentLaunchMode = Info{Mode: Persistent, Reason: "default"}
 )
 
-var lookupParentProcessName = detectParentProcessName
-
-func setCurrentLaunchMode(info launchModeInfo) {
+func SetCurrent(info Info) {
 	launchModeMu.Lock()
 	defer launchModeMu.Unlock()
 	currentLaunchMode = info
 }
 
-func getCurrentLaunchMode() launchModeInfo {
+func Current() Info {
 	launchModeMu.RLock()
 	defer launchModeMu.RUnlock()
 	return currentLaunchMode
 }
 
-func classifyLaunchMode(cfg *serverConfig, isTTY bool) launchModeInfo {
-	parent := lookupParentProcessName()
+func Classify(daemonMode, isTTY bool, parent string) Info {
 	supervised := isSupervisedLaunch()
 	strict := isPersistentModeRequired()
 
-	if cfg != nil && cfg.daemonMode {
-		return launchModeInfo{
-			Mode:            launchModePersistent,
+	if daemonMode {
+		return Info{
+			Mode:            Persistent,
 			Reason:          "daemon_flag_enabled",
 			ParentProcess:   parent,
 			IsTTY:           isTTY,
@@ -64,8 +61,8 @@ func classifyLaunchMode(cfg *serverConfig, isTTY bool) launchModeInfo {
 	}
 
 	if supervised {
-		return launchModeInfo{
-			Mode:            launchModePersistent,
+		return Info{
+			Mode:            Persistent,
 			Reason:          "supervisor_detected",
 			ParentProcess:   parent,
 			IsTTY:           isTTY,
@@ -79,8 +76,8 @@ func classifyLaunchMode(cfg *serverConfig, isTTY bool) launchModeInfo {
 		if isLikelyAdHocShell(parent) {
 			reason = "interactive_shell_parent"
 		}
-		return launchModeInfo{
-			Mode:            launchModeLikelyTransient,
+		return Info{
+			Mode:            LikelyTransient,
 			Reason:          reason,
 			ParentProcess:   parent,
 			IsTTY:           true,
@@ -89,8 +86,8 @@ func classifyLaunchMode(cfg *serverConfig, isTTY bool) launchModeInfo {
 		}
 	}
 
-	return launchModeInfo{
-		Mode:            launchModePersistent,
+	return Info{
+		Mode:            Persistent,
 		Reason:          "non_interactive_stdio",
 		ParentProcess:   parent,
 		IsTTY:           false,
@@ -99,8 +96,8 @@ func classifyLaunchMode(cfg *serverConfig, isTTY bool) launchModeInfo {
 	}
 }
 
-func buildLaunchModeWarning(info launchModeInfo, port int) string {
-	if info.Mode != launchModeLikelyTransient {
+func Warning(info Info, port int) string {
+	if info.Mode != LikelyTransient {
 		return ""
 	}
 	reason := info.Reason
@@ -110,8 +107,8 @@ func buildLaunchModeWarning(info launchModeInfo, port int) string {
 	return fmt.Sprintf("launch_mode_warning: detected %s (%s). This session may disconnect when the process exits. Start persistently: kaboom-agentic-browser --daemon --port %d", info.Mode, reason, port)
 }
 
-func enforcePersistentMode(info launchModeInfo) error {
-	if !info.StrictRequired || info.Mode != launchModeLikelyTransient {
+func EnforcePersistent(info Info, defaultPort int) error {
+	if !info.StrictRequired || info.Mode != LikelyTransient {
 		return nil
 	}
 	return fmt.Errorf("KABOOM_REQUIRE_PERSISTENT is enabled and launch mode is %s (%s). Start persistently: kaboom-agentic-browser --daemon --port %d", info.Mode, info.Reason, defaultPort)
@@ -125,7 +122,7 @@ func isPersistentModeRequired() bool {
 // by a service manager / supervisor rather than an interactive shell. Hoisted to
 // package scope so tests can deterministically clear them — CI runners set some
 // (e.g. JOURNAL_STREAM/INVOCATION_ID under systemd), which would otherwise make
-// classifyLaunchMode report "supervisor_detected".
+// Classify report "supervisor_detected".
 var supervisorEnvVars = []string{
 	"INVOCATION_ID",      // systemd
 	"JOURNAL_STREAM",     // systemd
@@ -176,7 +173,7 @@ func isLikelyAdHocShell(parent string) bool {
 	}
 }
 
-func detectParentProcessName() string {
+func DetectParentProcessName() string {
 	ppid := os.Getppid()
 	if ppid <= 0 {
 		return ""

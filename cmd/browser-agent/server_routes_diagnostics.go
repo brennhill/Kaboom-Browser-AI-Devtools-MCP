@@ -12,6 +12,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/launchmode"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
@@ -139,7 +140,7 @@ func (s *Server) handleDiagnostics(w http.ResponseWriter, r *http.Request, cap *
 	}
 
 	now := time.Now()
-	launch := getCurrentLaunchMode()
+	launch := launchmode.Current()
 	resp := map[string]any{
 		"generated_at":   now.Format(time.RFC3339),
 		"version":        version,

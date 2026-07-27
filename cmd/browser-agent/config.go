@@ -14,6 +14,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/launchmode"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/configdiscovery"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
@@ -293,8 +294,8 @@ func dispatchMode(server *Server, config *serverConfig) {
 	isTTY, stdinMode := detectStdinMode()
 	mcpConfigPath := configdiscovery.Find()
 	mode := selectRuntimeMode(config, isTTY)
-	launchInfo := classifyLaunchMode(config, isTTY)
-	setCurrentLaunchMode(launchInfo)
+	launchInfo := launchmode.Classify(config.daemonMode, isTTY, launchmode.DetectParentProcessName())
+	launchmode.SetCurrent(launchInfo)
 	if mode == modeDaemon {
 		diag.SetSink(os.Stderr)
 	}
@@ -315,13 +316,13 @@ func dispatchMode(server *Server, config *serverConfig) {
 		"selected_runtime": mode,
 	})
 
-	if warning := buildLaunchModeWarning(launchInfo, config.port); warning != "" {
+	if warning := launchmode.Warning(launchInfo, config.port); warning != "" {
 		server.AddWarning(warning)
 		diag.Printf("[Kaboom] Kaboom appears to be running in non-persistent mode (%s).\n", launchInfo.Reason)
 		diag.Println("[Kaboom] This will disconnect the extension when the process exits.")
 		diag.Printf("[Kaboom] Start persistently: kaboom-agentic-browser --daemon --port %d\n", config.port)
 	}
-	if err := enforcePersistentMode(launchInfo); err != nil {
+	if err := launchmode.EnforcePersistent(launchInfo, defaultPort); err != nil {
 		diag.Printf("[Kaboom] %v\n", err)
 		os.Exit(1)
 	}

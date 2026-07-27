@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/launchmode"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
@@ -235,19 +236,19 @@ func TestHealthMetrics_ConcurrentAccess(t *testing.T) {
 }
 
 func TestBuildServerInfo_IncludesLaunchModeMetadata(t *testing.T) {
-	previous := getCurrentLaunchMode()
-	setCurrentLaunchMode(launchModeInfo{
-		Mode:          launchModeLikelyTransient,
+	previous := launchmode.Current()
+	launchmode.SetCurrent(launchmode.Info{
+		Mode:          launchmode.LikelyTransient,
 		Reason:        "interactive_shell_parent",
 		ParentProcess: "zsh",
 	})
-	t.Cleanup(func() { setCurrentLaunchMode(previous) })
+	t.Cleanup(func() { launchmode.SetCurrent(previous) })
 
 	hm := health.NewMetrics()
 	resp := getHealthResponse(hm, nil, nil, "test-version")
 	info := resp.Server
-	if info.LaunchMode != launchModeLikelyTransient {
-		t.Fatalf("launch_mode = %q, want %q", info.LaunchMode, launchModeLikelyTransient)
+	if info.LaunchMode != launchmode.LikelyTransient {
+		t.Fatalf("launch_mode = %q, want %q", info.LaunchMode, launchmode.LikelyTransient)
 	}
 	if info.LaunchModeReason != "interactive_shell_parent" {
 		t.Fatalf("launch_mode_reason = %q, want interactive_shell_parent", info.LaunchModeReason)

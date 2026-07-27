@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/launchmode"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/replay"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/sequencehandler"
@@ -169,7 +170,7 @@ func getHealthResponse(hm *health.Metrics, cap *capture.Store, server *Server, v
 }
 
 func getLaunchModeInfo() health.LaunchModeInfo {
-	lm := getCurrentLaunchMode()
+	lm := launchmode.Current()
 	return health.LaunchModeInfo{
 		Mode: lm.Mode, Reason: lm.Reason, ParentProcess: lm.ParentProcess,
 	}

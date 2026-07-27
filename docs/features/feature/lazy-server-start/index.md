@@ -10,7 +10,7 @@ code_paths:
   - cmd/browser-agent/internal/bridge/bridge_startup_state.go
   - cmd/browser-agent/internal/bridge/bridge.go
   - cmd/browser-agent/internal/bridge/bridge_fastpath.go
-  - cmd/browser-agent/launch_mode.go
+  - cmd/browser-agent/internal/launchmode/launch_mode.go
   - cmd/browser-agent/tools_errors_guards.go
   - src/popup/tabs/tab-tracking.ts
   - src/popup/shell/status-display.ts
@@ -21,7 +21,7 @@ test_paths:
   - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
   - cmd/browser-agent/internal/bridge/bridge_fastpath_telemetry_test.go
   - cmd/browser-agent/internal/bridge/lazy_server_start_test.go
-  - cmd/browser-agent/launch_mode_test.go
+  - cmd/browser-agent/internal/launchmode/launch_mode_test.go
   - cmd/browser-agent/tools_coldstart_gate_test.go
 ---
 

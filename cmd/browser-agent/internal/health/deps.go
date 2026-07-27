@@ -20,7 +20,7 @@ type UpgradeProvider interface {
 	UpgradeInfo() (pending bool, newVersion string, detectedAt time.Time)
 }
 
-// LaunchModeInfo mirrors the main package's launchModeInfo struct.
+// LaunchModeInfo is the health payload projection of launchmode.Info.
 type LaunchModeInfo struct {
 	Mode          string
 	Reason        string
