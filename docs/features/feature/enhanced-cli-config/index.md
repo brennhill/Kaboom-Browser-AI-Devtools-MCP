@@ -16,7 +16,6 @@ code_paths:
   - Makefile
   - scripts/release/build-crx.js
   - cmd/browser-agent/native_install.go
-  - cmd/browser-agent/native_install_connect.go
   - npm/kaboom-agentic-browser/lib/extension.js
   - npm/kaboom-agentic-browser/lib/browser.js
   - npm/kaboom-agentic-browser/lib/health.js

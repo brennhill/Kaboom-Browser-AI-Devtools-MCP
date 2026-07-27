@@ -2,7 +2,7 @@
 doc_type: flow_map
 flow_id: installer-binary-path-and-manual-extension-handoff
 status: active
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 owners:
   - Brenn
 entrypoints:
@@ -10,7 +10,7 @@ entrypoints:
   - scripts/install.ps1
   - scripts/release/build-crx.js
   - cmd/browser-agent/native_install.go:runNativeInstall
-  - cmd/browser-agent/native_install_connect.go:runExtensionConnectWait
+  - cmd/browser-agent/native_install.go:runExtensionConnectWait
   - npm/kaboom-agentic-browser/lib/install.js:executeInstall
   - npm/kaboom-agentic-browser/lib/cli.js:watchExtensionConnect
   - pypi/kaboom-agentic-browser/kaboom_agentic_browser/platform.py:run_install
@@ -21,7 +21,6 @@ code_paths:
   - scripts/install.ps1
   - server/scripts/install.js
   - cmd/browser-agent/native_install.go
-  - cmd/browser-agent/native_install_connect.go
   - npm/kaboom-agentic-browser/lib/config.js
   - npm/kaboom-agentic-browser/lib/install.js
   - npm/kaboom-agentic-browser/lib/cli.js
@@ -125,7 +124,7 @@ Covers installer behavior for shell, PowerShell, npm wrapper, and PyPI wrapper t
 - `scripts/install.ps1`
 - `server/scripts/install.js`
 - `cmd/browser-agent/native_install.go`
-- `cmd/browser-agent/native_install_connect.go`
+- `cmd/browser-agent/native_install.go` (`runExtensionConnectWait`)
 - `npm/kaboom-agentic-browser/lib/config.js`
 - `npm/kaboom-agentic-browser/lib/install.js`
 - `npm/kaboom-agentic-browser/lib/cli.js`

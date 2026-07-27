@@ -20,7 +20,7 @@ code_paths:
   - cmd/browser-agent/terminal_supervisor.go
   - cmd/browser-agent/main_connection_mcp_shutdown.go
   - cmd/browser-agent/internal/daemonlife/lifecycle.go
-  - cmd/browser-agent/native_install_connect.go
+  - cmd/browser-agent/native_install.go
   - cmd/browser-agent/internal/terminal/intent_handlers.go
   - cmd/browser-agent/internal/terminal/static.go
   - cmd/browser-agent/internal/terminal/terminal_assets/terminal.html

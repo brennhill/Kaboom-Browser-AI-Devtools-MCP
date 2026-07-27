@@ -4,13 +4,20 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
@@ -385,4 +392,165 @@ func mergeJSONConfig(path, key, exePath string, isCustom bool) error {
 		return err
 	}
 	return os.Rename(tmpPath, path)
+}
+
+const (
+	connectWaitTimeout = 30 * time.Second
+	connectPollEvery   = 750 * time.Millisecond
+	connectHealthRead  = 800 * time.Millisecond
+)
+
+type installHealth struct {
+	reachable          bool
+	extensionConnected bool
+	version            string
+	refused            bool
+}
+
+func isConnRefused(err error) bool {
+	return errors.Is(err, syscall.ECONNREFUSED)
+}
+
+func connectPhase(h installHealth) string {
+	if h.extensionConnected {
+		return "connected"
+	}
+	if h.reachable {
+		return "waiting_extension"
+	}
+	return "daemon_unreachable"
+}
+
+func connectProgressLine(phase string) string {
+	switch phase {
+	case "daemon_unreachable":
+		return "   … waiting for the Kaboom server to come up"
+	case "waiting_extension":
+		return "   … server is up — load the extension in your browser to finish"
+	default:
+		return ""
+	}
+}
+
+func connectHintLine(lastPhase string, port int, extDir string) string {
+	if lastPhase == "waiting_extension" {
+		return fmt.Sprintf(
+			"The Kaboom server is running on port %d, but the extension has not connected yet.\n"+
+				"   Open chrome://extensions, enable Developer mode, click Load unpacked, and select:\n   %s",
+			port, extDir)
+	}
+	return fmt.Sprintf(
+		"The Kaboom server is not answering on port %d yet.\n"+
+			"   Re-run the installer, or start Kaboom manually, then load the extension.",
+		port)
+}
+
+type connectWaitDeps struct {
+	fetch func(ctx context.Context, port int) installHealth
+	now   func() time.Time
+	after func(time.Duration) <-chan time.Time
+	sink  func(string)
+}
+
+type connectResult struct {
+	connected bool
+	aborted   bool
+	lastPhase string
+}
+
+func waitForExtensionConnected(ctx context.Context, port int, timeout, poll time.Duration, deps connectWaitDeps) connectResult {
+	start := deps.now()
+	rendered := ""
+	for {
+		if ctx.Err() != nil {
+			return connectResult{aborted: true, lastPhase: rendered}
+		}
+		phase := connectPhase(deps.fetch(ctx, port))
+		if phase != rendered {
+			rendered = phase
+			if deps.sink != nil {
+				if line := connectProgressLine(phase); line != "" {
+					deps.sink(line)
+				}
+			}
+		}
+		if phase == "connected" {
+			return connectResult{connected: true, lastPhase: phase}
+		}
+		if deps.now().Sub(start) >= timeout {
+			return connectResult{lastPhase: phase}
+		}
+		select {
+		case <-ctx.Done():
+			return connectResult{aborted: true, lastPhase: rendered}
+		case <-deps.after(poll):
+		}
+	}
+}
+
+func fetchInstallHealth(ctx context.Context, port int, timeout time.Duration) installHealth {
+	client := &http.Client{Timeout: timeout}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://127.0.0.1:%d/health", port), nil)
+	if err != nil {
+		return installHealth{}
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return installHealth{refused: isConnRefused(err)}
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		return installHealth{reachable: true}
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 256*1024))
+	if err != nil {
+		return installHealth{reachable: true}
+	}
+	var parsed struct {
+		Version string `json:"version"`
+		Capture struct {
+			ExtensionConnected bool `json:"extension_connected"`
+		} `json:"capture"`
+	}
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		return installHealth{reachable: true}
+	}
+	return installHealth{reachable: true, extensionConnected: parsed.Capture.ExtensionConnected, version: parsed.Version}
+}
+
+func installWaitDisabled() bool {
+	return envFlagEnabled("KABOOM_NO_WAIT", "KABOOM_INSTALL_NO_WAIT")
+}
+
+func isTerminal(f *os.File) bool {
+	if f == nil {
+		return false
+	}
+	fi, err := f.Stat()
+	if err != nil {
+		return false
+	}
+	return fi.Mode()&os.ModeCharDevice != 0
+}
+
+func runExtensionConnectWait(port int, extDir string) {
+	if installWaitDisabled() || !isTerminal(os.Stderr) {
+		return
+	}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+	stderrf("\n\033[1;33m⏳ Waiting for the browser extension to connect (Ctrl-C to skip)…\033[0m\n")
+	res := waitForExtensionConnected(ctx, port, connectWaitTimeout, connectPollEvery, connectWaitDeps{
+		fetch: func(c context.Context, p int) installHealth { return fetchInstallHealth(c, p, connectHealthRead) },
+		now:   time.Now,
+		after: time.After,
+		sink:  func(line string) { stderrf("%s\n", line) },
+	})
+	if res.connected {
+		stderrf("\033[1;32m✅ Extension connected — Kaboom is fully wired up!\033[0m\n")
+	} else if res.aborted {
+		stderrf("\033[1;33m⏭️  Skipped waiting — the Kaboom server is running; load the extension and it will connect.\033[0m\n")
+	} else {
+		stderrf("\033[1;33m⚠️  %s\033[0m\n", connectHintLine(res.lastPhase, port, extDir))
+	}
 }
