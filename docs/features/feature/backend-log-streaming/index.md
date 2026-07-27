@@ -6,7 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-27
 code_paths:
-  - cmd/browser-agent/tools_configure_network_recording.go
+  - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/netrecord/handlers.go
   - cmd/browser-agent/internal/toolconfigure/netrecord/state.go
   - cmd/browser-agent/internal/toolconfigure/netrecord/filters.go

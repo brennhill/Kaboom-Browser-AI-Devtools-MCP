@@ -7,8 +7,12 @@ package main
 import (
 	"encoding/json"
 	"runtime"
+	"sync"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/replay"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/sequencehandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/qualitygates"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/tutorial"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/issuereport"
@@ -18,6 +22,11 @@ import (
 )
 
 const defaultStoreNamespace = "session"
+
+type RecordingSnapshot = netrecord.RecordingSnapshot
+type Sequence = toolconfigure.Sequence
+
+var replayMu sync.Mutex
 
 var configureHandlers = map[string]ModeHandler{
 	"store": func(h *ToolHandler, req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
@@ -235,4 +244,42 @@ func (h *ToolHandler) SanitizeIssueReport(report issuereport.IssueReport) issuer
 
 func (h *ToolHandler) SubmitIssueReport(report issuereport.IssueReport) issuereport.SubmitResult {
 	return issuereport.SubmitViaGH(h.shutdownCtx, report, h.issueCommandRunner)
+}
+
+func (h *ToolHandler) toolConfigureNetworkRecording(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return netrecord.HandleNetworkRecording(h.capture, h.networkRecording, req, args)
+}
+
+func extractErrorMessage(response JSONRPCResponse) string {
+	if message := replay.ErrorMessage(response); message != "" {
+		return message
+	}
+	return "unknown error"
+}
+
+func (h *ToolHandler) sequenceHandler() *sequencehandler.Handler {
+	return sequencehandler.New(sequencehandler.Deps{
+		Store: h.sessionStoreImpl, ReplayMu: &replayMu, Interact: h.toolInteract,
+		WaitForCommand: h.capture.WaitForCommand, RecordAction: h.recordAIAction,
+	})
+}
+
+func (h *ToolHandler) toolConfigureSaveSequence(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return h.sequenceHandler().Save(req, args)
+}
+
+func (h *ToolHandler) toolConfigureGetSequence(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return h.sequenceHandler().Get(req, args)
+}
+
+func (h *ToolHandler) toolConfigureListSequences(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return h.sequenceHandler().List(req, args)
+}
+
+func (h *ToolHandler) toolConfigureDeleteSequence(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return h.sequenceHandler().Delete(req, args)
+}
+
+func (h *ToolHandler) toolConfigureReplaySequence(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return h.sequenceHandler().Replay(req, args)
 }

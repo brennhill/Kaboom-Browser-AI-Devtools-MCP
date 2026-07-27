@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
@@ -343,4 +345,98 @@ func mergeAsyncAlias(args json.RawMessage) json.RawMessage {
 		return args
 	}
 	return merged
+}
+
+type WorkflowStep = act.WorkflowStep
+type FormField = act.FormField
+
+func isErrorResponse(resp JSONRPCResponse) bool {
+	return act.IsErrorResponse(resp)
+}
+
+func isNonFinalResponse(resp JSONRPCResponse) bool {
+	return act.IsNonFinalResponse(resp)
+}
+
+func responseStatus(resp JSONRPCResponse) string {
+	return act.ResponseStatus(resp)
+}
+
+func workflowResult(req JSONRPCRequest, workflow string, trace []WorkflowStep, lastResp JSONRPCResponse, start time.Time) JSONRPCResponse {
+	return act.WorkflowResult(req, workflow, trace, lastResp, start)
+}
+
+func (h *ToolHandler) recordAIAction(actionType, url string, details map[string]any) {
+	action := capture.EnhancedAction{
+		Type: actionType, Timestamp: time.Now().UnixMilli(), URL: url, Source: "ai",
+	}
+	if len(details) > 0 {
+		action.Selectors = details
+	}
+	h.capture.AddEnhancedActions([]capture.EnhancedAction{action})
+}
+
+func (h *ToolHandler) recordAIEnhancedAction(action capture.EnhancedAction) {
+	action.Timestamp = time.Now().UnixMilli()
+	action.Source = "ai"
+	h.capture.AddEnhancedActions([]capture.EnhancedAction{action})
+}
+
+func (h *ToolHandler) recordDOMPrimitiveAction(action, selector, text, value string) {
+	reproType, ok := act.DOMActionToReproType[action]
+	if !ok {
+		h.recordAIAction("dom_"+action, "", map[string]any{"selector": selector})
+		return
+	}
+	enhanced := capture.EnhancedAction{
+		Type: reproType, Selectors: act.ParseSelectorForReproduction(selector),
+	}
+	switch action {
+	case "type":
+		enhanced.Value = text
+	case "key_press":
+		enhanced.Key = text
+	case "select":
+		enhanced.SelectedValue = value
+	}
+	h.recordAIEnhancedAction(enhanced)
+}
+
+func (h *ToolHandler) enrichNavigateResponse(resp JSONRPCResponse, req JSONRPCRequest, tabID int) JSONRPCResponse {
+	var result MCPToolResult
+	if json.Unmarshal(resp.Result, &result) != nil || result.IsError {
+		return resp
+	}
+	_, _, tabURL := h.capture.GetTrackingStatus()
+	tabTitle := h.capture.GetTrackedTabTitle()
+	vitals := h.capture.GetPerformanceSnapshots()
+	correlationID := newCorrelationID("nav_content")
+	params := buildQueryParams(map[string]any{"timeout_ms": 4000})
+	query := queries.PendingQuery{
+		Type: "page_summary", Params: params, TabID: tabID, CorrelationID: correlationID,
+	}
+	if enqueueResponse, blocked := h.EnqueuePendingQuery(req, query, queries.AsyncCommandTimeout); blocked {
+		return enqueueResponse
+	}
+	var textContent string
+	command, found := h.capture.WaitForCommand(correlationID, toolinteract.NavigatePageSummaryWait)
+	if found && command.Status != "pending" && command.Result != nil {
+		var summary map[string]any
+		if json.Unmarshal(command.Result, &summary) == nil {
+			textContent, _ = summary["main_content_preview"].(string)
+		}
+	}
+	if len(result.Content) > 0 {
+		enrichment := map[string]any{"url": tabURL, "title": tabTitle, "text_content": textContent}
+		if len(vitals) > 0 {
+			enrichment["vitals"] = vitals[len(vitals)-1]
+		}
+		enrichmentJSON, _ := json.Marshal(enrichment)
+		result.Content = append(result.Content, MCPContentBlock{
+			Type: "text", Text: "Page content:\n" + string(enrichmentJSON),
+		})
+	}
+	resultJSON, _ := json.Marshal(result)
+	resp.Result = resultJSON
+	return resp
 }

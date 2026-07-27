@@ -2,7 +2,7 @@
 doc_type: tech-spec
 feature_id: feature-batch-sequences
 status: proposed
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-27
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -10,10 +10,10 @@ last_verified_date: 2026-03-05
 # Batch Sequences Tech Spec
 
 ## Architecture
-- Core batch executor: `cmd/browser-agent/tools_interact_batch.go`
-- Sequence persistence + dispatch: `cmd/browser-agent/tools_configure_sequence.go`
-- Replay orchestration: `cmd/browser-agent/tools_configure_sequence_replay.go`
-- Replay step execution helpers: `cmd/browser-agent/tools_configure_sequence_replay_steps.go`
+- Core batch executor: `cmd/browser-agent/internal/toolinteract/interact_batch.go`
+- Sequence configure boundary: `cmd/browser-agent/tools_configure.go`
+- Sequence persistence handlers: `cmd/browser-agent/internal/sequencehandler/handler.go`
+- Replay orchestration: `cmd/browser-agent/internal/sequencehandler/replay.go`
 
 ## Contract Notes
 - Batch step schema is part of interact tool schema (`internal/schema/interact/properties_output_batch.go`).

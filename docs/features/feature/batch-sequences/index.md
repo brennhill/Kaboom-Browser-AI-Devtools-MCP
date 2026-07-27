@@ -11,7 +11,7 @@ code_paths:
   - cmd/browser-agent/internal/sequencehandler/replay.go
   - cmd/browser-agent/internal/toolinteract/interact_batch.go
   - cmd/browser-agent/tools_interact_dispatch.go
-  - cmd/browser-agent/tools_configure_sequence.go
+  - cmd/browser-agent/tools_configure.go
   - internal/schema/interact/actions.go
   - internal/schema/interact/properties_output_batch.go
   - internal/tools/configure/capabilities/modespecs_interact.go
