@@ -12,11 +12,14 @@ package toolinteract
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
 type evidenceMode string
@@ -148,6 +151,49 @@ type EvidenceShot = evidenceShot
 // EvidenceCaptureFn is the pluggable evidence capture function.
 // Tests can replace it to avoid real screenshot I/O.
 var evidenceCaptureFn func(deps *Deps, clientID string) evidenceShot
+
+// CaptureEvidence captures one screenshot through the canonical query lifecycle.
+// It lives with evidence state because its error vocabulary is part of that contract.
+func CaptureEvidence(store *capture.Store, clientID string) EvidenceShot {
+	if store == nil {
+		return EvidenceShot{Error: "capture_not_initialized"}
+	}
+	enabled, _, _ := store.GetTrackingStatus()
+	if !enabled {
+		return EvidenceShot{Error: "no_tracked_tab"}
+	}
+
+	queryID, err := store.CreatePendingQueryWithTimeout(
+		queries.PendingQuery{Type: "screenshot", Params: json.RawMessage(`{}`)},
+		evidenceScreenshotTimeout,
+		clientID,
+	)
+	if err != nil {
+		return EvidenceShot{Error: "queue_full: " + err.Error()}
+	}
+
+	raw, err := store.WaitForResult(queryID, evidenceScreenshotTimeout)
+	if err != nil {
+		return EvidenceShot{Error: "screenshot_timeout: " + err.Error()}
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return EvidenceShot{Error: "screenshot_parse_error: " + err.Error()}
+	}
+	if message, ok := payload["error"].(string); ok && strings.TrimSpace(message) != "" {
+		return EvidenceShot{Error: strings.TrimSpace(message)}
+	}
+
+	path, _ := payload["path"].(string)
+	filename, _ := payload["filename"].(string)
+	path = strings.TrimSpace(path)
+	filename = strings.TrimSpace(filename)
+	if path == "" {
+		return EvidenceShot{Filename: filename, Error: "screenshot_missing_path"}
+	}
+	return EvidenceShot{Path: path, Filename: filename}
+}
 
 func (h *InteractActionHandler) captureEvidenceWithRetry(clientID string) evidenceShot {
 	retries := evidenceRetryCount()

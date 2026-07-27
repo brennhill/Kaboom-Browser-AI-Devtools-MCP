@@ -7,7 +7,8 @@ owners: []
 last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/internal/toolguard/guards.go
-  - cmd/browser-agent/tools_interact_adapter.go
+  - cmd/browser-agent/tools_core.go
+  - cmd/browser-agent/internal/toolinteract/interact_evidence.go
 test_paths:
   - cmd/browser-agent/tools_interact_gate_test.go
   - cmd/browser-agent/tools_coldstart_gate_test.go

@@ -600,6 +600,63 @@ func (h *ToolHandler) LogEntries() []types.LogEntry {
 	return entries
 }
 
+// buildInteractDeps is the composition boundary between ToolHandler and the
+// canonical interact owner. All cross-feature dependencies are wired here.
+func buildInteractDeps(h *ToolHandler) *toolinteract.Deps {
+	if h.Guards == nil {
+		h.Guards = toolguard.New(h.capture, h.shutdownCtx, defaultExtensionReadinessTimeout())
+	}
+	return &toolinteract.Deps{
+		RequirePilot: h.Guards.RequirePilot, RequireExtension: h.Guards.RequireExtension,
+		RequireTabTracking: h.Guards.RequireTabTracking, RequireCSPClear: h.Guards.RequireCSPClear,
+		EnqueuePendingQuery: h.EnqueuePendingQuery, MaybeWaitForCommand: h.MaybeWaitForCommand,
+		Capture:        func() *capture.Store { return h.capture },
+		RecordAIAction: h.recordAIAction, RecordAIEnhancedAction: h.recordAIEnhancedAction,
+		RecordDOMPrimitiveAction: h.recordDOMPrimitiveAction,
+		ToolInteract:             h.toolInteract, ToolAnalyze: h.analyzeDispatcher.Handle,
+		ToolExportSARIF:         h.generateDispatcher.ExportSARIF,
+		EnrichNavigateResponse:  h.enrichNavigateResponse,
+		InjectCSPBlockedActions: h.Guards.InjectCSPBlockedActions,
+		GetScreenshot: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return observe.GetScreenshot(h, req, args)
+		},
+		GetPageInfo: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return observe.GetPageInfo(h, req, args)
+		},
+		MarkDrawStarted: func() {
+			if h.annotationStore != nil {
+				h.annotationStore.MarkDrawStarted()
+			}
+		},
+		GetListenPort: func() int {
+			if h.server != nil {
+				return h.server.getListenPort()
+			}
+			return defaultPort
+		},
+		DefaultEvidenceCapture: func(clientID string) toolinteract.EvidenceShot {
+			return toolinteract.CaptureEvidence(h.capture, clientID)
+		},
+		RequireSessionStore: func(req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool) {
+			return sessionStoreGuard(h.sessionStoreImpl, req)
+		},
+		DiagnosticHint: h.Guards.DiagnosticHint,
+		GetRedactionEngine: func() toolinteract.RedactionEngine {
+			return h.GetRedactionEngine()
+		},
+		GetCommandResult: h.capture.GetCommandResult,
+		ReplayMu:         &replayMu,
+	}
+}
+
+func (h *ToolHandler) interactAction() *toolinteract.InteractActionHandler {
+	return h.interactActionHandler
+}
+
+func (h *ToolHandler) stateInteract() *interactstate.Handler {
+	return h.stateInteractHandler
+}
+
 func (h *ToolHandler) screenrecDeps() screenrec.Deps {
 	if h.Guards == nil {
 		h.Guards = toolguard.New(h.capture, h.shutdownCtx, defaultExtensionReadinessTimeout())

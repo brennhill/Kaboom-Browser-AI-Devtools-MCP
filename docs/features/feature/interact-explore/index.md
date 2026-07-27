@@ -4,7 +4,7 @@ feature_id: feature-interact-explore
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/internal/toolinteract/deps.go
   - cmd/browser-agent/internal/toolinteract/interactstate/state.go
@@ -19,7 +19,7 @@ code_paths:
   - cmd/browser-agent/internal/toolinteract/interact_evidence.go
   - cmd/browser-agent/internal/toolinteract/interact_batch.go
   - cmd/browser-agent/internal/toolinteract/elemindex/registry.go
-  - cmd/browser-agent/tools_interact_adapter.go
+  - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/tools_interact_dispatch.go
   - cmd/browser-agent/tools_async_completion.go
   - internal/tools/interact/workflow.go
