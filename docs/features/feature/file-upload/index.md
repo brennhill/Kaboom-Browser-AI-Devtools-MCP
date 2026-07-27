@@ -9,6 +9,11 @@ code_paths:
   - cmd/browser-agent/internal/toolinteract/interactupload/upload.go
   - cmd/browser-agent/internal/toolinteract/deps.go
   - cmd/browser-agent/upload_handlers.go
+  - cmd/browser-agent/internal/uploadhandler/handlers.go
+  - cmd/browser-agent/internal/uploadhandler/types.go
+  - cmd/browser-agent/internal/uploadhandler/security.go
+  - cmd/browser-agent/internal/uploadhandler/os_automation.go
+  - cmd/browser-agent/internal/uploadhandler/form_submit.go
   - internal/upload/handlers.go
   - internal/upload/types.go
   - internal/upload/uploadsec/path.go
@@ -20,6 +25,8 @@ code_paths:
   - scripts/smoke-tests/upload-server.py
 test_paths:
   - cmd/browser-agent/internal/toolinteract/interactupload/upload_test.go
+  - cmd/browser-agent/internal/uploadhandler/uploadhandler_test.go
+  - cmd/browser-agent/internal/uploadhandler/handlers_http_test.go
   - cmd/browser-agent/upload_integration_test.go
   - cmd/browser-agent/upload_handlers_test.go
   - internal/upload/handlers_test.go
