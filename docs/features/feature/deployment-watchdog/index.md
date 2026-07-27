@@ -9,7 +9,6 @@ code_paths:
   - cmd/browser-agent/main_connection_mcp_upgrade.go
   - cmd/browser-agent/binary_watcher.go
   - cmd/browser-agent/config_modes.go
-  - cmd/browser-agent/binary_watcher_marker.go
   - cmd/browser-agent/health_tool_handler.go
   - cmd/browser-agent/server_routes_health_diagnostics.go
   - cmd/browser-agent/handler_tools_call_postprocess.go

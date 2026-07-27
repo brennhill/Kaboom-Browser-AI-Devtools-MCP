@@ -7,9 +7,11 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -280,4 +282,49 @@ func startBinaryWatcherWithConfig(
 	})
 
 	return state
+}
+
+// upgradeMarker persists the completed version transition across daemon restart.
+type upgradeMarker struct {
+	FromVersion string `json:"from_version"`
+	ToVersion   string `json:"to_version"`
+	Timestamp   string `json:"timestamp"`
+}
+
+func writeUpgradeMarker(fromVersion, toVersion, path string) error {
+	marker := upgradeMarker{
+		FromVersion: fromVersion,
+		ToVersion:   toVersion,
+		Timestamp:   time.Now().UTC().Format(time.RFC3339),
+	}
+	data, err := json.Marshal(marker)
+	if err != nil {
+		return fmt.Errorf("marshal upgrade marker: %w", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return fmt.Errorf("create marker dir: %w", err)
+	}
+	return os.WriteFile(path, data, 0o644)
+}
+
+// readAndClearUpgradeMarker consumes the marker exactly once. Invalid marker
+// contents are cleared and treated as absent so they cannot poison startup.
+func readAndClearUpgradeMarker(path string) (*upgradeMarker, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("read upgrade marker: %w", err)
+	}
+	_ = os.Remove(path)
+
+	var marker upgradeMarker
+	if err := json.Unmarshal(data, &marker); err != nil {
+		return nil, nil
+	}
+	if marker.FromVersion == "" || marker.ToVersion == "" {
+		return nil, nil
+	}
+	return &marker, nil
 }
