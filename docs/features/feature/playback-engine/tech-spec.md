@@ -17,7 +17,8 @@ last_verified_date: 2026-03-05
 - Selector fragility analysis: `internal/recording/playback/fragile.go`
 - Recording comparison and reports: `internal/recording/logdiff/`
 - Delegation surface: `internal/capture/handlers.go`
-- CLI handler bridge: `cmd/browser-agent/recording_handlers.go`
+- MCP configure/observe bridges: `cmd/browser-agent/tools_configure.go` and `cmd/browser-agent/tools_observe.go`
+- Runtime construction seams: `cmd/browser-agent/tools_core_constructor.go`
 - Recording and playback handler implementation: `cmd/browser-agent/internal/toolrecording/handler.go`
 
 ## Constraints

@@ -283,3 +283,19 @@ func (h *ToolHandler) toolConfigureDeleteSequence(req JSONRPCRequest, args json.
 func (h *ToolHandler) toolConfigureReplaySequence(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 	return h.sequenceHandler().Replay(req, args)
 }
+
+func (h *ToolHandler) toolConfigureEventRecordingStart(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return h.recordingHandler.EventRecordingStart(req, args)
+}
+
+func (h *ToolHandler) toolConfigureEventRecordingStop(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return h.recordingHandler.EventRecordingStop(req, args)
+}
+
+func (h *ToolHandler) toolConfigurePlayback(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return h.recordingHandler.Playback(req, args)
+}
+
+func (h *ToolHandler) toolConfigureLogDiff(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return h.recordingHandler.LogDiff(req, args)
+}

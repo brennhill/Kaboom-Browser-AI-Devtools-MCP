@@ -8,24 +8,22 @@ The kaboom codebase has two major architectural pain points: a monolithic Go bac
 
 ## Phase 1: Naming Convention Discipline (Current — Option C)
 
-Enforce `tools_<tool>_*.go` naming so each tool's files are traceable:
+Keep each MCP tool's package-main surface concentrated in its dispatch boundary,
+with implementations delegated to focused internal packages:
 
 ```
-tools_observe.go            # handler
-tools_observe_schema.go     # schema
-tools_observe_analysis.go   # sub-handlers
-tools_analyze.go
-tools_analyze_schema.go
-tools_analyze_security.go   # was tools_security.go
-tools_configure.go
-tools_configure_schema.go
-tools_configure_recording.go # was recording_handlers.go (configure half)
+tools_observe.go            # observe routing and thin result adapters
+tools_analyze_dispatch.go   # analyze routing
+tools_configure.go          # configure routing and thin adapters
+tools_interact_dispatch.go  # interact routing and boundary glue
+internal/tool*/             # feature implementations
 ...
 ```
 
 Shared test helpers consolidated into `tools_test_helpers_test.go`. Shared cross-tool query functions live with the async command protocol in `tools_async_completion.go`; other shared tool state lives in `tools_core.go`.
 
-**Status**: In progress. Test helpers consolidated, schema split planned.
+**Status**: In progress. Root adapters are being removed or colocated with their
+registry while behavior moves behind narrow internal-package contracts.
 
 ---
 

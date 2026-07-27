@@ -19,7 +19,9 @@ code_paths:
   - internal/recording/logdiff/helpers.go
   - internal/recording/logdiff/report.go
   - internal/capture/handlers.go
-  - cmd/browser-agent/recording_handlers.go
+  - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/tools_observe.go
+  - cmd/browser-agent/tools_core_constructor.go
   - cmd/browser-agent/internal/toolrecording/handler.go
   - cmd/browser-agent/internal/toolrecording/helpers.go
 test_paths:
@@ -73,7 +75,7 @@ last_verified_date: 2026-03-05
   for diffing), so neither depends on the manager type and both are tested
   against in-memory fakes.
 - Delegation surface: `internal/capture/handlers.go`
-- MCP adapter: `cmd/browser-agent/recording_handlers.go`
+- MCP adapters: `cmd/browser-agent/tools_configure.go`, `tools_observe.go`, and `tools_core_constructor.go`
 - Recording and playback MCP behavior/state: `cmd/browser-agent/internal/toolrecording/`
 - Still a stub: `playback.executeAction` returns synthetic results and is not yet
   wired to the PendingQuery/interact system, so replay does not drive a browser.

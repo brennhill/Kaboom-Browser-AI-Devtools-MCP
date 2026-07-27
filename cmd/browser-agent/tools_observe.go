@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolobserve"
 	observe "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 )
@@ -167,4 +168,24 @@ func (h *ToolHandler) toolObserveFailedCommands(req JSONRPCRequest, _ json.RawMe
 		return succeed(req, "No failed commands found", data)
 	}
 	return succeed(req, fmt.Sprintf("Found %d failed/expired commands", len(failed)), data)
+}
+
+func (h *ToolHandler) toolObserveSavedVideos(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return screenrec.HandleObserveSavedVideos(req, args)
+}
+
+func (h *ToolHandler) toolGetRecordings(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return h.recordingHandler.Recordings(req, args)
+}
+
+func (h *ToolHandler) toolGetRecordingActions(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return h.recordingHandler.RecordingActions(req, args)
+}
+
+func (h *ToolHandler) toolGetPlaybackResults(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return h.recordingHandler.PlaybackResults(req, args)
+}
+
+func (h *ToolHandler) toolGetLogDiffReport(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	return h.recordingHandler.LogDiffReport(req, args)
 }

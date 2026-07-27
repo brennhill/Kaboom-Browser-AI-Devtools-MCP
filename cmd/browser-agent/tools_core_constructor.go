@@ -145,3 +145,19 @@ func NewToolHandler(server *Server, capture *capture.Store) *MCPHandler {
 		toolHandler: handler,
 	}
 }
+
+func (h *ToolHandler) screenrecDeps() screenrec.Deps {
+	return screenrec.Deps{
+		EnqueuePendingQuery: h.EnqueuePendingQuery, RequirePilot: h.requirePilot,
+		RequireExtension: h.requireExtension, RecordAIAction: h.recordAIAction,
+		DiagnosticHint: h.diagnosticHint, GetCommandResult: h.getCommandResult,
+	}
+}
+
+func (h *ToolHandler) buildPlaybackResult(req JSONRPCRequest, recordingID string, session *capture.PlaybackSession) JSONRPCResponse {
+	return toolrecording.BuildPlaybackResult(req, recordingID, session)
+}
+
+func (h *ToolHandler) appendServerLog(entry LogEntry) {
+	h.server.logs.AddEntries([]LogEntry{entry})
+}

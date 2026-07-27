@@ -4,11 +4,12 @@ feature_id: feature-tab-recording
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/tools_interact_dispatch.go
   - internal/schema/interact/actions.go
-  - cmd/browser-agent/screenrec_bridge.go
+  - cmd/browser-agent/tools_core_constructor.go
+  - cmd/browser-agent/tools_observe.go
   - cmd/browser-agent/internal/screenrec/deps.go
   - cmd/browser-agent/internal/screenrec/types.go
   - cmd/browser-agent/internal/screenrec/handlers.go
@@ -31,6 +32,7 @@ code_paths:
   - extension/popup.html
   - extension/popup.css
 test_paths:
+  - cmd/browser-agent/screenrec_wiring_test.go
   - cmd/browser-agent/tools_interact_handler_test.go
   - cmd/browser-agent/internal/screenrec/screenrec_test.go
   - tests/extension/recording-shortcut-command.test.js

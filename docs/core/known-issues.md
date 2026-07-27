@@ -98,20 +98,18 @@ investigating the daemon itself.
 
 ## Test coverage gaps
 
-### 5. Only one of the `*Deps()` seam builders has a wiring guard — MEDIUM
+### 5. `generateDeps()` lacks an all-seams-wired guard — MEDIUM
 
 `daemonlifeDeps()` is guarded by `TestDaemonlifeDeps_AllSeamsWired`
-(`cmd/browser-agent/daemon_lifecycle_wiring_test.go`). These are not:
-
-- `screenrecDeps()` — `cmd/browser-agent/screenrec_bridge.go:19`
-- `generateDeps()` — `cmd/browser-agent/tools_generate_adapter.go:11`
+(`cmd/browser-agent/daemon_lifecycle_wiring_test.go`), and `screenrecDeps()` is
+now guarded by `TestScreenrecDeps_AllSeamsWired`
+(`cmd/browser-agent/screenrec_wiring_test.go`). The remaining unguarded builder
+is `generateDeps()` in `cmd/browser-agent/tools_generate_adapter.go`.
 
 A `Deps` struct of function fields fails silently when a field is left nil or
 mis-wired: the seam still compiles and the feature simply stops doing something.
-For `screenrecDeps()` this was demonstrated by sabotage — the pilot gate and
-audit journaling can both be disabled with the suite staying green.
 
-**Fix direction:** copy the `AllSeamsWired` pattern for each remaining builder.
+**Fix direction:** copy the `AllSeamsWired` pattern for `generateDeps()`.
 
 ### 6. Per-package coverage numbers under-report cross-package tests — INFO
 
@@ -144,8 +142,8 @@ the folder-gate numbers as evidence that it did.
 | | Current |
 | --- | --- |
 | `Capture` methods behind one `sync.RWMutex` | 165 |
-| `cmd/browser-agent` production source files (package `main`) | 83 |
-| …of which declare `*ToolHandler` methods | 28 |
+| `cmd/browser-agent` production source files (package `main`) | 81 |
+| …of which declare `*ToolHandler` methods | 26 |
 
 Both remain structurally constrained: Go only permits methods on a type in the
 package that declares it. Extracted `tool*` packages therefore expose handlers
