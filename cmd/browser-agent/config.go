@@ -338,7 +338,7 @@ func dispatchMode(server *Server, config *serverConfig) {
 		server.logLifecycle("daemon_mode_start", config.port, nil)
 		if err := runMCPMode(server, config.port, config.apiKey, daemonlife.LaunchOptions{Parallel: config.parallelMode}); err != nil {
 			telemetry.AppError("daemon_start_failed", nil)
-			diagnosticPath := appendExitDiagnostic("daemon_start_failed", map[string]any{
+			diagnosticPath := exitDiagnostics.Append("daemon_start_failed", map[string]any{
 				"port":  config.port,
 				"error": err.Error(),
 			})

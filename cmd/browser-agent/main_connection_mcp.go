@@ -327,7 +327,7 @@ func startHTTPServer(server *Server, port int, apiKey string, mux *http.ServeMux
 		httpReady <- nil
 		// #nosec G114 -- localhost-only MCP background server
 		if err := srv.Serve(ln); err != nil && err != http.ErrServerClosed {
-			_ = appendExitDiagnostic("http_listener_error", map[string]any{
+			_ = exitDiagnostics.Append("http_listener_error", map[string]any{
 				"port":  port,
 				"error": err.Error(),
 			})

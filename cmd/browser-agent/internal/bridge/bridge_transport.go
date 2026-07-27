@@ -71,7 +71,7 @@ func bridgeShutdown(wg *sync.WaitGroup, readErr error, responseSent chan bool, s
 
 	if stats != nil {
 		// PRIVACY: beacon props must NOT include readErr or any error messages.
-		// The extra map below (for appendExitDiagnostic) intentionally includes
+		// The extra map below (for the exit diagnostic recorder) intentionally includes
 		// more detail because it writes to a local file, not to telemetry.
 		if stats.parseErrors > 0 || stats.methodNotFound > 0 || (readErr != nil && !errors.Is(readErr, io.EOF)) {
 			telemetry.AppError("bridge_exit_error", nil)

@@ -76,7 +76,7 @@ func initBridge() {
 		StopServerForUpgrade: stopServerForUpgrade,
 		FindProcessOnPort:    procctl.FindProcessOnPort,
 		IsProcessAlive:       procctl.IsProcessAlive,
-		AppendExitDiagnostic: appendExitDiagnostic,
+		AppendExitDiagnostic: exitDiagnostics.Append,
 	})
 }
 

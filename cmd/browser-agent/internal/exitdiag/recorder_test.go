@@ -1,9 +1,10 @@
 // Purpose: Tests for exit diagnostic output on shutdown.
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
-package main
+package exitdiag
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +12,24 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
+
+func TestRecorderRecoverUsesInjectedExitAndStderr(t *testing.T) {
+	t.Setenv(state.StateDirEnv, t.TempDir())
+	var stderr bytes.Buffer
+	exitCode := 0
+	recorder := New(Options{
+		Version: "test", Stderr: &stderr, Exit: func(code int) { exitCode = code },
+	})
+
+	recorder.Recover("boom")
+
+	if exitCode != 1 {
+		t.Fatalf("exit code = %d, want 1", exitCode)
+	}
+	if !strings.Contains(stderr.String(), "FATAL ERROR") || !strings.Contains(stderr.String(), "Crash details written") {
+		t.Fatalf("stderr missing panic diagnostics: %q", stderr.String())
+	}
+}
 
 func TestWriteDiagnosticToCandidates_WritesFirstAvailable(t *testing.T) {
 	t.Parallel()
@@ -67,9 +86,9 @@ func TestAppendExitDiagnostic_UsesStateCrashPath(t *testing.T) {
 	stateDir := t.TempDir()
 	t.Setenv(state.StateDirEnv, stateDir)
 
-	path := appendExitDiagnostic("daemon_shutdown", map[string]any{"reason": "unit_test"})
+	path := New(Options{Version: "test"}).Append("daemon_shutdown", map[string]any{"reason": "unit_test"})
 	if path == "" {
-		t.Fatal("appendExitDiagnostic returned empty path")
+		t.Fatal("Append returned empty path")
 	}
 	want := filepath.Join(stateDir, "logs", "exit-diagnostics.log")
 	if path != want {

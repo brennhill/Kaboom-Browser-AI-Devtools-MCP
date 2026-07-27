@@ -65,7 +65,7 @@ func awaitShutdownSignal(server *Server, srv *http.Server, port int, httpDone <-
 	if shutdownSource != "http_listener_died" {
 		daemonlife.ClearRestartHistoryOnCleanShutdown(daemonlifeDeps(server), port)
 	}
-	if diagPath := appendExitDiagnostic("daemon_shutdown", map[string]any{
+	if diagPath := exitDiagnostics.Append("daemon_shutdown", map[string]any{
 		"port":            port,
 		"signal":          s.String(),
 		"shutdown_source": shutdownSource,

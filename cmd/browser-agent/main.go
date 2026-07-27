@@ -11,6 +11,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/cli"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/exitdiag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/versioncheck"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
@@ -21,6 +22,8 @@ import (
 // version is set at build time via -ldflags "-X main.version=..."
 // Fallback used for `go run` and `make dev` (no ldflags).
 var version = "0.8.8"
+
+var exitDiagnostics = exitdiag.New(exitdiag.Options{Version: version})
 
 var releaseChecker = versioncheck.New(versioncheck.Options{
 	CurrentVersion: version,
@@ -76,7 +79,7 @@ var (
 func main() {
 	defer func() {
 		if r := recover(); r != nil {
-			handlePanicRecovery(r)
+			exitDiagnostics.Recover(r)
 		}
 	}()
 

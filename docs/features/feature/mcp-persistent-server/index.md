@@ -49,7 +49,7 @@ code_paths:
   - cmd/browser-agent/internal/logstore/validate.go
   - cmd/browser-agent/internal/logstore/seed.go
   - cmd/browser-agent/main_connection_mcp_shutdown.go
-  - cmd/browser-agent/exit_diagnostics.go
+  - cmd/browser-agent/internal/exitdiag/recorder.go
   - cmd/browser-agent/internal/httpguard/middleware.go
   - cmd/browser-agent/handler_http.go
   - cmd/browser-agent/internal/connectmode/runner.go
@@ -91,7 +91,7 @@ test_paths:
   - cmd/browser-agent/openapi_branding_test.go
   - cmd/browser-agent/server_routes_debug_usage_test.go
   - cmd/browser-agent/internal/dashboard/handler_test.go
-  - cmd/browser-agent/exit_diagnostics_test.go
+  - cmd/browser-agent/internal/exitdiag/recorder_test.go
   - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
   - cmd/browser-agent/internal/bridge/bridge_detach_stdio_test.go
   - cmd/browser-agent/internal/bridge/bridge_detach_contract_test.go

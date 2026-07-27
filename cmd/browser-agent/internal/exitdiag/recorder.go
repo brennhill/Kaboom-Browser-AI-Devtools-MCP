@@ -1,11 +1,12 @@
 // Purpose: Writes structured lifecycle diagnostic entries to crash log files on server exit or panic.
 // Why: Preserves post-mortem evidence when the daemon exits unexpectedly for later troubleshooting.
 
-package main
+package exitdiag
 
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -15,15 +16,36 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
 
-// appendExitDiagnostic writes a structured exit diagnostic entry to the first
-// writable crash-log candidate and returns the path used, or "" on total failure.
-func appendExitDiagnostic(event string, extra map[string]any) string {
+type Options struct {
+	Version string
+	Stderr  io.Writer
+	Exit    func(int)
+}
+
+type Recorder struct {
+	version string
+	stderr  io.Writer
+	exit    func(int)
+}
+
+func New(options Options) *Recorder {
+	if options.Stderr == nil {
+		options.Stderr = os.Stderr
+	}
+	if options.Exit == nil {
+		options.Exit = os.Exit
+	}
+	return &Recorder{version: options.Version, stderr: options.Stderr, exit: options.Exit}
+}
+
+// Append writes a structured exit diagnostic entry to the first writable candidate.
+func (r *Recorder) Append(event string, extra map[string]any) string {
 	entry := map[string]any{
 		"type":       "lifecycle",
 		"event":      event,
 		"timestamp":  time.Now().UTC().Format(time.RFC3339),
 		"pid":        os.Getpid(),
-		"version":    version,
+		"version":    r.version,
 		"go_version": runtime.Version(),
 		"os":         runtime.GOOS,
 		"arch":       runtime.GOARCH,
@@ -111,13 +133,13 @@ func writeDiagnosticToCandidates(candidates []string, entry map[string]any) (str
 	return "", lastErr
 }
 
-// handlePanicRecovery records crash details in both lifecycle logs before exiting.
-func handlePanicRecovery(recovered any) {
+// Recover records crash details in both lifecycle logs before exiting.
+func (r *Recorder) Recover(recovered any) {
 	stack := make([]byte, 4096)
 	stack = stack[:runtime.Stack(stack, false)]
 
 	telemetry.AppError("daemon_panic", nil)
-	fmt.Fprintln(os.Stderr, "\n[Kaboom] FATAL ERROR")
+	fmt.Fprintln(r.stderr, "\n[Kaboom] FATAL ERROR")
 
 	logFile, err := state.DefaultLogFile()
 	if err != nil {
@@ -142,11 +164,11 @@ func handlePanicRecovery(recovered any) {
 		}
 	}
 
-	if diagnosticPath := appendExitDiagnostic("panic", map[string]any{
+	if diagnosticPath := r.Append("panic", map[string]any{
 		"reason": fmt.Sprintf("%v", recovered),
 		"stack":  string(stack),
 	}); diagnosticPath != "" {
-		fmt.Fprintf(os.Stderr, "[Kaboom] Crash details written to: %s\n", diagnosticPath)
+		fmt.Fprintf(r.stderr, "[Kaboom] Crash details written to: %s\n", diagnosticPath)
 	}
-	os.Exit(1)
+	r.exit(1)
 }
