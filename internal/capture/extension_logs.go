@@ -1,5 +1,6 @@
-// Purpose: Implements extension-internal log ingestion, redaction, ring-buffer storage and retrieval.
-// Why: Redaction is part of the ingest path — every append already went through it.
+// extension_logs.go — Extension and daemon diagnostic log ingestion and retrieval.
+// Purpose: Owns capture-level logging, redaction, and bounded extension log storage.
+// Why: Both log paths share the same redactor and diagnostic boundary.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 // Docs: docs/features/feature/redaction-patterns/index.md
 
@@ -125,4 +126,39 @@ func (b *ExtensionLogBuffer) clear() int {
 	count := len(b.logs)
 	b.logs = make([]ExtensionLog, 0)
 	return count
+}
+
+func (c *Capture) logPollingActivity(entry PollingLogEntry) {
+	c.debug.LogPollingActivity(entry)
+}
+
+func (c *Capture) LogHTTPDebugEntry(entry HTTPDebugEntry) {
+	c.debug.LogHTTPDebugEntry(c.redactHTTPDebugEntry(entry))
+}
+
+func (c *Capture) GetHTTPDebugLog() []HTTPDebugEntry {
+	return c.debug.GetHTTPDebugLog()
+}
+
+func (c *Capture) redactHTTPDebugEntry(entry HTTPDebugEntry) HTTPDebugEntry {
+	if c.logRedactor == nil {
+		return entry
+	}
+	if len(entry.Headers) > 0 {
+		redactedHeaders := make(map[string]string, len(entry.Headers))
+		for key, value := range entry.Headers {
+			redactedHeaders[key] = c.logRedactor.Redact(value)
+		}
+		entry.Headers = redactedHeaders
+	}
+	if entry.RequestBody != "" {
+		entry.RequestBody = c.logRedactor.Redact(entry.RequestBody)
+	}
+	if entry.ResponseBody != "" {
+		entry.ResponseBody = c.logRedactor.Redact(entry.ResponseBody)
+	}
+	if entry.Error != "" {
+		entry.Error = c.logRedactor.Redact(entry.Error)
+	}
+	return entry
 }

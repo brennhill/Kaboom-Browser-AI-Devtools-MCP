@@ -358,3 +358,224 @@ func syncLongPollTimeout() time.Duration {
 	}
 	return syncLongPollDefaultTimeout
 }
+
+type syncConnectionState struct {
+	wasConnected      bool
+	isReconnect       bool
+	wasDisconnected   bool
+	timeSinceLastPoll time.Duration
+	extSessionID      string
+	pilotEnabled      bool
+	inProgressCount   int
+}
+
+func (c *Capture) updateSyncConnectionState(req SyncRequest, clientID string, now time.Time) syncConnectionState {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	state := syncConnectionState{
+		wasConnected:      c.extensionState.lastExtensionConnected,
+		timeSinceLastPoll: now.Sub(c.extensionState.lastPollAt),
+	}
+	state.wasDisconnected = !c.extensionState.lastSyncSeen.IsZero() && now.Sub(c.extensionState.lastSyncSeen) >= extensionDisconnectThreshold
+	state.isReconnect = state.wasDisconnected
+
+	c.extensionState.lastPollAt = now
+	c.extensionState.lastExtensionConnected = true
+	c.extensionState.lastSyncSeen = now
+	c.extensionState.lastSyncClientID = clientID
+	if req.ExtSessionID != "" && req.ExtSessionID != c.extensionState.extSessionID {
+		c.extensionState.extSessionID = req.ExtSessionID
+		c.extensionState.extSessionChangedAt = now
+	}
+	state.extSessionID = c.extensionState.extSessionID
+
+	if req.Settings != nil {
+		c.extensionState.pilotEnabled = req.Settings.PilotEnabled
+		c.extensionState.pilotStatusKnown = true
+		c.extensionState.pilotUpdatedAt = now
+		c.extensionState.pilotSource = PilotSourceExtensionSync
+		c.extensionState.trackingEnabled = req.Settings.TrackingEnabled
+		c.extensionState.trackedTabID = req.Settings.TrackedTabID
+		c.extensionState.trackedTabURL = req.Settings.TrackedTabURL
+		c.extensionState.trackedTabTitle = req.Settings.TrackedTabTitle
+		c.extensionState.trackingUpdated = now
+		switch req.Settings.TabStatus {
+		case "loading", "complete":
+			c.extensionState.tabStatus = req.Settings.TabStatus
+		default:
+			c.extensionState.tabStatus = ""
+		}
+		c.extensionState.trackedTabActive = req.Settings.TrackedTabActive
+		c.extensionState.cspRestricted = req.Settings.CspRestricted
+		c.extensionState.cspLevel = req.Settings.CspLevel
+	}
+	if req.InProgress != nil {
+		c.extensionState.inProgress = normalizeInProgressList(req.InProgress)
+		c.extensionState.inProgressUpdated = now
+	}
+	state.pilotEnabled = c.extensionState.pilotEnabled
+	state.inProgressCount = len(c.extensionState.inProgress)
+	return state
+}
+
+func (c *Capture) processSyncCommandResults(results []SyncCommandResult, clientID string) {
+	for _, result := range results {
+		if result.ID != "" {
+			if result.CorrelationID != "" {
+				c.SetQueryResultWithClientNoCommandComplete(result.ID, result.Result, clientID)
+			} else {
+				c.SetQueryResultWithClient(result.ID, result.Result, clientID)
+			}
+		}
+		if result.CorrelationID != "" {
+			c.ApplyCommandResult(result.CorrelationID, result.Status, result.Result, result.Error)
+		}
+	}
+}
+
+func (c *Capture) updateSyncLogs(req SyncRequest, now time.Time, pilotEnabled bool, queryCount int) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.logPollingActivity(PollingLogEntry{
+		Timestamp:    now,
+		Endpoint:     "sync",
+		Method:       "POST",
+		ExtSessionID: req.ExtSessionID,
+		PilotEnabled: &pilotEnabled,
+		QueryCount:   queryCount,
+	})
+	for _, log := range req.ExtensionLogs {
+		if log.Timestamp.IsZero() {
+			log.Timestamp = now
+		}
+		log = c.redactExtensionLog(log)
+		c.extensionLogs.append(log)
+	}
+	if req.ExtensionVersion != "" {
+		c.extensionState.extensionVersion = req.ExtensionVersion
+	}
+}
+
+func normalizeInProgressList(in []SyncInProgress) []SyncInProgress {
+	if in == nil {
+		return nil
+	}
+	if len(in) == 0 {
+		return []SyncInProgress{}
+	}
+	const maxInProgress = 100
+	limit := len(in)
+	if limit > maxInProgress {
+		limit = maxInProgress
+	}
+	out := make([]SyncInProgress, 0, limit)
+	for i := 0; i < limit; i++ {
+		entry := in[i]
+		entry.ID = strings.TrimSpace(entry.ID)
+		entry.CorrelationID = strings.TrimSpace(entry.CorrelationID)
+		entry.Type = strings.TrimSpace(entry.Type)
+		entry.Status = strings.TrimSpace(strings.ToLower(entry.Status))
+		if entry.Status == "" {
+			entry.Status = "running"
+		}
+		if entry.ProgressPct != nil {
+			progress := *entry.ProgressPct
+			if progress < 0 {
+				progress = 0
+			}
+			if progress > 100 {
+				progress = 100
+			}
+			entry.ProgressPct = &progress
+		}
+		if entry.ID == "" && entry.CorrelationID == "" {
+			continue
+		}
+		out = append(out, entry)
+	}
+	return out
+}
+
+func commandHasStarted(command *queries.CommandResult) bool {
+	if command == nil {
+		return false
+	}
+	for _, event := range command.TraceEvents {
+		if event.Stage == "started" || event.Stage == "resolved" || event.Stage == "errored" || event.Stage == "timed_out" {
+			return true
+		}
+	}
+	return strings.Contains(command.TraceTimeline, "started")
+}
+
+func (c *Capture) reconcileInProgressCommandState(inProgress []SyncInProgress) {
+	if inProgress == nil {
+		return
+	}
+
+	active := make(map[string]struct{}, len(inProgress))
+	for _, entry := range inProgress {
+		if entry.CorrelationID != "" {
+			active[entry.CorrelationID] = struct{}{}
+		}
+	}
+	pending := c.GetPendingCommands()
+	pendingCorrelations := make(map[string]struct{}, len(pending))
+	toFail := make([]string, 0)
+	toFailIDs := make([]string, 0)
+
+	func() {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		if c.extensionState.missingInProgressByCorr == nil {
+			c.extensionState.missingInProgressByCorr = make(map[string]int)
+		}
+		for _, command := range pending {
+			if command == nil || command.CorrelationID == "" {
+				continue
+			}
+			correlationID := command.CorrelationID
+			pendingCorrelations[correlationID] = struct{}{}
+			if _, ok := active[correlationID]; ok {
+				delete(c.extensionState.missingInProgressByCorr, correlationID)
+				continue
+			}
+			if !commandHasStarted(command) {
+				continue
+			}
+			c.extensionState.missingInProgressByCorr[correlationID]++
+			if c.extensionState.missingInProgressByCorr[correlationID] >= 2 {
+				toFail = append(toFail, correlationID)
+				toFailIDs = append(toFailIDs, command.QueryID)
+				delete(c.extensionState.missingInProgressByCorr, correlationID)
+			}
+		}
+		for correlationID := range c.extensionState.missingInProgressByCorr {
+			if _, stillPending := pendingCorrelations[correlationID]; !stillPending {
+				delete(c.extensionState.missingInProgressByCorr, correlationID)
+			}
+		}
+	}()
+
+	for i, correlationID := range toFail {
+		queryID := ""
+		if i < len(toFailIDs) {
+			queryID = toFailIDs[i]
+		}
+		c.ApplyCommandResult(
+			correlationID,
+			"error",
+			nil,
+			"extension_lost_command: command acknowledged by extension but missing from in_progress heartbeats",
+		)
+		util.SafeGo(func() {
+			c.emitLifecycleEvent("command_state_desync", map[string]any{
+				"correlation_id": correlationID,
+				"query_id":       queryID,
+				"reason":         "missing_in_progress_heartbeat",
+			})
+		})
+	}
+}

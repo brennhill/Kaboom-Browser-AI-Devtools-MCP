@@ -232,7 +232,7 @@ AI Agent
 - **Wrapper:** `bin/kaboom-mcp`
 - **Server Entry:** `cmd/browser-agent/main.go:handleMCPConnection()`
 - **MCP Handler:** `cmd/browser-agent/handler.go`
-- **Capture:** `internal/capture/types.go:Capture`
+- **Capture:** `internal/capture/capture.go:Capture`
 - **Session:** `internal/session/client_registry.go`
 - **Extension Background:** `src/background/index.ts`
 - **Extension Content:** `src/content.ts`

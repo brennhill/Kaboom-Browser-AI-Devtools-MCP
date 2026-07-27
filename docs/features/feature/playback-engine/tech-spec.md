@@ -2,7 +2,7 @@
 doc_type: tech-spec
 feature_id: feature-playback-engine
 status: proposed
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-27
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -16,7 +16,7 @@ last_verified_date: 2026-03-05
 - Session/runtime management: `internal/recording/playback/session.go`
 - Selector fragility analysis: `internal/recording/playback/fragile.go`
 - Recording comparison and reports: `internal/recording/logdiff/`
-- Delegation surface: `internal/capture/recording_manager.go`
+- Delegation surface: `internal/capture/handlers.go`
 - CLI handler bridge: `cmd/browser-agent/recording_handlers_playback.go`
 
 ## Constraints

@@ -9,7 +9,7 @@ code_paths:
   - internal/capture/accessors.go
   - internal/capture/query_dispatcher.go
   - internal/capture/sync.go
-  - internal/capture/websocket.go
+  - internal/capture/events.go
   - internal/capture/wsconn/status.go
   - internal/capture/wsconn/tracker.go
   - cmd/browser-agent/tools_observe.go

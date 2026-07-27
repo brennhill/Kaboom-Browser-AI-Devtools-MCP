@@ -487,11 +487,11 @@ type BufferStats struct {
 - `src/background/caches/state-manager.ts` - State storage
 
 **Server-Side Storage:**
-- `internal/capture/types.go` - Capture struct
-- `internal/capture/websocket.go` - WS buffer
+- `internal/capture/capture.go` - Capture struct
+- `internal/capture/events.go` - WS and network event buffers
 - `internal/capture/network_waterfall.go` - Waterfall buffer
 - `internal/capture/network_bodies.go` - Body storage
-- `internal/capture/enhanced_actions.go` - Actions buffer
+- `internal/capture/events.go` - Actions buffer
 - `internal/capture/extension_logs.go` - Logs buffer
 - `internal/capture/handlers.go` - /sync endpoint
 - `internal/capture/memory.go` - Memory tracking

@@ -1,13 +1,19 @@
-// Purpose: Owns the websocket/network/action ring buffers plus their eviction and memory accounting.
-// Why: Eviction is memory accounting — separating them made every append cross a file boundary for no boundary.
+// events.go — Event ingestion, bounded buffers, eviction, and event retrieval.
+// Purpose: Owns network, WebSocket, and enhanced-action lifecycles end to end.
+// Why: Ingestion and eviction share timestamps, memory counters, test tagging, and
+// the same Capture lock, so they must evolve as one consistency boundary.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
 package capture
 
 import (
+	"encoding/json"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
 // wsEventEntry bundles a WebSocketEvent with its ingestion timestamp.
@@ -444,4 +450,229 @@ func (c *Capture) ClearAll() int {
 	c.perf.clear()
 
 	return c.extensionLogs.clear()
+}
+
+func detectAndSetBinaryFormat(body *NetworkBody) {
+	if body.BinaryFormat != "" {
+		return
+	}
+	if len(body.RequestBody) > 0 {
+		if format := util.DetectBinaryFormat([]byte(body.RequestBody)); format != nil {
+			body.BinaryFormat = format.Name
+			body.FormatConfidence = format.Confidence
+			return
+		}
+	}
+	if len(body.ResponseBody) > 0 {
+		if format := util.DetectBinaryFormat([]byte(body.ResponseBody)); format != nil {
+			body.BinaryFormat = format.Name
+			body.FormatConfidence = format.Confidence
+		}
+	}
+}
+
+func (c *Capture) AddNetworkBodies(bodies []NetworkBody) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	activeTestIDs := make([]string, 0)
+	for testID := range c.extensionState.activeTestIDs {
+		activeTestIDs = append(activeTestIDs, testID)
+	}
+	c.buffers.appendNetworkBodies(bodies, activeTestIDs, time.Now())
+}
+
+func (c *Capture) GetNetworkBodyCount() int {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.buffers.networkCount()
+}
+
+func (c *Capture) AddNetworkWaterfallEntries(entries []NetworkWaterfallEntry, pageURL string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.networkWaterfall.appendEntries(entries, pageURL, time.Now())
+}
+
+func (c *Capture) GetNetworkWaterfallCount() int {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.networkWaterfall.count()
+}
+
+func (c *Capture) GetNetworkWaterfallEntries() []NetworkWaterfallEntry {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if c.networkWaterfall.count() == 0 {
+		return []NetworkWaterfallEntry{}
+	}
+	return c.networkWaterfall.snapshot()
+}
+
+func (b *NetworkWaterfallBuffer) appendEntries(entries []NetworkWaterfallEntry, pageURL string, now time.Time) {
+	for i := range entries {
+		entries[i].PageURL = pageURL
+		entries[i].Timestamp = now
+		b.entries = append(b.entries, entries[i])
+	}
+	if len(b.entries) <= b.capacity {
+		return
+	}
+	kept := make([]NetworkWaterfallEntry, b.capacity)
+	copy(kept, b.entries[len(b.entries)-b.capacity:])
+	b.entries = kept
+}
+
+func (b *NetworkWaterfallBuffer) count() int {
+	return len(b.entries)
+}
+
+func (b *NetworkWaterfallBuffer) snapshot() []NetworkWaterfallEntry {
+	out := make([]NetworkWaterfallEntry, len(b.entries))
+	copy(out, b.entries)
+	return out
+}
+
+func (b *NetworkWaterfallBuffer) clear() int {
+	count := len(b.entries)
+	b.entries = make([]NetworkWaterfallEntry, 0, b.capacity)
+	return count
+}
+
+func detectWSBinaryFormat(event *WebSocketEvent) {
+	if event.Event != "message" || event.BinaryFormat != "" || len(event.Data) == 0 {
+		return
+	}
+	if format := util.DetectBinaryFormat([]byte(event.Data)); format != nil {
+		event.BinaryFormat = format.Name
+		event.FormatConfidence = format.Confidence
+	}
+}
+
+func (c *Capture) AddWebSocketEvents(events []WebSocketEvent) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	activeTestIDs := make([]string, 0)
+	for testID := range c.extensionState.activeTestIDs {
+		activeTestIDs = append(activeTestIDs, testID)
+	}
+	c.buffers.appendWebSocketEvents(events, activeTestIDs, time.Now(), c.wsConnections.TrackEvent)
+}
+
+func (c *Capture) GetWebSocketEventCount() int {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.buffers.webSocketCount()
+}
+
+func matchesWSEventFilter(event *WebSocketEvent, filter WebSocketEventFilter) bool {
+	if filter.ConnectionID != "" && event.ID != filter.ConnectionID {
+		return false
+	}
+	if filter.URLFilter != "" && !strings.Contains(event.URL, filter.URLFilter) {
+		return false
+	}
+	if filter.Direction != "" && event.Direction != filter.Direction {
+		return false
+	}
+	if filter.TestID != "" && !containsTestID(event.TestIDs, filter.TestID) {
+		return false
+	}
+	return true
+}
+
+func containsTestID(testIDs []string, target string) bool {
+	for _, testID := range testIDs {
+		if testID == target {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *Capture) GetWebSocketEvents(filter WebSocketEventFilter) []WebSocketEvent {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	limit := filter.Limit
+	if limit <= 0 {
+		limit = defaultWSLimit
+	}
+	filtered := make([]WebSocketEvent, 0, limit)
+	for i := len(c.buffers.wsEvents) - 1; i >= 0; i-- {
+		entry := &c.buffers.wsEvents[i]
+		if c.TTL > 0 && isExpiredByTTL(entry.AddedAt, c.TTL) {
+			break
+		}
+		if !matchesWSEventFilter(&entry.Event, filter) {
+			continue
+		}
+		filtered = append(filtered, entry.Event)
+		if len(filtered) >= limit {
+			break
+		}
+	}
+	return filtered
+}
+
+func (c *Capture) HandleWebSocketEvents(w http.ResponseWriter, r *http.Request) {
+	if !util.RequireMethod(w, r, "POST") {
+		return
+	}
+	body, ok := c.readIngestBody(w, r)
+	if !ok {
+		return
+	}
+	var payload struct {
+		Events []WebSocketEvent `json:"events"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+		return
+	}
+	if !c.recordAndRecheck(w, len(payload.Events)) {
+		return
+	}
+	c.AddWebSocketEvents(payload.Events)
+	w.WriteHeader(http.StatusOK)
+}
+
+func (c *Capture) HandleWebSocketStatus(w http.ResponseWriter, _ *http.Request) {
+	status := c.GetWebSocketStatus(WebSocketStatusFilter{})
+	util.JSONResponse(w, http.StatusOK, status)
+}
+
+func (c *Capture) GetWebSocketStatus(filter WebSocketStatusFilter) WebSocketStatusResponse {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.wsConnections.Status(filter)
+}
+
+func (c *Capture) AddEnhancedActions(actions []EnhancedAction) {
+	navigationCallback := func() func() {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+
+		activeTestIDs := make([]string, 0)
+		for testID := range c.extensionState.activeTestIDs {
+			activeTestIDs = append(activeTestIDs, testID)
+		}
+		for i := range actions {
+			actions[i].TestIDs = activeTestIDs
+		}
+		if c.buffers.appendEnhancedActions(actions, time.Now()) {
+			return c.navigationCallback
+		}
+		return nil
+	}()
+	if navigationCallback != nil {
+		util.SafeGo(navigationCallback)
+	}
+}
+
+func (c *Capture) GetEnhancedActionCount() int {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.buffers.actionCount()
 }

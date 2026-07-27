@@ -313,12 +313,12 @@ sequenceDiagram
 ### Implementation Files
 
 **Query Queue:**
-- `internal/capture/types.go:Capture.queries`
+- `internal/capture/capture.go:Capture.queries`
 - `internal/capture/queries.go` - Queue management
 - `internal/capture/query_dispatcher.go` - Routing logic
 
 **Result Storage:**
-- `internal/capture/types.go:Capture.completedResults`
+- `internal/capture/capture.go:Capture.completedResults`
 - `cmd/browser-agent/tools_interact.go` - Query creation
 - `cmd/browser-agent/tools_core.go:CompleteCommand()` - Result storage
 

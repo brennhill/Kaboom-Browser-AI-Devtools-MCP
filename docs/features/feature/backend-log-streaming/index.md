@@ -11,26 +11,15 @@ code_paths:
   - cmd/browser-agent/internal/toolconfigure/netrecord/state.go
   - cmd/browser-agent/internal/toolconfigure/netrecord/filters.go
   - internal/capture/accessors.go
-  - internal/capture/aliases.go
-  - internal/capture/buffer_store.go
   - internal/capture/capture.go
-  - internal/capture/constants.go
-  - internal/capture/debug.go
-  - internal/capture/doc.go
-  - internal/capture/enhanced_actions.go
+  - internal/capture/model.go
+  - internal/capture/events.go
   - internal/capture/extension_logs.go
   - internal/capture/extension_state.go
   - internal/capture/handlers.go
-  - internal/capture/helpers.go
-  - internal/capture/network.go
   - internal/capture/query_dispatcher.go
-  - internal/capture/recording_manager.go
-  - internal/capture/settings.go
   - internal/capture/sync.go
-  - internal/capture/sync_state.go
   - internal/capture/test_helpers.go
-  - internal/capture/types.go
-  - internal/capture/websocket.go
   - internal/capture/wsconn/doc.go
   - internal/capture/wsconn/status.go
   - internal/capture/wsconn/tracker.go

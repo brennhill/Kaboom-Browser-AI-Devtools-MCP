@@ -1,12 +1,19 @@
-// Purpose: Owns ExtensionState — connection readiness, pilot gating, tab tracking, CSP posture and test boundaries.
-// Why: These fields share one lock and mutate together on every /sync round-trip; splitting them by prefix hid that.
+// extension_state.go — Live extension state and its persisted pilot-settings cache.
+// Purpose: Owns connection readiness, pilot gating, tab tracking, CSP posture, and persistence.
+// Why: These fields share one lock and settings persistence snapshots the same state.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
 package capture
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
 const (
@@ -487,4 +494,112 @@ func (c *Capture) UpdateExtensionStatus(status ExtensionStatus) {
 	c.extensionState.trackedTabID = status.TrackedTabID
 	c.extensionState.trackedTabURL = status.TrackedTabURL
 	c.extensionState.trackingUpdated = time.Now()
+}
+
+type PersistedSettings struct {
+	AIWebPilotEnabled *bool     `json:"ai_web_pilot_enabled,omitempty"`
+	Timestamp         time.Time `json:"timestamp"`
+	ExtSessionID      string    `json:"ext_session_id"`
+}
+
+func getSettingsPath() (string, error) {
+	return state.SettingsFile()
+}
+
+func getLegacySettingsPath() (string, error) {
+	return state.LegacySettingsFile()
+}
+
+func readSettingsData() ([]byte, error) {
+	path, err := getSettingsPath()
+	if err != nil {
+		return nil, fmt.Errorf("could not determine settings path: %w", err)
+	}
+
+	// #nosec G304 -- path is resolved from trusted runtime state, not user input.
+	data, err := os.ReadFile(path)
+	if err == nil {
+		return data, nil
+	}
+	if !os.IsNotExist(err) {
+		return nil, fmt.Errorf("could not read settings file: %w", err)
+	}
+
+	legacyPath, legacyErr := getLegacySettingsPath()
+	if legacyErr != nil {
+		return nil, nil
+	}
+	// #nosec G304 -- legacy path is deterministic, not user input.
+	legacyData, readErr := os.ReadFile(legacyPath)
+	if readErr != nil {
+		if !os.IsNotExist(readErr) {
+			return nil, fmt.Errorf("could not read legacy settings file: %w", readErr)
+		}
+		return nil, nil
+	}
+	return legacyData, nil
+}
+
+func (c *Capture) LoadSettingsFromDisk() {
+	data, err := readSettingsData()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[Kaboom] %v\n", err)
+		return
+	}
+	if data == nil {
+		return
+	}
+
+	var settings PersistedSettings
+	if err := json.Unmarshal(data, &settings); err != nil {
+		fmt.Fprintf(os.Stderr, "[Kaboom] Could not parse settings file: %v\n", err)
+		return
+	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if time.Since(settings.Timestamp) > 5*time.Second {
+		return
+	}
+	if settings.AIWebPilotEnabled != nil {
+		c.extensionState.pilotEnabled = *settings.AIWebPilotEnabled
+		c.extensionState.pilotStatusKnown = true
+		c.extensionState.pilotUpdatedAt = settings.Timestamp
+		c.extensionState.pilotSource = PilotSourceSettingsCache
+	}
+}
+
+func (c *Capture) SaveSettingsToDisk() error {
+	path, err := getSettingsPath()
+	if err != nil {
+		return err
+	}
+
+	c.mu.RLock()
+	var pilotEnabled *bool
+	if c.extensionState.pilotStatusKnown {
+		value := c.extensionState.pilotEnabled
+		pilotEnabled = &value
+	}
+	settings := PersistedSettings{
+		AIWebPilotEnabled: pilotEnabled,
+		Timestamp:         c.extensionState.pilotUpdatedAt,
+		ExtSessionID:      c.extensionState.extSessionID,
+	}
+	c.mu.RUnlock()
+
+	data, err := json.MarshalIndent(settings, "", "  ")
+	if err != nil {
+		return err
+	}
+	// #nosec G301 -- runtime state directory is intentionally user-readable.
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	tmpPath := path + ".tmp"
+	// #nosec G306 -- settings cache is owner-only.
+	if err := os.WriteFile(tmpPath, data, 0600); err != nil {
+		return err
+	}
+	return os.Rename(tmpPath, path)
 }

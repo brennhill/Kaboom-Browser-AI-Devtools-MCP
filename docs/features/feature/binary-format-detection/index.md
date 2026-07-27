@@ -4,10 +4,9 @@ feature_id: feature-binary-format-detection
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 code_paths:
-  - internal/capture/network.go
-  - internal/capture/websocket.go
+  - internal/capture/events.go
   - internal/util/binary.go
 test_paths:
   - internal/util/binary_test.go

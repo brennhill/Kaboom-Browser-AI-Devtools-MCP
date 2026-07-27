@@ -4,7 +4,7 @@ feature_id: feature-playback-engine
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 code_paths:
   - internal/recording/types.go
   - internal/recording/manager.go
@@ -18,7 +18,7 @@ code_paths:
   - internal/recording/logdiff/compare.go
   - internal/recording/logdiff/helpers.go
   - internal/recording/logdiff/report.go
-  - internal/capture/recording_manager.go
+  - internal/capture/handlers.go
   - cmd/browser-agent/recording_handlers_playback.go
   - cmd/browser-agent/recording_handlers_logdiff.go
 test_paths:
@@ -68,7 +68,7 @@ last_verified_date: 2026-03-05
   `*recording.Manager` satisfies (`LookupRecording` for replay, `GetRecording`
   for diffing), so neither depends on the manager type and both are tested
   against in-memory fakes.
-- Delegation surface: `internal/capture/recording_manager.go`
+- Delegation surface: `internal/capture/handlers.go`
 - MCP handlers: `cmd/browser-agent/recording_handlers_playback.go`, `cmd/browser-agent/recording_handlers_logdiff.go`
 - Still a stub: `playback.executeAction` returns synthetic results and is not yet
   wired to the PendingQuery/interact system, so replay does not drive a browser.

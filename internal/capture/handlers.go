@@ -1,5 +1,6 @@
-// Purpose: Implements HTTP ingest handlers for network, query, and telemetry capture endpoints.
-// Why: Provides the daemon-side ingress boundary that validates and routes extension event batches.
+// handlers.go — HTTP ingestion, request plumbing, and recording service delegation.
+// Purpose: Owns capture's external request boundary and recording/storage operations.
+// Why: Recording HTTP handlers and their delegated service methods evolve together.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 // Docs: docs/features/feature/query-service/index.md
 
@@ -8,9 +9,14 @@ package capture
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
+	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/logdiff"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/playback"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -198,4 +204,124 @@ func (c *Capture) HandlePerformanceSnapshots(w http.ResponseWriter, r *http.Requ
 		"status": "ok",
 		"count":  len(payload.Snapshots),
 	})
+}
+
+func ExtractURLPath(rawURL string) string {
+	return util.ExtractURLPath(rawURL)
+}
+
+func (c *Capture) readIngestBody(w http.ResponseWriter, r *http.Request) ([]byte, bool) {
+	if c.CheckRateLimit() {
+		c.WriteRateLimitResponse(w)
+		return nil, false
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, maxExtensionPostBody)
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Request body too large", http.StatusRequestEntityTooLarge)
+		return nil, false
+	}
+	return body, true
+}
+
+func (c *Capture) recordAndRecheck(w http.ResponseWriter, count int) bool {
+	c.RecordEvents(count)
+	if c.CheckRateLimit() {
+		c.WriteRateLimitResponse(w)
+		return false
+	}
+	return true
+}
+
+func (c *Capture) RecordEvents(count int) {
+	c.circuit.RecordEvents(count)
+}
+
+func (c *Capture) CheckRateLimit() bool {
+	return c.circuit.CheckRateLimit()
+}
+
+func (c *Capture) GetHealthStatus() HealthResponse {
+	return c.circuit.GetHealthStatus()
+}
+
+func (c *Capture) WriteRateLimitResponse(w http.ResponseWriter) {
+	c.circuit.WriteRateLimitResponse(w)
+}
+
+func (c *Capture) HandleHealth(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		util.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		return
+	}
+
+	health := c.GetHealthStatus()
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(health)
+}
+
+func isExpiredByTTL(addedAt time.Time, ttl time.Duration) bool {
+	if ttl == 0 {
+		return false
+	}
+	return time.Since(addedAt) >= ttl
+}
+
+var NewRecordingManager = recording.NewRecordingManager
+
+func (c *Capture) StartRecording(name, pageURL string, sensitiveDataEnabled bool) (string, error) {
+	return c.recordingManager.StartRecording(name, pageURL, sensitiveDataEnabled)
+}
+
+func (c *Capture) StopRecording(recordingID string) (int, int64, error) {
+	return c.recordingManager.StopRecording(recordingID)
+}
+
+func (c *Capture) AddRecordingAction(action RecordingAction) error {
+	return c.recordingManager.AddRecordingAction(action)
+}
+
+func (c *Capture) ListRecordings(limit int) ([]Recording, error) {
+	return c.recordingManager.ListRecordings(limit)
+}
+
+func (c *Capture) GetRecording(recordingID string) (*Recording, error) {
+	return c.recordingManager.GetRecording(recordingID)
+}
+
+func (c *Capture) StartPlayback(recordingID string) (*PlaybackSession, error) {
+	return playback.Start(c.recordingManager, recordingID)
+}
+
+func (c *Capture) ExecutePlayback(recordingID string) (*PlaybackSession, error) {
+	return playback.Execute(c.recordingManager, recordingID)
+}
+
+func (c *Capture) DetectFragileSelectors(sessions []*PlaybackSession) map[string]bool {
+	return playback.DetectFragileSelectors(sessions)
+}
+
+func (c *Capture) GetPlaybackStatus(session *PlaybackSession) map[string]any {
+	return playback.Status(session)
+}
+
+func (c *Capture) DiffRecordings(originalID, replayID string) (*LogDiffResult, error) {
+	return logdiff.Compare(c.recordingManager, originalID, replayID)
+}
+
+func (c *Capture) CategorizeActionTypes(recordingItem *Recording) map[string]int {
+	return logdiff.CategorizeActionTypes(recordingItem)
+}
+
+func (c *Capture) GetStorageInfo() (StorageInfo, error) {
+	return c.recordingManager.GetStorageInfo()
+}
+
+func (c *Capture) DeleteRecording(recordingID string) error {
+	return c.recordingManager.DeleteRecording(recordingID)
+}
+
+func (c *Capture) RecalculateStorageUsed() error {
+	return c.recordingManager.RecalculateStorageUsed()
 }

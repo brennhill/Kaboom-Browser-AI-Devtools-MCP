@@ -2,7 +2,9 @@
 // Why: Centralizes all in-memory telemetry state so ingestion/query paths share one coherent source of truth.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 // Docs: docs/features/feature/request-session-correlation/index.md
-
+//
+// Package capture owns the daemon's in-memory browser telemetry, extension state,
+// query coordination, bounded event buffers, and recording integration.
 package capture
 
 import (

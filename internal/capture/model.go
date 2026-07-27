@@ -1,10 +1,14 @@
-// Purpose: Re-exports subsystem types, constants and helpers extracted out of capture.
-// Why: Keeps the capture package API stable for its ~212 importers after each subsystem extraction.
+// model.go — Capture's public compatibility model, local state types, and limits.
+// Purpose: Keeps the package API and runtime constraints in one stable boundary.
+// Why: Aliases, local model types, and their capacity constants change together when
+// capture delegates another responsibility to a focused subsystem.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
 package capture
 
 import (
+	"time"
+
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/wsconn"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/debuglog"
@@ -191,3 +195,68 @@ var NewLifecycleObserver = lifecycle.NewObserver
 
 // ParseLifecycleEvent re-exports lifecycle.ParseEvent for backward compatibility.
 var ParseLifecycleEvent = lifecycle.ParseEvent
+
+const (
+	MaxWSEvents        = 500
+	MaxNetworkBodies   = 100
+	MaxExtensionLogs   = 500
+	MaxEnhancedActions = 1000
+
+	RateLimitThreshold = circuit.RateLimitThreshold
+
+	DefaultNetworkWaterfallCapacity = 1000
+	MinNetworkWaterfallCapacity     = 100
+	MaxNetworkWaterfallCapacity     = 10000
+
+	defaultWSLimit       = 50
+	defaultBodyLimit     = 20
+	maxExtensionPostBody = 5 << 20
+	maxRequestBodySize   = 8192
+	maxResponseBodySize  = 16384
+	wsBufferMemoryLimit  = 4 * 1024 * 1024
+	nbBufferMemoryLimit  = 8 * 1024 * 1024
+)
+
+const ExtensionReadinessTimeout = 5 * time.Second
+
+const extensionReadinessPollInterval = 200 * time.Millisecond
+
+var (
+	extensionDisconnectThreshold = 10 * time.Second
+	readinessGatePollInterval    = 100 * time.Millisecond
+)
+
+type SecurityFlag struct {
+	Type      string    `json:"type"`
+	Severity  string    `json:"severity"`
+	Origin    string    `json:"origin"`
+	Message   string    `json:"message"`
+	Resource  string    `json:"resource"`
+	PageURL   string    `json:"page_url"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+type PerformanceStore struct {
+	snapshots       map[string]performance.Snapshot
+	snapshotOrder   []string
+	baselines       map[string]performance.Baseline
+	baselineOrder   []string
+	beforeSnapshots map[string]performance.Snapshot
+}
+
+type NetworkWaterfallBuffer struct {
+	entries  []NetworkWaterfallEntry
+	capacity int
+}
+
+type ExtensionLogBuffer struct {
+	logs []ExtensionLog
+}
+
+type ClientRegistry interface {
+	Count() int
+	List() any
+	Register(cwd string) any
+	Get(id string) any
+	Unregister(id string) bool
+}
