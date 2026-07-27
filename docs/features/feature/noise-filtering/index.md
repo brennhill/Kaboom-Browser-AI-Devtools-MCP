@@ -8,7 +8,8 @@ last_reviewed: 2026-07-26
 code_paths:
   - cmd/browser-agent/internal/toolconfigure/noise_actions.go
   - cmd/browser-agent/noise_autorun.go
-  - cmd/browser-agent/tools_configure_audit_log.go
+  - cmd/browser-agent/internal/toolconfigure/auditlog/handler.go
+  - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/tools_configure_sessions.go
   - internal/noise/noise.go
   - internal/noise/noise_builtin.go
@@ -18,6 +19,7 @@ code_paths:
   - internal/noise/noise_rules.go
   - internal/noise/noise_stats.go
 test_paths:
+  - cmd/browser-agent/internal/toolconfigure/auditlog/handler_test.go
   - internal/noise/noise_test.go
   - internal/noise/noise_detect_test.go
   - internal/noise/noise_edge_test.go

@@ -129,8 +129,8 @@ the folder-gate numbers as evidence that it did.
 | | Current |
 | --- | --- |
 | `Capture` methods behind one `sync.RWMutex` | 165 |
-| `cmd/browser-agent` production source files (package `main`) | 76 |
-| …of which declare `*ToolHandler` methods | 23 |
+| `cmd/browser-agent` production source files (package `main`) | 75 |
+| …of which declare `*ToolHandler` methods | 22 |
 
 Both remain structurally constrained: Go only permits methods on a type in the
 package that declares it. Extracted `tool*` packages therefore expose handlers

@@ -15,6 +15,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/replay"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/sequencehandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/auditlog"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/qualitygates"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/tutorial"
@@ -303,6 +304,40 @@ func (h *ToolHandler) toolConfigurePlayback(req JSONRPCRequest, args json.RawMes
 
 func (h *ToolHandler) toolConfigureLogDiff(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 	return h.recordingHandler.LogDiff(req, args)
+}
+
+func (h *ToolHandler) toolGetAuditLog(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	result, problem := auditlog.New(h.auditTrail).Execute(args)
+	if problem != nil {
+		switch problem.Kind {
+		case auditlog.Unavailable:
+			return fail(req, ErrNotInitialized, problem.Message, "Internal error — do not retry")
+		case auditlog.InvalidJSON:
+			return fail(req, ErrInvalidJSON, "Invalid JSON arguments: "+problem.Message, "Fix JSON syntax and call again")
+		case auditlog.InvalidOperation:
+			return fail(req, ErrInvalidParam, problem.Message, "Use operation: analyze, report, or clear", withParam("operation"))
+		default:
+			return fail(req, ErrInvalidParam, problem.Message, "Use RFC3339 format, for example 2026-02-17T15:04:05Z", withParam("since"))
+		}
+	}
+
+	switch result.Operation {
+	case "clear":
+		h.auditMu.Lock()
+		h.auditSessionMap = make(map[string]string)
+		h.auditMu.Unlock()
+		return succeed(req, "Audit log cleared", map[string]any{
+			"status": "ok", "operation": result.Operation, "cleared": result.Cleared,
+		})
+	case "analyze":
+		return succeed(req, "Audit log analysis", map[string]any{
+			"status": "ok", "operation": result.Operation, "summary": result.Summary,
+		})
+	default:
+		return succeed(req, "Audit log entries", map[string]any{
+			"status": "ok", "operation": result.Operation, "entries": result.Entries, "count": result.Count,
+		})
+	}
 }
 
 func (h *ToolHandler) toolConfigureRestart(req JSONRPCRequest) JSONRPCResponse {
