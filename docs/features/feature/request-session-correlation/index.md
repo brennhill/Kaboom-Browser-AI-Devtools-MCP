@@ -9,7 +9,7 @@ code_paths:
   - internal/capture/model.go
   - internal/capture/capture.go
   - cmd/browser-agent/main_connection_mcp_bootstrap.go
-  - cmd/browser-agent/server_routes_clients.go
+  - cmd/browser-agent/server_routes.go
   - internal/session/clientreg/registry.go
   - internal/session/clientreg/state.go
   - internal/session/types.go

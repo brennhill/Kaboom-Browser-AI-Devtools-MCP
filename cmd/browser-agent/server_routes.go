@@ -5,6 +5,7 @@ package main
 
 import (
 	_ "embed"
+	"encoding/json"
 	"net/http"
 	"strings"
 
@@ -85,6 +86,79 @@ func registerCaptureRoutes(mux *http.ServeMux, server *Server, cap *capture.Stor
 	mux.HandleFunc("/snapshot", httpguard.CORS(httpguard.ExtensionOnly(ciapi.Snapshot(server.logs, cap))))
 	mux.HandleFunc("/clear", httpguard.CORS(httpguard.ExtensionOnly(ciapi.Clear(server.logs, cap))))
 	mux.HandleFunc("/test-boundary", httpguard.CORS(httpguard.ExtensionOnly(ciapi.TestBoundary(cap))))
+}
+
+func resolveClientRegistry(cap *capture.Store, w http.ResponseWriter) (capture.ClientRegistry, bool) {
+	registry := cap.GetClientRegistry()
+	if registry == nil {
+		jsonResponse(w, http.StatusServiceUnavailable, map[string]string{"error": "client_registry_unavailable"})
+		return nil, false
+	}
+	return registry, true
+}
+
+func registerClientRegistryRoutes(mux *http.ServeMux, cap *capture.Store) {
+	mux.HandleFunc("/clients", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
+		handleClientsList(w, r, cap)
+	})))
+	mux.HandleFunc("/clients/", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
+		handleClientByID(w, r, cap)
+	})))
+}
+
+func handleClientsList(w http.ResponseWriter, r *http.Request, cap *capture.Store) {
+	registry, ok := resolveClientRegistry(cap, w)
+	if !ok {
+		return
+	}
+	switch r.Method {
+	case http.MethodGet:
+		jsonResponse(w, http.StatusOK, map[string]any{
+			"clients": registry.List(),
+			"count":   registry.Count(),
+		})
+	case http.MethodPost:
+		r.Body = http.MaxBytesReader(w, r.Body, maxPostBodySize)
+		var body struct {
+			CWD string `json:"cwd"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+			return
+		}
+		jsonResponse(w, http.StatusOK, map[string]any{"result": registry.Register(body.CWD)})
+	default:
+		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+	}
+}
+
+func handleClientByID(w http.ResponseWriter, r *http.Request, cap *capture.Store) {
+	registry, ok := resolveClientRegistry(cap, w)
+	if !ok {
+		return
+	}
+	clientID := strings.TrimPrefix(r.URL.Path, "/clients/")
+	if clientID == "" {
+		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Missing client ID"})
+		return
+	}
+	switch r.Method {
+	case http.MethodGet:
+		client := registry.Get(clientID)
+		if client == nil {
+			jsonResponse(w, http.StatusNotFound, map[string]string{"error": "Client not found"})
+			return
+		}
+		jsonResponse(w, http.StatusOK, client)
+	case http.MethodDelete:
+		if !registry.Unregister(clientID) {
+			jsonResponse(w, http.StatusNotFound, map[string]string{"error": "Client not found"})
+			return
+		}
+		jsonResponse(w, http.StatusOK, map[string]bool{"unregistered": true})
+	default:
+		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+	}
 }
 
 // registerUploadRoutes adds upload automation endpoints to the mux.
