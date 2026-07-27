@@ -60,8 +60,6 @@ var observeValueAliases = map[string]modeValueAlias{
 	"ws":      {Canonical: "websocket_events", DeprecatedIn: "0.7.0", RemoveIn: "0.9.0"},
 }
 
-var serverSideObserveModes = toolobserve.ServerSideObserveModes
-
 func getValidObserveModes() string { return sortedMapKeys(observeHandlers) }
 
 // observeAliasParams references the shared default mode/action aliases.

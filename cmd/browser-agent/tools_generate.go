@@ -10,17 +10,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate/annotations"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/reproduction"
-	gen "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/generate"
-)
-
-var (
-	filterLastN       = reproduction.FilterLastN
-	escapeJS          = reproduction.EscapeJS
-	chopString        = reproduction.ChopString
-	writePauseComment = reproduction.WritePauseComment
-	playwrightStep    = reproduction.PlaywrightStep
-	playwrightLocator = reproduction.PlaywrightLocator
-	describeElement   = reproduction.DescribeElement
 )
 
 // generateHandlers maps generate format names to their handler functions.
@@ -85,9 +74,6 @@ func (h *ToolHandler) toolGenerate(req JSONRPCRequest, args json.RawMessage) JSO
 	reg.Resolution.ValidModes = getValidGenerateFormats()
 	return h.dispatchTool(req, args, reg)
 }
-
-// TestGenParams delegates to internal/tools/generate.
-type TestGenParams = gen.TestGenParams
 
 // generateDeps exposes the narrow generate package contract at the MCP boundary.
 func (h *ToolHandler) generateDeps() toolgenerate.Deps {

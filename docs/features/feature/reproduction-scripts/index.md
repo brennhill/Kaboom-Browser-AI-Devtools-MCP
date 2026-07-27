@@ -7,9 +7,16 @@ owners: []
 last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/tools_generate.go
+  - internal/reproduction/reproduction.go
+  - internal/reproduction/reproduction_kaboom.go
+  - internal/reproduction/reproduction_playwright.go
+  - internal/reproduction/reproduction_selectors.go
+  - internal/reproduction/reproduction_utils.go
   - src/lib/page/reproduction.ts
 test_paths:
   - cmd/browser-agent/reproduction_test.go
+  - internal/reproduction/reproduction_test.go
+  - internal/reproduction/golden_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

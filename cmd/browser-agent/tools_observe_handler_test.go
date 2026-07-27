@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolobserve"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
@@ -810,15 +811,15 @@ func TestToolsObserve_IsServerSideObserveMode(t *testing.T) {
 		"playback_results", "log_diff_report", "pilot",
 	}
 	for _, mode := range serverSide {
-		if !serverSideObserveModes[mode] {
-			t.Errorf("serverSideObserveModes[%q] = false, want true", mode)
+		if !toolobserve.ServerSideObserveModes[mode] {
+			t.Errorf("toolobserve.ServerSideObserveModes[%q] = false, want true", mode)
 		}
 	}
 
 	clientSide := []string{"errors", "logs", "network_bodies", "actions", "vitals"}
 	for _, mode := range clientSide {
-		if serverSideObserveModes[mode] {
-			t.Errorf("serverSideObserveModes[%q] = true, want false", mode)
+		if toolobserve.ServerSideObserveModes[mode] {
+			t.Errorf("toolobserve.ServerSideObserveModes[%q] = true, want false", mode)
 		}
 	}
 }

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 )
 
@@ -92,7 +93,7 @@ func (h *ToolHandler) getAnonymousAnnotations(req JSONRPCRequest, wait bool, wai
 			return h.formatAnnotationSession(req, session, urlFilter)
 		}
 
-		corrID := newCorrelationID("ann")
+		corrID := toolresp.NewCorrelationID("ann")
 		h.capture.RegisterCommand(corrID, "", annotationWaitCommandTTL)
 		h.annotationStore.RegisterWaiter(corrID, "", urlFilter)
 
@@ -133,7 +134,7 @@ func (h *ToolHandler) getNamedAnnotations(req JSONRPCRequest, sessionName string
 			return h.formatNamedAnnotationSession(req, ns, urlFilter)
 		}
 
-		corrID := newCorrelationID("ann")
+		corrID := toolresp.NewCorrelationID("ann")
 		h.capture.RegisterCommand(corrID, "", annotationWaitCommandTTL)
 		h.annotationStore.RegisterWaiter(corrID, sessionName, urlFilter)
 

@@ -30,9 +30,6 @@ import (
 const defaultStoreNamespace = "session"
 const restartSelfSignalDelay = 100 * time.Millisecond
 
-type RecordingSnapshot = netrecord.RecordingSnapshot
-type Sequence = toolconfigure.Sequence
-
 var replayMu sync.Mutex
 
 var configureHandlers = map[string]ModeHandler{

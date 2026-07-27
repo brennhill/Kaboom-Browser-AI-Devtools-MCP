@@ -13,13 +13,11 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
-
-// domPrimitiveActions delegates to the interact package.
-var domPrimitiveActions = act.DOMPrimitiveActions
 
 // randIntn returns a random int in [0, n). Uses math/rand/v2 which auto-seeds.
 func randIntn(n int) int {
@@ -228,7 +226,7 @@ func buildInteractHandlers() map[string]ModeHandler {
 	}
 
 	// Merge DOM primitive actions into the handler map.
-	for action := range domPrimitiveActions {
+	for action := range act.DOMPrimitiveActions {
 		if _, exists := handlers[action]; exists {
 			continue // named handler takes precedence (e.g. wait_for_stable, auto_dismiss_overlays)
 		}
@@ -410,7 +408,7 @@ func (h *ToolHandler) enrichNavigateResponse(resp JSONRPCResponse, req JSONRPCRe
 	_, _, tabURL := h.capture.GetTrackingStatus()
 	tabTitle := h.capture.GetTrackedTabTitle()
 	vitals := h.capture.GetPerformanceSnapshots()
-	correlationID := newCorrelationID("nav_content")
+	correlationID := toolresp.NewCorrelationID("nav_content")
 	params := buildQueryParams(map[string]any{"timeout_ms": 4000})
 	query := queries.PendingQuery{
 		Type: "page_summary", Params: params, TabID: tabID, CorrelationID: correlationID,
