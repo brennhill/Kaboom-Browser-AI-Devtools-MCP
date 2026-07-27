@@ -5,11 +5,12 @@ package main
 
 import (
 	_ "embed"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpguard"
 	"net/http"
 	"strings"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/ciapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testpages"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
@@ -80,9 +81,9 @@ func registerCaptureRoutes(mux *http.ServeMux, server *Server, cap *capture.Stor
 	mux.HandleFunc("/telemetry", httpguard.CORS(handleTelemetry(server, cap)))
 
 	// NOT MCP — CI infrastructure (test harness boundaries, not AI-facing)
-	mux.HandleFunc("/snapshot", httpguard.CORS(httpguard.ExtensionOnly(handleSnapshot(server, cap))))
-	mux.HandleFunc("/clear", httpguard.CORS(httpguard.ExtensionOnly(handleClear(server, cap))))
-	mux.HandleFunc("/test-boundary", httpguard.CORS(httpguard.ExtensionOnly(handleTestBoundary(cap))))
+	mux.HandleFunc("/snapshot", httpguard.CORS(httpguard.ExtensionOnly(ciapi.Snapshot(server.logs, cap))))
+	mux.HandleFunc("/clear", httpguard.CORS(httpguard.ExtensionOnly(ciapi.Clear(server.logs, cap))))
+	mux.HandleFunc("/test-boundary", httpguard.CORS(httpguard.ExtensionOnly(ciapi.TestBoundary(cap))))
 }
 
 // registerUploadRoutes adds upload automation endpoints to the mux.

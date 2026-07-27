@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/ciapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
@@ -33,7 +34,7 @@ func TestHandleSnapshot_MethodAndSinceValidation(t *testing.T) {
 
 	srv := newTestServerForHandlers(t)
 	cap := capture.NewCapture()
-	handler := handleSnapshot(srv, cap)
+	handler := ciapi.Snapshot(srv.logs, cap)
 
 	notGetReq := httptest.NewRequest(http.MethodPost, "/snapshot", nil)
 	notGetRR := httptest.NewRecorder()
@@ -75,7 +76,7 @@ func TestHandleSnapshot_WithStatsAndActiveTestIDFallback(t *testing.T) {
 	})
 	cap.SetTestBoundaryStart("test-123")
 
-	handler := handleSnapshot(srv, cap)
+	handler := ciapi.Snapshot(srv.logs, cap)
 	req := httptest.NewRequest(http.MethodGet, "/snapshot", nil)
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
@@ -83,7 +84,7 @@ func TestHandleSnapshot_WithStatsAndActiveTestIDFallback(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
 
-	var resp SnapshotResponse
+	var resp ciapi.SnapshotResponse
 	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("json.Unmarshal() error = %v", err)
 	}
@@ -116,7 +117,7 @@ func TestHandleSnapshot_SinceFilter(t *testing.T) {
 
 	srv := newTestServerForHandlers(t)
 	cap := capture.NewCapture()
-	handler := handleSnapshot(srv, cap)
+	handler := ciapi.Snapshot(srv.logs, cap)
 
 	oldTS := time.Now().UTC().Add(-10 * time.Second)
 	cutoff := time.Now().UTC().Add(-5 * time.Second)
@@ -133,7 +134,7 @@ func TestHandleSnapshot_SinceFilter(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
 
-	var resp SnapshotResponse
+	var resp ciapi.SnapshotResponse
 	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("json.Unmarshal() error = %v", err)
 	}
@@ -154,7 +155,7 @@ func TestHandleClearAndTestBoundaryHandlers(t *testing.T) {
 	srv.logs.AddEntries([]LogEntry{{"level": "error", "message": "x"}})
 	cap.AddNetworkBodies([]capture.NetworkBody{{URL: "https://example.test", Status: 200}})
 
-	clearHandler := handleClear(srv, cap)
+	clearHandler := ciapi.Clear(srv.logs, cap)
 
 	getReq := httptest.NewRequest(http.MethodGet, "/clear", nil)
 	getRR := httptest.NewRecorder()
@@ -176,7 +177,7 @@ func TestHandleClearAndTestBoundaryHandlers(t *testing.T) {
 		t.Fatalf("network bodies len = %d, want 0 after clear", len(cap.GetNetworkBodies()))
 	}
 
-	testBoundary := handleTestBoundary(cap)
+	testBoundary := ciapi.TestBoundary(cap)
 
 	startReq := httptest.NewRequest(http.MethodPost, "/test-boundary", bytes.NewBufferString(`{"test_id":"checkout","action":"start"}`))
 	startRR := httptest.NewRecorder()
@@ -224,12 +225,12 @@ func TestFilterLogsSinceAndComputeSnapshotStats(t *testing.T) {
 		{"level": "warn", "message": "old", "ts": now.Add(-5 * time.Second).Format(time.RFC3339Nano)},
 		{"level": "error", "message": "new", "ts": now.Format(time.RFC3339Nano)},
 	}
-	filtered := filterLogsSince(logs, now.Add(-1*time.Second))
+	filtered := ciapi.FilterLogsSince(logs, now.Add(-1*time.Second))
 	if len(filtered) != 1 {
 		t.Fatalf("filtered logs len = %d, want 1", len(filtered))
 	}
 
-	stats := computeSnapshotStats(
+	stats := ciapi.ComputeSnapshotStats(
 		[]LogEntry{
 			{"level": "error"},
 			{"level": "warning"},

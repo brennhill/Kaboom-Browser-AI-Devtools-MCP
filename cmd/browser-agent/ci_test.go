@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/ciapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
@@ -15,7 +16,7 @@ func TestComputeSnapshotStats(t *testing.T) {
 	t.Parallel()
 
 	t.Run("empty inputs", func(t *testing.T) {
-		stats := computeSnapshotStats(nil, nil, nil)
+		stats := ciapi.ComputeSnapshotStats(nil, nil, nil)
 		if stats.TotalLogs != 0 || stats.ErrorCount != 0 || stats.WarningCount != 0 ||
 			stats.NetworkFailures != 0 || stats.WSConnections != 0 {
 			t.Fatalf("empty inputs should produce zero stats, got %+v", stats)
@@ -31,7 +32,7 @@ func TestComputeSnapshotStats(t *testing.T) {
 			{"level": "info", "msg": "started"},
 			{"level": "debug", "msg": "trace"},
 		}
-		stats := computeSnapshotStats(logs, nil, nil)
+		stats := ciapi.ComputeSnapshotStats(logs, nil, nil)
 
 		if stats.TotalLogs != 6 {
 			t.Fatalf("TotalLogs = %d, want 6", stats.TotalLogs)
@@ -51,7 +52,7 @@ func TestComputeSnapshotStats(t *testing.T) {
 			{Status: 500, URL: "/error"},
 			{Status: 302, URL: "/redirect"},
 		}
-		stats := computeSnapshotStats(nil, nil, bodies)
+		stats := ciapi.ComputeSnapshotStats(nil, nil, bodies)
 
 		if stats.NetworkFailures != 2 {
 			t.Fatalf("NetworkFailures = %d, want 2 (404 + 500)", stats.NetworkFailures)
@@ -65,7 +66,7 @@ func TestComputeSnapshotStats(t *testing.T) {
 			{URL: "ws://host/b", Event: "open"},
 			{URL: "", Event: "close"}, // no URL, not counted
 		}
-		stats := computeSnapshotStats(nil, wsEvents, nil)
+		stats := ciapi.ComputeSnapshotStats(nil, wsEvents, nil)
 
 		if stats.WSConnections != 2 {
 			t.Fatalf("WSConnections = %d, want 2", stats.WSConnections)
@@ -83,7 +84,7 @@ func TestComputeSnapshotStats(t *testing.T) {
 		bodies := []capture.NetworkBody{
 			{Status: 500, URL: "/fail"},
 		}
-		stats := computeSnapshotStats(logs, wsEvents, bodies)
+		stats := ciapi.ComputeSnapshotStats(logs, wsEvents, bodies)
 
 		if stats.TotalLogs != 2 || stats.ErrorCount != 1 || stats.NetworkFailures != 1 || stats.WSConnections != 1 {
 			t.Fatalf("combined stats incorrect: %+v", stats)
@@ -103,7 +104,7 @@ func TestFilterLogsSince(t *testing.T) {
 	}
 
 	t.Run("filters entries after since", func(t *testing.T) {
-		result := filterLogsSince(logs, base)
+		result := ciapi.FilterLogsSince(logs, base)
 		if len(result) != 2 {
 			t.Fatalf("expected 2 entries after since, got %d", len(result))
 		}
@@ -113,14 +114,14 @@ func TestFilterLogsSince(t *testing.T) {
 	})
 
 	t.Run("empty input returns empty", func(t *testing.T) {
-		result := filterLogsSince(nil, base)
+		result := ciapi.FilterLogsSince(nil, base)
 		if len(result) != 0 {
 			t.Fatalf("expected 0 entries for nil input, got %d", len(result))
 		}
 	})
 
 	t.Run("all before since returns empty", func(t *testing.T) {
-		result := filterLogsSince(logs[:2], base)
+		result := ciapi.FilterLogsSince(logs[:2], base)
 		if len(result) != 0 {
 			t.Fatalf("expected 0 entries when all before since, got %d", len(result))
 		}
@@ -128,7 +129,7 @@ func TestFilterLogsSince(t *testing.T) {
 
 	t.Run("all after since returns all", func(t *testing.T) {
 		earlyTime := base.Add(-10 * time.Second)
-		result := filterLogsSince(logs, earlyTime)
+		result := ciapi.FilterLogsSince(logs, earlyTime)
 		if len(result) != 4 {
 			t.Fatalf("expected 4 entries when all after since, got %d", len(result))
 		}
@@ -139,7 +140,7 @@ func TestFilterLogsSince(t *testing.T) {
 			{"msg": "no timestamp"},
 			{"ts": base.Add(1 * time.Second).Format(time.RFC3339Nano), "msg": "has ts"},
 		}
-		result := filterLogsSince(logsWithMissing, base)
+		result := ciapi.FilterLogsSince(logsWithMissing, base)
 		if len(result) != 1 {
 			t.Fatalf("expected 1 entry (skip missing ts), got %d", len(result))
 		}
@@ -150,7 +151,7 @@ func TestFilterLogsSince(t *testing.T) {
 			{"ts": "not-a-timestamp", "msg": "bad ts"},
 			{"ts": base.Add(1 * time.Second).Format(time.RFC3339Nano), "msg": "good ts"},
 		}
-		result := filterLogsSince(logsWithBadTS, base)
+		result := ciapi.FilterLogsSince(logsWithBadTS, base)
 		if len(result) != 1 {
 			t.Fatalf("expected 1 entry (skip bad ts), got %d", len(result))
 		}

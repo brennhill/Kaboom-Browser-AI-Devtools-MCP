@@ -6,7 +6,6 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-27
 code_paths:
-  - cmd/browser-agent/ci.go
   - cmd/browser-agent/internal/ciapi/handlers.go
   - cmd/browser-agent/internal/ciapi/snapshot.go
   - cmd/browser-agent/internal/ciapi/types.go
@@ -42,7 +41,8 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-- HTTP route adapters: `cmd/browser-agent/ci.go`
+- HTTP endpoint implementation: `cmd/browser-agent/internal/ciapi/`
+- Route registration: `cmd/browser-agent/server_routes.go`
 - Snapshot, clear, and test-boundary endpoint behavior:
   `cmd/browser-agent/internal/ciapi/handlers.go`
 - Snapshot filtering, statistics, and payload contracts:
