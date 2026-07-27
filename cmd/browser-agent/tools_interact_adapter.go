@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactstate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
@@ -96,7 +97,7 @@ func (h *ToolHandler) interactAction() *toolinteract.InteractActionHandler {
 }
 
 // stateInteract returns the state interact handler from the toolinteract package.
-func (h *ToolHandler) stateInteract() *toolinteract.StateInteractHandler {
+func (h *ToolHandler) stateInteract() *interactstate.Handler {
 	return h.stateInteractHandler
 }
 

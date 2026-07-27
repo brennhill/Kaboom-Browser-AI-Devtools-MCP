@@ -129,13 +129,8 @@ type RedactionEngine interface {
 	RedactMapValues(m map[string]any) map[string]any
 }
 
-// UploadInteractHandler handles file upload operations.
-// It lives in interactupload, which needs five of the seams above plus a single
-// method from the action handler; this alias keeps the caller's type name stable.
-type UploadInteractHandler = interactupload.Handler
-
-// NewUploadInteractHandler creates a new UploadInteractHandler with the given dependencies.
-func NewUploadInteractHandler(deps *Deps, actionHandler *InteractActionHandler) *UploadInteractHandler {
+// NewUploadInteractHandler creates an upload handler with narrowed dependencies.
+func NewUploadInteractHandler(deps *Deps, actionHandler *InteractActionHandler) *interactupload.Handler {
 	return interactupload.New(&interactupload.Deps{
 		RequirePilot: func(req mcp.JSONRPCRequest, opts ...func(*mcp.StructuredError)) (mcp.JSONRPCResponse, bool) {
 			return deps.RequirePilot(req, opts...)
@@ -155,18 +150,13 @@ func NewUploadInteractHandler(deps *Deps, actionHandler *InteractActionHandler) 
 	}, actionHandler)
 }
 
-// StateInteractHandler handles state save/load/list/delete operations.
-// It lives in interactstate, which needs only nine of the seams above; this alias
-// keeps the caller's type name stable across that boundary.
-type StateInteractHandler = interactstate.Handler
-
-// NewStateInteractHandler creates a new StateInteractHandler with the given dependencies.
+// NewStateInteractHandler creates a state handler with narrowed dependencies.
 //
 // The narrow interactstate.Deps is built here rather than by the caller, and every
 // field forwards through the wide *Deps pointer instead of copying the function
 // value out of it — so a test that swaps a seam on the shared Deps after
 // construction still wins, exactly as it did when this handler read h.deps directly.
-func NewStateInteractHandler(deps *Deps, store *persistence.SessionStore) *StateInteractHandler {
+func NewStateInteractHandler(deps *Deps, store *persistence.SessionStore) *interactstate.Handler {
 	return interactstate.New(&interactstate.Deps{
 		IsPilotActionAllowed: func() bool { return deps.Capture().IsPilotActionAllowed() },
 		IsExtensionConnected: func() bool { return deps.Capture().IsExtensionConnected() },

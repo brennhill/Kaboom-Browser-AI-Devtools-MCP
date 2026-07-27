@@ -16,6 +16,8 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testgenhandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactstate"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactupload"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolrecording"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/apicontract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/analysis/thirdparty"
@@ -101,9 +103,9 @@ type ToolHandler struct {
 
 	recordingInteractHandler *screenrec.InteractHandler
 	recordingHandler         *toolrecording.Handler
-	uploadInteractHandler    *toolinteract.UploadInteractHandler
+	uploadInteractHandler    *interactupload.Handler
 	testGenHandler           *testgenhandler.Handler
-	stateInteractHandler     *toolinteract.StateInteractHandler
+	stateInteractHandler     *interactstate.Handler
 	configureSessionHandler  *configureSessionHandler
 
 	// Passive network traffic recording state (start/stop capture).

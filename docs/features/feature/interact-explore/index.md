@@ -7,6 +7,8 @@ owners: []
 last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/internal/toolinteract/deps.go
+  - cmd/browser-agent/internal/toolinteract/interactstate/state.go
+  - cmd/browser-agent/internal/toolinteract/interactupload/upload.go
   - cmd/browser-agent/internal/toolinteract/interact_action_handler.go
   - cmd/browser-agent/internal/toolinteract/interact_command_builder.go
   - cmd/browser-agent/internal/toolinteract/interact_browser.go
