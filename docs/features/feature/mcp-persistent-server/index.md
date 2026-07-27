@@ -6,6 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-27
 code_paths:
+  - cmd/browser-agent/mcp_stdout.go
   - cmd/browser-agent/tools_registry.go
   - cmd/browser-agent/mcp_identity.go
   - cmd/browser-agent/bridge_adapter.go
@@ -45,6 +46,8 @@ code_paths:
   - internal/util/proc_unix.go
   - internal/util/proc_windows.go
 test_paths:
+  - cmd/browser-agent/mcp_protocol_test.go
+  - cmd/browser-agent/stdout_sync_unit_test.go
   - cmd/browser-agent/tools_registry_test.go
   - cmd/browser-agent/terminal_availability_test.go
   - cmd/browser-agent/reclaim_port_identity_test.go

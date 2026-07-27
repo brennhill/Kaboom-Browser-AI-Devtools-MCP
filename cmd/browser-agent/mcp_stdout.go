@@ -6,12 +6,35 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"os"
+	"syscall"
 	"time"
 
 	cmbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
 )
+
+func syncStdoutBestEffort() {
+	if err := cmbridge.ActiveMCPTransportWriter().Sync(); err != nil && !isIgnorableStdoutSyncError(err) {
+		stderrf("[Kaboom] warning: stdout.Sync failed: %v\n", err)
+	}
+}
+
+func isIgnorableStdoutSyncError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, syscall.EINVAL) || errors.Is(err, syscall.EBADF) {
+		return true
+	}
+	var pathErr *os.PathError
+	if errors.As(err, &pathErr) {
+		return errors.Is(pathErr.Err, syscall.EINVAL) || errors.Is(pathErr.Err, syscall.EBADF)
+	}
+	return false
+}
 
 // writeMCPPayload is the only stdout emitter used by MCP wrapper responses.
 func writeMCPPayload(payload []byte, framing bridge.StdioFraming) {
