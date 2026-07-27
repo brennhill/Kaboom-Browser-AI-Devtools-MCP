@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
@@ -247,4 +248,99 @@ func getValidInteractActions() string {
 	}
 	sort.Strings(sorted)
 	return strings.Join(sorted, ", ")
+}
+
+const composableSideEffectDelay = 300 * time.Millisecond
+
+func (h *ToolHandler) toolInteract(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+	var composable struct {
+		Subtitle           *string `json:"subtitle"`
+		IncludeScreenshot  bool    `json:"include_screenshot"`
+		IncludeInteractive bool    `json:"include_interactive"`
+		AutoDismiss        bool    `json:"auto_dismiss"`
+		WaitForStable      bool    `json:"wait_for_stable"`
+		StabilityMs        int     `json:"stability_ms,omitempty"`
+		ActionDiff         bool    `json:"action_diff"`
+	}
+	lenientUnmarshal(args, &composable)
+
+	registry := interactRegistry
+	registry.Handlers = getInteractHandlers()
+	registry.Resolution.ValidModes = getValidInteractActions()
+	what := resolveWhatForComposable(args, interactAliasParams)
+	response := h.dispatchTool(req, args, registry)
+
+	if composable.Subtitle != nil && what != "subtitle" && response.Error == nil {
+		h.interactAction().QueueComposableSubtitle(req, *composable.Subtitle)
+	}
+	hasSideEffects := false
+	if composable.AutoDismiss && what == "navigate" && !isErrorResponse(response) {
+		h.interactAction().QueueComposableAutoDismiss(req)
+		hasSideEffects = true
+	}
+	if composable.WaitForStable && (what == "navigate" || what == "click") && !isErrorResponse(response) {
+		h.interactAction().QueueComposableWaitForStable(req, composable.StabilityMs)
+		hasSideEffects = true
+	}
+	if composable.ActionDiff && !isErrorResponse(response) {
+		h.interactAction().QueueComposableActionDiff(req)
+		hasSideEffects = true
+	}
+	if hasSideEffects && composable.IncludeScreenshot {
+		time.Sleep(composableSideEffectDelay)
+	}
+	if composable.IncludeScreenshot && !isErrorResponse(response) {
+		response = h.interactAction().AppendScreenshotToResponse(response, req)
+	}
+	if composable.IncludeInteractive && !isErrorResponse(response) {
+		response = h.interactAction().AppendInteractiveToResponse(response, req)
+	}
+	return response
+}
+
+func resolveWhatForComposable(args json.RawMessage, aliases []modeAlias) string {
+	if len(args) == 0 {
+		return ""
+	}
+	var raw map[string]json.RawMessage
+	if json.Unmarshal(args, &raw) != nil {
+		return ""
+	}
+	if value, ok := raw["what"]; ok {
+		var what string
+		if json.Unmarshal(value, &what) == nil && what != "" {
+			return what
+		}
+	}
+	for _, alias := range aliases {
+		if value, ok := raw[alias.JSONField]; ok {
+			var what string
+			if json.Unmarshal(value, &what) == nil && what != "" {
+				return what
+			}
+		}
+	}
+	return ""
+}
+
+func mergeAsyncAlias(args json.RawMessage) json.RawMessage {
+	if len(args) == 0 {
+		return args
+	}
+	var raw map[string]json.RawMessage
+	if json.Unmarshal(args, &raw) != nil {
+		return args
+	}
+	asyncValue, hasAsync := raw["async"]
+	_, hasBackground := raw["background"]
+	if !hasAsync || hasBackground {
+		return args
+	}
+	raw["background"] = asyncValue
+	delete(raw, "async")
+	merged, err := json.Marshal(raw)
+	if err != nil {
+		return args
+	}
+	return merged
 }

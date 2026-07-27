@@ -3,7 +3,7 @@ doc_type: tech-spec
 feature_id: feature-interact-explore
 status: shipped
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-27
 links:
   product: ./product-spec.md
   tech: ./tech-spec.md
@@ -16,7 +16,7 @@ last_verified_date: 2026-03-05
 # Interact Tech Spec (TARGET)
 
 ## Dispatcher
-- Entry: `toolInteract` in `cmd/browser-agent/tools_interact_entrypoint.go`
+- Entry: `toolInteract` in `cmd/browser-agent/tools_interact_dispatch.go`
 - Action routing:
 - named action handlers (`interactActionHandler.interactDispatch` map in `cmd/browser-agent/tools_interact_dispatch.go`)
 - DOM primitives (`domPrimitiveActions` -> `handleDOMPrimitive`)
@@ -63,7 +63,7 @@ last_verified_date: 2026-03-05
 
 ## Code Anchors
 - `cmd/browser-agent/tools_interact_action_handler.go`
-- `cmd/browser-agent/tools_interact_entrypoint.go`
+- `cmd/browser-agent/tools_interact_dispatch.go`
 - `cmd/browser-agent/tools_interact_dispatch.go`
 - `cmd/browser-agent/tools_interact_draw.go`
 - `cmd/browser-agent/tools_interact_upload.go`
