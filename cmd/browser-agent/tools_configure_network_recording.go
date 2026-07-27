@@ -10,6 +10,9 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
 )
 
+// RecordingSnapshot remains an alias for root-package compatibility.
+type RecordingSnapshot = netrecord.RecordingSnapshot
+
 // toolConfigureNetworkRecording delegates to the sub-package handler.
 func (h *ToolHandler) toolConfigureNetworkRecording(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 	return netrecord.HandleNetworkRecording(h.capture, h.networkRecording, req, args)

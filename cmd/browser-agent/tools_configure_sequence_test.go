@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/replay"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
 )
 
@@ -406,7 +407,7 @@ func TestForceReplayAsyncInteractStep(t *testing.T) {
 	t.Parallel()
 
 	original := json.RawMessage(`{"action":"execute_js","script":"1+1","wait":true,"sync":true}`)
-	mutated := forceReplayAsyncInteractStep(original)
+	mutated := replay.ForceAsync(original)
 
 	var data map[string]any
 	if err := json.Unmarshal(mutated, &data); err != nil {

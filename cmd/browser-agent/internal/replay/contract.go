@@ -78,7 +78,11 @@ func ErrorMessage(resp mcp.JSONRPCResponse) string {
 			continue
 		}
 		var data map[string]any
-		if json.Unmarshal([]byte(block.Text), &data) == nil {
+		structured := block.Text
+		if index := strings.IndexByte(structured, '{'); index >= 0 {
+			structured = structured[index:]
+		}
+		if json.Unmarshal([]byte(structured), &data) == nil {
 			if message, ok := data["message"].(string); ok {
 				return message
 			}
