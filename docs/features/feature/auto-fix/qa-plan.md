@@ -3,7 +3,7 @@ doc_type: qa-plan
 feature_id: feature-auto-fix
 status: proposed
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-27
 links:
   index: ./index.md
   product: ./product-spec.md
@@ -88,7 +88,7 @@ tags: [testing, qa, audit]
 
 ### 4.1 Unit Tests
 
-Server source: `cmd/browser-agent/tools_analyze_page_issues.go`. Tests: `tools_analyze_page_issues_test.go`.
+Server source: `cmd/browser-agent/internal/toolanalyze/pageissues/handler.go`. Tests: `handler_test.go` and `summary_test.go` in that package.
 
 | # | Test Case | Input | Expected Output | Priority |
 |---|-----------|-------|-----------------|----------|

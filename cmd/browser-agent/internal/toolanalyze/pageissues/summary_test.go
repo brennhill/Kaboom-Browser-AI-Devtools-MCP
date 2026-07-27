@@ -2,7 +2,7 @@
 // Why: Validates aggregation, severity sorting, and edge cases (empty, overflow, partial).
 // Docs: docs/features/feature/auto-fix/index.md
 
-package main
+package pageissues
 
 import (
 	"testing"

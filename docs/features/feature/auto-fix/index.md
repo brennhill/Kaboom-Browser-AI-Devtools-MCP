@@ -6,7 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-27
 code_paths:
-  - cmd/browser-agent/tools_analyze_page_issues.go
+  - cmd/browser-agent/internal/toolanalyze/pageissues/handler.go
   - cmd/browser-agent/internal/toolanalyze/page_issues_summary.go
   - cmd/browser-agent/tools_analyze_dispatch.go
   - cmd/browser-agent/handler_tools_call.go
@@ -25,7 +25,8 @@ code_paths:
   - src/types/runtime-messages.ts
 test_paths:
   - cmd/browser-agent/handler_tools_call_postprocess_test.go
-  - cmd/browser-agent/tools_analyze_page_issues_test.go
+  - cmd/browser-agent/internal/toolanalyze/pageissues/handler_test.go
+  - cmd/browser-agent/internal/toolanalyze/pageissues/summary_test.go
   - cmd/browser-agent/internal/terminal/intent_store_test.go
   - tests/extension/request-audit.test.js
   - tests/extension/message-handlers.test.js

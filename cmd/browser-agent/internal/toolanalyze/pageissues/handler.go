@@ -1,8 +1,8 @@
-// tools_analyze_page_issues.go — Aggregates all detectable page issues into a single response.
+// handler.go — Aggregates all detectable page issues into a single response.
 // Why: Gives any AI a comprehensive starting point without needing to know which individual tools to call.
 // Docs: docs/features/feature/auto-fix/index.md
 
-package main
+package pageissues
 
 import (
 	"encoding/json"
@@ -11,7 +11,9 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -50,27 +52,27 @@ type checkResult struct {
 	err    string
 }
 
-func (h *ToolHandler) toolAnalyzePageIssues(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
+func Handle(d toolanalyze.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params pageIssuesParams
 	if len(args) > 0 {
-		lenientUnmarshal(args, &params)
+		mcp.LenientUnmarshal(args, &params)
 	}
 	if params.Limit <= 0 {
 		params.Limit = pageIssuesPerSectionCap
 	}
 
-	enabled, _, tabURL := h.capture.GetTrackingStatus()
+	enabled, _, tabURL := d.GetTrackingStatus()
 	if !enabled {
-		return fail(req, ErrNoData, "No tab is being tracked. Track a tab first.",
+		return mcp.Fail(req, mcp.ErrNoData, "No tab is being tracked. Track a tab first.",
 			"Open the extension popup and click 'Track This Tab'.",
-			withRecoveryToolCall(map[string]any{
+			mcp.WithRecoveryToolCall(map[string]any{
 				"tool":      "configure",
 				"arguments": map[string]any{"what": "health"},
 			}))
 	}
 
 	categories := defaultCategories(params.Categories)
-	result := h.runPageIssuesChecks(categories, params.Limit, tabURL)
+	result := runPageIssuesChecks(d, categories, params.Limit, tabURL)
 
 	if params.Summary {
 		azResult := toolanalyze.PageIssuesResult{
@@ -82,9 +84,9 @@ func (h *ToolHandler) toolAnalyzePageIssues(req JSONRPCRequest, args json.RawMes
 			PageURL:         result.PageURL,
 			Timestamp:       result.Timestamp,
 		}
-		return succeed(req, "Page issues summary", toolanalyze.BuildPageIssuesSummary(azResult))
+		return mcp.Succeed(req, "Page issues summary", toolanalyze.BuildPageIssuesSummary(azResult))
 	}
-	return succeed(req, "Page issues scan complete", result)
+	return mcp.Succeed(req, "Page issues scan complete", result)
 }
 
 func defaultCategories(requested []string) map[string]bool {
@@ -108,22 +110,19 @@ type pageIssuesChecker struct {
 type sharedPageData struct {
 	networkBodies    []capture.NetworkBody
 	waterfallEntries []capture.NetworkWaterfallEntry
-	logEntries       []LogEntry
+	logEntries       []types.LogEntry
 	consoleEntries   []scan.LogEntry
 	tabURL           string
 }
 
-func (h *ToolHandler) prefetchSharedData(tabURL string) sharedPageData {
-	bodies := h.capture.GetNetworkBodies()
-	waterfall := h.capture.GetNetworkWaterfallEntries()
+func prefetchSharedData(d toolanalyze.Deps, tabURL string) sharedPageData {
+	bodies := d.NetworkBodies()
+	waterfall := d.NetworkWaterfallEntries()
 
 	// Single snapshot for both logEntries and consoleEntries to avoid TOCTOU
 	// inconsistency between two separate reads of the same data.
-	logEntries := h.server.logs.Entries()
-	consoleEntries := make([]scan.LogEntry, len(logEntries))
-	for i, e := range logEntries {
-		consoleEntries[i] = scan.LogEntry(e)
-	}
+	logEntries := d.LogEntries()
+	consoleEntries := d.ConsoleSecurityEntries()
 
 	return sharedPageData{
 		networkBodies:    bodies,
@@ -134,8 +133,8 @@ func (h *ToolHandler) prefetchSharedData(tabURL string) sharedPageData {
 	}
 }
 
-func (h *ToolHandler) runPageIssuesChecks(categories map[string]bool, limit int, tabURL string) pageIssuesResult {
-	shared := h.prefetchSharedData(tabURL)
+func runPageIssuesChecks(d toolanalyze.Deps, categories map[string]bool, limit int, tabURL string) pageIssuesResult {
+	shared := prefetchSharedData(d, tabURL)
 
 	checkers := make([]pageIssuesChecker, 0, len(categories))
 	if categories[catConsoleErrors] {
@@ -150,12 +149,12 @@ func (h *ToolHandler) runPageIssuesChecks(categories map[string]bool, limit int,
 	}
 	if categories[catAccessibility] {
 		checkers = append(checkers, pageIssuesChecker{catAccessibility, func(lim int) ([]map[string]any, error) {
-			return h.collectA11yIssues(lim)
+			return collectA11yIssues(d, lim)
 		}})
 	}
 	if categories[catSecurity] {
 		checkers = append(checkers, pageIssuesChecker{catSecurity, func(lim int) ([]map[string]any, error) {
-			return h.collectSecurityIssues(shared, lim)
+			return collectSecurityIssues(d, shared, lim)
 		}})
 	}
 
@@ -239,7 +238,7 @@ func (h *ToolHandler) runPageIssuesChecks(categories map[string]bool, limit int,
 }
 
 // collectConsoleErrors gathers error/warning log entries from pre-fetched data.
-func collectConsoleErrors(entries []LogEntry, limit int) []map[string]any {
+func collectConsoleErrors(entries []types.LogEntry, limit int) []map[string]any {
 	issues := make([]map[string]any, 0)
 	for _, entry := range entries {
 		level, _ := entry["level"].(string)
@@ -296,8 +295,8 @@ func collectNetworkFailures(bodies []capture.NetworkBody, limit int) []map[strin
 }
 
 // collectA11yIssues runs an accessibility audit via the extension (async, not pre-fetchable).
-func (h *ToolHandler) collectA11yIssues(limit int) ([]map[string]any, error) {
-	result, err := h.ExecuteA11yQuery("", nil, nil, false)
+func collectA11yIssues(d toolanalyze.Deps, limit int) ([]map[string]any, error) {
+	result, err := d.ExecuteA11yQuery("", nil, nil, false)
 	if err != nil {
 		return nil, err
 	}
@@ -333,8 +332,9 @@ func (h *ToolHandler) collectA11yIssues(limit int) ([]map[string]any, error) {
 }
 
 // collectSecurityIssues runs the security scanner against pre-fetched data.
-func (h *ToolHandler) collectSecurityIssues(shared sharedPageData, limit int) ([]map[string]any, error) {
-	if h.securityScannerImpl == nil {
+func collectSecurityIssues(d toolanalyze.Deps, shared sharedPageData, limit int) ([]map[string]any, error) {
+	scanner := d.SecurityScanner()
+	if scanner == nil {
 		return nil, nil
 	}
 
@@ -343,7 +343,7 @@ func (h *ToolHandler) collectSecurityIssues(shared sharedPageData, limit int) ([
 		pageURLs = append(pageURLs, shared.tabURL)
 	}
 
-	result, err := h.securityScannerImpl.HandleSecurityAudit(
+	result, err := scanner.HandleSecurityAudit(
 		json.RawMessage("{}"), shared.networkBodies, shared.consoleEntries, pageURLs, shared.waterfallEntries,
 	)
 	if err != nil {

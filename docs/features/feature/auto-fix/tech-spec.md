@@ -3,12 +3,12 @@ doc_type: tech-spec
 feature_id: feature-auto-fix
 status: proposed
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-27
 links:
   index: ./index.md
   product: ./product-spec.md
 code_paths:
-  - cmd/browser-agent/tools_analyze_page_issues.go
+  - cmd/browser-agent/internal/toolanalyze/pageissues/handler.go
   - cmd/browser-agent/internal/toolanalyze/page_issues_summary.go
   - cmd/browser-agent/tools_analyze_dispatch.go
   - cmd/browser-agent/handler_tools_call_postprocess.go
@@ -17,7 +17,8 @@ code_paths:
   - src/lib/tabs/request-audit.ts
   - src/background/message-handlers.ts
 test_paths:
-  - cmd/browser-agent/tools_analyze_page_issues_test.go
+  - cmd/browser-agent/internal/toolanalyze/pageissues/handler_test.go
+  - cmd/browser-agent/internal/toolanalyze/pageissues/summary_test.go
   - cmd/browser-agent/handler_tools_call_postprocess_test.go
   - tests/extension/request-audit.test.js
   - tests/extension/message-handlers.test.js
@@ -44,9 +45,9 @@ The agent then runs the `/kaboom/audit` command or the bundled `audit` skill, wh
 
 ## Key Components
 
-### `toolAnalyzePageIssues` — the evidence sweep
+### `pageissues.Handle` — the evidence sweep
 
-Located in `cmd/browser-agent/tools_analyze_page_issues.go`. Flow:
+Located in `cmd/browser-agent/internal/toolanalyze/pageissues/handler.go`. Flow:
 
 1. Parse params (`summary`, `categories`, `limit`); default `limit` to the per-section cap (50).
 2. Check tracking via `capture.GetTrackingStatus()`. If no tab is tracked, return `ErrNoData` with a recovery tool call (`configure(what="health")`).
