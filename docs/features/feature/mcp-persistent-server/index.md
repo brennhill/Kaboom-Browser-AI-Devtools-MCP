@@ -48,6 +48,7 @@ code_paths:
   - cmd/browser-agent/internal/httpguard/middleware.go
   - cmd/browser-agent/handler_http.go
   - cmd/browser-agent/internal/connectmode/runner.go
+  - cmd/browser-agent/internal/versioncheck/checker.go
   - internal/diag/output.go
   - internal/diag/debug_file.go
   - cmd/browser-agent/server_routes_media_screenshots.go
@@ -77,6 +78,7 @@ test_paths:
   - cmd/browser-agent/handler_http_headers_test.go
   - cmd/browser-agent/internal/httpguard/middleware_test.go
   - cmd/browser-agent/internal/connectmode/runner_test.go
+  - cmd/browser-agent/internal/versioncheck/checker_test.go
   - scripts/check-bridge-stdout-invariant.sh
   - cmd/browser-agent/handler_consistency_test.go
   - cmd/browser-agent/server_routes_unit_test.go

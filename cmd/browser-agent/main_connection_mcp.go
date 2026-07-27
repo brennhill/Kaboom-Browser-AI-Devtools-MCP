@@ -41,7 +41,7 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	startVersionCheckLoop(ctx)
+	releaseChecker.Start(ctx)
 	server.startScreenshotRateLimiterCleanup(ctx)
 	configureBinaryUpgradeMonitoring(ctx, server, port)
 

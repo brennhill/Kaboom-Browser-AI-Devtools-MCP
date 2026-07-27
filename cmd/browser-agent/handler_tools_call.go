@@ -212,7 +212,7 @@ func maybeAddUpdateAvailableWarning(resp JSONRPCResponse) JSONRPCResponse {
 			return resp
 		}
 	}
-	availableVersion := getAvailableVersion()
+	availableVersion := releaseChecker.Available()
 	if availableVersion == "" || !daemonlife.IsNewerVersion(availableVersion, version) {
 		return resp
 	}

@@ -47,7 +47,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request, cap *captu
 	s.addTerminalHealth(response)
 	successReads, failedReads := bridge.SnapshotFastPathResourceReadCounters()
 	response["bridge_fastpath"] = map[string]any{"resources_read_success": successReads, "resources_read_failure": failedReads}
-	if availableVersion := getAvailableVersion(); availableVersion != "" {
+	if availableVersion := releaseChecker.Available(); availableVersion != "" {
 		response["available_version"] = availableVersion
 	}
 	if info := buildUpgradeInfo(); info != nil {

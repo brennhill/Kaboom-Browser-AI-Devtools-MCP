@@ -5,12 +5,14 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/cli"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/versioncheck"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
@@ -19,6 +21,12 @@ import (
 // version is set at build time via -ldflags "-X main.version=..."
 // Fallback used for `go run` and `make dev` (no ldflags).
 var version = "0.8.8"
+
+var releaseChecker = versioncheck.New(versioncheck.Options{
+	CurrentVersion: version,
+	ReleaseURL:     os.Getenv("KABOOM_RELEASES_URL"),
+	HTTPClient:     &http.Client{Timeout: 10 * time.Second},
+})
 
 // daemonProcessArgv0 binds the build-time version to the process-title builder in
 // internal/procctl. It lives beside `version` because that is the only reason it
