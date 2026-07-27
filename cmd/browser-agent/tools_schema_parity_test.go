@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/cli"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	interactschema "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema/interact"
 )
@@ -62,12 +63,7 @@ func TestSchemaParity_ObserveWhatEnumMatchesHandlers(t *testing.T) {
 }
 
 func sortedKeysGenerateHandlers() []string {
-	keys := make([]string, 0, len(generateHandlers))
-	for format := range generateHandlers {
-		keys = append(keys, format)
-	}
-	sort.Strings(keys)
-	return keys
+	return strings.Split(toolgenerate.ValidFormats(), ", ")
 }
 
 func sortedKeysConfigureHandlers() []string {

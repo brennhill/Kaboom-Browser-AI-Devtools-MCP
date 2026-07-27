@@ -34,7 +34,7 @@ Each feature under `docs/features/feature/<feature-name>/` should keep:
 - Analyze handlers: `cmd/browser-agent/tools_analyze.go`
 - Configure handlers: `cmd/browser-agent/tools_configure.go`
 - Interact handlers: `cmd/browser-agent/tools_interact.go`
-- Generate handlers: `cmd/browser-agent/tools_generate.go`
+- Generate handlers: `cmd/browser-agent/internal/toolgenerate/dispatcher.go`
 
 ## Update Rule
 When schema/handler behavior changes:

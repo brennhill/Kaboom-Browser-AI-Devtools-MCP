@@ -334,7 +334,7 @@ func TestToolGenerate_MissingFormat(t *testing.T) {
 		ID:      json.RawMessage(`"test-id"`),
 	}
 
-	resp := toolHandler.toolGenerate(req, json.RawMessage(`{}`))
+	resp := toolHandler.generateDispatcher.Handle(req, json.RawMessage(`{}`))
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -360,7 +360,7 @@ func TestToolGenerate_UnknownFormat(t *testing.T) {
 		ID:      json.RawMessage(`"test-id"`),
 	}
 
-	resp := toolHandler.toolGenerate(req, json.RawMessage(`{"what": "invalid_format"}`))
+	resp := toolHandler.generateDispatcher.Handle(req, json.RawMessage(`{"what": "invalid_format"}`))
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {

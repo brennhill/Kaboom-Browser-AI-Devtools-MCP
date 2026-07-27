@@ -89,20 +89,19 @@ cmd/browser-agent/tools_core.go  # Add dispatch for new generate modes
 
 ## Code Changes Detail
 
-### tools_core.go Additions
+### Generate Dispatcher Registration
 
 ```go
-// Add to tool dispatch switch in HandleToolCall
-case "generate":
-    switch mode {
-    // ... existing cases ...
-    case "test_from_context":
-        return h.toolGenerateTestFromContext(req, args)
-    case "test_heal":
-        return h.toolGenerateTestHeal(req, args)
-    case "test_classify":
-        return h.toolGenerateTestClassify(req, args)
-    }
+// cmd/browser-agent/internal/toolgenerate/dispatcher.go
+"test_from_context": func(h *Dispatcher, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+    return h.tests.HandleGenerateTestFromContext(req, args)
+},
+"test_heal": func(h *Dispatcher, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+    return h.tests.HandleGenerateTestHeal(req, args)
+},
+"test_classify": func(h *Dispatcher, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+    return h.tests.HandleGenerateTestClassify(req, args)
+},
 ```
 
 ### New Error Codes

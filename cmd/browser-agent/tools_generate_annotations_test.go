@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate/annotations"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
@@ -88,7 +90,7 @@ func TestGenerate_VisualTest_NoAnnotations(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"visual_test"}`)
 
-	resp := h.toolGenerate(req, args)
+	resp := h.generateDispatcher.Handle(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
 	if !strings.Contains(strings.ToLower(text), "no annotation") {
@@ -103,7 +105,7 @@ func TestGenerate_VisualTest_GeneratesPlaywright(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"visual_test"}`)
 
-	resp := h.toolGenerate(req, args)
+	resp := h.generateDispatcher.Handle(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
 	// Should contain Playwright test structure
@@ -140,7 +142,7 @@ func TestGenerate_VisualTest_UsesSelectorCandidates(t *testing.T) {
 	})
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := h.toolGenerateVisualTest(req, nil)
+	resp := annotations.HandleVisualTest(h, req, nil)
 	text := unmarshalMCPText(t, resp.Result)
 
 	if !strings.Contains(text, "testid=checkout-submit") {
@@ -164,7 +166,7 @@ func TestGenerate_VisualTest_IncludesAnnotationComments(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"visual_test"}`)
 
-	resp := h.toolGenerate(req, args)
+	resp := h.generateDispatcher.Handle(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
 	// annotation.Annotation text should appear as comments in the test
@@ -183,7 +185,7 @@ func TestGenerate_VisualTest_CustomTestName(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"visual_test","test_name":"checkout visual review"}`)
 
-	resp := h.toolGenerate(req, args)
+	resp := h.generateDispatcher.Handle(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
 	if !strings.Contains(text, "checkout visual review") {
@@ -198,7 +200,7 @@ func TestGenerate_VisualTest_IncludesA11yAssertions(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"visual_test"}`)
 
-	resp := h.toolGenerate(req, args)
+	resp := h.generateDispatcher.Handle(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
 	// Should include a11y flag as a comment/todo
@@ -229,7 +231,7 @@ func TestGenerate_VisualTest_NamedSession(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"visual_test","annot_session":"qa-review"}`)
 
-	resp := h.toolGenerate(req, args)
+	resp := h.generateDispatcher.Handle(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
 	// Should contain both page URLs
@@ -253,7 +255,7 @@ func TestGenerate_AnnotationReport_NoAnnotations(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"annotation_report"}`)
 
-	resp := h.toolGenerate(req, args)
+	resp := h.generateDispatcher.Handle(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
 	if !strings.Contains(strings.ToLower(text), "no annotation") {
@@ -268,7 +270,7 @@ func TestGenerate_AnnotationReport_GeneratesMarkdown(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"annotation_report"}`)
 
-	resp := h.toolGenerate(req, args)
+	resp := h.generateDispatcher.Handle(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
 	// Should be markdown with header
@@ -291,7 +293,7 @@ func TestGenerate_AnnotationReport_IncludesScreenshotRef(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"annotation_report"}`)
 
-	resp := h.toolGenerate(req, args)
+	resp := h.generateDispatcher.Handle(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
 	if !strings.Contains(text, "draw_test_annotated.png") {
@@ -306,7 +308,7 @@ func TestGenerate_AnnotationReport_IncludesA11yFlags(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"annotation_report"}`)
 
-	resp := h.toolGenerate(req, args)
+	resp := h.generateDispatcher.Handle(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
 	if !strings.Contains(text, "low-contrast") {
@@ -326,7 +328,7 @@ func TestGenerate_AnnotationIssues_NoAnnotations(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"annotation_issues"}`)
 
-	resp := h.toolGenerate(req, args)
+	resp := h.generateDispatcher.Handle(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
 	if !strings.Contains(strings.ToLower(text), "no annotation") {
@@ -341,7 +343,7 @@ func TestGenerate_AnnotationIssues_ReturnsStructuredJSON(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"annotation_issues"}`)
 
-	resp := h.toolGenerate(req, args)
+	resp := h.generateDispatcher.Handle(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
 	// Should contain JSON with issues array
@@ -360,7 +362,7 @@ func TestGenerate_AnnotationIssues_IncludesElementInfo(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"annotation_issues"}`)
 
-	resp := h.toolGenerate(req, args)
+	resp := h.generateDispatcher.Handle(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
 	// Should include element summary and selector info
@@ -376,7 +378,7 @@ func TestGenerate_AnnotationIssues_CountsCorrect(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"annotation_issues"}`)
 
-	resp := h.toolGenerate(req, args)
+	resp := h.generateDispatcher.Handle(req, args)
 	text := unmarshalMCPText(t, resp.Result)
 
 	// Should mention count of 2
@@ -413,7 +415,7 @@ func TestGenerate_VisualTest_ExpiredDetailFallsBackToBody(t *testing.T) {
 	h.annotationStore.StoreSession(1, session)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := h.toolGenerateVisualTest(req, nil)
+	resp := annotations.HandleVisualTest(h, req, nil)
 	text := unmarshalMCPText(t, resp.Result)
 
 	// Should include a fallback locator path and expired comment.
@@ -455,7 +457,7 @@ func TestGenerate_VisualTest_EscapesSingleQuotes(t *testing.T) {
 	})
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := h.toolGenerateVisualTest(req, nil)
+	resp := annotations.HandleVisualTest(h, req, nil)
 	text := unmarshalMCPText(t, resp.Result)
 
 	// The generated code must NOT have unescaped single quotes inside JS string literals
@@ -491,7 +493,7 @@ func TestGenerate_AnnotationFormats_NoPanic(t *testing.T) {
 			}()
 
 			req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-			resp := h.toolGenerate(req, json.RawMessage(tc.args))
+			resp := h.generateDispatcher.Handle(req, json.RawMessage(tc.args))
 			if resp.Result == nil {
 				t.Errorf("generate(%s) returned nil Result", tc.name)
 			}

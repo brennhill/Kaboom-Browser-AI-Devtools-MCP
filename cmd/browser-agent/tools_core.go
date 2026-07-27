@@ -19,6 +19,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/annotationanalysis"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactstate"
@@ -116,6 +117,7 @@ type ToolHandler struct {
 	recordingHandler         *toolrecording.Handler
 	uploadInteractHandler    *interactupload.Handler
 	testGenHandler           *testgenhandler.Handler
+	generateDispatcher       *toolgenerate.Dispatcher
 	stateInteractHandler     *interactstate.Handler
 	configureSessions        *toolconfigure.SessionHandler
 	annotationAnalysis       *annotationanalysis.Handler
@@ -495,6 +497,7 @@ func NewToolHandler(server *Server, captureStore *capture.Store) *MCPHandler {
 	handler.interactActionHandler = toolinteract.NewInteractActionHandler(interactDeps)
 	handler.uploadInteractHandler = toolinteract.NewUploadInteractHandler(interactDeps, handler.interactActionHandler)
 	handler.testGenHandler = testgenhandler.New(handler)
+	handler.generateDispatcher = toolgenerate.NewDispatcher(handler, handler.testGenHandler)
 	handler.stateInteractHandler = toolinteract.NewStateInteractHandler(interactDeps, handler.sessionStoreImpl)
 	handler.configureSessions = toolconfigure.NewSessionHandler(toolconfigure.SessionDeps{
 		RequireStore: func(req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool) {

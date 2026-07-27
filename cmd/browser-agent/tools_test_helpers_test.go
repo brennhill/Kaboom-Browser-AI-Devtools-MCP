@@ -15,6 +15,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testgenhandler"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -189,7 +190,7 @@ func callConfigureRaw(h *ToolHandler, argsJSON string) mcp.JSONRPCResponse {
 // callGenerateRaw invokes toolGenerate directly.
 func callGenerateRaw(h *ToolHandler, argsJSON string) mcp.JSONRPCResponse {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	return h.toolGenerate(req, json.RawMessage(argsJSON))
+	return h.generateDispatcher.Handle(req, json.RawMessage(argsJSON))
 }
 
 // callInteractRaw invokes toolInteract with async normalization.
@@ -403,6 +404,7 @@ func newTestToolHandler() *ToolHandler {
 		capture:    cap,
 	}
 	h.testGenHandler = testgenhandler.New(h)
+	h.generateDispatcher = toolgenerate.NewDispatcher(h, h.testGenHandler)
 	h.interactActionHandler = toolinteract.NewInteractActionHandler(buildInteractDeps(h))
 	return h
 }

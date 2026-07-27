@@ -109,7 +109,7 @@ func TestGenerateEmptyOutputIncludesReason(t *testing.T) {
 
 	// Call generate(test) with no actions captured → should include reason
 	args, _ := json.Marshal(map[string]any{"what": "test"})
-	resp := h.toolGenerate(mcp.JSONRPCRequest{ID: 1}, args)
+	resp := h.generateDispatcher.Handle(mcp.JSONRPCRequest{ID: 1}, args)
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -129,7 +129,7 @@ func TestGeneratePRSummaryEmptyIncludesReason(t *testing.T) {
 	h := newTestToolHandler()
 
 	args, _ := json.Marshal(map[string]any{"what": "pr_summary"})
-	resp := h.toolGenerate(mcp.JSONRPCRequest{ID: 1}, args)
+	resp := h.generateDispatcher.Handle(mcp.JSONRPCRequest{ID: 1}, args)
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {

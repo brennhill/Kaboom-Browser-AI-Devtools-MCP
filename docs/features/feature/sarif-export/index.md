@@ -4,9 +4,9 @@ feature_id: feature-sarif-export
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
-  - cmd/browser-agent/tools_generate.go
+  - cmd/browser-agent/internal/toolgenerate/dispatcher.go
   - cmd/browser-agent/internal/toolgenerate/artifacts_sarif_impl.go
   - internal/mcp/response.go
   - internal/export/export_sarif.go
@@ -43,6 +43,6 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-- MCP adapter: `cmd/browser-agent/tools_generate.go`
+- MCP adapter: `cmd/browser-agent/internal/toolgenerate/dispatcher.go`
 - Generate handler: `cmd/browser-agent/internal/toolgenerate/artifacts_sarif_impl.go`
 - Export implementation and tests: `internal/export/`

@@ -61,7 +61,7 @@ last_reviewed: 2026-02-16
 
 - `tools_core.go` (680 lines) - ToolHandler struct, dispatch, response helpers
 - `tools_observe.go` (326 lines) - Observe tool and mode handlers
-- `tools_generate.go` (130 lines) - Generate tool (HAR, SARIF, CSP, SRI, tests)
+- `internal/toolgenerate/dispatcher.go` (130 lines) - Generate tool (HAR, SARIF, CSP, SRI, tests)
 - `tools_configure.go` (412 lines) - Configure tool (store, noise, streaming, etc.)
 - `tools_interact.go` (256 lines) - Interact tool (AI Web Pilot browser actions)
 - `tools_security.go` (85 lines) - Security audit wrappers

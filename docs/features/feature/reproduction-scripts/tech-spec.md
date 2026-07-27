@@ -13,9 +13,9 @@ last_verified_date: 2026-03-05
 
 ## Overview
 
-Replace the `toolGetReproductionScript()` stub in [tools_generate.go](cmd/browser-agent/tools_generate.go) with a complete implementation that generates reproduction scripts from captured `EnhancedAction` data. Two output formats: Playwright (test code) and Kaboom (natural language).
+Replace the `toolGetReproductionScript()` stub in [internal/toolgenerate/dispatcher.go](cmd/browser-agent/internal/toolgenerate/dispatcher.go) with a complete implementation that generates reproduction scripts from captured `EnhancedAction` data. Two output formats: Playwright (test code) and Kaboom (natural language).
 
-The daemon-side logic lives with the generate boundary in `cmd/browser-agent/tools_generate.go`.
+The daemon-side logic lives with the generate boundary in `cmd/browser-agent/internal/toolgenerate/dispatcher.go`.
 
 ---
 
@@ -69,7 +69,7 @@ The generation code reads from this map to produce the best possible description
 
 ## Implementation
 
-### Generate Boundary: `cmd/browser-agent/tools_generate.go`
+### Generate Boundary: `cmd/browser-agent/internal/toolgenerate/dispatcher.go`
 
 **Size target:** ~250 LOC
 
@@ -279,9 +279,9 @@ func selectorRole(selectors map[string]any) (role, name string) {
 
 | File | Change | LOC |
 |------|--------|-----|
-| `cmd/browser-agent/tools_generate.go` | Generate adapter and reproduction formatting | <800 |
+| `cmd/browser-agent/internal/toolgenerate/dispatcher.go` | Generate adapter and reproduction formatting | <800 |
 | `cmd/browser-agent/reproduction_test.go` | **NEW** — Tests | ~300 |
-| `cmd/browser-agent/tools_generate.go` | Update `toolGetReproductionScript()` to delegate to reproduction.go | ~5 |
+| `cmd/browser-agent/internal/toolgenerate/dispatcher.go` | Update `toolGetReproductionScript()` to delegate to reproduction.go | ~5 |
 
 **Total new code:** ~555 LOC
 
@@ -308,7 +308,7 @@ func selectorRole(selectors map[string]any) (role, name string) {
 
 ### Integration Test
 
-Run via existing `go test ./cmd/browser-agent/...` — the generate tool dispatch in `tools_generate.go` ensures the `reproduction` format reaches the new code.
+Run via existing `go test ./cmd/browser-agent/...` — the generate tool dispatch in `internal/toolgenerate/dispatcher.go` ensures the `reproduction` format reaches the new code.
 
 ---
 
@@ -326,6 +326,6 @@ Run via existing `go test ./cmd/browser-agent/...` — the generate tool dispatc
 
 1. Write `reproduction_test.go` with tests for both formats (TDD)
 2. Write `reproduction.go` — types, helpers, `generateKaboomScript()`, `generateReproPlaywrightScript()`
-3. Update `toolGetReproductionScript()` in `tools_generate.go` to call new code
+3. Update `toolGetReproductionScript()` in `internal/toolgenerate/dispatcher.go` to call new code
 4. Run tests: `go test ./cmd/browser-agent/... -run TestReproduction`
 5. Run full suite: `go test ./... -timeout 120s`

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mediaapi"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate/annotations"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
@@ -279,7 +280,7 @@ func TestToolGetDrawSession_HydratesStoreForGenerators(t *testing.T) {
 		t.Fatalf("draw_session should expose annot_session alias, got: %s", loadText)
 	}
 
-	reportResp := h.toolGenerateAnnotationReport(req, json.RawMessage(`{"annot_session":"qa-review"}`))
+	reportResp := annotations.HandleAnnotationReport(h, req, json.RawMessage(`{"annot_session":"qa-review"}`))
 	reportText := unmarshalMCPText(t, reportResp.Result)
 	if !strings.Contains(reportText, "# Annotation Report") {
 		t.Fatalf("annotation_report should render report, got: %s", reportText)

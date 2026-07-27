@@ -142,7 +142,7 @@ Concurrency is enforced via semaphores in the Go server. Excess requests are que
 
 ```
 cmd/browser-agent/
-├── tools_generate.go                    # generate mode router (calls h.testGen())
+├── internal/toolgenerate/dispatcher.go                    # generate mode router (calls h.testGen())
 ├── tools_generate_testgen_handler.go    # testGenHandler wiring/accessor
 ├── testgen.go                           # test_from_context
 ├── testgen_heal.go                      # test_heal
@@ -165,7 +165,7 @@ internal/testgen/
 
 #### Current handler boundaries:
 ```go
-// tools_generate.go
+// internal/toolgenerate/dispatcher.go
 func (h *ToolHandler) toolGenerate(...)
 // Routes "test_from_context", "test_heal", "test_classify" to h.testGen()
 

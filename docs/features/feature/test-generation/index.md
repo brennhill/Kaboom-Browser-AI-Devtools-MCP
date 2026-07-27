@@ -4,14 +4,14 @@ feature_id: feature-test-generation
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/internal/testgenhandler/handler.go
   - cmd/browser-agent/internal/testgenhandler/provider_adapter.go
   - cmd/browser-agent/internal/testgenhandler/classify.go
   - cmd/browser-agent/internal/testgenhandler/heal.go
   - cmd/browser-agent/internal/testgenhandler/generate.go
-  - cmd/browser-agent/tools_generate.go
+  - cmd/browser-agent/internal/toolgenerate/dispatcher.go
   - cmd/browser-agent/internal/toolgenerate/artifacts_test_impl.go
   - internal/mcp/response.go
   - internal/testgen/generate.go

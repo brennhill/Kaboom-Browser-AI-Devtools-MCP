@@ -13,7 +13,7 @@ code_paths:
   - cmd/browser-agent/internal/mediaapi/draw_mode.go
   - cmd/browser-agent/internal/mediaapi/screenshots.go
   - cmd/browser-agent/internal/mediaapi/handler.go
-  - cmd/browser-agent/tools_generate.go
+  - cmd/browser-agent/internal/toolgenerate/dispatcher.go
   - cmd/browser-agent/internal/toolgenerate/annotations/handlers.go
   - cmd/browser-agent/internal/toolgenerate/annotations/visual.go
   - cmd/browser-agent/internal/toolgenerate/annotations/report.go

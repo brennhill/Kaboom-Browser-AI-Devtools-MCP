@@ -24,7 +24,7 @@ Enhance reproduction scripts with screenshot insertion, data fixture generation,
 
 ### 1. Screenshot Insertion
 
-**File:** `cmd/browser-agent/tools_generate.go`
+**File:** `cmd/browser-agent/internal/toolgenerate/dispatcher.go`
 
 When generating reproduction script, insert screenshot capture at key points:
 ```javascript
@@ -41,7 +41,7 @@ Option in MCP tool: `include_screenshots: true` (default false to keep scripts c
 
 ### 2. Data Fixture Generation
 
-**File:** `cmd/browser-agent/tools_generate.go`
+**File:** `cmd/browser-agent/internal/toolgenerate/dispatcher.go`
 
 Extract API response data used during the session and generate fixture files:
 ```javascript
@@ -58,7 +58,7 @@ Option: `generate_fixtures: true`.
 
 ### 3. Visual Assertions
 
-**File:** `cmd/browser-agent/tools_generate.go`
+**File:** `cmd/browser-agent/internal/toolgenerate/dispatcher.go`
 
 Add visual snapshot assertions at key checkpoints:
 ```javascript
@@ -109,6 +109,6 @@ go test -v ./cmd/browser-agent/ -run Reproduction
 
 | File | Change |
 |------|--------|
-| `cmd/browser-agent/tools_generate.go` | Screenshot, fixture, assertion generation |
+| `cmd/browser-agent/internal/toolgenerate/dispatcher.go` | Screenshot, fixture, assertion generation |
 | `cmd/browser-agent/tools_core.go` | Update generate tool schema |
 | `cmd/browser-agent/reproduction_test.go` | Test new options |

@@ -68,7 +68,7 @@ func TestUnknownMode_IncludesRecoveryToolCall_Generate(t *testing.T) {
 	h, _, _ := makeToolHandler(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolGenerate(req, json.RawMessage(`{"what":"nonexistent_format"}`))
+	resp := h.generateDispatcher.Handle(req, json.RawMessage(`{"what":"nonexistent_format"}`))
 	result := parseToolResult(t, resp)
 	if !result.IsError {
 		t.Fatal("expected error for unknown mode")

@@ -206,7 +206,7 @@ func TestToolHandler_Generate_NoStdout(t *testing.T) {
 			}
 
 			output := captureStdout(t, func() {
-				_ = handler.toolGenerate(req, args)
+				_ = handler.generateDispatcher.Handle(req, args)
 			})
 
 			if output != "" {

@@ -8,6 +8,8 @@ package main
 import (
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
@@ -99,7 +101,7 @@ func TestToolsGenerateDispatch_EmptyArgs(t *testing.T) {
 	h, _, _ := makeToolHandler(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolGenerate(req, nil)
+	resp := h.generateDispatcher.Handle(req, nil)
 	result := parseToolResult(t, resp)
 	if !result.IsError {
 		t.Fatal("nil args (no 'format') should return isError:true")
@@ -152,7 +154,7 @@ func TestToolsGenerateDispatch_ConflictingWhatAndFormat(t *testing.T) {
 func TestToolsGenerate_GetValidGenerateFormats(t *testing.T) {
 	t.Parallel()
 
-	formats := getValidGenerateFormats()
+	formats := toolgenerate.ValidFormats()
 	formatList := strings.Split(formats, ", ")
 	for i := 1; i < len(formatList); i++ {
 		if formatList[i-1] > formatList[i] {

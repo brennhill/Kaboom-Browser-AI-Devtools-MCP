@@ -57,7 +57,7 @@ func (e *generateTestEnv) callGenerate(t *testing.T, argsJSON string) (mcp.MCPTo
 
 	args := json.RawMessage(argsJSON)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := e.handler.toolGenerate(req, args)
+	resp := e.handler.generateDispatcher.Handle(req, args)
 
 	if resp.Result == nil {
 		return mcp.MCPToolResult{}, false
@@ -354,7 +354,7 @@ func TestGenerateAudit_InvalidJSON_ReturnsParseError(t *testing.T) {
 
 	args := json.RawMessage(`{invalid json here}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := env.handler.toolGenerate(req, args)
+	resp := env.handler.generateDispatcher.Handle(req, args)
 
 	// ASSERTION: Returns some response (not nil/panic)
 	if resp.Result == nil && resp.Error == nil {
@@ -450,7 +450,7 @@ func TestGenerateAudit_AllFormats_NoPanic(t *testing.T) {
 
 			args := json.RawMessage(tc.args)
 			req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-			resp := env.handler.toolGenerate(req, args)
+			resp := env.handler.generateDispatcher.Handle(req, args)
 
 			// ASSERTION: Returns something
 			if resp.Result == nil && resp.Error == nil {

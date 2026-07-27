@@ -4,9 +4,9 @@ feature_id: feature-security-hardening
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
-  - cmd/browser-agent/tools_generate.go
+  - cmd/browser-agent/internal/toolgenerate/dispatcher.go
   - cmd/browser-agent/internal/toolgenerate/artifacts_security_impl.go
   - cmd/browser-agent/internal/toolconfigure/security_mode.go
   - internal/mcp/response.go

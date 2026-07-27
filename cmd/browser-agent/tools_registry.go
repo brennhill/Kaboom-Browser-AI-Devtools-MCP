@@ -145,7 +145,7 @@ func (h *ToolHandler) buildToolModuleRegistry() *toolModuleRegistry {
 		"Generate artifacts (reproduction, csp, sarif, tests) from captured context",
 		[]json.RawMessage{json.RawMessage(`{"what":"reproduction","last_n":20}`)},
 		validateJSONObjectArgs,
-		h.toolGenerate,
+		h.generateDispatcher.Handle,
 	))
 	registry.register("configure", newToolMethodModule(
 		"configure",

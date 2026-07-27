@@ -4,9 +4,9 @@ feature_id: feature-reproduction-scripts
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
-  - cmd/browser-agent/tools_generate.go
+  - cmd/browser-agent/internal/toolgenerate/dispatcher.go
   - internal/reproduction/reproduction.go
   - internal/reproduction/reproduction_kaboom.go
   - internal/reproduction/reproduction_playwright.go
@@ -45,6 +45,6 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-- MCP adapter and script formatting: `cmd/browser-agent/tools_generate.go`
+- MCP adapter and script formatting: `cmd/browser-agent/internal/toolgenerate/dispatcher.go`
 - Page-side reproduction capture: `src/lib/page/reproduction.ts`
 - Go behavior coverage: `cmd/browser-agent/reproduction_test.go`

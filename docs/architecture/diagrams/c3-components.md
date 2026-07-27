@@ -108,7 +108,7 @@ graph TB
     subgraph Tools["🔧 Layer 3: MCP Tools (cmd/browser-agent/tools_*.go)"]
         direction LR
         Observe["tools_observe.go<br/>observe(what)"]
-        Generate["tools_generate.go<br/>generate(format)"]
+        Generate["internal/toolgenerate/dispatcher.go<br/>generate(format)"]
         Interact["tools_interact.go<br/>interact(action)"]
         Configure["tools_configure.go<br/>configure(action)"]
 
@@ -289,7 +289,7 @@ graph TB
 | Tool | File | Purpose | Uses |
 |------|------|---------|------|
 | **observe** | tools_observe.go | Query buffered telemetry | Capture, Analysis, Security |
-| **generate** | tools_generate.go | Generate artifacts (tests, SARIF, HAR, CSP) | Capture, Analysis, Security |
+| **generate** | internal/toolgenerate/dispatcher.go | Generate artifacts (tests, SARIF, HAR, CSP) | Capture, Analysis, Security |
 | **interact** | tools_interact.go | DOM queries, browser control | Capture, Session |
 | **configure** | tools_configure.go | Noise rules, state persistence | Session, Capture |
 
@@ -382,8 +382,8 @@ AI calls interact({action: 'execute_js'})
 ### Pattern 3: Generate Tool
 ```
 AI calls generate({format: 'test'})
-  → handler.go routes to tools_generate.go
-  → tools_generate.go queries Capture buffers
+  → handler.go routes to internal/toolgenerate/dispatcher.go
+  → internal/toolgenerate/dispatcher.go queries Capture buffers
   → Analysis clusters errors, infers API schemas
   → testgen.go classifies and heals selectors
   → Pagination handles large datasets

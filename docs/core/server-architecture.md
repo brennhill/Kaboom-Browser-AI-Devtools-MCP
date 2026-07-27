@@ -32,7 +32,7 @@ cmd/browser-agent/               Main binary
   tools_core.go                ToolHandler struct, rate limiter, response helpers
   tools_observe.go             observe tool: dispatches to internal/tools/observe
   tools_analyze.go             analyze tool: DOM, a11y, security, performance
-  tools_generate.go            generate tool: Playwright tests, HAR, CSP, SARIF
+  internal/toolgenerate/dispatcher.go            generate tool: Playwright tests, HAR, CSP, SARIF
   tools_configure.go           configure tool: noise rules, storage, streaming, health
   tools_interact.go            interact tool: click, type, navigate, execute JS
   tools_schema.go              JSON Schema definitions for all 5 tools

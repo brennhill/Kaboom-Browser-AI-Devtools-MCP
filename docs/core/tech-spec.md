@@ -82,7 +82,7 @@ Primary components:
 - Analyze dispatch map: `cmd/browser-agent/tools_analyze.go`
 - Configure dispatch map: `cmd/browser-agent/tools_configure.go`
 - Interact dispatch map: `cmd/browser-agent/tools_interact.go`
-- Generate dispatch map: `cmd/browser-agent/tools_generate.go`
+- Generate dispatch map: `cmd/browser-agent/internal/toolgenerate/dispatcher.go`
 - Query dispatcher and command tracker: `internal/capture/queries.go`
 - Extension sync endpoint: `internal/capture/sync.go`
 - Extension command execution: `src/background/pending-queries.ts`
