@@ -6,7 +6,15 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
+
+// sortedMapKeys returns a stable comma-separated registry key list.
+func sortedMapKeys[T any](registry map[string]T) string {
+	return strings.Join(util.SortedMapKeys(registry), ", ")
+}
 
 // ToolModuleDescription provides lightweight metadata for docs and diagnostics.
 type ToolModuleDescription struct {
