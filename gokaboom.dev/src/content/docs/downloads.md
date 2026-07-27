@@ -84,7 +84,7 @@ make build
 - **Runtime:** Native Go binary (no Node.js required for standalone binary installs)
 - **Node.js:** 18+ (optional, only if you install via npm)
 - **Platform:** macOS, Linux, Windows
-- **MCP Client:** Claude Code, Cursor, Windsurf, Claude Desktop, Zed, Gemini CLI, OpenCode, Antigravity, or any other MCP-compliant system/agent
+- **MCP Client:** Claude Code, OpenAI Codex, Cursor, Windsurf, Claude Desktop, Zed, Gemini CLI, OpenCode, Antigravity, or any other MCP-compliant system/agent
 
 ## Verification
 
@@ -114,6 +114,7 @@ To verify the binary:
 
 **Issues with MCP integration?**
 - See [Claude Code Integration Guide](/mcp-integration/claude-code)
+- See [OpenAI Codex Integration Guide](/mcp-integration/codex)
 - See [Cursor Integration Guide](/mcp-integration/cursor)
 
 ## Support

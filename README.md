@@ -111,7 +111,7 @@ Useful flags: `--dry-run` (preview), `--keep-data` (keep logs/recordings/project
 
 **Captures what others can't.** WebSocket messages, full request/response bodies, user action recording, Web Vitals, automatic regression detection, visual annotations, and Playwright test generation from real browser sessions — features no other MCP browser tool offers.
 
-**Works with every MCP tool.** Claude Code, Cursor, Windsurf, Zed, Claude Desktop, VS Code + Continue. Switch AI tools without changing your debugging setup.
+**Works with every MCP tool.** Claude Code, OpenAI Codex, Cursor, Windsurf, Zed, Claude Desktop, VS Code + Continue. Switch AI tools without changing your debugging setup.
 
 **Enterprise-safe by design.** Binds to `127.0.0.1` only. Auth headers are stripped automatically. No accounts, no cloud. Anonymous usage stats only (see Privacy). Audit the source — it's AGPL-3.0.
 

@@ -60,6 +60,7 @@ export default defineConfig({
           items: [
             { label: 'Overview', slug: 'mcp-integration' },
             { label: 'Claude Code', slug: 'mcp-integration/claude-code' },
+            { label: 'OpenAI Codex', slug: 'mcp-integration/codex' },
             { label: 'Cursor', slug: 'mcp-integration/cursor' },
             { label: 'Windsurf', slug: 'mcp-integration/windsurf' },
             { label: 'Claude Desktop', slug: 'mcp-integration/claude-desktop' },

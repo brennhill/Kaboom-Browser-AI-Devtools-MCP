@@ -124,6 +124,7 @@ Your browser logs stay on your hardware. The AI reads a local file via stdio. At
 Kaboom implements the open **[Model Context Protocol](https://modelcontextprotocol.io/)** standard. Swap AI tools without changing your debugging setup:
 
 - **[Claude Code](/mcp-integration/claude-code/)** — `.mcp.json` in project root
+- **[OpenAI Codex](/mcp-integration/codex/)** — `~/.codex/config.toml`
 - **[Cursor](/mcp-integration/cursor/)** — `~/.cursor/mcp.json`
 - **[Windsurf](/mcp-integration/windsurf/)** — `~/.codeium/windsurf/mcp_config.json`
 - **[Claude Desktop](/mcp-integration/claude-desktop/)** — OS-specific config

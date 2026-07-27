@@ -1,6 +1,6 @@
 ---
 title: "Fuel Any Agent"
-description: "Connect Kaboom to any MCP-compatible coding agent. Configuration guides for Claude Code, Cursor, Windsurf, Claude Desktop, Zed, and VS Code with Continue."
+description: "Connect Kaboom to any MCP-compatible coding agent. Configuration guides for Claude Code, OpenAI Codex, Cursor, Windsurf, Claude Desktop, Zed, and VS Code with Continue."
 keywords: "MCP server configuration, Model Context Protocol, autonomous coding agent, agentic debugging, browser debugging MCP"
 permalink: /mcp-integration/
 header:
@@ -20,6 +20,7 @@ Kaboom implements the [Model Context Protocol](https://modelcontextprotocol.io/)
 | Tool | Config Location | Guide |
 |------|----------------|-------|
 | <i class="fas fa-terminal"></i> Claude Code | `.mcp.json` (project root) | [Setup →](/mcp-integration/claude-code/) |
+| <i class="fas fa-code"></i> OpenAI Codex | `~/.codex/config.toml` | [Setup →](/mcp-integration/codex/) |
 | <i class="fas fa-i-cursor"></i> Cursor | `~/.cursor/mcp.json` | [Setup →](/mcp-integration/cursor/) |
 | <i class="fas fa-wind"></i> Windsurf | `~/.codeium/windsurf/mcp_config.json` | [Setup →](/mcp-integration/windsurf/) |
 | <i class="fas fa-desktop"></i> Claude Desktop | OS-specific config file | [Setup →](/mcp-integration/claude-desktop/) |

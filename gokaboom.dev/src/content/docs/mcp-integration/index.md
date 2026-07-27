@@ -1,6 +1,6 @@
 ---
 title: Fuel Any Agent
-description: "Connect KaBOOM to any MCP-compatible coding agent. Configuration guides for Claude Code, Cursor, Windsurf, Claude Desktop, Zed, Gemini CLI, OpenCode, Antigravity, and VS Code with Continue."
+description: "Connect KaBOOM to any MCP-compatible coding agent. Configuration guides for Claude Code, OpenAI Codex, Cursor, Windsurf, Claude Desktop, Zed, Gemini CLI, OpenCode, Antigravity, and VS Code with Continue."
 last_verified_version: 0.8.0
 last_verified_date: 2026-03-06
 normalized_tags: ['mcp', 'integration']
@@ -13,6 +13,7 @@ KaBOOM is an open-source MCP server that implements the [Model Context Protocol]
 | Tool | Config Location | Guide |
 |------|----------------|-------|
 | Claude Code | `.mcp.json` (project root) | [Setup →](/mcp-integration/claude-code/) |
+| OpenAI Codex | `~/.codex/config.toml` | [Setup →](/mcp-integration/codex/) |
 | Cursor | `~/.cursor/mcp.json` | [Setup →](/mcp-integration/cursor/) |
 | Windsurf | `~/.codeium/windsurf/mcp_config.json` | [Setup →](/mcp-integration/windsurf/) |
 | Claude Desktop | OS-specific config file | [Setup →](/mcp-integration/claude-desktop/) |
