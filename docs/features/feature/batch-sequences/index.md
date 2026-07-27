@@ -31,6 +31,7 @@ last_verified_date: 2026-03-05
 - Status: shipped
 - Tools: `interact`, `configure`
 - Actions: `batch`, `save_sequence`, `replay_sequence`
+- Step results use the canonical `internal/replay.StepResult` contract directly.
 
 ## Specs
 - Product Spec: [product-spec.md](./product-spec.md)

@@ -39,8 +39,5 @@ type SequenceSummary struct {
 	StepCount   int      `json:"step_count"`
 }
 
-// SequenceStepResult captures the outcome of one step during replay.
-type SequenceStepResult = replay.StepResult
-
 // Note: replayMu lives in the main package and is passed via Deps.ReplayMu.
 // This prevents concurrent sequence replays and batch executions.

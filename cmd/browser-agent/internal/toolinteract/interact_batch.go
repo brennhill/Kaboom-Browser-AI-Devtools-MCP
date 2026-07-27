@@ -22,8 +22,6 @@ const (
 // ReplayMu prevents concurrent batch/replay execution.
 var ReplayMu sync.Mutex
 
-type SequenceStepResult = replay.StepResult
-
 // handleBatch executes a sequence of interact steps provided inline.
 func (h *InteractActionHandler) HandleBatch(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 	// Fail fast if pilot/extension are not available — avoids acquiring replayMu
@@ -85,7 +83,7 @@ func (h *InteractActionHandler) HandleBatch(req JSONRPCRequest, args json.RawMes
 	h.deps.RecordAIAction("batch", "", map[string]any{"steps": len(params.Steps)})
 
 	start := time.Now()
-	results := make([]SequenceStepResult, 0, len(params.Steps))
+	results := make([]replay.StepResult, 0, len(params.Steps))
 	stepsExecuted := 0
 	stepsFailed := 0
 	stepsQueued := 0
@@ -117,7 +115,7 @@ func (h *InteractActionHandler) HandleBatch(req JSONRPCRequest, args json.RawMes
 		stepResp := h.deps.ToolInteract(req, replayStepArgs)
 		stepDuration := time.Since(stepStart).Milliseconds()
 
-		stepResult := SequenceStepResult{
+		stepResult := replay.StepResult{
 			StepIndex:  i,
 			Action:     actionName,
 			DurationMs: stepDuration,
