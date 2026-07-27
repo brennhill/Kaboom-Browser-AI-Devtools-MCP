@@ -104,7 +104,7 @@
 - `cmd/browser-agent/setup.html`
 - `cmd/browser-agent/docs.html`
 - `cmd/browser-agent/logs.html`
-- `cmd/browser-agent/debug_log.go`
+- `internal/diag/debug_file.go`
 - `cmd/browser-agent/native_install.go`
 - `cmd/browser-agent/main_connection_stop.go`
 - `cmd/browser-agent/native_install_config_test.go`
@@ -488,7 +488,7 @@
 - Modify: `cmd/browser-agent/setup.html`
 - Modify: `cmd/browser-agent/docs.html`
 - Modify: `cmd/browser-agent/logs.html`
-- Modify: `cmd/browser-agent/debug_log.go`
+- Modify: `internal/diag/debug_file.go`
 - Test: `cmd/browser-agent/handler_unit_test.go`
 - Test: `cmd/browser-agent/native_install_config_test.go`
 

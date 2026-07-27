@@ -25,6 +25,7 @@ var mcpStdoutMu sync.Mutex
 // initBridge wires the bridge sub-package to main-package dependencies.
 // Must be called before any bridge function is used.
 func initBridge() {
+	debugLogger := diag.NewDebugFileFromEnv()
 	bridgepkg.Init(bridgepkg.Deps{
 		Version:              version,
 		MaxPostBodySize:      maxPostBodySize,
@@ -34,7 +35,7 @@ func initBridge() {
 
 		// Logging
 		Stderrf: diag.Printf,
-		Debugf:  debugf,
+		Debugf:  debugLogger.Printf,
 
 		// Stdout transport
 		WriteMCPPayload:      writeMCPPayload,

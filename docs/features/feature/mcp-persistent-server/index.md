@@ -46,12 +46,14 @@ code_paths:
   - cmd/browser-agent/handler_http.go
   - cmd/browser-agent/connect_mode.go
   - internal/diag/output.go
+  - internal/diag/debug_file.go
   - cmd/browser-agent/server_routes_media_screenshots.go
   - internal/identity/mcp.go
   - internal/util/proc_unix.go
   - internal/util/proc_windows.go
 test_paths:
   - internal/diag/output_test.go
+  - internal/diag/debug_file_test.go
   - cmd/browser-agent/internal/playbooks/resource_catalog_test.go
   - cmd/browser-agent/stdout_protocol_boundary_test.go
   - cmd/browser-agent/mcp_protocol_test.go
