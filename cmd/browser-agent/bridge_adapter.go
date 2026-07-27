@@ -70,17 +70,6 @@ func initBridge() {
 		StopServerForUpgrade: stopServerForUpgrade,
 		FindProcessOnPort:    procctl.FindProcessOnPort,
 		IsProcessAlive:       procctl.IsProcessAlive,
-		VersionsMatch:        versionsMatch,
-		DecodeHealthMetadata: func(body []byte) (bridgepkg.HealthMeta, bool) {
-			meta, ok := decodeHealthMetadata(body)
-			if !ok {
-				return bridgepkg.HealthMeta{}, false
-			}
-			return bridgepkg.HealthMeta{
-				Version:     meta.Version,
-				ServiceName: meta.resolvedServiceName(),
-			}, true
-		},
 		AppendExitDiagnostic: appendExitDiagnostic,
 	})
 }

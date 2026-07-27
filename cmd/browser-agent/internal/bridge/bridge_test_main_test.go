@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 	"testing"
 
 	internbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
@@ -32,10 +31,10 @@ func TestMain(m *testing.M) {
 				_, _ = out.Write([]byte("\n"))
 			}
 		},
-		SyncStdoutBestEffort: func() {},
-		SetStderrSink:        func(w io.Writer) {},
-		GetBridgeFraming:     func() internbridge.StdioFraming { return internbridge.StdioFramingLine },
-		StoreBridgeFraming:   func(f internbridge.StdioFraming) {},
+		SyncStdoutBestEffort:      func() {},
+		SetStderrSink:             func(w io.Writer) {},
+		GetBridgeFraming:          func() internbridge.StdioFraming { return internbridge.StdioFramingLine },
+		StoreBridgeFraming:        func(f internbridge.StdioFraming) {},
 		SetPushClientCapabilities: func(caps push.ClientCapabilities) {},
 		ExtractClientCapabilities: func(rawParams json.RawMessage) push.ClientCapabilities {
 			return push.ClientCapabilities{}
@@ -76,31 +75,6 @@ func TestMain(m *testing.M) {
 			}
 			// Signal(syscall.Signal(0)) checks existence without killing.
 			return p.Signal(nil) == nil || pid == os.Getpid()
-		},
-		VersionsMatch: func(a, b string) bool {
-			return strings.TrimSpace(a) == strings.TrimSpace(b)
-		},
-		DecodeHealthMetadata: func(body []byte) (HealthMeta, bool) {
-			var raw struct {
-				Version     string `json:"version"`
-				Service     string `json:"service"`
-				ServiceName string `json:"service-name"`
-				Name        string `json:"name"`
-			}
-			if err := json.Unmarshal(body, &raw); err != nil {
-				return HealthMeta{}, false
-			}
-			sn := strings.TrimSpace(raw.ServiceName)
-			if sn == "" {
-				sn = strings.TrimSpace(raw.Service)
-			}
-			if sn == "" {
-				sn = strings.TrimSpace(raw.Name)
-			}
-			return HealthMeta{
-				Version:     raw.Version,
-				ServiceName: sn,
-			}, true
 		},
 		AppendExitDiagnostic: func(event string, extra map[string]any) string { return "" },
 	})

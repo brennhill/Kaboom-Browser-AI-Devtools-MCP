@@ -104,6 +104,22 @@ func (s *Server) TakeWarnings() []string {
 	return warnings
 }
 
+func (s *Server) logLifecycle(event string, port int, fields map[string]any) {
+	entry := LogEntry{
+		"type":      "lifecycle",
+		"event":     event,
+		"pid":       os.Getpid(),
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+	}
+	if port != 0 {
+		entry["port"] = port
+	}
+	for key, value := range fields {
+		entry[key] = value
+	}
+	s.logs.AddEntries([]LogEntry{entry})
+}
+
 // NewServer creates a new server instance.
 func NewServer(logFile string, maxEntries int) (*Server, error) {
 	s := &Server{

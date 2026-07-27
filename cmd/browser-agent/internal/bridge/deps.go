@@ -92,20 +92,8 @@ type Deps struct {
 	// IsProcessAlive checks if a process with the given PID is still running.
 	IsProcessAlive func(pid int) bool
 
-	// VersionsMatch checks if two version strings are compatible.
-	VersionsMatch func(a, b string) bool
-
-	// DecodeHealthMetadata parses health response body into metadata.
-	DecodeHealthMetadata func(body []byte) (HealthMeta, bool)
-
 	// AppendExitDiagnostic writes an exit diagnostic entry.
 	AppendExitDiagnostic func(event string, extra map[string]any) string
-}
-
-// HealthMeta is a minimal interface for health metadata used in version checks.
-type HealthMeta struct {
-	Version     string
-	ServiceName string
 }
 
 // deps is the package-level dependency holder, set once via Init().

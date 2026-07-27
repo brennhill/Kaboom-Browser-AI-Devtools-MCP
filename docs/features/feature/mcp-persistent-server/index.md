@@ -16,6 +16,7 @@ code_paths:
   - cmd/browser-agent/bridge_adapter.go
   - cmd/browser-agent/internal/bridge/bridge.go
   - cmd/browser-agent/internal/bridge/bridge_startup.go
+  - cmd/browser-agent/internal/bridge/health_metadata.go
   - cmd/browser-agent/internal/bridge/bridge_transport.go
   - cmd/browser-agent/internal/bridge/stdioisolate/isolation.go
   - cmd/browser-agent/internal/daemonlife/lifecycle.go
@@ -25,7 +26,6 @@ code_paths:
   - cmd/browser-agent/internal/daemonlife/version_compare.go
   - cmd/browser-agent/internal/daemonlife/deps.go
   - cmd/browser-agent/daemon_lifecycle_wiring.go
-  - cmd/browser-agent/main_connection.go
   - cmd/browser-agent/main_connection_stop.go
   - cmd/browser-agent/main_connection_mcp.go
   - cmd/browser-agent/internal/procctl/pidfile.go
@@ -74,6 +74,7 @@ test_paths:
   - cmd/browser-agent/internal/bridge/bridge_detach_stdio_test.go
   - cmd/browser-agent/internal/bridge/bridge_detach_contract_test.go
   - cmd/browser-agent/internal/bridge/bridge_context_contract_test.go
+  - cmd/browser-agent/internal/bridge/health_metadata_test.go
   - cmd/browser-agent/internal/bridge/bridge_deps_isolation_test.go
   - cmd/browser-agent/internal/bridge/stdioisolate/isolation_unix_test.go
   - cmd/browser-agent/internal/daemonlife/lifecycle_takeover_test.go

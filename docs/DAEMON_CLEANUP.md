@@ -123,7 +123,7 @@ Fix by running: make sync-version
 
 ### Go Binary: `--force` Flag
 
-**File:** `cmd/browser-agent/main.go` and `cmd/browser-agent/main_connection.go`
+**Files:** `cmd/browser-agent/config.go` and `cmd/browser-agent/main_connection_stop.go`
 
 The `--force` flag invokes `runForceCleanup()` which:
 
@@ -288,7 +288,7 @@ The sync-version Makefile target will automatically update:
 
 - `npm/kaboom-mcp/package.json` - Main package with daemon cleanup hooks
 - `npm/kaboom-mcp/lib/validate-versions.js` - Version validation script
-- `cmd/browser-agent/main.go` - `--force` flag definition
-- `cmd/browser-agent/main_connection.go` - `runForceCleanup()` implementation
+- `cmd/browser-agent/config.go` - `--force` flag definition and dispatch
+- `cmd/browser-agent/main_connection_stop.go` - `runForceCleanup()` implementation
 - `scripts/clean-old-daemons.sh` - User-friendly cleanup script
 - `Makefile` - sync-version and validate-deps-versions targets

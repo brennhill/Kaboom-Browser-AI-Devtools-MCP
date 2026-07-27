@@ -200,12 +200,12 @@ func runningServerVersionCompatible(port int) (bool, string, string) {
 		return false, "", ""
 	}
 
-	meta, ok := deps.DecodeHealthMetadata(body)
+	meta, ok := decodeHealthMetadata(body)
 	if !ok {
 		return false, "", ""
 	}
 
-	serviceName := meta.ServiceName
+	serviceName := meta.resolvedServiceName()
 	if !IsKaboomService(serviceName) {
 		return false, strings.TrimSpace(meta.Version), serviceName
 	}
@@ -214,7 +214,7 @@ func runningServerVersionCompatible(port int) (bool, string, string) {
 	if runningVersion == "" {
 		return false, "<missing>", serviceName
 	}
-	return deps.VersionsMatch(runningVersion, deps.Version), runningVersion, serviceName
+	return versionsMatch(runningVersion, deps.Version), runningVersion, serviceName
 }
 
 // waitForServer delegates to internal/bridge for server startup wait.

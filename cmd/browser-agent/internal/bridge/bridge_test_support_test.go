@@ -14,7 +14,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 )
 
-
 // initTestDeps sets up minimal bridge deps for testing.
 //
 // It restores the previous package-global deps (installed by TestMain, or by an
@@ -46,10 +45,10 @@ func initTestDeps(t *testing.T) {
 				_, _ = out.Write([]byte("\n"))
 			}
 		},
-		SyncStdoutBestEffort: func() {},
-		SetStderrSink:        func(w io.Writer) {},
-		GetBridgeFraming:     func() internbridge.StdioFraming { return internbridge.StdioFramingLine },
-		StoreBridgeFraming:   func(f internbridge.StdioFraming) {},
+		SyncStdoutBestEffort:      func() {},
+		SetStderrSink:             func(w io.Writer) {},
+		GetBridgeFraming:          func() internbridge.StdioFraming { return internbridge.StdioFramingLine },
+		StoreBridgeFraming:        func(f internbridge.StdioFraming) {},
 		SetPushClientCapabilities: func(caps push.ClientCapabilities) {},
 		ExtractClientCapabilities: func(rawParams json.RawMessage) push.ClientCapabilities {
 			return push.ClientCapabilities{}
@@ -62,8 +61,6 @@ func initTestDeps(t *testing.T) {
 		StopServerForUpgrade:     func(port int) bool { return false },
 		FindProcessOnPort:        func(port int) ([]int, error) { return nil, nil },
 		IsProcessAlive:           func(pid int) bool { return false },
-		VersionsMatch:            func(a, b string) bool { return a == b },
-		DecodeHealthMetadata:     func(body []byte) (HealthMeta, bool) { return HealthMeta{}, false },
 		AppendExitDiagnostic:     func(event string, extra map[string]any) string { return "" },
 	})
 }

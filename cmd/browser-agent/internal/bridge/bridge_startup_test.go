@@ -150,6 +150,6 @@ func TestRunningServerVersionCompatible_HealthServed(t *testing.T) {
 		_, _ = w.Write([]byte(`{"service-name":"kaboom-browser-devtools","version":"0.8.4"}`))
 	}))
 	defer srv.Close()
-	// Exercises the read-body + DecodeHealthMetadata + service/version compat path.
+	// Exercises the read-body, health metadata, and service/version compatibility path.
 	_, _, _ = runningServerVersionCompatible(portOfURL(t, srv.URL))
 }
