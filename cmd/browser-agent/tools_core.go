@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -29,6 +30,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/redaction"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session"
@@ -369,4 +371,124 @@ func (h *ToolHandler) GetRedactionEngine() RedactionEngine {
 
 func (h *ToolHandler) testGen() *testgenhandler.Handler {
 	return h.testGenHandler
+}
+
+const (
+	defaultColdStartTimeout       = 5 * time.Second
+	testExtensionReadinessTimeout = time.Millisecond
+)
+
+func defaultExtensionReadinessTimeout() time.Duration {
+	if strings.HasSuffix(os.Args[0], ".test") {
+		return testExtensionReadinessTimeout
+	}
+	return capture.ExtensionReadinessTimeout
+}
+
+// NewToolHandler constructs the composite five-tool backend and its MCP adapter.
+func NewToolHandler(server *Server, captureStore *capture.Store) *MCPHandler {
+	shutdownContext, shutdownCancel := context.WithCancel(context.Background())
+	handler := &ToolHandler{
+		MCPHandler:                NewMCPHandler(server, version),
+		capture:                   captureStore,
+		shutdownCtx:               shutdownContext,
+		shutdownCancel:            shutdownCancel,
+		coldStartTimeout:          defaultColdStartTimeout,
+		extensionReadinessTimeout: defaultExtensionReadinessTimeout(),
+		networkRecording:          &netrecord.NetworkRecordingState{},
+	}
+	handler.recordingHandler = toolrecording.NewHandler(captureStore, handler.appendServerLog)
+	handler.usageTracker = telemetry.NewUsageTracker()
+	if captureStore != nil {
+		tracker := handler.usageTracker
+		captureStore.SetFeaturesCallback(func(features map[string]bool) {
+			for key, used := range features {
+				if used {
+					tracker.RecordToolCall("ext:"+key, 0, false)
+				}
+			}
+		})
+	}
+
+	handler.healthMetrics = health.NewMetrics()
+	handler.toolCallLimiter = NewToolCallLimiter(500, time.Minute)
+	handler.alertBuffer = alertbuf.NewAlertBuffer()
+
+	if currentDirectory, err := os.Getwd(); err == nil {
+		if store, storeErr := persistence.NewSessionStore(currentDirectory); storeErr == nil {
+			handler.sessionStoreImpl = store
+		}
+	}
+	handler.summaryPrefs = summarypref.New(func() ([]byte, error) {
+		if handler.sessionStoreImpl == nil {
+			return nil, nil
+		}
+		return handler.sessionStoreImpl.Load("session", "response_mode")
+	})
+	if handler.sessionStoreImpl != nil {
+		handler.noiseConfig = noise.NewNoiseConfigWithStore(handler.sessionStoreImpl)
+	} else {
+		handler.noiseConfig = noise.NewNoiseConfig()
+	}
+	handler.redactionEngine = redaction.NewRedactionEngine("")
+
+	handler.annotationStore = server.getAnnotationStore()
+	if handler.capture != nil {
+		handler.annotationStore.SetCommandCompleter(func(correlationID string, result json.RawMessage) {
+			handler.capture.CompleteCommand(correlationID, result, "")
+		})
+	}
+	wireNoiseAutoDetect(handler)
+	wireNoiseFirstConnect(handler)
+
+	handler.securityScannerImpl = scan.NewScanner()
+	handler.thirdPartyAuditorImpl = thirdparty.NewThirdPartyAuditor()
+	handler.apiContractRuntime = apicontract.NewRuntime()
+	handler.sessionManager = session.NewSessionManager(
+		10,
+		session.NewRuntimeStateReader(handler.server.logs.Entries, handler.capture),
+	)
+	handler.auditTrail = audit.NewAuditTrail(audit.Config{
+		MaxEntries:   10000,
+		Enabled:      true,
+		RedactParams: true,
+	})
+	handler.auditSessionMap = make(map[string]string)
+
+	handler.uploadSecurity = uploadSecurityConfig
+	handler.recordingInteractHandler = screenrec.NewInteractHandler(handler.screenrecDeps())
+	interactDeps := buildInteractDeps(handler)
+	handler.interactActionHandler = toolinteract.NewInteractActionHandler(interactDeps)
+	handler.uploadInteractHandler = toolinteract.NewUploadInteractHandler(interactDeps, handler.interactActionHandler)
+	handler.testGenHandler = testgenhandler.New(handler)
+	handler.stateInteractHandler = toolinteract.NewStateInteractHandler(interactDeps, handler.sessionStoreImpl)
+	handler.configureSessionHandler = newConfigureSessionHandler(
+		handler,
+		handler.sessionStoreImpl,
+		handler.sessionManager,
+		handler.MCPHandler.server,
+	)
+	handler.ensureToolModules()
+	handler.ensureToolSchemas()
+
+	return &MCPHandler{server: server, toolHandler: handler}
+}
+
+func (h *ToolHandler) screenrecDeps() screenrec.Deps {
+	return screenrec.Deps{
+		EnqueuePendingQuery: h.EnqueuePendingQuery,
+		RequirePilot:        h.requirePilot,
+		RequireExtension:    h.requireExtension,
+		RecordAIAction:      h.recordAIAction,
+		DiagnosticHint:      h.diagnosticHint,
+		GetCommandResult:    h.getCommandResult,
+	}
+}
+
+func (h *ToolHandler) buildPlaybackResult(request JSONRPCRequest, recordingID string, playback *capture.PlaybackSession) JSONRPCResponse {
+	return toolrecording.BuildPlaybackResult(request, recordingID, playback)
+}
+
+func (h *ToolHandler) appendServerLog(entry LogEntry) {
+	h.server.logs.AddEntries([]LogEntry{entry})
 }

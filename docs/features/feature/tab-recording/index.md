@@ -8,7 +8,7 @@ last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/tools_interact_dispatch.go
   - internal/schema/interact/actions.go
-  - cmd/browser-agent/tools_core_constructor.go
+  - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/tools_observe.go
   - cmd/browser-agent/internal/screenrec/deps.go
   - cmd/browser-agent/internal/screenrec/types.go

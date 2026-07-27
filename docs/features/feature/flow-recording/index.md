@@ -8,7 +8,7 @@ last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/tools_observe.go
-  - cmd/browser-agent/tools_core_constructor.go
+  - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/internal/toolrecording/handler.go
   - cmd/browser-agent/internal/toolrecording/helpers.go
   - internal/capture/handlers.go
@@ -68,7 +68,7 @@ last_verified_date: 2026-03-05
 - Core recording lifecycle and listener wiring:
   - `cmd/browser-agent/tools_configure.go`
   - `cmd/browser-agent/tools_observe.go`
-  - `cmd/browser-agent/tools_core_constructor.go`
+  - `cmd/browser-agent/tools_core.go`
   - `cmd/browser-agent/internal/toolrecording/handler.go`
   - `cmd/browser-agent/internal/toolrecording/helpers.go`
   - `internal/capture/handlers.go`
