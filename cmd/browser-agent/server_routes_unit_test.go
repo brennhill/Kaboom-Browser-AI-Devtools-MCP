@@ -322,6 +322,30 @@ func TestLogsEndpointValidationAndMethods(t *testing.T) {
 	}
 }
 
+func TestTelemetryEndpointReadContract(t *testing.T) {
+	t.Parallel()
+
+	srv := newTestServerForHandlers(t)
+	srv.logs.AddEntries([]LogEntry{{"level": "error", "message": "boom"}})
+	mux, _ := setupHTTPRoutes(srv, capture.NewCapture())
+
+	missingRR := httptest.NewRecorder()
+	mux.ServeHTTP(missingRR, localRequest(http.MethodGet, "/telemetry", nil))
+	if missingRR.Code != http.StatusBadRequest {
+		t.Fatalf("GET /telemetry without type status = %d, want %d", missingRR.Code, http.StatusBadRequest)
+	}
+
+	logsRR := httptest.NewRecorder()
+	mux.ServeHTTP(logsRR, localRequest(http.MethodGet, "/telemetry?type=logs&limit=1", nil))
+	if logsRR.Code != http.StatusOK {
+		t.Fatalf("GET /telemetry?type=logs status = %d, want %d", logsRR.Code, http.StatusOK)
+	}
+	body := decodeJSONMap(t, logsRR.Body.Bytes())
+	if body["type"] != "logs" || body["count"] != float64(1) {
+		t.Fatalf("telemetry response = %v, want type=logs count=1", body)
+	}
+}
+
 func TestHandleScreenshotRoutes(t *testing.T) {
 	t.Parallel()
 

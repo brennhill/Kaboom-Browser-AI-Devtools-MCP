@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/ciapi"
@@ -32,6 +33,95 @@ func handleOpenAPI(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write(openapiJSON); err != nil {
 		diag.Printf("[kaboom] failed to write /openapi.json response: %v\n", err)
+	}
+}
+
+func handleTelemetry(server *Server, cap *capture.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		telType := r.URL.Query().Get("type")
+		if telType == "" {
+			jsonResponse(w, http.StatusBadRequest, map[string]string{
+				"error": "Missing required 'type' parameter",
+				"hint":  "Valid types: logs, network_waterfall, network_bodies, websocket_events, actions, performance_snapshots, extension_logs, websocket_status",
+			})
+			return
+		}
+
+		limit := 0
+		if rawLimit := r.URL.Query().Get("limit"); rawLimit != "" {
+			if parsed, err := strconv.Atoi(rawLimit); err == nil && parsed > 0 {
+				limit = parsed
+			}
+		}
+
+		var result any
+		var count int
+		switch telType {
+		case "logs":
+			entries := server.logs.Entries()
+			if limit > 0 && len(entries) > limit {
+				entries = entries[len(entries)-limit:]
+			}
+			result, count = entries, len(entries)
+		case "network_waterfall":
+			entries := cap.GetNetworkWaterfallEntries()
+			if limit > 0 && len(entries) > limit {
+				entries = entries[len(entries)-limit:]
+			}
+			result, count = entries, len(entries)
+		case "network_bodies":
+			entries := cap.GetNetworkBodies()
+			if limit > 0 && len(entries) > limit {
+				entries = entries[len(entries)-limit:]
+			}
+			result, count = entries, len(entries)
+		case "websocket_events":
+			entries := cap.GetWebSocketEvents(capture.WebSocketEventFilter{})
+			if limit > 0 && len(entries) > limit {
+				entries = entries[len(entries)-limit:]
+			}
+			result, count = entries, len(entries)
+		case "actions":
+			entries := cap.GetAllEnhancedActions()
+			if limit > 0 && len(entries) > limit {
+				entries = entries[len(entries)-limit:]
+			}
+			result, count = entries, len(entries)
+		case "performance_snapshots":
+			entries := cap.GetPerformanceSnapshots()
+			if limit > 0 && len(entries) > limit {
+				entries = entries[len(entries)-limit:]
+			}
+			result, count = entries, len(entries)
+		case "extension_logs":
+			entries := cap.GetExtensionLogs()
+			if limit > 0 && len(entries) > limit {
+				entries = entries[len(entries)-limit:]
+			}
+			result, count = entries, len(entries)
+		case "websocket_status":
+			status := cap.GetWebSocketStatus(capture.WebSocketStatusFilter{})
+			jsonResponse(w, http.StatusOK, map[string]any{
+				"type": telType, "connections": status.Connections,
+				"closed": status.Closed, "count": len(status.Connections),
+			})
+			return
+		default:
+			jsonResponse(w, http.StatusBadRequest, map[string]string{
+				"error": "Unknown telemetry type: " + telType,
+				"hint":  "Valid types: logs, network_waterfall, network_bodies, websocket_events, actions, performance_snapshots, extension_logs, websocket_status",
+			})
+			return
+		}
+
+		jsonResponse(w, http.StatusOK, map[string]any{
+			"type": telType, "items": result, "count": count,
+		})
 	}
 }
 

@@ -14,6 +14,7 @@ code_paths:
   - cmd/browser-agent/tools_registry.go
   - cmd/browser-agent/types.go
   - cmd/browser-agent/server.go
+  - cmd/browser-agent/server_routes.go
   - cmd/browser-agent/internal/playbooks/resource_catalog.go
   - cmd/browser-agent/internal/playbooks/playbooks_resolver.go
   - cmd/browser-agent/bridge_adapter.go
