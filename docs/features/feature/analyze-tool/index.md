@@ -69,6 +69,9 @@ last_verified_date: 2026-03-05
 
 ## Canonical Note
 `analyze` is the active analysis surface. `analyze({what:"dom"})` is the canonical DOM query API.
+The mode registry, alias policy, and narrow `toolanalyze.Deps` adaptation are
+colocated in `tools_analyze_dispatch.go`; feature implementations remain in
+their dedicated modules.
 
 Structured extraction modes:
 - `analyze({what:"form_state"})` returns current form values and field metadata.
