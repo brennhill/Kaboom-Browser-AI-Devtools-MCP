@@ -11,9 +11,11 @@ code_paths:
   - src/background/exec/csp-safe/executor.ts
   - src/background/exec/query-execution.ts
   - src/inject/execute-js.ts
+  - cmd/browser-agent/internal/insecureproxy/handler.go
 test_paths:
   - extension/background/exec/__tests__/query-execution-serialization.test.js
   - tests/extension/execute-js.test.js
+  - cmd/browser-agent/internal/insecureproxy/handler_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

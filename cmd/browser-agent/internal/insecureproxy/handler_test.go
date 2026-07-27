@@ -1,9 +1,10 @@
-// Purpose: Tests for insecure proxy route handling.
-// Docs: docs/features/feature/mcp-persistent-server/index.md
+// Purpose: Tests for insecure proxy request handling.
+// Docs: docs/features/feature/csp-safe-execution/index.md
 
-package main
+package insecureproxy
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -14,13 +15,18 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
+func testRespond(w http.ResponseWriter, status int, data any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(data)
+}
+
 func TestInsecureProxyEndpoint_SSRFDenylist(t *testing.T) {
 	t.Parallel()
 
-	srv := newTestServerForHandlers(t)
 	cap := capture.NewCapture()
 	cap.SetSecurityMode("insecure_proxy", []string{"csp_headers"})
-	mux, _ := setupHTTPRoutes(srv, cap)
+	handler := New(cap, testRespond)
 
 	// Test various private/internal IP ranges.
 	tests := []struct {
@@ -38,9 +44,9 @@ func TestInsecureProxyEndpoint_SSRFDenylist(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			req := localRequest(http.MethodGet, "/insecure-proxy?target="+url.QueryEscape(tc.target), nil)
+			req := httptest.NewRequest(http.MethodGet, "/insecure-proxy?target="+url.QueryEscape(tc.target), nil)
 			rr := httptest.NewRecorder()
-			mux.ServeHTTP(rr, req)
+			handler.ServeHTTP(rr, req)
 
 			if rr.Code != http.StatusForbidden {
 				t.Fatalf("GET /insecure-proxy to %s status = %d, want 403", tc.target, rr.Code)
@@ -50,11 +56,6 @@ func TestInsecureProxyEndpoint_SSRFDenylist(t *testing.T) {
 }
 
 func TestInsecureProxyEndpoint_StripsCSPHeaders(t *testing.T) {
-	// Not parallel — toggles package-level ssrfCheckEnabled.
-	origSSRF := ssrfCheckEnabled
-	ssrfCheckEnabled = false
-	t.Cleanup(func() { ssrfCheckEnabled = origSSRF })
-
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Security-Policy", "default-src 'self'")
 		w.Header().Set("Content-Security-Policy-Report-Only", "default-src 'none'")
@@ -64,14 +65,14 @@ func TestInsecureProxyEndpoint_StripsCSPHeaders(t *testing.T) {
 	}))
 	defer upstream.Close()
 
-	srv := newTestServerForHandlers(t)
 	cap := capture.NewCapture()
 	cap.SetSecurityMode("insecure_proxy", []string{"csp_headers"})
-	mux, _ := setupHTTPRoutes(srv, cap)
+	handler := New(cap, testRespond)
+	handler.client = upstream.Client()
 
-	req := localRequest(http.MethodGet, "/insecure-proxy?target="+url.QueryEscape(upstream.URL), nil)
+	req := httptest.NewRequest(http.MethodGet, "/insecure-proxy?target="+url.QueryEscape(upstream.URL), nil)
 	rr := httptest.NewRecorder()
-	mux.ServeHTTP(rr, req)
+	handler.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
 		t.Fatalf("GET /insecure-proxy status = %d, want 200", rr.Code)
@@ -93,14 +94,13 @@ func TestInsecureProxyEndpoint_StripsCSPHeaders(t *testing.T) {
 
 func TestInsecureProxyEndpoint_RequiresInsecureMode(t *testing.T) {
 	t.Parallel()
-	srv := newTestServerForHandlers(t)
 	cap := capture.NewCapture()
 	cap.SetSecurityMode("normal", nil)
-	mux, _ := setupHTTPRoutes(srv, cap)
+	handler := New(cap, testRespond)
 
-	req := localRequest(http.MethodGet, "/insecure-proxy?target="+url.QueryEscape("https://example.com"), nil)
+	req := httptest.NewRequest(http.MethodGet, "/insecure-proxy?target="+url.QueryEscape("https://example.com"), nil)
 	rr := httptest.NewRecorder()
-	mux.ServeHTTP(rr, req)
+	handler.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusForbidden {
 		t.Fatalf("GET /insecure-proxy status = %d, want 403 when mode is normal", rr.Code)

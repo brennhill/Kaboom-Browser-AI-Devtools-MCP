@@ -13,6 +13,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/ciapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpguard"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/insecureproxy"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testpages"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
@@ -298,9 +299,8 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, cap *capture.Store) 
 	}))
 
 	// NOT MCP — Last-resort altered-environment proxy for CSP-locked debugging sessions.
-	mux.HandleFunc("/insecure-proxy", httpguard.CORS(func(w http.ResponseWriter, r *http.Request) {
-		server.handleInsecureProxy(w, r, cap)
-	}))
+	proxyHandler := insecureproxy.New(cap, jsonResponse)
+	mux.HandleFunc("/insecure-proxy", httpguard.CORS(proxyHandler.ServeHTTP))
 
 	// NOT MCP — Doctor preflight check (aggregated readiness status)
 	mux.HandleFunc("/doctor", httpguard.CORS(func(w http.ResponseWriter, r *http.Request) {
