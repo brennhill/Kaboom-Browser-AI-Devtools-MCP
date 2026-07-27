@@ -13,13 +13,13 @@ import (
 
 // Recorder owns tool-call audit policy and per-client session state.
 type Recorder struct {
-	trail    *Trail
+	trail    *AuditTrail
 	mu       sync.Mutex
 	sessions map[string]string
 }
 
 // NewRecorder creates a recorder for an audit trail.
-func NewRecorder(trail *Trail) *Recorder {
+func NewRecorder(trail *AuditTrail) *Recorder {
 	return &Recorder{trail: trail, sessions: make(map[string]string)}
 }
 
@@ -33,7 +33,7 @@ func (recorder *Recorder) Record(req mcp.JSONRPCRequest, toolName string, args j
 		return
 	}
 	success := response.Error == nil && !toolResultIsError(response.Result)
-	entry := Entry{
+	entry := AuditEntry{
 		AuditSessionID: sessionID,
 		ClientID:       normalizeClientID(req.ClientID),
 		ToolName:       toolName,

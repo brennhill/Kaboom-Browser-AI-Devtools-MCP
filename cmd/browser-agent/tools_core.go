@@ -83,7 +83,7 @@ type ToolHandler struct {
 	securityScannerImpl   *scan.Scanner
 	thirdPartyAuditorImpl *thirdparty.ThirdPartyAuditor
 	sessionManager        *session.SessionManager
-	auditTrail            *audit.Trail
+	auditTrail            *audit.AuditTrail
 	auditRecorder         *audit.Recorder
 
 	// Draw mode annotation store (in-memory, TTL-based)
@@ -469,7 +469,7 @@ func NewToolHandler(server *Server, captureStore *capture.Store) *MCPHandler {
 		10,
 		session.NewRuntimeStateReader(handler.server.logs.Entries, handler.capture),
 	)
-	handler.auditTrail = audit.NewAuditTrail(audit.Config{
+	handler.auditTrail = audit.NewAuditTrail(audit.AuditConfig{
 		MaxEntries:   10000,
 		Enabled:      true,
 		RedactParams: true,

@@ -17,6 +17,7 @@ code_paths:
   - internal/audit/audit_trail.go
 test_paths:
   - internal/audit/audit_trail_test.go
+  - internal/audit/no_facade_test.go
   - cmd/browser-agent/tools_configure_audit_test.go
   - cmd/browser-agent/tools_configure_wave_abc_tdd_test.go
   - internal/session/runtime_reader_test.go
@@ -51,3 +52,5 @@ last_verified_date: 2026-03-05
 `internal/audit/recorder.go` owns tool-call filtering, error interpretation,
 per-client audit sessions, and session reset. `ToolHandler` retains only the
 canonical recorder and trail references needed by dispatch and configure.
+Callers use the canonical `AuditEntry`, `AuditTrail`, `AuditFilter`, and
+`AuditConfig` contracts directly; the former alias-only type facade is deleted.

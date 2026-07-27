@@ -7,7 +7,7 @@ import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/audit"
 
 // SummarizeAuditEntries aggregates audit entries into a summary map
 // with tool call counts, success/failure rates, and session counts.
-func SummarizeAuditEntries(entries []audit.Entry) map[string]any {
+func SummarizeAuditEntries(entries []audit.AuditEntry) map[string]any {
 	byTool := make(map[string]int)
 	uniqueSessions := make(map[string]struct{})
 	success := 0

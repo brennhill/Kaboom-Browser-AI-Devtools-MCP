@@ -38,7 +38,7 @@ func TestSummarizeAuditEntries_Empty(t *testing.T) {
 func TestSummarizeAuditEntries_MixedEntries(t *testing.T) {
 	t.Parallel()
 
-	entries := []audit.Entry{
+	entries := []audit.AuditEntry{
 		{ToolName: "observe", AuditSessionID: "s1", Success: true},
 		{ToolName: "observe", AuditSessionID: "s1", Success: true},
 		{ToolName: "configure", AuditSessionID: "s2", Success: false},
@@ -74,7 +74,7 @@ func TestSummarizeAuditEntries_MixedEntries(t *testing.T) {
 func TestSummarizeAuditEntries_AllFailures(t *testing.T) {
 	t.Parallel()
 
-	entries := []audit.Entry{
+	entries := []audit.AuditEntry{
 		{ToolName: "interact", AuditSessionID: "s1", Success: false},
 		{ToolName: "interact", AuditSessionID: "s1", Success: false},
 	}

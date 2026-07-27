@@ -32,17 +32,17 @@ func (p *Problem) Error() string {
 
 type Result struct {
 	Operation string
-	Entries   []audit.Entry
+	Entries   []audit.AuditEntry
 	Count     int
 	Summary   map[string]any
 	Cleared   int
 }
 
 type Handler struct {
-	trail *audit.Trail
+	trail *audit.AuditTrail
 }
 
-func New(trail *audit.Trail) *Handler {
+func New(trail *audit.AuditTrail) *Handler {
 	return &Handler{trail: trail}
 }
 
@@ -78,7 +78,7 @@ func (h *Handler) Execute(args json.RawMessage) (Result, *Problem) {
 		return Result{Operation: operation, Cleared: h.trail.Clear()}, nil
 	}
 
-	filter := audit.Filter{
+	filter := audit.AuditFilter{
 		AuditSessionID: params.AuditSessionID,
 		ToolName:       params.ToolName,
 		Limit:          params.Limit,

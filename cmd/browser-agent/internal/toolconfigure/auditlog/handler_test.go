@@ -9,10 +9,10 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/audit"
 )
 
-func populatedTrail() *audit.Trail {
-	trail := audit.NewAuditTrail(audit.Config{MaxEntries: 10, Enabled: true})
-	trail.Record(audit.Entry{AuditSessionID: "session-a", ToolName: "observe", Success: true})
-	trail.Record(audit.Entry{AuditSessionID: "session-b", ToolName: "analyze", Success: false})
+func populatedTrail() *audit.AuditTrail {
+	trail := audit.NewAuditTrail(audit.AuditConfig{MaxEntries: 10, Enabled: true})
+	trail.Record(audit.AuditEntry{AuditSessionID: "session-a", ToolName: "observe", Success: true})
+	trail.Record(audit.AuditEntry{AuditSessionID: "session-b", ToolName: "analyze", Success: false})
 	return trail
 }
 
@@ -51,7 +51,7 @@ func TestExecuteClearsTrail(t *testing.T) {
 	if result.Operation != "clear" || result.Cleared != 2 {
 		t.Fatalf("unexpected clear result: %#v", result)
 	}
-	if remaining := trail.Query(audit.Filter{}); len(remaining) != 0 {
+	if remaining := trail.Query(audit.AuditFilter{}); len(remaining) != 0 {
 		t.Fatalf("expected empty trail, got %d entries", len(remaining))
 	}
 }
