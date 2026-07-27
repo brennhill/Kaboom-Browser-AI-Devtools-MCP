@@ -10,12 +10,14 @@ code_paths:
   - internal/session/types.go
   - internal/session/doc.go
   - internal/session/snapshot-manager.go
+  - internal/session/runtime_reader.go
   - internal/session/comparison.go
   - internal/session/snapdiff/types.go
   - internal/session/snapdiff/errors.go
   - internal/session/snapdiff/network.go
   - internal/session/snapdiff/performance.go
 test_paths:
+  - internal/session/runtime_reader_test.go
   - internal/session/snapshot_manager_test.go
   - internal/session/comparison_test.go
   - internal/session/snapdiff/errors_test.go

@@ -4,9 +4,10 @@ feature_id: feature-enterprise-audit
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 code_paths:
-  - cmd/browser-agent/tools_session_audit_reader.go
+  - internal/session/runtime_reader.go
+  - cmd/browser-agent/tools_core_constructor.go
   - cmd/browser-agent/tools_session_audit_recording.go
   - internal/analysis/thirdparty/audit.go
   - internal/analysis/thirdparty/entries.go
@@ -15,6 +16,7 @@ code_paths:
   - internal/analysis/thirdparty/summary.go
   - internal/audit/audit_trail.go
 test_paths:
+  - internal/session/runtime_reader_test.go
   - internal/analysis/thirdparty/audit_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05

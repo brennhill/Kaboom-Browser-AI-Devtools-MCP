@@ -1,8 +1,8 @@
-// Purpose: Adapts ToolHandler runtime state into session snapshot reader interfaces.
-// Why: Isolates snapshot extraction logic from audit trail persistence utilities.
+// runtime_reader.go — Adapts runtime telemetry into session snapshot reader interfaces.
+// Why: Keeps session snapshot projection independent of the MCP ToolHandler.
 // Docs: docs/features/feature/enterprise-audit/index.md
 
-package main
+package session
 
 import (
 	"sort"
@@ -10,33 +10,40 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session"
 )
 
-// toolCaptureStateReader adapts ToolHandler state to session.CaptureStateReader.
-type toolCaptureStateReader struct {
-	h *ToolHandler
+type RuntimeCaptureReader interface {
+	GetNetworkBodies() []capture.NetworkBody
+	GetWebSocketStatus(capture.WebSocketStatusFilter) capture.WebSocketStatusResponse
+	GetPerformanceSnapshots() []capture.PerformanceSnapshot
+	GetTrackingStatus() (bool, int, string)
 }
 
-func newToolCaptureStateReader(h *ToolHandler) session.CaptureStateReader {
-	return &toolCaptureStateReader{h: h}
+type runtimeStateReader struct {
+	entries func() []mcp.LogEntry
+	capture RuntimeCaptureReader
 }
 
-func (r *toolCaptureStateReader) GetConsoleErrors() []session.SnapshotError {
+func NewRuntimeStateReader(entries func() []mcp.LogEntry, captureReader RuntimeCaptureReader) CaptureStateReader {
+	return &runtimeStateReader{entries: entries, capture: captureReader}
+}
+
+func (r *runtimeStateReader) GetConsoleErrors() []SnapshotError {
 	return r.collectConsoleByLevel(map[string]bool{"error": true})
 }
 
-func (r *toolCaptureStateReader) GetConsoleWarnings() []session.SnapshotError {
+func (r *runtimeStateReader) GetConsoleWarnings() []SnapshotError {
 	return r.collectConsoleByLevel(map[string]bool{"warn": true, "warning": true})
 }
 
-func (r *toolCaptureStateReader) collectConsoleByLevel(levels map[string]bool) []session.SnapshotError {
-	if r.h == nil || r.h.server == nil {
-		return []session.SnapshotError{}
+func (r *runtimeStateReader) collectConsoleByLevel(levels map[string]bool) []SnapshotError {
+	if r.entries == nil {
+		return []SnapshotError{}
 	}
 
-	entries := r.h.server.logs.Entries()
+	entries := r.entries()
 
 	type key struct {
 		level string
@@ -68,9 +75,9 @@ func (r *toolCaptureStateReader) collectConsoleByLevel(levels map[string]bool) [
 		return keys[i].msg < keys[j].msg
 	})
 
-	out := make([]session.SnapshotError, 0, len(keys))
+	out := make([]SnapshotError, 0, len(keys))
 	for _, k := range keys {
-		out = append(out, session.SnapshotError{
+		out = append(out, SnapshotError{
 			Type:    k.level,
 			Message: k.msg,
 			Count:   counts[k],
@@ -79,14 +86,14 @@ func (r *toolCaptureStateReader) collectConsoleByLevel(levels map[string]bool) [
 	return out
 }
 
-func (r *toolCaptureStateReader) GetNetworkRequests() []session.SnapshotNetworkRequest {
-	if r.h == nil || r.h.capture == nil {
-		return []session.SnapshotNetworkRequest{}
+func (r *runtimeStateReader) GetNetworkRequests() []SnapshotNetworkRequest {
+	if r.capture == nil {
+		return []SnapshotNetworkRequest{}
 	}
-	bodies := r.h.capture.GetNetworkBodies()
-	out := make([]session.SnapshotNetworkRequest, 0, len(bodies))
+	bodies := r.capture.GetNetworkBodies()
+	out := make([]SnapshotNetworkRequest, 0, len(bodies))
 	for _, body := range bodies {
-		out = append(out, session.SnapshotNetworkRequest{
+		out = append(out, SnapshotNetworkRequest{
 			Method:       body.Method,
 			URL:          body.URL,
 			Status:       body.Status,
@@ -98,14 +105,14 @@ func (r *toolCaptureStateReader) GetNetworkRequests() []session.SnapshotNetworkR
 	return out
 }
 
-func (r *toolCaptureStateReader) GetWSConnections() []session.SnapshotWSConnection {
-	if r.h == nil || r.h.capture == nil {
-		return []session.SnapshotWSConnection{}
+func (r *runtimeStateReader) GetWSConnections() []SnapshotWSConnection {
+	if r.capture == nil {
+		return []SnapshotWSConnection{}
 	}
-	status := r.h.capture.GetWebSocketStatus(capture.WebSocketStatusFilter{})
-	out := make([]session.SnapshotWSConnection, 0, len(status.Connections))
+	status := r.capture.GetWebSocketStatus(capture.WebSocketStatusFilter{})
+	out := make([]SnapshotWSConnection, 0, len(status.Connections))
 	for _, conn := range status.Connections {
-		out = append(out, session.SnapshotWSConnection{
+		out = append(out, SnapshotWSConnection{
 			URL:         conn.URL,
 			State:       conn.State,
 			MessageRate: conn.MessageRate.Incoming.PerSecond + conn.MessageRate.Outgoing.PerSecond,
@@ -114,11 +121,11 @@ func (r *toolCaptureStateReader) GetWSConnections() []session.SnapshotWSConnecti
 	return out
 }
 
-func (r *toolCaptureStateReader) GetPerformance() *performance.Snapshot {
-	if r.h == nil || r.h.capture == nil {
+func (r *runtimeStateReader) GetPerformance() *performance.Snapshot {
+	if r.capture == nil {
 		return nil
 	}
-	snapshots := r.h.capture.GetPerformanceSnapshots()
+	snapshots := r.capture.GetPerformanceSnapshots()
 	if len(snapshots) == 0 {
 		return nil
 	}
@@ -140,18 +147,18 @@ func (r *toolCaptureStateReader) GetPerformance() *performance.Snapshot {
 	return best
 }
 
-func (r *toolCaptureStateReader) GetCurrentPageURL() string {
-	if r.h == nil || r.h.capture == nil {
+func (r *runtimeStateReader) GetCurrentPageURL() string {
+	if r.capture == nil {
 		return ""
 	}
-	_, _, trackedURL := r.h.capture.GetTrackingStatus()
+	_, _, trackedURL := r.capture.GetTrackingStatus()
 	if trackedURL != "" {
 		return trackedURL
 	}
 	if snap := r.GetPerformance(); snap != nil && snap.URL != "" {
 		return snap.URL
 	}
-	bodies := r.h.capture.GetNetworkBodies()
+	bodies := r.capture.GetNetworkBodies()
 	if len(bodies) > 0 {
 		return bodies[len(bodies)-1].URL
 	}
