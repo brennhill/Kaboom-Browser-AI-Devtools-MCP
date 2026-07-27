@@ -144,13 +144,14 @@ the folder-gate numbers as evidence that it did.
 | | Current |
 | --- | --- |
 | `Capture` methods behind one `sync.RWMutex` | 165 |
-| `cmd/browser-agent` source files (package `main`) | 160 |
-| …of which declare `*ToolHandler` methods | 67 |
+| `cmd/browser-agent` production source files (package `main`) | 118 |
+| …of which declare `*ToolHandler` methods | 47 |
 
-Both are **structurally pinned**: Go only permits methods on a type in the
-package that declares it, so no `*ToolHandler` method can move until
-`ToolHandler` itself does. That is why the extracted `tool*` subpackages hold
-free functions plus a `Deps` struct, with thin method shims left in `main`.
+Both remain structurally constrained: Go only permits methods on a type in the
+package that declares it. Extracted `tool*` packages therefore expose handlers
+through narrow `Deps` contracts while the remaining `*ToolHandler` shims stay
+in `main`. The active refactor is also consolidating shims that form one MCP
+boundary; the 10-file target is not yet met.
 
 Note also that `src/lib` and `src/background` were **relocated into
 subdirectories, not decomposed** — total file count and LOC are essentially
