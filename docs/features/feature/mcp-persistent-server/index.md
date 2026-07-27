@@ -19,6 +19,8 @@ code_paths:
   - cmd/browser-agent/internal/daemonlife/version_compare.go
   - cmd/browser-agent/internal/daemonlife/deps.go
   - cmd/browser-agent/daemon_lifecycle_wiring.go
+  - cmd/browser-agent/main_connection.go
+  - cmd/browser-agent/main_connection_stop.go
   - cmd/browser-agent/main_connection_mcp.go
   - cmd/browser-agent/internal/procctl/pidfile.go
   - cmd/browser-agent/internal/procctl/port.go

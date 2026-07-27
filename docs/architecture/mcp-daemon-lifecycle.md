@@ -2,7 +2,7 @@
 doc_type: flow_map
 flow_id: mcp-daemon-lifecycle
 status: active
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-27
 owners:
   - Brenn
 entrypoints:
@@ -10,6 +10,8 @@ entrypoints:
   - cmd/browser-agent/main_connection_mcp.go:runMCPMode
 code_paths:
   - cmd/browser-agent/mcp_identity.go
+  - cmd/browser-agent/main_connection.go
+  - cmd/browser-agent/main_connection_stop.go
   - cmd/browser-agent/main_connection_mcp.go
   - cmd/browser-agent/main_connection_mcp_bootstrap.go
   - cmd/browser-agent/main_connection_mcp_upgrade.go
