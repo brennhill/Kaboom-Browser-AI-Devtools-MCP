@@ -127,7 +127,7 @@ internal/
 
 **Wire types** -- `internal/types/wire_*.go` are the source of truth for HTTP payload shapes between extension and server. TypeScript counterparts in `src/types/wire/wire-*.ts` are generated from Go. CI enforces drift detection via `make check-wire-drift`.
 
-**Zero external dependencies** -- The entire Go server uses only stdlib. No logging library, no HTTP framework, no JSON library. `fmt.Fprintf(os.Stderr, ...)` for errors, append-only file I/O for lifecycle logs.
+**Zero external dependencies** -- The entire Go server uses only stdlib. No logging library, HTTP framework, or JSON library. `internal/diag` owns operator diagnostics, while lifecycle logs use append-only file I/O.
 
 **Append-only I/O on hot paths** -- Log writes go through a buffered channel (`logChan`) to an async goroutine. Ring buffers in `Capture` use single-pass eviction (never loop-remove-recheck).
 

@@ -7,9 +7,13 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/uploadhandler"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
 // multiFlag implements flag.Value for repeatable string flags (e.g., --upload-deny-pattern).
@@ -98,12 +102,12 @@ func parseAndValidateFlags() *serverConfig {
 	f := registerFlags()
 
 	osUploadAutomationFlag = *f.enableOsUploadAutomation
-	uploadhandler.SetSSRFAllowedHosts(f.ssrfAllowedHosts)
+	uploadsec.SetSSRFAllowedHosts(f.ssrfAllowedHosts)
 	initUploadSecurity(*f.enableOsUploadAutomation, *f.uploadDir, f.uploadDenyPatterns)
 	validatePort(*f.port)
 	normalizeStateDir(f.stateDir)
 	if err := applyParallelModeStateDir(*f.parallelMode, f.stateDir); err != nil {
-		fmt.Fprintf(os.Stderr, "[Kaboom] Invalid --parallel setup: %v\n", err)
+		diag.Printf("[Kaboom] Invalid --parallel setup: %v\n", err)
 		os.Exit(1)
 	}
 	handleEarlyExitModes(f)
@@ -120,4 +124,90 @@ func parseAndValidateFlags() *serverConfig {
 		daemonMode:   *f.daemonMode,
 		parallelMode: *f.parallelMode,
 	}
+}
+
+func initUploadSecurity(enabled bool, dir string, denyPatterns multiFlag) {
+	if dir == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			if enabled {
+				diag.Printf("[Kaboom] Cannot determine home directory for default upload dir: %v\n", err)
+				os.Exit(1)
+			}
+			uploadSecurityConfig = &uploadsec.Security{}
+			return
+		}
+		dir = filepath.Join(home, "kaboom-upload-dir")
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			if enabled {
+				diag.Printf("[Kaboom] Cannot create default upload dir %s: %v\n", dir, err)
+				os.Exit(1)
+			}
+			uploadSecurityConfig = &uploadsec.Security{}
+			return
+		}
+	}
+	security, err := uploadsec.ValidateUploadDir(dir, denyPatterns)
+	if err != nil {
+		diag.Printf("[Kaboom] Upload security validation failed: %v\n", err)
+		os.Exit(1)
+	}
+	uploadSecurityConfig = security
+}
+
+func validatePort(port int) {
+	if port < 1 || port > 65535 {
+		diag.Printf("[Kaboom] Invalid port: %d (must be 1-65535)\n", port)
+		os.Exit(1)
+	}
+}
+
+func normalizeStateDir(stateDir *string) {
+	if *stateDir == "" {
+		return
+	}
+	absolute, err := filepath.Abs(*stateDir)
+	if err != nil {
+		diag.Printf("[Kaboom] Invalid --state-dir: %v\n", err)
+		os.Exit(1)
+	}
+	*stateDir = filepath.Clean(absolute)
+	if err := os.Setenv(state.StateDirEnv, *stateDir); err != nil {
+		diag.Printf("[Kaboom] Failed to set %s: %v\n", state.StateDirEnv, err)
+		os.Exit(1)
+	}
+}
+
+func applyParallelModeStateDir(parallel bool, stateDir *string) error {
+	if !parallel || strings.TrimSpace(*stateDir) != "" {
+		return nil
+	}
+	root, err := state.RootDir()
+	if err != nil {
+		return fmt.Errorf("cannot resolve runtime state root: %w", err)
+	}
+	generated := filepath.Join(root, "parallel", fmt.Sprintf("run-%d-%d", time.Now().UnixNano(), os.Getpid()))
+	if err := os.MkdirAll(generated, 0o750); err != nil {
+		return fmt.Errorf("cannot create parallel state dir %q: %w", generated, err)
+	}
+	*stateDir = filepath.Clean(generated)
+	if err := os.Setenv(state.StateDirEnv, *stateDir); err != nil {
+		return fmt.Errorf("failed to set %s: %w", state.StateDirEnv, err)
+	}
+	startupWarnings = append(startupWarnings, fmt.Sprintf("parallel_mode_state_dir_auto: %s", *stateDir))
+	return nil
+}
+
+func resolveDefaultLogFile(logFile *string) {
+	if *logFile != "" {
+		return
+	}
+	defaultLogFile, err := state.DefaultLogFile()
+	if err != nil {
+		fallback := filepath.Join(os.TempDir(), "kaboom", "logs", "kaboom.jsonl")
+		startupWarnings = append(startupWarnings, fmt.Sprintf("state_dir_unwritable: %v; falling back to %s", err, fallback))
+		*logFile = fallback
+		return
+	}
+	*logFile = defaultLogFile
 }
