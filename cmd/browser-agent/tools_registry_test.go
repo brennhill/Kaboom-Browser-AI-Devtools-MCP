@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolmodule"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -32,8 +33,8 @@ func (m *stubToolModule) Execute(req mcp.JSONRPCRequest, args json.RawMessage) m
 	}
 }
 
-func (m *stubToolModule) Describe() ToolModuleDescription {
-	return ToolModuleDescription{Name: "stub_tool", Summary: "test-only stub"}
+func (m *stubToolModule) Describe() toolmodule.Description {
+	return toolmodule.Description{Name: "stub_tool", Summary: "test-only stub"}
 }
 
 func (m *stubToolModule) Examples() []json.RawMessage {
@@ -47,7 +48,7 @@ func TestNewToolHandler_WiresCoreToolModules(t *testing.T) {
 		t.Fatal("toolModules should be initialized")
 	}
 	for _, name := range []string{"observe", "analyze", "generate", "configure", "interact"} {
-		module, ok := env.handler.toolModules.get(name)
+		module, ok := env.handler.toolModules.Get(name)
 		if !ok || module == nil {
 			t.Fatalf("%s module should be registered", name)
 		}
@@ -64,7 +65,7 @@ func TestNewToolHandler_WiresCoreToolModules(t *testing.T) {
 func TestHandleToolCall_DispatchesRegisteredModule(t *testing.T) {
 	env := newToolTestEnv(t)
 	stub := &stubToolModule{}
-	env.handler.toolModules.register("stub_tool", stub)
+	env.handler.toolModules.Register("stub_tool", stub)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`"test-id"`), Method: "tools/call"}
 	resp, handled := env.handler.HandleToolCall(req, "stub_tool", json.RawMessage(`{"x":1}`))
@@ -91,7 +92,7 @@ func TestHandleToolCall_DispatchesRegisteredModule(t *testing.T) {
 func TestHandleToolCall_ModuleValidationError(t *testing.T) {
 	env := newToolTestEnv(t)
 	stub := &stubToolModule{validateErr: errors.New("bad params")}
-	env.handler.toolModules.register("stub_tool", stub)
+	env.handler.toolModules.Register("stub_tool", stub)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`"test-id"`), Method: "tools/call"}
 	resp, handled := env.handler.HandleToolCall(req, "stub_tool", json.RawMessage(`{"x":1}`))

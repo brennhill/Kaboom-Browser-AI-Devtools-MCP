@@ -285,7 +285,7 @@ Optional compatibility methods during migration:
 
 1. `internal/tools/<tool>/module.go`
 2. `internal/tools/<tool>/validation.go`, `execute.go`, `describe.go`, `examples.go`
-3. `cmd/browser-agent/tools_registry.go` for assembly only
+3. `cmd/browser-agent/internal/toolmodule/registry.go` for canonical module registration and dispatch
 4. Keep `ToolHandler` as integration root during migration.
 
 ### Registry policy

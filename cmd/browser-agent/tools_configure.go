@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -116,7 +117,9 @@ func cfgLocal(fn func(toolconfigure.Deps, mcp.JSONRPCRequest, json.RawMessage) m
 	}
 }
 
-func getValidConfigureActions() string { return sortedMapKeys(configureHandlers) }
+func getValidConfigureActions() string {
+	return strings.Join(util.SortedMapKeys(configureHandlers), ", ")
+}
 
 func (h *ToolHandler) toolGetHealth(req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
 	if h.healthMetrics == nil {
@@ -256,10 +259,8 @@ func (h *ToolHandler) GetPilotStatus() any {
 
 func (h *ToolHandler) GetToolModuleExamples(toolName string) any {
 	h.ensureToolModules()
-	if module, ok := h.toolModules.get(toolName); ok {
-		if examples := module.Examples(); len(examples) > 0 {
-			return examples
-		}
+	if examples := h.toolModules.Examples(toolName); len(examples) > 0 {
+		return examples
 	}
 	return nil
 }

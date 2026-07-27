@@ -567,7 +567,7 @@ Add cases to the configure action switch for: `save_sequence`, `replay_sequence`
 
 Add new actions to the configure tool schema enum and add parameter definitions for sequence-related fields.
 
-#### Modified file: `cmd/browser-agent/tools_registry.go` (~5 LOC)
+#### Module registration owner: `cmd/browser-agent/internal/toolmodule/registry.go`
 
 No changes needed -- configure tool is already registered.
 

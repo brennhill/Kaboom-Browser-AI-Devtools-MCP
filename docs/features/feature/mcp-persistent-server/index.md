@@ -20,7 +20,7 @@ code_paths:
   - cmd/browser-agent/bridge_adapter.go
   - cmd/browser-agent/tools_core.go
   - internal/session/snapshot-manager.go
-  - cmd/browser-agent/tools_registry.go
+  - cmd/browser-agent/internal/toolmodule/registry.go
   - cmd/browser-agent/server.go
   - cmd/browser-agent/server_routes.go
   - cmd/browser-agent/internal/playbooks/resource_catalog.go

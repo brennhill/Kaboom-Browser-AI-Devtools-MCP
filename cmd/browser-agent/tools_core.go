@@ -26,6 +26,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactstate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactupload"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolmodule"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolobserve"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolrecording"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
@@ -134,7 +135,7 @@ type ToolHandler struct {
 
 	// Module registry for plugin-style tool dispatch (incremental migration).
 	toolModulesOnce sync.Once
-	toolModules     *toolModuleRegistry
+	toolModules     *toolmodule.Registry
 
 	// Tool schema cache for parameter-warning validation.
 	toolSchemasOnce sync.Once
@@ -174,7 +175,7 @@ func (h *ToolHandler) HandleToolCall(req mcp.JSONRPCRequest, name string, args j
 
 	h.ensureToolModules()
 	h.ensureToolSchemas()
-	resp, handled := h.dispatchViaModules(req, name, args)
+	resp, handled := h.toolModules.Dispatch(req, name, args)
 	if !handled {
 		return mcp.JSONRPCResponse{}, false
 	}
@@ -236,7 +237,18 @@ func (h *ToolHandler) getToolSchema(name string) map[string]any {
 
 func (h *ToolHandler) ensureToolModules() {
 	h.toolModulesOnce.Do(func() {
-		h.toolModules = h.buildToolModuleRegistry()
+		h.toolModules = toolmodule.New(
+			toolmodule.Spec{Name: "observe", Summary: "Read captured browser state: logs, network, screenshots, and async results",
+				Examples: []json.RawMessage{json.RawMessage(`{"what":"logs"}`), json.RawMessage(`{"what":"screenshot"}`)}, Handle: h.observeDispatcher.Handle},
+			toolmodule.Spec{Name: "analyze", Summary: "Run analysis checks over DOM, links, accessibility, and audits",
+				Examples: []json.RawMessage{json.RawMessage(`{"what":"dom","selector":"body","background":true}`)}, Handle: h.analyzeDispatcher.Handle},
+			toolmodule.Spec{Name: "generate", Summary: "Generate artifacts (reproduction, csp, sarif, tests) from captured context",
+				Examples: []json.RawMessage{json.RawMessage(`{"what":"reproduction","last_n":20}`)}, Handle: h.generateDispatcher.Handle},
+			toolmodule.Spec{Name: "configure", Summary: "Session settings, diagnostics, and recording utilities",
+				Examples: []json.RawMessage{json.RawMessage(`{"what":"health"}`), json.RawMessage(`{"what":"clear","buffer":"logs"}`)}, Handle: h.toolConfigure},
+			toolmodule.Spec{Name: "interact", Summary: "Browser automation: navigate, click, type, fill forms, take screenshots, and control any web page",
+				Examples: []json.RawMessage{json.RawMessage(`{"what":"navigate","url":"https://example.com"}`), json.RawMessage(`{"what":"click","selector":"button.submit"}`), json.RawMessage(`{"what":"type","selector":"input[name=search]","text":"hello"}`)}, Handle: h.toolInteract},
+		)
 	})
 }
 
