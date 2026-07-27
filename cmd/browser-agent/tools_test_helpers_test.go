@@ -16,6 +16,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testgenhandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
 // ============================================
@@ -365,7 +366,7 @@ func assertNonErrorResponse(t *testing.T, label string, result MCPToolResult) {
 // assertIsError verifies the response is an error containing the expected substring.
 func assertIsError(t *testing.T, resp JSONRPCResponse, contains string) {
 	t.Helper()
-	if !isErrorResponse(resp) {
+	if !act.IsErrorResponse(resp) {
 		var result MCPToolResult
 		if err := json.Unmarshal(resp.Result, &result); err == nil {
 			for _, c := range result.Content {

@@ -12,6 +12,7 @@ code_paths:
   - cmd/browser-agent/internal/toolinteract/interact_batch.go
   - cmd/browser-agent/tools_interact_dispatch.go
   - cmd/browser-agent/tools_configure.go
+  - internal/tools/interact/workflow.go
   - internal/schema/interact/actions.go
   - internal/schema/interact/properties_output_batch.go
   - internal/tools/configure/capabilities/modespecs_interact.go

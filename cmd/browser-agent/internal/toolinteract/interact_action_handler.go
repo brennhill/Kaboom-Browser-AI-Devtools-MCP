@@ -557,7 +557,7 @@ func (h *InteractActionHandler) AppendPageContextToResponse(resp JSONRPCResponse
 func (h *InteractActionHandler) AppendWorkflowTraceToResponse(
 	resp JSONRPCResponse,
 	workflow string,
-	trace []WorkflowStep,
+	trace []act.WorkflowStep,
 	start time.Time,
 	status string,
 ) JSONRPCResponse {

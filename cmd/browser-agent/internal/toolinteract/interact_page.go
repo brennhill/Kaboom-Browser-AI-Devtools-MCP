@@ -17,6 +17,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/menus"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
 const (
@@ -52,7 +53,7 @@ func (h *InteractActionHandler) HandleContentExtraction(req JSONRPCRequest, args
 		}).
 		tabID(params.TabID).
 		guards(h.deps.RequirePilot, h.deps.RequireExtension, h.deps.RequireTabTracking).
-		queuedMessage(queryType + " queued").
+		queuedMessage(queryType+" queued").
 		execute(req, args)
 }
 
@@ -109,7 +110,7 @@ func (h *InteractActionHandler) HandleExplorePage(req JSONRPCRequest, args json.
 		execute(req, args)
 
 	// Post-process: enrich with structured site_menus if the command completed
-	if !isErrorResponse(resp) && !isResponseQueued(resp) {
+	if !act.IsErrorResponse(resp) && !isResponseQueued(resp) {
 		resp = enrichExploreWithMenus(resp)
 		resp = h.AppendScreenshotToResponse(resp, req)
 	}
@@ -229,7 +230,7 @@ func (h *InteractActionHandler) HandleClipboardRead(req JSONRPCRequest, args jso
 	resp := h.queueExecuteScript(req, args, "exec", 0, 0, "main", script, "clipboard_read", "Clipboard read queued")
 
 	// Record AI action only on success (queueExecuteScript handles guards).
-	if !isErrorResponse(resp) {
+	if !act.IsErrorResponse(resp) {
 		h.deps.RecordAIAction("clipboard_read", "", nil)
 	}
 
@@ -263,7 +264,7 @@ func (h *InteractActionHandler) HandleClipboardWrite(req JSONRPCRequest, args js
 	resp := h.queueExecuteScript(req, args, "exec", 0, 0, "main", script, "clipboard_write", "Clipboard write queued")
 
 	// Record AI action only on success (queueExecuteScript handles guards).
-	if !isErrorResponse(resp) {
+	if !act.IsErrorResponse(resp) {
 		h.deps.RecordAIAction("clipboard_write", "", map[string]any{"text_length": len(params.Text)})
 	}
 

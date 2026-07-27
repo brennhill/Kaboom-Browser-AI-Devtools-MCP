@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"testing"
 	"time"
+
+	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
 func TestHandleFillForm_Success(t *testing.T) {
@@ -177,10 +179,10 @@ func TestExtractMCPResponseJSONPayload(t *testing.T) {
 
 func TestWorkflowFieldLabel(t *testing.T) {
 	idx := 3
-	if workflowFieldLabel(FormField{Index: &idx}) != "index:3" {
+	if workflowFieldLabel(act.FormField{Index: &idx}) != "index:3" {
 		t.Fatal("expected index label")
 	}
-	if workflowFieldLabel(FormField{Selector: "#x"}) != "#x" {
+	if workflowFieldLabel(act.FormField{Selector: "#x"}) != "#x" {
 		t.Fatal("expected selector label")
 	}
 }

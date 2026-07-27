@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/replay"
+	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
 const (
@@ -150,7 +151,7 @@ func (h *InteractActionHandler) HandleBatch(req JSONRPCRequest, args json.RawMes
 			}
 		}
 
-		if isErrorResponse(stepResp) {
+		if act.IsErrorResponse(stepResp) {
 			// Only count as failed if not already counted by the correlation path above (#9.R1).
 			// In the contradictory case where correlation resolved to "ok" but isErrorResponse
 			// is true, we trust the correlation result since it reflects the actual extension-side

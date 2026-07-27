@@ -112,6 +112,10 @@ This feature documents the shipped `interact` action surface (not a batched `int
 
 `navigate_and_document` combines click-driven navigation, optional URL-change/stability waits, and page-context enrichment (`url`, `title`, `tab_id`) in a single interact workflow.
 
+Workflow types and response classification come directly from
+`internal/tools/interact/workflow.go`; browser-agent layers do not maintain
+aliases or pass-through response helpers.
+
 `navigate_and_document` now returns structured metadata for machine consumers:
 1. `metadata.page_context` (`url`, `title`, `tab_id`) while preserving the legacy text block.
 2. `metadata.workflow_trace` (`trace_id`, `status`, stage-level timing/status envelope).

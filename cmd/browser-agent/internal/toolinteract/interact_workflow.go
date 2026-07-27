@@ -1,6 +1,6 @@
 // interact_workflow.go — The composite interact actions: fill_form(_and_submit),
 // navigate_and_wait_for, navigate_and_document, and run_a11y_and_export_sarif.
-// Why one file: all four build the same []WorkflowStep trace and end in the same
+// Why one file: all four build the same []act.WorkflowStep trace and end in the same
 // workflowResult envelope (formerly interact_workflow_types.go), so the shared
 // contract lived in a fifth file that none of them could be read without.
 // Docs: docs/features/feature/interact-explore/index.md
@@ -16,41 +16,15 @@ import (
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
-// WorkflowStep — type alias delegated to internal/tools/interact package.
-type WorkflowStep = act.WorkflowStep
-
-// FormField — type alias delegated to internal/tools/interact package.
-type FormField = act.FormField
-
-// isErrorResponse — delegated to internal/tools/interact package.
-func isErrorResponse(resp JSONRPCResponse) bool {
-	return act.IsErrorResponse(resp)
-}
-
-// isNonFinalResponse — delegated to internal/tools/interact package.
-func isNonFinalResponse(resp JSONRPCResponse) bool {
-	return act.IsNonFinalResponse(resp)
-}
-
-// responseStatus — delegated to internal/tools/interact package.
-func responseStatus(resp JSONRPCResponse) string {
-	return act.ResponseStatus(resp)
-}
-
-// workflowResult — delegated to internal/tools/interact package.
-func workflowResult(req JSONRPCRequest, workflow string, trace []WorkflowStep, lastResp JSONRPCResponse, start time.Time) JSONRPCResponse {
-	return act.WorkflowResult(req, workflow, trace, lastResp, start)
-}
-
 // handleFillFormAndSubmit fills multiple form fields and clicks a submit button.
 // Gates (requirePilot, requireExtension, requireTabTracking) are applied by the delegated handlers.
 func (h *InteractActionHandler) HandleFillFormAndSubmit(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 	var params struct {
-		Fields         []FormField `json:"fields"`
-		SubmitSelector string      `json:"submit_selector"`
-		SubmitIndex    *int        `json:"submit_index,omitempty"`
-		TabID          int         `json:"tab_id,omitempty"`
-		TimeoutMs      int         `json:"timeout_ms,omitempty"`
+		Fields         []act.FormField `json:"fields"`
+		SubmitSelector string          `json:"submit_selector"`
+		SubmitIndex    *int            `json:"submit_index,omitempty"`
+		TabID          int             `json:"tab_id,omitempty"`
+		TimeoutMs      int             `json:"timeout_ms,omitempty"`
 	}
 	if resp, stop := parseArgs(req, args, &params); stop {
 		return resp
@@ -65,7 +39,7 @@ func (h *InteractActionHandler) HandleFillFormAndSubmit(req JSONRPCRequest, args
 		params.TimeoutMs = 15_000
 	}
 
-	trace := make([]WorkflowStep, 0, len(params.Fields)+1)
+	trace := make([]act.WorkflowStep, 0, len(params.Fields)+1)
 	workflowStart := time.Now()
 
 	trace, errResp := h.fillWorkflowFields(req, "fill_form_and_submit", params.Fields, params.TabID, trace, workflowStart)
@@ -86,23 +60,23 @@ func (h *InteractActionHandler) HandleFillFormAndSubmit(req JSONRPCRequest, args
 
 	stepStart := time.Now()
 	clickResp := h.HandleDOMPrimitive(req, clickJSON, "click")
-	trace = append(trace, WorkflowStep{
+	trace = append(trace, act.WorkflowStep{
 		Action:   "click_submit",
-		Status:   responseStatus(clickResp),
+		Status:   act.ResponseStatus(clickResp),
 		TimingMs: time.Since(stepStart).Milliseconds(),
 		Detail:   params.SubmitSelector,
 	})
 
-	return workflowResult(req, "fill_form_and_submit", trace, clickResp, workflowStart)
+	return act.WorkflowResult(req, "fill_form_and_submit", trace, clickResp, workflowStart)
 }
 
 // handleFillForm fills multiple form fields without submitting.
 // Gates (requirePilot, requireExtension, requireTabTracking) are applied by the delegated handlers.
 func (h *InteractActionHandler) HandleFillForm(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 	var params struct {
-		Fields    []FormField `json:"fields"`
-		TabID     int         `json:"tab_id,omitempty"`
-		TimeoutMs int         `json:"timeout_ms,omitempty"`
+		Fields    []act.FormField `json:"fields"`
+		TabID     int             `json:"tab_id,omitempty"`
+		TimeoutMs int             `json:"timeout_ms,omitempty"`
 	}
 	if resp, stop := parseArgs(req, args, &params); stop {
 		return resp
@@ -114,7 +88,7 @@ func (h *InteractActionHandler) HandleFillForm(req JSONRPCRequest, args json.Raw
 		params.TimeoutMs = 15_000
 	}
 
-	trace := make([]WorkflowStep, 0, len(params.Fields))
+	trace := make([]act.WorkflowStep, 0, len(params.Fields))
 	workflowStart := time.Now()
 
 	trace, errResp := h.fillWorkflowFields(req, "fill_form", params.Fields, params.TabID, trace, workflowStart)
@@ -126,19 +100,19 @@ func (h *InteractActionHandler) HandleFillForm(req JSONRPCRequest, args json.Raw
 		"status":       "filled",
 		"fields_count": len(params.Fields),
 	})
-	return workflowResult(req, "fill_form", trace, lastResp, workflowStart)
+	return act.WorkflowResult(req, "fill_form", trace, lastResp, workflowStart)
 }
 
 // fillWorkflowFields executes all field entry steps for fill_form* workflows.
-func (h *InteractActionHandler) fillWorkflowFields(req JSONRPCRequest, workflowName string, fields []FormField, tabID int, trace []WorkflowStep, workflowStart time.Time) ([]WorkflowStep, *JSONRPCResponse) {
+func (h *InteractActionHandler) fillWorkflowFields(req JSONRPCRequest, workflowName string, fields []act.FormField, tabID int, trace []act.WorkflowStep, workflowStart time.Time) ([]act.WorkflowStep, *JSONRPCResponse) {
 	for i, field := range fields {
 		if field.Selector == "" && field.Index == nil {
-			trace = append(trace, WorkflowStep{
+			trace = append(trace, act.WorkflowStep{
 				Action: fmt.Sprintf("type[%d]", i),
 				Status: "error",
 				Detail: "Missing selector and index",
 			})
-			resp := workflowResult(req, workflowName, trace, fail(req, ErrMissingParam,
+			resp := act.WorkflowResult(req, workflowName, trace, fail(req, ErrMissingParam,
 				fmt.Sprintf("Field %d missing 'selector' or 'index'", i),
 				"Each field needs a 'selector' or 'index'",
 				withParam("fields")), workflowStart)
@@ -147,14 +121,14 @@ func (h *InteractActionHandler) fillWorkflowFields(req JSONRPCRequest, workflowN
 
 		stepStart := time.Now()
 		actionUsed, typeResp := h.executeFillFieldStep(req, field, tabID)
-		trace = append(trace, WorkflowStep{
+		trace = append(trace, act.WorkflowStep{
 			Action:   fmt.Sprintf("%s[%d]", actionUsed, i),
-			Status:   responseStatus(typeResp),
+			Status:   act.ResponseStatus(typeResp),
 			TimingMs: time.Since(stepStart).Milliseconds(),
 			Detail:   workflowFieldLabel(field),
 		})
-		if isErrorResponse(typeResp) {
-			resp := workflowResult(req, workflowName, trace, typeResp, workflowStart)
+		if act.IsErrorResponse(typeResp) {
+			resp := act.WorkflowResult(req, workflowName, trace, typeResp, workflowStart)
 			return trace, &resp
 		}
 	}
@@ -162,7 +136,7 @@ func (h *InteractActionHandler) fillWorkflowFields(req JSONRPCRequest, workflowN
 }
 
 // executeFillFieldStep sends a type action and falls back to select for non-typeable elements.
-func (h *InteractActionHandler) executeFillFieldStep(req JSONRPCRequest, field FormField, tabID int) (string, JSONRPCResponse) {
+func (h *InteractActionHandler) executeFillFieldStep(req JSONRPCRequest, field act.FormField, tabID int) (string, JSONRPCResponse) {
 	typeArgs := map[string]any{
 		"action": "type",
 		"text":   field.Value,
@@ -198,7 +172,7 @@ func (h *InteractActionHandler) executeFillFieldStep(req JSONRPCRequest, field F
 	return actionUsed, typeResp
 }
 
-func workflowFieldLabel(field FormField) string {
+func workflowFieldLabel(field act.FormField) string {
 	if field.Index != nil {
 		return fmt.Sprintf("index:%d", *field.Index)
 	}
@@ -237,7 +211,7 @@ func (h *InteractActionHandler) HandleNavigateAndWaitFor(req JSONRPCRequest, arg
 		params.TimeoutMs = 15_000
 	}
 
-	trace := make([]WorkflowStep, 0, 3)
+	trace := make([]act.WorkflowStep, 0, 3)
 	workflowStart := time.Now()
 
 	// Step 1: Navigate.
@@ -248,14 +222,14 @@ func (h *InteractActionHandler) HandleNavigateAndWaitFor(req JSONRPCRequest, arg
 	})
 	stepStart := time.Now()
 	navResp := h.HandleBrowserActionNavigateImpl(req, navArgs)
-	trace = append(trace, WorkflowStep{
+	trace = append(trace, act.WorkflowStep{
 		Action:   "navigate",
-		Status:   responseStatus(navResp),
+		Status:   act.ResponseStatus(navResp),
 		TimingMs: time.Since(stepStart).Milliseconds(),
 		Detail:   params.URL,
 	})
-	if isErrorResponse(navResp) {
-		return workflowResult(req, "navigate_and_wait_for", trace, navResp, workflowStart)
+	if act.IsErrorResponse(navResp) {
+		return act.WorkflowResult(req, "navigate_and_wait_for", trace, navResp, workflowStart)
 	}
 
 	// Step 2: Wait for selector.
@@ -272,35 +246,35 @@ func (h *InteractActionHandler) HandleNavigateAndWaitFor(req JSONRPCRequest, arg
 	})
 	stepStart = time.Now()
 	waitResp := h.HandleDOMPrimitive(req, waitArgs, "wait_for")
-	trace = append(trace, WorkflowStep{
+	trace = append(trace, act.WorkflowStep{
 		Action:   "wait_for",
-		Status:   responseStatus(waitResp),
+		Status:   act.ResponseStatus(waitResp),
 		TimingMs: time.Since(stepStart).Milliseconds(),
 		Detail:   params.WaitFor,
 	})
-	if isErrorResponse(waitResp) {
-		return workflowResult(req, "navigate_and_wait_for", trace, waitResp, workflowStart)
+	if act.IsErrorResponse(waitResp) {
+		return act.WorkflowResult(req, "navigate_and_wait_for", trace, waitResp, workflowStart)
 	}
 
 	// Step 3: Optional content enrichment.
 	if params.IncludeContent {
 		stepStart = time.Now()
 		navResp = h.deps.EnrichNavigateResponse(navResp, req, params.TabID)
-		trace = append(trace, WorkflowStep{
+		trace = append(trace, act.WorkflowStep{
 			Action:   "get_content",
 			Status:   "success",
 			TimingMs: time.Since(stepStart).Milliseconds(),
 		})
 	}
 
-	return workflowResult(req, "navigate_and_wait_for", trace, navResp, workflowStart)
+	return act.WorkflowResult(req, "navigate_and_wait_for", trace, navResp, workflowStart)
 }
 
 // handleNavigateAndDocument performs click-based navigation, waits for URL/stability,
 // then enriches the response with compact page context (url/title/tab_id).
 func (h *InteractActionHandler) HandleNavigateAndDocument(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
 	workflowStart := time.Now()
-	trace := make([]WorkflowStep, 0, 4)
+	trace := make([]act.WorkflowStep, 0, 4)
 
 	var params struct {
 		TimeoutMs        int   `json:"timeout_ms,omitempty"`
@@ -324,7 +298,7 @@ func (h *InteractActionHandler) HandleNavigateAndDocument(req JSONRPCRequest, ar
 
 	validateStart := time.Now()
 	if resp, blocked := h.validateNavigateAndDocumentTab(req, params.TabID); blocked {
-		trace = append(trace, WorkflowStep{
+		trace = append(trace, act.WorkflowStep{
 			Action:   "validate_tab",
 			Status:   "error",
 			TimingMs: time.Since(validateStart).Milliseconds(),
@@ -332,7 +306,7 @@ func (h *InteractActionHandler) HandleNavigateAndDocument(req JSONRPCRequest, ar
 		})
 		return h.AppendWorkflowTraceToResponse(resp, "navigate_and_document", trace, workflowStart, "failed")
 	}
-	trace = append(trace, WorkflowStep{
+	trace = append(trace, act.WorkflowStep{
 		Action:   "validate_tab",
 		Status:   "success",
 		TimingMs: time.Since(validateStart).Milliseconds(),
@@ -343,18 +317,18 @@ func (h *InteractActionHandler) HandleNavigateAndDocument(req JSONRPCRequest, ar
 	clickArgs := filterNavigateAndDocumentClickArgs(args)
 	clickStart := time.Now()
 	clickResp := h.HandleDOMPrimitive(req, clickArgs, "click")
-	trace = append(trace, WorkflowStep{
+	trace = append(trace, act.WorkflowStep{
 		Action:   "click",
-		Status:   responseStatus(clickResp),
+		Status:   act.ResponseStatus(clickResp),
 		TimingMs: time.Since(clickStart).Milliseconds(),
 	})
-	if isErrorResponse(clickResp) {
+	if act.IsErrorResponse(clickResp) {
 		return h.AppendWorkflowTraceToResponse(clickResp, "navigate_and_document", trace, workflowStart, "failed")
 	}
 
 	// Non-final click response (async correlation pending): return early with
 	// correlation metadata so the caller can poll instead of continuing the workflow.
-	if isNonFinalResponse(clickResp) {
+	if act.IsNonFinalResponse(clickResp) {
 		return h.AppendWorkflowTraceToResponse(clickResp, "navigate_and_document", trace, workflowStart, "pending")
 	}
 
@@ -366,7 +340,7 @@ func (h *InteractActionHandler) HandleNavigateAndDocument(req JSONRPCRequest, ar
 			timeoutMs, ok = remainingNavigateAndDocumentTimeoutMs(workflowStart, params.TimeoutMs)
 			if !ok {
 				timeoutResp := navigateAndDocumentTimeoutBudgetExceeded(req, "wait_for_url_change")
-				trace = append(trace, WorkflowStep{
+				trace = append(trace, act.WorkflowStep{
 					Action:   "wait_for_url_change",
 					Status:   "error",
 					TimingMs: time.Since(waitURLStart).Milliseconds(),
@@ -384,7 +358,7 @@ func (h *InteractActionHandler) HandleNavigateAndDocument(req JSONRPCRequest, ar
 				"Increase timeout_ms, disable wait_for_url_change, or verify the click target triggers navigation.",
 				withParam("wait_for_url_change"),
 			)
-			trace = append(trace, WorkflowStep{
+			trace = append(trace, act.WorkflowStep{
 				Action:   "wait_for_url_change",
 				Status:   "error",
 				TimingMs: time.Since(waitURLStart).Milliseconds(),
@@ -392,14 +366,14 @@ func (h *InteractActionHandler) HandleNavigateAndDocument(req JSONRPCRequest, ar
 			})
 			return h.AppendWorkflowTraceToResponse(failResp, "navigate_and_document", trace, workflowStart, "failed")
 		}
-		trace = append(trace, WorkflowStep{
+		trace = append(trace, act.WorkflowStep{
 			Action:   "wait_for_url_change",
 			Status:   "success",
 			TimingMs: time.Since(waitURLStart).Milliseconds(),
 			Detail:   lastURL,
 		})
 	} else if waitForURLChange {
-		trace = append(trace, WorkflowStep{
+		trace = append(trace, act.WorkflowStep{
 			Action: "wait_for_url_change",
 			Status: "skipped",
 			Detail: "no pre-click tracked URL available",
@@ -418,7 +392,7 @@ func (h *InteractActionHandler) HandleNavigateAndDocument(req JSONRPCRequest, ar
 			timeoutMs, ok := remainingNavigateAndDocumentTimeoutMs(workflowStart, params.TimeoutMs)
 			if !ok {
 				timeoutResp := navigateAndDocumentTimeoutBudgetExceeded(req, "wait_for_stable")
-				trace = append(trace, WorkflowStep{
+				trace = append(trace, act.WorkflowStep{
 					Action:   "wait_for_stable",
 					Status:   "error",
 					TimingMs: time.Since(waitStableStart).Milliseconds(),
@@ -430,16 +404,16 @@ func (h *InteractActionHandler) HandleNavigateAndDocument(req JSONRPCRequest, ar
 		}
 		waitArgs, _ := json.Marshal(waitArgsMap)
 		waitResp := h.HandleWaitForStable(req, waitArgs)
-		trace = append(trace, WorkflowStep{
+		trace = append(trace, act.WorkflowStep{
 			Action:   "wait_for_stable",
-			Status:   responseStatus(waitResp),
+			Status:   act.ResponseStatus(waitResp),
 			TimingMs: time.Since(waitStableStart).Milliseconds(),
 		})
-		if isErrorResponse(waitResp) {
+		if act.IsErrorResponse(waitResp) {
 			return h.AppendWorkflowTraceToResponse(waitResp, "navigate_and_document", trace, workflowStart, "failed")
 		}
 	} else {
-		trace = append(trace, WorkflowStep{
+		trace = append(trace, act.WorkflowStep{
 			Action: "wait_for_stable",
 			Status: "skipped",
 			Detail: "wait_for_stable disabled",
@@ -564,7 +538,7 @@ func (h *InteractActionHandler) HandleRunA11yAndExportSARIF(req JSONRPCRequest, 
 		return resp
 	}
 
-	trace := make([]WorkflowStep, 0, 2)
+	trace := make([]act.WorkflowStep, 0, 2)
 	workflowStart := time.Now()
 
 	// Step 1: Run accessibility audit.
@@ -575,13 +549,13 @@ func (h *InteractActionHandler) HandleRunA11yAndExportSARIF(req JSONRPCRequest, 
 	})
 	stepStart := time.Now()
 	a11yResp := h.deps.ToolAnalyze(req, a11yArgs)
-	trace = append(trace, WorkflowStep{
+	trace = append(trace, act.WorkflowStep{
 		Action:   "analyze_accessibility",
-		Status:   responseStatus(a11yResp),
+		Status:   act.ResponseStatus(a11yResp),
 		TimingMs: time.Since(stepStart).Milliseconds(),
 	})
-	if isErrorResponse(a11yResp) {
-		return workflowResult(req, "run_a11y_and_export_sarif", trace, a11yResp, workflowStart)
+	if act.IsErrorResponse(a11yResp) {
+		return act.WorkflowResult(req, "run_a11y_and_export_sarif", trace, a11yResp, workflowStart)
 	}
 
 	// Step 2: Export as SARIF, reusing successful a11y payload to avoid a second blocking query.
@@ -595,13 +569,13 @@ func (h *InteractActionHandler) HandleRunA11yAndExportSARIF(req JSONRPCRequest, 
 	sarifArgs, _ := json.Marshal(sarifParams)
 	stepStart = time.Now()
 	sarifResp := h.deps.ToolExportSARIF(req, sarifArgs)
-	trace = append(trace, WorkflowStep{
+	trace = append(trace, act.WorkflowStep{
 		Action:   "generate_sarif",
-		Status:   responseStatus(sarifResp),
+		Status:   act.ResponseStatus(sarifResp),
 		TimingMs: time.Since(stepStart).Milliseconds(),
 	})
 
-	return workflowResult(req, "run_a11y_and_export_sarif", trace, sarifResp, workflowStart)
+	return act.WorkflowResult(req, "run_a11y_and_export_sarif", trace, sarifResp, workflowStart)
 }
 
 // extractMCPResponseJSONPayload extracts JSON payload from first text block in MCP response.

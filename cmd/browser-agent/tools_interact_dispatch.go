@@ -274,25 +274,25 @@ func (h *ToolHandler) toolInteract(req JSONRPCRequest, args json.RawMessage) JSO
 		h.interactAction().QueueComposableSubtitle(req, *composable.Subtitle)
 	}
 	hasSideEffects := false
-	if composable.AutoDismiss && what == "navigate" && !isErrorResponse(response) {
+	if composable.AutoDismiss && what == "navigate" && !act.IsErrorResponse(response) {
 		h.interactAction().QueueComposableAutoDismiss(req)
 		hasSideEffects = true
 	}
-	if composable.WaitForStable && (what == "navigate" || what == "click") && !isErrorResponse(response) {
+	if composable.WaitForStable && (what == "navigate" || what == "click") && !act.IsErrorResponse(response) {
 		h.interactAction().QueueComposableWaitForStable(req, composable.StabilityMs)
 		hasSideEffects = true
 	}
-	if composable.ActionDiff && !isErrorResponse(response) {
+	if composable.ActionDiff && !act.IsErrorResponse(response) {
 		h.interactAction().QueueComposableActionDiff(req)
 		hasSideEffects = true
 	}
 	if hasSideEffects && composable.IncludeScreenshot {
 		time.Sleep(composableSideEffectDelay)
 	}
-	if composable.IncludeScreenshot && !isErrorResponse(response) {
+	if composable.IncludeScreenshot && !act.IsErrorResponse(response) {
 		response = h.interactAction().AppendScreenshotToResponse(response, req)
 	}
-	if composable.IncludeInteractive && !isErrorResponse(response) {
+	if composable.IncludeInteractive && !act.IsErrorResponse(response) {
 		response = h.interactAction().AppendInteractiveToResponse(response, req)
 	}
 	return response
@@ -343,25 +343,6 @@ func mergeAsyncAlias(args json.RawMessage) json.RawMessage {
 		return args
 	}
 	return merged
-}
-
-type WorkflowStep = act.WorkflowStep
-type FormField = act.FormField
-
-func isErrorResponse(resp JSONRPCResponse) bool {
-	return act.IsErrorResponse(resp)
-}
-
-func isNonFinalResponse(resp JSONRPCResponse) bool {
-	return act.IsNonFinalResponse(resp)
-}
-
-func responseStatus(resp JSONRPCResponse) string {
-	return act.ResponseStatus(resp)
-}
-
-func workflowResult(req JSONRPCRequest, workflow string, trace []WorkflowStep, lastResp JSONRPCResponse, start time.Time) JSONRPCResponse {
-	return act.WorkflowResult(req, workflow, trace, lastResp, start)
 }
 
 func (h *ToolHandler) recordAIAction(actionType, url string, details map[string]any) {
