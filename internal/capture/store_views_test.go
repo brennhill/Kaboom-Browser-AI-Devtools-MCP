@@ -1,6 +1,10 @@
 package capture
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
+)
 
 func TestCaptureStoreViews_ExposeFocusedSnapshotContracts(t *testing.T) {
 	c := NewCapture()
@@ -10,7 +14,7 @@ func TestCaptureStoreViews_ExposeFocusedSnapshotContracts(t *testing.T) {
 	c.AddEnhancedActionsForTest([]EnhancedAction{{Type: "click", URL: "https://example.com"}})
 	c.AddNetworkWaterfallEntries([]NetworkWaterfallEntry{{URL: "https://cdn.example.com/app.js"}}, "https://example.com")
 	c.AddExtensionLogs([]ExtensionLog{{Level: "info", Message: "extension ok"}})
-	c.AddPerformanceSnapshots([]PerformanceSnapshot{{URL: "https://example.com"}})
+	c.AddPerformanceSnapshots([]performance.PerformanceSnapshot{{URL: "https://example.com"}})
 
 	events := c.EventBuffers()
 	if len(events.NetworkBodies()) != 1 {

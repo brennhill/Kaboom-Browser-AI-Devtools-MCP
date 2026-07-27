@@ -20,14 +20,14 @@ import (
 func TestStressCaptureSystemConcurrent(t *testing.T) {
 	t.Run("concurrent_stress", func(t *testing.T) {
 		const (
-			numWSWriters      = 10
-			numNetWriters     = 10
-			numActionWriters  = 10
-			numReaders        = 10
-			eventsPerWriter   = 50
-			bodiesPerWriter   = 50
-			actionsPerWriter  = 50
-			readsPerReader    = 20
+			numWSWriters     = 10
+			numNetWriters    = 10
+			numActionWriters = 10
+			numReaders       = 10
+			eventsPerWriter  = 50
+			bodiesPerWriter  = 50
+			actionsPerWriter = 50
+			readsPerReader   = 20
 		)
 
 		c := NewCapture()

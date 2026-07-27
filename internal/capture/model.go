@@ -101,17 +101,14 @@ type (
 	// Backward compatibility: CaptureSnapshot remains available as an alias target.
 	Snapshot = CaptureSnapshot
 
-	PerformanceSnapshot   = performance.Snapshot         // Alias for convenience (avoid qualifying as performance.Snapshot everywhere)
-	PerformanceBaseline   = performance.Baseline         // Alias for convenience
-	PerformanceRegression = performance.Regression       // Alias for convenience
-	ResourceEntry         = performance.ResourceEntry    // Alias for convenience
-	ResourceDiff          = performance.ResourceDiff     // Alias for convenience
-	CausalDiffResult      = performance.CausalDiffResult // Alias for convenience
-	Recording             = recording.Item               // Alias for convenience (avoid qualifying as recording.Item everywhere)
-	RecordingAction       = recording.Action             // Alias for convenience
-	PendingQueryResponse  = queries.PendingQueryResponse // Alias for convenience (avoid qualifying as queries.PendingQueryResponse everywhere)
-	PendingQuery          = queries.PendingQuery         // Alias for convenience
-	CommandResult         = queries.CommandResult        // Alias for convenience (avoid qualifying as queries.CommandResult everywhere)
+	ResourceEntry        = performance.ResourceEntry    // Alias for convenience
+	ResourceDiff         = performance.ResourceDiff     // Alias for convenience
+	CausalDiffResult     = performance.CausalDiffResult // Alias for convenience
+	Recording            = recording.Item               // Alias for convenience (avoid qualifying as recording.Item everywhere)
+	RecordingAction      = recording.Action             // Alias for convenience
+	PendingQueryResponse = queries.PendingQueryResponse // Alias for convenience (avoid qualifying as queries.PendingQueryResponse everywhere)
+	PendingQuery         = queries.PendingQuery         // Alias for convenience
+	CommandResult        = queries.CommandResult        // Alias for convenience (avoid qualifying as queries.CommandResult everywhere)
 
 	// QueryDispatcher subsystem types — moved to internal/queries package.
 	QueryDispatcher = queries.QueryDispatcher // Query lifecycle, result storage, async command tracking
@@ -237,11 +234,11 @@ type SecurityFlag struct {
 }
 
 type PerformanceStore struct {
-	snapshots       map[string]performance.Snapshot
+	snapshots       map[string]performance.PerformanceSnapshot
 	snapshotOrder   []string
-	baselines       map[string]performance.Baseline
+	baselines       map[string]performance.PerformanceBaseline
 	baselineOrder   []string
-	beforeSnapshots map[string]performance.Snapshot
+	beforeSnapshots map[string]performance.PerformanceSnapshot
 }
 
 type NetworkWaterfallBuffer struct {

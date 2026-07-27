@@ -99,7 +99,7 @@ func (sm *SessionManager) captureCurrentState(name, urlFilter string) *NamedSnap
 	}
 
 	// Deep copy performance snapshot if present
-	var perfCopy *performance.Snapshot
+	var perfCopy *performance.PerformanceSnapshot
 	if perf != nil {
 		p := *perf
 		perfCopy = &p

@@ -39,4 +39,3 @@ func setupToolHandler(t *testing.T, server *server.Server, capture *Capture) any
 	t.Helper()
 	return nil
 }
-

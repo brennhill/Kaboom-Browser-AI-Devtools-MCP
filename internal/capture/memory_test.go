@@ -159,6 +159,7 @@ func TestMemory_CalcNBMemory_PerEntryEstimate(t *testing.T) {
 			mem, expectedMin, expectedMax, reqSize, respSize)
 	}
 }
+
 // ============================================
 // Running Total Accuracy
 // ============================================

@@ -17,7 +17,7 @@ import (
 type RuntimeCaptureReader interface {
 	GetNetworkBodies() []capture.NetworkBody
 	GetWebSocketStatus(capture.WebSocketStatusFilter) capture.WebSocketStatusResponse
-	GetPerformanceSnapshots() []capture.PerformanceSnapshot
+	GetPerformanceSnapshots() []performance.PerformanceSnapshot
 	GetTrackingStatus() (bool, int, string)
 }
 
@@ -121,7 +121,7 @@ func (r *runtimeStateReader) GetWSConnections() []SnapshotWSConnection {
 	return out
 }
 
-func (r *runtimeStateReader) GetPerformance() *performance.Snapshot {
+func (r *runtimeStateReader) GetPerformance() *performance.PerformanceSnapshot {
 	if r.capture == nil {
 		return nil
 	}
@@ -130,7 +130,7 @@ func (r *runtimeStateReader) GetPerformance() *performance.Snapshot {
 		return nil
 	}
 
-	var best *performance.Snapshot
+	var best *performance.PerformanceSnapshot
 	var bestTS time.Time
 	for i := range snapshots {
 		s := snapshots[i]

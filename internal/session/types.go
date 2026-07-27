@@ -18,7 +18,7 @@ type CaptureStateReader interface {
 	GetConsoleWarnings() []SnapshotError
 	GetNetworkRequests() []SnapshotNetworkRequest
 	GetWSConnections() []SnapshotWSConnection
-	GetPerformance() *performance.Snapshot
+	GetPerformance() *performance.PerformanceSnapshot
 	GetCurrentPageURL() string
 }
 

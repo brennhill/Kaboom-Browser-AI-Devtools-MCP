@@ -14,6 +14,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/logdiff"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/playback"
@@ -193,7 +194,7 @@ func (c *Capture) HandlePerformanceSnapshots(w http.ResponseWriter, r *http.Requ
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxExtensionPostBody)
 	var payload struct {
-		Snapshots []PerformanceSnapshot `json:"snapshots"`
+		Snapshots []performance.PerformanceSnapshot `json:"snapshots"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})

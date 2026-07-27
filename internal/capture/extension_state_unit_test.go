@@ -10,6 +10,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
+
 // ============================================
 // WaitForExtensionConnected tests (issue #302)
 // ============================================

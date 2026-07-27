@@ -36,13 +36,13 @@ type SnapshotWSConnection struct {
 
 // NamedSnapshot is a stored point-in-time browser state.
 type NamedSnapshot struct {
-	Name                 string                   `json:"name"`
-	CapturedAt           time.Time                `json:"captured_at"`
-	URLFilter            string                   `json:"url,omitempty"`
-	PageURL              string                   `json:"page_url"`
-	ConsoleErrors        []SnapshotError          `json:"console_errors"`
-	ConsoleWarnings      []SnapshotError          `json:"console_warnings"`
-	NetworkRequests      []SnapshotNetworkRequest `json:"network_requests"`
-	WebSocketConnections []SnapshotWSConnection   `json:"websocket_connections"`
-	Performance          *performance.Snapshot    `json:"performance,omitempty"`
+	Name                 string                           `json:"name"`
+	CapturedAt           time.Time                        `json:"captured_at"`
+	URLFilter            string                           `json:"url,omitempty"`
+	PageURL              string                           `json:"page_url"`
+	ConsoleErrors        []SnapshotError                  `json:"console_errors"`
+	ConsoleWarnings      []SnapshotError                  `json:"console_warnings"`
+	NetworkRequests      []SnapshotNetworkRequest         `json:"network_requests"`
+	WebSocketConnections []SnapshotWSConnection           `json:"websocket_connections"`
+	Performance          *performance.PerformanceSnapshot `json:"performance,omitempty"`
 }

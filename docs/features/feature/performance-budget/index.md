@@ -4,9 +4,14 @@ feature_id: feature-performance-budget
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-28
 code_paths:
-test_paths: []
+  - internal/performance/types.go
+  - internal/performance/diff.go
+  - internal/performance/wire_performance.go
+test_paths:
+  - internal/performance/no_facade_test.go
+  - internal/performance/diff_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -34,4 +39,6 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-Add concrete implementation and test links here as this feature evolves.
+Performance snapshots, timings, baselines, and regressions use the canonical
+`Performance*` contracts directly. The former non-stuttering aliases were
+deleted so the package has one explicit API surface.

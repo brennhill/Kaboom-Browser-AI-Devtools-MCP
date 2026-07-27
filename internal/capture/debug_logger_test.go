@@ -161,7 +161,7 @@ func TestDebugLogger_PollingLogCircularWrapping(t *testing.T) {
 
 	for i := 0; i < 55; i++ {
 		dl.LogPollingActivity(PollingLogEntry{
-			Endpoint: "sync",
+			Endpoint:   "sync",
 			QueryCount: i,
 		})
 	}

@@ -1,19 +1,23 @@
 package capture
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
+)
 
 func TestPerformanceStore_AppendSnapshotsEvictsOldest(t *testing.T) {
 	store := PerformanceStore{
-		snapshots:       make(map[string]PerformanceSnapshot),
+		snapshots:       make(map[string]performance.PerformanceSnapshot),
 		snapshotOrder:   make([]string, 0),
-		baselines:       make(map[string]PerformanceBaseline),
+		baselines:       make(map[string]performance.PerformanceBaseline),
 		baselineOrder:   make([]string, 0),
-		beforeSnapshots: make(map[string]PerformanceSnapshot),
+		beforeSnapshots: make(map[string]performance.PerformanceSnapshot),
 	}
 
-	input := make([]PerformanceSnapshot, 0, 101)
+	input := make([]performance.PerformanceSnapshot, 0, 101)
 	for i := 0; i < 101; i++ {
-		input = append(input, PerformanceSnapshot{URL: "https://app.local/page-" + itoa(i)})
+		input = append(input, performance.PerformanceSnapshot{URL: "https://app.local/page-" + itoa(i)})
 	}
 	store.appendSnapshots(input)
 
@@ -30,13 +34,13 @@ func TestPerformanceStore_AppendSnapshotsEvictsOldest(t *testing.T) {
 
 func TestPerformanceStore_SnapshotsListDetached(t *testing.T) {
 	store := PerformanceStore{
-		snapshots:       make(map[string]PerformanceSnapshot),
+		snapshots:       make(map[string]performance.PerformanceSnapshot),
 		snapshotOrder:   make([]string, 0),
-		baselines:       make(map[string]PerformanceBaseline),
+		baselines:       make(map[string]performance.PerformanceBaseline),
 		baselineOrder:   make([]string, 0),
-		beforeSnapshots: make(map[string]PerformanceSnapshot),
+		beforeSnapshots: make(map[string]performance.PerformanceSnapshot),
 	}
-	store.appendSnapshots([]PerformanceSnapshot{{URL: "https://app.local"}})
+	store.appendSnapshots([]performance.PerformanceSnapshot{{URL: "https://app.local"}})
 
 	list := store.snapshotsList()
 	if len(list) != 1 {
@@ -50,14 +54,14 @@ func TestPerformanceStore_SnapshotsListDetached(t *testing.T) {
 
 func TestPerformanceStore_BeforeSnapshotStoreAndTake(t *testing.T) {
 	store := PerformanceStore{
-		snapshots:       make(map[string]PerformanceSnapshot),
+		snapshots:       make(map[string]performance.PerformanceSnapshot),
 		snapshotOrder:   make([]string, 0),
-		baselines:       make(map[string]PerformanceBaseline),
+		baselines:       make(map[string]performance.PerformanceBaseline),
 		baselineOrder:   make([]string, 0),
-		beforeSnapshots: make(map[string]PerformanceSnapshot),
+		beforeSnapshots: make(map[string]performance.PerformanceSnapshot),
 	}
 
-	store.storeBeforeSnapshot("corr-1", PerformanceSnapshot{URL: "https://app.local/before"})
+	store.storeBeforeSnapshot("corr-1", performance.PerformanceSnapshot{URL: "https://app.local/before"})
 	got, ok := store.takeBeforeSnapshot("corr-1")
 	if !ok {
 		t.Fatal("expected before snapshot to be found")
@@ -72,14 +76,14 @@ func TestPerformanceStore_BeforeSnapshotStoreAndTake(t *testing.T) {
 
 func TestPerformanceStore_Clear(t *testing.T) {
 	store := PerformanceStore{
-		snapshots:       make(map[string]PerformanceSnapshot),
+		snapshots:       make(map[string]performance.PerformanceSnapshot),
 		snapshotOrder:   make([]string, 0),
-		baselines:       make(map[string]PerformanceBaseline),
+		baselines:       make(map[string]performance.PerformanceBaseline),
 		baselineOrder:   make([]string, 0),
-		beforeSnapshots: make(map[string]PerformanceSnapshot),
+		beforeSnapshots: make(map[string]performance.PerformanceSnapshot),
 	}
-	store.appendSnapshots([]PerformanceSnapshot{{URL: "https://app.local"}})
-	store.storeBeforeSnapshot("corr-1", PerformanceSnapshot{URL: "https://app.local/before"})
+	store.appendSnapshots([]performance.PerformanceSnapshot{{URL: "https://app.local"}})
+	store.storeBeforeSnapshot("corr-1", performance.PerformanceSnapshot{URL: "https://app.local/before"})
 
 	store.clear()
 

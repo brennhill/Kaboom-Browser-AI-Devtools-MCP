@@ -135,15 +135,15 @@ func TestDiffPerformance_IntegrationWithCompare(t *testing.T) {
 	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
 	sm := NewSessionManager(10, mock)
 
-	mock.performance = &performance.Snapshot{
-		Timing:  performance.Timing{Load: 500},
+	mock.performance = &performance.PerformanceSnapshot{
+		Timing:  performance.PerformanceTiming{Load: 500},
 		Network: performance.NetworkSummary{RequestCount: 5, TransferSize: 25000},
 	}
 	sm.Capture("baseline", "")
 
 	// Make it much worse
-	mock.performance = &performance.Snapshot{
-		Timing:  performance.Timing{Load: 5000},
+	mock.performance = &performance.PerformanceSnapshot{
+		Timing:  performance.PerformanceTiming{Load: 5000},
 		Network: performance.NetworkSummary{RequestCount: 50, TransferSize: 250000},
 	}
 	sm.Capture("degraded", "")

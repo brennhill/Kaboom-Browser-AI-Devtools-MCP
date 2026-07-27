@@ -48,11 +48,11 @@ func TestToolGetWebVitals_WithData(t *testing.T) {
 	lcp := 2500.0
 	fcp := 1200.0
 	cls := 0.05
-	env.capture.AddPerformanceSnapshots([]capture.PerformanceSnapshot{
+	env.capture.AddPerformanceSnapshots([]performance.PerformanceSnapshot{
 		{
 			URL:       "https://example.com",
 			Timestamp: "2024-01-01T00:00:00Z",
-			Timing: performance.Timing{
+			Timing: performance.PerformanceTiming{
 				LargestContentfulPaint: &lcp,
 				FirstContentfulPaint:   &fcp,
 				DomContentLoaded:       800,

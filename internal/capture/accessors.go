@@ -4,7 +4,11 @@
 
 package capture
 
-import "time"
+import (
+	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
+)
 
 // GetNetworkTotalAdded returns the monotonic total of network bodies ever added
 func (c *Capture) GetNetworkTotalAdded() int64 {
@@ -171,21 +175,21 @@ func (c *Capture) GetAllEnhancedActions() []EnhancedAction {
 
 // AddPerformanceSnapshots stores performance snapshots from the extension.
 // Snapshots are keyed by URL with LRU eviction (max 100 entries).
-func (c *Capture) AddPerformanceSnapshots(snapshots []PerformanceSnapshot) {
+func (c *Capture) AddPerformanceSnapshots(snapshots []performance.PerformanceSnapshot) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.perf.appendSnapshots(snapshots)
 }
 
 // GetPerformanceSnapshots returns all stored performance snapshots (thread-safe)
-func (c *Capture) GetPerformanceSnapshots() []PerformanceSnapshot {
+func (c *Capture) GetPerformanceSnapshots() []performance.PerformanceSnapshot {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.perf.snapshotsList()
 }
 
 // GetPerformanceSnapshotByURL returns a specific snapshot by URL key (thread-safe).
-func (c *Capture) GetPerformanceSnapshotByURL(url string) (PerformanceSnapshot, bool) {
+func (c *Capture) GetPerformanceSnapshotByURL(url string) (performance.PerformanceSnapshot, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.perf.snapshotByURL(url)
@@ -193,7 +197,7 @@ func (c *Capture) GetPerformanceSnapshotByURL(url string) (PerformanceSnapshot, 
 
 // StoreBeforeSnapshot stores a performance snapshot keyed by correlation_id
 // for later perf_diff computation. Max 50 entries with oldest eviction.
-func (c *Capture) StoreBeforeSnapshot(correlationID string, snapshot PerformanceSnapshot) {
+func (c *Capture) StoreBeforeSnapshot(correlationID string, snapshot performance.PerformanceSnapshot) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.perf.storeBeforeSnapshot(correlationID, snapshot)
@@ -201,7 +205,7 @@ func (c *Capture) StoreBeforeSnapshot(correlationID string, snapshot Performance
 
 // GetAndDeleteBeforeSnapshot retrieves and removes a before-snapshot by correlation_id.
 // Consume-on-read: the snapshot is deleted after retrieval to prevent memory leaks.
-func (c *Capture) GetAndDeleteBeforeSnapshot(correlationID string) (PerformanceSnapshot, bool) {
+func (c *Capture) GetAndDeleteBeforeSnapshot(correlationID string) (performance.PerformanceSnapshot, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.perf.takeBeforeSnapshot(correlationID)
@@ -213,7 +217,7 @@ const (
 )
 
 // appendSnapshots stores snapshots by URL with oldest-entry eviction.
-func (s *PerformanceStore) appendSnapshots(snapshots []PerformanceSnapshot) {
+func (s *PerformanceStore) appendSnapshots(snapshots []performance.PerformanceSnapshot) {
 	for _, snapshot := range snapshots {
 		key := snapshot.URL
 		if key == "" {
@@ -234,11 +238,11 @@ func (s *PerformanceStore) appendSnapshots(snapshots []PerformanceSnapshot) {
 }
 
 // snapshotsList returns a detached list copy.
-func (s *PerformanceStore) snapshotsList() []PerformanceSnapshot {
+func (s *PerformanceStore) snapshotsList() []performance.PerformanceSnapshot {
 	if len(s.snapshots) == 0 {
-		return []PerformanceSnapshot{}
+		return []performance.PerformanceSnapshot{}
 	}
-	out := make([]PerformanceSnapshot, 0, len(s.snapshots))
+	out := make([]performance.PerformanceSnapshot, 0, len(s.snapshots))
 	for _, snapshot := range s.snapshots {
 		out = append(out, snapshot)
 	}
@@ -246,13 +250,13 @@ func (s *PerformanceStore) snapshotsList() []PerformanceSnapshot {
 }
 
 // snapshotByURL returns one snapshot by URL key.
-func (s *PerformanceStore) snapshotByURL(url string) (PerformanceSnapshot, bool) {
+func (s *PerformanceStore) snapshotByURL(url string) (performance.PerformanceSnapshot, bool) {
 	snap, ok := s.snapshots[url]
 	return snap, ok
 }
 
 // storeBeforeSnapshot keeps a pre-action snapshot for perf diff correlation.
-func (s *PerformanceStore) storeBeforeSnapshot(correlationID string, snapshot PerformanceSnapshot) {
+func (s *PerformanceStore) storeBeforeSnapshot(correlationID string, snapshot performance.PerformanceSnapshot) {
 	s.beforeSnapshots[correlationID] = snapshot
 	if len(s.beforeSnapshots) <= maxBeforeSnapshots {
 		return
@@ -266,7 +270,7 @@ func (s *PerformanceStore) storeBeforeSnapshot(correlationID string, snapshot Pe
 }
 
 // takeBeforeSnapshot retrieves and deletes a before-snapshot (consume-on-read).
-func (s *PerformanceStore) takeBeforeSnapshot(correlationID string) (PerformanceSnapshot, bool) {
+func (s *PerformanceStore) takeBeforeSnapshot(correlationID string) (performance.PerformanceSnapshot, bool) {
 	snap, ok := s.beforeSnapshots[correlationID]
 	if ok {
 		delete(s.beforeSnapshots, correlationID)
@@ -276,11 +280,11 @@ func (s *PerformanceStore) takeBeforeSnapshot(correlationID string) (Performance
 
 // clear resets performance snapshot/baseline/before-snapshot state.
 func (s *PerformanceStore) clear() {
-	s.snapshots = make(map[string]PerformanceSnapshot)
+	s.snapshots = make(map[string]performance.PerformanceSnapshot)
 	s.snapshotOrder = make([]string, 0)
-	s.baselines = make(map[string]PerformanceBaseline)
+	s.baselines = make(map[string]performance.PerformanceBaseline)
 	s.baselineOrder = make([]string, 0)
-	s.beforeSnapshots = make(map[string]PerformanceSnapshot)
+	s.beforeSnapshots = make(map[string]performance.PerformanceSnapshot)
 }
 
 // EventBufferStore exposes high-volume event buffers through read-only snapshots.
@@ -303,8 +307,8 @@ type ExtensionLogStore interface {
 
 // PerformanceSnapshotStore exposes performance snapshots keyed by URL.
 type PerformanceSnapshotStore interface {
-	Snapshots() []PerformanceSnapshot
-	SnapshotByURL(url string) (PerformanceSnapshot, bool)
+	Snapshots() []performance.PerformanceSnapshot
+	SnapshotByURL(url string) (performance.PerformanceSnapshot, bool)
 }
 
 type eventBufferView struct {
@@ -347,11 +351,11 @@ type performanceSnapshotView struct {
 	capture *Capture
 }
 
-func (v performanceSnapshotView) Snapshots() []PerformanceSnapshot {
+func (v performanceSnapshotView) Snapshots() []performance.PerformanceSnapshot {
 	return v.capture.GetPerformanceSnapshots()
 }
 
-func (v performanceSnapshotView) SnapshotByURL(url string) (PerformanceSnapshot, bool) {
+func (v performanceSnapshotView) SnapshotByURL(url string) (performance.PerformanceSnapshot, bool) {
 	return v.capture.GetPerformanceSnapshotByURL(url)
 }
 

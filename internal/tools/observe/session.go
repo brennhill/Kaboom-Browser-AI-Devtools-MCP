@@ -12,6 +12,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/buffers"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/hints"
 )
 
@@ -232,7 +233,7 @@ func GetWebVitals(deps Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSON
 	})
 }
 
-func buildVitalsMap(snapshots []capture.PerformanceSnapshot) map[string]any {
+func buildVitalsMap(snapshots []performance.PerformanceSnapshot) map[string]any {
 	if len(snapshots) == 0 {
 		return map[string]any{"has_data": false}
 	}

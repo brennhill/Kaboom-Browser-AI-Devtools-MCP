@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 )
 
 func TestCaptureAccessorSnapshotsAndCopies(t *testing.T) {
@@ -74,7 +76,7 @@ func TestCapturePerformanceSnapshotAccessors(t *testing.T) {
 	c := NewCapture()
 
 	for i := 0; i < 105; i++ {
-		c.AddPerformanceSnapshots([]PerformanceSnapshot{
+		c.AddPerformanceSnapshots([]performance.PerformanceSnapshot{
 			{
 				URL: fmt.Sprintf("https://example.test/%d", i),
 			},
@@ -102,7 +104,7 @@ func TestCaptureBeforeSnapshotStoreAndConsume(t *testing.T) {
 
 	c := NewCapture()
 
-	c.StoreBeforeSnapshot("corr-1", PerformanceSnapshot{URL: "https://example.test/before"})
+	c.StoreBeforeSnapshot("corr-1", performance.PerformanceSnapshot{URL: "https://example.test/before"})
 	if snap, ok := c.GetAndDeleteBeforeSnapshot("corr-1"); !ok || snap.URL != "https://example.test/before" {
 		t.Fatalf("GetAndDeleteBeforeSnapshot(corr-1) = (%+v,%v), want found snapshot", snap, ok)
 	}
@@ -111,7 +113,7 @@ func TestCaptureBeforeSnapshotStoreAndConsume(t *testing.T) {
 	}
 
 	for i := 0; i < 60; i++ {
-		c.StoreBeforeSnapshot(fmt.Sprintf("corr-%d", i), PerformanceSnapshot{URL: fmt.Sprintf("u-%d", i)})
+		c.StoreBeforeSnapshot(fmt.Sprintf("corr-%d", i), performance.PerformanceSnapshot{URL: fmt.Sprintf("u-%d", i)})
 	}
 
 	c.mu.RLock()
