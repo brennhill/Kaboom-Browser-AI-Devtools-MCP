@@ -12,7 +12,7 @@ code_paths:
   - cmd/browser-agent/tools_analyze_inspect_forms.go
   - cmd/browser-agent/tools_pending_query_enqueue.go
   - cmd/browser-agent/tools_async_observe_commands.go
-  - cmd/browser-agent/tools_async_formatting.go
+  - cmd/browser-agent/tools_async_completion.go
   - cmd/browser-agent/tools_analyze_audit.go
   - internal/annotation/store.go
   - internal/annotation/store_results.go

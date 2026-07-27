@@ -55,7 +55,7 @@ code_paths:
   - cmd/browser-agent/internal/asyncresult/enrichment_csp.go
   - cmd/browser-agent/internal/asyncresult/enrichment_recovery.go
   - cmd/browser-agent/internal/asyncresult/lifecycle.go
-  - cmd/browser-agent/tools_async_formatting.go
+  - cmd/browser-agent/tools_async_completion.go
   - cmd/browser-agent/tools_summary_pref.go
 test_paths:
   - cmd/browser-agent/internal/toolinteract/fake_deps_test.go

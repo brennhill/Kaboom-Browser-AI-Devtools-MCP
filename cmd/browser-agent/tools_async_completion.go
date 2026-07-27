@@ -1,9 +1,10 @@
-// Purpose: Formats async command results into stable MCP response envelopes.
-// Why: Keep lifecycle polling separate from payload shaping and error semantics.
+// tools_async_completion.go — Waits for async commands and shapes their final MCP responses.
+// Why: Connectivity-aware waiting and result formatting form one command-completion protocol.
 
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -221,4 +222,137 @@ func (h *ToolHandler) attachPerfDiffIfAvailable(corrID string, responseData map[
 	before := performance.SnapshotToPageLoadMetrics(beforeSnap)
 	after := performance.SnapshotToPageLoadMetrics(afterSnap)
 	responseData["perf_diff"] = performance.ComputePerfDiff(before, after)
+}
+
+// Wait/poll cadence for sync-by-default commands. Tests may shorten these;
+// production never mutates them.
+var (
+	asyncInitialWait  = 15 * time.Second
+	asyncRetryWait    = 5 * time.Second
+	asyncPollInterval = 500 * time.Millisecond
+)
+
+func (h *ToolHandler) waitForCommandWithConnectivity(correlationID string, timeout time.Duration) (*queries.CommandResult, bool, bool, int64) {
+	deadline := time.Now().Add(timeout)
+	waited := int64(0)
+	for {
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			cmd, found := h.capture.GetCommandResult(correlationID)
+			disconnected := found && cmd != nil && cmd.Status == "pending" && !h.capture.IsExtensionConnected()
+			return cmd, found, disconnected, waited
+		}
+		waitStep := asyncPollInterval
+		if waitStep <= 0 || waitStep > remaining {
+			waitStep = remaining
+		}
+		stepStart := time.Now()
+		cmd, found := h.capture.WaitForCommand(correlationID, waitStep)
+		waited += time.Since(stepStart).Milliseconds()
+		if !found {
+			return nil, false, false, waited
+		}
+		if cmd.Status != "pending" {
+			return cmd, true, false, waited
+		}
+		if !h.capture.IsExtensionConnected() {
+			return cmd, true, true, waited
+		}
+	}
+}
+
+func (h *ToolHandler) finalizePendingDisconnect(req JSONRPCRequest, correlationID string) JSONRPCResponse {
+	h.capture.ApplyCommandResult(correlationID, "error", nil, "extension_disconnected")
+	if cmd, found := h.capture.GetCommandResult(correlationID); found && cmd != nil {
+		return h.formatCommandResult(req, *cmd, correlationID)
+	}
+	return fail(req, ErrNoData,
+		"Extension disconnected while command was pending",
+		"Ensure the extension is connected, then retry the action.",
+		h.diagnosticHint(),
+		withFinal(true))
+}
+
+// MaybeWaitForCommand implements sync-by-default command completion. Explicit
+// background/async requests return a polling handle immediately.
+func (h *ToolHandler) MaybeWaitForCommand(req JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) JSONRPCResponse {
+	var params struct {
+		Sync       *bool `json:"sync"`
+		Wait       *bool `json:"wait"`
+		Background bool  `json:"background"`
+		TimeoutMs  int   `json:"timeout_ms"`
+	}
+	lenientUnmarshal(args, &params)
+
+	isSync := true
+	if params.Background || (params.Sync != nil && !*params.Sync) || (params.Wait != nil && !*params.Wait) {
+		isSync = false
+	}
+	if !isSync {
+		return succeed(req, queuedSummary, map[string]any{
+			"status": "queued", "lifecycle_status": "queued",
+			"correlation_id": correlationID, "trace_id": correlationID,
+			"queued": true, "final": false,
+		})
+	}
+	if !h.capture.IsExtensionConnected() {
+		return fail(req, ErrNoData, "Extension is not connected", "Ensure the Kaboom extension shows 'Connected' and a tab is tracked.", h.diagnosticHint())
+	}
+
+	initialWait, retryWait := asyncInitialWait, asyncRetryWait
+	if params.TimeoutMs > 0 {
+		totalBudget := time.Duration(params.TimeoutMs) * time.Millisecond
+		if totalBudget < 100*time.Millisecond {
+			totalBudget = 100 * time.Millisecond
+		}
+		if totalBudget > 120*time.Second {
+			totalBudget = 120 * time.Second
+		}
+		initialWait = totalBudget * 3 / 4
+		retryWait = totalBudget - initialWait
+	}
+
+	attempts := 1
+	totalWaitMs := int64(0)
+	cmd, found, disconnected, waitedMs := h.waitForCommandWithConnectivity(correlationID, initialWait)
+	totalWaitMs += waitedMs
+	if !found {
+		return fail(req, ErrInternal, "Command not found after queuing", "Internal error — do not retry")
+	}
+	if disconnected {
+		return h.finalizePendingDisconnect(req, correlationID)
+	}
+	if cmd.Status == "pending" && h.capture.IsExtensionConnected() {
+		attempts = 2
+		cmd, found, disconnected, waitedMs = h.waitForCommandWithConnectivity(correlationID, retryWait)
+		totalWaitMs += waitedMs
+		if !found {
+			return fail(req, ErrInternal, "Command not found after retry", "Internal error — do not retry")
+		}
+		if disconnected {
+			return h.finalizePendingDisconnect(req, correlationID)
+		}
+	}
+	if cmd.Status == "pending" {
+		if !h.capture.IsExtensionConnected() {
+			return h.finalizePendingDisconnect(req, correlationID)
+		}
+		stillProcessing := map[string]any{
+			"status": "still_processing", "lifecycle_status": "running",
+			"correlation_id": correlationID, "trace_id": correlationID,
+			"queued": false, "final": false, "elapsed_ms": cmd.ElapsedMs(),
+			"queue_depth": h.capture.QueueDepth(),
+			"retry_context": map[string]any{
+				"attempts": attempts, "total_wait_ms": totalWaitMs,
+				"extension_connected": h.capture.IsExtensionConnected(),
+			},
+			"suggested_retry_ms": 2000,
+			"message":            "Action is taking longer than expected. Polling is now required. Use observe({what:'command_result', correlation_id:'" + correlationID + "'}) to check the result.",
+		}
+		if pos := h.capture.QueuePosition(correlationID); pos >= 0 {
+			stillProcessing["queue_position"] = pos
+		}
+		return succeed(req, "Action still processing", stillProcessing)
+	}
+	return h.formatCommandResult(req, *cmd, correlationID)
 }

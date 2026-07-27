@@ -141,7 +141,7 @@ type ToolHandler struct {
 }
 
 // maybeWaitForCommand, formatCommandResult, and related async infrastructure
-// live in tools_async_wait.go / tools_async_formatting.go; the result shaping
+// live in tools_async_completion.go; the result shaping
 // they call lives in internal/asyncresult.
 
 // handleToolCall dispatches composite tool calls by mode parameter.

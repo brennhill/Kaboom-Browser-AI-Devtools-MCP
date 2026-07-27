@@ -195,7 +195,7 @@ func (s *Server) handleDrawModeComplete(w http.ResponseWriter, r *http.Request, 
 		result["warnings"] = parseWarnings
 	}
 
-	// Complete the pending command — unblocks WaitForCommand in tools_async_wait.go
+	// Complete the pending command — unblocks WaitForCommand in tools_async_completion.go.
 	// so the LLM can retrieve results via correlation_id.
 	if body.CorrelationID != "" && cap != nil {
 		resultJSON, _ := json.Marshal(result)

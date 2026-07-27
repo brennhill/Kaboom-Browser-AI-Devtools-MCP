@@ -7,7 +7,7 @@ owners: []
 last_reviewed: 2026-07-27
 code_paths:
   - cmd/browser-agent/tools_core.go
-  - cmd/browser-agent/tools_async_wait.go
+  - cmd/browser-agent/tools_async_completion.go
   - internal/capture/extension_state.go
 test_paths:
   - cmd/browser-agent/tools_coldstart_gate_test.go

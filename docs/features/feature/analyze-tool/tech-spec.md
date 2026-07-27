@@ -4,7 +4,7 @@ status: shipped
 version: 0.7.12
 doc_type: tech-spec
 feature_id: feature-analyze-tool
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-27
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -62,7 +62,7 @@ last_verified_date: 2026-03-05
 - `cmd/browser-agent/tools_analyze_dispatch.go`
 - `cmd/browser-agent/tools_analyze_annotations_handlers.go`
 - `cmd/browser-agent/tools_async_observe_commands.go`
-- `cmd/browser-agent/tools_async_formatting.go`
+- `cmd/browser-agent/tools_async_completion.go`
 - `internal/annotation/store.go`
 - `internal/annotation/store_results.go`
 - `internal/annotation/store_wait.go`
