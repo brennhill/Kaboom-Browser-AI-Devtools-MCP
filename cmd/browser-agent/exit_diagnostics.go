@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
 
 // appendExitDiagnostic writes a structured exit diagnostic entry to the first
@@ -108,4 +109,44 @@ func writeDiagnosticToCandidates(candidates []string, entry map[string]any) (str
 		lastErr = fmt.Errorf("no writable crash-log candidates")
 	}
 	return "", lastErr
+}
+
+// handlePanicRecovery records crash details in both lifecycle logs before exiting.
+func handlePanicRecovery(recovered any) {
+	stack := make([]byte, 4096)
+	stack = stack[:runtime.Stack(stack, false)]
+
+	telemetry.AppError("daemon_panic", nil)
+	fmt.Fprintln(os.Stderr, "\n[Kaboom] FATAL ERROR")
+
+	logFile, err := state.DefaultLogFile()
+	if err != nil {
+		logFile = filepath.Join(os.TempDir(), "kaboom.jsonl")
+	}
+	entry := map[string]any{
+		"type":       "lifecycle",
+		"event":      "crash",
+		"reason":     fmt.Sprintf("%v", recovered),
+		"stack":      string(stack),
+		"timestamp":  time.Now().UTC().Format(time.RFC3339),
+		"go_version": runtime.Version(),
+		"os":         runtime.GOOS,
+		"arch":       runtime.GOARCH,
+	}
+	if data, marshalErr := json.Marshal(entry); marshalErr == nil {
+		_ = os.MkdirAll(filepath.Dir(logFile), 0o750)                                                          // #nosec G301 -- runtime diagnostics directory
+		if file, openErr := os.OpenFile(logFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o600); openErr == nil { // #nosec G304
+			_, _ = file.Write(data)
+			_, _ = file.Write([]byte{'\n'})
+			_ = file.Close()
+		}
+	}
+
+	if diagnosticPath := appendExitDiagnostic("panic", map[string]any{
+		"reason": fmt.Sprintf("%v", recovered),
+		"stack":  string(stack),
+	}); diagnosticPath != "" {
+		fmt.Fprintf(os.Stderr, "[Kaboom] Crash details written to: %s\n", diagnosticPath)
+	}
+	os.Exit(1)
 }
