@@ -1,4 +1,4 @@
-// Purpose: Tests for force-cleanup process discovery helpers.
+// Purpose: Tests daemon stop and force-cleanup process discovery helpers.
 
 // main_connection_force_cleanup_strategies_test.go — Tests for lsof output
 // parsing used by the force-cleanup process sweep.
