@@ -32,7 +32,6 @@ code_paths:
   - cmd/browser-agent/internal/procctl/pidfile.go
   - cmd/browser-agent/internal/procctl/port.go
   - cmd/browser-agent/internal/procctl/argv0.go
-  - cmd/browser-agent/main_connection_mcp_bootstrap.go
   - cmd/browser-agent/main_connection_recovery.go
   - cmd/browser-agent/server_routes_diagnostics.go
   - cmd/browser-agent/dashboard.go
