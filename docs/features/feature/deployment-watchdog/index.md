@@ -6,7 +6,6 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-27
 code_paths:
-  - cmd/browser-agent/main_connection_mcp_upgrade.go
   - cmd/browser-agent/binary_watcher.go
   - cmd/browser-agent/config.go
   - cmd/browser-agent/health_tool_handler.go

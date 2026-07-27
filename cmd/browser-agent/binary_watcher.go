@@ -14,9 +14,11 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -25,6 +27,42 @@ const (
 	defaultUpgradeGracePeriod   = 5 * time.Second
 	defaultVersionVerifyTimeout = 5 * time.Second
 )
+
+var binaryUpgradeState *BinaryWatcherState
+
+func configureBinaryUpgradeMonitoring(ctx context.Context, server *Server, port int) {
+	binaryUpgradeState = startBinaryWatcher(ctx, version,
+		func(newVersion string) {
+			server.logLifecycle("binary_upgrade_detected", port, map[string]any{
+				"current_version": version,
+				"new_version":     newVersion,
+			})
+			server.AddWarning("UPGRADE DETECTED: v" + newVersion + " installed. Auto-restart in ~5s.")
+		},
+		func() {
+			if binaryUpgradeState != nil {
+				if _, newVersion, _ := binaryUpgradeState.UpgradeInfo(); newVersion != "" {
+					if markerPath, err := state.UpgradeMarkerFile(); err == nil {
+						_ = writeUpgradeMarker(version, newVersion, markerPath)
+					}
+				}
+			}
+			server.logLifecycle("binary_upgrade_shutdown", port, map[string]any{"version": version})
+			process, _ := os.FindProcess(os.Getpid())
+			_ = process.Signal(syscall.SIGTERM)
+		},
+	)
+
+	if markerPath, err := state.UpgradeMarkerFile(); err == nil {
+		if marker, err := readAndClearUpgradeMarker(markerPath); err == nil && marker != nil {
+			server.AddWarning(fmt.Sprintf("Upgraded from v%s to v%s", marker.FromVersion, marker.ToVersion))
+			server.logLifecycle("binary_upgrade_complete", port, map[string]any{
+				"from_version": marker.FromVersion,
+				"to_version":   marker.ToVersion,
+			})
+		}
+	}
+}
 
 type binaryVersionVerifier func(path string, timeout time.Duration) (string, error)
 

@@ -109,4 +109,3 @@ last_verified_date: 2026-03-29
 - QA Plan: [qa-plan.md](./qa-plan.md)
 
 ## Related Architecture
-- [MCP Daemon Lifecycle](../../../architecture/mcp-daemon-lifecycle.md)
