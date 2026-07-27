@@ -85,7 +85,7 @@ type Capture struct {
 	debug DebugLogger // Polling activity + HTTP debug circular buffers. Has own sync.Mutex — independent of Capture.mu. Delegates to internal/debuglog.
 
 	// Redaction engine for scrubbing sensitive values from extension debug logs.
-	logRedactor *redaction.Engine
+	logRedactor *redaction.RedactionEngine
 
 	// Recording Management — delegates to RecordingManager sub-struct (aliased from internal/recording).
 	recordingManager *RecordingManager // Recording lifecycle, playback, and log-diff. Has own sync.Mutex — independent of Capture.mu.
