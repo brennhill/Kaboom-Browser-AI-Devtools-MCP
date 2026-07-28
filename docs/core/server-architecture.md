@@ -26,8 +26,7 @@ cmd/browser-agent/               Main binary
   bridge.go                    Bridge mode: stdio-to-HTTP forwarding, daemon spawn/respawn
   main_connection_mcp.go       Daemon mode: HTTP server startup, PID management, signals
   cli.go, cli_commands.go      CLI mode: arg parsing, HTTP dispatch, output formatting
-  server.go                    Server struct: log storage, rotation, async writer
-  server_routes.go             HTTP route registration (extension + MCP + admin)
+  server.go                    Server state, subsystem startup, and HTTP route registration
   handler.go                   MCPHandler: JSON-RPC dispatch, initialize/tools/list
   tools_core.go                ToolHandler struct, rate limiter, response helpers
   internal/toolobserve/dispatcher.go             observe tool: dispatches to internal/tools/observe
@@ -140,7 +139,7 @@ internal/
 | Add a new MCP tool                      | `tools_<name>.go` (handler), `tools_<name>_schema.go` (schema), `tools_core.go` (register in ToolHandler) |
 | Add a new observe mode                  | `internal/tools/observe/` (handler), `internal/toolobserve/dispatcher.go` (register in its private mode map)                 |
 | Add a new analyze/generate/etc. action  | `internal/tools/<tool>/` (logic), `tools_<tool>.go` (register in dispatch map)                            |
-| Add an HTTP endpoint for the extension  | `internal/capture/` (handler), `server_routes.go` (register in setupHTTPRoutes)                           |
+| Add an HTTP endpoint for the extension  | `internal/capture/` (handler), `server.go` (register in setupHTTPRoutes)                           |
 | Change sync protocol                    | `internal/capture/sync.go` (server), `src/background/sync/sync-client.ts` (extension)                         |
 | Add a wire type                         | `internal/types/wire_*.go` (Go source of truth), run `make check-wire-drift`                              |
 | Add a dependency interface              | `internal/mcp/deps.go` (interface), `internal/tools/<tool>/deps.go` (embed it)                            |

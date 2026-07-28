@@ -130,7 +130,7 @@ graph TB
         Handler["handler.go<br/>JSON-RPC routing"]
         Server["server.go<br/>HTTP setup<br/>Log storage"]
         Middleware["server_middleware.go<br/>CORS, auth<br/>Origin validation"]
-        Routes["server_routes.go<br/>REST endpoints"]
+        Routes["server.go<br/>REST endpoints"]
         Health["health.go<br/>Diagnostics"]
 
         Main --> Handler
@@ -305,7 +305,7 @@ graph TB
 | **handler.go** | JSON-RPC 2.0 request parsing and routing |
 | **server.go** | HTTP server setup, log rotation, file persistence |
 | **server_middleware.go** | CORS, authentication, origin validation |
-| **server_routes.go** | REST endpoint registration |
+| **server.go** | REST endpoint registration |
 | **health.go** | Health checks, diagnostics |
 
 **HTTP Endpoints:**

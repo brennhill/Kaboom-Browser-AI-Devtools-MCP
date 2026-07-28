@@ -60,9 +60,9 @@ The bridge forwards JSON-RPC from stdin to the HTTP daemon. Each request gets a 
 | Endpoint | Limit | Location |
 |----------|-------|----------|
 | `/mcp` | 10 MB | `handler.go` |
-| `/screenshots` | 10 MB | `server_routes.go` |
+| `/screenshots` | 10 MB | `server.go` |
 | `/sync` | 5 MB | `constants.go` |
-| `/logs` | 10 MB | `server_routes.go` |
+| `/logs` | 10 MB | `server.go` |
 
 ## Timeout Hierarchy Rule
 

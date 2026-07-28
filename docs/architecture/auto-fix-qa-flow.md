@@ -55,7 +55,7 @@ User clicks "Find Problems" on hover widget
             → intent_handlers.go: handleIntentCreate
             → intent_store.go: Add (with TTL + correlation ID)
             → On next AI tool call:
-                handler_tools_call.go: maybeAddPendingIntents
+                handler.go: maybeAddPendingIntents
                 → intentStore.NudgeAndClean()
                 → Prepends "ACTION REQUIRED" nudge to response
                 → Nudges up to 3 times before discarding

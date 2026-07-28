@@ -4,11 +4,11 @@ feature_id: feature-file-upload
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/internal/toolinteract/interactupload/upload.go
   - cmd/browser-agent/internal/toolinteract/deps.go
-  - cmd/browser-agent/server_routes.go
+  - cmd/browser-agent/server.go
   - cmd/browser-agent/config.go
   - cmd/browser-agent/tools_core.go
   - internal/upload/httpapi/handlers.go

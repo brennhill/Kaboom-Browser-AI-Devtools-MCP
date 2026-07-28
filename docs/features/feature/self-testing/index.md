@@ -4,7 +4,7 @@ feature_id: feature-self-testing
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
   - scripts/smoke-test.sh
   - scripts/smoke-tests/framework-smoke.sh
@@ -17,7 +17,7 @@ code_paths:
   - scripts/test-new-uat.sh
   - scripts/uat-result-lib.sh
   - scripts/tests/framework.sh
-  - cmd/browser-agent/server_routes.go
+  - cmd/browser-agent/server.go
   - cmd/browser-agent/internal/testpages/http.go
   - cmd/browser-agent/internal/testpages/websocket.go
   - cmd/browser-agent/internal/wsframe/frame.go

@@ -4,11 +4,11 @@ feature_id: feature-api-schema
 status: superseded
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/internal/toolconfigure/capabilities.go
   - cmd/browser-agent/tools_core.go
-  - cmd/browser-agent/server_routes.go
+  - cmd/browser-agent/server.go
   - internal/analysis/apicontract/contract.go
   - internal/analysis/apicontract/runtime_handler.go
   - internal/analysis/apicontract/report.go
@@ -86,7 +86,7 @@ Observed-traffic API schema inference (`observe {what: "api"}`):
 - Schema inference and OpenAPI emission: `internal/analysis/apischema/`
 - Contract learning and violation reporting: `internal/analysis/apicontract/`
 - MCP tool-list adapter: `cmd/browser-agent/tools_core.go`
-- OpenAPI HTTP route: `cmd/browser-agent/server_routes.go`
+- OpenAPI HTTP route: `cmd/browser-agent/server.go`
 
 MCP tool schemas (the `tools/list` contract, `internal/schema`):
 

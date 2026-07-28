@@ -10,7 +10,7 @@ code_paths:
   - cmd/browser-agent/config.go
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/operationalapi/handler.go
-  - cmd/browser-agent/handler_tools_call.go
+  - cmd/browser-agent/handler.go
 test_paths:
   - cmd/browser-agent/internal/binarywatch/watcher_test.go
   - cmd/browser-agent/internal/operationalapi/health_test.go

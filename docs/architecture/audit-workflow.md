@@ -11,7 +11,7 @@ code_anchors:
   - src/popup/tabs/tab-tracking-api.ts
   - src/content/ui/tracked-hover-launcher.ts
   - src/background/message-handlers.ts
-  - cmd/browser-agent/handler_tools_call.go
+  - cmd/browser-agent/handler.go
   - cmd/browser-agent/internal/terminal/intent_handlers.go
   - cmd/browser-agent/internal/terminal/intent_store.go
   - plugin/kaboom-workflows/commands/audit.md
@@ -58,7 +58,7 @@ Related feature docs:
 5. `src/background/message-handlers.ts` converts that runtime message into audit-oriented prompt text for terminal injection.
 6. Primary path: the terminal server injects the prompt directly into the active PTY session.
 7. Fallback path: the terminal server stores a `qa_scan` intent for later pickup.
-8. On the next MCP tool response, `cmd/browser-agent/handler_tools_call.go` prepends an `ACTION REQUIRED` warning that points the operator at `/kaboom/audit` or `/audit`.
+8. On the next MCP tool response, `cmd/browser-agent/handler.go` prepends an `ACTION REQUIRED` warning that points the operator at `/kaboom/audit` or `/audit`.
 9. The agent runs the repo-owned command or bundled skill:
    - health check
    - baseline `page_issues` summary
@@ -95,7 +95,7 @@ Related feature docs:
 - `src/popup/tabs/tab-tracking-api.ts`
 - `src/content/ui/tracked-hover-launcher.ts`
 - `src/background/message-handlers.ts`
-- `cmd/browser-agent/handler_tools_call.go`
+- `cmd/browser-agent/handler.go`
 - `cmd/browser-agent/internal/terminal/intent_handlers.go`
 - `cmd/browser-agent/internal/terminal/intent_store.go`
 - `plugin/kaboom-workflows/commands/audit.md`

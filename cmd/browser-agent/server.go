@@ -4,25 +4,42 @@
 package main
 
 import (
+	_ "embed"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	cmbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/ciapi"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/dashboard"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpapi"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpguard"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/insecureproxy"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcphttp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mediaapi"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/operationalapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/pushapi"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
 	terminalsupervisor "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal/supervisor"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testpages"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tracking"
+	uploadapi "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/httpapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -326,4 +343,345 @@ func (s *Server) SetActiveCodebase(path string) {
 func (s *Server) Close() {
 	s.logs.Shutdown(asyncLoggerDrainTimeout)
 	s.closeAnnotationStore()
+}
+
+//go:embed openapi.json
+var openapiJSON []byte
+
+func handleOpenAPI(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		httpapi.JSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if _, err := w.Write(openapiJSON); err != nil {
+		diag.Printf("[kaboom] failed to write /openapi.json response: %v\n", err)
+	}
+}
+
+func handleTelemetry(server *Server, captured *capture.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		telemetryType := r.URL.Query().Get("type")
+		if telemetryType == "" {
+			httpapi.JSON(w, http.StatusBadRequest, map[string]string{
+				"error": "Missing required 'type' parameter",
+				"hint":  "Valid types: logs, network_waterfall, network_bodies, websocket_events, actions, performance_snapshots, extension_logs, websocket_status",
+			})
+			return
+		}
+		limit := 0
+		if rawLimit := r.URL.Query().Get("limit"); rawLimit != "" {
+			if parsed, err := strconv.Atoi(rawLimit); err == nil && parsed > 0 {
+				limit = parsed
+			}
+		}
+		var result any
+		var count int
+		switch telemetryType {
+		case "logs":
+			entries := server.logs.Entries()
+			if limit > 0 && len(entries) > limit {
+				entries = entries[len(entries)-limit:]
+			}
+			result, count = entries, len(entries)
+		case "network_waterfall":
+			entries := captured.GetNetworkWaterfallEntries()
+			if limit > 0 && len(entries) > limit {
+				entries = entries[len(entries)-limit:]
+			}
+			result, count = entries, len(entries)
+		case "network_bodies":
+			entries := captured.GetNetworkBodies()
+			if limit > 0 && len(entries) > limit {
+				entries = entries[len(entries)-limit:]
+			}
+			result, count = entries, len(entries)
+		case "websocket_events":
+			entries := captured.GetWebSocketEvents(capture.WebSocketEventFilter{})
+			if limit > 0 && len(entries) > limit {
+				entries = entries[len(entries)-limit:]
+			}
+			result, count = entries, len(entries)
+		case "actions":
+			entries := captured.GetAllEnhancedActions()
+			if limit > 0 && len(entries) > limit {
+				entries = entries[len(entries)-limit:]
+			}
+			result, count = entries, len(entries)
+		case "performance_snapshots":
+			entries := captured.GetPerformanceSnapshots()
+			if limit > 0 && len(entries) > limit {
+				entries = entries[len(entries)-limit:]
+			}
+			result, count = entries, len(entries)
+		case "extension_logs":
+			entries := captured.GetExtensionLogs()
+			if limit > 0 && len(entries) > limit {
+				entries = entries[len(entries)-limit:]
+			}
+			result, count = entries, len(entries)
+		case "websocket_status":
+			status := captured.GetWebSocketStatus(capture.WebSocketStatusFilter{})
+			httpapi.JSON(w, http.StatusOK, map[string]any{
+				"type": telemetryType, "connections": status.Connections,
+				"closed": status.Closed, "count": len(status.Connections),
+			})
+			return
+		default:
+			httpapi.JSON(w, http.StatusBadRequest, map[string]string{
+				"error": "Unknown telemetry type: " + telemetryType,
+				"hint":  "Valid types: logs, network_waterfall, network_bodies, websocket_events, actions, performance_snapshots, extension_logs, websocket_status",
+			})
+			return
+		}
+		httpapi.JSON(w, http.StatusOK, map[string]any{"type": telemetryType, "items": result, "count": count})
+	}
+}
+
+func setupHTTPRoutes(server *Server, captured *capture.Store) (*http.ServeMux, *MCPHandler) {
+	server.mediaHTTP = mediaapi.New(captured, server.annotationStore, server.pushRouter)
+	mux := http.NewServeMux()
+	if captured != nil {
+		registerCaptureRoutes(mux, server, captured)
+	}
+	registerUploadRoutes(mux)
+	return mux, registerCoreRoutes(mux, server, captured)
+}
+
+func registerCaptureRoutes(mux *http.ServeMux, server *Server, captured *capture.Store) {
+	mux.HandleFunc("/websocket-events", httpguard.CORS(httpguard.ExtensionOnly(captured.HandleWebSocketEvents)))
+	mux.HandleFunc("/websocket-status", httpguard.CORS(httpguard.ExtensionOnly(captured.HandleWebSocketStatus)))
+	mux.HandleFunc("/network-bodies", httpguard.CORS(httpguard.ExtensionOnly(captured.HandleNetworkBodies)))
+	mux.HandleFunc("/network-waterfall", httpguard.CORS(httpguard.ExtensionOnly(captured.HandleNetworkWaterfall)))
+	mux.HandleFunc("/query-result", httpguard.CORS(httpguard.ExtensionOnly(captured.HandleQueryResult)))
+	mux.HandleFunc("/enhanced-actions", httpguard.CORS(httpguard.ExtensionOnly(captured.HandleEnhancedActions)))
+	mux.HandleFunc("/performance-snapshots", httpguard.CORS(httpguard.ExtensionOnly(captured.HandlePerformanceSnapshots)))
+	mux.HandleFunc("/sync", httpguard.CORS(httpguard.ExtensionOnly(captured.HandleSync)))
+	registerClientRegistryRoutes(mux, captured)
+	mux.HandleFunc("/recordings/save", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
+		screenrec.HandleSave(w, r, captured)
+	})))
+	mux.HandleFunc("/recordings/storage", httpguard.CORS(httpguard.ExtensionOnly(captured.HandleRecordingStorage)))
+	mux.HandleFunc("/recordings/reveal", httpguard.CORS(httpguard.ExtensionOnly(screenrec.HandleReveal)))
+	mux.HandleFunc("/telemetry", httpguard.CORS(handleTelemetry(server, captured)))
+	mux.HandleFunc("/snapshot", httpguard.CORS(httpguard.ExtensionOnly(ciapi.Snapshot(server.logs, captured))))
+	mux.HandleFunc("/clear", httpguard.CORS(httpguard.ExtensionOnly(ciapi.Clear(server.logs, captured))))
+	mux.HandleFunc("/test-boundary", httpguard.CORS(httpguard.ExtensionOnly(ciapi.TestBoundary(captured))))
+}
+
+func resolveClientRegistry(captured *capture.Store, w http.ResponseWriter) (capture.ClientRegistry, bool) {
+	registry := captured.GetClientRegistry()
+	if registry == nil {
+		httpapi.JSON(w, http.StatusServiceUnavailable, map[string]string{"error": "client_registry_unavailable"})
+		return nil, false
+	}
+	return registry, true
+}
+
+func registerClientRegistryRoutes(mux *http.ServeMux, captured *capture.Store) {
+	mux.HandleFunc("/clients", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
+		handleClientsList(w, r, captured)
+	})))
+	mux.HandleFunc("/clients/", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
+		handleClientByID(w, r, captured)
+	})))
+}
+
+func handleClientsList(w http.ResponseWriter, r *http.Request, captured *capture.Store) {
+	registry, ok := resolveClientRegistry(captured, w)
+	if !ok {
+		return
+	}
+	switch r.Method {
+	case http.MethodGet:
+		httpapi.JSON(w, http.StatusOK, map[string]any{"clients": registry.List(), "count": registry.Count()})
+	case http.MethodPost:
+		r.Body = http.MaxBytesReader(w, r.Body, maxPostBodySize)
+		var body struct {
+			CWD string `json:"cwd"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			httpapi.JSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+			return
+		}
+		httpapi.JSON(w, http.StatusOK, map[string]any{"result": registry.Register(body.CWD)})
+	default:
+		httpapi.JSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+	}
+}
+
+func handleClientByID(w http.ResponseWriter, r *http.Request, captured *capture.Store) {
+	registry, ok := resolveClientRegistry(captured, w)
+	if !ok {
+		return
+	}
+	clientID := strings.TrimPrefix(r.URL.Path, "/clients/")
+	if clientID == "" {
+		httpapi.JSON(w, http.StatusBadRequest, map[string]string{"error": "Missing client ID"})
+		return
+	}
+	switch r.Method {
+	case http.MethodGet:
+		client := registry.Get(clientID)
+		if client == nil {
+			httpapi.JSON(w, http.StatusNotFound, map[string]string{"error": "Client not found"})
+			return
+		}
+		httpapi.JSON(w, http.StatusOK, client)
+	case http.MethodDelete:
+		if !registry.Unregister(clientID) {
+			httpapi.JSON(w, http.StatusNotFound, map[string]string{"error": "Client not found"})
+			return
+		}
+		httpapi.JSON(w, http.StatusOK, map[string]bool{"unregistered": true})
+	default:
+		httpapi.JSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+	}
+}
+
+func registerUploadRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("/api/file/read", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
+		uploadapi.HandleFileReadHTTP(w, r, uploadSecurityConfig, httpapi.JSON)
+	})))
+	mux.HandleFunc("/api/file/dialog/inject", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
+		uploadapi.HandleFileDialogInjectHTTP(w, r, uploadSecurityConfig, httpapi.JSON)
+	})))
+	mux.HandleFunc("/api/form/submit", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
+		uploadapi.HandleFormSubmitHTTP(w, r, uploadSecurityConfig, httpapi.JSON)
+	})))
+	mux.HandleFunc("/api/os-automation/inject", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
+		uploadapi.HandleOSAutomationHTTP(w, r, osUploadAutomationFlag, uploadSecurityConfig, httpapi.JSON)
+	})))
+	mux.HandleFunc("/api/os-automation/dismiss", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
+		uploadapi.HandleOSAutomationDismissHTTP(w, r, osUploadAutomationFlag, httpapi.JSON)
+	})))
+}
+
+func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Store) *MCPHandler {
+	mux.HandleFunc("/openapi.json", httpguard.CORS(handleOpenAPI))
+
+	mcpHandler := NewToolHandler(server, captured)
+	mux.HandleFunc("/mcp", httpguard.CORS(newMCPHTTPHandler(mcpHandler).ServeHTTP))
+	operations := operationalapi.New(operationalapi.Options{
+		Logs:      server.logs,
+		Capture:   captured,
+		Version:   version,
+		StartedAt: startTime,
+		TerminalStatus: func() operationalapi.TerminalStatus {
+			status := server.getTerminalStatus()
+			return operationalapi.TerminalStatus{
+				Available:      status.Available,
+				Port:           status.Port,
+				Error:          status.Error,
+				BlockedByPID:   status.BlockedByPID,
+				BlockedCommand: status.BlockedByCommand,
+			}
+		},
+		AvailableVersion: releaseChecker.Available,
+		UpgradeInfo: func() *health.UpgradeInfo {
+			if binaryUpgradeState == nil {
+				return nil
+			}
+			return health.BuildUpgradeInfo(binaryUpgradeState)
+		},
+		UsageTracker:    mcpHandler.GetUsageTracker,
+		MaxPostBodySize: maxPostBodySize,
+	})
+
+	mux.HandleFunc("/api/status", httpguard.CORS(dashboard.Status(dashboard.StatusOptions{
+		Version: version, StartedAt: startTime, Capture: captured, JSONResponse: httpapi.JSON,
+		Logs: func() (int, int) {
+			return server.logs.EntryCount(), server.logs.MaxEntries()
+		},
+		Terminal: func() (int, int, []string) {
+			port := server.getTerminalPort()
+			if server.ptyManager == nil {
+				return port, 0, nil
+			}
+			return port, server.ptyManager.Count(), server.ptyManager.List()
+		},
+		ListenPort: server.getListenPort,
+		Audit: func() any {
+			if mcpHandler.toolHandler == nil {
+				return nil
+			}
+			handler, ok := mcpHandler.toolHandler.(*ToolHandler)
+			if !ok || handler.healthMetrics == nil {
+				return nil
+			}
+			return handler.healthMetrics.BuildAuditInfo()
+		},
+	})))
+	mux.HandleFunc("/health", httpguard.CORS(operations.ServeHealth))
+
+	proxyHandler := insecureproxy.New(captured, httpapi.JSON)
+	mux.HandleFunc("/insecure-proxy", httpguard.CORS(proxyHandler.ServeHTTP))
+	mux.HandleFunc("/doctor", httpguard.CORS(func(w http.ResponseWriter, _ *http.Request) {
+		health.HandleDoctorHTTP(w, captured, version)
+	}))
+	mux.HandleFunc("/api/token-savings", httpguard.CORS(tracking.HandleRecordTokenSavings(server.tokenTracker)))
+
+	if operationalapi.DebugEndpointsEnabled() {
+		mux.HandleFunc("/debug/usage", httpguard.CORS(operations.ServeDebugUsage))
+		mux.HandleFunc("/debug/beacon-flush", httpguard.CORS(operations.ServeDebugBeaconFlush))
+	}
+	mux.HandleFunc("/shutdown", httpguard.CORS(httpguard.ExtensionOnly(operations.ServeShutdown)))
+	mux.HandleFunc("/diagnostics", httpguard.CORS(func(w http.ResponseWriter, r *http.Request) {
+		accept := r.Header.Get("Accept")
+		if strings.Contains(accept, "text/html") && !strings.Contains(accept, "application/json") {
+			dashboard.Diagnostics(httpapi.JSON)(w, r)
+			return
+		}
+		operations.ServeDiagnostics(w, r)
+	}))
+	mux.HandleFunc("/diagnostics.json", httpguard.CORS(operations.ServeDiagnostics))
+	mux.HandleFunc("/logs", httpguard.CORS(httpguard.ExtensionOnly(operations.ServeLogs)))
+	mux.HandleFunc("/logs.html", httpguard.CORS(dashboard.Logs(httpapi.JSON)))
+	mux.HandleFunc("/setup", httpguard.CORS(dashboard.Setup(httpapi.JSON)))
+	mux.HandleFunc("/docs", httpguard.CORS(dashboard.Docs(httpapi.JSON)))
+
+	mux.HandleFunc("/tests/ws", httpguard.CORS(testpages.HandlerWS))
+	mux.HandleFunc("/tests/", httpguard.CORS(testpages.Handler()))
+	mux.HandleFunc("/screenshots", httpguard.CORS(httpguard.ExtensionOnly(server.mediaHTTP.HandleScreenshot)))
+	mux.HandleFunc("/draw-mode/complete", httpguard.CORS(httpguard.ExtensionOnly(server.mediaHTTP.HandleDrawModeComplete)))
+	mux.HandleFunc("/push/screenshot", httpguard.CORS(httpguard.ExtensionOnly(server.pushHTTP.HandleScreenshot)))
+	mux.HandleFunc("/push/message", httpguard.CORS(httpguard.ExtensionOnly(server.pushHTTP.HandleMessage)))
+	mux.HandleFunc("/push/capabilities", httpguard.CORS(httpguard.ExtensionOnly(server.pushHTTP.HandleCapabilities)))
+	mux.HandleFunc("/push/drain", func(w http.ResponseWriter, r *http.Request) {
+		if server.pushDrainToken != "" {
+			const prefix = "Bearer "
+			authorization := r.Header.Get("Authorization")
+			if !strings.HasPrefix(authorization, prefix) || authorization[len(prefix):] != server.pushDrainToken {
+				httpapi.JSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+				return
+			}
+		}
+		server.pushHTTP.HandleDrain(w, r)
+	})
+	mux.HandleFunc("/config/active-codebase", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
+		handleActiveCodebase(w, r, server)
+	})))
+	mux.HandleFunc("/", httpguard.CORS(dashboard.Root(dashboard.RootOptions{
+		Name: identity.MCPServerName, Version: version, JSONResponse: httpapi.JSON,
+	})))
+	return mcpHandler
+}
+
+func newMCPHTTPHandler(handler *MCPHandler) *mcphttp.Handler {
+	return mcphttp.New(mcphttp.Config{
+		Version:       handler.version,
+		MaxBodySize:   maxPostBodySize,
+		HandleRequest: handler.HandleRequest,
+		Capture: func() *capture.Store {
+			if handler.toolHandler == nil {
+				return nil
+			}
+			return handler.toolHandler.GetCapture()
+		},
+	})
 }

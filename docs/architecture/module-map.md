@@ -22,7 +22,7 @@ Current ownership is based on commit history and can be split into teams later.
 | `src/background/` | Brenn | P0 | Extension control plane and sync client | Lost command execution or telemetry ingest | `npm test` or extension test target |
 | `src/content/` | Brenn | P1 | In-page capture and action execution hooks | DOM/network/websocket capture regressions | `npm test` or extension test target |
 | `src/popup/` | Brenn | P2 | User-facing extension controls | Incorrect pilot state/toggle behavior | `npm test` or extension test target |
-| `server_routes.go` + `internal/capture/*` | Brenn | P0 | HTTP endpoint registration and payload handling | Endpoint mismatch, protocol breakage | `go test ./cmd/browser-agent/... ./internal/capture/...` |
+| `server.go` + `internal/capture/*` | Brenn | P0 | HTTP endpoint registration and payload handling | Endpoint mismatch, protocol breakage | `go test ./cmd/browser-agent/... ./internal/capture/...` |
 | `docs/architecture/` | Brenn | P1 | Architecture contract and invariants | Missing/incorrect constraints for future edits | Documentation review in PR |
 
 ## Owner Notes

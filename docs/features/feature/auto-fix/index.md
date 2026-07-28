@@ -9,7 +9,7 @@ code_paths:
   - cmd/browser-agent/internal/toolanalyze/pageissues/handler.go
   - cmd/browser-agent/internal/toolanalyze/page_issues_summary.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
-  - cmd/browser-agent/handler_tools_call.go
+  - cmd/browser-agent/handler.go
   - cmd/browser-agent/internal/terminal/intent_store.go
   - cmd/browser-agent/internal/terminal/intent_handlers.go
   - internal/schema/analyze.go
