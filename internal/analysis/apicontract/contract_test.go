@@ -45,6 +45,28 @@ func TestAPIContractValidator_LearnBasicSchema(t *testing.T) {
 	}
 }
 
+func TestAPIContractViolationWireUsesCanonicalTypeFieldOnly(t *testing.T) {
+	t.Parallel()
+
+	payload, err := json.Marshal(APIContractViolation{
+		Endpoint:      "GET /api/items",
+		ViolationType: "shape_change",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded map[string]any
+	if err := json.Unmarshal(payload, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if decoded["violation_type"] != "shape_change" {
+		t.Fatalf("violation_type = %v, want shape_change", decoded["violation_type"])
+	}
+	if _, exists := decoded["type"]; exists {
+		t.Fatalf("duplicate compatibility field type must not be emitted: %s", payload)
+	}
+}
+
 func TestAPIContractValidator_LearnMultipleResponses(t *testing.T) {
 	t.Parallel()
 	v := NewAPIContractValidator()
@@ -250,7 +272,7 @@ func TestAPIContractValidator_DetectShapeChange(t *testing.T) {
 
 	found := false
 	for _, v := range violations {
-		if v.Type == "shape_change" && containsField(v.MissingFields, "avatar_url") {
+		if v.ViolationType == "shape_change" && containsField(v.MissingFields, "avatar_url") {
 			found = true
 			break
 		}
@@ -290,7 +312,7 @@ func TestAPIContractValidator_DetectTypeChange(t *testing.T) {
 
 	found := false
 	for _, v := range violations {
-		if v.Type == "type_change" && v.Field == "price" {
+		if v.ViolationType == "type_change" && v.Field == "price" {
 			found = true
 			if v.ExpectedType != "number" {
 				t.Errorf("Expected ExpectedType='number', got %q", v.ExpectedType)
@@ -374,7 +396,7 @@ func TestAPIContractValidator_DetectNewField(t *testing.T) {
 
 	found := false
 	for _, v := range violations {
-		if v.Type == "new_field" && containsField(v.NewFields, "created_at") {
+		if v.ViolationType == "new_field" && containsField(v.NewFields, "created_at") {
 			found = true
 			break
 		}
@@ -410,7 +432,7 @@ func TestAPIContractValidator_DetectNullField(t *testing.T) {
 
 	found := false
 	for _, v := range violations {
-		if v.Type == "null_field" && v.Field == "avatar" {
+		if v.ViolationType == "null_field" && v.Field == "avatar" {
 			found = true
 			break
 		}
@@ -483,7 +505,7 @@ func TestAPIContractValidator_NoViolationBeforeMinCalls(t *testing.T) {
 
 	// During learning phase, should not flag violations
 	for _, v := range violations {
-		if v.Type == "shape_change" {
+		if v.ViolationType == "shape_change" {
 			t.Error("Should not report shape_change violation before shape is established (min 3 calls)")
 		}
 	}
@@ -948,7 +970,7 @@ func TestAPIContractViolation_JSONSerialization(t *testing.T) {
 	t.Parallel()
 	violation := APIContractViolation{
 		Endpoint:      "GET /api/users/{id}",
-		Type:          "shape_change",
+		ViolationType: "shape_change",
 		Description:   "Field 'avatar_url' was present in 5 responses but missing in the latest",
 		MissingFields: []string{"avatar_url"},
 	}
@@ -966,8 +988,11 @@ func TestAPIContractViolation_JSONSerialization(t *testing.T) {
 	if parsed["endpoint"] != "GET /api/users/{id}" {
 		t.Error("Expected 'endpoint' field in JSON")
 	}
-	if parsed["type"] != "shape_change" {
-		t.Error("Expected 'type' field in JSON")
+	if parsed["violation_type"] != "shape_change" {
+		t.Error("Expected 'violation_type' field in JSON")
+	}
+	if _, exists := parsed["type"]; exists {
+		t.Error("Unexpected duplicate 'type' field in JSON")
 	}
 }
 
@@ -1103,7 +1128,7 @@ func TestAPIContractAnalyze_SummaryObject(t *testing.T) {
 	}
 }
 
-// Test 5: violationType and severity on violations
+// Test 5: canonical violation type and severity on violations
 func TestAPIContractAnalyze_ViolationTypeAndSeverity(t *testing.T) {
 	t.Parallel()
 	v := NewAPIContractValidator()
@@ -1134,12 +1159,9 @@ func TestAPIContractAnalyze_ViolationTypeAndSeverity(t *testing.T) {
 	}
 
 	viol := result.Violations[0]
-	// violationType should be set (same as Type for backward compatibility)
+	// violationType should be set.
 	if viol.ViolationType == "" {
 		t.Error("Expected violationType to be set")
-	}
-	if viol.ViolationType != viol.Type {
-		t.Errorf("Expected violationType=%q to match type=%q", viol.ViolationType, viol.Type)
 	}
 	// severity should be set
 	if viol.Severity == "" {

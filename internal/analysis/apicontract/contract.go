@@ -55,8 +55,7 @@ type EndpointTracker struct {
 // APIContractViolation represents a detected contract violation.
 type APIContractViolation struct {
 	Endpoint          string                `json:"endpoint"`
-	Type              string                `json:"type"`           // "shape_change", "type_change", "error_spike", "new_field", "null_field"
-	ViolationType     string                `json:"violation_type"` // Same as Type, explicit for LLM consumption
+	ViolationType     string                `json:"violation_type"` // "shape_change", "type_change", "error_spike", "new_field", "null_field"
 	Severity          string                `json:"severity"`       // "critical", "high", "medium", "low"
 	Description       string                `json:"description"`
 	AffectedCallCount int                   `json:"affected_call_count"`     // How many calls violated this rule

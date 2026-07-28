@@ -83,6 +83,8 @@ Note: the API *contract* checking in `internal/analysis/apicontract` is live and
 
 API contract tests construct canonical `internal/types.NetworkBody` values
 directly; no test-local type alias masks the wire-contract owner.
+API contract violations expose one discriminator, `violation_type`; the former
+duplicate `type` response field is not emitted.
 
 Observed-traffic API schema inference (`observe {what: "api"}`):
 

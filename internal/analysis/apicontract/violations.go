@@ -43,7 +43,7 @@ func (v *APIContractValidator) detectErrorSpike(tracker *EndpointTracker, body t
 
 		return &APIContractViolation{
 			Endpoint:      tracker.Endpoint,
-			Type:          "error_spike",
+			ViolationType: "error_spike",
 			Description:   fmt.Sprintf("Endpoint returned success %d times, then started returning errors", earlierSuccesses),
 			StatusHistory: history,
 			LastErrorBody: errorBody,
@@ -75,11 +75,11 @@ func detectTopLevelTypeChange(endpoint string, expected, actual any) []APIContra
 		return nil
 	}
 	return []APIContractViolation{{
-		Endpoint:     endpoint,
-		Type:         "type_change",
-		Description:  "Response type changed",
-		ExpectedType: describeType(expected),
-		ActualType:   describeType(actual),
+		Endpoint:      endpoint,
+		ViolationType: "type_change",
+		Description:   "Response type changed",
+		ExpectedType:  describeType(expected),
+		ActualType:    describeType(actual),
 	}}
 }
 
@@ -100,7 +100,7 @@ func detectMissingFields(endpoint string, expectedMap, actualMap map[string]any)
 	sort.Strings(missing)
 	return []APIContractViolation{{
 		Endpoint:      endpoint,
-		Type:          "shape_change",
+		ViolationType: "shape_change",
 		Description:   fmt.Sprintf("Field(s) missing from response: %s", strings.Join(missing, ", ")),
 		MissingFields: missing,
 		ExpectedShape: toStringMap(expectedMap),
@@ -124,10 +124,10 @@ func detectNewFields(endpoint string, expectedMap, actualMap map[string]any) []A
 	}
 	sort.Strings(newFields)
 	return []APIContractViolation{{
-		Endpoint:    endpoint,
-		Type:        "new_field",
-		Description: fmt.Sprintf("New field(s) appeared in response: %s", strings.Join(newFields, ", ")),
-		NewFields:   newFields,
+		Endpoint:      endpoint,
+		ViolationType: "new_field",
+		Description:   fmt.Sprintf("New field(s) appeared in response: %s", strings.Join(newFields, ", ")),
+		NewFields:     newFields,
 	}}
 }
 
@@ -157,12 +157,12 @@ func classifyFieldTypeChange(endpoint, field, expectedType, actualType string, a
 	}
 	if actualType == "null" && expectedType != "null" {
 		return &APIContractViolation{
-			Endpoint:     endpoint,
-			Type:         "null_field",
-			Description:  fmt.Sprintf("Field '%s' became null (was %s)", field, expectedType),
-			Field:        field,
-			ExpectedType: expectedType,
-			ActualType:   "null",
+			Endpoint:      endpoint,
+			ViolationType: "null_field",
+			Description:   fmt.Sprintf("Field '%s' became null (was %s)", field, expectedType),
+			Field:         field,
+			ExpectedType:  expectedType,
+			ActualType:    "null",
 		}
 	}
 	if actualType != "null" {
@@ -171,13 +171,13 @@ func classifyFieldTypeChange(endpoint, field, expectedType, actualType string, a
 			sampleValue = actualDataMap[field]
 		}
 		return &APIContractViolation{
-			Endpoint:     endpoint,
-			Type:         "type_change",
-			Description:  fmt.Sprintf("Field '%s' changed type from %s to %s", field, expectedType, actualType),
-			Field:        field,
-			ExpectedType: expectedType,
-			ActualType:   actualType,
-			SampleValue:  sampleValue,
+			Endpoint:      endpoint,
+			ViolationType: "type_change",
+			Description:   fmt.Sprintf("Field '%s' changed type from %s to %s", field, expectedType, actualType),
+			Field:         field,
+			ExpectedType:  expectedType,
+			ActualType:    actualType,
+			SampleValue:   sampleValue,
 		}
 	}
 	return nil
@@ -185,12 +185,11 @@ func classifyFieldTypeChange(endpoint, field, expectedType, actualType string, a
 
 func (v *APIContractValidator) addViolation(tracker *EndpointTracker, violation APIContractViolation) {
 	now := time.Now().Format(time.RFC3339)
-	violation.ViolationType = violation.Type
-	violation.Severity = violationSeverity(violation.Type)
+	violation.Severity = violationSeverity(violation.ViolationType)
 	violation.AffectedCallCount = 1
 
 	for i := range tracker.Violations {
-		if tracker.Violations[i].Type == violation.Type && tracker.Violations[i].Endpoint == violation.Endpoint {
+		if tracker.Violations[i].ViolationType == violation.ViolationType && tracker.Violations[i].Endpoint == violation.Endpoint {
 			tracker.Violations[i].AffectedCallCount++
 			tracker.Violations[i].LastSeenAt = now
 			return
