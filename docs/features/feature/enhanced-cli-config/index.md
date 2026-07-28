@@ -91,6 +91,8 @@ test_paths:
   - tests/cli/install-script-safety.test.cjs
   - tests/cli/operator-script-branding.test.cjs
   - scripts/release/canonical-installer-scripts.test.mjs
+  - cmd/browser-agent/internal/cli/cli_test.go
+  - cmd/browser-agent/internal/cli/cli_coverage_extra_test.go
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-28
 ---
@@ -144,6 +146,9 @@ OpenAPI contract.
 - Install now also fixes the Claude Code `claude mcp add-json` invocation (JSON passed as a positional arg, not stdin) and adds **Codex CLI** as a supported client (`~/.codex/config.toml`, TOML; honors `$CODEX_HOME`).
 - Daemon setup diagnostics use one canonical CLI entry point, `--doctor`; the duplicate `--check` facade is rejected.
 - Runtime help uses one canonical configure mode, `tutorial`; the duplicate `examples` mode is rejected.
+- Direct CLI diagnostics and formatted results use the writer injected through
+  `cli.RuntimeConfig`; production supplies the canonical diagnostic sink, and
+  tests use owned buffers without replacing process stdout or stderr.
 
 ## Tool Auto-Approve (default-ON)
 

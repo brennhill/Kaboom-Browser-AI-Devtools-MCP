@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 
@@ -773,17 +772,13 @@ func TestFormatResultExitCodeSuccess(t *testing.T) {
 	result := &mcp.MCPToolResult{
 		Content: []mcp.MCPContentBlock{{Type: "text", Text: "ok"}},
 	}
-	oldStdout := os.Stdout
-	devNull, _ := os.OpenFile(os.DevNull, os.O_WRONLY, 0)
-	os.Stdout = devNull
-	defer func() {
-		os.Stdout = oldStdout
-		_ = devNull.Close()
-	}()
-
-	code := FormatResult("human", "observe", "errors", result)
+	var output bytes.Buffer
+	code := FormatResult(&output, "human", "observe", "errors", result)
 	if code != 0 {
 		t.Errorf("expected exit code 0, got %d", code)
+	}
+	if !strings.Contains(output.String(), "ok") {
+		t.Fatalf("FormatResult output = %q, want result text", output.String())
 	}
 }
 
@@ -792,16 +787,12 @@ func TestFormatResultExitCodeError(t *testing.T) {
 		Content: []mcp.MCPContentBlock{{Type: "text", Text: "failed"}},
 		IsError: true,
 	}
-	oldStdout := os.Stdout
-	devNull, _ := os.OpenFile(os.DevNull, os.O_WRONLY, 0)
-	os.Stdout = devNull
-	defer func() {
-		os.Stdout = oldStdout
-		_ = devNull.Close()
-	}()
-
-	code := FormatResult("human", "observe", "errors", result)
+	var output bytes.Buffer
+	code := FormatResult(&output, "human", "observe", "errors", result)
 	if code != 1 {
 		t.Errorf("expected exit code 1, got %d", code)
+	}
+	if !strings.Contains(output.String(), "failed") {
+		t.Fatalf("FormatResult output = %q, want error text", output.String())
 	}
 }

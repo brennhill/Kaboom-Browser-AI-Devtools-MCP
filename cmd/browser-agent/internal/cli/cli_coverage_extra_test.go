@@ -5,13 +5,14 @@
 package cli
 
 import (
+	"bytes"
 	"encoding/json"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -32,31 +33,13 @@ func serverPort(t *testing.T, rawURL string) int {
 	return p
 }
 
-// withSilencedStdio redirects stdout+stderr to /dev/null while fn runs so CLI
-// output does not pollute test logs. Not safe for t.Parallel().
-func withSilencedStdio(t *testing.T, fn func()) {
-	t.Helper()
-	devNull, err := os.OpenFile(os.DevNull, os.O_WRONLY, 0)
-	if err != nil {
-		t.Fatalf("open %s: %v", os.DevNull, err)
-	}
-	oldOut, oldErr := os.Stdout, os.Stderr
-	os.Stdout = devNull
-	os.Stderr = devNull
-	defer func() {
-		os.Stdout = oldOut
-		os.Stderr = oldErr
-		_ = devNull.Close()
-	}()
-	fn()
-}
-
 // runRC builds a RuntimeConfig whose daemon is reported as already running so
 // Run/EnsureDaemon never spawn a process.
-func runRC(port int) RuntimeConfig {
+func runRC(port int, output *bytes.Buffer) RuntimeConfig {
 	return RuntimeConfig{
 		DefaultPort:        port,
 		MaxPostBodySize:    10 * 1024 * 1024,
+		DiagnosticOutput:   output,
 		IsServerRunning:    func(int) bool { return true },
 		WaitForServer:      func(int, time.Duration) bool { return true },
 		DaemonProcessArgv0: func(exePath string) string { return exePath },
@@ -85,12 +68,9 @@ func TestRun_ObserveSuccess(t *testing.T) {
 
 	srv := mcpEchoServer(t)
 	defer srv.Close()
-	rc := runRC(serverPort(t, srv.URL))
-
-	var code int
-	withSilencedStdio(t, func() {
-		code = Run([]string{"observe", "errors", "--limit", "10"}, rc)
-	})
+	var output bytes.Buffer
+	rc := runRC(serverPort(t, srv.URL), &output)
+	code := Run([]string{"observe", "errors", "--limit", "10"}, rc)
 	if code != 0 {
 		t.Fatalf("Run() = %d, want 0", code)
 	}
@@ -102,12 +82,9 @@ func TestRun_AnalyzeAccessibilityTimeoutBranch(t *testing.T) {
 
 	srv := mcpEchoServer(t)
 	defer srv.Close()
-	rc := runRC(serverPort(t, srv.URL))
-
-	var code int
-	withSilencedStdio(t, func() {
-		code = Run([]string{"analyze", "accessibility"}, rc)
-	})
+	var output bytes.Buffer
+	rc := runRC(serverPort(t, srv.URL), &output)
+	code := Run([]string{"analyze", "accessibility"}, rc)
 	if code != 0 {
 		t.Fatalf("Run() = %d, want 0", code)
 	}
@@ -119,12 +96,9 @@ func TestRun_ObserveCommandResultTimeoutBranch(t *testing.T) {
 
 	srv := mcpEchoServer(t)
 	defer srv.Close()
-	rc := runRC(serverPort(t, srv.URL))
-
-	var code int
-	withSilencedStdio(t, func() {
-		code = Run([]string{"observe", "command-result", "--correlation-id", "abc"}, rc)
-	})
+	var output bytes.Buffer
+	rc := runRC(serverPort(t, srv.URL), &output)
+	code := Run([]string{"observe", "command-result", "--correlation-id", "abc"}, rc)
 	if code != 0 {
 		t.Fatalf("Run() = %d, want 0", code)
 	}
@@ -134,13 +108,14 @@ func TestRun_UsageError(t *testing.T) {
 	t.Setenv("KABOOM_PORT", "")
 	t.Setenv("KABOOM_FORMAT", "")
 
-	rc := runRC(testDefaultPort)
-	var code int
-	withSilencedStdio(t, func() {
-		code = Run([]string{"observe"}, rc)
-	})
+	var output bytes.Buffer
+	rc := runRC(testDefaultPort, &output)
+	code := Run([]string{"observe"}, rc)
 	if code != 2 {
 		t.Fatalf("Run() = %d, want 2 for usage error", code)
+	}
+	if !strings.Contains(output.String(), "Usage: kaboom") {
+		t.Fatalf("Run() diagnostic output = %q, want usage", output.String())
 	}
 }
 
@@ -148,12 +123,10 @@ func TestRun_ParseError(t *testing.T) {
 	t.Setenv("KABOOM_PORT", "")
 	t.Setenv("KABOOM_FORMAT", "")
 
-	rc := runRC(testDefaultPort)
-	var code int
-	withSilencedStdio(t, func() {
-		// interact click without a targeting param fails ParseCLIArgs.
-		code = Run([]string{"interact", "click"}, rc)
-	})
+	var output bytes.Buffer
+	rc := runRC(testDefaultPort, &output)
+	// interact click without a targeting param fails ParseCLIArgs.
+	code := Run([]string{"interact", "click"}, rc)
 	if code != 2 {
 		t.Fatalf("Run() = %d, want 2 for parse error", code)
 	}
@@ -171,11 +144,9 @@ func TestRun_CallToolError(t *testing.T) {
 	port := ln.Addr().(*net.TCPAddr).Port
 	_ = ln.Close()
 
-	rc := runRC(port)
-	var code int
-	withSilencedStdio(t, func() {
-		code = Run([]string{"observe", "errors"}, rc)
-	})
+	var output bytes.Buffer
+	rc := runRC(port, &output)
+	code := Run([]string{"observe", "errors"}, rc)
 	if code != 1 {
 		t.Fatalf("Run() = %d, want 1 for CallTool failure", code)
 	}
@@ -202,10 +173,8 @@ func TestFormatResult_JSONAndCSVFormats(t *testing.T) {
 	result := &mcp.MCPToolResult{Content: []mcp.MCPContentBlock{{Type: "text", Text: `{"count":3}`}}}
 
 	for _, format := range []string{"json", "csv"} {
-		var code int
-		withSilencedStdio(t, func() {
-			code = FormatResult(format, "observe", "errors", result)
-		})
+		var output bytes.Buffer
+		code := FormatResult(&output, format, "observe", "errors", result)
 		if code != 0 {
 			t.Fatalf("FormatResult(%q) = %d, want 0", format, code)
 		}

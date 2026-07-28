@@ -6,6 +6,7 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strconv"
@@ -16,13 +17,14 @@ import (
 
 // RuntimeConfig holds values injected from the main package at startup.
 type RuntimeConfig struct {
-	DefaultPort     int
-	MaxPostBodySize int64
+	DefaultPort      int
+	MaxPostBodySize  int64
+	DiagnosticOutput io.Writer
 
 	// DaemonOps — callbacks into the main package for daemon lifecycle.
-	IsServerRunning     func(port int) bool
-	WaitForServer       func(port int, timeout time.Duration) bool
-	DaemonProcessArgv0  func(exePath string) string
+	IsServerRunning    func(port int) bool
+	WaitForServer      func(port int, timeout time.Duration) bool
+	DaemonProcessArgv0 func(exePath string) string
 }
 
 // CLIToolNames lists valid tool names for CLI mode detection.
@@ -52,11 +54,15 @@ func IsCLIMode(args []string) bool {
 // Run is the main CLI flow. Returns exit code.
 func Run(args []string, rc RuntimeConfig) int {
 	cfg, remaining := ResolveCLIConfig(args, rc)
+	output := rc.DiagnosticOutput
+	if output == nil {
+		output = os.Stderr
+	}
 
 	if len(remaining) < 2 {
-		fmt.Fprintf(os.Stderr, "Usage: kaboom <tool> <action> [flags]\n")
-		fmt.Fprintf(os.Stderr, "  Tools: observe, analyze, generate, configure, interact\n")
-		fmt.Fprintf(os.Stderr, "  Example: kaboom observe errors --limit 50\n")
+		fmt.Fprintf(output, "Usage: kaboom <tool> <action> [flags]\n")
+		fmt.Fprintf(output, "  Tools: observe, analyze, generate, configure, interact\n")
+		fmt.Fprintf(output, "  Example: kaboom observe errors --limit 50\n")
 		return 2
 	}
 
@@ -67,14 +73,14 @@ func Run(args []string, rc RuntimeConfig) int {
 	// Parse tool-specific arguments
 	mcpArgs, err := ParseCLIArgs(tool, action, toolArgs)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		fmt.Fprintf(output, "Error: %v\n", err)
 		return 2
 	}
 
 	// Ensure daemon is running and get base URL
 	baseURL, err := EnsureDaemon(cfg.Port, rc)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		fmt.Fprintf(output, "Error: %v\n", err)
 		return 1
 	}
 
@@ -90,11 +96,11 @@ func Run(args []string, rc RuntimeConfig) int {
 	// Call the tool
 	result, err := CallTool(baseURL, tool, mcpArgs, timeout, rc.MaxPostBodySize)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		fmt.Fprintf(output, "Error: %v\n", err)
 		return 1
 	}
 
-	return FormatResult(cfg.Format, tool, NormalizeAction(action), result)
+	return FormatResult(output, cfg.Format, tool, NormalizeAction(action), result)
 }
 
 // ResolveCLIConfig resolves config from defaults < env < flags, stripping global flags.

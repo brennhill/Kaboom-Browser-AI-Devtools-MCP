@@ -27,7 +27,11 @@ func TestFindMCPConfigResolution(t *testing.T) {
 	if err := os.MkdirAll(filepath.Dir(continuePath), 0o755); err != nil {
 		t.Fatalf("MkdirAll(%q) error = %v", filepath.Dir(continuePath), err)
 	}
-	if err := os.WriteFile(continuePath, []byte(`{"tool":"kaboom-agentic-browser"}`), 0o600); err != nil {
+	if err := os.WriteFile(
+		continuePath,
+		[]byte(`{"mcpServers":{"kaboom-browser-devtools":{"command":"kaboom-agentic-browser"}}}`),
+		0o600,
+	); err != nil {
 		t.Fatalf("WriteFile(%q) error = %v", continuePath, err)
 	}
 	if got := configdiscovery.Find(); got != continuePath {

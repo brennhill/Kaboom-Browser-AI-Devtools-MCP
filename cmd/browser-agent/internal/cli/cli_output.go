@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"sort"
 	"strings"
 
@@ -26,22 +25,22 @@ type CLIResult struct {
 	Data        map[string]any
 }
 
-// FormatResult formats the MCP tool result as human-facing stderr output.
-func FormatResult(format, tool, action string, result *mcp.MCPToolResult) int {
+// FormatResult formats the MCP tool result as human-facing diagnostic output.
+func FormatResult(output io.Writer, format, tool, action string, result *mcp.MCPToolResult) int {
 	cliRes := BuildCLIResult(tool, action, result)
 	var err error
 
 	switch format {
 	case "json":
-		err = FormatJSON(os.Stderr, cliRes)
+		err = FormatJSON(output, cliRes)
 	case "csv":
-		err = FormatCSV(os.Stderr, cliRes)
+		err = FormatCSV(output, cliRes)
 	default:
-		err = FormatHuman(os.Stderr, cliRes)
+		err = FormatHuman(output, cliRes)
 	}
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[Kaboom] output error: %v\n", err)
+		fmt.Fprintf(output, "[Kaboom] output error: %v\n", err)
 		return 1
 	}
 

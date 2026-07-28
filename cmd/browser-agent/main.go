@@ -52,7 +52,8 @@ func daemonProcessArgv0(exePath string) string {
 func cliRuntimeConfig() cli.RuntimeConfig {
 	return cli.RuntimeConfig{
 		DefaultPort: defaultPort, MaxPostBodySize: maxPostBodySize,
-		IsServerRunning: bridge.IsServerRunning,
+		DiagnosticOutput: diag.Sink(),
+		IsServerRunning:  bridge.IsServerRunning,
 		WaitForServer: func(port int, timeout time.Duration) bool {
 			return bridge.WaitForServer(port, timeout)
 		},
