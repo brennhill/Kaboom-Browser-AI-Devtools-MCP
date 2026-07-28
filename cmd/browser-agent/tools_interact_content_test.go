@@ -30,7 +30,7 @@ func newContentTestEnv(t *testing.T) *interactTestEnv {
 	cap := capture.NewCapture()
 	cap.Extension().SetPilotEnabled(true) // content extraction requires pilot
 	mcpHandler := NewToolHandler(server, cap)
-	handler := mcpHandler.toolHandler.(*ToolHandler)
+	handler := mcpHandler.tools.Executor.(*ToolHandler)
 
 	// Simulate extension connection
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))

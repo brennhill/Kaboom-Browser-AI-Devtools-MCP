@@ -118,7 +118,7 @@ func TestGetUsageTracker(t *testing.T) {
 		handler.usageTracker = counter
 
 		mcpHandler := NewMCPHandler(nil, "test")
-		mcpHandler.SetToolHandler(handler)
+		mcpHandler.SetToolBackend(buildMCPToolBackend(handler))
 
 		got := mcpHandler.GetUsageTracker()
 		if got != counter {
@@ -137,7 +137,7 @@ func TestGetUsageTracker(t *testing.T) {
 
 	t.Run("test double returns nil", func(t *testing.T) {
 		mcpHandler := NewMCPHandler(nil, "test")
-		mcpHandler.SetToolHandler(&fakeToolHandlerForMCP{})
+		setFakeToolBackend(mcpHandler, &fakeToolHandlerForMCP{})
 		got := mcpHandler.GetUsageTracker()
 		if got != nil {
 			t.Fatalf("GetUsageTracker() = %p, want nil for test double", got)

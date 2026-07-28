@@ -120,7 +120,7 @@ func TestCorrelationID_AsyncCommands(t *testing.T) {
 	cap := capture.NewCapture()
 	cap.Extension().SetPilotEnabled(true)
 	mcpHandler := NewToolHandler(srv, cap)
-	handler := mcpHandler.toolHandler.(*ToolHandler)
+	handler := mcpHandler.tools.Executor.(*ToolHandler)
 
 	// Actions that queue async commands and must return correlation_id.
 	// Each entry: action name → minimal args JSON that passes param validation.

@@ -50,28 +50,34 @@ Key patterns:
 // MCPHandler owns JSON-RPC request routing and response post-processing for MCP.
 //
 // Invariants:
-// - toolHandler is expected to be set once during bootstrap before serving requests.
+// - tools is configured once during bootstrap before serving requests.
 // - telemetryCursors is guarded by telemetryMu.
 //
 // Failure semantics:
 // - Unknown methods/tools return JSON-RPC method-not-found errors.
 // - Notification requests (no id) intentionally produce no response.
 type MCPHandler struct {
-	server      *Server
-	toolHandler ToolHandlerInterface
-	version     string
+	server  *Server
+	tools   ToolBackend
+	version string
 
 	telemetryMu      sync.Mutex
 	telemetryCursors map[string]passiveTelemetryCursor
 }
 
-// ToolHandlerInterface defines the minimal tool handler interface.
-type ToolHandlerInterface interface {
-	GetCapture() *capture.Capture
-	GetToolCallLimiter() RateLimiter
-	GetRedactionEngine() RedactionEngine
-	ToolsList() []mcp.MCPTool
+// ToolExecutor is the sole behavior required from the five-tool backend.
+type ToolExecutor interface {
 	HandleToolCall(req mcp.JSONRPCRequest, name string, arguments json.RawMessage) (mcp.JSONRPCResponse, bool)
+}
+
+// ToolBackend composes execution with MCP transport policy and telemetry owners.
+type ToolBackend struct {
+	Executor     ToolExecutor
+	Capture      *capture.Capture
+	Limiter      RateLimiter
+	Redactor     RedactionEngine
+	Schemas      []mcp.MCPTool
+	UsageTracker *telemetry.UsageTracker
 }
 
 // RateLimiter interface for tool call rate limiting.
@@ -95,21 +101,17 @@ func NewMCPHandler(server *Server, version string) *MCPHandler {
 	}
 }
 
-// SetToolHandler injects the tool execution backend.
+// SetToolBackend injects the tool execution and transport dependencies.
 //
 // Invariants:
 // - Intended for one-time startup wiring; runtime swapping is unsupported.
-func (h *MCPHandler) SetToolHandler(th ToolHandlerInterface) {
-	h.toolHandler = th
+func (h *MCPHandler) SetToolBackend(backend ToolBackend) {
+	h.tools = backend
 }
 
-// GetUsageTracker returns the usage tracker from the concrete ToolHandler.
-// Returns nil if toolHandler is a test double.
+// GetUsageTracker returns the configured usage tracker.
 func (h *MCPHandler) GetUsageTracker() *telemetry.UsageTracker {
-	if th, ok := h.toolHandler.(*ToolHandler); ok {
-		return th.usageTracker
-	}
-	return nil
+	return h.tools.UsageTracker
 }
 
 type mcpMethodHandler func(handler *MCPHandler, request mcp.JSONRPCRequest) mcp.JSONRPCResponse
@@ -236,11 +238,7 @@ func (h *MCPHandler) handleResourcesTemplatesList(request mcp.JSONRPCRequest) mc
 }
 
 func (h *MCPHandler) handleToolsList(request mcp.JSONRPCRequest) mcp.JSONRPCResponse {
-	var tools []mcp.MCPTool
-	if h.toolHandler != nil {
-		tools = h.toolHandler.ToolsList()
-	}
-	resultJSON, _ := json.Marshal(mcp.MCPToolsListResult{Tools: tools})
+	resultJSON, _ := json.Marshal(mcp.MCPToolsListResult{Tools: h.tools.Schemas})
 	return toolresp.SucceedRaw(request, resultJSON)
 }
 
@@ -257,7 +255,7 @@ func (h *MCPHandler) handleToolsCall(req mcp.JSONRPCRequest) mcp.JSONRPCResponse
 			Error: &mcp.JSONRPCError{Code: -32602, Message: "Invalid params: " + err.Error()},
 		}
 	}
-	if h.toolHandler == nil {
+	if h.tools.Executor == nil {
 		return mcp.JSONRPCResponse{
 			JSONRPC: mcp.JSONRPCVersion, ID: req.ID,
 			Error: &mcp.JSONRPCError{Code: -32601, Message: "Unknown tool: " + params.Name},
@@ -268,7 +266,7 @@ func (h *MCPHandler) handleToolsCall(req mcp.JSONRPCRequest) mcp.JSONRPCResponse
 		telemetry.AppError("tool_rate_limited", nil)
 		return mcp.JSONRPCResponse{JSONRPC: mcp.JSONRPCVersion, ID: req.ID, Error: err}
 	}
-	resp, handled := h.toolHandler.HandleToolCall(req, params.Name, params.Arguments)
+	resp, handled := h.tools.Executor.HandleToolCall(req, params.Name, params.Arguments)
 	if !handled {
 		return mcp.JSONRPCResponse{
 			JSONRPC: mcp.JSONRPCVersion, ID: req.ID,
@@ -280,7 +278,7 @@ func (h *MCPHandler) handleToolsCall(req mcp.JSONRPCRequest) mcp.JSONRPCResponse
 }
 
 func (h *MCPHandler) checkToolRateLimit() *mcp.JSONRPCError {
-	limiter := h.toolHandler.GetToolCallLimiter()
+	limiter := h.tools.Limiter
 	if limiter != nil && !limiter.Allow() {
 		return &mcp.JSONRPCError{
 			Code:    -32603,
@@ -291,7 +289,7 @@ func (h *MCPHandler) checkToolRateLimit() *mcp.JSONRPCError {
 }
 
 func (h *MCPHandler) warnUnknownToolArguments(toolName string, args json.RawMessage) {
-	if h.server == nil || h.toolHandler == nil || len(args) == 0 {
+	if h.server == nil || h.tools.Executor == nil || len(args) == 0 {
 		return
 	}
 	var raw map[string]json.RawMessage
@@ -315,7 +313,7 @@ func (h *MCPHandler) warnUnknownToolArguments(toolName string, args json.RawMess
 }
 
 func (h *MCPHandler) allowedToolArgumentKeys(toolName string) map[string]struct{} {
-	for _, tool := range h.toolHandler.ToolsList() {
+	for _, tool := range h.tools.Schemas {
 		if tool.Name != toolName {
 			continue
 		}
@@ -333,7 +331,7 @@ func (h *MCPHandler) allowedToolArgumentKeys(toolName string) map[string]struct{
 }
 
 func (h *MCPHandler) applyToolResponsePostProcessing(resp mcp.JSONRPCResponse, clientID, toolName, telemetryModeOverride string) mcp.JSONRPCResponse {
-	redactor := h.toolHandler.GetRedactionEngine()
+	redactor := h.tools.Redactor
 	if redactor != nil && resp.Result != nil {
 		resp.Result = redactor.RedactJSON(resp.Result)
 	}
@@ -365,10 +363,10 @@ func prependWarningToResponse(resp mcp.JSONRPCResponse, warning string) mcp.JSON
 }
 
 func (h *MCPHandler) maybeAddSecurityModeWarning(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
-	if h.toolHandler == nil || resp.Result == nil {
+	if h.tools.Executor == nil || resp.Result == nil {
 		return resp
 	}
-	captured := h.toolHandler.GetCapture()
+	captured := h.tools.Capture
 	if captured == nil {
 		return resp
 	}
@@ -388,10 +386,10 @@ func (h *MCPHandler) maybeAddSecurityModeWarning(resp mcp.JSONRPCResponse) mcp.J
 }
 
 func (h *MCPHandler) maybeAddVersionWarning(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
-	if h.toolHandler == nil || resp.Result == nil {
+	if h.tools.Executor == nil || resp.Result == nil {
 		return resp
 	}
-	captured := h.toolHandler.GetCapture()
+	captured := h.tools.Capture
 	if captured == nil {
 		return resp
 	}
@@ -477,7 +475,7 @@ type passiveTelemetryCursor struct {
 }
 
 func (h *MCPHandler) maybeAddTelemetrySummary(resp mcp.JSONRPCResponse, clientID, toolName, modeOverride string) mcp.JSONRPCResponse {
-	if h.toolHandler == nil || resp.Result == nil {
+	if h.tools.Executor == nil || resp.Result == nil {
 		return resp
 	}
 	summary, changed := h.buildTelemetrySummary(clientID, toolName)
@@ -521,7 +519,7 @@ func (h *MCPHandler) buildTelemetrySummary(clientID, toolName string) (map[strin
 		"trigger_tool":                         toolName,
 		"retrieved_at":                         time.Now().UTC().Format(time.RFC3339),
 	}
-	captured := h.toolHandler.GetCapture()
+	captured := h.tools.Capture
 	if captured != nil {
 		summary["extension_connected"] = captured.Extension().IsExtensionConnected()
 		enabled, tabID, tabURL := captured.Extension().GetTrackingStatus()
@@ -544,7 +542,7 @@ func (h *MCPHandler) currentTelemetryCursor() passiveTelemetryCursor {
 	if h.server != nil {
 		current.errorTotal = h.server.logs.ErrorTotalAdded()
 	}
-	captured := h.toolHandler.GetCapture()
+	captured := h.tools.Capture
 	if captured == nil {
 		return current
 	}

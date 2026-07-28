@@ -26,7 +26,7 @@ func setupHARTestHandler(t *testing.T) *ToolHandler {
 	}
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(srv, cap)
-	return mcpHandler.toolHandler.(*ToolHandler)
+	return mcpHandler.tools.Executor.(*ToolHandler)
 }
 
 func TestToolExportHAR_ReturnsHARJSON(t *testing.T) {

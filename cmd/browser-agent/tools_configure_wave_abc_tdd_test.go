@@ -19,8 +19,7 @@ func configureSchemaPropertiesForTest(t *testing.T) map[string]any {
 		t.Fatalf("NewServer: %v", err)
 	}
 	t.Cleanup(func() { server.Close() })
-	cap := capture.NewCapture()
-	tools := NewToolHandler(server, cap).toolHandler.ToolsList()
+	tools := toolSchemasForTest()
 	for _, tool := range tools {
 		if tool.Name != "configure" {
 			continue
@@ -97,7 +96,7 @@ func TestWaveB_AuditLogOperationAnalyzeAndClear(t *testing.T) {
 
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
-	h := mcpHandler.toolHandler.(*ToolHandler)
+	h := mcpHandler.tools.Executor.(*ToolHandler)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1, ClientID: "wave-b-test"}
 
 	callHandledTool(t, h, req, "configure", `{"what":"health"}`)
@@ -141,7 +140,7 @@ func TestWaveB_AuditLogClear_DoesNotReinsertClearCall(t *testing.T) {
 
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
-	h := mcpHandler.toolHandler.(*ToolHandler)
+	h := mcpHandler.tools.Executor.(*ToolHandler)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1, ClientID: "audit-clear-test"}
 
 	// Seed at least one entry.
@@ -176,7 +175,7 @@ func TestWaveB_AuditLogClear_ResetsToolHandlerSessionMap(t *testing.T) {
 
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
-	h := mcpHandler.toolHandler.(*ToolHandler)
+	h := mcpHandler.tools.Executor.(*ToolHandler)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1, ClientID: "session-reset-client"}
 
 	callHandledTool(t, h, req, "configure", `{"what":"health"}`)
@@ -211,8 +210,8 @@ func TestWaveC_RedactionEngineIsWiredAndApplied(t *testing.T) {
 
 	cap := capture.NewCapture()
 	h := NewToolHandler(server, cap)
-	if h.toolHandler.GetRedactionEngine() == nil {
-		t.Fatal("tool handler should provide a redaction engine")
+	if h.tools.Redactor == nil {
+		t.Fatal("MCP handler should provide a redaction engine")
 	}
 
 	input := mcp.JSONRPCResponse{

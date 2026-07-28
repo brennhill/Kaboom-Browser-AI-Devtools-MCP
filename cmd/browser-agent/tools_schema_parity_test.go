@@ -19,7 +19,7 @@ func TestSchemaParity_AnalyzeWhatEnumMatchesHandlers(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	schemaModes := mustToolEnumValues(t, h.ToolsList(), "analyze", "what")
+	schemaModes := mustToolEnumValues(t, toolSchemasForTest(), "analyze", "what")
 	runtimeModes := h.analyzeDispatcher.ValidModes()
 
 	assertSameStringSet(t, "analyze.what enum vs analyze dispatcher", schemaModes, runtimeModes)
@@ -27,16 +27,14 @@ func TestSchemaParity_AnalyzeWhatEnumMatchesHandlers(t *testing.T) {
 
 func TestSchemaParity_GenerateWhatEnumMatchesHandlers(t *testing.T) {
 	t.Parallel()
-	h, _, _ := makeToolHandler(t)
-	schemaFormats := mustToolEnumValues(t, h.ToolsList(), "generate", "what")
+	schemaFormats := mustToolEnumValues(t, toolSchemasForTest(), "generate", "what")
 	runtimeFormats := sortedKeysGenerateHandlers()
 	assertSameStringSet(t, "generate.what enum vs generateHandlers", schemaFormats, runtimeFormats)
 }
 
 func TestSchemaParity_ConfigureWhatEnumMatchesHandlers(t *testing.T) {
 	t.Parallel()
-	h, _, _ := makeToolHandler(t)
-	schemaActions := mustToolEnumValues(t, h.ToolsList(), "configure", "what")
+	schemaActions := mustToolEnumValues(t, toolSchemasForTest(), "configure", "what")
 	runtimeActions := sortedKeysConfigureHandlers()
 	assertSameStringSet(t, "configure.what enum vs configureHandlers", schemaActions, runtimeActions)
 }
@@ -45,7 +43,7 @@ func TestSchemaParity_InteractWhatEnumMatchesDispatch(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	schemaActions := mustToolEnumValues(t, h.ToolsList(), "interact", "what")
+	schemaActions := mustToolEnumValues(t, toolSchemasForTest(), "interact", "what")
 	runtimeActions := sortedInteractRuntimeActions(h)
 
 	assertSameStringSet(t, "interact.what enum vs interact runtime actions", schemaActions, runtimeActions)
@@ -55,7 +53,7 @@ func TestSchemaParity_ObserveWhatEnumMatchesHandlers(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	schemaModes := mustToolEnumValues(t, h.ToolsList(), "observe", "what")
+	schemaModes := mustToolEnumValues(t, toolSchemasForTest(), "observe", "what")
 	runtimeModes := sortedKeysObserveHandlers(h)
 
 	assertSameStringSet(t, "observe.what enum vs observe dispatcher", schemaModes, runtimeModes)
@@ -171,8 +169,7 @@ func toStringSlice(v any) ([]string, error) {
 // new schema properties are added but the CLI parser isn't updated.
 func TestCLIParserParity_AllSchemaPropertiesMapped(t *testing.T) {
 	t.Parallel()
-	h, _, _ := makeToolHandler(t)
-	tools := h.ToolsList()
+	tools := toolSchemasForTest()
 
 	// Known exceptions: params that are intentionally not CLI flags.
 	// "what" is the positional mode arg, not a flag.

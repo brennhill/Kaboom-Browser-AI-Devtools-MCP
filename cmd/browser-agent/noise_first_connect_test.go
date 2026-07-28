@@ -38,7 +38,7 @@ func TestNoiseAutoDetectOnFirstSync_TriggersOnce(t *testing.T) {
 	cap := capture.NewCapture()
 	cap.Extension().SetPilotEnabled(false)
 	mcpHandler := NewToolHandler(server, cap)
-	handler := mcpHandler.toolHandler.(*ToolHandler)
+	handler := mcpHandler.tools.Executor.(*ToolHandler)
 
 	// Override first-connect detection to count invocations.
 	handler.noiseFirstConnectFn = func() { detectCount.Add(1) }
@@ -67,7 +67,7 @@ func TestNoiseAutoDetectOnFirstSync_DoesNotRepeat(t *testing.T) {
 	cap := capture.NewCapture()
 	cap.Extension().SetPilotEnabled(false)
 	mcpHandler := NewToolHandler(server, cap)
-	handler := mcpHandler.toolHandler.(*ToolHandler)
+	handler := mcpHandler.tools.Executor.(*ToolHandler)
 
 	// Override first-connect detection to count invocations.
 	handler.noiseFirstConnectFn = func() { detectCount.Add(1) }
@@ -122,7 +122,7 @@ func TestNoiseAutoDetectOnFirstSync_EmitsLogEntry(t *testing.T) {
 	cap := capture.NewCapture()
 	cap.Extension().SetPilotEnabled(false)
 	mcpHandler := NewToolHandler(server, cap)
-	_ = mcpHandler.toolHandler.(*ToolHandler)
+	_ = mcpHandler.tools.Executor.(*ToolHandler)
 
 	// Simulate first extension connection
 	simulateExtensionConnect(cap)

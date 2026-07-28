@@ -59,7 +59,7 @@ func TestMCPHandler_PassiveTelemetrySummaryDeltas(t *testing.T) {
 	cap.Telemetry().AddEnhancedActions([]types.EnhancedAction{{Type: "click", Timestamp: time.Now().UnixMilli()}})
 
 	h := NewMCPHandler(srv, "v-test")
-	h.SetToolHandler(&fakeToolHandlerForMCP{
+	setFakeToolBackend(h, &fakeToolHandlerForMCP{
 		cap:     cap,
 		limiter: testLimiter{allowed: true},
 		handleFn: func(req mcp.JSONRPCRequest, name string, _ json.RawMessage) (mcp.JSONRPCResponse, bool) {
@@ -147,7 +147,7 @@ func TestMCPHandler_PassiveTelemetryIsPerClient(t *testing.T) {
 	cap := capture.NewCapture()
 
 	h := NewMCPHandler(srv, "v-test")
-	h.SetToolHandler(&fakeToolHandlerForMCP{
+	setFakeToolBackend(h, &fakeToolHandlerForMCP{
 		cap:     cap,
 		limiter: testLimiter{allowed: true},
 		handleFn: func(req mcp.JSONRPCRequest, name string, _ json.RawMessage) (mcp.JSONRPCResponse, bool) {
@@ -225,7 +225,7 @@ func TestMCPHandler_PassiveTelemetryModeFullIncludesSummaryWithoutChanges(t *tes
 	srv.logs.SetTelemetryMode(telemetryModeFull)
 
 	h := NewMCPHandler(srv, "v-test")
-	h.SetToolHandler(&fakeToolHandlerForMCP{
+	setFakeToolBackend(h, &fakeToolHandlerForMCP{
 		cap:     capture.NewCapture(),
 		limiter: testLimiter{allowed: true},
 		handleFn: func(req mcp.JSONRPCRequest, name string, _ json.RawMessage) (mcp.JSONRPCResponse, bool) {
@@ -266,7 +266,7 @@ func TestMCPHandler_PassiveTelemetryModeOffSuppressesTelemetryMetadata(t *testin
 	srv.logs.SetTelemetryMode(telemetryModeOff)
 
 	h := NewMCPHandler(srv, "v-test")
-	h.SetToolHandler(&fakeToolHandlerForMCP{
+	setFakeToolBackend(h, &fakeToolHandlerForMCP{
 		cap:     capture.NewCapture(),
 		limiter: testLimiter{allowed: true},
 		handleFn: func(req mcp.JSONRPCRequest, name string, _ json.RawMessage) (mcp.JSONRPCResponse, bool) {
@@ -313,7 +313,7 @@ func TestMCPHandler_PassiveTelemetryModePerCallOverride(t *testing.T) {
 	srv.logs.SetTelemetryMode(telemetryModeFull)
 
 	h := NewMCPHandler(srv, "v-test")
-	h.SetToolHandler(&fakeToolHandlerForMCP{
+	setFakeToolBackend(h, &fakeToolHandlerForMCP{
 		cap:     capture.NewCapture(),
 		limiter: testLimiter{allowed: true},
 		handleFn: func(req mcp.JSONRPCRequest, name string, _ json.RawMessage) (mcp.JSONRPCResponse, bool) {
@@ -352,7 +352,7 @@ func TestMCPHandlerHandleHTTP(t *testing.T) {
 	t.Parallel()
 
 	h := NewMCPHandler(nil, "v-http")
-	h.SetToolHandler(&fakeToolHandlerForMCP{
+	setFakeToolBackend(h, &fakeToolHandlerForMCP{
 		cap:     capture.NewCapture(),
 		limiter: testLimiter{allowed: true},
 		handleFn: func(req mcp.JSONRPCRequest, name string, _ json.RawMessage) (mcp.JSONRPCResponse, bool) {
@@ -571,7 +571,7 @@ func TestMCPHandlerHandleHTTP_ReadErrorUsesNullID(t *testing.T) {
 	t.Parallel()
 
 	h := NewMCPHandler(nil, "v-http")
-	h.SetToolHandler(&fakeToolHandlerForMCP{
+	setFakeToolBackend(h, &fakeToolHandlerForMCP{
 		cap:     capture.NewCapture(),
 		limiter: testLimiter{allowed: true},
 	})
@@ -598,7 +598,7 @@ func TestMCPHandlerHandleHTTP_IDNullIsInvalidRequest(t *testing.T) {
 	t.Parallel()
 
 	h := NewMCPHandler(nil, "v-http")
-	h.SetToolHandler(&fakeToolHandlerForMCP{
+	setFakeToolBackend(h, &fakeToolHandlerForMCP{
 		cap:     capture.NewCapture(),
 		limiter: testLimiter{allowed: true},
 	})

@@ -37,12 +37,12 @@ func TestNewToolHandler(t *testing.T) {
 	if handler.server != server {
 		t.Error("MCPHandler.server not set correctly")
 	}
-	if handler.toolHandler == nil {
-		t.Fatal("MCPHandler.toolHandler should not be nil")
+	if handler.tools.Executor == nil {
+		t.Fatal("MCPHandler.tools.Executor should not be nil")
 	}
-	th, ok := handler.toolHandler.(*ToolHandler)
+	th, ok := handler.tools.Executor.(*ToolHandler)
 	if !ok {
-		t.Fatalf("toolHandler type = %T, want *ToolHandler", handler.toolHandler)
+		t.Fatalf("toolHandler type = %T, want *ToolHandler", handler.tools.Executor)
 	}
 	if th.server != server {
 		t.Error("ToolHandler.server not set correctly")
@@ -62,7 +62,7 @@ func TestHandleToolCall_UnknownTool(t *testing.T) {
 	mcpHandler := NewToolHandler(server, cap)
 
 	// Get the tool handler
-	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
+	toolHandler := mcpHandler.tools.Executor.(*ToolHandler)
 
 	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
@@ -88,7 +88,7 @@ func TestHandleToolCall_ObserveTool(t *testing.T) {
 	server, _ := NewServer(t.TempDir()+"/test-kaboom.jsonl", 100)
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
-	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
+	toolHandler := mcpHandler.tools.Executor.(*ToolHandler)
 
 	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
@@ -126,7 +126,7 @@ func TestHandleToolCall_GenerateTool(t *testing.T) {
 	server, _ := NewServer(t.TempDir()+"/test-kaboom.jsonl", 100)
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
-	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
+	toolHandler := mcpHandler.tools.Executor.(*ToolHandler)
 
 	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
@@ -160,7 +160,7 @@ func TestHandleToolCall_ConfigureTool(t *testing.T) {
 	server, _ := NewServer(t.TempDir()+"/test-kaboom.jsonl", 100)
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
-	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
+	toolHandler := mcpHandler.tools.Executor.(*ToolHandler)
 
 	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
@@ -194,7 +194,7 @@ func TestHandleToolCall_InteractTool(t *testing.T) {
 	server, _ := NewServer(t.TempDir()+"/test-kaboom.jsonl", 100)
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
-	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
+	toolHandler := mcpHandler.tools.Executor.(*ToolHandler)
 
 	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
@@ -233,7 +233,7 @@ func TestToolObserve_MissingWhat(t *testing.T) {
 	server, _ := NewServer(t.TempDir()+"/test-kaboom.jsonl", 100)
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
-	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
+	toolHandler := mcpHandler.tools.Executor.(*ToolHandler)
 
 	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
@@ -262,7 +262,7 @@ func TestToolObserve_UnknownMode(t *testing.T) {
 	server, _ := NewServer(t.TempDir()+"/test-kaboom.jsonl", 100)
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
-	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
+	toolHandler := mcpHandler.tools.Executor.(*ToolHandler)
 
 	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
@@ -294,7 +294,7 @@ func TestToolObserve_NetworkBodies(t *testing.T) {
 	server, _ := NewServer(t.TempDir()+"/test-kaboom.jsonl", 100)
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
-	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
+	toolHandler := mcpHandler.tools.Executor.(*ToolHandler)
 
 	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
@@ -327,7 +327,7 @@ func TestToolGenerate_MissingFormat(t *testing.T) {
 	server, _ := NewServer(t.TempDir()+"/test-kaboom.jsonl", 100)
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
-	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
+	toolHandler := mcpHandler.tools.Executor.(*ToolHandler)
 
 	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
@@ -353,7 +353,7 @@ func TestToolGenerate_UnknownFormat(t *testing.T) {
 	server, _ := NewServer(t.TempDir()+"/test-kaboom.jsonl", 100)
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
-	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
+	toolHandler := mcpHandler.tools.Executor.(*ToolHandler)
 
 	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
@@ -386,7 +386,7 @@ func TestToolConfigure_MissingAction(t *testing.T) {
 	server, _ := NewServer(t.TempDir()+"/test-kaboom.jsonl", 100)
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
-	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
+	toolHandler := mcpHandler.tools.Executor.(*ToolHandler)
 
 	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
@@ -412,7 +412,7 @@ func TestToolConfigure_UnknownAction(t *testing.T) {
 	server, _ := NewServer(t.TempDir()+"/test-kaboom.jsonl", 100)
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
-	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
+	toolHandler := mcpHandler.tools.Executor.(*ToolHandler)
 
 	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
@@ -441,7 +441,7 @@ func TestToolConfigure_Health(t *testing.T) {
 	server, _ := NewServer(t.TempDir()+"/test-kaboom.jsonl", 100)
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
-	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
+	toolHandler := mcpHandler.tools.Executor.(*ToolHandler)
 
 	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
@@ -478,7 +478,7 @@ func TestToolInteract_MissingAction(t *testing.T) {
 	server, _ := NewServer(t.TempDir()+"/test-kaboom.jsonl", 100)
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
-	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
+	toolHandler := mcpHandler.tools.Executor.(*ToolHandler)
 
 	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
@@ -504,7 +504,7 @@ func TestToolInteract_UnknownAction(t *testing.T) {
 	server, _ := NewServer(t.TempDir()+"/test-kaboom.jsonl", 100)
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
-	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
+	toolHandler := mcpHandler.tools.Executor.(*ToolHandler)
 
 	req := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",
@@ -537,9 +537,8 @@ func TestToolsList(t *testing.T) {
 	server, _ := NewServer(t.TempDir()+"/test-kaboom.jsonl", 100)
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
-	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
 
-	tools := toolHandler.ToolsList()
+	tools := mcpHandler.tools.Schemas
 
 	if len(tools) != 5 {
 		t.Errorf("Expected 5 tools, got %d", len(tools))

@@ -51,7 +51,7 @@ func newObserveTestEnv(t *testing.T) *observeTestEnv {
 	}
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
-	handler := mcpHandler.toolHandler.(*ToolHandler)
+	handler := mcpHandler.tools.Executor.(*ToolHandler)
 	return &observeTestEnv{handler: handler, server: server, capture: cap}
 }
 

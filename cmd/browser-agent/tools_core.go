@@ -295,7 +295,7 @@ func usageKey(args json.RawMessage) string {
 func (h *ToolHandler) ensureToolSchemas() {
 	h.toolSchemasOnce.Do(func() {
 		h.toolSchemas = make(map[string]map[string]any)
-		for _, tool := range h.ToolsList() {
+		for _, tool := range schema.AllTools() {
 			h.toolSchemas[tool.Name] = tool.InputSchema
 		}
 	})
@@ -328,22 +328,6 @@ func (h *ToolHandler) Close() {
 	if h.shutdownCancel != nil {
 		h.shutdownCancel()
 	}
-}
-
-func (h *ToolHandler) GetCapture() *capture.Capture {
-	return h.capture
-}
-
-func (h *ToolHandler) ToolsList() []mcp.MCPTool {
-	return schema.AllTools()
-}
-
-func (h *ToolHandler) GetToolCallLimiter() RateLimiter {
-	return h.toolCallLimiter
-}
-
-func (h *ToolHandler) GetRedactionEngine() RedactionEngine {
-	return h.redactionEngine
 }
 
 const (
@@ -550,10 +534,19 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	handler.ensureToolModules()
 	handler.ensureToolSchemas()
 
-	return &MCPHandler{server: server, toolHandler: handler}
+	handler.MCPHandler.SetToolBackend(buildMCPToolBackend(handler))
+	return handler.MCPHandler
 }
 
 type visualAnalyzeDeps struct{ h *ToolHandler }
+
+func buildMCPToolBackend(handler *ToolHandler) ToolBackend {
+	return ToolBackend{
+		Executor: handler, Capture: handler.capture,
+		Limiter: handler.toolCallLimiter, Redactor: handler.redactionEngine,
+		Schemas: schema.AllTools(), UsageTracker: handler.usageTracker,
+	}
+}
 
 func (d visualAnalyzeDeps) CaptureScreenshot(req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
 	return observe.GetScreenshot(buildObserveReadDeps(d.h), req, json.RawMessage(`{}`))
@@ -718,7 +711,7 @@ func buildInteractDeps(h *ToolHandler) *toolinteract.Deps {
 		},
 		DiagnosticHint: h.Guards.DiagnosticHint,
 		GetRedactionEngine: func() toolinteract.RedactionEngine {
-			return h.GetRedactionEngine()
+			return h.redactionEngine
 		},
 		GetCommandResult: getCommandResult,
 		ReplayMu:         &replayMu,

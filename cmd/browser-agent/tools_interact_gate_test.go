@@ -43,7 +43,7 @@ func newGateTestEnv(t *testing.T) *gateTestEnv {
 	t.Cleanup(func() { server.Close() })
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
-	handler := mcpHandler.toolHandler.(*ToolHandler)
+	handler := mcpHandler.tools.Executor.(*ToolHandler)
 	// Keep disconnect tests fast — override the 5s production readiness timeout.
 	handler.Guards.SetExtensionReadinessTimeout(100 * time.Millisecond)
 	return &gateTestEnv{handler: handler, server: server, capture: cap}

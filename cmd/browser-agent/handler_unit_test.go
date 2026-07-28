@@ -46,19 +46,22 @@ type fakeToolHandlerForMCP struct {
 	handleFn func(req mcp.JSONRPCRequest, name string, arguments json.RawMessage) (mcp.JSONRPCResponse, bool)
 }
 
-func (f *fakeToolHandlerForMCP) GetCapture() *capture.Capture { return f.cap }
-func (f *fakeToolHandlerForMCP) GetToolCallLimiter() RateLimiter {
-	return f.limiter
-}
-func (f *fakeToolHandlerForMCP) GetRedactionEngine() RedactionEngine {
-	return f.redactor
-}
-func (f *fakeToolHandlerForMCP) ToolsList() []mcp.MCPTool { return f.tools }
 func (f *fakeToolHandlerForMCP) HandleToolCall(req mcp.JSONRPCRequest, name string, arguments json.RawMessage) (mcp.JSONRPCResponse, bool) {
 	if f.handleFn == nil {
 		return mcp.JSONRPCResponse{}, false
 	}
 	return f.handleFn(req, name, arguments)
+}
+
+func (f *fakeToolHandlerForMCP) backend() ToolBackend {
+	return ToolBackend{
+		Executor: f, Capture: f.cap, Limiter: f.limiter,
+		Redactor: f.redactor, Schemas: f.tools,
+	}
+}
+
+func setFakeToolBackend(handler *MCPHandler, fake *fakeToolHandlerForMCP) {
+	handler.SetToolBackend(fake.backend())
 }
 
 func mustDecodeJSON[T any](t *testing.T, raw json.RawMessage) T {
@@ -212,7 +215,7 @@ func TestMCPHandlerResourceAndToolMethods(t *testing.T) {
 		},
 		redactor: testRedactor{replacement: json.RawMessage(`{"ok":true,"secret":"[REDACTED]"}`)},
 	}
-	h.SetToolHandler(th)
+	h.SetToolBackend(th.backend())
 
 	resources := h.HandleRequest(mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1, Method: "resources/list"})
 	if resources == nil || resources.Error != nil {
@@ -447,7 +450,7 @@ func TestMCPHandler_AppendsServerWarningsToToolResponse(t *testing.T) {
 	srv.AddWarning("state_dir_not_writable: test warning")
 
 	h := NewMCPHandler(srv, "v-test")
-	h.SetToolHandler(&fakeToolHandlerForMCP{
+	setFakeToolBackend(h, &fakeToolHandlerForMCP{
 		cap:     capture.NewCapture(),
 		limiter: testLimiter{allowed: true},
 		handleFn: func(req mcp.JSONRPCRequest, name string, _ json.RawMessage) (mcp.JSONRPCResponse, bool) {
@@ -515,7 +518,7 @@ func TestMCPHandler_WarnsOnUnknownToolArguments(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	h := NewMCPHandler(srv, "v-test")
-	h.SetToolHandler(&fakeToolHandlerForMCP{
+	setFakeToolBackend(h, &fakeToolHandlerForMCP{
 		cap:     capture.NewCapture(),
 		limiter: testLimiter{allowed: true},
 		tools: []mcp.MCPTool{
@@ -572,7 +575,7 @@ func TestMCPHandler_DoesNotWarnOnKnownToolArguments(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	h := NewMCPHandler(srv, "v-test")
-	h.SetToolHandler(&fakeToolHandlerForMCP{
+	setFakeToolBackend(h, &fakeToolHandlerForMCP{
 		cap:     capture.NewCapture(),
 		limiter: testLimiter{allowed: true},
 		tools: []mcp.MCPTool{
@@ -619,7 +622,7 @@ func TestMCPHandlerToolRateLimit(t *testing.T) {
 	t.Parallel()
 
 	h := NewMCPHandler(nil, "v")
-	h.SetToolHandler(&fakeToolHandlerForMCP{
+	setFakeToolBackend(h, &fakeToolHandlerForMCP{
 		cap:     capture.NewCapture(),
 		limiter: testLimiter{allowed: false},
 	})

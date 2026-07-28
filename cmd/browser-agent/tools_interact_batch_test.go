@@ -118,9 +118,8 @@ func TestToolsInteractBatch_StepMissingWhat(t *testing.T) {
 
 func TestToolsInteractSchema_BatchInWhatEnum(t *testing.T) {
 	t.Parallel()
-	h, _, _ := makeToolHandler(t)
 
-	tools := h.ToolsList()
+	tools := toolSchemasForTest()
 	var interactSchema map[string]any
 	for _, tool := range tools {
 		if tool.Name == "interact" {
@@ -159,9 +158,8 @@ func TestToolsInteractSchema_BatchInWhatEnum(t *testing.T) {
 
 func TestToolsInteractSchema_StepsParam(t *testing.T) {
 	t.Parallel()
-	h, _, _ := makeToolHandler(t)
 
-	tools := h.ToolsList()
+	tools := toolSchemasForTest()
 	var interactSchema map[string]any
 	for _, tool := range tools {
 		if tool.Name == "interact" {

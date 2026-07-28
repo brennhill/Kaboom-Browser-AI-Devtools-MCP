@@ -502,19 +502,19 @@ func shutdownTerminalServer(server *Server, termSrv *http.Server, port int) {
 }
 
 func closeToolHandler(handler *MCPHandler) {
-	if handler == nil || handler.toolHandler == nil {
+	if handler == nil || handler.tools.Executor == nil {
 		return
 	}
-	if toolHandler, ok := handler.toolHandler.(*ToolHandler); ok {
+	if toolHandler, ok := handler.tools.Executor.(*ToolHandler); ok {
 		toolHandler.Close()
 	}
 }
 
 func closeCaptureStore(handler *MCPHandler) {
-	if handler == nil || handler.toolHandler == nil {
+	if handler == nil || handler.tools.Executor == nil {
 		return
 	}
-	if toolHandler, ok := handler.toolHandler.(*ToolHandler); ok && toolHandler.capture != nil {
+	if toolHandler, ok := handler.tools.Executor.(*ToolHandler); ok && toolHandler.capture != nil {
 		toolHandler.capture.Close()
 	}
 }

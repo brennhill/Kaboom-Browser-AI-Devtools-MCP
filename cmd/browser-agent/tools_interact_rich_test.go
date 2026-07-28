@@ -188,10 +188,8 @@ func TestRichAction_FrameIndexInPendingQueryParams(t *testing.T) {
 // ============================================
 
 func TestRichAction_SchemaHasAnalyze(t *testing.T) {
-	env := newInteractTestEnv(t)
-
-	// Get tools list directly (not via embedded MCPHandler which has no toolHandler)
-	tools := env.handler.ToolsList()
+	// Get the canonical tool schemas directly.
+	tools := toolSchemasForTest()
 
 	// Find interact tool schema
 	var interactSchema map[string]any
@@ -240,8 +238,7 @@ func TestRichAction_SchemaHasAnalyze(t *testing.T) {
 }
 
 func TestRichAction_SchemaHasEvidence(t *testing.T) {
-	env := newInteractTestEnv(t)
-	tools := env.handler.ToolsList()
+	tools := toolSchemasForTest()
 
 	var interactSchema map[string]any
 	for _, tool := range tools {
@@ -285,8 +282,7 @@ func TestRichAction_SchemaHasEvidence(t *testing.T) {
 }
 
 func TestRichAction_SchemaHasFrame(t *testing.T) {
-	env := newInteractTestEnv(t)
-	tools := env.handler.ToolsList()
+	tools := toolSchemasForTest()
 
 	var interactSchema map[string]any
 	for _, tool := range tools {
@@ -318,10 +314,8 @@ func TestRichAction_SchemaHasFrame(t *testing.T) {
 }
 
 func TestRichAction_SchemaDescriptionMentionsPerf(t *testing.T) {
-	env := newInteractTestEnv(t)
-
 	// Get tools list directly
-	tools := env.handler.ToolsList()
+	tools := toolSchemasForTest()
 
 	var desc string
 	for _, tool := range tools {

@@ -36,7 +36,7 @@ func newInteractHelpersTestEnv(t *testing.T) *interactHelpersTestEnv {
 	cap := capture.NewCapture()
 	cap.Extension().SetPilotEnabled(false) // explicit default for state/pilot-disabled test branches
 	mcpHandler := NewToolHandler(server, cap)
-	handler := mcpHandler.toolHandler.(*ToolHandler)
+	handler := mcpHandler.tools.Executor.(*ToolHandler)
 
 	// Simulate extension connection so tests that enable pilot don't hit the extension gate.
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))

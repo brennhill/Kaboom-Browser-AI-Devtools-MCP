@@ -113,6 +113,10 @@ func TestRootDoesNotReexportCanonicalTypes(t *testing.T) {
 		"func (h *ToolHandler) IsConsoleNoise(",
 		"func (h *ToolHandler) GetLogEntries(",
 		"func (h *ToolHandler) GetLogTotalAdded(",
+		"func (h *ToolHandler) GetToolCallLimiter(",
+		"func (h *ToolHandler) GetRedactionEngine(",
+		"func (h *ToolHandler) ToolsList(",
+		"func (h *ToolHandler) GetCapture(",
 	} {
 		for _, path := range rootFiles {
 			if strings.HasSuffix(path, "_test.go") {
@@ -125,6 +129,24 @@ func TestRootDoesNotReexportCanonicalTypes(t *testing.T) {
 			if strings.Contains(string(source), forbidden) {
 				t.Errorf("%s re-exports canonical API %q", filepath.Base(path), forbidden)
 			}
+		}
+	}
+}
+
+func TestMCPToolBackendIsExecutionOnly(t *testing.T) {
+	source, err := os.ReadFile(filepath.Join(projectRoot(), "cmd", "browser-agent", "handler.go"))
+	if err != nil {
+		t.Fatalf("read MCP handler: %v", err)
+	}
+	for _, forbidden := range []string{
+		"type ToolHandlerInterface interface {",
+		"GetCapture() *capture.Capture",
+		"GetToolCallLimiter() RateLimiter",
+		"GetRedactionEngine() RedactionEngine",
+		"ToolsList() []mcp.MCPTool",
+	} {
+		if strings.Contains(string(source), forbidden) {
+			t.Errorf("MCP tool backend retains transport dependency %q", forbidden)
 		}
 	}
 }

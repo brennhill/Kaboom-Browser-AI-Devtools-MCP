@@ -158,9 +158,8 @@ func TestInteract_ExplorePage_ModeSpec_Present(t *testing.T) {
 
 func TestInteract_ExplorePage_InWhatEnum(t *testing.T) {
 	t.Parallel()
-	h, _, _ := makeToolHandler(t)
 
-	tools := h.ToolsList()
+	tools := toolSchemasForTest()
 	var interactSchema map[string]any
 	for _, tool := range tools {
 		if tool.Name == "interact" {

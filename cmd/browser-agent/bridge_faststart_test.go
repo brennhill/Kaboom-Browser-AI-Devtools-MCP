@@ -286,9 +286,7 @@ func TestFastStart_ToolsListRespondsImmediately(t *testing.T) {
 // TestFastStart_ToolsListSchemaStability ensures the tools/list schema doesn't change
 // unexpectedly. This catches regressions in the MCP tool definitions.
 func TestFastStart_ToolsListSchemaStability(t *testing.T) {
-	// Get the static tools list directly
-	var handler *ToolHandler
-	tools := handler.ToolsList()
+	tools := toolSchemasForTest()
 
 	// Expected tool names (must not change without intentional update)
 	// Updated in Phase 0 to include new "analyze" tool for active analysis operations

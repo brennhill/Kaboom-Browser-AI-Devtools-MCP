@@ -83,9 +83,8 @@ func TestToolsObservePageInventory_ModeSpecExists(t *testing.T) {
 
 func TestToolsObserveSchema_PageInventoryInWhatEnum(t *testing.T) {
 	t.Parallel()
-	h, _, _ := makeToolHandler(t)
 
-	tools := h.ToolsList()
+	tools := toolSchemasForTest()
 	var observeSchema map[string]any
 	for _, tool := range tools {
 		if tool.Name == "observe" {

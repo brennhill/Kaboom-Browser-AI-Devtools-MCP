@@ -89,8 +89,8 @@ func createTestToolHandler(t *testing.T) *ToolHandler {
 	// Create handler using proper constructor
 	mcpHandler := NewToolHandler(server, cap)
 
-	// Extract the ToolHandler from MCPHandler.toolHandler
-	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
+	// Extract the ToolHandler from MCPHandler.tools.Executor
+	toolHandler := mcpHandler.tools.Executor.(*ToolHandler)
 
 	return toolHandler
 }
@@ -295,7 +295,7 @@ func TestToolHandler_ToolsList_NoStdout(t *testing.T) {
 	handler := createTestToolHandler(t)
 
 	output := captureStdout(t, func() {
-		_ = handler.ToolsList()
+		_ = handler.handleToolsList(mcp.JSONRPCRequest{})
 	})
 
 	if output != "" {

@@ -607,10 +607,10 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 		},
 		ListenPort: server.getListenPort,
 		Audit: func() any {
-			if mcpHandler.toolHandler == nil {
+			if mcpHandler.tools.Executor == nil {
 				return nil
 			}
-			handler, ok := mcpHandler.toolHandler.(*ToolHandler)
+			handler, ok := mcpHandler.tools.Executor.(*ToolHandler)
 			if !ok || handler.healthMetrics == nil {
 				return nil
 			}
@@ -677,10 +677,7 @@ func newMCPHTTPHandler(handler *MCPHandler) *mcphttp.Handler {
 		MaxBodySize:   maxPostBodySize,
 		HandleRequest: handler.HandleRequest,
 		Capture: func() *capture.Capture {
-			if handler.toolHandler == nil {
-				return nil
-			}
-			return handler.toolHandler.GetCapture()
+			return handler.tools.Capture
 		},
 	})
 }

@@ -36,7 +36,7 @@ func TestWaterfallOnDemand_FreshDataNoQuery(t *testing.T) {
 	}
 	cap := capture.NewCapture()
 	handler := NewToolHandler(server, cap)
-	th := handler.toolHandler.(*ToolHandler)
+	th := handler.tools.Executor.(*ToolHandler)
 
 	// Add fresh entries (just now)
 	entries := []types.NetworkWaterfallEntry{
@@ -90,7 +90,7 @@ func TestWaterfallOnDemand_StaleDataCreatesQuery(t *testing.T) {
 	}
 	cap := capture.NewCapture()
 	handler := NewToolHandler(server, cap)
-	th := handler.toolHandler.(*ToolHandler)
+	th := handler.tools.Executor.(*ToolHandler)
 
 	// Add stale entries (2 seconds ago - simulated by waiting)
 	entries := []types.NetworkWaterfallEntry{
@@ -182,7 +182,7 @@ func TestWaterfallOnDemand_EmptyBufferCreatesQuery(t *testing.T) {
 	}
 	cap := capture.NewCapture()
 	handler := NewToolHandler(server, cap)
-	th := handler.toolHandler.(*ToolHandler)
+	th := handler.tools.Executor.(*ToolHandler)
 
 	// Don't add any entries - buffer is empty
 
@@ -243,7 +243,7 @@ func TestWaterfallOnDemand_TimeoutHandling(t *testing.T) {
 	// Set a very short timeout for this test
 	cap.Queries().SetQueryTimeout(100 * time.Millisecond)
 	handler := NewToolHandler(server, cap)
-	th := handler.toolHandler.(*ToolHandler)
+	th := handler.tools.Executor.(*ToolHandler)
 
 	// Don't respond to the query - let it timeout
 	start := time.Now()
@@ -283,7 +283,7 @@ func TestWaterfallOnDemand_ConcurrentRequests(t *testing.T) {
 	}
 	cap := capture.NewCapture()
 	handler := NewToolHandler(server, cap)
-	th := handler.toolHandler.(*ToolHandler)
+	th := handler.tools.Executor.(*ToolHandler)
 
 	// Simulate extension responding to queries
 	go func() {
@@ -393,7 +393,7 @@ func TestWaterfallStalenessThreshold(t *testing.T) {
 	}
 	cap := capture.NewCapture()
 	handler := NewToolHandler(server, cap)
-	th := handler.toolHandler.(*ToolHandler)
+	th := handler.tools.Executor.(*ToolHandler)
 
 	// Add entries
 	entries := []types.NetworkWaterfallEntry{

@@ -19,8 +19,11 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
+
+func toolSchemasForTest() []mcp.MCPTool { return schema.AllTools() }
 
 // ============================================
 // Factory + Test Environment
@@ -39,7 +42,7 @@ func makeToolHandler(t *testing.T) (*ToolHandler, *Server, *capture.Capture) {
 	cap := capture.NewCapture()
 	cap.Extension().SetPilotEnabled(false) // keep legacy test default: explicitly disabled unless test opts in
 	mcpHandler := NewToolHandler(server, cap)
-	handler := mcpHandler.toolHandler.(*ToolHandler)
+	handler := mcpHandler.tools.Executor.(*ToolHandler)
 	return handler, server, cap
 }
 
@@ -65,7 +68,7 @@ func newToolTestEnv(t *testing.T) *toolTestEnv {
 	cap := capture.NewCapture()
 	cap.Extension().SetPilotEnabled(false) // keep legacy test default: explicitly disabled unless test opts in
 	mcpHandler := NewToolHandler(server, cap)
-	handler := mcpHandler.toolHandler.(*ToolHandler)
+	handler := mcpHandler.tools.Executor.(*ToolHandler)
 	return &toolTestEnv{handler: handler, server: server, capture: cap}
 }
 

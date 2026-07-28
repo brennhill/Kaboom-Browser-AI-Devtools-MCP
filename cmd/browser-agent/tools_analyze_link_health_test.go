@@ -35,7 +35,7 @@ func newAnalyzeTestEnv(t *testing.T) *analyzeTestEnv {
 	}
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
-	handler := mcpHandler.toolHandler.(*ToolHandler)
+	handler := mcpHandler.tools.Executor.(*ToolHandler)
 	return &analyzeTestEnv{handler: handler, server: server, capture: cap}
 }
 

@@ -10,7 +10,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
-func TestGetCapture(t *testing.T) {
+func TestMCPCaptureConfigured(t *testing.T) {
 	t.Parallel()
 
 	cap := capture.NewCapture()
@@ -19,14 +19,12 @@ func TestGetCapture(t *testing.T) {
 		t.Fatalf("NewServer: %v", err)
 	}
 	mcpHandler := NewToolHandler(server, cap)
-	h := mcpHandler.toolHandler.(*ToolHandler)
-
-	if h.GetCapture() != cap {
-		t.Fatal("GetCapture should return the injected capture")
+	if mcpHandler.tools.Capture != cap {
+		t.Fatal("MCP handler should retain the injected capture")
 	}
 }
 
-func TestGetToolCallLimiter(t *testing.T) {
+func TestMCPToolCallLimiterConfigured(t *testing.T) {
 	t.Parallel()
 
 	cap := capture.NewCapture()
@@ -35,11 +33,9 @@ func TestGetToolCallLimiter(t *testing.T) {
 		t.Fatalf("NewServer: %v", err)
 	}
 	mcpHandler := NewToolHandler(server, cap)
-	h := mcpHandler.toolHandler.(*ToolHandler)
-
-	limiter := h.GetToolCallLimiter()
+	limiter := mcpHandler.tools.Limiter
 	if limiter == nil {
-		t.Fatal("GetToolCallLimiter should return non-nil limiter")
+		t.Fatal("MCP tool call limiter should be configured")
 	}
 	// Limiter should allow calls
 	if !limiter.Allow() {
@@ -47,7 +43,7 @@ func TestGetToolCallLimiter(t *testing.T) {
 	}
 }
 
-func TestGetRedactionEngine_Configured(t *testing.T) {
+func TestMCPRedactionEngineConfigured(t *testing.T) {
 	t.Parallel()
 
 	cap := capture.NewCapture()
@@ -56,9 +52,7 @@ func TestGetRedactionEngine_Configured(t *testing.T) {
 		t.Fatalf("NewServer: %v", err)
 	}
 	mcpHandler := NewToolHandler(server, cap)
-	h := mcpHandler.toolHandler.(*ToolHandler)
-
-	if h.GetRedactionEngine() == nil {
-		t.Fatal("GetRedactionEngine should return a configured engine")
+	if mcpHandler.tools.Redactor == nil {
+		t.Fatal("MCP redaction engine should be configured")
 	}
 }

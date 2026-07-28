@@ -23,7 +23,7 @@ func TestToolResponsePostProcessing_AddsSecurityModeMetadataAndWarning(t *testin
 
 	cap := makeTestCapture(t)
 	handler := NewToolHandler(server, cap)
-	toolHandler := handler.toolHandler.(*ToolHandler)
+	toolHandler := handler.tools.Executor.(*ToolHandler)
 
 	enableReq := mcp.JSONRPCRequest{
 		JSONRPC: "2.0",

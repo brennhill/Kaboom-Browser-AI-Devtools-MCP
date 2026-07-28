@@ -140,6 +140,9 @@ last_verified_date: 2026-03-29
 `internal/mcp/deps.go` contains only live diagnostic and asynchronous-command
 contracts. Obsolete capture, log-buffer, accessibility, and noise provider
 interfaces were removed after their consumers migrated to explicit composition.
+`MCPHandler` owns its capture, tool schemas, limiter, redactor, usage tracker,
+and execution backend through one `ToolBackend` value. The executor contract has
+only `HandleToolCall`; no transport-policy getter remains on `ToolHandler`.
 
 > **2026-07-27:** Deleted the package-main type facade. MCP wire contracts and
 > protocol negotiation now come directly from `internal/mcp`; server identity,

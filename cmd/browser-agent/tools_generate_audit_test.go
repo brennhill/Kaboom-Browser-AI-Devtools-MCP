@@ -48,7 +48,7 @@ func newGenerateTestEnv(t *testing.T) *generateTestEnv {
 	}
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
-	handler := mcpHandler.toolHandler.(*ToolHandler)
+	handler := mcpHandler.tools.Executor.(*ToolHandler)
 	return &generateTestEnv{handler: handler, server: server, capture: cap}
 }
 

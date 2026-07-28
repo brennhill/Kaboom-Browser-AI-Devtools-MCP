@@ -123,7 +123,7 @@ func TestObserveErrors_EndToEnd(t *testing.T) {
 		Params:  json.RawMessage(`{"name":"observe","arguments":{"what":"errors"}}`),
 	}
 
-	th := handler.toolHandler.(*ToolHandler)
+	th := handler.tools.Executor.(*ToolHandler)
 	resp := observe.GetBrowserErrors(buildObserveReadDeps(th), mcpReq, json.RawMessage(`{}`))
 
 	// Step 3: Verify errors are returned
@@ -186,7 +186,7 @@ func TestObserveLogs_EndToEnd(t *testing.T) {
 
 	// Call observe logs
 	mcpReq := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	th := handler.toolHandler.(*ToolHandler)
+	th := handler.tools.Executor.(*ToolHandler)
 	resp := observe.GetBrowserLogs(buildObserveReadDeps(th), mcpReq, json.RawMessage(`{}`))
 
 	var result map[string]any
@@ -227,7 +227,7 @@ func TestObserveLogs_LevelFilter(t *testing.T) {
 	}, nil)
 
 	// min_level uses threshold semantics: warn returns warn+error.
-	th := handler.toolHandler.(*ToolHandler)
+	th := handler.tools.Executor.(*ToolHandler)
 	resp := observe.GetBrowserLogs(buildObserveReadDeps(th), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{"min_level":"warn"}`))
 
 	var result map[string]any
@@ -264,7 +264,7 @@ func TestObserveNetworkWaterfall_EndToEnd(t *testing.T) {
 	cap.Telemetry().NetworkWaterfall().Add([]types.NetworkWaterfallEntry{sampleNetworkEntry}, "https://example.com/dashboard")
 
 	// Call observe network_waterfall
-	th := handler.toolHandler.(*ToolHandler)
+	th := handler.tools.Executor.(*ToolHandler)
 	resp := observe.GetNetworkWaterfall(buildObserveReadDeps(th), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 	var result map[string]any
@@ -313,7 +313,7 @@ func TestObserveNetworkWaterfall_URLFilter(t *testing.T) {
 	cap.Telemetry().NetworkWaterfall().Add(entries, "https://example.com")
 
 	// Filter by "api.example.com"
-	th := handler.toolHandler.(*ToolHandler)
+	th := handler.tools.Executor.(*ToolHandler)
 	resp := observe.GetNetworkWaterfall(buildObserveReadDeps(th), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{"url":"api.example.com"}`))
 
 	var result map[string]any
@@ -350,7 +350,7 @@ func TestObserveExtensionLogs_EndToEnd(t *testing.T) {
 	cap.ExtensionLogs().Add([]types.ExtensionLog{sampleExtensionLog})
 
 	// Call observe extension_logs
-	th := handler.toolHandler.(*ToolHandler)
+	th := handler.tools.Executor.(*ToolHandler)
 	resp := observe.GetExtensionLogs(buildObserveReadDeps(th), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 	var result map[string]any
@@ -394,7 +394,7 @@ func TestObservePage_ExtractsFromWaterfall(t *testing.T) {
 	cap.Telemetry().NetworkWaterfall().Add([]types.NetworkWaterfallEntry{sampleNetworkEntry}, "https://example.com/dashboard")
 
 	// Call observe page
-	th := handler.toolHandler.(*ToolHandler)
+	th := handler.tools.Executor.(*ToolHandler)
 	resp := observe.GetPageInfo(buildObserveReadDeps(th), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 	var result map[string]any
@@ -457,7 +457,7 @@ func TestObservePage_PrioritizesTrackedURL(t *testing.T) {
 	}
 
 	// Call observe page - should return tracked URL, NOT waterfall URL
-	th := handler.toolHandler.(*ToolHandler)
+	th := handler.tools.Executor.(*ToolHandler)
 	resp := observe.GetPageInfo(buildObserveReadDeps(th), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 	var result map[string]any
@@ -512,7 +512,7 @@ func TestObserveNetworkBodies_EndToEnd(t *testing.T) {
 	})
 
 	// Call observe network_bodies
-	th := handler.toolHandler.(*ToolHandler)
+	th := handler.tools.Executor.(*ToolHandler)
 	resp := observe.GetNetworkBodies(buildObserveReadDeps(th), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 	var result map[string]any
@@ -566,7 +566,7 @@ func TestObserveWebSocketEvents_EndToEnd(t *testing.T) {
 	cap.HandleWebSocketEvents(w, req)
 
 	// Call observe websocket_events
-	th := handler.toolHandler.(*ToolHandler)
+	th := handler.tools.Executor.(*ToolHandler)
 	resp := observe.GetWSEvents(buildObserveReadDeps(th), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 	var result map[string]any
@@ -626,7 +626,7 @@ func TestMCPToolsCall_ObserveErrors_FullFlow(t *testing.T) {
 	}
 
 	// Dispatch to observe tool
-	th := handler.toolHandler.(*ToolHandler)
+	th := handler.tools.Executor.(*ToolHandler)
 	resp := th.observeDispatcher.Handle(mcpRequest, params.Arguments)
 
 	// Verify response structure

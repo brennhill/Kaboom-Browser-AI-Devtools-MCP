@@ -80,9 +80,9 @@ func TestToolsAnalyzeStructuredExtraction_InValidModes(t *testing.T) {
 
 func TestToolsAnalyzeSchema_StructuredExtractionInWhatEnum(t *testing.T) {
 	t.Parallel()
-	h, _, _ := makeToolHandler(t)
+	_, _, _ = makeToolHandler(t)
 
-	tools := h.ToolsList()
+	tools := toolSchemasForTest()
 	var analyzeSchema map[string]any
 	for _, tool := range tools {
 		if tool.Name == "analyze" {

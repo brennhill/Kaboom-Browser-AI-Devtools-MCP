@@ -38,14 +38,14 @@ func newGoldenHandlers(t *testing.T) (*MCPHandler, *ToolHandler) {
 
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
-	toolHandler := mcpHandler.toolHandler.(*ToolHandler)
+	toolHandler := mcpHandler.tools.Executor.(*ToolHandler)
 	return mcpHandler, toolHandler
 }
 
 func TestGoldenToolsList(t *testing.T) {
-	_, toolHandler := newGoldenHandlers(t)
+	_, _ = newGoldenHandlers(t)
 
-	tools := toolHandler.ToolsList()
+	tools := toolSchemasForTest()
 	data, err := json.MarshalIndent(tools, "", "  ")
 	if err != nil {
 		t.Fatalf("json.MarshalIndent failed: %v", err)

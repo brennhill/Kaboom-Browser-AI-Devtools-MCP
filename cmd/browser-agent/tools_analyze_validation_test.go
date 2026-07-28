@@ -28,7 +28,7 @@ func newAnalyzeValidationHandler(t *testing.T) *ToolHandler {
 	})
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
-	return mcpHandler.toolHandler.(*ToolHandler)
+	return mcpHandler.tools.Executor.(*ToolHandler)
 }
 
 func decodeToolResult(t *testing.T, raw json.RawMessage) mcp.MCPToolResult {

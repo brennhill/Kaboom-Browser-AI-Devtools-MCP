@@ -39,7 +39,7 @@ func newBundleTestEnv(t *testing.T) *bundleTestEnv {
 	}
 	cap := capture.NewCapture()
 	mcpHandler := NewToolHandler(server, cap)
-	handler := mcpHandler.toolHandler.(*ToolHandler)
+	handler := mcpHandler.tools.Executor.(*ToolHandler)
 	return &bundleTestEnv{handler: handler, server: server, capture: cap}
 }
 
