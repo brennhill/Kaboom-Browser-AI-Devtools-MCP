@@ -15,6 +15,9 @@ code_paths:
   - internal/queries/dispatcher_results.go
   - internal/queries/dispatcher_trace.go
   - internal/queries/types.go
+  - internal/capture/query_dispatcher.go
+  - cmd/browser-agent/tools_async_completion.go
+  - cmd/browser-agent/internal/asyncresult/normalization.go
   - src/types/index.ts
   - src/types/global.d.ts
   - src/types/runtime-messages.ts
@@ -31,6 +34,10 @@ test_paths:
   - internal/queries/commands_test.go
   - internal/queries/command_trace_test.go
   - internal/queries/expire_signal_test.go
+  - internal/queries/no_facade_test.go
+  - internal/capture/no_facade_test.go
+  - internal/capture/query_commands_test.go
+  - cmd/browser-agent/internal/asyncresult/normalization_test.go
   - tests/extension/no-compatibility-facades.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
@@ -65,3 +72,4 @@ last_verified_date: 2026-03-05
   - `internal/mcp/response_clamp.go` — JSON-aware payload clamping
 - Tests:
   - `internal/mcp/response_test.go`
+  - `internal/queries/no_facade_test.go` and `internal/capture/no_facade_test.go` prevent compatibility-only command lifecycle APIs from returning.

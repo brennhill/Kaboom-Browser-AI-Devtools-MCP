@@ -11,7 +11,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
-func NormalizeCompleteCommandResult(corrID string, result json.RawMessage) (json.RawMessage, string) {
+func NormalizeCompletedCommandResult(corrID string, result json.RawMessage) (json.RawMessage, string) {
 	if strings.HasPrefix(corrID, "dom_list_") {
 		return normalizeListInteractiveResult(result)
 	}

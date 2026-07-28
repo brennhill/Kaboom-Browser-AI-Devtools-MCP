@@ -31,7 +31,7 @@ func TestMaybeWaitForCommand_TimeoutMs_CustomTimeout(t *testing.T) {
 	// Complete the command after 200ms
 	go func() {
 		time.Sleep(200 * time.Millisecond)
-		cap.CompleteCommand(correlationID, json.RawMessage(`{"success":true,"data":"custom-timeout"}`), "")
+		cap.ApplyCommandResult(correlationID, "complete", json.RawMessage(`{"success":true,"data":"custom-timeout"}`), "")
 	}()
 
 	// Set timeout_ms to 2000ms (should be enough to catch the 200ms result)
@@ -163,7 +163,7 @@ func TestAnalyze_LinkHealth_SyncTrue_WaitsForResult(t *testing.T) {
 		pending := cap.GetPendingCommands()
 		for _, cmd := range pending {
 			if cmd != nil && strings.HasPrefix(cmd.CorrelationID, "link_health_") {
-				cap.CompleteCommand(cmd.CorrelationID, json.RawMessage(`{"success":true,"healthy":5,"broken":0}`), "")
+				cap.ApplyCommandResult(cmd.CorrelationID, "complete", json.RawMessage(`{"success":true,"healthy":5,"broken":0}`), "")
 				break
 			}
 		}
@@ -227,7 +227,7 @@ func TestAnalyze_Dom_TimeoutMs_Respected(t *testing.T) {
 		pending := cap.GetPendingCommands()
 		for _, cmd := range pending {
 			if cmd != nil && strings.HasPrefix(cmd.CorrelationID, "dom_") {
-				cap.CompleteCommand(cmd.CorrelationID, json.RawMessage(`{"success":true,"elements":[]}`), "")
+				cap.ApplyCommandResult(cmd.CorrelationID, "complete", json.RawMessage(`{"success":true,"elements":[]}`), "")
 				break
 			}
 		}

@@ -135,7 +135,7 @@ func TestSaveState_StateCapture_Captured(t *testing.T) {
 						"scroll_position": map[string]any{"x": 0.0, "y": 150.0},
 					},
 				})
-				env.capture.CompleteCommand(q.CorrelationID, result, "")
+				env.capture.ApplyCommandResult(q.CorrelationID, "complete", result, "")
 				return
 			}
 		}
@@ -186,7 +186,7 @@ func TestSaveState_CapturesStorage(t *testing.T) {
 						"cookies":         map[string]any{"_ga": "GA1.2.123", "prefs": "compact"},
 					},
 				})
-				env.capture.CompleteCommand(q.CorrelationID, result, "")
+				env.capture.ApplyCommandResult(q.CorrelationID, "complete", result, "")
 				return
 			}
 		}
@@ -259,7 +259,7 @@ func TestSaveState_ServerRedaction_RedactsSensitiveFormValues(t *testing.T) {
 						},
 					},
 				})
-				env.capture.CompleteCommand(q.CorrelationID, result, "")
+				env.capture.ApplyCommandResult(q.CorrelationID, "complete", result, "")
 				return
 			}
 		}
@@ -332,7 +332,7 @@ func TestSaveState_ServerRedaction_RedactsLegacyFormValueShapes(t *testing.T) {
 						},
 					},
 				})
-				env.capture.CompleteCommand(q.CorrelationID, result, "")
+				env.capture.ApplyCommandResult(q.CorrelationID, "complete", result, "")
 				return
 			}
 		}
@@ -414,7 +414,7 @@ func TestSaveState_StateCapture_SkippedErrorOnExecuteFailure(t *testing.T) {
 					"error":   "execution_error",
 					"message": "script failed",
 				})
-				env.capture.CompleteCommand(q.CorrelationID, result, "")
+				env.capture.ApplyCommandResult(q.CorrelationID, "complete", result, "")
 				return
 			}
 		}

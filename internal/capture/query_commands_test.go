@@ -47,7 +47,7 @@ func TestNewCaptureDelegation_QueryDispatcher(t *testing.T) {
 	}
 
 	c.RegisterCommand("c-1", "q-1", 30*time.Second)
-	c.CompleteCommand("c-1", json.RawMessage(`{"done":true}`), "")
+	c.ApplyCommandResult("c-1", "complete", json.RawMessage(`{"done":true}`), "")
 	cmd, cmdFound := c.GetCommandResult("c-1")
 	if !cmdFound {
 		t.Fatal("GetCommandResult returned false")

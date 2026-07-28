@@ -68,7 +68,7 @@ graph TB
     BG -->|"5a. GET /pending-queries"| Capture
     Capture -->|"5b. Query list + data"| BG
     BG -->|"6. POST /query-result"| Capture
-    Capture -->|"7. CompleteCommand()"| Session
+    Capture -->|"7. ApplyCommandResult()"| Session
 
     Inject -->|"8. POST /sync (batched)"| Capture
     Inject -->|"Events: logs, network,<br/>WS, performance"| Capture

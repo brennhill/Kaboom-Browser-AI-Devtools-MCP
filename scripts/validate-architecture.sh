@@ -55,7 +55,7 @@ REQUIRED_METHODS=(
     "SetQueryResultWithClient"
     "TakeQueryResult"
     "RegisterCommand"
-    "CompleteCommand"
+    "ApplyCommandResult"
     "ExpireCommand"
     "GetCommandResult"
     "GetPendingCommands"

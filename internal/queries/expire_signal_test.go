@@ -147,7 +147,7 @@ func TestExpireCommand_NoOpOnNonPending(t *testing.T) {
 
 	correlationID := "already-complete"
 	qd.RegisterCommand(correlationID, "q-3", 30*time.Second)
-	qd.CompleteCommand(correlationID, json.RawMessage(`{"ok":true}`), "")
+	qd.ApplyCommandResult(correlationID, "complete", json.RawMessage(`{"ok":true}`), "")
 
 	// ExpireCommand on an already-completed command should be a no-op
 	// (should not panic or signal spuriously)
@@ -163,7 +163,7 @@ func TestExpireCommand_NoOpOnNonPending(t *testing.T) {
 }
 
 // TestExpireAndComplete_ConcurrentRace verifies that concurrent ExpireCommand
-// and CompleteCommand on the same correlation ID do not panic or corrupt state.
+// and ApplyCommandResult on the same correlation ID do not panic or corrupt state.
 // One must win; the other becomes a no-op.
 func TestExpireAndComplete_ConcurrentRace(t *testing.T) {
 	t.Parallel()
@@ -186,7 +186,7 @@ func TestExpireAndComplete_ConcurrentRace(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 
 		// Fire both concurrently — exactly one should win
-		go qd.CompleteCommand(correlationID, json.RawMessage(`{"ok":true}`), "")
+		go qd.ApplyCommandResult(correlationID, "complete", json.RawMessage(`{"ok":true}`), "")
 		go qd.ExpireCommand(correlationID)
 
 		// Waiter must unblock well before its 10s timeout

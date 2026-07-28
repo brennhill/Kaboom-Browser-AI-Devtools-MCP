@@ -203,7 +203,7 @@ func (h *Handler) HandleDrawModeComplete(w http.ResponseWriter, r *http.Request)
 	// so the LLM can retrieve results via correlation_id.
 	if body.CorrelationID != "" && h.capture != nil {
 		resultJSON, _ := json.Marshal(result)
-		h.capture.CompleteCommand(body.CorrelationID, resultJSON, "")
+		h.capture.ApplyCommandResult(body.CorrelationID, "complete", resultJSON, "")
 	}
 
 	// Auto-push annotations to AI client via push pipeline

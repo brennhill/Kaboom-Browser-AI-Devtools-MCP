@@ -31,7 +31,7 @@ func TestMaybeWaitForCommand_SyncByDefault(t *testing.T) {
 	// Create a result after a short delay
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		cap.CompleteCommand(correlationID, json.RawMessage(`{"success":true,"message":"instant result"}`), "")
+		cap.ApplyCommandResult(correlationID, "complete", json.RawMessage(`{"success":true,"message":"instant result"}`), "")
 	}()
 
 	// Simulate extension connection via a Sync call so IsExtensionConnected() returns true
@@ -92,7 +92,7 @@ func TestToolObserveCommandResult_IncludesTraceTimeline(t *testing.T) {
 
 	_ = cap.GetPendingQueries() // marks "sent"
 	cap.AcknowledgePendingQuery(queryID)
-	cap.CompleteCommand(correlationID, json.RawMessage(`{"success":true}`), "")
+	cap.ApplyCommandResult(correlationID, "complete", json.RawMessage(`{"success":true}`), "")
 
 	resp := handler.observeDispatcher.CommandResult(req, json.RawMessage(`{"correlation_id":"test-trace-obs-123"}`))
 	data := parseMCPResponseData(t, resp.Result)

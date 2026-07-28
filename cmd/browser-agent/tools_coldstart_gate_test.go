@@ -109,7 +109,7 @@ func TestMaybeWaitForCommand_ExtensionConnected_WaitsForResult(t *testing.T) {
 	// Complete the command after 100ms
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		cap.CompleteCommand(correlationID, json.RawMessage(`{"success":true}`), "")
+		cap.ApplyCommandResult(correlationID, "complete", json.RawMessage(`{"success":true}`), "")
 	}()
 
 	req := mcp.JSONRPCRequest{ID: 1, ClientID: "test-client"}

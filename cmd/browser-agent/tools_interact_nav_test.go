@@ -279,7 +279,7 @@ func completePendingCommands(env *interactTestEnv, result json.RawMessage, cmdEr
 		pending := env.capture.GetPendingCommands()
 		for _, cmd := range pending {
 			if cmd != nil && cmd.CorrelationID != "" && cmd.Status == "pending" {
-				env.capture.CompleteCommand(cmd.CorrelationID, result, cmdErr)
+				env.capture.ApplyCommandResult(cmd.CorrelationID, "complete", result, cmdErr)
 				return
 			}
 		}

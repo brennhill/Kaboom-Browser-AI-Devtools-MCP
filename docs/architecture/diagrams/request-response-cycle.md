@@ -320,7 +320,7 @@ sequenceDiagram
 **Result Storage:**
 - `internal/capture/capture.go:Capture.completedResults`
 - `cmd/browser-agent/tools_interact.go` - Query creation
-- `cmd/browser-agent/tools_core.go:CompleteCommand()` - Result storage
+- `cmd/browser-agent/tools_core.go:ApplyCommandResult()` - Result storage
 
 **Extension Polling:**
 - `src/background/pending-queries.ts` - Poll logic

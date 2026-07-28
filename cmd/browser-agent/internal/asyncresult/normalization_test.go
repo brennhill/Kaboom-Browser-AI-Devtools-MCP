@@ -22,14 +22,14 @@ func decode(t *testing.T, raw json.RawMessage) map[string]any {
 	return m
 }
 
-// TestNormalizeCompleteCommandResult_OnlyTouchesListInteractive pins the
+// TestNormalizeCompletedCommandResult_OnlyTouchesListInteractive pins the
 // correlation-ID gate: normalization is scoped to dom_list_* commands and every
 // other command's payload must come through byte-identical.
-func TestNormalizeCompleteCommandResult_OnlyTouchesListInteractive(t *testing.T) {
+func TestNormalizeCompletedCommandResult_OnlyTouchesListInteractive(t *testing.T) {
 	t.Parallel()
 
 	payload := json.RawMessage(`{"value":null}`)
-	got, errCode := NormalizeCompleteCommandResult("dom_click_1", payload)
+	got, errCode := NormalizeCompletedCommandResult("dom_click_1", payload)
 	if errCode != "" {
 		t.Fatalf("error code = %q for a non-list command, want empty", errCode)
 	}
@@ -38,7 +38,7 @@ func TestNormalizeCompleteCommandResult_OnlyTouchesListInteractive(t *testing.T)
 	}
 
 	// The same payload under a dom_list_ correlation ID IS normalized.
-	got, errCode = NormalizeCompleteCommandResult("dom_list_1", payload)
+	got, errCode = NormalizeCompletedCommandResult("dom_list_1", payload)
 	if errCode != "list_interactive_missing_payload" {
 		t.Fatalf("error code = %q, want list_interactive_missing_payload", errCode)
 	}

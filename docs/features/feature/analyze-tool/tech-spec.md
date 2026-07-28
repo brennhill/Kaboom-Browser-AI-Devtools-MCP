@@ -40,7 +40,7 @@ last_verified_date: 2026-03-05
   2. fallback to `ann_*` async waiter + command-result polling if the block window expires.
 - Normal completion path:
   1. Draw-mode completion stores session data in `internal/annotation`.
-  2. Store callback completes matching waiters via `capture.CompleteCommand`.
+  2. Store callback completes matching waiters via `capture.ApplyCommandResult(correlationID, "complete", payload, "")`.
   3. `observe(command_result)` returns final command output.
 - Recovery path (`#412`):
   - `analyze({what:"annotations", operation:"flush", correlation_id:"ann_*"})`

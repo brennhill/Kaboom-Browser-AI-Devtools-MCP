@@ -29,7 +29,7 @@ LLM                          Server                      Extension
  |                              |<-- /draw-mode/complete ----|
  |                              |    (annotations + corrID)  |
  |                              |                            |
- |                              |-- CompleteCommand(ann_X) ->|
+ |                              |-- ApplyCommandResult(ann_X, "complete", result, "") ->|
  |                              |   (stored in CommandTracker)|
  |                              |                            |
  |-- observe(command_result, -->|                            |
@@ -57,7 +57,7 @@ The call **blocks for up to 55 seconds** waiting for annotations to arrive. This
 
 2. **AnnotationStore** (`internal/annotation/store_wait.go`): Maintains annotation waiters. When `StoreSession()` or `AppendToNamedSession()` receives annotations, it completes matching waiters through the command-completion callback.
 
-3. **CommandTracker** (`internal/capture/queries.go`): Provides `WaitForCommand(correlationID, timeout)` which blocks using a `commandNotify` channel. `CompleteCommand()` closes the channel to wake all waiters. The waiter registration uses a 10-minute TTL to give users ample drawing time.
+3. **CommandTracker** (`internal/queries/dispatcher_commands.go`): Provides `WaitForCommand(correlationID, timeout)` which blocks using a `commandNotify` channel. `ApplyCommandResult(correlationID, status, result, err)` closes the channel to wake all waiters. The waiter registration uses a 10-minute TTL to give users ample drawing time.
 
 4. **Observe handler** (`tools_observe_analysis.go`): When `correlation_id` starts with `ann_`, calls `WaitForCommand(55s)` instead of returning immediately. Returns `pending` if still waiting after 55s, or the completed result if annotations arrived.
 
@@ -86,7 +86,7 @@ Any tool that depends on user interaction should follow this pattern:
 
 1. Return immediately with `{status: "waiting_for_user", correlation_id: "..."}`
 2. Register the correlation_id in both CommandTracker and the relevant store
-3. When data arrives, complete the command via `capture.CompleteCommand()`
+3. When data arrives, complete the command via `capture.ApplyCommandResult(correlationID, "complete", result, "")`.
 4. LLM polls via `observe({what: "command_result", correlation_id: "..."})` which blocks for a reasonable duration
 
 Do NOT use long timeouts or fully blocking waits for user-facing operations. The LLM should always be in control of when and how long to wait.

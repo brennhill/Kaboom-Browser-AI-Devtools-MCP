@@ -58,7 +58,7 @@ func TestNewQueryDispatcher_RegisterCommand_EmptyCorrelationID(t *testing.T) {
 	}
 }
 
-func TestNewQueryDispatcher_CompleteCommand(t *testing.T) {
+func TestNewQueryDispatcher_ApplyCommandResultComplete(t *testing.T) {
 	t.Parallel()
 
 	qd := NewQueryDispatcher()
@@ -67,7 +67,7 @@ func TestNewQueryDispatcher_CompleteCommand(t *testing.T) {
 	qd.RegisterCommand("corr-2", "q-2", 30*time.Second)
 
 	resultData := json.RawMessage(`{"title":"Page Title"}`)
-	qd.CompleteCommand("corr-2", resultData, "")
+	qd.ApplyCommandResult("corr-2", "complete", resultData, "")
 
 	cmd, found := qd.GetCommandResult("corr-2")
 	if !found {
@@ -87,14 +87,14 @@ func TestNewQueryDispatcher_CompleteCommand(t *testing.T) {
 	}
 }
 
-func TestNewQueryDispatcher_CompleteCommand_WithError(t *testing.T) {
+func TestNewQueryDispatcher_ApplyCommandResult_WithError(t *testing.T) {
 	t.Parallel()
 
 	qd := NewQueryDispatcher()
 	defer qd.Close()
 
 	qd.RegisterCommand("corr-err", "q-err", 30*time.Second)
-	qd.CompleteCommand("corr-err", nil, "element not found")
+	qd.ApplyCommandResult("corr-err", "complete", nil, "element not found")
 
 	cmd, found := qd.GetCommandResult("corr-err")
 	if !found {
@@ -255,22 +255,22 @@ func TestNewQueryDispatcher_ApplyCommandResult_ErrorFieldForcesErrorStatus(t *te
 	}
 }
 
-func TestNewQueryDispatcher_CompleteCommand_EmptyCorrelationID(t *testing.T) {
+func TestNewQueryDispatcher_ApplyCommandResult_EmptyCorrelationID(t *testing.T) {
 	t.Parallel()
 
 	qd := NewQueryDispatcher()
 	defer qd.Close()
 
-	qd.CompleteCommand("", json.RawMessage(`{}`), "")
+	qd.ApplyCommandResult("", "complete", json.RawMessage(`{}`), "")
 }
 
-func TestNewQueryDispatcher_CompleteCommand_NotRegistered(t *testing.T) {
+func TestNewQueryDispatcher_ApplyCommandResult_NotRegistered(t *testing.T) {
 	t.Parallel()
 
 	qd := NewQueryDispatcher()
 	defer qd.Close()
 
-	qd.CompleteCommand("nonexistent", json.RawMessage(`{}`), "")
+	qd.ApplyCommandResult("nonexistent", "complete", json.RawMessage(`{}`), "")
 }
 
 func TestNewQueryDispatcher_ExpireCommand(t *testing.T) {
@@ -316,7 +316,7 @@ func TestNewQueryDispatcher_ExpireCommand_AlreadyCompleted(t *testing.T) {
 	defer qd.Close()
 
 	qd.RegisterCommand("corr-done", "q-done", 30*time.Second)
-	qd.CompleteCommand("corr-done", json.RawMessage(`{"ok":true}`), "")
+	qd.ApplyCommandResult("corr-done", "complete", json.RawMessage(`{"ok":true}`), "")
 
 	qd.ExpireCommand("corr-done")
 
@@ -371,7 +371,7 @@ func TestNewQueryDispatcher_WaitForCommand_Immediate(t *testing.T) {
 	defer qd.Close()
 
 	qd.RegisterCommand("corr-wait", "q-wait", 30*time.Second)
-	qd.CompleteCommand("corr-wait", json.RawMessage(`{"done":true}`), "")
+	qd.ApplyCommandResult("corr-wait", "complete", json.RawMessage(`{"done":true}`), "")
 
 	cmd, found := qd.WaitForCommand("corr-wait", 1*time.Second)
 	if !found {
@@ -392,7 +392,7 @@ func TestNewQueryDispatcher_WaitForCommand_Async(t *testing.T) {
 
 	go func() {
 		time.Sleep(20 * time.Millisecond)
-		qd.CompleteCommand("corr-async", json.RawMessage(`{"async":true}`), "")
+		qd.ApplyCommandResult("corr-async", "complete", json.RawMessage(`{"async":true}`), "")
 	}()
 
 	cmd, found := qd.WaitForCommand("corr-async", 2*time.Second)
@@ -442,7 +442,7 @@ func TestNewQueryDispatcher_GetCompletedCommands(t *testing.T) {
 	defer qd.Close()
 
 	qd.RegisterCommand("corr-c1", "q-c1", 30*time.Second)
-	qd.CompleteCommand("corr-c1", json.RawMessage(`{}`), "")
+	qd.ApplyCommandResult("corr-c1", "complete", json.RawMessage(`{}`), "")
 
 	qd.RegisterCommand("corr-c2", "q-c2", 30*time.Second)
 

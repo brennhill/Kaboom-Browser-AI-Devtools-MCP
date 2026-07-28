@@ -126,7 +126,7 @@ func (qd *QueryDispatcher) setQueryResultWithClient(id string, result json.RawMe
 
 	// Mark command as complete if it has a correlation ID
 	if markComplete && correlationID != "" {
-		qd.CompleteCommand(correlationID, result, "")
+		qd.ApplyCommandResult(correlationID, "complete", result, "")
 	}
 }
 

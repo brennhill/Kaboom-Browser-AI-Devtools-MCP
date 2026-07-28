@@ -112,7 +112,7 @@ func (h *ToolHandler) formatCommandResult(req mcp.JSONRPCRequest, cmd queries.Co
 	switch cmd.Status {
 	case "complete":
 		responseData["final"] = true
-		return h.formatCompleteCommand(req, cmd, corrID, responseData)
+		return h.formatCompletedCommand(req, cmd, corrID, responseData)
 	case "error":
 		return h.formatErrorCommandResult(req, cmd, corrID, responseData)
 	case "expired":
@@ -215,8 +215,8 @@ func attachTraceSummary(responseData map[string]any, cmd queries.CommandResult) 
 	responseData["trace"] = trace
 }
 
-func (h *ToolHandler) formatCompleteCommand(req mcp.JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) mcp.JSONRPCResponse {
-	normalizedResult, normalizedErr := asyncresult.NormalizeCompleteCommandResult(corrID, cmd.Result)
+func (h *ToolHandler) formatCompletedCommand(req mcp.JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) mcp.JSONRPCResponse {
+	normalizedResult, normalizedErr := asyncresult.NormalizeCompletedCommandResult(corrID, cmd.Result)
 	responseData["result"] = normalizedResult
 	responseData["completed_at"] = cmd.CompletedAt.Format(time.RFC3339)
 	responseData["timing_ms"] = cmd.CompletedAt.Sub(cmd.CreatedAt).Milliseconds()

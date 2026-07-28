@@ -155,14 +155,6 @@ func (qd *QueryDispatcher) ApplyCommandResult(correlationID string, status strin
 	}
 }
 
-// CompleteCommand is compatibility sugar for ApplyCommandResult(..., "complete", ...).
-//
-// Failure semantics:
-// - If err is non-empty, normalizeCommandOutcome downgrades to "error".
-func (qd *QueryDispatcher) CompleteCommand(correlationID string, result json.RawMessage, err string) {
-	qd.ApplyCommandResult(correlationID, "complete", result, err)
-}
-
 // ExpireCommand marks a pending command as expired due to timeout/dequeue loss.
 //
 // Failure semantics:

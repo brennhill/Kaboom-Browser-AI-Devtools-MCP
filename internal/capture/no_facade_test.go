@@ -86,6 +86,7 @@ func TestCaptureHasNoCompatibilityAliases(t *testing.T) {
 		"PollingLogEntry =",
 		"HTTPDebugEntry =",
 		"BufferClearCounts =",
+		"CompleteCommand(",
 	} {
 		if strings.Contains(source.String(), forbidden) {
 			t.Errorf("capture retains compatibility surface %q", forbidden)

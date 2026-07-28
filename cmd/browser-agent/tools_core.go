@@ -481,7 +481,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	)
 	if handler.capture != nil {
 		handler.annotationStore.SetCommandCompleter(func(correlationID string, result json.RawMessage) {
-			handler.capture.CompleteCommand(correlationID, result, "")
+			handler.capture.ApplyCommandResult(correlationID, "complete", result, "")
 		})
 	}
 	detectNoise := func() {

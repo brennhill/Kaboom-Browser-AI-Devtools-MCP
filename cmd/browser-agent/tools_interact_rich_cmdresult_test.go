@@ -75,7 +75,7 @@ func TestCommandResult_CompleteWithErrorSetsIsError(t *testing.T) {
 	corrID := pq.CorrelationID
 
 	// Simulate extension completing with an error
-	env.capture.CompleteCommand(corrID, json.RawMessage(`null`), "Element not found: #btn")
+	env.capture.ApplyCommandResult(corrID, "complete", json.RawMessage(`null`), "Element not found: #btn")
 
 	// Observe the failed command
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
@@ -113,7 +113,7 @@ func TestCommandResult_EmbeddedFailureSetsIsError(t *testing.T) {
 	corrID := pq.CorrelationID
 
 	// Extension reported failure inside the result payload without setting command error.
-	env.capture.CompleteCommand(corrID, json.RawMessage(`{"success":false,"error":"selector_not_found","message":"#btn not found"}`), "")
+	env.capture.ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":false,"error":"selector_not_found","message":"#btn not found"}`), "")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
@@ -149,7 +149,7 @@ func TestCommandResult_EmbeddedCSPFailureAddsCSPMarkers(t *testing.T) {
 	pq := env.capture.GetLastPendingQuery()
 	corrID := pq.CorrelationID
 
-	env.capture.CompleteCommand(corrID, json.RawMessage(`{"success":false,"error":"csp_blocked_all_worlds","message":"Page CSP blocks dynamic script execution"}`), "")
+	env.capture.ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":false,"error":"csp_blocked_all_worlds","message":"Page CSP blocks dynamic script execution"}`), "")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
@@ -321,7 +321,7 @@ func TestCommandResult_SuccessDoesNotSetIsError(t *testing.T) {
 	corrID := pq.CorrelationID
 
 	// Simulate successful completion
-	env.capture.CompleteCommand(corrID, json.RawMessage(`{"success":true}`), "")
+	env.capture.ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":true}`), "")
 
 	// Observe the successful command
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
@@ -380,7 +380,7 @@ func TestCommandResult_CompleteHasFinalTrue(t *testing.T) {
 	}
 	corrID := resultData["correlation_id"].(string)
 
-	env.capture.CompleteCommand(corrID, json.RawMessage(`{"success":true}`), "")
+	env.capture.ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":true}`), "")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
@@ -413,7 +413,7 @@ func TestCommandResult_ErrorHasFinalTrue(t *testing.T) {
 	}
 	corrID := resultData["correlation_id"].(string)
 
-	env.capture.CompleteCommand(corrID, nil, "element_not_found")
+	env.capture.ApplyCommandResult(corrID, "complete", nil, "element_not_found")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
@@ -458,7 +458,7 @@ func TestCommandResult_EffectiveContextSurfaced(t *testing.T) {
 		"effective_tab_id": 42,
 		"effective_url": "https://example.com/page2"
 	}`)
-	env.capture.CompleteCommand(corrID, extensionResult, "")
+	env.capture.ApplyCommandResult(corrID, "complete", extensionResult, "")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
@@ -500,7 +500,7 @@ func TestCommandResult_CompleteHasQueuedFalse(t *testing.T) {
 	}
 	corrID := resultData["correlation_id"].(string)
 
-	env.capture.CompleteCommand(corrID, json.RawMessage(`{"success":true}`), "")
+	env.capture.ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":true}`), "")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)

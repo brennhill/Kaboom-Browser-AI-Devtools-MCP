@@ -114,7 +114,7 @@ func TestBuildCommandExecutionInfoAt_Empty(t *testing.T) {
 func TestBuildCommandExecutionInfoAt_SuccessCounted(t *testing.T) {
 	c := newTestCapture(t)
 	c.RegisterCommand("ok-1", "q", time.Minute)
-	c.CompleteCommand("ok-1", json.RawMessage(`{"done":true}`), "")
+	c.ApplyCommandResult("ok-1", "complete", json.RawMessage(`{"done":true}`), "")
 
 	info := BuildCommandExecutionInfoAt(c, time.Now())
 	if info.RecentSuccessCount != 1 {
@@ -151,7 +151,7 @@ func TestBuildCommandExecutionInfoAt_WarnOnSingleFailure(t *testing.T) {
 func TestBuildCommandExecutionInfoAt_FailOnManyFailures(t *testing.T) {
 	c := newTestCapture(t)
 	c.RegisterCommand("ok-1", "q", time.Minute)
-	c.CompleteCommand("ok-1", json.RawMessage(`{}`), "")
+	c.ApplyCommandResult("ok-1", "complete", json.RawMessage(`{}`), "")
 	c.RegisterCommand("f-exp", "q", time.Minute)
 	c.ExpireCommand("f-exp")
 	c.RegisterCommand("f-to", "q", time.Minute)
@@ -216,7 +216,7 @@ func TestBuildCommandExecutionInfoAt_PendingStallWarn(t *testing.T) {
 func TestBuildCommandExecutionInfoAt_NegativeAgesClamped(t *testing.T) {
 	c := newTestCapture(t)
 	c.RegisterCommand("ok-1", "q", time.Minute)
-	c.CompleteCommand("ok-1", json.RawMessage(`{}`), "")
+	c.ApplyCommandResult("ok-1", "complete", json.RawMessage(`{}`), "")
 	c.RegisterCommand("p-1", "q", 10*time.Minute)
 
 	// now in the past relative to command creation -> ages clamp to 0 / are skipped.

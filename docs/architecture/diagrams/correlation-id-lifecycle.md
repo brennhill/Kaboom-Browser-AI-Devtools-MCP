@@ -14,7 +14,7 @@ last_verified_date: 2026-03-05
 stateDiagram-v2
     [*] --> Pending: RegisterCommand()<br/>when query created
 
-    Pending --> Complete: CompleteCommand()<br/>when extension posts result
+    Pending --> Complete: ApplyCommandResult(id, "complete", result, "")<br/>when extension posts result
     Pending --> Expired: ExpireCommand()<br/>after 30s timeout
 
     Complete --> Cleaned: 60s TTL cleanup
@@ -92,7 +92,7 @@ classDiagram
         +[]CommandResult failedCommands
         +sync.RWMutex resultsMu
         +RegisterCommand()
-        +CompleteCommand()
+        +ApplyCommandResult()
         +ExpireCommand()
         +GetCommandResult()
         +GetPendingCommands()
@@ -111,7 +111,7 @@ classDiagram
 | From | To | Trigger | Action |
 |------|----|---------|-
 | — | `pending` | CreatePendingQueryWithTimeout() | RegisterCommand() called |
-| `pending` | `complete` | Extension posts result | CompleteCommand() called |
+| `pending` | `complete` | Extension posts result | `ApplyCommandResult(id, "complete", result, "")` called |
 | `pending` | `expired` | 30s timeout | ExpireCommand() called, move to failedCommands |
 | `complete` | [deleted] | 60s TTL | Background cleanup removes from completedResults |
 | `expired` | [evicted] | Ring buffer full | Oldest entry removed from failedCommands (FIFO) |

@@ -61,7 +61,7 @@ type QueryDispatcher struct {
 	resultsMu        sync.RWMutex
 	completedResults map[string]*CommandResult
 	failedCommands   []*CommandResult
-	commandNotify    chan struct{} // closed on CompleteCommand, then recreated
+	commandNotify    chan struct{} // closed on a terminal ApplyCommandResult, then recreated
 	queryNotify      chan struct{} // closed when pending queries are enqueued, then recreated (protected by mu)
 
 	stopCleanup func()

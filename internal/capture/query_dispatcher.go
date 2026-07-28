@@ -124,11 +124,6 @@ func (c *Capture) RegisterCommand(correlationID string, queryID string, timeout 
 	c.queryDispatcher.RegisterCommand(correlationID, queryID, timeout)
 }
 
-// CompleteCommand delegates to QueryDispatcher.
-func (c *Capture) CompleteCommand(correlationID string, result json.RawMessage, err string) {
-	c.queryDispatcher.CompleteCommand(correlationID, result, err)
-}
-
 // ApplyCommandResult delegates status-aware command updates to QueryDispatcher.
 func (c *Capture) ApplyCommandResult(correlationID string, status string, result json.RawMessage, err string) {
 	c.queryDispatcher.ApplyCommandResult(correlationID, status, result, err)

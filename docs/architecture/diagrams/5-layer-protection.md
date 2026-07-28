@@ -204,7 +204,7 @@ graph TB
         M1[CreatePendingQuery<br/>CreatePendingQueryWithTimeout]
         M2[GetPendingQueries<br/>GetPendingQueriesForClient]
         M3[SetQueryResult<br/>SetQueryResultWithClient]
-        M4[RegisterCommand<br/>CompleteCommand<br/>ExpireCommand]
+        M4[RegisterCommand<br/>ApplyCommandResult<br/>ExpireCommand]
         M5[GetCommandResult<br/>GetPendingCommands<br/>GetCompletedCommands<br/>GetFailedCommands]
     end
 

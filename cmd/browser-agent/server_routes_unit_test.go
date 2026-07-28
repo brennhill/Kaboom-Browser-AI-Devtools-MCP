@@ -157,7 +157,7 @@ func TestSetupHTTPRoutesBasicEndpoints(t *testing.T) {
 	}, 30*time.Second, "test-client")
 	_ = cap.GetPendingQueries()
 	cap.AcknowledgePendingQuery(traceQueryID)
-	cap.CompleteCommand("diag-trace-corr", json.RawMessage(`{"ok":true}`), "")
+	cap.ApplyCommandResult("diag-trace-corr", "complete", json.RawMessage(`{"ok":true}`), "")
 
 	diagWithTraceRR := httptest.NewRecorder()
 	mux.ServeHTTP(diagWithTraceRR, localRequest(http.MethodGet, "/diagnostics", nil))

@@ -43,7 +43,7 @@ Primary components:
 3. Extension polls `POST /sync` and receives queued commands.
 4. Extension executes command (`src/background/pending-queries.ts`).
 5. Extension posts command result on next `/sync` cycle (`command_results`).
-6. Server maps result to `correlation_id` and calls `CompleteCommand`.
+6. Server maps result to `correlation_id` and calls `ApplyCommandResult(correlationID, status, result, err)`.
 7. Tool either:
 - returns inline completion (sync wait path), or
 - returns queued/still_processing and caller fetches with `observe(command_result)`.
