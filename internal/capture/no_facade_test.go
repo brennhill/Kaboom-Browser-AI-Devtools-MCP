@@ -160,6 +160,10 @@ func TestCaptureHasNoCompatibilityAliases(t *testing.T) {
 		"func (c *Capture) GetStorageInfo(",
 		"func (c *Capture) DeleteRecording(",
 		"func (c *Capture) RecalculateStorageUsed(",
+		"func (c *Capture) RecordEvents(",
+		"func (c *Capture) CheckRateLimit(",
+		"func (c *Capture) GetHealthStatus(",
+		"func (c *Capture) WriteRateLimitResponse(",
 	} {
 		if strings.Contains(source.String(), forbidden) {
 			t.Errorf("capture retains compatibility surface %q", forbidden)

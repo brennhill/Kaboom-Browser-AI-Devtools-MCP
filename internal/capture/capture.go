@@ -164,6 +164,11 @@ func (c *Capture) Recordings() *recording.RecordingManager {
 	return c.recordingManager
 }
 
+// Circuit returns the canonical independently synchronized circuit breaker.
+func (c *Capture) Circuit() *circuit.CircuitBreaker {
+	return c.circuit
+}
+
 // Close shuts down capture-owned background goroutines.
 //
 // Failure semantics:

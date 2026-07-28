@@ -124,6 +124,8 @@ Performance snapshots and pre-action correlation snapshots now share an
 independently synchronized `PerformanceStore`. Callers use
 `Capture.Performance()` for add/list/URL lookup and consume-on-read correlation;
 the five former capture-level forwarding methods have been removed.
+Rate limiting and circuit health use the canonical breaker returned by
+`Capture.Circuit()`; the former four Capture forwarding methods are deleted.
 Tracked-tab state is updated through the canonical `/sync` contract or
 `UpdateTrackedTab`; the pre-`/sync` `ExtensionStatus` envelope and
 `UpdateExtensionStatus` mutation API have been deleted.

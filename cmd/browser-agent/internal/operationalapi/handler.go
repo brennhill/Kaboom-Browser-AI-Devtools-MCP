@@ -234,7 +234,7 @@ func (h *Handler) ServeDiagnostics(w http.ResponseWriter, r *http.Request) {
 // appendCaptureDiagnostics adds capture-related diagnostic fields to response map.
 func appendCaptureDiagnostics(resp map[string]any, cap *capture.Capture) {
 	snap := cap.GetHealthSnapshot()
-	health := cap.GetHealthStatus()
+	health := cap.Circuit().GetHealthStatus()
 
 	resp["buffers"] = map[string]any{
 		"websocket_events": snap.WebSocketCount,

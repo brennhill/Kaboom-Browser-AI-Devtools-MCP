@@ -56,9 +56,9 @@ func TestCoverageBoost_SetupHelpers(t *testing.T) {
 
 func TestCoverageBoost_RateLimitHealthHandler(t *testing.T) {
 	c := newCoverageCapture(t)
-	c.RecordEvents(42)
+	c.Circuit().RecordEvents(42)
 
-	health := c.GetHealthStatus()
+	health := c.Circuit().GetHealthStatus()
 	if health.CurrentRate < 42 {
 		t.Fatalf("CurrentRate = %d, want at least 42", health.CurrentRate)
 	}

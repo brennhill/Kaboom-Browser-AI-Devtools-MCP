@@ -15,7 +15,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
@@ -211,8 +210,8 @@ func ExtractURLPath(rawURL string) string {
 }
 
 func (c *Capture) readIngestBody(w http.ResponseWriter, r *http.Request) ([]byte, bool) {
-	if c.CheckRateLimit() {
-		c.WriteRateLimitResponse(w)
+	if c.Circuit().CheckRateLimit() {
+		c.Circuit().WriteRateLimitResponse(w)
 		return nil, false
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxExtensionPostBody)
@@ -225,28 +224,12 @@ func (c *Capture) readIngestBody(w http.ResponseWriter, r *http.Request) ([]byte
 }
 
 func (c *Capture) recordAndRecheck(w http.ResponseWriter, count int) bool {
-	c.RecordEvents(count)
-	if c.CheckRateLimit() {
-		c.WriteRateLimitResponse(w)
+	c.Circuit().RecordEvents(count)
+	if c.Circuit().CheckRateLimit() {
+		c.Circuit().WriteRateLimitResponse(w)
 		return false
 	}
 	return true
-}
-
-func (c *Capture) RecordEvents(count int) {
-	c.circuit.RecordEvents(count)
-}
-
-func (c *Capture) CheckRateLimit() bool {
-	return c.circuit.CheckRateLimit()
-}
-
-func (c *Capture) GetHealthStatus() circuit.HealthResponse {
-	return c.circuit.GetHealthStatus()
-}
-
-func (c *Capture) WriteRateLimitResponse(w http.ResponseWriter) {
-	c.circuit.WriteRateLimitResponse(w)
 }
 
 func (c *Capture) HandleHealth(w http.ResponseWriter, r *http.Request) {
@@ -255,7 +238,7 @@ func (c *Capture) HandleHealth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	health := c.GetHealthStatus()
+	health := c.Circuit().GetHealthStatus()
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(health)

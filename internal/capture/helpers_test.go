@@ -198,7 +198,7 @@ func TestNewReadIngestBody_RateLimited(t *testing.T) {
 
 	// Trigger rate limit by recording many events
 	for i := 0; i < 100; i++ {
-		c.RecordEvents(RateLimitThreshold)
+		c.Circuit().RecordEvents(RateLimitThreshold)
 	}
 
 	req := httptest.NewRequest(http.MethodPost, "/ingest", strings.NewReader(`{}`))
@@ -241,7 +241,7 @@ func TestNewRecordAndRecheck_RecordsEventCount(t *testing.T) {
 
 	c.recordAndRecheck(w, 10)
 	// After recording 10 events, health should reflect them
-	health := c.GetHealthStatus()
+	health := c.Circuit().GetHealthStatus()
 	if health.CurrentRate < 10 {
 		t.Errorf("CurrentRate = %d after recording 10 events, want >= 10", health.CurrentRate)
 	}
