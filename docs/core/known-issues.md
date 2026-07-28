@@ -49,6 +49,13 @@ package — very common here, because `cmd/browser-agent` tests exercise
 `internal/tools/...` through the MCP dispatch — the function reads 0.0% while
 being fully exercised.
 
+This also leaves the aggregate coverage gate red: `make ci-local` passes
+`go vet` and the complete race suite, then `make test-cover` reports **71.5%**
+against the unchanged 89% threshold. Tracked as `kaboom-xem`; the fix must make
+cross-package execution visible rather than lower or bypass the threshold.
+Naively adding `-coverpkg=./...` is not sufficient: it reports **85.6%** and
+adds enough instrumentation overhead to trip the documented fast-start timeout.
+
 `observe.AnalyzeErrors` reads **0.0%** in a plain `go test ./internal/...` run
 and **100%** when measured correctly:
 
