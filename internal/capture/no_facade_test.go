@@ -4,6 +4,7 @@ package capture
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -11,15 +12,21 @@ import (
 func TestCaptureHasNoCompatibilityAliases(t *testing.T) {
 	t.Parallel()
 
-	model, err := os.ReadFile("model.go")
+	paths, err := filepath.Glob("*.go")
 	if err != nil {
 		t.Fatal(err)
 	}
-	captureSource, err := os.ReadFile("capture.go")
-	if err != nil {
-		t.Fatal(err)
+	var source strings.Builder
+	for _, path := range paths {
+		if strings.HasSuffix(path, "_test.go") {
+			continue
+		}
+		contents, readErr := os.ReadFile(path)
+		if readErr != nil {
+			t.Fatalf("read %s: %v", path, readErr)
+		}
+		source.Write(contents)
 	}
-	source := string(model) + string(captureSource)
 	for _, forbidden := range []string{
 		"LifecycleEvent =",
 		"LifecycleListener =",
@@ -78,8 +85,9 @@ func TestCaptureHasNoCompatibilityAliases(t *testing.T) {
 		"ExtensionLog =",
 		"PollingLogEntry =",
 		"HTTPDebugEntry =",
+		"BufferClearCounts =",
 	} {
-		if strings.Contains(source, forbidden) {
+		if strings.Contains(source.String(), forbidden) {
 			t.Errorf("capture retains compatibility surface %q", forbidden)
 		}
 	}

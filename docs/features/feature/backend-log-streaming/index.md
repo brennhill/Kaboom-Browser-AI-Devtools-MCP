@@ -92,6 +92,7 @@ Capture dependencies use the canonical `capture.Capture` container type.
 The former `capture.Store` and `capture.Snapshot` aliases have been removed.
 Capture APIs and their callers use the canonical wire contracts from
 `internal/types` directly; `internal/capture` does not re-export wire types.
+Buffer-clear APIs likewise return `internal/types.BufferClearCounts` directly.
 
 ## Specs
 

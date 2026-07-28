@@ -351,19 +351,15 @@ func (c *Capture) GetNetworkBodiesBufferMemory() int64 {
 	return c.buffers.calcNBMemory()
 }
 
-// BufferClearCounts is an alias to canonical definition in internal/types/buffer.go.
-// Total() method is inherited through the type alias.
-type BufferClearCounts = types.BufferClearCounts
-
 // ClearNetworkBuffers resets network telemetry buffers and related counters.
 //
 // Invariants:
 // - network buffers and their monotonic counters are reset together under c.mu.
-func (c *Capture) ClearNetworkBuffers() BufferClearCounts {
+func (c *Capture) ClearNetworkBuffers() types.BufferClearCounts {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	counts := BufferClearCounts{
+	counts := types.BufferClearCounts{
 		NetworkWaterfall: c.networkWaterfall.count(),
 		NetworkBodies:    len(c.buffers.networkBodies),
 	}
@@ -381,11 +377,11 @@ func (c *Capture) ClearNetworkBuffers() BufferClearCounts {
 //
 // Invariants:
 // - wsEvents/wsMemoryTotal/wsTotalAdded are reset atomically.
-func (c *Capture) ClearWebSocketBuffers() BufferClearCounts {
+func (c *Capture) ClearWebSocketBuffers() types.BufferClearCounts {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	counts := BufferClearCounts{
+	counts := types.BufferClearCounts{
 		WebSocketEvents: len(c.buffers.wsEvents),
 		WebSocketStatus: c.wsConnections.Count(),
 	}
@@ -400,11 +396,11 @@ func (c *Capture) ClearWebSocketBuffers() BufferClearCounts {
 }
 
 // ClearActionBuffer resets action telemetry ring and counters.
-func (c *Capture) ClearActionBuffer() BufferClearCounts {
+func (c *Capture) ClearActionBuffer() types.BufferClearCounts {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	counts := BufferClearCounts{
+	counts := types.BufferClearCounts{
 		Actions: len(c.buffers.enhancedActions),
 	}
 
