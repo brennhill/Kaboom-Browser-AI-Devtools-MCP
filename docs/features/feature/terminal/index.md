@@ -4,7 +4,7 @@ feature_id: feature-terminal
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
   - internal/pty/upload/upload.go
   - src/content/ui/hover/screenshot-feedback.ts
@@ -19,7 +19,6 @@ code_paths:
   - cmd/browser-agent/internal/terminal/server.go
   - cmd/browser-agent/internal/terminal/supervisor/supervisor.go
   - cmd/browser-agent/main_connection_mcp.go
-  - cmd/browser-agent/main_connection_mcp_shutdown.go
   - cmd/browser-agent/internal/daemonlife/lifecycle.go
   - cmd/browser-agent/internal/nativeinstall/installer.go
   - cmd/browser-agent/internal/terminal/intent_handlers.go
@@ -450,7 +449,7 @@ Note: `/config/active-codebase` is on the **main** daemon server (not terminal s
 | File | Responsibility |
 |------|---------------|
 | `cmd/browser-agent/internal/terminal/supervisor/supervisor.go` | Restart/backoff supervision and graceful shutdown behind explicit host callbacks |
-| `cmd/browser-agent/main_connection_mcp.go` | Dedicated terminal-server bootstrap and root package adapters |
+| `cmd/browser-agent/main_connection_mcp.go` | Terminal server startup, supervision, root adapters, and graceful shutdown |
 | `cmd/browser-agent/terminal_handlers.go` | All HTTP handlers: page, WS, start, stop, validate, config |
 | `cmd/browser-agent/terminal_assets/terminal.html` | xterm.js terminal page with WS reconnect and postMessage bridge |
 | `extension/sidepanel.html` | Side panel shell that loads the terminal host |
@@ -462,5 +461,3 @@ Note: `/config/active-codebase` is on the **main** daemon server (not terminal s
 | `src/lib/constants.ts` | `TERMINAL_PORT_OFFSET`, storage keys |
 | `internal/pty/manager.go` | Session manager: create, get, destroy, token auth |
 | `internal/pty/session.go` | PTY session: spawn, I/O, resize, scrollback, close |
-| `cmd/browser-agent/main_connection_mcp.go` | Terminal server startup wiring |
-| `cmd/browser-agent/main_connection_mcp_shutdown.go` | Terminal server graceful shutdown |

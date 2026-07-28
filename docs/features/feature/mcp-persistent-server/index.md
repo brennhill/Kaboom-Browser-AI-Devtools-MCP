@@ -55,7 +55,6 @@ code_paths:
   - cmd/browser-agent/internal/logstore/persistence.go
   - cmd/browser-agent/internal/logstore/validate.go
   - cmd/browser-agent/internal/logstore/seed.go
-  - cmd/browser-agent/main_connection_mcp_shutdown.go
   - cmd/browser-agent/internal/exitdiag/recorder.go
   - cmd/browser-agent/internal/httpguard/middleware.go
   - cmd/browser-agent/internal/httpapi/response.go

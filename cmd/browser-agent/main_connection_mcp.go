@@ -10,6 +10,8 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -230,7 +232,7 @@ func runMCPMode(server *Server, port int, apiKey string, opts daemonlife.LaunchO
 		telemetry.StartUsageBeaconLoop(ctx, tracker)
 	}
 
-	awaitShutdownSignal(server, srv, port, httpDone, termSrv, termDone, mcpHandler)
+	awaitShutdownSignal(server, srv, port, httpDone, termSrv, mcpHandler)
 	return nil
 }
 
@@ -421,5 +423,134 @@ func persistDaemonRuntimeState(server *Server, port int) {
 	}
 	if err := daemonlife.PersistCurrentLock(port, version); err != nil {
 		server.logLifecycle("daemon_lock_write_failed", port, map[string]any{"error": err.Error()})
+	}
+}
+
+const (
+	terminalShutdownTimeout = 2 * time.Second
+	httpShutdownTimeout     = 3 * time.Second
+	asyncLoggerDrainTimeout = 2 * time.Second
+)
+
+// awaitShutdownSignal blocks until a termination signal is received or the
+// HTTP listener dies unexpectedly, then performs graceful cleanup.
+func awaitShutdownSignal(server *Server, srv *http.Server, port int, httpDone <-chan struct{}, termSrv *http.Server, mcpHandler *MCPHandler) {
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
+
+	var shutdownSignal os.Signal
+	var shutdownSource string
+	select {
+	case shutdownSignal = <-sigCh:
+		shutdownSource = mapSignalSource(shutdownSignal)
+	case <-httpDone:
+		shutdownSource = "http_listener_died"
+		shutdownSignal = syscall.SIGTERM
+		diag.Printf("[Kaboom] HTTP listener exited unexpectedly, shutting down to avoid zombie process\n")
+	}
+
+	server.logLifecycle("shutdown", port, map[string]any{
+		"signal":          shutdownSignal.String(),
+		"shutdown_source": shutdownSource,
+		"uptime_seconds":  time.Since(startTime).Seconds(),
+	})
+	if shutdownSource != "http_listener_died" {
+		daemonlife.ClearRestartHistoryOnCleanShutdown(daemonlifeDeps(server), port)
+	}
+	if diagPath := exitDiagnostics.Append("daemon_shutdown", map[string]any{
+		"port":            port,
+		"signal":          shutdownSignal.String(),
+		"shutdown_source": shutdownSource,
+		"uptime_seconds":  time.Since(startTime).Seconds(),
+		"unexpected":      shutdownSource == "http_listener_died",
+	}); diagPath != "" && shutdownSource == "http_listener_died" {
+		diag.Printf("[Kaboom] Shutdown diagnostics written to: %s\n", diagPath)
+	}
+
+	shutdownTerminalServer(server, termSrv, port)
+	closeToolHandler(mcpHandler)
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), httpShutdownTimeout)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		server.logLifecycle("http_shutdown_error", port, map[string]any{"error": err.Error()})
+	}
+
+	server.logs.Shutdown(asyncLoggerDrainTimeout)
+	server.closeAnnotationStore()
+	closeCaptureStore(mcpHandler)
+	closeTerminalResources(server)
+	persistTokenSavings(server)
+
+	procctl.RemovePIDFile(port)
+	daemonlife.RemoveLockIfOwned(os.Getpid())
+}
+
+func shutdownTerminalServer(server *Server, termSrv *http.Server, port int) {
+	termCtx, termCancel := context.WithTimeout(context.Background(), terminalShutdownTimeout)
+	defer termCancel()
+	if server.terminalSupervisor != nil {
+		server.terminalSupervisor.Shutdown(termCtx)
+		return
+	}
+	if termSrv != nil {
+		if err := termSrv.Shutdown(termCtx); err != nil {
+			server.logLifecycle("terminal_shutdown_error", port, map[string]any{"error": err.Error()})
+		}
+	}
+}
+
+func closeToolHandler(handler *MCPHandler) {
+	if handler == nil || handler.toolHandler == nil {
+		return
+	}
+	if toolHandler, ok := handler.toolHandler.(*ToolHandler); ok {
+		toolHandler.Close()
+	}
+}
+
+func closeCaptureStore(handler *MCPHandler) {
+	if handler == nil || handler.toolHandler == nil {
+		return
+	}
+	if toolHandler, ok := handler.toolHandler.(*ToolHandler); ok && toolHandler.capture != nil {
+		toolHandler.capture.Close()
+	}
+}
+
+func closeTerminalResources(server *Server) {
+	if server.ptyManager != nil {
+		server.ptyManager.StopAll()
+	}
+	if server.ptyRelays != nil {
+		server.ptyRelays.CloseAll()
+	}
+}
+
+func persistTokenSavings(server *Server) {
+	if server.tokenTracker == nil {
+		return
+	}
+	if summary := server.tokenTracker.GetSessionSummary(); summary != "" {
+		diag.Printf("[Kaboom] %s", summary)
+	}
+	if root, err := state.RootDir(); err == nil {
+		lifetimePath := filepath.Join(root, "stats", "lifetime.json")
+		if err := server.tokenTracker.SaveLifetime(lifetimePath); err != nil {
+			diag.Printf("[Kaboom] Failed to save lifetime token stats: %v\n", err)
+		}
+	}
+}
+
+func mapSignalSource(signal os.Signal) string {
+	switch signal {
+	case os.Interrupt:
+		return "Ctrl+C (SIGINT)"
+	case syscall.SIGTERM:
+		return "SIGTERM (likely --stop or kill)"
+	case syscall.SIGHUP:
+		return "SIGHUP (terminal closed)"
+	default:
+		return signal.String()
 	}
 }
