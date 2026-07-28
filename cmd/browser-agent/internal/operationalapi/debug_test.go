@@ -198,7 +198,7 @@ func TestDebugBeaconFlush_POST_WithData(t *testing.T) {
 	}
 
 	// Counter should be empty after flush.
-	peek := counter.Peek()
+	peek := counter.DebugCounts()
 	if len(peek) != 0 {
 		t.Errorf("counter has %d keys after flush, want 0", len(peek))
 	}

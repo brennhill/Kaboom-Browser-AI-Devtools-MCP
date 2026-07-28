@@ -169,8 +169,8 @@ func (u *UsageTracker) SessionDepth() int {
 	return d
 }
 
-// Peek returns a flat count map for the debug endpoint (backward compat).
-func (u *UsageTracker) Peek() map[string]int {
+// DebugCounts returns the current flat count map without resetting counters.
+func (u *UsageTracker) DebugCounts() map[string]int {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	cp := make(map[string]int)

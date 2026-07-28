@@ -18,7 +18,7 @@ func TestUsageTracker_Increment(t *testing.T) {
 	c.RecordToolCall("observe:errors", 0, false)
 	c.RecordToolCall("observe:errors", 0, false)
 
-	counts := c.Peek()
+	counts := c.DebugCounts()
 	if counts["observe:errors"] != 3 {
 		t.Fatalf("count = %d, want 3", counts["observe:errors"])
 	}
@@ -58,7 +58,7 @@ func TestUsageTracker_ConcurrentIncrement(t *testing.T) {
 	}
 	wg.Wait()
 
-	counts := c.Peek()
+	counts := c.DebugCounts()
 	if counts["concurrent:key"] != goroutines {
 		t.Fatalf("count = %d, want %d", counts["concurrent:key"], goroutines)
 	}
@@ -133,13 +133,13 @@ func TestUsageTracker_ConcurrentSwapAndIncrement(t *testing.T) {
 	}
 }
 
-func TestUsageTracker_Peek(t *testing.T) {
+func TestUsageTracker_DebugCounts(t *testing.T) {
 	c := NewUsageTracker()
 	c.RecordToolCall("observe:page", 0, false)
 	c.RecordToolCall("observe:page", 0, false)
 	c.RecordToolCall("interact:click", 0, false)
 
-	peeked := c.Peek()
+	peeked := c.DebugCounts()
 	if peeked["observe:page"] != 2 {
 		t.Fatalf("peeked observe:page = %d, want 2", peeked["observe:page"])
 	}
@@ -148,22 +148,22 @@ func TestUsageTracker_Peek(t *testing.T) {
 	}
 
 	// Peek should not reset — counts should still be there.
-	peeked2 := c.Peek()
+	peeked2 := c.DebugCounts()
 	if peeked2["observe:page"] != 2 {
 		t.Fatalf("second peek observe:page = %d, want 2 (Peek should not reset)", peeked2["observe:page"])
 	}
 
 	// Mutating the returned map should not affect the counter.
 	peeked["observe:page"] = 999
-	peeked3 := c.Peek()
+	peeked3 := c.DebugCounts()
 	if peeked3["observe:page"] != 2 {
 		t.Fatalf("peek after mutation = %d, want 2 (returned map should be a copy)", peeked3["observe:page"])
 	}
 }
 
-func TestUsageTracker_PeekEmpty(t *testing.T) {
+func TestUsageTracker_DebugCountsEmpty(t *testing.T) {
 	c := NewUsageTracker()
-	peeked := c.Peek()
+	peeked := c.DebugCounts()
 	if len(peeked) != 0 {
 		t.Fatalf("Peek on new counter returned %d entries, want 0", len(peeked))
 	}
@@ -212,7 +212,7 @@ func TestUsageTracker_RecordToolCallError(t *testing.T) {
 	c.RecordToolCall("observe:page", 0, false)
 	c.RecordToolCall("observe:page", 0, true) // error
 
-	snapshot := c.Peek()
+	snapshot := c.DebugCounts()
 	if snapshot["observe:page"] != 2 {
 		t.Fatalf("observe:page = %d, want 2", snapshot["observe:page"])
 	}
@@ -229,7 +229,7 @@ func TestUsageTracker_RecordAsyncOutcome(t *testing.T) {
 	c.RecordAsyncOutcome("timeout")
 	c.RecordAsyncOutcome("expired")
 
-	snapshot := c.Peek()
+	snapshot := c.DebugCounts()
 	if snapshot["async:complete"] != 2 {
 		t.Fatalf("async:complete = %d, want 2", snapshot["async:complete"])
 	}
@@ -643,7 +643,7 @@ func TestUsageTracker_LatencyNotIncludedWhenNoLatencyRecorded(t *testing.T) {
 	c := NewUsageTracker()
 	c.RecordToolCall("observe:page", 0, false) // no latency variant
 
-	snapshot := c.Peek()
+	snapshot := c.DebugCounts()
 	if _, exists := snapshot["lat_avg:observe:page"]; exists {
 		t.Fatal("lat_avg should not exist when no latency was recorded")
 	}
@@ -658,7 +658,7 @@ func TestUsageTracker_MultipleKeys(t *testing.T) {
 	c.RecordToolCall("analyze:performance", 0, false)
 	c.RecordToolCall("analyze:performance", 0, false)
 
-	counts := c.Peek()
+	counts := c.DebugCounts()
 	if counts["observe:errors"] != 2 {
 		t.Fatalf("observe:errors = %d, want 2", counts["observe:errors"])
 	}

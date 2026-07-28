@@ -33,7 +33,7 @@ func TestFeaturesCallbackWiresIntoUsageTracker(t *testing.T) {
 		"dom_action":  true,
 	})
 
-	counts := counter.Peek()
+	counts := counter.DebugCounts()
 
 	if counts["ext:screenshot"] != 1 {
 		t.Errorf("ext:screenshot = %d, want 1", counts["ext:screenshot"])
@@ -60,7 +60,7 @@ func TestFeaturesCallback_OnlyTrueValuesIncrement(t *testing.T) {
 		"annotations": false,
 	})
 
-	counts := counter.Peek()
+	counts := counter.DebugCounts()
 	if len(counts) != 0 {
 		t.Errorf("Expected empty counts for all-false features, got %v", counts)
 	}
@@ -75,7 +75,7 @@ func TestFeaturesCallback_MultipleInvocations_Accumulate(t *testing.T) {
 	cb(map[string]bool{"screenshot": true})
 	cb(map[string]bool{"screenshot": true, "video": true})
 
-	counts := counter.Peek()
+	counts := counter.DebugCounts()
 	if counts["ext:screenshot"] != 2 {
 		t.Errorf("ext:screenshot = %d, want 2", counts["ext:screenshot"])
 	}

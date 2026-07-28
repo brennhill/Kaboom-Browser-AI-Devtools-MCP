@@ -11,6 +11,7 @@ code_paths:
   - internal/telemetry/session.go
   - internal/telemetry/usage_beacon.go
   - internal/telemetry/usage_counter.go
+  - cmd/browser-agent/internal/operationalapi/handler.go
 test_paths:
   - internal/telemetry/beacon_test.go
   - internal/telemetry/contract_compliance_test.go
@@ -21,6 +22,7 @@ test_paths:
   - internal/telemetry/session_test.go
   - internal/telemetry/usage_beacon_test.go
   - internal/telemetry/usage_counter_test.go
+  - cmd/browser-agent/internal/operationalapi/debug_test.go
 last_verified_version: 0.8.8
 last_verified_date: 2026-07-28
 ---
@@ -35,6 +37,9 @@ The event suite owns individual beacon envelopes and payloads. The session
 suite owns activity boundaries, shutdown, timeout, and opt-out behavior. The
 usage-summary suite owns counter aggregation, snapshot/reset semantics, and
 summary beacons.
+The operational debug endpoint reads non-destructive flat counters through the
+canonical `UsageTracker.DebugCounts` API; the former compatibility-named
+counter accessor is deleted.
 
 ## Specifications
 

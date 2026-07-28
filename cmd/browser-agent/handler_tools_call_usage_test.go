@@ -189,7 +189,7 @@ func TestHandleToolCall_IncrementsUsageTracker(t *testing.T) {
 	// The tool may return an error (no extension) but the counter should still increment.
 	_ = resp
 
-	counts := counter.Peek()
+	counts := counter.DebugCounts()
 	if counts["observe:errors"] != 1 {
 		t.Fatalf("observe:errors count = %d, want 1", counts["observe:errors"])
 	}
@@ -215,7 +215,7 @@ func TestHandleToolCall_IncrementsUsageTracker_NoWhatParam(t *testing.T) {
 	}
 	_ = resp
 
-	counts := counter.Peek()
+	counts := counter.DebugCounts()
 	if counts["configure:unknown"] != 1 {
 		t.Fatalf("configure:unknown count = %d, want 1", counts["configure:unknown"])
 	}
@@ -271,7 +271,7 @@ func TestHandleToolCall_RecordsErrorRate(t *testing.T) {
 	args := json.RawMessage(`{}`)
 	handler.HandleToolCall(req, "interact", args)
 
-	counts := counter.Peek()
+	counts := counter.DebugCounts()
 	if counts["interact:unknown"] != 1 {
 		t.Fatalf("interact:unknown = %d, want 1", counts["interact:unknown"])
 	}

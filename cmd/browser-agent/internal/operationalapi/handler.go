@@ -355,7 +355,7 @@ func (h *Handler) ServeDebugUsage(w http.ResponseWriter, r *http.Request) {
 		httpapi.JSON(w, http.StatusOK, map[string]any{"counts": map[string]int{}})
 		return
 	}
-	httpapi.JSON(w, http.StatusOK, map[string]any{"counts": tracker.Peek()})
+	httpapi.JSON(w, http.StatusOK, map[string]any{"counts": tracker.DebugCounts()})
 }
 
 // handleDebugBeaconFlush returns the usage payload that a beacon would send without transmitting it.
