@@ -97,6 +97,8 @@ test_paths:
   - cmd/browser-agent/tools_pending_query_enqueue_test.go
   - cmd/browser-agent/tools_interact_rich_test.go
   - cmd/browser-agent/tools_interact_rich_cmdresult_test.go
+  - cmd/browser-agent/tools_interact_result_lifecycle_test.go
+  - cmd/browser-agent/tools_interact_result_ambiguity_test.go
   - cmd/browser-agent/tools_interact_navigate_document_test.go
   - cmd/browser-agent/tools_interact_pilot_test.go
   - cmd/browser-agent/tools_interact_utils_test.go
