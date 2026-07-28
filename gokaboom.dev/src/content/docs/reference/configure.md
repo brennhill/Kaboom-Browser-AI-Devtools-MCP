@@ -450,13 +450,13 @@ configure({what: "delete_sequence", name: "login-flow"})
 
 ---
 
-## tutorial / examples — Quick Start Guidance
+## tutorial — Quick Start Guidance
 
 Return quickstart snippets and context-aware setup guidance.
 
 ```js
 configure({what: "tutorial"})
-configure({what: "examples"})
+configure({what: "tutorial"})
 ```
 
 ---

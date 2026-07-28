@@ -92,9 +92,6 @@ var configureHandlers = map[string]toolrouting.Handler[*ToolHandler]{
 	"tutorial": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return tutorial.HandleTutorial(h, req, args, playbooks.TutorialFailureRecoveryPlaybooks())
 	},
-	"examples": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return tutorial.HandleTutorial(h, req, args, playbooks.TutorialFailureRecoveryPlaybooks())
-	},
 	"save_sequence":     (*ToolHandler).toolConfigureSaveSequence,
 	"get_sequence":      (*ToolHandler).toolConfigureGetSequence,
 	"list_sequences":    (*ToolHandler).toolConfigureListSequences,

@@ -1,10 +1,10 @@
-// snippets.go — Reusable tutorial snippet catalog for configure tutorial/examples.
+// snippets.go — Reusable tutorial snippet catalog for configure tutorial.
 // Why: Keeps static command snippet payloads separate from runtime context analysis logic.
 // Docs: docs/features/feature/enhanced-cli-config/index.md
 
 package tutorial
 
-// TutorialSnippets returns the static snippet catalog for tutorial/examples mode.
+// TutorialSnippets returns the static snippet catalog for tutorial mode.
 func TutorialSnippets() []map[string]any {
 	return []map[string]any{
 		{

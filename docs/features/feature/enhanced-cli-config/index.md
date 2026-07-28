@@ -118,6 +118,7 @@ OpenAPI contract.
 - Server postinstall now validates `kaboom-browser-devtools` on `/health` reuse checks and points manual extension loading at `KABOOM_EXTENSION_DIR` / `~/KaboomAgenticDevtoolExtension`.
 - Install now also fixes the Claude Code `claude mcp add-json` invocation (JSON passed as a positional arg, not stdin) and adds **Codex CLI** as a supported client (`~/.codex/config.toml`, TOML; honors `$CODEX_HOME`).
 - Daemon setup diagnostics use one canonical CLI entry point, `--doctor`; the duplicate `--check` facade is rejected.
+- Runtime help uses one canonical configure mode, `tutorial`; the duplicate `examples` mode is rejected.
 
 ## Tool Auto-Approve (default-ON)
 

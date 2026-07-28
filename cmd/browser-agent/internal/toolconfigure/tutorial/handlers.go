@@ -27,23 +27,13 @@ type Deps interface {
 	IsExtensionConnected() bool
 }
 
-// HandleTutorial handles configure(what="tutorial") and configure(what="examples").
+// HandleTutorial handles configure(what="tutorial").
 // failureRecoveryPlaybooks is injected from the caller (lives in playbooks sub-package).
 func HandleTutorial(d Deps, req mcp.JSONRPCRequest, args json.RawMessage, failureRecoveryPlaybooks map[string]any) mcp.JSONRPCResponse {
-	var params struct {
-		What string `json:"what"`
-	}
-	mcp.LenientUnmarshal(args, &params)
-
-	mode := "tutorial"
-	if params.What == "examples" {
-		mode = "examples"
-	}
-
 	context := TutorialContext(d)
 	return mcp.Succeed(req, "Tutorial", map[string]any{
 		"status":                     "ok",
-		"mode":                       mode,
+		"mode":                       "tutorial",
 		"message":                    "Quickstart snippets and context-aware guidance",
 		"context":                    context,
 		"issues":                     TutorialIssues(context),
@@ -54,7 +44,7 @@ func HandleTutorial(d Deps, req mcp.JSONRPCRequest, args json.RawMessage, failur
 		"failure_recovery_playbooks": failureRecoveryPlaybooks,
 		"best_practices": []string{
 			"Start with observe to gather evidence before automating actions",
-			"Use configure tutorial/examples and describe_capabilities when argument shape is unclear",
+			"Use configure tutorial and describe_capabilities when argument shape is unclear",
 			"When debugging, capture correlation_id from interact/analyze and inspect with observe command_result",
 			"Use scope + list_interactive + post-action verification to avoid wrong-target clicks",
 		},

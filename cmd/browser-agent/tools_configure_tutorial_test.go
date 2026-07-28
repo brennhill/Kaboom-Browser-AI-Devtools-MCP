@@ -1,7 +1,7 @@
 // Purpose: Tests for configure tutorial content delivery.
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
-// tools_configure_tutorial_test.go — Tests for configure tutorial/examples mode.
+// tools_configure_tutorial_test.go — Tests for configure tutorial mode.
 package main
 
 import (
@@ -48,7 +48,7 @@ func TestToolsConfigureTutorial_ResponseShape(t *testing.T) {
 	}
 }
 
-func TestToolsConfigureExamples_Alias(t *testing.T) {
+func TestToolsConfigureExamples_IsRejected(t *testing.T) {
 	t.Parallel()
 	env := newConfigureTestEnv(t)
 
@@ -56,12 +56,8 @@ func TestToolsConfigureExamples_Alias(t *testing.T) {
 	if !ok {
 		t.Fatal("examples should return result")
 	}
-	if result.IsError {
-		t.Fatalf("examples should not error, got: %s", result.Content[0].Text)
-	}
-	data := parseResponseJSON(t, result)
-	if data["mode"] != "examples" {
-		t.Fatalf("mode = %v, want examples", data["mode"])
+	if !result.IsError || !strings.Contains(result.Content[0].Text, "unknown_mode") {
+		t.Fatalf("examples alias should be rejected, got: %s", result.Content[0].Text)
 	}
 }
 
@@ -256,12 +252,12 @@ func TestToolsConfigureTutorial_SnippetsAvoidAmbiguousGlobalSubmit(t *testing.T)
 	t.Parallel()
 	env := newConfigureTestEnv(t)
 
-	result, ok := env.callConfigure(t, `{"what":"examples"}`)
+	result, ok := env.callConfigure(t, `{"what":"tutorial"}`)
 	if !ok {
-		t.Fatal("examples should return result")
+		t.Fatal("tutorial should return result")
 	}
 	if result.IsError {
-		t.Fatalf("examples should not error, got: %s", result.Content[0].Text)
+		t.Fatalf("tutorial should not error, got: %s", result.Content[0].Text)
 	}
 
 	data := parseResponseJSON(t, result)

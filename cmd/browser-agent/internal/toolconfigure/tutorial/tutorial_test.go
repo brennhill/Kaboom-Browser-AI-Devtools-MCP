@@ -59,11 +59,9 @@ func TestHandleTutorial(t *testing.T) {
 	}
 	playbooks := map[string]any{"foo": "bar"}
 
-	for _, what := range []string{"tutorial", "examples"} {
-		resp := HandleTutorial(d, newReq(), json.RawMessage(`{"what":"`+what+`"}`), playbooks)
-		if isErr, text := parseResp(t, resp); isErr {
-			t.Fatalf("HandleTutorial(%s) should succeed: %s", what, text)
-		}
+	resp := HandleTutorial(d, newReq(), json.RawMessage(`{"what":"tutorial"}`), playbooks)
+	if isErr, text := parseResp(t, resp); isErr {
+		t.Fatalf("HandleTutorial should succeed: %s", text)
 	}
 }
 

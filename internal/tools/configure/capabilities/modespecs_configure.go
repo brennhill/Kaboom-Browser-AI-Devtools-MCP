@@ -27,9 +27,6 @@ var configureModeSpecs = map[string]modeParamSpec{
 	"tutorial": {
 		Hint: "Context-aware usage guidance and best practices",
 	},
-	"examples": {
-		Hint: "Quick code snippets for common operations",
-	},
 	"streaming": {
 		Hint:     "Enable/disable push notifications for browser events. streaming_action: enable|disable|status (default: status)",
 		Optional: []string{"streaming_action", "events", "throttle_seconds", "severity_min"},

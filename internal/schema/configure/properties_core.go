@@ -7,7 +7,7 @@ func coreProperties() map[string]any {
 		"what": map[string]any{
 			"type":        "string",
 			"description": "Setting or utility to configure",
-			"enum":        []string{"store", "load", "noise_rule", "clear", "health", "tutorial", "examples", "streaming", "test_boundary_start", "test_boundary_end", "event_recording_start", "event_recording_stop", "playback", "log_diff", "telemetry", "describe_capabilities", "diff_sessions", "audit_log", "restart", "save_sequence", "get_sequence", "list_sequences", "delete_sequence", "replay_sequence", "doctor", "security_mode", "network_recording", "action_jitter", "report_issue", "setup_quality_gates"},
+			"enum":        []string{"store", "load", "noise_rule", "clear", "health", "tutorial", "streaming", "test_boundary_start", "test_boundary_end", "event_recording_start", "event_recording_stop", "playback", "log_diff", "telemetry", "describe_capabilities", "diff_sessions", "audit_log", "restart", "save_sequence", "get_sequence", "list_sequences", "delete_sequence", "replay_sequence", "doctor", "security_mode", "network_recording", "action_jitter", "report_issue", "setup_quality_gates"},
 		},
 		"action": map[string]any{
 			"type":        "string",

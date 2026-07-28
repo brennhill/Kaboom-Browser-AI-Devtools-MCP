@@ -120,7 +120,6 @@ selector parameters and shorthand mode names are rejected.
 | `telemetry` | `toolConfigureTelemetry` | Set the global telemetry mode |
 | `describe_capabilities` | `toolConfigureDescribeCapabilities` | Return per-mode parameter specs for any tool |
 | `tutorial` | `toolConfigureTutorial` | Return getting-started tutorial content |
-| `examples` | `toolConfigureTutorial` | Return focused usage examples |
 | `save_sequence` | `toolConfigureSaveSequence` | Save a named interact action sequence |
 | `get_sequence` | `toolConfigureGetSequence` | Retrieve a saved sequence by name |
 | `list_sequences` | `toolConfigureListSequences` | List all saved sequences |
