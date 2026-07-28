@@ -271,7 +271,7 @@ func handleEarlyExitModes(flags *parsedFlags) {
 		}
 		connectmode.New(connectmode.Deps{
 			Input: os.Stdin, HTTPClient: http.DefaultClient,
-			Diagnosticf: diag.Printf, WriteMCP: writeMCPPayload, Exit: os.Exit,
+			Diagnosticf: diag.Printf, WriteMCP: bridge.WriteMCPPayload, Exit: os.Exit,
 		}).Run(*flags.port, id, cwd)
 		os.Exit(0)
 	}
@@ -350,7 +350,7 @@ func dispatchMode(server *Server, config *serverConfig) {
 		}
 	case modeBridge:
 		if err := bridge.EnsureIOIsolation(config.logFile); err != nil {
-			sendStartupError("Bridge stdio isolation failed: " + err.Error())
+			bridge.SendStartupError("Bridge stdio isolation failed: " + err.Error())
 			os.Exit(1)
 		}
 		server.logLifecycle("bridge_mode_start", config.port, bridge.LaunchFingerprint())

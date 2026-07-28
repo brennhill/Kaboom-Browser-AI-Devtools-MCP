@@ -739,13 +739,13 @@ func TestMCPProtocol_BridgeCodeVerification(t *testing.T) {
 	// CRITICAL: forwarding must go through writeMCPPayload so stdout framing stays
 	// consistent (line-delimited vs Content-Length) and writes remain serialized.
 	//
-	// Matched case-insensitively on the call rather than on a bare `writeMCPPayload(`:
+	// Matched case-insensitively on the call rather than on a bare `cmbridge.WriteMCPPayload(`:
 	// the bridge extraction moved this behind a Deps struct, so the call site is now
 	// `deps.WriteMCPPayload(body, framing)`. The invariant is unchanged — the body
 	// must reach the framing-aware serialized writer — and this still fails if the
 	// body is written any other way.
 	if !strings.Contains(source, "WriteMCPPayload(body, framing)") &&
-		!strings.Contains(source, "writeMCPPayload(body, framing)") {
+		!strings.Contains(source, "cmbridge.WriteMCPPayload(body, framing)") {
 		t.Error("CRITICAL: bridge.go must forward HTTP bodies via WriteMCPPayload(body, framing)")
 	} else {
 		t.Log("bridge.go forwards HTTP bodies via WriteMCPPayload")
@@ -760,7 +760,7 @@ func TestMCPProtocol_BridgeCodeVerification(t *testing.T) {
 func TestMCPProtocol_WriteMCPPayload_LineFramingNormalizesTrailingNewline(t *testing.T) {
 	rawPayload := []byte(" \n\t" + `{"jsonrpc":"2.0","id":1,"result":{"ok":true}}` + "\n\n ")
 	output := captureStdout(t, func() {
-		writeMCPPayload(rawPayload, bridge.StdioFramingLine)
+		cmbridge.WriteMCPPayload(rawPayload, bridge.StdioFramingLine)
 	})
 
 	if !strings.HasSuffix(output, "\n") {
@@ -782,7 +782,7 @@ func TestMCPProtocol_WriteMCPPayload_LineFramingNormalizesTrailingNewline(t *tes
 func TestMCPProtocol_WriteMCPPayload_ContentLengthUsesTrimmedPayload(t *testing.T) {
 	rawPayload := []byte(" \n\t" + `{"jsonrpc":"2.0","id":9,"result":{"ok":true}}` + "\n\n ")
 	output := captureStdout(t, func() {
-		writeMCPPayload(rawPayload, bridge.StdioFramingContentLength)
+		cmbridge.WriteMCPPayload(rawPayload, bridge.StdioFramingContentLength)
 	})
 
 	parts := strings.SplitN(output, "\r\n\r\n", 2)
@@ -813,7 +813,7 @@ func TestMCPProtocol_WriteMCPPayload_ContentLengthUsesTrimmedPayload(t *testing.
 
 func TestMCPProtocol_WriteMCPPayload_InvalidJSONFallsBackToJSONRPCError(t *testing.T) {
 	output := captureStdout(t, func() {
-		writeMCPPayload([]byte("not-json"), bridge.StdioFramingLine)
+		cmbridge.WriteMCPPayload([]byte("not-json"), bridge.StdioFramingLine)
 	})
 
 	trimmed := strings.TrimSuffix(output, "\n")

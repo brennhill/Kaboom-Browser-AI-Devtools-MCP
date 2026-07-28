@@ -10,12 +10,13 @@ import (
 	"strings"
 	"testing"
 
+	cmbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 func TestSendStartupErrorWritesJSONRPCError(t *testing.T) {
 	output := captureStdout(t, func() {
-		sendStartupError("boom")
+		cmbridge.SendStartupError("boom")
 	})
 	line := strings.TrimSpace(output)
 	if line == "" {

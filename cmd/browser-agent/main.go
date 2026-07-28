@@ -12,9 +12,14 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/cli"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/exitdiag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/pushapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/versioncheck"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
@@ -60,6 +65,32 @@ func init() {
 	if telemetry.Version == "dev" {
 		telemetry.Version = version
 	}
+}
+
+func initBridge() {
+	debugLogger := diag.NewDebugFileFromEnv()
+	bridge.Init(bridge.Deps{
+		Version: version, MaxPostBodySize: maxPostBodySize,
+		MCPServerName: identity.MCPServerName, LegacyMCPServerNames: identity.LegacyMCPServerNames,
+		ServerInstructions: serverInstructions,
+		Stderrf:            diag.Printf, Debugf: debugLogger.Printf,
+		WriteMCPPayload: bridge.WriteMCPPayload, SyncStdoutBestEffort: bridge.SyncStdoutBestEffort,
+		SetStderrSink:    diag.SetSink,
+		GetBridgeFraming: bridge.PushRuntime.Framing, StoreBridgeFraming: bridge.PushRuntime.StoreFraming,
+		SetPushClientCapabilities: func(capabilities push.ClientCapabilities) {
+			bridge.PushRuntime.SetCapabilities(capabilities)
+			if capabilities.ClientName != "" {
+				telemetry.SetLLMName(capabilities.ClientName)
+			}
+		},
+		ExtractClientCapabilities: pushapi.ExtractClientCapabilities,
+		NegotiateProtocolVersion:  mcp.NegotiateProtocolVersion,
+		MCPResources:              playbooks.Resources, MCPResourceTemplates: playbooks.ResourceTemplates,
+		ResolveResourceContent: playbooks.ResolveResourceContent,
+		DaemonProcessArgv0:     daemonProcessArgv0, StopServerForUpgrade: stopServerForUpgrade,
+		FindProcessOnPort: procctl.FindProcessOnPort, IsProcessAlive: procctl.IsProcessAlive,
+		AppendExitDiagnostic: exitDiagnostics.Append,
+	})
 }
 
 // startTime tracks when the server started for uptime calculation

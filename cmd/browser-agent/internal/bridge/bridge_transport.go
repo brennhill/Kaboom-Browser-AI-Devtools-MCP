@@ -10,6 +10,7 @@ package bridge
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,12 +19,76 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/pushapi"
 	internbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
+
+var stdoutMu sync.Mutex
+
+// PushRuntime is the single negotiated push/framing state for the bridge process.
+var PushRuntime = pushapi.NewRuntime(WriteMCPPayload)
+
+func SyncStdoutBestEffort() {
+	if err := ActiveMCPTransportWriter().Sync(); err != nil && !IsIgnorableStdoutSyncError(err) {
+		diag.Printf("[Kaboom] warning: stdout.Sync failed: %v\n", err)
+	}
+}
+
+func IsIgnorableStdoutSyncError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, syscall.EINVAL) || errors.Is(err, syscall.EBADF) {
+		return true
+	}
+	var pathErr *os.PathError
+	if errors.As(err, &pathErr) {
+		return errors.Is(pathErr.Err, syscall.EINVAL) || errors.Is(pathErr.Err, syscall.EBADF)
+	}
+	return false
+}
+
+// WriteMCPPayload is the only stdout emitter for MCP wrapper and push responses.
+func WriteMCPPayload(payload []byte, framing internbridge.StdioFraming) {
+	normalized := normalizeMCPPayload(payload)
+	out := ActiveMCPTransportWriter()
+	stdoutMu.Lock()
+	defer stdoutMu.Unlock()
+	if framing == internbridge.StdioFramingContentLength {
+		_, _ = fmt.Fprintf(out, "Content-Length: %d\r\nContent-Type: application/json\r\n\r\n%s", len(normalized), normalized)
+	} else {
+		_, _ = out.Write(normalized)
+		_, _ = out.Write([]byte("\n"))
+	}
+	FlushStdout()
+}
+
+func normalizeMCPPayload(payload []byte) []byte {
+	trimmed := bytes.TrimSpace(payload)
+	if len(trimmed) > 0 && json.Valid(trimmed) {
+		return trimmed
+	}
+	diag.Printf("[kaboom-bridge] ERROR: stdout invariant violation: invalid JSON payload (len=%d)\n", len(payload))
+	response := mcp.JSONRPCResponse{JSONRPC: mcp.JSONRPCVersion, ID: nil,
+		Error: &mcp.JSONRPCError{Code: -32603, Message: "Wrapper emitted invalid JSON payload"}}
+	encoded, _ := json.Marshal(response)
+	return encoded
+}
+
+func SendStartupError(message string) {
+	response := mcp.JSONRPCResponse{JSONRPC: mcp.JSONRPCVersion, ID: "startup",
+		Error: &mcp.JSONRPCError{Code: -32603, Message: message}}
+	encoded, _ := json.Marshal(response)
+	WriteMCPPayload(encoded, internbridge.StdioFramingLine)
+	SyncStdoutBestEffort()
+	time.Sleep(bridgeShutdownFlushDelay)
+}
 
 const (
 	// bridgeShutdownResponseDrain is the maximum time to wait for the last response

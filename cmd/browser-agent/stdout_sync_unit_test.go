@@ -8,6 +8,8 @@ import (
 	"os"
 	"syscall"
 	"testing"
+
+	cmbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 )
 
 func TestIsIgnorableStdoutSyncError(t *testing.T) {
@@ -37,9 +39,9 @@ func TestIsIgnorableStdoutSyncError(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got := isIgnorableStdoutSyncError(tc.err)
+			got := cmbridge.IsIgnorableStdoutSyncError(tc.err)
 			if got != tc.want {
-				t.Fatalf("isIgnorableStdoutSyncError(%v) = %v, want %v", tc.err, got, tc.want)
+				t.Fatalf("cmbridge.IsIgnorableStdoutSyncError(%v) = %v, want %v", tc.err, got, tc.want)
 			}
 		})
 	}

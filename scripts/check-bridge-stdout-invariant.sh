@@ -14,7 +14,7 @@ TARGET_FILES=(
   "cmd/browser-agent/internal/bridge/stdioisolate/isolation.go"
   "cmd/browser-agent/internal/bridge/stdioisolate/isolation_unix.go"
   "cmd/browser-agent/internal/bridge/stdioisolate/isolation_windows.go"
-  "cmd/browser-agent/bridge_adapter.go"
+  "cmd/browser-agent/internal/bridge/bridge_transport.go"
   "cmd/browser-agent/config.go"
   "cmd/browser-agent/internal/connectmode/runner.go"
   "cmd/browser-agent/main_connection_mcp.go"
@@ -41,7 +41,7 @@ if ! rg -n 'bridge\.EnsureIOIsolation\(config\.logFile\)' cmd/browser-agent/conf
   VIOLATIONS=1
 fi
 
-if ! rg -n 'sendStartupError\("Bridge stdio isolation failed:' cmd/browser-agent/config.go >/dev/null 2>&1; then
+if ! rg -n 'bridge\.SendStartupError\("Bridge stdio isolation failed:' cmd/browser-agent/config.go >/dev/null 2>&1; then
   echo "INVARIANT VIOLATION: bridge isolation failures must be surfaced as JSON-RPC startup errors"
   VIOLATIONS=1
 fi

@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	cmbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mediaapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/pushapi"
@@ -145,10 +146,10 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 	})
 
 	// Initialize push router with capability sync callback
-	caps := pushRuntime.Capabilities()
-	s.pushRouter = push.NewRouter(s.pushInbox, pushRuntime, pushRuntime, caps)
-	s.pushHTTP = pushapi.NewHandler(s.pushRouter, s.pushInbox, pushRuntime, jsonResponse, maxPostBodySize)
-	pushRuntime.OnCapabilitiesChange(func(newCaps push.ClientCapabilities) {
+	caps := cmbridge.PushRuntime.Capabilities()
+	s.pushRouter = push.NewRouter(s.pushInbox, cmbridge.PushRuntime, cmbridge.PushRuntime, caps)
+	s.pushHTTP = pushapi.NewHandler(s.pushRouter, s.pushInbox, cmbridge.PushRuntime, jsonResponse, maxPostBodySize)
+	cmbridge.PushRuntime.OnCapabilitiesChange(func(newCaps push.ClientCapabilities) {
 		s.pushRouter.UpdateCapabilities(newCaps)
 	})
 
