@@ -44,4 +44,7 @@ Batch execution and reusable configure sequences share replay primitives and one
 concurrency lock. Saved-sequence persistence, CRUD, and replay orchestration stay
 together in `internal/sequencehandler`; interactive batch orchestration remains
 with the interact feature. Configure actions and saved interact steps both use
-the canonical `what` discriminator.
+the canonical `what` discriminator. Tool composition constructs one
+`sequencehandler.Handler`, and all five configure sequence actions route to it
+directly; no ToolHandler forwarding methods or per-request handler factory
+remain.

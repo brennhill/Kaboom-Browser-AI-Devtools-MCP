@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/replay"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/sequencehandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
 )
 
@@ -24,6 +25,13 @@ func newSequenceTestEnv(t *testing.T) *toolTestEnv {
 	}
 	t.Cleanup(func() { store.Shutdown() })
 	env.handler.sessionStoreImpl = store
+	env.handler.sequences = sequencehandler.New(sequencehandler.Deps{
+		Store:          store,
+		ReplayMu:       &replayMu,
+		Interact:       env.handler.toolInteract,
+		WaitForCommand: env.handler.capture.Queries().WaitForCommand,
+		RecordAction:   env.handler.recordAIAction,
+	})
 	return env
 }
 

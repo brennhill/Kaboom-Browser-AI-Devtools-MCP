@@ -63,6 +63,12 @@ func TestRootDoesNotReexportCanonicalTypes(t *testing.T) {
 		"activeBoundaries ",
 		"toolConfigureTestBoundaryStart(",
 		"toolConfigureTestBoundaryEnd(",
+		"func (h *ToolHandler) sequenceHandler(",
+		"toolConfigureSaveSequence(",
+		"toolConfigureGetSequence(",
+		"toolConfigureListSequences(",
+		"toolConfigureDeleteSequence(",
+		"toolConfigureReplaySequence(",
 	} {
 		for _, path := range rootFiles {
 			if strings.HasSuffix(path, "_test.go") {

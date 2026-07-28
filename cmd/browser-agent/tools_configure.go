@@ -18,7 +18,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/launchmode"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/playbooks"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/replay"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/sequencehandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/auditlog"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
@@ -96,11 +95,21 @@ var configureHandlers = map[string]toolrouting.Handler[*ToolHandler]{
 	"tutorial": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return tutorial.HandleTutorial(h, req, args, playbooks.TutorialFailureRecoveryPlaybooks())
 	},
-	"save_sequence":     (*ToolHandler).toolConfigureSaveSequence,
-	"get_sequence":      (*ToolHandler).toolConfigureGetSequence,
-	"list_sequences":    (*ToolHandler).toolConfigureListSequences,
-	"delete_sequence":   (*ToolHandler).toolConfigureDeleteSequence,
-	"replay_sequence":   (*ToolHandler).toolConfigureReplaySequence,
+	"save_sequence": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		return h.sequences.Save(req, args)
+	},
+	"get_sequence": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		return h.sequences.Get(req, args)
+	},
+	"list_sequences": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		return h.sequences.List(req, args)
+	},
+	"delete_sequence": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		return h.sequences.Delete(req, args)
+	},
+	"replay_sequence": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		return h.sequences.Replay(req, args)
+	},
 	"security_mode":     cfgLocal(toolconfigure.HandleSecurityMode),
 	"network_recording": (*ToolHandler).toolConfigureNetworkRecording,
 	"action_jitter":     cfgLocal(toolconfigure.HandleActionJitter),
@@ -320,33 +329,6 @@ func extractErrorMessage(response mcp.JSONRPCResponse) string {
 		return message
 	}
 	return "unknown error"
-}
-
-func (h *ToolHandler) sequenceHandler() *sequencehandler.Handler {
-	return sequencehandler.New(sequencehandler.Deps{
-		Store: h.sessionStoreImpl, ReplayMu: &replayMu, Interact: h.toolInteract,
-		WaitForCommand: h.capture.Queries().WaitForCommand, RecordAction: h.recordAIAction,
-	})
-}
-
-func (h *ToolHandler) toolConfigureSaveSequence(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	return h.sequenceHandler().Save(req, args)
-}
-
-func (h *ToolHandler) toolConfigureGetSequence(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	return h.sequenceHandler().Get(req, args)
-}
-
-func (h *ToolHandler) toolConfigureListSequences(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	return h.sequenceHandler().List(req, args)
-}
-
-func (h *ToolHandler) toolConfigureDeleteSequence(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	return h.sequenceHandler().Delete(req, args)
-}
-
-func (h *ToolHandler) toolConfigureReplaySequence(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	return h.sequenceHandler().Replay(req, args)
 }
 
 func (h *ToolHandler) toolConfigureEventRecordingStart(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {

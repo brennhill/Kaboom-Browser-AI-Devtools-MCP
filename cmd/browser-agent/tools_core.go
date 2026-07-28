@@ -14,6 +14,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/noiseautorun"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/sequencehandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/summarypref"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testgenhandler"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
@@ -126,6 +127,7 @@ type ToolHandler struct {
 	stateInteractHandler     *interactstate.Handler
 	configureSessions        *toolconfigure.SessionHandler
 	testBoundaries           *cfg.BoundaryHandler
+	sequences                *sequencehandler.Handler
 	annotationAnalysis       *annotationanalysis.Handler
 	analyzeDispatcher        *analyzedispatch.Dispatcher
 
@@ -584,6 +586,17 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 		handler.sessionStoreImpl,
 		handler.sessionManager,
 	)
+	var waitForSequenceCommand func(string, time.Duration) (*queries.CommandResult, bool)
+	if captureStore != nil {
+		waitForSequenceCommand = captureStore.Queries().WaitForCommand
+	}
+	handler.sequences = sequencehandler.New(sequencehandler.Deps{
+		Store:          handler.sessionStoreImpl,
+		ReplayMu:       &replayMu,
+		Interact:       handler.toolInteract,
+		WaitForCommand: waitForSequenceCommand,
+		RecordAction:   handler.recordAIAction,
+	})
 	handler.ensureToolModules()
 	handler.ensureToolSchemas()
 
