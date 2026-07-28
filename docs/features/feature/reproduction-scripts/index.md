@@ -16,10 +16,12 @@ code_paths:
   - src/lib/page/reproduction.ts
 test_paths:
   - cmd/browser-agent/reproduction_test.go
-  - cmd/browser-agent/reproduction_test.go
   - internal/reproduction/reproduction_test.go
   - internal/reproduction/golden_test.go
   - cmd/browser-agent/lint_hardening_test.go
+  - tests/extension/reproduction-script-fixture.js
+  - tests/extension/reproduction-script-generation.test.js
+  - tests/extension/reproduction-script.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
