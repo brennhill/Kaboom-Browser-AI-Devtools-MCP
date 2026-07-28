@@ -48,6 +48,7 @@ type ExtensionState struct {
 	extSessionChangedAt    time.Time // When extSessionID last changed.
 	lastExtensionConnected bool      // Previous connection state for transition detection.
 	extensionVersion       string    // Last reported extension version from sync request.
+	serverVersion          string    // Daemon version used for extension compatibility checks.
 
 	// Disconnect detection (P0-1 hardening)
 	lastSyncSeen     time.Time // When last /sync request was received. Zero = never synced.
@@ -135,6 +136,20 @@ func (r *ExtensionRuntime) SetExtensionVersion(version string) {
 	r.state.extensionVersion = version
 }
 
+// SetServerVersion stores the daemon version used for extension compatibility checks.
+func (r *ExtensionRuntime) SetServerVersion(version string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.state.serverVersion = version
+}
+
+// ServerVersion returns the daemon version used for sync responses.
+func (r *ExtensionRuntime) ServerVersion() string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.state.serverVersion
+}
+
 func (r *ExtensionRuntime) Disconnected() (neverSynced bool, disconnected bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -210,11 +225,11 @@ func (r *ExtensionRuntime) GetExtensionStatus() map[string]any {
 // Returns the extension version, server version, and whether a mismatch exists.
 // A mismatch is detected only when the extension has reported a version (non-empty)
 // and the major.minor portions differ from the server version.
-func (c *Capture) GetVersionMismatch() (extensionVersion string, serverVersion string, hasMismatch bool) {
-	extVer := c.extension.ExtensionVersion()
-	c.mu.RLock()
-	srvVer := c.serverVersion
-	c.mu.RUnlock()
+func (r *ExtensionRuntime) VersionMismatch() (extensionVersion string, serverVersion string, hasMismatch bool) {
+	r.mu.RLock()
+	extVer := r.state.extensionVersion
+	srvVer := r.state.serverVersion
+	r.mu.RUnlock()
 
 	if extVer == "" || srvVer == "" {
 		return extVer, srvVer, false

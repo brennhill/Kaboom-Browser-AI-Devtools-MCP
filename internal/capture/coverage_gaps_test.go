@@ -2,7 +2,7 @@
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
 // coverage_gaps_test.go — Targeted tests for uncovered capture paths (part 1).
-// Covers: lifecycle observer access, SetServerVersion,
+// Covers: lifecycle observer access, extension version compatibility,
 // GetVersionMismatch, majorMinor, detectAndSetBinaryFormat,
 // redactExtensionLog edge cases, circuit breaker, and HTTP handlers.
 package capture
@@ -57,18 +57,18 @@ func TestLifecycleObserverEmitWithoutSubscribers(t *testing.T) {
 }
 
 // ============================================
-// SetServerVersion / GetVersionMismatch / majorMinor
+// Extension version compatibility / majorMinor
 // ============================================
 
-func TestSetServerVersion(t *testing.T) {
+func TestExtensionRuntimeServerVersion(t *testing.T) {
 	t.Parallel()
 
 	c := NewCapture()
 	defer c.Close()
 
-	c.SetServerVersion("6.0.3")
-	if got := c.GetServerVersion(); got != "6.0.3" {
-		t.Errorf("GetServerVersion() = %q, want 6.0.3", got)
+	c.Extension().SetServerVersion("6.0.3")
+	if got := c.Extension().ServerVersion(); got != "6.0.3" {
+		t.Errorf("ServerVersion() = %q, want 6.0.3", got)
 	}
 }
 
@@ -78,8 +78,8 @@ func TestGetVersionMismatch_NoExtensionVersion(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 
-	c.SetServerVersion("6.0.3")
-	extVer, srvVer, mismatch := c.GetVersionMismatch()
+	c.Extension().SetServerVersion("6.0.3")
+	extVer, srvVer, mismatch := c.Extension().VersionMismatch()
 	if extVer != "" {
 		t.Errorf("extVer = %q, want empty", extVer)
 	}
@@ -101,7 +101,7 @@ func TestGetVersionMismatch_NoServerVersion(t *testing.T) {
 	c.extension.state.extensionVersion = "6.0.3"
 	c.mu.Unlock()
 
-	_, _, mismatch := c.GetVersionMismatch()
+	_, _, mismatch := c.Extension().VersionMismatch()
 	if mismatch {
 		t.Error("mismatch = true, want false when server version empty")
 	}
@@ -113,12 +113,12 @@ func TestGetVersionMismatch_Match(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 
-	c.SetServerVersion("6.0.3")
+	c.Extension().SetServerVersion("6.0.3")
 	c.mu.Lock()
 	c.extension.state.extensionVersion = "6.0.5"
 	c.mu.Unlock()
 
-	extVer, srvVer, mismatch := c.GetVersionMismatch()
+	extVer, srvVer, mismatch := c.Extension().VersionMismatch()
 	if extVer != "6.0.5" {
 		t.Errorf("extVer = %q, want 6.0.5", extVer)
 	}
@@ -136,12 +136,12 @@ func TestGetVersionMismatch_Mismatch(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 
-	c.SetServerVersion("6.0.3")
+	c.Extension().SetServerVersion("6.0.3")
 	c.mu.Lock()
 	c.extension.state.extensionVersion = "5.9.0"
 	c.mu.Unlock()
 
-	_, _, mismatch := c.GetVersionMismatch()
+	_, _, mismatch := c.Extension().VersionMismatch()
 	if !mismatch {
 		t.Error("mismatch = false, want true (6.0 != 5.9)")
 	}
@@ -176,12 +176,12 @@ func TestGetVersionMismatch_InvalidVersionFormat(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 
-	c.SetServerVersion("6.0.3")
+	c.Extension().SetServerVersion("6.0.3")
 	c.mu.Lock()
 	c.extension.state.extensionVersion = "invalid"
 	c.mu.Unlock()
 
-	_, _, mismatch := c.GetVersionMismatch()
+	_, _, mismatch := c.Extension().VersionMismatch()
 	if mismatch {
 		t.Error("mismatch = true, want false for invalid version format")
 	}

@@ -144,12 +144,15 @@ Lifecycle publishers and subscribers likewise use the independently
 synchronized observer returned by `Capture.Lifecycle()`; the Capture-level
 subscribe and emit forwarding methods are deleted.
 Extension connection, pilot, tracked-tab, CSP, security-mode, command-heartbeat,
-and test-boundary state now share the independently synchronized
+test-boundary, and server/extension compatibility state now share the independently synchronized
 `ExtensionRuntime` returned by `Capture.Extension()`. Sync ingestion and every
 consumer use that owner directly; the 19 former Capture forwarding methods and
 parent-lock coupling are deleted. Event ingestion takes detached test-boundary
 snapshots before acquiring the buffer lock. The pre-`/sync` `ExtensionStatus`
 envelope and `UpdateExtensionStatus` mutation API remain deleted.
+Server version storage and major/minor mismatch evaluation also live entirely
+on `ExtensionRuntime`; the three Capture-level version forwarding methods and
+split-lock state are deleted.
 Tests likewise mutate extension-owned pilot, tracking, connection, tab, and CSP
 state through `Capture.Extension()`; the seven Capture-level test-helper
 facades are deleted. The remaining sync simulation helper stays on Capture

@@ -96,11 +96,6 @@ type Capture struct {
 	lifecycle        *lifecycle.Observer   // Typed event bus for lifecycle events (circuit breaker, extension state, buffer overflow). Has own lock independent of Capture.mu.
 	featuresCallback func(map[string]bool) // Optional callback fired when extension reports feature usage (called outside lock)
 
-	// ============================================
-	// Version Information
-	// ============================================
-
-	serverVersion string // Server version (e.g., "5.7.0"), set via SetServerVersion()
 }
 
 // NewCapture creates a fully initialized Capture with all subcomponents wired.
@@ -174,21 +169,6 @@ func (c *Capture) SetFeaturesCallback(cb func(map[string]bool)) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.featuresCallback = cb
-}
-
-// SetServerVersion sets server version for compatibility checking.
-// Called once at startup with version from main.go.
-func (c *Capture) SetServerVersion(v string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.serverVersion = v
-}
-
-// GetServerVersion returns server version.
-func (c *Capture) GetServerVersion() string {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.serverVersion
 }
 
 // SetClientRegistry wires the client registry used by /clients endpoints.

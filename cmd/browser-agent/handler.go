@@ -395,7 +395,7 @@ func (h *MCPHandler) maybeAddVersionWarning(resp mcp.JSONRPCResponse) mcp.JSONRP
 	if captured == nil {
 		return resp
 	}
-	extensionVersion, serverVersion, mismatch := captured.GetVersionMismatch()
+	extensionVersion, serverVersion, mismatch := captured.Extension().VersionMismatch()
 	if !mismatch {
 		return resp
 	}

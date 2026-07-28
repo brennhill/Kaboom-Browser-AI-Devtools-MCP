@@ -292,7 +292,7 @@ func (c *Capture) HandleSync(w http.ResponseWriter, r *http.Request) {
 		Commands:         commands,
 		NextPollMs:       nextPollMs,
 		ServerTime:       now.Format(time.RFC3339),
-		ServerVersion:    c.GetServerVersion(),
+		ServerVersion:    c.Extension().ServerVersion(),
 		InstallID:        telemetry.GetInstallID(),
 		CaptureOverrides: c.buildCaptureOverrides(),
 	}

@@ -260,7 +260,7 @@ func (a *sessionClientRegistryAdapter) Unregister(id string) bool {
 func initCapture(server *Server, port int) *capture.Capture {
 	cap := capture.NewCapture()
 	cap.SetClientRegistry(newSessionClientRegistryAdapter(clientreg.NewClientRegistry()))
-	cap.SetServerVersion(version)
+	cap.Extension().SetServerVersion(version)
 	cap.Lifecycle().Subscribe(func(event lifecycle.Event, data map[string]any) {
 		entry := types.LogEntry{
 			"type":      "lifecycle",
