@@ -223,8 +223,6 @@ All 5 tools use `what` as the primary dispatch parameter. `action`, `mode`, and 
 
 | Old name | Canonical |
 |---|---|
-| `record_start` | `screen_recording_start` |
-| `record_stop` | `screen_recording_stop` |
 | `action` param | use `what` |
 
 ---

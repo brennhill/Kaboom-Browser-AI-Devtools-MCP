@@ -131,7 +131,7 @@ This document summarizes the comprehensive test plans created for 5 major Kaboom
 **Location:** `/Users/brenn/dev/kaboom/docs/features/feature/flow-recording/test-plan.md`
 
 **UAT Tests:** 7 tests in `cat-18-recording.sh`
-- Test 18.1-18.2: record_start/record_stop JSON-RPC validation
+- Test 18.1-18.2: screen_recording_start/screen_recording_stop JSON-RPC validation
 - Test 18.3: observe(saved_videos) structure validation
 - Test 18.4-18.7: Audio parameter handling and validation
 

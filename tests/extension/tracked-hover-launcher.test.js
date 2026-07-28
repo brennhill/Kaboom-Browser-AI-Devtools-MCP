@@ -164,12 +164,12 @@ function resetGlobals() {
       callback?.({ success: true })
       return Promise.resolve({ success: true })
     }
-    if (message?.type === 'record_start') {
+    if (message?.type === 'screen_recording_start') {
       storageData.kaboom_recording = { active: true }
       callback?.({ status: 'recording' })
       return Promise.resolve({ status: 'recording' })
     }
-    if (message?.type === 'record_stop') {
+    if (message?.type === 'screen_recording_stop') {
       storageData.kaboom_recording = { active: false }
       callback?.({ status: 'saved' })
       return Promise.resolve({ status: 'saved' })

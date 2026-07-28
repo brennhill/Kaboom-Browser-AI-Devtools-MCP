@@ -150,13 +150,7 @@ func buildInteractHandlers() map[string]toolrouting.Handler[*ToolHandler] {
 		"screen_recording_start": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.recordingInteractHandler.HandleRecordStart(req, args)
 		},
-		"record_start": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return th.recordingInteractHandler.HandleRecordStart(req, args)
-		},
 		"screen_recording_stop": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return th.recordingInteractHandler.HandleRecordStop(req, args)
-		},
-		"record_stop": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.recordingInteractHandler.HandleRecordStop(req, args)
 		},
 		"upload": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {

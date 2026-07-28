@@ -47,7 +47,7 @@ last_verified_date: 2026-03-05
 - `subtitle` -> `subtitle`
 - `upload` -> `upload`
 - `draw_mode_start` -> `draw_mode`
-- `record_start` / `record_stop` -> `record_start` / `record_stop`
+- `screen_recording_start` / `screen_recording_stop` -> `screen_recording_start` / `screen_recording_stop`
 
 ## Execution Pipeline
 1. Go queues command with correlation ID.

@@ -48,7 +48,7 @@ type Deps struct {
 type InteractHandler struct {
 	deps Deps
 
-	// Interact recording state gate (record_start/record_stop sequencing).
+	// Interact recording state gate (start/stop sequencing).
 	// Exclusively owned by InteractHandler — never read or written by the host.
 	recordInteractMu sync.Mutex
 	recordInteract   State

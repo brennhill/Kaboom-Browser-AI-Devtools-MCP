@@ -153,13 +153,13 @@ Real-world scenarios where Kaboom dramatically accelerates product development.
 **Without Kaboom:** Screen record manually, write a script, re-record when you mess up. Edit in post.
 
 **With Kaboom:**
-1. `interact(record_start, name: "product_demo", fps: 30)` → recording starts
+1. `interact(screen_recording_start, name: "product_demo", fps: 30)` → recording starts
 2. AI navigates the happy path with subtitle narration at each step
 3. `interact(highlight)` on key features as AI explains them via subtitle
-4. `interact(record_stop)` → .webm video saved with all narration baked in
+4. `interact(screen_recording_stop)` → .webm video saved with all narration baked in
 5. **Result: Professional demo video created entirely by AI. No human on camera.**
 
-**Key features:** record_start/stop, subtitle narration, highlight, navigate
+**Key features:** screen_recording_start/stop, subtitle narration, highlight, navigate
 
 ---
 

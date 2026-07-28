@@ -19,7 +19,7 @@ last_verified_date: 2026-03-05
 
 - Status: proposed
 - Tool: interact, observe
-- Mode/Action: record_start, record_stop, saved_videos
+- Mode/Action: screen_recording_start, screen_recording_stop, saved_videos
 - This document is a generated placeholder and should be completed.
 
 ## Linked Specs

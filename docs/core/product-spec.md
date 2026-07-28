@@ -35,7 +35,7 @@ Define the user-visible, canonical behavior of the Kaboom MCP surface. This spec
 `store`, `load`, `noise_rule`, `clear`, `health`, `streaming`, `test_boundary_start`, `test_boundary_end`, `recording_start`, `recording_stop`, `playback`, `log_diff`, `telemetry`, `diff_sessions`, `audit_log`
 
 ### `interact` (`action`)
-`highlight`, `subtitle`, `save_state`, `load_state`, `list_states`, `delete_state`, `execute_js`, `navigate`, `refresh`, `back`, `forward`, `new_tab`, `screenshot`, `click`, `type`, `select`, `check`, `get_text`, `get_value`, `get_attribute`, `set_attribute`, `focus`, `scroll_to`, `wait_for`, `key_press`, `paste`, `list_interactive`, `record_start`, `record_stop`, `upload`, `draw_mode_start`
+`highlight`, `subtitle`, `save_state`, `load_state`, `list_states`, `delete_state`, `execute_js`, `navigate`, `refresh`, `back`, `forward`, `new_tab`, `screenshot`, `click`, `type`, `select`, `check`, `get_text`, `get_value`, `get_attribute`, `set_attribute`, `focus`, `scroll_to`, `wait_for`, `key_press`, `paste`, `list_interactive`, `screen_recording_start`, `screen_recording_stop`, `upload`, `draw_mode_start`
 
 ## Product Guarantees
 1. Schema-first contract: `tools/list` is the canonical enum/option contract for all MCP clients.

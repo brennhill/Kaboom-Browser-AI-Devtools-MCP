@@ -2,7 +2,7 @@
 feature: flow-recording
 status: proposed
 tool: [interact, observe, configure]
-mode: [record_start, record_stop, playback]
+mode: [screen_recording_start, screen_recording_stop, playback]
 version: 0.7.12
 last-updated: 2026-02-09
 last_reviewed: 2026-07-05
@@ -137,12 +137,12 @@ last_verified_date: 2026-03-05
 
 | Cat | Test | Line | Scenario |
 |-----|------|------|----------|
-| 18.1 | record_start returns valid JSON-RPC | 20-41 | API contract, returns queued or pilot-disabled |
-| 18.2 | record_stop returns valid JSON-RPC | 43-55 | API contract validation |
+| 18.1 | screen_recording_start returns valid JSON-RPC | 20-41 | API contract, returns queued or pilot-disabled |
+| 18.2 | screen_recording_stop returns valid JSON-RPC | 43-55 | API contract validation |
 | 18.3 | observe(saved_videos) returns valid structure | 57-89 | Recordings array + total count |
-| 18.4 | record_start with audio:'tab' echoes param | 91-117 | Audio parameter round-trip |
-| 18.5 | record_start rejects invalid audio mode | 119-142 | Input validation |
-| 18.6 | record_start with audio:'both' echoes audio | 144-150+ | Audio mode validation |
+| 18.4 | screen_recording_start with audio:'tab' echoes param | 91-117 | Audio parameter round-trip |
+| 18.5 | screen_recording_start rejects invalid audio mode | 119-142 | Input validation |
+| 18.6 | screen_recording_start with audio:'both' echoes audio | 144-150+ | Audio mode validation |
 | 18.7 | (Not yet shown in truncated output) | TBD | Additional recording scenario |
 
 #### Coverage:

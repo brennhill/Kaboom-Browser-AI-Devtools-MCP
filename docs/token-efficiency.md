@@ -75,9 +75,9 @@ A typical visual debugging flow:
 
 | Step | Tool Call | ~Response Tokens |
 |---:|---|---:|
-| 1 | `interact(what="record_start")` | 50–100 |
+| 1 | `interact(what="screen_recording_start")` | 50–100 |
 | 2 | *User performs actions in browser* | — |
-| 3 | `interact(what="record_stop")` | 50–100 |
+| 3 | `interact(what="screen_recording_stop")` | 50–100 |
 | 4 | `observe(what="actions")` | 200–600 |
 | 5 | `generate(what="playwright_test")` | 500–1,500 |
 

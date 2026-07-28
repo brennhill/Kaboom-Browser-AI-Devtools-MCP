@@ -51,7 +51,7 @@ last_verified_date: 2026-03-05
 
 - Status: proposed
 - Tool: interact, observe
-- Mode/Action: screen_recording_start, screen_recording_stop, record_start (alias), record_stop (alias), saved_videos, toggle_action_sequence_recording
+- Mode/Action: screen_recording_start, screen_recording_stop, saved_videos, toggle_action_sequence_recording
 - Location: `docs/features/feature/tab-recording`
 
 ## Specs

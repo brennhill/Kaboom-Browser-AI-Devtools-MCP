@@ -109,7 +109,7 @@ last_reviewed: 2026-02-16
   - Token authorization format
   - Correlation ID format
   - Timestamp format (milliseconds since epoch)
-  - Query action types (execute_js, query_dom, execute_a11y_audit, record_start, record_stop)
+  - Query action types (execute_js, query_dom, execute_a11y_audit, screen_recording_start, screen_recording_stop)
 
 - **Reliability Patterns:**
   - Idempotent query IDs

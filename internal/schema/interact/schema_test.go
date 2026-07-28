@@ -206,7 +206,7 @@ func TestInteractEnum_ExcludesAliases(t *testing.T) {
 		enumSet[v] = true
 	}
 
-	aliases := []string{"state_save", "state_load", "state_list", "state_delete"}
+	aliases := []string{"state_save", "state_load", "state_list", "state_delete", "record_start", "record_stop"}
 	for _, alias := range aliases {
 		if enumSet[alias] {
 			t.Errorf("alias %q should be excluded from interact enum", alias)
@@ -214,7 +214,10 @@ func TestInteractEnum_ExcludesAliases(t *testing.T) {
 	}
 
 	// Canonical forms must still be present
-	canonicals := []string{"save_state", "load_state", "list_states", "delete_state"}
+	canonicals := []string{
+		"save_state", "load_state", "list_states", "delete_state",
+		"screen_recording_start", "screen_recording_stop",
+	}
 	for _, c := range canonicals {
 		if !enumSet[c] {
 			t.Errorf("canonical action %q should be in interact enum", c)
@@ -235,6 +238,22 @@ func TestInteractActionSpecs_ExcludeStateAliases(t *testing.T) {
 	for _, alias := range aliases {
 		if specNames[alias] {
 			t.Errorf("duplicate state action %q must not be registered", alias)
+		}
+	}
+}
+
+func TestInteractActionSpecs_ExcludeRecordingAliases(t *testing.T) {
+	t.Parallel()
+
+	specs := ActionSpecs()
+	specNames := make(map[string]bool, len(specs))
+	for _, s := range specs {
+		specNames[s.Name] = true
+	}
+
+	for _, alias := range []string{"record_start", "record_stop"} {
+		if specNames[alias] {
+			t.Errorf("duplicate recording action %q must not be registered", alias)
 		}
 	}
 }

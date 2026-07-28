@@ -205,10 +205,10 @@ run_test_27_5
 
 # ── 27.6 — Recording start shows watermark ───────────────
 begin_test "27.6" "Recording start shows watermark" \
-    "interact(record_start) — verify flame watermark visible in bottom-right" \
+    "interact(screen_recording_start) — verify flame watermark visible in bottom-right" \
     "Visual: recording indicator overlay renders."
 run_test_27_6() {
-    RESPONSE=$(call_tool "interact" '{"action":"record_start","name":"smoke-test-27"}')
+    RESPONSE=$(call_tool "interact" '{"action":"screen_recording_start","name":"smoke-test-27"}')
     local text
     text=$(extract_content_text "$RESPONSE")
 
@@ -217,13 +217,13 @@ run_test_27_6() {
             skip "Recording requires pilot — not enabled."
             return
         fi
-        fail "record_start returned error: $(truncate "$text")"
+        fail "screen_recording_start returned error: $(truncate "$text")"
         return
     fi
 
     sleep 1
     if human_verify "Is a RECORDING WATERMARK (flame icon) visible in the bottom-right corner of the page?"; then
-        pass "Recording watermark appeared on record_start."
+        pass "Recording watermark appeared on screen_recording_start."
     else
         fail "Human reports recording watermark not visible."
     fi
@@ -232,10 +232,10 @@ run_test_27_6
 
 # ── 27.7 — Recording stop removes watermark ──────────────
 begin_test "27.7" "Recording stop removes watermark" \
-    "interact(record_stop) — verify watermark disappears" \
+    "interact(screen_recording_stop) — verify watermark disappears" \
     "Visual: recording indicator removed after stop."
 run_test_27_7() {
-    RESPONSE=$(call_tool "interact" '{"action":"record_stop"}')
+    RESPONSE=$(call_tool "interact" '{"action":"screen_recording_stop"}')
     local text
     text=$(extract_content_text "$RESPONSE")
 
@@ -244,12 +244,12 @@ run_test_27_7() {
             skip "Recording requires pilot — not enabled."
             return
         fi
-        # record_stop error is OK if nothing was recording
+        # screen_recording_stop error is OK if nothing was recording
     fi
 
     sleep 1
     if human_verify "Has the recording watermark DISAPPEARED from the page?"; then
-        pass "Recording watermark removed on record_stop."
+        pass "Recording watermark removed on screen_recording_stop."
     else
         fail "Human reports recording watermark still visible after stop."
     fi

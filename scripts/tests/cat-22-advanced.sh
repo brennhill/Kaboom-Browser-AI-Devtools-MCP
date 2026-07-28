@@ -23,13 +23,13 @@ run_test_22_1() {
     call_tool "configure" '{"action":"clear","buffer":"all"}' >/dev/null
 
     # 1. Record
-    call_tool "interact" '{"action":"record_start","name":"workflow-test"}' >/dev/null
+    call_tool "interact" '{"action":"screen_recording_start","name":"workflow-test"}' >/dev/null
     sleep 0.1
     call_tool "interact" '{"action":"navigate","url":"https://example.com"}' >/dev/null 2>&1
     sleep 0.1
     call_tool "interact" '{"action":"click","selector":"#old-button"}' >/dev/null 2>&1
     sleep 0.1
-    response=$(call_tool "interact" '{"action":"record_stop"}')
+    response=$(call_tool "interact" '{"action":"screen_recording_stop"}')
 
     if ! check_not_error "$response"; then
         fail "Recording failed in workflow"
@@ -89,11 +89,11 @@ run_test_22_2() {
     sleep 0.1
 
     # Start recording with noise rules active
-    call_tool "interact" '{"action":"record_start","name":"with-filtering"}' >/dev/null
+    call_tool "interact" '{"action":"screen_recording_start","name":"with-filtering"}' >/dev/null
     sleep 0.1
     call_tool "interact" '{"action":"navigate","url":"https://example.com"}' >/dev/null 2>&1
     sleep 0.1
-    response=$(call_tool "interact" '{"action":"record_stop"}')
+    response=$(call_tool "interact" '{"action":"screen_recording_stop"}')
 
     if ! check_not_error "$response"; then
         fail "Recording with noise rules active failed"

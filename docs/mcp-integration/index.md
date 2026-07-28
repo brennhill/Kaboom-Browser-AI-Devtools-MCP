@@ -178,7 +178,7 @@ Control the browser. Requires AI Web Pilot. Use the `action` parameter:
 | `list_interactive` | List all interactive elements on the page |
 | `upload` | Upload a file to a file input |
 | `save_state` / `load_state` / `list_states` / `delete_state` | Browser state snapshots |
-| `record_start` / `record_stop` | Start/stop browser recording |
+| `screen_recording_start` / `screen_recording_stop` | Start/stop browser recording |
 | `draw_mode_start` | Activate annotation overlay for visual feedback |
 
 ## <i class="fas fa-cog"></i> Custom Port

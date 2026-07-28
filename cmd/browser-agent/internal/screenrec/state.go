@@ -1,4 +1,4 @@
-// Purpose: Interact record_start/record_stop state-machine helpers.
+// Purpose: Interact screen-recording state-machine helpers.
 // Why: Keeps command-result interpretation and state transitions isolated from request handlers.
 // Docs: docs/features/feature/tab-recording/index.md
 

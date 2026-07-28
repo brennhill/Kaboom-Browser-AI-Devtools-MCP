@@ -437,7 +437,7 @@ interact_and_wait() {
     local max_polls="${3:-}"
     if [ -z "$max_polls" ]; then
         case "$action" in
-            navigate|refresh|back|forward|new_tab|upload|record_start|record_stop|screen_recording_start|screen_recording_stop)
+            navigate|refresh|back|forward|new_tab|upload|screen_recording_start|screen_recording_stop|screen_recording_start|screen_recording_stop)
                 max_polls=120 ;; # up to 60s at 0.5s interval for slower async browser actions
             *)
                 max_polls=20 ;;

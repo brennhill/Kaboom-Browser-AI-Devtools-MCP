@@ -22,7 +22,7 @@ begin_test "30.19" "record_wait_for: Wait for element to appear before clicking"
 run_test_18_19() {
     call_tool "configure" '{"action":"clear","buffer":"all"}' >/dev/null
 
-    call_tool "interact" '{"action":"record_start","name":"wait-test"}' >/dev/null
+    call_tool "interact" '{"action":"screen_recording_start","name":"wait-test"}' >/dev/null
     sleep 0.1
 
     # Record a wait action
@@ -34,7 +34,7 @@ run_test_18_19() {
     fi
 
     sleep 0.1
-    call_tool "interact" '{"action":"record_stop"}' >/dev/null
+    call_tool "interact" '{"action":"screen_recording_stop"}' >/dev/null
 
     pass "Wait action recorded successfully"
 }
@@ -49,7 +49,7 @@ begin_test "30.20" "Recording click with multiple selectors (fallback chain)" \
 run_test_18_20() {
     call_tool "configure" '{"action":"clear","buffer":"all"}' >/dev/null
 
-    call_tool "interact" '{"action":"record_start","name":"fallback-test"}' >/dev/null
+    call_tool "interact" '{"action":"screen_recording_start","name":"fallback-test"}' >/dev/null
     sleep 0.1
 
     # Record click with potential fallback
@@ -65,7 +65,7 @@ run_test_18_20() {
     fi
 
     sleep 0.1
-    call_tool "interact" '{"action":"record_stop"}' >/dev/null
+    call_tool "interact" '{"action":"screen_recording_stop"}' >/dev/null
 
     pass "Multi-selector click recorded with fallback chain"
 }
@@ -80,7 +80,7 @@ begin_test "30.21" "Recording form fills with validation waits" \
 run_test_18_21() {
     call_tool "configure" '{"action":"clear","buffer":"all"}' >/dev/null
 
-    call_tool "interact" '{"action":"record_start","name":"form-test"}' >/dev/null
+    call_tool "interact" '{"action":"screen_recording_start","name":"form-test"}' >/dev/null
     sleep 0.1
 
     # Fill form field
@@ -97,7 +97,7 @@ run_test_18_21() {
     fi
 
     sleep 0.1
-    call_tool "interact" '{"action":"record_stop"}' >/dev/null
+    call_tool "interact" '{"action":"screen_recording_stop"}' >/dev/null
 }
 run_test_18_21
 
@@ -110,7 +110,7 @@ begin_test "30.22" "Recording drag-drop actions with coordinates" \
 run_test_18_22() {
     call_tool "configure" '{"action":"clear","buffer":"all"}' >/dev/null
 
-    call_tool "interact" '{"action":"record_start","name":"drag-test"}' >/dev/null
+    call_tool "interact" '{"action":"screen_recording_start","name":"drag-test"}' >/dev/null
     sleep 0.1
 
     # Record drag operation
@@ -127,7 +127,7 @@ run_test_18_22() {
     fi
 
     sleep 0.1
-    call_tool "interact" '{"action":"record_stop"}' >/dev/null
+    call_tool "interact" '{"action":"screen_recording_stop"}' >/dev/null
 }
 run_test_18_22
 
@@ -140,7 +140,7 @@ begin_test "30.23" "Recording keyboard navigation (Tab, Enter, Escape)" \
 run_test_18_23() {
     call_tool "configure" '{"action":"clear","buffer":"all"}' >/dev/null
 
-    call_tool "interact" '{"action":"record_start","name":"keyboard-test"}' >/dev/null
+    call_tool "interact" '{"action":"screen_recording_start","name":"keyboard-test"}' >/dev/null
     sleep 0.1
 
     # Record key presses
@@ -149,7 +149,7 @@ run_test_18_23() {
     call_tool "interact" '{"action":"key_press","text":"Enter"}' >/dev/null 2>&1
     sleep 0.1
 
-    response=$(call_tool "interact" '{"action":"record_stop"}')
+    response=$(call_tool "interact" '{"action":"screen_recording_stop"}')
 
     if ! check_not_error "$response"; then
         fail "Keyboard recording failed"
@@ -169,7 +169,7 @@ begin_test "30.24" "Recording includes screenshot at key moments" \
 run_test_18_24() {
     call_tool "configure" '{"action":"clear","buffer":"all"}' >/dev/null
 
-    call_tool "interact" '{"action":"record_start","name":"screenshot-test"}' >/dev/null
+    call_tool "interact" '{"action":"screen_recording_start","name":"screenshot-test"}' >/dev/null
     sleep 0.1
 
     # Perform action with screenshot
@@ -186,7 +186,7 @@ run_test_18_24() {
     fi
 
     sleep 0.1
-    call_tool "interact" '{"action":"record_stop"}' >/dev/null
+    call_tool "interact" '{"action":"screen_recording_stop"}' >/dev/null
 }
 run_test_18_24
 
@@ -200,11 +200,11 @@ run_test_18_25() {
     call_tool "configure" '{"action":"clear","buffer":"all"}' >/dev/null
 
     # Record a session
-    call_tool "interact" '{"action":"record_start","name":"error-inject"}' >/dev/null
+    call_tool "interact" '{"action":"screen_recording_start","name":"error-inject"}' >/dev/null
     sleep 0.1
     call_tool "interact" '{"action":"navigate","url":"https://example.com"}' >/dev/null 2>&1
     sleep 0.1
-    call_tool "interact" '{"action":"record_stop"}' >/dev/null
+    call_tool "interact" '{"action":"screen_recording_stop"}' >/dev/null
 
     sleep 0.2
 

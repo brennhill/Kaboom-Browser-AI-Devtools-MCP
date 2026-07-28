@@ -153,9 +153,9 @@ Marketing demos for Kaboom, showcasing how AI + browser telemetry accelerates th
 **Story:** Record a user session as video, capture all actions, replay for regression testing.
 
 **Flow:**
-1. `interact(record_start, name: "checkout_flow", fps: 30)` → starts video recording
+1. `interact(screen_recording_start, name: "checkout_flow", fps: 30)` → starts video recording
 2. AI performs the checkout flow (navigate → browse → add to cart → checkout)
-3. `interact(record_stop)` → saves .webm video to disk
+3. `interact(screen_recording_stop)` → saves .webm video to disk
 4. `observe(recordings)` → lists saved recordings with metadata (duration, size, fps)
 5. `observe(recording_actions, recording_id: "checkout_flow")` → shows all captured actions
 6. Later: replay the flow and compare results
@@ -163,7 +163,7 @@ Marketing demos for Kaboom, showcasing how AI + browser telemetry accelerates th
 
 **Key point:** This is regression testing via replay, not via written tests. Record once, detect drift forever.
 
-**Features showcased:** record_start/stop, recordings, recording_actions, log_diff_report, video capture
+**Features showcased:** screen_recording_start/stop, recordings, recording_actions, log_diff_report, video capture
 
 ---
 
@@ -247,11 +247,11 @@ Marketing demos for Kaboom, showcasing how AI + browser telemetry accelerates th
 8. `interact(highlight, selector: "#customer-name", subtitle: "No <label> element — only placeholder text for context")` → highlight form issue
 9. `interact(subtitle, text: "Tour complete. 6 issues identified across 3 pages.")` → final narration
 
-**Key point:** This creates a visual, recordable walkthrough. Combined with `record_start`, this produces a professional demo video with captions.
+**Key point:** This creates a visual, recordable walkthrough. Combined with `screen_recording_start`, this produces a professional demo video with captions.
 
 **Can be combined with recording:**
-- `interact(record_start, name: "site_tour", fps: 30, audio: "tab")` at the start
-- `interact(record_stop)` at the end
+- `interact(screen_recording_start, name: "site_tour", fps: 30, audio: "tab")` at the start
+- `interact(screen_recording_stop)` at the end
 - Output: .webm video with subtitle narration baked in
 
 **Features showcased:** subtitle (composable narration), highlight, navigate, recording integration

@@ -17,7 +17,7 @@ last_verified_date: 2026-03-05
 Provide deterministic browser control and DOM interaction for AI workflows.
 
 ## Actions (`action`)
-`highlight`, `subtitle`, `save_state`, `load_state`, `list_states`, `delete_state`, `execute_js`, `navigate`, `refresh`, `back`, `forward`, `new_tab`, `screenshot`, `click`, `type`, `select`, `check`, `get_text`, `get_value`, `get_attribute`, `set_attribute`, `focus`, `scroll_to`, `wait_for`, `key_press`, `paste`, `list_interactive`, `record_start`, `record_stop`, `upload`, `draw_mode_start`
+`highlight`, `subtitle`, `save_state`, `load_state`, `list_states`, `delete_state`, `execute_js`, `navigate`, `refresh`, `back`, `forward`, `new_tab`, `screenshot`, `click`, `type`, `select`, `check`, `get_text`, `get_value`, `get_attribute`, `set_attribute`, `focus`, `scroll_to`, `wait_for`, `key_press`, `paste`, `list_interactive`, `screen_recording_start`, `screen_recording_stop`, `upload`, `draw_mode_start`
 
 ## Behavior Guarantees
 1. Sync by default with correlation-aware command completion.
