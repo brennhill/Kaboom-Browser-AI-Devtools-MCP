@@ -36,7 +36,7 @@ type TerminalStatus struct {
 // Options supplies the runtime-owned state needed by operational endpoints.
 type Options struct {
 	Logs             *logstore.Store
-	Capture          *capture.Store
+	Capture          *capture.Capture
 	Version          string
 	StartedAt        time.Time
 	TerminalStatus   func() TerminalStatus
@@ -232,7 +232,7 @@ func (h *Handler) ServeDiagnostics(w http.ResponseWriter, r *http.Request) {
 }
 
 // appendCaptureDiagnostics adds capture-related diagnostic fields to response map.
-func appendCaptureDiagnostics(resp map[string]any, cap *capture.Store) {
+func appendCaptureDiagnostics(resp map[string]any, cap *capture.Capture) {
 	snap := cap.GetHealthSnapshot()
 	health := cap.GetHealthStatus()
 

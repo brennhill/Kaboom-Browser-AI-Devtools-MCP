@@ -21,7 +21,7 @@ import (
 // fakeConfigureDeps implements toolconfigure.Deps.
 type fakeConfigureDeps struct {
 	noiseConfig      *noise.NoiseConfig
-	consoleEntries   []noise.LogEntry
+	consoleEntries   []types.LogEntry
 	networkBodies    []types.NetworkBody
 	wsEvents         []capture.WebSocketEvent
 	tools            []mcp.MCPTool
@@ -41,7 +41,7 @@ type fakeConfigureDeps struct {
 }
 
 func (f *fakeConfigureDeps) NoiseConfig() *noise.NoiseConfig              { return f.noiseConfig }
-func (f *fakeConfigureDeps) ConsoleEntries() []noise.LogEntry             { return f.consoleEntries }
+func (f *fakeConfigureDeps) ConsoleEntries() []types.LogEntry             { return f.consoleEntries }
 func (f *fakeConfigureDeps) NetworkBodies() []types.NetworkBody           { return f.networkBodies }
 func (f *fakeConfigureDeps) AllWebSocketEvents() []capture.WebSocketEvent { return f.wsEvents }
 func (f *fakeConfigureDeps) ToolsList() []mcp.MCPTool                     { return f.tools }

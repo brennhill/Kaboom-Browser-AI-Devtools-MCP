@@ -23,7 +23,7 @@ type Deps interface {
 	NoiseConfig() *noise.NoiseConfig
 
 	// ConsoleEntries returns console entries for noise auto-detection.
-	ConsoleEntries() []noise.LogEntry
+	ConsoleEntries() []types.LogEntry
 
 	// NetworkBodies returns captured network bodies for noise auto-detection.
 	NetworkBodies() []types.NetworkBody

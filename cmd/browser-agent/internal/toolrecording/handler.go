@@ -17,7 +17,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/playback"
 )
 
-// Capture is the recording-specific subset of capture.Store used by Handler.
+// Capture is the recording-specific subset of capture.Capture used by Handler.
 type Capture interface {
 	StartRecording(name, pageURL string, sensitiveDataEnabled bool) (string, error)
 	StopRecording(recordingID string) (int, int64, error)

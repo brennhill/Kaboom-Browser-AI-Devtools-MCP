@@ -15,7 +15,7 @@ import (
 // *ToolHandler in cmd/browser-agent/ satisfies this interface.
 type Deps interface {
 	// GetCapture returns the capture store.
-	GetCapture() *capture.Store
+	GetCapture() *capture.Capture
 
 	// GetAnnotationStore returns the annotation store.
 	GetAnnotationStore() *annotation.Store

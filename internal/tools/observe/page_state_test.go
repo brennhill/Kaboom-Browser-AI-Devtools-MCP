@@ -19,7 +19,7 @@ import (
 // ============================================
 
 type mockA11yDeps struct {
-	cap           *capture.Store
+	cap           *capture.Capture
 	a11yResult    json.RawMessage
 	a11yErr       error
 	diagnosticStr string
@@ -27,7 +27,7 @@ type mockA11yDeps struct {
 
 func (m *mockA11yDeps) DiagnosticHintString() string { return m.diagnosticStr }
 
-func (m *mockA11yDeps) GetCapture() *capture.Store { return m.cap }
+func (m *mockA11yDeps) GetCapture() *capture.Capture { return m.cap }
 
 func (m *mockA11yDeps) GetLogEntries() ([]mcp.LogEntry, []time.Time) {
 	return nil, nil

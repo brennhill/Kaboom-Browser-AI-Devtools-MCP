@@ -84,17 +84,6 @@ type PollingLogEntry = types.PollingLogEntry
 // HTTPDebugEntry is an alias to canonical definition in internal/types/log.go
 type HTTPDebugEntry = types.HTTPDebugEntry
 
-// Type aliases for imported packages to avoid qualifying every use.
-// These are real type aliases (= syntax), not any forward declarations.
-type (
-	// Store is the preferred non-stuttering name for the package's primary state container.
-	// Backward compatibility: Capture remains available as an alias target.
-	Store = Capture
-	// Snapshot is the preferred non-stuttering name for CaptureSnapshot.
-	// Backward compatibility: CaptureSnapshot remains available as an alias target.
-	Snapshot = CaptureSnapshot
-)
-
 const (
 	MaxWSEvents        = 500
 	MaxNetworkBodies   = 100

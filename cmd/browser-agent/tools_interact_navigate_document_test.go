@@ -363,7 +363,7 @@ func TestInteract_NavigateAndDocument_IncludeScreenshot(t *testing.T) {
 	}
 }
 
-func waitForPendingQuery(t *testing.T, cap *capture.Store, match func(queries.PendingQueryResponse) bool) queries.PendingQueryResponse {
+func waitForPendingQuery(t *testing.T, cap *capture.Capture, match func(queries.PendingQueryResponse) bool) queries.PendingQueryResponse {
 	t.Helper()
 	deadline := time.Now().Add(3 * time.Second)
 	for time.Now().Before(deadline) {

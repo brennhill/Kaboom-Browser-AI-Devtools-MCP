@@ -21,7 +21,7 @@ type DoctorCheck struct {
 }
 
 // HandleDoctorHTTP serves the /doctor HTTP endpoint with JSON readiness checks.
-func HandleDoctorHTTP(w http.ResponseWriter, cap *capture.Store, ver string) {
+func HandleDoctorHTTP(w http.ResponseWriter, cap *capture.Capture, ver string) {
 	checks := RunDoctorChecks(cap)
 
 	overallStatus := "healthy"
@@ -47,7 +47,7 @@ func HandleDoctorHTTP(w http.ResponseWriter, cap *capture.Store, ver string) {
 }
 
 // RunDoctorChecks runs all live diagnostic checks against the capture instance.
-func RunDoctorChecks(cap *capture.Store) []DoctorCheck {
+func RunDoctorChecks(cap *capture.Capture) []DoctorCheck {
 	checks := make([]DoctorCheck, 0, 9)
 	snap := cap.GetHealthSnapshot()
 

@@ -16,13 +16,13 @@ import (
 
 // Guards owns browser-runtime preconditions and their diagnostic responses.
 type Guards struct {
-	capture                   *capture.Store
+	capture                   *capture.Capture
 	shutdownCtx               context.Context
 	extensionReadinessTimeout time.Duration
 }
 
 // New constructs runtime guards over the canonical capture state.
-func New(captureStore *capture.Store, shutdownCtx context.Context, extensionReadinessTimeout time.Duration) *Guards {
+func New(captureStore *capture.Capture, shutdownCtx context.Context, extensionReadinessTimeout time.Duration) *Guards {
 	return &Guards{
 		capture:                   captureStore,
 		shutdownCtx:               shutdownCtx,

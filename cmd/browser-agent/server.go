@@ -360,7 +360,7 @@ func handleOpenAPI(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handleTelemetry(server *Server, captured *capture.Store) http.HandlerFunc {
+func handleTelemetry(server *Server, captured *capture.Capture) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -443,7 +443,7 @@ func handleTelemetry(server *Server, captured *capture.Store) http.HandlerFunc {
 	}
 }
 
-func setupHTTPRoutes(server *Server, captured *capture.Store) (*http.ServeMux, *MCPHandler) {
+func setupHTTPRoutes(server *Server, captured *capture.Capture) (*http.ServeMux, *MCPHandler) {
 	server.mediaHTTP = mediaapi.New(captured, server.annotationStore, server.pushRouter)
 	mux := http.NewServeMux()
 	if captured != nil {
@@ -453,7 +453,7 @@ func setupHTTPRoutes(server *Server, captured *capture.Store) (*http.ServeMux, *
 	return mux, registerCoreRoutes(mux, server, captured)
 }
 
-func registerCaptureRoutes(mux *http.ServeMux, server *Server, captured *capture.Store) {
+func registerCaptureRoutes(mux *http.ServeMux, server *Server, captured *capture.Capture) {
 	mux.HandleFunc("/websocket-events", httpguard.CORS(httpguard.ExtensionOnly(captured.HandleWebSocketEvents)))
 	mux.HandleFunc("/websocket-status", httpguard.CORS(httpguard.ExtensionOnly(captured.HandleWebSocketStatus)))
 	mux.HandleFunc("/network-bodies", httpguard.CORS(httpguard.ExtensionOnly(captured.HandleNetworkBodies)))
@@ -474,7 +474,7 @@ func registerCaptureRoutes(mux *http.ServeMux, server *Server, captured *capture
 	mux.HandleFunc("/test-boundary", httpguard.CORS(httpguard.ExtensionOnly(ciapi.TestBoundary(captured))))
 }
 
-func resolveClientRegistry(captured *capture.Store, w http.ResponseWriter) (capture.ClientRegistry, bool) {
+func resolveClientRegistry(captured *capture.Capture, w http.ResponseWriter) (capture.ClientRegistry, bool) {
 	registry := captured.GetClientRegistry()
 	if registry == nil {
 		httpapi.JSON(w, http.StatusServiceUnavailable, map[string]string{"error": "client_registry_unavailable"})
@@ -483,7 +483,7 @@ func resolveClientRegistry(captured *capture.Store, w http.ResponseWriter) (capt
 	return registry, true
 }
 
-func registerClientRegistryRoutes(mux *http.ServeMux, captured *capture.Store) {
+func registerClientRegistryRoutes(mux *http.ServeMux, captured *capture.Capture) {
 	mux.HandleFunc("/clients", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
 		handleClientsList(w, r, captured)
 	})))
@@ -492,7 +492,7 @@ func registerClientRegistryRoutes(mux *http.ServeMux, captured *capture.Store) {
 	})))
 }
 
-func handleClientsList(w http.ResponseWriter, r *http.Request, captured *capture.Store) {
+func handleClientsList(w http.ResponseWriter, r *http.Request, captured *capture.Capture) {
 	registry, ok := resolveClientRegistry(captured, w)
 	if !ok {
 		return
@@ -515,7 +515,7 @@ func handleClientsList(w http.ResponseWriter, r *http.Request, captured *capture
 	}
 }
 
-func handleClientByID(w http.ResponseWriter, r *http.Request, captured *capture.Store) {
+func handleClientByID(w http.ResponseWriter, r *http.Request, captured *capture.Capture) {
 	registry, ok := resolveClientRegistry(captured, w)
 	if !ok {
 		return
@@ -562,7 +562,7 @@ func registerUploadRoutes(mux *http.ServeMux) {
 	})))
 }
 
-func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Store) *MCPHandler {
+func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Capture) *MCPHandler {
 	mux.HandleFunc("/openapi.json", httpguard.CORS(handleOpenAPI))
 
 	mcpHandler := NewToolHandler(server, captured)
@@ -677,7 +677,7 @@ func newMCPHTTPHandler(handler *MCPHandler) *mcphttp.Handler {
 		Version:       handler.version,
 		MaxBodySize:   maxPostBodySize,
 		HandleRequest: handler.HandleRequest,
-		Capture: func() *capture.Store {
+		Capture: func() *capture.Capture {
 			if handler.toolHandler == nil {
 				return nil
 			}

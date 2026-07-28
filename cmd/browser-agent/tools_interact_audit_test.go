@@ -38,7 +38,7 @@ import (
 type interactTestEnv struct {
 	handler *ToolHandler
 	server  *Server
-	capture *capture.Store
+	capture *capture.Capture
 }
 
 func newInteractTestEnv(t *testing.T) *interactTestEnv {

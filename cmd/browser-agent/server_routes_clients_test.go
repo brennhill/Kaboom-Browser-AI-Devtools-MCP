@@ -89,7 +89,7 @@ func (m *mockClientRegistry) Unregister(id string) bool {
 }
 
 // newCaptureWithRegistry creates a capture instance with a mock client registry.
-func newCaptureWithRegistry(t *testing.T) *capture.Store {
+func newCaptureWithRegistry(t *testing.T) *capture.Capture {
 	t.Helper()
 	cap := capture.NewCapture()
 	cap.SetClientRegistryForTest(newMockClientRegistry())

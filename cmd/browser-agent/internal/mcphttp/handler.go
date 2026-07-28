@@ -21,7 +21,7 @@ type Config struct {
 	Version       string
 	MaxBodySize   int64
 	HandleRequest func(mcp.JSONRPCRequest) *mcp.JSONRPCResponse
-	Capture       func() *capture.Store
+	Capture       func() *capture.Capture
 }
 
 type Handler struct{ config Config }

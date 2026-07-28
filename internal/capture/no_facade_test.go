@@ -54,6 +54,8 @@ func TestCaptureHasNoCompatibilityAliases(t *testing.T) {
 		"CausalDiffResult =",
 		"WSConnectionTracker =",
 		"queryResultTTL =",
+		"Store = Capture",
+		"Snapshot = CaptureSnapshot",
 	} {
 		if strings.Contains(source, forbidden) {
 			t.Errorf("capture retains compatibility surface %q", forbidden)

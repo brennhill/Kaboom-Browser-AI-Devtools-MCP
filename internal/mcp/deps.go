@@ -35,7 +35,7 @@ type PendingQueryEnqueuer interface {
 // CaptureProvider gives access to the capture instance for buffer reads.
 // Used by all 5 tools.
 type CaptureProvider interface {
-	GetCapture() *capture.Store
+	GetCapture() *capture.Capture
 }
 
 // LogBufferReader provides read-only access to server log entries.

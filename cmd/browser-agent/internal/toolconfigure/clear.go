@@ -13,7 +13,7 @@ import (
 
 // ClearTargets are the stores affected by configure(what="clear").
 type ClearTargets struct {
-	Capture     *capture.Store
+	Capture     *capture.Capture
 	ClearLogs   func() int
 	Inbox       *push.PushInbox
 	Annotations *annotation.Store

@@ -19,11 +19,11 @@ const (
 	commandPendingStallFailAge  = 2 * time.Minute
 )
 
-func BuildCommandExecutionInfo(cap *capture.Store) CommandExecutionInfo {
+func BuildCommandExecutionInfo(cap *capture.Capture) CommandExecutionInfo {
 	return BuildCommandExecutionInfoAt(cap, time.Now())
 }
 
-func BuildCommandExecutionInfoAt(cap *capture.Store, now time.Time) CommandExecutionInfo {
+func BuildCommandExecutionInfoAt(cap *capture.Capture, now time.Time) CommandExecutionInfo {
 	info := CommandExecutionInfo{
 		Ready:         true,
 		Status:        "pass",

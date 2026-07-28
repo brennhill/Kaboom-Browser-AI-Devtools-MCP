@@ -13,6 +13,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -95,7 +96,7 @@ func (runner *Runner) execute() {
 }
 
 // WireNavigation installs debounced detection on navigation events when enabled.
-func WireNavigation(store *capture.Store, detect func()) {
+func WireNavigation(store *capture.Capture, detect func()) {
 	if store == nil || detect == nil || !Enabled() {
 		return
 	}
@@ -105,7 +106,7 @@ func WireNavigation(store *capture.Store, detect func()) {
 }
 
 // WireFirstConnect invokes detect once after the first extension connection.
-func WireFirstConnect(store *capture.Store, shutdown <-chan struct{}, detect func()) {
+func WireFirstConnect(store *capture.Capture, shutdown <-chan struct{}, detect func()) {
 	if store == nil || detect == nil {
 		return
 	}
@@ -129,13 +130,13 @@ func WireFirstConnect(store *capture.Store, shutdown <-chan struct{}, detect fun
 
 // Detect adapts captured telemetry to the canonical noise detector and applies
 // only high-confidence proposals.
-func Detect(config *noise.NoiseConfig, store *capture.Store, logs []mcp.LogEntry) {
+func Detect(config *noise.NoiseConfig, store *capture.Capture, logs []mcp.LogEntry) {
 	if config == nil || store == nil {
 		return
 	}
-	consoleEntries := make([]noise.LogEntry, len(logs))
+	consoleEntries := make([]types.LogEntry, len(logs))
 	for index, entry := range logs {
-		consoleEntries[index] = noise.LogEntry(entry)
+		consoleEntries[index] = types.LogEntry(entry)
 	}
 	proposals := config.AutoDetect(consoleEntries, store.GetNetworkBodies(), store.GetAllWebSocketEvents())
 	var rules []noise.NoiseRule

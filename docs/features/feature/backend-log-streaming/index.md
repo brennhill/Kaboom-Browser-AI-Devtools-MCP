@@ -86,6 +86,9 @@ last_verified_date: 2026-04-13
 - Mode/Action: See feature contract and `docs/core/mcp-command-option-matrix.md` for canonical `what`/`action`/`format` enums.
 - Location: `docs/features/feature/backend-log-streaming`
 
+Capture dependencies use the canonical `capture.Capture` container type.
+The former `capture.Store` and `capture.Snapshot` aliases have been removed.
+
 ## Specs
 
 - Product Spec: [product-spec.md](./product-spec.md)

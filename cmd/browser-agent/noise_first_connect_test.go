@@ -17,7 +17,7 @@ import (
 // simulateExtensionConnect triggers the "extension_connected" lifecycle event
 // by directly calling the capture connection state API, avoiding the 5-second
 // long-poll in HandleSync. This makes tests fast and deterministic.
-func simulateExtensionConnect(cap *capture.Store) {
+func simulateExtensionConnect(cap *capture.Capture) {
 	cap.SimulateSyncForTest("test-sess-1", "test-client")
 }
 

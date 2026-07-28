@@ -1,6 +1,6 @@
 // fake_deps_test.go — Shared fully-populated fake Deps harness for toolinteract tests.
 // Purpose: Provide a deterministic, dependency-injected Deps so handlers can be exercised
-// end-to-end without real chrome/network/IO. Reuses the real capture.Store (no external I/O).
+// end-to-end without real chrome/network/IO. Reuses the real capture.Capture (no external I/O).
 package toolinteract
 
 import (
@@ -54,7 +54,7 @@ func TestDepsDoesNotReexportMCPProtocolSurface(t *testing.T) {
 type fakeState struct {
 	mu sync.Mutex
 
-	cap *capture.Store
+	cap *capture.Capture
 
 	// Guard toggles — when true, the corresponding guard blocks the command.
 	blockPilot   bool
@@ -155,7 +155,7 @@ func (fs *fakeState) deps() *Deps {
 			})
 		},
 
-		Capture: func() *capture.Store { return fs.cap },
+		Capture: func() *capture.Capture { return fs.cap },
 
 		RecordAIAction:           func(action, url string, extra map[string]any) { fs.record(action) },
 		RecordAIEnhancedAction:   func(action capture.EnhancedAction) { fs.record("enhanced") },

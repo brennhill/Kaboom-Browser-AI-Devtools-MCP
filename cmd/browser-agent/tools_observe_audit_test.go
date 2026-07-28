@@ -39,7 +39,7 @@ import (
 type observeTestEnv struct {
 	handler *ToolHandler
 	server  *Server
-	capture *capture.Store
+	capture *capture.Capture
 }
 
 func newObserveTestEnv(t *testing.T) *observeTestEnv {

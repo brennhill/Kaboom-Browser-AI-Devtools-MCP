@@ -33,4 +33,4 @@ var _ toolgenerate.Deps = (*ToolHandler)(nil)
 // Phase 3: Narrow sub-package dependency interfaces
 var _ tutorial.Deps = (*ToolHandler)(nil)
 var _ annotations.Deps = (*ToolHandler)(nil)
-var _ netrecord.NetworkBodyProvider = (*capture.Store)(nil)
+var _ netrecord.NetworkBodyProvider = (*capture.Capture)(nil)

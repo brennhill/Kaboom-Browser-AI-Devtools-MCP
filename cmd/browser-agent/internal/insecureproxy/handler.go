@@ -28,12 +28,12 @@ const (
 type JSONResponder func(http.ResponseWriter, int, any)
 
 type Handler struct {
-	capture *capture.Store
+	capture *capture.Capture
 	respond JSONResponder
 	client  *http.Client
 }
 
-func New(cap *capture.Store, respond JSONResponder) *Handler {
+func New(cap *capture.Capture, respond JSONResponder) *Handler {
 	return &Handler{
 		capture: cap,
 		respond: respond,

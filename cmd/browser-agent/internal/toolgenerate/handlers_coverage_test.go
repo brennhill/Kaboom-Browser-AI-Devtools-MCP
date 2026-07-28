@@ -19,7 +19,7 @@ import (
 // ---------------------------------------------------------------------------
 
 type fakeGenerateDeps struct {
-	cap          *capture.Store
+	cap          *capture.Capture
 	annStore     *annotation.Store
 	version      string
 	extConnected bool
@@ -27,7 +27,7 @@ type fakeGenerateDeps struct {
 	a11yErr      error
 }
 
-func (f *fakeGenerateDeps) GetCapture() *capture.Store            { return f.cap }
+func (f *fakeGenerateDeps) GetCapture() *capture.Capture          { return f.cap }
 func (f *fakeGenerateDeps) GetAnnotationStore() *annotation.Store { return f.annStore }
 func (f *fakeGenerateDeps) GetVersion() string                    { return f.version }
 func (f *fakeGenerateDeps) IsExtensionConnected() bool            { return f.extConnected }

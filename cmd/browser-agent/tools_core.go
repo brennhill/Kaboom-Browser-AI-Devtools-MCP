@@ -66,7 +66,7 @@ import (
 // ToolHandler extends MCPHandler with composite tool dispatch
 type ToolHandler struct {
 	*MCPHandler
-	capture *capture.Store
+	capture *capture.Capture
 
 	// shutdownCtx is cancelled when the ToolHandler is closed. Gates like
 	// requireExtension pass this context to blocking waits so they abort
@@ -335,7 +335,7 @@ func (h *ToolHandler) Close() {
 	}
 }
 
-func (h *ToolHandler) GetCapture() *capture.Store {
+func (h *ToolHandler) GetCapture() *capture.Capture {
 	return h.capture
 }
 
@@ -426,7 +426,7 @@ func sessionStoreGuard(store *persistence.SessionStore, req mcp.JSONRPCRequest) 
 }
 
 // NewToolHandler constructs the composite five-tool backend and its MCP adapter.
-func NewToolHandler(server *Server, captureStore *capture.Store) *MCPHandler {
+func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	shutdownContext, shutdownCancel := context.WithCancel(context.Background())
 	handler := &ToolHandler{
 		MCPHandler:       NewMCPHandler(server, version),
@@ -623,7 +623,7 @@ func buildInteractDeps(h *ToolHandler) *toolinteract.Deps {
 		RequirePilot: h.Guards.RequirePilot, RequireExtension: h.Guards.RequireExtension,
 		RequireTabTracking: h.Guards.RequireTabTracking, RequireCSPClear: h.Guards.RequireCSPClear,
 		EnqueuePendingQuery: h.EnqueuePendingQuery, MaybeWaitForCommand: h.MaybeWaitForCommand,
-		Capture:        func() *capture.Store { return h.capture },
+		Capture:        func() *capture.Capture { return h.capture },
 		RecordAIAction: h.recordAIAction, RecordAIEnhancedAction: h.recordAIEnhancedAction,
 		RecordDOMPrimitiveAction: h.recordDOMPrimitiveAction,
 		ToolInteract:             h.toolInteract, ToolAnalyze: h.analyzeDispatcher.Handle,

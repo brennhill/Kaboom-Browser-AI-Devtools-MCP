@@ -14,7 +14,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
-func saturatePendingQueryQueue(t *testing.T, cap *capture.Store) {
+func saturatePendingQueryQueue(t *testing.T, cap *capture.Capture) {
 	t.Helper()
 	for i := 0; i < queries.MaxPendingQueries; i++ {
 		_, err := cap.CreatePendingQueryWithTimeout(

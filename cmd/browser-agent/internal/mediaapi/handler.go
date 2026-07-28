@@ -16,7 +16,7 @@ const maxPostBodySize = 10 << 20
 
 // Handler owns media ingest dependencies and per-client screenshot throttling.
 type Handler struct {
-	capture      *capture.Store
+	capture      *capture.Capture
 	annotations  *annotation.Store
 	pushRouter   *push.Router
 	rateMu       sync.Mutex
@@ -24,7 +24,7 @@ type Handler struct {
 }
 
 // New constructs the complete media ingest boundary.
-func New(captureStore *capture.Store, annotations *annotation.Store, pushRouter *push.Router) *Handler {
+func New(captureStore *capture.Capture, annotations *annotation.Store, pushRouter *push.Router) *Handler {
 	return &Handler{
 		capture:      captureStore,
 		annotations:  annotations,

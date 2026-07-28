@@ -154,7 +154,7 @@ var evidenceCaptureFn func(deps *Deps, clientID string) evidenceShot
 
 // CaptureEvidence captures one screenshot through the canonical query lifecycle.
 // It lives with evidence state because its error vocabulary is part of that contract.
-func CaptureEvidence(store *capture.Store, clientID string) EvidenceShot {
+func CaptureEvidence(store *capture.Capture, clientID string) EvidenceShot {
 	if store == nil {
 		return EvidenceShot{Error: "capture_not_initialized"}
 	}

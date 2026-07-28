@@ -20,7 +20,7 @@ import (
 // Handler owns annotation analysis over the shared annotation and command stores.
 type Handler struct {
 	annotationStore *annotation.Store
-	capture         *capture.Store
+	capture         *capture.Capture
 	formatCommand   func(mcp.JSONRPCRequest, queries.CommandResult, string) mcp.JSONRPCResponse
 	logEntries      func() []mcp.LogEntry
 }
@@ -28,7 +28,7 @@ type Handler struct {
 // New constructs annotation analysis with explicit runtime dependencies.
 func New(
 	annotationStore *annotation.Store,
-	captureStore *capture.Store,
+	captureStore *capture.Capture,
 	formatCommand func(mcp.JSONRPCRequest, queries.CommandResult, string) mcp.JSONRPCResponse,
 	logEntries func() []mcp.LogEntry,
 ) *Handler {

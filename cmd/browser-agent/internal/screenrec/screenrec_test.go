@@ -23,14 +23,14 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
-// videoTestEnv drives screenrec against a real capture.Store through the same
+// videoTestEnv drives screenrec against a real capture.Capture through the same
 // Deps struct the host builds. It deliberately does NOT construct a Server or a
 // ToolHandler: everything these tests assert on (pending queries, command
 // results, pilot gating) is capture state, and building the god object only to
 // reach it is what kept this feature pinned to package main.
 type videoTestEnv struct {
 	handler *InteractHandler
-	capture *capture.Store
+	capture *capture.Capture
 }
 
 func newVideoTestEnv(t *testing.T) *videoTestEnv {
@@ -44,7 +44,7 @@ func newVideoTestEnv(t *testing.T) *videoTestEnv {
 
 // testDeps mirrors the host's screenrecDeps() wiring in ToolHandler, minus the
 // cold-start wait: the gates read the same capture flags the real ones read.
-func testDeps(cap *capture.Store) Deps {
+func testDeps(cap *capture.Capture) Deps {
 	return Deps{
 		EnqueuePendingQuery: func(req mcp.JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (mcp.JSONRPCResponse, bool) {
 			if _, err := cap.CreatePendingQueryWithTimeout(query, timeout, req.ClientID); err != nil {
@@ -640,7 +640,7 @@ func TestHandleRecordStartAndStop(t *testing.T) {
 // package main's tools_test_helpers_test.go cannot be imported across a package
 // boundary, so the two helpers this file used come along as unexported copies.
 
-func mockConnectedTrackedTab(t *testing.T, cap *capture.Store) {
+func mockConnectedTrackedTab(t *testing.T, cap *capture.Capture) {
 	t.Helper()
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")

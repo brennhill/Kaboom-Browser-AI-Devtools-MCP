@@ -45,7 +45,7 @@ func captureStdout(t *testing.T, fn func()) string {
 }
 
 // newTestCapture builds a fresh capture Store and registers cleanup.
-func newTestCapture(t *testing.T) *capture.Store {
+func newTestCapture(t *testing.T) *capture.Capture {
 	t.Helper()
 	c := capture.NewCapture()
 	t.Cleanup(c.Close)

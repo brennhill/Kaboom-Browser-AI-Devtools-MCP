@@ -62,7 +62,7 @@ func (deps *serverIntentDeps) GetIntentStore() *terminal.IntentStore {
 	return deps.server.intentStore
 }
 
-func setupTerminalMux(server *Server, manager *pty.Manager, store *capture.Store) (*http.ServeMux, *terminal.Map) {
+func setupTerminalMux(server *Server, manager *pty.Manager, store *capture.Capture) (*http.ServeMux, *terminal.Map) {
 	deps := terminalDeps()
 	deps.LogEvent = func(event string, fields map[string]any) { server.logLifecycle(event, 0, fields) }
 	return terminal.SetupMux(deps, server, &serverIntentDeps{server: server}, manager, store)
@@ -257,7 +257,7 @@ func (a *sessionClientRegistryAdapter) Unregister(id string) bool {
 }
 
 // initCapture creates and configures the capture buffers with lifecycle logging.
-func initCapture(server *Server, port int) *capture.Store {
+func initCapture(server *Server, port int) *capture.Capture {
 	cap := capture.NewCapture()
 	cap.SetClientRegistry(newSessionClientRegistryAdapter(clientreg.NewClientRegistry()))
 	cap.SetServerVersion(version)

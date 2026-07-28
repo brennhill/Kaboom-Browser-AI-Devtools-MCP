@@ -43,7 +43,7 @@ type RootOptions struct {
 type StatusOptions struct {
 	Version      string
 	StartedAt    time.Time
-	Capture      *capture.Store
+	Capture      *capture.Capture
 	Logs         func() (entries, capacity int)
 	Terminal     func() (port, sessions int, sessionIDs []string)
 	ListenPort   func() int

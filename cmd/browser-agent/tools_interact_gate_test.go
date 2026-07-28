@@ -27,7 +27,7 @@ import (
 type gateTestEnv struct {
 	handler *ToolHandler
 	server  *Server
-	capture *capture.Store
+	capture *capture.Capture
 }
 
 // newGateTestEnv creates a test env WITHOUT extension connection (for disconnect tests).

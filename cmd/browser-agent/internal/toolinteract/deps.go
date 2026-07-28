@@ -47,7 +47,7 @@ type Deps struct {
 	// -- Capture store --
 
 	// Capture returns the capture store.
-	Capture func() *capture.Store
+	Capture func() *capture.Capture
 
 	// -- Recording --
 

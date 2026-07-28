@@ -67,7 +67,7 @@ type MCPHandler struct {
 
 // ToolHandlerInterface defines the minimal tool handler interface.
 type ToolHandlerInterface interface {
-	GetCapture() *capture.Store
+	GetCapture() *capture.Capture
 	GetToolCallLimiter() RateLimiter
 	GetRedactionEngine() RedactionEngine
 	ToolsList() []mcp.MCPTool

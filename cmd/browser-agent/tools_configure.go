@@ -173,7 +173,7 @@ func (a *serverDepsAdapter) GetConsoleStats() (int, int, int64) {
 
 const defaultMaxEntries = 1000
 
-func getHealthResponse(hm *health.Metrics, cap *capture.Store, server *Server, ver string) health.MCPHealthResponse {
+func getHealthResponse(hm *health.Metrics, cap *capture.Capture, server *Server, ver string) health.MCPHealthResponse {
 	var serverDeps health.ServerDeps
 	if server != nil {
 		serverDeps = &serverDepsAdapter{s: server}
@@ -232,11 +232,11 @@ func (h *ToolHandler) NoiseConfig() *noise.NoiseConfig {
 	return h.noiseConfig
 }
 
-func (h *ToolHandler) ConsoleEntries() []noise.LogEntry {
+func (h *ToolHandler) ConsoleEntries() []types.LogEntry {
 	snapshot := h.server.logs.Entries()
-	entries := make([]noise.LogEntry, len(snapshot))
+	entries := make([]types.LogEntry, len(snapshot))
 	for i, entry := range snapshot {
-		entries[i] = noise.LogEntry(entry)
+		entries[i] = types.LogEntry(entry)
 	}
 	return entries
 }

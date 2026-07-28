@@ -7,16 +7,16 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
-// fakeDeps satisfies Deps over a real capture.Store and an in-memory log buffer.
+// fakeDeps satisfies Deps over a real capture.Capture and an in-memory log buffer.
 // It replaces the old harness, which built a whole *ToolHandler (plus a *Server
 // and a *logstore.Store) just to reach these three methods.
 type fakeDeps struct {
-	cap     *capture.Store
+	cap     *capture.Capture
 	entries []mcp.LogEntry
 	stamps  []time.Time
 }
 
-func (f *fakeDeps) GetCapture() *capture.Store                   { return f.cap }
+func (f *fakeDeps) GetCapture() *capture.Capture                 { return f.cap }
 func (f *fakeDeps) GetLogEntries() ([]mcp.LogEntry, []time.Time) { return f.entries, f.stamps }
 func (f *fakeDeps) GetLogTotalAdded() int64                      { return int64(len(f.entries)) }
 
@@ -24,7 +24,7 @@ func (f *fakeDeps) GetLogTotalAdded() int64                      { return int64(
 // seed actions/bodies and then assert on generated output.
 type testEnv struct {
 	h    *Handler
-	cap  *capture.Store
+	cap  *capture.Capture
 	deps *fakeDeps
 }
 

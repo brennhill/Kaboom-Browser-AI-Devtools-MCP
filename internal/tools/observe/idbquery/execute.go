@@ -20,7 +20,7 @@ const queryTimeout = 10 * time.Second
 
 // Listing enumerates IndexedDB databases in the tracked tab, each with its object stores,
 // sorted by database name. A page without IndexedDB reports supported=false rather than erroring.
-func Listing(cap *capture.Store) (map[string]any, error) {
+func Listing(cap *capture.Capture) (map[string]any, error) {
 	data, err := executeScript(cap, listingScript, "observe_storage_indexeddb", queryTimeout)
 	if err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func Listing(cap *capture.Store) (map[string]any, error) {
 
 // Entries reads up to limit rows from one object store. It returns an error when the page
 // reports failure (missing database, missing store, or a serialization fault).
-func Entries(cap *capture.Store, database, store string, limit int) (map[string]any, error) {
+func Entries(cap *capture.Capture, database, store string, limit int) (map[string]any, error) {
 	script := buildEntriesScript(database, store, limit)
 	data, err := executeScript(cap, script, "observe_indexeddb_entries", queryTimeout)
 	if err != nil {
@@ -80,7 +80,7 @@ func Entries(cap *capture.Store, database, store string, limit int) (map[string]
 	return data, nil
 }
 
-func executeScript(cap *capture.Store, script, reason string, timeout time.Duration) (map[string]any, error) {
+func executeScript(cap *capture.Capture, script, reason string, timeout time.Duration) (map[string]any, error) {
 	params, _ := json.Marshal(map[string]any{
 		"script":     script,
 		"timeout_ms": int(timeout.Milliseconds()),

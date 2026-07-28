@@ -88,7 +88,7 @@ const RelayCloseTimeout = 5 * time.Second
 
 // RegisterRoutes adds terminal-related routes to the mux.
 // NOT MCP — These are daemon-served endpoints for the in-browser terminal.
-func RegisterRoutes(mux *http.ServeMux, deps Deps, server ServerDeps, mgr *pty.Manager, cap *capture.Store) *Map {
+func RegisterRoutes(mux *http.ServeMux, deps Deps, server ServerDeps, mgr *pty.Manager, cap *capture.Capture) *Map {
 	relays := NewMap()
 
 	// Route a stuck-writer write-buffer close timeout (a drain goroutine + fd leak
@@ -224,7 +224,7 @@ func classifyStartError(err error, sessionID, token string) (int, map[string]any
 	}
 }
 
-func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, server ServerDeps, mgr *pty.Manager, cap *capture.Store, relays *Map) {
+func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, server ServerDeps, mgr *pty.Manager, cap *capture.Capture, relays *Map) {
 	if r.Method != "POST" {
 		deps.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "method_not_allowed"})
 		return
@@ -364,7 +364,7 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 }
 
 // AutoDetectCWD gets the CWD from the first registered MCP client.
-func AutoDetectCWD(cap *capture.Store) string {
+func AutoDetectCWD(cap *capture.Capture) string {
 	reg := cap.GetClientRegistry()
 	if reg == nil {
 		return ""
