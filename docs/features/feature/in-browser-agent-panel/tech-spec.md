@@ -225,7 +225,7 @@ Add metrics:
 
 1. Contract tests
    - `interact/observe` behavior unchanged for non-panel clients.
-   - `interact(action:"screenshot")` compatibility remains green.
+   - `observe({what:"screenshot"})` remains the sole screenshot capture API.
 2. Redaction tests
    - seed synthetic secrets through logs/network/errors/actions.
    - assert no secret appears in panel packet or persisted artifacts.

@@ -31,7 +31,7 @@ Provide read-only access to captured runtime state, logs, network artifacts, act
 - `OBS_PROD_002`: cursor pagination options must work for log-like streams (`after_cursor`, `before_cursor`, `since_cursor`, `restart_on_eviction`).
 - `OBS_PROD_003`: `command_result` must expose terminal and non-terminal states with correlation context.
 - `OBS_PROD_004`: extension-disconnected states must return actionable diagnostics.
-- `OBS_PROD_005`: `screenshot` mode must remain callable directly and via interact alias.
+- `OBS_PROD_005`: `screenshot` mode is callable through `observe` only.
 
 ## Non-Goals
 - No browser mutation.

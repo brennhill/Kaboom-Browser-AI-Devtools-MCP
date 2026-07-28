@@ -40,7 +40,6 @@ var actionSpecs = []ActionSpec{
 	{Name: "new_tab", Hint: "Open a new browser tab", Optional: []string{"url"}},
 	{Name: "switch_tab", Hint: "Switch to a different browser tab", Optional: []string{"tab_id", "tab_index", "set_tracked"}},
 	{Name: "close_tab", Hint: "Close a browser tab", Optional: []string{"tab_id"}},
-	{Name: "screenshot", Hint: "Capture page screenshot (alias for observe/screenshot)"},
 	{Name: "click", Hint: "Click an element by selector, element_id, or coordinates", Optional: []string{"selector", "element_id", "index", "nth", "scope_selector", "frame", "reason", "correlation_id", "timeout_ms", "x", "y", "analyze", "wait_for_stable", "stability_ms"}},
 	{Name: "type", Hint: "Type text into an input or textarea", Required: []string{"text"}, Optional: []string{"selector", "element_id", "index", "nth", "scope_selector", "frame", "clear"}},
 	{Name: "select", Hint: "Choose an option in a <select> dropdown", Required: []string{"value"}, Optional: []string{"selector", "element_id", "index", "nth", "scope_selector", "frame"}},

@@ -256,14 +256,6 @@ Extract the page content as markdown.
 bash scripts/kaboom-call.sh interact '{"what":"get_markdown"}'
 ```
 
-## screenshot
-Capture a screenshot of the current page (alias for observe/screenshot).
-**Params:** none
-**Example:**
-```bash
-bash scripts/kaboom-call.sh interact '{"what":"screenshot"}'
-```
-
 ---
 
 # Forms

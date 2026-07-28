@@ -153,9 +153,6 @@ func buildInteractHandlers() map[string]toolrouting.Handler[*ToolHandler] {
 		"close_tab": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleBrowserActionCloseTabImpl(req, args)
 		},
-		"screenshot": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return th.interactAction().HandleScreenshotAliasImpl(req, args)
-		},
 		"subtitle": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleSubtitleImpl(req, args)
 		},

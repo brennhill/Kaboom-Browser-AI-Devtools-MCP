@@ -95,21 +95,18 @@ func TestToolsInteractDispatch_UnknownActionAliasAddsCanonicalWhatWarning(t *tes
 	}
 }
 
-func TestToolsInteractDispatch_ScreenshotAlias(t *testing.T) {
+func TestToolsInteractDispatch_RejectsObserveScreenshotMode(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
 	resp := callInteractRaw(h, `{"what":"screenshot"}`)
 	result := parseToolResult(t, resp)
 	if !result.IsError {
-		t.Fatal("screenshot alias without tracked tab should return isError:true")
+		t.Fatal("interact screenshot should return isError:true")
 	}
 	text := result.Content[0].Text
-	if strings.Contains(text, "unknown_mode") {
-		t.Fatalf("screenshot alias should not return unknown_mode. Got: %s", text)
-	}
-	if !strings.Contains(text, "no_data") {
-		t.Fatalf("screenshot alias should route to screenshot handler (no_data expected in unit test). Got: %s", text)
+	if !strings.Contains(text, "unknown_mode") {
+		t.Fatalf("interact screenshot should be rejected as unknown_mode. Got: %s", text)
 	}
 	assertSnakeCaseFields(t, string(resp.Result))
 }

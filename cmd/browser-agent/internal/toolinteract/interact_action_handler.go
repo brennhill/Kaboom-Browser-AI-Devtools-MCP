@@ -345,7 +345,6 @@ var ReadOnlyInteractActions = map[string]bool{
 	"get_value":                 true,
 	"get_attribute":             true,
 	"query":                     true,
-	"screenshot":                true,
 	"list_states":               true,
 	"state_list":                true,
 	"get_readable":              true,

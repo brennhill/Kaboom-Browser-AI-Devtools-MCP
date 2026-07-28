@@ -82,6 +82,7 @@ test_paths:
   - cmd/browser-agent/tools_interact_rich_test.go
   - cmd/browser-agent/tools_interact_navigate_document_test.go
   - cmd/browser-agent/tools_schema_parity_test.go
+  - internal/schema/interact/schema_test.go
   - cmd/browser-agent/tools_interact_evidence_test.go
   - cmd/browser-agent/tools_interact_state_test.go
   - extension/background/__tests__/dom-dispatch-structured.test.js
@@ -112,6 +113,8 @@ consumers import state, command, snapshot, and query APIs from their focused
 owner modules; no compatibility facade is retained.
 Page-world interaction tests import action, state, serialization, and message
 handler modules directly; the injected bundle is not an API surface.
+Screenshot capture belongs only to `observe({what:"screenshot"})`; the former
+`interact` screenshot compatibility action has been removed.
 
 ## TL;DR
 - Status: shipped

@@ -52,7 +52,7 @@ Define the user-visible, canonical behavior of the Kaboom MCP surface. This spec
 ## Compatibility Rules
 - Canonical DOM query API is `analyze({what:"dom", selector:"..."})`.
 - Legacy `analyze({what:"dom"})` documentation is non-canonical and must not be used for new integrations.
-- `interact(action:"screenshot")` is kept as an alias for `observe({what:"screenshot"})`.
+- Screenshot capture is owned exclusively by `observe({what:"screenshot"})`.
 
 ## Requirements
 - `CORE_MCP_PROD_001`: Every tool call must route through `tools/call` and a declared schema.

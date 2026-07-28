@@ -183,7 +183,6 @@ All 5 tools use `what` as the primary dispatch parameter. `action`, `mode`, and 
 | `new_tab` | `handleBrowserActionNewTabImpl` | Open a new browser tab |
 | `switch_tab` | `handleBrowserActionSwitchTabImpl` | Switch to a different browser tab |
 | `close_tab` | `handleBrowserActionCloseTabImpl` | Close a browser tab |
-| `screenshot` | `handleScreenshotAliasImpl` | Capture page screenshot (alias for observe/screenshot) |
 | `click` | `handleDOMPrimitive` (dom_action) | Click an element by selector, element_id, or coordinates |
 | `type` | `handleDOMPrimitive` (dom_action) | Type text into an input or textarea |
 | `select` | `handleDOMPrimitive` (dom_action) | Choose an option in a select dropdown |

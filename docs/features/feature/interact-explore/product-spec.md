@@ -24,7 +24,8 @@ Provide deterministic browser control and DOM interaction for AI workflows.
 2. Browser automation requires AI Web Pilot enabled.
 3. `subtitle` is composable with other actions via `subtitle` param.
 4. `navigate` and `refresh` include performance baseline/diff context.
-5. `screenshot` action remains compatibility alias for observe screenshot mode.
+5. Screenshots are captured exclusively through `observe({what:"screenshot"})`;
+   `interact` does not duplicate the observe mode.
 
 ## Requirements
 - `INTERACT_PROD_001`: `action` is required and enum-validated.

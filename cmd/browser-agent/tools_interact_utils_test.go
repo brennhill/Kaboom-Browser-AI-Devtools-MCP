@@ -21,7 +21,6 @@ func TestApplyJitter_ReadOnlyActions_ReturnZero(t *testing.T) {
 		"get_value",
 		"get_attribute",
 		"query",
-		"screenshot",
 		"list_states",
 		"state_list",
 		"get_readable",

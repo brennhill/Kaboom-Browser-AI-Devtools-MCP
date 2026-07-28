@@ -204,22 +204,6 @@ func TestHandleSubtitle_MissingText(t *testing.T) {
 	assertErr(t, h.HandleSubtitleImpl(testReq(), json.RawMessage(`{}`)), mcp.ErrMissingParam)
 }
 
-func TestHandleScreenshotAlias(t *testing.T) {
-	h, _ := newFakeHandler(t)
-	resp := h.HandleScreenshotAliasImpl(testReq(), nil)
-	result := assertOK(t, resp)
-	// The fake GetScreenshot yields an image block.
-	hasImage := false
-	for _, c := range result.Content {
-		if c.Type == "image" {
-			hasImage = true
-		}
-	}
-	if !hasImage {
-		t.Fatal("expected image content from screenshot alias")
-	}
-}
-
 func TestResolveNavigateURL_PassThrough(t *testing.T) {
 	h, _ := newFakeHandler(t)
 	got, err := h.ResolveNavigateURLImpl("https://example.com/x")

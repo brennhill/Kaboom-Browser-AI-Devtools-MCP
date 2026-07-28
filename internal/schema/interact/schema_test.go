@@ -31,7 +31,7 @@ func TestInteractToolSchema_RequiresWhat_ActionIsRuntimeAlias(t *testing.T) {
 	}
 
 	// Spot-check that well-known actions are present in the canonical 'what' enum.
-	mustContain := []string{"navigate", "click", "screenshot", "type", "execute_js", "upload", "auto_dismiss_overlays", "wait_for_stable"}
+	mustContain := []string{"navigate", "click", "type", "execute_js", "upload", "auto_dismiss_overlays", "wait_for_stable"}
 	whatSet := make(map[string]bool, len(whatEnum))
 	for _, v := range whatEnum {
 		whatSet[v] = true
@@ -40,6 +40,9 @@ func TestInteractToolSchema_RequiresWhat_ActionIsRuntimeAlias(t *testing.T) {
 		if !whatSet[name] {
 			t.Errorf("interact enum missing expected action %q", name)
 		}
+	}
+	if whatSet["screenshot"] {
+		t.Fatal("interact must not expose the observe screenshot mode as a compatibility action")
 	}
 
 	// Claude API forbids oneOf/allOf/anyOf at the top level of input_schema.
@@ -137,18 +140,18 @@ func TestInteractActionSpecs_RequiredMatchesRuntimeValidation(t *testing.T) {
 	// Expected required params per action, derived from DOMActionRequiredParams
 	// and handler validation in the codebase.
 	expected := map[string][]string{
-		"type":                    {"text"},
-		"paste":                   {"text"},
-		"select":                  {"value"},
-		"get_attribute":           {"name"},
-		"set_attribute":           {"name"},
-		"navigate":                {"url"},
-		"navigate_and_wait_for":   {"url", "wait_for"},
-		"execute_js":              {"script"},
-		"set_storage":             {"key"},
-		"delete_storage":          {"key"},
-		"set_cookie":              {"name"},
-		"delete_cookie":           {"name"},
+		"type":                  {"text"},
+		"paste":                 {"text"},
+		"select":                {"value"},
+		"get_attribute":         {"name"},
+		"set_attribute":         {"name"},
+		"navigate":              {"url"},
+		"navigate_and_wait_for": {"url", "wait_for"},
+		"execute_js":            {"script"},
+		"set_storage":           {"key"},
+		"delete_storage":        {"key"},
+		"set_cookie":            {"name"},
+		"delete_cookie":         {"name"},
 	}
 
 	specs := ActionSpecs()

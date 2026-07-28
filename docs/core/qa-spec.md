@@ -53,7 +53,8 @@ Ensure every MCP tool command and documented option is valid end-to-end: schema 
 3. Run one extension-backed analyze command with `background:true`, then poll `observe(command_result)`.
 4. Run one sync-by-default interact action and verify inline completion.
 5. Force extension disconnect and verify queued command expiration behavior.
-6. Verify `interact(action:"screenshot")` alias still works.
+6. Verify `interact({what:"screenshot"})` is rejected and
+   `observe({what:"screenshot"})` remains the sole screenshot API.
 7. Verify `analyze(what:"dom")` path for DOM queries.
 
 ## Exit Criteria

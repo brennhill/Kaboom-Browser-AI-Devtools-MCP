@@ -23,7 +23,7 @@ interact({what: "navigate", url: "https://example.com"})
 interact({what: "click", selector: "text=Submit"})
 interact({what: "type", selector: "label=Email", text: "user@example.com"})
 interact({what: "list_interactive"})
-interact({what: "screenshot"})
+observe({what: "screenshot"})
 interact({what: "execute_js", script: "document.title"})
 interact({what: "batch", steps: [{what: "click", selector: "text=Menu"}, ...]})
 interact({what: "set_cookie", name: "theme", value: "dark", domain: "example.com"})
@@ -687,25 +687,6 @@ interact({what: "screen_recording_stop", name: "checkout-flow"})
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `name` | string | Recording name (if multiple active) |
-
-### screenshot
-
-Capture a screenshot from the interact tool. Prefer `observe({what: "screenshot"})` for passive captures — this version is useful when composing with other interact actions via `include_screenshot`.
-
-```js
-interact({what: "screenshot"})
-interact({what: "screenshot", selector: ".hero-section"})
-```
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `selector` | string | — | Capture a specific element by CSS selector |
-| `full_page` | boolean | false | Capture the full scrollable page |
-| `format` | string | `png` | Image format: `png` or `jpeg` |
-| `quality` | number | — | JPEG quality 1-100 (only for `jpeg`) |
-| `wait_for_stable` | boolean | false | Wait for layout to stabilize before capture |
-
----
 
 ## Clipboard
 

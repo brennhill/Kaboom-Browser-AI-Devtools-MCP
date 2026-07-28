@@ -1,6 +1,6 @@
 // interact_browser.go — Every interact action that drives the browser chrome rather
 // than the page's DOM: navigate/refresh/back/forward, tab open/switch/activate/close,
-// highlight and execute_js, plus the screenshot/subtitle aliases and the shared
+// highlight and execute_js, plus subtitles and the shared
 // queueBrowserAction helper they all funnel through.
 // Why one file: this was four files by topic, but the call graph makes it one —
 // every handler here funnels through queueBrowserAction, and ApplySwitchTabTracking
@@ -118,12 +118,6 @@ func (h *InteractActionHandler) queueBrowserAction(req mcp.JSONRPCRequest, args 
 	}
 
 	return cmd.execute(req, args)
-}
-
-// handleScreenshotAliasImpl provides backward compatibility for clients that call
-// interact({action:"screenshot"}). The canonical API remains observe({what:"screenshot"}).
-func (h *InteractActionHandler) HandleScreenshotAliasImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	return h.deps.GetScreenshot(req, args)
 }
 
 func (h *InteractActionHandler) HandleSubtitleImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
