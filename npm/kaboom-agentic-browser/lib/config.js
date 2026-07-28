@@ -426,48 +426,6 @@ function getValidAliases() {
 }
 
 /**
- * Backward-compat: returns config file paths for detected file-type clients.
- * Excludes non-JSON (TOML) clients like Codex — every consumer of this helper
- * JSON-parses the returned paths, so a TOML path must never appear here. Codex
- * is diagnosed/managed directly via CLIENT_DEFINITIONS instead.
- * @returns {Array<string>} Array of JSON config file paths
- */
-function getConfigCandidates() {
-  return CLIENT_DEFINITIONS
-    .filter(def => def.type === 'file' && def.format !== 'toml')
-    .map(def => getClientConfigPath(def))
-    .filter(Boolean);
-}
-
-/**
- * Backward-compat: get tool name from config path
- * @param {string} configPath Path to config file
- * @returns {string} Tool name
- */
-function getToolNameFromPath(configPath) {
-  const normalized = path.normalize(configPath);
-  for (const def of CLIENT_DEFINITIONS) {
-    if (def.type !== 'file') continue;
-    const cfgPath = getClientConfigPath(def);
-    if (cfgPath && normalized === path.normalize(cfgPath)) {
-      return def.name;
-    }
-  }
-  // Fallback: substring matching for legacy paths
-  if (normalized.includes('.cursor')) return 'Cursor';
-  if (normalized.includes(path.join('.codeium', 'windsurf'))) return 'Windsurf';
-  if (normalized.includes('.codeium')) return 'Windsurf';
-  if (normalized.includes('Claude')) return 'Claude Desktop';
-  if (normalized.includes(path.join('.gemini', 'antigravity'))) return 'Antigravity';
-  if (normalized.includes('.gemini')) return 'Gemini CLI';
-  if (normalized.includes(path.join('.config', 'opencode'))) return 'OpenCode';
-  if (normalized.includes(path.join('.config', 'zed'))) return 'Zed';
-  if (normalized.includes('.codex')) return 'Codex CLI';
-  if (normalized.includes('Code')) return 'VS Code';
-  return 'Unknown';
-}
-
-/**
  * Read and parse a config file
  * @param {string} filePath Path to config file
  * @returns {Object} {valid: bool, data: obj, error: string, stats: {size, mtime}}
@@ -705,8 +663,6 @@ module.exports = {
   getClientById,
   getClientByAlias,
   getValidAliases,
-  getConfigCandidates,
-  getToolNameFromPath,
   readConfigFile,
   writeConfigFile,
   validateMCPConfig,

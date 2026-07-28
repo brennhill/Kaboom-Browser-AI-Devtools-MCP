@@ -16,7 +16,6 @@ code_paths:
   - internal/tools/configure/capabilities/modespecs_analyze.go
   - plugin/kaboom-workflows/commands/audit.md
   - npm/kaboom-agentic-browser/skills/audit/SKILL.md
-  - npm/kaboom-agentic-browser/skills/qa/SKILL.md
   - src/lib/tabs/request-audit.ts
   - src/popup/tabs/tab-tracking.ts
   - src/popup/tabs/tab-tracking-api.ts

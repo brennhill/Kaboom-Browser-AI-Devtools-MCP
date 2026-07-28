@@ -10,6 +10,28 @@ test('obsolete extension type compatibility barrel is absent', () => {
     false,
     'src/types/messages.ts is a compatibility facade; import focused type modules directly'
   )
+  for (const compiledPath of [
+    'extension/types/messages.js',
+    'extension/types/messages.js.map',
+    'extension/types/messages.d.ts',
+    'extension/types/messages.d.ts.map'
+  ]) {
+    assert.equal(existsSync(compiledPath), false, `${compiledPath} is a stale compiled compatibility facade`)
+  }
+})
+
+test('npm package has no QA skill redirect', () => {
+  assert.equal(
+    existsSync('npm/kaboom-agentic-browser/skills/qa/SKILL.md'),
+    false,
+    'QA must use the canonical audit skill directly'
+  )
+})
+
+test('npm config exports only canonical client APIs', () => {
+  const source = readFileSync('npm/kaboom-agentic-browser/lib/config.js', 'utf8')
+  assert.doesNotMatch(source, /function getConfigCandidates\(/)
+  assert.doesNotMatch(source, /function getToolNameFromPath\(/)
 })
 
 test('background cache modules have no state-manager facade', () => {

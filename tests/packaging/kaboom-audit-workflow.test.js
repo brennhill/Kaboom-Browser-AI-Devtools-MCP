@@ -17,10 +17,9 @@ function read(relativePath) {
 }
 
 describe('kaboom audit workflow assets', () => {
-  test('command, bundled skill, and qa redirect expose the Phase 1 audit contract', () => {
+  test('command and bundled audit skill expose the Phase 1 audit contract', () => {
     const command = read('plugin/kaboom-workflows/commands/audit.md')
     const auditSkill = read('npm/kaboom-agentic-browser/skills/audit/SKILL.md')
-    const qaSkill = read('npm/kaboom-agentic-browser/skills/qa/SKILL.md')
     const manifest = read('npm/kaboom-agentic-browser/skills/skills.json')
 
     assert.match(command, /^name:\s+kaboom\/audit/m)
@@ -43,9 +42,7 @@ describe('kaboom audit workflow assets', () => {
     assert.match(auditSkill, /Fast Wins/)
     assert.match(auditSkill, /Ship Blockers/)
 
-    assert.match(qaSkill, /audit/i)
-    assert.match(qaSkill, /kaboom\/audit|\/audit|audit workflow/i)
-
     assert.match(manifest, /"id": "audit"/)
+    assert.doesNotMatch(manifest, /"id": "qa"/)
   })
 })

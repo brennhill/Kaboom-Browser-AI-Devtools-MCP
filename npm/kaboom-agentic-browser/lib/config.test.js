@@ -14,8 +14,6 @@ const {
   isClientInstalled,
   getDetectedClients,
   commandExistsOnPath,
-  getConfigCandidates,
-  getToolNameFromPath,
   getClientById,
   getClientByAlias,
   getValidAliases,
@@ -245,33 +243,6 @@ test('getDetectedClients returns only installed clients', () => {
   }
 });
 
-// --- getConfigCandidates (backward compat) ---
-
-test('getConfigCandidates returns file paths for detected file-type clients', () => {
-  const candidates = getConfigCandidates();
-  assert.ok(Array.isArray(candidates));
-  // Should be strings (file paths), no CLI entries
-  for (const c of candidates) {
-    assert.equal(typeof c, 'string');
-  }
-});
-
-// --- getToolNameFromPath (backward compat) ---
-
-test('getToolNameFromPath maps cursor path correctly', () => {
-  const homeDir = os.homedir();
-  assert.equal(getToolNameFromPath(path.join(homeDir, '.cursor', 'mcp.json')), 'Cursor');
-});
-
-test('getToolNameFromPath maps windsurf path correctly', () => {
-  const homeDir = os.homedir();
-  assert.equal(getToolNameFromPath(path.join(homeDir, '.codeium', 'windsurf', 'mcp_config.json')), 'Windsurf');
-});
-
-test('getToolNameFromPath returns Unknown for unrecognized path', () => {
-  assert.equal(getToolNameFromPath('/some/random/path'), 'Unknown');
-});
-
 // --- Gemini CLI client ---
 
 test('gemini uses correct config path', () => {
@@ -413,10 +384,8 @@ test('codex falls back to ~/.codex when CODEX_HOME is unset', () => {
   }
 });
 
-test('getClientByAlias resolves codex; getToolNameFromPath maps the codex path', () => {
+test('getClientByAlias resolves codex', () => {
   assert.equal(getClientByAlias('codex').id, 'codex');
-  const homeDir = os.homedir();
-  assert.equal(getToolNameFromPath(path.join(homeDir, '.codex', 'config.toml')), 'Codex CLI');
 });
 
 // --- getClientByAlias ---
@@ -451,16 +420,4 @@ test('getValidAliases returns one alias per client', () => {
   assert.ok(aliases.includes('zed'));
   // Should have exactly one per unique client ID
   assert.equal(aliases.length, CLIENT_DEFINITIONS.length);
-});
-
-// --- getToolNameFromPath fallbacks ---
-
-test('getToolNameFromPath maps gemini path correctly', () => {
-  const homeDir = os.homedir();
-  assert.equal(getToolNameFromPath(path.join(homeDir, '.gemini', 'settings.json')), 'Gemini CLI');
-});
-
-test('getToolNameFromPath maps opencode path correctly', () => {
-  const homeDir = os.homedir();
-  assert.equal(getToolNameFromPath(path.join(homeDir, '.config', 'opencode', 'opencode.json')), 'OpenCode');
 });

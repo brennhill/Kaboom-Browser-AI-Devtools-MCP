@@ -75,11 +75,6 @@
       "id": "audit",
       "version": 1,
       "description": "Run the Kaboom Phase 1 audit workflow and return a polished six-lane quality report."
-    },
-    {
-      "id": "qa",
-      "version": 1,
-      "description": "Compatibility alias that routes older QA requests to the Kaboom audit workflow."
     }
   ]
 }
