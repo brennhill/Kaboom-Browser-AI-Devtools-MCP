@@ -50,6 +50,9 @@ test_paths:
   - internal/recording/logdiff/logdiff_test.go
   - internal/recording/no_facade_test.go
   - internal/recording/actionlog/recorder_test.go
+  - tests/extension/recording-fixture.js
+  - tests/extension/recording-lifecycle.test.js
+  - tests/extension/recording-recovery.test.js
   - tests/extension/recording.test.js
   - tests/extension/recording-listeners-target-tab.test.js
   - tests/extension/recording-capture-branding.test.js
