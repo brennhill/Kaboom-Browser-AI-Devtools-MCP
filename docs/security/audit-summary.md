@@ -83,7 +83,7 @@ function validateMessageType(
 ): boolean
 ```
 
-All message handlers use TypeScript's discriminated union types from `/src/types/messages.ts`:
+All message handlers use TypeScript's discriminated union types from `/src/types/runtime-messages.ts`:
 - Exhaustive switch statements catch missing cases at compile time
 - Runtime validation ensures message structure is correct
 - Logging for unexpected message types
@@ -91,7 +91,7 @@ All message handlers use TypeScript's discriminated union types from `/src/types
 ### Affected Files
 - `/Users/brenn/dev/kaboom/src/background/message-handlers.ts` - Added sender validation
 - `/Users/brenn/dev/kaboom/src/content.ts` - Added background sender validation
-- `/Users/brenn/dev/kaboom/src/types/messages.ts` - Already had discriminated unions
+- `/Users/brenn/dev/kaboom/src/types/runtime-messages.ts` - Declares the discriminated runtime-message unions
 
 ---
 
@@ -320,7 +320,7 @@ Ensure all message handlers use discriminated unions and have exhaustive type ch
 ### Solution: Type Guards with Discriminated Unions
 
 **Existing (already good):**
-- `/Users/brenn/dev/kaboom/src/types/messages.ts` - Comprehensive discriminated unions
+- `/Users/brenn/dev/kaboom/src/types/runtime-messages.ts` - Comprehensive runtime-message discriminated unions
 
 **Enhanced:**
 - `/Users/brenn/dev/kaboom/src/background/message-handlers.ts` - Type validation function
@@ -383,7 +383,7 @@ export type PageMessageType =
 ```
 
 ### Affected Files
-- `/Users/brenn/dev/kaboom/src/types/messages.ts` - Already comprehensive
+- `/Users/brenn/dev/kaboom/src/types/runtime-messages.ts` - Canonical runtime-message contract
 - `/Users/brenn/dev/kaboom/src/background/message-handlers.ts` - Added validation function
 - `/Users/brenn/dev/kaboom/src/content.ts` - Added sender validation
 

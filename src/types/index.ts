@@ -11,137 +11,20 @@
  * Usage: import type { LogEntry, BackgroundMessage } from './types.js';
  */
 
-// Re-export all message types
-export type {
-  // Log types
-  LogLevel,
-  LogLevelFilter,
-  LogType,
-  BaseLogEntry,
-  ConsoleLogEntry,
-  NetworkLogEntry,
-  ExceptionLogEntry,
-  ScreenshotLogEntry,
-  LogEntry,
-  ProcessedLogEntry,
-
-  // WebSocket types
-  WebSocketCaptureMode,
-  WebSocketEventType,
-  WebSocketEvent,
-
-  // Network types
-  WaterfallEntry,
-  PendingRequest,
-  NetworkBodyPayload,
-
-  // Performance types
-  PerformanceMark,
-  PerformanceMeasure,
-  PerformanceSnapshot,
-
-  // User action types
-  ActionType,
-  ActionEntry,
-  SelectorStrategies,
-  EnhancedAction,
-
-  // AI context types
-  StackFrame,
-  SourceSnippet,
-  ReactComponentAncestry,
-  AiContextData,
-
-  // Accessibility types
-  A11yViolationNode,
-  A11yViolation,
-  A11yAuditResult,
-
-  // DOM query types
-  DomElementInfo,
-  DomQueryResult,
-  PageInfo,
-
-  // State management types
-  BrowserStateSnapshot,
-  SavedStateSnapshot,
-  StateAction,
-
-  // Background message types
-  GetTabIdMessage,
-  GetTabIdResponse,
-  WsEventMessage,
-  EnhancedActionMessage,
-  NetworkBodyMessage,
-  PerformanceSnapshotMessage,
-  LogMessage,
-  GetStatusMessage,
-  ClearLogsMessage,
-  SetLogLevelMessage,
-  SetBooleanSettingMessage,
-  SetWebSocketCaptureModeMessage,
-  GetAiWebPilotEnabledMessage,
-  GetAiWebPilotEnabledResponse,
-  GetDiagnosticStateMessage,
-  GetDiagnosticStateResponse,
-  CaptureScreenshotMessage,
-  GetDebugLogMessage,
-  ClearDebugLogMessage,
-  SetServerUrlMessage,
-  StatusUpdateMessage,
-  DrawModeCompletedMessage,
-  BackgroundMessage,
-
-  // Content script message types
-  ContentPingMessage,
-  ContentPingResponse,
-  HighlightMessage,
-  HighlightResponse,
-  ExecuteJsMessage,
-  ExecuteQueryMessage,
-  DomQueryMessage,
-  A11yQueryMessage,
-  GetNetworkWaterfallMessage,
-  ManageStateMessage,
-  ContentMessage,
-
-  // Inject script message types
-  PageMessageType,
-  ContentToPageMessageType,
-  ExecuteJsResult,
-
-  // State types
-  CircuitBreakerState,
-  CircuitBreakerStats,
-  MemoryPressureLevel,
-  MemoryPressureState,
-  ConnectionStatus,
-  ContextWarning,
-  DebugCategory,
-  DebugLogEntry,
-  ErrorGroup,
-  RateLimitResult,
-  CaptureScreenshotResult,
-
-  // Pending query types
-  QueryType,
-  PendingQuery,
-  BrowserActionParams,
-  BrowserActionResult,
-  TabInfo,
-
-  // Source map types
-  ParsedSourceMap,
-  OriginalLocation,
-
-  // Chrome API wrapper types
-  ChromeMessageSender,
-  ChromeTabInfo,
-  StorageChange,
-  StorageAreaName,
-  ChromeSessionStorage,
-  ChromeStorageWithSession
-} from './messages.js'
+export type * from './capture/accessibility.js'
+export type * from './capture/actions.js'
+export type * from './capture/ai-context.js'
+export type * from './capture/dom.js'
+export type * from './capture/network.js'
+export type * from './capture/performance.js'
+export type * from './capture/sourcemap.js'
+export type * from './capture/telemetry.js'
+export type * from './capture/websocket.js'
+export type * from './runtime/chrome.js'
+export type * from './runtime/debug.js'
+export type * from './runtime/queries.js'
+export type * from './runtime/state.js'
+export type * from './runtime-messages.js'
 
 // Re-export wire types (canonical HTTP payload shapes)
 export type { WireEnhancedAction } from './wire/wire-enhanced-action.js'

@@ -8,12 +8,14 @@
 import type {
   ActionEntry,
   EnhancedAction,
-  SelectorStrategies,
-  WaterfallEntry,
+  SelectorStrategies
+} from './capture/actions.js'
+import type { AiContextData } from './capture/ai-context.js'
+import type { WaterfallEntry } from './capture/network.js'
+import type {
   PerformanceMark,
-  PerformanceMeasure,
-  AiContextData
-} from './messages.js'
+  PerformanceMeasure
+} from './capture/performance.js'
 
 // =============================================================================
 // KABOOM DEVELOPER API (window.__kaboom)

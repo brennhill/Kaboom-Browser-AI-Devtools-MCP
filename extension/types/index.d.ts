@@ -9,7 +9,20 @@
  * This is the single entry point for importing types in the extension.
  * Usage: import type { LogEntry, BackgroundMessage } from './types.js';
  */
-export type { LogLevel, LogLevelFilter, LogType, BaseLogEntry, ConsoleLogEntry, NetworkLogEntry, ExceptionLogEntry, ScreenshotLogEntry, LogEntry, ProcessedLogEntry, WebSocketCaptureMode, WebSocketEventType, WebSocketEvent, WaterfallEntry, PendingRequest, NetworkBodyPayload, PerformanceMark, PerformanceMeasure, PerformanceSnapshot, ActionType, ActionEntry, SelectorStrategies, EnhancedAction, StackFrame, SourceSnippet, ReactComponentAncestry, AiContextData, A11yViolationNode, A11yViolation, A11yAuditResult, DomElementInfo, DomQueryResult, PageInfo, BrowserStateSnapshot, SavedStateSnapshot, StateAction, GetTabIdMessage, GetTabIdResponse, WsEventMessage, EnhancedActionMessage, NetworkBodyMessage, PerformanceSnapshotMessage, LogMessage, GetStatusMessage, ClearLogsMessage, SetLogLevelMessage, SetBooleanSettingMessage, SetWebSocketCaptureModeMessage, GetAiWebPilotEnabledMessage, GetAiWebPilotEnabledResponse, GetDiagnosticStateMessage, GetDiagnosticStateResponse, CaptureScreenshotMessage, GetDebugLogMessage, ClearDebugLogMessage, SetServerUrlMessage, StatusUpdateMessage, DrawModeCompletedMessage, BackgroundMessage, ContentPingMessage, ContentPingResponse, HighlightMessage, HighlightResponse, ExecuteJsMessage, ExecuteQueryMessage, DomQueryMessage, A11yQueryMessage, GetNetworkWaterfallMessage, ManageStateMessage, ContentMessage, PageMessageType, ContentToPageMessageType, ExecuteJsResult, CircuitBreakerState, CircuitBreakerStats, MemoryPressureLevel, MemoryPressureState, ConnectionStatus, ContextWarning, DebugCategory, DebugLogEntry, ErrorGroup, RateLimitResult, CaptureScreenshotResult, QueryType, PendingQuery, BrowserActionParams, BrowserActionResult, TabInfo, ParsedSourceMap, OriginalLocation, ChromeMessageSender, ChromeTabInfo, StorageChange, StorageAreaName, ChromeSessionStorage, ChromeStorageWithSession } from './messages.js';
+export type * from './capture/accessibility.js';
+export type * from './capture/actions.js';
+export type * from './capture/ai-context.js';
+export type * from './capture/dom.js';
+export type * from './capture/network.js';
+export type * from './capture/performance.js';
+export type * from './capture/sourcemap.js';
+export type * from './capture/telemetry.js';
+export type * from './capture/websocket.js';
+export type * from './runtime/chrome.js';
+export type * from './runtime/debug.js';
+export type * from './runtime/queries.js';
+export type * from './runtime/state.js';
+export type * from './runtime-messages.js';
 export type { WireEnhancedAction } from './wire/wire-enhanced-action.js';
 export type { WireNetworkBody, WireNetworkWaterfallEntry, WireNetworkWaterfallPayload } from './wire/wire-network.js';
 export type { WireWebSocketEvent } from './wire/wire-websocket-event.js';

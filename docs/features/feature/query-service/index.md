@@ -4,7 +4,7 @@ feature_id: feature-query-service
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-28
 code_paths:
   - internal/mcp/response.go
   - internal/mcp/response_content.go
@@ -16,7 +16,7 @@ code_paths:
   - internal/queries/dispatcher_trace.go
   - internal/queries/types.go
   - src/types/index.ts
-  - src/types/messages.ts
+  - src/types/global.d.ts
   - src/types/runtime-messages.ts
   - src/types/runtime/queries.ts
 test_paths:
@@ -25,6 +25,7 @@ test_paths:
   - internal/queries/commands_test.go
   - internal/queries/command_trace_test.go
   - internal/queries/expire_signal_test.go
+  - tests/extension/no-compatibility-facades.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

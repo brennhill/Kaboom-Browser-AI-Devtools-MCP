@@ -98,8 +98,7 @@ src/
     serialize.ts           Safe serialization utilities
 
   types/                   TypeScript type definitions
-    index.ts               Barrel re-exports
-    messages.ts            Inner barrel over capture/ + runtime/
+    index.ts               Canonical public type exports from focused modules
     runtime-messages.ts    Message type discriminated unions (rule 20 contract)
     utils.ts               Generic type helpers and type guards
     global.d.ts            Ambient globals (KaboomAPI, axe, Performance)

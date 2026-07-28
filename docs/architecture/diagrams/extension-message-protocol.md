@@ -1,7 +1,7 @@
 ---
 doc_type: legacy_doc
 status: reference
-last_reviewed: 2026-03-05
+last_reviewed: 2026-07-28
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -600,7 +600,8 @@ If extension posts too many errors:
 
 **Types:**
 - `internal/types/protocol.go` - Message types
-- `src/types/messages.ts` - TS message types
+- `src/types/runtime-messages.ts` - Cross-context runtime message contracts
+- `src/types/capture/` and `src/types/runtime/` - Focused telemetry and runtime types
 
 **Middleware:**
 - `cmd/browser-agent/server_middleware.go` - Auth, rate limit
