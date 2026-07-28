@@ -202,7 +202,10 @@ func DiscoverConventions(projectRoot, ext string) []DiscoveredConvention {
 	}
 
 	sort.Slice(conventions, func(i, j int) bool {
-		return conventions[i].FileCount > conventions[j].FileCount
+		if conventions[i].FileCount != conventions[j].FileCount {
+			return conventions[i].FileCount > conventions[j].FileCount
+		}
+		return conventions[i].Pattern < conventions[j].Pattern
 	})
 
 	if len(conventions) > discoveryMaxProbes {
