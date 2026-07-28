@@ -12,6 +12,7 @@ code_paths:
   - cmd/browser-agent/internal/testgenhandler/heal.go
   - cmd/browser-agent/internal/testgenhandler/generate.go
   - cmd/browser-agent/internal/toolgenerate/dispatcher.go
+  - cmd/browser-agent/internal/toolgenerate/deps.go
   - cmd/browser-agent/internal/toolgenerate/artifacts_test_impl.go
   - internal/mcp/response.go
   - internal/testgen/generate.go
@@ -28,6 +29,7 @@ code_paths:
   - internal/schema/generate.go
 test_paths:
   - cmd/browser-agent/internal/toolgenerate/handlers_coverage_test.go
+  - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/tools_generate_handler_test.go
   - cmd/browser-agent/tools_generate_validation_test.go
   - cmd/browser-agent/tools_generate_warning_filter_test.go
@@ -70,6 +72,9 @@ last_verified_date: 2026-03-05
 - Sub-handler wiring: `cmd/browser-agent/internal/testgenhandler/handler.go`
 - Tool composition and tests use the owned `testGenHandler` directly; the
   unchanged-return ToolHandler accessor has been deleted.
+- Generate handlers receive an explicit immutable dependency bundle composed
+  from the capture, annotation, version, connectivity, and accessibility owners;
+  `ToolHandler` is not a generate dependency interface.
 - Context dispatch: `cmd/browser-agent/internal/testgenhandler/generate.go`
 - Canonical contracts: `internal/testgen/types.go`, `internal/testgen/heal/types.go`
 - Provider delegation: `cmd/browser-agent/internal/testgenhandler/provider_adapter.go`

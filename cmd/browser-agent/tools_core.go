@@ -363,14 +363,6 @@ func (h *ToolHandler) PushInbox() *push.PushInbox {
 	return h.server.pushInbox
 }
 
-func (h *ToolHandler) GetAnnotationStore() *annotation.Store {
-	return h.annotationStore
-}
-
-func (h *ToolHandler) GetVersion() string {
-	return version
-}
-
 func (h *ToolHandler) GetToolCallLimiter() RateLimiter {
 	return h.toolCallLimiter
 }
@@ -524,7 +516,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 		},
 	})
 	handler.testGenHandler = testgenhandler.New(handler)
-	handler.generateDispatcher = toolgenerate.NewDispatcher(handler, handler.testGenHandler)
+	handler.generateDispatcher = toolgenerate.NewDispatcher(buildGenerateDeps(handler), handler.testGenHandler)
 	interactDeps := buildInteractDeps(handler)
 	handler.interactActionHandler = toolinteract.NewInteractActionHandler(interactDeps)
 	handler.configureLocalDeps = buildConfigureLocalDeps(handler)
@@ -597,6 +589,18 @@ func (d visualAnalyzeDeps) HasSessionStore() bool { return d.h.sessionStoreImpl 
 
 func (d visualAnalyzeDeps) HandleSessionStore(args persistence.SessionStoreArgs) (json.RawMessage, error) {
 	return d.h.sessionStoreImpl.HandleSessionStore(args)
+}
+
+func buildGenerateDeps(h *ToolHandler) toolgenerate.Deps {
+	return toolgenerate.Deps{
+		Capture:          h.capture,
+		AnnotationStore:  h.annotationStore,
+		Version:          version,
+		ExecuteA11yQuery: h.ExecuteA11yQuery,
+		IsExtensionConnected: func() bool {
+			return h.capture.Extension().IsExtensionConnected()
+		},
+	}
 }
 
 func buildAnalyzeDeps(h *ToolHandler) toolanalyze.Deps {

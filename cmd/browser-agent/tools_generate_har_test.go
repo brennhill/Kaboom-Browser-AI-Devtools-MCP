@@ -38,7 +38,7 @@ func TestToolExportHAR_ReturnsHARJSON(t *testing.T) {
 
 	args, _ := json.Marshal(map[string]any{})
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), Method: "tools/call"}
-	resp := toolgenerate.HandleExportHAR(handler, req, args)
+	resp := toolgenerate.HandleExportHAR(buildGenerateDeps(handler), req, args)
 
 	if resp.Error != nil {
 		t.Fatalf("unexpected error: %v", resp.Error)
@@ -84,7 +84,7 @@ func TestToolExportHAR_SaveToFile(t *testing.T) {
 
 	args, _ := json.Marshal(map[string]any{"save_to": tmpFile})
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`2`), Method: "tools/call"}
-	resp := toolgenerate.HandleExportHAR(handler, req, args)
+	resp := toolgenerate.HandleExportHAR(buildGenerateDeps(handler), req, args)
 
 	if resp.Error != nil {
 		t.Fatalf("unexpected error: %v", resp.Error)
@@ -126,7 +126,7 @@ func TestToolExportHAR_Filters(t *testing.T) {
 
 	args, _ := json.Marshal(map[string]any{"method": "POST", "status_min": 400})
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`3`), Method: "tools/call"}
-	resp := toolgenerate.HandleExportHAR(handler, req, args)
+	resp := toolgenerate.HandleExportHAR(buildGenerateDeps(handler), req, args)
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -157,7 +157,7 @@ func TestToolExportHAR_PathTraversal(t *testing.T) {
 
 	args, _ := json.Marshal(map[string]any{"save_to": "../../etc/passwd"})
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`5`), Method: "tools/call"}
-	resp := toolgenerate.HandleExportHAR(handler, req, args)
+	resp := toolgenerate.HandleExportHAR(buildGenerateDeps(handler), req, args)
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -174,7 +174,7 @@ func TestToolExportHAR_EmptyCapture(t *testing.T) {
 
 	args, _ := json.Marshal(map[string]any{})
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), Method: "tools/call"}
-	resp := toolgenerate.HandleExportHAR(handler, req, args)
+	resp := toolgenerate.HandleExportHAR(buildGenerateDeps(handler), req, args)
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {

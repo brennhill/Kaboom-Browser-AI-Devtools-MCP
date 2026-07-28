@@ -7,6 +7,7 @@ owners: []
 last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/internal/toolgenerate/dispatcher.go
+  - cmd/browser-agent/internal/toolgenerate/deps.go
   - cmd/browser-agent/internal/toolgenerate/artifacts_sarif_impl.go
   - internal/mcp/response.go
   - internal/export/export_sarif.go
@@ -16,6 +17,7 @@ test_paths:
   - cmd/browser-agent/tools_generate_audit_test.go
   - internal/export/export_sarif_test.go
   - internal/export/export_sarif_unit_test.go
+  - cmd/browser-agent/lint_hardening_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -44,5 +46,7 @@ last_verified_date: 2026-03-05
 ## Code and Tests
 
 - MCP adapter: `cmd/browser-agent/internal/toolgenerate/dispatcher.go`
+- Composition: `cmd/browser-agent/internal/toolgenerate/deps.go` explicitly
+  supplies connectivity and accessibility operations; no catch-all host is retained.
 - Generate handler: `cmd/browser-agent/internal/toolgenerate/artifacts_sarif_impl.go`
 - Export implementation and tests: `internal/export/`

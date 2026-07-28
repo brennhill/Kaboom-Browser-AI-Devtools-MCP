@@ -7,6 +7,7 @@ owners: []
 last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/internal/toolgenerate/dispatcher.go
+  - cmd/browser-agent/internal/toolgenerate/deps.go
   - cmd/browser-agent/internal/toolgenerate/artifacts_har_impl.go
   - internal/mcp/response.go
   - internal/export/export_har.go
@@ -14,6 +15,7 @@ code_paths:
 test_paths:
   - cmd/browser-agent/internal/toolgenerate/handlers_coverage_test.go
   - cmd/browser-agent/tools_generate_har_test.go
+  - cmd/browser-agent/lint_hardening_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -42,5 +44,7 @@ last_verified_date: 2026-03-05
 ## Code and Tests
 
 - MCP adapter: `cmd/browser-agent/internal/toolgenerate/dispatcher.go`
+- Composition: `cmd/browser-agent/internal/toolgenerate/deps.go` receives the
+  canonical capture owner and version value directly, without ToolHandler getters.
 - Generate handler: `cmd/browser-agent/internal/toolgenerate/artifacts_har_impl.go`
 - Export implementation: `internal/export/export_har.go`

@@ -34,7 +34,7 @@ func HandleGenerateCSP(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 			mcp.WithParam("mode"))
 	}
 
-	networkBodies := d.GetCapture().Telemetry().GetNetworkBodies()
+	networkBodies := d.Capture.Telemetry().GetNetworkBodies()
 	if len(networkBodies) == 0 {
 		return mcp.Succeed(req, "CSP policy unavailable", map[string]any{
 			"status": "unavailable", "mode": mode, "policy": "",
@@ -54,7 +54,7 @@ func HandleGenerateCSP(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 
 // HandleGenerateSRI generates Subresource Integrity hashes for third-party scripts/styles.
 func HandleGenerateSRI(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	cap := d.GetCapture()
+	cap := d.Capture
 	networkBodies := cap.Telemetry().GetNetworkBodies()
 	if len(networkBodies) == 0 {
 		return mcp.Succeed(req, "SRI unavailable", map[string]any{

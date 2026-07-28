@@ -105,15 +105,15 @@ func (h *Dispatcher) generateTest(req mcp.JSONRPCRequest, args json.RawMessage) 
 }
 
 func (h *Dispatcher) generateVisualTest(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	return annotations.HandleVisualTest(h.deps, req, args)
+	return annotations.HandleVisualTest(h.deps.AnnotationStore, req, args)
 }
 
 func (h *Dispatcher) generateAnnotationReport(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	return annotations.HandleAnnotationReport(h.deps, req, args)
+	return annotations.HandleAnnotationReport(h.deps.AnnotationStore, req, args)
 }
 
 func (h *Dispatcher) generateAnnotationIssues(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	return annotations.HandleAnnotationIssues(h.deps, req, args)
+	return annotations.HandleAnnotationIssues(h.deps.AnnotationStore, req, args)
 }
 
 func (h *Dispatcher) getReproductionScript(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
@@ -121,7 +121,7 @@ func (h *Dispatcher) getReproductionScript(req mcp.JSONRPCRequest, args json.Raw
 	if err := reproduction.ValidateOutputFormat(params.OutputFormat); err != "" {
 		return mcp.Fail(req, mcp.ErrInvalidParam, err, "Use 'kaboom' or 'playwright'", mcp.WithParam("output_format"))
 	}
-	allActions := h.deps.GetCapture().Telemetry().GetAllEnhancedActions()
+	allActions := h.deps.Capture.Telemetry().GetAllEnhancedActions()
 	actions := reproduction.FilterLastN(allActions, params.LastN)
 	script := reproduction.GenerateScript(actions, params)
 	result := reproduction.BuildResult(script, params, actions, allActions)

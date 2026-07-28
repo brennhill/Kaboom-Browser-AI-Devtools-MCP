@@ -24,7 +24,7 @@ func TestToolGenerateCSP_NoNetworkBodies(t *testing.T) {
 
 	args := json.RawMessage(`{"mode":"strict"}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := toolgenerate.HandleGenerateCSP(env.handler, req, args)
+	resp := toolgenerate.HandleGenerateCSP(buildGenerateDeps(env.handler), req, args)
 
 	result := parseToolResult(t, resp)
 	if result.IsError {
@@ -46,7 +46,7 @@ func TestToolGenerateCSP_DefaultMode(t *testing.T) {
 
 	args := json.RawMessage(`{}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := toolgenerate.HandleGenerateCSP(env.handler, req, args)
+	resp := toolgenerate.HandleGenerateCSP(buildGenerateDeps(env.handler), req, args)
 
 	result := parseToolResult(t, resp)
 
@@ -69,7 +69,7 @@ func TestToolGenerateCSP_WithNetworkBodies(t *testing.T) {
 
 	args := json.RawMessage(`{"mode":"strict"}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := toolgenerate.HandleGenerateCSP(env.handler, req, args)
+	resp := toolgenerate.HandleGenerateCSP(buildGenerateDeps(env.handler), req, args)
 
 	result := parseToolResult(t, resp)
 	if result.IsError {
@@ -106,7 +106,7 @@ func TestToolGenerateCSP_InvalidJSON(t *testing.T) {
 
 	args := json.RawMessage(`{bad json}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := toolgenerate.HandleGenerateCSP(env.handler, req, args)
+	resp := toolgenerate.HandleGenerateCSP(buildGenerateDeps(env.handler), req, args)
 
 	result := parseToolResult(t, resp)
 	if !result.IsError {

@@ -25,7 +25,7 @@ func HandleExportHAR(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 		return resp
 	}
 
-	cap := d.GetCapture()
+	cap := d.Capture
 	bodies := cap.Telemetry().GetNetworkBodies()
 	waterfall := cap.Telemetry().NetworkWaterfall().Entries()
 	filter := types.NetworkBodyFilter{
@@ -35,7 +35,7 @@ func HandleExportHAR(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 		StatusMax: params.StatusMax,
 	}
 
-	ver := d.GetVersion()
+	ver := d.Version
 
 	if params.SaveTo != "" {
 		result, err := export.ExportHARMergedToFile(bodies, waterfall, filter, ver, params.SaveTo)

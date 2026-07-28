@@ -12,17 +12,8 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
-// Deps is everything the annotation artifact handlers need from the host server.
-// It is deliberately narrower than toolgenerate.Deps: these handlers read the
-// annotation store and nothing else. *ToolHandler in cmd/browser-agent/ satisfies
-// it, as does any toolgenerate.Deps value.
-type Deps interface {
-	// GetAnnotationStore returns the annotation store.
-	GetAnnotationStore() *annotation.Store
-}
-
 // HandleVisualTest generates a Playwright test from annotation session data.
-func HandleVisualTest(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func HandleVisualTest(store *annotation.Store, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		TestName     string `json:"test_name"`
 		AnnotSession string `json:"annot_session"`
@@ -31,7 +22,7 @@ func HandleVisualTest(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.
 		mcp.LenientUnmarshal(args, &params)
 	}
 
-	pages, noDataResp, noData := resolveAnnotationPages(d, req, params.AnnotSession)
+	pages, noDataResp, noData := resolveAnnotationPages(store, req, params.AnnotSession)
 	if noData {
 		return noDataResp
 	}
@@ -41,12 +32,12 @@ func HandleVisualTest(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.
 		testName = "visual review annotations"
 	}
 
-	script := GeneratePlaywrightFromAnnotations(testName, pages, d.GetAnnotationStore())
+	script := GeneratePlaywrightFromAnnotations(testName, pages, store)
 	return mcp.SucceedText(req, script)
 }
 
 // HandleAnnotationReport generates a Markdown report from annotation session data.
-func HandleAnnotationReport(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func HandleAnnotationReport(store *annotation.Store, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		AnnotSession string `json:"annot_session"`
 	}
@@ -54,17 +45,17 @@ func HandleAnnotationReport(d Deps, req mcp.JSONRPCRequest, args json.RawMessage
 		mcp.LenientUnmarshal(args, &params)
 	}
 
-	pages, noDataResp, noData := resolveAnnotationPages(d, req, params.AnnotSession)
+	pages, noDataResp, noData := resolveAnnotationPages(store, req, params.AnnotSession)
 	if noData {
 		return noDataResp
 	}
 
-	report := GenerateMarkdownReport(pages, d.GetAnnotationStore())
+	report := GenerateMarkdownReport(pages, store)
 	return mcp.SucceedText(req, report)
 }
 
 // HandleAnnotationIssues generates a structured JSON issue list from annotations.
-func HandleAnnotationIssues(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func HandleAnnotationIssues(store *annotation.Store, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		AnnotSession string `json:"annot_session"`
 	}
@@ -72,12 +63,12 @@ func HandleAnnotationIssues(d Deps, req mcp.JSONRPCRequest, args json.RawMessage
 		mcp.LenientUnmarshal(args, &params)
 	}
 
-	pages, noDataResp, noData := resolveAnnotationPages(d, req, params.AnnotSession)
+	pages, noDataResp, noData := resolveAnnotationPages(store, req, params.AnnotSession)
 	if noData {
 		return noDataResp
 	}
 
-	issues := BuildIssueList(pages, d.GetAnnotationStore())
+	issues := BuildIssueList(pages, store)
 	result := map[string]any{
 		"issues":      issues,
 		"total_count": len(issues),
@@ -88,8 +79,8 @@ func HandleAnnotationIssues(d Deps, req mcp.JSONRPCRequest, args json.RawMessage
 	return mcp.Succeed(req, summary, result)
 }
 
-func resolveAnnotationPages(d Deps, req mcp.JSONRPCRequest, sessionName string) ([]*annotation.Session, mcp.JSONRPCResponse, bool) {
-	pages, err := collectAnnotationPages(d, sessionName)
+func resolveAnnotationPages(store *annotation.Store, req mcp.JSONRPCRequest, sessionName string) ([]*annotation.Session, mcp.JSONRPCResponse, bool) {
+	pages, err := collectAnnotationPages(store, sessionName)
 	if err == "" {
 		return pages, mcp.JSONRPCResponse{}, false
 	}
@@ -101,8 +92,7 @@ func resolveAnnotationPages(d Deps, req mcp.JSONRPCRequest, sessionName string) 
 
 // collectAnnotationPages gathers annotation pages from either a named or anonymous session.
 // Returns (pages, errorMessage). errorMessage is empty on success.
-func collectAnnotationPages(d Deps, sessionName string) ([]*annotation.Session, string) {
-	store := d.GetAnnotationStore()
+func collectAnnotationPages(store *annotation.Store, sessionName string) ([]*annotation.Session, string) {
 	if sessionName != "" {
 		ns := store.GetNamedSession(sessionName)
 		if ns == nil || len(ns.Pages) == 0 {

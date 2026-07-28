@@ -28,12 +28,18 @@ type fakeGenerateDeps struct {
 	a11yErr      error
 }
 
-func (f *fakeGenerateDeps) GetCapture() *capture.Capture          { return f.cap }
-func (f *fakeGenerateDeps) GetAnnotationStore() *annotation.Store { return f.annStore }
-func (f *fakeGenerateDeps) GetVersion() string                    { return f.version }
-func (f *fakeGenerateDeps) IsExtensionConnected() bool            { return f.extConnected }
-func (f *fakeGenerateDeps) ExecuteA11yQuery(_ string, _ []string, _ any, _ bool) (json.RawMessage, error) {
-	return f.a11yResult, f.a11yErr
+func (f *fakeGenerateDeps) deps() Deps {
+	return Deps{
+		Capture:         f.cap,
+		AnnotationStore: f.annStore,
+		Version:         f.version,
+		IsExtensionConnected: func() bool {
+			return f.extConnected
+		},
+		ExecuteA11yQuery: func(_ string, _ []string, _ any, _ bool) (json.RawMessage, error) {
+			return f.a11yResult, f.a11yErr
+		},
+	}
 }
 
 func newGenDeps() *fakeGenerateDeps {
@@ -72,7 +78,7 @@ func parseResult(t *testing.T, resp mcp.JSONRPCResponse) (bool, string) {
 func TestHandleExportHAR(t *testing.T) {
 	t.Run("no bodies yields empty export", func(t *testing.T) {
 		d := newGenDeps()
-		resp := HandleExportHAR(d, genReq(), json.RawMessage(`{}`))
+		resp := HandleExportHAR(d.deps(), genReq(), json.RawMessage(`{}`))
 		if isErr, text := parseResult(t, resp); isErr {
 			t.Fatalf("empty HAR export should succeed: %s", text)
 		}
@@ -83,7 +89,7 @@ func TestHandleExportHAR(t *testing.T) {
 		d.cap.Telemetry().AddNetworkBodiesForTest([]types.NetworkBody{
 			{URL: "https://example.com/api", Method: "GET", Status: 200},
 		})
-		resp := HandleExportHAR(d, genReq(), json.RawMessage(`{"method":"GET"}`))
+		resp := HandleExportHAR(d.deps(), genReq(), json.RawMessage(`{"method":"GET"}`))
 		if isErr, text := parseResult(t, resp); isErr {
 			t.Fatalf("HAR export with bodies should succeed: %s", text)
 		}
@@ -91,7 +97,7 @@ func TestHandleExportHAR(t *testing.T) {
 
 	t.Run("unsafe save_to path errors", func(t *testing.T) {
 		d := newGenDeps()
-		resp := HandleExportHAR(d, genReq(), json.RawMessage(`{"save_to":"../escape.har"}`))
+		resp := HandleExportHAR(d.deps(), genReq(), json.RawMessage(`{"save_to":"../escape.har"}`))
 		if isErr, _ := parseResult(t, resp); !isErr {
 			t.Fatal("unsafe save_to path should error")
 		}
@@ -99,7 +105,7 @@ func TestHandleExportHAR(t *testing.T) {
 
 	t.Run("invalid JSON errors", func(t *testing.T) {
 		d := newGenDeps()
-		resp := HandleExportHAR(d, genReq(), json.RawMessage(`{bad`))
+		resp := HandleExportHAR(d.deps(), genReq(), json.RawMessage(`{bad`))
 		if isErr, _ := parseResult(t, resp); !isErr {
 			t.Fatal("invalid JSON should error")
 		}
@@ -113,7 +119,7 @@ func TestHandleExportHAR(t *testing.T) {
 func TestHandlePRSummary(t *testing.T) {
 	t.Run("no activity", func(t *testing.T) {
 		d := newGenDeps()
-		resp := HandlePRSummary(d, genReq(), nil)
+		resp := HandlePRSummary(d.deps(), genReq(), nil)
 		isErr, text := parseResult(t, resp)
 		if isErr {
 			t.Fatalf("pr summary should succeed: %s", text)
@@ -136,7 +142,7 @@ func TestHandlePRSummary(t *testing.T) {
 			{Level: "error", Message: "boom"},
 			{Level: "info", Message: "fine"},
 		})
-		resp := HandlePRSummary(d, genReq(), nil)
+		resp := HandlePRSummary(d.deps(), genReq(), nil)
 		isErr, text := parseResult(t, resp)
 		if isErr {
 			t.Fatalf("pr summary should succeed: %s", text)
@@ -154,7 +160,7 @@ func TestHandlePRSummary(t *testing.T) {
 func TestHandleExportSARIF(t *testing.T) {
 	t.Run("precomputed a11y result", func(t *testing.T) {
 		d := newGenDeps()
-		resp := HandleExportSARIF(d, genReq(), json.RawMessage(`{"a11y_result":{"violations":[]}}`))
+		resp := HandleExportSARIF(d.deps(), genReq(), json.RawMessage(`{"a11y_result":{"violations":[]}}`))
 		if isErr, text := parseResult(t, resp); isErr {
 			t.Fatalf("SARIF export should succeed: %s", text)
 		}
@@ -163,7 +169,7 @@ func TestHandleExportSARIF(t *testing.T) {
 	t.Run("not connected uses empty a11y", func(t *testing.T) {
 		d := newGenDeps()
 		d.extConnected = false
-		resp := HandleExportSARIF(d, genReq(), json.RawMessage(`{"scope":"page"}`))
+		resp := HandleExportSARIF(d.deps(), genReq(), json.RawMessage(`{"scope":"page"}`))
 		if isErr, text := parseResult(t, resp); isErr {
 			t.Fatalf("SARIF export (empty) should succeed: %s", text)
 		}
@@ -173,7 +179,7 @@ func TestHandleExportSARIF(t *testing.T) {
 		d := newGenDeps()
 		d.extConnected = true
 		d.a11yResult = json.RawMessage(`{"violations":[]}`)
-		resp := HandleExportSARIF(d, genReq(), json.RawMessage(`{"include_passes":true}`))
+		resp := HandleExportSARIF(d.deps(), genReq(), json.RawMessage(`{"include_passes":true}`))
 		if isErr, text := parseResult(t, resp); isErr {
 			t.Fatalf("SARIF export via query should succeed: %s", text)
 		}
@@ -181,7 +187,7 @@ func TestHandleExportSARIF(t *testing.T) {
 
 	t.Run("invalid JSON errors", func(t *testing.T) {
 		d := newGenDeps()
-		resp := HandleExportSARIF(d, genReq(), json.RawMessage(`{bad`))
+		resp := HandleExportSARIF(d.deps(), genReq(), json.RawMessage(`{bad`))
 		if isErr, _ := parseResult(t, resp); !isErr {
 			t.Fatal("invalid JSON should error")
 		}
@@ -195,7 +201,7 @@ func TestHandleExportSARIF(t *testing.T) {
 func TestHandleGenerateCSP(t *testing.T) {
 	t.Run("no bodies unavailable", func(t *testing.T) {
 		d := newGenDeps()
-		resp := HandleGenerateCSP(d, genReq(), json.RawMessage(`{}`))
+		resp := HandleGenerateCSP(d.deps(), genReq(), json.RawMessage(`{}`))
 		if isErr, _ := parseResult(t, resp); isErr {
 			t.Fatal("unavailable should be a success response, not error")
 		}
@@ -203,7 +209,7 @@ func TestHandleGenerateCSP(t *testing.T) {
 
 	t.Run("invalid mode errors", func(t *testing.T) {
 		d := newGenDeps()
-		resp := HandleGenerateCSP(d, genReq(), json.RawMessage(`{"mode":"nuclear"}`))
+		resp := HandleGenerateCSP(d.deps(), genReq(), json.RawMessage(`{"mode":"nuclear"}`))
 		if isErr, _ := parseResult(t, resp); !isErr {
 			t.Fatal("invalid mode should error")
 		}
@@ -219,7 +225,7 @@ func TestHandleGenerateCSP(t *testing.T) {
 			if mode == "" {
 				args = `{}`
 			}
-			resp := HandleGenerateCSP(d, genReq(), json.RawMessage(args))
+			resp := HandleGenerateCSP(d.deps(), genReq(), json.RawMessage(args))
 			if isErr, text := parseResult(t, resp); isErr {
 				t.Fatalf("CSP mode %q should succeed: %s", mode, text)
 			}
@@ -228,7 +234,7 @@ func TestHandleGenerateCSP(t *testing.T) {
 
 	t.Run("invalid JSON errors", func(t *testing.T) {
 		d := newGenDeps()
-		resp := HandleGenerateCSP(d, genReq(), json.RawMessage(`{bad`))
+		resp := HandleGenerateCSP(d.deps(), genReq(), json.RawMessage(`{bad`))
 		if isErr, _ := parseResult(t, resp); !isErr {
 			t.Fatal("invalid JSON should error")
 		}
@@ -242,7 +248,7 @@ func TestHandleGenerateCSP(t *testing.T) {
 func TestHandleGenerateSRI(t *testing.T) {
 	t.Run("no bodies unavailable", func(t *testing.T) {
 		d := newGenDeps()
-		resp := HandleGenerateSRI(d, genReq(), json.RawMessage(`{}`))
+		resp := HandleGenerateSRI(d.deps(), genReq(), json.RawMessage(`{}`))
 		if isErr, _ := parseResult(t, resp); isErr {
 			t.Fatal("unavailable should be success response")
 		}
@@ -254,7 +260,7 @@ func TestHandleGenerateSRI(t *testing.T) {
 		d.cap.Telemetry().AddNetworkBodiesForTest([]types.NetworkBody{
 			{URL: "https://cdn.example.com/lib.js", Method: "GET", Status: 200, ContentType: "application/javascript"},
 		})
-		resp := HandleGenerateSRI(d, genReq(), json.RawMessage(`{}`))
+		resp := HandleGenerateSRI(d.deps(), genReq(), json.RawMessage(`{}`))
 		// Result may be success or a structured error depending on hash availability;
 		// either way the response must be well-formed.
 		parseResult(t, resp)
@@ -268,7 +274,7 @@ func TestHandleGenerateSRI(t *testing.T) {
 func TestHandleGenerateTest(t *testing.T) {
 	t.Run("no actions captured", func(t *testing.T) {
 		d := newGenDeps()
-		resp := HandleGenerateTest(d, genReq(), json.RawMessage(`{}`))
+		resp := HandleGenerateTest(d.deps(), genReq(), json.RawMessage(`{}`))
 		if isErr, text := parseResult(t, resp); isErr {
 			t.Fatalf("generate test should succeed with hint: %s", text)
 		}
@@ -280,7 +286,7 @@ func TestHandleGenerateTest(t *testing.T) {
 			{Type: "navigate", ToURL: "https://example.com", Timestamp: time.Now().UnixMilli()},
 			{Type: "click", Selectors: map[string]any{"css": "#btn"}, Timestamp: time.Now().UnixMilli()},
 		})
-		resp := HandleGenerateTest(d, genReq(), json.RawMessage(`{"test_name":"login","last_n":10}`))
+		resp := HandleGenerateTest(d.deps(), genReq(), json.RawMessage(`{"test_name":"login","last_n":10}`))
 		if isErr, text := parseResult(t, resp); isErr {
 			t.Fatalf("generate test with actions should succeed: %s", text)
 		}
@@ -288,7 +294,7 @@ func TestHandleGenerateTest(t *testing.T) {
 
 	t.Run("invalid JSON errors", func(t *testing.T) {
 		d := newGenDeps()
-		resp := HandleGenerateTest(d, genReq(), json.RawMessage(`{bad`))
+		resp := HandleGenerateTest(d.deps(), genReq(), json.RawMessage(`{bad`))
 		if isErr, _ := parseResult(t, resp); !isErr {
 			t.Fatal("invalid JSON should error")
 		}

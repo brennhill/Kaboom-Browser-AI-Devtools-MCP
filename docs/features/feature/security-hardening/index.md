@@ -7,6 +7,7 @@ owners: []
 last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/internal/toolgenerate/dispatcher.go
+  - cmd/browser-agent/internal/toolgenerate/deps.go
   - cmd/browser-agent/internal/toolgenerate/artifacts_security_impl.go
   - cmd/browser-agent/internal/toolconfigure/security_mode.go
   - internal/mcp/response.go
@@ -67,6 +68,7 @@ test_paths:
   - internal/security/netflag/detectors_unit_test.go
   - internal/security/httpsec/url_test.go
   - internal/security/httpsec/cookie_test.go
+  - cmd/browser-agent/lint_hardening_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -82,6 +84,8 @@ last_verified_date: 2026-03-05
 
 Security scanning consumes the canonical `internal/types.LogEntry` contract
 directly, without a scan-package compatibility alias.
+Generate-time CSP and SRI handlers receive their capture dependency through the
+explicit generate composition bundle, not through ToolHandler forwarding methods.
 Security policy configuration likewise resolves only through the canonical
 state path and does not fall back to historical config directories.
 

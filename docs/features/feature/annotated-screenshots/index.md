@@ -14,6 +14,7 @@ code_paths:
   - cmd/browser-agent/internal/mediaapi/screenshots.go
   - cmd/browser-agent/internal/mediaapi/handler.go
   - cmd/browser-agent/internal/toolgenerate/dispatcher.go
+  - cmd/browser-agent/internal/toolgenerate/deps.go
   - cmd/browser-agent/internal/toolgenerate/annotations/handlers.go
   - cmd/browser-agent/internal/toolgenerate/annotations/visual.go
   - cmd/browser-agent/internal/toolgenerate/annotations/report.go
@@ -37,6 +38,7 @@ test_paths:
   - cmd/browser-agent/tools_analyze_annotations_test.go
   - cmd/browser-agent/tools_generate_annotations_test.go
   - cmd/browser-agent/internal/toolgenerate/annotations/annotations_test.go
+  - cmd/browser-agent/lint_hardening_test.go
   - tests/extension/entry-point-parity.test.js
   - scripts/smoke-tests/31-annotation-parity.sh
   - scripts/smoke-tests/annotation-parity-benchmark.sh
@@ -78,6 +80,8 @@ last_verified_date: 2026-03-05
 - `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go` — annotation retrieval, error correlation, and detail response shaping
 - `cmd/browser-agent/internal/toolgenerate/annotations/visual.go` — resilient visual test generation via locator fallback candidates (`css`, `testid`, `role`, `label`, `placeholder`, `text`)
 - `cmd/browser-agent/internal/toolgenerate/annotations/handlers.go` — the three MCP entry points (`visual_test`, `annotation_report`, `annotation_issues`) and session resolution
+- Annotation artifact handlers accept the canonical `*annotation.Store`
+  directly. There is no annotation host interface or ToolHandler store accessor.
 - `cmd/browser-agent/internal/toolgenerate/annotations/report.go` / `issues.go` / `builder.go` — Markdown report rendering, structured issue payloads, and the shared line builder
 - `internal/schema/analyze.go` + `internal/tools/configure/capabilities/modespecs_analyze.go` — analyze annotations schema/capability metadata for the canonical `url` filter
 

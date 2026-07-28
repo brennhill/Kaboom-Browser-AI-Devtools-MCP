@@ -24,8 +24,7 @@ import (
 func seedAnnotationSession(t *testing.T, h *ToolHandler) {
 	t.Helper()
 	// Fresh store to avoid global state pollution from other tests
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
-	t.Cleanup(func() { h.annotationStore.Close() })
+	h.annotationStore.ClearAll()
 	session := &annotation.Session{
 		Annotations: []annotation.Annotation{
 			{
@@ -84,8 +83,7 @@ func seedAnnotationSession(t *testing.T, h *ToolHandler) {
 
 func TestGenerate_VisualTest_NoAnnotations(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
-	defer h.annotationStore.Close()
+	h.annotationStore.ClearAll()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"visual_test"}`)
@@ -142,7 +140,7 @@ func TestGenerate_VisualTest_UsesSelectorCandidates(t *testing.T) {
 	})
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := annotations.HandleVisualTest(h, req, nil)
+	resp := annotations.HandleVisualTest(h.annotationStore, req, nil)
 	text := unmarshalMCPText(t, resp.Result)
 
 	if !strings.Contains(text, "testid=checkout-submit") {
@@ -249,8 +247,7 @@ func TestGenerate_VisualTest_NamedSession(t *testing.T) {
 
 func TestGenerate_AnnotationReport_NoAnnotations(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
-	defer h.annotationStore.Close()
+	h.annotationStore.ClearAll()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"annotation_report"}`)
@@ -322,8 +319,7 @@ func TestGenerate_AnnotationReport_IncludesA11yFlags(t *testing.T) {
 
 func TestGenerate_AnnotationIssues_NoAnnotations(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
-	defer h.annotationStore.Close()
+	h.annotationStore.ClearAll()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	args := json.RawMessage(`{"what":"annotation_issues"}`)
@@ -393,8 +389,7 @@ func TestGenerate_AnnotationIssues_CountsCorrect(t *testing.T) {
 
 func TestGenerate_VisualTest_ExpiredDetailFallsBackToBody(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
-	t.Cleanup(func() { h.annotationStore.Close() })
+	h.annotationStore.ClearAll()
 
 	// Store a session but DON'T store any detail — simulates expired detail
 	session := &annotation.Session{
@@ -415,7 +410,7 @@ func TestGenerate_VisualTest_ExpiredDetailFallsBackToBody(t *testing.T) {
 	h.annotationStore.StoreSession(1, session)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := annotations.HandleVisualTest(h, req, nil)
+	resp := annotations.HandleVisualTest(h.annotationStore, req, nil)
 	text := unmarshalMCPText(t, resp.Result)
 
 	// Should include a fallback locator path and expired comment.
@@ -430,8 +425,7 @@ func TestGenerate_VisualTest_ExpiredDetailFallsBackToBody(t *testing.T) {
 
 func TestGenerate_VisualTest_EscapesSingleQuotes(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
-	t.Cleanup(func() { h.annotationStore.Close() })
+	h.annotationStore.ClearAll()
 
 	session := &annotation.Session{
 		Annotations: []annotation.Annotation{
@@ -457,7 +451,7 @@ func TestGenerate_VisualTest_EscapesSingleQuotes(t *testing.T) {
 	})
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := annotations.HandleVisualTest(h, req, nil)
+	resp := annotations.HandleVisualTest(h.annotationStore, req, nil)
 	text := unmarshalMCPText(t, resp.Result)
 
 	// The generated code must NOT have unescaped single quotes inside JS string literals

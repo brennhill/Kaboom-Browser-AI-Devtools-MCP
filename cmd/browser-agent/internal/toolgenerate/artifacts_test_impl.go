@@ -23,7 +23,7 @@ func HandleGenerateTest(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mc
 		params.TestName = "generated test"
 	}
 
-	allActions := d.GetCapture().Telemetry().GetAllEnhancedActions()
+	allActions := d.Capture.Telemetry().GetAllEnhancedActions()
 	actions := gen.FilterLastN(allActions, params.LastN)
 	script := gen.GenerateTestScript(actions, params)
 

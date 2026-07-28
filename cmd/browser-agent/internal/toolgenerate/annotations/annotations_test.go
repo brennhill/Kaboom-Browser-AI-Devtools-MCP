@@ -20,8 +20,6 @@ type fakeAnnotationDeps struct {
 	annStore *annotation.Store
 }
 
-func (f *fakeAnnotationDeps) GetAnnotationStore() *annotation.Store { return f.annStore }
-
 func newGenDeps() *fakeAnnotationDeps {
 	return &fakeAnnotationDeps{annStore: annotation.NewStore(1 * time.Hour)}
 }
@@ -65,7 +63,7 @@ func addAnonymousSession(d *fakeAnnotationDeps) {
 func TestHandleVisualTest(t *testing.T) {
 	t.Run("no annotations returns no_data", func(t *testing.T) {
 		d := newGenDeps()
-		resp := HandleVisualTest(d, genReq(), json.RawMessage(`{}`))
+		resp := HandleVisualTest(d.annStore, genReq(), json.RawMessage(`{}`))
 		if isErr, text := parseResult(t, resp); isErr {
 			t.Fatalf("no_data path should not be an error response: %s", text)
 		}
@@ -74,7 +72,7 @@ func TestHandleVisualTest(t *testing.T) {
 	t.Run("with annotations generates script", func(t *testing.T) {
 		d := newGenDeps()
 		addAnonymousSession(d)
-		resp := HandleVisualTest(d, genReq(), json.RawMessage(`{"test_name":"My Test"}`))
+		resp := HandleVisualTest(d.annStore, genReq(), json.RawMessage(`{"test_name":"My Test"}`))
 		isErr, text := parseResult(t, resp)
 		if isErr {
 			t.Fatalf("visual test should succeed: %s", text)
@@ -87,7 +85,7 @@ func TestHandleVisualTest(t *testing.T) {
 	t.Run("default test name when empty", func(t *testing.T) {
 		d := newGenDeps()
 		addAnonymousSession(d)
-		resp := HandleVisualTest(d, genReq(), nil)
+		resp := HandleVisualTest(d.annStore, genReq(), nil)
 		if isErr, _ := parseResult(t, resp); isErr {
 			t.Fatal("should succeed with default test name")
 		}
@@ -95,7 +93,7 @@ func TestHandleVisualTest(t *testing.T) {
 
 	t.Run("named session not found", func(t *testing.T) {
 		d := newGenDeps()
-		resp := HandleVisualTest(d, genReq(), json.RawMessage(`{"annot_session":"ghost"}`))
+		resp := HandleVisualTest(d.annStore, genReq(), json.RawMessage(`{"annot_session":"ghost"}`))
 		if isErr, _ := parseResult(t, resp); isErr {
 			t.Fatal("missing named session yields no_data success, not error")
 		}
@@ -107,7 +105,7 @@ func TestHandleVisualTest(t *testing.T) {
 			PageURL:     "https://example.com/x",
 			Annotations: []annotation.Annotation{{ID: "n1", Text: "note"}},
 		})
-		resp := HandleVisualTest(d, genReq(), json.RawMessage(`{"annot_session":"flow"}`))
+		resp := HandleVisualTest(d.annStore, genReq(), json.RawMessage(`{"annot_session":"flow"}`))
 		if isErr, text := parseResult(t, resp); isErr {
 			t.Fatalf("named session should generate script: %s", text)
 		}
@@ -117,7 +115,7 @@ func TestHandleVisualTest(t *testing.T) {
 func TestHandleAnnotationReport(t *testing.T) {
 	t.Run("no data", func(t *testing.T) {
 		d := newGenDeps()
-		resp := HandleAnnotationReport(d, genReq(), json.RawMessage(`{}`))
+		resp := HandleAnnotationReport(d.annStore, genReq(), json.RawMessage(`{}`))
 		if isErr, _ := parseResult(t, resp); isErr {
 			t.Fatal("no data path should be success no_data")
 		}
@@ -125,7 +123,7 @@ func TestHandleAnnotationReport(t *testing.T) {
 	t.Run("with data", func(t *testing.T) {
 		d := newGenDeps()
 		addAnonymousSession(d)
-		resp := HandleAnnotationReport(d, genReq(), nil)
+		resp := HandleAnnotationReport(d.annStore, genReq(), nil)
 		isErr, text := parseResult(t, resp)
 		if isErr {
 			t.Fatalf("report should succeed: %s", text)
@@ -139,7 +137,7 @@ func TestHandleAnnotationReport(t *testing.T) {
 func TestHandleAnnotationIssues(t *testing.T) {
 	t.Run("no data", func(t *testing.T) {
 		d := newGenDeps()
-		resp := HandleAnnotationIssues(d, genReq(), json.RawMessage(`{}`))
+		resp := HandleAnnotationIssues(d.annStore, genReq(), json.RawMessage(`{}`))
 		if isErr, _ := parseResult(t, resp); isErr {
 			t.Fatal("no data path should be success no_data")
 		}
@@ -147,7 +145,7 @@ func TestHandleAnnotationIssues(t *testing.T) {
 	t.Run("with data", func(t *testing.T) {
 		d := newGenDeps()
 		addAnonymousSession(d)
-		resp := HandleAnnotationIssues(d, genReq(), nil)
+		resp := HandleAnnotationIssues(d.annStore, genReq(), nil)
 		if isErr, text := parseResult(t, resp); isErr {
 			t.Fatalf("issues should succeed: %s", text)
 		}

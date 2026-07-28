@@ -11,21 +11,12 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
-// Deps provides all dependencies the generate-local handlers need.
-// *ToolHandler in cmd/browser-agent/ satisfies this interface.
-type Deps interface {
-	// GetCapture returns the capture store.
-	GetCapture() *capture.Capture
-
-	// GetAnnotationStore returns the annotation store.
-	GetAnnotationStore() *annotation.Store
-
-	// GetVersion returns the server version string.
-	GetVersion() string
-
-	// ExecuteA11yQuery runs an accessibility audit and returns results.
-	ExecuteA11yQuery(scope string, tags []string, frame any, forceRefresh bool) (json.RawMessage, error)
-
-	// IsExtensionConnected reports whether the browser extension is connected.
-	IsExtensionConnected() bool
+// Deps names the concrete owners and operations used by generate handlers.
+// The composition root supplies these once when it constructs the dispatcher.
+type Deps struct {
+	Capture              *capture.Capture
+	AnnotationStore      *annotation.Store
+	Version              string
+	ExecuteA11yQuery     func(scope string, tags []string, frame any, forceRefresh bool) (json.RawMessage, error)
+	IsExtensionConnected func() bool
 }
