@@ -21,6 +21,7 @@ code_paths:
   - cmd/browser-agent/internal/toolinteract/interact_batch.go
   - cmd/browser-agent/internal/toolinteract/elemindex/registry.go
   - cmd/browser-agent/tools_core.go
+  - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/tools_interact_dispatch.go
   - cmd/browser-agent/tools_async_completion.go
   - internal/tools/interact/workflow.go
@@ -82,11 +83,20 @@ test_paths:
   - cmd/browser-agent/internal/toolinteract/interact_workflow_test.go
   - cmd/browser-agent/internal/toolinteract/elemindex/registry_test.go
   - cmd/browser-agent/tools_interact_handler_test.go
+  - cmd/browser-agent/tools_csp_blocked_test.go
+  - cmd/browser-agent/tools_interact_clipboard_test.go
+  - cmd/browser-agent/tools_interact_coverage_test.go
   - cmd/browser-agent/tools_interact_dom_params_test.go
+  - cmd/browser-agent/tools_interact_draw_test.go
+  - cmd/browser-agent/tools_interact_gate_test.go
+  - cmd/browser-agent/tools_interact_helpers_test.go
+  - cmd/browser-agent/tools_interact_nav_test.go
   - cmd/browser-agent/tools_interact_workflows_test.go
   - cmd/browser-agent/tools_pending_query_enqueue_test.go
   - cmd/browser-agent/tools_interact_rich_test.go
   - cmd/browser-agent/tools_interact_navigate_document_test.go
+  - cmd/browser-agent/tools_interact_pilot_test.go
+  - cmd/browser-agent/tools_interact_utils_test.go
   - cmd/browser-agent/tools_schema_parity_test.go
   - internal/schema/interact/schema_test.go
   - cmd/browser-agent/tools_interact_evidence_test.go
@@ -134,6 +144,10 @@ State snapshot handlers accept only the canonical `snapshot_name` parameter;
 the former generic `name` request alias has been removed.
 State dispatch and tests use the composed `stateInteractHandler` directly; the
 root unchanged-return accessor has been deleted and is structurally prohibited.
+All other action dispatch, async enrichment, configuration, and tests likewise
+use the composed `interactActionHandler` directly. Both the root unchanged-return
+accessor and the test-only shim that mirrored it have been deleted and are
+structurally prohibited.
 Public state actions likewise use only `save_state`, `load_state`,
 `list_states`, and `delete_state`; duplicate `state_*` entry points are not
 registered. The similarly named extension pending-query types remain internal.

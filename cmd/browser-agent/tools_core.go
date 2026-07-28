@@ -371,7 +371,7 @@ func (h *ToolHandler) maybeInjectSummary(args json.RawMessage) json.RawMessage {
 }
 
 func (h *ToolHandler) armEvidenceForCommand(correlationID, action string, args json.RawMessage, clientID string) {
-	h.interactAction().ArmEvidenceForCommand(correlationID, action, args, clientID)
+	h.interactActionHandler.ArmEvidenceForCommand(correlationID, action, args, clientID)
 }
 
 func (h *ToolHandler) getCommandResult(correlationID string) (*queries.CommandResult, bool) {
@@ -535,11 +535,11 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 			return handler.apiContractRuntime.Handle(req, args, handler.capture.Telemetry().GetNetworkBodies())
 		},
 		PageSummary: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return handler.interactAction().HandleContentExtraction(req, args, "page_summary", "page_summary")
+			return handler.interactActionHandler.HandleContentExtraction(req, args, "page_summary", "page_summary")
 		},
 		Annotations: handler.annotationAnalysis.GetAnnotations, AnnotationDetail: handler.annotationAnalysis.GetAnnotationDetail,
 		FeatureGates: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return handler.interactAction().HandleContentExtraction(req, args, "feature_gates", "feature_gates")
+			return handler.interactActionHandler.HandleContentExtraction(req, args, "feature_gates", "feature_gates")
 		},
 	})
 	handler.testGenHandler = testgenhandler.New(handler)
@@ -691,10 +691,6 @@ func buildInteractDeps(h *ToolHandler) *toolinteract.Deps {
 		GetCommandResult: getCommandResult,
 		ReplayMu:         &replayMu,
 	}
-}
-
-func (h *ToolHandler) interactAction() *toolinteract.InteractActionHandler {
-	return h.interactActionHandler
 }
 
 func (h *ToolHandler) screenrecDeps() screenrec.Deps {

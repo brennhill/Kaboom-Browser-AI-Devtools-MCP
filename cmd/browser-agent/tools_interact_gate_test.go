@@ -232,7 +232,7 @@ func TestNavigate_ExtDisconnected_FastFail(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"navigate","url":"https://example.com","sync":false}`)
-	resp := env.handler.interactAction().HandleBrowserActionNavigateImpl(req, args)
+	resp := env.handler.interactActionHandler.HandleBrowserActionNavigateImpl(req, args)
 
 	code := extractErrorCode(t, resp)
 	if code != mcp.ErrNoData {
@@ -250,7 +250,7 @@ func TestExecuteJS_CSP_MainWorld_FastFail(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"execute_js","script":"return 1","world":"main","sync":false}`)
-	resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
+	resp := env.handler.interactActionHandler.HandleExecuteJSImpl(req, args)
 
 	code := extractErrorCode(t, resp)
 	if code != mcp.ErrExtError {
@@ -268,7 +268,7 @@ func TestExecuteJS_CSP_AutoWorld_PassesThrough(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"execute_js","script":"return 1","sync":false}`)
-	resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
+	resp := env.handler.interactActionHandler.HandleExecuteJSImpl(req, args)
 
 	// world=auto (default) passes through gate — extension handles CSP fallback
 	if !isSuccessOrQueued(t, resp) {
@@ -284,7 +284,7 @@ func TestClick_ExtDisconnected_FastFail(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"click","selector":"#btn","sync":false}`)
-	resp := env.handler.interactAction().HandleDOMPrimitive(req, args, "click")
+	resp := env.handler.interactActionHandler.HandleDOMPrimitive(req, args, "click")
 
 	code := extractErrorCode(t, resp)
 	if code != mcp.ErrNoData {
@@ -299,7 +299,7 @@ func TestSubtitle_NoExtensionGate(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"subtitle","text":"hello","sync":false}`)
-	resp := env.handler.interactAction().HandleSubtitleImpl(req, args)
+	resp := env.handler.interactActionHandler.HandleSubtitleImpl(req, args)
 
 	// Subtitle should succeed (queued) even without extension
 	if !isSuccessOrQueued(t, resp) {
@@ -380,7 +380,7 @@ func TestNavigate_NoTabTracking_NotBlocked(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"navigate","url":"https://example.com","sync":false}`)
-	resp := env.handler.interactAction().HandleBrowserActionNavigateImpl(req, args)
+	resp := env.handler.interactActionHandler.HandleBrowserActionNavigateImpl(req, args)
 
 	// Navigate should succeed (queued) even without tab tracking
 	if !isSuccessOrQueued(t, resp) {
@@ -397,7 +397,7 @@ func TestClick_NoTabTracking_FastFail(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"click","selector":"#btn","sync":false}`)
-	resp := env.handler.interactAction().HandleDOMPrimitive(req, args, "click")
+	resp := env.handler.interactActionHandler.HandleDOMPrimitive(req, args, "click")
 
 	code := extractErrorCode(t, resp)
 	if code != mcp.ErrNoData {
@@ -415,7 +415,7 @@ func TestSwitchTab_NoTabTracking_NotBlocked(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"switch_tab","tab_id":42,"sync":false}`)
-	resp := env.handler.interactAction().HandleBrowserActionSwitchTabImpl(req, args)
+	resp := env.handler.interactActionHandler.HandleBrowserActionSwitchTabImpl(req, args)
 
 	// switch_tab should succeed (queued) even without tab tracking.
 	if !isSuccessOrQueued(t, resp) {
@@ -458,7 +458,7 @@ func TestGateOrder_ParamValidation_BeforeExtension(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"execute_js","sync":false}`)
-	resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
+	resp := env.handler.interactActionHandler.HandleExecuteJSImpl(req, args)
 
 	code := extractErrorCode(t, resp)
 	if code != mcp.ErrMissingParam {
@@ -474,7 +474,7 @@ func TestGateOrder_Pilot_BeforeExtension(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"navigate","url":"https://example.com","sync":false}`)
-	resp := env.handler.interactAction().HandleBrowserActionNavigateImpl(req, args)
+	resp := env.handler.interactActionHandler.HandleBrowserActionNavigateImpl(req, args)
 
 	code := extractErrorCode(t, resp)
 	if code != mcp.ErrCodePilotDisabled {
@@ -490,7 +490,7 @@ func TestGateOrder_Extension_BeforeTabTracking(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"click","selector":"#btn","sync":false}`)
-	resp := env.handler.interactAction().HandleDOMPrimitive(req, args, "click")
+	resp := env.handler.interactActionHandler.HandleDOMPrimitive(req, args, "click")
 
 	code := extractErrorCode(t, resp)
 	if code != mcp.ErrNoData {
@@ -514,7 +514,7 @@ func TestGateOrder_TabTracking_BeforeCSP(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"execute_js","script":"return 1","world":"main","sync":false}`)
-	resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
+	resp := env.handler.interactActionHandler.HandleExecuteJSImpl(req, args)
 
 	code := extractErrorCode(t, resp)
 	if code != mcp.ErrNoData {
@@ -535,7 +535,7 @@ func TestGateOrder_Extension_BeforeCSP(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"execute_js","script":"return 1","world":"main","sync":false}`)
-	resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
+	resp := env.handler.interactActionHandler.HandleExecuteJSImpl(req, args)
 
 	code := extractErrorCode(t, resp)
 	if code != mcp.ErrNoData {
@@ -705,7 +705,7 @@ func TestSmoke_AllGates_SequentialFiring_ExecuteJS(t *testing.T) {
 
 		req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 		args := json.RawMessage(`{"what":"execute_js","world":"main","sync":false}`)
-		resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
+		resp := env.handler.interactActionHandler.HandleExecuteJSImpl(req, args)
 
 		code := extractErrorCode(t, resp)
 		if code != mcp.ErrMissingParam {
@@ -721,7 +721,7 @@ func TestSmoke_AllGates_SequentialFiring_ExecuteJS(t *testing.T) {
 
 		req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 		args := json.RawMessage(`{"what":"execute_js","script":"return 1","world":"main","sync":false}`)
-		resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
+		resp := env.handler.interactActionHandler.HandleExecuteJSImpl(req, args)
 
 		code := extractErrorCode(t, resp)
 		if code != mcp.ErrCodePilotDisabled {
@@ -737,7 +737,7 @@ func TestSmoke_AllGates_SequentialFiring_ExecuteJS(t *testing.T) {
 
 		req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 		args := json.RawMessage(`{"what":"execute_js","script":"return 1","world":"main","sync":false}`)
-		resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
+		resp := env.handler.interactActionHandler.HandleExecuteJSImpl(req, args)
 
 		code := extractErrorCode(t, resp)
 		if code != mcp.ErrNoData {
@@ -758,7 +758,7 @@ func TestSmoke_AllGates_SequentialFiring_ExecuteJS(t *testing.T) {
 
 		req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 		args := json.RawMessage(`{"what":"execute_js","script":"return 1","world":"main","sync":false}`)
-		resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
+		resp := env.handler.interactActionHandler.HandleExecuteJSImpl(req, args)
 
 		code := extractErrorCode(t, resp)
 		if code != mcp.ErrNoData {
@@ -779,7 +779,7 @@ func TestSmoke_AllGates_SequentialFiring_ExecuteJS(t *testing.T) {
 
 		req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 		args := json.RawMessage(`{"what":"execute_js","script":"return 1","world":"main","sync":false}`)
-		resp := env.handler.interactAction().HandleExecuteJSImpl(req, args)
+		resp := env.handler.interactActionHandler.HandleExecuteJSImpl(req, args)
 
 		code := extractErrorCode(t, resp)
 		if code != mcp.ErrExtError {

@@ -282,11 +282,11 @@ func (h *ToolHandler) SetTelemetryMode(mode string) {
 }
 
 func (h *ToolHandler) InteractActionSetJitter(ms int) {
-	h.interactAction().SetJitter(ms)
+	h.interactActionHandler.SetJitter(ms)
 }
 
 func (h *ToolHandler) InteractActionGetJitter() int {
-	return h.interactAction().GetJitter()
+	return h.interactActionHandler.GetJitter()
 }
 
 func (h *ToolHandler) HasCapture() bool {

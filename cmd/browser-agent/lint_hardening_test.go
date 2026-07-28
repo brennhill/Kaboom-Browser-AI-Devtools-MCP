@@ -76,6 +76,7 @@ func TestRootDoesNotReexportCanonicalTypes(t *testing.T) {
 		"toolConfigureNetworkRecording(",
 		"func (h *ToolHandler) testGen(",
 		"func (h *ToolHandler) stateInteract(",
+		"func (h *ToolHandler) interactAction(",
 	} {
 		for _, path := range rootFiles {
 			if strings.HasSuffix(path, "_test.go") {
@@ -88,6 +89,30 @@ func TestRootDoesNotReexportCanonicalTypes(t *testing.T) {
 			if strings.Contains(string(source), forbidden) {
 				t.Errorf("%s re-exports canonical API %q", filepath.Base(path), forbidden)
 			}
+		}
+	}
+}
+
+func TestInteractTestsDoNotMirrorRootAccessor(t *testing.T) {
+	sourcePath := filepath.Join(
+		projectRoot(),
+		"cmd",
+		"browser-agent",
+		"internal",
+		"toolinteract",
+		"test_helpers_test.go",
+	)
+	source, err := os.ReadFile(sourcePath)
+	if err != nil {
+		t.Fatalf("read interact test helpers: %v", err)
+	}
+	for _, forbidden := range []string{
+		"newTestToolHandler",
+		"testToolHandlerShim",
+		"func (s *testToolHandlerShim) interactAction(",
+	} {
+		if strings.Contains(string(source), forbidden) {
+			t.Errorf("interact tests retain root accessor facade %q", forbidden)
 		}
 	}
 }

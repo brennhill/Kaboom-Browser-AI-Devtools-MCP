@@ -82,9 +82,9 @@ func (h *ToolHandler) ExecuteA11yQuery(scope string, tags []string, frame any, f
 // finalizeResponseEnrichment attaches evidence, transient elements, and retry context
 // to the response data in a single call. Consolidates the repeated triplet pattern.
 func (h *ToolHandler) finalizeResponseEnrichment(corrID string, responseData map[string]any, cmd queries.CommandResult) {
-	h.interactAction().AttachEvidencePayload(corrID, responseData)
+	h.interactActionHandler.AttachEvidencePayload(corrID, responseData)
 	h.attachTransientElements(responseData, cmd.CreatedAt)
-	h.interactAction().AttachRetryContext(corrID, responseData, cmd.Status, cmd.Error)
+	h.interactActionHandler.AttachRetryContext(corrID, responseData, cmd.Status, cmd.Error)
 }
 
 func (h *ToolHandler) formatCommandResult(req mcp.JSONRPCRequest, cmd queries.CommandResult, corrID string) mcp.JSONRPCResponse {

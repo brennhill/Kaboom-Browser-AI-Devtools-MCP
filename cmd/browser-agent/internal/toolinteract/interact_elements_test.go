@@ -14,8 +14,8 @@ import (
 
 func TestResolveIndexToSelector_Empty(t *testing.T) {
 	t.Parallel()
-	h := newTestToolHandler()
-	_, ok, _, _ := h.interactAction().resolveIndexToSelector("client-a", 0, 0, "")
+	h := newTestHandler()
+	_, ok, _, _ := h.resolveIndexToSelector("client-a", 0, 0, "")
 	if ok {
 		t.Error("expected not found on empty store")
 	}
@@ -23,21 +23,21 @@ func TestResolveIndexToSelector_Empty(t *testing.T) {
 
 func TestResolveIndexToSelector_AfterBuild(t *testing.T) {
 	t.Parallel()
-	h := newTestToolHandler()
+	h := newTestHandler()
 
 	// Manually populate the store
-	h.interactAction().elementIndexRegistry.Store("client-a", 0, "gen_1", map[int]string{
+	h.elementIndexRegistry.Store("client-a", 0, "gen_1", map[int]string{
 		0: "#email",
 		1: "#password",
 		2: "button[type=submit]",
 	})
 
-	sel, ok, _, _ := h.interactAction().resolveIndexToSelector("client-a", 0, 1, "")
+	sel, ok, _, _ := h.resolveIndexToSelector("client-a", 0, 1, "")
 	if !ok || sel != "#password" {
 		t.Errorf("expected #password, got %q (ok=%v)", sel, ok)
 	}
 
-	_, ok, _, _ = h.interactAction().resolveIndexToSelector("client-a", 0, 99, "")
+	_, ok, _, _ = h.resolveIndexToSelector("client-a", 0, 99, "")
 	if ok {
 		t.Error("expected not found for missing index")
 	}
@@ -45,21 +45,21 @@ func TestResolveIndexToSelector_AfterBuild(t *testing.T) {
 
 func TestResolveIndexToSelector_ScopedByClientAndTab(t *testing.T) {
 	t.Parallel()
-	h := newTestToolHandler()
+	h := newTestHandler()
 
-	h.interactAction().elementIndexRegistry.Store("client-a", 0, "gen_a", map[int]string{1: "#a"})
-	h.interactAction().elementIndexRegistry.Store("client-b", 0, "gen_b", map[int]string{1: "#b"})
-	h.interactAction().elementIndexRegistry.Store("client-a", 9, "gen_a9", map[int]string{1: "#a9"})
+	h.elementIndexRegistry.Store("client-a", 0, "gen_a", map[int]string{1: "#a"})
+	h.elementIndexRegistry.Store("client-b", 0, "gen_b", map[int]string{1: "#b"})
+	h.elementIndexRegistry.Store("client-a", 9, "gen_a9", map[int]string{1: "#a9"})
 
-	sel, ok, _, _ := h.interactAction().resolveIndexToSelector("client-a", 0, 1, "")
+	sel, ok, _, _ := h.resolveIndexToSelector("client-a", 0, 1, "")
 	if !ok || sel != "#a" {
 		t.Fatalf("client-a/tab0 selector=%q ok=%v, want #a/true", sel, ok)
 	}
-	sel, ok, _, _ = h.interactAction().resolveIndexToSelector("client-b", 0, 1, "")
+	sel, ok, _, _ = h.resolveIndexToSelector("client-b", 0, 1, "")
 	if !ok || sel != "#b" {
 		t.Fatalf("client-b/tab0 selector=%q ok=%v, want #b/true", sel, ok)
 	}
-	sel, ok, _, _ = h.interactAction().resolveIndexToSelector("client-a", 9, 1, "")
+	sel, ok, _, _ = h.resolveIndexToSelector("client-a", 9, 1, "")
 	if !ok || sel != "#a9" {
 		t.Fatalf("client-a/tab9 selector=%q ok=%v, want #a9/true", sel, ok)
 	}
@@ -67,11 +67,11 @@ func TestResolveIndexToSelector_ScopedByClientAndTab(t *testing.T) {
 
 func TestResolveIndexToSelector_GenerationMismatch(t *testing.T) {
 	t.Parallel()
-	h := newTestToolHandler()
+	h := newTestHandler()
 
-	h.interactAction().elementIndexRegistry.Store("client-a", 0, "gen_new", map[int]string{1: "#a"})
+	h.elementIndexRegistry.Store("client-a", 0, "gen_new", map[int]string{1: "#a"})
 
-	_, ok, stale, latest := h.interactAction().resolveIndexToSelector("client-a", 0, 1, "gen_old")
+	_, ok, stale, latest := h.resolveIndexToSelector("client-a", 0, 1, "gen_old")
 	if ok {
 		t.Fatal("expected no selector on generation mismatch")
 	}
@@ -85,11 +85,11 @@ func TestResolveIndexToSelector_GenerationMismatch(t *testing.T) {
 
 func TestHandleDOMPrimitive_IndexGenerationMismatch(t *testing.T) {
 	t.Parallel()
-	h := newTestToolHandler()
-	h.interactAction().elementIndexRegistry.Store("client-a", 7, "gen_new", map[int]string{1: "#submit"})
+	h := newTestHandler()
+	h.elementIndexRegistry.Store("client-a", 7, "gen_new", map[int]string{1: "#submit"})
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1), ClientID: "client-a"}
-	resp := h.interactAction().HandleDOMPrimitive(req, json.RawMessage(`{"index":1,"tab_id":7,"index_generation":"gen_old"}`), "click")
+	resp := h.HandleDOMPrimitive(req, json.RawMessage(`{"index":1,"tab_id":7,"index_generation":"gen_old"}`), "click")
 	result := parseToolResult(t, resp)
 	if !result.IsError {
 		t.Fatalf("expected error response, got: %s", firstText(result))
@@ -102,7 +102,7 @@ func TestHandleDOMPrimitive_IndexGenerationMismatch(t *testing.T) {
 
 func TestBuildElementIndexFromResponse_ValidElements(t *testing.T) {
 	t.Parallel()
-	h := newTestToolHandler()
+	h := newTestHandler()
 
 	// Simulate a list_interactive response with elements in the JSON
 	elemData := map[string]any{
@@ -120,20 +120,20 @@ func TestBuildElementIndexFromResponse_ValidElements(t *testing.T) {
 	resultJSON, _ := json.Marshal(result)
 	resp := mcp.JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
 
-	h.interactAction().buildElementIndexFromResponse("client-a", 0, "gen_1", resp)
+	h.buildElementIndexFromResponse("client-a", 0, "gen_1", resp)
 
-	sel, ok, _, _ := h.interactAction().resolveIndexToSelector("client-a", 0, 0, "")
+	sel, ok, _, _ := h.resolveIndexToSelector("client-a", 0, 0, "")
 	if !ok || sel != "#name" {
 		t.Errorf("index 0: expected #name, got %q (ok=%v)", sel, ok)
 	}
 
-	sel, ok, _, _ = h.interactAction().resolveIndexToSelector("client-a", 0, 1, "")
+	sel, ok, _, _ = h.resolveIndexToSelector("client-a", 0, 1, "")
 	if !ok || sel != ".btn-submit" {
 		t.Errorf("index 1: expected .btn-submit, got %q (ok=%v)", sel, ok)
 	}
 
 	// Index 2 had empty selector, should not be stored
-	_, ok, _, _ = h.interactAction().resolveIndexToSelector("client-a", 0, 2, "")
+	_, ok, _, _ = h.resolveIndexToSelector("client-a", 0, 2, "")
 	if ok {
 		t.Error("index 2 with empty selector should not be stored")
 	}
@@ -141,7 +141,7 @@ func TestBuildElementIndexFromResponse_ValidElements(t *testing.T) {
 
 func TestBuildElementIndexFromResponse_NestedResult(t *testing.T) {
 	t.Parallel()
-	h := newTestToolHandler()
+	h := newTestHandler()
 
 	// Elements nested under result.result.elements
 	nestedData := map[string]any{
@@ -161,9 +161,9 @@ func TestBuildElementIndexFromResponse_NestedResult(t *testing.T) {
 	resultJSON, _ := json.Marshal(result)
 	resp := mcp.JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
 
-	h.interactAction().buildElementIndexFromResponse("client-a", 0, "gen_1", resp)
+	h.buildElementIndexFromResponse("client-a", 0, "gen_1", resp)
 
-	sel, ok, _, _ := h.interactAction().resolveIndexToSelector("client-a", 0, 0, "")
+	sel, ok, _, _ := h.resolveIndexToSelector("client-a", 0, 0, "")
 	if !ok || sel != "a.link" {
 		t.Errorf("expected a.link from nested result, got %q (ok=%v)", sel, ok)
 	}
@@ -171,10 +171,10 @@ func TestBuildElementIndexFromResponse_NestedResult(t *testing.T) {
 
 func TestBuildElementIndexFromResponse_ErrorResponse(t *testing.T) {
 	t.Parallel()
-	h := newTestToolHandler()
+	h := newTestHandler()
 
 	// Pre-populate store
-	h.interactAction().elementIndexRegistry.Store("client-a", 0, "gen_1", map[int]string{0: "old"})
+	h.elementIndexRegistry.Store("client-a", 0, "gen_1", map[int]string{0: "old"})
 
 	// Error response should not clear the store
 	result := mcp.MCPToolResult{
@@ -184,9 +184,9 @@ func TestBuildElementIndexFromResponse_ErrorResponse(t *testing.T) {
 	resultJSON, _ := json.Marshal(result)
 	resp := mcp.JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
 
-	h.interactAction().buildElementIndexFromResponse("client-a", 0, "gen_2", resp)
+	h.buildElementIndexFromResponse("client-a", 0, "gen_2", resp)
 
-	sel, ok, _, _ := h.interactAction().resolveIndexToSelector("client-a", 0, 0, "")
+	sel, ok, _, _ := h.resolveIndexToSelector("client-a", 0, 0, "")
 	if !ok || sel != "old" {
 		t.Errorf("error response should not clear store, got %q (ok=%v)", sel, ok)
 	}

@@ -229,7 +229,7 @@ func TestCSP_Navigate_IncludesBlockedActions(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"navigate","url":"https://example.com","sync":false}`)
-	resp := env.handler.interactAction().HandleBrowserActionNavigateImpl(req, args)
+	resp := env.handler.interactActionHandler.HandleBrowserActionNavigateImpl(req, args)
 
 	// Parse the queued response
 	var result mcp.MCPToolResult
@@ -296,7 +296,7 @@ func TestCSP_Navigate_OmitsBlockedActions_WhenClear(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"navigate","url":"https://example.com","sync":false}`)
-	resp := env.handler.interactAction().HandleBrowserActionNavigateImpl(req, args)
+	resp := env.handler.interactActionHandler.HandleBrowserActionNavigateImpl(req, args)
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
