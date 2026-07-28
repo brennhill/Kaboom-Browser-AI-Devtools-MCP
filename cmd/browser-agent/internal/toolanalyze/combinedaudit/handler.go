@@ -13,9 +13,9 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 )
 
-type Deps interface {
-	toolanalyze.Deps
-	observe.Deps
+type Deps struct {
+	Analyze toolanalyze.Deps
+	Observe observe.Deps
 }
 
 // auditCategory defines a category for the combined audit.
@@ -29,16 +29,16 @@ type auditCategory struct {
 func defaultAuditCategories() []auditCategory {
 	return []auditCategory{
 		{Name: "performance", Handler: func(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return observe.CheckPerformance(d, req, args)
+			return observe.CheckPerformance(d.Observe, req, args)
 		}, Weight: 1.0},
 		{Name: "accessibility", Handler: func(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return observe.RunA11yAudit(d, req, args)
+			return observe.RunA11yAudit(d.Observe, req, args)
 		}, Weight: 1.0},
 		{Name: "security", Handler: func(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return toolanalyze.HandleSecurityAudit(d, req, args)
+			return toolanalyze.HandleSecurityAudit(d.Analyze, req, args)
 		}, Weight: 1.0},
 		{Name: "best_practices", Handler: func(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return toolanalyze.HandleThirdPartyAudit(d, req, args)
+			return toolanalyze.HandleThirdPartyAudit(d.Analyze, req, args)
 		}, Weight: 1.0},
 	}
 }
@@ -102,7 +102,7 @@ func Handle(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCRes
 		overallScore = int(totalScore / totalWeight)
 	}
 
-	_, _, trackedURL := d.GetTrackingStatus()
+	_, _, trackedURL := d.Analyze.GetTrackingStatus()
 
 	// When summary=true, strip findings to reduce output size
 	catOutput := make(map[string]any, len(categoryResults))

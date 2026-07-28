@@ -1,6 +1,6 @@
 // handlers_coverage_test.go — Unit tests for the analyze-local MCP handlers and builders.
 // Covers navigation dispatch, security/third-party audits, link validation, summary
-// builders and detail-hint construction via a fake Deps + fake security scanner.
+// builders and detail-hint construction without a host-object compatibility fake.
 
 package toolanalyze
 
@@ -9,62 +9,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
-
-// ---------------------------------------------------------------------------
-// Test fakes
-// ---------------------------------------------------------------------------
-
-type fakeScanner struct {
-	result any
-	err    error
-}
-
-func (s fakeScanner) HandleSecurityAudit(_ json.RawMessage, _ []types.NetworkBody, _ []types.LogEntry, _ []string, _ []types.NetworkWaterfallEntry) (any, error) {
-	return s.result, s.err
-}
-
-type fakeAnalyzeDeps struct {
-	trackingEnabled bool
-	tabID           int
-	tabURL          string
-	networkBodies   []types.NetworkBody
-	waterfall       []types.NetworkWaterfallEntry
-	consoleSec      []types.LogEntry
-	scanner         SecurityScannerInterface
-	scannerSet      bool
-	logEntries      []types.LogEntry
-	a11yResult      json.RawMessage
-	a11yErr         error
-
-	enqueueBlocked bool
-
-	enqueueCalled   bool
-	maybeWaitCalled bool
-}
-
-func (f *fakeAnalyzeDeps) EnqueuePendingQuery(req mcp.JSONRPCRequest, _ queries.PendingQuery, _ interface{ String() string }) (mcp.JSONRPCResponse, bool) {
-	// placeholder — real signature defined below
-	return mcp.JSONRPCResponse{}, false
-}
-
-func (f *fakeAnalyzeDeps) GetTrackingStatus() (bool, int, string) {
-	return f.trackingEnabled, f.tabID, f.tabURL
-}
-func (f *fakeAnalyzeDeps) NetworkBodies() []types.NetworkBody { return f.networkBodies }
-func (f *fakeAnalyzeDeps) NetworkWaterfallEntries() []types.NetworkWaterfallEntry {
-	return f.waterfall
-}
-func (f *fakeAnalyzeDeps) ConsoleSecurityEntries() []types.LogEntry { return f.consoleSec }
-func (f *fakeAnalyzeDeps) SecurityScanner() SecurityScannerInterface {
-	return f.scanner
-}
-func (f *fakeAnalyzeDeps) LogEntries() []types.LogEntry { return f.logEntries }
-func (f *fakeAnalyzeDeps) ExecuteA11yQuery(_ string, _ []string, _ any, _ bool) (json.RawMessage, error) {
-	return f.a11yResult, f.a11yErr
-}
 
 func az_newReq() mcp.JSONRPCRequest { return mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1} }
 

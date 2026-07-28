@@ -6,6 +6,8 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-28
 code_paths:
+  - cmd/browser-agent/tools_core.go
+  - cmd/browser-agent/internal/toolanalyze/deps.go
   - cmd/browser-agent/internal/toolanalyze/pageissues/handler.go
   - cmd/browser-agent/internal/toolanalyze/page_issues_summary.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
@@ -23,6 +25,8 @@ code_paths:
   - src/background/message-handlers.ts
   - src/types/runtime-messages.ts
 test_paths:
+  - cmd/browser-agent/lint_hardening_test.go
+  - cmd/browser-agent/internal/toolanalyze/handlers_coverage_test.go
   - cmd/browser-agent/handler_tools_call_postprocess_test.go
   - cmd/browser-agent/internal/toolanalyze/pageissues/handler_test.go
   - cmd/browser-agent/internal/toolanalyze/pageissues/summary_test.go
@@ -51,6 +55,9 @@ last_verified_date: 2026-04-03
 
 ### 1. `analyze(what: "page_issues")`
 Internal evidence sweep that aggregates console errors, network failures (4xx/5xx), a11y violations, and security findings into a unified prioritized report. Runs checks in parallel with per-check timeouts. Supports `summary:true` for ~80% token reduction and serves as the audit baseline.
+
+The sweep consumes the explicit analyze dependency value directly; page-issue
+changes do not require adding forwarding methods to the root handler.
 
 ### 2. `/kaboom/audit` command + `audit` skill
 Repo-owned workflow assets that turn the raw primitives into one product-shaped Phase 1 audit. They require a tracked site, run the six-lane review, and return a polished local report with scores, findings, Fast Wins, and Ship Blockers.

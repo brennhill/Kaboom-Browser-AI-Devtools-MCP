@@ -6,6 +6,8 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-28
 code_paths:
+  - cmd/browser-agent/tools_core.go
+  - cmd/browser-agent/internal/toolanalyze/deps.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
   - cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go
   - internal/analysis/apicontract/runtime_handler.go
@@ -47,6 +49,9 @@ code_paths:
   - src/inject/message-handlers.ts
   - src/types/runtime-messages.ts
 test_paths:
+  - cmd/browser-agent/lint_hardening_test.go
+  - cmd/browser-agent/tools_interface_check_test.go
+  - cmd/browser-agent/internal/toolanalyze/handlers_coverage_test.go
   - internal/analysis/apicontract/runtime_handler_test.go
   - cmd/browser-agent/tools_analyze_annotations_test.go
   - cmd/browser-agent/tools_analyze_inspect_test.go
@@ -90,9 +95,12 @@ last_verified_date: 2026-03-05
 
 ## Canonical Note
 `analyze` is the active analysis surface. `analyze({what:"dom"})` is the canonical DOM query API.
-The mode registry, alias policy, and narrow `toolanalyze.Deps` adaptation are
-owned by `internal/toolanalyze/analyzedispatch/dispatcher.go`; feature implementations remain in
-their dedicated modules.
+The mode registry and alias policy are owned by
+`internal/toolanalyze/analyzedispatch/dispatcher.go`; feature implementations
+remain in their dedicated modules. The dispatcher closes over separate
+analyze, inspect, observe, audit, and visual dependency groups. Analyze-owned
+telemetry and security access uses explicit function fields, so there is no
+catch-all host interface or root forwarding surface.
 The background service-worker entrypoint owns startup only. Analysis tests and
 runtime code import their focused owner modules rather than an entrypoint facade.
 

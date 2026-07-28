@@ -282,18 +282,6 @@ func buildTutorialDeps(h *ToolHandler) *tutorial.Deps {
 	}
 }
 
-// GetTrackingStatus is the shared analyze host boundary. Configure tutorial
-// receives the same owner callback through tutorialDeps instead.
-func (h *ToolHandler) GetTrackingStatus() (bool, int, string) {
-	return h.capture.Extension().GetTrackingStatus()
-}
-
-// NetworkBodies is the shared analyze host boundary. Configure noise receives
-// the same telemetry callback through configureLocalDeps instead.
-func (h *ToolHandler) NetworkBodies() []types.NetworkBody {
-	return h.capture.Telemetry().GetNetworkBodies()
-}
-
 func (h *ToolHandler) CollectIssueReport(template, title, userContext string) issuereport.IssueReport {
 	report := issuereport.IssueReport{Template: template, Title: title, UserContext: userContext}
 	report.Diagnostics.Server.Version = version

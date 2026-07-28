@@ -97,6 +97,12 @@ func TestRootDoesNotReexportCanonicalTypes(t *testing.T) {
 		"func (h *ToolHandler) InteractActionSetJitter(",
 		"func (h *ToolHandler) InteractActionGetJitter(",
 		"func (h *ToolHandler) HasCapture(",
+		"func (h *ToolHandler) GetTrackingStatus(",
+		"func (h *ToolHandler) NetworkBodies(",
+		"func (h *ToolHandler) NetworkWaterfallEntries(",
+		"func (h *ToolHandler) ConsoleSecurityEntries(",
+		"func (h *ToolHandler) SecurityScanner(",
+		"func (h *ToolHandler) LogEntries(",
 	} {
 		for _, path := range rootFiles {
 			if strings.HasSuffix(path, "_test.go") {
@@ -109,6 +115,22 @@ func TestRootDoesNotReexportCanonicalTypes(t *testing.T) {
 			if strings.Contains(string(source), forbidden) {
 				t.Errorf("%s re-exports canonical API %q", filepath.Base(path), forbidden)
 			}
+		}
+	}
+}
+
+func TestAnalyzePackagesDoNotRequireCatchAllHost(t *testing.T) {
+	for relativePath, forbidden := range map[string]string{
+		"cmd/browser-agent/internal/toolanalyze/deps.go":                       "type Deps interface {",
+		"cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go": "type Host interface {",
+		"cmd/browser-agent/internal/toolanalyze/combinedaudit/handler.go":      "type Deps interface {",
+	} {
+		source, err := os.ReadFile(filepath.Join(projectRoot(), relativePath))
+		if err != nil {
+			t.Fatalf("read %s: %v", relativePath, err)
+		}
+		if strings.Contains(string(source), forbidden) {
+			t.Errorf("%s retains catch-all dependency interface %q", relativePath, forbidden)
 		}
 	}
 }

@@ -6,10 +6,13 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-28
 code_paths:
+  - cmd/browser-agent/tools_core.go
+  - cmd/browser-agent/internal/toolanalyze/deps.go
   - cmd/browser-agent/internal/toolanalyze/combinedaudit/handler.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
   - cmd/browser-agent/internal/toolanalyze/audit_scoring.go
 test_paths:
+  - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/internal/toolanalyze/combinedaudit/handler_test.go
   - cmd/browser-agent/tools_analyze_audit_test.go
   - cmd/browser-agent/internal/toolanalyze/toolanalyze_test.go
@@ -40,4 +43,6 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-Add concrete implementation and test links here as this feature evolves.
+Combined audit explicitly names its analyze and observe dependency groups.
+It no longer embeds a catch-all host interface, so category changes remain
+coupled to their owning feature boundary.

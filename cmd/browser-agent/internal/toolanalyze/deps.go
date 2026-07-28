@@ -1,41 +1,29 @@
-// deps.go — Declares the Deps interface for analyze-local handlers.
-// Why: Narrow interface decouples analyze handlers from the full ToolHandler.
+// deps.go — Explicit dependencies for analyze-local handlers.
+// Why: Keeps analyze handlers independent without forcing the composition root
+// to expose forwarding methods for analyze-owned data.
 
 package toolanalyze
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
-// Deps provides all dependencies the analyze-local handlers need.
-// *ToolHandler in cmd/browser-agent/ satisfies this interface.
-type Deps interface {
-	mcp.PendingQueryEnqueuer
-	mcp.AsyncCommandDispatcher
-
-	// GetTrackingStatus returns (enabled, tabID, tabURL) for the tracked tab.
-	GetTrackingStatus() (bool, int, string)
-
-	// NetworkBodies returns captured network bodies.
-	NetworkBodies() []types.NetworkBody
-
-	// NetworkWaterfallEntries returns captured network waterfall entries.
-	NetworkWaterfallEntries() []types.NetworkWaterfallEntry
-
-	// ConsoleSecurityEntries returns canonical console entries for security scanning.
-	ConsoleSecurityEntries() []types.LogEntry
-
-	// SecurityScanner returns the security scanner, or nil if not initialized.
-	SecurityScanner() SecurityScannerInterface
-
-	// LogEntries returns a snapshot of console log entries.
-	LogEntries() []types.LogEntry
-
-	// ExecuteA11yQuery runs an accessibility audit via the extension.
-	ExecuteA11yQuery(scope string, tags []string, frame any, forceRefresh bool) (json.RawMessage, error)
+// Deps groups the exact callbacks used by analyze-local handlers.
+type Deps struct {
+	EnqueuePendingQuery     func(mcp.JSONRPCRequest, queries.PendingQuery, time.Duration) (mcp.JSONRPCResponse, bool)
+	MaybeWaitForCommand     func(mcp.JSONRPCRequest, string, json.RawMessage, string) mcp.JSONRPCResponse
+	GetTrackingStatus       func() (bool, int, string)
+	NetworkBodies           func() []types.NetworkBody
+	NetworkWaterfallEntries func() []types.NetworkWaterfallEntry
+	ConsoleSecurityEntries  func() []types.LogEntry
+	SecurityScanner         func() SecurityScannerInterface
+	LogEntries              func() []types.LogEntry
+	ExecuteA11yQuery        func(string, []string, any, bool) (json.RawMessage, error)
 }
 
 // SecurityScannerInterface is the narrow interface for security scanning.
