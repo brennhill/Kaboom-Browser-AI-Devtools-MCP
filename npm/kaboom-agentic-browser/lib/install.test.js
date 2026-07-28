@@ -126,42 +126,6 @@ test('installToClient merges into existing file-type config', () => {
   fs.rmSync(tmp, { recursive: true });
 });
 
-test('installToClient removes gasoline and strum MCP entries before writing kaboom config', () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-install-'));
-  const cfgPath = path.join(tmp, 'mcp.json');
-
-  fs.writeFileSync(cfgPath, JSON.stringify({
-    mcpServers: {
-      other: { command: 'other-cmd', args: [] },
-      gasoline: { command: 'gasoline-mcp', args: [] },
-      'gasoline-agentic-browser': { command: 'gasoline-agentic-browser', args: [] },
-      'strum-browser-devtools': { command: 'strum-agentic-browser', args: [] },
-      strum: { command: 'strum-agentic-browser', args: [] },
-    },
-  }));
-
-  const def = {
-    id: 'test-cursor',
-    name: 'Test Cursor',
-    type: 'file',
-    configPath: { all: cfgPath },
-    detectDir: { all: tmp },
-  };
-
-  const result = installToClient(def, { dryRun: false, envVars: {}, binaryCommand: '/tmp/kaboom-bin' });
-  assert.equal(result.success, true);
-
-  const written = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
-  assert.ok(written.mcpServers['kaboom-browser-devtools']);
-  assert.equal(written.mcpServers.gasoline, undefined);
-  assert.equal(written.mcpServers['gasoline-agentic-browser'], undefined);
-  assert.equal(written.mcpServers['strum-browser-devtools'], undefined);
-  assert.equal(written.mcpServers.strum, undefined);
-  assert.ok(written.mcpServers.other, 'should preserve non-managed servers');
-
-  fs.rmSync(tmp, { recursive: true });
-});
-
 test('installToClient dry-run does not write file', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-install-'));
   const cfgPath = path.join(tmp, 'mcp.json');
@@ -448,14 +412,13 @@ test('installToClient creates Zed-format config with context_servers key', () =>
 
 // --- VS Code format install ---
 
-test('installToClient writes VS Code config under servers key and migrates legacy mcpServers entries', () => {
+test('installToClient writes VS Code config under servers key and preserves unrelated keys', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-install-'));
   const cfgPath = path.join(tmp, 'mcp.json');
 
-  // Pre-existing VS Code config: stale kaboom entry under the legacy key plus a user server.
   fs.writeFileSync(cfgPath, JSON.stringify({
     servers: { other: { command: 'other-cmd', args: [] } },
-    mcpServers: { 'kaboom-browser-devtools': { command: 'old-kaboom', args: [] } },
+    extensionSetting: { enabled: true },
   }));
 
   const def = {
@@ -464,7 +427,6 @@ test('installToClient writes VS Code config under servers key and migrates legac
     type: 'file',
     dedicatedMcpFile: true,
     configKey: 'servers',
-    legacyConfigKeys: ['mcpServers'],
     configPath: { all: cfgPath },
     detectDir: { all: tmp },
   };
@@ -476,7 +438,7 @@ test('installToClient writes VS Code config under servers key and migrates legac
   assert.ok(written.servers['kaboom-browser-devtools'], 'must write under the servers key');
   assert.equal(written.servers['kaboom-browser-devtools'].command, '/tmp/kaboom-bin');
   assert.ok(written.servers.other, 'must preserve user servers');
-  assert.equal(written.mcpServers, undefined, 'stale legacy-key entry must be migrated away');
+  assert.deepEqual(written.extensionSetting, { enabled: true });
 
   fs.rmSync(tmp, { recursive: true });
 });
@@ -505,55 +467,4 @@ test('executeInstall dry-run reports all detected clients without writing', () =
   assert.equal(fs.existsSync(path.join(cursorDir, 'mcp.json')), false);
 
   fs.rmSync(tmp, { recursive: true });
-});
-
-test('installBundledSkills removes managed gasoline and strum legacy skill files before writing kaboom skill', async () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-skills-'));
-  const skillsDir = path.join(tmp, 'bundled');
-  const claudeRoot = path.join(tmp, 'claude-skills');
-
-  fs.mkdirSync(path.join(skillsDir, 'debug'), { recursive: true });
-  fs.writeFileSync(
-    path.join(skillsDir, 'skills.json'),
-    JSON.stringify({ skills: [{ id: 'debug', version: 2 }] }),
-    'utf8'
-  );
-  fs.writeFileSync(path.join(skillsDir, 'debug', 'SKILL.md'), '# Debug\nKaboom skill body\n', 'utf8');
-
-  fs.mkdirSync(claudeRoot, { recursive: true });
-  fs.writeFileSync(
-    path.join(claudeRoot, 'gasoline-debug.md'),
-    '<!-- gasoline-managed-skill id:debug version:1 -->\nold gasoline body\n',
-    'utf8'
-  );
-  fs.writeFileSync(
-    path.join(claudeRoot, 'strum-debug.md'),
-    '<!-- strum-managed-skill id:debug version:1 -->\nold strum body\n',
-    'utf8'
-  );
-
-  const originalClaudeDir = process.env.KABOOM_CLAUDE_SKILLS_DIR;
-  try {
-    process.env.KABOOM_CLAUDE_SKILLS_DIR = claudeRoot;
-    const result = await installBundledSkills({
-      agents: ['claude'],
-      scope: 'global',
-      skillsDir,
-    });
-
-    assert.equal(result.skipped, false);
-    assert.ok(result.summary.legacy_removed >= 2);
-    assert.equal(fs.existsSync(path.join(claudeRoot, 'gasoline-debug.md')), false);
-    assert.equal(fs.existsSync(path.join(claudeRoot, 'strum-debug.md')), false);
-
-    const installedSkill = fs.readFileSync(path.join(claudeRoot, 'debug.md'), 'utf8');
-    assert.match(installedSkill, /Kaboom skill body/);
-  } finally {
-    if (originalClaudeDir === undefined) {
-      delete process.env.KABOOM_CLAUDE_SKILLS_DIR;
-    } else {
-      process.env.KABOOM_CLAUDE_SKILLS_DIR = originalClaudeDir;
-    }
-    fs.rmSync(tmp, { recursive: true, force: true });
-  }
 });

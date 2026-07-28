@@ -23,16 +23,13 @@ test('npm wrapper no longer exposes gasoline launcher aliases', () => {
 
 // --- uninstallFromClient: file-type ---
 
-test('uninstallFromClient removes kaboom, gasoline, and strum managed entries from file-type config', () => {
+test('uninstallFromClient removes canonical entry and preserves other servers', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-uninstall-'));
   const cfgPath = path.join(tmp, 'mcp.json');
 
   fs.writeFileSync(cfgPath, JSON.stringify({
     mcpServers: {
       'kaboom-browser-devtools': { command: 'kaboom-agentic-browser', args: [] },
-      gasoline: { command: 'gasoline-mcp', args: [] },
-      'strum-browser-devtools': { command: 'strum-agentic-browser', args: [] },
-      strum: { command: 'strum-agentic-browser', args: [] },
       other: { command: 'other-cmd', args: [] },
     },
   }));
@@ -50,9 +47,6 @@ test('uninstallFromClient removes kaboom, gasoline, and strum managed entries fr
 
   const written = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
   assert.equal(written.mcpServers['kaboom-browser-devtools'], undefined);
-  assert.equal(written.mcpServers.gasoline, undefined);
-  assert.equal(written.mcpServers['strum-browser-devtools'], undefined);
-  assert.equal(written.mcpServers.strum, undefined);
   assert.ok(written.mcpServers.other, 'should preserve other servers');
 
   fs.rmSync(tmp, { recursive: true });
@@ -63,7 +57,7 @@ test('uninstallFromClient deletes dedicated MCP config file when managed entries
   const cfgPath = path.join(tmp, 'mcp.json');
 
   fs.writeFileSync(cfgPath, JSON.stringify({
-    mcpServers: { gasoline: { command: 'gasoline-mcp', args: [] } },
+    mcpServers: { 'kaboom-browser-devtools': { command: 'kaboom-agentic-browser', args: [] } },
   }));
 
   const def = {
@@ -142,7 +136,7 @@ test('uninstallFromClient never deletes shared settings files (Gemini-style mcpS
   fs.rmSync(tmp, { recursive: true });
 });
 
-test('uninstallFromClient cleans both servers and legacy mcpServers keys (VS Code)', () => {
+test('uninstallFromClient cleans the canonical VS Code servers key', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-uninstall-'));
   const cfgPath = path.join(tmp, 'mcp.json');
 
@@ -151,7 +145,7 @@ test('uninstallFromClient cleans both servers and legacy mcpServers keys (VS Cod
       'kaboom-browser-devtools': { command: 'kaboom-agentic-browser', args: [] },
       other: { command: 'other-cmd', args: [] },
     },
-    mcpServers: { gasoline: { command: 'gasoline-mcp', args: [] } },
+    extensionSetting: true,
   }));
 
   const def = {
@@ -160,7 +154,6 @@ test('uninstallFromClient cleans both servers and legacy mcpServers keys (VS Cod
     type: 'file',
     dedicatedMcpFile: true,
     configKey: 'servers',
-    legacyConfigKeys: ['mcpServers'],
     configPath: { all: cfgPath },
     detectDir: { all: tmp },
   };
@@ -172,60 +165,7 @@ test('uninstallFromClient cleans both servers and legacy mcpServers keys (VS Cod
   const written = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
   assert.equal(written.servers['kaboom-browser-devtools'], undefined);
   assert.ok(written.servers.other, 'unrelated entries under servers must survive');
-  assert.equal(written.mcpServers.gasoline, undefined, 'legacy mcpServers key must also be cleaned');
-
-  fs.rmSync(tmp, { recursive: true });
-});
-
-test('uninstallFromClient detects managed entries present only under a legacy config key', () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-uninstall-'));
-  const cfgPath = path.join(tmp, 'mcp.json');
-
-  fs.writeFileSync(cfgPath, JSON.stringify({
-    servers: {},
-    mcpServers: { gasoline: { command: 'gasoline-mcp', args: [] } },
-  }));
-
-  const def = {
-    id: 'test-vscode',
-    name: 'Test VS Code',
-    type: 'file',
-    dedicatedMcpFile: true,
-    configKey: 'servers',
-    legacyConfigKeys: ['mcpServers'],
-    configPath: { all: cfgPath },
-    detectDir: { all: tmp },
-  };
-
-  const result = uninstallFromClient(def, { dryRun: false });
-  assert.equal(result.status, 'removed', 'legacy-key-only entries must still count as configured');
-  assert.equal(fs.existsSync(cfgPath), false, 'dedicated file with nothing left may be removed');
-
-  fs.rmSync(tmp, { recursive: true });
-});
-
-test('uninstallFromClient cleans stale entries at declared legacy config paths', () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-uninstall-'));
-  const primaryPath = path.join(tmp, 'mcp_config.json'); // intentionally absent
-  const legacyPath = path.join(tmp, 'legacy', 'mcp_config.json');
-  fs.mkdirSync(path.dirname(legacyPath), { recursive: true });
-  fs.writeFileSync(legacyPath, JSON.stringify({
-    mcpServers: { gasoline: { command: 'gasoline-mcp', args: [] } },
-  }));
-
-  const def = {
-    id: 'test-antigravity',
-    name: 'Test Antigravity',
-    type: 'file',
-    dedicatedMcpFile: true,
-    configPath: { all: primaryPath },
-    detectDir: { all: tmp },
-    legacyConfigPaths: { all: legacyPath },
-  };
-
-  const result = uninstallFromClient(def, { dryRun: false });
-  assert.equal(result.status, 'removed', 'stale legacy-path entries must be cleaned and reported');
-  assert.equal(fs.existsSync(legacyPath), false, 'legacy dedicated config should be removed when emptied');
+  assert.equal(written.extensionSetting, true, 'unrelated settings must survive');
 
   fs.rmSync(tmp, { recursive: true });
 });
@@ -270,7 +210,7 @@ test('uninstallFromClient dry-run does not modify file', () => {
   const cfgPath = path.join(tmp, 'mcp.json');
 
   const original = {
-    mcpServers: { gasoline: { command: 'gasoline-mcp', args: [] } },
+    mcpServers: { 'kaboom-browser-devtools': { command: 'kaboom-agentic-browser', args: [] } },
   };
   fs.writeFileSync(cfgPath, JSON.stringify(original));
 
@@ -286,20 +226,19 @@ test('uninstallFromClient dry-run does not modify file', () => {
   assert.equal(result.status, 'removed');
 
   const still = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
-  assert.ok(still.mcpServers.gasoline, 'should not modify in dry-run');
+  assert.ok(still.mcpServers['kaboom-browser-devtools'], 'should not modify in dry-run');
 
   fs.rmSync(tmp, { recursive: true });
 });
 
 // --- uninstallFromClient: CLI-type ---
 
-test('uninstallFromClient removes every configured server name via CLI, not just the first', () => {
+test('uninstallFromClient removes the canonical server via CLI', () => {
   if (process.platform === 'win32') return; // fake CLI uses a unix shebang
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-uninstall-cli-'));
   const logPath = path.join(tmp, 'calls.log');
   const fakeCli = path.join(tmp, 'fake-claude');
 
-  // Fake `claude` CLI: both the canonical and one legacy name are configured.
   fs.writeFileSync(
     fakeCli,
     [
@@ -307,8 +246,7 @@ test('uninstallFromClient removes every configured server name via CLI, not just
       "const fs = require('fs');",
       'const name = process.argv[process.argv.length - 1];',
       `fs.appendFileSync(${JSON.stringify(logPath)}, name + '\\n');`,
-      "const configured = ['kaboom-browser-devtools', 'gasoline'];",
-      'if (configured.includes(name)) process.exit(0);',
+      "if (name === 'kaboom-browser-devtools') process.exit(0);",
       "process.stderr.write('No MCP server found: not found');",
       'process.exit(1);',
       '',
@@ -328,9 +266,7 @@ test('uninstallFromClient removes every configured server name via CLI, not just
   assert.equal(result.status, 'removed');
 
   const attempts = fs.readFileSync(logPath, 'utf8').trim().split('\n');
-  assert.ok(attempts.includes('kaboom-browser-devtools'), 'must attempt the canonical name');
-  assert.ok(attempts.includes('gasoline'), 'must keep removing legacy names after the first success');
-  assert.ok(attempts.length > 2, 'must attempt every known server name');
+  assert.deepEqual(attempts, ['kaboom-browser-devtools']);
 
   fs.rmSync(tmp, { recursive: true, force: true });
 });
@@ -386,7 +322,7 @@ test('executeUninstall removes from detected file-type clients', () => {
 
   fs.writeFileSync(cfgPath, JSON.stringify({
     mcpServers: {
-      gasoline: { command: 'gasoline-mcp', args: [] },
+      'kaboom-browser-devtools': { command: 'kaboom-agentic-browser', args: [] },
       other: { command: 'other-cmd', args: [] },
     },
   }));
@@ -410,23 +346,13 @@ test('executeUninstall removes from detected file-type clients', () => {
   fs.rmSync(tmp, { recursive: true });
 });
 
-test('executeUninstall removes kaboom, gasoline, and strum managed skill files', () => {
+test('executeUninstall removes canonical managed skill files', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-uninstall-'));
   const claudeRoot = path.join(tmp, 'claude-skills');
   fs.mkdirSync(claudeRoot, { recursive: true });
   fs.writeFileSync(
     path.join(claudeRoot, 'debug.md'),
     '<!-- kaboom-managed-skill id:debug version:2 -->\ncurrent kaboom skill\n',
-    'utf8'
-  );
-  fs.writeFileSync(
-    path.join(claudeRoot, 'gasoline-debug.md'),
-    '<!-- gasoline-managed-skill id:debug version:1 -->\nold gasoline skill\n',
-    'utf8'
-  );
-  fs.writeFileSync(
-    path.join(claudeRoot, 'strum-debug.md'),
-    '<!-- strum-managed-skill id:debug version:1 -->\nold strum skill\n',
     'utf8'
   );
 
@@ -442,10 +368,8 @@ test('executeUninstall removes kaboom, gasoline, and strum managed skill files',
 
     assert.equal(result.success, true);
     assert.ok(result.skillCleanup);
-    assert.equal(result.skillCleanup.removed, 3);
+    assert.equal(result.skillCleanup.removed, 1);
     assert.equal(fs.existsSync(path.join(claudeRoot, 'debug.md')), false);
-    assert.equal(fs.existsSync(path.join(claudeRoot, 'gasoline-debug.md')), false);
-    assert.equal(fs.existsSync(path.join(claudeRoot, 'strum-debug.md')), false);
   } finally {
     if (originalClaudeDir === undefined) {
       delete process.env.KABOOM_CLAUDE_SKILLS_DIR;

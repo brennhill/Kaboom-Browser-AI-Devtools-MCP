@@ -150,7 +150,7 @@ function runKillDaemon({ homeDir, binDir, env = {}, logPath }) {
   assert.equal(run.status, 0, `kill-daemon.js exited with ${run.status}: ${run.stderr}`);
 }
 
-test('cleanup targets kaboom and legacy daemon names', () => {
+test('cleanup targets only canonical kaboom daemon names', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-kill-test-'));
   const binDir = path.join(tmp, 'bin');
   fs.mkdirSync(binDir, { recursive: true });
@@ -161,41 +161,32 @@ test('cleanup targets kaboom and legacy daemon names', () => {
   const log = fs.existsSync(logPath) ? fs.readFileSync(logPath, 'utf8') : '';
   if (process.platform === 'win32') {
     assert.match(log, /kaboom-agentic-browser\*\.exe/, 'expected cleanup to target kaboom-agentic-browser*.exe');
-    assert.match(log, /gasoline\*\.exe/, 'expected cleanup to target gasoline*.exe');
-    assert.match(log, /browser-agent\*\.exe/, 'expected cleanup to target legacy browser-agent*.exe');
     assert.match(log, /\[execFile\] kaboom-agentic-browser --force/, 'expected cleanup to invoke kaboom-agentic-browser --force');
     return;
   }
 
   assert.match(
     log,
-    /\[pattern\] .*\(kaboom\|gasoline\|strum\)-/,
+    /\[pattern\] kaboom-\(agentic-browser\|agentic-devtools\|browser-devtools\|hooks\|mcp\)/,
     'expected cleanup to target anchored full daemon binary names'
   );
   assert.doesNotMatch(log, /\[pattern\] kaboom\s*$/m, 'must not pgrep on bare "kaboom"');
-  assert.doesNotMatch(log, /\[pattern\] gasoline\s*$/m, 'must not pgrep on bare "gasoline"');
 });
 
 // --- Identity-gated process matching (regression: blind kills by substring/port) ---
 
 test('daemon command-line matching only targets full kaboom binary names', () => {
-  // Must NOT match unrelated processes that merely mention "kaboom"/"gasoline".
+  // Must NOT match unrelated processes that merely mention Kaboom.
   assert.equal(matchesDaemonCommandLine('vim /Users/dev/kaboom/notes.md'), false);
-  assert.equal(matchesDaemonCommandLine('tail -f /var/log/gasoline'), false);
-  assert.equal(matchesDaemonCommandLine('bash ./strum-along.sh'), false);
-  // Must match real daemon binary names (current and legacy).
+  assert.equal(matchesDaemonCommandLine('tail -f /var/log/kaboom'), false);
+  // Must match canonical daemon binary names.
   assert.equal(matchesDaemonCommandLine('/usr/local/bin/kaboom-agentic-browser --port 7890'), true);
-  assert.equal(matchesDaemonCommandLine('gasoline-mcp --port 7890'), true);
-  assert.equal(matchesDaemonCommandLine('strum-agentic-browser serve'), true);
   assert.equal(matchesDaemonCommandLine('/home/u/.kaboom/bin/kaboom-agentic-browser'), true);
 });
 
-test('health identity check accepts kaboom and legacy daemons only', () => {
+test('health identity check accepts canonical kaboom daemons only', () => {
   assert.equal(isKaboomDaemonHealth({ 'service-name': 'kaboom-browser-devtools' }), true);
   assert.equal(isKaboomDaemonHealth({ service_name: 'kaboom-browser-devtools' }), true);
-  assert.equal(isKaboomDaemonHealth({ 'service-name': 'gasoline-browser-devtools' }), true);
-  assert.equal(isKaboomDaemonHealth({ service_name: 'gasoline' }), true);
-  assert.equal(isKaboomDaemonHealth({ 'service-name': 'strum-browser-devtools' }), true);
   assert.equal(isKaboomDaemonHealth({ 'service-name': 'vite-dev-server' }), false);
   assert.equal(isKaboomDaemonHealth({ 'service-name': 'my-kaboom-clone-2' }), false);
   assert.equal(isKaboomDaemonHealth({}), false);
@@ -219,21 +210,18 @@ test('killByKnownPorts only kills ports whose /health identifies a kaboom daemon
   assert.equal(probed.length, KNOWN_PORTS.length, 'must probe every known port');
 });
 
-test('cleanup removes kaboom and legacy pid files', () => {
+test('cleanup removes canonical kaboom pid files', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-kill-pids-'));
   const binDir = path.join(tmp, 'bin');
   fs.mkdirSync(binDir, { recursive: true });
 
   const modernPid = path.join(tmp, '.kaboom', 'run', 'kaboom-7890.pid');
-  const legacyPid = path.join(tmp, '.gasoline-7890.pid');
   fs.mkdirSync(path.dirname(modernPid), { recursive: true });
   fs.writeFileSync(modernPid, '123');
-  fs.writeFileSync(legacyPid, '456');
 
   runKillDaemon({ homeDir: tmp, binDir, logPath: path.join(tmp, 'kill-daemon.log') });
 
   assert.equal(fs.existsSync(modernPid), false, `expected pid file removed: ${modernPid}`);
-  assert.equal(fs.existsSync(legacyPid), false, `expected pid file removed: ${legacyPid}`);
 });
 
 test('cleanup removes pid files across known ports and XDG state root', () => {
@@ -244,17 +232,12 @@ test('cleanup removes pid files across known ports and XDG state root', () => {
 
   const trackedPaths = [];
   for (const port of KNOWN_PORTS) {
-    const modernPid = path.join(tmp, '.kaboom', 'run', `kaboom-${port}.pid`);
     const xdgPid = path.join(xdgStateHome, 'kaboom', 'run', `kaboom-${port}.pid`);
-    const legacyPid = path.join(tmp, `.gasoline-${port}.pid`);
 
-    fs.mkdirSync(path.dirname(modernPid), { recursive: true });
     fs.mkdirSync(path.dirname(xdgPid), { recursive: true });
-    fs.writeFileSync(modernPid, String(port));
     fs.writeFileSync(xdgPid, String(port));
-    fs.writeFileSync(legacyPid, String(port));
 
-    trackedPaths.push(modernPid, xdgPid, legacyPid);
+    trackedPaths.push(xdgPid);
   }
 
   runKillDaemon({

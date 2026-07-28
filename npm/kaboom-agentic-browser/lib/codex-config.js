@@ -12,15 +12,11 @@
 
 const fs = require('fs');
 const path = require('path');
-const { MCP_SERVER_NAME, LEGACY_MCP_SERVER_NAMES } = require('./config');
+const { MCP_SERVER_NAME } = require('./config');
 
 // Only `approve` unconditionally suppresses tool-call prompts.
 const APPROVAL_MODE = 'approve';
 const APPROVAL_FIELD = 'default_tools_approval_mode';
-
-function knownServerNames() {
-  return [...new Set([MCP_SERVER_NAME, ...LEGACY_MCP_SERVER_NAMES])];
-}
 
 /** Escape a value for a double-quoted TOML basic string. */
 function tomlString(value) {
@@ -124,7 +120,7 @@ function installCodex(opts) {
   const { configPath, binaryCommand, envVars = {}, dryRun = false } = opts;
   const existing = fs.existsSync(configPath) ? fs.readFileSync(configPath, 'utf8') : '';
   const isNew = existing === '';
-  const { text: stripped } = stripServerBlocks(existing, knownServerNames());
+  const { text: stripped } = stripServerBlocks(existing, [MCP_SERVER_NAME]);
   const block = buildServerBlock(binaryCommand, envVars);
   const head = stripped.replace(/\s*$/, '');
   const next = head.length > 0 ? `${head}\n\n${block}\n` : `${block}\n`;
@@ -138,7 +134,7 @@ function installCodex(opts) {
 }
 
 /**
- * Remove the Kaboom (and legacy) MCP server blocks from Codex config.toml.
+ * Remove the Kaboom MCP server block from Codex config.toml.
  * Never deletes the file (config.toml is a shared settings file).
  * @param {{configPath:string, dryRun?:boolean}} opts
  * @returns {{status:'removed'|'notConfigured', path:string}}
@@ -147,7 +143,7 @@ function uninstallCodex(opts) {
   const { configPath, dryRun = false } = opts;
   if (!fs.existsSync(configPath)) return { status: 'notConfigured', path: configPath };
   const existing = fs.readFileSync(configPath, 'utf8');
-  const { text, changed } = stripServerBlocks(existing, knownServerNames());
+  const { text, changed } = stripServerBlocks(existing, [MCP_SERVER_NAME]);
   if (!changed) return { status: 'notConfigured', path: configPath };
   if (dryRun) return { status: 'removed', path: configPath };
   // Collapse blank-line runs left by the removed block; keep a trailing newline.
@@ -157,7 +153,7 @@ function uninstallCodex(opts) {
 }
 
 /**
- * Diagnose whether the Kaboom (or a legacy) server table exists in config.toml.
+ * Diagnose whether the Kaboom server table exists in config.toml.
  * @param {string} configPath
  * @returns {{configured:boolean, exists:boolean, matchedName?:string, error?:string}}
  */
@@ -169,14 +165,14 @@ function codexServerConfigured(configPath) {
   } catch (err) {
     return { configured: false, exists: true, error: err.message };
   }
-  const names = knownServerNames();
   for (const line of content.split('\n')) {
     const tablePath = headerPath(line);
     if (tablePath === null) continue;
-    for (const name of names) {
-      if (tablePath === `mcp_servers.${name}` || tablePath === `mcp_servers.${tomlString(name)}`) {
-        return { configured: true, exists: true, matchedName: name };
-      }
+    if (
+      tablePath === `mcp_servers.${MCP_SERVER_NAME}` ||
+      tablePath === `mcp_servers.${tomlString(MCP_SERVER_NAME)}`
+    ) {
+      return { configured: true, exists: true, matchedName: MCP_SERVER_NAME };
     }
   }
   return { configured: false, exists: true };

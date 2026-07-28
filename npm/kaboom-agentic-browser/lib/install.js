@@ -11,7 +11,6 @@ const { execFileSync } = require('child_process');
 const {
   CLIENT_DEFINITIONS,
   MCP_SERVER_NAME,
-  LEGACY_MCP_SERVER_NAMES,
   getClientConfigPath,
   getDetectedClients,
   getClientByAlias,
@@ -23,13 +22,6 @@ const {
 const autoApprove = require('./auto-approve');
 const codexConfig = require('./codex-config');
 const { resolveExtensionDir } = require('./extension');
-
-const LEGACY_INSTALL_SERVER_NAMES = [
-  ...LEGACY_MCP_SERVER_NAMES,
-  'strum-browser-devtools',
-  'strum-agentic-browser',
-  'strum',
-];
 
 /**
  * Generate default MCP config for Kaboom
@@ -181,23 +173,6 @@ function installViaFile(def, options) {
 
   // Merge Kaboom entry under the correct key
   if (!configData[configKey]) configData[configKey] = {};
-  for (const legacyName of LEGACY_INSTALL_SERVER_NAMES) {
-    if (legacyName !== MCP_SERVER_NAME) {
-      delete configData[configKey][legacyName];
-    }
-  }
-  // Migrate managed entries out of legacy config keys (e.g. VS Code's old
-  // "mcpServers" key) so the client only sees the canonical entry.
-  for (const legacyKey of def.legacyConfigKeys || []) {
-    if (!configData[legacyKey] || typeof configData[legacyKey] !== 'object') continue;
-    delete configData[legacyKey][MCP_SERVER_NAME];
-    for (const legacyName of LEGACY_INSTALL_SERVER_NAMES) {
-      delete configData[legacyKey][legacyName];
-    }
-    if (Object.keys(configData[legacyKey]).length === 0) {
-      delete configData[legacyKey];
-    }
-  }
   configData[configKey][MCP_SERVER_NAME] = kaboomEntry;
 
   // Fold whole-server tool auto-approve into the SAME atomic write (Gemini

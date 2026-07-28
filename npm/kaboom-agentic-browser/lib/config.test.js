@@ -288,33 +288,11 @@ test('antigravity uses the home-dir config path on every platform', () => {
   }
 });
 
-test('antigravity keeps the old %APPDATA% path tracked for stale cleanup', () => {
-  const ag = CLIENT_DEFINITIONS.find(c => c.id === 'antigravity');
-  assert.ok(ag.legacyConfigPaths, 'must declare legacy config paths');
-  assert.ok(ag.legacyConfigPaths.win32.includes('%APPDATA%'), 'legacy win32 path must be the %APPDATA% location');
-});
-
-test('getClientLegacyConfigPaths resolves declared legacy paths per platform', () => {
-  const { getClientLegacyConfigPaths } = require('./config');
-  const def = {
-    id: 'test',
-    type: 'file',
-    configPath: { all: '~/x.json' },
-    detectDir: { all: '~' },
-    legacyConfigPaths: { all: '~/legacy/x.json' },
-  };
-  const paths = getClientLegacyConfigPaths(def);
-  assert.equal(paths.length, 1);
-  assert.ok(paths[0].includes(path.join('legacy', 'x.json')));
-  assert.deepEqual(getClientLegacyConfigPaths({ id: 'no-legacy', type: 'file', configPath: {}, detectDir: {} }), []);
-});
-
 // --- VS Code client ---
 
-test('vscode uses the "servers" config key with "mcpServers" as legacy key', () => {
+test('vscode uses the canonical "servers" config key', () => {
   const vs = CLIENT_DEFINITIONS.find(c => c.id === 'vscode');
   assert.equal(vs.configKey, 'servers', 'VS Code mcp.json uses a top-level "servers" key');
-  assert.deepEqual(vs.legacyConfigKeys, ['mcpServers'], 'legacy mcpServers entries must still be cleaned');
   assert.equal(vs.dedicatedMcpFile, true);
 });
 

@@ -14,11 +14,8 @@ const os = require('os');
 const path = require('path');
 
 const MANAGED_MARKER = '<!-- kaboom-managed-skill';
-const LEGACY_MANAGED_MARKERS = ['<!-- kaboom-managed-skill', '<!-- gasoline-managed-skill', '<!-- strum-managed-skill'];
-const MANAGED_MARKERS = [MANAGED_MARKER, ...LEGACY_MANAGED_MARKERS];
 const BUNDLED_SKILLS_DIR = path.join(__dirname, '..', 'skills');
 const DEFAULT_AGENTS = ['claude', 'codex', 'gemini'];
-const LEGACY_PREFIXES = ['kaboom-', 'gasoline-', 'strum-'];
 
 function parseBoolEnv(name) {
   const value = process.env[name];
@@ -415,7 +412,7 @@ function buildManagedContent(skillId, version, body) {
 }
 
 function isManagedSkillContent(content) {
-  return MANAGED_MARKERS.some((marker) => content.includes(marker));
+  return content.includes(MANAGED_MARKER);
 }
 
 function safeWriteManagedFile(filePath, content) {
@@ -486,41 +483,9 @@ function removeManagedSkillFile(agent, rootDir, skillId, options = {}) {
   }
 }
 
-function removeLegacySkillVariants(agent, rootDir, skillId, options = {}) {
-  const { dryRun = false } = options;
-  let removed = 0;
-
-  for (const prefix of LEGACY_PREFIXES) {
-    const legacyId = `${prefix}${skillId}`;
-    const legacyPath = skillFilePath(agent, rootDir, legacyId);
-    if (!fs.existsSync(legacyPath)) continue;
-
-    try {
-      const existing = fs.readFileSync(legacyPath, 'utf8');
-      if (!isManagedSkillContent(existing)) continue;
-      if (!dryRun) {
-        fs.unlinkSync(legacyPath);
-      }
-      removed += 1;
-      if (!dryRun && agent === 'codex') {
-        const legacyDir = path.dirname(legacyPath);
-        try {
-          fs.rmdirSync(legacyDir);
-        } catch (err) {
-          // Ignore non-empty or missing directory errors.
-        }
-      }
-    } catch (err) {
-      // Ignore unreadable legacy artifacts and continue cleanup.
-    }
-  }
-
-  return removed;
-}
-
 function isManagedSkillFileStart(content) {
   const text = String(content || '');
-  return MANAGED_MARKERS.some((marker) => text.startsWith(marker));
+  return text.startsWith(MANAGED_MARKER);
 }
 
 /**
@@ -591,14 +556,10 @@ function cleanupInstalledSkills(options = {}) {
       const handledPaths = new Set();
       for (const skill of bundledSkills) {
         handledPaths.add(skillFilePath(agent, rootDir, skill.id));
-        for (const prefix of LEGACY_PREFIXES) {
-          handledPaths.add(skillFilePath(agent, rootDir, `${prefix}${skill.id}`));
-        }
         const current = removeManagedSkillFile(agent, rootDir, skill.id, { dryRun });
         summary.removed += current.removed;
         summary.skipped_user_owned += current.skipped_user_owned;
         summary.errors += current.errors;
-        summary.removed += removeLegacySkillVariants(agent, rootDir, skill.id, { dryRun });
         if (verbose && current.removed > 0) {
           console.log(`[kaboom-mcp] skills removed: ${agent}:${skill.id} -> ${rootDir}`);
         }
@@ -633,7 +594,6 @@ async function installBundledSkills(options = {}) {
         updated: 0,
         unchanged: 0,
         skipped_user_owned: 0,
-        legacy_removed: 0,
         errors: 0,
       },
       results: [],
@@ -654,7 +614,6 @@ async function installBundledSkills(options = {}) {
         updated: 0,
         unchanged: 0,
         skipped_user_owned: 0,
-        legacy_removed: 0,
         errors: 0,
       },
       results: [],
@@ -670,7 +629,6 @@ async function installBundledSkills(options = {}) {
     updated: 0,
     unchanged: 0,
     skipped_user_owned: 0,
-    legacy_removed: 0,
     errors: 0,
   };
 
@@ -701,7 +659,6 @@ async function installBundledSkills(options = {}) {
             `[kaboom-mcp] skills ${writeResult.status}: ${agent}:${skill.id} -> ${filePath}${suffix}`
           );
         }
-        summary.legacy_removed += removeLegacySkillVariants(agent, rootDir, skill.id);
       }
     }
   }

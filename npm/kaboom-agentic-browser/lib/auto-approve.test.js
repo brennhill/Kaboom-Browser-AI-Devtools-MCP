@@ -196,12 +196,12 @@ test('removeClaudeSettingsAllow removes the rule, prunes empties, keeps other ru
   const settingsPath = path.join(tmp, 'settings.json');
   fs.writeFileSync(settingsPath, JSON.stringify({
     model: 'opus',
-    permissions: { allow: ['Bash(ls:*)', 'mcp__kaboom-browser-devtools', 'mcp__gasoline'] },
+    permissions: { allow: ['Bash(ls:*)', 'mcp__kaboom-browser-devtools'] },
   }));
   const r = removeClaudeSettingsAllow({ settingsPath });
   assert.equal(r.status, 'removed');
   const data = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-  assert.deepEqual(data.permissions.allow, ['Bash(ls:*)'], 'canonical + legacy rules removed, user rule kept');
+  assert.deepEqual(data.permissions.allow, ['Bash(ls:*)'], 'canonical rule removed, user rule kept');
   assert.equal(data.model, 'opus');
   fs.rmSync(tmp, { recursive: true, force: true });
 });

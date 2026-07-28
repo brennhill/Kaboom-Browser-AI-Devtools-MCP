@@ -12,9 +12,7 @@ const { execFileSync } = require('child_process');
 const {
   CLIENT_DEFINITIONS,
   MCP_SERVER_NAME,
-  LEGACY_MCP_SERVER_NAMES,
   getClientConfigPath,
-  getClientLegacyConfigPaths,
   getDetectedClients,
   readConfigFile,
   writeConfigFile,
@@ -22,17 +20,6 @@ const {
 const autoApprove = require('./auto-approve');
 const codexConfig = require('./codex-config');
 const { cleanupInstalledSkills } = require('./skills');
-
-const LEGACY_UNINSTALL_SERVER_NAMES = [
-  ...LEGACY_MCP_SERVER_NAMES,
-  'strum-browser-devtools',
-  'strum-agentic-browser',
-  'strum',
-];
-
-function knownServerNames() {
-  return [...new Set([MCP_SERVER_NAME, ...LEGACY_UNINSTALL_SERVER_NAMES])];
-}
 
 /**
  * Uninstall from a CLI-type client (e.g. Claude Code via `claude mcp remove`)
@@ -61,29 +48,20 @@ function uninstallViaCli(def, options) {
 
   const env = { ...process.env };
   delete env.CLAUDECODE;
-  const serverNames = knownServerNames();
-  // Both the canonical name and one or more legacy names can be configured at
-  // the same time — attempt removal for EVERY known name and collect results.
-  const removedNames = [];
+  let serverRemoved = false;
   let unexpectedErr = null;
-  for (const serverName of serverNames) {
-    const args = [...canonicalArgs];
-    if (args.length > 0) {
-      args[args.length - 1] = serverName;
-    }
-    try {
-      execFileSync(cmd, args, {
-        env,
-        stdio: ['pipe', 'pipe', 'pipe'],
-        timeout: 15000,
-      });
-      removedNames.push(serverName);
-    } catch (err) {
-      const stderr = err.stderr ? err.stderr.toString() : '';
-      const notConfigured = stderr.includes('not found') || stderr.includes('does not exist');
-      if (!notConfigured) {
-        unexpectedErr = err;
-      }
+  try {
+    execFileSync(cmd, canonicalArgs, {
+      env,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 15000,
+    });
+    serverRemoved = true;
+  } catch (err) {
+    const stderr = err.stderr ? err.stderr.toString() : '';
+    const notConfigured = stderr.includes('not found') || stderr.includes('does not exist');
+    if (!notConfigured) {
+      unexpectedErr = err;
     }
   }
 
@@ -100,9 +78,9 @@ function uninstallViaCli(def, options) {
     }
   }
 
-  if (removedNames.length > 0 || settingsRemoved) {
+  if (serverRemoved || settingsRemoved) {
     const parts = [];
-    if (removedNames.length > 0) parts.push(removedNames.join(', '));
+    if (serverRemoved) parts.push(MCP_SERVER_NAME);
     if (settingsRemoved) parts.push('auto-approve');
     return {
       status: 'removed',
@@ -132,8 +110,7 @@ function uninstallViaCli(def, options) {
 
 /**
  * Remove managed Kaboom entries from one config file.
- * Cleans the client's primary config key plus any legacy keys (e.g. VS Code's
- * old "mcpServers" alongside the current "servers").
+ * Cleans the client's primary config key.
  * Only deletes the file itself when the client definition marks it as a
  * dedicated MCP config (def.dedicatedMcpFile) — shared settings files
  * (Zed/Gemini/OpenCode settings) are always written back, never unlinked.
@@ -157,12 +134,9 @@ function removeManagedEntriesFromConfigFile(cfgPath, def, options) {
     };
   }
 
-  const configKeys = [def.configKey || 'mcpServers', ...(def.legacyConfigKeys || [])];
-  const names = knownServerNames();
-  const serverPresent = configKeys.some((key) => {
-    const servers = readResult.data[key] || {};
-    return names.some((name) => Object.prototype.hasOwnProperty.call(servers, name));
-  });
+  const configKey = def.configKey || 'mcpServers';
+  const servers = readResult.data[configKey] || {};
+  const serverPresent = Object.prototype.hasOwnProperty.call(servers, MCP_SERVER_NAME);
   // A config carrying only auto-approve keys (server entry already gone) is
   // still ours to clean, so factor auto-approve presence into the decision.
   const present = serverPresent || autoApprove.autoApprovePresent(def, readResult.data);
@@ -178,14 +152,10 @@ function removeManagedEntriesFromConfigFile(cfgPath, def, options) {
   }
 
   const modified = structuredClone(readResult.data);
-  let remainingEntries = 0;
-  for (const key of configKeys) {
-    if (!modified[key] || typeof modified[key] !== 'object') continue;
-    for (const name of names) {
-      delete modified[key][name];
-    }
-    remainingEntries += Object.keys(modified[key]).length;
+  if (modified[configKey] && typeof modified[configKey] === 'object') {
+    delete modified[configKey][MCP_SERVER_NAME];
   }
+  const remainingEntries = Object.keys(modified[configKey] || {}).length;
 
   // Remove the same-file auto-approve entries this installer added (OpenCode
   // permission, Zed tool_permissions; Gemini trust rode on the deleted entry).
@@ -194,8 +164,7 @@ function removeManagedEntriesFromConfigFile(cfgPath, def, options) {
   if (remainingEntries === 0 && def.dedicatedMcpFile) {
     fs.unlinkSync(cfgPath);
   } else {
-    const primaryKey = def.configKey || 'mcpServers';
-    const skipValidation = primaryKey !== 'mcpServers';
+    const skipValidation = configKey !== 'mcpServers';
     writeConfigFile(cfgPath, modified, false, { skipValidation });
   }
 
@@ -216,24 +185,10 @@ function uninstallViaFile(def, options) {
   const cfgPath = getClientConfigPath(def);
   const primary = removeManagedEntriesFromConfigFile(cfgPath, def, options);
 
-  // Best-effort cleanup of paths older versions wrote to (e.g. the
-  // Windows %APPDATA% Antigravity location).
-  let legacyRemoved = false;
-  for (const legacyPath of getClientLegacyConfigPaths(def)) {
-    try {
-      const legacyResult = removeManagedEntriesFromConfigFile(legacyPath, def, options);
-      if (legacyResult.status === 'removed') {
-        legacyRemoved = true;
-      }
-    } catch (_) {
-      // Legacy path cleanup must never fail the uninstall.
-    }
-  }
-
   if (primary.status === 'error') {
     return { status: 'error', name: def.name, id: def.id, message: primary.message };
   }
-  if (primary.status === 'removed' || legacyRemoved) {
+  if (primary.status === 'removed') {
     return {
       status: 'removed',
       name: def.name,

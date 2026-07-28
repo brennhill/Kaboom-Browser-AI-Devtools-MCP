@@ -12,14 +12,11 @@ const net = require('net');
 const { execFileSync } = require('child_process');
 const {
   CLIENT_DEFINITIONS,
-  LEGACY_PATHS,
   MCP_SERVER_NAME,
-  LEGACY_MCP_SERVER_NAMES,
   getClientConfigPath,
   isClientInstalled,
   commandExistsOnPath,
   readConfigFile,
-  expandPath,
 } = require('./config');
 const codexConfig = require('./codex-config');
 const { fetchHealth, DEFAULT_PORT } = require('./health');
@@ -28,10 +25,6 @@ const { fetchHealth, DEFAULT_PORT } = require('./health');
 // (node: specifiers, structuredClone, fetch-free http usage). 18 is the oldest
 // still-maintained line that clears that bar.
 const MIN_NODE_MAJOR = 18;
-
-function knownServerNames() {
-  return [MCP_SERVER_NAME, ...LEGACY_MCP_SERVER_NAMES.filter((name) => name !== MCP_SERVER_NAME)];
-}
 
 /**
  * Check whether a port is free by trying to bind it. Cross-platform (net only,
@@ -241,26 +234,8 @@ function diagnoseFileClient(def, verbose) {
 
   const configKey = def.configKey || 'mcpServers';
   const servers = readResult.data[configKey] || {};
-  const matchedName = knownServerNames().find((name) => Object.prototype.hasOwnProperty.call(servers, name));
-  if (!matchedName) {
-    // Check legacy config keys (e.g. VS Code's old "mcpServers" key).
-    for (const legacyKey of def.legacyConfigKeys || []) {
-      const legacyServers = readResult.data[legacyKey] || {};
-      const legacyMatch = knownServerNames().find((name) => Object.prototype.hasOwnProperty.call(legacyServers, name));
-      if (legacyMatch) {
-        tool.status = 'error';
-        tool.issues.push(`MCP entry found under legacy "${legacyKey}" key; migrate to "${configKey}"`);
-        tool.suggestions.push('Run: kaboom-agentic-browser --install');
-        return tool;
-      }
-    }
+  if (!Object.prototype.hasOwnProperty.call(servers, MCP_SERVER_NAME)) {
     tool.issues.push(`${MCP_SERVER_NAME} entry missing from ${configKey}`);
-    tool.suggestions.push('Run: kaboom-agentic-browser --install');
-    return tool;
-  }
-  if (matchedName !== MCP_SERVER_NAME) {
-    tool.status = 'error';
-    tool.issues.push(`Legacy MCP server name detected (${matchedName}); migrate to ${MCP_SERVER_NAME}`);
     tool.suggestions.push('Run: kaboom-agentic-browser --install');
     return tool;
   }
@@ -363,19 +338,15 @@ function diagnoseCliClient(def, verbose) {
   }
 
   // Try to check if Kaboom is configured via CLI
-  let found = false;
-  for (const serverName of knownServerNames()) {
-    try {
-      execFileSync(def.detectCommand, ['mcp', 'get', serverName], {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        timeout: 10000,
-        env: { ...process.env, CLAUDECODE: undefined },
-      });
-      found = true;
-      break;
-    } catch {
-      // Try next known server name.
-    }
+  let found = true;
+  try {
+    execFileSync(def.detectCommand, ['mcp', 'get', MCP_SERVER_NAME], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 10000,
+      env: { ...process.env, CLAUDECODE: undefined },
+    });
+  } catch {
+    found = false;
   }
   if (found) {
     tool.status = 'ok';
@@ -386,35 +357,6 @@ function diagnoseCliClient(def, verbose) {
   }
 
   return tool;
-}
-
-/**
- * Check for legacy/orphaned config files at old paths
- * @returns {Array<Object>} Warnings for legacy paths found
- */
-function checkLegacyPaths() {
-  const warnings = [];
-  for (const legacy of LEGACY_PATHS) {
-    const expanded = expandPath(legacy.path);
-    if (fs.existsSync(expanded)) {
-      try {
-        const readResult = readConfigFile(expanded);
-        if (readResult.valid && readResult.data.mcpServers) {
-          const hasKnownEntry = knownServerNames().some((name) => Object.prototype.hasOwnProperty.call(readResult.data.mcpServers, name));
-          if (hasKnownEntry) {
-            warnings.push({
-              path: expanded,
-              description: legacy.description,
-              message: `Orphaned ${MCP_SERVER_NAME} config at old path: ${expanded}`,
-            });
-          }
-        }
-      } catch {
-        // Ignore read errors on legacy paths
-      }
-    }
-  }
-  return warnings;
 }
 
 /**
@@ -490,9 +432,6 @@ async function runDiagnostics(verbose = false, opts = {}) {
   const daemon = await checkDaemon({ port: defaultPort, fetchHealthFn: opts.fetchHealthFn });
   const extension = { connected: daemon.extensionConnected, lastSeen: daemon.extensionLastSeen };
 
-  // Check for legacy paths
-  const legacyWarnings = checkLegacyPaths();
-
   // Generate summary
   const okCount = tools.filter(t => t.status === 'ok').length;
   const errorCount = tools.filter(t => t.status === 'error').length;
@@ -516,7 +455,6 @@ async function runDiagnostics(verbose = false, opts = {}) {
     daemon,
     extension,
     restarts,
-    legacyWarnings,
     summary,
   };
 }

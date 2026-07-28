@@ -11,7 +11,6 @@ const os = require('os');
 const path = require('path');
 const {
   MCP_SERVER_NAME,
-  LEGACY_MCP_SERVER_NAMES,
   readConfigFile,
   writeConfigFile,
 } = require('./config');
@@ -20,21 +19,15 @@ const {
 // server and each tool must be named individually (Zed).
 const KABOOM_TOOL_NAMES = ['observe', 'generate', 'configure', 'interact', 'analyze'];
 
-// Legacy server names other than the canonical one (used to clean up stale
-// auto-approve entries from older installs during uninstall).
-const LEGACY_SERVER_NAMES = LEGACY_MCP_SERVER_NAMES.filter((n) => n !== MCP_SERVER_NAME);
-
 // --- Claude Code: ~/.claude/settings.json permissions.allow ---
 // A bare `mcp__<server>` (no tool suffix) wildcard-approves EVERY tool of that
 // server. Verified: https://code.claude.com/docs/en/permissions
 const CLAUDE_ALLOW_RULE = `mcp__${MCP_SERVER_NAME}`;
-const CLAUDE_LEGACY_ALLOW_RULES = LEGACY_SERVER_NAMES.map((n) => `mcp__${n}`);
 
 // --- OpenCode: opencode.json top-level `permission` object ---
 // `<server>_*` covers every tool of the server.
 // Verified: https://opencode.ai/docs/permissions/ + https://opencode.ai/docs/tools/
 const OPENCODE_PERMISSION_KEY = `${MCP_SERVER_NAME}_*`;
-const OPENCODE_LEGACY_PERMISSION_KEYS = LEGACY_SERVER_NAMES.map((n) => `${n}_*`);
 
 // --- Zed: settings.json agent.tool_permissions.tools ---
 // MCP tools are referenced as `mcp:<server>:<tool>`; Zed has no server-level
@@ -84,7 +77,6 @@ function applyToConfig(def, configData) {
   if (kind === 'opencode-permission') {
     const permission = ensureObject(configData, 'permission');
     if (!permission) return false; // malformed existing value — do not clobber
-    for (const legacy of OPENCODE_LEGACY_PERMISSION_KEYS) delete permission[legacy];
     permission[OPENCODE_PERMISSION_KEY] = 'allow';
     return true;
   }
@@ -119,11 +111,9 @@ function removeFromConfig(def, configData) {
   if (kind === 'opencode-permission') {
     const permission = configData.permission;
     if (permission && typeof permission === 'object' && !Array.isArray(permission)) {
-      for (const k of [OPENCODE_PERMISSION_KEY, ...OPENCODE_LEGACY_PERMISSION_KEYS]) {
-        if (Object.prototype.hasOwnProperty.call(permission, k)) {
-          delete permission[k];
-          changed = true;
-        }
+      if (Object.prototype.hasOwnProperty.call(permission, OPENCODE_PERMISSION_KEY)) {
+        delete permission[OPENCODE_PERMISSION_KEY];
+        changed = true;
       }
       if (changed && Object.keys(permission).length === 0) delete configData.permission;
     }
@@ -135,12 +125,10 @@ function removeFromConfig(def, configData) {
     const toolPermissions = agent && agent.tool_permissions;
     const tools = toolPermissions && toolPermissions.tools;
     if (tools && typeof tools === 'object' && !Array.isArray(tools)) {
-      for (const name of [MCP_SERVER_NAME, ...LEGACY_SERVER_NAMES]) {
-        for (const ref of zedToolRefs(name)) {
-          if (Object.prototype.hasOwnProperty.call(tools, ref)) {
-            delete tools[ref];
-            changed = true;
-          }
+      for (const ref of zedToolRefs(MCP_SERVER_NAME)) {
+        if (Object.prototype.hasOwnProperty.call(tools, ref)) {
+          delete tools[ref];
+          changed = true;
         }
       }
       if (changed) {
@@ -167,8 +155,7 @@ function autoApprovePresent(def, configData) {
   if (kind === 'opencode-permission') {
     const permission = configData.permission;
     if (permission && typeof permission === 'object') {
-      return [OPENCODE_PERMISSION_KEY, ...OPENCODE_LEGACY_PERMISSION_KEYS]
-        .some((k) => Object.prototype.hasOwnProperty.call(permission, k));
+      return Object.prototype.hasOwnProperty.call(permission, OPENCODE_PERMISSION_KEY);
     }
     return false;
   }
@@ -176,8 +163,8 @@ function autoApprovePresent(def, configData) {
   if (kind === 'zed-tool-permissions') {
     const tools = configData.agent && configData.agent.tool_permissions && configData.agent.tool_permissions.tools;
     if (tools && typeof tools === 'object') {
-      return [MCP_SERVER_NAME, ...LEGACY_SERVER_NAMES]
-        .some((name) => zedToolRefs(name).some((ref) => Object.prototype.hasOwnProperty.call(tools, ref)));
+      return zedToolRefs(MCP_SERVER_NAME)
+        .some((ref) => Object.prototype.hasOwnProperty.call(tools, ref));
     }
     return false;
   }
@@ -250,7 +237,7 @@ function applyClaudeSettingsAllow(options = {}) {
 }
 
 /**
- * Remove the Kaboom (and legacy) allow rules from ~/.claude/settings.json,
+ * Remove the Kaboom allow rule from ~/.claude/settings.json,
  * pruning now-empty `allow`/`permissions` containers. Never deletes the file
  * (it is a shared user settings file).
  * @returns {{status:'removed'|'notConfigured', path:string, changed:boolean, dryRun?:boolean}}
@@ -267,8 +254,7 @@ function removeClaudeSettingsAllow(options = {}) {
     return { status: 'notConfigured', path: settingsPath, changed: false };
   }
 
-  const rules = [CLAUDE_ALLOW_RULE, ...CLAUDE_LEGACY_ALLOW_RULES];
-  const nextAllow = permissions.allow.filter((r) => !rules.includes(r));
+  const nextAllow = permissions.allow.filter((r) => r !== CLAUDE_ALLOW_RULE);
   if (nextAllow.length === permissions.allow.length) {
     return { status: 'notConfigured', path: settingsPath, changed: false };
   }
@@ -291,7 +277,6 @@ function removeClaudeSettingsAllow(options = {}) {
 module.exports = {
   KABOOM_TOOL_NAMES,
   CLAUDE_ALLOW_RULE,
-  CLAUDE_LEGACY_ALLOW_RULES,
   OPENCODE_PERMISSION_KEY,
   zedToolRefs,
   applyToConfig,

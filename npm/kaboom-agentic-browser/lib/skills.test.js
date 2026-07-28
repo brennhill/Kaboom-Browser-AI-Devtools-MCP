@@ -165,11 +165,6 @@ test('cleanupInstalledSkills removes managed skills no longer in the manifest', 
       '<!-- kaboom-managed-skill id:old-renamed-skill version:1 -->\nrenamed away\n',
       'utf8'
     );
-    fs.writeFileSync(
-      path.join(claudeRoot, 'gasoline-ancient.md'),
-      '<!-- gasoline-managed-skill id:ancient version:1 -->\nold era\n',
-      'utf8'
-    );
     fs.writeFileSync(path.join(claudeRoot, 'user-note.md'), '# my own skill\n', 'utf8');
     fs.writeFileSync(
       path.join(claudeRoot, 'mentions-marker.md'),
@@ -181,9 +176,8 @@ test('cleanupInstalledSkills removes managed skills no longer in the manifest', 
       cleanupInstalledSkills({ agents: ['claude'], scope: 'global' })
     );
 
-    assert.ok(result.removed >= 2, `expected orphaned managed skills removed, got ${result.removed}`);
+    assert.ok(result.removed >= 1, `expected orphaned managed skills removed, got ${result.removed}`);
     assert.equal(fs.existsSync(path.join(claudeRoot, 'old-renamed-skill.md')), false);
-    assert.equal(fs.existsSync(path.join(claudeRoot, 'gasoline-ancient.md')), false);
     assert.equal(fs.existsSync(path.join(claudeRoot, 'user-note.md')), true, 'user files must survive');
     assert.equal(
       fs.existsSync(path.join(claudeRoot, 'mentions-marker.md')),
@@ -202,7 +196,7 @@ test('cleanupInstalledSkills removes orphaned codex skill directories', () => {
     fs.mkdirSync(path.join(codexRoot, 'dropped-skill'), { recursive: true });
     fs.writeFileSync(
       path.join(codexRoot, 'dropped-skill', 'SKILL.md'),
-      '<!-- strum-managed-skill id:dropped-skill version:1 -->\ndropped\n',
+      '<!-- kaboom-managed-skill id:dropped-skill version:1 -->\ndropped\n',
       'utf8'
     );
     fs.mkdirSync(path.join(codexRoot, 'user-skill'), { recursive: true });

@@ -34,6 +34,8 @@ code_paths:
   - npm/kaboom-agentic-browser/lib/config.js
   - npm/kaboom-agentic-browser/lib/doctor.js
   - npm/kaboom-agentic-browser/lib/install.js
+  - npm/kaboom-agentic-browser/lib/kill-daemon.js
+  - npm/kaboom-agentic-browser/lib/skills.js
   - npm/kaboom-agentic-browser/lib/uninstall.js
   - npm/kaboom-agentic-browser/lib/cli.js
   - npm/kaboom-agentic-browser/lib/output.js
@@ -66,6 +68,9 @@ test_paths:
   - npm/kaboom-agentic-browser/lib/doctor.test.js
   - npm/kaboom-agentic-browser/lib/install.test.js
   - npm/kaboom-agentic-browser/lib/uninstall.test.js
+  - npm/kaboom-agentic-browser/lib/kill-daemon.test.js
+  - npm/kaboom-agentic-browser/lib/skills.test.js
+  - npm/kaboom-agentic-browser/lib/no-compatibility.test.js
   - tests/packaging/kaboom-packaging-branding.test.js
   - tests/extension/install-script-extension-source.test.js
   - tests/extension/release-extension-zip.test.js
@@ -115,7 +120,10 @@ OpenAPI contract.
   canonical `kaboom-browser-devtools` MCP identity; unrelated server entries
   are preserved without migration-specific handling.
 - PyPI wrapper config helpers now converge on `merge_kaboom_config(...)`, and packaged `.egg-info` metadata now exposes only Kaboom package names, entry points, and repo URLs.
-- Platform npm packages now ship `kaboom-agentic-browser` and `kaboom-hooks` binaries while preserving legacy cleanup for customer machines.
+- The npm wrapper recognizes, installs, diagnoses, approves, stops, and
+  uninstalls only canonical Kaboom identities and state paths. It does not
+  retain migration branches for historical server names, skill markers,
+  process names, config keys, config paths, or PID files.
 - Server postinstall now validates `kaboom-browser-devtools` on `/health` reuse checks and points manual extension loading at `KABOOM_EXTENSION_DIR` / `~/KaboomAgenticDevtoolExtension`.
 - Install now also fixes the Claude Code `claude mcp add-json` invocation (JSON passed as a positional arg, not stdin) and adds **Codex CLI** as a supported client (`~/.codex/config.toml`, TOML; honors `$CODEX_HOME`).
 - Daemon setup diagnostics use one canonical CLI entry point, `--doctor`; the duplicate `--check` facade is rejected.

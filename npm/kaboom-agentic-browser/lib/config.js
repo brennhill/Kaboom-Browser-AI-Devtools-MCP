@@ -20,17 +20,6 @@ const {
 
 const MAX_CONFIG_SIZE = 1024 * 1024; // 1MB
 const MCP_SERVER_NAME = 'kaboom-browser-devtools';
-const LEGACY_MCP_SERVER_NAMES = [
-  'kaboom-browser-devtools',
-  'kaboom-agentic-browser',
-  'kaboom',
-  'gasoline-browser-devtools',
-  'gasoline-agentic-browser',
-  'gasoline',
-  'strum-browser-devtools',
-  'strum-agentic-browser',
-  'strum',
-];
 
 /**
  * Resolve the managed Kaboom binary path from the installed npm package layout.
@@ -156,10 +145,8 @@ const CLIENT_DEFINITIONS = [
     // Kaboom-scoped installer, so we don't write it. Per-server = UI ("Always
     // Allow").
     autoApprove: { kind: 'ui-only', note: 'Use "Always Allow"; only a global auto-approve exists' },
-    // VS Code's mcp.json uses a top-level "servers" key; "mcpServers" entries
-    // were written by older Kaboom versions and must still be cleaned up.
+    // VS Code's mcp.json uses a top-level "servers" key.
     configKey: 'servers',
-    legacyConfigKeys: ['mcpServers'],
     configPath: {
       darwin: '~/Library/Application Support/Code/User/mcp.json',
       win32: '%APPDATA%/Code/User/mcp.json',
@@ -207,8 +194,6 @@ const CLIENT_DEFINITIONS = [
     // Antigravity uses the home-dir path on every OS (matches the Go installer).
     configPath: { all: '~/.gemini/antigravity/mcp_config.json' },
     detectDir: { all: '~/.gemini/antigravity' },
-    // Older npm versions wrote to %APPDATA% on Windows; keep cleaning that path.
-    legacyConfigPaths: { win32: '%APPDATA%/.gemini/antigravity/mcp_config.json' },
   },
   {
     id: 'zed',
@@ -241,17 +226,6 @@ const CLIENT_DEFINITIONS = [
     configPath: { all: '~/.codex/config.toml' },
     detectDir: { all: '~/.codex' },
   },
-];
-
-/**
- * Legacy paths that may contain orphaned configs from older versions.
- * Used by doctor to warn users.
- */
-const LEGACY_PATHS = [
-  { path: '~/.codeium/mcp.json', description: 'Old Windsurf/Codeium path' },
-  { path: '~/.vscode/claude.mcp.json', description: 'Old VS Code path' },
-  { path: '~/.claude.json', description: 'Old Claude Code path (now uses CLI)' },
-  { path: '%APPDATA%/.gemini/antigravity/mcp_config.json', description: 'Old Antigravity path (Windows %APPDATA% location)' },
 ];
 
 /**
@@ -296,22 +270,6 @@ function getClientConfigPath(def, platform) {
   const plat = platform || os.platform();
   const raw = def.configPath[plat] || def.configPath.all || null;
   return raw ? expandPath(raw) : null;
-}
-
-/**
- * Get resolved legacy config paths for a file-type client definition.
- * These are paths older versions wrote to; uninstall/doctor still clean them.
- * @param {Object} def Client definition
- * @param {string} [platform] Platform override (defaults to os.platform())
- * @returns {Array<string>} Resolved legacy paths (empty when none apply)
- */
-function getClientLegacyConfigPaths(def, platform) {
-  if (def.type === 'cli' || !def.legacyConfigPaths) return [];
-  const plat = platform || os.platform();
-  const raw = def.legacyConfigPaths[plat] || def.legacyConfigPaths.all || null;
-  if (!raw) return [];
-  const list = Array.isArray(raw) ? raw : [raw];
-  return list.map((p) => expandPath(p)).filter(Boolean);
 }
 
 /**
@@ -581,13 +539,6 @@ function mergeKaboomConfig(existing, kaboomEntry, envVars = {}) {
     merged.mcpServers = {};
   }
 
-  // Remove legacy keys before writing canonical key.
-  for (const legacyName of LEGACY_MCP_SERVER_NAMES) {
-    if (legacyName !== MCP_SERVER_NAME) {
-      delete merged.mcpServers[legacyName];
-    }
-  }
-
   // Merge Kaboom entry
   merged.mcpServers[MCP_SERVER_NAME] = {
     command: kaboomEntry.command,
@@ -650,12 +601,9 @@ function isEnvFlagSet(env, keys) {
 module.exports = {
   CLIENT_DEFINITIONS,
   CLIENT_ALIASES,
-  LEGACY_PATHS,
   MCP_SERVER_NAME,
-  LEGACY_MCP_SERVER_NAMES,
   expandPath,
   getClientConfigPath,
-  getClientLegacyConfigPaths,
   getClientDetectDir,
   commandExistsOnPath,
   isClientInstalled,

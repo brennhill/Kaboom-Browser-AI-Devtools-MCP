@@ -186,7 +186,7 @@ test('install then uninstall restores the user config (no kaboom residue)', () =
 
 // --- codexServerConfigured ---
 
-test('codexServerConfigured reports canonical, legacy, and missing states', () => {
+test('codexServerConfigured reports canonical and missing states', () => {
   const tmp = tmpdir();
   const configPath = path.join(tmp, 'config.toml');
   assert.equal(codex.codexServerConfigured(configPath).exists, false);
@@ -195,11 +195,6 @@ test('codexServerConfigured reports canonical, legacy, and missing states', () =
   let res = codex.codexServerConfigured(configPath);
   assert.equal(res.configured, true);
   assert.equal(res.matchedName, 'kaboom-browser-devtools');
-
-  fs.writeFileSync(configPath, '[mcp_servers.gasoline]\ncommand = "x"\n');
-  res = codex.codexServerConfigured(configPath);
-  assert.equal(res.configured, true);
-  assert.equal(res.matchedName, 'gasoline');
 
   fs.writeFileSync(configPath, '[mcp_servers.other]\ncommand = "x"\n');
   assert.equal(codex.codexServerConfigured(configPath).configured, false);
