@@ -161,14 +161,6 @@ type ToolHandler struct {
 	usageTracker *telemetry.UsageTracker
 }
 
-// IsConsoleNoise implements mcp.NoiseFilterer.
-func (h *ToolHandler) IsConsoleNoise(entry types.LogEntry) bool {
-	if h.noiseConfig == nil {
-		return false
-	}
-	return h.noiseConfig.IsConsoleNoise(entry)
-}
-
 // maybeWaitForCommand, formatCommandResult, and related async infrastructure
 // live in tools_async_completion.go; the result shaping
 // they call lives in internal/asyncresult.
@@ -342,14 +334,6 @@ func (h *ToolHandler) GetCapture() *capture.Capture {
 	return h.capture
 }
 
-func (h *ToolHandler) GetLogEntries() ([]types.LogEntry, []time.Time) {
-	return h.server.logs.EntriesWithAddedAt()
-}
-
-func (h *ToolHandler) GetLogTotalAdded() int64 {
-	return h.server.logs.TotalAdded()
-}
-
 func (h *ToolHandler) ToolsList() []mcp.MCPTool {
 	return schema.AllTools()
 }
@@ -491,9 +475,10 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	handler.uploadSecurity = uploadSecurityConfig
 	handler.recordingInteractHandler = screenrec.NewInteractHandler(handler.screenrecDeps())
 	analyzeDeps := buildAnalyzeDeps(handler)
+	observeDeps := buildObserveReadDeps(handler)
 	handler.analyzeDispatcher = analyzedispatch.NewDispatcher(analyzedispatch.Config{
-		Analyze: analyzeDeps, Inspect: handler, Observe: handler,
-		Audit:   combinedaudit.Deps{Analyze: analyzeDeps, Observe: handler},
+		Analyze: analyzeDeps, Inspect: handler, Observe: observeDeps,
+		Audit:   combinedaudit.Deps{Analyze: analyzeDeps, Observe: observeDeps},
 		Version: version, AnnotationStore: handler.annotationStore, Visual: visualAnalyzeDeps{h: handler},
 		ValidateAPI: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return handler.apiContractRuntime.Handle(req, args, handler.capture.Telemetry().GetNetworkBodies())
@@ -515,7 +500,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	handler.issueReportDeps = buildIssueReportDeps(handler)
 	handler.uploadInteractHandler = toolinteract.NewUploadInteractHandler(interactDeps, handler.interactActionHandler)
 	handler.observeDispatcher = toolobserve.NewDispatcher(toolobserve.Config{
-		Observe: handler, Local: buildObserveLocalDeps(handler),
+		Observe: observeDeps, Local: buildObserveLocalDeps(handler),
 		IsExtensionConnected: func() bool { return handler.capture.Extension().IsExtensionConnected() },
 		Commands:             queryStore, InProgress: inProgress,
 		AnnotationStore: handler.annotationStore,
@@ -571,7 +556,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 type visualAnalyzeDeps struct{ h *ToolHandler }
 
 func (d visualAnalyzeDeps) CaptureScreenshot(req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
-	return observe.GetScreenshot(d.h, req, json.RawMessage(`{}`))
+	return observe.GetScreenshot(buildObserveReadDeps(d.h), req, json.RawMessage(`{}`))
 }
 
 func (d visualAnalyzeDeps) GetTrackingStatus() (bool, int, string) {
@@ -669,6 +654,24 @@ func buildObserveLocalDeps(h *ToolHandler) toolobserve.Deps {
 	}
 }
 
+func buildObserveReadDeps(h *ToolHandler) observe.Deps {
+	return observe.Deps{
+		Capture: h.capture,
+		LogEntries: func() ([]types.LogEntry, []time.Time) {
+			return h.server.logs.EntriesWithAddedAt()
+		},
+		LogTotalAdded:    h.server.logs.TotalAdded,
+		ExecuteA11yQuery: h.ExecuteA11yQuery,
+		IsConsoleNoise: func(entry types.LogEntry) bool {
+			if h.noiseConfig == nil {
+				return false
+			}
+			return h.noiseConfig.IsConsoleNoise(entry)
+		},
+		DiagnosticHintString: h.Guards.DiagnosticHintString,
+	}
+}
+
 // buildInteractDeps is the composition boundary between ToolHandler and the
 // canonical interact owner. All cross-feature dependencies are wired here.
 func buildInteractDeps(h *ToolHandler) *toolinteract.Deps {
@@ -691,10 +694,10 @@ func buildInteractDeps(h *ToolHandler) *toolinteract.Deps {
 		EnrichNavigateResponse:  h.enrichNavigateResponse,
 		InjectCSPBlockedActions: h.Guards.InjectCSPBlockedActions,
 		GetScreenshot: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return observe.GetScreenshot(h, req, args)
+			return observe.GetScreenshot(buildObserveReadDeps(h), req, args)
 		},
 		GetPageInfo: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return observe.GetPageInfo(h, req, args)
+			return observe.GetPageInfo(buildObserveReadDeps(h), req, args)
 		},
 		MarkDrawStarted: func() {
 			if h.annotationStore != nil {

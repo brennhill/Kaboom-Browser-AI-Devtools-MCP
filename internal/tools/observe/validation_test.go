@@ -12,8 +12,8 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
-func newValidationDeps() *mockTransientDeps {
-	return &mockTransientDeps{cap: capture.NewCapture()}
+func newValidationDeps() Deps {
+	return (&mockTransientDeps{cap: capture.NewCapture()}).deps()
 }
 
 // extractJSON strips any text prefix before the first '{' or '['.

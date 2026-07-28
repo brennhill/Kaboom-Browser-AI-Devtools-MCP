@@ -55,7 +55,7 @@ func (e *bundleTestEnv) callErrorBundles(t *testing.T, args string) (mcp.MCPTool
 	t.Helper()
 	rawArgs := json.RawMessage(args)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := observe.GetErrorBundles(e.handler, req, rawArgs)
+	resp := observe.GetErrorBundles(buildObserveReadDeps(e.handler), req, rawArgs)
 	if resp.Result == nil {
 		return mcp.MCPToolResult{}, false
 	}

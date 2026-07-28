@@ -143,6 +143,8 @@ State snapshot handlers accept only the canonical `snapshot_name` parameter;
 the former generic `name` request alias has been removed.
 State dispatch and tests use the composed `stateInteractHandler` directly; the
 root unchanged-return accessor has been deleted and is structurally prohibited.
+The unused generic `internal/tools/interact` host declaration is also deleted;
+interaction dependencies live only with the handlers that consume them.
 All other action dispatch, async enrichment, configuration, and tests likewise
 use the composed `interactActionHandler` directly. Both the root unchanged-return
 accessor and the test-only shim that mirrored it have been deleted and are

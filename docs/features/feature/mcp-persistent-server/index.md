@@ -137,6 +137,10 @@ last_verified_date: 2026-03-29
 
 # MCP Persistent Server
 
+`internal/mcp/deps.go` contains only live diagnostic and asynchronous-command
+contracts. Obsolete capture, log-buffer, accessibility, and noise provider
+interfaces were removed after their consumers migrated to explicit composition.
+
 > **2026-07-27:** Deleted the package-main type facade. MCP wire contracts and
 > protocol negotiation now come directly from `internal/mcp`; server identity,
 > annotations, and tool-call limiting come directly from their canonical owner

@@ -5,16 +5,22 @@
 
 package observe
 
-import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+import (
+	"encoding/json"
+	"time"
 
-// Deps provides all dependencies the observe handlers need.
-// *ToolHandler in cmd/browser-agent/ satisfies this interface.
-type Deps interface {
-	mcp.DiagnosticProvider
-	mcp.CaptureProvider
-	mcp.LogBufferReader
-	mcp.A11yQueryExecutor
-	mcp.NoiseFilterer
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+)
+
+// Deps names the canonical read owners and operations used by observe modes.
+type Deps struct {
+	Capture              *capture.Capture
+	LogEntries           func() ([]types.LogEntry, []time.Time)
+	LogTotalAdded        func() int64
+	ExecuteA11yQuery     func(string, []string, any, bool) (json.RawMessage, error)
+	IsConsoleNoise       func(types.LogEntry) bool
+	DiagnosticHintString func() string
 }
 
 // MaxObserveLimit caps the limit parameter to prevent oversized responses.

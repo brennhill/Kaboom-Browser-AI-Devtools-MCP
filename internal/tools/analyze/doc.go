@@ -7,7 +7,6 @@ Package analyze provides the implementation for the analyze MCP tool, which perf
 active analysis of browser state.
 
 Key types:
-  - Deps: interface declaring dependencies required from the host server.
   - ComputedStylesArgs: parsed arguments for computed styles queries.
   - FormsArgs: parsed arguments for form discovery queries.
   - LinkValidationParams: parameters for server-side link verification.

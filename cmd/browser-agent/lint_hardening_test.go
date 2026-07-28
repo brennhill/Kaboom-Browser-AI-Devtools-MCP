@@ -110,6 +110,9 @@ func TestRootDoesNotReexportCanonicalTypes(t *testing.T) {
 		"func (h *ToolHandler) GetVersion(",
 		"func (h *ToolHandler) IsExtensionConnected(",
 		"func (h *ToolHandler) PushInbox(",
+		"func (h *ToolHandler) IsConsoleNoise(",
+		"func (h *ToolHandler) GetLogEntries(",
+		"func (h *ToolHandler) GetLogTotalAdded(",
 	} {
 		for _, path := range rootFiles {
 			if strings.HasSuffix(path, "_test.go") {
@@ -130,6 +133,7 @@ func TestObserveDispatcherDoesNotRequireHostInterfaces(t *testing.T) {
 	for relativePath, forbidden := range map[string]string{
 		"cmd/browser-agent/internal/toolobserve/deps.go":       "type Deps interface {",
 		"cmd/browser-agent/internal/toolobserve/dispatcher.go": "type Host interface {",
+		"internal/tools/observe/deps.go":                       "type Deps interface {",
 	} {
 		source, err := os.ReadFile(filepath.Join(projectRoot(), relativePath))
 		if err != nil {
@@ -137,6 +141,32 @@ func TestObserveDispatcherDoesNotRequireHostInterfaces(t *testing.T) {
 		}
 		if strings.Contains(string(source), forbidden) {
 			t.Errorf("%s retains host dependency interface %q", relativePath, forbidden)
+		}
+	}
+}
+
+func TestUnusedToolHostContractsStayDeleted(t *testing.T) {
+	for _, relativePath := range []string{
+		"internal/tools/analyze/deps.go",
+		"internal/tools/configure/deps.go",
+		"internal/tools/interact/deps.go",
+	} {
+		if _, err := os.Stat(filepath.Join(projectRoot(), relativePath)); !os.IsNotExist(err) {
+			t.Errorf("unused tool host contract still exists: %s", relativePath)
+		}
+	}
+	source, err := os.ReadFile(filepath.Join(projectRoot(), "internal", "mcp", "deps.go"))
+	if err != nil {
+		t.Fatalf("read MCP dependency contracts: %v", err)
+	}
+	for _, forbidden := range []string{
+		"type CaptureProvider interface {",
+		"type LogBufferReader interface {",
+		"type A11yQueryExecutor interface {",
+		"type NoiseFilterer interface {",
+	} {
+		if strings.Contains(string(source), forbidden) {
+			t.Errorf("MCP package retains unused host contract %q", forbidden)
 		}
 	}
 }

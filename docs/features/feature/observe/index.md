@@ -90,6 +90,9 @@ runtime code import caches, batching, transport, and log processing directly
 from the modules that own those APIs.
 The injected page-world entrypoint is also startup-only; observer and telemetry
 APIs remain owned by their focused `src/inject` and `src/lib` modules.
+Go observe modes receive the canonical capture owner plus explicit log, noise,
+accessibility, and diagnostic reads. No ToolHandler-satisfied observation
+interface or observation-only root getter remains.
 
 ## TL;DR
 - Status: shipped

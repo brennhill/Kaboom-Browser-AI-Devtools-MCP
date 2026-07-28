@@ -26,21 +26,18 @@ type mockA11yDeps struct {
 	diagnosticStr string
 }
 
-func (m *mockA11yDeps) DiagnosticHintString() string { return m.diagnosticStr }
-
-func (m *mockA11yDeps) GetCapture() *capture.Capture { return m.cap }
-
-func (m *mockA11yDeps) GetLogEntries() ([]types.LogEntry, []time.Time) {
-	return nil, nil
+func (m *mockA11yDeps) deps() Deps {
+	return Deps{
+		Capture:              m.cap,
+		LogEntries:           func() ([]types.LogEntry, []time.Time) { return nil, nil },
+		LogTotalAdded:        func() int64 { return 0 },
+		IsConsoleNoise:       func(types.LogEntry) bool { return false },
+		DiagnosticHintString: func() string { return m.diagnosticStr },
+		ExecuteA11yQuery: func(string, []string, any, bool) (json.RawMessage, error) {
+			return m.a11yResult, m.a11yErr
+		},
+	}
 }
-
-func (m *mockA11yDeps) GetLogTotalAdded() int64 { return 0 }
-
-func (m *mockA11yDeps) ExecuteA11yQuery(_ string, _ []string, _ any, _ bool) (json.RawMessage, error) {
-	return m.a11yResult, m.a11yErr
-}
-
-func (m *mockA11yDeps) IsConsoleNoise(_ types.LogEntry) bool { return false }
 
 // ============================================
 // Waterfall Summary Tests
@@ -146,7 +143,7 @@ func TestRunA11yAudit_TimeoutReturnsPartialResults(t *testing.T) {
 	}
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	resp := RunA11yAudit(deps, req, json.RawMessage(`{}`))
+	resp := RunA11yAudit(deps.deps(), req, json.RawMessage(`{}`))
 
 	// Should NOT be an error response — should return partial results gracefully
 	var result mcp.MCPToolResult
@@ -207,7 +204,7 @@ func TestRunA11yAudit_AlreadyRunningReturnsPartialResults(t *testing.T) {
 	}
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	resp := RunA11yAudit(deps, req, json.RawMessage(`{}`))
+	resp := RunA11yAudit(deps.deps(), req, json.RawMessage(`{}`))
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -316,7 +313,7 @@ func TestRunA11yAudit_ResultWithErrorFieldReturnsGracefully(t *testing.T) {
 	}
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	resp := RunA11yAudit(deps, req, json.RawMessage(`{}`))
+	resp := RunA11yAudit(deps.deps(), req, json.RawMessage(`{}`))
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {

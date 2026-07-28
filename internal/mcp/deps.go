@@ -1,4 +1,4 @@
-// Purpose: Declares provider interfaces (DiagnosticProvider, CaptureProvider, etc.) that tools require from the host server.
+// Purpose: Declares the asynchronous command and diagnostic contracts used at MCP boundaries.
 // Docs: docs/features/feature/query-service/index.md
 
 package mcp
@@ -7,9 +7,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // DiagnosticProvider supplies system state snapshots for error messages.
@@ -31,29 +29,4 @@ type AsyncCommandDispatcher interface {
 // async queries to the extension.
 type PendingQueryEnqueuer interface {
 	EnqueuePendingQuery(req JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (JSONRPCResponse, bool)
-}
-
-// CaptureProvider gives access to the capture instance for buffer reads.
-// Used by all 5 tools.
-type CaptureProvider interface {
-	GetCapture() *capture.Capture
-}
-
-// LogBufferReader provides read-only access to server log entries.
-// Used by observe, generate (testgen), configure, and analyze (security audit).
-type LogBufferReader interface {
-	GetLogEntries() ([]types.LogEntry, []time.Time)
-	GetLogTotalAdded() int64
-}
-
-// A11yQueryExecutor runs accessibility queries via the browser extension.
-// Used by observe (accessibility), generate (SARIF), and analyze (accessibility).
-type A11yQueryExecutor interface {
-	ExecuteA11yQuery(scope string, tags []string, frame any, forceRefresh bool) (json.RawMessage, error)
-}
-
-// NoiseFilterer checks whether log/network entries match noise suppression rules.
-// Used by observe to filter out repetitive/irrelevant entries.
-type NoiseFilterer interface {
-	IsConsoleNoise(entry types.LogEntry) bool
 }

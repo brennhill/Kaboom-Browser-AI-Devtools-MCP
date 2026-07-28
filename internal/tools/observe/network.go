@@ -31,7 +31,7 @@ func GetNetworkBodies(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 	mcp.LenientUnmarshal(args, &params)
 	params.Limit = clampLimit(params.Limit, 100)
 
-	allBodies := deps.GetCapture().Telemetry().GetNetworkBodies()
+	allBodies := deps.Capture.Telemetry().GetNetworkBodies()
 	var bodyFilterErr error
 	filtered := buffers.ReverseFilterLimit(allBodies, func(b types.NetworkBody) bool {
 		if bodyFilterErr != nil {
@@ -78,8 +78,8 @@ func GetNetworkBodies(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 		newestTS, _ = time.Parse(time.RFC3339, allBodies[len(allBodies)-1].Timestamp)
 	}
 
-	waterfallCount := len(deps.GetCapture().Telemetry().NetworkWaterfall().Entries())
-	responseMeta := BuildResponseMetadata(deps.GetCapture(), newestTS)
+	waterfallCount := len(deps.Capture.Telemetry().NetworkWaterfall().Entries())
+	responseMeta := BuildResponseMetadata(deps.Capture, newestTS)
 	hintFilters := hints.NetworkBodiesFilters{
 		URL:       params.URL,
 		Method:    params.Method,
@@ -127,7 +127,7 @@ func GetWSEvents(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JS
 
 	params.Limit = clampLimit(params.Limit, 100)
 
-	allEvents := deps.GetCapture().Telemetry().GetAllWebSocketEvents()
+	allEvents := deps.Capture.Telemetry().GetAllWebSocketEvents()
 	filtered := buffers.ReverseFilterLimit(allEvents, func(evt types.WebSocketEvent) bool {
 		if params.URL != "" && !ContainsIgnoreCase(evt.URL, params.URL) {
 			return false
@@ -145,7 +145,7 @@ func GetWSEvents(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JS
 		newestTS, _ = time.Parse(time.RFC3339, allEvents[len(allEvents)-1].Timestamp)
 	}
 
-	responseMeta := BuildResponseMetadata(deps.GetCapture(), newestTS)
+	responseMeta := BuildResponseMetadata(deps.Capture, newestTS)
 	if params.Summary {
 		summary := buildWSEventsSummary(filtered, responseMeta)
 		if paramHint != "" {
@@ -198,7 +198,7 @@ func GetNetworkWaterfall(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage
 		return mcp.Succeed(req, "Network waterfall", map[string]any{
 			"entries":  entries,
 			"count":    len(entries),
-			"metadata": BuildResponseMetadata(deps.GetCapture(), newestTS),
+			"metadata": BuildResponseMetadata(deps.Capture, newestTS),
 		})
 	}
 
@@ -206,7 +206,7 @@ func GetNetworkWaterfall(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage
 	response := map[string]any{
 		"entries":  entries,
 		"count":    len(entries),
-		"metadata": BuildResponseMetadata(deps.GetCapture(), newestTS),
+		"metadata": BuildResponseMetadata(deps.Capture, newestTS),
 	}
 	if len(entries) == 0 {
 		response["hint"] = hints.NetworkWaterfall(params.URLFilter)
@@ -215,7 +215,7 @@ func GetNetworkWaterfall(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage
 }
 
 func refreshWaterfallIfStale(deps Deps) []types.NetworkWaterfallEntry {
-	cap := deps.GetCapture()
+	cap := deps.Capture
 	allEntries := cap.Telemetry().NetworkWaterfall().Entries()
 	if len(allEntries) > 0 && time.Since(allEntries[len(allEntries)-1].Timestamp) < 1*time.Second {
 		return allEntries
@@ -313,8 +313,8 @@ func GetWSStatus(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JS
 		URLFilter:    arguments.URL,
 		ConnectionID: arguments.ConnectionID,
 	}
-	status := deps.GetCapture().Telemetry().GetWebSocketStatus(filter)
-	metadata := BuildResponseMetadata(deps.GetCapture(), time.Now())
+	status := deps.Capture.Telemetry().GetWebSocketStatus(filter)
+	metadata := BuildResponseMetadata(deps.Capture, time.Now())
 
 	if arguments.Summary {
 		response := buildWSStatusSummary(status, metadata)

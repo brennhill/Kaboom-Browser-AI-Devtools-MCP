@@ -1,8 +1,6 @@
 // handler.go — the generate(test_*) sub-handler and its contract with the host.
-// Why: test generation reads exactly two things from the host — the console log
-// buffer and the capture store — and both contracts (mcp.LogBufferReader,
-// mcp.CaptureProvider) were already exported from internal/mcp. That made this the
-// one tools_*/testgen_* cluster that needed no new Deps design to leave package main.
+// Why: Test generation consumes only log, action, and network snapshots, so its
+// composition boundary names those reads directly instead of exposing a host.
 // Docs: docs/features/feature/test-generation/index.md
 
 package testgenhandler

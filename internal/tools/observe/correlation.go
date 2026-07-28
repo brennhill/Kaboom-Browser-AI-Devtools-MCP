@@ -63,14 +63,14 @@ func GetErrorBundles(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mc
 		params.Scope = "current_page"
 	}
 
-	_, trackedTabID, trackedTabURL := deps.GetCapture().Extension().GetTrackingStatus()
+	_, trackedTabID, trackedTabURL := deps.Capture.Extension().GetTrackingStatus()
 	if params.URL == "" && params.Scope == "current_page" && trackedTabURL != "" {
 		params.URL = trackedTabURL
 	}
 
 	errors, logs := collectErrorsAndLogs(deps, params.Limit, params.URL, params.Scope, trackedTabID)
 
-	cap := deps.GetCapture()
+	cap := deps.Capture
 	_, trackedTabID, _ = cap.Extension().GetTrackingStatus()
 
 	networkBodies := cap.Telemetry().GetNetworkBodies()
@@ -124,7 +124,7 @@ func GetErrorBundles(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mc
 
 // collectErrorsAndLogs extracts errors and logs from the log buffer snapshot.
 func collectErrorsAndLogs(deps Deps, limit int, urlFilter, scope string, trackedTabID int) ([]timedEntry, []timedEntry) {
-	entries, _ := deps.GetLogEntries()
+	entries, _ := deps.LogEntries()
 
 	var errors, logs []timedEntry
 	for i := len(entries) - 1; i >= 0; i-- {
@@ -363,7 +363,7 @@ func GetSessionTimeline(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage)
 
 	if params.Summary {
 		summary := buildTimelineSummary(entries)
-		summary["metadata"] = BuildResponseMetadata(deps.GetCapture(), time.Now())
+		summary["metadata"] = BuildResponseMetadata(deps.Capture, time.Now())
 		return mcp.Succeed(req, "Timeline", summary)
 	}
 
@@ -374,7 +374,7 @@ func GetSessionTimeline(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage)
 	response := map[string]any{
 		"entries":  entries,
 		"count":    len(entries),
-		"metadata": BuildResponseMetadata(deps.GetCapture(), time.Now()),
+		"metadata": BuildResponseMetadata(deps.Capture, time.Now()),
 	}
 	if len(entries) == 0 {
 		response["hint"] = hints.Timeline()
@@ -383,7 +383,7 @@ func GetSessionTimeline(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage)
 }
 
 func collectTimelineEntries(deps Deps, inc timelineIncludes) []timelineEntry {
-	cap := deps.GetCapture()
+	cap := deps.Capture
 	entries := make([]timelineEntry, 0)
 	if inc.actions {
 		entries = append(entries, collectTimelineActions(cap)...)
@@ -419,7 +419,7 @@ func collectTimelineActions(cap *capture.Capture) []timelineEntry {
 }
 
 func collectTimelineErrors(deps Deps) []timelineEntry {
-	logEntries, _ := deps.GetLogEntries()
+	logEntries, _ := deps.LogEntries()
 	entries := make([]timelineEntry, 0)
 	for _, entry := range logEntries {
 		level, _ := entry["level"].(string)

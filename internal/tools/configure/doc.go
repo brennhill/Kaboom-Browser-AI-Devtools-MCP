@@ -7,7 +7,6 @@ Package configure provides the implementation for the configure MCP tool, which
 manages session settings, noise rules, and test boundaries.
 
 Key types:
-  - Deps: interface declaring dependencies required from the host server.
   - TestBoundaryStartResult: validated parameters for test isolation boundaries.
 
 Key functions:

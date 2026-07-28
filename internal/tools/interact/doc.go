@@ -7,7 +7,6 @@ Package interact provides the implementation for the interact MCP tool, which
 performs browser actions like click, type, navigate, and state management.
 
 Key types:
-  - Deps: interface declaring dependencies required from the host server.
   - WorkflowStep: records a single step's outcome within a workflow trace.
 
 Key functions:

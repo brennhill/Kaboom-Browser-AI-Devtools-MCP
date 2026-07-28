@@ -24,7 +24,7 @@ import (
 
 // GetPageInfo returns information about the currently tracked page.
 func GetPageInfo(deps Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
-	cap := deps.GetCapture()
+	cap := deps.Capture
 	enabled, tabID, trackedURL := cap.Extension().GetTrackingStatus()
 	trackedTitle := cap.Extension().GetTrackedTabTitle()
 
@@ -99,7 +99,7 @@ func resolvePageTitle(deps Deps, trackedTitle string) string {
 	if trackedTitle != "" {
 		return trackedTitle
 	}
-	entries, _ := deps.GetLogEntries()
+	entries, _ := deps.LogEntries()
 	for i := len(entries) - 1; i >= 0; i-- {
 		if title, ok := entries[i]["title"].(string); ok && title != "" {
 			return title
@@ -214,7 +214,7 @@ func filterCookies(cookies []any, name string) []any {
 // GetStorage returns localStorage, sessionStorage, and cookies from the tracked tab.
 func GetStorage(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	params := parseStorageParams(args)
-	cap := deps.GetCapture()
+	cap := deps.Capture
 	enabled, _, _ := cap.Extension().GetTrackingStatus()
 	if !enabled {
 		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(
@@ -356,7 +356,7 @@ func GetIndexedDB(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 	}
 	params.Limit = clampLimit(params.Limit, 100)
 
-	cap := deps.GetCapture()
+	cap := deps.Capture
 	enabled, _, _ := cap.Extension().GetTrackingStatus()
 	if !enabled {
 		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(
@@ -417,7 +417,7 @@ func toInt(v any) (int, bool) {
 
 // GetScreenshot captures a screenshot of the current page via the extension.
 func GetScreenshot(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	cap := deps.GetCapture()
+	cap := deps.Capture
 	enabled, _, _ := cap.Extension().GetTrackingStatus()
 	if !enabled {
 		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(mcp.ErrNoData, "No tab is being tracked. Open the Kaboom extension popup and click 'Track This Tab' on the page you want to monitor. Check observe with what='pilot' for extension status.", "", mcp.WithHint(deps.DiagnosticHintString()))}
@@ -603,7 +603,7 @@ func RunA11yAudit(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 		params.Scope = params.Selector
 	}
 
-	enabled, _, _ := deps.GetCapture().Extension().GetTrackingStatus()
+	enabled, _, _ := deps.Capture.Extension().GetTrackingStatus()
 	if !enabled {
 		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(mcp.ErrNoData, "No tab is being tracked. Open the Kaboom extension popup and click 'Track This Tab' on the page you want to monitor. Check observe with what='pilot' for extension status.", "", mcp.WithHint(deps.DiagnosticHintString()))}
 	}

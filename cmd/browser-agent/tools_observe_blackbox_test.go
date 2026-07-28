@@ -124,7 +124,7 @@ func TestObserveErrors_EndToEnd(t *testing.T) {
 	}
 
 	th := handler.toolHandler.(*ToolHandler)
-	resp := observe.GetBrowserErrors(th, mcpReq, json.RawMessage(`{}`))
+	resp := observe.GetBrowserErrors(buildObserveReadDeps(th), mcpReq, json.RawMessage(`{}`))
 
 	// Step 3: Verify errors are returned
 	var result map[string]any
@@ -187,7 +187,7 @@ func TestObserveLogs_EndToEnd(t *testing.T) {
 	// Call observe logs
 	mcpReq := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	th := handler.toolHandler.(*ToolHandler)
-	resp := observe.GetBrowserLogs(th, mcpReq, json.RawMessage(`{}`))
+	resp := observe.GetBrowserLogs(buildObserveReadDeps(th), mcpReq, json.RawMessage(`{}`))
 
 	var result map[string]any
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -228,7 +228,7 @@ func TestObserveLogs_LevelFilter(t *testing.T) {
 
 	// min_level uses threshold semantics: warn returns warn+error.
 	th := handler.toolHandler.(*ToolHandler)
-	resp := observe.GetBrowserLogs(th, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{"min_level":"warn"}`))
+	resp := observe.GetBrowserLogs(buildObserveReadDeps(th), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{"min_level":"warn"}`))
 
 	var result map[string]any
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -265,7 +265,7 @@ func TestObserveNetworkWaterfall_EndToEnd(t *testing.T) {
 
 	// Call observe network_waterfall
 	th := handler.toolHandler.(*ToolHandler)
-	resp := observe.GetNetworkWaterfall(th, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	resp := observe.GetNetworkWaterfall(buildObserveReadDeps(th), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 	var result map[string]any
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -314,7 +314,7 @@ func TestObserveNetworkWaterfall_URLFilter(t *testing.T) {
 
 	// Filter by "api.example.com"
 	th := handler.toolHandler.(*ToolHandler)
-	resp := observe.GetNetworkWaterfall(th, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{"url":"api.example.com"}`))
+	resp := observe.GetNetworkWaterfall(buildObserveReadDeps(th), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{"url":"api.example.com"}`))
 
 	var result map[string]any
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -351,7 +351,7 @@ func TestObserveExtensionLogs_EndToEnd(t *testing.T) {
 
 	// Call observe extension_logs
 	th := handler.toolHandler.(*ToolHandler)
-	resp := observe.GetExtensionLogs(th, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	resp := observe.GetExtensionLogs(buildObserveReadDeps(th), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 	var result map[string]any
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -395,7 +395,7 @@ func TestObservePage_ExtractsFromWaterfall(t *testing.T) {
 
 	// Call observe page
 	th := handler.toolHandler.(*ToolHandler)
-	resp := observe.GetPageInfo(th, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	resp := observe.GetPageInfo(buildObserveReadDeps(th), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 	var result map[string]any
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -458,7 +458,7 @@ func TestObservePage_PrioritizesTrackedURL(t *testing.T) {
 
 	// Call observe page - should return tracked URL, NOT waterfall URL
 	th := handler.toolHandler.(*ToolHandler)
-	resp := observe.GetPageInfo(th, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	resp := observe.GetPageInfo(buildObserveReadDeps(th), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 	var result map[string]any
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -513,7 +513,7 @@ func TestObserveNetworkBodies_EndToEnd(t *testing.T) {
 
 	// Call observe network_bodies
 	th := handler.toolHandler.(*ToolHandler)
-	resp := observe.GetNetworkBodies(th, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	resp := observe.GetNetworkBodies(buildObserveReadDeps(th), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 	var result map[string]any
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -567,7 +567,7 @@ func TestObserveWebSocketEvents_EndToEnd(t *testing.T) {
 
 	// Call observe websocket_events
 	th := handler.toolHandler.(*ToolHandler)
-	resp := observe.GetWSEvents(th, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
+	resp := observe.GetWSEvents(buildObserveReadDeps(th), mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 	var result map[string]any
 	if err := json.Unmarshal(resp.Result, &result); err != nil {

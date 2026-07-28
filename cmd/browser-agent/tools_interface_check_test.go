@@ -9,16 +9,12 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 )
 
 // Phase 1: Shared dependency interfaces
 var _ mcp.DiagnosticProvider = (*ToolHandler)(nil)
 var _ mcp.AsyncCommandDispatcher = (*ToolHandler)(nil)
 var _ mcp.PendingQueryEnqueuer = (*ToolHandler)(nil)
-
-// Phase 2: Tool-specific dependency interfaces
-var _ observe.Deps = (*ToolHandler)(nil)
 
 // Phase 3: Narrow sub-package dependency interfaces
 var _ netrecord.NetworkBodyProvider = (*capture.TelemetryStore)(nil)

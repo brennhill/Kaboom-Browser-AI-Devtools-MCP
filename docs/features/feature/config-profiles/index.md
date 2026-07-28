@@ -71,6 +71,8 @@ last_verified_date: 2026-03-05
 - Shared configure argument normalization/parsing:
   - `internal/tools/configure/boundaries.go`
   - `internal/tools/configure/rewrite.go`
+- The unused `internal/tools/configure` host declaration has been deleted;
+  configure dependencies are defined only at boundaries that consume them.
 - Configure-local noise, capability, security, telemetry, and jitter handlers
   receive one explicit function-field dependency value composed in
   `tools_configure.go`. Tutorial receives its own three-signal value. The

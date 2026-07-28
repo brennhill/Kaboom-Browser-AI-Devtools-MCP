@@ -34,11 +34,11 @@ func GetSummarizedLogs(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) 
 		}
 	}
 
-	_, trackedTabID, trackedTabURL := deps.GetCapture().Extension().GetTrackingStatus()
+	_, trackedTabID, trackedTabURL := deps.Capture.Extension().GetTrackingStatus()
 	if params.URL == "" && params.Scope == "current_page" && trackedTabURL != "" {
 		params.URL = trackedTabURL
 	}
-	rawEntries, _ := deps.GetLogEntries()
+	rawEntries, _ := deps.LogEntries()
 	views, noiseSuppressed := filterSummarizedLogViews(rawEntries, deps, params, trackedTabID)
 
 	groups, anomalies := groupLogs(views, params.MinGroupSize)
@@ -52,7 +52,7 @@ func GetSummarizedLogs(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) 
 
 	timeStart, timeEnd := summarizedLogsTimeRange(views)
 	summary := summarizedLogsSummary(views, groups, anomalies, noiseSuppressed, timeStart, timeEnd)
-	responseMeta := BuildResponseMetadata(deps.GetCapture(), time.Time{})
+	responseMeta := BuildResponseMetadata(deps.Capture, time.Time{})
 
 	return mcp.Succeed(req, "Summarized logs", map[string]any{
 		"groups":    cleanSummarizedLogGroups(groups),

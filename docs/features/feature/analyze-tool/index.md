@@ -82,6 +82,10 @@ last_verified_date: 2026-03-05
 
 # Analyze Tool
 
+Analyze modes that reuse observation logic receive the same explicit observation
+read value. The unused `internal/tools/analyze` host declaration was deleted
+rather than retained as a prospective interface.
+
 ## TL;DR
 - Status: shipped
 - Tool: `analyze`

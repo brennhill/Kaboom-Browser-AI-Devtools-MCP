@@ -98,7 +98,7 @@ func TestToolAnalyzeErrors_NoErrors(t *testing.T) {
 	env := newObserveTestEnv(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := observe.AnalyzeErrors(env.handler, req, nil)
+	resp := observe.AnalyzeErrors(buildObserveReadDeps(env.handler), req, nil)
 
 	result := parseToolResult(t, resp)
 	data := parseResponseJSON(t, result)
@@ -130,7 +130,7 @@ func TestToolAnalyzeErrors_WithClusters(t *testing.T) {
 	})
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := observe.AnalyzeErrors(env.handler, req, nil)
+	resp := observe.AnalyzeErrors(buildObserveReadDeps(env.handler), req, nil)
 
 	result := parseToolResult(t, resp)
 	data := parseResponseJSON(t, result)
@@ -160,7 +160,7 @@ func TestToolAnalyzeHistory_Empty(t *testing.T) {
 
 	args := json.RawMessage(`{"what":"history"}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := observe.AnalyzeHistory(env.handler, req, args)
+	resp := observe.AnalyzeHistory(buildObserveReadDeps(env.handler), req, args)
 
 	result := parseToolResult(t, resp)
 	data := parseResponseJSON(t, result)
@@ -182,7 +182,7 @@ func TestToolAnalyzeHistory_WithNavigations(t *testing.T) {
 
 	args := json.RawMessage(`{"what":"history"}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := observe.AnalyzeHistory(env.handler, req, args)
+	resp := observe.AnalyzeHistory(buildObserveReadDeps(env.handler), req, args)
 
 	result := parseToolResult(t, resp)
 	data := parseResponseJSON(t, result)
@@ -202,7 +202,7 @@ func TestToolGetScreenshot_TrackingDisabled(t *testing.T) {
 
 	args := json.RawMessage(`{"what":"screenshot"}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := observe.GetScreenshot(env.handler, req, args)
+	resp := observe.GetScreenshot(buildObserveReadDeps(env.handler), req, args)
 
 	result := parseToolResult(t, resp)
 	if !result.IsError {
@@ -224,7 +224,7 @@ func TestToolRunA11yAudit_TrackingDisabled(t *testing.T) {
 
 	args := json.RawMessage(`{"what":"accessibility"}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := observe.RunA11yAudit(env.handler, req, args)
+	resp := observe.RunA11yAudit(buildObserveReadDeps(env.handler), req, args)
 
 	result := parseToolResult(t, resp)
 	if !result.IsError {
