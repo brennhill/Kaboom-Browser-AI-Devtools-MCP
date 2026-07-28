@@ -295,7 +295,7 @@
         }
 
         // Accept both `direction` (preferred) and legacy `value` for backward compatibility.
-        const direction = (options.direction || options.value || '').toLowerCase()
+        const direction = (options.direction || '').toLowerCase()
         const tag = node.tagName.toLowerCase()
 
         // Check if the target itself is a scrollable container

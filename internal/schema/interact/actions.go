@@ -46,7 +46,7 @@ var actionSpecs = []ActionSpec{
 	{Name: "query", Hint: "Query DOM elements: check existence, count, read text or attributes without screenshots", Optional: []string{"selector", "element_id", "index", "nth", "scope_selector", "frame", "query_type", "attribute_names"}},
 	{Name: "set_attribute", Hint: "Set an HTML attribute on an element", Required: []string{"name"}, Optional: []string{"selector", "element_id", "index", "nth", "scope_selector", "frame", "value"}},
 	{Name: "focus", Hint: "Focus an element", Optional: []string{"selector", "element_id", "index", "nth", "scope_selector", "frame"}},
-	{Name: "scroll_to", Hint: "Scroll an element into view, or scroll container directionally (direction='top'|'bottom'|'up'|'down')", Optional: []string{"selector", "element_id", "index", "nth", "scope_selector", "frame", "direction", "value"}},
+	{Name: "scroll_to", Hint: "Scroll an element into view, or scroll container directionally (direction='top'|'bottom'|'up'|'down')", Optional: []string{"selector", "element_id", "index", "nth", "scope_selector", "frame", "direction"}},
 	{Name: "wait_for", Hint: "Wait until a selector appears (or disappears with absent=true), text appears, or URL contains a substring", Optional: []string{"selector", "timeout_ms", "frame", "absent", "url_contains", "text"}},
 	{Name: "key_press", Hint: "Send keyboard keys (Enter, Tab, Escape, shortcuts)", Optional: []string{"text"}},
 	{Name: "paste", Hint: "Paste text into an element via clipboard", Required: []string{"text"}, Optional: []string{"selector", "element_id", "index", "nth", "scope_selector", "frame"}},

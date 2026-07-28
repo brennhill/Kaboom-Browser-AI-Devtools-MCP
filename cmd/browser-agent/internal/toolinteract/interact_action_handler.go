@@ -86,7 +86,6 @@ func deriveRetryStrategy(action string, args json.RawMessage) (strategy string, 
 		"selector",
 		"scope_selector",
 		"scope_rect",
-		"annotation_rect",
 		"element_id",
 		"index",
 		"frame",
@@ -104,7 +103,7 @@ func deriveRetryStrategy(action string, args json.RawMessage) (strategy string, 
 	switch {
 	case payload["element_id"] != nil:
 		return "element_handle", fingerprint
-	case payload["scope_selector"] != nil || payload["scope_rect"] != nil || payload["annotation_rect"] != nil:
+	case payload["scope_selector"] != nil || payload["scope_rect"] != nil:
 		return "scoped_selector", fingerprint
 	case payload["frame"] != nil:
 		return "frame_targeted", fingerprint

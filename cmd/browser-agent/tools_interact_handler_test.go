@@ -667,16 +667,16 @@ func TestToolsInteractDOMPrimitives_SuccessWithPilot(t *testing.T) {
 	}
 }
 
-func TestToolsInteractDOMPrimitive_AnnotationRectAliasMapsToScopeRect(t *testing.T) {
+func TestToolsInteractDOMPrimitive_ScopeRectQueues(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 	cap.SetPilotEnabled(true)
 	mockConnectedTrackedTab(t, cap)
 
-	resp := callInteractRaw(h, `{"what":"click","selector":".compose","annotation_rect":{"x":120,"y":240,"width":300,"height":180}}`)
+	resp := callInteractRaw(h, `{"what":"click","selector":".compose","scope_rect":{"x":120,"y":240,"width":300,"height":180}}`)
 	result := parseToolResult(t, resp)
 	if result.IsError {
-		t.Fatalf("click with annotation_rect should queue, got error: %s", result.Content[0].Text)
+		t.Fatalf("click with scope_rect should queue, got error: %s", result.Content[0].Text)
 	}
 
 	pq := cap.GetLastPendingQuery()

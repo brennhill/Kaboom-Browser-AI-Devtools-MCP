@@ -37,11 +37,6 @@ func normalizeDOMActionArgs(args json.RawMessage, action string) json.RawMessage
 		payload = map[string]any{}
 	}
 	payload["action"] = action
-	if _, hasScopeRect := payload["scope_rect"]; !hasScopeRect {
-		if annotationRect, hasAnnotationRect := payload["annotation_rect"]; hasAnnotationRect {
-			payload["scope_rect"] = annotationRect
-		}
-	}
 	// #448: Convert near_x/near_y/near_radius to scope_rect for region-scoped discovery
 	if _, hasScopeRect := payload["scope_rect"]; !hasScopeRect {
 		nearX, hasX := toFloat64(payload["near_x"])

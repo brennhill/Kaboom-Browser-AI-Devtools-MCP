@@ -179,3 +179,7 @@ The entrypoint does not translate alternate parameter names.
 
 All MCP tools route exclusively through `what`; `interact` does not accept
 `action` as a selector.
+
+Region targeting uses only `scope_rect`; `annotation_rect` is not translated.
+Directional scrolling uses only `direction`; `value` remains reserved for
+actions whose canonical payload is a value.

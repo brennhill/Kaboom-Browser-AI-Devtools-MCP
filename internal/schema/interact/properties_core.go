@@ -34,11 +34,11 @@ func coreActionProperties() map[string]any {
 		},
 		"value": map[string]any{
 			"type":        "string",
-			"description": "Value for select/set_attribute. Also accepted by scroll_to as a legacy direction alias.",
+			"description": "Value for select or set_attribute.",
 		},
 		"direction": map[string]any{
 			"type":        "string",
-			"description": "Scroll direction for scroll_to: top, bottom, up, or down (preferred over value)",
+			"description": "Scroll direction for scroll_to: top, bottom, up, or down.",
 			"enum":        []string{"top", "bottom", "up", "down"},
 		},
 		"storage_type": map[string]any{

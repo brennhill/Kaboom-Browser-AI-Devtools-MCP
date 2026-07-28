@@ -260,21 +260,21 @@ HTMLElement&&current.scrollHeight>current.clientHeight+10){const style=typeof ge
 overflow||"";const ovY=style.overflowY||"";if(ov==="auto"||ov==="scroll"||ovY==="auto"||ovY==="scroll"){return current}}}current=current.parentElement}return null}
 function scrollToY(container,top){if(typeof container.scrollTo==="function"){container.scrollTo({top,behavior:"smooth"});return};container.scrollTop=top}function scrollByY(container,deltaY){
 if(typeof container.scrollBy==="function"){container.scrollBy({top:deltaY,behavior:"smooth"});return}const currentTop=typeof container.scrollTop==="number"?Number(
-container.scrollTop):0;container.scrollTop=currentTop+deltaY}const direction=(options.direction||options.value||"").toLowerCase();const tag=node.tagName.toLowerCase();
-const isContainer=node instanceof HTMLElement&&node.scrollHeight>node.clientHeight+10&&(()=>{const s=typeof getComputedStyle==="function"?getComputedStyle(node):
-null;if(!s)return false;const ov=s.overflow||"";const ovY=s.overflowY||"";return ov==="auto"||ov==="scroll"||ovY==="auto"||ovY==="scroll"})();const directionalContainer=(()=>{
-if(isContainer)return node;const ancestor=findScrollableContainer(node);if(ancestor)return ancestor;if(typeof document!=="undefined"&&document.scrollingElement instanceof
-HTMLElement){return document.scrollingElement}if(tag==="body"||tag==="html")return document.documentElement;return document.documentElement})();if(direction&&directionalContainer){
-const container=directionalContainer;switch(direction){case"top":scrollToY(container,0);return mutatingSuccess(node,{reason:"scrolled_container_top"});case"bott\
-om":scrollToY(container,container.scrollHeight);return mutatingSuccess(node,{reason:"scrolled_container_bottom"});case"up":scrollByY(container,-container.clientHeight*
-.8);return mutatingSuccess(node,{reason:"scrolled_container_up"});case"down":scrollByY(container,container.clientHeight*.8);return mutatingSuccess(node,{reason:"\
-scrolled_container_down"})}}if(tag==="body"||tag==="html"){const scrollable=findScrollableContainer(document.body);if(scrollable){scrollable.scrollIntoView({behavior:"\
-smooth",block:"center"});return mutatingSuccess(node,{reason:"scrolled_nested_container"})}}const parentContainer=findScrollableContainer(node);if(parentContainer&&
-parentContainer!==document.documentElement){node.scrollIntoView({behavior:"smooth",block:"center"});return mutatingSuccess(node,{reason:"scrolled_within_contain\
-er"})}node.scrollIntoView({behavior:"smooth",block:"center"});return mutatingSuccess(node)},hover:()=>withMutationTracking(()=>{if(!(node instanceof HTMLElement))
-return domError("not_interactive",`Element is not an HTMLElement: ${node.tagName}`);const rect=node.getBoundingClientRect();const centerX=rect.left+rect.width/2;
-const centerY=rect.top+rect.height/2;const eventInit={bubbles:true,cancelable:true,clientX:centerX,clientY:centerY};node.dispatchEvent(new MouseEvent("mouseente\
-r",{...eventInit,bubbles:false}));node.dispatchEvent(new MouseEvent("mouseover",eventInit));node.dispatchEvent(new MouseEvent("mousemove",eventInit));return mutatingSuccess(
-node)})}}const handlers=buildActionHandlers(el);const handler=handlers[action];if(!handler){return domError("unknown_action",`Unknown DOM action: ${action}`)}const rawResult=handler();
-if(!resolvedAmbiguousMatches)return rawResult;if(rawResult instanceof Promise){return rawResult.then(r=>{if(r&&typeof r==="object"&&r.success){return{...r,ambiguous_matches:resolvedAmbiguousMatches}}
-return r})}if(rawResult&&typeof rawResult==="object"&&rawResult.success){return{...rawResult,ambiguous_matches:resolvedAmbiguousMatches}}return rawResult}
+container.scrollTop):0;container.scrollTop=currentTop+deltaY}const direction=(options.direction||"").toLowerCase();const tag=node.tagName.toLowerCase();const isContainer=node instanceof
+HTMLElement&&node.scrollHeight>node.clientHeight+10&&(()=>{const s=typeof getComputedStyle==="function"?getComputedStyle(node):null;if(!s)return false;const ov=s.
+overflow||"";const ovY=s.overflowY||"";return ov==="auto"||ov==="scroll"||ovY==="auto"||ovY==="scroll"})();const directionalContainer=(()=>{if(isContainer)return node;
+const ancestor=findScrollableContainer(node);if(ancestor)return ancestor;if(typeof document!=="undefined"&&document.scrollingElement instanceof HTMLElement){return document.
+scrollingElement}if(tag==="body"||tag==="html")return document.documentElement;return document.documentElement})();if(direction&&directionalContainer){const container=directionalContainer;
+switch(direction){case"top":scrollToY(container,0);return mutatingSuccess(node,{reason:"scrolled_container_top"});case"bottom":scrollToY(container,container.scrollHeight);
+return mutatingSuccess(node,{reason:"scrolled_container_bottom"});case"up":scrollByY(container,-container.clientHeight*.8);return mutatingSuccess(node,{reason:"\
+scrolled_container_up"});case"down":scrollByY(container,container.clientHeight*.8);return mutatingSuccess(node,{reason:"scrolled_container_down"})}}if(tag==="bo\
+dy"||tag==="html"){const scrollable=findScrollableContainer(document.body);if(scrollable){scrollable.scrollIntoView({behavior:"smooth",block:"center"});return mutatingSuccess(
+node,{reason:"scrolled_nested_container"})}}const parentContainer=findScrollableContainer(node);if(parentContainer&&parentContainer!==document.documentElement){
+node.scrollIntoView({behavior:"smooth",block:"center"});return mutatingSuccess(node,{reason:"scrolled_within_container"})}node.scrollIntoView({behavior:"smooth",
+block:"center"});return mutatingSuccess(node)},hover:()=>withMutationTracking(()=>{if(!(node instanceof HTMLElement))return domError("not_interactive",`Element \
+is not an HTMLElement: ${node.tagName}`);const rect=node.getBoundingClientRect();const centerX=rect.left+rect.width/2;const centerY=rect.top+rect.height/2;const eventInit={
+bubbles:true,cancelable:true,clientX:centerX,clientY:centerY};node.dispatchEvent(new MouseEvent("mouseenter",{...eventInit,bubbles:false}));node.dispatchEvent(new MouseEvent(
+"mouseover",eventInit));node.dispatchEvent(new MouseEvent("mousemove",eventInit));return mutatingSuccess(node)})}}const handlers=buildActionHandlers(el);const handler=handlers[action];
+if(!handler){return domError("unknown_action",`Unknown DOM action: ${action}`)}const rawResult=handler();if(!resolvedAmbiguousMatches)return rawResult;if(rawResult instanceof
+Promise){return rawResult.then(r=>{if(r&&typeof r==="object"&&r.success){return{...r,ambiguous_matches:resolvedAmbiguousMatches}}return r})}if(rawResult&&typeof rawResult===
+"object"&&rawResult.success){return{...rawResult,ambiguous_matches:resolvedAmbiguousMatches}}return rawResult}

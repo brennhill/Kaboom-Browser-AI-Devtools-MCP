@@ -130,12 +130,12 @@ func TestNormalizeDOMActionArgs_NearToScopeRect(t *testing.T) {
 	}
 }
 
-func TestNormalizeDOMActionArgs_AnnotationRectToScopeRect(t *testing.T) {
-	out := normalizeDOMActionArgs(json.RawMessage(`{"annotation_rect":{"x":1}}`), "click")
+func TestNormalizeDOMActionArgs_PreservesScopeRect(t *testing.T) {
+	out := normalizeDOMActionArgs(json.RawMessage(`{"scope_rect":{"x":1}}`), "click")
 	var m map[string]any
 	_ = json.Unmarshal(out, &m)
 	if _, ok := m["scope_rect"]; !ok {
-		t.Fatal("expected scope_rect copied from annotation_rect")
+		t.Fatal("expected canonical scope_rect")
 	}
 }
 

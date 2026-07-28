@@ -435,7 +435,7 @@ func filterNavigateAndDocumentClickArgs(args json.RawMessage) json.RawMessage {
 
 	click := make(map[string]any, 12)
 	for _, key := range []string{
-		"selector", "scope_selector", "scope_rect", "annotation_rect",
+		"selector", "scope_selector", "scope_rect",
 		"element_id", "index", "index_generation", "nth",
 		"x", "y",
 		"tab_id", "frame", "timeout_ms", "reason",

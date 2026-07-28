@@ -1404,14 +1404,15 @@ instant", block: "center" });
                     const currentTop = typeof container.scrollTop === "number" ? Number(container.scrollTop) : 0;
                     container.scrollTop = currentTop + deltaY;
                 }
-                const direction = (options.direction || options.value || "").toLowerCase();
+                const direction = (options.direction || "").toLowerCase();
                 const tag = node.tagName.toLowerCase();
-                const isContainer = node instanceof HTMLElement && node.scrollHeight > node.clientHeight + 10 && (() => {
-                    const s = typeof getComputedStyle === "function" ? getComputedStyle(node) :
-                        null;
+                const isContainer = node instanceof
+                    HTMLElement && node.scrollHeight > node.clientHeight + 10 && (() => {
+                    const s = typeof getComputedStyle === "function" ? getComputedStyle(node) : null;
                     if (!s)
                         return false;
-                    const ov = s.overflow || "";
+                    const ov = s.
+                        overflow || "";
                     const ovY = s.overflowY || "";
                     return ov === "auto" || ov === "scroll" || ovY === "auto" || ovY === "scroll";
                 })();
@@ -1421,9 +1422,9 @@ instant", block: "center" });
                     const ancestor = findScrollableContainer(node);
                     if (ancestor)
                         return ancestor;
-                    if (typeof document !== "undefined" && document.scrollingElement instanceof
-                        HTMLElement) {
-                        return document.scrollingElement;
+                    if (typeof document !== "undefined" && document.scrollingElement instanceof HTMLElement) {
+                        return document.
+                            scrollingElement;
                     }
                     if (tag === "body" || tag === "html")
                         return document.documentElement;
@@ -1435,46 +1436,45 @@ instant", block: "center" });
                         case "top":
                             scrollToY(container, 0);
                             return mutatingSuccess(node, { reason: "scrolled_container_top" });
-                        case "bott\
-om":
+                        case "bottom":
                             scrollToY(container, container.scrollHeight);
                             return mutatingSuccess(node, { reason: "scrolled_container_bottom" });
                         case "up":
-                            scrollByY(container, -container.clientHeight *
-                                .8);
-                            return mutatingSuccess(node, { reason: "scrolled_container_up" });
+                            scrollByY(container, -container.clientHeight * .8);
+                            return mutatingSuccess(node, { reason: "\
+scrolled_container_up" });
                         case "down":
                             scrollByY(container, container.clientHeight * .8);
-                            return mutatingSuccess(node, { reason: "\
-scrolled_container_down" });
+                            return mutatingSuccess(node, { reason: "scrolled_container_down" });
                     }
                 }
-                if (tag === "body" || tag === "html") {
+                if (tag === "bo\
+dy" || tag === "html") {
                     const scrollable = findScrollableContainer(document.body);
                     if (scrollable) {
-                        scrollable.scrollIntoView({ behavior: "\
-smooth", block: "center" });
+                        scrollable.scrollIntoView({ behavior: "smooth", block: "center" });
                         return mutatingSuccess(node, { reason: "scrolled_nested_container" });
                     }
                 }
                 const parentContainer = findScrollableContainer(node);
-                if (parentContainer &&
-                    parentContainer !== document.documentElement) {
+                if (parentContainer && parentContainer !== document.documentElement) {
                     node.scrollIntoView({ behavior: "smooth", block: "center" });
-                    return mutatingSuccess(node, { reason: "scrolled_within_contain\
-er" });
+                    return mutatingSuccess(node, { reason: "scrolled_within_container" });
                 }
-                node.scrollIntoView({ behavior: "smooth", block: "center" });
+                node.scrollIntoView({ behavior: "smooth",
+                    block: "center" });
                 return mutatingSuccess(node);
             }, hover: () => withMutationTracking(() => {
                 if (!(node instanceof HTMLElement))
-                    return domError("not_interactive", `Element is not an HTMLElement: ${node.tagName}`);
+                    return domError("not_interactive", `Element \
+is not an HTMLElement: ${node.tagName}`);
                 const rect = node.getBoundingClientRect();
                 const centerX = rect.left + rect.width / 2;
                 const centerY = rect.top + rect.height / 2;
-                const eventInit = { bubbles: true, cancelable: true, clientX: centerX, clientY: centerY };
-                node.dispatchEvent(new MouseEvent("mouseente\
-r", { ...eventInit, bubbles: false }));
+                const eventInit = {
+                    bubbles: true, cancelable: true, clientX: centerX, clientY: centerY
+                };
+                node.dispatchEvent(new MouseEvent("mouseenter", { ...eventInit, bubbles: false }));
                 node.dispatchEvent(new MouseEvent("mouseover", eventInit));
                 node.dispatchEvent(new MouseEvent("mousemove", eventInit));
                 return mutatingSuccess(node);
@@ -1488,15 +1488,14 @@ r", { ...eventInit, bubbles: false }));
     const rawResult = handler();
     if (!resolvedAmbiguousMatches)
         return rawResult;
-    if (rawResult instanceof Promise) {
-        return rawResult.then(r => {
-            if (r && typeof r === "object" && r.success) {
-                return { ...r, ambiguous_matches: resolvedAmbiguousMatches };
-            }
-            return r;
-        });
+    if (rawResult instanceof
+        Promise) {
+        return rawResult.then(r => { if (r && typeof r === "object" && r.success) {
+            return { ...r, ambiguous_matches: resolvedAmbiguousMatches };
+        } return r; });
     }
-    if (rawResult && typeof rawResult === "object" && rawResult.success) {
+    if (rawResult && typeof rawResult ===
+        "object" && rawResult.success) {
         return { ...rawResult, ambiguous_matches: resolvedAmbiguousMatches };
     }
     return rawResult;

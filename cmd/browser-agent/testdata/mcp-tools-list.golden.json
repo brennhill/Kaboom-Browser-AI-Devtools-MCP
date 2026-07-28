@@ -1162,7 +1162,7 @@
           "type": "string"
         },
         "direction": {
-          "description": "Scroll direction for scroll_to: top, bottom, up, or down (preferred over value)",
+          "description": "Scroll direction for scroll_to: top, bottom, up, or down.",
           "enum": [
             "top",
             "bottom",
@@ -1434,7 +1434,7 @@
           "type": "string"
         },
         "value": {
-          "description": "Value for select/set_attribute. Also accepted by scroll_to as a legacy direction alias.",
+          "description": "Value for select or set_attribute.",
           "type": "string"
         },
         "visible_only": {
