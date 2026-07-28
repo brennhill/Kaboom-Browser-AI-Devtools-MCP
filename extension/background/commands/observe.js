@@ -10,6 +10,7 @@ import { DebugCategory } from '../debug.js';
 import { recordScreenshot } from '../caches/cache-limits.js';
 import { domPrimitiveListInteractive } from '../dom/primitives/dom-primitives-list-interactive.js';
 import { registerCommand } from './registry.js';
+import { collectCommandElements, commandPageMetadata, selectCommandElements } from './results/element-results.js';
 import { CDP_VERSION } from '../../lib/constants.js';
 import { errorMessage } from '../../lib/error-utils.js';
 import { KABOOM_LOG_PREFIX } from '../../lib/brand.js';
@@ -129,6 +130,13 @@ async function postScreenshot(dataUrl, pageUrl, queryId) {
         return false;
     }
 }
+async function captureAndPostViewport(ctx, tab, format, quality) {
+    const dataUrl = await captureVisibleTabSafe(ctx.tabId, tab.windowId, { format, quality });
+    recordScreenshot(ctx.tabId);
+    if (!(await postScreenshot(dataUrl, tab.url, ctx.query.id))) {
+        ctx.sendResult({ error: 'screenshot_upload_failed', message: 'Server rejected screenshot' });
+    }
+}
 registerCommand('screenshot', async (ctx) => {
     const format = ctx.params.format === 'png' ? 'png' : 'jpeg';
     const quality = typeof ctx.params.quality === 'number' ? ctx.params.quality : 80;
@@ -147,16 +155,7 @@ registerCommand('screenshot', async (ctx) => {
             await captureElement(ctx, tab, selector, format, quality);
             return;
         }
-        const dataUrl = await captureVisibleTabSafe(ctx.tabId, tab.windowId, {
-            format: format,
-            quality
-        });
-        recordScreenshot(ctx.tabId);
-        // POST to /screenshots with query_id — server saves file and resolves query directly
-        const ok = await postScreenshot(dataUrl, tab.url, ctx.query.id);
-        if (!ok) {
-            ctx.sendResult({ error: 'screenshot_upload_failed', message: 'Server rejected screenshot' });
-        }
+        await captureAndPostViewport(ctx, tab, format, quality);
         // No sendResult needed — server resolves the query via query_id
     }
     catch (err) {
@@ -427,15 +426,7 @@ async function captureFullPage(ctx, tab, format, quality) {
         debugLog(DebugCategory.CAPTURE, 'Full-page CDP failed, falling back to viewport capture', {
             error: errorMessage(err)
         });
-        const dataUrl = await captureVisibleTabSafe(ctx.tabId, tab.windowId, {
-            format: format,
-            quality
-        });
-        recordScreenshot(ctx.tabId);
-        const ok = await postScreenshot(dataUrl, tab.url, ctx.query.id);
-        if (!ok) {
-            ctx.sendResult({ error: 'screenshot_upload_failed', message: 'Server rejected screenshot' });
-        }
+        await captureAndPostViewport(ctx, tab, format, quality);
     }
     finally {
         // Step 8: Always restore containers
@@ -545,42 +536,10 @@ registerCommand('page_inventory', async (ctx) => {
             args: ['']
         });
         // Merge interactive elements from all frames (up to 100)
-        const elements = [];
-        let firstError;
-        for (const r of interactiveResults) {
-            const res = r.result;
-            if (res?.success === false) {
-                if (!firstError)
-                    firstError = res.error || res.message;
-                continue;
-            }
-            if (res?.elements) {
-                elements.push(...res.elements);
-                if (elements.length >= 100)
-                    break;
-            }
-        }
-        const cappedElements = elements.slice(0, 100);
-        // Apply visible_only filter if requested
-        let filteredElements = cappedElements;
-        if (ctx.params.visible_only === true) {
-            filteredElements = cappedElements.filter((el) => {
-                const elem = el;
-                return elem.visible !== false;
-            });
-        }
-        // Apply limit if specified
-        const limit = typeof ctx.params.limit === 'number' && ctx.params.limit > 0 ? ctx.params.limit : filteredElements.length;
-        const finalElements = filteredElements.slice(0, limit);
+        const { elements: cappedElements, firstError } = collectCommandElements(interactiveResults, 100);
+        const finalElements = selectCommandElements(cappedElements, ctx.params);
         const payload = {
-            url: tab.url || '',
-            title: tab.title || '',
-            tab_status: tab.status || '',
-            favicon: tab.favIconUrl || '',
-            viewport: {
-                width: tab.width,
-                height: tab.height
-            },
+            ...commandPageMetadata(tab),
             interactive_elements: finalElements,
             interactive_count: finalElements.length,
             total_candidates: cappedElements.length

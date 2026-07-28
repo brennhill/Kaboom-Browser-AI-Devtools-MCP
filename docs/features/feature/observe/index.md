@@ -38,6 +38,8 @@ code_paths:
   - internal/tools/observe/idbquery/scripts.go
   - src/background.ts
   - src/background/commands/observe.ts
+  - src/background/commands/helpers.ts
+  - src/background/commands/results/element-results.ts
   - src/lib/brand.ts
   - src/lib/page/context.ts
   - src/lib/daemon-http.ts
@@ -49,6 +51,7 @@ code_paths:
   - src/lib/net/network.ts
 test_paths:
   - internal/capture/health_reader_owner_test.go
+  - tests/extension/command-element-results.test.js
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/internal/toolobserve/toolobserve_coverage_test.go
   - cmd/browser-agent/tools_observe_inbox_test.go
@@ -127,6 +130,9 @@ interface or observation-only root getter remains.
 
 Cross-owner runtime health is read through `capture.HealthReader`; no aggregate
 health facade remains on the `Capture` composition root.
+Element collection, visibility filtering, limits, and tab metadata use the
+shared command helpers also consumed by `interact-explore`; viewport screenshot
+capture/upload has one implementation for both normal capture and CDP fallback.
 
 Tool dispatch uses only the canonical `what` selector and canonical mode names;
 `mode`, `action`, `network`, and `ws` routing shortcuts are not accepted.

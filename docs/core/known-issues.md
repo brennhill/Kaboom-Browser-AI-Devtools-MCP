@@ -62,63 +62,9 @@ go test ./cmd/browser-agent/ -run TestToolAnalyzeErrors \
 produced a false claim in a feature doc during the July 2026 audit. Untested
 *behaviour* and uncounted *coverage* are different problems with different fixes.
 
-## Architecture
-
-### 4. God objects remain, despite the folder counts — INFO
-
-The July 2026 refactor series reduced *per-folder file counts* and satisfied the
-ratcheting folder gate, but it did not decompose the two large types. Do not read
-the folder-gate numbers as evidence that it did.
-
-| | Current |
-| --- | --- |
-| `Capture` production methods (composition and owner accessors) | 12 |
-| `cmd/browser-agent` production source files (package `main`) | 10 |
-| `*ToolHandler` methods in those files | 3 |
-
-Both remain structurally constrained: Go only permits methods on a type in the
-package that declares it. Extracted `tool*` packages therefore expose handlers
-through narrow `Deps` contracts while canonical `*ToolHandler` entry points
-remain in `main`. These are the sole implementations, not compatibility shims.
-The 10-file production package target is met, but the remaining methods still
-reflect a broad composition root. The asynchronous command lifecycle is now
-owned completely by `internal/asynccommand.Handler`; queueing, accessibility
-execution, waiting, response enrichment, and telemetry no longer remain as root
-methods or MCP provider interfaces. AI action normalization is likewise owned by
-`internal/recording/actionlog.Recorder`, shared directly by interact, state,
-upload, sequence, and screen-recording callers. Configure mode registration and
-dispatch now belong to `internal/toolconfigure.Dispatcher`; health, doctor,
-audit, streaming, and restart receive explicit dependencies rather than root
-methods. Executable modules, examples, and input schemas now live in one
-immutable `internal/toolcatalog.Catalog`; the parallel lazy root caches and
-their initialization methods were deleted. The active refactor continues moving the
-remaining stateful clusters behind independently synchronized owners and
-migrating callers directly to those canonical APIs.
-
-The extension-facing ingestion boundary is now owned by
-`capture.HTTPHandlers`: network, action, performance, WebSocket, query-result,
-recording-storage, and circuit-health routes migrated together. All server and
-test callers construct that canonical owner directly, and the former
-`Capture.Handle*` methods were deleted rather than kept as facades. The
-separate session/command transport cluster is now owned by
-`capture.SyncHandler`. Heartbeats, command results, long-poll delivery,
-disconnect reconciliation, lifecycle events, and sync diagnostics migrated
-together; all callers construct the owner directly and `Capture` retains no
-sync forwarding methods.
-Aggregate health composition is now owned by `capture.HealthReader`, which
-depends directly on the telemetry, query, extension, and circuit owners.
-Operational, dashboard, doctor, and configure callers migrated directly; the
-former `Capture.GetHealthSnapshot` method was deleted.
-Coordinated clearing is now owned by `capture.StateResetter`; CI and configure
-callers receive it explicitly, and `Capture.ClearAll` was deleted.
-
-Note also that `src/lib` and `src/background` were **relocated into
-subdirectories, not decomposed** — total file count and LOC are essentially
-unchanged. The folder gate counts files per directory, so nesting satisfies it.
-
 ## Release / tooling
 
-### 5. Repo token lacks `workflow` scope — MEDIUM
+### 4. Repo token lacks `workflow` scope — MEDIUM
 
 Any PR touching `.github/workflows/` cannot be merged, or have its branch
 updated, via `gh`:
@@ -130,7 +76,7 @@ GraphQL: refusing to allow an OAuth App to create or update workflow
 
 Such PRs must go through the GitHub web UI.
 
-### 6. PR #591 would revert the repository if merged — HIGH
+### 5. PR #591 would revert the repository if merged — HIGH
 
 The open dependabot PR (`@playwright/test` 1.59.1 → 1.62.0) is **115 commits
 behind UNSTABLE**. Its real payload is one line in `tests/e2e/package.json`, but
@@ -148,7 +94,7 @@ The branch cannot be updated via `gh` because of issue 9.
 **Do not merge it.** Close it and let dependabot regenerate against UNSTABLE
 (#637 already retargeted dependabot), or apply the one-line bump by hand.
 
-### 7. Non-blocking CI checks that are permanently red — INFO
+### 6. Non-blocking CI checks that are permanently red — INFO
 
 These appear on every PR and are not caused by the branch under review:
 
@@ -163,12 +109,12 @@ under `extension/` or `tests/`.
 
 ## Runtime (product)
 
-### 8. Extension timeout on first `interact()` — MEDIUM
+### 7. Extension timeout on first `interact()` — MEDIUM
 
 The content script may not be fully loaded when the first `interact()` command
 arrives after navigation. **Workaround:** retry after 2-3 seconds.
 
-### 9. Tracking loss during cross-origin navigation — MEDIUM
+### 8. Tracking loss during cross-origin navigation — MEDIUM
 
 The extension can lose tab tracking state during an AI-initiated cross-origin
 navigation via `interact({what: "navigate"})`. **Workaround:** re-enable
@@ -178,6 +124,16 @@ tracking from the extension popup.
 
 ### v0.8.x
 
+- The broad `Capture` behavior was decomposed into change-coupled
+  `HTTPHandlers`, `SyncHandler`, `HealthReader`, and `StateResetter` owners.
+  `Capture` now exposes only canonical owner accessors and lifecycle close;
+  structural tests prohibit the deleted forwarding surfaces.
+- The extension folder split was audited by responsibility and duplication.
+  `background/{commands,dom,exec,recording,sync,ui}` and
+  `lib/{analysis,net,page,storage,tabs}` are domain boundaries, not filename or
+  size buckets. Handwritten command clones were extracted; the remaining
+  `jscpd` findings are generated DOM primitives sourced from one template and
+  partial set because Chrome requires self-contained injected functions.
 - All authored Go, TypeScript, and JavaScript files, including tests, are now
   enforced at 800 LOC with no waiver comments. The oversized suites were split
   by change-coupled responsibility; generated and compiled outputs are excluded.

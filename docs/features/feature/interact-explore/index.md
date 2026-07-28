@@ -35,6 +35,8 @@ code_paths:
   - src/background/pending-queries.ts
   - src/background/exec/query-execution.ts
   - src/background/commands/helpers.ts
+  - src/background/commands/results/element-results.ts
+  - src/background/commands/interact-explore.ts
   - src/background/exec/browser-actions.ts
   - src/background/dom/cdp/cdp-dispatch.ts
   - src/background/dom/dom-dispatch.ts
@@ -71,6 +73,7 @@ code_paths:
   - cmd/browser-agent/internal/summarypref/cache.go
   - cmd/browser-agent/tools_core.go
 test_paths:
+  - tests/extension/command-element-results.test.js
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/lint_hardening_test.go
   - internal/recording/actionlog/recorder_test.go
@@ -185,11 +188,15 @@ registered. The similarly named extension pending-query types remain internal.
 ## Canonical Note
 This feature documents the shipped `interact` action surface (not a batched `interact.explore` action).
 
-The generated pointer, form, and read primitive modules intentionally contain
-the same selector and result machinery. Chrome serializes each injected
+The generated DOM primitive modules intentionally contain shared selector,
+target-resolution, and result machinery. Chrome serializes each injected
 function independently, so imports or shared closures would fail at runtime.
-Their duplication is generated from one template; only the action handlers
-differ. This is the intentional `jscpd` exception for these three files.
+Their duplication is generated from one template and focused partials; only the
+action-family handlers differ. These generated modules are the documented
+`jscpd` exception. Handwritten command clones are not exempt:
+`selectCommandElements`, `collectCommandElements`, and `commandPageMetadata`
+are grouped in the pure `commands/results` module and shared directly by
+`observe` and `interact-explore`.
 
 `get_text` supports `structured:true` for hierarchical extraction (for example accordion/list sections), and this option must be forwarded through DOM dispatch into extension primitives.
 

@@ -40,6 +40,7 @@ export type ActionToastFn = (
 ) => void
 
 export type QueryParamsObject = Record<string, unknown>
+
 type TargetResolutionSource =
   | 'explicit_tab'
   | 'tracked_tab'

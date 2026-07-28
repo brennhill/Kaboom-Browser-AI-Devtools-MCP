@@ -6,6 +6,11 @@ import { domPrimitiveListInteractive } from '../dom/primitives/dom-primitives-li
 import { domPrimitiveNavDiscovery } from '../dom/primitives/dom-primitives-nav-discovery.js'
 import { readableFallbackScript } from '../exec/content-fallback-scripts.js'
 import { registerCommand } from './registry.js'
+import {
+  collectCommandElements,
+  commandPageMetadata,
+  selectCommandElements
+} from './results/element-results.js'
 import { errorMessage } from '../../lib/error-utils.js'
 
 // =============================================================================
@@ -83,38 +88,11 @@ registerCommand('explore_page', async (ctx) => {
     ])
 
     // Process interactive elements (capped at 100)
-    const elements: unknown[] = []
-    let interactiveError: string | undefined
-    for (const r of interactiveResults) {
-      const res = r.result as {
-        success?: boolean
-        elements?: unknown[]
-        error?: string
-        message?: string
-      } | null
-      if (res?.success === false) {
-        if (!interactiveError) interactiveError = res.error || res.message
-        continue
-      }
-      if (res?.elements) {
-        elements.push(...res.elements)
-        if (elements.length >= 100) break
-      }
-    }
-    let cappedElements = elements.slice(0, 100)
-
-    // Apply visible_only filter if requested
-    if (ctx.params.visible_only === true) {
-      cappedElements = cappedElements.filter((el) => {
-        const elem = el as { visible?: boolean }
-        return elem.visible !== false
-      })
-    }
-
-    // Apply limit if specified
-    const limit =
-      typeof ctx.params.limit === 'number' && ctx.params.limit > 0 ? ctx.params.limit : cappedElements.length
-    const finalElements = cappedElements.slice(0, limit)
+    const { elements: cappedElements, firstError: interactiveError } = collectCommandElements(
+      interactiveResults,
+      100
+    )
+    const finalElements = selectCommandElements(cappedElements, ctx.params)
 
     // Process readable content
     const readableFirst = readableResults?.[0]?.result
@@ -127,15 +105,7 @@ registerCommand('explore_page', async (ctx) => {
 
     // Build composite payload
     const payload: Record<string, unknown> = {
-      // Page metadata
-      url: tab.url || '',
-      title: tab.title || '',
-      tab_status: tab.status || '',
-      favicon: tab.favIconUrl || '',
-      viewport: {
-        width: tab.width,
-        height: tab.height
-      },
+      ...commandPageMetadata(tab),
 
       // Interactive elements
       interactive_elements: finalElements,
