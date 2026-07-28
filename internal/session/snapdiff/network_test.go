@@ -55,7 +55,7 @@ func TestBuildEndpointMap_KeyByMethodAndPath(t *testing.T) {
 		t.Fatalf("Expected 2 entries, got %d", len(m))
 	}
 
-	// GET /api/users (query stripped by capture.ExtractURLPath)
+	// GET /api/users (query stripped by util.ExtractURLPath)
 	getKey := endpointKey{Method: "GET", Path: "/api/users"}
 	getReq, ok := m[getKey]
 	if !ok {

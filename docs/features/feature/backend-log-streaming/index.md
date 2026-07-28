@@ -17,6 +17,7 @@ code_paths:
   - internal/capture/extension_logs.go
   - internal/capture/extension_state.go
   - internal/capture/handlers.go
+  - internal/util/url.go
   - internal/queries/dispatcher_queries.go
   - internal/capture/sync.go
   - internal/capture/test_helpers.go
@@ -97,6 +98,8 @@ Capture dependencies use the canonical `capture.Capture` container type.
 Persisted extension settings are read and written only through the canonical
 `internal/state.SettingsFile` location; there is no fallback settings reader.
 The former `capture.Store` and `capture.Snapshot` aliases have been removed.
+URL-path normalization consumers import `internal/util.ExtractURLPath`
+directly; the capture-package pass-through and its duplicate tests are deleted.
 Capture APIs and their callers use the canonical wire contracts from
 `internal/types` directly; `internal/capture` does not re-export wire types.
 The unused `EventBuffers`, `NetworkWaterfallStore`, `ExtensionLogStore`, and

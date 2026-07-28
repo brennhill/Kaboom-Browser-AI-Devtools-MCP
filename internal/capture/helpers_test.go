@@ -1,7 +1,7 @@
 // Purpose: Tests for capture helper functions.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
-// helpers_test.go — Tests for shared utility functions: URL path extraction, slice helpers, ingest body reading.
+// helpers_test.go — Tests for ingest body reading and rate-limit plumbing.
 package capture
 
 import (
@@ -11,135 +11,6 @@ import (
 	"strings"
 	"testing"
 )
-
-// ============================================
-// ExtractURLPath Tests
-// ============================================
-
-func TestNewExtractURLPath_FullURL(t *testing.T) {
-	t.Parallel()
-
-	got := ExtractURLPath("https://example.com/api/v1/users?page=2&limit=10")
-	want := "/api/v1/users"
-	if got != want {
-		t.Errorf("ExtractURLPath(full URL with query) = %q, want %q", got, want)
-	}
-}
-
-func TestNewExtractURLPath_URLWithFragment(t *testing.T) {
-	t.Parallel()
-
-	got := ExtractURLPath("https://example.com/docs#section-3")
-	want := "/docs"
-	if got != want {
-		t.Errorf("ExtractURLPath(URL with fragment) = %q, want %q", got, want)
-	}
-}
-
-func TestNewExtractURLPath_URLWithQueryAndFragment(t *testing.T) {
-	t.Parallel()
-
-	got := ExtractURLPath("https://example.com/search?q=test#results")
-	want := "/search"
-	if got != want {
-		t.Errorf("ExtractURLPath(URL with query+fragment) = %q, want %q", got, want)
-	}
-}
-
-func TestNewExtractURLPath_RootPath(t *testing.T) {
-	t.Parallel()
-
-	got := ExtractURLPath("https://example.com/")
-	want := "/"
-	if got != want {
-		t.Errorf("ExtractURLPath(root path) = %q, want %q", got, want)
-	}
-}
-
-func TestNewExtractURLPath_NoPath(t *testing.T) {
-	t.Parallel()
-
-	// When URL has no path component, ExtractURLPath returns "/"
-	got := ExtractURLPath("https://example.com")
-	want := "/"
-	if got != want {
-		t.Errorf("ExtractURLPath(no path) = %q, want %q", got, want)
-	}
-}
-
-func TestNewExtractURLPath_DeepNestedPath(t *testing.T) {
-	t.Parallel()
-
-	got := ExtractURLPath("https://api.example.com/v2/users/123/posts/456/comments")
-	want := "/v2/users/123/posts/456/comments"
-	if got != want {
-		t.Errorf("ExtractURLPath(deep nested) = %q, want %q", got, want)
-	}
-}
-
-func TestNewExtractURLPath_EmptyString(t *testing.T) {
-	t.Parallel()
-
-	// Empty string is parseable as a URL with empty path
-	got := ExtractURLPath("")
-	want := "/"
-	if got != want {
-		t.Errorf("ExtractURLPath(empty string) = %q, want %q", got, want)
-	}
-}
-
-func TestNewExtractURLPath_JustPath(t *testing.T) {
-	t.Parallel()
-
-	got := ExtractURLPath("/api/health")
-	want := "/api/health"
-	if got != want {
-		t.Errorf("ExtractURLPath(just path) = %q, want %q", got, want)
-	}
-}
-
-func TestNewExtractURLPath_FileURL(t *testing.T) {
-	t.Parallel()
-
-	got := ExtractURLPath("file:///home/user/document.html")
-	want := "/home/user/document.html"
-	if got != want {
-		t.Errorf("ExtractURLPath(file URL) = %q, want %q", got, want)
-	}
-}
-
-func TestNewExtractURLPath_URLWithPort(t *testing.T) {
-	t.Parallel()
-
-	got := ExtractURLPath("http://localhost:8080/api/data")
-	want := "/api/data"
-	if got != want {
-		t.Errorf("ExtractURLPath(URL with port) = %q, want %q", got, want)
-	}
-}
-
-func TestNewExtractURLPath_URLWithAuth(t *testing.T) {
-	t.Parallel()
-
-	got := ExtractURLPath("https://user:pass@example.com/secret")
-	want := "/secret"
-	if got != want {
-		t.Errorf("ExtractURLPath(URL with auth) = %q, want %q", got, want)
-	}
-}
-
-func TestNewExtractURLPath_URLWithEncodedChars(t *testing.T) {
-	t.Parallel()
-
-	got := ExtractURLPath("https://example.com/path%20with%20spaces")
-	want := "/path%20with%20spaces"
-	// url.Parse preserves percent-encoding in RawPath but Path is decoded.
-	// The function uses parsed.Path, so spaces may be decoded.
-	// Accept either encoded or decoded form:
-	if got != want && got != "/path with spaces" {
-		t.Errorf("ExtractURLPath(encoded chars) = %q, want %q or decoded form", got, want)
-	}
-}
 
 // ============================================
 // readIngestBody Tests

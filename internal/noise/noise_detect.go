@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
 // AutoDetect analyzes buffers and proposes noise rules based on frequency and source analysis.
@@ -103,7 +103,7 @@ func (nc *NoiseConfig) detectInfrastructureURLs(bodies []types.NetworkBody) []No
 	}
 	urlCounts := make(map[string]int)
 	for _, body := range bodies {
-		path := capture.ExtractURLPath(body.URL)
+		path := util.ExtractURLPath(body.URL)
 		if path != "" {
 			urlCounts[path]++
 		}

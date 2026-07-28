@@ -19,6 +19,7 @@ code_paths:
   - internal/noise/noise_persistence.go
   - internal/noise/noise_rules.go
   - internal/noise/noise_stats.go
+  - internal/util/url.go
 test_paths:
   - cmd/browser-agent/internal/noiseautorun/autorun_test.go
   - cmd/browser-agent/noise_first_connect_test.go
@@ -58,4 +59,6 @@ last_verified_date: 2026-03-05
 Automatic detection scheduling, navigation debouncing, first-connect lifecycle
 wiring, and telemetry adaptation are owned together by
 `cmd/browser-agent/internal/noiseautorun`. The root handler retains only its
-required `mcp.NoiseFilterer` method and initialization wiring.
+required `mcp.NoiseFilterer` method and initialization wiring. Automatic URL
+classification imports the canonical `internal/util` path normalizer directly;
+there is no capture-layer pass-through.

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
 // endpointKey uniquely identifies a network endpoint by method and path.
@@ -21,7 +21,7 @@ type endpointKey struct {
 func buildEndpointMap(requests []types.SnapshotNetworkRequest) map[endpointKey]types.SnapshotNetworkRequest {
 	m := make(map[endpointKey]types.SnapshotNetworkRequest, len(requests))
 	for _, req := range requests {
-		key := endpointKey{Method: req.Method, Path: capture.ExtractURLPath(req.URL)}
+		key := endpointKey{Method: req.Method, Path: util.ExtractURLPath(req.URL)}
 		m[key] = req
 	}
 	return m

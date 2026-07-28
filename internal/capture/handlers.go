@@ -205,10 +205,6 @@ func (c *Capture) HandlePerformanceSnapshots(w http.ResponseWriter, r *http.Requ
 	})
 }
 
-func ExtractURLPath(rawURL string) string {
-	return util.ExtractURLPath(rawURL)
-}
-
 func (c *Capture) readIngestBody(w http.ResponseWriter, r *http.Request) ([]byte, bool) {
 	if c.Circuit().CheckRateLimit() {
 		c.Circuit().WriteRateLimitResponse(w)

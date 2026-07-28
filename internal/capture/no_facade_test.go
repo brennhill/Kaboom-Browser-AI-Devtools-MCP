@@ -214,6 +214,7 @@ func TestCaptureHasNoCompatibilityAliases(t *testing.T) {
 		"func (c *Capture) GetActionTotalAdded(",
 		"func (c *Capture) GetSnapshot(",
 		"func (c *Capture) NetworkWaterfall(",
+		"func ExtractURLPath(",
 	} {
 		if strings.Contains(source.String(), forbidden) {
 			t.Errorf("capture retains compatibility surface %q", forbidden)

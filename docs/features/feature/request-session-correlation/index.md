@@ -16,7 +16,9 @@ code_paths:
   - internal/session/snapshot-manager.go
   - internal/session/comparison.go
   - internal/session/snapdiff/types.go
+  - internal/session/snapdiff/network.go
   - internal/types/snapshot.go
+  - internal/util/url.go
 test_paths:
   - cmd/browser-agent/server_routes_clients_test.go
   - internal/session/clientreg/clientreg_test.go
@@ -61,4 +63,5 @@ last_verified_date: 2026-03-05
 `internal/types/snapshot.go` owns the snapshot contract. Session capture and
 diff modules consume those types directly; they do not re-export package-local
 aliases. Snapshot manager, comparison, and diff tests exercise the same
-canonical contract.
+canonical contract. Network diffing likewise consumes URL-path normalization
+directly from `internal/util`, without routing through capture.
