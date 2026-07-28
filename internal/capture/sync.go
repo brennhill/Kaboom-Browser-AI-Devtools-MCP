@@ -229,12 +229,7 @@ func (c *Capture) HandleSync(w http.ResponseWriter, r *http.Request) {
 	// Forward extension feature usage to the usage counter via callback.
 	// Only known UI-originated keys are forwarded to prevent unbounded counter cardinality.
 	if filtered := filterFeaturesUsed(req.FeaturesUsed); len(filtered) > 0 {
-		c.mu.RLock()
-		cb := c.featuresCallback
-		c.mu.RUnlock()
-		if cb != nil {
-			cb(filtered)
-		}
+		c.FeatureUsage().Notify(filtered)
 	}
 
 	c.processSyncCommandResults(req.CommandResults, clientID)

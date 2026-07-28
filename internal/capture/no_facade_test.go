@@ -41,6 +41,7 @@ func TestCaptureHasNoCompatibilityAliases(t *testing.T) {
 		"func (c *Capture) SetServerVersion(",
 		"func (c *Capture) GetServerVersion(",
 		"func (c *Capture) GetVersionMismatch(",
+		"func (c *Capture) SetFeaturesCallback(",
 		"QueryDispatcher =",
 		"QuerySnapshot =",
 		"NewQueryDispatcher =",

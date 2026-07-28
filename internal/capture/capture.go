@@ -93,8 +93,8 @@ type Capture struct {
 	// Lifecycle Event Callbacks
 	// ============================================
 
-	lifecycle        *lifecycle.Observer   // Typed event bus for lifecycle events (circuit breaker, extension state, buffer overflow). Has own lock independent of Capture.mu.
-	featuresCallback func(map[string]bool) // Optional callback fired when extension reports feature usage (called outside lock)
+	lifecycle    *lifecycle.Observer   // Typed event bus for lifecycle events (circuit breaker, extension state, buffer overflow). Has own lock independent of Capture.mu.
+	featureUsage *FeatureUsageObserver // Optional extension feature-usage consumer. Independently synchronized.
 
 }
 
@@ -112,6 +112,7 @@ func NewCapture() *Capture {
 		diagnosticLogs:   newDiagnosticLogStore(logRedactor.Redact),
 		recordingManager: recording.NewRecordingManager(),
 		lifecycle:        lifecycle.NewObserver(),
+		featureUsage:     newFeatureUsageObserver(),
 	}
 	c.queryDispatcher = queries.NewQueryDispatcher()
 	c.circuit = circuit.NewCircuitBreaker(c.lifecycle.Emit)
@@ -142,6 +143,11 @@ func (c *Capture) Lifecycle() *lifecycle.Observer {
 	return c.lifecycle
 }
 
+// FeatureUsage returns the canonical independently synchronized usage observer.
+func (c *Capture) FeatureUsage() *FeatureUsageObserver {
+	return c.featureUsage
+}
+
 // Extension returns the canonical independently synchronized extension runtime.
 func (c *Capture) Extension() *ExtensionRuntime {
 	return c.extension
@@ -161,14 +167,6 @@ func (c *Capture) Close() {
 	if c.queryDispatcher != nil {
 		c.queryDispatcher.Close()
 	}
-}
-
-// SetFeaturesCallback sets a callback for extension feature usage reports.
-// Called from HandleSync when features_used is present. Invoked outside Capture lock.
-func (c *Capture) SetFeaturesCallback(cb func(map[string]bool)) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.featuresCallback = cb
 }
 
 // SetClientRegistry wires the client registry used by /clients endpoints.

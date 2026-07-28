@@ -16,6 +16,7 @@ code_paths:
   - internal/capture/events.go
   - internal/capture/extension_logs.go
   - internal/capture/extension_state.go
+  - internal/capture/feature_usage.go
   - internal/capture/handlers.go
   - internal/util/url.go
   - internal/queries/dispatcher_queries.go
@@ -61,6 +62,7 @@ test_paths:
   - internal/capture/coverage_gaps_part2_test.go
   - internal/capture/api_contract_test.go
   - internal/capture/extension_log_store_test.go
+  - internal/capture/feature_usage_test.go
   - internal/capture/buffer_clear_test.go
   - internal/capture/testhelpers_test.go
   - internal/capture/no_facade_test.go
@@ -143,6 +145,10 @@ Rate limiting and circuit health use the canonical breaker returned by
 Lifecycle publishers and subscribers likewise use the independently
 synchronized observer returned by `Capture.Lifecycle()`; the Capture-level
 subscribe and emit forwarding methods are deleted.
+Extension feature-usage analytics use the independently synchronized
+`FeatureUsageObserver` returned by `Capture.FeatureUsage()`. Callback
+replacement and notification live together; Capture no longer stores or
+forwards the callback.
 Extension connection, pilot, tracked-tab, CSP, security-mode, command-heartbeat,
 test-boundary, and server/extension compatibility state now share the independently synchronized
 `ExtensionRuntime` returned by `Capture.Extension()`. Sync ingestion and every

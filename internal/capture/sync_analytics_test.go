@@ -17,7 +17,7 @@ func TestHandleSync_FeaturesUsedInvokesCallback(t *testing.T) {
 	var callbackInvoked bool
 	var receivedFeatures map[string]bool
 
-	cap.SetFeaturesCallback(func(features map[string]bool) {
+	cap.FeatureUsage().SetCallback(func(features map[string]bool) {
 		mu.Lock()
 		callbackInvoked = true
 		receivedFeatures = features
@@ -41,7 +41,7 @@ func TestHandleSync_FeaturesUsedInvokesCallback(t *testing.T) {
 	mu.Lock()
 	defer mu.Unlock()
 	if !callbackInvoked {
-		t.Fatal("Expected featuresCallback to be invoked")
+		t.Fatal("expected feature-usage observer to be notified")
 	}
 	if !receivedFeatures["screenshot"] {
 		t.Error("Expected screenshot=true in callback")
@@ -60,7 +60,7 @@ func TestHandleSync_FeaturesUsedEmpty_NoCallback(t *testing.T) {
 
 	var mu sync.Mutex
 	var callbackInvoked bool
-	cap.SetFeaturesCallback(func(_ map[string]bool) {
+	cap.FeatureUsage().SetCallback(func(_ map[string]bool) {
 		mu.Lock()
 		callbackInvoked = true
 		mu.Unlock()
@@ -162,7 +162,7 @@ func TestHandleSync_FeaturesUsedUnknownKeysFiltered(t *testing.T) {
 
 	var mu sync.Mutex
 	var receivedFeatures map[string]bool
-	cap.SetFeaturesCallback(func(features map[string]bool) {
+	cap.FeatureUsage().SetCallback(func(features map[string]bool) {
 		mu.Lock()
 		receivedFeatures = features
 		mu.Unlock()

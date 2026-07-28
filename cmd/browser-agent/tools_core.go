@@ -446,7 +446,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	handler.usageTracker = telemetry.NewUsageTracker()
 	if captureStore != nil {
 		tracker := handler.usageTracker
-		captureStore.SetFeaturesCallback(func(features map[string]bool) {
+		captureStore.FeatureUsage().SetCallback(func(features map[string]bool) {
 			for key, used := range features {
 				if used {
 					tracker.RecordToolCall("ext:"+key, 0, false)
