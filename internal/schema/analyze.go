@@ -33,7 +33,7 @@ func analyzeToolSchema() mcp.MCPTool {
 				},
 				"background": map[string]any{
 					"type":        "boolean",
-					"description": "Return immediately with correlation_id instead of waiting for result (default: false). For annotations, wait blocks up to timeout_ms before falling back to correlation polling.",
+					"description": "Return immediately with correlation_id instead of waiting for result (default: false). For annotations, background=false blocks up to timeout_ms before falling back to correlation polling.",
 				},
 				"operation": map[string]any{
 					"type":        "string",

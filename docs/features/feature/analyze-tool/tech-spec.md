@@ -35,7 +35,7 @@ last_verified_date: 2026-03-05
 - `observe({what:"command_result", correlation_id})` is the canonical retrieval path.
 
 ## Annotation Waiter and Flush Recovery
-- `analyze({what:"annotations", wait:true})` now uses a two-stage wait path:
+- `analyze({what:"annotations", background:false})` now uses a two-stage wait path:
   1. bounded blocking wait for new annotations (`timeout_ms`, default 15s, max 10m),
   2. fallback to `ann_*` async waiter + command-result polling if the block window expires.
 - Normal completion path:

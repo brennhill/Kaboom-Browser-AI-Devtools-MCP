@@ -10,10 +10,21 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/annotationanalysis"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
+
+func replaceAnnotationStoreForTest(h *ToolHandler, store *annotation.Store) {
+	h.annotationStore = store
+	h.annotationAnalysis = annotationanalysis.New(
+		store,
+		h.capture,
+		h.formatCommandResult,
+		h.server.logs.Entries,
+	)
+}
 
 // unmarshalMCPText extracts the text from an MCP tool response.
 func unmarshalMCPText(t *testing.T, raw json.RawMessage) string {
@@ -32,7 +43,7 @@ func TestToolGetAnnotations_NoSession(t *testing.T) {
 	h := createTestToolHandler(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	args := json.RawMessage(`{"what":"annotations","wait":false}`)
+	args := json.RawMessage(`{"what":"annotations","background":true}`)
 
 	resp := h.annotationAnalysis.GetAnnotations(req, args)
 
@@ -269,7 +280,7 @@ func TestToolGetAnnotations_ZeroAnnotationsFlow(t *testing.T) {
 	h := createTestToolHandler(t)
 
 	// Use a fresh store to avoid cross-test contamination
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
 	session := &annotation.Session{
@@ -310,7 +321,7 @@ func TestToolGetAnnotations_ZeroAnnotationsFlow(t *testing.T) {
 
 func TestToolGetAnnotations_WaitTrue_ImmediateReturn(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
 	// Mark draw started, then store session
@@ -324,7 +335,7 @@ func TestToolGetAnnotations_WaitTrue_ImmediateReturn(t *testing.T) {
 	})
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	args := json.RawMessage(`{"what": "annotations", "wait": true, "timeout_ms": 10}`)
+	args := json.RawMessage(`{"what": "annotations", "background":false, "timeout_ms": 10}`)
 
 	resp := h.annotationAnalysis.GetAnnotations(req, args)
 	text := unmarshalMCPText(t, resp.Result)
@@ -336,13 +347,13 @@ func TestToolGetAnnotations_WaitTrue_ImmediateReturn(t *testing.T) {
 
 func TestToolGetAnnotations_WaitTrue_ReturnsCorrelationID(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
 	h.annotationStore.MarkDrawStarted()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	args := json.RawMessage(`{"what": "annotations", "wait": true, "timeout_ms": 10}`)
+	args := json.RawMessage(`{"what": "annotations", "background":false, "timeout_ms": 10}`)
 
 	resp := h.annotationAnalysis.GetAnnotations(req, args)
 	text := unmarshalMCPText(t, resp.Result)
@@ -370,14 +381,14 @@ func TestToolGetAnnotations_WaitTrue_ReturnsCorrelationID(t *testing.T) {
 
 func TestToolGetAnnotations_Flush_CompletesPendingCommand_WithEmptyResultReason(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
 	h.annotationStore.MarkDrawStarted()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 
-	waitResp := h.annotationAnalysis.GetAnnotations(req, json.RawMessage(`{"what":"annotations","wait":true,"timeout_ms":10}`))
+	waitResp := h.annotationAnalysis.GetAnnotations(req, json.RawMessage(`{"what":"annotations","background":false,"timeout_ms":10}`))
 	waitText := unmarshalMCPText(t, waitResp.Result)
 	waitJSON := extractJSONFromText(waitText)
 
@@ -430,10 +441,10 @@ func TestToolGetAnnotations_Flush_CompletesPendingCommand_WithEmptyResultReason(
 
 func TestToolGetAnnotations_Flush_IsIdempotent(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
-	// Seed currently-available data, then mark draw start so wait=true still returns pending.
+	// Seed currently-available data, then mark draw start so blocking mode still returns pending.
 	h.annotationStore.StoreSession(1, &annotation.Session{
 		TabID:       1,
 		Timestamp:   time.Now().UnixMilli(),
@@ -443,7 +454,7 @@ func TestToolGetAnnotations_Flush_IsIdempotent(t *testing.T) {
 	h.annotationStore.MarkDrawStarted()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	waitResp := h.annotationAnalysis.GetAnnotations(req, json.RawMessage(`{"what":"annotations","wait":true,"timeout_ms":10}`))
+	waitResp := h.annotationAnalysis.GetAnnotations(req, json.RawMessage(`{"what":"annotations","background":false,"timeout_ms":10}`))
 	waitText := unmarshalMCPText(t, waitResp.Result)
 	waitJSON := extractJSONFromText(waitText)
 
@@ -490,7 +501,7 @@ func TestToolGetAnnotations_Flush_IsIdempotent(t *testing.T) {
 
 func TestToolGetAnnotations_Flush_MissingCorrelationID(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
@@ -504,7 +515,7 @@ func TestToolGetAnnotations_Flush_MissingCorrelationID(t *testing.T) {
 
 func TestToolGetAnnotations_InvalidOperation(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
@@ -518,7 +529,7 @@ func TestToolGetAnnotations_InvalidOperation(t *testing.T) {
 
 func TestToolGetAnnotations_WaitTrue_ImmediateIfDataReady(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
 	h.annotationStore.MarkDrawStarted()
@@ -533,7 +544,7 @@ func TestToolGetAnnotations_WaitTrue_ImmediateIfDataReady(t *testing.T) {
 	})
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	args := json.RawMessage(`{"what": "annotations", "wait": true, "timeout_ms": 10}`)
+	args := json.RawMessage(`{"what": "annotations", "background":false, "timeout_ms": 10}`)
 
 	resp := h.annotationAnalysis.GetAnnotations(req, args)
 	text := unmarshalMCPText(t, resp.Result)
@@ -545,7 +556,7 @@ func TestToolGetAnnotations_WaitTrue_ImmediateIfDataReady(t *testing.T) {
 
 func TestToolGetAnnotations_WaitTrue_BlocksAndReturnsSessionWithinTimeout(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
 	h.annotationStore.MarkDrawStarted()
@@ -561,7 +572,7 @@ func TestToolGetAnnotations_WaitTrue_BlocksAndReturnsSessionWithinTimeout(t *tes
 	}()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	args := json.RawMessage(`{"what":"annotations","wait":true,"timeout_ms":250}`)
+	args := json.RawMessage(`{"what":"annotations","background":false,"timeout_ms":250}`)
 
 	resp := h.annotationAnalysis.GetAnnotations(req, args)
 	text := unmarshalMCPText(t, resp.Result)
@@ -576,13 +587,13 @@ func TestToolGetAnnotations_WaitTrue_BlocksAndReturnsSessionWithinTimeout(t *tes
 
 func TestToolGetAnnotations_WaitTrue_TimesOutToCorrelationFallback(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
 	h.annotationStore.MarkDrawStarted()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	args := json.RawMessage(`{"what":"annotations","wait":true,"timeout_ms":10}`)
+	args := json.RawMessage(`{"what":"annotations","background":false,"timeout_ms":10}`)
 
 	resp := h.annotationAnalysis.GetAnnotations(req, args)
 	text := unmarshalMCPText(t, resp.Result)
@@ -603,7 +614,7 @@ func TestToolGetAnnotations_WaitTrue_TimesOutToCorrelationFallback(t *testing.T)
 
 func TestToolGetAnnotations_WaitTrue_WaiterCompletedOnStore(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
 	// Track completed commands
@@ -616,9 +627,9 @@ func TestToolGetAnnotations_WaitTrue_WaiterCompletedOnStore(t *testing.T) {
 
 	h.annotationStore.MarkDrawStarted()
 
-	// Call wait=true — returns correlation_id immediately
+	// Call with background=false — returns correlation_id after the bounded wait.
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	args := json.RawMessage(`{"what": "annotations", "wait": true}`)
+	args := json.RawMessage(`{"what": "annotations", "background":false}`)
 	resp := h.annotationAnalysis.GetAnnotations(req, args)
 
 	text := unmarshalMCPText(t, resp.Result)
@@ -647,7 +658,7 @@ func TestToolGetAnnotations_WaitTrue_WaiterCompletedOnStore(t *testing.T) {
 
 func TestToolGetAnnotations_WaitTrue_WaiterCompletedOnStore_UsesURLFilter(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
 	var completedResult json.RawMessage
@@ -658,7 +669,7 @@ func TestToolGetAnnotations_WaitTrue_WaiterCompletedOnStore_UsesURLFilter(t *tes
 	h.annotationStore.MarkDrawStarted()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	args := json.RawMessage(`{"what":"annotations","wait":true,"timeout_ms":10,"url":"http://localhost:3000/*"}`)
+	args := json.RawMessage(`{"what":"annotations","background":false,"timeout_ms":10,"url":"http://localhost:3000/*"}`)
 	resp := h.annotationAnalysis.GetAnnotations(req, args)
 
 	text := unmarshalMCPText(t, resp.Result)
@@ -692,7 +703,7 @@ func TestToolGetAnnotations_WaitTrue_WaiterCompletedOnStore_UsesURLFilter(t *tes
 
 func TestToolGetAnnotations_WaitTrue_NamedWaiterCompletedOnStore_UsesURLFilter(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
 	var completedResult json.RawMessage
@@ -703,7 +714,7 @@ func TestToolGetAnnotations_WaitTrue_NamedWaiterCompletedOnStore_UsesURLFilter(t
 	h.annotationStore.MarkDrawStarted()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	args := json.RawMessage(`{"what":"annotations","annot_session":"qa","wait":true,"timeout_ms":10,"url_pattern":"http://localhost:3000/*"}`)
+	args := json.RawMessage(`{"what":"annotations","annot_session":"qa","background":false,"timeout_ms":10,"url_pattern":"http://localhost:3000/*"}`)
 	resp := h.annotationAnalysis.GetAnnotations(req, args)
 
 	text := unmarshalMCPText(t, resp.Result)
@@ -740,12 +751,12 @@ func TestToolGetAnnotations_WaitTrue_NamedWaiterCompletedOnStore_UsesURLFilter(t
 
 func TestToolGetAnnotations_WaitFalse_DefaultBehavior(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
-	// No session exists, wait=false — should return immediately with no-data message
+	// No session exists, background=true — return immediately with no-data message.
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	args := json.RawMessage(`{"what": "annotations", "wait": false}`)
+	args := json.RawMessage(`{"what": "annotations", "background":true}`)
 
 	resp := h.annotationAnalysis.GetAnnotations(req, args)
 	text := unmarshalMCPText(t, resp.Result)
@@ -757,7 +768,7 @@ func TestToolGetAnnotations_WaitFalse_DefaultBehavior(t *testing.T) {
 
 func TestToolGetAnnotations_NamedSession(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
 	h.annotationStore.AppendToNamedSession("qa", &annotation.Session{
@@ -812,11 +823,11 @@ func TestToolGetAnnotations_NamedSession(t *testing.T) {
 
 func TestToolGetAnnotations_NamedSession_NotFound(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	args := json.RawMessage(`{"what":"annotations","annot_session":"nonexistent","wait":false}`)
+	args := json.RawMessage(`{"what":"annotations","annot_session":"nonexistent","background":true}`)
 
 	resp := h.annotationAnalysis.GetAnnotations(req, args)
 	text := unmarshalMCPText(t, resp.Result)
@@ -828,7 +839,7 @@ func TestToolGetAnnotations_NamedSession_NotFound(t *testing.T) {
 
 func TestToolGetAnnotations_NamedSession_MultiProjectScopeWarningWithoutFilter(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
 	h.annotationStore.AppendToNamedSession("qa", &annotation.Session{
@@ -868,7 +879,7 @@ func TestToolGetAnnotations_NamedSession_MultiProjectScopeWarningWithoutFilter(t
 
 func TestToolGetAnnotations_NamedSession_URLFilterScoped(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
 	h.annotationStore.AppendToNamedSession("qa", &annotation.Session{
@@ -910,7 +921,7 @@ func TestToolGetAnnotations_NamedSession_URLFilterScoped(t *testing.T) {
 
 func TestToolGetAnnotations_AnonymousURLFilterNoMatch(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
 	h.annotationStore.StoreSession(1, &annotation.Session{
@@ -940,7 +951,7 @@ func TestToolGetAnnotations_AnonymousURLFilterNoMatch(t *testing.T) {
 
 func TestToolGetAnnotations_AnonymousBaseURLFilter_DoesNotCrossPortPrefix(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
 	h.annotationStore.StoreSession(1, &annotation.Session{
@@ -967,7 +978,7 @@ func TestToolGetAnnotations_AnonymousBaseURLFilter_DoesNotCrossPortPrefix(t *tes
 
 func TestToolGetAnnotations_ConflictingURLFilterParams(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
@@ -981,7 +992,7 @@ func TestToolGetAnnotations_ConflictingURLFilterParams(t *testing.T) {
 
 func TestToolGetAnnotations_Flush_UsesExplicitURLFilterWhenWaiterMissing(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
 	h.annotationStore.StoreSession(1, &annotation.Session{
@@ -1272,7 +1283,7 @@ func TestToolGetAnnotationDetail_ErrorCorrelation_NoErrors(t *testing.T) {
 
 func TestToolGetAnnotationDetail_ErrorCorrelation_NamedSession(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
 	annotTS := time.Now()
@@ -1321,7 +1332,7 @@ func TestToolGetAnnotationDetail_ErrorCorrelation_NamedSession(t *testing.T) {
 
 func TestToolGetAnnotationDetail_ErrorCorrelation_NonLatestTab(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
 	annotTS := time.Now()
@@ -1639,7 +1650,7 @@ func TestToolGetAnnotationDetail_NoHints_WhenNoSpecialData(t *testing.T) {
 
 func TestToolGetAnnotations_NamedSessionHints(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
 	h.annotationStore.AppendToNamedSession("pm-review", &annotation.Session{
@@ -1671,7 +1682,7 @@ func TestToolGetAnnotations_NamedSessionHints(t *testing.T) {
 
 func TestToolGetAnnotationDetail_ErrorCorrelation_CapsAt5(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
 	annotTS := time.Now()
@@ -1912,7 +1923,7 @@ func TestToolGetAnnotationDetail_ErrorCorrelation_TimestampFoundEmptyLogs(t *tes
 
 func TestToolGetAnnotations_ZeroAnnotations_NoHints(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
+	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
 	defer h.annotationStore.Close()
 
 	session := &annotation.Session{

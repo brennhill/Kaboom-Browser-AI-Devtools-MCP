@@ -52,13 +52,12 @@ const annotationBlockingWaitDefault = 15 * time.Second
 // in which console errors are considered correlated.
 const annotationErrorCorrelationWindow = 5 * time.Second
 
-// annotationBlockingWaitMax caps caller-provided timeout_ms for wait=true annotation calls.
+// annotationBlockingWaitMax caps caller-provided timeout_ms for blocking annotation calls.
 const annotationBlockingWaitMax = 10 * time.Minute
 
 // toolGetAnnotations returns latest annotation session or a named multi-page session.
 func (h *Handler) GetAnnotations(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
-		Wait         *bool  `json:"wait"`
 		Background   *bool  `json:"background"`
 		AnnotSession string `json:"annot_session"`
 		Operation    string `json:"operation"`
@@ -68,15 +67,14 @@ func (h *Handler) GetAnnotations(req mcp.JSONRPCRequest, args json.RawMessage) m
 		URLPattern   string `json:"url_pattern"`
 	}
 	if len(args) > 0 {
-		mcp.LenientUnmarshal(args, &params)
+		if response, stop := mcp.ParseArgs(req, args, &params); stop {
+			return response
+		}
 	}
-	// Canonical param is "background" (false = block). "wait" is a quiet alias.
-	// Default to wait=true when both background and wait are omitted.
+	// Default to blocking when background is omitted.
 	waitValue := true // default: blocking
 	if params.Background != nil {
 		waitValue = !*params.Background
-	} else if params.Wait != nil {
-		waitValue = *params.Wait
 	}
 
 	urlFilter, filterResp, hasFilterErr := resolveAnnotationURLFilter(req, params.URL, params.URLPattern)
@@ -313,13 +311,13 @@ func (h *Handler) toolFlushAnnotations(req mcp.JSONRPCRequest, correlationID str
 	if correlationID == "" {
 		return mcp.Fail(req, mcp.ErrMissingParam,
 			"Required parameter 'correlation_id' is missing for operation='flush'",
-			"Pass the correlation_id returned by analyze({what:'annotations',wait:true}).",
+			"Pass the correlation_id returned by analyze({what:'annotations',background:false}).",
 			mcp.WithParam("correlation_id"))
 	}
 	if !strings.HasPrefix(correlationID, "ann_") {
 		return mcp.Fail(req, mcp.ErrInvalidParam,
 			"Invalid annotation correlation_id: "+correlationID,
-			"Use an annotation correlation_id (prefix ann_) from analyze({what:'annotations',wait:true}).",
+			"Use an annotation correlation_id (prefix ann_) from analyze({what:'annotations',background:false}).",
 			mcp.WithParam("correlation_id"))
 	}
 

@@ -232,14 +232,14 @@ Retrieve annotations from the last draw mode session. Users draw rectangles and 
 ```js
 analyze({what: "annotations"})
 analyze({what: "annotations", session: "checkout-review"})
-analyze({what: "annotations", session: "checkout-review", wait: true, timeout_ms: 300000})
+analyze({what: "annotations", session: "checkout-review", background:false, timeout_ms: 300000})
 ```
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `session` | string | Named session for multi-page annotation review |
 | `wait` | boolean | Block until user finishes drawing (default 5 min timeout) |
-| `timeout_ms` | number | Max wait time when `wait: true` (max 600000ms / 10 min) |
+| `timeout_ms` | number | Max wait time when `background:false` (max 600000ms / 10 min) |
 
 ### `annotation_detail`
 

@@ -106,4 +106,7 @@ Aliases:
 Tool dispatch uses only the canonical `what` selector and canonical mode names;
 `mode`, `action`, `a11y`, and `history` routing shortcuts are not accepted.
 
+Annotation execution uses only `background`: false blocks for the bounded wait,
+while true returns immediately. The former inverse `wait` parameter is removed.
+
 Queue saturation for extension-dispatched analyze actions now fails fast with a structured `queue_full` response (via shared enqueue helper), instead of entering async wait/poll flow.

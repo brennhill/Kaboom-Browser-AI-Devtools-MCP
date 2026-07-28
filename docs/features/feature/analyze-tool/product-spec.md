@@ -20,7 +20,7 @@ Run analysis and command-driven browser inspection workflows that go beyond pass
 
 ## Behavior Model
 - Sync by default.
-- `background:true` (or `sync:false`/`wait:false`) returns queued handles.
+- `background:true` (or `sync:false`/`background:true`) returns queued handles.
 - Correlation results are retrievable via `observe({what:"command_result"})`.
 
 ## Mode Classes
