@@ -16,6 +16,8 @@ test_paths:
   - cmd/browser-agent/internal/toolgenerate/handlers_coverage_test.go
   - cmd/browser-agent/tools_generate_audit_test.go
   - internal/export/export_sarif_test.go
+  - internal/export/export_sarif_document_test.go
+  - internal/export/export_sarif_file_test.go
   - internal/export/export_sarif_unit_test.go
   - cmd/browser-agent/lint_hardening_test.go
 last_verified_version: 0.7.12
