@@ -47,6 +47,11 @@ code_paths:
   - src/background/dom/primitives/dom-primitives-read.ts
   - src/inject.ts
   - src/inject/execute-js.ts
+  - src/inject/message-handlers.ts
+  - src/inject/state.ts
+  - src/content/message-handlers.ts
+  - src/content/script-injection.ts
+  - src/content/window-message-listener.ts
   - src/content/runtime-message-listener.ts
   - src/background/dom/primitives/dom-primitives-list-interactive.ts
   - src/background/dom/primitives/dom-primitives-intent.ts
@@ -103,6 +108,7 @@ test_paths:
   - tests/extension/pilot-state.test.js
   - tests/extension/pilot-toggle.test.js
   - tests/extension/no-compatibility-facades.test.js
+  - tests/extension/content-message-correlation.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -118,6 +124,9 @@ The action registry contains canonical actions only; schemas, capability metadat
 runtime parity, and reference generators consume it directly without alias filters.
 Page-world interaction tests import action, state, serialization, and message
 handler modules directly; the injected bundle is not an API surface.
+Every content/inject `window.postMessage` request and response requires the
+current per-page nonce. Missing and mismatched nonces fail closed; there is no
+unauthenticated migration path.
 Screenshot capture belongs only to `observe({what:"screenshot"})`; the former
 `interact` screenshot compatibility action has been removed.
 State snapshot handlers accept only the canonical `snapshot_name` parameter;

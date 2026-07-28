@@ -156,6 +156,20 @@ test('storage consumers use focused owner modules', () => {
   }
 })
 
+test('cross-context messages require the canonical page nonce', () => {
+  for (const path of [
+    'src/content/message-handlers.ts',
+    'src/content/script-injection.ts',
+    'src/content/window-message-listener.ts',
+    'src/inject/message-handlers.ts',
+    'src/inject/state.ts'
+  ]) {
+    const source = readFileSync(path, 'utf8')
+    assert.doesNotMatch(source, /backwards? compat/i, `${path} retains a nonce migration branch`)
+    assert.doesNotMatch(source, /\b(?:nonce|pageNonce)\s*&&[^;\n]*_nonce/, `${path} accepts a missing nonce`)
+  }
+})
+
 test('WebSocket instrumentation does not re-export tracking APIs', () => {
   const source = readFileSync('src/lib/net/websocket.ts', 'utf8')
   assert.doesNotMatch(

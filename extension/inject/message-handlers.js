@@ -81,7 +81,7 @@ export function installMessageListener(captureStateFn, restoreStateFn) {
     window.addEventListener('message', (event) => {
         if (event.source !== window || event.origin !== window.location.origin)
             return;
-        if (pageNonce && event.data?._nonce !== pageNonce)
+        if (!pageNonce || event.data?._nonce !== pageNonce)
             return;
         const msgType = event.data?.type;
         if (!msgType)

@@ -299,7 +299,7 @@ if (typeof window !== 'undefined') {
 if (typeof window !== 'undefined') {
   window.addEventListener('message', (event: MessageEvent) => {
     if (event.source !== window || event.origin !== window.location.origin) return
-    if (pageNonce && (event.data as Record<string, unknown>)?._nonce !== pageNonce) return
+    if (!pageNonce || (event.data as Record<string, unknown>)?._nonce !== pageNonce) return
     if (event.data?.type === 'kaboom_highlight_request') {
       const { requestId, params } = event.data
       const { selector, duration_ms } = params || { selector: '' }

@@ -193,7 +193,7 @@ export async function ensureInjectBridgeReady(timeoutMs = 350) {
                 return;
             if (event.data?.requestId !== requestId)
                 return;
-            if (event.data?._nonce && event.data._nonce !== pageNonce)
+            if (event.data?._nonce !== pageNonce)
                 return;
             finish(true);
         };

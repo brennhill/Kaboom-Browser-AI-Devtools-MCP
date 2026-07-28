@@ -41,10 +41,8 @@ export function initWindowMessageListener(): void {
 
     const responseHandler = messageType ? RESPONSE_HANDLERS[messageType] : undefined
     if (responseHandler) {
-      // Validate nonce on response messages (spoofing prevention).
-      // Accept responses with no nonce for backwards compat during migration.
       const nonce = (event.data as { _nonce?: string })?._nonce
-      if (nonce && nonce !== getPageNonce()) return
+      if (nonce !== getPageNonce()) return
       if (requestId !== undefined) responseHandler(requestId, result)
       return
     }

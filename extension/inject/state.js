@@ -246,7 +246,7 @@ if (typeof window !== 'undefined') {
     window.addEventListener('message', (event) => {
         if (event.source !== window || event.origin !== window.location.origin)
             return;
-        if (pageNonce && event.data?._nonce !== pageNonce)
+        if (!pageNonce || event.data?._nonce !== pageNonce)
             return;
         if (event.data?.type === 'kaboom_highlight_request') {
             const { requestId, params } = event.data;

@@ -227,7 +227,7 @@ export function installMessageListener(
 
   window.addEventListener('message', (event: MessageEvent<PageMessageData>) => {
     if (event.source !== window || event.origin !== window.location.origin) return
-    if (pageNonce && (event.data as unknown as { _nonce?: string })?._nonce !== pageNonce) return
+    if (!pageNonce || (event.data as unknown as { _nonce?: string })?._nonce !== pageNonce) return
 
     const msgType = event.data?.type
     if (!msgType) return

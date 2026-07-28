@@ -7,6 +7,7 @@ import { initTabTracking } from '../../extension/content/tab-tracking.js'
 import { initWindowMessageListener } from '../../extension/content/window-message-listener.js'
 import { registerDomRequest } from '../../extension/content/request-tracking.js'
 import { MESSAGE_MAP, safeSendMessage } from '../../extension/content/message-forwarding.js'
+import { getPageNonce } from '../../extension/content/script-injection.js'
 
 describe('Content Window Message Bridge', () => {
   let messageHandler
@@ -110,6 +111,7 @@ describe('Content Window Message Bridge', () => {
       data: {
         type: 'kaboom_dom_query_response',
         requestId,
+        _nonce: getPageNonce(),
         result: expected
       }
     })

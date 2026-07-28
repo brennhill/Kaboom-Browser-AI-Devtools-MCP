@@ -132,9 +132,15 @@ export async function handleStateCommand(
 
   // Set up listener for response from inject.js
   const responseHandler = (
-    event: MessageEvent<{ type?: string; messageId?: string; result?: { error?: string; [key: string]: unknown } }>
+    event: MessageEvent<{
+      type?: string
+      messageId?: string
+      result?: { error?: string; [key: string]: unknown }
+      _nonce?: string
+    }>
   ) => {
     if (event.source !== window) return
+    if (event.data?._nonce !== getPageNonce()) return
     if (event.data?.type === 'kaboom_state_response' && event.data?.messageId === messageId) {
       window.removeEventListener('message', responseHandler)
       deferred.resolve(event.data.result || { error: 'No result from state command' })
@@ -346,10 +352,8 @@ export function handleGetNetworkWaterfall(sendResponse: (result: { entries: Wate
     event: MessageEvent<{ type?: string; requestId?: number; entries?: WaterfallEntry[]; _nonce?: string }>
   ) => {
     if (event.source !== window) return
-    // Validate nonce on response messages (spoofing prevention).
-    // Accept responses with no nonce for backwards compat during migration.
     const nonce = event.data?._nonce
-    if (nonce && nonce !== getPageNonce()) return
+    if (nonce !== getPageNonce()) return
     if (event.data?.type === 'kaboom_waterfall_response' && event.data?.requestId === requestId) {
       window.removeEventListener('message', responseHandler)
       deferred.resolve({ entries: event.data.entries || [] })
@@ -399,10 +403,8 @@ function forwardInjectQuery(
     event: MessageEvent<{ type?: string; requestId?: number; result?: unknown; _nonce?: string }>
   ) => {
     if (event.source !== window) return
-    // Validate nonce on response messages (spoofing prevention).
-    // Accept responses with no nonce for backwards compat during migration.
     const nonce = event.data?._nonce
-    if (nonce && nonce !== getPageNonce()) return
+    if (nonce !== getPageNonce()) return
     if (event.data?.type === responseType && event.data?.requestId === requestId) {
       window.removeEventListener('message', responseHandler)
       deferred.resolve(event.data.result || { error: `No result from ${label}` })

@@ -216,7 +216,7 @@ export async function ensureInjectBridgeReady(timeoutMs = 350): Promise<boolean>
       if (event.source !== window || event.origin !== window.location.origin) return
       if (event.data?.type !== 'kaboom_inject_bridge_pong') return
       if (event.data?.requestId !== requestId) return
-      if (event.data?._nonce && event.data._nonce !== pageNonce) return
+      if (event.data?._nonce !== pageNonce) return
       finish(true)
     }
 

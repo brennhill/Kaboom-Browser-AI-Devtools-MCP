@@ -44,11 +44,12 @@ function resetWindow() {
 }
 
 /** Simulate a postMessage event from the page (inject.js response) */
-function fireWindowMessage(data) {
+function fireWindowMessage(data, { authenticate = true } = {}) {
+  const nonce = postedMessages.findLast((message) => typeof message._nonce === 'string')?._nonce
   const event = {
     source: mockWindow,
     origin: mockWindow.location.origin,
-    data
+    data: authenticate && data._nonce === undefined ? { ...data, _nonce: nonce } : data
   }
   // Copy listeners array to avoid mutation during iteration
   const listeners = [...messageListeners]
@@ -336,20 +337,34 @@ describe('forwardInjectQuery — nonce validation', () => {
     assert.deepStrictEqual(result, { elements: ['legit'], count: 1 })
   })
 
-  test('response with no nonce is accepted (backwards compat)', async () => {
-    const result = await new Promise((resolve) => {
-      handleComputedStylesQuery({ selector: 'div' }, resolve)
-
-      const posted = postedMessages.find((m) => m.type === 'kaboom_computed_styles_query')
-
-      // No _nonce field — backwards compat for migration period
-      fireWindowMessage({
-        type: 'kaboom_computed_styles_response',
-        requestId: posted.requestId,
-        result: { elements: ['no-nonce'], count: 1 }
+  test('response with no nonce is ignored', async () => {
+    let resolved = false
+    const pending = new Promise((resolve) => {
+      handleComputedStylesQuery({ selector: 'div' }, (result) => {
+        resolved = true
+        resolve(result)
       })
     })
 
-    assert.deepStrictEqual(result, { elements: ['no-nonce'], count: 1 })
+    const posted = postedMessages.find((m) => m.type === 'kaboom_computed_styles_query')
+    fireWindowMessage(
+      {
+        type: 'kaboom_computed_styles_response',
+        requestId: posted.requestId,
+        result: { elements: ['spoofed'], count: 1 }
+      },
+      { authenticate: false }
+    )
+
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    assert.strictEqual(resolved, false, 'should not resolve without the page nonce')
+
+    fireWindowMessage({
+      type: 'kaboom_computed_styles_response',
+      requestId: posted.requestId,
+      _nonce: getPageNonce(),
+      result: { elements: ['legit'], count: 1 }
+    })
+    assert.deepStrictEqual(await pending, { elements: ['legit'], count: 1 })
   })
 })

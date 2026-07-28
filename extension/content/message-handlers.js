@@ -82,6 +82,8 @@ export async function handleStateCommand(params) {
     const responseHandler = (event) => {
         if (event.source !== window)
             return;
+        if (event.data?._nonce !== getPageNonce())
+            return;
         if (event.data?.type === 'kaboom_state_response' && event.data?.messageId === messageId) {
             window.removeEventListener('message', responseHandler);
             deferred.resolve(event.data.result || { error: 'No result from state command' });
@@ -250,10 +252,8 @@ export function handleGetNetworkWaterfall(sendResponse) {
     const responseHandler = (event) => {
         if (event.source !== window)
             return;
-        // Validate nonce on response messages (spoofing prevention).
-        // Accept responses with no nonce for backwards compat during migration.
         const nonce = event.data?._nonce;
-        if (nonce && nonce !== getPageNonce())
+        if (nonce !== getPageNonce())
             return;
         if (event.data?.type === 'kaboom_waterfall_response' && event.data?.requestId === requestId) {
             window.removeEventListener('message', responseHandler);
@@ -288,10 +288,8 @@ function forwardInjectQuery(queryType, responseType, label, params, sendResponse
     const responseHandler = (event) => {
         if (event.source !== window)
             return;
-        // Validate nonce on response messages (spoofing prevention).
-        // Accept responses with no nonce for backwards compat during migration.
         const nonce = event.data?._nonce;
-        if (nonce && nonce !== getPageNonce())
+        if (nonce !== getPageNonce())
             return;
         if (event.data?.type === responseType && event.data?.requestId === requestId) {
             window.removeEventListener('message', responseHandler);
