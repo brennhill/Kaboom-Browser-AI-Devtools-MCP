@@ -57,6 +57,7 @@ code_paths:
 test_paths:
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/tools_configure_network_recording_test.go
+  - cmd/browser-agent/tools_configure_network_recording_handler_test.go
   - cmd/browser-agent/internal/toolconfigure/netrecord/netrecord_test.go
   - internal/capture/sync_test.go
   - internal/capture/websocket_test.go
