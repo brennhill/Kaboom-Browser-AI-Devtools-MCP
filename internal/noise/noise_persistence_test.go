@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 func newNoiseTestSessionStore(t *testing.T) *persistence.SessionStore {
@@ -41,7 +42,7 @@ func TestNoiseConfigWithStorePersistsAndReloadsUserRules(t *testing.T) {
 	}
 	nc.DismissNoise(`/health`, "network", "noisy health checks")
 
-	if !nc.IsConsoleNoise(LogEntry{
+	if !nc.IsConsoleNoise(types.LogEntry{
 		"level":   "info",
 		"message": "persist-me message",
 		"source":  "http://localhost:3000/app.js",

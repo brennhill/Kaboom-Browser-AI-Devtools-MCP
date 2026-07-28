@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // ============================================
@@ -122,7 +124,7 @@ func TestReset_StatisticsCleared(t *testing.T) {
 	nc := NewNoiseConfig()
 
 	// Generate some statistics
-	entry := LogEntry{"level": "info", "message": "[vite] hot updated", "source": "http://localhost:3000/app.js"}
+	entry := types.LogEntry{"level": "info", "message": "[vite] hot updated", "source": "http://localhost:3000/app.js"}
 	for i := 0; i < 5; i++ {
 		nc.IsConsoleNoise(entry)
 	}

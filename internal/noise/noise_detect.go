@@ -11,13 +11,14 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // AutoDetect analyzes buffers and proposes noise rules based on frequency and source analysis.
 // High-confidence proposals (>= 0.9) are automatically applied.
 // Note: This function holds a write lock for the entire analysis. It is designed for
 // infrequent manual invocation via the MCP tool, not for hot-path usage.
-func (nc *NoiseConfig) AutoDetect(consoleEntries []LogEntry, networkBodies []capture.NetworkBody, wsEvents []capture.WebSocketEvent) []NoiseProposal {
+func (nc *NoiseConfig) AutoDetect(consoleEntries []types.LogEntry, networkBodies []capture.NetworkBody, wsEvents []capture.WebSocketEvent) []NoiseProposal {
 	nc.mu.Lock()
 	defer nc.mu.Unlock()
 
@@ -32,7 +33,7 @@ func (nc *NoiseConfig) AutoDetect(consoleEntries []LogEntry, networkBodies []cap
 }
 
 // detectRepetitiveMessages proposes rules for console messages repeated 10+ times.
-func (nc *NoiseConfig) detectRepetitiveMessages(entries []LogEntry) []NoiseProposal {
+func (nc *NoiseConfig) detectRepetitiveMessages(entries []types.LogEntry) []NoiseProposal {
 	if len(entries) == 0 {
 		return nil
 	}
@@ -66,7 +67,7 @@ func (nc *NoiseConfig) detectRepetitiveMessages(entries []LogEntry) []NoisePropo
 }
 
 // detectNodeModuleSources proposes rules for console entries from node_modules sources.
-func (nc *NoiseConfig) detectNodeModuleSources(entries []LogEntry) []NoiseProposal {
+func (nc *NoiseConfig) detectNodeModuleSources(entries []types.LogEntry) []NoiseProposal {
 	if len(entries) == 0 {
 		return nil
 	}
@@ -151,7 +152,7 @@ func (nc *NoiseConfig) autoApplyHighConfidence(proposals []NoiseProposal) {
 }
 
 // isConsoleCoveredLocked checks if a message is already covered by existing rules (caller holds lock)
-func (nc *NoiseConfig) isConsoleCoveredLocked(msg string, entries []LogEntry) bool {
+func (nc *NoiseConfig) isConsoleCoveredLocked(msg string, entries []types.LogEntry) bool {
 	if nc.isMessageCoveredLocked(msg) {
 		return true
 	}
@@ -172,7 +173,7 @@ func (nc *NoiseConfig) isMessageCoveredLocked(msg string) bool {
 }
 
 // isSourceCoveredForMessageLocked checks if the source of entries with the given message is covered.
-func (nc *NoiseConfig) isSourceCoveredForMessageLocked(msg string, entries []LogEntry) bool {
+func (nc *NoiseConfig) isSourceCoveredForMessageLocked(msg string, entries []types.LogEntry) bool {
 	for _, entry := range entries {
 		entryMsg, _ := entry["message"].(string)
 		if entryMsg != msg {

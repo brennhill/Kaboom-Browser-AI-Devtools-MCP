@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // ============================================
@@ -261,7 +262,7 @@ func TestIsNetworkNoise_MethodOnlyRule(t *testing.T) {
 	}
 	_ = nc.AddRules([]NoiseRule{rule})
 
-	body := NetworkBody{
+	body := capture.NetworkBody{
 		Method: "HEAD",
 		URL:    "http://localhost:3000/any/path",
 		Status: 200,
@@ -270,7 +271,7 @@ func TestIsNetworkNoise_MethodOnlyRule(t *testing.T) {
 		t.Error("HEAD request matching method-only rule should be noise")
 	}
 
-	bodyGet := NetworkBody{
+	bodyGet := capture.NetworkBody{
 		Method: "GET",
 		URL:    "http://localhost:3000/any/path",
 		Status: 200,
@@ -298,7 +299,7 @@ func TestIsNetworkNoise_StatusRangeOnlyRule(t *testing.T) {
 	}
 	_ = nc.AddRules([]NoiseRule{rule})
 
-	body301 := NetworkBody{
+	body301 := capture.NetworkBody{
 		Method: "GET",
 		URL:    "http://localhost:3000/redirect",
 		Status: 301,
@@ -307,7 +308,7 @@ func TestIsNetworkNoise_StatusRangeOnlyRule(t *testing.T) {
 		t.Error("301 should match status-range-only rule")
 	}
 
-	body200 := NetworkBody{
+	body200 := capture.NetworkBody{
 		Method: "GET",
 		URL:    "http://localhost:3000/ok",
 		Status: 200,
@@ -318,7 +319,7 @@ func TestIsNetworkNoise_StatusRangeOnlyRule(t *testing.T) {
 }
 
 // ============================================
-// IsConsoleNoise: nil/missing fields in LogEntry
+// IsConsoleNoise: nil/missing fields in types.LogEntry
 // ============================================
 
 func TestIsConsoleNoise_NilFields(t *testing.T) {
@@ -326,18 +327,18 @@ func TestIsConsoleNoise_NilFields(t *testing.T) {
 	nc := NewNoiseConfig()
 
 	// Empty entry
-	if nc.IsConsoleNoise(LogEntry{}) {
-		t.Error("empty LogEntry should not be noise")
+	if nc.IsConsoleNoise(types.LogEntry{}) {
+		t.Error("empty types.LogEntry should not be noise")
 	}
 
 	// Only level field
-	if nc.IsConsoleNoise(LogEntry{"level": "error"}) {
-		t.Error("LogEntry with only level should not be noise")
+	if nc.IsConsoleNoise(types.LogEntry{"level": "error"}) {
+		t.Error("types.LogEntry with only level should not be noise")
 	}
 
 	// Non-string type assertions
-	if nc.IsConsoleNoise(LogEntry{"message": 123, "source": true, "level": nil}) {
-		t.Error("LogEntry with non-string fields should not be noise")
+	if nc.IsConsoleNoise(types.LogEntry{"message": 123, "source": true, "level": nil}) {
+		t.Error("types.LogEntry with non-string fields should not be noise")
 	}
 }
 
@@ -381,7 +382,7 @@ func TestGetStatistics_SignalTimestamp(t *testing.T) {
 	nc := NewNoiseConfig()
 
 	// A non-matching entry should update LastSignalAt
-	entry := LogEntry{
+	entry := types.LogEntry{
 		"level":   "error",
 		"message": "real application error",
 		"source":  "http://localhost:3000/app.js",
@@ -405,7 +406,7 @@ func TestGetStatistics_NoiseTimestamp(t *testing.T) {
 	t.Parallel()
 	nc := NewNoiseConfig()
 
-	entry := LogEntry{
+	entry := types.LogEntry{
 		"level":   "info",
 		"message": "[vite] hot updated",
 		"source":  "http://localhost:5173/app.js",
@@ -429,7 +430,7 @@ func TestGetStatistics_ReturnsCopy(t *testing.T) {
 	t.Parallel()
 	nc := NewNoiseConfig()
 
-	entry := LogEntry{
+	entry := types.LogEntry{
 		"level":   "info",
 		"message": "[vite] update",
 		"source":  "http://localhost:3000/app.js",
@@ -457,7 +458,7 @@ func TestIsNetworkNoise_SignalRecorded(t *testing.T) {
 	t.Parallel()
 	nc := NewNoiseConfig()
 
-	body := NetworkBody{
+	body := capture.NetworkBody{
 		Method: "POST",
 		URL:    "http://localhost:3000/api/orders",
 		Status: 200,

@@ -9,17 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
-
-// LogEntry is a type alias for the canonical definition in internal/types.
-type LogEntry = types.LogEntry
-
-// Compatibility aliases for telemetry payloads used by filtering and tests.
-type NetworkBody = capture.NetworkBody
-type WebSocketEvent = capture.WebSocketEvent
 
 // ============================================
 // Noise Filtering

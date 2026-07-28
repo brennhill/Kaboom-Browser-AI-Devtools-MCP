@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // ============================================
@@ -24,7 +25,7 @@ func TestAutoDetect_AllEmptyInputs(t *testing.T) {
 		t.Fatalf("expected 0 proposals for nil inputs, got %d", len(proposals))
 	}
 
-	proposals = nc.AutoDetect([]LogEntry{}, []capture.NetworkBody{}, []capture.WebSocketEvent{})
+	proposals = nc.AutoDetect([]types.LogEntry{}, []capture.NetworkBody{}, []capture.WebSocketEvent{})
 	if len(proposals) != 0 {
 		t.Fatalf("expected 0 proposals for empty slices, got %d", len(proposals))
 	}
@@ -39,9 +40,9 @@ func TestAutoDetect_RepetitiveMessagesBelowThreshold(t *testing.T) {
 	nc := NewNoiseConfig()
 
 	// 9 identical messages (threshold is 10)
-	entries := make([]LogEntry, 9)
+	entries := make([]types.LogEntry, 9)
 	for i := range entries {
-		entries[i] = LogEntry{
+		entries[i] = types.LogEntry{
 			"level":   "info",
 			"message": "almost frequent enough",
 			"source":  "http://localhost:3000/app.js",
@@ -65,9 +66,9 @@ func TestAutoDetect_RepetitiveMessagesExactThreshold(t *testing.T) {
 	nc := NewNoiseConfig()
 
 	// Exactly 10 identical messages
-	entries := make([]LogEntry, 10)
+	entries := make([]types.LogEntry, 10)
 	for i := range entries {
-		entries[i] = LogEntry{
+		entries[i] = types.LogEntry{
 			"level":   "info",
 			"message": "exactly at threshold",
 			"source":  "http://localhost:3000/app.js",
@@ -106,9 +107,9 @@ func TestAutoDetect_ConfidenceCappedAt099(t *testing.T) {
 	nc := NewNoiseConfig()
 
 	// 100 identical messages: 0.7 + 100/100 = 1.7 -> capped at 0.99
-	entries := make([]LogEntry, 100)
+	entries := make([]types.LogEntry, 100)
 	for i := range entries {
-		entries[i] = LogEntry{
+		entries[i] = types.LogEntry{
 			"level":   "info",
 			"message": "ultra frequent message that will be capped",
 			"source":  "http://localhost:3000/app.js",
@@ -131,9 +132,9 @@ func TestAutoDetect_EmptyMessageStringsIgnored(t *testing.T) {
 	t.Parallel()
 	nc := NewNoiseConfig()
 
-	entries := make([]LogEntry, 20)
+	entries := make([]types.LogEntry, 20)
 	for i := range entries {
-		entries[i] = LogEntry{
+		entries[i] = types.LogEntry{
 			"level":  "info",
 			"source": "http://localhost:3000/app.js",
 			// no "message" key
@@ -157,7 +158,7 @@ func TestAutoDetect_NodeModulesSourceBelowThreshold(t *testing.T) {
 	nc := NewNoiseConfig()
 
 	// Only 1 entry from node_modules (threshold is 2)
-	entries := []LogEntry{
+	entries := []types.LogEntry{
 		{
 			"level":   "warn",
 			"message": "single warning",
@@ -181,9 +182,9 @@ func TestAutoDetect_NonNodeModulesSourceIgnored(t *testing.T) {
 	t.Parallel()
 	nc := NewNoiseConfig()
 
-	entries := make([]LogEntry, 10)
+	entries := make([]types.LogEntry, 10)
 	for i := range entries {
-		entries[i] = LogEntry{
+		entries[i] = types.LogEntry{
 			"level":   "warn",
 			"message": "app warning",
 			"source":  "http://localhost:3000/src/app.js",
@@ -206,9 +207,9 @@ func TestAutoDetect_EmptySourceFieldIgnored(t *testing.T) {
 	t.Parallel()
 	nc := NewNoiseConfig()
 
-	entries := make([]LogEntry, 10)
+	entries := make([]types.LogEntry, 10)
 	for i := range entries {
-		entries[i] = LogEntry{
+		entries[i] = types.LogEntry{
 			"level":   "warn",
 			"message": "warning without source",
 			// no "source" key
@@ -315,9 +316,9 @@ func TestAutoDetect_LowConfidenceNotAutoApplied(t *testing.T) {
 	nc := NewNoiseConfig()
 
 	// 10 messages -> confidence = 0.7 + 10/100 = 0.80 (< 0.9)
-	entries := make([]LogEntry, 10)
+	entries := make([]types.LogEntry, 10)
 	for i := range entries {
-		entries[i] = LogEntry{
+		entries[i] = types.LogEntry{
 			"level":   "info",
 			"message": "low confidence test message",
 			"source":  "http://localhost:3000/app.js",
@@ -357,9 +358,9 @@ func TestAutoDetect_AtMaxRulesNotAutoApplied(t *testing.T) {
 	_ = nc.AddRules(fillRules)
 
 	// Now at max. High confidence proposals should not be added.
-	entries := make([]LogEntry, 50)
+	entries := make([]types.LogEntry, 50)
 	for i := range entries {
-		entries[i] = LogEntry{
+		entries[i] = types.LogEntry{
 			"level":   "info",
 			"message": "max rules exceeded test",
 			"source":  "http://localhost:3000/app.js",
@@ -388,9 +389,9 @@ func TestAutoDetect_SourceCoverageForMessage(t *testing.T) {
 
 	// The built-in chrome extension rule covers sources with chrome-extension://
 	// Create 15+ entries with a unique message but coming from chrome-extension source
-	entries := make([]LogEntry, 15)
+	entries := make([]types.LogEntry, 15)
 	for i := range entries {
-		entries[i] = LogEntry{
+		entries[i] = types.LogEntry{
 			"level":   "warn",
 			"message": "unique message from covered source 12345",
 			"source":  "chrome-extension://abcdef/content.js",
@@ -458,9 +459,9 @@ func TestAutoDetect_NodeModulesConfidence(t *testing.T) {
 	t.Parallel()
 	nc := NewNoiseConfig()
 
-	entries := make([]LogEntry, 5)
+	entries := make([]types.LogEntry, 5)
 	for i := range entries {
-		entries[i] = LogEntry{
+		entries[i] = types.LogEntry{
 			"level":   "warn",
 			"message": "lib warning " + string(rune('A'+i)),
 			"source":  "http://localhost:3000/node_modules/unique-test-lib/dist/index.js",
@@ -489,9 +490,9 @@ func TestAutoDetect_ReasonStrings(t *testing.T) {
 	nc := NewNoiseConfig()
 
 	// Repetitive messages
-	entries := make([]LogEntry, 15)
+	entries := make([]types.LogEntry, 15)
 	for i := range entries {
-		entries[i] = LogEntry{
+		entries[i] = types.LogEntry{
 			"level":   "info",
 			"message": "reason test repetitive msg",
 			"source":  "http://localhost:3000/app.js",
@@ -516,9 +517,9 @@ func TestAutoDetect_NodeModulesReasonString(t *testing.T) {
 	t.Parallel()
 	nc := NewNoiseConfig()
 
-	entries := make([]LogEntry, 3)
+	entries := make([]types.LogEntry, 3)
 	for i := range entries {
-		entries[i] = LogEntry{
+		entries[i] = types.LogEntry{
 			"level":   "warn",
 			"message": "node_modules reason test " + string(rune('A'+i)),
 			"source":  "http://localhost:3000/node_modules/reason-lib/index.js",

@@ -4,10 +4,13 @@
 
 package noise
 
-import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+)
 
 // IsConsoleNoise checks if a console log entry matches any noise rule.
-func (nc *NoiseConfig) IsConsoleNoise(entry LogEntry) bool {
+func (nc *NoiseConfig) IsConsoleNoise(entry types.LogEntry) bool {
 	nc.mu.RLock()
 	defer nc.mu.RUnlock()
 

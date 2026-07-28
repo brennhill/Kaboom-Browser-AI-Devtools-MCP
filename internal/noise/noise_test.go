@@ -8,6 +8,9 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // ============================================
@@ -67,7 +70,7 @@ func TestNoiseConsoleFromChromeExtension(t *testing.T) {
 	t.Parallel()
 	nc := NewNoiseConfig()
 
-	entry := LogEntry{
+	entry := types.LogEntry{
 		"level":   "warn",
 		"message": "Some extension warning",
 		"source":  "chrome-extension://abcdef123456/content.js",
@@ -78,7 +81,7 @@ func TestNoiseConsoleFromChromeExtension(t *testing.T) {
 	}
 
 	// Also test moz-extension://
-	entry2 := LogEntry{
+	entry2 := types.LogEntry{
 		"level":   "info",
 		"message": "Firefox addon message",
 		"source":  "moz-extension://abcdef123456/background.js",
@@ -97,7 +100,7 @@ func TestNoiseAppErrorNotNoise(t *testing.T) {
 	t.Parallel()
 	nc := NewNoiseConfig()
 
-	entry := LogEntry{
+	entry := types.LogEntry{
 		"level":   "error",
 		"message": "TypeError: Cannot read property 'foo' of undefined",
 		"source":  "http://localhost:3000/app.js",
@@ -116,7 +119,7 @@ func TestNoiseFavicon404(t *testing.T) {
 	t.Parallel()
 	nc := NewNoiseConfig()
 
-	body := NetworkBody{
+	body := capture.NetworkBody{
 		Method: "GET",
 		URL:    "http://localhost:3000/favicon.ico",
 		Status: 404,
@@ -135,7 +138,7 @@ func TestNoiseAPI500NotNoise(t *testing.T) {
 	t.Parallel()
 	nc := NewNoiseConfig()
 
-	body := NetworkBody{
+	body := capture.NetworkBody{
 		Method: "POST",
 		URL:    "http://localhost:3000/api/users",
 		Status: 500,
@@ -165,7 +168,7 @@ func TestNoiseAnalyticsURL(t *testing.T) {
 	}
 
 	for _, url := range analyticsURLs {
-		body := NetworkBody{
+		body := capture.NetworkBody{
 			Method: "GET",
 			URL:    url,
 			Status: 200,
@@ -184,7 +187,7 @@ func TestNoiseCORSPreflight(t *testing.T) {
 	t.Parallel()
 	nc := NewNoiseConfig()
 
-	body := NetworkBody{
+	body := capture.NetworkBody{
 		Method: "OPTIONS",
 		URL:    "http://localhost:3000/api/users",
 		Status: 204,
@@ -223,7 +226,7 @@ func TestNoiseHMRMessages(t *testing.T) {
 	}
 
 	for _, msg := range hmrMessages {
-		entry := LogEntry{
+		entry := types.LogEntry{
 			"level":   "info",
 			"message": msg,
 			"source":  "http://localhost:3000/app.js",
@@ -242,7 +245,7 @@ func TestNoiseReactDevTools(t *testing.T) {
 	t.Parallel()
 	nc := NewNoiseConfig()
 
-	entry := LogEntry{
+	entry := types.LogEntry{
 		"level":   "info",
 		"message": "Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools",
 		"source":  "http://localhost:3000/bundle.js",
@@ -261,7 +264,7 @@ func TestNoiseAddCustomRule(t *testing.T) {
 	t.Parallel()
 	nc := NewNoiseConfig()
 
-	entry := LogEntry{
+	entry := types.LogEntry{
 		"level":   "info",
 		"message": "MyApp: polling for updates",
 		"source":  "http://localhost:3000/app.js",
@@ -324,7 +327,7 @@ func TestNoiseRemoveCustomRule(t *testing.T) {
 		t.Fatal("could not find added rule")
 	}
 
-	entry := LogEntry{
+	entry := types.LogEntry{
 		"level":   "info",
 		"message": "custom pattern to filter here",
 		"source":  "http://localhost:3000/app.js",
@@ -448,9 +451,9 @@ func TestNoiseAutoDetectFrequency(t *testing.T) {
 	nc := NewNoiseConfig()
 
 	// Create entries with 15 identical messages
-	var entries []LogEntry
+	var entries []types.LogEntry
 	for i := 0; i < 15; i++ {
-		entries = append(entries, LogEntry{
+		entries = append(entries, types.LogEntry{
 			"level":   "info",
 			"message": "Repeated polling message from my app",
 			"source":  "http://localhost:3000/app.js",
@@ -486,9 +489,9 @@ func TestNoiseAutoDetectNoDuplicates(t *testing.T) {
 	nc := NewNoiseConfig()
 
 	// The built-in chrome extension rule already covers this
-	var entries []LogEntry
+	var entries []types.LogEntry
 	for i := 0; i < 20; i++ {
-		entries = append(entries, LogEntry{
+		entries = append(entries, types.LogEntry{
 			"level":   "warn",
 			"message": "Extension warning",
 			"source":  "chrome-extension://abc123/script.js",
@@ -514,9 +517,9 @@ func TestNoiseAutoDetectHighConfidenceApplied(t *testing.T) {
 	nc := NewNoiseConfig()
 
 	// Create 50 identical messages (should yield high confidence: 0.7 + 50/100 = 1.2, capped at 0.99)
-	var entries []LogEntry
+	var entries []types.LogEntry
 	for i := 0; i < 50; i++ {
-		entries = append(entries, LogEntry{
+		entries = append(entries, types.LogEntry{
 			"level":   "info",
 			"message": "Unique auto-apply test message xyz",
 			"source":  "http://localhost:3000/worker.js",
@@ -579,7 +582,7 @@ func TestNoiseDismissNetworkCategory(t *testing.T) {
 
 	nc.DismissNoise("/api/health", "network", "health check noise")
 
-	body := NetworkBody{
+	body := capture.NetworkBody{
 		Method: "GET",
 		URL:    "http://localhost:3000/api/health",
 		Status: 200,
@@ -599,7 +602,7 @@ func TestNoiseStatistics(t *testing.T) {
 	nc := NewNoiseConfig()
 
 	// Trigger a few matches
-	entry := LogEntry{
+	entry := types.LogEntry{
 		"level":   "info",
 		"message": "[vite] hot updated module",
 		"source":  "http://localhost:5173/app.js",
@@ -644,7 +647,7 @@ func TestNoiseInvalidRegexNoPanic(t *testing.T) {
 	}
 
 	// The rule should exist but never match
-	entry := LogEntry{
+	entry := types.LogEntry{
 		"level":   "info",
 		"message": "[invalid regex(",
 		"source":  "http://localhost:3000/app.js",
@@ -672,21 +675,21 @@ func TestNoiseConcurrentAccess(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for j := 0; j < 100; j++ {
-				entry := LogEntry{
+				entry := types.LogEntry{
 					"level":   "info",
 					"message": "[vite] update",
 					"source":  "http://localhost:3000/app.js",
 				}
 				nc.IsConsoleNoise(entry)
 
-				body := NetworkBody{
+				body := capture.NetworkBody{
 					Method: "GET",
 					URL:    "http://localhost:3000/favicon.ico",
 					Status: 404,
 				}
 				nc.IsNetworkNoise(body)
 
-				wsEvent := WebSocketEvent{
+				wsEvent := capture.WebSocketEvent{
 					URL: "ws://localhost:3000/ws",
 				}
 				nc.IsWebSocketNoise(wsEvent)
@@ -735,7 +738,7 @@ func TestNoiseAuthNeverFiltered(t *testing.T) {
 	_ = nc.AddRules([]NoiseRule{rule})
 
 	// 401 should never be noise
-	body401 := NetworkBody{
+	body401 := capture.NetworkBody{
 		Method: "GET",
 		URL:    "http://localhost:3000/api/protected",
 		Status: 401,
@@ -745,7 +748,7 @@ func TestNoiseAuthNeverFiltered(t *testing.T) {
 	}
 
 	// 403 should never be noise
-	body403 := NetworkBody{
+	body403 := capture.NetworkBody{
 		Method: "GET",
 		URL:    "http://localhost:3000/api/admin",
 		Status: 403,
@@ -755,7 +758,7 @@ func TestNoiseAuthNeverFiltered(t *testing.T) {
 	}
 
 	// 200 to the same pattern should still be noise
-	body200 := NetworkBody{
+	body200 := capture.NetworkBody{
 		Method: "GET",
 		URL:    "http://localhost:3000/api/data",
 		Status: 200,
@@ -773,7 +776,7 @@ func TestNoiseSourceMap404(t *testing.T) {
 	t.Parallel()
 	nc := NewNoiseConfig()
 
-	body := NetworkBody{
+	body := capture.NetworkBody{
 		Method: "GET",
 		URL:    "http://localhost:3000/assets/app.js.map",
 		Status: 404,
@@ -802,7 +805,7 @@ func TestNoiseHMRNetworkURLs(t *testing.T) {
 	}
 
 	for _, url := range hmrURLs {
-		body := NetworkBody{
+		body := capture.NetworkBody{
 			Method: "GET",
 			URL:    url,
 			Status: 200,
@@ -824,7 +827,7 @@ func TestNoiseServiceWorkerMessages(t *testing.T) {
 	}
 
 	for _, msg := range messages {
-		entry := LogEntry{
+		entry := types.LogEntry{
 			"level":   "info",
 			"message": msg,
 			"source":  "http://localhost:3000/sw.js",
@@ -839,7 +842,7 @@ func TestNoisePassiveEventListener(t *testing.T) {
 	t.Parallel()
 	nc := NewNoiseConfig()
 
-	entry := LogEntry{
+	entry := types.LogEntry{
 		"level":   "warn",
 		"message": "Added non-passive event listener to a scroll-blocking 'touchstart' event",
 		"source":  "http://localhost:3000/vendor.js",
@@ -854,7 +857,7 @@ func TestNoiseDeprecationWarning(t *testing.T) {
 	t.Parallel()
 	nc := NewNoiseConfig()
 
-	entry := LogEntry{
+	entry := types.LogEntry{
 		"level":   "warn",
 		"message": "[Deprecation] SharedArrayBuffer will require cross-origin isolation",
 		"source":  "http://localhost:3000/bundle.js",
@@ -879,7 +882,7 @@ func TestNoiseWebSocketEvent(t *testing.T) {
 	}
 	_ = nc.AddRules([]NoiseRule{rule})
 
-	event := WebSocketEvent{
+	event := capture.WebSocketEvent{
 		URL:   "ws://localhost:3000/sockjs-node/websocket",
 		Event: "message",
 		Data:  "heartbeat",
@@ -890,7 +893,7 @@ func TestNoiseWebSocketEvent(t *testing.T) {
 	}
 
 	// Normal WebSocket should not be noise
-	event2 := WebSocketEvent{
+	event2 := capture.WebSocketEvent{
 		URL:   "ws://localhost:3000/api/live",
 		Event: "message",
 		Data:  "user data",
@@ -906,9 +909,9 @@ func TestNoiseAutoDetectNetworkFrequency(t *testing.T) {
 	nc := NewNoiseConfig()
 
 	// Create 25 network requests to /health endpoint
-	var bodies []NetworkBody
+	var bodies []capture.NetworkBody
 	for i := 0; i < 25; i++ {
-		bodies = append(bodies, NetworkBody{
+		bodies = append(bodies, capture.NetworkBody{
 			Method: "GET",
 			URL:    "http://localhost:3000/health",
 			Status: 200,
@@ -935,9 +938,9 @@ func TestNoiseAutoDetectSourceAnalysis(t *testing.T) {
 	nc := NewNoiseConfig()
 
 	// Create entries from node_modules
-	var entries []LogEntry
+	var entries []types.LogEntry
 	for i := 0; i < 5; i++ {
-		entries = append(entries, LogEntry{
+		entries = append(entries, types.LogEntry{
 			"level":   "warn",
 			"message": "Some lib warning " + string(rune('A'+i)),
 			"source":  "http://localhost:3000/node_modules/some-lib/index.js",
@@ -1004,7 +1007,7 @@ func TestNoiseMatchSpecMethodFilter(t *testing.T) {
 	}
 	_ = nc.AddRules([]NoiseRule{rule})
 
-	getBody := NetworkBody{
+	getBody := capture.NetworkBody{
 		Method: "GET",
 		URL:    "http://localhost:3000/internal/status",
 		Status: 200,
@@ -1013,7 +1016,7 @@ func TestNoiseMatchSpecMethodFilter(t *testing.T) {
 		t.Error("GET to /internal/ should be noise")
 	}
 
-	postBody := NetworkBody{
+	postBody := capture.NetworkBody{
 		Method: "POST",
 		URL:    "http://localhost:3000/internal/status",
 		Status: 200,
@@ -1039,7 +1042,7 @@ func TestNoiseMatchSpecStatusRange(t *testing.T) {
 	}
 	_ = nc.AddRules([]NoiseRule{rule})
 
-	body404 := NetworkBody{
+	body404 := capture.NetworkBody{
 		Method: "GET",
 		URL:    "http://localhost:3000/styles.css.map",
 		Status: 404,
@@ -1048,7 +1051,7 @@ func TestNoiseMatchSpecStatusRange(t *testing.T) {
 		t.Error(".css.map 404 should be noise")
 	}
 
-	body200 := NetworkBody{
+	body200 := capture.NetworkBody{
 		Method: "GET",
 		URL:    "http://localhost:3000/styles.css.map",
 		Status: 200,
@@ -1073,7 +1076,7 @@ func TestNoiseMatchSpecLevelFilter(t *testing.T) {
 	}
 	_ = nc.AddRules([]NoiseRule{rule})
 
-	warnEntry := LogEntry{
+	warnEntry := types.LogEntry{
 		"level":   "warn",
 		"message": "Using experimental feature X",
 		"source":  "http://localhost:3000/app.js",
@@ -1082,7 +1085,7 @@ func TestNoiseMatchSpecLevelFilter(t *testing.T) {
 		t.Error("warn-level experimental feature message should be noise")
 	}
 
-	errorEntry := LogEntry{
+	errorEntry := types.LogEntry{
 		"level":   "error",
 		"message": "Using experimental feature X",
 		"source":  "http://localhost:3000/app.js",
@@ -1121,7 +1124,7 @@ func TestDismissNoise_WebSocketCategory(t *testing.T) {
 	}
 
 	// Verify the rule actually matches websocket events
-	event := WebSocketEvent{
+	event := capture.WebSocketEvent{
 		URL: "wss://example.com/socket",
 	}
 	if !nc.IsWebSocketNoise(event) {
@@ -1148,12 +1151,12 @@ func TestIsCoveredLocked_LevelMismatch(t *testing.T) {
 
 	// isConsoleCoveredLocked is called inside AutoDetect to prevent duplicate proposals.
 	// Even though the rule has Level=warn, the coverage check matches by regex alone.
-	entries := []LogEntry{
+	entries := []types.LogEntry{
 		{"message": "experimental feature", "level": "error", "source": "app.js"},
 	}
 
 	// Feed enough entries to trigger frequency detection
-	manyEntries := make([]LogEntry, 15)
+	manyEntries := make([]types.LogEntry, 15)
 	for i := range manyEntries {
 		manyEntries[i] = entries[0]
 	}
@@ -1185,9 +1188,9 @@ func TestIsSourceCoveredLocked_RegexMatch(t *testing.T) {
 	_ = nc.AddRules([]NoiseRule{rule})
 
 	// Create entries from the covered source (node_modules is required for source analysis)
-	entries := make([]LogEntry, 5)
+	entries := make([]types.LogEntry, 5)
 	for i := range entries {
-		entries[i] = LogEntry{
+		entries[i] = types.LogEntry{
 			"message": fmt.Sprintf("react warning %d", i),
 			"source":  "http://localhost:3000/node_modules/react/cjs/react.development.js",
 			"level":   "warn",
@@ -1219,9 +1222,9 @@ func TestIsURLCoveredLocked_RegexMatch(t *testing.T) {
 	_ = nc.AddRules([]NoiseRule{rule})
 
 	// Create enough network bodies to trigger frequency detection (>= 20)
-	bodies := make([]NetworkBody, 25)
+	bodies := make([]capture.NetworkBody, 25)
 	for i := range bodies {
-		bodies[i] = NetworkBody{
+		bodies[i] = capture.NetworkBody{
 			URL:    "http://localhost:3000/health",
 			Method: "GET",
 			Status: 200,
@@ -1247,9 +1250,9 @@ func TestIsURLCoveredLocked_StatusMinMaxRange(t *testing.T) {
 	// only checks urlRegex, not status ranges)
 
 	// Create enough .map requests to trigger frequency detection
-	bodies := make([]NetworkBody, 25)
+	bodies := make([]capture.NetworkBody, 25)
 	for i := range bodies {
-		bodies[i] = NetworkBody{
+		bodies[i] = capture.NetworkBody{
 			URL:    "http://localhost:3000/__webpack_hmr",
 			Method: "GET",
 			Status: 200,
