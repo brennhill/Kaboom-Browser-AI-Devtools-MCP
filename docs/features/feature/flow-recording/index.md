@@ -42,6 +42,9 @@ test_paths:
   - cmd/browser-agent/internal/toolrecording/toolrecording_test.go
   - cmd/browser-agent/recording_playback_result_test.go
   - internal/capture/recording_manager_test.go
+  - internal/capture/recording_store_integration_test.go
+  - internal/capture/recording_logdiff_integration_test.go
+  - internal/capture/recording_extension_lifecycle_test.go
   - internal/capture/no_facade_test.go
   - internal/recording/playback/playback_test.go
   - internal/recording/logdiff/logdiff_test.go
