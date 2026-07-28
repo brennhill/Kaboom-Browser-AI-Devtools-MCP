@@ -145,6 +145,21 @@ func TestCaptureHasNoCompatibilityAliases(t *testing.T) {
 		"func (c *Capture) QueuePosition(",
 		"func (c *Capture) QueueDepth(",
 		"func (c *Capture) GetLastPendingQuery(",
+		"var NewRecordingManager =",
+		"func (c *Capture) StartRecording(",
+		"func (c *Capture) StopRecording(",
+		"func (c *Capture) AddRecordingAction(",
+		"func (c *Capture) ListRecordings(",
+		"func (c *Capture) GetRecording(",
+		"func (c *Capture) StartPlayback(",
+		"func (c *Capture) ExecutePlayback(",
+		"func (c *Capture) DetectFragileSelectors(",
+		"func (c *Capture) GetPlaybackStatus(",
+		"func (c *Capture) DiffRecordings(",
+		"func (c *Capture) CategorizeActionTypes(",
+		"func (c *Capture) GetStorageInfo(",
+		"func (c *Capture) DeleteRecording(",
+		"func (c *Capture) RecalculateStorageUsed(",
 	} {
 		if strings.Contains(source.String(), forbidden) {
 			t.Errorf("capture retains compatibility surface %q", forbidden)

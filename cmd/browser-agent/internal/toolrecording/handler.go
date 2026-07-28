@@ -18,29 +18,28 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
-// Capture is the recording-specific subset of capture.Capture used by Handler.
-type Capture interface {
+// Store is the recording lifecycle boundary used by Handler.
+type Store interface {
 	StartRecording(name, pageURL string, sensitiveDataEnabled bool) (string, error)
 	StopRecording(recordingID string) (int, int64, error)
 	ListRecordings(limit int) ([]recording.Recording, error)
 	GetRecording(recordingID string) (*recording.Recording, error)
-	ExecutePlayback(recordingID string) (*playback.Session, error)
-	DiffRecordings(originalID, replayID string) (*logdiff.Result, error)
+	LookupRecording(recordingID string) (*recording.Recording, error)
 }
 
 // Handler owns the full recording MCP lifecycle and its playback-session state.
 type Handler struct {
-	capture   Capture
-	appendLog func(types.LogEntry)
+	recordings Store
+	appendLog  func(types.LogEntry)
 
 	playbackMu       sync.RWMutex
 	playbackSessions map[string]*playback.Session
 }
 
 // NewHandler constructs a recording handler around its explicit dependencies.
-func NewHandler(recordingCapture Capture, appendLog func(types.LogEntry)) *Handler {
+func NewHandler(recordings Store, appendLog func(types.LogEntry)) *Handler {
 	return &Handler{
-		capture:          recordingCapture,
+		recordings:       recordings,
 		appendLog:        appendLog,
 		playbackSessions: make(map[string]*playback.Session),
 	}
@@ -68,7 +67,7 @@ func (h *Handler) EventRecordingStart(req mcp.JSONRPCRequest, args json.RawMessa
 		params.URL = "about:blank"
 	}
 
-	recordingID, err := h.capture.StartRecording(params.Name, params.URL, params.SensitiveDataEnabled)
+	recordingID, err := h.recordings.StartRecording(params.Name, params.URL, params.SensitiveDataEnabled)
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrInternal,
 			fmt.Sprintf("Failed to start recording: %v", err),
@@ -106,7 +105,7 @@ func (h *Handler) EventRecordingStop(req mcp.JSONRPCRequest, args json.RawMessag
 		return resp
 	}
 
-	actionCount, duration, err := h.capture.StopRecording(params.RecordingID)
+	actionCount, duration, err := h.recordings.StopRecording(params.RecordingID)
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrInternal,
 			fmt.Sprintf("Failed to stop recording: %v", err),
@@ -145,7 +144,7 @@ func (h *Handler) Recordings(req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 		params.Limit = 10
 	}
 
-	recordings, err := h.capture.ListRecordings(params.Limit)
+	recordings, err := h.recordings.ListRecordings(params.Limit)
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrInternal,
 			fmt.Sprintf("Failed to list recordings: %v", err),
@@ -172,7 +171,7 @@ func (h *Handler) RecordingActions(req mcp.JSONRPCRequest, args json.RawMessage)
 		return resp
 	}
 
-	recording, err := h.capture.GetRecording(params.RecordingID)
+	recording, err := h.recordings.GetRecording(params.RecordingID)
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrInternal,
 			fmt.Sprintf("Failed to load recording: %v", err),
@@ -203,7 +202,7 @@ func (h *Handler) Playback(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSO
 		return resp
 	}
 
-	session, err := h.capture.ExecutePlayback(params.RecordingID)
+	session, err := playback.Execute(h.recordings, params.RecordingID)
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrInternal,
 			fmt.Sprintf("Failed to execute playback: %v", err),
@@ -289,7 +288,7 @@ func (h *Handler) LogDiff(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSON
 		return *resp
 	}
 
-	result, err := h.capture.DiffRecordings(params.OriginalID, params.ReplayID)
+	result, err := logdiff.Compare(h.recordings, params.OriginalID, params.ReplayID)
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrInternal,
 			fmt.Sprintf("Failed to diff recordings: %v", err),
@@ -326,7 +325,7 @@ func (h *Handler) LogDiffReport(req mcp.JSONRPCRequest, args json.RawMessage) mc
 		return *resp
 	}
 
-	result, err := h.capture.DiffRecordings(params.OriginalID, params.ReplayID)
+	result, err := logdiff.Compare(h.recordings, params.OriginalID, params.ReplayID)
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrInternal,
 			fmt.Sprintf("Failed to generate report: %v", err),

@@ -141,7 +141,7 @@ func NewCapture() *Capture {
 		},
 		perf:             newPerformanceStore(),
 		debug:            debuglog.NewLogger(),
-		recordingManager: NewRecordingManager(),
+		recordingManager: recording.NewRecordingManager(),
 
 		logRedactor: logRedactor,
 		lifecycle:   lifecycle.NewObserver(),
@@ -157,6 +157,11 @@ func NewCapture() *Capture {
 // Queries returns the canonical independently synchronized query dispatcher.
 func (c *Capture) Queries() *queries.QueryDispatcher {
 	return c.queryDispatcher
+}
+
+// Recordings returns the canonical independently synchronized recording manager.
+func (c *Capture) Recordings() *recording.RecordingManager {
+	return c.recordingManager
 }
 
 // Close shuts down capture-owned background goroutines.

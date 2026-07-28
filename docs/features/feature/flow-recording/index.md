@@ -11,6 +11,7 @@ code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/internal/toolrecording/handler.go
   - cmd/browser-agent/internal/toolrecording/helpers.go
+  - internal/capture/capture.go
   - internal/capture/handlers.go
   - internal/recording/types.go
   - internal/recording/manager.go
@@ -35,7 +36,7 @@ test_paths:
   - cmd/browser-agent/internal/toolrecording/handler_test.go
   - cmd/browser-agent/internal/toolrecording/toolrecording_test.go
   - cmd/browser-agent/recording_playback_result_test.go
-  - internal/capture/recording_delegation_test.go
+  - internal/capture/recording_manager_test.go
   - internal/capture/no_facade_test.go
   - internal/recording/playback/playback_test.go
   - internal/recording/logdiff/logdiff_test.go
@@ -79,6 +80,10 @@ Go callers use the canonical `Recording`, `RecordingAction`,
 `RecordingMetadata`, and `RecordingManager` contracts from
 `internal/recording`; alias-only recording and capture re-exports are
 prohibited.
+Capture exposes its owned manager only through `Capture.Recordings()`. MCP,
+storage, playback, and log-diff callers use the manager and the
+`internal/recording/playback` or `internal/recording/logdiff` owners directly;
+the former Capture forwarding surface is deleted.
 
 - Core recording lifecycle and listener wiring:
   - `cmd/browser-agent/tools_configure.go`
@@ -101,7 +106,7 @@ prohibited.
   - `cmd/browser-agent/internal/toolrecording/handler_test.go`
   - `cmd/browser-agent/internal/toolrecording/toolrecording_test.go`
   - `cmd/browser-agent/recording_playback_result_test.go`
-  - `internal/capture/recording_delegation_test.go`
+  - `internal/capture/recording_manager_test.go`
   - `tests/extension/recording.test.js`
   - `tests/extension/recording-listeners-target-tab.test.js`
   - `tests/extension/recording-capture-branding.test.js`

@@ -2,7 +2,7 @@
 doc_type: tech-spec
 feature_id: feature-playback-engine
 status: proposed
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -16,9 +16,10 @@ last_verified_date: 2026-03-05
 - Session/runtime management: `internal/recording/playback/session.go`
 - Selector fragility analysis: `internal/recording/playback/fragile.go`
 - Recording comparison and reports: `internal/recording/logdiff/`
-- Delegation surface: `internal/capture/handlers.go`
+- Manager composition boundary: `internal/capture/capture.go`
+- Recording storage HTTP boundary: `internal/capture/handlers.go`
 - MCP configure/observe bridges: `cmd/browser-agent/tools_configure.go` and `cmd/browser-agent/internal/toolobserve/dispatcher.go`
-- Runtime construction seams: `cmd/browser-agent/tools_core_constructor.go`
+- Runtime construction seams: `cmd/browser-agent/tools_core.go`
 - Recording and playback handler implementation: `cmd/browser-agent/internal/toolrecording/handler.go`
 
 ## Constraints

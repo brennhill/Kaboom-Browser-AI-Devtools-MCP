@@ -1,7 +1,7 @@
 // Purpose: Tests for capture query command dispatch and response routing.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
-// query_commands_test.go — Tests for Capture delegation of command methods and disconnect detection.
+// query_commands_test.go — Tests for canonical query dispatch and Capture disconnect orchestration.
 package capture
 
 import (

@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/logdiff"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/playback"
 	"time"
 
@@ -314,14 +315,14 @@ func TestCoverageBoost_RecordingStorageHandlerAndDelegations(t *testing.T) {
 		t.Fatalf("DELETE missing recording status = %d, want %d", rr.Code, http.StatusNotFound)
 	}
 
-	recordingID, err := c.StartRecording("coverage", "https://example.test", true)
+	recordingID, err := c.Recordings().StartRecording("coverage", "https://example.test", true)
 	if err != nil {
 		t.Fatalf("StartRecording() error = %v", err)
 	}
-	if err := c.AddRecordingAction(recording.RecordingAction{Type: "click", Selector: "#btn"}); err != nil {
+	if err := c.Recordings().AddRecordingAction(recording.RecordingAction{Type: "click", Selector: "#btn"}); err != nil {
 		t.Fatalf("AddRecordingAction() error = %v", err)
 	}
-	if _, _, err := c.StopRecording(recordingID); err != nil {
+	if _, _, err := c.Recordings().StopRecording(recordingID); err != nil {
 		t.Fatalf("StopRecording() error = %v", err)
 	}
 
@@ -344,20 +345,20 @@ func TestCoverageBoost_RecordingStorageHandlerAndDelegations(t *testing.T) {
 		t.Fatalf("PUT recording storage status = %d, want %d", rr.Code, http.StatusMethodNotAllowed)
 	}
 
-	if _, err := c.StartPlayback("missing-recording"); err == nil {
+	if _, err := playback.Start(c.Recordings(), "missing-recording"); err == nil {
 		t.Fatal("StartPlayback(missing) expected error")
 	}
-	if _, err := c.ExecutePlayback("missing-recording"); err == nil {
+	if _, err := playback.Execute(c.Recordings(), "missing-recording"); err == nil {
 		t.Fatal("ExecutePlayback(missing) expected error")
 	}
-	fragile := c.DetectFragileSelectors([]*playback.Session{
+	fragile := playback.DetectFragileSelectors([]*playback.Session{
 		{Results: []playback.Result{{ActionType: "click", SelectorUsed: "css", Status: "error"}}},
 		{Results: []playback.Result{{ActionType: "click", SelectorUsed: "css", Status: "error"}}},
 	})
 	if !fragile["css:css"] {
 		t.Fatalf("DetectFragileSelectors() = %+v, want css:css fragile", fragile)
 	}
-	statusMap := c.GetPlaybackStatus(&playback.Session{
+	statusMap := playback.Status(&playback.Session{
 		StartedAt:        time.Now().Add(-2 * time.Second),
 		ActionsExecuted:  0,
 		ActionsFailed:    1,
@@ -366,19 +367,19 @@ func TestCoverageBoost_RecordingStorageHandlerAndDelegations(t *testing.T) {
 	if got, _ := statusMap["status"].(string); got != "failed" {
 		t.Fatalf("GetPlaybackStatus status = %q, want failed", got)
 	}
-	if _, err := c.DiffRecordings("orig", "replay"); err == nil {
+	if _, err := logdiff.Compare(c.Recordings(), "orig", "replay"); err == nil {
 		t.Fatal("DiffRecordings(orig,replay) expected error for missing recordings")
 	}
-	cats := c.CategorizeActionTypes(&recording.Recording{
+	cats := logdiff.CategorizeActionTypes(&recording.Recording{
 		Actions: []recording.RecordingAction{{Type: "click"}, {Type: "type"}, {Type: "click"}},
 	})
 	if cats["click"] != 2 || cats["type"] != 1 {
 		t.Fatalf("CategorizeActionTypes() = %+v, want click=2,type=1", cats)
 	}
-	if _, err := c.GetStorageInfo(); err != nil {
+	if _, err := c.Recordings().GetStorageInfo(); err != nil {
 		t.Fatalf("GetStorageInfo() error = %v", err)
 	}
-	if err := c.RecalculateStorageUsed(); err != nil {
+	if err := c.Recordings().RecalculateStorageUsed(); err != nil {
 		t.Fatalf("RecalculateStorageUsed() error = %v", err)
 	}
 }

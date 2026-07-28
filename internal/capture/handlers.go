@@ -1,6 +1,6 @@
-// handlers.go — HTTP ingestion, request plumbing, and recording service delegation.
-// Purpose: Owns capture's external request boundary and recording/storage operations.
-// Why: recording.Recording HTTP handlers and their delegated service methods evolve together.
+// handlers.go — HTTP ingestion and request plumbing.
+// Purpose: Owns capture's external request boundary.
+// Why: Protocol validation and response writing evolve with the ingestion routes.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 // Docs: docs/features/feature/query-service/index.md
 
@@ -17,9 +17,6 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/logdiff"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/playback"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -150,7 +147,7 @@ func (c *Capture) HandleRecordingStorage(w http.ResponseWriter, r *http.Request)
 }
 
 func (c *Capture) handleStorageGet(w http.ResponseWriter) {
-	info, err := c.GetStorageInfo()
+	info, err := c.Recordings().GetStorageInfo()
 	if err != nil {
 		util.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
@@ -165,7 +162,7 @@ func (c *Capture) handleStorageDelete(w http.ResponseWriter, r *http.Request) {
 		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Missing recording_id query parameter"})
 		return
 	}
-	if err := c.DeleteRecording(recordingID); err != nil {
+	if err := c.Recordings().DeleteRecording(recordingID); err != nil {
 		fmt.Fprintf(os.Stderr, "[Kaboom] HandleRecordingStorage: Failed to delete recording %s - %v\n", recordingID, err)
 		util.JSONResponse(w, http.StatusNotFound, map[string]string{"error": err.Error()})
 		return
@@ -174,12 +171,12 @@ func (c *Capture) handleStorageDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Capture) handleStorageRecalculate(w http.ResponseWriter) {
-	if err := c.RecalculateStorageUsed(); err != nil {
+	if err := c.Recordings().RecalculateStorageUsed(); err != nil {
 		fmt.Fprintf(os.Stderr, "[Kaboom] HandleRecordingStorage: Failed to recalculate storage - %v\n", err)
 		util.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	info, err := c.GetStorageInfo()
+	info, err := c.Recordings().GetStorageInfo()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[Kaboom] HandleRecordingStorage: Failed to get storage info - %v\n", err)
 		util.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
@@ -269,62 +266,4 @@ func isExpiredByTTL(addedAt time.Time, ttl time.Duration) bool {
 		return false
 	}
 	return time.Since(addedAt) >= ttl
-}
-
-var NewRecordingManager = recording.NewRecordingManager
-
-func (c *Capture) StartRecording(name, pageURL string, sensitiveDataEnabled bool) (string, error) {
-	return c.recordingManager.StartRecording(name, pageURL, sensitiveDataEnabled)
-}
-
-func (c *Capture) StopRecording(recordingID string) (int, int64, error) {
-	return c.recordingManager.StopRecording(recordingID)
-}
-
-func (c *Capture) AddRecordingAction(action recording.RecordingAction) error {
-	return c.recordingManager.AddRecordingAction(action)
-}
-
-func (c *Capture) ListRecordings(limit int) ([]recording.Recording, error) {
-	return c.recordingManager.ListRecordings(limit)
-}
-
-func (c *Capture) GetRecording(recordingID string) (*recording.Recording, error) {
-	return c.recordingManager.GetRecording(recordingID)
-}
-
-func (c *Capture) StartPlayback(recordingID string) (*playback.Session, error) {
-	return playback.Start(c.recordingManager, recordingID)
-}
-
-func (c *Capture) ExecutePlayback(recordingID string) (*playback.Session, error) {
-	return playback.Execute(c.recordingManager, recordingID)
-}
-
-func (c *Capture) DetectFragileSelectors(sessions []*playback.Session) map[string]bool {
-	return playback.DetectFragileSelectors(sessions)
-}
-
-func (c *Capture) GetPlaybackStatus(session *playback.Session) map[string]any {
-	return playback.Status(session)
-}
-
-func (c *Capture) DiffRecordings(originalID, replayID string) (*logdiff.Result, error) {
-	return logdiff.Compare(c.recordingManager, originalID, replayID)
-}
-
-func (c *Capture) CategorizeActionTypes(recordingItem *recording.Recording) map[string]int {
-	return logdiff.CategorizeActionTypes(recordingItem)
-}
-
-func (c *Capture) GetStorageInfo() (recording.StorageInfo, error) {
-	return c.recordingManager.GetStorageInfo()
-}
-
-func (c *Capture) DeleteRecording(recordingID string) error {
-	return c.recordingManager.DeleteRecording(recordingID)
-}
-
-func (c *Capture) RecalculateStorageUsed() error {
-	return c.recordingManager.RecalculateStorageUsed()
 }

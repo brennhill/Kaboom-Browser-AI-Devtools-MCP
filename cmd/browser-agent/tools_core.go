@@ -438,7 +438,11 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 		networkRecording: &netrecord.NetworkRecordingState{},
 	}
 	handler.Guards = toolguard.New(captureStore, shutdownContext, defaultExtensionReadinessTimeout())
-	handler.recordingHandler = toolrecording.NewHandler(captureStore, handler.appendServerLog)
+	var recordingStore toolrecording.Store
+	if captureStore != nil {
+		recordingStore = captureStore.Recordings()
+	}
+	handler.recordingHandler = toolrecording.NewHandler(recordingStore, handler.appendServerLog)
 	handler.usageTracker = telemetry.NewUsageTracker()
 	if captureStore != nil {
 		tracker := handler.usageTracker

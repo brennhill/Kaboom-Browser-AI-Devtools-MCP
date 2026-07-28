@@ -18,6 +18,7 @@ code_paths:
   - internal/recording/logdiff/compare.go
   - internal/recording/logdiff/helpers.go
   - internal/recording/logdiff/report.go
+  - internal/capture/capture.go
   - internal/capture/handlers.go
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolobserve/dispatcher.go
@@ -33,7 +34,7 @@ test_paths:
   - internal/recording/state_path_test.go
   - internal/recording/playback/playback_test.go
   - internal/recording/logdiff/logdiff_test.go
-  - internal/capture/recording_delegation_test.go
+  - internal/capture/recording_manager_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -76,7 +77,9 @@ last_verified_date: 2026-03-05
   `*recording.RecordingManager` satisfies (`LookupRecording` for replay, `GetRecording`
   for diffing), so neither depends on the manager type and both are tested
   against in-memory fakes.
-- Delegation surface: `internal/capture/handlers.go`
+- Capture exposes the canonical manager through `Capture.Recordings()`; there
+  is no recording/playback delegation surface on Capture.
+- Recording storage HTTP boundary: `internal/capture/handlers.go`
 - MCP owners: `cmd/browser-agent/tools_configure.go`, `cmd/browser-agent/internal/toolobserve/dispatcher.go`, and the composition root in `tools_core.go`
 - Recording and playback MCP behavior/state: `cmd/browser-agent/internal/toolrecording/`
 - Still a stub: `playback.executeAction` returns synthetic results and is not yet

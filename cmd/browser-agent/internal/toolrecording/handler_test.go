@@ -9,8 +9,6 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/logdiff"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/playback"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -40,12 +38,8 @@ func (f *fakeCapture) GetRecording(string) (*recording.Recording, error) {
 	return &recording.Recording{}, nil
 }
 
-func (f *fakeCapture) ExecutePlayback(string) (*playback.Session, error) {
-	return &playback.Session{}, nil
-}
-
-func (f *fakeCapture) DiffRecordings(string, string) (*logdiff.Result, error) {
-	return &logdiff.Result{}, nil
+func (f *fakeCapture) LookupRecording(string) (*recording.Recording, error) {
+	return &recording.Recording{}, nil
 }
 
 func TestHandlerEventRecordingStartDefaultsURLAndLogs(t *testing.T) {

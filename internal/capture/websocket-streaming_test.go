@@ -34,7 +34,7 @@ func TestRecordingWebSocketConnectionEstablished(t *testing.T) {
 	// For now, test the recording infrastructure is ready to integrate with WS
 
 	// Create a recording to verify it's ready for WS telemetry
-	recordingID, err := capture.StartRecording("ws-test", "https://example.com", false)
+	recordingID, err := capture.Recordings().StartRecording("ws-test", "https://example.com", false)
 	if err != nil {
 		t.Fatalf("Failed to start recording: %v", err)
 	}
@@ -51,7 +51,7 @@ func TestRecordingWebSocketConnectionEstablished(t *testing.T) {
 		Selector:    "button",
 		TimestampMs: 1000,
 	}
-	err = capture.AddRecordingAction(action)
+	err = capture.Recordings().AddRecordingAction(action)
 	if err != nil {
 		t.Errorf("Recording should be ready to receive actions from WebSocket")
 	}
@@ -69,7 +69,7 @@ func TestRecordingWebSocketRealTimeStreaming(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Start recording
-	recordingID, err := capture.StartRecording("streaming-test", "https://example.com", false)
+	recordingID, err := capture.Recordings().StartRecording("streaming-test", "https://example.com", false)
 	if err != nil {
 		t.Fatalf("Failed to start recording: %v", err)
 	}
@@ -83,7 +83,7 @@ func TestRecordingWebSocketRealTimeStreaming(t *testing.T) {
 			Selector:    fmt.Sprintf("button#action-%d", i),
 			DataTestID:  fmt.Sprintf("test-action-%d", i),
 		}
-		err := capture.AddRecordingAction(action)
+		err := capture.Recordings().AddRecordingAction(action)
 		if err != nil {
 			t.Errorf("Failed to add action %d: %v", i, err)
 		}
@@ -125,7 +125,7 @@ func TestRecordingWebSocketBufferOverflow(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Start recording
-	recordingID, err := capture.StartRecording("buffer-overflow-test", "https://example.com", false)
+	recordingID, err := capture.Recordings().StartRecording("buffer-overflow-test", "https://example.com", false)
 	if err != nil {
 		t.Fatalf("Failed to start recording: %v", err)
 	}
@@ -139,7 +139,7 @@ func TestRecordingWebSocketBufferOverflow(t *testing.T) {
 			Selector:    fmt.Sprintf("button#action-%d", i),
 			DataTestID:  fmt.Sprintf("test-action-%d", i),
 		}
-		err := capture.AddRecordingAction(action)
+		err := capture.Recordings().AddRecordingAction(action)
 		if err != nil {
 			t.Errorf("Failed to add action %d: %v", i, err)
 		}
@@ -174,7 +174,7 @@ func TestRecordingWebSocketConnectionDropFallback(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Start recording
-	recordingID, err := capture.StartRecording("connection-drop-test", "https://example.com", false)
+	recordingID, err := capture.Recordings().StartRecording("connection-drop-test", "https://example.com", false)
 	if err != nil {
 		t.Fatalf("Failed to start recording: %v", err)
 	}
@@ -186,7 +186,7 @@ func TestRecordingWebSocketConnectionDropFallback(t *testing.T) {
 			TimestampMs: time.Now().UnixMilli(),
 			Selector:    fmt.Sprintf("button#pre-drop-%d", i),
 		}
-		_ = capture.AddRecordingAction(action)
+		_ = capture.Recordings().AddRecordingAction(action)
 	}
 
 	// Simulate events after fallback to polling (should still be captured)
@@ -197,7 +197,7 @@ func TestRecordingWebSocketConnectionDropFallback(t *testing.T) {
 			Selector:    fmt.Sprintf("input#post-drop-%d", i),
 			Text:        "[redacted]",
 		}
-		_ = capture.AddRecordingAction(action)
+		_ = capture.Recordings().AddRecordingAction(action)
 	}
 
 	// Verify all events captured through fallback
@@ -237,7 +237,7 @@ func TestRecordingWebSocketReconnectBackoff(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Start recording
-	recordingID, err := capture.StartRecording("reconnect-backoff-test", "https://example.com", false)
+	recordingID, err := capture.Recordings().StartRecording("reconnect-backoff-test", "https://example.com", false)
 	if err != nil {
 		t.Fatalf("Failed to start recording: %v", err)
 	}
@@ -250,7 +250,7 @@ func TestRecordingWebSocketReconnectBackoff(t *testing.T) {
 			TimestampMs: time.Now().UnixMilli(),
 			Selector:    fmt.Sprintf("button#cycle1-%d", i),
 		}
-		_ = capture.AddRecordingAction(action)
+		_ = capture.Recordings().AddRecordingAction(action)
 	}
 
 	// Cycle 2: After connection drop and reconnect
@@ -260,7 +260,7 @@ func TestRecordingWebSocketReconnectBackoff(t *testing.T) {
 			TimestampMs: time.Now().UnixMilli(),
 			Selector:    fmt.Sprintf("button#cycle2-%d", i),
 		}
-		_ = capture.AddRecordingAction(action)
+		_ = capture.Recordings().AddRecordingAction(action)
 	}
 
 	// Cycle 3: After another reconnect cycle
@@ -270,7 +270,7 @@ func TestRecordingWebSocketReconnectBackoff(t *testing.T) {
 			TimestampMs: time.Now().UnixMilli(),
 			Selector:    fmt.Sprintf("button#cycle3-%d", i),
 		}
-		_ = capture.AddRecordingAction(action)
+		_ = capture.Recordings().AddRecordingAction(action)
 	}
 
 	// Verify all events captured across reconnect cycles
@@ -326,7 +326,7 @@ func TestRecordingCreateMetadata(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Start recording
-	recordingID, err := capture.StartRecording("checkout", "https://example.com/checkout", false)
+	recordingID, err := capture.Recordings().StartRecording("checkout", "https://example.com/checkout", false)
 	if err != nil {
 		t.Fatalf("Expected no error, got: %v", err)
 	}
@@ -375,7 +375,7 @@ func TestRecordingAddActions(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Start recording
-	recordingID, err := capture.StartRecording("checkout", "https://example.com", false)
+	recordingID, err := capture.Recordings().StartRecording("checkout", "https://example.com", false)
 	if err != nil {
 		t.Fatalf("Failed to start recording: %v", err)
 	}
@@ -391,7 +391,7 @@ func TestRecordingAddActions(t *testing.T) {
 
 	for i, action := range actions {
 		action.TimestampMs = int64((i + 1) * 1000) // 1000, 2000, 3000, 4000, 5000
-		err := capture.AddRecordingAction(action)
+		err := capture.Recordings().AddRecordingAction(action)
 		if err != nil {
 			t.Fatalf("Failed to add action %d: %v", i, err)
 		}
@@ -432,7 +432,7 @@ func TestRecordingPersistToDisk(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Start recording
-	recordingID, err := capture.StartRecording("test", "https://example.com", false)
+	recordingID, err := capture.Recordings().StartRecording("test", "https://example.com", false)
 	if err != nil {
 		t.Fatalf("Failed to start recording: %v", err)
 	}
@@ -444,14 +444,14 @@ func TestRecordingPersistToDisk(t *testing.T) {
 			Selector:    "[data-testid=btn]",
 			TimestampMs: int64((i + 1) * 1000),
 		}
-		err := capture.AddRecordingAction(action)
+		err := capture.Recordings().AddRecordingAction(action)
 		if err != nil {
 			t.Fatalf("Failed to add action: %v", err)
 		}
 	}
 
 	// Stop recording
-	actionCount, duration, err := capture.StopRecording(recordingID)
+	actionCount, duration, err := capture.Recordings().StopRecording(recordingID)
 	if err != nil {
 		t.Fatalf("Failed to stop recording: %v", err)
 	}
@@ -465,7 +465,7 @@ func TestRecordingPersistToDisk(t *testing.T) {
 	}
 
 	// Try to load the recording back from disk
-	recording, err := capture.GetRecording(recordingID)
+	recording, err := capture.Recordings().GetRecording(recordingID)
 	if err != nil {
 		t.Fatalf("Failed to load recording from disk: %v", err)
 	}
@@ -490,7 +490,7 @@ func TestRecordingSensitiveDataRedaction(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Start recording with sensitive_data_enabled = false (default)
-	recordingID, err := capture.StartRecording("login", "https://example.com/login", false)
+	recordingID, err := capture.Recordings().StartRecording("login", "https://example.com/login", false)
 	if err != nil {
 		t.Fatalf("Failed to start recording: %v", err)
 	}
@@ -501,7 +501,7 @@ func TestRecordingSensitiveDataRedaction(t *testing.T) {
 		Selector: "input[type=password]",
 		Text:     "my_password_123",
 	}
-	err = capture.AddRecordingAction(action)
+	err = capture.Recordings().AddRecordingAction(action)
 	if err != nil {
 		t.Fatalf("Failed to add action: %v", err)
 	}
@@ -529,7 +529,7 @@ func TestRecordingSensitiveDataOptIn(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Start recording with sensitive_data_enabled = true
-	recordingID, err := capture.StartRecording("login", "https://example.com/login", true)
+	recordingID, err := capture.Recordings().StartRecording("login", "https://example.com/login", true)
 	if err != nil {
 		t.Fatalf("Failed to start recording: %v", err)
 	}
@@ -546,7 +546,7 @@ func TestRecordingSensitiveDataOptIn(t *testing.T) {
 		Selector: "input[type=password]",
 		Text:     "test_password",
 	}
-	err = capture.AddRecordingAction(action)
+	err = capture.Recordings().AddRecordingAction(action)
 	if err != nil {
 		t.Fatalf("Failed to add action: %v", err)
 	}
@@ -557,13 +557,13 @@ func TestRecordingSensitiveDataOptIn(t *testing.T) {
 	}
 
 	// Verify it persists to disk with flag set
-	_, _, err = capture.StopRecording(recordingID)
+	_, _, err = capture.Recordings().StopRecording(recordingID)
 	if err != nil {
 		t.Fatalf("Failed to stop recording: %v", err)
 	}
 
 	// Load it back and verify flag
-	loaded, err := capture.GetRecording(recordingID)
+	loaded, err := capture.Recordings().GetRecording(recordingID)
 	if err != nil {
 		t.Fatalf("Failed to load recording: %v", err)
 	}
@@ -588,7 +588,7 @@ func TestRecordingStorageQuotaEnforcement(t *testing.T) {
 	capture.recordingManager.SetRecordingStorageUsed(1024 * 1024 * 1024) // 1GB
 
 	// Try to start a new recording when storage is full
-	recordingID, err := capture.StartRecording("over-quota", "https://example.com", false)
+	recordingID, err := capture.Recordings().StartRecording("over-quota", "https://example.com", false)
 
 	// Verify error is returned
 	if err == nil {
@@ -627,7 +627,7 @@ func TestRecordingStorageWarning(t *testing.T) {
 
 	// Try to start a recording when at warning level
 	// The operation should proceed (non-blocking) but a warning should be logged
-	recordingID, err := capture.StartRecording("at-warning-level", "https://example.com", false)
+	recordingID, err := capture.Recordings().StartRecording("at-warning-level", "https://example.com", false)
 
 	// Verify no error - operation should succeed despite warning
 	if err != nil {
@@ -646,13 +646,13 @@ func TestRecordingStorageWarning(t *testing.T) {
 
 	// Verify we can still add actions (non-blocking)
 	action := recordingmodel.RecordingAction{Type: "click", Selector: "button", TimestampMs: int64(1000)}
-	err = capture.AddRecordingAction(action)
+	err = capture.Recordings().AddRecordingAction(action)
 	if err != nil {
 		t.Errorf("Expected to add actions at warning level, got error: %v", err)
 	}
 
 	// Verify we can stop recording (non-blocking)
-	actionCount, _, err := capture.StopRecording(recordingID)
+	actionCount, _, err := capture.Recordings().StopRecording(recordingID)
 	if err != nil {
 		t.Errorf("Expected to stop recording at warning level, got error: %v", err)
 	}
@@ -674,25 +674,25 @@ func TestRecordingListRecordings(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Create 1 recording to test listing
-	recordingID, err := capture.StartRecording("listtest", "https://example.com", false)
+	recordingID, err := capture.Recordings().StartRecording("listtest", "https://example.com", false)
 	if err != nil {
 		t.Fatalf("Failed to create recording: %v", err)
 	}
 
 	// Add an action
-	err = capture.AddRecordingAction(recordingmodel.RecordingAction{Type: "click", Selector: "btn"})
+	err = capture.Recordings().AddRecordingAction(recordingmodel.RecordingAction{Type: "click", Selector: "btn"})
 	if err != nil {
 		t.Fatalf("Failed to add action: %v", err)
 	}
 
 	// Stop recording
-	_, _, err = capture.StopRecording(recordingID)
+	_, _, err = capture.Recordings().StopRecording(recordingID)
 	if err != nil {
 		t.Fatalf("Failed to stop recording: %v", err)
 	}
 
 	// List recordings
-	recordings, err := capture.ListRecordings(100)
+	recordings, err := capture.Recordings().ListRecordings(100)
 	if err != nil {
 		t.Fatalf("Failed to list recordings: %v", err)
 	}
@@ -728,7 +728,7 @@ func TestRecordingQueryActions(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Create recording with 10 actions
-	recordingID, err := capture.StartRecording("query-test", "https://example.com", false)
+	recordingID, err := capture.Recordings().StartRecording("query-test", "https://example.com", false)
 	if err != nil {
 		t.Fatalf("Failed to start recording: %v", err)
 	}
@@ -741,19 +741,19 @@ func TestRecordingQueryActions(t *testing.T) {
 			X:           100 + i*10,
 			Y:           50 + i*10,
 		}
-		err := capture.AddRecordingAction(action)
+		err := capture.Recordings().AddRecordingAction(action)
 		if err != nil {
 			t.Fatalf("Failed to add action %d: %v", i, err)
 		}
 	}
 
 	// Stop and load the recording
-	_, _, err = capture.StopRecording(recordingID)
+	_, _, err = capture.Recordings().StopRecording(recordingID)
 	if err != nil {
 		t.Fatalf("Failed to stop recording: %v", err)
 	}
 
-	recording, err := capture.GetRecording(recordingID)
+	recording, err := capture.Recordings().GetRecording(recordingID)
 	if err != nil {
 		t.Fatalf("Failed to get recording: %v", err)
 	}
@@ -797,18 +797,18 @@ func TestPlaybackLoadRecording(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Create and persist a recording
-	recordingID, _ := capture.StartRecording("playback-test", "https://example.com", false)
+	recordingID, _ := capture.Recordings().StartRecording("playback-test", "https://example.com", false)
 	for i := 0; i < 8; i++ {
-		capture.AddRecordingAction(recordingmodel.RecordingAction{
+		capture.Recordings().AddRecordingAction(recordingmodel.RecordingAction{
 			Type:        "click",
 			Selector:    "button",
 			TimestampMs: int64((i + 1) * 1000),
 		})
 	}
-	capture.StopRecording(recordingID)
+	capture.Recordings().StopRecording(recordingID)
 
 	// Load recording for playback
-	recording, err := capture.GetRecording(recordingID)
+	recording, err := capture.Recordings().GetRecording(recordingID)
 	if err != nil {
 		t.Fatalf("Failed to load recording: %v", err)
 	}
@@ -841,16 +841,16 @@ func TestPlaybackNavigateAction(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Create a recording with navigate action
-	recordingID, _ := capture.StartRecording("nav-test", "https://example.com", false)
-	capture.AddRecordingAction(recordingmodel.RecordingAction{
+	recordingID, _ := capture.Recordings().StartRecording("nav-test", "https://example.com", false)
+	capture.Recordings().AddRecordingAction(recordingmodel.RecordingAction{
 		Type:        "navigate",
 		URL:         "https://example.com/checkout",
 		TimestampMs: 1000,
 	})
-	capture.StopRecording(recordingID)
+	capture.Recordings().StopRecording(recordingID)
 
 	// Load the recording
-	recording, err := capture.GetRecording(recordingID)
+	recording, err := capture.Recordings().GetRecording(recordingID)
 	if err != nil {
 		t.Fatalf("Failed to load recording: %v", err)
 	}
@@ -882,8 +882,8 @@ func TestPlaybackClickAction(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Create a recording with click action
-	recordingID, _ := capture.StartRecording("click-test", "https://example.com", false)
-	capture.AddRecordingAction(recordingmodel.RecordingAction{
+	recordingID, _ := capture.Recordings().StartRecording("click-test", "https://example.com", false)
+	capture.Recordings().AddRecordingAction(recordingmodel.RecordingAction{
 		Type:        "click",
 		Selector:    "[data-testid=add-to-cart]",
 		X:           500,
@@ -891,10 +891,10 @@ func TestPlaybackClickAction(t *testing.T) {
 		DataTestID:  "add-to-cart",
 		TimestampMs: 1000,
 	})
-	capture.StopRecording(recordingID)
+	capture.Recordings().StopRecording(recordingID)
 
 	// Load and verify action
-	recording, _ := capture.GetRecording(recordingID)
+	recording, _ := capture.Recordings().GetRecording(recordingID)
 	action := recording.Actions[0]
 
 	if action.Type != "click" {
@@ -921,8 +921,8 @@ func TestPlaybackClickSelfHealing(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Create action with data-testid (primary selector)
-	recordingID, _ := capture.StartRecording("healing-test", "https://example.com", false)
-	capture.AddRecordingAction(recordingmodel.RecordingAction{
+	recordingID, _ := capture.Recordings().StartRecording("healing-test", "https://example.com", false)
+	capture.Recordings().AddRecordingAction(recordingmodel.RecordingAction{
 		Type:        "click",
 		Selector:    "[data-testid=add-to-cart]",
 		DataTestID:  "add-to-cart",
@@ -930,10 +930,10 @@ func TestPlaybackClickSelfHealing(t *testing.T) {
 		Y:           300,
 		TimestampMs: 1000,
 	})
-	capture.StopRecording(recordingID)
+	capture.Recordings().StopRecording(recordingID)
 
 	// Verify action has fallback coordinates for self-healing
-	recording, _ := capture.GetRecording(recordingID)
+	recording, _ := capture.Recordings().GetRecording(recordingID)
 	action := recording.Actions[0]
 
 	// Self-healing should use fallback strategies
@@ -956,11 +956,11 @@ func TestPlaybackFragileSelectorDetection(t *testing.T) {
 	// For now, just test that we can record actions with potentially fragile selectors
 
 	capture := setupTestCapture(t)
-	recordingID, _ := capture.StartRecording("fragile-test", "https://example.com", false)
+	recordingID, _ := capture.Recordings().StartRecording("fragile-test", "https://example.com", false)
 
 	// Add click actions (could have fragile selectors)
 	for i := 0; i < 3; i++ {
-		capture.AddRecordingAction(recordingmodel.RecordingAction{
+		capture.Recordings().AddRecordingAction(recordingmodel.RecordingAction{
 			Type:        "click",
 			Selector:    ".button-" + string(rune('a'+i)),
 			X:           100 + (i * 50),
@@ -968,9 +968,9 @@ func TestPlaybackFragileSelectorDetection(t *testing.T) {
 			TimestampMs: int64((i + 1) * 1000),
 		})
 	}
-	capture.StopRecording(recordingID)
+	capture.Recordings().StopRecording(recordingID)
 
-	recording, _ := capture.GetRecording(recordingID)
+	recording, _ := capture.Recordings().GetRecording(recordingID)
 	if len(recording.Actions) != 3 {
 		t.Errorf("Expected 3 actions, got: %d", len(recording.Actions))
 	}
@@ -989,17 +989,17 @@ func TestPlaybackNonBlockingError(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Create a recording with 5 actions
-	recordingID, _ := capture.StartRecording("error-test", "https://example.com", false)
+	recordingID, _ := capture.Recordings().StartRecording("error-test", "https://example.com", false)
 	for i := 0; i < 5; i++ {
-		capture.AddRecordingAction(recordingmodel.RecordingAction{
+		capture.Recordings().AddRecordingAction(recordingmodel.RecordingAction{
 			Type:        "click",
 			Selector:    ".btn",
 			TimestampMs: int64((i + 1) * 1000),
 		})
 	}
-	capture.StopRecording(recordingID)
+	capture.Recordings().StopRecording(recordingID)
 
-	recording, _ := capture.GetRecording(recordingID)
+	recording, _ := capture.Recordings().GetRecording(recordingID)
 
 	// Verify all actions are still recorded even if some might fail
 	if len(recording.Actions) != 5 {
@@ -1031,7 +1031,7 @@ func TestLogDiffMatch(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Create recording with actions (simulating a user flow)
-	recordingID, err := capture.StartRecording("user-flow", "https://example.com/checkout", false)
+	recordingID, err := capture.Recordings().StartRecording("user-flow", "https://example.com/checkout", false)
 	if err != nil {
 		t.Fatalf("Failed to start recording: %v", err)
 	}
@@ -1043,16 +1043,16 @@ func TestLogDiffMatch(t *testing.T) {
 			Selector:    "button.checkout",
 			TimestampMs: int64((i + 1) * 1000),
 		}
-		_ = capture.AddRecordingAction(action)
+		_ = capture.Recordings().AddRecordingAction(action)
 	}
 
-	actionCount, _, err := capture.StopRecording(recordingID)
+	actionCount, _, err := capture.Recordings().StopRecording(recordingID)
 	if err != nil {
 		t.Fatalf("Failed to stop recording: %v", err)
 	}
 
 	// Load recording
-	recording, err := capture.GetRecording(recordingID)
+	recording, err := capture.Recordings().GetRecording(recordingID)
 	if err != nil {
 		t.Fatalf("Failed to load recording: %v", err)
 	}
@@ -1090,7 +1090,7 @@ func TestLogDiffNewErrors(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Create original recording (no errors)
-	recordingID1, err := capture.StartRecording("original", "https://example.com", false)
+	recordingID1, err := capture.Recordings().StartRecording("original", "https://example.com", false)
 	if err != nil {
 		t.Fatalf("Failed to start original recording: %v", err)
 	}
@@ -1100,19 +1100,19 @@ func TestLogDiffNewErrors(t *testing.T) {
 			Selector:    "button",
 			TimestampMs: int64((i + 1) * 1000),
 		}
-		_ = capture.AddRecordingAction(action)
+		_ = capture.Recordings().AddRecordingAction(action)
 	}
-	capture.StopRecording(recordingID1)
+	capture.Recordings().StopRecording(recordingID1)
 
 	// Create replay recording with more actions (simulating a regression)
-	recordingID2, _ := capture.StartRecording("replay", "https://example.com", false)
+	recordingID2, _ := capture.Recordings().StartRecording("replay", "https://example.com", false)
 	for i := 0; i < 3; i++ {
 		action := recordingmodel.RecordingAction{
 			Type:        "click",
 			Selector:    "button",
 			TimestampMs: int64((i + 1) * 1000),
 		}
-		_ = capture.AddRecordingAction(action)
+		_ = capture.Recordings().AddRecordingAction(action)
 	}
 	// Add extra action to simulate regression/new error condition
 	extraAction := recordingmodel.RecordingAction{
@@ -1121,12 +1121,12 @@ func TestLogDiffNewErrors(t *testing.T) {
 		TimestampMs: int64(4 * 1000),
 		Text:        "Network error occurred",
 	}
-	_ = capture.AddRecordingAction(extraAction)
-	capture.StopRecording(recordingID2)
+	_ = capture.Recordings().AddRecordingAction(extraAction)
+	capture.Recordings().StopRecording(recordingID2)
 
 	// Load both recordings
-	rec1, _ := capture.GetRecording(recordingID1)
-	rec2, _ := capture.GetRecording(recordingID2)
+	rec1, _ := capture.Recordings().GetRecording(recordingID1)
+	rec2, _ := capture.Recordings().GetRecording(recordingID2)
 
 	// Verify recordings are different
 	if rec1.ActionCount == rec2.ActionCount {
@@ -1164,39 +1164,39 @@ func TestLogDiffFixed(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Create original recording with error
-	recordingID1, _ := capture.StartRecording("buggy", "https://example.com", false)
+	recordingID1, _ := capture.Recordings().StartRecording("buggy", "https://example.com", false)
 	errorAction := recordingmodel.RecordingAction{
 		Type:        "error",
 		Selector:    "button.broken",
 		TimestampMs: int64(1000),
 		Text:        "Element not clickable",
 	}
-	_ = capture.AddRecordingAction(errorAction)
+	_ = capture.Recordings().AddRecordingAction(errorAction)
 	for i := 0; i < 2; i++ {
 		action := recordingmodel.RecordingAction{
 			Type:        "click",
 			Selector:    "button",
 			TimestampMs: int64((i + 2) * 1000),
 		}
-		_ = capture.AddRecordingAction(action)
+		_ = capture.Recordings().AddRecordingAction(action)
 	}
-	capture.StopRecording(recordingID1)
+	capture.Recordings().StopRecording(recordingID1)
 
 	// Create replay recording without error (bug fixed)
-	recordingID2, _ := capture.StartRecording("fixed", "https://example.com", false)
+	recordingID2, _ := capture.Recordings().StartRecording("fixed", "https://example.com", false)
 	for i := 0; i < 3; i++ {
 		action := recordingmodel.RecordingAction{
 			Type:        "click",
 			Selector:    "button",
 			TimestampMs: int64((i + 1) * 1000),
 		}
-		_ = capture.AddRecordingAction(action)
+		_ = capture.Recordings().AddRecordingAction(action)
 	}
-	capture.StopRecording(recordingID2)
+	capture.Recordings().StopRecording(recordingID2)
 
 	// Load both recordings
-	rec1, _ := capture.GetRecording(recordingID1)
-	rec2, _ := capture.GetRecording(recordingID2)
+	rec1, _ := capture.Recordings().GetRecording(recordingID1)
+	rec2, _ := capture.Recordings().GetRecording(recordingID2)
 
 	// Verify original has error action
 	hasErrorOriginal := false
@@ -1241,7 +1241,7 @@ func TestLogDiffValueChanges(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Create recording with type action that has specific value
-	recordingID, _ := capture.StartRecording("value-test", "https://example.com", true)
+	recordingID, _ := capture.Recordings().StartRecording("value-test", "https://example.com", true)
 
 	action := recordingmodel.RecordingAction{
 		Type:        "type",
@@ -1249,11 +1249,11 @@ func TestLogDiffValueChanges(t *testing.T) {
 		TimestampMs: int64(1000),
 		Text:        "3",
 	}
-	_ = capture.AddRecordingAction(action)
-	capture.StopRecording(recordingID)
+	_ = capture.Recordings().AddRecordingAction(action)
+	capture.Recordings().StopRecording(recordingID)
 
 	// Load recording
-	recording, err := capture.GetRecording(recordingID)
+	recording, err := capture.Recordings().GetRecording(recordingID)
 	if err != nil {
 		t.Fatalf("Failed to load recording: %v", err)
 	}
@@ -1289,7 +1289,7 @@ func TestLogDiffCategorize(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Create original recording with mixed action types
-	recordingID1, err := capture.StartRecording("original", "https://example.com", false)
+	recordingID1, err := capture.Recordings().StartRecording("original", "https://example.com", false)
 	if err != nil {
 		t.Fatalf("Failed to start original recording: %v", err)
 	}
@@ -1301,16 +1301,16 @@ func TestLogDiffCategorize(t *testing.T) {
 		{Type: "click", Selector: "button.submit", TimestampMs: 5000},
 	}
 	for _, a := range actions1 {
-		if err := capture.AddRecordingAction(a); err != nil {
+		if err := capture.Recordings().AddRecordingAction(a); err != nil {
 			t.Fatalf("Failed to add action to original recording: %v", err)
 		}
 	}
-	if _, _, err := capture.StopRecording(recordingID1); err != nil {
+	if _, _, err := capture.Recordings().StopRecording(recordingID1); err != nil {
 		t.Fatalf("Failed to stop original recording: %v", err)
 	}
 
 	// Create replay recording with different action mix
-	recordingID2, err := capture.StartRecording("replay", "https://example.com", false)
+	recordingID2, err := capture.Recordings().StartRecording("replay", "https://example.com", false)
 	if err != nil {
 		t.Fatalf("Failed to start replay recording: %v", err)
 	}
@@ -1323,16 +1323,16 @@ func TestLogDiffCategorize(t *testing.T) {
 		{Type: "click", Selector: "button.submit", TimestampMs: 5000},
 	}
 	for _, a := range actions2 {
-		if err := capture.AddRecordingAction(a); err != nil {
+		if err := capture.Recordings().AddRecordingAction(a); err != nil {
 			t.Fatalf("Failed to add action to replay recording: %v", err)
 		}
 	}
-	if _, _, err := capture.StopRecording(recordingID2); err != nil {
+	if _, _, err := capture.Recordings().StopRecording(recordingID2); err != nil {
 		t.Fatalf("Failed to stop replay recording: %v", err)
 	}
 
 	// Load both recordings
-	rec1, err := capture.GetRecording(recordingID1)
+	rec1, err := capture.Recordings().GetRecording(recordingID1)
 	if err != nil {
 		t.Fatalf("Failed to load original recording: %v", err)
 	}
@@ -1340,7 +1340,7 @@ func TestLogDiffCategorize(t *testing.T) {
 		t.Fatal("Original recording is nil")
 	}
 
-	rec2, err := capture.GetRecording(recordingID2)
+	rec2, err := capture.Recordings().GetRecording(recordingID2)
 	if err != nil {
 		t.Fatalf("Failed to load replay recording: %v", err)
 	}
@@ -1404,7 +1404,7 @@ func TestExtensionStartRecording(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Simulate extension calling event_recording_start via configure tool
-	recordingID, err := capture.StartRecording("checkout", "https://example.com/checkout", false)
+	recordingID, err := capture.Recordings().StartRecording("checkout", "https://example.com/checkout", false)
 	if err != nil {
 		t.Fatalf("Failed to start recording: %v", err)
 	}
@@ -1436,7 +1436,7 @@ func TestExtensionStartRecording(t *testing.T) {
 
 	// Verify we can add actions after starting
 	testAction := recordingmodel.RecordingAction{Type: "click", Selector: "button", TimestampMs: int64(1000)}
-	err = capture.AddRecordingAction(testAction)
+	err = capture.Recordings().AddRecordingAction(testAction)
 	if err != nil {
 		t.Errorf("Expected to be able to add action after starting recording: %v", err)
 	}
@@ -1459,7 +1459,7 @@ func TestExtensionStopRecording(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Start recording
-	recordingID, err := capture.StartRecording("flow-test", "https://example.com", false)
+	recordingID, err := capture.Recordings().StartRecording("flow-test", "https://example.com", false)
 	if err != nil {
 		t.Fatalf("Failed to start recording: %v", err)
 	}
@@ -1471,14 +1471,14 @@ func TestExtensionStopRecording(t *testing.T) {
 			Selector:    fmt.Sprintf("button#action-%d", i+1),
 			TimestampMs: int64((i + 1) * 1000), // 1s, 2s, 3s, ... 12s apart
 		}
-		err := capture.AddRecordingAction(action)
+		err := capture.Recordings().AddRecordingAction(action)
 		if err != nil {
 			t.Fatalf("Failed to add action %d: %v", i, err)
 		}
 	}
 
 	// Stop recording
-	actionCount, durationMs, err := capture.StopRecording(recordingID)
+	actionCount, durationMs, err := capture.Recordings().StopRecording(recordingID)
 	if err != nil {
 		t.Fatalf("Failed to stop recording: %v", err)
 	}
@@ -1499,7 +1499,7 @@ func TestExtensionStopRecording(t *testing.T) {
 	}
 
 	// Verify recording was persisted
-	recording, err := capture.GetRecording(recordingID)
+	recording, err := capture.Recordings().GetRecording(recordingID)
 	if err != nil {
 		t.Fatalf("Failed to load persisted recording: %v", err)
 	}
@@ -1527,7 +1527,7 @@ func TestExtensionAutoNameRecording(t *testing.T) {
 	// Start recording WITHOUT explicit name (empty string)
 	// In a real extension, this would use the page title
 	// For this test, we verify the system generates a recording ID
-	recordingID, err := capture.StartRecording("", "https://example.com/checkout", false)
+	recordingID, err := capture.Recordings().StartRecording("", "https://example.com/checkout", false)
 	if err != nil {
 		t.Fatalf("Failed to start recording: %v", err)
 	}
@@ -1538,16 +1538,16 @@ func TestExtensionAutoNameRecording(t *testing.T) {
 	}
 
 	// Add an action
-	_ = capture.AddRecordingAction(recordingmodel.RecordingAction{Type: "click", Selector: "button"})
+	_ = capture.Recordings().AddRecordingAction(recordingmodel.RecordingAction{Type: "click", Selector: "button"})
 
 	// Stop recording
-	_, _, err = capture.StopRecording(recordingID)
+	_, _, err = capture.Recordings().StopRecording(recordingID)
 	if err != nil {
 		t.Fatalf("Failed to stop recording: %v", err)
 	}
 
 	// Load the recording
-	recording, err := capture.GetRecording(recordingID)
+	recording, err := capture.Recordings().GetRecording(recordingID)
 	if err != nil {
 		t.Fatalf("Failed to load recording: %v", err)
 	}
