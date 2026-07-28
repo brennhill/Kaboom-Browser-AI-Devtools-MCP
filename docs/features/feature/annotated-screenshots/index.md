@@ -8,6 +8,7 @@ last_reviewed: 2026-07-28
 code_paths:
   - extension/content/draw-mode.js
   - internal/annotation/store.go
+  - internal/annotation/store_results.go
   - internal/annotation/draw_sessions_handler.go
   - cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go
   - cmd/browser-agent/internal/mediaapi/draw_mode.go
@@ -34,6 +35,7 @@ test_paths:
   - internal/schema/invariants_test.go
   - tests/extension/draw-mode.test.js
   - internal/annotation/store_test.go
+  - internal/annotation/named_test.go
   - internal/annotation/store_named_sessions_test.go
   - internal/annotation/store_lifecycle_test.go
   - internal/annotation/store_maintenance_test.go
@@ -85,6 +87,8 @@ last_verified_date: 2026-03-05
 - `internal/annotation/draw_sessions_handler.go` — persisted draw history, traversal-safe loading, and annotation-store hydration
 - `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go` — detail response enrichment, error correlation, LLM hints, and cross-project scope safety metadata (`projects`, `scope_ambiguous`, `scope_warning`, `filter_applied`)
 - `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go` — annotation retrieval, error correlation, and detail response shaping
+- `internal/annotation/store_results.go` owns the canonical filtered named-session
+  page projection shared by async completion and analysis enrichment.
 - `cmd/browser-agent/internal/toolgenerate/annotations/visual.go` — resilient visual test generation via locator fallback candidates (`css`, `testid`, `role`, `label`, `placeholder`, `text`)
 - `cmd/browser-agent/internal/toolgenerate/annotations/handlers.go` — the three MCP entry points (`visual_test`, `annotation_report`, `annotation_issues`) and session resolution
 - Annotation artifact handlers accept the canonical `*annotation.Store`

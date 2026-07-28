@@ -221,27 +221,11 @@ func buildAnnotationSessionResult(session *annotation.Session, urlFilter string)
 
 func buildNamedAnnotationSessionResult(ns *annotation.NamedSession, urlFilter string) map[string]any {
 	allProjects := toolanalyze.BuildProjectSummaries(ns.Pages)
-	filteredPages := filterAnnotationPages(ns.Pages, urlFilter)
-
-	totalCount := 0
-	pages := make([]map[string]any, 0, len(filteredPages))
-	for _, page := range filteredPages {
-		totalCount += len(page.Annotations)
-		p := map[string]any{
-			"page_url":    page.PageURL,
-			"annotations": page.Annotations,
-			"count":       len(page.Annotations),
-			"tab_id":      page.TabID,
-		}
-		if page.ScreenshotPath != "" {
-			p["screenshot"] = page.ScreenshotPath
-		}
-		pages = append(pages, p)
-	}
+	pageView := annotation.BuildNamedSessionPageView(ns, urlFilter)
 
 	// Find first screenshot for hints
 	var screenshotPath string
-	for _, page := range filteredPages {
+	for _, page := range pageView.FilteredPages {
 		if page.ScreenshotPath != "" {
 			screenshotPath = page.ScreenshotPath
 			break
@@ -250,9 +234,9 @@ func buildNamedAnnotationSessionResult(ns *annotation.NamedSession, urlFilter st
 
 	result := map[string]any{
 		"annot_session_name": ns.Name,
-		"pages":              pages,
-		"page_count":         len(filteredPages),
-		"total_count":        totalCount,
+		"pages":              pageView.Pages,
+		"page_count":         len(pageView.FilteredPages),
+		"total_count":        pageView.TotalCount,
 		"filter_applied":     annotation.FilterAppliedValue(urlFilter),
 	}
 	if len(allProjects) > 0 {
@@ -262,26 +246,13 @@ func buildNamedAnnotationSessionResult(ns *annotation.NamedSession, urlFilter st
 		result["scope_ambiguous"] = true
 		result["scope_warning"] = toolanalyze.BuildScopeWarning(allProjects)
 	}
-	if len(filteredPages) == 0 && urlFilter != "" {
+	if len(pageView.FilteredPages) == 0 && urlFilter != "" {
 		result["message"] = "No pages in this annotation session match the requested url filter."
 	}
-	if totalCount > 0 {
+	if pageView.TotalCount > 0 {
 		result["hints"] = toolanalyze.BuildSessionHints(screenshotPath)
 	}
 	return result
-}
-
-func filterAnnotationPages(pages []*annotation.Session, urlFilter string) []*annotation.Session {
-	if strings.TrimSpace(urlFilter) == "" {
-		return pages
-	}
-	filtered := make([]*annotation.Session, 0, len(pages))
-	for _, page := range pages {
-		if annotation.URLMatches(urlFilter, page.PageURL) {
-			filtered = append(filtered, page)
-		}
-	}
-	return filtered
 }
 
 // toolFlushAnnotations forces completion of a pending annotation waiter.

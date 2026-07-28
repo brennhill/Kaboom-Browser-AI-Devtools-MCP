@@ -556,3 +556,36 @@ func TestBuildNamedSessionResult_URLFilterScopesPages(t *testing.T) {
 		t.Errorf("expected retained page_url to match filter, got %v", page["page_url"])
 	}
 }
+
+func TestBuildNamedSessionPageViewOwnsFilteringAndProjection(t *testing.T) {
+	t.Parallel()
+	ns := &NamedSession{
+		Name: "view-session",
+		Pages: []*Session{
+			{
+				Annotations:    []Annotation{{ID: "a1"}},
+				PageURL:        "https://one.test/page",
+				TabID:          1,
+				ScreenshotPath: "/tmp/one.png",
+			},
+			{
+				Annotations: []Annotation{{ID: "a2"}, {ID: "a3"}},
+				PageURL:     "https://two.test/page",
+				TabID:       2,
+			},
+		},
+	}
+
+	view := BuildNamedSessionPageView(ns, "https://one.test/*")
+	if len(view.FilteredPages) != 1 || len(view.Pages) != 1 {
+		t.Fatalf("filtered pages = %d, projected pages = %d; want 1 each", len(view.FilteredPages), len(view.Pages))
+	}
+	if view.TotalCount != 1 {
+		t.Fatalf("total count = %d, want 1", view.TotalCount)
+	}
+	if view.Pages[0]["page_url"] != "https://one.test/page" ||
+		view.Pages[0]["screenshot"] != "/tmp/one.png" ||
+		view.Pages[0]["tab_id"] != 1 {
+		t.Fatalf("page projection = %#v", view.Pages[0])
+	}
+}

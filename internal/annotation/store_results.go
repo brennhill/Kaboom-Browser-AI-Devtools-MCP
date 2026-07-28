@@ -32,30 +32,46 @@ func BuildSessionResult(session *Session, urlFilter string) json.RawMessage {
 	return data
 }
 
-// BuildNamedSessionResult serializes a named session for the CommandTracker.
-func BuildNamedSessionResult(ns *NamedSession, urlFilter string) json.RawMessage {
-	totalCount := 0
+// NamedSessionPageView is the canonical filtered projection shared by async
+// completion and MCP analysis responses.
+type NamedSessionPageView struct {
+	FilteredPages []*Session
+	Pages         []map[string]any
+	TotalCount    int
+}
+
+// BuildNamedSessionPageView filters and projects the pages in a named session.
+func BuildNamedSessionPageView(ns *NamedSession, urlFilter string) NamedSessionPageView {
 	filteredPages := filterPagesByURL(ns.Pages, urlFilter)
-	pages := make([]map[string]any, 0, len(filteredPages))
+	view := NamedSessionPageView{
+		FilteredPages: filteredPages,
+		Pages:         make([]map[string]any, 0, len(filteredPages)),
+	}
 	for _, page := range filteredPages {
-		totalCount += len(page.Annotations)
-		p := map[string]any{
+		view.TotalCount += len(page.Annotations)
+		projected := map[string]any{
 			"page_url":    page.PageURL,
 			"annotations": page.Annotations,
 			"count":       len(page.Annotations),
 			"tab_id":      page.TabID,
 		}
 		if page.ScreenshotPath != "" {
-			p["screenshot"] = page.ScreenshotPath
+			projected["screenshot"] = page.ScreenshotPath
 		}
-		pages = append(pages, p)
+		view.Pages = append(view.Pages, projected)
 	}
+	return view
+}
+
+// BuildNamedSessionResult serializes a named session for the CommandTracker.
+func BuildNamedSessionResult(ns *NamedSession, urlFilter string) json.RawMessage {
+	view := BuildNamedSessionPageView(ns, urlFilter)
 	result := map[string]any{
 		"status":             "complete",
 		"annot_session_name": ns.Name,
-		"pages":              pages,
-		"page_count":         len(filteredPages),
-		"total_count":        totalCount,
+		"pages":              view.Pages,
+		"page_count":         len(view.FilteredPages),
+		"total_count":        view.TotalCount,
 		"terminal_reason":    "completed",
 		"filter_applied":     FilterAppliedValue(urlFilter),
 	}
