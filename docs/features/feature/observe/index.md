@@ -58,6 +58,9 @@ test_paths:
   - cmd/browser-agent/tools_observe_analysis_test.go
   - extension/background/commands/observe.fullpage.test.js
   - internal/a11ysummary/summary_test.go
+  - internal/capture/websocket_test.go
+  - internal/capture/websocket_status_test.go
+  - internal/capture/websocket_handlers_test.go
   - internal/tools/observe/logs_test.go
   - internal/tools/observe/metadata_test.go
   - internal/tools/observe/network_test.go

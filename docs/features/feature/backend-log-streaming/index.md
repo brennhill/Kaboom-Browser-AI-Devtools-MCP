@@ -59,6 +59,9 @@ test_paths:
   - cmd/browser-agent/tools_configure_network_recording_test.go
   - cmd/browser-agent/internal/toolconfigure/netrecord/netrecord_test.go
   - internal/capture/sync_test.go
+  - internal/capture/websocket_test.go
+  - internal/capture/websocket_status_test.go
+  - internal/capture/websocket_handlers_test.go
   - internal/capture/websocket-streaming_test.go
   - internal/capture/sync_test_helpers_test.go
   - internal/capture/settings_path_test.go
