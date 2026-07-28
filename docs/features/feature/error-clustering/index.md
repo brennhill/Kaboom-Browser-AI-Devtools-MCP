@@ -9,6 +9,7 @@ code_paths:
   - internal/tools/observe/errorcluster/cluster.go
   - internal/tools/observe/errorcluster/normalize.go
   - internal/tools/observe/logs.go
+  - internal/types/log.go
   - internal/schema/analyze.go
   - cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go
 test_paths:

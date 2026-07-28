@@ -8,14 +8,16 @@ import (
 	"fmt"
 	"os"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // addEntries adds new entries and rotates if needed.
-func (s *Server) addEntries(newEntries []LogEntry) int {
+func (s *Server) addEntries(newEntries []types.LogEntry) int {
 	type addEntriesPlan struct {
-		entriesToSave []LogEntry
-		appendOnly    []LogEntry
-		callback      func([]LogEntry)
+		entriesToSave []types.LogEntry
+		appendOnly    []types.LogEntry
+		callback      func([]types.LogEntry)
 	}
 	plan := func() addEntriesPlan {
 		s.mu.Lock()
@@ -31,7 +33,7 @@ func (s *Server) addEntries(newEntries []LogEntry) int {
 		// Rotate if needed — copy to new slice to allow GC of evicted entries.
 		rotated := len(s.entries) > s.maxEntries
 		if rotated {
-			kept := make([]LogEntry, s.maxEntries)
+			kept := make([]types.LogEntry, s.maxEntries)
 			copy(kept, s.entries[len(s.entries)-s.maxEntries:])
 			s.entries = kept
 			keptAt := make([]time.Time, s.maxEntries)
@@ -44,10 +46,10 @@ func (s *Server) addEntries(newEntries []LogEntry) int {
 		}
 		// Snapshot data for file I/O outside the lock.
 		if rotated {
-			result.entriesToSave = make([]LogEntry, len(s.entries))
+			result.entriesToSave = make([]types.LogEntry, len(s.entries))
 			copy(result.entriesToSave, s.entries)
 		} else {
-			result.appendOnly = make([]LogEntry, len(newEntries))
+			result.appendOnly = make([]types.LogEntry, len(newEntries))
 			copy(result.appendOnly, newEntries)
 		}
 		return result
@@ -98,10 +100,10 @@ func (s *Server) getEntryCount() int {
 }
 
 // getEntries returns a copy of all entries.
-func (s *Server) getEntries() []LogEntry {
+func (s *Server) getEntries() []types.LogEntry {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	result := make([]LogEntry, len(s.entries))
+	result := make([]types.LogEntry, len(s.entries))
 	copy(result, s.entries)
 	return result
 }

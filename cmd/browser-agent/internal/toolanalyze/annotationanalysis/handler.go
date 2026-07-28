@@ -15,6 +15,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // Handler owns annotation analysis over the shared annotation and command stores.
@@ -22,7 +23,7 @@ type Handler struct {
 	annotationStore *annotation.Store
 	capture         *capture.Capture
 	formatCommand   func(mcp.JSONRPCRequest, queries.CommandResult, string) mcp.JSONRPCResponse
-	logEntries      func() []mcp.LogEntry
+	logEntries      func() []types.LogEntry
 }
 
 // New constructs annotation analysis with explicit runtime dependencies.
@@ -30,7 +31,7 @@ func New(
 	annotationStore *annotation.Store,
 	captureStore *capture.Capture,
 	formatCommand func(mcp.JSONRPCRequest, queries.CommandResult, string) mcp.JSONRPCResponse,
-	logEntries func() []mcp.LogEntry,
+	logEntries func() []types.LogEntry,
 ) *Handler {
 	return &Handler{
 		annotationStore: annotationStore,

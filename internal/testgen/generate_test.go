@@ -13,12 +13,12 @@ import (
 
 // mockDataProvider implements DataProvider for testing.
 type mockDataProvider struct {
-	logEntries []map[string]any
+	logEntries []types.LogEntry
 	actions    []types.EnhancedAction
 	bodies     []types.NetworkBody
 }
 
-func (m *mockDataProvider) GetLogEntries() []map[string]any               { return m.logEntries }
+func (m *mockDataProvider) GetLogEntries() []types.LogEntry               { return m.logEntries }
 func (m *mockDataProvider) GetAllEnhancedActions() []types.EnhancedAction { return m.actions }
 func (m *mockDataProvider) GetNetworkBodies() []types.NetworkBody         { return m.bodies }
 
@@ -42,7 +42,7 @@ func TestFindTargetError_EmptyEntries(t *testing.T) {
 func TestFindTargetError_NoErrorLevel(t *testing.T) {
 	t.Parallel()
 	dp := &mockDataProvider{
-		logEntries: []map[string]any{
+		logEntries: []types.LogEntry{
 			{"level": "info", "message": "just info"},
 			{"level": "warn", "message": "a warning"},
 		},
@@ -57,7 +57,7 @@ func TestFindTargetError_NoErrorLevel(t *testing.T) {
 func TestFindTargetError_ReturnsLastError(t *testing.T) {
 	t.Parallel()
 	dp := &mockDataProvider{
-		logEntries: []map[string]any{
+		logEntries: []types.LogEntry{
 			{"level": "error", "message": "first error", "error_id": "e1", "ts": "2024-01-01T00:00:01Z"},
 			{"level": "info", "message": "info between"},
 			{"level": "error", "message": "second error", "error_id": "e2", "ts": "2024-01-01T00:00:02Z"},
@@ -80,7 +80,7 @@ func TestFindTargetError_ReturnsLastError(t *testing.T) {
 func TestFindTargetError_SpecificErrorID(t *testing.T) {
 	t.Parallel()
 	dp := &mockDataProvider{
-		logEntries: []map[string]any{
+		logEntries: []types.LogEntry{
 			{"level": "error", "message": "first error", "error_id": "e1", "ts": "2024-01-01T00:00:01Z"},
 			{"level": "error", "message": "second error", "error_id": "e2", "ts": "2024-01-01T00:00:02Z"},
 		},
@@ -102,7 +102,7 @@ func TestFindTargetError_SpecificErrorID(t *testing.T) {
 func TestFindTargetError_SpecificErrorIDNotFound(t *testing.T) {
 	t.Parallel()
 	dp := &mockDataProvider{
-		logEntries: []map[string]any{
+		logEntries: []types.LogEntry{
 			{"level": "error", "message": "an error", "error_id": "e1", "ts": "2024-01-01T00:00:01Z"},
 		},
 	}
@@ -255,7 +255,7 @@ func TestCollectErrorMessages_NoEntries(t *testing.T) {
 func TestCollectErrorMessages_MixedLevels(t *testing.T) {
 	t.Parallel()
 	dp := &mockDataProvider{
-		logEntries: []map[string]any{
+		logEntries: []types.LogEntry{
 			{"level": "error", "message": "error one"},
 			{"level": "info", "message": "info msg"},
 			{"level": "error", "message": "error two"},
@@ -272,7 +272,7 @@ func TestCollectErrorMessages_MixedLevels(t *testing.T) {
 func TestCollectErrorMessages_RespectsLimit(t *testing.T) {
 	t.Parallel()
 	dp := &mockDataProvider{
-		logEntries: []map[string]any{
+		logEntries: []types.LogEntry{
 			{"level": "error", "message": "err-1"},
 			{"level": "error", "message": "err-2"},
 			{"level": "error", "message": "err-3"},
@@ -289,7 +289,7 @@ func TestCollectErrorMessages_RespectsLimit(t *testing.T) {
 func TestCollectErrorMessages_SkipsEmptyMessages(t *testing.T) {
 	t.Parallel()
 	dp := &mockDataProvider{
-		logEntries: []map[string]any{
+		logEntries: []types.LogEntry{
 			{"level": "error", "message": ""},
 			{"level": "error", "message": "real error"},
 			{"level": "error"},
@@ -305,7 +305,7 @@ func TestCollectErrorMessages_SkipsEmptyMessages(t *testing.T) {
 func TestCollectErrorMessages_LimitZero(t *testing.T) {
 	t.Parallel()
 	dp := &mockDataProvider{
-		logEntries: []map[string]any{{"level": "error", "message": "should not appear"}},
+		logEntries: []types.LogEntry{{"level": "error", "message": "should not appear"}},
 	}
 
 	if msgs := CollectErrorMessages(dp, 0); len(msgs) != 0 {
@@ -330,7 +330,7 @@ func TestGenerateTestFromError_NoErrors(t *testing.T) {
 func TestGenerateTestFromError_ErrorButNoActions(t *testing.T) {
 	t.Parallel()
 	dp := &mockDataProvider{
-		logEntries: []map[string]any{
+		logEntries: []types.LogEntry{
 			{"level": "error", "message": "test error", "error_id": "e1", "ts": "2024-01-01T00:00:01Z"},
 		},
 	}
@@ -345,7 +345,7 @@ func TestGenerateTestFromError_Success(t *testing.T) {
 	t.Parallel()
 	errorTime := time.Date(2024, 1, 1, 0, 0, 1, 0, time.UTC)
 	dp := &mockDataProvider{
-		logEntries: []map[string]any{
+		logEntries: []types.LogEntry{
 			{"level": "error", "message": "click failed", "error_id": "e1", "ts": errorTime.Format(time.RFC3339)},
 		},
 		actions: []types.EnhancedAction{
@@ -498,7 +498,7 @@ func TestGenerateTestFromRegression_WithErrorsAndNetwork(t *testing.T) {
 		actions: []types.EnhancedAction{
 			{Type: "click", Selectors: map[string]any{"target": "#btn"}},
 		},
-		logEntries: []map[string]any{
+		logEntries: []types.LogEntry{
 			{"level": "error", "message": "TypeError: undefined is not a function"},
 			{"level": "error", "message": "ReferenceError: x is not defined"},
 		},

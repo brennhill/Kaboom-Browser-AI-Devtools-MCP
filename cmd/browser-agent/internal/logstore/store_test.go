@@ -11,6 +11,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // newStoreForTest mirrors NewServer's wiring: build the store, start the single
@@ -31,7 +33,7 @@ func TestStoreAddEntriesRotationPath(t *testing.T) {
 	logFile := filepath.Join(t.TempDir(), "rotation.jsonl")
 	ls := newStoreForTest(t, logFile, 2)
 
-	added := ls.AddEntries([]Entry{
+	added := ls.AddEntries([]types.LogEntry{
 		{"level": "info", "message": "a"},
 		{"level": "info", "message": "b"},
 		{"level": "info", "message": "c"},
@@ -68,11 +70,11 @@ func TestStoreSetOnEntriesAndAppendPath(t *testing.T) {
 	ls := newStoreForTest(t, logFile, 10)
 
 	var callbackCount atomic.Int32
-	ls.SetOnEntries(func(entries []Entry) {
+	ls.SetOnEntries(func(entries []types.LogEntry) {
 		callbackCount.Add(int32(len(entries)))
 	})
 
-	added := ls.AddEntries([]Entry{{"level": "info", "message": "hello"}})
+	added := ls.AddEntries([]types.LogEntry{{"level": "info", "message": "hello"}})
 	if added != 1 {
 		t.Fatalf("AddEntries() = %d, want 1", added)
 	}
@@ -116,8 +118,8 @@ func TestStoreLoadEntriesBoundsAndMalformedLines(t *testing.T) {
 
 func TestStoreAppendToFileDropAndShutdownTimeout(t *testing.T) {
 	ls := New(Config{ChanSize: 1, AddWarning: func(string) {}})
-	ls.logChan <- []Entry{{"level": "info", "message": "queued"}}
-	if err := ls.AppendToFile([]Entry{{"level": "info", "message": "drop"}}); err == nil {
+	ls.logChan <- []types.LogEntry{{"level": "info", "message": "queued"}}
+	if err := ls.AppendToFile([]types.LogEntry{{"level": "info", "message": "drop"}}); err == nil {
 		t.Fatal("AppendToFile() expected drop error when channel is full")
 	}
 	if dropped := ls.DropCount(); dropped != 1 {
@@ -134,9 +136,9 @@ func TestStoreFileRotationOnSizeExceeded(t *testing.T) {
 	ls.SetMaxFileSize(1024)
 
 	// Write enough entries to exceed 1KB (triggers rotation)
-	var entries []Entry
+	var entries []types.LogEntry
 	for i := 0; i < 50; i++ {
-		entries = append(entries, Entry{"level": "info", "message": strings.Repeat("x", 100)})
+		entries = append(entries, types.LogEntry{"level": "info", "message": strings.Repeat("x", 100)})
 	}
 	ls.AddEntries(entries)
 
@@ -144,7 +146,7 @@ func TestStoreFileRotationOnSizeExceeded(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	// Write a second small batch so a new main file is created after rotation
-	ls.AddEntries([]Entry{{"level": "info", "message": "after-rotation"}})
+	ls.AddEntries([]types.LogEntry{{"level": "info", "message": "after-rotation"}})
 	ls.Shutdown(2 * time.Second)
 
 	// The .old file should exist after rotation
@@ -175,7 +177,7 @@ func TestStoreFileRotationCreatesOldFile(t *testing.T) {
 	ls.SetMaxFileSize(512)
 
 	// Write entries in two batches to trigger rotation
-	batch1 := []Entry{
+	batch1 := []types.LogEntry{
 		{"level": "info", "message": strings.Repeat("a", 200)},
 		{"level": "info", "message": strings.Repeat("b", 200)},
 		{"level": "info", "message": strings.Repeat("c", 200)},
@@ -185,7 +187,7 @@ func TestStoreFileRotationCreatesOldFile(t *testing.T) {
 	// Let the async logger process
 	time.Sleep(50 * time.Millisecond)
 
-	batch2 := []Entry{
+	batch2 := []types.LogEntry{
 		{"level": "info", "message": strings.Repeat("d", 200)},
 	}
 	ls.AddEntries(batch2)
@@ -219,7 +221,7 @@ func TestStoreFileRotationOverwritesExistingOld(t *testing.T) {
 	ls := newStoreForTest(t, logFile, 10000)
 	ls.SetMaxFileSize(256)
 
-	entries := []Entry{
+	entries := []types.LogEntry{
 		{"level": "info", "message": strings.Repeat("z", 200)},
 		{"level": "info", "message": strings.Repeat("y", 200)},
 	}
@@ -253,7 +255,7 @@ func TestStoreFileRotationZeroDisablesRotation(t *testing.T) {
 	// Explicitly disable file rotation
 	ls.SetMaxFileSize(0)
 
-	entries := []Entry{
+	entries := []types.LogEntry{
 		{"level": "info", "message": strings.Repeat("x", 200)},
 		{"level": "info", "message": strings.Repeat("y", 200)},
 	}
@@ -283,15 +285,15 @@ func TestStoreDropCount(t *testing.T) {
 	}
 
 	// Fill channel, then trigger a drop
-	ls.logChan <- []Entry{{"level": "info", "message": "fill"}}
-	_ = ls.AppendToFile([]Entry{{"level": "info", "message": "drop"}})
+	ls.logChan <- []types.LogEntry{{"level": "info", "message": "fill"}}
+	_ = ls.AppendToFile([]types.LogEntry{{"level": "info", "message": "drop"}})
 
 	if got := ls.DropCount(); got != 1 {
 		t.Fatalf("DropCount() = %d, want 1", got)
 	}
 
 	// Trigger a second drop
-	_ = ls.AppendToFile([]Entry{{"level": "info", "message": "drop2"}})
+	_ = ls.AppendToFile([]types.LogEntry{{"level": "info", "message": "drop2"}})
 
 	if got := ls.DropCount(); got != 2 {
 		t.Fatalf("DropCount() = %d, want 2", got)
@@ -307,7 +309,7 @@ func TestStoreDropCount(t *testing.T) {
 func TestStoreAppendToFileSyncSkipsUnmarshalableEntry(t *testing.T) {
 	logFile := filepath.Join(t.TempDir(), "sync.jsonl")
 	ls := New(Config{LogFile: logFile, AddWarning: func(string) {}})
-	err := ls.appendToFileSync([]Entry{
+	err := ls.appendToFileSync([]types.LogEntry{
 		{"level": "info", "message": "ok"},
 		{"level": "info", "value": math.NaN()},
 	})
@@ -348,7 +350,7 @@ func TestStoreAccessorsRoundTrip(t *testing.T) {
 		t.Fatalf("TelemetryMode() = %q, want %q", got, "full")
 	}
 
-	ls.AddEntries([]Entry{
+	ls.AddEntries([]types.LogEntry{
 		{"level": "info", "message": "one"},
 		{"level": "error", "message": "two"},
 	})
@@ -406,7 +408,7 @@ func TestStoreSetLogFileRedirectsPersistence(t *testing.T) {
 	}
 	go ls.RunWorker()
 
-	ls.AddEntries([]Entry{{"level": "info", "message": "redirected"}})
+	ls.AddEntries([]types.LogEntry{{"level": "info", "message": "redirected"}})
 	ls.Shutdown(2 * time.Second)
 
 	data, err := os.ReadFile(fallback)
@@ -431,10 +433,10 @@ func TestStoreSeedEntriesBypassesIngest(t *testing.T) {
 	ls := New(Config{LogFile: logFile, MaxEntries: 1, AddWarning: func(string) {}})
 
 	var callbacks atomic.Int32
-	ls.SetOnEntries(func([]Entry) { callbacks.Add(1) })
+	ls.SetOnEntries(func([]types.LogEntry) { callbacks.Add(1) })
 
 	backdated := time.Now().Add(-time.Hour)
-	ls.SeedEntries([]Entry{
+	ls.SeedEntries([]types.LogEntry{
 		{"level": "error", "message": "seeded-1"},
 		{"level": "error", "message": "seeded-2"},
 	}, []time.Time{backdated, backdated})
@@ -458,7 +460,7 @@ func TestStoreSeedEntriesBypassesIngest(t *testing.T) {
 	}
 
 	// nil add-times must leave the parallel slice untouched.
-	ls.SeedEntries([]Entry{{"level": "info", "message": "seeded-3"}}, nil)
+	ls.SeedEntries([]types.LogEntry{{"level": "info", "message": "seeded-3"}}, nil)
 	if _, addedAt = ls.EntriesWithAddedAt(); len(addedAt) != 2 {
 		t.Fatalf("len(addedAt) = %d after a nil-time seed, want 2", len(addedAt))
 	}

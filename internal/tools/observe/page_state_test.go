@@ -12,6 +12,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // ============================================
@@ -29,7 +30,7 @@ func (m *mockA11yDeps) DiagnosticHintString() string { return m.diagnosticStr }
 
 func (m *mockA11yDeps) GetCapture() *capture.Capture { return m.cap }
 
-func (m *mockA11yDeps) GetLogEntries() ([]mcp.LogEntry, []time.Time) {
+func (m *mockA11yDeps) GetLogEntries() ([]types.LogEntry, []time.Time) {
 	return nil, nil
 }
 
@@ -39,7 +40,7 @@ func (m *mockA11yDeps) ExecuteA11yQuery(_ string, _ []string, _ any, _ bool) (js
 	return m.a11yResult, m.a11yErr
 }
 
-func (m *mockA11yDeps) IsConsoleNoise(_ mcp.LogEntry) bool { return false }
+func (m *mockA11yDeps) IsConsoleNoise(_ types.LogEntry) bool { return false }
 
 // ============================================
 // Waterfall Summary Tests

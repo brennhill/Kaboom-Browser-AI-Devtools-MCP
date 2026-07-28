@@ -9,13 +9,15 @@ import (
 	"os"
 	"sync/atomic"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // AddEntries adds new entries to the in-memory window and queues them for
 // append-only persistence. The hot path performs no file I/O: all file writes
 // (appends, compaction rewrites, size rotation) happen on the async logger
 // worker goroutine, which is the single file writer.
-func (ls *Store) AddEntries(newEntries []Entry) int {
+func (ls *Store) AddEntries(newEntries []types.LogEntry) int {
 	appendOnly, cb := ls.addEntriesInMemory(newEntries)
 
 	if err := ls.AppendToFile(appendOnly); err != nil {
@@ -34,7 +36,7 @@ func (ls *Store) AddEntries(newEntries []Entry) int {
 // new entries for async file I/O outside the lock. The in-memory window is
 // trimmed to maxEntries here; the file is compacted separately by the async
 // worker (see maybeCompactLogFile) so steady-state ingest stays append-only.
-func (ls *Store) addEntriesInMemory(newEntries []Entry) (appendOnly []Entry, cb func([]Entry)) {
+func (ls *Store) addEntriesInMemory(newEntries []types.LogEntry) (appendOnly []types.LogEntry, cb func([]types.LogEntry)) {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
 
@@ -54,7 +56,7 @@ func (ls *Store) addEntriesInMemory(newEntries []Entry) (appendOnly []Entry, cb 
 
 	// Trim the in-memory window — copy to new slice to allow GC of evicted entries
 	if len(ls.entries) > ls.maxEntries {
-		kept := make([]Entry, ls.maxEntries)
+		kept := make([]types.LogEntry, ls.maxEntries)
 		copy(kept, ls.entries[len(ls.entries)-ls.maxEntries:])
 		ls.entries = kept
 		keptAt := make([]time.Time, ls.maxEntries)
@@ -63,7 +65,7 @@ func (ls *Store) addEntriesInMemory(newEntries []Entry) (appendOnly []Entry, cb 
 	}
 
 	// Snapshot new entries for file I/O outside the lock
-	appendOnly = make([]Entry, len(newEntries))
+	appendOnly = make([]types.LogEntry, len(newEntries))
 	copy(appendOnly, newEntries)
 	cb = ls.onEntries
 	return appendOnly, cb
@@ -85,7 +87,7 @@ func (ls *Store) RunWorker() {
 }
 
 // appendToFileSync does synchronous file I/O (called by async worker only).
-func (ls *Store) appendToFileSync(entries []Entry) error {
+func (ls *Store) appendToFileSync(entries []types.LogEntry) error {
 	if ls.logFile == "" {
 		return nil
 	}
@@ -184,7 +186,7 @@ func (ls *Store) maybeCompactLogFile() {
 }
 
 // AppendToFile queues log entries for async writing (never blocks).
-func (ls *Store) AppendToFile(entries []Entry) error {
+func (ls *Store) AppendToFile(entries []types.LogEntry) error {
 	if ls.logChanClosed.Load() {
 		return fmt.Errorf("log channel closed, %d entries dropped", len(entries))
 	}

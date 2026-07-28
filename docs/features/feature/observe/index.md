@@ -27,6 +27,7 @@ code_paths:
   - internal/tools/observe/metadata.go
   - internal/tools/observe/logs.go
   - internal/tools/observe/summarized_logs.go
+  - internal/types/log.go
   - internal/tools/observe/network.go
   - internal/tools/observe/session.go
   - internal/tools/observe/correlation.go

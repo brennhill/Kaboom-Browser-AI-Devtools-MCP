@@ -161,8 +161,8 @@ func TestToolsObserveErrors_ResponseFields(t *testing.T) {
 	_ = cap
 
 	ts := time.Now().UTC().Format(time.RFC3339)
-	server.logs.SeedEntries([]mcp.LogEntry{
-		mcp.LogEntry{
+	server.logs.SeedEntries([]types.LogEntry{
+		types.LogEntry{
 			"level":   "error",
 			"message": "Test error message",
 			"source":  "https://example.com/app.js",
@@ -256,9 +256,9 @@ func TestToolsObserveErrors_URLFilter(t *testing.T) {
 	h, server, _ := makeToolHandler(t)
 
 	ts := time.Now().UTC().Format(time.RFC3339)
-	server.logs.SeedEntries([]mcp.LogEntry{
-		mcp.LogEntry{"level": "error", "message": "Error A", "url": "https://example.com/a.js", "ts": ts},
-		mcp.LogEntry{"level": "error", "message": "Error B", "url": "https://other.com/b.js", "ts": ts},
+	server.logs.SeedEntries([]types.LogEntry{
+		types.LogEntry{"level": "error", "message": "Error A", "url": "https://example.com/a.js", "ts": ts},
+		types.LogEntry{"level": "error", "message": "Error B", "url": "https://other.com/b.js", "ts": ts},
 	}, nil)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
@@ -278,7 +278,7 @@ func TestToolsObserveErrors_LimitParam(t *testing.T) {
 
 	ts := time.Now().UTC().Format(time.RFC3339)
 	for i := 0; i < 5; i++ {
-		server.logs.SeedEntries([]mcp.LogEntry{{"level": "error", "message": "err", "ts": ts}}, nil)
+		server.logs.SeedEntries([]types.LogEntry{{"level": "error", "message": "err", "ts": ts}}, nil)
 	}
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
@@ -301,8 +301,8 @@ func TestToolsObserveLogs_ResponseFields(t *testing.T) {
 	h, server, _ := makeToolHandler(t)
 
 	ts := time.Now().UTC().Format(time.RFC3339)
-	server.logs.SeedEntries([]mcp.LogEntry{
-		mcp.LogEntry{
+	server.logs.SeedEntries([]types.LogEntry{
+		types.LogEntry{
 			"type":    "console",
 			"level":   "warn",
 			"message": "deprecation warning",
@@ -780,8 +780,8 @@ func TestToolsObserveErrors_DataAgeMs_Present(t *testing.T) {
 	h, server, _ := makeToolHandler(t)
 
 	ts := time.Now().UTC().Format(time.RFC3339)
-	server.logs.SeedEntries([]mcp.LogEntry{
-		mcp.LogEntry{
+	server.logs.SeedEntries([]types.LogEntry{
+		types.LogEntry{
 			"level": "error", "message": "Test error", "ts": ts,
 		},
 	}, nil)

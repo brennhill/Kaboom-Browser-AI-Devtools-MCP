@@ -110,7 +110,7 @@ type sharedPageData struct {
 	networkBodies    []types.NetworkBody
 	waterfallEntries []types.NetworkWaterfallEntry
 	logEntries       []types.LogEntry
-	consoleEntries   []scan.LogEntry
+	consoleEntries   []types.LogEntry
 	tabURL           string
 }
 

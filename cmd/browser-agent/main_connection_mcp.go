@@ -29,11 +29,11 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/clientreg"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -262,7 +262,7 @@ func initCapture(server *Server, port int) *capture.Capture {
 	cap.SetClientRegistry(newSessionClientRegistryAdapter(clientreg.NewClientRegistry()))
 	cap.SetServerVersion(version)
 	cap.SubscribeLifecycle(func(event lifecycle.Event, data map[string]any) {
-		entry := mcp.LogEntry{
+		entry := types.LogEntry{
 			"type":      "lifecycle",
 			"event":     event.String(),
 			"pid":       os.Getpid(),
@@ -272,7 +272,7 @@ func initCapture(server *Server, port int) *capture.Capture {
 		for k, v := range data {
 			entry[k] = v
 		}
-		server.logs.AddEntries([]mcp.LogEntry{entry})
+		server.logs.AddEntries([]types.LogEntry{entry})
 	})
 
 	server.logLifecycle("loading_settings", port, nil)

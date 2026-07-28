@@ -20,7 +20,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
@@ -226,8 +225,8 @@ func TestHealthEndpointExposesDroppedCount(t *testing.T) {
 	tinyMux, _ := setupHTTPRoutes(tinyLogSrv, cap)
 
 	// Fill queue (no worker draining it), then trigger a drop
-	_ = tinyLogSrv.logs.AppendToFile([]mcp.LogEntry{{"level": "info", "message": "fill"}})
-	_ = tinyLogSrv.logs.AppendToFile([]mcp.LogEntry{{"level": "info", "message": "drop"}})
+	_ = tinyLogSrv.logs.AppendToFile([]types.LogEntry{{"level": "info", "message": "fill"}})
+	_ = tinyLogSrv.logs.AppendToFile([]types.LogEntry{{"level": "info", "message": "drop"}})
 
 	healthReq := localRequest(http.MethodGet, "/health", nil)
 	healthRR := httptest.NewRecorder()
@@ -328,7 +327,7 @@ func TestTelemetryEndpointReadContract(t *testing.T) {
 	t.Parallel()
 
 	srv := newTestServerForHandlers(t)
-	srv.logs.AddEntries([]mcp.LogEntry{{"level": "error", "message": "boom"}})
+	srv.logs.AddEntries([]types.LogEntry{{"level": "error", "message": "boom"}})
 	mux, _ := setupHTTPRoutes(srv, capture.NewCapture())
 
 	missingRR := httptest.NewRecorder()

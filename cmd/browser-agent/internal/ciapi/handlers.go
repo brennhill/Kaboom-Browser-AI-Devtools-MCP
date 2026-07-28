@@ -10,13 +10,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
 // Logs is the bounded log-store surface used by CI endpoints.
 type Logs interface {
-	Entries() []mcp.LogEntry
+	Entries() []types.LogEntry
 	EntryCount() int
 	ClearEntries()
 }

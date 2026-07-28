@@ -3,8 +3,6 @@
 
 package mcp
 
-import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
-
 // JSONRPCVersion is the JSON-RPC protocol version string. Use this constant
 // instead of the magic string "2.0" when constructing JSON-RPC responses.
 const JSONRPCVersion = "2.0"
@@ -86,6 +84,3 @@ type MCPToolsListResult struct {
 type MCPResourceTemplatesListResult struct {
 	ResourceTemplates []any `json:"resourceTemplates"` // SPEC:MCP
 }
-
-// LogEntry is a type alias for the canonical definition in internal/types.
-type LogEntry = types.LogEntry

@@ -6,7 +6,11 @@
 
 package errorcluster
 
-import "sort"
+import (
+	"sort"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+)
 
 // keyCap bounds the fingerprint length so a stack-laden message cannot become a
 // multi-kilobyte map key. Applied after normalization, on the placeholder form.
@@ -30,11 +34,11 @@ type cluster struct {
 // list and each cluster's url list used to be produced by ranging a Go map, so identical
 // input returned a different order on every call — undiffable across runs and impossible
 // to pin with a golden test.
-func Analyze(entries []map[string]any) []map[string]any {
+func Analyze(entries []types.LogEntry) []map[string]any {
 	return toResponse(build(entries))
 }
 
-func build(entries []map[string]any) map[string]*cluster {
+func build(entries []types.LogEntry) map[string]*cluster {
 	clusters := make(map[string]*cluster)
 	for _, entry := range entries {
 		level, _ := entry["level"].(string)

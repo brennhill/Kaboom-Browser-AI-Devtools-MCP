@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -26,8 +25,8 @@ type Deps interface {
 	// NetworkWaterfallEntries returns captured network waterfall entries.
 	NetworkWaterfallEntries() []types.NetworkWaterfallEntry
 
-	// ConsoleSecurityEntries returns console entries as scan.LogEntry for security scanning.
-	ConsoleSecurityEntries() []scan.LogEntry
+	// ConsoleSecurityEntries returns canonical console entries for security scanning.
+	ConsoleSecurityEntries() []types.LogEntry
 
 	// SecurityScanner returns the security scanner, or nil if not initialized.
 	SecurityScanner() SecurityScannerInterface
@@ -41,5 +40,5 @@ type Deps interface {
 
 // SecurityScannerInterface is the narrow interface for security scanning.
 type SecurityScannerInterface interface {
-	HandleSecurityAudit(args json.RawMessage, bodies []types.NetworkBody, console []scan.LogEntry, pageURLs []string, waterfall []types.NetworkWaterfallEntry) (any, error)
+	HandleSecurityAudit(args json.RawMessage, bodies []types.NetworkBody, console []types.LogEntry, pageURLs []string, waterfall []types.NetworkWaterfallEntry) (any, error)
 }

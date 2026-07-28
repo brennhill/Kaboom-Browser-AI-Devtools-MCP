@@ -36,7 +36,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tracking"
@@ -128,7 +127,7 @@ func (s *Server) TakeWarnings() []string {
 }
 
 func (s *Server) logLifecycle(event string, port int, fields map[string]any) {
-	entry := mcp.LogEntry{
+	entry := types.LogEntry{
 		"type":      "lifecycle",
 		"event":     event,
 		"pid":       os.Getpid(),
@@ -140,7 +139,7 @@ func (s *Server) logLifecycle(event string, port int, fields map[string]any) {
 	for key, value := range fields {
 		entry[key] = value
 	}
-	s.logs.AddEntries([]mcp.LogEntry{entry})
+	s.logs.AddEntries([]types.LogEntry{entry})
 }
 
 // NewServer creates a new server instance.

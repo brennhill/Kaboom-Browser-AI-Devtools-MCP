@@ -75,8 +75,8 @@ func (e *observeTestEnv) callObserve(t *testing.T, what string) (mcp.MCPToolResu
 }
 
 // addLogEntry adds a log entry to the server (simulates extension POST)
-func (e *observeTestEnv) addLogEntry(entry mcp.LogEntry) {
-	e.server.logs.SeedEntries([]mcp.LogEntry{
+func (e *observeTestEnv) addLogEntry(entry types.LogEntry) {
+	e.server.logs.SeedEntries([]types.LogEntry{
 		entry,
 	}, nil)
 }
@@ -91,7 +91,7 @@ func TestObserveAudit_Errors_DataFlow(t *testing.T) {
 	env := newObserveTestEnv(t)
 
 	// 1. Add error log entry (simulating browser extension POST)
-	errorEntry := mcp.LogEntry{
+	errorEntry := types.LogEntry{
 		"type":    "console",
 		"level":   "error",
 		"message": "UniqueErrorMessage12345",
@@ -126,8 +126,8 @@ func TestObserveAudit_Logs_DataFlow(t *testing.T) {
 	env := newObserveTestEnv(t)
 
 	// Add multiple log entries
-	env.addLogEntry(mcp.LogEntry{"type": "console", "level": "log", "message": "LogTestEntry1", "ts": time.Now().UTC().Format(time.RFC3339)})
-	env.addLogEntry(mcp.LogEntry{"type": "console", "level": "warn", "message": "LogTestEntry2", "ts": time.Now().UTC().Format(time.RFC3339)})
+	env.addLogEntry(types.LogEntry{"type": "console", "level": "log", "message": "LogTestEntry1", "ts": time.Now().UTC().Format(time.RFC3339)})
+	env.addLogEntry(types.LogEntry{"type": "console", "level": "warn", "message": "LogTestEntry2", "ts": time.Now().UTC().Format(time.RFC3339)})
 
 	// Call observe logs
 	result, ok := env.callObserve(t, "logs")

@@ -19,6 +19,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // newAsyncLogStoreForTest builds a Store with a running worker, mirroring
@@ -57,7 +59,7 @@ func TestLogStoreSteadyStatePostsAppendInsteadOfRewriting(t *testing.T) {
 	ls, _ := newAsyncLogStoreForTest(t, maxEntries)
 
 	for i := 0; i < posts; i++ {
-		ls.AddEntries([]Entry{{"level": "info", "message": fmt.Sprintf("entry-%d", i)}})
+		ls.AddEntries([]types.LogEntry{{"level": "info", "message": fmt.Sprintf("entry-%d", i)}})
 	}
 	ls.Shutdown(2 * time.Second)
 
@@ -90,7 +92,7 @@ func TestLogStoreCompactionRewritesAfterThreshold(t *testing.T) {
 	ls, logFile := newAsyncLogStoreForTest(t, maxEntries)
 
 	for i := 0; i < posts; i++ {
-		ls.AddEntries([]Entry{{"level": "info", "message": fmt.Sprintf("entry-%d", i)}})
+		ls.AddEntries([]types.LogEntry{{"level": "info", "message": fmt.Sprintf("entry-%d", i)}})
 	}
 	ls.Shutdown(2 * time.Second)
 
@@ -106,7 +108,7 @@ func TestLogStoreCompactionRewritesAfterThreshold(t *testing.T) {
 	if len(lines) != maxEntries {
 		t.Fatalf("file line count = %d, want %d after compaction", len(lines), maxEntries)
 	}
-	var first, last Entry
+	var first, last types.LogEntry
 	if err := json.Unmarshal([]byte(lines[0]), &first); err != nil {
 		t.Fatalf("first line not valid JSON: %v", err)
 	}
@@ -133,7 +135,7 @@ func TestLogStoreCompactionRewritesAfterThreshold(t *testing.T) {
 func TestLogStoreClearEntriesTruncatesFileAndResetsCount(t *testing.T) {
 	ls, logFile := newAsyncLogStoreForTest(t, 5)
 
-	ls.AddEntries([]Entry{
+	ls.AddEntries([]types.LogEntry{
 		{"level": "info", "message": "a"},
 		{"level": "info", "message": "b"},
 		{"level": "info", "message": "c"},
@@ -170,7 +172,7 @@ func TestLogStoreConcurrentAddsProduceValidFile(t *testing.T) {
 		go func(g int) {
 			defer wg.Done()
 			for i := 0; i < addsPerGoroutine; i++ {
-				ls.AddEntries([]Entry{{"level": "info", "message": fmt.Sprintf("g%d-%d", g, i)}})
+				ls.AddEntries([]types.LogEntry{{"level": "info", "message": fmt.Sprintf("g%d-%d", g, i)}})
 			}
 		}(g)
 	}
@@ -181,7 +183,7 @@ func TestLogStoreConcurrentAddsProduceValidFile(t *testing.T) {
 		t.Fatalf("EntryCount() = %d, want %d", got, maxEntries)
 	}
 	for i, line := range readLogLines(t, logFile) {
-		var entry Entry
+		var entry types.LogEntry
 		if err := json.Unmarshal([]byte(line), &entry); err != nil {
 			t.Fatalf("file line %d is not valid JSON (%v): %q", i, err, line)
 		}

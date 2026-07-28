@@ -11,6 +11,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/logdiff"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/playback"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 type fakeCapture struct {
@@ -49,8 +50,8 @@ func (f *fakeCapture) DiffRecordings(string, string) (*logdiff.Result, error) {
 
 func TestHandlerEventRecordingStartDefaultsURLAndLogs(t *testing.T) {
 	deps := &fakeCapture{}
-	var logs []mcp.LogEntry
-	handler := NewHandler(deps, func(entry mcp.LogEntry) {
+	var logs []types.LogEntry
+	handler := NewHandler(deps, func(entry types.LogEntry) {
 		logs = append(logs, entry)
 	})
 

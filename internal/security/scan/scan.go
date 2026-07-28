@@ -60,7 +60,7 @@ func (s *Scanner) Scan(input Input) Result {
 	}
 }
 
-func (s *Scanner) HandleSecurityAudit(params json.RawMessage, bodies []types.NetworkBody, entries []LogEntry, pageURLs []string, waterfallEntries []types.NetworkWaterfallEntry) (any, error) {
+func (s *Scanner) HandleSecurityAudit(params json.RawMessage, bodies []types.NetworkBody, entries []types.LogEntry, pageURLs []string, waterfallEntries []types.NetworkWaterfallEntry) (any, error) {
 	var toolParams struct {
 		Checks      []string `json:"checks"`
 		URLFilter   string   `json:"url"`

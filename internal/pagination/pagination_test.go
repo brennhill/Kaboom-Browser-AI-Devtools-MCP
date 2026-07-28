@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 func buildSequentialLogEntries(baseTime time.Time, startIndex, count int) []LogEntryWithSequence {
@@ -16,7 +18,7 @@ func buildSequentialLogEntries(baseTime time.Time, startIndex, count int) []LogE
 		idx := startIndex + i
 		ts := baseTime.Add(time.Duration(idx) * time.Second).Format(time.RFC3339)
 		entries[i] = LogEntryWithSequence{
-			Entry:     LogEntry{"ts": ts, "message": fmt.Sprintf("Log %d", idx)},
+			Entry:     types.LogEntry{"ts": ts, "message": fmt.Sprintf("Log %d", idx)},
 			Sequence:  int64(idx + 1),
 			Timestamp: ts,
 		}
@@ -29,21 +31,21 @@ func TestEnrichLogEntries(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		entries       []LogEntry
+		entries       []types.LogEntry
 		logTotalAdded int64
 		wantFirstSeq  int64
 		wantLastSeq   int64
 	}{
 		{
 			name:          "empty buffer",
-			entries:       []LogEntry{},
+			entries:       []types.LogEntry{},
 			logTotalAdded: 0,
 			wantFirstSeq:  0,
 			wantLastSeq:   0,
 		},
 		{
 			name: "single entry",
-			entries: []LogEntry{
+			entries: []types.LogEntry{
 				{"ts": baseTime.Format(time.RFC3339), "message": "Log 1"},
 			},
 			logTotalAdded: 1,
@@ -52,7 +54,7 @@ func TestEnrichLogEntries(t *testing.T) {
 		},
 		{
 			name: "multiple entries",
-			entries: []LogEntry{
+			entries: []types.LogEntry{
 				{"ts": baseTime.Format(time.RFC3339), "message": "Log 1"},
 				{"ts": baseTime.Add(1 * time.Second).Format(time.RFC3339), "message": "Log 2"},
 				{"ts": baseTime.Add(2 * time.Second).Format(time.RFC3339), "message": "Log 3"},
@@ -63,7 +65,7 @@ func TestEnrichLogEntries(t *testing.T) {
 		},
 		{
 			name: "buffer with evictions (logTotalAdded > buffer length)",
-			entries: []LogEntry{
+			entries: []types.LogEntry{
 				{"ts": baseTime.Format(time.RFC3339), "message": "Log 101"},
 				{"ts": baseTime.Add(1 * time.Second).Format(time.RFC3339), "message": "Log 102"},
 			},

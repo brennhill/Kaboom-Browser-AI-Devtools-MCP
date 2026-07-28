@@ -69,9 +69,9 @@ func TestParseCursor(t *testing.T) {
 			errContains: "invalid sequence",
 		},
 		{
-			name:        "invalid sequence - negative",
-			cursorStr:   "2026-01-30T10:15:23Z:-100",
-			wantErr:     false, // ParseInt accepts negative numbers
+			name:      "invalid sequence - negative",
+			cursorStr: "2026-01-30T10:15:23Z:-100",
+			wantErr:   false, // ParseInt accepts negative numbers
 			wantCursor: Cursor{
 				Timestamp: "2026-01-30T10:15:23Z",
 				Sequence:  -100,

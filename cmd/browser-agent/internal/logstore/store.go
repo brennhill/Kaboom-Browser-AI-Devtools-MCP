@@ -8,11 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
-
-// Entry represents a single log entry (alias to internal/mcp).
-type Entry = mcp.LogEntry
 
 // DefaultMaxFileSize is the log file size threshold for rotation (50MB).
 const DefaultMaxFileSize int64 = 50 * 1024 * 1024
@@ -47,20 +44,20 @@ type Store struct {
 	maxEntries  int
 	maxFileSize int64 // max log file size in bytes before rotation (0 = disabled)
 
-	entries         []Entry
+	entries         []types.LogEntry
 	logAddedAt      []time.Time // parallel slice: when each entry was added
 	mu              sync.RWMutex
-	logTotalAdded   int64         // monotonic counter of total entries ever added
-	errorTotalAdded int64         // monotonic counter of error-level entries ever added
-	telemetryMode   string        // telemetry summary verbosity: off|auto|full
-	onEntries       func([]Entry) // optional callback when entries are added (e.g., for clustering)
-	TTL             time.Duration // TTL for read-time filtering (0 means unlimited)
+	logTotalAdded   int64                  // monotonic counter of total entries ever added
+	errorTotalAdded int64                  // monotonic counter of error-level entries ever added
+	telemetryMode   string                 // telemetry summary verbosity: off|auto|full
+	onEntries       func([]types.LogEntry) // optional callback when entries are added (e.g., for clustering)
+	TTL             time.Duration          // TTL for read-time filtering (0 means unlimited)
 
 	// Async logging
-	logChan       chan []Entry  // buffered channel for async log writes
-	logDropCount  int64         // atomic counter for dropped logs (when channel full)
-	logDone       chan struct{} // signal when async logger exits
-	logChanClosed atomic.Bool   // guards against double-close panic on logChan
+	logChan       chan []types.LogEntry // buffered channel for async log writes
+	logDropCount  int64                 // atomic counter for dropped logs (when channel full)
+	logDone       chan struct{}         // signal when async logger exits
+	logChanClosed atomic.Bool           // guards against double-close panic on logChan
 
 	// Single-writer file persistence state. The async logger worker is the only
 	// hot-path file writer; ClearEntries (rare, user-triggered) synchronizes with
@@ -96,9 +93,9 @@ func New(cfg Config) *Store {
 		logFile:       cfg.LogFile,
 		maxEntries:    cfg.MaxEntries,
 		maxFileSize:   DefaultMaxFileSize,
-		entries:       make([]Entry, 0),
+		entries:       make([]types.LogEntry, 0),
 		telemetryMode: cfg.TelemetryMode,
-		logChan:       make(chan []Entry, chanSize),
+		logChan:       make(chan []types.LogEntry, chanSize),
 		logDone:       make(chan struct{}),
 		addWarning:    addWarning,
 		stderrf:       stderrf,
@@ -107,7 +104,7 @@ func New(cfg Config) *Store {
 
 // SetOnEntries sets the callback invoked when new log entries are added.
 // Thread-safe: acquires the write lock to avoid racing with AddEntries.
-func (ls *Store) SetOnEntries(cb func([]Entry)) {
+func (ls *Store) SetOnEntries(cb func([]types.LogEntry)) {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
 	ls.onEntries = cb

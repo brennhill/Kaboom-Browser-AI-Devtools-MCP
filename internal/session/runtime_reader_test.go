@@ -5,13 +5,13 @@ package session
 import (
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 func TestRuntimeStateReaderAggregatesConsoleErrors(t *testing.T) {
 	t.Parallel()
-	reader := NewRuntimeStateReader(func() []mcp.LogEntry {
-		return []mcp.LogEntry{
+	reader := NewRuntimeStateReader(func() []types.LogEntry {
+		return []types.LogEntry{
 			{"level": "error", "message": " broken "},
 			{"level": "error", "message": "broken"},
 			{"level": "warn", "message": "careful"},

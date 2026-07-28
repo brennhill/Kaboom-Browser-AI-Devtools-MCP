@@ -10,6 +10,8 @@ code_paths:
   - internal/mcp/response_content.go
   - internal/mcp/protocol.go
   - internal/mcp/types.go
+  - internal/mcp/deps.go
+  - internal/types/log.go
   - internal/identity/mcp.go
   - cmd/browser-agent/internal/toolresp/rate_limiter.go
   - cmd/browser-agent/internal/toolresp/toolresp.go

@@ -15,6 +15,7 @@ import (
 	"unicode"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // GetSummarizedLogs handles observe(what="summarized_logs").
@@ -84,7 +85,7 @@ func parseSummarizedLogsParams(args json.RawMessage) summarizedLogsParams {
 	return params
 }
 
-func filterSummarizedLogViews(rawEntries []map[string]any, deps Deps, params summarizedLogsParams, trackedTabID int) ([]logEntryView, int) {
+func filterSummarizedLogViews(rawEntries []types.LogEntry, deps Deps, params summarizedLogsParams, trackedTabID int) ([]logEntryView, int) {
 	noiseSuppressed := 0
 	views := make([]logEntryView, 0, min(params.Limit, len(rawEntries)))
 	count := 0

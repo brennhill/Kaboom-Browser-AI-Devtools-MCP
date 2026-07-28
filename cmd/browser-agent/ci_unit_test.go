@@ -15,7 +15,6 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/ciapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 func newTestServerForHandlers(t *testing.T) *Server {
@@ -59,7 +58,7 @@ func TestHandleSnapshot_WithStatsAndActiveTestIDFallback(t *testing.T) {
 	srv := newTestServerForHandlers(t)
 	cap := capture.NewCapture()
 
-	srv.logs.AddEntries([]mcp.LogEntry{
+	srv.logs.AddEntries([]types.LogEntry{
 		{"level": "error", "message": "boom", "ts": time.Now().UTC().Format(time.RFC3339Nano)},
 		{"level": "warn", "message": "warn", "ts": time.Now().UTC().Format(time.RFC3339Nano)},
 		{"level": "info", "message": "info", "ts": time.Now().UTC().Format(time.RFC3339Nano)},
@@ -124,7 +123,7 @@ func TestHandleSnapshot_SinceFilter(t *testing.T) {
 	oldTS := time.Now().UTC().Add(-10 * time.Second)
 	cutoff := time.Now().UTC().Add(-5 * time.Second)
 	newTS := time.Now().UTC().Add(-1 * time.Second)
-	srv.logs.AddEntries([]mcp.LogEntry{
+	srv.logs.AddEntries([]types.LogEntry{
 		{"level": "error", "message": "old", "ts": oldTS.Format(time.RFC3339Nano)},
 		{"level": "error", "message": "new", "ts": newTS.Format(time.RFC3339Nano)},
 	})
@@ -154,7 +153,7 @@ func TestHandleClearAndTestBoundaryHandlers(t *testing.T) {
 	srv := newTestServerForHandlers(t)
 	cap := capture.NewCapture()
 
-	srv.logs.AddEntries([]mcp.LogEntry{{"level": "error", "message": "x"}})
+	srv.logs.AddEntries([]types.LogEntry{{"level": "error", "message": "x"}})
 	cap.AddNetworkBodies([]types.NetworkBody{{URL: "https://example.test", Status: 200}})
 
 	clearHandler := ciapi.Clear(srv.logs, cap)
@@ -222,7 +221,7 @@ func TestFilterLogsSinceAndComputeSnapshotStats(t *testing.T) {
 	t.Parallel()
 
 	now := time.Now().UTC()
-	logs := []mcp.LogEntry{
+	logs := []types.LogEntry{
 		{"level": "error", "message": "bad-ts", "ts": "not-time"},
 		{"level": "warn", "message": "old", "ts": now.Add(-5 * time.Second).Format(time.RFC3339Nano)},
 		{"level": "error", "message": "new", "ts": now.Format(time.RFC3339Nano)},
@@ -233,7 +232,7 @@ func TestFilterLogsSinceAndComputeSnapshotStats(t *testing.T) {
 	}
 
 	stats := ciapi.ComputeSnapshotStats(
-		[]mcp.LogEntry{
+		[]types.LogEntry{
 			{"level": "error"},
 			{"level": "warning"},
 			{"level": "warn"},

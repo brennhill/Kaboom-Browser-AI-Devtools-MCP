@@ -17,7 +17,7 @@ import (
 // Implemented as a map to allow flexible field addition without schema changes.
 // any: Console log entries have dynamic fields (level, message, source, tabId, stack, etc.)
 // that vary by log type. A typed struct would require many optional fields.
-type LogEntry = map[string]any
+type LogEntry map[string]any
 
 // ============================================
 // Extension Logging
@@ -56,15 +56,15 @@ type PollingLogEntry struct {
 
 // HTTPDebugEntry tracks detailed request/response data for debugging
 type HTTPDebugEntry struct {
-	Timestamp       time.Time         `json:"timestamp"`
-	Endpoint        string            `json:"endpoint"`        // URL path
-	Method          string            `json:"method"`          // HTTP method
-	ExtSessionID    string            `json:"ext_session_id,omitempty"`
-	ClientID        string            `json:"client_id,omitempty"`
-	Headers         map[string]string `json:"headers,omitempty"`         // Request headers (redacted auth)
-	RequestBody     string            `json:"request_body,omitempty"`    // First 1KB of request body
-	ResponseStatus  int               `json:"response_status,omitempty"` // HTTP status code
-	ResponseBody    string            `json:"response_body,omitempty"`   // First 1KB of response body
-	DurationMs      int64             `json:"duration_ms"`               // Request processing duration
-	Error           string            `json:"error,omitempty"`           // Error message if any
+	Timestamp      time.Time         `json:"timestamp"`
+	Endpoint       string            `json:"endpoint"` // URL path
+	Method         string            `json:"method"`   // HTTP method
+	ExtSessionID   string            `json:"ext_session_id,omitempty"`
+	ClientID       string            `json:"client_id,omitempty"`
+	Headers        map[string]string `json:"headers,omitempty"`         // Request headers (redacted auth)
+	RequestBody    string            `json:"request_body,omitempty"`    // First 1KB of request body
+	ResponseStatus int               `json:"response_status,omitempty"` // HTTP status code
+	ResponseBody   string            `json:"response_body,omitempty"`   // First 1KB of response body
+	DurationMs     int64             `json:"duration_ms"`               // Request processing duration
+	Error          string            `json:"error,omitempty"`           // Error message if any
 }

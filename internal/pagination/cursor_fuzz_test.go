@@ -20,8 +20,8 @@ import (
 func FuzzParseCursor(f *testing.F) {
 	// Seed corpus: valid cursors
 	f.Add("2024-01-01T00:00:00Z:42")
-	f.Add(":100")                  // sequence-only
-	f.Add("")                      // empty (first page)
+	f.Add(":100")                               // sequence-only
+	f.Add("")                                   // empty (first page)
 	f.Add("2024-01-01T00:00:00.123456789Z:999") // RFC3339Nano
 	f.Add("2024-12-31T23:59:59Z:0")
 	f.Add(":0")
@@ -30,8 +30,8 @@ func FuzzParseCursor(f *testing.F) {
 	// Seed corpus: invalid cursors
 	f.Add("no-colon")
 	f.Add("2024-01-01T00:00:00Z:not-a-number")
-	f.Add(strings.Repeat("a", 10*1024)) // 10KB string
-	f.Add("日本語:42")                     // unicode
+	f.Add(strings.Repeat("a", 10*1024))               // 10KB string
+	f.Add("日本語:42")                                   // unicode
 	f.Add("2024-01-01T00:00:00Z:9999999999999999999") // int64 overflow
 	f.Add("2024-01-01T00:00:00Z")                     // missing sequence
 	f.Add("::")

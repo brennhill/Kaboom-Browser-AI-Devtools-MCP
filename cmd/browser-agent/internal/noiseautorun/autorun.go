@@ -11,7 +11,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
@@ -130,7 +129,7 @@ func WireFirstConnect(store *capture.Capture, shutdown <-chan struct{}, detect f
 
 // Detect adapts captured telemetry to the canonical noise detector and applies
 // only high-confidence proposals.
-func Detect(config *noise.NoiseConfig, store *capture.Capture, logs []mcp.LogEntry) {
+func Detect(config *noise.NoiseConfig, store *capture.Capture, logs []types.LogEntry) {
 	if config == nil || store == nil {
 		return
 	}

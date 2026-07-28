@@ -14,7 +14,7 @@ import (
 
 // DataProvider abstracts access to captured browser data for test generation.
 type DataProvider interface {
-	GetLogEntries() []map[string]any
+	GetLogEntries() []types.LogEntry
 	GetAllEnhancedActions() []types.EnhancedAction
 	GetNetworkBodies() []types.NetworkBody
 }

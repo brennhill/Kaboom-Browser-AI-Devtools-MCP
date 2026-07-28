@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // fakeDeps satisfies Deps over a real capture.Capture and an in-memory log buffer.
@@ -12,13 +12,13 @@ import (
 // and a *logstore.Store) just to reach these three methods.
 type fakeDeps struct {
 	cap     *capture.Capture
-	entries []mcp.LogEntry
+	entries []types.LogEntry
 	stamps  []time.Time
 }
 
-func (f *fakeDeps) GetCapture() *capture.Capture                 { return f.cap }
-func (f *fakeDeps) GetLogEntries() ([]mcp.LogEntry, []time.Time) { return f.entries, f.stamps }
-func (f *fakeDeps) GetLogTotalAdded() int64                      { return int64(len(f.entries)) }
+func (f *fakeDeps) GetCapture() *capture.Capture                   { return f.cap }
+func (f *fakeDeps) GetLogEntries() ([]types.LogEntry, []time.Time) { return f.entries, f.stamps }
+func (f *fakeDeps) GetLogTotalAdded() int64                        { return int64(len(f.entries)) }
 
 // testEnv pairs a Handler with the capture store its Deps read from, so tests can
 // seed actions/bodies and then assert on generated output.

@@ -22,12 +22,10 @@ type Finding struct {
 	Remediation string `json:"remediation"`
 }
 
-type LogEntry = types.LogEntry
-
 type Input struct {
 	NetworkBodies    []types.NetworkBody
 	WaterfallEntries []types.NetworkWaterfallEntry
-	ConsoleEntries   []LogEntry
+	ConsoleEntries   []types.LogEntry
 	PageURLs         []string
 	URLFilter        string
 	Checks           []string

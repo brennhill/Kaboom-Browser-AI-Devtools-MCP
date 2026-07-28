@@ -18,7 +18,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
@@ -115,7 +114,7 @@ func (h *Handler) ServeShutdown(w http.ResponseWriter, r *http.Request) {
 		httpapi.JSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
 	}
-	_ = h.options.Logs.AppendToFile([]mcp.LogEntry{{
+	_ = h.options.Logs.AppendToFile([]types.LogEntry{{
 		"type": "lifecycle", "event": "shutdown_requested", "source": "http",
 		"pid": os.Getpid(), "timestamp": time.Now().UTC().Format(time.RFC3339),
 	}})
@@ -321,7 +320,7 @@ func (h *Handler) ServeLogs(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) handleLogsPost(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, h.options.MaxPostBodySize)
 	var body struct {
-		Entries []mcp.LogEntry `json:"entries"`
+		Entries []types.LogEntry `json:"entries"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		httpapi.JSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})

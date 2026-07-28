@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"os"
 	"strings"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // loadEntries reads existing log entries from file.
@@ -27,7 +29,7 @@ func (s *Server) loadEntries() error {
 			continue
 		}
 
-		var entry LogEntry
+		var entry types.LogEntry
 		if err := json.Unmarshal([]byte(line), &entry); err != nil {
 			continue // Skip malformed lines
 		}
@@ -36,7 +38,7 @@ func (s *Server) loadEntries() error {
 
 	// Bound entries (file may have more from append-only writes between rotations).
 	if len(s.entries) > s.maxEntries {
-		kept := make([]LogEntry, s.maxEntries)
+		kept := make([]types.LogEntry, s.maxEntries)
 		copy(kept, s.entries[len(s.entries)-s.maxEntries:])
 		s.entries = kept
 	}
@@ -53,7 +55,7 @@ func (s *Server) saveEntries() error {
 // The caller is responsible for providing a snapshot of the entries.
 // Entries go to a temp file in the same directory followed by an atomic
 // os.Rename so a crash mid-write can never truncate or corrupt the log.
-func (s *Server) saveEntriesCopy(entries []LogEntry) error {
+func (s *Server) saveEntriesCopy(entries []types.LogEntry) error {
 	tmpPath := s.logFile + ".tmp"
 	if err := writeEntriesFile(tmpPath, entries); err != nil {
 		_ = os.Remove(tmpPath)
@@ -63,7 +65,7 @@ func (s *Server) saveEntriesCopy(entries []LogEntry) error {
 }
 
 // writeEntriesFile writes entries as JSON lines to path with owner-only permissions.
-func writeEntriesFile(path string, entries []LogEntry) error {
+func writeEntriesFile(path string, entries []types.LogEntry) error {
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600) // #nosec G304 -- path derived from logFile configured at startup
 	if err != nil {
 		return err
@@ -87,7 +89,7 @@ func writeEntriesFile(path string, entries []LogEntry) error {
 }
 
 // appendToFile writes only the new entries to the file (append-only, no rewrite).
-func (s *Server) appendToFile(entries []LogEntry) error {
+func (s *Server) appendToFile(entries []types.LogEntry) error {
 	// Owner-only (0600) to match the live store's privacy choice for captured telemetry.
 	f, err := os.OpenFile(s.logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600) // #nosec G304 -- path set at startup
 	if err != nil {

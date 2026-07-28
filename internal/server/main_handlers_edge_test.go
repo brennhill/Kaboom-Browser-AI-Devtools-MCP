@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 func TestNewServerLoadsEntriesAndBoundsFromDisk(t *testing.T) {
@@ -83,7 +84,7 @@ func TestLoadEntriesScannerTokenTooLong(t *testing.T) {
 	s := &Server{
 		logFile:    logFile,
 		maxEntries: 10,
-		entries:    make([]LogEntry, 0),
+		entries:    make([]types.LogEntry, 0),
 	}
 	if err := s.loadEntries(); err == nil {
 		t.Fatal("loadEntries() expected scanner error for oversized token, got nil")
@@ -94,7 +95,7 @@ func TestSaveEntriesAndCopyErrorPath(t *testing.T) {
 	t.Parallel()
 
 	s, logFile := newTestServer(t, 10)
-	s.entries = []LogEntry{
+	s.entries = []types.LogEntry{
 		{"ok": "first"},
 		{"bad": func() {}},
 		{"ok": "second"},
@@ -117,7 +118,7 @@ func TestSaveEntriesAndCopyErrorPath(t *testing.T) {
 	}
 
 	s.logFile = filepath.Join(t.TempDir(), "missing", "dir", "logs.jsonl")
-	if err := s.saveEntriesCopy([]LogEntry{{"x": "y"}}); err == nil {
+	if err := s.saveEntriesCopy([]types.LogEntry{{"x": "y"}}); err == nil {
 		t.Fatal("saveEntriesCopy() expected create error, got nil")
 	}
 }
@@ -126,7 +127,7 @@ func TestAppendToFileSkipsUnmarshalableAndOpenErrors(t *testing.T) {
 	t.Parallel()
 
 	s, logFile := newTestServer(t, 10)
-	err := s.appendToFile([]LogEntry{
+	err := s.appendToFile([]types.LogEntry{
 		{"ok": 1},
 		{"bad": func() {}},
 		{"ok": 2},
@@ -145,7 +146,7 @@ func TestAppendToFileSkipsUnmarshalableAndOpenErrors(t *testing.T) {
 	}
 
 	s.logFile = t.TempDir() // directory path causes OpenFile to fail
-	if err := s.appendToFile([]LogEntry{{"msg": "x"}}); err == nil {
+	if err := s.appendToFile([]types.LogEntry{{"msg": "x"}}); err == nil {
 		t.Fatal("appendToFile() expected OpenFile error for directory path, got nil")
 	}
 }
@@ -158,7 +159,7 @@ func TestSaveEntriesCopyAtomicWrite(t *testing.T) {
 	t.Parallel()
 
 	s, logFile := newTestServer(t, 10)
-	if err := s.saveEntriesCopy([]LogEntry{{"msg": "original"}}); err != nil {
+	if err := s.saveEntriesCopy([]types.LogEntry{{"msg": "original"}}); err != nil {
 		t.Fatalf("saveEntriesCopy() error = %v", err)
 	}
 
@@ -182,7 +183,7 @@ func TestSaveEntriesCopyAtomicWrite(t *testing.T) {
 	if err := os.MkdirAll(logFile+".tmp", 0o755); err != nil {
 		t.Fatalf("MkdirAll() error = %v", err)
 	}
-	if err := s.saveEntriesCopy([]LogEntry{{"msg": "replacement"}}); err == nil {
+	if err := s.saveEntriesCopy([]types.LogEntry{{"msg": "replacement"}}); err == nil {
 		t.Fatal("saveEntriesCopy() expected error when temp path is blocked, got nil")
 	}
 	data, err := os.ReadFile(logFile)
@@ -206,7 +207,7 @@ func TestAppendToFileOwnerOnlyPermissions(t *testing.T) {
 	}
 
 	s, logFile := newTestServer(t, 10)
-	if err := s.appendToFile([]LogEntry{{"msg": "hello"}}); err != nil {
+	if err := s.appendToFile([]types.LogEntry{{"msg": "hello"}}); err != nil {
 		t.Fatalf("appendToFile() error = %v", err)
 	}
 
@@ -294,9 +295,9 @@ func TestOldestAndNewestLogTime(t *testing.T) {
 		t.Fatalf("GetNewestLogTime() on empty server = %v, want zero", got)
 	}
 
-	s.addEntries([]LogEntry{{"id": "a"}})
+	s.addEntries([]types.LogEntry{{"id": "a"}})
 	time.Sleep(2 * time.Millisecond)
-	s.addEntries([]LogEntry{{"id": "b"}})
+	s.addEntries([]types.LogEntry{{"id": "b"}})
 
 	oldest := s.GetOldestLogTime()
 	newest := s.GetNewestLogTime()

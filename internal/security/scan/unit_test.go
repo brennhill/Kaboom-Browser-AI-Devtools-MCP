@@ -158,11 +158,11 @@ func TestHelperFunctions_FilterAndParsing(t *testing.T) {
 		t.Fatal("looksLikeCreditCard should reject non-digit input")
 	}
 
-	entry := LogEntry{"message": "hello"}
+	entry := types.LogEntry{"message": "hello"}
 	if getEntryString(entry, "message") != "hello" {
 		t.Fatal("getEntryString should return string values")
 	}
-	if getEntryString(LogEntry{"message": 123}, "message") != "" {
+	if getEntryString(types.LogEntry{"message": 123}, "message") != "" {
 		t.Fatal("getEntryString should return empty for non-string values")
 	}
 }
@@ -244,7 +244,7 @@ func TestCredentialScanner_ConsolePatterns(t *testing.T) {
 	t.Parallel()
 	scanner := NewScanner()
 
-	bearerAndJWT := LogEntry{
+	bearerAndJWT := types.LogEntry{
 		"message": "Authorization: Bearer token_abcd1234efgh5678ijkl9012 with jwt eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.signature1234567890",
 		"source":  "auth.js:10",
 	}
@@ -253,7 +253,7 @@ func TestCredentialScanner_ConsolePatterns(t *testing.T) {
 		t.Fatalf("expected single bearer-token finding (no JWT double-count), got %+v", findings)
 	}
 
-	jwtOnly := LogEntry{
+	jwtOnly := types.LogEntry{
 		"message": "jwt: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.signature1234567890",
 		"source":  "auth.js:20",
 	}
@@ -287,7 +287,7 @@ func TestHandleSecurityAudit_CredentialsOnlyPath(t *testing.T) {
 			URL:    "https://api.example.com/data?api_key=live_secret_1234567890abcdef",
 		},
 	}
-	console := []LogEntry{
+	console := []types.LogEntry{
 		{
 			"message": "Bearer token_abcdefghijklmnopqrstuvwxyz123456",
 			"source":  "console",

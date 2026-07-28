@@ -112,19 +112,19 @@ func TestToolAnalyzeErrors_WithClusters(t *testing.T) {
 	t.Parallel()
 	env := newObserveTestEnv(t)
 
-	env.addLogEntry(mcp.LogEntry{
+	env.addLogEntry(types.LogEntry{
 		"level":     "error",
 		"message":   "TypeError: Cannot read property 'foo' of null",
 		"timestamp": "2024-01-01T00:00:01Z",
 		"url":       "https://example.com/app.js",
 	})
-	env.addLogEntry(mcp.LogEntry{
+	env.addLogEntry(types.LogEntry{
 		"level":     "error",
 		"message":   "TypeError: Cannot read property 'foo' of null",
 		"timestamp": "2024-01-01T00:00:02Z",
 		"url":       "https://example.com/app.js",
 	})
-	env.addLogEntry(mcp.LogEntry{
+	env.addLogEntry(types.LogEntry{
 		"level":   "info",
 		"message": "Application loaded",
 	})

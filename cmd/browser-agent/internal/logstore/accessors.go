@@ -7,6 +7,8 @@ package logstore
 import (
 	"sync/atomic"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // DropCount returns the total number of dropped log entries (thread-safe).
@@ -50,20 +52,20 @@ func (ls *Store) SetTelemetryMode(mode string) {
 }
 
 // Entries returns a copy of all entries.
-func (ls *Store) Entries() []Entry {
+func (ls *Store) Entries() []types.LogEntry {
 	ls.mu.RLock()
 	defer ls.mu.RUnlock()
-	result := make([]Entry, len(ls.entries))
+	result := make([]types.LogEntry, len(ls.entries))
 	copy(result, ls.entries)
 	return result
 }
 
 // EntriesWithAddedAt returns copies of the entry window and its parallel
 // add-time slice, captured under a single read lock so the two stay aligned.
-func (ls *Store) EntriesWithAddedAt() ([]Entry, []time.Time) {
+func (ls *Store) EntriesWithAddedAt() ([]types.LogEntry, []time.Time) {
 	ls.mu.RLock()
 	defer ls.mu.RUnlock()
-	entries := make([]Entry, len(ls.entries))
+	entries := make([]types.LogEntry, len(ls.entries))
 	copy(entries, ls.entries)
 	addedAt := make([]time.Time, len(ls.logAddedAt))
 	copy(addedAt, ls.logAddedAt)
@@ -71,7 +73,7 @@ func (ls *Store) EntriesWithAddedAt() ([]Entry, []time.Time) {
 }
 
 // LastEntry returns the most recent entry, or ok=false when the window is empty.
-func (ls *Store) LastEntry() (Entry, bool) {
+func (ls *Store) LastEntry() (types.LogEntry, bool) {
 	ls.mu.RLock()
 	defer ls.mu.RUnlock()
 	if len(ls.entries) == 0 {

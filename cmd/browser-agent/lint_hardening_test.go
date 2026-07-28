@@ -71,3 +71,24 @@ func TestRootDoesNotReexportCanonicalTypes(t *testing.T) {
 		}
 	}
 }
+
+func TestPackagesDoNotReexportCanonicalLogEntry(t *testing.T) {
+	for _, relativePath := range []string{
+		"internal/mcp/types.go",
+		"internal/server/main_handlers.go",
+		"internal/pagination/pagination_logs.go",
+		"internal/security/scan/types.go",
+		"cmd/browser-agent/internal/logstore/store.go",
+	} {
+		path := filepath.Join(projectRoot(), relativePath)
+		source, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read %s: %v", relativePath, err)
+		}
+		for _, forbidden := range []string{"type LogEntry =", "type Entry ="} {
+			if strings.Contains(string(source), forbidden) {
+				t.Errorf("%s re-exports canonical log contract with %q", relativePath, forbidden)
+			}
+		}
+	}
+}

@@ -12,6 +12,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/annotation"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // unmarshalMCPText extracts the text from an MCP tool response.
@@ -1196,12 +1197,12 @@ func TestToolGetAnnotationDetail_ErrorCorrelation(t *testing.T) {
 	h.annotationStore.StoreDetail("detail_corr", detail)
 
 	// Inject log entries: errors near the annotation timestamp
-	h.server.logs.SeedEntries([]mcp.LogEntry{
-		mcp.LogEntry{"level": "error", "message": "TypeError: Cannot read property 'click'", "ts": annotTS.Add(-2 * time.Second).UTC().Format(time.RFC3339)},
-		mcp.LogEntry{"level": "error", "message": "Uncaught ReferenceError: x is not defined", "ts": annotTS.Add(3 * time.Second).UTC().Format(time.RFC3339)},
-		mcp.LogEntry{"level": "info", "message": "page loaded", "ts": annotTS.Add(-1 * time.Second).UTC().Format(time.RFC3339)},
+	h.server.logs.SeedEntries([]types.LogEntry{
+		types.LogEntry{"level": "error", "message": "TypeError: Cannot read property 'click'", "ts": annotTS.Add(-2 * time.Second).UTC().Format(time.RFC3339)},
+		types.LogEntry{"level": "error", "message": "Uncaught ReferenceError: x is not defined", "ts": annotTS.Add(3 * time.Second).UTC().Format(time.RFC3339)},
+		types.LogEntry{"level": "info", "message": "page loaded", "ts": annotTS.Add(-1 * time.Second).UTC().Format(time.RFC3339)},
 		// not error
-		mcp.LogEntry{"level": "error", "message": "far away error", "ts": annotTS.Add(-30 * time.Second).UTC().Format(time.RFC3339)},
+		types.LogEntry{"level": "error", "message": "far away error", "ts": annotTS.Add(-30 * time.Second).UTC().Format(time.RFC3339)},
 		// outside window,
 	}, []time.Time{
 		annotTS.Add(-2 * time.Second),
@@ -1296,8 +1297,8 @@ func TestToolGetAnnotationDetail_ErrorCorrelation_NamedSession(t *testing.T) {
 	h.annotationStore.StoreDetail("detail_ns", detail)
 
 	// Inject error near annotation time
-	h.server.logs.SeedEntries([]mcp.LogEntry{
-		mcp.LogEntry{"level": "error", "message": "Layout shift error", "ts": annotTS.Add(-1 * time.Second).UTC().Format(time.RFC3339)},
+	h.server.logs.SeedEntries([]types.LogEntry{
+		types.LogEntry{"level": "error", "message": "Layout shift error", "ts": annotTS.Add(-1 * time.Second).UTC().Format(time.RFC3339)},
 	}, []time.Time{
 		annotTS.Add(-1 * time.Second),
 	})
@@ -1355,8 +1356,8 @@ func TestToolGetAnnotationDetail_ErrorCorrelation_NonLatestTab(t *testing.T) {
 	h.annotationStore.StoreDetail("detail_t1", detail)
 
 	// Inject error near tab 1's annotation time
-	h.server.logs.SeedEntries([]mcp.LogEntry{
-		mcp.LogEntry{"level": "error", "message": "Tab1 error", "ts": annotTS.Add(-2 * time.Second).UTC().Format(time.RFC3339)},
+	h.server.logs.SeedEntries([]types.LogEntry{
+		types.LogEntry{"level": "error", "message": "Tab1 error", "ts": annotTS.Add(-2 * time.Second).UTC().Format(time.RFC3339)},
 	}, []time.Time{
 		annotTS.Add(-2 * time.Second),
 	})
@@ -1583,8 +1584,8 @@ func TestToolGetAnnotationDetail_Hints_ErrorContext(t *testing.T) {
 	}
 	h.annotationStore.StoreDetail("detail_ec", detail)
 
-	h.server.logs.SeedEntries([]mcp.LogEntry{
-		mcp.LogEntry{"level": "error", "message": "ReferenceError", "ts": annotTS.Add(-1 * time.Second).UTC().Format(time.RFC3339)},
+	h.server.logs.SeedEntries([]types.LogEntry{
+		types.LogEntry{"level": "error", "message": "ReferenceError", "ts": annotTS.Add(-1 * time.Second).UTC().Format(time.RFC3339)},
 	}, []time.Time{
 		annotTS.Add(-1 * time.Second),
 	})
@@ -1689,7 +1690,7 @@ func TestToolGetAnnotationDetail_ErrorCorrelation_CapsAt5(t *testing.T) {
 	for i := 0; i < 8; i++ {
 		offset := time.Duration(i-4) * time.Second
 		h.server.logs.SeedEntries(
-			[]mcp.LogEntry{{"level": "error", "message": "Error " + strings.Repeat("X", i), "ts": annotTS.Add(offset).UTC().Format(time.RFC3339)}},
+			[]types.LogEntry{{"level": "error", "message": "Error " + strings.Repeat("X", i), "ts": annotTS.Add(offset).UTC().Format(time.RFC3339)}},
 			[]time.Time{annotTS.Add(offset)},
 		)
 	}
@@ -1832,11 +1833,11 @@ func TestToolGetAnnotationDetail_ErrorCorrelation_BoundaryAndShape(t *testing.T)
 	})
 
 	// Inject errors at exactly ±5s (boundary, inclusive) and ±6s (outside window)
-	h.server.logs.SeedEntries([]mcp.LogEntry{
-		mcp.LogEntry{"level": "error", "message": "at minus 5s", "ts": annotTS.Add(-5 * time.Second).UTC().Format(time.RFC3339)},
-		mcp.LogEntry{"level": "error", "message": "at plus 5s", "ts": annotTS.Add(5 * time.Second).UTC().Format(time.RFC3339)},
-		mcp.LogEntry{"level": "error", "message": "at minus 6s", "ts": annotTS.Add(-6 * time.Second).UTC().Format(time.RFC3339)},
-		mcp.LogEntry{"level": "error", "message": "at plus 6s", "ts": annotTS.Add(6 * time.Second).UTC().Format(time.RFC3339)},
+	h.server.logs.SeedEntries([]types.LogEntry{
+		types.LogEntry{"level": "error", "message": "at minus 5s", "ts": annotTS.Add(-5 * time.Second).UTC().Format(time.RFC3339)},
+		types.LogEntry{"level": "error", "message": "at plus 5s", "ts": annotTS.Add(5 * time.Second).UTC().Format(time.RFC3339)},
+		types.LogEntry{"level": "error", "message": "at minus 6s", "ts": annotTS.Add(-6 * time.Second).UTC().Format(time.RFC3339)},
+		types.LogEntry{"level": "error", "message": "at plus 6s", "ts": annotTS.Add(6 * time.Second).UTC().Format(time.RFC3339)},
 	}, []time.Time{
 		annotTS.Add(-5 * time.Second),
 		annotTS.Add(5 * time.Second),

@@ -7,13 +7,11 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 	"time"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 func TestComputeSnapshotStatsCountsFailuresAndConnections(t *testing.T) {
 	stats := ComputeSnapshotStats(
-		[]mcp.LogEntry{{"level": "error"}, {"level": "warning"}},
+		[]types.LogEntry{{"level": "error"}, {"level": "warning"}},
 		[]types.WebSocketEvent{{URL: "wss://one"}, {URL: "wss://one"}, {URL: "wss://two"}},
 		[]types.NetworkBody{{Status: 200}, {Status: 503}},
 	)
@@ -28,7 +26,7 @@ func TestComputeSnapshotStatsCountsFailuresAndConnections(t *testing.T) {
 
 func TestFilterLogsSinceIgnoresMalformedTimestamps(t *testing.T) {
 	since := time.Date(2026, time.July, 27, 10, 0, 0, 0, time.UTC)
-	logs := []mcp.LogEntry{
+	logs := []types.LogEntry{
 		{"ts": since.Add(-time.Second).Format(time.RFC3339Nano)},
 		{"ts": "invalid"},
 		{"ts": since.Add(time.Second).Format(time.RFC3339Nano)},

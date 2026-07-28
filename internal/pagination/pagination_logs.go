@@ -8,12 +8,9 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
-// LogEntry is a type alias for the canonical definition in internal/types.
-type LogEntry = types.LogEntry
-
 // entryStr extracts a string field from a LogEntry map.
 // Returns empty string if field doesn't exist or isn't a string.
-func entryStr(entry LogEntry, key string) string {
+func entryStr(entry types.LogEntry, key string) string {
 	if v, ok := entry[key]; ok {
 		if s, ok := v.(string); ok {
 			return s
@@ -28,7 +25,7 @@ func entryStr(entry LogEntry, key string) string {
 
 // LogEntryWithSequence pairs a log entry with its sequence number and timestamp for pagination.
 type LogEntryWithSequence struct {
-	Entry     LogEntry
+	Entry     types.LogEntry
 	Sequence  int64
 	Timestamp string
 }
@@ -41,7 +38,7 @@ func (e LogEntryWithSequence) GetTimestamp() string { return e.Timestamp }
 
 // EnrichLogEntries adds sequence numbers and timestamps to entries for pagination.
 // Must be called with the UNFILTERED entry list to get correct sequence numbers.
-func EnrichLogEntries(entries []LogEntry, logTotalAdded int64) []LogEntryWithSequence {
+func EnrichLogEntries(entries []types.LogEntry, logTotalAdded int64) []LogEntryWithSequence {
 	enriched := make([]LogEntryWithSequence, len(entries))
 	baseSeq := logTotalAdded - int64(len(entries)) + 1
 

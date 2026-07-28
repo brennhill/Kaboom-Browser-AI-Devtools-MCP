@@ -4,7 +4,6 @@
 package ciapi
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -12,7 +11,7 @@ import (
 type SnapshotResponse struct {
 	Timestamp       string                 `json:"timestamp"`
 	TestID          string                 `json:"test_id,omitempty"`
-	Logs            []mcp.LogEntry         `json:"logs"`
+	Logs            []types.LogEntry       `json:"logs"`
 	WebSocket       []types.WebSocketEvent `json:"websocket_events"`
 	NetworkBodies   []types.NetworkBody    `json:"network_bodies"`
 	EnhancedActions []types.EnhancedAction `json:"enhanced_actions,omitempty"`

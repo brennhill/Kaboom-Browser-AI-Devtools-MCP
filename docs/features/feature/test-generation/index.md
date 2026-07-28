@@ -15,6 +15,7 @@ code_paths:
   - cmd/browser-agent/internal/toolgenerate/artifacts_test_impl.go
   - internal/mcp/response.go
   - internal/testgen/generate.go
+  - internal/types/log.go
   - internal/testgen/helpers.go
   - internal/testgen/classify.go
   - internal/testgen/types.go

@@ -8,7 +8,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
-func (s *Scanner) checkCredentials(bodies []types.NetworkBody, entries []LogEntry) []Finding {
+func (s *Scanner) checkCredentials(bodies []types.NetworkBody, entries []types.LogEntry) []Finding {
 	var findings []Finding
 
 	// Scan network bodies (URLs and body content)
@@ -149,7 +149,7 @@ func (s *Scanner) scanBodyForCredentials(bodyContent, sourceURL, location string
 	return findings
 }
 
-func (s *Scanner) scanConsoleForCredentials(entry LogEntry) []Finding {
+func (s *Scanner) scanConsoleForCredentials(entry types.LogEntry) []Finding {
 	var findings []Finding
 
 	msg := getEntryString(entry, "message")

@@ -9,6 +9,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // DiagnosticProvider supplies system state snapshots for error messages.
@@ -41,7 +42,7 @@ type CaptureProvider interface {
 // LogBufferReader provides read-only access to server log entries.
 // Used by observe, generate (testgen), configure, and analyze (security audit).
 type LogBufferReader interface {
-	GetLogEntries() ([]LogEntry, []time.Time)
+	GetLogEntries() ([]types.LogEntry, []time.Time)
 	GetLogTotalAdded() int64
 }
 
@@ -54,5 +55,5 @@ type A11yQueryExecutor interface {
 // NoiseFilterer checks whether log/network entries match noise suppression rules.
 // Used by observe to filter out repetitive/irrelevant entries.
 type NoiseFilterer interface {
-	IsConsoleNoise(entry LogEntry) bool
+	IsConsoleNoise(entry types.LogEntry) bool
 }

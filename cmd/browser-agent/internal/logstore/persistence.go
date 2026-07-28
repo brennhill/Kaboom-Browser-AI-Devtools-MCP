@@ -10,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // LoadEntries reads existing log entries from file.
@@ -28,7 +30,7 @@ func (ls *Store) LoadEntries() error {
 			continue
 		}
 
-		var entry Entry
+		var entry types.LogEntry
 		if err := json.Unmarshal([]byte(line), &entry); err != nil {
 			continue // Skip malformed lines
 		}
@@ -46,7 +48,7 @@ func (ls *Store) LoadEntries() error {
 
 	// Bound entries (file may have more from append-only writes between rotations)
 	if len(ls.entries) > ls.maxEntries {
-		kept := make([]Entry, ls.maxEntries)
+		kept := make([]types.LogEntry, ls.maxEntries)
 		copy(kept, ls.entries[len(ls.entries)-ls.maxEntries:])
 		ls.entries = kept
 		ls.logAddedAt = make([]time.Time, ls.maxEntries)
@@ -59,7 +61,7 @@ func (ls *Store) LoadEntries() error {
 // Uses atomic write pattern: write to temp file then rename for crash safety.
 // Called only from the async logger worker (maybeCompactLogFile); the caller
 // must hold fileMu so the rewrite cannot interleave with appends or clears.
-func (ls *Store) saveEntriesCopy(entries []Entry) error {
+func (ls *Store) saveEntriesCopy(entries []types.LogEntry) error {
 	if ls.logFile == "" {
 		return nil
 	}

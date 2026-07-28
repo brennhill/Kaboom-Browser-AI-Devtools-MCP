@@ -159,7 +159,7 @@ type ToolHandler struct {
 }
 
 // IsConsoleNoise implements mcp.NoiseFilterer.
-func (h *ToolHandler) IsConsoleNoise(entry map[string]any) bool {
+func (h *ToolHandler) IsConsoleNoise(entry types.LogEntry) bool {
 	if h.noiseConfig == nil {
 		return false
 	}
@@ -339,7 +339,7 @@ func (h *ToolHandler) GetCapture() *capture.Capture {
 	return h.capture
 }
 
-func (h *ToolHandler) GetLogEntries() ([]mcp.LogEntry, []time.Time) {
+func (h *ToolHandler) GetLogEntries() ([]types.LogEntry, []time.Time) {
 	return h.server.logs.EntriesWithAddedAt()
 }
 
@@ -592,11 +592,11 @@ func (h *ToolHandler) NetworkWaterfallEntries() []types.NetworkWaterfallEntry {
 	return h.capture.GetNetworkWaterfallEntries()
 }
 
-func (h *ToolHandler) ConsoleSecurityEntries() []scan.LogEntry {
+func (h *ToolHandler) ConsoleSecurityEntries() []types.LogEntry {
 	snapshot := h.server.logs.Entries()
-	entries := make([]scan.LogEntry, len(snapshot))
+	entries := make([]types.LogEntry, len(snapshot))
 	for index, entry := range snapshot {
-		entries[index] = scan.LogEntry(entry)
+		entries[index] = types.LogEntry(entry)
 	}
 	return entries
 }
@@ -688,6 +688,6 @@ func (h *ToolHandler) buildPlaybackResult(request mcp.JSONRPCRequest, recordingI
 	return toolrecording.BuildPlaybackResult(request, recordingID, session)
 }
 
-func (h *ToolHandler) appendServerLog(entry mcp.LogEntry) {
-	h.server.logs.AddEntries([]mcp.LogEntry{entry})
+func (h *ToolHandler) appendServerLog(entry types.LogEntry) {
+	h.server.logs.AddEntries([]types.LogEntry{entry})
 }

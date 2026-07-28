@@ -17,11 +17,11 @@ type mockTransientDeps struct {
 	cap *capture.Capture
 }
 
-func (m *mockTransientDeps) DiagnosticHintString() string                 { return "" }
-func (m *mockTransientDeps) GetCapture() *capture.Capture                 { return m.cap }
-func (m *mockTransientDeps) GetLogEntries() ([]mcp.LogEntry, []time.Time) { return nil, nil }
-func (m *mockTransientDeps) GetLogTotalAdded() int64                      { return 0 }
-func (m *mockTransientDeps) IsConsoleNoise(_ mcp.LogEntry) bool           { return false }
+func (m *mockTransientDeps) DiagnosticHintString() string                   { return "" }
+func (m *mockTransientDeps) GetCapture() *capture.Capture                   { return m.cap }
+func (m *mockTransientDeps) GetLogEntries() ([]types.LogEntry, []time.Time) { return nil, nil }
+func (m *mockTransientDeps) GetLogTotalAdded() int64                        { return 0 }
+func (m *mockTransientDeps) IsConsoleNoise(_ types.LogEntry) bool           { return false }
 func (m *mockTransientDeps) ExecuteA11yQuery(_ string, _ []string, _ any, _ bool) (json.RawMessage, error) {
 	return nil, nil
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/logdiff"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/playback"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // Capture is the recording-specific subset of capture.Capture used by Handler.
@@ -30,14 +31,14 @@ type Capture interface {
 // Handler owns the full recording MCP lifecycle and its playback-session state.
 type Handler struct {
 	capture   Capture
-	appendLog func(mcp.LogEntry)
+	appendLog func(types.LogEntry)
 
 	playbackMu       sync.RWMutex
 	playbackSessions map[string]*playback.Session
 }
 
 // NewHandler constructs a recording handler around its explicit dependencies.
-func NewHandler(recordingCapture Capture, appendLog func(mcp.LogEntry)) *Handler {
+func NewHandler(recordingCapture Capture, appendLog func(types.LogEntry)) *Handler {
 	return &Handler{
 		capture:          recordingCapture,
 		appendLog:        appendLog,
@@ -45,7 +46,7 @@ func NewHandler(recordingCapture Capture, appendLog func(mcp.LogEntry)) *Handler
 	}
 }
 
-func (h *Handler) log(entry mcp.LogEntry) {
+func (h *Handler) log(entry types.LogEntry) {
 	if h.appendLog != nil {
 		h.appendLog(entry)
 	}
@@ -74,7 +75,7 @@ func (h *Handler) EventRecordingStart(req mcp.JSONRPCRequest, args json.RawMessa
 			"Check storage quota and try again")
 	}
 
-	h.log(mcp.LogEntry{
+	h.log(types.LogEntry{
 		"timestamp":    time.Now().Format(time.RFC3339Nano),
 		"level":        "info",
 		"message":      fmt.Sprintf("[RECORDING_START] Recording started: %s", recordingID),
@@ -112,7 +113,7 @@ func (h *Handler) EventRecordingStop(req mcp.JSONRPCRequest, args json.RawMessag
 			"No active recording with this ID. Start one first: configure({what: 'event_recording_start', name: 'my-recording'})")
 	}
 
-	h.log(mcp.LogEntry{
+	h.log(types.LogEntry{
 		"timestamp":    time.Now().Format(time.RFC3339Nano),
 		"level":        "info",
 		"message":      fmt.Sprintf("[RECORDING_STOP] Recording stopped: %s (%d actions, %dms)", params.RecordingID, actionCount, duration),
@@ -213,7 +214,7 @@ func (h *Handler) Playback(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSO
 	h.playbackMu.Unlock()
 
 	total := session.ActionsExecuted + session.ActionsFailed
-	h.log(mcp.LogEntry{
+	h.log(types.LogEntry{
 		"timestamp":        time.Now().Format(time.RFC3339Nano),
 		"level":            "info",
 		"message":          fmt.Sprintf("[PLAYBACK_COMPLETE] Recording replayed: %d/%d actions succeeded", session.ActionsExecuted, total),
@@ -294,7 +295,7 @@ func (h *Handler) LogDiff(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSON
 			fmt.Sprintf("Failed to diff recordings: %v", err),
 			"Ensure both recording IDs are valid")
 	}
-	h.log(mcp.LogEntry{
+	h.log(types.LogEntry{
 		"timestamp":   time.Now().Format(time.RFC3339Nano),
 		"level":       "info",
 		"message":     fmt.Sprintf("[LOG_DIFF] Comparison complete: %s", result.Summary),

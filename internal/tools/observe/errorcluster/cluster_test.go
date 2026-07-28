@@ -7,10 +7,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
-func entry(level, msg, ts, url, stack string) map[string]any {
-	return map[string]any{
+func entry(level, msg, ts, url, stack string) types.LogEntry {
+	return types.LogEntry{
 		"level": level, "message": msg, "timestamp": ts, "url": url, "stackTrace": stack,
 	}
 }
@@ -18,7 +20,7 @@ func entry(level, msg, ts, url, stack string) map[string]any {
 // TestAnalyze_SiblingsCollapse is the regression test for the defect this package fixes:
 // keying on the raw message made every error carrying an id its own singleton "cluster".
 func TestAnalyze_SiblingsCollapse(t *testing.T) {
-	entries := []map[string]any{
+	entries := []types.LogEntry{
 		entry("error", "Cannot read property 'id' of undefined at /users/12345", "t1", "https://a/1", ""),
 		entry("error", "Cannot read property 'id' of undefined at /users/67890", "t2", "https://a/2", ""),
 		entry("error", "Cannot read property 'id' of undefined at /users/24680", "t3", "https://a/1", ""),
@@ -44,7 +46,7 @@ func TestAnalyze_SiblingsCollapse(t *testing.T) {
 }
 
 func TestAnalyze_DistinctErrorsStaySeparate(t *testing.T) {
-	entries := []map[string]any{
+	entries := []types.LogEntry{
 		entry("error", "Cannot read property 'id' of undefined", "t1", "", ""),
 		entry("error", "NetworkError: connection refused", "t2", "", ""),
 	}
@@ -54,7 +56,7 @@ func TestAnalyze_DistinctErrorsStaySeparate(t *testing.T) {
 }
 
 func TestAnalyze_IgnoresNonErrorsAndEmptyMessages(t *testing.T) {
-	entries := []map[string]any{
+	entries := []types.LogEntry{
 		entry("warn", "a warning", "t1", "", ""),
 		entry("info", "some info", "t2", "", ""),
 		entry("error", "", "t3", "", ""),
@@ -70,7 +72,7 @@ func TestAnalyze_IgnoresNonErrorsAndEmptyMessages(t *testing.T) {
 }
 
 func TestAnalyze_OrderedByCountDescending(t *testing.T) {
-	var entries []map[string]any
+	var entries []types.LogEntry
 	for i := 0; i < 2; i++ {
 		entries = append(entries, entry("error", "rare failure", "t", "", ""))
 	}
@@ -96,7 +98,7 @@ func TestAnalyze_OrderedByCountDescending(t *testing.T) {
 // list and each url list were built by ranging a Go map, whose iteration order is
 // randomized per run, so identical input produced differently-ordered output every call.
 func TestAnalyze_Deterministic(t *testing.T) {
-	var entries []map[string]any
+	var entries []types.LogEntry
 	for i := 0; i < 12; i++ {
 		// Equal counts across many clusters maximizes the chance a map-order
 		// regression shows up: the tie-break is the only thing imposing order.

@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -35,14 +36,14 @@ func TestServerAddEntries_RotationAndAccounting(t *testing.T) {
 
 	s, logFile := newTestServer(t, 2)
 	callbackCalls := 0
-	s.SetOnEntries(func(entries []LogEntry) {
+	s.SetOnEntries(func(entries []types.LogEntry) {
 		callbackCalls++
 		if len(entries) != 3 {
 			t.Errorf("callback len(entries) = %d, want 3", len(entries))
 		}
 	})
 
-	added := s.addEntries([]LogEntry{
+	added := s.addEntries([]types.LogEntry{
 		{"seq": 1, "message": "first"},
 		{"seq": 2, "message": "second"},
 		{"seq": 3, "message": "third"},
@@ -80,7 +81,7 @@ func TestGetLogEntries_ReturnsMapCopies(t *testing.T) {
 	t.Parallel()
 
 	s, _ := newTestServer(t, 10)
-	s.addEntries([]LogEntry{{"level": "info"}})
+	s.addEntries([]types.LogEntry{{"level": "info"}})
 
 	first := s.GetLogEntries()
 	if len(first) != 1 {
@@ -98,9 +99,9 @@ func TestGetLogSnapshot_AndTimestampCopies(t *testing.T) {
 	t.Parallel()
 
 	s, _ := newTestServer(t, 10)
-	s.addEntries([]LogEntry{{"id": "a"}})
+	s.addEntries([]types.LogEntry{{"id": "a"}})
 	time.Sleep(2 * time.Millisecond)
-	s.addEntries([]LogEntry{{"id": "b"}})
+	s.addEntries([]types.LogEntry{{"id": "b"}})
 
 	snapshot := s.GetLogSnapshot()
 	if snapshot.EntryCount != 2 {
@@ -209,7 +210,7 @@ func TestClearEntries_ClearsMemoryAndFile(t *testing.T) {
 	t.Parallel()
 
 	s, logFile := newTestServer(t, 10)
-	s.addEntries([]LogEntry{{"msg": "a"}, {"msg": "b"}})
+	s.addEntries([]types.LogEntry{{"msg": "a"}, {"msg": "b"}})
 	if s.getEntryCount() != 2 {
 		t.Fatalf("precondition failed: expected 2 entries")
 	}

@@ -4,16 +4,20 @@ feature_id: feature-pagination
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
+last_reviewed: 2026-07-28
 code_paths:
   - internal/pagination/pagination.go
   - internal/pagination/pagination_actions.go
   - internal/pagination/pagination_websocket.go
+  - internal/pagination/pagination_logs.go
   - internal/pagination/cursor.go
+  - internal/types/log.go
 test_paths:
   - internal/pagination/pagination_test.go
   - internal/pagination/pagination_actions_test.go
   - internal/pagination/pagination_websocket_test.go
+  - internal/pagination/pagination_coverage_test.go
+  - internal/pagination/pagination_bench_test.go
   - internal/pagination/test_helpers_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
@@ -46,3 +50,5 @@ last_verified_date: 2026-03-05
 - `internal/pagination/pagination_actions_test.go` validates action cursor slicing, before/after cursors, and eviction restart behavior.
 - `internal/pagination/pagination_websocket_test.go` validates websocket cursor slicing and eviction restart behavior using the shared runner.
 - `internal/pagination/pagination_test.go` now reuses shared before/after cursor runners and common log-entry fixture builders.
+- Log pagination consumes `internal/types.LogEntry` directly; the package-local
+  compatibility alias has been removed.

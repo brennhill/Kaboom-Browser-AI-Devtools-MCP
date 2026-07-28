@@ -15,7 +15,7 @@ type dataProviderAdapter struct {
 	deps Deps
 }
 
-func (a *dataProviderAdapter) GetLogEntries() []map[string]any {
+func (a *dataProviderAdapter) GetLogEntries() []types.LogEntry {
 	entries, _ := a.deps.GetLogEntries()
 	return entries
 }

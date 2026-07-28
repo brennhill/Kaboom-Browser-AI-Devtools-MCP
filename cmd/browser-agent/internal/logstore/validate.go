@@ -3,7 +3,11 @@
 
 package logstore
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+)
 
 // validLevels defines accepted log level values.
 var validLevels = map[string]bool{
@@ -19,7 +23,7 @@ const MaxEntrySize = 1024 * 1024
 
 // ValidateEntry checks if a log entry meets the contract requirements.
 // Returns true if the entry is valid, false otherwise.
-func ValidateEntry(entry Entry) bool {
+func ValidateEntry(entry types.LogEntry) bool {
 	// Required: level field must exist and be a known value
 	level, ok := entry["level"].(string)
 	if !ok || !validLevels[level] {
@@ -47,8 +51,8 @@ func ValidateEntry(entry Entry) bool {
 }
 
 // ValidateEntries filters entries, returning only valid ones and a count of rejected.
-func ValidateEntries(entries []Entry) (valid []Entry, rejected int) {
-	valid = make([]Entry, 0, len(entries))
+func ValidateEntries(entries []types.LogEntry) (valid []types.LogEntry, rejected int) {
+	valid = make([]types.LogEntry, 0, len(entries))
 	for _, entry := range entries {
 		if ValidateEntry(entry) {
 			valid = append(valid, entry)

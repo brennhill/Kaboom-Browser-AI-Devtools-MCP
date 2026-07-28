@@ -64,7 +64,7 @@ func TestSecurityScan_EmptyInput_NoError(t *testing.T) {
 	scanner := NewScanner()
 	input := Input{
 		NetworkBodies:  []NetworkBody{},
-		ConsoleEntries: []LogEntry{},
+		ConsoleEntries: []types.LogEntry{},
 		PageURLs:       []string{},
 	}
 	result := scanner.Scan(input)
@@ -233,7 +233,7 @@ func TestSecurityScan_CredentialInConsoleLog(t *testing.T) {
 	t.Parallel()
 	scanner := NewScanner()
 	input := Input{
-		ConsoleEntries: []LogEntry{
+		ConsoleEntries: []types.LogEntry{
 			{
 				"level":   "log",
 				"message": "Auth token: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U",
@@ -1168,7 +1168,7 @@ func TestSecurityScan_NilConsoleEntryFields(t *testing.T) {
 	t.Parallel()
 	scanner := NewScanner()
 	input := Input{
-		ConsoleEntries: []LogEntry{
+		ConsoleEntries: []types.LogEntry{
 			{}, // Empty entry
 			{"level": nil, "message": nil},
 		},
@@ -1262,7 +1262,7 @@ func FuzzSecurityPatterns(f *testing.F) {
 					ResponseHeaders: map[string]string{"Set-Cookie": bodyData},
 				},
 			},
-			ConsoleEntries: []LogEntry{
+			ConsoleEntries: []types.LogEntry{
 				{"level": "error", "msg": bodyData},
 			},
 			PageURLs: []string{urlData},

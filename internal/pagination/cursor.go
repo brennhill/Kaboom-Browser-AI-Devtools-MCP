@@ -155,13 +155,13 @@ func NormalizeTimestamp(ts any) string {
 
 // CursorPaginationMetadata contains metadata for cursor-based pagination responses.
 type CursorPaginationMetadata struct {
-	Cursor           string `json:"cursor,omitempty"`            // Composite cursor of last returned entry
-	Count            int    `json:"count"`                       // Number of entries in this page
-	HasMore          bool   `json:"has_more"`                    // More entries available
-	OldestTimestamp  string `json:"oldest_timestamp,omitempty"`  // Oldest entry in buffer
-	NewestTimestamp  string `json:"newest_timestamp,omitempty"`  // Newest entry in buffer
-	Total            int    `json:"total"`                       // Total entries in buffer
-	CursorRestarted  bool   `json:"cursor_restarted,omitempty"`  // True if cursor expired and auto-restarted
-	OriginalCursor   string `json:"original_cursor,omitempty"`   // Original cursor if restarted
-	Warning          string `json:"warning,omitempty"`           // Warning message if applicable
+	Cursor          string `json:"cursor,omitempty"`           // Composite cursor of last returned entry
+	Count           int    `json:"count"`                      // Number of entries in this page
+	HasMore         bool   `json:"has_more"`                   // More entries available
+	OldestTimestamp string `json:"oldest_timestamp,omitempty"` // Oldest entry in buffer
+	NewestTimestamp string `json:"newest_timestamp,omitempty"` // Newest entry in buffer
+	Total           int    `json:"total"`                      // Total entries in buffer
+	CursorRestarted bool   `json:"cursor_restarted,omitempty"` // True if cursor expired and auto-restarted
+	OriginalCursor  string `json:"original_cursor,omitempty"`  // Original cursor if restarted
+	Warning         string `json:"warning,omitempty"`          // Warning message if applicable
 }

@@ -89,7 +89,7 @@ func TestIsNewer_RFC3339FallbackEntryTimestamp(t *testing.T) {
 
 func TestEntryStr_MissingKey(t *testing.T) {
 	t.Parallel()
-	entry := LogEntry{"other": "value"}
+	entry := types.LogEntry{"other": "value"}
 	got := entryStr(entry, "missing")
 	if got != "" {
 		t.Errorf("entryStr(missing key) = %q, want empty", got)
@@ -98,7 +98,7 @@ func TestEntryStr_MissingKey(t *testing.T) {
 
 func TestEntryStr_NonStringValue(t *testing.T) {
 	t.Parallel()
-	entry := LogEntry{"count": 42}
+	entry := types.LogEntry{"count": 42}
 	got := entryStr(entry, "count")
 	if got != "" {
 		t.Errorf("entryStr(int value) = %q, want empty", got)
@@ -189,7 +189,7 @@ func TestCheckCursorExpired_EmptyEntries(t *testing.T) {
 func TestApplyCursorPagination_InvalidCursorFormat(t *testing.T) {
 	t.Parallel()
 	entries := []LogEntryWithSequence{
-		{Entry: LogEntry{}, Sequence: 1, Timestamp: "2026-01-30T10:15:23Z"},
+		{Entry: types.LogEntry{}, Sequence: 1, Timestamp: "2026-01-30T10:15:23Z"},
 	}
 	_, _, err := ApplyLogCursorPagination(entries, "invalid-no-colon", "", "", 10, false)
 	if err == nil {
@@ -207,11 +207,11 @@ func TestApplyCursorPagination_InvalidCursorFormat(t *testing.T) {
 func TestApplyLogCursorPagination_SinceCursor(t *testing.T) {
 	t.Parallel()
 	entries := []LogEntryWithSequence{
-		{Entry: LogEntry{"ts": "2026-01-30T10:15:20Z"}, Sequence: 1, Timestamp: "2026-01-30T10:15:20Z"},
-		{Entry: LogEntry{"ts": "2026-01-30T10:15:21Z"}, Sequence: 2, Timestamp: "2026-01-30T10:15:21Z"},
-		{Entry: LogEntry{"ts": "2026-01-30T10:15:22Z"}, Sequence: 3, Timestamp: "2026-01-30T10:15:22Z"},
-		{Entry: LogEntry{"ts": "2026-01-30T10:15:23Z"}, Sequence: 4, Timestamp: "2026-01-30T10:15:23Z"},
-		{Entry: LogEntry{"ts": "2026-01-30T10:15:24Z"}, Sequence: 5, Timestamp: "2026-01-30T10:15:24Z"},
+		{Entry: types.LogEntry{"ts": "2026-01-30T10:15:20Z"}, Sequence: 1, Timestamp: "2026-01-30T10:15:20Z"},
+		{Entry: types.LogEntry{"ts": "2026-01-30T10:15:21Z"}, Sequence: 2, Timestamp: "2026-01-30T10:15:21Z"},
+		{Entry: types.LogEntry{"ts": "2026-01-30T10:15:22Z"}, Sequence: 3, Timestamp: "2026-01-30T10:15:22Z"},
+		{Entry: types.LogEntry{"ts": "2026-01-30T10:15:23Z"}, Sequence: 4, Timestamp: "2026-01-30T10:15:23Z"},
+		{Entry: types.LogEntry{"ts": "2026-01-30T10:15:24Z"}, Sequence: 5, Timestamp: "2026-01-30T10:15:24Z"},
 	}
 	// since cursor at entry 2 should include entries 2, 3, 4, 5
 	sinceCursor := BuildCursor("2026-01-30T10:15:21Z", 2)

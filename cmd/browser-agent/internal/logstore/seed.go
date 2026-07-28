@@ -6,7 +6,11 @@
 
 package logstore
 
-import "time"
+import (
+	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+)
 
 // SeedEntries appends entries to the in-memory window and, when addedAt is
 // non-nil, to the parallel add-time slice.
@@ -15,7 +19,7 @@ import "time"
 // no file queueing, no window trimming, no counters, no onEntries callback —
 // so a test can construct an exact window state. Production ingest must go
 // through AddEntries.
-func (ls *Store) SeedEntries(entries []Entry, addedAt []time.Time) {
+func (ls *Store) SeedEntries(entries []types.LogEntry, addedAt []time.Time) {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
 	ls.entries = append(ls.entries, entries...)

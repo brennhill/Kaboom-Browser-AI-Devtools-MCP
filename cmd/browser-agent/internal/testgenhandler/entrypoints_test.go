@@ -81,7 +81,7 @@ func TestHandleGenerateTestFromContext(t *testing.T) {
 			t.Fatal("expected an error result when no error-level log entry exists")
 		}
 
-		env.deps.entries = []mcp.LogEntry{
+		env.deps.entries = []types.LogEntry{
 			{"level": "error", "message": "TypeError: undefined is not a function", "ts": errorTS},
 		}
 		withError := toolResult(t, env.h.HandleGenerateTestFromContext(req(), json.RawMessage(`{"context":"error"}`)))

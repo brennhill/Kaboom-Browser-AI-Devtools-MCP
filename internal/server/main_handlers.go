@@ -14,19 +14,16 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
-// LogEntry is a type alias for the canonical definition in internal/types
-type LogEntry = types.LogEntry
-
 // Server holds the server state
 type Server struct {
 	logFile       string
 	maxEntries    int
-	entries       []LogEntry
+	entries       []types.LogEntry
 	logAddedAt    []time.Time // parallel slice: when each entry was added
 	mu            sync.RWMutex
-	logTotalAdded int64            // monotonic counter of total entries ever added
-	onEntries     func([]LogEntry) // optional callback when entries are added (e.g., for clustering)
-	TTL           time.Duration    // TTL for read-time filtering (0 means unlimited)
+	logTotalAdded int64                  // monotonic counter of total entries ever added
+	onEntries     func([]types.LogEntry) // optional callback when entries are added (e.g., for clustering)
+	TTL           time.Duration          // TTL for read-time filtering (0 means unlimited)
 }
 
 // NewServer creates a new server instance
@@ -34,7 +31,7 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 	s := &Server{
 		logFile:    logFile,
 		maxEntries: maxEntries,
-		entries:    make([]LogEntry, 0),
+		entries:    make([]types.LogEntry, 0),
 	}
 
 	// Ensure log directory exists.
@@ -57,7 +54,7 @@ func NewServer(logFile string, maxEntries int) (*Server, error) {
 
 // SetOnEntries sets the callback invoked when new log entries are added.
 // Thread-safe: acquires the write lock to avoid racing with addEntries.
-func (s *Server) SetOnEntries(cb func([]LogEntry)) {
+func (s *Server) SetOnEntries(cb func([]types.LogEntry)) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.onEntries = cb

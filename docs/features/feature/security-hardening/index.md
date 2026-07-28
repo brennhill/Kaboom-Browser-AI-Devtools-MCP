@@ -23,6 +23,7 @@ code_paths:
   - internal/security/scan/doc.go
   - internal/security/scan/scan.go
   - internal/security/scan/types.go
+  - internal/types/log.go
   - internal/security/scan/checks_cookies.go
   - internal/security/scan/checks_headers.go
   - internal/security/scan/checks_pii.go
@@ -78,6 +79,9 @@ last_verified_date: 2026-03-05
 - Tool: configure
 - Mode/Action: security config
 - Location: `docs/features/feature/security-hardening`
+
+Security scanning consumes the canonical `internal/types.LogEntry` contract
+directly, without a scan-package compatibility alias.
 
 ## Specs
 

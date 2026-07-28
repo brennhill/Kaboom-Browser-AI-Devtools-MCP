@@ -38,7 +38,7 @@ func newScenario(t *testing.T) *scenario {
 func (s *scenario) loadConsoleData(t *testing.T) {
 	t.Helper()
 	now := time.Now().UTC().Format(time.RFC3339)
-	s.addLogEntry(mcp.LogEntry{
+	s.addLogEntry(types.LogEntry{
 		"type": "console", "level": "error",
 		"message":   "Uncaught TypeError: Cannot read property 'id' of undefined",
 		"source":    "https://app.example.com/main.js",
@@ -48,7 +48,7 @@ func (s *scenario) loadConsoleData(t *testing.T) {
 		"stack":     "TypeError: Cannot read property 'id' of undefined\n    at render (main.js:42:15)",
 		"timestamp": now,
 	})
-	s.addLogEntry(mcp.LogEntry{
+	s.addLogEntry(types.LogEntry{
 		"type": "console", "level": "warn",
 		"message":   "componentWillMount is deprecated",
 		"source":    "https://app.example.com/vendor.js",
@@ -56,7 +56,7 @@ func (s *scenario) loadConsoleData(t *testing.T) {
 		"line":      float64(100),
 		"timestamp": now,
 	})
-	s.addLogEntry(mcp.LogEntry{
+	s.addLogEntry(types.LogEntry{
 		"type": "console", "level": "log",
 		"message":   "App initialized successfully",
 		"source":    "https://app.example.com/main.js",

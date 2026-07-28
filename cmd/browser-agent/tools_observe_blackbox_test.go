@@ -31,7 +31,7 @@ import (
 // ============================================
 
 // Sample console error from browser
-var sampleConsoleError = mcp.LogEntry{
+var sampleConsoleError = types.LogEntry{
 	"type":    "console",
 	"level":   "error",
 	"message": "Uncaught TypeError: Cannot read property 'foo' of undefined",
@@ -44,7 +44,7 @@ var sampleConsoleError = mcp.LogEntry{
 }
 
 // Sample console warning
-var sampleConsoleWarning = mcp.LogEntry{
+var sampleConsoleWarning = types.LogEntry{
 	"type":    "console",
 	"level":   "warn",
 	"message": "Deprecation warning: componentWillMount is deprecated",
@@ -55,7 +55,7 @@ var sampleConsoleWarning = mcp.LogEntry{
 }
 
 // Sample console log
-var sampleConsoleLog = mcp.LogEntry{
+var sampleConsoleLog = types.LogEntry{
 	"type":    "console",
 	"level":   "log",
 	"message": "User clicked button",
@@ -105,7 +105,7 @@ func TestObserveErrors_EndToEnd(t *testing.T) {
 
 	// Step 1: POST console errors (simulating browser extension)
 	logsPayload := map[string]any{
-		"entries": []mcp.LogEntry{sampleConsoleError, sampleConsoleWarning, sampleConsoleLog},
+		"entries": []types.LogEntry{sampleConsoleError, sampleConsoleWarning, sampleConsoleLog},
 	}
 	body, _ := json.Marshal(logsPayload)
 
@@ -113,7 +113,7 @@ func TestObserveErrors_EndToEnd(t *testing.T) {
 	_ = body // Payload would be POSTed to /logs in real scenario
 
 	// Use the server's /logs handler
-	server.logs.SeedEntries(logsPayload["entries"].([]mcp.LogEntry), nil)
+	server.logs.SeedEntries(logsPayload["entries"].([]types.LogEntry), nil)
 
 	// Step 2: Call observe errors via MCP tool
 	mcpReq := mcp.JSONRPCRequest{
@@ -178,7 +178,7 @@ func TestObserveLogs_EndToEnd(t *testing.T) {
 	handler := NewToolHandler(server, cap)
 
 	// POST logs
-	server.logs.SeedEntries([]mcp.LogEntry{
+	server.logs.SeedEntries([]types.LogEntry{
 		sampleConsoleError,
 		sampleConsoleWarning,
 		sampleConsoleLog,
@@ -220,7 +220,7 @@ func TestObserveLogs_LevelFilter(t *testing.T) {
 	cap := capture.NewCapture()
 	handler := NewToolHandler(server, cap)
 
-	server.logs.SeedEntries([]mcp.LogEntry{
+	server.logs.SeedEntries([]types.LogEntry{
 		sampleConsoleError,
 		sampleConsoleWarning,
 		sampleConsoleLog,
@@ -604,7 +604,7 @@ func TestMCPToolsCall_ObserveErrors_FullFlow(t *testing.T) {
 	handler := NewToolHandler(server, cap)
 
 	// Populate with test data
-	server.logs.SeedEntries([]mcp.LogEntry{
+	server.logs.SeedEntries([]types.LogEntry{
 		sampleConsoleError,
 	}, nil)
 

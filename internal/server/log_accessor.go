@@ -13,11 +13,11 @@ import (
 // LogSnapshot represents a snapshot of log state at a moment in time.
 // Safe to pass across package boundaries without exposing internal synchronization.
 type LogSnapshot struct {
-	Entries      []types.LogEntry // Copy of log entries
-	TotalAdded   int64            // Monotonic total added ever
-	EntryCount   int              // Current entry count
-	LastAddedAt  time.Time        // When the last entry was added (zero if no entries)
-	OldestAddedAt time.Time       // When the oldest entry was added (zero if no entries)
+	Entries       []types.LogEntry // Copy of log entries
+	TotalAdded    int64            // Monotonic total added ever
+	EntryCount    int              // Current entry count
+	LastAddedAt   time.Time        // When the last entry was added (zero if no entries)
+	OldestAddedAt time.Time        // When the oldest entry was added (zero if no entries)
 }
 
 // GetLogSnapshot returns a thread-safe snapshot of the log state.

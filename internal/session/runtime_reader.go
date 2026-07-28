@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 )
 
@@ -22,11 +21,11 @@ type RuntimeCaptureReader interface {
 }
 
 type runtimeStateReader struct {
-	entries func() []mcp.LogEntry
+	entries func() []types.LogEntry
 	capture RuntimeCaptureReader
 }
 
-func NewRuntimeStateReader(entries func() []mcp.LogEntry, captureReader RuntimeCaptureReader) CaptureStateReader {
+func NewRuntimeStateReader(entries func() []types.LogEntry, captureReader RuntimeCaptureReader) CaptureStateReader {
 	return &runtimeStateReader{entries: entries, capture: captureReader}
 }
 

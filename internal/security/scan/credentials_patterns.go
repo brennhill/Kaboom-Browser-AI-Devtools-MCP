@@ -6,6 +6,8 @@ package scan
 import (
 	"regexp"
 	"strings"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 var (
@@ -70,7 +72,7 @@ func isTestKey(value string) bool {
 	return false
 }
 
-func getEntryString(entry LogEntry, key string) string {
+func getEntryString(entry types.LogEntry, key string) string {
 	val, ok := entry[key]
 	if !ok || val == nil {
 		return ""

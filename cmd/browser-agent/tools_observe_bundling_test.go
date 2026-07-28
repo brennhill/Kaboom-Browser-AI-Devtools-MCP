@@ -43,8 +43,8 @@ func newBundleTestEnv(t *testing.T) *bundleTestEnv {
 	return &bundleTestEnv{handler: handler, server: server, capture: cap}
 }
 
-func (e *bundleTestEnv) addLogEntry(entry mcp.LogEntry) {
-	e.server.logs.SeedEntries([]mcp.LogEntry{
+func (e *bundleTestEnv) addLogEntry(entry types.LogEntry) {
+	e.server.logs.SeedEntries([]types.LogEntry{
 		entry,
 	}, []time.Time{
 		time.Now(),
@@ -119,7 +119,7 @@ func TestErrorBundles_ErrorWithNoContext(t *testing.T) {
 
 	// Add an error with no matching network/actions/logs
 	now := time.Now().UTC()
-	env.addLogEntry(mcp.LogEntry{
+	env.addLogEntry(types.LogEntry{
 		"type":      "console",
 		"level":     "error",
 		"message":   "ReferenceError: foo is not defined",
@@ -189,7 +189,7 @@ func TestErrorBundles_ErrorWithNetwork(t *testing.T) {
 	})
 
 	// Add the error
-	env.addLogEntry(mcp.LogEntry{
+	env.addLogEntry(types.LogEntry{
 		"type":      "console",
 		"level":     "error",
 		"message":   "Failed to load users",
@@ -240,7 +240,7 @@ func TestErrorBundles_ErrorWithAction(t *testing.T) {
 	})
 
 	// Add the error
-	env.addLogEntry(mcp.LogEntry{
+	env.addLogEntry(types.LogEntry{
 		"type":      "console",
 		"level":     "error",
 		"message":   "Submit failed",
@@ -278,7 +278,7 @@ func TestErrorBundles_ErrorWithLog(t *testing.T) {
 	now := time.Now().UTC()
 
 	// Add a warning log 1 second before the error
-	env.addLogEntry(mcp.LogEntry{
+	env.addLogEntry(types.LogEntry{
 		"type":      "console",
 		"level":     "warn",
 		"message":   "Cache miss for user profile",
@@ -286,7 +286,7 @@ func TestErrorBundles_ErrorWithLog(t *testing.T) {
 	})
 
 	// Add the error
-	env.addLogEntry(mcp.LogEntry{
+	env.addLogEntry(types.LogEntry{
 		"type":      "console",
 		"level":     "error",
 		"message":   "TypeError in UserProfile render",
@@ -342,7 +342,7 @@ func TestErrorBundles_WindowBoundary(t *testing.T) {
 	})
 
 	// Add the error
-	env.addLogEntry(mcp.LogEntry{
+	env.addLogEntry(types.LogEntry{
 		"type":      "console",
 		"level":     "error",
 		"message":   "Window test error",
@@ -384,7 +384,7 @@ func TestErrorBundles_CustomWindow(t *testing.T) {
 	})
 
 	// Add the error
-	env.addLogEntry(mcp.LogEntry{
+	env.addLogEntry(types.LogEntry{
 		"type":      "console",
 		"level":     "error",
 		"message":   "Custom window test",
@@ -425,7 +425,7 @@ func TestErrorBundles_Limit(t *testing.T) {
 
 	// Add 5 errors
 	for i := 0; i < 5; i++ {
-		env.addLogEntry(mcp.LogEntry{
+		env.addLogEntry(types.LogEntry{
 			"type":      "console",
 			"level":     "error",
 			"message":   "Error number",
@@ -465,13 +465,13 @@ func TestErrorBundles_SharedContext(t *testing.T) {
 	})
 
 	// Add two errors within 1 second — both should see the same network body
-	env.addLogEntry(mcp.LogEntry{
+	env.addLogEntry(types.LogEntry{
 		"type":      "console",
 		"level":     "error",
 		"message":   "Error A",
 		"timestamp": now.Format(time.RFC3339),
 	})
-	env.addLogEntry(mcp.LogEntry{
+	env.addLogEntry(types.LogEntry{
 		"type":      "console",
 		"level":     "error",
 		"message":   "Error B",
@@ -505,7 +505,7 @@ func TestErrorBundles_ViaObserveDispatcher(t *testing.T) {
 	env := newBundleTestEnv(t)
 
 	now := time.Now().UTC()
-	env.addLogEntry(mcp.LogEntry{
+	env.addLogEntry(types.LogEntry{
 		"type":      "console",
 		"level":     "error",
 		"message":   "Dispatcher test error",
@@ -543,7 +543,7 @@ func TestErrorBundles_TsField(t *testing.T) {
 	now := time.Now().UTC()
 
 	// Extension-originated entries use "ts" instead of "timestamp"
-	env.addLogEntry(mcp.LogEntry{
+	env.addLogEntry(types.LogEntry{
 		"type":    "console",
 		"level":   "error",
 		"message": "Extension error with ts field",

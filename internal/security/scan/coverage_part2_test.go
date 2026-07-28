@@ -138,7 +138,7 @@ func TestLooksLikeCreditCard_NonDigit(t *testing.T) {
 func TestScanConsoleForCredentials_EmptyMessage(t *testing.T) {
 	t.Parallel()
 	s := NewScanner()
-	entry := LogEntry{"source": "console", "message": ""}
+	entry := types.LogEntry{"source": "console", "message": ""}
 	findings := s.scanConsoleForCredentials(entry)
 	if len(findings) != 0 {
 		t.Errorf("expected 0 findings for empty message, got %d", len(findings))
@@ -148,7 +148,7 @@ func TestScanConsoleForCredentials_EmptyMessage(t *testing.T) {
 func TestScanConsoleForCredentials_NilMessage(t *testing.T) {
 	t.Parallel()
 	s := NewScanner()
-	entry := LogEntry{"source": "console"}
+	entry := types.LogEntry{"source": "console"}
 	findings := s.scanConsoleForCredentials(entry)
 	if len(findings) != 0 {
 		t.Errorf("expected 0 findings for nil message, got %d", len(findings))
@@ -158,7 +158,7 @@ func TestScanConsoleForCredentials_NilMessage(t *testing.T) {
 func TestScanConsoleForCredentials_NonStringMessage(t *testing.T) {
 	t.Parallel()
 	s := NewScanner()
-	entry := LogEntry{"source": "console", "message": 42}
+	entry := types.LogEntry{"source": "console", "message": 42}
 	findings := s.scanConsoleForCredentials(entry)
 	if len(findings) != 0 {
 		t.Errorf("expected 0 findings for non-string message, got %d", len(findings))
@@ -169,7 +169,7 @@ func TestScanConsoleForCredentials_LongMessage(t *testing.T) {
 	t.Parallel()
 	s := NewScanner()
 	longMsg := "Bearer " + strings.Repeat("A", 11000)
-	entry := LogEntry{"source": "console", "message": longMsg}
+	entry := types.LogEntry{"source": "console", "message": longMsg}
 	findings := s.scanConsoleForCredentials(entry)
 	if len(findings) == 0 {
 		t.Error("expected Bearer token finding even with long message")
@@ -184,14 +184,14 @@ func TestGetEntryString_AllBranches(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name  string
-		entry LogEntry
+		entry types.LogEntry
 		key   string
 		want  string
 	}{
-		{"missing key", LogEntry{}, "message", ""},
-		{"nil value", LogEntry{"message": nil}, "message", ""},
-		{"non-string value", LogEntry{"message": 42}, "message", ""},
-		{"valid string", LogEntry{"message": "hello"}, "message", "hello"},
+		{"missing key", types.LogEntry{}, "message", ""},
+		{"nil value", types.LogEntry{"message": nil}, "message", ""},
+		{"non-string value", types.LogEntry{"message": 42}, "message", ""},
+		{"valid string", types.LogEntry{"message": "hello"}, "message", "hello"},
 	}
 	for _, tc := range cases {
 		got := getEntryString(tc.entry, tc.key)

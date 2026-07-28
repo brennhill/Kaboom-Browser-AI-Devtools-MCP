@@ -46,7 +46,7 @@ func GetBrowserErrors(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 	entries, _ := deps.GetLogEntries()
 
 	noiseSuppressed := 0
-	matched := buffers.ReverseFilterLimit(entries, func(entry map[string]any) bool {
+	matched := buffers.ReverseFilterLimit(entries, func(entry types.LogEntry) bool {
 		level, _ := entry["level"].(string)
 		if level != "error" {
 			return false
@@ -175,13 +175,7 @@ func GetBrowserLogs(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 	rawEntries, _ := deps.GetLogEntries()
 	totalAdded := deps.GetLogTotalAdded()
 
-	// Convert to []map[string]any for pagination package.
-	allEntries := make([]map[string]any, len(rawEntries))
-	for i, e := range rawEntries {
-		allEntries[i] = e
-	}
-
-	enriched := pagination.EnrichLogEntries(allEntries, totalAdded)
+	enriched := pagination.EnrichLogEntries(rawEntries, totalAdded)
 
 	filtered := make([]pagination.LogEntryWithSequence, 0, len(enriched))
 	noiseSuppressed := 0

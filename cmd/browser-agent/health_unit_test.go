@@ -13,7 +13,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/launchmode"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 func TestHealthMetrics_IncrementAndGet(t *testing.T) {
@@ -101,9 +101,9 @@ func TestHealthResponseIncludesDroppedCount(t *testing.T) {
 	}
 
 	// Fill queue (no worker draining it), then trigger two drops
-	_ = srv.logs.AppendToFile([]mcp.LogEntry{{"level": "info", "message": "fill"}})
-	_ = srv.logs.AppendToFile([]mcp.LogEntry{{"level": "info", "message": "drop1"}})
-	_ = srv.logs.AppendToFile([]mcp.LogEntry{{"level": "info", "message": "drop2"}})
+	_ = srv.logs.AppendToFile([]types.LogEntry{{"level": "info", "message": "fill"}})
+	_ = srv.logs.AppendToFile([]types.LogEntry{{"level": "info", "message": "drop1"}})
+	_ = srv.logs.AppendToFile([]types.LogEntry{{"level": "info", "message": "drop2"}})
 
 	resp := getHealthResponse(hm, nil, srv, "test")
 

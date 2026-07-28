@@ -6,6 +6,8 @@ package logstore
 import (
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 func TestValidateLogEntry_EdgeCases(t *testing.T) {
@@ -17,7 +19,7 @@ func TestValidateLogEntry_EdgeCases(t *testing.T) {
 		for i := range bigStr {
 			bigStr[i] = 'a'
 		}
-		entry := Entry{"level": "info", "data": string(bigStr)}
+		entry := types.LogEntry{"level": "info", "data": string(bigStr)}
 		// This triggers slow path (string content > MaxEntrySize/2)
 		// Result depends on whether JSON serialization stays under limit
 		_ = ValidateEntry(entry)
@@ -25,7 +27,7 @@ func TestValidateLogEntry_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("empty entry is invalid", func(t *testing.T) {
-		if ValidateEntry(Entry{}) {
+		if ValidateEntry(types.LogEntry{}) {
 			t.Fatal("empty entry should be invalid (no level)")
 		}
 	})
@@ -38,12 +40,12 @@ func TestValidateEntry_LevelContract(t *testing.T) {
 	t.Parallel()
 
 	for _, level := range []string{"error", "warn", "info", "debug", "log"} {
-		if !ValidateEntry(Entry{"level": level}) {
+		if !ValidateEntry(types.LogEntry{"level": level}) {
 			t.Errorf("ValidateEntry(level=%q) = false, want true", level)
 		}
 	}
 	for _, bad := range []any{"trace", "ERROR", "", 42, nil} {
-		if ValidateEntry(Entry{"level": bad}) {
+		if ValidateEntry(types.LogEntry{"level": bad}) {
 			t.Errorf("ValidateEntry(level=%v) = true, want false", bad)
 		}
 	}
@@ -54,7 +56,7 @@ func TestValidateEntry_LevelContract(t *testing.T) {
 func TestValidateEntry_OversizeRejected(t *testing.T) {
 	t.Parallel()
 
-	oversize := Entry{"level": "info", "message": strings.Repeat("x", MaxEntrySize+1)}
+	oversize := types.LogEntry{"level": "info", "message": strings.Repeat("x", MaxEntrySize+1)}
 	if ValidateEntry(oversize) {
 		t.Fatalf("ValidateEntry() = true for a %d-byte entry, want false (limit %d)",
 			MaxEntrySize+1, MaxEntrySize)
@@ -67,7 +69,7 @@ func TestValidateEntry_OversizeRejected(t *testing.T) {
 func TestValidateEntries_FiltersAndCounts(t *testing.T) {
 	t.Parallel()
 
-	valid, rejected := ValidateEntries([]Entry{
+	valid, rejected := ValidateEntries([]types.LogEntry{
 		{"level": "info", "message": "keep-1"},
 		{"level": "bogus", "message": "drop-1"},
 		{"level": "error", "message": "keep-2"},
@@ -85,7 +87,7 @@ func TestValidateEntries_FiltersAndCounts(t *testing.T) {
 	}
 
 	// An all-valid batch must report zero rejections and preserve every entry.
-	valid, rejected = ValidateEntries([]Entry{{"level": "warn"}, {"level": "debug"}})
+	valid, rejected = ValidateEntries([]types.LogEntry{{"level": "warn"}, {"level": "debug"}})
 	if rejected != 0 || len(valid) != 2 {
 		t.Fatalf("all-valid batch = %d valid / %d rejected, want 2/0", len(valid), rejected)
 	}
