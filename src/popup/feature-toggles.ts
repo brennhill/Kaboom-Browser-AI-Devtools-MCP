@@ -11,7 +11,6 @@
 
 import type { FeatureToggleConfig } from './shell/types.js'
 import { SettingName, StorageKey } from '../lib/constants.js'
-import { getLocals } from '../lib/storage/local.js'
 
 /**
  * Feature toggle configuration
@@ -109,13 +108,4 @@ export function applyFeatureToggles(result: Record<string, unknown>): void {
       })
     }
   }
-}
-
-/**
- * Initialize all feature toggles (self-contained async version for backward compat)
- */
-export async function initFeatureToggles(): Promise<void> {
-  const storageKeys = FEATURE_TOGGLES.map((t) => t.storageKey)
-  const result = await getLocals(storageKeys)
-  applyFeatureToggles(result)
 }

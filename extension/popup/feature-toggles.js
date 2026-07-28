@@ -4,7 +4,6 @@
  * Docs: docs/features/feature/browser-extension-enhancement/index.md
  */
 import { SettingName, StorageKey } from '../lib/constants.js';
-import { getLocals } from '../lib/storage/local.js';
 /**
  * Feature toggle configuration
  */
@@ -100,13 +99,5 @@ export function applyFeatureToggles(result) {
             });
         }
     }
-}
-/**
- * Initialize all feature toggles (self-contained async version for backward compat)
- */
-export async function initFeatureToggles() {
-    const storageKeys = FEATURE_TOGGLES.map((t) => t.storageKey);
-    const result = await getLocals(storageKeys);
-    applyFeatureToggles(result);
 }
 //# sourceMappingURL=feature-toggles.js.map

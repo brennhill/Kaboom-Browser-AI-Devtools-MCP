@@ -9,9 +9,6 @@
  * Manages the AI Web Pilot feature toggle
  */
 
-import { StorageKey } from '../lib/constants.js'
-import { getLocal } from '../lib/storage/local.js'
-
 /**
  * Apply pre-loaded AI Web Pilot value to the toggle and wire up change handler.
  * Called from the orchestrator after a single batched storage read.
@@ -25,15 +22,6 @@ export function applyAiWebPilotToggle(value: unknown): void {
   toggle.addEventListener('change', () => {
     handleAiWebPilotToggle(toggle.checked)
   })
-}
-
-/**
- * Initialize the AI Web Pilot toggle (self-contained async version for backward compat).
- * Read the current state from local storage via the storage facade.
- */
-export async function initAiWebPilotToggle(): Promise<void> {
-  const value = await getLocal(StorageKey.AI_WEB_PILOT_ENABLED)
-  applyAiWebPilotToggle(value)
 }
 
 /**

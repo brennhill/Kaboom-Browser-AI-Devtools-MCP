@@ -193,3 +193,29 @@ export function createMockDocument(overrides = {}) {
     ...overrides
   }
 }
+
+function readMockLocal(keys) {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(keys, resolve)
+  })
+}
+
+/**
+ * Exercise the canonical feature-toggle apply function with values supplied by
+ * a test's chrome.storage mock.
+ */
+export async function applyFeatureTogglesFromMockStorage() {
+  const { FEATURE_TOGGLES, applyFeatureToggles } = await import('../../extension/popup.js')
+  const keys = FEATURE_TOGGLES.map((toggle) => toggle.storageKey)
+  applyFeatureToggles(await readMockLocal(keys))
+}
+
+/**
+ * Exercise the canonical WebSocket-mode apply function with the value supplied
+ * by a test's chrome.storage mock.
+ */
+export async function applyWebSocketModeFromMockStorage() {
+  const { applyWebSocketMode } = await import('../../extension/popup.js')
+  const values = await readMockLocal(['webSocketCaptureMode'])
+  applyWebSocketMode(values.webSocketCaptureMode)
+}

@@ -1104,11 +1104,6 @@
       }
     }
   }
-  async function initFeatureToggles() {
-    const storageKeys = FEATURE_TOGGLES.map((t) => t.storageKey);
-    const result = await getLocals(storageKeys);
-    applyFeatureToggles(result);
-  }
 
   // extension/lib/tabs/cloaked-domains.js
   var BUILTIN_CLOAKED = [
@@ -1428,10 +1423,6 @@
       handleAiWebPilotToggle(toggle.checked);
     });
   }
-  async function initAiWebPilotToggle() {
-    const value = await getLocal(StorageKey.AI_WEB_PILOT_ENABLED);
-    applyAiWebPilotToggle(value);
-  }
   async function handleAiWebPilotToggle(enabled) {
     chrome.runtime.sendMessage({ type: "set_ai_web_pilot_enabled", enabled }, (response) => {
       if (!response || !response.success) {
@@ -1462,10 +1453,6 @@
     if (!modeSelect)
       return;
     modeSelect.value = value || "medium";
-  }
-  async function initWebSocketModeSelector() {
-    const value = await getLocal(StorageKey.WEBSOCKET_CAPTURE_MODE);
-    applyWebSocketMode(value);
   }
   var clearConfirmPending = false;
   var clearConfirmTimer = null;

@@ -12,7 +12,7 @@
 import type { WebSocketCaptureMode } from '../types/index.js'
 import { SettingName, StorageKey } from '../lib/constants.js'
 import { persist } from '../lib/storage/io.js'
-import { getLocal, setLocal } from '../lib/storage/local.js'
+import { setLocal } from '../lib/storage/local.js'
 
 /**
  * Handle WebSocket mode change
@@ -30,14 +30,6 @@ export function applyWebSocketMode(value: unknown): void {
   const modeSelect = document.getElementById('ws-mode') as HTMLSelectElement | null
   if (!modeSelect) return
   modeSelect.value = (value as WebSocketCaptureMode) || 'medium'
-}
-
-/**
- * Initialize the WebSocket mode selector (self-contained async version for backward compat)
- */
-export async function initWebSocketModeSelector(): Promise<void> {
-  const value = await getLocal(StorageKey.WEBSOCKET_CAPTURE_MODE)
-  applyWebSocketMode(value)
 }
 
 // Track clear-logs confirmation state

@@ -7,6 +7,7 @@
 
 import { test, describe, mock, beforeEach } from 'node:test'
 import assert from 'node:assert'
+import { applyFeatureTogglesFromMockStorage } from './helpers.js'
 
 // Mock Chrome APIs
 const mockChrome = {
@@ -152,8 +153,7 @@ describe('Network Waterfall Toggle', () => {
       callback({}) // No saved value — defaults to ON
     })
 
-    const { initFeatureToggles } = await import('../../extension/popup.js')
-    await initFeatureToggles()
+    await applyFeatureTogglesFromMockStorage()
 
     const toggle = mockDocument.getElementById('toggle-network-waterfall')
     assert.strictEqual(toggle.checked, true)
@@ -164,8 +164,7 @@ describe('Network Waterfall Toggle', () => {
       callback({ networkWaterfallEnabled: false })
     })
 
-    const { initFeatureToggles } = await import('../../extension/popup.js')
-    await initFeatureToggles()
+    await applyFeatureTogglesFromMockStorage()
 
     const toggle = mockDocument.getElementById('toggle-network-waterfall')
     assert.strictEqual(toggle.checked, false)
@@ -224,8 +223,7 @@ describe('Performance Marks Toggle', () => {
       callback({})
     })
 
-    const { initFeatureToggles } = await import('../../extension/popup.js')
-    await initFeatureToggles()
+    await applyFeatureTogglesFromMockStorage()
 
     const toggle = mockDocument.getElementById('toggle-performance-marks')
     assert.strictEqual(toggle.checked, true)
@@ -236,8 +234,7 @@ describe('Performance Marks Toggle', () => {
       callback({ performanceMarksEnabled: false })
     })
 
-    const { initFeatureToggles } = await import('../../extension/popup.js')
-    await initFeatureToggles()
+    await applyFeatureTogglesFromMockStorage()
 
     const toggle = mockDocument.getElementById('toggle-performance-marks')
     assert.strictEqual(toggle.checked, false)
@@ -296,8 +293,7 @@ describe('Action Replay Toggle', () => {
       callback({})
     })
 
-    const { initFeatureToggles } = await import('../../extension/popup.js')
-    await initFeatureToggles()
+    await applyFeatureTogglesFromMockStorage()
 
     const toggle = mockDocument.getElementById('toggle-action-replay')
     assert.strictEqual(toggle.checked, true)
@@ -308,8 +304,7 @@ describe('Action Replay Toggle', () => {
       callback({ actionReplayEnabled: false })
     })
 
-    const { initFeatureToggles } = await import('../../extension/popup.js')
-    await initFeatureToggles()
+    await applyFeatureTogglesFromMockStorage()
 
     const toggle = mockDocument.getElementById('toggle-action-replay')
     assert.strictEqual(toggle.checked, false)
@@ -368,8 +363,7 @@ describe('Screenshot on Error Toggle', () => {
       callback({})
     })
 
-    const { initFeatureToggles } = await import('../../extension/popup.js')
-    await initFeatureToggles()
+    await applyFeatureTogglesFromMockStorage()
 
     const toggle = mockDocument.getElementById('toggle-screenshot')
     assert.strictEqual(toggle.checked, true)
@@ -380,8 +374,7 @@ describe('Screenshot on Error Toggle', () => {
       callback({ screenshotOnError: false })
     })
 
-    const { initFeatureToggles } = await import('../../extension/popup.js')
-    await initFeatureToggles()
+    await applyFeatureTogglesFromMockStorage()
 
     const toggle = mockDocument.getElementById('toggle-screenshot')
     assert.strictEqual(toggle.checked, false)
@@ -440,8 +433,7 @@ describe('Source Maps Toggle', () => {
       callback({})
     })
 
-    const { initFeatureToggles } = await import('../../extension/popup.js')
-    await initFeatureToggles()
+    await applyFeatureTogglesFromMockStorage()
 
     const toggle = mockDocument.getElementById('toggle-source-maps')
     assert.strictEqual(toggle.checked, true)
@@ -452,8 +444,7 @@ describe('Source Maps Toggle', () => {
       callback({ sourceMapEnabled: false })
     })
 
-    const { initFeatureToggles } = await import('../../extension/popup.js')
-    await initFeatureToggles()
+    await applyFeatureTogglesFromMockStorage()
 
     const toggle = mockDocument.getElementById('toggle-source-maps')
     assert.strictEqual(toggle.checked, false)
@@ -512,8 +503,7 @@ describe('Action Toasts Toggle', () => {
       callback({})
     })
 
-    const { initFeatureToggles } = await import('../../extension/popup.js')
-    await initFeatureToggles()
+    await applyFeatureTogglesFromMockStorage()
 
     const toggle = mockDocument.getElementById('toggle-action-toasts')
     assert.strictEqual(toggle.checked, true)
@@ -524,8 +514,7 @@ describe('Action Toasts Toggle', () => {
       callback({ actionToastsEnabled: false })
     })
 
-    const { initFeatureToggles } = await import('../../extension/popup.js')
-    await initFeatureToggles()
+    await applyFeatureTogglesFromMockStorage()
 
     const toggle = mockDocument.getElementById('toggle-action-toasts')
     assert.strictEqual(toggle.checked, false)
@@ -584,8 +573,7 @@ describe('Subtitles Toggle', () => {
       callback({})
     })
 
-    const { initFeatureToggles } = await import('../../extension/popup.js')
-    await initFeatureToggles()
+    await applyFeatureTogglesFromMockStorage()
 
     const toggle = mockDocument.getElementById('toggle-subtitles')
     assert.strictEqual(toggle.checked, true)
@@ -596,8 +584,7 @@ describe('Subtitles Toggle', () => {
       callback({ subtitlesEnabled: false })
     })
 
-    const { initFeatureToggles } = await import('../../extension/popup.js')
-    await initFeatureToggles()
+    await applyFeatureTogglesFromMockStorage()
 
     const toggle = mockDocument.getElementById('toggle-subtitles')
     assert.strictEqual(toggle.checked, false)

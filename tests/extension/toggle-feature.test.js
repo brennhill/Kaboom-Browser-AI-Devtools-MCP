@@ -11,7 +11,7 @@
 
 import { test, describe, mock, beforeEach } from 'node:test'
 import assert from 'node:assert'
-import { MANIFEST_VERSION } from './helpers.js'
+import { applyFeatureTogglesFromMockStorage, MANIFEST_VERSION } from './helpers.js'
 
 // =============================================================================
 // MOCK SETUP
@@ -157,8 +157,7 @@ describe('Feature Toggle Defaults and Persistence', () => {
     }
     mockChrome.storage.local.get.mock.mockImplementation((keys, callback) => callback(savedState))
 
-    const { initFeatureToggles } = await import('../../extension/popup.js')
-    await initFeatureToggles()
+    await applyFeatureTogglesFromMockStorage()
 
     // Each checkbox should be set to false
     const { FEATURE_TOGGLES } = await import('../../extension/popup.js')
@@ -171,8 +170,7 @@ describe('Feature Toggle Defaults and Persistence', () => {
   test('all toggles default to checked when storage is empty', async () => {
     mockChrome.storage.local.get.mock.mockImplementation((keys, callback) => callback({}))
 
-    const { initFeatureToggles } = await import('../../extension/popup.js')
-    await initFeatureToggles()
+    await applyFeatureTogglesFromMockStorage()
 
     const { FEATURE_TOGGLES } = await import('../../extension/popup.js')
     for (const toggle of FEATURE_TOGGLES) {
@@ -184,8 +182,7 @@ describe('Feature Toggle Defaults and Persistence', () => {
   test('each toggle registers a change event handler', async () => {
     mockChrome.storage.local.get.mock.mockImplementation((keys, callback) => callback({}))
 
-    const { initFeatureToggles } = await import('../../extension/popup.js')
-    await initFeatureToggles()
+    await applyFeatureTogglesFromMockStorage()
 
     const { FEATURE_TOGGLES } = await import('../../extension/popup.js')
     for (const toggle of FEATURE_TOGGLES) {

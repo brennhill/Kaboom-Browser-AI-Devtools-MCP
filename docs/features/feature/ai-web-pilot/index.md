@@ -9,9 +9,12 @@ code_paths:
   - cmd/browser-agent/internal/toolguard/guards.go
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/internal/toolinteract/interact_evidence.go
+  - src/popup.ts
+  - src/popup/ai-web-pilot.ts
 test_paths:
   - cmd/browser-agent/tools_interact_gate_test.go
   - cmd/browser-agent/tools_coldstart_gate_test.go
+  - tests/extension/pilot-toggle.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -42,3 +45,5 @@ last_verified_date: 2026-03-05
 Pilot, extension-connectivity, tracked-tab, and CSP preconditions are owned by
 `internal/toolguard`. Tool adapters receive those canonical guard methods
 directly; package-main no longer carries a duplicate guard surface.
+The popup's batched storage read calls `applyAiWebPilotToggle` directly. There
+is no self-loading compatibility initializer or second storage-read path.

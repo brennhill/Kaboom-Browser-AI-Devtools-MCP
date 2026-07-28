@@ -7,6 +7,10 @@
 
 import { test, describe, mock, beforeEach } from 'node:test'
 import assert from 'node:assert'
+import {
+  applyFeatureTogglesFromMockStorage,
+  applyWebSocketModeFromMockStorage
+} from './helpers.js'
 
 // Mock Chrome APIs
 const mockChrome = {
@@ -75,6 +79,14 @@ const createMockElement = (id) => ({
 
 let mockDocument
 
+test('popup exposes only batched-read apply functions for feature settings', async () => {
+  const popup = await import('../../extension/popup.js')
+  assert.strictEqual(popup.initFeatureToggles, undefined)
+  assert.strictEqual(popup.initWebSocketModeSelector, undefined)
+  assert.strictEqual(typeof popup.applyFeatureToggles, 'function')
+  assert.strictEqual(typeof popup.applyWebSocketMode, 'function')
+})
+
 describe('WebSocket Toggle', () => {
   beforeEach(() => {
     mock.reset()
@@ -94,9 +106,7 @@ describe('WebSocket Toggle', () => {
       callback({ webSocketCaptureEnabled: true, webSocketCaptureMode: 'high' })
     })
 
-    const { initFeatureToggles } = await import('../../extension/popup.js')
-
-    await initFeatureToggles()
+    await applyFeatureTogglesFromMockStorage()
 
     const wsToggle = mockDocument.getElementById('toggle-websocket')
     assert.strictEqual(wsToggle.checked, true)
@@ -107,9 +117,7 @@ describe('WebSocket Toggle', () => {
       callback({}) // No saved value — defaults to ON
     })
 
-    const { initFeatureToggles } = await import('../../extension/popup.js')
-
-    await initFeatureToggles()
+    await applyFeatureTogglesFromMockStorage()
 
     const wsToggle = mockDocument.getElementById('toggle-websocket')
     assert.strictEqual(wsToggle.checked, true)
@@ -144,9 +152,7 @@ describe('WebSocket Toggle', () => {
       callback({}) // No saved value
     })
 
-    const { initWebSocketModeSelector } = await import('../../extension/popup.js')
-
-    await initWebSocketModeSelector()
+    await applyWebSocketModeFromMockStorage()
 
     const modeSelect = mockDocument.getElementById('ws-mode')
     assert.strictEqual(modeSelect.value, 'medium')
@@ -157,9 +163,7 @@ describe('WebSocket Toggle', () => {
       callback({ webSocketCaptureMode: 'high' })
     })
 
-    const { initWebSocketModeSelector } = await import('../../extension/popup.js')
-
-    await initWebSocketModeSelector()
+    await applyWebSocketModeFromMockStorage()
 
     const modeSelect = mockDocument.getElementById('ws-mode')
     assert.strictEqual(modeSelect.value, 'high')

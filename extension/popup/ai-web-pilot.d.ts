@@ -4,15 +4,14 @@
  * Docs: docs/features/feature/ai-web-pilot/index.md
  */
 /**
+ * @fileoverview AI Web Pilot Toggle Module
+ * Manages the AI Web Pilot feature toggle
+ */
+/**
  * Apply pre-loaded AI Web Pilot value to the toggle and wire up change handler.
  * Called from the orchestrator after a single batched storage read.
  */
 export declare function applyAiWebPilotToggle(value: unknown): void;
-/**
- * Initialize the AI Web Pilot toggle (self-contained async version for backward compat).
- * Read the current state from local storage via the storage facade.
- */
-export declare function initAiWebPilotToggle(): Promise<void>;
 /**
  * Handle AI Web Pilot toggle change.
  *

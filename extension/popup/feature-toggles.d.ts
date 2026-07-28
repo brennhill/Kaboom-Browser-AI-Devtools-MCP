@@ -24,8 +24,4 @@ export declare function handleFeatureToggle(storageKey: string, messageType: str
  * Called from the orchestrator after a single batched storage read.
  */
 export declare function applyFeatureToggles(result: Record<string, unknown>): void;
-/**
- * Initialize all feature toggles (self-contained async version for backward compat)
- */
-export declare function initFeatureToggles(): Promise<void>;
 //# sourceMappingURL=feature-toggles.d.ts.map

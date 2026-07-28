@@ -134,30 +134,24 @@ describe('AI Web Pilot Toggle Default State', () => {
   })
 
   test('toggle should default to true (enabled) when no saved value', async () => {
-    // Mock no saved value — defaults to ON via !== false pattern
-    mockChrome.storage.local.get.mock.mockImplementation((keys, callback) => {
-      callback({}) // Empty - no saved value, defaults to true
-    })
-
-    const { initAiWebPilotToggle } = await import('../../extension/popup.js')
-
-    await initAiWebPilotToggle()
+    const { applyAiWebPilotToggle } = await import('../../extension/popup.js')
+    applyAiWebPilotToggle(undefined)
 
     const toggle = mockDocument.getElementById('aiWebPilotEnabled')
     assert.strictEqual(toggle.checked, true, 'AI Web Pilot toggle should default to ON')
   })
 
-  test('toggle should load saved state from chrome.storage.local', async () => {
-    mockChrome.storage.local.get.mock.mockImplementation((keys, callback) => {
-      callback({ aiWebPilotEnabled: true })
-    })
-
-    const { initAiWebPilotToggle } = await import('../../extension/popup.js')
-
-    await initAiWebPilotToggle()
+  test('toggle should apply the value from the popup batched storage read', async () => {
+    const { applyAiWebPilotToggle } = await import('../../extension/popup.js')
+    applyAiWebPilotToggle(false)
 
     const toggle = mockDocument.getElementById('aiWebPilotEnabled')
-    assert.strictEqual(toggle.checked, true, 'Toggle should reflect saved state')
+    assert.strictEqual(toggle.checked, false, 'Toggle should reflect saved state')
+  })
+
+  test('popup should not export a compatibility initializer', async () => {
+    const popup = await import('../../extension/popup.js')
+    assert.strictEqual(popup.initAiWebPilotToggle, undefined)
   })
 })
 

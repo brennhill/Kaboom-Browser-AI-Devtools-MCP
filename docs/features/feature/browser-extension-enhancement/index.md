@@ -7,6 +7,8 @@ owners: []
 last_reviewed: 2026-07-28
 code_paths:
   - src/popup.ts
+  - src/popup/feature-toggles.ts
+  - src/popup/settings.ts
   - src/popup/shell/status-display.ts
   - src/popup/shell/logo-motion.ts
   - src/options.ts
@@ -16,6 +18,9 @@ code_paths:
   - extension/popup.css
   - extension/options.html
 test_paths:
+  - tests/extension/popup-features.test.js
+  - tests/extension/popup-toggles.test.js
+  - tests/extension/toggle-feature.test.js
   - tests/extension/logo-motion.test.js
   - tests/extension/popup-status.test.js
   - tests/extension/version-check-branding.test.js
@@ -53,6 +58,9 @@ last_verified_date: 2026-03-28
 ## Code and Tests
 
 - `src/popup.ts` initializes popup-side UI wiring, including the shared Kaboom flame icon state.
+- Popup feature toggles and WebSocket mode consume the orchestrator's single
+  batched storage read through `applyFeatureToggles` and `applyWebSocketMode`;
+  self-loading compatibility initializers are not exported.
 - `src/popup/shell/status-display.ts` renders `Connected` only for heartbeat-confirmed daemon status and shows offline recovery hints otherwise.
 - `src/popup/shell/logo-motion.ts` pins popup logo rendering to the shared flame asset without hover-only swaps.
 - `src/options.ts` uses shared daemon request/header helpers for health checks and active-codebase config sync.

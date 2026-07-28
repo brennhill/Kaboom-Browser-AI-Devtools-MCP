@@ -18,10 +18,6 @@ export declare function handleWebSocketModeChange(mode: WebSocketCaptureMode): v
  */
 export declare function applyWebSocketMode(value: unknown): void;
 /**
- * Initialize the WebSocket mode selector (self-contained async version for backward compat)
- */
-export declare function initWebSocketModeSelector(): Promise<void>;
-/**
  * Reset clear confirmation state (exported for testing)
  */
 export declare function resetClearConfirm(): void;

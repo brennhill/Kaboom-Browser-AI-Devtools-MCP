@@ -27,12 +27,11 @@ import { updateConnectionStatus } from './popup/shell/status-display.js'
 import { setupRecordingUI } from './popup/recording/recording.js'
 import { setupDrawModeButton } from './popup/draw-mode.js'
 import { setupActionRecordingUI } from './popup/recording/action-recording.js'
-import { FEATURE_TOGGLES as TOGGLE_DEFS, initFeatureToggles, applyFeatureToggles } from './popup/feature-toggles.js'
+import { FEATURE_TOGGLES as TOGGLE_DEFS, applyFeatureToggles } from './popup/feature-toggles.js'
 import { initTrackPageButton } from './popup/tabs/tab-tracking.js'
-import { initAiWebPilotToggle, applyAiWebPilotToggle } from './popup/ai-web-pilot.js'
+import { applyAiWebPilotToggle } from './popup/ai-web-pilot.js'
 import { initPopupLogoMotion } from './popup/shell/logo-motion.js'
 import {
-  initWebSocketModeSelector,
   applyWebSocketMode,
   handleWebSocketModeChange,
   handleClearLogs,
@@ -42,12 +41,12 @@ import {
 // Re-export for testing
 export { resetClearConfirm, handleClearLogs }
 export { updateConnectionStatus }
-export { FEATURE_TOGGLES, initFeatureToggles, applyFeatureToggles } from './popup/feature-toggles.js'
+export { FEATURE_TOGGLES, applyFeatureToggles } from './popup/feature-toggles.js'
 export { handleFeatureToggle } from './popup/feature-toggles.js'
-export { initAiWebPilotToggle, handleAiWebPilotToggle, applyAiWebPilotToggle } from './popup/ai-web-pilot.js'
+export { handleAiWebPilotToggle, applyAiWebPilotToggle } from './popup/ai-web-pilot.js'
 export { initTrackPageButton, handleTrackPageClick } from './popup/tabs/tab-tracking.js'
 export { handleWebSocketModeChange } from './popup/settings.js'
-export { initWebSocketModeSelector, applyWebSocketMode } from './popup/settings.js'
+export { applyWebSocketMode } from './popup/settings.js'
 export { isInternalUrl } from './popup/shell/ui-utils.js'
 
 // Apply theme early to prevent flash of unstyled content (moved from inline script for CSP compliance).
