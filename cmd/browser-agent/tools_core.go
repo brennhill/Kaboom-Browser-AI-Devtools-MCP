@@ -717,8 +717,11 @@ func buildInteractDeps(h *ToolHandler) *toolinteract.Deps {
 			return sessionStoreGuard(h.sessionStoreImpl, req)
 		},
 		DiagnosticHint: h.Guards.DiagnosticHint,
-		GetRedactionEngine: func() toolinteract.RedactionEngine {
-			return h.redactionEngine
+		Redact: func(data map[string]any) map[string]any {
+			if h.redactionEngine == nil {
+				return data
+			}
+			return h.redactionEngine.RedactMapValues(data)
 		},
 		GetCommandResult: getCommandResult,
 		ReplayMu:         &replayMu,

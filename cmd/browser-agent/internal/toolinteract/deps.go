@@ -1,5 +1,5 @@
-// deps.go — Dependency injection and MCP boundary aliases for toolinteract.
-// Purpose: Declares external seams and package-local protocol helpers.
+// deps.go — Dependency injection boundaries for toolinteract.
+// Purpose: Declares external seams and package-local helpers.
 // Why: Decouples handlers from the main package without circular imports.
 
 package toolinteract
@@ -106,8 +106,8 @@ type Deps struct {
 	// DiagnosticHint returns a structured-error option carrying diagnostic context.
 	DiagnosticHint func() func(*mcp.StructuredError)
 
-	// GetRedactionEngine returns the redaction engine (may be nil).
-	GetRedactionEngine func() RedactionEngine
+	// Redact scrubs sensitive values from a state map.
+	Redact func(map[string]any) map[string]any
 
 	// GetCommandResult retrieves a command result by correlation ID.
 	GetCommandResult func(correlationID string) (*queries.CommandResult, bool)
@@ -117,11 +117,6 @@ type Deps struct {
 	// ReplayMu is the shared mutex for batch/replay serialization.
 	// Points to the same mutex used by sequence replay in the main package.
 	ReplayMu *sync.Mutex
-}
-
-// RedactionEngine mirrors the main package's RedactionEngine interface.
-type RedactionEngine interface {
-	RedactMapValues(m map[string]any) map[string]any
 }
 
 // NewUploadInteractHandler creates an upload handler with narrowed dependencies.
@@ -170,14 +165,7 @@ func NewStateInteractHandler(deps *Deps, store *persistence.SessionStore) *inter
 			return deps.RequireSessionStore(req)
 		},
 		DiagnosticHint: func() func(*mcp.StructuredError) { return deps.DiagnosticHint() },
-		// interactstate asks for a total Redact; the nil-engine case is the host's
-		// to answer, so the "no engine configured" branch stays here.
-		Redact: func(m map[string]any) map[string]any {
-			if re := deps.GetRedactionEngine(); re != nil {
-				return re.RedactMapValues(m)
-			}
-			return m
-		},
+		Redact:         deps.Redact,
 	}, store)
 }
 

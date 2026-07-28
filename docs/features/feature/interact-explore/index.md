@@ -223,6 +223,9 @@ Interact handlers and their dependency seams use `internal/mcp` and
 `internal/toolresp` directly. Package-local protocol type, error-code, and
 structured-error option aliases are prohibited so the canonical contract stays
 visible at every call site.
+State redaction is injected as the single map transformation the state owner
+needs; `toolinteract` does not mirror or expose a host redaction-engine
+interface.
 
 List-interactive response indexing, metadata annotation, and truncation share a
 single JSON-content decoder. Tests cover prefixed payloads, malformed blocks,

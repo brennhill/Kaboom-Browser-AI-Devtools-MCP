@@ -45,6 +45,8 @@ func TestDepsDoesNotReexportMCPProtocolSurface(t *testing.T) {
 		"func withRetryAfterMs(",
 		"func withFinal(",
 		"func withRecoveryToolCall(",
+		"type RedactionEngine interface",
+		"GetRedactionEngine func()",
 	} {
 		if strings.Contains(string(source), forbidden) {
 			t.Errorf("deps.go retains MCP compatibility facade %q", forbidden)
@@ -78,7 +80,6 @@ type fakeState struct {
 	pageInfo   func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
 	analyzeFn  func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
 	sarifFn    func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
-	redaction  RedactionEngine
 	listenPort int
 	evidenceFn func(clientID string) EvidenceShot
 }
@@ -233,8 +234,8 @@ func (fs *fakeState) deps() *Deps {
 			}
 			return mcp.JSONRPCResponse{}, false
 		},
-		DiagnosticHint:     func() func(*mcp.StructuredError) { return mcp.WithHint("diagnostic hint") },
-		GetRedactionEngine: func() RedactionEngine { return fs.redaction },
+		DiagnosticHint: func() func(*mcp.StructuredError) { return mcp.WithHint("diagnostic hint") },
+		Redact:         func(data map[string]any) map[string]any { return data },
 		GetCommandResult: func(correlationID string) (*queries.CommandResult, bool) {
 			return fs.cap.Queries().GetCommandResult(correlationID)
 		},
