@@ -71,11 +71,9 @@ function extractWhatEnum(schemaSource) {
 function extractInteractActions(schemaSource) {
   const match = schemaSource.match(/var\s+actionSpecs\s*=\s*\[\]ActionSpec\{([\s\S]*?)\n\}/m)
   if (!match) throw new Error('Could not find interact specs variable')
-  const aliases = new Set(['state_save', 'state_load', 'state_list', 'state_delete'])
   return dedupe(
     [...match[1].matchAll(/Name:\s*"([^"]+)"/g)]
       .map((item) => item[1])
-      .filter((name) => !aliases.has(name))
   )
 }
 

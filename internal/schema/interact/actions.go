@@ -9,12 +9,11 @@ type ActionSpec struct {
 	Hint     string
 	Required []string
 	Optional []string
-	IsAlias  bool
 }
 
 // actionSpecs is the canonical interact action registry.
 // Fields are consumed by:
-// - interact schema enum (`what`/`action`)
+// - interact schema enum (`what`)
 // - describe_capabilities interact mode specs
 var actionSpecs = []ActionSpec{
 	{Name: "highlight", Hint: "Visually highlight an element with a colored overlay", Optional: []string{"selector", "element_id", "index", "nth", "scope_selector", "frame", "duration_ms"}},
@@ -83,9 +82,6 @@ var actionEnum = actionNames(actionSpecs)
 func actionNames(specs []ActionSpec) []string {
 	out := make([]string, 0, len(specs))
 	for _, spec := range specs {
-		if spec.IsAlias {
-			continue
-		}
 		out = append(out, spec.Name)
 	}
 	return out
@@ -100,7 +96,6 @@ func ActionSpecs() []ActionSpec {
 			Hint:     spec.Hint,
 			Required: append([]string(nil), spec.Required...),
 			Optional: append([]string(nil), spec.Optional...),
-			IsAlias:  spec.IsAlias,
 		})
 	}
 	return out

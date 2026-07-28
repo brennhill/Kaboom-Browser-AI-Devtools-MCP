@@ -1,6 +1,17 @@
 package interact
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
+
+func TestActionSpecHasNoCompatibilityMetadata(t *testing.T) {
+	t.Parallel()
+
+	if _, exists := reflect.TypeOf(ActionSpec{}).FieldByName("IsAlias"); exists {
+		t.Fatal("ActionSpec retains compatibility-only IsAlias metadata")
+	}
+}
 
 func TestInteractToolSchema_RequiresCanonicalWhat(t *testing.T) {
 	t.Parallel()
@@ -91,19 +102,11 @@ func TestInteractActionSpecs_EnumParity(t *testing.T) {
 		t.Fatal("ActionSpecs should be non-empty")
 	}
 
-	// actionEnum excludes IsAlias specs; build the non-alias subset for comparison.
-	nonAlias := make([]ActionSpec, 0, len(specs))
-	for _, s := range specs {
-		if !s.IsAlias {
-			nonAlias = append(nonAlias, s)
-		}
+	if len(actionEnum) != len(specs) {
+		t.Fatalf("actionEnum/spec count mismatch: actions=%d specs=%d", len(actionEnum), len(specs))
 	}
 
-	if len(actionEnum) != len(nonAlias) {
-		t.Fatalf("actionEnum/non-alias spec count mismatch: actions=%d specs=%d", len(actionEnum), len(nonAlias))
-	}
-
-	for i, spec := range nonAlias {
+	for i, spec := range specs {
 		if actionEnum[i] != spec.Name {
 			t.Fatalf("interact action order mismatch at %d: enum=%q spec=%q", i, actionEnum[i], spec.Name)
 		}

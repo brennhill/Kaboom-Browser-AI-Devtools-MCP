@@ -5,8 +5,6 @@ import path from 'node:path'
 
 const repoRoot = process.cwd()
 
-const INTERACT_ALIAS_ACTIONS = new Set(['state_save', 'state_load', 'state_list', 'state_delete'])
-
 const TOOL_SPECS = [
   {
     tool: 'observe',
@@ -37,8 +35,7 @@ const TOOL_SPECS = [
     schemaPath: 'internal/schema/interact/actions.go',
     docPath: 'gokaboom.dev/src/content/docs/reference/interact.md',
     enumType: 'interactSpecs',
-    specsVar: 'actionSpecs',
-    ignore: INTERACT_ALIAS_ACTIONS
+    specsVar: 'actionSpecs'
   }
 ]
 

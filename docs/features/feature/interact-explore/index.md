@@ -114,6 +114,8 @@ consumers import state, command, snapshot, and query APIs from their focused
 owner modules; no compatibility facade is retained.
 Analyze and generate dispatchers are constructed before interact dependencies
 capture their cross-tool entry points, so workflows never retain nil dispatchers.
+The action registry contains canonical actions only; schemas, capability metadata,
+runtime parity, and reference generators consume it directly without alias filters.
 Page-world interaction tests import action, state, serialization, and message
 handler modules directly; the injected bundle is not an API surface.
 Screenshot capture belongs only to `observe({what:"screenshot"})`; the former

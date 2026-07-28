@@ -7,8 +7,6 @@ const repoRoot = process.cwd()
 const version = (await fs.readFile(path.join(repoRoot, 'VERSION'), 'utf8')).trim()
 const today = new Date().toISOString().slice(0, 10)
 
-const INTERACT_ALIAS_ACTIONS = new Set(['state_save', 'state_load', 'state_list', 'state_delete'])
-
 function dedupe(values) {
   return [...new Set(values)]
 }
@@ -29,7 +27,6 @@ function extractInteractActions(schemaSource) {
   return dedupe(
     [...match[1].matchAll(/Name:\s*"([^"]+)"/g)]
       .map((entry) => entry[1])
-      .filter((name) => !INTERACT_ALIAS_ACTIONS.has(name))
   )
 }
 

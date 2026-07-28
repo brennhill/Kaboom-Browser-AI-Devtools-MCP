@@ -188,9 +188,6 @@ func TestInteractModeSpecs_DerivedFromSchemaRegistry(t *testing.T) {
 	}
 
 	for _, spec := range actionSpecs {
-		if spec.IsAlias {
-			continue // aliases are excluded from mode specs and schema enum
-		}
 		modeSpec, ok := interactModeSpecs[spec.Name]
 		if !ok {
 			t.Fatalf("interact mode spec missing action %q", spec.Name)
