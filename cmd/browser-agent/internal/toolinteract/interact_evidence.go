@@ -35,7 +35,8 @@ const (
 	evidenceMaxCapturesEnv = "KABOOM_EVIDENCE_MAX_CAPTURES_PER_COMMAND"
 )
 
-type evidenceShot struct {
+// EvidenceShot holds a single evidence screenshot result.
+type EvidenceShot struct {
 	Path     string
 	Filename string
 	Error    string
@@ -50,14 +51,12 @@ type commandEvidenceState struct {
 	clientID      string
 	skipped       string
 
-	before evidenceShot
-	after  evidenceShot
+	before EvidenceShot
+	after  EvidenceShot
 
 	finalized bool
 	cached    map[string]any
 }
-
-// evidenceCaptureFn is declared in interact_evidence_capture.go
 
 func ParseEvidenceMode(args json.RawMessage) (evidenceMode, error) {
 	var params struct {
@@ -145,12 +144,9 @@ const (
 	evidenceRetryDelay = 150 * time.Millisecond
 )
 
-// EvidenceShot holds a single evidence screenshot result.
-type EvidenceShot = evidenceShot
-
 // EvidenceCaptureFn is the pluggable evidence capture function.
 // Tests can replace it to avoid real screenshot I/O.
-var evidenceCaptureFn func(deps *Deps, clientID string) evidenceShot
+var evidenceCaptureFn func(deps *Deps, clientID string) EvidenceShot
 
 // CaptureEvidence captures one screenshot through the canonical query lifecycle.
 // It lives with evidence state because its error vocabulary is part of that contract.
@@ -195,19 +191,19 @@ func CaptureEvidence(store *capture.Capture, clientID string) EvidenceShot {
 	return EvidenceShot{Path: path, Filename: filename}
 }
 
-func (h *InteractActionHandler) captureEvidenceWithRetry(clientID string) evidenceShot {
+func (h *InteractActionHandler) captureEvidenceWithRetry(clientID string) EvidenceShot {
 	retries := evidenceRetryCount()
 	attempts := retries + 1
-	last := evidenceShot{Error: "evidence_capture_not_attempted"}
+	last := EvidenceShot{Error: "evidence_capture_not_attempted"}
 
 	captureFn := evidenceCaptureFn
 	if captureFn == nil && h.deps.DefaultEvidenceCapture != nil {
-		captureFn = func(_ *Deps, cid string) evidenceShot {
+		captureFn = func(_ *Deps, cid string) EvidenceShot {
 			return h.deps.DefaultEvidenceCapture(cid)
 		}
 	}
 	if captureFn == nil {
-		return evidenceShot{Error: "evidence_capture_not_configured"}
+		return EvidenceShot{Error: "evidence_capture_not_configured"}
 	}
 
 	for i := 0; i < attempts; i++ {
@@ -268,7 +264,7 @@ func (h *InteractActionHandler) loadEvidenceAttachContext(correlationID string) 
 	return nil, state.shouldCapture && state.maxCaptures > 1, state.clientID, false
 }
 
-func (h *InteractActionHandler) finalizeEvidencePayload(correlationID string, needsAfter bool, after evidenceShot) (map[string]any, bool) {
+func (h *InteractActionHandler) finalizeEvidencePayload(correlationID string, needsAfter bool, after EvidenceShot) (map[string]any, bool) {
 	h.evidenceMu.Lock()
 	defer h.evidenceMu.Unlock()
 
@@ -416,7 +412,7 @@ func (h *InteractActionHandler) AttachEvidencePayload(correlationID string, resp
 		return
 	}
 
-	var after evidenceShot
+	var after EvidenceShot
 	if needsAfter {
 		after = h.captureEvidenceWithRetry(clientID)
 	}

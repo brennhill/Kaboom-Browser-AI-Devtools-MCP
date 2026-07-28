@@ -92,3 +92,19 @@ func TestPackagesDoNotReexportCanonicalLogEntry(t *testing.T) {
 		}
 	}
 }
+
+func TestEvidenceCaptureHasNoCompatibilityShim(t *testing.T) {
+	shimPath := filepath.Join(projectRoot(), "cmd", "browser-agent", "interact_evidence_test_aliases_test.go")
+	if _, err := os.Stat(shimPath); !os.IsNotExist(err) {
+		t.Fatalf("evidence compatibility shim still exists: %s", shimPath)
+	}
+
+	sourcePath := filepath.Join(projectRoot(), "cmd", "browser-agent", "internal", "toolinteract", "interact_evidence.go")
+	source, err := os.ReadFile(sourcePath)
+	if err != nil {
+		t.Fatalf("read evidence implementation: %v", err)
+	}
+	if strings.Contains(string(source), "type EvidenceShot =") {
+		t.Fatal("evidence implementation still aliases its public type")
+	}
+}

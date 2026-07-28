@@ -129,6 +129,10 @@ Workflow types and response classification come directly from
 `internal/tools/interact/workflow.go`; browser-agent layers do not maintain
 aliases or pass-through response helpers.
 
+Evidence capture uses the concrete
+`toolinteract.EvidenceShot` contract directly in runtime wiring and tests; the
+former private/exported type alias and root-package test shim have been deleted.
+
 Interact handlers and their dependency seams use `internal/mcp` and
 `internal/toolresp` directly. Package-local protocol type, error-code, and
 structured-error option aliases are prohibited so the canonical contract stays

@@ -9,33 +9,34 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
+
+func setEvidenceCaptureForTest(t *testing.T, capture func(*toolinteract.Deps, string) toolinteract.EvidenceShot) {
+	t.Helper()
+	toolinteract.SetEvidenceCaptureFn(capture)
+	t.Cleanup(toolinteract.ResetEvidenceCaptureFn)
+}
 
 func TestCommandResult_EvidenceAlwaysIncludesBeforeAfterPaths(t *testing.T) {
 	env := newInteractTestEnv(t)
 	env.capture.SetPilotEnabled(true)
 
 	calls := 0
-	shots := []evidenceShot{
+	shots := []toolinteract.EvidenceShot{
 		{Path: "/tmp/evidence-before.png"},
 		{Path: "/tmp/evidence-after.png"},
 	}
 	idx := 0
-	orig := evidenceCaptureFn
-	evidenceCaptureFn = func(_ *ToolHandler, _ string) evidenceShot {
+	setEvidenceCaptureForTest(t, func(_ *toolinteract.Deps, _ string) toolinteract.EvidenceShot {
 		calls++
 		if idx >= len(shots) {
-			return evidenceShot{Error: "unexpected_extra_capture"}
+			return toolinteract.EvidenceShot{Error: "unexpected_extra_capture"}
 		}
 		shot := shots[idx]
 		idx++
 		return shot
-	}
-	syncEvidenceCaptureFn()
-	t.Cleanup(func() {
-		evidenceCaptureFn = orig
-		syncEvidenceCaptureFn()
 	})
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","background":true,"evidence":"always"}`)
@@ -83,15 +84,9 @@ func TestCommandResult_EvidenceOnMutationSkipsReadOnlyAction(t *testing.T) {
 	env.capture.SetPilotEnabled(true)
 
 	calls := 0
-	orig := evidenceCaptureFn
-	evidenceCaptureFn = func(_ *ToolHandler, _ string) evidenceShot {
+	setEvidenceCaptureForTest(t, func(_ *toolinteract.Deps, _ string) toolinteract.EvidenceShot {
 		calls++
-		return evidenceShot{Path: "/tmp/should-not-capture.png"}
-	}
-	syncEvidenceCaptureFn()
-	t.Cleanup(func() {
-		evidenceCaptureFn = orig
-		syncEvidenceCaptureFn()
+		return toolinteract.EvidenceShot{Path: "/tmp/should-not-capture.png"}
 	})
 
 	result, ok := env.callInteract(t, `{"what":"get_text","selector":"h1","background":true,"evidence":"on_mutation"}`)
@@ -140,26 +135,20 @@ func TestCommandResult_EvidencePartialWhenAfterCaptureFails(t *testing.T) {
 	env.capture.SetPilotEnabled(true)
 
 	calls := 0
-	shots := []evidenceShot{
+	shots := []toolinteract.EvidenceShot{
 		{Path: "/tmp/evidence-before.png"},
 		{Error: "screenshot_timeout"},
 		{Error: "screenshot_timeout"},
 	}
 	idx := 0
-	orig := evidenceCaptureFn
-	evidenceCaptureFn = func(_ *ToolHandler, _ string) evidenceShot {
+	setEvidenceCaptureForTest(t, func(_ *toolinteract.Deps, _ string) toolinteract.EvidenceShot {
 		calls++
 		if idx >= len(shots) {
-			return evidenceShot{Error: "unexpected_extra_capture"}
+			return toolinteract.EvidenceShot{Error: "unexpected_extra_capture"}
 		}
 		shot := shots[idx]
 		idx++
 		return shot
-	}
-	syncEvidenceCaptureFn()
-	t.Cleanup(func() {
-		evidenceCaptureFn = orig
-		syncEvidenceCaptureFn()
 	})
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","background":true,"evidence":"always"}`)
