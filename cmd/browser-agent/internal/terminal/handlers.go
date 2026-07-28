@@ -40,6 +40,16 @@ func defaultShell() string {
 	return "/bin/sh"
 }
 
+// resolveTerminalCommand starts the implicit interactive shell as a login
+// shell so daemons launched with a minimal service environment load the user's
+// profile (including PATH). Explicit commands retain their exact argument list.
+func resolveTerminalCommand(cmd string, args []string) (string, []string) {
+	if cmd != "" {
+		return cmd, args
+	}
+	return defaultShell(), []string{"-l"}
+}
+
 // PingInterval is how often the server sends WebSocket ping frames.
 // Browser WebSocket API auto-replies with pong — no client code needed.
 const PingInterval = 30 * time.Second
@@ -248,10 +258,7 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 		return
 	}
 
-	// Default to shell if no command specified.
-	if req.Cmd == "" {
-		req.Cmd = defaultShell()
-	}
+	req.Cmd, req.Args = resolveTerminalCommand(req.Cmd, req.Args)
 
 	// CWD priority: request dir > active_codebase (set via MCP/extension) > auto-detect
 	activeCodebase := ""

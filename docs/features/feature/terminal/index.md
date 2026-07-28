@@ -121,6 +121,7 @@ last_verified_date: 2026-03-28
 - Header minimize control hides the side panel while preserving the current PTY session
 - The current side panel rollout is terminal-only; xterm fills the available panel height
 - Terminal startup failure guidance now consistently points users at the Kaboom daemon command: `npx kaboom-agentic-browser`
+- Implicit terminal shells start in login mode so launchd-managed daemons load the user's profile and command `PATH`; explicitly requested commands retain their exact arguments.
 - Start failures are never silently dropped: `startSession` classifies each failure (`unreachable` transport / `unavailable` reachable-500 / `sandbox`), and the side panel surfaces `unreachable`/`sandbox` even with no panel body mounted (via toast at daemon-down-at-open), while `unavailable` falls through to the recoverable no-session state. The daemon also logs state-mutating failures (`terminal_session_start_failed`, `terminal_session_stop_failed`) to `~/.kaboom/logs/kaboom.jsonl`.
 - Any legacy or fallback terminal shell that still mounts from content-script code now uses `Kaboom Terminal` so mixed-brand terminal chrome does not reappear.
 - Annotation auto-send now uses a typing-aware write queue: if the user is active in terminal, writes wait until ~1.5s idle

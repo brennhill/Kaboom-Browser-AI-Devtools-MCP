@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"testing"
 
@@ -194,6 +195,32 @@ func TestDefaultShell_EmptySHELL(t *testing.T) {
 	got := defaultShell()
 	if got == "" {
 		t.Fatal("defaultShell() returned empty string")
+	}
+}
+
+func TestResolveTerminalCommand_DefaultShellUsesLoginProfile(t *testing.T) {
+	t.Setenv("SHELL", "/bin/zsh")
+
+	cmd, args := resolveTerminalCommand("", nil)
+
+	if cmd != "/bin/zsh" {
+		t.Fatalf("command = %q, want /bin/zsh", cmd)
+	}
+	if !slices.Equal(args, []string{"-l"}) {
+		t.Fatalf("args = %#v, want login-shell args", args)
+	}
+}
+
+func TestResolveTerminalCommand_ExplicitCommandAndArgsRemainUntouched(t *testing.T) {
+	input := []string{"-c", "printf ok"}
+
+	cmd, args := resolveTerminalCommand("/bin/sh", input)
+
+	if cmd != "/bin/sh" {
+		t.Fatalf("command = %q, want /bin/sh", cmd)
+	}
+	if !slices.Equal(args, input) {
+		t.Fatalf("args = %#v, want %#v", args, input)
 	}
 }
 
