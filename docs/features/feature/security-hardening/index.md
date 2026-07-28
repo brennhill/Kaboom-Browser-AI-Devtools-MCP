@@ -62,6 +62,9 @@ test_paths:
   - internal/security/scan/coverage_part2_test.go
   - internal/security/scan/network_wiring_test.go
   - internal/security/csp/csp_test.go
+  - internal/security/csp/csp_store_test.go
+  - internal/security/csp/csp_tooling_test.go
+  - internal/security/csp/csp_helpers_test.go
   - internal/security/csp/boundary_test.go
   - internal/security/csp/coverage_test.go
   - internal/security/sri/sri_test.go
@@ -130,6 +133,10 @@ imports `httpsec`.
 - `internal/security/policy/audit.go` — session-scoped in-memory audit trail for security config actions/attempts.
 - `internal/security/policy/policy_test.go` — manual-only policy and audit-event behavior.
 - `internal/security/policy/boundary_test.go` — LLM trust boundary: MCP mode detection and blocked config mutations.
+- `internal/security/csp/csp_test.go` — generated CSP policy and directive behavior.
+- `internal/security/csp/csp_store_test.go` — origin observation accumulation and timestamps.
+- `internal/security/csp/csp_tooling_test.go` — CSP tool parameter handling and dispatch.
+- `internal/security/csp/csp_helpers_test.go` — resource classification and URL extraction.
 - `internal/security/csp/boundary_test.go` — session-only whitelist overrides are applied, warned about, audited, and never persisted.
 - `internal/security/diff/diff_test.go` — regression/improvement diff coverage with shared snapshot/compare test helpers for consistent setup.
 - `internal/security/scan/scan_test.go` — scanner orchestration, filtering, serialization, and fuzz safety.
