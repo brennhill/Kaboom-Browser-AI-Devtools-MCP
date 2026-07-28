@@ -60,6 +60,8 @@ test_paths:
   - cmd/browser-agent/tools_configure_network_recording_handler_test.go
   - cmd/browser-agent/internal/toolconfigure/netrecord/netrecord_test.go
   - internal/capture/sync_test.go
+  - internal/capture/sync_command_lifecycle_test.go
+  - internal/capture/sync_waterfall_test.go
   - internal/capture/websocket_test.go
   - internal/capture/websocket_status_test.go
   - internal/capture/websocket_handlers_test.go
@@ -205,6 +207,8 @@ those contracts.
 ## Code and Tests
 
 - `internal/capture/sync_test_helpers_test.go` centralizes `/sync` request marshaling, transport dispatch, and response decoding helpers.
-- `internal/capture/sync_test.go` now reuses those helpers across heartbeat, adaptive polling, and command lifecycle tests.
+- `internal/capture/sync_test.go` reuses those helpers for request ingestion, heartbeats, and connection state.
+- `internal/capture/sync_command_lifecycle_test.go` owns adaptive polling and command-result lifecycle coverage.
+- `internal/capture/sync_waterfall_test.go` owns waterfall query and result delivery coverage.
 - Additional capture contract tests (`settings_path_test`, `coverage_gaps_part2_test`, `api_contract_test`) now reuse shared helper assertions to keep endpoint/status checks consistent.
 - `src/background/sync/server.ts` now treats popup/background `connected` as daemon-confirmed heartbeat state instead of raw `/health` reachability.
