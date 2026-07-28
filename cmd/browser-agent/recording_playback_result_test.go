@@ -1,42 +1,26 @@
 // Purpose: Tests for recording playback result formatting.
-// Docs: docs/features/feature/mcp-persistent-server/index.md
+// Docs: docs/features/feature/playback-engine/index.md
 
-// recording_playback_result_test.go — Tests for buildPlaybackResult method.
+// recording_playback_result_test.go — Tests for canonical playback result formatting.
 package main
 
 import (
 	"encoding/json"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolrecording"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/playback"
 )
 
 // ============================================
-// buildPlaybackResult
+// BuildPlaybackResult
 // ============================================
-
-func newPlaybackTestEnv(t *testing.T) *ToolHandler {
-	t.Helper()
-	logFile := filepath.Join(t.TempDir(), "test-playback.jsonl")
-	server, err := NewServer(logFile, 100)
-	if err != nil {
-		t.Fatalf("NewServer failed: %v", err)
-	}
-	t.Cleanup(func() { server.Close() })
-	cap := capture.NewCapture()
-	mcpHandler := NewToolHandler(server, cap)
-	return mcpHandler.toolHandler.(*ToolHandler)
-}
 
 func TestBuildPlaybackResult_AllActionsSucceeded(t *testing.T) {
 	t.Parallel()
-	handler := newPlaybackTestEnv(t)
-
 	session := &playback.Session{
 		RecordingID:      "rec-001",
 		StartedAt:        time.Now().Add(-500 * time.Millisecond),
@@ -47,7 +31,7 @@ func TestBuildPlaybackResult_AllActionsSucceeded(t *testing.T) {
 	}
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`42`)}
-	resp := handler.buildPlaybackResult(req, "rec-001", session)
+	resp := toolrecording.BuildPlaybackResult(req, "rec-001", session)
 
 	if resp.JSONRPC != "2.0" {
 		t.Errorf("expected jsonrpc '2.0', got %q", resp.JSONRPC)
@@ -94,8 +78,6 @@ func TestBuildPlaybackResult_AllActionsSucceeded(t *testing.T) {
 
 func TestBuildPlaybackResult_PartialFailure(t *testing.T) {
 	t.Parallel()
-	handler := newPlaybackTestEnv(t)
-
 	session := &playback.Session{
 		RecordingID:     "rec-002",
 		StartedAt:       time.Now().Add(-1 * time.Second),
@@ -109,7 +91,7 @@ func TestBuildPlaybackResult_PartialFailure(t *testing.T) {
 	}
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	resp := handler.buildPlaybackResult(req, "rec-002", session)
+	resp := toolrecording.BuildPlaybackResult(req, "rec-002", session)
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -142,8 +124,6 @@ func TestBuildPlaybackResult_PartialFailure(t *testing.T) {
 
 func TestBuildPlaybackResult_ZeroActions(t *testing.T) {
 	t.Parallel()
-	handler := newPlaybackTestEnv(t)
-
 	session := &playback.Session{
 		RecordingID:      "rec-003",
 		StartedAt:        time.Now(),
@@ -154,7 +134,7 @@ func TestBuildPlaybackResult_ZeroActions(t *testing.T) {
 	}
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	resp := handler.buildPlaybackResult(req, "rec-003", session)
+	resp := toolrecording.BuildPlaybackResult(req, "rec-003", session)
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -181,8 +161,6 @@ func TestBuildPlaybackResult_ZeroActions(t *testing.T) {
 
 func TestBuildPlaybackResult_DurationIsPositive(t *testing.T) {
 	t.Parallel()
-	handler := newPlaybackTestEnv(t)
-
 	session := &playback.Session{
 		RecordingID:      "rec-004",
 		StartedAt:        time.Now().Add(-100 * time.Millisecond),
@@ -193,7 +171,7 @@ func TestBuildPlaybackResult_DurationIsPositive(t *testing.T) {
 	}
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	resp := handler.buildPlaybackResult(req, "rec-004", session)
+	resp := toolrecording.BuildPlaybackResult(req, "rec-004", session)
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -218,8 +196,6 @@ func TestBuildPlaybackResult_DurationIsPositive(t *testing.T) {
 
 func TestBuildPlaybackResult_SnakeCaseFields(t *testing.T) {
 	t.Parallel()
-	handler := newPlaybackTestEnv(t)
-
 	session := &playback.Session{
 		RecordingID:      "rec-005",
 		StartedAt:        time.Now(),
@@ -230,7 +206,7 @@ func TestBuildPlaybackResult_SnakeCaseFields(t *testing.T) {
 	}
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	resp := handler.buildPlaybackResult(req, "rec-005", session)
+	resp := toolrecording.BuildPlaybackResult(req, "rec-005", session)
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -257,8 +233,6 @@ func TestBuildPlaybackResult_SnakeCaseFields(t *testing.T) {
 
 func TestBuildPlaybackResult_MessageFormat(t *testing.T) {
 	t.Parallel()
-	handler := newPlaybackTestEnv(t)
-
 	session := &playback.Session{
 		RecordingID:      "rec-006",
 		StartedAt:        time.Now(),
@@ -269,7 +243,7 @@ func TestBuildPlaybackResult_MessageFormat(t *testing.T) {
 	}
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	resp := handler.buildPlaybackResult(req, "rec-006", session)
+	resp := toolrecording.BuildPlaybackResult(req, "rec-006", session)
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {

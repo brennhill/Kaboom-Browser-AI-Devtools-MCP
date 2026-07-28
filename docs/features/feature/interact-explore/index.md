@@ -148,6 +148,8 @@ All other action dispatch, async enrichment, configuration, and tests likewise
 use the composed `interactActionHandler` directly. Both the root unchanged-return
 accessor and the test-only shim that mirrored it have been deleted and are
 structurally prohibited.
+Composition also supplies evidence and query callbacks directly; dead or
+one-line ToolHandler forwarding methods are structurally prohibited.
 Public state actions likewise use only `save_state`, `load_state`,
 `list_states`, and `delete_state`; duplicate `state_*` entry points are not
 registered. The similarly named extension pending-query types remain internal.

@@ -44,7 +44,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/playback"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/redaction"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
@@ -370,14 +369,6 @@ func (h *ToolHandler) maybeInjectSummary(args json.RawMessage) json.RawMessage {
 	return h.summaryPreference().Inject(args)
 }
 
-func (h *ToolHandler) armEvidenceForCommand(correlationID, action string, args json.RawMessage, clientID string) {
-	h.interactActionHandler.ArmEvidenceForCommand(correlationID, action, args, clientID)
-}
-
-func (h *ToolHandler) getCommandResult(correlationID string) (*queries.CommandResult, bool) {
-	return h.capture.Queries().GetCommandResult(correlationID)
-}
-
 func (h *ToolHandler) IsExtensionConnected() bool {
 	return h.capture.Extension().IsExtensionConnected()
 }
@@ -438,7 +429,9 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	if captureStore != nil {
 		recordingStore = captureStore.Recordings()
 	}
-	handler.recordingHandler = toolrecording.NewHandler(recordingStore, handler.appendServerLog)
+	handler.recordingHandler = toolrecording.NewHandler(recordingStore, func(entry types.LogEntry) {
+		handler.server.logs.AddEntries([]types.LogEntry{entry})
+	})
 	handler.usageTracker = telemetry.NewUsageTracker()
 	if captureStore != nil {
 		tracker := handler.usageTracker
@@ -697,20 +690,16 @@ func (h *ToolHandler) screenrecDeps() screenrec.Deps {
 	if h.Guards == nil {
 		h.Guards = toolguard.New(h.capture, h.shutdownCtx, defaultExtensionReadinessTimeout())
 	}
+	var getCommandResult func(string) (*queries.CommandResult, bool)
+	if h.capture != nil {
+		getCommandResult = h.capture.Queries().GetCommandResult
+	}
 	return screenrec.Deps{
 		EnqueuePendingQuery: h.EnqueuePendingQuery,
 		RequirePilot:        h.Guards.RequirePilot,
 		RequireExtension:    h.Guards.RequireExtension,
 		RecordAIAction:      h.recordAIAction,
 		DiagnosticHint:      h.Guards.DiagnosticHint,
-		GetCommandResult:    h.getCommandResult,
+		GetCommandResult:    getCommandResult,
 	}
-}
-
-func (h *ToolHandler) buildPlaybackResult(request mcp.JSONRPCRequest, recordingID string, session *playback.Session) mcp.JSONRPCResponse {
-	return toolrecording.BuildPlaybackResult(request, recordingID, session)
-}
-
-func (h *ToolHandler) appendServerLog(entry types.LogEntry) {
-	h.server.logs.AddEntries([]types.LogEntry{entry})
 }

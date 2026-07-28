@@ -39,6 +39,7 @@ code_paths:
   - extension/popup.html
   - extension/popup.css
 test_paths:
+  - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/screenrec_wiring_test.go
   - cmd/browser-agent/tools_interact_handler_test.go
   - cmd/browser-agent/internal/screenrec/screenrec_test.go
@@ -80,3 +81,5 @@ not merge or deduplicate entries from historical storage roots.
 Extension storage is divided by change lifecycle, shared I/O mechanics, durable
 local state, and ephemeral session state. Consumers import those owners
 directly; there is no all-purpose storage facade or compatibility barrel.
+Screen-recording dependencies receive the query owner callback directly from
+composition; no root `getCommandResult` forwarding method is retained.

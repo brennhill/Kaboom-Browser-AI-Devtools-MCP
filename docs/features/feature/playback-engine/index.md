@@ -26,6 +26,7 @@ code_paths:
   - cmd/browser-agent/internal/toolrecording/handler.go
   - cmd/browser-agent/internal/toolrecording/helpers.go
 test_paths:
+  - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/internal/toolrecording/handler_test.go
   - cmd/browser-agent/internal/toolrecording/toolrecording_test.go
   - cmd/browser-agent/recording_playback_result_test.go
@@ -84,5 +85,8 @@ last_verified_date: 2026-03-05
 - Recording and playback MCP behavior/state: `cmd/browser-agent/internal/toolrecording/`
 - Configure playback and log-diff actions route directly to the composed
   `toolrecording.Handler`; no root ToolHandler forwarding surface remains.
+- Playback-result tests call `toolrecording.BuildPlaybackResult` directly, and
+  composition passes the recording log callback directly; the former root
+  result and log forwarding wrappers are deleted and structurally prohibited.
 - Still a stub: `playback.executeAction` returns synthetic results and is not yet
   wired to the PendingQuery/interact system, so replay does not drive a browser.

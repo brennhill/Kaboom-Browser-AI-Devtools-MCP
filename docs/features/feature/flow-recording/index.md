@@ -33,6 +33,7 @@ code_paths:
   - src/lib/brand.ts
   - src/lib/daemon-http.ts
 test_paths:
+  - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/internal/toolrecording/handler_test.go
   - cmd/browser-agent/internal/toolrecording/toolrecording_test.go
   - cmd/browser-agent/recording_playback_result_test.go
@@ -87,6 +88,8 @@ the former Capture forwarding surface is deleted.
 Configure dispatch routes event-recording start/stop, playback, and log-diff
 actions directly to the composed `toolrecording.Handler`; ToolHandler retains
 no recording forwarding methods.
+Recording log callbacks and playback-result formatting are wired to their
+canonical owners directly; root one-line forwarding wrappers are prohibited.
 
 - Core recording lifecycle and listener wiring:
   - `cmd/browser-agent/tools_configure.go`
