@@ -261,7 +261,7 @@ func (h *InteractActionHandler) HandleNavigateAndWaitFor(req mcp.JSONRPCRequest,
 	// Step 3: Optional content enrichment.
 	if params.IncludeContent {
 		stepStart = time.Now()
-		navResp = h.deps.EnrichNavigateResponse(navResp, req, params.TabID)
+		navResp = h.enrichNavigateResponse(navResp, req, params.TabID)
 		trace = append(trace, act.WorkflowStep{
 			Action:   "get_content",
 			Status:   "success",

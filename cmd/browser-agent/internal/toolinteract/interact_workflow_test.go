@@ -108,15 +108,11 @@ func TestHandleNavigateAndWaitFor_InvalidJSON(t *testing.T) {
 
 func TestHandleNavigateAndWaitFor_IncludeContent(t *testing.T) {
 	h, fs := newFakeHandler(t)
-	enriched := false
-	fs.enrichFn = func(resp mcp.JSONRPCResponse, req mcp.JSONRPCRequest, tabID int) mcp.JSONRPCResponse {
-		enriched = true
-		return resp
-	}
 	args := `{"url":"https://example.org","wait_for":"#ready","include_content":true}`
 	assertOK(t, h.HandleNavigateAndWaitFor(testReq(), json.RawMessage(args)))
-	if !enriched {
-		t.Fatal("expected enrichment on include_content")
+	enqueued := fs.enqueuedSnapshot()
+	if len(enqueued) < 3 || enqueued[len(enqueued)-1].Type != "page_summary" {
+		t.Fatalf("enqueued = %#v, want final page_summary enrichment", enqueued)
 	}
 }
 

@@ -216,6 +216,23 @@ func TestActionRecordingDoesNotReturnToToolHandler(t *testing.T) {
 	}
 }
 
+func TestNavigateEnrichmentBelongsToInteractOwner(t *testing.T) {
+	checks := map[string]string{
+		"cmd/browser-agent/tools_interact_dispatch.go":              "func (h *ToolHandler) enrichNavigateResponse(",
+		"cmd/browser-agent/internal/toolinteract/deps.go":           "EnrichNavigateResponse func(",
+		"cmd/browser-agent/internal/toolinteract/fake_deps_test.go": "EnrichNavigateResponse:",
+	}
+	for relativePath, forbidden := range checks {
+		source, err := os.ReadFile(filepath.Join(projectRoot(), relativePath))
+		if err != nil {
+			t.Fatalf("read %s: %v", relativePath, err)
+		}
+		if strings.Contains(string(source), forbidden) {
+			t.Errorf("%s retains navigation enrichment facade %q", relativePath, forbidden)
+		}
+	}
+}
+
 func TestTestGenerationDoesNotRequireHostInterface(t *testing.T) {
 	relativePath := "cmd/browser-agent/internal/testgenhandler/handler.go"
 	source, err := os.ReadFile(filepath.Join(projectRoot(), relativePath))

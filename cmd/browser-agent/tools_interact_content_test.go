@@ -2,8 +2,7 @@
 // Why: Prevents regression to CSP-fragile execute-based routing (#257).
 // Docs: docs/features/feature/interact-explore/index.md
 
-// tools_interact_content_test.go — Tests for get_readable/get_markdown/page_summary
-// query type routing and enrichNavigateResponse.
+// tools_interact_content_test.go — Tests get_readable/get_markdown query routing.
 package main
 
 import (
@@ -13,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // ============================================
@@ -286,43 +284,6 @@ func TestPageSummary_CustomTimeout(t *testing.T) {
 	}
 	if timeoutMs != 5000 {
 		t.Fatalf("timeout_ms = %v, want 5000", timeoutMs)
-	}
-}
-
-// ============================================
-// enrichNavigateResponse: uses "page_summary" query type
-// ============================================
-
-func TestEnrichNavigate_UsesPageSummaryQueryType(t *testing.T) {
-	t.Parallel()
-	env := newContentTestEnv(t)
-
-	// Build a successful navigate response to enrich
-	successResult := mcp.MCPToolResult{
-		Content: []mcp.MCPContentBlock{{Type: "text", Text: "Navigate success"}},
-	}
-	resultJSON, _ := json.Marshal(successResult)
-	resp := mcp.JSONRPCResponse{JSONRPC: "2.0", ID: 1, Result: resultJSON}
-	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-
-	// This should create a page_summary query internally
-	env.handler.enrichNavigateResponse(resp, req, 42)
-
-	pq := env.capture.Queries().GetLastPendingQuery()
-	if pq == nil {
-		t.Fatal("enrichNavigateResponse should create a pending query")
-	}
-	if pq.Type != "page_summary" {
-		t.Fatalf("enrichNavigateResponse query type = %q, want page_summary", pq.Type)
-	}
-
-	// Verify no script in params
-	var params map[string]any
-	if err := json.Unmarshal(pq.Params, &params); err != nil {
-		t.Fatalf("unmarshal params: %v", err)
-	}
-	if _, hasScript := params["script"]; hasScript {
-		t.Fatal("enrichNavigateResponse params must NOT contain a 'script' field")
 	}
 }
 

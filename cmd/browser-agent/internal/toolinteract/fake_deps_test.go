@@ -78,7 +78,6 @@ type fakeState struct {
 	pageInfo   func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
 	analyzeFn  func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
 	sarifFn    func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
-	enrichFn   func(resp mcp.JSONRPCResponse, req mcp.JSONRPCRequest, tabID int) mcp.JSONRPCResponse
 	redaction  RedactionEngine
 	listenPort int
 	evidenceFn func(clientID string) EvidenceShot
@@ -109,6 +108,12 @@ func (fs *fakeState) enqueuedCount() int {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
 	return len(fs.enqueued)
+}
+
+func (fs *fakeState) enqueuedSnapshot() []queries.PendingQuery {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+	return append([]queries.PendingQuery(nil), fs.enqueued...)
 }
 
 func (fs *fakeState) recordedCount() int {
@@ -143,6 +148,15 @@ func (fs *fakeState) deps() *Deps {
 			fs.enqueue(query)
 			if fs.blockEnqueue {
 				return mcp.Fail(req, mcp.ErrQueueFull, "Queue full", "retry later"), true
+			}
+			if query.Type == "page_summary" {
+				_, _ = fs.cap.Queries().CreatePendingQueryWithTimeout(query, timeout, req.ClientID)
+				fs.cap.Queries().ApplyCommandResult(
+					query.CorrelationID,
+					"complete",
+					json.RawMessage(`{"main_content_preview":"Example content"}`),
+					"",
+				)
 			}
 			return mcp.JSONRPCResponse{}, false
 		},
@@ -182,12 +196,6 @@ func (fs *fakeState) deps() *Deps {
 			return mcp.Succeed(req, "sarif", map[string]any{"status": "exported"})
 		},
 
-		EnrichNavigateResponse: func(resp mcp.JSONRPCResponse, req mcp.JSONRPCRequest, tabID int) mcp.JSONRPCResponse {
-			if fs.enrichFn != nil {
-				return fs.enrichFn(resp, req, tabID)
-			}
-			return resp
-		},
 		InjectCSPBlockedActions: func(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse { return resp },
 
 		GetScreenshot: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {

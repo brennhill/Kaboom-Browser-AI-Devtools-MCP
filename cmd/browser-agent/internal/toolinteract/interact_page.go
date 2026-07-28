@@ -67,8 +67,52 @@ func (h *InteractActionHandler) HandleGetMarkdown(req mcp.JSONRPCRequest, args j
 	return h.HandleContentExtraction(req, args, "get_markdown", "markdown")
 }
 
-// NavigatePageSummaryWait is exported for use by the main package's enrichNavigateResponse.
-const NavigatePageSummaryWait = navigatePageSummaryWait
+func (h *InteractActionHandler) enrichNavigateResponse(
+	resp mcp.JSONRPCResponse,
+	req mcp.JSONRPCRequest,
+	tabID int,
+) mcp.JSONRPCResponse {
+	var result mcp.MCPToolResult
+	if json.Unmarshal(resp.Result, &result) != nil || result.IsError {
+		return resp
+	}
+	captureStore := h.deps.Capture()
+	_, _, tabURL := captureStore.Extension().GetTrackingStatus()
+	tabTitle := captureStore.Extension().GetTrackedTabTitle()
+	vitals := captureStore.Performance().Entries()
+	correlationID := toolresp.NewCorrelationID("nav_content")
+	query := queries.PendingQuery{
+		Type: "page_summary",
+		Params: mcp.SafeMarshal(map[string]any{
+			"timeout_ms": 4000,
+		}, "{}"),
+		TabID: tabID, CorrelationID: correlationID,
+	}
+	if enqueueResponse, blocked := h.deps.EnqueuePendingQuery(req, query, queries.AsyncCommandTimeout); blocked {
+		return enqueueResponse
+	}
+	var textContent string
+	command, found := captureStore.Queries().WaitForCommand(correlationID, navigatePageSummaryWait)
+	if found && command.Status != "pending" && command.Result != nil {
+		var summary map[string]any
+		if json.Unmarshal(command.Result, &summary) == nil {
+			textContent, _ = summary["main_content_preview"].(string)
+		}
+	}
+	if len(result.Content) > 0 {
+		enrichment := map[string]any{
+			"url": tabURL, "title": tabTitle, "text_content": textContent,
+		}
+		if len(vitals) > 0 {
+			enrichment["vitals"] = vitals[len(vitals)-1]
+		}
+		result.Content = append(result.Content, mcp.MCPContentBlock{
+			Type: "text", Text: "Page content:\n" + string(mcp.SafeMarshal(enrichment, "{}")),
+		})
+	}
+	resp.Result = mcp.SafeMarshal(result, "{}")
+	return resp
+}
 
 // handleExplorePage handles interact(what="explore_page").
 // Creates a pending query for the extension to return combined page metadata,

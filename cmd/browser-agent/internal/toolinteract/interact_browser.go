@@ -191,7 +191,7 @@ func (h *InteractActionHandler) HandleBrowserActionNavigateImpl(req mcp.JSONRPCR
 
 	// If include_content is requested and navigate succeeded, enrich with page content.
 	if params.IncludeContent {
-		resp = h.deps.EnrichNavigateResponse(resp, req, params.TabID)
+		resp = h.enrichNavigateResponse(resp, req, params.TabID)
 	}
 
 	// Include blocked_actions/blocked_reason when CSP restricts — omit entirely

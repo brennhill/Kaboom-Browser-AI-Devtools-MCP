@@ -190,6 +190,10 @@ differ. This is the intentional `jscpd` exception for these three files.
 
 `navigate_and_document` combines click-driven navigation, optional URL-change/stability waits, and page-context enrichment (`url`, `title`, `tab_id`) in a single interact workflow.
 
+Navigation page-summary enrichment is colocated with the interact page-content
+owner. Navigate and workflow handlers call it directly; neither `ToolHandler`
+nor `toolinteract.Deps` retains an enrichment callback facade.
+
 Workflow types and response classification come directly from
 `internal/tools/interact/workflow.go`; browser-agent layers do not maintain
 aliases or pass-through response helpers.

@@ -72,9 +72,6 @@ type Deps struct {
 
 	// -- Response enrichment --
 
-	// EnrichNavigateResponse appends page content to a navigate response.
-	EnrichNavigateResponse func(resp mcp.JSONRPCResponse, req mcp.JSONRPCRequest, tabID int) mcp.JSONRPCResponse
-
 	// InjectCSPBlockedActions adds CSP-blocked action warnings to a response.
 	InjectCSPBlockedActions func(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse
 

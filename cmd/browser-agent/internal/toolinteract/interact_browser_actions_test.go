@@ -46,15 +46,21 @@ func TestHandleNavigate_PilotBlocked(t *testing.T) {
 
 func TestHandleNavigate_IncludeContent(t *testing.T) {
 	h, fs := newFakeHandler(t)
-	enriched := false
-	fs.enrichFn = func(resp mcp.JSONRPCResponse, req mcp.JSONRPCRequest, tabID int) mcp.JSONRPCResponse {
-		enriched = true
-		return resp
-	}
 	resp := h.HandleBrowserActionNavigateImpl(testReq(), json.RawMessage(`{"url":"https://example.org","include_content":true}`))
 	assertOK(t, resp)
-	if !enriched {
-		t.Fatal("expected EnrichNavigateResponse to be called")
+	enqueued := fs.enqueuedSnapshot()
+	if len(enqueued) != 2 || enqueued[1].Type != "page_summary" {
+		t.Fatalf("enqueued = %#v, want navigate followed by page_summary", enqueued)
+	}
+	var summaryParams map[string]any
+	if err := json.Unmarshal(enqueued[1].Params, &summaryParams); err != nil {
+		t.Fatalf("decode page_summary params: %v", err)
+	}
+	if _, hasScript := summaryParams["script"]; hasScript {
+		t.Fatal("page_summary enrichment must not use execute script")
+	}
+	if summaryParams["timeout_ms"] != float64(4000) {
+		t.Fatalf("timeout_ms = %v, want 4000", summaryParams["timeout_ms"])
 	}
 }
 

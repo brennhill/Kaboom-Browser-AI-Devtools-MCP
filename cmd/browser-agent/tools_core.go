@@ -712,7 +712,6 @@ func buildInteractDeps(h *ToolHandler) *toolinteract.Deps {
 		RecordDOMPrimitiveAction: h.actionRecorder.RecordDOMPrimitive,
 		ToolInteract:             h.toolInteract, ToolAnalyze: h.analyzeDispatcher.Handle,
 		ToolExportSARIF:         h.generateDispatcher.ExportSARIF,
-		EnrichNavigateResponse:  h.enrichNavigateResponse,
 		InjectCSPBlockedActions: h.Guards.InjectCSPBlockedActions,
 		GetScreenshot: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return observe.GetScreenshot(buildObserveReadDeps(h), req, args)

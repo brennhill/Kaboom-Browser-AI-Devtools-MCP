@@ -13,10 +13,8 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolrouting"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
@@ -285,43 +283,4 @@ func resolveWhatForComposable(args json.RawMessage) string {
 		}
 	}
 	return ""
-}
-
-func (h *ToolHandler) enrichNavigateResponse(resp mcp.JSONRPCResponse, req mcp.JSONRPCRequest, tabID int) mcp.JSONRPCResponse {
-	var result mcp.MCPToolResult
-	if json.Unmarshal(resp.Result, &result) != nil || result.IsError {
-		return resp
-	}
-	_, _, tabURL := h.capture.Extension().GetTrackingStatus()
-	tabTitle := h.capture.Extension().GetTrackedTabTitle()
-	vitals := h.capture.Performance().Entries()
-	correlationID := toolresp.NewCorrelationID("nav_content")
-	params := mcp.SafeMarshal(map[string]any{"timeout_ms": 4000}, "{}")
-	query := queries.PendingQuery{
-		Type: "page_summary", Params: params, TabID: tabID, CorrelationID: correlationID,
-	}
-	if enqueueResponse, blocked := h.asyncCommands.EnqueuePendingQuery(req, query, queries.AsyncCommandTimeout); blocked {
-		return enqueueResponse
-	}
-	var textContent string
-	command, found := h.capture.Queries().WaitForCommand(correlationID, toolinteract.NavigatePageSummaryWait)
-	if found && command.Status != "pending" && command.Result != nil {
-		var summary map[string]any
-		if json.Unmarshal(command.Result, &summary) == nil {
-			textContent, _ = summary["main_content_preview"].(string)
-		}
-	}
-	if len(result.Content) > 0 {
-		enrichment := map[string]any{"url": tabURL, "title": tabTitle, "text_content": textContent}
-		if len(vitals) > 0 {
-			enrichment["vitals"] = vitals[len(vitals)-1]
-		}
-		enrichmentJSON, _ := json.Marshal(enrichment)
-		result.Content = append(result.Content, mcp.MCPContentBlock{
-			Type: "text", Text: "Page content:\n" + string(enrichmentJSON),
-		})
-	}
-	resultJSON, _ := json.Marshal(result)
-	resp.Result = resultJSON
-	return resp
 }
