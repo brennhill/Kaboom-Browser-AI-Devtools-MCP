@@ -4,7 +4,7 @@ feature_id: feature-kaboom-ci
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-26
+last_reviewed: 2026-07-28
 code_paths:
   - Makefile
   - .github/workflows/ci.yml
@@ -14,12 +14,19 @@ code_paths:
   - scripts/docs/site/check-gokaboom-content-contract.mjs
   - scripts/docs/reference/check-reference-schema-sync.mjs
   - scripts/lint-documentation.py
+  - scripts/check-dormant-tests.sh
+  - scripts/test-js-sharded.sh
   - package.json
 test_paths:
   - scripts/docs/features/check-feature-bundles.test.mjs
   - cmd/browser-agent/tools_schema_parity_test.go
   - cmd/browser-agent/tools_interact_navigate_document_test.go
   - cmd/browser-agent/tools_contract_enforcement_test.go
+  - tests/cli/cli-integration.test.cjs
+  - tests/cli/config.test.cjs
+  - tests/cli/doctor.test.cjs
+  - tests/cli/server-install-hardening.test.cjs
+  - tests/site/gokaboom-domain-contract.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

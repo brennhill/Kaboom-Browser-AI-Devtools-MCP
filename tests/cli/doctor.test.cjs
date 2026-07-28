@@ -175,7 +175,9 @@ test('doctor tool statuses are consistent with structure', async () => {
 })
 
 test('doctor.runDiagnostics does not modify config files', async () => {
-  const candidates = config.getConfigCandidates()
+  const candidates = config.CLIENT_DEFINITIONS
+    .filter((def) => def.type === 'file' && def.format !== 'toml')
+    .map((def) => config.getClientConfigPath(def))
 
   // Get checksums of existing files
   const checksums = {}

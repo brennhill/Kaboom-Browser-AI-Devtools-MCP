@@ -72,16 +72,10 @@ jobs:
         with:
           node-version: "20"
 
-      # 800 lines per hand-written source file. Generated code and build output are
-      # excluded by the script — splitting those is meaningless.
-      - name: File length (800 lines)
-        run: bash scripts/check-file-length.sh
-
-      # Ratcheting per-folder limit: 10 source files, with folders already over it
-      # frozen at their current count so they can only shrink. Fails if any folder
-      # grows past its budget, or a folder not on the baseline exceeds 10.
-      - name: Folder size (ratcheting)
-        run: node scripts/check-folder-size.cjs
+      # File length, folder budgets, and dormant Go/Node test detection share one
+      # canonical entrypoint so new structure gates cannot silently miss CI.
+      - name: Run structure gates
+        run: make check-structure
 
       # The baseline must reflect reality: if a folder improved, the committed
       # baseline is stale and should be re-frozen so the ratchet keeps tightening.

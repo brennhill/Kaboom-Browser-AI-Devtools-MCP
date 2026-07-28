@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-js-sharded.sh — Run all extension JS tests split across N parallel Node processes.
+# test-js-sharded.sh — Run all Node test suites split across N parallel processes.
 #
 # Why: Running 40 test files in a single Node process takes ~30 minutes due to
 # serial execution of tests with real setTimeout waits. Splitting across processes
@@ -10,6 +10,7 @@ set -euo pipefail
 SHARDS="${JS_TEST_SHARDS:-4}"
 TIMEOUT="${JS_TEST_TIMEOUT:-15000}"
 CONCURRENCY="${JS_TEST_CONCURRENCY:-4}"
+LIST_ONLY=0
 
 usage() {
   cat <<'EOF'
@@ -18,6 +19,7 @@ Usage: scripts/test-js-sharded.sh [options]
 Options:
   --shards <n>      Number of parallel processes (default: 4, env: JS_TEST_SHARDS)
   --timeout <ms>    Per-test timeout in ms (default: 15000, env: JS_TEST_TIMEOUT)
+  --list            Print the canonical test-file inventory and exit
   -h, --help        Show help
 
 Examples:
@@ -31,25 +33,38 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --shards)   SHARDS="$2";   shift 2 ;;
     --timeout)  TIMEOUT="$2";  shift 2 ;;
+    --list)      LIST_ONLY=1;   shift ;;
     -h|--help)  usage; exit 0 ;;
     *) echo "Unknown option: $1" >&2; usage; exit 1 ;;
   esac
 done
 
-# Collect test files from both extension test roots.
+# Collect every Node test suite. Playwright E2E uses *.spec.* and remains under
+# its browser job; release/docs contract suites are ordinary Node tests.
 # Portable read-loop instead of `mapfile` (bash 4+): macOS ships bash 3.2, the
 # primary developer platform, so build/test scripts must run there.
 FILES=()
 if command -v rg >/dev/null 2>&1; then
-  while IFS= read -r _f; do FILES+=("$_f"); done < <(rg --files tests/extension extension/background -g '*.test.js' | sort)
+  while IFS= read -r _f; do FILES+=("$_f"); done < <(
+    rg --files tests scripts extension/background \
+      -g '*.test.js' -g '*.test.cjs' -g '*.test.mjs' | sort
+  )
 else
-  while IFS= read -r _f; do FILES+=("$_f"); done < <(find tests/extension extension/background -name '*.test.js' -type f | sort)
+  while IFS= read -r _f; do FILES+=("$_f"); done < <(
+    find tests scripts extension/background -type f \
+      \( -name '*.test.js' -o -name '*.test.cjs' -o -name '*.test.mjs' \) | sort
+  )
 fi
 TOTAL=${#FILES[@]}
 
 if [[ $TOTAL -eq 0 ]]; then
-  echo "No extension test files found in tests/extension or extension/background" >&2
+  echo "No JavaScript test files found" >&2
   exit 1
+fi
+
+if [[ $LIST_ONLY -eq 1 ]]; then
+  printf '%s\n' "${FILES[@]}"
+  exit 0
 fi
 
 # Cap shards at file count
@@ -57,7 +72,7 @@ if [[ $SHARDS -gt $TOTAL ]]; then
   SHARDS=$TOTAL
 fi
 
-echo "Sharding extension JS tests: $TOTAL files across $SHARDS process(es)"
+echo "Sharding JavaScript tests: $TOTAL files across $SHARDS process(es)"
 
 # Distribute files round-robin into shard arrays
 declare -a SHARD_FILES

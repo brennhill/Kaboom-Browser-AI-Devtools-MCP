@@ -5,7 +5,7 @@ status: in_progress
 feature_type: feature
 owners:
   - Brenn
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
   - package.json
   - .vale.ini
@@ -59,6 +59,7 @@ code_paths:
   - scripts/docs/features/sync-verification-metadata.mjs
   - scripts/docs/site/run-vale-on-changed.mjs
   - scripts/docs/reference/check-reference-schema-sync.mjs
+  - tests/site/gokaboom-domain-contract.test.js
   - scripts/docs/features/check-feature-bundles.js
   - .github/workflows/ci.yml
 test_paths:

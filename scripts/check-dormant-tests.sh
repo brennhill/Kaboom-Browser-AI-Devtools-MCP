@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# check-dormant-tests.sh — Fail on Go tests excluded from the default suite.
+# check-dormant-tests.sh — Fail on Go or Node tests excluded from default suites.
 #
 # Why this exists: five separate test files in this repo were sitting behind
 # `//go:build integration` with justifications that were plainly false by the
@@ -112,10 +112,25 @@ done < <(find . -name '*_test.go.*' \
   -not -path './.claude/worktrees/*' \
   -not -path './.git/*' 2>/dev/null | sed 's|^\./||' | sort)
 
+# ---------------------------------------------------------------------------
+# 3. Node test files absent from the canonical sharded runner.
+# ---------------------------------------------------------------------------
+ACTIVE_JS_TESTS=$(bash scripts/test-js-sharded.sh --list)
+while IFS= read -r file; do
+  [ -n "$file" ] || continue
+  if ! echo "$ACTIVE_JS_TESTS" | grep -qxF "$file"; then
+    echo "❌ $file is a Node test absent from scripts/test-js-sharded.sh."
+    echo "   Add its root/extension to the canonical inventory or remove the stale test."
+    echo
+    fail=1
+  fi
+done < <(find tests scripts extension/background -type f \
+  \( -name '*.test.js' -o -name '*.test.cjs' -o -name '*.test.mjs' \) | sort)
+
 if [ "$fail" -ne 0 ]; then
-  echo "Dormant tests found. A test excluded from CI is worse than no test:"
+  echo "Dormant tests found. A test excluded from default CI is worse than no test:"
   echo "it reads as coverage while catching nothing, and drifts out of sync with the code."
   exit 1
 fi
 
-echo "✅ No dormant Go tests (no stale build-tag exclusions, no *_test.go.* files)."
+echo "✅ No dormant Go or Node tests."

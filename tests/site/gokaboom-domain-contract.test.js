@@ -24,8 +24,8 @@ describe('gokaboom domain contracts', () => {
     const nestedMarkdown = read('gokaboom.dev/src/pages/markdown/[...slug].md.ts')
 
     assert.match(astroConfig, /site:\s*'https:\/\/gokaboom\.dev'/)
-    assert.match(astroConfig, /title:\s*'KaBOOM'/)
-    assert.match(astroConfig, /alt:\s*'KaBOOM'/)
+    assert.match(astroConfig, /title:\s*'KaBOOM!'/)
+    assert.match(astroConfig, /alt:\s*'KaBOOM!'/)
     assert.doesNotMatch(astroConfig, /cookwithgasoline\.com|STRUM Agentic Devtools/)
 
     assert.match(indexMarkdown, /canonical: https:\/\/gokaboom\.dev\//)
@@ -71,13 +71,13 @@ describe('gokaboom domain contracts', () => {
 
   test('site helper utilities use gokaboom.dev for canonical paths and analytics filtering', () => {
     const markdownPaths = read('gokaboom.dev/src/utils/markdownPaths.ts')
-    const analytics = read('gokaboom.dev/src/components/Analytics.astro')
+    const head = read('gokaboom.dev/src/components/Head.astro')
 
     assert.match(markdownPaths, /https:\/\/gokaboom\.dev/)
     assert.doesNotMatch(markdownPaths, /cookwithgasoline\.com/)
 
-    assert.match(analytics, /gokaboom\.dev/)
-    assert.doesNotMatch(analytics, /cookwithgasoline\.com/)
+    assert.match(head, /gokaboom\.dev/)
+    assert.doesNotMatch(head, /cookwithgasoline\.com/)
   })
 
   test('site install docs batch 1 uses Kaboom naming and gokaboom.dev contracts', () => {

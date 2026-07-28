@@ -58,10 +58,9 @@ test('server postinstall validates existing daemon identity/version when port is
 
 // --- Identity-gated process cleanup (regression: blind kills by substring/port) ---
 
-test('isKaboomServiceIdentity accepts kaboom/legacy identities only', () => {
+test('isKaboomServiceIdentity accepts only canonical kaboom identities', () => {
   assert.equal(installer.isKaboomServiceIdentity({ 'service-name': 'kaboom-browser-devtools' }), true)
-  assert.equal(installer.isKaboomServiceIdentity({ service_name: 'gasoline-browser-devtools' }), true)
-  assert.equal(installer.isKaboomServiceIdentity({ 'service-name': 'strum' }), true)
+  assert.equal(installer.isKaboomServiceIdentity({ service_name: 'kaboom-agentic-browser' }), true)
   assert.equal(installer.isKaboomServiceIdentity({ 'service-name': 'webpack-dev-server' }), false)
   assert.equal(installer.isKaboomServiceIdentity(null), false)
   assert.equal(installer.isKaboomServiceIdentity({}), false)
@@ -94,8 +93,7 @@ test('cleanupOldProcesses only kills ports owned by a kaboom daemon', async () =
   const pkillCalls = calls.filter(([cmd]) => cmd === 'pkill')
   assert.strictEqual(pkillCalls.length, 1, 'must use a single anchored pkill pattern')
   const pattern = pkillCalls[0][pkillCalls[0].length - 1]
-  assert.match(pattern, /\(kaboom\|gasoline\|strum\)-/, 'pkill pattern must anchor to full binary names')
-  assert.notStrictEqual(pattern, 'gasoline', 'must never pkill bare "gasoline"')
+  assert.match(pattern, /^kaboom-/, 'pkill pattern must anchor to canonical full binary names')
 })
 
 test('install.js no longer pkills bare process-name substrings', () => {

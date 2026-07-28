@@ -4,7 +4,7 @@ feature_id: feature-quality-gates
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go
   - cmd/browser-agent/tools_configure.go
@@ -19,6 +19,8 @@ code_paths:
   - internal/tracking/stats_endpoint.go
   - cmd/hooks/main.go
   - scripts/check-folder-size.cjs
+  - scripts/check-dormant-tests.sh
+  - scripts/test-js-sharded.sh
   - package.json
   - .github/workflows/ci.yml
 test_paths:
@@ -35,6 +37,7 @@ test_paths:
   - scripts/test-install-hooks-only.sh
   - scripts/docs/features/check-feature-paths.test.mjs
   - tests/cli/root-metadata-branding.test.cjs
+  - tests/site/gokaboom-domain-contract.test.js
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-28
 ---

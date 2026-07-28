@@ -122,7 +122,10 @@ test('kaboom-agentic-browser --doctor exit code reflects the binary check (hard 
 
 test('kaboom-agentic-browser --install --dry-run previews without writing', () => {
   // Get initial state
-  const candidates = require('../../npm/kaboom-agentic-browser/lib/config').getConfigCandidates()
+  const config = require('../../npm/kaboom-agentic-browser/lib/config')
+  const candidates = config.CLIENT_DEFINITIONS
+    .filter((def) => def.type === 'file' && def.format !== 'toml')
+    .map((def) => config.getClientConfigPath(def))
   const initialState = {}
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) {

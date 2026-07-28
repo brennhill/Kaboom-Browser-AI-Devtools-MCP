@@ -29,11 +29,10 @@ function cleanupTestDir() {
   }
 }
 
-test('config.getConfigCandidates returns expected file-client paths', () => {
-  const candidates = config.getConfigCandidates()
-  // getConfigCandidates excludes non-JSON (TOML) clients like Codex — every
-  // consumer JSON-parses these paths, so only JSON file clients are returned.
-  const fileClientCount = config.CLIENT_DEFINITIONS.filter((def) => def.type === 'file' && def.format !== 'toml').length
+test('canonical client definitions resolve every JSON file-client path', () => {
+  const fileClients = config.CLIENT_DEFINITIONS.filter((def) => def.type === 'file' && def.format !== 'toml')
+  const candidates = fileClients.map((def) => config.getClientConfigPath(def))
+  const fileClientCount = fileClients.length
   assert.strictEqual(candidates.length, fileClientCount, 'Should return one config path per JSON file-based client')
   assert.ok(candidates.some((p) => p.includes('Claude')), 'Should include Claude Desktop path')
   assert.ok(candidates.some((p) => p.includes('.cursor')), 'Should include Cursor path')
@@ -41,12 +40,12 @@ test('config.getConfigCandidates returns expected file-client paths', () => {
   assert.ok(candidates.some((p) => p.includes('Code')), 'Should include VS Code path')
 })
 
-test('config.getToolNameFromPath identifies tool by path', () => {
-  assert.strictEqual(config.getToolNameFromPath('/home/user/Library/Application Support/Claude/claude_desktop_config.json'), 'Claude Desktop')
-  assert.strictEqual(config.getToolNameFromPath('/home/user/.config/Code/User/mcp.json'), 'VS Code')
-  assert.strictEqual(config.getToolNameFromPath('/home/user/.cursor/mcp.json'), 'Cursor')
-  assert.strictEqual(config.getToolNameFromPath('/home/user/.codeium/windsurf/mcp_config.json'), 'Windsurf')
-  assert.strictEqual(config.getToolNameFromPath('/home/user/.unknown/mcp.json'), 'Unknown')
+test('canonical client lookup identifies supported tools without path heuristics', () => {
+  assert.strictEqual(config.getClientById('claude-desktop').name, 'Claude Desktop')
+  assert.strictEqual(config.getClientById('vscode').name, 'VS Code')
+  assert.strictEqual(config.getClientByAlias('cursor').name, 'Cursor')
+  assert.strictEqual(config.getClientByAlias('windsurf').name, 'Windsurf')
+  assert.strictEqual(config.getClientById('unknown'), undefined)
 })
 
 test('config.readConfigFile reads and parses valid JSON', () => {
@@ -174,17 +173,14 @@ test('config.mergeKaboomConfig preserves existing entries', () => {
   assert.strictEqual(merged.mcpServers.other.command, 'other-tool', 'other entry unchanged')
 })
 
-test('config.mergeKaboomConfig removes legacy entries and adds env vars', () => {
-  const existing = { mcpServers: {} }
-  existing.mcpServers.gasoline = { command: 'gasoline-mcp', args: [] }
-  existing.mcpServers['strum-browser-devtools'] = { command: 'strum-agentic-browser', args: [] }
+test('config.mergeKaboomConfig adds env vars without disturbing unrelated entries', () => {
+  const existing = { mcpServers: { other: { command: 'other-mcp', args: [] } } }
   const kaboom = { command: 'kaboom-agentic-browser', args: [] }
   const envVars = { DEBUG: '1', API_KEY: 'secret' }
 
   const merged = config.mergeKaboomConfig(existing, kaboom, envVars)
   assert.deepStrictEqual(merged.mcpServers['kaboom-browser-devtools'].env, envVars, 'Env vars should be added')
-  assert.strictEqual(merged.mcpServers.gasoline, undefined, 'legacy gasoline entry should be removed')
-  assert.strictEqual(merged.mcpServers['strum-browser-devtools'], undefined, 'legacy strum entry should be removed')
+  assert.deepStrictEqual(merged.mcpServers.other, existing.mcpServers.other, 'unrelated entries should be preserved')
 })
 
 test('config.mergeKaboomConfig without env vars does not add empty env object', () => {
