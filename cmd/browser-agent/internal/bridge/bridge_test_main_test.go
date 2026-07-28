@@ -15,13 +15,12 @@ import (
 
 func TestMain(m *testing.M) {
 	Init(Deps{
-		Version:              "0.0.0-test",
-		MaxPostBodySize:      10 * 1024 * 1024,
-		MCPServerName:        "kaboom",
-		LegacyMCPServerNames: []string{"gasoline", "gasoline-browser-devtools", "kaboom-browser-devtools"},
-		ServerInstructions:   "test instructions",
-		Stderrf:              func(format string, args ...any) { fmt.Fprintf(os.Stderr, format, args...) },
-		Debugf:               func(format string, args ...any) {},
+		Version:            "0.0.0-test",
+		MaxPostBodySize:    10 * 1024 * 1024,
+		MCPServerName:      "kaboom",
+		ServerInstructions: "test instructions",
+		Stderrf:            func(format string, args ...any) { fmt.Fprintf(os.Stderr, format, args...) },
+		Debugf:             func(format string, args ...any) {},
 		WriteMCPPayload: func(payload []byte, framing internbridge.StdioFraming) {
 			out := ActiveMCPTransportWriter()
 			if framing == internbridge.StdioFramingContentLength {

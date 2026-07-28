@@ -12,6 +12,7 @@ code_paths:
   - cmd/browser-agent/internal/bridge/bridge_fastpath.go
   - cmd/browser-agent/internal/launchmode/launch_mode.go
   - cmd/browser-agent/internal/toolguard/guards.go
+  - internal/identity/mcp.go
   - src/popup/tabs/tab-tracking.ts
   - src/popup/shell/status-display.ts
   - extension/popup.html
@@ -24,6 +25,7 @@ test_paths:
   - cmd/browser-agent/internal/bridge/health_metadata_test.go
   - cmd/browser-agent/internal/launchmode/launch_mode_test.go
   - cmd/browser-agent/tools_coldstart_gate_test.go
+  - internal/identity/mcp_test.go
 ---
 
 # Lazy Server Start

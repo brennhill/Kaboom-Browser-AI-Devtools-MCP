@@ -71,7 +71,7 @@ func initBridge() {
 	debugLogger := diag.NewDebugFileFromEnv()
 	bridge.Init(bridge.Deps{
 		Version: version, MaxPostBodySize: maxPostBodySize,
-		MCPServerName: identity.MCPServerName, LegacyMCPServerNames: identity.LegacyMCPServerNames,
+		MCPServerName:      identity.MCPServerName,
 		ServerInstructions: serverInstructions,
 		Stderrf:            diag.Printf, Debugf: debugLogger.Printf,
 		WriteMCPPayload: bridge.WriteMCPPayload, SyncStdoutBestEffort: bridge.SyncStdoutBestEffort,

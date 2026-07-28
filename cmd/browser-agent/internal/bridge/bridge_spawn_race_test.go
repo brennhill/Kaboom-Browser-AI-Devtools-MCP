@@ -86,6 +86,27 @@ func TestTryConnectToExisting_NonKaboomService(t *testing.T) {
 	}
 }
 
+func TestTryConnectToExisting_RejectsLegacyKaboomIdentity(t *testing.T) {
+	ln, port := startHealthServer(t, http.StatusOK, healthJSON(deps.Version, "gasoline"))
+	defer ln.Close()
+
+	state := &daemonState{
+		readyCh:  make(chan struct{}),
+		failedCh: make(chan struct{}),
+	}
+	if got := tryConnectToExisting(state, port); !got {
+		t.Fatal("tryConnectToExisting() = false, want legacy identity to block the occupied port")
+	}
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	if state.ready {
+		t.Fatal("legacy identity must not be treated as the canonical daemon")
+	}
+	if !state.failed || !strings.Contains(state.err, "non-kaboom") {
+		t.Fatalf("legacy identity should be reported as non-kaboom, got failed=%v err=%q", state.failed, state.err)
+	}
+}
+
 // --- waitForPeerDaemon tests ---
 
 func TestWaitForPeerDaemon_ServerAppearsOnFirstRetry(t *testing.T) {

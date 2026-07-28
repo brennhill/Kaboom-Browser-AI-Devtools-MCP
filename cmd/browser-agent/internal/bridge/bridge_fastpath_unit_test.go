@@ -646,7 +646,7 @@ func TestCheckDaemonStatus_HealsReadyFlagFromHealth(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_, _ = io.WriteString(w, `{"status":"ok","name":"kaboom-browser-devtools","version":"1.0.0"}`)
+		_, _ = io.WriteString(w, `{"status":"ok","name":"`+deps.MCPServerName+`","version":"1.0.0"}`)
 	})
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
@@ -697,7 +697,7 @@ func TestRunningServerVersionCompatible(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_, _ = io.WriteString(w, `{"status":"ok","name":"kaboom-browser-devtools","version":"`+healthVersion+`"}`)
+		_, _ = io.WriteString(w, `{"status":"ok","name":"`+deps.MCPServerName+`","version":"`+healthVersion+`"}`)
 	})
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
@@ -712,14 +712,14 @@ func TestRunningServerVersionCompatible(t *testing.T) {
 	})
 
 	compatible, gotVersion, gotService := runningServerVersionCompatible(port)
-	if !compatible || gotVersion != "9.9.9" || gotService != "kaboom-browser-devtools" {
-		t.Fatalf("runningServerVersionCompatible() = (%v, %q, %q), want (true, %q, %q)", compatible, gotVersion, gotService, "9.9.9", "kaboom-browser-devtools")
+	if !compatible || gotVersion != "9.9.9" || gotService != deps.MCPServerName {
+		t.Fatalf("runningServerVersionCompatible() = (%v, %q, %q), want (true, %q, %q)", compatible, gotVersion, gotService, "9.9.9", deps.MCPServerName)
 	}
 
 	healthVersion = "1.0.0"
 	compatible, gotVersion, gotService = runningServerVersionCompatible(port)
-	if compatible || gotVersion != "1.0.0" || gotService != "kaboom-browser-devtools" {
-		t.Fatalf("runningServerVersionCompatible() = (%v, %q, %q), want (false, %q, %q)", compatible, gotVersion, gotService, "1.0.0", "kaboom-browser-devtools")
+	if compatible || gotVersion != "1.0.0" || gotService != deps.MCPServerName {
+		t.Fatalf("runningServerVersionCompatible() = (%v, %q, %q), want (false, %q, %q)", compatible, gotVersion, gotService, "1.0.0", deps.MCPServerName)
 	}
 }
 

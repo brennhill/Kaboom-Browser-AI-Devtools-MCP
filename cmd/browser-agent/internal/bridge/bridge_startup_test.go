@@ -147,7 +147,7 @@ func TestRunningServerVersionCompatible_Non200(t *testing.T) {
 func TestRunningServerVersionCompatible_HealthServed(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"name":"kaboom-browser-devtools","version":"0.8.4"}`))
+		_, _ = w.Write([]byte(`{"name":"` + deps.MCPServerName + `","version":"0.8.4"}`))
 	}))
 	defer srv.Close()
 	// Exercises the read-body, health metadata, and service/version compatibility path.

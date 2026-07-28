@@ -25,9 +25,6 @@ type Deps struct {
 	// MCPServerName is the canonical server identity shown to MCP clients.
 	MCPServerName string
 
-	// LegacyMCPServerNames are previous names accepted for compatibility.
-	LegacyMCPServerNames []string
-
 	// ServerInstructions is the instructions string sent in MCP initialize responses.
 	ServerInstructions string
 

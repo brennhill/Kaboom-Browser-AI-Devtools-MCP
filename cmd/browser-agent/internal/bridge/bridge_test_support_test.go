@@ -26,13 +26,12 @@ func initTestDeps(t *testing.T) {
 	prev := deps
 	t.Cleanup(func() { deps = prev })
 	Init(Deps{
-		Version:              "0.0.0-test",
-		MaxPostBodySize:      10 * 1024 * 1024,
-		MCPServerName:        "kaboom",
-		LegacyMCPServerNames: []string{"gasoline"},
-		ServerInstructions:   "test instructions",
-		Stderrf:              func(format string, args ...any) {},
-		Debugf:               func(format string, args ...any) {},
+		Version:            "0.0.0-test",
+		MaxPostBodySize:    10 * 1024 * 1024,
+		MCPServerName:      "kaboom",
+		ServerInstructions: "test instructions",
+		Stderrf:            func(format string, args ...any) {},
+		Debugf:             func(format string, args ...any) {},
 		WriteMCPPayload: func(payload []byte, framing internbridge.StdioFraming) {
 			out := ActiveMCPTransportWriter()
 			if framing == internbridge.StdioFramingContentLength {

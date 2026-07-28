@@ -18,7 +18,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"strings"
 	"sync"
 	"time"
 
@@ -45,20 +44,6 @@ func EnsureIOIsolation(logFileHint string) error {
 		func(w io.Writer) { deps.SetStderrSink(w) },
 		func(format string, args ...any) { deps.Stderrf(format, args...) },
 	)
-}
-
-// IsKaboomService accepts canonical and legacy server names for compatibility.
-func IsKaboomService(name string) bool {
-	n := strings.ToLower(strings.TrimSpace(name))
-	if n == deps.MCPServerName {
-		return true
-	}
-	for _, legacy := range deps.LegacyMCPServerNames {
-		if n == legacy {
-			return true
-		}
-	}
-	return false
 }
 
 // toolCallTimeout delegates to internal/bridge for per-request timeout logic.

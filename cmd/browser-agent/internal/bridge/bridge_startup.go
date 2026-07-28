@@ -230,7 +230,7 @@ func runningServerVersionCompatible(port int) (bool, string, string) {
 	}
 
 	serviceName := meta.serviceName()
-	if !IsKaboomService(serviceName) {
+	if serviceName != deps.MCPServerName {
 		return false, strings.TrimSpace(meta.Version), serviceName
 	}
 
@@ -442,7 +442,7 @@ func tryConnectToExisting(state *daemonState, port int) bool {
 		state.markReady()
 		return true
 	}
-	if IsKaboomService(serviceName) {
+	if serviceName == deps.MCPServerName {
 		// Version mismatch — stop old server, let caller spawn new one.
 		if !deps.StopServerForUpgrade(port) {
 			state.markFailed(fmt.Sprintf("found running daemon version %s but could not recycle it", runningVersion))
