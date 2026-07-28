@@ -63,7 +63,7 @@ func TestFastStart_ClientCompatibilityMatrix(t *testing.T) {
 			reader := bufio.NewReader(stdout)
 			initReq := fmt.Sprintf(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"%s","version":"%s"}}}`, tc.clientName, tc.clientVer)
 			writeJSONRPCLine(t, stdin, initReq)
-			initResp := readJSONRPCLine(t, reader, 5*time.Second)
+			initResp := readJSONRPCLine(t, reader, serverStartTimeout)
 			if initResp.Error != nil {
 				t.Fatalf("initialize error: %+v", initResp.Error)
 			}

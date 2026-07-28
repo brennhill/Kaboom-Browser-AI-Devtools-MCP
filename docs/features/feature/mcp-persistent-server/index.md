@@ -147,6 +147,10 @@ last_verified_date: 2026-03-29
 
 # MCP Persistent Server
 
+Fast-start compatibility tests use the canonical build-tagged server startup
+budget (5 seconds normally, 30 seconds under the race detector). Post-start MCP
+resource latency remains independently enforced at 500 milliseconds.
+
 The obsolete `internal/mcp/deps.go` provider contracts were deleted after all
 consumers migrated to explicit owner functions. Asynchronous command lifecycle
 behavior now belongs to `internal/asynccommand.Handler`; MCP transport owns no
