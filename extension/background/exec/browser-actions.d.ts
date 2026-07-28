@@ -5,7 +5,7 @@
 import type { PendingQuery } from '../../types/index.js';
 import type { SyncClient } from '../sync/sync-client.js';
 import { type CSPProbeResult } from './query-execution.js';
-import type { SendAsyncResultFn, ActionToastFn } from '../pending-queries.js';
+import type { SendAsyncResultFn, ActionToastFn } from '../commands/helpers.js';
 export type BrowserActionResult = {
     success: boolean;
     action?: string;

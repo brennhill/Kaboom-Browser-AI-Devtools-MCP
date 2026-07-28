@@ -12,8 +12,6 @@ import './commands/analyze-feature-gates.js';
 import './commands/interact.js';
 import './commands/interact-content.js';
 import './commands/interact-explore.js';
-// Re-export handlePilotCommand (used by index.ts re-export chain)
-export { handlePilotCommand } from './commands/interact.js';
 export async function handlePendingQuery(query, syncClient) {
     return dispatch(query, syncClient);
 }

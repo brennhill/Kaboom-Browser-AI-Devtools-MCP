@@ -8,7 +8,8 @@ import { addDebugLogEntry, getDebugLog as getDebugLogEntries, clearDebugLog as c
 import { createCircuitBreaker, RATE_LIMIT_CONFIG, shouldCaptureLog, formatLogEntry, captureScreenshot, updateBadge, checkServerHealth } from './sync/communication.js';
 import { DebugCategory } from './debug.js';
 import { getRequestHeaders } from './sync/server.js';
-import { handlePendingQuery as handlePendingQueryImpl, handlePilotCommand as handlePilotCommandImpl } from './pending-queries.js';
+import { handlePendingQuery as handlePendingQueryImpl } from './pending-queries.js';
+import { handlePilotCommand as handlePilotCommandImpl } from './commands/interact.js';
 import { updateVersionFromHealth } from './sync/version-check.js';
 import { createBatcherInstances } from './sync/batcher-instances.js';
 import { KABOOM_LOG_PREFIX } from '../lib/brand.js';

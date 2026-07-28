@@ -4,7 +4,7 @@
  */
 import type { PendingQuery } from '../../types/runtime/queries.js';
 import type { SyncClient } from '../sync/sync-client.js';
-import type { SendAsyncResultFn, ActionToastFn } from '../pending-queries.js';
+import type { SendAsyncResultFn, ActionToastFn } from '../commands/helpers.js';
 interface VerifyResult {
     has_file: boolean;
     file_name?: string;

@@ -55,10 +55,8 @@ import {
 import { getTrackedTabInfo } from './event-listeners.js'
 import { DebugCategory } from './debug.js'
 import { getRequestHeaders } from './sync/server.js'
-import {
-  handlePendingQuery as handlePendingQueryImpl,
-  handlePilotCommand as handlePilotCommandImpl
-} from './pending-queries.js'
+import { handlePendingQuery as handlePendingQueryImpl } from './pending-queries.js'
+import { handlePilotCommand as handlePilotCommandImpl } from './commands/interact.js'
 import { updateVersionFromHealth } from './sync/version-check.js'
 import { createBatcherInstances } from './sync/batcher-instances.js'
 import { KABOOM_LOG_PREFIX } from '../lib/brand.js'

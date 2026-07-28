@@ -20,12 +20,6 @@ import './commands/interact.js'
 import './commands/interact-content.js'
 import './commands/interact-explore.js'
 
-// Re-export types for backward compatibility (used by browser-actions.ts, upload-handler.ts, dom-dispatch.ts)
-export type { SendAsyncResultFn, ActionToastFn } from './commands/helpers.js'
-
-// Re-export handlePilotCommand (used by index.ts re-export chain)
-export { handlePilotCommand } from './commands/interact.js'
-
 export async function handlePendingQuery(query: PendingQuery, syncClient: SyncClient): Promise<void> {
   return dispatch(query, syncClient)
 }

@@ -9,7 +9,7 @@
 
 import type { PendingQuery } from '../../types/runtime/queries.js'
 import type { SyncClient } from '../sync/sync-client.js'
-import type { SendAsyncResultFn, ActionToastFn } from '../pending-queries.js'
+import type { SendAsyncResultFn, ActionToastFn } from '../commands/helpers.js'
 import { delay, fetchWithTimeout } from '../../lib/timeout-utils.js'
 import { debugLog } from '../index.js'
 import { getServerUrl } from '../state.js'

@@ -19,6 +19,12 @@ code_paths:
   - src/types/global.d.ts
   - src/types/runtime-messages.ts
   - src/types/runtime/queries.ts
+  - src/background/pending-queries.ts
+  - src/background/commands/helpers.ts
+  - src/background/commands/interact.ts
+  - src/background/exec/browser-actions.ts
+  - src/background/exec/upload-handler.ts
+  - src/background/index.ts
 test_paths:
   - internal/mcp/response_test.go
   - internal/queries/dispatcher_test.go
