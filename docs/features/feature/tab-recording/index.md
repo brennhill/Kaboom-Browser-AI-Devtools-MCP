@@ -20,6 +20,7 @@ code_paths:
   - cmd/browser-agent/internal/screenrec/save.go
   - cmd/browser-agent/internal/screenrec/reveal.go
   - cmd/browser-agent/internal/screenrec/observe.go
+  - internal/recording/actionlog/recorder.go
   - src/background/event-listeners.ts
   - src/background/init.ts
   - src/background/ui/keyboard-shortcuts.ts
@@ -44,6 +45,7 @@ test_paths:
   - cmd/browser-agent/screenrec_wiring_test.go
   - cmd/browser-agent/tools_interact_handler_test.go
   - cmd/browser-agent/internal/screenrec/screenrec_test.go
+  - internal/recording/actionlog/recorder_test.go
   - tests/extension/recording-shortcut-command.test.js
   - tests/extension/context-menus-labels.test.js
   - tests/extension/recording-listeners-target-tab.test.js

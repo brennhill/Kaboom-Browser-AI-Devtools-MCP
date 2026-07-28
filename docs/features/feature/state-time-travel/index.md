@@ -9,11 +9,13 @@ code_paths:
   - cmd/browser-agent/internal/toolinteract/interactstate/state.go
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/tools_interact_dispatch.go
+  - internal/recording/actionlog/recorder.go
   - internal/schema/interact/actions.go
   - src/inject/state.ts
 test_paths:
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/internal/toolinteract/interactstate/state_test.go
+  - internal/recording/actionlog/recorder_test.go
   - cmd/browser-agent/tools_interact_gate_test.go
   - cmd/browser-agent/tools_interact_helpers_test.go
   - cmd/browser-agent/tools_interact_state_test.go
@@ -56,6 +58,9 @@ last_verified_date: 2026-03-05
   - `cmd/browser-agent/tools_core.go`
   - dispatch and state-focused tests access `stateInteractHandler` without an
     unchanged-return accessor facade
+- Save, load, and delete audit actions route through the canonical
+  `internal/recording/actionlog.Recorder`; the composition root has no parallel
+  action-recording methods.
 - Canonical public action schemas:
   - `internal/schema/interact/actions.go`
 - Tests:

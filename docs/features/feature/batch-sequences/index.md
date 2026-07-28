@@ -12,6 +12,7 @@ code_paths:
   - cmd/browser-agent/internal/toolinteract/interact_batch.go
   - cmd/browser-agent/tools_interact_dispatch.go
   - cmd/browser-agent/tools_configure.go
+  - internal/recording/actionlog/recorder.go
   - internal/tools/interact/workflow.go
   - internal/schema/interact/actions.go
   - internal/schema/interact/properties_output_batch.go
@@ -21,6 +22,7 @@ test_paths:
   - cmd/browser-agent/internal/sequencehandler/handler_test.go
   - cmd/browser-agent/tools_interact_batch_test.go
   - cmd/browser-agent/tools_configure_sequence_test.go
+  - internal/recording/actionlog/recorder_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -47,4 +49,5 @@ with the interact feature. Configure actions and saved interact steps both use
 the canonical `what` discriminator. Tool composition constructs one
 `sequencehandler.Handler`, and all five configure sequence actions route to it
 directly; no ToolHandler forwarding methods or per-request handler factory
-remain.
+remain. Batch and replay audit entries use the same
+`internal/recording/actionlog.Recorder` as direct interact actions.

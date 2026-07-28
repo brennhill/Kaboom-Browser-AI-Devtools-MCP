@@ -83,9 +83,9 @@ type browserActionOpts struct {
 	tabID          int             // Tab ID for the pending query (0 = default)
 	skipTabGuard   bool            // If true, skip requireTabTracking guard
 	queuedMsg      string          // Queued message for MaybeWaitForCommand
-	recordAction   string          // Action type for recordAIAction (defaults to action)
-	recordURL      string          // URL for recordAIAction
-	recordExtra    map[string]any  // Extra details for recordAIAction
+	recordAction   string          // Action type for canonical action recording (defaults to action)
+	recordURL      string          // URL for canonical action recording
+	recordExtra    map[string]any  // Extra details for canonical action recording
 }
 
 // queueBrowserAction is the shared helper for simple browser actions that follow

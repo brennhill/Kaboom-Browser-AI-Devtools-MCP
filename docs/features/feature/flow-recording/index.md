@@ -16,6 +16,7 @@ code_paths:
   - internal/capture/handlers.go
   - internal/recording/types.go
   - internal/recording/manager.go
+  - internal/recording/actionlog/recorder.go
   - internal/recording/playback/types.go
   - internal/recording/playback/session.go
   - internal/recording/logdiff/types.go
@@ -43,6 +44,7 @@ test_paths:
   - internal/recording/playback/playback_test.go
   - internal/recording/logdiff/logdiff_test.go
   - internal/recording/no_facade_test.go
+  - internal/recording/actionlog/recorder_test.go
   - tests/extension/recording.test.js
   - tests/extension/recording-listeners-target-tab.test.js
   - tests/extension/recording-capture-branding.test.js
@@ -82,6 +84,9 @@ Go callers use the canonical `Recording`, `RecordingAction`,
 `RecordingMetadata`, and `RecordingManager` contracts from
 `internal/recording`; alias-only recording and capture re-exports are
 prohibited.
+AI-driven actions from interact, state, upload, sequence, and screen-recording
+entry points are normalized by one `internal/recording/actionlog.Recorder`
+before entering the capture timeline.
 Capture exposes its owned manager only through `Capture.Recordings()`. MCP,
 storage, playback, and log-diff callers use the manager and the
 `internal/recording/playback` or `internal/recording/logdiff` owners directly;

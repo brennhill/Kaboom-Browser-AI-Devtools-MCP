@@ -71,7 +71,7 @@ type commandBuilder struct {
 
 	// Post-enqueue callback (optional). Called after the query is successfully
 	// enqueued but before MaybeWaitForCommand. Used for recording actions with
-	// non-standard signatures (e.g. recordDOMPrimitiveAction).
+	// non-standard signatures (for example DOM primitive recording).
 	postEnqueueFn func()
 
 	// Response
@@ -148,7 +148,7 @@ func (b *commandBuilder) preEnqueue(fn func(correlationID string)) *commandBuild
 }
 
 // postEnqueue registers a callback invoked after successful enqueue but before MaybeWaitForCommand.
-// Used for recording actions with non-standard signatures (e.g. recordDOMPrimitiveAction).
+// Used for recording actions with non-standard signatures (for example DOM primitives).
 func (b *commandBuilder) postEnqueue(fn func()) *commandBuilder {
 	b.postEnqueueFn = fn
 	return b
@@ -250,7 +250,7 @@ func (b *commandBuilder) executeWithCorrelation(req mcp.JSONRPCRequest, waitArgs
 		b.handler.deps.RecordAIAction(b.recAction, b.recURL, b.recExtra)
 	}
 
-	// 6b. Post-enqueue callback (e.g. recordDOMPrimitiveAction)
+	// 6b. Post-enqueue callback (for example DOM primitive recording)
 	if b.postEnqueueFn != nil {
 		b.postEnqueueFn()
 	}

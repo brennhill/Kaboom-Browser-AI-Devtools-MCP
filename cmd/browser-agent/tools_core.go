@@ -47,6 +47,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/actionlog"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/redaction"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
@@ -136,6 +137,7 @@ type ToolHandler struct {
 	annotationAnalysis       *annotationanalysis.Handler
 	analyzeDispatcher        *analyzedispatch.Dispatcher
 	asyncCommands            *asynccommand.Handler
+	actionRecorder           *actionlog.Recorder
 
 	// Passive network traffic recording state (start/stop capture).
 	networkRecording *netrecord.NetworkRecordingState
@@ -163,10 +165,6 @@ type ToolHandler struct {
 	// When nil, usage counting is disabled (backwards compatible).
 	usageTracker *telemetry.UsageTracker
 }
-
-// maybeWaitForCommand, formatCommandResult, and related async infrastructure
-// live in tools_async_completion.go; the result shaping
-// they call lives in internal/asyncresult.
 
 // handleToolCall dispatches composite tool calls by mode parameter.
 func (h *ToolHandler) HandleToolCall(req mcp.JSONRPCRequest, name string, args json.RawMessage) (mcp.JSONRPCResponse, bool) {
@@ -405,6 +403,11 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 		handler.noiseConfig = noise.NewNoiseConfig()
 	}
 	handler.redactionEngine = redaction.NewRedactionEngine("")
+	var actionTelemetry *capture.TelemetryStore
+	if captureStore != nil {
+		actionTelemetry = captureStore.Telemetry()
+	}
+	handler.actionRecorder = actionlog.New(actionTelemetry)
 	handler.asyncCommands = asynccommand.New(asynccommand.Deps{
 		Capture:              handler.capture,
 		DiagnosticHint:       handler.Guards.DiagnosticHint(),
@@ -547,7 +550,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 		ReplayMu:       &replayMu,
 		Interact:       handler.toolInteract,
 		WaitForCommand: waitForSequenceCommand,
-		RecordAction:   handler.recordAIAction,
+		RecordAction:   handler.actionRecorder.Record,
 	})
 	handler.ensureToolModules()
 	handler.ensureToolSchemas()
@@ -705,8 +708,8 @@ func buildInteractDeps(h *ToolHandler) *toolinteract.Deps {
 		RequireTabTracking: h.Guards.RequireTabTracking, RequireCSPClear: h.Guards.RequireCSPClear,
 		EnqueuePendingQuery: h.asyncCommands.EnqueuePendingQuery, MaybeWaitForCommand: h.asyncCommands.MaybeWaitForCommand,
 		Capture:        func() *capture.Capture { return h.capture },
-		RecordAIAction: h.recordAIAction, RecordAIEnhancedAction: h.recordAIEnhancedAction,
-		RecordDOMPrimitiveAction: h.recordDOMPrimitiveAction,
+		RecordAIAction: h.actionRecorder.Record, RecordAIEnhancedAction: h.actionRecorder.RecordEnhanced,
+		RecordDOMPrimitiveAction: h.actionRecorder.RecordDOMPrimitive,
 		ToolInteract:             h.toolInteract, ToolAnalyze: h.analyzeDispatcher.Handle,
 		ToolExportSARIF:         h.generateDispatcher.ExportSARIF,
 		EnrichNavigateResponse:  h.enrichNavigateResponse,
@@ -755,7 +758,7 @@ func (h *ToolHandler) screenrecDeps() screenrec.Deps {
 		EnqueuePendingQuery: h.asyncCommands.EnqueuePendingQuery,
 		RequirePilot:        h.Guards.RequirePilot,
 		RequireExtension:    h.Guards.RequireExtension,
-		RecordAIAction:      h.recordAIAction,
+		RecordAIAction:      h.actionRecorder.Record,
 		DiagnosticHint:      h.Guards.DiagnosticHint,
 		GetCommandResult:    getCommandResult,
 	}

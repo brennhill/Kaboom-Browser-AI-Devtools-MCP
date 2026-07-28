@@ -30,7 +30,7 @@ func newSequenceTestEnv(t *testing.T) *toolTestEnv {
 		ReplayMu:       &replayMu,
 		Interact:       env.handler.toolInteract,
 		WaitForCommand: env.handler.capture.Queries().WaitForCommand,
-		RecordAction:   env.handler.recordAIAction,
+		RecordAction:   env.handler.actionRecorder.Record,
 	})
 	return env
 }

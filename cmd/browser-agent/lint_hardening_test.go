@@ -194,6 +194,28 @@ func TestUnusedToolHostContractsStayDeleted(t *testing.T) {
 	}
 }
 
+func TestActionRecordingDoesNotReturnToToolHandler(t *testing.T) {
+	for _, forbidden := range []string{
+		"func (h *ToolHandler) recordAIAction(",
+		"func (h *ToolHandler) recordAIEnhancedAction(",
+		"func (h *ToolHandler) recordDOMPrimitiveAction(",
+	} {
+		for _, relativePath := range []string{
+			"cmd/browser-agent/tools_core.go",
+			"cmd/browser-agent/tools_interact_dispatch.go",
+			"cmd/browser-agent/tools_configure.go",
+		} {
+			source, err := os.ReadFile(filepath.Join(projectRoot(), relativePath))
+			if err != nil {
+				t.Fatalf("read %s: %v", relativePath, err)
+			}
+			if strings.Contains(string(source), forbidden) {
+				t.Errorf("%s retains action-recording root method %q", relativePath, forbidden)
+			}
+		}
+	}
+}
+
 func TestTestGenerationDoesNotRequireHostInterface(t *testing.T) {
 	relativePath := "cmd/browser-agent/internal/testgenhandler/handler.go"
 	source, err := os.ReadFile(filepath.Join(projectRoot(), relativePath))

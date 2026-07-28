@@ -6,7 +6,6 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"math/rand/v2"
 	"sort"
 	"strings"
@@ -286,42 +285,6 @@ func resolveWhatForComposable(args json.RawMessage) string {
 		}
 	}
 	return ""
-}
-
-func (h *ToolHandler) recordAIAction(actionType, url string, details map[string]any) {
-	action := types.EnhancedAction{
-		Type: actionType, Timestamp: time.Now().UnixMilli(), URL: url, Source: "ai",
-	}
-	if len(details) > 0 {
-		action.Selectors = details
-	}
-	h.capture.Telemetry().AddEnhancedActions([]types.EnhancedAction{action})
-}
-
-func (h *ToolHandler) recordAIEnhancedAction(action types.EnhancedAction) {
-	action.Timestamp = time.Now().UnixMilli()
-	action.Source = "ai"
-	h.capture.Telemetry().AddEnhancedActions([]types.EnhancedAction{action})
-}
-
-func (h *ToolHandler) recordDOMPrimitiveAction(action, selector, text, value string) {
-	reproType, ok := act.DOMActionToReproType[action]
-	if !ok {
-		h.recordAIAction("dom_"+action, "", map[string]any{"selector": selector})
-		return
-	}
-	enhanced := types.EnhancedAction{
-		Type: reproType, Selectors: act.ParseSelectorForReproduction(selector),
-	}
-	switch action {
-	case "type":
-		enhanced.Value = text
-	case "key_press":
-		enhanced.Key = text
-	case "select":
-		enhanced.SelectedValue = value
-	}
-	h.recordAIEnhancedAction(enhanced)
 }
 
 func (h *ToolHandler) enrichNavigateResponse(resp mcp.JSONRPCResponse, req mcp.JSONRPCRequest, tabID int) mcp.JSONRPCResponse {
