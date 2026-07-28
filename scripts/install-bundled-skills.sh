@@ -11,8 +11,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SKILLS_SRC_DIR="${KABOOM_BUNDLED_SKILLS_DIR:-$PROJECT_ROOT/npm/kaboom-agentic-browser/skills}"
 MARKER="<!-- kaboom-managed-skill"
-# Managed markers from every brand era — must match npm installer (lib/skills.js).
-MANAGED_MARKER_RE='<!-- (kaboom|gasoline|strum)-managed-skill'
 
 SCOPE="${KABOOM_SKILL_SCOPE:-global}"
 TARGETS_RAW="${KABOOM_SKILL_TARGETS:-${KABOOM_SKILL_TARGET:-claude,codex,gemini}}"
@@ -22,7 +20,6 @@ CREATED=0
 UPDATED=0
 UNCHANGED=0
 SKIPPED=0
-LEGACY_REMOVED=0
 ERRORS=0
 
 case "$SCOPE" in
@@ -116,27 +113,6 @@ skill_dest_path() {
   fi
 }
 
-remove_legacy_skill() {
-  local agent="$1"
-  local root="$2"
-  local skill_id="$3"
-  local prefix legacy_id legacy_path
-
-  # Remove every brand-era prefixed variant — matches npm installer behavior.
-  for prefix in kaboom- gasoline- strum-; do
-    legacy_id="${prefix}${skill_id}"
-    legacy_path="$(skill_dest_path "$agent" "$root" "$legacy_id")"
-
-    if [ -f "$legacy_path" ] && grep -Eq "$MANAGED_MARKER_RE" "$legacy_path"; then
-      rm -f "$legacy_path" || true
-      if [ "$agent" = "codex" ]; then
-        rmdir "$(dirname "$legacy_path")" 2>/dev/null || true
-      fi
-      LEGACY_REMOVED=$((LEGACY_REMOVED + 1))
-    fi
-  done
-}
-
 install_skill() {
   local agent="$1"
   local root="$2"
@@ -165,7 +141,7 @@ install_skill() {
       rm -f "$tmp_file"
       return
     fi
-    if ! grep -Eq "$MANAGED_MARKER_RE" "$dest"; then
+    if ! grep -Fq "$MARKER" "$dest"; then
       SKIPPED=$((SKIPPED + 1))
       rm -f "$tmp_file"
       return
@@ -184,7 +160,6 @@ install_skill() {
   fi
 
   rm -f "$tmp_file"
-  remove_legacy_skill "$agent" "$root" "$skill_id"
 }
 
 # Resolve manifest once; iterate manifest-listed skills (never raw directory globs).
@@ -226,7 +201,7 @@ EOF_ROOTS
 
 done
 
-echo "Skills installed (${TARGETS_RAW} / ${SCOPE}): created=${CREATED} updated=${UPDATED} unchanged=${UNCHANGED} skipped=${SKIPPED} legacy_removed=${LEGACY_REMOVED} errors=${ERRORS}"
+echo "Skills installed (${TARGETS_RAW} / ${SCOPE}): created=${CREATED} updated=${UPDATED} unchanged=${UNCHANGED} skipped=${SKIPPED} errors=${ERRORS}"
 
 if [ "$ERRORS" -gt 0 ]; then
   exit 1

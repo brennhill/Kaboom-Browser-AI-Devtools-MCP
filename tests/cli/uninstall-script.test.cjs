@@ -17,14 +17,6 @@ const UNINSTALL_PS1 = path.join(REPO_ROOT, 'scripts', 'uninstall.ps1')
 
 const KNOWN_SERVER_NAMES = [
   'kaboom-browser-devtools',
-  'kaboom-agentic-browser',
-  'kaboom',
-  'gasoline-browser-devtools',
-  'gasoline-agentic-browser',
-  'gasoline',
-  'strum-browser-devtools',
-  'strum-agentic-browser',
-  'strum',
 ]
 
 // ─────────────────────────────────────────────────────────────
@@ -60,7 +52,6 @@ test('uninstall.sh covers every install.sh artifact', () => {
   assert.match(script, /KaboomAgenticDevtoolExtension/)
   assert.match(script, /KABOOM_STATE_DIR/)
   assert.match(script, /XDG_STATE_HOME/)
-  assert.match(script, /kaboom-logs\.jsonl/, 'must remove the legacy log file')
 
   // MCP client configs written by native_install.go.
   for (const name of KNOWN_SERVER_NAMES) {
@@ -76,14 +67,10 @@ test('uninstall.sh covers every install.sh artifact', () => {
   assert.match(script, /Code\/User\/mcp\.json/)
   assert.match(script, /Code\/User\/mcp\.json" servers/, 'must clean the VS Code "servers" key')
 
-  // Managed skills cleanup — must recognize all three brand-era markers.
+  // Managed skills cleanup recognizes only the canonical marker.
   assert.match(script, /managed-skill/, 'must only delete marker-managed skill files')
-  for (const brand of ['kaboom', 'gasoline', 'strum']) {
-    assert.ok(
-      new RegExp(`${brand}[^\\n]*managed-skill|managed-skill[^\\n]*${brand}`).test(script),
-      `skill marker check must cover the ${brand} era`
-    )
-  }
+  assert.match(script, /kaboom-managed-skill/)
+  assert.doesNotMatch(script, /\b(?:gasoline|strum|legacy)\b/i)
 
   // Telemetry opt-out parity with install.sh.
   assert.match(script, /KABOOM_TELEMETRY/)
@@ -137,8 +124,6 @@ function makeSandbox() {
   mk('.kaboom/bin/kaboom-hooks', 'binary')
   mk('.kaboom/logs/kaboom.jsonl', '{}')
   mk('KaboomAgenticDevtoolExtension/manifest.json', '{}')
-  mk('kaboom-logs.jsonl', '{}')
-  mk('kaboom-upload-dir/upload.png', 'png')
   mk('.zshrc', '# user content\nexport PATH="$HOME/.kaboom/bin:$PATH" # kaboom\nalias ll="ls -la"\n')
   mk('Library/LaunchAgents/com.kaboom.daemon.plist', '<plist/>')
   mk('.config/systemd/user/kaboom.service', '[Unit]')
@@ -155,12 +140,11 @@ function makeSandbox() {
   )
   mk(
     '.gemini/settings.json',
-    JSON.stringify({ mcpServers: { gasoline: { command: 'x' } }, otherSetting: true }, null, 2)
+    JSON.stringify({ mcpServers: { 'kaboom-browser-devtools': { command: 'x' } }, otherSetting: true }, null, 2)
   )
   const vscodeConfig = JSON.stringify(
     {
       servers: { 'kaboom-browser-devtools': { command: 'x' }, 'keep-me': { command: 'y' } },
-      mcpServers: { kaboom: { command: 'x' } },
     },
     null,
     2
@@ -201,8 +185,6 @@ test('uninstall.sh --yes removes all install artifacts in a sandboxed HOME', () 
 
   gone('.kaboom')
   gone('KaboomAgenticDevtoolExtension')
-  gone('kaboom-logs.jsonl')
-  gone('kaboom-upload-dir')
   gone('.claude/skills/kaboom')
   gone('.claude/skills/debug')
   kept('.claude/skills/my-custom/SKILL.md')
@@ -230,10 +212,10 @@ test('uninstall.sh --yes removes all install artifacts in a sandboxed HOME', () 
   assert.equal(zed.context_servers['kaboom-browser-devtools'], undefined)
 
   const gemini = JSON.parse(fs.readFileSync(path.join(home, '.gemini/settings.json'), 'utf8'))
-  assert.equal(gemini.mcpServers.gasoline, undefined, 'legacy server names must be removed')
+  assert.equal(gemini.mcpServers['kaboom-browser-devtools'], undefined)
   assert.equal(gemini.otherSetting, true)
 
-  // VS Code: both the current "servers" key and legacy "mcpServers" cleaned.
+  // VS Code uses its canonical "servers" key.
   const vscodeRel =
     process.platform === 'darwin'
       ? 'Library/Application Support/Code/User/mcp.json'
@@ -242,7 +224,6 @@ test('uninstall.sh --yes removes all install artifacts in a sandboxed HOME', () 
     const vscode = JSON.parse(fs.readFileSync(path.join(home, vscodeRel), 'utf8'))
     assert.equal(vscode.servers['kaboom-browser-devtools'], undefined)
     assert.ok(vscode.servers['keep-me'], 'unrelated VS Code servers must survive')
-    assert.equal(vscode.mcpServers.kaboom, undefined, 'legacy mcpServers key must also be cleaned')
   }
 
   // Claude Code CLI removal attempted for the canonical server name.
@@ -268,7 +249,6 @@ test('uninstall.sh --dry-run removes nothing', () => {
   for (const rel of [
     '.kaboom/bin/kaboom-agentic-browser',
     'KaboomAgenticDevtoolExtension/manifest.json',
-    'kaboom-logs.jsonl',
     'Library/LaunchAgents/com.kaboom.daemon.plist',
     '.claude/skills/debug/SKILL.md',
   ]) {
@@ -308,4 +288,5 @@ test('uninstall.ps1 exists and mirrors the artifact coverage of install.ps1', ()
     assert.match(script, new RegExp(name), `must remove MCP server entry "${name}"`)
   }
   assert.match(script, /kaboom-managed-skill/)
+  assert.doesNotMatch(script, /\b(?:gasoline|strum|legacy)\b/i)
 })

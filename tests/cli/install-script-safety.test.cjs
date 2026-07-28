@@ -1,7 +1,7 @@
 /**
  * @fileoverview Safety-contract tests for scripts/install.sh (and docs install
  * one-liners). Static regression guards for the 2026-06-10 code-review fixes:
- * purge ordering, anchored process-kill patterns, backup-preserving cleanup,
+ * anchored process-kill patterns, backup-preserving cleanup,
  * bash-only invocation strings, fish rc-dir creation, exact checksum matching,
  * kaboom-identity health checks, EXT_DIR guards, and stale-staging sweeps.
  */
@@ -36,64 +36,12 @@ test('install.sh parses cleanly under bash -n', () => {
 })
 
 // ─────────────────────────────────────────────────────────────
-// Finding 1 — purge must never delete canonical binaries, and
-// must run only after the new binaries are installed.
-// ─────────────────────────────────────────────────────────────
-
-test('purge_legacy_install_artifacts never lists the canonical binaries', () => {
-  const body = functionBody('purge_legacy_install_artifacts')
-
-  assert.doesNotMatch(
-    body,
-    /kaboom-agentic-browser/,
-    'purge list must not contain the canonical kaboom-agentic-browser binary'
-  )
-  assert.doesNotMatch(
-    body,
-    /kaboom-hooks/,
-    'purge list must not contain the canonical kaboom-hooks binary'
-  )
-
-  // Genuinely legacy names must still be purged.
-  assert.match(body, /\$BIN_DIR\/kaboom\$BINARY_EXT/, 'must purge legacy bare kaboom binary')
-  assert.match(body, /kaboom-agentic-devtools/, 'must purge legacy kaboom-agentic-devtools binary')
-  assert.match(body, /gasoline\$BINARY_EXT/, 'must purge legacy gasoline binary')
-  assert.match(body, /gasoline-agentic-browser/, 'must purge legacy gasoline-agentic-browser binary')
-  assert.match(body, /gasoline-agentic-devtools/, 'must purge legacy gasoline-agentic-devtools binary')
-  assert.match(body, /gasoline-hooks/, 'must purge legacy gasoline-hooks binary')
-  assert.match(body, /strum\$BINARY_EXT/, 'must purge legacy strum binary')
-  assert.match(body, /strum-hooks/, 'must purge legacy strum-hooks binary')
-})
-
-test('purge_legacy_install_artifacts runs only after binary installation', () => {
-  const callIndices = lines
-    .map((line, idx) => ({ line: line.trim(), idx }))
-    .filter(({ line }) => line === 'purge_legacy_install_artifacts')
-    .map(({ idx }) => idx)
-  assert.equal(callIndices.length, 1, 'purge_legacy_install_artifacts must have exactly one call site')
-
-  const mainDownloadIdx = lines.findIndex((l) => l.includes('download_and_verify "$BINARY_NAME"'))
-  const hooksDownloadIdx = lines.findIndex((l) => l.includes('download_and_verify "$HOOKS_BINARY_NAME"'))
-  assert.ok(mainDownloadIdx > -1, 'install.sh must download/verify the main binary')
-  assert.ok(hooksDownloadIdx > -1, 'install.sh must download/verify the hooks binary')
-
-  assert.ok(
-    callIndices[0] > mainDownloadIdx,
-    'purge must run after the main binary is downloaded, verified, and installed'
-  )
-  assert.ok(
-    callIndices[0] > hooksDownloadIdx,
-    'purge must run after the hooks binary is downloaded, verified, and installed'
-  )
-})
-
-// ─────────────────────────────────────────────────────────────
 // Finding 3 — process-kill patterns must be anchored full names,
 // consistent with scripts/uninstall.sh.
 // ─────────────────────────────────────────────────────────────
 
 test('process kill patterns are anchored and match uninstall.sh', () => {
-  const anchored = String.raw`(kaboom|gasoline|strum)-(agentic-browser|agentic-devtools|hooks)|\.kaboom/bin/`
+  const anchored = String.raw`kaboom-(agentic-browser|hooks)|\.kaboom/bin/`
 
   assert.ok(
     script.includes(anchored),
@@ -105,11 +53,6 @@ test('process kill patterns are anchored and match uninstall.sh', () => {
     uninstall.includes(anchored),
     'uninstall.sh must keep the same anchored process pattern (consistency)'
   )
-
-  // No effectively-bare legacy alternations that match unrelated processes
-  // (e.g. bare "strum" matches "instrument").
-  assert.doesNotMatch(script, /strum\(\\\.exe\)\?/, 'must not use bare strum(\\.exe)? pattern')
-  assert.doesNotMatch(script, /\|gasoline\|strum'/, 'pkill fallback must not use bare gasoline/strum names')
 
   // Every pgrep/pkill invocation must go through the shared anchored pattern.
   const procLines = lines.filter((l) => /\b(pgrep|pkill)\b.* -f /.test(l))

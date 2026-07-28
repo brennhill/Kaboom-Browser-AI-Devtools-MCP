@@ -58,7 +58,7 @@ function Show-InstallWarnings {
 function Get-KaboomServerPids {
     $pids = @()
     $targetPath = [System.IO.Path]::GetFullPath($KABOOM_BIN).ToLowerInvariant()
-    $processes = Get-CimInstance Win32_Process -Filter "Name = 'kaboom-agentic-browser.exe' OR Name = 'kaboom.exe' OR Name = 'gasoline.exe' OR Name = 'strum.exe'" -ErrorAction SilentlyContinue
+    $processes = Get-CimInstance Win32_Process -Filter "Name = 'kaboom-agentic-browser.exe'" -ErrorAction SilentlyContinue
 
     foreach ($proc in $processes) {
         if (-not $proc.ProcessId) { continue }
@@ -71,8 +71,7 @@ function Get-KaboomServerPids {
 
         try {
             $procPath = [System.IO.Path]::GetFullPath($proc.ExecutablePath).ToLowerInvariant()
-            # Catch Kaboom plus legacy Gasoline and STRUM processes.
-            if ($procPath -eq $targetPath -or $procPath -match "kaboom\.exe$" -or $procPath -match "gasoline\.exe$" -or $procPath -match "strum\.exe$") {
+            if ($procPath -eq $targetPath) {
                 $pids += [int]$proc.ProcessId
             }
         } catch {
@@ -89,7 +88,7 @@ function Stop-KaboomServerProcesses {
         return $true
     }
 
-    Write-Host "🛑 Stopping running Kaboom/legacy server: PID(s) $($targetPids -join ', ')"
+    Write-Host "🛑 Stopping running Kaboom server: PID(s) $($targetPids -join ', ')"
     foreach ($procId in $targetPids) {
         Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
     }
@@ -173,24 +172,8 @@ function Test-ExtensionStage {
         return $false
     }
 
-    # Support both modern bundled extension layout and legacy modular layout
-    # (mirrors validate_extension_stage in scripts/install.sh). Each group
-    # requires at least one of its alternatives to be present.
-    $alternativeGroups = @(
-        @("background.js", "background\init.js"),
-        @("content.bundled.js", "content\script-injection.js"),
-        @("inject.bundled.js", "inject\index.js"),
-        @("early-patch.bundled.js", "theme-bootstrap.js")
-    )
-    foreach ($group in $alternativeGroups) {
-        $found = $false
-        foreach ($candidate in $group) {
-            if (Test-Path (Join-Path $BaseDir $candidate)) {
-                $found = $true
-                break
-            }
-        }
-        if (-not $found) {
+    foreach ($required in @("background.js", "content.bundled.js", "inject.bundled.js", "early-patch.bundled.js")) {
+        if (-not (Test-Path (Join-Path $BaseDir $required))) {
             return $false
         }
     }
@@ -370,7 +353,7 @@ Remove-Item -Path $TEMP_ZIP -ErrorAction SilentlyContinue
 # The binary's --install flag will:
 #   - Detect all installed MCP clients (Claude, Cursor, VS Code, etc.).
 #   - Safely update JSON configuration files with Windows-aware paths.
-#   - Reset any running Kaboom and legacy processes.
+#   - Reset any running Kaboom processes.
 #   - Display final success message and extension instructions.
 Write-Host "🚀 Finalizing configuration..."
 if (-not (Test-Path $INSTALL_BIN)) {

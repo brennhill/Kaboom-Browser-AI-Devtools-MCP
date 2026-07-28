@@ -36,12 +36,12 @@ test('kaboom npm wrapper metadata points at the final repo slug', () => {
   assert.equal(packageJson.bugs.url, 'https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/issues')
 })
 
-test('npm skill installer cleanup targets kaboom-managed output and strum legacy artifacts', () => {
+test('npm skill installer targets only canonical kaboom-managed output', () => {
   const skillsSource = fs.readFileSync(path.join(REPO_ROOT, 'npm/kaboom-agentic-browser/lib/skills.js'), 'utf8')
   const postinstallSource = fs.readFileSync(path.join(REPO_ROOT, 'npm/kaboom-agentic-browser/lib/postinstall-skills.js'), 'utf8')
 
   assert.match(skillsSource, /kaboom-managed-skill/)
-  assert.match(skillsSource, /strum-/)
+  assert.doesNotMatch(skillsSource, /\b(?:gasoline|strum|legacy)\b/i)
   assert.match(postinstallSource, /\[kaboom-mcp\]/)
 })
 
@@ -63,7 +63,7 @@ test('install-bundled-skills.sh has valid bash syntax', () => {
   assert.equal(res.status, 0, `bash -n failed: ${res.stderr}`)
 })
 
-test('install-bundled-skills.sh uses per-skill manifest versions, manifest iteration, and all legacy prefixes', () => {
+test('install-bundled-skills.sh uses per-skill manifest versions and manifest iteration', () => {
   if (process.platform === 'win32') return
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kaboom-skills-sh-'))
   try {
@@ -81,16 +81,6 @@ test('install-bundled-skills.sh uses per-skill manifest versions, manifest itera
 
     const claudeRoot = path.join(tmp, 'claude-skills')
     fs.mkdirSync(claudeRoot, { recursive: true })
-    // Legacy variants from older brand eras must be removed (npm parity).
-    fs.writeFileSync(
-      path.join(claudeRoot, 'gasoline-alpha.md'),
-      '<!-- gasoline-managed-skill id:alpha version:1 -->\nold gasoline\n'
-    )
-    fs.writeFileSync(
-      path.join(claudeRoot, 'strum-alpha.md'),
-      '<!-- strum-managed-skill id:alpha version:1 -->\nold strum\n'
-    )
-
     const res = runSkillsScript({
       KABOOM_BUNDLED_SKILLS_DIR: skillsSrc,
       KABOOM_CLAUDE_SKILLS_DIR: claudeRoot,
@@ -108,8 +98,6 @@ test('install-bundled-skills.sh uses per-skill manifest versions, manifest itera
       false,
       'must only install manifest-listed skills, not every directory'
     )
-    assert.equal(fs.existsSync(path.join(claudeRoot, 'gasoline-alpha.md')), false, 'gasoline- legacy variant must be removed')
-    assert.equal(fs.existsSync(path.join(claudeRoot, 'strum-alpha.md')), false, 'strum- legacy variant must be removed')
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true })
   }

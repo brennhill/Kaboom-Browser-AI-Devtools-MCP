@@ -9,7 +9,7 @@ function read(relativePath) {
   return fs.readFileSync(path.join(REPO_ROOT, relativePath), 'utf8')
 }
 
-test('operator scripts use Kaboom binary names and cleanup semantics', () => {
+test('operator scripts use only canonical Kaboom binary names', () => {
   const stdioSilence = read('scripts/test-stdio-silence.sh')
   const mcpComprehensive = read('scripts/test-mcp-comprehensive.sh')
   const cursorSimulation = read('scripts/test-cursor-simulation.sh')
@@ -30,7 +30,7 @@ test('operator scripts use Kaboom binary names and cleanup semantics', () => {
   assert.match(rebuild, /VERSIONED_BIN_NAME="kaboom-agentic-browser-\$VERSION_TAG"/)
   assert.match(rebuild, /go build -o kaboom-agentic-browser/)
   assert.match(rebuild, /\/usr\/local\/bin\/kaboom-agentic-browser/)
-  assert.match(rebuild, /gasoline-mcp/)
+  assert.doesNotMatch(rebuild, /\b(?:gasoline|strum|legacy)\b/i)
 
   assert.match(buildCrx, /\.kaboom\/extension-signing-key\.pem/)
   assert.match(buildCrx, /kaboom-extension-v\$\{VERSION\}\.crx/)

@@ -28,22 +28,10 @@ $BIN_DIR = Join-Path $INSTALL_DIR "bin"
 $EXT_DIR = if ($env:KABOOM_EXTENSION_DIR) { $env:KABOOM_EXTENSION_DIR } else { Join-Path $HOME "KaboomAgenticDevtoolExtension" }
 $APPDATA_DIR = if ($env:APPDATA) { $env:APPDATA } else { Join-Path $HOME "AppData\Roaming" }
 
-# Canonical MCP server key plus every legacy key older installs may have
-# written (must match installerLegacyServerKeys in internal/nativeinstall/installer.go).
-$SERVER_NAMES = @(
-    'kaboom-browser-devtools',
-    'kaboom-agentic-browser',
-    'kaboom',
-    'gasoline-browser-devtools',
-    'gasoline-agentic-browser',
-    'gasoline',
-    'strum-browser-devtools',
-    'strum-agentic-browser',
-    'strum'
-)
+$SERVER_NAMES = @('kaboom-browser-devtools')
 
 # Managed skill files start with one of these markers (see lib/skills.js).
-$SKILL_MARKER = 'kaboom-managed-skill|gasoline-managed-skill|strum-managed-skill'
+$SKILL_MARKER = 'kaboom-managed-skill'
 
 Write-Host ""
 Write-Host "KaBOOM! Uninstaller (Windows)" -ForegroundColor Yellow
@@ -83,7 +71,7 @@ function Remove-Target {
 
 Write-Host "Stopping Kaboom processes..." -ForegroundColor Blue
 if (-not $DryRun) {
-    $patterns = 'kaboom-agentic-browser|kaboom-agentic-devtools|kaboom-hooks|gasoline-agentic-browser|gasoline-agentic-devtools|strum-agentic-browser'
+    $patterns = 'kaboom-agentic-browser|kaboom-hooks'
     Get-Process -ErrorAction SilentlyContinue | Where-Object {
         $_.ProcessName -match $patterns
     } | ForEach-Object {
@@ -104,7 +92,7 @@ function Remove-McpEntries {
     param([string]$Path, [string]$Key)
     if (-not (Test-Path $Path)) { return }
     $raw = Get-Content -Path $Path -Raw -ErrorAction SilentlyContinue
-    if (-not $raw -or $raw -notmatch 'kaboom|gasoline|strum') { return }
+    if (-not $raw -or $raw -notmatch 'kaboom-browser-devtools') { return }
     if ($DryRun) {
         Write-Host "  [dry-run] Would remove Kaboom MCP entries from: $Path"
         return
@@ -144,15 +132,12 @@ if (Get-Command claude -ErrorAction SilentlyContinue) {
 Remove-McpEntries -Path (Join-Path $HOME ".cursor\mcp.json") -Key "mcpServers"
 Remove-McpEntries -Path (Join-Path $HOME ".codeium\windsurf\mcp_config.json") -Key "mcpServers"
 Remove-McpEntries -Path (Join-Path $HOME ".gemini\settings.json") -Key "mcpServers"
-# Both Antigravity locations: the Go installer writes under ~, npm under %APPDATA%.
 Remove-McpEntries -Path (Join-Path $HOME ".gemini\antigravity\mcp_config.json") -Key "mcpServers"
-Remove-McpEntries -Path (Join-Path $APPDATA_DIR ".gemini\antigravity\mcp_config.json") -Key "mcpServers"
 Remove-McpEntries -Path (Join-Path $HOME ".config\opencode\opencode.json") -Key "mcp"
 Remove-McpEntries -Path (Join-Path $HOME ".config\zed\settings.json") -Key "context_servers"
 Remove-McpEntries -Path (Join-Path $APPDATA_DIR "Claude\claude_desktop_config.json") -Key "mcpServers"
-# VS Code mcp.json uses the "servers" key; older installs wrote "mcpServers".
+# VS Code mcp.json uses the "servers" key.
 Remove-McpEntries -Path (Join-Path $APPDATA_DIR "Code\User\mcp.json") -Key "servers"
-Remove-McpEntries -Path (Join-Path $APPDATA_DIR "Code\User\mcp.json") -Key "mcpServers"
 
 # ─────────────────────────────────────────────────────────────
 # 3. Remove managed agent skills
@@ -195,10 +180,6 @@ if ($KeepData) {
     Write-Host "  Kept data in $INSTALL_DIR (-KeepData)" -ForegroundColor Green
 } else {
     Remove-Target $INSTALL_DIR
-    Remove-Target (Join-Path $HOME "kaboom-upload-dir")
-    Remove-Target (Join-Path $HOME "kaboom-logs.jsonl")
-    Remove-Target (Join-Path $HOME "kaboom-crash.log")
-    Remove-Target (Join-Path $APPDATA_DIR "kaboom")   # legacy state root
 }
 
 # ─────────────────────────────────────────────────────────────

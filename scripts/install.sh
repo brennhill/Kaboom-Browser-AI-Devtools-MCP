@@ -181,10 +181,6 @@ curl_retry() {
     return 1
 }
 
-# ─────────────────────────────────────────────────────────────
-# Extension staging helpers
-# ─────────────────────────────────────────────────────────────
-
 # assert_safe_ext_dir refuses obviously catastrophic extension targets before
 # any destructive rm/mv of EXT_DIR — KABOOM_EXTENSION_DIR is taken verbatim
 # from the environment (mirrors safe_rm_rf in scripts/uninstall.sh).
@@ -224,21 +220,10 @@ validate_extension_stage() {
     local base_dir="${1:-$EXT_DIR}"
     [ -f "$base_dir/manifest.json" ] || return 1
 
-    # Support both modern bundled extension layout and legacy modular layout.
-    local has_background=0
-    local has_content=0
-    local has_inject=0
-    local has_bootstrap=0
-
-    [ -f "$base_dir/background.js" ] || [ -f "$base_dir/background/init.js" ] && has_background=1
-    [ -f "$base_dir/content.bundled.js" ] || [ -f "$base_dir/content/script-injection.js" ] && has_content=1
-    [ -f "$base_dir/inject.bundled.js" ] || [ -f "$base_dir/inject/index.js" ] && has_inject=1
-    [ -f "$base_dir/early-patch.bundled.js" ] || [ -f "$base_dir/theme-bootstrap.js" ] && has_bootstrap=1
-
-    [ "$has_background" -eq 1 ] &&
-    [ "$has_content" -eq 1 ] &&
-    [ "$has_inject" -eq 1 ] &&
-    [ "$has_bootstrap" -eq 1 ]
+    [ -f "$base_dir/background.js" ] &&
+    [ -f "$base_dir/content.bundled.js" ] &&
+    [ -f "$base_dir/inject.bundled.js" ] &&
+    [ -f "$base_dir/early-patch.bundled.js" ]
 }
 
 promote_extension_stage() {
@@ -309,37 +294,12 @@ stage_extension_from_source_zip() {
     return 0
 }
 
-# purge_legacy_install_artifacts removes binaries left behind by older
-# releases. It must ONLY list genuinely legacy names — never the canonical
-# kaboom-agentic-browser / kaboom-hooks binaries — and must only run after
-# the new binaries have been downloaded, verified, and installed.
-purge_legacy_install_artifacts() {
-    local legacy_path=""
-    for legacy_path in \
-        "$BIN_DIR/kaboom$BINARY_EXT" \
-        "$BIN_DIR/kaboom-agentic-devtools$BINARY_EXT" \
-        "$BIN_DIR/gasoline$BINARY_EXT" \
-        "$BIN_DIR/gasoline-agentic-browser$BINARY_EXT" \
-        "$BIN_DIR/gasoline-agentic-devtools$BINARY_EXT" \
-        "$BIN_DIR/gasoline-hooks$BINARY_EXT" \
-        "$BIN_DIR/strum$BINARY_EXT" \
-        "$BIN_DIR/strum-hooks$BINARY_EXT"
-    do
-        rm -f "$legacy_path" 2>/dev/null || true
-    done
-}
-
-# ─────────────────────────────────────────────────────────────
-# Stale process cleanup (pre-install)
-# ─────────────────────────────────────────────────────────────
-
 kill_stale_kaboom_processes() {
     # Kill any running Kaboom daemons before replacing the binary.
     # This avoids "text file busy" on Linux and ensures a clean upgrade.
-    # Anchored to full binary names — never bare substrings like 'strum',
-    # which would match unrelated processes (e.g. 'instrument'). Keep this
-    # pattern in sync with scripts/uninstall.sh.
-    local proc_pattern='(kaboom|gasoline|strum)-(agentic-browser|agentic-devtools|hooks)|\.kaboom/bin/'
+    # Anchored to the canonical binary name. Keep this pattern in sync with
+    # scripts/uninstall.sh.
+    local proc_pattern='kaboom-(agentic-browser|hooks)|\.kaboom/bin/'
     local killed=0
     local pids=""
 
@@ -354,7 +314,7 @@ kill_stale_kaboom_processes() {
     fi
 
     if [ -n "$pids" ]; then
-        echo -e "  Stopping running KaBOOM!/legacy processes..."
+        echo -e "  Stopping running Kaboom processes..."
         for pid in $pids; do
             # Don't kill ourselves.
             if [ "$pid" != "$$" ]; then
@@ -588,14 +548,6 @@ fi
 HOOKS_BINARY_NAME="kaboom-hooks-$PLATFORM-$E_ARCH$BINARY_EXT"
 download_and_verify "$HOOKS_BINARY_NAME" "$KABOOM_HOOKS_BIN" "$MIN_HOOKS_BINARY_BYTES" "kaboom-hooks binary"
 echo -e "${GREEN}kaboom-hooks installed.${NC}"
-
-# Remove genuinely legacy binaries only AFTER the new binaries are verified
-# and installed — a failed download must never leave the user binary-less.
-purge_legacy_install_artifacts
-
-# ─────────────────────────────────────────────────────────────
-# 7. Extension, Config, Daemon (skip for --hooks-only)
-# ─────────────────────────────────────────────────────────────
 
 if [ "$HOOKS_ONLY" = "1" ]; then
     echo -e "Skipping extension, daemon, and MCP config (hooks-only mode)."

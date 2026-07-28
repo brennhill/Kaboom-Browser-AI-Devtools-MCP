@@ -27,6 +27,9 @@ code_paths:
   - npm/kaboom-agentic-browser/lib/output.js
   - scripts/install.sh
   - scripts/install.ps1
+  - scripts/install-bundled-skills.sh
+  - scripts/clean-old-daemons.sh
+  - scripts/rebuild.sh
   - scripts/uninstall.sh
   - scripts/uninstall.ps1
   - server/scripts/install.js
@@ -84,6 +87,10 @@ test_paths:
   - tests/cli/install.test.cjs
   - tests/cli/uninstall.test.cjs
   - tests/cli/uninstall-script.test.cjs
+  - tests/cli/clean-old-daemons-branding.test.cjs
+  - tests/cli/install-script-safety.test.cjs
+  - tests/cli/operator-script-branding.test.cjs
+  - scripts/release/canonical-installer-scripts.test.mjs
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-28
 ---
@@ -128,6 +135,12 @@ OpenAPI contract.
 - Server postinstall now validates `kaboom-browser-devtools` on `/health` reuse checks and points manual extension loading at `KABOOM_EXTENSION_DIR` / `~/KaboomAgenticDevtoolExtension`.
 - Server postinstall process discovery and health gating use only canonical
   Kaboom binary and service identities.
+- Shell and PowerShell install, rebuild, daemon cleanup, skill installation,
+  and uninstall scripts now operate only on canonical Kaboom binaries,
+  processes, state, skill markers, server identities, and client config
+  locations. They contain no historical-brand cleanup or alternate config-key
+  branches; the authored installer scripts are regression-checked below 800
+  lines.
 - Install now also fixes the Claude Code `claude mcp add-json` invocation (JSON passed as a positional arg, not stdin) and adds **Codex CLI** as a supported client (`~/.codex/config.toml`, TOML; honors `$CODEX_HOME`).
 - Daemon setup diagnostics use one canonical CLI entry point, `--doctor`; the duplicate `--check` facade is rejected.
 - Runtime help uses one canonical configure mode, `tutorial`; the duplicate `examples` mode is rejected.

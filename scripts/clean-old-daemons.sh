@@ -1,5 +1,5 @@
 #!/bin/bash
-# Clean up old Kaboom and legacy daemons before upgrading
+# Clean up Kaboom daemons before upgrading
 # Usage: ./scripts/clean-old-daemons.sh
 # Or: kaboom --force
 
@@ -40,47 +40,34 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   # macOS: use lsof and pkill
   echo "Platform: macOS"
   echo ""
-  echo "Searching for Kaboom/legacy processes..."
+  echo "Searching for Kaboom processes..."
 
-  # Get all Kaboom/legacy processes
-  PIDS=$(
-    for legacy_name in kaboom gasoline strum; do
-      lsof -c "$legacy_name" -a -d cwd 2>/dev/null | tail -n +2 | awk '{print $2}'
-    done | sort -u || true
-  )
+  PIDS=$(lsof -c "kaboom" -a -d cwd 2>/dev/null | tail -n +2 | awk '{print $2}' | sort -u || true)
 
   if [ -z "$PIDS" ]; then
-    echo "  No Kaboom/legacy processes found"
+    echo "  No Kaboom processes found"
   else
     for pid in $PIDS; do
-      kill_process "$pid" "Kaboom/legacy process"
+      kill_process "$pid" "Kaboom process"
     done
   fi
 
   # Also try pkill as fallback
   pkill -9 -f "kaboom.*--daemon" 2>/dev/null || true
-  pkill -9 -f "gasoline.*--daemon" 2>/dev/null || true
-  pkill -9 -f "strum.*--daemon" 2>/dev/null || true
 
 elif [[ "$OSTYPE" == "linux"* ]]; then
   # Linux: use pgrep/pkill
   echo "Platform: Linux"
   echo ""
-  echo "Searching for Kaboom/legacy processes..."
+  echo "Searching for Kaboom processes..."
 
-  PIDS=$(
-    {
-      pgrep -f "kaboom.*--daemon"
-      pgrep -f "gasoline.*--daemon"
-      pgrep -f "strum.*--daemon"
-    } 2>/dev/null | sort -u || true
-  )
+  PIDS=$(pgrep -f "kaboom.*--daemon" 2>/dev/null | sort -u || true)
 
   if [ -z "$PIDS" ]; then
-    echo "  No Kaboom/legacy processes found"
+    echo "  No Kaboom processes found"
   else
     for pid in $PIDS; do
-      kill_process "$pid" "Kaboom/legacy process"
+      kill_process "$pid" "Kaboom process"
     done
   fi
 
@@ -88,37 +75,35 @@ elif [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
   # Windows
   echo "Platform: Windows"
   echo ""
-  echo "Searching for Kaboom/legacy processes..."
+  echo "Searching for Kaboom processes..."
 
-  for legacy_image in kaboom.exe gasoline.exe strum.exe; do
-    if taskkill /F /IM "$legacy_image" 2>/dev/null; then
-      ((KILLED++))
-    else
-      echo "  No $legacy_image processes found"
-    fi
-  done
+  if taskkill /F /IM "kaboom-agentic-browser.exe" 2>/dev/null; then
+    ((KILLED++))
+  else
+    echo "  No Kaboom processes found"
+  fi
 fi
 
 # Clean up PID files
 echo ""
 echo "Cleaning up PID files..."
-for legacy_name in kaboom gasoline strum; do
-  for port in {7890..7910}; do
-    pid_file="$HOME/.${legacy_name}-$port.pid"
-    if [ -f "$pid_file" ]; then
-      rm -f "$pid_file"
-      echo "  Removed $pid_file"
-    fi
-  done
+state_root="${KABOOM_STATE_DIR:-${XDG_STATE_HOME:+$XDG_STATE_HOME/kaboom}}"
+state_root="${state_root:-$HOME/.kaboom}"
+for port in {7890..7910}; do
+  pid_file="$state_root/run/kaboom-$port.pid"
+  if [ -f "$pid_file" ]; then
+    rm -f "$pid_file"
+    echo "  Removed $pid_file"
+  fi
 done
 
 # Summary
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 if [ "$KILLED" -gt 0 ]; then
-  echo "✓ Killed $KILLED Kaboom/legacy process(es)"
+  echo "✓ Killed $KILLED Kaboom process(es)"
   else
-  echo "✓ No running Kaboom/legacy processes found"
+  echo "✓ No running Kaboom processes found"
   fi
 
   echo "Safe to install or upgrade Kaboom now:"

@@ -43,12 +43,10 @@ INSTALL_DIR="$HOME/.kaboom"
 BIN_DIR="$INSTALL_DIR/bin"
 EXT_DIR="${KABOOM_EXTENSION_DIR:-$HOME/KaboomAgenticDevtoolExtension}"
 
-# Canonical MCP server key plus every legacy key older installs may have
-# written (must match installerLegacyServerKeys in internal/nativeinstall/installer.go).
-SERVER_NAMES="kaboom-browser-devtools kaboom-agentic-browser kaboom gasoline-browser-devtools gasoline-agentic-browser gasoline strum-browser-devtools strum-agentic-browser strum"
+SERVER_NAMES="kaboom-browser-devtools"
 
 # Managed skill files start with one of these markers (see lib/skills.js).
-SKILL_MARKER_RE='<!-- (kaboom|gasoline|strum)-managed-skill'
+SKILL_MARKER_RE='<!-- kaboom-managed-skill'
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -185,9 +183,7 @@ stop_kaboom_processes() {
     fi
     local pids=""
     if command -v pgrep >/dev/null 2>&1; then
-        # Anchored to full binary names — never bare substrings like 'strum',
-        # which would match unrelated processes (e.g. 'instrument').
-        pids=$(pgrep -f '(kaboom|gasoline|strum)-(agentic-browser|agentic-devtools|hooks)|\.kaboom/bin/' 2>/dev/null || true)
+        pids=$(pgrep -f 'kaboom-(agentic-browser|hooks)|\.kaboom/bin/' 2>/dev/null || true)
     fi
     [ -n "$pids" ] || return 0
     local pid
@@ -250,7 +246,7 @@ fi
 strip_mcp_entries() {
     local file="$1" key="$2"
     [ -f "$file" ] || return 0
-    grep -qE 'kaboom|gasoline|strum' "$file" 2>/dev/null || return 0
+    grep -q 'kaboom-browser-devtools' "$file" 2>/dev/null || return 0
     if [ "$DRY_RUN" = "1" ]; then
         echo -e "  [dry-run] Would remove Kaboom MCP entries from: $file"
         return 0
@@ -329,12 +325,10 @@ strip_mcp_entries "$HOME/.config/opencode/opencode.json" mcp
 strip_mcp_entries "$HOME/.config/zed/settings.json" context_servers
 if [ "$PLATFORM" = "darwin" ]; then
     strip_mcp_entries "$HOME/Library/Application Support/Claude/claude_desktop_config.json" mcpServers
-    # VS Code mcp.json uses the "servers" key; older installs wrote "mcpServers".
+    # VS Code mcp.json uses the "servers" key.
     strip_mcp_entries "$HOME/Library/Application Support/Code/User/mcp.json" servers
-    strip_mcp_entries "$HOME/Library/Application Support/Code/User/mcp.json" mcpServers
 elif [ "$PLATFORM" = "linux" ]; then
     strip_mcp_entries "$HOME/.config/Code/User/mcp.json" servers
-    strip_mcp_entries "$HOME/.config/Code/User/mcp.json" mcpServers
 fi
 
 # ─────────────────────────────────────────────────────────────
@@ -425,25 +419,6 @@ remove_state_root "$INSTALL_DIR"
 remove_state_root "${KABOOM_STATE_DIR:-}"
 if [ -n "${XDG_STATE_HOME:-}" ]; then
     remove_state_root "$XDG_STATE_HOME/kaboom"
-fi
-
-if [ "$KEEP_DATA" != "1" ]; then
-    # Legacy/runtime artifacts from older versions and daemon defaults.
-    remove_path "$HOME/kaboom-upload-dir"
-    remove_path "$HOME/kaboom-logs.jsonl"
-    remove_path "$HOME/kaboom-crash.log"
-    remove_path "$HOME/.kaboom-settings.json"
-    for pidfile in "$HOME"/.kaboom-*.pid "$HOME"/.gasoline-*.pid "$HOME"/.strum-*.pid; do
-        [ -e "$pidfile" ] || continue
-        remove_path "$pidfile"
-    done
-    remove_path "$HOME/.gasoline"
-    remove_path "$HOME/.strum"
-    if [ "$PLATFORM" = "darwin" ]; then
-        remove_path "$HOME/Library/Application Support/kaboom"
-    else
-        remove_path "${XDG_CONFIG_HOME:-$HOME/.config}/kaboom"
-    fi
 fi
 
 # ─────────────────────────────────────────────────────────────

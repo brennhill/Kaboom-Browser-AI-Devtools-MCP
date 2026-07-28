@@ -34,21 +34,20 @@ INSTALL=true
 [ "${1:-}" = "--no-install" ] && INSTALL=false
 
 # ── Step 1: Kill all running daemons ─────────────────────
-step "Killing all Kaboom and legacy daemon processes..."
+step "Killing all Kaboom daemon processes..."
 killed=0
 
-# Kill by process name
-for process_pattern in "kaboom-agentic-browser" "gasoline-mcp" "kaboom" "gasoline" "strum"; do
+# Kill by canonical process name.
+process_pattern="kaboom-agentic-browser"
+if pgrep -f "$process_pattern" >/dev/null 2>&1; then
+    pids=$(pgrep -f "$process_pattern" | tr '\n' ' ')
+    kill $pids 2>/dev/null || true
+    sleep 0.3
     if pgrep -f "$process_pattern" >/dev/null 2>&1; then
-        pids=$(pgrep -f "$process_pattern" | tr '\n' ' ')
-        kill $pids 2>/dev/null || true
-        sleep 0.3
-        if pgrep -f "$process_pattern" >/dev/null 2>&1; then
-            kill -9 $(pgrep -f "$process_pattern") 2>/dev/null || true
-        fi
-        killed=1
+        kill -9 $(pgrep -f "$process_pattern") 2>/dev/null || true
     fi
-done
+    killed=1
+fi
 
 # Kill anything on port 7890
 if lsof -ti :7890 >/dev/null 2>&1; then
@@ -57,7 +56,7 @@ if lsof -ti :7890 >/dev/null 2>&1; then
 fi
 
 if [ "$killed" = "1" ]; then
-    ok "All Kaboom and legacy daemon processes killed"
+    ok "All Kaboom daemon processes killed"
 else
     ok "No running processes found"
 fi
@@ -66,12 +65,11 @@ fi
 step "Removing stale binaries..."
 
 # Local project binaries
-for local_bin in "./kaboom-agentic-browser" "./gasoline-agentic-browser"; do
-    if [ -f "$local_bin" ]; then
-        rm -f "$local_bin"
-        ok "Removed $local_bin"
-    fi
-done
+local_bin="./kaboom-agentic-browser"
+if [ -f "$local_bin" ]; then
+    rm -f "$local_bin"
+    ok "Removed $local_bin"
+fi
 
 # Local versioned binary
 if [ -f "$VERSIONED_LOCAL_PATH" ]; then
@@ -80,15 +78,14 @@ if [ -f "$VERSIONED_LOCAL_PATH" ]; then
 fi
 
 # System binaries
-for system_bin in "/usr/local/bin/kaboom-agentic-browser" "/usr/local/bin/gasoline-agentic-browser"; do
-    if [ -f "$system_bin" ]; then
-        rm -f "$system_bin"
-        ok "Removed $system_bin"
-    fi
-done
+system_bin="/usr/local/bin/kaboom-agentic-browser"
+if [ -f "$system_bin" ]; then
+    rm -f "$system_bin"
+    ok "Removed $system_bin"
+fi
 
 # Remove stale system versioned binaries
-for stale_glob in /usr/local/bin/kaboom-agentic-browser-[0-9]* /usr/local/bin/kaboom-agentic-browser-dev /usr/local/bin/gasoline-agentic-browser-[0-9]* /usr/local/bin/gasoline-agentic-browser-dev; do
+for stale_glob in /usr/local/bin/kaboom-agentic-browser-[0-9]* /usr/local/bin/kaboom-agentic-browser-dev; do
     if [ -e "$stale_glob" ]; then
         rm -f "$stale_glob"
         ok "Removed $stale_glob"
