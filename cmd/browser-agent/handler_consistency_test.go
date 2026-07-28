@@ -118,7 +118,7 @@ func TestCorrelationID_AsyncCommands(t *testing.T) {
 
 	srv := newTestServerForHandlers(t)
 	cap := capture.NewCapture()
-	cap.SetPilotEnabled(true)
+	cap.Extension().SetPilotEnabled(true)
 	mcpHandler := NewToolHandler(srv, cap)
 	handler := mcpHandler.toolHandler.(*ToolHandler)
 

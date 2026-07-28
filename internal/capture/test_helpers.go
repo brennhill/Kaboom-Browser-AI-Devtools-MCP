@@ -61,33 +61,33 @@ func (c *Capture) AddEnhancedActionsForTest(actions []types.EnhancedAction) {
 }
 
 // SetPilotEnabled sets the pilot enabled state (TEST ONLY)
-func (c *Capture) SetPilotEnabled(enabled bool) {
-	c.extension.mu.Lock()
-	defer c.extension.mu.Unlock()
-	c.extension.state.pilotEnabled = enabled
-	c.extension.state.pilotStatusKnown = true
-	c.extension.state.pilotUpdatedAt = time.Now()
-	c.extension.state.pilotSource = PilotSourceTestHelper
+func (r *ExtensionRuntime) SetPilotEnabled(enabled bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.state.pilotEnabled = enabled
+	r.state.pilotStatusKnown = true
+	r.state.pilotUpdatedAt = time.Now()
+	r.state.pilotSource = PilotSourceTestHelper
 }
 
 // SetPilotUnknownForTest resets pilot to startup-uncertain state (TEST ONLY).
-func (c *Capture) SetPilotUnknownForTest() {
-	c.extension.mu.Lock()
-	defer c.extension.mu.Unlock()
-	c.extension.state.pilotEnabled = false
-	c.extension.state.pilotStatusKnown = false
-	c.extension.state.pilotUpdatedAt = time.Time{}
-	c.extension.state.pilotSource = PilotSourceAssumedStartup
+func (r *ExtensionRuntime) SetPilotUnknownForTest() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.state.pilotEnabled = false
+	r.state.pilotStatusKnown = false
+	r.state.pilotUpdatedAt = time.Time{}
+	r.state.pilotSource = PilotSourceAssumedStartup
 }
 
 // SetTrackingStatusForTest sets the tracked tab URL and ID (TEST ONLY)
-func (c *Capture) SetTrackingStatusForTest(tabID int, tabURL string) {
-	c.extension.mu.Lock()
-	defer c.extension.mu.Unlock()
-	c.extension.state.trackingEnabled = true
-	c.extension.state.trackedTabID = tabID
-	c.extension.state.trackedTabURL = tabURL
-	c.extension.state.trackingUpdated = time.Now()
+func (r *ExtensionRuntime) SetTrackingStatusForTest(tabID int, tabURL string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.state.trackingEnabled = true
+	r.state.trackedTabID = tabID
+	r.state.trackedTabURL = tabURL
+	r.state.trackingUpdated = time.Now()
 }
 
 // SetClientRegistryForTest sets the client registry (TEST ONLY)
@@ -125,35 +125,35 @@ func (c *Capture) GetWSLengthsForTest() (events int, addedAt int, memoryTotal in
 
 // SimulateExtensionConnectForTest marks the extension as connected by
 // setting lastSyncSeen to now. Thread-safe (operates on the instance, not a global).
-func (c *Capture) SimulateExtensionConnectForTest() {
-	c.extension.mu.Lock()
-	defer c.extension.mu.Unlock()
-	c.extension.state.lastSyncSeen = time.Now()
-	c.extension.state.lastExtensionConnected = true
+func (r *ExtensionRuntime) SimulateExtensionConnectForTest() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.state.lastSyncSeen = time.Now()
+	r.state.lastExtensionConnected = true
 }
 
 // SimulateExtensionDisconnectForTest marks the extension as disconnected by
 // setting lastSyncSeen far in the past. Thread-safe (operates on the instance, not a global).
-func (c *Capture) SimulateExtensionDisconnectForTest() {
-	c.extension.mu.Lock()
-	defer c.extension.mu.Unlock()
-	c.extension.state.lastSyncSeen = time.Now().Add(-1 * time.Hour)
+func (r *ExtensionRuntime) SimulateExtensionDisconnectForTest() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.state.lastSyncSeen = time.Now().Add(-1 * time.Hour)
 }
 
 // SetTabStatusForTest sets the tracked tab status (TEST ONLY).
 // Valid values: "loading", "complete".
-func (c *Capture) SetTabStatusForTest(status string) {
-	c.extension.mu.Lock()
-	defer c.extension.mu.Unlock()
-	c.extension.state.tabStatus = status
+func (r *ExtensionRuntime) SetTabStatusForTest(status string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.state.tabStatus = status
 }
 
 // SetCSPStatusForTest sets the CSP restriction state (TEST ONLY)
-func (c *Capture) SetCSPStatusForTest(restricted bool, level string) {
-	c.extension.mu.Lock()
-	defer c.extension.mu.Unlock()
-	c.extension.state.cspRestricted = restricted
-	c.extension.state.cspLevel = level
+func (r *ExtensionRuntime) SetCSPStatusForTest(restricted bool, level string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.state.cspRestricted = restricted
+	r.state.cspLevel = level
 }
 
 // SimulateSyncForTest simulates a /sync connection from the extension,

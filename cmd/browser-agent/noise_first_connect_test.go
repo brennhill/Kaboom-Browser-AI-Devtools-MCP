@@ -36,7 +36,7 @@ func TestNoiseAutoDetectOnFirstSync_TriggersOnce(t *testing.T) {
 	t.Cleanup(func() { server.Close() })
 
 	cap := capture.NewCapture()
-	cap.SetPilotEnabled(false)
+	cap.Extension().SetPilotEnabled(false)
 	mcpHandler := NewToolHandler(server, cap)
 	handler := mcpHandler.toolHandler.(*ToolHandler)
 
@@ -65,7 +65,7 @@ func TestNoiseAutoDetectOnFirstSync_DoesNotRepeat(t *testing.T) {
 	t.Cleanup(func() { server.Close() })
 
 	cap := capture.NewCapture()
-	cap.SetPilotEnabled(false)
+	cap.Extension().SetPilotEnabled(false)
 	mcpHandler := NewToolHandler(server, cap)
 	handler := mcpHandler.toolHandler.(*ToolHandler)
 
@@ -120,7 +120,7 @@ func TestNoiseAutoDetectOnFirstSync_EmitsLogEntry(t *testing.T) {
 	t.Cleanup(func() { server.Close() })
 
 	cap := capture.NewCapture()
-	cap.SetPilotEnabled(false)
+	cap.Extension().SetPilotEnabled(false)
 	mcpHandler := NewToolHandler(server, cap)
 	_ = mcpHandler.toolHandler.(*ToolHandler)
 

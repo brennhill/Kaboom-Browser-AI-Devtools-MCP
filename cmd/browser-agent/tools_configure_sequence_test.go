@@ -354,7 +354,7 @@ func TestReplaySequence_OverrideStepsLengthMismatch(t *testing.T) {
 func TestReplaySequence_QueuesPendingAsyncCommands(t *testing.T) {
 	t.Parallel()
 	env := newSequenceTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 	mockConnectedTrackedTab(t, env.capture)
 
 	callConfigureRaw(env.handler, `{

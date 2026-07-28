@@ -19,10 +19,10 @@ import (
 func TestSmoke_ObservePage_DataAgeMs_IsNumeric(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.SimulateExtensionConnectForTest()
-	cap.SetPilotEnabled(true)
-	cap.SetTrackingStatusForTest(42, "https://example.com")
-	cap.SetTabStatusForTest("complete")
+	cap.Extension().SimulateExtensionConnectForTest()
+	cap.Extension().SetPilotEnabled(true)
+	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
+	cap.Extension().SetTabStatusForTest("complete")
 
 	resp := callObserveRaw(h, "page")
 	result := parseToolResult(t, resp)
@@ -198,10 +198,10 @@ func TestSmoke_ObserveErrors_DataAgeMs_NoData_Sentinel(t *testing.T) {
 func TestSmoke_ObservePage_DataAgeMs_RecentValue(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.SimulateExtensionConnectForTest()
-	cap.SetPilotEnabled(true)
-	cap.SetTrackingStatusForTest(42, "https://example.com")
-	cap.SetTabStatusForTest("complete")
+	cap.Extension().SimulateExtensionConnectForTest()
+	cap.Extension().SetPilotEnabled(true)
+	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
+	cap.Extension().SetTabStatusForTest("complete")
 
 	resp := callObserveRaw(h, "page")
 	result := parseToolResult(t, resp)
@@ -249,10 +249,10 @@ func TestSmoke_ObservePage_DataAgeMs_RecentValue(t *testing.T) {
 func TestSmoke_ObservePage_IsActive_PresentWhenKnown(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.SimulateExtensionConnectForTest()
-	cap.SetPilotEnabled(true)
-	cap.SetTrackingStatusForTest(42, "https://example.com")
-	cap.SetTabStatusForTest("complete")
+	cap.Extension().SimulateExtensionConnectForTest()
+	cap.Extension().SetPilotEnabled(true)
+	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
+	cap.Extension().SetTabStatusForTest("complete")
 	cap.Extension().SetTrackedTabActiveForTest(true)
 
 	resp := callObserveRaw(h, "page")
@@ -274,10 +274,10 @@ func TestSmoke_ObservePage_IsActive_PresentWhenKnown(t *testing.T) {
 func TestSmoke_ObservePage_IsActive_FalseWhenInactive(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.SimulateExtensionConnectForTest()
-	cap.SetPilotEnabled(true)
-	cap.SetTrackingStatusForTest(42, "https://example.com")
-	cap.SetTabStatusForTest("complete")
+	cap.Extension().SimulateExtensionConnectForTest()
+	cap.Extension().SetPilotEnabled(true)
+	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
+	cap.Extension().SetTabStatusForTest("complete")
 	cap.Extension().SetTrackedTabActiveForTest(false)
 
 	resp := callObserveRaw(h, "page")
@@ -299,10 +299,10 @@ func TestSmoke_ObservePage_IsActive_FalseWhenInactive(t *testing.T) {
 func TestSmoke_ObservePage_IsActive_AbsentWhenUnknown(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.SimulateExtensionConnectForTest()
-	cap.SetPilotEnabled(true)
-	cap.SetTrackingStatusForTest(42, "https://example.com")
-	cap.SetTabStatusForTest("complete")
+	cap.Extension().SimulateExtensionConnectForTest()
+	cap.Extension().SetPilotEnabled(true)
+	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
+	cap.Extension().SetTabStatusForTest("complete")
 	// Do NOT call SetTrackedTabActiveForTest — state is unknown
 
 	resp := callObserveRaw(h, "page")

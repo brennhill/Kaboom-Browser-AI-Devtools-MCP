@@ -21,7 +21,7 @@ import (
 func TestHandleBrowserActionBack_Success(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	result, ok := env.callInteract(t, `{"what":"back"}`)
 	if !ok {
@@ -60,7 +60,7 @@ func TestHandleBrowserActionBack_Success(t *testing.T) {
 func TestHandleBrowserActionForward_Success(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	result, ok := env.callInteract(t, `{"what":"forward"}`)
 	if !ok {
@@ -94,7 +94,7 @@ func TestHandleBrowserActionForward_Success(t *testing.T) {
 func TestHandleBrowserActionNewTab_Success(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	result, ok := env.callInteract(t, `{"what":"new_tab","url":"https://example.com"}`)
 	if !ok {
@@ -131,7 +131,7 @@ func TestHandleBrowserActionNewTab_Success(t *testing.T) {
 func TestHandleBrowserActionNewTab_NoURL(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	// URL is optional for new_tab
 	result, ok := env.callInteract(t, `{"what":"new_tab"}`)
@@ -175,7 +175,7 @@ func TestHandleBrowserActionNewTab_InvalidJSON(t *testing.T) {
 func TestHandleBrowserActionSwitchTab_WithTabID(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	result, ok := env.callInteract(t, `{"what":"switch_tab","tab_id":42}`)
 	if !ok {
@@ -208,7 +208,7 @@ func TestHandleBrowserActionSwitchTab_WithTabID(t *testing.T) {
 func TestHandleBrowserActionSwitchTab_WithTabIndex(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	result, ok := env.callInteract(t, `{"what":"switch_tab","tab_index":1}`)
 	if !ok {
@@ -238,7 +238,7 @@ func TestHandleBrowserActionSwitchTab_WithTabIndex(t *testing.T) {
 func TestHandleBrowserActionCloseTab_WithTabID(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	result, ok := env.callInteract(t, `{"what":"close_tab","tab_id":55}`)
 	if !ok {
@@ -292,10 +292,10 @@ func completePendingCommands(env *interactTestEnv, result json.RawMessage, cmdEr
 func TestSwitchTab_UpdatesTrackedTabOnSuccess(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	// Set an initial tracked tab — simulates the user having tab 100 tracked.
-	env.capture.SetTrackingStatusForTest(100, "https://old-page.example.com")
+	env.capture.Extension().SetTrackingStatusForTest(100, "https://old-page.example.com")
 
 	// Verify initial state
 	_, oldTabID, oldURL := env.capture.Extension().GetTrackingStatus()
@@ -346,8 +346,8 @@ func TestSwitchTab_UpdatesTrackedTabOnSuccess(t *testing.T) {
 func TestSwitchTab_SetTrackedFalse_NoUpdate(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
-	env.capture.SetTrackingStatusForTest(100, "https://old-page.example.com")
+	env.capture.Extension().SetPilotEnabled(true)
+	env.capture.Extension().SetTrackingStatusForTest(100, "https://old-page.example.com")
 
 	// Simulate extension completing with a different tab.
 	go completePendingCommands(env, json.RawMessage(`{
@@ -376,8 +376,8 @@ func TestSwitchTab_SetTrackedFalse_NoUpdate(t *testing.T) {
 func TestSwitchTab_FailedCommand_NoUpdate(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
-	env.capture.SetTrackingStatusForTest(100, "https://old-page.example.com")
+	env.capture.Extension().SetPilotEnabled(true)
+	env.capture.Extension().SetTrackingStatusForTest(100, "https://old-page.example.com")
 
 	// Simulate extension returning a failure.
 	go completePendingCommands(env, json.RawMessage(`{
@@ -405,8 +405,8 @@ func TestSwitchTab_FailedCommand_NoUpdate(t *testing.T) {
 func TestSwitchTab_TabIDZero_NoUpdate(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
-	env.capture.SetTrackingStatusForTest(100, "https://old-page.example.com")
+	env.capture.Extension().SetPilotEnabled(true)
+	env.capture.Extension().SetTrackingStatusForTest(100, "https://old-page.example.com")
 
 	// Simulate extension returning success but with tab_id=0 (missing/invalid).
 	go completePendingCommands(env, json.RawMessage(`{
@@ -435,8 +435,8 @@ func TestSwitchTab_TabIDZero_NoUpdate(t *testing.T) {
 func TestSwitchTab_TabIDMissing_NoUpdate(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
-	env.capture.SetTrackingStatusForTest(100, "https://old-page.example.com")
+	env.capture.Extension().SetPilotEnabled(true)
+	env.capture.Extension().SetTrackingStatusForTest(100, "https://old-page.example.com")
 
 	// Simulate extension returning success but without a tab_id field.
 	go completePendingCommands(env, json.RawMessage(`{
@@ -466,8 +466,8 @@ func TestSwitchTab_TabIDMissing_NoUpdate(t *testing.T) {
 func TestSwitchTab_AsyncMode_NoImmediateTrackingUpdate(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
-	env.capture.SetTrackingStatusForTest(100, "https://old-page.example.com")
+	env.capture.Extension().SetPilotEnabled(true)
+	env.capture.Extension().SetTrackingStatusForTest(100, "https://old-page.example.com")
 
 	// Call switch_tab with background=true (async mode).
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
@@ -502,7 +502,7 @@ func TestSwitchTab_AsyncMode_NoImmediateTrackingUpdate(t *testing.T) {
 func TestSmoke_SwitchTab_DispatchesThroughToolInteract(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	// Dispatch through the top-level callInteractRaw (toolInteract dispatch path).
 	resp := callInteractRaw(env.handler, `{"what":"switch_tab","tab_id":99}`)
@@ -541,7 +541,7 @@ func TestSmoke_SwitchTab_DispatchesThroughToolInteract(t *testing.T) {
 func TestSmoke_SwitchTab_MissingTabID_StructuredError(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	// No tab_id or tab_index — should return structured error
 	resp := callInteractRaw(env.handler, `{"what":"switch_tab"}`)
@@ -567,7 +567,7 @@ func TestSmoke_SwitchTab_MissingTabID_StructuredError(t *testing.T) {
 func TestHandleBrowserActionNavigate_NewTabFlagPreserved(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	result, ok := env.callInteract(t, `{"what":"navigate","url":"https://example.com/path","new_tab":true}`)
 	if !ok {

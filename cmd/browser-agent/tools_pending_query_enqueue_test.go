@@ -48,7 +48,7 @@ func TestInteractNavigate_QueueFullFailsFast(t *testing.T) {
 	t.Parallel()
 
 	env := newToolTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 	mockConnectedTrackedTab(t, env.capture)
 	saturatePendingQueryQueue(t, env.capture)
 

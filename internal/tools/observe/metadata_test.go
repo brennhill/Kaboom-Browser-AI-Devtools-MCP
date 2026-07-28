@@ -12,7 +12,7 @@ import (
 func TestBuildResponseMetadata_DataAgeMs_FreshData(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	cap.SimulateExtensionConnectForTest()
+	cap.Extension().SimulateExtensionConnectForTest()
 
 	newestEntry := time.Now().Add(-500 * time.Millisecond)
 	meta := BuildResponseMetadata(cap, newestEntry)
@@ -26,7 +26,7 @@ func TestBuildResponseMetadata_DataAgeMs_FreshData(t *testing.T) {
 func TestBuildResponseMetadata_DataAgeMs_ZeroForVeryFresh(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	cap.SimulateExtensionConnectForTest()
+	cap.Extension().SimulateExtensionConnectForTest()
 
 	newestEntry := time.Now()
 	meta := BuildResponseMetadata(cap, newestEntry)
@@ -40,7 +40,7 @@ func TestBuildResponseMetadata_DataAgeMs_ZeroForVeryFresh(t *testing.T) {
 func TestBuildResponseMetadata_DataAgeMs_StaleData(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	cap.SimulateExtensionConnectForTest()
+	cap.Extension().SimulateExtensionConnectForTest()
 
 	newestEntry := time.Now().Add(-30 * time.Second)
 	meta := BuildResponseMetadata(cap, newestEntry)
@@ -54,7 +54,7 @@ func TestBuildResponseMetadata_DataAgeMs_StaleData(t *testing.T) {
 func TestBuildResponseMetadata_DataAgeMs_NoData(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	cap.SimulateExtensionConnectForTest()
+	cap.Extension().SimulateExtensionConnectForTest()
 
 	meta := BuildResponseMetadata(cap, time.Time{})
 
@@ -70,7 +70,7 @@ func TestBuildResponseMetadata_DataAgeMs_NoData(t *testing.T) {
 func TestBuildResponseMetadata_DataAgeMs_FutureTimestamp(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	cap.SimulateExtensionConnectForTest()
+	cap.Extension().SimulateExtensionConnectForTest()
 
 	// Simulate NTP clock adjustment: newestEntry is in the future relative to now.
 	newestEntry := time.Now().Add(5 * time.Second)
@@ -91,7 +91,7 @@ func TestBuildResponseMetadata_DataAgeMs_FutureTimestamp(t *testing.T) {
 func TestBuildResponseMetadata_DataAgeMs_InPaginatedMetadata(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	cap.SimulateExtensionConnectForTest()
+	cap.Extension().SimulateExtensionConnectForTest()
 
 	newestEntry := time.Now().Add(-2 * time.Second)
 	pMeta := &pagination.CursorPaginationMetadata{

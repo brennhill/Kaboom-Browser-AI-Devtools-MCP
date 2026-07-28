@@ -34,7 +34,7 @@ func newInteractHelpersTestEnv(t *testing.T) *interactHelpersTestEnv {
 	}
 	t.Cleanup(func() { server.Close() })
 	cap := capture.NewCapture()
-	cap.SetPilotEnabled(false) // explicit default for state/pilot-disabled test branches
+	cap.Extension().SetPilotEnabled(false) // explicit default for state/pilot-disabled test branches
 	mcpHandler := NewToolHandler(server, cap)
 	handler := mcpHandler.toolHandler.(*ToolHandler)
 
@@ -44,7 +44,7 @@ func newInteractHelpersTestEnv(t *testing.T) *interactHelpersTestEnv {
 	cap.HandleSync(httptest.NewRecorder(), httpReq)
 
 	// Simulate tab tracking so tests don't hit the tab tracking gate.
-	cap.SetTrackingStatusForTest(42, "https://example.com")
+	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 
 	return &interactHelpersTestEnv{handler: handler, server: server, capture: cap}
 }
@@ -52,7 +52,7 @@ func newInteractHelpersTestEnv(t *testing.T) *interactHelpersTestEnv {
 // enablePilot activates pilot mode using the test helper.
 func (e *interactHelpersTestEnv) enablePilot(t *testing.T) {
 	t.Helper()
-	e.capture.SetPilotEnabled(true)
+	e.capture.Extension().SetPilotEnabled(true)
 }
 
 // ============================================

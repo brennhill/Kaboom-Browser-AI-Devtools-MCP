@@ -21,7 +21,7 @@ func setEvidenceCaptureForTest(t *testing.T, capture func(*toolinteract.Deps, st
 
 func TestCommandResult_EvidenceAlwaysIncludesBeforeAfterPaths(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	calls := 0
 	shots := []toolinteract.EvidenceShot{
@@ -81,7 +81,7 @@ func TestCommandResult_EvidenceAlwaysIncludesBeforeAfterPaths(t *testing.T) {
 
 func TestCommandResult_EvidenceOnMutationSkipsReadOnlyAction(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	calls := 0
 	setEvidenceCaptureForTest(t, func(_ *toolinteract.Deps, _ string) toolinteract.EvidenceShot {
@@ -132,7 +132,7 @@ func TestCommandResult_EvidenceOnMutationSkipsReadOnlyAction(t *testing.T) {
 
 func TestCommandResult_EvidencePartialWhenAfterCaptureFails(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	calls := 0
 	shots := []toolinteract.EvidenceShot{

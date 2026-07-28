@@ -37,7 +37,7 @@ func newVideoTestEnv(t *testing.T) *videoTestEnv {
 	t.Helper()
 
 	cap := capture.NewCapture()
-	cap.SetPilotEnabled(false) // explicit default for pilot-disabled recording tests
+	cap.Extension().SetPilotEnabled(false) // explicit default for pilot-disabled recording tests
 	mockConnectedTrackedTab(t, cap)
 	return &videoTestEnv{handler: NewInteractHandler(testDeps(cap)), capture: cap}
 }
@@ -518,7 +518,7 @@ func TestHandleRecordStartAndStop(t *testing.T) {
 		t.Fatal("expected screen_recording_start to fail when pilot is disabled")
 	}
 
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	invalidAudio := env.handler.HandleRecordStart(req, json.RawMessage(`{"audio":"speaker"}`))
 	invalidAudioResult := parseToolResult(t, invalidAudio)
@@ -618,7 +618,7 @@ func mockConnectedTrackedTab(t *testing.T, cap *capture.Capture) {
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
 	cap.HandleSync(httptest.NewRecorder(), httpReq)
-	cap.SetTrackingStatusForTest(42, "https://example.com")
+	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 }
 
 func parseToolResult(t *testing.T, resp mcp.JSONRPCResponse) mcp.MCPToolResult {

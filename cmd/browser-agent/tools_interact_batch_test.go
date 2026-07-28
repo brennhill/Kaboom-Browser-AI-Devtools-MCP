@@ -40,11 +40,11 @@ func TestToolsInteractBatch_Dispatches(t *testing.T) {
 func setupBatchHandler(t *testing.T) *ToolHandler {
 	t.Helper()
 	h, _, cap := makeToolHandler(t)
-	cap.SetPilotEnabled(true)
+	cap.Extension().SetPilotEnabled(true)
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
 	cap.HandleSync(httptest.NewRecorder(), httpReq)
-	cap.SetTrackingStatusForTest(42, "https://example.com")
+	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 	return h
 }
 

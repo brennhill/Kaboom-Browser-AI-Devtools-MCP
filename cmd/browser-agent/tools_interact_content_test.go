@@ -28,7 +28,7 @@ func newContentTestEnv(t *testing.T) *interactTestEnv {
 	}
 	t.Cleanup(func() { server.Close() })
 	cap := capture.NewCapture()
-	cap.SetPilotEnabled(true) // content extraction requires pilot
+	cap.Extension().SetPilotEnabled(true) // content extraction requires pilot
 	mcpHandler := NewToolHandler(server, cap)
 	handler := mcpHandler.toolHandler.(*ToolHandler)
 
@@ -38,7 +38,7 @@ func newContentTestEnv(t *testing.T) *interactTestEnv {
 	cap.HandleSync(httptest.NewRecorder(), httpReq)
 
 	// Simulate tab tracking
-	cap.SetTrackingStatusForTest(42, "https://example.com")
+	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 
 	return &interactTestEnv{handler: handler, server: server, capture: cap}
 }

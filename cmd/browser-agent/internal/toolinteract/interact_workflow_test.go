@@ -134,7 +134,7 @@ func TestHandleNavigateAndDocument_InvalidJSON(t *testing.T) {
 func TestHandleNavigateAndDocument_TabMismatch(t *testing.T) {
 	h, fs := newFakeHandler(t)
 	// tracked tab is 1; request tab_id 2 should mismatch.
-	fs.cap.SetTrackingStatusForTest(1, "https://example.com/page")
+	fs.cap.Extension().SetTrackingStatusForTest(1, "https://example.com/page")
 	args := `{"selector":"#link","tab_id":2,"wait_for_url_change":false,"wait_for_stable":false}`
 	assertErr(t, h.HandleNavigateAndDocument(testReq(), json.RawMessage(args)), mcp.ErrInvalidParam)
 }

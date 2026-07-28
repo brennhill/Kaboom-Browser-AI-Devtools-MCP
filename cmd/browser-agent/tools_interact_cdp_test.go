@@ -84,11 +84,11 @@ func TestToolsInteractHardwareClick_PilotDisabled(t *testing.T) {
 func TestToolsInteractHardwareClick_Success(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.SetPilotEnabled(true)
+	cap.Extension().SetPilotEnabled(true)
 	syncReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	syncReq.Header.Set("X-Kaboom-Client", "test-client")
 	cap.HandleSync(httptest.NewRecorder(), syncReq)
-	cap.SetTrackingStatusForTest(42, "https://example.com")
+	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 
 	resp := callInteractRaw(h, `{"what":"hardware_click","x":512,"y":384}`)
 	result := parseToolResult(t, resp)
@@ -131,11 +131,11 @@ func TestToolsInteractHardwareClick_Success(t *testing.T) {
 func TestToolsInteractClick_CDPEscalationWithXY(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.SetPilotEnabled(true)
+	cap.Extension().SetPilotEnabled(true)
 	syncReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	syncReq.Header.Set("X-Kaboom-Client", "test-client")
 	cap.HandleSync(httptest.NewRecorder(), syncReq)
-	cap.SetTrackingStatusForTest(42, "https://example.com")
+	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 
 	resp := callInteractRaw(h, `{"what":"click","selector":"#btn","x":100,"y":200}`)
 	result := parseToolResult(t, resp)
@@ -157,11 +157,11 @@ func TestToolsInteractClick_CDPEscalationWithXY(t *testing.T) {
 func TestToolsInteractClick_NoCDPEscalationWithoutXY(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.SetPilotEnabled(true)
+	cap.Extension().SetPilotEnabled(true)
 	syncReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	syncReq.Header.Set("X-Kaboom-Client", "test-client")
 	cap.HandleSync(httptest.NewRecorder(), syncReq)
-	cap.SetTrackingStatusForTest(42, "https://example.com")
+	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 
 	resp := callInteractRaw(h, `{"what":"click","selector":"#btn"}`)
 	result := parseToolResult(t, resp)

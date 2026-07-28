@@ -590,10 +590,10 @@ func TestToolsObservePage_PageReadyForCommands_AllConditionsMet(t *testing.T) {
 	h, _, cap := makeToolHandler(t)
 
 	// Set up all conditions for page_ready_for_commands=true
-	cap.SimulateExtensionConnectForTest()
-	cap.SetPilotEnabled(true)
-	cap.SetTrackingStatusForTest(42, "https://example.com")
-	cap.SetTabStatusForTest("complete")
+	cap.Extension().SimulateExtensionConnectForTest()
+	cap.Extension().SetPilotEnabled(true)
+	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
+	cap.Extension().SetTabStatusForTest("complete")
 
 	resp := callObserveRaw(h, "page")
 	result := parseToolResult(t, resp)
@@ -623,10 +623,10 @@ func TestToolsObservePage_PageReadyForCommands_ExtensionDisconnected(t *testing.
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 
-	cap.SimulateExtensionDisconnectForTest()
-	cap.SetPilotEnabled(true)
-	cap.SetTrackingStatusForTest(42, "https://example.com")
-	cap.SetTabStatusForTest("complete")
+	cap.Extension().SimulateExtensionDisconnectForTest()
+	cap.Extension().SetPilotEnabled(true)
+	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
+	cap.Extension().SetTabStatusForTest("complete")
 
 	resp := callObserveRaw(h, "page")
 	result := parseToolResult(t, resp)
@@ -641,10 +641,10 @@ func TestToolsObservePage_PageReadyForCommands_PilotDisabled(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 
-	cap.SimulateExtensionConnectForTest()
-	cap.SetPilotEnabled(false)
-	cap.SetTrackingStatusForTest(42, "https://example.com")
-	cap.SetTabStatusForTest("complete")
+	cap.Extension().SimulateExtensionConnectForTest()
+	cap.Extension().SetPilotEnabled(false)
+	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
+	cap.Extension().SetTabStatusForTest("complete")
 
 	resp := callObserveRaw(h, "page")
 	result := parseToolResult(t, resp)
@@ -659,10 +659,10 @@ func TestToolsObservePage_PageReadyForCommands_NoTrackedTab(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 
-	cap.SimulateExtensionConnectForTest()
-	cap.SetPilotEnabled(true)
+	cap.Extension().SimulateExtensionConnectForTest()
+	cap.Extension().SetPilotEnabled(true)
 	// No tracked tab set
-	cap.SetTabStatusForTest("complete")
+	cap.Extension().SetTabStatusForTest("complete")
 
 	resp := callObserveRaw(h, "page")
 	result := parseToolResult(t, resp)
@@ -677,10 +677,10 @@ func TestToolsObservePage_PageReadyForCommands_TabLoading(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 
-	cap.SimulateExtensionConnectForTest()
-	cap.SetPilotEnabled(true)
-	cap.SetTrackingStatusForTest(42, "https://example.com")
-	cap.SetTabStatusForTest("loading")
+	cap.Extension().SimulateExtensionConnectForTest()
+	cap.Extension().SetPilotEnabled(true)
+	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
+	cap.Extension().SetTabStatusForTest("loading")
 
 	resp := callObserveRaw(h, "page")
 	result := parseToolResult(t, resp)
@@ -697,7 +697,7 @@ func TestToolsObservePage_PageReadyForCommands_TabLoading(t *testing.T) {
 func TestToolsObservePage_DataAgeMs_Present(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.SimulateExtensionConnectForTest()
+	cap.Extension().SimulateExtensionConnectForTest()
 
 	resp := callObserveRaw(h, "page")
 	result := parseToolResult(t, resp)

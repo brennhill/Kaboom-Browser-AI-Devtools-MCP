@@ -18,9 +18,9 @@ import (
 func TestInteract_IncludeScreenshot_Schema(t *testing.T) {
 	t.Parallel()
 	env := newToolTestEnv(t)
-	env.capture.SetPilotEnabled(true)
-	env.capture.SetTrackingStatusForTest(1, "https://example.com")
-	env.capture.SimulateExtensionConnectForTest()
+	env.capture.Extension().SetPilotEnabled(true)
+	env.capture.Extension().SetTrackingStatusForTest(1, "https://example.com")
+	env.capture.Extension().SimulateExtensionConnectForTest()
 
 	// Send a click action with include_screenshot=true
 	// The action will timeout since no extension is processing, but the schema should accept the param
@@ -44,9 +44,9 @@ func TestInteract_IncludeScreenshot_Schema(t *testing.T) {
 func TestInteract_IncludeScreenshot_AppendsImageBlock(t *testing.T) {
 	t.Parallel()
 	env := newToolTestEnv(t)
-	env.capture.SetPilotEnabled(true)
-	env.capture.SetTrackingStatusForTest(1, "https://example.com")
-	env.capture.SimulateExtensionConnectForTest()
+	env.capture.Extension().SetPilotEnabled(true)
+	env.capture.Extension().SetTrackingStatusForTest(1, "https://example.com")
+	env.capture.Extension().SimulateExtensionConnectForTest()
 
 	args := json.RawMessage(`{"what":"click","selector":"button","include_screenshot":true}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
@@ -160,9 +160,9 @@ func TestInteract_IncludeScreenshot_AppendsImageBlock(t *testing.T) {
 func TestInteract_IncludeScreenshot_DefaultFalse(t *testing.T) {
 	t.Parallel()
 	env := newToolTestEnv(t)
-	env.capture.SetPilotEnabled(true)
-	env.capture.SetTrackingStatusForTest(1, "https://example.com")
-	env.capture.SimulateExtensionConnectForTest()
+	env.capture.Extension().SetPilotEnabled(true)
+	env.capture.Extension().SetTrackingStatusForTest(1, "https://example.com")
+	env.capture.Extension().SimulateExtensionConnectForTest()
 
 	args := json.RawMessage(`{"what":"click","selector":"button"}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}

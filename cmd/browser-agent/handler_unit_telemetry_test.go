@@ -47,7 +47,7 @@ func TestMCPHandler_PassiveTelemetrySummaryDeltas(t *testing.T) {
 	}
 	t.Cleanup(srv.Close)
 	cap := capture.NewCapture()
-	cap.SetTrackingStatusForTest(42, "https://tracked.test")
+	cap.Extension().SetTrackingStatusForTest(42, "https://tracked.test")
 
 	// Seed baseline data before first call; first response should still report zero deltas.
 	srv.logs.AddEntries([]types.LogEntry{{"level": "error", "message": "baseline error"}})

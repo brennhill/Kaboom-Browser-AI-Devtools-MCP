@@ -87,9 +87,9 @@ type fakeState struct {
 // newFakeState builds a fakeState with pilot enabled, a tracked tab, and a connected extension.
 func newFakeState() *fakeState {
 	c := capture.NewCapture()
-	c.SetPilotEnabled(true)
-	c.SetTrackingStatusForTest(1, "https://example.com/page")
-	c.SimulateExtensionConnectForTest()
+	c.Extension().SetPilotEnabled(true)
+	c.Extension().SetTrackingStatusForTest(1, "https://example.com/page")
+	c.Extension().SimulateExtensionConnectForTest()
 	return &fakeState{cap: c, listenPort: 7890}
 }
 

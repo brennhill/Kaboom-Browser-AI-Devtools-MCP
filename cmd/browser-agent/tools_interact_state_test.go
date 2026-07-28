@@ -100,7 +100,7 @@ func TestCaptureState_Status_ExtensionDisconnected(t *testing.T) {
 	t.Parallel()
 	env := newInteractHelpersTestEnv(t)
 	env.enablePilot(t)
-	env.capture.SimulateExtensionDisconnectForTest()
+	env.capture.Extension().SimulateExtensionDisconnectForTest()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	result := env.handler.stateInteract().CaptureState(req)
@@ -383,7 +383,7 @@ func TestSaveState_StateCapture_SkippedExtensionDisconnected(t *testing.T) {
 	env.enablePilot(t)
 	requireSessionStore(t, env)
 	// Force extension to appear disconnected despite test env default connection.
-	env.capture.SimulateExtensionDisconnectForTest()
+	env.capture.Extension().SimulateExtensionDisconnectForTest()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	resp := env.handler.stateInteract().HandleStateSave(req, json.RawMessage(`{"snapshot_name":"no_ext"}`))
@@ -608,7 +608,7 @@ func TestLoadState_StateRestore_SkippedExtensionDisconnected(t *testing.T) {
 	env.enablePilot(t)
 	requireSessionStore(t, env)
 	// Force extension to appear disconnected despite test env default connection.
-	env.capture.SimulateExtensionDisconnectForTest()
+	env.capture.Extension().SimulateExtensionDisconnectForTest()
 
 	stateData := map[string]any{
 		"url":             "https://example.com/form",
@@ -664,7 +664,7 @@ func TestLoadState_IncludeURL_SkipsNavigationWhenExtensionDisconnected(t *testin
 	env.enablePilot(t)
 	requireSessionStore(t, env)
 	// Force extension to appear disconnected despite test env default connection.
-	env.capture.SimulateExtensionDisconnectForTest()
+	env.capture.Extension().SimulateExtensionDisconnectForTest()
 
 	stateData := map[string]any{
 		"url":      "https://example.com/restore-target",

@@ -165,7 +165,7 @@ func TestBuildPilotInfo_ExplicitDisableState(t *testing.T) {
 	t.Parallel()
 
 	cap := capture.NewCapture()
-	cap.SetPilotEnabled(false)
+	cap.Extension().SetPilotEnabled(false)
 
 	info := health.BuildPilotInfo(cap)
 	if info.Enabled {

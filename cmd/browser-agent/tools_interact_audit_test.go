@@ -48,7 +48,7 @@ func newInteractTestEnv(t *testing.T) *interactTestEnv {
 		t.Fatalf("NewServer failed: %v", err)
 	}
 	cap := capture.NewCapture()
-	cap.SetPilotEnabled(false) // explicit default for legacy pilot-disabled tests
+	cap.Extension().SetPilotEnabled(false) // explicit default for legacy pilot-disabled tests
 	mcpHandler := NewToolHandler(server, cap)
 	handler := mcpHandler.toolHandler.(*ToolHandler)
 
@@ -58,7 +58,7 @@ func newInteractTestEnv(t *testing.T) *interactTestEnv {
 	cap.HandleSync(httptest.NewRecorder(), httpReq)
 
 	// Simulate tab tracking so tests don't hit the tab tracking gate.
-	cap.SetTrackingStatusForTest(42, "https://example.com")
+	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 
 	return &interactTestEnv{handler: handler, server: server, capture: cap}
 }

@@ -471,9 +471,9 @@ func findCheck(t *testing.T, checks []DoctorCheck, name string) DoctorCheck {
 
 func TestRunDoctorChecks_HealthyState(t *testing.T) {
 	c := newTestCapture(t)
-	c.SimulateExtensionConnectForTest()
-	c.SetPilotEnabled(true)
-	c.SetTrackingStatusForTest(42, "https://example.com")
+	c.Extension().SimulateExtensionConnectForTest()
+	c.Extension().SetPilotEnabled(true)
+	c.Extension().SetTrackingStatusForTest(42, "https://example.com")
 
 	checks := RunDoctorChecks(c)
 	if got := findCheck(t, checks, "extension_connected").Status; got != "pass" {
@@ -511,7 +511,7 @@ func TestRunDoctorChecks_DegradedDefaults(t *testing.T) {
 
 func TestRunDoctorChecks_PilotExplicitlyDisabled(t *testing.T) {
 	c := newTestCapture(t)
-	c.SetPilotEnabled(false) // explicitly disabled
+	c.Extension().SetPilotEnabled(false) // explicitly disabled
 
 	pilot := findCheck(t, RunDoctorChecks(c), "pilot_enabled")
 	if pilot.Status != "warn" {
@@ -599,9 +599,9 @@ func TestHandleDoctorHTTP_Unhealthy(t *testing.T) {
 
 func TestHandleDoctorHTTP_Healthy(t *testing.T) {
 	c := newTestCapture(t)
-	c.SimulateExtensionConnectForTest()
-	c.SetPilotEnabled(true)
-	c.SetTrackingStatusForTest(1, "https://example.com")
+	c.Extension().SimulateExtensionConnectForTest()
+	c.Extension().SetPilotEnabled(true)
+	c.Extension().SetTrackingStatusForTest(1, "https://example.com")
 
 	w := httptest.NewRecorder()
 	HandleDoctorHTTP(w, c, "1.0")
@@ -623,8 +623,8 @@ func TestHandleDoctorHTTP_Healthy(t *testing.T) {
 
 func TestHandleDoctorHTTP_Degraded(t *testing.T) {
 	c := newTestCapture(t)
-	c.SimulateExtensionConnectForTest()
-	c.SetPilotEnabled(true)
+	c.Extension().SimulateExtensionConnectForTest()
+	c.Extension().SetPilotEnabled(true)
 	// No tracked tab -> tracked_tab warn (no fail) -> degraded.
 
 	w := httptest.NewRecorder()
@@ -735,7 +735,7 @@ func TestBuildPilotInfo(t *testing.T) {
 	}
 
 	c := newTestCapture(t)
-	c.SetPilotEnabled(true)
+	c.Extension().SetPilotEnabled(true)
 	info := BuildPilotInfo(c)
 	if !info.Enabled {
 		t.Error("pilot should be enabled")

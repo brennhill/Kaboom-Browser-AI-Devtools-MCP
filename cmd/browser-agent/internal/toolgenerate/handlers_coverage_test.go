@@ -122,7 +122,7 @@ func TestHandlePRSummary(t *testing.T) {
 
 	t.Run("with activity", func(t *testing.T) {
 		d := newGenDeps()
-		d.cap.SetTrackingStatusForTest(1, "https://example.com/dash")
+		d.cap.Extension().SetTrackingStatusForTest(1, "https://example.com/dash")
 		d.cap.AddEnhancedActionsForTest([]types.EnhancedAction{
 			{Type: "click", Timestamp: time.Now().UnixMilli()},
 			{Type: "click", Timestamp: time.Now().UnixMilli()},
@@ -250,7 +250,7 @@ func TestHandleGenerateSRI(t *testing.T) {
 
 	t.Run("with bodies", func(t *testing.T) {
 		d := newGenDeps()
-		d.cap.SetTrackingStatusForTest(1, "https://example.com")
+		d.cap.Extension().SetTrackingStatusForTest(1, "https://example.com")
 		d.cap.AddNetworkBodiesForTest([]types.NetworkBody{
 			{URL: "https://cdn.example.com/lib.js", Method: "GET", Status: 200, ContentType: "application/javascript"},
 		})

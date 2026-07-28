@@ -21,7 +21,7 @@ func TestWaitForExtensionConnected_AlreadyConnected(t *testing.T) {
 	c := NewCapture()
 
 	// Simulate extension already connected.
-	c.SimulateExtensionConnectForTest()
+	c.Extension().SimulateExtensionConnectForTest()
 
 	if !c.Extension().WaitForExtensionConnected(context.Background(), 5*time.Second) {
 		t.Fatal("WaitForExtensionConnected returned false when extension already connected")
@@ -36,7 +36,7 @@ func TestWaitForExtensionConnected_ConnectsDuringWait(t *testing.T) {
 	// 150ms margin before the tick catches the connection.
 	go func() {
 		time.Sleep(50 * time.Millisecond)
-		c.SimulateExtensionConnectForTest()
+		c.Extension().SimulateExtensionConnectForTest()
 	}()
 
 	if !c.Extension().WaitForExtensionConnected(context.Background(), time.Second) {
@@ -82,11 +82,11 @@ func TestCaptureTestHelpersAndTTL(t *testing.T) {
 		t.Fatalf("GetActionTotalAdded() = %d, want 1", got)
 	}
 
-	c.SetPilotEnabled(true)
+	c.Extension().SetPilotEnabled(true)
 	if !c.Extension().IsPilotEnabled() {
 		t.Fatal("SetPilotEnabled(true) did not update state")
 	}
-	c.SetTrackingStatusForTest(77, "https://tracked.test")
+	c.Extension().SetTrackingStatusForTest(77, "https://tracked.test")
 	enabled, tabID, tabURL := c.Extension().GetTrackingStatus()
 	if !enabled || tabID != 77 || tabURL != "https://tracked.test" {
 		t.Fatalf("tracking state = (%v,%d,%q), want (true,77,https://tracked.test)", enabled, tabID, tabURL)

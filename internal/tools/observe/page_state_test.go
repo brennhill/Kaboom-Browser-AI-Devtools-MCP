@@ -138,7 +138,7 @@ func TestBuildA11ySummary_TopIssuesLimitedTo5(t *testing.T) {
 func TestRunA11yAudit_TimeoutReturnsPartialResults(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	cap.SetTrackingStatusForTest(1, "https://example.com")
+	cap.Extension().SetTrackingStatusForTest(1, "https://example.com")
 
 	deps := &mockA11yDeps{
 		cap:     cap,
@@ -199,7 +199,7 @@ func TestRunA11yAudit_TimeoutReturnsPartialResults(t *testing.T) {
 func TestRunA11yAudit_AlreadyRunningReturnsPartialResults(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	cap.SetTrackingStatusForTest(1, "https://example.com")
+	cap.Extension().SetTrackingStatusForTest(1, "https://example.com")
 
 	deps := &mockA11yDeps{
 		cap:     cap,
@@ -292,7 +292,7 @@ func TestParseDataURL_EmptyString(t *testing.T) {
 func TestRunA11yAudit_ResultWithErrorFieldReturnsGracefully(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	cap.SetTrackingStatusForTest(1, "https://example.com")
+	cap.Extension().SetTrackingStatusForTest(1, "https://example.com")
 
 	// Simulate extension returning partial results with an error field
 	partialResult := map[string]any{

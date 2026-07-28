@@ -133,6 +133,10 @@ consumer use that owner directly; the 19 former Capture forwarding methods and
 parent-lock coupling are deleted. Event ingestion takes detached test-boundary
 snapshots before acquiring the buffer lock. The pre-`/sync` `ExtensionStatus`
 envelope and `UpdateExtensionStatus` mutation API remain deleted.
+Tests likewise mutate extension-owned pilot, tracking, connection, tab, and CSP
+state through `Capture.Extension()`; the seven Capture-level test-helper
+facades are deleted. The remaining sync simulation helper stays on Capture
+because it coordinates extension state with lifecycle emission.
 Buffer-clear APIs likewise return `internal/types.BufferClearCounts` directly.
 The background manifest entrypoint performs initialization only; batching,
 transport, cache, and processing consumers import their canonical owner modules

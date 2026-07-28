@@ -37,7 +37,7 @@ func makeToolHandler(t *testing.T) (*ToolHandler, *Server, *capture.Capture) {
 	}
 	t.Cleanup(func() { server.Close() })
 	cap := capture.NewCapture()
-	cap.SetPilotEnabled(false) // keep legacy test default: explicitly disabled unless test opts in
+	cap.Extension().SetPilotEnabled(false) // keep legacy test default: explicitly disabled unless test opts in
 	mcpHandler := NewToolHandler(server, cap)
 	handler := mcpHandler.toolHandler.(*ToolHandler)
 	return handler, server, cap
@@ -63,7 +63,7 @@ func newToolTestEnv(t *testing.T) *toolTestEnv {
 	}
 	t.Cleanup(func() { server.Close() })
 	cap := capture.NewCapture()
-	cap.SetPilotEnabled(false) // keep legacy test default: explicitly disabled unless test opts in
+	cap.Extension().SetPilotEnabled(false) // keep legacy test default: explicitly disabled unless test opts in
 	mcpHandler := NewToolHandler(server, cap)
 	handler := mcpHandler.toolHandler.(*ToolHandler)
 	return &toolTestEnv{handler: handler, server: server, capture: cap}
@@ -76,7 +76,7 @@ func mockConnectedTrackedTab(t *testing.T, cap *capture.Capture) {
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
 	cap.HandleSync(httptest.NewRecorder(), httpReq)
-	cap.SetTrackingStatusForTest(42, "https://example.com")
+	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 }
 
 // ============================================

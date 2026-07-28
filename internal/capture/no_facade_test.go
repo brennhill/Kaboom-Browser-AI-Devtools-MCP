@@ -184,6 +184,13 @@ func TestCaptureHasNoCompatibilityAliases(t *testing.T) {
 		"func (c *Capture) GetActiveTestIDs(",
 		"func (c *Capture) SetTestBoundaryStart(",
 		"func (c *Capture) SetTestBoundaryEnd(",
+		"func (c *Capture) SetPilotEnabled(",
+		"func (c *Capture) SetPilotUnknownForTest(",
+		"func (c *Capture) SetTrackingStatusForTest(",
+		"func (c *Capture) SimulateExtensionConnectForTest(",
+		"func (c *Capture) SimulateExtensionDisconnectForTest(",
+		"func (c *Capture) SetTabStatusForTest(",
+		"func (c *Capture) SetCSPStatusForTest(",
 	} {
 		if strings.Contains(source.String(), forbidden) {
 			t.Errorf("capture retains compatibility surface %q", forbidden)

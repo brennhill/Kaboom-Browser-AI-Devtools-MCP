@@ -24,7 +24,7 @@ import (
 
 func TestCommandResult_ExpiredSetsIsError(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	// Queue a command
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
@@ -63,7 +63,7 @@ func TestCommandResult_ExpiredSetsIsError(t *testing.T) {
 
 func TestCommandResult_CompleteWithErrorSetsIsError(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	// Queue a command
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
@@ -102,7 +102,7 @@ func TestCommandResult_CompleteWithErrorSetsIsError(t *testing.T) {
 
 func TestCommandResult_EmbeddedFailureSetsIsError(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
 	if !ok || result.IsError {
@@ -139,7 +139,7 @@ func TestCommandResult_EmbeddedFailureSetsIsError(t *testing.T) {
 
 func TestCommandResult_EmbeddedCSPFailureAddsCSPMarkers(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	result, ok := env.callInteract(t, `{"what":"execute_js","script":"(() => 1)()","background":true}`)
 	if !ok || result.IsError {
@@ -177,7 +177,7 @@ func TestCommandResult_EmbeddedCSPFailureAddsCSPMarkers(t *testing.T) {
 
 func TestCommandResult_ErrorStatusCSPFailureIncludesRetryHint(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	result, ok := env.callInteract(t, `{"what":"navigate","url":"https://example.com","background":true}`)
 	if !ok || result.IsError {
@@ -266,7 +266,7 @@ func TestCommandResult_InteractFailureCodesIncludeRecoveryRetryGuidance(t *testi
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			env := newInteractTestEnv(t)
-			env.capture.SetPilotEnabled(true)
+			env.capture.Extension().SetPilotEnabled(true)
 
 			result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
 			if !ok || result.IsError {
@@ -309,7 +309,7 @@ func TestCommandResult_InteractFailureCodesIncludeRecoveryRetryGuidance(t *testi
 
 func TestCommandResult_SuccessDoesNotSetIsError(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	// Queue a command
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
@@ -349,7 +349,7 @@ func TestCommandResult_SuccessDoesNotSetIsError(t *testing.T) {
 
 func TestQueuedResponse_HasQueuedAndFinalMarkers(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	result, _ := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
 	var responseData map[string]any
@@ -370,7 +370,7 @@ func TestQueuedResponse_HasQueuedAndFinalMarkers(t *testing.T) {
 
 func TestCommandResult_CompleteHasFinalTrue(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	// Queue async to avoid sync-wait-for-extension
 	result, _ := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
@@ -404,7 +404,7 @@ func TestCommandResult_CompleteHasFinalTrue(t *testing.T) {
 
 func TestCommandResult_ErrorHasFinalTrue(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	result, _ := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
 	var resultData map[string]any
@@ -441,7 +441,7 @@ func TestCommandResult_ErrorHasFinalTrue(t *testing.T) {
 
 func TestCommandResult_EffectiveContextSurfaced(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	result, _ := env.callInteract(t, `{"what":"click","selector":"#btn","tab_id":42,"background":true}`)
 	var resultData map[string]any
@@ -491,7 +491,7 @@ func TestCommandResult_EffectiveContextSurfaced(t *testing.T) {
 
 func TestCommandResult_CompleteHasQueuedFalse(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	result, _ := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
 	var resultData map[string]any
@@ -527,7 +527,7 @@ func TestCommandResult_CompleteHasQueuedFalse(t *testing.T) {
 
 func TestCommandResult_ExpiredHasFinalTrue(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	result, _ := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
 	var resultData map[string]any
@@ -654,7 +654,7 @@ func TestCommandResult_AnnotationNotFoundHasFinalTrue(t *testing.T) {
 
 func TestCommandResult_ExpiredIncludesDiagnosticHint(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
 	if !ok || result.IsError {
@@ -777,7 +777,7 @@ func TestSubtitle_CorrelationID_MatchesPendingQuery(t *testing.T) {
 
 func TestCommandResult_AmbiguousTarget_CandidatesPromotedToTopLevel(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"text=About","background":true}`)
 	if !ok || result.IsError {
@@ -839,7 +839,7 @@ func TestCommandResult_AmbiguousTarget_CandidatesPromotedToTopLevel(t *testing.T
 
 func TestCommandResult_AmbiguousTarget_SuggestedElementID(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"text=Submit","background":true}`)
 	if !ok || result.IsError {
@@ -888,7 +888,7 @@ func TestCommandResult_AmbiguousTarget_SuggestedElementID(t *testing.T) {
 
 func TestCommandResult_AmbiguousTarget_RetryGuidanceMentionsCandidates(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"text=OK","background":true}`)
 	if !ok || result.IsError {
@@ -939,7 +939,7 @@ func TestCommandResult_AmbiguousTarget_RetryGuidanceMentionsCandidates(t *testin
 
 func TestCommandResult_AmbiguousTarget_NoCandidates_NoSuggestedElementID(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	result, ok := env.callInteract(t, `{"what":"click","selector":"text=OK","background":true}`)
 	if !ok || result.IsError {

@@ -49,7 +49,7 @@ func newConfigureTestEnv(t *testing.T) *configureTestEnv {
 	}
 	t.Cleanup(func() { server.Close() })
 	cap := capture.NewCapture()
-	cap.SetPilotEnabled(false) // explicit default for configure context tests
+	cap.Extension().SetPilotEnabled(false) // explicit default for configure context tests
 	mcpHandler := NewToolHandler(server, cap)
 	handler := mcpHandler.toolHandler.(*ToolHandler)
 	return &configureTestEnv{handler: handler, server: server, capture: cap}

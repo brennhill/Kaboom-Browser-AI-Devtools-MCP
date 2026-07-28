@@ -24,8 +24,8 @@ import (
 
 func TestRichAction_RefreshStoresBeforeSnapshot(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
-	env.capture.SetTrackingStatusForTest(1, "https://example.com/dashboard")
+	env.capture.Extension().SetPilotEnabled(true)
+	env.capture.Extension().SetTrackingStatusForTest(1, "https://example.com/dashboard")
 
 	// Seed a perf snapshot for the tracked URL's path
 	env.capture.Performance().Add([]performance.PerformanceSnapshot{{
@@ -68,8 +68,8 @@ func TestRichAction_RefreshStoresBeforeSnapshot(t *testing.T) {
 
 func TestRichAction_NavigateStoresBeforeSnapshot(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
-	env.capture.SetTrackingStatusForTest(1, "https://example.com/dashboard")
+	env.capture.Extension().SetPilotEnabled(true)
+	env.capture.Extension().SetTrackingStatusForTest(1, "https://example.com/dashboard")
 
 	// Seed a perf snapshot for the tracked URL's path
 	env.capture.Performance().Add([]performance.PerformanceSnapshot{{
@@ -110,8 +110,8 @@ func TestRichAction_NavigateStoresBeforeSnapshot(t *testing.T) {
 
 func TestRichAction_CommandResultEnrichedWithPerfDiff(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
-	env.capture.SetTrackingStatusForTest(1, "https://example.com/dashboard")
+	env.capture.Extension().SetPilotEnabled(true)
+	env.capture.Extension().SetTrackingStatusForTest(1, "https://example.com/dashboard")
 
 	// Seed "before" snapshot
 	env.capture.Performance().Add([]performance.PerformanceSnapshot{{
@@ -197,7 +197,7 @@ func TestRichAction_CommandResultEnrichedWithPerfDiff(t *testing.T) {
 
 func TestRichAction_CommandResultNoPerfDiffWhenNoSnapshots(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 	// No tracking status set, no snapshots
 
 	// Call refresh — no before-snapshot available
@@ -233,7 +233,7 @@ func TestRichAction_CommandResultNoPerfDiffWhenNoSnapshots(t *testing.T) {
 
 func TestRichAction_CommandResultIncludesTimingMs(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	// Click action
 	result, _ := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
@@ -276,8 +276,8 @@ func TestRichAction_CommandResultIncludesTimingMs(t *testing.T) {
 
 func TestRichAction_PerfDiffWithFullWebVitals(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
-	env.capture.SetTrackingStatusForTest(1, "https://example.com/dashboard")
+	env.capture.Extension().SetPilotEnabled(true)
+	env.capture.Extension().SetTrackingStatusForTest(1, "https://example.com/dashboard")
 
 	fcp := 3500.0
 	lcp := 4500.0
@@ -405,7 +405,7 @@ func TestRichAction_PerfDiffWithFullWebVitals(t *testing.T) {
 // This is exactly what smoke test 9.2 observes: "timeout waiting for click".
 func TestRichAction_CompactClickMissingDomSummary_WhenExtensionHangs(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	// Queue a click command
 	result, ok := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)
@@ -454,7 +454,7 @@ func TestRichAction_CompactClickMissingDomSummary_WhenExtensionHangs(t *testing.
 // It exists to confirm the server isn't the problem.
 func TestRichAction_CompactClickHasDomSummary_WhenExtensionResponds(t *testing.T) {
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	// Click without analyze:true (compact mode)
 	result, _ := env.callInteract(t, `{"what":"click","selector":"#btn","background":true}`)

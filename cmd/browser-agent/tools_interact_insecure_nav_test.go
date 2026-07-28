@@ -12,7 +12,7 @@ import (
 func TestHandleBrowserActionNavigate_InsecureSchemeRequiresSecurityMode(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	result, ok := env.callInteract(t, `{"what":"navigate","url":"kaboom-insecure://https://example.com"}`)
 	if !ok {
@@ -33,7 +33,7 @@ func TestHandleBrowserActionNavigate_InsecureSchemeRequiresSecurityMode(t *testi
 func TestHandleBrowserActionNavigate_RewritesKaboomInsecureURL(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	enable := callConfigureRaw(env.handler, `{"what":"security_mode","mode":"insecure_proxy","confirm":true}`)
 	enableResult := parseToolResult(t, enable)
@@ -76,7 +76,7 @@ func TestHandleBrowserActionNavigate_RewritesKaboomInsecureURL(t *testing.T) {
 func TestHandleBrowserActionNewTab_RewritesKaboomInsecureURL(t *testing.T) {
 	t.Parallel()
 	env := newInteractTestEnv(t)
-	env.capture.SetPilotEnabled(true)
+	env.capture.Extension().SetPilotEnabled(true)
 
 	enable := callConfigureRaw(env.handler, `{"what":"security_mode","mode":"insecure_proxy","confirm":true}`)
 	if parseToolResult(t, enable).IsError {

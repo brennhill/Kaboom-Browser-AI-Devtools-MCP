@@ -31,7 +31,7 @@ func TestHandleDrawModeStart_Success(t *testing.T) {
 	h := createTestToolHandler(t)
 
 	// Enable pilot
-	h.capture.SetPilotEnabled(true)
+	h.capture.Extension().SetPilotEnabled(true)
 	mockConnectedTrackedTab(t, h.capture)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
@@ -47,7 +47,7 @@ func TestHandleDrawModeStart_Success(t *testing.T) {
 
 func TestHandleDrawModeStart_WithSession(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.capture.SetPilotEnabled(true)
+	h.capture.Extension().SetPilotEnabled(true)
 	mockConnectedTrackedTab(t, h.capture)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
