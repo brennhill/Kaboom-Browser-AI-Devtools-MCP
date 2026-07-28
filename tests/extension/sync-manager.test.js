@@ -87,19 +87,6 @@ mock.module('../../extension/background/caches/snapshots.js', {
   }
 })
 
-mock.module('../../extension/background/event-listeners.js', {
-  namedExports: {
-    getActiveTab: mock.fn(() => Promise.resolve({ id: 1, windowId: 1, url: 'http://localhost:3000' })),
-    getTrackedTabInfo: mock.fn(() => Promise.resolve({
-      trackedTabId: 0, trackedTabUrl: '', trackedTabTitle: ''
-    })),
-    sendTabToast: mock.fn(() => Promise.resolve()),
-    clearTrackedTab: mock.fn(() => Promise.resolve()),
-    waitForTabLoad: mock.fn(() => Promise.resolve()),
-    pingContentScript: mock.fn(() => Promise.resolve({ ok: true }))
-  }
-})
-
 mock.module('../../extension/background/pending-queries.js', {
   namedExports: {
     handlePendingQuery: mock.fn(() => Promise.resolve()),

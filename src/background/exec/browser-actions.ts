@@ -8,7 +8,7 @@
 
 import type { PendingQuery } from '../../types/index.js'
 import type { SyncClient } from '../sync/sync-client.js'
-import { waitForTabLoad, pingContentScript, getActiveTab } from '../event-listeners.js'
+import { waitForTabLoad, pingContentScript, getActiveTab } from '../ui/tab-state.js'
 import { debugLog } from '../index.js'
 import { isAiWebPilotEnabled } from '../state.js'
 import { DebugCategory } from '../debug.js'

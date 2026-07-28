@@ -5,7 +5,7 @@
  */
 // push-handler.ts — Background handlers for screenshot push and push capability tracking.
 import { getServerUrl } from './state.js';
-import { getActiveTab } from './event-listeners.js';
+import { getActiveTab } from './ui/tab-state.js';
 import { getRequestHeaders } from './sync/server.js';
 import { errorMessage } from '../lib/error-utils.js';
 import { fetchWithTimeout } from '../lib/timeout-utils.js';

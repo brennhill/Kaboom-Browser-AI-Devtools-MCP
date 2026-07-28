@@ -16,7 +16,10 @@ import { getServerUrl, getConnectionStatus, isDebugMode, isScreenshotOnError, ge
 import { isSourceMapEnabled, setSourceMapEnabled, canTakeScreenshot, recordScreenshot, clearSourceMapCache, getMemoryPressureState, isNetworkBodyCaptureDisabled, clearScreenshotTimestamps } from './caches/cache-limits.js';
 import { flushErrorGroups, cleanupStaleErrorGroups } from './caches/error-groups.js';
 import { getContextWarning } from './caches/snapshots.js';
-import { loadDebugModeState, installStartupListener, loadAiWebPilotState, loadSavedSettings, installStorageChangeListener, setupChromeAlarms, installAlarmListener, installTabRemovedListener, installTabUpdatedListener, installDrawModeCommandListener, installRecordingShortcutCommandListener, installTerminalPanelCommandListener, installScreenRecordingCommandListener, installContextMenus, saveSetting, forwardToAllContentScripts, getActiveTab, sendTabToast, handleTrackedTabClosed, handleTrackedTabUrlChange } from './event-listeners.js';
+import { installStorageChangeListener, setupChromeAlarms, installAlarmListener, installTabRemovedListener, installTabUpdatedListener, installStartupListener, handleTrackedTabClosed, handleTrackedTabUrlChange } from './event-listeners.js';
+import { installDrawModeCommandListener, installRecordingShortcutCommandListener, installTerminalPanelCommandListener, installScreenRecordingCommandListener } from './ui/keyboard-shortcuts.js';
+import { installContextMenus } from './ui/context-menus.js';
+import { saveSetting, forwardToAllContentScripts, getActiveTab, sendTabToast, loadDebugModeState, loadAiWebPilotState, loadSavedSettings } from './ui/tab-state.js';
 import { installPushCommandListener, installChatCommandListener } from './push-handler.js';
 import { isRecording, startRecording, stopRecording, initRecording } from './recording/index.js';
 import { installMessageListener, broadcastTrackingState } from './message-handlers.js';

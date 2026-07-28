@@ -20,6 +20,8 @@ code_paths:
   - cmd/browser-agent/internal/screenrec/observe.go
   - src/background/event-listeners.ts
   - src/background/init.ts
+  - src/background/ui/keyboard-shortcuts.ts
+  - src/background/ui/tab-state.ts
   - src/background/ui/context-menus.ts
   - src/background/recording/badge.ts
   - src/background/recording/capture.ts

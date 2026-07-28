@@ -2,7 +2,7 @@
  * Purpose: Handles browser navigation actions (navigate, refresh, back, forward, tab management) with CSP probing and async timeouts.
  * Docs: docs/features/feature/interact-explore/index.md
  */
-import { waitForTabLoad, pingContentScript, getActiveTab } from '../event-listeners.js';
+import { waitForTabLoad, pingContentScript, getActiveTab } from '../ui/tab-state.js';
 import { debugLog } from '../index.js';
 import { isAiWebPilotEnabled } from '../state.js';
 import { DebugCategory } from '../debug.js';

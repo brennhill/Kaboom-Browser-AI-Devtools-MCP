@@ -13,7 +13,7 @@ import { getLastCSPStatus } from '../exec/browser-actions.js'
 import { DebugCategory } from '../debug.js'
 import { updateBadge } from './server.js'
 import { isQueryProcessing, addProcessingQuery, removeProcessingQuery } from '../caches/snapshots.js'
-import { getTrackedTabInfo } from '../event-listeners.js'
+import { getTrackedTabInfo } from '../ui/tab-state.js'
 import { handlePendingQuery as handlePendingQueryImpl } from '../pending-queries.js'
 import { errorMessage } from '../../lib/error-utils.js'
 

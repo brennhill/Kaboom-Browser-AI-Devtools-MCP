@@ -8,7 +8,7 @@
 // =============================================================================
 
 import { errorMessage } from '../../lib/error-utils.js'
-import { getActiveTab, sendTabToast } from '../event-listeners.js'
+import { getActiveTab, sendTabToast } from './tab-state.js'
 import { toggleDrawModeForTab } from './draw-mode-toggle.js'
 import { buildScreenRecordingSlug } from '../recording/utils.js'
 import { trackUIFeature } from './ui-usage-tracker.js'

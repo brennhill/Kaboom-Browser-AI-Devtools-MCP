@@ -8,7 +8,7 @@
 // chrome runtime listener registration to recording-listeners.ts.
 
 import { getServerUrl } from '../state.js'
-import { pingContentScript, waitForTabLoad, getActiveTab, sendTabToast } from '../event-listeners.js'
+import { pingContentScript, waitForTabLoad, getActiveTab, sendTabToast } from '../ui/tab-state.js'
 import { scaleTimeout } from '../../lib/timeouts.js'
 import { StorageKey } from '../../lib/constants.js'
 import type {

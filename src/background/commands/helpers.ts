@@ -7,7 +7,7 @@
 
 import type { PendingQuery } from '../../types/index.js'
 import type { SyncClient } from '../sync/sync-client.js'
-import { getTrackedTabInfo, clearTrackedTab, getActiveTab } from '../event-listeners.js'
+import { getTrackedTabInfo, clearTrackedTab, getActiveTab } from '../ui/tab-state.js'
 import { DebugCategory } from '../debug.js'
 import { isAiWebPilotEnabled } from '../state.js'
 import { KABOOM_LOG_PREFIX } from '../../lib/brand.js'

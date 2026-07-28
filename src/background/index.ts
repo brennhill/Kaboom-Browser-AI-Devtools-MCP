@@ -55,7 +55,7 @@ import {
   updateBadge,
   checkServerHealth
 } from './sync/server.js'
-import { getTrackedTabInfo } from './event-listeners.js'
+import { getTrackedTabInfo } from './ui/tab-state.js'
 import { DebugCategory } from './debug.js'
 import { getRequestHeaders } from './sync/server.js'
 import { handlePendingQuery as handlePendingQueryImpl } from './pending-queries.js'

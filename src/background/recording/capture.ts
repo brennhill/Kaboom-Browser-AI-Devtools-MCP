@@ -8,7 +8,7 @@
 
 import { scaleTimeout } from '../../lib/timeouts.js'
 import { StorageKey } from '../../lib/constants.js'
-import { sendTabToast } from '../event-listeners.js'
+import { sendTabToast } from '../ui/tab-state.js'
 import { errorMessage } from '../../lib/error-utils.js'
 import { delay } from '../../lib/timeout-utils.js'
 import { buildRecordingToastLabel } from './utils.js'

@@ -32,3 +32,8 @@ test('pending query dispatcher does not re-export APIs owned by command modules'
   const source = readFileSync('src/background/pending-queries.ts', 'utf8')
   assert.doesNotMatch(source, /export\s+(?:type\s+)?\{/, 'dispatcher must not re-export command helper APIs')
 })
+
+test('event listener module does not re-export UI module APIs', () => {
+  const source = readFileSync('src/background/event-listeners.ts', 'utf8')
+  assert.doesNotMatch(source, /export\s+(?:type\s+)?\{/, 'event listeners must export only owned listener functions')
+})

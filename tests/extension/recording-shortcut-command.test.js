@@ -35,7 +35,7 @@ describe('recording shortcut command listener', () => {
   })
 
   test('starts recording when idle', async () => {
-    const { installRecordingShortcutCommandListener } = await import('../../extension/background/event-listeners.js')
+    const { installRecordingShortcutCommandListener } = await import('../../extension/background/ui/keyboard-shortcuts.js')
     const calls = []
     const handlers = {
       isRecording: () => false,
@@ -60,7 +60,7 @@ describe('recording shortcut command listener', () => {
   })
 
   test('stops recording when active', async () => {
-    const { installRecordingShortcutCommandListener } = await import('../../extension/background/event-listeners.js')
+    const { installRecordingShortcutCommandListener } = await import('../../extension/background/ui/keyboard-shortcuts.js')
     const handlers = {
       isRecording: () => true,
       startRecording: mock.fn(async () => ({ status: 'recording' })),
@@ -78,7 +78,7 @@ describe('recording shortcut command listener', () => {
   })
 
   test('shows error toast when start fails', async () => {
-    const { installRecordingShortcutCommandListener } = await import('../../extension/background/event-listeners.js')
+    const { installRecordingShortcutCommandListener } = await import('../../extension/background/ui/keyboard-shortcuts.js')
     const handlers = {
       isRecording: () => false,
       startRecording: mock.fn(async () => ({ status: 'error', error: 'permission denied' })),
@@ -97,7 +97,7 @@ describe('recording shortcut command listener', () => {
   })
 
   test('counts action_recording usage via the shared toggle helper (F6)', async () => {
-    const { installRecordingShortcutCommandListener } = await import('../../extension/background/event-listeners.js')
+    const { installRecordingShortcutCommandListener } = await import('../../extension/background/ui/keyboard-shortcuts.js')
     const tracker = await import('../../extension/background/ui/ui-usage-tracker.js')
     tracker.drainUIFeatures() // clear any prior state so this test reads only its own
     const handlers = {
@@ -114,7 +114,7 @@ describe('recording shortcut command listener', () => {
   })
 
   test('ignores unrelated commands', async () => {
-    const { installRecordingShortcutCommandListener } = await import('../../extension/background/event-listeners.js')
+    const { installRecordingShortcutCommandListener } = await import('../../extension/background/ui/keyboard-shortcuts.js')
     const handlers = {
       isRecording: () => false,
       startRecording: mock.fn(async () => ({ status: 'recording' })),
@@ -128,4 +128,3 @@ describe('recording shortcut command listener', () => {
     assert.strictEqual(handlers.stopRecording.mock.calls.length, 0)
   })
 })
-

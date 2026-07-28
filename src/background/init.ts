@@ -61,27 +61,31 @@ import {
 import { flushErrorGroups, cleanupStaleErrorGroups } from './caches/error-groups.js'
 import { getContextWarning } from './caches/snapshots.js'
 import {
-  loadDebugModeState,
-  installStartupListener,
-  loadAiWebPilotState,
-  loadSavedSettings,
   installStorageChangeListener,
   setupChromeAlarms,
   installAlarmListener,
   installTabRemovedListener,
   installTabUpdatedListener,
+  installStartupListener,
+  handleTrackedTabClosed,
+  handleTrackedTabUrlChange
+} from './event-listeners.js'
+import {
   installDrawModeCommandListener,
   installRecordingShortcutCommandListener,
   installTerminalPanelCommandListener,
-  installScreenRecordingCommandListener,
-  installContextMenus,
+  installScreenRecordingCommandListener
+} from './ui/keyboard-shortcuts.js'
+import { installContextMenus } from './ui/context-menus.js'
+import {
   saveSetting,
   forwardToAllContentScripts,
   getActiveTab,
   sendTabToast,
-  handleTrackedTabClosed,
-  handleTrackedTabUrlChange
-} from './event-listeners.js'
+  loadDebugModeState,
+  loadAiWebPilotState,
+  loadSavedSettings
+} from './ui/tab-state.js'
 import { installPushCommandListener, installChatCommandListener } from './push-handler.js'
 import { isRecording, startRecording, stopRecording, initRecording } from './recording/index.js'
 import type { MessageHandlerDependencies } from './message-handlers.js'
