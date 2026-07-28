@@ -29,6 +29,7 @@ code_paths:
   - internal/types/log.go
   - internal/types/network.go
   - src/background.ts
+  - src/inject.ts
   - src/background/sync/server.ts
   - src/background/sync/circuit-breaker.ts
   - src/background/sync/batchers.ts
@@ -72,6 +73,9 @@ test_paths:
   - tests/extension/sync-manager.test.js
   - tests/extension/observe-screenshot.test.js
   - tests/extension/no-compatibility-facades.test.js
+  - tests/extension/network-bodies.test.js
+  - tests/extension/network-waterfall.test.js
+  - tests/extension/websocket.test.js
   - tests/extension/websocket-tracking.test.js
   - tests/extension/early-patch-hardened-restore.test.js
   - tests/extension/early-patch-branding.test.js
@@ -97,6 +101,9 @@ Buffer-clear APIs likewise return `internal/types.BufferClearCounts` directly.
 The background manifest entrypoint performs initialization only; batching,
 transport, cache, and processing consumers import their canonical owner modules
 directly instead of relying on re-exported compatibility names.
+The injected page-world entrypoint likewise owns startup only. Network,
+WebSocket, and performance consumers import the focused modules that implement
+those contracts.
 
 ## Specs
 

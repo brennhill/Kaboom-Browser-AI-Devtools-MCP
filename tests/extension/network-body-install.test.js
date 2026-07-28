@@ -115,8 +115,8 @@ describe('Bug #4 Fix: installFetchCapture uses wrapFetchWithBodies', () => {
 
   test('installFetchCapture should capture response body for successful 200 JSON response', async () => {
     // Import fresh module
-    const { installFetchCapture, uninstallFetchCapture, setNetworkBodyCaptureEnabled } =
-      await import('../../extension/inject.js')
+    const { installFetchCapture, uninstallFetchCapture } = await import('../../extension/inject/observers.js')
+    const { setNetworkBodyCaptureEnabled } = await import('../../extension/lib/net/network.js')
 
     // Enable body capture
     setNetworkBodyCaptureEnabled(true)
@@ -154,8 +154,8 @@ describe('Bug #4 Fix: installFetchCapture uses wrapFetchWithBodies', () => {
   })
 
   test('large POST body is captured and returned', async () => {
-    const { installFetchCapture, uninstallFetchCapture, setNetworkBodyCaptureEnabled } =
-      await import('../../extension/inject.js')
+    const { installFetchCapture, uninstallFetchCapture } = await import('../../extension/inject/observers.js')
+    const { setNetworkBodyCaptureEnabled } = await import('../../extension/lib/net/network.js')
 
     setNetworkBodyCaptureEnabled(true)
 
@@ -184,8 +184,8 @@ describe('Bug #4 Fix: installFetchCapture uses wrapFetchWithBodies', () => {
   })
 
   test('large response body is captured', async () => {
-    const { installFetchCapture, uninstallFetchCapture, setNetworkBodyCaptureEnabled } =
-      await import('../../extension/inject.js')
+    const { installFetchCapture, uninstallFetchCapture } = await import('../../extension/inject/observers.js')
+    const { setNetworkBodyCaptureEnabled } = await import('../../extension/lib/net/network.js')
 
     setNetworkBodyCaptureEnabled(true)
 
@@ -209,8 +209,8 @@ describe('Bug #4 Fix: installFetchCapture uses wrapFetchWithBodies', () => {
   })
 
   test('binary bodies are detected and marked', async () => {
-    const { installFetchCapture, uninstallFetchCapture, setNetworkBodyCaptureEnabled } =
-      await import('../../extension/inject.js')
+    const { installFetchCapture, uninstallFetchCapture } = await import('../../extension/inject/observers.js')
+    const { setNetworkBodyCaptureEnabled } = await import('../../extension/lib/net/network.js')
 
     setNetworkBodyCaptureEnabled(true)
 
@@ -236,8 +236,8 @@ describe('Bug #4 Fix: installFetchCapture uses wrapFetchWithBodies', () => {
   })
 
   test('error response body (500) is captured', async () => {
-    const { installFetchCapture, uninstallFetchCapture, setNetworkBodyCaptureEnabled } =
-      await import('../../extension/inject.js')
+    const { installFetchCapture, uninstallFetchCapture } = await import('../../extension/inject/observers.js')
+    const { setNetworkBodyCaptureEnabled } = await import('../../extension/lib/net/network.js')
 
     setNetworkBodyCaptureEnabled(true)
 
@@ -265,8 +265,8 @@ describe('Bug #4 Fix: installFetchCapture uses wrapFetchWithBodies', () => {
   })
 
   test('request bodies are truncated at 8KB limit', async () => {
-    const { installFetchCapture, uninstallFetchCapture, setNetworkBodyCaptureEnabled } =
-      await import('../../extension/inject.js')
+    const { installFetchCapture, uninstallFetchCapture } = await import('../../extension/inject/observers.js')
+    const { setNetworkBodyCaptureEnabled } = await import('../../extension/lib/net/network.js')
 
     setNetworkBodyCaptureEnabled(true)
 
@@ -296,8 +296,8 @@ describe('Bug #4 Fix: installFetchCapture uses wrapFetchWithBodies', () => {
   })
 
   test('response bodies are truncated at 16KB limit', async () => {
-    const { installFetchCapture, uninstallFetchCapture, setNetworkBodyCaptureEnabled } =
-      await import('../../extension/inject.js')
+    const { installFetchCapture, uninstallFetchCapture } = await import('../../extension/inject/observers.js')
+    const { setNetworkBodyCaptureEnabled } = await import('../../extension/lib/net/network.js')
 
     setNetworkBodyCaptureEnabled(true)
 
@@ -324,8 +324,8 @@ describe('Bug #4 Fix: installFetchCapture uses wrapFetchWithBodies', () => {
   })
 
   test('multiple requests return bodies (not empty arrays)', async () => {
-    const { installFetchCapture, uninstallFetchCapture, setNetworkBodyCaptureEnabled } =
-      await import('../../extension/inject.js')
+    const { installFetchCapture, uninstallFetchCapture } = await import('../../extension/inject/observers.js')
+    const { setNetworkBodyCaptureEnabled } = await import('../../extension/lib/net/network.js')
 
     setNetworkBodyCaptureEnabled(true)
 
@@ -364,8 +364,8 @@ describe('Bug #4 Fix: installFetchCapture uses wrapFetchWithBodies', () => {
   })
 
   test('bodies NOT captured when networkBodyCaptureEnabled is false', async () => {
-    const { installFetchCapture, uninstallFetchCapture, setNetworkBodyCaptureEnabled } =
-      await import('../../extension/inject.js')
+    const { installFetchCapture, uninstallFetchCapture } = await import('../../extension/inject/observers.js')
+    const { setNetworkBodyCaptureEnabled } = await import('../../extension/lib/net/network.js')
 
     // Disable body capture
     setNetworkBodyCaptureEnabled(false)
@@ -390,8 +390,8 @@ describe('Bug #4 Fix: installFetchCapture uses wrapFetchWithBodies', () => {
   })
 
   test('gasoline server requests are not captured', async () => {
-    const { installFetchCapture, uninstallFetchCapture, setNetworkBodyCaptureEnabled } =
-      await import('../../extension/inject.js')
+    const { installFetchCapture, uninstallFetchCapture } = await import('../../extension/inject/observers.js')
+    const { setNetworkBodyCaptureEnabled } = await import('../../extension/lib/net/network.js')
 
     setNetworkBodyCaptureEnabled(true)
 

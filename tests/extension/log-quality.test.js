@@ -30,7 +30,7 @@ describe('W3 Bridge: message and source enrichment', () => {
   })
 
   test('postLog always sends message and source fields', async () => {
-    const { postLog } = await import('../../extension/inject.js')
+    const { postLog } = await import('../../extension/lib/page/bridge.js')
 
     postLog({ level: 'error', args: ['test'] })
 
@@ -41,7 +41,7 @@ describe('W3 Bridge: message and source enrichment', () => {
   })
 
   test('message extracted from args[0] when payload.message absent', async () => {
-    const { postLog } = await import('../../extension/inject.js')
+    const { postLog } = await import('../../extension/lib/page/bridge.js')
 
     postLog({ level: 'warn', args: ['something went wrong', { detail: 1 }] })
 
@@ -50,7 +50,7 @@ describe('W3 Bridge: message and source enrichment', () => {
   })
 
   test('message preserves existing payload.message (not overwritten by args)', async () => {
-    const { postLog } = await import('../../extension/inject.js')
+    const { postLog } = await import('../../extension/lib/page/bridge.js')
 
     postLog({ level: 'error', message: 'custom msg', args: ['ignored arg'] })
 
@@ -59,7 +59,7 @@ describe('W3 Bridge: message and source enrichment', () => {
   })
 
   test('message is empty string when no message and no args', async () => {
-    const { postLog } = await import('../../extension/inject.js')
+    const { postLog } = await import('../../extension/lib/page/bridge.js')
 
     postLog({ level: 'info' })
 
@@ -68,7 +68,7 @@ describe('W3 Bridge: message and source enrichment', () => {
   })
 
   test('message handles numeric args[0]', async () => {
-    const { postLog } = await import('../../extension/inject.js')
+    const { postLog } = await import('../../extension/lib/page/bridge.js')
 
     postLog({ level: 'log', args: [42] })
 
@@ -77,7 +77,7 @@ describe('W3 Bridge: message and source enrichment', () => {
   })
 
   test('source derived from filename and lineno', async () => {
-    const { postLog } = await import('../../extension/inject.js')
+    const { postLog } = await import('../../extension/lib/page/bridge.js')
 
     postLog({ level: 'error', filename: 'app.js', lineno: 42 })
 
@@ -86,7 +86,7 @@ describe('W3 Bridge: message and source enrichment', () => {
   })
 
   test('source defaults lineno to 0 when lineno missing', async () => {
-    const { postLog } = await import('../../extension/inject.js')
+    const { postLog } = await import('../../extension/lib/page/bridge.js')
 
     postLog({ level: 'error', filename: 'app.js' })
 
@@ -95,7 +95,7 @@ describe('W3 Bridge: message and source enrichment', () => {
   })
 
   test('source is empty string when no filename available', async () => {
-    const { postLog } = await import('../../extension/inject.js')
+    const { postLog } = await import('../../extension/lib/page/bridge.js')
 
     postLog({ level: 'log', args: ['hello'] })
 
@@ -104,7 +104,7 @@ describe('W3 Bridge: message and source enrichment', () => {
   })
 
   test('payload source field overrides default when explicitly set', async () => {
-    const { postLog } = await import('../../extension/inject.js')
+    const { postLog } = await import('../../extension/lib/page/bridge.js')
 
     postLog({ level: 'error', source: 'custom-source:99', filename: 'app.js', lineno: 42 })
 
@@ -132,7 +132,7 @@ describe('W3 Bridge: console capture populates message', () => {
   })
 
   test('console.log populates message from first arg', async () => {
-    const { installConsoleCapture, uninstallConsoleCapture } = await import('../../extension/inject.js')
+    const { installConsoleCapture, uninstallConsoleCapture } = await import('../../extension/lib/page/console.js')
 
     installConsoleCapture()
     globalThis.console.log('hello world')
@@ -144,7 +144,7 @@ describe('W3 Bridge: console capture populates message', () => {
   })
 
   test('console.error populates message from first arg', async () => {
-    const { installConsoleCapture, uninstallConsoleCapture } = await import('../../extension/inject.js')
+    const { installConsoleCapture, uninstallConsoleCapture } = await import('../../extension/lib/page/console.js')
 
     installConsoleCapture()
     globalThis.console.error('failure occurred')
@@ -174,7 +174,7 @@ describe('W3 Exceptions: source field', () => {
 
   test('exception entries include source field with filename:lineno format', async () => {
     const { installExceptionCapture, uninstallExceptionCapture: _uninstallExceptionCapture } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/page/exceptions.js')
 
     installExceptionCapture()
 
@@ -190,7 +190,7 @@ describe('W3 Exceptions: source field', () => {
   })
 
   test('exception source is empty when filename is empty', async () => {
-    const { installExceptionCapture, uninstallExceptionCapture } = await import('../../extension/inject.js')
+    const { installExceptionCapture, uninstallExceptionCapture } = await import('../../extension/lib/page/exceptions.js')
 
     installExceptionCapture()
 
@@ -207,7 +207,7 @@ describe('W3 Exceptions: source field', () => {
   })
 
   test('exception source defaults lineno to 0 when lineno not provided', async () => {
-    const { installExceptionCapture, uninstallExceptionCapture } = await import('../../extension/inject.js')
+    const { installExceptionCapture, uninstallExceptionCapture } = await import('../../extension/lib/page/exceptions.js')
 
     installExceptionCapture()
 

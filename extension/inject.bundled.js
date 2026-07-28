@@ -27,22 +27,11 @@ var MAX_RESPONSE_LENGTH = 5120;
 var MAX_DEPTH = 10;
 var MAX_CONTEXT_SIZE = 50;
 var MAX_CONTEXT_VALUE_SIZE = 4096;
-var SENSITIVE_HEADERS = [
-  "authorization",
-  "cookie",
-  "set-cookie",
-  "x-auth-token",
-  "x-api-key",
-  "x-csrf-token",
-  "proxy-authorization"
-];
 var MAX_ACTION_BUFFER_SIZE = 20;
 var SCROLL_THROTTLE_MS = 250;
 var SENSITIVE_INPUT_TYPES = ["password", "credit-card", "cc-number", "cc-exp", "cc-csc"];
 var MAX_WATERFALL_ENTRIES = 50;
-var WATERFALL_TIME_WINDOW_MS = 3e4;
 var MAX_PERFORMANCE_ENTRIES = 50;
-var PERFORMANCE_TIME_WINDOW_MS = 6e4;
 var WS_MAX_BODY_SIZE = 4096;
 var WS_PREVIEW_LIMIT = 200;
 var REQUEST_BODY_MAX = 8192;
@@ -57,8 +46,6 @@ var DOM_QUERY_MAX_HTML = 200;
 var A11Y_MAX_NODES_PER_VIOLATION = 10;
 var ASYNC_COMMAND_TIMEOUT_MS = scaleTimeout(6e4);
 var A11Y_AUDIT_TIMEOUT_MS = ASYNC_COMMAND_TIMEOUT_MS;
-var MEMORY_SOFT_LIMIT_MB = 20;
-var MEMORY_HARD_LIMIT_MB = 50;
 var AI_CONTEXT_SNIPPET_LINES = 5;
 var AI_CONTEXT_MAX_LINE_LENGTH = 200;
 var AI_CONTEXT_MAX_SNIPPETS_SIZE = 10240;
@@ -67,7 +54,6 @@ var AI_CONTEXT_MAX_PROP_KEYS = 20;
 var AI_CONTEXT_MAX_STATE_KEYS = 10;
 var AI_CONTEXT_MAX_RELEVANT_SLICE = 10;
 var AI_CONTEXT_MAX_VALUE_LENGTH = 200;
-var AI_CONTEXT_SOURCE_MAP_CACHE_SIZE = 20;
 var AI_CONTEXT_PIPELINE_TIMEOUT_MS = scaleTimeout(3e3);
 var ENHANCED_ACTION_BUFFER_SIZE = 50;
 var CSS_PATH_MAX_DEPTH = 5;
@@ -113,6 +99,207 @@ var INJECT_FORWARDED_SETTINGS = /* @__PURE__ */ new Set([
   SettingName.NETWORK_BODY_CAPTURE,
   SettingName.SERVER_URL
 ]);
+
+// extension/lib/analysis/perf-snapshot.js
+var perfSnapshotEnabled = true;
+var longTaskEntries = [];
+var longTaskObserver = null;
+var paintObserver = null;
+var lcpObserver = null;
+var clsObserver = null;
+var inpObserver = null;
+var fcpValue = null;
+var lcpValue = null;
+var clsValue = 0;
+var inpValue = null;
+function mapInitiatorType(type) {
+  switch (type) {
+    case "script":
+      return "script";
+    case "link":
+    case "css":
+      return "style";
+    case "img":
+      return "image";
+    case "fetch":
+    case "xmlhttprequest":
+      return "fetch";
+    case "font":
+      return "font";
+    default:
+      return "other";
+  }
+}
+function aggregateResourceTiming() {
+  const resources = performance.getEntriesByType("resource") || [];
+  const byType = {};
+  let transferSize = 0;
+  let decodedSize = 0;
+  for (const entry of resources) {
+    const category = mapInitiatorType(entry.initiatorType);
+    if (!byType[category]) {
+      byType[category] = { count: 0, size: 0 };
+    }
+    byType[category].count++;
+    byType[category].size += entry.transferSize || 0;
+    transferSize += entry.transferSize || 0;
+    decodedSize += entry.decodedBodySize || 0;
+  }
+  const sorted = [...resources].sort((a, b) => b.duration - a.duration);
+  const slowestRequests = sorted.slice(0, MAX_SLOWEST_REQUESTS).map((r) => ({
+    url: r.name.length > MAX_URL_LENGTH ? r.name.slice(0, MAX_URL_LENGTH) : r.name,
+    duration: r.duration,
+    size: r.transferSize || 0
+  }));
+  return {
+    request_count: resources.length,
+    transfer_size: transferSize,
+    decoded_size: decodedSize,
+    by_type: byType,
+    slowest_requests: slowestRequests
+  };
+}
+function capturePerformanceSnapshot() {
+  const navEntries = performance.getEntriesByType("navigation") || [];
+  if (!navEntries || navEntries.length === 0)
+    return null;
+  const nav = navEntries[0];
+  if (!nav)
+    return null;
+  const timing = {
+    dom_content_loaded: nav.domContentLoadedEventEnd,
+    load: nav.loadEventEnd,
+    first_contentful_paint: getFCP(),
+    largest_contentful_paint: getLCP(),
+    interaction_to_next_paint: getINP(),
+    time_to_first_byte: nav.responseStart - nav.requestStart,
+    dom_interactive: nav.domInteractive
+  };
+  const network = aggregateResourceTiming();
+  const longTasks = getLongTaskMetrics();
+  const marks = performance.getEntriesByType("mark") || [];
+  const measures = performance.getEntriesByType("measure") || [];
+  const userTiming = marks.length > 0 || measures.length > 0 ? {
+    marks: marks.slice(-50).map((m) => ({ name: m.name, start_time: m.startTime })),
+    measures: measures.slice(-50).map((m) => ({ name: m.name, start_time: m.startTime, duration: m.duration }))
+  } : void 0;
+  return {
+    url: window.location.pathname,
+    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+    timing,
+    network,
+    long_tasks: longTasks,
+    cumulative_layout_shift: getCLS(),
+    user_timing: userTiming
+  };
+}
+function installPerfObservers() {
+  longTaskEntries = [];
+  fcpValue = null;
+  lcpValue = null;
+  clsValue = 0;
+  inpValue = null;
+  longTaskObserver = new PerformanceObserver((list) => {
+    const entries = list.getEntries();
+    for (const entry of entries) {
+      if (longTaskEntries.length < MAX_LONG_TASKS) {
+        longTaskEntries.push(entry);
+      }
+    }
+  });
+  longTaskObserver.observe({ type: "longtask" });
+  paintObserver = new PerformanceObserver((list) => {
+    for (const entry of list.getEntries()) {
+      if (entry.name === "first-contentful-paint") {
+        fcpValue = entry.startTime;
+      }
+    }
+  });
+  paintObserver.observe({ type: "paint", buffered: true });
+  lcpObserver = new PerformanceObserver((list) => {
+    const entries = list.getEntries();
+    if (entries.length > 0) {
+      const lastEntry = entries[entries.length - 1];
+      if (lastEntry) {
+        lcpValue = lastEntry.startTime;
+      }
+    }
+  });
+  lcpObserver.observe({ type: "largest-contentful-paint", buffered: true });
+  clsObserver = new PerformanceObserver((list) => {
+    for (const entry of list.getEntries()) {
+      const clsEntry = entry;
+      if (!clsEntry.hadRecentInput) {
+        clsValue += clsEntry.value || 0;
+      }
+    }
+  });
+  clsObserver.observe({ type: "layout-shift", buffered: true });
+  inpObserver = new PerformanceObserver((list) => {
+    for (const entry of list.getEntries()) {
+      const inpEntry = entry;
+      if (inpEntry.interactionId) {
+        if (inpValue === null || inpEntry.duration > inpValue) {
+          inpValue = inpEntry.duration;
+        }
+      }
+    }
+  });
+  inpObserver.observe({ type: "event", durationThreshold: 40, buffered: true });
+}
+function getLongTaskMetrics() {
+  let totalBlockingTime = 0;
+  let longest = 0;
+  for (const entry of longTaskEntries) {
+    const blocking = entry.duration - 50;
+    if (blocking > 0)
+      totalBlockingTime += blocking;
+    if (entry.duration > longest)
+      longest = entry.duration;
+  }
+  return {
+    count: longTaskEntries.length,
+    total_blocking_time: totalBlockingTime,
+    longest
+  };
+}
+function getFCP() {
+  return fcpValue;
+}
+function getLCP() {
+  return lcpValue;
+}
+function getCLS() {
+  return clsValue;
+}
+function getINP() {
+  return inpValue;
+}
+function sendPerformanceSnapshot() {
+  if (!perfSnapshotEnabled)
+    return;
+  const snapshot = capturePerformanceSnapshot();
+  if (!snapshot)
+    return;
+  window.postMessage({ type: "kaboom_performance_snapshot", payload: snapshot }, window.location.origin);
+}
+var snapshotResendTimer = null;
+function scheduleSnapshotResend() {
+  if (!perfSnapshotEnabled)
+    return;
+  if (snapshotResendTimer)
+    clearTimeout(snapshotResendTimer);
+  snapshotResendTimer = setTimeout(() => {
+    snapshotResendTimer = null;
+    sendPerformanceSnapshot();
+  }, 500);
+}
+function setPerformanceSnapshotEnabled(enabled) {
+  perfSnapshotEnabled = enabled;
+}
+
+// extension/lib/brand.js
+var KABOOM_LOG_PREFIX = "[KaBOOM!]";
 
 // extension/lib/page/serialize.js
 function serializePrimitive(value, type) {
@@ -197,9 +384,6 @@ function isSensitiveInput(element) {
   const name = (inputElement.name || "").toLowerCase();
   return SENSITIVE_INPUT_TYPES.includes(type) || matchesAny(autocomplete, SENSITIVE_AUTOCOMPLETE_PATTERNS) || matchesAny(name, SENSITIVE_NAME_PATTERNS);
 }
-
-// extension/lib/brand.js
-var KABOOM_LOG_PREFIX = "[KaBOOM!]";
 
 // extension/lib/page/context.js
 var contextAnnotations = /* @__PURE__ */ new Map();
@@ -614,29 +798,6 @@ function installActionCapture() {
   document.addEventListener("change", changeHandler, { capture: true, passive: true });
   window.addEventListener("scroll", scrollHandler, { capture: true, passive: true });
 }
-function uninstallActionCapture() {
-  if (clickHandler) {
-    document.removeEventListener("click", clickHandler, { capture: true });
-    clickHandler = null;
-  }
-  if (inputHandler) {
-    document.removeEventListener("input", inputHandler, { capture: true });
-    inputHandler = null;
-  }
-  if (keydownHandler) {
-    document.removeEventListener("keydown", keydownHandler, { capture: true });
-    keydownHandler = null;
-  }
-  if (changeHandler) {
-    document.removeEventListener("change", changeHandler, { capture: true });
-    changeHandler = null;
-  }
-  if (scrollHandler) {
-    window.removeEventListener("scroll", scrollHandler, { capture: true });
-    scrollHandler = null;
-  }
-  clearActionBuffer();
-}
 function setActionCaptureEnabled(enabled) {
   actionCaptureEnabled = enabled;
   if (!enabled) {
@@ -677,26 +838,10 @@ function installNavigationCapture() {
     };
   }
 }
-function uninstallNavigationCapture() {
-  if (navigationPopstateHandler) {
-    window.removeEventListener("popstate", navigationPopstateHandler);
-    navigationPopstateHandler = null;
-  }
-  if (originalPushState && window.history) {
-    window.history.pushState = originalPushState;
-    originalPushState = null;
-  }
-  if (originalReplaceState && window.history) {
-    window.history.replaceState = originalReplaceState;
-    originalReplaceState = null;
-  }
-}
 
 // extension/lib/net/network.js
 var configuredServerUrl = "";
 var networkWaterfallEnabled = false;
-var pendingRequests = /* @__PURE__ */ new Map();
-var requestIdCounter = 0;
 var networkBodyCaptureEnabled = true;
 var SENSITIVE_URL_PATTERNS = /\/(auth|login|signin|signup|token|oauth|session|api[_-]?key|password|register)\b/i;
 function parseResourceTiming(timing) {
@@ -734,49 +879,11 @@ function getNetworkWaterfall(options = {}) {
     return [];
   }
 }
-function trackPendingRequest(request) {
-  const id = `req_${++requestIdCounter}`;
-  pendingRequests.set(id, {
-    ...request,
-    id
-  });
-  return id;
-}
-function completePendingRequest(requestId) {
-  pendingRequests.delete(requestId);
-}
-function getPendingRequests() {
-  return Array.from(pendingRequests.values());
-}
-function clearPendingRequests() {
-  pendingRequests.clear();
-}
-async function getNetworkWaterfallForError(errorEntry) {
-  if (!networkWaterfallEnabled)
-    return null;
-  const now = typeof performance !== "undefined" && performance?.now ? performance.now() : 0;
-  const since = Math.max(0, now - WATERFALL_TIME_WINDOW_MS);
-  const entries = getNetworkWaterfall({ since });
-  const pending = getPendingRequests();
-  return {
-    type: "network_waterfall",
-    ts: (/* @__PURE__ */ new Date()).toISOString(),
-    _errorTs: errorEntry.ts,
-    entries,
-    pending
-  };
-}
 function setNetworkWaterfallEnabled(enabled) {
   networkWaterfallEnabled = enabled;
 }
-function isNetworkWaterfallEnabled() {
-  return networkWaterfallEnabled;
-}
 function setNetworkBodyCaptureEnabled(enabled) {
   networkBodyCaptureEnabled = enabled;
-}
-function isNetworkBodyCaptureEnabled() {
-  return networkBodyCaptureEnabled;
 }
 function setServerUrl(url) {
   configuredServerUrl = url || "";
@@ -950,14 +1057,6 @@ function wrapXHRWithBodies() {
     return originalXHRSend.call(this, body);
   };
 }
-function unwrapXHR() {
-  if (originalXHROpen)
-    XMLHttpRequest.prototype.open = originalXHROpen;
-  if (originalXHRSend)
-    XMLHttpRequest.prototype.send = originalXHRSend;
-  originalXHROpen = null;
-  originalXHRSend = null;
-}
 function adoptEarlyBodies() {
   if (typeof window === "undefined")
     return;
@@ -1029,230 +1128,6 @@ function wrapFetchWithBodies(fetchFn) {
   };
 }
 
-// extension/lib/analysis/perf-snapshot.js
-var perfSnapshotEnabled = true;
-var longTaskEntries = [];
-var longTaskObserver = null;
-var paintObserver = null;
-var lcpObserver = null;
-var clsObserver = null;
-var inpObserver = null;
-var fcpValue = null;
-var lcpValue = null;
-var clsValue = 0;
-var inpValue = null;
-function mapInitiatorType(type) {
-  switch (type) {
-    case "script":
-      return "script";
-    case "link":
-    case "css":
-      return "style";
-    case "img":
-      return "image";
-    case "fetch":
-    case "xmlhttprequest":
-      return "fetch";
-    case "font":
-      return "font";
-    default:
-      return "other";
-  }
-}
-function aggregateResourceTiming() {
-  const resources = performance.getEntriesByType("resource") || [];
-  const byType = {};
-  let transferSize = 0;
-  let decodedSize = 0;
-  for (const entry of resources) {
-    const category = mapInitiatorType(entry.initiatorType);
-    if (!byType[category]) {
-      byType[category] = { count: 0, size: 0 };
-    }
-    byType[category].count++;
-    byType[category].size += entry.transferSize || 0;
-    transferSize += entry.transferSize || 0;
-    decodedSize += entry.decodedBodySize || 0;
-  }
-  const sorted = [...resources].sort((a, b) => b.duration - a.duration);
-  const slowestRequests = sorted.slice(0, MAX_SLOWEST_REQUESTS).map((r) => ({
-    url: r.name.length > MAX_URL_LENGTH ? r.name.slice(0, MAX_URL_LENGTH) : r.name,
-    duration: r.duration,
-    size: r.transferSize || 0
-  }));
-  return {
-    request_count: resources.length,
-    transfer_size: transferSize,
-    decoded_size: decodedSize,
-    by_type: byType,
-    slowest_requests: slowestRequests
-  };
-}
-function capturePerformanceSnapshot() {
-  const navEntries = performance.getEntriesByType("navigation") || [];
-  if (!navEntries || navEntries.length === 0)
-    return null;
-  const nav = navEntries[0];
-  if (!nav)
-    return null;
-  const timing = {
-    dom_content_loaded: nav.domContentLoadedEventEnd,
-    load: nav.loadEventEnd,
-    first_contentful_paint: getFCP(),
-    largest_contentful_paint: getLCP(),
-    interaction_to_next_paint: getINP(),
-    time_to_first_byte: nav.responseStart - nav.requestStart,
-    dom_interactive: nav.domInteractive
-  };
-  const network = aggregateResourceTiming();
-  const longTasks = getLongTaskMetrics();
-  const marks = performance.getEntriesByType("mark") || [];
-  const measures = performance.getEntriesByType("measure") || [];
-  const userTiming = marks.length > 0 || measures.length > 0 ? {
-    marks: marks.slice(-50).map((m) => ({ name: m.name, start_time: m.startTime })),
-    measures: measures.slice(-50).map((m) => ({ name: m.name, start_time: m.startTime, duration: m.duration }))
-  } : void 0;
-  return {
-    url: window.location.pathname,
-    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-    timing,
-    network,
-    long_tasks: longTasks,
-    cumulative_layout_shift: getCLS(),
-    user_timing: userTiming
-  };
-}
-function installPerfObservers() {
-  longTaskEntries = [];
-  fcpValue = null;
-  lcpValue = null;
-  clsValue = 0;
-  inpValue = null;
-  longTaskObserver = new PerformanceObserver((list) => {
-    const entries = list.getEntries();
-    for (const entry of entries) {
-      if (longTaskEntries.length < MAX_LONG_TASKS) {
-        longTaskEntries.push(entry);
-      }
-    }
-  });
-  longTaskObserver.observe({ type: "longtask" });
-  paintObserver = new PerformanceObserver((list) => {
-    for (const entry of list.getEntries()) {
-      if (entry.name === "first-contentful-paint") {
-        fcpValue = entry.startTime;
-      }
-    }
-  });
-  paintObserver.observe({ type: "paint", buffered: true });
-  lcpObserver = new PerformanceObserver((list) => {
-    const entries = list.getEntries();
-    if (entries.length > 0) {
-      const lastEntry = entries[entries.length - 1];
-      if (lastEntry) {
-        lcpValue = lastEntry.startTime;
-      }
-    }
-  });
-  lcpObserver.observe({ type: "largest-contentful-paint", buffered: true });
-  clsObserver = new PerformanceObserver((list) => {
-    for (const entry of list.getEntries()) {
-      const clsEntry = entry;
-      if (!clsEntry.hadRecentInput) {
-        clsValue += clsEntry.value || 0;
-      }
-    }
-  });
-  clsObserver.observe({ type: "layout-shift", buffered: true });
-  inpObserver = new PerformanceObserver((list) => {
-    for (const entry of list.getEntries()) {
-      const inpEntry = entry;
-      if (inpEntry.interactionId) {
-        if (inpValue === null || inpEntry.duration > inpValue) {
-          inpValue = inpEntry.duration;
-        }
-      }
-    }
-  });
-  inpObserver.observe({ type: "event", durationThreshold: 40, buffered: true });
-}
-function uninstallPerfObservers() {
-  if (longTaskObserver) {
-    longTaskObserver.disconnect();
-    longTaskObserver = null;
-  }
-  if (paintObserver) {
-    paintObserver.disconnect();
-    paintObserver = null;
-  }
-  if (lcpObserver) {
-    lcpObserver.disconnect();
-    lcpObserver = null;
-  }
-  if (clsObserver) {
-    clsObserver.disconnect();
-    clsObserver = null;
-  }
-  if (inpObserver) {
-    inpObserver.disconnect();
-    inpObserver = null;
-  }
-  longTaskEntries = [];
-}
-function getLongTaskMetrics() {
-  let totalBlockingTime = 0;
-  let longest = 0;
-  for (const entry of longTaskEntries) {
-    const blocking = entry.duration - 50;
-    if (blocking > 0)
-      totalBlockingTime += blocking;
-    if (entry.duration > longest)
-      longest = entry.duration;
-  }
-  return {
-    count: longTaskEntries.length,
-    total_blocking_time: totalBlockingTime,
-    longest
-  };
-}
-function getFCP() {
-  return fcpValue;
-}
-function getLCP() {
-  return lcpValue;
-}
-function getCLS() {
-  return clsValue;
-}
-function getINP() {
-  return inpValue;
-}
-function sendPerformanceSnapshot() {
-  if (!perfSnapshotEnabled)
-    return;
-  const snapshot = capturePerformanceSnapshot();
-  if (!snapshot)
-    return;
-  window.postMessage({ type: "kaboom_performance_snapshot", payload: snapshot }, window.location.origin);
-}
-var snapshotResendTimer = null;
-function scheduleSnapshotResend() {
-  if (!perfSnapshotEnabled)
-    return;
-  if (snapshotResendTimer)
-    clearTimeout(snapshotResendTimer);
-  snapshotResendTimer = setTimeout(() => {
-    snapshotResendTimer = null;
-    sendPerformanceSnapshot();
-  }, 500);
-}
-function isPerformanceSnapshotEnabled() {
-  return perfSnapshotEnabled;
-}
-function setPerformanceSnapshotEnabled(enabled) {
-  perfSnapshotEnabled = enabled;
-}
-
 // extension/lib/analysis/performance.js
 var performanceMarksEnabled = false;
 var capturedMarks = [];
@@ -1303,12 +1178,6 @@ function getPerformanceMeasures(options = {}) {
   } catch {
     return [];
   }
-}
-function getCapturedMarks() {
-  return [...capturedMarks];
-}
-function getCapturedMeasures() {
-  return [...capturedMeasures];
 }
 function installPerformanceCapture() {
   if (typeof performance === "undefined" || !performance)
@@ -1411,106 +1280,8 @@ function uninstallPerformanceCapture() {
   capturedMeasures = [];
   performanceCaptureActive = false;
 }
-function isPerformanceCaptureActive() {
-  return performanceCaptureActive;
-}
-async function getPerformanceSnapshotForError(errorEntry) {
-  if (!performanceMarksEnabled)
-    return null;
-  const now = typeof performance !== "undefined" && performance?.now ? performance.now() : 0;
-  const since = Math.max(0, now - PERFORMANCE_TIME_WINDOW_MS);
-  const marks = getPerformanceMarks({ since });
-  const measures = getPerformanceMeasures({ since });
-  let navigation = null;
-  if (typeof performance !== "undefined" && performance) {
-    try {
-      const navEntries = performance.getEntriesByType("navigation") || [];
-      if (navEntries && navEntries.length > 0) {
-        const nav = navEntries[0];
-        if (nav) {
-          navigation = {
-            type: nav.type,
-            startTime: nav.startTime,
-            domContentLoadedEventEnd: nav.domContentLoadedEventEnd,
-            loadEventEnd: nav.loadEventEnd
-          };
-        }
-      }
-    } catch {
-    }
-  }
-  return {
-    type: "performance",
-    ts: (/* @__PURE__ */ new Date()).toISOString(),
-    _enrichments: ["performanceMarks"],
-    _errorTs: errorEntry.ts,
-    marks,
-    measures,
-    navigation
-  };
-}
 function setPerformanceMarksEnabled(enabled) {
   performanceMarksEnabled = enabled;
-}
-function isPerformanceMarksEnabled() {
-  return performanceMarksEnabled;
-}
-
-// extension/lib/page/bridge.js
-function postLog(payload) {
-  const context = getContextAnnotations();
-  const actions = payload.level === "error" ? getActionBuffer() : null;
-  const enrichments = [];
-  if (context && payload.level === "error")
-    enrichments.push("context");
-  if (actions && actions.length > 0)
-    enrichments.push("userActions");
-  const { level, type, args, error, stack, ...otherFields } = payload;
-  window.postMessage({
-    type: "kaboom_log",
-    payload: {
-      // Enriched fields (these are the source of truth)
-      ts: (/* @__PURE__ */ new Date()).toISOString(),
-      url: window.location.href,
-      message: payload.message || payload.error || (payload.args?.[0] !== null && payload.args?.[0] !== void 0 ? String(payload.args[0]) : ""),
-      source: payload.filename ? `${payload.filename}:${payload.lineno || 0}` : "",
-      // Core fields from payload
-      level,
-      ...type ? { type } : {},
-      ...args ? { args } : {},
-      ...error ? { error } : {},
-      ...stack ? { stack } : {},
-      // Optional enrichments
-      ...enrichments.length > 0 ? { _enrichments: enrichments } : {},
-      ...context && payload.level === "error" ? { _context: context } : {},
-      ...actions && actions.length > 0 ? { _actions: actions } : {},
-      // Any other fields from payload (excluding the ones we destructured)
-      ...otherFields
-    }
-  }, window.location.origin);
-}
-
-// extension/lib/page/console.js
-var originalConsole = {};
-function installConsoleCapture() {
-  const methods = ["log", "warn", "error", "info", "debug"];
-  methods.forEach((method) => {
-    originalConsole[method] = console[method];
-    console[method] = function(...args) {
-      postLog({
-        level: method,
-        type: "console",
-        args: args.map((arg) => safeSerialize(arg))
-      });
-      originalConsole[method].apply(console, args);
-    };
-  });
-}
-function uninstallConsoleCapture() {
-  Object.keys(originalConsole).forEach((method) => {
-    console[method] = originalConsole[method];
-  });
-  originalConsole = {};
 }
 
 // extension/lib/ai-context/ai-context-parsing.js
@@ -1555,24 +1326,6 @@ function parseStackFrames(stack) {
     }
   }
   return frames;
-}
-function parseSourceMap(dataUrl) {
-  if (!dataUrl || typeof dataUrl !== "string")
-    return null;
-  if (!dataUrl.startsWith("data:"))
-    return null;
-  try {
-    const base64Match = dataUrl.match(/;base64,(.+)$/);
-    if (!base64Match || !base64Match[1])
-      return null;
-    const decoded = atob(base64Match[1]);
-    const parsed = JSON.parse(decoded);
-    if (!parsed.sourcesContent || parsed.sourcesContent.length === 0)
-      return null;
-    return parsed;
-  } catch {
-    return null;
-  }
 }
 function extractSnippet(sourceContent, line) {
   if (!sourceContent || typeof sourceContent !== "string")
@@ -1620,21 +1373,8 @@ async function extractSourceSnippets(frames, mockSourceMaps) {
   }
   return snippets;
 }
-function setSourceMapCache(url, map) {
-  if (!aiSourceMapCache.has(url) && aiSourceMapCache.size >= AI_CONTEXT_SOURCE_MAP_CACHE_SIZE) {
-    const firstKey = aiSourceMapCache.keys().next().value;
-    if (firstKey) {
-      aiSourceMapCache.delete(firstKey);
-    }
-  }
-  aiSourceMapCache.delete(url);
-  aiSourceMapCache.set(url, map);
-}
 function getSourceMapCache(url) {
   return aiSourceMapCache.get(url) || null;
-}
-function getSourceMapCacheSize() {
-  return aiSourceMapCache.size;
 }
 
 // extension/lib/ai-context/ai-context-enrichment.js
@@ -1824,733 +1564,6 @@ function setAiContextEnabled(enabled) {
 }
 function setAiContextStateSnapshot(enabled) {
   aiContextStateSnapshotEnabled = enabled;
-}
-
-// extension/lib/page/exceptions.js
-var originalOnerror = null;
-var unhandledrejectionHandler = null;
-function enrichAndPost(entry) {
-  void (async () => {
-    try {
-      const enriched = await enrichErrorWithAiContext(entry);
-      postLog(enriched);
-    } catch {
-      postLog(entry);
-    }
-  })().catch((err) => {
-    console.error("[KaBOOM!] Exception enrichment error:", err);
-    try {
-      postLog(entry);
-    } catch (postErr) {
-      console.error("[KaBOOM!] Failed to log entry:", postErr);
-    }
-  });
-}
-function extractRejectionInfo(reason) {
-  if (reason instanceof Error)
-    return { message: reason.message, stack: reason.stack || "" };
-  if (typeof reason === "string")
-    return { message: reason, stack: "" };
-  return { message: String(reason), stack: "" };
-}
-function installExceptionCapture() {
-  originalOnerror = window.onerror;
-  window.onerror = function(message, filename, lineno, colno, error) {
-    const messageStr = typeof message === "string" ? message : message.type || "Error";
-    const entry = {
-      level: "error",
-      type: "exception",
-      message: messageStr,
-      source: filename ? `${filename}:${lineno || 0}` : "",
-      filename: filename || "",
-      lineno: lineno || 0,
-      colno: colno || 0,
-      stack: error?.stack || ""
-    };
-    enrichAndPost(entry);
-    if (originalOnerror)
-      return originalOnerror(message, filename, lineno, colno, error);
-    return false;
-  };
-  unhandledrejectionHandler = function(event) {
-    const { message, stack } = extractRejectionInfo(event.reason);
-    enrichAndPost({
-      level: "error",
-      type: "exception",
-      message: `Unhandled Promise Rejection: ${message}`,
-      stack
-    });
-  };
-  window.addEventListener("unhandledrejection", unhandledrejectionHandler);
-}
-function uninstallExceptionCapture() {
-  if (originalOnerror !== null) {
-    window.onerror = originalOnerror;
-    originalOnerror = null;
-  }
-  if (unhandledrejectionHandler) {
-    window.removeEventListener("unhandledrejection", unhandledrejectionHandler);
-    unhandledrejectionHandler = null;
-  }
-}
-
-// extension/lib/net/websocket-tracking.js
-var _textEncoder = typeof TextEncoder !== "undefined" ? new TextEncoder() : null;
-var webSocketCaptureMode = "medium";
-function setWebSocketCaptureModeInternal(mode) {
-  webSocketCaptureMode = mode;
-}
-function getWebSocketCaptureModeInternal() {
-  return webSocketCaptureMode;
-}
-function resetCaptureModeForTesting() {
-  webSocketCaptureMode = "medium";
-}
-function getSize(data) {
-  if (typeof data === "string") {
-    return _textEncoder ? _textEncoder.encode(data).length : data.length;
-  }
-  if (data instanceof ArrayBuffer)
-    return data.byteLength;
-  if (data && typeof data === "object" && "size" in data)
-    return data.size;
-  return 0;
-}
-function formatPayload(data) {
-  if (typeof data === "string")
-    return data;
-  if (data instanceof ArrayBuffer) {
-    const bytes = new Uint8Array(data);
-    if (data.byteLength < 256) {
-      let hex = "";
-      for (let i = 0; i < bytes.length; i++) {
-        const byte = bytes[i];
-        if (byte !== void 0) {
-          hex += byte.toString(16).padStart(2, "0");
-        }
-      }
-      return `[Binary: ${data.byteLength}B] ${hex}`;
-    } else {
-      let magic = "";
-      for (let i = 0; i < Math.min(4, bytes.length); i++) {
-        const byte = bytes[i];
-        if (byte !== void 0) {
-          magic += byte.toString(16).padStart(2, "0");
-        }
-      }
-      return `[Binary: ${data.byteLength}B, magic:${magic}]`;
-    }
-  }
-  if (data && typeof data === "object" && "size" in data) {
-    return `[Binary: ${data.size}B]`;
-  }
-  return String(data);
-}
-function truncateWsMessage(message) {
-  if (typeof message === "string" && message.length > WS_MAX_BODY_SIZE) {
-    return { data: message.slice(0, WS_MAX_BODY_SIZE), truncated: true };
-  }
-  return { data: message, truncated: false };
-}
-function createConnectionTracker(id, url) {
-  const tracker = {
-    id,
-    url,
-    messageCount: 0,
-    _sampleCounter: 0,
-    _messageRate: 0,
-    _messageTimestamps: [],
-    _schemaKeys: [],
-    _schemaVariants: /* @__PURE__ */ new Map(),
-    _schemaConsistent: true,
-    _schemaDetected: false,
-    stats: {
-      incoming: { count: 0, bytes: 0, lastPreview: null, lastAt: null },
-      outgoing: { count: 0, bytes: 0, lastPreview: null, lastAt: null }
-    },
-    /**
-     * Record a message for stats and schema detection
-     *
-     * WEBSOCKET PAYLOAD SCHEMA INFERENCE LOGIC:
-     *
-     * This method implements a three-phase schema detection strategy to identify the
-     * shape of JSON messages flowing over a WebSocket connection. Understanding the
-     * schema is crucial for debugging: it reveals whether messages are uniform (good
-     * for testing) or polymorphic (suggests different message types or errors).
-     *
-     * PHASE 1: BOOTSTRAP DETECTION (messages 1-5)
-     *   Purpose: Quickly infer the "canonical" schema from the first JSON messages.
-     *   Strategy:
-     *     - Extract sorted object keys from each incoming JSON message
-     *     - Stop after 5 messages (samples are enough to detect schema; balance between
-     *       coverage and memory/CPU cost)
-     *     - Compute consistency: if all 5 messages have identical key sets, mark as
-     *       consistent=true
-     *     - Store key strings as comma-separated sorted lists (e.g., "id,status,timestamp")
-     *   Why 5: Statistically sufficient for most API patterns. First message might be
-     *     special (connection ACK). By message 5, the pattern is clear.
-     *   Early exit: If not JSON or message is array, skip (only track object schemas).
-     *
-     * PHASE 2: CONSISTENCY CHECKING (after first 2 messages)
-     *   Trigger: Once _schemaKeys.length >= 2, begin checking if all keys match the first.
-     *   Result: Sets _schemaConsistent = boolean indicating if messages have uniform schema.
-     *   Why check early: Detect schema changes immediately without waiting for all 5 messages.
-     *   Performance: O(n) single pass over _schemaKeys array; no redundant comparisons.
-     *
-     * PHASE 3: VARIANT TRACKING (messages 6+)
-     *   Purpose: After bootstrap, track schema variants without resetting detection.
-     *   Strategy:
-     *     - Continue parsing incoming JSON messages after _schemaDetected = true
-     *     - Build variants Map: key -> count (e.g., "id,status" -> 5 occurrences)
-     *     - Memory bound: Cap Map at 50 entries. Only add new variants if under cap;
-     *       always increment existing keys (ensures frequent patterns stay tracked).
-     *     - This bounds memory to ~50KB even on long-lived connections.
-     *   Why variants matter: Detects polymorphic message types (e.g., "id,status,data"
-     *     vs "id,error,code"). Useful for debugging API versioning issues.
-     *   Why cap variants: Long-running connections might emit hundreds of unique schemas.
-     *     Capping prevents unbounded growth while keeping the 50 most frequent variants.
-     *
-     * SAMPLING RATE DECISION:
-     *   The schema info (keys, consistency, variants) flows to getSchema() which returns:
-     *     - detectedKeys: union of all seen keys (for understanding message structure)
-     *     - consistent: boolean (true if all bootstrap messages matched)
-     *     - variants: array of key strings (top variants seen after bootstrap)
-     *   MCP observe handler uses this to emit SchemaInfo in WebSocket capture events,
-     *   helping users understand payload patterns without logging every message.
-     *
-     * MESSAGE RATE TRACKING:
-     *   Maintains _messageTimestamps for the last 5 seconds (sliding window). This powers
-     *   shouldSample() which implements adaptive sampling: high-frequency connections
-     *   (>200 msg/s) sample at 1-in-100; low-frequency (<2 msg/s) capture all messages.
-     *   This ensures detailed visibility on slow links without bloating on high-volume.
-     */
-    recordMessage(direction, data) {
-      this.messageCount++;
-      const size = data ? typeof data === "string" ? data.length : getSize(data) : 0;
-      const now = Date.now();
-      this.stats[direction].count++;
-      this.stats[direction].bytes += size;
-      this.stats[direction].lastAt = now;
-      if (data && typeof data === "string") {
-        this.stats[direction].lastPreview = data.length > WS_PREVIEW_LIMIT ? data.slice(0, WS_PREVIEW_LIMIT) : data;
-      }
-      this._messageTimestamps.push(now);
-      const cutoff = now - 5e3;
-      this._messageTimestamps = this._messageTimestamps.filter((t) => t >= cutoff);
-      if (direction === "incoming" && data && typeof data === "string" && this._schemaKeys.length < 5) {
-        try {
-          const parsed = JSON.parse(data);
-          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-            const keys = Object.keys(parsed).sort();
-            const keyStr = keys.join(",");
-            this._schemaKeys.push(keyStr);
-            this._schemaVariants.set(keyStr, (this._schemaVariants.get(keyStr) || 0) + 1);
-            if (this._schemaKeys.length >= 2) {
-              const first = this._schemaKeys[0];
-              this._schemaConsistent = this._schemaKeys.every((k) => k === first);
-            }
-            if (this._schemaKeys.length >= 5) {
-              this._schemaDetected = true;
-            }
-          }
-        } catch {
-        }
-      }
-      if (direction === "incoming" && data && typeof data === "string" && this._schemaDetected) {
-        try {
-          const parsed = JSON.parse(data);
-          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-            const keys = Object.keys(parsed).sort();
-            const keyStr = keys.join(",");
-            if (this._schemaVariants.has(keyStr) || this._schemaVariants.size < 50) {
-              this._schemaVariants.set(keyStr, (this._schemaVariants.get(keyStr) || 0) + 1);
-            }
-          }
-        } catch {
-        }
-      }
-    },
-    /**
-     * Determine if a message should be sampled (logged)
-     */
-    shouldSample(_direction) {
-      this._sampleCounter++;
-      if (webSocketCaptureMode === "all")
-        return true;
-      if (this.messageCount > 0 && this.messageCount <= 5)
-        return true;
-      const rate = this._messageRate || this.getMessageRate();
-      const targetRate = webSocketCaptureMode === "high" ? 10 : webSocketCaptureMode === "medium" ? 5 : 2;
-      if (rate <= targetRate)
-        return true;
-      const n = Math.max(1, Math.round(rate / targetRate));
-      return this._sampleCounter % n === 0;
-    },
-    /**
-     * Lifecycle events should always be logged
-     */
-    shouldLogLifecycle() {
-      return true;
-    },
-    /**
-     * Get sampling info
-     */
-    getSamplingInfo() {
-      const rate = this._messageRate || this.getMessageRate();
-      let targetRate = rate;
-      if (rate >= 10 && rate < 50)
-        targetRate = 10;
-      else if (rate >= 50 && rate < 200)
-        targetRate = 5;
-      else if (rate >= 200)
-        targetRate = 2;
-      return {
-        rate: `${rate}/s`,
-        logged: `${targetRate}/${Math.round(rate)}`,
-        window: "5s"
-      };
-    },
-    /**
-     * Get the current message rate (messages per second)
-     */
-    getMessageRate() {
-      if (this._messageTimestamps.length < 2)
-        return this._messageTimestamps.length;
-      const lastTime = this._messageTimestamps[this._messageTimestamps.length - 1];
-      const firstTime = this._messageTimestamps[0];
-      if (lastTime === void 0 || firstTime === void 0)
-        return this._messageTimestamps.length;
-      const window2 = (lastTime - firstTime) / 1e3;
-      return window2 > 0 ? this._messageTimestamps.length / window2 : this._messageTimestamps.length;
-    },
-    /**
-     * Set the message rate manually (for testing)
-     */
-    setMessageRate(rate) {
-      this._messageRate = rate;
-    },
-    /**
-     * Get the detected schema info
-     */
-    getSchema() {
-      if (this._schemaKeys.length === 0) {
-        return { detectedKeys: null, consistent: true };
-      }
-      const allKeys = /* @__PURE__ */ new Set();
-      for (const keyStr of this._schemaKeys) {
-        for (const k of keyStr.split(",")) {
-          if (k)
-            allKeys.add(k);
-        }
-      }
-      const variants = [];
-      for (const [keyStr, count] of this._schemaVariants) {
-        if (count > 0)
-          variants.push(keyStr);
-      }
-      return {
-        detectedKeys: allKeys.size > 0 ? Array.from(allKeys).sort() : null,
-        consistent: this._schemaConsistent,
-        variants: variants.length > 1 ? variants : void 0
-      };
-    },
-    /**
-     * Check if a message represents a schema change
-     */
-    isSchemaChange(data) {
-      if (!this._schemaDetected || !data || typeof data !== "string")
-        return false;
-      try {
-        const parsed = JSON.parse(data);
-        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
-          return false;
-        const keys = Object.keys(parsed).sort().join(",");
-        return !this._schemaKeys.includes(keys);
-      } catch {
-        return false;
-      }
-    }
-  };
-  return tracker;
-}
-
-// extension/lib/net/websocket.js
-var originalWebSocket = null;
-var webSocketCaptureEnabled = true;
-function postLifecycleEvent(event, connectionId, urlString, extra) {
-  window.postMessage({
-    type: "kaboom_ws",
-    payload: {
-      type: "websocket",
-      event,
-      id: connectionId,
-      url: urlString,
-      ts: extra?.ts || (/* @__PURE__ */ new Date()).toISOString(),
-      ...extra?.code !== void 0 && { code: extra.code },
-      ...extra?.reason !== void 0 && { reason: extra.reason }
-    }
-  }, window.location.origin);
-}
-function postMessageEvent(connectionId, urlString, direction, data) {
-  const size = getSize(data);
-  const formatted = formatPayload(data);
-  const { data: truncatedData, truncated } = truncateWsMessage(formatted);
-  window.postMessage({
-    type: "kaboom_ws",
-    payload: {
-      type: "websocket",
-      event: "message",
-      id: connectionId,
-      url: urlString,
-      direction,
-      data: truncatedData,
-      size,
-      truncated: truncated || void 0,
-      ts: (/* @__PURE__ */ new Date()).toISOString()
-    }
-  }, window.location.origin);
-}
-function attachMessageCapture(ws, connectionId, urlString, tracker) {
-  ws.addEventListener("message", (event) => {
-    if (!webSocketCaptureEnabled)
-      return;
-    tracker.recordMessage("incoming", event.data);
-    if (!tracker.shouldSample("incoming"))
-      return;
-    postMessageEvent(connectionId, urlString, "incoming", event.data);
-  });
-  const originalSend = ws.send.bind(ws);
-  ws.send = function(data) {
-    if (webSocketCaptureEnabled) {
-      tracker.recordMessage("outgoing", data);
-    }
-    if (webSocketCaptureEnabled && tracker.shouldSample("outgoing")) {
-      postMessageEvent(connectionId, urlString, "outgoing", data);
-    }
-    return originalSend(data);
-  };
-}
-function attachLifecycleCapture(ws, connectionId, urlString) {
-  ws.addEventListener("close", (event) => {
-    if (!webSocketCaptureEnabled)
-      return;
-    postLifecycleEvent("close", connectionId, urlString, {
-      code: event.code,
-      reason: event.reason
-    });
-  });
-  ws.addEventListener("error", () => {
-    if (!webSocketCaptureEnabled)
-      return;
-    postLifecycleEvent("error", connectionId, urlString);
-  });
-}
-function installWebSocketCapture() {
-  if (typeof window === "undefined")
-    return;
-  if (!window.WebSocket)
-    return;
-  if (originalWebSocket)
-    return;
-  webSocketCaptureEnabled = true;
-  const earlyOriginal = window.__KABOOM_ORIGINAL_WS__;
-  originalWebSocket = earlyOriginal || window.WebSocket;
-  const OriginalWS = originalWebSocket;
-  function KaboomWebSocket(url, protocols) {
-    const ws = new OriginalWS(url, protocols);
-    const connectionId = crypto.randomUUID();
-    const urlString = url.toString();
-    const tracker = createConnectionTracker(connectionId, urlString);
-    ws.addEventListener("open", () => {
-      if (!webSocketCaptureEnabled)
-        return;
-      postLifecycleEvent("open", connectionId, urlString);
-    });
-    attachLifecycleCapture(ws, connectionId, urlString);
-    attachMessageCapture(ws, connectionId, urlString, tracker);
-    return ws;
-  }
-  KaboomWebSocket.prototype = OriginalWS.prototype;
-  Object.defineProperty(KaboomWebSocket, "CONNECTING", { value: OriginalWS.CONNECTING, writable: false });
-  Object.defineProperty(KaboomWebSocket, "OPEN", { value: OriginalWS.OPEN, writable: false });
-  Object.defineProperty(KaboomWebSocket, "CLOSING", { value: OriginalWS.CLOSING, writable: false });
-  Object.defineProperty(KaboomWebSocket, "CLOSED", { value: OriginalWS.CLOSED, writable: false });
-  window.WebSocket = KaboomWebSocket;
-  adoptEarlyConnections();
-}
-function adoptEarlyConnections() {
-  const earlyConnections = window.__KABOOM_EARLY_WS__;
-  if (!earlyConnections || earlyConnections.length === 0) {
-    delete window.__KABOOM_ORIGINAL_WS__;
-    delete window.__KABOOM_EARLY_WS__;
-    return;
-  }
-  let adopted = 0;
-  for (const conn of earlyConnections) {
-    const ws = conn.ws;
-    if (ws.readyState === WebSocket.CLOSED)
-      continue;
-    adopted++;
-    const connectionId = crypto.randomUUID();
-    const urlString = conn.url;
-    const tracker = createConnectionTracker(connectionId, urlString);
-    const hasOpened = conn.events.some((e) => e.type === "open");
-    if (hasOpened && webSocketCaptureEnabled) {
-      const openEvent = conn.events.find((e) => e.type === "open");
-      postLifecycleEvent("open", connectionId, urlString, {
-        ts: openEvent ? new Date(openEvent.ts).toISOString() : void 0
-      });
-    }
-    attachLifecycleCapture(ws, connectionId, urlString);
-    attachMessageCapture(ws, connectionId, urlString, tracker);
-  }
-  if (adopted > 0) {
-    console.log(`[KaBOOM!] Adopted ${adopted} early WebSocket connection(s)`);
-  }
-  delete window.__KABOOM_ORIGINAL_WS__;
-  delete window.__KABOOM_EARLY_WS__;
-}
-function setWebSocketCaptureMode(mode) {
-  setWebSocketCaptureModeInternal(mode);
-}
-function setWebSocketCaptureEnabled(enabled) {
-  webSocketCaptureEnabled = enabled;
-}
-function getWebSocketCaptureMode() {
-  return getWebSocketCaptureModeInternal();
-}
-function uninstallWebSocketCapture() {
-  if (typeof window === "undefined")
-    return;
-  if (originalWebSocket) {
-    window.WebSocket = originalWebSocket;
-    originalWebSocket = null;
-  }
-}
-function resetForTesting() {
-  uninstallWebSocketCapture();
-  webSocketCaptureEnabled = false;
-  resetCaptureModeForTesting();
-  originalWebSocket = null;
-  if (typeof window !== "undefined") {
-    delete window.__KABOOM_ORIGINAL_WS__;
-    delete window.__KABOOM_EARLY_WS__;
-  }
-}
-
-// extension/lib/analysis/dom-queries.js
-async function executeDOMQuery(params) {
-  const { selector, include_styles, properties, include_children, max_depth } = params;
-  const elements = document.querySelectorAll(selector);
-  const matchCount = elements.length;
-  const cappedDepth = Math.min(max_depth || 3, DOM_QUERY_MAX_DEPTH);
-  const matches = [];
-  for (let i = 0; i < Math.min(elements.length, DOM_QUERY_MAX_ELEMENTS); i++) {
-    const el = elements[i];
-    if (!el)
-      continue;
-    const entry = serializeDOMElement(el, include_styles, properties, include_children, cappedDepth, 0);
-    matches.push(entry);
-  }
-  return {
-    url: window.location.href,
-    title: document.title,
-    matchCount,
-    returnedCount: matches.length,
-    matches
-  };
-}
-function collectAttributes(el) {
-  if (!el.attributes || el.attributes.length === 0)
-    return void 0;
-  const attrs = {};
-  for (const attr of el.attributes) {
-    attrs[attr.name] = attr.value;
-  }
-  return attrs;
-}
-function collectBoundingBox(el) {
-  if (!el.getBoundingClientRect)
-    return void 0;
-  const rect = el.getBoundingClientRect();
-  return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
-}
-function collectStyles(el, includeStyles, styleProps) {
-  if (!includeStyles || typeof window.getComputedStyle !== "function")
-    return void 0;
-  const computed = window.getComputedStyle(el);
-  if (styleProps && styleProps.length > 0) {
-    const styles = {};
-    for (const prop of styleProps) {
-      styles[prop] = computed.getPropertyValue(prop);
-    }
-    return styles;
-  }
-  return { display: computed.display, color: computed.color, position: computed.position };
-}
-function collectChildren(el, includeChildren, maxDepth, currentDepth) {
-  if (!includeChildren || currentDepth >= maxDepth || !el.children || el.children.length === 0)
-    return void 0;
-  const children = [];
-  const maxChildren = Math.min(el.children.length, DOM_QUERY_MAX_ELEMENTS);
-  for (let i = 0; i < maxChildren; i++) {
-    const child = el.children[i];
-    if (child) {
-      children.push(serializeDOMElement(child, false, void 0, true, maxDepth, currentDepth + 1));
-    }
-  }
-  return children;
-}
-function serializeDOMElement(el, includeStyles, styleProps, includeChildren, maxDepth, currentDepth) {
-  const entry = {
-    tag: el.tagName ? el.tagName.toLowerCase() : "",
-    text: (el.textContent || "").slice(0, DOM_QUERY_MAX_TEXT),
-    visible: el.offsetParent !== null || el.getBoundingClientRect && el.getBoundingClientRect().width > 0
-  };
-  entry.attributes = collectAttributes(el);
-  entry.boundingBox = collectBoundingBox(el);
-  entry.styles = collectStyles(el, includeStyles, styleProps);
-  entry.children = collectChildren(el, includeChildren, maxDepth, currentDepth);
-  return entry;
-}
-async function getPageInfo() {
-  const headings = [];
-  const headingEls = document.querySelectorAll("h1,h2,h3,h4,h5,h6");
-  for (const h of headingEls) {
-    headings.push((h.textContent || "").slice(0, DOM_QUERY_MAX_TEXT));
-  }
-  const forms = [];
-  const formEls = document.querySelectorAll("form");
-  for (const form of formEls) {
-    const fields = [];
-    const inputs = form.querySelectorAll("input,select,textarea");
-    for (const input of inputs) {
-      const inputEl = input;
-      if (inputEl.name)
-        fields.push(inputEl.name);
-    }
-    forms.push({
-      id: form.id || void 0,
-      action: form.action || void 0,
-      fields
-    });
-  }
-  return {
-    url: window.location.href,
-    title: document.title,
-    viewport: { width: window.innerWidth, height: window.innerHeight },
-    scroll: { x: window.scrollX, y: window.scrollY },
-    documentHeight: document.documentElement.scrollHeight,
-    headings,
-    links: document.querySelectorAll("a").length,
-    images: document.querySelectorAll("img").length,
-    interactiveElements: document.querySelectorAll("button,input,select,textarea,a[href]").length,
-    forms
-  };
-}
-function loadAxeCore() {
-  return new Promise((resolve, reject) => {
-    const hasAxe = () => typeof window !== "undefined" && !!window.axe;
-    if (hasAxe()) {
-      resolve();
-      return;
-    }
-    let settled = false;
-    const finish = (fn) => {
-      if (settled)
-        return;
-      settled = true;
-      fn();
-    };
-    const checkInterval = setInterval(() => {
-      if (hasAxe()) {
-        finish(() => {
-          clearInterval(checkInterval);
-          clearTimeout(loadTimeout);
-          resolve();
-        });
-      }
-    }, scaleTimeout(100));
-    const loadTimeout = setTimeout(() => {
-      finish(() => {
-        clearInterval(checkInterval);
-        reject(new Error("Accessibility audit failed: axe-core library not loaded (5s timeout). The extension content script may not have been injected on this page. Try reloading the tab and re-running the audit."));
-      });
-    }, scaleTimeout(5e3));
-  });
-}
-async function runAxeAudit(params) {
-  await loadAxeCore();
-  const context = params.scope ? { include: [params.scope] } : document;
-  const config = {};
-  if (params.tags && params.tags.length > 0) {
-    config.runOnly = params.tags;
-  }
-  if (params.include_passes) {
-    config.resultTypes = ["violations", "passes", "incomplete", "inapplicable"];
-  } else {
-    config.resultTypes = ["violations", "incomplete"];
-  }
-  const results = await window.axe.run(context, config);
-  return formatAxeResults(results);
-}
-function emptyPartialResult(errorMessage2) {
-  return {
-    violations: [],
-    passes: [],
-    incomplete: [],
-    inapplicable: [],
-    summary: { violations: 0, passes: 0, incomplete: 0, inapplicable: 0 },
-    partial: true,
-    error: errorMessage2
-  };
-}
-async function runAxeAuditWithTimeout(params, timeoutMs = A11Y_AUDIT_TIMEOUT_MS) {
-  try {
-    return await Promise.race([
-      runAxeAudit(params),
-      new Promise((resolve) => {
-        setTimeout(() => resolve(emptyPartialResult("Accessibility audit timeout")), timeoutMs);
-      })
-    ]);
-  } catch (err) {
-    return emptyPartialResult(err instanceof Error ? err.message : String(err));
-  }
-}
-function formatAxeResults(axeResult) {
-  const formatViolation = (v) => {
-    const formatted = {
-      id: v.id,
-      impact: v.impact,
-      description: v.description,
-      helpUrl: v.helpUrl,
-      nodes: []
-    };
-    if (v.tags) {
-      formatted.wcag = v.tags.filter((t) => t.startsWith("wcag"));
-    }
-    formatted.nodes = (v.nodes || []).slice(0, A11Y_MAX_NODES_PER_VIOLATION).map((node) => {
-      const selector = Array.isArray(node.target) ? node.target[0] : node.target;
-      return {
-        selector: selector || "",
-        html: (node.html || "").slice(0, DOM_QUERY_MAX_HTML),
-        ...node.failureSummary ? { failureSummary: node.failureSummary } : {}
-      };
-    });
-    if (v.nodes && v.nodes.length > A11Y_MAX_NODES_PER_VIOLATION) {
-      formatted.nodeCount = v.nodes.length;
-    }
-    return formatted;
-  };
-  return {
-    violations: (axeResult.violations || []).map(formatViolation),
-    summary: {
-      violations: (axeResult.violations || []).length,
-      passes: (axeResult.passes || []).length,
-      incomplete: (axeResult.incomplete || []).length,
-      inapplicable: (axeResult.inapplicable || []).length
-    }
-  };
 }
 
 // extension/inject/api.js
@@ -2779,350 +1792,185 @@ function installKaboomAPI() {
     version: "0.8.8"
   };
 }
-function uninstallKaboomAPI() {
-  if (typeof window !== "undefined" && window.__kaboom) {
-    delete window.__kaboom;
-  }
-}
 
-// extension/lib/page/safe-global-patch.js
-function safeAssignGlobal(target, key, value) {
-  try {
-    target[key] = value;
-    if (target[key] === value)
-      return true;
-  } catch {
+// extension/lib/analysis/dom-queries.js
+async function executeDOMQuery(params) {
+  const { selector, include_styles, properties, include_children, max_depth } = params;
+  const elements = document.querySelectorAll(selector);
+  const matchCount = elements.length;
+  const cappedDepth = Math.min(max_depth || 3, DOM_QUERY_MAX_DEPTH);
+  const matches = [];
+  for (let i = 0; i < Math.min(elements.length, DOM_QUERY_MAX_ELEMENTS); i++) {
+    const el = elements[i];
+    if (!el)
+      continue;
+    const entry = serializeDOMElement(el, include_styles, properties, include_children, cappedDepth, 0);
+    matches.push(entry);
   }
-  try {
-    Object.defineProperty(target, key, { value, writable: true, configurable: true });
-    return target[key] === value;
-  } catch {
-    return false;
-  }
+  return {
+    url: window.location.href,
+    title: document.title,
+    matchCount,
+    returnedCount: matches.length,
+    matches
+  };
 }
-
-// extension/lib/page/transient-capture.js
-var SKIP_TAGS = /* @__PURE__ */ new Set(["SCRIPT", "STYLE", "LINK", "META", "NOSCRIPT", "BR", "HR"]);
-var CLASS_FINGERPRINTS = [
-  [/toast/i, "toast"],
-  [/snackbar/i, "snackbar"],
-  [/notification/i, "notification"],
-  [/tooltip/i, "tooltip"],
-  [/alert/i, "alert"],
-  [/banner/i, "banner"],
-  [/flash/i, "flash"]
-];
-var DEDUP_WINDOW_MS = 2e3;
-var DEDUP_MAP_CAP = 100;
-var MAX_TEXT_LENGTH = 500;
-var DEDUP_KEY_TEXT_LENGTH = 100;
-var observer = null;
-var dedupMap = /* @__PURE__ */ new Map();
-function classifyTransient(el) {
-  const tag = el.tagName;
-  if (!tag || SKIP_TAGS.has(tag))
-    return null;
-  const text = extractText(el);
-  if (!text)
-    return null;
-  const role = el.getAttribute("role");
-  const ariaLive = el.getAttribute("aria-live");
-  if (role === "alert" || ariaLive === "assertive") {
-    return { classification: "alert", role: role || "alert", text };
+function collectAttributes(el) {
+  if (!el.attributes || el.attributes.length === 0)
+    return void 0;
+  const attrs = {};
+  for (const attr of el.attributes) {
+    attrs[attr.name] = attr.value;
   }
-  if (role === "status" || ariaLive === "polite") {
-    return { classification: "toast", role: role || "status", text };
-  }
-  const className = el.className;
-  if (className && typeof className === "string") {
-    for (const [pattern, classification] of CLASS_FINGERPRINTS) {
-      if (pattern.test(className)) {
-        return { classification, role: role || "", text };
-      }
+  return attrs;
+}
+function collectBoundingBox(el) {
+  if (!el.getBoundingClientRect)
+    return void 0;
+  const rect = el.getBoundingClientRect();
+  return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+}
+function collectStyles(el, includeStyles, styleProps) {
+  if (!includeStyles || typeof window.getComputedStyle !== "function")
+    return void 0;
+  const computed = window.getComputedStyle(el);
+  if (styleProps && styleProps.length > 0) {
+    const styles = {};
+    for (const prop of styleProps) {
+      styles[prop] = computed.getPropertyValue(prop);
     }
+    return styles;
   }
-  if (typeof window !== "undefined" && window.getComputedStyle) {
-    try {
-      const style = window.getComputedStyle(el);
-      const position = style.position;
-      if (position === "fixed" || position === "absolute") {
-        const zIndex = parseInt(style.zIndex, 10);
-        const height = el.getBoundingClientRect().height;
-        if (zIndex > 1e3 && height > 0 && height < 200) {
-          return { classification: "flash", role: role || "", text };
-        }
-      }
-    } catch {
-    }
-  }
-  return null;
+  return { display: computed.display, color: computed.color, position: computed.position };
 }
-function extractText(el) {
-  const raw = (el.textContent || "").trim();
-  return raw.slice(0, MAX_TEXT_LENGTH);
-}
-function dedupKey(classification, text) {
-  return `${classification}:${text.slice(0, DEDUP_KEY_TEXT_LENGTH)}`;
-}
-function isDuplicate(key, now) {
-  const entry = dedupMap.get(key);
-  return entry !== void 0 && now - entry.timestamp < DEDUP_WINDOW_MS;
-}
-function recordDedup(key, now) {
-  dedupMap.set(key, { timestamp: now });
-  if (dedupMap.size > DEDUP_MAP_CAP) {
-    for (const [k, v] of dedupMap) {
-      if (now - v.timestamp > DEDUP_WINDOW_MS) {
-        dedupMap.delete(k);
-      }
-    }
-  }
-}
-function classifyCandidates(el) {
-  const info = classifyTransient(el);
-  if (info)
-    return info;
-  for (let i = 0; i < el.children.length; i++) {
+function collectChildren(el, includeChildren, maxDepth, currentDepth) {
+  if (!includeChildren || currentDepth >= maxDepth || !el.children || el.children.length === 0)
+    return void 0;
+  const children = [];
+  const maxChildren = Math.min(el.children.length, DOM_QUERY_MAX_ELEMENTS);
+  for (let i = 0; i < maxChildren; i++) {
     const child = el.children[i];
     if (child) {
-      const childInfo = classifyTransient(child);
-      if (childInfo)
-        return childInfo;
+      children.push(serializeDOMElement(child, false, void 0, true, maxDepth, currentDepth + 1));
     }
   }
-  return null;
+  return children;
 }
-function recordPendingTransients(pending) {
-  const now = Date.now();
-  for (const { element, info } of pending) {
-    const key = dedupKey(info.classification, info.text);
-    if (isDuplicate(key, now))
-      continue;
-    recordDedup(key, now);
-    recordEnhancedAction("transient", null, {
-      classification: info.classification,
-      duration_ms: 0,
-      // MVP: capture moment only; removal tracking not yet implemented
-      role: info.role,
-      value: info.text
-    });
-  }
-}
-function mutationCallback(mutations) {
-  const pending = [];
-  for (const mutation of mutations) {
-    if (mutation.type !== "childList")
-      continue;
-    for (let i = 0; i < mutation.addedNodes.length; i++) {
-      const node = mutation.addedNodes[i];
-      if (node.nodeType !== Node.ELEMENT_NODE)
-        continue;
-      const el = node;
-      const info = classifyCandidates(el);
-      if (info) {
-        pending.push({ element: el, info });
-      }
-    }
-  }
-  if (pending.length === 0)
-    return;
-  if (typeof requestIdleCallback === "function") {
-    requestIdleCallback(() => recordPendingTransients(pending));
-  } else {
-    setTimeout(() => recordPendingTransients(pending), 0);
-  }
-}
-function installTransientCapture() {
-  if (observer)
-    return;
-  if (typeof document === "undefined" || !document.body)
-    return;
-  if (typeof MutationObserver === "undefined")
-    return;
-  observer = new MutationObserver(mutationCallback);
-  observer.observe(document.body, { childList: true, subtree: true });
-}
-function uninstallTransientCapture() {
-  if (observer) {
-    observer.disconnect();
-    observer = null;
-  }
-  dedupMap.clear();
-}
-
-// extension/lib/error-utils.js
-function errorMessage(err, fallback = "Unknown error") {
-  if (err instanceof Error && err.message)
-    return err.message;
-  if (typeof err === "string" && err)
-    return err;
-  return fallback;
-}
-
-// extension/inject/observers.js
-var originalFetch = null;
-var deferralEnabled = true;
-var phase2Installed = false;
-var injectionTimestamp = 0;
-var phase2Timestamp = 0;
-function wrapFetch(originalFetchFn) {
-  return async function(input, init) {
-    const startTime = Date.now();
-    const url = typeof input === "string" ? input : input.url;
-    const method = init?.method || (typeof input === "object" && "method" in input ? input.method : "GET") || "GET";
-    try {
-      const response = await originalFetchFn(input, init);
-      const duration = Date.now() - startTime;
-      if (!response.ok) {
-        let responseBody = "";
-        try {
-          const cloned = response.clone();
-          responseBody = await cloned.text();
-          if (responseBody.length > MAX_RESPONSE_LENGTH) {
-            responseBody = responseBody.slice(0, MAX_RESPONSE_LENGTH) + "... [truncated]";
-          }
-        } catch {
-          responseBody = "[Could not read response]";
-        }
-        const rawHeaders = init?.headers || (typeof input === "object" && "headers" in input ? input.headers : null);
-        const safeHeaders = sanitizeHeaders(rawHeaders);
-        const logPayload = {
-          level: "error",
-          type: "network",
-          method: method.toUpperCase(),
-          url,
-          status: response.status,
-          statusText: response.statusText,
-          duration,
-          response: responseBody,
-          ...Object.keys(safeHeaders).length > 0 ? { headers: safeHeaders } : {}
-        };
-        postLog(logPayload);
-      }
-      return response;
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      const rawHeaders = init?.headers || (typeof input === "object" && "headers" in input ? input.headers : null);
-      const safeHeaders = sanitizeHeaders(rawHeaders);
-      const logPayload = {
-        level: "error",
-        type: "network",
-        method: method.toUpperCase(),
-        url,
-        error: errorMessage(error),
-        duration,
-        ...Object.keys(safeHeaders).length > 0 ? { headers: safeHeaders } : {}
-      };
-      postLog(logPayload);
-      throw error;
-    }
+function serializeDOMElement(el, includeStyles, styleProps, includeChildren, maxDepth, currentDepth) {
+  const entry = {
+    tag: el.tagName ? el.tagName.toLowerCase() : "",
+    text: (el.textContent || "").slice(0, DOM_QUERY_MAX_TEXT),
+    visible: el.offsetParent !== null || el.getBoundingClientRect && el.getBoundingClientRect().width > 0
   };
+  entry.attributes = collectAttributes(el);
+  entry.boundingBox = collectBoundingBox(el);
+  entry.styles = collectStyles(el, includeStyles, styleProps);
+  entry.children = collectChildren(el, includeChildren, maxDepth, currentDepth);
+  return entry;
 }
-function installFetchCapture() {
-  const earlyOriginal = window.__KABOOM_ORIGINAL_FETCH__;
-  originalFetch = earlyOriginal || window.fetch;
-  const wrappedWithBodies = wrapFetchWithBodies(originalFetch);
-  if (!safeAssignGlobal(window, "fetch", wrapFetch(wrappedWithBodies))) {
-    console.warn("[KaBOOM!] fetch is read-only on this page; network capture via fetch is unavailable.");
-  }
-}
-function installXHRCapture() {
-  wrapXHRWithBodies();
-}
-function uninstallXHRCapture() {
-  unwrapXHR();
-}
-function uninstallFetchCapture() {
-  if (originalFetch) {
-    safeAssignGlobal(window, "fetch", originalFetch);
-    originalFetch = null;
-  }
-}
-function install() {
-  installConsoleCapture();
-  installFetchCapture();
-  installXHRCapture();
-  installExceptionCapture();
-  installActionCapture();
-  installNavigationCapture();
-  installWebSocketCapture();
-  installPerformanceCapture();
-  installTransientCapture();
-}
-function uninstall() {
-  uninstallConsoleCapture();
-  uninstallFetchCapture();
-  uninstallXHRCapture();
-  uninstallExceptionCapture();
-  uninstallActionCapture();
-  uninstallNavigationCapture();
-  uninstallWebSocketCapture();
-  uninstallPerformanceCapture();
-  uninstallTransientCapture();
-}
-function shouldDeferIntercepts() {
-  if (typeof document === "undefined")
-    return false;
-  return document.readyState === "loading";
-}
-function checkMemoryPressure(state) {
-  const result = { ...state };
-  if (state.memoryUsageMB >= MEMORY_HARD_LIMIT_MB) {
-    result.networkBodiesEnabled = false;
-    result.wsBufferCapacity = Math.floor(state.wsBufferCapacity * 0.25);
-    result.networkBufferCapacity = Math.floor(state.networkBufferCapacity * 0.25);
-  } else if (state.memoryUsageMB >= MEMORY_SOFT_LIMIT_MB) {
-    result.wsBufferCapacity = Math.floor(state.wsBufferCapacity * 0.5);
-    result.networkBufferCapacity = Math.floor(state.networkBufferCapacity * 0.5);
-  }
-  return result;
-}
-function installPhase1() {
-  console.log("[KaBOOM!] Phase 1 installing (lightweight API + perf observers)");
-  injectionTimestamp = performance.now();
-  phase2Installed = false;
-  phase2Timestamp = 0;
-  installPerformanceCapture();
-  if (!deferralEnabled) {
-    installPhase2();
-  } else {
-    const installDeferred = () => {
-      if (!phase2Installed)
-        setTimeout(installPhase2, 100);
+function loadAxeCore() {
+  return new Promise((resolve, reject) => {
+    const hasAxe = () => typeof window !== "undefined" && !!window.axe;
+    if (hasAxe()) {
+      resolve();
+      return;
+    }
+    let settled = false;
+    const finish = (fn) => {
+      if (settled)
+        return;
+      settled = true;
+      fn();
     };
-    if (document.readyState === "complete") {
-      installDeferred();
-    } else {
-      window.addEventListener("load", installDeferred, { once: true });
-      setTimeout(() => {
-        if (!phase2Installed)
-          installPhase2();
-      }, 1e4);
-    }
+    const checkInterval = setInterval(() => {
+      if (hasAxe()) {
+        finish(() => {
+          clearInterval(checkInterval);
+          clearTimeout(loadTimeout);
+          resolve();
+        });
+      }
+    }, scaleTimeout(100));
+    const loadTimeout = setTimeout(() => {
+      finish(() => {
+        clearInterval(checkInterval);
+        reject(new Error("Accessibility audit failed: axe-core library not loaded (5s timeout). The extension content script may not have been injected on this page. Try reloading the tab and re-running the audit."));
+      });
+    }, scaleTimeout(5e3));
+  });
+}
+async function runAxeAudit(params) {
+  await loadAxeCore();
+  const context = params.scope ? { include: [params.scope] } : document;
+  const config = {};
+  if (params.tags && params.tags.length > 0) {
+    config.runOnly = params.tags;
   }
+  if (params.include_passes) {
+    config.resultTypes = ["violations", "passes", "incomplete", "inapplicable"];
+  } else {
+    config.resultTypes = ["violations", "incomplete"];
+  }
+  const results = await window.axe.run(context, config);
+  return formatAxeResults(results);
 }
-function installPhase2() {
-  if (phase2Installed)
-    return;
-  if (typeof window === "undefined" || typeof document === "undefined")
-    return;
-  console.log("[KaBOOM!] Phase 2 installing (heavy interceptors: console, fetch, WS, errors, actions)");
-  phase2Timestamp = performance.now();
-  phase2Installed = true;
-  install();
-  adoptEarlyBodies();
-  installPerfObservers();
-}
-function getDeferralState() {
+function emptyPartialResult(errorMessage2) {
   return {
-    deferralEnabled,
-    phase2Installed,
-    injectionTimestamp,
-    phase2Timestamp
+    violations: [],
+    passes: [],
+    incomplete: [],
+    inapplicable: [],
+    summary: { violations: 0, passes: 0, incomplete: 0, inapplicable: 0 },
+    partial: true,
+    error: errorMessage2
   };
 }
-function setDeferralEnabled(enabled) {
-  deferralEnabled = enabled;
+async function runAxeAuditWithTimeout(params, timeoutMs = A11Y_AUDIT_TIMEOUT_MS) {
+  try {
+    return await Promise.race([
+      runAxeAudit(params),
+      new Promise((resolve) => {
+        setTimeout(() => resolve(emptyPartialResult("Accessibility audit timeout")), timeoutMs);
+      })
+    ]);
+  } catch (err) {
+    return emptyPartialResult(err instanceof Error ? err.message : String(err));
+  }
+}
+function formatAxeResults(axeResult) {
+  const formatViolation = (v) => {
+    const formatted = {
+      id: v.id,
+      impact: v.impact,
+      description: v.description,
+      helpUrl: v.helpUrl,
+      nodes: []
+    };
+    if (v.tags) {
+      formatted.wcag = v.tags.filter((t) => t.startsWith("wcag"));
+    }
+    formatted.nodes = (v.nodes || []).slice(0, A11Y_MAX_NODES_PER_VIOLATION).map((node) => {
+      const selector = Array.isArray(node.target) ? node.target[0] : node.target;
+      return {
+        selector: selector || "",
+        html: (node.html || "").slice(0, DOM_QUERY_MAX_HTML),
+        ...node.failureSummary ? { failureSummary: node.failureSummary } : {}
+      };
+    });
+    if (v.nodes && v.nodes.length > A11Y_MAX_NODES_PER_VIOLATION) {
+      formatted.nodeCount = v.nodes.length;
+    }
+    return formatted;
+  };
+  return {
+    violations: (axeResult.violations || []).map(formatViolation),
+    summary: {
+      violations: (axeResult.violations || []).length,
+      passes: (axeResult.passes || []).length,
+      incomplete: (axeResult.incomplete || []).length,
+      inapplicable: (axeResult.inapplicable || []).length
+    }
+  };
 }
 
 // extension/lib/analysis/link-health.js
@@ -3857,6 +2705,828 @@ Tip: Run small test scripts to isolate the issue, then build up complexity.`
   return deferred.promise;
 }
 
+// extension/lib/error-utils.js
+function errorMessage(err, fallback = "Unknown error") {
+  if (err instanceof Error && err.message)
+    return err.message;
+  if (typeof err === "string" && err)
+    return err;
+  return fallback;
+}
+
+// extension/lib/net/websocket-tracking.js
+var _textEncoder = typeof TextEncoder !== "undefined" ? new TextEncoder() : null;
+var webSocketCaptureMode = "medium";
+function setWebSocketCaptureModeInternal(mode) {
+  webSocketCaptureMode = mode;
+}
+function getSize(data) {
+  if (typeof data === "string") {
+    return _textEncoder ? _textEncoder.encode(data).length : data.length;
+  }
+  if (data instanceof ArrayBuffer)
+    return data.byteLength;
+  if (data && typeof data === "object" && "size" in data)
+    return data.size;
+  return 0;
+}
+function formatPayload(data) {
+  if (typeof data === "string")
+    return data;
+  if (data instanceof ArrayBuffer) {
+    const bytes = new Uint8Array(data);
+    if (data.byteLength < 256) {
+      let hex = "";
+      for (let i = 0; i < bytes.length; i++) {
+        const byte = bytes[i];
+        if (byte !== void 0) {
+          hex += byte.toString(16).padStart(2, "0");
+        }
+      }
+      return `[Binary: ${data.byteLength}B] ${hex}`;
+    } else {
+      let magic = "";
+      for (let i = 0; i < Math.min(4, bytes.length); i++) {
+        const byte = bytes[i];
+        if (byte !== void 0) {
+          magic += byte.toString(16).padStart(2, "0");
+        }
+      }
+      return `[Binary: ${data.byteLength}B, magic:${magic}]`;
+    }
+  }
+  if (data && typeof data === "object" && "size" in data) {
+    return `[Binary: ${data.size}B]`;
+  }
+  return String(data);
+}
+function truncateWsMessage(message) {
+  if (typeof message === "string" && message.length > WS_MAX_BODY_SIZE) {
+    return { data: message.slice(0, WS_MAX_BODY_SIZE), truncated: true };
+  }
+  return { data: message, truncated: false };
+}
+function createConnectionTracker(id, url) {
+  const tracker = {
+    id,
+    url,
+    messageCount: 0,
+    _sampleCounter: 0,
+    _messageRate: 0,
+    _messageTimestamps: [],
+    _schemaKeys: [],
+    _schemaVariants: /* @__PURE__ */ new Map(),
+    _schemaConsistent: true,
+    _schemaDetected: false,
+    stats: {
+      incoming: { count: 0, bytes: 0, lastPreview: null, lastAt: null },
+      outgoing: { count: 0, bytes: 0, lastPreview: null, lastAt: null }
+    },
+    /**
+     * Record a message for stats and schema detection
+     *
+     * WEBSOCKET PAYLOAD SCHEMA INFERENCE LOGIC:
+     *
+     * This method implements a three-phase schema detection strategy to identify the
+     * shape of JSON messages flowing over a WebSocket connection. Understanding the
+     * schema is crucial for debugging: it reveals whether messages are uniform (good
+     * for testing) or polymorphic (suggests different message types or errors).
+     *
+     * PHASE 1: BOOTSTRAP DETECTION (messages 1-5)
+     *   Purpose: Quickly infer the "canonical" schema from the first JSON messages.
+     *   Strategy:
+     *     - Extract sorted object keys from each incoming JSON message
+     *     - Stop after 5 messages (samples are enough to detect schema; balance between
+     *       coverage and memory/CPU cost)
+     *     - Compute consistency: if all 5 messages have identical key sets, mark as
+     *       consistent=true
+     *     - Store key strings as comma-separated sorted lists (e.g., "id,status,timestamp")
+     *   Why 5: Statistically sufficient for most API patterns. First message might be
+     *     special (connection ACK). By message 5, the pattern is clear.
+     *   Early exit: If not JSON or message is array, skip (only track object schemas).
+     *
+     * PHASE 2: CONSISTENCY CHECKING (after first 2 messages)
+     *   Trigger: Once _schemaKeys.length >= 2, begin checking if all keys match the first.
+     *   Result: Sets _schemaConsistent = boolean indicating if messages have uniform schema.
+     *   Why check early: Detect schema changes immediately without waiting for all 5 messages.
+     *   Performance: O(n) single pass over _schemaKeys array; no redundant comparisons.
+     *
+     * PHASE 3: VARIANT TRACKING (messages 6+)
+     *   Purpose: After bootstrap, track schema variants without resetting detection.
+     *   Strategy:
+     *     - Continue parsing incoming JSON messages after _schemaDetected = true
+     *     - Build variants Map: key -> count (e.g., "id,status" -> 5 occurrences)
+     *     - Memory bound: Cap Map at 50 entries. Only add new variants if under cap;
+     *       always increment existing keys (ensures frequent patterns stay tracked).
+     *     - This bounds memory to ~50KB even on long-lived connections.
+     *   Why variants matter: Detects polymorphic message types (e.g., "id,status,data"
+     *     vs "id,error,code"). Useful for debugging API versioning issues.
+     *   Why cap variants: Long-running connections might emit hundreds of unique schemas.
+     *     Capping prevents unbounded growth while keeping the 50 most frequent variants.
+     *
+     * SAMPLING RATE DECISION:
+     *   The schema info (keys, consistency, variants) flows to getSchema() which returns:
+     *     - detectedKeys: union of all seen keys (for understanding message structure)
+     *     - consistent: boolean (true if all bootstrap messages matched)
+     *     - variants: array of key strings (top variants seen after bootstrap)
+     *   MCP observe handler uses this to emit SchemaInfo in WebSocket capture events,
+     *   helping users understand payload patterns without logging every message.
+     *
+     * MESSAGE RATE TRACKING:
+     *   Maintains _messageTimestamps for the last 5 seconds (sliding window). This powers
+     *   shouldSample() which implements adaptive sampling: high-frequency connections
+     *   (>200 msg/s) sample at 1-in-100; low-frequency (<2 msg/s) capture all messages.
+     *   This ensures detailed visibility on slow links without bloating on high-volume.
+     */
+    recordMessage(direction, data) {
+      this.messageCount++;
+      const size = data ? typeof data === "string" ? data.length : getSize(data) : 0;
+      const now = Date.now();
+      this.stats[direction].count++;
+      this.stats[direction].bytes += size;
+      this.stats[direction].lastAt = now;
+      if (data && typeof data === "string") {
+        this.stats[direction].lastPreview = data.length > WS_PREVIEW_LIMIT ? data.slice(0, WS_PREVIEW_LIMIT) : data;
+      }
+      this._messageTimestamps.push(now);
+      const cutoff = now - 5e3;
+      this._messageTimestamps = this._messageTimestamps.filter((t) => t >= cutoff);
+      if (direction === "incoming" && data && typeof data === "string" && this._schemaKeys.length < 5) {
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            const keys = Object.keys(parsed).sort();
+            const keyStr = keys.join(",");
+            this._schemaKeys.push(keyStr);
+            this._schemaVariants.set(keyStr, (this._schemaVariants.get(keyStr) || 0) + 1);
+            if (this._schemaKeys.length >= 2) {
+              const first = this._schemaKeys[0];
+              this._schemaConsistent = this._schemaKeys.every((k) => k === first);
+            }
+            if (this._schemaKeys.length >= 5) {
+              this._schemaDetected = true;
+            }
+          }
+        } catch {
+        }
+      }
+      if (direction === "incoming" && data && typeof data === "string" && this._schemaDetected) {
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            const keys = Object.keys(parsed).sort();
+            const keyStr = keys.join(",");
+            if (this._schemaVariants.has(keyStr) || this._schemaVariants.size < 50) {
+              this._schemaVariants.set(keyStr, (this._schemaVariants.get(keyStr) || 0) + 1);
+            }
+          }
+        } catch {
+        }
+      }
+    },
+    /**
+     * Determine if a message should be sampled (logged)
+     */
+    shouldSample(_direction) {
+      this._sampleCounter++;
+      if (webSocketCaptureMode === "all")
+        return true;
+      if (this.messageCount > 0 && this.messageCount <= 5)
+        return true;
+      const rate = this._messageRate || this.getMessageRate();
+      const targetRate = webSocketCaptureMode === "high" ? 10 : webSocketCaptureMode === "medium" ? 5 : 2;
+      if (rate <= targetRate)
+        return true;
+      const n = Math.max(1, Math.round(rate / targetRate));
+      return this._sampleCounter % n === 0;
+    },
+    /**
+     * Lifecycle events should always be logged
+     */
+    shouldLogLifecycle() {
+      return true;
+    },
+    /**
+     * Get sampling info
+     */
+    getSamplingInfo() {
+      const rate = this._messageRate || this.getMessageRate();
+      let targetRate = rate;
+      if (rate >= 10 && rate < 50)
+        targetRate = 10;
+      else if (rate >= 50 && rate < 200)
+        targetRate = 5;
+      else if (rate >= 200)
+        targetRate = 2;
+      return {
+        rate: `${rate}/s`,
+        logged: `${targetRate}/${Math.round(rate)}`,
+        window: "5s"
+      };
+    },
+    /**
+     * Get the current message rate (messages per second)
+     */
+    getMessageRate() {
+      if (this._messageTimestamps.length < 2)
+        return this._messageTimestamps.length;
+      const lastTime = this._messageTimestamps[this._messageTimestamps.length - 1];
+      const firstTime = this._messageTimestamps[0];
+      if (lastTime === void 0 || firstTime === void 0)
+        return this._messageTimestamps.length;
+      const window2 = (lastTime - firstTime) / 1e3;
+      return window2 > 0 ? this._messageTimestamps.length / window2 : this._messageTimestamps.length;
+    },
+    /**
+     * Set the message rate manually (for testing)
+     */
+    setMessageRate(rate) {
+      this._messageRate = rate;
+    },
+    /**
+     * Get the detected schema info
+     */
+    getSchema() {
+      if (this._schemaKeys.length === 0) {
+        return { detectedKeys: null, consistent: true };
+      }
+      const allKeys = /* @__PURE__ */ new Set();
+      for (const keyStr of this._schemaKeys) {
+        for (const k of keyStr.split(",")) {
+          if (k)
+            allKeys.add(k);
+        }
+      }
+      const variants = [];
+      for (const [keyStr, count] of this._schemaVariants) {
+        if (count > 0)
+          variants.push(keyStr);
+      }
+      return {
+        detectedKeys: allKeys.size > 0 ? Array.from(allKeys).sort() : null,
+        consistent: this._schemaConsistent,
+        variants: variants.length > 1 ? variants : void 0
+      };
+    },
+    /**
+     * Check if a message represents a schema change
+     */
+    isSchemaChange(data) {
+      if (!this._schemaDetected || !data || typeof data !== "string")
+        return false;
+      try {
+        const parsed = JSON.parse(data);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+          return false;
+        const keys = Object.keys(parsed).sort().join(",");
+        return !this._schemaKeys.includes(keys);
+      } catch {
+        return false;
+      }
+    }
+  };
+  return tracker;
+}
+
+// extension/lib/net/websocket.js
+var originalWebSocket = null;
+var webSocketCaptureEnabled = true;
+function postLifecycleEvent(event, connectionId, urlString, extra) {
+  window.postMessage({
+    type: "kaboom_ws",
+    payload: {
+      type: "websocket",
+      event,
+      id: connectionId,
+      url: urlString,
+      ts: extra?.ts || (/* @__PURE__ */ new Date()).toISOString(),
+      ...extra?.code !== void 0 && { code: extra.code },
+      ...extra?.reason !== void 0 && { reason: extra.reason }
+    }
+  }, window.location.origin);
+}
+function postMessageEvent(connectionId, urlString, direction, data) {
+  const size = getSize(data);
+  const formatted = formatPayload(data);
+  const { data: truncatedData, truncated } = truncateWsMessage(formatted);
+  window.postMessage({
+    type: "kaboom_ws",
+    payload: {
+      type: "websocket",
+      event: "message",
+      id: connectionId,
+      url: urlString,
+      direction,
+      data: truncatedData,
+      size,
+      truncated: truncated || void 0,
+      ts: (/* @__PURE__ */ new Date()).toISOString()
+    }
+  }, window.location.origin);
+}
+function attachMessageCapture(ws, connectionId, urlString, tracker) {
+  ws.addEventListener("message", (event) => {
+    if (!webSocketCaptureEnabled)
+      return;
+    tracker.recordMessage("incoming", event.data);
+    if (!tracker.shouldSample("incoming"))
+      return;
+    postMessageEvent(connectionId, urlString, "incoming", event.data);
+  });
+  const originalSend = ws.send.bind(ws);
+  ws.send = function(data) {
+    if (webSocketCaptureEnabled) {
+      tracker.recordMessage("outgoing", data);
+    }
+    if (webSocketCaptureEnabled && tracker.shouldSample("outgoing")) {
+      postMessageEvent(connectionId, urlString, "outgoing", data);
+    }
+    return originalSend(data);
+  };
+}
+function attachLifecycleCapture(ws, connectionId, urlString) {
+  ws.addEventListener("close", (event) => {
+    if (!webSocketCaptureEnabled)
+      return;
+    postLifecycleEvent("close", connectionId, urlString, {
+      code: event.code,
+      reason: event.reason
+    });
+  });
+  ws.addEventListener("error", () => {
+    if (!webSocketCaptureEnabled)
+      return;
+    postLifecycleEvent("error", connectionId, urlString);
+  });
+}
+function installWebSocketCapture() {
+  if (typeof window === "undefined")
+    return;
+  if (!window.WebSocket)
+    return;
+  if (originalWebSocket)
+    return;
+  webSocketCaptureEnabled = true;
+  const earlyOriginal = window.__KABOOM_ORIGINAL_WS__;
+  originalWebSocket = earlyOriginal || window.WebSocket;
+  const OriginalWS = originalWebSocket;
+  function KaboomWebSocket(url, protocols) {
+    const ws = new OriginalWS(url, protocols);
+    const connectionId = crypto.randomUUID();
+    const urlString = url.toString();
+    const tracker = createConnectionTracker(connectionId, urlString);
+    ws.addEventListener("open", () => {
+      if (!webSocketCaptureEnabled)
+        return;
+      postLifecycleEvent("open", connectionId, urlString);
+    });
+    attachLifecycleCapture(ws, connectionId, urlString);
+    attachMessageCapture(ws, connectionId, urlString, tracker);
+    return ws;
+  }
+  KaboomWebSocket.prototype = OriginalWS.prototype;
+  Object.defineProperty(KaboomWebSocket, "CONNECTING", { value: OriginalWS.CONNECTING, writable: false });
+  Object.defineProperty(KaboomWebSocket, "OPEN", { value: OriginalWS.OPEN, writable: false });
+  Object.defineProperty(KaboomWebSocket, "CLOSING", { value: OriginalWS.CLOSING, writable: false });
+  Object.defineProperty(KaboomWebSocket, "CLOSED", { value: OriginalWS.CLOSED, writable: false });
+  window.WebSocket = KaboomWebSocket;
+  adoptEarlyConnections();
+}
+function adoptEarlyConnections() {
+  const earlyConnections = window.__KABOOM_EARLY_WS__;
+  if (!earlyConnections || earlyConnections.length === 0) {
+    delete window.__KABOOM_ORIGINAL_WS__;
+    delete window.__KABOOM_EARLY_WS__;
+    return;
+  }
+  let adopted = 0;
+  for (const conn of earlyConnections) {
+    const ws = conn.ws;
+    if (ws.readyState === WebSocket.CLOSED)
+      continue;
+    adopted++;
+    const connectionId = crypto.randomUUID();
+    const urlString = conn.url;
+    const tracker = createConnectionTracker(connectionId, urlString);
+    const hasOpened = conn.events.some((e) => e.type === "open");
+    if (hasOpened && webSocketCaptureEnabled) {
+      const openEvent = conn.events.find((e) => e.type === "open");
+      postLifecycleEvent("open", connectionId, urlString, {
+        ts: openEvent ? new Date(openEvent.ts).toISOString() : void 0
+      });
+    }
+    attachLifecycleCapture(ws, connectionId, urlString);
+    attachMessageCapture(ws, connectionId, urlString, tracker);
+  }
+  if (adopted > 0) {
+    console.log(`[KaBOOM!] Adopted ${adopted} early WebSocket connection(s)`);
+  }
+  delete window.__KABOOM_ORIGINAL_WS__;
+  delete window.__KABOOM_EARLY_WS__;
+}
+function setWebSocketCaptureMode(mode) {
+  setWebSocketCaptureModeInternal(mode);
+}
+function setWebSocketCaptureEnabled(enabled) {
+  webSocketCaptureEnabled = enabled;
+}
+function uninstallWebSocketCapture() {
+  if (typeof window === "undefined")
+    return;
+  if (originalWebSocket) {
+    window.WebSocket = originalWebSocket;
+    originalWebSocket = null;
+  }
+}
+
+// extension/lib/page/bridge.js
+function postLog(payload) {
+  const context = getContextAnnotations();
+  const actions = payload.level === "error" ? getActionBuffer() : null;
+  const enrichments = [];
+  if (context && payload.level === "error")
+    enrichments.push("context");
+  if (actions && actions.length > 0)
+    enrichments.push("userActions");
+  const { level, type, args, error, stack, ...otherFields } = payload;
+  window.postMessage({
+    type: "kaboom_log",
+    payload: {
+      // Enriched fields (these are the source of truth)
+      ts: (/* @__PURE__ */ new Date()).toISOString(),
+      url: window.location.href,
+      message: payload.message || payload.error || (payload.args?.[0] !== null && payload.args?.[0] !== void 0 ? String(payload.args[0]) : ""),
+      source: payload.filename ? `${payload.filename}:${payload.lineno || 0}` : "",
+      // Core fields from payload
+      level,
+      ...type ? { type } : {},
+      ...args ? { args } : {},
+      ...error ? { error } : {},
+      ...stack ? { stack } : {},
+      // Optional enrichments
+      ...enrichments.length > 0 ? { _enrichments: enrichments } : {},
+      ...context && payload.level === "error" ? { _context: context } : {},
+      ...actions && actions.length > 0 ? { _actions: actions } : {},
+      // Any other fields from payload (excluding the ones we destructured)
+      ...otherFields
+    }
+  }, window.location.origin);
+}
+
+// extension/lib/page/console.js
+var originalConsole = {};
+function installConsoleCapture() {
+  const methods = ["log", "warn", "error", "info", "debug"];
+  methods.forEach((method) => {
+    originalConsole[method] = console[method];
+    console[method] = function(...args) {
+      postLog({
+        level: method,
+        type: "console",
+        args: args.map((arg) => safeSerialize(arg))
+      });
+      originalConsole[method].apply(console, args);
+    };
+  });
+}
+
+// extension/lib/page/safe-global-patch.js
+function safeAssignGlobal(target, key, value) {
+  try {
+    target[key] = value;
+    if (target[key] === value)
+      return true;
+  } catch {
+  }
+  try {
+    Object.defineProperty(target, key, { value, writable: true, configurable: true });
+    return target[key] === value;
+  } catch {
+    return false;
+  }
+}
+
+// extension/lib/page/exceptions.js
+var originalOnerror = null;
+var unhandledrejectionHandler = null;
+function enrichAndPost(entry) {
+  void (async () => {
+    try {
+      const enriched = await enrichErrorWithAiContext(entry);
+      postLog(enriched);
+    } catch {
+      postLog(entry);
+    }
+  })().catch((err) => {
+    console.error("[KaBOOM!] Exception enrichment error:", err);
+    try {
+      postLog(entry);
+    } catch (postErr) {
+      console.error("[KaBOOM!] Failed to log entry:", postErr);
+    }
+  });
+}
+function extractRejectionInfo(reason) {
+  if (reason instanceof Error)
+    return { message: reason.message, stack: reason.stack || "" };
+  if (typeof reason === "string")
+    return { message: reason, stack: "" };
+  return { message: String(reason), stack: "" };
+}
+function installExceptionCapture() {
+  originalOnerror = window.onerror;
+  window.onerror = function(message, filename, lineno, colno, error) {
+    const messageStr = typeof message === "string" ? message : message.type || "Error";
+    const entry = {
+      level: "error",
+      type: "exception",
+      message: messageStr,
+      source: filename ? `${filename}:${lineno || 0}` : "",
+      filename: filename || "",
+      lineno: lineno || 0,
+      colno: colno || 0,
+      stack: error?.stack || ""
+    };
+    enrichAndPost(entry);
+    if (originalOnerror)
+      return originalOnerror(message, filename, lineno, colno, error);
+    return false;
+  };
+  unhandledrejectionHandler = function(event) {
+    const { message, stack } = extractRejectionInfo(event.reason);
+    enrichAndPost({
+      level: "error",
+      type: "exception",
+      message: `Unhandled Promise Rejection: ${message}`,
+      stack
+    });
+  };
+  window.addEventListener("unhandledrejection", unhandledrejectionHandler);
+}
+
+// extension/lib/page/transient-capture.js
+var SKIP_TAGS = /* @__PURE__ */ new Set(["SCRIPT", "STYLE", "LINK", "META", "NOSCRIPT", "BR", "HR"]);
+var CLASS_FINGERPRINTS = [
+  [/toast/i, "toast"],
+  [/snackbar/i, "snackbar"],
+  [/notification/i, "notification"],
+  [/tooltip/i, "tooltip"],
+  [/alert/i, "alert"],
+  [/banner/i, "banner"],
+  [/flash/i, "flash"]
+];
+var DEDUP_WINDOW_MS = 2e3;
+var DEDUP_MAP_CAP = 100;
+var MAX_TEXT_LENGTH = 500;
+var DEDUP_KEY_TEXT_LENGTH = 100;
+var observer = null;
+var dedupMap = /* @__PURE__ */ new Map();
+function classifyTransient(el) {
+  const tag = el.tagName;
+  if (!tag || SKIP_TAGS.has(tag))
+    return null;
+  const text = extractText(el);
+  if (!text)
+    return null;
+  const role = el.getAttribute("role");
+  const ariaLive = el.getAttribute("aria-live");
+  if (role === "alert" || ariaLive === "assertive") {
+    return { classification: "alert", role: role || "alert", text };
+  }
+  if (role === "status" || ariaLive === "polite") {
+    return { classification: "toast", role: role || "status", text };
+  }
+  const className = el.className;
+  if (className && typeof className === "string") {
+    for (const [pattern, classification] of CLASS_FINGERPRINTS) {
+      if (pattern.test(className)) {
+        return { classification, role: role || "", text };
+      }
+    }
+  }
+  if (typeof window !== "undefined" && window.getComputedStyle) {
+    try {
+      const style = window.getComputedStyle(el);
+      const position = style.position;
+      if (position === "fixed" || position === "absolute") {
+        const zIndex = parseInt(style.zIndex, 10);
+        const height = el.getBoundingClientRect().height;
+        if (zIndex > 1e3 && height > 0 && height < 200) {
+          return { classification: "flash", role: role || "", text };
+        }
+      }
+    } catch {
+    }
+  }
+  return null;
+}
+function extractText(el) {
+  const raw = (el.textContent || "").trim();
+  return raw.slice(0, MAX_TEXT_LENGTH);
+}
+function dedupKey(classification, text) {
+  return `${classification}:${text.slice(0, DEDUP_KEY_TEXT_LENGTH)}`;
+}
+function isDuplicate(key, now) {
+  const entry = dedupMap.get(key);
+  return entry !== void 0 && now - entry.timestamp < DEDUP_WINDOW_MS;
+}
+function recordDedup(key, now) {
+  dedupMap.set(key, { timestamp: now });
+  if (dedupMap.size > DEDUP_MAP_CAP) {
+    for (const [k, v] of dedupMap) {
+      if (now - v.timestamp > DEDUP_WINDOW_MS) {
+        dedupMap.delete(k);
+      }
+    }
+  }
+}
+function classifyCandidates(el) {
+  const info = classifyTransient(el);
+  if (info)
+    return info;
+  for (let i = 0; i < el.children.length; i++) {
+    const child = el.children[i];
+    if (child) {
+      const childInfo = classifyTransient(child);
+      if (childInfo)
+        return childInfo;
+    }
+  }
+  return null;
+}
+function recordPendingTransients(pending) {
+  const now = Date.now();
+  for (const { element, info } of pending) {
+    const key = dedupKey(info.classification, info.text);
+    if (isDuplicate(key, now))
+      continue;
+    recordDedup(key, now);
+    recordEnhancedAction("transient", null, {
+      classification: info.classification,
+      duration_ms: 0,
+      // MVP: capture moment only; removal tracking not yet implemented
+      role: info.role,
+      value: info.text
+    });
+  }
+}
+function mutationCallback(mutations) {
+  const pending = [];
+  for (const mutation of mutations) {
+    if (mutation.type !== "childList")
+      continue;
+    for (let i = 0; i < mutation.addedNodes.length; i++) {
+      const node = mutation.addedNodes[i];
+      if (node.nodeType !== Node.ELEMENT_NODE)
+        continue;
+      const el = node;
+      const info = classifyCandidates(el);
+      if (info) {
+        pending.push({ element: el, info });
+      }
+    }
+  }
+  if (pending.length === 0)
+    return;
+  if (typeof requestIdleCallback === "function") {
+    requestIdleCallback(() => recordPendingTransients(pending));
+  } else {
+    setTimeout(() => recordPendingTransients(pending), 0);
+  }
+}
+function installTransientCapture() {
+  if (observer)
+    return;
+  if (typeof document === "undefined" || !document.body)
+    return;
+  if (typeof MutationObserver === "undefined")
+    return;
+  observer = new MutationObserver(mutationCallback);
+  observer.observe(document.body, { childList: true, subtree: true });
+}
+
+// extension/inject/observers.js
+var originalFetch = null;
+var deferralEnabled = true;
+var phase2Installed = false;
+var injectionTimestamp = 0;
+var phase2Timestamp = 0;
+function wrapFetch(originalFetchFn) {
+  return async function(input, init) {
+    const startTime = Date.now();
+    const url = typeof input === "string" ? input : input.url;
+    const method = init?.method || (typeof input === "object" && "method" in input ? input.method : "GET") || "GET";
+    try {
+      const response = await originalFetchFn(input, init);
+      const duration = Date.now() - startTime;
+      if (!response.ok) {
+        let responseBody = "";
+        try {
+          const cloned = response.clone();
+          responseBody = await cloned.text();
+          if (responseBody.length > MAX_RESPONSE_LENGTH) {
+            responseBody = responseBody.slice(0, MAX_RESPONSE_LENGTH) + "... [truncated]";
+          }
+        } catch {
+          responseBody = "[Could not read response]";
+        }
+        const rawHeaders = init?.headers || (typeof input === "object" && "headers" in input ? input.headers : null);
+        const safeHeaders = sanitizeHeaders(rawHeaders);
+        const logPayload = {
+          level: "error",
+          type: "network",
+          method: method.toUpperCase(),
+          url,
+          status: response.status,
+          statusText: response.statusText,
+          duration,
+          response: responseBody,
+          ...Object.keys(safeHeaders).length > 0 ? { headers: safeHeaders } : {}
+        };
+        postLog(logPayload);
+      }
+      return response;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      const rawHeaders = init?.headers || (typeof input === "object" && "headers" in input ? input.headers : null);
+      const safeHeaders = sanitizeHeaders(rawHeaders);
+      const logPayload = {
+        level: "error",
+        type: "network",
+        method: method.toUpperCase(),
+        url,
+        error: errorMessage(error),
+        duration,
+        ...Object.keys(safeHeaders).length > 0 ? { headers: safeHeaders } : {}
+      };
+      postLog(logPayload);
+      throw error;
+    }
+  };
+}
+function installFetchCapture() {
+  const earlyOriginal = window.__KABOOM_ORIGINAL_FETCH__;
+  originalFetch = earlyOriginal || window.fetch;
+  const wrappedWithBodies = wrapFetchWithBodies(originalFetch);
+  if (!safeAssignGlobal(window, "fetch", wrapFetch(wrappedWithBodies))) {
+    console.warn("[KaBOOM!] fetch is read-only on this page; network capture via fetch is unavailable.");
+  }
+}
+function installXHRCapture() {
+  wrapXHRWithBodies();
+}
+function install() {
+  installConsoleCapture();
+  installFetchCapture();
+  installXHRCapture();
+  installExceptionCapture();
+  installActionCapture();
+  installNavigationCapture();
+  installWebSocketCapture();
+  installPerformanceCapture();
+  installTransientCapture();
+}
+function installPhase1() {
+  console.log("[KaBOOM!] Phase 1 installing (lightweight API + perf observers)");
+  injectionTimestamp = performance.now();
+  phase2Installed = false;
+  phase2Timestamp = 0;
+  installPerformanceCapture();
+  if (!deferralEnabled) {
+    installPhase2();
+  } else {
+    const installDeferred = () => {
+      if (!phase2Installed)
+        setTimeout(installPhase2, 100);
+    };
+    if (document.readyState === "complete") {
+      installDeferred();
+    } else {
+      window.addEventListener("load", installDeferred, { once: true });
+      setTimeout(() => {
+        if (!phase2Installed)
+          installPhase2();
+      }, 1e4);
+    }
+  }
+}
+function installPhase2() {
+  if (phase2Installed)
+    return;
+  if (typeof window === "undefined" || typeof document === "undefined")
+    return;
+  console.log("[KaBOOM!] Phase 2 installing (heavy interceptors: console, fetch, WS, errors, actions)");
+  phase2Timestamp = performance.now();
+  phase2Installed = true;
+  install();
+  adoptEarlyBodies();
+  installPerfObservers();
+}
+function setDeferralEnabled(enabled) {
+  deferralEnabled = enabled;
+}
+
 // extension/inject/settings.js
 var VALID_SETTINGS = INJECT_FORWARDED_SETTINGS;
 var VALID_STATE_ACTIONS = /* @__PURE__ */ new Set(["capture", "restore"]);
@@ -4403,12 +4073,6 @@ function highlightElement(selector, durationMs = 5e3) {
     bounds: { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
   };
 }
-function clearHighlight() {
-  if (kaboomHighlighter) {
-    kaboomHighlighter.remove();
-    kaboomHighlighter = null;
-  }
-}
 if (typeof window !== "undefined") {
   window.addEventListener("scroll", () => {
     if (kaboomHighlighter) {
@@ -4443,7 +4107,7 @@ if (typeof window !== "undefined") {
   });
 }
 
-// extension/inject/index.js
+// extension/inject.js
 if (typeof window !== "undefined" && typeof document !== "undefined" && typeof globalThis.process === "undefined") {
   installPhase1();
   installMessageListener(captureState, restoreState);
@@ -4454,138 +4118,4 @@ if (typeof window !== "undefined" && typeof document !== "undefined" && typeof g
     }, 2e3);
   });
 }
-export {
-  MAX_PERFORMANCE_ENTRIES,
-  MAX_WATERFALL_ENTRIES,
-  SENSITIVE_HEADERS,
-  adoptEarlyBodies,
-  aggregateResourceTiming,
-  capturePerformanceSnapshot,
-  captureState,
-  captureStateSnapshot,
-  checkMemoryPressure,
-  clearActionBuffer,
-  clearContextAnnotations,
-  clearEnhancedActionBuffer,
-  clearHighlight,
-  clearPendingRequests,
-  completePendingRequest,
-  computeCssPath,
-  computeSelectors,
-  createConnectionTracker,
-  detectFramework,
-  enrichErrorWithAiContext,
-  executeDOMQuery,
-  executeJavaScript,
-  extractSnippet,
-  extractSourceSnippets,
-  formatAxeResults,
-  formatPayload,
-  generateAiSummary,
-  generatePlaywrightScript,
-  getActionBuffer,
-  getCLS,
-  getCapturedMarks,
-  getCapturedMeasures,
-  getContextAnnotations,
-  getDeferralState,
-  getElementSelector,
-  getEnhancedActionBuffer,
-  getFCP,
-  getINP,
-  getImplicitRole,
-  getLCP,
-  getLongTaskMetrics,
-  getNetworkWaterfall,
-  getNetworkWaterfallForError,
-  getPageInfo,
-  getPendingRequests,
-  getPerformanceMarks,
-  getPerformanceMeasures,
-  getPerformanceSnapshotForError,
-  getReactComponentAncestry,
-  getSize,
-  getSourceMapCache,
-  getSourceMapCacheSize,
-  getWebSocketCaptureMode,
-  handleChange,
-  handleClick,
-  handleInput,
-  handleKeydown,
-  handleScroll,
-  highlightElement,
-  install,
-  installActionCapture,
-  installConsoleCapture,
-  installExceptionCapture,
-  installFetchCapture,
-  installKaboomAPI,
-  installMessageListener,
-  installNavigationCapture,
-  installPerfObservers,
-  installPerformanceCapture,
-  installPhase1,
-  installPhase2,
-  installWebSocketCapture,
-  installXHRCapture,
-  isDynamicClass,
-  isNetworkBodyCaptureEnabled,
-  isNetworkWaterfallEnabled,
-  isPerformanceCaptureActive,
-  isPerformanceMarksEnabled,
-  isPerformanceSnapshotEnabled,
-  isSensitiveInput,
-  mapInitiatorType,
-  parseResourceTiming,
-  parseSourceMap,
-  parseStackFrames,
-  postLog,
-  readResponseBody,
-  readResponseBodyWithTimeout,
-  recordAction,
-  recordEnhancedAction,
-  removeContextAnnotation,
-  resetForTesting,
-  restoreState,
-  runAxeAudit,
-  runAxeAuditWithTimeout,
-  safeSerialize,
-  safeSerializeForExecute,
-  sanitizeHeaders,
-  sendPerformanceSnapshot,
-  setActionCaptureEnabled,
-  setAiContextEnabled,
-  setAiContextStateSnapshot,
-  setContextAnnotation,
-  setDeferralEnabled,
-  setNetworkBodyCaptureEnabled,
-  setNetworkWaterfallEnabled,
-  setPerformanceMarksEnabled,
-  setPerformanceSnapshotEnabled,
-  setServerUrl,
-  setSourceMapCache,
-  setWebSocketCaptureEnabled,
-  setWebSocketCaptureMode,
-  shouldCaptureUrl,
-  shouldDeferIntercepts,
-  trackPendingRequest,
-  truncateRequestBody,
-  truncateResponseBody,
-  truncateWsMessage,
-  uninstall,
-  uninstallActionCapture,
-  uninstallConsoleCapture,
-  uninstallExceptionCapture,
-  uninstallFetchCapture,
-  uninstallKaboomAPI,
-  uninstallNavigationCapture,
-  uninstallPerfObservers,
-  uninstallPerformanceCapture,
-  uninstallWebSocketCapture,
-  uninstallXHRCapture,
-  unwrapXHR,
-  wrapFetch,
-  wrapFetchWithBodies,
-  wrapXHRWithBodies
-};
 //# sourceMappingURL=inject.bundled.js.map

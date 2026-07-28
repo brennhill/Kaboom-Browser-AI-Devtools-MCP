@@ -54,7 +54,7 @@ function createElement(tag, attrs = {}, opts = {}) {
 
 describe('Selector Computation', () => {
   test('should prioritize data-testid', async () => {
-    const { computeSelectors } = await import('../../extension/inject.js')
+    const { computeSelectors } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('button', { 'data-testid': 'login-btn' })
 
@@ -64,7 +64,7 @@ describe('Selector Computation', () => {
   })
 
   test('should accept data-test-id variant', async () => {
-    const { computeSelectors } = await import('../../extension/inject.js')
+    const { computeSelectors } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('button', { 'data-test-id': 'submit-form' })
 
@@ -74,7 +74,7 @@ describe('Selector Computation', () => {
   })
 
   test('should accept data-cy variant', async () => {
-    const { computeSelectors } = await import('../../extension/inject.js')
+    const { computeSelectors } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('button', { 'data-cy': 'next-step' })
 
@@ -84,7 +84,7 @@ describe('Selector Computation', () => {
   })
 
   test('should extract aria-label', async () => {
-    const { computeSelectors } = await import('../../extension/inject.js')
+    const { computeSelectors } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('button', { 'aria-label': 'Close dialog' })
 
@@ -94,7 +94,7 @@ describe('Selector Computation', () => {
   })
 
   test('should extract explicit role + accessible name', async () => {
-    const { computeSelectors } = await import('../../extension/inject.js')
+    const { computeSelectors } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('div', { role: 'button', 'aria-label': 'Submit' })
 
@@ -104,7 +104,7 @@ describe('Selector Computation', () => {
   })
 
   test('should extract id when present', async () => {
-    const { computeSelectors } = await import('../../extension/inject.js')
+    const { computeSelectors } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('input', { id: 'email-field' })
 
@@ -114,7 +114,7 @@ describe('Selector Computation', () => {
   })
 
   test('should extract visible text for clickable elements', async () => {
-    const { computeSelectors } = await import('../../extension/inject.js')
+    const { computeSelectors } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('button', {}, { textContent: 'Sign In' })
 
@@ -124,7 +124,7 @@ describe('Selector Computation', () => {
   })
 
   test('should not extract text for non-clickable elements', async () => {
-    const { computeSelectors } = await import('../../extension/inject.js')
+    const { computeSelectors } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('div', {}, { textContent: 'Just a div' })
 
@@ -134,7 +134,7 @@ describe('Selector Computation', () => {
   })
 
   test('should truncate text at 50 chars', async () => {
-    const { computeSelectors } = await import('../../extension/inject.js')
+    const { computeSelectors } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('button', {}, { textContent: 'x'.repeat(80) })
 
@@ -146,7 +146,7 @@ describe('Selector Computation', () => {
   })
 
   test('should include cssPath as last resort', async () => {
-    const { computeSelectors } = await import('../../extension/inject.js')
+    const { computeSelectors } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('button', { class: 'submit-btn' })
 
@@ -156,7 +156,7 @@ describe('Selector Computation', () => {
   })
 
   test('should compute all available selectors', async () => {
-    const { computeSelectors } = await import('../../extension/inject.js')
+    const { computeSelectors } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement(
       'button',
@@ -179,7 +179,7 @@ describe('Selector Computation', () => {
   })
 
   test('should handle element with no identifiers', async () => {
-    const { computeSelectors } = await import('../../extension/inject.js')
+    const { computeSelectors } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('div', {})
 
@@ -197,98 +197,98 @@ describe('Selector Computation', () => {
 
 describe('Implicit Role Mapping', () => {
   test('should map button to button role', async () => {
-    const { getImplicitRole } = await import('../../extension/inject.js')
+    const { getImplicitRole } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('button', {})
     assert.strictEqual(getImplicitRole(el), 'button')
   })
 
   test('should map anchor with href to link role', async () => {
-    const { getImplicitRole } = await import('../../extension/inject.js')
+    const { getImplicitRole } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('a', { href: '/page' })
     assert.strictEqual(getImplicitRole(el), 'link')
   })
 
   test('should map anchor without href to null', async () => {
-    const { getImplicitRole } = await import('../../extension/inject.js')
+    const { getImplicitRole } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('a', {})
     assert.strictEqual(getImplicitRole(el), null)
   })
 
   test('should map input[type=text] to textbox', async () => {
-    const { getImplicitRole } = await import('../../extension/inject.js')
+    const { getImplicitRole } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('input', { type: 'text' })
     assert.strictEqual(getImplicitRole(el), 'textbox')
   })
 
   test('should map input[type=email] to textbox', async () => {
-    const { getImplicitRole } = await import('../../extension/inject.js')
+    const { getImplicitRole } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('input', { type: 'email' })
     assert.strictEqual(getImplicitRole(el), 'textbox')
   })
 
   test('should map input[type=checkbox] to checkbox', async () => {
-    const { getImplicitRole } = await import('../../extension/inject.js')
+    const { getImplicitRole } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('input', { type: 'checkbox' })
     assert.strictEqual(getImplicitRole(el), 'checkbox')
   })
 
   test('should map input[type=radio] to radio', async () => {
-    const { getImplicitRole } = await import('../../extension/inject.js')
+    const { getImplicitRole } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('input', { type: 'radio' })
     assert.strictEqual(getImplicitRole(el), 'radio')
   })
 
   test('should map input[type=search] to searchbox', async () => {
-    const { getImplicitRole } = await import('../../extension/inject.js')
+    const { getImplicitRole } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('input', { type: 'search' })
     assert.strictEqual(getImplicitRole(el), 'searchbox')
   })
 
   test('should map textarea to textbox', async () => {
-    const { getImplicitRole } = await import('../../extension/inject.js')
+    const { getImplicitRole } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('textarea', {})
     assert.strictEqual(getImplicitRole(el), 'textbox')
   })
 
   test('should map select to combobox', async () => {
-    const { getImplicitRole } = await import('../../extension/inject.js')
+    const { getImplicitRole } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('select', {})
     assert.strictEqual(getImplicitRole(el), 'combobox')
   })
 
   test('should map nav to navigation', async () => {
-    const { getImplicitRole } = await import('../../extension/inject.js')
+    const { getImplicitRole } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('nav', {})
     assert.strictEqual(getImplicitRole(el), 'navigation')
   })
 
   test('should map main to main', async () => {
-    const { getImplicitRole } = await import('../../extension/inject.js')
+    const { getImplicitRole } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('main', {})
     assert.strictEqual(getImplicitRole(el), 'main')
   })
 
   test('should return null for unknown elements', async () => {
-    const { getImplicitRole } = await import('../../extension/inject.js')
+    const { getImplicitRole } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('div', {})
     assert.strictEqual(getImplicitRole(el), null)
   })
 
   test('should default input without type to textbox', async () => {
-    const { getImplicitRole } = await import('../../extension/inject.js')
+    const { getImplicitRole } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('input', {}) // No type attribute
     assert.strictEqual(getImplicitRole(el), 'textbox')
@@ -299,37 +299,37 @@ describe('Implicit Role Mapping', () => {
 
 describe('Dynamic Class Detection', () => {
   test('should detect css-* prefix as dynamic', async () => {
-    const { isDynamicClass } = await import('../../extension/inject.js')
+    const { isDynamicClass } = await import('../../extension/lib/page/reproduction.js')
 
     assert.strictEqual(isDynamicClass('css-1a2b3c'), true)
   })
 
   test('should detect sc-* prefix as dynamic (styled-components)', async () => {
-    const { isDynamicClass } = await import('../../extension/inject.js')
+    const { isDynamicClass } = await import('../../extension/lib/page/reproduction.js')
 
     assert.strictEqual(isDynamicClass('sc-bdnxRM'), true)
   })
 
   test('should detect emotion-* prefix as dynamic', async () => {
-    const { isDynamicClass } = await import('../../extension/inject.js')
+    const { isDynamicClass } = await import('../../extension/lib/page/reproduction.js')
 
     assert.strictEqual(isDynamicClass('emotion-abc123'), true)
   })
 
   test('should detect styled-* prefix as dynamic', async () => {
-    const { isDynamicClass } = await import('../../extension/inject.js')
+    const { isDynamicClass } = await import('../../extension/lib/page/reproduction.js')
 
     assert.strictEqual(isDynamicClass('styled-xyz789'), true)
   })
 
   test('should detect chakra-* prefix as dynamic', async () => {
-    const { isDynamicClass } = await import('../../extension/inject.js')
+    const { isDynamicClass } = await import('../../extension/lib/page/reproduction.js')
 
     assert.strictEqual(isDynamicClass('chakra-button'), true)
   })
 
   test('should detect random hash classes as dynamic', async () => {
-    const { isDynamicClass } = await import('../../extension/inject.js')
+    const { isDynamicClass } = await import('../../extension/lib/page/reproduction.js')
 
     // 5-8 lowercase chars that look like generated hashes
     assert.strictEqual(isDynamicClass('abcdef'), true)
@@ -337,7 +337,7 @@ describe('Dynamic Class Detection', () => {
   })
 
   test('should not flag real class names', async () => {
-    const { isDynamicClass } = await import('../../extension/inject.js')
+    const { isDynamicClass } = await import('../../extension/lib/page/reproduction.js')
 
     assert.strictEqual(isDynamicClass('btn'), false)
     assert.strictEqual(isDynamicClass('container'), false)
@@ -347,14 +347,14 @@ describe('Dynamic Class Detection', () => {
   })
 
   test('should not flag short classes', async () => {
-    const { isDynamicClass } = await import('../../extension/inject.js')
+    const { isDynamicClass } = await import('../../extension/lib/page/reproduction.js')
 
     assert.strictEqual(isDynamicClass('btn'), false)
     assert.strictEqual(isDynamicClass('card'), false)
   })
 
   test('should not flag classes with uppercase or numbers', async () => {
-    const { isDynamicClass } = await import('../../extension/inject.js')
+    const { isDynamicClass } = await import('../../extension/lib/page/reproduction.js')
 
     assert.strictEqual(isDynamicClass('Button'), false)
     assert.strictEqual(isDynamicClass('col-12'), false)
@@ -365,7 +365,7 @@ describe('Dynamic Class Detection', () => {
 
 describe('CSS Path Computation', () => {
   test('should generate tag-based path', async () => {
-    const { computeCssPath } = await import('../../extension/inject.js')
+    const { computeCssPath } = await import('../../extension/lib/page/reproduction.js')
 
     const parent = createElement('form', { id: 'login' })
     const el = createElement('button', { class: 'submit' }, { parent })
@@ -376,7 +376,7 @@ describe('CSS Path Computation', () => {
   })
 
   test('should stop at element with ID', async () => {
-    const { computeCssPath } = await import('../../extension/inject.js')
+    const { computeCssPath } = await import('../../extension/lib/page/reproduction.js')
 
     const root = createElement('div', {})
     const parent = createElement('form', { id: 'myform' }, { parent: root })
@@ -390,7 +390,7 @@ describe('CSS Path Computation', () => {
   })
 
   test('should limit depth to 5 levels', async () => {
-    const { computeCssPath } = await import('../../extension/inject.js')
+    const { computeCssPath } = await import('../../extension/lib/page/reproduction.js')
 
     // Build 8-deep nesting
     let current = createElement('div', { class: 'root' })
@@ -406,7 +406,7 @@ describe('CSS Path Computation', () => {
   })
 
   test('should filter dynamic classes from path', async () => {
-    const { computeCssPath } = await import('../../extension/inject.js')
+    const { computeCssPath } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('div', { class: 'container css-abc123 styled-xyz' })
 
@@ -418,7 +418,7 @@ describe('CSS Path Computation', () => {
   })
 
   test('should include max 2 classes per element', async () => {
-    const { computeCssPath } = await import('../../extension/inject.js')
+    const { computeCssPath } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('div', { class: 'a b c d e' })
 
@@ -447,7 +447,7 @@ describe('Enhanced Action Recording', () => {
   })
 
   test('should record click with multi-strategy selectors', async () => {
-    const { recordEnhancedAction } = await import('../../extension/inject.js')
+    const { recordEnhancedAction } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement(
       'button',
@@ -469,7 +469,7 @@ describe('Enhanced Action Recording', () => {
   })
 
   test('should record input with value (non-sensitive)', async () => {
-    const { recordEnhancedAction } = await import('../../extension/inject.js')
+    const { recordEnhancedAction } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('input', {
       type: 'email',
@@ -484,7 +484,7 @@ describe('Enhanced Action Recording', () => {
   })
 
   test('should redact password input values', async () => {
-    const { recordEnhancedAction } = await import('../../extension/inject.js')
+    const { recordEnhancedAction } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('input', { type: 'password', 'data-testid': 'pw' })
 
@@ -494,7 +494,7 @@ describe('Enhanced Action Recording', () => {
   })
 
   test('should record keypress events', async () => {
-    const { recordEnhancedAction } = await import('../../extension/inject.js')
+    const { recordEnhancedAction } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('input', { 'data-testid': 'search' })
 
@@ -505,7 +505,7 @@ describe('Enhanced Action Recording', () => {
   })
 
   test('should record navigation events', async () => {
-    const { recordEnhancedAction } = await import('../../extension/inject.js')
+    const { recordEnhancedAction } = await import('../../extension/lib/page/reproduction.js')
 
     const action = recordEnhancedAction('navigate', null, {
       from_url: 'http://localhost:3000/login',
@@ -518,7 +518,7 @@ describe('Enhanced Action Recording', () => {
   })
 
   test('should record select changes', async () => {
-    const { recordEnhancedAction } = await import('../../extension/inject.js')
+    const { recordEnhancedAction } = await import('../../extension/lib/page/reproduction.js')
 
     const el = createElement('select', { 'data-testid': 'country' })
 
@@ -533,7 +533,7 @@ describe('Enhanced Action Recording', () => {
   })
 
   test('should include current URL with each action', async () => {
-    const { recordEnhancedAction } = await import('../../extension/inject.js')
+    const { recordEnhancedAction } = await import('../../extension/lib/page/reproduction.js')
 
     globalThis.window.location = { href: 'http://localhost:3000/page' }
     const el = createElement('button', {})
@@ -544,7 +544,7 @@ describe('Enhanced Action Recording', () => {
   })
 
   test('should buffer up to 50 actions', async () => {
-    const { recordEnhancedAction, getEnhancedActionBuffer } = await import('../../extension/inject.js')
+    const { recordEnhancedAction, getEnhancedActionBuffer } = await import('../../extension/lib/page/reproduction.js')
 
     for (let i = 0; i < 60; i++) {
       const el = createElement('button', { 'data-testid': `btn-${i}` })
@@ -557,7 +557,7 @@ describe('Enhanced Action Recording', () => {
 
   test('should drop oldest actions when buffer is full', async () => {
     const { recordEnhancedAction, getEnhancedActionBuffer, clearEnhancedActionBuffer } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/page/reproduction.js')
 
     clearEnhancedActionBuffer()
 
@@ -577,7 +577,7 @@ describe('Enhanced Action Recording', () => {
 
 describe('Playwright Script Generation', () => {
   test('should generate valid Playwright test structure', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     const actions = [
       { type: 'click', selectors: { testId: 'login-btn' }, url: 'http://localhost:3000/login', timestamp: 1000 }
@@ -592,7 +592,7 @@ describe('Playwright Script Generation', () => {
   })
 
   test('should use getByTestId when testId available', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     const actions = [
       {
@@ -610,7 +610,7 @@ describe('Playwright Script Generation', () => {
   })
 
   test('should use getByRole when role available and no testId', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     const actions = [
       {
@@ -627,7 +627,7 @@ describe('Playwright Script Generation', () => {
   })
 
   test('should use getByLabel when ariaLabel available', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     const actions = [
       {
@@ -645,7 +645,7 @@ describe('Playwright Script Generation', () => {
   })
 
   test('should use getByText for clickable text', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     const actions = [{ type: 'click', selectors: { text: 'Next Step' }, url: 'http://localhost:3000', timestamp: 1000 }]
 
@@ -655,7 +655,7 @@ describe('Playwright Script Generation', () => {
   })
 
   test('should use locator with id', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     const actions = [
       {
@@ -672,7 +672,7 @@ describe('Playwright Script Generation', () => {
   })
 
   test('should fall back to cssPath locator', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     const actions = [
       { type: 'click', selectors: { cssPath: 'form > button.submit' }, url: 'http://localhost:3000', timestamp: 1000 }
@@ -684,7 +684,7 @@ describe('Playwright Script Generation', () => {
   })
 
   test('should map click action to .click()', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     const actions = [{ type: 'click', selectors: { testId: 'btn' }, url: 'http://localhost:3000', timestamp: 1000 }]
 
@@ -694,7 +694,7 @@ describe('Playwright Script Generation', () => {
   })
 
   test('should map input action to .fill()', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     const actions = [
       { type: 'input', selectors: { testId: 'name' }, value: 'Alice', url: 'http://localhost:3000', timestamp: 1000 }
@@ -706,7 +706,7 @@ describe('Playwright Script Generation', () => {
   })
 
   test('should map keypress to keyboard.press()', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     const actions = [
       {
@@ -724,7 +724,7 @@ describe('Playwright Script Generation', () => {
   })
 
   test('should map select action to .selectOption()', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     const actions = [
       {
@@ -742,7 +742,7 @@ describe('Playwright Script Generation', () => {
   })
 
   test('should add waitForURL on navigate actions', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     const actions = [
       { type: 'click', selectors: { testId: 'login-btn' }, url: 'http://localhost:3000/login', timestamp: 1000 },
@@ -761,7 +761,7 @@ describe('Playwright Script Generation', () => {
   })
 
   test('should add comment for long pauses (> 2s)', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     const actions = [
       { type: 'click', selectors: { testId: 'btn1' }, url: 'http://localhost:3000', timestamp: 1000 },
@@ -774,7 +774,7 @@ describe('Playwright Script Generation', () => {
   })
 
   test('should add scroll as comment only', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     const actions = [{ type: 'scroll', scroll_y: 500, url: 'http://localhost:3000', timestamp: 1000 }]
 
@@ -785,7 +785,7 @@ describe('Playwright Script Generation', () => {
   })
 
   test('should include error context comment at end', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     const actions = [{ type: 'click', selectors: { testId: 'btn' }, url: 'http://localhost:3000', timestamp: 1000 }]
 
@@ -797,7 +797,7 @@ describe('Playwright Script Generation', () => {
   })
 
   test('should use base_url override', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     const actions = [
       { type: 'click', selectors: { testId: 'btn' }, url: 'http://localhost:3000/page', timestamp: 1000 }
@@ -814,7 +814,7 @@ describe('Playwright Script Generation', () => {
 
 describe('Sensitive Data Handling', () => {
   test('should redact password field values in script', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     const actions = [
       {
@@ -834,7 +834,7 @@ describe('Sensitive Data Handling', () => {
   })
 
   test('should include warning for redacted fields', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     const actions = [
       {
@@ -861,7 +861,7 @@ describe('Sensitive Data Handling', () => {
 
 describe('Script Generation Edge Cases', () => {
   test('should handle empty action buffer', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     const script = generatePlaywrightScript([], {})
 
@@ -871,7 +871,7 @@ describe('Script Generation Edge Cases', () => {
   })
 
   test('should handle single action', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     const actions = [
       { type: 'click', selectors: { testId: 'only-btn' }, url: 'http://localhost:3000', timestamp: 1000 }
@@ -884,7 +884,7 @@ describe('Script Generation Edge Cases', () => {
   })
 
   test('should handle actions with no selectors', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     const actions = [{ type: 'click', selectors: {}, url: 'http://localhost:3000', timestamp: 1000 }]
 
@@ -896,7 +896,7 @@ describe('Script Generation Edge Cases', () => {
   })
 
   test('should respect last_n_actions parameter', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     const actions = [
       { type: 'click', selectors: { testId: 'btn1' }, url: 'http://localhost:3000', timestamp: 1000 },
@@ -916,7 +916,7 @@ describe('Script Generation Edge Cases', () => {
   })
 
   test('should use error message in test name', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     const actions = [{ type: 'click', selectors: { testId: 'btn' }, url: 'http://localhost:3000', timestamp: 1000 }]
 
@@ -926,7 +926,7 @@ describe('Script Generation Edge Cases', () => {
   })
 
   test('should cap output at 50KB', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     // Generate many actions
     const actions = Array.from({ length: 200 }, (_, i) => ({
@@ -947,7 +947,7 @@ describe('Script Generation Edge Cases', () => {
 
 describe('Selector Priority Order', () => {
   test('priority: testId > role > ariaLabel > text > id > cssPath', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     // All selectors available — should use testId
     const actions = [
@@ -972,7 +972,7 @@ describe('Selector Priority Order', () => {
   })
 
   test('should fall through to role when no testId', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     const actions = [
       {
@@ -993,7 +993,7 @@ describe('Selector Priority Order', () => {
   })
 
   test('should fall through to ariaLabel when no testId or role', async () => {
-    const { generatePlaywrightScript } = await import('../../extension/inject.js')
+    const { generatePlaywrightScript } = await import('../../extension/lib/page/reproduction.js')
 
     const actions = [
       {

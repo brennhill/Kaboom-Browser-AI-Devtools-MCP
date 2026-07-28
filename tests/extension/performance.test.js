@@ -95,7 +95,7 @@ globalThis.console = mockConsole
 describe('Performance Benchmarks', () => {
   describe('Serialization Performance', () => {
     test('should serialize simple objects under 0.1ms', async () => {
-      const { safeSerialize } = await import('../../extension/inject.js')
+      const { safeSerialize } = await import('../../extension/lib/page/serialize.js')
 
       const simpleObject = {
         message: 'Test error',
@@ -110,7 +110,7 @@ describe('Performance Benchmarks', () => {
     })
 
     test('should serialize nested objects under 0.5ms', async () => {
-      const { safeSerialize } = await import('../../extension/inject.js')
+      const { safeSerialize } = await import('../../extension/lib/page/serialize.js')
 
       const nestedObject = {
         level1: {
@@ -136,7 +136,7 @@ describe('Performance Benchmarks', () => {
     })
 
     test('should serialize large arrays under 1ms', async () => {
-      const { safeSerialize } = await import('../../extension/inject.js')
+      const { safeSerialize } = await import('../../extension/lib/page/serialize.js')
 
       const largeArray = Array.from({ length: 100 }, (_, i) => ({
         id: i,
@@ -151,7 +151,7 @@ describe('Performance Benchmarks', () => {
     })
 
     test('should handle circular references without hanging', async () => {
-      const { safeSerialize } = await import('../../extension/inject.js')
+      const { safeSerialize } = await import('../../extension/lib/page/serialize.js')
 
       const circular = { a: 1 }
       circular.self = circular
@@ -164,7 +164,7 @@ describe('Performance Benchmarks', () => {
     })
 
     test('should truncate large strings efficiently', async () => {
-      const { safeSerialize } = await import('../../extension/inject.js')
+      const { safeSerialize } = await import('../../extension/lib/page/serialize.js')
 
       // 100KB string
       const largeString = 'x'.repeat(100 * 1024)
@@ -273,7 +273,7 @@ describe('Performance Benchmarks', () => {
 
   describe('Network Waterfall Performance', () => {
     test('should parse resource timing under 0.1ms per entry', async () => {
-      const { parseResourceTiming } = await import('../../extension/inject.js')
+      const { parseResourceTiming } = await import('../../extension/lib/net/network.js')
 
       const mockTiming = {
         name: 'http://localhost:3000/api/data',
@@ -300,7 +300,7 @@ describe('Performance Benchmarks', () => {
     })
 
     test('should get waterfall for 50 entries under 5ms', async () => {
-      const { getNetworkWaterfall } = await import('../../extension/inject.js')
+      const { getNetworkWaterfall } = await import('../../extension/lib/net/network.js')
 
       // Mock performance API with 50 entries
       const mockEntries = Array.from({ length: 50 }, (_, i) => ({
@@ -332,7 +332,7 @@ describe('Performance Benchmarks', () => {
 
   describe('User Action Buffer Performance', () => {
     test('should record action under 0.1ms', async () => {
-      const { recordAction, clearActionBuffer } = await import('../../extension/inject.js')
+      const { recordAction, clearActionBuffer } = await import('../../extension/lib/page/actions.js')
 
       clearActionBuffer()
 
@@ -356,7 +356,7 @@ describe('Performance Benchmarks', () => {
     })
 
     test('should maintain buffer under 20 items efficiently', async () => {
-      const { recordAction, getActionBuffer, clearActionBuffer } = await import('../../extension/inject.js')
+      const { recordAction, getActionBuffer, clearActionBuffer } = await import('../../extension/lib/page/actions.js')
 
       clearActionBuffer()
 
@@ -394,7 +394,7 @@ describe('Performance Benchmarks', () => {
       const { createErrorSignature, processErrorGroup } = await import(
         '../../extension/background/caches/error-groups.js'
       )
-      const { safeSerialize } = await import('../../extension/inject.js')
+      const { safeSerialize } = await import('../../extension/lib/page/serialize.js')
 
       // Simulate the complete error handling path
       const rawError = {

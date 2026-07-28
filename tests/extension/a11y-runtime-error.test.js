@@ -101,14 +101,14 @@ describe('Bug #3: runAxeAuditWithTimeout is defined and accessible', () => {
 
   test('runAxeAuditWithTimeout should be exported from inject.js', async () => {
     // This is the core test for Bug #3 - verifies the function is importable
-    const { runAxeAuditWithTimeout } = await import('../../extension/inject.js')
+    const { runAxeAuditWithTimeout } = await import('../../extension/lib/analysis/dom-queries.js')
 
     assert.ok(runAxeAuditWithTimeout, 'runAxeAuditWithTimeout should be defined')
     assert.strictEqual(typeof runAxeAuditWithTimeout, 'function', 'runAxeAuditWithTimeout should be a function')
   })
 
   test('runAxeAuditWithTimeout should be callable and return a promise', async () => {
-    const { runAxeAuditWithTimeout } = await import('../../extension/inject.js')
+    const { runAxeAuditWithTimeout } = await import('../../extension/lib/analysis/dom-queries.js')
 
     // Mock axe-core
     globalThis.window.axe = {
@@ -127,14 +127,14 @@ describe('Bug #3: runAxeAuditWithTimeout is defined and accessible', () => {
   })
 
   test('runAxeAudit should also be exported from inject.js', async () => {
-    const { runAxeAudit } = await import('../../extension/inject.js')
+    const { runAxeAudit } = await import('../../extension/lib/analysis/dom-queries.js')
 
     assert.ok(runAxeAudit, 'runAxeAudit should be defined')
     assert.strictEqual(typeof runAxeAudit, 'function', 'runAxeAudit should be a function')
   })
 
   test('formatAxeResults should also be exported from inject.js', async () => {
-    const { formatAxeResults } = await import('../../extension/inject.js')
+    const { formatAxeResults } = await import('../../extension/lib/analysis/dom-queries.js')
 
     assert.ok(formatAxeResults, 'formatAxeResults should be defined')
     assert.strictEqual(typeof formatAxeResults, 'function', 'formatAxeResults should be a function')
@@ -159,7 +159,7 @@ describe('Accessibility audit returns real violations on pages with issues', () 
   })
 
   test('should return violations when axe-core finds accessibility issues', async () => {
-    const { runAxeAuditWithTimeout } = await import('../../extension/inject.js')
+    const { runAxeAuditWithTimeout } = await import('../../extension/lib/analysis/dom-queries.js')
 
     // Mock axe-core with violations
     globalThis.window.axe = {
@@ -221,7 +221,7 @@ describe('Accessibility audit returns real violations on pages with issues', () 
   })
 
   test('should include violation details: impact, description, help, nodes', async () => {
-    const { runAxeAuditWithTimeout } = await import('../../extension/inject.js')
+    const { runAxeAuditWithTimeout } = await import('../../extension/lib/analysis/dom-queries.js')
 
     globalThis.window.axe = {
       run: mock.fn(() =>
@@ -281,7 +281,7 @@ describe('Audit returns passes for accessible pages', () => {
   })
 
   test('should return empty violations and count passes for accessible page', async () => {
-    const { runAxeAuditWithTimeout } = await import('../../extension/inject.js')
+    const { runAxeAuditWithTimeout } = await import('../../extension/lib/analysis/dom-queries.js')
 
     globalThis.window.axe = {
       run: mock.fn(() =>
@@ -323,7 +323,7 @@ describe('Audit timeout after 10 seconds on complex page', () => {
   })
 
   test('should return timeout error when audit exceeds timeout', async () => {
-    const { runAxeAuditWithTimeout } = await import('../../extension/inject.js')
+    const { runAxeAuditWithTimeout } = await import('../../extension/lib/analysis/dom-queries.js')
 
     // Mock axe-core that never resolves
     globalThis.window.axe = {
@@ -338,7 +338,7 @@ describe('Audit timeout after 10 seconds on complex page', () => {
   })
 
   test('should complete before timeout on fast pages', async () => {
-    const { runAxeAuditWithTimeout } = await import('../../extension/inject.js')
+    const { runAxeAuditWithTimeout } = await import('../../extension/lib/analysis/dom-queries.js')
 
     globalThis.window.axe = {
       run: mock.fn(() =>
@@ -376,7 +376,7 @@ describe('Clear error when axe-core is not loaded', () => {
   })
 
   test('should return clear error when axe-core fails to load', async () => {
-    const { runAxeAudit } = await import('../../extension/inject.js')
+    const { runAxeAudit } = await import('../../extension/lib/analysis/dom-queries.js')
 
     // Mock script loading failure
     globalThis.window.axe = null
@@ -425,7 +425,7 @@ describe('Regression: DOM queries still work after fix', () => {
   })
 
   test('executeDOMQuery should still be exported and work', async () => {
-    const { executeDOMQuery } = await import('../../extension/inject.js')
+    const { executeDOMQuery } = await import('../../extension/lib/analysis/dom-queries.js')
 
     assert.ok(executeDOMQuery, 'executeDOMQuery should be defined')
     assert.strictEqual(typeof executeDOMQuery, 'function', 'executeDOMQuery should be a function')
@@ -452,7 +452,7 @@ describe('Regression: DOM queries still work after fix', () => {
   })
 
   test('getPageInfo should still work', async () => {
-    const { getPageInfo } = await import('../../extension/inject.js')
+    const { getPageInfo } = await import('../../extension/lib/analysis/dom-queries.js')
 
     assert.ok(getPageInfo, 'getPageInfo should be defined')
 
@@ -493,7 +493,7 @@ describe('kaboom_a11y_query message handler uses runAxeAuditWithTimeout', () => 
 
   test('should handle kaboom_a11y_query message and call runAxeAuditWithTimeout', async () => {
     // This test simulates the message handler behavior
-    const { runAxeAuditWithTimeout } = await import('../../extension/inject.js')
+    const { runAxeAuditWithTimeout } = await import('../../extension/lib/analysis/dom-queries.js')
 
     const requestId = 12345
     const params = { scope: '#main' }

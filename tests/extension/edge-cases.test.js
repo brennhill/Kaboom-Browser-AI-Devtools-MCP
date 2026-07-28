@@ -19,7 +19,7 @@ describe('Edge Cases: WebSocket Reconnection', () => {
     originalCrypto = globalThis.crypto
     globalThis.window = createMockWindow({ withWebSocket: true })
     Object.defineProperty(globalThis, 'crypto', { value: createMockCrypto(), writable: true, configurable: true })
-    const { uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
     uninstallWebSocketCapture()
   })
 
@@ -29,7 +29,7 @@ describe('Edge Cases: WebSocket Reconnection', () => {
   })
 
   test('should handle rapid connection/disconnection cycles', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
     installWebSocketCapture()
 
     // Simulate rapid connect/disconnect cycles
@@ -61,7 +61,7 @@ describe('Edge Cases: WebSocket Reconnection', () => {
   })
 
   test('should handle connection error followed by successful reconnect', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
     installWebSocketCapture()
 
     // First connection fails
@@ -91,7 +91,7 @@ describe('Edge Cases: WebSocket Reconnection', () => {
   })
 
   test('should handle messages received before connection fully established', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
     installWebSocketCapture()
 
     const ws = new globalThis.window.WebSocket('wss://example.com/ws')
@@ -111,7 +111,7 @@ describe('Edge Cases: WebSocket Reconnection', () => {
   })
 
   test('should handle connection timeout (no events received)', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
     installWebSocketCapture()
 
     // Create connection but never emit events (simulates timeout)
@@ -134,7 +134,7 @@ describe('Edge Cases: WebSocket Reconnection', () => {
   })
 
   test('should handle simultaneous connections to different URLs', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
     installWebSocketCapture()
 
     const ws1 = new globalThis.window.WebSocket('wss://a.com/ws')
@@ -182,7 +182,7 @@ describe('Edge Cases: Service Worker Restart', () => {
 
   test('should reset state on service worker restart', async () => {
     const { installWebSocketCapture, uninstallWebSocketCapture, resetForTesting } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/net/websocket.js')
 
     installWebSocketCapture()
 
@@ -204,7 +204,7 @@ describe('Edge Cases: Service Worker Restart', () => {
   })
 
   test('should handle early connections before full initialization', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
 
     // Don't wait for full initialization
     installWebSocketCapture()
@@ -225,7 +225,7 @@ describe('Edge Cases: Service Worker Restart', () => {
   })
 
   test('should handle multiple rapid install/uninstall cycles', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
 
     for (let i = 0; i < 5; i++) {
       installWebSocketCapture()
@@ -258,7 +258,7 @@ describe('Edge Cases: Concurrent Operations', () => {
     originalCrypto = globalThis.crypto
     globalThis.window = createMockWindow({ withWebSocket: true })
     Object.defineProperty(globalThis, 'crypto', { value: createMockCrypto(), writable: true, configurable: true })
-    const { resetForTesting } = await import('../../extension/inject.js')
+    const { resetForTesting } = await import('../../extension/lib/net/websocket.js')
     resetForTesting()
   })
 
@@ -268,7 +268,7 @@ describe('Edge Cases: Concurrent Operations', () => {
   })
 
   test('should handle concurrent WebSocket connections', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
     installWebSocketCapture()
 
     // Create 20 concurrent connections
@@ -302,7 +302,7 @@ describe('Edge Cases: Concurrent Operations', () => {
 
   test('should handle rapid message bursts on single connection', async () => {
     const { installWebSocketCapture, uninstallWebSocketCapture, setWebSocketCaptureMode } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/net/websocket.js')
     installWebSocketCapture()
     setWebSocketCaptureMode('all') // Disable sampling for burst test
 
@@ -326,7 +326,7 @@ describe('Edge Cases: Concurrent Operations', () => {
   })
 
   test('should handle mixed connection states simultaneously', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
     installWebSocketCapture()
 
     // Create connections in different states
@@ -370,7 +370,7 @@ describe('Edge Cases: Memory Pressure Scenarios', () => {
     originalCrypto = globalThis.crypto
     globalThis.window = createMockWindow({ withWebSocket: true })
     Object.defineProperty(globalThis, 'crypto', { value: createMockCrypto(), writable: true, configurable: true })
-    const { resetForTesting } = await import('../../extension/inject.js')
+    const { resetForTesting } = await import('../../extension/lib/net/websocket.js')
     resetForTesting()
   })
 
@@ -380,7 +380,7 @@ describe('Edge Cases: Memory Pressure Scenarios', () => {
   })
 
   test('should handle memory pressure during active connection', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
     installWebSocketCapture()
 
     const ws = new globalThis.window.WebSocket('wss://example.com/ws')
@@ -399,7 +399,7 @@ describe('Edge Cases: Memory Pressure Scenarios', () => {
   })
 
   test('should handle rapid connection creation under memory pressure', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
     installWebSocketCapture()
 
     // Create many connections rapidly (simulates memory pressure)
@@ -425,7 +425,7 @@ describe('Edge Cases: Memory Pressure Scenarios', () => {
   })
 
   test('should cleanup old connections when memory is constrained', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
     installWebSocketCapture()
 
     // Create and close many connections
@@ -461,7 +461,7 @@ describe('Edge Cases: Message Edge Cases', () => {
   })
 
   test('should handle empty messages', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
     installWebSocketCapture()
 
     const ws = new globalThis.window.WebSocket('wss://example.com/ws')
@@ -480,7 +480,7 @@ describe('Edge Cases: Message Edge Cases', () => {
   })
 
   test('should handle messages with special characters', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
     installWebSocketCapture()
 
     const ws = new globalThis.window.WebSocket('wss://example.com/ws')
@@ -505,7 +505,7 @@ describe('Edge Cases: Message Edge Cases', () => {
   })
 
   test('should handle malformed JSON messages', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
     installWebSocketCapture()
 
     const ws = new globalThis.window.WebSocket('wss://example.com/ws')
@@ -528,7 +528,7 @@ describe('Edge Cases: Message Edge Cases', () => {
   })
 
   test('should handle extremely large messages', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
     installWebSocketCapture()
 
     const ws = new globalThis.window.WebSocket('wss://example.com/ws')

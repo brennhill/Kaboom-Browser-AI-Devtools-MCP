@@ -68,6 +68,33 @@ test('background runtime entrypoint is not an API compatibility facade', () => {
   }
 })
 
+test('inject runtime entrypoint is not an API compatibility facade', () => {
+  const source = readFileSync('src/inject.ts', 'utf8')
+  assert.doesNotMatch(
+    source,
+    /export\s+(?:type\s+)?(?:\{|\*)[^;]*\s+from\s+['"]/s,
+    'inject.ts is a runtime entrypoint; consumers must import the focused owner module'
+  )
+  assert.equal(existsSync('src/inject/index.ts'), false, 'inject/index.ts is a redundant compatibility barrel')
+  for (const compiledPath of [
+    'extension/inject/index.js',
+    'extension/inject/index.js.map',
+    'extension/inject/index.d.ts',
+    'extension/inject/index.d.ts.map'
+  ]) {
+    assert.equal(existsSync(compiledPath), false, `${compiledPath} is a stale compiled compatibility facade`)
+  }
+
+  for (const testPath of collectTestFiles('tests/extension')) {
+    const testSource = readFileSync(testPath, 'utf8')
+    assert.doesNotMatch(
+      testSource,
+      /(?:from\s+|import\s*\()\s*['"][^'"]*extension\/inject\.js['"]/,
+      `${testPath} imports the inject runtime entrypoint instead of an owner module`
+    )
+  }
+})
+
 test('pending query dispatcher does not re-export APIs owned by command modules', () => {
   const source = readFileSync('src/background/pending-queries.ts', 'utf8')
   assert.doesNotMatch(source, /export\s+(?:type\s+)?\{/, 'dispatcher must not re-export command helper APIs')

@@ -117,7 +117,7 @@ describe('Performance Capture After Refactoring', () => {
   })
 
   test('should capture performance.mark() entries', async () => {
-    const { getPerformanceMarks } = await import('../../extension/inject.js')
+    const { getPerformanceMarks } = await import('../../extension/lib/analysis/performance.js')
 
     const marks = getPerformanceMarks()
 
@@ -129,7 +129,7 @@ describe('Performance Capture After Refactoring', () => {
   })
 
   test('should capture performance.measure() entries', async () => {
-    const { getPerformanceMeasures } = await import('../../extension/inject.js')
+    const { getPerformanceMeasures } = await import('../../extension/lib/analysis/performance.js')
 
     const measures = getPerformanceMeasures()
 
@@ -141,7 +141,7 @@ describe('Performance Capture After Refactoring', () => {
   })
 
   test('should format performance entries with correct types', async () => {
-    const { getPerformanceMarks, getPerformanceMeasures } = await import('../../extension/inject.js')
+    const { getPerformanceMarks, getPerformanceMeasures } = await import('../../extension/lib/analysis/performance.js')
 
     const marks = getPerformanceMarks()
     const measures = getPerformanceMeasures()
@@ -210,7 +210,7 @@ describe('Network Body Capture After Refactoring', () => {
   })
 
   test('should capture fetch request body', async () => {
-    const { wrapFetchWithBodies } = await import('../../extension/inject.js')
+    const { wrapFetchWithBodies } = await import('../../extension/lib/net/network.js')
 
     const mockResponse = createMockResponse({ body: '{"success":true}' })
     const originalFetch = mock.fn(() => Promise.resolve(mockResponse))
@@ -233,7 +233,7 @@ describe('Network Body Capture After Refactoring', () => {
   })
 
   test('should capture fetch response body', async () => {
-    const { wrapFetchWithBodies } = await import('../../extension/inject.js')
+    const { wrapFetchWithBodies } = await import('../../extension/lib/net/network.js')
 
     const responseBody = '{"id":42,"status":"created"}'
     const mockResponse = createMockResponse({ body: responseBody, status: 201 })
@@ -254,7 +254,7 @@ describe('Network Body Capture After Refactoring', () => {
   })
 
   test('should return properly typed response from wrapper', async () => {
-    const { wrapFetchWithBodies } = await import('../../extension/inject.js')
+    const { wrapFetchWithBodies } = await import('../../extension/lib/net/network.js')
 
     const mockResponse = createMockResponse({ body: '{}' })
     const originalFetch = mock.fn(() => Promise.resolve(mockResponse))
@@ -360,22 +360,22 @@ describe('Full Pipeline Integration After Refactoring', () => {
 
     try {
       // Import all modules that interact with each other
-      const injectModule = await import('../../extension/inject.js')
+      const serialization = await import('../../extension/lib/page/serialize.js')
       const logProcessing = await import('../../extension/background/sync/log-processing.js')
       const errorGroups = await import('../../extension/background/caches/error-groups.js')
 
       // Verify modules loaded without errors
-      assert.ok(injectModule, 'Inject module should load')
+      assert.ok(serialization, 'Serialization module should load')
       assert.ok(logProcessing, 'Log processing module should load')
       assert.ok(errorGroups, 'Error grouping module should load')
 
       // Verify key functions exist and have correct signatures
-      assert.strictEqual(typeof injectModule.safeSerialize, 'function', 'safeSerialize should exist')
+      assert.strictEqual(typeof serialization.safeSerialize, 'function', 'safeSerialize should exist')
       assert.strictEqual(typeof logProcessing.formatLogEntry, 'function', 'formatLogEntry should exist')
       assert.strictEqual(typeof errorGroups.createErrorSignature, 'function', 'createErrorSignature should exist')
 
       // Test that functions work together
-      const serialized = injectModule.safeSerialize({ test: 'data', nested: { value: 42 } })
+      const serialized = serialization.safeSerialize({ test: 'data', nested: { value: 42 } })
       assert.ok(serialized, 'Serialization should work')
 
       const formatted = logProcessing.formatLogEntry({

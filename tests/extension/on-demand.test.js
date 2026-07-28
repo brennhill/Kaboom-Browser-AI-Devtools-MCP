@@ -162,7 +162,7 @@ describe('DOM Query Execution', () => {
   })
 
   test('should execute querySelectorAll with given selector', async () => {
-    const { executeDOMQuery } = await import('../../extension/inject.js')
+    const { executeDOMQuery } = await import('../../extension/lib/analysis/dom-queries.js')
 
     globalThis.document.querySelectorAll = mock.fn(() => [
       {
@@ -184,7 +184,7 @@ describe('DOM Query Execution', () => {
   })
 
   test('should include attributes', async () => {
-    const { executeDOMQuery } = await import('../../extension/inject.js')
+    const { executeDOMQuery } = await import('../../extension/lib/analysis/dom-queries.js')
 
     globalThis.document.querySelectorAll = mock.fn(() => [
       {
@@ -212,7 +212,7 @@ describe('DOM Query Execution', () => {
   })
 
   test('should include bounding box', async () => {
-    const { executeDOMQuery } = await import('../../extension/inject.js')
+    const { executeDOMQuery } = await import('../../extension/lib/analysis/dom-queries.js')
 
     globalThis.document.querySelectorAll = mock.fn(() => [
       {
@@ -232,7 +232,7 @@ describe('DOM Query Execution', () => {
   })
 
   test('should detect visibility', async () => {
-    const { executeDOMQuery } = await import('../../extension/inject.js')
+    const { executeDOMQuery } = await import('../../extension/lib/analysis/dom-queries.js')
 
     globalThis.document.querySelectorAll = mock.fn(() => [
       {
@@ -262,7 +262,7 @@ describe('DOM Query Execution', () => {
   })
 
   test('should include computed styles when requested', async () => {
-    const { executeDOMQuery } = await import('../../extension/inject.js')
+    const { executeDOMQuery } = await import('../../extension/lib/analysis/dom-queries.js')
 
     globalThis.window.getComputedStyle = mock.fn(() => ({
       display: 'flex',
@@ -289,7 +289,7 @@ describe('DOM Query Execution', () => {
   })
 
   test('should include only specified style properties', async () => {
-    const { executeDOMQuery } = await import('../../extension/inject.js')
+    const { executeDOMQuery } = await import('../../extension/lib/analysis/dom-queries.js')
 
     const styles = {
       display: 'flex',
@@ -327,7 +327,7 @@ describe('DOM Query Execution', () => {
   })
 
   test('should include children when requested', async () => {
-    const { executeDOMQuery } = await import('../../extension/inject.js')
+    const { executeDOMQuery } = await import('../../extension/lib/analysis/dom-queries.js')
 
     const childElement = {
       tagName: 'SPAN',
@@ -358,7 +358,7 @@ describe('DOM Query Execution', () => {
   })
 
   test('should limit child depth to max_depth', async () => {
-    const { executeDOMQuery } = await import('../../extension/inject.js')
+    const { executeDOMQuery } = await import('../../extension/lib/analysis/dom-queries.js')
 
     // Create deeply nested structure
     const makeNested = (depth) => ({
@@ -391,7 +391,7 @@ describe('DOM Query Execution', () => {
   })
 
   test('should limit max_depth to 5 even if higher requested', async () => {
-    const { executeDOMQuery } = await import('../../extension/inject.js')
+    const { executeDOMQuery } = await import('../../extension/lib/analysis/dom-queries.js')
 
     const makeNested = (depth) => ({
       tagName: 'DIV',
@@ -422,7 +422,7 @@ describe('DOM Query Execution', () => {
   })
 
   test('should limit to 50 elements max', async () => {
-    const { executeDOMQuery } = await import('../../extension/inject.js')
+    const { executeDOMQuery } = await import('../../extension/lib/analysis/dom-queries.js')
 
     const elements = Array.from({ length: 100 }, (_, i) => ({
       tagName: 'LI',
@@ -443,7 +443,7 @@ describe('DOM Query Execution', () => {
   })
 
   test('should truncate text content at 500 chars', async () => {
-    const { executeDOMQuery } = await import('../../extension/inject.js')
+    const { executeDOMQuery } = await import('../../extension/lib/analysis/dom-queries.js')
 
     const longText = 'x'.repeat(1000)
     globalThis.document.querySelectorAll = mock.fn(() => [
@@ -464,7 +464,7 @@ describe('DOM Query Execution', () => {
   })
 
   test('should include page URL and title in response', async () => {
-    const { executeDOMQuery } = await import('../../extension/inject.js')
+    const { executeDOMQuery } = await import('../../extension/lib/analysis/dom-queries.js')
 
     globalThis.document.title = 'My App - Dashboard'
     globalThis.document.querySelectorAll = mock.fn(() => [])
@@ -490,7 +490,7 @@ describe('Page Info', () => {
   })
 
   test('should return basic page info', async () => {
-    const { getPageInfo } = await import('../../extension/inject.js')
+    const { getPageInfo } = await import('../../extension/lib/analysis/dom-queries.js')
 
     globalThis.document.title = 'My App - Dashboard'
     globalThis.document.querySelectorAll = mock.fn((selector) => {
@@ -512,7 +512,7 @@ describe('Page Info', () => {
   })
 
   test('should list headings', async () => {
-    const { getPageInfo } = await import('../../extension/inject.js')
+    const { getPageInfo } = await import('../../extension/lib/analysis/dom-queries.js')
 
     globalThis.document.querySelectorAll = mock.fn((selector) => {
       if (selector === 'h1,h2,h3,h4,h5,h6') {
@@ -527,7 +527,7 @@ describe('Page Info', () => {
   })
 
   test('should list forms with fields', async () => {
-    const { getPageInfo } = await import('../../extension/inject.js')
+    const { getPageInfo } = await import('../../extension/lib/analysis/dom-queries.js')
 
     globalThis.document.querySelectorAll = mock.fn((selector) => {
       if (selector === 'form') {
@@ -554,7 +554,7 @@ describe('Page Info', () => {
   })
 
   test('should count links, images, and interactive elements', async () => {
-    const { getPageInfo } = await import('../../extension/inject.js')
+    const { getPageInfo } = await import('../../extension/lib/analysis/dom-queries.js')
 
     globalThis.document.querySelectorAll = mock.fn((selector) => {
       if (selector === 'a') return Array(24).fill({})
@@ -585,7 +585,7 @@ describe('Accessibility Audit Execution', () => {
   })
 
   test('should wait for axe-core to appear on window', async () => {
-    const { runAxeAudit } = await import('../../extension/inject.js')
+    const { runAxeAudit } = await import('../../extension/lib/analysis/dom-queries.js')
 
     globalThis.window.axe = null
 
@@ -611,7 +611,7 @@ describe('Accessibility Audit Execution', () => {
   })
 
   test('should reuse axe-core if already loaded', async () => {
-    const { runAxeAudit } = await import('../../extension/inject.js')
+    const { runAxeAudit } = await import('../../extension/lib/analysis/dom-queries.js')
 
     globalThis.window.axe = {
       run: mock.fn(() =>
@@ -632,7 +632,7 @@ describe('Accessibility Audit Execution', () => {
   })
 
   test('should pass scope as context to axe.run', async () => {
-    const { runAxeAudit } = await import('../../extension/inject.js')
+    const { runAxeAudit } = await import('../../extension/lib/analysis/dom-queries.js')
 
     globalThis.window.axe = {
       run: mock.fn(() =>
@@ -652,7 +652,7 @@ describe('Accessibility Audit Execution', () => {
   })
 
   test('should pass tags as runOnly config', async () => {
-    const { runAxeAudit } = await import('../../extension/inject.js')
+    const { runAxeAudit } = await import('../../extension/lib/analysis/dom-queries.js')
 
     globalThis.window.axe = {
       run: mock.fn(() =>
@@ -672,7 +672,7 @@ describe('Accessibility Audit Execution', () => {
   })
 
   test('should include passes when include_passes is true', async () => {
-    const { runAxeAudit } = await import('../../extension/inject.js')
+    const { runAxeAudit } = await import('../../extension/lib/analysis/dom-queries.js')
 
     globalThis.window.axe = {
       run: mock.fn(() =>
@@ -692,7 +692,7 @@ describe('Accessibility Audit Execution', () => {
   })
 
   test('should format violations with selector, html, and fix suggestion', async () => {
-    const { formatAxeResults } = await import('../../extension/inject.js')
+    const { formatAxeResults } = await import('../../extension/lib/analysis/dom-queries.js')
 
     const axeResult = {
       violations: [
@@ -725,7 +725,7 @@ describe('Accessibility Audit Execution', () => {
   })
 
   test('should limit nodes per violation to 10', async () => {
-    const { formatAxeResults } = await import('../../extension/inject.js')
+    const { formatAxeResults } = await import('../../extension/lib/analysis/dom-queries.js')
 
     const nodes = Array.from({ length: 20 }, (_, i) => ({
       target: [`#node-${i}`],
@@ -756,7 +756,7 @@ describe('Accessibility Audit Execution', () => {
   })
 
   test('should truncate HTML snippets to 200 chars', async () => {
-    const { formatAxeResults } = await import('../../extension/inject.js')
+    const { formatAxeResults } = await import('../../extension/lib/analysis/dom-queries.js')
 
     const longHtml = '<div class="' + 'x'.repeat(300) + '">content</div>'
     const axeResult = {
@@ -781,7 +781,7 @@ describe('Accessibility Audit Execution', () => {
   })
 
   test('should include summary counts', async () => {
-    const { formatAxeResults } = await import('../../extension/inject.js')
+    const { formatAxeResults } = await import('../../extension/lib/analysis/dom-queries.js')
 
     const axeResult = {
       violations: [
@@ -802,7 +802,7 @@ describe('Accessibility Audit Execution', () => {
   })
 
   test('should timeout after 30 seconds', async () => {
-    const { runAxeAuditWithTimeout } = await import('../../extension/inject.js')
+    const { runAxeAuditWithTimeout } = await import('../../extension/lib/analysis/dom-queries.js')
 
     globalThis.window.axe = {
       run: mock.fn(() => new Promise(() => {})) // Never resolves
@@ -815,7 +815,7 @@ describe('Accessibility Audit Execution', () => {
   })
 
   test('should extract WCAG tags', async () => {
-    const { formatAxeResults } = await import('../../extension/inject.js')
+    const { formatAxeResults } = await import('../../extension/lib/analysis/dom-queries.js')
 
     const axeResult = {
       violations: [
@@ -855,14 +855,14 @@ describe('Page Load Deferral', () => {
   })
 
   test('should defer intercepts while page is loading', async () => {
-    const { shouldDeferIntercepts } = await import('../../extension/inject.js')
+    const { shouldDeferIntercepts } = await import('../../extension/inject/observers.js')
 
     globalThis.document.readyState = 'loading'
     assert.strictEqual(shouldDeferIntercepts(), true)
   })
 
   test('should not defer if page already loaded', async () => {
-    const { shouldDeferIntercepts } = await import('../../extension/inject.js')
+    const { shouldDeferIntercepts } = await import('../../extension/inject/observers.js')
 
     globalThis.document.readyState = 'complete'
     assert.strictEqual(shouldDeferIntercepts(), false)
@@ -880,7 +880,7 @@ describe('Memory Pressure Detection', () => {
   })
 
   test('should reduce buffers at soft limit (20MB)', async () => {
-    const { checkMemoryPressure } = await import('../../extension/inject.js')
+    const { checkMemoryPressure } = await import('../../extension/inject/observers.js')
 
     const state = {
       wsBufferCapacity: 500,
@@ -895,7 +895,7 @@ describe('Memory Pressure Detection', () => {
   })
 
   test('should disable network bodies at hard limit (50MB)', async () => {
-    const { checkMemoryPressure } = await import('../../extension/inject.js')
+    const { checkMemoryPressure } = await import('../../extension/inject/observers.js')
 
     const state = {
       wsBufferCapacity: 500,
@@ -910,7 +910,7 @@ describe('Memory Pressure Detection', () => {
   })
 
   test('should not modify state when under soft limit', async () => {
-    const { checkMemoryPressure } = await import('../../extension/inject.js')
+    const { checkMemoryPressure } = await import('../../extension/inject/observers.js')
 
     const state = {
       wsBufferCapacity: 500,

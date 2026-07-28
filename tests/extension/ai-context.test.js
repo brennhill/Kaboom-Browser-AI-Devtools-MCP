@@ -40,7 +40,7 @@ let originalWindow, originalDocument
 
 describe('Stack Frame Parsing', () => {
   test('should parse Chrome-style stack frames', async () => {
-    const { parseStackFrames } = await import('../../extension/inject.js')
+    const { parseStackFrames } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     const stack = `TypeError: Cannot read properties of undefined
     at handleSubmit (http://localhost:3000/static/js/main.abc123.js:42:15)
@@ -56,7 +56,7 @@ describe('Stack Frame Parsing', () => {
   })
 
   test('should parse Firefox-style stack frames', async () => {
-    const { parseStackFrames } = await import('../../extension/inject.js')
+    const { parseStackFrames } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     const stack = `handleSubmit@http://localhost:3000/main.js:42:15
 onclick@http://localhost:3000/main.js:100:3`
@@ -71,7 +71,7 @@ onclick@http://localhost:3000/main.js:100:3`
   })
 
   test('should handle anonymous functions in stack', async () => {
-    const { parseStackFrames } = await import('../../extension/inject.js')
+    const { parseStackFrames } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     const stack = `Error: test
     at http://localhost:3000/main.js:42:15
@@ -87,25 +87,25 @@ onclick@http://localhost:3000/main.js:100:3`
   })
 
   test('should return empty array for empty stack', async () => {
-    const { parseStackFrames } = await import('../../extension/inject.js')
+    const { parseStackFrames } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     assert.deepStrictEqual(parseStackFrames(''), [])
   })
 
   test('should return empty array for null stack', async () => {
-    const { parseStackFrames } = await import('../../extension/inject.js')
+    const { parseStackFrames } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     assert.deepStrictEqual(parseStackFrames(null), [])
   })
 
   test('should return empty array for undefined stack', async () => {
-    const { parseStackFrames } = await import('../../extension/inject.js')
+    const { parseStackFrames } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     assert.deepStrictEqual(parseStackFrames(undefined), [])
   })
 
   test('should handle eval frames', async () => {
-    const { parseStackFrames } = await import('../../extension/inject.js')
+    const { parseStackFrames } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     const stack = `Error: test
     at eval (eval at runCode (http://localhost:3000/main.js:10:5), <anonymous>:1:1)
@@ -133,7 +133,7 @@ describe('Source Map Parsing', () => {
   })
 
   test('should parse inline base64 source map with sourcesContent', async () => {
-    const { parseSourceMap } = await import('../../extension/inject.js')
+    const { parseSourceMap } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     const sourceMap = {
       version: 3,
@@ -152,7 +152,7 @@ describe('Source Map Parsing', () => {
   })
 
   test('should parse inline source map with charset', async () => {
-    const { parseSourceMap } = await import('../../extension/inject.js')
+    const { parseSourceMap } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     const sourceMap = {
       version: 3,
@@ -170,7 +170,7 @@ describe('Source Map Parsing', () => {
   })
 
   test('should return null for source map without sourcesContent', async () => {
-    const { parseSourceMap } = await import('../../extension/inject.js')
+    const { parseSourceMap } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     const sourceMap = {
       version: 3,
@@ -186,7 +186,7 @@ describe('Source Map Parsing', () => {
   })
 
   test('should return null for invalid base64', async () => {
-    const { parseSourceMap } = await import('../../extension/inject.js')
+    const { parseSourceMap } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     const result = parseSourceMap('data:application/json;base64,!!!invalid!!!')
 
@@ -194,7 +194,7 @@ describe('Source Map Parsing', () => {
   })
 
   test('should return null for non-data-url string', async () => {
-    const { parseSourceMap } = await import('../../extension/inject.js')
+    const { parseSourceMap } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     const result = parseSourceMap('https://example.com/app.js.map')
 
@@ -202,13 +202,13 @@ describe('Source Map Parsing', () => {
   })
 
   test('should return null for empty string', async () => {
-    const { parseSourceMap } = await import('../../extension/inject.js')
+    const { parseSourceMap } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     assert.strictEqual(parseSourceMap(''), null)
   })
 
   test('should return null for null input', async () => {
-    const { parseSourceMap } = await import('../../extension/inject.js')
+    const { parseSourceMap } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     assert.strictEqual(parseSourceMap(null), null)
   })
@@ -218,7 +218,7 @@ describe('Source Map Parsing', () => {
 
 describe('Source Snippet Extraction', () => {
   test('should extract snippet with 5 lines before and after', async () => {
-    const { extractSnippet } = await import('../../extension/inject.js')
+    const { extractSnippet } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     const sourceContent = Array.from({ length: 20 }, (_, i) => `line ${i + 1} content`).join('\n')
 
@@ -233,7 +233,7 @@ describe('Source Snippet Extraction', () => {
   })
 
   test('should handle error on first line', async () => {
-    const { extractSnippet } = await import('../../extension/inject.js')
+    const { extractSnippet } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     const sourceContent = 'line 1\nline 2\nline 3\nline 4\nline 5\nline 6'
 
@@ -246,7 +246,7 @@ describe('Source Snippet Extraction', () => {
   })
 
   test('should handle error on last line', async () => {
-    const { extractSnippet } = await import('../../extension/inject.js')
+    const { extractSnippet } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     const sourceContent = 'line 1\nline 2\nline 3\nline 4\nline 5'
 
@@ -259,7 +259,7 @@ describe('Source Snippet Extraction', () => {
   })
 
   test('should truncate lines longer than 200 chars', async () => {
-    const { extractSnippet } = await import('../../extension/inject.js')
+    const { extractSnippet } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     const longLine = 'x'.repeat(300)
     const sourceContent = `line 1\n${longLine}\nline 3`
@@ -271,7 +271,7 @@ describe('Source Snippet Extraction', () => {
   })
 
   test('should return null for line number out of range', async () => {
-    const { extractSnippet } = await import('../../extension/inject.js')
+    const { extractSnippet } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     const sourceContent = 'line 1\nline 2\nline 3'
 
@@ -279,31 +279,31 @@ describe('Source Snippet Extraction', () => {
   })
 
   test('should return null for line 0', async () => {
-    const { extractSnippet } = await import('../../extension/inject.js')
+    const { extractSnippet } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     assert.strictEqual(extractSnippet('line 1', 0), null)
   })
 
   test('should return null for negative line', async () => {
-    const { extractSnippet } = await import('../../extension/inject.js')
+    const { extractSnippet } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     assert.strictEqual(extractSnippet('line 1', -1), null)
   })
 
   test('should return null for empty source content', async () => {
-    const { extractSnippet } = await import('../../extension/inject.js')
+    const { extractSnippet } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     assert.strictEqual(extractSnippet('', 1), null)
   })
 
   test('should return null for null source content', async () => {
-    const { extractSnippet } = await import('../../extension/inject.js')
+    const { extractSnippet } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     assert.strictEqual(extractSnippet(null, 1), null)
   })
 
   test('should mark only the error line with isError', async () => {
-    const { extractSnippet } = await import('../../extension/inject.js')
+    const { extractSnippet } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     const sourceContent = Array.from({ length: 20 }, (_, i) => `line ${i + 1}`).join('\n')
 
@@ -315,7 +315,7 @@ describe('Source Snippet Extraction', () => {
   })
 
   test('should only process top 3 stack frames', async () => {
-    const { extractSourceSnippets } = await import('../../extension/inject.js')
+    const { extractSourceSnippets } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     const frames = [
       { filename: 'a.js', lineno: 10 },
@@ -339,7 +339,7 @@ describe('Source Snippet Extraction', () => {
   })
 
   test('should cap total snippets payload at 10KB', async () => {
-    const { extractSourceSnippets } = await import('../../extension/inject.js')
+    const { extractSourceSnippets } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     // Each line 200 chars, 11 lines per snippet = 2200 chars per snippet
     const largeSource = Array.from({ length: 100 }, () => 'x'.repeat(200)).join('\n')
@@ -376,7 +376,7 @@ describe('Component Ancestry - React', () => {
   })
 
   test('should detect React from __reactFiber$ key', async () => {
-    const { detectFramework } = await import('../../extension/inject.js')
+    const { detectFramework } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     const element = { __reactFiber$abc123: {} }
     const result = detectFramework(element)
@@ -386,7 +386,7 @@ describe('Component Ancestry - React', () => {
   })
 
   test('should detect React from __reactInternalInstance$ key', async () => {
-    const { detectFramework } = await import('../../extension/inject.js')
+    const { detectFramework } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     const element = { __reactInternalInstance$xyz: {} }
     const result = detectFramework(element)
@@ -395,7 +395,7 @@ describe('Component Ancestry - React', () => {
   })
 
   test('should extract component names from fiber tree', async () => {
-    const { getReactComponentAncestry } = await import('../../extension/inject.js')
+    const { getReactComponentAncestry } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     const fiber = {
       type: { name: 'LoginForm' },
@@ -422,7 +422,7 @@ describe('Component Ancestry - React', () => {
   })
 
   test('should prefer displayName over name', async () => {
-    const { getReactComponentAncestry } = await import('../../extension/inject.js')
+    const { getReactComponentAncestry } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     const fiber = {
       type: { name: 'Comp', displayName: 'MyDisplayName' },
@@ -436,7 +436,7 @@ describe('Component Ancestry - React', () => {
   })
 
   test('should use Anonymous for unnamed components', async () => {
-    const { getReactComponentAncestry } = await import('../../extension/inject.js')
+    const { getReactComponentAncestry } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     const fiber = {
       type: { name: '', displayName: null },
@@ -450,7 +450,7 @@ describe('Component Ancestry - React', () => {
   })
 
   test('should extract prop keys excluding children', async () => {
-    const { getReactComponentAncestry } = await import('../../extension/inject.js')
+    const { getReactComponentAncestry } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     const fiber = {
       type: { name: 'Button' },
@@ -466,7 +466,7 @@ describe('Component Ancestry - React', () => {
   })
 
   test('should extract state keys', async () => {
-    const { getReactComponentAncestry } = await import('../../extension/inject.js')
+    const { getReactComponentAncestry } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     const fiber = {
       type: { name: 'Form' },
@@ -484,7 +484,7 @@ describe('Component Ancestry - React', () => {
   })
 
   test('should limit ancestry depth to 10', async () => {
-    const { getReactComponentAncestry } = await import('../../extension/inject.js')
+    const { getReactComponentAncestry } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     let current = null
     for (let i = 0; i < 15; i++) {
@@ -501,7 +501,7 @@ describe('Component Ancestry - React', () => {
   })
 
   test('should limit prop keys to 20', async () => {
-    const { getReactComponentAncestry } = await import('../../extension/inject.js')
+    const { getReactComponentAncestry } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     const props = {}
     for (let i = 0; i < 30; i++) props[`prop${i}`] = i
@@ -518,7 +518,7 @@ describe('Component Ancestry - React', () => {
   })
 
   test('should limit state keys to 10', async () => {
-    const { getReactComponentAncestry } = await import('../../extension/inject.js')
+    const { getReactComponentAncestry } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     const state = {}
     for (let i = 0; i < 15; i++) state[`state${i}`] = i
@@ -536,7 +536,7 @@ describe('Component Ancestry - React', () => {
   })
 
   test('should skip host elements (div, span, etc.)', async () => {
-    const { getReactComponentAncestry } = await import('../../extension/inject.js')
+    const { getReactComponentAncestry } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     const fiber = {
       type: { name: 'Child' },
@@ -561,7 +561,7 @@ describe('Component Ancestry - React', () => {
   })
 
   test('should handle null fiber gracefully', async () => {
-    const { getReactComponentAncestry } = await import('../../extension/inject.js')
+    const { getReactComponentAncestry } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     const ancestry = getReactComponentAncestry(null)
 
@@ -573,7 +573,7 @@ describe('Component Ancestry - React', () => {
 
 describe('Component Ancestry - Vue', () => {
   test('should detect Vue 3 from __vueParentComponent', async () => {
-    const { detectFramework } = await import('../../extension/inject.js')
+    const { detectFramework } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     const result = detectFramework({ __vueParentComponent: {} })
 
@@ -581,7 +581,7 @@ describe('Component Ancestry - Vue', () => {
   })
 
   test('should detect Vue app root from __vue_app__', async () => {
-    const { detectFramework } = await import('../../extension/inject.js')
+    const { detectFramework } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     const result = detectFramework({ __vue_app__: {} })
 
@@ -593,7 +593,7 @@ describe('Component Ancestry - Vue', () => {
 
 describe('Component Ancestry - Svelte', () => {
   test('should detect Svelte from __svelte_meta', async () => {
-    const { detectFramework } = await import('../../extension/inject.js')
+    const { detectFramework } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     const result = detectFramework({ __svelte_meta: { loc: { file: 'App.svelte' } } })
 
@@ -605,7 +605,7 @@ describe('Component Ancestry - Svelte', () => {
 
 describe('Framework Detection - None', () => {
   test('should return null for plain DOM elements', async () => {
-    const { detectFramework } = await import('../../extension/inject.js')
+    const { detectFramework } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     const result = detectFramework({ tagName: 'DIV', className: 'container' })
 
@@ -613,13 +613,13 @@ describe('Framework Detection - None', () => {
   })
 
   test('should return null for empty object', async () => {
-    const { detectFramework } = await import('../../extension/inject.js')
+    const { detectFramework } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     assert.strictEqual(detectFramework({}), null)
   })
 
   test('should return null for null', async () => {
-    const { detectFramework } = await import('../../extension/inject.js')
+    const { detectFramework } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     assert.strictEqual(detectFramework(null), null)
   })
@@ -638,7 +638,7 @@ describe('Application State Snapshot', () => {
   })
 
   test('should detect Redux store and extract keys', async () => {
-    const { captureStateSnapshot } = await import('../../extension/inject.js')
+    const { captureStateSnapshot } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     globalThis.window.__REDUX_STORE__ = {
       getState: () => ({
@@ -657,7 +657,7 @@ describe('Application State Snapshot', () => {
   })
 
   test('should extract correct types for state values', async () => {
-    const { captureStateSnapshot } = await import('../../extension/inject.js')
+    const { captureStateSnapshot } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     globalThis.window.__REDUX_STORE__ = {
       getState: () => ({
@@ -682,7 +682,7 @@ describe('Application State Snapshot', () => {
   })
 
   test('should extract relevant slice based on error keywords', async () => {
-    const { captureStateSnapshot } = await import('../../extension/inject.js')
+    const { captureStateSnapshot } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     globalThis.window.__REDUX_STORE__ = {
       getState: () => ({
@@ -703,7 +703,7 @@ describe('Application State Snapshot', () => {
   })
 
   test('should include error/loading/status keys in relevant slice', async () => {
-    const { captureStateSnapshot } = await import('../../extension/inject.js')
+    const { captureStateSnapshot } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     globalThis.window.__REDUX_STORE__ = {
       getState: () => ({
@@ -722,7 +722,7 @@ describe('Application State Snapshot', () => {
   })
 
   test('should limit relevant slice to 10 entries', async () => {
-    const { captureStateSnapshot } = await import('../../extension/inject.js')
+    const { captureStateSnapshot } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     const state = {}
     for (let i = 0; i < 20; i++) {
@@ -739,7 +739,7 @@ describe('Application State Snapshot', () => {
   })
 
   test('should truncate values at 200 chars', async () => {
-    const { captureStateSnapshot } = await import('../../extension/inject.js')
+    const { captureStateSnapshot } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     globalThis.window.__REDUX_STORE__ = {
       getState: () => ({
@@ -756,7 +756,7 @@ describe('Application State Snapshot', () => {
   })
 
   test('should return null when no store is found', async () => {
-    const { captureStateSnapshot } = await import('../../extension/inject.js')
+    const { captureStateSnapshot } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     const snapshot = captureStateSnapshot('some error')
 
@@ -764,7 +764,7 @@ describe('Application State Snapshot', () => {
   })
 
   test('should handle store.getState() throwing', async () => {
-    const { captureStateSnapshot } = await import('../../extension/inject.js')
+    const { captureStateSnapshot } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     globalThis.window.__REDUX_STORE__ = {
       getState: () => {
@@ -784,7 +784,7 @@ describe('Application State Snapshot', () => {
 
 describe('AI Context Summary Generation', () => {
   test('should generate summary with all data', async () => {
-    const { generateAiSummary } = await import('../../extension/inject.js')
+    const { generateAiSummary } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     const summary = generateAiSummary({
       errorType: 'TypeError',
@@ -806,7 +806,7 @@ describe('AI Context Summary Generation', () => {
   })
 
   test('should generate summary with minimal data', async () => {
-    const { generateAiSummary } = await import('../../extension/inject.js')
+    const { generateAiSummary } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     const summary = generateAiSummary({
       errorType: 'Error',
@@ -824,7 +824,7 @@ describe('AI Context Summary Generation', () => {
   })
 
   test('should include component path when available', async () => {
-    const { generateAiSummary } = await import('../../extension/inject.js')
+    const { generateAiSummary } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     const summary = generateAiSummary({
       errorType: 'TypeError',
@@ -844,7 +844,7 @@ describe('AI Context Summary Generation', () => {
   })
 
   test('should include state info when available', async () => {
-    const { generateAiSummary } = await import('../../extension/inject.js')
+    const { generateAiSummary } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     const summary = generateAiSummary({
       errorType: 'Error',
@@ -877,7 +877,7 @@ describe('AI Context Enrichment Pipeline', () => {
   })
 
   test('should produce _aiContext field on error entries', async () => {
-    const { enrichErrorWithAiContext } = await import('../../extension/inject.js')
+    const { enrichErrorWithAiContext } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     const error = {
       type: 'exception',
@@ -898,7 +898,7 @@ describe('AI Context Enrichment Pipeline', () => {
   })
 
   test('should complete within 3s budget even if source map fetch hangs', async () => {
-    const { enrichErrorWithAiContext } = await import('../../extension/inject.js')
+    const { enrichErrorWithAiContext } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     globalThis.window.fetch = () => new Promise(() => {}) // Never resolves
 
@@ -921,7 +921,7 @@ describe('AI Context Enrichment Pipeline', () => {
   })
 
   test('should skip enrichment when disabled', async () => {
-    const { enrichErrorWithAiContext, setAiContextEnabled } = await import('../../extension/inject.js')
+    const { enrichErrorWithAiContext, setAiContextEnabled } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     setAiContextEnabled(false)
 
@@ -941,7 +941,7 @@ describe('AI Context Enrichment Pipeline', () => {
   })
 
   test('should include componentAncestry when React fiber found on activeElement', async () => {
-    const { enrichErrorWithAiContext } = await import('../../extension/inject.js')
+    const { enrichErrorWithAiContext } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     globalThis.document.activeElement = {
       __reactFiber$test: {
@@ -968,7 +968,7 @@ describe('AI Context Enrichment Pipeline', () => {
   })
 
   test('should include stateSnapshot when store exists and setting enabled', async () => {
-    const { enrichErrorWithAiContext, setAiContextStateSnapshot } = await import('../../extension/inject.js')
+    const { enrichErrorWithAiContext, setAiContextStateSnapshot } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     setAiContextStateSnapshot(true)
 
@@ -995,7 +995,7 @@ describe('AI Context Enrichment Pipeline', () => {
   })
 
   test('should not include stateSnapshot when setting disabled', async () => {
-    const { enrichErrorWithAiContext, setAiContextStateSnapshot } = await import('../../extension/inject.js')
+    const { enrichErrorWithAiContext, setAiContextStateSnapshot } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     setAiContextStateSnapshot(false) // Default
 
@@ -1023,7 +1023,7 @@ describe('AI Context Enrichment Pipeline', () => {
 
 describe('Source Map Cache', () => {
   test('should cache and retrieve source maps', async () => {
-    const { setSourceMapCache, getSourceMapCache } = await import('../../extension/inject.js')
+    const { setSourceMapCache, getSourceMapCache } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     const mockMap = { sources: ['app.ts'], sourcesContent: ['code'] }
     setSourceMapCache('http://localhost/main.js', mockMap)
@@ -1034,7 +1034,7 @@ describe('Source Map Cache', () => {
   })
 
   test('should return null for uncached URL', async () => {
-    const { getSourceMapCache } = await import('../../extension/inject.js')
+    const { getSourceMapCache } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     const result = getSourceMapCache('http://localhost/unknown.js')
 
@@ -1042,7 +1042,7 @@ describe('Source Map Cache', () => {
   })
 
   test('should limit cache to 20 entries', async () => {
-    const { setSourceMapCache, getSourceMapCacheSize } = await import('../../extension/inject.js')
+    const { setSourceMapCache, getSourceMapCacheSize } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     for (let i = 0; i < 25; i++) {
       setSourceMapCache(`http://localhost/file${i}.js`, {
@@ -1055,7 +1055,7 @@ describe('Source Map Cache', () => {
   })
 
   test('should evict oldest entries when cache is full', async () => {
-    const { setSourceMapCache, getSourceMapCache } = await import('../../extension/inject.js')
+    const { setSourceMapCache, getSourceMapCache } = await import('../../extension/lib/ai-context/ai-context-parsing.js')
 
     // Fill cache
     for (let i = 0; i < 20; i++) {

@@ -115,7 +115,7 @@ describe('Performance Marks - getPerformanceMarks', () => {
   })
 
   test('should return all performance marks', async () => {
-    const { getPerformanceMarks } = await import('../../extension/inject.js')
+    const { getPerformanceMarks } = await import('../../extension/lib/analysis/performance.js')
 
     globalThis.performance._addEntry(createMockMark('pageLoad', 100))
     globalThis.performance._addEntry(createMockMark('componentMount', 200))
@@ -127,7 +127,7 @@ describe('Performance Marks - getPerformanceMarks', () => {
   })
 
   test('should include mark name and startTime', async () => {
-    const { getPerformanceMarks } = await import('../../extension/inject.js')
+    const { getPerformanceMarks } = await import('../../extension/lib/analysis/performance.js')
 
     globalThis.performance._addEntry(createMockMark('userAction', 500))
 
@@ -138,7 +138,7 @@ describe('Performance Marks - getPerformanceMarks', () => {
   })
 
   test('should include mark detail if present', async () => {
-    const { getPerformanceMarks } = await import('../../extension/inject.js')
+    const { getPerformanceMarks } = await import('../../extension/lib/analysis/performance.js')
 
     globalThis.performance._addEntry(createMockMark('checkout', 300, { step: 'payment', items: 3 }))
 
@@ -149,7 +149,7 @@ describe('Performance Marks - getPerformanceMarks', () => {
   })
 
   test('should filter marks by time range', async () => {
-    const { getPerformanceMarks } = await import('../../extension/inject.js')
+    const { getPerformanceMarks } = await import('../../extension/lib/analysis/performance.js')
 
     globalThis.performance._addEntry(createMockMark('early', 100))
     globalThis.performance._addEntry(createMockMark('late', 500))
@@ -161,7 +161,8 @@ describe('Performance Marks - getPerformanceMarks', () => {
   })
 
   test('should limit number of marks returned', async () => {
-    const { getPerformanceMarks, MAX_PERFORMANCE_ENTRIES } = await import('../../extension/inject.js')
+    const { getPerformanceMarks } = await import('../../extension/lib/analysis/performance.js')
+    const { MAX_PERFORMANCE_ENTRIES } = await import('../../extension/lib/constants.js')
 
     for (let i = 0; i < 100; i++) {
       globalThis.performance._addEntry(createMockMark(`mark-${i}`, i * 10))
@@ -173,7 +174,7 @@ describe('Performance Marks - getPerformanceMarks', () => {
   })
 
   test('should sort marks by startTime', async () => {
-    const { getPerformanceMarks } = await import('../../extension/inject.js')
+    const { getPerformanceMarks } = await import('../../extension/lib/analysis/performance.js')
 
     globalThis.performance._addEntry(createMockMark('second', 200))
     globalThis.performance._addEntry(createMockMark('first', 100))
@@ -184,7 +185,7 @@ describe('Performance Marks - getPerformanceMarks', () => {
   })
 
   test('should return empty array when performance API unavailable', async () => {
-    const { getPerformanceMarks } = await import('../../extension/inject.js')
+    const { getPerformanceMarks } = await import('../../extension/lib/analysis/performance.js')
 
     globalThis.performance = null
 
@@ -212,7 +213,7 @@ describe('Performance Marks - getPerformanceMeasures', () => {
   })
 
   test('should return all performance measures', async () => {
-    const { getPerformanceMeasures } = await import('../../extension/inject.js')
+    const { getPerformanceMeasures } = await import('../../extension/lib/analysis/performance.js')
 
     globalThis.performance._addEntry(createMockMeasure('pageLoadTime', 0, 1500))
     globalThis.performance._addEntry(createMockMeasure('apiCallDuration', 100, 300))
@@ -224,7 +225,7 @@ describe('Performance Marks - getPerformanceMeasures', () => {
   })
 
   test('should include measure name, startTime, and duration', async () => {
-    const { getPerformanceMeasures } = await import('../../extension/inject.js')
+    const { getPerformanceMeasures } = await import('../../extension/lib/analysis/performance.js')
 
     globalThis.performance._addEntry(createMockMeasure('renderTime', 200, 150))
 
@@ -236,7 +237,7 @@ describe('Performance Marks - getPerformanceMeasures', () => {
   })
 
   test('should include measure detail if present', async () => {
-    const { getPerformanceMeasures } = await import('../../extension/inject.js')
+    const { getPerformanceMeasures } = await import('../../extension/lib/analysis/performance.js')
 
     const measure = createMockMeasure('apiCall', 100, 200, { endpoint: '/api/users' })
     globalThis.performance._addEntry(measure)
@@ -247,7 +248,7 @@ describe('Performance Marks - getPerformanceMeasures', () => {
   })
 
   test('should filter measures by time range', async () => {
-    const { getPerformanceMeasures } = await import('../../extension/inject.js')
+    const { getPerformanceMeasures } = await import('../../extension/lib/analysis/performance.js')
 
     globalThis.performance._addEntry(createMockMeasure('early', 50, 100))
     globalThis.performance._addEntry(createMockMeasure('late', 400, 100))
@@ -277,7 +278,7 @@ describe('Performance Marks - wrapPerformanceMark', () => {
 
   test('should wrap performance.mark to capture calls', async () => {
     const { installPerformanceCapture, uninstallPerformanceCapture, getCapturedMarks } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/analysis/performance.js')
 
     installPerformanceCapture()
 
@@ -291,7 +292,7 @@ describe('Performance Marks - wrapPerformanceMark', () => {
   })
 
   test('should preserve original mark behavior', async () => {
-    const { installPerformanceCapture, uninstallPerformanceCapture } = await import('../../extension/inject.js')
+    const { installPerformanceCapture, uninstallPerformanceCapture } = await import('../../extension/lib/analysis/performance.js')
 
     const originalMark = globalThis.performance.mark
 
@@ -307,7 +308,7 @@ describe('Performance Marks - wrapPerformanceMark', () => {
 
   test('should include timestamp when mark is created', async () => {
     const { installPerformanceCapture, uninstallPerformanceCapture, getCapturedMarks } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/analysis/performance.js')
 
     installPerformanceCapture()
 
@@ -340,7 +341,7 @@ describe('Performance Marks - wrapPerformanceMeasure', () => {
 
   test('should wrap performance.measure to capture calls', async () => {
     const { installPerformanceCapture, uninstallPerformanceCapture, getCapturedMeasures } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/analysis/performance.js')
 
     installPerformanceCapture()
 
@@ -354,7 +355,7 @@ describe('Performance Marks - wrapPerformanceMeasure', () => {
   })
 
   test('should preserve original measure behavior', async () => {
-    const { installPerformanceCapture, uninstallPerformanceCapture } = await import('../../extension/inject.js')
+    const { installPerformanceCapture, uninstallPerformanceCapture } = await import('../../extension/lib/analysis/performance.js')
 
     const originalMeasure = globalThis.performance.measure
 
@@ -386,7 +387,7 @@ describe('Performance Marks - Error Integration', () => {
   })
 
   test('should create performance snapshot for error', async () => {
-    const { getPerformanceSnapshotForError, setPerformanceMarksEnabled } = await import('../../extension/inject.js')
+    const { getPerformanceSnapshotForError, setPerformanceMarksEnabled } = await import('../../extension/lib/analysis/performance.js')
 
     setPerformanceMarksEnabled(true)
 
@@ -409,7 +410,7 @@ describe('Performance Marks - Error Integration', () => {
   })
 
   test('should respect performanceMarksEnabled setting', async () => {
-    const { getPerformanceSnapshotForError, setPerformanceMarksEnabled } = await import('../../extension/inject.js')
+    const { getPerformanceSnapshotForError, setPerformanceMarksEnabled } = await import('../../extension/lib/analysis/performance.js')
 
     setPerformanceMarksEnabled(false)
 
@@ -424,7 +425,7 @@ describe('Performance Marks - Error Integration', () => {
   })
 
   test('should only include recent entries (last 60 seconds)', async () => {
-    const { getPerformanceSnapshotForError, setPerformanceMarksEnabled } = await import('../../extension/inject.js')
+    const { getPerformanceSnapshotForError, setPerformanceMarksEnabled } = await import('../../extension/lib/analysis/performance.js')
 
     setPerformanceMarksEnabled(true)
 
@@ -445,7 +446,7 @@ describe('Performance Marks - Error Integration', () => {
   })
 
   test('should include navigation timing', async () => {
-    const { getPerformanceSnapshotForError, setPerformanceMarksEnabled } = await import('../../extension/inject.js')
+    const { getPerformanceSnapshotForError, setPerformanceMarksEnabled } = await import('../../extension/lib/analysis/performance.js')
 
     setPerformanceMarksEnabled(true)
 
@@ -489,7 +490,7 @@ describe('Performance Marks - Configuration', () => {
   })
 
   test('setPerformanceMarksEnabled should toggle feature', async () => {
-    const { setPerformanceMarksEnabled, isPerformanceMarksEnabled } = await import('../../extension/inject.js')
+    const { setPerformanceMarksEnabled, isPerformanceMarksEnabled } = await import('../../extension/lib/analysis/performance.js')
 
     setPerformanceMarksEnabled(true)
     assert.strictEqual(isPerformanceMarksEnabled(), true)
@@ -499,8 +500,8 @@ describe('Performance Marks - Configuration', () => {
   })
 
   test('should expose performance marks through __kaboom API', async () => {
-    const { installKaboomAPI, uninstallKaboomAPI, setPerformanceMarksEnabled } =
-      await import('../../extension/inject.js')
+    const { installKaboomAPI, uninstallKaboomAPI } = await import('../../extension/inject/api.js')
+    const { setPerformanceMarksEnabled } = await import('../../extension/lib/analysis/performance.js')
 
     setPerformanceMarksEnabled(true)
     installKaboomAPI()
@@ -515,7 +516,7 @@ describe('Performance Marks - Configuration', () => {
 
   test('should clear captured data on uninstall', async () => {
     const { installPerformanceCapture, uninstallPerformanceCapture, getCapturedMarks, getCapturedMeasures } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/analysis/performance.js')
 
     installPerformanceCapture()
 
@@ -553,7 +554,7 @@ describe('Performance Marks - PerformanceObserver', () => {
 
   test('should use PerformanceObserver when available', async () => {
     const { installPerformanceCapture, uninstallPerformanceCapture, isPerformanceCaptureActive } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/analysis/performance.js')
 
     // First uninstall any existing capture (from module auto-init)
     uninstallPerformanceCapture()
@@ -595,7 +596,7 @@ describe('Performance Marks - PerformanceObserver', () => {
 
   test('should fall back to polling when PerformanceObserver unavailable', async () => {
     const { installPerformanceCapture, uninstallPerformanceCapture, isPerformanceCaptureActive } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/analysis/performance.js')
 
     delete globalThis.window.PerformanceObserver
 

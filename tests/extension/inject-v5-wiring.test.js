@@ -31,8 +31,8 @@ describe('V5 Wiring: Exception handler enrichment', () => {
   })
 
   test('window.onerror should enrich error with AI context before posting', async () => {
-    const { installExceptionCapture, uninstallExceptionCapture, setAiContextEnabled } =
-      await import('../../extension/inject.js')
+    const { installExceptionCapture, uninstallExceptionCapture } = await import('../../extension/lib/page/exceptions.js')
+    const { setAiContextEnabled } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     setAiContextEnabled(true)
     installExceptionCapture()
@@ -60,8 +60,8 @@ describe('V5 Wiring: Exception handler enrichment', () => {
   })
 
   test('unhandled rejection should enrich error with AI context', async () => {
-    const { installExceptionCapture, uninstallExceptionCapture, setAiContextEnabled } =
-      await import('../../extension/inject.js')
+    const { installExceptionCapture, uninstallExceptionCapture } = await import('../../extension/lib/page/exceptions.js')
+    const { setAiContextEnabled } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     setAiContextEnabled(true)
     installExceptionCapture()
@@ -88,8 +88,8 @@ describe('V5 Wiring: Exception handler enrichment', () => {
   })
 
   test('should still post error when AI context is disabled', async () => {
-    const { installExceptionCapture, uninstallExceptionCapture, setAiContextEnabled } =
-      await import('../../extension/inject.js')
+    const { installExceptionCapture, uninstallExceptionCapture } = await import('../../extension/lib/page/exceptions.js')
+    const { setAiContextEnabled } = await import('../../extension/lib/ai-context/ai-context-enrichment.js')
 
     setAiContextEnabled(false)
     installExceptionCapture()
@@ -112,15 +112,15 @@ describe('V5 Wiring: Exception handler enrichment', () => {
 })
 
 describe('V5 Wiring: Kaboom API exports', () => {
-  test('inject bundle should export Kaboom API installers only', async () => {
-    const injectModule = await import('../../extension/inject.js')
+  test('API module should export Kaboom API installers only', async () => {
+    const apiModule = await import('../../extension/inject/api.js')
 
     // Kaboom-named installers are the public surface...
-    assert.strictEqual(typeof injectModule.installKaboomAPI, 'function')
-    assert.strictEqual(typeof injectModule.uninstallKaboomAPI, 'function')
+    assert.strictEqual(typeof apiModule.installKaboomAPI, 'function')
+    assert.strictEqual(typeof apiModule.uninstallKaboomAPI, 'function')
     // ...and the pre-rebrand Gasoline aliases must no longer be exported.
-    assert.strictEqual(injectModule.installGasolineAPI, undefined)
-    assert.strictEqual(injectModule.uninstallGasolineAPI, undefined)
+    assert.strictEqual(apiModule.installGasolineAPI, undefined)
+    assert.strictEqual(apiModule.uninstallGasolineAPI, undefined)
   })
 })
 
@@ -140,8 +140,8 @@ describe('V5 Wiring: Enhanced action recording in handlers', () => {
   })
 
   test('handleClick should also call recordEnhancedAction', async () => {
-    const { handleClick, getEnhancedActionBuffer, clearEnhancedActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/inject.js')
+    const { handleClick, setActionCaptureEnabled } = await import('../../extension/lib/page/actions.js')
+    const { getEnhancedActionBuffer, clearEnhancedActionBuffer } = await import('../../extension/lib/page/reproduction.js')
 
     clearEnhancedActionBuffer()
     setActionCaptureEnabled(true)
@@ -179,8 +179,8 @@ describe('V5 Wiring: Enhanced action recording in handlers', () => {
   })
 
   test('handleInput should also call recordEnhancedAction', async () => {
-    const { handleInput, getEnhancedActionBuffer, clearEnhancedActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/inject.js')
+    const { handleInput, setActionCaptureEnabled } = await import('../../extension/lib/page/actions.js')
+    const { getEnhancedActionBuffer, clearEnhancedActionBuffer } = await import('../../extension/lib/page/reproduction.js')
 
     clearEnhancedActionBuffer()
     setActionCaptureEnabled(true)
@@ -217,8 +217,8 @@ describe('V5 Wiring: Enhanced action recording in handlers', () => {
   })
 
   test('handleInput should redact password fields in enhanced action', async () => {
-    const { handleInput, getEnhancedActionBuffer, clearEnhancedActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/inject.js')
+    const { handleInput, setActionCaptureEnabled } = await import('../../extension/lib/page/actions.js')
+    const { getEnhancedActionBuffer, clearEnhancedActionBuffer } = await import('../../extension/lib/page/reproduction.js')
 
     clearEnhancedActionBuffer()
     setActionCaptureEnabled(true)
@@ -250,8 +250,8 @@ describe('V5 Wiring: Enhanced action recording in handlers', () => {
   })
 
   test('handleScroll should call recordEnhancedAction with scroll type', async () => {
-    const { handleScroll, getEnhancedActionBuffer, clearEnhancedActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/inject.js')
+    const { handleScroll, setActionCaptureEnabled } = await import('../../extension/lib/page/actions.js')
+    const { getEnhancedActionBuffer, clearEnhancedActionBuffer } = await import('../../extension/lib/page/reproduction.js')
 
     clearEnhancedActionBuffer()
     setActionCaptureEnabled(true)
@@ -278,8 +278,8 @@ describe('V5 Wiring: Enhanced action recording in handlers', () => {
   })
 
   test('keydown handler should call recordEnhancedAction with keypress type', async () => {
-    const { handleKeydown, getEnhancedActionBuffer, clearEnhancedActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/inject.js')
+    const { handleKeydown, setActionCaptureEnabled } = await import('../../extension/lib/page/actions.js')
+    const { getEnhancedActionBuffer, clearEnhancedActionBuffer } = await import('../../extension/lib/page/reproduction.js')
 
     clearEnhancedActionBuffer()
     setActionCaptureEnabled(true)
@@ -313,8 +313,8 @@ describe('V5 Wiring: Enhanced action recording in handlers', () => {
   })
 
   test('keydown handler should only record actionable keys (Enter, Escape, Tab, arrows)', async () => {
-    const { handleKeydown, getEnhancedActionBuffer, clearEnhancedActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/inject.js')
+    const { handleKeydown, setActionCaptureEnabled } = await import('../../extension/lib/page/actions.js')
+    const { getEnhancedActionBuffer, clearEnhancedActionBuffer } = await import('../../extension/lib/page/reproduction.js')
 
     clearEnhancedActionBuffer()
     setActionCaptureEnabled(true)
@@ -356,8 +356,8 @@ describe('V5 Wiring: Enhanced action recording in handlers', () => {
   })
 
   test('change handler on select should call recordEnhancedAction with select type', async () => {
-    const { handleChange, getEnhancedActionBuffer, clearEnhancedActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/inject.js')
+    const { handleChange, setActionCaptureEnabled } = await import('../../extension/lib/page/actions.js')
+    const { getEnhancedActionBuffer, clearEnhancedActionBuffer } = await import('../../extension/lib/page/reproduction.js')
 
     clearEnhancedActionBuffer()
     setActionCaptureEnabled(true)
@@ -392,8 +392,8 @@ describe('V5 Wiring: Enhanced action recording in handlers', () => {
   })
 
   test('change handler should ignore non-select elements', async () => {
-    const { handleChange, getEnhancedActionBuffer, clearEnhancedActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/inject.js')
+    const { handleChange, setActionCaptureEnabled } = await import('../../extension/lib/page/actions.js')
+    const { getEnhancedActionBuffer, clearEnhancedActionBuffer } = await import('../../extension/lib/page/reproduction.js')
 
     clearEnhancedActionBuffer()
     setActionCaptureEnabled(true)
@@ -425,7 +425,7 @@ describe('V5 Wiring: Enhanced action recording in handlers', () => {
   })
 
   test('installActionCapture should register keydown and change listeners', async () => {
-    const { installActionCapture, uninstallActionCapture } = await import('../../extension/inject.js')
+    const { installActionCapture, uninstallActionCapture } = await import('../../extension/lib/page/actions.js')
 
     installActionCapture()
 
@@ -460,8 +460,8 @@ describe('V5 Wiring: Enhanced action postMessage emission', () => {
   })
 
   test('enhanced action payload has spec-compliant base shape', async () => {
-    const { recordEnhancedAction, clearEnhancedActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/inject.js')
+    const { recordEnhancedAction, clearEnhancedActionBuffer } = await import('../../extension/lib/page/reproduction.js')
+    const { setActionCaptureEnabled } = await import('../../extension/lib/page/actions.js')
 
     clearEnhancedActionBuffer()
     setActionCaptureEnabled(true)
@@ -500,8 +500,8 @@ describe('V5 Wiring: Enhanced action postMessage emission', () => {
   })
 
   test('recordEnhancedAction should emit kaboom_enhanced_action via postMessage', async () => {
-    const { recordEnhancedAction, clearEnhancedActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/inject.js')
+    const { recordEnhancedAction, clearEnhancedActionBuffer } = await import('../../extension/lib/page/reproduction.js')
+    const { setActionCaptureEnabled } = await import('../../extension/lib/page/actions.js')
 
     clearEnhancedActionBuffer()
     setActionCaptureEnabled(true)
@@ -537,8 +537,8 @@ describe('V5 Wiring: Enhanced action postMessage emission', () => {
   })
 
   test('recordEnhancedAction should include all action fields in postMessage', async () => {
-    const { recordEnhancedAction, clearEnhancedActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/inject.js')
+    const { recordEnhancedAction, clearEnhancedActionBuffer } = await import('../../extension/lib/page/reproduction.js')
+    const { setActionCaptureEnabled } = await import('../../extension/lib/page/actions.js')
 
     clearEnhancedActionBuffer()
     setActionCaptureEnabled(true)
@@ -596,8 +596,8 @@ describe('V5 Wiring: Navigation event recording', () => {
   })
 
   test('should record enhanced action on popstate', async () => {
-    const { installNavigationCapture, uninstallNavigationCapture, getEnhancedActionBuffer, clearEnhancedActionBuffer } =
-      await import('../../extension/inject.js')
+    const { installNavigationCapture, uninstallNavigationCapture } = await import('../../extension/lib/page/actions.js')
+    const { getEnhancedActionBuffer, clearEnhancedActionBuffer } = await import('../../extension/lib/page/reproduction.js')
 
     clearEnhancedActionBuffer()
 
@@ -622,8 +622,8 @@ describe('V5 Wiring: Navigation event recording', () => {
   })
 
   test('should record enhanced action on pushState', async () => {
-    const { installNavigationCapture, uninstallNavigationCapture, getEnhancedActionBuffer, clearEnhancedActionBuffer } =
-      await import('../../extension/inject.js')
+    const { installNavigationCapture, uninstallNavigationCapture } = await import('../../extension/lib/page/actions.js')
+    const { getEnhancedActionBuffer, clearEnhancedActionBuffer } = await import('../../extension/lib/page/reproduction.js')
 
     clearEnhancedActionBuffer()
 
@@ -644,8 +644,8 @@ describe('V5 Wiring: Navigation event recording', () => {
   })
 
   test('should record enhanced action on replaceState', async () => {
-    const { installNavigationCapture, uninstallNavigationCapture, getEnhancedActionBuffer, clearEnhancedActionBuffer } =
-      await import('../../extension/inject.js')
+    const { installNavigationCapture, uninstallNavigationCapture } = await import('../../extension/lib/page/actions.js')
+    const { getEnhancedActionBuffer, clearEnhancedActionBuffer } = await import('../../extension/lib/page/reproduction.js')
 
     clearEnhancedActionBuffer()
 
@@ -664,8 +664,8 @@ describe('V5 Wiring: Navigation event recording', () => {
   })
 
   test('navigate action should include from_url', async () => {
-    const { installNavigationCapture, uninstallNavigationCapture, getEnhancedActionBuffer, clearEnhancedActionBuffer } =
-      await import('../../extension/inject.js')
+    const { installNavigationCapture, uninstallNavigationCapture } = await import('../../extension/lib/page/actions.js')
+    const { getEnhancedActionBuffer, clearEnhancedActionBuffer } = await import('../../extension/lib/page/reproduction.js')
 
     clearEnhancedActionBuffer()
 

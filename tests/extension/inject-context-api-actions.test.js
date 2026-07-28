@@ -30,7 +30,7 @@ describe('Context Annotations', () => {
 
   test('should set and get context annotation', async () => {
     const { setContextAnnotation, getContextAnnotations, clearContextAnnotations } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/page/context.js')
 
     clearContextAnnotations()
 
@@ -46,7 +46,7 @@ describe('Context Annotations', () => {
 
   test('should remove context annotation', async () => {
     const { setContextAnnotation, removeContextAnnotation, getContextAnnotations, clearContextAnnotations } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/page/context.js')
 
     clearContextAnnotations()
 
@@ -62,7 +62,7 @@ describe('Context Annotations', () => {
 
   test('should clear all annotations', async () => {
     const { setContextAnnotation, clearContextAnnotations, getContextAnnotations } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/page/context.js')
 
     setContextAnnotation('a', 1)
     setContextAnnotation('b', 2)
@@ -74,7 +74,7 @@ describe('Context Annotations', () => {
   })
 
   test('should reject empty key', async () => {
-    const { setContextAnnotation, clearContextAnnotations } = await import('../../extension/inject.js')
+    const { setContextAnnotation, clearContextAnnotations } = await import('../../extension/lib/page/context.js')
 
     clearContextAnnotations()
 
@@ -83,7 +83,7 @@ describe('Context Annotations', () => {
   })
 
   test('should reject non-string key', async () => {
-    const { setContextAnnotation, clearContextAnnotations } = await import('../../extension/inject.js')
+    const { setContextAnnotation, clearContextAnnotations } = await import('../../extension/lib/page/context.js')
 
     clearContextAnnotations()
 
@@ -92,7 +92,7 @@ describe('Context Annotations', () => {
   })
 
   test('should reject key longer than 100 chars', async () => {
-    const { setContextAnnotation, clearContextAnnotations } = await import('../../extension/inject.js')
+    const { setContextAnnotation, clearContextAnnotations } = await import('../../extension/lib/page/context.js')
 
     clearContextAnnotations()
 
@@ -103,7 +103,7 @@ describe('Context Annotations', () => {
 
   test('should truncate large values', async () => {
     const { setContextAnnotation, getContextAnnotations, clearContextAnnotations } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/page/context.js')
 
     clearContextAnnotations()
 
@@ -117,8 +117,8 @@ describe('Context Annotations', () => {
   })
 
   test('should include context in error logs', async () => {
-    const { installConsoleCapture, uninstallConsoleCapture, setContextAnnotation, clearContextAnnotations } =
-      await import('../../extension/inject.js')
+    const { installConsoleCapture, uninstallConsoleCapture } = await import('../../extension/lib/page/console.js')
+    const { setContextAnnotation, clearContextAnnotations } = await import('../../extension/lib/page/context.js')
 
     clearContextAnnotations()
     setContextAnnotation('checkout', { step: 'payment' })
@@ -136,8 +136,8 @@ describe('Context Annotations', () => {
   })
 
   test('should not include context in non-error logs', async () => {
-    const { installConsoleCapture, uninstallConsoleCapture, setContextAnnotation, clearContextAnnotations } =
-      await import('../../extension/inject.js')
+    const { installConsoleCapture, uninstallConsoleCapture } = await import('../../extension/lib/page/console.js')
+    const { setContextAnnotation, clearContextAnnotations } = await import('../../extension/lib/page/context.js')
 
     clearContextAnnotations()
     setContextAnnotation('checkout', { step: 'payment' })
@@ -165,7 +165,7 @@ describe('Kaboom API', () => {
   })
 
   test('should install window.__kaboom API', async () => {
-    const { installKaboomAPI, uninstallKaboomAPI } = await import('../../extension/inject.js')
+    const { installKaboomAPI, uninstallKaboomAPI } = await import('../../extension/inject/api.js')
 
     installKaboomAPI()
 
@@ -181,7 +181,7 @@ describe('Kaboom API', () => {
   })
 
   test('should uninstall window.__kaboom API', async () => {
-    const { installKaboomAPI, uninstallKaboomAPI } = await import('../../extension/inject.js')
+    const { installKaboomAPI, uninstallKaboomAPI } = await import('../../extension/inject/api.js')
 
     installKaboomAPI()
     assert.ok(globalThis.window.__kaboom)
@@ -191,8 +191,8 @@ describe('Kaboom API', () => {
   })
 
   test('__kaboom.annotate should work', async () => {
-    const { installKaboomAPI, uninstallKaboomAPI, clearContextAnnotations } =
-      await import('../../extension/inject.js')
+    const { installKaboomAPI, uninstallKaboomAPI } = await import('../../extension/inject/api.js')
+    const { clearContextAnnotations } = await import('../../extension/lib/page/context.js')
 
     clearContextAnnotations()
     installKaboomAPI()
@@ -208,8 +208,8 @@ describe('Kaboom API', () => {
   })
 
   test('__kaboom.getActions should work', async () => {
-    const { installKaboomAPI, uninstallKaboomAPI, recordAction, clearActionBuffer } =
-      await import('../../extension/inject.js')
+    const { installKaboomAPI, uninstallKaboomAPI } = await import('../../extension/inject/api.js')
+    const { recordAction, clearActionBuffer } = await import('../../extension/lib/page/actions.js')
 
     clearActionBuffer()
     installKaboomAPI()
@@ -225,8 +225,8 @@ describe('Kaboom API', () => {
   })
 
   test('__kaboom.clearActions should work', async () => {
-    const { installKaboomAPI, uninstallKaboomAPI, recordAction, getActionBuffer } =
-      await import('../../extension/inject.js')
+    const { installKaboomAPI, uninstallKaboomAPI } = await import('../../extension/inject/api.js')
+    const { recordAction, getActionBuffer } = await import('../../extension/lib/page/actions.js')
 
     installKaboomAPI()
 
@@ -240,14 +240,10 @@ describe('Kaboom API', () => {
   })
 
   test('__kaboom.setActionCapture should work', async () => {
-    const {
-      installKaboomAPI,
-      uninstallKaboomAPI,
-      recordAction,
-      getActionBuffer,
-      clearActionBuffer,
-      setActionCaptureEnabled
-    } = await import('../../extension/inject.js')
+    const { installKaboomAPI, uninstallKaboomAPI } = await import('../../extension/inject/api.js')
+    const { recordAction, getActionBuffer, clearActionBuffer, setActionCaptureEnabled } = await import(
+      '../../extension/lib/page/actions.js'
+    )
 
     clearActionBuffer()
     setActionCaptureEnabled(true)
@@ -281,7 +277,7 @@ describe('User Action Replay', () => {
 
   test('should record actions to buffer', async () => {
     const { recordAction, getActionBuffer, clearActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/page/actions.js')
 
     clearActionBuffer()
     setActionCaptureEnabled(true)
@@ -299,7 +295,7 @@ describe('User Action Replay', () => {
 
   test('should limit buffer to MAX_ACTION_BUFFER_SIZE (20)', async () => {
     const { recordAction, getActionBuffer, clearActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/page/actions.js')
 
     clearActionBuffer()
     setActionCaptureEnabled(true)
@@ -321,7 +317,7 @@ describe('User Action Replay', () => {
 
   test('should clear action buffer', async () => {
     const { recordAction, getActionBuffer, clearActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/page/actions.js')
 
     setActionCaptureEnabled(true)
     recordAction({ type: 'click' })
@@ -335,7 +331,7 @@ describe('User Action Replay', () => {
 
   test('should not record actions when capture disabled', async () => {
     const { recordAction, getActionBuffer, clearActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/page/actions.js')
 
     clearActionBuffer()
     setActionCaptureEnabled(false)
@@ -348,7 +344,7 @@ describe('User Action Replay', () => {
   })
 
   test('should get element selector with id', async () => {
-    const { getElementSelector } = await import('../../extension/inject.js')
+    const { getElementSelector } = await import('../../extension/lib/page/serialize.js')
 
     const element = {
       tagName: 'BUTTON',
@@ -363,7 +359,7 @@ describe('User Action Replay', () => {
   })
 
   test('should get element selector with classes', async () => {
-    const { getElementSelector } = await import('../../extension/inject.js')
+    const { getElementSelector } = await import('../../extension/lib/page/serialize.js')
 
     const element = {
       tagName: 'DIV',
@@ -379,7 +375,7 @@ describe('User Action Replay', () => {
   })
 
   test('should get element selector with data-testid', async () => {
-    const { getElementSelector } = await import('../../extension/inject.js')
+    const { getElementSelector } = await import('../../extension/lib/page/serialize.js')
 
     const element = {
       tagName: 'INPUT',
@@ -394,7 +390,7 @@ describe('User Action Replay', () => {
   })
 
   test('should truncate element selector to 100 chars', async () => {
-    const { getElementSelector } = await import('../../extension/inject.js')
+    const { getElementSelector } = await import('../../extension/lib/page/serialize.js')
 
     const element = {
       tagName: 'DIV',
@@ -408,13 +404,13 @@ describe('User Action Replay', () => {
   })
 
   test('should identify password inputs as sensitive', async () => {
-    const { isSensitiveInput } = await import('../../extension/inject.js')
+    const { isSensitiveInput } = await import('../../extension/lib/page/serialize.js')
 
     assert.strictEqual(isSensitiveInput({ type: 'password' }), true)
   })
 
   test('should identify credit card inputs as sensitive', async () => {
-    const { isSensitiveInput } = await import('../../extension/inject.js')
+    const { isSensitiveInput } = await import('../../extension/lib/page/serialize.js')
 
     assert.strictEqual(isSensitiveInput({ type: 'text', autocomplete: 'cc-number' }), true)
     assert.strictEqual(isSensitiveInput({ type: 'text', autocomplete: 'cc-exp' }), true)
@@ -422,7 +418,7 @@ describe('User Action Replay', () => {
   })
 
   test('should identify inputs by name as sensitive', async () => {
-    const { isSensitiveInput } = await import('../../extension/inject.js')
+    const { isSensitiveInput } = await import('../../extension/lib/page/serialize.js')
 
     assert.strictEqual(isSensitiveInput({ type: 'text', name: 'password' }), true)
     assert.strictEqual(isSensitiveInput({ type: 'text', name: 'user_password' }), true)
@@ -434,7 +430,7 @@ describe('User Action Replay', () => {
   })
 
   test('should not identify regular inputs as sensitive', async () => {
-    const { isSensitiveInput } = await import('../../extension/inject.js')
+    const { isSensitiveInput } = await import('../../extension/lib/page/serialize.js')
 
     assert.strictEqual(isSensitiveInput({ type: 'text', name: 'email' }), false)
     assert.strictEqual(isSensitiveInput({ type: 'text', name: 'username' }), false)
@@ -443,7 +439,7 @@ describe('User Action Replay', () => {
 
   test('should handle click event', async () => {
     const { handleClick, getActionBuffer, clearActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/page/actions.js')
 
     clearActionBuffer()
     setActionCaptureEnabled(true)
@@ -475,7 +471,7 @@ describe('User Action Replay', () => {
 
   test('should handle input event for non-sensitive field', async () => {
     const { handleInput, getActionBuffer, clearActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/page/actions.js')
 
     clearActionBuffer()
     setActionCaptureEnabled(true)
@@ -506,7 +502,7 @@ describe('User Action Replay', () => {
 
   test('should redact sensitive input values', async () => {
     const { handleInput, getActionBuffer, clearActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/page/actions.js')
 
     clearActionBuffer()
     setActionCaptureEnabled(true)
@@ -535,8 +531,8 @@ describe('User Action Replay', () => {
   })
 
   test('should include actions in error logs', async () => {
-    const { installConsoleCapture, uninstallConsoleCapture, recordAction, clearActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/inject.js')
+    const { installConsoleCapture, uninstallConsoleCapture } = await import('../../extension/lib/page/console.js')
+    const { recordAction, clearActionBuffer, setActionCaptureEnabled } = await import('../../extension/lib/page/actions.js')
 
     clearActionBuffer()
     setActionCaptureEnabled(true)
@@ -559,8 +555,8 @@ describe('User Action Replay', () => {
   })
 
   test('should not include actions in non-error logs', async () => {
-    const { installConsoleCapture, uninstallConsoleCapture, recordAction, clearActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/inject.js')
+    const { installConsoleCapture, uninstallConsoleCapture } = await import('../../extension/lib/page/console.js')
+    const { recordAction, clearActionBuffer, setActionCaptureEnabled } = await import('../../extension/lib/page/actions.js')
 
     clearActionBuffer()
     setActionCaptureEnabled(true)
@@ -580,7 +576,7 @@ describe('User Action Replay', () => {
 
   test('should handle null target in events', async () => {
     const { handleClick, handleInput, getActionBuffer, clearActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/page/actions.js')
 
     clearActionBuffer()
     setActionCaptureEnabled(true)
@@ -593,7 +589,7 @@ describe('User Action Replay', () => {
   })
 
   test('should handle element without tagName in selector', async () => {
-    const { getElementSelector } = await import('../../extension/inject.js')
+    const { getElementSelector } = await import('../../extension/lib/page/serialize.js')
 
     assert.strictEqual(getElementSelector(null), '')
     assert.strictEqual(getElementSelector({}), '')
@@ -602,7 +598,7 @@ describe('User Action Replay', () => {
 
   test('should handle scroll event', async () => {
     const { handleScroll, getActionBuffer, clearActionBuffer, setActionCaptureEnabled } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/page/actions.js')
 
     clearActionBuffer()
     setActionCaptureEnabled(true)

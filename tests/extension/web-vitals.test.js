@@ -83,7 +83,7 @@ describe('Web Vitals Capture', () => {
   })
 
   test('installPerfObservers creates observers for paint, LCP, CLS, longtask', async () => {
-    const mod = await import('../../extension/inject.js')
+    const mod = await import('../../extension/lib/analysis/perf-snapshot.js')
     mod.installPerfObservers()
 
     const types = MockPerformanceObserver._instances.flatMap((obs) => obs._types)
@@ -94,7 +94,7 @@ describe('Web Vitals Capture', () => {
   })
 
   test('FCP is captured from paint entries', async () => {
-    const mod = await import('../../extension/inject.js')
+    const mod = await import('../../extension/lib/analysis/perf-snapshot.js')
     mod.installPerfObservers()
 
     const paintObs = MockPerformanceObserver._instances.find((obs) => obs._types.includes('paint'))
@@ -106,7 +106,7 @@ describe('Web Vitals Capture', () => {
   })
 
   test('LCP updates to latest entry', async () => {
-    const mod = await import('../../extension/inject.js')
+    const mod = await import('../../extension/lib/analysis/perf-snapshot.js')
     mod.installPerfObservers()
 
     const lcpObs = MockPerformanceObserver._instances.find((obs) => obs._types.includes('largest-contentful-paint'))
@@ -122,7 +122,7 @@ describe('Web Vitals Capture', () => {
   })
 
   test('CLS accumulates layout shifts (ignores input-driven)', async () => {
-    const mod = await import('../../extension/inject.js')
+    const mod = await import('../../extension/lib/analysis/perf-snapshot.js')
     mod.installPerfObservers()
 
     const clsObs = MockPerformanceObserver._instances.find((obs) => obs._types.includes('layout-shift'))
@@ -153,13 +153,13 @@ describe('Web Vitals Capture', () => {
     }
     globalThis.PerformanceObserver.supportedEntryTypes = []
 
-    const mod = await import('../../extension/inject.js')
+    const mod = await import('../../extension/lib/analysis/perf-snapshot.js')
     // Observer errors propagate (not silently swallowed)
     assert.throws(() => mod.installPerfObservers(), { message: 'Not supported' })
   })
 
   test('installPerfObservers resets values', async () => {
-    const mod = await import('../../extension/inject.js')
+    const mod = await import('../../extension/lib/analysis/perf-snapshot.js')
     mod.installPerfObservers()
 
     // Simulate FCP
@@ -175,7 +175,7 @@ describe('Web Vitals Capture', () => {
   })
 
   test('uninstallPerfObservers disconnects all observers', async () => {
-    const mod = await import('../../extension/inject.js')
+    const mod = await import('../../extension/lib/analysis/perf-snapshot.js')
     mod.installPerfObservers()
 
     const observersBefore = MockPerformanceObserver._instances.filter((obs) => !obs._disconnected)
@@ -188,25 +188,25 @@ describe('Web Vitals Capture', () => {
   })
 
   test('getFCP returns null before any paint entry', async () => {
-    const mod = await import('../../extension/inject.js')
+    const mod = await import('../../extension/lib/analysis/perf-snapshot.js')
     mod.installPerfObservers()
     assert.strictEqual(mod.getFCP(), null)
   })
 
   test('getLCP returns null before any LCP entry', async () => {
-    const mod = await import('../../extension/inject.js')
+    const mod = await import('../../extension/lib/analysis/perf-snapshot.js')
     mod.installPerfObservers()
     assert.strictEqual(mod.getLCP(), null)
   })
 
   test('getCLS returns 0 before any layout shift', async () => {
-    const mod = await import('../../extension/inject.js')
+    const mod = await import('../../extension/lib/analysis/perf-snapshot.js')
     mod.installPerfObservers()
     assert.strictEqual(mod.getCLS(), 0)
   })
 
   test('INP observer is created for event type entries when installPerfObservers is called', async () => {
-    const mod = await import('../../extension/inject.js')
+    const mod = await import('../../extension/lib/analysis/perf-snapshot.js')
     mod.installPerfObservers()
 
     const types = MockPerformanceObserver._instances.flatMap((obs) => obs._types)
@@ -214,13 +214,13 @@ describe('Web Vitals Capture', () => {
   })
 
   test('getINP returns null before any interaction', async () => {
-    const mod = await import('../../extension/inject.js')
+    const mod = await import('../../extension/lib/analysis/perf-snapshot.js')
     mod.installPerfObservers()
     assert.strictEqual(mod.getINP(), null)
   })
 
   test('INP captures the highest duration from event entries with interactionId', async () => {
-    const mod = await import('../../extension/inject.js')
+    const mod = await import('../../extension/lib/analysis/perf-snapshot.js')
     mod.installPerfObservers()
 
     const eventObs = MockPerformanceObserver._instances.find((obs) => obs._types.includes('event'))
@@ -236,7 +236,7 @@ describe('Web Vitals Capture', () => {
   })
 
   test('INP ignores entries without interactionId', async () => {
-    const mod = await import('../../extension/inject.js')
+    const mod = await import('../../extension/lib/analysis/perf-snapshot.js')
     mod.installPerfObservers()
 
     const eventObs = MockPerformanceObserver._instances.find((obs) => obs._types.includes('event'))
@@ -252,7 +252,7 @@ describe('Web Vitals Capture', () => {
   })
 
   test('INP updates when a higher duration interaction occurs', async () => {
-    const mod = await import('../../extension/inject.js')
+    const mod = await import('../../extension/lib/analysis/perf-snapshot.js')
     mod.installPerfObservers()
 
     const eventObs = MockPerformanceObserver._instances.find((obs) => obs._types.includes('event'))
@@ -270,7 +270,7 @@ describe('Web Vitals Capture', () => {
   })
 
   test('uninstallPerfObservers disconnects INP observer', async () => {
-    const mod = await import('../../extension/inject.js')
+    const mod = await import('../../extension/lib/analysis/perf-snapshot.js')
     mod.installPerfObservers()
 
     const eventObs = MockPerformanceObserver._instances.find((obs) => obs._types.includes('event'))
@@ -282,7 +282,7 @@ describe('Web Vitals Capture', () => {
   })
 
   test('installPerfObservers resets INP value', async () => {
-    const mod = await import('../../extension/inject.js')
+    const mod = await import('../../extension/lib/analysis/perf-snapshot.js')
     mod.installPerfObservers()
 
     const eventObs = MockPerformanceObserver._instances.find((obs) => obs._types.includes('event'))
@@ -362,7 +362,7 @@ describe('Performance Snapshot Message Flow', () => {
     })
     globalThis.performance.getEntries = mock.fn(() => [])
 
-    const mod = await import('../../extension/inject.js')
+    const mod = await import('../../extension/lib/analysis/perf-snapshot.js')
     mod.setPerformanceSnapshotEnabled(true)
     mod.installPerfObservers()
 
@@ -395,7 +395,7 @@ describe('Performance Snapshot Message Flow', () => {
     })
     globalThis.performance.getEntries = mock.fn(() => [])
 
-    const mod = await import('../../extension/inject.js')
+    const mod = await import('../../extension/lib/analysis/perf-snapshot.js')
     mod.setPerformanceSnapshotEnabled(true)
     mod.installPerfObservers()
 
@@ -416,7 +416,7 @@ describe('Performance Snapshot Message Flow', () => {
   })
 
   test('sendPerformanceSnapshot does nothing when disabled', async () => {
-    const mod = await import('../../extension/inject.js')
+    const mod = await import('../../extension/lib/analysis/perf-snapshot.js')
     mod.setPerformanceSnapshotEnabled(false)
 
     mod.sendPerformanceSnapshot()

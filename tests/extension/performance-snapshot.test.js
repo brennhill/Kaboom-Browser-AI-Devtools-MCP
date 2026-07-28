@@ -96,7 +96,7 @@ describe('Performance Snapshot Capture', () => {
   })
 
   test('capturePerformanceSnapshot returns spec-compliant shape', async () => {
-    const { capturePerformanceSnapshot } = await import('../../extension/inject.js')
+    const { capturePerformanceSnapshot } = await import('../../extension/lib/analysis/perf-snapshot.js')
     const snapshot = capturePerformanceSnapshot()
 
     // Top-level fields from spec
@@ -129,7 +129,7 @@ describe('Performance Snapshot Capture', () => {
   })
 
   test('capturePerformanceSnapshot collects navigation timing', async () => {
-    const { capturePerformanceSnapshot } = await import('../../extension/inject.js')
+    const { capturePerformanceSnapshot } = await import('../../extension/lib/analysis/perf-snapshot.js')
 
     const snapshot = capturePerformanceSnapshot()
 
@@ -144,14 +144,14 @@ describe('Performance Snapshot Capture', () => {
   test('capturePerformanceSnapshot returns null when no navigation entry', async () => {
     globalThis.performance.getEntriesByType = mock.fn(() => [])
 
-    const { capturePerformanceSnapshot } = await import('../../extension/inject.js')
+    const { capturePerformanceSnapshot } = await import('../../extension/lib/analysis/perf-snapshot.js')
     const snapshot = capturePerformanceSnapshot()
 
     assert.strictEqual(snapshot, null)
   })
 
   test('capturePerformanceSnapshot includes timestamp and url', async () => {
-    const { capturePerformanceSnapshot } = await import('../../extension/inject.js')
+    const { capturePerformanceSnapshot } = await import('../../extension/lib/analysis/perf-snapshot.js')
 
     const snapshot = capturePerformanceSnapshot()
 
@@ -162,7 +162,7 @@ describe('Performance Snapshot Capture', () => {
   })
 
   test('aggregateResourceTiming groups by initiator type', async () => {
-    const { aggregateResourceTiming } = await import('../../extension/inject.js')
+    const { aggregateResourceTiming } = await import('../../extension/lib/analysis/perf-snapshot.js')
 
     const result = aggregateResourceTiming()
 
@@ -178,7 +178,7 @@ describe('Performance Snapshot Capture', () => {
   })
 
   test('aggregateResourceTiming calculates total sizes', async () => {
-    const { aggregateResourceTiming } = await import('../../extension/inject.js')
+    const { aggregateResourceTiming } = await import('../../extension/lib/analysis/perf-snapshot.js')
 
     const result = aggregateResourceTiming()
 
@@ -187,7 +187,7 @@ describe('Performance Snapshot Capture', () => {
   })
 
   test('aggregateResourceTiming returns top 3 slowest requests', async () => {
-    const { aggregateResourceTiming } = await import('../../extension/inject.js')
+    const { aggregateResourceTiming } = await import('../../extension/lib/analysis/perf-snapshot.js')
 
     const result = aggregateResourceTiming()
 
@@ -208,14 +208,14 @@ describe('Performance Snapshot Capture', () => {
       return []
     })
 
-    const { aggregateResourceTiming } = await import('../../extension/inject.js')
+    const { aggregateResourceTiming } = await import('../../extension/lib/analysis/perf-snapshot.js')
     const result = aggregateResourceTiming()
 
     assert.ok(result.slowest_requests[0].url.length <= 80)
   })
 
   test('mapInitiatorType maps known types correctly', async () => {
-    const { mapInitiatorType } = await import('../../extension/inject.js')
+    const { mapInitiatorType } = await import('../../extension/lib/analysis/perf-snapshot.js')
 
     assert.strictEqual(mapInitiatorType('script'), 'script')
     assert.strictEqual(mapInitiatorType('link'), 'style')
@@ -250,7 +250,7 @@ describe('Long Task Observer', () => {
   })
 
   test('installPerfObservers creates longtask observer', async () => {
-    const { installPerfObservers, uninstallPerfObservers } = await import('../../extension/inject.js')
+    const { installPerfObservers, uninstallPerfObservers } = await import('../../extension/lib/analysis/perf-snapshot.js')
 
     installPerfObservers()
 
@@ -262,7 +262,7 @@ describe('Long Task Observer', () => {
 
   test('getLongTaskMetrics returns accumulated long tasks', async () => {
     const { installPerfObservers, getLongTaskMetrics, uninstallPerfObservers } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/analysis/perf-snapshot.js')
 
     installPerfObservers()
 
@@ -290,7 +290,7 @@ describe('Long Task Observer', () => {
 
   test('getLongTaskMetrics caps at 50 entries', async () => {
     const { installPerfObservers, getLongTaskMetrics, uninstallPerfObservers } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/analysis/perf-snapshot.js')
 
     installPerfObservers()
 
@@ -331,7 +331,7 @@ describe('Web Vitals Observers', () => {
   })
 
   test('installPerfObservers creates paint observer for FCP', async () => {
-    const { installPerfObservers, uninstallPerfObservers } = await import('../../extension/inject.js')
+    const { installPerfObservers, uninstallPerfObservers } = await import('../../extension/lib/analysis/perf-snapshot.js')
 
     installPerfObservers()
 
@@ -342,7 +342,7 @@ describe('Web Vitals Observers', () => {
   })
 
   test('FCP value is captured from paint observer', async () => {
-    const { installPerfObservers, getFCP, uninstallPerfObservers } = await import('../../extension/inject.js')
+    const { installPerfObservers, getFCP, uninstallPerfObservers } = await import('../../extension/lib/analysis/perf-snapshot.js')
 
     installPerfObservers()
 
@@ -360,7 +360,7 @@ describe('Web Vitals Observers', () => {
   })
 
   test('LCP value captured from largest-contentful-paint observer', async () => {
-    const { installPerfObservers, getLCP, uninstallPerfObservers } = await import('../../extension/inject.js')
+    const { installPerfObservers, getLCP, uninstallPerfObservers } = await import('../../extension/lib/analysis/perf-snapshot.js')
 
     installPerfObservers()
 
@@ -382,7 +382,7 @@ describe('Web Vitals Observers', () => {
   })
 
   test('CLS accumulated from layout-shift observer', async () => {
-    const { installPerfObservers, getCLS, uninstallPerfObservers } = await import('../../extension/inject.js')
+    const { installPerfObservers, getCLS, uninstallPerfObservers } = await import('../../extension/lib/analysis/perf-snapshot.js')
 
     installPerfObservers()
 
@@ -405,7 +405,7 @@ describe('Web Vitals Observers', () => {
   })
 
   test('CLS ignores entries with hadRecentInput', async () => {
-    const { installPerfObservers, getCLS, uninstallPerfObservers } = await import('../../extension/inject.js')
+    const { installPerfObservers, getCLS, uninstallPerfObservers } = await import('../../extension/lib/analysis/perf-snapshot.js')
 
     installPerfObservers()
 
@@ -442,7 +442,7 @@ describe('Performance Snapshot Message', () => {
   })
 
   test('sendPerformanceSnapshot posts correct message type', async () => {
-    const { sendPerformanceSnapshot } = await import('../../extension/inject.js')
+    const { sendPerformanceSnapshot } = await import('../../extension/lib/analysis/perf-snapshot.js')
 
     sendPerformanceSnapshot()
 
@@ -455,7 +455,7 @@ describe('Performance Snapshot Message', () => {
   })
 
   test('sendPerformanceSnapshot includes all sections', async () => {
-    const { sendPerformanceSnapshot } = await import('../../extension/inject.js')
+    const { sendPerformanceSnapshot } = await import('../../extension/lib/analysis/perf-snapshot.js')
 
     sendPerformanceSnapshot()
 
@@ -472,7 +472,7 @@ describe('Performance Snapshot Message', () => {
   test('sendPerformanceSnapshot does nothing when no navigation entry', async () => {
     globalThis.performance.getEntriesByType = mock.fn(() => [])
 
-    const { sendPerformanceSnapshot } = await import('../../extension/inject.js')
+    const { sendPerformanceSnapshot } = await import('../../extension/lib/analysis/perf-snapshot.js')
     sendPerformanceSnapshot()
 
     assert.strictEqual(globalThis.window.postMessage.mock.calls.length, 0)
@@ -500,12 +500,12 @@ describe('Performance Snapshot Toggle', () => {
   })
 
   test('performance snapshot is enabled by default', async () => {
-    const { isPerformanceSnapshotEnabled } = await import('../../extension/inject.js')
+    const { isPerformanceSnapshotEnabled } = await import('../../extension/lib/analysis/perf-snapshot.js')
     assert.strictEqual(isPerformanceSnapshotEnabled(), true)
   })
 
   test('setPerformanceSnapshotEnabled can disable capture', async () => {
-    const { setPerformanceSnapshotEnabled, isPerformanceSnapshotEnabled } = await import('../../extension/inject.js')
+    const { setPerformanceSnapshotEnabled, isPerformanceSnapshotEnabled } = await import('../../extension/lib/analysis/perf-snapshot.js')
 
     setPerformanceSnapshotEnabled(false)
     assert.strictEqual(isPerformanceSnapshotEnabled(), false)

@@ -54,7 +54,7 @@ describe('Interception Deferral: Phase 1 (Immediate)', () => {
     'Phase 1 should install window.__kaboom API',
     { skip: 'installKaboomAPI has double-install guard — module state persists across tests' },
     async () => {
-      const { installPhase1 } = await import('../../extension/inject.js')
+      const { installPhase1 } = await import('../../extension/inject/observers.js')
 
       // Ensure clean state
       delete globalThis.window.__kaboom
@@ -70,7 +70,7 @@ describe('Interception Deferral: Phase 1 (Immediate)', () => {
   )
 
   test('Phase 1 should record injection timestamp', async () => {
-    const { installPhase1, getDeferralState } = await import('../../extension/inject.js')
+    const { installPhase1, getDeferralState } = await import('../../extension/inject/observers.js')
 
     installPhase1()
 
@@ -83,7 +83,7 @@ describe('Interception Deferral: Phase 1 (Immediate)', () => {
   })
 
   test('Phase 1 should NOT modify console methods', async () => {
-    const { installPhase1 } = await import('../../extension/inject.js')
+    const { installPhase1 } = await import('../../extension/inject/observers.js')
 
     const originalLog = globalThis.console.log
     const originalError = globalThis.console.error
@@ -100,7 +100,7 @@ describe('Interception Deferral: Phase 1 (Immediate)', () => {
   })
 
   test('Phase 1 should NOT modify fetch', async () => {
-    const { installPhase1 } = await import('../../extension/inject.js')
+    const { installPhase1 } = await import('../../extension/inject/observers.js')
 
     globalThis.window.fetch = mock.fn()
     const fetchBefore = globalThis.window.fetch
@@ -114,7 +114,7 @@ describe('Interception Deferral: Phase 1 (Immediate)', () => {
   })
 
   test('Phase 1 should NOT modify WebSocket constructor', async () => {
-    const { installPhase1 } = await import('../../extension/inject.js')
+    const { installPhase1 } = await import('../../extension/inject/observers.js')
 
     class OriginalWebSocket {}
     globalThis.window.WebSocket = OriginalWebSocket
@@ -131,7 +131,7 @@ describe('Interception Deferral: Phase 1 (Immediate)', () => {
     'Phase 1 should install PerformanceObservers (FCP, LCP, CLS)',
     { skip: 'installPerfObservers has double-install guard — module state persists across tests' },
     async () => {
-      const { installPhase1 } = await import('../../extension/inject.js')
+      const { installPhase1 } = await import('../../extension/inject/observers.js')
 
       let observerCount = 0
       globalThis.PerformanceObserver = class MockPerfObserver {
@@ -155,7 +155,7 @@ describe('Interception Deferral: Phase 1 (Immediate)', () => {
   )
 
   test('Phase 1 should set phase2Installed to false', async () => {
-    const { installPhase1, getDeferralState } = await import('../../extension/inject.js')
+    const { installPhase1, getDeferralState } = await import('../../extension/inject/observers.js')
 
     installPhase1()
 
@@ -205,7 +205,7 @@ describe('Interception Deferral: Phase 2 (Deferred)', () => {
   })
 
   test('Phase 2 should install console interceptors', async () => {
-    const { installPhase2, uninstall } = await import('../../extension/inject.js')
+    const { installPhase2, uninstall } = await import('../../extension/inject/observers.js')
 
     const originalLog = globalThis.console.log
 
@@ -218,7 +218,7 @@ describe('Interception Deferral: Phase 2 (Deferred)', () => {
   })
 
   test('Phase 2 should set phase2Installed to true', async () => {
-    const { installPhase2, getDeferralState, uninstall } = await import('../../extension/inject.js')
+    const { installPhase2, getDeferralState, uninstall } = await import('../../extension/inject/observers.js')
 
     installPhase2()
 
@@ -229,7 +229,7 @@ describe('Interception Deferral: Phase 2 (Deferred)', () => {
   })
 
   test('Phase 2 should record phase2Timestamp', async () => {
-    const { installPhase2, getDeferralState, uninstall } = await import('../../extension/inject.js')
+    const { installPhase2, getDeferralState, uninstall } = await import('../../extension/inject/observers.js')
 
     installPhase2()
 
@@ -241,7 +241,7 @@ describe('Interception Deferral: Phase 2 (Deferred)', () => {
   })
 
   test('Double-injection guard: Phase 2 should not run twice', async () => {
-    const { installPhase2, getDeferralState, uninstall } = await import('../../extension/inject.js')
+    const { installPhase2, getDeferralState, uninstall } = await import('../../extension/inject/observers.js')
 
     installPhase2()
     const firstTimestamp = getDeferralState().phase2Timestamp
@@ -295,7 +295,7 @@ describe('Interception Deferral: Deferral Logic', () => {
   })
 
   test('Default: Phase 2 installs after load event + 100ms delay', async () => {
-    const { installPhase1, getDeferralState, setDeferralEnabled, uninstall } = await import('../../extension/inject.js')
+    const { installPhase1, getDeferralState, setDeferralEnabled, uninstall } = await import('../../extension/inject/observers.js')
 
     setDeferralEnabled(true)
 
@@ -332,7 +332,7 @@ describe('Interception Deferral: Deferral Logic', () => {
   })
 
   test('deferralEnabled=false: Phase 2 installs immediately', async () => {
-    const { installPhase1, getDeferralState, setDeferralEnabled, uninstall } = await import('../../extension/inject.js')
+    const { installPhase1, getDeferralState, setDeferralEnabled, uninstall } = await import('../../extension/inject/observers.js')
 
     setDeferralEnabled(false)
 
@@ -351,7 +351,7 @@ describe('Interception Deferral: Deferral Logic', () => {
   })
 
   test('document.readyState=complete at injection: installs immediately (+100ms)', async () => {
-    const { installPhase1, getDeferralState, setDeferralEnabled, uninstall } = await import('../../extension/inject.js')
+    const { installPhase1, getDeferralState, setDeferralEnabled, uninstall } = await import('../../extension/inject/observers.js')
 
     setDeferralEnabled(true)
 
@@ -381,7 +381,7 @@ describe('Interception Deferral: Deferral Logic', () => {
   })
 
   test('10-second timeout fallback: Phase 2 installs if load never fires', async () => {
-    const { installPhase1, getDeferralState, setDeferralEnabled, uninstall } = await import('../../extension/inject.js')
+    const { installPhase1, getDeferralState, setDeferralEnabled, uninstall } = await import('../../extension/inject/observers.js')
 
     setDeferralEnabled(true)
 
@@ -421,7 +421,7 @@ describe('Interception Deferral: Deferral Logic', () => {
   })
 
   test('Console logs before Phase 2 are not captured (intentional)', async () => {
-    const { installPhase1, getDeferralState, setDeferralEnabled } = await import('../../extension/inject.js')
+    const { installPhase1, getDeferralState, setDeferralEnabled } = await import('../../extension/inject/observers.js')
 
     setDeferralEnabled(true)
     Object.defineProperty(globalThis.document, 'readyState', { value: 'loading', configurable: true })
@@ -444,7 +444,7 @@ describe('Interception Deferral: Deferral Logic', () => {
   })
 
   test('SPA navigation after Phase 2 does not re-defer interceptors', async () => {
-    const { installPhase1, getDeferralState, setDeferralEnabled, uninstall } = await import('../../extension/inject.js')
+    const { installPhase1, getDeferralState, setDeferralEnabled, uninstall } = await import('../../extension/inject/observers.js')
 
     setDeferralEnabled(false) // Install immediately for this test
     installPhase1()
@@ -507,7 +507,7 @@ describe('Interception Deferral: State Management', () => {
   })
 
   test('getDeferralState returns correct initial state', async () => {
-    const { getDeferralState, setDeferralEnabled } = await import('../../extension/inject.js')
+    const { getDeferralState, setDeferralEnabled } = await import('../../extension/inject/observers.js')
 
     setDeferralEnabled(true)
 
@@ -519,7 +519,7 @@ describe('Interception Deferral: State Management', () => {
   })
 
   test('setDeferralEnabled should update state', async () => {
-    const { getDeferralState, setDeferralEnabled } = await import('../../extension/inject.js')
+    const { getDeferralState, setDeferralEnabled } = await import('../../extension/inject/observers.js')
 
     setDeferralEnabled(true)
     assert.strictEqual(getDeferralState().deferralEnabled, true)
@@ -531,7 +531,7 @@ describe('Interception Deferral: State Management', () => {
   })
 
   test('getDeferralState includes timing diagnostics after Phase 2', async () => {
-    const { installPhase1, getDeferralState, setDeferralEnabled, uninstall } = await import('../../extension/inject.js')
+    const { installPhase1, getDeferralState, setDeferralEnabled, uninstall } = await import('../../extension/inject/observers.js')
 
     setDeferralEnabled(false)
 
@@ -589,7 +589,7 @@ describe('Interception Deferral: GASOLINE_SETTING integration', () => {
   })
 
   test('setDeferralEnabled setting should update deferral state', async () => {
-    const { getDeferralState, setDeferralEnabled } = await import('../../extension/inject.js')
+    const { getDeferralState, setDeferralEnabled } = await import('../../extension/inject/observers.js')
 
     setDeferralEnabled(true)
     assert.strictEqual(getDeferralState().deferralEnabled, true)

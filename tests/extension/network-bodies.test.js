@@ -55,7 +55,7 @@ describe('Network Body Capture - Fetch Wrapper', () => {
   })
 
   test('network body event has spec-compliant shape', async () => {
-    const { wrapFetchWithBodies } = await import('../../extension/inject.js')
+    const { wrapFetchWithBodies } = await import('../../extension/lib/net/network.js')
 
     const mockResponse = createMockResponse({ body: '{"id":1}', contentType: 'application/json', status: 201 })
     const originalFetch = mock.fn(() => Promise.resolve(mockResponse))
@@ -94,7 +94,7 @@ describe('Network Body Capture - Fetch Wrapper', () => {
   })
 
   test('should capture response body for JSON responses', async () => {
-    const { wrapFetchWithBodies } = await import('../../extension/inject.js')
+    const { wrapFetchWithBodies } = await import('../../extension/lib/net/network.js')
 
     const responseBody = '{"id":1,"name":"Alice"}'
     const mockResponse = createMockResponse({ body: responseBody, contentType: 'application/json' })
@@ -123,7 +123,7 @@ describe('Network Body Capture - Fetch Wrapper', () => {
   })
 
   test('should capture request body for POST requests', async () => {
-    const { wrapFetchWithBodies } = await import('../../extension/inject.js')
+    const { wrapFetchWithBodies } = await import('../../extension/lib/net/network.js')
 
     const requestBody = '{"name":"Alice","email":"alice@example.com"}'
     const mockResponse = createMockResponse({ status: 201, body: '{"id":1}' })
@@ -151,7 +151,7 @@ describe('Network Body Capture - Fetch Wrapper', () => {
   })
 
   test('should return response immediately without blocking', async () => {
-    const { wrapFetchWithBodies } = await import('../../extension/inject.js')
+    const { wrapFetchWithBodies } = await import('../../extension/lib/net/network.js')
 
     const mockResponse = createMockResponse({ body: '{"data":"test"}' })
     const originalFetch = mock.fn(() => Promise.resolve(mockResponse))
@@ -167,7 +167,7 @@ describe('Network Body Capture - Fetch Wrapper', () => {
   })
 
   test('should not block on slow body reads', async () => {
-    const { wrapFetchWithBodies } = await import('../../extension/inject.js')
+    const { wrapFetchWithBodies } = await import('../../extension/lib/net/network.js')
 
     const slowClone = {
       ok: true,
@@ -190,7 +190,7 @@ describe('Network Body Capture - Fetch Wrapper', () => {
   })
 
   test('should capture content-type', async () => {
-    const { wrapFetchWithBodies } = await import('../../extension/inject.js')
+    const { wrapFetchWithBodies } = await import('../../extension/lib/net/network.js')
 
     const mockResponse = createMockResponse({ contentType: 'text/html' })
     const originalFetch = mock.fn(() => Promise.resolve(mockResponse))
@@ -210,7 +210,7 @@ describe('Network Body Capture - Fetch Wrapper', () => {
   })
 
   test('should capture request method', async () => {
-    const { wrapFetchWithBodies } = await import('../../extension/inject.js')
+    const { wrapFetchWithBodies } = await import('../../extension/lib/net/network.js')
 
     const mockResponse = createMockResponse({})
     const originalFetch = mock.fn(() => Promise.resolve(mockResponse))
@@ -227,7 +227,7 @@ describe('Network Body Capture - Fetch Wrapper', () => {
   })
 
   test('should default method to GET', async () => {
-    const { wrapFetchWithBodies } = await import('../../extension/inject.js')
+    const { wrapFetchWithBodies } = await import('../../extension/lib/net/network.js')
 
     const mockResponse = createMockResponse({})
     const originalFetch = mock.fn(() => Promise.resolve(mockResponse))
@@ -244,7 +244,7 @@ describe('Network Body Capture - Fetch Wrapper', () => {
   })
 
   test('should handle Request object as input', async () => {
-    const { wrapFetchWithBodies } = await import('../../extension/inject.js')
+    const { wrapFetchWithBodies } = await import('../../extension/lib/net/network.js')
 
     const mockResponse = createMockResponse({})
     const originalFetch = mock.fn(() => Promise.resolve(mockResponse))
@@ -262,7 +262,7 @@ describe('Network Body Capture - Fetch Wrapper', () => {
   })
 
   test('should not capture binary content types', async () => {
-    const { wrapFetchWithBodies } = await import('../../extension/inject.js')
+    const { wrapFetchWithBodies } = await import('../../extension/lib/net/network.js')
 
     const binaryTypes = ['image/png', 'video/mp4', 'audio/mpeg', 'font/woff2', 'application/wasm']
 
@@ -290,7 +290,7 @@ describe('Network Body Capture - Fetch Wrapper', () => {
   })
 
   test('should not capture requests to gasoline server', async () => {
-    const { wrapFetchWithBodies } = await import('../../extension/inject.js')
+    const { wrapFetchWithBodies } = await import('../../extension/lib/net/network.js')
 
     const mockResponse = createMockResponse({})
     const originalFetch = mock.fn(() => Promise.resolve(mockResponse))
@@ -307,7 +307,7 @@ describe('Network Body Capture - Fetch Wrapper', () => {
   })
 
   test('should capture duration', async () => {
-    const { wrapFetchWithBodies } = await import('../../extension/inject.js')
+    const { wrapFetchWithBodies } = await import('../../extension/lib/net/network.js')
 
     const mockResponse = createMockResponse({ body: '{}' })
     const originalFetch = mock.fn(
@@ -331,7 +331,7 @@ describe('Network Body Capture - Fetch Wrapper', () => {
 
 describe('Header Sanitization', () => {
   test('should strip Authorization header', async () => {
-    const { sanitizeHeaders } = await import('../../extension/inject.js')
+    const { sanitizeHeaders } = await import('../../extension/lib/net/network.js')
 
     const headers = {
       Authorization: 'Bearer secret-token-123',
@@ -350,7 +350,7 @@ describe('Header Sanitization', () => {
   })
 
   test('should strip Cookie header', async () => {
-    const { sanitizeHeaders } = await import('../../extension/inject.js')
+    const { sanitizeHeaders } = await import('../../extension/lib/net/network.js')
 
     const headers = {
       Cookie: 'session=abc123; token=xyz',
@@ -362,7 +362,7 @@ describe('Header Sanitization', () => {
   })
 
   test('should strip Set-Cookie header', async () => {
-    const { sanitizeHeaders } = await import('../../extension/inject.js')
+    const { sanitizeHeaders } = await import('../../extension/lib/net/network.js')
 
     const headers = {
       'Set-Cookie': 'session=abc123; Path=/',
@@ -374,7 +374,7 @@ describe('Header Sanitization', () => {
   })
 
   test('should strip X-API-Key header', async () => {
-    const { sanitizeHeaders } = await import('../../extension/inject.js')
+    const { sanitizeHeaders } = await import('../../extension/lib/net/network.js')
 
     const headers = {
       'X-API-Key': 'sk_live_abc123',
@@ -386,7 +386,7 @@ describe('Header Sanitization', () => {
   })
 
   test('should strip headers matching token/secret/key/password pattern', async () => {
-    const { sanitizeHeaders } = await import('../../extension/inject.js')
+    const { sanitizeHeaders } = await import('../../extension/lib/net/network.js')
 
     const headers = {
       'X-Auth-Token': 'abc123',
@@ -410,7 +410,7 @@ describe('Header Sanitization', () => {
   })
 
   test('should be case-insensitive for sensitive header patterns', async () => {
-    const { sanitizeHeaders } = await import('../../extension/inject.js')
+    const { sanitizeHeaders } = await import('../../extension/lib/net/network.js')
 
     const headers = {
       'x-auth-TOKEN': 'value',
@@ -426,14 +426,14 @@ describe('Header Sanitization', () => {
   })
 
   test('should handle null/undefined headers', async () => {
-    const { sanitizeHeaders } = await import('../../extension/inject.js')
+    const { sanitizeHeaders } = await import('../../extension/lib/net/network.js')
 
     assert.deepStrictEqual(sanitizeHeaders(null), {})
     assert.deepStrictEqual(sanitizeHeaders(undefined), {})
   })
 
   test('should handle Headers object', async () => {
-    const { sanitizeHeaders } = await import('../../extension/inject.js')
+    const { sanitizeHeaders } = await import('../../extension/lib/net/network.js')
 
     const headers = new MockHeaders({
       authorization: 'Bearer token',
@@ -448,7 +448,7 @@ describe('Header Sanitization', () => {
 
 describe('Body Truncation', () => {
   test('should truncate request body at 8KB', async () => {
-    const { truncateRequestBody } = await import('../../extension/inject.js')
+    const { truncateRequestBody } = await import('../../extension/lib/net/network.js')
 
     const largeBody = 'x'.repeat(10000)
     const result = truncateRequestBody(largeBody)
@@ -461,7 +461,7 @@ describe('Body Truncation', () => {
   })
 
   test('should not truncate request body under 8KB', async () => {
-    const { truncateRequestBody } = await import('../../extension/inject.js')
+    const { truncateRequestBody } = await import('../../extension/lib/net/network.js')
 
     const smallBody = '{"name":"Alice"}'
     const result = truncateRequestBody(smallBody)
@@ -471,7 +471,7 @@ describe('Body Truncation', () => {
   })
 
   test('should truncate response body at 16KB', async () => {
-    const { truncateResponseBody } = await import('../../extension/inject.js')
+    const { truncateResponseBody } = await import('../../extension/lib/net/network.js')
 
     const largeBody = 'y'.repeat(20000)
     const result = truncateResponseBody(largeBody)
@@ -483,7 +483,7 @@ describe('Body Truncation', () => {
   })
 
   test('should not truncate response body under 16KB', async () => {
-    const { truncateResponseBody } = await import('../../extension/inject.js')
+    const { truncateResponseBody } = await import('../../extension/lib/net/network.js')
 
     const smallBody = '{"items":[1,2,3]}'
     const result = truncateResponseBody(smallBody)
@@ -493,7 +493,7 @@ describe('Body Truncation', () => {
   })
 
   test('should handle null body', async () => {
-    const { truncateRequestBody, truncateResponseBody } = await import('../../extension/inject.js')
+    const { truncateRequestBody, truncateResponseBody } = await import('../../extension/lib/net/network.js')
 
     assert.deepStrictEqual(truncateRequestBody(null), { body: null, truncated: false })
     assert.deepStrictEqual(truncateResponseBody(null), { body: null, truncated: false })
@@ -502,7 +502,7 @@ describe('Body Truncation', () => {
 
 describe('Body Reading', () => {
   test('should read JSON response as text', async () => {
-    const { readResponseBody } = await import('../../extension/inject.js')
+    const { readResponseBody } = await import('../../extension/lib/net/network.js')
 
     const response = {
       headers: new Map([['content-type', 'application/json']]),
@@ -514,7 +514,7 @@ describe('Body Reading', () => {
   })
 
   test('should read text response as text', async () => {
-    const { readResponseBody } = await import('../../extension/inject.js')
+    const { readResponseBody } = await import('../../extension/lib/net/network.js')
 
     const response = {
       headers: new Map([['content-type', 'text/html']]),
@@ -526,7 +526,7 @@ describe('Body Reading', () => {
   })
 
   test('should report binary size for non-text content', async () => {
-    const { readResponseBody } = await import('../../extension/inject.js')
+    const { readResponseBody } = await import('../../extension/lib/net/network.js')
 
     const response = {
       headers: new Map([['content-type', 'image/png']]),
@@ -541,7 +541,7 @@ describe('Body Reading', () => {
   })
 
   test('should handle missing content-type', async () => {
-    const { readResponseBody } = await import('../../extension/inject.js')
+    const { readResponseBody } = await import('../../extension/lib/net/network.js')
 
     const response = {
       headers: new Map(),
@@ -554,7 +554,7 @@ describe('Body Reading', () => {
   })
 
   test('should timeout body read after 5ms', async () => {
-    const { readResponseBodyWithTimeout } = await import('../../extension/inject.js')
+    const { readResponseBodyWithTimeout } = await import('../../extension/lib/net/network.js')
 
     const response = {
       headers: new Map([['content-type', 'application/json']]),
@@ -568,14 +568,14 @@ describe('Body Reading', () => {
 
 describe('URL Filtering', () => {
   test('should exclude gasoline server URLs', async () => {
-    const { shouldCaptureUrl } = await import('../../extension/inject.js')
+    const { shouldCaptureUrl } = await import('../../extension/lib/net/network.js')
 
     assert.strictEqual(shouldCaptureUrl('http://localhost:7890/logs'), false)
     assert.strictEqual(shouldCaptureUrl('http://127.0.0.1:7890/health'), false)
   })
 
   test('should include normal URLs', async () => {
-    const { shouldCaptureUrl } = await import('../../extension/inject.js')
+    const { shouldCaptureUrl } = await import('../../extension/lib/net/network.js')
 
     assert.strictEqual(shouldCaptureUrl('/api/users'), true)
     assert.strictEqual(shouldCaptureUrl('https://api.example.com/data'), true)
@@ -583,7 +583,7 @@ describe('URL Filtering', () => {
   })
 
   test('should exclude extension resource URLs', async () => {
-    const { shouldCaptureUrl } = await import('../../extension/inject.js')
+    const { shouldCaptureUrl } = await import('../../extension/lib/net/network.js')
 
     assert.strictEqual(shouldCaptureUrl('chrome-extension://abc123/lib/axe.min.js'), false)
   })
@@ -653,7 +653,7 @@ describe('Network Body Capture - XHR Wrapper', () => {
 
   afterEach(async () => {
     // Clean up: unwrap XHR
-    const { unwrapXHR } = await import('../../extension/inject.js')
+    const { unwrapXHR } = await import('../../extension/lib/net/network.js')
     unwrapXHR()
     globalThis.window = originalWindow
     globalThis.XMLHttpRequest = originalXMLHttpRequest
@@ -663,7 +663,7 @@ describe('Network Body Capture - XHR Wrapper', () => {
     const MockXHR = createMockXMLHttpRequest()
     globalThis.XMLHttpRequest = MockXHR
 
-    const { wrapXHRWithBodies } = await import('../../extension/inject.js')
+    const { wrapXHRWithBodies } = await import('../../extension/lib/net/network.js')
     wrapXHRWithBodies()
 
     const xhr = new XMLHttpRequest()
@@ -698,7 +698,7 @@ describe('Network Body Capture - XHR Wrapper', () => {
     const MockXHR = createMockXMLHttpRequest()
     globalThis.XMLHttpRequest = MockXHR
 
-    const { wrapXHRWithBodies } = await import('../../extension/inject.js')
+    const { wrapXHRWithBodies } = await import('../../extension/lib/net/network.js')
     wrapXHRWithBodies()
 
     const xhr = new XMLHttpRequest()
@@ -721,7 +721,7 @@ describe('Network Body Capture - XHR Wrapper', () => {
     const MockXHR = createMockXMLHttpRequest()
     globalThis.XMLHttpRequest = MockXHR
 
-    const { wrapXHRWithBodies } = await import('../../extension/inject.js')
+    const { wrapXHRWithBodies } = await import('../../extension/lib/net/network.js')
     wrapXHRWithBodies()
 
     const xhr = new XMLHttpRequest()
@@ -740,7 +740,7 @@ describe('Network Body Capture - XHR Wrapper', () => {
     const MockXHR = createMockXMLHttpRequest()
     globalThis.XMLHttpRequest = MockXHR
 
-    const { wrapXHRWithBodies } = await import('../../extension/inject.js')
+    const { wrapXHRWithBodies } = await import('../../extension/lib/net/network.js')
     wrapXHRWithBodies()
 
     const xhr = new XMLHttpRequest()
@@ -761,7 +761,7 @@ describe('Network Body Capture - XHR Wrapper', () => {
     const MockXHR = createMockXMLHttpRequest()
     globalThis.XMLHttpRequest = MockXHR
 
-    const { wrapXHRWithBodies } = await import('../../extension/inject.js')
+    const { wrapXHRWithBodies } = await import('../../extension/lib/net/network.js')
     wrapXHRWithBodies()
 
     const xhr = new XMLHttpRequest()
@@ -781,7 +781,7 @@ describe('Network Body Capture - XHR Wrapper', () => {
     const MockXHR = createMockXMLHttpRequest()
     globalThis.XMLHttpRequest = MockXHR
 
-    const { wrapXHRWithBodies } = await import('../../extension/inject.js')
+    const { wrapXHRWithBodies } = await import('../../extension/lib/net/network.js')
     wrapXHRWithBodies()
 
     const xhr = new XMLHttpRequest()
@@ -806,7 +806,7 @@ describe('Network Body Capture - XHR Wrapper', () => {
     const originalOpen = MockXHR.prototype.open
     const originalSend = MockXHR.prototype.send
 
-    const { wrapXHRWithBodies, unwrapXHR } = await import('../../extension/inject.js')
+    const { wrapXHRWithBodies, unwrapXHR } = await import('../../extension/lib/net/network.js')
     wrapXHRWithBodies()
 
     // Verify they're wrapped

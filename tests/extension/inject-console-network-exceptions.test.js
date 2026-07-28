@@ -30,7 +30,7 @@ describe('Console Capture', () => {
 
   test('should intercept console.log', async () => {
     // Import the module to install interceptors
-    const { installConsoleCapture, uninstallConsoleCapture } = await import('../../extension/inject.js')
+    const { installConsoleCapture, uninstallConsoleCapture } = await import('../../extension/lib/page/console.js')
 
     const originalLog = globalThis.console.log
     installConsoleCapture()
@@ -53,7 +53,7 @@ describe('Console Capture', () => {
   })
 
   test('should intercept console.error', async () => {
-    const { installConsoleCapture, uninstallConsoleCapture } = await import('../../extension/inject.js')
+    const { installConsoleCapture, uninstallConsoleCapture } = await import('../../extension/lib/page/console.js')
 
     installConsoleCapture()
     globalThis.console.error('error message')
@@ -65,7 +65,7 @@ describe('Console Capture', () => {
   })
 
   test('should intercept console.warn', async () => {
-    const { installConsoleCapture, uninstallConsoleCapture } = await import('../../extension/inject.js')
+    const { installConsoleCapture, uninstallConsoleCapture } = await import('../../extension/lib/page/console.js')
 
     installConsoleCapture()
     globalThis.console.warn('warning message')
@@ -77,7 +77,7 @@ describe('Console Capture', () => {
   })
 
   test('should intercept console.info', async () => {
-    const { installConsoleCapture, uninstallConsoleCapture } = await import('../../extension/inject.js')
+    const { installConsoleCapture, uninstallConsoleCapture } = await import('../../extension/lib/page/console.js')
 
     installConsoleCapture()
     globalThis.console.info('info message')
@@ -89,7 +89,7 @@ describe('Console Capture', () => {
   })
 
   test('should intercept console.debug', async () => {
-    const { installConsoleCapture, uninstallConsoleCapture } = await import('../../extension/inject.js')
+    const { installConsoleCapture, uninstallConsoleCapture } = await import('../../extension/lib/page/console.js')
 
     installConsoleCapture()
     globalThis.console.debug('debug message')
@@ -101,7 +101,7 @@ describe('Console Capture', () => {
   })
 
   test('should include page URL', async () => {
-    const { installConsoleCapture, uninstallConsoleCapture } = await import('../../extension/inject.js')
+    const { installConsoleCapture, uninstallConsoleCapture } = await import('../../extension/lib/page/console.js')
 
     installConsoleCapture()
     globalThis.console.log('test')
@@ -113,7 +113,7 @@ describe('Console Capture', () => {
   })
 
   test('should restore original console on uninstall', async () => {
-    const { installConsoleCapture, uninstallConsoleCapture } = await import('../../extension/inject.js')
+    const { installConsoleCapture, uninstallConsoleCapture } = await import('../../extension/lib/page/console.js')
 
     const originalLog = globalThis.console.log
     installConsoleCapture()
@@ -139,7 +139,7 @@ describe('Network Capture', () => {
   })
 
   test('should capture fetch errors (status >= 400)', async () => {
-    const { wrapFetch } = await import('../../extension/inject.js')
+    const { wrapFetch } = await import('../../extension/inject/observers.js')
 
     const mockResponse = {
       ok: false,
@@ -173,7 +173,7 @@ describe('Network Capture', () => {
   })
 
   test('should not capture successful fetch requests', async () => {
-    const { wrapFetch } = await import('../../extension/inject.js')
+    const { wrapFetch } = await import('../../extension/inject/observers.js')
 
     const mockResponse = {
       ok: true,
@@ -190,7 +190,7 @@ describe('Network Capture', () => {
   })
 
   test('should capture 5xx server errors', async () => {
-    const { wrapFetch } = await import('../../extension/inject.js')
+    const { wrapFetch } = await import('../../extension/inject/observers.js')
 
     const mockResponse = {
       ok: false,
@@ -211,7 +211,7 @@ describe('Network Capture', () => {
   })
 
   test('should capture network failures', async () => {
-    const { wrapFetch } = await import('../../extension/inject.js')
+    const { wrapFetch } = await import('../../extension/inject/observers.js')
 
     const originalFetch = mock.fn(() => Promise.reject(new Error('Failed to fetch')))
     const wrappedFetch = wrapFetch(originalFetch)
@@ -229,7 +229,7 @@ describe('Network Capture', () => {
   })
 
   test('should exclude Authorization header from logs', async () => {
-    const { wrapFetch } = await import('../../extension/inject.js')
+    const { wrapFetch } = await import('../../extension/inject/observers.js')
 
     const mockResponse = {
       ok: false,
@@ -258,7 +258,7 @@ describe('Network Capture', () => {
   })
 
   test('should truncate large response bodies', async () => {
-    const { wrapFetch } = await import('../../extension/inject.js')
+    const { wrapFetch } = await import('../../extension/inject/observers.js')
 
     const largeBody = 'x'.repeat(10000) // 10KB
     const mockResponse = {
@@ -291,7 +291,7 @@ describe('Exception Capture', () => {
   })
 
   test('should capture window.onerror events', async () => {
-    const { installExceptionCapture, uninstallExceptionCapture } = await import('../../extension/inject.js')
+    const { installExceptionCapture, uninstallExceptionCapture } = await import('../../extension/lib/page/exceptions.js')
 
     installExceptionCapture()
 
@@ -315,7 +315,7 @@ describe('Exception Capture', () => {
   })
 
   test('should capture unhandled promise rejections', async () => {
-    const { installExceptionCapture, uninstallExceptionCapture } = await import('../../extension/inject.js')
+    const { installExceptionCapture, uninstallExceptionCapture } = await import('../../extension/lib/page/exceptions.js')
 
     installExceptionCapture()
 
@@ -344,7 +344,7 @@ describe('Exception Capture', () => {
   })
 
   test('should include stack trace', async () => {
-    const { installExceptionCapture, uninstallExceptionCapture } = await import('../../extension/inject.js')
+    const { installExceptionCapture, uninstallExceptionCapture } = await import('../../extension/lib/page/exceptions.js')
 
     installExceptionCapture()
 
@@ -365,7 +365,7 @@ describe('Exception Capture', () => {
   })
 
   test('should handle error event without error object', async () => {
-    const { installExceptionCapture, uninstallExceptionCapture } = await import('../../extension/inject.js')
+    const { installExceptionCapture, uninstallExceptionCapture } = await import('../../extension/lib/page/exceptions.js')
 
     installExceptionCapture()
 
@@ -386,7 +386,7 @@ describe('Exception Capture', () => {
 
 describe('Safe Serialization', () => {
   test('should handle circular references in objects', async () => {
-    const { safeSerialize } = await import('../../extension/inject.js')
+    const { safeSerialize } = await import('../../extension/lib/page/serialize.js')
 
     const obj = { name: 'test' }
     obj.self = obj
@@ -399,14 +399,14 @@ describe('Safe Serialization', () => {
   })
 
   test('should handle undefined and null', async () => {
-    const { safeSerialize } = await import('../../extension/inject.js')
+    const { safeSerialize } = await import('../../extension/lib/page/serialize.js')
 
     assert.strictEqual(safeSerialize(undefined), null) // JSON has no undefined type
     assert.strictEqual(safeSerialize(null), null)
   })
 
   test('should preserve primitive types', async () => {
-    const { safeSerialize } = await import('../../extension/inject.js')
+    const { safeSerialize } = await import('../../extension/lib/page/serialize.js')
 
     assert.strictEqual(safeSerialize('string'), 'string')
     assert.strictEqual(safeSerialize(123), 123)
@@ -414,7 +414,7 @@ describe('Safe Serialization', () => {
   })
 
   test('should handle Error objects', async () => {
-    const { safeSerialize } = await import('../../extension/inject.js')
+    const { safeSerialize } = await import('../../extension/lib/page/serialize.js')
 
     const error = new Error('test error')
     const result = safeSerialize(error)
@@ -423,7 +423,7 @@ describe('Safe Serialization', () => {
   })
 
   test('should truncate strings over 10KB', async () => {
-    const { safeSerialize } = await import('../../extension/inject.js')
+    const { safeSerialize } = await import('../../extension/lib/page/serialize.js')
 
     const longString = 'x'.repeat(15000)
     const result = safeSerialize(longString)
@@ -433,7 +433,7 @@ describe('Safe Serialization', () => {
   })
 
   test('should handle functions by converting to string', async () => {
-    const { safeSerialize } = await import('../../extension/inject.js')
+    const { safeSerialize } = await import('../../extension/lib/page/serialize.js')
 
     const fn = function testFunc() {}
     const result = safeSerialize(fn)
@@ -443,7 +443,7 @@ describe('Safe Serialization', () => {
   })
 
   test('should handle DOM elements', async () => {
-    const { safeSerialize } = await import('../../extension/inject.js')
+    const { safeSerialize } = await import('../../extension/lib/page/serialize.js')
 
     // Mock a DOM element
     const element = {
@@ -460,7 +460,7 @@ describe('Safe Serialization', () => {
   })
 
   test('should handle deeply nested objects', async () => {
-    const { safeSerialize } = await import('../../extension/inject.js')
+    const { safeSerialize } = await import('../../extension/lib/page/serialize.js')
 
     let obj = { value: 'deep' }
     for (let i = 0; i < 50; i++) {

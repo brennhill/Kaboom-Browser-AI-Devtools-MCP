@@ -20,7 +20,7 @@ describe('WebSocket Interception', () => {
     Object.defineProperty(globalThis, 'crypto', { value: createMockCrypto(), writable: true, configurable: true })
     // Force uninstall to reset module state in case a previous test crashed before cleanup
     const { setWebSocketCaptureMode, setWebSocketCaptureEnabled, uninstallWebSocketCapture } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/net/websocket.js')
     uninstallWebSocketCapture()
     setWebSocketCaptureMode('lifecycle')
     setWebSocketCaptureEnabled(true)
@@ -32,7 +32,7 @@ describe('WebSocket Interception', () => {
   })
 
   test('should replace WebSocket constructor', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
 
     const OriginalWS = globalThis.window.WebSocket
     installWebSocketCapture()
@@ -44,7 +44,7 @@ describe('WebSocket Interception', () => {
   })
 
   test('should preserve WebSocket.prototype', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
 
     const OriginalWS = globalThis.window.WebSocket
     installWebSocketCapture()
@@ -55,7 +55,7 @@ describe('WebSocket Interception', () => {
   })
 
   test('should preserve WebSocket static constants (CONNECTING, OPEN, CLOSING, CLOSED)', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
 
     installWebSocketCapture()
 
@@ -68,7 +68,7 @@ describe('WebSocket Interception', () => {
   })
 
   test('should create WebSocket with correct URL and protocols', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
 
     installWebSocketCapture()
 
@@ -79,7 +79,7 @@ describe('WebSocket Interception', () => {
   })
 
   test('ws:open payload has spec-compliant shape', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
     installWebSocketCapture()
 
     const ws = new globalThis.window.WebSocket('wss://example.com/ws')
@@ -101,7 +101,7 @@ describe('WebSocket Interception', () => {
   })
 
   test('ws:close payload has spec-compliant shape', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
     installWebSocketCapture()
 
     const ws = new globalThis.window.WebSocket('wss://example.com/ws')
@@ -129,7 +129,7 @@ describe('WebSocket Interception', () => {
 
   test('ws:message payload has spec-compliant shape', async () => {
     const { installWebSocketCapture, uninstallWebSocketCapture, setWebSocketCaptureMode } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/net/websocket.js')
     setWebSocketCaptureMode('messages')
     installWebSocketCapture()
 
@@ -158,7 +158,7 @@ describe('WebSocket Interception', () => {
   })
 
   test('should emit ws:open event on connection open', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
 
     installWebSocketCapture()
 
@@ -179,7 +179,7 @@ describe('WebSocket Interception', () => {
   })
 
   test('should emit ws:close event with code and reason', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
 
     installWebSocketCapture()
 
@@ -201,7 +201,7 @@ describe('WebSocket Interception', () => {
   })
 
   test('should emit ws:error event', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
 
     installWebSocketCapture()
 
@@ -222,7 +222,7 @@ describe('WebSocket Interception', () => {
 
   test('should track incoming messages', async () => {
     const { installWebSocketCapture, uninstallWebSocketCapture, setWebSocketCaptureMode } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/net/websocket.js')
 
     setWebSocketCaptureMode('messages')
     installWebSocketCapture()
@@ -246,7 +246,7 @@ describe('WebSocket Interception', () => {
 
   test('should intercept outgoing messages via send()', async () => {
     const { installWebSocketCapture, uninstallWebSocketCapture, setWebSocketCaptureMode } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/net/websocket.js')
 
     setWebSocketCaptureMode('messages')
     installWebSocketCapture()
@@ -268,7 +268,7 @@ describe('WebSocket Interception', () => {
   })
 
   test('should call original send() after interception', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
 
     installWebSocketCapture()
 
@@ -282,7 +282,7 @@ describe('WebSocket Interception', () => {
   })
 
   test('should assign unique ID per connection', async () => {
-    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/inject.js')
+    const { installWebSocketCapture, uninstallWebSocketCapture } = await import('../../extension/lib/net/websocket.js')
 
     installWebSocketCapture()
 
@@ -304,7 +304,7 @@ describe('WebSocket Interception', () => {
 
   test('should capture messages in low sampling mode at low rates', async () => {
     const { installWebSocketCapture, uninstallWebSocketCapture, setWebSocketCaptureMode } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/net/websocket.js')
 
     setWebSocketCaptureMode('low')
     installWebSocketCapture()
@@ -327,7 +327,7 @@ describe('WebSocket Interception', () => {
 
   test('should truncate message data at 4KB', async () => {
     const { installWebSocketCapture, uninstallWebSocketCapture, setWebSocketCaptureMode } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/net/websocket.js')
 
     setWebSocketCaptureMode('messages')
     installWebSocketCapture()
@@ -365,7 +365,7 @@ describe('Adaptive Sampling', () => {
   })
 
   test('should log every message when rate < 10 msg/s', async () => {
-    const { createConnectionTracker } = await import('../../extension/inject.js')
+    const { createConnectionTracker } = await import('../../extension/lib/net/websocket-tracking.js')
 
     const tracker = createConnectionTracker('test-id', 'wss://example.com')
 
@@ -378,7 +378,8 @@ describe('Adaptive Sampling', () => {
   })
 
   test('should sample at ~5 msg/s in medium mode when rate is 30 msg/s', async () => {
-    const { createConnectionTracker, setWebSocketCaptureMode } = await import('../../extension/inject.js')
+    const { createConnectionTracker } = await import('../../extension/lib/net/websocket-tracking.js')
+    const { setWebSocketCaptureMode } = await import('../../extension/lib/net/websocket.js')
 
     setWebSocketCaptureMode('medium')
     const tracker = createConnectionTracker('test-id', 'wss://example.com')
@@ -397,7 +398,7 @@ describe('Adaptive Sampling', () => {
   })
 
   test('should sample at ~5 msg/s when rate is 50-200 msg/s', async () => {
-    const { createConnectionTracker } = await import('../../extension/inject.js')
+    const { createConnectionTracker } = await import('../../extension/lib/net/websocket-tracking.js')
 
     const tracker = createConnectionTracker('test-id', 'wss://example.com')
     tracker.setMessageRate(100)
@@ -412,7 +413,7 @@ describe('Adaptive Sampling', () => {
   })
 
   test('should sample at ~2 msg/s when rate > 200 msg/s', async () => {
-    const { createConnectionTracker } = await import('../../extension/inject.js')
+    const { createConnectionTracker } = await import('../../extension/lib/net/websocket-tracking.js')
 
     const tracker = createConnectionTracker('test-id', 'wss://example.com')
     tracker.setMessageRate(500)
@@ -427,7 +428,7 @@ describe('Adaptive Sampling', () => {
   })
 
   test('should always log first 5 messages on a new connection', async () => {
-    const { createConnectionTracker } = await import('../../extension/inject.js')
+    const { createConnectionTracker } = await import('../../extension/lib/net/websocket-tracking.js')
 
     const tracker = createConnectionTracker('test-id', 'wss://example.com')
     tracker.setMessageRate(100) // High rate - would normally sample
@@ -442,7 +443,7 @@ describe('Adaptive Sampling', () => {
   })
 
   test('should always log lifecycle events regardless of rate', async () => {
-    const { createConnectionTracker } = await import('../../extension/inject.js')
+    const { createConnectionTracker } = await import('../../extension/lib/net/websocket-tracking.js')
 
     const tracker = createConnectionTracker('test-id', 'wss://example.com')
     tracker.setMessageRate(500)
@@ -452,7 +453,7 @@ describe('Adaptive Sampling', () => {
   })
 
   test('should include sampling info when sampling is active', async () => {
-    const { createConnectionTracker } = await import('../../extension/inject.js')
+    const { createConnectionTracker } = await import('../../extension/lib/net/websocket-tracking.js')
 
     const tracker = createConnectionTracker('test-id', 'wss://example.com')
     tracker.setMessageRate(50)
@@ -465,7 +466,7 @@ describe('Adaptive Sampling', () => {
   })
 
   test('should use rolling 5-second window for rate calculation', async () => {
-    const { createConnectionTracker } = await import('../../extension/inject.js')
+    const { createConnectionTracker } = await import('../../extension/lib/net/websocket-tracking.js')
 
     const tracker = createConnectionTracker('test-id', 'wss://example.com')
 
@@ -493,7 +494,7 @@ describe('Schema Detection', () => {
   })
 
   test('should detect JSON schema from first 5 messages', async () => {
-    const { createConnectionTracker } = await import('../../extension/inject.js')
+    const { createConnectionTracker } = await import('../../extension/lib/net/websocket-tracking.js')
 
     const tracker = createConnectionTracker('test-id', 'wss://example.com')
 
@@ -508,7 +509,7 @@ describe('Schema Detection', () => {
   })
 
   test('should detect schema inconsistency', async () => {
-    const { createConnectionTracker } = await import('../../extension/inject.js')
+    const { createConnectionTracker } = await import('../../extension/lib/net/websocket-tracking.js')
 
     const tracker = createConnectionTracker('test-id', 'wss://example.com')
 
@@ -524,7 +525,7 @@ describe('Schema Detection', () => {
   })
 
   test('should log schema-change messages even when sampling', async () => {
-    const { createConnectionTracker } = await import('../../extension/inject.js')
+    const { createConnectionTracker } = await import('../../extension/lib/net/websocket-tracking.js')
 
     const tracker = createConnectionTracker('test-id', 'wss://example.com')
     tracker.setMessageRate(100) // High rate - sampling active
@@ -540,7 +541,7 @@ describe('Schema Detection', () => {
   })
 
   test('should not detect schema from non-JSON messages', async () => {
-    const { createConnectionTracker } = await import('../../extension/inject.js')
+    const { createConnectionTracker } = await import('../../extension/lib/net/websocket-tracking.js')
 
     const tracker = createConnectionTracker('test-id', 'wss://example.com')
 
@@ -553,7 +554,7 @@ describe('Schema Detection', () => {
   })
 
   test('should track schema variants', async () => {
-    const { createConnectionTracker } = await import('../../extension/inject.js')
+    const { createConnectionTracker } = await import('../../extension/lib/net/websocket-tracking.js')
 
     const tracker = createConnectionTracker('test-id', 'wss://example.com')
 
@@ -588,7 +589,7 @@ describe('Binary Message Handling', () => {
   })
 
   test('should format small binary as hex preview', async () => {
-    const { formatPayload } = await import('../../extension/inject.js')
+    const { formatPayload } = await import('../../extension/lib/net/websocket-tracking.js')
 
     // Binary < 256 bytes: hex preview
     const buffer = new ArrayBuffer(128)
@@ -602,7 +603,7 @@ describe('Binary Message Handling', () => {
   })
 
   test('should format large binary with magic bytes only', async () => {
-    const { formatPayload } = await import('../../extension/inject.js')
+    const { formatPayload } = await import('../../extension/lib/net/websocket-tracking.js')
 
     // Binary >= 256 bytes: size + magic bytes
     const buffer = new ArrayBuffer(4096)
@@ -619,7 +620,7 @@ describe('Binary Message Handling', () => {
   })
 
   test('should pass through JSON text as-is', async () => {
-    const { formatPayload } = await import('../../extension/inject.js')
+    const { formatPayload } = await import('../../extension/lib/net/websocket-tracking.js')
 
     const json = '{"type":"chat","msg":"hello"}'
     const formatted = formatPayload(json)
@@ -628,7 +629,7 @@ describe('Binary Message Handling', () => {
   })
 
   test('should pass through non-JSON text as-is', async () => {
-    const { formatPayload } = await import('../../extension/inject.js')
+    const { formatPayload } = await import('../../extension/lib/net/websocket-tracking.js')
 
     const text = 'Hello, world!'
     const formatted = formatPayload(text)
@@ -637,7 +638,7 @@ describe('Binary Message Handling', () => {
   })
 
   test('should handle Blob binary data', async () => {
-    const { formatPayload } = await import('../../extension/inject.js')
+    const { formatPayload } = await import('../../extension/lib/net/websocket-tracking.js')
 
     // Simulate Blob (in test environment, use object with size)
     const blob = {
@@ -653,21 +654,21 @@ describe('Binary Message Handling', () => {
   })
 
   test('should compute correct size for text messages', async () => {
-    const { getSize } = await import('../../extension/inject.js')
+    const { getSize } = await import('../../extension/lib/net/websocket-tracking.js')
 
     assert.strictEqual(getSize('hello'), 5)
     assert.strictEqual(getSize('{"type":"chat"}'), 15)
   })
 
   test('should compute correct size for ArrayBuffer', async () => {
-    const { getSize } = await import('../../extension/inject.js')
+    const { getSize } = await import('../../extension/lib/net/websocket-tracking.js')
 
     const buffer = new ArrayBuffer(256)
     assert.strictEqual(getSize(buffer), 256)
   })
 
   test('should compute correct size for Blob', async () => {
-    const { getSize } = await import('../../extension/inject.js')
+    const { getSize } = await import('../../extension/lib/net/websocket-tracking.js')
 
     const blob = { size: 4096 }
     assert.strictEqual(getSize(blob), 4096)
@@ -688,7 +689,7 @@ describe('WebSocket Message Truncation', () => {
   })
 
   test('should truncate text messages longer than 4KB', async () => {
-    const { truncateWsMessage } = await import('../../extension/inject.js')
+    const { truncateWsMessage } = await import('../../extension/lib/net/websocket-tracking.js')
 
     const longMessage = 'x'.repeat(5000)
     const result = truncateWsMessage(longMessage)
@@ -698,7 +699,7 @@ describe('WebSocket Message Truncation', () => {
   })
 
   test('should not truncate messages within 4KB', async () => {
-    const { truncateWsMessage } = await import('../../extension/inject.js')
+    const { truncateWsMessage } = await import('../../extension/lib/net/websocket-tracking.js')
 
     const shortMessage = '{"type":"chat","msg":"hello"}'
     const result = truncateWsMessage(shortMessage)
@@ -722,7 +723,7 @@ describe('Connection Stats', () => {
   })
 
   test('should track incoming message count and bytes', async () => {
-    const { createConnectionTracker } = await import('../../extension/inject.js')
+    const { createConnectionTracker } = await import('../../extension/lib/net/websocket-tracking.js')
 
     const tracker = createConnectionTracker('test-id', 'wss://example.com')
 
@@ -734,7 +735,7 @@ describe('Connection Stats', () => {
   })
 
   test('should track outgoing message count and bytes', async () => {
-    const { createConnectionTracker } = await import('../../extension/inject.js')
+    const { createConnectionTracker } = await import('../../extension/lib/net/websocket-tracking.js')
 
     const tracker = createConnectionTracker('test-id', 'wss://example.com')
 
@@ -745,7 +746,7 @@ describe('Connection Stats', () => {
   })
 
   test('should track last message preview', async () => {
-    const { createConnectionTracker } = await import('../../extension/inject.js')
+    const { createConnectionTracker } = await import('../../extension/lib/net/websocket-tracking.js')
 
     const tracker = createConnectionTracker('test-id', 'wss://example.com')
 
@@ -756,7 +757,7 @@ describe('Connection Stats', () => {
   })
 
   test('should truncate preview to 200 chars', async () => {
-    const { createConnectionTracker } = await import('../../extension/inject.js')
+    const { createConnectionTracker } = await import('../../extension/lib/net/websocket-tracking.js')
 
     const tracker = createConnectionTracker('test-id', 'wss://example.com')
     const longMessage = 'x'.repeat(300)
@@ -767,7 +768,7 @@ describe('Connection Stats', () => {
   })
 
   test('should track last message timestamp', async () => {
-    const { createConnectionTracker } = await import('../../extension/inject.js')
+    const { createConnectionTracker } = await import('../../extension/lib/net/websocket-tracking.js')
 
     const tracker = createConnectionTracker('test-id', 'wss://example.com')
     const before = Date.now()

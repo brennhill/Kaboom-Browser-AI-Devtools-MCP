@@ -45,6 +45,7 @@ code_paths:
   - src/background/dom/primitives/dom-primitives-pointer.ts
   - src/background/dom/primitives/dom-primitives-form.ts
   - src/background/dom/primitives/dom-primitives-read.ts
+  - src/inject.ts
   - src/inject/execute-js.ts
   - src/content/runtime-message-listener.ts
   - src/background/dom/primitives/dom-primitives-list-interactive.ts
@@ -109,6 +110,8 @@ last_verified_date: 2026-03-05
 The background service-worker entrypoint owns startup only. Interaction
 consumers import state, command, snapshot, and query APIs from their focused
 owner modules; no compatibility facade is retained.
+Page-world interaction tests import action, state, serialization, and message
+handler modules directly; the injected bundle is not an API surface.
 
 ## TL;DR
 - Status: shipped

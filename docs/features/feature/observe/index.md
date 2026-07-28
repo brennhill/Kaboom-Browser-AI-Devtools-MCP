@@ -43,6 +43,7 @@ code_paths:
   - src/content/message-forwarding.ts
   - src/content/runtime-message-listener.ts
   - src/content/window-message-listener.ts
+  - src/inject.ts
   - src/inject/observers.ts
   - src/lib/net/network.ts
 test_paths:
@@ -83,6 +84,8 @@ last_verified_date: 2026-03-05
 The background service-worker entrypoint owns startup only. Telemetry tests and
 runtime code import caches, batching, transport, and log processing directly
 from the modules that own those APIs.
+The injected page-world entrypoint is also startup-only; observer and telemetry
+APIs remain owned by their focused `src/inject` and `src/lib` modules.
 
 ## TL;DR
 - Status: shipped

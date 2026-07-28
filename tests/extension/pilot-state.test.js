@@ -152,7 +152,7 @@ describe('captureState', () => {
   })
 
   test('should capture empty state when no storage exists', async () => {
-    const { captureState } = await import('../../extension/inject.js')
+    const { captureState } = await import('../../extension/inject/state.js')
 
     const state = captureState()
 
@@ -167,7 +167,7 @@ describe('captureState', () => {
     localStorageData['user'] = 'john'
     localStorageData['theme'] = 'dark'
 
-    const { captureState } = await import('../../extension/inject.js')
+    const { captureState } = await import('../../extension/inject/state.js')
 
     const state = captureState()
 
@@ -180,7 +180,7 @@ describe('captureState', () => {
     sessionStorageData['viewId'] = 'abc123'
     sessionStorageData['cart'] = '["item1","item2"]'
 
-    const { captureState } = await import('../../extension/inject.js')
+    const { captureState } = await import('../../extension/inject/state.js')
 
     const state = captureState()
 
@@ -192,7 +192,7 @@ describe('captureState', () => {
   test('should capture cookies', async () => {
     mockCookie = 'lang=en; preference=compact'
 
-    const { captureState } = await import('../../extension/inject.js')
+    const { captureState } = await import('../../extension/inject/state.js')
 
     const state = captureState()
 
@@ -202,7 +202,7 @@ describe('captureState', () => {
   test('should redact sensitive cookie values', async () => {
     mockCookie = 'token=xyz789; preference=compact'
 
-    const { captureState } = await import('../../extension/inject.js')
+    const { captureState } = await import('../../extension/inject/state.js')
 
     const state = captureState()
 
@@ -214,7 +214,7 @@ describe('captureState', () => {
     sessionStorageData['session_key'] = 'session_value'
     mockCookie = 'cookie_key=cookie_value'
 
-    const { captureState } = await import('../../extension/inject.js')
+    const { captureState } = await import('../../extension/inject/state.js')
 
     const state = captureState()
 
@@ -241,7 +241,7 @@ describe('restoreState', () => {
       cookies: ''
     }
 
-    const { restoreState } = await import('../../extension/inject.js')
+    const { restoreState } = await import('../../extension/inject/state.js')
 
     const result = restoreState(state, false)
 
@@ -260,7 +260,7 @@ describe('restoreState', () => {
       cookies: ''
     }
 
-    const { restoreState } = await import('../../extension/inject.js')
+    const { restoreState } = await import('../../extension/inject/state.js')
 
     const result = restoreState(state, false)
 
@@ -279,7 +279,7 @@ describe('restoreState', () => {
       cookies: 'token=xyz789; preference=compact'
     }
 
-    const { restoreState } = await import('../../extension/inject.js')
+    const { restoreState } = await import('../../extension/inject/state.js')
 
     const result = restoreState(state, false)
 
@@ -301,7 +301,7 @@ describe('restoreState', () => {
       cookies: 'new_cookie=new'
     }
 
-    const { restoreState } = await import('../../extension/inject.js')
+    const { restoreState } = await import('../../extension/inject/state.js')
 
     restoreState(state, false)
 
@@ -325,7 +325,7 @@ describe('restoreState', () => {
       cookies: ''
     }
 
-    const { restoreState } = await import('../../extension/inject.js')
+    const { restoreState } = await import('../../extension/inject/state.js')
 
     const result = restoreState(state, false)
 
@@ -342,7 +342,7 @@ describe('restoreState', () => {
       // localStorage, sessionStorage, cookies are undefined
     }
 
-    const { restoreState } = await import('../../extension/inject.js')
+    const { restoreState } = await import('../../extension/inject/state.js')
 
     const result = restoreState(state, false)
 
@@ -368,7 +368,7 @@ describe('State Round-trip', () => {
     sessionStorageData['temp'] = 'session_data'
     mockCookie = 'auth=token123'
 
-    const { captureState, restoreState } = await import('../../extension/inject.js')
+    const { captureState, restoreState } = await import('../../extension/inject/state.js')
 
     // Capture state
     const savedState = captureState()
@@ -561,7 +561,7 @@ describe('include_url parameter', () => {
       cookies: ''
     }
 
-    const { restoreState } = await import('../../extension/inject.js')
+    const { restoreState } = await import('../../extension/inject/state.js')
 
     restoreState(state, false)
 
@@ -578,7 +578,7 @@ describe('include_url parameter', () => {
       cookies: ''
     }
 
-    const { restoreState } = await import('../../extension/inject.js')
+    const { restoreState } = await import('../../extension/inject/state.js')
 
     // Note: In the test environment, we can't actually navigate,
     // but the function should attempt to set location.href
@@ -599,7 +599,7 @@ describe('include_url parameter', () => {
       cookies: ''
     }
 
-    const { restoreState } = await import('../../extension/inject.js')
+    const { restoreState } = await import('../../extension/inject/state.js')
 
     const result = restoreState(state, true)
 

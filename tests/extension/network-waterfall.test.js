@@ -104,7 +104,7 @@ describe('Network Waterfall - parseResourceTiming', () => {
   })
 
   test('should parse resource timing into WireNetworkWaterfallEntry', async () => {
-    const { parseResourceTiming } = await import('../../extension/inject.js')
+    const { parseResourceTiming } = await import('../../extension/lib/net/network.js')
 
     const timing = createMockResourceTiming()
     const result = parseResourceTiming(timing)
@@ -118,7 +118,7 @@ describe('Network Waterfall - parseResourceTiming', () => {
   })
 
   test('should include fetch_start from timing', async () => {
-    const { parseResourceTiming } = await import('../../extension/inject.js')
+    const { parseResourceTiming } = await import('../../extension/lib/net/network.js')
 
     const timing = createMockResourceTiming({ fetchStart: 100 })
     const result = parseResourceTiming(timing)
@@ -127,7 +127,7 @@ describe('Network Waterfall - parseResourceTiming', () => {
   })
 
   test('should include response_end from timing', async () => {
-    const { parseResourceTiming } = await import('../../extension/inject.js')
+    const { parseResourceTiming } = await import('../../extension/lib/net/network.js')
 
     const timing = createMockResourceTiming({ responseEnd: 350 })
     const result = parseResourceTiming(timing)
@@ -136,7 +136,7 @@ describe('Network Waterfall - parseResourceTiming', () => {
   })
 
   test('should include encoded and decoded body sizes', async () => {
-    const { parseResourceTiming } = await import('../../extension/inject.js')
+    const { parseResourceTiming } = await import('../../extension/lib/net/network.js')
 
     const timing = createMockResourceTiming({
       encodedBodySize: 900,
@@ -150,7 +150,7 @@ describe('Network Waterfall - parseResourceTiming', () => {
   })
 
   test('should handle zero transferSize (cache hit)', async () => {
-    const { parseResourceTiming } = await import('../../extension/inject.js')
+    const { parseResourceTiming } = await import('../../extension/lib/net/network.js')
 
     const timing = createMockResourceTiming({
       transferSize: 0,
@@ -164,7 +164,7 @@ describe('Network Waterfall - parseResourceTiming', () => {
   })
 
   test('should default missing size values to 0', async () => {
-    const { parseResourceTiming } = await import('../../extension/inject.js')
+    const { parseResourceTiming } = await import('../../extension/lib/net/network.js')
 
     const timing = createMockResourceTiming({
       transferSize: 0,
@@ -180,7 +180,7 @@ describe('Network Waterfall - parseResourceTiming', () => {
   })
 
   test('should include total duration', async () => {
-    const { parseResourceTiming } = await import('../../extension/inject.js')
+    const { parseResourceTiming } = await import('../../extension/lib/net/network.js')
 
     const timing = createMockResourceTiming({ duration: 500 })
     const result = parseResourceTiming(timing)
@@ -189,7 +189,7 @@ describe('Network Waterfall - parseResourceTiming', () => {
   })
 
   test('should include transfer size information', async () => {
-    const { parseResourceTiming } = await import('../../extension/inject.js')
+    const { parseResourceTiming } = await import('../../extension/lib/net/network.js')
 
     const timing = createMockResourceTiming({
       transferSize: 2048,
@@ -203,7 +203,7 @@ describe('Network Waterfall - parseResourceTiming', () => {
   })
 
   test('should include initiator type', async () => {
-    const { parseResourceTiming } = await import('../../extension/inject.js')
+    const { parseResourceTiming } = await import('../../extension/lib/net/network.js')
 
     const timing = createMockResourceTiming({ initiatorType: 'fetch' })
     const result = parseResourceTiming(timing)
@@ -212,7 +212,7 @@ describe('Network Waterfall - parseResourceTiming', () => {
   })
 
   test('should handle missing fetchStart and responseEnd (0)', async () => {
-    const { parseResourceTiming } = await import('../../extension/inject.js')
+    const { parseResourceTiming } = await import('../../extension/lib/net/network.js')
 
     const timing = createMockResourceTiming({
       fetchStart: 0,
@@ -245,7 +245,7 @@ describe('Network Waterfall - getNetworkWaterfall', () => {
   })
 
   test('should return all resource entries', async () => {
-    const { getNetworkWaterfall } = await import('../../extension/inject.js')
+    const { getNetworkWaterfall } = await import('../../extension/lib/net/network.js')
 
     globalThis.performance._addEntry(createMockResourceTiming({ name: 'http://localhost/api/1' }))
     globalThis.performance._addEntry(createMockResourceTiming({ name: 'http://localhost/api/2' }))
@@ -257,7 +257,7 @@ describe('Network Waterfall - getNetworkWaterfall', () => {
   })
 
   test('should filter by time range', async () => {
-    const { getNetworkWaterfall } = await import('../../extension/inject.js')
+    const { getNetworkWaterfall } = await import('../../extension/lib/net/network.js')
 
     globalThis.performance._addEntry(createMockResourceTiming({ name: 'http://localhost/early', startTime: 50 }))
     globalThis.performance._addEntry(createMockResourceTiming({ name: 'http://localhost/late', startTime: 500 }))
@@ -269,7 +269,8 @@ describe('Network Waterfall - getNetworkWaterfall', () => {
   })
 
   test('should limit number of entries', async () => {
-    const { getNetworkWaterfall, MAX_WATERFALL_ENTRIES } = await import('../../extension/inject.js')
+    const { getNetworkWaterfall } = await import('../../extension/lib/net/network.js')
+    const { MAX_WATERFALL_ENTRIES } = await import('../../extension/lib/constants.js')
 
     // Add more entries than the limit
     for (let i = 0; i < 100; i++) {
@@ -284,7 +285,7 @@ describe('Network Waterfall - getNetworkWaterfall', () => {
   })
 
   test('should sort entries by start time', async () => {
-    const { getNetworkWaterfall } = await import('../../extension/inject.js')
+    const { getNetworkWaterfall } = await import('../../extension/lib/net/network.js')
 
     globalThis.performance._addEntry(createMockResourceTiming({ name: 'http://localhost/second', startTime: 200 }))
     globalThis.performance._addEntry(createMockResourceTiming({ name: 'http://localhost/first', startTime: 100 }))
@@ -295,7 +296,7 @@ describe('Network Waterfall - getNetworkWaterfall', () => {
   })
 
   test('should filter by initiator type', async () => {
-    const { getNetworkWaterfall } = await import('../../extension/inject.js')
+    const { getNetworkWaterfall } = await import('../../extension/lib/net/network.js')
 
     globalThis.performance._addEntry(createMockResourceTiming({ name: 'http://localhost/api', initiatorType: 'fetch' }))
     globalThis.performance._addEntry(
@@ -311,7 +312,7 @@ describe('Network Waterfall - getNetworkWaterfall', () => {
   })
 
   test('should exclude data URLs', async () => {
-    const { getNetworkWaterfall } = await import('../../extension/inject.js')
+    const { getNetworkWaterfall } = await import('../../extension/lib/net/network.js')
 
     globalThis.performance._addEntry(createMockResourceTiming({ name: 'data:image/png;base64,abc123' }))
     globalThis.performance._addEntry(createMockResourceTiming({ name: 'http://localhost/api' }))
@@ -323,7 +324,7 @@ describe('Network Waterfall - getNetworkWaterfall', () => {
   })
 
   test('should return empty array when performance API unavailable', async () => {
-    const { getNetworkWaterfall } = await import('../../extension/inject.js')
+    const { getNetworkWaterfall } = await import('../../extension/lib/net/network.js')
 
     globalThis.performance = null
 
@@ -351,7 +352,7 @@ describe('Network Waterfall - Pending Requests', () => {
   })
 
   test('should track pending fetch requests', async () => {
-    const { trackPendingRequest, getPendingRequests, clearPendingRequests } = await import('../../extension/inject.js')
+    const { trackPendingRequest, getPendingRequests, clearPendingRequests } = await import('../../extension/lib/net/network.js')
 
     clearPendingRequests()
 
@@ -372,7 +373,7 @@ describe('Network Waterfall - Pending Requests', () => {
 
   test('should remove completed requests', async () => {
     const { trackPendingRequest, completePendingRequest, getPendingRequests, clearPendingRequests } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/net/network.js')
 
     clearPendingRequests()
 
@@ -390,7 +391,7 @@ describe('Network Waterfall - Pending Requests', () => {
 
   test('should include pending requests in error snapshots', async () => {
     const { trackPendingRequest, getNetworkWaterfallForError, clearPendingRequests, setNetworkWaterfallEnabled } =
-      await import('../../extension/inject.js')
+      await import('../../extension/lib/net/network.js')
 
     setNetworkWaterfallEnabled(true)
     clearPendingRequests()
@@ -434,7 +435,7 @@ describe('Network Waterfall - Error Integration', () => {
   })
 
   test('should create waterfall snapshot for error', async () => {
-    const { getNetworkWaterfallForError, setNetworkWaterfallEnabled } = await import('../../extension/inject.js')
+    const { getNetworkWaterfallForError, setNetworkWaterfallEnabled } = await import('../../extension/lib/net/network.js')
 
     setNetworkWaterfallEnabled(true)
 
@@ -456,7 +457,7 @@ describe('Network Waterfall - Error Integration', () => {
   })
 
   test('should respect networkWaterfallEnabled setting', async () => {
-    const { getNetworkWaterfallForError, setNetworkWaterfallEnabled } = await import('../../extension/inject.js')
+    const { getNetworkWaterfallForError, setNetworkWaterfallEnabled } = await import('../../extension/lib/net/network.js')
 
     setNetworkWaterfallEnabled(false)
 
@@ -474,7 +475,7 @@ describe('Network Waterfall - Error Integration', () => {
   })
 
   test('should only capture recent entries (last 30 seconds)', async () => {
-    const { getNetworkWaterfallForError, setNetworkWaterfallEnabled } = await import('../../extension/inject.js')
+    const { getNetworkWaterfallForError, setNetworkWaterfallEnabled } = await import('../../extension/lib/net/network.js')
 
     setNetworkWaterfallEnabled(true)
 
@@ -513,7 +514,7 @@ describe('Network Waterfall - Configuration', () => {
   })
 
   test('setNetworkWaterfallEnabled should toggle feature', async () => {
-    const { setNetworkWaterfallEnabled, isNetworkWaterfallEnabled } = await import('../../extension/inject.js')
+    const { setNetworkWaterfallEnabled, isNetworkWaterfallEnabled } = await import('../../extension/lib/net/network.js')
 
     setNetworkWaterfallEnabled(true)
     assert.strictEqual(isNetworkWaterfallEnabled(), true)
@@ -523,8 +524,8 @@ describe('Network Waterfall - Configuration', () => {
   })
 
   test('should expose network waterfall through __kaboom API', async () => {
-    const { installKaboomAPI, uninstallKaboomAPI, setNetworkWaterfallEnabled } =
-      await import('../../extension/inject.js')
+    const { installKaboomAPI, uninstallKaboomAPI } = await import('../../extension/inject/api.js')
+    const { setNetworkWaterfallEnabled } = await import('../../extension/lib/net/network.js')
 
     setNetworkWaterfallEnabled(true)
     installKaboomAPI()
