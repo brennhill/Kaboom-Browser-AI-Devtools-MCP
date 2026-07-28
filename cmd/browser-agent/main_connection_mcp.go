@@ -28,6 +28,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/wsframe"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pty"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/clientreg"
@@ -260,10 +261,10 @@ func initCapture(server *Server, port int) *capture.Store {
 	cap := capture.NewCapture()
 	cap.SetClientRegistry(newSessionClientRegistryAdapter(clientreg.NewClientRegistry()))
 	cap.SetServerVersion(version)
-	cap.SetLifecycleCallback(func(event string, data map[string]any) {
+	cap.SubscribeLifecycle(func(event lifecycle.Event, data map[string]any) {
 		entry := mcp.LogEntry{
 			"type":      "lifecycle",
-			"event":     event,
+			"event":     event.String(),
 			"pid":       os.Getpid(),
 			"port":      port,
 			"timestamp": time.Now().UTC().Format(time.RFC3339),

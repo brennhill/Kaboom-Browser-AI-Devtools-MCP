@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -57,14 +58,14 @@ type CircuitBreaker struct {
 	circuitReason        string
 
 	// Injected: emits lifecycle events (circuit_opened, circuit_closed)
-	emitEvent func(event string, data map[string]any)
+	emitEvent lifecycle.Listener
 
 	// Injected clock for deterministic tests; defaults to time.Now.
 	now func() time.Time
 }
 
 // NewCircuitBreaker creates a CircuitBreaker with injected dependencies.
-func NewCircuitBreaker(emitEvent func(string, map[string]any)) *CircuitBreaker {
+func NewCircuitBreaker(emitEvent lifecycle.Listener) *CircuitBreaker {
 	now := time.Now()
 	return &CircuitBreaker{
 		rateWindowStart:      now,
@@ -176,7 +177,7 @@ func (cb *CircuitBreaker) evaluateCircuit() {
 			rate := cb.windowEventCount
 			emitFn := cb.emitEvent
 			util.SafeGo(func() {
-				emitFn("circuit_opened", map[string]any{
+				emitFn(lifecycle.EventCircuitOpened, map[string]any{
 					"reason":    "rate_exceeded",
 					"streak":    streak,
 					"rate":      rate,
@@ -210,7 +211,7 @@ func (cb *CircuitBreaker) evaluateCircuit() {
 	emitFn := cb.emitEvent
 
 	util.SafeGo(func() {
-		emitFn("circuit_closed", map[string]any{
+		emitFn(lifecycle.EventCircuitClosed, map[string]any{
 			"previous_reason":    prevReason,
 			"open_duration_secs": openDuration.Seconds(),
 			"rate":               rate,

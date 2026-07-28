@@ -112,38 +112,6 @@ func TestObserver_ConcurrentAccess(t *testing.T) {
 	wg.Wait()
 }
 
-func TestObserver_EmitString(t *testing.T) {
-	t.Parallel()
-	obs := NewObserver()
-
-	var received Event
-	obs.Subscribe(func(event Event, data map[string]any) {
-		received = event
-	})
-
-	obs.EmitString("extension_connected", map[string]any{"key": "val"})
-
-	if received != EventExtensionConnected {
-		t.Errorf("received event = %d, want %d (EventExtensionConnected)", received, EventExtensionConnected)
-	}
-}
-
-func TestObserver_EmitString_Unknown(t *testing.T) {
-	t.Parallel()
-	obs := NewObserver()
-
-	var received Event
-	obs.Subscribe(func(event Event, data map[string]any) {
-		received = event
-	})
-
-	obs.EmitString("some_unknown_event", nil)
-
-	if received != EventUnknown {
-		t.Errorf("received event = %d, want %d (EventUnknown)", received, EventUnknown)
-	}
-}
-
 func TestEventString(t *testing.T) {
 	t.Parallel()
 
@@ -166,31 +134,6 @@ func TestEventString(t *testing.T) {
 	for _, tc := range cases {
 		if got := tc.event.String(); got != tc.want {
 			t.Errorf("Event(%d).String() = %q, want %q", tc.event, got, tc.want)
-		}
-	}
-}
-
-func TestParseEvent(t *testing.T) {
-	t.Parallel()
-
-	cases := []struct {
-		input string
-		want  Event
-	}{
-		{"circuit_opened", EventCircuitOpened},
-		{"circuit_closed", EventCircuitClosed},
-		{"extension_connected", EventExtensionConnected},
-		{"extension_disconnected", EventExtensionDisconnected},
-		{"buffer_eviction", EventBufferEviction},
-		{"rate_limit_triggered", EventRateLimitTriggered},
-		{"command_state_desync", EventCommandStateDesync},
-		{"sync_snapshot", EventSyncSnapshot},
-		{"bogus_event", EventUnknown},
-	}
-
-	for _, tc := range cases {
-		if got := ParseEvent(tc.input); got != tc.want {
-			t.Errorf("ParseEvent(%q) = %d, want %d", tc.input, got, tc.want)
 		}
 	}
 }

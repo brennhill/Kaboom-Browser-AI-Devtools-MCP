@@ -10,6 +10,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
@@ -109,8 +110,8 @@ func WireFirstConnect(store *capture.Store, shutdown <-chan struct{}, detect fun
 		return
 	}
 	var once sync.Once
-	store.AddLifecycleCallback(func(event string, _ map[string]any) {
-		if event != "extension_connected" {
+	store.SubscribeLifecycle(func(event lifecycle.Event, _ map[string]any) {
+		if event != lifecycle.EventExtensionConnected {
 			return
 		}
 		once.Do(func() {

@@ -14,38 +14,28 @@ import (
 type Event int
 
 const (
-	EventUnknown                Event = iota
-	EventCircuitOpened                // Circuit breaker opened (rate exceeded)
-	EventCircuitClosed                // Circuit breaker closed (recovered)
-	EventExtensionConnected           // Extension connected or reconnected
-	EventExtensionDisconnected        // Extension disconnected (poll timeout)
-	EventBufferEviction               // Ring buffer evicted old entries
-	EventRateLimitTriggered           // Rate limit threshold hit
-	EventCommandStateDesync           // Command state mismatch with extension
-	EventSyncSnapshot                 // Periodic sync state snapshot
+	EventUnknown               Event = iota
+	EventCircuitOpened               // Circuit breaker opened (rate exceeded)
+	EventCircuitClosed               // Circuit breaker closed (recovered)
+	EventExtensionConnected          // Extension connected or reconnected
+	EventExtensionDisconnected       // Extension disconnected (poll timeout)
+	EventBufferEviction              // Ring buffer evicted old entries
+	EventRateLimitTriggered          // Rate limit threshold hit
+	EventCommandStateDesync          // Command state mismatch with extension
+	EventSyncSnapshot                // Periodic sync state snapshot
 )
 
 // eventNames maps typed events to their wire-format string names.
 var eventNames = map[Event]string{
-	EventUnknown:                "unknown",
-	EventCircuitOpened:          "circuit_opened",
-	EventCircuitClosed:          "circuit_closed",
-	EventExtensionConnected:     "extension_connected",
-	EventExtensionDisconnected:  "extension_disconnected",
-	EventBufferEviction:         "buffer_eviction",
-	EventRateLimitTriggered:     "rate_limit_triggered",
-	EventCommandStateDesync:     "command_state_desync",
-	EventSyncSnapshot:           "sync_snapshot",
-}
-
-// stringToEvent maps wire-format string names to typed events (reverse of eventNames).
-var stringToEvent map[string]Event
-
-func init() {
-	stringToEvent = make(map[string]Event, len(eventNames))
-	for ev, name := range eventNames {
-		stringToEvent[name] = ev
-	}
+	EventUnknown:               "unknown",
+	EventCircuitOpened:         "circuit_opened",
+	EventCircuitClosed:         "circuit_closed",
+	EventExtensionConnected:    "extension_connected",
+	EventExtensionDisconnected: "extension_disconnected",
+	EventBufferEviction:        "buffer_eviction",
+	EventRateLimitTriggered:    "rate_limit_triggered",
+	EventCommandStateDesync:    "command_state_desync",
+	EventSyncSnapshot:          "sync_snapshot",
 }
 
 // String returns the wire-format name for a lifecycle event.
@@ -54,15 +44,6 @@ func (e Event) String() string {
 		return name
 	}
 	return "unknown"
-}
-
-// ParseEvent converts a string event name to its typed enum.
-// Returns EventUnknown for unrecognized strings.
-func ParseEvent(s string) Event {
-	if ev, ok := stringToEvent[s]; ok {
-		return ev
-	}
-	return EventUnknown
 }
 
 // Listener is the callback signature for lifecycle event subscribers.
@@ -127,19 +108,5 @@ func (o *Observer) Emit(event Event, data map[string]any) {
 			}()
 			fn(event, data)
 		}(entry.fn)
-	}
-}
-
-// EmitString converts a string event name to a typed event and emits it.
-// Backward compatibility bridge for callers that still use string event names.
-func (o *Observer) EmitString(event string, data map[string]any) {
-	o.Emit(ParseEvent(event), data)
-}
-
-// EmitFunc returns a func(string, map[string]any) suitable for injection into
-// subsystems (e.g., CircuitBreaker) that expect the old string-based callback signature.
-func (o *Observer) EmitFunc() func(string, map[string]any) {
-	return func(event string, data map[string]any) {
-		o.EmitString(event, data)
 	}
 }

@@ -2,7 +2,7 @@
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
 // coverage_gaps_test.go — Targeted tests for uncovered capture paths (part 1).
-// Covers: SetLifecycleCallback, emitLifecycleEvent, SetServerVersion,
+// Covers: SubscribeLifecycle, emitLifecycleEvent, SetServerVersion,
 // GetVersionMismatch, majorMinor, detectAndSetBinaryFormat,
 // redactExtensionLog edge cases, circuit breaker, and HTTP handlers.
 package capture
@@ -13,29 +13,31 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
 )
 
 // ============================================
-// SetLifecycleCallback / emitLifecycleEvent
+// SubscribeLifecycle / emitLifecycleEvent
 // ============================================
 
-func TestSetLifecycleCallback(t *testing.T) {
+func TestSubscribeLifecycle(t *testing.T) {
 	t.Parallel()
 
 	c := NewCapture()
 	defer c.Close()
 
-	var received string
+	var received lifecycle.Event
 	var receivedData map[string]any
-	c.SetLifecycleCallback(func(event string, data map[string]any) {
+	c.SubscribeLifecycle(func(event lifecycle.Event, data map[string]any) {
 		received = event
 		receivedData = data
 	})
 
-	c.emitLifecycleEvent("circuit_opened", map[string]any{"key": "value"})
+	c.emitLifecycleEvent(lifecycle.EventCircuitOpened, map[string]any{"key": "value"})
 
-	if received != "circuit_opened" {
-		t.Errorf("callback event = %q, want circuit_opened", received)
+	if received != lifecycle.EventCircuitOpened {
+		t.Errorf("callback event = %v, want circuit_opened", received)
 	}
 	if receivedData["key"] != "value" {
 		t.Errorf("callback data = %v, want key=value", receivedData)
@@ -49,7 +51,7 @@ func TestEmitLifecycleEvent_NilCallback(t *testing.T) {
 	defer c.Close()
 
 	// Should not panic when no callback is set
-	c.emitLifecycleEvent("no_callback", nil)
+	c.emitLifecycleEvent(lifecycle.EventUnknown, nil)
 }
 
 // ============================================
@@ -316,7 +318,7 @@ func TestRedactExtensionLog_WithRedactor(t *testing.T) {
 
 func TestCircuitBreaker_GetHealthStatus_Open(t *testing.T) {
 	t.Parallel()
-	cb := NewCircuitBreaker(func(string, map[string]any) {})
+	cb := NewCircuitBreaker(func(lifecycle.Event, map[string]any) {})
 	cb.ForceOpen("test_reason")
 	health := cb.GetHealthStatus()
 	if !health.CircuitOpen {
@@ -332,7 +334,7 @@ func TestCircuitBreaker_GetHealthStatus_Open(t *testing.T) {
 
 func TestCircuitBreaker_GetHealthStatus_Closed(t *testing.T) {
 	t.Parallel()
-	cb := NewCircuitBreaker(func(string, map[string]any) {})
+	cb := NewCircuitBreaker(func(lifecycle.Event, map[string]any) {})
 	health := cb.GetHealthStatus()
 	if health.CircuitOpen {
 		t.Error("CircuitOpen = true, want false")

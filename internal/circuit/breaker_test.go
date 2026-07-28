@@ -8,11 +8,13 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
 )
 
 func newTestCircuitBreaker() *CircuitBreaker {
 	return NewCircuitBreaker(
-		func(event string, data map[string]any) {}, // no-op lifecycle
+		func(event lifecycle.Event, data map[string]any) {}, // no-op lifecycle
 	)
 }
 
@@ -145,11 +147,11 @@ func TestCircuitBreaker_ConcurrentRecordEvents(t *testing.T) {
 
 func TestCircuitBreaker_LifecycleCallback(t *testing.T) {
 	t.Parallel()
-	var events []string
+	var events []lifecycle.Event
 	var mu sync.Mutex
 
 	cb := NewCircuitBreaker(
-		func(event string, data map[string]any) {
+		func(event lifecycle.Event, data map[string]any) {
 			mu.Lock()
 			events = append(events, event)
 			mu.Unlock()
@@ -173,7 +175,7 @@ func TestCircuitBreaker_LifecycleCallback(t *testing.T) {
 	if len(events) == 0 {
 		t.Fatal("Expected lifecycle callback for circuit_opened")
 	}
-	if events[0] != "circuit_opened" {
+	if events[0] != lifecycle.EventCircuitOpened {
 		t.Fatalf("Expected circuit_opened event, got %s", events[0])
 	}
 }
@@ -187,7 +189,7 @@ func TestCircuitBreaker_LifecycleCallback(t *testing.T) {
 func TestCircuitBreaker_ClosesViaCheckRateLimitPath(t *testing.T) {
 	t.Parallel()
 	current := time.Date(2026, 6, 10, 12, 0, 0, 0, time.UTC)
-	cb := NewCircuitBreaker(func(string, map[string]any) {})
+	cb := NewCircuitBreaker(func(lifecycle.Event, map[string]any) {})
 	cb.mu.Lock()
 	cb.now = func() time.Time { return current }
 	cb.rateWindowStart = current
@@ -228,7 +230,7 @@ func TestCircuitBreaker_ClosesViaCheckRateLimitPath(t *testing.T) {
 
 func TestCircuitBreaker_RecordEventsWindowReset(t *testing.T) {
 	t.Parallel()
-	cb := NewCircuitBreaker(func(string, map[string]any) {})
+	cb := NewCircuitBreaker(func(lifecycle.Event, map[string]any) {})
 	cb.SetWindowState(time.Now().Add(-2*time.Second), 50)
 	cb.RecordEvents(10)
 	cb.mu.RLock()

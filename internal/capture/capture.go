@@ -12,7 +12,11 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/wsconn"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/debuglog"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/redaction"
 )
@@ -65,13 +69,13 @@ type Capture struct {
 	// Query Dispatch (Own Locks)
 	// ============================================
 
-	queryDispatcher *QueryDispatcher // Pending queries, results, async command tracking — delegates to QueryDispatcher sub-struct (aliased from internal/queries). Has own sync.Mutex + sync.RWMutex — independent of Capture.mu.
+	queryDispatcher *queries.QueryDispatcher // Pending queries, results, async command tracking. Has own sync.Mutex + sync.RWMutex — independent of Capture.mu.
 
 	// ============================================
 	// Rate Limiting & Circuit Breaker (Own Lock)
 	// ============================================
 
-	circuit *CircuitBreaker // Rate limiting + circuit breaker state machine — delegates to internal/circuit. Has own sync.RWMutex — independent of Capture.mu.
+	circuit *circuit.CircuitBreaker // Rate limiting + circuit breaker state machine. Has own sync.RWMutex — independent of Capture.mu.
 
 	// ============================================
 	// Extension State (Protected by parent mu)
@@ -83,7 +87,7 @@ type Capture struct {
 	// Debug Logging (Own Lock)
 	// ============================================
 
-	debug DebugLogger // Polling activity + HTTP debug circular buffers. Has own sync.Mutex — independent of Capture.mu. Delegates to internal/debuglog.
+	debug debuglog.Logger // Polling activity + HTTP debug circular buffers. Has own sync.Mutex — independent of Capture.mu.
 
 	// Redaction engine for scrubbing sensitive values from extension debug logs.
 	logRedactor *redaction.RedactionEngine
@@ -107,7 +111,7 @@ type Capture struct {
 	// Lifecycle Event Callbacks
 	// ============================================
 
-	lifecycle          *LifecycleObserver    // Typed event bus for lifecycle events (circuit breaker, extension state, buffer overflow). Has own lock — independent of Capture.mu. Delegates to internal/lifecycle.
+	lifecycle          *lifecycle.Observer   // Typed event bus for lifecycle events (circuit breaker, extension state, buffer overflow). Has own lock independent of Capture.mu.
 	navigationCallback func()                // Optional callback fired after a navigation action is ingested (called outside lock)
 	featuresCallback   func(map[string]bool) // Optional callback fired when extension reports feature usage (called outside lock)
 
@@ -147,14 +151,14 @@ func NewCapture() *Capture {
 			baselineOrder:   make([]string, 0),
 			beforeSnapshots: make(map[string]performance.PerformanceSnapshot),
 		},
-		debug:            NewDebugLogger(),
+		debug:            debuglog.NewLogger(),
 		recordingManager: NewRecordingManager(),
 
 		logRedactor: redaction.NewRedactionEngine(""),
-		lifecycle:   NewLifecycleObserver(),
+		lifecycle:   lifecycle.NewObserver(),
 	}
-	c.queryDispatcher = NewQueryDispatcher()
-	c.circuit = NewCircuitBreaker(c.lifecycle.EmitFunc())
+	c.queryDispatcher = queries.NewQueryDispatcher()
+	c.circuit = circuit.NewCircuitBreaker(c.lifecycle.Emit)
 
 	// Note: clientRegistry is initialized by capture.New() in capture package
 	// to avoid circular import (those packages import capture for NetworkBody, WebSocketEvent, etc.)
@@ -193,7 +197,7 @@ func (c *Capture) SetFeaturesCallback(cb func(map[string]bool)) {
 // SubscribeLifecycle registers a typed lifecycle event listener and returns a
 // subscription ID for later removal via UnsubscribeLifecycle.
 // Thread-safe; the observer has its own lock independent of Capture.mu.
-func (c *Capture) SubscribeLifecycle(fn LifecycleListener) int {
+func (c *Capture) SubscribeLifecycle(fn lifecycle.Listener) int {
 	return c.lifecycle.Subscribe(fn)
 }
 
@@ -203,33 +207,13 @@ func (c *Capture) UnsubscribeLifecycle(id int) {
 	c.lifecycle.Unsubscribe(id)
 }
 
-// SetLifecycleCallback registers a string-based lifecycle callback.
-// Backward-compatible: wraps the callback as a LifecycleListener on the observer.
-// Note: does NOT clear previous listeners. Callers that need exclusive ownership
-// should use SubscribeLifecycle/UnsubscribeLifecycle directly.
-func (c *Capture) SetLifecycleCallback(cb func(event string, data map[string]any)) {
-	c.lifecycle.Subscribe(func(event LifecycleEvent, data map[string]any) {
-		cb(event.String(), data)
-	})
-}
-
-// AddLifecycleCallback appends a string-based lifecycle callback.
-// Backward-compatible: wraps the callback as a LifecycleListener on the observer.
-// Deprecated: prefer SubscribeLifecycle for new code.
-func (c *Capture) AddLifecycleCallback(cb func(event string, data map[string]any)) {
-	c.lifecycle.Subscribe(func(event LifecycleEvent, data map[string]any) {
-		cb(event.String(), data)
-	})
-}
-
 // emitLifecycleEvent dispatches a lifecycle event via the observer.
-// Backward-compatible bridge: converts string event name to typed event.
 //
 // Failure semantics:
 // - No listeners is a silent no-op.
 // - Individual listener panics are recovered (error isolation).
-func (c *Capture) emitLifecycleEvent(event string, data map[string]any) {
-	c.lifecycle.EmitString(event, data)
+func (c *Capture) emitLifecycleEvent(event lifecycle.Event, data map[string]any) {
+	c.lifecycle.Emit(event, data)
 }
 
 // SetServerVersion sets server version for compatibility checking.

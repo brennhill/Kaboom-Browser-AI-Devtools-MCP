@@ -12,7 +12,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/wsconn"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/debuglog"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
@@ -160,32 +159,6 @@ var (
 	validateRecordingID    = recording.ValidateRecordingID
 	calculateRecordingSize = recording.CalculateRecordingSize
 )
-
-// Type aliases for backward compatibility — all types now live in internal/lifecycle.
-type (
-	LifecycleEvent    = lifecycle.Event
-	LifecycleListener = lifecycle.Listener
-	LifecycleObserver = lifecycle.Observer
-)
-
-// Event constant aliases for backward compatibility.
-const (
-	EventUnknown               = lifecycle.EventUnknown
-	EventCircuitOpened         = lifecycle.EventCircuitOpened
-	EventCircuitClosed         = lifecycle.EventCircuitClosed
-	EventExtensionConnected    = lifecycle.EventExtensionConnected
-	EventExtensionDisconnected = lifecycle.EventExtensionDisconnected
-	EventBufferEviction        = lifecycle.EventBufferEviction
-	EventRateLimitTriggered    = lifecycle.EventRateLimitTriggered
-	EventCommandStateDesync    = lifecycle.EventCommandStateDesync
-	EventSyncSnapshot          = lifecycle.EventSyncSnapshot
-)
-
-// NewLifecycleObserver re-exports lifecycle.NewObserver for backward compatibility.
-var NewLifecycleObserver = lifecycle.NewObserver
-
-// ParseLifecycleEvent re-exports lifecycle.ParseEvent for backward compatibility.
-var ParseLifecycleEvent = lifecycle.ParseEvent
 
 const (
 	MaxWSEvents        = 500

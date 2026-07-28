@@ -20,6 +20,8 @@ code_paths:
   - internal/capture/query_dispatcher.go
   - internal/capture/sync.go
   - internal/capture/test_helpers.go
+  - internal/circuit/breaker.go
+  - internal/lifecycle/observer.go
   - internal/capture/wsconn/doc.go
   - internal/capture/wsconn/status.go
   - internal/capture/wsconn/tracker.go
@@ -55,6 +57,9 @@ test_paths:
   - internal/capture/extension_log_store_test.go
   - internal/capture/buffer_clear_test.go
   - internal/capture/testhelpers_test.go
+  - internal/capture/no_facade_test.go
+  - internal/circuit/breaker_test.go
+  - internal/lifecycle/observer_test.go
   - tests/extension/sync-client.test.js
   - tests/extension/server.test.js
   - tests/extension/background-batching.test.js
