@@ -16,6 +16,9 @@ test_paths:
   - internal/capture/http_debug_redaction_test.go
   - internal/redaction/no_facade_test.go
   - internal/redaction/redaction_test.go
+  - internal/redaction/redaction_config_test.go
+  - internal/redaction/redaction_engine_test.go
+  - internal/redaction/redaction_map_test.go
   - internal/security/scan/unit_test.go
   - internal/security/scan/coverage_part2_test.go
 last_verified_version: 0.7.12
