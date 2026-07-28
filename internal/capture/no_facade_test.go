@@ -89,6 +89,10 @@ func TestCaptureHasNoCompatibilityAliases(t *testing.T) {
 		"CompleteCommand(",
 		"ExtensionStatus struct",
 		"UpdateExtensionStatus(",
+		"func (c *Capture) EventBuffers(",
+		"func (c *Capture) NetworkWaterfallStore(",
+		"func (c *Capture) ExtensionLogStore(",
+		"func (c *Capture) PerformanceSnapshotStore(",
 	} {
 		if strings.Contains(source.String(), forbidden) {
 			t.Errorf("capture retains compatibility surface %q", forbidden)
