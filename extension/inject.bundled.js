@@ -1789,7 +1789,7 @@ function installKaboomAPI() {
     /**
      * Version of the Kaboom API
      */
-    version: "0.8.8"
+    version: "0.9.0"
   };
 }
 

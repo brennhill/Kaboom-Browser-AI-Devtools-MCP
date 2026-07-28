@@ -219,7 +219,7 @@ func TestActionRecordingDoesNotReturnToToolHandler(t *testing.T) {
 func TestNavigateEnrichmentBelongsToInteractOwner(t *testing.T) {
 	checks := map[string]string{
 		"cmd/browser-agent/tools_interact_dispatch.go":              "func (h *ToolHandler) enrichNavigateResponse(",
-		"cmd/browser-agent/internal/toolinteract/deps.go":           "EnrichNavigateResponse func(",
+		"cmd/browser-agent/internal/toolinteract/action_owners.go":  "EnrichNavigateResponse func(",
 		"cmd/browser-agent/internal/toolinteract/fake_deps_test.go": "EnrichNavigateResponse:",
 	}
 	for relativePath, forbidden := range checks {
@@ -395,7 +395,7 @@ func TestEvidenceCaptureHasNoCompatibilityShim(t *testing.T) {
 
 func TestFeaturePackagesDoNotMirrorGuardContract(t *testing.T) {
 	for _, relativePath := range []string{
-		"cmd/browser-agent/internal/toolinteract/deps.go",
+		"cmd/browser-agent/internal/toolinteract/action_owners.go",
 		"cmd/browser-agent/internal/toolinteract/interactupload/upload.go",
 		"cmd/browser-agent/internal/screenrec/deps.go",
 	} {

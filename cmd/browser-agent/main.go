@@ -26,7 +26,7 @@ import (
 
 // version is set at build time via -ldflags "-X main.version=..."
 // Fallback used for `go run` and `make dev` (no ldflags).
-var version = "0.8.8"
+var version = "0.9.0"
 
 var exitDiagnostics = exitdiag.New(exitdiag.Options{Version: version})
 
