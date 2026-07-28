@@ -178,7 +178,7 @@ function onSyncFailure(state: SyncState): void {
 ### Handler Pseudocode
 
 ```go
-func (c *Capture) HandleSync(w http.ResponseWriter, r *http.Request) {
+func (h *SyncHandler) HandleSync(w http.ResponseWriter, r *http.Request) {
     if r.Method != "POST" {
         w.WriteHeader(http.StatusMethodNotAllowed)
         return

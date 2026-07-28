@@ -175,7 +175,7 @@ func (s *scenario) loadTrackingState(t *testing.T) {
 	}`)))
 	syncReq.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
-	s.capture.HandleSync(w, syncReq)
+	capture.NewSyncHandler(s.capture).HandleSync(w, syncReq)
 }
 
 // loadFullScenario loads all data types for comprehensive testing.

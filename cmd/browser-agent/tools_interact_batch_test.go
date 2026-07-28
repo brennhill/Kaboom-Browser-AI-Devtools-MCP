@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // ============================================
@@ -43,7 +44,7 @@ func setupBatchHandler(t *testing.T) *ToolHandler {
 	cap.Extension().SetPilotEnabled(true)
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	cap.HandleSync(httptest.NewRecorder(), httpReq)
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 	return h
 }

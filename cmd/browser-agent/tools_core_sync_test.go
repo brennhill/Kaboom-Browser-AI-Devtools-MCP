@@ -57,7 +57,7 @@ func TestMaybeWaitForCommand_SyncByDefault(t *testing.T) {
 	reqBody := `{"ext_session_id":"test"}`
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(reqBody))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	cap.HandleSync(httptest.NewRecorder(), httpReq)
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 
 	// Call with no explicit sync param (should default to true)
 	resp := handler.asyncCommands.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{}`), "Queued")
@@ -188,7 +188,7 @@ func TestMaybeWaitForCommand_PendingDisconnectReturnsTerminalError(t *testing.T)
 	// Seed a recent /sync so the first connectivity check passes.
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	cap.HandleSync(httptest.NewRecorder(), httpReq)
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 
 	resp := handler.asyncCommands.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"sync":true}`), "Queued")
 	result := parseMCPResponseData(t, resp.Result)

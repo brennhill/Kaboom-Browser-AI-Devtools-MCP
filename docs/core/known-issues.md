@@ -72,7 +72,7 @@ the folder-gate numbers as evidence that it did.
 
 | | Current |
 | --- | --- |
-| `Capture` production methods (composition and cross-owner orchestration) | 20 |
+| `Capture` production methods (composition and cross-owner orchestration) | 14 |
 | `cmd/browser-agent` production source files (package `main`) | 10 |
 | `*ToolHandler` methods in those files | 3 |
 
@@ -100,7 +100,11 @@ The extension-facing ingestion boundary is now owned by
 recording-storage, and circuit-health routes migrated together. All server and
 test callers construct that canonical owner directly, and the former
 `Capture.Handle*` methods were deleted rather than kept as facades. The
-remaining `HandleSync` method is a separate session/command transport cluster.
+The separate session/command transport cluster is now owned by
+`capture.SyncHandler`. Heartbeats, command results, long-poll delivery,
+disconnect reconciliation, lifecycle events, and sync diagnostics migrated
+together; all callers construct the owner directly and `Capture` retains no
+sync forwarding methods.
 
 Note also that `src/lib` and `src/background` were **relocated into
 subdirectories, not decomposed** — total file count and LOC are essentially

@@ -79,7 +79,7 @@ func TestNewCapture_GetPendingQueriesDisconnectAware_NeverSynced(t *testing.T) {
 
 	c.Queries().CreatePendingQuery(queries.PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)})
 
-	pending := c.GetPendingQueriesDisconnectAware()
+	pending := NewSyncHandler(c).GetPendingQueriesDisconnectAware()
 	if len(pending) != 1 {
 		t.Fatalf("pending len = %d, want 1 (never synced = not disconnected)", len(pending))
 	}
@@ -97,7 +97,7 @@ func TestNewCapture_GetPendingQueriesDisconnectAware_RecentSync(t *testing.T) {
 
 	c.Queries().CreatePendingQuery(queries.PendingQuery{Type: "dom", Params: json.RawMessage(`{}`)})
 
-	pending := c.GetPendingQueriesDisconnectAware()
+	pending := NewSyncHandler(c).GetPendingQueriesDisconnectAware()
 	if len(pending) != 1 {
 		t.Fatalf("pending len = %d, want 1 (recently synced)", len(pending))
 	}
@@ -119,7 +119,7 @@ func TestNewCapture_GetPendingQueriesDisconnectAware_Disconnected(t *testing.T) 
 		CorrelationID: "corr-disc",
 	})
 
-	pending := c.GetPendingQueriesDisconnectAware()
+	pending := NewSyncHandler(c).GetPendingQueriesDisconnectAware()
 	if len(pending) != 0 {
 		t.Fatalf("pending len = %d, want 0 (disconnected)", len(pending))
 	}

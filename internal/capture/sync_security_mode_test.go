@@ -27,7 +27,7 @@ func TestHandleSync_IncludesSecurityModeOverridesWhenInsecureModeActive(t *testi
 
 	req := httptest.NewRequest("POST", "/sync", bytes.NewReader(reqBody))
 	w := httptest.NewRecorder()
-	cap.HandleSync(w, req)
+	NewSyncHandler(cap).HandleSync(w, req)
 	if w.Code != 200 {
 		t.Fatalf("HandleSync status = %d, want 200", w.Code)
 	}
@@ -53,7 +53,7 @@ func TestHandleSync_DefaultSecurityModeOverridesEmpty(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/sync", bytes.NewReader([]byte(`{"ext_session_id":"ext-default"}`)))
 	w := httptest.NewRecorder()
-	cap.HandleSync(w, req)
+	NewSyncHandler(cap).HandleSync(w, req)
 	if w.Code != 200 {
 		t.Fatalf("HandleSync status = %d, want 200", w.Code)
 	}

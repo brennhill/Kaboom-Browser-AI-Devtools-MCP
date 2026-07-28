@@ -33,7 +33,7 @@ func newContentTestEnv(t *testing.T) *interactTestEnv {
 	// Simulate extension connection
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	cap.HandleSync(httptest.NewRecorder(), httpReq)
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 
 	// Simulate tab tracking
 	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")

@@ -163,7 +163,7 @@ func TestHandleSync_UpdatesLastSyncSeen(t *testing.T) {
 	httpReq.Header.Set("X-Kaboom-Client", "client-123")
 	w := httptest.NewRecorder()
 
-	c.HandleSync(w, httpReq)
+	NewSyncHandler(c).HandleSync(w, httpReq)
 
 	// After sync: connected
 	if !c.Extension().IsExtensionConnected() {
@@ -267,7 +267,7 @@ func TestGetPilotStatus_ExplicitDisableFromSyncIsAuthoritative(t *testing.T) {
 	}`
 	httpReq := httptest.NewRequest("POST", "/sync", bytes.NewBufferString(reqBody))
 	w := httptest.NewRecorder()
-	c.HandleSync(w, httpReq)
+	NewSyncHandler(c).HandleSync(w, httpReq)
 
 	status, ok := c.Extension().GetPilotStatus().(map[string]any)
 	if !ok {
@@ -313,7 +313,7 @@ func TestGetPendingQueries_ExpiresOnDisconnect(t *testing.T) {
 	}
 
 	// Now call the disconnect-aware method
-	result := c.GetPendingQueriesDisconnectAware()
+	result := NewSyncHandler(c).GetPendingQueriesDisconnectAware()
 	if len(result) != 0 {
 		t.Fatalf("expected 0 queries after disconnect expiry, got %d", len(result))
 	}
@@ -349,7 +349,7 @@ func TestGetPendingQueries_DoesNotExpireWhenConnected(t *testing.T) {
 	}, 30*time.Second, "")
 
 	// Should return the query normally
-	result := c.GetPendingQueriesDisconnectAware()
+	result := NewSyncHandler(c).GetPendingQueriesDisconnectAware()
 	if len(result) != 1 {
 		t.Fatalf("expected 1 pending query when connected, got %d", len(result))
 	}
@@ -367,7 +367,7 @@ func TestGetPendingQueries_DoesNotExpireWhenNeverSynced(t *testing.T) {
 		Params: json.RawMessage(`{"selector":".test"}`),
 	}, 30*time.Second, "")
 
-	result := c.GetPendingQueriesDisconnectAware()
+	result := NewSyncHandler(c).GetPendingQueriesDisconnectAware()
 	if len(result) != 1 {
 		t.Fatalf("expected 1 pending query when never synced, got %d", len(result))
 	}
@@ -404,7 +404,7 @@ func TestHandleSync_ExpiresPendingOnDisconnect(t *testing.T) {
 	httpReq := httptest.NewRequest("POST", "/sync", bytes.NewReader(body))
 	w := httptest.NewRecorder()
 
-	c.HandleSync(w, httpReq)
+	NewSyncHandler(c).HandleSync(w, httpReq)
 
 	// After the sync, the pending queries should have been expired
 	// and the new sync should return no commands (they were expired before delivery)

@@ -55,7 +55,7 @@ func newInteractTestEnv(t *testing.T) *interactTestEnv {
 	// Simulate extension connection so tests that enable pilot don't hit the extension gate.
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	cap.HandleSync(httptest.NewRecorder(), httpReq)
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 
 	// Simulate tab tracking so tests don't hit the tab tracking gate.
 	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")

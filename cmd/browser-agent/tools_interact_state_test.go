@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
@@ -43,7 +44,7 @@ func simulateExtensionConnection(t *testing.T, env *interactHelpersTestEnv) {
 	t.Helper()
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	env.capture.HandleSync(httptest.NewRecorder(), httpReq)
+	capture.NewSyncHandler(env.capture).HandleSync(httptest.NewRecorder(), httpReq)
 }
 
 func requireSessionStore(t *testing.T, env *interactHelpersTestEnv) {

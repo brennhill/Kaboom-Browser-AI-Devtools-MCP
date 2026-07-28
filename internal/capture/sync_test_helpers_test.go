@@ -27,7 +27,7 @@ func runSyncRawRequest(t *testing.T, cap *Capture, method string, body []byte) *
 		req.Header.Set("Content-Type", "application/json")
 	}
 	w := httptest.NewRecorder()
-	cap.HandleSync(w, req)
+	NewSyncHandler(cap).HandleSync(w, req)
 	return w
 }
 

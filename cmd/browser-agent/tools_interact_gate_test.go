@@ -63,7 +63,7 @@ func (e *gateTestEnv) simulateConnection(t *testing.T) {
 	t.Helper()
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	e.capture.HandleSync(httptest.NewRecorder(), httpReq)
+	capture.NewSyncHandler(e.capture).HandleSync(httptest.NewRecorder(), httpReq)
 }
 
 // enablePilot turns on pilot for tests that need it.

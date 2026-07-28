@@ -19,6 +19,17 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
+// SyncHandler owns the extension heartbeat, command transport, and
+// disconnect-reconciliation boundary.
+type SyncHandler struct {
+	capture *Capture
+}
+
+// NewSyncHandler binds extension sync transport to canonical capture owners.
+func NewSyncHandler(capture *Capture) *SyncHandler {
+	return &SyncHandler{capture: capture}
+}
+
 // extractBrowserName returns a generic browser name from a User-Agent string.
 // Only the browser family is returned — no version, OS, or device details.
 func extractBrowserName(ua string) string {
@@ -198,7 +209,7 @@ func filterFeaturesUsed(raw map[string]bool) map[string]bool {
 // - Invalid JSON returns 400 and does not mutate capture state.
 // - Extension disconnect transitions expire pending queries to avoid indefinite LLM waits.
 // - Long-poll returns within bounded timeout even when no commands are queued.
-func (c *Capture) HandleSync(w http.ResponseWriter, r *http.Request) {
+func (h *SyncHandler) HandleSync(w http.ResponseWriter, r *http.Request) {
 	if !util.RequireMethod(w, r, "POST") {
 		return
 	}
@@ -213,12 +224,12 @@ func (c *Capture) HandleSync(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	clientID := r.Header.Get("X-Kaboom-Client")
 
-	state := c.extension.updateSyncConnectionState(req, clientID, now)
+	state := h.capture.extension.updateSyncConnectionState(req, clientID, now)
 
 	if !state.wasConnected || state.isReconnect {
 		telemetry.BeaconEvent("extension_connect", map[string]string{"browser": extractBrowserName(r.Header.Get("User-Agent"))})
 		util.SafeGo(func() {
-			c.Lifecycle().Emit(lifecycle.EventExtensionConnected, map[string]any{
+			h.capture.Lifecycle().Emit(lifecycle.EventExtensionConnected, map[string]any{
 				"ext_session_id":     state.extSessionID,
 				"is_reconnect":       state.isReconnect,
 				"disconnect_seconds": state.timeSinceLastPoll.Seconds(),
@@ -229,19 +240,19 @@ func (c *Capture) HandleSync(w http.ResponseWriter, r *http.Request) {
 	// Forward extension feature usage to the usage counter via callback.
 	// Only known UI-originated keys are forwarded to prevent unbounded counter cardinality.
 	if filtered := filterFeaturesUsed(req.FeaturesUsed); len(filtered) > 0 {
-		c.FeatureUsage().Notify(filtered)
+		h.capture.FeatureUsage().Notify(filtered)
 	}
 
-	c.processSyncCommandResults(req.CommandResults, clientID)
+	h.processSyncCommandResults(req.CommandResults, clientID)
 	if req.LastCommandAck != "" {
-		c.Queries().AcknowledgePendingQuery(req.LastCommandAck)
+		h.capture.Queries().AcknowledgePendingQuery(req.LastCommandAck)
 	}
 
 	if state.wasDisconnected {
 		telemetry.AppError("extension_disconnect", nil)
-		c.queryDispatcher.ExpireAllPendingQueries("extension_disconnected")
+		h.capture.queryDispatcher.ExpireAllPendingQueries("extension_disconnected")
 		util.SafeGo(func() {
-			c.Lifecycle().Emit(lifecycle.EventExtensionDisconnected, map[string]any{
+			h.capture.Lifecycle().Emit(lifecycle.EventExtensionDisconnected, map[string]any{
 				"ext_session_id": state.extSessionID,
 				"client_id":      clientID,
 			})
@@ -251,15 +262,15 @@ func (c *Capture) HandleSync(w http.ResponseWriter, r *http.Request) {
 	// Reconcile started commands against extension heartbeat state.
 	// If a command disappears from heartbeat in_progress without a terminal result,
 	// fail it fast instead of waiting for eventual timeout.
-	c.reconcileInProgressCommandState(req.InProgress)
+	h.reconcileInProgressCommandState(req.InProgress)
 
-	pendingQueries := c.Queries().GetPendingQueries()
+	pendingQueries := h.capture.Queries().GetPendingQueries()
 	if len(pendingQueries) == 0 {
-		c.Queries().WaitForPendingQueries(syncLongPollTimeout())
-		pendingQueries = c.Queries().GetPendingQueries()
+		h.capture.Queries().WaitForPendingQueries(syncLongPollTimeout())
+		pendingQueries = h.capture.Queries().GetPendingQueries()
 	}
 
-	c.updateSyncLogs(req, now, state.pilotEnabled, len(pendingQueries))
+	h.updateSyncLogs(req, now, state.pilotEnabled, len(pendingQueries))
 
 	commands := buildSyncCommands(pendingQueries)
 
@@ -269,7 +280,7 @@ func (c *Capture) HandleSync(w http.ResponseWriter, r *http.Request) {
 	}
 	if shouldEmitSyncSnapshot(req, state, len(commands)) {
 		util.SafeGo(func() {
-			c.Lifecycle().Emit(lifecycle.EventSyncSnapshot, map[string]any{
+			h.capture.Lifecycle().Emit(lifecycle.EventSyncSnapshot, map[string]any{
 				"ext_session_id":       state.extSessionID,
 				"client_id":            clientID,
 				"pilot_enabled":        state.pilotEnabled,
@@ -287,9 +298,9 @@ func (c *Capture) HandleSync(w http.ResponseWriter, r *http.Request) {
 		Commands:         commands,
 		NextPollMs:       nextPollMs,
 		ServerTime:       now.Format(time.RFC3339),
-		ServerVersion:    c.Extension().ServerVersion(),
+		ServerVersion:    h.capture.Extension().ServerVersion(),
 		InstallID:        telemetry.GetInstallID(),
-		CaptureOverrides: c.buildCaptureOverrides(),
+		CaptureOverrides: h.buildCaptureOverrides(),
 	}
 
 	util.JSONResponse(w, http.StatusOK, resp)
@@ -325,8 +336,8 @@ func shouldEmitSyncSnapshot(req SyncRequest, state syncConnectionState, commands
 	return false
 }
 
-func (c *Capture) buildCaptureOverrides() map[string]string {
-	mode, productionParity, rewrites := c.extension.GetSecurityMode()
+func (h *SyncHandler) buildCaptureOverrides() map[string]string {
+	mode, productionParity, rewrites := h.capture.extension.GetSecurityMode()
 	if mode == SecurityModeNormal {
 		return map[string]string{}
 	}
@@ -416,23 +427,23 @@ func (r *ExtensionRuntime) updateSyncConnectionState(req SyncRequest, clientID s
 	return state
 }
 
-func (c *Capture) processSyncCommandResults(results []SyncCommandResult, clientID string) {
+func (h *SyncHandler) processSyncCommandResults(results []SyncCommandResult, clientID string) {
 	for _, result := range results {
 		if result.ID != "" {
 			if result.CorrelationID != "" {
-				c.Queries().SetQueryResultWithClientNoCommandComplete(result.ID, result.Result, clientID)
+				h.capture.Queries().SetQueryResultWithClientNoCommandComplete(result.ID, result.Result, clientID)
 			} else {
-				c.Queries().SetQueryResultWithClient(result.ID, result.Result, clientID)
+				h.capture.Queries().SetQueryResultWithClient(result.ID, result.Result, clientID)
 			}
 		}
 		if result.CorrelationID != "" {
-			c.Queries().ApplyCommandResult(result.CorrelationID, result.Status, result.Result, result.Error)
+			h.capture.Queries().ApplyCommandResult(result.CorrelationID, result.Status, result.Result, result.Error)
 		}
 	}
 }
 
-func (c *Capture) updateSyncLogs(req SyncRequest, now time.Time, pilotEnabled bool, queryCount int) {
-	c.DiagnosticLogs().AddPolling(types.PollingLogEntry{
+func (h *SyncHandler) updateSyncLogs(req SyncRequest, now time.Time, pilotEnabled bool, queryCount int) {
+	h.capture.DiagnosticLogs().AddPolling(types.PollingLogEntry{
 		Timestamp:    now,
 		Endpoint:     "sync",
 		Method:       "POST",
@@ -440,22 +451,22 @@ func (c *Capture) updateSyncLogs(req SyncRequest, now time.Time, pilotEnabled bo
 		PilotEnabled: &pilotEnabled,
 		QueryCount:   queryCount,
 	})
-	c.extensionLogs.addAt(req.ExtensionLogs, now)
+	h.capture.extensionLogs.addAt(req.ExtensionLogs, now)
 	if req.ExtensionVersion != "" {
-		c.extension.SetExtensionVersion(req.ExtensionVersion)
+		h.capture.extension.SetExtensionVersion(req.ExtensionVersion)
 	}
 }
 
 // GetPendingQueriesDisconnectAware reconciles extension liveness before
 // returning the current query queue for sync delivery.
-func (c *Capture) GetPendingQueriesDisconnectAware() []queries.PendingQueryResponse {
-	_, disconnected := c.extension.Disconnected()
+func (h *SyncHandler) GetPendingQueriesDisconnectAware() []queries.PendingQueryResponse {
+	_, disconnected := h.capture.extension.Disconnected()
 
 	if disconnected {
-		c.queryDispatcher.ExpireAllPendingQueries("extension_disconnected")
+		h.capture.queryDispatcher.ExpireAllPendingQueries("extension_disconnected")
 		return nil
 	}
-	return c.Queries().GetPendingQueries()
+	return h.capture.Queries().GetPendingQueries()
 }
 
 func normalizeInProgressList(in []SyncInProgress) []SyncInProgress {
@@ -510,7 +521,7 @@ func commandHasStarted(command *queries.CommandResult) bool {
 	return strings.Contains(command.TraceTimeline, "started")
 }
 
-func (c *Capture) reconcileInProgressCommandState(inProgress []SyncInProgress) {
+func (h *SyncHandler) reconcileInProgressCommandState(inProgress []SyncInProgress) {
 	if inProgress == nil {
 		return
 	}
@@ -521,22 +532,22 @@ func (c *Capture) reconcileInProgressCommandState(inProgress []SyncInProgress) {
 			active[entry.CorrelationID] = struct{}{}
 		}
 	}
-	pending := c.Queries().GetPendingCommands()
-	toFail, toFailIDs := c.extension.reconcileMissingCommands(pending, active)
+	pending := h.capture.Queries().GetPendingCommands()
+	toFail, toFailIDs := h.capture.extension.reconcileMissingCommands(pending, active)
 
 	for i, correlationID := range toFail {
 		queryID := ""
 		if i < len(toFailIDs) {
 			queryID = toFailIDs[i]
 		}
-		c.Queries().ApplyCommandResult(
+		h.capture.Queries().ApplyCommandResult(
 			correlationID,
 			"error",
 			nil,
 			"extension_lost_command: command acknowledged by extension but missing from in_progress heartbeats",
 		)
 		util.SafeGo(func() {
-			c.Lifecycle().Emit(lifecycle.EventCommandStateDesync, map[string]any{
+			h.capture.Lifecycle().Emit(lifecycle.EventCommandStateDesync, map[string]any{
 				"correlation_id": correlationID,
 				"query_id":       queryID,
 				"reason":         "missing_in_progress_heartbeat",

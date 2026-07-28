@@ -450,7 +450,7 @@ func TestObservePage_PrioritizesTrackedURL(t *testing.T) {
 	}`)))
 	syncReq.Header.Set("Content-Type", "application/json")
 	syncW := httptest.NewRecorder()
-	cap.HandleSync(syncW, syncReq)
+	capture.NewSyncHandler(cap).HandleSync(syncW, syncReq)
 
 	if syncW.Code != http.StatusOK {
 		t.Fatalf("Sync request failed: %d", syncW.Code)

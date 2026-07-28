@@ -306,7 +306,7 @@ func TestInteract_NavigateAndDocument_IncludeScreenshot(t *testing.T) {
 	env.capture.Extension().SetPilotEnabled(true)
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	env.capture.HandleSync(httptest.NewRecorder(), httpReq)
+	capture.NewSyncHandler(env.capture).HandleSync(httptest.NewRecorder(), httpReq)
 	env.capture.Extension().SetTrackingStatusForTest(42, "https://example.com")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}

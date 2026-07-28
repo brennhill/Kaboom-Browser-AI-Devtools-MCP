@@ -78,6 +78,7 @@ test_paths:
   - internal/capture/testhelpers_test.go
   - internal/capture/no_facade_test.go
   - internal/capture/http_handlers_owner_test.go
+  - internal/capture/sync_handler_owner_test.go
   - internal/circuit/breaker_test.go
   - internal/debuglog/logger_test.go
   - internal/lifecycle/observer_test.go
@@ -128,7 +129,9 @@ HTTP ingestion, query-result, recording-storage, performance, WebSocket, and
 circuit-health routes are owned by `capture.HTTPHandlers`. Server registration
 and tests construct that owner directly; the corresponding `Capture.Handle*`
 methods were deleted rather than retained as forwarding facades. The sync
-transport stays on its separate lifecycle and command-coordination boundary.
+transport is likewise owned by `capture.SyncHandler`, which composes extension
+liveness, command results, long-poll delivery, lifecycle events, and sync
+diagnostics without adding forwarding methods to `Capture`.
 The unused `EventBuffers`, `NetworkWaterfallStore`, `ExtensionLogStore`, and
 `PerformanceSnapshotStore` read-only view layer has been deleted; it wrapped
 canonical capture methods and had no production consumers.

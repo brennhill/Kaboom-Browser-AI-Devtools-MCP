@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -277,7 +278,7 @@ func TestRunA11yAndExportSARIF_ReusesAnalyzePayload(t *testing.T) {
 
 	syncReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	syncReq.Header.Set("X-Kaboom-Client", "test-client")
-	cap.HandleSync(httptest.NewRecorder(), syncReq)
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), syncReq)
 
 	var a11yQueryCount int32
 	stop := make(chan struct{})

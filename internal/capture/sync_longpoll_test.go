@@ -36,7 +36,7 @@ func TestHandleSync_LongPolling(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	start := time.Now()
-	cap.HandleSync(w, req)
+	NewSyncHandler(cap).HandleSync(w, req)
 	duration := time.Since(start)
 
 	minExpected := queueDelay - 10*time.Millisecond
@@ -67,7 +67,7 @@ func TestHandleSync_TimeoutIfNoCommand(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	start := time.Now()
-	cap.HandleSync(w, req) // Should wait roughly syncLongPollTimeout().
+	NewSyncHandler(cap).HandleSync(w, req) // Should wait roughly syncLongPollTimeout().
 	duration := time.Since(start)
 
 	minExpected := timeout - 20*time.Millisecond

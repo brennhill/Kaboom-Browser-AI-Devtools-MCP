@@ -79,7 +79,7 @@ func mockConnectedTrackedTab(t *testing.T, cap *capture.Capture) {
 	t.Helper()
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	cap.HandleSync(httptest.NewRecorder(), httpReq)
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 }
 

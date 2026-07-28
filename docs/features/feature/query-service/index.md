@@ -37,6 +37,7 @@ test_paths:
   - internal/queries/expire_signal_test.go
   - internal/queries/no_facade_test.go
   - internal/capture/no_facade_test.go
+  - internal/capture/sync_handler_owner_test.go
   - internal/capture/query_commands_test.go
   - cmd/browser-agent/internal/asyncresult/normalization_test.go
   - cmd/browser-agent/tools_async_formatting_test.go
@@ -78,8 +79,8 @@ last_verified_date: 2026-03-05
 - Query and command state is accessed through the canonical
   `Capture.Queries()` owner. The former Capture forwarding layer and test-only
   pending-query facade have been deleted; disconnect-aware queue reconciliation
-  remains in the sync boundary because it composes extension liveness with query
-  expiry.
+  is owned by `capture.SyncHandler` because it composes extension liveness with
+  query expiry. `Capture` retains no sync forwarding methods.
 - `internal/asynccommand.Handler` owns queue admission, accessibility queries,
   connectivity-aware waiting, terminal response enrichment, and outcome
   recording as one lifecycle. Callers receive its functions explicitly; the

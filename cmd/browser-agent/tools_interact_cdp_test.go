@@ -9,6 +9,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // ============================================
@@ -87,7 +89,7 @@ func TestToolsInteractHardwareClick_Success(t *testing.T) {
 	cap.Extension().SetPilotEnabled(true)
 	syncReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	syncReq.Header.Set("X-Kaboom-Client", "test-client")
-	cap.HandleSync(httptest.NewRecorder(), syncReq)
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), syncReq)
 	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 
 	resp := callInteractRaw(h, `{"what":"hardware_click","x":512,"y":384}`)
@@ -134,7 +136,7 @@ func TestToolsInteractClick_CDPEscalationWithXY(t *testing.T) {
 	cap.Extension().SetPilotEnabled(true)
 	syncReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	syncReq.Header.Set("X-Kaboom-Client", "test-client")
-	cap.HandleSync(httptest.NewRecorder(), syncReq)
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), syncReq)
 	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 
 	resp := callInteractRaw(h, `{"what":"click","selector":"#btn","x":100,"y":200}`)
@@ -160,7 +162,7 @@ func TestToolsInteractClick_NoCDPEscalationWithoutXY(t *testing.T) {
 	cap.Extension().SetPilotEnabled(true)
 	syncReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	syncReq.Header.Set("X-Kaboom-Client", "test-client")
-	cap.HandleSync(httptest.NewRecorder(), syncReq)
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), syncReq)
 	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 
 	resp := callInteractRaw(h, `{"what":"click","selector":"#btn"}`)

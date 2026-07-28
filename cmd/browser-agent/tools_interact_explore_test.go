@@ -10,6 +10,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // ============================================
@@ -22,7 +24,7 @@ func TestInteract_ExplorePage_DispatchesPendingQuery(t *testing.T) {
 	cap.Extension().SetPilotEnabled(true)
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	cap.HandleSync(httptest.NewRecorder(), httpReq)
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 
 	resp := callInteractRaw(h, `{"what":"explore_page"}`)
@@ -57,7 +59,7 @@ func TestInteract_ExplorePage_NoURL_UsesCurrentTab(t *testing.T) {
 	cap.Extension().SetPilotEnabled(true)
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	cap.HandleSync(httptest.NewRecorder(), httpReq)
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 
 	resp := callInteractRaw(h, `{"what":"explore_page"}`)
@@ -84,7 +86,7 @@ func TestInteract_ExplorePage_WithURL_IncludesNavigate(t *testing.T) {
 	cap.Extension().SetPilotEnabled(true)
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	cap.HandleSync(httptest.NewRecorder(), httpReq)
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 
 	resp := callInteractRaw(h, `{"what":"explore_page","url":"https://example.com"}`)
@@ -114,7 +116,7 @@ func TestInteract_ExplorePage_ForwardsParams(t *testing.T) {
 	cap.Extension().SetPilotEnabled(true)
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	cap.HandleSync(httptest.NewRecorder(), httpReq)
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 
 	resp := callInteractRaw(h, `{"what":"explore_page","visible_only":true,"limit":50}`)
@@ -216,7 +218,7 @@ func TestInteract_ExplorePage_JavascriptURL_Rejected(t *testing.T) {
 	cap.Extension().SetPilotEnabled(true)
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	cap.HandleSync(httptest.NewRecorder(), httpReq)
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 
 	resp := callInteractRaw(h, `{"what":"explore_page","url":"javascript:alert(1)"}`)
@@ -236,7 +238,7 @@ func TestInteract_ExplorePage_DataURL_Rejected(t *testing.T) {
 	cap.Extension().SetPilotEnabled(true)
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	cap.HandleSync(httptest.NewRecorder(), httpReq)
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 
 	resp := callInteractRaw(h, `{"what":"explore_page","url":"data:text/html,<script>alert(1)</script>"}`)
@@ -252,7 +254,7 @@ func TestInteract_ExplorePage_ChromeURL_Rejected(t *testing.T) {
 	cap.Extension().SetPilotEnabled(true)
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	cap.HandleSync(httptest.NewRecorder(), httpReq)
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 
 	resp := callInteractRaw(h, `{"what":"explore_page","url":"chrome://settings"}`)
@@ -268,7 +270,7 @@ func TestInteract_ExplorePage_FileURL_Rejected(t *testing.T) {
 	cap.Extension().SetPilotEnabled(true)
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	cap.HandleSync(httptest.NewRecorder(), httpReq)
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 
 	resp := callInteractRaw(h, `{"what":"explore_page","url":"file:///etc/passwd"}`)
@@ -284,7 +286,7 @@ func TestInteract_ExplorePage_HTTPURL_Accepted(t *testing.T) {
 	cap.Extension().SetPilotEnabled(true)
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	cap.HandleSync(httptest.NewRecorder(), httpReq)
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 
 	resp := callInteractRaw(h, `{"what":"explore_page","url":"http://example.com"}`)
@@ -300,7 +302,7 @@ func TestInteract_ExplorePage_MalformedURL_Rejected(t *testing.T) {
 	cap.Extension().SetPilotEnabled(true)
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	cap.HandleSync(httptest.NewRecorder(), httpReq)
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 
 	resp := callInteractRaw(h, `{"what":"explore_page","url":"://bad"}`)
@@ -316,7 +318,7 @@ func TestInteract_ExplorePage_BareDomain_Rejected(t *testing.T) {
 	cap.Extension().SetPilotEnabled(true)
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	cap.HandleSync(httptest.NewRecorder(), httpReq)
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 
 	resp := callInteractRaw(h, `{"what":"explore_page","url":"example.com"}`)
@@ -332,7 +334,7 @@ func TestInteract_ExplorePage_VbscriptURL_Rejected(t *testing.T) {
 	cap.Extension().SetPilotEnabled(true)
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	cap.HandleSync(httptest.NewRecorder(), httpReq)
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 
 	resp := callInteractRaw(h, `{"what":"explore_page","url":"vbscript:alert(1)"}`)
@@ -348,7 +350,7 @@ func TestInteract_ExplorePage_BlobURL_Rejected(t *testing.T) {
 	cap.Extension().SetPilotEnabled(true)
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	cap.HandleSync(httptest.NewRecorder(), httpReq)
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 
 	resp := callInteractRaw(h, `{"what":"explore_page","url":"blob:http://example.com/abc"}`)
@@ -392,7 +394,7 @@ func TestInteract_ExplorePage_SuccessResponseStructure(t *testing.T) {
 	cap.Extension().SetPilotEnabled(true)
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	cap.HandleSync(httptest.NewRecorder(), httpReq)
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 
 	resp := callInteractRaw(h, `{"what":"explore_page"}`)
@@ -421,7 +423,7 @@ func TestInteract_ExplorePage_TabIDForwarded(t *testing.T) {
 	cap.Extension().SetPilotEnabled(true)
 	httpReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
-	cap.HandleSync(httptest.NewRecorder(), httpReq)
+	capture.NewSyncHandler(cap).HandleSync(httptest.NewRecorder(), httpReq)
 	cap.Extension().SetTrackingStatusForTest(42, "https://example.com")
 
 	resp := callInteractRaw(h, `{"what":"explore_page","tab_id":99}`)
