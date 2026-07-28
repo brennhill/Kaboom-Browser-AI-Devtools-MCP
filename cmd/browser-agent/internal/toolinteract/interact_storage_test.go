@@ -72,6 +72,65 @@ func TestHandleClearStorage_InvalidJSON(t *testing.T) {
 	assertErr(t, h.HandleClearStorage(testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
 }
 
+func TestStorageAndCookieActionsPreserveSharedExecutionTarget(t *testing.T) {
+	tests := []struct {
+		name string
+		args json.RawMessage
+		run  func(*InteractActionHandler, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
+	}{
+		{
+			name: "set",
+			args: json.RawMessage(`{"storage_type":"localStorage","key":"k","value":"v","tab_id":42,"timeout_ms":1234,"world":"isolated"}`),
+			run:  (*InteractActionHandler).HandleSetStorage,
+		},
+		{
+			name: "delete",
+			args: json.RawMessage(`{"storage_type":"localStorage","key":"k","tab_id":42,"timeout_ms":1234,"world":"isolated"}`),
+			run:  (*InteractActionHandler).HandleDeleteStorage,
+		},
+		{
+			name: "clear",
+			args: json.RawMessage(`{"storage_type":"localStorage","tab_id":42,"timeout_ms":1234,"world":"isolated"}`),
+			run:  (*InteractActionHandler).HandleClearStorage,
+		},
+		{
+			name: "set cookie",
+			args: json.RawMessage(`{"name":"sid","value":"abc","tab_id":42,"timeout_ms":1234,"world":"isolated"}`),
+			run:  (*InteractActionHandler).HandleSetCookie,
+		},
+		{
+			name: "delete cookie",
+			args: json.RawMessage(`{"name":"sid","tab_id":42,"timeout_ms":1234,"world":"isolated"}`),
+			run:  (*InteractActionHandler).HandleDeleteCookie,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h, fs := newFakeHandler(t)
+			assertOK(t, tt.run(h, testReq(), tt.args))
+
+			queued := fs.enqueuedSnapshot()
+			if len(queued) != 1 {
+				t.Fatalf("queued commands = %d, want 1", len(queued))
+			}
+			if queued[0].TabID != 42 {
+				t.Fatalf("tab_id = %d, want 42", queued[0].TabID)
+			}
+			var params map[string]any
+			if err := json.Unmarshal(queued[0].Params, &params); err != nil {
+				t.Fatalf("decode queued params: %v", err)
+			}
+			if params["timeout_ms"] != float64(1234) {
+				t.Fatalf("timeout_ms = %v, want 1234", params["timeout_ms"])
+			}
+			if params["world"] != "isolated" {
+				t.Fatalf("world = %v, want isolated", params["world"])
+			}
+		})
+	}
+}
+
 func TestHandleSetCookie_Success(t *testing.T) {
 	h, fs := newFakeHandler(t)
 	assertOK(t, h.HandleSetCookie(testReq(), json.RawMessage(`{"name":"sid","value":"abc","domain":"example.com","path":"/app"}`)))

@@ -16,6 +16,39 @@ var validStorageTypes = map[string]string{
 	"sessionStorage": "sessionStorage",
 }
 
+type scriptExecutionTarget struct {
+	TabID     int    `json:"tab_id,omitempty"`
+	TimeoutMs int    `json:"timeout_ms,omitempty"`
+	World     string `json:"world,omitempty"`
+}
+
+type storageCommandParams struct {
+	scriptExecutionTarget
+	StorageType string `json:"storage_type"`
+}
+
+type keyedStorageCommandParams struct {
+	storageCommandParams
+	Key string `json:"key"`
+}
+
+type setStorageParams struct {
+	keyedStorageCommandParams
+	Value *string `json:"value"`
+}
+
+type cookieCommandParams struct {
+	scriptExecutionTarget
+	Name   string `json:"name"`
+	Domain string `json:"domain,omitempty"`
+	Path   string `json:"path,omitempty"`
+}
+
+type setCookieParams struct {
+	cookieCommandParams
+	Value *string `json:"value"`
+}
+
 // validateStorageType checks that storage_type is one of the valid storage types.
 // Returns the JS expression (e.g. "localStorage") and true on success, or an error response and false on failure.
 func validateStorageType(req mcp.JSONRPCRequest, storageType string) (string, mcp.JSONRPCResponse, bool) {
@@ -26,25 +59,26 @@ func validateStorageType(req mcp.JSONRPCRequest, storageType string) (string, mc
 	return storageExpr, mcp.JSONRPCResponse{}, true
 }
 
-func (h *InteractActionHandler) HandleSetStorage(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	var params struct {
-		StorageType string  `json:"storage_type"`
-		Key         string  `json:"key"`
-		Value       *string `json:"value"`
-		TabID       int     `json:"tab_id,omitempty"`
-		TimeoutMs   int     `json:"timeout_ms,omitempty"`
-		World       string  `json:"world,omitempty"`
+func validateKeyedStorageParams(req mcp.JSONRPCRequest, params keyedStorageCommandParams) (string, mcp.JSONRPCResponse, bool) {
+	storageExpr, resp, ok := validateStorageType(req, params.StorageType)
+	if !ok {
+		return "", resp, false
 	}
+	if resp, blocked := toolresp.RequireString(req, params.Key, "key", "Add the 'key' parameter and call again"); blocked {
+		return "", resp, false
+	}
+	return storageExpr, mcp.JSONRPCResponse{}, true
+}
+
+func (h *InteractActionHandler) HandleSetStorage(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+	var params setStorageParams
 	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
 
-	storageExpr, errResp, ok := validateStorageType(req, params.StorageType)
+	storageExpr, errResp, ok := validateKeyedStorageParams(req, params.keyedStorageCommandParams)
 	if !ok {
 		return errResp
-	}
-	if resp, blocked := toolresp.RequireString(req, params.Key, "key", "Add the 'key' parameter and call again"); blocked {
-		return resp
 	}
 	if params.Value == nil {
 		return mcp.Fail(req, mcp.ErrMissingParam, "Required parameter 'value' is missing for set_storage action", "Add the 'value' parameter and call again", mcp.WithParam("value"))
@@ -56,23 +90,14 @@ func (h *InteractActionHandler) HandleSetStorage(req mcp.JSONRPCRequest, args js
 }
 
 func (h *InteractActionHandler) HandleDeleteStorage(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	var params struct {
-		StorageType string `json:"storage_type"`
-		Key         string `json:"key"`
-		TabID       int    `json:"tab_id,omitempty"`
-		TimeoutMs   int    `json:"timeout_ms,omitempty"`
-		World       string `json:"world,omitempty"`
-	}
+	var params keyedStorageCommandParams
 	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
 
-	storageExpr, errResp, ok := validateStorageType(req, params.StorageType)
+	storageExpr, errResp, ok := validateKeyedStorageParams(req, params)
 	if !ok {
 		return errResp
-	}
-	if resp, blocked := toolresp.RequireString(req, params.Key, "key", "Add the 'key' parameter and call again"); blocked {
-		return resp
 	}
 
 	script := fmt.Sprintf(`(() => { try { %s.removeItem(%s); return { ok: true, action: "delete_storage", storage_type: %s, key: %s }; } catch (e) { return { ok: false, error: String((e && e.message) || e) }; } })()`,
@@ -81,12 +106,7 @@ func (h *InteractActionHandler) HandleDeleteStorage(req mcp.JSONRPCRequest, args
 }
 
 func (h *InteractActionHandler) HandleClearStorage(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	var params struct {
-		StorageType string `json:"storage_type"`
-		TabID       int    `json:"tab_id,omitempty"`
-		TimeoutMs   int    `json:"timeout_ms,omitempty"`
-		World       string `json:"world,omitempty"`
-	}
+	var params storageCommandParams
 	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
@@ -102,15 +122,7 @@ func (h *InteractActionHandler) HandleClearStorage(req mcp.JSONRPCRequest, args 
 }
 
 func (h *InteractActionHandler) HandleSetCookie(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	var params struct {
-		Name      string  `json:"name"`
-		Value     *string `json:"value"`
-		Domain    string  `json:"domain,omitempty"`
-		Path      string  `json:"path,omitempty"`
-		TabID     int     `json:"tab_id,omitempty"`
-		TimeoutMs int     `json:"timeout_ms,omitempty"`
-		World     string  `json:"world,omitempty"`
-	}
+	var params setCookieParams
 	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
@@ -121,15 +133,7 @@ func (h *InteractActionHandler) HandleSetCookie(req mcp.JSONRPCRequest, args jso
 		return mcp.Fail(req, mcp.ErrMissingParam, "Required parameter 'value' is missing for set_cookie action", "Add the 'value' parameter and call again", mcp.WithParam("value"))
 	}
 
-	cookie := params.Name + "=" + *params.Value
-	if params.Path != "" {
-		cookie += "; path=" + params.Path
-	} else {
-		cookie += "; path=/"
-	}
-	if params.Domain != "" {
-		cookie += "; domain=" + params.Domain
-	}
+	cookie := buildCookie(params.Name+"="+*params.Value, params.Path, params.Domain)
 
 	script := fmt.Sprintf(`(() => { try { document.cookie = %s; return { ok: true, action: "set_cookie", name: %s }; } catch (e) { return { ok: false, error: String((e && e.message) || e) }; } })()`,
 		jsQuote(cookie), jsQuote(params.Name))
@@ -137,14 +141,7 @@ func (h *InteractActionHandler) HandleSetCookie(req mcp.JSONRPCRequest, args jso
 }
 
 func (h *InteractActionHandler) HandleDeleteCookie(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	var params struct {
-		Name      string `json:"name"`
-		Domain    string `json:"domain,omitempty"`
-		Path      string `json:"path,omitempty"`
-		TabID     int    `json:"tab_id,omitempty"`
-		TimeoutMs int    `json:"timeout_ms,omitempty"`
-		World     string `json:"world,omitempty"`
-	}
+	var params cookieCommandParams
 	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
@@ -152,19 +149,23 @@ func (h *InteractActionHandler) HandleDeleteCookie(req mcp.JSONRPCRequest, args 
 		return resp
 	}
 
-	cookie := params.Name + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT"
-	if params.Path != "" {
-		cookie += "; path=" + params.Path
-	} else {
-		cookie += "; path=/"
-	}
-	if params.Domain != "" {
-		cookie += "; domain=" + params.Domain
-	}
+	cookie := buildCookie(params.Name+"=; expires=Thu, 01 Jan 1970 00:00:00 GMT", params.Path, params.Domain)
 
 	script := fmt.Sprintf(`(() => { try { document.cookie = %s; return { ok: true, action: "delete_cookie", name: %s }; } catch (e) { return { ok: false, error: String((e && e.message) || e) }; } })()`,
 		jsQuote(cookie), jsQuote(params.Name))
 	return h.queueExecuteScript(req, args, "cookie_del", params.TabID, params.TimeoutMs, params.World, script, "delete_cookie", "delete_cookie queued")
+}
+
+func buildCookie(nameValue, path, domain string) string {
+	cookie := nameValue
+	if path == "" {
+		path = "/"
+	}
+	cookie += "; path=" + path
+	if domain != "" {
+		cookie += "; domain=" + domain
+	}
+	return cookie
 }
 
 func (h *InteractActionHandler) queueExecuteScript(

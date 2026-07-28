@@ -4,7 +4,7 @@ feature_id: feature-environment-manipulation
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/internal/toolinteract/interact_storage.go
 test_paths:
@@ -36,4 +36,7 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-Add concrete implementation and test links here as this feature evolves.
+- Storage and cookie mutation handlers share one canonical execution-target
+  contract for tab, timeout, and JavaScript world selection.
+- Characterization tests verify that every storage mutation preserves that
+  contract through the queued extension command.
