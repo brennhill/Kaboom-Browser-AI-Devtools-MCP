@@ -557,7 +557,8 @@ func readSettingsData() ([]byte, error) {
 	return nil, fmt.Errorf("could not read settings file: %w", err)
 }
 
-func (c *Capture) LoadSettingsFromDisk() {
+// LoadSettingsFromDisk refreshes recent pilot state from the canonical settings file.
+func (r *ExtensionRuntime) LoadSettingsFromDisk() {
 	data, err := readSettingsData()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[Kaboom] %v\n", err)
@@ -577,7 +578,7 @@ func (c *Capture) LoadSettingsFromDisk() {
 		return
 	}
 	if settings.AIWebPilotEnabled != nil {
-		c.extension.ApplyCachedPilot(*settings.AIWebPilotEnabled, settings.Timestamp)
+		r.ApplyCachedPilot(*settings.AIWebPilotEnabled, settings.Timestamp)
 	}
 }
 

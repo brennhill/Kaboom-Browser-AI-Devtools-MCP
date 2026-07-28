@@ -276,7 +276,7 @@ func initCapture(server *Server, port int) *capture.Capture {
 	})
 
 	server.logLifecycle("loading_settings", port, nil)
-	cap.LoadSettingsFromDisk()
+	cap.Extension().LoadSettingsFromDisk()
 	server.logLifecycle("settings_loaded", port, nil)
 	return cap
 }

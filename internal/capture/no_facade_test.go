@@ -46,6 +46,7 @@ func TestCaptureHasNoCompatibilityAliases(t *testing.T) {
 		"func (c *Capture) GetClientRegistry(",
 		"func (c *Capture) SetClientRegistryForTest(",
 		"type Capture struct {\n\tmu ",
+		"func (c *Capture) LoadSettingsFromDisk(",
 		"QueryDispatcher =",
 		"QuerySnapshot =",
 		"NewQueryDispatcher =",

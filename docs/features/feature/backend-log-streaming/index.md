@@ -100,7 +100,8 @@ last_verified_date: 2026-04-13
 
 Capture dependencies use the canonical `capture.Capture` container type.
 Persisted extension settings are read and written only through the canonical
-`internal/state.SettingsFile` location; there is no fallback settings reader.
+`internal/state.SettingsFile` location by `ExtensionRuntime`; there is no
+Capture forwarding method or fallback settings reader.
 The former `capture.Store` and `capture.Snapshot` aliases have been removed.
 URL-path normalization consumers import `internal/util.ExtractURLPath`
 directly; the capture-package pass-through and its duplicate tests are deleted.
