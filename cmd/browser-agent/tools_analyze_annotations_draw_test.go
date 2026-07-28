@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mediaapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate/annotations"
@@ -231,8 +230,6 @@ func TestToolGetDrawSession_MissingParam(t *testing.T) {
 
 func TestToolGetDrawSession_HydratesStoreForGenerators(t *testing.T) {
 	h := createTestToolHandler(t)
-	h.annotationStore = annotation.NewStore(10 * time.Minute)
-	t.Cleanup(func() { h.annotationStore.Close() })
 
 	t.Setenv("KABOOM_STATE_DIR", t.TempDir())
 	dir, err := mediaapi.ScreenshotsDir()

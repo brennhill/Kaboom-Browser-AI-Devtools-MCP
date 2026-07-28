@@ -110,8 +110,7 @@ func TestMaybeWaitForCommand_TimeoutMs_ZeroUsesDefault(t *testing.T) {
 func TestMaybeWaitForCommand_SyncFalse_ReturnsCorrelationID(t *testing.T) {
 	t.Parallel()
 
-	cap := capture.NewCapture()
-	handler := &ToolHandler{capture: cap}
+	handler, _, _ := makeToolHandler(t)
 	req := mcp.JSONRPCRequest{ID: 1}
 	correlationID := "test-async-275"
 
@@ -130,8 +129,8 @@ func TestMaybeWaitForCommand_SyncFalse_ReturnsCorrelationID(t *testing.T) {
 func TestMaybeWaitForCommand_TimeoutMs_NegativeIgnored(t *testing.T) {
 	t.Parallel()
 
-	cap := capture.NewCapture()
-	handler := &ToolHandler{capture: cap, coldStartTimeout: 0}
+	handler, _, _ := makeToolHandler(t)
+	handler.coldStartTimeout = 0
 	req := mcp.JSONRPCRequest{ID: 1}
 	correlationID := "test-neg-timeout-123"
 

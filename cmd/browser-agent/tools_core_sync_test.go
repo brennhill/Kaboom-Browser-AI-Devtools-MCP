@@ -4,22 +4,32 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
+func newSyncTestHandler(cap *capture.Capture) *ToolHandler {
+	return &ToolHandler{
+		capture: cap,
+		Guards:  toolguard.New(cap, context.Background(), time.Millisecond),
+	}
+}
+
 func TestMaybeWaitForCommand_SyncByDefault(t *testing.T) {
 	// Setup
 	cap := capture.NewCapture()
 	// coldStartTimeout=0 disables cold-start gate; extension is pre-connected via HandleSync below.
-	handler := &ToolHandler{capture: cap, coldStartTimeout: 0}
+	handler := newSyncTestHandler(cap)
+	handler.coldStartTimeout = 0
 	req := mcp.JSONRPCRequest{ID: 1, ClientID: "test-client"}
 	correlationID := "test-sync-123"
 	cap.RegisterCommand(correlationID, "q-sync-123", 15*time.Second)
@@ -56,7 +66,7 @@ func TestMaybeWaitForCommand_SyncByDefault(t *testing.T) {
 
 func TestMaybeWaitForCommand_BackgroundOverride(t *testing.T) {
 	cap := capture.NewCapture()
-	handler := &ToolHandler{capture: cap}
+	handler := newSyncTestHandler(cap)
 	req := mcp.JSONRPCRequest{ID: 1}
 	correlationID := "test-bg-123"
 
@@ -128,7 +138,8 @@ func TestToolObserveCommandResult_IncludesTraceTimeline(t *testing.T) {
 
 func TestMaybeWaitForCommand_TimeoutGracefulFallback(t *testing.T) {
 	cap := capture.NewCapture()
-	handler := &ToolHandler{capture: cap, coldStartTimeout: 0} // Disable cold-start gate for fast-fail test
+	handler := newSyncTestHandler(cap)
+	handler.coldStartTimeout = 0
 	req := mcp.JSONRPCRequest{ID: 1}
 	correlationID := "test-timeout-123"
 
@@ -165,7 +176,7 @@ func TestMaybeWaitForCommand_PendingDisconnectReturnsTerminalError(t *testing.T)
 	}()
 
 	cap := capture.NewCapture()
-	handler := &ToolHandler{capture: cap}
+	handler := newSyncTestHandler(cap)
 	req := mcp.JSONRPCRequest{ID: 1}
 	correlationID := "test-disconnect-midwait-123"
 	cap.RegisterCommand(correlationID, "q-disconnect-midwait-123", 5*time.Second)
@@ -214,7 +225,7 @@ func parseMCPResponseData(t *testing.T, rawResult json.RawMessage) map[string]an
 
 func TestFormatCommandResult_FinalField(t *testing.T) {
 	cap := capture.NewCapture()
-	handler := &ToolHandler{capture: cap}
+	handler := newSyncTestHandler(cap)
 	req := mcp.JSONRPCRequest{ID: 1}
 	now := time.Now()
 
@@ -303,7 +314,7 @@ func TestFormatCommandResult_FinalField(t *testing.T) {
 
 func TestFormatCommandResult_ElapsedMs(t *testing.T) {
 	cap := capture.NewCapture()
-	handler := &ToolHandler{capture: cap}
+	handler := newSyncTestHandler(cap)
 	req := mcp.JSONRPCRequest{ID: 1}
 	now := time.Now()
 
@@ -367,7 +378,7 @@ func TestFormatCommandResult_ElapsedMs(t *testing.T) {
 
 func TestFormatCommandResult_ListInteractivePayloadHardening(t *testing.T) {
 	cap := capture.NewCapture()
-	handler := &ToolHandler{capture: cap}
+	handler := newSyncTestHandler(cap)
 	req := mcp.JSONRPCRequest{ID: 1}
 	now := time.Now()
 

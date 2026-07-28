@@ -276,7 +276,9 @@ func TestLogsEndpointValidationAndMethods(t *testing.T) {
 	t.Parallel()
 
 	srv := newTestServerForHandlers(t)
-	mux, _ := setupHTTPRoutes(srv, nil)
+	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
+	mux, _ := setupHTTPRoutes(srv, cap)
 
 	// GET /logs returns 405 (reads go through /telemetry?type=logs)
 	getReq := localRequest(http.MethodGet, "/logs", nil)

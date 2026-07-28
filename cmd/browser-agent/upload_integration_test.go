@@ -22,6 +22,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
@@ -114,7 +115,9 @@ func TestUploadInteg_ExtensionOnlyMiddleware(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewServer failed: %v", err)
 	}
-	mux, _ := setupHTTPRoutes(server, nil)
+	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
+	mux, _ := setupHTTPRoutes(server, cap)
 	ts := httptest.NewServer(mux)
 	defer ts.Close()
 

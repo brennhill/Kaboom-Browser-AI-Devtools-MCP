@@ -43,6 +43,8 @@ code_paths:
 test_paths:
   - cmd/browser-agent/main_flags_test.go
   - cmd/browser-agent/main_io_unit_test.go
+  - cmd/browser-agent/main_helpers_more_test.go
+  - cmd/browser-agent/internal/health/health_coverage_test.go
   - cmd/browser-agent/server_reliability_integration_test.go
   - scripts/smoke-tests/23-doctor-preflight.sh
   - cmd/browser-agent/config_parallel_test.go

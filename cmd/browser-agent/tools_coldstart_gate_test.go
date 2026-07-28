@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -98,8 +97,8 @@ func TestRequireExtension_AlreadyConnected_NoWait(t *testing.T) {
 func TestMaybeWaitForCommand_ExtensionConnected_WaitsForResult(t *testing.T) {
 	t.Parallel()
 
-	cap := capture.NewCapture()
-	handler := &ToolHandler{capture: cap, coldStartTimeout: 500 * time.Millisecond}
+	handler, _, cap := makeToolHandler(t)
+	handler.coldStartTimeout = 500 * time.Millisecond
 	correlationID := "test-connected-result"
 	cap.RegisterCommand(correlationID, "q-connected-result", 15*time.Second)
 
@@ -132,8 +131,8 @@ func TestMaybeWaitForCommand_ExtensionConnected_WaitsForResult(t *testing.T) {
 func TestMaybeWaitForCommand_ExtensionNotConnected_InstantError(t *testing.T) {
 	t.Parallel()
 
-	cap := capture.NewCapture()
-	handler := &ToolHandler{capture: cap, coldStartTimeout: 200 * time.Millisecond}
+	handler, _, cap := makeToolHandler(t)
+	handler.coldStartTimeout = 200 * time.Millisecond
 	correlationID := "test-instant-fail"
 	cap.RegisterCommand(correlationID, "q-instant-fail", 15*time.Second)
 
@@ -156,8 +155,8 @@ func TestMaybeWaitForCommand_ExtensionNotConnected_InstantError(t *testing.T) {
 func TestMaybeWaitForCommand_Background_SkipsColdStartGate(t *testing.T) {
 	t.Parallel()
 
-	cap := capture.NewCapture()
-	handler := &ToolHandler{capture: cap, coldStartTimeout: 5 * time.Second}
+	handler, _, _ := makeToolHandler(t)
+	handler.coldStartTimeout = 5 * time.Second
 	correlationID := "test-bg-skip"
 
 	// Extension NOT connected, background mode

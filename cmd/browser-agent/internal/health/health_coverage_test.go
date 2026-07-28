@@ -6,7 +6,6 @@ package health
 import (
 	"bytes"
 	"encoding/json"
-	"io"
 	"net"
 	"net/http/httptest"
 	"os"
@@ -16,6 +15,7 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
@@ -23,25 +23,14 @@ import (
 // Test helpers
 // ---------------------------------------------------------------------------
 
-// captureStdout redirects os.Stdout while fn runs and returns everything written.
-func captureStdout(t *testing.T, fn func()) string {
+func captureDiagnostics(t *testing.T, fn func()) string {
 	t.Helper()
-	orig := os.Stdout
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("os.Pipe: %v", err)
-	}
-	os.Stdout = w
-	done := make(chan string, 1)
-	go func() {
-		var buf bytes.Buffer
-		_, _ = io.Copy(&buf, r)
-		done <- buf.String()
-	}()
+	previous := diag.Sink()
+	var output bytes.Buffer
+	diag.SetSink(&output)
+	defer diag.SetSink(previous)
 	fn()
-	_ = w.Close()
-	os.Stdout = orig
-	return <-done
+	return output.String()
 }
 
 // newTestCapture builds a fresh capture Store and registers cleanup.
@@ -269,7 +258,7 @@ func TestSuggestAvailablePort_NonPositiveCandidates(t *testing.T) {
 
 func TestCheckPortAvailability_Available(t *testing.T) {
 	port := freePort(t)
-	out := captureStdout(t, func() {
+	out := captureDiagnostics(t, func() {
 		CheckPortAvailability(port, func(p int) string { return "kill" })
 	})
 	if !strings.Contains(out, "OK") || !strings.Contains(out, "available") {
@@ -285,7 +274,7 @@ func TestCheckPortAvailability_InUse(t *testing.T) {
 	defer ln.Close() //nolint:errcheck
 	port := ln.Addr().(*net.TCPAddr).Port
 
-	out := captureStdout(t, func() {
+	out := captureDiagnostics(t, func() {
 		CheckPortAvailability(port, func(p int) string { return "kill-hint" })
 	})
 	if !strings.Contains(out, "FAILED") {
@@ -297,7 +286,7 @@ func TestCheckPortAvailability_InUse(t *testing.T) {
 }
 
 func TestCheckStateDirectory_Runs(t *testing.T) {
-	out := captureStdout(t, CheckStateDirectory)
+	out := captureDiagnostics(t, CheckStateDirectory)
 	if !strings.Contains(out, "runtime state directory") {
 		t.Errorf("expected state directory output, got %q", out)
 	}
@@ -335,7 +324,7 @@ func TestRunSetupCheckWithOptions_DefaultSkipsThreshold(t *testing.T) {
 		},
 	}
 	var ok bool
-	out := captureStdout(t, func() {
+	out := captureDiagnostics(t, func() {
 		ok = RunSetupCheckWithOptions(port, SetupCheckOptions{}, deps)
 	})
 	if !ok {
@@ -357,7 +346,7 @@ func TestRunSetupCheckWithOptions_ThresholdPasses(t *testing.T) {
 		},
 	}
 	var ok bool
-	out := captureStdout(t, func() {
+	out := captureDiagnostics(t, func() {
 		ok = RunSetupCheckWithOptions(port, SetupCheckOptions{MinSamples: 50, MaxFailureRatio: 0.5}, deps)
 	})
 	if !ok {
@@ -379,7 +368,7 @@ func TestRunSetupCheckWithOptions_ThresholdFailsInsufficientSamples(t *testing.T
 		},
 	}
 	var ok bool
-	out := captureStdout(t, func() {
+	out := captureDiagnostics(t, func() {
 		ok = RunSetupCheckWithOptions(port, SetupCheckOptions{MinSamples: 50, MaxFailureRatio: 0.5}, deps)
 	})
 	if ok {
@@ -397,7 +386,7 @@ func TestRunSetupCheckWithOptions_ThresholdFailsInsufficientSamples(t *testing.T
 func TestPrintFastPathTelemetryDiagnostics_PathError(t *testing.T) {
 	var summary FastPathTelemetrySummary
 	var ok bool
-	out := captureStdout(t, func() {
+	out := captureDiagnostics(t, func() {
 		summary, ok = PrintFastPathTelemetryDiagnostics(100, func() (string, error) {
 			return "", os.ErrInvalid
 		})
@@ -416,7 +405,7 @@ func TestPrintFastPathTelemetryDiagnostics_PathError(t *testing.T) {
 func TestPrintFastPathTelemetryDiagnostics_NoFileYet(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "does-not-exist.jsonl")
 	var ok bool
-	out := captureStdout(t, func() {
+	out := captureDiagnostics(t, func() {
 		_, ok = PrintFastPathTelemetryDiagnostics(100, func() (string, error) {
 			return missing, nil
 		})
@@ -433,7 +422,7 @@ func TestPrintFastPathTelemetryDiagnostics_WithData(t *testing.T) {
 	logPath := writeTelemetry(t, 3, 2) // 3 GET success, 2 POST failure w/ error_code 500
 	var summary FastPathTelemetrySummary
 	var ok bool
-	out := captureStdout(t, func() {
+	out := captureDiagnostics(t, func() {
 		summary, ok = PrintFastPathTelemetryDiagnostics(100, func() (string, error) {
 			return logPath, nil
 		})
@@ -454,7 +443,7 @@ func TestPrintFastPathTelemetryDiagnostics_WithData(t *testing.T) {
 
 func TestPrintFastPathTelemetryDiagnostics_NoErrorCodes(t *testing.T) {
 	logPath := writeTelemetry(t, 4, 0)
-	out := captureStdout(t, func() {
+	out := captureDiagnostics(t, func() {
 		PrintFastPathTelemetryDiagnostics(100, func() (string, error) {
 			return logPath, nil
 		})

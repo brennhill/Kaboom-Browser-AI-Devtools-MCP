@@ -4,7 +4,6 @@
 package main
 
 import (
-	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -52,7 +51,7 @@ func TestFindMCPConfigResolutionClaudePath(t *testing.T) {
 }
 
 func TestRunSetupCheckPrintsDiagnostics(t *testing.T) {
-	// Do not run in parallel; test redirects os.Stdout.
+	// Do not run in parallel; test redirects the process-wide diagnostic sink.
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("net.Listen error = %v", err)
@@ -60,21 +59,9 @@ func TestRunSetupCheckPrintsDiagnostics(t *testing.T) {
 	port := ln.Addr().(*net.TCPAddr).Port
 	_ = ln.Close()
 
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("os.Pipe(stdout) error = %v", err)
-	}
-	oldOut := os.Stdout
-	os.Stdout = w
-	runSetupCheckWithOptions(port, setupCheckOptions{})
-	os.Stdout = oldOut
-	_ = w.Close()
-	out, err := io.ReadAll(r)
-	_ = r.Close()
-	if err != nil {
-		t.Fatalf("ReadAll(stdout) error = %v", err)
-	}
-	text := string(out)
+	text := captureDiagnostics(t, func() {
+		runSetupCheckWithOptions(port, setupCheckOptions{})
+	})
 	if !strings.Contains(text, "KABOOM SETUP CHECK") || !strings.Contains(text, "Next steps:") {
 		t.Fatalf("runSetupCheck output missing expected sections:\n%s", text)
 	}
@@ -105,7 +92,7 @@ func TestEvaluateFastPathFailureThreshold(t *testing.T) {
 }
 
 func TestRunSetupCheckIncludesFastPathTelemetrySummary(t *testing.T) {
-	// Do not run in parallel; test redirects os.Stdout and uses Setenv.
+	// Do not run in parallel; test redirects diagnostics and uses Setenv.
 	t.Setenv(state.StateDirEnv, t.TempDir())
 	bridge.ResetFastPathCounters()
 	bridge.RecordFastPathEvent("resources/read", true, 0)
@@ -118,27 +105,16 @@ func TestRunSetupCheckIncludesFastPathTelemetrySummary(t *testing.T) {
 	port := ln.Addr().(*net.TCPAddr).Port
 	_ = ln.Close()
 
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("os.Pipe(stdout) error = %v", err)
-	}
-	oldOut := os.Stdout
-	os.Stdout = w
-	ok := runSetupCheckWithOptions(port, setupCheckOptions{
-		minSamples:      2,
-		maxFailureRatio: 0.1,
+	var ok bool
+	text := captureDiagnostics(t, func() {
+		ok = runSetupCheckWithOptions(port, setupCheckOptions{
+			minSamples:      2,
+			maxFailureRatio: 0.1,
+		})
 	})
-	os.Stdout = oldOut
-	_ = w.Close()
-	out, err := io.ReadAll(r)
-	_ = r.Close()
-	if err != nil {
-		t.Fatalf("ReadAll(stdout) error = %v", err)
-	}
 	if ok {
 		t.Fatal("runSetupCheckWithOptions should fail threshold check")
 	}
-	text := string(out)
 	if !strings.Contains(text, "Checking bridge fast-path telemetry...") {
 		t.Fatalf("expected fast-path telemetry diagnostics, got:\n%s", text)
 	}
