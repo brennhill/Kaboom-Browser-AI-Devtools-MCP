@@ -14,6 +14,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/logdiff"
@@ -242,7 +243,7 @@ func (c *Capture) CheckRateLimit() bool {
 	return c.circuit.CheckRateLimit()
 }
 
-func (c *Capture) GetHealthStatus() HealthResponse {
+func (c *Capture) GetHealthStatus() circuit.HealthResponse {
 	return c.circuit.GetHealthStatus()
 }
 

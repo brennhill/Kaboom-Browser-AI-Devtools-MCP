@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestCaptureHasNoLifecycleCompatibilitySurface(t *testing.T) {
+func TestCaptureHasNoCompatibilityAliases(t *testing.T) {
 	t.Parallel()
 
 	model, err := os.ReadFile("model.go")
@@ -29,9 +29,18 @@ func TestCaptureHasNoLifecycleCompatibilitySurface(t *testing.T) {
 		"ParseLifecycleEvent =",
 		"SetLifecycleCallback(",
 		"AddLifecycleCallback(",
+		"QueryDispatcher =",
+		"QuerySnapshot =",
+		"NewQueryDispatcher =",
+		"CircuitBreaker =",
+		"HealthResponse =",
+		"RateLimitResponse =",
+		"NewCircuitBreaker =",
+		"DebugLogger =",
+		"NewDebugLogger =",
 	} {
 		if strings.Contains(source, forbidden) {
-			t.Errorf("capture retains lifecycle compatibility surface %q", forbidden)
+			t.Errorf("capture retains compatibility surface %q", forbidden)
 		}
 	}
 }

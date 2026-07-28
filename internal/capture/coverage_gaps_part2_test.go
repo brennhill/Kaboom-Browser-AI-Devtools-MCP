@@ -335,60 +335,6 @@ func TestHandleQueryResult_WithIDAndCorrelationID_PreservesErrorStatus(t *testin
 }
 
 // ============================================
-// DebugLogger — fill beyond buffer size to wrap
-// ============================================
-
-func TestDebugLogger_HTTPLogCircularWrap(t *testing.T) {
-	t.Parallel()
-
-	dl := NewDebugLogger()
-
-	// Write more than debugLogSize entries to trigger wrapping
-	for i := 0; i < debugLogSize+10; i++ {
-		dl.LogHTTPDebugEntry(HTTPDebugEntry{
-			Method:         "GET",
-			Endpoint:       "/test",
-			ResponseStatus: 200 + i,
-		})
-	}
-
-	logs := dl.GetHTTPDebugLog()
-	if len(logs) != debugLogSize {
-		t.Errorf("log length = %d, want %d", len(logs), debugLogSize)
-	}
-
-	// The oldest entries should have been overwritten
-	// Entry at index 0 should now contain one of the newer entries
-	found := false
-	for _, entry := range logs {
-		if entry.ResponseStatus >= 200+10 {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Error("expected newer entries to overwrite older ones after wrap")
-	}
-}
-
-func TestDebugLogger_PollingLogCircularWrap(t *testing.T) {
-	t.Parallel()
-
-	dl := NewDebugLogger()
-
-	for i := 0; i < debugLogSize+5; i++ {
-		dl.LogPollingActivity(PollingLogEntry{
-			Endpoint: "/sync",
-		})
-	}
-
-	logs := dl.GetPollingLog()
-	if len(logs) != debugLogSize {
-		t.Errorf("polling log length = %d, want %d", len(logs), debugLogSize)
-	}
-}
-
-// ============================================
 // GetExtensionLogs — empty returns empty
 // ============================================
 

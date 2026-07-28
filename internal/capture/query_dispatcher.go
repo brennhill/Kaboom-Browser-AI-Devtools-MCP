@@ -1,5 +1,5 @@
-// Purpose: Re-exports query-dispatcher constructors and delegates capture query lifecycle methods.
-// Why: Preserves capture package API compatibility while query logic lives in internal/queries.
+// Purpose: Delegates capture query and command lifecycle methods to the query dispatcher.
+// Why: Keeps Capture's cohesive telemetry API while query state remains owned by internal/queries.
 // Docs: docs/features/feature/query-service/index.md
 
 package capture
@@ -11,11 +11,8 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
-// NewQueryDispatcher re-exports queries.NewQueryDispatcher for backward compatibility.
-var NewQueryDispatcher = queries.NewQueryDispatcher
-
 // ============================================================================
-// Capture delegation methods — preserve external API.
+// Capture delegation methods.
 // ============================================================================
 
 // CreatePendingQuery delegates to QueryDispatcher.

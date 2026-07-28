@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
 )
 
@@ -318,7 +319,7 @@ func TestRedactExtensionLog_WithRedactor(t *testing.T) {
 
 func TestCircuitBreaker_GetHealthStatus_Open(t *testing.T) {
 	t.Parallel()
-	cb := NewCircuitBreaker(func(lifecycle.Event, map[string]any) {})
+	cb := circuit.NewCircuitBreaker(func(lifecycle.Event, map[string]any) {})
 	cb.ForceOpen("test_reason")
 	health := cb.GetHealthStatus()
 	if !health.CircuitOpen {
@@ -334,7 +335,7 @@ func TestCircuitBreaker_GetHealthStatus_Open(t *testing.T) {
 
 func TestCircuitBreaker_GetHealthStatus_Closed(t *testing.T) {
 	t.Parallel()
-	cb := NewCircuitBreaker(func(lifecycle.Event, map[string]any) {})
+	cb := circuit.NewCircuitBreaker(func(lifecycle.Event, map[string]any) {})
 	health := cb.GetHealthStatus()
 	if health.CircuitOpen {
 		t.Error("CircuitOpen = true, want false")

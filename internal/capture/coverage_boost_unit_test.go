@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -71,7 +73,7 @@ func TestCoverageBoost_RateLimitHealthHandler(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("GET /health status = %d, want %d", rr.Code, http.StatusOK)
 	}
-	var got HealthResponse
+	var got circuit.HealthResponse
 	if err := json.Unmarshal(rr.Body.Bytes(), &got); err != nil {
 		t.Fatalf("json.Unmarshal health response error = %v", err)
 	}

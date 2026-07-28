@@ -21,6 +21,7 @@ code_paths:
   - internal/capture/sync.go
   - internal/capture/test_helpers.go
   - internal/circuit/breaker.go
+  - internal/debuglog/logger.go
   - internal/lifecycle/observer.go
   - internal/capture/wsconn/doc.go
   - internal/capture/wsconn/status.go
@@ -59,6 +60,7 @@ test_paths:
   - internal/capture/testhelpers_test.go
   - internal/capture/no_facade_test.go
   - internal/circuit/breaker_test.go
+  - internal/debuglog/logger_test.go
   - internal/lifecycle/observer_test.go
   - tests/extension/sync-client.test.js
   - tests/extension/server.test.js

@@ -11,7 +11,6 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/wsconn"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/debuglog"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
@@ -100,22 +99,9 @@ type (
 	// Backward compatibility: CaptureSnapshot remains available as an alias target.
 	Snapshot = CaptureSnapshot
 
-	ResourceEntry        = performance.ResourceEntry    // Alias for convenience
-	ResourceDiff         = performance.ResourceDiff     // Alias for convenience
-	CausalDiffResult     = performance.CausalDiffResult // Alias for convenience
-	PendingQueryResponse = queries.PendingQueryResponse // Alias for convenience (avoid qualifying as queries.PendingQueryResponse everywhere)
-	PendingQuery         = queries.PendingQuery         // Alias for convenience
-	CommandResult        = queries.CommandResult        // Alias for convenience (avoid qualifying as queries.CommandResult everywhere)
-
-	// QueryDispatcher subsystem types — moved to internal/queries package.
-	QueryDispatcher = queries.QueryDispatcher // Query lifecycle, result storage, async command tracking
-	QuerySnapshot   = queries.QuerySnapshot   // Point-in-time view of query state for health reporting
-
-	// Circuit breaker subsystem types — moved to internal/circuit package.
-	CircuitBreaker    = circuit.CircuitBreaker    // Rate limiting + circuit breaker state machine
-	HealthResponse    = circuit.HealthResponse    // GET /health response
-	RateLimitResponse = circuit.RateLimitResponse // 429 response body
-
+	ResourceEntry    = performance.ResourceEntry    // Alias for convenience
+	ResourceDiff     = performance.ResourceDiff     // Alias for convenience
+	CausalDiffResult = performance.CausalDiffResult // Alias for convenience
 	// WebSocket connection tracking — moved to internal/capture/wsconn package.
 	WSConnectionTracker = wsconn.Tracker // Active + closed WS connections, LRU eviction order. Guarded by Capture.mu.
 
@@ -130,19 +116,6 @@ type (
 	ValueChange      = logdiff.ValueChange      // Field value change between recordings
 	ActionComparison = logdiff.ActionComparison // Action counts and types between recordings
 )
-
-// NewCircuitBreaker is re-exported from internal/circuit for backward compatibility.
-var NewCircuitBreaker = circuit.NewCircuitBreaker
-
-// Debug logger subsystem types — moved to internal/debuglog package.
-
-// DebugLogger is an alias to the canonical type in internal/debuglog.
-type DebugLogger = debuglog.Logger
-
-// NewDebugLogger re-exports debuglog.NewLogger for backward compatibility.
-var NewDebugLogger = debuglog.NewLogger
-
-const debugLogSize = debuglog.LogSize
 
 const (
 	queryResultTTL = queries.QueryResultTTL // Re-export for queries_lifecycle_test.go
