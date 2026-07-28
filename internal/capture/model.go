@@ -9,10 +9,8 @@ package capture
 import (
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/wsconn"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -95,17 +93,6 @@ type (
 	// Snapshot is the preferred non-stuttering name for CaptureSnapshot.
 	// Backward compatibility: CaptureSnapshot remains available as an alias target.
 	Snapshot = CaptureSnapshot
-
-	ResourceEntry    = performance.ResourceEntry    // Alias for convenience
-	ResourceDiff     = performance.ResourceDiff     // Alias for convenience
-	CausalDiffResult = performance.CausalDiffResult // Alias for convenience
-	// WebSocket connection tracking — moved to internal/capture/wsconn package.
-	WSConnectionTracker = wsconn.Tracker // Active + closed WS connections, LRU eviction order. Guarded by Capture.mu.
-
-)
-
-const (
-	queryResultTTL = queries.QueryResultTTL // Re-export for queries_lifecycle_test.go
 )
 
 const (
