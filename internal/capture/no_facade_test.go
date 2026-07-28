@@ -38,6 +38,17 @@ func TestCaptureHasNoCompatibilityAliases(t *testing.T) {
 		"NewCircuitBreaker =",
 		"DebugLogger =",
 		"NewDebugLogger =",
+		"PlaybackSession =",
+		"PlaybackResult =",
+		"Coordinates =",
+		"LogDiffResult =",
+		"DiffLogEntry =",
+		"ValueChange =",
+		"ActionComparison =",
+		"recordingStorageMax =",
+		"recordingWarningLevel =",
+		"validateRecordingID =",
+		"calculateRecordingSize =",
 	} {
 		if strings.Contains(source, forbidden) {
 			t.Errorf("capture retains compatibility surface %q", forbidden)

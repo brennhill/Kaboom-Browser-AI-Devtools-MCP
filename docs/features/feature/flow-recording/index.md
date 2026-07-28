@@ -14,6 +14,10 @@ code_paths:
   - internal/capture/handlers.go
   - internal/recording/types.go
   - internal/recording/manager.go
+  - internal/recording/playback/types.go
+  - internal/recording/playback/session.go
+  - internal/recording/logdiff/types.go
+  - internal/recording/logdiff/compare.go
   - src/background/recording/index.ts
   - src/background/recording/capture.ts
   - src/background/recording/listeners.ts
@@ -32,6 +36,9 @@ test_paths:
   - cmd/browser-agent/internal/toolrecording/toolrecording_test.go
   - cmd/browser-agent/recording_playback_result_test.go
   - internal/capture/recording_delegation_test.go
+  - internal/capture/no_facade_test.go
+  - internal/recording/playback/playback_test.go
+  - internal/recording/logdiff/logdiff_test.go
   - internal/recording/no_facade_test.go
   - tests/extension/recording.test.js
   - tests/extension/recording-listeners-target-tab.test.js

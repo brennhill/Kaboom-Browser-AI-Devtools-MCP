@@ -13,9 +13,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/logdiff"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/playback"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -105,32 +102,10 @@ type (
 	// WebSocket connection tracking — moved to internal/capture/wsconn package.
 	WSConnectionTracker = wsconn.Tracker // Active + closed WS connections, LRU eviction order. Guarded by Capture.mu.
 
-	// Replay subsystem types — moved to internal/recording/playback package.
-	PlaybackSession = playback.Session     // Active playback session state
-	PlaybackResult  = playback.Result      // Result of executing a single recorded action
-	Coordinates     = playback.Coordinates // X/Y position on the page
-
-	// Log-diff subsystem types — moved to internal/recording/logdiff package.
-	LogDiffResult    = logdiff.Result           // Comparison of two recordings
-	DiffLogEntry     = logdiff.LogEntry         // Single log entry for diff comparison
-	ValueChange      = logdiff.ValueChange      // Field value change between recordings
-	ActionComparison = logdiff.ActionComparison // Action counts and types between recordings
 )
 
 const (
 	queryResultTTL = queries.QueryResultTTL // Re-export for queries_lifecycle_test.go
-)
-
-// Constants re-exported as unexported for capture-package test compatibility.
-const (
-	recordingStorageMax   = recording.RecordingStorageMax
-	recordingWarningLevel = recording.RecordingWarningLevel
-)
-
-// Function re-exports for capture-package test compatibility.
-var (
-	validateRecordingID    = recording.ValidateRecordingID
-	calculateRecordingSize = recording.CalculateRecordingSize
 )
 
 const (

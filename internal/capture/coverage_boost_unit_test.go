@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/playback"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -350,14 +351,14 @@ func TestCoverageBoost_RecordingStorageHandlerAndDelegations(t *testing.T) {
 	if _, err := c.ExecutePlayback("missing-recording"); err == nil {
 		t.Fatal("ExecutePlayback(missing) expected error")
 	}
-	fragile := c.DetectFragileSelectors([]*PlaybackSession{
-		{Results: []PlaybackResult{{ActionType: "click", SelectorUsed: "css", Status: "error"}}},
-		{Results: []PlaybackResult{{ActionType: "click", SelectorUsed: "css", Status: "error"}}},
+	fragile := c.DetectFragileSelectors([]*playback.Session{
+		{Results: []playback.Result{{ActionType: "click", SelectorUsed: "css", Status: "error"}}},
+		{Results: []playback.Result{{ActionType: "click", SelectorUsed: "css", Status: "error"}}},
 	})
 	if !fragile["css:css"] {
 		t.Fatalf("DetectFragileSelectors() = %+v, want css:css fragile", fragile)
 	}
-	statusMap := c.GetPlaybackStatus(&PlaybackSession{
+	statusMap := c.GetPlaybackStatus(&playback.Session{
 		StartedAt:        time.Now().Add(-2 * time.Second),
 		ActionsExecuted:  0,
 		ActionsFailed:    1,

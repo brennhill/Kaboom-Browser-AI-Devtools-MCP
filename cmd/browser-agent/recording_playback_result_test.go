@@ -13,6 +13,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/playback"
 )
 
 // ============================================
@@ -36,12 +37,12 @@ func TestBuildPlaybackResult_AllActionsSucceeded(t *testing.T) {
 	t.Parallel()
 	handler := newPlaybackTestEnv(t)
 
-	session := &capture.PlaybackSession{
+	session := &playback.Session{
 		RecordingID:      "rec-001",
 		StartedAt:        time.Now().Add(-500 * time.Millisecond),
 		ActionsExecuted:  5,
 		ActionsFailed:    0,
-		Results:          make([]capture.PlaybackResult, 3),
+		Results:          make([]playback.Result, 3),
 		SelectorFailures: map[string]int{},
 	}
 
@@ -95,12 +96,12 @@ func TestBuildPlaybackResult_PartialFailure(t *testing.T) {
 	t.Parallel()
 	handler := newPlaybackTestEnv(t)
 
-	session := &capture.PlaybackSession{
+	session := &playback.Session{
 		RecordingID:     "rec-002",
 		StartedAt:       time.Now().Add(-1 * time.Second),
 		ActionsExecuted: 3,
 		ActionsFailed:   2,
-		Results:         make([]capture.PlaybackResult, 5),
+		Results:         make([]playback.Result, 5),
 		SelectorFailures: map[string]int{
 			"#submit-btn": 1,
 			".nav-link":   1,
@@ -143,12 +144,12 @@ func TestBuildPlaybackResult_ZeroActions(t *testing.T) {
 	t.Parallel()
 	handler := newPlaybackTestEnv(t)
 
-	session := &capture.PlaybackSession{
+	session := &playback.Session{
 		RecordingID:      "rec-003",
 		StartedAt:        time.Now(),
 		ActionsExecuted:  0,
 		ActionsFailed:    0,
-		Results:          []capture.PlaybackResult{},
+		Results:          []playback.Result{},
 		SelectorFailures: map[string]int{},
 	}
 
@@ -182,12 +183,12 @@ func TestBuildPlaybackResult_DurationIsPositive(t *testing.T) {
 	t.Parallel()
 	handler := newPlaybackTestEnv(t)
 
-	session := &capture.PlaybackSession{
+	session := &playback.Session{
 		RecordingID:      "rec-004",
 		StartedAt:        time.Now().Add(-100 * time.Millisecond),
 		ActionsExecuted:  1,
 		ActionsFailed:    0,
-		Results:          make([]capture.PlaybackResult, 1),
+		Results:          make([]playback.Result, 1),
 		SelectorFailures: map[string]int{},
 	}
 
@@ -219,12 +220,12 @@ func TestBuildPlaybackResult_SnakeCaseFields(t *testing.T) {
 	t.Parallel()
 	handler := newPlaybackTestEnv(t)
 
-	session := &capture.PlaybackSession{
+	session := &playback.Session{
 		RecordingID:      "rec-005",
 		StartedAt:        time.Now(),
 		ActionsExecuted:  1,
 		ActionsFailed:    0,
-		Results:          make([]capture.PlaybackResult, 1),
+		Results:          make([]playback.Result, 1),
 		SelectorFailures: map[string]int{},
 	}
 
@@ -258,12 +259,12 @@ func TestBuildPlaybackResult_MessageFormat(t *testing.T) {
 	t.Parallel()
 	handler := newPlaybackTestEnv(t)
 
-	session := &capture.PlaybackSession{
+	session := &playback.Session{
 		RecordingID:      "rec-006",
 		StartedAt:        time.Now(),
 		ActionsExecuted:  7,
 		ActionsFailed:    3,
-		Results:          make([]capture.PlaybackResult, 10),
+		Results:          make([]playback.Result, 10),
 		SelectorFailures: map[string]int{},
 	}
 

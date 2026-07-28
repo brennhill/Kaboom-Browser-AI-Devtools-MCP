@@ -42,6 +42,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/playback"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/redaction"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
@@ -683,8 +684,8 @@ func (h *ToolHandler) screenrecDeps() screenrec.Deps {
 	}
 }
 
-func (h *ToolHandler) buildPlaybackResult(request mcp.JSONRPCRequest, recordingID string, playback *capture.PlaybackSession) mcp.JSONRPCResponse {
-	return toolrecording.BuildPlaybackResult(request, recordingID, playback)
+func (h *ToolHandler) buildPlaybackResult(request mcp.JSONRPCRequest, recordingID string, session *playback.Session) mcp.JSONRPCResponse {
+	return toolrecording.BuildPlaybackResult(request, recordingID, session)
 }
 
 func (h *ToolHandler) appendServerLog(entry mcp.LogEntry) {

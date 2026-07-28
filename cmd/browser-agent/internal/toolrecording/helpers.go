@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/playback"
 )
 
 // BuildPlaybackResult constructs canonical playback completion payload.
-func BuildPlaybackResult(req mcp.JSONRPCRequest, recordingID string, session *capture.PlaybackSession) mcp.JSONRPCResponse {
+func BuildPlaybackResult(req mcp.JSONRPCRequest, recordingID string, session *playback.Session) mcp.JSONRPCResponse {
 	status := "ok"
 	if session.ActionsFailed > 0 {
 		status = "partial"

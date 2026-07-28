@@ -292,23 +292,23 @@ func (c *Capture) GetRecording(recordingID string) (*recording.Recording, error)
 	return c.recordingManager.GetRecording(recordingID)
 }
 
-func (c *Capture) StartPlayback(recordingID string) (*PlaybackSession, error) {
+func (c *Capture) StartPlayback(recordingID string) (*playback.Session, error) {
 	return playback.Start(c.recordingManager, recordingID)
 }
 
-func (c *Capture) ExecutePlayback(recordingID string) (*PlaybackSession, error) {
+func (c *Capture) ExecutePlayback(recordingID string) (*playback.Session, error) {
 	return playback.Execute(c.recordingManager, recordingID)
 }
 
-func (c *Capture) DetectFragileSelectors(sessions []*PlaybackSession) map[string]bool {
+func (c *Capture) DetectFragileSelectors(sessions []*playback.Session) map[string]bool {
 	return playback.DetectFragileSelectors(sessions)
 }
 
-func (c *Capture) GetPlaybackStatus(session *PlaybackSession) map[string]any {
+func (c *Capture) GetPlaybackStatus(session *playback.Session) map[string]any {
 	return playback.Status(session)
 }
 
-func (c *Capture) DiffRecordings(originalID, replayID string) (*LogDiffResult, error) {
+func (c *Capture) DiffRecordings(originalID, replayID string) (*logdiff.Result, error) {
 	return logdiff.Compare(c.recordingManager, originalID, replayID)
 }
 

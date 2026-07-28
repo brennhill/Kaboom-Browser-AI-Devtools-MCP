@@ -46,11 +46,11 @@ func TestNewCaptureDelegation_RecordingManager(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetStorageInfo error = %v", err)
 	}
-	if info.MaxBytes != recordingStorageMax {
-		t.Errorf("MaxBytes = %d, want %d", info.MaxBytes, recordingStorageMax)
+	if info.MaxBytes != recording.RecordingStorageMax {
+		t.Errorf("MaxBytes = %d, want %d", info.MaxBytes, recording.RecordingStorageMax)
 	}
-	if info.WarningBytes != recordingWarningLevel {
-		t.Errorf("WarningBytes = %d, want %d", info.WarningBytes, recordingWarningLevel)
+	if info.WarningBytes != recording.RecordingWarningLevel {
+		t.Errorf("WarningBytes = %d, want %d", info.WarningBytes, recording.RecordingWarningLevel)
 	}
 
 	err = c.RecalculateStorageUsed()

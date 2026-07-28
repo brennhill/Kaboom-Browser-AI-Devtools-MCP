@@ -11,9 +11,10 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/logdiff"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/playback"
 )
 
 // Capture is the recording-specific subset of capture.Store used by Handler.
@@ -22,8 +23,8 @@ type Capture interface {
 	StopRecording(recordingID string) (int, int64, error)
 	ListRecordings(limit int) ([]recording.Recording, error)
 	GetRecording(recordingID string) (*recording.Recording, error)
-	ExecutePlayback(recordingID string) (*capture.PlaybackSession, error)
-	DiffRecordings(originalID, replayID string) (*capture.LogDiffResult, error)
+	ExecutePlayback(recordingID string) (*playback.Session, error)
+	DiffRecordings(originalID, replayID string) (*logdiff.Result, error)
 }
 
 // Handler owns the full recording MCP lifecycle and its playback-session state.
@@ -32,7 +33,7 @@ type Handler struct {
 	appendLog func(mcp.LogEntry)
 
 	playbackMu       sync.RWMutex
-	playbackSessions map[string]*capture.PlaybackSession
+	playbackSessions map[string]*playback.Session
 }
 
 // NewHandler constructs a recording handler around its explicit dependencies.
@@ -40,7 +41,7 @@ func NewHandler(recordingCapture Capture, appendLog func(mcp.LogEntry)) *Handler
 	return &Handler{
 		capture:          recordingCapture,
 		appendLog:        appendLog,
-		playbackSessions: make(map[string]*capture.PlaybackSession),
+		playbackSessions: make(map[string]*playback.Session),
 	}
 }
 

@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording/playback"
 )
 
 // ---------------------------------------------------------------------------
@@ -17,7 +17,7 @@ import (
 
 func TestBuildPlaybackResult_AllSuccess(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	session := &capture.PlaybackSession{
+	session := &playback.Session{
 		RecordingID:      "rec-1",
 		StartedAt:        time.Now().Add(-500 * time.Millisecond),
 		ActionsExecuted:  5,
@@ -54,7 +54,7 @@ func TestBuildPlaybackResult_AllSuccess(t *testing.T) {
 
 func TestBuildPlaybackResult_PartialFailure(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
-	session := &capture.PlaybackSession{
+	session := &playback.Session{
 		RecordingID:     "rec-2",
 		StartedAt:       time.Now().Add(-1 * time.Second),
 		ActionsExecuted: 3,
@@ -86,7 +86,7 @@ func TestBuildPlaybackResult_PartialFailure(t *testing.T) {
 
 func TestBuildPlaybackResult_ZeroActions(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 3}
-	session := &capture.PlaybackSession{
+	session := &playback.Session{
 		RecordingID:      "rec-3",
 		StartedAt:        time.Now(),
 		ActionsExecuted:  0,
@@ -102,7 +102,7 @@ func TestBuildPlaybackResult_ZeroActions(t *testing.T) {
 
 func TestBuildPlaybackResult_ResponseID(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: "custom-id"}
-	session := &capture.PlaybackSession{
+	session := &playback.Session{
 		RecordingID: "rec-4",
 		StartedAt:   time.Now(),
 	}
