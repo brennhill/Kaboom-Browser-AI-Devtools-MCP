@@ -49,7 +49,7 @@ func HandleDoctorHTTP(w http.ResponseWriter, cap *capture.Capture, ver string) {
 // RunDoctorChecks runs all live diagnostic checks against the capture instance.
 func RunDoctorChecks(cap *capture.Capture) []DoctorCheck {
 	checks := make([]DoctorCheck, 0, 9)
-	snap := cap.GetHealthSnapshot()
+	snap := capture.NewHealthReader(cap).Snapshot()
 
 	// 1. Extension connectivity.
 	if cap.Extension().IsExtensionConnected() {

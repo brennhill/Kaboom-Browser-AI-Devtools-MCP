@@ -17,6 +17,7 @@ code_paths:
   - cmd/browser-agent/internal/dashboard/diagnostics.html
   - src/generated/openapi-types.ts
 test_paths:
+  - internal/capture/health_reader_owner_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/internal/binarywatch/watcher_test.go
   - cmd/browser-agent/internal/operationalapi/health_test.go
@@ -53,3 +54,5 @@ last_verified_date: 2026-03-05
 JSON is served only by `GET /diagnostics`; the dashboard uses that canonical
 route, and generated TypeScript contracts come directly from
 `cmd/browser-agent/openapi.json`.
+Operational health handlers consume the canonical `capture.HealthReader`;
+`Capture` no longer exposes a health forwarding method.

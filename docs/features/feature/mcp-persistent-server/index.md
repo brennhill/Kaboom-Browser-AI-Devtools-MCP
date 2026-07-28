@@ -71,6 +71,7 @@ code_paths:
   - internal/util/proc_unix.go
   - internal/util/proc_windows.go
 test_paths:
+  - internal/capture/health_reader_owner_test.go
   - cmd/browser-agent/internal/toolrouting/routing_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/tools_configure_handler_test.go

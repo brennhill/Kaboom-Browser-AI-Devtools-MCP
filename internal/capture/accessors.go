@@ -5,10 +5,12 @@
 package capture
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // GetNetworkTotalAdded returns the monotonic total of network bodies ever added
@@ -95,12 +97,31 @@ type HealthSnapshot struct {
 	QueryTimeout          time.Duration
 }
 
-// GetHealthSnapshot returns a lock-safe aggregate health view.
-func (c *Capture) GetHealthSnapshot() HealthSnapshot {
-	circuitOpen, circuitReason, circuitOpenedAt, windowEventCount := c.circuit.GetState()
-	querySnap := c.queryDispatcher.GetSnapshot()
-	extensionSnap := c.extension.Snapshot()
-	telemetrySnap := c.telemetry.GetSnapshot()
+// HealthReader composes detached health snapshots from independently
+// synchronized runtime owners.
+type HealthReader struct {
+	circuit   *circuit.CircuitBreaker
+	queries   *queries.QueryDispatcher
+	extension *ExtensionRuntime
+	telemetry *TelemetryStore
+}
+
+// NewHealthReader binds health aggregation to the canonical runtime owners.
+func NewHealthReader(capture *Capture) *HealthReader {
+	return &HealthReader{
+		circuit:   capture.circuit,
+		queries:   capture.queryDispatcher,
+		extension: capture.extension,
+		telemetry: capture.telemetry,
+	}
+}
+
+// Snapshot returns a lock-safe aggregate health view.
+func (r *HealthReader) Snapshot() HealthSnapshot {
+	circuitOpen, circuitReason, circuitOpenedAt, windowEventCount := r.circuit.GetState()
+	querySnap := r.queries.GetSnapshot()
+	extensionSnap := r.extension.Snapshot()
+	telemetrySnap := r.telemetry.GetSnapshot()
 
 	return HealthSnapshot{
 		WebSocketCount:        telemetrySnap.WebSocketCount,

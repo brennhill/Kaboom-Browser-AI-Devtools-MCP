@@ -296,7 +296,7 @@ func buildIssueReportDeps(h *ToolHandler) issuereport.HandlerDeps {
 				report.Diagnostics.Server.ErrorRatePct = audit.ErrorRatePct
 			}
 			if h.capture != nil {
-				health := h.capture.GetHealthSnapshot()
+				health := capture.NewHealthReader(h.capture).Snapshot()
 				report.Diagnostics.Extension.Connected = health.ConnectionCount > 0
 				report.Diagnostics.Extension.Source = health.ExtSessionID
 				report.Diagnostics.Buffers.NetworkEntries = health.NetworkBodyCount

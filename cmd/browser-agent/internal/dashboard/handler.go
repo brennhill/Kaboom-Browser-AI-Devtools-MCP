@@ -93,7 +93,7 @@ func Status(options StatusOptions) http.HandlerFunc {
 		buffers := map[string]any{"console_entries": logEntries, "console_capacity": logCapacity}
 
 		if options.Capture != nil {
-			snap := options.Capture.GetHealthSnapshot()
+			snap := capture.NewHealthReader(options.Capture).Snapshot()
 
 			resp["extension_connected"] = options.Capture.Extension().IsExtensionConnected()
 			resp["pilot_enabled"] = snap.PilotEnabled

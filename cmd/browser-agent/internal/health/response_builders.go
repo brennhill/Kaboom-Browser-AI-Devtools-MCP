@@ -96,7 +96,7 @@ func BuildMemoryInfo(cap *capture.Capture) MemoryInfo {
 func BuildBuffersInfo(cap *capture.Capture, server ServerDeps) BuffersInfo {
 	var networkEntries, wsEntries, actionEntries int
 	if cap != nil {
-		h := cap.GetHealthSnapshot()
+		h := capture.NewHealthReader(cap).Snapshot()
 		networkEntries = h.NetworkBodyCount
 		wsEntries = h.WebSocketCount
 		actionEntries = h.ActionCount
@@ -141,7 +141,7 @@ func getConsoleStats(server ServerDeps) (int, int, int64) {
 func BuildRateLimitInfo(cap *capture.Capture) RateLimitingInfo {
 	info := RateLimitingInfo{Threshold: capture.RateLimitThreshold}
 	if cap != nil {
-		h := cap.GetHealthSnapshot()
+		h := capture.NewHealthReader(cap).Snapshot()
 		info.CurrentRate = h.WindowEventCount
 		info.CircuitOpen = h.CircuitOpen
 		info.CircuitReason = h.CircuitReason

@@ -236,7 +236,7 @@ func (cb *CircuitBreaker) GetHealthStatus() HealthResponse {
 }
 
 // GetState returns circuit breaker state fields for external snapshot consumers.
-// Used by Capture.GetHealthSnapshot() to avoid reentrant locking.
+// Used by capture.HealthReader to avoid reentrant locking.
 func (cb *CircuitBreaker) GetState() (open bool, reason string, openedAt time.Time, eventCount int) {
 	cb.mu.RLock()
 	defer cb.mu.RUnlock()

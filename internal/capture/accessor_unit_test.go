@@ -64,7 +64,7 @@ func TestCaptureAccessorSnapshotsAndCopies(t *testing.T) {
 	}
 
 	c.Extension().SetTestBoundaryStart("health-test")
-	health := c.GetHealthSnapshot()
+	health := NewHealthReader(c).Snapshot()
 	if health.NetworkBodyCount != 2 || health.WebSocketCount != 1 || health.ActionCount != 1 {
 		t.Fatalf("health counts = %+v, want 2/1/1", health)
 	}

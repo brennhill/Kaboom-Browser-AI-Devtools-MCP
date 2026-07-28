@@ -78,6 +78,7 @@ test_paths:
   - internal/capture/testhelpers_test.go
   - internal/capture/no_facade_test.go
   - internal/capture/http_handlers_owner_test.go
+  - internal/capture/health_reader_owner_test.go
   - internal/capture/sync_handler_owner_test.go
   - internal/circuit/breaker_test.go
   - internal/debuglog/logger_test.go
@@ -132,6 +133,9 @@ methods were deleted rather than retained as forwarding facades. The sync
 transport is likewise owned by `capture.SyncHandler`, which composes extension
 liveness, command results, long-poll delivery, lifecycle events, and sync
 diagnostics without adding forwarding methods to `Capture`.
+Aggregate health reads are owned by `capture.HealthReader`; it snapshots the
+independently synchronized telemetry, query, extension, and circuit owners
+without a cross-owner method on `Capture`.
 The unused `EventBuffers`, `NetworkWaterfallStore`, `ExtensionLogStore`, and
 `PerformanceSnapshotStore` read-only view layer has been deleted; it wrapped
 canonical capture methods and had no production consumers.

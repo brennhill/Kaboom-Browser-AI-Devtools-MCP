@@ -48,6 +48,7 @@ code_paths:
   - src/inject/observers.ts
   - src/lib/net/network.ts
 test_paths:
+  - internal/capture/health_reader_owner_test.go
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/internal/toolobserve/toolobserve_coverage_test.go
   - cmd/browser-agent/tools_observe_inbox_test.go
@@ -123,6 +124,9 @@ interface or observation-only root getter remains.
 
 ## Canonical Note
 `observe` is the passive read surface for captured browser/server state. It is the canonical polling surface for async command completion via `what:"command_result"`.
+
+Cross-owner runtime health is read through `capture.HealthReader`; no aggregate
+health facade remains on the `Capture` composition root.
 
 Tool dispatch uses only the canonical `what` selector and canonical mode names;
 `mode`, `action`, `network`, and `ws` routing shortcuts are not accepted.
