@@ -90,6 +90,8 @@ test_paths:
   - cmd/browser-agent/internal/playbooks/resource_catalog_test.go
   - cmd/browser-agent/stdout_protocol_boundary_test.go
   - cmd/browser-agent/mcp_protocol_test.go
+  - cmd/browser-agent/mcp_initialize_test.go
+  - cmd/browser-agent/mcp_transport_handler_test.go
   - cmd/browser-agent/stdout_sync_unit_test.go
   - cmd/browser-agent/tools_registry_test.go
   - cmd/browser-agent/internal/toolcatalog/catalog_test.go
