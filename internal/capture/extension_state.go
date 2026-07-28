@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
@@ -157,13 +156,6 @@ func (c *Capture) GetExtensionStatus() map[string]any {
 		"last_seen": lastSeen,
 		"client_id": c.extensionState.lastSyncClientID,
 	}
-}
-
-// GetExtensionVersion returns the last reported extension version.
-func (c *Capture) GetExtensionVersion() string {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.extensionState.extensionVersion
 }
 
 // GetVersionMismatch checks whether extension and server versions differ in major.minor.
@@ -523,39 +515,4 @@ func (c *Capture) LoadSettingsFromDisk() {
 		c.extensionState.pilotUpdatedAt = settings.Timestamp
 		c.extensionState.pilotSource = PilotSourceSettingsCache
 	}
-}
-
-func (c *Capture) SaveSettingsToDisk() error {
-	path, err := getSettingsPath()
-	if err != nil {
-		return err
-	}
-
-	c.mu.RLock()
-	var pilotEnabled *bool
-	if c.extensionState.pilotStatusKnown {
-		value := c.extensionState.pilotEnabled
-		pilotEnabled = &value
-	}
-	settings := PersistedSettings{
-		AIWebPilotEnabled: pilotEnabled,
-		Timestamp:         c.extensionState.pilotUpdatedAt,
-		ExtSessionID:      c.extensionState.extSessionID,
-	}
-	c.mu.RUnlock()
-
-	data, err := json.MarshalIndent(settings, "", "  ")
-	if err != nil {
-		return err
-	}
-	// #nosec G301 -- runtime state directory is intentionally user-readable.
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-	tmpPath := path + ".tmp"
-	// #nosec G306 -- settings cache is owner-only.
-	if err := os.WriteFile(tmpPath, data, 0600); err != nil {
-		return err
-	}
-	return os.Rename(tmpPath, path)
 }

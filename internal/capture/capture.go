@@ -195,17 +195,10 @@ func (c *Capture) SetFeaturesCallback(cb func(map[string]bool)) {
 	c.featuresCallback = cb
 }
 
-// SubscribeLifecycle registers a typed lifecycle event listener and returns a
-// subscription ID for later removal via UnsubscribeLifecycle.
+// SubscribeLifecycle registers a typed lifecycle event listener.
 // Thread-safe; the observer has its own lock independent of Capture.mu.
 func (c *Capture) SubscribeLifecycle(fn lifecycle.Listener) int {
 	return c.lifecycle.Subscribe(fn)
-}
-
-// UnsubscribeLifecycle removes a lifecycle listener by its subscription ID.
-// No-op if the ID is not found.
-func (c *Capture) UnsubscribeLifecycle(id int) {
-	c.lifecycle.Unsubscribe(id)
 }
 
 // emitLifecycleEvent dispatches a lifecycle event via the observer.

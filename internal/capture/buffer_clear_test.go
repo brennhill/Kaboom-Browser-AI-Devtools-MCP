@@ -132,32 +132,6 @@ func TestClearActionBuffer(t *testing.T) {
 	capture.mu.RUnlock()
 }
 
-// TestClearExtensionLogs verifies clearing extension logs buffer.
-func TestClearExtensionLogs(t *testing.T) {
-	t.Parallel()
-	capture := setupTestCapture(t)
-
-	// Add extension logs
-	capture.mu.Lock()
-	capture.extensionLogs.logs = append(capture.extensionLogs.logs, types.ExtensionLog{Level: "debug", Message: "ext log", Timestamp: time.Now()})
-	capture.mu.Unlock()
-
-	// Clear
-	count := capture.ClearExtensionLogs()
-
-	// Verify count
-	if count != 1 {
-		t.Errorf("Expected ExtensionLogs count = 1, got %d", count)
-	}
-
-	// Verify buffer empty
-	capture.mu.RLock()
-	if len(capture.extensionLogs.logs) != 0 {
-		t.Errorf("Expected extensionLogs to be empty, got %d entries", len(capture.extensionLogs.logs))
-	}
-	capture.mu.RUnlock()
-}
-
 // TestClearAllCapture verifies clearing all capture buffers at once.
 func TestClearAllCapture(t *testing.T) {
 	t.Parallel()

@@ -93,6 +93,10 @@ func TestCaptureHasNoCompatibilityAliases(t *testing.T) {
 		"func (c *Capture) NetworkWaterfallStore(",
 		"func (c *Capture) ExtensionLogStore(",
 		"func (c *Capture) PerformanceSnapshotStore(",
+		"func (c *Capture) GetExtensionVersion(",
+		"func (c *Capture) UnsubscribeLifecycle(",
+		"func (c *Capture) SaveSettingsToDisk(",
+		"func (c *Capture) ClearExtensionLogs(",
 	} {
 		if strings.Contains(source.String(), forbidden) {
 			t.Errorf("capture retains compatibility surface %q", forbidden)

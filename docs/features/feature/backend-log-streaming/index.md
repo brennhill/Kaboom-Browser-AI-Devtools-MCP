@@ -102,6 +102,10 @@ Capture APIs and their callers use the canonical wire contracts from
 The unused `EventBuffers`, `NetworkWaterfallStore`, `ExtensionLogStore`, and
 `PerformanceSnapshotStore` read-only view layer has been deleted; it wrapped
 canonical capture methods and had no production consumers.
+Dead exported capture methods for extension-version reads, lifecycle
+unsubscription, settings-cache writes, and extension-log-only clearing have
+also been removed. Startup settings loading and atomic `ClearAll` remain the
+canonical behaviors.
 Tracked-tab state is updated through the canonical `/sync` contract or
 `UpdateTrackedTab`; the pre-`/sync` `ExtensionStatus` envelope and
 `UpdateExtensionStatus` mutation API have been deleted.
