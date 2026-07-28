@@ -226,9 +226,9 @@ func TestObserveLogs_LevelFilter(t *testing.T) {
 		sampleConsoleLog,
 	}, nil)
 
-	// "level" is a quiet alias for "min_level" (threshold): warn returns warn+error.
+	// min_level uses threshold semantics: warn returns warn+error.
 	th := handler.toolHandler.(*ToolHandler)
-	resp := observe.GetBrowserLogs(th, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{"level":"warn"}`))
+	resp := observe.GetBrowserLogs(th, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{"min_level":"warn"}`))
 
 	var result map[string]any
 	if err := json.Unmarshal(resp.Result, &result); err != nil {

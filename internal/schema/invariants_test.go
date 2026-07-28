@@ -70,8 +70,8 @@ func checkPropsForCombiners(t *testing.T, toolName string, props map[string]any,
 	}
 }
 
-// TestObserveSchema_LevelNotExposed verifies that 'level' is a quiet alias
-// (not in schema) and only 'min_level' is exposed.
+// TestObserveSchema_LevelNotExposed verifies that min_level is the sole public
+// severity filter for browser logs.
 func TestObserveSchema_LevelNotExposed(t *testing.T) {
 	t.Parallel()
 	tool := observeToolSchema()
@@ -80,7 +80,7 @@ func TestObserveSchema_LevelNotExposed(t *testing.T) {
 		t.Fatal("observe schema missing properties")
 	}
 	if _, found := props["level"]; found {
-		t.Error("observe schema should not expose 'level' — it is a quiet alias for 'min_level'")
+		t.Error("observe schema should not expose the removed exact-level filter")
 	}
 	if _, found := props["min_level"]; !found {
 		t.Error("observe schema should expose 'min_level'")

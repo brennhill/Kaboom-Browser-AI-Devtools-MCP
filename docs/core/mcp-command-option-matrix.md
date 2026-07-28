@@ -19,7 +19,8 @@ canonical: true
 
 ## Dispatch Key
 
-All 5 tools use `what` as the primary dispatch parameter. `action`, `mode`, and `format` are deprecated aliases and should not be used in new integrations.
+All five tools use `what` as their only top-level dispatch parameter. Alternate
+selector parameters and shorthand mode names are rejected.
 
 ---
 
@@ -60,13 +61,6 @@ All 5 tools use `what` as the primary dispatch parameter. `action`, `mode`, and 
 | `playback_results` | `toolGetPlaybackResults` | Results from replaying a recording |
 | `log_diff_report` | `toolGetLogDiffReport` | Diff between two log snapshots |
 
-#### Deprecated aliases
-
-| Alias | Canonical |
-|---|---|
-| `network` | `network_waterfall` |
-| `ws` | `websocket_events` |
-
 ---
 
 ### `analyze` — 27 modes (`what` -> handler)
@@ -101,15 +95,6 @@ All 5 tools use `what` as the primary dispatch parameter. `action`, `mode`, and 
 | `audit` | `combinedaudit.Handle` | Multi-category Lighthouse-style audit |
 | `feature_gates` | `handleContentExtraction` (inline) | Feature gate status from page context |
 
-#### Deprecated aliases
-
-| Alias | Canonical |
-|---|---|
-| `a11y` | `accessibility` |
-| `history` | `navigation_patterns` |
-| `mode` param | use `what` |
-| `action` param | use `what` |
-
 ---
 
 ### `configure` — 29 modes (`what` -> handler)
@@ -135,7 +120,7 @@ All 5 tools use `what` as the primary dispatch parameter. `action`, `mode`, and 
 | `telemetry` | `toolConfigureTelemetry` | Set the global telemetry mode |
 | `describe_capabilities` | `toolConfigureDescribeCapabilities` | Return per-mode parameter specs for any tool |
 | `tutorial` | `toolConfigureTutorial` | Return getting-started tutorial content |
-| `examples` | `toolConfigureTutorial` | Return usage examples (alias for tutorial) |
+| `examples` | `toolConfigureTutorial` | Return focused usage examples |
 | `save_sequence` | `toolConfigureSaveSequence` | Save a named interact action sequence |
 | `get_sequence` | `toolConfigureGetSequence` | Retrieve a saved sequence by name |
 | `list_sequences` | `toolConfigureListSequences` | List all saved sequences |
@@ -145,14 +130,6 @@ All 5 tools use `what` as the primary dispatch parameter. `action`, `mode`, and 
 | `network_recording` | `toolConfigureNetworkRecording` | Configure network request recording filters |
 | `action_jitter` | `toolConfigureActionJitter` | Set random delay before interact actions |
 | `report_issue` | `issuereport.Handle` | Submit a bug report or issue template |
-
-#### Deprecated aliases
-
-| Old name | Canonical |
-|---|---|
-| `recording_start` | `event_recording_start` |
-| `recording_stop` | `event_recording_stop` |
-| `action` param | use `what` |
 
 ---
 
@@ -219,12 +196,6 @@ All 5 tools use `what` as the primary dispatch parameter. `action`, `mode`, and 
 | `clipboard_read` | `handleClipboardRead` | Read current clipboard text content |
 | `clipboard_write` | `handleClipboardWrite` | Write text to the clipboard |
 
-#### Deprecated aliases
-
-| Old name | Canonical |
-|---|---|
-| `action` param | use `what` |
-
 ---
 
 ### `generate` — 13 modes (`what` -> handler)
@@ -244,13 +215,6 @@ All 5 tools use `what` as the primary dispatch parameter. `action`, `mode`, and 
 | `test_from_context` | `testGen().handleGenerateTestFromContext` | Generate a test from current error/interaction context |
 | `test_heal` | `testGen().handleGenerateTestHeal` | Heal broken selectors in existing test files |
 | `test_classify` | `testGen().handleGenerateTestClassify` | Classify test failures by root cause |
-
-#### Deprecated aliases
-
-| Alias | Canonical |
-|---|---|
-| `format` param | use `what` |
-| `action` param (when value matches a generate mode) | use `what` |
 
 ---
 

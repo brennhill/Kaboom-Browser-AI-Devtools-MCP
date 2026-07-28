@@ -122,7 +122,6 @@ func GetBrowserErrors(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 func GetBrowserLogs(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Limit             int    `json:"limit"`
-		Level             string `json:"level"`
 		MinLevel          string `json:"min_level"`
 		Source            string `json:"source"`
 		URL               string `json:"url"`
@@ -137,12 +136,6 @@ func GetBrowserLogs(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 		Summary           bool   `json:"summary"`
 	}
 	mcp.LenientUnmarshal(args, &params)
-
-	// Quiet alias: level → min_level (threshold, not exact match).
-	if params.Level != "" && params.MinLevel == "" {
-		params.MinLevel = params.Level
-		params.Level = ""
-	}
 
 	var paramHint string
 	if params.MinLevel != "" && LogLevelRank(params.MinLevel) < 0 {
@@ -203,10 +196,6 @@ func GetBrowserLogs(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 		if level == "" && isInternalLogType(entryType) {
 			level = "info"
 		}
-		if params.Level != "" && level != params.Level {
-			continue
-		}
-
 		if params.MinLevel != "" && LogLevelRank(level) < LogLevelRank(params.MinLevel) {
 			continue
 		}
@@ -287,7 +276,7 @@ func GetBrowserLogs(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 			limit = params.Limit
 		}
 		limit = clampLimit(limit, 100)
-		extLogs := buildExtensionLogEntries(deps.GetCapture().GetExtensionLogs(), limit, params.Level, params.MinLevel)
+		extLogs := buildExtensionLogEntries(deps.GetCapture().GetExtensionLogs(), limit, "", params.MinLevel)
 		response["extension_logs"] = extLogs
 		response["extension_logs_count"] = len(extLogs)
 	}

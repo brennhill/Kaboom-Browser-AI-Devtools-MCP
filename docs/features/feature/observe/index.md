@@ -110,7 +110,8 @@ canonical keys `violations`, `passes`, `incomplete`, and `inapplicable`.
 Legacy `*_count` compatibility fields are not part of the contract.
 WebSocket status (`what:"websocket_status"`) supports `summary:true` with compact URL/connection-id previews while preserving the full default payload when `summary` is omitted.
 Network-bodies empty-result hints now echo all active filters (`url`, `method`, `status_*`, `body_path`) so retry guidance is specific to the current query.
-`level` is a quiet alias for `min_level` — accepted at runtime but hidden from schema. Both use threshold semantics (e.g., `warn` returns warn+error).
+Log severity filtering uses only `min_level`, with threshold semantics (for
+example, `warn` returns warning and error entries).
 Storage summary tests now share common assertions for `key_count`, `sample_keys`, and `total_bytes` shape checks.
 If the extension reloads while an old content script is still attached to the page, the bridge now emits a Kaboom-branded refresh warning and stops retrying dead `chrome.runtime.sendMessage` calls until the page is refreshed.
 Context-annotation warnings and background-sender rejection logs now use the shared Kaboom runtime prefix instead of hardcoded Kaboom labels.

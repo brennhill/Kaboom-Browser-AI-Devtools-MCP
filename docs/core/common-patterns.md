@@ -69,7 +69,8 @@ Use this as a hard checklist during design, coding, and review.
 
 - Top-level tool entrypoints (`toolObserve`, `toolConfigure`, `toolInteract`, `toolAnalyze`, `toolGenerate`) should delegate through `dispatchTool(...)`.
 - Mode/action registration belongs in the tool registry files (`tools_*_registry.go`), not ad-hoc `switch` blocks in entrypoint files.
-- Alias handling (`action`/`mode` fallback) must stay in shared mode-resolution helpers.
+- Tool routing is canonical-only: every top-level tool call uses `what`, and
+  registries must not add alternate selector or mode names.
 
 ## 8) Pending Query + Async Command Pattern
 

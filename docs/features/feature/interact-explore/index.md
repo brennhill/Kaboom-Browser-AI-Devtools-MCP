@@ -125,7 +125,7 @@ registered. The similarly named extension pending-query types remain internal.
 ## TL;DR
 - Status: shipped
 - Tool: `interact`
-- Mode key: `what` (deprecated alias: `action`)
+- Mode key: `what`
 - Contract source: `internal/schema/interact/tool.go`
 
 ## Specs
