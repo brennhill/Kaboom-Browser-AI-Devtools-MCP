@@ -30,6 +30,9 @@ test_paths:
   - internal/schema/invariants_test.go
   - tests/extension/draw-mode.test.js
   - internal/annotation/store_test.go
+  - internal/annotation/store_named_sessions_test.go
+  - internal/annotation/store_lifecycle_test.go
+  - internal/annotation/store_maintenance_test.go
   - internal/annotation/draw_sessions_handler_test.go
   - cmd/browser-agent/tools_analyze_annotations_draw_test.go
   - cmd/browser-agent/internal/mediaapi/annotation_store_test.go
@@ -87,7 +90,7 @@ last_verified_date: 2026-03-05
 
 ### Tests
 - `tests/extension/draw-mode.test.js` — "Element Detail Enrichment" describe block
-- `internal/annotation/store_test.go` — `TestStore_SessionTTL_Is2Hours`
+- `internal/annotation/store_maintenance_test.go` — `TestStore_SessionTTL_Is2Hours`
 - `internal/annotation/draw_sessions_handler_test.go` and `cmd/browser-agent/tools_analyze_annotations_draw_test.go` — safe persisted-session loading and end-to-end store hydration
 - `cmd/browser-agent/tools_analyze_annotations_test.go` — enrichment fields (`selector_candidates`, `js_framework`, `component`), error correlation, hints tests
 - `internal/schema/invariants_test.go` — ensures annotations expose only the canonical `url` scope filter and never restore `url_pattern`
