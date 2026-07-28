@@ -72,7 +72,6 @@ code_paths:
 test_paths:
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/internal/summarypref/cache_test.go
-  - cmd/browser-agent/tools_summary_pref_test.go
   - cmd/browser-agent/internal/toolinteract/fake_deps_test.go
   - cmd/browser-agent/internal/toolinteract/test_helpers_test.go
   - cmd/browser-agent/internal/toolinteract/interact_browser_actions_test.go
@@ -150,6 +149,9 @@ accessor and the test-only shim that mirrored it have been deleted and are
 structurally prohibited.
 Composition also supplies evidence and query callbacks directly; dead or
 one-line ToolHandler forwarding methods are structurally prohibited.
+Summary response-mode behavior belongs to `summarypref.Cache`; async formatting
+and dependency wiring use that owner directly, and the former four-method root
+forwarding layer plus its duplicate tests have been deleted.
 Public state actions likewise use only `save_state`, `load_state`,
 `list_states`, and `delete_state`; duplicate `state_*` entry points are not
 registered. The similarly named extension pending-query types remain internal.

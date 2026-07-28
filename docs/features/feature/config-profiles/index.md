@@ -6,8 +6,10 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-28
 code_paths:
+  - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/session.go
+  - cmd/browser-agent/internal/summarypref/cache.go
   - internal/session/snapshot-manager.go
   - internal/tools/configure/audit.go
   - internal/tools/configure/boundaries.go
@@ -16,6 +18,8 @@ code_paths:
   - internal/tools/configure/capabilities/schema.go
   - internal/tools/configure/capabilities/modespecs.go
 test_paths:
+  - cmd/browser-agent/lint_hardening_test.go
+  - cmd/browser-agent/internal/summarypref/cache_test.go
   - cmd/browser-agent/tools_configure_handler_test.go
   - cmd/browser-agent/tools_configure_session_test.go
   - internal/tools/configure/audit_test.go
@@ -54,6 +58,10 @@ last_verified_date: 2026-03-05
   - `cmd/browser-agent/tools_configure.go`
 - Session/store sub-handler and implementations:
   - `cmd/browser-agent/internal/toolconfigure/session.go`
+- Session summary-response preference caching and invalidation:
+  - `cmd/browser-agent/internal/summarypref/cache.go`
+  - composition passes `Cache.Invalidate` directly; no ToolHandler preference
+    forwarding layer remains
 - Shared configure argument normalization/parsing:
   - `internal/tools/configure/boundaries.go`
   - `internal/tools/configure/rewrite.go`

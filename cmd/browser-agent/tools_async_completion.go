@@ -244,7 +244,7 @@ func (h *ToolHandler) formatCompletedCommand(req mcp.JSONRPCRequest, cmd queries
 	asyncresult.StripSuccessOnlyFields(responseData)
 	asyncresult.StripRetryContextOnSuccess(responseData)
 	// #447: Strip verbose fields when summary mode is active
-	if h.loadSummaryPref() {
+	if h.summaryPrefs.Enabled() {
 		asyncresult.StripSummaryModeFields(responseData)
 	}
 	summary := fmt.Sprintf("Command %s: complete", corrID)

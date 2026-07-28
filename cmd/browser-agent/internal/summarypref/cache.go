@@ -21,6 +21,9 @@ func New(load Loader) *Cache {
 }
 
 func (c *Cache) Enabled() bool {
+	if c == nil {
+		return false
+	}
 	c.mu.RLock()
 	if c.loaded {
 		value := c.value
@@ -55,6 +58,9 @@ func (c *Cache) Enabled() bool {
 }
 
 func (c *Cache) Invalidate() {
+	if c == nil {
+		return
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.loaded = false
@@ -62,6 +68,9 @@ func (c *Cache) Invalidate() {
 }
 
 func (c *Cache) Inject(args json.RawMessage) json.RawMessage {
+	if c == nil {
+		return args
+	}
 	if !c.Enabled() {
 		return args
 	}

@@ -23,7 +23,7 @@
 
 - `tool*` for top-level MCP mode/action entry points (e.g. `toolObserve`, `toolConfigureClear`).
 - `handle*` for sub-action dispatch handlers on subsidiary types (e.g. `handleRecordStart`).
-- Unprefixed methods are internal utilities (e.g. `drainAlerts`, `loadSummaryPref`).
+- Unprefixed methods are internal utilities (e.g. `finalizeResponseEnrichment`).
 
 ## Error Handling
 

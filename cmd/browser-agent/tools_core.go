@@ -350,25 +350,6 @@ func (h *ToolHandler) ToolsList() []mcp.MCPTool {
 	return schema.AllTools()
 }
 
-func (h *ToolHandler) summaryPreference() *summarypref.Cache {
-	if h.summaryPrefs == nil {
-		return summarypref.New(nil)
-	}
-	return h.summaryPrefs
-}
-
-func (h *ToolHandler) loadSummaryPref() bool {
-	return h.summaryPreference().Enabled()
-}
-
-func (h *ToolHandler) invalidateSummaryPref() {
-	h.summaryPreference().Invalidate()
-}
-
-func (h *ToolHandler) maybeInjectSummary(args json.RawMessage) json.RawMessage {
-	return h.summaryPreference().Inject(args)
-}
-
 func (h *ToolHandler) IsExtensionConnected() bool {
 	return h.capture.Extension().IsExtensionConnected()
 }
@@ -561,7 +542,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 		LogDiffReport: func(_ toolobserve.Host, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return handler.recordingHandler.LogDiffReport(req, args)
 		},
-		FormatCommand: handler.formatCommandResult, InjectSummary: handler.maybeInjectSummary,
+		FormatCommand: handler.formatCommandResult, InjectSummary: handler.summaryPrefs.Inject,
 		DrainAlerts: handler.alertBuffer.DrainAlerts, DiagnosticHint: handler.Guards.DiagnosticHint(),
 	})
 	handler.stateInteractHandler = toolinteract.NewStateInteractHandler(interactDeps, handler.sessionStoreImpl)
@@ -569,7 +550,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 		RequireStore: func(req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool) {
 			return sessionStoreGuard(handler.sessionStoreImpl, req)
 		},
-		InvalidateSummary: handler.invalidateSummaryPref,
+		InvalidateSummary: handler.summaryPrefs.Invalidate,
 		SetActiveCodebase: handler.MCPHandler.server.SetActiveCodebase,
 	},
 		handler.sessionStoreImpl,

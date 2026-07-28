@@ -51,6 +51,19 @@ func TestCacheTreatsMissingInvalidAndFailedValuesAsDisabled(t *testing.T) {
 	}
 }
 
+func TestNilCacheIsDisabledAndPreservesArguments(t *testing.T) {
+	var cache *Cache
+	input := json.RawMessage(`{"what":"errors"}`)
+
+	if cache.Enabled() {
+		t.Fatal("nil cache must be disabled")
+	}
+	cache.Invalidate()
+	if got := cache.Inject(input); string(got) != string(input) {
+		t.Fatalf("nil cache changed arguments: got %q, want %q", got, input)
+	}
+}
+
 func TestCacheInjectPreservesExplicitResponseMode(t *testing.T) {
 	cache := New(func() ([]byte, error) { return []byte(`{"summary":true}`), nil })
 

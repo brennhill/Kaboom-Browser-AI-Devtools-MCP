@@ -45,7 +45,7 @@ func TestToolLoadSessionContext_NilStore(t *testing.T) {
 		RequireStore: func(req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool) {
 			return sessionStoreGuard(env.handler.sessionStoreImpl, req)
 		},
-		InvalidateSummary: env.handler.invalidateSummaryPref,
+		InvalidateSummary: env.handler.summaryPrefs.Invalidate,
 		SetActiveCodebase: env.server.SetActiveCodebase,
 	}, nil, env.handler.sessionManager)
 
