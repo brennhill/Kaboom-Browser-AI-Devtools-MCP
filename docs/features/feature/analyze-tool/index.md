@@ -54,6 +54,10 @@ test_paths:
   - cmd/browser-agent/internal/toolanalyze/handlers_coverage_test.go
   - internal/analysis/apicontract/runtime_handler_test.go
   - cmd/browser-agent/tools_analyze_annotations_test.go
+  - cmd/browser-agent/tools_analyze_annotations_core_test.go
+  - cmd/browser-agent/tools_analyze_annotations_wait_test.go
+  - cmd/browser-agent/tools_analyze_annotation_detail_test.go
+  - cmd/browser-agent/tools_analyze_annotation_hints_test.go
   - cmd/browser-agent/tools_analyze_inspect_test.go
   - cmd/browser-agent/internal/toolanalyze/inspect/forms_test.go
   - cmd/browser-agent/internal/toolanalyze/inspect/dom_test.go

@@ -41,20 +41,20 @@ type SessionState struct {
 
 // Expectation defines what to validate about the hook output.
 type Expectation struct {
-	HasOutput   bool     `json:"has_output"`
-	Contains    []string `json:"contains,omitempty"`
-	NotContains []string `json:"not_contains,omitempty"`
-	MaxTokens   int      `json:"max_tokens,omitempty"`
-	MaxLatencyMs int    `json:"max_latency_ms,omitempty"`
+	HasOutput    bool     `json:"has_output"`
+	Contains     []string `json:"contains,omitempty"`
+	NotContains  []string `json:"not_contains,omitempty"`
+	MaxTokens    int      `json:"max_tokens,omitempty"`
+	MaxLatencyMs int      `json:"max_latency_ms,omitempty"`
 }
 
 // Result holds the outcome of running a single fixture.
 type Result struct {
-	Fixture    *Fixture
-	Output     string
-	LatencyMs  int64
-	Passed     bool
-	Failures   []string
+	Fixture   *Fixture
+	Output    string
+	LatencyMs int64
+	Passed    bool
+	Failures  []string
 }
 
 // fixtureDirs are the subdirectories of testdata/ that contain eval fixtures.
@@ -129,6 +129,10 @@ func RunFixture(fix *Fixture, repoRoot string) *Result {
 
 	// Resolve relative file_path in tool_input to absolute using projectRoot.
 	toolInput := fix.Input.ToolInput
+	if materialized, cleanup := materializeFixtureFile(toolInput, repoRoot); cleanup != nil {
+		toolInput = materialized
+		defer cleanup()
+	}
 	if projectRoot != "" {
 		toolInput = resolveToolInputPaths(toolInput, projectRoot)
 	}
@@ -166,6 +170,31 @@ func RunFixture(fix *Fixture, repoRoot string) *Result {
 	result.Passed = len(result.Failures) == 0
 
 	return result
+}
+
+func materializeFixtureFile(raw json.RawMessage, repoRoot string) (json.RawMessage, func()) {
+	var fields map[string]json.RawMessage
+	if json.Unmarshal(raw, &fields) != nil {
+		return raw, nil
+	}
+	var filePath string
+	if json.Unmarshal(fields["file_path"], &filePath) != nil || filePath != "EVAL_OVERSIZED_FILE" {
+		return raw, nil
+	}
+	file, err := os.CreateTemp(repoRoot, ".kaboom-eval-oversized-*.go")
+	if err != nil {
+		return raw, nil
+	}
+	path := file.Name()
+	if _, err = file.WriteString(strings.Repeat("// eval fixture line\n", 801)); err != nil {
+		_ = file.Close()
+		_ = os.Remove(path)
+		return raw, nil
+	}
+	_ = file.Close()
+	fields["file_path"], _ = json.Marshal(path)
+	materialized, _ := json.Marshal(fields)
+	return materialized, func() { _ = os.Remove(path) }
 }
 
 // runHook dispatches to the correct hook function.
@@ -292,18 +321,18 @@ func truncate(s string, n int) string {
 
 // Report holds aggregate eval results.
 type Report struct {
-	Total   int            `json:"total"`
-	Passed  int            `json:"passed"`
-	Failed  int            `json:"failed"`
-	ByHook  map[string]*HookReport `json:"by_hook"`
+	Total  int                    `json:"total"`
+	Passed int                    `json:"passed"`
+	Failed int                    `json:"failed"`
+	ByHook map[string]*HookReport `json:"by_hook"`
 }
 
 // HookReport holds per-hook aggregate results.
 type HookReport struct {
-	Total     int     `json:"total"`
-	Passed    int     `json:"passed"`
-	AvgLatMs  float64 `json:"avg_latency_ms"`
-	MaxLatMs  int64   `json:"max_latency_ms"`
+	Total    int     `json:"total"`
+	Passed   int     `json:"passed"`
+	AvgLatMs float64 `json:"avg_latency_ms"`
+	MaxLatMs int64   `json:"max_latency_ms"`
 }
 
 // Aggregate builds a report from a list of results.

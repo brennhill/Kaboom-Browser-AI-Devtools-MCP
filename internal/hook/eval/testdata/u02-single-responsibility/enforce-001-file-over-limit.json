@@ -1,10 +1,10 @@
 {
-  "description": "U2 Enforce: editing a 1937-line file should trigger WARNING about file size limit",
+  "description": "U2 Enforce: editing an oversized file should trigger WARNING about file size limit",
   "hook": "quality-gate",
   "project_root": "REPO_ROOT",
   "input": {
     "tool_name": "Edit",
-    "tool_input": {"file_path": "cmd/browser-agent/tools_analyze_annotations_test.go", "new_string": "// additional test"}
+    "tool_input": {"file_path": "EVAL_OVERSIZED_FILE", "new_string": "// additional test"}
   },
   "expect": {
     "has_output": true,

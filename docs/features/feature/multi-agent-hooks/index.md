@@ -4,10 +4,11 @@ feature_id: feature-multi-agent-hooks
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
   - internal/hook/protocol.go
   - internal/hook/session_store.go
+  - internal/hook/eval/eval.go
   - cmd/hooks/main.go
   - cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go
   - cmd/browser-agent/tools_configure.go
@@ -16,6 +17,9 @@ test_paths:
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - internal/hook/protocol_test.go
   - internal/hook/session_store_test.go
+  - internal/hook/eval/eval_test.go
+  - internal/hook/eval/testdata/quality-gate/002-file-size-warning.json
+  - internal/hook/eval/testdata/u02-single-responsibility/enforce-001-file-over-limit.json
   - cmd/hooks/main_test.go
   - cmd/browser-agent/tools_configure_quality_gates_test.go
 ---
@@ -37,6 +41,10 @@ test_paths:
 ## Summary
 
 The `kaboom-hooks` binary auto-detects which AI coding agent is calling it and adapts its output protocol accordingly. All hooks (quality-gate, compress-output, session-track, blast-radius, decision-guard) work across agents without separate binaries or configuration. The hook logic is agent-agnostic; only the thin I/O protocol layer adapts.
+
+File-size evals materialize their own oversized temporary source under the
+repository root. They do not depend on keeping an unhealthy production or test
+file oversized.
 
 ## Supported Agents
 
