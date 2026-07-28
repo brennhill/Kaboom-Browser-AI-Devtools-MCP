@@ -52,6 +52,8 @@ test_paths:
   - cmd/browser-agent/internal/toolobserve/toolobserve_coverage_test.go
   - cmd/browser-agent/tools_observe_inbox_test.go
   - cmd/browser-agent/tools_observe_handler_test.go
+  - cmd/browser-agent/tools_observe_telemetry_modes_test.go
+  - cmd/browser-agent/tools_observe_page_readiness_test.go
   - cmd/browser-agent/tools_observe_blackbox_test.go
   - cmd/browser-agent/tools_observe_audit_test.go
   - cmd/browser-agent/tools_observe_screenshot_test.go
