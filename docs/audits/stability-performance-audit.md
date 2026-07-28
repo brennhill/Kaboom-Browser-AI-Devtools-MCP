@@ -143,7 +143,7 @@ func NewAnnotationStore(detailTTL time.Duration) *AnnotationStore {
 }
 ```
 
-This goroutine starts even for modes that do not need it (e.g., `--version`, `--help`, `--check`, `--stop`, `--force`). It also starts for bridge mode, which never uses the annotation store.
+This goroutine starts even for modes that do not need it (e.g., `--version`, `--help`, `--doctor`, `--stop`, `--force`). It also starts for bridge mode, which never uses the annotation store.
 
 **Impact:**
 Minor resource waste: one goroutine + ticker running in all execution modes. The goroutine is properly cleaned up in daemon mode via `globalAnnotationStore.Close()` in the shutdown path. In other modes, the process exits quickly enough that the leaked goroutine is inconsequential.

@@ -39,7 +39,6 @@ func TestIsCLIMode(t *testing.T) {
 		{"flag --bridge", []string{"--bridge"}, false},
 		{"flag --stop", []string{"--stop"}, false},
 		{"flag --force", []string{"--force"}, false},
-		{"flag --check", []string{"--check"}, false},
 		{"flag --doctor", []string{"--doctor"}, false},
 		{"flag --fastpath-min-samples", []string{"--fastpath-min-samples", "20"}, false},
 		{"flag --fastpath-max-failure-ratio", []string{"--fastpath-max-failure-ratio", "0.05"}, false},

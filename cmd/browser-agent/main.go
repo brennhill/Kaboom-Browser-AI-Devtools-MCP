@@ -157,10 +157,9 @@ Options:
   --api-key <key>        Require API key for HTTP requests (optional)
   --connect              Connect to existing server (multi-client mode)
   --client-id <id>       Override client ID (default: derived from CWD)
-  --check                Verify setup (check port availability, print status)
-  --doctor               Run full diagnostics (alias of --check)
+  --doctor               Run setup diagnostics
   --fastpath-min-samples Minimum telemetry samples required for threshold check (default: 50)
-  --fastpath-max-failure-ratio Maximum allowed fast-path failure ratio for --check (disabled by default)
+  --fastpath-max-failure-ratio Maximum allowed fast-path failure ratio for --doctor (disabled by default)
   --version              Show version
   --help                 Show this help message
 
@@ -175,7 +174,7 @@ Examples:
   kaboom --force                      # Force kill all daemons (for clean upgrade)
   kaboom --api-key s3cret             # Start with API key auth
   kaboom --connect --port 7890        # Connect to existing server
-  kaboom --check                      # Verify setup before running
+  kaboom --doctor                     # Verify setup before running
   kaboom --port 8080 --max-entries 500
 
 CLI Mode (direct tool access):

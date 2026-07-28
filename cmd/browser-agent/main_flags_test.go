@@ -37,7 +37,7 @@ func TestRegisterFlagsAcceptsParallel(t *testing.T) {
 func TestRegisterFlagsOmitsDeprecatedCompatibilityFlags(t *testing.T) {
 	withTestFlagSet(t, nil, func() {
 		registerFlags()
-		for _, name := range []string{"mcp", "persist"} {
+		for _, name := range []string{"mcp", "persist", "check"} {
 			if flag.Lookup(name) != nil {
 				t.Errorf("deprecated compatibility flag --%s is still registered", name)
 			}

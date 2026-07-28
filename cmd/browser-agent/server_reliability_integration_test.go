@@ -303,7 +303,7 @@ func TestReliability_Upgrade_OldServerKilled(t *testing.T) {
 }
 
 // TestReliability_Upgrade_PortConflictDetection verifies that the server
-// detects when a port is already in use (e.g., --check flag).
+// detects when a port is already in use (e.g., --doctor flag).
 func TestReliability_Upgrade_PortConflictDetection(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping port conflict test in short mode")
@@ -333,13 +333,13 @@ func TestReliability_Upgrade_PortConflictDetection(t *testing.T) {
 
 	t.Logf("First server running on port %d", port)
 
-	// Use --check flag to detect port conflict without starting
-	cmd2 := startServerCmd(t, binary, "--port", fmt.Sprintf("%d", port), "--check")
+	// Use --doctor to detect port conflict without starting.
+	cmd2 := startServerCmd(t, binary, "--port", fmt.Sprintf("%d", port), "--doctor")
 	output, _ := cmd2.CombinedOutput()
 
-	// --check should report the port is in use
+	// --doctor should report the port is in use.
 	outputStr := string(output)
-	t.Logf("--check output: %s", outputStr)
+	t.Logf("--doctor output: %s", outputStr)
 
 	// Verify first server is still running
 	resp, httpErr := http.Get(fmt.Sprintf("http://127.0.0.1:%d/health", port))
@@ -348,7 +348,7 @@ func TestReliability_Upgrade_PortConflictDetection(t *testing.T) {
 	}
 	resp.Body.Close()
 
-	// The --check command should indicate the port status
+	// The --doctor command should indicate the port status
 	// (whether it reports "in use" or "available" depends on implementation)
 	t.Logf("\u2705 Port conflict detection works, first server still running")
 }

@@ -41,6 +41,10 @@ code_paths:
   - npm/kaboom-agentic-browser/lib/codex-config.js
   - docs/mcp-install-guide.md
 test_paths:
+  - cmd/browser-agent/main_flags_test.go
+  - cmd/browser-agent/main_io_unit_test.go
+  - cmd/browser-agent/server_reliability_integration_test.go
+  - scripts/smoke-tests/23-doctor-preflight.sh
   - cmd/browser-agent/config_parallel_test.go
   - internal/configdiscovery/mcp_test.go
   - cmd/browser-agent/stdout_protocol_boundary_test.go
@@ -111,6 +115,7 @@ OpenAPI contract.
 - Platform npm packages now ship `kaboom-agentic-browser` and `kaboom-hooks` binaries while preserving legacy cleanup for customer machines.
 - Server postinstall now validates `kaboom-browser-devtools` on `/health` reuse checks and points manual extension loading at `KABOOM_EXTENSION_DIR` / `~/KaboomAgenticDevtoolExtension`.
 - Install now also fixes the Claude Code `claude mcp add-json` invocation (JSON passed as a positional arg, not stdin) and adds **Codex CLI** as a supported client (`~/.codex/config.toml`, TOML; honors `$CODEX_HOME`).
+- Daemon setup diagnostics use one canonical CLI entry point, `--doctor`; the duplicate `--check` facade is rejected.
 
 ## Tool Auto-Approve (default-ON)
 

@@ -67,17 +67,17 @@ const (
 
 // parsedFlags holds the raw parsed flag values before validation.
 type parsedFlags struct {
-	port, maxEntries                                                     *int
-	fastPathMinSamples                                                   *int
-	logFile, apiKey, clientID, stateDir, uploadDir                       *string
-	fastPathMaxFailureRatio                                              *float64
-	showVersion, showHelp, checkSetup, doctorMode, stopMode, connectMode *bool
-	bridgeMode, daemonMode, enableOsUploadAutomation                     *bool
-	parallelMode                                                         *bool
-	forceCleanup                                                         *bool
-	installMode                                                          *bool
-	uploadDenyPatterns                                                   multiFlag
-	ssrfAllowedHosts                                                     multiFlag
+	port, maxEntries                                         *int
+	fastPathMinSamples                                       *int
+	logFile, apiKey, clientID, stateDir, uploadDir           *string
+	fastPathMaxFailureRatio                                  *float64
+	showVersion, showHelp, doctorMode, stopMode, connectMode *bool
+	bridgeMode, daemonMode, enableOsUploadAutomation         *bool
+	parallelMode                                             *bool
+	forceCleanup                                             *bool
+	installMode                                              *bool
+	uploadDenyPatterns                                       multiFlag
+	ssrfAllowedHosts                                         multiFlag
 }
 
 // registerFlags defines all CLI flags and returns the parsed values.
@@ -87,12 +87,11 @@ func registerFlags() *parsedFlags {
 	f.logFile = flag.String("log-file", "", "Path to log file (default: in runtime state dir)")
 	f.maxEntries = flag.Int("max-entries", defaultMaxEntries, "Max log entries before rotation")
 	f.fastPathMinSamples = flag.Int("fastpath-min-samples", 50, "Minimum fast-path telemetry samples required when threshold check is enabled")
-	f.fastPathMaxFailureRatio = flag.Float64("fastpath-max-failure-ratio", -1, "Maximum allowed fast-path failure ratio in --check (set >=0 to enforce)")
+	f.fastPathMaxFailureRatio = flag.Float64("fastpath-max-failure-ratio", -1, "Maximum allowed fast-path failure ratio in --doctor (set >=0 to enforce)")
 	f.showVersion = flag.Bool("version", false, "Show version")
 	f.showHelp = flag.Bool("help", false, "Show help")
 	f.apiKey = flag.String("api-key", os.Getenv("KABOOM_API_KEY"), "API key for HTTP authentication (optional, or KABOOM_API_KEY env)")
-	f.checkSetup = flag.Bool("check", false, "Verify setup: check if port is available and print status")
-	f.doctorMode = flag.Bool("doctor", false, "Run full diagnostics (alias of --check)")
+	f.doctorMode = flag.Bool("doctor", false, "Run setup diagnostics")
 	f.stopMode = flag.Bool("stop", false, "Stop the running server on the specified port")
 	f.connectMode = flag.Bool("connect", false, "Connect to existing server (multi-client mode)")
 	f.clientID = flag.String("client-id", "", "Override client ID (default: derived from CWD)")
@@ -243,7 +242,7 @@ func handleEarlyExitModes(flags *parsedFlags) {
 		procctl.ForceCleanup()
 		os.Exit(0)
 	}
-	if *flags.checkSetup || *flags.doctorMode {
+	if *flags.doctorMode {
 		ok := runSetupCheckWithOptions(*flags.port, setupCheckOptions{
 			minSamples:      *flags.fastPathMinSamples,
 			maxFailureRatio: *flags.fastPathMaxFailureRatio,

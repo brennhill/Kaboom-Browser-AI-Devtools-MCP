@@ -1,6 +1,6 @@
 #!/bin/bash
-# 23-doctor-preflight.sh — 23.1-23.3: Doctor/check mode preflight tests.
-# Verifies --doctor and --check output format, exit codes, and diagnostic checks.
+# 23-doctor-preflight.sh — 23.1-23.3: Doctor mode preflight tests.
+# Verifies --doctor output, the removed alias, exit codes, and diagnostic checks.
 set -eo pipefail
 
 begin_category "23" "Doctor Preflight" "3"
@@ -30,24 +30,24 @@ run_test_23_1() {
 }
 run_test_23_1
 
-# ── Test 23.2: --check is an alias of --doctor ──────────
-begin_test "23.2" "[DAEMON ONLY] Check mode is a working alias of doctor" \
-    "kaboom-agentic-browser --check should produce similar output to --doctor" \
-    "Tests: --check flag works"
+# ── Test 23.2: removed alias is rejected ────────────────
+begin_test "23.2" "[DAEMON ONLY] Removed check alias is rejected" \
+    "kaboom-agentic-browser --check should fail as an unknown flag" \
+    "Tests: compatibility facade stays deleted"
 
 run_test_23_2() {
-    local output
-    output=$("$WRAPPER" --check --port "$PORT" 2>&1) || true
+    local output exit_code=0
+    output=$("$WRAPPER" --check --port "$PORT" 2>&1) || exit_code=$?
 
-    if [ -z "$output" ]; then
-        fail "Check mode produced no output."
+    if [ "$exit_code" -eq 0 ]; then
+        fail "Removed --check alias was accepted."
         return
     fi
 
-    if echo "$output" | grep -qi "version\|port\|kaboom"; then
-        pass "Check mode produced structured output. (${#output} chars)"
+    if echo "$output" | grep -qi "unknown\\|not defined\\|invalid"; then
+        pass "Removed --check alias is rejected."
     else
-        fail "Check output missing expected fields. Output: $(truncate "$output" 300)"
+        fail "Removed --check alias failed without an unknown-flag diagnostic. Output: $(truncate "$output" 300)"
     fi
 }
 run_test_23_2

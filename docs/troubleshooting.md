@@ -115,7 +115,7 @@ Then update the extension:
 
 Run the built-in setup check:
 ```bash
-npx kaboom-agentic-browser --check
+npx kaboom-agentic-browser --doctor
 ```
 
 This verifies port availability, log file directory, and prints next steps. You can also test from the extension: go to **Options** and click the **Test** button next to the Server URL.

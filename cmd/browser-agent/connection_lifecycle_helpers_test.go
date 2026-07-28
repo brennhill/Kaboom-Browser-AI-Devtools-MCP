@@ -73,7 +73,7 @@ func getTestStateDir(t *testing.T) string {
 	testStateOnce.Do(func() {
 		// Honor an externally provided state dir. The reliability soak gate sets
 		// KABOOM_STATE_DIR so the server spawned by startServerCmd writes its fast-path
-		// telemetry to the same root that `--check` later inspects; otherwise every
+		// telemetry to the same root that `--doctor` later inspects; otherwise every
 		// spawned server gets its own isolated temp dir.
 		if ext := os.Getenv(statecfg.StateDirEnv); ext != "" {
 			testStateDir = ext

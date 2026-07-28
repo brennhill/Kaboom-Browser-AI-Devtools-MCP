@@ -4,6 +4,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"net"
 	"strconv"
@@ -11,8 +12,19 @@ import (
 	"testing"
 
 	cmbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
+
+func captureDiagnostics(t *testing.T, run func()) string {
+	t.Helper()
+	previous := diag.Sink()
+	var output bytes.Buffer
+	diag.SetSink(&output)
+	defer diag.SetSink(previous)
+	run()
+	return output.String()
+}
 
 func TestSendStartupErrorWritesJSONRPCError(t *testing.T) {
 	output := captureStdout(t, func() {
@@ -39,7 +51,7 @@ func TestSendStartupErrorWritesJSONRPCError(t *testing.T) {
 }
 
 func TestPrintHelpIncludesKeySections(t *testing.T) {
-	output := captureStdout(t, printHelp)
+	output := captureDiagnostics(t, printHelp)
 	if !strings.Contains(output, "Usage: kaboom [options]") {
 		t.Fatalf("help output missing usage header: %q", output)
 	}
@@ -48,6 +60,12 @@ func TestPrintHelpIncludesKeySections(t *testing.T) {
 	}
 	if !strings.Contains(output, "--parallel") {
 		t.Fatalf("help output missing --parallel docs")
+	}
+	if !strings.Contains(output, "--doctor") {
+		t.Fatalf("help output missing --doctor docs")
+	}
+	if strings.Contains(output, "--check") {
+		t.Fatalf("help output retains removed --check compatibility facade")
 	}
 	if !strings.Contains(output, "CLI Mode (direct tool access):") {
 		t.Fatalf("help output missing CLI mode section")
@@ -62,7 +80,7 @@ func TestRunSetupCheckPortInUseBranch(t *testing.T) {
 	defer func() { _ = ln.Close() }()
 	port := ln.Addr().(*net.TCPAddr).Port
 
-	output := captureStdout(t, func() {
+	output := captureDiagnostics(t, func() {
 		runSetupCheckWithOptions(port, setupCheckOptions{})
 	})
 	if !strings.Contains(output, "Checking port availability... FAILED") {
