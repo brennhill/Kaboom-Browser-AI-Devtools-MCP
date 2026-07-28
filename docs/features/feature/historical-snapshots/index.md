@@ -19,6 +19,9 @@ code_paths:
 test_paths:
   - internal/session/runtime_reader_test.go
   - internal/session/snapshot_manager_test.go
+  - internal/session/sessions_test.go
+  - internal/session/sessions_compare_regression_test.go
+  - internal/session/sessions_tool_handler_test.go
   - internal/session/comparison_test.go
   - internal/session/snapdiff/errors_test.go
   - internal/session/snapdiff/network_test.go

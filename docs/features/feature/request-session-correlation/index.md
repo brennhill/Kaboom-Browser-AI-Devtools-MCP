@@ -24,6 +24,9 @@ test_paths:
   - cmd/browser-agent/server_routes_clients_test.go
   - internal/session/clientreg/clientreg_test.go
   - internal/session/snapshot_manager_test.go
+  - internal/session/sessions_test.go
+  - internal/session/sessions_compare_regression_test.go
+  - internal/session/sessions_tool_handler_test.go
   - internal/session/comparison_test.go
   - internal/session/snapdiff/errors_test.go
   - internal/session/snapdiff/network_test.go
