@@ -331,7 +331,7 @@ func (h *ToolHandler) enrichNavigateResponse(resp mcp.JSONRPCResponse, req mcp.J
 	}
 	_, _, tabURL := h.capture.GetTrackingStatus()
 	tabTitle := h.capture.GetTrackedTabTitle()
-	vitals := h.capture.GetPerformanceSnapshots()
+	vitals := h.capture.Performance().Entries()
 	correlationID := toolresp.NewCorrelationID("nav_content")
 	params := mcp.SafeMarshal(map[string]any{"timeout_ms": 4000}, "{}")
 	query := queries.PendingQuery{

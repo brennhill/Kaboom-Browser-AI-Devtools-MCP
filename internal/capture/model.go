@@ -6,6 +6,7 @@
 package capture
 
 import (
+	"sync"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
@@ -53,11 +54,18 @@ type SecurityFlag struct {
 }
 
 type PerformanceStore struct {
+	mu              sync.RWMutex
 	snapshots       map[string]performance.PerformanceSnapshot
 	snapshotOrder   []string
-	baselines       map[string]performance.PerformanceBaseline
-	baselineOrder   []string
 	beforeSnapshots map[string]performance.PerformanceSnapshot
+}
+
+func newPerformanceStore() *PerformanceStore {
+	return &PerformanceStore{
+		snapshots:       make(map[string]performance.PerformanceSnapshot),
+		snapshotOrder:   make([]string, 0),
+		beforeSnapshots: make(map[string]performance.PerformanceSnapshot),
+	}
 }
 
 type ClientRegistry interface {

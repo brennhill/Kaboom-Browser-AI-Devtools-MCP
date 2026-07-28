@@ -459,10 +459,10 @@ func (c *Capture) ClearAll() int {
 	c.buffers.clearAllEventBuffers()
 	c.wsConnections.Clear()
 	c.extensionState.activeTestIDs = make(map[string]bool)
-	c.perf.clear()
 	c.mu.Unlock()
 
 	c.networkWaterfall.Clear()
+	c.perf.clear()
 	return c.extensionLogs.Clear()
 }
 

@@ -112,6 +112,11 @@ func TestCaptureHasNoCompatibilityAliases(t *testing.T) {
 		"func (c *Capture) AddNetworkWaterfallEntries(",
 		"func (c *Capture) GetNetworkWaterfallEntries(",
 		"type NetworkWaterfallBuffer struct",
+		"func (c *Capture) AddPerformanceSnapshots(",
+		"func (c *Capture) GetPerformanceSnapshots(",
+		"func (c *Capture) GetPerformanceSnapshotByURL(",
+		"func (c *Capture) StoreBeforeSnapshot(",
+		"func (c *Capture) GetAndDeleteBeforeSnapshot(",
 	} {
 		if strings.Contains(source.String(), forbidden) {
 			t.Errorf("capture retains compatibility surface %q", forbidden)

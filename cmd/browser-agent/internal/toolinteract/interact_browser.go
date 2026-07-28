@@ -33,8 +33,8 @@ func (h *InteractActionHandler) stashPerfSnapshotImpl(correlationID string) {
 	if err != nil || u.Path == "" {
 		return
 	}
-	if snap, ok := h.deps.Capture().GetPerformanceSnapshotByURL(u.Path); ok {
-		h.deps.Capture().StoreBeforeSnapshot(correlationID, snap)
+	if snap, ok := h.deps.Capture().Performance().ByURL(u.Path); ok {
+		h.deps.Capture().Performance().StoreBefore(correlationID, snap)
 	}
 }
 

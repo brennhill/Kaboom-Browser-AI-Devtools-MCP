@@ -161,7 +161,7 @@ func ObservePilot(deps Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSON
 
 // CheckPerformance returns performance snapshots from the capture buffer.
 func CheckPerformance(deps Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
-	snapshots := deps.GetCapture().GetPerformanceSnapshots()
+	snapshots := deps.GetCapture().Performance().Entries()
 	return mcp.Succeed(req, "Performance", map[string]any{
 		"snapshots": snapshots,
 		"count":     len(snapshots),
@@ -225,7 +225,7 @@ func limitHistoryEntries(entries []historyEntry, limit int) []historyEntry {
 }
 
 func GetWebVitals(deps Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
-	snapshots := deps.GetCapture().GetPerformanceSnapshots()
+	snapshots := deps.GetCapture().Performance().Entries()
 	vitals := buildVitalsMap(snapshots)
 	return mcp.Succeed(req, "Web vitals", map[string]any{
 		"metrics":  vitals,

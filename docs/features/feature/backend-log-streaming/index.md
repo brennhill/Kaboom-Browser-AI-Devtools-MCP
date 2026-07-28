@@ -120,6 +120,10 @@ Browser resource timings likewise live in an independently synchronized
 snapshots, and clearing. All ingestion and analysis callers use
 `Capture.NetworkWaterfall()`; the former capture-level add/get facade and raw
 waterfall buffer are deleted.
+Performance snapshots and pre-action correlation snapshots now share an
+independently synchronized `PerformanceStore`. Callers use
+`Capture.Performance()` for add/list/URL lookup and consume-on-read correlation;
+the five former capture-level forwarding methods have been removed.
 Tracked-tab state is updated through the canonical `/sync` contract or
 `UpdateTrackedTab`; the pre-`/sync` `ExtensionStatus` envelope and
 `UpdateExtensionStatus` mutation API have been deleted.

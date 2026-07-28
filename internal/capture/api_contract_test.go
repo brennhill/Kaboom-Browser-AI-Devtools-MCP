@@ -364,7 +364,7 @@ func TestAPIContract_PerformanceSnapshots_POSTThenRead(t *testing.T) {
 	}
 
 	// Read back via getter
-	snapshots := c.GetPerformanceSnapshots()
+	snapshots := c.Performance().Entries()
 	if len(snapshots) != 2 {
 		t.Errorf("Expected 2 snapshots after POST, got %d", len(snapshots))
 	}

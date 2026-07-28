@@ -16,7 +16,7 @@ func TestRuntimeStateReaderAggregatesConsoleErrors(t *testing.T) {
 			{"level": "error", "message": "broken"},
 			{"level": "warn", "message": "careful"},
 		}
-	}, nil)
+	}, nil, nil)
 	errors := reader.GetConsoleErrors()
 	if len(errors) != 1 || errors[0].Message != "broken" || errors[0].Count != 2 {
 		t.Fatalf("errors = %#v", errors)

@@ -28,7 +28,7 @@ func TestRichAction_RefreshStoresBeforeSnapshot(t *testing.T) {
 	env.capture.SetTrackingStatusForTest(1, "https://example.com/dashboard")
 
 	// Seed a perf snapshot for the tracked URL's path
-	env.capture.AddPerformanceSnapshots([]performance.PerformanceSnapshot{{
+	env.capture.Performance().Add([]performance.PerformanceSnapshot{{
 		URL:       "/dashboard",
 		Timestamp: "2024-01-01T00:00:00Z",
 		Timing:    performance.PerformanceTiming{TimeToFirstByte: 120, DomContentLoaded: 800, Load: 1500},
@@ -54,7 +54,7 @@ func TestRichAction_RefreshStoresBeforeSnapshot(t *testing.T) {
 	}
 
 	// Verify before-snapshot was stored
-	snap, ok := env.capture.GetAndDeleteBeforeSnapshot(corrID)
+	snap, ok := env.capture.Performance().TakeBefore(corrID)
 	if !ok {
 		t.Fatal("Before-snapshot should have been stored for refresh correlation_id")
 	}
@@ -72,7 +72,7 @@ func TestRichAction_NavigateStoresBeforeSnapshot(t *testing.T) {
 	env.capture.SetTrackingStatusForTest(1, "https://example.com/dashboard")
 
 	// Seed a perf snapshot for the tracked URL's path
-	env.capture.AddPerformanceSnapshots([]performance.PerformanceSnapshot{{
+	env.capture.Performance().Add([]performance.PerformanceSnapshot{{
 		URL:       "/dashboard",
 		Timestamp: "2024-01-01T00:00:00Z",
 		Timing:    performance.PerformanceTiming{TimeToFirstByte: 115, DomContentLoaded: 700, Load: 1200},
@@ -96,7 +96,7 @@ func TestRichAction_NavigateStoresBeforeSnapshot(t *testing.T) {
 	}
 
 	// Verify before-snapshot was stored for perf_diff computation.
-	snap, ok := env.capture.GetAndDeleteBeforeSnapshot(corrID)
+	snap, ok := env.capture.Performance().TakeBefore(corrID)
 	if !ok {
 		t.Fatal("Before-snapshot should have been stored for navigate correlation_id")
 	}
@@ -114,7 +114,7 @@ func TestRichAction_CommandResultEnrichedWithPerfDiff(t *testing.T) {
 	env.capture.SetTrackingStatusForTest(1, "https://example.com/dashboard")
 
 	// Seed "before" snapshot
-	env.capture.AddPerformanceSnapshots([]performance.PerformanceSnapshot{{
+	env.capture.Performance().Add([]performance.PerformanceSnapshot{{
 		URL:       "/dashboard",
 		Timestamp: "2024-01-01T00:00:00Z",
 		Timing:    performance.PerformanceTiming{TimeToFirstByte: 200, DomContentLoaded: 1000, Load: 2000},
@@ -130,7 +130,7 @@ func TestRichAction_CommandResultEnrichedWithPerfDiff(t *testing.T) {
 	corrID := resultData["correlation_id"].(string)
 
 	// Simulate extension sending the "after" snapshot (overwrites the old one)
-	env.capture.AddPerformanceSnapshots([]performance.PerformanceSnapshot{{
+	env.capture.Performance().Add([]performance.PerformanceSnapshot{{
 		URL:       "/dashboard",
 		Timestamp: "2024-01-01T00:00:05Z",
 		Timing:    performance.PerformanceTiming{TimeToFirstByte: 100, DomContentLoaded: 600, Load: 1200},
@@ -284,7 +284,7 @@ func TestRichAction_PerfDiffWithFullWebVitals(t *testing.T) {
 	cls := 0.3
 
 	// Seed before snapshot with ALL Web Vitals populated
-	env.capture.AddPerformanceSnapshots([]performance.PerformanceSnapshot{{
+	env.capture.Performance().Add([]performance.PerformanceSnapshot{{
 		URL:       "/dashboard",
 		Timestamp: "2024-01-01T00:00:00Z",
 		Timing: performance.PerformanceTiming{
@@ -310,7 +310,7 @@ func TestRichAction_PerfDiffWithFullWebVitals(t *testing.T) {
 	fcp2 := 800.0
 	lcp2 := 1200.0
 	cls2 := 0.02
-	env.capture.AddPerformanceSnapshots([]performance.PerformanceSnapshot{{
+	env.capture.Performance().Add([]performance.PerformanceSnapshot{{
 		URL:       "/dashboard",
 		Timestamp: "2024-01-01T00:00:05Z",
 		Timing: performance.PerformanceTiming{

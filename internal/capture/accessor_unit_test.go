@@ -79,25 +79,25 @@ func TestCapturePerformanceSnapshotAccessors(t *testing.T) {
 	c := NewCapture()
 
 	for i := 0; i < 105; i++ {
-		c.AddPerformanceSnapshots([]performance.PerformanceSnapshot{
+		c.Performance().Add([]performance.PerformanceSnapshot{
 			{
 				URL: fmt.Sprintf("https://example.test/%d", i),
 			},
 		})
 	}
 
-	all := c.GetPerformanceSnapshots()
+	all := c.Performance().Entries()
 	if len(all) != 100 {
 		t.Fatalf("GetPerformanceSnapshots len = %d, want 100 (LRU cap)", len(all))
 	}
 
-	if _, ok := c.GetPerformanceSnapshotByURL("https://example.test/0"); ok {
+	if _, ok := c.Performance().ByURL("https://example.test/0"); ok {
 		t.Fatal("expected oldest snapshot to be evicted")
 	}
-	if latest, ok := c.GetPerformanceSnapshotByURL("https://example.test/104"); !ok || latest.URL == "" {
+	if latest, ok := c.Performance().ByURL("https://example.test/104"); !ok || latest.URL == "" {
 		t.Fatalf("latest snapshot lookup = (%+v,%v), want found", latest, ok)
 	}
-	if _, ok := c.GetPerformanceSnapshotByURL("https://example.test/missing"); ok {
+	if _, ok := c.Performance().ByURL("https://example.test/missing"); ok {
 		t.Fatal("missing snapshot lookup should return ok=false")
 	}
 }
@@ -107,16 +107,16 @@ func TestCaptureBeforeSnapshotStoreAndConsume(t *testing.T) {
 
 	c := NewCapture()
 
-	c.StoreBeforeSnapshot("corr-1", performance.PerformanceSnapshot{URL: "https://example.test/before"})
-	if snap, ok := c.GetAndDeleteBeforeSnapshot("corr-1"); !ok || snap.URL != "https://example.test/before" {
+	c.Performance().StoreBefore("corr-1", performance.PerformanceSnapshot{URL: "https://example.test/before"})
+	if snap, ok := c.Performance().TakeBefore("corr-1"); !ok || snap.URL != "https://example.test/before" {
 		t.Fatalf("GetAndDeleteBeforeSnapshot(corr-1) = (%+v,%v), want found snapshot", snap, ok)
 	}
-	if _, ok := c.GetAndDeleteBeforeSnapshot("corr-1"); ok {
+	if _, ok := c.Performance().TakeBefore("corr-1"); ok {
 		t.Fatal("before snapshot should be consume-on-read")
 	}
 
 	for i := 0; i < 60; i++ {
-		c.StoreBeforeSnapshot(fmt.Sprintf("corr-%d", i), performance.PerformanceSnapshot{URL: fmt.Sprintf("u-%d", i)})
+		c.Performance().StoreBefore(fmt.Sprintf("corr-%d", i), performance.PerformanceSnapshot{URL: fmt.Sprintf("u-%d", i)})
 	}
 
 	c.mu.RLock()

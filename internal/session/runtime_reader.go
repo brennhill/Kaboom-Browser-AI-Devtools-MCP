@@ -5,28 +5,36 @@
 package session
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 type RuntimeCaptureReader interface {
 	GetNetworkBodies() []types.NetworkBody
 	GetWebSocketStatus(types.WebSocketStatusFilter) types.WebSocketStatusResponse
-	GetPerformanceSnapshots() []performance.PerformanceSnapshot
 	GetTrackingStatus() (bool, int, string)
 }
 
 type runtimeStateReader struct {
-	entries func() []types.LogEntry
-	capture RuntimeCaptureReader
+	entries            func() []types.LogEntry
+	performanceEntries func() []performance.PerformanceSnapshot
+	capture            RuntimeCaptureReader
 }
 
-func NewRuntimeStateReader(entries func() []types.LogEntry, captureReader RuntimeCaptureReader) CaptureStateReader {
-	return &runtimeStateReader{entries: entries, capture: captureReader}
+func NewRuntimeStateReader(
+	entries func() []types.LogEntry,
+	performanceEntries func() []performance.PerformanceSnapshot,
+	captureReader RuntimeCaptureReader,
+) CaptureStateReader {
+	return &runtimeStateReader{
+		entries:            entries,
+		performanceEntries: performanceEntries,
+		capture:            captureReader,
+	}
 }
 
 func (r *runtimeStateReader) GetConsoleErrors() []types.SnapshotError {
@@ -121,10 +129,10 @@ func (r *runtimeStateReader) GetWSConnections() []types.SnapshotWSConnection {
 }
 
 func (r *runtimeStateReader) GetPerformance() *performance.PerformanceSnapshot {
-	if r.capture == nil {
+	if r.performanceEntries == nil {
 		return nil
 	}
-	snapshots := r.capture.GetPerformanceSnapshots()
+	snapshots := r.performanceEntries()
 	if len(snapshots) == 0 {
 		return nil
 	}

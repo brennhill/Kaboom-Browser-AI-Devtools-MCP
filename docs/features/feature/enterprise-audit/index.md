@@ -57,3 +57,6 @@ per-client audit sessions, and session reset. `ToolHandler` retains only the
 canonical recorder and trail references needed by dispatch and configure.
 Callers use the canonical `AuditEntry`, `AuditTrail`, `AuditFilter`, and
 `AuditConfig` contracts directly; the former alias-only type facade is deleted.
+The runtime session projection receives the canonical performance-entry reader
+as an injected function, so its capture interface no longer requires a
+performance compatibility method.

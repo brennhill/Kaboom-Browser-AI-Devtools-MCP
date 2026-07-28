@@ -48,7 +48,7 @@ func TestToolGetWebVitals_WithData(t *testing.T) {
 	lcp := 2500.0
 	fcp := 1200.0
 	cls := 0.05
-	env.capture.AddPerformanceSnapshots([]performance.PerformanceSnapshot{
+	env.capture.Performance().Add([]performance.PerformanceSnapshot{
 		{
 			URL:       "https://example.com",
 			Timestamp: "2024-01-01T00:00:00Z",

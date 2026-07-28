@@ -202,7 +202,7 @@ func (c *Capture) HandlePerformanceSnapshots(w http.ResponseWriter, r *http.Requ
 		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return
 	}
-	c.AddPerformanceSnapshots(payload.Snapshots)
+	c.Performance().Add(payload.Snapshots)
 	util.JSONResponse(w, http.StatusOK, map[string]any{
 		"status": "ok",
 		"count":  len(payload.Snapshots),

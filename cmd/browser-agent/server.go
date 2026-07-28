@@ -414,7 +414,7 @@ func handleTelemetry(server *Server, captured *capture.Capture) http.HandlerFunc
 			}
 			result, count = entries, len(entries)
 		case "performance_snapshots":
-			entries := captured.GetPerformanceSnapshots()
+			entries := captured.Performance().Entries()
 			if limit > 0 && len(entries) > limit {
 				entries = entries[len(entries)-limit:]
 			}

@@ -10,8 +10,6 @@ func TestPerformanceStore_AppendSnapshotsEvictsOldest(t *testing.T) {
 	store := PerformanceStore{
 		snapshots:       make(map[string]performance.PerformanceSnapshot),
 		snapshotOrder:   make([]string, 0),
-		baselines:       make(map[string]performance.PerformanceBaseline),
-		baselineOrder:   make([]string, 0),
 		beforeSnapshots: make(map[string]performance.PerformanceSnapshot),
 	}
 
@@ -36,8 +34,6 @@ func TestPerformanceStore_SnapshotsListDetached(t *testing.T) {
 	store := PerformanceStore{
 		snapshots:       make(map[string]performance.PerformanceSnapshot),
 		snapshotOrder:   make([]string, 0),
-		baselines:       make(map[string]performance.PerformanceBaseline),
-		baselineOrder:   make([]string, 0),
 		beforeSnapshots: make(map[string]performance.PerformanceSnapshot),
 	}
 	store.appendSnapshots([]performance.PerformanceSnapshot{{URL: "https://app.local"}})
@@ -56,8 +52,6 @@ func TestPerformanceStore_BeforeSnapshotStoreAndTake(t *testing.T) {
 	store := PerformanceStore{
 		snapshots:       make(map[string]performance.PerformanceSnapshot),
 		snapshotOrder:   make([]string, 0),
-		baselines:       make(map[string]performance.PerformanceBaseline),
-		baselineOrder:   make([]string, 0),
 		beforeSnapshots: make(map[string]performance.PerformanceSnapshot),
 	}
 
@@ -78,8 +72,6 @@ func TestPerformanceStore_Clear(t *testing.T) {
 	store := PerformanceStore{
 		snapshots:       make(map[string]performance.PerformanceSnapshot),
 		snapshotOrder:   make([]string, 0),
-		baselines:       make(map[string]performance.PerformanceBaseline),
-		baselineOrder:   make([]string, 0),
 		beforeSnapshots: make(map[string]performance.PerformanceSnapshot),
 	}
 	store.appendSnapshots([]performance.PerformanceSnapshot{{URL: "https://app.local"}})
@@ -89,9 +81,6 @@ func TestPerformanceStore_Clear(t *testing.T) {
 
 	if len(store.snapshots) != 0 || len(store.snapshotOrder) != 0 {
 		t.Fatalf("expected snapshots cleared, got map=%d order=%d", len(store.snapshots), len(store.snapshotOrder))
-	}
-	if len(store.baselines) != 0 || len(store.baselineOrder) != 0 {
-		t.Fatalf("expected baselines cleared, got map=%d order=%d", len(store.baselines), len(store.baselineOrder))
 	}
 	if len(store.beforeSnapshots) != 0 {
 		t.Fatalf("expected beforeSnapshots cleared, got %d", len(store.beforeSnapshots))

@@ -502,7 +502,11 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	handler.apiContractRuntime = apicontract.NewRuntime()
 	handler.sessionManager = session.NewSessionManager(
 		10,
-		session.NewRuntimeStateReader(handler.server.logs.Entries, handler.capture),
+		session.NewRuntimeStateReader(
+			handler.server.logs.Entries,
+			handler.capture.Performance().Entries,
+			handler.capture,
+		),
 	)
 	handler.auditTrail = audit.NewAuditTrail(audit.AuditConfig{
 		MaxEntries:   10000,

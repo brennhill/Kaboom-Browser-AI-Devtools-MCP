@@ -15,7 +15,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/debuglog"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/redaction"
@@ -99,7 +98,7 @@ type Capture struct {
 	// Composed Sub-Structures
 	// ============================================
 
-	perf PerformanceStore // Performance snapshots and baselines. Protected by parent mu (no separate lock).
+	perf *PerformanceStore // Performance snapshots and action correlations. Own lock and retention.
 
 	// ============================================
 	// Multi-Client Support
@@ -140,13 +139,7 @@ func NewCapture() *Capture {
 			pilotSource:             PilotSourceAssumedStartup,
 			securityMode:            SecurityModeNormal,
 		},
-		perf: PerformanceStore{
-			snapshots:       make(map[string]performance.PerformanceSnapshot),
-			snapshotOrder:   make([]string, 0),
-			baselines:       make(map[string]performance.PerformanceBaseline),
-			baselineOrder:   make([]string, 0),
-			beforeSnapshots: make(map[string]performance.PerformanceSnapshot),
-		},
+		perf:             newPerformanceStore(),
 		debug:            debuglog.NewLogger(),
 		recordingManager: NewRecordingManager(),
 

@@ -153,42 +153,44 @@ func (c *Capture) GetAllEnhancedActions() []types.EnhancedAction {
 	return c.buffers.enhancedActionsCopy()
 }
 
-// AddPerformanceSnapshots stores performance snapshots from the extension.
-// Snapshots are keyed by URL with LRU eviction (max 100 entries).
-func (c *Capture) AddPerformanceSnapshots(snapshots []performance.PerformanceSnapshot) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.perf.appendSnapshots(snapshots)
+// Performance returns the independently synchronized performance owner.
+func (c *Capture) Performance() *PerformanceStore {
+	return c.perf
 }
 
-// GetPerformanceSnapshots returns all stored performance snapshots (thread-safe)
-func (c *Capture) GetPerformanceSnapshots() []performance.PerformanceSnapshot {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.perf.snapshotsList()
+// Add stores URL-keyed performance snapshots with bounded oldest-entry eviction.
+func (s *PerformanceStore) Add(snapshots []performance.PerformanceSnapshot) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.appendSnapshots(snapshots)
 }
 
-// GetPerformanceSnapshotByURL returns a specific snapshot by URL key (thread-safe).
-func (c *Capture) GetPerformanceSnapshotByURL(url string) (performance.PerformanceSnapshot, bool) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.perf.snapshotByURL(url)
+// Entries returns a detached list of stored performance snapshots.
+func (s *PerformanceStore) Entries() []performance.PerformanceSnapshot {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.snapshotsList()
 }
 
-// StoreBeforeSnapshot stores a performance snapshot keyed by correlation_id
-// for later perf_diff computation. Max 50 entries with oldest eviction.
-func (c *Capture) StoreBeforeSnapshot(correlationID string, snapshot performance.PerformanceSnapshot) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.perf.storeBeforeSnapshot(correlationID, snapshot)
+// ByURL returns the performance snapshot stored for a URL.
+func (s *PerformanceStore) ByURL(url string) (performance.PerformanceSnapshot, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.snapshotByURL(url)
 }
 
-// GetAndDeleteBeforeSnapshot retrieves and removes a before-snapshot by correlation_id.
-// Consume-on-read: the snapshot is deleted after retrieval to prevent memory leaks.
-func (c *Capture) GetAndDeleteBeforeSnapshot(correlationID string) (performance.PerformanceSnapshot, bool) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return c.perf.takeBeforeSnapshot(correlationID)
+// StoreBefore stores a bounded pre-action snapshot for later performance diffing.
+func (s *PerformanceStore) StoreBefore(correlationID string, snapshot performance.PerformanceSnapshot) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.storeBeforeSnapshot(correlationID, snapshot)
+}
+
+// TakeBefore consumes the pre-action snapshot for a correlation ID.
+func (s *PerformanceStore) TakeBefore(correlationID string) (performance.PerformanceSnapshot, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.takeBeforeSnapshot(correlationID)
 }
 
 const (
@@ -260,9 +262,9 @@ func (s *PerformanceStore) takeBeforeSnapshot(correlationID string) (performance
 
 // clear resets performance snapshot/baseline/before-snapshot state.
 func (s *PerformanceStore) clear() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.snapshots = make(map[string]performance.PerformanceSnapshot)
 	s.snapshotOrder = make([]string, 0)
-	s.baselines = make(map[string]performance.PerformanceBaseline)
-	s.baselineOrder = make([]string, 0)
 	s.beforeSnapshots = make(map[string]performance.PerformanceSnapshot)
 }
