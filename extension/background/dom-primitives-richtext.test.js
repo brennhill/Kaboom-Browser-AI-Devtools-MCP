@@ -131,9 +131,10 @@ class MockClipboardEvent extends Event {
 globalThis.ClipboardEvent = MockClipboardEvent
 
 // ---------------------------------------------------------------------------
-// Import domPrimitive AFTER globals are set up
+// Import canonical action-family primitives AFTER globals are set up
 // ---------------------------------------------------------------------------
-const { domPrimitive } = await import('./dom/primitives/dom-primitives.js')
+const { domPrimitiveForm } = await import('./dom/primitives/dom-primitives-form.js')
+const { domPrimitiveRead } = await import('./dom/primitives/dom-primitives-read.js')
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -202,28 +203,28 @@ describe('rich editor detection', () => {
 
   test('Quill: element with class ql-editor detected', async () => {
     setupQuillEditor()
-    const result = await domPrimitive('type', '#editor', { text: 'test' })
+    const result = await domPrimitiveForm('type', '#editor', { text: 'test' })
     assert.strictEqual(result.success, true)
     assert.strictEqual(result.insertion_strategy, 'quill_native')
   })
 
   test('ProseMirror: element with class ProseMirror detected', async () => {
     setupProseMirrorEditor()
-    const result = await domPrimitive('type', '#editor', { text: 'test' })
+    const result = await domPrimitiveForm('type', '#editor', { text: 'test' })
     assert.strictEqual(result.success, true)
     assert.strictEqual(result.insertion_strategy, 'prosemirror_native')
   })
 
   test('Draft.js: element with data-contents attribute detected', async () => {
     setupDraftJSEditor()
-    const result = await domPrimitive('type', '#editor', { text: 'test' })
+    const result = await domPrimitiveForm('type', '#editor', { text: 'test' })
     assert.strictEqual(result.success, true)
     assert.strictEqual(result.insertion_strategy, 'draftjs_native')
   })
 
   test('no framework: returns keyboard_simulation for single-line', async () => {
     setupContentEditable()
-    const result = await domPrimitive('type', '#editor', { text: 'test' })
+    const result = await domPrimitiveForm('type', '#editor', { text: 'test' })
     assert.strictEqual(result.success, true)
     assert.strictEqual(result.insertion_strategy, 'keyboard_simulation')
   })
@@ -261,7 +262,7 @@ describe('rich editor detection', () => {
       execCommand: () => true
     }
 
-    const result = await domPrimitive('type', '#editor', { text: 'test' })
+    const result = await domPrimitiveForm('type', '#editor', { text: 'test' })
     assert.strictEqual(result.success, true)
     assert.strictEqual(result.insertion_strategy, 'quill_native')
   })
@@ -280,46 +281,46 @@ describe('native insertion for rich editors', () => {
 
   test('multiline text produces correct <p> elements in innerHTML', async () => {
     const { el } = setupQuillEditor()
-    await domPrimitive('type', '#editor', { text: 'line one\nline two', clear: true })
+    await domPrimitiveForm('type', '#editor', { text: 'line one\nline two', clear: true })
     assert.strictEqual(el.innerHTML, '<p>line one</p><p>line two</p>')
   })
 
   test('empty lines become <p><br></p>', async () => {
     const { el } = setupQuillEditor()
-    await domPrimitive('type', '#editor', { text: 'before\n\nafter', clear: true })
+    await domPrimitiveForm('type', '#editor', { text: 'before\n\nafter', clear: true })
     assert.strictEqual(el.innerHTML, '<p>before</p><p><br></p><p>after</p>')
   })
 
   test('clear: true replaces content via innerHTML', async () => {
     const { el } = setupQuillEditor()
     el.innerHTML = '<p>old content</p>'
-    await domPrimitive('type', '#editor', { text: 'new', clear: true })
+    await domPrimitiveForm('type', '#editor', { text: 'new', clear: true })
     assert.strictEqual(el.innerHTML, '<p>new</p>')
   })
 
   test('clear: false appends via insertAdjacentHTML', async () => {
     const { el } = setupQuillEditor()
     el.innerHTML = '<p>existing</p>'
-    await domPrimitive('type', '#editor', { text: 'appended' })
+    await domPrimitiveForm('type', '#editor', { text: 'appended' })
     assert.strictEqual(el.innerHTML, '<p>existing</p><p>appended</p>')
   })
 
   test('input event dispatched after insertion', async () => {
     const { dispatched } = setupQuillEditor()
-    await domPrimitive('type', '#editor', { text: 'hello' })
+    await domPrimitiveForm('type', '#editor', { text: 'hello' })
     const inputEvents = dispatched.filter((e) => e.type === 'input')
     assert.ok(inputEvents.length > 0, 'Should dispatch an input event')
   })
 
   test('HTML special characters are escaped', async () => {
     const { el } = setupQuillEditor()
-    await domPrimitive('type', '#editor', { text: '<b>bold</b> & "quotes"', clear: true })
+    await domPrimitiveForm('type', '#editor', { text: '<b>bold</b> & "quotes"', clear: true })
     assert.strictEqual(el.innerHTML, '<p>&lt;b&gt;bold&lt;/b&gt; &amp; "quotes"</p>')
   })
 
   test('no execCommand calls for detected rich editors', async () => {
     const { commands } = setupQuillEditor()
-    await domPrimitive('type', '#editor', { text: 'line one\nline two' })
+    await domPrimitiveForm('type', '#editor', { text: 'line one\nline two' })
     assert.strictEqual(commands.length, 0, 'Rich editor insertion should not use execCommand')
   })
 })
@@ -338,7 +339,7 @@ describe('keyboard simulation for generic contenteditable', () => {
   test('single-line text uses keyboard simulation fallback', async () => {
     const { commands } = setupContentEditable()
 
-    const result = await domPrimitive('type', '#editor', { text: 'hello world' })
+    const result = await domPrimitiveForm('type', '#editor', { text: 'hello world' })
 
     assert.strictEqual(result.success, true)
     assert.strictEqual(result.insertion_strategy, 'keyboard_simulation')
@@ -348,7 +349,7 @@ describe('keyboard simulation for generic contenteditable', () => {
   test('two-line text uses keyboard simulation with Enter keydown/keyup', async () => {
     const { commands, dispatched } = setupContentEditable()
 
-    const result = await domPrimitive('type', '#editor', { text: 'line one\nline two' })
+    const result = await domPrimitiveForm('type', '#editor', { text: 'line one\nline two' })
 
     assert.strictEqual(result.success, true)
     assert.strictEqual(result.insertion_strategy, 'keyboard_simulation')
@@ -363,7 +364,7 @@ describe('keyboard simulation for generic contenteditable', () => {
   test('three-line text dispatches two Enter key pairs', async () => {
     const { commands, dispatched } = setupContentEditable()
 
-    await domPrimitive('type', '#editor', { text: 'a\nb\nc' })
+    await domPrimitiveForm('type', '#editor', { text: 'a\nb\nc' })
 
     assert.strictEqual(commands.length, 0, 'Keyboard simulation should not rely on execCommand')
     const keydowns = dispatched.filter((e) => e.type === 'keydown')
@@ -373,7 +374,7 @@ describe('keyboard simulation for generic contenteditable', () => {
   test('consecutive newlines dispatch Enter without insertText for empty lines', async () => {
     const { commands, dispatched } = setupContentEditable()
 
-    await domPrimitive('type', '#editor', { text: 'before\n\nafter' })
+    await domPrimitiveForm('type', '#editor', { text: 'before\n\nafter' })
 
     assert.strictEqual(commands.length, 0, 'Keyboard simulation should not rely on execCommand')
     const keydowns = dispatched.filter((e) => e.type === 'keydown')
@@ -383,7 +384,7 @@ describe('keyboard simulation for generic contenteditable', () => {
   test('clear option works with multiline keyboard simulation', async () => {
     const { commands } = setupContentEditable()
 
-    const result = await domPrimitive('type', '#editor', { text: 'a\nb', clear: true })
+    const result = await domPrimitiveForm('type', '#editor', { text: 'a\nb', clear: true })
 
     assert.strictEqual(result.success, true)
     assert.strictEqual(result.insertion_strategy, 'keyboard_simulation')
@@ -404,33 +405,33 @@ describe('insertion_strategy field', () => {
 
   test('Quill editor returns quill_native strategy', async () => {
     setupQuillEditor()
-    const result = await domPrimitive('type', '#editor', { text: 'test' })
+    const result = await domPrimitiveForm('type', '#editor', { text: 'test' })
     assert.strictEqual(result.insertion_strategy, 'quill_native')
   })
 
   test('generic contenteditable multiline returns keyboard_simulation', async () => {
     setupContentEditable()
-    const result = await domPrimitive('type', '#editor', { text: 'a\nb' })
+    const result = await domPrimitiveForm('type', '#editor', { text: 'a\nb' })
     assert.strictEqual(result.insertion_strategy, 'keyboard_simulation')
   })
 
   test('generic contenteditable single-line returns keyboard_simulation', async () => {
     setupContentEditable()
-    const result = await domPrimitive('type', '#editor', { text: 'hello' })
+    const result = await domPrimitiveForm('type', '#editor', { text: 'hello' })
     assert.strictEqual(result.insertion_strategy, 'keyboard_simulation')
   })
 
   test('paste on generic contenteditable returns clipboard_event', async () => {
     const { el } = setupContentEditable()
     el.innerText = 'text'
-    const result = await domPrimitive('paste', '#editor', { text: 'pasted' })
+    const result = await domPrimitiveForm('paste', '#editor', { text: 'pasted' })
     assert.strictEqual(result.insertion_strategy, 'clipboard_event')
   })
 
   test('paste on Quill editor returns quill_native', async () => {
     const { el } = setupQuillEditor()
     el.innerText = 'text'
-    const result = await domPrimitive('paste', '#editor', { text: 'pasted' })
+    const result = await domPrimitiveForm('paste', '#editor', { text: 'pasted' })
     assert.strictEqual(result.insertion_strategy, 'quill_native')
   })
 })
@@ -458,7 +459,7 @@ describe('get_text: innerText for HTMLElement', () => {
       createTreeWalker: () => ({ nextNode: () => null })
     }
 
-    const result = domPrimitive('get_text', '#content', {})
+    const result = domPrimitiveRead('get_text', '#content', {})
 
     assert.strictEqual(result.success, true)
     assert.strictEqual(
@@ -487,7 +488,7 @@ describe('get_text: innerText for HTMLElement', () => {
       createTreeWalker: () => ({ nextNode: () => null })
     }
 
-    const result = domPrimitive('get_text', '#svg', {})
+    const result = domPrimitiveRead('get_text', '#svg', {})
 
     assert.strictEqual(result.success, true)
     assert.strictEqual(result.value, 'svg text', 'Non-HTMLElement should fall back to textContent')
@@ -507,7 +508,7 @@ describe('get_text: innerText for HTMLElement', () => {
       createTreeWalker: () => ({ nextNode: () => null })
     }
 
-    const result = domPrimitive('get_text', '#content', {})
+    const result = domPrimitiveRead('get_text', '#content', {})
 
     assert.strictEqual(result.success, true)
     assert.strictEqual(result.value, null)
@@ -533,7 +534,7 @@ describe('null-value read actions include reason payload', () => {
       createTreeWalker: () => ({ nextNode: () => null })
     }
 
-    const result = domPrimitive('get_attribute', '#target', { name: 'aria-label' })
+    const result = domPrimitiveRead('get_attribute', '#target', { name: 'aria-label' })
 
     assert.strictEqual(result.success, true)
     assert.strictEqual(result.value, null)
@@ -554,7 +555,7 @@ describe('null-value read actions include reason payload', () => {
       createTreeWalker: () => ({ nextNode: () => null })
     }
 
-    const result = domPrimitive('get_value', '#field', {})
+    const result = domPrimitiveRead('get_value', '#field', {})
 
     assert.strictEqual(result.success, true)
     assert.strictEqual(result.value, null)
@@ -597,7 +598,7 @@ describe('paste action: synthetic ClipboardEvent', () => {
       })
     }
 
-    const result = await domPrimitive('paste', '#editor', { text: 'hello\nworld' })
+    const result = await domPrimitiveForm('paste', '#editor', { text: 'hello\nworld' })
 
     assert.strictEqual(result.success, true)
     assert.strictEqual(result.insertion_strategy, 'clipboard_event')
@@ -614,7 +615,7 @@ describe('paste action: synthetic ClipboardEvent', () => {
   test('paste on Quill editor uses native insertion', async () => {
     const { el } = setupQuillEditor()
     el.innerText = ''
-    await domPrimitive('paste', '#editor', { text: 'line one\nline two', clear: true })
+    await domPrimitiveForm('paste', '#editor', { text: 'line one\nline two', clear: true })
     assert.strictEqual(el.innerHTML, '<p>line one</p><p>line two</p>')
   })
 
@@ -643,7 +644,7 @@ describe('paste action: synthetic ClipboardEvent', () => {
       })
     }
 
-    const result = await domPrimitive('paste', '#editor', { text: 'replacement', clear: true })
+    const result = await domPrimitiveForm('paste', '#editor', { text: 'replacement', clear: true })
 
     assert.strictEqual(result.success, true)
     assert.strictEqual(selectAllCalled, true, 'clear should call selectAllChildren')
@@ -667,7 +668,7 @@ describe('paste action: synthetic ClipboardEvent', () => {
       createTreeWalker: () => ({ nextNode: () => null })
     }
 
-    const result = await domPrimitive('paste', '#svg', { text: 'test' })
+    const result = await domPrimitiveForm('paste', '#svg', { text: 'test' })
 
     assert.strictEqual(result.success, false)
     assert.strictEqual(result.error, 'not_interactive')
@@ -688,7 +689,7 @@ describe('paste action: synthetic ClipboardEvent', () => {
       getSelection: () => null
     }
 
-    const result = await domPrimitive('paste', '#editor', { text: 'test' })
+    const result = await domPrimitiveForm('paste', '#editor', { text: 'test' })
 
     assert.strictEqual(result.success, true)
     assert.strictEqual(result.value, 'result text\nwith lines', 'paste should return innerText')

@@ -37,11 +37,11 @@ if [ ! -f "$DOM_DISPATCH_FILE" ]; then
   exit 1
 fi
 
-# INVARIANT 2: wait_for polling must reuse domPrimitive from dispatch side.
-# Background: injecting a second wait helper drifted from domPrimitive selector logic.
+# INVARIANT 2: wait_for polling must use the canonical read primitive from dispatch.
+# Background: the deleted domWaitFor facade duplicated selector and polling behavior.
 if grep -E "import .*domWaitFor" "$DOM_DISPATCH_FILE" > /dev/null 2>&1; then
   echo "❌ REGRESSION: domWaitFor imported in dom-dispatch.ts"
-  echo "   wait_for should poll via domPrimitive to keep one selector engine."
+  echo "   wait_for should poll via domPrimitiveRead to keep one selector engine."
   exit 1
 fi
 
@@ -56,9 +56,9 @@ echo "✅ DOM dispatch invariants OK"
 
 echo "Checking DOM code generation invariants..."
 
-# INVARIANT 4: generated dom-primitives.ts must match template source.
+# INVARIANT 4: generated DOM action-family primitives must match template source.
 if ! node scripts/build/generate-dom-primitives.js --check > /dev/null 2>&1; then
-  echo "❌ REGRESSION: src/background/dom/primitives/dom-primitives.ts is out of date"
+  echo "❌ REGRESSION: generated DOM action-family primitives are out of date"
   echo "   Run: node scripts/build/generate-dom-primitives.js"
   exit 1
 fi

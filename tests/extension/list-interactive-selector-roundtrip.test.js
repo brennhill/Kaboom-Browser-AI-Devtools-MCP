@@ -182,8 +182,8 @@ async function loadListInteractive() {
 }
 
 async function loadDomPrimitive() {
-  const mod = await import(`../../extension/background/dom/primitives/dom-primitives.js?t=${Date.now()}`)
-  return mod.domPrimitive
+  const mod = await import(`../../extension/background/dom/primitives/dom-primitives-pointer.js?t=${Date.now()}`)
+  return mod.domPrimitivePointer
 }
 
 describe('list_interactive selector round-trip', () => {

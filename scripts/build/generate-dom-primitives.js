@@ -6,7 +6,7 @@
 /**
  * generate-dom-primitives.js
  *
- * Generates src/background/dom/primitives/dom-primitives.ts from the main template plus partials:
+ * Generates pointer, form, and read primitive modules from the canonical template and partials.
  *   scripts/templates/dom-primitives.ts.tpl
  *   scripts/templates/partials/_dom-selectors.tpl
  *   scripts/templates/partials/_dom-semantic-resolvers.tpl
@@ -30,21 +30,26 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { transformSync } from 'esbuild'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.join(__dirname, '..', '..')
 
 const TEMPLATE_PATH = path.join(ROOT, 'scripts', 'templates', 'dom-primitives.ts.tpl')
 const PARTIALS_DIR = path.join(ROOT, 'scripts', 'templates', 'partials')
-const OUTPUT_PATH = path.join(ROOT, 'src', 'background', 'dom', 'primitives', 'dom-primitives.ts')
+const OUTPUT_DIR = path.join(ROOT, 'src', 'background', 'dom', 'primitives')
 const CHECK_ONLY = process.argv.includes('--check')
 
-const GENERATED_BANNER = `// AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
+const ACTION_FAMILIES = {
+  pointer: ['click', 'hover', 'focus', 'scroll_to'],
+  form: ['type', 'paste', 'select', 'check', 'key_press', 'set_attribute'],
+  read: ['get_text', 'get_value', 'get_attribute', 'wait_for', 'wait_for_text', 'wait_for_absent']
+}
+
+const GENERATED_BANNER = (family) => `// @ts-nocheck -- generated JavaScript is type-checked before transformation.
+// AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
 // Source: scripts/templates/dom-primitives.ts.tpl + partials/
-//   _dom-selectors.tpl, _dom-semantic-resolvers.tpl, _dom-overlay-helpers.tpl,
-//   _dom-intent.tpl, _dom-intent-actions.tpl, _dom-ranking.tpl,
-//   _dom-action-helpers.tpl, _dom-action-handlers-core.tpl,
-//   _dom-action-handlers-input.tpl, _dom-action-handlers-overlay.tpl
+// Action family: ${family}
 // Generator: scripts/build/generate-dom-primitives.js
 
 `
@@ -65,9 +70,50 @@ function resolveIncludes(templateContent) {
   })
 }
 
-function buildOutput(templateContent) {
-  const resolved = resolveIncludes(templateContent)
-  return GENERATED_BANNER + normalize(resolved)
+function retainActionHandlers(source, allowedActions) {
+  const startMarker = '    return {\n'
+  const endMarker = '\n    }\n  }\n\n  const handlers'
+  const start = source.indexOf(startMarker, source.indexOf('function buildActionHandlers'))
+  const end = source.indexOf(endMarker, start)
+  if (start < 0 || end < 0) {
+    throw new Error('Could not locate generated DOM action handler map')
+  }
+
+  const bodyStart = start + startMarker.length
+  const body = source.slice(bodyStart, end)
+  const matches = [...body.matchAll(/^ {6}([a-z_]+):/gm)]
+  const retained = []
+  for (let index = 0; index < matches.length; index += 1) {
+    const action = matches[index][1]
+    if (!allowedActions.has(action)) continue
+    const entryStart = matches[index].index
+    const entryEnd = index + 1 < matches.length ? matches[index + 1].index : body.length
+    retained.push(body.slice(entryStart, entryEnd).trimEnd())
+  }
+  return source.slice(0, bodyStart) + retained.join('\n\n') + source.slice(end)
+}
+
+function buildOutput(templateContent, family, actions) {
+  let resolved = resolveIncludes(templateContent)
+  resolved = retainActionHandlers(resolved, new Set(actions))
+  const exportName = `domPrimitive${family[0].toUpperCase()}${family.slice(1)}`
+  resolved = resolved
+    .replace(/export \{ domPrimitiveListInteractive \}[^\n]*\n/, '')
+    .replace('export function domPrimitive(', `export function ${exportName}(`)
+  const transformed = transformSync(resolved, {
+    loader: 'ts',
+    minifyWhitespace: true,
+    minifyIdentifiers: false,
+    minifySyntax: false,
+    legalComments: 'none',
+    lineLimit: 160
+  }).code
+  const typedExport = transformed.replace(
+    `export function ${exportName}(action,selector,options)`,
+    `export function ${exportName}(action: string, selector: string, options: DOMPrimitiveOptions): DOMResult | Promise<DOMResult>`
+  )
+  const typeImport = "import type { DOMPrimitiveOptions, DOMResult } from '../dom-types.js'\n\n"
+  return GENERATED_BANNER(family) + typeImport + normalize(typedExport)
 }
 
 function main() {
@@ -77,25 +123,31 @@ function main() {
   }
 
   const templateContent = fs.readFileSync(TEMPLATE_PATH, 'utf8')
-  const generatedContent = buildOutput(templateContent)
-  const existingContent = fs.existsSync(OUTPUT_PATH) ? fs.readFileSync(OUTPUT_PATH, 'utf8') : ''
-  const isDrifted = normalize(existingContent) !== normalize(generatedContent)
+  const outputs = Object.entries(ACTION_FAMILIES).map(([family, actions]) => {
+    const outputPath = path.join(OUTPUT_DIR, `dom-primitives-${family}.ts`)
+    const generatedContent = buildOutput(templateContent, family, actions)
+    const existingContent = fs.existsSync(outputPath) ? fs.readFileSync(outputPath, 'utf8') : ''
+    return { outputPath, generatedContent, isDrifted: normalize(existingContent) !== normalize(generatedContent) }
+  })
+  const isDrifted = outputs.some((output) => output.isDrifted)
 
   if (CHECK_ONLY) {
     if (isDrifted) {
-      console.error('dom-primitives.ts is out of date.')
+      console.error('DOM action-family primitives are out of date.')
       console.error('Run: node scripts/build/generate-dom-primitives.js')
       process.exit(1)
     }
-    console.log('dom-primitives.ts is up to date.')
+    console.log('DOM action-family primitives are up to date.')
     return
   }
 
-  fs.writeFileSync(OUTPUT_PATH, generatedContent, 'utf8')
+  for (const { outputPath, generatedContent } of outputs) {
+    fs.writeFileSync(outputPath, generatedContent, 'utf8')
+  }
   if (isDrifted) {
-    console.log('Generated src/background/dom/primitives/dom-primitives.ts from template.')
+    console.log('Generated action-family DOM primitives from template.')
   } else {
-    console.log('dom-primitives.ts already current (rewritten for normalized line endings).')
+    console.log('DOM action-family primitives already current.')
   }
 }
 

@@ -4,7 +4,7 @@
  */
 
 // dom-dispatch.ts — DOM action dispatcher and utilities.
-// Extracted from dom-primitives.ts to reduce file size.
+// Owns action-family routing independently from the self-contained injected functions.
 // Script builders stay self-contained because chrome.scripting.executeScript
 // serializes injected functions independently.
 
@@ -13,7 +13,9 @@ import type { SyncClient } from '../sync/sync-client.js'
 import type { DOMActionParams, DOMResult } from './dom-types.js'
 import type { SendAsyncResultFn, ActionToastFn } from '../commands/helpers.js'
 import { domFrameProbe } from './primitives/dom-frame-probe.js'
-import { domPrimitive } from './primitives/dom-primitives.js'
+import { domPrimitivePointer } from './primitives/dom-primitives-pointer.js'
+import { domPrimitiveForm } from './primitives/dom-primitives-form.js'
+import { domPrimitiveRead } from './primitives/dom-primitives-read.js'
 import { domPrimitiveListInteractive } from './primitives/dom-primitives-list-interactive.js'
 import { domPrimitiveQuery } from './primitives/dom-primitives-query.js'
 import { domPrimitiveWaitForStable, domPrimitiveActionDiff } from './primitives/dom-primitives-stability.js'
@@ -102,7 +104,7 @@ async function executeWaitFor(target: DOMExecutionTarget, params: DOMActionParam
   const quickCheck = await chrome.scripting.executeScript({
     target,
     world: 'MAIN',
-    func: domPrimitive,
+    func: domPrimitiveRead,
     args: [domAction, selector, domOpts]
   })
   const quickPicked = pickFrameResult(quickCheck)
@@ -119,7 +121,7 @@ async function executeWaitFor(target: DOMExecutionTarget, params: DOMActionParam
     const probeResults = await chrome.scripting.executeScript({
       target,
       world: 'MAIN',
-      func: domPrimitive,
+      func: domPrimitiveRead,
       args: [domAction, selector, domOpts]
     })
 
@@ -153,10 +155,15 @@ async function executeStandardAction(
   target: DOMExecutionTarget,
   params: DOMActionParams
 ): Promise<chrome.scripting.InjectionResult[]> {
+  const primitive = POINTER_ACTIONS.has(params.action!)
+    ? domPrimitivePointer
+    : FORM_ACTIONS.has(params.action!)
+      ? domPrimitiveForm
+      : domPrimitiveRead
   return chrome.scripting.executeScript({
     target,
     world: 'MAIN',
-    func: domPrimitive,
+    func: primitive,
     args: [
       params.action!,
       params.selector || '',
@@ -282,6 +289,8 @@ async function executeIntentAction(
 const STABILITY_ACTIONS = new Set(['wait_for_stable', 'action_diff'])
 const OVERLAY_ACTIONS = new Set(['dismiss_top_overlay', 'auto_dismiss_overlays'])
 const INTENT_ACTIONS = new Set(['open_composer', 'submit_active_composer', 'confirm_top_dialog'])
+const POINTER_ACTIONS = new Set(['click', 'hover', 'focus', 'scroll_to'])
+const FORM_ACTIONS = new Set(['type', 'paste', 'select', 'check', 'key_press', 'set_attribute'])
 
 // #lizard forgives
 export async function executeDOMAction(

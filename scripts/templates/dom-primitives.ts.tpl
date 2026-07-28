@@ -1,24 +1,22 @@
-// eslint-disable max-lines - Auto-generated from template + partials; must be a single self-contained function for chrome.scripting.executeScript.
 /**
- * Purpose: Core DOM primitives for selector-based actions (click, type, wait_for, etc.).
- * #502: Intent/overlay/stability actions extracted to separate self-contained modules:
+ * Purpose: Canonical source for generated, self-contained DOM action families.
+ * The generator emits pointer, form, and read primitives; each retains only its
+ * action handlers while sharing these selector and result contracts.
+ * Other independent action families:
  *   - dom-primitives-intent.ts (open_composer, submit_active_composer, confirm_top_dialog)
  *   - dom-primitives-overlay.ts (dismiss_top_overlay, auto_dismiss_overlays)
  *   - dom-primitives-stability.ts (wait_for_stable, action_diff)
  * Docs: docs/features/feature/interact-explore/index.md
  */
-// dom-primitives.ts — Pre-compiled DOM interaction functions for chrome.scripting.executeScript.
+// dom-primitives.ts.tpl — Source template for injected DOM action-family functions.
 // These bypass CSP restrictions because they use the `func` parameter (no eval/new Function).
 // Each function MUST be self-contained — no closures over external variables.
 
 import type { DOMMutationEntry, DOMPrimitiveOptions, DOMResult } from '../dom-types.js'
 
-// Re-export list_interactive primitive for backward compatibility
-export { domPrimitiveListInteractive } from './dom-primitives-list-interactive.js'
-
 /**
- * Single self-contained function for all DOM primitives.
- * Passed to chrome.scripting.executeScript({ func: domPrimitive, args: [...] }).
+ * Self-contained source function specialized and renamed by the generator.
+ * Passed to chrome.scripting.executeScript({ func, args: [...] }).
  * MUST NOT reference any module-level variables — Chrome serializes the function source only.
  */
 export function domPrimitive(
@@ -312,67 +310,6 @@ export function domPrimitive(
     return { ...(rawResult as DOMResult), ambiguous_matches: resolvedAmbiguousMatches }
   }
   return rawResult
-}
-
-/**
- * Backward-compatible wait helper used by unit tests and legacy call sites.
- * Polls wait_for and listens for DOM mutations for fast resolution.
- */
-export function domWaitFor(selector: string, timeoutMs: number = 5000): Promise<DOMResult> {
-  const timeout = Math.max(1, timeoutMs)
-  const startedAt = Date.now()
-  const pollIntervalMs = 50
-
-  return new Promise<DOMResult>((resolve) => {
-    let settled = false
-    let timer: ReturnType<typeof setTimeout> | null = null
-    let observer: MutationObserver | null = null
-
-    const done = (result: DOMResult) => {
-      if (settled) return
-      settled = true
-      if (timer) clearTimeout(timer)
-      if (observer) observer.disconnect()
-      resolve(result)
-    }
-
-    const check = () => {
-      const result = domPrimitive('wait_for', selector, { timeout_ms: timeout }) as DOMResult
-      if (result?.success) {
-        done(result)
-        return
-      }
-      if (Date.now() - startedAt >= timeout) {
-        done({
-          success: false,
-          action: 'wait_for',
-          selector,
-          error: 'timeout',
-          message: `Element not found within ${timeout}ms: ${selector}`
-        } as DOMResult)
-        return
-      }
-      timer = setTimeout(check, pollIntervalMs)
-    }
-
-    try {
-      observer = new MutationObserver(() => {
-        if (settled) return
-        const immediate = domPrimitive('wait_for', selector, { timeout_ms: timeout }) as DOMResult
-        if (immediate?.success) done(immediate)
-      })
-      observer.observe(document.body || document.documentElement, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        characterData: true
-      })
-    } catch {
-      // Best-effort optimization only; polling remains authoritative.
-    }
-
-    check()
-  })
 }
 
 // Dispatcher utilities (parseDOMParams, executeDOMAction, etc.) moved to ./dom-dispatch.ts

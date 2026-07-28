@@ -55,7 +55,7 @@ src/
     circuit-breaker.ts     Failure isolation
     log-processing.ts      Log normalization and filtering
     screenshot.ts          Screenshot capture and upload
-    dom-primitives.ts      Self-contained DOM functions for chrome.scripting.executeScript
+    dom/primitives/        Self-contained DOM functions grouped by action family
     dom-dispatch.ts        Dispatches dom-primitives to target tabs
     pending-queries.ts     Legacy command dispatch (being replaced by commands/)
     server.ts              Server URL and request header management
@@ -126,7 +126,7 @@ src/
 
 ## Constraints
 
-- **dom-primitives.ts must be self-contained** -- Functions in this file are serialized by `chrome.scripting.executeScript({ func })`. They cannot reference closures, imports, or external variables. Types are duplicated intentionally.
+- **DOM action primitives must be self-contained** -- Each function under `dom/primitives/` is serialized by `chrome.scripting.executeScript({ func })`. It cannot reference closures, imports, or external variables. The generated pointer, form, and read modules share one authored template but retain only their own handlers.
 - **Content and inject scripts must be bundled** -- MV3 content scripts cannot use ES module imports at runtime. `inject.bundled.js` and `content.bundled.js` are built by esbuild. Source changes in `src/inject/` or `src/lib/` used by inject require `make compile-ts`.
 - **No dynamic imports in background service worker** -- MV3 service workers do not support `import()`. All background modules must be statically imported. (Content script can use dynamic import for lazy-loaded modules like `draw-mode.js`.)
 - **lib/ code used by inject must go through esbuild** -- Anything in `src/lib/` that inject uses gets bundled into `inject.bundled.js`. Adding a new lib dependency requires `make compile-ts` to take effect.
@@ -138,7 +138,7 @@ src/
 | Add a new capture type              | `src/lib/<capture>.ts`, `src/inject/index.ts` (install hook), `src/types/` (types), `src/background/sync/batcher-instances.ts` (new batcher) |
 | Add a new capture toggle            | `src/lib/constants.ts`, `src/types/runtime-messages.ts`, `src/inject/settings.ts`, `src/content/message-handlers.ts` (TOGGLE_MESSAGES set) |
 | Add a new async command             | `src/background/commands/<name>.ts` (handler + registerCommand), `src/background/commands/helpers.ts` (if new helper needed) |
-| Add a new DOM query type            | `src/background/dom/primitives/dom-primitives.ts` (self-contained function), `src/background/dom/dom-dispatch.ts` (dispatch case) |
+| Add a new DOM action                | Its change-coupled module under `src/background/dom/primitives/`, `scripts/templates/dom-primitives.ts.tpl` when it shares the generated selector engine, and `src/background/dom/dom-dispatch.ts` |
 | Change server communication         | `src/background/sync/sync-client.ts`, `src/background/sync/server.ts`                                                |
 | Add UI overlay                      | `src/content/ui/<name>.ts`, `src/content/runtime-message-listener.ts` (add message handler)                 |
 | Add page instrumentation            | `src/inject/` + `src/lib/`, then `make compile-ts`                                                         |

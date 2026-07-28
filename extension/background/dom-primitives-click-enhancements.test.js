@@ -107,7 +107,8 @@ let perfNowValue = 0
 globalThis.performance = { now: () => perfNowValue++ }
 globalThis.requestAnimationFrame = (cb) => cb()
 
-const { domPrimitive } = await import('./dom/primitives/dom-primitives.js')
+const { domPrimitivePointer } = await import('./dom/primitives/dom-primitives-pointer.js')
+const { domPrimitiveRead } = await import('./dom/primitives/dom-primitives-read.js')
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -209,7 +210,7 @@ describe('#336: click auto-scrolls off-screen elements into view', () => {
     globalThis.window = { innerHeight: 800, innerWidth: 1200 }
     setupDocumentForCSS([btn])
 
-    const result = await domPrimitive('click', '#below-fold', {})
+    const result = await domPrimitivePointer('click', '#below-fold', {})
     assert.strictEqual(result.success, true, 'click should succeed')
     assert.ok(
       btn._scrollIntoViewCalls.length > 0,
@@ -231,7 +232,7 @@ describe('#336: click auto-scrolls off-screen elements into view', () => {
     globalThis.window = { innerHeight: 800, innerWidth: 1200 }
     setupDocumentForCSS([btn])
 
-    const result = await domPrimitive('click', '#in-view', {})
+    const result = await domPrimitivePointer('click', '#in-view', {})
     assert.strictEqual(result.success, true, 'click should succeed')
     assert.strictEqual(
       btn._scrollIntoViewCalls.length,
@@ -249,7 +250,7 @@ describe('#336: click auto-scrolls off-screen elements into view', () => {
     globalThis.window = { innerHeight: 800, innerWidth: 1200 }
     setupDocumentForCSS([btn])
 
-    const result = await domPrimitive('click', '#above-fold', {})
+    const result = await domPrimitivePointer('click', '#above-fold', {})
     assert.strictEqual(result.success, true)
     assert.ok(
       btn._scrollIntoViewCalls.length > 0,
@@ -266,7 +267,7 @@ describe('#336: click auto-scrolls off-screen elements into view', () => {
     globalThis.window = { innerHeight: 800, innerWidth: 1200 }
     setupDocumentForCSS([btn])
 
-    const result = await domPrimitive('click', '#off-screen', {})
+    const result = await domPrimitivePointer('click', '#off-screen', {})
     assert.strictEqual(result.success, true)
     assert.strictEqual(result.auto_scrolled, true, 'result should indicate that auto-scroll occurred')
   })
@@ -345,7 +346,7 @@ describe('#332: click bubbles up to nearest interactive ancestor', () => {
       execCommand: () => {}
     }
 
-    const result = await domPrimitive('click', 'text=Save', {})
+    const result = await domPrimitivePointer('click', 'text=Save', {})
     assert.strictEqual(result.success, true, 'click should succeed')
     assert.strictEqual(
       result.matched.tag,
@@ -380,7 +381,7 @@ describe('#332: click bubbles up to nearest interactive ancestor', () => {
       return null
     })
 
-    const result = await domPrimitive('click', '#nav-wrapper', {})
+    const result = await domPrimitivePointer('click', '#nav-wrapper', {})
     assert.strictEqual(result.success, true)
     assert.strictEqual(
       result.matched.tag,
@@ -400,7 +401,7 @@ describe('#332: click bubbles up to nearest interactive ancestor', () => {
     globalThis.window = { innerHeight: 800, innerWidth: 1200 }
     setupDocumentForCSS([button])
 
-    const result = await domPrimitive('click', '#action-btn', {})
+    const result = await domPrimitivePointer('click', '#action-btn', {})
     assert.strictEqual(result.success, true)
     assert.strictEqual(result.matched.tag, 'button', 'already-interactive element should not be changed')
   })
@@ -436,7 +437,7 @@ describe('#332: click bubbles up to nearest interactive ancestor', () => {
       return null
     })
 
-    const result = await domPrimitive('click', '#inner-text', {})
+    const result = await domPrimitivePointer('click', '#inner-text', {})
     assert.strictEqual(result.success, true)
     assert.strictEqual(
       result.matched.tag,
@@ -469,7 +470,7 @@ describe('#333: scroll_to finds nested scrollable containers', () => {
     globalThis.window = { innerHeight: 800, innerWidth: 1200 }
     setupDocumentForCSS([target])
 
-    const result = domPrimitive('scroll_to', '#target', {})
+    const result = domPrimitivePointer('scroll_to', '#target', {})
     assert.strictEqual(result.success, true, 'scroll_to should succeed')
     assert.ok(
       target._scrollIntoViewCalls.length > 0,
@@ -487,7 +488,7 @@ describe('#333: scroll_to finds nested scrollable containers', () => {
     globalThis.window = { innerHeight: 800, innerWidth: 1200 }
     setupDocumentForCSS([target])
 
-    const result = domPrimitive('scroll_to', '#content', {})
+    const result = domPrimitivePointer('scroll_to', '#content', {})
     assert.strictEqual(result.success, true)
     assert.deepStrictEqual(
       target._scrollIntoViewCalls[0],
@@ -583,7 +584,7 @@ describe('#316: ambiguous text selector warning metadata', () => {
       execCommand: () => {}
     }
 
-    const result = domPrimitive('get_text', 'text=Settings', {})
+    const result = domPrimitiveRead('get_text', 'text=Settings', {})
     assert.strictEqual(result.success, true, 'get_text with text= should still succeed')
     assert.ok(
       result.ambiguous_matches,
@@ -644,7 +645,7 @@ describe('#316: ambiguous text selector warning metadata', () => {
       execCommand: () => {}
     }
 
-    const result = domPrimitive('get_text', 'text=Unique Button Label', {})
+    const result = domPrimitiveRead('get_text', 'text=Unique Button Label', {})
     assert.strictEqual(result.success, true)
     assert.strictEqual(
       result.ambiguous_matches,
@@ -712,7 +713,7 @@ describe('#316: ambiguous text selector warning metadata', () => {
       execCommand: () => {}
     }
 
-    const result = domPrimitive('get_text', 'text=Save', {})
+    const result = domPrimitiveRead('get_text', 'text=Save', {})
     assert.strictEqual(result.success, true)
     assert.ok(result.ambiguous_matches, 'should include ambiguous_matches for 2+ matches')
     assert.ok(

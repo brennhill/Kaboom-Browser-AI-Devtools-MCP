@@ -40,7 +40,9 @@ code_paths:
   - src/lib/daemon-http.ts
   - src/background/ui/draw-mode-toggle.ts
   - src/background/dom/dom-types.ts
-  - src/background/dom/primitives/dom-primitives.ts
+  - src/background/dom/primitives/dom-primitives-pointer.ts
+  - src/background/dom/primitives/dom-primitives-form.ts
+  - src/background/dom/primitives/dom-primitives-read.ts
   - src/inject/execute-js.ts
   - src/content/runtime-message-listener.ts
   - src/background/dom/primitives/dom-primitives-list-interactive.ts
@@ -81,6 +83,7 @@ test_paths:
   - cmd/browser-agent/tools_interact_state_test.go
   - extension/background/__tests__/dom-dispatch-structured.test.js
   - tests/extension/dom-primitives-branding.test.js
+  - tests/extension/dom-action-family-routing.test.js
   - tests/extension/action-toast-labels.test.js
   - tests/extension/execute-js.test.js
   - internal/tools/interact/workflow_test.go
@@ -109,6 +112,12 @@ last_verified_date: 2026-03-05
 
 ## Canonical Note
 This feature documents the shipped `interact` action surface (not a batched `interact.explore` action).
+
+The generated pointer, form, and read primitive modules intentionally contain
+the same selector and result machinery. Chrome serializes each injected
+function independently, so imports or shared closures would fail at runtime.
+Their duplication is generated from one template; only the action handlers
+differ. This is the intentional `jscpd` exception for these three files.
 
 `get_text` supports `structured:true` for hierarchical extraction (for example accordion/list sections), and this option must be forwarded through DOM dispatch into extension primitives.
 

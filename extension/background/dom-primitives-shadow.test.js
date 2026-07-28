@@ -238,9 +238,12 @@ let perfNowValue = 0
 globalThis.performance = { now: () => perfNowValue++ }
 
 // ---------------------------------------------------------------------------
-// Import domPrimitive AFTER globals are set up
+// Import canonical action-family primitives AFTER globals are set up
 // ---------------------------------------------------------------------------
-const { domPrimitive, domWaitFor, domPrimitiveListInteractive } = await import('./dom/primitives/dom-primitives.js')
+const { domPrimitivePointer } = await import('./dom/primitives/dom-primitives-pointer.js')
+const { domPrimitiveForm } = await import('./dom/primitives/dom-primitives-form.js')
+const { domPrimitiveRead } = await import('./dom/primitives/dom-primitives-read.js')
+const { domPrimitiveListInteractive } = await import('./dom/primitives/dom-primitives-list-interactive.js')
 
 // ---------------------------------------------------------------------------
 // Helper: build a mock document with shadow DOM structure
@@ -380,12 +383,12 @@ describe('querySelectorDeep: fast path + shadow traversal', () => {
   beforeEach(() => setupShadowDocument())
 
   test('returns light DOM element on fast path (no shadow traversal)', () => {
-    const result = domPrimitive('get_text', '#light-button', {})
+    const result = domPrimitiveRead('get_text', '#light-button', {})
     assert.strictEqual(result.success, true, 'Should find light DOM element')
   })
 
   test('finds element in first-level shadow root when fast path misses', () => {
-    const result = domPrimitive('get_text', '#shadow-btn', {})
+    const result = domPrimitiveRead('get_text', '#shadow-btn', {})
     assert.strictEqual(result.success, true, 'Should find element in shadow root')
     assert.ok(
       String(result.value).includes('Shadow Button'),
@@ -394,12 +397,12 @@ describe('querySelectorDeep: fast path + shadow traversal', () => {
   })
 
   test('finds element in nested shadow root (2 levels deep)', () => {
-    const result = domPrimitive('get_text', '#deep-input', {})
+    const result = domPrimitiveRead('get_text', '#deep-input', {})
     assert.strictEqual(result.success, true, 'Should find element in nested shadow root')
   })
 
   test('returns element_not_found for non-existent selector', () => {
-    const result = domPrimitive('get_text', '#nonexistent', {})
+    const result = domPrimitiveRead('get_text', '#nonexistent', {})
     assert.strictEqual(result.success, false)
     assert.strictEqual(result.error, 'element_not_found')
   })
@@ -431,17 +434,17 @@ describe('resolveByTextDeep: text search across shadow roots', () => {
   beforeEach(() => setupShadowDocument())
 
   test('finds text in light DOM (unchanged behavior)', () => {
-    const result = domPrimitive('get_text', 'text=Light', {})
+    const result = domPrimitiveRead('get_text', 'text=Light', {})
     assert.strictEqual(result.success, true, 'Should find light DOM text')
   })
 
   test('finds text inside shadow root', () => {
-    const result = domPrimitive('get_text', 'text=Shadow Button', {})
+    const result = domPrimitiveRead('get_text', 'text=Shadow Button', {})
     assert.strictEqual(result.success, true, 'Should find text inside shadow root')
   })
 
   test('finds text inside another shadow root', () => {
-    const result = domPrimitive('get_text', 'text=Shadow Link', {})
+    const result = domPrimitiveRead('get_text', 'text=Shadow Link', {})
     assert.strictEqual(result.success, true, 'Should find text in second shadow root')
   })
 })
@@ -454,7 +457,7 @@ describe('deep combinator >>> syntax', () => {
   beforeEach(() => setupShadowDocument())
 
   test('resolves single-level: my-component >>> #shadow-btn', () => {
-    const result = domPrimitive('get_text', 'my-component >>> #shadow-btn', {})
+    const result = domPrimitiveRead('get_text', 'my-component >>> #shadow-btn', {})
     assert.strictEqual(result.success, true, 'Should resolve >>> selector')
     assert.ok(
       String(result.value).includes('Shadow Button'),
@@ -463,24 +466,24 @@ describe('deep combinator >>> syntax', () => {
   })
 
   test('resolves chained: my-component >>> nested-comp >>> #deep-input', () => {
-    const result = domPrimitive('get_text', 'my-component >>> nested-comp >>> #deep-input', {})
+    const result = domPrimitiveRead('get_text', 'my-component >>> nested-comp >>> #deep-input', {})
     assert.strictEqual(result.success, true, 'Should resolve chained >>> selector')
   })
 
   test('returns error if host not found', () => {
-    const result = domPrimitive('get_text', 'nonexistent-host >>> #shadow-btn', {})
+    const result = domPrimitiveRead('get_text', 'nonexistent-host >>> #shadow-btn', {})
     assert.strictEqual(result.success, false)
     assert.strictEqual(result.error, 'element_not_found')
   })
 
   test('returns error if host has no shadow root', () => {
-    const result = domPrimitive('get_text', '#light-btn >>> button', {})
+    const result = domPrimitiveRead('get_text', '#light-btn >>> button', {})
     assert.strictEqual(result.success, false)
     assert.strictEqual(result.error, 'element_not_found')
   })
 
   test('returns error if inner selector not found', () => {
-    const result = domPrimitive('get_text', 'my-component >>> #nonexistent', {})
+    const result = domPrimitiveRead('get_text', 'my-component >>> #nonexistent', {})
     assert.strictEqual(result.success, false)
     assert.strictEqual(result.error, 'element_not_found')
   })
@@ -524,7 +527,7 @@ describe('isVisible: shadow DOM fallback', () => {
     shadowBtn.style = { position: '' }
 
     // The button should still be found and actionable
-    const result = domPrimitive('get_text', '#shadow-btn', {})
+    const result = domPrimitiveRead('get_text', '#shadow-btn', {})
     assert.strictEqual(result.success, true, 'Shadow element with null offsetParent should still be found')
   })
 })
@@ -541,7 +544,7 @@ describe('actions work on shadow DOM elements', () => {
     const { shadowBtn } = setupShadowDocument()
     shadowBtn.click = () => { clicked = true }
 
-    const result = await domPrimitive('click', '#shadow-btn', {})
+    const result = await domPrimitivePointer('click', '#shadow-btn', {})
     assert.strictEqual(result.success, true)
     assert.strictEqual(clicked, true, 'Click should have been called on shadow element')
   })
@@ -558,7 +561,7 @@ describe('actions work on shadow DOM elements', () => {
       configurable: true
     })
 
-    const result = await domPrimitive('type', 'my-component >>> nested-comp >>> #deep-input', { text: 'hello' })
+    const result = await domPrimitiveForm('type', 'my-component >>> nested-comp >>> #deep-input', { text: 'hello' })
     assert.strictEqual(result.success, true, `Type should work through >>> selector: ${JSON.stringify(result)}`)
   })
 })
@@ -568,90 +571,19 @@ describe('actions work on shadow DOM elements', () => {
 // ===========================================================================
 
 // ===========================================================================
-// Phase 7: domWaitFor shadow DOM support
-// ===========================================================================
-
-describe('domWaitFor: shadow DOM support', () => {
-  beforeEach(() => setupShadowDocument())
-
-  test('resolves immediately for element inside shadow root', async () => {
-    const result = await domWaitFor('#shadow-btn', 500)
-    assert.strictEqual(result.success, true, 'Should find shadow element immediately')
-    assert.strictEqual(result.value, 'button')
-  })
-
-  test('resolves immediately for element in nested shadow root', async () => {
-    const result = await domWaitFor('#deep-input', 500)
-    assert.strictEqual(result.success, true, 'Should find nested shadow element immediately')
-    assert.strictEqual(result.value, 'input')
-  })
-
-  test('resolves immediately for >>> combinator', async () => {
-    const result = await domWaitFor('my-component >>> #shadow-btn', 500)
-    assert.strictEqual(result.success, true, 'Should resolve >>> in wait_for')
-    assert.strictEqual(result.value, 'button')
-  })
-
-  test('resolves immediately for text= inside shadow root', async () => {
-    const result = await domWaitFor('text=Shadow Button', 500)
-    assert.strictEqual(result.success, true, 'Should find text inside shadow root')
-  })
-
-  test('resolves immediately for light DOM element (unchanged)', async () => {
-    const result = await domWaitFor('#light-button', 500)
-    assert.strictEqual(result.success, true, 'Should still find light DOM elements')
-    assert.strictEqual(result.value, 'button')
-  })
-
-  test('times out for non-existent element', async () => {
-    const result = await domWaitFor('#does-not-exist', 50)
-    assert.strictEqual(result.success, false)
-    assert.strictEqual(result.error, 'timeout')
-  })
-
-  test('detects element added to shadow root via MutationObserver', async () => {
-    const { shadow1 } = setupShadowDocument()
-
-    // Override MutationObserver AFTER setupShadowDocument so we capture the callback
-    let observerCallback = null
-    globalThis.MutationObserver = class {
-      constructor(cb) { observerCallback = cb }
-      observe() {}
-      disconnect() {}
-    }
-
-    // Start waiting for an element that doesn't exist yet
-    const waitPromise = domWaitFor('#new-shadow-el', 2000)
-
-    // Simulate: element appears in shadow root after a tick
-    await new Promise((r) => setTimeout(r, 10))
-    const addedEl = new MockHTMLElement('button', { id: 'new-shadow-el', textContent: 'New' })
-    addToShadow(shadow1, addedEl, ['button'])
-
-    // Trigger the mutation observer callback
-    assert.ok(observerCallback, 'MutationObserver callback should have been captured')
-    observerCallback([{ type: 'childList' }])
-
-    const result = await waitPromise
-    assert.strictEqual(result.success, true, 'Should detect element added via mutation')
-    assert.strictEqual(result.value, 'button')
-  })
-})
-
-// ===========================================================================
 // Regression: existing behavior preserved
 // ===========================================================================
 
 describe('regression: non-shadow pages unaffected', () => {
   test('standard selector resolves without deep traversal', () => {
     setupShadowDocument()
-    const result = domPrimitive('get_text', '#light-button', {})
+    const result = domPrimitiveRead('get_text', '#light-button', {})
     assert.strictEqual(result.success, true)
   })
 
   test('element_not_found still returned for missing element', () => {
     setupShadowDocument()
-    const result = domPrimitive('get_text', '#does-not-exist', {})
+    const result = domPrimitiveRead('get_text', '#does-not-exist', {})
     assert.strictEqual(result.success, false)
     assert.strictEqual(result.error, 'element_not_found')
   })

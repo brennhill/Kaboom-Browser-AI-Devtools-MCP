@@ -42,6 +42,7 @@ test_paths:
   - tests/extension/runtime-log-branding.test.js
   - tests/extension/sidepanel-terminal.test.js
   - tests/extension/tab-tracking-core.test.js
+  - extension/background/event-listeners.test.js
   - tests/extension/entry-point-parity.test.js
   - tests/extension/integration.test.cjs
   - tests/extension/no-compatibility-facades.test.js
