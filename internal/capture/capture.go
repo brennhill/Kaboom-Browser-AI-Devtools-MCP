@@ -13,7 +13,6 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/wsconn"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/debuglog"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/recording"
@@ -83,13 +82,10 @@ type Capture struct {
 	extension *ExtensionRuntime // Connection, pilot, tracking, CSP, and test boundaries. Independently synchronized.
 
 	// ============================================
-	// Debug Logging (Own Lock)
+	// Diagnostic Logging (Own Lock)
 	// ============================================
 
-	debug debuglog.Logger // Polling activity + HTTP debug circular buffers. Has own sync.Mutex — independent of Capture.mu.
-
-	// Redaction engine for scrubbing sensitive values from extension debug logs.
-	logRedactor *redaction.RedactionEngine
+	diagnosticLogs *DiagnosticLogStore // Redacted polling + HTTP diagnostics. Independently synchronized.
 
 	// recording.Recording Management — delegates to recording.RecordingManager sub-struct (aliased from internal/recording).
 	recordingManager *recording.RecordingManager // recording.Recording lifecycle, playback, and log-diff. Has own sync.Mutex — independent of Capture.mu.
@@ -135,11 +131,9 @@ func NewCapture() *Capture {
 		wsConnections:    wsconn.NewTracker(),
 		extension:        newExtensionRuntime(),
 		perf:             newPerformanceStore(),
-		debug:            debuglog.NewLogger(),
+		diagnosticLogs:   newDiagnosticLogStore(logRedactor.Redact),
 		recordingManager: recording.NewRecordingManager(),
-
-		logRedactor: logRedactor,
-		lifecycle:   lifecycle.NewObserver(),
+		lifecycle:        lifecycle.NewObserver(),
 	}
 	c.queryDispatcher = queries.NewQueryDispatcher()
 	c.circuit = circuit.NewCircuitBreaker(c.lifecycle.Emit)

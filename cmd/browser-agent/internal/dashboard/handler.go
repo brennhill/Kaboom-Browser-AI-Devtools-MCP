@@ -108,7 +108,7 @@ func Status(options StatusOptions) http.HandlerFunc {
 			buffers["action_entries"] = snap.ActionCount
 			buffers["action_capacity"] = capture.MaxEnhancedActions
 
-			resp["recent_commands"] = buildRecentCommands(options.Capture.GetHTTPDebugLog())
+			resp["recent_commands"] = buildRecentCommands(options.Capture.DiagnosticLogs().HTTPEntries())
 		} else {
 			resp["extension_connected"] = false
 			resp["pilot_enabled"] = false

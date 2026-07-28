@@ -20,7 +20,7 @@ func TestLogHTTPDebugEntry_RedactsSensitiveFields(t *testing.T) {
 		ghPAT  = "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef123456"
 	)
 
-	c.LogHTTPDebugEntry(types.HTTPDebugEntry{
+	c.DiagnosticLogs().AddHTTP(types.HTTPDebugEntry{
 		Timestamp: time.Now(),
 		Endpoint:  "/mcp",
 		Method:    "POST",
@@ -34,7 +34,7 @@ func TestLogHTTPDebugEntry_RedactsSensitiveFields(t *testing.T) {
 		DurationMs:   10,
 	})
 
-	entries := c.GetHTTPDebugLog()
+	entries := c.DiagnosticLogs().HTTPEntries()
 	var found *types.HTTPDebugEntry
 	for i := range entries {
 		if entries[i].Method == "POST" && entries[i].Endpoint == "/mcp" {

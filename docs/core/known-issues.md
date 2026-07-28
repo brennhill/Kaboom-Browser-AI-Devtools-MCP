@@ -128,7 +128,7 @@ the folder-gate numbers as evidence that it did.
 
 | | Current |
 | --- | --- |
-| `Capture` methods (composition and telemetry-buffer operations) | 67 |
+| `Capture` methods (composition and telemetry-buffer operations) | 64 |
 | `cmd/browser-agent` production source files (package `main`) | 10 |
 | `*ToolHandler` methods in those files | 87 |
 

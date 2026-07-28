@@ -61,7 +61,7 @@ func (handler *Handler) log(ctx requestContext, requestBody string, status int, 
 	if store == nil {
 		return
 	}
-	store.LogHTTPDebugEntry(types.HTTPDebugEntry{
+	store.DiagnosticLogs().AddHTTP(types.HTTPDebugEntry{
 		Timestamp: ctx.startTime, Endpoint: "/mcp", Method: http.MethodPost,
 		ExtSessionID: ctx.extSessionID, ClientID: ctx.clientID, Headers: ctx.headers,
 		RequestBody: requestBody, ResponseStatus: status, ResponseBody: responseBody,

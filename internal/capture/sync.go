@@ -437,7 +437,7 @@ func (c *Capture) processSyncCommandResults(results []SyncCommandResult, clientI
 }
 
 func (c *Capture) updateSyncLogs(req SyncRequest, now time.Time, pilotEnabled bool, queryCount int) {
-	c.logPollingActivity(types.PollingLogEntry{
+	c.DiagnosticLogs().AddPolling(types.PollingLogEntry{
 		Timestamp:    now,
 		Endpoint:     "sync",
 		Method:       "POST",

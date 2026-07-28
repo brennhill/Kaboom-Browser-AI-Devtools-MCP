@@ -221,7 +221,7 @@ func (h *Handler) ServeDiagnostics(w http.ResponseWriter, r *http.Request) {
 	resp["last_events"] = lastEvents
 
 	if h.options.Capture != nil {
-		httpDebugLog := h.options.Capture.GetHTTPDebugLog()
+		httpDebugLog := h.options.Capture.DiagnosticLogs().HTTPEntries()
 		resp["http_debug_log"] = map[string]any{
 			"count":   len(httpDebugLog),
 			"entries": httpDebugLog,

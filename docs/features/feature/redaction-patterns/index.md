@@ -6,12 +6,14 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-28
 code_paths:
+  - internal/capture/extension_logs.go
   - internal/redaction/redaction.go
   - internal/redaction/redaction_engine.go
   - internal/redaction/redaction_types.go
   - internal/security/scan/credentials.go
   - internal/security/scan/credentials_patterns.go
 test_paths:
+  - internal/capture/http_debug_redaction_test.go
   - internal/redaction/no_facade_test.go
   - internal/redaction/redaction_test.go
   - internal/security/scan/unit_test.go

@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/debuglog"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -138,37 +139,55 @@ func (s *ExtensionLogStore) appendLocked(log types.ExtensionLog) {
 	s.logs = kept
 }
 
-func (c *Capture) logPollingActivity(entry types.PollingLogEntry) {
-	c.debug.LogPollingActivity(entry)
+// DiagnosticLogStore owns bounded daemon diagnostics and redaction.
+type DiagnosticLogStore struct {
+	logger   debuglog.Logger
+	redactFn func(string) string
 }
 
-func (c *Capture) LogHTTPDebugEntry(entry types.HTTPDebugEntry) {
-	c.debug.LogHTTPDebugEntry(c.redactHTTPDebugEntry(entry))
+func newDiagnosticLogStore(redactFn func(string) string) *DiagnosticLogStore {
+	return &DiagnosticLogStore{
+		logger:   debuglog.NewLogger(),
+		redactFn: redactFn,
+	}
 }
 
-func (c *Capture) GetHTTPDebugLog() []types.HTTPDebugEntry {
-	return c.debug.GetHTTPDebugLog()
+// DiagnosticLogs returns the canonical redacted diagnostic-log owner.
+func (c *Capture) DiagnosticLogs() *DiagnosticLogStore {
+	return c.diagnosticLogs
 }
 
-func (c *Capture) redactHTTPDebugEntry(entry types.HTTPDebugEntry) types.HTTPDebugEntry {
-	if c.logRedactor == nil {
+func (s *DiagnosticLogStore) AddPolling(entry types.PollingLogEntry) {
+	s.logger.LogPollingActivity(entry)
+}
+
+func (s *DiagnosticLogStore) AddHTTP(entry types.HTTPDebugEntry) {
+	s.logger.LogHTTPDebugEntry(s.redactHTTP(entry))
+}
+
+func (s *DiagnosticLogStore) HTTPEntries() []types.HTTPDebugEntry {
+	return s.logger.GetHTTPDebugLog()
+}
+
+func (s *DiagnosticLogStore) redactHTTP(entry types.HTTPDebugEntry) types.HTTPDebugEntry {
+	if s.redactFn == nil {
 		return entry
 	}
 	if len(entry.Headers) > 0 {
 		redactedHeaders := make(map[string]string, len(entry.Headers))
 		for key, value := range entry.Headers {
-			redactedHeaders[key] = c.logRedactor.Redact(value)
+			redactedHeaders[key] = s.redactFn(value)
 		}
 		entry.Headers = redactedHeaders
 	}
 	if entry.RequestBody != "" {
-		entry.RequestBody = c.logRedactor.Redact(entry.RequestBody)
+		entry.RequestBody = s.redactFn(entry.RequestBody)
 	}
 	if entry.ResponseBody != "" {
-		entry.ResponseBody = c.logRedactor.Redact(entry.ResponseBody)
+		entry.ResponseBody = s.redactFn(entry.ResponseBody)
 	}
 	if entry.Error != "" {
-		entry.Error = c.logRedactor.Redact(entry.Error)
+		entry.Error = s.redactFn(entry.Error)
 	}
 	return entry
 }

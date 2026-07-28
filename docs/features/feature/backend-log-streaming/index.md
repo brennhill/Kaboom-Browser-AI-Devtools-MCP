@@ -115,6 +115,10 @@ Extension runtime logs now live in an independently synchronized
 retention, snapshots, and clearing. Production and test callers use
 `Capture.ExtensionLogs()` directly; the former capture-level add/get facade and
 raw buffer type have been deleted.
+Daemon polling and HTTP diagnostics likewise use the canonical
+`DiagnosticLogStore` returned by `Capture.DiagnosticLogs()`. It owns HTTP-field
+redaction and the bounded debug logger; the four Capture-level forwarding and
+redaction methods are deleted.
 Browser resource timings likewise live in an independently synchronized
 `NetworkWaterfallStore`, which owns page/timestamp tagging, capacity eviction,
 snapshots, and clearing. All ingestion and analysis callers use

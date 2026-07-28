@@ -99,7 +99,7 @@ func TestSetupHTTPRoutesBasicEndpoints(t *testing.T) {
 	}
 
 	const rawSecret = "Bearer tokenValue1234567890abcdef"
-	cap.LogHTTPDebugEntry(types.HTTPDebugEntry{
+	cap.DiagnosticLogs().AddHTTP(types.HTTPDebugEntry{
 		Timestamp:    time.Now(),
 		Endpoint:     "/mcp",
 		Method:       http.MethodPost,
