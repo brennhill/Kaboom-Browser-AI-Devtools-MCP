@@ -6,7 +6,7 @@
  * Docs: docs/features/feature/observe/index.md
  */
 export { MEMORY_SOFT_LIMIT, MEMORY_HARD_LIMIT, MEMORY_CHECK_INTERVAL_MS, MEMORY_AVG_LOG_ENTRY_SIZE, MEMORY_AVG_WS_EVENT_SIZE, MEMORY_AVG_NETWORK_BODY_SIZE, MEMORY_AVG_ACTION_SIZE } from './background/caches/cache-limits.js';
-export { RATE_LIMIT_CONFIG } from './background/sync/communication.js';
+export { RATE_LIMIT_CONFIG } from './background/sync/batchers.js';
 export { EXTENSION_SESSION_ID, getServerUrl, isDebugMode, getConnectionStatus, getCurrentLogLevel, isScreenshotOnError, getExtensionLogQueue } from './background/state.js';
 export { DebugCategory } from './background/index.js';
 export { debugLog, getDebugLog, clearDebugLog, exportDebugLog } from './background/index.js';
@@ -22,6 +22,9 @@ export { getProcessingQueriesState, cleanupStaleProcessingQueries } from './back
 export { measureContextSize, checkContextAnnotations, getContextWarning, resetContextWarning } from './background/caches/snapshots.js';
 export { setSourceMapEnabled, isSourceMapEnabled, clearSourceMapCache } from './background/caches/cache-limits.js';
 export { SOURCE_MAP_CACHE_SIZE, setSourceMapCacheEntry, getSourceMapCacheEntry, getSourceMapCacheSize } from './background/caches/cache-limits.js';
-export { createCircuitBreaker, createBatcherWithCircuitBreaker, createLogBatcher, sendLogsToServer, sendEnhancedActionsToServer, checkServerHealth, updateBadge, formatLogEntry, shouldCaptureLog } from './background/sync/communication.js';
+export { createCircuitBreaker } from './background/sync/circuit-breaker.js';
+export { createBatcherWithCircuitBreaker, createLogBatcher } from './background/sync/batchers.js';
+export { sendLogsToServer, sendEnhancedActionsToServer, checkServerHealth, updateBadge } from './background/sync/server.js';
+export { formatLogEntry, shouldCaptureLog } from './background/sync/log-processing.js';
 export { saveStateSnapshot, loadStateSnapshot, listStateSnapshots, deleteStateSnapshot } from './background/message-handlers.js';
 //# sourceMappingURL=background.d.ts.map

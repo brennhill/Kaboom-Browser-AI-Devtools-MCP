@@ -26,10 +26,15 @@ const mockSendNetworkBodiesToServer = mock.fn(() => Promise.resolve())
 const mockSendPerformanceSnapshotsToServer = mock.fn(() => Promise.resolve())
 const mockCheckContextAnnotations = mock.fn()
 
-mock.module('../../extension/background/sync/communication.js', {
+mock.module('../../extension/background/sync/batchers.js', {
+  namedExports: {
+    createBatcherWithCircuitBreaker: mockCreateBatcherWithCircuitBreaker
+  }
+})
+
+mock.module('../../extension/background/sync/server.js', {
   namedExports: {
     updateBadge: mockUpdateBadge,
-    createBatcherWithCircuitBreaker: mockCreateBatcherWithCircuitBreaker,
     sendLogsToServer: mockSendLogsToServer,
     sendWSEventsToServer: mockSendWSEventsToServer,
     sendEnhancedActionsToServer: mockSendEnhancedActionsToServer,

@@ -38,21 +38,42 @@ mock.module('../../extension/background/debug.js', {
   }
 })
 
-mock.module('../../extension/background/sync/communication.js', {
+mock.module('../../extension/background/sync/server.js', {
   namedExports: {
     updateBadge: mock.fn(),
-    createCircuitBreaker: mock.fn(() => ({ call: mock.fn(async (fn) => fn()) })),
-    RATE_LIMIT_CONFIG: { screenshotPerMinute: 60 },
-    shouldCaptureLog: mock.fn(() => true),
-    formatLogEntry: mock.fn((entry) => entry),
-    captureScreenshot: mock.fn(async () => null),
+    getRequestHeaders: mock.fn(() => ({})),
     checkServerHealth: mock.fn(async () => ({ ok: true })),
-    createBatcherWithCircuitBreaker: mock.fn(() => ({ push: mock.fn(), flush: mock.fn() })),
     sendLogsToServer: mock.fn(async () => ({ ok: true })),
     sendWSEventsToServer: mock.fn(async () => ({ ok: true })),
     sendEnhancedActionsToServer: mock.fn(async () => ({ ok: true })),
     sendNetworkBodiesToServer: mock.fn(async () => ({ ok: true })),
     sendPerformanceSnapshotsToServer: mock.fn(async () => ({ ok: true }))
+  }
+})
+
+mock.module('../../extension/background/sync/circuit-breaker.js', {
+  namedExports: {
+    createCircuitBreaker: mock.fn(() => ({ call: mock.fn(async (fn) => fn()) }))
+  }
+})
+
+mock.module('../../extension/background/sync/batchers.js', {
+  namedExports: {
+    RATE_LIMIT_CONFIG: { screenshotPerMinute: 60 },
+    createBatcherWithCircuitBreaker: mock.fn(() => ({ push: mock.fn(), flush: mock.fn() }))
+  }
+})
+
+mock.module('../../extension/background/sync/log-processing.js', {
+  namedExports: {
+    shouldCaptureLog: mock.fn(() => true),
+    formatLogEntry: mock.fn((entry) => entry)
+  }
+})
+
+mock.module('../../extension/background/sync/screenshot.js', {
+  namedExports: {
+    captureScreenshot: mock.fn(async () => null)
   }
 })
 

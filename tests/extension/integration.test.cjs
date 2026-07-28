@@ -148,7 +148,11 @@ describe('Module Import Chain', () => {
 
     // Should import from modular subcomponents
     const expectedImports = [
-      './sync/communication',
+      './sync/circuit-breaker',
+      './sync/batchers',
+      './sync/log-processing',
+      './sync/screenshot',
+      './sync/server',
       './caches/debug-log',
       './caches/cache-limits',
       './caches/error-groups',

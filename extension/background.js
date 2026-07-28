@@ -15,7 +15,7 @@
  * Main modules:
  * - background/index.ts: Core state and batchers
  * - background/init.ts: Extension startup
- * - background/communication.ts: Server communication (internal)
+ * - background/sync/: Circuit breaking, batching, transport, log processing, and screenshots
  * - background/caches/: Error groups, limits, snapshots, and debug-log ownership
  * - background/polling.ts: Polling loops (internal)
  */
@@ -27,7 +27,7 @@ import { EXTENSION_SESSION_ID } from './background/state.js';
 // Memory enforcement constants
 export { MEMORY_SOFT_LIMIT, MEMORY_HARD_LIMIT, MEMORY_CHECK_INTERVAL_MS, MEMORY_AVG_LOG_ENTRY_SIZE, MEMORY_AVG_WS_EVENT_SIZE, MEMORY_AVG_NETWORK_BODY_SIZE, MEMORY_AVG_ACTION_SIZE } from './background/caches/cache-limits.js';
 // Rate limiting constants
-export { RATE_LIMIT_CONFIG } from './background/sync/communication.js';
+export { RATE_LIMIT_CONFIG } from './background/sync/batchers.js';
 // =============================================================================
 // === PUBLIC API: CORE STATE
 // =============================================================================
@@ -71,7 +71,10 @@ export { SOURCE_MAP_CACHE_SIZE, setSourceMapCacheEntry, getSourceMapCacheEntry, 
 // =============================================================================
 // === PUBLIC API: COMMUNICATION (Tests)
 // =============================================================================
-export { createCircuitBreaker, createBatcherWithCircuitBreaker, createLogBatcher, sendLogsToServer, sendEnhancedActionsToServer, checkServerHealth, updateBadge, formatLogEntry, shouldCaptureLog } from './background/sync/communication.js';
+export { createCircuitBreaker } from './background/sync/circuit-breaker.js';
+export { createBatcherWithCircuitBreaker, createLogBatcher } from './background/sync/batchers.js';
+export { sendLogsToServer, sendEnhancedActionsToServer, checkServerHealth, updateBadge } from './background/sync/server.js';
+export { formatLogEntry, shouldCaptureLog } from './background/sync/log-processing.js';
 // =============================================================================
 // === PUBLIC API: STATE SNAPSHOTS (Initialization)
 // =============================================================================

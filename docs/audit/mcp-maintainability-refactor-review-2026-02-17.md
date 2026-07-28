@@ -88,7 +88,7 @@ Impact:
 Evidence:
 
 - Canonical path is `/sync`: `internal/capture/sync.go`, `src/background/sync/sync-client.ts`
-- Legacy functions still exported and visible: `src/background/sync/server.ts`, `src/background/sync/communication.ts`, `src/background.ts`
+- Legacy functions were still exported and visible through `src/background.ts`; sync ownership now lives in focused modules under `src/background/sync/`.
 
 Impact:
 
@@ -264,4 +264,3 @@ Start with Phase 0 + Phase 1 in a small PR:
 2. Generated registry and schema for `interact`.
 3. Command matrix tests for `interact` actions.
 4. No behavioral changes.
-

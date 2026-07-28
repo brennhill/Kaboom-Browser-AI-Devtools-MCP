@@ -4,7 +4,8 @@
  * Docs: docs/features/feature/backend-log-streaming/index.md
  */
 import type { LogEntry, WebSocketEvent, NetworkBodyPayload, EnhancedAction, PerformanceSnapshot } from '../../types/index.js';
-import { type CircuitBreaker, type BatcherWithCircuitBreaker, type Batcher } from './communication.js';
+import { type BatcherWithCircuitBreaker, type Batcher } from './batchers.js';
+import type { CircuitBreaker } from './circuit-breaker.js';
 /** Mutable connection status passed in from the state owner */
 export interface ConnectionStatusRef {
     connected: boolean;

@@ -24,6 +24,10 @@ code_paths:
   - internal/capture/wsconn/status.go
   - internal/capture/wsconn/tracker.go
   - src/background/sync/server.ts
+  - src/background/sync/circuit-breaker.ts
+  - src/background/sync/batchers.ts
+  - src/background/sync/log-processing.ts
+  - src/background/sync/screenshot.ts
   - src/background/index.ts
   - src/background/init.ts
   - src/background/caches/cache-limits.ts

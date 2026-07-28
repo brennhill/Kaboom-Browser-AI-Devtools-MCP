@@ -17,17 +17,19 @@ import type {
 } from '../../types/index.js'
 
 import {
-  updateBadge,
   createBatcherWithCircuitBreaker,
+  type BatcherWithCircuitBreaker,
+  type Batcher
+} from './batchers.js'
+import type { CircuitBreaker } from './circuit-breaker.js'
+import {
+  updateBadge,
   sendLogsToServer,
   sendWSEventsToServer,
   sendEnhancedActionsToServer,
   sendNetworkBodiesToServer,
-  sendPerformanceSnapshotsToServer,
-  type CircuitBreaker,
-  type BatcherWithCircuitBreaker,
-  type Batcher
-} from './communication.js'
+  sendPerformanceSnapshotsToServer
+} from './server.js'
 import { checkContextAnnotations } from '../caches/snapshots.js'
 
 // =============================================================================

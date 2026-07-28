@@ -66,7 +66,7 @@ Screenshot archival and queryable design system compliance tool that allows LLMs
   - Single `POST /screenshots` with all viewports + shared metadata
   - Metadata validation (5KB cap, field name sanitization)
 - [ ] Integration with pending queries
-  - Follow existing `communication.js` patterns
+  - Follow existing focused `sync/server.js` and `sync/batchers.js` patterns
   - Handle disk warnings in responses
 
 ### Testing (Week 3)
@@ -137,7 +137,7 @@ Screenshot archival and queryable design system compliance tool that allows LLMs
 - **cmd/browser-agent/main.go** — HTTP routes, screenshot handler
 - **cmd/browser-agent/types.go** — Screenshot types, constants
 - **cmd/browser-agent/queries.go** — Query handlers
-- **extension/background/sync/communication.js** — Parallel capture, batch upload
+- **extension/background/sync/server.js** and **batchers.js** — Parallel capture transport and batch upload
 - **.claude/refs/architecture.md** — Document SQLite layer, concurrency model
 
 ---

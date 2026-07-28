@@ -392,35 +392,35 @@ describe('recordScreenshot', () => {
   })
 })
 
-// NOTE: captureScreenshot is not exported from background.js (it's internal to communication.js)
+// NOTE: captureScreenshot is not exported from background.js; screenshot.ts owns it.
 // These tests are skipped until captureScreenshot is exposed via the public API
 describe('captureScreenshot', () => {
   test('should capture screenshot and save via server', async (t) => {
-    t.skip('captureScreenshot not exported - internal to communication.js')
+    t.skip('captureScreenshot not exported - owned by screenshot.js')
   })
 
   test('should POST screenshot data to server', async (t) => {
-    t.skip('captureScreenshot not exported - internal to communication.js')
+    t.skip('captureScreenshot not exported - owned by screenshot.js')
   })
 
   test('should link screenshot to error when relatedErrorId provided', async (t) => {
-    t.skip('captureScreenshot not exported - internal to communication.js')
+    t.skip('captureScreenshot not exported - owned by screenshot.js')
   })
 
   test('should set trigger to manual when no relatedErrorId', async (t) => {
-    t.skip('captureScreenshot not exported - internal to communication.js')
+    t.skip('captureScreenshot not exported - owned by screenshot.js')
   })
 
   test('should respect rate limiting', async (t) => {
-    t.skip('captureScreenshot not exported - internal to communication.js')
+    t.skip('captureScreenshot not exported - owned by screenshot.js')
   })
 
   test('should handle capture errors gracefully', async (t) => {
-    t.skip('captureScreenshot not exported - internal to communication.js')
+    t.skip('captureScreenshot not exported - owned by screenshot.js')
   })
 
   test('should handle server error gracefully', async (t) => {
-    t.skip('captureScreenshot not exported - internal to communication.js')
+    t.skip('captureScreenshot not exported - owned by screenshot.js')
   })
 })
 
@@ -707,12 +707,11 @@ describe('Performance Snapshot Batching (W6)', () => {
   })
 
   test('sendPerformanceSnapshotsToServer exists as the batch sender', async () => {
-    // Import from communication module directly (not re-exported from main barrel)
-    const commModule = await import('../../extension/background/sync/communication.js')
+    const serverModule = await import('../../extension/background/sync/server.js')
     assert.strictEqual(
-      typeof commModule.sendPerformanceSnapshotsToServer,
+      typeof serverModule.sendPerformanceSnapshotsToServer,
       'function',
-      'sendPerformanceSnapshotsToServer (plural, batch) should be exported from communication.js'
+      'sendPerformanceSnapshotsToServer (plural, batch) should be owned by server.js'
     )
   })
 })

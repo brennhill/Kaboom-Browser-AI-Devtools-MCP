@@ -46,14 +46,15 @@ import {
 import { processErrorGroup } from './caches/error-groups.js'
 import { resolveStackTrace } from './caches/snapshots.js'
 import {
-  createCircuitBreaker,
-  RATE_LIMIT_CONFIG,
-  shouldCaptureLog,
-  formatLogEntry,
-  captureScreenshot,
+  createCircuitBreaker
+} from './sync/circuit-breaker.js'
+import { RATE_LIMIT_CONFIG } from './sync/batchers.js'
+import { shouldCaptureLog, formatLogEntry } from './sync/log-processing.js'
+import { captureScreenshot } from './sync/screenshot.js'
+import {
   updateBadge,
   checkServerHealth
-} from './sync/communication.js'
+} from './sync/server.js'
 import { getTrackedTabInfo } from './event-listeners.js'
 import { DebugCategory } from './debug.js'
 import { getRequestHeaders } from './sync/server.js'
@@ -293,7 +294,6 @@ async function maybeAutoScreenshot(errorEntry: LogEntry, sender: ChromeMessageSe
     sender.tab.id,
     getServerUrl(),
     errorId,
-    entryType || null,
     canTakeScreenshot,
     recordScreenshot,
     debugLog

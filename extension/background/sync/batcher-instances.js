@@ -3,7 +3,8 @@
  * Why: Isolates batcher wiring from business logic in index.ts to keep module initialization explicit.
  * Docs: docs/features/feature/backend-log-streaming/index.md
  */
-import { updateBadge, createBatcherWithCircuitBreaker, sendLogsToServer, sendWSEventsToServer, sendEnhancedActionsToServer, sendNetworkBodiesToServer, sendPerformanceSnapshotsToServer } from './communication.js';
+import { createBatcherWithCircuitBreaker } from './batchers.js';
+import { updateBadge, sendLogsToServer, sendWSEventsToServer, sendEnhancedActionsToServer, sendNetworkBodiesToServer, sendPerformanceSnapshotsToServer } from './server.js';
 import { checkContextAnnotations } from '../caches/snapshots.js';
 // =============================================================================
 // CONNECTION STATUS WRAPPER

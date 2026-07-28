@@ -596,7 +596,8 @@ If extension posts too many errors:
 **Extension Send/Receive:**
 - `src/background/sync/sync-client.ts` - Polling loop
 - `src/background/pending-queries.ts` - Query execution
-- `src/background/sync/communication.ts` - HTTP layer
+- `src/background/sync/server.ts` - Daemon HTTP transport
+- `src/background/sync/batchers.ts` - Buffered delivery
 
 **Types:**
 - `internal/types/protocol.go` - Message types

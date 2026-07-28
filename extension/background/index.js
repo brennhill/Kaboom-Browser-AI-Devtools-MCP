@@ -8,7 +8,11 @@ import { addDebugLogEntry, getDebugLog as getDebugLogEntries, clearDebugLog as c
 import { isSourceMapEnabled, canTakeScreenshot, recordScreenshot } from './caches/cache-limits.js';
 import { processErrorGroup } from './caches/error-groups.js';
 import { resolveStackTrace } from './caches/snapshots.js';
-import { createCircuitBreaker, RATE_LIMIT_CONFIG, shouldCaptureLog, formatLogEntry, captureScreenshot, updateBadge, checkServerHealth } from './sync/communication.js';
+import { createCircuitBreaker } from './sync/circuit-breaker.js';
+import { RATE_LIMIT_CONFIG } from './sync/batchers.js';
+import { shouldCaptureLog, formatLogEntry } from './sync/log-processing.js';
+import { captureScreenshot } from './sync/screenshot.js';
+import { updateBadge, checkServerHealth } from './sync/server.js';
 import { DebugCategory } from './debug.js';
 import { getRequestHeaders } from './sync/server.js';
 import { handlePendingQuery as handlePendingQueryImpl } from './pending-queries.js';
@@ -206,7 +210,7 @@ async function maybeAutoScreenshot(errorEntry, sender) {
         return;
     const errorId = `err_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     errorEntry._errorId = errorId;
-    const result = await captureScreenshot(sender.tab.id, getServerUrl(), errorId, entryType || null, canTakeScreenshot, recordScreenshot, debugLog);
+    const result = await captureScreenshot(sender.tab.id, getServerUrl(), errorId, canTakeScreenshot, recordScreenshot, debugLog);
     if (result.success && result.entry) {
         logBatcher.add(result.entry);
     }

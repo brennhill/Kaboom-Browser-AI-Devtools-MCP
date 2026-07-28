@@ -50,7 +50,11 @@ src/
     sync-client.ts         Unified /sync endpoint client (replaces individual polling)
     sync-manager.ts        Sync client lifecycle (start/stop/reset)
     batcher-instances.ts   Factory for debounced batchers (logs, ws, actions, network, perf)
-    communication.ts       HTTP helpers, badge updates, circuit breaker primitives
+    server.ts              Daemon HTTP transport and badge updates
+    batchers.ts            Buffered delivery and retry policy
+    circuit-breaker.ts     Failure isolation
+    log-processing.ts      Log normalization and filtering
+    screenshot.ts          Screenshot capture and upload
     dom-primitives.ts      Self-contained DOM functions for chrome.scripting.executeScript
     dom-dispatch.ts        Dispatches dom-primitives to target tabs
     pending-queries.ts     Legacy command dispatch (being replaced by commands/)

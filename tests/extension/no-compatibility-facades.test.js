@@ -20,6 +20,14 @@ test('background cache modules have no state-manager facade', () => {
   )
 })
 
+test('background sync modules have no communication facade', () => {
+  assert.equal(
+    existsSync('src/background/sync/communication.ts'),
+    false,
+    'sync consumers must import circuit-breaker, batchers, server, log-processing, or screenshot directly'
+  )
+})
+
 test('pending query dispatcher does not re-export APIs owned by command modules', () => {
   const source = readFileSync('src/background/pending-queries.ts', 'utf8')
   assert.doesNotMatch(source, /export\s+(?:type\s+)?\{/, 'dispatcher must not re-export command helper APIs')

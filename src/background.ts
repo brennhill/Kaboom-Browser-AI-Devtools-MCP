@@ -16,7 +16,7 @@
  * Main modules:
  * - background/index.ts: Core state and batchers
  * - background/init.ts: Extension startup
- * - background/communication.ts: Server communication (internal)
+ * - background/sync/: Circuit breaking, batching, transport, log processing, and screenshots
  * - background/caches/: Error groups, limits, snapshots, and debug-log ownership
  * - background/polling.ts: Polling loops (internal)
  */
@@ -40,7 +40,7 @@ export {
 } from './background/caches/cache-limits.js'
 
 // Rate limiting constants
-export { RATE_LIMIT_CONFIG } from './background/sync/communication.js'
+export { RATE_LIMIT_CONFIG } from './background/sync/batchers.js'
 
 // =============================================================================
 // === PUBLIC API: CORE STATE
@@ -161,16 +161,25 @@ export {
 // =============================================================================
 
 export {
-  createCircuitBreaker,
+  createCircuitBreaker
+} from './background/sync/circuit-breaker.js'
+
+export {
   createBatcherWithCircuitBreaker,
-  createLogBatcher,
+  createLogBatcher
+} from './background/sync/batchers.js'
+
+export {
   sendLogsToServer,
   sendEnhancedActionsToServer,
   checkServerHealth,
-  updateBadge,
+  updateBadge
+} from './background/sync/server.js'
+
+export {
   formatLogEntry,
   shouldCaptureLog
-} from './background/sync/communication.js'
+} from './background/sync/log-processing.js'
 
 // =============================================================================
 // === PUBLIC API: STATE SNAPSHOTS (Initialization)

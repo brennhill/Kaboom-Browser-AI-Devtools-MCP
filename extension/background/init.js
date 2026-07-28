@@ -20,7 +20,8 @@ import { loadDebugModeState, installStartupListener, loadAiWebPilotState, loadSa
 import { installPushCommandListener, installChatCommandListener } from './push-handler.js';
 import { isRecording, startRecording, stopRecording, initRecording } from './recording/index.js';
 import { installMessageListener, broadcastTrackingState } from './message-handlers.js';
-import { captureScreenshot, updateBadge } from './sync/communication.js';
+import { captureScreenshot } from './sync/screenshot.js';
+import { updateBadge } from './sync/server.js';
 import { wasServiceWorkerRestarted, markStateVersion, setSessionAccessLevel, setLocal, getLocal } from '../lib/storage-utils.js';
 import { loadServerInstallId } from './sync/sync-client.js';
 /**
@@ -192,7 +193,7 @@ async function initializeExtensionAsync() {
             addToPerfBatcher: (snapshot) => perfBatcher.add(snapshot),
             handleLogMessage,
             handleClearLogs,
-            captureScreenshot: (tabId, relatedErrorId) => captureScreenshot(tabId, getServerUrl(), relatedErrorId, null, canTakeScreenshot, recordScreenshot, debugLog),
+            captureScreenshot: (tabId, relatedErrorId) => captureScreenshot(tabId, getServerUrl(), relatedErrorId, canTakeScreenshot, recordScreenshot, debugLog),
             checkConnectionAndUpdate,
             clearSourceMapCache,
             debugLog,
