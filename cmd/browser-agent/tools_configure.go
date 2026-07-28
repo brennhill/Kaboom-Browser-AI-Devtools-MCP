@@ -118,9 +118,11 @@ var configureHandlers = map[string]toolrouting.Handler[*ToolHandler]{
 	"replay_sequence": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return h.sequences.Replay(req, args)
 	},
-	"security_mode":     cfgLocal(toolconfigure.HandleSecurityMode),
-	"network_recording": (*ToolHandler).toolConfigureNetworkRecording,
-	"action_jitter":     cfgLocal(toolconfigure.HandleActionJitter),
+	"security_mode": cfgLocal(toolconfigure.HandleSecurityMode),
+	"network_recording": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		return netrecord.HandleNetworkRecording(h.capture.Telemetry(), h.networkRecording, req, args)
+	},
+	"action_jitter": cfgLocal(toolconfigure.HandleActionJitter),
 	"report_issue": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return issuereport.Handle(h, req, args)
 	},
@@ -326,10 +328,6 @@ func (h *ToolHandler) SanitizeIssueReport(report issuereport.IssueReport) issuer
 
 func (h *ToolHandler) SubmitIssueReport(report issuereport.IssueReport) issuereport.SubmitResult {
 	return issuereport.SubmitViaGH(h.shutdownCtx, report, h.issueCommandRunner)
-}
-
-func (h *ToolHandler) toolConfigureNetworkRecording(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	return netrecord.HandleNetworkRecording(h.capture.Telemetry(), h.networkRecording, req, args)
 }
 
 func extractErrorMessage(response mcp.JSONRPCResponse) string {

@@ -139,6 +139,9 @@ use that owner directly; the former Capture buffer fields, WebSocket tracker,
 navigation callback, five test helpers, and sixteen production forwarding
 methods are deleted. `Capture.ClearAll` remains only because it genuinely
 coordinates telemetry, extension boundaries, performance, and extension logs.
+Configure network-recording dispatch calls `netrecord.HandleNetworkRecording`
+with the telemetry and recording-state owners directly; the root ToolHandler
+forwarding method is deleted.
 Performance snapshots and pre-action correlation snapshots now share an
 independently synchronized `PerformanceStore`. Callers use
 `Capture.Performance()` for add/list/URL lookup and consume-on-read correlation;
