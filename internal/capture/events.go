@@ -394,22 +394,16 @@ func (c *Capture) ClearActionBuffer() types.BufferClearCounts {
 
 // ClearAll resets all capture-owned in-memory telemetry state — INCLUDING
 // extension logs — and returns the number of extension-log entries cleared.
-//
-// Invariants:
-// - Runs under one c.mu critical section to avoid partially-cleared mixed state.
 func (c *Capture) ClearAll() int {
 	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	c.buffers.clearAllEventBuffers()
 	c.networkWaterfall.clear()
 	c.wsConnections.Clear()
 	c.extensionState.activeTestIDs = make(map[string]bool)
-
-	// Reset performance data
 	c.perf.clear()
+	c.mu.Unlock()
 
-	return c.extensionLogs.clear()
+	return c.extensionLogs.Clear()
 }
 
 func detectAndSetBinaryFormat(body *types.NetworkBody) {

@@ -66,10 +66,6 @@ type NetworkWaterfallBuffer struct {
 	capacity int
 }
 
-type ExtensionLogBuffer struct {
-	logs []types.ExtensionLog
-}
-
 type ClientRegistry interface {
 	Count() int
 	List() any

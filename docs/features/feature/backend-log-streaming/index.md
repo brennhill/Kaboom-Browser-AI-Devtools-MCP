@@ -110,6 +110,11 @@ Count, timestamp, and buffer-memory accessors used only by capture tests are
 gone as well. Behavioral tests now count canonical detached snapshots, while
 package-internal buffer tests inspect the owning `BufferStore` invariants
 directly.
+Extension runtime logs now live in an independently synchronized
+`ExtensionLogStore` that owns timestamp normalization, redaction, bounded
+retention, snapshots, and clearing. Production and test callers use
+`Capture.ExtensionLogs()` directly; the former capture-level add/get facade and
+raw buffer type have been deleted.
 Tracked-tab state is updated through the canonical `/sync` contract or
 `UpdateTrackedTab`; the pre-`/sync` `ExtensionStatus` envelope and
 `UpdateExtensionStatus` mutation API have been deleted.

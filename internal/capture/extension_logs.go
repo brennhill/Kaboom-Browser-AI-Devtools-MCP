@@ -8,8 +8,10 @@ package capture
 
 import (
 	"encoding/json"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+	"sync"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // ============================================
@@ -21,64 +23,86 @@ import (
 // This enables AI debugging of extension-internal behavior that isn't
 // visible through page-level console capture.
 
-// AddExtensionLogs ingests extension runtime logs into bounded in-memory buffer.
-//
-// Invariants:
-// - Logs are redacted before storage.
-// - Buffer compaction keeps the newest MaxExtensionLogs entries.
-//
-// Failure semantics:
-// - Missing timestamps are filled with server receive time.
-func (c *Capture) AddExtensionLogs(logs []types.ExtensionLog) {
-	now := time.Now()
+// ExtensionLogStore owns bounded extension logs, redaction, and synchronization.
+type ExtensionLogStore struct {
+	mu       sync.RWMutex
+	logs     []types.ExtensionLog
+	redactFn func(string) string
+}
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
+func newExtensionLogStore(redactFn func(string) string) *ExtensionLogStore {
+	return &ExtensionLogStore{
+		logs:     make([]types.ExtensionLog, 0, MaxExtensionLogs),
+		redactFn: redactFn,
+	}
+}
+
+// ExtensionLogs returns the independently synchronized extension-log owner.
+func (c *Capture) ExtensionLogs() *ExtensionLogStore {
+	return c.extensionLogs
+}
+
+// Add ingests extension runtime logs and fills missing timestamps at receive time.
+func (s *ExtensionLogStore) Add(logs []types.ExtensionLog) {
+	s.addAt(logs, time.Now())
+}
+
+func (s *ExtensionLogStore) addAt(logs []types.ExtensionLog, now time.Time) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	for _, log := range logs {
 		if log.Timestamp.IsZero() {
 			log.Timestamp = now
 		}
-		log = c.redactExtensionLog(log)
-		c.extensionLogs.append(log)
+		s.appendLocked(s.redactLog(log))
 	}
 }
 
-// GetExtensionLogs returns a detached copy of extension logs.
-//
-// Failure semantics:
-// - Returns empty slice when buffer is empty.
-func (c *Capture) GetExtensionLogs() []types.ExtensionLog {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.extensionLogs.snapshot()
+// Entries returns a detached copy of the buffered extension logs.
+func (s *ExtensionLogStore) Entries() []types.ExtensionLog {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	out := make([]types.ExtensionLog, len(s.logs))
+	copy(out, s.logs)
+	return out
 }
 
-// redactExtensionLog scrubs sensitive data from extension log fields before storage.
-func (c *Capture) redactExtensionLog(log types.ExtensionLog) types.ExtensionLog {
-	if c.logRedactor == nil {
+// Clear removes all buffered extension logs and returns the removed count.
+func (s *ExtensionLogStore) Clear() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	count := len(s.logs)
+	s.logs = make([]types.ExtensionLog, 0, MaxExtensionLogs)
+	return count
+}
+
+func (s *ExtensionLogStore) redactLog(log types.ExtensionLog) types.ExtensionLog {
+	if s.redactFn == nil {
 		return log
 	}
 
-	log.Message = c.logRedactor.Redact(log.Message)
-	log.Source = c.logRedactor.Redact(log.Source)
-	log.Category = c.logRedactor.Redact(log.Category)
+	log.Message = s.redactFn(log.Message)
+	log.Source = s.redactFn(log.Source)
+	log.Category = s.redactFn(log.Category)
 	if len(log.Data) > 0 {
-		log.Data = c.redactExtensionLogData(log.Data)
+		log.Data = s.redactData(log.Data)
 	}
 	return log
 }
 
-func (c *Capture) redactExtensionLogData(data json.RawMessage) json.RawMessage {
+func (s *ExtensionLogStore) redactData(data json.RawMessage) json.RawMessage {
 	var value any
 	if err := json.Unmarshal(data, &value); err != nil {
-		return json.RawMessage(c.logRedactor.Redact(string(data)))
+		return json.RawMessage(s.redactFn(string(data)))
 	}
 
-	redacted := redactJSONValue(value, c.logRedactor.Redact)
+	redacted := redactJSONValue(value, s.redactFn)
 	output, err := json.Marshal(redacted)
 	if err != nil {
-		return json.RawMessage(c.logRedactor.Redact(string(data)))
+		return json.RawMessage(s.redactFn(string(data)))
 	}
 	return output
 }
@@ -102,31 +126,16 @@ func redactJSONValue(value any, redactFn func(string) string) any {
 	}
 }
 
-// append adds one extension log entry and applies amortized eviction.
-func (b *ExtensionLogBuffer) append(log types.ExtensionLog) {
-	b.logs = append(b.logs, log)
+func (s *ExtensionLogStore) appendLocked(log types.ExtensionLog) {
+	s.logs = append(s.logs, log)
 	evictionThreshold := MaxExtensionLogs + MaxExtensionLogs/2
-	if len(b.logs) <= evictionThreshold {
+	if len(s.logs) <= evictionThreshold {
 		return
 	}
 
 	kept := make([]types.ExtensionLog, MaxExtensionLogs)
-	copy(kept, b.logs[len(b.logs)-MaxExtensionLogs:])
-	b.logs = kept
-}
-
-// snapshot returns a detached copy of the buffer contents.
-func (b *ExtensionLogBuffer) snapshot() []types.ExtensionLog {
-	out := make([]types.ExtensionLog, len(b.logs))
-	copy(out, b.logs)
-	return out
-}
-
-// clear removes all buffered logs and returns removed count.
-func (b *ExtensionLogBuffer) clear() int {
-	count := len(b.logs)
-	b.logs = make([]types.ExtensionLog, 0)
-	return count
+	copy(kept, s.logs[len(s.logs)-MaxExtensionLogs:])
+	s.logs = kept
 }
 
 func (c *Capture) logPollingActivity(entry types.PollingLogEntry) {

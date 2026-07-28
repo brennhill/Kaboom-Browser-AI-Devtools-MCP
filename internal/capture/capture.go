@@ -58,7 +58,7 @@ type Capture struct {
 	// ============================================
 
 	networkWaterfall NetworkWaterfallBuffer // Ring buffer of browser PerformanceResourceTiming data (configurable capacity, default 1000).
-	extensionLogs    ExtensionLogBuffer     // Ring buffer of extension internal logs (max 500). FIFO eviction. No TTL filtering.
+	extensionLogs    *ExtensionLogStore     // Bounded extension logs. Own lock, redaction, and retention.
 
 	// ============================================
 	// WebSocket Connection Tracking
@@ -129,15 +129,14 @@ type Capture struct {
 // - queryDispatcher/circuit/debug/recordingManager are non-nil in returned instance.
 // - extensionState.activeTestIDs and extensionState.missingInProgressByCorr start as initialized maps.
 func NewCapture() *Capture {
+	logRedactor := redaction.NewRedactionEngine("")
 	c := &Capture{
 		buffers: newBufferStore(),
 		networkWaterfall: NetworkWaterfallBuffer{
 			entries:  make([]types.NetworkWaterfallEntry, 0, DefaultNetworkWaterfallCapacity),
 			capacity: DefaultNetworkWaterfallCapacity,
 		},
-		extensionLogs: ExtensionLogBuffer{
-			logs: make([]types.ExtensionLog, 0, MaxExtensionLogs),
-		},
+		extensionLogs: newExtensionLogStore(logRedactor.Redact),
 		wsConnections: wsconn.NewTracker(),
 		extensionState: ExtensionState{
 			activeTestIDs:           make(map[string]bool),
@@ -155,7 +154,7 @@ func NewCapture() *Capture {
 		debug:            debuglog.NewLogger(),
 		recordingManager: NewRecordingManager(),
 
-		logRedactor: redaction.NewRedactionEngine(""),
+		logRedactor: logRedactor,
 		lifecycle:   lifecycle.NewObserver(),
 	}
 	c.queryDispatcher = queries.NewQueryDispatcher()

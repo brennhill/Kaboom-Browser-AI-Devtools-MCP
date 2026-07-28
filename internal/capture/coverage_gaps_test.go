@@ -280,7 +280,7 @@ func TestRedactExtensionLogData_InvalidJSON(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 	data := json.RawMessage(`not valid json at all`)
-	result := c.redactExtensionLogData(data)
+	result := c.ExtensionLogs().redactData(data)
 	if len(result) == 0 {
 		t.Error("expected non-empty result for invalid JSON fallback")
 	}
@@ -290,11 +290,9 @@ func TestRedactExtensionLog_NilRedactor(t *testing.T) {
 	t.Parallel()
 	c := NewCapture()
 	defer c.Close()
-	c.mu.Lock()
-	c.logRedactor = nil
-	c.mu.Unlock()
+	store := newExtensionLogStore(nil)
 	log := types.ExtensionLog{Message: "test message", Source: "background", Category: "debug"}
-	result := c.redactExtensionLog(log)
+	result := store.redactLog(log)
 	if result.Message != "test message" {
 		t.Errorf("Message = %q, want unchanged when redactor is nil", result.Message)
 	}
@@ -305,7 +303,7 @@ func TestRedactExtensionLog_WithRedactor(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 	log := types.ExtensionLog{Message: "some data", Source: "content-script", Category: "warn", Data: json.RawMessage(`{"key":"secret"}`)}
-	result := c.redactExtensionLog(log)
+	result := c.ExtensionLogs().redactLog(log)
 	if result.Message != "some data" {
 		t.Errorf("Message = %q, want some data (default engine has no patterns)", result.Message)
 	}

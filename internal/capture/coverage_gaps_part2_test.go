@@ -31,9 +31,9 @@ func TestAddExtensionLogs_ZeroTimestamp(t *testing.T) {
 	logs := []types.ExtensionLog{
 		{Message: "test1", Source: "background", Category: "debug"},
 	}
-	c.AddExtensionLogs(logs)
+	c.ExtensionLogs().Add(logs)
 
-	result := c.GetExtensionLogs()
+	result := c.ExtensionLogs().Entries()
 	if len(result) != 1 {
 		t.Fatalf("len = %d, want 1", len(result))
 	}
@@ -66,9 +66,9 @@ func TestAddExtensionLogs_Eviction(t *testing.T) {
 			Timestamp: time.Now(),
 		}
 	}
-	c.AddExtensionLogs(batch)
+	c.ExtensionLogs().Add(batch)
 
-	result := c.GetExtensionLogs()
+	result := c.ExtensionLogs().Entries()
 	if len(result) > evictionThreshold {
 		t.Errorf("len = %d, should be at most evictionThreshold=%d", len(result), evictionThreshold)
 	}
@@ -345,7 +345,7 @@ func TestGetExtensionLogs_EmptyReturnsEmptySlice(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 
-	result := c.GetExtensionLogs()
+	result := c.ExtensionLogs().Entries()
 	if result == nil {
 		t.Fatal("expected non-nil empty slice, got nil")
 	}

@@ -347,7 +347,7 @@ func TestObserveExtensionLogs_EndToEnd(t *testing.T) {
 	handler := NewToolHandler(server, cap)
 
 	// Add extension logs directly
-	cap.AddExtensionLogs([]types.ExtensionLog{sampleExtensionLog})
+	cap.ExtensionLogs().Add([]types.ExtensionLog{sampleExtensionLog})
 
 	// Call observe extension_logs
 	th := handler.toolHandler.(*ToolHandler)

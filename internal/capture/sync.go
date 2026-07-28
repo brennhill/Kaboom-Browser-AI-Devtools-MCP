@@ -437,9 +437,6 @@ func (c *Capture) processSyncCommandResults(results []SyncCommandResult, clientI
 }
 
 func (c *Capture) updateSyncLogs(req SyncRequest, now time.Time, pilotEnabled bool, queryCount int) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	c.logPollingActivity(types.PollingLogEntry{
 		Timestamp:    now,
 		Endpoint:     "sync",
@@ -448,15 +445,11 @@ func (c *Capture) updateSyncLogs(req SyncRequest, now time.Time, pilotEnabled bo
 		PilotEnabled: &pilotEnabled,
 		QueryCount:   queryCount,
 	})
-	for _, log := range req.ExtensionLogs {
-		if log.Timestamp.IsZero() {
-			log.Timestamp = now
-		}
-		log = c.redactExtensionLog(log)
-		c.extensionLogs.append(log)
-	}
+	c.extensionLogs.addAt(req.ExtensionLogs, now)
 	if req.ExtensionVersion != "" {
+		c.mu.Lock()
 		c.extensionState.extensionVersion = req.ExtensionVersion
+		c.mu.Unlock()
 	}
 }
 

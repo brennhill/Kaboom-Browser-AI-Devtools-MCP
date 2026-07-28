@@ -132,7 +132,7 @@ func TestHandlePRSummary(t *testing.T) {
 			{URL: "https://example.com/ok", Method: "GET", Status: 200},
 			{URL: "https://example.com/bad", Method: "GET", Status: 500},
 		})
-		d.cap.AddExtensionLogs([]types.ExtensionLog{
+		d.cap.ExtensionLogs().Add([]types.ExtensionLog{
 			{Level: "error", Message: "boom"},
 			{Level: "info", Message: "fine"},
 		})

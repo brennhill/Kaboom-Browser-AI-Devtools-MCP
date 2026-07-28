@@ -146,7 +146,7 @@ func (s *scenario) loadActionData(t *testing.T) {
 // loadExtensionLogs populates capture with extension debug logs.
 func (s *scenario) loadExtensionLogs(t *testing.T) {
 	t.Helper()
-	s.capture.AddExtensionLogs([]types.ExtensionLog{
+	s.capture.ExtensionLogs().Add([]types.ExtensionLog{
 		{
 			Level: "debug", Message: "Connection established",
 			Source: "background", Category: "CONNECTION",

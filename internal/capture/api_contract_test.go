@@ -167,11 +167,11 @@ func TestAPIContract_AddExtensionLogs(t *testing.T) {
 	t.Parallel()
 	c := NewCapture()
 
-	c.AddExtensionLogs([]types.ExtensionLog{
+	c.ExtensionLogs().Add([]types.ExtensionLog{
 		{Level: "debug", Message: "test", Source: "background"},
 	})
 
-	logs := c.GetExtensionLogs()
+	logs := c.ExtensionLogs().Entries()
 	if len(logs) != 1 {
 		t.Errorf("AddExtensionLogs should store 1 log, got %d", len(logs))
 	}

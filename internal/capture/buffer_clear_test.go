@@ -149,9 +149,7 @@ func TestClearAllCapture(t *testing.T) {
 	// left behind ("All" was a lie), so any caller that forgot the separate
 	// ClearExtensionLogs() leaked stale logs. ClearAll now clears them and returns
 	// the count.
-	capture.mu.Lock()
-	capture.extensionLogs.logs = append(capture.extensionLogs.logs, types.ExtensionLog{Level: "debug", Message: "ext log", Timestamp: time.Now()})
-	capture.mu.Unlock()
+	capture.ExtensionLogs().Add([]types.ExtensionLog{{Level: "debug", Message: "ext log", Timestamp: time.Now()}})
 
 	// Clear all
 	extensionLogsCleared := capture.ClearAll()
@@ -172,8 +170,8 @@ func TestClearAllCapture(t *testing.T) {
 	if len(capture.buffers.enhancedActions) != 0 {
 		t.Error("Expected enhancedActions to be empty")
 	}
-	if len(capture.extensionLogs.logs) != 0 {
-		t.Errorf("Expected extensionLogs to be empty after ClearAll, got %d entries", len(capture.extensionLogs.logs))
+	if logs := capture.ExtensionLogs().Entries(); len(logs) != 0 {
+		t.Errorf("Expected extensionLogs to be empty after ClearAll, got %d entries", len(logs))
 	}
 }
 

@@ -305,7 +305,7 @@ func TestToolsObserveExtensionLogs_ResponseFields(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 
-	cap.AddExtensionLogs([]types.ExtensionLog{{
+	cap.ExtensionLogs().Add([]types.ExtensionLog{{
 		Level:     "info",
 		Message:   "Extension started",
 		Source:    "background.js",

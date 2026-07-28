@@ -1,4 +1,4 @@
-// Purpose: Unit tests for ExtensionLogBuffer store helpers (append/snapshot/clear).
+// Purpose: Unit tests for the independently synchronized extension-log store.
 // Why: Guards the extracted extension-log store behavior after Capture decomposition.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
@@ -11,63 +11,62 @@ import (
 	"time"
 )
 
-func TestExtensionLogBuffer_AppendAppliesAmortizedEviction(t *testing.T) {
+func TestExtensionLogStore_AddAppliesAmortizedEviction(t *testing.T) {
 	t.Parallel()
 
-	buf := ExtensionLogBuffer{logs: make([]types.ExtensionLog, 0)}
+	store := newExtensionLogStore(nil)
 	total := MaxExtensionLogs + MaxExtensionLogs/2 + 1
 	for i := 0; i < total; i++ {
-		buf.append(types.ExtensionLog{
+		store.Add([]types.ExtensionLog{{
 			Level:     "info",
 			Message:   fmt.Sprintf("log-%d", i),
 			Timestamp: time.Unix(int64(i), 0),
-		})
+		}})
 	}
 
-	if got := len(buf.logs); got != MaxExtensionLogs {
+	entries := store.Entries()
+	if got := len(entries); got != MaxExtensionLogs {
 		t.Fatalf("buffer length = %d, want %d", got, MaxExtensionLogs)
 	}
 
 	// After compaction we should retain the newest MaxExtensionLogs entries.
 	expectedFirst := total - MaxExtensionLogs
-	if got := buf.logs[0].Message; got != fmt.Sprintf("log-%d", expectedFirst) {
+	if got := entries[0].Message; got != fmt.Sprintf("log-%d", expectedFirst) {
 		t.Fatalf("first kept log = %q, want %q", got, fmt.Sprintf("log-%d", expectedFirst))
 	}
-	if got := buf.logs[len(buf.logs)-1].Message; got != fmt.Sprintf("log-%d", total-1) {
+	if got := entries[len(entries)-1].Message; got != fmt.Sprintf("log-%d", total-1) {
 		t.Fatalf("last kept log = %q, want %q", got, fmt.Sprintf("log-%d", total-1))
 	}
 }
 
-func TestExtensionLogBuffer_SnapshotReturnsDetachedCopy(t *testing.T) {
+func TestExtensionLogStore_EntriesReturnsDetachedCopy(t *testing.T) {
 	t.Parallel()
 
-	buf := ExtensionLogBuffer{
-		logs: []types.ExtensionLog{{Level: "info", Message: "one"}, {Level: "warn", Message: "two"}},
-	}
+	store := newExtensionLogStore(nil)
+	store.Add([]types.ExtensionLog{{Level: "info", Message: "one"}, {Level: "warn", Message: "two"}})
 
-	snap := buf.snapshot()
+	snap := store.Entries()
 	if len(snap) != 2 {
 		t.Fatalf("snapshot len = %d, want 2", len(snap))
 	}
 	snap[0].Message = "mutated"
 
-	if buf.logs[0].Message != "one" {
-		t.Fatalf("buffer should remain unchanged, got %q", buf.logs[0].Message)
+	if got := store.Entries()[0].Message; got != "one" {
+		t.Fatalf("buffer should remain unchanged, got %q", got)
 	}
 }
 
-func TestExtensionLogBuffer_ClearReturnsCountAndEmpties(t *testing.T) {
+func TestExtensionLogStore_ClearReturnsCountAndEmpties(t *testing.T) {
 	t.Parallel()
 
-	buf := ExtensionLogBuffer{
-		logs: []types.ExtensionLog{{Level: "info", Message: "one"}, {Level: "warn", Message: "two"}},
-	}
+	store := newExtensionLogStore(nil)
+	store.Add([]types.ExtensionLog{{Level: "info", Message: "one"}, {Level: "warn", Message: "two"}})
 
-	count := buf.clear()
+	count := store.Clear()
 	if count != 2 {
 		t.Fatalf("clear count = %d, want 2", count)
 	}
-	if len(buf.logs) != 0 {
-		t.Fatalf("buffer len after clear = %d, want 0", len(buf.logs))
+	if entries := store.Entries(); len(entries) != 0 {
+		t.Fatalf("buffer len after clear = %d, want 0", len(entries))
 	}
 }

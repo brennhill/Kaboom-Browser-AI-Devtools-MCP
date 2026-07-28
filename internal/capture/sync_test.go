@@ -108,7 +108,7 @@ func TestHandleSync_WithExtensionLogs(t *testing.T) {
 	}
 
 	// Verify logs were stored
-	logs := cap.GetExtensionLogs()
+	logs := cap.ExtensionLogs().Entries()
 	if len(logs) != 1 {
 		t.Errorf("Expected 1 log, got %d", len(logs))
 	}
@@ -145,7 +145,7 @@ func TestHandleSync_WithExtensionLogs_RedactsSensitiveData(t *testing.T) {
 		t.Fatalf("Expected status 200, got %d", w.Code)
 	}
 
-	logs := cap.GetExtensionLogs()
+	logs := cap.ExtensionLogs().Entries()
 	if len(logs) != 1 {
 		t.Fatalf("Expected 1 log, got %d", len(logs))
 	}
