@@ -5,6 +5,7 @@ package toolinteract
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"os"
 	"path/filepath"
@@ -116,7 +117,7 @@ func (fs *fakeState) recordedCount() int {
 	return len(fs.recordedActions)
 }
 
-func guardFn(block *bool, code, msg string) GuardCheck {
+func guardFn(block *bool, code, msg string) toolguard.Check {
 	return func(req mcp.JSONRPCRequest, opts ...func(*mcp.StructuredError)) (mcp.JSONRPCResponse, bool) {
 		if *block {
 			return mcp.Fail(req, code, msg, "adjust and retry", opts...), true

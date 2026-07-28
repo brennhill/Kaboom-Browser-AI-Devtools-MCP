@@ -7,6 +7,7 @@ owners: []
 last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/internal/toolinteract/deps.go
+  - cmd/browser-agent/internal/toolguard/guards.go
   - cmd/browser-agent/internal/toolinteract/interactstate/state.go
   - cmd/browser-agent/internal/toolinteract/interactupload/upload.go
   - cmd/browser-agent/internal/toolinteract/interact_action_handler.go
@@ -132,6 +133,9 @@ aliases or pass-through response helpers.
 Evidence capture uses the concrete
 `toolinteract.EvidenceShot` contract directly in runtime wiring and tests; the
 former private/exported type alias and root-package test shim have been deleted.
+
+Pilot, extension, and tab preconditions use the canonical `toolguard.Check`
+contract; interact packages do not mirror the host guard signature.
 
 Interact handlers and their dependency seams use `internal/mcp` and
 `internal/toolresp` directly. Package-local protocol type, error-code, and

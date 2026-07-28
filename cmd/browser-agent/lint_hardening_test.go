@@ -108,3 +108,21 @@ func TestEvidenceCaptureHasNoCompatibilityShim(t *testing.T) {
 		t.Fatal("evidence implementation still aliases its public type")
 	}
 }
+
+func TestFeaturePackagesDoNotMirrorGuardContract(t *testing.T) {
+	for _, relativePath := range []string{
+		"cmd/browser-agent/internal/toolinteract/deps.go",
+		"cmd/browser-agent/internal/toolinteract/interactupload/upload.go",
+		"cmd/browser-agent/internal/screenrec/deps.go",
+	} {
+		source, err := os.ReadFile(filepath.Join(projectRoot(), relativePath))
+		if err != nil {
+			t.Fatalf("read %s: %v", relativePath, err)
+		}
+		for _, forbidden := range []string{"type GuardCheck =", "type Guard ="} {
+			if strings.Contains(string(source), forbidden) {
+				t.Errorf("%s mirrors guard contract with %q", relativePath, forbidden)
+			}
+		}
+	}
+}

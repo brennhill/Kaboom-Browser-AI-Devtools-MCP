@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -33,7 +35,7 @@ func (f *fake) ArmEvidenceForCommand(correlationID, action string, _ json.RawMes
 	f.armedActions = append(f.armedActions, action)
 }
 
-func guard(block *bool, code string) Guard {
+func guard(block *bool, code string) toolguard.Check {
 	return func(req mcp.JSONRPCRequest, opts ...func(*mcp.StructuredError)) (mcp.JSONRPCResponse, bool) {
 		if *block {
 			return mcp.Fail(req, code, "blocked", "unblock it", opts...), true

@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactstate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/interactupload"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
@@ -18,21 +19,18 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
-// GuardCheck mirrors the main package's guardCheck type.
-type GuardCheck = func(req mcp.JSONRPCRequest, opts ...func(*mcp.StructuredError)) (mcp.JSONRPCResponse, bool)
-
 // Deps holds all external dependencies interact handlers need from the caller.
 type Deps struct {
 	// -- Gate checks --
 
 	// RequirePilot checks that pilot mode is enabled.
-	RequirePilot GuardCheck
+	RequirePilot toolguard.Check
 
 	// RequireExtension checks that the extension is connected.
-	RequireExtension GuardCheck
+	RequireExtension toolguard.Check
 
 	// RequireTabTracking checks that tab tracking is active.
-	RequireTabTracking GuardCheck
+	RequireTabTracking toolguard.Check
 
 	// RequireCSPClear checks CSP restrictions for a given world.
 	RequireCSPClear func(req mcp.JSONRPCRequest, world string) (mcp.JSONRPCResponse, bool)
@@ -190,7 +188,7 @@ func marshalQueryParams(fields map[string]any) json.RawMessage {
 	return mcp.SafeMarshal(fields, "{}")
 }
 
-func checkGuards(req mcp.JSONRPCRequest, guards ...GuardCheck) (mcp.JSONRPCResponse, bool) {
+func checkGuards(req mcp.JSONRPCRequest, guards ...toolguard.Check) (mcp.JSONRPCResponse, bool) {
 	for _, guard := range guards {
 		if resp, blocked := guard(req); blocked {
 			return resp, true
@@ -199,7 +197,7 @@ func checkGuards(req mcp.JSONRPCRequest, guards ...GuardCheck) (mcp.JSONRPCRespo
 	return mcp.JSONRPCResponse{}, false
 }
 
-func checkGuardsWithOpts(req mcp.JSONRPCRequest, opts []func(*mcp.StructuredError), guards ...GuardCheck) (mcp.JSONRPCResponse, bool) {
+func checkGuardsWithOpts(req mcp.JSONRPCRequest, opts []func(*mcp.StructuredError), guards ...toolguard.Check) (mcp.JSONRPCResponse, bool) {
 	for _, guard := range guards {
 		if resp, blocked := guard(req, opts...); blocked {
 			return resp, true

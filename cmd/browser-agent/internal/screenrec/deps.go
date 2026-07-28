@@ -17,12 +17,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
-
-// GuardCheck mirrors the host's guardCheck type (same shape as toolinteract.GuardCheck).
-type GuardCheck = func(req mcp.JSONRPCRequest, opts ...func(*mcp.StructuredError)) (mcp.JSONRPCResponse, bool)
 
 // Deps holds everything the recording handlers need from the host.
 type Deps struct {
@@ -30,10 +28,10 @@ type Deps struct {
 	EnqueuePendingQuery func(req mcp.JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (mcp.JSONRPCResponse, bool)
 
 	// RequirePilot gates on AI Web Pilot being enabled.
-	RequirePilot GuardCheck
+	RequirePilot toolguard.Check
 
 	// RequireExtension gates on the browser extension being connected.
-	RequireExtension GuardCheck
+	RequireExtension toolguard.Check
 
 	// RecordAIAction journals an AI-driven action to the enhanced actions buffer.
 	RecordAIAction func(action, url string, extra map[string]any)

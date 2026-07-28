@@ -6,6 +6,7 @@ package toolinteract
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"time"
@@ -51,7 +52,7 @@ type commandBuilder struct {
 	qTimeout time.Duration   // enqueue timeout; zero = queries.AsyncCommandTimeout
 
 	// Guards
-	guardFns  []GuardCheck
+	guardFns  []toolguard.Check
 	guardOpts []func(*mcp.StructuredError) // optional opts passed to checkGuardsWithOpts
 
 	// AI recording (optional)
@@ -124,7 +125,7 @@ func (b *commandBuilder) tabID(id int) *commandBuilder {
 
 // guards adds guard checks that run before the command is enqueued.
 // Guards are run in order; the first blocking guard short-circuits.
-func (b *commandBuilder) guards(fns ...GuardCheck) *commandBuilder {
+func (b *commandBuilder) guards(fns ...toolguard.Check) *commandBuilder {
 	b.guardFns = append(b.guardFns, fns...)
 	return b
 }
@@ -133,7 +134,7 @@ func (b *commandBuilder) guards(fns ...GuardCheck) *commandBuilder {
 // This is used by handlers like handleDOMPrimitive that need to pass
 // contextOpts (action, selector) through to guard error responses.
 // Note: opts are accumulated, not replaced — multiple calls are safe.
-func (b *commandBuilder) guardsWithOpts(opts []func(*mcp.StructuredError), fns ...GuardCheck) *commandBuilder {
+func (b *commandBuilder) guardsWithOpts(opts []func(*mcp.StructuredError), fns ...toolguard.Check) *commandBuilder {
 	b.guardOpts = append(b.guardOpts, opts...)
 	b.guardFns = append(b.guardFns, fns...)
 	return b

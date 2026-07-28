@@ -8,6 +8,7 @@ last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/internal/toolinteract/interactupload/upload.go
   - cmd/browser-agent/internal/toolinteract/deps.go
+  - cmd/browser-agent/internal/toolguard/guards.go
   - cmd/browser-agent/server.go
   - cmd/browser-agent/config.go
   - cmd/browser-agent/tools_core.go

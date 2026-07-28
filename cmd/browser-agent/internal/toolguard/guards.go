@@ -14,6 +14,9 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
+// Check is the canonical browser-runtime precondition function contract.
+type Check func(req mcp.JSONRPCRequest, opts ...func(*mcp.StructuredError)) (mcp.JSONRPCResponse, bool)
+
 // Guards owns browser-runtime preconditions and their diagnostic responses.
 type Guards struct {
 	capture                   *capture.Capture

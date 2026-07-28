@@ -17,14 +17,12 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
 )
-
-// Guard mirrors the host's guard-check shape.
-type Guard = func(req mcp.JSONRPCRequest, opts ...func(*mcp.StructuredError)) (mcp.JSONRPCResponse, bool)
 
 // EvidenceArmer is the one thing this handler needs from the interact action
 // handler: arming the before/after evidence capture for the command it is about
@@ -38,11 +36,11 @@ type EvidenceArmer interface {
 // Deps are the host-owned seams this handler needs.
 type Deps struct {
 	// RequirePilot checks that pilot mode is enabled.
-	RequirePilot Guard
+	RequirePilot toolguard.Check
 	// RequireExtension checks that the extension is connected.
-	RequireExtension Guard
+	RequireExtension toolguard.Check
 	// RequireTabTracking checks that tab tracking is active.
-	RequireTabTracking Guard
+	RequireTabTracking toolguard.Check
 	// EnqueuePendingQuery queues a command for the extension.
 	EnqueuePendingQuery func(req mcp.JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (mcp.JSONRPCResponse, bool)
 	// RecordAIAction records an AI-driven action to the enhanced actions buffer.
