@@ -56,20 +56,13 @@ mock.module('../../extension/background/sync/communication.js', {
   }
 })
 
-mock.module('../../extension/background/caches/state-manager.js', {
+mock.module('../../extension/background/caches/snapshots.js', {
   namedExports: {
-    addDebugLogEntry: mock.fn(),
-    getDebugLog: mock.fn(() => []),
-    clearDebugLog: mock.fn(),
-    isSourceMapEnabled: mock.fn(() => false),
-    resolveStackTrace: mock.fn(() => null),
-    processErrorGroup: mock.fn(() => null),
-    canTakeScreenshot: mock.fn(() => ({ allowed: true })),
-    recordScreenshot: mock.fn(),
     isQueryProcessing: mock.fn(() => false),
     addProcessingQuery: mock.fn(),
     removeProcessingQuery: mock.fn(),
-    checkContextAnnotations: mock.fn(() => null)
+    checkContextAnnotations: mock.fn(),
+    resolveStackTrace: mock.fn(() => null)
   }
 })
 
@@ -79,6 +72,7 @@ mock.module('../../extension/background/event-listeners.js', {
     getTrackedTabInfo: mock.fn(() => Promise.resolve({
       trackedTabId: 0, trackedTabUrl: '', trackedTabTitle: ''
     })),
+    sendTabToast: mock.fn(() => Promise.resolve()),
     clearTrackedTab: mock.fn(() => Promise.resolve()),
     waitForTabLoad: mock.fn(() => Promise.resolve()),
     pingContentScript: mock.fn(() => Promise.resolve({ ok: true }))

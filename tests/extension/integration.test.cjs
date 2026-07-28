@@ -124,22 +124,18 @@ describe('Extension Integration', () => {
   })
 })
 
-describe('Module Signature Compatibility', () => {
-  test('getAllConfigSettings accepts both callback and Promise styles', async () => {
-    // This test verifies backward compatibility after signature changes
-    const eventListenersPath = path.join(EXTENSION_DIR, 'background/event-listeners.js')
-    const content = fs.readFileSync(eventListenersPath, 'utf8')
+describe('Focused Module Signatures', () => {
+  test('tab state owns async configuration reads', () => {
+    const tabStatePath = path.join(EXTENSION_DIR, 'background/ui/tab-state.js')
+    const content = fs.readFileSync(tabStatePath, 'utf8')
 
-    // Should support both patterns
     assert(content.includes('getAllConfigSettings'), 'Should export getAllConfigSettings')
-
-    // Check for Promise support (returns Promise when no callback)
-    assert(content.includes('Promise') || content.includes('new Promise'), 'Should support Promise-based calls')
+    assert(content.includes('async function getAllConfigSettings'), 'Configuration reads should be Promise-based')
   })
 
-  test('getTrackedTabInfo accepts both callback and Promise styles', async () => {
-    const eventListenersPath = path.join(EXTENSION_DIR, 'background/event-listeners.js')
-    const content = fs.readFileSync(eventListenersPath, 'utf8')
+  test('tab state owns tracked-tab reads', () => {
+    const tabStatePath = path.join(EXTENSION_DIR, 'background/ui/tab-state.js')
+    const content = fs.readFileSync(tabStatePath, 'utf8')
 
     assert(content.includes('getTrackedTabInfo'), 'Should export getTrackedTabInfo')
   })
@@ -152,10 +148,11 @@ describe('Module Import Chain', () => {
 
     // Should import from modular subcomponents
     const expectedImports = [
-      './communication',
-      './event-listeners',
-      './state-manager'
-      // Note: ./polling removed - replaced by sync-client
+      './sync/communication',
+      './caches/debug-log',
+      './caches/cache-limits',
+      './caches/error-groups',
+      './caches/snapshots'
     ]
 
     for (const importPath of expectedImports) {
@@ -169,12 +166,11 @@ describe('Module Import Chain', () => {
     }
   })
 
-  test('background/communication.js re-exports from server.js', () => {
-    const commPath = path.join(EXTENSION_DIR, 'background/communication.js')
-    const content = fs.readFileSync(commPath, 'utf8')
+  test('sync/server.js owns daemon transport functions', () => {
+    const serverPath = path.join(EXTENSION_DIR, 'background/sync/server.js')
+    const content = fs.readFileSync(serverPath, 'utf8')
 
-    // Should re-export server functions
-    const expectedExports = ['postSettings', 'sendLogsToServer', 'checkServerHealth']
+    const expectedExports = ['sendLogsToServer', 'checkServerHealth', 'updateBadge']
 
     for (const exportName of expectedExports) {
       assert(content.includes(exportName), `Should export ${exportName}`)

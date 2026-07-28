@@ -544,7 +544,7 @@ import * as eventListeners from './event-listeners'
 import * as index from './index'
 import { saveStateSnapshot, loadStateSnapshot, listStateSnapshots, deleteStateSnapshot, broadcastTrackingState } from './message-handlers'
 import { executeDOMAction } from './dom-primitives'
-import { canTakeScreenshot, recordScreenshot } from './state-manager'
+import { canTakeScreenshot, recordScreenshot } from './cache-limits'
 import { startRecording, stopRecording } from './recording'
 ```
 
@@ -896,7 +896,7 @@ export const DOM_QUERY_MAX_ELEMENTS = 100  // Why 100?
 - `src/background/sync/batchers.ts`
 - `src/background/connection-state.ts`
 - `src/background/pending-queries.ts`
-- `src/background/caches/state-manager.ts`
+- `src/background/caches/cache-limits.ts`
 - `src/content/message-handlers.ts`
 - `src/content/request-tracking.ts`
 - `src/inject/message-handlers.ts`

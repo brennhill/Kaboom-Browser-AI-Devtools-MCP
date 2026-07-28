@@ -54,13 +54,12 @@ import {
   canTakeScreenshot,
   recordScreenshot,
   clearSourceMapCache,
-  getContextWarning,
   getMemoryPressureState,
   isNetworkBodyCaptureDisabled,
-  flushErrorGroups,
-  cleanupStaleErrorGroups,
   clearScreenshotTimestamps
-} from './caches/state-manager.js'
+} from './caches/cache-limits.js'
+import { flushErrorGroups, cleanupStaleErrorGroups } from './caches/error-groups.js'
+import { getContextWarning } from './caches/snapshots.js'
 import {
   loadDebugModeState,
   installStartupListener,

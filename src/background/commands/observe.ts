@@ -9,7 +9,7 @@
 import { debugLog } from '../index.js'
 import { getServerUrl } from '../state.js'
 import { DebugCategory } from '../debug.js'
-import { recordScreenshot } from '../caches/state-manager.js'
+import { recordScreenshot } from '../caches/cache-limits.js'
 import { domPrimitiveListInteractive } from '../dom/primitives/dom-primitives-list-interactive.js'
 import { registerCommand } from './registry.js'
 import { CDP_VERSION } from '../../lib/constants.js'

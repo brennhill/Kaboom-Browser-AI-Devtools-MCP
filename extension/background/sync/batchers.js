@@ -4,7 +4,7 @@
  * Docs: docs/features/feature/backend-log-streaming/index.md
  */
 import { createCircuitBreaker } from './circuit-breaker.js';
-import { MAX_PENDING_BUFFER } from '../caches/state-manager.js';
+import { MAX_PENDING_BUFFER } from '../caches/cache-limits.js';
 const DEFAULT_DEBOUNCE_MS = 100;
 const DEFAULT_MAX_BATCH_SIZE = 50;
 /** Rate limit configuration */

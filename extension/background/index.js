@@ -4,7 +4,10 @@
  * Docs: docs/features/feature/backend-log-streaming/index.md
  */
 import { getServerUrl, getConnectionStatus, getExtensionLogQueue, pushExtensionLog, capExtensionLogs, getCurrentLogLevel, isScreenshotOnError, _setDebugModeRaw, setConnectionStatus, setConnectionCheckRunning, clearExtensionLogQueue, EXTENSION_SESSION_ID, isAiControlled, isAiWebPilotEnabled, isConnectionCheckRunning as isConnectionCheckRunningFlag, isDebugMode, applyCaptureOverrides } from './state.js';
-import { addDebugLogEntry, getDebugLog as getDebugLogEntries, clearDebugLog as clearDebugLogEntries, isSourceMapEnabled, resolveStackTrace, processErrorGroup, canTakeScreenshot, recordScreenshot } from './caches/state-manager.js';
+import { addDebugLogEntry, getDebugLog as getDebugLogEntries, clearDebugLog as clearDebugLogEntries } from './caches/debug-log.js';
+import { isSourceMapEnabled, canTakeScreenshot, recordScreenshot } from './caches/cache-limits.js';
+import { processErrorGroup } from './caches/error-groups.js';
+import { resolveStackTrace } from './caches/snapshots.js';
 import { createCircuitBreaker, RATE_LIMIT_CONFIG, shouldCaptureLog, formatLogEntry, captureScreenshot, updateBadge, checkServerHealth } from './sync/communication.js';
 import { DebugCategory } from './debug.js';
 import { getRequestHeaders } from './sync/server.js';

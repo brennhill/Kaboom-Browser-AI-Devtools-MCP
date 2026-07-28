@@ -38,7 +38,7 @@ mock.module('../../extension/background/sync/communication.js', {
   }
 })
 
-mock.module('../../extension/background/caches/state-manager.js', {
+mock.module('../../extension/background/caches/snapshots.js', {
   namedExports: {
     checkContextAnnotations: mockCheckContextAnnotations
   }

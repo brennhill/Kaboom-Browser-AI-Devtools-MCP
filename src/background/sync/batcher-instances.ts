@@ -28,7 +28,7 @@ import {
   type BatcherWithCircuitBreaker,
   type Batcher
 } from './communication.js'
-import { checkContextAnnotations } from '../caches/state-manager.js'
+import { checkContextAnnotations } from '../caches/snapshots.js'
 
 // =============================================================================
 // TYPES

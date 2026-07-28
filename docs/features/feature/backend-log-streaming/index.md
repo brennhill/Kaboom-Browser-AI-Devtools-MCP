@@ -4,7 +4,7 @@ feature_id: feature-backend-log-streaming
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/netrecord/handlers.go
@@ -25,6 +25,14 @@ code_paths:
   - internal/capture/wsconn/tracker.go
   - src/background/sync/server.ts
   - src/background/index.ts
+  - src/background/init.ts
+  - src/background/caches/cache-limits.ts
+  - src/background/caches/error-groups.ts
+  - src/background/caches/snapshots.ts
+  - src/background/caches/debug-log.ts
+  - src/background/sync/batchers.ts
+  - src/background/sync/batcher-instances.ts
+  - src/background/sync/sync-manager.ts
   - src/background/sync/sync-client.ts
   - src/lib/daemon-http.ts
   - src/lib/net/network.ts
@@ -45,6 +53,10 @@ test_paths:
   - tests/extension/sync-client.test.js
   - tests/extension/server.test.js
   - tests/extension/background-batching.test.js
+  - tests/extension/batcher-instances.test.js
+  - tests/extension/sync-manager.test.js
+  - tests/extension/observe-screenshot.test.js
+  - tests/extension/no-compatibility-facades.test.js
   - tests/extension/early-patch-hardened-restore.test.js
   - tests/extension/early-patch-branding.test.js
   - tests/extension/safe-global-patch.test.js

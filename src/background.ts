@@ -10,14 +10,14 @@
  * @fileoverview Background Service Worker Facade - Minimal Public API
  *
  * This facade provides a clean, minimal public API for the extension.
- * Direct use of internal modules (communication/, state-manager/, polling/)
+ * Direct use of focused internal modules
  * should go through initialization in init.ts, not through the facade.
  *
  * Main modules:
  * - background/index.ts: Core state and batchers
  * - background/init.ts: Extension startup
  * - background/communication.ts: Server communication (internal)
- * - background/state-manager.ts: State management (internal)
+ * - background/caches/: Error groups, limits, snapshots, and debug-log ownership
  * - background/polling.ts: Polling loops (internal)
  */
 
@@ -37,7 +37,7 @@ export {
   MEMORY_AVG_WS_EVENT_SIZE,
   MEMORY_AVG_NETWORK_BODY_SIZE,
   MEMORY_AVG_ACTION_SIZE
-} from './background/caches/state-manager.js'
+} from './background/caches/cache-limits.js'
 
 // Rate limiting constants
 export { RATE_LIMIT_CONFIG } from './background/sync/communication.js'
@@ -120,16 +120,22 @@ export {
   createErrorSignature,
   processErrorGroup,
   flushErrorGroups,
-  cleanupStaleErrorGroups,
+  cleanupStaleErrorGroups
+} from './background/caches/error-groups.js'
+
+export {
   canTakeScreenshot,
   recordScreenshot,
   estimateBufferMemory,
   checkMemoryPressure,
   getMemoryPressureState,
-  resetMemoryPressureState,
+  resetMemoryPressureState
+} from './background/caches/cache-limits.js'
+
+export {
   getProcessingQueriesState,
   cleanupStaleProcessingQueries
-} from './background/caches/state-manager.js'
+} from './background/caches/snapshots.js'
 
 // Context and annotations
 export {
@@ -137,10 +143,10 @@ export {
   checkContextAnnotations,
   getContextWarning,
   resetContextWarning
-} from './background/caches/state-manager.js'
+} from './background/caches/snapshots.js'
 
 // Source map management
-export { setSourceMapEnabled, isSourceMapEnabled, clearSourceMapCache } from './background/caches/state-manager.js'
+export { setSourceMapEnabled, isSourceMapEnabled, clearSourceMapCache } from './background/caches/cache-limits.js'
 
 // Cache limits and source map cache
 export {

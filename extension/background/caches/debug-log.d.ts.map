@@ -1,0 +1,1 @@
+{"version":3,"file":"debug-log.d.ts","sourceRoot":"","sources":["../../../src/background/caches/debug-log.ts"],"names":[],"mappings":"AAAA;;;GAGG;AAEH,OAAO,KAAK,EAAE,aAAa,EAAE,MAAM,sBAAsB,CAAA;AAKzD,wBAAgB,WAAW,IAAI,aAAa,EAAE,CAE7C;AAED,wBAAgB,gBAAgB,CAAC,KAAK,EAAE,aAAa,GAAG,IAAI,CAM3D;AAED,wBAAgB,aAAa,IAAI,IAAI,CAEpC"}

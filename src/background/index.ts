@@ -36,13 +36,15 @@ import {
 import {
   addDebugLogEntry,
   getDebugLog as getDebugLogEntries,
-  clearDebugLog as clearDebugLogEntries,
+  clearDebugLog as clearDebugLogEntries
+} from './caches/debug-log.js'
+import {
   isSourceMapEnabled,
-  resolveStackTrace,
-  processErrorGroup,
   canTakeScreenshot,
   recordScreenshot
-} from './caches/state-manager.js'
+} from './caches/cache-limits.js'
+import { processErrorGroup } from './caches/error-groups.js'
+import { resolveStackTrace } from './caches/snapshots.js'
 import {
   createCircuitBreaker,
   RATE_LIMIT_CONFIG,

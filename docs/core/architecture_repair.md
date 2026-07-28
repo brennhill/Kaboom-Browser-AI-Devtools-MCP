@@ -104,7 +104,7 @@ The Chrome extension (`src/`) has different constraints than the Go backend.
 
 3. **Message protocol complexity**: `runtime-messages.ts` (513 LOC) defines the typed protocol between all contexts. Changes ripple across background, content, and inject code.
 
-4. **No state management boundaries**: `state-manager.ts` provides a modular architecture but individual state modules can grow without limits.
+4. **State-module growth**: focused cache owners (`cache-limits.ts`, `error-groups.ts`, `snapshots.ts`, and `debug-log.ts`) can still grow without explicit per-module budgets.
 
 ### Extension Repair Strategy
 

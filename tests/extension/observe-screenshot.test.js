@@ -26,7 +26,7 @@ mock.module('../../extension/background/commands/registry.js', {
   }
 })
 
-mock.module('../../extension/background/caches/state-manager.js', {
+mock.module('../../extension/background/caches/cache-limits.js', {
   namedExports: {
     canTakeScreenshot: mockCanTakeScreenshot,
     recordScreenshot: mockRecordScreenshot
