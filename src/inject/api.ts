@@ -36,7 +36,11 @@ import {
 import { getActionBuffer, clearActionBuffer, setActionCaptureEnabled } from '../lib/page/actions.js'
 import { getNetworkWaterfall, setNetworkWaterfallEnabled } from '../lib/net/network.js'
 import { getPerformanceMarks, getPerformanceMeasures, setPerformanceMarksEnabled } from '../lib/analysis/performance.js'
-import { enrichErrorWithAiContext, setAiContextEnabled, setAiContextStateSnapshot } from '../lib/ai-context/ai-context.js'
+import {
+  enrichErrorWithAiContext,
+  setAiContextEnabled,
+  setAiContextStateSnapshot
+} from '../lib/ai-context/ai-context-enrichment.js'
 
 /**
  * KaboomAPI interface exposed on window.__kaboom

@@ -37,3 +37,20 @@ test('event listener module does not re-export UI module APIs', () => {
   const source = readFileSync('src/background/event-listeners.ts', 'utf8')
   assert.doesNotMatch(source, /export\s+(?:type\s+)?\{/, 'event listeners must export only owned listener functions')
 })
+
+test('AI context consumers use focused parsing and enrichment modules', () => {
+  assert.equal(
+    existsSync('src/lib/ai-context/ai-context.ts'),
+    false,
+    'ai-context.ts is an alias-only compatibility barrel; import its focused modules directly'
+  )
+})
+
+test('WebSocket instrumentation does not re-export tracking APIs', () => {
+  const source = readFileSync('src/lib/net/websocket.ts', 'utf8')
+  assert.doesNotMatch(
+    source,
+    /export\s+(?:type\s+)?\{[^}]*\}\s+from\s+['"]\.\/websocket-tracking\.js['"]/s,
+    'WebSocket tracking consumers must import websocket-tracking.ts directly'
+  )
+})

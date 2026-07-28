@@ -9,8 +9,6 @@
  * @fileoverview WebSocket capture.
  * Wraps the WebSocket constructor to intercept lifecycle events and messages.
  * Delegates tracking, sampling, and schema detection to websocket-tracking.ts.
- *
- * Re-exports all tracking primitives so existing importers are unaffected.
  */
 
 import type { WebSocketCaptureMode } from '../../types/index.js'
@@ -26,10 +24,6 @@ import {
   getWebSocketCaptureModeInternal,
   resetCaptureModeForTesting
 } from './websocket-tracking.js'
-
-// Re-export everything from tracking so existing import paths work unchanged
-export { getSize, formatPayload, truncateWsMessage, createConnectionTracker } from './websocket-tracking.js'
-export type { ConnectionTracker } from './websocket-tracking.js'
 
 // =============================================================================
 // MODULE STATE (instrumentation-specific)

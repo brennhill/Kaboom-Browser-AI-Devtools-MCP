@@ -15,9 +15,11 @@ export { parseResourceTiming, getNetworkWaterfall, trackPendingRequest, complete
 export { getPerformanceMarks, getPerformanceMeasures, getCapturedMarks, getCapturedMeasures, installPerformanceCapture, uninstallPerformanceCapture, isPerformanceCaptureActive, getPerformanceSnapshotForError, setPerformanceMarksEnabled, isPerformanceMarksEnabled } from '../lib/analysis/performance.js';
 export { postLog } from '../lib/page/bridge.js';
 export { installConsoleCapture, uninstallConsoleCapture } from '../lib/page/console.js';
-export { parseStackFrames, parseSourceMap, extractSnippet, extractSourceSnippets, detectFramework, getReactComponentAncestry, captureStateSnapshot, generateAiSummary, enrichErrorWithAiContext, setAiContextEnabled, setAiContextStateSnapshot, setSourceMapCache, getSourceMapCache, getSourceMapCacheSize } from '../lib/ai-context/ai-context.js';
+export { parseStackFrames, parseSourceMap, extractSnippet, extractSourceSnippets, setSourceMapCache, getSourceMapCache, getSourceMapCacheSize } from '../lib/ai-context/ai-context-parsing.js';
+export { detectFramework, getReactComponentAncestry, captureStateSnapshot, generateAiSummary, enrichErrorWithAiContext, setAiContextEnabled, setAiContextStateSnapshot } from '../lib/ai-context/ai-context-enrichment.js';
 export { installExceptionCapture, uninstallExceptionCapture } from '../lib/page/exceptions.js';
-export { getSize, formatPayload, truncateWsMessage, createConnectionTracker, installWebSocketCapture, setWebSocketCaptureMode, setWebSocketCaptureEnabled, getWebSocketCaptureMode, uninstallWebSocketCapture, resetForTesting } from '../lib/net/websocket.js';
+export { getSize, formatPayload, truncateWsMessage, createConnectionTracker } from '../lib/net/websocket-tracking.js';
+export { installWebSocketCapture, setWebSocketCaptureMode, setWebSocketCaptureEnabled, getWebSocketCaptureMode, uninstallWebSocketCapture, resetForTesting } from '../lib/net/websocket.js';
 export { executeDOMQuery, getPageInfo, runAxeAudit, runAxeAuditWithTimeout, formatAxeResults } from '../lib/analysis/dom-queries.js';
 export { mapInitiatorType, aggregateResourceTiming, capturePerformanceSnapshot, installPerfObservers, uninstallPerfObservers, getLongTaskMetrics, getFCP, getLCP, getCLS, getINP, sendPerformanceSnapshot, isPerformanceSnapshotEnabled, setPerformanceSnapshotEnabled } from '../lib/analysis/perf-snapshot.js';
 // Re-export constants that tests import from inject.js

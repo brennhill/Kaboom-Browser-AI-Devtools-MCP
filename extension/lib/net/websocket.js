@@ -3,8 +3,6 @@
  * Docs: docs/features/feature/observe/index.md
  */
 import { getSize, formatPayload, truncateWsMessage, createConnectionTracker, setWebSocketCaptureModeInternal, getWebSocketCaptureModeInternal, resetCaptureModeForTesting } from './websocket-tracking.js';
-// Re-export everything from tracking so existing import paths work unchanged
-export { getSize, formatPayload, truncateWsMessage, createConnectionTracker } from './websocket-tracking.js';
 // =============================================================================
 // MODULE STATE (instrumentation-specific)
 // =============================================================================

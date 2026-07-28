@@ -41,6 +41,7 @@ code_paths:
   - src/lib/daemon-http.ts
   - src/lib/net/network.ts
   - src/lib/net/websocket.ts
+  - src/lib/net/websocket-tracking.ts
   - src/early-patch.ts
   - src/lib/page/safe-global-patch.ts
 test_paths:
@@ -61,6 +62,7 @@ test_paths:
   - tests/extension/sync-manager.test.js
   - tests/extension/observe-screenshot.test.js
   - tests/extension/no-compatibility-facades.test.js
+  - tests/extension/websocket-tracking.test.js
   - tests/extension/early-patch-hardened-restore.test.js
   - tests/extension/early-patch-branding.test.js
   - tests/extension/safe-global-patch.test.js

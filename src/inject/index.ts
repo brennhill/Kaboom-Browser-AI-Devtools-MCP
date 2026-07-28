@@ -84,23 +84,22 @@ export {
   parseSourceMap,
   extractSnippet,
   extractSourceSnippets,
+  setSourceMapCache,
+  getSourceMapCache,
+  getSourceMapCacheSize
+} from '../lib/ai-context/ai-context-parsing.js'
+export {
   detectFramework,
   getReactComponentAncestry,
   captureStateSnapshot,
   generateAiSummary,
   enrichErrorWithAiContext,
   setAiContextEnabled,
-  setAiContextStateSnapshot,
-  setSourceMapCache,
-  getSourceMapCache,
-  getSourceMapCacheSize
-} from '../lib/ai-context/ai-context.js'
+  setAiContextStateSnapshot
+} from '../lib/ai-context/ai-context-enrichment.js'
 export { installExceptionCapture, uninstallExceptionCapture } from '../lib/page/exceptions.js'
+export { getSize, formatPayload, truncateWsMessage, createConnectionTracker } from '../lib/net/websocket-tracking.js'
 export {
-  getSize,
-  formatPayload,
-  truncateWsMessage,
-  createConnectionTracker,
   installWebSocketCapture,
   setWebSocketCaptureMode,
   setWebSocketCaptureEnabled,
