@@ -36,7 +36,7 @@ var interactAliasParams = []toolrouting.Alias{
 }
 
 // interactRegistry is the tool registry for interact dispatch.
-// PreDispatch handles evidence mode validation and async→background alias rewriting.
+// PreDispatch handles evidence mode validation.
 // PostDispatch handles composable side effects (subtitle, auto_dismiss, wait_for_stable,
 // action_diff, include_screenshot, include_interactive).
 var interactRegistry = toolrouting.Registry[*ToolHandler]{
@@ -58,8 +58,6 @@ var interactRegistry = toolrouting.Registry[*ToolHandler]{
 				mcp.WithParam("evidence"))
 			return args, &resp
 		}
-		// Quiet alias: async → background.
-		args = mergeAsyncAlias(args)
 		return args, nil
 	},
 	// PostDispatch is nil: composable side effects (subtitle, auto_dismiss, wait_for_stable,
@@ -302,28 +300,6 @@ func resolveWhatForComposable(args json.RawMessage, aliases []toolrouting.Alias)
 		}
 	}
 	return ""
-}
-
-func mergeAsyncAlias(args json.RawMessage) json.RawMessage {
-	if len(args) == 0 {
-		return args
-	}
-	var raw map[string]json.RawMessage
-	if json.Unmarshal(args, &raw) != nil {
-		return args
-	}
-	asyncValue, hasAsync := raw["async"]
-	_, hasBackground := raw["background"]
-	if !hasAsync || hasBackground {
-		return args
-	}
-	raw["background"] = asyncValue
-	delete(raw, "async")
-	merged, err := json.Marshal(raw)
-	if err != nil {
-		return args
-	}
-	return merged
 }
 
 func (h *ToolHandler) recordAIAction(actionType, url string, details map[string]any) {

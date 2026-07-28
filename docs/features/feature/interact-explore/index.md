@@ -173,3 +173,6 @@ visible at every call site.
 Interact action metadata now has a single canonical registry in `internal/schema/interact/actions.go`, consumed by both schema enum generation and `describe_capabilities` mode specs.
 
 Extension-dispatched interact actions now use shared enqueue fail-fast handling: when queue capacity is saturated, responses return structured `queue_full` immediately rather than entering async wait mode.
+
+Async execution is controlled only by the canonical `background` parameter.
+The entrypoint does not translate alternate parameter names.

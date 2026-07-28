@@ -1,4 +1,4 @@
-// Purpose: Tests for interact entrypoint quiet aliases.
+// Purpose: Tests for canonical interact entrypoint parameter handling.
 // Docs: docs/features/feature/interact-explore/index.md
 
 package main
@@ -6,34 +6,42 @@ package main
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
-func TestMergeAsyncAlias_RewritesAsyncToBackground(t *testing.T) {
+func TestInteractPreDispatch_DoesNotRewriteAsyncToBackground(t *testing.T) {
 	t.Parallel()
 
 	input := json.RawMessage(`{"what":"click","async":true}`)
-	result := mergeAsyncAlias(input)
+	h, _, _ := makeToolHandler(t)
+	result, blocked := interactRegistry.PreDispatch(h, mcp.JSONRPCRequest{ID: 1}, input, "click")
+	if blocked != nil {
+		t.Fatalf("pre-dispatch unexpectedly blocked: %+v", blocked)
+	}
 
 	var parsed map[string]any
 	if err := json.Unmarshal(result, &parsed); err != nil {
 		t.Fatalf("unmarshal failed: %v", err)
 	}
 
-	if _, ok := parsed["async"]; ok {
-		t.Error("async should be removed from args")
+	if async, ok := parsed["async"]; !ok || async != true {
+		t.Errorf("unrecognized async input should remain untouched, got %v", parsed)
 	}
-	if bg, ok := parsed["background"]; !ok {
-		t.Error("background should be set")
-	} else if bg != true {
-		t.Errorf("background = %v, want true", bg)
+	if _, ok := parsed["background"]; ok {
+		t.Errorf("async must not be rewritten to canonical background: %v", parsed)
 	}
 }
 
-func TestMergeAsyncAlias_BackgroundTakesPrecedence(t *testing.T) {
+func TestInteractPreDispatch_PreservesCanonicalBackground(t *testing.T) {
 	t.Parallel()
 
-	input := json.RawMessage(`{"what":"click","async":true,"background":false}`)
-	result := mergeAsyncAlias(input)
+	input := json.RawMessage(`{"what":"click","background":false}`)
+	h, _, _ := makeToolHandler(t)
+	result, blocked := interactRegistry.PreDispatch(h, mcp.JSONRPCRequest{ID: 2}, input, "click")
+	if blocked != nil {
+		t.Fatalf("pre-dispatch unexpectedly blocked: %+v", blocked)
+	}
 
 	var parsed map[string]any
 	if err := json.Unmarshal(result, &parsed); err != nil {
@@ -43,25 +51,6 @@ func TestMergeAsyncAlias_BackgroundTakesPrecedence(t *testing.T) {
 	if bg, ok := parsed["background"]; !ok {
 		t.Error("background should be preserved")
 	} else if bg != false {
-		t.Errorf("background = %v, want false (explicit takes precedence)", bg)
-	}
-}
-
-func TestMergeAsyncAlias_NoAsyncNoChange(t *testing.T) {
-	t.Parallel()
-
-	input := json.RawMessage(`{"what":"click","selector":"#btn"}`)
-	result := mergeAsyncAlias(input)
-
-	var orig, parsed map[string]any
-	if err := json.Unmarshal(input, &orig); err != nil {
-		t.Fatalf("json.Unmarshal error: %v", err)
-	}
-	if err := json.Unmarshal(result, &parsed); err != nil {
-		t.Fatalf("json.Unmarshal error: %v", err)
-	}
-
-	if len(orig) != len(parsed) {
-		t.Errorf("args changed unexpectedly: orig=%v result=%v", orig, parsed)
+		t.Errorf("background = %v, want false", bg)
 	}
 }
