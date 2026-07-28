@@ -185,11 +185,11 @@ func TestRunA11yAudit_TimeoutReturnsPartialResults(t *testing.T) {
 	if !ok {
 		t.Fatalf("partial result summary should be object, got %T", data["summary"])
 	}
-	if summary["violations"] != float64(0) || summary["violation_count"] != float64(0) {
-		t.Errorf("expected zero violations summary aliases, got %+v", summary)
+	if summary["violations"] != float64(0) {
+		t.Errorf("expected zero violations summary, got %+v", summary)
 	}
-	if summary["passes"] != float64(0) || summary["pass_count"] != float64(0) {
-		t.Errorf("expected zero passes summary aliases, got %+v", summary)
+	if summary["passes"] != float64(0) {
+		t.Errorf("expected zero passes summary, got %+v", summary)
 	}
 	if data["partial"] != true {
 		t.Errorf("partial result should have partial=true, got: %v", data["partial"])

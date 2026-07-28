@@ -1,5 +1,5 @@
-// Purpose: Normalizes accessibility summary counts across extension and server naming styles.
-// Why: Keeps a11y summary payloads semantically consistent while preserving backward compatibility.
+// Purpose: Normalizes accessibility summary counts to the canonical wire contract.
+// Why: Keeps accessibility payloads semantically consistent across extension and server boundaries.
 // Docs: docs/features/feature/enhanced-wcag-audit/index.md
 
 package a11ysummary
@@ -17,19 +17,13 @@ type Counts struct {
 	Inapplicable int
 }
 
-// BuildSummary returns a normalized summary map that includes canonical and legacy keys.
+// BuildSummary returns a summary containing only canonical count keys.
 func BuildSummary(counts Counts) map[string]any {
 	return map[string]any{
-		// Canonical keys
 		"violations":   counts.Violations,
 		"passes":       counts.Passes,
 		"incomplete":   counts.Incomplete,
 		"inapplicable": counts.Inapplicable,
-		// Legacy aliases (backward compatibility)
-		"violation_count":    counts.Violations,
-		"pass_count":         counts.Passes,
-		"incomplete_count":   counts.Incomplete,
-		"inapplicable_count": counts.Inapplicable,
 	}
 }
 
@@ -44,7 +38,7 @@ func countsFromAuditResult(auditResult map[string]any) Counts {
 }
 
 // EnsureAuditSummary adds or normalizes the "summary" field in an a11y result payload.
-// It keeps canonical and legacy keys in sync to avoid downstream contract drift.
+// Existing canonical values and unrelated metadata are preserved.
 func EnsureAuditSummary(auditResult map[string]any) {
 	if auditResult == nil {
 		return
@@ -63,13 +57,16 @@ func EnsureAuditSummary(auditResult map[string]any) {
 		return
 	}
 
-	violations := pickCount(summaryMap["violations"], summaryMap["violation_count"], fallback.Violations)
-	passes := pickCount(summaryMap["passes"], summaryMap["pass_count"], fallback.Passes)
-	incomplete := pickCount(summaryMap["incomplete"], summaryMap["incomplete_count"], fallback.Incomplete)
-	inapplicable := pickCount(summaryMap["inapplicable"], summaryMap["inapplicable_count"], fallback.Inapplicable)
+	violations := countOrDefault(summaryMap["violations"], fallback.Violations)
+	passes := countOrDefault(summaryMap["passes"], fallback.Passes)
+	incomplete := countOrDefault(summaryMap["incomplete"], fallback.Incomplete)
+	inapplicable := countOrDefault(summaryMap["inapplicable"], fallback.Inapplicable)
 
-	normalized := make(map[string]any, len(summaryMap)+8)
+	normalized := make(map[string]any, len(summaryMap)+4)
 	for k, v := range summaryMap {
+		if isLegacyCountKey(k) {
+			continue
+		}
 		normalized[k] = v
 	}
 
@@ -77,12 +74,16 @@ func EnsureAuditSummary(auditResult map[string]any) {
 	normalized["passes"] = passes
 	normalized["incomplete"] = incomplete
 	normalized["inapplicable"] = inapplicable
-	normalized["violation_count"] = violations
-	normalized["pass_count"] = passes
-	normalized["incomplete_count"] = incomplete
-	normalized["inapplicable_count"] = inapplicable
-
 	auditResult["summary"] = normalized
+}
+
+func isLegacyCountKey(key string) bool {
+	switch key {
+	case "violation_count", "pass_count", "incomplete_count", "inapplicable_count":
+		return true
+	default:
+		return false
+	}
 }
 
 func arrayLen(value any) int {
@@ -93,11 +94,8 @@ func arrayLen(value any) int {
 	return len(items)
 }
 
-func pickCount(primary any, fallback any, defaultValue int) int {
-	if v, ok := parseCount(primary); ok {
-		return v
-	}
-	if v, ok := parseCount(fallback); ok {
+func countOrDefault(value any, defaultValue int) int {
+	if v, ok := parseCount(value); ok {
 		return v
 	}
 	return defaultValue

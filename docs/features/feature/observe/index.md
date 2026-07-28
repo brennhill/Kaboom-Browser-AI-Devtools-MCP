@@ -102,7 +102,9 @@ APIs remain owned by their focused `src/inject` and `src/lib` modules.
 ## Canonical Note
 `observe` is the passive read surface for captured browser/server state. It is the canonical polling surface for async command completion via `what:"command_result"`.
 
-Accessibility (`what:"accessibility"`) normalizes `summary` counts with canonical keys (`violations`, `passes`, `incomplete`, `inapplicable`) and preserves legacy aliases (`*_count`) for compatibility.
+Accessibility (`what:"accessibility"`) normalizes `summary` counts to the
+canonical keys `violations`, `passes`, `incomplete`, and `inapplicable`.
+Legacy `*_count` compatibility fields are not part of the contract.
 WebSocket status (`what:"websocket_status"`) supports `summary:true` with compact URL/connection-id previews while preserving the full default payload when `summary` is omitted.
 Network-bodies empty-result hints now echo all active filters (`url`, `method`, `status_*`, `body_path`) so retry guidance is specific to the current query.
 `level` is a quiet alias for `min_level` — accepted at runtime but hidden from schema. Both use threshold semantics (e.g., `warn` returns warn+error).

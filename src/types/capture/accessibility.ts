@@ -46,17 +46,11 @@ export interface A11yAuditResult {
     readonly nodes: readonly { html: string; target: string[] }[]
   }[]
   readonly inapplicable: readonly { id: string; description: string }[]
-  // Canonical keys are violations/passes/incomplete/inapplicable.
-  // *_count aliases are preserved for compatibility with older server-side summaries.
   readonly summary?: {
     readonly violations: number
     readonly passes: number
     readonly incomplete?: number
     readonly inapplicable?: number
-    readonly violation_count?: number
-    readonly pass_count?: number
-    readonly incomplete_count?: number
-    readonly inapplicable_count?: number
   }
   readonly error?: string
 }
