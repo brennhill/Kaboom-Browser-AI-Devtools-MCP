@@ -106,6 +106,10 @@ Dead exported capture methods for extension-version reads, lifecycle
 unsubscription, settings-cache writes, and extension-log-only clearing have
 also been removed. Startup settings loading and atomic `ClearAll` remain the
 canonical behaviors.
+Count, timestamp, and buffer-memory accessors used only by capture tests are
+gone as well. Behavioral tests now count canonical detached snapshots, while
+package-internal buffer tests inspect the owning `BufferStore` invariants
+directly.
 Tracked-tab state is updated through the canonical `/sync` contract or
 `UpdateTrackedTab`; the pre-`/sync` `ExtensionStatus` envelope and
 `UpdateExtensionStatus` mutation API have been deleted.

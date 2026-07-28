@@ -17,7 +17,9 @@ func TestCaptureAccessorSnapshotsAndCopies(t *testing.T) {
 
 	c := NewCapture()
 
-	if len(c.GetNetworkTimestamps()) != 0 || len(c.GetWebSocketTimestamps()) != 0 || len(c.GetActionTimestamps()) != 0 {
+	if len(c.buffers.networkTimestamps()) != 0 ||
+		len(c.buffers.webSocketTimestamps()) != 0 ||
+		len(c.buffers.actionTimestamps()) != 0 {
 		t.Fatal("new capture should return empty timestamp slices")
 	}
 
@@ -143,9 +145,9 @@ func TestCaptureSnapshotTimestampsAreCopied(t *testing.T) {
 	c.AddWebSocketEvents([]types.WebSocketEvent{{Event: "open", ID: "1", URL: "wss://example.test"}})
 	c.AddEnhancedActions([]types.EnhancedAction{{Type: "click", Timestamp: time.Now().UnixMilli()}})
 
-	netTS := c.GetNetworkTimestamps()
-	wsTS := c.GetWebSocketTimestamps()
-	actTS := c.GetActionTimestamps()
+	netTS := c.buffers.networkTimestamps()
+	wsTS := c.buffers.webSocketTimestamps()
+	actTS := c.buffers.actionTimestamps()
 	if len(netTS) != 1 || len(wsTS) != 1 || len(actTS) != 1 {
 		t.Fatalf("timestamp lengths = %d/%d/%d, want 1/1/1", len(netTS), len(wsTS), len(actTS))
 	}
@@ -154,7 +156,9 @@ func TestCaptureSnapshotTimestampsAreCopied(t *testing.T) {
 	netTS[0] = time.Time{}
 	wsTS[0] = time.Time{}
 	actTS[0] = time.Time{}
-	if c.GetNetworkTimestamps()[0].IsZero() || c.GetWebSocketTimestamps()[0].IsZero() || c.GetActionTimestamps()[0].IsZero() {
+	if c.buffers.networkTimestamps()[0].IsZero() ||
+		c.buffers.webSocketTimestamps()[0].IsZero() ||
+		c.buffers.actionTimestamps()[0].IsZero() {
 		t.Fatal("timestamp accessors should return copies")
 	}
 }

@@ -126,7 +126,7 @@ func TestNavigationCallback_FiredOutsideLock(t *testing.T) {
 	c.SetNavigationCallback(func() {
 		defer wg.Done()
 		// This would deadlock if callback is called inside c.mu.Lock
-		count := c.GetEnhancedActionCount()
+		count := len(c.GetAllEnhancedActions())
 		if count == 0 {
 			t.Error("expected actions to be stored before callback fires")
 		}

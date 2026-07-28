@@ -102,13 +102,13 @@ func TestCoverageBoost_PublicMemoryAndBufferGetters(t *testing.T) {
 		ResponseBody: "def",
 	}})
 
-	if got := c.GetWebSocketBufferMemory(); got <= 0 {
+	if got := c.buffers.calcWSMemory(); got <= 0 {
 		t.Fatalf("GetWebSocketBufferMemory() = %d, want > 0", got)
 	}
-	if got := c.GetNetworkBodiesBufferMemory(); got <= 0 {
+	if got := c.buffers.calcNBMemory(); got <= 0 {
 		t.Fatalf("GetNetworkBodiesBufferMemory() = %d, want > 0", got)
 	}
-	if got := c.GetNetworkBodyCount(); got == 0 {
+	if got := len(c.GetNetworkBodies()); got == 0 {
 		t.Fatal("GetNetworkBodyCount() = 0, want > 0")
 	}
 }
@@ -126,7 +126,7 @@ func TestCoverageBoost_EnhancedActionsBranches(t *testing.T) {
 	c.mu.Unlock()
 
 	c.AddEnhancedActions([]types.EnhancedAction{{Type: "type", Value: "hello"}})
-	if got := c.GetEnhancedActionCount(); got != 3 {
+	if got := len(c.GetAllEnhancedActions()); got != 3 {
 		t.Fatalf("GetEnhancedActionCount() = %d, want 3 after add", got)
 	}
 
@@ -144,7 +144,7 @@ func TestCoverageBoost_EnhancedActionsBranches(t *testing.T) {
 		many[i] = types.EnhancedAction{Type: "click"}
 	}
 	c.AddEnhancedActions(many)
-	if got := c.GetEnhancedActionCount(); got != MaxEnhancedActions {
+	if got := len(c.GetAllEnhancedActions()); got != MaxEnhancedActions {
 		t.Fatalf("GetEnhancedActionCount() after rotation = %d, want %d", got, MaxEnhancedActions)
 	}
 }
@@ -167,7 +167,7 @@ func TestCoverageBoost_NetworkBodiesBranches(t *testing.T) {
 		RequestBody:  "ping",
 		ResponseBody: "pong",
 	}})
-	if got := c.GetNetworkBodyCount(); got != 3 {
+	if got := len(c.GetNetworkBodies()); got != 3 {
 		t.Fatalf("GetNetworkBodyCount() = %d, want 3 after add", got)
 	}
 	bodies := c.GetNetworkBodies()
@@ -184,10 +184,10 @@ func TestCoverageBoost_NetworkBodiesBranches(t *testing.T) {
 		RequestBody:  huge,
 		ResponseBody: huge,
 	}})
-	if got := c2.GetNetworkBodyCount(); got != 0 {
+	if got := len(c2.GetNetworkBodies()); got != 0 {
 		t.Fatalf("GetNetworkBodyCount() after memory eviction = %d, want 0", got)
 	}
-	if got := c2.GetNetworkBodiesBufferMemory(); got != 0 {
+	if got := c2.buffers.calcNBMemory(); got != 0 {
 		t.Fatalf("GetNetworkBodiesBufferMemory() after eviction = %d, want 0", got)
 	}
 }
@@ -209,7 +209,7 @@ func TestCoverageBoost_NetworkWaterfallGetters(t *testing.T) {
 		{Name: "https://two.example"},
 	}, "https://page.example")
 
-	if got := c.GetNetworkWaterfallCount(); got != 1 {
+	if got := len(c.GetNetworkWaterfallEntries()); got != 1 {
 		t.Fatalf("GetNetworkWaterfallCount() = %d, want 1", got)
 	}
 	entries := c.GetNetworkWaterfallEntries()

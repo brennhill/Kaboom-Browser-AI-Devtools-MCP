@@ -97,6 +97,15 @@ func TestCaptureHasNoCompatibilityAliases(t *testing.T) {
 		"func (c *Capture) UnsubscribeLifecycle(",
 		"func (c *Capture) SaveSettingsToDisk(",
 		"func (c *Capture) ClearExtensionLogs(",
+		"func (c *Capture) GetNetworkTimestamps(",
+		"func (c *Capture) GetWebSocketTimestamps(",
+		"func (c *Capture) GetActionTimestamps(",
+		"func (c *Capture) GetWebSocketBufferMemory(",
+		"func (c *Capture) GetNetworkBodiesBufferMemory(",
+		"func (c *Capture) GetNetworkBodyCount(",
+		"func (c *Capture) GetNetworkWaterfallCount(",
+		"func (c *Capture) GetWebSocketEventCount(",
+		"func (c *Capture) GetEnhancedActionCount(",
 	} {
 		if strings.Contains(source.String(), forbidden) {
 			t.Errorf("capture retains compatibility surface %q", forbidden)

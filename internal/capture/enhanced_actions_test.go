@@ -31,7 +31,7 @@ func TestNewAddEnhancedActions_SingleAction(t *testing.T) {
 
 	c.AddEnhancedActions([]types.EnhancedAction{action})
 
-	if got := c.GetEnhancedActionCount(); got != 1 {
+	if got := len(c.GetAllEnhancedActions()); got != 1 {
 		t.Fatalf("GetEnhancedActionCount() = %d, want 1", got)
 	}
 
@@ -73,7 +73,7 @@ func TestNewAddEnhancedActions_MultipleBatch(t *testing.T) {
 
 	c.AddEnhancedActions(actions)
 
-	if got := c.GetEnhancedActionCount(); got != 3 {
+	if got := len(c.GetAllEnhancedActions()); got != 3 {
 		t.Fatalf("GetEnhancedActionCount() = %d, want 3", got)
 	}
 
@@ -177,7 +177,7 @@ func TestNewAddEnhancedActions_EmptyBatch(t *testing.T) {
 
 	c.AddEnhancedActions([]types.EnhancedAction{})
 
-	if got := c.GetEnhancedActionCount(); got != 0 {
+	if got := len(c.GetAllEnhancedActions()); got != 0 {
 		t.Errorf("GetEnhancedActionCount() after empty batch = %d, want 0", got)
 	}
 }
@@ -204,7 +204,7 @@ func TestNewAddEnhancedActions_RingBufferEviction(t *testing.T) {
 
 	c.AddEnhancedActions(batch)
 
-	if got := c.GetEnhancedActionCount(); got != MaxEnhancedActions {
+	if got := len(c.GetAllEnhancedActions()); got != MaxEnhancedActions {
 		t.Fatalf("GetEnhancedActionCount() = %d, want %d (max)", got, MaxEnhancedActions)
 	}
 
@@ -235,7 +235,7 @@ func TestNewAddEnhancedActions_ExactCapacity(t *testing.T) {
 
 	c.AddEnhancedActions(batch)
 
-	if got := c.GetEnhancedActionCount(); got != MaxEnhancedActions {
+	if got := len(c.GetAllEnhancedActions()); got != MaxEnhancedActions {
 		t.Fatalf("GetEnhancedActionCount() at exact capacity = %d, want %d", got, MaxEnhancedActions)
 	}
 }
@@ -260,7 +260,7 @@ func TestNewAddEnhancedActions_IncrementalOverflow(t *testing.T) {
 	}
 	c.AddEnhancedActions(extra)
 
-	if got := c.GetEnhancedActionCount(); got != MaxEnhancedActions {
+	if got := len(c.GetAllEnhancedActions()); got != MaxEnhancedActions {
 		t.Fatalf("GetEnhancedActionCount() after incremental overflow = %d, want %d", got, MaxEnhancedActions)
 	}
 
@@ -297,7 +297,7 @@ func TestNewAddEnhancedActions_AppendAfterDirectBufferSet(t *testing.T) {
 	c.AddEnhancedActions([]types.EnhancedAction{{Type: "scroll"}})
 
 	// 3 existing + 1 new = 4
-	if got := c.GetEnhancedActionCount(); got != 4 {
+	if got := len(c.GetAllEnhancedActions()); got != 4 {
 		t.Fatalf("GetEnhancedActionCount() after append = %d, want 4", got)
 	}
 }
@@ -312,7 +312,7 @@ func TestNewGetEnhancedActionCount_Empty(t *testing.T) {
 	c := NewCapture()
 	t.Cleanup(c.Close)
 
-	if got := c.GetEnhancedActionCount(); got != 0 {
+	if got := len(c.GetAllEnhancedActions()); got != 0 {
 		t.Errorf("GetEnhancedActionCount() on fresh capture = %d, want 0", got)
 	}
 }
@@ -324,12 +324,12 @@ func TestNewGetEnhancedActionCount_AfterAdds(t *testing.T) {
 	t.Cleanup(c.Close)
 
 	c.AddEnhancedActions([]types.EnhancedAction{{Type: "click"}})
-	if got := c.GetEnhancedActionCount(); got != 1 {
+	if got := len(c.GetAllEnhancedActions()); got != 1 {
 		t.Errorf("GetEnhancedActionCount() after 1 add = %d, want 1", got)
 	}
 
 	c.AddEnhancedActions([]types.EnhancedAction{{Type: "type"}, {Type: "navigate"}})
-	if got := c.GetEnhancedActionCount(); got != 3 {
+	if got := len(c.GetAllEnhancedActions()); got != 3 {
 		t.Errorf("GetEnhancedActionCount() after 2 adds = %d, want 3", got)
 	}
 }

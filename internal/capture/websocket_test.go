@@ -25,8 +25,8 @@ func TestV4WebSocketEventBuffer(t *testing.T) {
 
 	capture.AddWebSocketEvents(events)
 
-	if capture.GetWebSocketEventCount() != 2 {
-		t.Errorf("Expected 2 events, got %d", capture.GetWebSocketEventCount())
+	if len(capture.GetAllWebSocketEvents()) != 2 {
+		t.Errorf("Expected 2 events, got %d", len(capture.GetAllWebSocketEvents()))
 	}
 }
 
@@ -48,8 +48,8 @@ func TestV4WebSocketEventBufferRotation(t *testing.T) {
 
 	capture.AddWebSocketEvents(events)
 
-	if capture.GetWebSocketEventCount() != 500 {
-		t.Errorf("Expected 500 events after rotation, got %d", capture.GetWebSocketEventCount())
+	if len(capture.GetAllWebSocketEvents()) != 500 {
+		t.Errorf("Expected 500 events after rotation, got %d", len(capture.GetAllWebSocketEvents()))
 	}
 }
 
@@ -384,8 +384,8 @@ func TestV4PostWebSocketEventsEndpoint(t *testing.T) {
 		t.Errorf("Expected 200, got %d", rec.Code)
 	}
 
-	if capture.GetWebSocketEventCount() != 1 {
-		t.Errorf("Expected 1 event stored, got %d", capture.GetWebSocketEventCount())
+	if len(capture.GetAllWebSocketEvents()) != 1 {
+		t.Errorf("Expected 1 event stored, got %d", len(capture.GetAllWebSocketEvents()))
 	}
 }
 

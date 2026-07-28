@@ -132,27 +132,6 @@ func (c *Capture) GetHealthSnapshot() HealthSnapshot {
 	}
 }
 
-// GetNetworkTimestamps returns a copy of the network body timestamps
-func (c *Capture) GetNetworkTimestamps() []time.Time {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.buffers.networkTimestamps()
-}
-
-// GetWebSocketTimestamps returns a copy of the WebSocket event timestamps
-func (c *Capture) GetWebSocketTimestamps() []time.Time {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.buffers.webSocketTimestamps()
-}
-
-// GetActionTimestamps returns a copy of the action timestamps
-func (c *Capture) GetActionTimestamps() []time.Time {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.buffers.actionTimestamps()
-}
-
 // GetNetworkBodies returns a copy of the network bodies slice (thread-safe)
 func (c *Capture) GetNetworkBodies() []types.NetworkBody {
 	c.mu.RLock()

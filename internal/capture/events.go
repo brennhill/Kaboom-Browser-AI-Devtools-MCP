@@ -333,24 +333,6 @@ func (s *BufferStore) calcNBMemory() int64 {
 	return s.networkBodyMemoryTotal
 }
 
-// ============================================
-// Public Memory Accessors
-// ============================================
-
-// GetWebSocketBufferMemory returns approximate memory usage of WS buffer
-func (c *Capture) GetWebSocketBufferMemory() int64 {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.buffers.calcWSMemory()
-}
-
-// GetNetworkBodiesBufferMemory returns approximate memory usage of network bodies buffer
-func (c *Capture) GetNetworkBodiesBufferMemory() int64 {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.buffers.calcNBMemory()
-}
-
 // ClearNetworkBuffers resets network telemetry buffers and related counters.
 //
 // Invariants:
@@ -460,22 +442,10 @@ func (c *Capture) AddNetworkBodies(bodies []types.NetworkBody) {
 	c.buffers.appendNetworkBodies(bodies, activeTestIDs, time.Now())
 }
 
-func (c *Capture) GetNetworkBodyCount() int {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.buffers.networkCount()
-}
-
 func (c *Capture) AddNetworkWaterfallEntries(entries []types.NetworkWaterfallEntry, pageURL string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.networkWaterfall.appendEntries(entries, pageURL, time.Now())
-}
-
-func (c *Capture) GetNetworkWaterfallCount() int {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.networkWaterfall.count()
 }
 
 func (c *Capture) GetNetworkWaterfallEntries() []types.NetworkWaterfallEntry {
@@ -536,12 +506,6 @@ func (c *Capture) AddWebSocketEvents(events []types.WebSocketEvent) {
 		activeTestIDs = append(activeTestIDs, testID)
 	}
 	c.buffers.appendWebSocketEvents(events, activeTestIDs, time.Now(), c.wsConnections.TrackEvent)
-}
-
-func (c *Capture) GetWebSocketEventCount() int {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.buffers.webSocketCount()
 }
 
 func matchesWSEventFilter(event *types.WebSocketEvent, filter types.WebSocketEventFilter) bool {
@@ -647,10 +611,4 @@ func (c *Capture) AddEnhancedActions(actions []types.EnhancedAction) {
 	if navigationCallback != nil {
 		util.SafeGo(navigationCallback)
 	}
-}
-
-func (c *Capture) GetEnhancedActionCount() int {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.buffers.actionCount()
 }
