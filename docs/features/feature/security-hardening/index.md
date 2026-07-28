@@ -50,6 +50,8 @@ code_paths:
   - internal/security/httpsec/cookie.go
 test_paths:
   - internal/security/diff/diff_test.go
+  - internal/security/diff/compare_test.go
+  - internal/security/diff/tool_test.go
   - internal/security/diff/helpers_test.go
   - internal/security/policy/policy_test.go
   - internal/security/policy/boundary_test.go
@@ -138,7 +140,9 @@ imports `httpsec`.
 - `internal/security/csp/csp_tooling_test.go` — CSP tool parameter handling and dispatch.
 - `internal/security/csp/csp_helpers_test.go` — resource classification and URL extraction.
 - `internal/security/csp/boundary_test.go` — session-only whitelist overrides are applied, warned about, audited, and never persisted.
-- `internal/security/diff/diff_test.go` — regression/improvement diff coverage with shared snapshot/compare test helpers for consistent setup.
+- `internal/security/diff/diff_test.go` — snapshot lifecycle and retention with shared setup helpers.
+- `internal/security/diff/compare_test.go` — regression/improvement comparison and extraction.
+- `internal/security/diff/tool_test.go` — tool dispatch and summary behavior.
 - `internal/security/scan/scan_test.go` — scanner orchestration, filtering, serialization, and fuzz safety.
 - `internal/security/scan/scan_sensitive_data_test.go` — credential, PII, and evidence-redaction findings.
 - `internal/security/scan/scan_transport_policy_test.go` — headers, cookies, and transport-policy findings.
