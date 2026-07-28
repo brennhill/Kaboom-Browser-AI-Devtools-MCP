@@ -58,7 +58,8 @@ code_paths:
   - cmd/browser-agent/main_connection_mcp_shutdown.go
   - cmd/browser-agent/internal/exitdiag/recorder.go
   - cmd/browser-agent/internal/httpguard/middleware.go
-  - cmd/browser-agent/handler_http.go
+  - cmd/browser-agent/internal/httpapi/response.go
+  - cmd/browser-agent/internal/mcphttp/handler.go
   - cmd/browser-agent/internal/connectmode/runner.go
   - cmd/browser-agent/internal/versioncheck/checker.go
   - internal/diag/output.go
@@ -91,7 +92,7 @@ test_paths:
   - cmd/browser-agent/reclaim_port_test.go
   - cmd/browser-agent/bridge_startup_contention_test.go
   - cmd/browser-agent/bridge_faststart_extended_test.go
-  - cmd/browser-agent/handler_http_headers_test.go
+  - cmd/browser-agent/internal/mcphttp/handler_test.go
   - cmd/browser-agent/internal/httpguard/middleware_test.go
   - cmd/browser-agent/internal/connectmode/runner_test.go
   - cmd/browser-agent/internal/versioncheck/checker_test.go

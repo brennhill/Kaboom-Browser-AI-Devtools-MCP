@@ -18,6 +18,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/binarywatch"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/daemonlife"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/terminal"
@@ -35,7 +36,7 @@ import (
 
 func terminalDeps() terminal.Deps {
 	return terminal.Deps{
-		JSONResponse:   jsonResponse,
+		JSONResponse:   httpapi.JSON,
 		CORSMiddleware: httpguard.CORS,
 		Stderrf:        diag.Printf,
 		MaxPostBody:    maxPostBodySize,

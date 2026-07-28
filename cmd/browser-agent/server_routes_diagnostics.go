@@ -12,6 +12,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/launchmode"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
@@ -32,7 +33,7 @@ func buildUpgradeInfo() *health.UpgradeInfo {
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request, cap *capture.Store) {
 	if r.Method != http.MethodGet {
-		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		httpapi.JSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
 	}
 	logFileSize := int64(0)
@@ -67,19 +68,19 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request, cap *captu
 			"production_parity": productionParity, "insecure_rewrites": rewrites,
 		}
 	}
-	jsonResponse(w, http.StatusOK, response)
+	httpapi.JSON(w, http.StatusOK, response)
 }
 
 func (s *Server) handleShutdown(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		httpapi.JSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
 	}
 	_ = s.logs.AppendToFile([]mcp.LogEntry{{
 		"type": "lifecycle", "event": "shutdown_requested", "source": "http",
 		"pid": os.Getpid(), "timestamp": time.Now().UTC().Format(time.RFC3339),
 	}})
-	jsonResponse(w, http.StatusOK, map[string]string{"status": "shutting_down", "message": "Server shutdown initiated"})
+	httpapi.JSON(w, http.StatusOK, map[string]string{"status": "shutting_down", "message": "Server shutdown initiated"})
 	if flusher, ok := w.(http.Flusher); ok {
 		flusher.Flush()
 	}
@@ -137,7 +138,7 @@ func (s *Server) lastConsoleEvent() map[string]any {
 // handleDiagnostics serves the /diagnostics endpoint with debug information.
 func (s *Server) handleDiagnostics(w http.ResponseWriter, r *http.Request, cap *capture.Store) {
 	if r.Method != "GET" {
-		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		httpapi.JSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
 	}
 
@@ -186,7 +187,7 @@ func (s *Server) handleDiagnostics(w http.ResponseWriter, r *http.Request, cap *
 		}
 	}
 
-	jsonResponse(w, http.StatusOK, resp)
+	httpapi.JSON(w, http.StatusOK, resp)
 }
 
 // appendCaptureDiagnostics adds capture-related diagnostic fields to response map.
@@ -269,9 +270,9 @@ func (s *Server) handleLogs(w http.ResponseWriter, r *http.Request) {
 		s.handleLogsPost(w, r)
 	case http.MethodDelete:
 		s.logs.ClearEntries()
-		jsonResponse(w, http.StatusOK, map[string]bool{"cleared": true})
+		httpapi.JSON(w, http.StatusOK, map[string]bool{"cleared": true})
 	default:
-		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		httpapi.JSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 	}
 }
 
@@ -281,17 +282,17 @@ func (s *Server) handleLogsPost(w http.ResponseWriter, r *http.Request) {
 		Entries []mcp.LogEntry `json:"entries"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+		httpapi.JSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return
 	}
 	if body.Entries == nil {
-		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Missing entries array"})
+		httpapi.JSON(w, http.StatusBadRequest, map[string]string{"error": "Missing entries array"})
 		return
 	}
 
 	valid, rejected := logstore.ValidateEntries(body.Entries)
 	received := s.logs.AddEntries(valid)
-	jsonResponse(w, http.StatusOK, map[string]int{
+	httpapi.JSON(w, http.StatusOK, map[string]int{
 		"received": received,
 		"rejected": rejected,
 		"entries":  s.logs.EntryCount(),
@@ -306,15 +307,15 @@ func debugEndpointsEnabled() bool {
 func handleDebugUsage(mcp *MCPHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
-			jsonResponse(w, http.StatusMethodNotAllowed, map[string]any{"error": "method not allowed"})
+			httpapi.JSON(w, http.StatusMethodNotAllowed, map[string]any{"error": "method not allowed"})
 			return
 		}
 		tracker := mcp.GetUsageTracker()
 		if tracker == nil {
-			jsonResponse(w, http.StatusOK, map[string]any{"counts": map[string]int{}})
+			httpapi.JSON(w, http.StatusOK, map[string]any{"counts": map[string]int{}})
 			return
 		}
-		jsonResponse(w, http.StatusOK, map[string]any{"counts": tracker.Peek()})
+		httpapi.JSON(w, http.StatusOK, map[string]any{"counts": tracker.Peek()})
 	}
 }
 
@@ -322,12 +323,12 @@ func handleDebugUsage(mcp *MCPHandler) http.HandlerFunc {
 func handleDebugBeaconFlush(mcp *MCPHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
-			jsonResponse(w, http.StatusMethodNotAllowed, map[string]any{"error": "method not allowed"})
+			httpapi.JSON(w, http.StatusMethodNotAllowed, map[string]any{"error": "method not allowed"})
 			return
 		}
 		tracker := mcp.GetUsageTracker()
 		if tracker == nil {
-			jsonResponse(w, http.StatusOK, map[string]any{
+			httpapi.JSON(w, http.StatusOK, map[string]any{
 				"payload": nil,
 				"flushed": 0,
 				"message": "no usage tracker available",
@@ -336,7 +337,7 @@ func handleDebugBeaconFlush(mcp *MCPHandler) http.HandlerFunc {
 		}
 		snapshot := tracker.SwapAndReset()
 		if snapshot == nil {
-			jsonResponse(w, http.StatusOK, map[string]any{
+			httpapi.JSON(w, http.StatusOK, map[string]any{
 				"payload": nil,
 				"flushed": 0,
 				"message": "no activity since last flush",
@@ -344,7 +345,7 @@ func handleDebugBeaconFlush(mcp *MCPHandler) http.HandlerFunc {
 			return
 		}
 		payload := telemetry.BuildUsageSummaryPayload(0, snapshot)
-		jsonResponse(w, http.StatusOK, map[string]any{
+		httpapi.JSON(w, http.StatusOK, map[string]any{
 			"payload": payload,
 			"flushed": len(snapshot.ToolStats),
 		})

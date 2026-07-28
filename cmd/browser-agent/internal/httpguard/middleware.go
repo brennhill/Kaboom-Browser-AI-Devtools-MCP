@@ -154,5 +154,3 @@ func ExtensionOnly(next http.HandlerFunc) http.HandlerFunc {
 		next(w, r)
 	}
 }
-
-// Note: jsonResponse is defined in handler.go

@@ -24,8 +24,9 @@ import (
 	"strings"
 	"testing"
 
+	agenthttp "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/httpapi"
+	uploadapi "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/httpapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
 )
 
@@ -227,16 +228,16 @@ func newUploadHTTPServer(t *testing.T, osAutomationEnabled bool) *httptest.Serve
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/file/read", func(w http.ResponseWriter, r *http.Request) {
-		httpapi.HandleFileReadHTTP(w, r, uploadSecurityConfig, jsonResponse)
+		uploadapi.HandleFileReadHTTP(w, r, uploadSecurityConfig, agenthttp.JSON)
 	})
 	mux.HandleFunc("/api/file/dialog/inject", func(w http.ResponseWriter, r *http.Request) {
-		httpapi.HandleFileDialogInjectHTTP(w, r, uploadSecurityConfig, jsonResponse)
+		uploadapi.HandleFileDialogInjectHTTP(w, r, uploadSecurityConfig, agenthttp.JSON)
 	})
 	mux.HandleFunc("/api/form/submit", func(w http.ResponseWriter, r *http.Request) {
-		httpapi.HandleFormSubmitHTTP(w, r, uploadSecurityConfig, jsonResponse)
+		uploadapi.HandleFormSubmitHTTP(w, r, uploadSecurityConfig, agenthttp.JSON)
 	})
 	mux.HandleFunc("/api/os-automation/inject", func(w http.ResponseWriter, r *http.Request) {
-		httpapi.HandleOSAutomationHTTP(w, r, osAutomationEnabled, uploadSecurityConfig, jsonResponse)
+		uploadapi.HandleOSAutomationHTTP(w, r, osAutomationEnabled, uploadSecurityConfig, agenthttp.JSON)
 	})
 
 	return httptest.NewServer(mux)

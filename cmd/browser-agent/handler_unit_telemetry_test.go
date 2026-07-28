@@ -72,7 +72,6 @@ func TestMCPHandler_PassiveTelemetrySummaryDeltas(t *testing.T) {
 			}, true
 		},
 	})
-
 	req := mcp.JSONRPCRequest{
 		JSONRPC:  "2.0",
 		ID:       1,
@@ -161,7 +160,6 @@ func TestMCPHandler_PassiveTelemetryIsPerClient(t *testing.T) {
 			}, true
 		},
 	})
-
 	reqA := mcp.JSONRPCRequest{
 		JSONRPC:  "2.0",
 		ID:       1,
@@ -367,17 +365,18 @@ func TestMCPHandlerHandleHTTP(t *testing.T) {
 			}, true
 		},
 	})
+	transport := newMCPHTTPHandler(h)
 
 	getReq := httptest.NewRequest(http.MethodGet, "/mcp", nil)
 	getRR := httptest.NewRecorder()
-	h.HandleHTTP(getRR, getReq)
+	transport.ServeHTTP(getRR, getReq)
 	if getRR.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("GET /mcp status = %d, want %d", getRR.Code, http.StatusMethodNotAllowed)
 	}
 
 	parseReq := httptest.NewRequest(http.MethodPost, "/mcp", bytes.NewBufferString(`{"jsonrpc":"2.0","id":1,`))
 	parseRR := httptest.NewRecorder()
-	h.HandleHTTP(parseRR, parseReq)
+	transport.ServeHTTP(parseRR, parseReq)
 	var parseResp mcp.JSONRPCResponse
 	if err := json.Unmarshal(parseRR.Body.Bytes(), &parseResp); err != nil {
 		t.Fatalf("json.Unmarshal(parse error response) error = %v", err)
@@ -388,14 +387,14 @@ func TestMCPHandlerHandleHTTP(t *testing.T) {
 
 	notifyReq := httptest.NewRequest(http.MethodPost, "/mcp", bytes.NewBufferString(`{"jsonrpc":"2.0","method":"notifications/initialized","params":{}}`))
 	notifyRR := httptest.NewRecorder()
-	h.HandleHTTP(notifyRR, notifyReq)
+	transport.ServeHTTP(notifyRR, notifyReq)
 	if notifyRR.Code != http.StatusNoContent {
 		t.Fatalf("notification status = %d, want %d", notifyRR.Code, http.StatusNoContent)
 	}
 
 	callReq := httptest.NewRequest(http.MethodPost, "/mcp", bytes.NewBufferString(`{"jsonrpc":"2.0","id":99,"method":"tools/call","params":{"name":"observe","arguments":{"what":"errors"}}}`))
 	callRR := httptest.NewRecorder()
-	h.HandleHTTP(callRR, callReq)
+	transport.ServeHTTP(callRR, callReq)
 	var callResp mcp.JSONRPCResponse
 	if err := json.Unmarshal(callRR.Body.Bytes(), &callResp); err != nil {
 		t.Fatalf("json.Unmarshal(call response) error = %v", err)
@@ -407,7 +406,7 @@ func TestMCPHandlerHandleHTTP(t *testing.T) {
 	readErrReq := httptest.NewRequest(http.MethodPost, "/mcp", bytes.NewBuffer(nil))
 	readErrReq.Body = ioNopCloser{Reader: failReader{}}
 	readErrRR := httptest.NewRecorder()
-	h.HandleHTTP(readErrRR, readErrReq)
+	transport.ServeHTTP(readErrRR, readErrReq)
 	var readErrResp mcp.JSONRPCResponse
 	if err := json.Unmarshal(readErrRR.Body.Bytes(), &readErrResp); err != nil {
 		t.Fatalf("json.Unmarshal(read error response) error = %v", err)
@@ -447,12 +446,13 @@ func TestHandleRequest_RejectsInvalidJSONRPCVersion(t *testing.T) {
 func TestHandleHTTP_RejectsNonJSONContentType(t *testing.T) {
 	t.Parallel()
 	h := NewMCPHandler(nil, "v-test")
+	transport := newMCPHTTPHandler(h)
 
 	// text/plain should be rejected
 	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
 	req.Header.Set("Content-Type", "text/plain")
 	rr := httptest.NewRecorder()
-	h.HandleHTTP(rr, req)
+	transport.ServeHTTP(rr, req)
 
 	var resp mcp.JSONRPCResponse
 	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
@@ -465,7 +465,7 @@ func TestHandleHTTP_RejectsNonJSONContentType(t *testing.T) {
 	// No Content-Type header should be accepted (lenient)
 	req2 := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":2,"method":"ping"}`))
 	rr2 := httptest.NewRecorder()
-	h.HandleHTTP(rr2, req2)
+	transport.ServeHTTP(rr2, req2)
 
 	var resp2 mcp.JSONRPCResponse
 	if err := json.Unmarshal(rr2.Body.Bytes(), &resp2); err != nil {
@@ -479,7 +479,7 @@ func TestHandleHTTP_RejectsNonJSONContentType(t *testing.T) {
 	req3 := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":3,"method":"ping"}`))
 	req3.Header.Set("Content-Type", "application/json")
 	rr3 := httptest.NewRecorder()
-	h.HandleHTTP(rr3, req3)
+	transport.ServeHTTP(rr3, req3)
 
 	var resp3 mcp.JSONRPCResponse
 	if err := json.Unmarshal(rr3.Body.Bytes(), &resp3); err != nil {
@@ -493,7 +493,7 @@ func TestHandleHTTP_RejectsNonJSONContentType(t *testing.T) {
 	req4 := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":4,"method":"ping"}`))
 	req4.Header.Set("Content-Type", "application/json; charset=utf-8")
 	rr4 := httptest.NewRecorder()
-	h.HandleHTTP(rr4, req4)
+	transport.ServeHTTP(rr4, req4)
 
 	var resp4 mcp.JSONRPCResponse
 	if err := json.Unmarshal(rr4.Body.Bytes(), &resp4); err != nil {
@@ -574,11 +574,12 @@ func TestMCPHandlerHandleHTTP_ReadErrorUsesNullID(t *testing.T) {
 		cap:     capture.NewCapture(),
 		limiter: testLimiter{allowed: true},
 	})
+	transport := newMCPHTTPHandler(h)
 
 	readErrReq := httptest.NewRequest(http.MethodPost, "/mcp", bytes.NewBuffer(nil))
 	readErrReq.Body = ioNopCloser{Reader: failReader{}}
 	readErrRR := httptest.NewRecorder()
-	h.HandleHTTP(readErrRR, readErrReq)
+	transport.ServeHTTP(readErrRR, readErrReq)
 
 	var readErrResp mcp.JSONRPCResponse
 	if err := json.Unmarshal(readErrRR.Body.Bytes(), &readErrResp); err != nil {
@@ -600,10 +601,11 @@ func TestMCPHandlerHandleHTTP_IDNullIsInvalidRequest(t *testing.T) {
 		cap:     capture.NewCapture(),
 		limiter: testLimiter{allowed: true},
 	})
+	transport := newMCPHTTPHandler(h)
 
 	nullIDReq := httptest.NewRequest(http.MethodPost, "/mcp", bytes.NewBufferString(`{"jsonrpc":"2.0","id":null,"method":"ping","params":{}}`))
 	nullIDRR := httptest.NewRecorder()
-	h.HandleHTTP(nullIDRR, nullIDReq)
+	transport.ServeHTTP(nullIDRR, nullIDReq)
 	if nullIDRR.Code != http.StatusOK {
 		t.Fatalf("id:null request status = %d, want %d", nullIDRR.Code, http.StatusOK)
 	}

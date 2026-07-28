@@ -670,7 +670,7 @@ func TestMCPProtocol_HTTPHandler(t *testing.T) {
 	handler := NewMCPHandler(nil, "test-version")
 
 	// Create test server
-	testServer := httptest.NewServer(http.HandlerFunc(handler.HandleHTTP))
+	testServer := httptest.NewServer(newMCPHTTPHandler(handler))
 	defer testServer.Close()
 
 	t.Run("notification returns 204", func(t *testing.T) {

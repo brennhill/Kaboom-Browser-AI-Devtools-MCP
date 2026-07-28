@@ -13,8 +13,10 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/ciapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/dashboard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
+	agenthttp "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/httpguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/insecureproxy"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcphttp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mediaapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testpages"
@@ -22,7 +24,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/identity"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tracking"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/httpapi"
+	uploadapi "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/httpapi"
 )
 
 //go:embed openapi.json
@@ -30,7 +32,7 @@ var openapiJSON []byte
 
 func handleOpenAPI(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		agenthttp.JSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -49,7 +51,7 @@ func handleTelemetry(server *Server, cap *capture.Store) http.HandlerFunc {
 
 		telType := r.URL.Query().Get("type")
 		if telType == "" {
-			jsonResponse(w, http.StatusBadRequest, map[string]string{
+			agenthttp.JSON(w, http.StatusBadRequest, map[string]string{
 				"error": "Missing required 'type' parameter",
 				"hint":  "Valid types: logs, network_waterfall, network_bodies, websocket_events, actions, performance_snapshots, extension_logs, websocket_status",
 			})
@@ -110,20 +112,20 @@ func handleTelemetry(server *Server, cap *capture.Store) http.HandlerFunc {
 			result, count = entries, len(entries)
 		case "websocket_status":
 			status := cap.GetWebSocketStatus(capture.WebSocketStatusFilter{})
-			jsonResponse(w, http.StatusOK, map[string]any{
+			agenthttp.JSON(w, http.StatusOK, map[string]any{
 				"type": telType, "connections": status.Connections,
 				"closed": status.Closed, "count": len(status.Connections),
 			})
 			return
 		default:
-			jsonResponse(w, http.StatusBadRequest, map[string]string{
+			agenthttp.JSON(w, http.StatusBadRequest, map[string]string{
 				"error": "Unknown telemetry type: " + telType,
 				"hint":  "Valid types: logs, network_waterfall, network_bodies, websocket_events, actions, performance_snapshots, extension_logs, websocket_status",
 			})
 			return
 		}
 
-		jsonResponse(w, http.StatusOK, map[string]any{
+		agenthttp.JSON(w, http.StatusOK, map[string]any{
 			"type": telType, "items": result, "count": count,
 		})
 	}
@@ -187,7 +189,7 @@ func registerCaptureRoutes(mux *http.ServeMux, server *Server, cap *capture.Stor
 func resolveClientRegistry(cap *capture.Store, w http.ResponseWriter) (capture.ClientRegistry, bool) {
 	registry := cap.GetClientRegistry()
 	if registry == nil {
-		jsonResponse(w, http.StatusServiceUnavailable, map[string]string{"error": "client_registry_unavailable"})
+		agenthttp.JSON(w, http.StatusServiceUnavailable, map[string]string{"error": "client_registry_unavailable"})
 		return nil, false
 	}
 	return registry, true
@@ -209,7 +211,7 @@ func handleClientsList(w http.ResponseWriter, r *http.Request, cap *capture.Stor
 	}
 	switch r.Method {
 	case http.MethodGet:
-		jsonResponse(w, http.StatusOK, map[string]any{
+		agenthttp.JSON(w, http.StatusOK, map[string]any{
 			"clients": registry.List(),
 			"count":   registry.Count(),
 		})
@@ -219,12 +221,12 @@ func handleClientsList(w http.ResponseWriter, r *http.Request, cap *capture.Stor
 			CWD string `json:"cwd"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+			agenthttp.JSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 			return
 		}
-		jsonResponse(w, http.StatusOK, map[string]any{"result": registry.Register(body.CWD)})
+		agenthttp.JSON(w, http.StatusOK, map[string]any{"result": registry.Register(body.CWD)})
 	default:
-		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		agenthttp.JSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 	}
 }
 
@@ -235,25 +237,25 @@ func handleClientByID(w http.ResponseWriter, r *http.Request, cap *capture.Store
 	}
 	clientID := strings.TrimPrefix(r.URL.Path, "/clients/")
 	if clientID == "" {
-		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Missing client ID"})
+		agenthttp.JSON(w, http.StatusBadRequest, map[string]string{"error": "Missing client ID"})
 		return
 	}
 	switch r.Method {
 	case http.MethodGet:
 		client := registry.Get(clientID)
 		if client == nil {
-			jsonResponse(w, http.StatusNotFound, map[string]string{"error": "Client not found"})
+			agenthttp.JSON(w, http.StatusNotFound, map[string]string{"error": "Client not found"})
 			return
 		}
-		jsonResponse(w, http.StatusOK, client)
+		agenthttp.JSON(w, http.StatusOK, client)
 	case http.MethodDelete:
 		if !registry.Unregister(clientID) {
-			jsonResponse(w, http.StatusNotFound, map[string]string{"error": "Client not found"})
+			agenthttp.JSON(w, http.StatusNotFound, map[string]string{"error": "Client not found"})
 			return
 		}
-		jsonResponse(w, http.StatusOK, map[string]bool{"unregistered": true})
+		agenthttp.JSON(w, http.StatusOK, map[string]bool{"unregistered": true})
 	default:
-		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		agenthttp.JSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 	}
 }
 
@@ -264,23 +266,23 @@ func handleClientByID(w http.ResponseWriter, r *http.Request, cap *capture.Store
 func registerUploadRoutes(mux *http.ServeMux) {
 	// NOT MCP — File read metadata (upload escalation stage 1, always available)
 	mux.HandleFunc("/api/file/read", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		httpapi.HandleFileReadHTTP(w, r, uploadSecurityConfig, jsonResponse)
+		uploadapi.HandleFileReadHTTP(w, r, uploadSecurityConfig, agenthttp.JSON)
 	})))
 	// NOT MCP — File dialog injection (upload escalation stage 2, always available)
 	mux.HandleFunc("/api/file/dialog/inject", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		httpapi.HandleFileDialogInjectHTTP(w, r, uploadSecurityConfig, jsonResponse)
+		uploadapi.HandleFileDialogInjectHTTP(w, r, uploadSecurityConfig, agenthttp.JSON)
 	})))
 	// NOT MCP — Form submit helper (upload escalation stage 3, always available)
 	mux.HandleFunc("/api/form/submit", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		httpapi.HandleFormSubmitHTTP(w, r, uploadSecurityConfig, jsonResponse)
+		uploadapi.HandleFormSubmitHTTP(w, r, uploadSecurityConfig, agenthttp.JSON)
 	})))
 	// NOT MCP — OS-level file dialog automation (upload escalation stage 4, requires --enable-os-upload-automation)
 	mux.HandleFunc("/api/os-automation/inject", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		httpapi.HandleOSAutomationHTTP(w, r, osUploadAutomationFlag, uploadSecurityConfig, jsonResponse)
+		uploadapi.HandleOSAutomationHTTP(w, r, osUploadAutomationFlag, uploadSecurityConfig, agenthttp.JSON)
 	})))
 	// NOT MCP — Dismiss dangling file dialog via Escape key (cleanup after failed Stage 4)
 	mux.HandleFunc("/api/os-automation/dismiss", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		httpapi.HandleOSAutomationDismissHTTP(w, r, osUploadAutomationFlag, jsonResponse)
+		uploadapi.HandleOSAutomationDismissHTTP(w, r, osUploadAutomationFlag, agenthttp.JSON)
 	})))
 }
 
@@ -292,11 +294,11 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, cap *capture.Store) 
 
 	// MCP — The single MCP JSON-RPC endpoint. All AI agent tool calls go through here.
 	mcp := NewToolHandler(server, cap)
-	mux.HandleFunc("/mcp", httpguard.CORS(mcp.HandleHTTP))
+	mux.HandleFunc("/mcp", httpguard.CORS(newMCPHTTPHandler(mcp).ServeHTTP))
 
 	// NOT MCP — Dashboard status API (JSON feed for the HTML dashboard)
 	mux.HandleFunc("/api/status", httpguard.CORS(dashboard.Status(dashboard.StatusOptions{
-		Version: version, StartedAt: startTime, Capture: cap, JSONResponse: jsonResponse,
+		Version: version, StartedAt: startTime, Capture: cap, JSONResponse: agenthttp.JSON,
 		Logs: func() (int, int) {
 			return server.logs.EntryCount(), server.logs.MaxEntries()
 		},
@@ -326,7 +328,7 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, cap *capture.Store) 
 	}))
 
 	// NOT MCP — Last-resort altered-environment proxy for CSP-locked debugging sessions.
-	proxyHandler := insecureproxy.New(cap, jsonResponse)
+	proxyHandler := insecureproxy.New(cap, agenthttp.JSON)
 	mux.HandleFunc("/insecure-proxy", httpguard.CORS(proxyHandler.ServeHTTP))
 
 	// NOT MCP — Doctor preflight check (aggregated readiness status)
@@ -353,7 +355,7 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, cap *capture.Store) 
 	mux.HandleFunc("/diagnostics", httpguard.CORS(func(w http.ResponseWriter, r *http.Request) {
 		accept := r.Header.Get("Accept")
 		if strings.Contains(accept, "text/html") && !strings.Contains(accept, "application/json") {
-			dashboard.Diagnostics(jsonResponse)(w, r)
+			dashboard.Diagnostics(agenthttp.JSON)(w, r)
 			return
 		}
 		server.handleDiagnostics(w, r, cap)
@@ -368,9 +370,9 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, cap *capture.Store) 
 	})))
 
 	// NOT MCP — HTML pages for human navigation
-	mux.HandleFunc("/logs.html", httpguard.CORS(dashboard.Logs(jsonResponse)))
-	mux.HandleFunc("/setup", httpguard.CORS(dashboard.Setup(jsonResponse)))
-	mux.HandleFunc("/docs", httpguard.CORS(dashboard.Docs(jsonResponse)))
+	mux.HandleFunc("/logs.html", httpguard.CORS(dashboard.Logs(agenthttp.JSON)))
+	mux.HandleFunc("/setup", httpguard.CORS(dashboard.Setup(agenthttp.JSON)))
+	mux.HandleFunc("/docs", httpguard.CORS(dashboard.Docs(agenthttp.JSON)))
 
 	// NOT MCP — WebSocket echo server for test harness (must be registered before /tests/ subtree).
 	// httpguard.CORS sets headers on http.ResponseWriter pre-hijack; those headers are not included
@@ -407,7 +409,7 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, cap *capture.Store) 
 			auth := r.Header.Get("Authorization")
 			const prefix = "Bearer "
 			if !strings.HasPrefix(auth, prefix) || auth[len(prefix):] != server.pushDrainToken {
-				jsonResponse(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+				agenthttp.JSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 				return
 			}
 		}
@@ -421,8 +423,22 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, cap *capture.Store) 
 
 	// NOT MCP — HTML dashboard (browser) with JSON fallback (Accept: application/json)
 	mux.HandleFunc("/", httpguard.CORS(dashboard.Root(dashboard.RootOptions{
-		Name: identity.MCPServerName, Version: version, JSONResponse: jsonResponse,
+		Name: identity.MCPServerName, Version: version, JSONResponse: agenthttp.JSON,
 	})))
 
 	return mcp
+}
+
+func newMCPHTTPHandler(handler *MCPHandler) *mcphttp.Handler {
+	return mcphttp.New(mcphttp.Config{
+		Version:       handler.version,
+		MaxBodySize:   maxPostBodySize,
+		HandleRequest: handler.HandleRequest,
+		Capture: func() *capture.Store {
+			if handler.toolHandler == nil {
+				return nil
+			}
+			return handler.toolHandler.GetCapture()
+		},
+	})
 }

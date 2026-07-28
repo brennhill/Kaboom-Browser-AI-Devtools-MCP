@@ -1,14 +1,14 @@
-// Purpose: Tests HTTP request-context header extraction for MCP-over-HTTP.
-// Docs: docs/core/mcp-correctness.md
+// handler_test.go — Tests MCP-over-HTTP request parsing and context capture.
+// Docs: docs/features/feature/mcp-persistent-server/index.md
 
-package main
+package mcphttp
 
 import (
 	"net/http/httptest"
 	"testing"
 )
 
-func TestNewHTTPRequestContextReadsKaboomHeaders(t *testing.T) {
+func TestNewRequestContextReadsKaboomHeaders(t *testing.T) {
 	t.Parallel()
 
 	req := httptest.NewRequest("POST", "http://localhost/mcp", nil)
@@ -17,7 +17,7 @@ func TestNewHTTPRequestContextReadsKaboomHeaders(t *testing.T) {
 	req.Header.Set("X-Kaboom-Extension-Version", "1.2.3")
 	req.Header.Set("Authorization", "Bearer secret-token")
 
-	ctx := newHTTPRequestContext(req, "9.9.9")
+	ctx := newRequestContext(req, "9.9.9")
 
 	if ctx.extSessionID != "session-123" {
 		t.Fatalf("extSessionID = %q, want session-123", ctx.extSessionID)
