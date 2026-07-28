@@ -196,5 +196,5 @@ curl http://localhost:7890/health
 ```
 
 Confirm these fields in the JSON response:
-- `service-name` (or `service_name`) is `kaboom-browser-devtools`
+- `name` is `kaboom-browser-devtools`
 - `version` matches the expected installed release

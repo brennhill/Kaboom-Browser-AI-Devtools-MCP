@@ -4,15 +4,15 @@ package bridge
 
 import "testing"
 
-func TestDecodeHealthMetadataResolvesServiceFieldFallbacks(t *testing.T) {
+func TestDecodeHealthMetadataUsesCanonicalNameOnly(t *testing.T) {
 	tests := []struct {
 		name string
 		body string
 		want string
 	}{
-		{name: "service-name", body: `{"version":"v0.8.8","service-name":"kaboom"}`, want: "kaboom"},
-		{name: "service", body: `{"version":"v0.8.8","service":"kaboom-agentic-browser"}`, want: "kaboom-agentic-browser"},
-		{name: "name", body: `{"version":"v0.8.8","name":"legacy"}`, want: "legacy"},
+		{name: "name", body: `{"version":"v0.8.8","name":"kaboom-browser-devtools"}`, want: "kaboom-browser-devtools"},
+		{name: "service-name rejected", body: `{"version":"v0.8.8","service-name":"kaboom"}`, want: ""},
+		{name: "service rejected", body: `{"version":"v0.8.8","service":"kaboom-agentic-browser"}`, want: ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -20,7 +20,7 @@ func TestDecodeHealthMetadataResolvesServiceFieldFallbacks(t *testing.T) {
 			if !ok {
 				t.Fatal("expected valid health metadata")
 			}
-			if got := meta.resolvedServiceName(); got != tt.want {
+			if got := meta.serviceName(); got != tt.want {
 				t.Fatalf("resolved service = %q, want %q", got, tt.want)
 			}
 		})

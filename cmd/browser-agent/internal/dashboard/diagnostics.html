@@ -109,7 +109,6 @@ tr:last-child td { border-bottom: none; }
   <span class="sub" id="generated-at"></span>
   <nav class="nav">
     <a href="/">Dashboard</a>
-    <a href="/diagnostics.json" class="json-link">JSON</a>
   </nav>
 </header>
 
@@ -293,7 +292,7 @@ function render(d) {
 
 async function refresh() {
   try {
-    const r = await fetch('/diagnostics.json');
+    const r = await fetch('/diagnostics');
     if (r.ok) render(await r.json());
   } catch (e) { /* silent */ }
 }

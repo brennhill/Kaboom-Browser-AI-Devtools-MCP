@@ -658,7 +658,7 @@ sleep 1
 HEALTH_OK=0
 HEALTH_RESPONSE=$(curl -sS --max-time 5 "http://127.0.0.1:7890/health" 2>/dev/null || true)
 # Require kaboom identity, not just any responder with a "status" field —
-# /health returns "service-name":"kaboom-browser-devtools" (handleHealth in
+# /health returns "name":"kaboom-browser-devtools" (handleHealth in
 # cmd/browser-agent/server_routes_health_diagnostics.go).
 if echo "$HEALTH_RESPONSE" | grep -q '"status"' 2>/dev/null && \
    echo "$HEALTH_RESPONSE" | grep -q 'kaboom-browser-devtools' 2>/dev/null; then

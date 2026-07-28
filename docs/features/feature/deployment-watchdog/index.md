@@ -11,9 +11,15 @@ code_paths:
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/operationalapi/handler.go
   - cmd/browser-agent/handler.go
+  - cmd/browser-agent/server.go
+  - cmd/browser-agent/openapi.json
+  - cmd/browser-agent/internal/dashboard/diagnostics.html
+  - src/generated/openapi-types.ts
 test_paths:
   - cmd/browser-agent/internal/binarywatch/watcher_test.go
   - cmd/browser-agent/internal/operationalapi/health_test.go
+  - cmd/browser-agent/server_routes_unit_test.go
+  - tests/extension/no-compatibility-facades.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -41,4 +47,7 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-Add concrete implementation and test links here as this feature evolves.
+`GET /health` exposes `name` as the sole daemon identity field. Diagnostics
+JSON is served only by `GET /diagnostics`; the dashboard uses that canonical
+route, and generated TypeScript contracts come directly from
+`cmd/browser-agent/openapi.json`.

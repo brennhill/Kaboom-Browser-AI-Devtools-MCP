@@ -100,6 +100,11 @@ last_verified_date: 2026-03-28
 
 ## Code and Tests
 
+Daemon updates are performed through the supported installer and CLI paths
+listed above. The popup no longer exposes a dormant one-click update flow:
+its `/upgrade/nonce` and `/upgrade/install` calls had no server routes or
+OpenAPI contract.
+
 - npm wrapper installs now register `kaboom-browser-devtools` and remove legacy `kaboom-*`, `gasoline-*`, and `strum-*` MCP entries during install/update/uninstall.
 - npm wrapper config helpers now converge on `mergeKaboomConfig(...)`, and doctor treats legacy MCP keys as non-OK until customers reinstall.
 - PyPI wrapper config helpers now converge on `merge_kaboom_config(...)`, and packaged `.egg-info` metadata now exposes only Kaboom package names, entry points, and repo URLs.

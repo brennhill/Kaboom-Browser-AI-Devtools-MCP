@@ -4,7 +4,7 @@ feature_id: feature-lazy-server-start
 status: implemented
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/internal/bridge/bridge_startup.go
   - cmd/browser-agent/internal/bridge/bridge_startup_state.go
@@ -21,6 +21,7 @@ test_paths:
   - cmd/browser-agent/internal/bridge/bridge_fastpath_unit_test.go
   - cmd/browser-agent/internal/bridge/bridge_fastpath_telemetry_test.go
   - cmd/browser-agent/internal/bridge/lazy_server_start_test.go
+  - cmd/browser-agent/internal/bridge/health_metadata_test.go
   - cmd/browser-agent/internal/launchmode/launch_mode_test.go
   - cmd/browser-agent/tools_coldstart_gate_test.go
 ---
@@ -52,6 +53,10 @@ When an MCP client (Claude Code, Cursor, etc.) invokes a tool call:
 4. `initialize` and `tools/list` respond immediately (fast-path, no daemon needed)
 5. `tools/call` waits for the daemon to become ready (up to grace period)
 6. Once daemon is ready, the tool call is proxied via HTTP
+
+Bridge readiness probes recognize the daemon only through the canonical
+`name` field in `/health`; historical `service` and `service-name` spellings
+are rejected.
 
 ### 3. Daemon Recovery on Failure
 

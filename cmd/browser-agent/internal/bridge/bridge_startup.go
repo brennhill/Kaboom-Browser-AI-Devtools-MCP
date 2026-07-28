@@ -34,10 +34,8 @@ import (
 var daemonStartupGracePeriod = 2 * time.Second
 
 type healthMetadata struct {
-	Version     string `json:"version"`
-	Service     string `json:"service"`
-	ServiceName string `json:"service-name"`
-	Name        string `json:"name"`
+	Version string `json:"version"`
+	Name    string `json:"name"`
 }
 
 func decodeHealthMetadata(body []byte) (healthMetadata, bool) {
@@ -48,13 +46,8 @@ func decodeHealthMetadata(body []byte) (healthMetadata, bool) {
 	return metadata, true
 }
 
-func (m healthMetadata) resolvedServiceName() string {
-	for _, name := range []string{m.ServiceName, m.Service, m.Name} {
-		if trimmed := strings.TrimSpace(name); trimmed != "" {
-			return trimmed
-		}
-	}
-	return ""
+func (m healthMetadata) serviceName() string {
+	return strings.TrimSpace(m.Name)
 }
 
 func versionsMatch(left, right string) bool {
@@ -236,7 +229,7 @@ func runningServerVersionCompatible(port int) (bool, string, string) {
 		return false, "", ""
 	}
 
-	serviceName := meta.resolvedServiceName()
+	serviceName := meta.serviceName()
 	if !IsKaboomService(serviceName) {
 		return false, strings.TrimSpace(meta.Version), serviceName
 	}

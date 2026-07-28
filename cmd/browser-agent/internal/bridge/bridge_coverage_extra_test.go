@@ -437,13 +437,13 @@ func TestRunningServerVersionCompatible_ErrorPaths(t *testing.T) {
 			w.WriteHeader(http.StatusInternalServerError)
 		case "nonkaboom":
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"service-name":"some-other-service","version":"1.2.3"}`))
+			_, _ = w.Write([]byte(`{"name":"some-other-service","version":"1.2.3"}`))
 		case "missingversion":
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"service-name":"kaboom","version":""}`))
+			_, _ = w.Write([]byte(`{"name":"kaboom","version":""}`))
 		default:
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"service-name":"kaboom","version":"9.9.9"}`))
+			_, _ = w.Write([]byte(`{"name":"kaboom","version":"9.9.9"}`))
 		}
 	})
 

@@ -8,9 +8,6 @@
 import { RuntimeMessageName, StorageKey } from './lib/constants.js';
 import { getLocal, getLocals, setSession, getSession, onStorageChanged, persist } from './lib/storage-utils.js';
 import { updateConnectionStatus } from './popup/shell/status-display.js';
-import { renderUpdateAvailableBanner } from './popup/update-button.js';
-import { DEFAULT_SERVER_URL } from './lib/constants.js';
-import { buildDaemonHeaders } from './lib/daemon-http.js';
 import { setupRecordingUI } from './popup/recording/recording.js';
 import { setupDrawModeButton } from './popup/draw-mode.js';
 import { setupActionRecordingUI } from './popup/recording/action-recording.js';
@@ -196,22 +193,6 @@ export function initPopup() {
             error: 'Extension error — try reloading the extension'
         });
     }
-    // ── One-shot health poll for the "Update available" banner ────────────
-    void (async () => {
-        try {
-            const stored = (await getLocal(StorageKey.SERVER_URL));
-            const serverUrl = stored && stored.length > 0 ? stored : DEFAULT_SERVER_URL;
-            const resp = await fetch(`${serverUrl}/health`, { headers: buildDaemonHeaders() });
-            if (!resp.ok)
-                return;
-            const health = (await resp.json());
-            await renderUpdateAvailableBanner(health);
-        }
-        catch {
-            // Daemon unreachable — banner stays hidden; the connection-status
-            // surface already communicates the offline state.
-        }
-    })();
     // ── Batched storage read: one call for ALL toggle/setting keys ────────
     const toggleKeys = TOGGLE_DEFS.map((t) => t.storageKey);
     const allKeys = [

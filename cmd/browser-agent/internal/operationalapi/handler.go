@@ -65,7 +65,7 @@ func (h *Handler) ServeHealth(w http.ResponseWriter, r *http.Request) {
 		logFileSize = info.Size()
 	}
 	response := map[string]any{
-		"status": "ok", "service-name": identity.MCPServerName, "name": identity.MCPServerName, "version": h.options.Version,
+		"status": "ok", "name": identity.MCPServerName, "version": h.options.Version,
 		"logs": map[string]any{
 			"entries": h.options.Logs.EntryCount(), "max_entries": h.options.Logs.MaxEntries(),
 			"log_file": h.options.Logs.LogFile(), "log_file_size": logFileSize, "dropped_count": h.options.Logs.DropCount(),

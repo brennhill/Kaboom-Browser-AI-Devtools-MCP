@@ -375,7 +375,7 @@ Exit criteria:
 ## 14) Operational Runbook Notes
 
 1. Health endpoint must include:
-   - `service-name: kaboom`
+   - `name: kaboom-browser-devtools`
    - `version`
    - `transport_status` (stdio/http)
 2. Include diagnostic command for startup path:

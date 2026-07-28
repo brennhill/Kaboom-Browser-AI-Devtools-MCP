@@ -84,8 +84,11 @@ func TestSetupHTTPRoutesBasicEndpoints(t *testing.T) {
 	if healthBody["status"] != "ok" {
 		t.Fatalf("health status = %v, want ok", healthBody["status"])
 	}
-	if healthBody["service-name"] != "kaboom-browser-devtools" {
-		t.Fatalf("health service-name = %v, want kaboom-browser-devtools", healthBody["service-name"])
+	if healthBody["name"] != "kaboom-browser-devtools" {
+		t.Fatalf("health name = %v, want kaboom-browser-devtools", healthBody["name"])
+	}
+	if _, exists := healthBody["service-name"]; exists {
+		t.Fatalf("health retains noncanonical service-name field: %v", healthBody)
 	}
 
 	healthBadReq := localRequest(http.MethodPost, "/health", nil)
@@ -193,6 +196,12 @@ func TestSetupHTTPRoutesBasicEndpoints(t *testing.T) {
 	mux.ServeHTTP(diagBadRR, diagBadReq)
 	if diagBadRR.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("POST /diagnostics status = %d, want %d", diagBadRR.Code, http.StatusMethodNotAllowed)
+	}
+
+	diagAliasRR := httptest.NewRecorder()
+	mux.ServeHTTP(diagAliasRR, localRequest(http.MethodGet, "/diagnostics.json", nil))
+	if diagAliasRR.Code != http.StatusNotFound {
+		t.Fatalf("GET /diagnostics.json = %d, want 404 after alias removal", diagAliasRR.Code)
 	}
 
 	shutdownBadReq := localRequest(http.MethodGet, "/shutdown", nil)

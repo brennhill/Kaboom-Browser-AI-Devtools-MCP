@@ -184,9 +184,9 @@ func TestRunBridgeModeWithExistingServer_StillWorks(t *testing.T) {
 
 func healthJSON(ver, service string) string {
 	m := map[string]any{
-		"status":       "ok",
-		"version":      ver,
-		"service-name": service,
+		"status":  "ok",
+		"version": ver,
+		"name":    service,
 	}
 	b, _ := json.Marshal(m)
 	return string(b)

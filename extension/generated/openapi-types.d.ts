@@ -3,6 +3,46 @@
  * Do not make direct changes to the file.
  */
 export interface paths {
+    "/debug/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tool usage counters
+         * @description Returns per-tool invocation counts for diagnostics. Debug-only endpoint.
+         */
+        get: operations["getDebugUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/debug/beacon-flush": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Flush telemetry beacon buffer
+         * @description Forces a flush of the buffered telemetry beacon payload and returns it. Debug-only endpoint.
+         */
+        post: operations["postDebugBeaconFlush"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/": {
         parameters: {
             query?: never;
@@ -43,46 +83,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/upgrade/nonce": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get upgrade install nonce
-         * @description Returns the per-process nonce that must be echoed back in POST /upgrade/install. Extension-only; rotates on every daemon start. On the first call, the nonce is pinned to the requesting Origin — subsequent POST /upgrade/install calls must come from the same Origin. A missing Origin header returns 400.
-         */
-        get: operations["getUpgradeNonce"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/upgrade/install": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Launch pinned self-update installer
-         * @description Fires the pinned install script in a detached process and returns immediately. The running daemon will be killed by the installer once the new binary is staged; the supervisor (launchd/systemd) respawns it. Rate-limited to one attempt per minute. Unix only — Windows returns 501. The request Origin must match the Origin that first fetched /upgrade/nonce; otherwise 401.
-         */
-        post: operations["postUpgradeInstall"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/doctor": {
         parameters: {
             query?: never;
@@ -115,26 +115,6 @@ export interface paths {
          * @description Returns comprehensive diagnostic information for bug reports and troubleshooting. Includes system info (OS, arch, Go version, goroutine count), buffer counts across all ring buffers, extension connection state, and circuit breaker status. Output is designed to be copy-pasted into GitHub issues.
          */
         get: operations["getDiagnostics"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/diagnostics.json": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * JSON diagnostics (alias)
-         * @description Alias for /diagnostics that returns identical diagnostic data. Exists for explicit content-type signaling — some HTTP clients and browser URL bars prefer the .json extension to trigger JSON formatting. Handled by the same handler as /diagnostics.
-         */
-        get: operations["getDiagnosticsJson"];
         put?: never;
         post?: never;
         delete?: never;
@@ -236,6 +216,30 @@ export interface paths {
          */
         get: operations["getApiStatus"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/config/active-codebase": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get active codebase path
+         * @description Returns the active codebase path used as the default terminal working directory. The extension reads this to know which project directory the terminal should open in.
+         */
+        get: operations["getActiveCodebase"];
+        /**
+         * Set active codebase path
+         * @description Sets the active codebase path used as the default terminal working directory. The extension writes this when the user selects a project.
+         */
+        put: operations["setActiveCodebase"];
         post?: never;
         delete?: never;
         options?: never;
@@ -755,30 +759,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/config/active-codebase": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get active codebase path
-         * @description Returns the active codebase directory path used as the default terminal CWD. Extension-only endpoint.
-         */
-        get: operations["getActiveCodebase"];
-        /**
-         * Set active codebase path
-         * @description Sets the active codebase directory path used as the default terminal CWD. Extension-only endpoint. Also accepts POST.
-         */
-        put: operations["setActiveCodebase"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/tests/": {
         parameters: {
             query?: never;
@@ -1088,23 +1068,10 @@ export interface components {
                 /** @description User action buffer max capacity */
                 action_capacity?: number;
             };
-            /** @description Recent MCP commands from the HTTP debug log. Null until the MCP debug log is populated. */
-            recent_commands?: Record<string, never>[] | null;
+            /** @description Recent MCP commands from the HTTP debug log */
+            recent_commands?: Record<string, never>[];
             /** @description Tool health metrics and audit info (present when MCP handler is active) */
             audit?: Record<string, never>;
-            /** @description TCP port the daemon is listening on */
-            listen_port?: number;
-            /** @description Terminal sub-server state */
-            terminal?: {
-                /** @description Terminal sub-server port (0 if not running) */
-                port?: number;
-                /** @description Whether the terminal sub-server is accepting connections */
-                running?: boolean;
-                /** @description Number of active PTY sessions */
-                sessions?: number;
-                /** @description IDs of currently active PTY sessions */
-                session_ids?: string[];
-            };
         };
         /** @description Screenshot upload request from the Chrome extension. Contains the base64 image data and optional correlation metadata for linking to MCP tool invocations. */
         ScreenshotRequest: {
@@ -1240,10 +1207,18 @@ export interface components {
              * @example ok
              */
             status?: string;
+            /** @description Canonical daemon service name */
+            name?: string;
             /** @description Server version string */
             version?: string;
             /** @description Latest available version from npm registry (if version check is enabled) */
             available_version?: string;
+            /** @description Detected on-disk daemon upgrade state */
+            upgrade_pending?: {
+                pending?: boolean;
+                new_version?: string;
+                detected_at?: string;
+            };
             /** @description Console log buffer statistics */
             logs?: {
                 /** @description Current number of log entries in the ring buffer */
@@ -1269,32 +1244,37 @@ export interface components {
                 available?: boolean;
                 /** @description Whether AI Web Pilot is enabled in the extension settings */
                 pilot_enabled?: boolean;
-                /** @description Detailed pilot state (e.g., `assumed_enabled`, `confirmed`) */
+                /** @description Detailed AI Web Pilot state */
                 pilot_state?: string;
-                /** @description Whether an extension has recently pinged /sync */
+                /** @description Whether the extension has recently synchronized */
                 extension_connected?: boolean;
-                /** @description RFC3339 timestamp of last extension /sync activity (empty if never seen) */
+                /** @description RFC3339 timestamp of the latest extension synchronization */
                 extension_last_seen?: string;
-                /** @description Opaque client identifier stamped by the extension */
+                /** @description Opaque extension client identifier */
                 extension_client_id?: string;
-                /** @description Current security posture (`normal`, `strict`, …) */
+                /** @description Current browser security posture */
                 security_mode?: string;
-                /** @description True when the daemon is running in production-parity mode */
+                /** @description Whether production-parity security behavior is enabled */
                 production_parity?: boolean;
-                /** @description Number of insecure URL rewrites performed; null before first measurement */
+                /** @description Number of insecure URL rewrites, or null before measurement */
                 insecure_rewrites?: number | null;
             };
-            /** @description Bridge fast-path telemetry counters */
+            /** @description Bridge fast-path resource-read counters */
             bridge_fastpath?: {
-                resources_read_failure?: number;
                 resources_read_success?: number;
+                resources_read_failure?: number;
             };
-            /** @description Daemon service name (e.g., `kaboom-browser-devtools`) */
-            name?: string;
-            /** @description Alias of `name` (kept for backward compatibility) */
-            "service-name"?: string;
-            /** @description Terminal sub-server port (0 if not running) */
+            /** @description Whether the terminal sub-server is available */
+            terminal_available?: boolean;
+            /** @description Terminal sub-server port when available */
             terminal_port?: number;
+            /** @description Terminal startup failure detail */
+            terminal_error?: string;
+            /** @description Process currently blocking the terminal port */
+            terminal_blocked_by?: {
+                pid?: number;
+                command?: string;
+            };
         };
         /** @description Comprehensive diagnostic report for bug reports and troubleshooting. Includes system info, buffer fill levels, and extension state. Designed to be copy-pasted into GitHub issues. */
         DiagnosticsResponse: {
@@ -1377,8 +1357,8 @@ export interface components {
                 message?: string;
             };
         };
-        /** @description Console log entry captured from the browser — a single console.log/warn/error/info/debug call. Variant discriminator: presence of `level` with one of the enum values. */
-        BrowserLogEntry: {
+        /** @description Console log entry captured from the browser. Represents a single console.log/warn/error/info/debug call with its arguments and metadata. */
+        LogEntry: {
             /**
              * @description Console log level
              * @enum {string}
@@ -1393,29 +1373,7 @@ export interface components {
             ts?: string;
             /** @description Page URL where the console call originated */
             url?: string;
-            /** @description Rendered log message */
-            message?: string;
-        } & {
-            [key: string]: unknown;
         };
-        /** @description Daemon lifecycle event captured during startup, mode detection, or runtime state transitions. Variant discriminator: presence of both `type` and `event`. */
-        LifecycleLogEntry: {
-            /** @description Entry category (e.g., `lifecycle` for daemon startup events) */
-            type: string;
-            /** @description Event name (e.g., `mode_detection`, `launch_mode_classified`) */
-            event: string;
-            /**
-             * Format: date-time
-             * @description RFC3339 timestamp for the event
-             */
-            timestamp?: string;
-            /** @description Daemon process ID at event time */
-            pid?: number;
-        } & {
-            [key: string]: unknown;
-        };
-        /** @description Union of log-entry shapes the daemon stores in a single map[string]any buffer. Schemathesis validates every entry against at least one variant, which preserves meaningful type checking without forcing every emitter to stamp a shared discriminator field. */
-        LogEntry: components["schemas"]["BrowserLogEntry"] | components["schemas"]["LifecycleLogEntry"];
         /** @description Network request timing entry derived from PerformanceResourceTiming. Captures URL, HTTP status, and duration for waterfall visualization and performance analysis. */
         WaterfallEntry: {
             /** @description Request URL */
@@ -1804,6 +1762,46 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    getDebugUsage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Usage counts keyed by tool:action */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    postDebugBeaconFlush: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Flushed beacon payload */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
     getRoot: {
         parameters: {
             query?: never;
@@ -1841,103 +1839,6 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
                 };
-            };
-        };
-    };
-    getUpgradeNonce: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Current nonce */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @description 64-character hex string to present in /upgrade/install */
-                        nonce: string;
-                    };
-                };
-            };
-            /** @description Method not allowed */
-            405: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    postUpgradeInstall: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description Current nonce from GET /upgrade/nonce */
-                    nonce: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Installer launched; daemon will restart shortly */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Invalid JSON body */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Invalid nonce */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Method not allowed */
-            405: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Rate-limited; try again after 60 seconds */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Failed to launch installer process */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Self-update not supported on this platform (Windows) */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
         };
     };
@@ -1983,26 +1884,6 @@ export interface operations {
         };
     };
     getDiagnostics: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Full diagnostic data */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DiagnosticsResponse"];
-                };
-            };
-        };
-    };
-    getDiagnosticsJson: {
         parameters: {
             query?: never;
             header?: never;
@@ -2156,6 +2037,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DashboardStatus"];
+                };
+            };
+        };
+    };
+    getActiveCodebase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current active codebase path */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Absolute path to the active codebase directory */
+                        active_codebase?: string;
+                    };
+                };
+            };
+        };
+    };
+    setActiveCodebase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Absolute path to set as active codebase */
+                    path: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated active codebase path */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        status?: string;
+                        active_codebase?: string;
+                    };
                 };
             };
         };
@@ -2873,72 +2807,6 @@ export interface operations {
                     "application/json": {
                         events?: Record<string, never>[];
                         count?: number;
-                    };
-                };
-            };
-        };
-    };
-    getActiveCodebase: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Current active codebase path */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @description Filesystem path to the active codebase directory */
-                        active_codebase?: string;
-                    };
-                };
-            };
-        };
-    };
-    setActiveCodebase: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description Filesystem path to set as the active codebase directory */
-                    path: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Active codebase updated successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @description Operation result status */
-                        status?: string;
-                        /** @description Filesystem path to the active codebase directory after update */
-                        active_codebase?: string;
-                    };
-                };
-            };
-            /** @description Invalid JSON body */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        error?: string;
                     };
                 };
             };

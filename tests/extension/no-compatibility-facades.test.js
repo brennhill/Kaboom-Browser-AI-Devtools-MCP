@@ -102,6 +102,17 @@ test('inject state exposes no performance snapshot compatibility wrapper', () =>
   }
 })
 
+test('health and diagnostics expose only canonical OpenAPI surfaces', () => {
+  const openapi = readFileSync('cmd/browser-agent/openapi.json', 'utf8')
+  const generated = readFileSync('src/generated/openapi-types.ts', 'utf8')
+  for (const source of [openapi, generated]) {
+    assert.doesNotMatch(source, /diagnostics\.json/)
+    assert.doesNotMatch(source, /service-name/)
+  }
+  assert.equal(existsSync('src/popup/update-button.ts'), false, 'popup update client has no backing HTTP routes')
+  assert.equal(existsSync('extension/popup/update-button.js'), false, 'compiled popup update client is stale')
+})
+
 test('pending query dispatcher does not re-export APIs owned by command modules', () => {
   const source = readFileSync('src/background/pending-queries.ts', 'utf8')
   assert.doesNotMatch(source, /export\s+(?:type\s+)?\{/, 'dispatcher must not re-export command helper APIs')

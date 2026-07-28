@@ -98,8 +98,8 @@ fi
 # ─────────────────────────────────────────────
 bold "4. Checking route ↔ OpenAPI sync..."
 
-# Route registration is intentionally split across server_routes*.go modules.
-SERVER_ROUTE_FILES=$(find cmd/browser-agent -maxdepth 1 -type f -name 'server_routes*.go' ! -name '*_test.go' | sort)
+# Public daemon route registration is owned by server.go.
+SERVER_ROUTE_FILES="cmd/browser-agent/server.go"
 
 # Extract registered routes from Go source
 GO_ROUTES=$(grep -h -o 'HandleFunc("[^"]*"' $SERVER_ROUTE_FILES \
@@ -119,7 +119,7 @@ ROUTE_SYNC_OK=true
 
 # Check Go routes exist in OpenAPI (skip / and /clients/ which is a prefix pattern)
 for route in $GO_ROUTES; do
-  if [ "$route" = "/" ] || [ "$route" = "/clients/" ] || [ "$route" = "/api/status" ] || [ "$route" = "/diagnostics.json" ] || [ "$route" = "/logs.html" ] || [ "$route" = "/setup" ] || [ "$route" = "/docs" ]; then
+  if [ "$route" = "/" ] || [ "$route" = "/clients/" ] || [ "$route" = "/api/status" ] || [ "$route" = "/logs.html" ] || [ "$route" = "/setup" ] || [ "$route" = "/docs" ]; then
     continue
   fi
   if ! echo "$OPENAPI_PATHS" | grep -qx "$route"; then

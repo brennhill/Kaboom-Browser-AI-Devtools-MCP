@@ -270,28 +270,6 @@
         }
       }
     },
-    "/diagnostics.json": {
-      "get": {
-        "tags": [
-          "Control"
-        ],
-        "summary": "JSON diagnostics (alias)",
-        "description": "Alias for /diagnostics that returns identical diagnostic data. Exists for explicit content-type signaling — some HTTP clients and browser URL bars prefer the .json extension to trigger JSON formatting. Handled by the same handler as /diagnostics.",
-        "operationId": "getDiagnosticsJson",
-        "responses": {
-          "200": {
-            "description": "Full diagnostic data",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DiagnosticsResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/shutdown": {
       "post": {
         "tags": [
@@ -1629,98 +1607,6 @@
         }
       }
     },
-    "/config/active-codebase": {
-      "get": {
-        "tags": [
-          "Configuration"
-        ],
-        "summary": "Get active codebase path",
-        "description": "Returns the active codebase directory path used as the default terminal CWD. Extension-only endpoint.",
-        "operationId": "getActiveCodebase",
-        "responses": {
-          "200": {
-            "description": "Current active codebase path",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "active_codebase": {
-                      "type": "string",
-                      "description": "Filesystem path to the active codebase directory"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "Configuration"
-        ],
-        "summary": "Set active codebase path",
-        "description": "Sets the active codebase directory path used as the default terminal CWD. Extension-only endpoint. Also accepts POST.",
-        "operationId": "setActiveCodebase",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "path": {
-                    "type": "string",
-                    "description": "Filesystem path to set as the active codebase directory"
-                  }
-                },
-                "required": [
-                  "path"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Active codebase updated successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "description": "Operation result status"
-                    },
-                    "active_codebase": {
-                      "type": "string",
-                      "description": "Filesystem path to the active codebase directory after update"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid JSON body",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/tests/": {
       "get": {
         "tags": [
@@ -2697,6 +2583,10 @@
             "example": "ok",
             "description": "Server status ('ok' when healthy)"
           },
+          "name": {
+            "type": "string",
+            "description": "Canonical daemon service name"
+          },
           "version": {
             "type": "string",
             "description": "Server version string"
@@ -2704,6 +2594,21 @@
           "available_version": {
             "type": "string",
             "description": "Latest available version from npm registry (if version check is enabled)"
+          },
+          "upgrade_pending": {
+            "type": "object",
+            "description": "Detected on-disk daemon upgrade state",
+            "properties": {
+              "pending": {
+                "type": "boolean"
+              },
+              "new_version": {
+                "type": "string"
+              },
+              "detected_at": {
+                "type": "string"
+              }
+            }
           },
           "logs": {
             "type": "object",
@@ -2744,6 +2649,73 @@
               "pilot_enabled": {
                 "type": "boolean",
                 "description": "Whether AI Web Pilot is enabled in the extension settings"
+              },
+              "pilot_state": {
+                "type": "string",
+                "description": "Detailed AI Web Pilot state"
+              },
+              "extension_connected": {
+                "type": "boolean",
+                "description": "Whether the extension has recently synchronized"
+              },
+              "extension_last_seen": {
+                "type": "string",
+                "description": "RFC3339 timestamp of the latest extension synchronization"
+              },
+              "extension_client_id": {
+                "type": "string",
+                "description": "Opaque extension client identifier"
+              },
+              "security_mode": {
+                "type": "string",
+                "description": "Current browser security posture"
+              },
+              "production_parity": {
+                "type": "boolean",
+                "description": "Whether production-parity security behavior is enabled"
+              },
+              "insecure_rewrites": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "description": "Number of insecure URL rewrites, or null before measurement"
+              }
+            }
+          },
+          "bridge_fastpath": {
+            "type": "object",
+            "description": "Bridge fast-path resource-read counters",
+            "properties": {
+              "resources_read_success": {
+                "type": "integer"
+              },
+              "resources_read_failure": {
+                "type": "integer"
+              }
+            }
+          },
+          "terminal_available": {
+            "type": "boolean",
+            "description": "Whether the terminal sub-server is available"
+          },
+          "terminal_port": {
+            "type": "integer",
+            "description": "Terminal sub-server port when available"
+          },
+          "terminal_error": {
+            "type": "string",
+            "description": "Terminal startup failure detail"
+          },
+          "terminal_blocked_by": {
+            "type": "object",
+            "description": "Process currently blocking the terminal port",
+            "properties": {
+              "pid": {
+                "type": "integer"
+              },
+              "command": {
+                "type": "string"
               }
             }
           }

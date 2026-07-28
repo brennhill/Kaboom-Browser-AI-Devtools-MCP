@@ -646,7 +646,7 @@ func TestCheckDaemonStatus_HealsReadyFlagFromHealth(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_, _ = io.WriteString(w, `{"status":"ok","service-name":"kaboom-browser-devtools","version":"1.0.0"}`)
+		_, _ = io.WriteString(w, `{"status":"ok","name":"kaboom-browser-devtools","version":"1.0.0"}`)
 	})
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
@@ -697,7 +697,7 @@ func TestRunningServerVersionCompatible(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_, _ = io.WriteString(w, `{"status":"ok","service-name":"kaboom-browser-devtools","version":"`+healthVersion+`"}`)
+		_, _ = io.WriteString(w, `{"status":"ok","name":"kaboom-browser-devtools","version":"`+healthVersion+`"}`)
 	})
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")

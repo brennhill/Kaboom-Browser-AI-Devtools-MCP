@@ -639,7 +639,6 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, captured *capture.Ca
 		}
 		operations.ServeDiagnostics(w, r)
 	}))
-	mux.HandleFunc("/diagnostics.json", httpguard.CORS(operations.ServeDiagnostics))
 	mux.HandleFunc("/logs", httpguard.CORS(httpguard.ExtensionOnly(operations.ServeLogs)))
 	mux.HandleFunc("/logs.html", httpguard.CORS(dashboard.Logs(httpapi.JSON)))
 	mux.HandleFunc("/setup", httpguard.CORS(dashboard.Setup(httpapi.JSON)))
