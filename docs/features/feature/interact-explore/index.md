@@ -118,6 +118,9 @@ Screenshot capture belongs only to `observe({what:"screenshot"})`; the former
 `interact` screenshot compatibility action has been removed.
 State snapshot handlers accept only the canonical `snapshot_name` parameter;
 the former generic `name` request alias has been removed.
+Public state actions likewise use only `save_state`, `load_state`,
+`list_states`, and `delete_state`; duplicate `state_*` entry points are not
+registered. The similarly named extension pending-query types remain internal.
 
 ## TL;DR
 - Status: shipped

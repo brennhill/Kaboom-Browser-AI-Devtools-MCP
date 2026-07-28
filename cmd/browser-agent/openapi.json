@@ -3183,11 +3183,7 @@
               "subtitle",
               "screenshot",
               "dom_action",
-              "state_capture",
-              "state_save",
-              "state_load",
-              "state_list",
-              "state_delete"
+              "state_capture"
             ]
           },
           "params": {

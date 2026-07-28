@@ -163,13 +163,9 @@ All 5 tools use `what` as the primary dispatch parameter. `action`, `mode`, and 
 | `highlight` | `handleHighlightImpl` | Visually highlight an element with a colored overlay |
 | `subtitle` | `handleSubtitleImpl` | Display a status subtitle in the extension UI |
 | `save_state` | `stateInteract().handleStateSave` | Snapshot cookies/storage/URL for later restore |
-| `state_save` | `stateInteract().handleStateSave` | Alias for save_state |
 | `load_state` | `stateInteract().handleStateLoad` | Restore a previously saved state snapshot |
-| `state_load` | `stateInteract().handleStateLoad` | Alias for load_state |
 | `list_states` | `stateInteract().handleStateList` | List all saved state snapshots |
-| `state_list` | `stateInteract().handleStateList` | Alias for list_states |
 | `delete_state` | `stateInteract().handleStateDelete` | Delete a saved state snapshot |
-| `state_delete` | `stateInteract().handleStateDelete` | Alias for delete_state |
 | `set_storage` | `handleSetStorage` | Set a localStorage or sessionStorage key |
 | `delete_storage` | `handleDeleteStorage` | Delete a storage key |
 | `clear_storage` | `handleClearStorage` | Clear all keys from a storage type |
@@ -347,7 +343,7 @@ All 5 tools use `what` as the primary dispatch parameter. `action`, `mode`, and 
 - Annotation keys: `annot_session`
 - Batch keys: `steps`, `step_timeout_ms`, `continue_on_error`, `stop_after_step`
 - Tab keys: `tab_index`, `set_tracked`
-- Jitter note: read-only actions (`list_interactive`, `get_text`, `get_value`, `get_attribute`, `query`, `screenshot`, `list_states`, `state_list`, `get_readable`, `get_markdown`, `explore_page`, `run_a11y_and_export_sarif`, `wait_for`, `wait_for_stable`, `auto_dismiss_overlays`, `batch`, `highlight`, `subtitle`, `clipboard_read`) are exempt from action jitter
+- Jitter note: read-only actions (`list_interactive`, `get_text`, `get_value`, `get_attribute`, `query`, `list_states`, `get_readable`, `get_markdown`, `explore_page`, `run_a11y_and_export_sarif`, `wait_for`, `wait_for_stable`, `auto_dismiss_overlays`, `batch`, `highlight`, `subtitle`, `clipboard_read`) are exempt from action jitter
 - Cross-cutting key: `telemetry_mode`
 
 ---

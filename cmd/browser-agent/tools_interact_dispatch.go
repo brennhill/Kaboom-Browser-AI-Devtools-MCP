@@ -93,25 +93,13 @@ func buildInteractHandlers() map[string]toolrouting.Handler[*ToolHandler] {
 		"save_state": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.stateInteract().HandleStateSave(req, args)
 		},
-		"state_save": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return th.stateInteract().HandleStateSave(req, args)
-		},
 		"load_state": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return th.stateInteract().HandleStateLoad(req, args)
-		},
-		"state_load": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.stateInteract().HandleStateLoad(req, args)
 		},
 		"list_states": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.stateInteract().HandleStateList(req, args)
 		},
-		"state_list": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return th.stateInteract().HandleStateList(req, args)
-		},
 		"delete_state": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return th.stateInteract().HandleStateDelete(req, args)
-		},
-		"state_delete": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.stateInteract().HandleStateDelete(req, args)
 		},
 		"set_storage": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {

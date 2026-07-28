@@ -542,9 +542,5 @@ bash scripts/kaboom-call.sh interact '{"what":"batch","steps":[{"what":"click","
 
 | Alias | Canonical Action |
 |-------|-----------------|
-| `state_save` | `save_state` |
-| `state_load` | `load_state` |
-| `state_list` | `list_states` |
-| `state_delete` | `delete_state` |
 | `record_start` | `screen_recording_start` |
 | `record_stop` | `screen_recording_stop` |

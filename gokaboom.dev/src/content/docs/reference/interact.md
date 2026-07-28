@@ -476,10 +476,6 @@ interact({what: "subtitle", text: ""})  // Clear
 
 ## State Management
 
-:::note[Aliases]
-`state_save`, `state_load`, `state_list`, and `state_delete` are aliases for `save_state`, `load_state`, `list_states`, and `delete_state` respectively.
-:::
-
 ### save_state
 
 Save the current browser state (URL, title, tab) as a named checkpoint.

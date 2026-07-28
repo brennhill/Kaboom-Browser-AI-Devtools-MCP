@@ -111,7 +111,7 @@ func TestToolsInteractDispatch_RejectsObserveScreenshotMode(t *testing.T) {
 	assertSnakeCaseFields(t, string(resp.Result))
 }
 
-func TestToolsInteractDispatch_StateActionAliases(t *testing.T) {
+func TestToolsInteractDispatch_RejectsStateActionAliases(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
@@ -120,8 +120,8 @@ func TestToolsInteractDispatch_StateActionAliases(t *testing.T) {
 			resp := callInteractRaw(h, fmt.Sprintf(`{"what":"%s"}`, action))
 			result := parseToolResult(t, resp)
 			text := result.Content[0].Text
-			if strings.Contains(text, "unknown_mode") {
-				t.Fatalf("%s should be recognized alias, got unknown_mode: %s", action, text)
+			if !strings.Contains(text, "unknown_mode") {
+				t.Fatalf("%s should be rejected as unknown_mode: %s", action, text)
 			}
 		})
 	}

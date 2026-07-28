@@ -1529,7 +1529,7 @@ export interface components {
              * @description Command type that determines which extension handler processes this query
              * @enum {string}
              */
-            type?: "dom" | "a11y" | "execute" | "highlight" | "state" | "screen_recording_start" | "screen_recording_stop" | "browser_action" | "page_info" | "tabs" | "subtitle" | "screenshot" | "dom_action" | "state_capture" | "state_save" | "state_load" | "state_list" | "state_delete";
+            type?: "dom" | "a11y" | "execute" | "highlight" | "state" | "screen_recording_start" | "screen_recording_stop" | "browser_action" | "page_info" | "tabs" | "subtitle" | "screenshot" | "dom_action" | "state_capture";
             /** @description Command-specific parameters passed to the extension handler */
             params?: Record<string, never>;
             /** @description Links this query to the originating MCP tool call for result routing */

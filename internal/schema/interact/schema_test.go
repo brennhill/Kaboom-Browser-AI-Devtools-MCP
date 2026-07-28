@@ -222,10 +222,9 @@ func TestInteractEnum_ExcludesAliases(t *testing.T) {
 	}
 }
 
-func TestInteractDispatch_AliasStillWorks(t *testing.T) {
+func TestInteractActionSpecs_ExcludeStateAliases(t *testing.T) {
 	t.Parallel()
 
-	// Verify alias specs are still in the full registry (used by dispatch)
 	specs := ActionSpecs()
 	specNames := make(map[string]bool, len(specs))
 	for _, s := range specs {
@@ -234,8 +233,8 @@ func TestInteractDispatch_AliasStillWorks(t *testing.T) {
 
 	aliases := []string{"state_save", "state_load", "state_list", "state_delete"}
 	for _, alias := range aliases {
-		if !specNames[alias] {
-			t.Errorf("alias %q should still be in ActionSpecs for dispatch", alias)
+		if specNames[alias] {
+			t.Errorf("duplicate state action %q must not be registered", alias)
 		}
 	}
 }

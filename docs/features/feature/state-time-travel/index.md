@@ -4,15 +4,15 @@ feature_id: feature-state-time-travel
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/internal/toolinteract/interactstate/state.go
-  - cmd/browser-agent/internal/toolinteract/deps.go
-  - internal/tools/interact/workflow.go
+  - cmd/browser-agent/tools_interact_dispatch.go
+  - internal/schema/interact/actions.go
 test_paths:
   - cmd/browser-agent/internal/toolinteract/interactstate/state_test.go
   - cmd/browser-agent/tools_interact_state_test.go
-  - cmd/browser-agent/tools_interact_gate_test.go
+  - internal/schema/interact/schema_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -40,14 +40,13 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-- State sub-handler wiring:
-  - `cmd/browser-agent/tools_interact_state_handler.go`
-- State capture and restore queueing:
-  - `cmd/browser-agent/tools_interact_state_capture.go`
-- Save/load handlers:
-  - `cmd/browser-agent/tools_interact_state_save_load.go`
-- List/delete handlers:
-  - `cmd/browser-agent/tools_interact_state_list_delete.go`
+- State capture, persistence, restore, listing, and deletion:
+  - `cmd/browser-agent/internal/toolinteract/interactstate/state.go`
+- Public `interact` action routing:
+  - `cmd/browser-agent/tools_interact_dispatch.go`
+- Canonical public action schemas:
+  - `internal/schema/interact/actions.go`
 - Tests:
+  - `cmd/browser-agent/internal/toolinteract/interactstate/state_test.go`
   - `cmd/browser-agent/tools_interact_state_test.go`
-  - `cmd/browser-agent/tools_interact_gate_test.go`
+  - `internal/schema/interact/schema_test.go`

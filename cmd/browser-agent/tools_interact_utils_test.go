@@ -22,7 +22,6 @@ func TestApplyJitter_ReadOnlyActions_ReturnZero(t *testing.T) {
 		"get_attribute",
 		"query",
 		"list_states",
-		"state_list",
 		"get_readable",
 		"get_markdown",
 		"explore_page",
