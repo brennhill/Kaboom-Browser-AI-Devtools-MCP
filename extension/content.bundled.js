@@ -414,7 +414,7 @@
           return;
         if (event.data?.requestId !== requestId)
           return;
-        if (event.data?._nonce && event.data._nonce !== pageNonce)
+        if (event.data?._nonce !== pageNonce)
           return;
         finish(true);
       };
@@ -605,7 +605,7 @@
       const responseHandler = messageType ? RESPONSE_HANDLERS[messageType] : void 0;
       if (responseHandler) {
         const nonce = event.data?._nonce;
-        if (nonce && nonce !== getPageNonce())
+        if (nonce !== getPageNonce())
           return;
         if (requestId !== void 0)
           responseHandler(requestId, result);
@@ -1103,6 +1103,8 @@
     const responseHandler = (event) => {
       if (event.source !== window)
         return;
+      if (event.data?._nonce !== getPageNonce())
+        return;
       if (event.data?.type === "kaboom_state_response" && event.data?.messageId === messageId) {
         window.removeEventListener("message", responseHandler);
         deferred.resolve(event.data.result || { error: "No result from state command" });
@@ -1228,7 +1230,7 @@
       if (event.source !== window)
         return;
       const nonce = event.data?._nonce;
-      if (nonce && nonce !== getPageNonce())
+      if (nonce !== getPageNonce())
         return;
       if (event.data?.type === "kaboom_waterfall_response" && event.data?.requestId === requestId) {
         window.removeEventListener("message", responseHandler);
@@ -1258,7 +1260,7 @@
       if (event.source !== window)
         return;
       const nonce = event.data?._nonce;
-      if (nonce && nonce !== getPageNonce())
+      if (nonce !== getPageNonce())
         return;
       if (event.data?.type === responseType && event.data?.requestId === requestId) {
         window.removeEventListener("message", responseHandler);

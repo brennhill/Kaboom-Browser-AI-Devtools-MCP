@@ -3671,7 +3671,7 @@ function installMessageListener(captureStateFn, restoreStateFn) {
   window.addEventListener("message", (event) => {
     if (event.source !== window || event.origin !== window.location.origin)
       return;
-    if (pageNonce && event.data?._nonce !== pageNonce)
+    if (!pageNonce || event.data?._nonce !== pageNonce)
       return;
     const msgType = event.data?.type;
     if (!msgType)
@@ -4092,7 +4092,7 @@ if (typeof window !== "undefined") {
   window.addEventListener("message", (event) => {
     if (event.source !== window || event.origin !== window.location.origin)
       return;
-    if (pageNonce2 && event.data?._nonce !== pageNonce2)
+    if (!pageNonce2 || event.data?._nonce !== pageNonce2)
       return;
     if (event.data?.type === "kaboom_highlight_request") {
       const { requestId, params } = event.data;
