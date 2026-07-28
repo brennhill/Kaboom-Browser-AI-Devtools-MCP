@@ -82,5 +82,7 @@ last_verified_date: 2026-03-05
 - Recording storage HTTP boundary: `internal/capture/handlers.go`
 - MCP owners: `cmd/browser-agent/tools_configure.go`, `cmd/browser-agent/internal/toolobserve/dispatcher.go`, and the composition root in `tools_core.go`
 - Recording and playback MCP behavior/state: `cmd/browser-agent/internal/toolrecording/`
+- Configure playback and log-diff actions route directly to the composed
+  `toolrecording.Handler`; no root ToolHandler forwarding surface remains.
 - Still a stub: `playback.executeAction` returns synthetic results and is not yet
   wired to the PendingQuery/interact system, so replay does not drive a browser.

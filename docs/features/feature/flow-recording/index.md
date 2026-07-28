@@ -84,6 +84,9 @@ Capture exposes its owned manager only through `Capture.Recordings()`. MCP,
 storage, playback, and log-diff callers use the manager and the
 `internal/recording/playback` or `internal/recording/logdiff` owners directly;
 the former Capture forwarding surface is deleted.
+Configure dispatch routes event-recording start/stop, playback, and log-diff
+actions directly to the composed `toolrecording.Handler`; ToolHandler retains
+no recording forwarding methods.
 
 - Core recording lifecycle and listener wiring:
   - `cmd/browser-agent/tools_configure.go`

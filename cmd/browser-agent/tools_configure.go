@@ -84,11 +84,19 @@ var configureHandlers = map[string]toolrouting.Handler[*ToolHandler]{
 	"test_boundary_end": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return h.testBoundaries.End(req, args)
 	},
-	"event_recording_start": (*ToolHandler).toolConfigureEventRecordingStart,
-	"event_recording_stop":  (*ToolHandler).toolConfigureEventRecordingStop,
-	"playback":              (*ToolHandler).toolConfigurePlayback,
-	"log_diff":              (*ToolHandler).toolConfigureLogDiff,
-	"telemetry":             cfgLocal(toolconfigure.HandleTelemetry),
+	"event_recording_start": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		return h.recordingHandler.EventRecordingStart(req, args)
+	},
+	"event_recording_stop": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		return h.recordingHandler.EventRecordingStop(req, args)
+	},
+	"playback": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		return h.recordingHandler.Playback(req, args)
+	},
+	"log_diff": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		return h.recordingHandler.LogDiff(req, args)
+	},
+	"telemetry": cfgLocal(toolconfigure.HandleTelemetry),
 	"describe_capabilities": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return toolconfigure.HandleDescribeCapabilities(h, req, args, version)
 	},
@@ -329,22 +337,6 @@ func extractErrorMessage(response mcp.JSONRPCResponse) string {
 		return message
 	}
 	return "unknown error"
-}
-
-func (h *ToolHandler) toolConfigureEventRecordingStart(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	return h.recordingHandler.EventRecordingStart(req, args)
-}
-
-func (h *ToolHandler) toolConfigureEventRecordingStop(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	return h.recordingHandler.EventRecordingStop(req, args)
-}
-
-func (h *ToolHandler) toolConfigurePlayback(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	return h.recordingHandler.Playback(req, args)
-}
-
-func (h *ToolHandler) toolConfigureLogDiff(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	return h.recordingHandler.LogDiff(req, args)
 }
 
 func (h *ToolHandler) toolGetAuditLog(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
