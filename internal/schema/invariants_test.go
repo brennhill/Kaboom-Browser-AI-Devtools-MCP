@@ -26,6 +26,15 @@ func TestAllToolSchemas_NoTopLevelCombiners(t *testing.T) {
 	}
 }
 
+func TestAnalyzeSchemaHasNoAnnotationURLAlias(t *testing.T) {
+	t.Parallel()
+
+	properties := analyzeToolSchema().InputSchema["properties"].(map[string]any)
+	if _, exists := properties["url_pattern"]; exists {
+		t.Fatal("analyze schema retains url_pattern compatibility alias; use url")
+	}
+}
+
 // TestAllToolSchemas_NoNestedCombiners checks that property-level schemas also
 // avoid combiners. Nested oneOf/anyOf/allOf in property definitions can cause
 // Claude API validation errors in some contexts. Walks recursively into items

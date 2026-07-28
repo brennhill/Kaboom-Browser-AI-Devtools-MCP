@@ -82,7 +82,7 @@ func BuildScopeWarning(projects []map[string]any) map[string]any {
 	}
 	return map[string]any{
 		"warning":           "MULTI-PROJECT ANNOTATION SESSION DETECTED: annotations span multiple projects.",
-		"recommendation":    "Re-run analyze({what:'annotations'}) with 'url' or 'url_pattern' scoped to the active project before implementing changes.",
+		"recommendation":    "Re-run analyze({what:'annotations'}) with 'url' scoped to the active project before implementing changes.",
 		"suggested_filters": suggestedFilters,
 		"projects_detected": projectBaseURLs,
 	}

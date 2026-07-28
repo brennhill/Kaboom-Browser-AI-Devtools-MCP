@@ -5,7 +5,7 @@ package capabilities
 var configureModeSpecs = map[string]modeParamSpec{
 	"store": {
 		Hint:     "Persist/retrieve session key-value data",
-		Optional: []string{"store_action", "namespace", "key", "data", "value"},
+		Optional: []string{"store_action", "namespace", "key", "data"},
 	},
 	"load": {
 		Hint: "Load stored session data by namespace",

@@ -26,6 +26,7 @@ code_paths:
   - scripts/smoke-test.sh
   - package.json
 test_paths:
+  - internal/schema/invariants_test.go
   - tests/extension/draw-mode.test.js
   - internal/annotation/store_test.go
   - internal/annotation/draw_sessions_handler_test.go
@@ -78,13 +79,14 @@ last_verified_date: 2026-03-05
 - `cmd/browser-agent/internal/toolgenerate/annotations/visual.go` — resilient visual test generation via locator fallback candidates (`css`, `testid`, `role`, `label`, `placeholder`, `text`)
 - `cmd/browser-agent/internal/toolgenerate/annotations/handlers.go` — the three MCP entry points (`visual_test`, `annotation_report`, `annotation_issues`) and session resolution
 - `cmd/browser-agent/internal/toolgenerate/annotations/report.go` / `issues.go` / `builder.go` — Markdown report rendering, structured issue payloads, and the shared line builder
-- `internal/schema/analyze.go` + `internal/tools/configure/capabilities/modespecs_analyze.go` — analyze annotations schema/capability metadata for `url` / `url_pattern` filters
+- `internal/schema/analyze.go` + `internal/tools/configure/capabilities/modespecs_analyze.go` — analyze annotations schema/capability metadata for the canonical `url` filter
 
 ### Tests
 - `tests/extension/draw-mode.test.js` — "Element Detail Enrichment" describe block
 - `internal/annotation/store_test.go` — `TestStore_SessionTTL_Is2Hours`
 - `internal/annotation/draw_sessions_handler_test.go` and `cmd/browser-agent/tools_analyze_annotations_draw_test.go` — safe persisted-session loading and end-to-end store hydration
 - `cmd/browser-agent/tools_analyze_annotations_test.go` — enrichment fields (`selector_candidates`, `js_framework`, `component`), error correlation, hints tests
+- `internal/schema/invariants_test.go` — ensures annotations expose only the canonical `url` scope filter and never restore `url_pattern`
 - `cmd/browser-agent/tools_generate_annotations_test.go` — resilient locator fallback generation tests
 - `cmd/browser-agent/internal/toolgenerate/annotations/annotations_test.go` — generator unit tests (JS escaping, locator candidates, Markdown report, issue list, Playwright script) and handler no-data/named-session paths
 - `scripts/smoke-tests/31-annotation-parity.sh` — deterministic end-to-end ingest/retrieval/generation gate with bounded retries for transient startup/no_data windows

@@ -246,7 +246,7 @@ selector parameters and shorthand mode names are rejected.
 - Timing key: `timeout_ms`
 - Security keys: `checks`, `severity_min`
 - Third-party keys: `first_party_origins`, `include_static`, `custom_lists`
-- Annotation keys: `annot_session`, `url`, `url_pattern`
+- Annotation keys: `annot_session`, `url`
 - Draw session keys: `file`
 - Visual diff keys: `name`, `baseline`, `threshold`
 - Data table keys: `max_rows`, `max_cols`
@@ -265,7 +265,7 @@ selector parameters and shorthand mode names are rejected.
 ### `configure` options
 
 - Dispatch key: `what`
-- `store`: `store_action`, `namespace`, `key`, `data`, `value`
+- `store`: `store_action`, `namespace`, `key`, `data`
 - `noise_rule`: `noise_action`, `rules`, `rule_id`, `pattern`, `category`, `reason`, `classification`, `message_regex`, `source_regex`, `url_regex`, `method`, `status_min`, `status_max`, `level`
 - `clear`: `buffer`
 - `streaming`: `streaming_action`, `events`, `throttle_seconds`, `severity_min`, `url`

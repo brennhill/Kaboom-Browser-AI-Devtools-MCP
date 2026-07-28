@@ -98,8 +98,7 @@ func ParseAnalyzeArgs(what string, args []string) (map[string]any, error) {
 		"--urls":                {MCPKey: "urls", Kind: FlagStringList},
 		"--file":                {MCPKey: "file", Kind: FlagString},
 		// Annotation URL filtering
-		"--url":         {MCPKey: "url", Kind: FlagString},
-		"--url-pattern": {MCPKey: "url_pattern", Kind: FlagString},
+		"--url": {MCPKey: "url", Kind: FlagString},
 		// Data table
 		"--max-rows": {MCPKey: "max_rows", Kind: FlagInt},
 		"--max-cols": {MCPKey: "max_cols", Kind: FlagInt},

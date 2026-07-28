@@ -125,10 +125,6 @@ func analyzeToolSchema() mcp.MCPTool {
 					"type":        "string",
 					"description": "Annotation URL scope filter (annotations). Supports exact URL, project base URL, or wildcard patterns such as http://localhost:3000/*.",
 				},
-				"url_pattern": map[string]any{
-					"type":        "string",
-					"description": "Alias for annotation URL scope filter (annotations). Use either url or url_pattern.",
-				},
 				"urls": map[string]any{
 					"type":        "array",
 					"description": "URLs to validate (link_validation)",

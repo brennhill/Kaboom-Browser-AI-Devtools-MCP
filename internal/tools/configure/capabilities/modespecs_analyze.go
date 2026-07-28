@@ -42,7 +42,7 @@ var analyzeModeSpecs = map[string]modeParamSpec{
 	},
 	"annotations": {
 		Hint:     "List annotations from a draw/annotation session. Set background:false (default) to block until annotations arrive (up to timeout_ms)",
-		Optional: []string{"annot_session", "background", "timeout_ms", "url", "url_pattern"},
+		Optional: []string{"annot_session", "background", "timeout_ms", "url"},
 	},
 	"annotation_detail": {
 		Hint:     "Full DOM/style details for a specific annotation",

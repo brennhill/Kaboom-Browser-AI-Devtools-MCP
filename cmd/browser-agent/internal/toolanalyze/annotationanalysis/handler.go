@@ -64,7 +64,6 @@ func (h *Handler) GetAnnotations(req mcp.JSONRPCRequest, args json.RawMessage) m
 		Correlation  string `json:"correlation_id"`
 		TimeoutMs    int    `json:"timeout_ms"`
 		URL          string `json:"url"`
-		URLPattern   string `json:"url_pattern"`
 	}
 	if len(args) > 0 {
 		if response, stop := mcp.ParseArgs(req, args, &params); stop {
@@ -77,10 +76,7 @@ func (h *Handler) GetAnnotations(req mcp.JSONRPCRequest, args json.RawMessage) m
 		waitValue = !*params.Background
 	}
 
-	urlFilter, filterResp, hasFilterErr := resolveAnnotationURLFilter(req, params.URL, params.URLPattern)
-	if hasFilterErr {
-		return filterResp
-	}
+	urlFilter := strings.TrimSpace(params.URL)
 
 	operation := strings.ToLower(strings.TrimSpace(params.Operation))
 	if operation != "" {
@@ -273,22 +269,6 @@ func buildNamedAnnotationSessionResult(ns *annotation.NamedSession, urlFilter st
 		result["hints"] = toolanalyze.BuildSessionHints(screenshotPath)
 	}
 	return result
-}
-
-func resolveAnnotationURLFilter(req mcp.JSONRPCRequest, urlValue, urlPatternValue string) (string, mcp.JSONRPCResponse, bool) {
-	urlValue = strings.TrimSpace(urlValue)
-	urlPatternValue = strings.TrimSpace(urlPatternValue)
-	if urlValue != "" && urlPatternValue != "" && urlValue != urlPatternValue {
-		return "", mcp.Fail(req, mcp.ErrInvalidParam,
-			"Conflicting annotation scope filters: 'url' and 'url_pattern' differ",
-			"Provide only one annotation scope filter, or set both to the same value.",
-			mcp.WithParam("url"), mcp.WithParam("url_pattern"),
-		), true
-	}
-	if urlPatternValue != "" {
-		return urlPatternValue, mcp.JSONRPCResponse{}, false
-	}
-	return urlValue, mcp.JSONRPCResponse{}, false
 }
 
 func filterAnnotationPages(pages []*annotation.Session, urlFilter string) []*annotation.Session {

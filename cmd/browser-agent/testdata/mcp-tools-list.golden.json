@@ -415,10 +415,6 @@
           "description": "Annotation URL scope filter (annotations). Supports exact URL, project base URL, or wildcard patterns such as http://localhost:3000/*.",
           "type": "string"
         },
-        "url_pattern": {
-          "description": "Alias for annotation URL scope filter (annotations). Use either url or url_pattern.",
-          "type": "string"
-        },
         "urls": {
           "description": "URLs to validate (link_validation)",
           "items": {

@@ -714,7 +714,7 @@ func TestToolGetAnnotations_WaitTrue_NamedWaiterCompletedOnStore_UsesURLFilter(t
 	h.annotationStore.MarkDrawStarted()
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	args := json.RawMessage(`{"what":"annotations","annot_session":"qa","background":false,"timeout_ms":10,"url_pattern":"http://localhost:3000/*"}`)
+	args := json.RawMessage(`{"what":"annotations","annot_session":"qa","background":false,"timeout_ms":10,"url":"http://localhost:3000/*"}`)
 	resp := h.annotationAnalysis.GetAnnotations(req, args)
 
 	text := unmarshalMCPText(t, resp.Result)
@@ -973,20 +973,6 @@ func TestToolGetAnnotations_AnonymousBaseURLFilter_DoesNotCrossPortPrefix(t *tes
 
 	if data["count"] != float64(0) {
 		t.Fatalf("expected base-url filter to reject different port, got count %v", data["count"])
-	}
-}
-
-func TestToolGetAnnotations_ConflictingURLFilterParams(t *testing.T) {
-	h := createTestToolHandler(t)
-	replaceAnnotationStoreForTest(h, annotation.NewStore(10*time.Minute))
-	defer h.annotationStore.Close()
-
-	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
-	resp := h.annotationAnalysis.GetAnnotations(req, json.RawMessage(`{"what":"annotations","url":"http://localhost:3000/*","url_pattern":"http://localhost:5173/*"}`))
-	text := unmarshalMCPText(t, resp.Result)
-
-	if !strings.Contains(text, "Conflicting annotation scope filters") {
-		t.Fatalf("expected conflicting filter validation error, got: %s", text)
 	}
 }
 

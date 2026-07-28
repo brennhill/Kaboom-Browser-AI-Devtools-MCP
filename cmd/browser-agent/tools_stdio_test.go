@@ -156,7 +156,7 @@ func TestToolHandler_Configure_NoStdout(t *testing.T) {
 		{"health", "health", `{"what":"health"}`},
 		{"clear", "clear", `{"what":"clear"}`},
 		{"status", "status", `{"what":"status"}`},
-		{"store_invalid", "store", `{"what":"store","key":"test","value":"val"}`},
+		{"store_invalid", "store", `{"what":"store","key":"test","data":"val"}`},
 	}
 
 	for _, tc := range testCases {

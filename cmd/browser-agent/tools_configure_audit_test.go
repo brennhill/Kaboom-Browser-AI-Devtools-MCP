@@ -461,7 +461,7 @@ func TestConfigureAudit_AllActions(t *testing.T) {
 		action string
 		args   string
 	}{
-		{"store", `{"what":"store","key":"test_key","value":"test_value"}`},
+		{"store", `{"what":"store","store_action":"save","key":"test_key","data":"test_value"}`},
 		{"load", `{"what":"load","key":"test_key"}`},
 		{"noise_rule", `{"what":"noise_rule","operation":"list"}`},
 		{"clear", `{"what":"clear"}`},
