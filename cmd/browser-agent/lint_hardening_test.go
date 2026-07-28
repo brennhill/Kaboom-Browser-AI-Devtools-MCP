@@ -75,6 +75,7 @@ func TestRootDoesNotReexportCanonicalTypes(t *testing.T) {
 		"toolConfigureLogDiff(",
 		"toolConfigureNetworkRecording(",
 		"func (h *ToolHandler) testGen(",
+		"func (h *ToolHandler) stateInteract(",
 	} {
 		for _, path := range rootFiles {
 			if strings.HasSuffix(path, "_test.go") {

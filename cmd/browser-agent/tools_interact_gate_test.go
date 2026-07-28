@@ -434,7 +434,7 @@ func TestSaveState_NoTabTracking_NoGate(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"what":"save_state","snapshot_name":"test-state","sync":false}`)
-	resp := env.handler.stateInteract().HandleStateSave(req, args)
+	resp := env.handler.stateInteractHandler.HandleStateSave(req, args)
 
 	// If it is an error, it must NOT be the tab tracking error (mcp.ErrNoData with "tab" message).
 	if !isSuccessOrQueued(t, resp) {

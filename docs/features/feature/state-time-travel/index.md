@@ -7,11 +7,15 @@ owners: []
 last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/internal/toolinteract/interactstate/state.go
+  - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/tools_interact_dispatch.go
   - internal/schema/interact/actions.go
   - src/inject/state.ts
 test_paths:
+  - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/internal/toolinteract/interactstate/state_test.go
+  - cmd/browser-agent/tools_interact_gate_test.go
+  - cmd/browser-agent/tools_interact_helpers_test.go
   - cmd/browser-agent/tools_interact_state_test.go
   - internal/schema/interact/schema_test.go
   - tests/extension/pilot-state.test.js
@@ -48,10 +52,17 @@ last_verified_date: 2026-03-05
   - `src/inject/state.ts`
 - Public `interact` action routing:
   - `cmd/browser-agent/tools_interact_dispatch.go`
+- Composition owns the canonical state handler directly:
+  - `cmd/browser-agent/tools_core.go`
+  - dispatch and state-focused tests access `stateInteractHandler` without an
+    unchanged-return accessor facade
 - Canonical public action schemas:
   - `internal/schema/interact/actions.go`
 - Tests:
+  - `cmd/browser-agent/lint_hardening_test.go`
   - `cmd/browser-agent/internal/toolinteract/interactstate/state_test.go`
+  - `cmd/browser-agent/tools_interact_gate_test.go`
+  - `cmd/browser-agent/tools_interact_helpers_test.go`
   - `cmd/browser-agent/tools_interact_state_test.go`
   - `internal/schema/interact/schema_test.go`
   - `tests/extension/pilot-state.test.js`

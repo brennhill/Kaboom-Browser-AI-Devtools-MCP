@@ -69,6 +69,7 @@ code_paths:
   - cmd/browser-agent/internal/summarypref/cache.go
   - cmd/browser-agent/tools_core.go
 test_paths:
+  - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/internal/summarypref/cache_test.go
   - cmd/browser-agent/tools_summary_pref_test.go
   - cmd/browser-agent/internal/toolinteract/fake_deps_test.go
@@ -131,6 +132,8 @@ Screenshot capture belongs only to `observe({what:"screenshot"})`; the former
 `interact` screenshot compatibility action has been removed.
 State snapshot handlers accept only the canonical `snapshot_name` parameter;
 the former generic `name` request alias has been removed.
+State dispatch and tests use the composed `stateInteractHandler` directly; the
+root unchanged-return accessor has been deleted and is structurally prohibited.
 Public state actions likewise use only `save_state`, `load_state`,
 `list_states`, and `delete_state`; duplicate `state_*` entry points are not
 registered. The similarly named extension pending-query types remain internal.

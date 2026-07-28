@@ -138,10 +138,10 @@ selector parameters and shorthand mode names are rejected.
 |---|---|---|
 | `highlight` | `handleHighlightImpl` | Visually highlight an element with a colored overlay |
 | `subtitle` | `handleSubtitleImpl` | Display a status subtitle in the extension UI |
-| `save_state` | `stateInteract().handleStateSave` | Snapshot cookies/storage/URL for later restore |
-| `load_state` | `stateInteract().handleStateLoad` | Restore a previously saved state snapshot |
-| `list_states` | `stateInteract().handleStateList` | List all saved state snapshots |
-| `delete_state` | `stateInteract().handleStateDelete` | Delete a saved state snapshot |
+| `save_state` | `stateInteractHandler.HandleStateSave` | Snapshot cookies/storage/URL for later restore |
+| `load_state` | `stateInteractHandler.HandleStateLoad` | Restore a previously saved state snapshot |
+| `list_states` | `stateInteractHandler.HandleStateList` | List all saved state snapshots |
+| `delete_state` | `stateInteractHandler.HandleStateDelete` | Delete a saved state snapshot |
 | `set_storage` | `handleSetStorage` | Set a localStorage or sessionStorage key |
 | `delete_storage` | `handleDeleteStorage` | Delete a storage key |
 | `clear_storage` | `handleClearStorage` | Clear all keys from a storage type |

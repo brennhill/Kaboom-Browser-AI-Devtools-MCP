@@ -83,16 +83,16 @@ func buildInteractHandlers() map[string]toolrouting.Handler[*ToolHandler] {
 			return th.interactAction().HandleHighlightImpl(req, args)
 		},
 		"save_state": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return th.stateInteract().HandleStateSave(req, args)
+			return th.stateInteractHandler.HandleStateSave(req, args)
 		},
 		"load_state": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return th.stateInteract().HandleStateLoad(req, args)
+			return th.stateInteractHandler.HandleStateLoad(req, args)
 		},
 		"list_states": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return th.stateInteract().HandleStateList(req, args)
+			return th.stateInteractHandler.HandleStateList(req, args)
 		},
 		"delete_state": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return th.stateInteract().HandleStateDelete(req, args)
+			return th.stateInteractHandler.HandleStateDelete(req, args)
 		},
 		"set_storage": func(th *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return th.interactAction().HandleSetStorage(req, args)

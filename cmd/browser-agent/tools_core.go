@@ -697,10 +697,6 @@ func (h *ToolHandler) interactAction() *toolinteract.InteractActionHandler {
 	return h.interactActionHandler
 }
 
-func (h *ToolHandler) stateInteract() *interactstate.Handler {
-	return h.stateInteractHandler
-}
-
 func (h *ToolHandler) screenrecDeps() screenrec.Deps {
 	if h.Guards == nil {
 		h.Guards = toolguard.New(h.capture, h.shutdownCtx, defaultExtensionReadinessTimeout())

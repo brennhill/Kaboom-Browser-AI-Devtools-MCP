@@ -257,7 +257,7 @@ func TestQueueStateNavigation_QueuesBrowserAction(t *testing.T) {
 		"title": "Test Page",
 	}
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	env.handler.stateInteract().QueueStateNavigation(req, stateData)
+	env.handler.stateInteractHandler.QueueStateNavigation(req, stateData)
 
 	// Should have queued a browser_action query
 	queries := env.capture.Queries().GetPendingQueries()
@@ -301,7 +301,7 @@ func TestQueueStateNavigation_SkipsWhenPilotDisabled(t *testing.T) {
 		"title": "Test Page",
 	}
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	env.handler.stateInteract().QueueStateNavigation(req, stateData)
+	env.handler.stateInteractHandler.QueueStateNavigation(req, stateData)
 
 	queries := env.capture.Queries().GetPendingQueries()
 	for _, q := range queries {
@@ -325,7 +325,7 @@ func TestQueueStateNavigation_SkipsWhenURLEmpty(t *testing.T) {
 		"title": "No URL",
 	}
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	env.handler.stateInteract().QueueStateNavigation(req, stateData)
+	env.handler.stateInteractHandler.QueueStateNavigation(req, stateData)
 
 	queries := env.capture.Queries().GetPendingQueries()
 	for _, q := range queries {
@@ -344,7 +344,7 @@ func TestQueueStateNavigation_SkipsWhenURLMissing(t *testing.T) {
 		"title": "No URL key",
 	}
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	env.handler.stateInteract().QueueStateNavigation(req, stateData)
+	env.handler.stateInteractHandler.QueueStateNavigation(req, stateData)
 
 	queries := env.capture.Queries().GetPendingQueries()
 	for _, q := range queries {
@@ -363,7 +363,7 @@ func TestQueueStateNavigation_SkipsWhenURLNotString(t *testing.T) {
 		"url": 12345, // not a string
 	}
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	env.handler.stateInteract().QueueStateNavigation(req, stateData)
+	env.handler.stateInteractHandler.QueueStateNavigation(req, stateData)
 
 	queries := env.capture.Queries().GetPendingQueries()
 	for _, q := range queries {
@@ -383,7 +383,7 @@ func TestQueueStateNavigation_CorrelationIDHasNavPrefix(t *testing.T) {
 		"url": "https://example.com",
 	}
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	env.handler.stateInteract().QueueStateNavigation(req, stateData)
+	env.handler.stateInteractHandler.QueueStateNavigation(req, stateData)
 
 	corrID, ok := stateData["correlation_id"].(string)
 	if !ok {
