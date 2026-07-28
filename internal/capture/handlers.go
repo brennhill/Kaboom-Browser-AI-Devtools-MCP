@@ -58,7 +58,7 @@ func (c *Capture) HandleNetworkWaterfall(w http.ResponseWriter, r *http.Request)
 		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return
 	}
-	c.AddNetworkWaterfallEntries(payload.Entries, payload.PageURL)
+	c.NetworkWaterfall().Add(payload.Entries, payload.PageURL)
 	util.JSONResponse(w, http.StatusOK, map[string]any{
 		"status": "ok",
 		"count":  len(payload.Entries),

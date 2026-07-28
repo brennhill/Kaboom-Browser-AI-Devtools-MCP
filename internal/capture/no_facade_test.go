@@ -109,6 +109,9 @@ func TestCaptureHasNoCompatibilityAliases(t *testing.T) {
 		"func (c *Capture) AddExtensionLogs(",
 		"func (c *Capture) GetExtensionLogs(",
 		"type ExtensionLogBuffer struct",
+		"func (c *Capture) AddNetworkWaterfallEntries(",
+		"func (c *Capture) GetNetworkWaterfallEntries(",
+		"type NetworkWaterfallBuffer struct",
 	} {
 		if strings.Contains(source.String(), forbidden) {
 			t.Errorf("capture retains compatibility surface %q", forbidden)

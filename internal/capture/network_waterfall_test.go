@@ -91,12 +91,11 @@ func TestHandleNetworkWaterfall_StoresTimestamp(t *testing.T) {
 	capture.HandleNetworkWaterfall(w, req)
 	afterTime := time.Now()
 
-	capture.mu.RLock()
-	if len(capture.networkWaterfall.entries) == 0 {
-		t.Fatalf("Expected 1 entry, got %d", len(capture.networkWaterfall.entries))
+	entries := capture.NetworkWaterfall().Entries()
+	if len(entries) == 0 {
+		t.Fatalf("Expected 1 entry, got %d", len(entries))
 	}
-	entryTime := capture.networkWaterfall.entries[0].Timestamp
-	capture.mu.RUnlock()
+	entryTime := entries[0].Timestamp
 
 	if entryTime.Before(beforeTime) || entryTime.After(afterTime) {
 		t.Errorf("Timestamp not set correctly: %v (should be between %v and %v)", entryTime, beforeTime, afterTime)
@@ -125,12 +124,11 @@ func TestHandleNetworkWaterfall_StoresPageURL(t *testing.T) {
 
 	capture.HandleNetworkWaterfall(w, req)
 
-	capture.mu.RLock()
-	if len(capture.networkWaterfall.entries) == 0 {
-		t.Fatalf("Expected 1 entry, got %d", len(capture.networkWaterfall.entries))
+	entries := capture.NetworkWaterfall().Entries()
+	if len(entries) == 0 {
+		t.Fatalf("Expected 1 entry, got %d", len(entries))
 	}
-	storedURL := capture.networkWaterfall.entries[0].PageURL
-	capture.mu.RUnlock()
+	storedURL := entries[0].PageURL
 
 	if storedURL != expectedURL {
 		t.Errorf("Expected URL %q, got %q", expectedURL, storedURL)
@@ -146,9 +144,7 @@ func TestNetworkWaterfall_RingBufferEviction(t *testing.T) {
 	capture := NewCapture()
 
 	// Override capacity to test eviction behavior
-	capture.mu.Lock()
-	capture.networkWaterfall.capacity = 10
-	capture.mu.Unlock()
+	capture.networkWaterfall = newNetworkWaterfallStore(10)
 
 	// Add 12 entries which should trigger eviction since we set max to 10
 	for i := 0; i < 12; i++ {
@@ -170,9 +166,7 @@ func TestNetworkWaterfall_RingBufferEviction(t *testing.T) {
 		capture.HandleNetworkWaterfall(w, req)
 	}
 
-	capture.mu.RLock()
-	count := len(capture.networkWaterfall.entries)
-	capture.mu.RUnlock()
+	count := len(capture.NetworkWaterfall().Entries())
 
 	// Should keep only the last 10 (the configured capacity)
 	if count > 10 {
@@ -206,11 +200,9 @@ func TestNetworkWaterfall_MultipleEntriesInSinglePayload(t *testing.T) {
 
 	capture.HandleNetworkWaterfall(w, req)
 
-	capture.mu.RLock()
-	if len(capture.networkWaterfall.entries) != 2 {
-		t.Errorf("Expected 2 entries, got %d", len(capture.networkWaterfall.entries))
+	if entries := capture.NetworkWaterfall().Entries(); len(entries) != 2 {
+		t.Errorf("Expected 2 entries, got %d", len(entries))
 	}
-	capture.mu.RUnlock()
 }
 
 // ============================================
@@ -233,19 +225,15 @@ func TestNetworkWaterfall_FeedsCSPGenerator(t *testing.T) {
 func TestNetworkWaterfall_DefaultCapacity(t *testing.T) {
 	t.Parallel()
 	capture := NewCapture()
-	capture.mu.RLock()
-	if cap(capture.networkWaterfall.entries) == 0 {
+	if capture.networkWaterfall.capacity == 0 {
 		t.Errorf("Expected networkWaterfall buffer to be initialized")
 	}
-	capture.mu.RUnlock()
 }
 
 func TestNetworkWaterfall_CustomCapacity(t *testing.T) {
 	t.Parallel()
 	capture := NewCapture()
-	capture.mu.RLock()
-	capacity := cap(capture.networkWaterfall.entries)
-	capture.mu.RUnlock()
+	capacity := capture.networkWaterfall.capacity
 
 	if capacity == 0 {
 		t.Errorf("Expected non-zero capacity")
@@ -289,9 +277,7 @@ func TestNetworkWaterfall_ConcurrentWrites(t *testing.T) {
 		<-done
 	}
 
-	capture.mu.RLock()
-	count := len(capture.networkWaterfall.entries)
-	capture.mu.RUnlock()
+	count := len(capture.NetworkWaterfall().Entries())
 
 	if count != 100 {
 		t.Errorf("Expected 100 entries, got %d", count)

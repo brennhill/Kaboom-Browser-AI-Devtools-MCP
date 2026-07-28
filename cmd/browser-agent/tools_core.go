@@ -589,7 +589,7 @@ func (d visualAnalyzeDeps) HandleSessionStore(args persistence.SessionStoreArgs)
 }
 
 func (h *ToolHandler) NetworkWaterfallEntries() []types.NetworkWaterfallEntry {
-	return h.capture.GetNetworkWaterfallEntries()
+	return h.capture.NetworkWaterfall().Entries()
 }
 
 func (h *ToolHandler) ConsoleSecurityEntries() []types.LogEntry {

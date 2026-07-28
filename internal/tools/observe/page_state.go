@@ -88,7 +88,7 @@ func resolvePageURL(cap *capture.Capture, trackedURL string) string {
 	if trackedURL != "" {
 		return trackedURL
 	}
-	waterfallEntries := cap.GetNetworkWaterfallEntries()
+	waterfallEntries := cap.NetworkWaterfall().Entries()
 	if len(waterfallEntries) > 0 {
 		return waterfallEntries[len(waterfallEntries)-1].PageURL
 	}

@@ -115,6 +115,11 @@ Extension runtime logs now live in an independently synchronized
 retention, snapshots, and clearing. Production and test callers use
 `Capture.ExtensionLogs()` directly; the former capture-level add/get facade and
 raw buffer type have been deleted.
+Browser resource timings likewise live in an independently synchronized
+`NetworkWaterfallStore`, which owns page/timestamp tagging, capacity eviction,
+snapshots, and clearing. All ingestion and analysis callers use
+`Capture.NetworkWaterfall()`; the former capture-level add/get facade and raw
+waterfall buffer are deleted.
 Tracked-tab state is updated through the canonical `/sync` contract or
 `UpdateTrackedTab`; the pre-`/sync` `ExtensionStatus` envelope and
 `UpdateExtensionStatus` mutation API have been deleted.

@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
@@ -26,6 +27,67 @@ type wsEventEntry struct {
 type networkBodyEntry struct {
 	Body    types.NetworkBody
 	AddedAt time.Time
+}
+
+// NetworkWaterfallStore owns bounded browser resource timings and synchronization.
+type NetworkWaterfallStore struct {
+	mu       sync.RWMutex
+	entries  []types.NetworkWaterfallEntry
+	capacity int
+}
+
+func newNetworkWaterfallStore(capacity int) *NetworkWaterfallStore {
+	return &NetworkWaterfallStore{
+		entries:  make([]types.NetworkWaterfallEntry, 0, capacity),
+		capacity: capacity,
+	}
+}
+
+// NetworkWaterfall returns the independently synchronized waterfall owner.
+func (c *Capture) NetworkWaterfall() *NetworkWaterfallStore {
+	return c.networkWaterfall
+}
+
+// Add tags and appends resource timings at server receive time.
+func (s *NetworkWaterfallStore) Add(entries []types.NetworkWaterfallEntry, pageURL string) {
+	s.addAt(entries, pageURL, time.Now())
+}
+
+func (s *NetworkWaterfallStore) addAt(entries []types.NetworkWaterfallEntry, pageURL string, now time.Time) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for i := range entries {
+		entries[i].PageURL = pageURL
+		entries[i].Timestamp = now
+		s.entries = append(s.entries, entries[i])
+	}
+	if len(s.entries) <= s.capacity {
+		return
+	}
+	kept := make([]types.NetworkWaterfallEntry, s.capacity)
+	copy(kept, s.entries[len(s.entries)-s.capacity:])
+	s.entries = kept
+}
+
+// Entries returns a detached snapshot of resource timings.
+func (s *NetworkWaterfallStore) Entries() []types.NetworkWaterfallEntry {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	out := make([]types.NetworkWaterfallEntry, len(s.entries))
+	copy(out, s.entries)
+	return out
+}
+
+// Clear removes all resource timings and returns the removed count.
+func (s *NetworkWaterfallStore) Clear() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	count := len(s.entries)
+	s.entries = make([]types.NetworkWaterfallEntry, 0, s.capacity)
+	return count
 }
 
 // enhancedActionEntry bundles an types.EnhancedAction with its ingestion timestamp.
@@ -338,16 +400,14 @@ func (s *BufferStore) calcNBMemory() int64 {
 // Invariants:
 // - network buffers and their monotonic counters are reset together under c.mu.
 func (c *Capture) ClearNetworkBuffers() types.BufferClearCounts {
+	waterfallCount := c.networkWaterfall.Clear()
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	counts := types.BufferClearCounts{
-		NetworkWaterfall: c.networkWaterfall.count(),
+		NetworkWaterfall: waterfallCount,
 		NetworkBodies:    len(c.buffers.networkBodies),
 	}
-
-	// Clear network waterfall buffer.
-	c.networkWaterfall.clear()
 
 	// Clear network bodies buffer and reset memory tracking
 	c.buffers.clearNetworkBuffers()
@@ -397,12 +457,12 @@ func (c *Capture) ClearActionBuffer() types.BufferClearCounts {
 func (c *Capture) ClearAll() int {
 	c.mu.Lock()
 	c.buffers.clearAllEventBuffers()
-	c.networkWaterfall.clear()
 	c.wsConnections.Clear()
 	c.extensionState.activeTestIDs = make(map[string]bool)
 	c.perf.clear()
 	c.mu.Unlock()
 
+	c.networkWaterfall.Clear()
 	return c.extensionLogs.Clear()
 }
 
@@ -434,51 +494,6 @@ func (c *Capture) AddNetworkBodies(bodies []types.NetworkBody) {
 		activeTestIDs = append(activeTestIDs, testID)
 	}
 	c.buffers.appendNetworkBodies(bodies, activeTestIDs, time.Now())
-}
-
-func (c *Capture) AddNetworkWaterfallEntries(entries []types.NetworkWaterfallEntry, pageURL string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.networkWaterfall.appendEntries(entries, pageURL, time.Now())
-}
-
-func (c *Capture) GetNetworkWaterfallEntries() []types.NetworkWaterfallEntry {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	if c.networkWaterfall.count() == 0 {
-		return []types.NetworkWaterfallEntry{}
-	}
-	return c.networkWaterfall.snapshot()
-}
-
-func (b *NetworkWaterfallBuffer) appendEntries(entries []types.NetworkWaterfallEntry, pageURL string, now time.Time) {
-	for i := range entries {
-		entries[i].PageURL = pageURL
-		entries[i].Timestamp = now
-		b.entries = append(b.entries, entries[i])
-	}
-	if len(b.entries) <= b.capacity {
-		return
-	}
-	kept := make([]types.NetworkWaterfallEntry, b.capacity)
-	copy(kept, b.entries[len(b.entries)-b.capacity:])
-	b.entries = kept
-}
-
-func (b *NetworkWaterfallBuffer) count() int {
-	return len(b.entries)
-}
-
-func (b *NetworkWaterfallBuffer) snapshot() []types.NetworkWaterfallEntry {
-	out := make([]types.NetworkWaterfallEntry, len(b.entries))
-	copy(out, b.entries)
-	return out
-}
-
-func (b *NetworkWaterfallBuffer) clear() int {
-	count := len(b.entries)
-	b.entries = make([]types.NetworkWaterfallEntry, 0, b.capacity)
-	return count
 }
 
 func detectWSBinaryFormat(event *types.WebSocketEvent) {

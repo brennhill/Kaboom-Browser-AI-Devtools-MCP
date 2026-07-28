@@ -261,7 +261,7 @@ func TestObserveNetworkWaterfall_EndToEnd(t *testing.T) {
 	handler := NewToolHandler(server, cap)
 
 	// Add network waterfall entry directly to capture
-	cap.AddNetworkWaterfallEntries([]types.NetworkWaterfallEntry{sampleNetworkEntry}, "https://example.com/dashboard")
+	cap.NetworkWaterfall().Add([]types.NetworkWaterfallEntry{sampleNetworkEntry}, "https://example.com/dashboard")
 
 	// Call observe network_waterfall
 	th := handler.toolHandler.(*ToolHandler)
@@ -310,7 +310,7 @@ func TestObserveNetworkWaterfall_URLFilter(t *testing.T) {
 		{URL: "https://cdn.example.com/style.css", PageURL: "https://example.com"},
 		{URL: "https://api.example.com/orders", PageURL: "https://example.com"},
 	}
-	cap.AddNetworkWaterfallEntries(entries, "https://example.com")
+	cap.NetworkWaterfall().Add(entries, "https://example.com")
 
 	// Filter by "api.example.com"
 	th := handler.toolHandler.(*ToolHandler)
@@ -391,7 +391,7 @@ func TestObservePage_ExtractsFromWaterfall(t *testing.T) {
 	handler := NewToolHandler(server, cap)
 
 	// Add network entry with page_url
-	cap.AddNetworkWaterfallEntries([]types.NetworkWaterfallEntry{sampleNetworkEntry}, "https://example.com/dashboard")
+	cap.NetworkWaterfall().Add([]types.NetworkWaterfallEntry{sampleNetworkEntry}, "https://example.com/dashboard")
 
 	// Call observe page
 	th := handler.toolHandler.(*ToolHandler)
@@ -431,7 +431,7 @@ func TestObservePage_PrioritizesTrackedURL(t *testing.T) {
 	handler := NewToolHandler(server, cap)
 
 	// Add STALE waterfall entry with old URL
-	cap.AddNetworkWaterfallEntries([]types.NetworkWaterfallEntry{sampleNetworkEntry}, "https://old-stale-url.com/page")
+	cap.NetworkWaterfall().Add([]types.NetworkWaterfallEntry{sampleNetworkEntry}, "https://old-stale-url.com/page")
 
 	// Simulate extension sync with FRESH tracked tab URL
 	// This is what the extension sends via /sync endpoint

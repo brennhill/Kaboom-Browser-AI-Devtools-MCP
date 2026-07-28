@@ -53,7 +53,7 @@ func TestGetNetworkBodies_EmptyWithWaterfallData_ReturnsHint(t *testing.T) {
 			Timestamp:     time.Now(),
 		},
 	}
-	env.capture.AddNetworkWaterfallEntries(waterfallEntries, "https://github.com/dashboard")
+	env.capture.NetworkWaterfall().Add(waterfallEntries, "https://github.com/dashboard")
 
 	// Do NOT add any network bodies — simulates issue #278
 

@@ -8,7 +8,6 @@
 package capture
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"sync"
 	"time"
 
@@ -57,7 +56,7 @@ type Capture struct {
 	// Timings and Performance Data
 	// ============================================
 
-	networkWaterfall NetworkWaterfallBuffer // Ring buffer of browser PerformanceResourceTiming data (configurable capacity, default 1000).
+	networkWaterfall *NetworkWaterfallStore // Bounded performance-resource timings. Own lock and retention.
 	extensionLogs    *ExtensionLogStore     // Bounded extension logs. Own lock, redaction, and retention.
 
 	// ============================================
@@ -131,13 +130,10 @@ type Capture struct {
 func NewCapture() *Capture {
 	logRedactor := redaction.NewRedactionEngine("")
 	c := &Capture{
-		buffers: newBufferStore(),
-		networkWaterfall: NetworkWaterfallBuffer{
-			entries:  make([]types.NetworkWaterfallEntry, 0, DefaultNetworkWaterfallCapacity),
-			capacity: DefaultNetworkWaterfallCapacity,
-		},
-		extensionLogs: newExtensionLogStore(logRedactor.Redact),
-		wsConnections: wsconn.NewTracker(),
+		buffers:          newBufferStore(),
+		networkWaterfall: newNetworkWaterfallStore(DefaultNetworkWaterfallCapacity),
+		extensionLogs:    newExtensionLogStore(logRedactor.Redact),
+		wsConnections:    wsconn.NewTracker(),
 		extensionState: ExtensionState{
 			activeTestIDs:           make(map[string]bool),
 			missingInProgressByCorr: make(map[string]int),

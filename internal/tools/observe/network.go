@@ -78,7 +78,7 @@ func GetNetworkBodies(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 		newestTS, _ = time.Parse(time.RFC3339, allBodies[len(allBodies)-1].Timestamp)
 	}
 
-	waterfallCount := len(deps.GetCapture().GetNetworkWaterfallEntries())
+	waterfallCount := len(deps.GetCapture().NetworkWaterfall().Entries())
 	responseMeta := BuildResponseMetadata(deps.GetCapture(), newestTS)
 	hintFilters := hints.NetworkBodiesFilters{
 		URL:       params.URL,
@@ -216,7 +216,7 @@ func GetNetworkWaterfall(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage
 
 func refreshWaterfallIfStale(deps Deps) []types.NetworkWaterfallEntry {
 	cap := deps.GetCapture()
-	allEntries := cap.GetNetworkWaterfallEntries()
+	allEntries := cap.NetworkWaterfall().Entries()
 	if len(allEntries) > 0 && time.Since(allEntries[len(allEntries)-1].Timestamp) < 1*time.Second {
 		return allEntries
 	}
@@ -243,8 +243,8 @@ func refreshWaterfallIfStale(deps Deps) []types.NetworkWaterfallEntry {
 		PageURL string                        `json:"page_url"`
 	}
 	if err := json.Unmarshal(result, &waterfallResult); err == nil && len(waterfallResult.Entries) > 0 {
-		cap.AddNetworkWaterfallEntries(waterfallResult.Entries, waterfallResult.PageURL)
-		return cap.GetNetworkWaterfallEntries()
+		cap.NetworkWaterfall().Add(waterfallResult.Entries, waterfallResult.PageURL)
+		return cap.NetworkWaterfall().Entries()
 	}
 	return allEntries
 }

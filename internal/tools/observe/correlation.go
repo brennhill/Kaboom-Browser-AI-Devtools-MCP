@@ -74,7 +74,7 @@ func GetErrorBundles(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mc
 	_, trackedTabID, _ = cap.GetTrackingStatus()
 
 	networkBodies := cap.GetNetworkBodies()
-	waterfallEntries := cap.GetNetworkWaterfallEntries()
+	waterfallEntries := cap.NetworkWaterfall().Entries()
 	actions := cap.GetAllEnhancedActions()
 
 	// Apply scope filtering to context buffers so bundles only include
@@ -392,7 +392,7 @@ func collectTimelineEntries(deps Deps, inc timelineIncludes) []timelineEntry {
 		entries = append(entries, collectTimelineErrors(deps)...)
 	}
 	if inc.network {
-		entries = append(entries, collectTimelineNetwork(cap.GetNetworkWaterfallEntries())...)
+		entries = append(entries, collectTimelineNetwork(cap.NetworkWaterfall().Entries())...)
 	}
 	if inc.ws {
 		entries = append(entries, collectTimelineWebSocket(cap.GetAllWebSocketEvents())...)

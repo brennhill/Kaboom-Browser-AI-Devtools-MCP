@@ -15,20 +15,18 @@ func TestClearNetworkBuffers(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Add network data directly to buffers
-	capture.mu.Lock()
-	capture.networkWaterfall.entries = []types.NetworkWaterfallEntry{
+	capture.NetworkWaterfall().Add([]types.NetworkWaterfallEntry{
 		{URL: "https://example.com/1"},
 		{URL: "https://example.com/2"},
-	}
-	capture.mu.Unlock()
+	}, "")
 
 	capture.AddNetworkBodies([]types.NetworkBody{
 		{URL: "https://example.com/1"},
 	})
 
 	// Verify data exists
+	initialWaterfall := len(capture.NetworkWaterfall().Entries())
 	capture.mu.RLock()
-	initialWaterfall := len(capture.networkWaterfall.entries)
 	initialBodies := len(capture.buffers.networkBodies)
 	capture.mu.RUnlock()
 
@@ -54,10 +52,10 @@ func TestClearNetworkBuffers(t *testing.T) {
 	}
 
 	// Verify buffers empty
-	capture.mu.RLock()
-	if len(capture.networkWaterfall.entries) != 0 {
-		t.Errorf("Expected networkWaterfall to be empty, got %d entries", len(capture.networkWaterfall.entries))
+	if entries := capture.NetworkWaterfall().Entries(); len(entries) != 0 {
+		t.Errorf("Expected networkWaterfall to be empty, got %d entries", len(entries))
 	}
+	capture.mu.RLock()
 	if len(capture.buffers.networkBodies) != 0 {
 		t.Errorf("Expected networkBodies to be empty, got %d entries", len(capture.buffers.networkBodies))
 	}
@@ -138,9 +136,7 @@ func TestClearAllCapture(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Add data to all capture buffers
-	capture.mu.Lock()
-	capture.networkWaterfall.entries = []types.NetworkWaterfallEntry{{URL: "test"}}
-	capture.mu.Unlock()
+	capture.NetworkWaterfall().Add([]types.NetworkWaterfallEntry{{URL: "test"}}, "")
 
 	capture.AddWebSocketEvents([]types.WebSocketEvent{{ID: "conn1", Data: "test"}})
 	capture.AddEnhancedActions([]types.EnhancedAction{{Type: "click", Timestamp: 1738238000000}})
@@ -158,12 +154,11 @@ func TestClearAllCapture(t *testing.T) {
 	}
 
 	// Verify all buffers empty
-	capture.mu.RLock()
-	defer capture.mu.RUnlock()
-
-	if len(capture.networkWaterfall.entries) != 0 {
+	if len(capture.NetworkWaterfall().Entries()) != 0 {
 		t.Error("Expected networkWaterfall to be empty")
 	}
+	capture.mu.RLock()
+	defer capture.mu.RUnlock()
 	if len(capture.buffers.wsEvents) != 0 {
 		t.Error("Expected wsEvents to be empty")
 	}

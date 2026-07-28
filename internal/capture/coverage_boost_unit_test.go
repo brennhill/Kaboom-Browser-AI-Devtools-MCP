@@ -195,24 +195,22 @@ func TestCoverageBoost_NetworkBodiesBranches(t *testing.T) {
 func TestCoverageBoost_NetworkWaterfallGetters(t *testing.T) {
 	c := newCoverageCapture(t)
 
-	empty := c.GetNetworkWaterfallEntries()
+	empty := c.NetworkWaterfall().Entries()
 	if len(empty) != 0 {
 		t.Fatalf("GetNetworkWaterfallEntries() initial len = %d, want 0", len(empty))
 	}
 
-	c.mu.Lock()
-	c.networkWaterfall.capacity = 1
-	c.mu.Unlock()
+	c.networkWaterfall = newNetworkWaterfallStore(1)
 
-	c.AddNetworkWaterfallEntries([]types.NetworkWaterfallEntry{
+	c.NetworkWaterfall().Add([]types.NetworkWaterfallEntry{
 		{Name: "https://one.example"},
 		{Name: "https://two.example"},
 	}, "https://page.example")
 
-	if got := len(c.GetNetworkWaterfallEntries()); got != 1 {
+	if got := len(c.NetworkWaterfall().Entries()); got != 1 {
 		t.Fatalf("GetNetworkWaterfallCount() = %d, want 1", got)
 	}
-	entries := c.GetNetworkWaterfallEntries()
+	entries := c.NetworkWaterfall().Entries()
 	if len(entries) != 1 {
 		t.Fatalf("GetNetworkWaterfallEntries() len = %d, want 1", len(entries))
 	}

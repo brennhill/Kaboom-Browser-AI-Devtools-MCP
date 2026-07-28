@@ -10,7 +10,6 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 const (
@@ -59,11 +58,6 @@ type PerformanceStore struct {
 	baselines       map[string]performance.PerformanceBaseline
 	baselineOrder   []string
 	beforeSnapshots map[string]performance.PerformanceSnapshot
-}
-
-type NetworkWaterfallBuffer struct {
-	entries  []types.NetworkWaterfallEntry
-	capacity int
 }
 
 type ClientRegistry interface {
