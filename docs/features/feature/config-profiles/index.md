@@ -57,6 +57,9 @@ last_verified_date: 2026-03-05
 - Shared configure argument normalization/parsing:
   - `internal/tools/configure/boundaries.go`
   - `internal/tools/configure/rewrite.go`
+- Test-boundary start/end state and synchronization are owned together by
+  `configure.BoundaryHandler`. The root `ToolHandler` router calls that owner
+  directly and retains no boundary mutex, map, or forwarding methods.
 - Tests:
   - `cmd/browser-agent/tools_configure_handler_test.go`
   - `cmd/browser-agent/tools_configure_session_test.go`

@@ -50,6 +50,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
+	cfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure"
 	observe "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/upload/uploadsec"
@@ -116,11 +117,6 @@ type ToolHandler struct {
 	// Dedicated interact action routing/jitter sub-handler.
 	interactActionHandler *toolinteract.InteractActionHandler
 
-	// Active test boundaries: test_id → start time.
-	// Used to detect out-of-order test_boundary_end calls.
-	activeBoundariesMu sync.Mutex
-	activeBoundaries   map[string]time.Time
-
 	recordingInteractHandler *screenrec.InteractHandler
 	recordingHandler         *toolrecording.Handler
 	uploadInteractHandler    *interactupload.Handler
@@ -129,6 +125,7 @@ type ToolHandler struct {
 	observeDispatcher        *toolobserve.Dispatcher
 	stateInteractHandler     *interactstate.Handler
 	configureSessions        *toolconfigure.SessionHandler
+	testBoundaries           *cfg.BoundaryHandler
 	annotationAnalysis       *annotationanalysis.Handler
 	analyzeDispatcher        *analyzedispatch.Dispatcher
 
@@ -436,6 +433,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 		shutdownCancel:   shutdownCancel,
 		coldStartTimeout: defaultColdStartTimeout,
 		networkRecording: &netrecord.NetworkRecordingState{},
+		testBoundaries:   cfg.NewBoundaryHandler(),
 	}
 	handler.Guards = toolguard.New(captureStore, shutdownContext, defaultExtensionReadinessTimeout())
 	var recordingStore toolrecording.Store

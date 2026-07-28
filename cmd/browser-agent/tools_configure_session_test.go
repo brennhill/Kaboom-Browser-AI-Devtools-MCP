@@ -64,7 +64,7 @@ func TestToolLoadSessionContext_NilStore(t *testing.T) {
 }
 
 // ============================================
-// toolConfigureTestBoundaryEnd — 63% → 100%
+// BoundaryHandler end lifecycle
 // ============================================
 
 func TestToolConfigureTestBoundaryEnd_Success(t *testing.T) {
@@ -123,7 +123,7 @@ func TestToolConfigureTestBoundaryEnd_InvalidJSON(t *testing.T) {
 
 	args := json.RawMessage(`{bad json}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := env.handler.toolConfigureTestBoundaryEnd(req, args)
+	resp := env.handler.testBoundaries.End(req, args)
 
 	result := parseToolResult(t, resp)
 	if !result.IsError {

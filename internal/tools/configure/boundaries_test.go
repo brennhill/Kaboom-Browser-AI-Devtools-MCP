@@ -7,7 +7,10 @@ package configure
 import (
 	"encoding/json"
 	"strings"
+	"sync"
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 // parseResultText extracts the text content from an MCP response for assertions.
@@ -27,6 +30,42 @@ func parseResultText(t *testing.T, result json.RawMessage) string {
 		t.Fatal("expected at least one content block")
 	}
 	return parsed.Content[0].Text
+}
+
+func TestBoundaryHandlerOwnsStartEndLifecycle(t *testing.T) {
+	t.Parallel()
+
+	handler := NewBoundaryHandler()
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	if result := handler.Start(req, json.RawMessage(`{"test_id":"owned"}`)); isErrorResult(t, result.Result) {
+		t.Fatal("Start returned an error")
+	}
+	if result := handler.End(req, json.RawMessage(`{"test_id":"owned"}`)); isErrorResult(t, result.Result) {
+		t.Fatal("End returned an error")
+	}
+	if result := handler.End(req, json.RawMessage(`{"test_id":"owned"}`)); !isErrorResult(t, result.Result) {
+		t.Fatal("ending an inactive boundary should return an error")
+	}
+}
+
+func TestBoundaryHandlerSerializesConcurrentLifecycle(t *testing.T) {
+	t.Parallel()
+
+	handler := NewBoundaryHandler()
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	var wg sync.WaitGroup
+	for i := 0; i < 50; i++ {
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			_ = handler.Start(req, json.RawMessage(`{"test_id":"shared"}`))
+		}()
+		go func() {
+			defer wg.Done()
+			_ = handler.End(req, json.RawMessage(`{"test_id":"shared"}`))
+		}()
+	}
+	wg.Wait()
 }
 
 func isErrorResult(t *testing.T, result json.RawMessage) bool {

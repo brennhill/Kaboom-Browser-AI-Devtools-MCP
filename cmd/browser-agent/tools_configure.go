@@ -77,10 +77,14 @@ var configureHandlers = map[string]toolrouting.Handler[*ToolHandler]{
 			Annotations: h.annotationStore,
 		}, req, args)
 	},
-	"audit_log":             (*ToolHandler).toolGetAuditLog,
-	"streaming":             (*ToolHandler).toolConfigureStreaming,
-	"test_boundary_start":   (*ToolHandler).toolConfigureTestBoundaryStart,
-	"test_boundary_end":     (*ToolHandler).toolConfigureTestBoundaryEnd,
+	"audit_log": (*ToolHandler).toolGetAuditLog,
+	"streaming": (*ToolHandler).toolConfigureStreaming,
+	"test_boundary_start": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		return h.testBoundaries.Start(req, args)
+	},
+	"test_boundary_end": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		return h.testBoundaries.End(req, args)
+	},
 	"event_recording_start": (*ToolHandler).toolConfigureEventRecordingStart,
 	"event_recording_stop":  (*ToolHandler).toolConfigureEventRecordingStop,
 	"playback":              (*ToolHandler).toolConfigurePlayback,
@@ -433,40 +437,4 @@ func (h *ToolHandler) toolConfigureRestart(req mcp.JSONRPCRequest) mcp.JSONRPCRe
 		_ = process.Signal(syscall.SIGTERM)
 	})
 	return resp
-}
-
-func (h *ToolHandler) toolConfigureTestBoundaryStart(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	result, errResp := cfg.ParseTestBoundaryStart(req.ID, args)
-	if errResp != nil {
-		return *errResp
-	}
-
-	h.activeBoundariesMu.Lock()
-	defer h.activeBoundariesMu.Unlock()
-	if h.activeBoundaries == nil {
-		h.activeBoundaries = make(map[string]time.Time)
-	}
-	h.activeBoundaries[result.TestID] = time.Now()
-	return cfg.BuildTestBoundaryStartResponse(req.ID, result)
-}
-
-func (h *ToolHandler) toolConfigureTestBoundaryEnd(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	result, errResp := cfg.ParseTestBoundaryEnd(req.ID, args)
-	if errResp != nil {
-		return *errResp
-	}
-
-	h.activeBoundariesMu.Lock()
-	_, wasActive := h.activeBoundaries[result.TestID]
-	if wasActive {
-		delete(h.activeBoundaries, result.TestID)
-	}
-	h.activeBoundariesMu.Unlock()
-	if !wasActive {
-		return mcp.Fail(req, mcp.ErrInvalidParam,
-			"No active test boundary for test_id '"+result.TestID+"'",
-			"Call configure({what: 'test_boundary_start', test_id: '"+result.TestID+"'}) first",
-			mcp.WithParam("test_id"))
-	}
-	return cfg.BuildTestBoundaryEndResponse(req.ID, result, wasActive)
 }

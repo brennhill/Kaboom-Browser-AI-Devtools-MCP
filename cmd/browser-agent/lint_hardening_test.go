@@ -59,6 +59,10 @@ func TestRootDoesNotReexportCanonicalTypes(t *testing.T) {
 		"var NewToolCallLimiter =",
 		"var randomInt63 =",
 		"var legacyMCPServerNames =",
+		"activeBoundariesMu ",
+		"activeBoundaries ",
+		"toolConfigureTestBoundaryStart(",
+		"toolConfigureTestBoundaryEnd(",
 	} {
 		for _, path := range rootFiles {
 			if strings.HasSuffix(path, "_test.go") {

@@ -5,9 +5,57 @@ package configure
 
 import (
 	"encoding/json"
+	"sync"
+	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
+
+// BoundaryHandler owns active test-boundary lifecycle state.
+type BoundaryHandler struct {
+	mu     sync.Mutex
+	active map[string]time.Time
+}
+
+// NewBoundaryHandler returns an initialized boundary lifecycle owner.
+func NewBoundaryHandler() *BoundaryHandler {
+	return &BoundaryHandler{active: make(map[string]time.Time)}
+}
+
+// Start validates and activates a test boundary.
+func (h *BoundaryHandler) Start(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+	result, errResp := ParseTestBoundaryStart(req.ID, args)
+	if errResp != nil {
+		return *errResp
+	}
+
+	h.mu.Lock()
+	h.active[result.TestID] = time.Now()
+	h.mu.Unlock()
+	return BuildTestBoundaryStartResponse(req.ID, result)
+}
+
+// End validates and removes an active test boundary.
+func (h *BoundaryHandler) End(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+	result, errResp := ParseTestBoundaryEnd(req.ID, args)
+	if errResp != nil {
+		return *errResp
+	}
+
+	h.mu.Lock()
+	_, wasActive := h.active[result.TestID]
+	if wasActive {
+		delete(h.active, result.TestID)
+	}
+	h.mu.Unlock()
+	if !wasActive {
+		return mcp.Fail(req, mcp.ErrInvalidParam,
+			"No active test boundary for test_id '"+result.TestID+"'",
+			"Call configure({what: 'test_boundary_start', test_id: '"+result.TestID+"'}) first",
+			mcp.WithParam("test_id"))
+	}
+	return BuildTestBoundaryEndResponse(req.ID, result, true)
+}
 
 func unmarshalBoundaryArgs(reqID any, args json.RawMessage, target any) *mcp.JSONRPCResponse {
 	if len(args) == 0 {
