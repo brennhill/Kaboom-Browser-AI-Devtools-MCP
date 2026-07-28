@@ -4,7 +4,7 @@ feature_id: feature-error-bundling
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-29
 code_paths:
   - src/lib/ai-context/ai-context-parsing.ts
   - src/lib/ai-context/ai-context-enrichment.ts
@@ -46,3 +46,7 @@ last_verified_date: 2026-03-05
 ## Code and Tests
 
 Add concrete implementation and test links here as this feature evolves.
+
+Chrome and Firefox stack formats delegate matched-frame validation and
+construction to one canonical decoder; format-specific wrappers own only their
+regular expressions.

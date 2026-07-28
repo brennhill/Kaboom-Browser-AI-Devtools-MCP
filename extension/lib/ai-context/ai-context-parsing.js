@@ -9,8 +9,8 @@ import { AI_CONTEXT_SNIPPET_LINES, AI_CONTEXT_MAX_LINE_LENGTH, AI_CONTEXT_MAX_SN
 const aiSourceMapCache = new Map();
 const CHROME_FRAME_RE = /^at\s+(?:(.+?)\s+\()?(.+?):(\d+):(\d+)\)?$/;
 const FIREFOX_FRAME_RE = /^(.+?)@(.+?):(\d+):(\d+)$/;
-function parseChromeFrame(line) {
-    const m = line.match(CHROME_FRAME_RE);
+function parseMatchedFrame(line, pattern) {
+    const m = line.match(pattern);
     if (!m)
         return null;
     const filename = m[2];
@@ -20,16 +20,11 @@ function parseChromeFrame(line) {
         return null;
     return { functionName: m[1] || null, filename, lineno: parseInt(m[3], 10), colno: parseInt(m[4], 10) };
 }
+function parseChromeFrame(line) {
+    return parseMatchedFrame(line, CHROME_FRAME_RE);
+}
 function parseFirefoxFrame(line) {
-    const m = line.match(FIREFOX_FRAME_RE);
-    if (!m)
-        return null;
-    const filename = m[2];
-    if (!filename || filename.includes('<anonymous>'))
-        return null;
-    if (!m[3] || !m[4])
-        return null;
-    return { functionName: m[1] || null, filename, lineno: parseInt(m[3], 10), colno: parseInt(m[4], 10) };
+    return parseMatchedFrame(line, FIREFOX_FRAME_RE);
 }
 const FRAME_PARSERS = [parseChromeFrame, parseFirefoxFrame];
 export function parseStackFrames(stack) {

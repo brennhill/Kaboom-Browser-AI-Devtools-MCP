@@ -6,6 +6,7 @@
 
 import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert'
+import { readFileSync } from 'node:fs'
 
 import {
   parseStackFrames,
@@ -99,6 +100,13 @@ describe('parseStackFrames — edge cases', () => {
   test('returns empty array for malformed stack', () => {
     assert.deepStrictEqual(parseStackFrames('just some random text\nno frames here'), [])
   })
+})
+
+test('stack formats share one canonical matched-frame decoder', () => {
+  const source = readFileSync('src/lib/ai-context/ai-context-parsing.ts', 'utf8')
+  assert.match(source, /function parseMatchedFrame\(/)
+  assert.match(source, /parseMatchedFrame\(line,\s*CHROME_FRAME_RE\)/)
+  assert.match(source, /parseMatchedFrame\(line,\s*FIREFOX_FRAME_RE\)/)
 })
 
 // =============================================================================
