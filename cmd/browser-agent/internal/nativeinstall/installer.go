@@ -25,19 +25,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
-// installerLegacyServerKeys are historical MCP config IDs that are migrated
-// to the canonical identity.MCPServerName during install.
-var installerLegacyServerKeys = []string{
-	"kaboom-agentic-browser",
-	"kaboom",
-	"gasoline-browser-devtools",
-	"gasoline-agentic-browser",
-	"gasoline",
-	"strum-browser-devtools",
-	"strum-agentic-browser",
-	"strum",
-}
-
 func extensionInstallDir(home string) string {
 	if override := strings.TrimSpace(os.Getenv("KABOOM_EXTENSION_DIR")); override != "" {
 		return override
@@ -353,10 +340,6 @@ func mergeJSONConfig(path, key, exePath string, isCustom bool) error {
 	if !ok {
 		return fmt.Errorf("unexpected format for key %q", key)
 	}
-	for _, legacy := range installerLegacyServerKeys {
-		delete(servers, legacy)
-	}
-
 	if isCustom {
 		if key == "mcp" { // OpenCode
 			servers[identity.MCPServerName] = map[string]any{

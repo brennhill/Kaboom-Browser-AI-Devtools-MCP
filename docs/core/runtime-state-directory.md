@@ -55,11 +55,7 @@ This works the same on macOS, Linux, and Windows, and is more discoverable than 
 
 AI persistence data is stored centrally under `~/.kaboom/projects/{abs-path}/` (with the leading `/` stripped from the absolute project path). This keeps all Kaboom state in one place rather than scattering `.kaboom/` directories inside each project.
 
-## Compatibility
+## Canonical Path Contract
 
-Legacy paths from earlier versions are still checked as read-only fallbacks:
-
-- `~/Library/Application Support/kaboom` (macOS), `%AppData%\kaboom` (Windows), `~/.config/kaboom` (Linux) — the previous primary location
-- `~/kaboom-logs.jsonl`, `~/kaboom-crash.log`, `~/.kaboom-7890.pid`, `~/.kaboom-settings.json` — pre-dotfolder flat files
-
-New writes always go to `~/.kaboom`. No automatic migration is performed.
+All reads, writes, and cleanup operations use the canonical state root. Kaboom
+does not inspect, migrate, or remove files in historical locations.

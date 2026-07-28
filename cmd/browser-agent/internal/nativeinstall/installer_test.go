@@ -107,20 +107,3 @@ func TestExtensionInstallDir_EnvOverride(t *testing.T) {
 		t.Fatalf("extensionInstallDir(%q) = %q, want env override %q", home, got, override)
 	}
 }
-
-func TestInstallerLegacyServerKeys_IncludeKaboomAndKaboomVariants(t *testing.T) {
-	joined := strings.Join(installerLegacyServerKeys, "\n")
-	required := []string{
-		"kaboom-agentic-browser",
-		"kaboom",
-		"strum-browser-devtools",
-		"strum-agentic-browser",
-		"strum",
-	}
-
-	for _, want := range required {
-		if !strings.Contains(joined, want) {
-			t.Fatalf("installerLegacyServerKeys missing %q; got %v", want, installerLegacyServerKeys)
-		}
-	}
-}

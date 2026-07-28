@@ -37,20 +37,5 @@ func Find() string {
 }
 
 func ContainsManagedMCPConfig(data string) bool {
-	for _, name := range []string{
-		"kaboom-browser-devtools",
-		"kaboom-agentic-browser",
-		"kaboom",
-		"gasoline-browser-devtools",
-		"gasoline-agentic-browser",
-		"gasoline",
-		"strum-browser-devtools",
-		"strum-agentic-browser",
-		"strum",
-	} {
-		if strings.Contains(data, name) {
-			return true
-		}
-	}
-	return false
+	return strings.Contains(data, "kaboom-browser-devtools")
 }

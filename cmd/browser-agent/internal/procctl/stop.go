@@ -26,7 +26,7 @@ const (
 	terminateSignalSettleDelay   = 100 * time.Millisecond
 )
 
-var forceCleanupCommandNames = []string{"kaboom", "gasoline", "strum"}
+var forceCleanupCommandNames = []string{"kaboom"}
 
 // Stop gracefully stops a running server on the specified port.
 // Uses hybrid approach: PID file (fast) -> HTTP /shutdown (graceful) -> platform-aware process kill (fallback).
@@ -191,9 +191,7 @@ func killUnixKaboomProcesses() (int, int) {
 			failedToKill += failed
 		}
 	}
-	for _, pattern := range []string{"kaboom.*--daemon", "gasoline.*--daemon", "strum.*--daemon"} {
-		_ = exec.Command("pkill", "-f", pattern).Run()
-	}
+	_ = exec.Command("pkill", "-f", "kaboom.*--daemon").Run()
 	return killed, failedToKill
 }
 
@@ -233,15 +231,13 @@ func terminateProcess(pid int) (int, int) {
 
 func killWindowsKaboomProcesses() int {
 	killed := 0
-	for _, imageName := range []string{"kaboom.exe", "gasoline.exe", "strum.exe"} {
-		output, err := exec.Command("taskkill", "/IM", imageName, "/F").CombinedOutput()
-		if err != nil {
-			continue
-		}
-		for _, line := range strings.Split(string(output), "\n") {
-			if strings.Contains(line, "SUCCESS") || strings.Contains(line, "terminated") {
-				killed++
-			}
+	output, err := exec.Command("taskkill", "/IM", "kaboom.exe", "/F").CombinedOutput()
+	if err != nil {
+		return killed
+	}
+	for _, line := range strings.Split(string(output), "\n") {
+		if strings.Contains(line, "SUCCESS") || strings.Contains(line, "terminated") {
+			killed++
 		}
 	}
 	return killed
@@ -258,29 +254,25 @@ func CleanupPIDFiles() {
 }
 
 func killUnixKaboomProcessesQuietly() (int, int) {
-	for _, pattern := range []string{"kaboom.*--daemon", "gasoline.*--daemon", "strum.*--daemon"} {
-		_ = exec.Command("pkill", "-f", pattern).Run()
-	}
+	_ = exec.Command("pkill", "-f", "kaboom.*--daemon").Run()
 	return 0, 0
 }
 
 func killWindowsKaboomProcessesQuietly() int {
-	for _, imageName := range []string{"kaboom.exe", "gasoline.exe", "strum.exe"} {
-		_ = exec.Command("taskkill", "/IM", imageName, "/F").Run()
-	}
+	_ = exec.Command("taskkill", "/IM", "kaboom.exe", "/F").Run()
 	return 0
 }
 
 func printForceCleanupSummary(killed, failedToKill int) {
 	diag.Println()
 	if killed > 0 {
-		diag.Printf("✓ Successfully killed %d Kaboom/legacy process(es)\n", killed)
+		diag.Printf("✓ Successfully killed %d Kaboom process(es)\n", killed)
 	}
 	if failedToKill > 0 {
 		diag.Printf("⚠ Failed to kill %d process(es) (may have already exited)\n", failedToKill)
 	}
 	if killed == 0 && failedToKill == 0 {
-		diag.Println("✓ No running Kaboom/legacy processes found")
+		diag.Println("✓ No running Kaboom processes found")
 	}
 	diag.Println()
 	diag.Println("Cleaned up PID files. Safe to proceed with installation.")

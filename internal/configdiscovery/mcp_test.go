@@ -8,15 +8,13 @@ import (
 	"testing"
 )
 
-func TestContainsManagedMCPConfigRecognizesCurrentAndLegacyNames(t *testing.T) {
-	for _, name := range []string{
-		"kaboom-browser-devtools",
-		"kaboom-agentic-browser",
-		"gasoline-agentic-browser",
-		"strum-browser-devtools",
-	} {
-		if !ContainsManagedMCPConfig(`{"mcpServers":{"` + name + `":{}}}`) {
-			t.Fatalf("expected %q to be recognized", name)
+func TestContainsManagedMCPConfigRecognizesOnlyCanonicalName(t *testing.T) {
+	if !ContainsManagedMCPConfig(`{"mcpServers":{"kaboom-browser-devtools":{}}}`) {
+		t.Fatal("canonical MCP config should be recognized")
+	}
+	for _, name := range []string{"kaboom", "kaboom-agentic-browser", "gasoline", "strum"} {
+		if ContainsManagedMCPConfig(`{"mcpServers":{"` + name + `":{}}}`) {
+			t.Fatalf("non-canonical MCP name %q should not be recognized", name)
 		}
 	}
 	if ContainsManagedMCPConfig(`{"mcpServers":{"github":{}}}`) {

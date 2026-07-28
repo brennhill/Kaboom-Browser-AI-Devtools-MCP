@@ -88,15 +88,14 @@ func TestMergeJSONConfig_CreatesBackup(t *testing.T) {
 	}
 }
 
-func TestMergeJSONConfig_RemovesLegacyKeys(t *testing.T) {
+func TestMergeJSONConfigPreservesUnrelatedServers(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "mcp.json")
 
 	existing := map[string]any{
 		"mcpServers": map[string]any{
-			"kaboom":                 map[string]any{"command": "old"},
-			"kaboom-agentic-browser": map[string]any{"command": "older"},
-			"github":                 map[string]any{"command": "github-mcp"},
+			"gasoline": map[string]any{"command": "other-mcp"},
+			"github":   map[string]any{"command": "github-mcp"},
 		},
 	}
 	data, _ := json.MarshalIndent(existing, "", "  ")
@@ -111,10 +110,8 @@ func TestMergeJSONConfig_RemovesLegacyKeys(t *testing.T) {
 	result := readJSONFile(t, path)
 	servers := result["mcpServers"].(map[string]any)
 
-	for _, legacy := range installerLegacyServerKeys {
-		if _, ok := servers[legacy]; ok {
-			t.Errorf("legacy key %q was not removed", legacy)
-		}
+	if _, ok := servers["gasoline"]; !ok {
+		t.Error("installer deleted an unrelated non-canonical server")
 	}
 	if _, ok := servers["github"]; !ok {
 		t.Error("github server was deleted")

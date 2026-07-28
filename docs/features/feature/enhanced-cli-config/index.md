@@ -111,8 +111,9 @@ listed above. The popup no longer exposes a dormant one-click update flow:
 its `/upgrade/nonce` and `/upgrade/install` calls had no server routes or
 OpenAPI contract.
 
-- npm wrapper installs now register `kaboom-browser-devtools` and remove legacy `kaboom-*`, `gasoline-*`, and `strum-*` MCP entries during install/update/uninstall.
-- npm wrapper config helpers now converge on `mergeKaboomConfig(...)`, and doctor treats legacy MCP keys as non-OK until customers reinstall.
+- Native configuration discovery and installation recognize and write only the
+  canonical `kaboom-browser-devtools` MCP identity; unrelated server entries
+  are preserved without migration-specific handling.
 - PyPI wrapper config helpers now converge on `merge_kaboom_config(...)`, and packaged `.egg-info` metadata now exposes only Kaboom package names, entry points, and repo URLs.
 - Platform npm packages now ship `kaboom-agentic-browser` and `kaboom-hooks` binaries while preserving legacy cleanup for customer machines.
 - Server postinstall now validates `kaboom-browser-devtools` on `/health` reuse checks and points manual extension loading at `KABOOM_EXTENSION_DIR` / `~/KaboomAgenticDevtoolExtension`.
