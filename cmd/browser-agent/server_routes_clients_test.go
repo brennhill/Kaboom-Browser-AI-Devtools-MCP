@@ -92,7 +92,7 @@ func (m *mockClientRegistry) Unregister(id string) bool {
 func newCaptureWithRegistry(t *testing.T) *capture.Capture {
 	t.Helper()
 	cap := capture.NewCapture()
-	cap.SetClientRegistryForTest(newMockClientRegistry())
+	cap.Clients().Set(newMockClientRegistry())
 	return cap
 }
 
@@ -226,7 +226,7 @@ func TestHandleClientsList_GET_CountMatchesRegistered(t *testing.T) {
 	cap := newCaptureWithRegistry(t)
 
 	// Register a client first
-	cap.GetClientRegistry().Register("/tmp/project-a")
+	cap.Clients().Registry().Register("/tmp/project-a")
 
 	req := httptest.NewRequest("GET", "/clients", nil)
 	w := httptest.NewRecorder()
@@ -284,7 +284,7 @@ func TestHandleClientByID_GET_ExistingClient(t *testing.T) {
 	cap := newCaptureWithRegistry(t)
 
 	// Register a client and get its ID
-	csAny := cap.GetClientRegistry().Register("/tmp/project")
+	csAny := cap.Clients().Registry().Register("/tmp/project")
 	csJSON, _ := json.Marshal(csAny)
 	var cs map[string]any
 	if err := json.Unmarshal(csJSON, &cs); err != nil {
@@ -364,7 +364,7 @@ func TestHandleClientByID_EmptyID(t *testing.T) {
 func TestHandleClientByID_DELETE_ReturnsUnregistered(t *testing.T) {
 	t.Parallel()
 	cap := newCaptureWithRegistry(t)
-	registered := cap.GetClientRegistry().Register("/tmp/project")
+	registered := cap.Clients().Registry().Register("/tmp/project")
 	registeredMap, ok := registered.(map[string]any)
 	if !ok {
 		t.Fatalf("expected mock registry to return map, got %T", registered)

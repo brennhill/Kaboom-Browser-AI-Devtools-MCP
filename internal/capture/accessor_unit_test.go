@@ -131,9 +131,9 @@ func TestCaptureClientRegistryAccessor(t *testing.T) {
 	t.Parallel()
 
 	c := NewCapture()
-	reg := c.GetClientRegistry()
+	reg := c.Clients().Registry()
 	if reg != nil {
-		t.Fatalf("GetClientRegistry() = %#v, want nil before registry is injected", reg)
+		t.Fatalf("Clients().Registry() = %#v, want nil before registry is injected", reg)
 	}
 }
 

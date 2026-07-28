@@ -35,9 +35,9 @@ func TestIsExtensionConnected_TrueAfterRecentSync(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 
-	c.mu.Lock()
-	c.extension.state.lastSyncSeen = time.Now()
-	c.mu.Unlock()
+	mutateExtensionStateForTest(c.Extension(), func(state *ExtensionState) {
+		state.lastSyncSeen = time.Now()
+	})
 
 	if !c.Extension().IsExtensionConnected() {
 		t.Fatal("IsExtensionConnected() = false, want true after recent sync")
@@ -49,9 +49,9 @@ func TestIsExtensionConnected_FalseAfterTimeout(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 
-	c.mu.Lock()
-	c.extension.state.lastSyncSeen = time.Now().Add(-15 * time.Second)
-	c.mu.Unlock()
+	mutateExtensionStateForTest(c.Extension(), func(state *ExtensionState) {
+		state.lastSyncSeen = time.Now().Add(-15 * time.Second)
+	})
 
 	if c.Extension().IsExtensionConnected() {
 		t.Fatal("IsExtensionConnected() = true, want false after 15s without sync")
@@ -64,9 +64,9 @@ func TestIsExtensionConnected_TrueAtBoundary(t *testing.T) {
 	defer c.Close()
 
 	// Just under the threshold
-	c.mu.Lock()
-	c.extension.state.lastSyncSeen = time.Now().Add(-9 * time.Second)
-	c.mu.Unlock()
+	mutateExtensionStateForTest(c.Extension(), func(state *ExtensionState) {
+		state.lastSyncSeen = time.Now().Add(-9 * time.Second)
+	})
 
 	if !c.Extension().IsExtensionConnected() {
 		t.Fatal("IsExtensionConnected() = false, want true at 9s (under 10s threshold)")
@@ -83,10 +83,10 @@ func TestGetExtensionStatus_ReturnsConnectionInfo(t *testing.T) {
 	defer c.Close()
 
 	now := time.Now()
-	c.mu.Lock()
-	c.extension.state.lastSyncSeen = now
-	c.extension.state.lastSyncClientID = "client-abc"
-	c.mu.Unlock()
+	mutateExtensionStateForTest(c.Extension(), func(state *ExtensionState) {
+		state.lastSyncSeen = now
+		state.lastSyncClientID = "client-abc"
+	})
 
 	status := c.Extension().GetExtensionStatus()
 
@@ -111,10 +111,10 @@ func TestGetExtensionStatus_DisconnectedWhenStale(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 
-	c.mu.Lock()
-	c.extension.state.lastSyncSeen = time.Now().Add(-20 * time.Second)
-	c.extension.state.lastSyncClientID = "client-old"
-	c.mu.Unlock()
+	mutateExtensionStateForTest(c.Extension(), func(state *ExtensionState) {
+		state.lastSyncSeen = time.Now().Add(-20 * time.Second)
+		state.lastSyncClientID = "client-old"
+	})
 
 	status := c.Extension().GetExtensionStatus()
 
@@ -187,12 +187,12 @@ func TestGetPilotStatus_IncludesExtensionLastSeen(t *testing.T) {
 	defer c.Close()
 
 	now := time.Now()
-	c.mu.Lock()
-	c.extension.state.pilotEnabled = true
-	c.extension.state.lastPollAt = now
-	c.extension.state.lastSyncSeen = now
-	c.extension.state.lastSyncClientID = "test-client"
-	c.mu.Unlock()
+	mutateExtensionStateForTest(c.Extension(), func(state *ExtensionState) {
+		state.pilotEnabled = true
+		state.lastPollAt = now
+		state.lastSyncSeen = now
+		state.lastSyncClientID = "test-client"
+	})
 
 	status, ok := c.Extension().GetPilotStatus().(map[string]any)
 	if !ok {
@@ -295,9 +295,9 @@ func TestGetPendingQueries_ExpiresOnDisconnect(t *testing.T) {
 	defer c.Close()
 
 	// Simulate extension was connected, then disconnected
-	c.mu.Lock()
-	c.extension.state.lastSyncSeen = time.Now().Add(-15 * time.Second)
-	c.mu.Unlock()
+	mutateExtensionStateForTest(c.Extension(), func(state *ExtensionState) {
+		state.lastSyncSeen = time.Now().Add(-15 * time.Second)
+	})
 
 	// Create a pending query with a correlation ID
 	c.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
@@ -337,9 +337,9 @@ func TestGetPendingQueries_DoesNotExpireWhenConnected(t *testing.T) {
 	defer c.Close()
 
 	// Simulate extension recently connected
-	c.mu.Lock()
-	c.extension.state.lastSyncSeen = time.Now()
-	c.mu.Unlock()
+	mutateExtensionStateForTest(c.Extension(), func(state *ExtensionState) {
+		state.lastSyncSeen = time.Now()
+	})
 
 	// Create pending query
 	c.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
@@ -379,10 +379,10 @@ func TestHandleSync_ExpiresPendingOnDisconnect(t *testing.T) {
 	defer c.Close()
 
 	// Simulate a past sync (extension was connected, now stale)
-	c.mu.Lock()
-	c.extension.state.lastSyncSeen = time.Now().Add(-15 * time.Second)
-	c.extension.state.lastPollAt = time.Now().Add(-15 * time.Second)
-	c.mu.Unlock()
+	mutateExtensionStateForTest(c.Extension(), func(state *ExtensionState) {
+		state.lastSyncSeen = time.Now().Add(-15 * time.Second)
+		state.lastPollAt = time.Now().Add(-15 * time.Second)
+	})
 
 	// Create pending queries with correlation IDs
 	c.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{

@@ -90,11 +90,6 @@ func (r *ExtensionRuntime) SetTrackingStatusForTest(tabID int, tabURL string) {
 	r.state.trackingUpdated = time.Now()
 }
 
-// SetClientRegistryForTest sets the client registry (TEST ONLY)
-func (c *Capture) SetClientRegistryForTest(reg ClientRegistry) {
-	c.SetClientRegistry(reg)
-}
-
 // AddExtraWSEventsForTest adds extra WebSocket event entries to the buffer (TEST ONLY).
 // This replaces SetWSParallelMismatchForTest since parallel arrays no longer exist.
 func (s *TelemetryStore) AddExtraWSEventsForTest(count int) {

@@ -8,6 +8,7 @@ last_reviewed: 2026-07-28
 code_paths:
   - internal/capture/model.go
   - internal/capture/capture.go
+  - internal/capture/model.go
   - cmd/browser-agent/main_connection_mcp.go
   - cmd/browser-agent/server.go
   - internal/session/clientreg/registry.go
@@ -65,3 +66,6 @@ diff modules consume those types directly; they do not re-export package-local
 aliases. Snapshot manager, comparison, and diff tests exercise the same
 canonical contract. Network diffing likewise consumes URL-path normalization
 directly from `internal/util`, without routing through capture.
+Client-session registry wiring is owned by `Capture.Clients()`; runtime routes
+consume the installed registry directly without Capture set/get forwarding
+methods.

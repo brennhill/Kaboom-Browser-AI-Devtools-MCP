@@ -50,14 +50,13 @@ func TestHandleSync_BasicRequest(t *testing.T) {
 	}
 
 	// Verify state was updated
-	cap.mu.RLock()
-	if cap.extension.state.extSessionID != "test_session_123" {
-		t.Errorf("Expected session to be 'test_session_123', got '%s'", cap.extension.state.extSessionID)
+	state := extensionStateSnapshotForTest(cap.Extension())
+	if state.extSessionID != "test_session_123" {
+		t.Errorf("Expected session to be 'test_session_123', got '%s'", state.extSessionID)
 	}
-	if !cap.extension.state.pilotEnabled {
+	if !state.pilotEnabled {
 		t.Error("Expected pilotEnabled to be true")
 	}
-	cap.mu.RUnlock()
 }
 
 func TestHandleSync_MethodNotAllowed(t *testing.T) {
@@ -169,9 +168,7 @@ func TestHandleSync_UpdatesLastPollAt(t *testing.T) {
 	cap := NewCapture()
 
 	// Initially lastPollAt should be zero
-	cap.mu.RLock()
-	initialPollAt := cap.extension.state.lastPollAt
-	cap.mu.RUnlock()
+	initialPollAt := extensionStateSnapshotForTest(cap.Extension()).lastPollAt
 
 	if !initialPollAt.IsZero() {
 		t.Error("Expected initial lastPollAt to be zero")
@@ -185,9 +182,7 @@ func TestHandleSync_UpdatesLastPollAt(t *testing.T) {
 	}
 
 	// Verify lastPollAt was updated
-	cap.mu.RLock()
-	newPollAt := cap.extension.state.lastPollAt
-	cap.mu.RUnlock()
+	newPollAt := extensionStateSnapshotForTest(cap.Extension()).lastPollAt
 
 	if newPollAt.IsZero() {
 		t.Error("Expected lastPollAt to be set after sync")
@@ -308,11 +303,11 @@ func TestUpdateSyncConnectionState_NoReconnectForShortPollGap(t *testing.T) {
 	defer cap.Close()
 
 	now := time.Now()
-	cap.mu.Lock()
-	cap.extension.state.lastPollAt = now.Add(-6 * time.Second)
-	cap.extension.state.lastSyncSeen = now.Add(-6 * time.Second)
-	cap.extension.state.lastExtensionConnected = true
-	cap.mu.Unlock()
+	mutateExtensionStateForTest(cap.Extension(), func(state *ExtensionState) {
+		state.lastPollAt = now.Add(-6 * time.Second)
+		state.lastSyncSeen = now.Add(-6 * time.Second)
+		state.lastExtensionConnected = true
+	})
 
 	state := cap.extension.updateSyncConnectionState(
 		SyncRequest{ExtSessionID: "session-short-gap"},
@@ -334,11 +329,11 @@ func TestUpdateSyncConnectionState_ReconnectAfterDisconnectThreshold(t *testing.
 	defer cap.Close()
 
 	now := time.Now()
-	cap.mu.Lock()
-	cap.extension.state.lastPollAt = now.Add(-12 * time.Second)
-	cap.extension.state.lastSyncSeen = now.Add(-12 * time.Second)
-	cap.extension.state.lastExtensionConnected = true
-	cap.mu.Unlock()
+	mutateExtensionStateForTest(cap.Extension(), func(state *ExtensionState) {
+		state.lastPollAt = now.Add(-12 * time.Second)
+		state.lastSyncSeen = now.Add(-12 * time.Second)
+		state.lastExtensionConnected = true
+	})
 
 	state := cap.extension.updateSyncConnectionState(
 		SyncRequest{ExtSessionID: "session-long-gap"},

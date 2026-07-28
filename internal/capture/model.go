@@ -75,3 +75,28 @@ type ClientRegistry interface {
 	Get(id string) any
 	Unregister(id string) bool
 }
+
+// ClientRegistryOwner synchronizes replacement and retrieval of the runtime registry.
+// The registry implementation owns synchronization for its own contents.
+type ClientRegistryOwner struct {
+	mu       sync.RWMutex
+	registry ClientRegistry
+}
+
+func newClientRegistryOwner() *ClientRegistryOwner {
+	return &ClientRegistryOwner{}
+}
+
+// Set installs the process-wide client registry during runtime composition.
+func (o *ClientRegistryOwner) Set(registry ClientRegistry) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	o.registry = registry
+}
+
+// Registry returns the currently installed registry.
+func (o *ClientRegistryOwner) Registry() ClientRegistry {
+	o.mu.RLock()
+	defer o.mu.RUnlock()
+	return o.registry
+}

@@ -97,7 +97,7 @@ func TestAutoDetectCWD_NilRegistry(t *testing.T) {
 func TestAutoDetectCWD_NilClientList(t *testing.T) {
 	t.Parallel()
 	store := capture.NewCapture()
-	store.SetClientRegistry(&fakeClientRegistry{listResult: nil})
+	store.Clients().Set(&fakeClientRegistry{listResult: nil})
 	if got := AutoDetectCWD(store); got != "" {
 		t.Fatalf("expected empty CWD when List() is nil, got %q", got)
 	}
@@ -106,10 +106,10 @@ func TestAutoDetectCWD_NilClientList(t *testing.T) {
 func TestAutoDetectCWD_AnySliceBranch(t *testing.T) {
 	t.Parallel()
 	store := capture.NewCapture()
-	store.SetClientRegistry(&fakeClientRegistry{listResult: []any{
-		map[string]any{"cwd": ""},               // skipped: empty
+	store.Clients().Set(&fakeClientRegistry{listResult: []any{
+		map[string]any{"cwd": ""},                // skipped: empty
 		"not-a-map",                              // skipped: wrong type
-		map[string]any{"other": "x"},            // skipped: no cwd
+		map[string]any{"other": "x"},             // skipped: no cwd
 		map[string]any{"cwd": "/first/real/cwd"}, // taken
 	}})
 	if got := AutoDetectCWD(store); got != "/first/real/cwd" {
@@ -120,7 +120,7 @@ func TestAutoDetectCWD_AnySliceBranch(t *testing.T) {
 func TestAutoDetectCWD_AnySliceNoCWD(t *testing.T) {
 	t.Parallel()
 	store := capture.NewCapture()
-	store.SetClientRegistry(&fakeClientRegistry{listResult: []any{
+	store.Clients().Set(&fakeClientRegistry{listResult: []any{
 		map[string]any{"cwd": ""},
 		map[string]any{"other": "y"},
 	}})
@@ -136,7 +136,7 @@ func TestAutoDetectCWD_JSONRoundtripBranch(t *testing.T) {
 		CWD string `json:"cwd"`
 	}
 	store := capture.NewCapture()
-	store.SetClientRegistry(&fakeClientRegistry{listResult: []clientInfo{
+	store.Clients().Set(&fakeClientRegistry{listResult: []clientInfo{
 		{CWD: ""},
 		{CWD: "/roundtrip/cwd"},
 	}})
@@ -151,7 +151,7 @@ func TestAutoDetectCWD_JSONRoundtripEmpty(t *testing.T) {
 		CWD string `json:"cwd"`
 	}
 	store := capture.NewCapture()
-	store.SetClientRegistry(&fakeClientRegistry{listResult: []clientInfo{{CWD: ""}}})
+	store.Clients().Set(&fakeClientRegistry{listResult: []clientInfo{{CWD: ""}}})
 	if got := AutoDetectCWD(store); got != "" {
 		t.Fatalf("expected empty, got %q", got)
 	}

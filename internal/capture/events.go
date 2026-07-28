@@ -427,7 +427,7 @@ func (s *BufferStore) calcNBMemory() int64 {
 // ClearNetworkBuffers resets network telemetry buffers and related counters.
 //
 // Invariants:
-// - network buffers and their monotonic counters are reset together under c.mu.
+// - network buffers and their monotonic counters are reset together under the telemetry lock.
 func (s *TelemetryStore) ClearNetworkBuffers() types.BufferClearCounts {
 	waterfallCount := s.networkWaterfall.Clear()
 	s.mu.Lock()

@@ -72,17 +72,10 @@ func (s *TelemetryStore) GetSnapshot() TelemetrySnapshot {
 	}
 }
 
-// GetClientRegistry returns the client registry (thread-safe)
-func (c *Capture) GetClientRegistry() ClientRegistry {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.clientRegistry
-}
-
 // HealthSnapshot aggregates capture + dispatcher + circuit health state.
 //
 // Invariants:
-// - Subsystem snapshots (circuit/queries) are sampled before c.mu to avoid lock inversion.
+// - Each subsystem contributes a detached snapshot under its own lock.
 type HealthSnapshot struct {
 	WebSocketCount        int
 	NetworkBodyCount      int
@@ -103,11 +96,7 @@ type HealthSnapshot struct {
 }
 
 // GetHealthSnapshot returns a lock-safe aggregate health view.
-//
-// Invariants:
-// - Reads c.circuit/c.queryDispatcher first, then c.mu, preserving declared lock hierarchy.
 func (c *Capture) GetHealthSnapshot() HealthSnapshot {
-	// Get sub-struct state (own locks) before acquiring c.mu
 	circuitOpen, circuitReason, circuitOpenedAt, windowEventCount := c.circuit.GetState()
 	querySnap := c.queryDispatcher.GetSnapshot()
 	extensionSnap := c.extension.Snapshot()

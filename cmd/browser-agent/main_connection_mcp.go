@@ -259,7 +259,7 @@ func (a *sessionClientRegistryAdapter) Unregister(id string) bool {
 // initCapture creates and configures the capture buffers with lifecycle logging.
 func initCapture(server *Server, port int) *capture.Capture {
 	cap := capture.NewCapture()
-	cap.SetClientRegistry(newSessionClientRegistryAdapter(clientreg.NewClientRegistry()))
+	cap.Clients().Set(newSessionClientRegistryAdapter(clientreg.NewClientRegistry()))
 	cap.Extension().SetServerVersion(version)
 	cap.Lifecycle().Subscribe(func(event lifecycle.Event, data map[string]any) {
 		entry := types.LogEntry{

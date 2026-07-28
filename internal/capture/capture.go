@@ -8,8 +8,6 @@
 package capture
 
 import (
-	"sync"
-
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -20,10 +18,8 @@ import (
 // Capture manages all buffered browser state: WebSocket events, network bodies,
 // user actions, connections, queries, rate limiting, and performance.
 //
-// All fields are protected by mu (sync.RWMutex) unless noted otherwise.
-// Lock hierarchy: Capture.mu is position 3 (after ClientRegistry, ClientState).
-// Release locks before calling external callbacks. Use RLock() for read-only access.
-// Sub-struct locks: perf and the buffer stores use parent mu.
+// Capture is a composition root. Each owner below synchronizes its own state;
+// Capture itself has no shared mutex or independently mutable state.
 //
 // Ring buffers (wsEvents, networkBodies, enhancedActions) use entry wrapper structs that
 // bundle each datum with its ingestion timestamp, eliminating parallel-array desync risk:
@@ -36,8 +32,6 @@ import (
 // Circuit opens after 5 consecutive seconds over threshold; closes after 10s below threshold.
 // lastBelowThresholdAt tracks when rate dropped below threshold (initialized at startup to prevent false close).
 type Capture struct {
-	mu sync.RWMutex
-
 	// ============================================
 	// Unified Telemetry Store (Own Lock)
 	// ============================================
@@ -54,13 +48,13 @@ type Capture struct {
 	// Query Dispatch (Own Locks)
 	// ============================================
 
-	queryDispatcher *queries.QueryDispatcher // Pending queries, results, async command tracking. Has own sync.Mutex + sync.RWMutex — independent of Capture.mu.
+	queryDispatcher *queries.QueryDispatcher // Pending queries, results, async command tracking. Has own sync.Mutex + sync.RWMutex.
 
 	// ============================================
 	// Rate Limiting & Circuit Breaker (Own Lock)
 	// ============================================
 
-	circuit *circuit.CircuitBreaker // Rate limiting + circuit breaker state machine. Has own sync.RWMutex — independent of Capture.mu.
+	circuit *circuit.CircuitBreaker // Rate limiting + circuit breaker state machine. Has own sync.RWMutex.
 
 	// ============================================
 	// Extension Runtime (Own Lock)
@@ -75,7 +69,7 @@ type Capture struct {
 	diagnosticLogs *DiagnosticLogStore // Redacted polling + HTTP diagnostics. Independently synchronized.
 
 	// recording.Recording Management — delegates to recording.RecordingManager sub-struct (aliased from internal/recording).
-	recordingManager *recording.RecordingManager // recording.Recording lifecycle, playback, and log-diff. Has own sync.Mutex — independent of Capture.mu.
+	recordingManager *recording.RecordingManager // recording.Recording lifecycle, playback, and log-diff. Has own sync.Mutex.
 
 	// ============================================
 	// Composed Sub-Structures
@@ -87,15 +81,14 @@ type Capture struct {
 	// Multi-Client Support
 	// ============================================
 
-	clientRegistry ClientRegistry // Registry of connected MCP clients. HAS OWN LOCK. Lock hierarchy: ClientRegistry.mu is position 1 (outermost), before Capture.mu.
+	clients *ClientRegistryOwner // Runtime client-registry wiring. Registry contents own their own lock.
 
 	// ============================================
 	// Lifecycle Event Callbacks
 	// ============================================
 
-	lifecycle    *lifecycle.Observer   // Typed event bus for lifecycle events (circuit breaker, extension state, buffer overflow). Has own lock independent of Capture.mu.
+	lifecycle    *lifecycle.Observer   // Typed event bus for lifecycle events (circuit breaker, extension state, buffer overflow). Has its own lock.
 	featureUsage *FeatureUsageObserver // Optional extension feature-usage consumer. Independently synchronized.
-
 }
 
 // NewCapture creates a fully initialized Capture with all subcomponents wired.
@@ -113,13 +106,12 @@ func NewCapture() *Capture {
 		recordingManager: recording.NewRecordingManager(),
 		lifecycle:        lifecycle.NewObserver(),
 		featureUsage:     newFeatureUsageObserver(),
+		clients:          newClientRegistryOwner(),
 	}
 	c.queryDispatcher = queries.NewQueryDispatcher()
 	c.circuit = circuit.NewCircuitBreaker(c.lifecycle.Emit)
 	c.telemetry = newTelemetryStore(c.extension)
 
-	// Note: clientRegistry is initialized by capture.New() in capture package
-	// to avoid circular import (those packages import capture for types.NetworkBody, types.WebSocketEvent, etc.)
 	return c
 }
 
@@ -148,6 +140,11 @@ func (c *Capture) FeatureUsage() *FeatureUsageObserver {
 	return c.featureUsage
 }
 
+// Clients returns the canonical client-registry owner.
+func (c *Capture) Clients() *ClientRegistryOwner {
+	return c.clients
+}
+
 // Extension returns the canonical independently synchronized extension runtime.
 func (c *Capture) Extension() *ExtensionRuntime {
 	return c.extension
@@ -167,12 +164,4 @@ func (c *Capture) Close() {
 	if c.queryDispatcher != nil {
 		c.queryDispatcher.Close()
 	}
-}
-
-// SetClientRegistry wires the client registry used by /clients endpoints.
-// Safe to call at startup before serving requests.
-func (c *Capture) SetClientRegistry(reg ClientRegistry) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.clientRegistry = reg
 }

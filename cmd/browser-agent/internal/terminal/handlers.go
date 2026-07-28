@@ -365,7 +365,7 @@ func HandleTerminalStart(w http.ResponseWriter, r *http.Request, deps Deps, serv
 
 // AutoDetectCWD gets the CWD from the first registered MCP client.
 func AutoDetectCWD(cap *capture.Capture) string {
-	reg := cap.GetClientRegistry()
+	reg := cap.Clients().Registry()
 	if reg == nil {
 		return ""
 	}

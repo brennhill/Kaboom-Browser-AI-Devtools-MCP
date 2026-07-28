@@ -475,7 +475,7 @@ func registerCaptureRoutes(mux *http.ServeMux, server *Server, captured *capture
 }
 
 func resolveClientRegistry(captured *capture.Capture, w http.ResponseWriter) (capture.ClientRegistry, bool) {
-	registry := captured.GetClientRegistry()
+	registry := captured.Clients().Registry()
 	if registry == nil {
 		httpapi.JSON(w, http.StatusServiceUnavailable, map[string]string{"error": "client_registry_unavailable"})
 		return nil, false

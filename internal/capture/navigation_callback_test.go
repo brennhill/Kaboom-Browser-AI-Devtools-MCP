@@ -119,13 +119,13 @@ func TestNavigationCallback_FiredOutsideLock(t *testing.T) {
 	c := NewCapture()
 	t.Cleanup(c.Close)
 
-	// Verify the callback is invoked outside the Capture.mu lock by attempting
+	// Verify the callback is invoked outside the telemetry lock by attempting
 	// to acquire the lock inside the callback (would deadlock if still held).
 	var wg sync.WaitGroup
 	wg.Add(1)
 	c.Telemetry().SetNavigationCallback(func() {
 		defer wg.Done()
-		// This would deadlock if callback is called inside c.mu.Lock
+		// This would deadlock if callback ran while the telemetry owner held its lock.
 		count := len(c.Telemetry().GetAllEnhancedActions())
 		if count == 0 {
 			t.Error("expected actions to be stored before callback fires")

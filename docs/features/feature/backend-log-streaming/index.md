@@ -63,6 +63,8 @@ test_paths:
   - internal/capture/api_contract_test.go
   - internal/capture/extension_log_store_test.go
   - internal/capture/feature_usage_test.go
+  - internal/capture/client_registry_owner_test.go
+  - internal/capture/extension_state_test_helpers_test.go
   - internal/capture/buffer_clear_test.go
   - internal/capture/testhelpers_test.go
   - internal/capture/no_facade_test.go
@@ -149,6 +151,12 @@ Extension feature-usage analytics use the independently synchronized
 `FeatureUsageObserver` returned by `Capture.FeatureUsage()`. Callback
 replacement and notification live together; Capture no longer stores or
 forwards the callback.
+Runtime client-registry installation and lookup use the independently
+synchronized `ClientRegistryOwner` returned by `Capture.Clients()`; the
+Capture-level set/get facades are deleted. With every mutable field assigned to
+an owner, Capture is now a lock-free composition root. Extension-state tests
+also acquire the extension owner lock rather than the former unrelated Capture
+mutex.
 Extension connection, pilot, tracked-tab, CSP, security-mode, command-heartbeat,
 test-boundary, and server/extension compatibility state now share the independently synchronized
 `ExtensionRuntime` returned by `Capture.Extension()`. Sync ingestion and every
