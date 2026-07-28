@@ -190,7 +190,7 @@ Fix the network body capture pipeline so that response bodies are actually captu
 ```json
 {
   "entries": [],
-  "message": "Network body capture is disabled. Enable via configure({action: 'network_body_capture', enabled: true})"
+  "message": "Network body capture is disabled. Enable via configure({what: 'network_body_capture', enabled: true})"
 }
 ```
 

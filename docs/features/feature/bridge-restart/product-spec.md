@@ -16,7 +16,7 @@ When the kaboom daemon hangs (deadlock, stuck goroutine, resource exhaustion), t
 
 ## Solution
 
-Add `configure(action="restart")` as a recovery mechanism. The bridge intercepts this specific tool call before checking daemon status, kills the daemon, and respawns a fresh one — all without the daemon needing to respond.
+Add `configure(what="restart")` as a recovery mechanism. The bridge intercepts this specific tool call before checking daemon status, kills the daemon, and respawns a fresh one — all without the daemon needing to respond.
 
 ## User Experience
 
@@ -25,7 +25,7 @@ Add `configure(action="restart")` as a recovery mechanism. The bridge intercepts
 The LLM detects repeated connection errors or timeouts from tool calls and calls:
 
 ```json
-{"tool": "configure", "arguments": {"action": "restart"}}
+{"tool": "configure", "arguments": {"what": "restart"}}
 ```
 
 The bridge handles this entirely in-process:
@@ -42,4 +42,4 @@ The request reaches the daemon, which sends itself SIGTERM. The bridge detects t
 - LLM can recover from a completely hung daemon without human intervention
 - Recovery completes within 6 seconds
 - Works for frozen processes (SIGSTOP), deadlocked processes, and resource-exhausted processes
-- Normal operation is unaffected — only `configure(action="restart")` triggers this path
+- Normal operation is unaffected — only `configure(what="restart")` triggers this path

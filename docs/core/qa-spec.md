@@ -48,7 +48,7 @@ Ensure every MCP tool command and documented option is valid end-to-end: schema 
 - `internal/capture/correlation_tracking_test.go`
 
 ## Manual UAT Checklist (Contract-level)
-1. Run `configure(action:"health")` and confirm extension/tracking status fields.
+1. Run `configure(what:"health")` and confirm extension/tracking status fields.
 2. Run one passive `observe` mode and confirm metadata + cursor fields.
 3. Run one extension-backed analyze command with `background:true`, then poll `observe(command_result)`.
 4. Run one sync-by-default interact action and verify inline completion.

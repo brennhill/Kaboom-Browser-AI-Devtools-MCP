@@ -23,7 +23,7 @@ begin_test "13.1" "navigate fails when pilot OFF (regression guard)" \
 run_test_13_1() {
     # First attempt should fail because extension reports pilot OFF by default
     local response
-    response=$(call_tool "interact" '{"action":"navigate","url":"https://example.com"}')
+    response=$(call_tool "interact" '{"what":"navigate","url":"https://example.com"}')
 
     local is_error
     is_error=$(echo "$response" | jq -r '.result.isError // false' 2>/dev/null)
@@ -81,7 +81,7 @@ begin_test "13.3" "execute_js fails when pilot OFF (double-check gating)" \
 
 run_test_13_3() {
     local response
-    response=$(call_tool "interact" '{"action":"execute_js","script":"console.log(1)"}')
+    response=$(call_tool "interact" '{"what":"execute_js","script":"console.log(1)"}')
 
     # Check if it's an error by looking at content
     local content

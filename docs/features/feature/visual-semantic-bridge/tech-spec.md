@@ -155,7 +155,7 @@ Return enriched DOM to AI
 ### On User Action (AI clicks button)
 
 ```
-AI: interact({action: 'execute_js', script: 'document.querySelector("[data-kaboom-id=\'btn-submit\']").click()'})
+AI: interact({what: 'execute_js', script: 'document.querySelector("[data-kaboom-id=\'btn-submit\']").click()'})
   ↓
 Extension injects click event
   ↓

@@ -33,10 +33,6 @@ func generateToolSchema() mcp.MCPTool {
 					"description": "Artifact type to generate from captured data",
 					"enum":        []string{"reproduction", "test", "pr_summary", "har", "csp", "sri", "sarif", "visual_test", "annotation_report", "annotation_issues", "test_from_context", "test_heal", "test_classify"},
 				},
-				"format": map[string]any{
-					"type":        "string",
-					"description": "Deprecated alias for 'what'. Prefer 'what'.",
-				},
 				"telemetry_mode": map[string]any{
 					"type":        "string",
 					"description": "Telemetry metadata mode for this call: off, auto, full",

@@ -24,7 +24,7 @@ last_verified_date: 2026-03-05
 
 | # | Data Leak Risk | What to Check | Severity |
 |---|---------------|---------------|----------|
-| DL-1 | Fixture data contains API tokens in response bodies | Verify that `generate({format: "playwright_fixture", artifact: "fixture_data"})` applies redaction to captured response bodies, replacing tokens (Bearer, JWT, session tokens) with `[REDACTED]` | critical |
+| DL-1 | Fixture data contains API tokens in response bodies | Verify that `generate({what: "playwright_fixture", artifact: "fixture_data"})` applies redaction to captured response bodies, replacing tokens (Bearer, JWT, session tokens) with `[REDACTED]` | critical |
 | DL-2 | Fixture data exposes auth header values | Verify that when `include_headers: true` is set, the exported fixture data strips Authorization, Cookie, Set-Cookie, and token headers (same list as `inject.js`) | critical |
 | DL-3 | Test harness hardcodes credentials | Verify that `test_harness` output does not include hardcoded passwords, API keys, or tokens in the generated test script. Input field values should use placeholders like `[user-provided]` | critical |
 | DL-4 | CI config YAML embeds secrets | Verify that `ci_config` output does not include any repository tokens, deployment keys, environment-specific secrets, or credentials. Only standard CI constructs (actions/checkout, npx commands) are used | critical |
@@ -54,7 +54,7 @@ last_verified_date: 2026-03-05
 |---|--------------|----------------|--------|
 | CL-1 | Artifact type selection | Verify that the AI clearly understands the four `artifact` options (`fixture_data`, `test_harness`, `ci_config`, `failure_snapshot`) and knows which to use for each task | [ ] |
 | CL-2 | Fixture data is JSON, not executable | Verify that `fixture_data` output is clearly a JSON data file (for use with `page.route()`), not an executable test -- the AI should save it as `.json`, not `.spec.js` | [ ] |
-| CL-3 | Test harness vs existing test generation | Verify the AI understands that `playwright_fixture` + `test_harness` is for CI-integrated tests (with Kaboom CI fixture), while `generate({format: "test"})` is for standalone scripts | [ ] |
+| CL-3 | Test harness vs existing test generation | Verify the AI understands that `playwright_fixture` + `test_harness` is for CI-integrated tests (with Kaboom CI fixture), while `generate({what: "test"})` is for standalone scripts | [ ] |
 | CL-4 | CI config is a fragment, not a complete file | Verify that the AI understands `ci_config` produces a workflow YAML that may need customization (e.g., adding environment variables, adjusting Node version) | [ ] |
 | CL-5 | Failure snapshot vs live observation | Verify the AI understands that `failure_snapshot` is a point-in-time export of server state, not a live stream -- it captures what is currently in buffers | [ ] |
 | CL-6 | filter_url is a substring match | Verify the AI understands `filter_url: "/api/"` matches any URL containing "/api/" as a substring, not an exact path match or regex | [ ] |
@@ -81,10 +81,10 @@ last_verified_date: 2026-03-05
 
 | Workflow | Steps Required | Can Be Simplified? |
 |----------|---------------|-------------------|
-| Export API fixtures from captured traffic | 1 step: `generate({format: "playwright_fixture", artifact: "fixture_data"})` | No -- already minimal |
-| Generate CI-ready test file | 1 step: `generate({format: "playwright_fixture", artifact: "test_harness"})` | No -- already minimal |
-| Generate GitHub Actions config | 1 step: `generate({format: "playwright_fixture", artifact: "ci_config"})` | No -- already minimal |
-| Export failure snapshot | 1 step: `generate({format: "playwright_fixture", artifact: "failure_snapshot"})` | No -- already minimal |
+| Export API fixtures from captured traffic | 1 step: `generate({what: "playwright_fixture", artifact: "fixture_data"})` | No -- already minimal |
+| Generate CI-ready test file | 1 step: `generate({what: "playwright_fixture", artifact: "test_harness"})` | No -- already minimal |
+| Generate GitHub Actions config | 1 step: `generate({what: "playwright_fixture", artifact: "ci_config"})` | No -- already minimal |
+| Export failure snapshot | 1 step: `generate({what: "playwright_fixture", artifact: "failure_snapshot"})` | No -- already minimal |
 | Full CI setup from captured session | 3 steps: (1) generate fixture_data, (2) generate test_harness, (3) generate ci_config, then save all files | Yes -- could provide a "generate all" option that returns all artifacts at once |
 | Filter fixtures to specific API paths | 1 step: add `filter_url: "/api/"` to options | No -- already a single parameter |
 
@@ -221,9 +221,9 @@ last_verified_date: 2026-03-05
 | DL-UAT-5 | Failure snapshot applies same redaction as observe | Compare `failure_snapshot` output to `observe({what: "network_bodies"})` output | Same redaction applied to both | [ ] |
 
 ### Regression Checks
-- [ ] Existing `generate({format: "reproduction"})` works independently and produces unchanged output
-- [ ] Existing `generate({format: "test"})` works independently and produces unchanged output
-- [ ] Existing `generate({format: "har"})` and `generate({format: "sarif"})` work independently
+- [ ] Existing `generate({what: "reproduction"})` works independently and produces unchanged output
+- [ ] Existing `generate({what: "test"})` works independently and produces unchanged output
+- [ ] Existing `generate({what: "har"})` and `generate({what: "sarif"})` work independently
 - [ ] 5-tool model maintained -- no new tools added, only new mode under `generate`
 - [ ] `generateFixtures()` in `reproduction.go` still works correctly for reproduction scripts
 - [ ] `getPlaywrightLocator()` selector priority unchanged for all generation modes

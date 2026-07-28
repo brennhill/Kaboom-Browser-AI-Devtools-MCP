@@ -84,21 +84,21 @@ begin_test "28.1" "[BROWSER] Proof-first ambiguous selector flow" \
 run_test_28_1() {
     module_enabled_or_skip || return
 
-    interact_and_wait "navigate" '{"action":"navigate","url":"https://example.com","reason":"Proof-first ambiguous flow baseline"}' 20
+    interact_and_wait "navigate" '{"what":"navigate","url":"https://example.com","reason":"Proof-first ambiguous flow baseline"}' 20
     record_last_corr_id
 
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Inject ambiguous controls","script":"(function(){var old=document.getElementById(\"pf-ambig-root\"); if(old) old.remove(); var root=document.createElement(\"div\"); root.id=\"pf-ambig-root\"; root.innerHTML=\"<div id=\\\"pf-ambig-a\\\"><button class=\\\"pf-ambig-btn\\\" type=\\\"button\\\">Post</button></div><div id=\\\"pf-ambig-b\\\"><button class=\\\"pf-ambig-btn\\\" type=\\\"button\\\">Post</button></div>\"; document.body.appendChild(root); return \"ambig-ready\";})()"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Inject ambiguous controls","script":"(function(){var old=document.getElementById(\"pf-ambig-root\"); if(old) old.remove(); var root=document.createElement(\"div\"); root.id=\"pf-ambig-root\"; root.innerHTML=\"<div id=\\\"pf-ambig-a\\\"><button class=\\\"pf-ambig-btn\\\" type=\\\"button\\\">Post</button></div><div id=\\\"pf-ambig-b\\\"><button class=\\\"pf-ambig-btn\\\" type=\\\"button\\\">Post</button></div>\"; document.body.appendChild(root); return \"ambig-ready\";})()"}'
     record_last_corr_id
     capture_screenshot_artifact "ambiguous_before"
 
-    interact_and_wait "click" '{"action":"click","selector":".pf-ambig-btn","reason":"Proof-first trigger ambiguous target"}'
+    interact_and_wait "click" '{"what":"click","selector":".pf-ambig-btn","reason":"Proof-first trigger ambiguous target"}'
     record_last_corr_id
     if ! echo "$INTERACT_RESULT" | grep -qi "ambiguous_target"; then
         fail "Expected ambiguous_target for broad selector. Result: $(truncate "$INTERACT_RESULT" 240)"
         return
     fi
 
-    interact_and_wait "click" '{"action":"click","selector":".pf-ambig-btn","scope_selector":"#pf-ambig-a","reason":"Proof-first scoped recovery"}'
+    interact_and_wait "click" '{"what":"click","selector":".pf-ambig-btn","scope_selector":"#pf-ambig-a","reason":"Proof-first scoped recovery"}'
     record_last_corr_id
     capture_screenshot_artifact "ambiguous_after"
     if echo "$INTERACT_RESULT" | grep -qi "error\|failed"; then
@@ -122,14 +122,14 @@ run_test_28_2() {
     record_last_corr_id
     capture_screenshot_artifact "csp_before"
 
-    interact_and_wait "execute_js" '{"action":"execute_js","world":"main","reason":"Expect CSP block in MAIN world","script":"document.title"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","world":"main","reason":"Expect CSP block in MAIN world","script":"document.title"}'
     record_last_corr_id
     if ! echo "$INTERACT_RESULT" | grep -qi "csp\|content security policy\|trusted type\|unsafe-eval"; then
         skip "CSP block not reproducible on configured URL ($csp_url). Result: $(truncate "$INTERACT_RESULT" 200)"
         return
     fi
 
-    interact_and_wait "list_interactive" '{"action":"list_interactive","selector":"main","reason":"CSP-safe fallback via DOM primitive"}'
+    interact_and_wait "list_interactive" '{"what":"list_interactive","selector":"main","reason":"CSP-safe fallback via DOM primitive"}'
     record_last_corr_id
     if echo "$INTERACT_RESULT" | grep -qi "error\|failed"; then
         fail "DOM fallback failed after CSP execute_js failure. Result: $(truncate "$INTERACT_RESULT" 240)"
@@ -181,7 +181,7 @@ run_test_28_3() {
     record_last_corr_id
     capture_screenshot_artifact "linkedin_before"
 
-    interact_and_wait "open_composer" '{"action":"open_composer","reason":"Open LinkedIn composer"}' 30
+    interact_and_wait "open_composer" '{"what":"open_composer","reason":"Open LinkedIn composer"}' 30
     record_last_corr_id
     if echo "$INTERACT_RESULT" | grep -qi "error\|failed"; then
         fail "LinkedIn open_composer failed. Result: $(truncate "$INTERACT_RESULT" 240)"
@@ -198,7 +198,7 @@ run_test_28_3() {
         return
     fi
 
-    interact_and_wait "submit_active_composer" '{"action":"submit_active_composer","reason":"Submit LinkedIn post"}' 40
+    interact_and_wait "submit_active_composer" '{"what":"submit_active_composer","reason":"Submit LinkedIn post"}' 40
     record_last_corr_id
     if echo "$INTERACT_RESULT" | grep -qi "error\|failed"; then
         fail "LinkedIn submit_active_composer failed. Result: $(truncate "$INTERACT_RESULT" 260)"
@@ -206,7 +206,7 @@ run_test_28_3() {
     fi
 
     sleep 2
-    interact_and_wait "list_interactive" '{"action":"list_interactive","selector":"[role=\"dialog\"][aria-modal=\"true\"]","reason":"Verify LinkedIn composer closed"}'
+    interact_and_wait "list_interactive" '{"what":"list_interactive","selector":"[role=\"dialog\"][aria-modal=\"true\"]","reason":"Verify LinkedIn composer closed"}'
     record_last_corr_id
     capture_screenshot_artifact "linkedin_after"
 
@@ -240,7 +240,7 @@ run_test_28_4() {
     record_last_corr_id
     capture_screenshot_artifact "facebook_before"
 
-    interact_and_wait "open_composer" '{"action":"open_composer","reason":"Open Facebook composer"}' 30
+    interact_and_wait "open_composer" '{"what":"open_composer","reason":"Open Facebook composer"}' 30
     record_last_corr_id
     if echo "$INTERACT_RESULT" | grep -qi "error\|failed"; then
         fail "Facebook open_composer failed. Result: $(truncate "$INTERACT_RESULT" 240)"
@@ -257,7 +257,7 @@ run_test_28_4() {
         return
     fi
 
-    interact_and_wait "submit_active_composer" '{"action":"submit_active_composer","reason":"Submit Facebook post"}' 40
+    interact_and_wait "submit_active_composer" '{"what":"submit_active_composer","reason":"Submit Facebook post"}' 40
     record_last_corr_id
     if echo "$INTERACT_RESULT" | grep -qi "error\|failed"; then
         fail "Facebook submit_active_composer failed. Result: $(truncate "$INTERACT_RESULT" 260)"
@@ -265,7 +265,7 @@ run_test_28_4() {
     fi
 
     sleep 2
-    interact_and_wait "list_interactive" '{"action":"list_interactive","selector":"[role=\"dialog\"][aria-modal=\"true\"]","reason":"Verify Facebook composer closed"}'
+    interact_and_wait "list_interactive" '{"what":"list_interactive","selector":"[role=\"dialog\"][aria-modal=\"true\"]","reason":"Verify Facebook composer closed"}'
     record_last_corr_id
     capture_screenshot_artifact "facebook_after"
 
@@ -285,13 +285,13 @@ begin_test "28.5" "[BROWSER] Evidence mode captures before/after artifacts" \
 run_test_28_5() {
     module_enabled_or_skip || return
 
-    interact_and_wait "navigate" '{"action":"navigate","url":"https://example.com","reason":"Evidence mode baseline"}' 20
+    interact_and_wait "navigate" '{"what":"navigate","url":"https://example.com","reason":"Evidence mode baseline"}' 20
     record_last_corr_id
 
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Inject evidence target button","script":"(function(){var old=document.getElementById(\"pf-evidence-btn\"); if(old) old.remove(); var btn=document.createElement(\"button\"); btn.id=\"pf-evidence-btn\"; btn.type=\"button\"; btn.textContent=\"Evidence Target\"; btn.onclick=function(){document.body.setAttribute(\"data-evidence-clicked\",\"1\")}; document.body.appendChild(btn); return \"evidence-ready\";})()"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Inject evidence target button","script":"(function(){var old=document.getElementById(\"pf-evidence-btn\"); if(old) old.remove(); var btn=document.createElement(\"button\"); btn.id=\"pf-evidence-btn\"; btn.type=\"button\"; btn.textContent=\"Evidence Target\"; btn.onclick=function(){document.body.setAttribute(\"data-evidence-clicked\",\"1\")}; document.body.appendChild(btn); return \"evidence-ready\";})()"}'
     record_last_corr_id
 
-    interact_and_wait "click" '{"action":"click","selector":"#pf-evidence-btn","evidence":"always","reason":"Evidence mode validation click"}' 30
+    interact_and_wait "click" '{"what":"click","selector":"#pf-evidence-btn","evidence":"always","reason":"Evidence mode validation click"}' 30
     record_last_corr_id
 
     local parsed
@@ -357,13 +357,13 @@ begin_test "28.6" "[BROWSER] Retry contract stops after two attempts" \
 run_test_28_6() {
     module_enabled_or_skip || return
 
-    interact_and_wait "navigate" '{"action":"navigate","url":"https://example.com","reason":"Retry contract baseline"}' 20
+    interact_and_wait "navigate" '{"what":"navigate","url":"https://example.com","reason":"Retry contract baseline"}' 20
     record_last_corr_id
 
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Inject duplicate retry buttons","script":"(function(){var old=document.getElementById(\"pf-retry-root\"); if(old) old.remove(); var root=document.createElement(\"div\"); root.id=\"pf-retry-root\"; root.innerHTML=\"<div id=\\\"pf-retry-a\\\"><button class=\\\"pf-retry-btn\\\" type=\\\"button\\\">Retry Target</button></div><div id=\\\"pf-retry-b\\\"><button class=\\\"pf-retry-btn\\\" type=\\\"button\\\">Retry Target</button></div>\"; document.body.appendChild(root); return \"retry-ready\";})()"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Inject duplicate retry buttons","script":"(function(){var old=document.getElementById(\"pf-retry-root\"); if(old) old.remove(); var root=document.createElement(\"div\"); root.id=\"pf-retry-root\"; root.innerHTML=\"<div id=\\\"pf-retry-a\\\"><button class=\\\"pf-retry-btn\\\" type=\\\"button\\\">Retry Target</button></div><div id=\\\"pf-retry-b\\\"><button class=\\\"pf-retry-btn\\\" type=\\\"button\\\">Retry Target</button></div>\"; document.body.appendChild(root); return \"retry-ready\";})()"}'
     record_last_corr_id
 
-    interact_and_wait "click" '{"action":"click","selector":".pf-retry-btn","reason":"Retry contract first failure"}'
+    interact_and_wait "click" '{"what":"click","selector":".pf-retry-btn","reason":"Retry contract first failure"}'
     record_last_corr_id
 
     local first_eval

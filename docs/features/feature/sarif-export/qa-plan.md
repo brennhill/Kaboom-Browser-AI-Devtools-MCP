@@ -126,7 +126,7 @@ last_verified_date: 2026-03-05
 
 | # | Test Case | Components Involved | Expected Behavior | Priority |
 |---|-----------|--------------------|--------------------|----------|
-| IT-1 | End-to-end SARIF via MCP | MCP client -> `generate(format: "sarif")` -> server -> extension audit -> SARIF | Valid SARIF file with real audit results | must |
+| IT-1 | End-to-end SARIF via MCP | MCP client -> `generate(what: "sarif")` -> server -> extension audit -> SARIF | Valid SARIF file with real audit results | must |
 | IT-2 | Cached audit reuse | Run audit, then export SARIF within 30s | SARIF uses cached results, no re-audit | should |
 | IT-3 | Stale cache triggers re-audit | Run audit, wait >30s, export SARIF | Fresh audit triggered before SARIF generation | should |
 | IT-4 | SARIF schema validation | Export SARIF -> validate against SARIF 2.1.0 JSON schema | No schema validation errors | must |

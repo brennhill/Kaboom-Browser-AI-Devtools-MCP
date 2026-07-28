@@ -33,7 +33,7 @@ Today's workflow for sharing what happened in a browser:
 
 ### The workflow:
 
-1. Start recording (AI says `interact({action: "screen_recording_start", name: "checkout bug"})` or user clicks Record in popup)
+1. Start recording (AI says `interact({what: "screen_recording_start", name: "checkout bug"})` or user clicks Record in popup)
 2. Interact with the page normally — Kaboom's subtitles and action toasts are captured in the video automatically
 3. Stop recording → video saved to `~/.kaboom/recordings/` with a metadata sidecar file
 4. AI can list recordings via `observe({what: "saved_videos"})` and reference them by name
@@ -53,10 +53,10 @@ Today's workflow for sharing what happened in a browser:
 
 ```
 1. Developer: "Record yourself reproducing the checkout bug"
-2. AI calls interact({action: "screen_recording_start", name: "checkout bug repro"})
+2. AI calls interact({what: "screen_recording_start", name: "checkout bug repro"})
 3. AI navigates to checkout, fills form, triggers the bug
 4. Kaboom subtitles narrate each step in the video
-5. AI calls interact({action: "screen_recording_stop"})
+5. AI calls interact({what: "screen_recording_stop"})
 6. Video saved: ~/.kaboom/recordings/checkout-bug-repro--2026-02-07-1423.webm
 7. Developer shares the video — no Loom needed
 ```
@@ -88,12 +88,12 @@ Today's workflow for sharing what happened in a browser:
 
 ```
 1. Developer: "Record a demo of the new dashboard, narrate what you're doing"
-2. AI calls interact({action: "screen_recording_start", name: "dashboard demo"})
+2. AI calls interact({what: "screen_recording_start", name: "dashboard demo"})
 3. AI navigates and uses subtitle to narrate:
-   interact({action: "navigate", url: "/dashboard", subtitle: "Opening the new dashboard"})
-   interact({action: "click", selector: "text=Analytics", subtitle: "Clicking into analytics view"})
+   interact({what: "navigate", url: "/dashboard", subtitle: "Opening the new dashboard"})
+   interact({what: "click", selector: "text=Analytics", subtitle: "Clicking into analytics view"})
 4. Subtitles render in the page → captured in the video
-5. AI calls interact({action: "screen_recording_stop"})
+5. AI calls interact({what: "screen_recording_stop"})
 6. Result: a narrated product demo video, no Loom, no voiceover needed
 ```
 
@@ -105,9 +105,9 @@ Today's workflow for sharing what happened in a browser:
 
 #### Start:
 
-- [ ] `interact({action: "screen_recording_start"})` — starts recording the active tab at default 15fps
-- [ ] `interact({action: "screen_recording_start", name: "checkout bug"})` — starts with a user-provided name
-- [ ] `interact({action: "screen_recording_start", name: "smooth demo", fps: 30})` — starts at specified framerate
+- [ ] `interact({what: "screen_recording_start"})` — starts recording the active tab at default 15fps
+- [ ] `interact({what: "screen_recording_start", name: "checkout bug"})` — starts with a user-provided name
+- [ ] `interact({what: "screen_recording_start", name: "smooth demo", fps: 30})` — starts at specified framerate
 - [ ] `fps` parameter: optional, default `15`. Valid range: `5`–`60`.
   - `5` — minimal CPU, ~2MB/min (static content, bug evidence)
   - `15` — default, ~4MB/min (bug repros, most demos)
@@ -117,7 +117,7 @@ Today's workflow for sharing what happened in a browser:
 - [ ] If already recording, returns error: `"RECORD_START: Already recording. Stop current recording first."`
 
 #### Stop:
-- [ ] `interact({action: "screen_recording_stop"})` — stops recording, saves video + metadata
+- [ ] `interact({what: "screen_recording_stop"})` — stops recording, saves video + metadata
 - [ ] Returns: `{status: "saved", name: "checkout-bug--2026-02-07-1423", path: "...", duration_seconds: 154, size_bytes: 18400000}`
 - [ ] If not recording, returns error: `"RECORD_STOP: No active recording."`
 
@@ -209,7 +209,7 @@ Today's workflow for sharing what happened in a browser:
 
 ### R5: Subtitle & Toast Capture
 
-- [ ] Kaboom subtitles (`interact({action: "subtitle"})`) render as DOM elements in the page
+- [ ] Kaboom subtitles (`interact({what: "subtitle"})`) render as DOM elements in the page
 - [ ] Action toasts (from `reason` param) render as DOM elements in the page
 - [ ] `chrome.tabCapture` captures the rendered tab content, including these DOM overlays
 - [ ] No extra work needed — subtitles appear in the video automatically

@@ -158,8 +158,8 @@ The push mechanism uses MCP notifications (JSON-RPC 2.0 `notifications/message` 
 - event_count_this_second (counter for rate limiting)
 
 #### Lifecycle:
-- Client subscribes: configure({action: "streaming", enabled: true}) → Server creates subscription state
-- Client unsubscribes: configure({action: "streaming", enabled: false}) → Server removes subscription state
+- Client subscribes: configure({what: "streaming", enabled: true}) → Server creates subscription state
+- Client unsubscribes: configure({what: "streaming", enabled: false}) → Server removes subscription state
 - Client disconnects: Server detects broken pipe → removes subscription state
 - Server restart: All subscription state lost (clients must re-subscribe)
 
@@ -167,7 +167,7 @@ The push mechanism uses MCP notifications (JSON-RPC 2.0 `notifications/message` 
 
 ### Subscription Flow
 ```
-AI client → MCP request: configure({action: "streaming", enabled: true, subscribe: ["error"]})
+AI client → MCP request: configure({what: "streaming", enabled: true, subscribe: ["error"]})
 → Server receives request
 → Server creates subscription state for this client
 → Server registers event dispatcher (if not already running)
@@ -199,7 +199,7 @@ Page → console.error("fail") → Extension captures → POST /logs to server
 
 ### Unsubscribe Flow
 ```
-AI client → MCP request: configure({action: "streaming", enabled: false})
+AI client → MCP request: configure({what: "streaming", enabled: false})
 → Server removes subscription state for this client
 → Event dispatcher checks: no active subscriptions → dispatcher pauses or exits
 → Server responds: {"configured": true, "streaming_enabled": false}

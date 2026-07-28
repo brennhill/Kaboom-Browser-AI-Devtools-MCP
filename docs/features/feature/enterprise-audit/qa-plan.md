@@ -33,7 +33,7 @@ last_verified_date: 2026-03-05
 | DL-7 | `export_data` audit scope leaks sensitive metadata | Audit export must not include any fields that were intentionally omitted from individual queries | high |
 | DL-8 | TTL bypass via export | `export_data` must respect TTL -- entries older than TTL must not appear in exports | high |
 | DL-9 | Configuration profiles expose API key | Profile info in health endpoint must not include the API key value | high |
-| DL-10 | Health metrics expose captured data | `configure({action:"health"})` must report buffer SIZES and COUNTS, not buffer CONTENTS | high |
+| DL-10 | Health metrics expose captured data | `configure({what:"health"})` must report buffer SIZES and COUNTS, not buffer CONTENTS | high |
 | DL-11 | Tool allowlist/blocklist reveals hidden tools | Hidden tools must not appear in `tools/list` or error messages that confirm their existence | medium |
 | DL-12 | Read-only mode bypass via MCP | AI agent must not be able to disable read-only mode via any tool call | critical |
 | DL-13 | Project isolation breach | Data captured in project A must never appear when querying project B | critical |
@@ -45,7 +45,7 @@ last_verified_date: 2026-03-05
 - [ ] `get_audit_log` with `type: "redaction"` entries contain no `matched_content` or `original_text` fields
 - [ ] `export_data` with `scope: "captures"` has redaction patterns applied to all exported data
 - [ ] `export_data` with `scope: "audit"` contains no sensitive captured data
-- [ ] `configure({action:"health"})` response contains no buffer contents, only sizes and utilization metrics
+- [ ] `configure({what:"health"})` response contains no buffer contents, only sizes and utilization metrics
 - [ ] Session records contain no auth token fields
 - [ ] Calling a blocked tool returns generic "method not found" -- does not reveal the tool exists but is blocked
 - [ ] Read-only mode cannot be disabled by any MCP tool call
@@ -100,7 +100,7 @@ last_verified_date: 2026-03-05
 | Enable read-only mode | 1 step: `--read-only` flag | No -- already minimal |
 | Configure tool allowlist | 1 step: `--tools-allow="observe,analyze"` flag | No -- already minimal |
 | Full enterprise setup | 3 steps: set profile + API key + redaction config | Could offer `--enterprise` meta-flag |
-| Check health metrics | 1 MCP call: `configure({action:"health"})` | No -- already minimal |
+| Check health metrics | 1 MCP call: `configure({what:"health"})` | No -- already minimal |
 | Create project isolation | 1 HTTP call: `POST /projects` | No -- already minimal |
 
 ### Default Behavior Verification
@@ -156,7 +156,7 @@ last_verified_date: 2026-03-05
 | UT-32 | Read-only mode blocks noise rules | `configure` with `action: "noise_rule"` | Error: "read-only mode active" | must |
 | UT-33 | Read-only mode allows observe | `observe` call | Normal response | must |
 | UT-34 | Read-only mode allows generate | `generate` call | Normal response | must |
-| UT-35 | Read-only mode allows health checks | `configure({action:"health"})` call | Normal response | must |
+| UT-35 | Read-only mode allows health checks | `configure({what:"health"})` call | Normal response | must |
 | UT-36 | Tool allowlist hides tools | `--tools-allow="observe"` | `tools/list` returns only `observe` | must |
 | UT-37 | Tool blocklist hides tools | `--tools-block="configure"` | `tools/list` returns everything except `configure` | must |
 | UT-38 | Hidden tool returns method not found | Call hidden tool directly | `-32601` error, no "tool exists but blocked" hint | must |
@@ -303,9 +303,9 @@ last_verified_date: 2026-03-05
 | DL-UAT-1 | Audit entries have no request/response bodies | AI queries audit log, inspect all fields | Only metadata fields present | [ ] |
 | DL-UAT-2 | Redaction audit has no sensitive content | Trigger redaction match, query redaction audit entries | Pattern name + char count only | [ ] |
 | DL-UAT-3 | Export applies redaction | Call export with captures scope when redaction active | Exported data has redaction applied | [ ] |
-| DL-UAT-4 | Health metrics have no buffer contents | Call `configure({action:"health"})` | Sizes and counts only, no data excerpts | [ ] |
+| DL-UAT-4 | Health metrics have no buffer contents | Call `configure({what:"health"})` | Sizes and counts only, no data excerpts | [ ] |
 | DL-UAT-5 | Hidden tool does not confirm existence | Call blocked tool | Generic "method not found", no "tool blocked" message | [ ] |
-| DL-UAT-6 | API key not in health output | Call `configure({action:"health"})` with auth enabled | `auth_enabled: true`, no key value | [ ] |
+| DL-UAT-6 | API key not in health output | Call `configure({what:"health"})` with auth enabled | `auth_enabled: true`, no key value | [ ] |
 | DL-UAT-7 | TTL prevents access to old data | Wait for TTL + observe | No old entries returned | [ ] |
 
 ### Regression Checks

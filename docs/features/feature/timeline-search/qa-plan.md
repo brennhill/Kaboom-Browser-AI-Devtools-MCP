@@ -251,7 +251,7 @@ last_verified_date: 2026-03-05
 - Timeline with 47 events for correlation_id
 
 #### Steps:
-1. Call `interact({action: "timeline_export", correlation_id: "test-payment-001"})`
+1. Call `interact({what: "timeline_export", correlation_id: "test-payment-001"})`
 2. Verify response: export_id, file_path
 3. Verify file exists at path
 4. Read file: parse JSON

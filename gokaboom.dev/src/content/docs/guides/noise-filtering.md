@@ -15,7 +15,7 @@ KaBOOM's noise filtering lets you suppress irrelevant errors so the AI only sees
 The fastest way to clean up:
 
 ```js
-configure({action: "noise_rule", noise_action: "auto_detect"})
+configure({what: "noise_rule", noise_action: "auto_detect"})
 ```
 
 KaBOOM scans current errors and identifies patterns that are likely noise:
@@ -28,7 +28,7 @@ KaBOOM scans current errors and identifies patterns that are likely noise:
 Auto-detect creates rules automatically. Review them to make sure nothing important was filtered:
 
 ```js
-configure({action: "noise_rule", noise_action: "list"})
+configure({what: "noise_rule", noise_action: "list"})
 ```
 
 ---
@@ -38,7 +38,7 @@ configure({action: "noise_rule", noise_action: "list"})
 ### Add a Rule
 
 ```js
-configure({action: "noise_rule",
+configure({what: "noise_rule",
            noise_action: "add",
            pattern: "analytics\\.google",
            category: "console",
@@ -70,7 +70,7 @@ configure({action: "noise_rule",
 Add multiple rules at once:
 
 ```js
-configure({action: "noise_rule",
+configure({what: "noise_rule",
            noise_action: "add",
            rules: [
              {pattern: "analytics\\.google", category: "network", reason: "Analytics"},
@@ -87,7 +87,7 @@ configure({action: "noise_rule",
 ### List All Rules
 
 ```js
-configure({action: "noise_rule", noise_action: "list"})
+configure({what: "noise_rule", noise_action: "list"})
 ```
 
 Returns every active rule with its ID, pattern, category, and reason.
@@ -97,7 +97,7 @@ Returns every active rule with its ID, pattern, category, and reason.
 If you filtered something that turned out to be important:
 
 ```js
-configure({action: "noise_rule", noise_action: "remove", rule_id: "rule-123"})
+configure({what: "noise_rule", noise_action: "remove", rule_id: "rule-123"})
 ```
 
 Get the rule ID from the list output.
@@ -107,7 +107,7 @@ Get the rule ID from the list output.
 Start fresh:
 
 ```js
-configure({action: "noise_rule", noise_action: "reset"})
+configure({what: "noise_rule", noise_action: "reset"})
 ```
 
 Removes all noise rules. Useful when switching projects or when you've over-filtered.
@@ -135,7 +135,7 @@ observe({what: "errors"})
 ```
 
 ```js
-configure({action: "noise_rule", noise_action: "auto_detect"})
+configure({what: "noise_rule", noise_action: "auto_detect"})
 ```
 
 ### 3. Review What Was Filtered
@@ -145,7 +145,7 @@ configure({action: "noise_rule", noise_action: "auto_detect"})
 ```
 
 ```js
-configure({action: "noise_rule", noise_action: "list"})
+configure({what: "noise_rule", noise_action: "list"})
 ```
 
 ### 4. Check Cleaned Errors
@@ -169,7 +169,7 @@ If your project has known noisy patterns:
 ```
 
 ```js
-configure({action: "noise_rule", noise_action: "add",
+configure({what: "noise_rule", noise_action: "add",
            rules: [
              {pattern: "\\[HMR\\]", category: "console", reason: "Dev server noise"},
              {pattern: "favicon\\.ico", category: "network", reason: "Missing favicon"}

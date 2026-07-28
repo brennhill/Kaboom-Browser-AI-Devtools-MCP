@@ -314,11 +314,11 @@ The audit synthesizes data from multiple sources, most of which are already capt
 | Image analysis | **New** (async query) | Missing dimensions, format detection, rendered vs intrinsic size |
 | Head element analysis | **New** (async query) | Render-blocking scripts/styles in `<head>` |
 
-The three "new" data points are collected via the existing async command infrastructure (`analyze({what: "dom"})` internally) -- the extension executes a JavaScript snippet in the page context that queries the DOM and returns structured metrics. This reuses the same async pattern as `interact({action: "execute_js"})` but is scoped to read-only DOM queries.
+The three "new" data points are collected via the existing async command infrastructure (`analyze({what: "dom"})` internally) -- the extension executes a JavaScript snippet in the page context that queries the DOM and returns structured metrics. This reuses the same async pattern as `interact({what: "execute_js"})` but is scoped to read-only DOM queries.
 
 ### Analysis Pipeline
 
-When the AI calls `generate({format: "performance_audit"})`:
+When the AI calls `generate({what: "performance_audit"})`:
 
 1. **Retrieve snapshot**: Get the latest (or URL-specific) performance snapshot from the ring buffer.
 2. **Retrieve waterfall**: Get network waterfall entries for the same page URL.
@@ -375,7 +375,7 @@ These estimates are clearly approximations. The audit does not run synthetic ben
 
 The performance audit is complementary to these tools. A typical AI workflow would be:
 
-1. `generate({format: "performance_audit"})` -- get a comprehensive diagnosis.
+1. `generate({what: "performance_audit"})` -- get a comprehensive diagnosis.
 2. Fix the identified issues in code.
 3. `observe({what: "performance"})` -- verify the fix improved the metrics.
 4. `observe({what: "vitals"})` -- confirm Web Vitals are now in the "good" range.
@@ -412,7 +412,7 @@ The performance audit is complementary to these tools. A typical AI workflow wou
 
 - This feature does NOT produce a visual report or HTML output. The output is structured JSON for AI consumption. Rendering a human-readable report is the AI's responsibility (or a future feature).
 
-- This feature does NOT persist audit results. Each call generates a fresh audit from current data. The AI can use `configure({action: "store"})` to persist results if needed.
+- This feature does NOT persist audit results. Each call generates a fresh audit from current data. The AI can use `configure({what: "store"})` to persist results if needed.
 
 - Out of scope: font optimization analysis, preconnect/preload hint suggestions, HTTP/2 multiplexing analysis. These may be added as future findings within the existing category structure.
 
@@ -469,7 +469,7 @@ The server-side analysis is pure computation over data already in memory (ring b
 - **Optionally composes with:**
   - `observe({what: "performance"})` (shipped) -- AI uses this after fixing issues to verify improvement.
   - `observe({what: "third_party_audit"})` (shipped) -- Provides complementary security/privacy analysis of third parties.
-  - Performance budgets via `configure({action: "health"})` (shipped) -- Budget thresholds can inform scoring (a category that violates a budget gets a harsher score).
+  - Performance budgets via `configure({what: "health"})` (shipped) -- Budget thresholds can inform scoring (a category that violates a budget gets a harsher score).
 
 - **Depended on by:**
   - None currently. This is a standalone analysis tool.
@@ -491,4 +491,4 @@ The server-side analysis is pure computation over data already in memory (ring b
 | OI-2 | Should the audit include a "font optimization" category (font-display, preloading, subsetting)? | open | Font optimization is a common performance recommendation but adds complexity. Could be added as a future category without changing the audit structure. |
 | OI-3 | Should the DOM query for images check for lazy-loading attributes (`loading="lazy"`) on below-the-fold images? | open | Requires determining the viewport boundary, which adds complexity to the DOM query. Could be a valuable finding for LCP optimization. |
 | OI-4 | How should the `estimated_impact_ms` be calibrated -- should it assume mobile or desktop conditions? | open | Lighthouse uses simulated mobile throttling. Kaboom observes real conditions. Estimates could be annotated with the assumed environment or provide both mobile/desktop estimates. |
-| OI-5 | Should the audit response include a `diff` field comparing the current audit against a previous audit to show improvement over time? | open | Useful for iterative optimization workflows. Would require storing previous audit results, which conflicts with the stateless design. The AI could store results via `configure({action: "store"})` and diff manually. |
+| OI-5 | Should the audit response include a `diff` field comparing the current audit against a previous audit to show improvement over time? | open | Useful for iterative optimization workflows. Would require storing previous audit results, which conflicts with the stateless design. The AI could store results via `configure({what: "store"})` and diff manually. |

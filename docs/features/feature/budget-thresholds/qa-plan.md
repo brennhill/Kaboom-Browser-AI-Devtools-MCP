@@ -188,18 +188,18 @@ last_verified_date: 2026-03-05
 
 | # | Step (AI executes) | Human Observes | Expected Result | Pass |
 |---|-------------------|----------------|-----------------|------|
-| UAT-1 | `{"tool": "configure", "arguments": {"action": "health"}}` or AI calls `check_budgets` | None | Response indicates "No budget configuration found" (no `.kaboom.json` exists yet) | [ ] |
+| UAT-1 | `{"tool": "configure", "arguments": {"what": "health"}}` or AI calls `check_budgets` | None | Response indicates "No budget configuration found" (no `.kaboom.json` exists yet) | [ ] |
 | UAT-2 | Human creates `.kaboom.json` at project root with: `{"budgets": {"default": {"load_ms": 2000, "total_transfer_kb": 500}, "presets": ["web-vitals-good"]}}` | File exists in project root | Configuration file saved | [ ] |
-| UAT-3 | Wait 30 seconds for config watch to detect the file, then: `{"tool": "observe", "arguments": {"action": "check_budgets"}}` | None | Response shows `config_file: ".kaboom.json"` and budget definitions loaded | [ ] |
+| UAT-3 | Wait 30 seconds for config watch to detect the file, then: `{"tool": "observe", "arguments": {"what": "check_budgets"}}` | None | Response shows `config_file: ".kaboom.json"` and budget definitions loaded | [ ] |
 | UAT-4 | Navigate to the application in the browser to generate a performance snapshot | Page loads in browser | Performance snapshot captured by extension | [ ] |
-| UAT-5 | `{"tool": "observe", "arguments": {"action": "check_budgets"}}` | Review violations | If page load > 2000ms or transfer > 500KB, violations appear with metric, budget, actual, over_by | [ ] |
-| UAT-6 | `{"tool": "observe", "arguments": {"action": "check_budgets", "show_passing": true}}` | Review all metrics | Response includes both violations (if any) and passing metrics | [ ] |
-| UAT-7 | `{"tool": "observe", "arguments": {"action": "check_budgets", "url": "/specific-page"}}` | None | Only the specified URL is checked against its applicable budget | [ ] |
-| UAT-8 | `{"tool": "observe", "arguments": {"action": "get_changes_since", "since": "<recent_timestamp>"}}` | Check for performance_alerts section | If any budget was exceeded, `performance_alerts` includes `budget_exceeded` entries alongside any regression alerts | [ ] |
+| UAT-5 | `{"tool": "observe", "arguments": {"what": "check_budgets"}}` | Review violations | If page load > 2000ms or transfer > 500KB, violations appear with metric, budget, actual, over_by | [ ] |
+| UAT-6 | `{"tool": "observe", "arguments": {"what": "check_budgets", "show_passing": true}}` | Review all metrics | Response includes both violations (if any) and passing metrics | [ ] |
+| UAT-7 | `{"tool": "observe", "arguments": {"what": "check_budgets", "url": "/specific-page"}}` | None | Only the specified URL is checked against its applicable budget | [ ] |
+| UAT-8 | `{"tool": "observe", "arguments": {"what": "get_changes_since", "since": "<recent_timestamp>"}}` | Check for performance_alerts section | If any budget was exceeded, `performance_alerts` includes `budget_exceeded` entries alongside any regression alerts | [ ] |
 | UAT-9 | Human updates `.kaboom.json` to add a route-specific budget: `"routes": {"/login": {"load_ms": 1000}}` | File saved | Route-specific budget added | [ ] |
-| UAT-10 | Wait 30 seconds, navigate to /login route, then: `{"tool": "observe", "arguments": {"action": "check_budgets", "url": "/login"}}` | None | Budget for /login uses route-specific 1000ms load threshold, not default 2000ms | [ ] |
+| UAT-10 | Wait 30 seconds, navigate to /login route, then: `{"tool": "observe", "arguments": {"what": "check_budgets", "url": "/login"}}` | None | Budget for /login uses route-specific 1000ms load threshold, not default 2000ms | [ ] |
 | UAT-11 | Human deletes `.kaboom.json` | File removed | Budget configuration removed | [ ] |
-| UAT-12 | Wait 30 seconds, then: `{"tool": "observe", "arguments": {"action": "check_budgets"}}` | None | Response: "No budget configuration found" | [ ] |
+| UAT-12 | Wait 30 seconds, then: `{"tool": "observe", "arguments": {"what": "check_budgets"}}` | None | Response: "No budget configuration found" | [ ] |
 
 ### Data Leak UAT Verification
 

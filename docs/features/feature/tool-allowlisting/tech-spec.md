@@ -22,7 +22,7 @@ Tool allowlisting uses a configuration file (YAML) parsed at server start. The a
 - **Allowlist matcher**: Match incoming tool.action against allowlist patterns (supports wildcards)
 - **MCP handler guards**: Each handler checks allowlist before execution
 - **Error response**: Return standard error with actionable message and allowed tools list
-- **Config exposure**: Include allowlist in configure({action:"health"})
+- **Config exposure**: Include allowlist in configure({what:"health"})
 - **Hot-reload (optional)**: Watch config file, reload on change
 
 ## Data Flows
@@ -33,19 +33,19 @@ Server startup: kaboom --allowlist-config=allowlist.yaml
   → Build in-memory allowlist: {observe: [*], generate: [*], interact: [navigate, refresh]}
   → Log: "Allowlist enabled, X tools/actions permitted"
 
-Agent calls interact({action: "execute_js"}):
+Agent calls interact({what: "execute_js"}):
   → Server receives MCP request
   → Extract tool="interact", action="execute_js"
   → Check allowlist: matcher.IsAllowed("interact.execute_js")
   → Match fails (not in list)
   → Return error with allowed_tools list
 
-Agent calls interact({action: "navigate"}):
+Agent calls interact({what: "navigate"}):
   → Check allowlist: matcher.IsAllowed("interact.navigate")
   → Match succeeds
   → Execute normally
 
-Agent calls configure({action:"health"}):
+Agent calls configure({what:"health"}):
   → Always allowed (observe.* in list)
   → Return config including allowlist
 ```

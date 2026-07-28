@@ -81,7 +81,7 @@ run_test_12_2() {
 
     # Malformed JSON in arguments (framework may catch this)
     local r4
-    r4=$(call_tool "interact" '{"action":""}')
+    r4=$(call_tool "interact" '{"what":""}')
     log_diagnostic "12.2" "empty action" "$r4"
 
     # Verify daemon is still healthy
@@ -124,7 +124,7 @@ run_test_12_3() {
     fi
 
     # Inject 1000 log entries in a single JS call
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Flood log buffer","script":"for(var i=0;i<1000;i++){console.log(\"FLOOD_TEST_\"+i)} \"flooded\""}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Flood log buffer","script":"for(var i=0;i<1000;i++){console.log(\"FLOOD_TEST_\"+i)} \"flooded\""}'
     sleep 3
 
     local response

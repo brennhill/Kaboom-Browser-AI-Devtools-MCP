@@ -21,7 +21,7 @@ begin_test "15.1" "navigate success: page loaded, data captured" \
 
 run_test_15_1() {
     # Clear buffers
-    call_tool "configure" '{"action":"clear","buffer":"all"}' >/dev/null
+    call_tool "configure" '{"what":"clear","buffer":"all"}' >/dev/null
 
     # Simulate extension sync with pilot ON
     curl -s -X POST \
@@ -37,7 +37,7 @@ run_test_15_1() {
 
     # Now navigate should succeed (extension is reporting pilot enabled)
     local response
-    response=$(call_tool "interact" '{"action":"navigate","url":"https://example.com"}')
+    response=$(call_tool "interact" '{"what":"navigate","url":"https://example.com"}')
 
     local content
     content=$(extract_content_text "$response" 2>/dev/null)
@@ -67,7 +67,7 @@ run_test_15_2() {
     sleep 1
 
     local response
-    response=$(call_tool "interact" '{"action":"execute_js","script":"console.log(\"test\")"}')
+    response=$(call_tool "interact" '{"what":"execute_js","script":"console.log(\"test\")"}')
 
     local content
     content=$(extract_content_text "$response" 2>/dev/null)
@@ -95,7 +95,7 @@ run_test_15_3() {
     sleep 1
 
     local response
-    response=$(call_tool "interact" '{"action":"highlight","selector":"body"}')
+    response=$(call_tool "interact" '{"what":"highlight","selector":"body"}')
 
     local content
     content=$(extract_content_text "$response" 2>/dev/null)
@@ -125,7 +125,7 @@ run_test_15_4() {
 
     # Should fail
     local response1
-    response1=$(call_tool "interact" '{"action":"navigate","url":"https://test1.com"}')
+    response1=$(call_tool "interact" '{"what":"navigate","url":"https://test1.com"}')
     local content1
     content1=$(extract_content_text "$response1" 2>/dev/null)
 
@@ -140,7 +140,7 @@ run_test_15_4() {
 
     # Should succeed
     local response2
-    response2=$(call_tool "interact" '{"action":"navigate","url":"https://test2.com"}')
+    response2=$(call_tool "interact" '{"what":"navigate","url":"https://test2.com"}')
     local content2
     content2=$(extract_content_text "$response2" 2>/dev/null)
 

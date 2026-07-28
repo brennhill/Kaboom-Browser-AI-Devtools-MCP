@@ -699,9 +699,9 @@ Implementation in extension:
 ### Example Flow:
 ```javascript
 // Option A: Record + playback within test boundaries (typical)
-configure({action: 'test_boundary_start', test_id: 'original-checkout'})
+configure({what: 'test_boundary_start', test_id: 'original-checkout'})
 // user performs flow, extension captures actions + logs
-configure({action: 'test_boundary_end', test_id: 'original-checkout'})
+configure({what: 'test_boundary_end', test_id: 'original-checkout'})
 
 // Later: replay
 interact({
@@ -715,14 +715,14 @@ observe({what: 'logs', test_id: 'original-checkout'})  // original logs
 observe({what: 'logs', test_id: 'replay-checkout'})    // replay logs
 
 // Option B: Record without explicit test boundary
-configure({action: 'recording_start', name: 'checkout-flow'})
+configure({what: 'recording_start', name: 'checkout-flow'})
 // user performs flow, extension captures (no test_id tagging)
-configure({action: 'recording_stop', recording_id: '...'})
+configure({what: 'recording_stop', recording_id: '...'})
 
 // Later: replay with explicit test boundary
-configure({action: 'test_boundary_start', test_id: 'replay-1'})
-interact({action: 'playback', recording: 'checkout-flow', test_id: 'replay-1'})
-configure({action: 'test_boundary_end', test_id: 'replay-1'})
+configure({what: 'test_boundary_start', test_id: 'replay-1'})
+interact({what: 'playback', recording: 'checkout-flow', test_id: 'replay-1'})
+configure({what: 'test_boundary_end', test_id: 'replay-1'})
 ```
 
 **Key Design:** Recording captures actions; test boundaries tag everything else. They're independent but compose naturally.

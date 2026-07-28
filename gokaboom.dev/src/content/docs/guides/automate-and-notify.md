@@ -36,40 +36,40 @@ Here's the scenario: every Monday, you pull a performance report from your analy
 ### Phase 1: Extract the data
 
 ```js
-interact({action: "navigate", url: "https://analytics.example.com/dashboard"})
+interact({what: "navigate", url: "https://analytics.example.com/dashboard"})
 
-interact({action: "click", selector: "text=This Week"})
+interact({what: "click", selector: "text=This Week"})
 
-interact({action: "click", selector: "text=Generate Report"})
+interact({what: "click", selector: "text=Generate Report"})
 
-interact({action: "wait_for", selector: "text=Total Users", timeout_ms: 10000})
+interact({what: "wait_for", selector: "text=Total Users", timeout_ms: 10000})
 
-interact({action: "get_text", selector: ".report-summary"})
+interact({what: "get_text", selector: ".report-summary"})
 // -> "Total Users: 14,230 | Conversion: 3.2% | Revenue: $48,700"
 ```
 
 ### Phase 2: Compose and send the email
 
 ```js
-interact({action: "navigate", url: "https://mail.google.com"})
+interact({what: "navigate", url: "https://mail.google.com"})
 
-interact({action: "click", selector: "text=Compose"})
+interact({what: "click", selector: "text=Compose"})
 
-interact({action: "type", selector: "aria-label=To recipients",
+interact({what: "type", selector: "aria-label=To recipients",
           text: "team@example.com"})
 
-interact({action: "key_press", selector: "aria-label=To recipients",
+interact({what: "key_press", selector: "aria-label=To recipients",
           text: "Tab"})
 
-interact({action: "type", selector: "placeholder=Subject",
+interact({what: "type", selector: "placeholder=Subject",
           text: "Weekly Performance Report"})
 
-interact({action: "click", selector: "aria-label=Message Body"})
+interact({what: "click", selector: "aria-label=Message Body"})
 
-interact({action: "type", selector: "aria-label=Message Body",
+interact({what: "type", selector: "aria-label=Message Body",
           text: "Hi team,\n\nHere are this week's numbers:\n\n- Total Users: 14,230\n- Conversion Rate: 3.2%\n- Revenue: $48,700\n\nBest,\nAutomated Report"})
 
-interact({action: "click", selector: "aria-label=Send"})
+interact({what: "click", selector: "aria-label=Send"})
 ```
 
 Done. Your team gets the email. You didn't open a browser.
@@ -87,7 +87,7 @@ Done. Your team gets the email. You didn't open a browser.
 **Use subtitles to narrate.** Add `subtitle` to each action so you can follow along:
 
 ```js
-interact({action: "click", selector: "text=Compose",
+interact({what: "click", selector: "text=Compose",
           subtitle: "Opening Gmail compose window"})
 ```
 
@@ -127,14 +127,14 @@ the status in #engineering."
 **Use `wait_for` before interacting.** Pages load asynchronously. Don't assume elements exist immediately:
 
 ```js
-interact({action: "wait_for", selector: "text=Compose", timeout_ms: 5000})
-interact({action: "click", selector: "text=Compose"})
+interact({what: "wait_for", selector: "text=Compose", timeout_ms: 5000})
+interact({what: "click", selector: "text=Compose"})
 ```
 
 **Use `list_interactive` when you're unsure.** If you're automating a new app for the first time, let the AI discover the elements:
 
 ```js
-interact({action: "list_interactive"})
+interact({what: "list_interactive"})
 ```
 
 **Check for errors after critical steps.** Verify nothing broke:
@@ -146,7 +146,7 @@ observe({what: "errors"})
 **Save checkpoints before risky actions.** Before clicking "Send" or "Submit," save state so you can review:
 
 ```js
-interact({action: "save_state", snapshot_name: "before-send"})
+interact({what: "save_state", snapshot_name: "before-send"})
 ```
 
 **Handle Gmail's quirks.** Gmail uses augmented `aria-label` values that include keyboard shortcuts (e.g., `"Send ‪(⌘Enter)‬"`). KaBOOM's `aria-label=` selector handles this automatically with starts-with matching — `aria-label=Send` matches the full label.

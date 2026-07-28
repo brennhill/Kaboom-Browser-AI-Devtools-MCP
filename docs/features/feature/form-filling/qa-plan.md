@@ -61,10 +61,10 @@ last_verified_date: 2026-03-05
    - Start Kaboom, enable AI Web Pilot toggle in extension
    - Observe DOM to identify form fields
 2. Steps:
-   - [ ] Call `interact({action: "fill_form", fields: [{selector: "#username", value: "testuser"}, {selector: "#password", value: "testpass123"}]})`
+   - [ ] Call `interact({what: "fill_form", fields: [{selector: "#username", value: "testuser"}, {selector: "#password", value: "testpass123"}]})`
    - [ ] Wait for async completion (poll `observe({what: "command_result"})`)
    - [ ] Visually verify username and password fields are filled in browser
-   - [ ] Call `interact({action: "execute_js", code: "document.querySelector('form').submit()"})` to submit
+   - [ ] Call `interact({what: "execute_js", code: "document.querySelector('form').submit()"})` to submit
 3. Expected Result: Form submits with correct credentials, login succeeds (or shows "invalid credentials" from backend)
 4. Verification: Check network traffic via `observe({what: "network_waterfall"})` to confirm POST to /login endpoint
 
@@ -73,7 +73,7 @@ last_verified_date: 2026-03-05
    - Open <https://example.com/register> (or local test page with complex form)
    - Form has: first name, last name, email (validated), password (min length), confirm password, country (select), agree to terms (checkbox)
 2. Steps:
-   - [ ] Call `interact({action: "fill_form", fields: [{selector: "#firstName", value: "John"}, {selector: "#lastName", value: "Doe"}, {selector: "#email", value: "invalid-email"}, {selector: "#password", value: "abc"}, {selector: "#confirmPassword", value: "abc"}, {selector: "#country", value: "US"}, {selector: "#terms", value: true}]})`
+   - [ ] Call `interact({what: "fill_form", fields: [{selector: "#firstName", value: "John"}, {selector: "#lastName", value: "Doe"}, {selector: "#email", value: "invalid-email"}, {selector: "#password", value: "abc"}, {selector: "#confirmPassword", value: "abc"}, {selector: "#country", value: "US"}, {selector: "#terms", value: true}]})`
    - [ ] Wait for result
    - [ ] Verify result includes validation errors for email (invalid format) and password (too short)
    - [ ] Retry with valid data: `fill_form` with `email: "john@example.com"` and `password: "SecurePass123"`
@@ -97,7 +97,7 @@ last_verified_date: 2026-03-05
    - Open any form page
    - Disable AI Web Pilot toggle in extension settings
 2. Steps:
-   - [ ] Call `interact({action: "fill_form", fields: [{selector: "#username", value: "test"}]})`
+   - [ ] Call `interact({what: "fill_form", fields: [{selector: "#username", value: "test"}]})`
    - [ ] Wait for async result
 3. Expected Result: Returns `{error: "ai_web_pilot_disabled", message: "Interactive features require AI Web Pilot toggle to be enabled"}`
 4. Verification: Confirm form is NOT filled, error message is clear
@@ -116,7 +116,7 @@ last_verified_date: 2026-03-05
 ## Regression Testing
 
 ### What existing features might break?
-- `interact({action: "execute_js"})` — ensure form filling doesn't interfere with general JS execution
+- `interact({what: "execute_js"})` — ensure form filling doesn't interfere with general JS execution
 - Async command architecture — verify correlation_id handling still works correctly
 - AI Web Pilot toggle — confirm toggle still gates all interact actions
 

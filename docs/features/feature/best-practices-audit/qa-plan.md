@@ -78,14 +78,14 @@ last_verified_date: 2026-03-05
 
 | Workflow | Steps Required | Can Be Simplified? |
 |----------|---------------|-------------------|
-| Run full best practices audit | 1 step: `generate({format: "best_practices_audit"})` | No -- already minimal |
+| Run full best practices audit | 1 step: `generate({what: "best_practices_audit"})` | No -- already minimal |
 | Run audit for specific categories | 1 step with `categories` parameter | No -- single call |
 | Run audit scoped to URL | 1 step with `url` parameter | No -- single call |
 | Get failures only (fewer tokens) | 1 step with `include_passing: false` | No -- single call |
 | Run audit then fix issues | 2+ steps: audit + code changes + re-audit | Natural workflow; cannot simplify |
 
 ### Default Behavior Verification
-- [ ] `generate({format: "best_practices_audit"})` with no optional params runs all 16 checks
+- [ ] `generate({what: "best_practices_audit"})` with no optional params runs all 16 checks
 - [ ] Default `include_passing` is `true` -- all checks shown
 - [ ] Default `categories` is all categories -- no filtering
 - [ ] Default `url` is empty -- all captured data analyzed
@@ -137,7 +137,7 @@ last_verified_date: 2026-03-05
 | IT-4 | Audit with empty buffers | Fresh server, no browsing activity | All checks skipped with "No data captured" evidence | must |
 | IT-5 | Audit with only API traffic (no HTML) | JSON API responses only | Header checks skipped ("No HTML responses"); transport checks still run | should |
 | IT-6 | Concurrent audit requests | Two simultaneous audit requests | Both complete without blocking each other (read locks on buffers) | should |
-| IT-7 | CSP remediation cross-references generate tool | CSP header missing | Remediation suggests `generate({format: 'csp'})` | should |
+| IT-7 | CSP remediation cross-references generate tool | CSP header missing | Remediation suggests `generate({what: 'csp'})` | should |
 
 ### 4.3 Performance Tests
 

@@ -212,10 +212,10 @@ last_verified_date: 2026-03-05
 
 | # | Step (AI executes) | Human Observes | Expected Result | Pass |
 |---|-------------------|----------------|-----------------|------|
-| UAT-9 | `{"tool": "configure", "arguments": {"action": "configure_streaming", "streaming": {"action": "enable", "events": ["errors", "performance"]}}}` | AI receives confirmation | Streaming enabled for errors and performance | [ ] |
+| UAT-9 | `{"tool": "configure", "arguments": {"what": "configure_streaming", "streaming": {"action": "enable", "events": ["errors", "performance"]}}}` | AI receives confirmation | Streaming enabled for errors and performance | [ ] |
 | UAT-10 | Trigger a JavaScript error in the test app | Console shows error | MCP notification appears on stdout without observe call | [ ] |
-| UAT-11 | `{"tool": "configure", "arguments": {"action": "configure_streaming", "streaming": {"action": "status"}}}` | AI receives status | Config shows enabled=true, events=["errors","performance"], notification count > 0 | [ ] |
-| UAT-12 | `{"tool": "configure", "arguments": {"action": "configure_streaming", "streaming": {"action": "disable"}}}` | AI receives confirmation | Streaming disabled, pending_cleared count shown | [ ] |
+| UAT-11 | `{"tool": "configure", "arguments": {"what": "configure_streaming", "streaming": {"action": "status"}}}` | AI receives status | Config shows enabled=true, events=["errors","performance"], notification count > 0 | [ ] |
+| UAT-12 | `{"tool": "configure", "arguments": {"what": "configure_streaming", "streaming": {"action": "disable"}}}` | AI receives confirmation | Streaming disabled, pending_cleared count shown | [ ] |
 | UAT-13 | Trigger another error | Console shows error | NO MCP notification (streaming disabled) | [ ] |
 
 ### Data Leak UAT Verification

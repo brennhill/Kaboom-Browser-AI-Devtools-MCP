@@ -205,7 +205,7 @@ sequenceDiagram
 
     BG->>BG: 11. Clear event batch<br/>Continue polling
 
-    Note over Server: Buffered for 60s<br/>Available to:<br/>- observe({what: 'network'})<br/>- generate({format: 'har'})<br/>- API schema learning
+    Note over Server: Buffered for 60s<br/>Available to:<br/>- observe({what: 'network'})<br/>- generate({what: 'har'})<br/>- API schema learning
 ```
 
 ---

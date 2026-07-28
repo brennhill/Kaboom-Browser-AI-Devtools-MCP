@@ -15,10 +15,10 @@ run_test_11_1() {
         return
     fi
 
-    interact_and_wait "navigate" '{"action":"navigate","url":"https://example.com","reason":"Clean page for subtitle test"}' 20
+    interact_and_wait "navigate" '{"what":"navigate","url":"https://example.com","reason":"Clean page for subtitle test"}' 20
     sleep 2
 
-    interact_and_wait "subtitle" '{"action":"subtitle","text":"Kaboom smoke test — this text should appear at the bottom of the viewport"}' 25
+    interact_and_wait "subtitle" '{"what":"subtitle","text":"Kaboom smoke test — this text should appear at the bottom of the viewport"}' 25
 
     if echo "$INTERACT_RESULT" | grep -qi "error\|failed"; then
         fail "Subtitle set returned error. Result: $(truncate "$INTERACT_RESULT" 200)"
@@ -26,7 +26,7 @@ run_test_11_1() {
     fi
 
     sleep 2
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Check subtitle visibility","script":"(function() { var el = document.getElementById(\"kaboom-subtitle\"); if (!el) return \"NOT_FOUND\"; var style = window.getComputedStyle(el); var visible = style.display !== \"none\" && style.opacity !== \"0\"; return (visible ? \"VISIBLE\" : \"HIDDEN\") + \":\" + el.textContent; })()"}' 25
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Check subtitle visibility","script":"(function() { var el = document.getElementById(\"kaboom-subtitle\"); if (!el) return \"NOT_FOUND\"; var style = window.getComputedStyle(el); var visible = style.display !== \"none\" && style.opacity !== \"0\"; return (visible ? \"VISIBLE\" : \"HIDDEN\") + \":\" + el.textContent; })()"}' 25
 
     local dom_check="$INTERACT_RESULT"
 
@@ -54,10 +54,10 @@ run_test_11_1() {
         return
     fi
 
-    interact_and_wait "subtitle" '{"action":"subtitle","text":""}'
+    interact_and_wait "subtitle" '{"what":"subtitle","text":""}'
     sleep 0.5
 
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Verify subtitle cleared","script":"(function() { var el = document.getElementById(\"kaboom-subtitle\"); if (!el) return \"REMOVED\"; var style = window.getComputedStyle(el); if (style.display === \"none\" || style.opacity === \"0\" || el.textContent === \"\") return \"HIDDEN\"; return \"STILL_VISIBLE:\" + el.textContent; })()"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Verify subtitle cleared","script":"(function() { var el = document.getElementById(\"kaboom-subtitle\"); if (!el) return \"REMOVED\"; var style = window.getComputedStyle(el); if (style.display === \"none\" || style.opacity === \"0\" || el.textContent === \"\") return \"HIDDEN\"; return \"STILL_VISIBLE:\" + el.textContent; })()"}'
 
     local clear_check="$INTERACT_RESULT"
 
@@ -82,7 +82,7 @@ run_test_11_2() {
         return
     fi
 
-    interact_and_wait "navigate" '{"action":"navigate","url":"https://example.com","subtitle":"Navigating to example.com — verifying composable subtitle"}' 20
+    interact_and_wait "navigate" '{"what":"navigate","url":"https://example.com","subtitle":"Navigating to example.com — verifying composable subtitle"}' 20
 
     if echo "$INTERACT_RESULT" | grep -qi "unknown.*subtitle\|invalid.*subtitle\|unrecognized"; then
         fail "Server rejected subtitle as unknown parameter. Result: $(truncate "$INTERACT_RESULT" 200)"
@@ -101,7 +101,7 @@ run_test_11_2() {
         navigated=true
     fi
 
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Check composable subtitle","script":"(function() { var el = document.getElementById(\"kaboom-subtitle\"); if (!el) return \"NOT_FOUND\"; return JSON.stringify({ text: el.textContent, visible: window.getComputedStyle(el).display !== \"none\" }); })()"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Check composable subtitle","script":"(function() { var el = document.getElementById(\"kaboom-subtitle\"); if (!el) return \"NOT_FOUND\"; return JSON.stringify({ text: el.textContent, visible: window.getComputedStyle(el).display !== \"none\" }); })()"}'
 
     local subtitle_check="$INTERACT_RESULT"
     local has_subtitle=false
@@ -119,7 +119,7 @@ run_test_11_2() {
         fail "Neither navigation nor subtitle worked. Page: $(truncate "$page_text" 200), Subtitle: $(truncate "$subtitle_check" 200)"
     fi
 
-    interact_and_wait "subtitle" '{"action":"subtitle","text":""}'
+    interact_and_wait "subtitle" '{"what":"subtitle","text":""}'
 }
 run_test_11_2
 

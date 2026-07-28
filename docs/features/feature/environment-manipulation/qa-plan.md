@@ -26,7 +26,7 @@ last_verified_date: 2026-03-05
 - .env.local file in backend directory
 
 #### Steps:
-1. Call `interact({action: "environment_inspect", service: "all"})`
+1. Call `interact({what: "environment_inspect", service: "all"})`
 2. Verify both services discovered
 3. Verify PIDs correct
 4. Verify config files listed for each service
@@ -55,7 +55,7 @@ last_verified_date: 2026-03-05
   - DEBUG=false
 
 #### Steps:
-1. Call `interact({action: "environment_inspect", service: "frontend"})`
+1. Call `interact({what: "environment_inspect", service: "frontend"})`
 2. Verify API_ENDPOINT returned as plaintext
 3. Verify API_KEY redacted: ***redacted***
 4. Verify is_set: true for API_KEY (so we know it exists)
@@ -85,7 +85,7 @@ last_verified_date: 2026-03-05
 
 #### Steps:
 1. Create BEFORE snapshot
-2. Call `interact({action: "environment_modify", service: "frontend", changes: {API_ENDPOINT: "http://localhost:9999"}, restart_service: true})`
+2. Call `interact({what: "environment_modify", service: "frontend", changes: {API_ENDPOINT: "http://localhost:9999"}, restart_service: true})`
 3. Verify response shows change
 4. Verify service restarted (PID changed)
 5. Verify frontend still running (health check)
@@ -115,7 +115,7 @@ last_verified_date: 2026-03-05
   - TIMEOUT_MS=5000
 
 #### Steps:
-1. Call `interact({action: "environment_modify", service: "backend", changes: {LOG_LEVEL: "debug", TIMEOUT_MS: "1000"}})`
+1. Call `interact({what: "environment_modify", service: "backend", changes: {LOG_LEVEL: "debug", TIMEOUT_MS: "1000"}})`
 2. Verify both changes applied
 3. Verify service restarted
 4. Verify both new values active
@@ -149,7 +149,7 @@ FEATURE_FLAGS=new_checkout:true,beta:false
 ```
 
 ## Steps:
-1. Call `interact({action: "config_read", service: "frontend", file: ".env"})`
+1. Call `interact({what: "config_read", service: "frontend", file: ".env"})`
 2. Verify all lines returned
 3. Verify line numbers correct
 4. Verify comments included
@@ -177,7 +177,7 @@ FEATURE_FLAGS=new_checkout:true,beta:false
 - Want to change 1 variable
 
 #### Steps:
-1. Call `interact({action: "config_write", service: "frontend", file: ".env", content: "API_ENDPOINT=http://localhost:9999\nAPI_KEY=sk_test_12345\nDEBUG=true"})`
+1. Call `interact({what: "config_write", service: "frontend", file: ".env", content: "API_ENDPOINT=http://localhost:9999\nAPI_KEY=sk_test_12345\nDEBUG=true"})`
 2. Verify response: lines_changed: 2
 3. Verify response: backup_created
 4. Check filesystem: .env.TIMESTAMP.backup exists
@@ -207,11 +207,11 @@ FEATURE_FLAGS=new_checkout:true,beta:false
 - Environment in known state (from Scenario 3+4 changes)
 
 #### Steps:
-1. Create snapshot: `configure({action: "snapshot", operation: "create", service: "frontend", name: "test_snapshot"})`
+1. Create snapshot: `configure({what: "snapshot", operation: "create", service: "frontend", name: "test_snapshot"})`
 2. Verify response: snapshot_id returned
 3. Modify environment significantly
 4. Verify environment changed
-5. Call restore: `configure({action: "snapshot", operation: "restore", snapshot_id: "..."})`
+5. Call restore: `configure({what: "snapshot", operation: "restore", snapshot_id: "..."})`
 6. Verify environment restored to snapshot state
 7. Verify service restarted
 8. Verify API_ENDPOINT back to original value
@@ -238,9 +238,9 @@ FEATURE_FLAGS=new_checkout:true,beta:false
 
 #### Steps:
 1. Create BEFORE snapshot
-2. Modify to invalid API endpoint: `interact({action: "environment_modify", service: "frontend", changes: {API_ENDPOINT: "http://localhost:9999"}, restart_service: true})`
+2. Modify to invalid API endpoint: `interact({what: "environment_modify", service: "frontend", changes: {API_ENDPOINT: "http://localhost:9999"}, restart_service: true})`
 3. Frontend service restarts but can't connect to backend
-4. Call `interact({action: "navigate", url: "http://localhost:3000"})`
+4. Call `interact({what: "navigate", url: "http://localhost:3000"})`
 5. Observe error: no response from backend
 6. AI automatically offers rollback
 7. Restore BEFORE snapshot

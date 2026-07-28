@@ -70,7 +70,7 @@ last_verified_date: 2026-03-05
 
 - [ ] **Full page load** — observe({what: 'page'}) returns enriched DOM with all metadata
 - [ ] **Metadata consistency** — Semantic ID appears on element both in DOM and in returned metadata
-- [ ] **After mutation** — After `interact({action: 'execute_js', script: 'element.click()'})`, re-observe shows updated visibility
+- [ ] **After mutation** — After `interact({what: 'execute_js', script: 'element.click()'})`, re-observe shows updated visibility
 - [ ] **React app** — Real React app (Create React App, Next.js) component mapping works
 - [ ] **Vue app** — Real Vue app component mapping works
 - [ ] **Mixed framework** — Page with both React and Vue components maps correctly
@@ -236,7 +236,7 @@ last_verified_date: 2026-03-05
 
 - [ ] `observe({what: 'page'})` still works without enrichment (backward compat)
 - [ ] `observe({what: 'dom'})` (if distinct from 'page') still works
-- [ ] `interact({action: 'execute_js'})` still works with injected IDs
+- [ ] `interact({what: 'execute_js'})` still works with injected IDs
 - [ ] `observe({what: 'network'})` unaffected by semantic enhancements
 - [ ] `observe({what: 'console'})` unaffected
 - [ ] Tab switching still works with semantic metadata

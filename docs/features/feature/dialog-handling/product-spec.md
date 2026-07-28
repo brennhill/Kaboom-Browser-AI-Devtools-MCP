@@ -51,7 +51,7 @@ Add `handle_dialog` action to the `interact` tool. Extension automatically detec
 1. Agent triggers action that shows dialog (e.g., click button that runs `alert('Hello')`)
 2. Extension detects dialog, captures text, stores in buffer
 3. Agent observes dialogs via `observe({what: "dialogs"})`
-4. Agent responds via `interact({action: "handle_dialog", response: "accept"})` or `{response: "dismiss"}` or `{response: "accept", text: "user input"}`
+4. Agent responds via `interact({what: "handle_dialog", response: "accept"})` or `{response: "dismiss"}` or `{response: "accept", text: "user input"}`
 5. Extension handles dialog, workflow continues
 
 ## Examples

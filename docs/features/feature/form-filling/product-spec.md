@@ -49,9 +49,9 @@ Add `fill_form` action to the `interact` tool. Agent provides field selectors an
 ## User Workflow
 
 1. Agent observes DOM to identify form structure (via `observe({what: "api", mode: "dom"})`)
-2. Agent calls `interact({action: "fill_form", fields: [{selector: "#email", value: "test@example.com"}, ...]})`
+2. Agent calls `interact({what: "fill_form", fields: [{selector: "#email", value: "test@example.com"}, ...]})`
 3. Extension fills all fields, triggers validation events, returns success/error per field
-4. Agent submits form (via `interact({action: "execute_js", code: "document.querySelector('form').submit()"})`) or clicks submit button
+4. Agent submits form (via `interact({what: "execute_js", code: "document.querySelector('form').submit()"})`) or clicks submit button
 5. Agent observes network traffic to verify form submission
 
 ## Examples

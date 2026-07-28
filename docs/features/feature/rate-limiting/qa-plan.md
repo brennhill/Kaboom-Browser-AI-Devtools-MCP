@@ -80,10 +80,10 @@ last_verified_date: 2026-03-05
 | Default rate limiting | 0 steps: enabled by default at 1000 events/sec | No -- zero-config |
 | Custom global rate limit | 1 step: `--rate-limit=2000` | No -- already minimal |
 | Per-tool rate limits | 1 step: `--rate-limits="analyze=10,generate=5"` | No -- already minimal |
-| Check circuit breaker state | 1 step: extension polls `/health` OR AI calls `configure({action:"health"})` | No -- already minimal |
+| Check circuit breaker state | 1 step: extension polls `/health` OR AI calls `configure({what:"health"})` | No -- already minimal |
 | Recovery from rate limiting | 0 steps: automatic (extension backoff + server window reset) | No -- fully automatic |
 | Recovery from circuit breaker | 0 steps: automatic (wait for conditions to clear) | No -- fully automatic |
-| Diagnose rate limiting issues | 1 step: AI calls `configure({action:"health"})` | No -- already minimal |
+| Diagnose rate limiting issues | 1 step: AI calls `configure({what:"health"})` | No -- already minimal |
 
 ### Default Behavior Verification
 - [ ] Global rate limit is 1000 events/sec by default with zero configuration
@@ -246,7 +246,7 @@ last_verified_date: 2026-03-05
 | # | Check | Method | Expected | Pass |
 |---|-------|--------|----------|------|
 | DL-UAT-1 | 429 response has no captured data | Inspect 429 JSON body | Only rate limit metadata fields | [ ] |
-| DL-UAT-2 | Health endpoint has no buffer contents | Call `configure({action:"health"})` | Memory sizes and counts only | [ ] |
+| DL-UAT-2 | Health endpoint has no buffer contents | Call `configure({what:"health"})` | Memory sizes and counts only | [ ] |
 | DL-UAT-3 | Extension backoff state not in page context | Open browser console on page, type `window.kaboom` | Undefined or no backoff state exposed | [ ] |
 | DL-UAT-4 | Per-tool error does not reveal other tools' limits | Inspect -32029 error | Only the limited tool's info shown | [ ] |
 | DL-UAT-5 | Circuit breaker health has no buffer data | Inspect health response during circuit open | Only circuit state + operational metrics | [ ] |

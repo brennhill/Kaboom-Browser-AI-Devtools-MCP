@@ -82,14 +82,14 @@ last_verified_date: 2026-03-05
 
 | Workflow | Steps Required | Can Be Simplified? |
 |----------|---------------|-------------------|
-| Run full performance audit | 1 step: `generate({format: "performance_audit"})` | No -- already minimal |
+| Run full performance audit | 1 step: `generate({what: "performance_audit"})` | No -- already minimal |
 | Run category-specific audit | 1 step with `categories` parameter | No -- single call |
 | Audit specific URL | 1 step with `url` parameter | No -- single call |
 | Audit then fix then verify | 3 steps: audit + fix + observe(performance/vitals) | Natural workflow; performance audit is diagnosis, observe is verification |
 | Metrics-only report (no recommendations) | 1 step with `include_recommendations: false` | No -- single parameter |
 
 ### Default Behavior Verification
-- [ ] `generate({format: "performance_audit"})` with no optional params runs all 8 categories
+- [ ] `generate({what: "performance_audit"})` with no optional params runs all 8 categories
 - [ ] Default `include_recommendations` is `true`
 - [ ] Default `url` uses the most recent performance snapshot URL
 - [ ] Default `categories` includes all 8 categories
@@ -191,7 +191,7 @@ last_verified_date: 2026-03-05
 
 | # | Step (AI executes) | Human Observes | Expected Result | Pass |
 |---|-------------------|----------------|-----------------|------|
-| UAT-1 | `{"tool": "generate", "arguments": {"format": "performance_audit"}}` | Server processes audit (may take up to 5s for DOM queries) | Response with all 8 categories, overall_score, web_vitals, top_opportunities | [ ] |
+| UAT-1 | `{"tool": "generate", "arguments": {"what": "performance_audit"}}` | Server processes audit (may take up to 5s for DOM queries) | Response with all 8 categories, overall_score, web_vitals, top_opportunities | [ ] |
 | UAT-2 | Inspect overall_score | Compare to per-category scores | Overall score is weighted average of category scores (weights per spec) | [ ] |
 | UAT-3 | Inspect render_blocking category | Check actual `<head>` of page | Render-blocking CSS and JS correctly identified with URLs and blocking times | [ ] |
 | UAT-4 | Inspect images category | Check actual images on page | Missing dimensions, non-modern formats, and oversized images correctly flagged | [ ] |
@@ -199,8 +199,8 @@ last_verified_date: 2026-03-05
 | UAT-6 | Inspect caching category | Check Cache-Control headers in Network tab | Resources without effective caching correctly flagged | [ ] |
 | UAT-7 | Inspect top_opportunities | Review ordering | Sorted by estimated_impact_ms descending; finding IDs reference actual findings | [ ] |
 | UAT-8 | Inspect web_vitals | Compare to Chrome DevTools Performance | Values match or are close to DevTools readings; assessments correct | [ ] |
-| UAT-9 | `{"tool": "generate", "arguments": {"format": "performance_audit", "categories": ["images", "javascript"]}}` | Only 2 categories | Response contains only images and javascript categories | [ ] |
-| UAT-10 | `{"tool": "generate", "arguments": {"format": "performance_audit", "include_recommendations": false}}` | No recommendations | Findings present but no recommendation text in any finding | [ ] |
+| UAT-9 | `{"tool": "generate", "arguments": {"what": "performance_audit", "categories": ["images", "javascript"]}}` | Only 2 categories | Response contains only images and javascript categories | [ ] |
+| UAT-10 | `{"tool": "generate", "arguments": {"what": "performance_audit", "include_recommendations": false}}` | No recommendations | Findings present but no recommendation text in any finding | [ ] |
 | UAT-11 | Fix an issue (e.g., add defer to script), reload, then re-audit | Performance improves | Previously flagged issue resolved or severity reduced; score improves | [ ] |
 | UAT-12 | Disconnect extension, run audit | Extension offline | DOM-dependent categories show null score; other categories complete normally | [ ] |
 | UAT-13 | Run audit before navigating to any page | No performance snapshot | Error: "No performance data available. Navigate to a page and wait for it to load." | [ ] |

@@ -15,7 +15,7 @@ begin_test "5.1" "interact(list_states) returns array" \
     "Verify list_states returns states array and count" \
     "list_states doesn't require pilot. Must always work."
 run_test_5_1() {
-    RESPONSE=$(call_tool "interact" '{"action":"list_states"}')
+    RESPONSE=$(call_tool "interact" '{"what":"list_states"}')
     if ! check_not_error "$RESPONSE"; then
         fail "Expected success but got isError. Content: $(truncate "$(extract_content_text "$RESPONSE")")"
         return
@@ -41,7 +41,7 @@ begin_test "5.2" "interact save/load/delete state roundtrip" \
 run_test_5_2() {
     # Step 1: Save state
     local SAVE_RESP
-    SAVE_RESP=$(call_tool "interact" '{"action":"save_state","snapshot_name":"uat-state-test"}')
+    SAVE_RESP=$(call_tool "interact" '{"what":"save_state","snapshot_name":"uat-state-test"}')
     if ! check_not_error "$SAVE_RESP"; then
         fail "save_state returned error. Content: $(truncate "$(extract_content_text "$SAVE_RESP")")"
         return
@@ -49,7 +49,7 @@ run_test_5_2() {
 
     # Step 2: List and verify it appears
     local LIST_RESP
-    LIST_RESP=$(call_tool "interact" '{"action":"list_states"}')
+    LIST_RESP=$(call_tool "interact" '{"what":"list_states"}')
     if ! check_not_error "$LIST_RESP"; then
         fail "list_states after save returned error. Content: $(truncate "$(extract_content_text "$LIST_RESP")")"
         return
@@ -63,7 +63,7 @@ run_test_5_2() {
 
     # Step 3: Load the state
     local LOAD_RESP
-    LOAD_RESP=$(call_tool "interact" '{"action":"load_state","snapshot_name":"uat-state-test"}')
+    LOAD_RESP=$(call_tool "interact" '{"what":"load_state","snapshot_name":"uat-state-test"}')
     if ! check_not_error "$LOAD_RESP"; then
         fail "load_state returned error. Content: $(truncate "$(extract_content_text "$LOAD_RESP")")"
         return
@@ -71,7 +71,7 @@ run_test_5_2() {
 
     # Step 4: Delete the state
     local DEL_RESP
-    DEL_RESP=$(call_tool "interact" '{"action":"delete_state","snapshot_name":"uat-state-test"}')
+    DEL_RESP=$(call_tool "interact" '{"what":"delete_state","snapshot_name":"uat-state-test"}')
     if ! check_not_error "$DEL_RESP"; then
         fail "delete_state returned error. Content: $(truncate "$(extract_content_text "$DEL_RESP")")"
         return
@@ -79,7 +79,7 @@ run_test_5_2() {
 
     # Step 5: List again and verify it's gone
     local LIST2_RESP
-    LIST2_RESP=$(call_tool "interact" '{"action":"list_states"}')
+    LIST2_RESP=$(call_tool "interact" '{"what":"list_states"}')
     if ! check_not_error "$LIST2_RESP"; then
         fail "list_states after delete returned error. Content: $(truncate "$(extract_content_text "$LIST2_RESP")")"
         return
@@ -100,7 +100,7 @@ begin_test "5.3" "interact(execute_js) without pilot returns error" \
     "execute_js requires pilot enabled; without extension it should return isError" \
     "Pilot-gated actions must fail clearly when pilot is off."
 run_test_5_3() {
-    RESPONSE=$(call_tool "interact" '{"action":"execute_js","script":"return 1+1"}')
+    RESPONSE=$(call_tool "interact" '{"what":"execute_js","script":"return 1+1"}')
     if ! check_is_error "$RESPONSE"; then
         fail "Expected isError:true for execute_js without pilot. Content: $(truncate "$(extract_content_text "$RESPONSE")")"
         return
@@ -114,7 +114,7 @@ begin_test "5.4" "interact(navigate) without pilot returns error" \
     "navigate requires pilot enabled; without extension it should return isError" \
     "Pilot-gated actions must fail clearly when pilot is off."
 run_test_5_4() {
-    RESPONSE=$(call_tool "interact" '{"action":"navigate","url":"https://example.com"}')
+    RESPONSE=$(call_tool "interact" '{"what":"navigate","url":"https://example.com"}')
     if ! check_is_error "$RESPONSE"; then
         fail "Expected isError:true for navigate without pilot. Content: $(truncate "$(extract_content_text "$RESPONSE")")"
         return
@@ -128,7 +128,7 @@ begin_test "5.5" "interact(highlight) without pilot returns error" \
     "highlight requires pilot enabled; without extension it should return isError" \
     "Pilot-gated actions must fail clearly when pilot is off."
 run_test_5_5() {
-    RESPONSE=$(call_tool "interact" '{"action":"highlight","selector":"body"}')
+    RESPONSE=$(call_tool "interact" '{"what":"highlight","selector":"body"}')
     if ! check_is_error "$RESPONSE"; then
         fail "Expected isError:true for highlight without pilot. Content: $(truncate "$(extract_content_text "$RESPONSE")")"
         return
@@ -142,7 +142,7 @@ begin_test "5.6" "interact with invalid action returns error" \
     "Send an unknown action, verify isError:true" \
     "Invalid actions must not crash."
 run_test_5_6() {
-    RESPONSE=$(call_tool "interact" '{"action":"fly_to_moon"}')
+    RESPONSE=$(call_tool "interact" '{"what":"fly_to_moon"}')
     if ! check_is_error "$RESPONSE"; then
         fail "Expected isError:true for invalid action 'fly_to_moon'. Content: $(truncate "$(extract_content_text "$RESPONSE")")"
         return
@@ -156,7 +156,7 @@ begin_test "5.7" "interact(save_state) without snapshot_name returns error" \
     "save_state requires snapshot_name parameter; omitting it should return isError" \
     "Required param validation."
 run_test_5_7() {
-    RESPONSE=$(call_tool "interact" '{"action":"save_state"}')
+    RESPONSE=$(call_tool "interact" '{"what":"save_state"}')
     if ! check_is_error "$RESPONSE"; then
         fail "Expected isError:true for save_state without snapshot_name. Content: $(truncate "$(extract_content_text "$RESPONSE")")"
         return
@@ -170,7 +170,7 @@ begin_test "5.8" "interact(click) without pilot returns error" \
     "click requires pilot enabled; without extension it should return isError" \
     "DOM primitive pilot gating."
 run_test_5_8() {
-    RESPONSE=$(call_tool "interact" '{"action":"click","selector":"#btn"}')
+    RESPONSE=$(call_tool "interact" '{"what":"click","selector":"#btn"}')
     if ! check_is_error "$RESPONSE"; then
         fail "Expected isError:true for click without pilot. Content: $(truncate "$(extract_content_text "$RESPONSE")")"
         return
@@ -257,7 +257,7 @@ begin_test "5.11" "interact(type) missing text returns error" \
     "type action requires text parameter; omitting it should return isError" \
     "Required param validation for type."
 run_test_5_11() {
-    RESPONSE=$(call_tool "interact" '{"action":"type","selector":"#input"}')
+    RESPONSE=$(call_tool "interact" '{"what":"type","selector":"#input"}')
     if ! check_is_error "$RESPONSE"; then
         fail "Expected isError:true for type without text. Content: $(truncate "$(extract_content_text "$RESPONSE")")"
         return
@@ -277,7 +277,7 @@ begin_test "5.12" "interact(select) missing value returns error" \
     "select action requires value parameter; omitting it should return isError" \
     "Required param validation for select."
 run_test_5_12() {
-    RESPONSE=$(call_tool "interact" '{"action":"select","selector":"#dropdown"}')
+    RESPONSE=$(call_tool "interact" '{"what":"select","selector":"#dropdown"}')
     if ! check_is_error "$RESPONSE"; then
         fail "Expected isError:true for select without value. Content: $(truncate "$(extract_content_text "$RESPONSE")")"
         return
@@ -297,7 +297,7 @@ begin_test "5.13" "interact(get_attribute) missing name returns error" \
     "get_attribute requires name parameter; omitting it should return isError" \
     "Required param validation for get_attribute."
 run_test_5_13() {
-    RESPONSE=$(call_tool "interact" '{"action":"get_attribute","selector":"#link"}')
+    RESPONSE=$(call_tool "interact" '{"what":"get_attribute","selector":"#link"}')
     if ! check_is_error "$RESPONSE"; then
         fail "Expected isError:true for get_attribute without name. Content: $(truncate "$(extract_content_text "$RESPONSE")")"
         return
@@ -317,7 +317,7 @@ begin_test "5.14" "interact(key_press) without pilot returns error" \
     "key_press requires pilot enabled; without extension it should return isError" \
     "key_press pilot gating."
 run_test_5_14() {
-    RESPONSE=$(call_tool "interact" '{"action":"key_press","selector":"#input","text":"Enter"}')
+    RESPONSE=$(call_tool "interact" '{"what":"key_press","selector":"#input","text":"Enter"}')
     if ! check_is_error "$RESPONSE"; then
         fail "Expected isError:true for key_press without pilot. Content: $(truncate "$(extract_content_text "$RESPONSE")")"
         return
@@ -337,7 +337,7 @@ begin_test "5.15" "interact(key_press) missing selector returns error" \
     "key_press requires selector parameter; omitting it should return isError mentioning 'selector'" \
     "Required param validation for key_press."
 run_test_5_15() {
-    RESPONSE=$(call_tool "interact" '{"action":"key_press","text":"Enter"}')
+    RESPONSE=$(call_tool "interact" '{"what":"key_press","text":"Enter"}')
     if ! check_is_error "$RESPONSE"; then
         fail "Expected isError:true for key_press without selector. Content: $(truncate "$(extract_content_text "$RESPONSE")")"
         return
@@ -357,7 +357,7 @@ begin_test "5.16" "interact(subtitle) standalone sets text" \
     "Send subtitle action with text, verify response confirms subtitle was set" \
     "Core subtitle functionality — standalone text overlay."
 run_test_5_16() {
-    RESPONSE=$(call_tool "interact" '{"action":"subtitle","text":"UAT subtitle test message"}')
+    RESPONSE=$(call_tool "interact" '{"what":"subtitle","text":"UAT subtitle test message"}')
     local text
     text=$(extract_content_text "$RESPONSE")
     if check_is_error "$RESPONSE"; then
@@ -382,7 +382,7 @@ begin_test "5.17" "interact(subtitle) with empty text clears subtitle" \
     "Send subtitle with empty string text, verify response confirms subtitle was cleared" \
     "Clearing subtitle must work — empty text = dismiss overlay."
 run_test_5_17() {
-    RESPONSE=$(call_tool "interact" '{"action":"subtitle","text":""}')
+    RESPONSE=$(call_tool "interact" '{"what":"subtitle","text":""}')
     local text
     text=$(extract_content_text "$RESPONSE")
     if check_is_error "$RESPONSE"; then
@@ -406,7 +406,7 @@ begin_test "5.18" "interact(subtitle) missing text returns error" \
     "subtitle action requires text parameter; omitting it should return isError" \
     "Required param validation for subtitle."
 run_test_5_18() {
-    RESPONSE=$(call_tool "interact" '{"action":"subtitle"}')
+    RESPONSE=$(call_tool "interact" '{"what":"subtitle"}')
     if ! check_is_error "$RESPONSE"; then
         fail "Expected isError:true for subtitle without text. Content: $(truncate "$(extract_content_text "$RESPONSE")")"
         return
@@ -426,7 +426,7 @@ begin_test "5.19" "interact(navigate) with subtitle param accepted" \
     "Send navigate with optional subtitle param, verify response does not error on the param" \
     "Subtitle as optional param on any interact action — must not reject unknown field."
 run_test_5_19() {
-    RESPONSE=$(call_tool "interact" '{"action":"navigate","url":"https://example.com","subtitle":"Navigating to example.com for testing"}')
+    RESPONSE=$(call_tool "interact" '{"what":"navigate","url":"https://example.com","subtitle":"Navigating to example.com for testing"}')
     # navigate without pilot will return isError (pilot not enabled in UAT),
     # but the error should be about pilot, NOT about an unknown 'subtitle' param
     local text

@@ -254,7 +254,7 @@ export const test = base.extend({
 test('my test', async ({ page, kaboom }) => {
   // Full Kaboom API available
   await kaboom.snapshot('state1');
-  await kaboom.configure({ action: 'mock', ... });
+  await kaboom.configure({ what: 'mock', ... });
 });
 ```
 

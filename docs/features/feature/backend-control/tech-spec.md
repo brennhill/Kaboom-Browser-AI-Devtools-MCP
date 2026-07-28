@@ -69,7 +69,7 @@ last_verified_date: 2026-03-05
 
 ### Data Flow: Reset Database
 ```
-1. AI calls: interact({action: "backend_control", operation: "reset_database"})
+1. AI calls: interact({what: "backend_control", operation: "reset_database"})
 2. Kaboom MCP creates BEFORE snapshot: snap-20260131-101500
 3. Kaboom MCP sends HTTP POST /.kaboom/control/reset_database
 4. Backend service resets DB, returns {rows_deleted: 1250, duration_ms: 350}
@@ -88,7 +88,7 @@ last_verified_date: 2026-03-05
    - Error handling: descriptive error codes, rollback support
 
 2. **Implement Control Router in MCP**
-   - Route `interact({action: "backend_control", ...})` to service discovery + gRPC/HTTP client
+   - Route `interact({what: "backend_control", ...})` to service discovery + gRPC/HTTP client
    - Validate `shadow_mode` and `dry_run` flags
    - Add retry logic with exponential backoff
 

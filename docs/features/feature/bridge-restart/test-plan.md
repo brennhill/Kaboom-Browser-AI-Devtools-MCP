@@ -19,12 +19,12 @@ last_verified_date: 2026-03-05
 
 - **Test:** Happy path restart with responsive daemon
   - **Given:** Daemon is running and healthy on port
-  - **When:** LLM calls `configure(action="restart")`
+  - **When:** LLM calls `configure(what="restart")`
   - **Then:** Daemon PID changes, response has `restarted: true, status: ok`
 
 - **Test:** Restart with hung (frozen) daemon
   - **Given:** Daemon is frozen via SIGSTOP (simulating deadlock)
-  - **When:** LLM calls `configure(action="restart")`
+  - **When:** LLM calls `configure(what="restart")`
   - **Then:** Frozen daemon is killed, fresh daemon spawns, PID changes
 
 - **Test:** Daemon-side restart when responsive
@@ -82,5 +82,5 @@ last_verified_date: 2026-03-05
 
 ### Manual Tests
 
-1. **Happy path:** Start kaboom, call `configure(action="restart")`, verify daemon PID changes
+1. **Happy path:** Start kaboom, call `configure(what="restart")`, verify daemon PID changes
 2. **Hung daemon:** `kill -STOP <daemon_pid>`, call restart, verify recovery with new PID

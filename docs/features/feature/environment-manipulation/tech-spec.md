@@ -83,7 +83,7 @@ last_verified_date: 2026-03-05
 
 ### Data Flow: Modify API Endpoint
 ```
-1. AI calls: interact({action: "environment_modify", service: "frontend", changes: {API_ENDPOINT: "..."}})
+1. AI calls: interact({what: "environment_modify", service: "frontend", changes: {API_ENDPOINT: "..."}})
 2. Kaboom creates BEFORE snapshot: env-snap-20260131-101500
 3. Kaboom reads current .env file
 4. Kaboom updates API_ENDPOINT in memory
@@ -93,7 +93,7 @@ last_verified_date: 2026-03-05
 8. Kaboom restarts service: npm run dev
 9. Kaboom polls health check (/health endpoint)
 10. After restart confirmed: create AFTER snapshot
-11. AI calls: interact({action: "navigate", url: "..."})
+11. AI calls: interact({what: "navigate", url: "..."})
 12. Frontend uses new API_ENDPOINT from updated .env
 ```
 

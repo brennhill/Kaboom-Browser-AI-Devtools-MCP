@@ -40,7 +40,7 @@ bash: npx playwright test tests/checkout.spec.js --headed
 The `--headed` flag ensures the test runs in a visible browser window that the Kaboom extension can track.
 
 #### Strategy B: Agent navigates manually and simulates the test flow
-If test runner integration is difficult, the agent reads the test source code, navigates to the tested URL via `interact({action: "navigate"})`, and executes the test steps manually via `interact({action: "execute_js"})`. Kaboom captures telemetry as the agent drives the browser.
+If test runner integration is difficult, the agent reads the test source code, navigates to the tested URL via `interact({what: "navigate"})`, and executes the test steps manually via `interact({what: "execute_js"})`. Kaboom captures telemetry as the agent drives the browser.
 
 During this phase, Kaboom passively captures: console errors, network requests/responses, DOM state snapshots, WebSocket events, performance timing.
 
@@ -52,7 +52,7 @@ observe({what: "errors"})
 observe({what: "network_waterfall"})
 observe({what: "network_bodies", url_filter: "/api/..."})
 analyze({what: "dom", selector: ".submit-btn"})
-configure({action: "validate_api", operation: "analyze"})
+configure({what: "validate_api", operation: "analyze"})
 observe({what: "error_clusters"})
 observe({what: "changes"})
 ```
@@ -67,7 +67,7 @@ The agent correlates the test's expected behavior with observed browser state to
 - Decision: The element was renamed or restructured, not removed. Update the selector.
 
 #### Category 2: API Contract Drift
-- Diagnostic signals: Test assertions on response body fields fail. `observe({what: "network_bodies"})` shows actual response has different field names or structure. `configure({action: "validate_api"})` reports `shape_change`, `type_change`, or `new_field` violations. Inferred API schema differs from test's expectations.
+- Diagnostic signals: Test assertions on response body fields fail. `observe({what: "network_bodies"})` shows actual response has different field names or structure. `configure({what: "validate_api"})` reports `shape_change`, `type_change`, or `new_field` violations. Inferred API schema differs from test's expectations.
 - Decision: API contract changed. Update test assertions and mocks to match new shape.
 
 #### Category 3: Timing Fragility
@@ -89,31 +89,31 @@ Based on diagnosis category, the agent uses `generate` tool to produce corrected
 
 **For selector drift**:
 ```
-generate({format: "test", include_fixtures: false})
+generate({what: "test", include_fixtures: false})
 ```
 Agent provides context: "Update selector from `.submit-btn` to `.btn-submit` based on observed DOM."
 
 **For API contract drift**:
 ```
-generate({format: "test", include_fixtures: true})
+generate({what: "test", include_fixtures: true})
 ```
 Agent provides context: "Update assertions to expect `user_name` instead of `userName`. Update mock fixture to return new shape."
 
 **For timing fragility**:
 ```
-generate({format: "test", include_fixtures: false})
+generate({what: "test", include_fixtures: false})
 ```
 Agent provides context: "Add `await page.waitForResponse('/api/data')` before assertion."
 
 **For mock staleness**:
 ```
-generate({format: "test", include_fixtures: true})
+generate({what: "test", include_fixtures: true})
 ```
 Agent provides context: "Update mock fixture to match observed API response shape from `network_bodies`."
 
 **For true regression**:
 ```
-generate({format: "reproduction"})
+generate({what: "reproduction"})
 ```
 Agent generates reproduction script instead of test fix.
 
@@ -137,7 +137,7 @@ If the test passes on first run, run again. If it passes both times, consider it
 The agent provides a structured explanation:
 
 ```
-generate({format: "pr_summary"})
+generate({what: "pr_summary"})
 ```
 
 Output includes: test file path and test name, root cause category (selector drift, API contract drift, timing fragility, mock staleness, or true regression), what changed (specific field names, selector patterns, wait conditions), why the fix is correct (based on observed browser state), and whether fix was verified (test now passes).
@@ -153,7 +153,7 @@ Test fails (test runner output or human notification)
 Agent re-runs test with Kaboom capture
   -> bash: npx playwright test --headed
   OR
-  -> interact({action: "navigate"}) + execute_js
+  -> interact({what: "navigate"}) + execute_js
   |
   v
 Kaboom captures telemetry
@@ -164,7 +164,7 @@ Agent observes browser state
   -> observe({what: "errors"})
   -> observe({what: "network_bodies"})
   -> analyze({what: "dom"})
-  -> configure({action: "validate_api"})
+  -> configure({what: "validate_api"})
   -> observe({what: "error_clusters"})
   |
   v
@@ -173,9 +173,9 @@ Agent diagnoses root cause
   |
   v
 Agent generates fix (or reproduction if regression)
-  -> generate({format: "test", include_fixtures: true/false})
+  -> generate({what: "test", include_fixtures: true/false})
   OR
-  -> generate({format: "reproduction"})
+  -> generate({what: "reproduction"})
   |
   v
 Agent verifies fix
@@ -185,7 +185,7 @@ Agent verifies fix
   |
   v
 Agent reports outcome
-  -> generate({format: "pr_summary"})
+  -> generate({what: "pr_summary"})
 ```
 
 ## Implementation Strategy
@@ -208,11 +208,11 @@ Trade-off: No server overhead, but requires agent reasoning to classify failures
 
 - **Multiple root causes in single test**: Agent addresses root causes in dependency order (API contract first, then selectors, then timing). Generates single fix addressing all causes.
 
-- **Test framework not recognized**: Agent observes browser state but generates generic JavaScript fixes rather than framework-specific ones. `generate({format: "test"})` handles framework detection.
+- **Test framework not recognized**: Agent observes browser state but generates generic JavaScript fixes rather than framework-specific ones. `generate({what: "test"})` handles framework detection.
 
 - **Extension disconnected during test run**: Observation data partial or missing. Agent falls back to test runner output only and reports Kaboom capture was incomplete.
 
-- **Buffer overflow during long test suite**: Kaboom's ring buffers evict oldest entries. Agent clears buffers between test runs using `configure({action: "clear"})` to ensure relevant data available.
+- **Buffer overflow during long test suite**: Kaboom's ring buffers evict oldest entries. Agent clears buffers between test runs using `configure({what: "clear"})` to ensure relevant data available.
 
 - **Test was already flaky before agent's change**: Agent runs test at least twice after fixing. If passes intermittently, classifies as flake and reports rather than claiming fix.
 
@@ -245,7 +245,7 @@ Trade-off: No server overhead, but requires agent reasoning to classify failures
 
 ### Risk 4: Test framework syntax errors
 - **Description**: Generated test code has syntax errors or uses wrong framework APIs.
-- **Mitigation**: `generate({format: "test"})` produces valid framework-specific code based on detected framework. Agent verifies fix by running test — syntax errors caught immediately.
+- **Mitigation**: `generate({what: "test"})` produces valid framework-specific code based on detected framework. Agent verifies fix by running test — syntax errors caught immediately.
 
 ### Risk 5: Sensitive data in test fixtures
 - **Description**: Agent generates fixtures containing real user data from observed API responses.

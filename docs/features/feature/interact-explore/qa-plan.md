@@ -42,8 +42,8 @@ last_verified_date: 2026-03-05
 - Screenshot alias behavior.
 
 ## Manual UAT
-1. `interact(action:"navigate", url:"https://example.com")`
-2. `interact(action:"click", selector:"text=Submit")`
-3. `interact(action:"execute_js", script:"document.title")`
-4. `interact(action:"upload", selector:"input[type=file]", file_path:"<abs path>")`
-5. `interact(action:"draw_mode_start")` then retrieve annotations with analyze.
+1. `interact(what:"navigate", url:"https://example.com")`
+2. `interact(what:"click", selector:"text=Submit")`
+3. `interact(what:"execute_js", script:"document.title")`
+4. `interact(what:"upload", selector:"input[type=file]", file_path:"<abs path>")`
+5. `interact(what:"draw_mode_start")` then retrieve annotations with analyze.

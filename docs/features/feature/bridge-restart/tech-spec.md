@@ -16,12 +16,12 @@ Kaboom uses a **two-process model**:
 - **Bridge** (foreground): stateless stdio-to-HTTP proxy, reads JSON-RPC from stdin, forwards `tools/call` to daemon via HTTP
 - **Daemon** (background): persistent HTTP server on `127.0.0.1:<port>`, holds all state
 
-The bridge already handles certain methods without the daemon ("fast path"): `initialize`, `tools/list`, `ping`, `resources/*`. This feature extends the fast path to intercept `configure(action="restart")` before the daemon check.
+The bridge already handles certain methods without the daemon ("fast path"): `initialize`, `tools/list`, `ping`, `resources/*`. This feature extends the fast path to intercept `configure(what="restart")` before the daemon check.
 
 ## Flow
 
 ```
-LLM calls configure(action="restart")
+LLM calls configure(what="restart")
   → bridge receives tools/call JSON-RPC on stdin
   → bridgeStdioToHTTPFast() detects configure+restart via handleBridgeRestart()
   → forceKillOnPort(): SIGCONT any frozen processes on the port
@@ -65,7 +65,7 @@ In `bridgeStdioToHTTPFast()`, the restart intercept sits **between** `handleFast
 // FAST PATH: initialize, tools/list, etc.
 if handleFastPath(req, toolsList) { ... }
 
-// RESTART FAST PATH: configure(action="restart")
+// RESTART FAST PATH: configure(what="restart")
 if handleBridgeRestart(req, state, port) { ... }
 
 // SLOW PATH: check daemon, forward to HTTP

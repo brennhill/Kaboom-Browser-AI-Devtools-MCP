@@ -48,7 +48,7 @@ Add `drag_drop` action to the `interact` tool. Agent specifies source element (w
 ## User Workflow
 
 1. Agent observes DOM to identify draggable and drop target elements
-2. Agent calls `interact({action: "drag_drop", source: "#card-1", target: "#column-2"})`
+2. Agent calls `interact({what: "drag_drop", source: "#card-1", target: "#column-2"})`
 3. Extension simulates drag sequence, triggers all required events
 4. App's drag-drop handlers execute, element moves
 5. Agent observes DOM changes or network requests to verify operation

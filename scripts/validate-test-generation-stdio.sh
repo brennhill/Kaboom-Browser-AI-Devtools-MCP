@@ -40,12 +40,12 @@ trap 'rm -f $COMMANDS_FILE' EXIT
 
 # Build the command sequence
 cat > "$COMMANDS_FILE" << 'EOF'
-{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"interact","arguments":{"action":"navigate","url":"http://localhost:3000"}}}
-{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"interact","arguments":{"action":"click","selector":"button:has-text('Chat')","description":"Open chat widget"}}}
-{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"observe","arguments":{"mode":"websocket"}}}
-{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"observe","arguments":{"mode":"errors"}}}
-{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"generate","arguments":{"format":"test_from_context","context":"error","framework":"playwright","base_url":"http://localhost:3000"}}}
-{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"generate","arguments":{"format":"test_from_context","context":"interaction","framework":"playwright","base_url":"http://localhost:3000"}}}
+{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"interact","arguments":{"what":"navigate","url":"http://localhost:3000"}}}
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"interact","arguments":{"what":"click","selector":"button:has-text('Chat')","description":"Open chat widget"}}}
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"observe","arguments":{"what":"websocket"}}}
+{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"observe","arguments":{"what":"errors"}}}
+{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"generate","arguments":{"what":"test_from_context","context":"error","framework":"playwright","base_url":"http://localhost:3000"}}}
+{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"generate","arguments":{"what":"test_from_context","context":"interaction","framework":"playwright","base_url":"http://localhost:3000"}}}
 EOF
 
 echo ""

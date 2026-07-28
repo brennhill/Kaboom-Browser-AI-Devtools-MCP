@@ -47,11 +47,11 @@ Add `emulation` mode to the `configure` tool. Agent can apply network profiles (
 
 ## User Workflow
 
-1. Agent applies network throttling: `configure({action: "emulation", network: "Slow 3G"})`
+1. Agent applies network throttling: `configure({what: "emulation", network: "Slow 3G"})`
 2. Agent navigates to page or refreshes
 3. Agent observes performance: `observe({what: "vitals"})` shows increased load times
 4. Agent tests workflow under constraint (e.g., form submission)
-5. Agent resets: `configure({action: "emulation", network: "reset"})`
+5. Agent resets: `configure({what: "emulation", network: "reset"})`
 
 ## Examples
 

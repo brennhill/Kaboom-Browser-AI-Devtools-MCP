@@ -73,7 +73,7 @@ begin_test "27.1" "Subtitle overlay appears" \
     "interact(subtitle) with text — verify text bar visible at bottom of page" \
     "Visual: subtitle bar renders with correct text."
 run_test_27_1() {
-    RESPONSE=$(call_tool "interact" '{"action":"subtitle","text":"Hello smoke test — cat-27"}')
+    RESPONSE=$(call_tool "interact" '{"what":"subtitle","text":"Hello smoke test — cat-27"}')
     if check_is_error "$RESPONSE"; then
         local text
         text=$(extract_content_text "$RESPONSE")
@@ -94,7 +94,7 @@ begin_test "27.2" "Subtitle overlay clears on empty text" \
     "interact(subtitle) with empty text — verify bar disappears" \
     "Visual: subtitle bar removed from page."
 run_test_27_2() {
-    RESPONSE=$(call_tool "interact" '{"action":"subtitle","text":""}')
+    RESPONSE=$(call_tool "interact" '{"what":"subtitle","text":""}')
     if check_is_error "$RESPONSE"; then
         local text
         text=$(extract_content_text "$RESPONSE")
@@ -116,9 +116,9 @@ begin_test "27.3" "Subtitle overlay updates on second call" \
     "Set text twice — verify second text replaces the first" \
     "Visual: subtitle text updates in-place."
 run_test_27_3() {
-    call_tool "interact" '{"action":"subtitle","text":"First message"}' >/dev/null 2>&1
+    call_tool "interact" '{"what":"subtitle","text":"First message"}' >/dev/null 2>&1
     sleep 1
-    RESPONSE=$(call_tool "interact" '{"action":"subtitle","text":"Updated: second message"}')
+    RESPONSE=$(call_tool "interact" '{"what":"subtitle","text":"Updated: second message"}')
     if check_is_error "$RESPONSE"; then
         local text
         text=$(extract_content_text "$RESPONSE")
@@ -133,7 +133,7 @@ run_test_27_3() {
     fi
 
     # Clean up
-    call_tool "interact" '{"action":"subtitle","text":""}' >/dev/null 2>&1
+    call_tool "interact" '{"what":"subtitle","text":""}' >/dev/null 2>&1
 }
 run_test_27_3
 
@@ -146,7 +146,7 @@ begin_test "27.4" "Draw mode overlay activates" \
     "interact(draw_mode_start) — verify annotation UI visible on page" \
     "Visual: draw mode overlay with numbered labels and bounding boxes."
 run_test_27_4() {
-    RESPONSE=$(call_tool "interact" '{"action":"draw_mode_start"}')
+    RESPONSE=$(call_tool "interact" '{"what":"draw_mode_start"}')
     local text
     text=$(extract_content_text "$RESPONSE")
 
@@ -208,7 +208,7 @@ begin_test "27.6" "Recording start shows watermark" \
     "interact(screen_recording_start) — verify flame watermark visible in bottom-right" \
     "Visual: recording indicator overlay renders."
 run_test_27_6() {
-    RESPONSE=$(call_tool "interact" '{"action":"screen_recording_start","name":"smoke-test-27"}')
+    RESPONSE=$(call_tool "interact" '{"what":"screen_recording_start","name":"smoke-test-27"}')
     local text
     text=$(extract_content_text "$RESPONSE")
 
@@ -235,7 +235,7 @@ begin_test "27.7" "Recording stop removes watermark" \
     "interact(screen_recording_stop) — verify watermark disappears" \
     "Visual: recording indicator removed after stop."
 run_test_27_7() {
-    RESPONSE=$(call_tool "interact" '{"action":"screen_recording_stop"}')
+    RESPONSE=$(call_tool "interact" '{"what":"screen_recording_stop"}')
     local text
     text=$(extract_content_text "$RESPONSE")
 
@@ -266,7 +266,7 @@ begin_test "27.8" "Action toast appears on interact action" \
     "Visual: transient action feedback toast renders."
 run_test_27_8() {
     # First check we can reach the page
-    RESPONSE=$(call_tool "interact" '{"action":"execute_js","script":"document.title"}')
+    RESPONSE=$(call_tool "interact" '{"what":"execute_js","script":"document.title"}')
     if check_is_error "$RESPONSE"; then
         skip "Cannot reach content script — skipping toast test."
         return
@@ -276,7 +276,7 @@ run_test_27_8() {
     echo "  >>> Watch the TOP of the page for a brief toast notification..."
     sleep 1
 
-    RESPONSE=$(call_tool "interact" '{"action":"click","selector":"a","reason":"smoke test click"}')
+    RESPONSE=$(call_tool "interact" '{"what":"click","selector":"a","reason":"smoke test click"}')
 
     if human_verify "Did a brief TOAST NOTIFICATION appear at the top of the page? (blue/green bar with action label)"; then
         pass "Action toast appeared on click."
@@ -482,11 +482,11 @@ begin_test "27.18" "Dismiss loop detection" \
     "Safety: prevents infinite dismiss loops when overlays reappear immediately."
 run_test_27_18() {
     # First dismiss — should succeed or report no overlay
-    RESPONSE=$(call_tool "interact" '{"action":"dismiss_top_overlay"}')
+    RESPONSE=$(call_tool "interact" '{"what":"dismiss_top_overlay"}')
     sleep 2
 
     # Second dismiss within 30s — should detect loop
-    RESPONSE=$(call_tool "interact" '{"action":"dismiss_top_overlay"}')
+    RESPONSE=$(call_tool "interact" '{"what":"dismiss_top_overlay"}')
     local text
     text=$(extract_content_text "$RESPONSE")
 

@@ -20,16 +20,16 @@ begin_test "22.1" "Full workflow: Record → Generate Test → Heal Broken → V
     "End-to-end feature integration"
 
 run_test_22_1() {
-    call_tool "configure" '{"action":"clear","buffer":"all"}' >/dev/null
+    call_tool "configure" '{"what":"clear","buffer":"all"}' >/dev/null
 
     # 1. Record
-    call_tool "interact" '{"action":"screen_recording_start","name":"workflow-test"}' >/dev/null
+    call_tool "interact" '{"what":"screen_recording_start","name":"workflow-test"}' >/dev/null
     sleep 0.1
-    call_tool "interact" '{"action":"navigate","url":"https://example.com"}' >/dev/null 2>&1
+    call_tool "interact" '{"what":"navigate","url":"https://example.com"}' >/dev/null 2>&1
     sleep 0.1
-    call_tool "interact" '{"action":"click","selector":"#old-button"}' >/dev/null 2>&1
+    call_tool "interact" '{"what":"click","selector":"#old-button"}' >/dev/null 2>&1
     sleep 0.1
-    response=$(call_tool "interact" '{"action":"screen_recording_stop"}')
+    response=$(call_tool "interact" '{"what":"screen_recording_stop"}')
 
     if ! check_not_error "$response"; then
         fail "Recording failed in workflow"
@@ -40,7 +40,7 @@ run_test_22_1() {
 
     # 2. Generate test (would normally be from recorded actions)
     sleep 0.2
-    response=$(call_tool "generate" '{"format":"test","name":"generated-test"}')
+    response=$(call_tool "generate" '{"what":"test","name":"generated-test"}')
 
     if ! check_not_error "$response"; then
         pass "Test generation pending (workflow continues)"
@@ -49,7 +49,7 @@ run_test_22_1() {
     fi
 
     # 3. Healing (would fix broken selectors)
-    response=$(call_tool "generate" '{"format":"reproduction","heal":true}')
+    response=$(call_tool "generate" '{"what":"reproduction","heal":true}')
 
     if ! check_not_error "$response"; then
         pass "Healing feature pending (workflow continues)"
@@ -68,7 +68,7 @@ begin_test "22.2" "Noise filtering active while recording user actions" \
     "Both features must work together without interference"
 
 run_test_22_2() {
-    call_tool "configure" '{"action":"clear","buffer":"all"}' >/dev/null
+    call_tool "configure" '{"what":"clear","buffer":"all"}' >/dev/null
 
     # Add noise rule
     response=$(call_tool "configure" '{
@@ -89,11 +89,11 @@ run_test_22_2() {
     sleep 0.1
 
     # Start recording with noise rules active
-    call_tool "interact" '{"action":"screen_recording_start","name":"with-filtering"}' >/dev/null
+    call_tool "interact" '{"what":"screen_recording_start","name":"with-filtering"}' >/dev/null
     sleep 0.1
-    call_tool "interact" '{"action":"navigate","url":"https://example.com"}' >/dev/null 2>&1
+    call_tool "interact" '{"what":"navigate","url":"https://example.com"}' >/dev/null 2>&1
     sleep 0.1
-    response=$(call_tool "interact" '{"action":"screen_recording_stop"}')
+    response=$(call_tool "interact" '{"what":"screen_recording_stop"}')
 
     if ! check_not_error "$response"; then
         fail "Recording with noise rules active failed"
@@ -167,10 +167,10 @@ begin_test "22.5" "Save state before test generation, restore if needed" \
     "State management enables recovery and debugging"
 
 run_test_22_5() {
-    call_tool "configure" '{"action":"clear","buffer":"all"}' >/dev/null
+    call_tool "configure" '{"what":"clear","buffer":"all"}' >/dev/null
 
     # Save state
-    response=$(call_tool "interact" '{"action":"save_state","snapshot_name":"pre-generation"}')
+    response=$(call_tool "interact" '{"what":"save_state","snapshot_name":"pre-generation"}')
 
     if ! check_not_error "$response"; then
         pass "State save pending (feature TBD)"
@@ -181,12 +181,12 @@ run_test_22_5() {
     sleep 0.1
 
     # Perform operation (generate)
-    call_tool "generate" '{"format":"test"}' >/dev/null 2>&1
+    call_tool "generate" '{"what":"test"}' >/dev/null 2>&1
 
     sleep 0.1
 
     # Could restore if needed
-    response=$(call_tool "interact" '{"action":"load_state","snapshot_name":"pre-generation"}')
+    response=$(call_tool "interact" '{"what":"load_state","snapshot_name":"pre-generation"}')
 
     if ! check_not_error "$response"; then
         pass "State restore pending (feature TBD)"

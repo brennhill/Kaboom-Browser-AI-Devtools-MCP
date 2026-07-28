@@ -75,11 +75,11 @@ run_test_13_4() {
     fi
 
     # Navigate to clean page first
-    interact_and_wait "navigate" '{"action":"navigate","url":"https://example.com","reason":"Clean page for draw mode"}' 20
+    interact_and_wait "navigate" '{"what":"navigate","url":"https://example.com","reason":"Clean page for draw mode"}' 20
     sleep 2
 
     local response
-    response=$(call_tool "interact" '{"action":"draw_mode_start"}')
+    response=$(call_tool "interact" '{"what":"draw_mode_start"}')
     local content_text
     content_text=$(extract_content_text "$response")
 
@@ -215,7 +215,7 @@ run_test_13_7() {
     fi
 
     # Start draw mode
-    call_tool "interact" '{"action":"draw_mode_start"}' >/dev/null 2>&1
+    call_tool "interact" '{"what":"draw_mode_start"}' >/dev/null 2>&1
     sleep 1
 
     local response
@@ -255,7 +255,7 @@ run_test_13_8() {
 
     # First activation — wait for the extension to confirm it's active
     local first_resp
-    first_resp=$(call_tool "interact" '{"action":"draw_mode_start"}')
+    first_resp=$(call_tool "interact" '{"what":"draw_mode_start"}')
     local first_text
     first_text=$(extract_content_text "$first_resp")
     local first_corr
@@ -280,7 +280,7 @@ run_test_13_8() {
     # Second activation — the server returns immediately (fire-and-forget),
     # so extract the correlation_id and poll the extension's actual response.
     local second_resp
-    second_resp=$(call_tool "interact" '{"action":"draw_mode_start"}')
+    second_resp=$(call_tool "interact" '{"what":"draw_mode_start"}')
     local second_text
     second_text=$(extract_content_text "$second_resp")
     local second_corr
@@ -347,7 +347,7 @@ run_test_13_9() {
     local session_name="smoke-session-$$"
 
     # Page 1
-    interact_and_wait "navigate" '{"action":"navigate","url":"https://example.com","reason":"Session page 1"}' 20
+    interact_and_wait "navigate" '{"what":"navigate","url":"https://example.com","reason":"Session page 1"}' 20
     sleep 2
     call_tool "interact" "{\"action\":\"draw_mode_start\",\"annot_session\":\"$session_name\"}" >/dev/null 2>&1
     echo "  >>> Draw 1 annotation on this page, then press ESC <<<"
@@ -355,7 +355,7 @@ run_test_13_9() {
     if [ -t 0 ]; then read -r; fi
 
     # Page 2
-    interact_and_wait "navigate" '{"action":"navigate","url":"https://www.iana.org/domains/reserved","reason":"Session page 2"}' 20
+    interact_and_wait "navigate" '{"what":"navigate","url":"https://www.iana.org/domains/reserved","reason":"Session page 2"}' 20
     sleep 2
     call_tool "interact" "{\"action\":\"draw_mode_start\",\"annot_session\":\"$session_name\"}" >/dev/null 2>&1
     echo "  >>> Draw 1 annotation on this page, then press ESC <<<"

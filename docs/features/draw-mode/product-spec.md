@@ -32,7 +32,7 @@ Today, when a developer wants an LLM to change a specific part of a UI:
 **Draw Mode** lets users visually annotate web pages with rectangles and text feedback. Annotations are readable by LLMs via MCP and exportable as annotated PNG screenshots.
 
 ### The workflow:
-1. **LLM activates** draw mode via `interact({action: "draw_mode_start"})` and asks the user to annotate what they want changed
+1. **LLM activates** draw mode via `interact({what: "draw_mode_start"})` and asks the user to annotate what they want changed
 2. **User draws** rectangles around elements and types feedback (e.g., "this button should be darker", "add padding here")
 3. **User presses ESC** to finish annotating
 4. **LLM reads** all annotations via `analyze({what: "annotations"})` -- gets element summaries, user text, and an annotated screenshot
@@ -56,7 +56,7 @@ Today, when a developer wants an LLM to change a specific part of a UI:
 Developer: "Make the hero section look better"
 LLM: "I'll activate draw mode -- please draw rectangles around the
       elements you want changed and type what you'd like."
-LLM: [calls interact({action: "draw_mode_start"})]
+LLM: [calls interact({what: "draw_mode_start"})]
 User: [draws rectangle around heading] "make this bigger and bolder"
 User: [draws rectangle around button] "change color to dark blue"
 User: [presses ESC]
@@ -102,7 +102,7 @@ LLM: "I have the exact selector and current styles. Updating the CSS now."
 |--------|-------|---------|
 | Keyboard shortcut | User | Cmd+Shift+D (macOS) / Ctrl+Shift+D (Windows/Linux) |
 | Popup toggle | User | Click "Draw Mode" toggle in extension popup |
-| MCP interact tool | LLM | `interact({action: "draw_mode_start"})` |
+| MCP interact tool | LLM | `interact({what: "draw_mode_start"})` |
 
 ### Deactivation Methods
 
@@ -145,7 +145,7 @@ LLM: "I have the exact selector and current styles. Updating the CSS now."
 
 ### R4: MCP Integration
 
-- [ ] `interact({action: "draw_mode_start"})` activates draw mode
+- [ ] `interact({what: "draw_mode_start"})` activates draw mode
 - [ ] `analyze({what: "annotations"})` returns all annotations with lightweight element summaries
 - [ ] `analyze({what: "annotations", wait: true})` blocks until user exits draw mode (5-minute timeout)
 - [ ] `analyze({what: "annotation_detail", correlation_id: "..."})` returns full computed styles and DOM detail

@@ -55,7 +55,7 @@ last_verified_date: 2026-03-05
    - [ ] Click button to trigger alert
    - [ ] Call `observe({what: "dialogs"})`
    - [ ] Verify dialog captured with type="alert", message="Test alert"
-   - [ ] Call `interact({action: "handle_dialog", response: "accept"})`
+   - [ ] Call `interact({what: "handle_dialog", response: "accept"})`
    - [ ] Verify alert dismissed, workflow continues
 3. Expected Result: Alert is captured and dismissed programmatically
 4. Verification: No alert visible in browser after handling
@@ -96,7 +96,7 @@ last_verified_date: 2026-03-05
 1. Setup:
    - Test page with: `window.addEventListener('beforeunload', (e) => { e.preventDefault(); e.returnValue = ''; });`
 2. Steps:
-   - [ ] Navigate away from page (e.g., `interact({action: "navigate", url: "https://example.com"})`)
+   - [ ] Navigate away from page (e.g., `interact({what: "navigate", url: "https://example.com"})`)
    - [ ] Observe beforeunload dialog captured
    - [ ] Handle with `{response: "accept"}` to allow navigation
    - [ ] Verify navigation completes

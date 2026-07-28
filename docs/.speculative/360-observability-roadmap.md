@@ -45,7 +45,7 @@ One call replaces 3-4 separate observe() calls. Go-side only, no extension chang
 **Navigation actions** (refresh, navigate) — auto-diff perf vs previous load:
 
 ```json
-interact({ action: "refresh" })
+interact({ what: "refresh" })
 // → result includes:
 {
   "perf_diff": {
@@ -64,14 +64,14 @@ interact({ action: "refresh" })
 **DOM actions** — always-on compact feedback (~30 tokens):
 
 ```json
-interact({ action: "click", selector: "text=Submit" })
+interact({ what: "click", selector: "text=Submit" })
 // → { "timing_ms": 85, "dom_summary": "2 added, 1 attr changed" }
 ```
 
 **DOM actions with `analyze: true`** — full interaction profiling:
 
 ```json
-interact({ action: "click", selector: "text=Load More", analyze: true })
+interact({ what: "click", selector: "text=Load More", analyze: true })
 // → timing breakdown, network requests, long tasks, layout shifts, detailed DOM changes
 // → analysis: "340ms total: 180ms network (/api/items), 120ms JS long task, 40ms render."
 ```
@@ -103,7 +103,7 @@ interact({ action: "click", selector: "text=Load More", analyze: true })
 
 **Solution:** After mutating DOM actions (click, type, select, check), optionally capture a screenshot and include a reference in the result.
 
-**API:** `interact({action: 'click', selector: 'text=Submit', screenshot: true})` — result includes `screenshot_url` or base64 data that the AI can view.
+**API:** `interact({what: 'click', selector: 'text=Submit', screenshot: true})` — result includes `screenshot_url` or base64 data that the AI can view.
 
 **Effort:** ~0.5 weeks. Wire `chrome.tabs.captureVisibleTab()` into the DOM action result path. Add `screenshot` boolean param to schema. Return as base64 data URL in the async result.
 
@@ -111,23 +111,23 @@ interact({ action: "click", selector: "text=Load More", analyze: true })
 
 ### 5. Action Export (recorded actions → repeatable UAT scripts)
 
-**Problem:** The AI (or human) performs a flow — login, add to cart, checkout — and it works. But there's no way to replay that flow later to verify it still works. Actions are captured in a ring buffer (50 entries) and then lost. `generate({format: 'test'})` is a stub. The existing `test_from_context` is hidden and only works for error reproduction.
+**Problem:** The AI (or human) performs a flow — login, add to cart, checkout — and it works. But there's no way to replay that flow later to verify it still works. Actions are captured in a ring buffer (50 entries) and then lost. `generate({what: 'test'})` is a stub. The existing `test_from_context` is hidden and only works for error reproduction.
 
 **Solution:** Export captured actions as either:
 1. **Playwright test scripts** — portable, runs in CI, standard tooling
 2. **Kaboom narratives** — JSON action sequences the AI replays via DOM primitives
 
-The key insight: DOM primitives (`interact({action: 'click', selector: 'text=Submit'})`) already solve browser automation. A Kaboom narrative is just a JSON array of interact calls the AI executes step-by-step, checking state between each step.
+The key insight: DOM primitives (`interact({what: 'click', selector: 'text=Submit'})`) already solve browser automation. A Kaboom narrative is just a JSON array of interact calls the AI executes step-by-step, checking state between each step.
 
 **Playwright export** — wire the existing `generatePlaywrightScript()` in testgen.go to `format: 'test'`:
 ```
-generate({format: 'test', test_name: 'checkout-flow'})
+generate({what: 'test', test_name: 'checkout-flow'})
 → returns full Playwright test using captured actions + multi-strategy selectors
 ```
 
 **Kaboom narrative export** — new format that produces a replayable JSON sequence:
 ```
-generate({format: 'narrative', name: 'checkout-flow'})
+generate({what: 'narrative', name: 'checkout-flow'})
 ```
 Returns:
 ```json
@@ -238,10 +238,10 @@ Built on existing `captureVisibleTab()` infrastructure. Same rate limiting (1/se
 
 **Problem:** AI testing is unreliable because it depends on live APIs. Rate limits, slow responses, intermittent failures all cause false negatives. Testing error states (500s, timeouts, malformed JSON) requires actual server failures.
 
-**Solution:** `configure({action: 'mock', url: '/api/users', method: 'GET', response: {status: 200, body: [...]}})`. The extension intercepts matching fetch/XHR requests and returns the mock instead.
+**Solution:** `configure({what: 'mock', url: '/api/users', method: 'GET', response: {status: 200, body: [...]}})`. The extension intercepts matching fetch/XHR requests and returns the mock instead.
 
 ```json
-configure({action: "mock", url: "/api/checkout", method: "POST", response: {
+configure({what: "mock", url: "/api/checkout", method: "POST", response: {
   status: 500,
   body: {"error": "payment_failed"},
   delay_ms: 2000
@@ -249,7 +249,7 @@ configure({action: "mock", url: "/api/checkout", method: "POST", response: {
 // Now the AI can test error handling without a real backend failure
 ```
 
-**Key design:** Mock rules stored in extension memory (not persisted). `configure({action: 'mock_clear'})` removes all mocks. Mocks are per-session. Uses service worker fetch event interception or declarativeNetRequest.
+**Key design:** Mock rules stored in extension memory (not persisted). `configure({what: 'mock_clear'})` removes all mocks. Mocks are per-session. Uses service worker fetch event interception or declarativeNetRequest.
 
 **Effort:** ~2 weeks. Extension-side fetch interception, Go-side mock rule management, cleanup lifecycle.
 
@@ -282,9 +282,9 @@ observe({what: "assertions", checks: [
 **Problem:** The AI performs a multi-step flow (login → navigate → fill form → submit) and it works. But there's no way to deterministically replay that flow later. Actions are captured but ephemeral. Network responses aren't persisted alongside actions.
 
 **Solution:** Two new operations:
-- `configure({action: 'record_start', name: 'checkout-flow'})` — starts recording actions + network responses
-- `configure({action: 'record_stop'})` — saves recording to `~/.kaboom/recordings/`
-- `configure({action: 'replay', name: 'checkout-flow'})` — replays actions with mocked network responses
+- `configure({what: 'record_start', name: 'checkout-flow'})` — starts recording actions + network responses
+- `configure({what: 'record_stop'})` — saves recording to `~/.kaboom/recordings/`
+- `configure({what: 'replay', name: 'checkout-flow'})` — replays actions with mocked network responses
 
 **Key design:** Recording bundles actions + network response snapshots. Replay uses network mocking (feature 8) to inject saved responses, then executes actions via DOM primitives. The AI monitors each step and can self-heal if selectors changed.
 
@@ -317,7 +317,7 @@ observe({what: "assertions", checks: [
 
 **Solution:** An interactive drawing/annotation overlay that lets the user mark up the live page and attach natural language descriptions. The AI receives both the visual annotations and the text as structured context.
 
-**Activation:** `interact({action: 'annotate'})` — enables drawing mode overlay on the active tab. User draws, types notes, then submits. The AI receives:
+**Activation:** `interact({what: 'annotate'})` — enables drawing mode overlay on the active tab. User draws, types notes, then submits. The AI receives:
 
 ```json
 {
@@ -354,7 +354,7 @@ observe({what: "assertions", checks: [
 - Canvas overlay (not DOM injection) — zero interference with page layout/styles
 - Annotations auto-map to nearest DOM element via `elementFromPoint()` for selector context
 - Screenshot captured with annotations baked in, so the AI sees exactly what the human drew
-- Annotations are ephemeral (not persisted) unless explicitly saved via `configure({action: 'store'})`
+- Annotations are ephemeral (not persisted) unless explicitly saved via `configure({what: 'store'})`
 
 **Effort:** ~2 weeks. Extension-side: canvas overlay, drawing tools, annotation serialization, screenshot compositing. Go-side: new annotate action in interact, annotation data passthrough, screenshot integration.
 

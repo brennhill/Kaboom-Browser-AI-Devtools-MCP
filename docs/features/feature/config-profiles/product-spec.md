@@ -49,7 +49,7 @@ Add configuration profiles as named bundles of settings. Profiles are YAML files
 2. Start server: `kaboom --profile=restricted`
 3. Server loads profile, applies all settings
 4. Agent connects, operates under profile constraints
-5. User can query active profile: `configure({action:"health"})`
+5. User can query active profile: `configure({what:"health"})`
 
 ## Examples
 
@@ -111,7 +111,7 @@ kaboom --profile=restricted --project-expiration-minutes=30
 
 ## Query active profile:
 ```json
-configure({action:"health"})
+configure({what:"health"})
 // Returns:
 {
   "profile": "restricted",

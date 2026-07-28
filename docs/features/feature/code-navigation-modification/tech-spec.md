@@ -80,15 +80,15 @@ last_verified_date: 2026-03-05
 ### Data Flow: Find & Fix Bug
 ```
 1. AI observes: network timeout in PaymentForm
-2. AI calls: interact({action: "code_search", pattern: "PaymentForm|handlePayment"})
+2. AI calls: interact({what: "code_search", pattern: "PaymentForm|handlePayment"})
 3. Searcher scans src/ directory, finds matches
-4. AI calls: interact({action: "code_read", file_path: "src/components/PaymentForm.tsx"})
+4. AI calls: interact({what: "code_read", file_path: "src/components/PaymentForm.tsx"})
 5. Reader returns file content with line numbers
 6. AI analyzes, identifies: missing timeout handling
-7. AI calls: interact({action: "code_modify", operation: "insert_after", line: 35, content: "..."})
+7. AI calls: interact({what: "code_modify", operation: "insert_after", line: 35, content: "..."})
 8. Editor inserts code, stages file via git add
 9. Modification logger records: file, lines_changed, correlation_id, reason
-10. AI calls: interact({action: "run_tests", test_file: "...", correlation_id: "..."})
+10. AI calls: interact({what: "run_tests", test_file: "...", correlation_id: "..."})
 11. Test runner executes, captures results
 12. Results show: 8 passed, 0 failed → fix verified
 13. Developer reviews staged changes, commits or reverts

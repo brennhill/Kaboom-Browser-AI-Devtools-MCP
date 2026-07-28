@@ -541,7 +541,7 @@ run_test_11_17() {
     post_logs '{"entries":[{"type":"console","level":"warn","message":"UAT_CLEAR_BEFORE_11_17","url":"https://uat.example.com","timestamp":"2026-02-06T12:02:00Z"}]}'
 
     # Step 2: Clear all buffers
-    call_tool "configure" '{"action":"clear","buffer":"all"}' >/dev/null 2>&1
+    call_tool "configure" '{"what":"clear","buffer":"all"}' >/dev/null 2>&1
     # Also clear logs (separate buffer)
     curl -s -X DELETE "http://localhost:${PORT}/logs" >/dev/null 2>&1
     sleep 0.3

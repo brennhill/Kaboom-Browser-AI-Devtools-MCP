@@ -81,7 +81,7 @@ The agent needs to know where the preview is deployed. Three mechanisms, in prio
 **Mechanism B: URL convention.** The developer (or team) configures a URL template in Kaboom's persistent memory:
 
 ```
-configure({action: "store", store_action: "save", key: "preview_url_template", value: "https://preview-{pr_number}.myapp.dev"})
+configure({what: "store", store_action: "save", key: "preview_url_template", data: "https://preview-{pr_number}.myapp.dev"})
 ```
 
 The agent retrieves this template and substitutes the PR number.
@@ -101,7 +101,7 @@ Before exploring the preview, the agent needs a "known good" state to compare ag
 The choice between strategies depends on context. If the agent has access to the production URL and the exploration budget allows it, Strategy A is preferred. If a recent baseline exists, Strategy B saves time.
 
 Baseline capture uses:
-- `configure({action: "diff_sessions", session_action: "capture", name: "stable-baseline"})` for session-level diffing
+- `configure({what: "diff_sessions", session_action: "capture", name: "stable-baseline"})` for session-level diffing
 - Behavioral baselines (`save_baseline`) for structured regression detection of network patterns, console errors, WebSocket state, and timing
 
 ### Phase 3: Exploration
@@ -111,7 +111,7 @@ The agent opens the preview URL and exercises the application. This is where Kab
 #### Step 3.1: Open the preview in a new tab.
 
 ```
-interact({action: "new_tab", url: "https://preview-42.myapp.dev"})
+interact({what: "new_tab", url: "https://preview-42.myapp.dev"})
 ```
 
 This isolates the preview exploration from the developer's browsing. The agent notes the returned tab_id and targets all subsequent interactions to this tab.
@@ -129,7 +129,7 @@ The agent performs a bounded set of interactions:
 - Scroll to load lazy content
 - Exercise key user flows identified by the page structure
 
-All interactions use `interact({action: "execute_js", ...})` with scripts that simulate user behavior (clicking elements, typing into inputs, submitting forms).
+All interactions use `interact({what: "execute_js", ...})` with scripts that simulate user behavior (clicking elements, typing into inputs, submitting forms).
 
 While the agent interacts, Kaboom passively captures:
 - Console errors and warnings (log buffer)
@@ -140,7 +140,7 @@ While the agent interacts, Kaboom passively captures:
 #### Step 3.4: Capture telemetry at exploration end.
 
 ```
-configure({action: "diff_sessions", session_action: "capture", name: "preview-pr-42"})
+configure({what: "diff_sessions", session_action: "capture", name: "preview-pr-42"})
 ```
 
 ### Phase 4: Comparison
@@ -149,14 +149,14 @@ The agent compares the preview session against the baseline:
 
 #### Session diff:
 ```
-configure({action: "diff_sessions", session_action: "compare", compare_a: "stable-baseline", compare_b: "preview-pr-42"})
+configure({what: "diff_sessions", session_action: "compare", compare_a: "stable-baseline", compare_b: "preview-pr-42"})
 ```
 
 This returns a structured diff showing new errors, changed network responses, performance deltas, and other differences.
 
 #### Behavioral baseline comparison (if baseline feature is available):
 ```
-configure({action: "compare_baseline", name: "stable-baseline"})
+configure({what: "compare_baseline", name: "stable-baseline"})
 ```
 
 This returns regression categorization: network regressions (status code changes), timing regressions (latency spikes), console regressions (new errors), and WebSocket regressions.
@@ -178,14 +178,14 @@ The agent synthesizes findings into a report. Two output formats:
 
 #### Human-readable PR comment (primary):
 ```
-generate({format: "pr_summary"})
+generate({what: "pr_summary"})
 ```
 
 The existing `pr_summary` mode already produces markdown with error summaries, network issues, and performance data. For PR preview exploration, the agent augments this by prepending context about what was explored and what was compared.
 
 #### Machine-readable SARIF (optional):
 ```
-generate({format: "sarif"})
+generate({what: "sarif"})
 ```
 
 For teams that consume SARIF in GitHub's code scanning, this provides structured findings that appear inline on the PR diff.
@@ -218,10 +218,10 @@ If any bound is reached, the agent stops exploration, captures whatever telemetr
 
 | # | Requirement | Priority |
 |---|-------------|----------|
-| R1 | Agent can navigate to a preview URL using `interact({action: "navigate"})` or `interact({action: "new_tab"})` | must |
+| R1 | Agent can navigate to a preview URL using `interact({what: "navigate"})` or `interact({what: "new_tab"})` | must |
 | R2 | Agent can capture a baseline session snapshot before exploring the preview | must |
 | R3 | Agent can compare preview telemetry against baseline using `diff_sessions` | must |
-| R4 | Agent produces a structured findings report via `generate({format: "pr_summary"})` | must |
+| R4 | Agent produces a structured findings report via `generate({what: "pr_summary"})` | must |
 | R5 | Agent respects exploration bounds (max pages, max actions, timeout) | must |
 | R6 | Agent detects and reports new console errors not present in baseline | must |
 | R7 | Agent detects and reports network regressions (new 4xx/5xx responses) | must |
@@ -259,7 +259,7 @@ Kaboom's per-operation overhead is small. The dominant cost is page load time an
 
 ### Preview URL validation
 
-The agent must only navigate to URLs that are plausible preview environments. Kaboom's `interact({action: "navigate"})` currently accepts any URL with no scheme or domain validation. The agent-side workflow should validate:
+The agent must only navigate to URLs that are plausible preview environments. Kaboom's `interact({what: "navigate"})` currently accepts any URL with no scheme or domain validation. The agent-side workflow should validate:
 
 - URL uses HTTPS (not HTTP, file://, javascript:, data:, or other schemes)
 - URL matches a configured domain pattern (e.g., `*.vercel.app`, `*.netlify.app`, or a custom domain)
@@ -271,7 +271,7 @@ This validation belongs in the agent workflow, not in Kaboom. Kaboom is a genera
 
 Many preview environments require authentication (basic auth, OAuth, API key). The agent workflow supports two mechanisms:
 
-**Cookie injection:** The agent uses `interact({action: "execute_js", script: "document.cookie = '...'"})` to set authentication cookies before navigating. The cookie value must come from a secure source (CI secret, vault, etc.), never hardcoded in the skill definition.
+**Cookie injection:** The agent uses `interact({what: "execute_js", script: "document.cookie = '...'"})` to set authentication cookies before navigating. The cookie value must come from a secure source (CI secret, vault, etc.), never hardcoded in the skill definition.
 
 **Bearer token in URL:** Some preview environments accept a token as a query parameter (e.g., `?token=abc`). The agent appends the token before navigating.
 
@@ -286,7 +286,7 @@ Preview environments may contain test data that resembles real user data. Kaboom
 
 - Network body capture is opt-in (off by default). The agent should enable it selectively for API endpoints it wants to validate.
 - Kaboom strips sensitive headers (Authorization, Cookie, tokens) from captured network requests.
-- Redaction patterns (configured via `configure({action: "noise_rule"})`) apply to all captured data.
+- Redaction patterns (configured via `configure({what: "noise_rule"})`) apply to all captured data.
 
 ### execute_js security surface
 
@@ -342,7 +342,7 @@ The exploration phase uses `execute_js` to interact with the page. The principal
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
-| OI-1 | Should Kaboom add URL scheme validation to `interact({action: "navigate"})`? | open | The current implementation accepts any URL. The PR preview review recommended scheme/domain allowlists. Question: should this be in Kaboom (all users benefit) or in the agent skill (more flexible)? Recommendation: add basic scheme validation (block `javascript:`, `data:`, `file://`) in Kaboom, leave domain allowlists to the skill. |
+| OI-1 | Should Kaboom add URL scheme validation to `interact({what: "navigate"})`? | open | The current implementation accepts any URL. The PR preview review recommended scheme/domain allowlists. Question: should this be in Kaboom (all users benefit) or in the agent skill (more flexible)? Recommendation: add basic scheme validation (block `javascript:`, `data:`, `file://`) in Kaboom, leave domain allowlists to the skill. |
 | OI-2 | How should the agent handle preview environments behind SSO/OAuth? | open | Cookie injection works for simple auth. OAuth flows require multi-step browser interaction that may exceed `execute_js` capabilities. May need a dedicated auth flow pattern in the skill definition. |
 | OI-3 | Should the exploration report include a confidence score? | open | The agent could rate its confidence in findings based on exploration coverage (pages visited vs total pages, actions taken vs available actions). This helps reviewers assess how thorough the exploration was. Risk: false confidence from arbitrary scoring. |
 | OI-4 | Should Kaboom add a "scan page" meta-action to `interact`? | open | The principal engineer review suggested this for performance. A single call that returns all interactive elements (links, buttons, inputs) would reduce the number of `execute_js` calls needed for exploration. This would be a new action under `interact`, not a new tool. |

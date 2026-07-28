@@ -24,8 +24,8 @@ Test Execution (CI)
         ↓
     MCP Server (Kaboom)
   ├─ observe({what: 'snapshots'})
-  ├─ configure({action: 'mock'})
-  ├─ interact({action: 'restore'})
+  ├─ configure({what: 'mock'})
+  ├─ interact({what: 'restore'})
   └─ async() wrapper for long operations
         ↓
     AI Agent (Claude)

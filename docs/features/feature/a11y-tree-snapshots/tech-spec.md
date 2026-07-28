@@ -28,7 +28,7 @@ UIDs are deterministic within a snapshot: same element structure produces same U
 
 **CSS Selector Generation**: For each UID'd element, computes minimal CSS selector with preference order: `#id` (if unique) > `[name="..."]` (if unique) > `[data-testid="..."]` (if present) > positional selector using `tag:nth-of-type(n)` up to 3 ancestors.
 
-Selector stored in `uidMap` so AI can use it with `interact({action: "execute_js"})` or `interact({action: "highlight"})`.
+Selector stored in `uidMap` so AI can use it with `interact({what: "execute_js"})` or `interact({what: "highlight"})`.
 
 **Text Formatting**: Output is indented text tree (not JSON) for token efficiency. Format:
 ```

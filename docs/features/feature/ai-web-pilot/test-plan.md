@@ -39,44 +39,44 @@ Server-side Gating:
 
 - **Test:** navigate succeeds when pilot ON
   - **Given:** Extension reports `settings.pilot_enabled=true` via /sync
-  - **When:** User/AI calls `interact({action: 'navigate', url: 'https://example.com'})`
+  - **When:** User/AI calls `interact({what: 'navigate', url: 'https://example.com'})`
   - **Then:** Action executed, browser navigates, data captured in buffers
 
 - **Test:** execute_js succeeds when pilot ON
   - **Given:** Extension reports `settings.pilot_enabled=true` via /sync
-  - **When:** User/AI calls `interact({action: 'execute_js', script: 'console.log(1)'})`
+  - **When:** User/AI calls `interact({what: 'execute_js', script: 'console.log(1)'})`
   - **Then:** Script executes in browser context, result returned
 
 - **Test:** highlight succeeds when pilot ON
   - **Given:** Extension reports `settings.pilot_enabled=true` via /sync
-  - **When:** User/AI calls `interact({action: 'highlight', selector: 'body'})`
+  - **When:** User/AI calls `interact({what: 'highlight', selector: 'body'})`
   - **Then:** Element highlighted visually in browser
 
 - **Test:** click succeeds when pilot ON
   - **Given:** Extension reports `settings.pilot_enabled=true` via /sync
-  - **When:** User/AI calls `interact({action: 'click', selector: 'button'})`
+  - **When:** User/AI calls `interact({what: 'click', selector: 'button'})`
   - **Then:** Button clicked, event fired, logs captured
 
 - **Test:** type succeeds when pilot ON
   - **Given:** Extension reports `settings.pilot_enabled=true` via /sync, input focused
-  - **When:** User/AI calls `interact({action: 'type', selector: 'input', text: 'hello'})`
+  - **When:** User/AI calls `interact({what: 'type', selector: 'input', text: 'hello'})`
   - **Then:** Text typed into input, value updated
 
 ### Invalid State Tests (Pilot OFF)
 
 - **Test:** navigate fails when pilot OFF
   - **Given:** Extension reports `settings.pilot_enabled=false` (or uninitialized) via /sync
-  - **When:** User/AI calls `interact({action: 'navigate', url: 'https://example.com'})`
+  - **When:** User/AI calls `interact({what: 'navigate', url: 'https://example.com'})`
   - **Then:** Error returned: `isError=true`, content includes "pilot_disabled" or "not enabled"
 
 - **Test:** execute_js fails when pilot OFF
   - **Given:** Extension reports `settings.pilot_enabled=false` via /sync
-  - **When:** User/AI calls `interact({action: 'execute_js', script: '...'})`
+  - **When:** User/AI calls `interact({what: 'execute_js', script: '...'})`
   - **Then:** Error returned with "pilot_disabled" message
 
 - **Test:** highlight fails when pilot OFF
   - **Given:** Extension reports `settings.pilot_enabled=false` via /sync
-  - **When:** User/AI calls `interact({action: 'highlight', selector: 'body'})`
+  - **When:** User/AI calls `interact({what: 'highlight', selector: 'body'})`
   - **Then:** Error returned, no DOM manipulation
 
 ### State Transition Tests

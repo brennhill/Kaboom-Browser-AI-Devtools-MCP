@@ -22,11 +22,11 @@ last_verified_date: 2026-03-05
 
 - **Test:** Built-in noise rules applied by default
   - **Given:** Server starts, no custom rules configured
-  - **When:** User calls `configure({action: 'noise_rule', noise_action: 'list'})`
+  - **When:** User calls `configure({what: 'noise_rule', noise_action: 'list'})`
   - **Then:** Response contains ~50 built-in rules (prefixed with 'builtin_'); chrome-extension, favicon, HMR, analytics rules all present
 
 - **Test:** Custom rule added and filters subsequent entries
-  - **Given:** User calls `configure({action: 'noise_rule', noise_action: 'add', rules: [{category: 'console', match_spec: {message_regex: 'test.*pattern'}, classification: 'test'}]})`
+  - **Given:** User calls `configure({what: 'noise_rule', noise_action: 'add', rules: [{category: 'console', match_spec: {message_regex: 'test.*pattern'}, classification: 'test'}]})`
   - **When:** Console entry matching "test.*pattern" is logged
   - **Then:** Entry is filtered from `observe` responses; statistics show 1 filtered
 
@@ -48,7 +48,7 @@ last_verified_date: 2026-03-05
 ### Edge Case Tests (Negative)
 
 - **Test:** Invalid regex pattern silently skipped (no panic)
-  - **Given:** User calls `configure({action: 'noise_rule', noise_action: 'add', rules: [{category: 'console', match_spec: {message_regex: '[invalid'}, classification: 'test'}]})`
+  - **Given:** User calls `configure({what: 'noise_rule', noise_action: 'add', rules: [{category: 'console', match_spec: {message_regex: '[invalid'}, classification: 'test'}]})`
   - **When:** Rule added and later entries tested
   - **Then:** Rule has nil regex, never matches, server doesn't crash
 
@@ -58,18 +58,18 @@ last_verified_date: 2026-03-05
   - **Then:** Rule silently dropped, count remains 100
 
 - **Test:** Built-in rules cannot be removed
-  - **Given:** User calls `configure({action: 'noise_rule', noise_action: 'remove', rule_id: 'builtin_favicon'})`
+  - **Given:** User calls `configure({what: 'noise_rule', noise_action: 'remove', rule_id: 'builtin_favicon'})`
   - **When:** Removal attempted
   - **Then:** Error returned: "Cannot remove built-in rule: builtin_favicon"
 
 - **Test:** Application errors from localhost never auto-detected
   - **Given:** 20+ identical console errors from localhost:3000
-  - **When:** `configure({action: 'noise_rule', noise_action: 'auto_detect'})` called
+  - **When:** `configure({what: 'noise_rule', noise_action: 'auto_detect'})` called
   - **Then:** No rule proposed for localhost error pattern (protected by DL-2)
 
 - **Test:** Empty buffer with noise rules
   - **Given:** Buffers empty, noise rules configured
-  - **When:** `configure({action: 'noise_rule', noise_action: 'auto_detect'})` called
+  - **When:** `configure({what: 'noise_rule', noise_action: 'auto_detect'})` called
   - **Then:** Returns empty proposals, no crash
 
 ### Concurrent/Race Condition Tests
@@ -80,7 +80,7 @@ last_verified_date: 2026-03-05
   - **Then:** No race condition, RWMutex prevents data corruption
 
 - **Test:** Reset during active filtering
-  - **Given:** Filtering in progress, user calls `configure({action: 'noise_rule', noise_action: 'reset'})`
+  - **Given:** Filtering in progress, user calls `configure({what: 'noise_rule', noise_action: 'reset'})`
   - **When:** Reset completes (removes all user/auto rules)
   - **Then:** Only built-ins remain; subsequent entries not affected by deleted rules
 
@@ -88,7 +88,7 @@ last_verified_date: 2026-03-05
 
 - **Test:** Reset clears persisted user rules
   - **Given:** User has added 5 custom rules, daemon restarted
-  - **When:** `configure({action: 'noise_rule', noise_action: 'reset'})` called, daemon killed and restarted
+  - **When:** `configure({what: 'noise_rule', noise_action: 'reset'})` called, daemon killed and restarted
   - **Then:** Rules file reset to empty; only built-ins present after restart
 
 - **Test:** Corrupted persisted rules file handled gracefully
@@ -97,7 +97,7 @@ last_verified_date: 2026-03-05
   - **Then:** Server starts successfully, skips corrupted file, uses only built-ins
 
 - **Test:** Dismiss noise creates rule correctly
-  - **Given:** User calls `configure({action: 'dismiss_noise', pattern: 'specific-app-warning', reason: 'Noisy during testing'})`
+  - **Given:** User calls `configure({what: 'dismiss_noise', pattern: 'specific-app-warning', reason: 'Noisy during testing'})`
   - **When:** Rule created
   - **Then:** Rule has ID starting with 'dismiss_', classification='dismissed', immediately filters matching entries
 
@@ -142,14 +142,14 @@ last_verified_date: 2026-03-05
    - → Built-in rules filter appropriately; real app errors NOT filtered
 
 2. **User adds rule → filters new entries:**
-   - `configure({action: 'noise_rule', noise_action: 'add', rules: [custom_rule]})`
+   - `configure({what: 'noise_rule', noise_action: 'add', rules: [custom_rule]})`
    - Generate new entry matching rule pattern
    - `observe` called
    - → New entry filtered, statistics show count increased
 
 3. **Auto-detect proposes and auto-applies rules:**
    - Generate 15 identical console messages
-   - `configure({action: 'noise_rule', noise_action: 'auto_detect'})`
+   - `configure({what: 'noise_rule', noise_action: 'auto_detect'})`
    - → Proposals returned with confidence scores
    - → Rules with confidence >= 0.9 automatically added
    - → Subsequent matching entries filtered
@@ -158,13 +158,13 @@ last_verified_date: 2026-03-05
    - Add custom rules
    - Kill daemon
    - Restart daemon
-   - `configure({action: 'noise_rule', noise_action: 'list'})`
+   - `configure({what: 'noise_rule', noise_action: 'list'})`
    - → Custom rules still present (loaded from file)
 
 5. **Security invariants (no data leak):**
    - Add rule matching analytics domain
    - Send 401 response on that domain
-   - `configure({action: 'noise_rule', noise_action: 'list'})` + count metrics
+   - `configure({what: 'noise_rule', noise_action: 'list'})` + count metrics
    - → 401 not filtered (security protected)
    - → Statistics don't expose sensitive details from filtered entries
 

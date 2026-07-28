@@ -50,18 +50,18 @@ last_verified_date: 2026-03-05
 
 | # | Clarity Check | What to Verify | Status |
 |---|--------------|----------------|--------|
-| CL-1 | Setting change confirmation is explicit | Response after `configure(action: "capture")` confirms which settings changed, with old and new values | [ ] |
+| CL-1 | Setting change confirmation is explicit | Response after `configure(what: "capture")` confirms which settings changed, with old and new values | [ ] |
 | CL-2 | Invalid setting name provides valid options | Error response for unknown setting includes the list of valid settings | [ ] |
 | CL-3 | Invalid setting value provides valid values | Error response for bad value includes the enum of valid values for that setting | [ ] |
 | CL-4 | Rate limit error is distinguishable | Rate limit error includes "Rate limited" text AND the time until next allowed change | [ ] |
-| CL-5 | Reset confirmation is clear | `configure(action: "capture", settings: "reset")` returns confirmation that ALL overrides were cleared | [ ] |
+| CL-5 | Reset confirmation is clear | `configure(what: "capture", settings: "reset")` returns confirmation that ALL overrides were cleared | [ ] |
 | CL-6 | Override status in `observe({what: "page"})` shows current vs default | Override display shows both the current value and the default value so the AI knows what changed | [ ] |
 | CL-7 | Alert piggyback on setting change | The info-level alert emitted on change is visible in the next `observe` response via `_alerts` | [ ] |
 | CL-8 | Session scope is communicated | Response or documentation communicates that changes are session-scoped (reset on server restart) | [ ] |
 
 ### Common LLM Misinterpretation Risks
 - [ ] AI may assume `network_bodies: true` means bodies are already available in the next `observe` call — verify there is latency (extension must poll `/settings` first, then the next request captures bodies)
-- [ ] AI may call `configure(action: "capture")` with no settings object — verify error message explains that `settings` is required
+- [ ] AI may call `configure(what: "capture")` with no settings object — verify error message explains that `settings` is required
 - [ ] AI may confuse `settings: "reset"` (clear overrides) with setting individual values to their defaults — verify reset is an atomic "clear all" operation
 - [ ] AI may not realize the 5-second poll delay between setting change and extension behavior change — verify response includes a note about propagation delay
 
@@ -75,10 +75,10 @@ last_verified_date: 2026-03-05
 
 | Workflow | Steps Required | Can Be Simplified? |
 |----------|---------------|-------------------|
-| Change one capture setting | 1 step: `configure(action: "capture", settings: { ... })` | No — already minimal |
+| Change one capture setting | 1 step: `configure(what: "capture", settings: { ... })` | No — already minimal |
 | Change multiple settings at once | 1 step: single call with multiple settings | No — already batched |
 | Check current overrides | 1 step: `observe(what: "page")` includes override state | No — piggybacks on existing call |
-| Reset all overrides | 1 step: `configure(action: "capture", settings: "reset")` | No — already minimal |
+| Reset all overrides | 1 step: `configure(what: "capture", settings: "reset")` | No — already minimal |
 | Verify setting took effect | 2 steps: change setting, then wait ~5s and observe data | Could add immediate confirmation, but 5s poll is architectural |
 
 ### Default Behavior Verification
@@ -94,7 +94,7 @@ last_verified_date: 2026-03-05
 
 | # | Test Case | Input | Expected Output | Priority |
 |---|-----------|-------|-----------------|----------|
-| UT-1 | Store single override | `configure(action: "capture", settings: { log_level: "all" })` | Override stored in memory map; response confirms change | must |
+| UT-1 | Store single override | `configure(what: "capture", settings: { log_level: "all" })` | Override stored in memory map; response confirms change | must |
 | UT-2 | Store multiple overrides in one call | `settings: { ws_mode: "messages", log_level: "all" }` | Both stored; both confirmed; one rate limit credit consumed | must |
 | UT-3 | Invalid setting name | `settings: { invalid_setting: "value" }` | Error with list of valid settings | must |
 | UT-4 | Invalid setting value | `settings: { log_level: "verbose" }` | Error: "Invalid value 'verbose' for log_level. Valid: error, warn, all" | must |
@@ -138,7 +138,7 @@ last_verified_date: 2026-03-05
 | # | Edge Case | Input/Scenario | Expected Behavior | Priority |
 |---|-----------|---------------|-------------------|----------|
 | EC-1 | Setting same value as current | Set `log_level: "error"` when default is already `error` | Accepted (no-op); alert shows same from/to; audit logged | should |
-| EC-2 | Empty settings object | `configure(action: "capture", settings: {})` | Error: no settings specified, or no-op with empty confirmation | should |
+| EC-2 | Empty settings object | `configure(what: "capture", settings: {})` | Error: no settings specified, or no-op with empty confirmation | should |
 | EC-3 | Rate limit with multiple settings | Call with 3 settings, then another with 1 setting within 1 second | First call succeeds (all 3 stored); second call rate-limited | must |
 | EC-4 | Audit log directory does not exist | `KABOOM_AUDIT_LOG=/nonexistent/path/audit.jsonl` | Directory created via `os.MkdirAll`; log file created | should |
 | EC-5 | Audit log disk full | Disk is full when audit write attempted | Write fails silently; capture control still works | must |
@@ -164,15 +164,15 @@ last_verified_date: 2026-03-05
 
 | # | Step (AI executes) | Human Observes | Expected Result | Pass |
 |---|-------------------|----------------|-----------------|------|
-| UAT-1 | `{"tool": "configure", "arguments": {"action": "capture", "settings": {"log_level": "all"}}}` | Extension popup shows "AI-controlled" indicator (if implemented) | AI receives confirmation: `log_level` changed from `error` to `all` | [ ] |
+| UAT-1 | `{"tool": "configure", "arguments": {"what": "capture", "settings": {"log_level": "all"}}}` | Extension popup shows "AI-controlled" indicator (if implemented) | AI receives confirmation: `log_level` changed from `error` to `all` | [ ] |
 | UAT-2 | Human types `console.log("test message")` in DevTools | Log message sent to console | Message visible in DevTools console | [ ] |
 | UAT-3 | Wait ~5s for extension poll, then: `{"tool": "observe", "arguments": {"what": "logs"}}` | No visual change | AI receives logs including "test message" (would NOT appear with default `error` level) | [ ] |
 | UAT-4 | `{"tool": "observe", "arguments": {"what": "page"}}` | No visual change | Response includes `capture_overrides` showing `log_level: { value: "all", default: "error", changed_at: "..." }` | [ ] |
-| UAT-5 | `{"tool": "configure", "arguments": {"action": "capture", "settings": {"ws_mode": "messages"}}}` | No visual change | AI receives confirmation: `ws_mode` changed from `lifecycle` to `messages` | [ ] |
-| UAT-6 | `{"tool": "configure", "arguments": {"action": "capture", "settings": {"invalid_setting": "value"}}}` | No visual change | AI receives error listing valid settings | [ ] |
-| UAT-7 | `{"tool": "configure", "arguments": {"action": "capture", "settings": {"log_level": "verbose"}}}` | No visual change | AI receives error listing valid values for log_level | [ ] |
+| UAT-5 | `{"tool": "configure", "arguments": {"what": "capture", "settings": {"ws_mode": "messages"}}}` | No visual change | AI receives confirmation: `ws_mode` changed from `lifecycle` to `messages` | [ ] |
+| UAT-6 | `{"tool": "configure", "arguments": {"what": "capture", "settings": {"invalid_setting": "value"}}}` | No visual change | AI receives error listing valid settings | [ ] |
+| UAT-7 | `{"tool": "configure", "arguments": {"what": "capture", "settings": {"log_level": "verbose"}}}` | No visual change | AI receives error listing valid values for log_level | [ ] |
 | UAT-8 | Call configure twice within 1 second: first `{"settings": {"network_bodies": false}}` then `{"settings": {"action_replay": false}}` | No visual change | First call succeeds; second call returns rate limit error | [ ] |
-| UAT-9 | Wait 2 seconds, then: `{"tool": "configure", "arguments": {"action": "capture", "settings": "reset"}}` | Extension popup "AI-controlled" indicator disappears | AI receives confirmation that all overrides cleared | [ ] |
+| UAT-9 | Wait 2 seconds, then: `{"tool": "configure", "arguments": {"what": "capture", "settings": "reset"}}` | Extension popup "AI-controlled" indicator disappears | AI receives confirmation that all overrides cleared | [ ] |
 | UAT-10 | `{"tool": "observe", "arguments": {"what": "page"}}` | No visual change | Response shows no `capture_overrides` (or empty overrides) | [ ] |
 | UAT-11 | Human checks audit log file: `cat ~/.kaboom/audit.jsonl` | File contains JSONL entries | Each setting change from above steps has a corresponding audit entry with ts, event, setting, from, to, source, agent fields | [ ] |
 

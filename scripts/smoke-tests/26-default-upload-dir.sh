@@ -32,9 +32,9 @@ run_test_26_1() {
         pass "Default upload directory exists at $expected_dir"
     else
         # The directory may not exist until first upload — check if daemon knows about it
-        # by calling configure(action="health") which may include upload config
+        # by calling configure(what="health") which may include upload config
         local config_resp
-        config_resp=$(call_tool "configure" '{"action":"health"}')
+        config_resp=$(call_tool "configure" '{"what":"health"}')
         local text
         text=$(extract_content_text "$config_resp")
 

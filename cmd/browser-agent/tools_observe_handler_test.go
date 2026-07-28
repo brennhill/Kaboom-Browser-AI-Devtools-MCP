@@ -75,28 +75,6 @@ func TestToolsObserveDispatch_UnknownMode(t *testing.T) {
 	}
 }
 
-func TestToolsObserveDispatch_UnknownModeAliasAddsCanonicalWhatWarning(t *testing.T) {
-	t.Parallel()
-	h, _, _ := makeToolHandler(t)
-
-	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.observeDispatcher.Handle(req, json.RawMessage(`{"mode":"nonexistent_mode"}`))
-	result := parseToolResult(t, resp)
-	if !result.IsError {
-		t.Fatal("unknown mode alias should return isError:true")
-	}
-	foundCanonicalWarning := false
-	for _, block := range result.Content {
-		if strings.Contains(block.Text, "deprecated") {
-			foundCanonicalWarning = true
-			break
-		}
-	}
-	if !foundCanonicalWarning {
-		t.Fatalf("expected canonical what warning block on error path, got %d content blocks", len(result.Content))
-	}
-}
-
 func TestToolsObserveDispatch_EmptyArgs(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
@@ -107,47 +85,6 @@ func TestToolsObserveDispatch_EmptyArgs(t *testing.T) {
 	result := parseToolResult(t, resp)
 	if !result.IsError {
 		t.Fatal("nil args (no 'what') should return isError:true")
-	}
-}
-
-func TestToolsObserveDispatch_ModeAliasAddsCanonicalWhatWarning(t *testing.T) {
-	t.Parallel()
-	h, _, _ := makeToolHandler(t)
-
-	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.observeDispatcher.Handle(req, json.RawMessage(`{"mode":"pilot"}`))
-	result := parseToolResult(t, resp)
-	if result.IsError {
-		t.Fatalf("mode alias should be accepted, got: %s", result.Content[0].Text)
-	}
-	foundCanonicalWarning := false
-	for _, block := range result.Content {
-		if strings.Contains(block.Text, "deprecated") {
-			foundCanonicalWarning = true
-			break
-		}
-	}
-	if !foundCanonicalWarning {
-		t.Fatalf("expected canonical what warning block, got %d content blocks", len(result.Content))
-	}
-}
-
-func TestToolsObserveDispatch_ConflictingWhatAndMode(t *testing.T) {
-	t.Parallel()
-	h, _, _ := makeToolHandler(t)
-
-	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.observeDispatcher.Handle(req, json.RawMessage(`{"what":"pilot","mode":"errors"}`))
-	result := parseToolResult(t, resp)
-	if !result.IsError {
-		t.Fatal("conflicting what/mode should return isError:true")
-	}
-	text := result.Content[0].Text
-	if !strings.Contains(text, "invalid_param") {
-		t.Fatalf("expected invalid_param, got: %s", text)
-	}
-	if !strings.Contains(text, "Conflicting parameters") {
-		t.Fatalf("expected conflict explanation, got: %s", text)
 	}
 }
 

@@ -802,7 +802,9 @@ The UX review (Section 8.2, Finding 5) discusses making `include_screenshot` def
 
 #### 9.6.5 The `action` Alias Is Preserved
 
-The deprecated `action` param continues to work via alias resolution (`tools_interact.go`, lines 140-152). Batch step validation (line 38 of `tools_interact_batch.go`) also accepts both `what` and `action`. No backward compatibility issues.
+Top-level tool dispatch uses only the canonical `what` parameter. Batch step
+objects retain their own `action` field because that is the batch-step contract,
+not a tool-selector alias.
 
 ---
 

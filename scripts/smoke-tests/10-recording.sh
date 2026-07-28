@@ -33,7 +33,7 @@ wait_for_saved_recording() {
 
 # Best-effort preflight: ensure no stale active recording from previous tests/runs.
 preflight_stop_recording_if_needed() {
-    interact_and_wait "screen_recording_stop" '{"action":"screen_recording_stop","reason":"Preflight cleanup: ensure no active recording"}' 20
+    interact_and_wait "screen_recording_stop" '{"what":"screen_recording_stop","reason":"Preflight cleanup: ensure no active recording"}' 20
 
     if is_interact_timeout "$INTERACT_RESULT"; then
         return 0
@@ -66,12 +66,12 @@ run_test_10_1() {
     fi
 
     echo "  Navigating to YouTube lofi stream..."
-    interact_and_wait "navigate" '{"action":"navigate","url":"https://youtu.be/n61ULEU7CO0?si=xT8FVrq5eIsJTfuI&t=646&autoplay=1","reason":"Load YouTube video for recording"}' 20
+    interact_and_wait "navigate" '{"what":"navigate","url":"https://youtu.be/n61ULEU7CO0?si=xT8FVrq5eIsJTfuI&t=646&autoplay=1","reason":"Load YouTube video for recording"}' 20
     sleep 3
 
     preflight_stop_recording_if_needed
 
-    interact_and_wait "screen_recording_start" '{"action":"screen_recording_start","name":"smoke-video-test","reason":"Record tab video"}'
+    interact_and_wait "screen_recording_start" '{"what":"screen_recording_start","name":"smoke-video-test","reason":"Record tab video"}'
 
     if echo "$INTERACT_RESULT" | grep -qi "error\|failed"; then
         fail "screen_recording_start returned error. Result: $(truncate "$INTERACT_RESULT" 200)"
@@ -85,7 +85,7 @@ run_test_10_1() {
     echo "  Recording... waiting 5 seconds"
     sleep 5
 
-    interact_and_wait "screen_recording_stop" '{"action":"screen_recording_stop","reason":"Stop recording"}' 20
+    interact_and_wait "screen_recording_stop" '{"what":"screen_recording_stop","reason":"Stop recording"}' 20
 
     if echo "$INTERACT_RESULT" | grep -qi "error\|failed"; then
         fail "screen_recording_stop returned error. Result: $(truncate "$INTERACT_RESULT" 200)"
@@ -153,12 +153,12 @@ run_test_10_2() {
     fi
 
     echo "  Navigating to YouTube lofi stream..."
-    interact_and_wait "navigate" '{"action":"navigate","url":"https://youtu.be/n61ULEU7CO0?si=xT8FVrq5eIsJTfuI&t=646&autoplay=1","reason":"Load YouTube video with audio for recording"}' 20
+    interact_and_wait "navigate" '{"what":"navigate","url":"https://youtu.be/n61ULEU7CO0?si=xT8FVrq5eIsJTfuI&t=646&autoplay=1","reason":"Load YouTube video with audio for recording"}' 20
     sleep 3
 
     preflight_stop_recording_if_needed
 
-    interact_and_wait "screen_recording_start" '{"action":"screen_recording_start","name":"smoke-audio-test","audio":"tab","reason":"Record tab with audio"}'
+    interact_and_wait "screen_recording_start" '{"what":"screen_recording_start","name":"smoke-audio-test","audio":"tab","reason":"Record tab with audio"}'
 
     if echo "$INTERACT_RESULT" | grep -qi "error\|failed"; then
         fail "screen_recording_start with audio:tab returned error. Result: $(truncate "$INTERACT_RESULT" 200)"
@@ -173,7 +173,7 @@ run_test_10_2() {
     echo "  (play sound in the tracked tab now if you want to verify audio)"
     sleep 5
 
-    interact_and_wait "screen_recording_stop" '{"action":"screen_recording_stop","reason":"Stop audio recording"}' 20
+    interact_and_wait "screen_recording_stop" '{"what":"screen_recording_stop","reason":"Stop audio recording"}' 20
 
     if echo "$INTERACT_RESULT" | grep -qi "error\|failed"; then
         # Check specifically for 403 errors — indicates server auth issue
@@ -259,12 +259,12 @@ run_test_10_3() {
     fi
 
     echo "  Navigating to CSP-safe page for watermark test..."
-    interact_and_wait "navigate" '{"action":"navigate","url":"https://example.com","reason":"Load CSP-safe page for watermark test"}' 20
+    interact_and_wait "navigate" '{"what":"navigate","url":"https://example.com","reason":"Load CSP-safe page for watermark test"}' 20
     sleep 2
 
     preflight_stop_recording_if_needed
 
-    interact_and_wait "screen_recording_start" '{"action":"screen_recording_start","name":"smoke-watermark-test","reason":"Test watermark persistence"}'
+    interact_and_wait "screen_recording_start" '{"what":"screen_recording_start","name":"smoke-watermark-test","reason":"Test watermark persistence"}'
 
     if echo "$INTERACT_RESULT" | grep -qi "error\|failed"; then
         fail "screen_recording_start returned error. Result: $(truncate "$INTERACT_RESULT" 200)"
@@ -274,26 +274,26 @@ run_test_10_3() {
     sleep 3
 
     # Keep generous poll budget to avoid false negatives on slower CI runners.
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Check watermark before refresh","script":"document.getElementById(\"kaboom-recording-watermark\") ? \"WATERMARK_FOUND\" : \"WATERMARK_MISSING\""}' 30
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Check watermark before refresh","script":"document.getElementById(\"kaboom-recording-watermark\") ? \"WATERMARK_FOUND\" : \"WATERMARK_MISSING\""}' 30
     local before_refresh="$INTERACT_RESULT"
     if echo "$before_refresh" | grep -q "csp_blocked_all_worlds"; then
-        interact_and_wait "screen_recording_stop" '{"action":"screen_recording_stop","reason":"Stop watermark test recording after CSP block"}' 20
+        interact_and_wait "screen_recording_stop" '{"what":"screen_recording_stop","reason":"Stop watermark test recording after CSP block"}' 20
         skip "Watermark DOM check blocked by page CSP (execute_js unavailable)."
         return
     fi
 
-    interact_and_wait "refresh" '{"action":"refresh","reason":"Refresh during recording"}' 20
+    interact_and_wait "refresh" '{"what":"refresh","reason":"Refresh during recording"}' 20
     sleep 5
 
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Check watermark after refresh","script":"document.getElementById(\"kaboom-recording-watermark\") ? \"WATERMARK_FOUND\" : \"WATERMARK_MISSING\""}' 30
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Check watermark after refresh","script":"document.getElementById(\"kaboom-recording-watermark\") ? \"WATERMARK_FOUND\" : \"WATERMARK_MISSING\""}' 30
     local after_refresh="$INTERACT_RESULT"
     if echo "$after_refresh" | grep -q "csp_blocked_all_worlds"; then
-        interact_and_wait "screen_recording_stop" '{"action":"screen_recording_stop","reason":"Stop watermark test recording after CSP block"}' 20
+        interact_and_wait "screen_recording_stop" '{"what":"screen_recording_stop","reason":"Stop watermark test recording after CSP block"}' 20
         skip "Watermark DOM check blocked by page CSP after refresh."
         return
     fi
 
-    interact_and_wait "screen_recording_stop" '{"action":"screen_recording_stop","reason":"Stop watermark test recording"}' 20
+    interact_and_wait "screen_recording_stop" '{"what":"screen_recording_stop","reason":"Stop watermark test recording"}' 20
     sleep 1
 
     local before_ok=false

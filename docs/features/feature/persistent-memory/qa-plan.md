@@ -204,22 +204,22 @@ last_verified_date: 2026-03-05
 
 | # | Step (AI executes) | Human Observes | Expected Result | Pass |
 |---|-------------------|----------------|-----------------|------|
-| UAT-1 | `{"tool": "configure", "arguments": {"action": "load"}}` (load_session_context) | Check project directory for `.kaboom/` | `.kaboom/` directory created, `meta.json` exists with `session_count: 1` | [ ] |
+| UAT-1 | `{"tool": "configure", "arguments": {"what": "load"}}` (load_session_context) | Check project directory for `.kaboom/` | `.kaboom/` directory created, `meta.json` exists with `session_count: 1` | [ ] |
 | UAT-2 | Check `.gitignore` in project root | Open `.gitignore` | `.kaboom/` line present | [ ] |
-| UAT-3 | `{"tool": "configure", "arguments": {"action": "load"}}` | Review response | Response shows session context with session_count, empty baselines/noise/errors summaries | [ ] |
-| UAT-4 | `{"tool": "configure", "arguments": {"action": "store", "namespace": "baselines", "key": "login-page", "data": {"load_ms": 1200, "requests": 15}}}` | Check `.kaboom/baselines/` | File `login-page.json` created with correct JSON content | [ ] |
-| UAT-5 | `{"tool": "configure", "arguments": {"action": "store", "store_action": "load", "namespace": "baselines", "key": "login-page"}}` | None | Response returns `{"load_ms": 1200, "requests": 15}` matching saved data | [ ] |
-| UAT-6 | `{"tool": "configure", "arguments": {"action": "store", "store_action": "list", "namespace": "baselines"}}` | None | Response lists `["login-page"]` | [ ] |
-| UAT-7 | `{"tool": "configure", "arguments": {"action": "store", "store_action": "stats"}}` | None | Response shows total bytes > 0, baselines namespace has 1 entry | [ ] |
-| UAT-8 | `{"tool": "configure", "arguments": {"action": "store", "store_action": "save", "namespace": "baselines", "key": "dashboard", "data": {"load_ms": 2500, "requests": 45}}}` | None | Second baseline saved | [ ] |
-| UAT-9 | `{"tool": "configure", "arguments": {"action": "store", "store_action": "list", "namespace": "baselines"}}` | None | Response lists `["dashboard", "login-page"]` (or `["login-page", "dashboard"]`) | [ ] |
-| UAT-10 | `{"tool": "configure", "arguments": {"action": "store", "store_action": "delete", "namespace": "baselines", "key": "dashboard"}}` | Check `.kaboom/baselines/` | File `dashboard.json` removed | [ ] |
-| UAT-11 | `{"tool": "configure", "arguments": {"action": "store", "store_action": "load", "namespace": "baselines", "key": "dashboard"}}` | None | Error: key not found | [ ] |
+| UAT-3 | `{"tool": "configure", "arguments": {"what": "load"}}` | Review response | Response shows session context with session_count, empty baselines/noise/errors summaries | [ ] |
+| UAT-4 | `{"tool": "configure", "arguments": {"what": "store", "namespace": "baselines", "key": "login-page", "data": {"load_ms": 1200, "requests": 15}}}` | Check `.kaboom/baselines/` | File `login-page.json` created with correct JSON content | [ ] |
+| UAT-5 | `{"tool": "configure", "arguments": {"what": "store", "store_action": "load", "namespace": "baselines", "key": "login-page"}}` | None | Response returns `{"load_ms": 1200, "requests": 15}` matching saved data | [ ] |
+| UAT-6 | `{"tool": "configure", "arguments": {"what": "store", "store_action": "list", "namespace": "baselines"}}` | None | Response lists `["login-page"]` | [ ] |
+| UAT-7 | `{"tool": "configure", "arguments": {"what": "store", "store_action": "stats"}}` | None | Response shows total bytes > 0, baselines namespace has 1 entry | [ ] |
+| UAT-8 | `{"tool": "configure", "arguments": {"what": "store", "store_action": "save", "namespace": "baselines", "key": "dashboard", "data": {"load_ms": 2500, "requests": 45}}}` | None | Second baseline saved | [ ] |
+| UAT-9 | `{"tool": "configure", "arguments": {"what": "store", "store_action": "list", "namespace": "baselines"}}` | None | Response lists `["dashboard", "login-page"]` (or `["login-page", "dashboard"]`) | [ ] |
+| UAT-10 | `{"tool": "configure", "arguments": {"what": "store", "store_action": "delete", "namespace": "baselines", "key": "dashboard"}}` | Check `.kaboom/baselines/` | File `dashboard.json` removed | [ ] |
+| UAT-11 | `{"tool": "configure", "arguments": {"what": "store", "store_action": "load", "namespace": "baselines", "key": "dashboard"}}` | None | Error: key not found | [ ] |
 | UAT-12 | Restart the Kaboom server | Server restarts | Server starts without error | [ ] |
-| UAT-13 | `{"tool": "configure", "arguments": {"action": "load"}}` | Check `meta.json` | `session_count` incremented to 2, `last_session` timestamp updated | [ ] |
-| UAT-14 | `{"tool": "configure", "arguments": {"action": "store", "store_action": "load", "namespace": "baselines", "key": "login-page"}}` | None | Previously saved baseline still available after restart | [ ] |
-| UAT-15 | `{"tool": "configure", "arguments": {"action": "store", "store_action": "save", "namespace": "../../etc", "key": "test"}}` | None | Error: invalid namespace (path traversal rejected) | [ ] |
-| UAT-16 | `{"tool": "configure", "arguments": {"action": "store", "store_action": "save", "namespace": "test", "key": "../meta", "data": {"hack": true}}}` | Check `.kaboom/meta.json` | meta.json unchanged; error returned for path traversal | [ ] |
+| UAT-13 | `{"tool": "configure", "arguments": {"what": "load"}}` | Check `meta.json` | `session_count` incremented to 2, `last_session` timestamp updated | [ ] |
+| UAT-14 | `{"tool": "configure", "arguments": {"what": "store", "store_action": "load", "namespace": "baselines", "key": "login-page"}}` | None | Previously saved baseline still available after restart | [ ] |
+| UAT-15 | `{"tool": "configure", "arguments": {"what": "store", "store_action": "save", "namespace": "../../etc", "key": "test"}}` | None | Error: invalid namespace (path traversal rejected) | [ ] |
+| UAT-16 | `{"tool": "configure", "arguments": {"what": "store", "store_action": "save", "namespace": "test", "key": "../meta", "data": {"hack": true}}}` | Check `.kaboom/meta.json` | meta.json unchanged; error returned for path traversal | [ ] |
 
 ### Data Leak UAT Verification
 

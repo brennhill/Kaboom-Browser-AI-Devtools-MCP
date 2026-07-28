@@ -29,7 +29,7 @@ run_test_23_1() {
     fi
 
     # Activate draw mode via interact tool (this creates a pending query)
-    RESPONSE=$(call_tool "interact" '{"action":"execute_js","script":"document.title"}')
+    RESPONSE=$(call_tool "interact" '{"what":"execute_js","script":"document.title"}')
     text=$(extract_content_text "$RESPONSE")
 
     if check_is_error "$RESPONSE"; then

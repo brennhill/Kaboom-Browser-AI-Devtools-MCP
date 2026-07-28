@@ -48,8 +48,8 @@ last_verified_date: 2026-03-05
    - Start server: `kaboom --profile=paranoid`
 2. Steps:
    - [ ] Verify server starts, logs "Profile 'paranoid' loaded"
-   - [ ] Check config: `configure({action:"health"})` — verify read_only=true, aggressive redaction
-   - [ ] Attempt mutation: `interact({action: "execute_js"})` — fails (read-only)
+   - [ ] Check config: `configure({what:"health"})` — verify read_only=true, aggressive redaction
+   - [ ] Attempt mutation: `interact({what: "execute_js"})` — fails (read-only)
    - [ ] Observe logs: succeeds
    - [ ] Verify project expiration is short (15 minutes)
 3. Expected Result: Max security settings applied

@@ -75,9 +75,9 @@ last_verified_date: 2026-03-05
 
 | Workflow | Steps Required | Can Be Simplified? |
 |----------|---------------|-------------------|
-| Highlight an element | 1 step: `interact({action: "highlight", selector: "..."})` | No — already minimal |
+| Highlight an element | 1 step: `interact({what: "highlight", selector: "..."})` | No — already minimal |
 | Save and restore state | 2 steps: save, then load | No — inherently two operations |
-| Execute JS and get result | 1 step: `interact({action: "execute_js", script: "..."})` | No — already minimal |
+| Execute JS and get result | 1 step: `interact({what: "execute_js", script: "..."})` | No — already minimal |
 | Enable AI Web Pilot | 1 step: human toggles in popup | No — intentional human gate |
 | Debug with state restore | 3 steps: save state, make changes, load state to reset | No — minimal for the workflow |
 | Check if pilot is enabled | 1 step: call any pilot action, check for opt-in error | Could add `observe({what: "pilot"})` to check status without triggering an error |
@@ -164,20 +164,20 @@ last_verified_date: 2026-03-05
 
 | # | Step (AI executes) | Human Observes | Expected Result | Pass |
 |---|-------------------|----------------|-----------------|------|
-| UAT-1 | `{"tool": "interact", "arguments": {"action": "highlight", "selector": "h1", "duration_ms": 5000}}` | Red border appears around the h1 element on the page | AI receives `{ success: true, selector: "h1", bounds: { x, y, width, height } }` with non-zero bounds | [ ] |
+| UAT-1 | `{"tool": "interact", "arguments": {"what": "highlight", "selector": "h1", "duration_ms": 5000}}` | Red border appears around the h1 element on the page | AI receives `{ success: true, selector: "h1", bounds: { x, y, width, height } }` with non-zero bounds | [ ] |
 | UAT-2 | Wait 5 seconds after UAT-1 | Red border disappears automatically | No highlighter div remains in the DOM | [ ] |
-| UAT-3 | `{"tool": "interact", "arguments": {"action": "highlight", "selector": "#nonexistent"}}` | No visual change on page | AI receives `{ success: false, error: "Element not found..." }` | [ ] |
-| UAT-4 | `{"tool": "interact", "arguments": {"action": "execute_js", "script": "document.title"}}` | No visual change | AI receives `{ success: true, result: "<page title>" }` matching the page title | [ ] |
-| UAT-5 | `{"tool": "interact", "arguments": {"action": "execute_js", "script": "window.testGlobal = {v:42}; window.testGlobal.v"}}` | No visual change | AI receives `{ success: true, result: 42 }` | [ ] |
-| UAT-6 | `{"tool": "interact", "arguments": {"action": "execute_js", "script": "while(true){}"}}` | No visual change; page may freeze briefly | AI receives timeout error within ~5s | [ ] |
-| UAT-7 | `{"tool": "interact", "arguments": {"action": "execute_js", "script": "throw new Error('test fail')"}}` | No visual change | AI receives `{ success: false, error: "test fail", stack: "..." }` | [ ] |
-| UAT-8 | `{"tool": "interact", "arguments": {"action": "save_state", "snapshot_name": "uat_test"}}` | No visual change | AI receives `{ success: true, snapshot_name: "uat_test", size_bytes: N }` | [ ] |
+| UAT-3 | `{"tool": "interact", "arguments": {"what": "highlight", "selector": "#nonexistent"}}` | No visual change on page | AI receives `{ success: false, error: "Element not found..." }` | [ ] |
+| UAT-4 | `{"tool": "interact", "arguments": {"what": "execute_js", "script": "document.title"}}` | No visual change | AI receives `{ success: true, result: "<page title>" }` matching the page title | [ ] |
+| UAT-5 | `{"tool": "interact", "arguments": {"what": "execute_js", "script": "window.testGlobal = {v:42}; window.testGlobal.v"}}` | No visual change | AI receives `{ success: true, result: 42 }` | [ ] |
+| UAT-6 | `{"tool": "interact", "arguments": {"what": "execute_js", "script": "while(true){}"}}` | No visual change; page may freeze briefly | AI receives timeout error within ~5s | [ ] |
+| UAT-7 | `{"tool": "interact", "arguments": {"what": "execute_js", "script": "throw new Error('test fail')"}}` | No visual change | AI receives `{ success: false, error: "test fail", stack: "..." }` | [ ] |
+| UAT-8 | `{"tool": "interact", "arguments": {"what": "save_state", "snapshot_name": "uat_test"}}` | No visual change | AI receives `{ success: true, snapshot_name: "uat_test", size_bytes: N }` | [ ] |
 | UAT-9 | Human clears localStorage manually in DevTools | localStorage is empty | Confirm localStorage is empty | [ ] |
-| UAT-10 | `{"tool": "interact", "arguments": {"action": "load_state", "snapshot_name": "uat_test"}}` | localStorage is restored (check in DevTools) | AI receives `{ success: true, restored: { localStorage: N, ... } }` | [ ] |
-| UAT-11 | `{"tool": "interact", "arguments": {"action": "list_states"}}` | No visual change | AI receives list including "uat_test" with metadata | [ ] |
-| UAT-12 | `{"tool": "interact", "arguments": {"action": "delete_state", "snapshot_name": "uat_test"}}` | No visual change | AI receives success; subsequent list_states does not include "uat_test" | [ ] |
+| UAT-10 | `{"tool": "interact", "arguments": {"what": "load_state", "snapshot_name": "uat_test"}}` | localStorage is restored (check in DevTools) | AI receives `{ success: true, restored: { localStorage: N, ... } }` | [ ] |
+| UAT-11 | `{"tool": "interact", "arguments": {"what": "list_states"}}` | No visual change | AI receives list including "uat_test" with metadata | [ ] |
+| UAT-12 | `{"tool": "interact", "arguments": {"what": "delete_state", "snapshot_name": "uat_test"}}` | No visual change | AI receives success; subsequent list_states does not include "uat_test" | [ ] |
 | UAT-13 | Human disables AI Web Pilot toggle in popup | Toggle switches to OFF | Popup shows toggle as OFF | [ ] |
-| UAT-14 | `{"tool": "interact", "arguments": {"action": "execute_js", "script": "1+1"}}` | No visual change | AI receives `{ error: "ai_web_pilot_disabled", message: "Enable 'AI Web Pilot'..." }` | [ ] |
+| UAT-14 | `{"tool": "interact", "arguments": {"what": "execute_js", "script": "1+1"}}` | No visual change | AI receives `{ error: "ai_web_pilot_disabled", message: "Enable 'AI Web Pilot'..." }` | [ ] |
 | UAT-15 | Human re-enables AI Web Pilot toggle | Toggle switches to ON | Subsequent pilot calls work again | [ ] |
 
 ### Data Leak UAT Verification

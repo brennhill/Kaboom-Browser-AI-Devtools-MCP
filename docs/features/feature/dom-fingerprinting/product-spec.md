@@ -28,7 +28,7 @@ When a developer renames a CSS class from `.submit-btn` to `.btn-submit`, the ap
 
 ## Solution
 
-Add `configure({action: "dom_fingerprint", selector: "..."})` -- a new action that analyzes an element and generates a ranked list of stable selectors. Selectors are scored based on semantic anchoring (ARIA roles, labels, data-testid), resilience to structural changes, and uniqueness.
+Add `configure({what: "dom_fingerprint", selector: "..."})` -- a new action that analyzes an element and generates a ranked list of stable selectors. Selectors are scored based on semantic anchoring (ARIA roles, labels, data-testid), resilience to structural changes, and uniqueness.
 
 DOM fingerprinting enables self-healing tests: when a test's selector breaks, the AI can query the fingerprint of the target element (identified by text content, role, or partial match) and get a more stable selector to use in the updated test.
 
@@ -69,7 +69,7 @@ DOM fingerprinting enables self-healing tests: when a test's selector breaks, th
 2. Agentic E2E Repair detects selector drift
 3. AI calls `analyze({what: "dom", selector: "button", text_content: "Submit"})` to find the button by text
 4. Element found but at different selector (`.btn-submit`)
-5. AI calls `configure({action: "dom_fingerprint", selector: ".btn-submit"})`
+5. AI calls `configure({what: "dom_fingerprint", selector: ".btn-submit"})`
 6. Server returns ranked selectors: `button[aria-label="Submit"]` (score: 9), `button[name="submit"]` (score: 7), `.btn-submit` (score: 3)
 7. AI updates test to use `button[aria-label="Submit"]` (highest stability score)
 8. Test now passes and is resilient to future CSS class renames

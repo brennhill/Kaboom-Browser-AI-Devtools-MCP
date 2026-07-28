@@ -25,12 +25,12 @@ last_verified_date: 2026-03-05
 | # | Data Leak Risk | What to Check | Severity |
 |---|---------------|---------------|----------|
 | DL-1 | Agent reads network bodies with auth tokens during diagnosis | `observe({what: "network_bodies"})` may return response bodies containing session tokens or API keys; verify the agent does not include these in PR descriptions or commit messages | critical |
-| DL-2 | Agent includes real API response data in generated test fixtures | `generate({format: "test", include_fixtures: true})` may create fixtures from observed traffic containing PII; verify fixture sanitization applies | critical |
+| DL-2 | Agent includes real API response data in generated test fixtures | `generate({what: "test", include_fixtures: true})` may create fixtures from observed traffic containing PII; verify fixture sanitization applies | critical |
 | DL-3 | Agent exposes DOM state with sensitive content | `analyze({what: "dom"})` returns DOM structure including input values; verify password fields and hidden inputs are not exposed | high |
-| DL-4 | Agent writes reproduction script with embedded credentials | `generate({format: "reproduction"})` may include URLs with tokens in query params; verify URL redaction | high |
+| DL-4 | Agent writes reproduction script with embedded credentials | `generate({what: "reproduction"})` may include URLs with tokens in query params; verify URL redaction | high |
 | DL-5 | Agent includes observed error stack traces with file paths in PR | Error clusters may contain server-side file paths; verify the agent's output follows existing redaction rules | medium |
 | DL-6 | Agent uses `execute_js` to inspect sensitive runtime state | During verification, agent might run `localStorage.getItem('token')` to check state; verify this stays within MCP response (localhost-only) | high |
-| DL-7 | Agent saves/loads browser state containing auth cookies | `interact({action: "save_state"})` captures cookies and localStorage; verify snapshots are not persisted beyond the session | medium |
+| DL-7 | Agent saves/loads browser state containing auth cookies | `interact({what: "save_state"})` captures cookies and localStorage; verify snapshots are not persisted beyond the session | medium |
 | DL-8 | Batch repair correlates data across multiple test runs | Agent combines observations from multiple test failures; composite diagnosis may reveal more about the system than individual observations | medium |
 | DL-9 | Agent commit message contains sensitive diagnostic data | Agent generates PR summary or commit message from diagnosis; verify no auth tokens, PII, or raw API responses in the text | high |
 | DL-10 | Circuit breaker failure leaves diagnostic data in memory | After 3 failed attempts, diagnostic data from all attempts remains in conversation context; verify no persistence to disk | medium |
@@ -57,9 +57,9 @@ last_verified_date: 2026-03-05
 | CL-2 | `observe({what: "errors"})` distinguishes app errors from test errors | Console errors from the application are distinguishable from test framework errors; verify error source is clear | [ ] |
 | CL-3 | `observe({what: "network_bodies"})` shows actual vs expected | Agent can compare observed API response shape against what the test asserts; verify field names and types are clear | [ ] |
 | CL-4 | `analyze({what: "dom"})` confirms selector existence | Response clearly shows whether a selector matched (count > 0) or not (count = 0); agent can determine selector drift | [ ] |
-| CL-5 | `configure({action: "validate_api"})` classifies contract changes | Violations are categorized (shape_change, type_change, new_field, null_field); agent can map these to fix strategies | [ ] |
+| CL-5 | `configure({what: "validate_api"})` classifies contract changes | Violations are categorized (shape_change, type_change, new_field, null_field); agent can map these to fix strategies | [ ] |
 | CL-6 | `observe({what: "error_clusters"})` groups related failures | Clusters show multiple errors with a single root cause; agent can fix the root cause once instead of each error | [ ] |
-| CL-7 | `generate({format: "test"})` produces framework-correct code | Generated test code uses correct Playwright/Cypress/Selenium syntax based on detected or specified framework | [ ] |
+| CL-7 | `generate({what: "test"})` produces framework-correct code | Generated test code uses correct Playwright/Cypress/Selenium syntax based on detected or specified framework | [ ] |
 | CL-8 | Root cause category is actionable | Each of 5 categories (selector drift, API contract drift, timing fragility, mock staleness, true regression) maps to a clear fix strategy | [ ] |
 | CL-9 | "True regression" stops the agent from modifying tests | When root cause is a true regression, the agent reports rather than fixes; verify the diagnostic evidence makes this clear | [ ] |
 | CL-10 | Circuit breaker message is unambiguous | After 3 failed attempts, the agent knows to stop and escalate; verify error patterns are distinguishable from transient issues | [ ] |
@@ -72,7 +72,7 @@ last_verified_date: 2026-03-05
 - [ ] Agent may enter an infinite fix-break loop — verify the circuit breaker (3 attempts) is enforced and the agent escalates
 - [ ] Agent may confuse "API returned 500" (true regression) with "API returned 200 with different fields" (contract drift) — verify network_waterfall status codes guide the classification
 - [ ] Agent may generate fixes for a framework it does not recognize — verify the agent checks framework detection before generating code
-- [ ] Agent may not clear Kaboom buffers between test runs — verify `configure({action: "clear"})` is called before re-running tests to avoid stale data
+- [ ] Agent may not clear Kaboom buffers between test runs — verify `configure({what: "clear"})` is called before re-running tests to avoid stale data
 
 ---
 
@@ -94,7 +94,7 @@ last_verified_date: 2026-03-05
 - [ ] All tools used in the workflow have their default settings (no special configuration needed to start)
 - [ ] `observe({what: "errors"})` works without prior configuration
 - [ ] `analyze({what: "dom"})` works without prior configuration
-- [ ] `generate({format: "test"})` auto-detects framework when not specified
+- [ ] `generate({what: "test"})` auto-detects framework when not specified
 - [ ] No pre-enablement required for the diagnosis workflow (unlike AI Web Pilot which requires a toggle)
 - [ ] Network body capture must be enabled for API contract drift detection — this is a prerequisite the agent must check
 
@@ -113,16 +113,16 @@ Since Agentic E2E Repair is a workflow pattern (not new server code), unit tests
 | UT-3 | `observe({what: "network_bodies"})` returns response bodies | Populate body buffer | Entries with URL, status, response body (redacted) | must |
 | UT-4 | `observe({what: "api"})` returns inferred schema | API traffic captured | Schema with field names, types, nullable | must |
 | UT-5 | `analyze({what: "dom", selector: ".submit-btn"})` returns match count | DOM with matching/non-matching elements | `{ count: N, matches: [...] }` or `{ count: 0 }` | must |
-| UT-6 | `configure({action: "validate_api"})` detects shape_change | Schema drift in traffic | Violations with category and details | must |
+| UT-6 | `configure({what: "validate_api"})` detects shape_change | Schema drift in traffic | Violations with category and details | must |
 | UT-7 | `observe({what: "error_clusters"})` groups related errors | Multiple related errors in buffer | Clusters with representative error and count | must |
 | UT-8 | `observe({what: "changes"})` shows recent changes | DOM or network changes captured | Change entries with type, description, timestamp | must |
-| UT-9 | `configure({action: "diff_sessions"})` compares states | Two session snapshots available | Diff showing DOM, network, error differences | should |
-| UT-10 | `generate({format: "test"})` produces valid Playwright code | Actions and assertions captured | Syntactically valid Playwright test | must |
-| UT-11 | `generate({format: "test", include_fixtures: true})` adds fixtures | Network bodies available | Test with beforeAll API setup calls | must |
-| UT-12 | `generate({format: "reproduction"})` produces reproduction steps | Actions captured | Playwright script reproducing the observed behavior | must |
-| UT-13 | `configure({action: "clear"})` resets buffers | Populated buffers | All buffers empty after clear | must |
-| UT-14 | `interact({action: "navigate", url: "..."})` navigates browser | Valid URL | Browser navigates to URL | must |
-| UT-15 | `interact({action: "execute_js", script: "..."})` runs in page | Valid JS expression | Result returned from page context | must |
+| UT-9 | `configure({what: "diff_sessions"})` compares states | Two session snapshots available | Diff showing DOM, network, error differences | should |
+| UT-10 | `generate({what: "test"})` produces valid Playwright code | Actions and assertions captured | Syntactically valid Playwright test | must |
+| UT-11 | `generate({what: "test", include_fixtures: true})` adds fixtures | Network bodies available | Test with beforeAll API setup calls | must |
+| UT-12 | `generate({what: "reproduction"})` produces reproduction steps | Actions captured | Playwright script reproducing the observed behavior | must |
+| UT-13 | `configure({what: "clear"})` resets buffers | Populated buffers | All buffers empty after clear | must |
+| UT-14 | `interact({what: "navigate", url: "..."})` navigates browser | Valid URL | Browser navigates to URL | must |
+| UT-15 | `interact({what: "execute_js", script: "..."})` runs in page | Valid JS expression | Result returned from page context | must |
 
 ### 4.2 Integration Tests
 
@@ -143,10 +143,10 @@ Since Agentic E2E Repair is a workflow pattern (not new server code), unit tests
 | # | Test Case | Metric | Target | Priority |
 |---|-----------|--------|--------|----------|
 | PT-1 | Diagnosis phase (all observations) | Total time for 3-5 observe calls | < 30 seconds (spec SLO) | must |
-| PT-2 | Fix generation time | Time for generate({format: "test"}) | < 10 seconds (spec SLO) | must |
+| PT-2 | Fix generation time | Time for generate({what: "test"}) | < 10 seconds (spec SLO) | must |
 | PT-3 | Server memory during repair workflow | Additional memory from tool calls | Zero additional (uses existing buffers) | must |
 | PT-4 | Token efficiency for batch repair | Tokens used for N related failures vs N independent repairs | < 2x tokens of single repair | should |
-| PT-5 | Buffer clear time | Time for configure({action: "clear"}) | < 10ms | should |
+| PT-5 | Buffer clear time | Time for configure({what: "clear"}) | < 10ms | should |
 | PT-6 | DOM query response time | Time for analyze({what: "dom"}) with complex selector | < 500ms | must |
 
 ### 4.4 Edge Case Tests
@@ -158,13 +158,13 @@ Since Agentic E2E Repair is a workflow pattern (not new server code), unit tests
 | EC-3 | Multiple root causes in single test | Both selector drift AND API contract change | Agent addresses in dependency order: API contract first, then selectors | should |
 | EC-4 | Unrecognized test framework | Agent cannot detect whether test uses Playwright, Cypress, or Selenium | Generates generic JS fixes; reports framework detection failure | should |
 | EC-5 | Extension disconnected mid-test | Partial telemetry captured | Agent works with partial data; notes that capture was incomplete | must |
-| EC-6 | Ring buffer overflow during long test suite | 1000+ log entries evict oldest | Agent uses configure({action: "clear"}) between tests; diagnoses with available data | should |
+| EC-6 | Ring buffer overflow during long test suite | 1000+ log entries evict oldest | Agent uses configure({what: "clear"}) between tests; diagnoses with available data | should |
 | EC-7 | Test was already flaky | Test passes intermittently regardless of agent's changes | Agent runs test twice after fix; if inconsistent, classifies as flaky and reports | should |
 | EC-8 | Fix breaks a different test | Agent's fix causes another test to fail | Circuit breaker activates; agent reports regression | must |
 | EC-9 | API returns 500 error (server broken) vs 200 with changed fields | Different HTTP status codes | Agent distinguishes: 500 = true regression (report); 200 with different fields = contract drift (fix test) | must |
 | EC-10 | Parallel test runners posting to same Kaboom | Multiple Playwright workers | Cross-contamination of telemetry; agent may misdiagnose. Notes limitation (OI-8) | should |
 | EC-11 | Agent tries to modify more than 10 files | Batch repair across many test files | Agent should request human approval before modifying more than 10 files (OI-3) | should |
-| EC-12 | Network body capture disabled | Agent tries API contract analysis | Agent detects missing data; suggests enabling body capture via configure({action: "capture", settings: {network_bodies: true}}) | must |
+| EC-12 | Network body capture disabled | Agent tries API contract analysis | Agent detects missing data; suggests enabling body capture via configure({what: "capture", settings: {network_bodies: true}}) | must |
 | EC-13 | Very stale test (months without update) | Many selectors, mocks, and assertions are outdated | Agent addresses one issue at a time; may need multiple repair cycles | should |
 
 ---
@@ -200,7 +200,7 @@ Since Agentic E2E Repair is a workflow pattern (not new server code), unit tests
 |---|-------------------|----------------|-----------------|------|
 | UAT-9 | Human creates a test asserting `response.userName` but API now returns `response.user_name` | Test fails with assertion error | Failing test output available | [ ] |
 | UAT-10 | `{"tool": "observe", "arguments": {"what": "network_bodies", "url_filter": "/api/users"}}` | No visual change | AI receives actual API response showing `user_name` field | [ ] |
-| UAT-11 | `{"tool": "configure", "arguments": {"action": "validate_api", "operation": "analyze"}}` | No visual change | AI receives contract violations showing `shape_change` for userName -> user_name | [ ] |
+| UAT-11 | `{"tool": "configure", "arguments": {"what": "validate_api", "operation": "analyze"}}` | No visual change | AI receives contract violations showing `shape_change` for userName -> user_name | [ ] |
 | UAT-12 | AI diagnoses: API contract drift — field renamed | Human confirms diagnosis | Agent correctly identifies API field rename as root cause | [ ] |
 | UAT-13 | AI proposes fix: update test assertion from `userName` to `user_name` | Human reviews proposed fix | Fix is targeted to the assertion only; no other test changes | [ ] |
 
@@ -212,7 +212,7 @@ Since Agentic E2E Repair is a workflow pattern (not new server code), unit tests
 | UAT-15 | `{"tool": "observe", "arguments": {"what": "errors"}}` | No visual change | AI sees application error (not test error) | [ ] |
 | UAT-16 | `{"tool": "observe", "arguments": {"what": "error_clusters"}}` | No visual change | AI sees new error cluster that did not exist before | [ ] |
 | UAT-17 | AI diagnoses: true regression — application code is broken | Human confirms this is an app bug, not a test bug | Agent correctly identifies this as "fix_code" (not "fix_test") | [ ] |
-| UAT-18 | AI does NOT propose a test fix; instead generates reproduction | No visual change | AI uses `generate({format: "reproduction"})` to create reproduction script | [ ] |
+| UAT-18 | AI does NOT propose a test fix; instead generates reproduction | No visual change | AI uses `generate({what: "reproduction"})` to create reproduction script | [ ] |
 
 ### Step-by-Step Verification: Circuit Breaker
 
@@ -236,7 +236,7 @@ Since Agentic E2E Repair is a workflow pattern (not new server code), unit tests
 - [ ] Extension capture behavior unaffected by the repair workflow
 - [ ] No new MCP tools created (still exactly 5 tools — observe, generate, configure, interact, analyze)
 - [ ] Server performance unaffected by the multi-tool orchestration pattern
-- [ ] Existing test generation (`generate({format: "test"})`) still works for non-repair use cases
+- [ ] Existing test generation (`generate({what: "test"})`) still works for non-repair use cases
 
 ---
 

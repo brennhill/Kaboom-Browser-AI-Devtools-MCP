@@ -57,7 +57,7 @@ sequenceDiagram
 
     Note over LLM: "Please annotate what you want changed"
 
-    LLM->>Server: interact({action: "draw_mode_start"})
+    LLM->>Server: interact({what: "draw_mode_start"})
     Server->>Server: Create PendingQuery<br/>{type: "draw_mode", id: "dm_abc"}
     Server-->>LLM: {status: "pending", correlation_id: "dm_abc"}
 
@@ -140,13 +140,13 @@ sequenceDiagram
     participant Server as Go Server
     participant CS as Content Script
 
-    LLM->>Server: interact({action: "draw_mode_start"})
+    LLM->>Server: interact({what: "draw_mode_start"})
     Server->>Server: Create PendingQuery, activate overlay
     Server-->>LLM: {status: "pending", correlation_id: "dm_1"}
 
     Note over CS: Draw mode already active<br/>(user is annotating)
 
-    LLM->>Server: interact({action: "draw_mode_start"})
+    LLM->>Server: interact({what: "draw_mode_start"})
     Server-->>LLM: {status: "already_active", annotation_count: 2}
     Note over Server: No-op, return current state
 ```
@@ -249,7 +249,7 @@ Returned when draw mode completes or `analyze({what: "annotations"})` is called.
 
 ### 2. draw_mode_start Called Twice
 
-**Scenario:** LLM calls `interact({action: "draw_mode_start"})` while draw mode is already active.
+**Scenario:** LLM calls `interact({what: "draw_mode_start"})` while draw mode is already active.
 
 **Resolution:** No-op. Returns `{status: "already_active", annotation_count: N}` with the current annotation count. Does not create a second overlay or reset existing annotations.
 
@@ -293,7 +293,7 @@ Returned when draw mode completes or `analyze({what: "annotations"})` is called.
 
 **Scenario:** LLM calls analyze for annotations but no draw mode session has occurred.
 
-**Resolution:** Returns `{status: "success", count: 0, annotations: [], hint: "No annotations found. Use interact({action: 'draw_mode_start'}) to activate draw mode and ask the user to annotate the page."}`.
+**Resolution:** Returns `{status: "success", count: 0, annotations: [], hint: "No annotations found. Use interact({what: 'draw_mode_start'}) to activate draw mode and ask the user to annotate the page."}`.
 
 ### 10. Detail correlation_id Expired
 
@@ -377,7 +377,7 @@ Returned when draw mode completes or `analyze({what: "annotations"})` is called.
 #### PendingQuery System:
 
 Draw mode uses the existing PendingQuery infrastructure:
-1. LLM calls `interact({action: "draw_mode_start"})` -> Go server creates a PendingQuery with type `draw_mode`
+1. LLM calls `interact({what: "draw_mode_start"})` -> Go server creates a PendingQuery with type `draw_mode`
 2. Extension polls `/pending-queries` -> picks up the draw_mode query
 3. Extension activates draw mode overlay
 4. On completion, extension POSTs results to `/draw-mode-result`

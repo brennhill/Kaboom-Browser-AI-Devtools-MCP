@@ -75,11 +75,11 @@ last_verified_date: 2026-03-05
 
 | Workflow | Steps Required | Can Be Simplified? |
 |----------|---------------|-------------------|
-| Set global TTL | 1 step: `configure(action: "ttl", ttl_action: "set", ttl_config: {global: "15m"})` | No -- already minimal |
+| Set global TTL | 1 step: `configure(what: "ttl", ttl_action: "set", ttl_config: {global: "15m"})` | No -- already minimal |
 | Set per-buffer TTL | 1 step: same call with buffer-specific fields | No -- already minimal |
-| Check current TTL config | 1 step: `configure(action: "ttl", ttl_action: "get")` | No -- already minimal |
-| Reset to defaults | 1 step: `configure(action: "ttl", ttl_action: "reset")` | No -- already minimal |
-| Apply a TTL preset | 1 step: `configure(action: "ttl", ttl_action: "set", preset: "debug")` | No -- already minimal |
+| Check current TTL config | 1 step: `configure(what: "ttl", ttl_action: "get")` | No -- already minimal |
+| Reset to defaults | 1 step: `configure(what: "ttl", ttl_action: "reset")` | No -- already minimal |
+| Apply a TTL preset | 1 step: `configure(what: "ttl", ttl_action: "set", preset: "debug")` | No -- already minimal |
 | Configure at startup | 1 step: CLI flag `--ttl 15m` | No -- already minimal |
 
 ### Default Behavior Verification
@@ -180,18 +180,18 @@ last_verified_date: 2026-03-05
 
 | # | Step (AI executes) | Human Observes | Expected Result | Pass |
 |---|-------------------|----------------|-----------------|------|
-| UAT-1 | `{"tool": "configure", "arguments": {"action": "ttl", "ttl_action": "get"}}` | Review TTL configuration | Response shows `config` with all zeros (unlimited) and `stats` for each buffer | [ ] |
-| UAT-2 | `{"tool": "configure", "arguments": {"action": "ttl", "ttl_action": "set", "ttl_config": {"global": "5m"}}}` | None | Response confirms global TTL set to "5m" | [ ] |
-| UAT-3 | `{"tool": "configure", "arguments": {"action": "ttl", "ttl_action": "get"}}` | Verify effective TTLs | All buffers show effective_ttl = "5m (global)" | [ ] |
-| UAT-4 | Generate browser activity for 2 minutes, then call `{"tool": "observe", "arguments": {"action": "get_console_logs"}}` | Compare to browser DevTools | Only entries from the last 5 minutes appear (all current entries, since only 2 minutes have passed) | [ ] |
-| UAT-5 | Wait 6 minutes from the first activity, then call `{"tool": "observe", "arguments": {"action": "get_console_logs"}}` | Note the entry count | Entries older than 5 minutes are no longer in the response | [ ] |
-| UAT-6 | `{"tool": "configure", "arguments": {"action": "ttl", "ttl_action": "set", "ttl_config": {"global": "5m", "network": "2m"}}}` | None | Response confirms global=5m, network=2m | [ ] |
-| UAT-7 | `{"tool": "configure", "arguments": {"action": "ttl", "ttl_action": "get"}}` | Verify per-buffer resolution | Console shows effective_ttl="5m (global)", Network shows effective_ttl="2m (buffer-specific)" | [ ] |
+| UAT-1 | `{"tool": "configure", "arguments": {"what": "ttl", "ttl_action": "get"}}` | Review TTL configuration | Response shows `config` with all zeros (unlimited) and `stats` for each buffer | [ ] |
+| UAT-2 | `{"tool": "configure", "arguments": {"what": "ttl", "ttl_action": "set", "ttl_config": {"global": "5m"}}}` | None | Response confirms global TTL set to "5m" | [ ] |
+| UAT-3 | `{"tool": "configure", "arguments": {"what": "ttl", "ttl_action": "get"}}` | Verify effective TTLs | All buffers show effective_ttl = "5m (global)" | [ ] |
+| UAT-4 | Generate browser activity for 2 minutes, then call `{"tool": "observe", "arguments": {"what": "get_console_logs"}}` | Compare to browser DevTools | Only entries from the last 5 minutes appear (all current entries, since only 2 minutes have passed) | [ ] |
+| UAT-5 | Wait 6 minutes from the first activity, then call `{"tool": "observe", "arguments": {"what": "get_console_logs"}}` | Note the entry count | Entries older than 5 minutes are no longer in the response | [ ] |
+| UAT-6 | `{"tool": "configure", "arguments": {"what": "ttl", "ttl_action": "set", "ttl_config": {"global": "5m", "network": "2m"}}}` | None | Response confirms global=5m, network=2m | [ ] |
+| UAT-7 | `{"tool": "configure", "arguments": {"what": "ttl", "ttl_action": "get"}}` | Verify per-buffer resolution | Console shows effective_ttl="5m (global)", Network shows effective_ttl="2m (buffer-specific)" | [ ] |
 | UAT-8 | Wait 3 minutes, then call observe for both console and network | Compare counts | Console has more entries (5m window) than network (2m window) | [ ] |
-| UAT-9 | `{"tool": "configure", "arguments": {"action": "ttl", "ttl_action": "set", "ttl_config": {"global": "30s"}}}` | None | Error: minimum TTL is 1 minute | [ ] |
-| UAT-10 | `{"tool": "configure", "arguments": {"action": "ttl", "ttl_action": "reset"}}` | None | Response confirms all TTLs reset to unlimited | [ ] |
-| UAT-11 | `{"tool": "observe", "arguments": {"action": "get_console_logs"}}` | Check entry count | All entries in ring buffer now visible again (unlimited TTL) | [ ] |
-| UAT-12 | `{"tool": "configure", "arguments": {"action": "ttl", "ttl_action": "set", "preset": "debug"}}` | None | Response confirms debug preset applied: global=15m, network=5m, websocket=30m, actions=15m | [ ] |
+| UAT-9 | `{"tool": "configure", "arguments": {"what": "ttl", "ttl_action": "set", "ttl_config": {"global": "30s"}}}` | None | Error: minimum TTL is 1 minute | [ ] |
+| UAT-10 | `{"tool": "configure", "arguments": {"what": "ttl", "ttl_action": "reset"}}` | None | Response confirms all TTLs reset to unlimited | [ ] |
+| UAT-11 | `{"tool": "observe", "arguments": {"what": "get_console_logs"}}` | Check entry count | All entries in ring buffer now visible again (unlimited TTL) | [ ] |
+| UAT-12 | `{"tool": "configure", "arguments": {"what": "ttl", "ttl_action": "set", "preset": "debug"}}` | None | Response confirms debug preset applied: global=15m, network=5m, websocket=30m, actions=15m | [ ] |
 
 ### Data Leak UAT Verification
 

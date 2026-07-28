@@ -135,7 +135,7 @@ last_verified_date: 2026-03-05
 | IT-2 | Named checkpoint create and query | Create checkpoint -> trigger events -> query named checkpoint | Events since named checkpoint returned | must |
 | IT-3 | Feedback loop simulation | Make changes -> call changes -> fix -> call changes | First call shows errors, second shows "clean" | must |
 | IT-4 | Concurrent reads and writes | Call `get_changes_since` while new events arriving | Consistent diff, no race conditions | must |
-| IT-5 | Session health integration | `configure(action: "health")` uses same checkpoint data | Health check reflects same state as changes diff | should |
+| IT-5 | Session health integration | `configure(what: "health")` uses same checkpoint data | Health check reflects same state as changes diff | should |
 | IT-6 | Persistence across sessions | Named checkpoint persists, new session queries it | Checkpoint data survives server restart | should |
 
 ### 4.3 Performance Tests
@@ -184,7 +184,7 @@ last_verified_date: 2026-03-05
 | UAT-2 | Trigger a console error on the page (e.g., click a button that calls undefined function) | Error appears in browser console | -- | [ ] |
 | UAT-3 | `{"tool": "observe", "arguments": {"what": "changes"}}` | Compare to UAT-1 | Severity "error", console diff shows the new error, summary mentions it | [ ] |
 | UAT-4 | `{"tool": "observe", "arguments": {"what": "changes"}}` | No new errors since UAT-3 | Severity "clean", summary "No significant changes" (auto-checkpoint advanced) | [ ] |
-| UAT-5 | `{"tool": "configure", "arguments": {"action": "store", "checkpoint": "before_test"}}` | Named checkpoint created | Confirmation response | [ ] |
+| UAT-5 | `{"tool": "configure", "arguments": {"what": "store", "checkpoint": "before_test"}}` | Named checkpoint created | Confirmation response | [ ] |
 | UAT-6 | Trigger 3 more errors, then: `{"tool": "observe", "arguments": {"what": "changes", "checkpoint": "before_test"}}` | 3 errors since named checkpoint | Severity "error", console diff has 3 entries | [ ] |
 | UAT-7 | `{"tool": "observe", "arguments": {"what": "changes", "checkpoint": "before_test"}}` | Same query again | Same result (named checkpoint does NOT advance) | [ ] |
 | UAT-8 | `{"tool": "observe", "arguments": {"what": "changes", "severity": "errors_only"}}` | Mix of errors and warnings on page | Only errors appear in response | [ ] |

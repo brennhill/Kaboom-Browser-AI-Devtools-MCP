@@ -150,7 +150,7 @@ last_verified_date: 2026-03-05
 
 ### Must Not Break
 
-- [ ] Accessibility queries still work (`generate({action: "query_accessibility"})`)
+- [ ] Accessibility queries still work (`generate({what: "query_accessibility"})`)
 - [ ] Page info queries still work (`observe({what: "page"})`)
 - [ ] Network queries still work (`observe({what: "network_waterfall"})`)
 - [ ] Other extension message types still handled correctly

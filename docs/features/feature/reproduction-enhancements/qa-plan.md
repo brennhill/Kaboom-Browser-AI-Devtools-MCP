@@ -83,10 +83,10 @@ last_verified_date: 2026-03-05
 | Workflow | Steps Required | Can Be Simplified? |
 |----------|---------------|-------------------|
 | Capture a screenshot | 1 step: `capture_screenshot` tool call | No — already minimal |
-| Generate reproduction with screenshots | 1 step: `generate({format: "reproduction", include_screenshots: true})` | No — single parameter adds screenshots |
-| Generate test with visual assertions | 1 step: `generate({format: "test", assert_visual: true})` | No — single parameter adds assertions |
-| Generate test with fixtures | 1 step: `generate({format: "test", include_fixtures: true})` | No — single parameter adds fixtures |
-| Generate full bug report | 1 step: `generate({format: "bug_report"})` | No — already minimal |
+| Generate reproduction with screenshots | 1 step: `generate({what: "reproduction", include_screenshots: true})` | No — single parameter adds screenshots |
+| Generate test with visual assertions | 1 step: `generate({what: "test", assert_visual: true})` | No — single parameter adds assertions |
+| Generate test with fixtures | 1 step: `generate({what: "test", include_fixtures: true})` | No — single parameter adds fixtures |
+| Generate full bug report | 1 step: `generate({what: "bug_report"})` | No — already minimal |
 | Configure auto-screenshot | 1 step: configure auto_screenshot settings | No — already minimal |
 | Full workflow: browse, capture, generate report | 3+ steps: browse site, trigger screenshots, generate report | Inherently multi-step; each step is minimal |
 
@@ -190,8 +190,8 @@ last_verified_date: 2026-03-05
 
 | # | Step (AI executes) | Human Observes | Expected Result | Pass |
 |---|-------------------|----------------|-----------------|------|
-| UAT-1 | `{"tool": "interact", "arguments": {"action": "capture_screenshot"}}` | Brief flash or no visible change (captureVisibleTab) | AI receives response with `success: true`, base64 PNG data, size in bytes, trigger: "explicit" | [ ] |
-| UAT-2 | `{"tool": "interact", "arguments": {"action": "capture_screenshot", "selector": "h1"}}` | No visible change | AI receives cropped screenshot of h1 element only | [ ] |
+| UAT-1 | `{"tool": "interact", "arguments": {"what": "capture_screenshot"}}` | Brief flash or no visible change (captureVisibleTab) | AI receives response with `success: true`, base64 PNG data, size in bytes, trigger: "explicit" | [ ] |
+| UAT-2 | `{"tool": "interact", "arguments": {"what": "capture_screenshot", "selector": "h1"}}` | No visible change | AI receives cropped screenshot of h1 element only | [ ] |
 | UAT-3 | Human triggers `throw new Error("screenshot test")` in DevTools (with on_error auto-screenshot enabled) | Error in console | AI calls `observe({what: "errors"})` and sees the error; screenshot buffer has an auto-captured screenshot with trigger: "error" | [ ] |
 
 #### Reproduction Script with Screenshots
@@ -229,8 +229,8 @@ last_verified_date: 2026-03-05
 | DL-UAT-4 | Screenshot not accessible via HTTP | `curl http://localhost:7890/screenshots` or any path | 404 Not Found — no HTTP endpoint for screenshots | [ ] |
 
 ### Regression Checks
-- [ ] Existing `generate({format: "reproduction"})` without new parameters still works identically
-- [ ] Existing `generate({format: "test"})` without new parameters still works identically
+- [ ] Existing `generate({what: "reproduction"})` without new parameters still works identically
+- [ ] Existing `generate({what: "test"})` without new parameters still works identically
 - [ ] Network body capture pipeline unchanged
 - [ ] Action capture pipeline unchanged
 - [ ] Extension performance not degraded when auto-screenshot is disabled (default)

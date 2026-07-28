@@ -74,27 +74,6 @@ func TestToolsConfigureDispatch_UnknownAction(t *testing.T) {
 	assertSnakeCaseFields(t, string(resp.Result))
 }
 
-func TestToolsConfigureDispatch_UnknownActionAliasAddsCanonicalWhatWarning(t *testing.T) {
-	t.Parallel()
-	h, _, _ := makeToolHandler(t)
-
-	resp := callConfigureRaw(h, `{"action":"nonexistent_action"}`)
-	result := parseToolResult(t, resp)
-	if !result.IsError {
-		t.Fatal("unknown action alias should return isError:true")
-	}
-	foundCanonicalWarning := false
-	for _, block := range result.Content {
-		if strings.Contains(block.Text, "deprecated") {
-			foundCanonicalWarning = true
-			break
-		}
-	}
-	if !foundCanonicalWarning {
-		t.Fatalf("expected canonical what warning block on error path, got %d content blocks", len(result.Content))
-	}
-}
-
 func TestToolsConfigureDispatch_EmptyArgs(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
@@ -104,45 +83,6 @@ func TestToolsConfigureDispatch_EmptyArgs(t *testing.T) {
 	result := parseToolResult(t, resp)
 	if !result.IsError {
 		t.Fatal("nil args (no 'action') should return isError:true")
-	}
-}
-
-func TestToolsConfigureDispatch_ActionAliasAddsCanonicalWhatWarning(t *testing.T) {
-	t.Parallel()
-	h, _, _ := makeToolHandler(t)
-
-	resp := callConfigureRaw(h, `{"action":"health"}`)
-	result := parseToolResult(t, resp)
-	if result.IsError {
-		t.Fatalf("action alias should be accepted, got: %s", result.Content[0].Text)
-	}
-	foundCanonicalWarning := false
-	for _, block := range result.Content {
-		if strings.Contains(block.Text, "deprecated") {
-			foundCanonicalWarning = true
-			break
-		}
-	}
-	if !foundCanonicalWarning {
-		t.Fatalf("expected canonical what warning block, got %d content blocks", len(result.Content))
-	}
-}
-
-func TestToolsConfigureDispatch_ConflictingWhatAndAction(t *testing.T) {
-	t.Parallel()
-	h, _, _ := makeToolHandler(t)
-
-	resp := callConfigureRaw(h, `{"what":"health","action":"clear"}`)
-	result := parseToolResult(t, resp)
-	if !result.IsError {
-		t.Fatal("conflicting what/action should return isError:true")
-	}
-	text := result.Content[0].Text
-	if !strings.Contains(text, "invalid_param") {
-		t.Fatalf("expected invalid_param, got: %s", text)
-	}
-	if !strings.Contains(text, "Conflicting parameters") {
-		t.Fatalf("expected conflict explanation, got: %s", text)
 	}
 }
 
@@ -598,14 +538,14 @@ func TestToolsConfigureStore_DefaultNamespaceForList(t *testing.T) {
 	assertSnakeCaseFields(t, string(resp.Result))
 }
 
-func TestToolsConfigureStore_ActionAliasAndFlatValue(t *testing.T) {
+func TestToolsConfigureStore_CanonicalActionAndData(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
 
-	saveResp := callConfigureRaw(h, `{"what":"store","action":"save","key":"flat_key","value":"flat_value"}`)
+	saveResp := callConfigureRaw(h, `{"what":"store","store_action":"save","key":"flat_key","data":"flat_value"}`)
 	saveResult := parseToolResult(t, saveResp)
 	if saveResult.IsError {
-		t.Fatalf("store save via action alias + flat value should succeed, got: %s", saveResult.Content[0].Text)
+		t.Fatalf("store save via canonical fields should succeed, got: %s", saveResult.Content[0].Text)
 	}
 	saveData := extractResultJSON(t, saveResult)
 	if saveData["status"] != "saved" {

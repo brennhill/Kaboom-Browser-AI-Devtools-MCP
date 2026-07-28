@@ -180,17 +180,17 @@ last_verified_date: 2026-03-05
 | # | Step (AI executes) | Human Observes | Expected Result | Pass |
 |---|-------------------|----------------|-----------------|------|
 | UAT-1 | Navigate to test app's main page, interact to generate network traffic | Network tab shows API calls completing | Several API responses captured | [ ] |
-| UAT-2 | `{"tool": "configure", "arguments": {"action": "save_baseline", "name": "main-page", "description": "Main page working state"}}` | AI confirms baseline saved | Response includes name, version: 1, endpoint count, URL scope | [ ] |
-| UAT-3 | `{"tool": "configure", "arguments": {"action": "list_baselines"}}` | AI receives baseline list | List contains "main-page" with correct metadata | [ ] |
-| UAT-4 | `{"tool": "configure", "arguments": {"action": "compare_baseline", "name": "main-page"}}` | No changes made to app | Response: `status: "match"`, no regressions | [ ] |
+| UAT-2 | `{"tool": "configure", "arguments": {"what": "save_baseline", "name": "main-page", "description": "Main page working state"}}` | AI confirms baseline saved | Response includes name, version: 1, endpoint count, URL scope | [ ] |
+| UAT-3 | `{"tool": "configure", "arguments": {"what": "list_baselines"}}` | AI receives baseline list | List contains "main-page" with correct metadata | [ ] |
+| UAT-4 | `{"tool": "configure", "arguments": {"what": "compare_baseline", "name": "main-page"}}` | No changes made to app | Response: `status: "match"`, no regressions | [ ] |
 | UAT-5 | Break an API endpoint (e.g., return 500 instead of 200) | Human modifies backend or mocks a failure | API now returns error | [ ] |
-| UAT-6 | Reload the page, then: `{"tool": "configure", "arguments": {"action": "compare_baseline", "name": "main-page"}}` | AI receives comparison | Response: `status: "regression"`, network regression listing the broken endpoint | [ ] |
+| UAT-6 | Reload the page, then: `{"tool": "configure", "arguments": {"what": "compare_baseline", "name": "main-page"}}` | AI receives comparison | Response: `status: "regression"`, network regression listing the broken endpoint | [ ] |
 | UAT-7 | Fix the API endpoint back to normal | Human restores normal behavior | API returns 200 again | [ ] |
-| UAT-8 | Reload and compare: `{"tool": "configure", "arguments": {"action": "compare_baseline", "name": "main-page"}}` | AI receives comparison | Response: `status: "match"` or `status: "improved"` | [ ] |
+| UAT-8 | Reload and compare: `{"tool": "configure", "arguments": {"what": "compare_baseline", "name": "main-page"}}` | AI receives comparison | Response: `status: "match"` or `status: "improved"` | [ ] |
 | UAT-9 | Add a console.error that was not in the baseline | Human adds `console.error("new bug")` to app code | Error visible in DevTools console | [ ] |
-| UAT-10 | `{"tool": "configure", "arguments": {"action": "compare_baseline", "name": "main-page"}}` | AI receives comparison | Console regression detected for new error | [ ] |
-| UAT-11 | `{"tool": "configure", "arguments": {"action": "save_baseline", "name": "main-page", "overwrite": true}}` | AI overwrites baseline | Response: version: 2, updated baseline | [ ] |
-| UAT-12 | `{"tool": "configure", "arguments": {"action": "delete_baseline", "name": "main-page"}}` | AI confirms deletion | Baseline removed from list, file deleted from disk | [ ] |
+| UAT-10 | `{"tool": "configure", "arguments": {"what": "compare_baseline", "name": "main-page"}}` | AI receives comparison | Console regression detected for new error | [ ] |
+| UAT-11 | `{"tool": "configure", "arguments": {"what": "save_baseline", "name": "main-page", "overwrite": true}}` | AI overwrites baseline | Response: version: 2, updated baseline | [ ] |
+| UAT-12 | `{"tool": "configure", "arguments": {"what": "delete_baseline", "name": "main-page"}}` | AI confirms deletion | Baseline removed from list, file deleted from disk | [ ] |
 | UAT-13 | Restart Kaboom server, then list baselines | Human restarts `./dist/kaboom` | Baselines loaded from disk (excluding deleted one) | [ ] |
 
 ### Data Leak UAT Verification

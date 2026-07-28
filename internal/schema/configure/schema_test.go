@@ -3,10 +3,9 @@ package configure
 
 import "testing"
 
-// TestToolSchema_RequiresWhat_ActionIsQuietAlias mirrors the interact contract:
-// 'what' is the single required dispatch key and 'action' is a quiet alias that
-// must not carry a duplicate enum.
-func TestToolSchema_RequiresWhat_ActionIsQuietAlias(t *testing.T) {
+// TestToolSchema_RequiresWhat verifies canonical routing while retaining action
+// only as a mode-specific sub-action field.
+func TestToolSchema_RequiresWhat(t *testing.T) {
 	t.Parallel()
 
 	tool := ToolSchema()
@@ -26,10 +25,10 @@ func TestToolSchema_RequiresWhat_ActionIsQuietAlias(t *testing.T) {
 
 	actionProp, ok := props["action"].(map[string]any)
 	if !ok {
-		t.Fatal("configure schema missing 'action' property")
+		t.Fatal("configure schema missing mode-specific 'action' property")
 	}
 	if _, hasEnum := actionProp["enum"]; hasEnum {
-		t.Fatal("configure 'action' alias should not have an enum (quiet alias)")
+		t.Fatal("configure mode-specific 'action' must not define a top-level routing enum")
 	}
 
 	required, ok := tool.InputSchema["required"].([]string)

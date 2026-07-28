@@ -116,7 +116,7 @@ begin_test "29.2" "export kaboom format with all action types" \
     "Call generate(reproduction, output_format=kaboom). Verify all 5 action types in numbered steps." \
     "Kaboom natural language format must be complete and human-readable."
 run_test_17_2() {
-    RESPONSE=$(call_tool "generate" '{"format":"reproduction","output_format":"kaboom"}')
+    RESPONSE=$(call_tool "generate" '{"what":"reproduction","output_format":"kaboom"}')
     if ! check_not_error "$RESPONSE"; then
         fail "generate(reproduction, kaboom) returned error: $(truncate "$(extract_content_text "$RESPONSE")")"
         return
@@ -175,7 +175,7 @@ begin_test "29.3" "export playwright format with valid code" \
     "Call generate(reproduction, output_format=playwright). Verify Playwright imports, locators, actions." \
     "Playwright format enables automated CI replay of recorded flows."
 run_test_17_3() {
-    RESPONSE=$(call_tool "generate" '{"format":"reproduction","output_format":"playwright"}')
+    RESPONSE=$(call_tool "generate" '{"what":"reproduction","output_format":"playwright"}')
     if ! check_not_error "$RESPONSE"; then
         fail "generate(reproduction, playwright) returned error: $(truncate "$(extract_content_text "$RESPONSE")")"
         return
@@ -332,7 +332,7 @@ begin_test "29.6" "last_n filter returns correct subset" \
     "Call generate(reproduction, last_n=2). Verify only the last 2 actions (select + keypress)." \
     "last_n is essential for focusing reproduction on recent actions."
 run_test_17_6() {
-    RESPONSE=$(call_tool "generate" '{"format":"reproduction","output_format":"kaboom","last_n":2}')
+    RESPONSE=$(call_tool "generate" '{"what":"reproduction","output_format":"kaboom","last_n":2}')
     if ! check_not_error "$RESPONSE"; then
         fail "generate with last_n returned error: $(truncate "$(extract_content_text "$RESPONSE")")"
         return

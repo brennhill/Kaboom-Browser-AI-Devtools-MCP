@@ -182,14 +182,14 @@ last_verified_date: 2026-03-05
 
 | # | Step (AI executes) | Human Observes | Expected Result | Pass |
 |---|-------------------|----------------|-----------------|------|
-| UAT-1 | `{"tool": "configure", "arguments": {"action": "get_dom_fingerprint"}}` | Page has standard structure | Response contains `landmarks`, `content`, `interactive`, `state` sections with correct data | [ ] |
-| UAT-2 | `{"tool": "configure", "arguments": {"action": "get_dom_fingerprint", "depth": "minimal"}}` | N/A | Response contains ONLY `landmarks` section. No interactive elements, no content, no page state. | [ ] |
-| UAT-3 | `{"tool": "configure", "arguments": {"action": "get_dom_fingerprint", "depth": "detailed"}}` | Page has a table | Response includes table with row/column counts | [ ] |
-| UAT-4 | `{"tool": "configure", "arguments": {"action": "get_dom_fingerprint", "scope": "#main"}}` | Main section has specific content | Only elements within `#main` are included | [ ] |
-| UAT-5 | `{"tool": "configure", "arguments": {"action": "get_dom_fingerprint", "scope": "#nonexistent"}}` | No such element | Error: "Scope element not found." | [ ] |
-| UAT-6 | `{"tool": "configure", "arguments": {"action": "get_dom_fingerprint", "baseline_name": "test-baseline"}}` | First capture | Fingerprint stored as baseline. Comparison section shows "no baseline exists" or baseline stored. | [ ] |
-| UAT-7 | Make a visible change to the page (add an error alert), then: `{"tool": "configure", "arguments": {"action": "compare_dom_fingerprint", "against": "test-baseline"}}` | Error element added to page | Comparison shows `error_appeared` change with severity `error` | [ ] |
-| UAT-8 | `{"tool": "configure", "arguments": {"action": "get_dom_fingerprint"}}` -- check hash | Page unchanged from previous step | Hash is different from the baseline hash (structure changed) | [ ] |
+| UAT-1 | `{"tool": "configure", "arguments": {"what": "get_dom_fingerprint"}}` | Page has standard structure | Response contains `landmarks`, `content`, `interactive`, `state` sections with correct data | [ ] |
+| UAT-2 | `{"tool": "configure", "arguments": {"what": "get_dom_fingerprint", "depth": "minimal"}}` | N/A | Response contains ONLY `landmarks` section. No interactive elements, no content, no page state. | [ ] |
+| UAT-3 | `{"tool": "configure", "arguments": {"what": "get_dom_fingerprint", "depth": "detailed"}}` | Page has a table | Response includes table with row/column counts | [ ] |
+| UAT-4 | `{"tool": "configure", "arguments": {"what": "get_dom_fingerprint", "scope": "#main"}}` | Main section has specific content | Only elements within `#main` are included | [ ] |
+| UAT-5 | `{"tool": "configure", "arguments": {"what": "get_dom_fingerprint", "scope": "#nonexistent"}}` | No such element | Error: "Scope element not found." | [ ] |
+| UAT-6 | `{"tool": "configure", "arguments": {"what": "get_dom_fingerprint", "baseline_name": "test-baseline"}}` | First capture | Fingerprint stored as baseline. Comparison section shows "no baseline exists" or baseline stored. | [ ] |
+| UAT-7 | Make a visible change to the page (add an error alert), then: `{"tool": "configure", "arguments": {"what": "compare_dom_fingerprint", "against": "test-baseline"}}` | Error element added to page | Comparison shows `error_appeared` change with severity `error` | [ ] |
+| UAT-8 | `{"tool": "configure", "arguments": {"what": "get_dom_fingerprint"}}` -- check hash | Page unchanged from previous step | Hash is different from the baseline hash (structure changed) | [ ] |
 | UAT-9 | Verify interactive elements listing | Count buttons and links on page | `interactive` list matches the visible interactive elements on the page | [ ] |
 | UAT-10 | Verify input values are redacted | Enter text in a form field, run fingerprint | Input shows `value: "[has value]"`, NOT the actual entered text | [ ] |
 | UAT-11 | Verify page state detection | Page has a visible `role="alert"` element | `state.error_elements` is non-empty with the alert's text | [ ] |

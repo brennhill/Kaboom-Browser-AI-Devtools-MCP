@@ -223,7 +223,7 @@ last_verified_date: 2026-03-05
 - [ ] a11y cache still works correctly for basic audits
 - [ ] Other observe modes (errors, network, page) are unaffected
 - [ ] Extension performance not degraded for non-a11y observe calls
-- [ ] SARIF export (`generate({format: "sarif"})`) still works with cached basic a11y results
+- [ ] SARIF export (`generate({what: "sarif"})`) still works with cached basic a11y results
 
 ---
 

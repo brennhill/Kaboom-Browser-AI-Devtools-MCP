@@ -30,18 +30,12 @@ func randIntn(n int) int {
 	return rand.IntN(n)
 }
 
-// interactAliasParams defines the deprecated alias parameters for the interact tool.
-var interactAliasParams = []toolrouting.Alias{
-	{JSONField: "action", DeprecatedIn: "0.7.0", RemoveIn: "0.9.0"},
-}
-
 // interactRegistry is the tool registry for interact dispatch.
 // PreDispatch handles evidence mode validation.
 // PostDispatch handles composable side effects (subtitle, auto_dismiss, wait_for_stable,
 // action_diff, include_screenshot, include_interactive).
 var interactRegistry = toolrouting.Registry[*ToolHandler]{
-	Handlers:  nil, // populated lazily per-call in toolInteract
-	AliasDefs: interactAliasParams,
+	Handlers: nil, // populated lazily per-call in toolInteract
 	Resolution: toolrouting.Resolution{
 		ToolName:   "interact",
 		ValidModes: "", // populated lazily per-call in toolInteract
@@ -246,7 +240,7 @@ func (h *ToolHandler) toolInteract(req mcp.JSONRPCRequest, args json.RawMessage)
 	registry := interactRegistry
 	registry.Handlers = getInteractHandlers()
 	registry.Resolution.ValidModes = getValidInteractActions()
-	what := resolveWhatForComposable(args, interactAliasParams)
+	what := resolveWhatForComposable(args)
 	response := toolrouting.Dispatch(h, req, args, registry)
 
 	if composable.Subtitle != nil && what != "subtitle" && response.Error == nil {
@@ -277,7 +271,7 @@ func (h *ToolHandler) toolInteract(req mcp.JSONRPCRequest, args json.RawMessage)
 	return response
 }
 
-func resolveWhatForComposable(args json.RawMessage, aliases []toolrouting.Alias) string {
+func resolveWhatForComposable(args json.RawMessage) string {
 	if len(args) == 0 {
 		return ""
 	}
@@ -289,14 +283,6 @@ func resolveWhatForComposable(args json.RawMessage, aliases []toolrouting.Alias)
 		var what string
 		if json.Unmarshal(value, &what) == nil && what != "" {
 			return what
-		}
-	}
-	for _, alias := range aliases {
-		if value, ok := raw[alias.JSONField]; ok {
-			var what string
-			if json.Unmarshal(value, &what) == nil && what != "" {
-				return what
-			}
 		}
 	}
 	return ""

@@ -89,13 +89,9 @@ func NewDispatcher(config Config) *Dispatcher {
 		"playback_results": config.PlaybackResults, "log_diff_report": config.LogDiffReport,
 	}
 	d.registry = toolrouting.Registry[Host]{
-		Handlers: handlers, AliasDefs: toolrouting.DefaultModeActionAliases,
+		Handlers: handlers,
 		Resolution: toolrouting.Resolution{
 			ToolName: "observe", ValidModes: strings.Join(util.SortedMapKeys(handlers), ", "),
-			ValueAliases: map[string]toolrouting.ValueAlias{
-				"network": {Canonical: "network_waterfall", DeprecatedIn: "0.7.0", RemoveIn: "0.9.0"},
-				"ws":      {Canonical: "websocket_events", DeprecatedIn: "0.7.0", RemoveIn: "0.9.0"},
-			},
 		},
 		PreDispatch: func(_ Host, _ mcp.JSONRPCRequest, args json.RawMessage, _ string) (json.RawMessage, *mcp.JSONRPCResponse) {
 			return config.InjectSummary(args), nil

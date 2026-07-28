@@ -95,7 +95,7 @@ last_verified_date: 2026-03-05
 
 | Workflow | Steps Required | Can Be Simplified? |
 |----------|---------------|-------------------|
-| Upload a file | 1 step: `interact({action: "upload", selector: "...", file_path: "..."})` | No — already minimal |
+| Upload a file | 1 step: `interact({what: "upload", selector: "...", file_path: "..."})` | No — already minimal |
 | Upload with form submit | 1 step: same as above with `submit: true` | No — already minimal |
 | Enable upload automation | 1 step: add `--enable-os-upload-automation` flag | No — intentional explicit opt-in |
 | Diagnose upload failure | 1 step: read `suggestions` array in error response | No — already minimal |

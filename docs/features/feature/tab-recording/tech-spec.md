@@ -30,7 +30,7 @@ sequenceDiagram
     participant Ext as Extension (background)
     participant Tab as Browser Tab
 
-    AI->>Server: interact({action: "screen_recording_start", name: "checkout bug"})
+    AI->>Server: interact({what: "screen_recording_start", name: "checkout bug"})
     Server->>Server: Generate filename: checkout-bug--2026-02-07-1423
     Server->>Server: Create dir ~/.kaboom/recordings/ (if needed)
     Server->>Ext: PendingQuery {action: "screen_recording_start", name: "checkout-bug--2026-02-07-1423"}
@@ -47,7 +47,7 @@ sequenceDiagram
 
     Note over AI,Tab: ... AI interacts with page, subtitles render in tab ...
 
-    AI->>Server: interact({action: "screen_recording_stop"})
+    AI->>Server: interact({what: "screen_recording_stop"})
     Server->>Ext: PendingQuery {action: "screen_recording_stop"}
 
     Ext->>Ext: recorder.stop()
@@ -539,9 +539,9 @@ sequenceDiagram
     participant AI as AI Assistant
     participant Server as Go Server
 
-    AI->>Server: interact({action: "screen_recording_start", name: "demo 1"})
+    AI->>Server: interact({what: "screen_recording_start", name: "demo 1"})
     Note over Server: Forwards to extension, recording starts
-    AI->>Server: interact({action: "screen_recording_start", name: "demo 2"})
+    AI->>Server: interact({what: "screen_recording_start", name: "demo 2"})
     Server->>Server: Extension reports: already recording
     Server-->>AI: Error: "RECORD_START: Already recording. Stop current recording first."
 ```
@@ -605,7 +605,7 @@ sequenceDiagram
 
 ### 7. No Name Provided
 
-**Scenario:** `interact({action: "screen_recording_start"})` with no `name` parameter.
+**Scenario:** `interact({what: "screen_recording_start"})` with no `name` parameter.
 
 **Resolution:** Server uses default slug `recording`, appends timestamp: `recording--2026-02-07-1423`. Same file saved, same metadata.
 
@@ -654,7 +654,7 @@ sequenceDiagram
 
 Uses existing async command pattern:
 
-1. Server receives `interact({action: "screen_recording_start"})` from MCP
+1. Server receives `interact({what: "screen_recording_start"})` from MCP
 2. Server creates `PendingQuery` with correlation ID
 3. Extension picks up query on next `/sync` poll
 4. Extension executes recording action

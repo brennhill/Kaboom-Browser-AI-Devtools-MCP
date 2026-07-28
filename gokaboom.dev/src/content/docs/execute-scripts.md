@@ -18,12 +18,12 @@ Kaboom solves this with a **three-world execution model** that automatically det
 
 ## The Three Worlds
 
-When you call `interact({action: "execute_js", script: "document.title"})`, Kaboom chooses one of three execution worlds:
+When you call `interact({what: "execute_js", script: "document.title"})`, Kaboom chooses one of three execution worlds:
 
 ### World 1: Main (Page Context)
 
 ```js
-interact({action: "execute_js", script: "document.title", world: "main"})
+interact({what: "execute_js", script: "document.title", world: "main"})
 ```
 
 The script runs in the **same JavaScript context as the web page**. It can:
@@ -48,7 +48,7 @@ The inject.js layer runs in Chrome's MAIN world, sharing the page's execution co
 ### World 2: Isolated (Extension Context)
 
 ```js
-interact({action: "execute_js", script: "document.title", world: "isolated"})
+interact({what: "execute_js", script: "document.title", world: "isolated"})
 ```
 
 The script runs in Chrome's **isolated world** — a separate JavaScript context with full DOM access but no access to page globals.
@@ -74,7 +74,7 @@ Chrome itself injects the function. Because Chrome is the execution agent (not t
 ### World 3: Auto (Smart Fallback)
 
 ```js
-interact({action: "execute_js", script: "document.title", world: "auto"})
+interact({what: "execute_js", script: "document.title", world: "auto"})
 ```
 
 This is the **default** and the one you should almost always use.
@@ -112,7 +112,7 @@ This is why Kaboom can automate Gmail (compose emails, read inboxes, click butto
 Every script execution has a configurable timeout:
 
 ```js
-interact({action: "execute_js", script: "longRunningOperation()", timeout_ms: 10000})
+interact({what: "execute_js", script: "longRunningOperation()", timeout_ms: 10000})
 ```
 
 Default: 5 seconds. Maximum: configurable per call.
@@ -128,15 +128,15 @@ If the script hangs (infinite loop, blocking network call), Kaboom:
 ### Read page state
 
 ```js
-interact({action: "execute_js", script: "document.title"})
-interact({action: "execute_js", script: "window.location.href"})
-interact({action: "execute_js", script: "document.querySelectorAll('li').length"})
+interact({what: "execute_js", script: "document.title"})
+interact({what: "execute_js", script: "window.location.href"})
+interact({what: "execute_js", script: "document.querySelectorAll('li').length"})
 ```
 
 ### Access framework state (main world only)
 
 ```js
-interact({action: "execute_js",
+interact({what: "execute_js",
           script: "document.querySelector('#app').__vue__.$store.state.user",
           world: "main"})
 ```
@@ -144,21 +144,21 @@ interact({action: "execute_js",
 ### Modify the page
 
 ```js
-interact({action: "execute_js",
+interact({what: "execute_js",
           script: "document.body.style.backgroundColor = 'red'"})
 ```
 
 ### Run complex logic
 
 ```js
-interact({action: "execute_js",
+interact({what: "execute_js",
           script: "Array.from(document.querySelectorAll('table tr')).map(r => Array.from(r.cells).map(c => c.textContent))"})
 ```
 
 ### Check for specific conditions
 
 ```js
-interact({action: "execute_js",
+interact({what: "execute_js",
           script: "!!document.querySelector('.error-banner')"})
 ```
 

@@ -50,7 +50,7 @@ last_verified_date: 2026-03-05
    - Start: `kaboom --feature-flags=features.yaml`
 2. Steps:
    - [ ] Check flags: `observe({what: "feature_flags"})` — verify generate_har: false
-   - [ ] Attempt HAR generation: `generate({format: "har"})`
+   - [ ] Attempt HAR generation: `generate({what: "har"})`
    - [ ] Verify error: {error: "feature_disabled", feature_flag: "generate_har"}
    - [ ] Attempt other generate types (reproduction): succeeds
 3. Expected Result: Disabled feature fails, others work

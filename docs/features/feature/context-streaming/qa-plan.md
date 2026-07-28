@@ -78,10 +78,10 @@ last_verified_date: 2026-03-05
 
 | Workflow | Steps Required | Can Be Simplified? |
 |----------|---------------|-------------------|
-| Enable streaming with defaults | 1 step: `configure(action: "streaming", streaming_action: "enable")` | No — already minimal |
+| Enable streaming with defaults | 1 step: `configure(what: "streaming", streaming_action: "enable")` | No — already minimal |
 | Enable with specific categories | 1 step: single call with `events` array | No — already batched |
-| Disable streaming | 1 step: `configure(action: "streaming", streaming_action: "disable")` | No — already minimal |
-| Check streaming status | 1 step: `configure(action: "streaming", streaming_action: "status")` | No — already minimal |
+| Disable streaming | 1 step: `configure(what: "streaming", streaming_action: "disable")` | No — already minimal |
+| Check streaming status | 1 step: `configure(what: "streaming", streaming_action: "status")` | No — already minimal |
 | Receive a notification | 0 steps: notification arrives automatically | No — this is the whole point |
 | React to a notification | 1 step: AI calls `observe()` with relevant mode | Could auto-suggest observe calls in notification, but this is a future enhancement (OI-4) |
 
@@ -100,7 +100,7 @@ last_verified_date: 2026-03-05
 
 | # | Test Case | Input | Expected Output | Priority |
 |---|-----------|-------|-----------------|----------|
-| UT-1 | Enable streaming with defaults | `configure(action: "streaming", streaming_action: "enable")` | `StreamState.Enabled = true`, response shows config with defaults | must |
+| UT-1 | Enable streaming with defaults | `configure(what: "streaming", streaming_action: "enable")` | `StreamState.Enabled = true`, response shows config with defaults | must |
 | UT-2 | Enable with specific events | `streaming_action: "enable", events: ["errors", "network_errors"]` | `StreamState.Events = ["errors", "network_errors"]` | must |
 | UT-3 | Enable with custom throttle | `streaming_action: "enable", throttle_seconds: 10` | `StreamState.ThrottleSeconds = 10` | must |
 | UT-4 | Enable with throttle out of range | `throttle_seconds: 0` or `throttle_seconds: 100` | Error: "throttle_seconds must be between 1 and 60" | must |
@@ -180,14 +180,14 @@ last_verified_date: 2026-03-05
 
 | # | Step (AI executes) | Human Observes | Expected Result | Pass |
 |---|-------------------|----------------|-----------------|------|
-| UAT-1 | `{"tool": "configure", "arguments": {"action": "streaming", "streaming_action": "status"}}` | No visual change | AI receives `{ config: { enabled: false }, notify_count: 0, pending: 0 }` | [ ] |
-| UAT-2 | `{"tool": "configure", "arguments": {"action": "streaming", "streaming_action": "enable", "events": ["errors", "network_errors"], "throttle_seconds": 5, "severity_min": "warning"}}` | No visual change | AI receives `{ status: "enabled", config: { enabled: true, events: [...], throttle_seconds: 5, ... } }` | [ ] |
+| UAT-1 | `{"tool": "configure", "arguments": {"what": "streaming", "streaming_action": "status"}}` | No visual change | AI receives `{ config: { enabled: false }, notify_count: 0, pending: 0 }` | [ ] |
+| UAT-2 | `{"tool": "configure", "arguments": {"what": "streaming", "streaming_action": "enable", "events": ["errors", "network_errors"], "throttle_seconds": 5, "severity_min": "warning"}}` | No visual change | AI receives `{ status: "enabled", config: { enabled: true, events: [...], throttle_seconds: 5, ... } }` | [ ] |
 | UAT-3 | Human triggers a JavaScript error on the page (e.g., `throw new Error("UAT streaming test")` in DevTools) | Error appears in DevTools console | Within 5 seconds, AI receives an MCP notification: `{ jsonrpc: "2.0", method: "notifications/message", params: { level: "warning", logger: "kaboom", data: { category: "errors", ... } } }` | [ ] |
 | UAT-4 | Human triggers a 500 network error (e.g., fetch to a failing endpoint) | Network error in DevTools | AI receives a notification with `category: "network_errors"` | [ ] |
-| UAT-5 | `{"tool": "configure", "arguments": {"action": "streaming", "streaming_action": "status"}}` | No visual change | `notify_count` is > 0; reflects notifications emitted in UAT-3 and UAT-4 | [ ] |
+| UAT-5 | `{"tool": "configure", "arguments": {"what": "streaming", "streaming_action": "status"}}` | No visual change | `notify_count` is > 0; reflects notifications emitted in UAT-3 and UAT-4 | [ ] |
 | UAT-6 | Human triggers the same error twice within 30 seconds | Two errors in DevTools | AI receives only ONE notification (second is deduped) | [ ] |
 | UAT-7 | Human triggers 3 different errors within 2 seconds | Three errors in DevTools | AI receives first notification immediately; others are batched; batch flushed after throttle window | [ ] |
-| UAT-8 | `{"tool": "configure", "arguments": {"action": "streaming", "streaming_action": "disable"}}` | No visual change | AI receives `{ status: "disabled", pending_cleared: N }` | [ ] |
+| UAT-8 | `{"tool": "configure", "arguments": {"what": "streaming", "streaming_action": "disable"}}` | No visual change | AI receives `{ status: "disabled", pending_cleared: N }` | [ ] |
 | UAT-9 | Human triggers another error | Error in DevTools | AI does NOT receive a notification (streaming disabled) | [ ] |
 | UAT-10 | `{"tool": "observe", "arguments": {"what": "errors"}}` | No visual change | AI receives the error from UAT-9 via normal observe (passive mode still works) | [ ] |
 

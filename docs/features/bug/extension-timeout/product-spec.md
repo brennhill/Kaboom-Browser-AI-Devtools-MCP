@@ -114,8 +114,8 @@ All operations complete with consistent latency.
 1. `observe({what: "errors"})` → Success
 2. `analyze({what: "dom"})` → Success
 3. `observe({what: "network_bodies"})` → Success
-4. `generate({action: "query_accessibility"})` → Success
-5. `interact({action: "highlight"})` → Success
+4. `generate({what: "query_accessibility"})` → Success
+5. `interact({what: "highlight"})` → Success
 ...
 20. Mixed operations continue → All succeed
 

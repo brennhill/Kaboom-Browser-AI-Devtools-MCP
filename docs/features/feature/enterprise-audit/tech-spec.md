@@ -57,7 +57,7 @@ Each audit entry contains:
 - Status (success, error, rate-limited, redacted)
 - Redaction count (how many fields were redacted in the response, see 1.4)
 
-The log is queryable via `configure({action:"audit_log"})` with filters for time range, tool name, session ID, and status. Responses return entries in reverse chronological order with pagination.
+The log is queryable via `configure({what:"audit_log"})` with filters for time range, tool name, session ID, and status. Responses return entries in reverse chronological order with pagination.
 
 #### What the Log Does NOT Store
 
@@ -104,7 +104,7 @@ When an MCP client sends the `initialize` request, Kaboom generates a session ID
 The session ID is:
 - Returned in the `initialize` response as a server capability extension
 - Included in every audit log entry for that connection
-- Available via `configure({action:"health"})` for active session listing
+- Available via `configure({what:"health"})` for active session listing
 - Logged on connection close with total tool call count and duration
 
 Sessions end when the stdio pipe closes (MCP client disconnects or process dies). The server detects this via EOF on stdin.
@@ -403,7 +403,7 @@ Priority order: CLI flags > environment variables > config file > defaults.
 
 ### 3.4 Health & SLA Metrics
 
-`configure({action:"health"})` exposes server operational state for monitoring and alerting. This is distinct from the existing `/health` HTTP endpoint (which only returns circuit breaker state) — it provides comprehensive server metrics.
+`configure({what:"health"})` exposes server operational state for monitoring and alerting. This is distinct from the existing `/health` HTTP endpoint (which only returns circuit breaker state) — it provides comprehensive server metrics.
 
 #### What It Reports
 

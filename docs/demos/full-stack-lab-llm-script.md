@@ -114,7 +114,7 @@ then explain what changed.
 Preferred one-command call:
 
 ```text
-interact({action:"execute_js", script:"window.kaboomDemo.applyPostFixMode()"})
+interact({what:"execute_js", script:"window.kaboomDemo.applyPostFixMode()"})
 ```
 
 What changes immediately:
@@ -141,7 +141,7 @@ Revert to broken mode in one command so we can compare behavior.
 One-command call:
 
 ```text
-interact({action:"execute_js", script:"window.kaboomDemo.applyBrokenMode()"})
+interact({what:"execute_js", script:"window.kaboomDemo.applyBrokenMode()"})
 ```
 
 ## Runtime API for LLM

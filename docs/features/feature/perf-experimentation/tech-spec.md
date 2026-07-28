@@ -41,7 +41,7 @@ Two modes, zero extra tool calls in either:
 ```
 repeat {
   edit code
-  interact({action: "refresh"})
+  interact({what: "refresh"})
   → result includes perf_diff: LCP -57%, transfer_size -33%, ...
   read diff, decide next step
 }
@@ -56,7 +56,7 @@ One call per iteration. No snapshots, no compare, no observe.
 Always included — no opt-in needed:
 
 ```json
-interact({ action: "refresh" })
+interact({ what: "refresh" })
 // → async result:
 {
   "success": true,
@@ -88,7 +88,7 @@ First page load: no `perf_diff` (no baseline yet). Every subsequent navigation a
 Two fields added to every mutating action result:
 
 ```json
-interact({ action: "click", selector: "text=Submit" })
+interact({ what: "click", selector: "text=Submit" })
 // → async result:
 {
   "success": true,
@@ -105,7 +105,7 @@ interact({ action: "click", selector: "text=Submit" })
 When the AI is actively debugging or profiling an interaction:
 
 ```json
-interact({ action: "click", selector: "text=Load More", analyze: true })
+interact({ what: "click", selector: "text=Load More", analyze: true })
 // → async result:
 {
   "success": true,
@@ -198,7 +198,7 @@ sequenceDiagram
     participant SW as Service Worker
     participant Page
 
-    AI->>Daemon: interact({action: "refresh"})
+    AI->>Daemon: interact({what: "refresh"})
     Daemon->>SW: pendingQuery {type: "browser_action", action: "refresh"}
 
     Note over SW: previousLoad = currentLoad
@@ -228,7 +228,7 @@ sequenceDiagram
     participant SW as Service Worker
     participant Page
 
-    AI->>Daemon: interact({action: "click", selector: "text=Submit", analyze: true})
+    AI->>Daemon: interact({what: "click", selector: "text=Submit", analyze: true})
     Daemon->>SW: pendingQuery {type: "dom_action", action: "click", analyze: true}
 
     SW->>Page: chrome.scripting.executeScript(domPrimitive)

@@ -67,7 +67,7 @@ Context Streaming enables **real-time push notifications** instead of polling:
 
 ### Integration
 - **observe({what: "events"})** — Fetch recent streamed events (if polling fallback needed)
-- **configure({action: "streaming", events: ["errors", "network_errors"], throttle_ms: 1000})** — Subscribe to streams
+- **configure({what: "streaming", events: ["errors", "network_errors"], throttle_ms: 1000})** — Subscribe to streams
 - **Bidirectional:** MCP client can mute channels dynamically based on noise
 
 ## Out of Scope

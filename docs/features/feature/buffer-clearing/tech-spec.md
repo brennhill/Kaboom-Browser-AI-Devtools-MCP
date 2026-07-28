@@ -23,7 +23,7 @@ last_verified_date: 2026-03-05
 
 ## Architecture Overview
 
-Add `buffer` parameter to `configure({action: "clear"})` tool. Implement buffer-specific clear methods in Capture struct. Return counts of cleared items.
+Add `buffer` parameter to `configure({what: "clear"})` tool. Implement buffer-specific clear methods in Capture struct. Return counts of cleared items.
 
 **Key Principle:** Clearing is **destructive and immediate**. No undo, no transactions.
 
@@ -48,7 +48,7 @@ Add `buffer` parameter to configure tool schema:
 
 Update tool description:
 ```go
-Description: "...\n\nBuffer clearing: configure({action: \"clear\", buffer: \"network\"}) clears network buffers. buffer: \"all\" clears everything. Omit buffer parameter to clear logs only (backward compatible).",
+Description: "...\n\nBuffer clearing: configure({what: \"clear\", buffer: \"network\"}) clears network buffers. buffer: \"all\" clears everything. Omit buffer parameter to clear logs only (backward compatible).",
 ```
 
 ### Phase 2: Add Clear Methods to Capture (30 min)
@@ -488,7 +488,7 @@ See [product-spec.md](./product-spec.md#manual-uat)
 
 ```go
 // Clear empty buffer
-configure({action: "clear", buffer: "network"})
+configure({what: "clear", buffer: "network"})
 → Returns: {cleared: "network", counts: {}, total_cleared: 0}
 ```
 **Not an error** - Clearing empty buffer is valid operation.
@@ -508,7 +508,7 @@ defer c.mu.Unlock()
 ### Invalid Buffer Name
 
 ```go
-configure({action: "clear", buffer: "xyz"})
+configure({what: "clear", buffer: "xyz"})
 → Error: "Invalid buffer: xyz. Use one of: network, websocket, actions, logs, all"
 ```
 
@@ -539,7 +539,7 @@ configure({action: "clear", buffer: "xyz"})
 
 ```javascript
 // Old code (no buffer parameter)
-configure({action: "clear"})
+configure({what: "clear"})
 ```
 **Behavior:** Clears logs only (current behavior)
 **Unchanged:** ✅
@@ -548,7 +548,7 @@ configure({action: "clear"})
 
 ```javascript
 // New code (with buffer parameter)
-configure({action: "clear", buffer: "network"})
+configure({what: "clear", buffer: "network"})
 ```
 **Behavior:** Clears network buffers
 **New feature:** ✅

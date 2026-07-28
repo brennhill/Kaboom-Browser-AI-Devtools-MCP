@@ -25,7 +25,7 @@ last_verified_date: 2026-03-05
 - Payment.ts contains: `async function processPayment()`
 
 #### Steps:
-1. Call `interact({action: "code_search", pattern: "handlePayment|processPayment"})`
+1. Call `interact({what: "code_search", pattern: "handlePayment|processPayment"})`
 2. Verify results include all 3 functions with correct file paths
 3. Verify relevance scores (exact match > partial match)
 4. Verify line numbers correct
@@ -51,7 +51,7 @@ last_verified_date: 2026-03-05
 - All contain pattern "async" or "timeout"
 
 #### Steps:
-1. Call `interact({action: "code_search", pattern: "timeout", language: "typescript"})`
+1. Call `interact({what: "code_search", pattern: "timeout", language: "typescript"})`
 2. Verify only .ts and .tsx files returned
 3. Call with `language: "python"`, verify only .py files returned
 4. Call with no language filter, verify all languages returned
@@ -74,7 +74,7 @@ last_verified_date: 2026-03-05
 - Target: read lines 40-70
 
 #### Steps:
-1. Call `interact({action: "code_read", file_path: "src/components/PaymentForm.tsx", lines: [40, 70]})`
+1. Call `interact({what: "code_read", file_path: "src/components/PaymentForm.tsx", lines: [40, 70]})`
 2. Verify returned content contains exactly 31 lines (40-70 inclusive)
 3. Verify line numbers annotated correctly
 4. Verify content accurate
@@ -99,7 +99,7 @@ last_verified_date: 2026-03-05
 - Target file: src/utils/helpers.ts with 75 lines
 
 #### Steps:
-1. Call `interact({action: "code_read", file_path: "src/utils/helpers.ts"})`
+1. Call `interact({what: "code_read", file_path: "src/utils/helpers.ts"})`
 2. Verify all 75 lines returned
 3. Verify first and last lines correct
 
@@ -122,9 +122,9 @@ last_verified_date: 2026-03-05
 - Target: lines 45-50
 
 #### Steps:
-1. Read original: `interact({action: "code_read", file_path: "src/components/PaymentForm.tsx", lines: [45, 50]})`
+1. Read original: `interact({what: "code_read", file_path: "src/components/PaymentForm.tsx", lines: [45, 50]})`
 2. Record original content
-3. Call `interact({action: "code_modify", operation: "replace", line_range: [45, 50], new_content: "...fixed code..."})`
+3. Call `interact({what: "code_modify", operation: "replace", line_range: [45, 50], new_content: "...fixed code..."})`
 4. Verify response shows git_diff
 5. Verify git_staged: true
 6. Call `git diff` to confirm changes staged
@@ -152,7 +152,7 @@ last_verified_date: 2026-03-05
 - Insert after line 35
 
 #### Steps:
-1. Call `interact({action: "code_modify", operation: "insert_after", line: 35, new_content: "console.debug('...');"})`
+1. Call `interact({what: "code_modify", operation: "insert_after", line: 35, new_content: "console.debug('...');"})`
 2. Verify response shows new lines added
 3. Read file: verify debug statement at line 36
 4. Verify indentation matches surrounding code
@@ -177,7 +177,7 @@ last_verified_date: 2026-03-05
 - Target: delete these lines
 
 #### Steps:
-1. Call `interact({action: "code_modify", operation: "delete", line_range: [3, 5]})`
+1. Call `interact({what: "code_modify", operation: "delete", line_range: [3, 5]})`
 2. Verify response shows lines deleted
 3. Read file: verify old imports gone
 4. Verify file structure intact (no orphaned braces)
@@ -202,7 +202,7 @@ last_verified_date: 2026-03-05
 - Modification made to PaymentForm.tsx
 
 #### Steps:
-1. Call `interact({action: "code_modify", operation: "replace", ..., auto_test: true})`
+1. Call `interact({what: "code_modify", operation: "replace", ..., auto_test: true})`
 2. Response should include test_results
 3. Verify tests ran: passed, failed, duration_ms present
 4. If modification broke tests: verify failure shown
@@ -229,7 +229,7 @@ last_verified_date: 2026-03-05
 - Tests currently pass (baseline)
 
 #### Steps:
-1. Call `interact({action: "run_tests", test_file: "src/components/PaymentForm.test.ts"})`
+1. Call `interact({what: "run_tests", test_file: "src/components/PaymentForm.test.ts"})`
 2. Verify command executed: "npm test -- PaymentForm.test.ts"
 3. Verify results captured: tests_passed, tests_failed, duration_ms
 4. Verify output includes test names and assertions
@@ -259,7 +259,7 @@ last_verified_date: 2026-03-05
 
 #### Steps:
 1. Record current file content
-2. Call `interact({action: "code_rollback", modification_id: "mod-20260131-101523-001"})`
+2. Call `interact({what: "code_rollback", modification_id: "mod-20260131-101523-001"})`
 3. Verify response: status: "rolled_back"
 4. Read file: verify original content restored
 5. Check git status: changes should be unstaged/reverted
@@ -310,9 +310,9 @@ last_verified_date: 2026-03-05
 - Attacker attempts to access files outside repo
 
 #### Steps:
-1. Call `interact({action: "code_read", file_path: "../../../etc/passwd"})`
+1. Call `interact({what: "code_read", file_path: "../../../etc/passwd"})`
 2. Verify error returned: "Path outside repository root"
-3. Call `interact({action: "code_read", file_path: "/etc/passwd"})`
+3. Call `interact({what: "code_read", file_path: "/etc/passwd"})`
 4. Verify error: "Absolute paths not allowed"
 5. Call with legitimate path: works fine
 
@@ -334,7 +334,7 @@ last_verified_date: 2026-03-05
 - Simulate large project or use real project with many files
 
 #### Steps:
-1. Call `interact({action: "code_search", pattern: "handlePayment"})`
+1. Call `interact({what: "code_search", pattern: "handlePayment"})`
 2. Record search time
 3. Verify completes in <100ms
 4. Verify result count reasonable

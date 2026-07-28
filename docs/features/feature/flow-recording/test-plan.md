@@ -21,7 +21,7 @@ last_verified_date: 2026-03-05
 ### Recording Tests
 
 - **Test:** Start recording captures user interactions
-  - **Given:** User calls `configure({action: 'recording_start', name: 'checkout-flow'})`
+  - **Given:** User calls `configure({what: 'recording_start', name: 'checkout-flow'})`
   - **When:** User navigates, clicks buttons, types form fields
   - **Then:** All actions recorded with timestamps, selectors, x/y coordinates
 
@@ -44,7 +44,7 @@ last_verified_date: 2026-03-05
 
 - **Test:** Playback executes actions in sequence
   - **Given:** Recording with actions [navigate → click → type → navigate]
-  - **When:** User calls `interact({action: 'playback', recording: 'checkout-flow', test_id: 'replay-checkout'})`
+  - **When:** User calls `interact({what: 'playback', recording: 'checkout-flow', test_id: 'replay-checkout'})`
   - **Then:** Actions executed in order, logs captured under test boundary 'replay-checkout'
 
 - **Test:** Element self-healing on selector failure

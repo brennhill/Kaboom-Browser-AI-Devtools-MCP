@@ -87,7 +87,7 @@ observe({what: "feature_flags"})
 
 ## Disabled feature call:
 ```json
-generate({format: "har"})
+generate({what: "har"})
 // Returns:
 {
   "error": "feature_disabled",
@@ -106,7 +106,7 @@ kaboom --feature-flags=features.yaml --disable-feature=interact_execute_js
 ```bash
 # Admin edits features.yaml, changes generate_har: false → true
 # Server detects file change within 10 seconds
-# New requests: generate({format: "har"}) now succeeds
+# New requests: generate({what: "har"}) now succeeds
 ```
 
 ---

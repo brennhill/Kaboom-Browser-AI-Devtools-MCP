@@ -15,7 +15,7 @@ ensure_daemon
 
 # ── TEST 17.19: Generate Test from 100-Action Sequence ───────────────────
 
-begin_test "17.19" "generate({format:'test'}) handles 100 recorded actions" \
+begin_test "17.19" "generate({what:'test'}) handles 100 recorded actions" \
     "Build 100-action sequence (1000+ lines of code), generate completes < 10s" \
     "Performance must scale for complex user journeys"
 
@@ -100,7 +100,7 @@ run_test_17_20
 
 # ── TEST 17.21: Large Response Format (SARIF with 1000 issues) ────────
 
-begin_test "17.21" "generate({format:'sarif'}) with 1000 test issues" \
+begin_test "17.21" "generate({what:'sarif'}) with 1000 test issues" \
     "Generate SARIF with many results, verify JSON valid and < 10MB" \
     "Large exports must remain performant"
 

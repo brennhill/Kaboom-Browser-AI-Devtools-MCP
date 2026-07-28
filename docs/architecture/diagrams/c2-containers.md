@@ -170,7 +170,7 @@ Extension (inject.js)
 ### Pattern 2: Query System (AI → Server → Extension → Result)
 ```
 AI Agent
-  → MCP call: interact({action: 'execute_js'})
+  → MCP call: interact({what: 'execute_js'})
   → Wrapper → Server
   → Server creates PendingQuery with correlation_id
   → Server creates implicit query in queue
@@ -195,7 +195,7 @@ AI Agent
 ### Pattern 4: Configure (AI → Server → Persistence)
 ```
 AI Agent
-  → MCP call: configure({action: 'store'})
+  → MCP call: configure({what: 'store'})
   → Server persists state to disk
   → No round-trip needed
 ```

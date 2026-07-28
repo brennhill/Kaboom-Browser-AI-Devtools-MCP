@@ -92,7 +92,7 @@ last_verified_date: 2026-03-05
    - [ ] Operation 16-20: Page observations
    - [ ] Operation 21-25: Interact actions (highlight)
    - [ ] Operation 26-30: Mixed repeats
-   - [ ] Check health after all operations: `configure({action: "health"})`
+   - [ ] Check health after all operations: `configure({what: "health"})`
 3. Expected Result:
    - [ ] All 30 operations complete
    - [ ] Health check shows: queue_depth = 0, pending_operations = 0, memory < 80MB
@@ -156,7 +156,7 @@ last_verified_date: 2026-03-05
 ### Scenario 7: Health Check After Stress Test
 1. Setup: Complete 50 operations as in Scenario 1
 2. Steps:
-   - [ ] Call `configure({action: "health"})`
+   - [ ] Call `configure({what: "health"})`
    - [ ] Observe response
 3. Expected Result:
    ```json

@@ -88,7 +88,7 @@ last_verified_date: 2026-03-05
 | Manual capture with Puppeteer | 3 steps: (1) read `kaboom-ci.js` file, (2) inject via `evaluateOnNewDocument`, (3) manually call `/snapshot` after test | No -- Puppeteer lacks fixture abstraction; this is inherently manual |
 | Get snapshot after test failure | 1 step (automatic): fixture captures snapshot on failure | No -- already zero-effort for the developer |
 | Clear buffers between tests | 0 steps (automatic): fixture calls `/clear` between tests | No -- already zero-effort |
-| Generate HAR from CI capture | 2 steps: (1) run tests with capture, (2) call `generate({format: "har"})` | Yes -- could auto-generate HAR as part of fixture teardown |
+| Generate HAR from CI capture | 2 steps: (1) run tests with capture, (2) call `generate({what: "har"})` | Yes -- could auto-generate HAR as part of fixture teardown |
 
 ### Default Behavior Verification
 - [ ] Playwright fixture works with zero configuration beyond the import statement
@@ -148,7 +148,7 @@ last_verified_date: 2026-03-05
 | IT-9 | Test timeout handling | Test times out (Playwright timeout) | Fixture teardown still fires, snapshot captured (possibly partial) | should |
 | IT-10 | Server unreachable graceful degradation | Kaboom server not started, run tests | Tests run normally, no Kaboom attachments, no test failures due to Kaboom | must |
 | IT-11 | MCP tools work with CI-captured data | Capture via `kaboom-ci.js`, then `observe({what: "errors"})` via MCP | MCP response includes errors captured by CI script (server treats identically) | must |
-| IT-12 | HAR generation from CI capture | Capture via CI script, call `generate({format: "har"})` | Valid HAR file produced from CI-captured network data | should |
+| IT-12 | HAR generation from CI capture | Capture via CI script, call `generate({what: "har"})` | Valid HAR file produced from CI-captured network data | should |
 
 ### 4.3 Performance Tests
 
@@ -211,7 +211,7 @@ last_verified_date: 2026-03-05
 | UAT-10 | AI marks test boundary: `POST http://127.0.0.1:7890/test-boundary {"test_id": "login-test", "action": "start"}` | N/A | Response confirms test boundary set with timestamp | [ ] |
 | UAT-11 | AI gets snapshot with test_id: `GET http://127.0.0.1:7890/snapshot?test_id=login-test` | N/A | Snapshot labeled with `test_id: "login-test"` | [ ] |
 | UAT-12 | AI uses existing MCP tool with CI-captured data: `{"tool":"observe","arguments":{"what":"errors"}}` | N/A | Errors captured by CI script appear in MCP response identically to extension-captured errors | [ ] |
-| UAT-13 | AI generates HAR from CI data: `{"tool":"generate","arguments":{"format":"har"}}` | N/A | Valid HAR file produced from CI-captured network data | [ ] |
+| UAT-13 | AI generates HAR from CI data: `{"tool":"generate","arguments":{"what":"har"}}` | N/A | Valid HAR file produced from CI-captured network data | [ ] |
 
 ### Data Leak UAT Verification
 

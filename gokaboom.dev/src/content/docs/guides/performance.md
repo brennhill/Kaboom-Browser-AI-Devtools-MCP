@@ -108,8 +108,8 @@ The most powerful performance feature: automatic before/after comparison when na
 When you use `interact` to navigate or refresh:
 
 ```js
-interact({action: "refresh"})
-interact({action: "navigate", url: "https://myapp.com/dashboard"})
+interact({what: "refresh"})
+interact({what: "navigate", url: "https://myapp.com/dashboard"})
 ```
 
 KaBOOM automatically:
@@ -154,7 +154,7 @@ The perf_diff includes:
 Add `analyze: true` to any DOM action to get performance profiling:
 
 ```js
-interact({action: "click", selector: "text=Load Dashboard", analyze: true})
+interact({what: "click", selector: "text=Load Dashboard", analyze: true})
 ```
 
 This captures before/after snapshots around the action, showing the performance impact of that specific interaction.
@@ -275,7 +275,7 @@ Route-specific budgets override defaults using longest-prefix matching. The conf
 ```
 
 ```js
-interact({action: "navigate", url: "https://myapp.com/dashboard"})
+interact({what: "navigate", url: "https://myapp.com/dashboard"})
 observe({what: "vitals"})
 ```
 
@@ -313,7 +313,7 @@ observe({what: "network_waterfall", url: ".js"})
 ```
 
 ```js
-interact({action: "refresh"})
+interact({what: "refresh"})
 ```
 
 The perf_diff tells you exactly what improved, what regressed, and by how much.
@@ -337,7 +337,7 @@ Confirm that render-blocking resources are gone, API calls are parallelized, or 
 ```
 
 ```js
-generate({format: "pr_summary"})
+generate({what: "pr_summary"})
 ```
 
 Produces a before/after comparison table suitable for pull request descriptions — Web Vitals deltas, resource changes, and a regression/improvement verdict.

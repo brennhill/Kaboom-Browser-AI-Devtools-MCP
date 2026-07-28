@@ -14,7 +14,7 @@ _inject_smoke_form() {
     fi
 
     # Navigate to clean page
-    interact_and_wait "navigate" '{"action":"navigate","url":"https://example.com","reason":"Clean page for DOM tests"}' 20
+    interact_and_wait "navigate" '{"what":"navigate","url":"https://example.com","reason":"Clean page for DOM tests"}' 20
     sleep 2
 
     local form_js
@@ -99,7 +99,7 @@ run_test_5_1() {
         return
     fi
 
-    interact_and_wait "type" '{"action":"type","selector":"#sf-name","text":"SmokeUser","clear":true,"reason":"Type into name field"}'
+    interact_and_wait "type" '{"what":"type","selector":"#sf-name","text":"SmokeUser","clear":true,"reason":"Type into name field"}'
 
     if _interact_failed "$INTERACT_RESULT"; then
         fail "type command failed. Result: $(truncate "$INTERACT_RESULT" 200)"
@@ -107,13 +107,13 @@ run_test_5_1() {
     fi
 
     sleep 1
-    interact_and_wait "get_value" '{"action":"get_value","selector":"#sf-name","reason":"Verify typed value"}' 20
+    interact_and_wait "get_value" '{"what":"get_value","selector":"#sf-name","reason":"Verify typed value"}' 20
 
     if echo "$INTERACT_RESULT" | grep -q "SmokeUser"; then
         pass "Type + get_value: 'SmokeUser' confirmed in #sf-name."
     else
         # Fallback: verify via execute_js if get_value timed out
-        interact_and_wait "execute_js" '{"action":"execute_js","reason":"Verify typed value via JS","script":"document.getElementById(\"sf-name\").value"}'
+        interact_and_wait "execute_js" '{"what":"execute_js","reason":"Verify typed value via JS","script":"document.getElementById(\"sf-name\").value"}'
         if echo "$INTERACT_RESULT" | grep -q "SmokeUser"; then
             pass "Type confirmed via execute_js fallback: 'SmokeUser' in #sf-name."
         else
@@ -135,7 +135,7 @@ run_test_5_2() {
     fi
 
     # Select 'user' (default is 'admin') to prove the value actually changes.
-    interact_and_wait "select" '{"action":"select","selector":"#sf-role","value":"user","reason":"Select user role"}'
+    interact_and_wait "select" '{"what":"select","selector":"#sf-role","value":"user","reason":"Select user role"}'
 
     if _interact_failed "$INTERACT_RESULT"; then
         fail "select command failed. Result: $(truncate "$INTERACT_RESULT" 200)"
@@ -143,7 +143,7 @@ run_test_5_2() {
     fi
 
     sleep 0.5
-    interact_and_wait "get_value" '{"action":"get_value","selector":"#sf-role","reason":"Verify selected value"}'
+    interact_and_wait "get_value" '{"what":"get_value","selector":"#sf-role","reason":"Verify selected value"}'
 
     if echo "$INTERACT_RESULT" | grep -q "user"; then
         pass "Select + get_value: changed to 'user' confirmed in #sf-role."
@@ -152,7 +152,7 @@ run_test_5_2() {
     fi
 
     # Restore to admin for subsequent tests
-    interact_and_wait "select" '{"action":"select","selector":"#sf-role","value":"admin","reason":"Restore admin role"}'
+    interact_and_wait "select" '{"what":"select","selector":"#sf-role","value":"admin","reason":"Restore admin role"}'
 }
 run_test_5_2
 
@@ -168,17 +168,17 @@ run_test_5_3() {
     fi
 
     # Check it
-    interact_and_wait "check" '{"action":"check","selector":"#sf-agree","checked":true,"reason":"Check the agree box"}'
+    interact_and_wait "check" '{"what":"check","selector":"#sf-agree","checked":true,"reason":"Check the agree box"}'
 
     sleep 0.3
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Verify checked","script":"document.getElementById(\"sf-agree\").checked ? \"CHECKED\" : \"UNCHECKED\""}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Verify checked","script":"document.getElementById(\"sf-agree\").checked ? \"CHECKED\" : \"UNCHECKED\""}'
     local checked_result="$INTERACT_RESULT"
 
     # Uncheck it
-    interact_and_wait "check" '{"action":"check","selector":"#sf-agree","checked":false,"reason":"Uncheck the agree box"}'
+    interact_and_wait "check" '{"what":"check","selector":"#sf-agree","checked":false,"reason":"Uncheck the agree box"}'
 
     sleep 0.3
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Verify unchecked","script":"document.getElementById(\"sf-agree\").checked ? \"CHECKED\" : \"UNCHECKED\""}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Verify unchecked","script":"document.getElementById(\"sf-agree\").checked ? \"CHECKED\" : \"UNCHECKED\""}'
     local unchecked_result="$INTERACT_RESULT"
 
     if echo "$checked_result" | grep -q "CHECKED" && echo "$unchecked_result" | grep -q "UNCHECKED"; then
@@ -200,7 +200,7 @@ run_test_5_4() {
         return
     fi
 
-    interact_and_wait "get_text" '{"action":"get_text","selector":"#sf-btn","reason":"Get button text"}'
+    interact_and_wait "get_text" '{"what":"get_text","selector":"#sf-btn","reason":"Get button text"}'
 
     if echo "$INTERACT_RESULT" | grep -q "Submit"; then
         pass "get_text returned 'Submit' from #sf-btn."
@@ -221,7 +221,7 @@ run_test_5_5() {
         return
     fi
 
-    interact_and_wait "get_value" '{"action":"get_value","selector":"#sf-name","reason":"Get name input value"}'
+    interact_and_wait "get_value" '{"what":"get_value","selector":"#sf-name","reason":"Get name input value"}'
 
     if echo "$INTERACT_RESULT" | grep -q "SmokeUser"; then
         pass "get_value returned 'SmokeUser' from #sf-name."
@@ -242,7 +242,7 @@ run_test_5_6() {
         return
     fi
 
-    interact_and_wait "get_attribute" '{"action":"get_attribute","selector":"#sf-link","name":"href","reason":"Get link href"}'
+    interact_and_wait "get_attribute" '{"what":"get_attribute","selector":"#sf-link","name":"href","reason":"Get link href"}'
 
     if echo "$INTERACT_RESULT" | grep -q "example.com/test"; then
         pass "get_attribute returned href 'example.com/test' from #sf-link."
@@ -265,7 +265,7 @@ run_test_5_7() {
         return
     fi
 
-    interact_and_wait "set_attribute" '{"action":"set_attribute","selector":"#sf-link","name":"data-smoke","value":"modified","reason":"Set data attribute"}'
+    interact_and_wait "set_attribute" '{"what":"set_attribute","selector":"#sf-link","name":"data-smoke","value":"modified","reason":"Set data attribute"}'
 
     if _interact_failed "$INTERACT_RESULT"; then
         fail "set_attribute command failed. Result: $(truncate "$INTERACT_RESULT" 200)"
@@ -273,7 +273,7 @@ run_test_5_7() {
     fi
 
     sleep 0.3
-    interact_and_wait "get_attribute" '{"action":"get_attribute","selector":"#sf-link","name":"data-smoke","reason":"Verify set attribute"}'
+    interact_and_wait "get_attribute" '{"what":"get_attribute","selector":"#sf-link","name":"data-smoke","reason":"Verify set attribute"}'
 
     if echo "$INTERACT_RESULT" | grep -q "modified"; then
         pass "set_attribute + get_attribute roundtrip: data-smoke='modified' confirmed."
@@ -294,7 +294,7 @@ run_test_5_8() {
         return
     fi
 
-    interact_and_wait "scroll_to" '{"action":"scroll_to","selector":"#sf-scroll-target","reason":"Scroll to bottom target"}'
+    interact_and_wait "scroll_to" '{"what":"scroll_to","selector":"#sf-scroll-target","reason":"Scroll to bottom target"}'
 
     if _interact_failed "$INTERACT_RESULT"; then
         fail "scroll_to command failed. Result: $(truncate "$INTERACT_RESULT" 200)"
@@ -303,7 +303,7 @@ run_test_5_8() {
 
     # Positive verification: check scrollY > 0 via DOM
     sleep 0.5
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Verify scroll position","script":"window.scrollY > 100 ? \"SCROLLED_\" + Math.round(window.scrollY) : \"NOT_SCROLLED_\" + Math.round(window.scrollY)"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Verify scroll position","script":"window.scrollY > 100 ? \"SCROLLED_\" + Math.round(window.scrollY) : \"NOT_SCROLLED_\" + Math.round(window.scrollY)"}'
 
     if echo "$INTERACT_RESULT" | grep -q "SCROLLED_"; then
         pass "scroll_to moved page: $(echo "$INTERACT_RESULT" | grep -oE 'SCROLLED_[0-9]+' | head -1 || echo 'SCROLLED')px."
@@ -325,9 +325,9 @@ run_test_5_9() {
     fi
 
     # Inject delayed element
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Inject delayed element","script":"setTimeout(function(){ var d = document.createElement(\"div\"); d.id = \"delayed-el\"; d.textContent = \"I appeared!\"; document.body.appendChild(d); }, 1000); \"scheduled\""}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Inject delayed element","script":"setTimeout(function(){ var d = document.createElement(\"div\"); d.id = \"delayed-el\"; d.textContent = \"I appeared!\"; document.body.appendChild(d); }, 1000); \"scheduled\""}'
 
-    interact_and_wait "wait_for" '{"action":"wait_for","selector":"#delayed-el","timeout_ms":5000,"reason":"Wait for delayed element"}'
+    interact_and_wait "wait_for" '{"what":"wait_for","selector":"#delayed-el","timeout_ms":5000,"reason":"Wait for delayed element"}'
 
     if _interact_failed "$INTERACT_RESULT"; then
         fail "wait_for timed out or failed. Result: $(truncate "$INTERACT_RESULT" 200)"
@@ -349,9 +349,9 @@ run_test_5_10() {
     fi
 
     # First focus the name field, then Tab should move focus to the next field
-    interact_and_wait "focus" '{"action":"focus","selector":"#sf-name","reason":"Focus name before Tab"}'
+    interact_and_wait "focus" '{"what":"focus","selector":"#sf-name","reason":"Focus name before Tab"}'
     sleep 0.3
-    interact_and_wait "key_press" '{"action":"key_press","selector":"#sf-name","text":"Tab","reason":"Press Tab key"}'
+    interact_and_wait "key_press" '{"what":"key_press","selector":"#sf-name","text":"Tab","reason":"Press Tab key"}'
 
     if _interact_failed "$INTERACT_RESULT"; then
         fail "key_press command failed. Result: $(truncate "$INTERACT_RESULT" 200)"
@@ -360,7 +360,7 @@ run_test_5_10() {
 
     # Positive verification: activeElement should have moved away from #sf-name
     sleep 0.3
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Verify focus moved after Tab","script":"document.activeElement ? document.activeElement.id || document.activeElement.tagName : \"NONE\""}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Verify focus moved after Tab","script":"document.activeElement ? document.activeElement.id || document.activeElement.tagName : \"NONE\""}'
 
     if echo "$INTERACT_RESULT" | grep -qE "sf-email|sf-role|sf-agree|sf-btn|INPUT|SELECT"; then
         pass "key_press(Tab) moved focus from #sf-name. Active: $(echo "$INTERACT_RESULT" | grep -oE 'sf-[a-z-]+|INPUT|SELECT' | head -1 || echo 'element')"
@@ -383,7 +383,7 @@ run_test_5_11() {
         return
     fi
 
-    interact_and_wait "list_interactive" '{"action":"list_interactive","reason":"List all interactive elements"}'
+    interact_and_wait "list_interactive" '{"what":"list_interactive","reason":"List all interactive elements"}'
 
     echo "  [interactive elements]"
     local elem_count
@@ -432,7 +432,7 @@ run_test_5_12() {
         return
     fi
 
-    interact_and_wait "focus" '{"action":"focus","selector":"#sf-email","reason":"Focus email field"}'
+    interact_and_wait "focus" '{"what":"focus","selector":"#sf-email","reason":"Focus email field"}'
 
     if _interact_failed "$INTERACT_RESULT"; then
         fail "focus command failed. Result: $(truncate "$INTERACT_RESULT" 200)"
@@ -441,7 +441,7 @@ run_test_5_12() {
 
     # Positive verification: document.activeElement should be #sf-email
     sleep 0.3
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Verify focus target","script":"document.activeElement && document.activeElement.id === \"sf-email\" ? \"FOCUSED_SF_EMAIL\" : \"WRONG_FOCUS_\" + (document.activeElement ? document.activeElement.id || document.activeElement.tagName : \"NONE\")"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Verify focus target","script":"document.activeElement && document.activeElement.id === \"sf-email\" ? \"FOCUSED_SF_EMAIL\" : \"WRONG_FOCUS_\" + (document.activeElement ? document.activeElement.id || document.activeElement.tagName : \"NONE\")"}'
 
     if echo "$INTERACT_RESULT" | grep -q "FOCUSED_SF_EMAIL"; then
         pass "focus confirmed: document.activeElement is #sf-email."
@@ -472,7 +472,7 @@ run_test_5_13() {
     sleep 2
 
     # Verify we're on page A via direct DOM query
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Verify page A URL","script":"window.location.href"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Verify page A URL","script":"window.location.href"}'
     echo "  [page A] $(echo "$INTERACT_RESULT" | grep -oE 'https?://[^ \"]+' | head -1 || echo '?')"
 
     # Navigate to page B
@@ -480,7 +480,7 @@ run_test_5_13() {
     sleep 2
 
     # Go back
-    interact_and_wait "back" '{"action":"back","reason":"Go back to page A"}'
+    interact_and_wait "back" '{"what":"back","reason":"Go back to page A"}'
     sleep 2
 
     # Primary check: command result URL (extension returns url after goBack)
@@ -518,7 +518,7 @@ run_test_5_14() {
         return
     fi
 
-    interact_and_wait "forward" '{"action":"forward","reason":"Go forward to page B"}'
+    interact_and_wait "forward" '{"what":"forward","reason":"Go forward to page B"}'
     sleep 2
 
     # Primary check: command result URL (extension returns url after goForward)
@@ -565,7 +565,7 @@ run_test_5_16() {
     # 5.13/5.14 navigate away from example.com; ensure recovery tests start with known DOM.
     _inject_smoke_form
 
-    interact_and_wait "click" '{"action":"click","selector":"#missing-target","reason":"Trigger element_not_found"}'
+    interact_and_wait "click" '{"what":"click","selector":"#missing-target","reason":"Trigger element_not_found"}'
     if ! echo "$INTERACT_RESULT" | grep -qi "element_not_found"; then
         fail "Expected element_not_found error. Result: $(truncate "$INTERACT_RESULT" 200)"
         return
@@ -575,9 +575,9 @@ run_test_5_16() {
         return
     fi
 
-    interact_and_wait "list_interactive" '{"action":"list_interactive","scope_selector":"#smoke-form-dom","reason":"Recover candidates in form scope"}'
+    interact_and_wait "list_interactive" '{"what":"list_interactive","scope_selector":"#smoke-form-dom","reason":"Recover candidates in form scope"}'
     # Use the known unique selector for the actual recovery click to avoid brittle scope coupling.
-    interact_and_wait "click" '{"action":"click","selector":"#sf-btn","reason":"Recover from element_not_found"}'
+    interact_and_wait "click" '{"what":"click","selector":"#sf-btn","reason":"Recover from element_not_found"}'
 
     if _interact_failed "$INTERACT_RESULT"; then
         fail "Recovery click failed after element_not_found. Result: $(truncate "$INTERACT_RESULT" 200)"
@@ -598,9 +598,9 @@ run_test_5_17() {
         return
     fi
 
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Inject duplicate targets for ambiguous test","script":"(function(){var old=document.getElementById(\"smoke-ambiguous\"); if(old) old.remove(); var root=document.createElement(\"div\"); root.id=\"smoke-ambiguous\"; root.innerHTML=\"<div id=\\\"dup-a\\\"><button class=\\\"dup-target\\\" type=\\\"button\\\">Post</button></div><div id=\\\"dup-b\\\"><button class=\\\"dup-target\\\" type=\\\"button\\\">Post</button></div>\"; document.body.appendChild(root); return \"ambiguous-ready\";})()"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Inject duplicate targets for ambiguous test","script":"(function(){var old=document.getElementById(\"smoke-ambiguous\"); if(old) old.remove(); var root=document.createElement(\"div\"); root.id=\"smoke-ambiguous\"; root.innerHTML=\"<div id=\\\"dup-a\\\"><button class=\\\"dup-target\\\" type=\\\"button\\\">Post</button></div><div id=\\\"dup-b\\\"><button class=\\\"dup-target\\\" type=\\\"button\\\">Post</button></div>\"; document.body.appendChild(root); return \"ambiguous-ready\";})()"}'
 
-    interact_and_wait "click" '{"action":"click","selector":".dup-target","reason":"Trigger ambiguous_target"}'
+    interact_and_wait "click" '{"what":"click","selector":".dup-target","reason":"Trigger ambiguous_target"}'
     if ! echo "$INTERACT_RESULT" | grep -qi "ambiguous_target"; then
         fail "Expected ambiguous_target error. Result: $(truncate "$INTERACT_RESULT" 220)"
         return
@@ -610,7 +610,7 @@ run_test_5_17() {
         return
     fi
 
-    interact_and_wait "click" '{"action":"click","selector":".dup-target","scope_selector":"#dup-a","reason":"Recover from ambiguous_target using scope"}'
+    interact_and_wait "click" '{"what":"click","selector":".dup-target","scope_selector":"#dup-a","reason":"Recover from ambiguous_target using scope"}'
     if _interact_failed "$INTERACT_RESULT"; then
         fail "Recovery click failed after ambiguous_target. Result: $(truncate "$INTERACT_RESULT" 220)"
     else
@@ -633,7 +633,7 @@ run_test_5_18() {
     # Ensure injected test DOM exists before stale handle recovery flow.
     _inject_smoke_form
 
-    interact_and_wait "click" '{"action":"click","selector":"#sf-btn","element_id":"el_missing","reason":"Trigger stale_element_id"}'
+    interact_and_wait "click" '{"what":"click","selector":"#sf-btn","element_id":"el_missing","reason":"Trigger stale_element_id"}'
     if ! echo "$INTERACT_RESULT" | grep -qi "stale_element_id"; then
         fail "Expected stale_element_id error. Result: $(truncate "$INTERACT_RESULT" 220)"
         return
@@ -643,7 +643,7 @@ run_test_5_18() {
         return
     fi
 
-    interact_and_wait "list_interactive" '{"action":"list_interactive","scope_selector":"#smoke-form-dom","reason":"Refresh handles for stale recovery"}'
+    interact_and_wait "list_interactive" '{"what":"list_interactive","scope_selector":"#smoke-form-dom","reason":"Refresh handles for stale recovery"}'
     local sf_btn_element_id
     sf_btn_element_id=$(echo "$INTERACT_RESULT" | python3 -c '
 import json, sys
@@ -707,7 +707,7 @@ run_test_5_19() {
     # Ensure injected test DOM exists before scope recovery flow.
     _inject_smoke_form
 
-    interact_and_wait "click" '{"action":"click","selector":"#sf-btn","scope_selector":"#missing-scope","reason":"Trigger scope_not_found"}'
+    interact_and_wait "click" '{"what":"click","selector":"#sf-btn","scope_selector":"#missing-scope","reason":"Trigger scope_not_found"}'
     if ! echo "$INTERACT_RESULT" | grep -qi "scope_not_found"; then
         fail "Expected scope_not_found error. Result: $(truncate "$INTERACT_RESULT" 220)"
         return
@@ -717,7 +717,7 @@ run_test_5_19() {
         return
     fi
 
-    interact_and_wait "click" '{"action":"click","selector":"#sf-btn","scope_selector":"#smoke-form-dom","reason":"Recover from scope_not_found"}'
+    interact_and_wait "click" '{"what":"click","selector":"#sf-btn","scope_selector":"#smoke-form-dom","reason":"Recover from scope_not_found"}'
     if _interact_failed "$INTERACT_RESULT"; then
         fail "Recovery click failed after scope_not_found. Result: $(truncate "$INTERACT_RESULT" 220)"
     else

@@ -34,7 +34,7 @@ Today, discovering these problems requires:
 
 ## Solution
 
-SEO Audit adds a new mode to the `generate` tool: `generate({format: "seo_audit"})`. When invoked, the server instructs the extension to collect on-page SEO signals from the active tab and returns a structured JSON report covering six audit dimensions:
+SEO Audit adds a new mode to the `generate` tool: `generate({what: "seo_audit"})`. When invoked, the server instructs the extension to collect on-page SEO signals from the active tab and returns a structured JSON report covering six audit dimensions:
 
 1. **Metadata** -- title, meta description, canonical URL, Open Graph tags, Twitter Card tags, robots directives
 2. **Heading structure** -- H1-H6 hierarchy, missing H1, multiple H1s, skipped levels
@@ -304,7 +304,7 @@ The output is designed for LLM consumption: flat issue arrays with consistent sc
 
 | # | Requirement | Priority |
 |---|-------------|----------|
-| R1 | `generate({format: "seo_audit"})` returns a structured JSON report covering metadata, headings, links, images, structured data, and technical SEO factors | must |
+| R1 | `generate({what: "seo_audit"})` returns a structured JSON report covering metadata, headings, links, images, structured data, and technical SEO factors | must |
 | R2 | Metadata audit validates: title presence and length (1-60 chars), meta description presence and length (50-160 chars), canonical URL, robots directives | must |
 | R3 | Metadata audit validates Open Graph tags (og:title, og:description, og:image, og:url, og:type) and reports missing core tags | must |
 | R4 | Heading audit extracts the full H1-H6 hierarchy with text content and selectors, reports missing H1, multiple H1s, and skipped heading levels | must |
@@ -324,7 +324,7 @@ The output is designed for LLM consumption: flat issue arrays with consistent sc
 
 ## Non-Goals
 
-- **This feature does NOT crawl the site.** The audit runs against the single page currently loaded in the tracked browser tab. Multi-page audits, sitemap crawling, and cross-page duplicate content detection are out of scope. The AI agent can invoke the audit on multiple pages sequentially by navigating via `interact({action: "navigate"})`.
+- **This feature does NOT crawl the site.** The audit runs against the single page currently loaded in the tracked browser tab. Multi-page audits, sitemap crawling, and cross-page duplicate content detection are out of scope. The AI agent can invoke the audit on multiple pages sequentially by navigating via `interact({what: "navigate"})`.
 
 - **This feature does NOT check external link reachability.** Detecting broken external links requires outbound HTTP requests, which Kaboom does not make. The link audit covers structural issues (empty hrefs, missing anchor text) but not 404 detection for external URLs. Internal link status can be inferred from network waterfall data if the page has been navigated.
 

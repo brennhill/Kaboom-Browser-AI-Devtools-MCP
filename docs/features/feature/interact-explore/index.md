@@ -176,3 +176,6 @@ Extension-dispatched interact actions now use shared enqueue fail-fast handling:
 
 Async execution is controlled only by the canonical `background` parameter.
 The entrypoint does not translate alternate parameter names.
+
+All MCP tools route exclusively through `what`; `interact` does not accept
+`action` as a selector.

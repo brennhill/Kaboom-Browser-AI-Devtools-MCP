@@ -124,7 +124,7 @@ Based on diagnosis, apply fix:
 ### Step 8: Add Health Monitoring
 Implement diagnostic endpoints:
 - Track operation count, memory usage, queue depth, pending operations
-- Expose via `configure({action: "health"})`
+- Expose via `configure({what: "health"})`
 - Log warnings when thresholds exceeded (queue > 10, memory > 80MB, pending > 5)
 - Add automatic cleanup when limits exceeded
 

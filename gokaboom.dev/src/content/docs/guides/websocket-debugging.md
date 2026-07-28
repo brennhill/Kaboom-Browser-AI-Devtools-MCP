@@ -236,7 +236,7 @@ After the AI fixes the issue:
 ```
 
 ```js
-configure({action: "clear", buffer: "websocket"})
+configure({what: "clear", buffer: "websocket"})
 ```
 
 Then monitor the fresh connection to confirm the fix.
@@ -251,4 +251,4 @@ Then monitor the fresh connection to confirm the fix.
 
 **Correlate with the timeline.** WebSocket issues rarely happen in isolation. The timeline shows what else was happening — API failures, user actions, page navigations — when the connection dropped.
 
-**Clear buffers between debug attempts.** After making a fix, `configure({action: "clear", buffer: "websocket"})` gives you a clean slate to verify the new behavior.
+**Clear buffers between debug attempts.** After making a fix, `configure({what: "clear", buffer: "websocket"})` gives you a clean slate to verify the new behavior.

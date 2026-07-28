@@ -97,9 +97,9 @@ This clears the cache and runs a fresh axe-core scan.
 Export results in [SARIF](https://sarifweb.azurewebsites.net/) (Static Analysis Results Interchange Format) for CI/CD integration:
 
 ```js
-generate({format: "sarif"})
-generate({format: "sarif", save_to: "/path/to/a11y-report.sarif"})
-generate({format: "sarif", scope: "#main-content", include_passes: true})
+generate({what: "sarif"})
+generate({what: "sarif", save_to: "/path/to/a11y-report.sarif"})
+generate({what: "sarif", scope: "#main-content", include_passes: true})
 ```
 
 | Parameter | Type | Description |
@@ -231,7 +231,7 @@ analyze({what: "accessibility", scope: ".checkout-form"})
 ```
 
 ```js
-generate({format: "sarif", save_to: "a11y-report.sarif"})
+generate({what: "sarif", save_to: "a11y-report.sarif"})
 ```
 
 ---
@@ -253,7 +253,7 @@ Returns the element's attributes, classes, computed state, and children — more
 Visually identify where violations are on the page:
 
 ```js
-interact({action: "highlight", selector: "#failing-element", duration_ms: 5000})
+interact({what: "highlight", selector: "#failing-element", duration_ms: 5000})
 ```
 
 ### Screenshot for Documentation

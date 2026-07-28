@@ -154,7 +154,7 @@ sequenceDiagram
     participant Server
     participant Disk
 
-    AI->>Wrapper: configure({action: 'store', data: {...}})
+    AI->>Wrapper: configure({what: 'store', data: {...}})
     Wrapper->>Server: POST /mcp
     Server->>Disk: Write state to ~/.kaboom/
     Server-->>Wrapper: 200 OK {status: 'ok'}

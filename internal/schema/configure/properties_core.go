@@ -11,7 +11,7 @@ func coreProperties() map[string]any {
 		},
 		"action": map[string]any{
 			"type":        "string",
-			"description": "Deprecated alias for 'what'. Prefer 'what'.",
+			"description": "Sub-action for modes that manage a resource, such as store, playback, or noise_rule.",
 		},
 		"mode": map[string]any{
 			"type":        "string",
@@ -48,10 +48,6 @@ func coreProperties() map[string]any {
 		"data": map[string]any{
 			"type":        "object",
 			"description": "JSON data to persist",
-		},
-		"value": map[string]any{
-			"type":        "string",
-			"description": "Flat value alias for save action; treated as data when provided",
 		},
 		"noise_action": map[string]any{
 			"type":        "string",

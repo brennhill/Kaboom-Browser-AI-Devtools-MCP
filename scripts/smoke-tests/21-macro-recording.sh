@@ -7,12 +7,12 @@ begin_category "21" "Macro Recording" "6"
 
 # ── Test 21.1: Save a sequence ───────────────────────────
 begin_test "21.1" "[DAEMON ONLY] Save a sequence with steps and tags" \
-    "configure(action='save_sequence') with name, steps, tags, description" \
+    "configure(what='save_sequence') with name, steps, tags, description" \
     "Tests: sequence persistence via session store"
 
 run_test_21_1() {
     local response
-    response=$(call_tool "configure" '{"action":"save_sequence","name":"smoke-macro","description":"Smoke test macro","tags":["smoke","test"],"steps":[{"action":"navigate","url":"https://example.com"},{"action":"click","selector":"a"}]}')
+    response=$(call_tool "configure" '{"what":"save_sequence","name":"smoke-macro","description":"Smoke test macro","tags":["smoke","test"],"steps":[{"action":"navigate","url":"https://example.com"},{"action":"click","selector":"a"}]}')
 
     if ! check_not_error "$response"; then
         fail "save_sequence returned error. Content: $(truncate "$(extract_content_text "$response")" 200)"
@@ -32,12 +32,12 @@ run_test_21_1
 
 # ── Test 21.2: Get the saved sequence ────────────────────
 begin_test "21.2" "[DAEMON ONLY] Get a saved sequence by name" \
-    "configure(action='get_sequence') returns steps, tags, description" \
+    "configure(what='get_sequence') returns steps, tags, description" \
     "Tests: sequence retrieval"
 
 run_test_21_2() {
     local response
-    response=$(call_tool "configure" '{"action":"get_sequence","name":"smoke-macro"}')
+    response=$(call_tool "configure" '{"what":"get_sequence","name":"smoke-macro"}')
 
     if ! check_not_error "$response"; then
         fail "get_sequence returned error. Content: $(truncate "$(extract_content_text "$response")" 200)"
@@ -75,13 +75,13 @@ run_test_21_2
 
 # ── Test 21.3: List sequences ────────────────────────────
 begin_test "21.3" "[DAEMON ONLY] List sequences with optional tag filter" \
-    "configure(action='list_sequences') returns saved sequences" \
+    "configure(what='list_sequences') returns saved sequences" \
     "Tests: sequence listing and tag filtering"
 
 run_test_21_3() {
     # List all
     local response
-    response=$(call_tool "configure" '{"action":"list_sequences"}')
+    response=$(call_tool "configure" '{"what":"list_sequences"}')
 
     if ! check_not_error "$response"; then
         fail "list_sequences returned error. Content: $(truncate "$(extract_content_text "$response")" 200)"
@@ -98,7 +98,7 @@ run_test_21_3() {
 
     # List with tag filter
     local filtered
-    filtered=$(call_tool "configure" '{"action":"list_sequences","tags":["smoke"]}')
+    filtered=$(call_tool "configure" '{"what":"list_sequences","tags":["smoke"]}')
     local filtered_text
     filtered_text=$(extract_content_text "$filtered")
 
@@ -112,7 +112,7 @@ run_test_21_3
 
 # ── Test 21.4: Replay a sequence ─────────────────────────
 begin_test "21.4" "[BROWSER] Replay a saved sequence" \
-    "configure(action='replay_sequence') executes steps via interact" \
+    "configure(what='replay_sequence') executes steps via interact" \
     "Tests: sequence replay dispatches through interact handler"
 
 run_test_21_4() {
@@ -122,7 +122,7 @@ run_test_21_4() {
     fi
 
     local response
-    response=$(call_tool "configure" '{"action":"replay_sequence","name":"smoke-macro"}')
+    response=$(call_tool "configure" '{"what":"replay_sequence","name":"smoke-macro"}')
     local text
     text=$(extract_content_text "$response")
     if [ -z "$text" ] && [ -n "$response" ]; then
@@ -171,7 +171,7 @@ begin_test "21.5" "[DAEMON ONLY] Upsert: save over existing sequence" \
 run_test_21_5() {
     # Save with different steps
     local response
-    response=$(call_tool "configure" '{"action":"save_sequence","name":"smoke-macro","description":"Updated macro","steps":[{"action":"navigate","url":"https://example.org"}]}')
+    response=$(call_tool "configure" '{"what":"save_sequence","name":"smoke-macro","description":"Updated macro","steps":[{"action":"navigate","url":"https://example.org"}]}')
 
     if ! check_not_error "$response"; then
         fail "save_sequence upsert returned error. Content: $(truncate "$(extract_content_text "$response")" 200)"
@@ -180,7 +180,7 @@ run_test_21_5() {
 
     # Get and verify updated
     local get_response
-    get_response=$(call_tool "configure" '{"action":"get_sequence","name":"smoke-macro"}')
+    get_response=$(call_tool "configure" '{"what":"get_sequence","name":"smoke-macro"}')
     local text
     text=$(extract_content_text "$get_response")
 
@@ -210,12 +210,12 @@ run_test_21_5
 
 # ── Test 21.6: Delete a sequence ─────────────────────────
 begin_test "21.6" "[DAEMON ONLY] Delete a sequence and verify removal" \
-    "configure(action='delete_sequence') then get returns not found" \
+    "configure(what='delete_sequence') then get returns not found" \
     "Tests: sequence deletion"
 
 run_test_21_6() {
     local response
-    response=$(call_tool "configure" '{"action":"delete_sequence","name":"smoke-macro"}')
+    response=$(call_tool "configure" '{"what":"delete_sequence","name":"smoke-macro"}')
 
     if ! check_not_error "$response"; then
         fail "delete_sequence returned error. Content: $(truncate "$(extract_content_text "$response")" 200)"
@@ -224,7 +224,7 @@ run_test_21_6() {
 
     # Verify deletion — get should fail
     local get_response
-    get_response=$(call_tool "configure" '{"action":"get_sequence","name":"smoke-macro"}')
+    get_response=$(call_tool "configure" '{"what":"get_sequence","name":"smoke-macro"}')
     local get_text
     get_text=$(extract_content_text "$get_response")
 

@@ -24,7 +24,7 @@ A typical browser session produces hundreds of console log entries. The majority
 
 Existing mitigations are insufficient:
 
-- `configure(action="noise_rule")` suppresses entries entirely. This is useful for entries that are never relevant (extension noise, favicon 404s), but destructive for entries that matter in aggregate. "200 heartbeats in 30 seconds" is useful context; "0 heartbeats" is misleading.
+- `configure(what="noise_rule")` suppresses entries entirely. This is useful for entries that are never relevant (extension noise, favicon 404s), but destructive for entries that matter in aggregate. "200 heartbeats in 30 seconds" is useful context; "0 heartbeats" is misleading.
 - `observe(what="logs", level="error")` filters by level, but repetitive noise spans all levels.
 - `observe(what="error_bundles")` solves a different problem (assembling context around errors, not summarizing volume).
 
@@ -312,7 +312,7 @@ For each group with 3+ entries:
 2. Compute mean and standard deviation of intervals
 3. If `stddev / mean < 0.20` (less than 20% jitter), mark `is_periodic = true` and set `period_seconds = mean`
 
-This reuses the same periodicity heuristic from `configure(action="noise_rule", noise_action="auto_detect")` but applies it per-group rather than per-URL.
+This reuses the same periodicity heuristic from `configure(what="noise_rule", noise_action="auto_detect")` but applies it per-group rather than per-URL.
 
 ### Step 4: Sorting
 
@@ -328,7 +328,7 @@ This reuses the same periodicity heuristic from `configure(action="noise_rule", 
 
 ## Interaction with Existing Features
 
-### Noise Rules (`configure(action="noise_rule")`)
+### Noise Rules (`configure(what="noise_rule")`)
 
 Noise rules and log aggregation are **complementary, not competing**:
 

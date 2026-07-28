@@ -73,7 +73,7 @@ last_verified_date: 2026-03-05
 
 | Workflow | Steps Required | Can Be Simplified? |
 |----------|---------------|-------------------|
-| Check memory status | 1 step: `configure(action: "health")` or observe diagnostics | No -- already minimal |
+| Check memory status | 1 step: `configure(what: "health")` or observe diagnostics | No -- already minimal |
 | Respond to memory pressure | 0 steps (automatic) | N/A -- feature is fully automatic |
 | Exit minimal mode | 1 step: restart the server | No -- intentionally requires manual intervention |
 | Understand current memory state | 1 step: read memory section of health response | No -- already minimal |
@@ -165,15 +165,15 @@ last_verified_date: 2026-03-05
 
 | # | Step (AI executes) | Human Observes | Expected Result | Pass |
 |---|-------------------|----------------|-----------------|------|
-| UAT-1 | `{"tool": "configure", "arguments": {"action": "health"}}` | Review the memory section of the response | Response includes `memory` object with `total_bytes`, per-buffer breakdown, `soft_limit`, `hard_limit`, `critical_limit`, `minimal_mode: false`, `total_evictions: 0` | [ ] |
+| UAT-1 | `{"tool": "configure", "arguments": {"what": "health"}}` | Review the memory section of the response | Response includes `memory` object with `total_bytes`, per-buffer breakdown, `soft_limit`, `hard_limit`, `critical_limit`, `minimal_mode: false`, `total_evictions: 0` | [ ] |
 | UAT-2 | Generate heavy network traffic (open a page making 100+ API calls with large bodies) | Watch server logs for eviction messages | If memory crosses 20MB, server logs show eviction activity | [ ] |
-| UAT-3 | `{"tool": "configure", "arguments": {"action": "health"}}` | Compare memory values to UAT-1 | Memory values increased; if eviction occurred, `total_evictions > 0` and `evicted_entries > 0` | [ ] |
-| UAT-4 | `{"tool": "observe", "arguments": {"action": "get_network"}}` | Compare entry count to what browser shows | If eviction occurred, oldest network entries are missing from Kaboom output but visible in browser Network tab history | [ ] |
+| UAT-3 | `{"tool": "configure", "arguments": {"what": "health"}}` | Compare memory values to UAT-1 | Memory values increased; if eviction occurred, `total_evictions > 0` and `evicted_entries > 0` | [ ] |
+| UAT-4 | `{"tool": "observe", "arguments": {"what": "get_network"}}` | Compare entry count to what browser shows | If eviction occurred, oldest network entries are missing from Kaboom output but visible in browser Network tab history | [ ] |
 | UAT-5 | Continue generating traffic to push memory above 50MB (hard limit) | Check server logs for hard limit messages | Server logs "hard limit exceeded", memory-exceeded flag set | [ ] |
-| UAT-6 | `{"tool": "configure", "arguments": {"action": "health"}}` | Check memory status | `minimal_mode` may be false but memory should show reduced counts due to 50% eviction | [ ] |
+| UAT-6 | `{"tool": "configure", "arguments": {"what": "health"}}` | Check memory status | `minimal_mode` may be false but memory should show reduced counts due to 50% eviction | [ ] |
 | UAT-7 | Verify network body capture is paused when memory-exceeded | Try to trigger new network body captures | Server rejects network body POSTs (extension receives 429 or equivalent) | [ ] |
 | UAT-8 | Let traffic subside, wait for memory to drop | Monitor health status | Memory drops below hard limit, memory-exceeded flag clears, network body capture resumes | [ ] |
-| UAT-9 | `{"tool": "observe", "arguments": {"action": "get_console_logs"}}` | Check that console entries are unaffected by network body eviction | Console entries still present and correctly ordered (eviction targets network bodies first) | [ ] |
+| UAT-9 | `{"tool": "observe", "arguments": {"what": "get_console_logs"}}` | Check that console entries are unaffected by network body eviction | Console entries still present and correctly ordered (eviction targets network bodies first) | [ ] |
 
 ### Data Leak UAT Verification
 

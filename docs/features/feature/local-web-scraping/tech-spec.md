@@ -29,11 +29,11 @@ Local web scraping is a workflow pattern, not a new technical feature. It uses e
 ```
 User logs in manually (session established)
   → Agent: observe({what: "page"}) — confirms logged in
-  → Agent: interact({action: "navigate", url: "/data-page"})
-  → Agent: interact({action: "wait_for", selector: ".data-table", timeout_ms: 5000})
-  → Agent: interact({action: "execute_js", code: "/* extract table */"})
+  → Agent: interact({what: "navigate", url: "/data-page"})
+  → Agent: interact({what: "wait_for", selector: ".data-table", timeout_ms: 5000})
+  → Agent: interact({what: "execute_js", code: "/* extract table */"})
   → Agent receives extracted data
-  → Agent: configure({action: "store", store_action: "save", key: "...", data: {...}})
+  → Agent: configure({what: "store", store_action: "save", key: "...", data: {...}})
   → Server stores structured data in session store
 ```
 
@@ -43,9 +43,9 @@ User logs in manually (session established)
 
 ### Agent workflow for scraping:
 1. Verify authentication: Use observe({what: "page"}) to check for login indicators
-2. Navigate to target: Use interact({action: "navigate"})
-3. Wait for content: Use interact({action: "wait_for"}) for AJAX-loaded elements, then optionally snapshot with analyze({what:"dom"})
-4. Extract data: Use interact({action: "execute_js"}) with custom extraction code
+2. Navigate to target: Use interact({what: "navigate"})
+3. Wait for content: Use interact({what: "wait_for"}) for AJAX-loaded elements, then optionally snapshot with analyze({what:"dom"})
+4. Extract data: Use interact({what: "execute_js"}) with custom extraction code
 5. Handle pagination: Loop with click next + wait for content
 6. Rate limit: Add delays between requests (agent responsibility)
 7. Persist/export: Use configure store/load or return extracted data inline
@@ -56,7 +56,7 @@ User logs in manually (session established)
 - If session expires, agent detects (login page appears), alerts user
 
 ### Dynamic content handling:
-- Use interact({action: "wait_for"}) to detect when elements appear
+- Use interact({what: "wait_for"}) to detect when elements appear
 - Use execute_js to poll for AJAX completion indicators
 - Set appropriate timeouts (2-10s) for slow-loading content
 

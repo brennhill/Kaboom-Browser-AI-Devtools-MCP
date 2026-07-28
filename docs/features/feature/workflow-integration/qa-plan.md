@@ -191,7 +191,7 @@ last_verified_date: 2026-03-05
 | UAT-8 | AI generates PR summary again | N/A | Summary shows the error under "Fixed" errors section | [ ] |
 | UAT-9 | AI queries HTTP endpoint: `GET http://127.0.0.1:7890/v4/session-summary` | N/A | JSON response with running summary matching MCP tool output | [ ] |
 | UAT-10 | Human gracefully stops server (Ctrl+C) | Server exits cleanly | `.kaboom/sessions/latest.json` file created with full session summary | [ ] |
-| UAT-11 | Human restarts server, AI loads previous context: `{"tool":"configure","arguments":{"action":"load_session_context"}}` | Server running again | Previous session summary loaded and available | [ ] |
+| UAT-11 | Human restarts server, AI loads previous context: `{"tool":"configure","arguments":{"what":"load_session_context"}}` | Server running again | Previous session summary loaded and available | [ ] |
 | UAT-12 | Verify archive file | Check `.kaboom/sessions/archive/` | At least one timestamped JSON file present | [ ] |
 
 ### Data Leak UAT Verification

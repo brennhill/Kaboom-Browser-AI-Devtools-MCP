@@ -30,7 +30,7 @@ Add read-only mode as a server-wide configuration flag. When enabled, all mutati
 - Clear error messages when mutation attempted: "Read-only mode enabled, mutation tools disabled"
 - Server-level enforcement (not client-side) — cannot be bypassed
 - Configuration via CLI flag: --read-only or environment variable KABOOM_READ_ONLY=true
-- Status visible via configure({action: "health"})
+- Status visible via configure({what: "health"})
 
 ## Out of Scope
 
@@ -50,8 +50,8 @@ Add read-only mode as a server-wide configuration flag. When enabled, all mutati
 1. SRE starts Kaboom in read-only mode: `kaboom --read-only`
 2. Agent connects, attempts to analyze production issue
 3. Agent uses `observe({what: "errors"})` — succeeds
-4. Agent tries `interact({action: "execute_js"})` — fails with "Read-only mode enabled"
-5. Agent generates analysis: `generate({format: "reproduction"})` — succeeds
+4. Agent tries `interact({what: "execute_js"})` — fails with "Read-only mode enabled"
+5. Agent generates analysis: `generate({what: "reproduction"})` — succeeds
 6. Agent provides findings to human, no production state mutated
 
 ## Examples
@@ -65,7 +65,7 @@ KABOOM_READ_ONLY=true kaboom
 
 ## Check read-only status:
 ```json
-configure({action: "health"})
+configure({what: "health"})
 // Returns:
 {
   "read_only_mode": true,
@@ -76,7 +76,7 @@ configure({action: "health"})
 
 ## Mutation attempt fails:
 ```json
-interact({action: "execute_js", code: "alert('test')"})
+interact({what: "execute_js", code: "alert('test')"})
 // Returns:
 {
   "error": "read_only_mode_enabled",
@@ -91,16 +91,16 @@ observe({what: "errors"})
 observe({what: "network_waterfall"})
 
 // Analysis generation: allowed
-generate({format: "reproduction"})
-generate({format: "sarif"})
+generate({what: "reproduction"})
+generate({what: "sarif"})
 
 // DOM query (read-only): allowed
 analyze({what: "dom", selector: ".error-message"})
 
 // Mutation: blocked
-interact({action: "navigate"}) // ERROR
-interact({action: "click", selector: "button.submit"}) // ERROR
-configure({action: "clear"}) // ERROR
+interact({what: "navigate"}) // ERROR
+interact({what: "click", selector: "button.submit"}) // ERROR
+configure({what: "clear"}) // ERROR
 ```
 
 ---

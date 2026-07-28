@@ -48,7 +48,7 @@ last_verified_date: 2026-03-05
    - Enable AI Web Pilot toggle
 2. Steps:
    - [ ] Observe DOM to identify list items
-   - [ ] Call `interact({action: "drag_drop", source: "li:nth-child(1)", target: "li:nth-child(3)", position: "after"})`
+   - [ ] Call `interact({what: "drag_drop", source: "li:nth-child(1)", target: "li:nth-child(3)", position: "after"})`
    - [ ] Wait for async result
    - [ ] Verify first item moved to third position
 3. Expected Result: List item reordered

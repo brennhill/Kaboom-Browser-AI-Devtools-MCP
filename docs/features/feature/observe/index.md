@@ -102,6 +102,9 @@ APIs remain owned by their focused `src/inject` and `src/lib` modules.
 ## Canonical Note
 `observe` is the passive read surface for captured browser/server state. It is the canonical polling surface for async command completion via `what:"command_result"`.
 
+Tool dispatch uses only the canonical `what` selector and canonical mode names;
+`mode`, `action`, `network`, and `ws` routing shortcuts are not accepted.
+
 Accessibility (`what:"accessibility"`) normalizes `summary` counts to the
 canonical keys `violations`, `passes`, `incomplete`, and `inapplicable`.
 Legacy `*_count` compatibility fields are not part of the contract.

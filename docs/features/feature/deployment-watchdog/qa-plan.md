@@ -82,14 +82,14 @@ last_verified_date: 2026-03-05
 | Workflow | Steps Required | Can Be Simplified? |
 |----------|---------------|-------------------|
 | Start watchdog and monitor deployment | 3 steps: (1) start watchdog with label/thresholds, (2) trigger deployment externally, (3) poll status or wait for changes alert | No -- the separation of "start watchdog" and "trigger deploy" is intentional (baseline capture must precede deploy) |
-| Check watchdog status | 1 step: `configure({action: "watchdog", watchdog_action: "status"})` | No -- already minimal |
+| Check watchdog status | 1 step: `configure({what: "watchdog", watchdog_action: "status"})` | No -- already minimal |
 | Passive alert via changes polling | 1 step: `observe({what: "changes"})` includes `deployment_alerts` key | No -- already integrated into existing polling pattern |
 | Check deployment overview | 1 step: `observe({what: "deployment_status"})` | No -- already minimal |
-| Stop watchdog and get summary | 1 step: `configure({action: "watchdog", watchdog_action: "stop"})` returns summary | No -- already minimal |
+| Stop watchdog and get summary | 1 step: `configure({what: "watchdog", watchdog_action: "stop"})` returns summary | No -- already minimal |
 | Full deploy-monitor-decide workflow | 5 steps: start watchdog, deploy, poll status periodically, read alert details, stop or wait for completion | Yes -- auto-detect deployment completion could eliminate explicit polling; however, keeping polling explicit reduces magic behavior |
 
 ### Default Behavior Verification
-- [ ] Feature works with zero-threshold configuration: `configure({action: "watchdog", watchdog_action: "start", deployment_label: "v1.0"})` uses all default thresholds
+- [ ] Feature works with zero-threshold configuration: `configure({what: "watchdog", watchdog_action: "start", deployment_label: "v1.0"})` uses all default thresholds
 - [ ] Default `duration_minutes: 10` is applied when not specified
 - [ ] Default `max_new_errors: 0` is conservative and catches any new error
 - [ ] Default `latency_factor: 1.5` is reasonable for typical deployment scenarios
@@ -106,7 +106,7 @@ last_verified_date: 2026-03-05
 
 | # | Test Case | Input | Expected Output | Priority |
 |---|-----------|-------|-----------------|----------|
-| UT-1 | Start watchdog with all defaults | `configure({action: "watchdog", watchdog_action: "start", deployment_label: "v1.0"})` | Watchdog created with default thresholds, status `capturing_baseline`, baseline snapshot captured | must |
+| UT-1 | Start watchdog with all defaults | `configure({what: "watchdog", watchdog_action: "start", deployment_label: "v1.0"})` | Watchdog created with default thresholds, status `capturing_baseline`, baseline snapshot captured | must |
 | UT-2 | Start watchdog with custom thresholds | `{max_new_errors: 5, latency_factor: 2.0, duration_minutes: 30}` | Thresholds applied as specified, duration set to 30 minutes | must |
 | UT-3 | Reject invalid duration (0 minutes) | `{duration_minutes: 0}` | Error: "duration must be between 1 and 60 minutes" | must |
 | UT-4 | Reject invalid duration (negative) | `{duration_minutes: -5}` | Error: "duration must be between 1 and 60 minutes" | must |
@@ -126,7 +126,7 @@ last_verified_date: 2026-03-05
 | UT-18 | Null threshold disables check | `{max_new_errors: null}` | Error monitoring skipped, no error alerts possible | must |
 | UT-19 | All thresholds null | All threshold fields set to null | Watchdog runs, no alerts fire, summary shows baseline vs final comparison | should |
 | UT-20 | Auto-stop after duration | Watchdog started with 1 minute duration, no alerts | After 60 seconds, status changes to `completed` with `reason: "soak_complete"` and `verdict: "healthy"` | must |
-| UT-21 | Manual stop with reason | `configure({action: "watchdog", watchdog_action: "stop", reason: "rollback_triggered"})` | Status changes to `stopped`, summary generated with specified reason | must |
+| UT-21 | Manual stop with reason | `configure({what: "watchdog", watchdog_action: "stop", reason: "rollback_triggered"})` | Status changes to `stopped`, summary generated with specified reason | must |
 | UT-22 | Status query for unknown watchdog_id | `watchdog_id: "wd-nonexistent"` | Error: "watchdog session not found" | must |
 | UT-23 | Regression self-resolves | Alert fires at check 3, condition clears at check 5 | Status transitions: monitoring -> alert -> monitoring, alert remains in history | should |
 
@@ -141,7 +141,7 @@ last_verified_date: 2026-03-05
 | IT-5 | Performance budget integration | Budget configured + watchdog active | Budget violation reported as watchdog alert with `type: "budget_violation"` | could |
 | IT-6 | Named snapshot saved for later diffing | Watchdog starts with label "v2.3.0" | Snapshot `wd-baseline-v2.3.0` available via `diff_sessions({session_action: "compare"})` | should |
 | IT-7 | Watchdog summary includes session diff | Watchdog completes | Summary contains `baseline_vs_final` with same structure as `diff_sessions` compare result | must |
-| IT-8 | Audit trail records watchdog lifecycle | Watchdog start + alert + stop | `configure({action: "audit_log"})` shows entries for start, each alert, and stop with timestamps | should |
+| IT-8 | Audit trail records watchdog lifecycle | Watchdog start + alert + stop | `configure({what: "audit_log"})` shows entries for start, each alert, and stop with timestamps | should |
 | IT-9 | Concurrent watchdogs (max 3) | Start 3 watchdogs, attempt 4th | First 3 succeed, 4th returns error "maximum concurrent watchdog sessions reached" | could |
 | IT-10 | observe({what: "deployment_status"}) returns active and recent | 1 active watchdog + 1 completed watchdog | Response shows both under `active_watchdogs` and `recent_completions` respectively | should |
 
@@ -191,13 +191,13 @@ last_verified_date: 2026-03-05
 
 | # | Step (AI executes) | Human Observes | Expected Result | Pass |
 |---|-------------------|----------------|-----------------|------|
-| UAT-1 | AI starts watchdog: `{"tool":"configure","arguments":{"action":"watchdog","watchdog_action":"start","deployment_label":"v1.0-test","duration_minutes":5,"thresholds":{"max_new_errors":0,"latency_factor":1.5,"max_network_error_rate":0.05,"vitals_regression_pct":20}}}` | Server logs show watchdog starting | Response shows `status: "capturing_baseline"` with baseline data, transitions to `monitoring` | [ ] |
-| UAT-2 | AI checks status: `{"tool":"configure","arguments":{"action":"watchdog","watchdog_action":"status","watchdog_id":"wd-xxx"}}` | No changes in browser | Response shows `status: "monitoring"`, `alerts: []`, `verdict: "healthy"` | [ ] |
+| UAT-1 | AI starts watchdog: `{"tool":"configure","arguments":{"what":"watchdog","watchdog_action":"start","deployment_label":"v1.0-test","duration_minutes":5,"thresholds":{"max_new_errors":0,"latency_factor":1.5,"max_network_error_rate":0.05,"vitals_regression_pct":20}}}` | Server logs show watchdog starting | Response shows `status: "capturing_baseline"` with baseline data, transitions to `monitoring` | [ ] |
+| UAT-2 | AI checks status: `{"tool":"configure","arguments":{"what":"watchdog","watchdog_action":"status","watchdog_id":"wd-xxx"}}` | No changes in browser | Response shows `status: "monitoring"`, `alerts: []`, `verdict: "healthy"` | [ ] |
 | UAT-3 | Human "deploys" by introducing a console error in the app (e.g., add `throw new Error("PaymentService is not defined")`) and refreshes the page | Error visible in browser console | Error appears in Kaboom capture | [ ] |
 | UAT-4 | AI waits 30+ seconds for next check, then checks status again | Watchdog check fires | Response shows `status: "alert"`, `alerts` array contains the new error, `verdict: "degraded"` | [ ] |
 | UAT-5 | AI checks via observe: `{"tool":"observe","arguments":{"what":"deployment_status"}}` | N/A | `active_watchdogs` contains the watchdog with `status: "alert"` and `alerts_count: 1` | [ ] |
 | UAT-6 | AI checks via changes: `{"tool":"observe","arguments":{"what":"changes"}}` | N/A | Response includes `deployment_alerts` key with the watchdog alert | [ ] |
-| UAT-7 | AI stops watchdog: `{"tool":"configure","arguments":{"action":"watchdog","watchdog_action":"stop","watchdog_id":"wd-xxx","reason":"rollback_triggered"}}` | Server logs show watchdog stopping | Response shows `status: "stopped"`, `reason: "rollback_triggered"`, `summary.verdict: "regressed"`, `summary.baseline_vs_final.new_errors: 1` | [ ] |
+| UAT-7 | AI stops watchdog: `{"tool":"configure","arguments":{"what":"watchdog","watchdog_action":"stop","watchdog_id":"wd-xxx","reason":"rollback_triggered"}}` | Server logs show watchdog stopping | Response shows `status: "stopped"`, `reason: "rollback_triggered"`, `summary.verdict: "regressed"`, `summary.baseline_vs_final.new_errors: 1` | [ ] |
 | UAT-8 | AI verifies clean completion by starting new watchdog, no changes made, wait for duration | 5-minute wait | Watchdog auto-completes with `verdict: "healthy"`, `reason: "soak_complete"` | [ ] |
 | UAT-9 | AI checks deployment_status after completion | N/A | `recent_completions` contains the completed watchdog | [ ] |
 | UAT-10 | AI attempts to start watchdog with duration 0 | N/A | Error response: duration must be between 1 and 60 minutes | [ ] |

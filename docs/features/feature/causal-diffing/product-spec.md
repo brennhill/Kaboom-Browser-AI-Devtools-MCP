@@ -28,7 +28,7 @@ Without causal attribution, the AI has no actionable recourse. It can only repor
 
 ## Solution
 
-Add `configure({action: "causal_diff"})` -- a new action that performs resource-level comparison between the baseline state and the current state. It identifies what's new, what's gone, what got bigger, and what got slower, then summarizes the probable cause in a structured format the AI can act on directly.
+Add `configure({what: "causal_diff"})` -- a new action that performs resource-level comparison between the baseline state and the current state. It identifies what's new, what's gone, what got bigger, and what got slower, then summarizes the probable cause in a structured format the AI can act on directly.
 
 Causal diffing answers: "Why did performance change?" by comparing resource waterfalls and attributing regression to specific resources (scripts, stylesheets, API calls, images, fonts).
 
@@ -67,7 +67,7 @@ Causal diffing answers: "Why did performance change?" by comparing resource wate
 
 1. AI receives performance regression alert via `observe({what: "changes"})`
 2. Alert says "load time regressed by 500ms" with recommendation: "Use causal_diff for resource-level analysis"
-3. AI calls `configure({action: "causal_diff", url: "/dashboard"})`
+3. AI calls `configure({what: "causal_diff", url: "/dashboard"})`
 4. Server compares current resource waterfall against baseline waterfall
 5. Server returns structured diff: added/removed/resized/retimed resources, probable cause, recommendations
 6. AI uses diagnosis to propose fix (e.g., "Add dynamic import for chart-library.js to reduce blocking time")

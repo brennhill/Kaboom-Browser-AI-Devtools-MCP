@@ -25,7 +25,7 @@ last_verified_date: 2026-03-05
 - [ ] Timeout mechanism works (reject after 10s)
 
 **Integration tests:** End-to-end audit execution
-- [ ] MCP tool `generate({action: "query_accessibility"})` returns real audit results
+- [ ] MCP tool `generate({what: "query_accessibility"})` returns real audit results
 - [ ] Audit results include violations array
 - [ ] Audit results include passes count
 - [ ] Audit results include incomplete and inapplicable counts
@@ -64,7 +64,7 @@ last_verified_date: 2026-03-05
    - Navigate to <https://example.com>
    - Start tracking the tab via interact tool
 2. Steps:
-   - [ ] Call MCP tool: `generate({action: "query_accessibility"})`
+   - [ ] Call MCP tool: `generate({what: "query_accessibility"})`
    - [ ] Observe response
 3. Expected Result: Response contains:
    ```json
@@ -96,7 +96,7 @@ last_verified_date: 2026-03-05
      - Missing form labels
    - Track the tab
 2. Steps:
-   - [ ] Call MCP tool: `generate({action: "query_accessibility"})`
+   - [ ] Call MCP tool: `generate({what: "query_accessibility"})`
    - [ ] Observe response
 3. Expected Result:
    - [ ] violations array has 3+ entries
@@ -109,7 +109,7 @@ last_verified_date: 2026-03-05
 ### Scenario 3: No Runtime Error on Complex Page
 1. Setup: Navigate to complex page (e.g., GitHub.com with 5,000+ DOM elements)
 2. Steps:
-   - [ ] Call MCP tool: `generate({action: "query_accessibility"})`
+   - [ ] Call MCP tool: `generate({what: "query_accessibility"})`
    - [ ] Wait for response (may take 5-10 seconds)
 3. Expected Result:
    - [ ] Either complete audit results OR timeout error
@@ -121,7 +121,7 @@ last_verified_date: 2026-03-05
    - Start Kaboom server
    - DO NOT track any tab
 2. Steps:
-   - [ ] Call MCP tool: `generate({action: "query_accessibility"})`
+   - [ ] Call MCP tool: `generate({what: "query_accessibility"})`
    - [ ] Observe response
 3. Expected Result: Error response with clear message
 4. Verification: Error says "No tab is currently tracked" (not undefined function)
@@ -131,7 +131,7 @@ last_verified_date: 2026-03-05
    - Navigate to extremely complex page or freeze page via DevTools
    - Track the tab
 2. Steps:
-   - [ ] Call MCP tool: `generate({action: "query_accessibility"})`
+   - [ ] Call MCP tool: `generate({what: "query_accessibility"})`
    - [ ] Wait 10+ seconds
 3. Expected Result: Timeout error after 10 seconds
 4. Verification: Audit doesn't hang indefinitely
@@ -139,7 +139,7 @@ last_verified_date: 2026-03-05
 ### Scenario 6: Accessible Page Returns Passes
 1. Setup: Navigate to well-designed accessible page (e.g., gov.uk)
 2. Steps:
-   - [ ] Call MCP tool: `generate({action: "query_accessibility"})`
+   - [ ] Call MCP tool: `generate({what: "query_accessibility"})`
    - [ ] Observe response
 3. Expected Result:
    - [ ] violations array is empty or has low count

@@ -52,7 +52,7 @@ sequenceDiagram
     participant MCP as MCP Server
     participant Tracker as Correlation Tracker
 
-    AI->>MCP: interact({action: 'execute_js', ...})
+    AI->>MCP: interact({what: 'execute_js', ...})
     MCP-->>AI: {status: "queued", correlation_id: "exec_123"}
 
     Note over AI: Wait 1-2 seconds<br/>(extension poll + execute time)

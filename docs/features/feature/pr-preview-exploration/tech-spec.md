@@ -34,7 +34,7 @@ If all mechanisms fail, the agent prompts the human for the URL.
 ### Phase 2: Baseline Capture
 Before visiting the preview, the agent establishes a "known good" behavioral baseline:
 
-- **Live baseline (preferred)**: Navigate to the production/stable-branch version, capture a session snapshot via `configure({action: "diff_sessions", session_action: "capture"})`, and optionally save a behavioral baseline via `configure({action: "save_baseline"})`.
+- **Live baseline (preferred)**: Navigate to the production/stable-branch version, capture a session snapshot via `configure({what: "diff_sessions", session_action: "capture"})`, and optionally save a behavioral baseline via `configure({what: "save_baseline"})`.
 - **Stored baseline (faster)**: Load a previously saved baseline from persistent memory. Agent checks staleness (warns if > 24 hours old).
 
 The baseline includes console error fingerprints, network endpoint status codes and latencies, performance metrics (LCP, FCP, CLS, load time), and WebSocket connection state.
@@ -44,14 +44,14 @@ The agent opens the preview URL in a new isolated tab and exercises the applicat
 
 #### Step 3.1: Open preview in new tab
 ```
-interact({action: "new_tab", url: "https://preview-42.myapp.dev"})
+interact({what: "new_tab", url: "https://preview-42.myapp.dev"})
 ```
 
 #### Step 3.2: Wait for page load
 Poll `observe({what: "page"})` until ready state is reached or timeout (30 seconds).
 
 #### Step 3.3: Exercise the application
-The agent performs a bounded set of interactions using `interact({action: "execute_js"})`:
+The agent performs a bounded set of interactions using `interact({what: "execute_js"})`:
 - Click navigation links
 - Fill and submit forms
 - Trigger error states (empty inputs, invalid data)
@@ -62,7 +62,7 @@ Kaboom passively captures telemetry during this phase (console logs, network req
 
 #### Step 3.4: Capture session snapshot
 ```
-configure({action: "diff_sessions", session_action: "capture", name: "preview-pr-42"})
+configure({what: "diff_sessions", session_action: "capture", name: "preview-pr-42"})
 ```
 
 ### Phase 4: Comparison
@@ -70,14 +70,14 @@ The agent compares the preview session against the baseline:
 
 **Session diff**:
 ```
-configure({action: "diff_sessions", session_action: "compare", compare_a: "stable-baseline", compare_b: "preview-pr-42"})
+configure({what: "diff_sessions", session_action: "compare", compare_a: "stable-baseline", compare_b: "preview-pr-42"})
 ```
 
 Returns structured diff: new errors, changed network responses, performance deltas, WebSocket state changes.
 
 **Behavioral baseline comparison** (if available):
 ```
-configure({action: "compare_baseline", name: "stable-baseline"})
+configure({what: "compare_baseline", name: "stable-baseline"})
 ```
 
 Returns categorized regressions: network, timing, console, WebSocket.
@@ -96,14 +96,14 @@ The agent synthesizes findings into a structured report:
 
 **Human-readable PR comment**:
 ```
-generate({format: "pr_summary"})
+generate({what: "pr_summary"})
 ```
 
 Produces markdown with error summaries, network issues, performance data, prepended with exploration context (preview URL, pages visited, actions taken).
 
 **Machine-readable SARIF** (optional):
 ```
-generate({format: "sarif"})
+generate({what: "sarif"})
 ```
 
 For GitHub code scanning integration.
@@ -117,16 +117,16 @@ Human/API provides preview URL
   |
   v
 Agent captures baseline (production/main)
-  -> configure({action: "diff_sessions", session_action: "capture"})
-  -> configure({action: "save_baseline"}) [optional]
+  -> configure({what: "diff_sessions", session_action: "capture"})
+  -> configure({what: "save_baseline"}) [optional]
   |
   v
 Agent navigates to preview
-  -> interact({action: "new_tab", url: preview_url})
+  -> interact({what: "new_tab", url: preview_url})
   |
   v
 Agent exercises application
-  -> interact({action: "execute_js"}) [multiple calls]
+  -> interact({what: "execute_js"}) [multiple calls]
   |
   v
 Kaboom captures telemetry passively
@@ -134,19 +134,19 @@ Kaboom captures telemetry passively
   |
   v
 Agent captures preview session
-  -> configure({action: "diff_sessions", session_action: "capture", name: "preview-pr-N"})
+  -> configure({what: "diff_sessions", session_action: "capture", name: "preview-pr-N"})
   |
   v
 Agent compares preview vs baseline
-  -> configure({action: "diff_sessions", session_action: "compare"})
-  -> configure({action: "compare_baseline"}) [if available]
+  -> configure({what: "diff_sessions", session_action: "compare"})
+  -> configure({what: "compare_baseline"}) [if available]
   -> observe({what: "errors"})
   -> observe({what: "performance"})
   |
   v
 Agent generates findings report
-  -> generate({format: "pr_summary"})
-  -> generate({format: "sarif"}) [optional]
+  -> generate({what: "pr_summary"})
+  -> generate({what: "sarif"}) [optional]
   |
   v
 Agent posts report to PR (via external gh CLI, not Kaboom)
@@ -259,6 +259,6 @@ Security constraints:
 **Data sensitivity**: Preview environments may contain test data. Kaboom's existing privacy controls apply:
 - Network body capture is opt-in (off by default). Agent enables selectively for API endpoints it wants to validate.
 - Kaboom strips sensitive headers (Authorization, Cookie, tokens).
-- Redaction patterns (configured via `configure({action: "noise_rule"})`) apply to all captured data.
+- Redaction patterns (configured via `configure({what: "noise_rule"})`) apply to all captured data.
 
 **execute_js security surface**: Agent generates scripts simulating user behavior (clicking, typing, scrolling). It does not read sensitive page data (localStorage, sessionStorage, form values). AI Web Pilot toggle must be enabled by human before `execute_js` works (existing security gate).

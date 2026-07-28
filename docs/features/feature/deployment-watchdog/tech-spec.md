@@ -36,13 +36,13 @@ If a named behavioral baseline exists for the URL scope, watchdog also loads it 
 **Alert Generator**: When a threshold is breached, generates alert struct containing: alert ID, severity (high/medium), type (new_errors, latency_regression, network_failure, vitals_regression), detected timestamp, summary, details, and recommendation.
 
 **Alert Delivery**: Alerts delivered through two channels:
-1. **Active polling**: Agent calls `configure({action: "watchdog", watchdog_action: "status"})` to get current state including pending alerts.
+1. **Active polling**: Agent calls `configure({what: "watchdog", watchdog_action: "status"})` to get current state including pending alerts.
 2. **Passive embedding**: Alerts embedded in `observe({what: "changes"})` response under `deployment_alerts` key. Alert appears once when first detected, not repeated on subsequent polls (same pattern as push regression alerts).
 
 ## Data Flows
 
 ```
-AI calls configure({action: "watchdog", watchdog_action: "start", deployment_label: "v2.3.0", duration_minutes: 15, thresholds: {...}})
+AI calls configure({what: "watchdog", watchdog_action: "start", deployment_label: "v2.3.0", duration_minutes: 15, thresholds: {...}})
   |
   v
 Watchdog Manager creates new session
@@ -66,7 +66,7 @@ Regression Checker goroutine starts
   |
   v
 AI polls deployment status
-  -> configure({action: "watchdog", watchdog_action: "status"})
+  -> configure({what: "watchdog", watchdog_action: "status"})
   OR
   -> observe({what: "deployment_status"})
   OR
@@ -80,7 +80,7 @@ On alert detection, AI investigates
   |
   v
 AI stops watchdog (or duration elapses)
-  -> configure({action: "watchdog", watchdog_action: "stop", reason: "rollback_triggered"})
+  -> configure({what: "watchdog", watchdog_action: "stop", reason: "rollback_triggered"})
   -> Watchdog Manager generates completion summary
   -> Session removed from active list, added to recent_completions (kept for 1 hour)
 ```
@@ -211,6 +211,6 @@ AI stops watchdog (or duration elapses)
 
 **No credential storage**: Watchdog does not store or require deployment API credentials. Rollback decisions made by AI and executed through external mechanisms.
 
-**Audit trail**: Watchdog start, stop, and alert events recorded in audit trail (`configure({action: "audit_log"})`) so there's record of what AI monitored and what it was told.
+**Audit trail**: Watchdog start, stop, and alert events recorded in audit trail (`configure({what: "audit_log"})`) so there's record of what AI monitored and what it was told.
 
 **Snapshot redaction**: Baseline snapshot inherits whatever redaction rules active on server (header stripping, URL scrubbing). No additional redaction needed.

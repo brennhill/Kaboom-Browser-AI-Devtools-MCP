@@ -7,7 +7,7 @@ Package interact defines the interact tool's MCP schema.
 
 Layout:
   - tool.go: the tool definition (name, description, input schema)
-  - actions.go: the canonical action registry backing both the what/action enum
+  - actions.go: the canonical action registry backing the what enum
     and describe_capabilities mode specs
   - properties.go: merges the five property groups into the full property set
   - properties_dispatch.go / properties_targeting.go / properties_core.go /

@@ -4,8 +4,6 @@ package toolrouting
 
 import (
 	"encoding/json"
-	"fmt"
-	"strings"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
@@ -25,37 +23,9 @@ func describeCapabilitiesRecovery(toolName string) func(*mcp.StructuredError) {
 	})
 }
 
-func appendCanonicalWhatAliasWarning(resp mcp.JSONRPCResponse, aliasParam, mode, deprecatedIn, removeIn string) mcp.JSONRPCResponse {
-	if strings.TrimSpace(aliasParam) == "" || strings.TrimSpace(mode) == "" {
-		return resp
-	}
-	var warning string
-	if deprecatedIn != "" && removeIn != "" {
-		warning = fmt.Sprintf("Parameter '%s' is deprecated (since %s, removal planned %s); use what=%q.", aliasParam, deprecatedIn, removeIn, mode)
-	} else if deprecatedIn != "" {
-		warning = fmt.Sprintf("Parameter '%s' is deprecated (since %s); use what=%q.", aliasParam, deprecatedIn, mode)
-	} else {
-		warning = fmt.Sprintf("Accepted alias parameter '%s'; canonical parameter is 'what' (use what=%q).", aliasParam, mode)
-	}
-	return mcp.AppendWarningsToResponse(resp, []string{warning})
-}
-
-func whatAliasConflictResponse(req mcp.JSONRPCRequest, aliasParam, whatValue, aliasValue, validValues string) mcp.JSONRPCResponse {
-	hint := "Use only 'what' when specifying tool mode/action."
-	if strings.TrimSpace(validValues) != "" {
-		hint += " Valid values: " + validValues
-	}
-	return mcp.Fail(req, mcp.ErrInvalidParam,
-		fmt.Sprintf("Conflicting parameters: what=%q and %s=%q", whatValue, aliasParam, aliasValue),
-		"Send only the canonical 'what' parameter and retry.",
-		mcp.WithParam("what"), mcp.WithHint(hint),
-	)
-}
-
-// Registry bundles the handler map, alias definitions, and metadata for a tool.
+// Registry bundles the handler map and metadata for a tool.
 type Registry[H any] struct {
 	Handlers   map[string]Handler[H]
-	AliasDefs  []Alias
 	Resolution Resolution
 	// PreDispatch is called after mode resolution but before handler dispatch.
 	// Returns modified args and optional response (non-nil short-circuits dispatch).
@@ -65,28 +35,26 @@ type Registry[H any] struct {
 }
 
 // Dispatch resolves the mode, looks up the handler, and dispatches.
-// Handles the resolve→lookup→not-found→call→alias-warning pattern shared by all 4 registry tools.
+// Handles the resolve→lookup→not-found→call pattern shared by all five tools.
 func Dispatch[H any](h H, req mcp.JSONRPCRequest, args json.RawMessage, reg Registry[H]) mcp.JSONRPCResponse {
-	what, usedAliasParam, errResp := resolveToolMode(req, args, reg.AliasDefs, reg.Resolution)
+	what, errResp := resolveToolMode(req, args, reg.Resolution)
 	if errResp != nil {
 		return *errResp
 	}
-
-	deprecatedIn, removeIn := findAliasParamDeprecation(usedAliasParam, reg.AliasDefs)
 
 	handler, ok := reg.Handlers[what]
 	if !ok {
 		validModes := reg.Resolution.ValidModes
 		resp := mcp.Fail(req, mcp.ErrUnknownMode, "Unknown "+reg.Resolution.ToolName+" mode: "+what,
 			"Use a valid mode from the 'what' enum", mcp.WithParam("what"), mcp.WithHint("Valid values: "+validModes), describeCapabilitiesRecovery(reg.Resolution.ToolName))
-		return appendCanonicalWhatAliasWarning(resp, usedAliasParam, what, deprecatedIn, removeIn)
+		return resp
 	}
 
 	if reg.PreDispatch != nil {
 		var preResp *mcp.JSONRPCResponse
 		args, preResp = reg.PreDispatch(h, req, args, what)
 		if preResp != nil {
-			return appendCanonicalWhatAliasWarning(*preResp, usedAliasParam, what, deprecatedIn, removeIn)
+			return *preResp
 		}
 	}
 
@@ -96,155 +64,39 @@ func Dispatch[H any](h H, req mcp.JSONRPCRequest, args json.RawMessage, reg Regi
 		resp = reg.PostDispatch(h, req, resp, what)
 	}
 
-	return appendCanonicalWhatAliasWarning(resp, usedAliasParam, what, deprecatedIn, removeIn)
-}
-
-// DefaultModeActionAliases defines the standard deprecated alias parameters ("mode", "action")
-// shared by observe and analyze tools. Reference this from tool registries instead of duplicating.
-var DefaultModeActionAliases = []Alias{
-	{JSONField: "mode", DeprecatedIn: "0.7.0", RemoveIn: "0.9.0"},
-	{JSONField: "action", DeprecatedIn: "0.7.0", RemoveIn: "0.9.0"},
-}
-
-// Alias defines a deprecated parameter that can substitute for the canonical 'what' param.
-//
-// ConflictFn gates the conflict check: when set, a conflict is only raised if ConflictFn returns true.
-// This supports tools where a param like "action" doubles as both a mode selector and a sub-action
-// field — conflicts are only flagged when the alias value is a known top-level mode.
-//
-// FallbackFn gates the fallback: when set, the alias value is only used as a mode selector when
-// FallbackFn returns true. When nil, any non-empty alias value is accepted as a fallback.
-type Alias struct {
-	JSONField    string            // JSON field name in args (e.g. "action", "mode", "format")
-	ConflictFn   func(string) bool // Optional: only raise conflict when this returns true
-	FallbackFn   func(string) bool // Optional: only use as fallback mode when this returns true
-	DeprecatedIn string            // Semver when deprecated (e.g. "0.7.0"); empty = not tracked
-	RemoveIn     string            // Semver when removal is planned (e.g. "0.9.0"); empty = not tracked
-}
-
-// ValueAlias maps a shorthand mode value to its canonical name with deprecation tracking.
-type ValueAlias struct {
-	Canonical    string // Canonical mode name (e.g. "network_waterfall")
-	DeprecatedIn string // Semver when deprecated (e.g. "0.7.0")
-	RemoveIn     string // Semver when removal is planned (e.g. "0.9.0")
+	return resp
 }
 
 // Resolution bundles context needed for mode resolution error messages.
 type Resolution struct {
-	ToolName     string                // For error messages (e.g. "observe", "analyze")
-	ValidModes   string                // Sorted comma-separated list for hints
-	Aliases      map[string]string     // Mode aliases (e.g. "network" -> "network_waterfall") — legacy, used when ValueAliases is nil
-	ValueAliases map[string]ValueAlias // Mode aliases with deprecation metadata — preferred over Aliases
+	ToolName   string // For error messages (e.g. "observe", "analyze")
+	ValidModes string // Sorted comma-separated list for hints
 }
 
-// resolveToolMode extracts and resolves the 'what' parameter from args, checking alias params
-// for fallback values. Returns the resolved mode, which alias param was used (empty if canonical),
-// and an error response if resolution fails.
-//
-// Resolution order:
-//  1. Parse 'what' and all alias params from args.
-//  2. Detect conflicts: if 'what' is set and an alias has a different value, return conflict error.
-//  3. Fall back to aliases in order if 'what' is empty.
-//  4. Return missing-param error if no mode found.
-//  5. Apply mode aliases (e.g. "network" -> "network_waterfall").
+// resolveToolMode extracts the canonical 'what' parameter.
 func resolveToolMode(
 	req mcp.JSONRPCRequest,
 	args json.RawMessage,
-	aliasDefs []Alias,
 	res Resolution,
-) (what string, usedAliasParam string, errResp *mcp.JSONRPCResponse) {
-
-	// Parse all potential mode fields into a map.
-	fields := make(map[string]string, len(aliasDefs)+1)
+) (what string, errResp *mcp.JSONRPCResponse) {
 	if len(args) > 0 {
-		var raw map[string]json.RawMessage
-		if err := json.Unmarshal(args, &raw); err != nil {
+		var params struct {
+			What string `json:"what"`
+		}
+		if err := json.Unmarshal(args, &params); err != nil {
 			resp := mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
-			return "", "", &resp
+			return "", &resp
 		}
-		for _, key := range append([]string{"what"}, aliasFieldNames(aliasDefs)...) {
-			if v, ok := raw[key]; ok {
-				var s string
-				if json.Unmarshal(v, &s) == nil {
-					fields[key] = s
-				}
-			}
-		}
+		what = params.What
 	}
 
-	what = fields["what"]
-
-	// Check for conflicts: what is set and an alias has a different value.
-	for _, ad := range aliasDefs {
-		aliasVal := fields[ad.JSONField]
-		if aliasVal == "" || aliasVal == what || what == "" {
-			continue
-		}
-		if ad.ConflictFn != nil && !ad.ConflictFn(aliasVal) {
-			continue
-		}
-		resp := whatAliasConflictResponse(req, ad.JSONField, what, aliasVal, res.ValidModes)
-		return "", "", &resp
-	}
-
-	// Fall back to alias params in order.
-	if what == "" {
-		for _, ad := range aliasDefs {
-			aliasVal := fields[ad.JSONField]
-			if aliasVal == "" {
-				continue
-			}
-			if ad.FallbackFn != nil && !ad.FallbackFn(aliasVal) {
-				continue
-			}
-			what = aliasVal
-			usedAliasParam = ad.JSONField
-			break
-		}
-	}
-
-	// Missing mode.
 	if what == "" {
 		resp := mcp.Fail(req, mcp.ErrMissingParam,
 			"Required parameter 'what' is missing",
 			"Add the 'what' parameter and call again",
 			mcp.WithParam("what"),
 			mcp.WithHint("Valid values: "+res.ValidModes))
-		return "", usedAliasParam, &resp
+		return "", &resp
 	}
-
-	// Apply mode aliases (e.g. "network" -> "network_waterfall").
-	if res.ValueAliases != nil {
-		if va, ok := res.ValueAliases[what]; ok {
-			what = va.Canonical
-		}
-	} else if res.Aliases != nil {
-		if canonical, ok := res.Aliases[what]; ok {
-			what = canonical
-		}
-	}
-
-	return what, usedAliasParam, nil
-}
-
-// findAliasParamDeprecation returns the deprecation metadata for a used alias param.
-func findAliasParamDeprecation(usedAliasParam string, aliasDefs []Alias) (deprecatedIn, removeIn string) {
-	if usedAliasParam == "" {
-		return "", ""
-	}
-	for _, ad := range aliasDefs {
-		if ad.JSONField == usedAliasParam {
-			return ad.DeprecatedIn, ad.RemoveIn
-		}
-	}
-	return "", ""
-}
-
-// aliasFieldNames extracts JSON field names from alias definitions.
-func aliasFieldNames(defs []Alias) []string {
-	names := make([]string, len(defs))
-	for i, d := range defs {
-		names[i] = d.JSONField
-	}
-	return names
+	return what, nil
 }

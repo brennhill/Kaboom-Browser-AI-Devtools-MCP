@@ -61,7 +61,7 @@ This guide provides step-by-step instructions for human testers to verify the `a
 2. Ask AI: "Check this page for accessibility issues"
 
 #### Expected AI Actions:
-- AI calls `analyze({action: 'audit', scope: 'accessibility'})`
+- AI calls `analyze({what: 'audit', scope: 'accessibility'})`
 
 #### Verification:
 - [ ] Response arrives within 15 seconds
@@ -82,7 +82,7 @@ This guide provides step-by-step instructions for human testers to verify the `a
 2. Ask AI: "Check just the signup form for accessibility"
 
 #### Expected AI Actions:
-- AI calls `analyze({action: 'audit', scope: 'accessibility', selector: 'form'})`
+- AI calls `analyze({what: 'audit', scope: 'accessibility', selector: 'form'})`
 
 #### Verification:
 - [ ] Response only includes issues within the form
@@ -100,7 +100,7 @@ This guide provides step-by-step instructions for human testers to verify the `a
 2. Ask AI: "Check this page for security issues"
 
 #### Expected AI Actions:
-- AI calls `analyze({action: 'security'})`
+- AI calls `analyze({what: 'security'})`
 
 #### Verification:
 - [ ] Response includes `findings` for missing headers
@@ -134,7 +134,7 @@ This guide provides step-by-step instructions for human testers to verify the `a
 2. Ask AI: "Take a memory snapshot of this page"
 
 #### Expected AI Actions:
-- AI calls `analyze({action: 'memory', scope: 'snapshot'})`
+- AI calls `analyze({what: 'memory', scope: 'snapshot'})`
 
 #### Verification:
 - [ ] Response includes `heap_used_mb` and `heap_total_mb`
@@ -155,8 +155,8 @@ This guide provides step-by-step instructions for human testers to verify the `a
 4. Ask AI: "Check for memory leaks"
 
 #### Expected AI Actions:
-- First: `analyze({action: 'memory', scope: 'snapshot'})` (baseline)
-- Second: `analyze({action: 'memory', scope: 'compare'})`
+- First: `analyze({what: 'memory', scope: 'snapshot'})` (baseline)
+- Second: `analyze({what: 'memory', scope: 'compare'})`
 
 #### Verification:
 - [ ] Compare response shows `baseline` and `current` states
@@ -175,7 +175,7 @@ This guide provides step-by-step instructions for human testers to verify the `a
 2. Ask AI: "Save a baseline of this page's state"
 
 #### Expected AI Actions:
-- AI calls `analyze({action: 'regression', scope: 'baseline'})`
+- AI calls `analyze({what: 'regression', scope: 'baseline'})`
 
 #### Verification:
 - [ ] Response confirms baseline captured
@@ -192,7 +192,7 @@ This guide provides step-by-step instructions for human testers to verify the `a
 2. Ask AI: "Check for regressions against the baseline"
 
 #### Expected AI Actions:
-- AI calls `analyze({action: 'regression', scope: 'compare'})`
+- AI calls `analyze({what: 'regression', scope: 'compare'})`
 
 #### Verification:
 - [ ] Response compares accessibility, performance, security
@@ -211,7 +211,7 @@ This guide provides step-by-step instructions for human testers to verify the `a
 2. Within 10 seconds, ask AI: "Audit accessibility again, fresh"
 
 #### Expected AI Actions:
-- AI calls `analyze({action: 'audit', scope: 'accessibility', force_refresh: true})`
+- AI calls `analyze({what: 'audit', scope: 'accessibility', force_refresh: true})`
 
 #### Verification:
 - [ ] New audit runs (check duration is > 1s)

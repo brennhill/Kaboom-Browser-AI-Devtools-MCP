@@ -219,7 +219,7 @@ Go Server (native process, full filesystem + OS access)
 ### Escalation Flow (User Perspective)
 
 ```
-User calls: interact(action: "upload", selector: "#Filedata", file_path: "/path/to/video.mp4")
+User calls: interact(what: "upload", selector: "#Filedata", file_path: "/path/to/video.mp4")
   ↓
 [5 second timeout for manual interaction]
   ├─ User clicks file input → STAGE 2 (file dialog)
@@ -238,7 +238,7 @@ User calls: interact(action: "upload", selector: "#Filedata", file_path: "/path/
 
 ## API Design
 
-### Tool Signature: `interact(action: "upload", ...)`
+### Tool Signature: `interact(what: "upload", ...)`
 
 #### Parameters:
 
@@ -555,8 +555,8 @@ const videos = await readCSV('videos.csv');
 
 for (const video of videos) {
   // Fill form fields
-  await interact({ action: 'fill', selector: '#title', text: video.title });
-  await interact({ action: 'fill', selector: '#tags', text: video.tags });
+  await interact({ what: 'fill', selector: '#title', text: video.title });
+  await interact({ what: 'fill', selector: '#tags', text: video.tags });
 
   // Upload file (auto-escalates if needed)
   const result = await interact({
@@ -573,7 +573,7 @@ for (const video of videos) {
   console.log(`Uploaded with Stage ${result.stage}`);
 
   // Submit form
-  await interact({ action: 'click', selector: 'button[type=submit]' });
+  await interact({ what: 'click', selector: 'button[type=submit]' });
 
   // Wait for redirect
   await wait(5000);
@@ -597,7 +597,7 @@ Escalation strategy automatically detects the right approach per platform.
 
 ```
 IDLE
-  ↓ [User calls interact(action: "upload", ...)]
+  ↓ [User calls interact(what: "upload", ...)]
 
 WAITING_FOR_USER_INPUT
   ├─ [User clicks file input within 5s timeout] → STAGE_2_FILE_DIALOG

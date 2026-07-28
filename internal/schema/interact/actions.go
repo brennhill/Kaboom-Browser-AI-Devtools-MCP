@@ -1,4 +1,4 @@
-// Purpose: Defines the canonical list of interact tool action values for the what/action enum.
+// Purpose: Defines the canonical list of interact tool action values for the what enum.
 // Why: Centralizes the action enum so schema definition and action dispatch share a single source.
 package interact
 
@@ -78,7 +78,6 @@ var actionSpecs = []ActionSpec{
 }
 
 // actionEnum is the canonical list of values accepted by the 'what' parameter.
-// The deprecated 'action' alias references this same slice — do not mutate it at runtime.
 var actionEnum = actionNames(actionSpecs)
 
 func actionNames(specs []ActionSpec) []string {

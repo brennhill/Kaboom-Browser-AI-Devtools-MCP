@@ -132,7 +132,7 @@ AND: Resumes streaming (no polling after reconnect)
 
 #### Test Case 2.1: Create Recording Metadata
 ```
-GIVEN: User calls configure({action: 'recording_start', name: 'checkout', url: 'https://...'})
+GIVEN: User calls configure({what: 'recording_start', name: 'checkout', url: 'https://...'})
 WHEN: Recording created
 THEN: metadata.json saved to ~/.kaboom/recordings/{id}/metadata.json
 AND: File contains: id, name, created_at, duration, action_count, start_url, viewport, sensitive_data_enabled
@@ -162,7 +162,7 @@ AND: Timestamps in ascending order
 #### Test Case 2.3: Persist Recording to Disk
 ```
 GIVEN: Active recording with 10 actions
-WHEN: configure({action: 'recording_stop', recording_id: '...'})
+WHEN: configure({what: 'recording_stop', recording_id: '...'})
 THEN: metadata.json persisted with all 10 actions
 AND: File readable as valid JSON
 AND: action_count = 10
@@ -189,7 +189,7 @@ AND: Original text never stored
 
 #### Test Case 2.5: Sensitive Data Full Capture (Opt-In)
 ```
-GIVEN: User calls configure({action: 'recording_start', sensitive_data_enabled: true})
+GIVEN: User calls configure({what: 'recording_start', sensitive_data_enabled: true})
 AND: Extension shows warning popup (mocked in test)
 WHEN: Type action on password input: "test_password"
 THEN: Stored as: {type: "type", text: "test_password", ...}
@@ -204,7 +204,7 @@ AND: metadata.json: sensitive_data_enabled: true
 #### Test Case 2.6: Storage Quota Enforcement
 ```
 GIVEN: Recording storage at 100% (1GB used)
-WHEN: User calls configure({action: 'recording_start', name: 'new'})
+WHEN: User calls configure({what: 'recording_start', name: 'new'})
 THEN: Error returned: "recording_storage_full: Recording storage at capacity (1GB)..."
 AND: No recording created
 AND: Next call still fails (no auto-delete)
@@ -391,7 +391,7 @@ GIVEN: Custom action array (not from recording):
   {type: "click", selector: "[data-testid=coupon-btn]", ...},
   {type: "type", selector: "input#coupon", text: "SUMMER2026", ...}
 ]
-WHEN: interact({action: 'playback', actions: [...], test_id: 'variation-1'})
+WHEN: interact({what: 'playback', actions: [...], test_id: 'variation-1'})
 THEN: Playback executes custom actions
 AND: All events tagged with test_id: 'variation-1'
 AND: Result: {status: "ok", actions_executed: 3, errors: []}
@@ -558,7 +558,7 @@ AND: Enters name: "checkout-flow"
 AND: Enters URL: "https://shop.example.com"
 THEN: Recording state changed to "recording"
 AND: Button changes to "Stop Recording"
-AND: MCP action sent: configure({action: 'recording_start', name: 'checkout-flow', ...})
+AND: MCP action sent: configure({what: 'recording_start', name: 'checkout-flow', ...})
 AND: Server responds with recording_id
 ```
 
@@ -573,7 +573,7 @@ AND: Server responds with recording_id
 GIVEN: Recording in progress
 WHEN: User clicks "Stop Recording"
 THEN: Recording state changed to "stopped"
-AND: MCP action sent: configure({action: 'recording_stop', recording_id: '...'})
+AND: MCP action sent: configure({what: 'recording_stop', recording_id: '...'})
 AND: Button changes back to "Start Recording"
 AND: Recording saved to disk (via server)
 ```
@@ -692,9 +692,9 @@ GIVEN:
 
 WHEN:
   Step 1: Record original flow
-    configure({action: 'test_boundary_start', test_id: 'original-shop'})
+    configure({what: 'test_boundary_start', test_id: 'original-shop'})
     User: click "Product", type "Apple", click "Add to Cart", click "Checkout"
-    configure({action: 'test_boundary_end', test_id: 'original-shop'})
+    configure({what: 'test_boundary_end', test_id: 'original-shop'})
     → All actions + logs captured
 
   Step 2: Simulate bug fix in shopping app
@@ -1033,10 +1033,10 @@ dd if=/dev/zero of=dummy2.bin bs=1M count=200
 #### Phase 1: Reproduce Bug
 ```
 1. Open test shopping app
-2. configure({action: 'test_boundary_start', test_id: 'bug-report'})
+2. configure({what: 'test_boundary_start', test_id: 'bug-report'})
 3. Click "Add to Cart" → Select product → Click "Checkout"
 4. Observe error: "400 Bad Request - Invalid session"
-5. configure({action: 'test_boundary_end', test_id: 'bug-report'})
+5. configure({what: 'test_boundary_end', test_id: 'bug-report'})
 ```
 
 #### Phase 2: Engineer Investigates

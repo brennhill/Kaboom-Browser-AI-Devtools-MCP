@@ -161,8 +161,8 @@ Regression testing today is **slow, manual, and error-prone**:
 - [ ] List: recent recordings with timestamp, action count
 
 #### MCP Actions:
-- [ ] `configure({action: 'recording_start', name?: 'shopping-cart', url?: 'https://...'})`
-- [ ] `configure({action: 'recording_stop', recording_id: 'shopping-cart-20260130T...'})` (auto-generates ID if not provided)
+- [ ] `configure({what: 'recording_start', name?: 'shopping-cart', url?: 'https://...'})`
+- [ ] `configure({what: 'recording_stop', recording_id: 'shopping-cart-20260130T...'})` (auto-generates ID if not provided)
 - [ ] Browser auto-navigates to URL if provided on `recording_start`
 
 ### R3: Screenshot Management
@@ -245,7 +245,7 @@ Regression testing today is **slow, manual, and error-prone**:
   - Returns: `[{action, selector, text, x, y, timestamp, screenshot_path}]`
 
 #### Playback:
-- [ ] `interact({action: 'playback', recording: 'shopping-cart-{id}', test_id: 'replay-shopping-cart'})`
+- [ ] `interact({what: 'playback', recording: 'shopping-cart-{id}', test_id: 'replay-shopping-cart'})`
   - Records playback logs under test boundary `replay-shopping-cart`
   - Returns: `{status, actions_executed, errors, duration}`
 

@@ -192,29 +192,9 @@ func getLaunchModeInfo() health.LaunchModeInfo {
 	}
 }
 
-// configureAliasParams defines the deprecated alias parameters for the configure tool.
-// "mode" is included for parity with observe and analyze. Both "mode" and "action" have
-// ConflictFn and FallbackFn gates because these fields also serve as sub-parameters
-// (e.g. security_mode uses "mode" as a field, playback uses "action" as a sub-action).
-// Conflicts and fallbacks are only triggered when the value is a known top-level configure mode.
-var configureAliasParams = []toolrouting.Alias{
-	{JSONField: "mode", ConflictFn: func(v string) bool {
-		_, ok := configureHandlers[v]
-		return ok
-	}, FallbackFn: func(v string) bool {
-		_, ok := configureHandlers[v]
-		return ok
-	}, DeprecatedIn: "0.7.0", RemoveIn: "0.9.0"},
-	{JSONField: "action", ConflictFn: func(v string) bool {
-		_, ok := configureHandlers[v]
-		return ok
-	}, DeprecatedIn: "0.7.0", RemoveIn: "0.9.0"},
-}
-
 // configureRegistry is the tool registry for configure dispatch.
 var configureRegistry = toolrouting.Registry[*ToolHandler]{
-	Handlers:  configureHandlers,
-	AliasDefs: configureAliasParams,
+	Handlers: configureHandlers,
 	Resolution: toolrouting.Resolution{
 		ToolName:   "configure",
 		ValidModes: "", // populated lazily

@@ -83,7 +83,7 @@ last_verified_date: 2026-03-05
 | Get full page tree | 1 step: `observe({what: "a11y_tree"})` | No -- already minimal |
 | Get interactive elements only | 1 step: add `interactive_only: true` | No -- single parameter |
 | Scope to a subtree | 1 step: add `scope: "#main"` | No -- single parameter |
-| Find an element and click it | 2 steps: (1) get tree with UIDs, (2) use uidMap selector in `interact({action: "execute_js"})` | Could be 1 step with future `click_uid` action (OI-2) |
+| Find an element and click it | 2 steps: (1) get tree with UIDs, (2) use uidMap selector in `interact({what: "execute_js"})` | Could be 1 step with future `click_uid` action (OI-2) |
 | Re-check page after action | 1 step: re-request `a11y_tree` | No -- snapshots are stateless |
 
 ### Default Behavior Verification

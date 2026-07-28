@@ -54,11 +54,11 @@ last_verified_date: 2026-03-05
    - Create allowlist-production.yaml: `allowed_tools: [observe.*, generate.*, analyze.dom]`
    - Start server: `kaboom --allowlist-config=allowlist-production.yaml`
 2. Steps:
-   - [ ] Check status: `configure({action:"health"})` — verify allowlist_enabled: true
+   - [ ] Check status: `configure({what:"health"})` — verify allowlist_enabled: true
    - [ ] Observe logs: `observe({what: "logs"})` — succeeds
-   - [ ] Generate reproduction: `generate({format: "reproduction"})` — succeeds
+   - [ ] Generate reproduction: `generate({what: "reproduction"})` — succeeds
    - [ ] Query DOM: `analyze({what: "dom", selector: ".error"})` — succeeds
-   - [ ] Attempt execute_js: `interact({action: "execute_js"})` — fails with error
+   - [ ] Attempt execute_js: `interact({what: "execute_js"})` — fails with error
    - [ ] Verify error includes allowed_tools list
 3. Expected Result: Observation works, mutations blocked
 4. Verification: Agent can analyze but not interact
@@ -68,10 +68,10 @@ last_verified_date: 2026-03-05
    - Create allowlist-staging.yaml: `allowed_tools: [observe.*, generate.*, interact.navigate, interact.refresh]`
 2. Steps:
    - [ ] Observe works
-   - [ ] Navigate: `interact({action: "navigate", url: "https://example.com"})` — succeeds
-   - [ ] Refresh: `interact({action: "refresh"})` — succeeds
-   - [ ] Execute JS: `interact({action: "execute_js"})` — fails
-   - [ ] Fill form: `interact({action: "fill_form"})` — fails
+   - [ ] Navigate: `interact({what: "navigate", url: "https://example.com"})` — succeeds
+   - [ ] Refresh: `interact({what: "refresh"})` — succeeds
+   - [ ] Execute JS: `interact({what: "execute_js"})` — fails
+   - [ ] Fill form: `interact({what: "fill_form"})` — fails
 3. Expected Result: Navigation allowed, code execution blocked
 4. Verification: Safe interactions work, dangerous ones blocked
 

@@ -101,6 +101,9 @@ Structured extraction modes:
 - `analyze({what:"data_table"})` returns parsed table headers/rows without `execute_js` string parsing.
 
 Aliases:
-- `history` → `navigation_patterns` (quiet alias, dispatches correctly but hidden from schema enum).
+- Navigation-pattern analysis uses the canonical `navigation_patterns` mode.
+
+Tool dispatch uses only the canonical `what` selector and canonical mode names;
+`mode`, `action`, `a11y`, and `history` routing shortcuts are not accepted.
 
 Queue saturation for extension-dispatched analyze actions now fails fast with a structured `queue_full` response (via shared enqueue helper), instead of entering async wait/poll flow.

@@ -274,7 +274,7 @@ validate_response "ping returns result" "$RESP" "result" "5"
 echo ""
 echo "=== Test 7: tools/call (observe) ==="
 echo ""
-RESP=$(send_request '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"observe","arguments":{"mode":"errors"}}}')
+RESP=$(send_request '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"observe","arguments":{"what":"errors"}}}')
 # This might return error if no browser extension, but should still be valid JSON-RPC
 HAS_RESULT=$(echo "$RESP" | jq 'has("result")')
 HAS_ERROR=$(echo "$RESP" | jq 'has("error")')

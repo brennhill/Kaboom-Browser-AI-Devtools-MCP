@@ -436,7 +436,7 @@ observe({what: "logs", limit: 100})
 // Sees: "ReferenceError in foo() at line 42" × 100 times
 
 // Step 2: Clear buffer to stop overflow
-configure({action: "clear", buffer: "logs"})
+configure({what: "clear", buffer: "logs"})
 
 // Step 3: Report to user
 "Detected infinite recursion causing 500 logs/sec. Cleared buffer.

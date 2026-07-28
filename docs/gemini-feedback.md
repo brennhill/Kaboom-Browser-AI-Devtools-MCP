@@ -13,12 +13,12 @@ Based on my experience using Kaboom MCP, here are key architectural suggestions 
 
 ## 1. Action Bundling (Wait-Until Logic)
 Currently, a typical navigation and inspection flow requires multiple turns:
-1. `interact(action="navigate", ...)`
+1. `interact(what="navigate", ...)`
 2. `observe(what="command_result", ...)` (multiple times)
-3. `interact(action="list_interactive")`
+3. `interact(what="list_interactive")`
 
 **Suggestion:** Add a `wait_for` parameter to `interact` actions.
-**Example:** `interact(action="navigate", url="...", wait_for="#login-button")`
+**Example:** `interact(what="navigate", url="...", wait_for="#login-button")`
 **Benefit:** Collapses multi-turn handshakes into atomic operations, reducing latency and error rates.
 
 ## 2. Semantic DOM Snapshots
@@ -61,7 +61,7 @@ For agents with vision capabilities, correlating text elements with visual layou
 **Benefit:** Reduces polling waste and allows agents to "idle" during long-running background processes.
 
 ### 6. Network Mocking & Interception
-**Suggestion:** An `interact(action="mock_response")` tool to override API responses locally.
+**Suggestion:** An `interact(what="mock_response")` tool to override API responses locally.
 **Benefit:** Enables parallel full-stack debugging by allowing the agent to verify frontend fixes against simulated backend states.
 
 ### 7. Self-Healing Tool Calls

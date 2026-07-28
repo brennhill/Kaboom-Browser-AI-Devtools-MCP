@@ -44,13 +44,13 @@ Add tool allowlisting via configuration file. Define which tools (observe, gener
 - Admin can configure production profile (observe-only)
 - Admin can configure staging profile (observe + interact.navigate)
 - Non-allowlisted tools fail with clear error
-- Agent can query current allowlist via configure({action:"health"})
+- Agent can query current allowlist via configure({what:"health"})
 
 ## User Workflow
 
 1. Admin creates allowlist.yaml defining permitted tools/actions
 2. Start server: `kaboom --allowlist-config=allowlist.yaml`
-3. Agent connects, queries allowlist: `configure({action:"health"})`
+3. Agent connects, queries allowlist: `configure({what:"health"})`
 4. Agent calls allowed tool: succeeds
 5. Agent calls non-allowed tool: fails with "tool_not_allowed" error
 
@@ -88,7 +88,7 @@ allowed_tools:
 
 ## Query current allowlist:
 ```json
-configure({action:"health"})
+configure({what:"health"})
 // Returns:
 {
   "allowlist_enabled": true,
@@ -99,7 +99,7 @@ configure({action:"health"})
 
 ## Non-allowed tool call:
 ```json
-interact({action: "execute_js", code: "alert('test')"})
+interact({what: "execute_js", code: "alert('test')"})
 // Returns:
 {
   "error": "tool_not_allowed",

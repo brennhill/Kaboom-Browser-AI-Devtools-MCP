@@ -131,7 +131,7 @@ Complete the message forwarding chain so that DOM queries flow from the MCP tool
 #### Response (No Tab Tracked):
 ```json
 {
-  "error": "No tab is currently tracked. Use interact({action: 'track_tab'}) first."
+  "error": "No tab is currently tracked. Use interact({what: 'track_tab'}) first."
 }
 ```
 

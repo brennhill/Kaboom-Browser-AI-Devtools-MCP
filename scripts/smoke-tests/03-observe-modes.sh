@@ -18,7 +18,7 @@ run_test_3_1() {
 
     # Web Vitals (LCP, FCP, TTFB) only emit on fresh navigations.
     # Force a fresh page load so the extension has vitals to report.
-    interact_and_wait "navigate" '{"action":"navigate","url":"https://example.com","reason":"Fresh load for Web Vitals"}' 20
+    interact_and_wait "navigate" '{"what":"navigate","url":"https://example.com","reason":"Fresh load for Web Vitals"}' 20
     sleep 3
 
     local response
@@ -151,7 +151,7 @@ run_test_3_3() {
     fi
 
     # Seed a fetch request
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Trigger fetch for body capture","script":"fetch(\"https://jsonplaceholder.typicode.com/posts/1\").then(r=>r.json()).then(d=>JSON.stringify(d)).catch(e=>e.message)"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Trigger fetch for body capture","script":"fetch(\"https://jsonplaceholder.typicode.com/posts/1\").then(r=>r.json()).then(d=>JSON.stringify(d)).catch(e=>e.message)"}'
     sleep 2
 
     local response

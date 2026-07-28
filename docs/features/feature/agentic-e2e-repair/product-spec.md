@@ -105,7 +105,7 @@ observe({ what: "network_bodies", url_filter: "/api/users" })
 
 Step 3: Agent validates the API contract against what the test expected.
 ```
-configure({ action: "validate_api", operation: "analyze" })
+configure({ what: "validate_api", operation: "analyze" })
 ```
 
 Step 4: Agent queries the DOM to check whether the expected selector exists.
@@ -115,7 +115,7 @@ analyze({what: "dom", selector: ".submit-btn" })
 
 Step 5: Agent generates a corrected test based on observations.
 ```
-generate({format: "test", include_fixtures: true })
+generate({what: "test", include_fixtures: true })
 ```
 
 ## Requirements
@@ -167,7 +167,7 @@ The agent classifies each failure into one of five root cause categories. Each c
 #### Diagnostic signals:
 - Test assertions on response body fields fail
 - `observe({ what: "network_bodies" })` shows the actual response has different field names or structure
-- `configure({ action: "validate_api", operation: "analyze" })` reports `shape_change`, `type_change`, or `new_field` violations
+- `configure({ what: "validate_api", operation: "analyze" })` reports `shape_change`, `type_change`, or `new_field` violations
 - `observe({ what: "api" })` shows the inferred schema differs from the test's expectations
 
 #### Fix strategy:
@@ -194,7 +194,7 @@ The agent classifies each failure into one of five root cause categories. Each c
 #### Diagnostic signals:
 - Test mocks return data that does not match the actual API shape
 - `observe({ what: "network_bodies" })` shows real responses differ from mock data
-- `configure({ action: "validate_api" })` shows discrepancies between learned schema and test expectations
+- `configure({ what: "validate_api" })` shows discrepancies between learned schema and test expectations
 - The test passes with mocks but fails against the real backend
 
 #### Fix strategy:
@@ -213,7 +213,7 @@ The agent classifies each failure into one of five root cause categories. Each c
 #### Fix strategy:
 - Do NOT fix the test. The test is correctly detecting a regression.
 - Report the regression with full diagnostic evidence: error cluster, network diff, DOM state
-- Generate a reproduction script via `generate({format: "reproduction" })`
+- Generate a reproduction script via `generate({what: "reproduction" })`
 - Escalate to the developer who made the recent change
 
 ## Batch Repair Workflow
@@ -285,11 +285,11 @@ Note: Diagnosis and fix generation times refer to the Kaboom tool calls, not the
 
 - **Multiple root causes in a single test failure.** Expected behavior: The agent addresses root causes in dependency order (API contract first, then selectors, then timing). It generates a single fix that addresses all causes.
 
-- **Test framework not recognized.** Expected behavior: The agent can still observe browser state but generates generic JavaScript fixes rather than framework-specific ones (Playwright vs. Cypress vs. Selenium). The `generate({format: "test" })` tool handles framework detection.
+- **Test framework not recognized.** Expected behavior: The agent can still observe browser state but generates generic JavaScript fixes rather than framework-specific ones (Playwright vs. Cypress vs. Selenium). The `generate({what: "test" })` tool handles framework detection.
 
 - **Kaboom extension disconnected during test run.** Expected behavior: Observation data is partial or missing. The agent falls back to test runner output only and reports that Kaboom capture was incomplete.
 
-- **Buffer overflow during long test suite.** Expected behavior: Kaboom's ring buffers evict oldest entries. The agent should clear buffers between test runs using `configure({ action: "clear" })` to ensure relevant data is available.
+- **Buffer overflow during long test suite.** Expected behavior: Kaboom's ring buffers evict oldest entries. The agent should clear buffers between test runs using `configure({ what: "clear" })` to ensure relevant data is available.
 
 - **Test was already flaky before the agent's change.** Expected behavior: The agent should run the test at least twice after fixing. If it passes intermittently, classify as a flake and report rather than claiming a fix.
 

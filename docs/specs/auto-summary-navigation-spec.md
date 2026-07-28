@@ -49,7 +49,7 @@ AI agents spend ~4 tool calls and ~6 seconds orienting after every navigation (n
 The server owns the page summary script (Go string constant). When a navigate command is queued with `summary: true`, the server embeds the script in the `browser_action` params. The extension executes it after navigation completes and returns the combined result.
 
 ```
-Agent: interact(action="navigate", url="...", summary=true)
+Agent: interact(what="navigate", url="...", summary=true)
   │
   ├─ Server: embeds compact summary script in browser_action params
   ├─ Server: queues query, enters maybeWaitForCommand (15s)
@@ -344,7 +344,7 @@ Add `summary` parameter to the interact tool schema:
 Update `serverInstructions` to mention auto-summary:
 
 ```
-- Performance: interact(action="navigate"|"refresh") auto-includes perf_diff and page summary.
+- Performance: interact(what="navigate"|"refresh") auto-includes perf_diff and page summary.
   Set summary=false to skip. Use analyze(what="page_summary") for full standalone analysis.
 ```
 

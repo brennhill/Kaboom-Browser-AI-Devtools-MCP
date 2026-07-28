@@ -51,24 +51,24 @@ Add scraping capabilities as a guided workflow pattern over existing tools. The 
 
 1. User manually logs into web app in Chrome
 2. Agent observes current page: `observe({what: "page"})`
-3. Agent navigates to target page: `interact({action: "navigate", url: "..."})`
+3. Agent navigates to target page: `interact({what: "navigate", url: "..."})`
 4. Agent waits for content: `analyze({what: "dom", selector: ".data-table", wait: true})`
-5. Agent extracts data: `interact({action: "execute_js", code: "return Array.from(document.querySelectorAll('tr')).map(r => r.innerText)"})`
-6. Agent handles pagination: `interact({action: "execute_js", code: "document.querySelector('.next').click()"})`, repeat extraction
-7. Agent persists extracted data with `configure({action: "store", store_action: "save", ...})` or returns structured data inline to the caller.
+5. Agent extracts data: `interact({what: "execute_js", code: "return Array.from(document.querySelectorAll('tr')).map(r => r.innerText)"})`
+6. Agent handles pagination: `interact({what: "execute_js", code: "document.querySelector('.next').click()"})`, repeat extraction
+7. Agent persists extracted data with `configure({what: "store", store_action: "save", ...})` or returns structured data inline to the caller.
 
 ## Examples
 
 ### Scrape authenticated dashboard table:
 ```json
 // Navigate to dashboard
-interact({action: "navigate", url: "https://app.example.com/dashboard"})
+interact({what: "navigate", url: "https://app.example.com/dashboard"})
 
 // Wait for table to load
-interact({action: "wait_for", selector: "table.data", timeout_ms: 5000})
+interact({what: "wait_for", selector: "table.data", timeout_ms: 5000})
 
 // Extract table data
-interact({action: "execute_js", code: `
+interact({what: "execute_js", code: `
   return Array.from(document.querySelectorAll('table.data tr')).map(row => ({
     id: row.cells[0].innerText,
     name: row.cells[1].innerText,
@@ -83,20 +83,20 @@ interact({action: "execute_js", code: `
 let allData = [];
 for (let page = 1; page <= 10; page++) {
   // Extract current page
-  let data = interact({action: "execute_js", code: "/* extract */"})
+  let data = interact({what: "execute_js", code: "/* extract */"})
   allData.push(...data);
   
   // Click next
-  interact({action: "execute_js", code: "document.querySelector('.next-page').click()"})
+  interact({what: "execute_js", code: "document.querySelector('.next-page').click()"})
   
   // Wait for new content
-  interact({action: "wait_for", selector: ".page-loading", timeout_ms: 2000})
+  interact({what: "wait_for", selector: ".page-loading", timeout_ms: 2000})
 }
 ```
 
 ### Export scraped data:
 ```json
-configure({action: "store", store_action: "save", namespace: "scraping", key: "scraped_data", data: {"rows": allData}})
+configure({what: "store", store_action: "save", namespace: "scraping", key: "scraped_data", data: {"rows": allData}})
 ```
 
 ---

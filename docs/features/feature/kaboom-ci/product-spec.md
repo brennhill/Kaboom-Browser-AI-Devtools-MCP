@@ -322,9 +322,9 @@ A Playwright test fixture that automates the full lifecycle:
 
 After tests complete, the captured telemetry can be used to generate reports. This layer composes existing Kaboom features:
 
-- **HAR export:** Call `generate({format: "har", save_to: "./artifacts/test-run.har"})` via MCP to produce a HAR file from all captured network traffic. Attach as a CI artifact.
-- **SARIF export:** Call `generate({format: "sarif", save_to: "./artifacts/a11y-report.sarif"})` via MCP to produce a SARIF file. Upload to GitHub Code Scanning.
-- **PR summary:** Call `generate({format: "pr_summary"})` via MCP to produce a markdown summary of the test run's telemetry. Post as a PR comment via `gh pr comment`.
+- **HAR export:** Call `generate({what: "har", save_to: "./artifacts/test-run.har"})` via MCP to produce a HAR file from all captured network traffic. Attach as a CI artifact.
+- **SARIF export:** Call `generate({what: "sarif", save_to: "./artifacts/a11y-report.sarif"})` via MCP to produce a SARIF file. Upload to GitHub Code Scanning.
+- **PR summary:** Call `generate({what: "pr_summary"})` via MCP to produce a markdown summary of the test run's telemetry. Post as a PR comment via `gh pr comment`.
 
 This layer is future work and depends on having an MCP client available in the CI context (either the Kaboom CLI or a lightweight report command).
 

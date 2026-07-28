@@ -32,7 +32,6 @@ These parameters are shared across many `configure` modes:
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `what` | string (required) | Mode to execute (`noise_rule`, `store`, `diff_sessions`, etc.) |
-| `action` | string | Deprecated alias for `what` |
 | `telemetry_mode` | string | Telemetry metadata mode: `off`, `auto`, `full` |
 | `tab_id` | number | Optional target tab ID for tab-aware modes |
 | `operation` | string | Secondary operation selector used by mode-specific flows |

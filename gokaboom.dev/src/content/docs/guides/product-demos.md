@@ -65,13 +65,13 @@ Demo: Acme Project Management
 The AI translates each step into `interact` calls with composable subtitles:
 
 ```js
-interact({action: "navigate", url: "https://app.acme.dev",
+interact({what: "navigate", url: "https://app.acme.dev",
           subtitle: "Welcome to Acme — project management that gets out of your way."})
 
-interact({action: "click", selector: "text=New Project",
+interact({what: "click", selector: "text=New Project",
           subtitle: "Creating a new project takes one click."})
 
-interact({action: "type", selector: "placeholder=Project name",
+interact({what: "type", selector: "placeholder=Project name",
           text: "Q4 Marketing Campaign",
           subtitle: "Give it a name, and Acme sets up your workspace automatically."})
 ```
@@ -95,7 +95,7 @@ Every `interact` action accepts a `subtitle` parameter — narration is composab
 **Use `reason` for your own reference.** When toasts are on (during rehearsal), the `reason` parameter labels each action so you can verify the script is hitting the right elements:
 
 ```js
-interact({action: "click", selector: "text=Create",
+interact({what: "click", selector: "text=Create",
           reason: "Create the new project"})
 ```
 
@@ -104,31 +104,31 @@ interact({action: "click", selector: "text=Create",
 **Pace with pauses.** Add explicit waits between steps so the audience can absorb each screen:
 
 ```js
-interact({action: "wait_for", selector: "text=Timeline", timeout_ms: 3000})
+interact({what: "wait_for", selector: "text=Timeline", timeout_ms: 3000})
 ```
 
 **Discover elements first.** Not sure what selectors to use? Run `list_interactive` on any page to get a full inventory of clickable and typeable elements with suggested selectors:
 
 ```js
-interact({action: "list_interactive"})
+interact({what: "list_interactive"})
 ```
 
 **Save checkpoints.** Before the demo, save the starting state so you can reset instantly if you need to run it again:
 
 ```js
-interact({action: "save_state", snapshot_name: "demo-start"})
+interact({what: "save_state", snapshot_name: "demo-start"})
 ```
 
 Reset anytime with:
 
 ```js
-interact({action: "load_state", snapshot_name: "demo-start", include_url: true})
+interact({what: "load_state", snapshot_name: "demo-start", include_url: true})
 ```
 
 **Clear subtitles at the end.** Send an empty string to remove the narration bar when you're done:
 
 ```js
-interact({action: "subtitle", text: ""})
+interact({what: "subtitle", text: ""})
 ```
 
 ## Checklist

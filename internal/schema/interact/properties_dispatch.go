@@ -1,4 +1,4 @@
-// Purpose: Defines dispatch properties for the interact tool (what, action, telemetry_mode, sync).
+// Purpose: Defines canonical dispatch properties for the interact tool.
 // Why: Separates dispatch/routing properties from action-specific and targeting properties.
 package interact
 
@@ -8,10 +8,6 @@ func dispatchProperties() map[string]any {
 			"type":        "string",
 			"description": "Browser action to perform",
 			"enum":        actionEnum,
-		},
-		"action": map[string]any{
-			"type":        "string",
-			"description": "Deprecated alias for 'what'. Prefer 'what'.",
 		},
 		"telemetry_mode": map[string]any{
 			"type":        "string",

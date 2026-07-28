@@ -26,14 +26,14 @@ last_verified_date: 2026-03-05
 
 ### The Issue
 
-`configure({action: "clear"})` only clears console logs. All other buffers accumulate indefinitely, causing:
+`configure({what: "clear"})` only clears console logs. All other buffers accumulate indefinitely, causing:
 - Memory bloat (WebSocket events, network bodies, actions pile up)
 - Stale data confusion (old requests mixed with new)
 - Token limit issues (buffers grow too large to return)
 
 #### Current behavior:
 ```javascript
-configure({action: "clear"})
+configure({what: "clear"})
 ```
 ✅ Clears: console logs
 ❌ Does NOT clear: network_waterfall, network_bodies, websocket_events, actions, extension_logs
@@ -55,22 +55,22 @@ configure({action: "clear"})
 
 ## Solution
 
-Add **`buffer` parameter** to `configure({action: "clear"})` for granular clearing.
+Add **`buffer` parameter** to `configure({what: "clear"})` for granular clearing.
 
 ### API Design
 
 ```javascript
 // Clear specific buffer
-configure({action: "clear", buffer: "network"})
-configure({action: "clear", buffer: "websocket"})
-configure({action: "clear", buffer: "actions"})
-configure({action: "clear", buffer: "logs"})
+configure({what: "clear", buffer: "network"})
+configure({what: "clear", buffer: "websocket"})
+configure({what: "clear", buffer: "actions"})
+configure({what: "clear", buffer: "logs"})
 
 // Clear all buffers
-configure({action: "clear", buffer: "all"})
+configure({what: "clear", buffer: "all"})
 
 // Backward compatible: clear logs only (current behavior)
-configure({action: "clear"}) // Same as buffer: "logs"
+configure({what: "clear"}) // Same as buffer: "logs"
 ```
 
 ### Buffer Categories
@@ -100,7 +100,7 @@ observe({what: "network_waterfall"})
 // → 50 requests (good)
 
 // Now test scenario 2: logout flow
-configure({action: "clear"}) // Only clears logs, not network
+configure({what: "clear"}) // Only clears logs, not network
 observe({what: "network_waterfall"})
 // → 100 requests (50 from login + 50 from logout) ❌ Confusing!
 ```
@@ -113,7 +113,7 @@ observe({what: "network_waterfall"})
 // → 50 requests (good)
 
 // Clear network buffer before new test
-configure({action: "clear", buffer: "network"})
+configure({what: "clear", buffer: "network"})
 
 // Now test scenario 2: logout flow
 observe({what: "network_waterfall"})
@@ -146,14 +146,14 @@ observe({what: "network_waterfall"})
 ### Invalid Buffer Name
 
 ```javascript
-configure({action: "clear", buffer: "invalid"})
+configure({what: "clear", buffer: "invalid"})
 ```
 Returns: Error with valid buffer names
 
 ### Empty Buffers
 
 ```javascript
-configure({action: "clear", buffer: "network"})
+configure({what: "clear", buffer: "network"})
 ```
 Returns: `{cleared: "network", count: 0}` (not an error)
 
@@ -161,7 +161,7 @@ Returns: `{cleared: "network", count: 0}` (not an error)
 
 ```javascript
 // Page is still loading, requests coming in
-configure({action: "clear", buffer: "network"})
+configure({what: "clear", buffer: "network"})
 ```
 **Behavior:** Clears current buffer. New requests continue to arrive.
 **Note:** This is expected. Clearing is instantaneous, not a pause.
@@ -310,7 +310,7 @@ observe({what: "websocket_events"})
 # → Returns events
 
 # 3. Clear network buffer
-configure({action: "clear", buffer: "network"})
+configure({what: "clear", buffer: "network"})
 # → Returns count of cleared items
 
 # 4. Verify network buffer is empty
@@ -322,7 +322,7 @@ observe({what: "websocket_events"})
 # → Still returns events
 
 # 6. Clear all buffers
-configure({action: "clear", buffer: "all"})
+configure({what: "clear", buffer: "all"})
 
 # 7. Verify all buffers empty
 observe({what: "websocket_events"})
@@ -339,12 +339,12 @@ observe({what: "websocket_events"})
 
 Old code continues to work:
 ```javascript
-configure({action: "clear"}) // Clears logs only (current behavior)
+configure({what: "clear"}) // Clears logs only (current behavior)
 ```
 
 New code gets granular clearing:
 ```javascript
-configure({action: "clear", buffer: "network"}) // New feature
+configure({what: "clear", buffer: "network"}) // New feature
 ```
 
 ### Documentation Updates

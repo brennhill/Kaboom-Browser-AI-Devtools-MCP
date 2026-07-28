@@ -171,7 +171,7 @@ run_test_20_5
 
 # ── Test 20.6: Fill form ──────────────────────────────────
 begin_test "20.6" "[BROWSER] Fill form without submit" \
-    "interact(action='fill_form') fills fields, verify via execute_js" \
+    "interact(what='fill_form') fills fields, verify via execute_js" \
     "Tests: fill_form workflow"
 
 run_test_20_6() {
@@ -181,10 +181,10 @@ run_test_20_6() {
     fi
 
     # First inject a simple form
-    interact_and_wait "execute_js" '{"action":"execute_js","script":"(function(){var f=document.createElement(\"form\");f.id=\"smoke-fill-form\";f.innerHTML=\"<input id=sf-fill-name name=name><input id=sf-fill-email name=email>\";document.body.appendChild(f);return \"ok\";})()"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","script":"(function(){var f=document.createElement(\"form\");f.id=\"smoke-fill-form\";f.innerHTML=\"<input id=sf-fill-name name=name><input id=sf-fill-email name=email>\";document.body.appendChild(f);return \"ok\";})()"}'
     sleep 0.5
 
-    interact_and_wait "fill_form" '{"action":"fill_form","fields":[{"selector":"#sf-fill-name","value":"TestUser"},{"selector":"#sf-fill-email","value":"test@example.com"}]}'
+    interact_and_wait "fill_form" '{"what":"fill_form","fields":[{"selector":"#sf-fill-name","value":"TestUser"},{"selector":"#sf-fill-email","value":"test@example.com"}]}'
 
     if echo "$INTERACT_RESULT" | grep -qi "error\|failed"; then
         fail "fill_form failed. Result: $(truncate "$INTERACT_RESULT" 200)"
@@ -192,7 +192,7 @@ run_test_20_6() {
     fi
 
     # Verify values
-    interact_and_wait "execute_js" '{"action":"execute_js","script":"document.getElementById(\"sf-fill-name\").value + \"|\" + document.getElementById(\"sf-fill-email\").value"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","script":"document.getElementById(\"sf-fill-name\").value + \"|\" + document.getElementById(\"sf-fill-email\").value"}'
 
     if echo "$INTERACT_RESULT" | grep -q "TestUser.*test@example.com"; then
         pass "fill_form correctly filled fields without submitting."
@@ -213,7 +213,7 @@ run_test_20_7() {
         return
     fi
 
-    interact_and_wait "fill_form" '{"action":"fill_form","fields":[{"selector":"#sf-fill-name","value":"Traced"}]}'
+    interact_and_wait "fill_form" '{"what":"fill_form","fields":[{"selector":"#sf-fill-name","value":"Traced"}]}'
 
     if echo "$INTERACT_RESULT" | grep -q "trace\|workflow\|timing"; then
         pass "fill_form response includes workflow trace."
@@ -314,7 +314,7 @@ run_test_20_11() {
     fi
 
     # Navigate to a different page to ensure visual difference
-    interact_and_wait "execute_js" '{"action":"execute_js","script":"document.body.style.backgroundColor=\"red\";\"changed\""}'
+    interact_and_wait "execute_js" '{"what":"execute_js","script":"document.body.style.backgroundColor=\"red\";\"changed\""}'
     sleep 1
 
     call_tool "analyze" '{"what":"visual_diff","baseline":"smoke-test-baseline"}'

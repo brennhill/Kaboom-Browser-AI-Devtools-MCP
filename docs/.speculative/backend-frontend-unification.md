@@ -172,7 +172,7 @@ All data normalized to:
 #### Automatic extraction:
 - Browser: Extract `x-request-id` from response headers
 - Backend: Parse logs for `trace_id=...`, `request_id=...`
-- Tests: Inject via `configure({action: "custom_event", ...})`
+- Tests: Inject via `configure({what: "custom_event", ...})`
 - Git: Hash correlation (same code hash = related events)
 
 #### Manual injection:

@@ -27,12 +27,12 @@ This UAT plan proves that noise filtering rules persist across server restarts, 
 
 #### Steps:
 1. Start daemon on port 7920
-2. Call `configure(action: "noise_rule", noise_action: "add", rules: [{ category: "console", classification: "test", match_spec: { message_regex: "test.*pattern" } }])`
-3. Call `configure(action: "noise_rule", noise_action: "list")` → verify rule added with ID `user_1`
+2. Call `configure(what: "noise_rule", noise_action: "add", rules: [{ category: "console", classification: "test", match_spec: { message_regex: "test.*pattern" } }])`
+3. Call `configure(what: "noise_rule", noise_action: "list")` → verify rule added with ID `user_1`
 4. Inspect `.kaboom/noise/rules.json` on disk → verify file created, contains `user_1`
 5. Kill daemon (SIGKILL)
 6. Start daemon on same port again
-7. Call `configure(action: "noise_rule", noise_action: "list")` → verify rule still present with ID `user_1`
+7. Call `configure(what: "noise_rule", noise_action: "list")` → verify rule still present with ID `user_1`
 8. Verify rule is filtering entries (add console entry matching pattern, verify filtered)
 
 #### Assertions:
@@ -84,7 +84,7 @@ This UAT plan proves that noise filtering rules persist across server restarts, 
 2. Manually corrupt `.kaboom/noise/rules.json` → `{invalid json}`
 3. Kill and restart daemon
 4. Verify daemon starts successfully (no crash)
-5. Call `configure(action: "noise_rule", noise_action: "list")` → returns built-in rules only
+5. Call `configure(what: "noise_rule", noise_action: "list")` → returns built-in rules only
 6. Verify new rules can still be added (no state corruption)
 
 #### Assertions:
@@ -111,7 +111,7 @@ This UAT plan proves that noise filtering rules persist across server restarts, 
 4. Add another user rule
 5. Inspect file again → verify still NO built-in rules
 6. Kill and restart daemon
-7. Call `configure(action: "noise_rule", noise_action: "list")` → verify all ~50 built-ins + 2 user rules
+7. Call `configure(what: "noise_rule", noise_action: "list")` → verify all ~50 built-ins + 2 user rules
 
 #### Assertions:
 - ✅ Persisted file contains only user/auto/dismiss rules
@@ -131,11 +131,11 @@ This UAT plan proves that noise filtering rules persist across server restarts, 
 
 #### Steps:
 1. Start daemon and add 3 rules → `user_1`, `user_2`, `user_3`
-2. Call `configure(action: "noise_rule", noise_action: "remove", rule_id: "user_2")`
+2. Call `configure(what: "noise_rule", noise_action: "remove", rule_id: "user_2")`
 3. Inspect file → verify `user_2` removed, `user_1` and `user_3` remain
 4. Kill and restart daemon
 5. List rules → verify `user_2` still gone, only `user_1` and `user_3`
-6. Call `configure(action: "noise_rule", noise_action: "reset")`
+6. Call `configure(what: "noise_rule", noise_action: "reset")`
 7. Inspect file → should be empty (user rules cleared) or missing
 8. Kill and restart daemon
 9. List rules → only built-ins present
@@ -210,7 +210,7 @@ This UAT plan proves that noise filtering rules persist across server restarts, 
 #### Steps:
 1. Start daemon and add rule
 2. Generate 10 entries matching rule → should be filtered
-3. Check `configure(action: "noise_rule", noise_action: "list")` → statistics show rule ID with count ~10
+3. Check `configure(what: "noise_rule", noise_action: "list")` → statistics show rule ID with count ~10
 4. Manually verify `.kaboom/noise/rules.json` contains statistics
 5. Kill and restart daemon
 6. Check statistics → should still show count ~10 for that rule

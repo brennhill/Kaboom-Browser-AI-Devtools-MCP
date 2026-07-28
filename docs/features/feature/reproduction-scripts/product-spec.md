@@ -15,7 +15,7 @@ last_verified_date: 2026-03-05
 
 ## Problem Statement
 
-When a user discovers a bug or wants to demonstrate a flow, they need a way to **export what just happened** as a replayable script. Today the `generate({format: "reproduction"})` tool is a stub that returns an empty string.
+When a user discovers a bug or wants to demonstrate a flow, they need a way to **export what just happened** as a replayable script. Today the `generate({what: "reproduction"})` tool is a stub that returns an empty string.
 
 Users need two very different export formats:
 
@@ -28,7 +28,7 @@ The Playwright format already exists in the TypeScript extension (`reproduction.
 
 ## Solution
 
-Implement `generate({format: "reproduction"})` to produce scripts from captured `EnhancedAction` data in two output formats:
+Implement `generate({what: "reproduction"})` to produce scripts from captured `EnhancedAction` data in two output formats:
 
 - **`playwright`** — Playwright test code using multi-strategy selectors (testId > role > ariaLabel > text > id > cssPath)
 - **`kaboom`** — Human-readable natural language steps that describe what to do, usable as instructions for the AI Pilot or as documentation
@@ -74,7 +74,7 @@ test('reproduction: captured user actions', async ({ page }) => {
 
 ```
 1. Developer reproduces a bug in the browser
-2. LLM calls: generate({format: "reproduction", output_format: "kaboom"})
+2. LLM calls: generate({what: "reproduction", output_format: "kaboom"})
 3. Gets human-readable steps
 4. Pastes into bug report / Slack / PR description
 5. Anyone can read and manually follow the steps
@@ -84,7 +84,7 @@ test('reproduction: captured user actions', async ({ page }) => {
 
 ```
 1. User records a flow (captured as EnhancedActions)
-2. LLM calls: generate({format: "reproduction", output_format: "kaboom"})
+2. LLM calls: generate({what: "reproduction", output_format: "kaboom"})
 3. Gets natural language steps
 4. LLM feeds steps to the Pilot via interact() tool
 5. Pilot re-executes the flow using semantic selectors
@@ -94,7 +94,7 @@ test('reproduction: captured user actions', async ({ page }) => {
 
 ```
 1. QA reproduces a flow in the browser
-2. LLM calls: generate({format: "reproduction", output_format: "playwright"})
+2. LLM calls: generate({what: "reproduction", output_format: "playwright"})
 3. Gets Playwright test code
 4. Saves to test suite, runs in CI
 ```
@@ -103,7 +103,7 @@ test('reproduction: captured user actions', async ({ page }) => {
 
 ```
 1. User performs a demo flow (1000 action buffer captures it)
-2. LLM calls: generate({format: "reproduction", output_format: "kaboom"})
+2. LLM calls: generate({what: "reproduction", output_format: "kaboom"})
 3. Gets natural language steps for the demo
 4. Steps can be replayed later via Pilot for live demos
 ```
@@ -189,7 +189,7 @@ Every script starts with a metadata header:
 ## Requirements
 
 ### Functional
-- [ ] `generate({format: "reproduction"})` returns a non-empty script
+- [ ] `generate({what: "reproduction"})` returns a non-empty script
 - [ ] Default `output_format` is `"kaboom"` (natural language)
 - [ ] Playwright format uses multi-strategy selectors (testId > role > ariaLabel > text > id > cssPath)
 - [ ] Kaboom format uses human-readable element descriptions
@@ -217,7 +217,7 @@ Every script starts with a metadata header:
 
 ## Success Criteria
 
-- `generate({format: "reproduction"})` returns useful, human-readable output
+- `generate({what: "reproduction"})` returns useful, human-readable output
 - Kaboom format can be copy-pasted into a bug report and understood by anyone
 - Kaboom format can be fed to Claude + Pilot for AI replay
 - Playwright format produces valid, runnable Playwright tests

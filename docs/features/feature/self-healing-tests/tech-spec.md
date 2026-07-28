@@ -159,7 +159,7 @@ Test failure output → AI agent → MCP: observe({what: "test_diagnosis", failu
 
 ### Fix Generation Flow
 ```
-AI agent receives diagnosis → MCP: generate({format: "test_fix", diagnosis: {...}})
+AI agent receives diagnosis → MCP: generate({what: "test_fix", diagnosis: {...}})
 → Server receives request
 → Read diagnosis category and evidence
 → Determine fix strategy:
@@ -283,7 +283,7 @@ We assume failures occur in the browser (DOM, network, JS errors). Non-browser f
 - **observe({what: "changes"})** — Recent state changes
 - **observe({what: "error_clusters"})** — Error pattern grouping
 - **analyze({what: "dom"})** — DOM queries for candidates
-- **generate({format: "test"})** — Existing test generation infrastructure (shared templates)
+- **generate({what: "test"})** — Existing test generation infrastructure (shared templates)
 
 ### Optionally Leverages (In-Progress Features)
 - **DOM fingerprinting** — Structural similarity for selector candidates (improves matching quality)

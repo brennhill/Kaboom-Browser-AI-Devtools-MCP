@@ -90,7 +90,7 @@ last_verified_date: 2026-03-05
 ### Medium Issues
 
 #### D2-1: TestFromContextRequest.Context enum values inconsistent with implementation
-- Need clarity: Is it `generate({format:"test_from_context", context:"error"})` or `generate({format:"test_from_context.error"})`?
+- Need clarity: Is it `generate({what:"test_from_context", context:"error"})` or `generate({what:"test_from_context.error"})`?
 
 #### D2-2: Generated test output format inconsistent with existing generate.test
 - Existing returns plain script; proposed returns JSON wrapper

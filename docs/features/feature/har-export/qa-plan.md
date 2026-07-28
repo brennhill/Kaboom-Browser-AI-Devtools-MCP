@@ -133,7 +133,7 @@ last_verified_date: 2026-03-05
 
 | # | Test Case | Components Involved | Expected Behavior | Priority |
 |---|-----------|--------------------|--------------------|----------|
-| IT-1 | End-to-end export via MCP | MCP client -> `generate(format: "har")` -> server -> file | Valid HAR file written to disk, response has metadata | must |
+| IT-1 | End-to-end export via MCP | MCP client -> `generate(what: "har")` -> server -> file | Valid HAR file written to disk, response has metadata | must |
 | IT-2 | Export after network body capture | Extension captures traffic -> server stores -> export | All captured entries appear in HAR | must |
 | IT-3 | Output path directory creation | `output_path` with non-existent parent dirs | Directories created via MkdirAll, file written | must |
 | IT-4 | Large export warning | >10MB of captured traffic | Response includes size warning | should |

@@ -166,19 +166,19 @@ test('should login', async ({ page }) => {
 #### Artifacts:
 
 #### HAR Export
-- Call `generate({format: "har"})` via MCP after tests complete
+- Call `generate({what: "har"})` via MCP after tests complete
 - Produces standard HAR 1.2 file from network_bodies and network_waterfall buffers
 - Upload as GitHub Actions artifact or attach to CI report
 - Developers can download and import into Charles Proxy, Postman, DevTools
 
 #### SARIF Export
-- Call `generate({format: "sarif"})` after security or accessibility audits
+- Call `generate({what: "sarif"})` after security or accessibility audits
 - Produces SARIF 2.1.0 file with findings as results
 - Upload to GitHub Code Scanning API for PR annotations
 - Findings appear inline on changed files
 
 #### PR Summary
-- Call `generate({format: "pr_summary"})` after tests
+- Call `generate({what: "pr_summary"})` after tests
 - Produces markdown summary of errors, network failures, performance metrics
 - Post as PR comment or attach to CI report
 - Gives reviewer high-level test health without diving into logs
@@ -233,7 +233,7 @@ Test 1 starts → POST /test-boundary {test_id: "test1", action: "start"}
 ### Artifact Generation Flow (Telemetry to CI Output)
 ```
 All tests complete → CI job still running
-→ Call MCP tool: generate({format: "har"})
+→ Call MCP tool: generate({what: "har"})
 → Server reads network_bodies + network_waterfall buffers
 → Generates HAR 1.2 JSON
 → Returns to MCP client (or via HTTP if using CLI)

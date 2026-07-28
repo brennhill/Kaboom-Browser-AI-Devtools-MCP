@@ -15,10 +15,10 @@ last_verified_date: 2026-03-05
 
 ## Problem Statement
 
-Users attempting to run accessibility audits via `generate({action: "query_accessibility"})` encounter a runtime error: `runAxeAuditWithTimeout is not defined`. The function is implemented in the codebase but is undefined at runtime when called, causing all accessibility audits to fail.
+Users attempting to run accessibility audits via `generate({what: "query_accessibility"})` encounter a runtime error: `runAxeAuditWithTimeout is not defined`. The function is implemented in the codebase but is undefined at runtime when called, causing all accessibility audits to fail.
 
 ### Current User Experience:
-1. User calls `generate({action: "query_accessibility"})`
+1. User calls `generate({what: "query_accessibility"})`
 2. Extension attempts to execute the accessibility audit
 3. Runtime error: `ReferenceError: runAxeAuditWithTimeout is not defined`
 4. Audit fails with no results
@@ -31,7 +31,7 @@ Users attempting to run accessibility audits via `generate({action: "query_acces
 Fix the import/export chain or scope issue so that `runAxeAuditWithTimeout` is defined and accessible when the accessibility audit executor calls it. Ensure the axe-core library is properly loaded and the audit function can access it.
 
 ### Fixed User Experience:
-1. User calls `generate({action: "query_accessibility"})`
+1. User calls `generate({what: "query_accessibility"})`
 2. Query is forwarded to the extension
 3. `runAxeAuditWithTimeout` executes successfully with axe-core
 4. User receives real accessibility audit results with violations, passes, and incomplete checks
@@ -56,7 +56,7 @@ Fix the import/export chain or scope issue so that `runAxeAuditWithTimeout` is d
 
 ## Success Criteria
 
-1. `generate({action: "query_accessibility"})` returns real audit results without runtime errors
+1. `generate({what: "query_accessibility"})` returns real audit results without runtime errors
 2. Audit includes violations, passes, incomplete, and inapplicable checks
 3. Each violation includes impact, description, help text, and affected elements
 4. Audit completes within timeout period (10s default)
@@ -66,13 +66,13 @@ Fix the import/export chain or scope issue so that `runAxeAuditWithTimeout` is d
 ## User Workflow
 
 ### Before Fix:
-1. User calls `generate({action: "query_accessibility"})`
+1. User calls `generate({what: "query_accessibility"})`
 2. Receives runtime error: "runAxeAuditWithTimeout is not defined"
 3. No audit results available
 4. User cannot diagnose accessibility issues
 
 ### After Fix:
-1. User calls `generate({action: "query_accessibility"})`
+1. User calls `generate({what: "query_accessibility"})`
 2. Audit executes in tracked tab's DOM
 3. User receives comprehensive accessibility report
 4. User can identify violations, review best practices, fix issues
@@ -145,7 +145,7 @@ Fix the import/export chain or scope issue so that `runAxeAuditWithTimeout` is d
 #### Response (No Tab Tracked):
 ```json
 {
-  "error": "No tab is currently tracked. Use interact({action: 'track_tab'}) first."
+  "error": "No tab is currently tracked. Use interact({what: 'track_tab'}) first."
 }
 ```
 

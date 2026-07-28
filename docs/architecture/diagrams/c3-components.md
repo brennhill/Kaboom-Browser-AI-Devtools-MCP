@@ -366,7 +366,7 @@ AI calls observe({what: 'logs'})
 
 ### Pattern 2: Interact Tool (Query)
 ```
-AI calls interact({action: 'execute_js'})
+AI calls interact({what: 'execute_js'})
   → handler.go routes to tools_interact.go
   → tools_interact.go creates PendingQuery in Capture.queries
   → Query assigned correlation_id
@@ -381,7 +381,7 @@ AI calls interact({action: 'execute_js'})
 
 ### Pattern 3: Generate Tool
 ```
-AI calls generate({format: 'test'})
+AI calls generate({what: 'test'})
   → handler.go routes to internal/toolgenerate/dispatcher.go
   → internal/toolgenerate/dispatcher.go queries Capture buffers
   → Analysis clusters errors, infers API schemas
@@ -394,7 +394,7 @@ AI calls generate({format: 'test'})
 
 ### Pattern 4: Configure Tool
 ```
-AI calls configure({action: 'store', data: {...}})
+AI calls configure({what: 'store', data: {...}})
   → handler.go routes to tools_configure.go
   → tools_configure.go persists to disk
   → No query to extension needed

@@ -182,18 +182,18 @@ Use recordings to capture before/after security state and compare error logs:
 ### Record a Baseline
 
 ```js
-configure({action: "recording_start"})
+configure({what: "recording_start"})
 // Browse the application to capture security-relevant traffic
-configure({action: "recording_stop", recording_id: "rec-baseline"})
+configure({what: "recording_stop", recording_id: "rec-baseline"})
 ```
 
 ### After Changes, Record and Compare
 
 ```js
-configure({action: "recording_start"})
+configure({what: "recording_start"})
 // Browse the same flows after the refactor/deploy
-configure({action: "recording_stop", recording_id: "rec-after"})
-configure({action: "log_diff", original_id: "rec-baseline", replay_id: "rec-after"})
+configure({what: "recording_stop", recording_id: "rec-after"})
+configure({what: "log_diff", original_id: "rec-baseline", replay_id: "rec-after"})
 ```
 
 The comparison reports new errors, resolved errors, and changes between the two sessions. Run `analyze({what: "security_audit"})` on each recording to compare security posture directly.
@@ -207,9 +207,9 @@ The comparison reports new errors, resolved errors, and changes between the two 
 Generate a CSP header from observed traffic:
 
 ```js
-generate({format: "csp"})
-generate({format: "csp", mode: "strict"})
-generate({format: "csp", mode: "report_only"})
+generate({what: "csp"})
+generate({what: "csp", mode: "strict"})
+generate({what: "csp", mode: "report_only"})
 ```
 
 | Mode | Behavior |
@@ -236,8 +236,8 @@ generate({format: "csp", mode: "report_only"})
 Generate SRI hashes for all third-party scripts and stylesheets:
 
 ```js
-generate({format: "sri"})
-generate({format: "sri", resource_types: ["script"], origins: ["https://cdn.example.com"]})
+generate({what: "sri"})
+generate({what: "sri", resource_types: ["script"], origins: ["https://cdn.example.com"]})
 ```
 
 Output per resource:
@@ -283,8 +283,8 @@ Address findings by severity: critical first, then high, medium, low.
 ```
 
 ```js
-generate({format: "csp", mode: "strict"})
-generate({format: "sri"})
+generate({what: "csp", mode: "strict"})
+generate({what: "sri"})
 ```
 
 ### 5. Record Your Secure Baseline
@@ -294,9 +294,9 @@ generate({format: "sri"})
 ```
 
 ```js
-configure({action: "recording_start"})
+configure({what: "recording_start"})
 // Browse the application
-configure({action: "recording_stop", recording_id: "rec-secured"})
+configure({what: "recording_stop", recording_id: "rec-secured"})
 ```
 
 ### 6. After Future Changes, Compare
@@ -306,10 +306,10 @@ configure({action: "recording_stop", recording_id: "rec-secured"})
 ```
 
 ```js
-configure({action: "recording_start"})
+configure({what: "recording_start"})
 // Browse the same flows
-configure({action: "recording_stop", recording_id: "rec-post-change"})
-configure({action: "log_diff", original_id: "rec-secured", replay_id: "rec-post-change"})
+configure({what: "recording_stop", recording_id: "rec-post-change"})
+configure({what: "log_diff", original_id: "rec-secured", replay_id: "rec-post-change"})
 ```
 
 ---
@@ -337,7 +337,7 @@ Two layers, always active, zero configuration.
 Export accessibility and security findings in SARIF format for GitHub Code Scanning:
 
 ```js
-generate({format: "sarif", save_to: "/path/to/report.sarif"})
+generate({what: "sarif", save_to: "/path/to/report.sarif"})
 ```
 
 SARIF files integrate with:

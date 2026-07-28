@@ -24,7 +24,7 @@ begin_test "18.1" "screen_recording_start returns valid JSON-RPC" \
     "Verify screen_recording_start produces a valid JSON-RPC response (queued or pilot error)" \
     "API contract: screen_recording_start must never crash or return malformed JSON."
 run_test_18_1() {
-    RESPONSE=$(call_tool "interact" '{"action":"screen_recording_start","name":"uat-test-18-1"}')
+    RESPONSE=$(call_tool "interact" '{"what":"screen_recording_start","name":"uat-test-18-1"}')
     if ! check_valid_jsonrpc "$RESPONSE"; then
         fail "screen_recording_start returned invalid JSON-RPC. Response: $(truncate "$RESPONSE")"
         return
@@ -47,7 +47,7 @@ begin_test "18.2" "screen_recording_stop returns valid JSON-RPC" \
     "Verify screen_recording_stop produces a valid JSON-RPC response (queued or error)" \
     "API contract: screen_recording_stop must never crash or return malformed JSON."
 run_test_18_2() {
-    RESPONSE=$(call_tool "interact" '{"action":"screen_recording_stop"}')
+    RESPONSE=$(call_tool "interact" '{"what":"screen_recording_stop"}')
     if ! check_valid_jsonrpc "$RESPONSE"; then
         fail "screen_recording_stop returned invalid JSON-RPC. Response: $(truncate "$RESPONSE")"
         return
@@ -99,7 +99,7 @@ run_test_18_4() {
         skip "Pilot not available. Skipping audio param test."
         return
     fi
-    RESPONSE=$(call_tool "interact" '{"action":"screen_recording_start","name":"uat-audio-test","audio":"tab"}')
+    RESPONSE=$(call_tool "interact" '{"what":"screen_recording_start","name":"uat-audio-test","audio":"tab"}')
     local text
     text=$(extract_content_text "$RESPONSE")
     if ! check_contains "$text" "queued"; then
@@ -113,7 +113,7 @@ run_test_18_4() {
     pass "screen_recording_start with audio:'tab' returned queued response with audio param echoed."
     # Clean up: stop any recording that might have started
     sleep 1
-    call_tool "interact" '{"action":"screen_recording_stop"}' >/dev/null 2>&1
+    call_tool "interact" '{"what":"screen_recording_stop"}' >/dev/null 2>&1
     sleep 1
 }
 run_test_18_4
@@ -127,7 +127,7 @@ run_test_18_5() {
         skip "Pilot not available. Skipping audio validation test."
         return
     fi
-    RESPONSE=$(call_tool "interact" '{"action":"screen_recording_start","name":"uat-bad-audio","audio":"invalid"}')
+    RESPONSE=$(call_tool "interact" '{"what":"screen_recording_start","name":"uat-bad-audio","audio":"invalid"}')
     if ! check_is_error "$RESPONSE"; then
         # Even if not isError, check for error message in content
         local text
@@ -152,7 +152,7 @@ run_test_18_6() {
         skip "Pilot not available. Skipping audio:'both' test."
         return
     fi
-    RESPONSE=$(call_tool "interact" '{"action":"screen_recording_start","name":"uat-both-audio","audio":"both"}')
+    RESPONSE=$(call_tool "interact" '{"what":"screen_recording_start","name":"uat-both-audio","audio":"both"}')
     local text
     text=$(extract_content_text "$RESPONSE")
     if ! check_contains "$text" "queued"; then
@@ -166,7 +166,7 @@ run_test_18_6() {
     pass "screen_recording_start with audio:'both' returned queued response with audio param echoed."
     # Clean up
     sleep 1
-    call_tool "interact" '{"action":"screen_recording_stop"}' >/dev/null 2>&1
+    call_tool "interact" '{"what":"screen_recording_stop"}' >/dev/null 2>&1
     sleep 1
 }
 run_test_18_6

@@ -198,7 +198,7 @@ arrives after navigation. **Workaround:** retry after 2-3 seconds.
 ### 11. Tracking loss during cross-origin navigation — MEDIUM
 
 The extension can lose tab tracking state during an AI-initiated cross-origin
-navigation via `interact({action: "navigate"})`. **Workaround:** re-enable
+navigation via `interact({what: "navigate"})`. **Workaround:** re-enable
 tracking from the extension popup.
 
 ## Recently fixed

@@ -1,4 +1,4 @@
-// Purpose: Tests for dispatch routing improvements: rename, alias, and recovery_tool_call.
+// Purpose: Tests canonical dispatch routing and recovery_tool_call behavior.
 // Docs: docs/features/feature/analyze-tool/index.md
 
 package main
@@ -24,16 +24,63 @@ func TestAnalyzeDispatch_NavigationPatterns(t *testing.T) {
 	}
 }
 
-func TestAnalyzeDispatch_HistoryAlias(t *testing.T) {
+func TestToolDispatchRequiresCanonicalWhat(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
-
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.analyzeDispatcher.Handle(req, json.RawMessage(`{"what":"history"}`))
-	result := parseToolResult(t, resp)
-	// Should not be an "unknown mode" error — history is an alias for navigation_patterns
-	if result.IsError && strings.Contains(result.Content[0].Text, "unknown_mode") {
-		t.Fatalf("history should be a valid alias, got: %s", result.Content[0].Text)
+	calls := map[string]func(json.RawMessage) mcp.JSONRPCResponse{
+		"observe mode": func(args json.RawMessage) mcp.JSONRPCResponse {
+			return h.observeDispatcher.Handle(req, args)
+		},
+		"analyze mode": func(args json.RawMessage) mcp.JSONRPCResponse {
+			return h.analyzeDispatcher.Handle(req, args)
+		},
+		"generate format": func(args json.RawMessage) mcp.JSONRPCResponse {
+			return h.generateDispatcher.Handle(req, args)
+		},
+		"configure action": func(args json.RawMessage) mcp.JSONRPCResponse {
+			return h.toolConfigure(req, args)
+		},
+		"interact action": func(args json.RawMessage) mcp.JSONRPCResponse {
+			return h.toolInteract(req, args)
+		},
+	}
+	for name, call := range calls {
+		t.Run(name, func(t *testing.T) {
+			field := strings.Split(name, " ")[1]
+			result := parseToolResult(t, call(json.RawMessage(`{"`+field+`":"health"}`)))
+			if !result.IsError || !strings.Contains(result.Content[0].Text, "missing_param") {
+				t.Fatalf("%s selector must not substitute for what: %+v", field, result)
+			}
+		})
+	}
+}
+
+func TestToolDispatchRejectsShorthandModeValues(t *testing.T) {
+	t.Parallel()
+	h, _, _ := makeToolHandler(t)
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
+	calls := map[string]func() mcp.JSONRPCResponse{
+		"observe network": func() mcp.JSONRPCResponse {
+			return h.observeDispatcher.Handle(req, json.RawMessage(`{"what":"network"}`))
+		},
+		"observe ws": func() mcp.JSONRPCResponse {
+			return h.observeDispatcher.Handle(req, json.RawMessage(`{"what":"ws"}`))
+		},
+		"analyze a11y": func() mcp.JSONRPCResponse {
+			return h.analyzeDispatcher.Handle(req, json.RawMessage(`{"what":"a11y"}`))
+		},
+		"analyze history": func() mcp.JSONRPCResponse {
+			return h.analyzeDispatcher.Handle(req, json.RawMessage(`{"what":"history"}`))
+		},
+	}
+	for name, call := range calls {
+		t.Run(name, func(t *testing.T) {
+			result := parseToolResult(t, call())
+			if !result.IsError || !strings.Contains(result.Content[0].Text, "unknown_mode") {
+				t.Fatalf("shorthand mode must be rejected: %+v", result)
+			}
+		})
 	}
 }
 

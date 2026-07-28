@@ -61,9 +61,9 @@ run_test_21_2() {
     # Rapid tool switching
     for i in {1..10}; do
         call_tool "observe" '{"what":"page"}' >/dev/null 2>&1 && success_count=$((success_count + 1))
-        call_tool "generate" '{"format":"reproduction"}' >/dev/null 2>&1 && success_count=$((success_count + 1))
-        call_tool "configure" '{"action":"health"}' >/dev/null 2>&1 && success_count=$((success_count + 1))
-        call_tool "interact" '{"action":"navigate","url":"https://example.com"}' >/dev/null 2>&1 && success_count=$((success_count + 1))
+        call_tool "generate" '{"what":"reproduction"}' >/dev/null 2>&1 && success_count=$((success_count + 1))
+        call_tool "configure" '{"what":"health"}' >/dev/null 2>&1 && success_count=$((success_count + 1))
+        call_tool "interact" '{"what":"navigate","url":"https://example.com"}' >/dev/null 2>&1 && success_count=$((success_count + 1))
         call_tool "analyze" '{"what":"page"}' >/dev/null 2>&1 && success_count=$((success_count + 1))
     done
 
@@ -141,7 +141,7 @@ run_test_21_4() {
     sleep 0.2
 
     # Verify all rules persisted
-    response=$(call_tool "configure" '{"action":"noise_rule","noise_action":"list"}')
+    response=$(call_tool "configure" '{"what":"noise_rule","noise_action":"list"}')
 
     if ! check_not_error "$response"; then
         fail "Rule list failed after concurrent adds"
@@ -171,7 +171,7 @@ begin_test "21.5" "System recovers cleanly after high-load stress test" \
 
 run_test_21_5() {
     # Clear everything
-    call_tool "configure" '{"action":"clear","buffer":"all"}' >/dev/null
+    call_tool "configure" '{"what":"clear","buffer":"all"}' >/dev/null
 
     sleep 0.2
 
@@ -193,7 +193,7 @@ run_test_21_5() {
     fi
 
     # Final health check
-    response=$(call_tool "configure" '{"action":"health"}')
+    response=$(call_tool "configure" '{"what":"health"}')
     if ! check_not_error "$response"; then
         fail "Daemon unhealthy after stress test cleanup"
     else

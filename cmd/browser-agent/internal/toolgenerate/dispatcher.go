@@ -58,28 +58,12 @@ var generateHandlers = map[string]toolrouting.Handler[*Dispatcher]{
 	},
 }
 
-// isGenerateMode returns true when the value is a known top-level generate mode.
-func isGenerateMode(v string) bool {
-	_, ok := generateHandlers[v]
-	return ok
-}
-
-// generateAliasParams defines the deprecated alias parameters for the generate tool.
-// "action" is only treated as a mode alias when its value matches a known generate mode,
-// since "action" can also be a sub-action parameter (e.g. test_heal action=analyze).
-// Both ConflictFn and FallbackFn are gated to handler membership.
-var generateAliasParams = []toolrouting.Alias{
-	{JSONField: "format", DeprecatedIn: "0.7.0", RemoveIn: "0.9.0"},
-	{JSONField: "action", ConflictFn: isGenerateMode, FallbackFn: isGenerateMode, DeprecatedIn: "0.7.0", RemoveIn: "0.9.0"},
-}
-
 // getValidGenerateFormats returns a sorted, comma-separated list of valid generate formats.
 func ValidFormats() string { return strings.Join(util.SortedMapKeys(generateHandlers), ", ") }
 
 // generateRegistry is the tool registry for generate dispatch.
 var generateRegistry = toolrouting.Registry[*Dispatcher]{
-	Handlers:  generateHandlers,
-	AliasDefs: generateAliasParams,
+	Handlers: generateHandlers,
 	Resolution: toolrouting.Resolution{
 		ToolName:   "generate",
 		ValidModes: "", // populated lazily

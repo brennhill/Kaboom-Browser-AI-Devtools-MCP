@@ -66,7 +66,7 @@ last_verified_date: 2026-03-05
 1. Setup:
    - Start Kaboom server: `./dist/kaboom`
    - Load Chrome with extension
-   - Enable body capture via: `configure({action: "network_body_capture", enabled: true})` (or default ON if changed)
+   - Enable body capture via: `configure({what: "network_body_capture", enabled: true})` (or default ON if changed)
    - Navigate to <https://jsonplaceholder.typicode.com/users>
 2. Steps:
    - [ ] Page loads and makes GET request to API
@@ -105,7 +105,7 @@ last_verified_date: 2026-03-05
    ```json
    {
      "entries": [],
-     "message": "Network body capture is disabled. Enable via configure({action: 'network_body_capture', enabled: true})"
+     "message": "Network body capture is disabled. Enable via configure({what: 'network_body_capture', enabled: true})"
    }
    ```
 4. Verification: Empty array with clear instruction on how to enable
@@ -218,8 +218,8 @@ last_verified_date: 2026-03-05
 
 ### Body capture toggle:
 - [ ] Default state is OFF (privacy-first)
-- [ ] Enable via `configure({action: "network_body_capture", enabled: true})`
-- [ ] Disable via `configure({action: "network_body_capture", enabled: false})`
+- [ ] Enable via `configure({what: "network_body_capture", enabled: true})`
+- [ ] Disable via `configure({what: "network_body_capture", enabled: false})`
 - [ ] Toggle state persists across page navigations
 - [ ] Toggle state resets on extension reload (session-only)
 

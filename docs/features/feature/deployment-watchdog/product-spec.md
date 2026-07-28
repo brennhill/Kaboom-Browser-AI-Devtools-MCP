@@ -379,7 +379,7 @@ Alerts are delivered through two channels:
 
 ### 1. Active Polling
 
-The AI calls `configure({action: "watchdog", watchdog_action: "status"})` to get the current watchdog state, including any pending alerts.
+The AI calls `configure({what: "watchdog", watchdog_action: "status"})` to get the current watchdog state, including any pending alerts.
 
 ### 2. Passive Embedding
 
@@ -408,7 +408,7 @@ This means the AI receives deployment alerts automatically if it is already watc
 
 ### Behavioral Baselines
 
-If the AI has previously saved a behavioral baseline for the URL scope (via `configure({action: "save_baseline"})`), the watchdog automatically loads it for richer comparison. Behavioral baselines provide:
+If the AI has previously saved a behavioral baseline for the URL scope (via `configure({what: "save_baseline"})`), the watchdog automatically loads it for richer comparison. Behavioral baselines provide:
 
 - API response shape comparison (detect structural changes in JSON responses)
 - Per-endpoint timing tolerances (instead of a global latency factor)
@@ -422,7 +422,7 @@ The existing push regression system (which fires alerts when performance snapsho
 
 ### Performance Budget
 
-If performance budgets are configured via `configure({action: "health"})`, the watchdog respects those budgets as additional thresholds. A budget violation during a watchdog session is reported as a watchdog alert with `type: "budget_violation"`.
+If performance budgets are configured via `configure({what: "health"})`, the watchdog respects those budgets as additional thresholds. A budget violation during a watchdog session is reported as a watchdog alert with `type: "budget_violation"`.
 
 ### Session Diffing
 
@@ -488,7 +488,7 @@ The 30-second check interval ensures the watchdog never contributes to CPU conte
 
 - **No credential storage**: The watchdog does not store or require deployment API credentials. Rollback decisions are made by the AI and executed through external mechanisms.
 
-- **Audit trail**: Watchdog start, stop, and alert events are recorded in the audit trail (`configure({action: "audit_log"})`) so there is a record of what the AI monitored and what it was told.
+- **Audit trail**: Watchdog start, stop, and alert events are recorded in the audit trail (`configure({what: "audit_log"})`) so there is a record of what the AI monitored and what it was told.
 
 - **Snapshot redaction**: The baseline snapshot inherits whatever redaction rules are active on the server (e.g., header stripping, URL scrubbing). No additional redaction is needed.
 
@@ -544,9 +544,9 @@ The 30-second check interval ensures the watchdog never contributes to CPU conte
 | # | Item | Status | Notes |
 |---|------|--------|-------|
 | OI-1 | Should the watchdog auto-detect deployments (e.g., by watching for a full page reload or a version change in a meta tag)? | open | Auto-detection would remove A2 but adds complexity and brittleness. The current design requires the AI to explicitly start the watchdog. |
-| OI-2 | Should the watchdog persist its baseline to disk via `configure({action: "store"})` so it survives server restarts? | open | The review flagged this as critical for production use. However, the watchdog is a short-lived session (max 60 min) and the probability of a server restart during that window is low for a localhost dev tool. |
+| OI-2 | Should the watchdog persist its baseline to disk via `configure({what: "store"})` so it survives server restarts? | open | The review flagged this as critical for production use. However, the watchdog is a short-lived session (max 60 min) and the probability of a server restart during that window is low for a localhost dev tool. |
 | OI-3 | Should the watchdog support a "re-baseline" action that captures a new baseline mid-session (e.g., after a config change that is expected to alter behavior)? | open | This could prevent false positives from intentional changes during the soak period. |
 | OI-4 | What is the correct interaction model when the watchdog fires an alert and the AI wants to investigate? Should the AI stop the watchdog first, or can it investigate while monitoring continues? | open | Current design: monitoring continues while the AI investigates. The AI stops the watchdog only when it decides to act (rollback or accept). |
-| OI-5 | Should watchdog completion summaries be automatically stored in persistent memory (`configure({action: "store"})`) so the AI can reference past deployments? | open | Useful for trend analysis ("last 5 deployments all had latency increases") but adds storage complexity. |
+| OI-5 | Should watchdog completion summaries be automatically stored in persistent memory (`configure({what: "store"})`) so the AI can reference past deployments? | open | Useful for trend analysis ("last 5 deployments all had latency increases") but adds storage complexity. |
 | OI-6 | How should the watchdog interact with tab targeting? If the tracked tab changes mid-session, should the watchdog follow the new tab or stick to the original? | open | Current assumption: the watchdog monitors whatever tab is active. If the AI re-targets, the watchdog monitors the new target. |
 | OI-7 | Should the watchdog check interval (30s) be configurable? | open | Fixed interval is simpler. Configurable interval adds a parameter but is useful for short-duration watchdogs (1-2 min) where 30s is too coarse. |

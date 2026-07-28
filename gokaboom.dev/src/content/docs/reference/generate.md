@@ -33,7 +33,6 @@ These parameters are used across multiple generate modes:
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `what` | string (required) | Artifact type to generate |
-| `format` | string | Deprecated alias for `what` |
 | `telemetry_mode` | string | Telemetry metadata mode: `off`, `auto`, `full` |
 | `save_to` | string | Output file path when writing artifacts to disk |
 | `test_name` | string | Optional name for generated test artifacts |

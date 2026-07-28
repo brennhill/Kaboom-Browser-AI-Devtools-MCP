@@ -63,7 +63,7 @@ run_test_27_2() {
     fi
 
     # List snapshots to verify our save is there
-    interact_and_wait "state_list" '{"action":"state_list","reason":"Verify snapshot saved"}'
+    interact_and_wait "state_list" '{"what":"state_list","reason":"Verify snapshot saved"}'
     local list_result="$INTERACT_RESULT"
 
     log_diagnostic "27.2" "state-list" "$list_result"
@@ -80,7 +80,7 @@ run_test_27_2
 
 # ── Test 27.3: Storage-backed settings persist (async conversion) ──
 begin_test "27.3" "[BROWSER] Settings load correctly after async/await conversion" \
-    "configure(action=health) should show settings loaded from chrome.storage after async conversion" \
+    "configure(what=health) should show settings loaded from chrome.storage after async conversion" \
     "Tests: loadSavedSettings/loadAiWebPilotState async conversion (#158)"
 
 run_test_27_3() {
@@ -91,7 +91,7 @@ run_test_27_3() {
 
     # Health should reflect extension state loaded via the now-async functions
     local response
-    response=$(call_tool "configure" '{"action":"health"}')
+    response=$(call_tool "configure" '{"what":"health"}')
 
     if [ -z "$response" ]; then
         fail "No response from configure(health)."

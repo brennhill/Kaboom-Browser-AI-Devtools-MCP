@@ -205,7 +205,7 @@ run_test_1_5() {
     requests='{"jsonrpc":"2.0","id":201,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"uat-purity","version":"1.0"}}}
 {"jsonrpc":"2.0","id":202,"method":"tools/list","params":{}}
 {"jsonrpc":"2.0","id":203,"method":"tools/call","params":{"name":"observe","arguments":{"what":"page"}}}
-{"jsonrpc":"2.0","id":204,"method":"tools/call","params":{"name":"configure","arguments":{"action":"health"}}}'
+{"jsonrpc":"2.0","id":204,"method":"tools/call","params":{"name":"configure","arguments":{"what":"health"}}}'
 
     local stdout_file="$TEMP_DIR/purity_stdout.txt"
     local stderr_file="$TEMP_DIR/purity_stderr.txt"

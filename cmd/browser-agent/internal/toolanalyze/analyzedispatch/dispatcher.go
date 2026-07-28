@@ -78,13 +78,9 @@ func NewDispatcher(config Config) *Dispatcher {
 		"page_issues": wrapLocal(pageissues.Handle), "feature_gates": mode(config.FeatureGates),
 	}
 	d.registry = toolrouting.Registry[Host]{
-		Handlers: handlers, AliasDefs: toolrouting.DefaultModeActionAliases,
+		Handlers: handlers,
 		Resolution: toolrouting.Resolution{
 			ToolName: "analyze", ValidModes: strings.Join(util.SortedMapKeys(handlers), ", "),
-			ValueAliases: map[string]toolrouting.ValueAlias{
-				"a11y":    {Canonical: "accessibility", DeprecatedIn: "0.7.0", RemoveIn: "0.9.0"},
-				"history": {Canonical: "navigation_patterns", DeprecatedIn: "0.7.0", RemoveIn: "0.9.0"},
-			},
 		},
 	}
 	return d

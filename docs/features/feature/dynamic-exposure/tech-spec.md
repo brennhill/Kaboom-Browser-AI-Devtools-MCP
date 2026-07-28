@@ -36,7 +36,7 @@ Server startup: kaboom --feature-flags=features.yaml
   → Start file watcher on features.yaml
   → Log: "Feature flags loaded, X features enabled"
 
-Agent calls generate({format: "har"}):
+Agent calls generate({what: "har"}):
   → Handler: check registry.IsEnabled("generate_har")
   → Registry: RLock, lookup, RUnlock → false
   → Return error: {error: "feature_disabled", feature_flag: "generate_har"}
@@ -46,7 +46,7 @@ Admin edits features.yaml (generate_har: false → true):
   → Reload: parse YAML, update registry with WLock
   → Log: "Feature flags reloaded, generate_har enabled"
 
-Next request: generate({format: "har"}):
+Next request: generate({what: "har"}):
   → Check flag: now true
   → Execute normally
 ```

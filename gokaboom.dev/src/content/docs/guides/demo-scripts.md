@@ -78,16 +78,16 @@ and composable subtitles for narration.
 The AI translates each line into `interact` calls:
 
 ```js
-interact({action: "navigate", url: "https://app.acme.dev/login"})
+interact({what: "navigate", url: "https://app.acme.dev/login"})
 
-interact({action: "type", selector: "label=Email", text: "demo@acme.dev"})
-interact({action: "type", selector: "label=Password", text: "DemoPass123"})
-interact({action: "click", selector: "text=Log In"})
-interact({action: "wait_for", selector: "text=Dashboard", timeout_ms: 10000})
+interact({what: "type", selector: "label=Email", text: "demo@acme.dev"})
+interact({what: "type", selector: "label=Password", text: "DemoPass123"})
+interact({what: "click", selector: "text=Log In"})
+interact({what: "wait_for", selector: "text=Dashboard", timeout_ms: 10000})
 
-interact({action: "subtitle", text: ""})
+interact({what: "subtitle", text: ""})
 
-interact({action: "subtitle",
+interact({what: "subtitle",
           text: "This is your command center. Every project, every metric, one screen."})
 ```
 
@@ -107,7 +107,7 @@ Before running the demo, save the current state as "demo-start".
 
 The AI calls:
 ```js
-interact({action: "save_state", snapshot_name: "demo-start"})
+interact({what: "save_state", snapshot_name: "demo-start"})
 ```
 
 ### Reset Between Runs
@@ -121,7 +121,7 @@ Then run the demo script.
 
 The AI calls:
 ```js
-interact({action: "load_state", snapshot_name: "demo-start", include_url: true})
+interact({what: "load_state", snapshot_name: "demo-start", include_url: true})
 ```
 
 Then executes the full script from the top. Same flow, same timing, same narration. Every time.

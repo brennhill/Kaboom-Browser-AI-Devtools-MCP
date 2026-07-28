@@ -56,7 +56,7 @@ Response includes:
 ### Option B: Dedicated `generate` format
 
 ```json
-generate({ format: "perf_comparison", baseline: "before" })
+generate({ what: "perf_comparison", baseline: "before" })
 // Returns human-readable performance comparison report
 ```
 
@@ -96,7 +96,7 @@ Option A — keeps it in `observe` where performance data already lives. The `sn
 
 - Automated multi-run averaging (too complex for v1)
 - Statistical significance testing
-- CI integration (future: could feed into `generate(format: "pr_summary")`)
+- CI integration (future: could feed into `generate(what: "pr_summary")`)
 
 ## Success Criteria
 

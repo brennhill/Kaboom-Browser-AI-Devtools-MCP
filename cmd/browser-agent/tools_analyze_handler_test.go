@@ -72,27 +72,6 @@ func TestToolsAnalyzeDispatch_UnknownMode(t *testing.T) {
 	assertSnakeCaseFields(t, string(resp.Result))
 }
 
-func TestToolsAnalyzeDispatch_UnknownModeAliasAddsCanonicalWhatWarning(t *testing.T) {
-	t.Parallel()
-	h, _, _ := makeToolHandler(t)
-
-	resp := callAnalyzeRaw(h, `{"mode":"nonexistent_mode"}`)
-	result := parseToolResult(t, resp)
-	if !result.IsError {
-		t.Fatal("unknown mode alias should return isError:true")
-	}
-	foundCanonicalWarning := false
-	for _, block := range result.Content {
-		if strings.Contains(block.Text, "deprecated") {
-			foundCanonicalWarning = true
-			break
-		}
-	}
-	if !foundCanonicalWarning {
-		t.Fatalf("expected canonical what warning block on error path, got %d content blocks", len(result.Content))
-	}
-}
-
 func TestToolsAnalyzeDispatch_EmptyArgs(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
@@ -102,45 +81,6 @@ func TestToolsAnalyzeDispatch_EmptyArgs(t *testing.T) {
 	result := parseToolResult(t, resp)
 	if !result.IsError {
 		t.Fatal("nil args (no 'what') should return isError:true")
-	}
-}
-
-func TestToolsAnalyzeDispatch_ModeAliasAddsCanonicalWhatWarning(t *testing.T) {
-	t.Parallel()
-	h, _, _ := makeToolHandler(t)
-
-	resp := callAnalyzeRaw(h, `{"mode":"dom","selector":"body","sync":false}`)
-	result := parseToolResult(t, resp)
-	if result.IsError {
-		t.Fatalf("mode alias should be accepted, got: %s", result.Content[0].Text)
-	}
-	foundCanonicalWarning := false
-	for _, block := range result.Content {
-		if strings.Contains(block.Text, "deprecated") {
-			foundCanonicalWarning = true
-			break
-		}
-	}
-	if !foundCanonicalWarning {
-		t.Fatalf("expected canonical what warning block, got %d content blocks", len(result.Content))
-	}
-}
-
-func TestToolsAnalyzeDispatch_ConflictingWhatAndMode(t *testing.T) {
-	t.Parallel()
-	h, _, _ := makeToolHandler(t)
-
-	resp := callAnalyzeRaw(h, `{"what":"dom","mode":"performance","selector":"body"}`)
-	result := parseToolResult(t, resp)
-	if !result.IsError {
-		t.Fatal("conflicting what/mode should return isError:true")
-	}
-	text := result.Content[0].Text
-	if !strings.Contains(text, "invalid_param") {
-		t.Fatalf("expected invalid_param, got: %s", text)
-	}
-	if !strings.Contains(text, "Conflicting parameters") {
-		t.Fatalf("expected conflict explanation, got: %s", text)
 	}
 }
 
@@ -607,27 +547,6 @@ func TestSmoke_AnalyzeDOM_DefaultSelector_IsStar(t *testing.T) {
 	}
 	if got, ok := params["selector"].(string); !ok || got != "*" {
 		t.Fatalf("selector should default to '*' for full DOM dump, got %#v", params["selector"])
-	}
-}
-
-func TestSmoke_AnalyzeA11y_Alias_Resolves(t *testing.T) {
-	t.Parallel()
-	h, _, _ := makeToolHandler(t)
-
-	// "a11y" is an alias for "accessibility" — should NOT return unknown_mode
-	resp := callAnalyzeRaw(h, `{"what":"a11y","sync":false}`)
-	result := parseToolResult(t, resp)
-
-	// The a11y handler may produce an error for other reasons (e.g., extension
-	// not connected), but it must NOT be "unknown_mode". If unknown_mode is
-	// returned, the alias resolution is broken.
-	if result.IsError {
-		text := result.Content[0].Text
-		if strings.Contains(text, "unknown_mode") {
-			t.Fatalf("a11y alias should resolve to accessibility, but got unknown_mode: %s", text)
-		}
-		// Other errors (no data, extension disconnected) are acceptable —
-		// they prove the alias resolved correctly and reached the handler.
 	}
 }
 

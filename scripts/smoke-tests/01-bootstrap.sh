@@ -129,9 +129,9 @@ run_test_1_4() {
         return
     fi
 
-    call_tool "configure" '{"action":"clear","buffer":"all"}' >/dev/null
+    call_tool "configure" '{"what":"clear","buffer":"all"}' >/dev/null
 
-    interact_and_wait "navigate" '{"action":"navigate","url":"https://example.com","reason":"Initial page load"}'
+    interact_and_wait "navigate" '{"what":"navigate","url":"https://example.com","reason":"Initial page load"}'
 
     if echo "$INTERACT_RESULT" | grep -qi "pilot.*disabled\|not enabled\|web pilot"; then
         skip "AI Web Pilot is disabled. Enable it in the extension popup and re-run."

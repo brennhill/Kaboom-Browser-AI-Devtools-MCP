@@ -48,11 +48,11 @@ last_verified_date: 2026-03-05
    - Enable AI Web Pilot toggle
 2. Steps:
    - [ ] Verify logged in: `observe({what: "page"})` shows dashboard
-   - [ ] Navigate: `interact({action: "navigate", url: "https://testapp.local/dashboard"})`
+   - [ ] Navigate: `interact({what: "navigate", url: "https://testapp.local/dashboard"})`
    - [ ] Wait for table: `analyze({what: "dom", selector: "table.data", wait: true})`
-   - [ ] Extract data: `interact({action: "execute_js", code: "return Array.from(document.querySelectorAll('table.data tr')).map(r => r.innerText)"})`
+   - [ ] Extract data: `interact({what: "execute_js", code: "return Array.from(document.querySelectorAll('table.data tr')).map(r => r.innerText)"})`
    - [ ] Verify data returned (array of rows)
-- [ ] Persist extracted data: `configure({action: "store", store_action: "save", namespace: "scraping", key: "extracted", data: {"rows": extracted}})`
+- [ ] Persist extracted data: `configure({what: "store", store_action: "save", namespace: "scraping", key: "extracted", data: {"rows": extracted}})`
 3. Expected Result: Table data extracted and exported as JSON
 4. Verification: Open exported JSON file, verify contains table data
 
@@ -62,8 +62,8 @@ last_verified_date: 2026-03-05
 2. Steps:
    - [ ] Navigate to results page
    - [ ] Extract page 1 data
-   - [ ] Click next: `interact({action: "execute_js", code: "document.querySelector('.next-page').click()"})`
-- [ ] Wait for page 2 to load: `interact({action: "wait_for", selector: ".page-2", timeout_ms: 5000})`
+   - [ ] Click next: `interact({what: "execute_js", code: "document.querySelector('.next-page').click()"})`
+- [ ] Wait for page 2 to load: `interact({what: "wait_for", selector: ".page-2", timeout_ms: 5000})`
    - [ ] Extract page 2 data
    - [ ] Repeat for pages 3-5
    - [ ] Aggregate all data
@@ -77,7 +77,7 @@ last_verified_date: 2026-03-05
 2. Steps:
    - [ ] Navigate to page
    - [ ] Attempt immediate extraction (should fail, content not loaded)
-- [ ] Wait for AJAX: `interact({action: "wait_for", selector: ".ajax-loaded", timeout_ms: 5000})`
+- [ ] Wait for AJAX: `interact({what: "wait_for", selector: ".ajax-loaded", timeout_ms: 5000})`
    - [ ] Extract data after wait
 3. Expected Result: Data extracted only after AJAX completes
 4. Verification: Extracted data is complete (not empty)

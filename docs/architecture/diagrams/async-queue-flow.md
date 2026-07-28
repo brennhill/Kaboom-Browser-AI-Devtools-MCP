@@ -18,7 +18,7 @@ sequenceDiagram
     participant Ext as Browser Extension<br/>(Polls every 1s)
     participant Browser as Browser Tab
 
-    AI->>MCP: interact({action: 'execute_js', script: '...'})
+    AI->>MCP: interact({what: 'execute_js', script: '...'})
     Note over MCP: Generate correlation_id<br/>exec_12345_67890
 
     MCP->>Queue: CreatePendingQuery(query, 30s timeout)

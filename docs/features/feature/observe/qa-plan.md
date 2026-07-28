@@ -41,7 +41,7 @@ last_verified_date: 2026-03-05
 - `observe(what:"screenshot", full_page:true)` captures nested scroll-container content when available, restores container styles after capture, and degrades cleanly to viewport capture on CDP failure.
 
 ## Manual UAT
-1. Call `configure(action:"health")`.
+1. Call `configure(what:"health")`.
 2. Call `observe(what:"logs")` with and without cursor options.
 3. Queue an async command and verify `observe(what:"command_result", correlation_id)`.
 4. Disconnect extension and verify warning + guidance surfaces.

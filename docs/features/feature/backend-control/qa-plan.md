@@ -25,7 +25,7 @@ last_verified_date: 2026-03-05
 - Kaboom MCP connected and discovered service
 
 #### Steps:
-1. Call `interact({action: "backend_control", operation: "reset_database", tables: ["users", "orders"]})`
+1. Call `interact({what: "backend_control", operation: "reset_database", tables: ["users", "orders"]})`
 2. Verify Kaboom creates BEFORE snapshot
 3. Verify Kaboom creates AFTER snapshot
 4. Query backend state: `observe({what: "backend_state", service: "api-server", keys: ["user_count"]})`
@@ -53,7 +53,7 @@ last_verified_date: 2026-03-05
 - AI agent ready to create test user
 
 #### Steps:
-1. Call `interact({action: "backend_control", operation: "create_test_user", params: {email: "test@example.com", plan: "pro", credits: 100}})`
+1. Call `interact({what: "backend_control", operation: "create_test_user", params: {email: "test@example.com", plan: "pro", credits: 100}})`
 2. Verify operation returns `{user_id: 12345}`
 3. Call `observe({what: "backend_state", service: "api-server", keys: ["user_count"]})`
 4. Verify user_count is 1
@@ -82,8 +82,8 @@ last_verified_date: 2026-03-05
 - Kaboom has record correlation_id="test-payment-003"
 
 #### Steps:
-1. Create BEFORE snapshot: `configure({action: "snapshot", session_action: "create", name: "before_payment"})`
-2. Enable payment timeout simulation: `interact({action: "backend_control", operation: "simulate_payment_timeout", params: {duration_ms: 3000, error_code: "TIMEOUT"}})`
+1. Create BEFORE snapshot: `configure({what: "snapshot", session_action: "create", name: "before_payment"})`
+2. Enable payment timeout simulation: `interact({what: "backend_control", operation: "simulate_payment_timeout", params: {duration_ms: 3000, error_code: "TIMEOUT"}})`
 3. Frontend user clicks "Checkout" button
 4. Observe frontend error: `observe({what: "logs", correlation_id: "test-payment-003"})`
 5. Observe backend timeout: `observe({what: "backend-logs", correlation_id: "test-payment-003", level: "ERROR"})`
@@ -113,7 +113,7 @@ last_verified_date: 2026-03-05
 - AI agent wants to retry test with clean state
 
 #### Steps:
-1. Call `configure({action: "snapshot", session_action: "restore", snapshot_id: "before_payment"})`
+1. Call `configure({what: "snapshot", session_action: "restore", snapshot_id: "before_payment"})`
 2. Verify `{status: "restored", rows_recovered: 1}`
 3. Verify state matches pre-test: `observe({what: "backend_state", service: "api-server", keys: ["user_count", "order_count"]})`
 4. Re-run payment flow
@@ -142,10 +142,10 @@ last_verified_date: 2026-03-05
 - Test user ready
 
 #### Steps:
-1. Call `interact({action: "backend_control", operation: "set_feature_flag", params: {flag_name: "use_new_checkout", value: true}})`
-2. Frontend reloads: `interact({action: "refresh"})`
+1. Call `interact({what: "backend_control", operation: "set_feature_flag", params: {flag_name: "use_new_checkout", value: true}})`
+2. Frontend reloads: `interact({what: "refresh"})`
 3. Verify new checkout UI appears (old UI should not)
-4. Toggle flag back to false: `interact({action: "backend_control", operation: "set_feature_flag", params: {flag_name: "use_new_checkout", value: false}})`
+4. Toggle flag back to false: `interact({what: "backend_control", operation: "set_feature_flag", params: {flag_name: "use_new_checkout", value: false}})`
 5. Refresh and verify old checkout UI appears
 
 #### Expected Result:
@@ -170,7 +170,7 @@ last_verified_date: 2026-03-05
 - Dry run mode enabled
 
 #### Steps:
-1. Call `interact({action: "backend_control", operation: "reset_database", dry_run: true})`
+1. Call `interact({what: "backend_control", operation: "reset_database", dry_run: true})`
 2. Verify response includes `{predicted_rows_deleted: 1250}` but no actual deletion
 3. Query user_count: should still be 1250
 4. Run same operation with `dry_run: false`
@@ -199,7 +199,7 @@ last_verified_date: 2026-03-05
 #### Steps:
 1. Call `observe({what: "backend_state", service: "api-server"})` with implicit shadow_mode=true
 2. Verify data readable without modification
-3. Call `interact({action: "backend_control", operation: "reset_database", shadow_mode: true})`
+3. Call `interact({what: "backend_control", operation: "reset_database", shadow_mode: true})`
 4. Verify operation returns predicted result but doesn't execute
 5. Query database: all users still present
 
@@ -224,10 +224,10 @@ last_verified_date: 2026-03-05
 
 #### Steps:
 1. Inject failure into reset_database: service returns error
-2. Call `interact({action: "backend_control", operation: "reset_database"})`
+2. Call `interact({what: "backend_control", operation: "reset_database"})`
 3. Verify operation fails: `{status: "error", error: "database_lock_timeout"}`
 4. Verify AI offers automatic restore to BEFORE snapshot
-5. Call rollback: `configure({action: "snapshot", session_action: "restore", snapshot_id: "before_*"})`
+5. Call rollback: `configure({what: "snapshot", session_action: "restore", snapshot_id: "before_*"})`
 6. Verify state unchanged
 
 #### Expected Result:

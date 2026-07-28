@@ -2,7 +2,7 @@ package interact
 
 import "testing"
 
-func TestInteractToolSchema_RequiresWhat_ActionIsRuntimeAlias(t *testing.T) {
+func TestInteractToolSchema_RequiresCanonicalWhat(t *testing.T) {
 	t.Parallel()
 
 	tool := ToolSchema()
@@ -15,19 +15,13 @@ func TestInteractToolSchema_RequiresWhat_ActionIsRuntimeAlias(t *testing.T) {
 	if !ok {
 		t.Fatal("interact schema missing 'what' property")
 	}
-	actionProp, ok := props["action"].(map[string]any)
-	if !ok {
-		t.Fatal("interact schema missing 'action' property")
+	if _, exists := props["action"]; exists {
+		t.Fatal("interact schema must not expose an action selector alias")
 	}
 
 	whatEnum := toSchemaStringSlice(t, whatProp["enum"])
 	if len(whatEnum) == 0 {
 		t.Fatal("interact 'what' enum must be non-empty")
-	}
-
-	// 'action' is a quiet alias — it must NOT have an enum (avoids duplicating the full list).
-	if _, hasEnum := actionProp["enum"]; hasEnum {
-		t.Fatal("interact 'action' alias should not have an enum (quiet alias)")
 	}
 
 	// Spot-check that well-known actions are present in the canonical 'what' enum.
@@ -46,7 +40,7 @@ func TestInteractToolSchema_RequiresWhat_ActionIsRuntimeAlias(t *testing.T) {
 	}
 
 	// Claude API forbids oneOf/allOf/anyOf at the top level of input_schema.
-	// 'what' is required; 'action' is a runtime alias handled by the server.
+	// 'what' is the sole routing selector.
 	if _, hasAnyOf := tool.InputSchema["anyOf"]; hasAnyOf {
 		t.Fatal("interact schema must not use top-level anyOf (Claude API limitation)")
 	}

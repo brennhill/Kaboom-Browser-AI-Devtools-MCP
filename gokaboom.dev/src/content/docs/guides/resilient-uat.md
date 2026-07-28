@@ -40,17 +40,17 @@ That's your test. Save it as a text file, a Notion doc, a comment in your issue 
 Hand the script to your AI (Claude Code, Cursor, etc.) with KaBOOM connected. The AI translates each step into `interact` calls using semantic selectors:
 
 ```js
-interact({action: "click", selector: "text=Sign Up"})
+interact({what: "click", selector: "text=Sign Up"})
 
-interact({action: "type", selector: "label=Full Name", text: "Jane Doe"})
+interact({what: "type", selector: "label=Full Name", text: "Jane Doe"})
 
-interact({action: "type", selector: "label=Email", text: "jane@example.com"})
+interact({what: "type", selector: "label=Email", text: "jane@example.com"})
 
-interact({action: "type", selector: "label=Password", text: "SecurePass123!"})
+interact({what: "type", selector: "label=Password", text: "SecurePass123!"})
 
-interact({action: "check", selector: "text=I agree to the Terms of Service"})
+interact({what: "check", selector: "text=I agree to the Terms of Service"})
 
-interact({action: "click", selector: "text=Create Account"})
+interact({what: "click", selector: "text=Create Account"})
 ```
 
 For verification, the AI observes the page:
@@ -63,7 +63,7 @@ observe({what: "page"})
 Or uses `get_text` on specific elements:
 
 ```js
-interact({action: "get_text", selector: "text=Welcome"})
+interact({what: "get_text", selector: "text=Welcome"})
 // -> "Welcome, Jane"
 ```
 
@@ -87,19 +87,19 @@ The only time a semantic selector breaks is when the _meaning_ changes — and t
 **Save starting state** so you can reset between runs:
 
 ```js
-interact({action: "save_state", snapshot_name: "logged-out-homepage"})
+interact({what: "save_state", snapshot_name: "logged-out-homepage"})
 ```
 
 **Start each run from the checkpoint:**
 
 ```js
-interact({action: "load_state", snapshot_name: "logged-out-homepage", include_url: true})
+interact({what: "load_state", snapshot_name: "logged-out-homepage", include_url: true})
 ```
 
 **Use `list_interactive` when the UI changes significantly.** If a page redesign moves things around, the AI can discover what's available:
 
 ```js
-interact({action: "list_interactive"})
+interact({what: "list_interactive"})
 ```
 
 This returns every clickable, typeable, and selectable element on the page with suggested selectors. The AI adapts its approach based on what's actually there — not what was there last week.

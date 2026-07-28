@@ -44,7 +44,7 @@ Agent calls observe tool:
   → Handler checks: observe is always allowed
   → Execute normally, return data
 
-Agent calls configure({action: "clear"}):
+Agent calls configure({what: "clear"}):
   → Server receives MCP request
   → Handler checks action: "clear" is mutation
   → If read-only, return error
@@ -75,7 +75,7 @@ Agent calls configure({action: "clear"}):
 ### Server config exposure:
 Use configure health response to expose current configuration:
 ```json
-configure({action: "health"})
+configure({what: "health"})
 // Returns:
 {
   "read_only_mode": true,

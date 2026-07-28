@@ -22,7 +22,7 @@ Configuration profiles are YAML files mapping setting names to values. At server
 - **Config merger**: Merge profile settings with CLI flags (CLI wins)
 - **Profile validator**: Validate profile has no invalid keys or values
 - **Built-in profiles**: Ship with Kaboom in profiles/ directory
-- **Config exposure**: Include active profile name in configure({action:"health"})
+- **Config exposure**: Include active profile name in configure({what:"health"})
 
 ## Data Flows
 

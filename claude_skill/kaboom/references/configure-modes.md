@@ -9,7 +9,7 @@ Persist and retrieve session data.
 **Params:** store_action (save|load|list|delete|stats), namespace (string, default: session), key (string), data (object), value (string)
 **Example:**
 ```bash
-bash scripts/kaboom-call.sh configure '{"what":"store","store_action":"save","namespace":"session","key":"my_key","value":"my_value"}'
+bash scripts/kaboom-call.sh configure '{"what":"store","store_action":"save","namespace":"session","key":"my_key","data":"my_value"}'
 ```
 
 ## load

@@ -34,7 +34,7 @@ Today:
 Wire `executeAction` to dispatch real browser commands through the existing PendingQuery/interact system. Playback = automated `interact()` calls driven by a recording or synthetic action array.
 
 ### The workflow:
-1. **LLM starts playback** via `configure({action: "playback", recording_id: "checkout-flow"})` or passes a synthetic action array
+1. **LLM starts playback** via `configure({what: "playback", recording_id: "checkout-flow"})` or passes a synthetic action array
 2. **Server returns immediately** with `{status: "running", playback_id: "..."}` — playback is asynchronous
 3. **Server iterates actions** — each `RecordingAction` maps to an `interact()` primitive (navigate, click, type, scroll, select, check, key_press)
 4. **Extension executes** — same dispatch path as manual `interact()` calls, via PendingQuery
@@ -64,7 +64,7 @@ The extension captures rich action data as `EnhancedAction` (6 selector strategi
 ### Workflow 1: Replay a Saved Recording
 
 ```
-1. LLM: configure({action: "playback", recording_id: "checkout-flow-20260218T1400Z"})
+1. LLM: configure({what: "playback", recording_id: "checkout-flow-20260218T1400Z"})
 2. Returns immediately: {status: "running", playback_id: "pb-abc123"}
 3. Server iterates actions in background:
    - navigate to https://example.com/checkout
@@ -89,7 +89,7 @@ The extension captures rich action data as `EnhancedAction` (6 selector strategi
 
 ```
 1. LLM constructs action array from context (no saved recording needed):
-   configure({action: "playback", actions: [
+   configure({what: "playback", actions: [
      {action: "navigate", url: "https://example.com/login"},
      {action: "click", selector: "[data-testid=login-btn]"},
      {action: "type", selector: "#email", text: "test@example.com"},
@@ -102,7 +102,7 @@ The extension captures rich action data as `EnhancedAction` (6 selector strategi
 ### Workflow 3: Regression Test with Test Boundary
 
 ```
-1. LLM: configure({action: "playback", recording_id: "checkout-flow",
+1. LLM: configure({what: "playback", recording_id: "checkout-flow",
          test_id: "checkout-regression", auto_boundary: true})
 2. Server auto-starts test boundary "checkout-regression"
 3. Actions execute, logs captured under test boundary
@@ -127,10 +127,10 @@ Manual boundary control is still supported (omit `auto_boundary`, manage boundar
 ### Workflow 5: Compose Video Recording with Playback
 
 ```
-1. LLM: interact({action: "screen_recording_start", name: "regression-replay"})
-2. LLM: configure({action: "playback", recording_id: "checkout-flow"})
+1. LLM: interact({what: "screen_recording_start", name: "regression-replay"})
+2. LLM: configure({what: "playback", recording_id: "checkout-flow"})
 3. LLM polls observe({what: "playback_results", playback_id: "..."}) until status: "completed"
-4. LLM: interact({action: "screen_recording_stop"})
+4. LLM: interact({what: "screen_recording_stop"})
 → Narrated regression test video (subtitles auto-captured during playback)
 ```
 
@@ -226,7 +226,7 @@ Final playback report:
 
 #### Start Playback
 
-`configure({action: "playback", ...})` — returns immediately, playback runs asynchronously.
+`configure({what: "playback", ...})` — returns immediately, playback runs asynchronously.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|

@@ -771,7 +771,7 @@ analyze({
 2. LLM: observe({what: "page"})
    → Browser state at /signup
    ↓
-3. LLM: interact({action: "explore", steps: [...]})
+3. LLM: interact({what: "explore", steps: [...]})
    → User fills form, submits
    ↓
 4. Kaboom captures:
@@ -824,13 +824,13 @@ Git History ──────→ Normalize ──→ Enrichment ──→ (show
 2. LLM: observe({what: "code"})
    → Current product list implementation
    ↓
-3. LLM: generate({format: "implementation_plan"})
+3. LLM: generate({what: "implementation_plan"})
    → Files to modify, tests to add
    ↓
-4. LLM: interact({action: "apply_changes", ...})
+4. LLM: interact({what: "apply_changes", ...})
    → Modify code
    ↓
-5. LLM: interact({action: "explore", steps: [use_filter]})
+5. LLM: interact({what: "explore", steps: [use_filter]})
    → Test new feature
    ↓
 6. Kaboom captures new behavior

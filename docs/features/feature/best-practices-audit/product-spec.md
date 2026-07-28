@@ -130,7 +130,7 @@ For document metadata, the audit leverages the existing `analyze({what: "dom"})`
       "verdict": "fail",
       "description": "No Content-Security-Policy header found on HTML responses.",
       "evidence": "0/3 HTML responses include a CSP header",
-      "remediation": "Add a Content-Security-Policy header. Use generate({format: 'csp'}) to generate a policy based on observed traffic."
+      "remediation": "Add a Content-Security-Policy header. Use generate({what: 'csp'}) to generate a policy based on observed traffic."
     },
     {
       "id": "hsts-header",
@@ -252,7 +252,7 @@ For document metadata, the audit leverages the existing `analyze({what: "dom"})`
   ],
   "recommendations": [
     "Fix 2 JavaScript errors before they affect users. Use observe({what: 'errors'}) for full stack traces.",
-    "Add a Content-Security-Policy header. Run generate({format: 'csp'}) to auto-generate one from observed traffic.",
+    "Add a Content-Security-Policy header. Run generate({what: 'csp'}) to auto-generate one from observed traffic.",
     "Update 2 HTTP resource URLs to HTTPS to eliminate mixed content."
   ],
   "data_coverage": {
@@ -358,7 +358,7 @@ No new extension-side code is needed for this check.
 | R11 | Detect deprecated API usage from console warning patterns | should |
 | R12 | Retrieve document metadata via the existing `analyze({what: "dom"})` async command infrastructure | should |
 | R13 | Gracefully degrade metadata checks to "skipped" when extension is disconnected | should |
-| R14 | Cross-reference CSP check with the CSP generator: suggest `generate({format: 'csp'})` in remediation when CSP is missing | should |
+| R14 | Cross-reference CSP check with the CSP generator: suggest `generate({what: 'csp'})` in remediation when CSP is missing | should |
 | R15 | Cross-reference security headers with the security audit: avoid duplicating findings already available via `observe({what: 'security_audit'})` | should |
 | R16 | Include a `data_coverage.metadata_source` field indicating whether metadata came from DOM query or was unavailable | should |
 | R17 | Support returning only failed checks for minimal-token responses | could |
@@ -375,7 +375,7 @@ No new extension-side code is needed for this check.
 
 - Out of scope: accessibility best practices. Accessibility is a separate concern covered by `observe({what: "accessibility"})` which integrates with axe-core. The best practices audit does not include WCAG checks.
 
-- Out of scope: SEO checks (canonical URLs, structured data, Open Graph tags). These are valuable but belong in a separate `generate({format: "seo_audit"})` mode if added later.
+- Out of scope: SEO checks (canonical URLs, structured data, Open Graph tags). These are valuable but belong in a separate `generate({what: "seo_audit"})` mode if added later.
 
 ## Performance SLOs
 
@@ -447,5 +447,5 @@ The audit handler performs in-memory iteration over existing buffers with O(n) c
 | OI-1 | Should the audit cache its results for a configurable TTL to avoid redundant computation on repeated calls? | open | Useful if the AI calls the audit multiple times in quick succession (e.g., before and after a fix). However, caching adds complexity and stale-data risk. The audit is cheap (< 50ms without DOM query), so caching may be premature. |
 | OI-2 | Should metadata checks use a synchronous DOM query (blocking the audit response) or return metadata checks as "pending" and require a follow-up call? | open | Current design uses the async analyze({what: "dom"}) infrastructure with a 2s wait. An alternative is to make the audit fully synchronous (skip metadata if not immediately available) and suggest the AI run `analyze({what: "dom"})` separately. |
 | OI-3 | Should the check thresholds (e.g., console noise: 50 entries = warning, 200 = fail) be configurable via parameters? | open | Configurable thresholds add parameter complexity. Fixed thresholds aligned with industry norms (similar to Lighthouse) are simpler and more consistent across AI agents. |
-| OI-4 | Should the audit integrate with the SARIF exporter so that best practices violations can appear as GitHub Code Scanning annotations? | open | This would allow `generate({format: "sarif"})` to include best practices findings alongside security findings. Requires defining SARIF rule IDs for each check. Natural future extension. |
+| OI-4 | Should the audit integrate with the SARIF exporter so that best practices violations can appear as GitHub Code Scanning annotations? | open | This would allow `generate({what: "sarif"})` to include best practices findings alongside security findings. Requires defining SARIF rule IDs for each check. Natural future extension. |
 | OI-5 | Should the audit support a `format` parameter for output variants (e.g., `"markdown"` for PR comments, `"json"` for programmatic use)? | open | JSON-only is simplest and most LLM-friendly. Markdown formatting can be done by the LLM from JSON data. |

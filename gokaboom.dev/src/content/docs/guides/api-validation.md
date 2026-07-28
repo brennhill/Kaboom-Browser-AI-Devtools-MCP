@@ -175,10 +175,10 @@ See the full payload including headers, status code, and body.
 Capture the full session state before and after changes:
 
 ```js
-configure({action: "diff_sessions", session_action: "capture", name: "before-api-change"})
+configure({what: "diff_sessions", session_action: "capture", name: "before-api-change"})
 // Make changes
-configure({action: "diff_sessions", session_action: "capture", name: "after-api-change"})
-configure({action: "diff_sessions", session_action: "compare",
+configure({what: "diff_sessions", session_action: "capture", name: "after-api-change"})
+configure({what: "diff_sessions", session_action: "compare",
            compare_a: "before-api-change", compare_b: "after-api-change"})
 ```
 
@@ -187,7 +187,7 @@ configure({action: "diff_sessions", session_action: "compare",
 Once you've validated the API behavior is correct, lock it in with a test:
 
 ```js
-generate({format: "test", assert_network: true, assert_response_shape: true})
+generate({what: "test", assert_network: true, assert_response_shape: true})
 ```
 
 This generates a Playwright test that asserts the API response shapes match what was observed — catching future regressions automatically.

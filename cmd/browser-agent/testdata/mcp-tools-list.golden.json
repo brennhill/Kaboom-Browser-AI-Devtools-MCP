@@ -601,10 +601,6 @@
           },
           "type": "array"
         },
-        "format": {
-          "description": "Deprecated alias for 'what'. Prefer 'what'.",
-          "type": "string"
-        },
         "generate_fixtures": {
           "description": "Generate network fixtures (reproduction)",
           "type": "boolean"
@@ -737,7 +733,7 @@
     "inputSchema": {
       "properties": {
         "action": {
-          "description": "Deprecated alias for 'what'. Prefer 'what'.",
+          "description": "Sub-action for modes that manage a resource, such as store, playback, or noise_rule.",
           "type": "string"
         },
         "action_jitter_ms": {
@@ -1047,10 +1043,6 @@
           "description": "User description of the issue (report_issue)",
           "type": "string"
         },
-        "value": {
-          "description": "Flat value alias for save action; treated as data when provided",
-          "type": "string"
-        },
         "verif_session_action": {
           "description": "Session verification operation (diff_sessions)",
           "enum": [
@@ -1112,10 +1104,6 @@
         "absent": {
           "description": "Wait for element to disappear (wait_for)",
           "type": "boolean"
-        },
-        "action": {
-          "description": "Deprecated alias for 'what'. Prefer 'what'.",
-          "type": "string"
         },
         "action_diff": {
           "description": "After the action completes, capture a structured mutation summary (overlays opened/closed, toasts, form errors, text changes). Composable with click, type, select, and other DOM-mutating actions.",

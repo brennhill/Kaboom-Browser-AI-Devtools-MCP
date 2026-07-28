@@ -15,7 +15,7 @@ run_test_4_1() {
         return
     fi
 
-    interact_and_wait "navigate" '{"action":"navigate","url":"https://www.binance.com/en/trade/BTC_USDT","reason":"Load WebSocket-heavy page"}' 20
+    interact_and_wait "navigate" '{"what":"navigate","url":"https://www.binance.com/en/trade/BTC_USDT","reason":"Load WebSocket-heavy page"}' 20
 
     sleep 5
 
@@ -59,7 +59,7 @@ run_test_4_2() {
         return
     fi
 
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Seed resource timing buffer","script":"fetch(window.location.href).then(function(r){return r.ok?\"fetched\":\"error\"}).catch(function(){return \"error\"})"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Seed resource timing buffer","script":"fetch(window.location.href).then(function(r){return r.ok?\"fetched\":\"error\"}).catch(function(){return \"error\"})"}'
     sleep 0.5
 
     local response

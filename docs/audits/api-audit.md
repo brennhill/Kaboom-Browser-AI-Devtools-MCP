@@ -161,7 +161,7 @@ These endpoints are not visible in `setupHTTPRoutes()` / `registerCaptureRoutes(
 
 ---
 
-### MEDIUM-5: `generate({format: "har"})` uses string literal "export_failed" instead of `ErrExportFailed` constant
+### MEDIUM-5: `generate({what: "har"})` uses string literal "export_failed" instead of `ErrExportFailed` constant
 
 **Severity**: MEDIUM
 
@@ -197,7 +197,7 @@ While each makes semantic sense, a uniform key (or at least a convention) would 
 
 ---
 
-### MEDIUM-7: `generate({format: "csp"})` does not validate `mode` parameter against enum
+### MEDIUM-7: `generate({what: "csp"})` does not validate `mode` parameter against enum
 
 **Severity**: MEDIUM
 
@@ -221,7 +221,7 @@ While each makes semantic sense, a uniform key (or at least a convention) would 
 
 ---
 
-### MEDIUM-9: `configure({action: "store"})` returns `ErrNotInitialized` but `configure({action: "load"})` returns a fallback response
+### MEDIUM-9: `configure({what: "store"})` returns `ErrNotInitialized` but `configure({what: "load"})` returns a fallback response
 
 **Severity**: MEDIUM
 
@@ -237,7 +237,7 @@ This is inconsistent. The caller gets an error for `store` but a misleading succ
 
 ---
 
-### MEDIUM-10: Missing `recording_id` parameter in schema for `configure({action: "event_recording_stop"})`
+### MEDIUM-10: Missing `recording_id` parameter in schema for `configure({what: "event_recording_stop"})`
 
 **Severity**: MEDIUM
 
@@ -333,7 +333,7 @@ This is inconsistent. The caller gets an error for `store` but a misleading succ
 
 ---
 
-### LOW-7: `generate({format: "sri"})` error uses `ErrInvalidJSON` for non-JSON failures
+### LOW-7: `generate({what: "sri"})` error uses `ErrInvalidJSON` for non-JSON failures
 
 **Severity**: LOW
 

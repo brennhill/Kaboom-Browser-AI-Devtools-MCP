@@ -33,7 +33,7 @@ Page calls alert("message")
   → POST to /dialogs endpoint
   → Server stores in dialog buffer
   → Agent polls: observe({what: "dialogs"})
-  → Agent responds: interact({action: "handle_dialog", response: "accept"})
+  → Agent responds: interact({what: "handle_dialog", response: "accept"})
   → Server creates pending query
   → Extension polls, executes dialog.accept()
   → Dialog dismissed, workflow continues

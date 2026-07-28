@@ -140,7 +140,7 @@ The image block is always the **last** content block in the array, after all tex
 
 | # | Requirement | Priority |
 |---|-------------|----------|
-| R1 | Add `screenshot_mode` setting to `configure({action: "capture"})` with values `off`, `on`, `errors_only` | must |
+| R1 | Add `screenshot_mode` setting to `configure({what: "capture"})` with values `off`, `on`, `errors_only` | must |
 | R2 | When `screenshot_mode` is `on`, append a base64 JPEG image content block to every `observe` and `generate` response | must |
 | R3 | When `screenshot_mode` is `errors_only`, append screenshot only to `observe({what: "errors"})` responses | must |
 | R4 | Use existing `captureVisibleTab` mechanism in the extension (JPEG, quality 80) | must |
@@ -156,7 +156,7 @@ The image block is always the **last** content block in the array, after all tex
 ## Non-Goals
 
 - This feature does NOT paste screenshots into the IDE via clipboard or OS-level paste actions. The "auto-paste" is achieved by including the image in the MCP response, which the MCP client (Cursor, Claude Code, etc.) renders natively. No clipboard, no AppleScript, no accessibility API.
-- This feature does NOT add a new MCP tool. It extends existing `observe`/`generate` response payloads and adds a new value to the existing `configure({action: "capture"})` settings.
+- This feature does NOT add a new MCP tool. It extends existing `observe`/`generate` response payloads and adds a new value to the existing `configure({what: "capture"})` settings.
 - Out of scope: Video capture or animated screenshots (GIFs). A single static JPEG is sufficient.
 - Out of scope: Screenshot annotation, cropping, or highlighting. The raw browser viewport capture is returned as-is.
 - Out of scope: Serving screenshots from disk. The existing disk-saved screenshots (from `handleScreenshot`) are a separate feature. This feature captures a fresh screenshot on-demand for each MCP response.
@@ -251,8 +251,8 @@ The only new work is handling a `screenshot` query type in the pending-query pol
 
 - Depends on: Async command pipeline (v6.0.0) for on-demand screenshot capture
 - Depends on: `captureVisibleTab` extension permission (already granted in manifest)
-- Depends on: `configure({action: "capture"})` settings infrastructure (already exists)
-- Depended on by: Future visual regression features (e.g., `generate({format: "visual_diff"})`)
+- Depends on: `configure({what: "capture"})` settings infrastructure (already exists)
+- Depended on by: Future visual regression features (e.g., `generate({what: "visual_diff"})`)
 
 ## Assumptions
 

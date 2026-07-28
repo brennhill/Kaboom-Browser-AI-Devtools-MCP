@@ -48,8 +48,8 @@ last_verified_date: 2026-03-05
    - Start Kaboom
 2. Steps:
    - [ ] Observe baseline: `observe({what: "vitals"})` note LCP time
-   - [ ] Apply throttle: `configure({action: "emulation", network: "Slow 3G"})`
-   - [ ] Reload page: `interact({action: "refresh"})`
+   - [ ] Apply throttle: `configure({what: "emulation", network: "Slow 3G"})`
+   - [ ] Reload page: `interact({what: "refresh"})`
    - [ ] Observe throttled: `observe({what: "vitals"})` note increased LCP
    - [ ] Verify network waterfall shows slow requests (200ms+ per resource)
 3. Expected Result: Page load significantly slower, LCP increases 5-10x
@@ -59,9 +59,9 @@ last_verified_date: 2026-03-05
 1. Setup:
    - Open page with heavy JS (e.g., data visualization)
 2. Steps:
-   - [ ] Run JS benchmark: `interact({action: "execute_js", code: "let start = Date.now(); for (let i=0; i<1e8; i++) {}; Date.now() - start"})`
+   - [ ] Run JS benchmark: `interact({what: "execute_js", code: "let start = Date.now(); for (let i=0; i<1e8; i++) {}; Date.now() - start"})`
    - [ ] Note baseline time (e.g., 100ms)
-   - [ ] Apply CPU throttle: `configure({action: "emulation", cpu: 4})`
+   - [ ] Apply CPU throttle: `configure({what: "emulation", cpu: 4})`
    - [ ] Rerun same benchmark
    - [ ] Note throttled time (should be ~400ms, 4x slower)
 3. Expected Result: JS execution 4x slower
@@ -71,10 +71,10 @@ last_verified_date: 2026-03-05
 1. Setup:
    - Open any page
 2. Steps:
-   - [ ] Apply offline: `configure({action: "emulation", network: "offline"})`
-   - [ ] Navigate to new URL: `interact({action: "navigate", url: "https://example.com"})`
+   - [ ] Apply offline: `configure({what: "emulation", network: "offline"})`
+   - [ ] Navigate to new URL: `interact({what: "navigate", url: "https://example.com"})`
    - [ ] Observe error: should see "No internet" page
-   - [ ] Reset: `configure({action: "emulation", reset: true})`
+   - [ ] Reset: `configure({what: "emulation", reset: true})`
    - [ ] Navigate again, verify success
 3. Expected Result: Offline blocks navigation, reset restores
 4. Verification: Observe logs/errors for offline indication
@@ -83,7 +83,7 @@ last_verified_date: 2026-03-05
 1. Setup:
    - Open page
 2. Steps:
-   - [ ] Apply custom: `configure({action: "emulation", network: "custom", download_kbps: 500, latency_ms: 300})`
+   - [ ] Apply custom: `configure({what: "emulation", network: "custom", download_kbps: 500, latency_ms: 300})`
    - [ ] Reload page
    - [ ] Observe waterfall, verify latency ~300ms per request
 3. Expected Result: Custom throttle applied
@@ -93,7 +93,7 @@ last_verified_date: 2026-03-05
 1. Setup:
    - Apply both network and CPU throttling
 2. Steps:
-   - [ ] Reset: `configure({action: "emulation", reset: true})`
+   - [ ] Reset: `configure({what: "emulation", reset: true})`
    - [ ] Verify network and CPU back to normal (run benchmark, check waterfall)
 3. Expected Result: All throttling removed
 4. Verification: Performance metrics return to baseline

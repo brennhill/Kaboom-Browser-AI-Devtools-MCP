@@ -13,7 +13,7 @@ begin_test "8.1" "[DAEMON ONLY] Noise rules: add, list, remove, verify" \
 run_test_8_1() {
     # Add a noise rule (API expects rules array with match_spec)
     local add_response
-    add_response=$(call_tool "configure" '{"action":"noise_rule","noise_action":"add","rules":[{"category":"console","match_spec":{"message_regex":"smoke-test-noise"}}]}')
+    add_response=$(call_tool "configure" '{"what":"noise_rule","noise_action":"add","rules":[{"category":"console","match_spec":{"message_regex":"smoke-test-noise"}}]}')
 
     if ! check_not_error "$add_response"; then
         fail "noise_rule add returned error. Content: $(truncate "$(extract_content_text "$add_response")" 200)"
@@ -22,7 +22,7 @@ run_test_8_1() {
 
     # List rules
     local list_response
-    list_response=$(call_tool "configure" '{"action":"noise_rule","noise_action":"list"}')
+    list_response=$(call_tool "configure" '{"what":"noise_rule","noise_action":"list"}')
     local list_text
     list_text=$(extract_content_text "$list_response")
 
@@ -53,7 +53,7 @@ run_test_8_1() {
 
     # Verify removal
     local list2_response
-    list2_response=$(call_tool "configure" '{"action":"noise_rule","noise_action":"list"}')
+    list2_response=$(call_tool "configure" '{"what":"noise_rule","noise_action":"list"}')
     local list2_text
     list2_text=$(extract_content_text "$list2_response")
 
@@ -75,7 +75,7 @@ run_test_8_2() {
     echo "  [store: save]"
     echo "    namespace=smoke key=smoke-key data={\"value\":\"smoke-data-123\"}"
     local save_response
-    save_response=$(call_tool "configure" '{"action":"store","store_action":"save","key":"smoke-key","namespace":"smoke","data":{"value":"smoke-data-123"}}')
+    save_response=$(call_tool "configure" '{"what":"store","store_action":"save","key":"smoke-key","namespace":"smoke","data":{"value":"smoke-data-123"}}')
 
     if ! check_not_error "$save_response"; then
         fail "store save returned error. Content: $(truncate "$(extract_content_text "$save_response")" 200)"
@@ -85,7 +85,7 @@ run_test_8_2() {
 
     # 2. Load it back and verify exact value
     local load_response
-    load_response=$(call_tool "configure" '{"action":"store","store_action":"load","key":"smoke-key","namespace":"smoke"}')
+    load_response=$(call_tool "configure" '{"what":"store","store_action":"load","key":"smoke-key","namespace":"smoke"}')
     local load_text
     load_text=$(extract_content_text "$load_response")
 
@@ -100,7 +100,7 @@ run_test_8_2() {
 
     # 3. List keys and verify our key is present
     local list_response
-    list_response=$(call_tool "configure" '{"action":"store","store_action":"list","namespace":"smoke"}')
+    list_response=$(call_tool "configure" '{"what":"store","store_action":"list","namespace":"smoke"}')
     local list_text
     list_text=$(extract_content_text "$list_response")
 
@@ -115,7 +115,7 @@ run_test_8_2() {
 
     # 4. Delete the key
     local del_response
-    del_response=$(call_tool "configure" '{"action":"store","store_action":"delete","key":"smoke-key","namespace":"smoke"}')
+    del_response=$(call_tool "configure" '{"what":"store","store_action":"delete","key":"smoke-key","namespace":"smoke"}')
 
     if ! check_not_error "$del_response"; then
         fail "store delete returned error. Content: $(truncate "$(extract_content_text "$del_response")" 200)"
@@ -126,7 +126,7 @@ run_test_8_2() {
 
     # 5. Verify deletion — load should NOT return the data
     local load2_response
-    load2_response=$(call_tool "configure" '{"action":"store","store_action":"load","key":"smoke-key","namespace":"smoke"}')
+    load2_response=$(call_tool "configure" '{"what":"store","store_action":"load","key":"smoke-key","namespace":"smoke"}')
     local load2_text
     load2_text=$(extract_content_text "$load2_response")
 
@@ -154,12 +154,12 @@ run_test_8_3() {
 
     # Seed some data
     interact_and_wait "execute_js" "{\"action\":\"execute_js\",\"reason\":\"Seed log\",\"script\":\"console.log('CLEAR_TEST_LOG')\"}"
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Seed action","script":"var b = document.createElement(\"button\"); b.id = \"clear-test-btn\"; b.textContent = \"X\"; document.body.appendChild(b); b.click(); \"done\""}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Seed action","script":"var b = document.createElement(\"button\"); b.id = \"clear-test-btn\"; b.textContent = \"X\"; document.body.appendChild(b); b.click(); \"done\""}'
     sleep 1
 
     # Clear only logs
     local clear_response
-    clear_response=$(call_tool "configure" '{"action":"clear","buffer":"logs"}')
+    clear_response=$(call_tool "configure" '{"what":"clear","buffer":"logs"}')
 
     if ! check_not_error "$clear_response"; then
         fail "clear(logs) returned error. Content: $(truncate "$(extract_content_text "$clear_response")" 200)"
@@ -209,7 +209,7 @@ begin_test "8.4" "[DAEMON ONLY] Streaming: enable, status, disable, status" \
 run_test_8_4() {
     # Enable streaming with specific events
     local enable_response
-    enable_response=$(call_tool "configure" '{"action":"streaming","streaming_action":"enable","events":["errors","network_errors"]}')
+    enable_response=$(call_tool "configure" '{"what":"streaming","streaming_action":"enable","events":["errors","network_errors"]}')
 
     if ! check_not_error "$enable_response"; then
         fail "streaming enable returned error. Content: $(truncate "$(extract_content_text "$enable_response")" 200)"
@@ -223,7 +223,7 @@ run_test_8_4() {
 
     # Check status — must show enabled state
     local status_response
-    status_response=$(call_tool "configure" '{"action":"streaming","streaming_action":"status"}')
+    status_response=$(call_tool "configure" '{"what":"streaming","streaming_action":"status"}')
     local status_text
     status_text=$(extract_content_text "$status_response")
 
@@ -241,7 +241,7 @@ run_test_8_4() {
 
     # Disable streaming
     local disable_response
-    disable_response=$(call_tool "configure" '{"action":"streaming","streaming_action":"disable"}')
+    disable_response=$(call_tool "configure" '{"what":"streaming","streaming_action":"disable"}')
 
     if ! check_not_error "$disable_response"; then
         fail "streaming disable returned error. Content: $(truncate "$(extract_content_text "$disable_response")" 200)"
@@ -250,7 +250,7 @@ run_test_8_4() {
 
     # Check status after disable
     local status2_response
-    status2_response=$(call_tool "configure" '{"action":"streaming","streaming_action":"status"}')
+    status2_response=$(call_tool "configure" '{"what":"streaming","streaming_action":"status"}')
     local status2_text
     status2_text=$(extract_content_text "$status2_response")
 
@@ -274,7 +274,7 @@ begin_test "8.5" "[DAEMON ONLY] Test boundaries: start and end markers" \
 run_test_8_5() {
     # Start boundary
     local start_response
-    start_response=$(call_tool "configure" '{"action":"test_boundary_start","test_id":"smoke-boundary","label":"Smoke test boundary"}')
+    start_response=$(call_tool "configure" '{"what":"test_boundary_start","test_id":"smoke-boundary","label":"Smoke test boundary"}')
 
     if ! check_not_error "$start_response"; then
         fail "test_boundary_start returned error. Content: $(truncate "$(extract_content_text "$start_response")" 200)"
@@ -288,14 +288,14 @@ run_test_8_5() {
 
     # Do some activity between boundaries
     if [ "$PILOT_ENABLED" = "true" ]; then
-        interact_and_wait "execute_js" '{"action":"execute_js","reason":"Activity between boundaries","script":"console.log(\"boundary-test-activity\"); \"logged\""}'
+        interact_and_wait "execute_js" '{"what":"execute_js","reason":"Activity between boundaries","script":"console.log(\"boundary-test-activity\"); \"logged\""}'
     fi
 
     sleep 0.5
 
     # End boundary
     local end_response
-    end_response=$(call_tool "configure" '{"action":"test_boundary_end","test_id":"smoke-boundary"}')
+    end_response=$(call_tool "configure" '{"what":"test_boundary_end","test_id":"smoke-boundary"}')
 
     if ! check_not_error "$end_response"; then
         fail "test_boundary_end returned error. Content: $(truncate "$(extract_content_text "$end_response")" 200)"

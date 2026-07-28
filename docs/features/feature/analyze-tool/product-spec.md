@@ -37,7 +37,7 @@ Run analysis and command-driven browser inspection workflows that go beyond pass
 - `visual_baseline`, `visual_diff`, `visual_baselines`
 
 ## Aliases
-- `history` → `navigation_patterns` (quiet alias, dispatches correctly but hidden from enum)
+- Navigation-pattern analysis uses the canonical `navigation_patterns` mode.
 
 ## Requirements
 - `ANALYZE_PROD_001`: `what` is required and enum-validated.

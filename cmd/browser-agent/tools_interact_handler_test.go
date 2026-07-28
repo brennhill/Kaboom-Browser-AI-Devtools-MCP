@@ -74,27 +74,6 @@ func TestToolsInteractDispatch_UnknownAction(t *testing.T) {
 	assertSnakeCaseFields(t, string(resp.Result))
 }
 
-func TestToolsInteractDispatch_UnknownActionAliasAddsCanonicalWhatWarning(t *testing.T) {
-	t.Parallel()
-	h, _, _ := makeToolHandler(t)
-
-	resp := callInteractRaw(h, `{"action":"nonexistent_action"}`)
-	result := parseToolResult(t, resp)
-	if !result.IsError {
-		t.Fatal("unknown action alias should return isError:true")
-	}
-	foundCanonicalWarning := false
-	for _, block := range result.Content {
-		if strings.Contains(block.Text, "deprecated") {
-			foundCanonicalWarning = true
-			break
-		}
-	}
-	if !foundCanonicalWarning {
-		t.Fatalf("expected canonical what warning block on error path, got %d content blocks", len(result.Content))
-	}
-}
-
 func TestToolsInteractDispatch_RejectsObserveScreenshotMode(t *testing.T) {
 	t.Parallel()
 	h, _, _ := makeToolHandler(t)
@@ -133,7 +112,7 @@ func TestToolsInteractDispatch_RejectsRecordingActionAliases(t *testing.T) {
 
 	for _, action := range []string{"record_start", "record_stop"} {
 		t.Run(action, func(t *testing.T) {
-			resp := callInteractRaw(h, fmt.Sprintf(`{"action":"%s"}`, action))
+			resp := callInteractRaw(h, fmt.Sprintf(`{"what":"%s"}`, action))
 			result := parseToolResult(t, resp)
 			text := result.Content[0].Text
 			if !strings.Contains(text, "unknown_mode") {
@@ -152,48 +131,6 @@ func TestToolsInteractDispatch_EmptyArgs(t *testing.T) {
 	result := parseToolResult(t, resp)
 	if !result.IsError {
 		t.Fatal("nil args (no 'action') should return isError:true")
-	}
-}
-
-func TestToolsInteractDispatch_ActionAliasAddsCanonicalWhatWarning(t *testing.T) {
-	t.Parallel()
-	h, _, _ := makeToolHandler(t)
-
-	resp := callInteractRaw(h, `{"action":"list_states"}`)
-	result := parseToolResult(t, resp)
-	if len(result.Content) == 0 {
-		t.Fatal("expected content blocks in alias response")
-	}
-	if strings.Contains(result.Content[0].Text, "unknown_mode") {
-		t.Fatalf("action alias should not route to unknown_mode, got: %s", result.Content[0].Text)
-	}
-	foundCanonicalWarning := false
-	for _, block := range result.Content {
-		if strings.Contains(block.Text, "deprecated") {
-			foundCanonicalWarning = true
-			break
-		}
-	}
-	if !foundCanonicalWarning {
-		t.Fatalf("expected canonical what warning block, got %d content blocks", len(result.Content))
-	}
-}
-
-func TestToolsInteractDispatch_ConflictingWhatAndAction(t *testing.T) {
-	t.Parallel()
-	h, _, _ := makeToolHandler(t)
-
-	resp := callInteractRaw(h, `{"what":"list_states","action":"navigate"}`)
-	result := parseToolResult(t, resp)
-	if !result.IsError {
-		t.Fatal("conflicting what/action should return isError:true")
-	}
-	text := result.Content[0].Text
-	if !strings.Contains(text, "invalid_param") {
-		t.Fatalf("expected invalid_param, got: %s", text)
-	}
-	if !strings.Contains(text, "Conflicting parameters") {
-		t.Fatalf("expected conflict explanation, got: %s", text)
 	}
 }
 

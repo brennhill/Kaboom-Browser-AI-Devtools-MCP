@@ -84,7 +84,7 @@ last_verified_date: 2026-03-05
 | Workflow | Steps Required | Can Be Simplified? |
 |----------|---------------|-------------------|
 | Check current performance | 1 step: call `observe(what: "performance")` | No -- already minimal |
-| Check session health | 1 step: call `configure(action: "health")` | No -- already minimal |
+| Check session health | 1 step: call `configure(what: "health")` | No -- already minimal |
 | View regression alerts | Included in health check or changes response | No -- already integrated |
 | Set custom budget thresholds | Via `configure` tool | Could be simpler with presets (e.g., "strict", "relaxed") |
 | Compare across page loads | Automatic via baseline system | No -- baselines build automatically |
@@ -150,7 +150,7 @@ last_verified_date: 2026-03-05
 | IT-4 | Alert resolution | Regression -> fix -> next snapshot within threshold | Alert marked as resolved | should |
 | IT-5 | Multiple batched snapshots | Extension POSTs array of snapshots | All processed, baselines updated for each | must |
 | IT-6 | URL-filtered performance check | `observe(what: "performance", url: "/dashboard")` | Only dashboard performance shown | must |
-| IT-7 | Health check integration | `configure(action: "health")` | Includes performance regression status | should |
+| IT-7 | Health check integration | `configure(what: "health")` | Includes performance regression status | should |
 | IT-8 | Concurrent snapshot processing | Multiple snapshots arriving simultaneously | No race conditions, baselines consistent | must |
 | IT-9 | Session summary with performance | Generate PR summary with performance data | Performance section includes baseline comparison | should |
 
@@ -206,7 +206,7 @@ last_verified_date: 2026-03-05
 | UAT-3 | Add a large (2MB) image to the page, reload, then query performance | Page loads slower with large image | Transfer size regression detected, alert in response | [ ] |
 | UAT-4 | Remove the large image, reload, then query performance | Page load normalizes | Previous regression resolves | [ ] |
 | UAT-5 | `{"tool": "observe", "arguments": {"what": "performance", "url": "/specific-page"}}` | Check filtering | Only performance data for the specified URL | [ ] |
-| UAT-6 | `{"tool": "configure", "arguments": {"action": "health"}}` | Session health check | Performance section included, shows regression status (if any) | [ ] |
+| UAT-6 | `{"tool": "configure", "arguments": {"what": "health"}}` | Session health check | Performance section included, shows regression status (if any) | [ ] |
 | UAT-7 | `{"tool": "observe", "arguments": {"what": "changes"}}` | After performance regression | Changes response includes performance alert in its summary | [ ] |
 | UAT-8 | Add a slow synchronous script (blocking main thread for 500ms), reload | Page feels janky | Long tasks and/or TBT regression detected | [ ] |
 | UAT-9 | Check the performance report includes resource breakdown | Look at resource types in report | Scripts, stylesheets, images, fonts listed with counts and sizes | [ ] |

@@ -16,17 +16,17 @@ run_test_9_1() {
         return
     fi
 
-    interact_and_wait "navigate" '{"action":"navigate","url":"https://example.com","reason":"Load baseline page"}' 20
+    interact_and_wait "navigate" '{"what":"navigate","url":"https://example.com","reason":"Load baseline page"}' 20
     # Wait for perf snapshot to arrive: extension sends it 2s after window.load,
     # then the batcher debounces for 500ms → ~2.5s minimum after page load.
     sleep 4
 
-    interact_and_wait "refresh" '{"action":"refresh","reason":"Establish perf baseline"}' 20
+    interact_and_wait "refresh" '{"what":"refresh","reason":"Establish perf baseline"}' 20
     # Same wait: the refresh's perf snapshot needs to arrive before the next refresh
     # stashes it as the "before" baseline via stashPerfSnapshot().
     sleep 4
 
-    interact_and_wait "refresh" '{"action":"refresh","reason":"Measure perf diff"}' 20
+    interact_and_wait "refresh" '{"what":"refresh","reason":"Measure perf diff"}' 20
 
     if [ -z "$INTERACT_RESULT" ]; then
         fail "No result from refresh command."
@@ -95,7 +95,7 @@ else:
     # Bounded retry for snapshot race: perf snapshots are async and may arrive slightly after refresh completion.
     if ! echo "$validation" | grep -q "VERDICT:PASS"; then
         sleep 3
-        interact_and_wait "refresh" '{"action":"refresh","reason":"Retry perf diff after async snapshot sync"}' 20
+        interact_and_wait "refresh" '{"what":"refresh","reason":"Retry perf diff after async snapshot sync"}' 20
         validation=$(echo "$INTERACT_RESULT" | python3 -c "
 import sys, json
 t = sys.stdin.read(); i = t.find('{')
@@ -157,13 +157,13 @@ run_test_9_2() {
         return
     fi
 
-    interact_and_wait "navigate" '{"action":"navigate","url":"https://example.com","reason":"Clean page for click test"}' 20
+    interact_and_wait "navigate" '{"what":"navigate","url":"https://example.com","reason":"Clean page for click test"}' 20
     sleep 2
 
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Inject test button","script":"var btn = document.createElement(\"button\"); btn.id = \"perf-test-btn\"; btn.textContent = \"Test\"; btn.onclick = function() { var d = document.createElement(\"div\"); d.textContent = \"clicked\"; document.body.appendChild(d); }; document.body.appendChild(btn); \"injected\""}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Inject test button","script":"var btn = document.createElement(\"button\"); btn.id = \"perf-test-btn\"; btn.textContent = \"Test\"; btn.onclick = function() { var d = document.createElement(\"div\"); d.textContent = \"clicked\"; document.body.appendChild(d); }; document.body.appendChild(btn); \"injected\""}'
     sleep 0.5
 
-    interact_and_wait "click" '{"action":"click","selector":"#perf-test-btn","reason":"Click test button"}'
+    interact_and_wait "click" '{"what":"click","selector":"#perf-test-btn","reason":"Click test button"}'
 
     echo "  [click result]"
     echo "$INTERACT_RESULT" | python3 -c "
@@ -232,10 +232,10 @@ run_test_9_3() {
         return
     fi
 
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Inject profiling button","script":"var btn2 = document.createElement(\"button\"); btn2.id = \"analyze-btn\"; btn2.textContent = \"Analyze Me\"; btn2.onclick = function() { for (var i=0; i<5; i++) { var d = document.createElement(\"p\"); d.textContent = \"item-\" + i; document.body.appendChild(d); } }; document.body.appendChild(btn2); \"injected\""}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Inject profiling button","script":"var btn2 = document.createElement(\"button\"); btn2.id = \"analyze-btn\"; btn2.textContent = \"Analyze Me\"; btn2.onclick = function() { for (var i=0; i<5; i++) { var d = document.createElement(\"p\"); d.textContent = \"item-\" + i; document.body.appendChild(d); } }; document.body.appendChild(btn2); \"injected\""}'
     sleep 0.5
 
-    interact_and_wait "click" '{"action":"click","selector":"#analyze-btn","analyze":true,"reason":"Profile DOM changes"}'
+    interact_and_wait "click" '{"what":"click","selector":"#analyze-btn","analyze":true,"reason":"Profile DOM changes"}'
 
     echo "  [analyze:true result]"
     echo "$INTERACT_RESULT" | python3 -c "
@@ -409,13 +409,13 @@ run_test_9_5() {
     fi
 
     # Make this test self-contained: establish its own baseline/warm cycle.
-    interact_and_wait "navigate" '{"action":"navigate","url":"https://example.com","reason":"9.5 baseline page"}' 20
+    interact_and_wait "navigate" '{"what":"navigate","url":"https://example.com","reason":"9.5 baseline page"}' 20
     sleep 4
 
-    interact_and_wait "refresh" '{"action":"refresh","reason":"9.5 baseline refresh"}' 20
+    interact_and_wait "refresh" '{"what":"refresh","reason":"9.5 baseline refresh"}' 20
     sleep 4
 
-    interact_and_wait "refresh" '{"action":"refresh","reason":"Check LLM perf fields"}' 20
+    interact_and_wait "refresh" '{"what":"refresh","reason":"Check LLM perf fields"}' 20
 
     echo "  [LLM optimization fields]"
     echo "$INTERACT_RESULT" | python3 -c "
@@ -488,7 +488,7 @@ else:
     # Same bounded retry as 9.1: perf snapshots can trail command completion.
     if ! echo "$validation" | grep -q "VERDICT:PASS"; then
         sleep 3
-        interact_and_wait "refresh" '{"action":"refresh","reason":"9.5 retry after async snapshot sync"}' 20
+        interact_and_wait "refresh" '{"what":"refresh","reason":"9.5 retry after async snapshot sync"}' 20
         validation=$(echo "$INTERACT_RESULT" | python3 -c "
 import sys, json
 t = sys.stdin.read(); i = t.find('{')

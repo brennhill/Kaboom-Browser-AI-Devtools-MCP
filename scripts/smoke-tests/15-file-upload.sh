@@ -303,7 +303,7 @@ _fetch_last_upload_via_browser() {
     LAST_UPLOAD_COOKIE_OK=""
     LAST_UPLOAD_RAW=""
 
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Fetch last upload from server API","script":"fetch(\"/api/last-upload\").then(r=>r.json()).then(d=>JSON.stringify(d)).catch(e=>JSON.stringify({error:e.message}))"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Fetch last upload from server API","script":"fetch(\"/api/last-upload\").then(r=>r.json()).then(d=>JSON.stringify(d)).catch(e=>JSON.stringify({error:e.message}))"}'
     LAST_UPLOAD_RAW="$INTERACT_RESULT"
 
     # Extract fields from command result JSON.
@@ -426,7 +426,7 @@ begin_test "15.2" "[DAEMON ONLY] Upload works without any flag (queues successfu
 
 run_test_15_2() {
     local response
-    response=$(call_tool "interact" '{"action":"upload","selector":"#file","file_path":"/tmp/nonexistent-kaboom-test.txt"}')
+    response=$(call_tool "interact" '{"what":"upload","selector":"#file","file_path":"/tmp/nonexistent-kaboom-test.txt"}')
     local content_text
     content_text=$(extract_content_text "$response")
 
@@ -449,7 +449,7 @@ begin_test "15.3" "[DAEMON ONLY] Missing file_path returns clear error" \
 
 run_test_15_3() {
     local response
-    response=$(call_tool "interact" '{"action":"upload","selector":"#file"}')
+    response=$(call_tool "interact" '{"what":"upload","selector":"#file"}')
     local content_text
     content_text=$(extract_content_text "$response")
 
@@ -470,7 +470,7 @@ begin_test "15.4" "[DAEMON ONLY] Missing selector returns clear error" \
 
 run_test_15_4() {
     local response
-    response=$(call_tool "interact" '{"action":"upload","file_path":"/tmp/test.txt"}')
+    response=$(call_tool "interact" '{"what":"upload","file_path":"/tmp/test.txt"}')
     local content_text
     content_text=$(extract_content_text "$response")
 
@@ -491,7 +491,7 @@ begin_test "15.5" "[DAEMON ONLY] Relative path rejected with security error" \
 
 run_test_15_5() {
     local response
-    response=$(call_tool "interact" '{"action":"upload","selector":"#file","file_path":"relative/path/file.txt"}')
+    response=$(call_tool "interact" '{"what":"upload","selector":"#file","file_path":"relative/path/file.txt"}')
     local content_text
     content_text=$(extract_content_text "$response")
 
@@ -512,7 +512,7 @@ begin_test "15.6" "[DAEMON ONLY] Nonexistent file rejected with clear error" \
 
 run_test_15_6() {
     local response
-    response=$(call_tool "interact" '{"action":"upload","selector":"#file","file_path":"/tmp/kaboom-nonexistent-file-12345.txt"}')
+    response=$(call_tool "interact" '{"what":"upload","selector":"#file","file_path":"/tmp/kaboom-nonexistent-file-12345.txt"}')
     local content_text
     content_text=$(extract_content_text "$response")
 
@@ -533,7 +533,7 @@ begin_test "15.7" "[DAEMON ONLY] Directory path rejected (not a file)" \
 
 run_test_15_7() {
     local response
-    response=$(call_tool "interact" '{"action":"upload","selector":"#file","file_path":"/tmp"}')
+    response=$(call_tool "interact" '{"what":"upload","selector":"#file","file_path":"/tmp"}')
     local content_text
     content_text=$(extract_content_text "$response")
 
@@ -661,11 +661,11 @@ run_test_15_10() {
     esac
 
     # Fill in required title field via execute_js
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Fill title field","script":"document.querySelector(\"input[name=title]\").value=\"Smoke Test 15.10\"; \"title_set\""}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Fill title field","script":"document.querySelector(\"input[name=title]\").value=\"Smoke Test 15.10\"; \"title_set\""}'
     sleep 0.5
 
     # Submit form via execute_js
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Submit upload form","script":"document.querySelector(\"form\").submit(); \"submitted\""}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Submit upload form","script":"document.querySelector(\"form\").submit(); \"submitted\""}'
     sleep 3
 
     # Observe result page — should reach /upload/success after redirect settles.
@@ -770,11 +770,11 @@ run_test_15_12() {
     esac
 
     # Fill form fields (title + tags) via execute_js
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Fill form fields","script":"document.querySelector(\"input[name=title]\").value=\"Smoke Test Upload\"; document.querySelector(\"input[name=tags]\").value=\"smoke,kaboom\"; \"fields_set\""}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Fill form fields","script":"document.querySelector(\"input[name=title]\").value=\"Smoke Test Upload\"; document.querySelector(\"input[name=tags]\").value=\"smoke,kaboom\"; \"fields_set\""}'
     sleep 0.5
 
     # Submit form
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Submit upload form","script":"document.querySelector(\"form\").submit(); \"submitted\""}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Submit upload form","script":"document.querySelector(\"form\").submit(); \"submitted\""}'
     sleep 3
 
     # Observe success page and tolerate redirect/load latency.
@@ -841,7 +841,7 @@ run_test_15_14() {
     sleep 1
 
     # Verify 401 is visible in the browser via execute_js (dogfood — use Kaboom, not curl)
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Check 401 page content","script":"document.body.innerText"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Check 401 page content","script":"document.body.innerText"}'
 
     log_diagnostic "15.14" "401 page content" "$INTERACT_RESULT" ""
 
@@ -882,7 +882,7 @@ run_test_15_15() {
     sleep 1
 
     # Verify: execute_js to check files on the input
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Check upload input files","script":"(function(){ var el = document.getElementById(\"file-input\"); return el && el.files && el.files[0] ? el.files[0].name : (el ? \"NO_FILES\" : \"NO_ELEMENT\"); })()"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Check upload input files","script":"(function(){ var el = document.getElementById(\"file-input\"); return el && el.files && el.files[0] ? el.files[0].name : (el ? \"NO_FILES\" : \"NO_ELEMENT\"); })()"}'
 
     log_diagnostic "15.15" "file verification" "$INTERACT_RESULT" ""
 
@@ -1107,9 +1107,9 @@ run_test_15_16() {
             # Check if it was Stage 4 escalation
             if echo "$UPLOAD_FINAL_TEXT" | grep -q '"stage":4\|"stage": 4'; then
                 # Stage 4 confirmed — now submit the form and verify MD5
-                interact_and_wait "execute_js" '{"action":"execute_js","reason":"Fill title field","script":"document.querySelector(\"input[name=title]\").value=\"Smoke Test 15.16 Stage4\"; \"title_set\""}'
+                interact_and_wait "execute_js" '{"what":"execute_js","reason":"Fill title field","script":"document.querySelector(\"input[name=title]\").value=\"Smoke Test 15.16 Stage4\"; \"title_set\""}'
                 sleep 0.5
-                interact_and_wait "execute_js" '{"action":"execute_js","reason":"Submit upload form","script":"document.querySelector(\"form\").submit(); \"submitted\""}'
+                interact_and_wait "execute_js" '{"what":"execute_js","reason":"Submit upload form","script":"document.querySelector(\"form\").submit(); \"submitted\""}'
 
                 # Poll for success page (up to 5s)
                 local page_resp page_text poll_ok=false
@@ -1126,7 +1126,7 @@ run_test_15_16() {
 
                 if [ "$poll_ok" != "true" ]; then
                     # Capture page content for diagnostics
-                    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Get page content on failure","script":"document.title + \": \" + document.body.innerText.substring(0,200)"}'
+                    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Get page content on failure","script":"document.title + \": \" + document.body.innerText.substring(0,200)"}'
                     fail "Stage 4 upload: form submission did not reach success page. Page: $(truncate "$page_text" 300). Body: $(truncate "$INTERACT_RESULT" 200). Possible CSRF or session mismatch."
                     return
                 fi

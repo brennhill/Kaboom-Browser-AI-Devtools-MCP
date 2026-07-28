@@ -56,11 +56,11 @@ last_verified_date: 2026-03-05
    - Open production web app in browser with extension
 2. Steps:
    - [ ] Connect agent (Claude Code or Cursor)
-- [ ] Check status: `configure({action: "health"})` — verify read_only_mode: true
+- [ ] Check status: `configure({what: "health"})` — verify read_only_mode: true
    - [ ] Observe errors: `observe({what: "errors"})` — succeeds, returns errors
    - [ ] Observe network: `observe({what: "network_waterfall"})` — succeeds
    - [ ] Query DOM: `analyze({what: "dom", selector: ".error"})` — succeeds
-- [ ] Generate reproduction: `generate({format: "reproduction"})` — succeeds
+- [ ] Generate reproduction: `generate({what: "reproduction"})` — succeeds
 3. Expected Result: All observation and analysis operations work normally
 4. Verification: Agent can analyze production issue without any mutations
 
@@ -68,11 +68,11 @@ last_verified_date: 2026-03-05
 1. Setup:
    - Server running in read-only mode
 2. Steps:
-   - [ ] Attempt execute_js: `interact({action: "execute_js", code: "alert('test')"})`
+   - [ ] Attempt execute_js: `interact({what: "execute_js", code: "alert('test')"})`
    - [ ] Verify error returned: {error: "read_only_mode_enabled", message: "..."}
-   - [ ] Attempt navigate: `interact({action: "navigate", url: "https://example.com"})`
+   - [ ] Attempt navigate: `interact({what: "navigate", url: "https://example.com"})`
    - [ ] Verify error returned
-   - [ ] Attempt clear logs: `configure({action: "clear"})`
+   - [ ] Attempt clear logs: `configure({what: "clear"})`
    - [ ] Verify error returned
 3. Expected Result: All mutation attempts fail with clear error message
 4. Verification: Browser state unchanged, no pending queries created
@@ -81,8 +81,8 @@ last_verified_date: 2026-03-05
 1. Setup:
    - Start Kaboom without --read-only flag: `kaboom`
 2. Steps:
-   - [ ] Check status: `configure({action: "health"})` — verify read_only_mode: false
-   - [ ] Attempt execute_js: `interact({action: "execute_js", code: "console.log('test')"})`
+   - [ ] Check status: `configure({what: "health"})` — verify read_only_mode: false
+   - [ ] Attempt execute_js: `interact({what: "execute_js", code: "console.log('test')"})`
    - [ ] Verify succeeds
    - [ ] Attempt navigate: succeeds
 3. Expected Result: All mutations allowed

@@ -27,7 +27,7 @@ last_verified_date: 2026-03-05
 | DL-1 | API key echoed in error responses | 401 response must NOT include the provided (invalid) key | critical |
 | DL-2 | API key logged in plaintext to audit trail | Audit entries must log success/failure + header used, never the key value | critical |
 | DL-3 | API key exposed in MCP tool responses | `get_audit_log` results must NOT contain API key values in any field | critical |
-| DL-4 | API key visible in health endpoint | `/health` and `configure({action:"health"})` must not expose configured keys | high |
+| DL-4 | API key visible in health endpoint | `/health` and `configure({what:"health"})` must not expose configured keys | high |
 | DL-5 | API key leaked in server startup logs | Server log output on startup must not print the configured key(s) | high |
 | DL-6 | Key file contents exposed via error messages | If `--api-key-file` path is invalid, error must not dump file contents | medium |
 | DL-7 | Extension stores key in accessible location | Chrome extension must store key in `chrome.storage.local` only, not in plaintext DOM or logs | high |
@@ -42,7 +42,7 @@ last_verified_date: 2026-03-05
 - [ ] Server startup output with `--api-key=secret123` does not print `secret123`
 - [ ] Extension options page masks the key field (password input type)
 - [ ] Network body captures of requests TO the Kaboom server strip the `X-API-Key` and `Authorization` headers
-- [ ] `configure({action:"health"})` tool response contains no key values, only a boolean `auth_enabled` indicator
+- [ ] `configure({what:"health"})` tool response contains no key values, only a boolean `auth_enabled` indicator
 
 ---
 
@@ -84,7 +84,7 @@ last_verified_date: 2026-03-05
 | Configure extension | 2 steps: open options, paste key | No -- standard UX |
 | Key rotation | 4 steps: generate new key, add to server, update clients, remove old key | Could add `--api-key-rotate` CLI but manual is clearer |
 | Query auth events | 1 MCP call: `get_audit_log` with type filter | No -- already minimal |
-| Verify auth status | 1 MCP call: `configure({action:"health"})` | No -- already minimal |
+| Verify auth status | 1 MCP call: `configure({what:"health"})` | No -- already minimal |
 
 ### Default Behavior Verification
 - [ ] Feature works with zero configuration: auth disabled by default, all requests pass through

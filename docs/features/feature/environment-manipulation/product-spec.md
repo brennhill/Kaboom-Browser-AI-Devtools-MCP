@@ -200,7 +200,7 @@ await interact({
 // Service automatically restarts, new endpoint takes effect
 
 // Step 4: Test frontend error handling
-await interact({action: "navigate", url: "http://localhost:3000"});
+await interact({what: "navigate", url: "http://localhost:3000"});
 // User sees error message for API unavailable
 
 // Step 5: Restore original config

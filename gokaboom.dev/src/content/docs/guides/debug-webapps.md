@@ -123,7 +123,7 @@ Three `observe` calls. Ten seconds. Root cause identified.
 Real browsers are noisy. Extension errors, analytics failures, third-party script warnings — they drown out the signal. Use noise filtering:
 
 ```js
-configure({action: "noise_rule", noise_action: "auto_detect"})
+configure({what: "noise_rule", noise_action: "auto_detect"})
 ```
 
 KaBOOM scans your current errors and identifies the noise (extension errors, analytics, framework internals). After auto-detect, `observe({what: "errors"})` returns only the errors that matter.
@@ -131,7 +131,7 @@ KaBOOM scans your current errors and identifies the noise (extension errors, ana
 You can also add manual rules:
 
 ```js
-configure({action: "noise_rule", noise_action: "add",
+configure({what: "noise_rule", noise_action: "add",
            pattern: "analytics\\.google", reason: "GA noise"})
 ```
 
@@ -145,6 +145,6 @@ configure({action: "noise_rule", noise_action: "add",
 | Visual state | `observe({what: "screenshot"})` |
 | Full timeline | `observe({what: "timeline"})` |
 | Performance metrics | `observe({what: "vitals"})` |
-| Filter noise | `configure({action: "noise_rule", noise_action: "auto_detect"})` |
+| Filter noise | `configure({what: "noise_rule", noise_action: "auto_detect"})` |
 
 Your AI doesn't need you to copy-paste from DevTools anymore. Just point it at the browser and let it work.

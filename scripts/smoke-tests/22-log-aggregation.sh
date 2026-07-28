@@ -83,13 +83,13 @@ run_test_22_2() {
     fi
 
     # Clear logs to start fresh
-    call_tool "configure" '{"action":"clear","buffer":"logs"}' > /dev/null 2>&1
+    call_tool "configure" '{"what":"clear","buffer":"logs"}' > /dev/null 2>&1
     sleep 1
 
     # Seed logs with same structure but different variable content
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Seed var log 1","script":"console.log(\"SMOKE_FP_REQUEST user=1001 took 234ms\")"}'
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Seed var log 2","script":"console.log(\"SMOKE_FP_REQUEST user=2002 took 567ms\")"}'
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Seed var log 3","script":"console.log(\"SMOKE_FP_REQUEST user=3003 took 890ms\")"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Seed var log 1","script":"console.log(\"SMOKE_FP_REQUEST user=1001 took 234ms\")"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Seed var log 2","script":"console.log(\"SMOKE_FP_REQUEST user=2002 took 567ms\")"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Seed var log 3","script":"console.log(\"SMOKE_FP_REQUEST user=3003 took 890ms\")"}'
     sleep 2
 
     local response
@@ -139,13 +139,13 @@ run_test_22_3() {
         return
     fi
 
-    call_tool "configure" '{"action":"clear","buffer":"logs"}' > /dev/null 2>&1
+    call_tool "configure" '{"what":"clear","buffer":"logs"}' > /dev/null 2>&1
     sleep 1
 
     # Same message at different levels
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Seed level log","script":"console.log(\"SMOKE_LEVEL_TEST multi-level message\")"}'
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Seed level warn","script":"console.warn(\"SMOKE_LEVEL_TEST multi-level message\")"}'
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Seed level error","script":"console.error(\"SMOKE_LEVEL_TEST multi-level message\")"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Seed level log","script":"console.log(\"SMOKE_LEVEL_TEST multi-level message\")"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Seed level warn","script":"console.warn(\"SMOKE_LEVEL_TEST multi-level message\")"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Seed level error","script":"console.error(\"SMOKE_LEVEL_TEST multi-level message\")"}'
     sleep 2
 
     local response
@@ -195,7 +195,7 @@ run_test_22_4() {
         return
     fi
 
-    call_tool "configure" '{"action":"clear","buffer":"logs"}' > /dev/null 2>&1
+    call_tool "configure" '{"what":"clear","buffer":"logs"}' > /dev/null 2>&1
     sleep 1
 
     # Seed one unique message

@@ -29,9 +29,9 @@ Displays persistent, styled text at the bottom of the viewport — like closed c
 `subtitle` is an optional string parameter on **every** `interact` action. One tool call performs the action AND shows the caption:
 
 ```json
-interact({ action: "navigate", url: "/dashboard", subtitle: "This is the main dashboard." })
-interact({ action: "highlight", selector: ".error-banner", subtitle: "This API call is returning a 500." })
-interact({ action: "refresh", subtitle: "Let's check if the fix worked..." })
+interact({ what: "navigate", url: "/dashboard", subtitle: "This is the main dashboard." })
+interact({ what: "highlight", selector: ".error-banner", subtitle: "This API call is returning a 500." })
+interact({ what: "refresh", subtitle: "Let's check if the fix worked..." })
 ```
 
 No extra tool calls. The subtitle displays alongside the action.
@@ -41,8 +41,8 @@ No extra tool calls. The subtitle displays alongside the action.
 For cases where you just want to update or clear the caption without performing another action:
 
 ```json
-interact({ action: "subtitle", text: "Now watch what happens when we submit the form..." })
-interact({ action: "subtitle", text: "" })  // Clear subtitle
+interact({ what: "subtitle", text: "Now watch what happens when we submit the form..." })
+interact({ what: "subtitle", text: "" })  // Clear subtitle
 ```
 
 ### Parameters
@@ -67,9 +67,9 @@ interact({ action: "subtitle", text: "" })  // Clear subtitle
 
 ### Site Walkthrough (single tool call per step)
 ```json
-interact({ action: "navigate", url: "/dashboard", subtitle: "Main dashboard — notice the metrics cards at the top." })
-interact({ action: "navigate", url: "/settings", subtitle: "Settings page — let's check the API configuration." })
-interact({ action: "navigate", url: "/users", subtitle: "User management — 3 pending invitations." })
+interact({ what: "navigate", url: "/dashboard", subtitle: "Main dashboard — notice the metrics cards at the top." })
+interact({ what: "navigate", url: "/settings", subtitle: "Settings page — let's check the API configuration." })
+interact({ what: "navigate", url: "/users", subtitle: "User management — 3 pending invitations." })
 ```
 
 3 navigations + 3 subtitles = 3 tool calls (not 6).
@@ -77,16 +77,16 @@ interact({ action: "navigate", url: "/users", subtitle: "User management — 3 p
 ### Demo Video Recording
 User records their screen while AI drives the browser with narration:
 ```json
-interact({ action: "subtitle", text: "Kaboom captures every browser event in real time" })
-interact({ action: "navigate", url: "https://example.com", subtitle: "Watch — we'll trigger an error and see it immediately" })
-interact({ action: "execute_js", script: "fetch('/api/broken')", subtitle: "Calling a broken API endpoint..." })
+interact({ what: "subtitle", text: "Kaboom captures every browser event in real time" })
+interact({ what: "navigate", url: "https://example.com", subtitle: "Watch — we'll trigger an error and see it immediately" })
+interact({ what: "execute_js", script: "fetch('/api/broken')", subtitle: "Calling a broken API endpoint..." })
 ```
 
 ### Guided Debugging
 AI walks the user through a problem it found:
 ```json
-interact({ action: "highlight", selector: ".error-banner", subtitle: "See this? The API response was malformed." })
-interact({ action: "highlight", selector: "#network-tab", subtitle: "The 500 started after the last deploy." })
+interact({ what: "highlight", selector: ".error-banner", subtitle: "See this? The API response was malformed." })
+interact({ what: "highlight", selector: "#network-tab", subtitle: "The 500 started after the last deploy." })
 ```
 
 ### UAT Narration

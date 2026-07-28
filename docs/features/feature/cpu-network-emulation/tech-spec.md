@@ -27,7 +27,7 @@ Emulation uses Chrome DevTools Protocol (CDP) to apply network and CPU throttlin
 ## Data Flows
 
 ```
-Agent: configure({action: "emulation", network: "Slow 3G"})
+Agent: configure({what: "emulation", network: "Slow 3G"})
   → Server receives, validates profile
   → Returns success
   → Agent polls: observe({what: "emulation_status"})

@@ -27,7 +27,7 @@ Drag-drop automation simulates user drag actions via JavaScript event creation a
 ## Data Flows
 
 ```
-Agent: interact({action: "drag_drop", source: "#elem1", target: "#elem2"})
+Agent: interact({what: "drag_drop", source: "#elem1", target: "#elem2"})
   → Server validates, creates pending query
   → Extension polls, receives drag_drop command
   → inject.js:

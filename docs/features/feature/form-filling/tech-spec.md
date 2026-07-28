@@ -28,7 +28,7 @@ Follows standard async command pattern: MCP returns immediately with correlation
 ## Data Flows
 
 ```
-AI: interact({action: "fill_form", fields: [...]})
+AI: interact({what: "fill_form", fields: [...]})
   → Server: validate fields, create pending query, return correlation_id
   → Extension polls /pending-queries
   → background.js sends postMessage to inject.js

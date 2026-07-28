@@ -23,7 +23,7 @@ run_test_2_1() {
     page_before=$(call_tool "observe" '{"what":"page"}')
     page_before_text=$(extract_content_text "$page_before")
     if ! echo "$page_before_text" | grep -qi "example.com"; then
-        interact_and_wait "navigate" '{"action":"navigate","url":"https://example.com","reason":"Core telemetry 2.1 precondition: CSP-safe page"}'
+        interact_and_wait "navigate" '{"what":"navigate","url":"https://example.com","reason":"Core telemetry 2.1 precondition: CSP-safe page"}'
         sleep 1
     fi
 
@@ -157,7 +157,7 @@ run_test_2_4() {
     fi
 
     # Use 40 polls (20s) — extension sync can take a few seconds after daemon startup
-    interact_and_wait "highlight" '{"action":"highlight","selector":"body","duration_ms":2000,"reason":"Highlight page body"}' 40
+    interact_and_wait "highlight" '{"what":"highlight","selector":"body","duration_ms":2000,"reason":"Highlight page body"}' 40
 
     if echo "$INTERACT_RESULT" | grep -qi "complete\|success\|highlighted"; then
         pass "Highlight command completed successfully."
@@ -362,7 +362,7 @@ run_test_2_7() {
         return
     fi
 
-    call_tool "configure" '{"action":"clear","buffer":"all"}' >/dev/null
+    call_tool "configure" '{"what":"clear","buffer":"all"}' >/dev/null
     sleep 0.3
 
     local form_js="(function() {
@@ -381,16 +381,16 @@ run_test_2_7() {
 
     sleep 0.5
 
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Fill username","script":"var el = document.getElementById(\"sf-user\"); el.focus(); el.value = \"smokeuser\"; el.dispatchEvent(new Event(\"input\", {bubbles:true})); \"filled-user\""}'
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Fill email","script":"var el = document.getElementById(\"sf-email\"); el.focus(); el.value = \"smoke@test.com\"; el.dispatchEvent(new Event(\"input\", {bubbles:true})); \"filled-email\""}'
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Fill password","script":"var el = document.getElementById(\"sf-pass\"); el.focus(); el.value = \"s3cure!\"; el.dispatchEvent(new Event(\"input\", {bubbles:true})); \"filled-pass\""}'
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Select role","script":"var el = document.getElementById(\"sf-role\"); el.value = \"admin\"; el.dispatchEvent(new Event(\"change\", {bubbles:true})); \"selected-role\""}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Fill username","script":"var el = document.getElementById(\"sf-user\"); el.focus(); el.value = \"smokeuser\"; el.dispatchEvent(new Event(\"input\", {bubbles:true})); \"filled-user\""}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Fill email","script":"var el = document.getElementById(\"sf-email\"); el.focus(); el.value = \"smoke@test.com\"; el.dispatchEvent(new Event(\"input\", {bubbles:true})); \"filled-email\""}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Fill password","script":"var el = document.getElementById(\"sf-pass\"); el.focus(); el.value = \"s3cure!\"; el.dispatchEvent(new Event(\"input\", {bubbles:true})); \"filled-pass\""}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Select role","script":"var el = document.getElementById(\"sf-role\"); el.value = \"admin\"; el.dispatchEvent(new Event(\"change\", {bubbles:true})); \"selected-role\""}'
 
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Submit form","script":"document.getElementById(\"sf-submit\").click(); \"submitted\""}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Submit form","script":"document.getElementById(\"sf-submit\").click(); \"submitted\""}'
 
     sleep 1
 
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Verify form submitted","script":"window.__SMOKE_FORM_SUBMITTED__ === true ? \"submit-confirmed\" : \"no-submit\""}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Verify form submitted","script":"window.__SMOKE_FORM_SUBMITTED__ === true ? \"submit-confirmed\" : \"no-submit\""}'
 
     local submit_confirmed=false
     if echo "$INTERACT_RESULT" | grep -q "submit-confirmed"; then

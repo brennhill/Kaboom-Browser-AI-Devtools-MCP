@@ -22,12 +22,12 @@ last_verified_date: 2026-03-05
 
 - **Test:** Generate Playwright test from captured error
   - **Given:** Captured console error "Form validation failed: email required" on /signup
-  - **When:** User calls `generate({format: 'reproduction', output_format: 'playwright'})`
+  - **When:** User calls `generate({what: 'reproduction', output_format: 'playwright'})`
   - **Then:** Response includes Playwright test that reproduces the error (navigate → fill → submit → assertion)
 
 - **Test:** Generate test from recorded user interaction
   - **Given:** Recorded actions [navigate to /shop, click product-1, type qty:5, click checkout]
-  - **When:** User calls `generate({format: 'reproduction', context: 'interaction', framework: 'playwright'})`
+  - **When:** User calls `generate({what: 'reproduction', context: 'interaction', framework: 'playwright'})`
   - **Then:** Test code generated that performs same sequence with assertions
 
 - **Test:** Multiple frameworks supported
@@ -39,12 +39,12 @@ last_verified_date: 2026-03-05
 
 - **Test:** Identify broken selectors
   - **Given:** Existing test file with selectors `#old-login-btn`, `.deprecated-form` (no longer exist in DOM)
-  - **When:** User calls `generate({format: 'test_heal', action: 'analyze', test_file: 'tests/login.spec.ts'})`
+  - **When:** User calls `generate({what: 'test_heal', action: 'analyze', test_file: 'tests/login.spec.ts'})`
   - **Then:** Response lists broken selectors and attempts repairs
 
 - **Test:** Auto-repair broken selectors
   - **Given:** Broken selector `#old-login-btn`, current DOM has `<button data-testid='login'>` at same location
-  - **When:** User calls `generate({format: 'test_heal', action: 'repair', test_file: '...', broken_selectors: [...])})`
+  - **When:** User calls `generate({what: 'test_heal', action: 'repair', test_file: '...', broken_selectors: [...])})`
   - **Then:** Old selector replaced with `button[data-testid='login']`, test file updated, confidence >= 0.9
 
 - **Test:** Suggest repairs with confidence scores
@@ -56,7 +56,7 @@ last_verified_date: 2026-03-05
 
 - **Test:** Classify test failure as real bug vs flaky
   - **Given:** Test failure: "element not found" error
-  - **When:** User calls `generate({format: 'test_classify', failure: '...', context: '...'})`
+  - **When:** User calls `generate({what: 'test_classify', failure: '...', context: '...'})`
   - **Then:** Response classifies as "selector fragile (flaky)" or "real bug" based on context
 
 - **Test:** Distinguish environmental issues from bugs

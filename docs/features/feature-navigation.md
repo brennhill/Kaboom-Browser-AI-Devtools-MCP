@@ -44,7 +44,7 @@ Features with active code implementations referencing their feature docs.
 | api-schema | `feature/api-schema/` | product-spec.md, qa-plan.md, tech-spec.md | Schema validation for API requests and responses |
 | backend-log-streaming | `feature/backend-log-streaming/` | product-spec.md, qa-plan.md, tech-spec.md | Real-time backend log streaming to browser context |
 | binary-format-detection | `feature/binary-format-detection/` | product-spec.md, qa-plan.md, tech-spec.md | Detect and handle binary response bodies |
-| bridge-restart | `feature/bridge-restart/` | product-spec.md, tech-spec.md, test-plan.md | Force-restart daemon when unresponsive via `configure(action="restart")` |
+| bridge-restart | `feature/bridge-restart/` | product-spec.md, tech-spec.md, test-plan.md | Force-restart daemon when unresponsive via `configure(what="restart")` |
 | browser-extension-enhancement | `feature/browser-extension-enhancement/` | product-spec.md, qa-plan.md, tech-spec.md | MV3 extension enhancements and lifecycle management |
 | ci-infrastructure | `feature/ci-infrastructure/` | product-spec.md, qa-plan.md, tech-spec.md, business-pitch.md | CI/CD pipeline infrastructure and automation |
 | code-navigation-modification | `feature/code-navigation-modification/` | product-spec.md, qa-plan.md, tech-spec.md | Code navigation and modification helpers |

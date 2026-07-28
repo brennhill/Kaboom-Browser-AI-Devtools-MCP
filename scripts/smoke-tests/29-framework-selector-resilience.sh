@@ -166,7 +166,7 @@ ensure_hydrated_ready() {
     local framework_key="$1"
     local attempt
     for attempt in 1 2 3; do
-        interact_and_wait "wait_for" '{"action":"wait_for","selector":"#hydrated-ready","timeout_ms":8000,"reason":"Wait for hydration to complete"}' 30
+        interact_and_wait "wait_for" '{"what":"wait_for","selector":"#hydrated-ready","timeout_ms":8000,"reason":"Wait for hydration to complete"}' 30
         if ! interact_failed "$INTERACT_RESULT"; then
             return 0
         fi
@@ -189,7 +189,7 @@ ensure_hydrated_ready() {
 
 dismiss_overlay_if_present() {
     local framework_key="$1"
-    interact_and_wait "click" '{"action":"click","selector":"text=Accept Cookies","reason":"Dismiss consent overlay if present"}' 12
+    interact_and_wait "click" '{"what":"click","selector":"text=Accept Cookies","reason":"Dismiss consent overlay if present"}' 12
     if interact_failed "$INTERACT_RESULT"; then
         if echo "$INTERACT_RESULT" | grep -qiE 'element_not_found|ambiguous_target|No matching element'; then
             return 0
@@ -201,7 +201,7 @@ dismiss_overlay_if_present() {
 }
 
 collect_submit_targets() {
-    interact_and_wait "list_interactive" '{"action":"list_interactive","role":"button","text_contains":"Submit Profile","visible_only":true,"reason":"Find submit button by label"}'
+    interact_and_wait "list_interactive" '{"what":"list_interactive","role":"button","text_contains":"Submit Profile","visible_only":true,"reason":"Find submit button by label"}'
     if interact_failed "$INTERACT_RESULT"; then
         return 1
     fi
@@ -223,13 +223,13 @@ exercise_stale_handle_recovery() {
         return 1
     fi
 
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Switch route to settings via helper","script":"(function(){ if (typeof window.__SMOKE_SHOW_SETTINGS__ === \"function\") { window.__SMOKE_SHOW_SETTINGS__(); return \"helper\"; } var b = Array.from(document.querySelectorAll(\"button\")).find(function(x){ return /Settings Tab/.test((x.textContent||\"\")); }); if (b) { b.click(); return \"dom-click\"; } return \"missing\"; })()"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Switch route to settings via helper","script":"(function(){ if (typeof window.__SMOKE_SHOW_SETTINGS__ === \"function\") { window.__SMOKE_SHOW_SETTINGS__(); return \"helper\"; } var b = Array.from(document.querySelectorAll(\"button\")).find(function(x){ return /Settings Tab/.test((x.textContent||\"\")); }); if (b) { b.click(); return \"dom-click\"; } return \"missing\"; })()"}'
     if interact_failed "$INTERACT_RESULT"; then
         fail "Settings route switch failed for ${framework_key}. Result: $(truncate "$INTERACT_RESULT" 240)"
         return 1
     fi
 
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Switch route to profile via helper","script":"(function(){ if (typeof window.__SMOKE_SHOW_PROFILE__ === \"function\") { window.__SMOKE_SHOW_PROFILE__(); return \"helper\"; } var b = Array.from(document.querySelectorAll(\"button\")).find(function(x){ return /Profile Tab/.test((x.textContent||\"\")); }); if (b) { b.click(); return \"dom-click\"; } return \"missing\"; })()"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Switch route to profile via helper","script":"(function(){ if (typeof window.__SMOKE_SHOW_PROFILE__ === \"function\") { window.__SMOKE_SHOW_PROFILE__(); return \"helper\"; } var b = Array.from(document.querySelectorAll(\"button\")).find(function(x){ return /Profile Tab/.test((x.textContent||\"\")); }); if (b) { b.click(); return \"dom-click\"; } return \"missing\"; })()"}'
     if interact_failed "$INTERACT_RESULT"; then
         fail "Profile route switch failed for ${framework_key}. Result: $(truncate "$INTERACT_RESULT" 240)"
         return 1
@@ -273,7 +273,7 @@ exercise_stale_handle_recovery() {
 exercise_async_content_flow() {
     local framework_key="$1"
 
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Trigger delayed async panel via framework helper","script":"(function(){ if (typeof window.__SMOKE_LOAD_ASYNC__ === \"function\") { window.__SMOKE_LOAD_ASYNC__(); return \"helper\"; } var btn = Array.from(document.querySelectorAll(\"button\")).find(function(b){ return /Load Async Panel/.test((b.textContent||\"\")); }); if (btn) { btn.click(); return \"dom-click\"; } return \"missing\"; })()"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Trigger delayed async panel via framework helper","script":"(function(){ if (typeof window.__SMOKE_LOAD_ASYNC__ === \"function\") { window.__SMOKE_LOAD_ASYNC__(); return \"helper\"; } var btn = Array.from(document.querySelectorAll(\"button\")).find(function(b){ return /Load Async Panel/.test((b.textContent||\"\")); }); if (btn) { btn.click(); return \"dom-click\"; } return \"missing\"; })()"}'
     if interact_failed "$INTERACT_RESULT"; then
         fail "Async panel trigger failed for ${framework_key}. Result: $(truncate "$INTERACT_RESULT" 240)"
         return 1
@@ -284,7 +284,7 @@ exercise_async_content_flow() {
         return 1
     fi
 
-    interact_and_wait "list_interactive" '{"action":"list_interactive","role":"button","text_contains":"Async Save","visible_only":true,"reason":"Find delayed async button"}'
+    interact_and_wait "list_interactive" '{"what":"list_interactive","role":"button","text_contains":"Async Save","visible_only":true,"reason":"Find delayed async button"}'
     if interact_failed "$INTERACT_RESULT"; then
         fail "Delayed async button discovery failed for ${framework_key}. Result: $(truncate "$INTERACT_RESULT" 240)"
         return 1
@@ -296,11 +296,11 @@ exercise_async_content_flow() {
 
     dismiss_overlay_if_present "$framework_key" || return 1
 
-    interact_and_wait "click" '{"action":"click","selector":"#async-panel button","auto_dismiss":true,"wait_for_stable":true,"reason":"Click async action"}'
+    interact_and_wait "click" '{"what":"click","selector":"#async-panel button","auto_dismiss":true,"wait_for_stable":true,"reason":"Click async action"}'
     if interact_failed "$INTERACT_RESULT" && echo "$INTERACT_RESULT" | grep -qi "blocked_by_overlay"; then
         dismiss_overlay_if_present "$framework_key" || return 1
-        interact_and_wait "execute_js" '{"action":"execute_js","reason":"Force-dismiss consent overlay if still present","script":"(function(){ var btn=document.querySelector(\"#consent-modal button\"); if(btn){ btn.click(); return \"dismissed\"; } return \"not_present\"; })()"}'
-        interact_and_wait "click" '{"action":"click","selector":"#async-panel button","auto_dismiss":true,"wait_for_stable":true,"reason":"Retry async action after overlay dismissal"}'
+        interact_and_wait "execute_js" '{"what":"execute_js","reason":"Force-dismiss consent overlay if still present","script":"(function(){ var btn=document.querySelector(\"#consent-modal button\"); if(btn){ btn.click(); return \"dismissed\"; } return \"not_present\"; })()"}'
+        interact_and_wait "click" '{"what":"click","selector":"#async-panel button","auto_dismiss":true,"wait_for_stable":true,"reason":"Retry async action after overlay dismissal"}'
     fi
     if interact_failed "$INTERACT_RESULT"; then
         fail "Async Save click failed for ${framework_key}. Result: $(truncate "$INTERACT_RESULT" 240)"
@@ -318,19 +318,19 @@ exercise_async_content_flow() {
 exercise_virtualized_content_flow() {
     local framework_key="$1"
 
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Expand virtual list via helper + scroll","script":"(function(){ if (typeof window.__SMOKE_EXPAND_VIRTUAL__ === \"function\") { window.__SMOKE_EXPAND_VIRTUAL__(); } var el=document.getElementById(\"virtual-list\"); if(!el) return \"missing\"; el.scrollTop=el.scrollHeight; return \"expanded\"; })()"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Expand virtual list via helper + scroll","script":"(function(){ if (typeof window.__SMOKE_EXPAND_VIRTUAL__ === \"function\") { window.__SMOKE_EXPAND_VIRTUAL__(); } var el=document.getElementById(\"virtual-list\"); if(!el) return \"missing\"; el.scrollTop=el.scrollHeight; return \"expanded\"; })()"}'
     if interact_failed "$INTERACT_RESULT"; then
         fail "Virtual list scroll script failed for ${framework_key}. Result: $(truncate "$INTERACT_RESULT" 240)"
         return 1
     fi
 
-    interact_and_wait "wait_for" '{"action":"wait_for","selector":"#deep-target","timeout_ms":6000,"reason":"Wait for late target in virtualized list"}' 25
+    interact_and_wait "wait_for" '{"what":"wait_for","selector":"#deep-target","timeout_ms":6000,"reason":"Wait for late target in virtualized list"}' 25
     if interact_failed "$INTERACT_RESULT"; then
         fail "Deep virtual target did not appear for ${framework_key}. Result: $(truncate "$INTERACT_RESULT" 240)"
         return 1
     fi
 
-    interact_and_wait "click" '{"action":"click","selector":"#deep-target","reason":"Click deep virtualized target"}'
+    interact_and_wait "click" '{"what":"click","selector":"#deep-target","reason":"Click deep virtualized target"}'
     if interact_failed "$INTERACT_RESULT"; then
         fail "Deep virtual target click failed for ${framework_key}. Result: $(truncate "$INTERACT_RESULT" 240)"
         return 1
@@ -350,7 +350,7 @@ exercise_submit_roundtrip() {
         return 1
     fi
 
-    interact_and_wait "click" '{"action":"click","selector":"text=Submit Profile","reason":"Semantic click submit button"}'
+    interact_and_wait "click" '{"what":"click","selector":"text=Submit Profile","reason":"Semantic click submit button"}'
     if interact_failed "$INTERACT_RESULT"; then
         fail "Semantic click failed for ${framework_key} iteration ${iteration}. Result: $(truncate "$INTERACT_RESULT" 240)"
         return 1
@@ -469,7 +469,7 @@ run_framework_resilience_test() {
             ensure_hydrated_ready "$framework_key" || return
             dismiss_overlay_if_present "$framework_key" || return
 
-            interact_and_wait "get_text" '{"action":"get_text","selector":"#selector-token","reason":"Read selector churn token"}'
+            interact_and_wait "get_text" '{"what":"get_text","selector":"#selector-token","reason":"Read selector churn token"}'
             if interact_failed "$INTERACT_RESULT"; then
                 fail "Token read failed for ${framework_key} run ${full_repeat}/${FRAMEWORK_RESILIENCE_FULL_REPEATS} iteration ${iteration}. Result: $(truncate "$INTERACT_RESULT" 240)"
                 return

@@ -106,7 +106,7 @@ begin_test "24.3" "Missing file_path returns isError" \
     "interact(upload) without file_path should return isError with missing_param code" \
     "Required parameter validation."
 run_test_24_3() {
-    RESPONSE=$(call_tool "interact" '{"action":"upload","selector":"#file"}')
+    RESPONSE=$(call_tool "interact" '{"what":"upload","selector":"#file"}')
     if ! check_is_error "$RESPONSE"; then
         fail "Expected isError for missing file_path."
         return
@@ -126,7 +126,7 @@ begin_test "24.4" "Missing selector and apiEndpoint returns isError" \
     "interact(upload) without selector or apiEndpoint should return isError" \
     "Required parameter validation: at least one target is needed."
 run_test_24_4() {
-    RESPONSE=$(call_tool "interact" '{"action":"upload","file_path":"'"$TEMP_DIR/test-file.txt"'"}')
+    RESPONSE=$(call_tool "interact" '{"what":"upload","file_path":"'"$TEMP_DIR/test-file.txt"'"}')
     if ! check_is_error "$RESPONSE"; then
         fail "Expected isError for missing selector and apiEndpoint."
         return
@@ -146,7 +146,7 @@ begin_test "24.5" "Relative path rejected with path_not_allowed" \
     "interact(upload) with relative file_path should return path_not_allowed error" \
     "Security: only absolute paths allowed."
 run_test_24_5() {
-    RESPONSE=$(call_tool "interact" '{"action":"upload","file_path":"relative/path.txt","selector":"#file"}')
+    RESPONSE=$(call_tool "interact" '{"what":"upload","file_path":"relative/path.txt","selector":"#file"}')
     if ! check_is_error "$RESPONSE"; then
         fail "Expected isError for relative path."
         return
@@ -166,7 +166,7 @@ begin_test "24.6" "File not found returns invalid_param" \
     "interact(upload) with nonexistent file should return isError with invalid_param" \
     "Graceful error for missing files."
 run_test_24_6() {
-    RESPONSE=$(call_tool "interact" '{"action":"upload","file_path":"/tmp/kaboom-uat-nonexistent-file-99999.txt","selector":"#file"}')
+    RESPONSE=$(call_tool "interact" '{"what":"upload","file_path":"/tmp/kaboom-uat-nonexistent-file-99999.txt","selector":"#file"}')
     if ! check_is_error "$RESPONSE"; then
         fail "Expected isError for nonexistent file."
         return
@@ -186,7 +186,7 @@ begin_test "24.7" "Directory rejected with invalid_param" \
     "interact(upload) with a directory path should return isError with invalid_param" \
     "Only files can be uploaded, not directories."
 run_test_24_7() {
-    RESPONSE=$(call_tool "interact" '{"action":"upload","file_path":"'"$TEMP_DIR/test-dir"'","selector":"#file"}')
+    RESPONSE=$(call_tool "interact" '{"what":"upload","file_path":"'"$TEMP_DIR/test-dir"'","selector":"#file"}')
     if ! check_is_error "$RESPONSE"; then
         fail "Expected isError for directory path."
         return
@@ -206,7 +206,7 @@ begin_test "24.8" "Queued response has status, correlation_id, file_name, file_s
     "interact(upload) with valid params returns queued response with all expected fields" \
     "Core success path: verify queued response shape."
 run_test_24_8() {
-    RESPONSE=$(call_tool "interact" '{"action":"upload","file_path":"'"$TEMP_DIR/test-file.txt"'","selector":"#file-input"}')
+    RESPONSE=$(call_tool "interact" '{"what":"upload","file_path":"'"$TEMP_DIR/test-file.txt"'","selector":"#file-input"}')
     if check_is_error "$RESPONSE"; then
         fail "Expected success but got isError. Content: $(truncate "$(extract_content_text "$RESPONSE")")"
         return
@@ -240,7 +240,7 @@ begin_test "24.9" "MIME detection: .txt → text/plain" \
     "Upload a .txt file and verify mime_type is text/plain" \
     "MIME type detection correctness."
 run_test_24_9() {
-    RESPONSE=$(call_tool "interact" '{"action":"upload","file_path":"'"$TEMP_DIR/test-file.txt"'","selector":"#file"}')
+    RESPONSE=$(call_tool "interact" '{"what":"upload","file_path":"'"$TEMP_DIR/test-file.txt"'","selector":"#file"}')
     if check_is_error "$RESPONSE"; then
         fail "Expected success. Content: $(truncate "$(extract_content_text "$RESPONSE")")"
         return
@@ -260,7 +260,7 @@ begin_test "24.10" "MIME detection: .json → application/json" \
     "Upload a .json file and verify mime_type is application/json" \
     "MIME type detection correctness."
 run_test_24_10() {
-    RESPONSE=$(call_tool "interact" '{"action":"upload","file_path":"'"$TEMP_DIR/test-file.json"'","selector":"#file"}')
+    RESPONSE=$(call_tool "interact" '{"what":"upload","file_path":"'"$TEMP_DIR/test-file.json"'","selector":"#file"}')
     if check_is_error "$RESPONSE"; then
         fail "Expected success. Content: $(truncate "$(extract_content_text "$RESPONSE")")"
         return
@@ -280,7 +280,7 @@ begin_test "24.11" "MIME detection: .png → image/png" \
     "Upload a .png file and verify mime_type is image/png" \
     "MIME type detection correctness."
 run_test_24_11() {
-    RESPONSE=$(call_tool "interact" '{"action":"upload","file_path":"'"$TEMP_DIR/test-file.png"'","selector":"#file"}')
+    RESPONSE=$(call_tool "interact" '{"what":"upload","file_path":"'"$TEMP_DIR/test-file.png"'","selector":"#file"}')
     if check_is_error "$RESPONSE"; then
         fail "Expected success. Content: $(truncate "$(extract_content_text "$RESPONSE")")"
         return

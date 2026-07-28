@@ -52,7 +52,7 @@ last_verified_date: 2026-03-05
 |---|--------------|----------------|--------|
 | CL-1 | Image block position in content array is predictable | Verify image block is always the LAST content block in the array, after all text blocks. | [ ] |
 | CL-2 | Screenshot unavailability is explained, not silent | When capture fails, verify a text block like `[Screenshot unavailable: reason]` replaces the image block. Never silently omit. | [ ] |
-| CL-3 | Configure response confirms the setting change | After `configure({action: "capture", settings: {screenshot_mode: "on"}})`, verify response text confirms the new setting value. | [ ] |
+| CL-3 | Configure response confirms the setting change | After `configure({what: "capture", settings: {screenshot_mode: "on"}})`, verify response text confirms the new setting value. | [ ] |
 | CL-4 | Sensitive content warning on first enable | When screenshot_mode is set to "on" or "errors_only" for the first time, verify response includes privacy warning about screenshots potentially containing sensitive content. | [ ] |
 | CL-5 | screenshot_mode values are clearly documented in error messages | If an invalid screenshot_mode value is provided, verify error lists valid values ("off", "on", "errors_only"). | [ ] |
 | CL-6 | Rate limit explanation is actionable | When screenshot is rate-limited, verify the text block includes specific info (e.g., cooldown remaining, session count). | [ ] |
@@ -75,11 +75,11 @@ last_verified_date: 2026-03-05
 
 | Workflow | Steps Required | Can Be Simplified? |
 |----------|---------------|-------------------|
-| Enable screenshots for all responses | 1 step: `configure({action: "capture", settings: {screenshot_mode: "on"}})` | No -- already minimal |
-| Enable screenshots for errors only | 1 step: `configure({action: "capture", settings: {screenshot_mode: "errors_only"}})` | No -- already minimal |
-| Disable screenshots | 1 step: `configure({action: "capture", settings: {screenshot_mode: "off"}})` | No -- already minimal |
+| Enable screenshots for all responses | 1 step: `configure({what: "capture", settings: {screenshot_mode: "on"}})` | No -- already minimal |
+| Enable screenshots for errors only | 1 step: `configure({what: "capture", settings: {screenshot_mode: "errors_only"}})` | No -- already minimal |
+| Disable screenshots | 1 step: `configure({what: "capture", settings: {screenshot_mode: "off"}})` | No -- already minimal |
 | Get observe response with screenshot | 1 step: `observe({what: "errors"})` (screenshot auto-appended if mode is on) | No -- zero extra steps once configured |
-| Check current screenshot_mode | 1 step: `configure({action: "health"})` or similar status query | Could expose in health response if not already present |
+| Check current screenshot_mode | 1 step: `configure({what: "health"})` or similar status query | Could expose in health response if not already present |
 
 ### Default Behavior Verification
 - [ ] Feature defaults to `screenshot_mode: "off"` -- no screenshots unless explicitly enabled
@@ -145,7 +145,7 @@ last_verified_date: 2026-03-05
 | EC-8 | observe errors with mode "errors_only" and no errors | observe({what: "errors"}) returns 0 errors | Screenshot still appended (mode is "errors_only" for the observe type, not conditional on error count) | should |
 | EC-9 | Tab minimized | Tab not visible when capture requested | captureVisibleTab captures whatever Chrome provides (may be blank) | should |
 | EC-10 | Multiple configure calls toggling mode | Toggle on -> off -> on rapidly | Final state is "on"; each configure call takes effect immediately | must |
-| EC-11 | Generate response with screenshot | generate({format: "csp"}) with mode "on" | Screenshot appended to generate response | should |
+| EC-11 | Generate response with screenshot | generate({what: "csp"}) with mode "on" | Screenshot appended to generate response | should |
 
 ---
 
@@ -163,15 +163,15 @@ last_verified_date: 2026-03-05
 
 | # | Step (AI executes) | Human Observes | Expected Result | Pass |
 |---|-------------------|----------------|-----------------|------|
-| UAT-1 | `{"tool": "configure", "arguments": {"action": "capture", "settings": {"screenshot_mode": "on"}}}` | Server logs confirm setting change | Response confirms `screenshot_mode=on`; includes sensitive content warning | [ ] |
+| UAT-1 | `{"tool": "configure", "arguments": {"what": "capture", "settings": {"screenshot_mode": "on"}}}` | Server logs confirm setting change | Response confirms `screenshot_mode=on`; includes sensitive content warning | [ ] |
 | UAT-2 | `{"tool": "observe", "arguments": {"what": "page"}}` | Browser may briefly flash during capture | Response contains text block with page metadata AND image block with base64 JPEG | [ ] |
 | UAT-3 | Visually inspect the screenshot in MCP client | Screenshot matches current browser viewport | Image accurately represents the visible browser content | [ ] |
 | UAT-4 | `{"tool": "observe", "arguments": {"what": "errors"}}` | No special browser behavior | Response contains error data text block AND screenshot image block | [ ] |
 | UAT-5 | Immediately repeat: `{"tool": "observe", "arguments": {"what": "errors"}}` (within 5s) | No capture flash | Response contains error data text block AND `[Screenshot unavailable: rate-limited]` text block | [ ] |
-| UAT-6 | `{"tool": "configure", "arguments": {"action": "capture", "settings": {"screenshot_mode": "errors_only"}}}` | Server logs confirm setting change | Response confirms `screenshot_mode=errors_only` | [ ] |
+| UAT-6 | `{"tool": "configure", "arguments": {"what": "capture", "settings": {"screenshot_mode": "errors_only"}}}` | Server logs confirm setting change | Response confirms `screenshot_mode=errors_only` | [ ] |
 | UAT-7 | `{"tool": "observe", "arguments": {"what": "page"}}` | No screenshot capture | Response contains only page metadata text block, NO image block | [ ] |
 | UAT-8 | `{"tool": "observe", "arguments": {"what": "errors"}}` | Screenshot capture occurs | Response contains error text AND image block | [ ] |
-| UAT-9 | `{"tool": "configure", "arguments": {"action": "capture", "settings": {"screenshot_mode": "off"}}}` | Server logs confirm setting change | Response confirms `screenshot_mode=off` | [ ] |
+| UAT-9 | `{"tool": "configure", "arguments": {"what": "capture", "settings": {"screenshot_mode": "off"}}}` | Server logs confirm setting change | Response confirms `screenshot_mode=off` | [ ] |
 | UAT-10 | `{"tool": "observe", "arguments": {"what": "errors"}}` | No screenshot capture | Response contains only error text, NO image block | [ ] |
 | UAT-11 | Disconnect extension, then with mode "on": `{"tool": "observe", "arguments": {"what": "page"}}` | Extension icon shows disconnected | Response contains page metadata text AND `[Screenshot unavailable: extension not connected]` text block | [ ] |
 | UAT-12 | Restart server, then: `{"tool": "observe", "arguments": {"what": "page"}}` | Fresh server start | No screenshot appended (screenshot_mode reset to "off") | [ ] |
@@ -189,7 +189,7 @@ last_verified_date: 2026-03-05
 ### Regression Checks
 - [ ] Existing `observe` responses unchanged when screenshot_mode is "off"
 - [ ] Existing `screenshotOnError` disk-save feature still works independently
-- [ ] `configure({action: "capture"})` with other settings (not screenshot_mode) still works
+- [ ] `configure({what: "capture"})` with other settings (not screenshot_mode) still works
 - [ ] MCP clients that do not support image blocks handle responses gracefully
 - [ ] Server restart does not crash or error due to screenshot_mode cleanup
 

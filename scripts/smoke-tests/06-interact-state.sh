@@ -16,7 +16,7 @@ run_test_6_1() {
     fi
 
     local response
-    response=$(call_tool "interact" '{"action":"save_state","snapshot_name":"smoke-state"}')
+    response=$(call_tool "interact" '{"what":"save_state","snapshot_name":"smoke-state"}')
     local content_text
     content_text=$(extract_content_text "$response")
 
@@ -49,7 +49,7 @@ run_test_6_2() {
     fi
 
     local response
-    response=$(call_tool "interact" '{"action":"list_states"}')
+    response=$(call_tool "interact" '{"what":"list_states"}')
 
     if ! check_not_error "$response"; then
         fail "list_states returned error. Content: $(truncate "$(extract_content_text "$response")" 200)"
@@ -79,7 +79,7 @@ run_test_6_3() {
     fi
 
     local response
-    response=$(call_tool "interact" '{"action":"load_state","snapshot_name":"smoke-state"}')
+    response=$(call_tool "interact" '{"what":"load_state","snapshot_name":"smoke-state"}')
 
     if ! check_not_error "$response"; then
         fail "load_state returned error. Content: $(truncate "$(extract_content_text "$response")" 200)"
@@ -113,7 +113,7 @@ run_test_6_4() {
     fi
 
     local response
-    response=$(call_tool "interact" '{"action":"delete_state","snapshot_name":"smoke-state"}')
+    response=$(call_tool "interact" '{"what":"delete_state","snapshot_name":"smoke-state"}')
 
     if ! check_not_error "$response"; then
         fail "delete_state returned error. Content: $(truncate "$(extract_content_text "$response")" 200)"
@@ -122,7 +122,7 @@ run_test_6_4() {
 
     # Verify it's gone
     local list_response
-    list_response=$(call_tool "interact" '{"action":"list_states"}')
+    list_response=$(call_tool "interact" '{"what":"list_states"}')
     local list_text
     list_text=$(extract_content_text "$list_response")
 

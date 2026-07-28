@@ -117,7 +117,7 @@ Chrome DevTools Protocol *can* be exposed via MCP, but Kaboom solves the operati
 - **Cleanup:** Automatic cleanup when test boundary ends
 
 #### 3. Network Mocking
-- **Mock API:** AI calls `configure({action: 'mock', endpoint: '/api/x', response: {...}})` to mock response
+- **Mock API:** AI calls `configure({what: 'mock', endpoint: '/api/x', response: {...}})` to mock response
 - **Interception:** Kaboom intercepts requests to endpoint, returns mocked response
 - **Error Testing:** Can mock error responses (4xx, 5xx, timeouts) to test error handling
 - **Partial Mocks:** Can mock specific endpoints while others hit real backend
@@ -433,7 +433,7 @@ await kaboom.configure({
 4. AI queries only "test-specific" logs
 
 ### Network Mocking
-1. AI calls `configure({action: 'mock', endpoint, response})`
+1. AI calls `configure({what: 'mock', endpoint, response})`
 2. Kaboom intercepts requests to endpoint
 3. Returns mocked response instead of real request
 4. Test continues with mocked data

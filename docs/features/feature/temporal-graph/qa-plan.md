@@ -28,7 +28,7 @@ last_verified_date: 2026-03-05
 | DL-2 | JSONL file on disk is world-readable | Verify `.kaboom/history/events.jsonl` has user-only file permissions | high |
 | DL-3 | Event descriptions accumulate user behavior patterns over 90 days | Verify event deduplication and fingerprinting prevent granular user activity reconstruction | high |
 | DL-4 | Deploy events expose CI/CD secrets | Verify deploy events from CI webhooks and resource changes store only public commit refs and timestamps, not CI tokens or environment variables | critical |
-| DL-5 | Agent-recorded events contain arbitrary text | Verify `configure(action: "record_event")` sanitizes or limits description length, preventing storage of arbitrary sensitive data by a misconfigured AI | medium |
+| DL-5 | Agent-recorded events contain arbitrary text | Verify `configure(what: "record_event")` sanitizes or limits description length, preventing storage of arbitrary sensitive data by a misconfigured AI | medium |
 | DL-6 | Causal links expose internal system relationships | Verify relationship links between events do not reveal infrastructure topology beyond what browser data shows | medium |
 | DL-7 | Pattern detection reveals long-term user habits | Verify pattern descriptions are behavioral summaries (e.g., "recurring error") not user activity profiles | medium |
 | DL-8 | Event metadata contains raw metric values | Verify metric values in regression/baseline-shift events are performance numbers only, not user-identifying data | low |
@@ -81,7 +81,7 @@ last_verified_date: 2026-03-05
 | Workflow | Steps Required | Can Be Simplified? |
 |----------|---------------|-------------------|
 | Query recent error history | 1 step: `analyze(target: "history", query: {type: "error", since: "7d"})` | No -- already minimal |
-| Record a fix event | 1 step: `configure(action: "record_event", event: {type: "fix", ...})` | No -- already minimal |
+| Record a fix event | 1 step: `configure(what: "record_event", event: {type: "fix", ...})` | No -- already minimal |
 | Find related events | 1 step: `analyze(target: "history", query: {related_to: "evt_123"})` | No -- already minimal |
 | Get full history overview | 1 step: `analyze(target: "history")` (no filters) | No -- already minimal |
 | Search events by description | 1 step: `analyze(target: "history", query: {pattern: "UserProfile"})` | No -- already minimal |
@@ -110,7 +110,7 @@ last_verified_date: 2026-03-05
 | UT-5 | Baseline shift event on update | Baseline updated with new values | Event with type: "baseline_shift", old/new values | must |
 | UT-6 | Deploy event on resource change | Resource list changes significantly | Event with type: "deploy", origin: "system" | must |
 | UT-7 | Deploy event on CI webhook | CI webhook receives deploy notification | Event with type: "deploy", source info included | must |
-| UT-8 | AI-recorded fix event | `configure(action: "record_event", event: {type: "fix", ...})` | Event with origin: "agent", agent name recorded | must |
+| UT-8 | AI-recorded fix event | `configure(what: "record_event", event: {type: "fix", ...})` | Event with origin: "agent", agent name recorded | must |
 | UT-9 | AI-recorded event with explicit link | Event with `related_to: "evt_error_123"` | Link stored with confidence: "explicit" | must |
 | UT-10 | AI-recorded event with invalid related_to | `related_to: "evt_nonexistent"` | Event recorded WITHOUT link, warning in response | must |
 | UT-11 | AI-recorded event missing required fields | `{type: "fix"}` without description | Error response listing valid fields | must |
@@ -135,7 +135,7 @@ last_verified_date: 2026-03-05
 | IT-2 | Regression -> Alert -> Event chain | Performance regression -> push alert fires -> temporal event recorded | Both alert and event exist for same regression | must |
 | IT-3 | Disk persistence round-trip | Record events -> server restart -> query history | Events loaded from JSONL file, all present | must |
 | IT-4 | Cross-session pattern detection | Session 1: error appears + resolves. Session 2: same error recurs | Pattern detected: "recurring error" | must |
-| IT-5 | Configure record_event via MCP | AI calls `configure(action: "record_event")` via MCP protocol | Event stored with origin="agent", agent name from MCP client | must |
+| IT-5 | Configure record_event via MCP | AI calls `configure(what: "record_event")` via MCP protocol | Event stored with origin="agent", agent name from MCP client | must |
 | IT-6 | Concurrent event recording + querying | Background event recording while AI queries history | No race conditions, consistent results | must |
 | IT-7 | Eviction on startup | Events.jsonl has old entries -> server starts | Old entries removed, file rewritten | must |
 
@@ -187,7 +187,7 @@ last_verified_date: 2026-03-05
 | UAT-1 | Trigger a JavaScript error in the test app | Console shows TypeError in DevTools | Error appears in browser | [ ] |
 | UAT-2 | Wait 5 seconds for event recording | No user action needed | Server detects new error fingerprint | [ ] |
 | UAT-3 | `{"tool": "analyze", "arguments": {"target": "history", "query": {"type": "error", "since": "1h"}}}` | AI receives history | At least 1 error event with correct description and timestamp | [ ] |
-| UAT-4 | Record a fix event: `{"tool": "configure", "arguments": {"action": "record_event", "event": {"type": "fix", "description": "Fixed null user in UserProfile", "related_to": "<evt_id_from_step_3>"}}}` | AI confirms event recorded | Fix event stored with explicit link to the error event | [ ] |
+| UAT-4 | Record a fix event: `{"tool": "configure", "arguments": {"what": "record_event", "event": {"type": "fix", "description": "Fixed null user in UserProfile", "related_to": "<evt_id_from_step_3>"}}}` | AI confirms event recorded | Fix event stored with explicit link to the error event | [ ] |
 | UAT-5 | `{"tool": "analyze", "arguments": {"target": "history", "query": {"related_to": "<evt_id_from_step_3>"}}}` | AI receives linked events | Both error event and fix event returned, linked by relationship | [ ] |
 | UAT-6 | Trigger a performance regression (add slow script) | Page loads noticeably slower | Extension captures slow performance snapshot | [ ] |
 | UAT-7 | Wait for regression detection | No user action | Server detects regression against baseline | [ ] |

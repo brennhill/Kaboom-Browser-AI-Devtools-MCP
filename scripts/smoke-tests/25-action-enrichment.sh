@@ -56,7 +56,7 @@ run_test_25_1() {
     local final_attempt=1
 
     for attempt in 1 2; do
-        interact_and_wait "navigate" '{"action":"navigate","url":"https://example.com","reason":"Smoke test enrichment"}'
+        interact_and_wait "navigate" '{"what":"navigate","url":"https://example.com","reason":"Smoke test enrichment"}'
         result="$INTERACT_RESULT"
 
         if [ -z "$result" ]; then
@@ -138,14 +138,14 @@ run_test_25_2() {
     fi
 
     # Navigate first to have a clean page.
-    interact_and_wait "navigate" '{"action":"navigate","url":"https://example.com","reason":"Setup for deterministic dom_changes test"}'
+    interact_and_wait "navigate" '{"what":"navigate","url":"https://example.com","reason":"Setup for deterministic dom_changes test"}'
     sleep 1
 
     # Inject a deterministic click target that always mutates DOM when clicked.
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Inject deterministic DOM mutation target","script":"(function(){var old=document.getElementById(\"enrich-dom-root\"); if(old) old.remove(); var root=document.createElement(\"div\"); root.id=\"enrich-dom-root\"; var btn=document.createElement(\"button\"); btn.id=\"enrich-dom-btn\"; btn.type=\"button\"; btn.textContent=\"Mutate DOM\"; btn.onclick=function(){var n=document.createElement(\"div\"); n.className=\"enrich-dom-added\"; n.textContent=\"added-\"+Date.now(); root.appendChild(n);}; root.appendChild(btn); document.body.appendChild(root); return \"ready\";})()"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Inject deterministic DOM mutation target","script":"(function(){var old=document.getElementById(\"enrich-dom-root\"); if(old) old.remove(); var root=document.createElement(\"div\"); root.id=\"enrich-dom-root\"; var btn=document.createElement(\"button\"); btn.id=\"enrich-dom-btn\"; btn.type=\"button\"; btn.textContent=\"Mutate DOM\"; btn.onclick=function(){var n=document.createElement(\"div\"); n.className=\"enrich-dom-added\"; n.textContent=\"added-\"+Date.now(); root.appendChild(n);}; root.appendChild(btn); document.body.appendChild(root); return \"ready\";})()"}'
     sleep 0.5
 
-    interact_and_wait "click" '{"action":"click","selector":"#enrich-dom-btn","reason":"Trigger deterministic DOM mutation","analyze":true}'
+    interact_and_wait "click" '{"what":"click","selector":"#enrich-dom-btn","reason":"Trigger deterministic DOM mutation","analyze":true}'
     local result="$INTERACT_RESULT"
 
     if [ -z "$result" ]; then
@@ -196,7 +196,7 @@ except Exception as e:
 " 2>/dev/null || echo "FAIL parse_error")
 
     # Cross-check actual DOM mutation happened.
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Verify deterministic DOM mutation happened","script":"document.querySelectorAll(\"#enrich-dom-root .enrich-dom-added\").length"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Verify deterministic DOM mutation happened","script":"document.querySelectorAll(\"#enrich-dom-root .enrich-dom-added\").length"}'
     local dom_count
     dom_count=$(echo "$INTERACT_RESULT" | python3 -c "
 import sys, json, re
@@ -234,7 +234,7 @@ run_test_25_3() {
         return
     fi
 
-    interact_and_wait "execute_js" '{"action":"execute_js","reason":"Smoke test timing","script":"document.title"}'
+    interact_and_wait "execute_js" '{"what":"execute_js","reason":"Smoke test timing","script":"document.title"}'
     local result="$INTERACT_RESULT"
 
     if [ -z "$result" ]; then

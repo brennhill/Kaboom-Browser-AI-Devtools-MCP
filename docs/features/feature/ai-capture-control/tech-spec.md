@@ -22,7 +22,7 @@ last_verified_date: 2026-03-05
 
 The extension has capture settings (log level, WebSocket mode, network body capture, etc.) that determine what data flows to the server. Today, these are configured manually through the extension's options page. When the AI needs richer data — "I'm debugging a WebSocket issue, I need to see message payloads" — it has to ask the human to toggle a setting. That breaks the feedback loop.
 
-AI capture control lets the AI adjust its own observation capabilities via the existing `configure` tool. The AI calls `configure(action: "capture", settings: { ws_mode: "messages" })` and the extension picks up the new setting on its next heartbeat. The AI is borrowing elevated access for the session, not permanently changing preferences.
+AI capture control lets the AI adjust its own observation capabilities via the existing `configure` tool. The AI calls `configure(what: "capture", settings: { ws_mode: "messages" })` and the extension picks up the new setting on its next heartbeat. The AI is borrowing elevated access for the session, not permanently changing preferences.
 
 All changes are session-scoped (reset on server restart), transparent (emit an alert), and auditable (written to a structured log file).
 
@@ -35,7 +35,7 @@ All changes are session-scoped (reset on server restart), transparent (emit an a
 The AI uses the existing composite tool interface:
 
 ```
-configure(action: "capture", settings: { ws_mode: "messages", log_level: "all" })
+configure(what: "capture", settings: { ws_mode: "messages", log_level: "all" })
 ```
 
 The server stores the override in memory. On the extension's next settings poll (every 5 seconds via the existing `/settings` endpoint), the override is included in the response. The extension applies it immediately.
@@ -52,7 +52,7 @@ The server stores the override in memory. On the extension's next settings poll 
 
 ### Rate Limiting
 
-Setting changes are rate-limited to 1 change per second. If the AI calls `configure(action: "capture")` more frequently, the server returns an error: "Rate limited: capture settings can be changed at most once per second." This prevents settings oscillation (intentional or accidental) from flooding the audit log or causing unnecessary extension reconfiguration. The 5-second extension poll already provides a natural throttle on actual behavior change, but the rate limit protects the server side.
+Setting changes are rate-limited to 1 change per second. If the AI calls `configure(what: "capture")` more frequently, the server returns an error: "Rate limited: capture settings can be changed at most once per second." This prevents settings oscillation (intentional or accidental) from flooding the audit log or causing unnecessary extension reconfiguration. The 5-second extension poll already provides a natural throttle on actual behavior change, but the rate limit protects the server side.
 
 ### Session Scoping
 
@@ -60,7 +60,7 @@ AI-set overrides live only in server memory. When the server restarts, all overr
 
 The AI can also explicitly reset:
 ```
-configure(action: "capture", settings: "reset")
+configure(what: "capture", settings: "reset")
 ```
 
 This clears all overrides immediately without restarting.
@@ -195,7 +195,7 @@ The `/settings` endpoint response adds a `capture_overrides` field. The extensio
 
 ## Test Scenarios
 
-1. `configure(action: "capture", settings: { log_level: "all" })` → override stored
+1. `configure(what: "capture", settings: { log_level: "all" })` → override stored
 2. `/settings` response includes active overrides
 3. Multiple settings changed in one call
 4. Reset clears all overrides

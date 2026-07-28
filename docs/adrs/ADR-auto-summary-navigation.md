@@ -14,7 +14,7 @@ last_reviewed: 2026-02-16
 
 AI agents spend ~4 tool calls and ~6 seconds orienting after every navigation. The current flow:
 
-1. `interact(action="navigate")` — navigate and wait
+1. `interact(what="navigate")` — navigate and wait
 2. `get_page_info` — get title/URL
 3. `get_text` — get content
 4. `list_interactive` — get actionable elements

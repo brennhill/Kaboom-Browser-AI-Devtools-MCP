@@ -346,7 +346,7 @@ last_verified_date: 2026-03-05
 #### Steps:
 1. Start Kaboom MCP server
 2. Connect an MCP client (e.g., Claude Code)
-3. Call `interact({action: "draw_mode_start"})`
+3. Call `interact({what: "draw_mode_start"})`
 4. Verify: extension activates draw mode on active tab
 5. Draw 2-3 rectangles with annotations in the browser
 6. Press ESC
@@ -426,7 +426,7 @@ node --test tests/extension/*.test.js
 
 - Start server: `./dist/kaboom --port 7890`
 - Open test page
-- Call `interact({action: "draw_mode_start"})` via MCP client
+- Call `interact({what: "draw_mode_start"})` via MCP client
 - Draw 2 annotations, press ESC
 - Call `analyze({what: "annotations"})` and verify response
 - Call `analyze({what: "annotation_detail"})` and verify computed styles

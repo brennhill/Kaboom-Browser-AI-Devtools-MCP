@@ -14,7 +14,7 @@ last_verified_date: 2026-03-05
 
 # QA Plan: Self-Healing Tests
 
-> QA plan for the Self-Healing Tests feature. Covers data leak analysis, LLM clarity, simplicity assessment, code-level testing, and step-by-step UAT verification. This feature adds `observe({what: "test_diagnosis"})` and `generate({format: "test_fix"})` modes to existing tools.
+> QA plan for the Self-Healing Tests feature. Covers data leak analysis, LLM clarity, simplicity assessment, code-level testing, and step-by-step UAT verification. This feature adds `observe({what: "test_diagnosis"})` and `generate({what: "test_fix"})` modes to existing tools.
 
 ---
 
@@ -67,7 +67,7 @@ last_verified_date: 2026-03-05
 - [ ] AI may apply a `fix_test` fix when the diagnosis is `true_regression` — verify the AI checks `recommended_action` BEFORE reading `fix.changes`
 - [ ] AI may confuse `selector_stale` (element exists with different selector) with `element_removed` (element is gone) — verify the summary makes this distinction explicit
 - [ ] AI may apply fixes from a `low` confidence diagnosis without human review — verify warnings are present for low-confidence fixes
-- [ ] AI may call `generate({format: "test_fix"})` without calling `observe({what: "test_diagnosis"})` first — verify test_fix works with manually constructed diagnosis objects (not just piped from test_diagnosis)
+- [ ] AI may call `generate({what: "test_fix"})` without calling `observe({what: "test_diagnosis"})` first — verify test_fix works with manually constructed diagnosis objects (not just piped from test_diagnosis)
 - [ ] AI may assume the diagnosis is deterministic — verify that timing-dependent diagnoses (flaky tests) include a note about non-determinism
 
 ---
@@ -81,7 +81,7 @@ last_verified_date: 2026-03-05
 | Workflow | Steps Required | Can Be Simplified? |
 |----------|---------------|-------------------|
 | Diagnose a test failure | 1 step: `observe({what: "test_diagnosis", failure: {...}})` | No — already a single call |
-| Generate a fix proposal | 1 step: `generate({format: "test_fix", diagnosis: {...}})` | No — already a single call |
+| Generate a fix proposal | 1 step: `generate({what: "test_fix", diagnosis: {...}})` | No — already a single call |
 | Full self-healing workflow | 2 steps: diagnose, then fix | Could combine into 1 call, but separation allows AI to review diagnosis first (intentional) |
 | Diagnose + fix + verify | 4 steps: diagnose, fix, apply code change, re-run test | Steps 3-4 are outside Kaboom; cannot simplify |
 | Handle "unknown" diagnosis | 3 steps: check observe(page), verify extension connected, retry with broader time window | Could add automatic fallback, but explicit control is better for AI agents |
@@ -130,7 +130,7 @@ last_verified_date: 2026-03-05
 | IT-1 | Diagnosis correlates across buffer types | Log buffer, network buffer, DOM query | Diagnosis reads from multiple buffers to build composite evidence | must |
 | IT-2 | Diagnosis uses existing analyze({what: "dom"}) | MCP handler, DOM query system, extension | Selector candidate search delegates to existing analyze({what: "dom"}) infrastructure | must |
 | IT-3 | Diagnosis uses error_clusters when available | Error clustering system, diagnosis handler | Grouped errors referenced in diagnosis to avoid duplicate investigation | should |
-| IT-4 | Fix integrates with existing test generation | generate handler, test template system | test_fix shares framework-specific template code with `generate({format: "test"})` | should |
+| IT-4 | Fix integrates with existing test generation | generate handler, test template system | test_fix shares framework-specific template code with `generate({what: "test"})` | should |
 | IT-5 | Full workflow: diagnose then fix | observe handler, generate handler | Diagnosis output is valid input for test_fix; round-trip produces actionable fix | must |
 | IT-6 | Concurrent diagnosis requests | Multiple MCP requests | Each operates on snapshot of buffer contents; no interference | should |
 
@@ -182,11 +182,11 @@ last_verified_date: 2026-03-05
 | UAT-1 | Human triggers a console error: `throw new Error("Test element missing")` | Error in DevTools console | Error captured by extension | [ ] |
 | UAT-2 | `{"tool": "observe", "arguments": {"what": "test_diagnosis", "failure": {"message": "Element not found: [data-testid='submit-btn']", "test_name": "Submit form test", "framework": "playwright"}}}` | No visual change | AI receives diagnosis with `category` (likely `selector_stale` or `unknown` depending on DOM state), `confidence`, `summary`, and `evidence` | [ ] |
 | UAT-3 | Verify diagnosis evidence | Human checks DOM for actual element | If page has `[data-testid='submit-button']`, diagnosis should show it as a candidate with similarity score | [ ] |
-| UAT-4 | `{"tool": "generate", "arguments": {"format": "test_fix", "diagnosis": {"category": "selector_stale", "expected_selector": "[data-testid='submit-btn']", "candidates": [{"selector": "[data-testid='submit-button']", "similarity": 0.92}]}, "framework": "playwright"}}` | No visual change | AI receives fix proposal with `strategy: "selector_update"`, `changes` array with old/new selectors, and Playwright-specific `framework_hint` | [ ] |
+| UAT-4 | `{"tool": "generate", "arguments": {"what": "test_fix", "diagnosis": {"category": "selector_stale", "expected_selector": "[data-testid='submit-btn']", "candidates": [{"selector": "[data-testid='submit-button']", "similarity": 0.92}]}, "framework": "playwright"}}` | No visual change | AI receives fix proposal with `strategy: "selector_update"`, `changes` array with old/new selectors, and Playwright-specific `framework_hint` | [ ] |
 | UAT-5 | Verify fix proposal is correct | Human reviews proposed selector change | `old_value` is `[data-testid='submit-btn']`, `new_value` is `[data-testid='submit-button']`, framework_hint shows Playwright locator syntax | [ ] |
 | UAT-6 | `{"tool": "observe", "arguments": {"what": "test_diagnosis", "failure": {"message": "Request failed: POST /api/users returned 500"}, "context": {"since": "2026-01-28T00:00:00Z"}}}` | No visual change | AI receives diagnosis — if server has 500 errors in buffer, `category: "network_failure"`; otherwise `category: "unknown"` | [ ] |
 | UAT-7 | `{"tool": "observe", "arguments": {"what": "test_diagnosis", "failure": {"message": "Timeout waiting for selector .loading-spinner to be hidden"}}}` | No visual change | AI receives diagnosis with `category: "timing_issue"` (if timing evidence exists) or `category: "unknown"` | [ ] |
-| UAT-8 | `{"tool": "generate", "arguments": {"format": "test_fix", "diagnosis": {"category": "timing_issue"}, "framework": "playwright"}}` | No visual change | Fix proposal with `strategy: "wait_adjustment"`, `framework_hint` showing Playwright waitForSelector or waitForLoadState | [ ] |
+| UAT-8 | `{"tool": "generate", "arguments": {"what": "test_fix", "diagnosis": {"category": "timing_issue"}, "framework": "playwright"}}` | No visual change | Fix proposal with `strategy: "wait_adjustment"`, `framework_hint` showing Playwright waitForSelector or waitForLoadState | [ ] |
 | UAT-9 | `{"tool": "observe", "arguments": {"what": "test_diagnosis", "failure": {"message": "Some error"}, "context": {"since": "2099-01-01T00:00:00Z"}}}` | No visual change | Diagnosis: `category: "unknown"`, `confidence: "low"` because no telemetry in that future window | [ ] |
 
 ### Data Leak UAT Verification
@@ -199,7 +199,7 @@ last_verified_date: 2026-03-05
 
 ### Regression Checks
 - [ ] Existing `observe({what: "errors"})` still works normally
-- [ ] Existing `generate({format: "test"})` still works normally
+- [ ] Existing `generate({what: "test"})` still works normally
 - [ ] `analyze({what: "dom"})` still works as a standalone action
 - [ ] `observe({what: "changes"})` still works independently
 - [ ] No new MCP tools created (still exactly 5 tools)

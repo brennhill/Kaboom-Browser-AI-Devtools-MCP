@@ -272,8 +272,8 @@ last_verified_date: 2026-03-05
 - [ ] `observe({what: 'page'})` still works (DOM observation unaffected)
 - [ ] `observe({what: 'network'})` still works (network capture unaffected)
 - [ ] `observe({what: 'console'})` still works (console capture unaffected)
-- [ ] `interact({action: 'execute_js'})` still works
-- [ ] `interact({action: 'click'})` still works (events still captured)
+- [ ] `interact({what: 'execute_js'})` still works
+- [ ] `interact({what: 'click'})` still works (events still captured)
 - [ ] Page performance is not degraded by event capture
 - [ ] Memory usage is bounded (not growing unbounded)
 

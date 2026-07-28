@@ -17,7 +17,7 @@ run_test_7_1() {
     fi
 
     local response
-    response=$(call_tool "generate" '{"format":"reproduction"}')
+    response=$(call_tool "generate" '{"what":"reproduction"}')
     local content_text
     content_text=$(extract_content_text "$response")
 
@@ -52,7 +52,7 @@ run_test_7_2() {
     fi
 
     local response
-    response=$(call_tool "generate" '{"format":"test","test_name":"smoke-test"}')
+    response=$(call_tool "generate" '{"what":"test","test_name":"smoke-test"}')
     local content_text
     content_text=$(extract_content_text "$response")
 
@@ -89,12 +89,12 @@ run_test_7_3() {
     # Seed browser activity so pr_summary has data to summarize.
     # Navigate to a page — this generates actions and network entries.
     if [ "$PILOT_ENABLED" = "true" ]; then
-        interact_and_wait "navigate" '{"action":"navigate","url":"https://example.com","reason":"Seed activity for PR summary"}' 20
+        interact_and_wait "navigate" '{"what":"navigate","url":"https://example.com","reason":"Seed activity for PR summary"}' 20
         sleep 2
     fi
 
     local response
-    response=$(call_tool "generate" '{"format":"pr_summary"}')
+    response=$(call_tool "generate" '{"what":"pr_summary"}')
     local content_text
     content_text=$(extract_content_text "$response")
 
@@ -156,7 +156,7 @@ run_test_7_4() {
     fi
 
     local response
-    response=$(call_tool "generate" '{"format":"sarif"}')
+    response=$(call_tool "generate" '{"what":"sarif"}')
     local content_text
     content_text=$(extract_content_text "$response")
 
@@ -233,10 +233,10 @@ run_test_7_5() {
     local data_seeded="false"
     if [ "$PILOT_ENABLED" = "true" ]; then
         # Navigate to generate resource timing (waterfall) entries.
-        interact_and_wait "navigate" '{"action":"navigate","url":"https://example.com","reason":"Seed network for HAR export"}' 20
+        interact_and_wait "navigate" '{"what":"navigate","url":"https://example.com","reason":"Seed network for HAR export"}' 20
         sleep 2
         # Trigger a fetch for body capture.
-        interact_and_wait "execute_js" '{"action":"execute_js","reason":"Seed fetch for HAR export","script":"fetch(\"https://jsonplaceholder.typicode.com/posts/1\").then(r=>r.json()).then(d=>\"fetched\").catch(e=>e.message)"}'
+        interact_and_wait "execute_js" '{"what":"execute_js","reason":"Seed fetch for HAR export","script":"fetch(\"https://jsonplaceholder.typicode.com/posts/1\").then(r=>r.json()).then(d=>\"fetched\").catch(e=>e.message)"}'
 
         # Poll network_bodies until the fetch URL appears.
         local max_polls=10
@@ -327,7 +327,7 @@ run_test_7_6() {
     fi
 
     local response
-    response=$(call_tool "generate" '{"format":"csp","mode":"moderate"}')
+    response=$(call_tool "generate" '{"what":"csp","mode":"moderate"}')
     local content_text
     content_text=$(extract_content_text "$response")
 
@@ -412,7 +412,7 @@ else: print(f'REAL_BODY:len={len(body)}')
 
     # ── Step 3: Call generate(sri) ──
     local response
-    response=$(call_tool "generate" '{"format":"sri"}')
+    response=$(call_tool "generate" '{"what":"sri"}')
     local content_text
     content_text=$(extract_content_text "$response")
 

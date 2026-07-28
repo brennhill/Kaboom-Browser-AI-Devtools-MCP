@@ -32,9 +32,9 @@ Each cycle costs 30-60 seconds of browser automation and 4-8 tool calls. During 
 
 Kaboom already has two relevant but incomplete primitives:
 
-- **`configure(action="recording_start/recording_stop")` + `configure(action="playback")`** -- Records raw browser events (clicks, keypresses) with timestamps and replays them. Designed for regression testing, not for quick state recovery. Recordings capture low-level DOM events, are tied to exact page state, and have no concept of named reusable sequences.
+- **`configure(what="recording_start/recording_stop")` + `configure(what="playback")`** -- Records raw browser events (clicks, keypresses) with timestamps and replays them. Designed for regression testing, not for quick state recovery. Recordings capture low-level DOM events, are tied to exact page state, and have no concept of named reusable sequences.
 
-- **`interact(action="save_state/load_state")`** -- Captures and restores page-level state (form values, scroll position, localStorage, sessionStorage, cookies). This restores *data* but not *navigation path*. It cannot click through a multi-step wizard or authenticate through an OAuth flow.
+- **`interact(what="save_state/load_state")`** -- Captures and restores page-level state (form values, scroll position, localStorage, sessionStorage, cookies). This restores *data* but not *navigation path*. It cannot click through a multi-step wizard or authenticate through an OAuth flow.
 
 Neither primitive solves the "get me back to this exact UI state via a repeatable sequence of interact actions" problem.
 
@@ -46,7 +46,7 @@ What agents need is a way to **save a named sequence of high-level interact acti
 
 ## Solution
 
-**`configure(action="save_sequence")`** saves a named sequence of interact actions. **`configure(action="replay_sequence")`** replays it. The sequence is a list of interact action objects that the server executes in order, with configurable wait/retry behavior between steps.
+**`configure(what="save_sequence")`** saves a named sequence of interact actions. **`configure(what="replay_sequence")`** replays it. The sequence is a list of interact action objects that the server executes in order, with configurable wait/retry behavior between steps.
 
 ### Key design decisions
 
@@ -54,7 +54,7 @@ What agents need is a way to **save a named sequence of high-level interact acti
 
 2. **Builds on existing interact infrastructure.** Each step in a sequence is dispatched through the same handler that processes `interact()` calls. No new browser-side code needed.
 
-3. **Persisted via session store.** Uses the existing `configure(action="store/load")` persistence layer with a dedicated namespace, so sequences survive daemon restarts.
+3. **Persisted via session store.** Uses the existing `configure(what="store/load")` persistence layer with a dedicated namespace, so sequences survive daemon restarts.
 
 4. **Composable with state snapshots.** A sequence can end with a `save_state` to capture the resulting page state, or begin with a `load_state` to restore context before navigating.
 
@@ -67,10 +67,10 @@ What agents need is a way to **save a named sequence of high-level interact acti
 ```
 Agent debugging a bug in the admin settings panel:
 
-1. interact({action: "navigate", url: "https://app.local/login"})
-2. interact({action: "fill_form_and_submit", fields: [{selector: "#email", value: "admin@test.com"}, {selector: "#password", value: "test123"}], submit_selector: "#login-btn"})
-3. interact({action: "click", selector: "[data-testid=settings-nav]"})
-4. interact({action: "click", selector: "[data-testid=advanced-tab]"})
+1. interact({what: "navigate", url: "https://app.local/login"})
+2. interact({what: "fill_form_and_submit", fields: [{selector: "#email", value: "admin@test.com"}, {selector: "#password", value: "test123"}], submit_selector: "#login-btn"})
+3. interact({what: "click", selector: "[data-testid=settings-nav]"})
+4. interact({what: "click", selector: "[data-testid=advanced-tab]"})
 
 Agent finds the bug, then saves the sequence:
 
@@ -107,12 +107,12 @@ Developer applies a fix. Agent verifies:
 ```
 Agent checks available sequences:
 
-1. configure({action: "list_sequences"})
+1. configure({what: "list_sequences"})
    -> Returns: [{name: "admin-settings-advanced", step_count: 4, description: "...", saved_at: "..."}]
 
 Agent deletes an outdated sequence:
 
-2. configure({action: "delete_sequence", name: "admin-settings-advanced"})
+2. configure({what: "delete_sequence", name: "admin-settings-advanced"})
 ```
 
 ### Workflow 4: LLM edits a sequence before replay
@@ -120,7 +120,7 @@ Agent deletes an outdated sequence:
 ```
 Agent reads the sequence, modifies it, and replays:
 
-1. configure({action: "get_sequence", name: "admin-settings-advanced"})
+1. configure({what: "get_sequence", name: "admin-settings-advanced"})
    -> Returns full step list
 
 2. Agent modifies step 2 to use different credentials
@@ -144,7 +144,7 @@ Agent reads the sequence, modifies it, and replays:
 
 All macro operations use the **configure** tool, consistent with how recording_start/recording_stop and store/load already live in configure.
 
-### `configure(action="save_sequence")`
+### `configure(what="save_sequence")`
 
 Saves a named sequence of interact actions.
 
@@ -212,7 +212,7 @@ Each element in `steps` is a JSON object with the same schema as `interact()` ar
 - Each step must have a valid `action` field matching a known interact action
 - Saving with an existing `name` overwrites the previous sequence (upsert semantics)
 
-### `configure(action="replay_sequence")`
+### `configure(what="replay_sequence")`
 
 Replays a saved sequence by executing each step in order.
 
@@ -288,7 +288,7 @@ Replays a saved sequence by executing each step in order.
 }
 ```
 
-### `configure(action="get_sequence")`
+### `configure(what="get_sequence")`
 
 Retrieves a saved sequence with all its steps.
 
@@ -318,7 +318,7 @@ Retrieves a saved sequence with all its steps.
 }
 ```
 
-### `configure(action="list_sequences")`
+### `configure(what="list_sequences")`
 
 Lists all saved sequences.
 
@@ -354,7 +354,7 @@ Lists all saved sequences.
 }
 ```
 
-### `configure(action="delete_sequence")`
+### `configure(what="delete_sequence")`
 
 Deletes a saved sequence.
 
@@ -381,7 +381,7 @@ Deletes a saved sequence.
 
 ### Session Store (persistence)
 
-Sequences are stored using the existing `configure(action="store")` persistence layer (`internal/persistence/persistence_store.go`). The session store supports namespaced key-value storage with Save/Load/List/Delete operations. Sequences use a dedicated namespace `"sequences"` to avoid collisions with other stored data.
+Sequences are stored using the existing `configure(what="store")` persistence layer (`internal/persistence/persistence_store.go`). The session store supports namespaced key-value storage with Save/Load/List/Delete operations. Sequences use a dedicated namespace `"sequences"` to avoid collisions with other stored data.
 
 **Storage format on disk:** `~/.kaboom/store/sequences/{name}.json`
 
@@ -540,7 +540,7 @@ Sequences are limited to 50 steps to prevent runaway macros. The JSON payload fo
 ## Privacy Considerations
 
 - **All data stays local.** Sequences are stored on disk at `~/.kaboom/store/sequences/` and never transmitted externally.
-- **Credentials in steps.** If a sequence includes `fill_form_and_submit` with password fields, those values are stored in plaintext in the sequence JSON. This is the same security model as `configure(action="store")`. The LLM should use test credentials only, not production secrets.
+- **Credentials in steps.** If a sequence includes `fill_form_and_submit` with password fields, those values are stored in plaintext in the sequence JSON. This is the same security model as `configure(what="store")`. The LLM should use test credentials only, not production secrets.
 - **Redaction support.** The existing server-side redaction engine (`RedactionEngine`) is applied to sequence data before persistence, consistent with `save_state` behavior. Sensitive field patterns (password, token, secret) are redacted unless the agent explicitly opts in.
 - **No network transmission.** Sequences are never sent to the extension or to any external service. They are server-side only.
 
@@ -724,7 +724,7 @@ Each replay is recorded in the AI action audit trail via `recordAIAction("replay
 
 ## Future Enhancements (not in scope for v1)
 
-1. **Auto-capture from action history.** `configure(action="save_sequence_from_history", last_n: 5)` would save the last N interact actions as a sequence.
+1. **Auto-capture from action history.** `configure(what="save_sequence_from_history", last_n: 5)` would save the last N interact actions as a sequence.
 2. **Sequence chaining.** Allow a step to reference another sequence by name, enabling composition.
 3. **Parameterized sequences.** Define placeholder variables in steps (e.g., `{{email}}`) that are substituted at replay time.
 4. **Sequence versioning.** Track changes to a sequence over time with version history.

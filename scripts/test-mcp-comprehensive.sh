@@ -92,7 +92,7 @@ echo "========================================="
 kill_server
 
 test_request "cold_observe_page" \
-    '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"observe","arguments":{"mode":"page"}}}' \
+    '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"observe","arguments":{"what":"page"}}}' \
     "error_ok"
 
 echo ""
@@ -109,28 +109,28 @@ test_request "initialize" \
 
 # observe tool with different modes
 test_request "observe_errors" \
-    '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"observe","arguments":{"mode":"errors"}}}' \
+    '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"observe","arguments":{"what":"errors"}}}' \
     "error_ok"
 
 test_request "observe_logs" \
-    '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"observe","arguments":{"mode":"logs"}}}' \
+    '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"observe","arguments":{"what":"logs"}}}' \
     "error_ok"
 
 test_request "observe_network" \
-    '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"observe","arguments":{"mode":"network_waterfall"}}}' \
+    '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"observe","arguments":{"what":"network_waterfall"}}}' \
     "error_ok"
 
 test_request "observe_page" \
-    '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"observe","arguments":{"mode":"page"}}}' \
+    '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"observe","arguments":{"what":"page"}}}' \
     "error_ok"
 
 # configure tool
 test_request "configure_get_health" \
-    '{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"configure","arguments":{"action":"get_health"}}}' \
+    '{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"configure","arguments":{"what":"get_health"}}}' \
     "success"
 
 test_request "configure_toggle_pilot" \
-    '{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"configure","arguments":{"action":"toggle_pilot"}}}' \
+    '{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"configure","arguments":{"what":"toggle_pilot"}}}' \
     "success"
 
 # generate tool (expects error - no extension)
@@ -140,7 +140,7 @@ test_request "generate_screenshot" \
 
 # interact tool (expects error - no extension)
 test_request "interact_click" \
-    '{"jsonrpc":"2.0","id":11,"method":"tools/call","params":{"name":"interact","arguments":{"action":"click","selector":"button"}}}' \
+    '{"jsonrpc":"2.0","id":11,"method":"tools/call","params":{"name":"interact","arguments":{"what":"click","selector":"button"}}}' \
     "error_ok"
 
 echo ""
@@ -151,7 +151,7 @@ echo "==============================================="
 
 PIDS=()
 for i in 1 2 3 4 5; do
-    REQUEST='{"jsonrpc":"2.0","id":'$((100+i))',"method":"tools/call","params":{"name":"configure","arguments":{"action":"get_health"}}}'
+    REQUEST='{"jsonrpc":"2.0","id":'$((100+i))',"method":"tools/call","params":{"name":"configure","arguments":{"what":"get_health"}}}'
     (echo "$REQUEST"; sleep 0.3) | "$WRAPPER" --port "$PORT" > "$TEMP_DIR/concurrent_$i.log" 2>&1 &
     PIDS+=("$!")
 done
@@ -187,7 +187,7 @@ echo "============================================="
 
 RAPID_SUCCESS=0
 for i in 1 2 3 4 5 6 7 8 9 10; do
-    REQUEST='{"jsonrpc":"2.0","id":'$((200+i))',"method":"tools/call","params":{"name":"configure","arguments":{"action":"get_health"}}}'
+    REQUEST='{"jsonrpc":"2.0","id":'$((200+i))',"method":"tools/call","params":{"name":"configure","arguments":{"what":"get_health"}}}'
     if echo "$REQUEST" | "$WRAPPER" --port "$PORT" 2>/dev/null | grep -q '"result"'; then
         RAPID_SUCCESS=$((RAPID_SUCCESS + 1))
     fi

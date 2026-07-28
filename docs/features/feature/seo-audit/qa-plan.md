@@ -84,14 +84,14 @@ last_verified_date: 2026-03-05
 
 | Workflow | Steps Required | Can Be Simplified? |
 |----------|---------------|-------------------|
-| Run full SEO audit | 1 step: `generate({format: "seo_audit"})` | No -- already minimal |
-| Run specific dimension | 1 step: `generate({format: "seo_audit", scope: "metadata"})` | No -- single call |
+| Run full SEO audit | 1 step: `generate({what: "seo_audit"})` | No -- already minimal |
+| Run specific dimension | 1 step: `generate({what: "seo_audit", scope: "metadata"})` | No -- single call |
 | Fix issues then re-audit | 2 steps: fix code + re-audit | Natural workflow |
 | Audit after navigation | 2 steps: navigate + audit | Could auto-audit on navigate but 2 steps is acceptable |
 | Multi-page audit | N steps: navigate + audit per page | Cannot simplify -- single-page by design |
 
 ### Default Behavior Verification
-- [ ] `generate({format: "seo_audit"})` with no optional params runs full audit (all 6 dimensions)
+- [ ] `generate({what: "seo_audit"})` with no optional params runs full audit (all 6 dimensions)
 - [ ] Default `scope` is `"full"` -- all dimensions audited
 - [ ] Default `url` uses the currently tracked tab's URL
 - [ ] Audit runs against the current rendered DOM (including JS-injected content)

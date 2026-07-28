@@ -36,11 +36,9 @@ func NewSessionHandler(deps SessionDeps, store *persistence.SessionStore, manage
 func (handler *SessionHandler) Store(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		StoreAction string          `json:"store_action"`
-		Action      string          `json:"action"`
 		Namespace   string          `json:"namespace"`
 		Key         string          `json:"key"`
 		Data        json.RawMessage `json:"data"`
-		Value       json.RawMessage `json:"value"`
 	}
 	if len(args) > 0 {
 		if response, stop := mcp.ParseArgs(req, args, &params); stop {
@@ -48,9 +46,6 @@ func (handler *SessionHandler) Store(req mcp.JSONRPCRequest, args json.RawMessag
 		}
 	}
 	action := params.StoreAction
-	if action == "" && isStoreAction(params.Action) {
-		action = params.Action
-	}
 	if action == "" {
 		action = "list"
 	}
@@ -59,9 +54,6 @@ func (handler *SessionHandler) Store(req mcp.JSONRPCRequest, args json.RawMessag
 		namespace = defaultStoreNamespace
 	}
 	data := params.Data
-	if len(data) == 0 && len(params.Value) > 0 {
-		data = params.Value
-	}
 	if response, blocked := handler.deps.RequireStore(req); blocked {
 		return response
 	}
@@ -131,13 +123,4 @@ func (handler *SessionHandler) Diff(req mcp.JSONRPCRequest, args json.RawMessage
 		responseData["result"] = result
 	}
 	return mcp.Succeed(req, "Session diff", responseData)
-}
-
-func isStoreAction(action string) bool {
-	switch action {
-	case "save", "load", "list", "delete", "stats":
-		return true
-	default:
-		return false
-	}
 }

@@ -14,7 +14,7 @@ last_verified_date: 2026-03-05
 
 ## Architecture Overview
 
-Annotated Screenshots adds `generate({format: "annotated_screenshot"})` -- captures screenshot of current page and overlays element labels and bounding boxes to help AI vision models understand page structure. Implemented using Chrome's `chrome.tabs.captureVisibleTab()` API (background.js) and Canvas API (inject.js) for annotation rendering.
+Annotated Screenshots adds `generate({what: "annotated_screenshot"})` -- captures screenshot of current page and overlays element labels and bounding boxes to help AI vision models understand page structure. Implemented using Chrome's `chrome.tabs.captureVisibleTab()` API (background.js) and Canvas API (inject.js) for annotation rendering.
 
 ## Key Components
 
@@ -29,7 +29,7 @@ Annotated Screenshots adds `generate({format: "annotated_screenshot"})` -- captu
 ## Data Flows
 
 ```
-AI calls generate({format: "annotated_screenshot", scope: "#main"})
+AI calls generate({what: "annotated_screenshot", scope: "#main"})
   |
   v
 Server creates pending query

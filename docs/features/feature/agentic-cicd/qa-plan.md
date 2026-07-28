@@ -31,7 +31,7 @@ last_verified_date: 2026-03-05
 | DL-5 | Network response bodies containing secrets | Verify that captured API response bodies do not leak tokens, session IDs, or API keys when the agent uses `observe({what: "network"})` to diagnose failures | high |
 | DL-6 | Git diff data exposing secrets in fix commits | Verify that when the agent runs `analyze({target: "changes"})`, the response does not include file contents that contain credentials (e.g., .env files, config files with keys) | high |
 | DL-7 | Webhook payloads containing repository secrets | Verify that webhook handlers receiving CI failure notifications do not forward repository secrets, deploy keys, or tokens to the Kaboom server | high |
-| DL-8 | Snapshot data persisted to disk contains secrets | Verify that session snapshots saved via `configure({action: "store"})` apply redaction before writing to `.kaboom/` directory | medium |
+| DL-8 | Snapshot data persisted to disk contains secrets | Verify that session snapshots saved via `configure({what: "store"})` apply redaction before writing to `.kaboom/` directory | medium |
 | DL-9 | Audit trail entries expose sensitive diagnosis data | Verify that audit trail records of AI-generated commits and fix attempts do not include sensitive file contents or credentials | medium |
 | DL-10 | PR preview URLs containing auth tokens in query strings | Verify that preview URLs with embedded tokens (e.g., `?token=abc123`) are redacted in MCP responses and reports | medium |
 
@@ -121,7 +121,7 @@ last_verified_date: 2026-03-05
 | IT-1 | End-to-end self-healing workflow | Kaboom server + observe tool + verify_fix + snapshot endpoint | Agent receives test failure, captures state, diagnoses selector change, applies fix, verifies fix passes | must |
 | IT-2 | CI webhook triggers skill execution | Webhook handler + Claude Code skill + Kaboom server | `ci/test-failure` webhook triggers self-heal skill, skill calls Kaboom tools in sequence | must |
 | IT-3 | API contract drift detection | observe(network) + analyze(api) + verify_fix | Agent detects `userName` -> `user_name` change across network response, proposes and verifies fix | must |
-| IT-4 | Audit trail records all AI commits | Self-healing fix + git commit + audit_trail | Every AI-generated commit is recorded in `configure({action: "audit_log"})` with commit SHA, diagnosis, and fix description | should |
+| IT-4 | Audit trail records all AI commits | Self-healing fix + git commit + audit_trail | Every AI-generated commit is recorded in `configure({what: "audit_log"})` with commit SHA, diagnosis, and fix description | should |
 | IT-5 | Pre-commit hook blocks credential commit | Self-healing fix + pre-commit hook | Fix that accidentally includes a credential is blocked by pre-commit hook, agent retries without credential | should |
 | IT-6 | Multi-test failure with single root cause | 5 test failures + error grouping + single fix | Agent groups failures, applies one fix, all 5 tests pass on re-run | should |
 | IT-7 | Human approval gate for security test changes | Security-related test fix + approval gate | Agent proposes fix but waits for human approval before committing | should |
@@ -171,13 +171,13 @@ last_verified_date: 2026-03-05
 | UAT-3 | Human intentionally breaks a test (change a CSS selector in app code) | Test now fails when run | Test failure confirmed | [ ] |
 | UAT-4 | AI re-runs failing test with Kaboom capture | Test output shows failure | AI receives test failure notification | [ ] |
 | UAT-5 | AI captures failure state: `{"tool":"observe","arguments":{"what":"errors"}}` | Console errors visible in browser DevTools | AI receives error list including the selector-not-found error | [ ] |
-| UAT-6 | AI observes DOM: `{"tool":"interact","arguments":{"action":"execute_js","script":"document.querySelector('.btn-submit')"}}` | Element found with new selector | AI identifies the new selector name | [ ] |
-| UAT-7 | AI starts verification: `{"tool":"configure","arguments":{"action":"verify_fix","verify_action":"start"}}` | Verification session started | Baseline captured for comparison | [ ] |
+| UAT-6 | AI observes DOM: `{"tool":"interact","arguments":{"what":"execute_js","script":"document.querySelector('.btn-submit')"}}` | Element found with new selector | AI identifies the new selector name | [ ] |
+| UAT-7 | AI starts verification: `{"tool":"configure","arguments":{"what":"verify_fix","verify_action":"start"}}` | Verification session started | Baseline captured for comparison | [ ] |
 | UAT-8 | AI applies fix (updates selector in test file) | Git diff shows selector change | Test file modified with correct new selector | [ ] |
 | UAT-9 | AI re-runs test to verify fix | Test output shows pass | Test passes with new selector | [ ] |
-| UAT-10 | AI completes verification: `{"tool":"configure","arguments":{"action":"verify_fix","verify_action":"compare"}}` | Comparison results shown | Verification shows pass (errors resolved) | [ ] |
+| UAT-10 | AI completes verification: `{"tool":"configure","arguments":{"what":"verify_fix","verify_action":"compare"}}` | Comparison results shown | Verification shows pass (errors resolved) | [ ] |
 | UAT-11 | AI commits fix with explanation | Git log shows new commit | Commit message explains the selector change and includes AI attribution | [ ] |
-| UAT-12 | Verify audit trail: `{"tool":"configure","arguments":{"action":"audit_log"}}` | Audit log entry visible | Entry shows tool calls made during diagnosis and fix | [ ] |
+| UAT-12 | Verify audit trail: `{"tool":"configure","arguments":{"what":"audit_log"}}` | Audit log entry visible | Entry shows tool calls made during diagnosis and fix | [ ] |
 
 ### Data Leak UAT Verification
 
