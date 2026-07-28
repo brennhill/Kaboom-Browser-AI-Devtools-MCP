@@ -140,6 +140,9 @@ independently synchronized `PerformanceStore`. Callers use
 the five former capture-level forwarding methods have been removed.
 Rate limiting and circuit health use the canonical breaker returned by
 `Capture.Circuit()`; the former four Capture forwarding methods are deleted.
+Lifecycle publishers and subscribers likewise use the independently
+synchronized observer returned by `Capture.Lifecycle()`; the Capture-level
+subscribe and emit forwarding methods are deleted.
 Extension connection, pilot, tracked-tab, CSP, security-mode, command-heartbeat,
 and test-boundary state now share the independently synchronized
 `ExtensionRuntime` returned by `Capture.Extension()`. Sync ingestion and every

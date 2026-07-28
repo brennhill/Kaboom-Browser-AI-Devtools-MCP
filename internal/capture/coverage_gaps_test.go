@@ -2,7 +2,7 @@
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
 // coverage_gaps_test.go — Targeted tests for uncovered capture paths (part 1).
-// Covers: SubscribeLifecycle, emitLifecycleEvent, SetServerVersion,
+// Covers: lifecycle observer access, SetServerVersion,
 // GetVersionMismatch, majorMinor, detectAndSetBinaryFormat,
 // redactExtensionLog edge cases, circuit breaker, and HTTP handlers.
 package capture
@@ -20,10 +20,10 @@ import (
 )
 
 // ============================================
-// SubscribeLifecycle / emitLifecycleEvent
+// Lifecycle observer
 // ============================================
 
-func TestSubscribeLifecycle(t *testing.T) {
+func TestLifecycleObserver(t *testing.T) {
 	t.Parallel()
 
 	c := NewCapture()
@@ -31,12 +31,12 @@ func TestSubscribeLifecycle(t *testing.T) {
 
 	var received lifecycle.Event
 	var receivedData map[string]any
-	c.SubscribeLifecycle(func(event lifecycle.Event, data map[string]any) {
+	c.Lifecycle().Subscribe(func(event lifecycle.Event, data map[string]any) {
 		received = event
 		receivedData = data
 	})
 
-	c.emitLifecycleEvent(lifecycle.EventCircuitOpened, map[string]any{"key": "value"})
+	c.Lifecycle().Emit(lifecycle.EventCircuitOpened, map[string]any{"key": "value"})
 
 	if received != lifecycle.EventCircuitOpened {
 		t.Errorf("callback event = %v, want circuit_opened", received)
@@ -46,14 +46,14 @@ func TestSubscribeLifecycle(t *testing.T) {
 	}
 }
 
-func TestEmitLifecycleEvent_NilCallback(t *testing.T) {
+func TestLifecycleObserverEmitWithoutSubscribers(t *testing.T) {
 	t.Parallel()
 
 	c := NewCapture()
 	defer c.Close()
 
 	// Should not panic when no callback is set
-	c.emitLifecycleEvent(lifecycle.EventUnknown, nil)
+	c.Lifecycle().Emit(lifecycle.EventUnknown, nil)
 }
 
 // ============================================

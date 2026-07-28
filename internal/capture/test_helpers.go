@@ -173,7 +173,7 @@ func (c *Capture) SimulateSyncForTest(extSessionID string, clientID string) {
 	state := c.extension.updateSyncConnectionState(req, clientID, now)
 
 	if !state.wasConnected || state.isReconnect {
-		c.emitLifecycleEvent(lifecycle.EventExtensionConnected, map[string]any{
+		c.Lifecycle().Emit(lifecycle.EventExtensionConnected, map[string]any{
 			"ext_session_id":     state.extSessionID,
 			"is_reconnect":       state.isReconnect,
 			"disconnect_seconds": state.timeSinceLastPoll.Seconds(),

@@ -218,7 +218,7 @@ func (c *Capture) HandleSync(w http.ResponseWriter, r *http.Request) {
 	if !state.wasConnected || state.isReconnect {
 		telemetry.BeaconEvent("extension_connect", map[string]string{"browser": extractBrowserName(r.Header.Get("User-Agent"))})
 		util.SafeGo(func() {
-			c.emitLifecycleEvent(lifecycle.EventExtensionConnected, map[string]any{
+			c.Lifecycle().Emit(lifecycle.EventExtensionConnected, map[string]any{
 				"ext_session_id":     state.extSessionID,
 				"is_reconnect":       state.isReconnect,
 				"disconnect_seconds": state.timeSinceLastPoll.Seconds(),
@@ -246,7 +246,7 @@ func (c *Capture) HandleSync(w http.ResponseWriter, r *http.Request) {
 		telemetry.AppError("extension_disconnect", nil)
 		c.queryDispatcher.ExpireAllPendingQueries("extension_disconnected")
 		util.SafeGo(func() {
-			c.emitLifecycleEvent(lifecycle.EventExtensionDisconnected, map[string]any{
+			c.Lifecycle().Emit(lifecycle.EventExtensionDisconnected, map[string]any{
 				"ext_session_id": state.extSessionID,
 				"client_id":      clientID,
 			})
@@ -274,7 +274,7 @@ func (c *Capture) HandleSync(w http.ResponseWriter, r *http.Request) {
 	}
 	if shouldEmitSyncSnapshot(req, state, len(commands)) {
 		util.SafeGo(func() {
-			c.emitLifecycleEvent(lifecycle.EventSyncSnapshot, map[string]any{
+			c.Lifecycle().Emit(lifecycle.EventSyncSnapshot, map[string]any{
 				"ext_session_id":       state.extSessionID,
 				"client_id":            clientID,
 				"pilot_enabled":        state.pilotEnabled,
@@ -541,7 +541,7 @@ func (c *Capture) reconcileInProgressCommandState(inProgress []SyncInProgress) {
 			"extension_lost_command: command acknowledged by extension but missing from in_progress heartbeats",
 		)
 		util.SafeGo(func() {
-			c.emitLifecycleEvent(lifecycle.EventCommandStateDesync, map[string]any{
+			c.Lifecycle().Emit(lifecycle.EventCommandStateDesync, map[string]any{
 				"correlation_id": correlationID,
 				"query_id":       queryID,
 				"reason":         "missing_in_progress_heartbeat",

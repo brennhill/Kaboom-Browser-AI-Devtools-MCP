@@ -142,6 +142,11 @@ func (c *Capture) Circuit() *circuit.CircuitBreaker {
 	return c.circuit
 }
 
+// Lifecycle returns the canonical independently synchronized lifecycle observer.
+func (c *Capture) Lifecycle() *lifecycle.Observer {
+	return c.lifecycle
+}
+
 // Extension returns the canonical independently synchronized extension runtime.
 func (c *Capture) Extension() *ExtensionRuntime {
 	return c.extension
@@ -169,21 +174,6 @@ func (c *Capture) SetFeaturesCallback(cb func(map[string]bool)) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.featuresCallback = cb
-}
-
-// SubscribeLifecycle registers a typed lifecycle event listener.
-// Thread-safe; the observer has its own lock independent of Capture.mu.
-func (c *Capture) SubscribeLifecycle(fn lifecycle.Listener) int {
-	return c.lifecycle.Subscribe(fn)
-}
-
-// emitLifecycleEvent dispatches a lifecycle event via the observer.
-//
-// Failure semantics:
-// - No listeners is a silent no-op.
-// - Individual listener panics are recovered (error isolation).
-func (c *Capture) emitLifecycleEvent(event lifecycle.Event, data map[string]any) {
-	c.lifecycle.Emit(event, data)
 }
 
 // SetServerVersion sets server version for compatibility checking.

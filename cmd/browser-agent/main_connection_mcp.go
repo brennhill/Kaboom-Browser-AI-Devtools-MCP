@@ -261,7 +261,7 @@ func initCapture(server *Server, port int) *capture.Capture {
 	cap := capture.NewCapture()
 	cap.SetClientRegistry(newSessionClientRegistryAdapter(clientreg.NewClientRegistry()))
 	cap.SetServerVersion(version)
-	cap.SubscribeLifecycle(func(event lifecycle.Event, data map[string]any) {
+	cap.Lifecycle().Subscribe(func(event lifecycle.Event, data map[string]any) {
 		entry := types.LogEntry{
 			"type":      "lifecycle",
 			"event":     event.String(),

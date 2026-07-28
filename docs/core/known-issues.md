@@ -72,7 +72,7 @@ the folder-gate numbers as evidence that it did.
 
 | | Current |
 | --- | --- |
-| `Capture` methods (composition and cross-owner orchestration) | 42 |
+| `Capture` methods (composition and cross-owner orchestration) | 41 |
 | `cmd/browser-agent` production source files (package `main`) | 10 |
 | `*ToolHandler` methods in those files | 87 |
 

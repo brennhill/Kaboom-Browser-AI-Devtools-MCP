@@ -36,6 +36,8 @@ func TestCaptureHasNoCompatibilityAliases(t *testing.T) {
 		"ParseLifecycleEvent =",
 		"SetLifecycleCallback(",
 		"AddLifecycleCallback(",
+		"func (c *Capture) SubscribeLifecycle(",
+		"func (c *Capture) emitLifecycleEvent(",
 		"QueryDispatcher =",
 		"QuerySnapshot =",
 		"NewQueryDispatcher =",

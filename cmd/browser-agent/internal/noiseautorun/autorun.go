@@ -110,7 +110,7 @@ func WireFirstConnect(store *capture.Capture, shutdown <-chan struct{}, detect f
 		return
 	}
 	var once sync.Once
-	store.SubscribeLifecycle(func(event lifecycle.Event, _ map[string]any) {
+	store.Lifecycle().Subscribe(func(event lifecycle.Event, _ map[string]any) {
 		if event != lifecycle.EventExtensionConnected {
 			return
 		}

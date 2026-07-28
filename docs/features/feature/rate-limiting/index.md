@@ -42,4 +42,7 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-Add concrete implementation and test links here as this feature evolves.
+The circuit breaker publishes state transitions through the canonical
+`lifecycle.Observer` owned by Capture. Runtime subscribers and capture
+publishers use `Capture.Lifecycle()` directly; Capture does not duplicate the
+observer's subscribe or emit API.
