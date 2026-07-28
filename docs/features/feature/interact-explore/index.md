@@ -224,6 +224,10 @@ Interact handlers and their dependency seams use `internal/mcp` and
 structured-error option aliases are prohibited so the canonical contract stays
 visible at every call site.
 
+List-interactive response indexing, metadata annotation, and truncation share a
+single JSON-content decoder. Tests cover prefixed payloads, malformed blocks,
+index construction, and truncation so response-shaping paths cannot drift.
+
 `navigate_and_document` now returns structured metadata for machine consumers:
 1. `metadata.page_context` (`url`, `title`, `tab_id`) while preserving the legacy text block.
 2. `metadata.workflow_trace` (`trace_id`, `status`, stage-level timing/status envelope).

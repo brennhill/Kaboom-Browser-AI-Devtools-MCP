@@ -229,6 +229,34 @@ func TestExtractElementList_NoElements(t *testing.T) {
 	}
 }
 
+func TestAnnotateListInteractiveIndexMetadata_PreservesPrefixAndSkipsMalformedBlocks(t *testing.T) {
+	t.Parallel()
+
+	result := mcp.MCPToolResult{Content: []mcp.MCPContentBlock{
+		{Type: "text", Text: "not JSON"},
+		{Type: "text", Text: "list_interactive results\n{\"elements\":[]}"},
+	}}
+	resultJSON, _ := json.Marshal(result)
+	resp := mcp.JSONRPCResponse{JSONRPC: "2.0", Result: resultJSON}
+
+	annotated := annotateListInteractiveIndexMetadata(resp, 7, "gen_7")
+	var got mcp.MCPToolResult
+	if err := json.Unmarshal(annotated.Result, &got); err != nil {
+		t.Fatalf("decode annotated result: %v", err)
+	}
+	const prefix = "list_interactive results\n"
+	if !strings.HasPrefix(got.Content[1].Text, prefix) {
+		t.Fatalf("result prefix changed: %q", got.Content[1].Text)
+	}
+	var data map[string]any
+	if err := json.Unmarshal([]byte(strings.TrimPrefix(got.Content[1].Text, prefix)), &data); err != nil {
+		t.Fatalf("decode annotated payload: %v", err)
+	}
+	if data["index_generation"] != "gen_7" || data["index_scope_tab_id"] != float64(7) {
+		t.Fatalf("metadata = %#v", data)
+	}
+}
+
 // ============================================
 // List Interactive Limit/Truncation Tests
 // ============================================

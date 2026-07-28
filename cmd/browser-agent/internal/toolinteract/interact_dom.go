@@ -379,110 +379,100 @@ func (h *InteractActionHandler) HandleListInteractive(req mcp.JSONRPCRequest, ar
 }
 
 func (h *InteractActionHandler) buildElementIndexFromResponse(clientID string, tabID int, generation string, resp mcp.JSONRPCResponse) string {
-	var result mcp.MCPToolResult
-	if err := json.Unmarshal(resp.Result, &result); err != nil || result.IsError {
+	block, ok := decodeFirstToolResultJSONBlock(resp)
+	if !ok {
+		return ""
+	}
+	elements := extractElementList(block.data)
+	if elements == nil {
 		return ""
 	}
 
-	for _, block := range result.Content {
-		idx := strings.Index(block.Text, "{")
-		if idx < 0 {
+	indexMap := make(map[int]string, len(elements))
+	for _, elem := range elements {
+		elemMap, ok := elem.(map[string]any)
+		if !ok {
+			continue
+		}
+		indexVal, _ := elemMap["index"].(float64)
+		selector, _ := elemMap["selector"].(string)
+		if selector != "" {
+			indexMap[int(indexVal)] = selector
+		}
+	}
+	if h.elementIndexRegistry == nil {
+		h.elementIndexRegistry = elemindex.New()
+	}
+	return h.elementIndexRegistry.Store(clientID, tabID, generation, indexMap)
+}
+
+type toolResultJSONBlock struct {
+	result       mcp.MCPToolResult
+	contentIndex int
+	prefix       string
+	data         map[string]any
+}
+
+func decodeFirstToolResultJSONBlock(resp mcp.JSONRPCResponse) (toolResultJSONBlock, bool) {
+	var result mcp.MCPToolResult
+	if err := json.Unmarshal(resp.Result, &result); err != nil || result.IsError {
+		return toolResultJSONBlock{}, false
+	}
+	for i, content := range result.Content {
+		jsonStart := strings.Index(content.Text, "{")
+		if jsonStart < 0 {
 			continue
 		}
 		var data map[string]any
-		if json.Unmarshal([]byte(block.Text[idx:]), &data) != nil {
-			continue
+		if json.Unmarshal([]byte(content.Text[jsonStart:]), &data) == nil {
+			return toolResultJSONBlock{
+				result:       result,
+				contentIndex: i,
+				prefix:       content.Text[:jsonStart],
+				data:         data,
+			}, true
 		}
-		elements := extractElementList(data)
-		if elements == nil {
-			continue
-		}
-
-		indexMap := make(map[int]string, len(elements))
-		for _, elem := range elements {
-			elemMap, ok := elem.(map[string]any)
-			if !ok {
-				continue
-			}
-			indexVal, _ := elemMap["index"].(float64)
-			selector, _ := elemMap["selector"].(string)
-			if selector != "" {
-				indexMap[int(indexVal)] = selector
-			}
-		}
-		if h.elementIndexRegistry == nil {
-			h.elementIndexRegistry = elemindex.New()
-		}
-		return h.elementIndexRegistry.Store(clientID, tabID, generation, indexMap)
 	}
-	return ""
+	return toolResultJSONBlock{}, false
+}
+
+func (b toolResultJSONBlock) replace(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
+	data, err := json.Marshal(b.data)
+	if err != nil {
+		return resp
+	}
+	b.result.Content[b.contentIndex].Text = b.prefix + string(data)
+	resp.Result = mcp.SafeMarshal(b.result, string(resp.Result))
+	return resp
 }
 
 func annotateListInteractiveIndexMetadata(resp mcp.JSONRPCResponse, tabID int, generation string) mcp.JSONRPCResponse {
 	if generation == "" {
 		return resp
 	}
-	var result mcp.MCPToolResult
-	if err := json.Unmarshal(resp.Result, &result); err != nil || result.IsError {
+	block, ok := decodeFirstToolResultJSONBlock(resp)
+	if !ok {
 		return resp
 	}
-	for i, block := range result.Content {
-		idx := strings.Index(block.Text, "{")
-		if idx < 0 {
-			continue
-		}
-		var data map[string]any
-		if json.Unmarshal([]byte(block.Text[idx:]), &data) != nil {
-			continue
-		}
-		data["index_generation"] = generation
-		data["index_scope_tab_id"] = tabID
-		newJSON, err := json.Marshal(data)
-		if err != nil {
-			continue
-		}
-		result.Content[i].Text = block.Text[:idx] + string(newJSON)
-		newResult, _ := json.Marshal(result)
-		resp.Result = newResult
-		return resp
-	}
-	return resp
+	block.data["index_generation"] = generation
+	block.data["index_scope_tab_id"] = tabID
+	return block.replace(resp)
 }
 
 func truncateListInteractiveResponse(resp mcp.JSONRPCResponse, limit int) mcp.JSONRPCResponse {
-	var result mcp.MCPToolResult
-	if err := json.Unmarshal(resp.Result, &result); err != nil || result.IsError {
+	block, ok := decodeFirstToolResultJSONBlock(resp)
+	if !ok {
+		return resp
+	}
+	elements := extractElementList(block.data)
+	if elements == nil || len(elements) <= limit {
 		return resp
 	}
 
-	for i, block := range result.Content {
-		idx := strings.Index(block.Text, "{")
-		if idx < 0 {
-			continue
-		}
-		var data map[string]any
-		if json.Unmarshal([]byte(block.Text[idx:]), &data) != nil {
-			continue
-		}
-		elements := extractElementList(data)
-		if elements == nil || len(elements) <= limit {
-			continue
-		}
-
-		total := len(elements)
-		setNestedElements(data, elements[:limit])
-		data["total"] = total
-		data["truncated"] = true
-		newJSON, err := json.Marshal(data)
-		if err != nil {
-			continue
-		}
-		result.Content[i].Text = block.Text[:idx] + string(newJSON)
-		newResult, _ := json.Marshal(result)
-		resp.Result = newResult
-		return resp
-	}
-	return resp
+	setNestedElements(block.data, elements[:limit])
+	block.data["total"] = len(elements)
+	block.data["truncated"] = true
+	return block.replace(resp)
 }
 
 func setNestedElements(data map[string]any, elements []any) {
