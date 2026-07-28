@@ -159,14 +159,14 @@ func (v *Capture) handleManageState(params map[string]any) (any, error) {
         if snapshotName == "" {
             return nil, errors.New("snapshot_name required for save")
         }
-        return v.sendPilotCommand("state_save", map[string]any{"name": snapshotName})
+        return v.sendPilotCommand("state_save", map[string]any{"snapshot_name": snapshotName})
 
     case "load":
         if snapshotName == "" {
             return nil, errors.New("snapshot_name required for load")
         }
         return v.sendPilotCommand("state_load", map[string]any{
-            "name":        snapshotName,
+            "snapshot_name": snapshotName,
             "include_url": includeUrl,
         })
 
@@ -177,7 +177,7 @@ func (v *Capture) handleManageState(params map[string]any) (any, error) {
         if snapshotName == "" {
             return nil, errors.New("snapshot_name required for delete")
         }
-        return v.sendPilotCommand("state_delete", map[string]any{"name": snapshotName})
+        return v.sendPilotCommand("state_delete", map[string]any{"snapshot_name": snapshotName})
 
     default:
         return nil, errors.New("action must be save|load|list|delete")

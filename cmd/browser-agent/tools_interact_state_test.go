@@ -53,64 +53,28 @@ func requireSessionStore(t *testing.T, env *interactHelpersTestEnv) {
 	}
 }
 
-func TestSaveState_LegacyNameParamSupported(t *testing.T) {
+func TestStateHandlers_RejectLegacyNameParam(t *testing.T) {
 	t.Parallel()
-	env := newInteractHelpersTestEnv(t)
-	requireSessionStore(t, env)
-
-	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), ClientID: "test-client"}
-	resp := env.handler.stateInteract().HandleStateSave(req, json.RawMessage(`{"name":"legacy_name_save"}`))
-	data := extractResponseData(t, resp)
-
-	if data["status"] != "saved" {
-		t.Fatalf("status = %v, want \"saved\"", data["status"])
-	}
-	if data["snapshot_name"] != "legacy_name_save" {
-		t.Fatalf("snapshot_name = %v, want \"legacy_name_save\"", data["snapshot_name"])
-	}
-}
-
-func TestLoadState_LegacyNameParamSupported(t *testing.T) {
-	t.Parallel()
-	env := newInteractHelpersTestEnv(t)
-	requireSessionStore(t, env)
-
-	stateData, _ := json.Marshal(map[string]any{"url": "https://example.com", "saved_at": time.Now().Format(time.RFC3339)})
-	if err := env.handler.sessionStoreImpl.Save(act.StateNamespace, "legacy_name_load", stateData); err != nil {
-		t.Fatalf("seed state: %v", err)
-	}
-
-	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), ClientID: "test-client"}
-	resp := env.handler.stateInteract().HandleStateLoad(req, json.RawMessage(`{"name":"legacy_name_load"}`))
-	data := extractResponseData(t, resp)
-
-	if data["status"] != "loaded" {
-		t.Fatalf("status = %v, want \"loaded\"", data["status"])
-	}
-	if data["snapshot_name"] != "legacy_name_load" {
-		t.Fatalf("snapshot_name = %v, want \"legacy_name_load\"", data["snapshot_name"])
-	}
-}
-
-func TestDeleteState_LegacyNameParamSupported(t *testing.T) {
-	t.Parallel()
-	env := newInteractHelpersTestEnv(t)
-	requireSessionStore(t, env)
-
-	stateData, _ := json.Marshal(map[string]any{"url": "https://example.com"})
-	if err := env.handler.sessionStoreImpl.Save(act.StateNamespace, "legacy_name_delete", stateData); err != nil {
-		t.Fatalf("seed state: %v", err)
-	}
-
-	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), ClientID: "test-client"}
-	resp := env.handler.stateInteract().HandleStateDelete(req, json.RawMessage(`{"name":"legacy_name_delete"}`))
-	data := extractResponseData(t, resp)
-
-	if data["status"] != "deleted" {
-		t.Fatalf("status = %v, want \"deleted\"", data["status"])
-	}
-	if data["snapshot_name"] != "legacy_name_delete" {
-		t.Fatalf("snapshot_name = %v, want \"legacy_name_delete\"", data["snapshot_name"])
+	for name, call := range map[string]func(*ToolHandler, mcp.JSONRPCRequest) mcp.JSONRPCResponse{
+		"save": func(h *ToolHandler, req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
+			return h.stateInteract().HandleStateSave(req, json.RawMessage(`{"name":"old"}`))
+		},
+		"load": func(h *ToolHandler, req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
+			return h.stateInteract().HandleStateLoad(req, json.RawMessage(`{"name":"old"}`))
+		},
+		"delete": func(h *ToolHandler, req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
+			return h.stateInteract().HandleStateDelete(req, json.RawMessage(`{"name":"old"}`))
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			env := newInteractHelpersTestEnv(t)
+			req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`), ClientID: "test-client"}
+			resp := call(env.handler, req)
+			if !strings.Contains(string(resp.Result), mcp.ErrMissingParam) {
+				t.Fatalf("expected %s, got %s", mcp.ErrMissingParam, string(resp.Result))
+			}
+		})
 	}
 }
 

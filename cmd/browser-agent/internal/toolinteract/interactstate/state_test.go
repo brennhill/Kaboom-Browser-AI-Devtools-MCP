@@ -106,17 +106,41 @@ func payload(t *testing.T, resp mcp.JSONRPCResponse) map[string]any {
 	return data
 }
 
-func TestHandleStateSave_AcceptsLegacyNameAlias(t *testing.T) {
+func TestHandleStateSave_RejectsNameAlias(t *testing.T) {
 	h, _ := newHandler(t)
-	got := payload(t, h.HandleStateSave(req(), json.RawMessage(`{"name":"legacy-snap"}`)))
-	if got["snapshot_name"] != "legacy-snap" {
-		t.Fatalf("snapshot_name = %v, want legacy-snap — the 'name' alias must still work", got["snapshot_name"])
+	resp := h.HandleStateSave(req(), json.RawMessage(`{"name":"legacy-snap"}`))
+	if !strings.Contains(string(resp.Result), mcp.ErrMissingParam) {
+		t.Fatalf("expected %s, got %s", mcp.ErrMissingParam, string(resp.Result))
 	}
 }
 
-func TestHandleStateSave_SnapshotNameWinsOverLegacyAlias(t *testing.T) {
+func TestStateSnapshotHandlers_RequireSnapshotName(t *testing.T) {
+	t.Parallel()
+	for name, call := range map[string]func(*Handler) mcp.JSONRPCResponse{
+		"save": func(h *Handler) mcp.JSONRPCResponse {
+			return h.HandleStateSave(req(), json.RawMessage(`{"name":"old"}`))
+		},
+		"load": func(h *Handler) mcp.JSONRPCResponse {
+			return h.HandleStateLoad(req(), json.RawMessage(`{"name":"old"}`))
+		},
+		"delete": func(h *Handler) mcp.JSONRPCResponse {
+			return h.HandleStateDelete(req(), json.RawMessage(`{"name":"old"}`))
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			h, _ := newHandler(t)
+			resp := call(h)
+			if !strings.Contains(string(resp.Result), mcp.ErrMissingParam) {
+				t.Fatalf("expected %s, got %s", mcp.ErrMissingParam, string(resp.Result))
+			}
+		})
+	}
+}
+
+func TestHandleStateSave_AcceptsSnapshotName(t *testing.T) {
 	h, _ := newHandler(t)
-	got := payload(t, h.HandleStateSave(req(), json.RawMessage(`{"snapshot_name":"new","name":"old"}`)))
+	got := payload(t, h.HandleStateSave(req(), json.RawMessage(`{"snapshot_name":"new"}`)))
 	if got["snapshot_name"] != "new" {
 		t.Fatalf("snapshot_name = %v, want new", got["snapshot_name"])
 	}

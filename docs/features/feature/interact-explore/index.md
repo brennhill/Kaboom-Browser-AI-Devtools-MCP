@@ -85,6 +85,7 @@ test_paths:
   - internal/schema/interact/schema_test.go
   - cmd/browser-agent/tools_interact_evidence_test.go
   - cmd/browser-agent/tools_interact_state_test.go
+  - cmd/browser-agent/internal/toolinteract/interactstate/state_test.go
   - extension/background/__tests__/dom-dispatch-structured.test.js
   - tests/extension/dom-primitives-branding.test.js
   - tests/extension/dom-action-family-routing.test.js
@@ -115,6 +116,8 @@ Page-world interaction tests import action, state, serialization, and message
 handler modules directly; the injected bundle is not an API surface.
 Screenshot capture belongs only to `observe({what:"screenshot"})`; the former
 `interact` screenshot compatibility action has been removed.
+State snapshot handlers accept only the canonical `snapshot_name` parameter;
+the former generic `name` request alias has been removed.
 
 ## TL;DR
 - Status: shipped

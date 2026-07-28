@@ -167,13 +167,12 @@ func (h *Handler) QueueStateNavigation(req mcp.JSONRPCRequest, stateData map[str
 func (h *Handler) HandleStateSave(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		SnapshotName string `json:"snapshot_name"`
-		Name         string `json:"name"` // backward-compatible alias
 	}
 	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
 
-	snapshotName := resolveStateSnapshotName(params.SnapshotName, params.Name)
+	snapshotName := params.SnapshotName
 	if resp, blocked := requireSnapshotName(req, snapshotName); blocked {
 		return resp
 	}
@@ -231,14 +230,13 @@ func (h *Handler) HandleStateSave(req mcp.JSONRPCRequest, args json.RawMessage) 
 func (h *Handler) HandleStateLoad(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		SnapshotName string `json:"snapshot_name"`
-		Name         string `json:"name"` // backward-compatible alias
 		IncludeURL   bool   `json:"include_url,omitempty"`
 	}
 	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
 
-	snapshotName := resolveStateSnapshotName(params.SnapshotName, params.Name)
+	snapshotName := params.SnapshotName
 	if resp, blocked := requireSnapshotName(req, snapshotName); blocked {
 		return resp
 	}
@@ -292,13 +290,6 @@ func (h *Handler) HandleStateLoad(req mcp.JSONRPCRequest, args json.RawMessage) 
 	return mcp.Succeed(req, "State loaded", responseData)
 }
 
-func resolveStateSnapshotName(snapshotName, legacyName string) string {
-	if snapshotName != "" {
-		return snapshotName
-	}
-	return legacyName
-}
-
 // requireSnapshotName rejects a request that named no snapshot, with the same
 // message for every action so the recovery hint stays consistent.
 func requireSnapshotName(req mcp.JSONRPCRequest, snapshotName string) (mcp.JSONRPCResponse, bool) {
@@ -307,7 +298,7 @@ func requireSnapshotName(req mcp.JSONRPCRequest, snapshotName string) (mcp.JSONR
 	}
 	return mcp.Fail(req, mcp.ErrMissingParam,
 		"Required parameter 'snapshot_name' is missing",
-		"Add the 'snapshot_name' parameter (legacy alias: 'name')",
+		"Add the 'snapshot_name' parameter",
 		mcp.WithParam("snapshot_name")), true
 }
 
@@ -356,13 +347,12 @@ func (h *Handler) buildStateEntry(key string) map[string]any {
 func (h *Handler) HandleStateDelete(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		SnapshotName string `json:"snapshot_name"`
-		Name         string `json:"name"` // backward-compatible alias
 	}
 	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
 	}
 
-	snapshotName := resolveStateSnapshotName(params.SnapshotName, params.Name)
+	snapshotName := params.SnapshotName
 	if resp, blocked := requireSnapshotName(req, snapshotName); blocked {
 		return resp
 	}
