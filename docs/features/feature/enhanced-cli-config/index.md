@@ -73,6 +73,7 @@ test_paths:
   - npm/kaboom-agentic-browser/lib/no-compatibility.test.js
   - tests/packaging/kaboom-packaging-branding.test.js
   - tests/extension/install-script-extension-source.test.js
+  - server/scripts/install.test.js
   - tests/extension/release-extension-zip.test.js
   - tests/extension/release-extension-crx-fallback.test.js
   - tests/extension/manifest-startup-integrity.test.js
@@ -125,6 +126,8 @@ OpenAPI contract.
   retain migration branches for historical server names, skill markers,
   process names, config keys, config paths, or PID files.
 - Server postinstall now validates `kaboom-browser-devtools` on `/health` reuse checks and points manual extension loading at `KABOOM_EXTENSION_DIR` / `~/KaboomAgenticDevtoolExtension`.
+- Server postinstall process discovery and health gating use only canonical
+  Kaboom binary and service identities.
 - Install now also fixes the Claude Code `claude mcp add-json` invocation (JSON passed as a positional arg, not stdin) and adds **Codex CLI** as a supported client (`~/.codex/config.toml`, TOML; honors `$CODEX_HOME`).
 - Daemon setup diagnostics use one canonical CLI entry point, `--doctor`; the duplicate `--check` facade is rejected.
 - Runtime help uses one canonical configure mode, `tutorial`; the duplicate `examples` mode is rejected.

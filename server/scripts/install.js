@@ -2,7 +2,7 @@
 
 /**
  * Postinstall script to download the correct binary for the platform
- * Also handles cleanup of old Kaboom and legacy processes for clean upgrades
+ * Also handles cleanup of installed Kaboom processes for clean upgrades
  */
 
 const https = require('https')
@@ -18,14 +18,13 @@ const GITHUB_REPO = 'brennhill/Kaboom-Browser-AI-Devtools-MCP'
 const BINARY_NAME = 'kaboom-agentic-browser'
 const EXPECTED_SERVICE_NAME = 'kaboom-browser-devtools'
 
-// Anchored to full daemon binary names (current + legacy brands). Never use
-// bare substrings like "gasoline" — they match unrelated command lines.
+// Anchored to full daemon binary names. Never use bare name substrings because
+// they match unrelated command lines.
 const DAEMON_NAME_PATTERN =
-  '(kaboom|gasoline|strum)-(agentic-browser|agentic-devtools|browser-devtools|hooks|mcp)|\\.kaboom/bin/'
+  'kaboom-(agentic-browser|agentic-devtools|browser-devtools|hooks|mcp)|\\.kaboom/bin/'
 
-// Accepted /health identities for the kill path: current daemon plus legacy brand eras.
 const KABOOM_SERVICE_IDENTITY_RE =
-  /^(kaboom|gasoline|strum)(-browser-devtools|-agentic-browser|-agentic-devtools|-mcp)?$/
+  /^kaboom(-browser-devtools|-agentic-browser|-agentic-devtools|-mcp)?$/
 
 function printPanel(title, lines = []) {
   const border = '+----------------------------------------------------------+'
@@ -60,7 +59,7 @@ function printBanner() {
 }
 
 /**
- * Check whether a /health payload identifies a Kaboom (or legacy-brand) daemon.
+ * Check whether a /health payload identifies a Kaboom daemon.
  * Used to gate by-port kills so unrelated dev servers are never killed.
  */
 function isKaboomServiceIdentity(health) {
@@ -70,7 +69,7 @@ function isKaboomServiceIdentity(health) {
 }
 
 /**
- * Kill all running Kaboom and legacy processes to ensure clean upgrade.
+ * Kill all running Kaboom processes to ensure clean upgrade.
  * deps: { spawnSync, readHealth } injection seams for tests.
  */
 // #lizard forgives
@@ -79,23 +78,21 @@ async function cleanupOldProcesses(deps = {}) {
   const fetchHealth = deps.readHealth || readHealth
 
   if (process.platform === 'win32') {
-    // Windows: Find and kill Kaboom and legacy processes
+    // Windows: Find and kill Kaboom processes.
     try {
-      for (const imagePattern of ['kaboom*', 'gasoline*', 'browser-agent*']) {
-        const result = exec('tasklist', ['/FI', `IMAGENAME eq ${imagePattern}`, '/FO', 'CSV'], {
-          encoding: 'utf8',
-          windowsHide: true
-        })
-        if (result.stdout) {
-          const lines = result.stdout.split('\n').slice(1) // Skip header
-          for (const line of lines) {
-            const match = line.match(/"([^"]+)","(\d+)"/)
-            if (match) {
-              const imageName = match[1]
-              const pid = match[2]
-              exec('taskkill', ['/F', '/PID', pid], { windowsHide: true })
-              console.log(`Killed old ${imageName} process (PID: ${pid})`)
-            }
+      const result = exec('tasklist', ['/FI', 'IMAGENAME eq kaboom-agentic-browser*.exe', '/FO', 'CSV'], {
+        encoding: 'utf8',
+        windowsHide: true
+      })
+      if (result.stdout) {
+        const lines = result.stdout.split('\n').slice(1) // Skip header
+        for (const line of lines) {
+          const match = line.match(/"([^"]+)","(\d+)"/)
+          if (match) {
+            const imageName = match[1]
+            const pid = match[2]
+            exec('taskkill', ['/F', '/PID', pid], { windowsHide: true })
+            console.log(`Killed installed ${imageName} process (PID: ${pid})`)
           }
         }
       }
@@ -103,7 +100,7 @@ async function cleanupOldProcesses(deps = {}) {
       // Ignore errors - process might not exist
     }
   } else {
-    // Unix: Find and kill Kaboom and legacy processes by full binary name only.
+    // Unix: Find and kill Kaboom processes by full binary name only.
     try {
       // Method 1: pkill anchored to full daemon binary names (never bare substrings).
       exec('pkill', ['-f', DAEMON_NAME_PATTERN], {
@@ -468,8 +465,8 @@ async function main() {
   const binaryPath = path.join(binDir, binaryName)
   const stagedBinaryPath = path.join(binDir, `${binaryName}.tmp-${Date.now()}`)
 
-  // Clean up any old Kaboom and legacy processes before installing new version
-  console.log('Cleaning up old Kaboom and legacy processes...')
+  // Clean up the installed Kaboom process before installing a new version.
+  console.log('Cleaning up installed Kaboom processes...')
   await cleanupOldProcesses()
 
   // Ensure bin directory exists
@@ -524,7 +521,7 @@ async function main() {
         console.error('')
         console.error('OPTION 1: Build from source (requires Go 1.21+)')
         console.error('  git clone https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP.git')
-        console.error('  cd gasoline')
+        console.error('  cd Kaboom-Browser-AI-Devtools-MCP')
         console.error('  go build -o /usr/local/bin/kaboom-agentic-browser ./cmd/browser-agent')
         console.error('')
         console.error('OPTION 2: Run directly with Go')
