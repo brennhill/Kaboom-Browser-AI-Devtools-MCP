@@ -21,11 +21,11 @@ func (a *dataProviderAdapter) GetLogEntries() []types.LogEntry {
 }
 
 func (a *dataProviderAdapter) GetAllEnhancedActions() []types.EnhancedAction {
-	return a.deps.GetCapture().GetAllEnhancedActions()
+	return a.deps.GetCapture().Telemetry().GetAllEnhancedActions()
 }
 
 func (a *dataProviderAdapter) GetNetworkBodies() []types.NetworkBody {
-	return a.deps.GetCapture().GetNetworkBodies()
+	return a.deps.GetCapture().Telemetry().GetNetworkBodies()
 }
 
 // dataProvider returns a testgen.DataProvider backed by this test-generation handler.

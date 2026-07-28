@@ -67,7 +67,7 @@ func (s *scenario) loadConsoleData(t *testing.T) {
 // loadNetworkData populates capture with network waterfall and body entries.
 func (s *scenario) loadNetworkData(t *testing.T) {
 	t.Helper()
-	s.capture.NetworkWaterfall().Add([]types.NetworkWaterfallEntry{
+	s.capture.Telemetry().NetworkWaterfall().Add([]types.NetworkWaterfallEntry{
 		{
 			URL: "https://api.example.com/users", Name: "https://api.example.com/users",
 			InitiatorType: "fetch", Duration: 150.5, StartTime: 1000.0,
@@ -77,7 +77,7 @@ func (s *scenario) loadNetworkData(t *testing.T) {
 		},
 	}, "https://app.example.com/dashboard")
 
-	s.capture.AddNetworkBodiesForTest([]types.NetworkBody{
+	s.capture.Telemetry().AddNetworkBodiesForTest([]types.NetworkBody{
 		{
 			URL: "https://api.example.com/users", Method: "GET", Status: 200,
 			ResponseBody: `{"users":[{"id":1,"name":"Alice"}]}`,

@@ -62,23 +62,23 @@ func TestCaptureTestHelpersAndTTL(t *testing.T) {
 
 	c := NewCapture()
 
-	c.AddNetworkBodiesForTest([]types.NetworkBody{
+	c.Telemetry().AddNetworkBodiesForTest([]types.NetworkBody{
 		{URL: "https://example.test/a", Status: 200},
 		{URL: "https://example.test/b", Status: 500},
 	})
-	c.AddWebSocketEventsForTest([]types.WebSocketEvent{
+	c.Telemetry().AddWebSocketEventsForTest([]types.WebSocketEvent{
 		{Event: "open", URL: "wss://example.test"},
 	})
-	c.AddEnhancedActionsForTest([]types.EnhancedAction{
+	c.Telemetry().AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "click", URL: "https://example.test", Timestamp: 123},
 	})
-	if got := c.GetNetworkTotalAdded(); got != 2 {
+	if got := c.Telemetry().GetNetworkTotalAdded(); got != 2 {
 		t.Fatalf("GetNetworkTotalAdded() = %d, want 2", got)
 	}
-	if got := c.GetWebSocketTotalAdded(); got != 1 {
+	if got := c.Telemetry().GetWebSocketTotalAdded(); got != 1 {
 		t.Fatalf("GetWebSocketTotalAdded() = %d, want 1", got)
 	}
-	if got := c.GetActionTotalAdded(); got != 1 {
+	if got := c.Telemetry().GetActionTotalAdded(); got != 1 {
 		t.Fatalf("GetActionTotalAdded() = %d, want 1", got)
 	}
 

@@ -60,7 +60,7 @@ func TestToolGenerateCSP_WithNetworkBodies(t *testing.T) {
 	t.Parallel()
 	env := newObserveTestEnv(t)
 
-	env.capture.AddNetworkBodiesForTest([]types.NetworkBody{
+	env.capture.Telemetry().AddNetworkBodiesForTest([]types.NetworkBody{
 		{URL: "https://cdn.example.com/app.js", ContentType: "application/javascript", Method: "GET", Status: 200},
 		{URL: "https://cdn.example.com/style.css", ContentType: "text/css", Method: "GET", Status: 200},
 		{URL: "https://api.example.com/data", ContentType: "application/json", Method: "GET", Status: 200},

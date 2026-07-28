@@ -23,11 +23,9 @@ type Logs interface {
 
 // Capture is the snapshot/test-boundary surface used by CI endpoints.
 type Capture interface {
-	GetAllWebSocketEvents() []types.WebSocketEvent
-	GetNetworkBodies() []types.NetworkBody
-	GetAllEnhancedActions() []types.EnhancedAction
 	ClearAll() int
 	Extension() *capture.ExtensionRuntime
+	Telemetry() *capture.TelemetryStore
 }
 
 // Snapshot returns the GET /snapshot handler.
@@ -51,8 +49,8 @@ func Snapshot(logs Logs, captured Capture) http.HandlerFunc {
 		if !sinceTime.IsZero() {
 			entries = FilterLogsSince(entries, sinceTime)
 		}
-		wsEvents := captured.GetAllWebSocketEvents()
-		networkBodies := captured.GetNetworkBodies()
+		wsEvents := captured.Telemetry().GetAllWebSocketEvents()
+		networkBodies := captured.Telemetry().GetNetworkBodies()
 		testID := r.URL.Query().Get("test_id")
 		if testID == "" {
 			activeIDs := captured.Extension().GetActiveTestIDs()
@@ -66,7 +64,7 @@ func Snapshot(logs Logs, captured Capture) http.HandlerFunc {
 			Logs:            entries,
 			WebSocket:       wsEvents,
 			NetworkBodies:   networkBodies,
-			EnhancedActions: captured.GetAllEnhancedActions(),
+			EnhancedActions: captured.Telemetry().GetAllEnhancedActions(),
 			Stats:           ComputeSnapshotStats(entries, wsEvents, networkBodies),
 		})
 	}

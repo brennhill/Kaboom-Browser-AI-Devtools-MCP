@@ -15,9 +15,8 @@ import (
 )
 
 type RuntimeCaptureReader interface {
-	GetNetworkBodies() []types.NetworkBody
-	GetWebSocketStatus(types.WebSocketStatusFilter) types.WebSocketStatusResponse
 	Extension() *capture.ExtensionRuntime
+	Telemetry() *capture.TelemetryStore
 }
 
 type runtimeStateReader struct {
@@ -98,7 +97,7 @@ func (r *runtimeStateReader) GetNetworkRequests() []types.SnapshotNetworkRequest
 	if r.capture == nil {
 		return []types.SnapshotNetworkRequest{}
 	}
-	bodies := r.capture.GetNetworkBodies()
+	bodies := r.capture.Telemetry().GetNetworkBodies()
 	out := make([]types.SnapshotNetworkRequest, 0, len(bodies))
 	for _, body := range bodies {
 		out = append(out, types.SnapshotNetworkRequest{
@@ -117,7 +116,7 @@ func (r *runtimeStateReader) GetWSConnections() []types.SnapshotWSConnection {
 	if r.capture == nil {
 		return []types.SnapshotWSConnection{}
 	}
-	status := r.capture.GetWebSocketStatus(types.WebSocketStatusFilter{})
+	status := r.capture.Telemetry().GetWebSocketStatus(types.WebSocketStatusFilter{})
 	out := make([]types.SnapshotWSConnection, 0, len(status.Connections))
 	for _, conn := range status.Connections {
 		out = append(out, types.SnapshotWSConnection{
@@ -166,7 +165,7 @@ func (r *runtimeStateReader) GetCurrentPageURL() string {
 	if snap := r.GetPerformance(); snap != nil && snap.URL != "" {
 		return snap.URL
 	}
-	bodies := r.capture.GetNetworkBodies()
+	bodies := r.capture.Telemetry().GetNetworkBodies()
 	if len(bodies) > 0 {
 		return bodies[len(bodies)-1].URL
 	}

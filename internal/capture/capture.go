@@ -9,9 +9,7 @@ package capture
 
 import (
 	"sync"
-	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/wsconn"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/circuit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -40,28 +38,17 @@ import (
 type Capture struct {
 	mu sync.RWMutex
 
-	// TTL for read-time filtering (0 = unlimited, no filtering applied).
-	// Applied during reads: events older than TTL are skipped.
-	TTL time.Duration
-
 	// ============================================
-	// Unified Event Buffer Store (ring buffers)
+	// Unified Telemetry Store (Own Lock)
 	// ============================================
 
-	buffers BufferStore // ws/network/action buffers + counters + memory totals (protected by Capture.mu).
+	telemetry *TelemetryStore // Event buffers, WebSocket connections, and navigation callback.
 
 	// ============================================
 	// Timings and Performance Data
 	// ============================================
 
-	networkWaterfall *NetworkWaterfallStore // Bounded performance-resource timings. Own lock and retention.
-	extensionLogs    *ExtensionLogStore     // Bounded extension logs. Own lock, redaction, and retention.
-
-	// ============================================
-	// WebSocket Connection Tracking
-	// ============================================
-
-	wsConnections wsconn.Tracker // Active + closed WS connections, LRU eviction order. Protected by parent mu (no separate lock).
+	extensionLogs *ExtensionLogStore // Bounded extension logs. Own lock, redaction, and retention.
 
 	// ============================================
 	// Query Dispatch (Own Locks)
@@ -106,9 +93,8 @@ type Capture struct {
 	// Lifecycle Event Callbacks
 	// ============================================
 
-	lifecycle          *lifecycle.Observer   // Typed event bus for lifecycle events (circuit breaker, extension state, buffer overflow). Has own lock independent of Capture.mu.
-	navigationCallback func()                // Optional callback fired after a navigation action is ingested (called outside lock)
-	featuresCallback   func(map[string]bool) // Optional callback fired when extension reports feature usage (called outside lock)
+	lifecycle        *lifecycle.Observer   // Typed event bus for lifecycle events (circuit breaker, extension state, buffer overflow). Has own lock independent of Capture.mu.
+	featuresCallback func(map[string]bool) // Optional callback fired when extension reports feature usage (called outside lock)
 
 	// ============================================
 	// Version Information
@@ -125,10 +111,7 @@ type Capture struct {
 func NewCapture() *Capture {
 	logRedactor := redaction.NewRedactionEngine("")
 	c := &Capture{
-		buffers:          newBufferStore(),
-		networkWaterfall: newNetworkWaterfallStore(DefaultNetworkWaterfallCapacity),
 		extensionLogs:    newExtensionLogStore(logRedactor.Redact),
-		wsConnections:    wsconn.NewTracker(),
 		extension:        newExtensionRuntime(),
 		perf:             newPerformanceStore(),
 		diagnosticLogs:   newDiagnosticLogStore(logRedactor.Redact),
@@ -137,6 +120,7 @@ func NewCapture() *Capture {
 	}
 	c.queryDispatcher = queries.NewQueryDispatcher()
 	c.circuit = circuit.NewCircuitBreaker(c.lifecycle.Emit)
+	c.telemetry = newTelemetryStore(c.extension)
 
 	// Note: clientRegistry is initialized by capture.New() in capture package
 	// to avoid circular import (those packages import capture for types.NetworkBody, types.WebSocketEvent, etc.)
@@ -163,6 +147,11 @@ func (c *Capture) Extension() *ExtensionRuntime {
 	return c.extension
 }
 
+// Telemetry returns the canonical independently synchronized event store.
+func (c *Capture) Telemetry() *TelemetryStore {
+	return c.telemetry
+}
+
 // Close shuts down capture-owned background goroutines.
 //
 // Failure semantics:
@@ -172,16 +161,6 @@ func (c *Capture) Close() {
 	if c.queryDispatcher != nil {
 		c.queryDispatcher.Close()
 	}
-}
-
-// SetNavigationCallback sets a callback function that fires after a navigation
-// action is ingested. The callback is invoked outside of the Capture lock in a
-// separate goroutine (via util.SafeGo) so it is safe to call Capture methods.
-// Used for automatic noise detection after page navigations.
-func (c *Capture) SetNavigationCallback(cb func()) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.navigationCallback = cb
 }
 
 // SetFeaturesCallback sets a callback for extension feature usage reports.

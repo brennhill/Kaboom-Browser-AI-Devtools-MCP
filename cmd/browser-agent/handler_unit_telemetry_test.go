@@ -51,12 +51,12 @@ func TestMCPHandler_PassiveTelemetrySummaryDeltas(t *testing.T) {
 
 	// Seed baseline data before first call; first response should still report zero deltas.
 	srv.logs.AddEntries([]types.LogEntry{{"level": "error", "message": "baseline error"}})
-	cap.AddNetworkBodies([]types.NetworkBody{
+	cap.Telemetry().AddNetworkBodies([]types.NetworkBody{
 		{Method: "GET", URL: "https://api.test/ok", Status: 200},
 		{Method: "GET", URL: "https://api.test/fail", Status: 500},
 	})
-	cap.AddWebSocketEvents([]types.WebSocketEvent{{Event: "message", ID: "ws-1"}})
-	cap.AddEnhancedActions([]types.EnhancedAction{{Type: "click", Timestamp: time.Now().UnixMilli()}})
+	cap.Telemetry().AddWebSocketEvents([]types.WebSocketEvent{{Event: "message", ID: "ws-1"}})
+	cap.Telemetry().AddEnhancedActions([]types.EnhancedAction{{Type: "click", Timestamp: time.Now().UnixMilli()}})
 
 	h := NewMCPHandler(srv, "v-test")
 	h.SetToolHandler(&fakeToolHandlerForMCP{
@@ -96,15 +96,15 @@ func TestMCPHandler_PassiveTelemetrySummaryDeltas(t *testing.T) {
 		{"level": "error", "message": "TypeError"},
 		{"level": "info", "message": "noise"},
 	})
-	cap.AddNetworkBodies([]types.NetworkBody{
+	cap.Telemetry().AddNetworkBodies([]types.NetworkBody{
 		{Method: "GET", URL: "https://api.test/ok2", Status: 204},
 		{Method: "GET", URL: "https://api.test/fail2", Status: 503},
 	})
-	cap.AddWebSocketEvents([]types.WebSocketEvent{
+	cap.Telemetry().AddWebSocketEvents([]types.WebSocketEvent{
 		{Event: "message", ID: "ws-2"},
 		{Event: "message", ID: "ws-3"},
 	})
-	cap.AddEnhancedActions([]types.EnhancedAction{{Type: "type", Timestamp: time.Now().UnixMilli()}})
+	cap.Telemetry().AddEnhancedActions([]types.EnhancedAction{{Type: "type", Timestamp: time.Now().UnixMilli()}})
 
 	req.ID = 2
 	resp2 := h.HandleRequest(req)

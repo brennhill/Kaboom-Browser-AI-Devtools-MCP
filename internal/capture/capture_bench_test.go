@@ -26,7 +26,7 @@ func BenchmarkAddWebSocketEvents(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		cap.AddWebSocketEvents(events)
+		cap.Telemetry().AddWebSocketEvents(events)
 	}
 }
 
@@ -49,7 +49,7 @@ func BenchmarkAddNetworkBodies(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		cap.AddNetworkBodies(bodies)
+		cap.Telemetry().AddNetworkBodies(bodies)
 	}
 }
 
@@ -69,7 +69,7 @@ func BenchmarkAddEnhancedActions(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		cap.AddEnhancedActions(actions)
+		cap.Telemetry().AddEnhancedActions(actions)
 	}
 }
 
@@ -79,7 +79,7 @@ func BenchmarkMemoryEnforcement(b *testing.B) {
 
 	// Pre-populate with data near soft limit
 	for i := 0; i < 1000; i++ {
-		cap.AddWebSocketEvents([]types.WebSocketEvent{
+		cap.Telemetry().AddWebSocketEvents([]types.WebSocketEvent{
 			{
 				Timestamp: time.Now().Format(time.RFC3339Nano),
 				ID:        "ws_bench",
@@ -98,7 +98,7 @@ func BenchmarkMemoryEnforcement(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		cap.AddWebSocketEvents(event)
+		cap.Telemetry().AddWebSocketEvents(event)
 	}
 }
 
@@ -132,11 +132,11 @@ func BenchmarkConcurrentCapture(b *testing.B) {
 		for pb.Next() {
 			switch i % 3 {
 			case 0:
-				cap.AddWebSocketEvents(wsEvent)
+				cap.Telemetry().AddWebSocketEvents(wsEvent)
 			case 1:
-				cap.AddNetworkBodies(networkBody)
+				cap.Telemetry().AddNetworkBodies(networkBody)
 			case 2:
-				cap.AddEnhancedActions(action)
+				cap.Telemetry().AddEnhancedActions(action)
 			}
 			i++
 		}

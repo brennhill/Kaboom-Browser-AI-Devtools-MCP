@@ -174,7 +174,7 @@ func TestToolAnalyzeHistory_WithNavigations(t *testing.T) {
 	t.Parallel()
 	env := newObserveTestEnv(t)
 
-	env.capture.AddEnhancedActionsForTest([]types.EnhancedAction{
+	env.capture.Telemetry().AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "navigate", Timestamp: 1704067201000, ToURL: "https://example.com/page1", FromURL: "https://example.com"},
 		{Type: "click", Timestamp: 1704067202000, URL: "https://example.com/page2"},
 		{Type: "navigate", Timestamp: 1704067203000, ToURL: "https://example.com/page1"}, // Duplicate URL — should be deduped

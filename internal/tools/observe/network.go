@@ -31,7 +31,7 @@ func GetNetworkBodies(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 	mcp.LenientUnmarshal(args, &params)
 	params.Limit = clampLimit(params.Limit, 100)
 
-	allBodies := deps.GetCapture().GetNetworkBodies()
+	allBodies := deps.GetCapture().Telemetry().GetNetworkBodies()
 	var bodyFilterErr error
 	filtered := buffers.ReverseFilterLimit(allBodies, func(b types.NetworkBody) bool {
 		if bodyFilterErr != nil {
@@ -78,7 +78,7 @@ func GetNetworkBodies(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 		newestTS, _ = time.Parse(time.RFC3339, allBodies[len(allBodies)-1].Timestamp)
 	}
 
-	waterfallCount := len(deps.GetCapture().NetworkWaterfall().Entries())
+	waterfallCount := len(deps.GetCapture().Telemetry().NetworkWaterfall().Entries())
 	responseMeta := BuildResponseMetadata(deps.GetCapture(), newestTS)
 	hintFilters := hints.NetworkBodiesFilters{
 		URL:       params.URL,
@@ -127,7 +127,7 @@ func GetWSEvents(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JS
 
 	params.Limit = clampLimit(params.Limit, 100)
 
-	allEvents := deps.GetCapture().GetAllWebSocketEvents()
+	allEvents := deps.GetCapture().Telemetry().GetAllWebSocketEvents()
 	filtered := buffers.ReverseFilterLimit(allEvents, func(evt types.WebSocketEvent) bool {
 		if params.URL != "" && !ContainsIgnoreCase(evt.URL, params.URL) {
 			return false
@@ -216,7 +216,7 @@ func GetNetworkWaterfall(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage
 
 func refreshWaterfallIfStale(deps Deps) []types.NetworkWaterfallEntry {
 	cap := deps.GetCapture()
-	allEntries := cap.NetworkWaterfall().Entries()
+	allEntries := cap.Telemetry().NetworkWaterfall().Entries()
 	if len(allEntries) > 0 && time.Since(allEntries[len(allEntries)-1].Timestamp) < 1*time.Second {
 		return allEntries
 	}
@@ -243,8 +243,8 @@ func refreshWaterfallIfStale(deps Deps) []types.NetworkWaterfallEntry {
 		PageURL string                        `json:"page_url"`
 	}
 	if err := json.Unmarshal(result, &waterfallResult); err == nil && len(waterfallResult.Entries) > 0 {
-		cap.NetworkWaterfall().Add(waterfallResult.Entries, waterfallResult.PageURL)
-		return cap.NetworkWaterfall().Entries()
+		cap.Telemetry().NetworkWaterfall().Add(waterfallResult.Entries, waterfallResult.PageURL)
+		return cap.Telemetry().NetworkWaterfall().Entries()
 	}
 	return allEntries
 }
@@ -313,7 +313,7 @@ func GetWSStatus(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JS
 		URLFilter:    arguments.URL,
 		ConnectionID: arguments.ConnectionID,
 	}
-	status := deps.GetCapture().GetWebSocketStatus(filter)
+	status := deps.GetCapture().Telemetry().GetWebSocketStatus(filter)
 	metadata := BuildResponseMetadata(deps.GetCapture(), time.Now())
 
 	if arguments.Summary {

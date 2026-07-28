@@ -88,14 +88,14 @@ func TestCoverageBoost_RateLimitHealthHandler(t *testing.T) {
 func TestCoverageBoost_PublicMemoryAndBufferGetters(t *testing.T) {
 	c := newCoverageCapture(t)
 
-	c.AddWebSocketEvents([]types.WebSocketEvent{{
+	c.Telemetry().AddWebSocketEvents([]types.WebSocketEvent{{
 		ID:        "conn-1",
 		Event:     "message",
 		Direction: "incoming",
 		Data:      "hello",
 		Timestamp: time.Now().Format(time.RFC3339Nano),
 	}})
-	c.AddNetworkBodies([]types.NetworkBody{{
+	c.Telemetry().AddNetworkBodies([]types.NetworkBody{{
 		Method:       "POST",
 		URL:          "https://example.test/api",
 		Status:       200,
@@ -103,13 +103,13 @@ func TestCoverageBoost_PublicMemoryAndBufferGetters(t *testing.T) {
 		ResponseBody: "def",
 	}})
 
-	if got := c.buffers.calcWSMemory(); got <= 0 {
+	if got := c.telemetry.buffers.calcWSMemory(); got <= 0 {
 		t.Fatalf("GetWebSocketBufferMemory() = %d, want > 0", got)
 	}
-	if got := c.buffers.calcNBMemory(); got <= 0 {
+	if got := c.telemetry.buffers.calcNBMemory(); got <= 0 {
 		t.Fatalf("GetNetworkBodiesBufferMemory() = %d, want > 0", got)
 	}
-	if got := len(c.GetNetworkBodies()); got == 0 {
+	if got := len(c.Telemetry().GetNetworkBodies()); got == 0 {
 		t.Fatal("GetNetworkBodyCount() = 0, want > 0")
 	}
 }
@@ -117,21 +117,21 @@ func TestCoverageBoost_PublicMemoryAndBufferGetters(t *testing.T) {
 func TestCoverageBoost_EnhancedActionsBranches(t *testing.T) {
 	c := newCoverageCapture(t)
 
-	c.mu.Lock()
+	c.telemetry.mu.Lock()
 	now := time.Now()
-	c.buffers.enhancedActions = []enhancedActionEntry{
+	c.telemetry.buffers.enhancedActions = []enhancedActionEntry{
 		{Action: types.EnhancedAction{Type: "click"}, AddedAt: now},
 		{Action: types.EnhancedAction{Type: "click"}, AddedAt: now},
 	}
 	c.extension.state.activeTestIDs["test-1"] = true
-	c.mu.Unlock()
+	c.telemetry.mu.Unlock()
 
-	c.AddEnhancedActions([]types.EnhancedAction{{Type: "type", Value: "hello"}})
-	if got := len(c.GetAllEnhancedActions()); got != 3 {
+	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{{Type: "type", Value: "hello"}})
+	if got := len(c.Telemetry().GetAllEnhancedActions()); got != 3 {
 		t.Fatalf("GetEnhancedActionCount() = %d, want 3 after add", got)
 	}
 
-	actions := c.GetAllEnhancedActions()
+	actions := c.Telemetry().GetAllEnhancedActions()
 	if len(actions) == 0 {
 		t.Fatal("GetAllEnhancedActions() returned empty actions")
 	}
@@ -144,8 +144,8 @@ func TestCoverageBoost_EnhancedActionsBranches(t *testing.T) {
 	for i := range many {
 		many[i] = types.EnhancedAction{Type: "click"}
 	}
-	c.AddEnhancedActions(many)
-	if got := len(c.GetAllEnhancedActions()); got != MaxEnhancedActions {
+	c.Telemetry().AddEnhancedActions(many)
+	if got := len(c.Telemetry().GetAllEnhancedActions()); got != MaxEnhancedActions {
 		t.Fatalf("GetEnhancedActionCount() after rotation = %d, want %d", got, MaxEnhancedActions)
 	}
 }
@@ -154,24 +154,24 @@ func TestCoverageBoost_NetworkBodiesBranches(t *testing.T) {
 	c := newCoverageCapture(t)
 
 	now := time.Now()
-	c.mu.Lock()
-	c.buffers.networkBodies = []networkBodyEntry{
+	c.telemetry.mu.Lock()
+	c.telemetry.buffers.networkBodies = []networkBodyEntry{
 		{Body: types.NetworkBody{Method: "GET", URL: "https://a.example", RequestBody: "a", ResponseBody: "a"}, AddedAt: now},
 		{Body: types.NetworkBody{Method: "GET", URL: "https://b.example", RequestBody: "b", ResponseBody: "b"}, AddedAt: now},
 	}
 	c.extension.state.activeTestIDs["tid"] = true
-	c.mu.Unlock()
+	c.telemetry.mu.Unlock()
 
-	c.AddNetworkBodies([]types.NetworkBody{{
+	c.Telemetry().AddNetworkBodies([]types.NetworkBody{{
 		Method:       "POST",
 		URL:          "https://example.test/upload",
 		RequestBody:  "ping",
 		ResponseBody: "pong",
 	}})
-	if got := len(c.GetNetworkBodies()); got != 3 {
+	if got := len(c.Telemetry().GetNetworkBodies()); got != 3 {
 		t.Fatalf("GetNetworkBodyCount() = %d, want 3 after add", got)
 	}
-	bodies := c.GetNetworkBodies()
+	bodies := c.Telemetry().GetNetworkBodies()
 	last := bodies[len(bodies)-1]
 	if len(last.TestIDs) == 0 || last.TestIDs[0] != "tid" {
 		t.Fatalf("last network body TestIDs = %+v, want [tid]", last.TestIDs)
@@ -179,16 +179,16 @@ func TestCoverageBoost_NetworkBodiesBranches(t *testing.T) {
 
 	c2 := newCoverageCapture(t)
 	huge := strings.Repeat("x", nbBufferMemoryLimit)
-	c2.AddNetworkBodies([]types.NetworkBody{{
+	c2.Telemetry().AddNetworkBodies([]types.NetworkBody{{
 		Method:       "POST",
 		URL:          "https://example.test/huge",
 		RequestBody:  huge,
 		ResponseBody: huge,
 	}})
-	if got := len(c2.GetNetworkBodies()); got != 0 {
+	if got := len(c2.Telemetry().GetNetworkBodies()); got != 0 {
 		t.Fatalf("GetNetworkBodyCount() after memory eviction = %d, want 0", got)
 	}
-	if got := c2.buffers.calcNBMemory(); got != 0 {
+	if got := c2.telemetry.buffers.calcNBMemory(); got != 0 {
 		t.Fatalf("GetNetworkBodiesBufferMemory() after eviction = %d, want 0", got)
 	}
 }
@@ -196,22 +196,22 @@ func TestCoverageBoost_NetworkBodiesBranches(t *testing.T) {
 func TestCoverageBoost_NetworkWaterfallGetters(t *testing.T) {
 	c := newCoverageCapture(t)
 
-	empty := c.NetworkWaterfall().Entries()
+	empty := c.Telemetry().NetworkWaterfall().Entries()
 	if len(empty) != 0 {
 		t.Fatalf("GetNetworkWaterfallEntries() initial len = %d, want 0", len(empty))
 	}
 
-	c.networkWaterfall = newNetworkWaterfallStore(1)
+	c.telemetry.networkWaterfall = newNetworkWaterfallStore(1)
 
-	c.NetworkWaterfall().Add([]types.NetworkWaterfallEntry{
+	c.Telemetry().NetworkWaterfall().Add([]types.NetworkWaterfallEntry{
 		{Name: "https://one.example"},
 		{Name: "https://two.example"},
 	}, "https://page.example")
 
-	if got := len(c.NetworkWaterfall().Entries()); got != 1 {
+	if got := len(c.Telemetry().NetworkWaterfall().Entries()); got != 1 {
 		t.Fatalf("GetNetworkWaterfallCount() = %d, want 1", got)
 	}
-	entries := c.NetworkWaterfall().Entries()
+	entries := c.Telemetry().NetworkWaterfall().Entries()
 	if len(entries) != 1 {
 		t.Fatalf("GetNetworkWaterfallEntries() len = %d, want 1", len(entries))
 	}

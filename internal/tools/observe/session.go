@@ -29,7 +29,7 @@ func GetEnhancedActions(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage)
 	mcp.LenientUnmarshal(args, &params)
 	params.Limit = clampLimit(params.Limit, 100)
 
-	allActions := deps.GetCapture().GetAllEnhancedActions()
+	allActions := deps.GetCapture().Telemetry().GetAllEnhancedActions()
 	filtered := buffers.ReverseFilterLimit(allActions, func(a types.EnhancedAction) bool {
 		if params.Type != "" && a.Type != params.Type {
 			return false
@@ -90,7 +90,7 @@ func GetTransients(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.
 	// MVP: duration_ms is always 0 — removal tracking is not yet implemented.
 	params.Limit = clampLimit(params.Limit, 50)
 
-	allActions := deps.GetCapture().GetAllEnhancedActions()
+	allActions := deps.GetCapture().Telemetry().GetAllEnhancedActions()
 	filtered := buffers.ReverseFilterLimit(allActions, func(a types.EnhancedAction) bool {
 		if a.Type != "transient" {
 			return false
@@ -183,7 +183,7 @@ func AnalyzeHistory(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 	}
 	mcp.LenientUnmarshal(args, &params)
 
-	actions := deps.GetCapture().GetAllEnhancedActions()
+	actions := deps.GetCapture().Telemetry().GetAllEnhancedActions()
 	entries := buildHistoryEntries(actions)
 	entries = limitHistoryEntries(entries, clampLimit(params.Limit, 0))
 

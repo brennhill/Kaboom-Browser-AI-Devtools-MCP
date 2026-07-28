@@ -13,50 +13,50 @@ import (
 
 // AddNetworkBodiesForTest adds network bodies directly to the buffer (TEST ONLY)
 // Normal production code should use HTTP handlers
-func (c *Capture) AddNetworkBodiesForTest(bodies []types.NetworkBody) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+func (s *TelemetryStore) AddNetworkBodiesForTest(bodies []types.NetworkBody) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	now := time.Now()
 	for _, body := range bodies {
-		c.buffers.networkBodies = append(c.buffers.networkBodies, networkBodyEntry{
+		s.buffers.networkBodies = append(s.buffers.networkBodies, networkBodyEntry{
 			Body:    body,
 			AddedAt: now,
 		})
-		c.buffers.networkTotalAdded++
+		s.buffers.networkTotalAdded++
 		if body.Status >= 400 {
-			c.buffers.networkErrorTotalAdded++
+			s.buffers.networkErrorTotalAdded++
 		}
 	}
 }
 
 // AddWebSocketEventsForTest adds WebSocket events directly to the buffer (TEST ONLY)
-func (c *Capture) AddWebSocketEventsForTest(events []types.WebSocketEvent) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+func (s *TelemetryStore) AddWebSocketEventsForTest(events []types.WebSocketEvent) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	now := time.Now()
 	for _, event := range events {
-		c.buffers.wsEvents = append(c.buffers.wsEvents, wsEventEntry{
+		s.buffers.wsEvents = append(s.buffers.wsEvents, wsEventEntry{
 			Event:   event,
 			AddedAt: now,
 		})
-		c.buffers.wsTotalAdded++
+		s.buffers.wsTotalAdded++
 	}
 }
 
 // AddEnhancedActionsForTest adds enhanced actions directly to the buffer (TEST ONLY)
-func (c *Capture) AddEnhancedActionsForTest(actions []types.EnhancedAction) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+func (s *TelemetryStore) AddEnhancedActionsForTest(actions []types.EnhancedAction) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	now := time.Now()
 	for _, action := range actions {
-		c.buffers.enhancedActions = append(c.buffers.enhancedActions, enhancedActionEntry{
+		s.buffers.enhancedActions = append(s.buffers.enhancedActions, enhancedActionEntry{
 			Action:  action,
 			AddedAt: now,
 		})
-		c.buffers.actionTotalAdded++
+		s.buffers.actionTotalAdded++
 	}
 }
 
@@ -97,13 +97,13 @@ func (c *Capture) SetClientRegistryForTest(reg ClientRegistry) {
 
 // AddExtraWSEventsForTest adds extra WebSocket event entries to the buffer (TEST ONLY).
 // This replaces SetWSParallelMismatchForTest since parallel arrays no longer exist.
-func (c *Capture) AddExtraWSEventsForTest(count int) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+func (s *TelemetryStore) AddExtraWSEventsForTest(count int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	now := time.Now()
 	for i := 0; i < count; i++ {
-		c.buffers.wsEvents = append(c.buffers.wsEvents, wsEventEntry{
+		s.buffers.wsEvents = append(s.buffers.wsEvents, wsEventEntry{
 			Event: types.WebSocketEvent{
 				Event: "message",
 				Data:  "extra-event",
@@ -116,11 +116,11 @@ func (c *Capture) AddExtraWSEventsForTest(count int) {
 
 // GetWSLengthsForTest returns wsEvents count and memory total (TEST ONLY).
 // The addedAt return value always equals events since timestamps are embedded in entries.
-func (c *Capture) GetWSLengthsForTest() (events int, addedAt int, memoryTotal int64) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	n := len(c.buffers.wsEvents)
-	return n, n, c.buffers.wsMemoryTotal
+func (s *TelemetryStore) GetWSLengthsForTest() (events int, addedAt int, memoryTotal int64) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	n := len(s.buffers.wsEvents)
+	return n, n, s.buffers.wsMemoryTotal
 }
 
 // SimulateExtensionConnectForTest marks the extension as connected by

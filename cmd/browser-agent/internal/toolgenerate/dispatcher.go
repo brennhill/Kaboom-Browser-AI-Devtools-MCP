@@ -121,7 +121,7 @@ func (h *Dispatcher) getReproductionScript(req mcp.JSONRPCRequest, args json.Raw
 	if err := reproduction.ValidateOutputFormat(params.OutputFormat); err != "" {
 		return mcp.Fail(req, mcp.ErrInvalidParam, err, "Use 'kaboom' or 'playwright'", mcp.WithParam("output_format"))
 	}
-	allActions := h.deps.GetCapture().GetAllEnhancedActions()
+	allActions := h.deps.GetCapture().Telemetry().GetAllEnhancedActions()
 	actions := reproduction.FilterLastN(allActions, params.LastN)
 	script := reproduction.GenerateScript(actions, params)
 	result := reproduction.BuildResult(script, params, actions, allActions)

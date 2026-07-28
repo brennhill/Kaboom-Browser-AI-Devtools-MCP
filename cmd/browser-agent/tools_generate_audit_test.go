@@ -81,7 +81,7 @@ func TestGenerateAudit_Reproduction_DataFlow(t *testing.T) {
 	env := newGenerateTestEnv(t)
 
 	// Seed actions so reproduction has data to work with
-	env.capture.AddEnhancedActionsForTest([]types.EnhancedAction{
+	env.capture.Telemetry().AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "navigate", Timestamp: 1000, URL: "https://example.com", ToURL: "https://example.com"},
 		{Type: "click", Timestamp: 2000, URL: "https://example.com", Selectors: map[string]any{"text": "Go"}},
 	})

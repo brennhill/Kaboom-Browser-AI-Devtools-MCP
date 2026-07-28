@@ -73,9 +73,9 @@ func GetErrorBundles(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mc
 	cap := deps.GetCapture()
 	_, trackedTabID, _ = cap.Extension().GetTrackingStatus()
 
-	networkBodies := cap.GetNetworkBodies()
-	waterfallEntries := cap.NetworkWaterfall().Entries()
-	actions := cap.GetAllEnhancedActions()
+	networkBodies := cap.Telemetry().GetNetworkBodies()
+	waterfallEntries := cap.Telemetry().NetworkWaterfall().Entries()
+	actions := cap.Telemetry().GetAllEnhancedActions()
 
 	// Apply scope filtering to context buffers so bundles only include
 	// network/action entries from the tracked tab, not global state.
@@ -392,16 +392,16 @@ func collectTimelineEntries(deps Deps, inc timelineIncludes) []timelineEntry {
 		entries = append(entries, collectTimelineErrors(deps)...)
 	}
 	if inc.network {
-		entries = append(entries, collectTimelineNetwork(cap.NetworkWaterfall().Entries())...)
+		entries = append(entries, collectTimelineNetwork(cap.Telemetry().NetworkWaterfall().Entries())...)
 	}
 	if inc.ws {
-		entries = append(entries, collectTimelineWebSocket(cap.GetAllWebSocketEvents())...)
+		entries = append(entries, collectTimelineWebSocket(cap.Telemetry().GetAllWebSocketEvents())...)
 	}
 	return entries
 }
 
 func collectTimelineActions(cap *capture.Capture) []timelineEntry {
-	actions := cap.GetAllEnhancedActions()
+	actions := cap.Telemetry().GetAllEnhancedActions()
 	entries := make([]timelineEntry, 0, len(actions))
 	for _, a := range actions {
 		ts := time.UnixMilli(a.Timestamp).Format(time.RFC3339Nano)

@@ -34,7 +34,7 @@ func (c *Capture) HandleNetworkBodies(w http.ResponseWriter, r *http.Request) {
 		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return
 	}
-	c.AddNetworkBodies(payload.Bodies)
+	c.Telemetry().AddNetworkBodies(payload.Bodies)
 	util.JSONResponse(w, http.StatusOK, map[string]any{
 		"status": "ok",
 		"count":  len(payload.Bodies),
@@ -54,7 +54,7 @@ func (c *Capture) HandleNetworkWaterfall(w http.ResponseWriter, r *http.Request)
 		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return
 	}
-	c.NetworkWaterfall().Add(payload.Entries, payload.PageURL)
+	c.Telemetry().NetworkWaterfall().Add(payload.Entries, payload.PageURL)
 	util.JSONResponse(w, http.StatusOK, map[string]any{
 		"status": "ok",
 		"count":  len(payload.Entries),
@@ -121,7 +121,7 @@ func (c *Capture) HandleEnhancedActions(w http.ResponseWriter, r *http.Request) 
 		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return
 	}
-	c.AddEnhancedActions(payload.Actions)
+	c.Telemetry().AddEnhancedActions(payload.Actions)
 	util.JSONResponse(w, http.StatusOK, map[string]any{
 		"status": "ok",
 		"count":  len(payload.Actions),

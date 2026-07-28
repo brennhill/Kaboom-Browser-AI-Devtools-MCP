@@ -100,7 +100,7 @@ func WireNavigation(store *capture.Capture, detect func()) {
 		return
 	}
 	runner := NewRunner(detect, autoDetectInterval)
-	store.SetNavigationCallback(runner.Schedule)
+	store.Telemetry().SetNavigationCallback(runner.Schedule)
 	diag.Printf("[Kaboom] noise auto-detect enabled (triggers after navigation, debounce=%s)\n", autoDetectInterval)
 }
 
@@ -137,7 +137,7 @@ func Detect(config *noise.NoiseConfig, store *capture.Capture, logs []types.LogE
 	for index, entry := range logs {
 		consoleEntries[index] = types.LogEntry(entry)
 	}
-	proposals := config.AutoDetect(consoleEntries, store.GetNetworkBodies(), store.GetAllWebSocketEvents())
+	proposals := config.AutoDetect(consoleEntries, store.Telemetry().GetNetworkBodies(), store.Telemetry().GetAllWebSocketEvents())
 	var rules []noise.NoiseRule
 	for _, proposal := range proposals {
 		if proposal.Confidence >= 0.9 {

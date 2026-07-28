@@ -1,7 +1,7 @@
 // events.go — Event ingestion, bounded buffers, eviction, and event retrieval.
 // Purpose: Owns network, WebSocket, and enhanced-action lifecycles end to end.
 // Why: Ingestion and eviction share timestamps, memory counters, test tagging, and
-// the same Capture lock, so they must evolve as one consistency boundary.
+// one TelemetryStore lock, so they evolve as a single consistency boundary.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
 package capture
@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture/wsconn"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
@@ -44,8 +45,8 @@ func newNetworkWaterfallStore(capacity int) *NetworkWaterfallStore {
 }
 
 // NetworkWaterfall returns the independently synchronized waterfall owner.
-func (c *Capture) NetworkWaterfall() *NetworkWaterfallStore {
-	return c.networkWaterfall
+func (s *TelemetryStore) NetworkWaterfall() *NetworkWaterfallStore {
+	return s.networkWaterfall
 }
 
 // Add tags and appends resource timings at server receive time.
@@ -96,8 +97,8 @@ type enhancedActionEntry struct {
 	AddedAt time.Time
 }
 
-// BufferStore owns the in-memory ring buffers used for event/body/action capture.
-// Access is synchronized by Capture.mu (this type has no independent lock).
+// BufferStore holds the in-memory rings used for event/body/action capture.
+// Its owning TelemetryStore supplies synchronization.
 type BufferStore struct {
 	// WebSocket event buffer state.
 	wsEvents      []wsEventEntry
@@ -113,6 +114,34 @@ type BufferStore struct {
 	// Enhanced action buffer state.
 	enhancedActions  []enhancedActionEntry
 	actionTotalAdded int64
+}
+
+// TelemetryStore owns event buffers, WebSocket connection state, navigation
+// callbacks, and the synchronization that keeps those values coherent.
+type TelemetryStore struct {
+	mu                 sync.RWMutex
+	buffers            BufferStore
+	wsConnections      wsconn.Tracker
+	networkWaterfall   *NetworkWaterfallStore
+	extension          *ExtensionRuntime
+	navigationCallback func()
+	ttl                time.Duration
+}
+
+func newTelemetryStore(extension *ExtensionRuntime) *TelemetryStore {
+	return &TelemetryStore{
+		buffers:          newBufferStore(),
+		wsConnections:    wsconn.NewTracker(),
+		networkWaterfall: newNetworkWaterfallStore(DefaultNetworkWaterfallCapacity),
+		extension:        extension,
+	}
+}
+
+// SetNavigationCallback sets the callback fired after navigation ingestion.
+func (s *TelemetryStore) SetNavigationCallback(callback func()) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.navigationCallback = callback
 }
 
 func newBufferStore() BufferStore {
@@ -399,18 +428,18 @@ func (s *BufferStore) calcNBMemory() int64 {
 //
 // Invariants:
 // - network buffers and their monotonic counters are reset together under c.mu.
-func (c *Capture) ClearNetworkBuffers() types.BufferClearCounts {
-	waterfallCount := c.networkWaterfall.Clear()
-	c.mu.Lock()
-	defer c.mu.Unlock()
+func (s *TelemetryStore) ClearNetworkBuffers() types.BufferClearCounts {
+	waterfallCount := s.networkWaterfall.Clear()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	counts := types.BufferClearCounts{
 		NetworkWaterfall: waterfallCount,
-		NetworkBodies:    len(c.buffers.networkBodies),
+		NetworkBodies:    len(s.buffers.networkBodies),
 	}
 
 	// Clear network bodies buffer and reset memory tracking
-	c.buffers.clearNetworkBuffers()
+	s.buffers.clearNetworkBuffers()
 
 	return counts
 }
@@ -419,35 +448,35 @@ func (c *Capture) ClearNetworkBuffers() types.BufferClearCounts {
 //
 // Invariants:
 // - wsEvents/wsMemoryTotal/wsTotalAdded are reset atomically.
-func (c *Capture) ClearWebSocketBuffers() types.BufferClearCounts {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+func (s *TelemetryStore) ClearWebSocketBuffers() types.BufferClearCounts {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	counts := types.BufferClearCounts{
-		WebSocketEvents: len(c.buffers.wsEvents),
-		WebSocketStatus: c.wsConnections.Count(),
+		WebSocketEvents: len(s.buffers.wsEvents),
+		WebSocketStatus: s.wsConnections.Count(),
 	}
 
 	// Clear WebSocket events buffer
-	c.buffers.clearWebSocketBuffers()
+	s.buffers.clearWebSocketBuffers()
 
 	// Clear WebSocket connection tracker.
-	c.wsConnections.Clear()
+	s.wsConnections.Clear()
 
 	return counts
 }
 
 // ClearActionBuffer resets action telemetry ring and counters.
-func (c *Capture) ClearActionBuffer() types.BufferClearCounts {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+func (s *TelemetryStore) ClearActionBuffer() types.BufferClearCounts {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	counts := types.BufferClearCounts{
-		Actions: len(c.buffers.enhancedActions),
+		Actions: len(s.buffers.enhancedActions),
 	}
 
 	// Clear actions buffer
-	c.buffers.clearActionBuffers()
+	s.buffers.clearActionBuffers()
 
 	return counts
 }
@@ -456,14 +485,17 @@ func (c *Capture) ClearActionBuffer() types.BufferClearCounts {
 // extension logs — and returns the number of extension-log entries cleared.
 func (c *Capture) ClearAll() int {
 	c.extension.ClearTestBoundaries()
-	c.mu.Lock()
-	c.buffers.clearAllEventBuffers()
-	c.wsConnections.Clear()
-	c.mu.Unlock()
-
-	c.networkWaterfall.Clear()
+	c.telemetry.clearAll()
 	c.perf.clear()
 	return c.extensionLogs.Clear()
+}
+
+func (s *TelemetryStore) clearAll() {
+	s.mu.Lock()
+	s.buffers.clearAllEventBuffers()
+	s.wsConnections.Clear()
+	s.mu.Unlock()
+	s.networkWaterfall.Clear()
 }
 
 func detectAndSetBinaryFormat(body *types.NetworkBody) {
@@ -485,11 +517,11 @@ func detectAndSetBinaryFormat(body *types.NetworkBody) {
 	}
 }
 
-func (c *Capture) AddNetworkBodies(bodies []types.NetworkBody) {
-	activeTestIDs := c.extension.GetActiveTestIDs()
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.buffers.appendNetworkBodies(bodies, activeTestIDs, time.Now())
+func (s *TelemetryStore) AddNetworkBodies(bodies []types.NetworkBody) {
+	activeTestIDs := s.extension.GetActiveTestIDs()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.buffers.appendNetworkBodies(bodies, activeTestIDs, time.Now())
 }
 
 func detectWSBinaryFormat(event *types.WebSocketEvent) {
@@ -502,11 +534,11 @@ func detectWSBinaryFormat(event *types.WebSocketEvent) {
 	}
 }
 
-func (c *Capture) AddWebSocketEvents(events []types.WebSocketEvent) {
-	activeTestIDs := c.extension.GetActiveTestIDs()
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.buffers.appendWebSocketEvents(events, activeTestIDs, time.Now(), c.wsConnections.TrackEvent)
+func (s *TelemetryStore) AddWebSocketEvents(events []types.WebSocketEvent) {
+	activeTestIDs := s.extension.GetActiveTestIDs()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.buffers.appendWebSocketEvents(events, activeTestIDs, time.Now(), s.wsConnections.TrackEvent)
 }
 
 func matchesWSEventFilter(event *types.WebSocketEvent, filter types.WebSocketEventFilter) bool {
@@ -534,18 +566,18 @@ func containsTestID(testIDs []string, target string) bool {
 	return false
 }
 
-func (c *Capture) GetWebSocketEvents(filter types.WebSocketEventFilter) []types.WebSocketEvent {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+func (s *TelemetryStore) GetWebSocketEvents(filter types.WebSocketEventFilter) []types.WebSocketEvent {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	limit := filter.Limit
 	if limit <= 0 {
 		limit = defaultWSLimit
 	}
 	filtered := make([]types.WebSocketEvent, 0, limit)
-	for i := len(c.buffers.wsEvents) - 1; i >= 0; i-- {
-		entry := &c.buffers.wsEvents[i]
-		if c.TTL > 0 && isExpiredByTTL(entry.AddedAt, c.TTL) {
+	for i := len(s.buffers.wsEvents) - 1; i >= 0; i-- {
+		entry := &s.buffers.wsEvents[i]
+		if s.ttl > 0 && isExpiredByTTL(entry.AddedAt, s.ttl) {
 			break
 		}
 		if !matchesWSEventFilter(&entry.Event, filter) {
@@ -577,32 +609,32 @@ func (c *Capture) HandleWebSocketEvents(w http.ResponseWriter, r *http.Request) 
 	if !c.recordAndRecheck(w, len(payload.Events)) {
 		return
 	}
-	c.AddWebSocketEvents(payload.Events)
+	c.telemetry.AddWebSocketEvents(payload.Events)
 	w.WriteHeader(http.StatusOK)
 }
 
 func (c *Capture) HandleWebSocketStatus(w http.ResponseWriter, _ *http.Request) {
-	status := c.GetWebSocketStatus(types.WebSocketStatusFilter{})
+	status := c.telemetry.GetWebSocketStatus(types.WebSocketStatusFilter{})
 	util.JSONResponse(w, http.StatusOK, status)
 }
 
-func (c *Capture) GetWebSocketStatus(filter types.WebSocketStatusFilter) types.WebSocketStatusResponse {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.wsConnections.Status(filter)
+func (s *TelemetryStore) GetWebSocketStatus(filter types.WebSocketStatusFilter) types.WebSocketStatusResponse {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.wsConnections.Status(filter)
 }
 
-func (c *Capture) AddEnhancedActions(actions []types.EnhancedAction) {
-	activeTestIDs := c.extension.GetActiveTestIDs()
+func (s *TelemetryStore) AddEnhancedActions(actions []types.EnhancedAction) {
+	activeTestIDs := s.extension.GetActiveTestIDs()
 	navigationCallback := func() func() {
-		c.mu.Lock()
-		defer c.mu.Unlock()
+		s.mu.Lock()
+		defer s.mu.Unlock()
 
 		for i := range actions {
 			actions[i].TestIDs = activeTestIDs
 		}
-		if c.buffers.appendEnhancedActions(actions, time.Now()) {
-			return c.navigationCallback
+		if s.buffers.appendEnhancedActions(actions, time.Now()) {
+			return s.navigationCallback
 		}
 		return nil
 	}()

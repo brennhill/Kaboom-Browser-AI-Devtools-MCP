@@ -12,61 +12,63 @@ import (
 )
 
 // GetNetworkTotalAdded returns the monotonic total of network bodies ever added
-func (c *Capture) GetNetworkTotalAdded() int64 {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.buffers.networkTotal()
+func (s *TelemetryStore) GetNetworkTotalAdded() int64 {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.buffers.networkTotal()
 }
 
 // GetNetworkErrorTotalAdded returns the monotonic total of error network bodies ever added.
-func (c *Capture) GetNetworkErrorTotalAdded() int64 {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.buffers.networkErrorTotal()
+func (s *TelemetryStore) GetNetworkErrorTotalAdded() int64 {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.buffers.networkErrorTotal()
 }
 
 // GetWebSocketTotalAdded returns the monotonic total of WebSocket events ever added
-func (c *Capture) GetWebSocketTotalAdded() int64 {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.buffers.webSocketTotal()
+func (s *TelemetryStore) GetWebSocketTotalAdded() int64 {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.buffers.webSocketTotal()
 }
 
 // GetActionTotalAdded returns the monotonic total of actions ever added
-func (c *Capture) GetActionTotalAdded() int64 {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.buffers.actionTotal()
+func (s *TelemetryStore) GetActionTotalAdded() int64 {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.buffers.actionTotal()
 }
 
-// CaptureSnapshot is an immutable point-in-time view of core ring-buffer counters.
+// TelemetrySnapshot is an immutable point-in-time view of event-store counters.
 //
 // Invariants:
-// - Counts and totals in one snapshot come from the same c.mu critical section.
-type CaptureSnapshot struct {
+// - Counts and totals in one snapshot come from the same s.mu critical section.
+type TelemetrySnapshot struct {
 	NetworkTotalAdded   int64
 	WebSocketTotalAdded int64
 	ActionTotalAdded    int64
 	NetworkCount        int
 	WebSocketCount      int
 	ActionCount         int
+	ConnectionCount     int
 }
 
 // GetSnapshot returns a thread-safe capture counter snapshot.
 //
 // Failure semantics:
 // - Snapshot can be stale immediately after return; callers should treat it as diagnostic-only.
-func (c *Capture) GetSnapshot() CaptureSnapshot {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+func (s *TelemetryStore) GetSnapshot() TelemetrySnapshot {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
-	return CaptureSnapshot{
-		NetworkTotalAdded:   c.buffers.networkTotal(),
-		WebSocketTotalAdded: c.buffers.webSocketTotal(),
-		ActionTotalAdded:    c.buffers.actionTotal(),
-		NetworkCount:        c.buffers.networkCount(),
-		WebSocketCount:      c.buffers.webSocketCount(),
-		ActionCount:         c.buffers.actionCount(),
+	return TelemetrySnapshot{
+		NetworkTotalAdded:   s.buffers.networkTotal(),
+		WebSocketTotalAdded: s.buffers.webSocketTotal(),
+		ActionTotalAdded:    s.buffers.actionTotal(),
+		NetworkCount:        s.buffers.networkCount(),
+		WebSocketCount:      s.buffers.webSocketCount(),
+		ActionCount:         s.buffers.actionCount(),
+		ConnectionCount:     s.wsConnections.Count(),
 	}
 }
 
@@ -109,15 +111,13 @@ func (c *Capture) GetHealthSnapshot() HealthSnapshot {
 	circuitOpen, circuitReason, circuitOpenedAt, windowEventCount := c.circuit.GetState()
 	querySnap := c.queryDispatcher.GetSnapshot()
 	extensionSnap := c.extension.Snapshot()
-
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	telemetrySnap := c.telemetry.GetSnapshot()
 
 	return HealthSnapshot{
-		WebSocketCount:        c.buffers.webSocketCount(),
-		NetworkBodyCount:      c.buffers.networkCount(),
-		ActionCount:           c.buffers.actionCount(),
-		ConnectionCount:       c.wsConnections.Count(),
+		WebSocketCount:        telemetrySnap.WebSocketCount,
+		NetworkBodyCount:      telemetrySnap.NetworkCount,
+		ActionCount:           telemetrySnap.ActionCount,
+		ConnectionCount:       telemetrySnap.ConnectionCount,
 		LastPollTime:          extensionSnap.LastPollAt,
 		ExtSessionID:          extensionSnap.ExtSessionID,
 		ExtSessionChangedTime: extensionSnap.ExtSessionChangedAt,
@@ -134,24 +134,24 @@ func (c *Capture) GetHealthSnapshot() HealthSnapshot {
 }
 
 // GetNetworkBodies returns a copy of the network bodies slice (thread-safe)
-func (c *Capture) GetNetworkBodies() []types.NetworkBody {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.buffers.networkBodiesCopy()
+func (s *TelemetryStore) GetNetworkBodies() []types.NetworkBody {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.buffers.networkBodiesCopy()
 }
 
 // GetAllWebSocketEvents returns a copy of all WebSocket events slice (thread-safe)
-func (c *Capture) GetAllWebSocketEvents() []types.WebSocketEvent {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.buffers.webSocketEventsCopy()
+func (s *TelemetryStore) GetAllWebSocketEvents() []types.WebSocketEvent {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.buffers.webSocketEventsCopy()
 }
 
 // GetAllEnhancedActions returns a copy of all enhanced actions slice (thread-safe)
-func (c *Capture) GetAllEnhancedActions() []types.EnhancedAction {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.buffers.enhancedActionsCopy()
+func (s *TelemetryStore) GetAllEnhancedActions() []types.EnhancedAction {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.buffers.enhancedActionsCopy()
 }
 
 // Performance returns the independently synchronized performance owner.

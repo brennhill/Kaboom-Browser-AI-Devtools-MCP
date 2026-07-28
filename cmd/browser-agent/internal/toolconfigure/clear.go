@@ -57,13 +57,13 @@ func clearBuffer(targets ClearTargets, buffer string) (any, bool) {
 		}
 		return cleared, true
 	case "network":
-		counts := targets.Capture.ClearNetworkBuffers()
+		counts := targets.Capture.Telemetry().ClearNetworkBuffers()
 		return map[string]int{"waterfall": counts.NetworkWaterfall, "bodies": counts.NetworkBodies}, true
 	case "websocket":
-		counts := targets.Capture.ClearWebSocketBuffers()
+		counts := targets.Capture.Telemetry().ClearWebSocketBuffers()
 		return map[string]int{"events": counts.WebSocketEvents, "connections": counts.WebSocketStatus}, true
 	case "actions":
-		counts := targets.Capture.ClearActionBuffer()
+		counts := targets.Capture.Telemetry().ClearActionBuffer()
 		return map[string]int{"actions": counts.Actions}, true
 	case "logs":
 		return map[string]int{"logs": targets.ClearLogs()}, true

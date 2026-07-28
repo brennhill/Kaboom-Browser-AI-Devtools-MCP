@@ -219,11 +219,11 @@ func (h *ToolHandler) ConsoleEntries() []types.LogEntry {
 }
 
 func (h *ToolHandler) NetworkBodies() []types.NetworkBody {
-	return h.capture.GetNetworkBodies()
+	return h.capture.Telemetry().GetNetworkBodies()
 }
 
 func (h *ToolHandler) AllWebSocketEvents() []types.WebSocketEvent {
-	return h.capture.GetAllWebSocketEvents()
+	return h.capture.Telemetry().GetAllWebSocketEvents()
 }
 
 func (h *ToolHandler) GetTrackingStatus() (bool, int, string) {
@@ -308,7 +308,7 @@ func (h *ToolHandler) SubmitIssueReport(report issuereport.IssueReport) issuerep
 }
 
 func (h *ToolHandler) toolConfigureNetworkRecording(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	return netrecord.HandleNetworkRecording(h.capture, h.networkRecording, req, args)
+	return netrecord.HandleNetworkRecording(h.capture.Telemetry(), h.networkRecording, req, args)
 }
 
 func extractErrorMessage(response mcp.JSONRPCResponse) string {

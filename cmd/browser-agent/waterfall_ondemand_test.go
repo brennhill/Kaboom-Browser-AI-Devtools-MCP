@@ -42,7 +42,7 @@ func TestWaterfallOnDemand_FreshDataNoQuery(t *testing.T) {
 	entries := []types.NetworkWaterfallEntry{
 		{URL: "https://api.example.com/users", PageURL: "https://example.com"},
 	}
-	cap.NetworkWaterfall().Add(entries, "https://example.com")
+	cap.Telemetry().NetworkWaterfall().Add(entries, "https://example.com")
 
 	// Get pending queries count before call
 	pendingBefore := len(cap.Queries().GetPendingQueries())
@@ -96,7 +96,7 @@ func TestWaterfallOnDemand_StaleDataCreatesQuery(t *testing.T) {
 	entries := []types.NetworkWaterfallEntry{
 		{URL: "https://old.example.com/stale", PageURL: "https://example.com"},
 	}
-	cap.NetworkWaterfall().Add(entries, "https://example.com")
+	cap.Telemetry().NetworkWaterfall().Add(entries, "https://example.com")
 
 	// Wait for data to become stale (>1s)
 	time.Sleep(1100 * time.Millisecond)
@@ -399,7 +399,7 @@ func TestWaterfallStalenessThreshold(t *testing.T) {
 	entries := []types.NetworkWaterfallEntry{
 		{URL: "https://example.com/test", PageURL: "https://example.com"},
 	}
-	cap.NetworkWaterfall().Add(entries, "https://example.com")
+	cap.Telemetry().NetworkWaterfall().Add(entries, "https://example.com")
 
 	// Immediately query - should NOT create new query (data is fresh)
 	pendingBefore := len(cap.Queries().GetPendingQueries())

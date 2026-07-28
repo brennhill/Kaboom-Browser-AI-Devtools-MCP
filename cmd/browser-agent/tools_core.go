@@ -536,7 +536,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 		Host: handler, Version: version, AnnotationStore: handler.annotationStore,
 		Visual: visualAnalyzeDeps{h: handler},
 		ValidateAPI: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return handler.apiContractRuntime.Handle(req, args, handler.capture.GetNetworkBodies())
+			return handler.apiContractRuntime.Handle(req, args, handler.capture.Telemetry().GetNetworkBodies())
 		},
 		PageSummary: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return handler.interactAction().HandleContentExtraction(req, args, "page_summary", "page_summary")
@@ -609,7 +609,7 @@ func (d visualAnalyzeDeps) HandleSessionStore(args persistence.SessionStoreArgs)
 }
 
 func (h *ToolHandler) NetworkWaterfallEntries() []types.NetworkWaterfallEntry {
-	return h.capture.NetworkWaterfall().Entries()
+	return h.capture.Telemetry().NetworkWaterfall().Entries()
 }
 
 func (h *ToolHandler) ConsoleSecurityEntries() []types.LogEntry {

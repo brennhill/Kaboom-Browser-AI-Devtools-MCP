@@ -23,11 +23,11 @@ func TestNavigationCallback_FiredOnNavigationAction(t *testing.T) {
 	t.Cleanup(c.Close)
 
 	var called atomic.Int32
-	c.SetNavigationCallback(func() {
+	c.Telemetry().SetNavigationCallback(func() {
 		called.Add(1)
 	})
 
-	c.AddEnhancedActions([]types.EnhancedAction{
+	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{
 		{Type: "navigation", Timestamp: time.Now().UnixMilli()},
 	})
 
@@ -46,11 +46,11 @@ func TestNavigationCallback_NotFiredOnNonNavigationAction(t *testing.T) {
 	t.Cleanup(c.Close)
 
 	var called atomic.Int32
-	c.SetNavigationCallback(func() {
+	c.Telemetry().SetNavigationCallback(func() {
 		called.Add(1)
 	})
 
-	c.AddEnhancedActions([]types.EnhancedAction{
+	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{
 		{Type: "click", Timestamp: time.Now().UnixMilli()},
 		{Type: "type", Timestamp: time.Now().UnixMilli()},
 		{Type: "scroll", Timestamp: time.Now().UnixMilli()},
@@ -70,12 +70,12 @@ func TestNavigationCallback_FiredOnceForMultipleNavigationsInBatch(t *testing.T)
 	t.Cleanup(c.Close)
 
 	var called atomic.Int32
-	c.SetNavigationCallback(func() {
+	c.Telemetry().SetNavigationCallback(func() {
 		called.Add(1)
 	})
 
 	// Two navigation actions in the same batch should fire callback only once
-	c.AddEnhancedActions([]types.EnhancedAction{
+	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{
 		{Type: "navigation", Timestamp: time.Now().UnixMilli()},
 		{Type: "click", Timestamp: time.Now().UnixMilli()},
 		{Type: "navigation", Timestamp: time.Now().UnixMilli()},
@@ -95,7 +95,7 @@ func TestNavigationCallback_NotSetDoesNotPanic(t *testing.T) {
 	t.Cleanup(c.Close)
 
 	// No callback set — should not panic
-	c.AddEnhancedActions([]types.EnhancedAction{
+	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{
 		{Type: "navigation", Timestamp: time.Now().UnixMilli()},
 	})
 }
@@ -106,9 +106,9 @@ func TestNavigationCallback_NilCallbackDoesNotPanic(t *testing.T) {
 	c := NewCapture()
 	t.Cleanup(c.Close)
 
-	c.SetNavigationCallback(nil)
+	c.Telemetry().SetNavigationCallback(nil)
 
-	c.AddEnhancedActions([]types.EnhancedAction{
+	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{
 		{Type: "navigation", Timestamp: time.Now().UnixMilli()},
 	})
 }
@@ -123,16 +123,16 @@ func TestNavigationCallback_FiredOutsideLock(t *testing.T) {
 	// to acquire the lock inside the callback (would deadlock if still held).
 	var wg sync.WaitGroup
 	wg.Add(1)
-	c.SetNavigationCallback(func() {
+	c.Telemetry().SetNavigationCallback(func() {
 		defer wg.Done()
 		// This would deadlock if callback is called inside c.mu.Lock
-		count := len(c.GetAllEnhancedActions())
+		count := len(c.Telemetry().GetAllEnhancedActions())
 		if count == 0 {
 			t.Error("expected actions to be stored before callback fires")
 		}
 	})
 
-	c.AddEnhancedActions([]types.EnhancedAction{
+	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{
 		{Type: "navigation", Timestamp: time.Now().UnixMilli()},
 	})
 

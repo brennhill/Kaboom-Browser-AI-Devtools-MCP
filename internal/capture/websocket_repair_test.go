@@ -14,20 +14,20 @@ func TestWSEntryBuffer_EqualLength(t *testing.T) {
 	t.Parallel()
 	c := NewCapture()
 
-	c.AddWebSocketEventsForTest([]types.WebSocketEvent{
+	c.Telemetry().AddWebSocketEventsForTest([]types.WebSocketEvent{
 		{Event: "message", Data: "hello", ID: "ws1"},
 		{Event: "message", Data: "world", ID: "ws1"},
 	})
 
-	events, addedAt, _ := c.GetWSLengthsForTest()
+	events, addedAt, _ := c.Telemetry().GetWSLengthsForTest()
 	if events != addedAt {
 		t.Fatalf("expected equal lengths, got events=%d addedAt=%d", events, addedAt)
 	}
 
 	// Add via production path
-	c.AddWebSocketEvents([]types.WebSocketEvent{{Event: "message", Data: "new", ID: "ws1"}})
+	c.Telemetry().AddWebSocketEvents([]types.WebSocketEvent{{Event: "message", Data: "new", ID: "ws1"}})
 
-	events, addedAt, _ = c.GetWSLengthsForTest()
+	events, addedAt, _ = c.Telemetry().GetWSLengthsForTest()
 	if events != addedAt {
 		t.Fatalf("after add: expected equal lengths, got events=%d addedAt=%d", events, addedAt)
 	}
@@ -41,13 +41,13 @@ func TestWSEntryBuffer_ExtraEventsViaTestHelper(t *testing.T) {
 	c := NewCapture()
 
 	// Add 2 events, then 3 extra via test helper
-	c.AddWebSocketEventsForTest([]types.WebSocketEvent{
+	c.Telemetry().AddWebSocketEventsForTest([]types.WebSocketEvent{
 		{Event: "message", Data: "matched1", ID: "ws1"},
 		{Event: "message", Data: "matched2", ID: "ws1"},
 	})
-	c.AddExtraWSEventsForTest(3)
+	c.Telemetry().AddExtraWSEventsForTest(3)
 
-	events, addedAt, _ := c.GetWSLengthsForTest()
+	events, addedAt, _ := c.Telemetry().GetWSLengthsForTest()
 	// With entry wrappers, events and addedAt are always equal
 	if events != addedAt {
 		t.Fatalf("expected equal lengths, got events=%d addedAt=%d", events, addedAt)
@@ -57,9 +57,9 @@ func TestWSEntryBuffer_ExtraEventsViaTestHelper(t *testing.T) {
 	}
 
 	// Adding another event should work fine
-	c.AddWebSocketEvents([]types.WebSocketEvent{{Event: "message", Data: "trigger", ID: "ws1"}})
+	c.Telemetry().AddWebSocketEvents([]types.WebSocketEvent{{Event: "message", Data: "trigger", ID: "ws1"}})
 
-	events, addedAt, _ = c.GetWSLengthsForTest()
+	events, addedAt, _ = c.Telemetry().GetWSLengthsForTest()
 	if events != addedAt {
 		t.Fatalf("after add: expected equal lengths, got events=%d addedAt=%d", events, addedAt)
 	}
@@ -73,17 +73,17 @@ func TestWSEntryBuffer_MemoryTracked(t *testing.T) {
 	c := NewCapture()
 
 	// Add events with known data sizes
-	c.AddWebSocketEventsForTest([]types.WebSocketEvent{
+	c.Telemetry().AddWebSocketEventsForTest([]types.WebSocketEvent{
 		{Event: "message", Data: "aaaa", ID: "ws1"},   // 4 bytes data
 		{Event: "message", Data: "bbbbbb", ID: "ws1"}, // 6 bytes data
 	})
 	// Add extra events via test helper
-	c.AddExtraWSEventsForTest(1)
+	c.Telemetry().AddExtraWSEventsForTest(1)
 
 	// Add via production path to trigger memory accounting
-	c.AddWebSocketEvents([]types.WebSocketEvent{{Event: "message", Data: "cc", ID: "ws1"}})
+	c.Telemetry().AddWebSocketEvents([]types.WebSocketEvent{{Event: "message", Data: "cc", ID: "ws1"}})
 
-	events, addedAt, mem := c.GetWSLengthsForTest()
+	events, addedAt, mem := c.Telemetry().GetWSLengthsForTest()
 	if events != addedAt {
 		t.Fatalf("expected equal lengths, got events=%d addedAt=%d", events, addedAt)
 	}
@@ -97,15 +97,15 @@ func TestWSEntryBuffer_BothEmpty(t *testing.T) {
 	c := NewCapture()
 
 	// Buffer is empty
-	events, addedAt, _ := c.GetWSLengthsForTest()
+	events, addedAt, _ := c.Telemetry().GetWSLengthsForTest()
 	if events != 0 || addedAt != 0 {
 		t.Fatalf("expected both empty, got events=%d addedAt=%d", events, addedAt)
 	}
 
 	// Adding an event should work fine
-	c.AddWebSocketEvents([]types.WebSocketEvent{{Event: "open", ID: "ws1"}})
+	c.Telemetry().AddWebSocketEvents([]types.WebSocketEvent{{Event: "open", ID: "ws1"}})
 
-	events, addedAt, _ = c.GetWSLengthsForTest()
+	events, addedAt, _ = c.Telemetry().GetWSLengthsForTest()
 	if events != addedAt {
 		t.Fatalf("expected equal lengths, got events=%d addedAt=%d", events, addedAt)
 	}

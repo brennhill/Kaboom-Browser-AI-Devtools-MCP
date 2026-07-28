@@ -15,20 +15,20 @@ func TestClearNetworkBuffers(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Add network data directly to buffers
-	capture.NetworkWaterfall().Add([]types.NetworkWaterfallEntry{
+	capture.Telemetry().NetworkWaterfall().Add([]types.NetworkWaterfallEntry{
 		{URL: "https://example.com/1"},
 		{URL: "https://example.com/2"},
 	}, "")
 
-	capture.AddNetworkBodies([]types.NetworkBody{
+	capture.Telemetry().AddNetworkBodies([]types.NetworkBody{
 		{URL: "https://example.com/1"},
 	})
 
 	// Verify data exists
-	initialWaterfall := len(capture.NetworkWaterfall().Entries())
-	capture.mu.RLock()
-	initialBodies := len(capture.buffers.networkBodies)
-	capture.mu.RUnlock()
+	initialWaterfall := len(capture.Telemetry().NetworkWaterfall().Entries())
+	capture.telemetry.mu.RLock()
+	initialBodies := len(capture.telemetry.buffers.networkBodies)
+	capture.telemetry.mu.RUnlock()
 
 	if initialWaterfall != 2 {
 		t.Fatalf("Expected 2 waterfall entries, got %d", initialWaterfall)
@@ -38,7 +38,7 @@ func TestClearNetworkBuffers(t *testing.T) {
 	}
 
 	// Clear
-	counts := capture.ClearNetworkBuffers()
+	counts := capture.Telemetry().ClearNetworkBuffers()
 
 	// Verify counts
 	if counts.NetworkWaterfall != 2 {
@@ -52,17 +52,17 @@ func TestClearNetworkBuffers(t *testing.T) {
 	}
 
 	// Verify buffers empty
-	if entries := capture.NetworkWaterfall().Entries(); len(entries) != 0 {
+	if entries := capture.Telemetry().NetworkWaterfall().Entries(); len(entries) != 0 {
 		t.Errorf("Expected networkWaterfall to be empty, got %d entries", len(entries))
 	}
-	capture.mu.RLock()
-	if len(capture.buffers.networkBodies) != 0 {
-		t.Errorf("Expected networkBodies to be empty, got %d entries", len(capture.buffers.networkBodies))
+	capture.telemetry.mu.RLock()
+	if len(capture.telemetry.buffers.networkBodies) != 0 {
+		t.Errorf("Expected networkBodies to be empty, got %d entries", len(capture.telemetry.buffers.networkBodies))
 	}
-	if capture.buffers.networkTotalAdded != 0 {
-		t.Errorf("Expected networkTotalAdded = 0, got %d", capture.buffers.networkTotalAdded)
+	if capture.telemetry.buffers.networkTotalAdded != 0 {
+		t.Errorf("Expected networkTotalAdded = 0, got %d", capture.telemetry.buffers.networkTotalAdded)
 	}
-	capture.mu.RUnlock()
+	capture.telemetry.mu.RUnlock()
 }
 
 // TestClearWebSocketBuffers verifies clearing websocket_events and websocket_status buffers.
@@ -71,18 +71,18 @@ func TestClearWebSocketBuffers(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Add WS events
-	capture.AddWebSocketEvents([]types.WebSocketEvent{
+	capture.Telemetry().AddWebSocketEvents([]types.WebSocketEvent{
 		{ID: "conn1", Direction: "outgoing", Data: "test"},
 		{ID: "conn1", Direction: "incoming", Data: "response"},
 	})
 
 	// Add WS connections (open event only — it does not enter the event buffer).
-	capture.mu.Lock()
-	capture.wsConnections.TrackEvent(types.WebSocketEvent{Event: "open", ID: "conn1", URL: "ws://localhost"})
-	capture.mu.Unlock()
+	capture.telemetry.mu.Lock()
+	capture.telemetry.wsConnections.TrackEvent(types.WebSocketEvent{Event: "open", ID: "conn1", URL: "ws://localhost"})
+	capture.telemetry.mu.Unlock()
 
 	// Clear
-	counts := capture.ClearWebSocketBuffers()
+	counts := capture.Telemetry().ClearWebSocketBuffers()
 
 	// Verify counts
 	if counts.WebSocketEvents != 2 {
@@ -93,14 +93,14 @@ func TestClearWebSocketBuffers(t *testing.T) {
 	}
 
 	// Verify buffers empty
-	capture.mu.RLock()
-	if len(capture.buffers.wsEvents) != 0 {
-		t.Errorf("Expected wsEvents to be empty, got %d entries", len(capture.buffers.wsEvents))
+	capture.telemetry.mu.RLock()
+	if len(capture.telemetry.buffers.wsEvents) != 0 {
+		t.Errorf("Expected wsEvents to be empty, got %d entries", len(capture.telemetry.buffers.wsEvents))
 	}
-	if capture.wsConnections.Count() != 0 {
-		t.Errorf("Expected connections to be empty, got %d entries", capture.wsConnections.Count())
+	if capture.telemetry.wsConnections.Count() != 0 {
+		t.Errorf("Expected connections to be empty, got %d entries", capture.telemetry.wsConnections.Count())
 	}
-	capture.mu.RUnlock()
+	capture.telemetry.mu.RUnlock()
 }
 
 // TestClearActionBuffer verifies clearing enhancedActions buffer.
@@ -109,13 +109,13 @@ func TestClearActionBuffer(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Add actions
-	capture.AddEnhancedActions([]types.EnhancedAction{
+	capture.Telemetry().AddEnhancedActions([]types.EnhancedAction{
 		{Type: "click", Timestamp: 1738238000000},
 		{Type: "input", Timestamp: 1738238001000},
 	})
 
 	// Clear
-	counts := capture.ClearActionBuffer()
+	counts := capture.Telemetry().ClearActionBuffer()
 
 	// Verify counts
 	if counts.Actions != 2 {
@@ -123,11 +123,11 @@ func TestClearActionBuffer(t *testing.T) {
 	}
 
 	// Verify buffer empty
-	capture.mu.RLock()
-	if len(capture.buffers.enhancedActions) != 0 {
-		t.Errorf("Expected enhancedActions to be empty, got %d entries", len(capture.buffers.enhancedActions))
+	capture.telemetry.mu.RLock()
+	if len(capture.telemetry.buffers.enhancedActions) != 0 {
+		t.Errorf("Expected enhancedActions to be empty, got %d entries", len(capture.telemetry.buffers.enhancedActions))
 	}
-	capture.mu.RUnlock()
+	capture.telemetry.mu.RUnlock()
 }
 
 // TestClearAllCapture verifies clearing all capture buffers at once.
@@ -136,10 +136,10 @@ func TestClearAllCapture(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Add data to all capture buffers
-	capture.NetworkWaterfall().Add([]types.NetworkWaterfallEntry{{URL: "test"}}, "")
+	capture.Telemetry().NetworkWaterfall().Add([]types.NetworkWaterfallEntry{{URL: "test"}}, "")
 
-	capture.AddWebSocketEvents([]types.WebSocketEvent{{ID: "conn1", Data: "test"}})
-	capture.AddEnhancedActions([]types.EnhancedAction{{Type: "click", Timestamp: 1738238000000}})
+	capture.Telemetry().AddWebSocketEvents([]types.WebSocketEvent{{ID: "conn1", Data: "test"}})
+	capture.Telemetry().AddEnhancedActions([]types.EnhancedAction{{Type: "click", Timestamp: 1738238000000}})
 
 	// Regression: extension logs must be cleared by ClearAll too. They used to be
 	// left behind ("All" was a lie), so any caller that forgot the separate
@@ -154,15 +154,15 @@ func TestClearAllCapture(t *testing.T) {
 	}
 
 	// Verify all buffers empty
-	if len(capture.NetworkWaterfall().Entries()) != 0 {
+	if len(capture.Telemetry().NetworkWaterfall().Entries()) != 0 {
 		t.Error("Expected networkWaterfall to be empty")
 	}
-	capture.mu.RLock()
-	defer capture.mu.RUnlock()
-	if len(capture.buffers.wsEvents) != 0 {
+	capture.telemetry.mu.RLock()
+	defer capture.telemetry.mu.RUnlock()
+	if len(capture.telemetry.buffers.wsEvents) != 0 {
 		t.Error("Expected wsEvents to be empty")
 	}
-	if len(capture.buffers.enhancedActions) != 0 {
+	if len(capture.telemetry.buffers.enhancedActions) != 0 {
 		t.Error("Expected enhancedActions to be empty")
 	}
 	if logs := capture.ExtensionLogs().Entries(); len(logs) != 0 {
@@ -176,7 +176,7 @@ func TestClearEmptyBuffers(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Clear empty network buffers
-	counts := capture.ClearNetworkBuffers()
+	counts := capture.Telemetry().ClearNetworkBuffers()
 
 	// Should return zero counts, not error
 	if counts.NetworkWaterfall != 0 {

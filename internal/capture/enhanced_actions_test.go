@@ -29,13 +29,13 @@ func TestNewAddEnhancedActions_SingleAction(t *testing.T) {
 		Source:    "human",
 	}
 
-	c.AddEnhancedActions([]types.EnhancedAction{action})
+	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{action})
 
-	if got := len(c.GetAllEnhancedActions()); got != 1 {
+	if got := len(c.Telemetry().GetAllEnhancedActions()); got != 1 {
 		t.Fatalf("GetEnhancedActionCount() = %d, want 1", got)
 	}
 
-	actions := c.GetAllEnhancedActions()
+	actions := c.Telemetry().GetAllEnhancedActions()
 	if len(actions) != 1 {
 		t.Fatalf("len(GetAllEnhancedActions()) = %d, want 1", len(actions))
 	}
@@ -71,13 +71,13 @@ func TestNewAddEnhancedActions_MultipleBatch(t *testing.T) {
 		{Type: "navigate", FromURL: "https://a.com", ToURL: "https://b.com"},
 	}
 
-	c.AddEnhancedActions(actions)
+	c.Telemetry().AddEnhancedActions(actions)
 
-	if got := len(c.GetAllEnhancedActions()); got != 3 {
+	if got := len(c.Telemetry().GetAllEnhancedActions()); got != 3 {
 		t.Fatalf("GetEnhancedActionCount() = %d, want 3", got)
 	}
 
-	stored := c.GetAllEnhancedActions()
+	stored := c.Telemetry().GetAllEnhancedActions()
 	if stored[0].Type != "click" {
 		t.Errorf("stored[0].Type = %q, want click", stored[0].Type)
 	}
@@ -108,17 +108,17 @@ func TestNewAddEnhancedActions_TestIDTagging(t *testing.T) {
 	t.Cleanup(c.Close)
 
 	// Set active test IDs
-	c.mu.Lock()
+	c.extension.mu.Lock()
 	c.extension.state.activeTestIDs["test-alpha"] = true
 	c.extension.state.activeTestIDs["test-beta"] = true
-	c.mu.Unlock()
+	c.extension.mu.Unlock()
 
-	c.AddEnhancedActions([]types.EnhancedAction{
+	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{
 		{Type: "click"},
 		{Type: "type", Value: "text"},
 	})
 
-	actions := c.GetAllEnhancedActions()
+	actions := c.Telemetry().GetAllEnhancedActions()
 	for i, action := range actions {
 		if len(action.TestIDs) != 2 {
 			t.Fatalf("action[%d].TestIDs len = %d, want 2", i, len(action.TestIDs))
@@ -143,9 +143,9 @@ func TestNewAddEnhancedActions_NoActiveTestIDs(t *testing.T) {
 	c := NewCapture()
 	t.Cleanup(c.Close)
 
-	c.AddEnhancedActions([]types.EnhancedAction{{Type: "click"}})
+	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{{Type: "click"}})
 
-	actions := c.GetAllEnhancedActions()
+	actions := c.Telemetry().GetAllEnhancedActions()
 	if len(actions[0].TestIDs) != 0 {
 		t.Errorf("TestIDs = %v, want empty when no active tests", actions[0].TestIDs)
 	}
@@ -157,12 +157,12 @@ func TestNewAddEnhancedActions_IncrementsTotalAdded(t *testing.T) {
 	c := NewCapture()
 	t.Cleanup(c.Close)
 
-	c.AddEnhancedActions([]types.EnhancedAction{{Type: "click"}, {Type: "type"}})
-	c.AddEnhancedActions([]types.EnhancedAction{{Type: "navigate"}})
+	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{{Type: "click"}, {Type: "type"}})
+	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{{Type: "navigate"}})
 
-	c.mu.RLock()
-	total := c.buffers.actionTotalAdded
-	c.mu.RUnlock()
+	c.telemetry.mu.RLock()
+	total := c.telemetry.buffers.actionTotalAdded
+	c.telemetry.mu.RUnlock()
 
 	if total != 3 {
 		t.Errorf("actionTotalAdded = %d, want 3", total)
@@ -175,9 +175,9 @@ func TestNewAddEnhancedActions_EmptyBatch(t *testing.T) {
 	c := NewCapture()
 	t.Cleanup(c.Close)
 
-	c.AddEnhancedActions([]types.EnhancedAction{})
+	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{})
 
-	if got := len(c.GetAllEnhancedActions()); got != 0 {
+	if got := len(c.Telemetry().GetAllEnhancedActions()); got != 0 {
 		t.Errorf("GetEnhancedActionCount() after empty batch = %d, want 0", got)
 	}
 }
@@ -202,14 +202,14 @@ func TestNewAddEnhancedActions_RingBufferEviction(t *testing.T) {
 		}
 	}
 
-	c.AddEnhancedActions(batch)
+	c.Telemetry().AddEnhancedActions(batch)
 
-	if got := len(c.GetAllEnhancedActions()); got != MaxEnhancedActions {
+	if got := len(c.Telemetry().GetAllEnhancedActions()); got != MaxEnhancedActions {
 		t.Fatalf("GetEnhancedActionCount() = %d, want %d (max)", got, MaxEnhancedActions)
 	}
 
 	// The oldest entries should be evicted; newest should remain
-	actions := c.GetAllEnhancedActions()
+	actions := c.Telemetry().GetAllEnhancedActions()
 	first := actions[0]
 	last := actions[len(actions)-1]
 
@@ -233,9 +233,9 @@ func TestNewAddEnhancedActions_ExactCapacity(t *testing.T) {
 		batch[i] = types.EnhancedAction{Type: "click", Timestamp: int64(i)}
 	}
 
-	c.AddEnhancedActions(batch)
+	c.Telemetry().AddEnhancedActions(batch)
 
-	if got := len(c.GetAllEnhancedActions()); got != MaxEnhancedActions {
+	if got := len(c.Telemetry().GetAllEnhancedActions()); got != MaxEnhancedActions {
 		t.Fatalf("GetEnhancedActionCount() at exact capacity = %d, want %d", got, MaxEnhancedActions)
 	}
 }
@@ -251,21 +251,21 @@ func TestNewAddEnhancedActions_IncrementalOverflow(t *testing.T) {
 	for i := range batch {
 		batch[i] = types.EnhancedAction{Type: "click", Timestamp: int64(i)}
 	}
-	c.AddEnhancedActions(batch)
+	c.Telemetry().AddEnhancedActions(batch)
 
 	// Add 5 more
 	extra := make([]types.EnhancedAction, 5)
 	for i := range extra {
 		extra[i] = types.EnhancedAction{Type: "type", Timestamp: int64(MaxEnhancedActions + i)}
 	}
-	c.AddEnhancedActions(extra)
+	c.Telemetry().AddEnhancedActions(extra)
 
-	if got := len(c.GetAllEnhancedActions()); got != MaxEnhancedActions {
+	if got := len(c.Telemetry().GetAllEnhancedActions()); got != MaxEnhancedActions {
 		t.Fatalf("GetEnhancedActionCount() after incremental overflow = %d, want %d", got, MaxEnhancedActions)
 	}
 
 	// Last 5 actions should be "type"
-	actions := c.GetAllEnhancedActions()
+	actions := c.Telemetry().GetAllEnhancedActions()
 	for i := MaxEnhancedActions - 5; i < MaxEnhancedActions; i++ {
 		if actions[i].Type != "type" {
 			t.Errorf("actions[%d].Type = %q, want type (newly added)", i, actions[i].Type)
@@ -285,19 +285,19 @@ func TestNewAddEnhancedActions_AppendAfterDirectBufferSet(t *testing.T) {
 
 	// Pre-populate buffer with entries using entry wrapper structs
 	now := time.Now()
-	c.mu.Lock()
-	c.buffers.enhancedActions = []enhancedActionEntry{
+	c.telemetry.mu.Lock()
+	c.telemetry.buffers.enhancedActions = []enhancedActionEntry{
 		{Action: types.EnhancedAction{Type: "click"}, AddedAt: now},
 		{Action: types.EnhancedAction{Type: "type"}, AddedAt: now},
 		{Action: types.EnhancedAction{Type: "navigate"}, AddedAt: now},
 	}
-	c.mu.Unlock()
+	c.telemetry.mu.Unlock()
 
 	// Adding appends to existing entries
-	c.AddEnhancedActions([]types.EnhancedAction{{Type: "scroll"}})
+	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{{Type: "scroll"}})
 
 	// 3 existing + 1 new = 4
-	if got := len(c.GetAllEnhancedActions()); got != 4 {
+	if got := len(c.Telemetry().GetAllEnhancedActions()); got != 4 {
 		t.Fatalf("GetEnhancedActionCount() after append = %d, want 4", got)
 	}
 }
@@ -312,7 +312,7 @@ func TestNewGetEnhancedActionCount_Empty(t *testing.T) {
 	c := NewCapture()
 	t.Cleanup(c.Close)
 
-	if got := len(c.GetAllEnhancedActions()); got != 0 {
+	if got := len(c.Telemetry().GetAllEnhancedActions()); got != 0 {
 		t.Errorf("GetEnhancedActionCount() on fresh capture = %d, want 0", got)
 	}
 }
@@ -323,13 +323,13 @@ func TestNewGetEnhancedActionCount_AfterAdds(t *testing.T) {
 	c := NewCapture()
 	t.Cleanup(c.Close)
 
-	c.AddEnhancedActions([]types.EnhancedAction{{Type: "click"}})
-	if got := len(c.GetAllEnhancedActions()); got != 1 {
+	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{{Type: "click"}})
+	if got := len(c.Telemetry().GetAllEnhancedActions()); got != 1 {
 		t.Errorf("GetEnhancedActionCount() after 1 add = %d, want 1", got)
 	}
 
-	c.AddEnhancedActions([]types.EnhancedAction{{Type: "type"}, {Type: "navigate"}})
-	if got := len(c.GetAllEnhancedActions()); got != 3 {
+	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{{Type: "type"}, {Type: "navigate"}})
+	if got := len(c.Telemetry().GetAllEnhancedActions()); got != 3 {
 		t.Errorf("GetEnhancedActionCount() after 2 adds = %d, want 3", got)
 	}
 }
@@ -361,8 +361,8 @@ func TestNewAddEnhancedActions_AllFieldsPreserved(t *testing.T) {
 		Source:        "ai",
 	}
 
-	c.AddEnhancedActions([]types.EnhancedAction{action})
-	stored := c.GetAllEnhancedActions()[0]
+	c.Telemetry().AddEnhancedActions([]types.EnhancedAction{action})
+	stored := c.Telemetry().GetAllEnhancedActions()[0]
 
 	if stored.Type != "click" {
 		t.Errorf("Type = %q, want click", stored.Type)

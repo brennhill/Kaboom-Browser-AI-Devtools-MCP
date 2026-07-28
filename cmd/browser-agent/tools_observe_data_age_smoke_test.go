@@ -95,7 +95,7 @@ func TestSmoke_ObserveNetworkBodies_DataAgeMs_Present(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 
-	cap.AddNetworkBodiesForTest([]types.NetworkBody{
+	cap.Telemetry().AddNetworkBodiesForTest([]types.NetworkBody{
 		{
 			URL:       "https://api.example.com/smoke",
 			Method:    "GET",
@@ -134,7 +134,7 @@ func TestSmoke_ObserveActions_DataAgeMs_Present(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 
-	cap.AddEnhancedActionsForTest([]types.EnhancedAction{
+	cap.Telemetry().AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "click", Timestamp: time.Now().UnixMilli(), URL: "https://example.com/smoke"},
 	})
 

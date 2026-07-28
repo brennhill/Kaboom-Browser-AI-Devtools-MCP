@@ -26,7 +26,7 @@ func (h *ToolHandler) attachTransientElements(responseData map[string]any, since
 	if h == nil || responseData == nil {
 		return
 	}
-	asyncresult.AttachTransientElements(responseData, h.capture.GetAllEnhancedActions(), since)
+	asyncresult.AttachTransientElements(responseData, h.capture.Telemetry().GetAllEnhancedActions(), since)
 }
 
 func (h *ToolHandler) EnqueuePendingQuery(req mcp.JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (mcp.JSONRPCResponse, bool) {

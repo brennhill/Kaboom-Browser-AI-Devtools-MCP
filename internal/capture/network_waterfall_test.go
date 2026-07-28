@@ -91,7 +91,7 @@ func TestHandleNetworkWaterfall_StoresTimestamp(t *testing.T) {
 	capture.HandleNetworkWaterfall(w, req)
 	afterTime := time.Now()
 
-	entries := capture.NetworkWaterfall().Entries()
+	entries := capture.Telemetry().NetworkWaterfall().Entries()
 	if len(entries) == 0 {
 		t.Fatalf("Expected 1 entry, got %d", len(entries))
 	}
@@ -124,7 +124,7 @@ func TestHandleNetworkWaterfall_StoresPageURL(t *testing.T) {
 
 	capture.HandleNetworkWaterfall(w, req)
 
-	entries := capture.NetworkWaterfall().Entries()
+	entries := capture.Telemetry().NetworkWaterfall().Entries()
 	if len(entries) == 0 {
 		t.Fatalf("Expected 1 entry, got %d", len(entries))
 	}
@@ -144,7 +144,7 @@ func TestNetworkWaterfall_RingBufferEviction(t *testing.T) {
 	capture := NewCapture()
 
 	// Override capacity to test eviction behavior
-	capture.networkWaterfall = newNetworkWaterfallStore(10)
+	capture.telemetry.networkWaterfall = newNetworkWaterfallStore(10)
 
 	// Add 12 entries which should trigger eviction since we set max to 10
 	for i := 0; i < 12; i++ {
@@ -166,7 +166,7 @@ func TestNetworkWaterfall_RingBufferEviction(t *testing.T) {
 		capture.HandleNetworkWaterfall(w, req)
 	}
 
-	count := len(capture.NetworkWaterfall().Entries())
+	count := len(capture.Telemetry().NetworkWaterfall().Entries())
 
 	// Should keep only the last 10 (the configured capacity)
 	if count > 10 {
@@ -200,7 +200,7 @@ func TestNetworkWaterfall_MultipleEntriesInSinglePayload(t *testing.T) {
 
 	capture.HandleNetworkWaterfall(w, req)
 
-	if entries := capture.NetworkWaterfall().Entries(); len(entries) != 2 {
+	if entries := capture.Telemetry().NetworkWaterfall().Entries(); len(entries) != 2 {
 		t.Errorf("Expected 2 entries, got %d", len(entries))
 	}
 }
@@ -225,7 +225,7 @@ func TestNetworkWaterfall_FeedsCSPGenerator(t *testing.T) {
 func TestNetworkWaterfall_DefaultCapacity(t *testing.T) {
 	t.Parallel()
 	capture := NewCapture()
-	if capture.networkWaterfall.capacity == 0 {
+	if capture.telemetry.networkWaterfall.capacity == 0 {
 		t.Errorf("Expected networkWaterfall buffer to be initialized")
 	}
 }
@@ -233,7 +233,7 @@ func TestNetworkWaterfall_DefaultCapacity(t *testing.T) {
 func TestNetworkWaterfall_CustomCapacity(t *testing.T) {
 	t.Parallel()
 	capture := NewCapture()
-	capacity := capture.networkWaterfall.capacity
+	capacity := capture.telemetry.networkWaterfall.capacity
 
 	if capacity == 0 {
 		t.Errorf("Expected non-zero capacity")
@@ -277,7 +277,7 @@ func TestNetworkWaterfall_ConcurrentWrites(t *testing.T) {
 		<-done
 	}
 
-	count := len(capture.NetworkWaterfall().Entries())
+	count := len(capture.Telemetry().NetworkWaterfall().Entries())
 
 	if count != 100 {
 		t.Errorf("Expected 100 entries, got %d", count)

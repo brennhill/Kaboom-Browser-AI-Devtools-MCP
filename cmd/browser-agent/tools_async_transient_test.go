@@ -16,7 +16,7 @@ func TestAttachTransientElements_AttachesWhenPresent(t *testing.T) {
 
 	since := time.Now()
 	sinceMs := since.UnixMilli()
-	cap.AddEnhancedActionsForTest([]types.EnhancedAction{
+	cap.Telemetry().AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "click", Timestamp: sinceMs + 100, URL: "https://example.com"},
 		{Type: "transient", Timestamp: sinceMs + 200, URL: "https://example.com", Classification: "toast", Value: "Saved", Role: "status"},
 		{Type: "transient", Timestamp: sinceMs + 300, URL: "https://example.com", Classification: "alert", Value: "Error!", Role: "alert"},
@@ -47,7 +47,7 @@ func TestAttachTransientElements_OmitsWhenEmpty(t *testing.T) {
 
 	since := time.Now()
 	sinceMs := since.UnixMilli()
-	cap.AddEnhancedActionsForTest([]types.EnhancedAction{
+	cap.Telemetry().AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "click", Timestamp: sinceMs + 100, URL: "https://example.com"},
 		{Type: "input", Timestamp: sinceMs + 200, URL: "https://example.com"},
 	})
@@ -78,7 +78,7 @@ func TestAttachTransientElements_CapsAtMax(t *testing.T) {
 			Role:           "status",
 		}
 	}
-	cap.AddEnhancedActionsForTest(actions)
+	cap.Telemetry().AddEnhancedActionsForTest(actions)
 
 	responseData := map[string]any{}
 	h.attachTransientElements(responseData, since)
@@ -99,7 +99,7 @@ func TestAttachTransientElements_FiltersByTimestamp(t *testing.T) {
 
 	since := time.Now()
 	sinceMs := since.UnixMilli()
-	cap.AddEnhancedActionsForTest([]types.EnhancedAction{
+	cap.Telemetry().AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "transient", Timestamp: sinceMs - 1000, URL: "https://example.com", Classification: "toast", Value: "Old", Role: "status"},
 		{Type: "transient", Timestamp: sinceMs + 200, URL: "https://example.com", Classification: "alert", Value: "New", Role: "alert"},
 	})
@@ -127,7 +127,7 @@ func TestAttachTransientElements_ClockSkewTolerance(t *testing.T) {
 	since := time.Now()
 	sinceMs := since.UnixMilli()
 	// Actions must be in chronological order (append-only buffer invariant)
-	cap.AddEnhancedActionsForTest([]types.EnhancedAction{
+	cap.Telemetry().AddEnhancedActionsForTest([]types.EnhancedAction{
 		// 1000ms before server time — outside 500ms tolerance, should be EXCLUDED
 		{Type: "transient", Timestamp: sinceMs - 1000, URL: "https://example.com", Classification: "alert", Value: "TooOld", Role: "alert"},
 		// 300ms before server time — within 500ms tolerance, should be INCLUDED

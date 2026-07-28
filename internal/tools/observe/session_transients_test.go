@@ -27,7 +27,7 @@ func (m *mockTransientDeps) ExecuteA11yQuery(_ string, _ []string, _ any, _ bool
 }
 
 func seedTransientActions(c *capture.Capture) {
-	c.AddEnhancedActionsForTest([]types.EnhancedAction{
+	c.Telemetry().AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "click", Timestamp: 1000, URL: "https://example.com"},
 		{Type: "transient", Timestamp: 2000, URL: "https://example.com", Classification: "toast", Value: "Saved", Role: "status"},
 		{Type: "transient", Timestamp: 3000, URL: "https://example.com", Classification: "alert", Value: "Error occurred", Role: "alert"},

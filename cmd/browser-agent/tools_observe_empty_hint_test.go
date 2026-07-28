@@ -53,7 +53,7 @@ func TestGetNetworkBodies_EmptyWithWaterfallData_ReturnsHint(t *testing.T) {
 			Timestamp:     time.Now(),
 		},
 	}
-	env.capture.NetworkWaterfall().Add(waterfallEntries, "https://github.com/dashboard")
+	env.capture.Telemetry().NetworkWaterfall().Add(waterfallEntries, "https://github.com/dashboard")
 
 	// Do NOT add any network bodies — simulates issue #278
 
@@ -127,7 +127,7 @@ func TestGetNetworkBodies_NonEmpty_NoHint(t *testing.T) {
 
 	env := newToolTestEnv(t)
 
-	env.capture.AddNetworkBodiesForTest([]types.NetworkBody{
+	env.capture.Telemetry().AddNetworkBodiesForTest([]types.NetworkBody{
 		{
 			URL:          "https://api.github.com/repos",
 			Method:       "GET",
@@ -161,7 +161,7 @@ func TestGetNetworkBodies_EmptyWithURLFilter_HintMentionsFilter(t *testing.T) {
 	env := newToolTestEnv(t)
 
 	// Add a body that won't match the filter
-	env.capture.AddNetworkBodiesForTest([]types.NetworkBody{
+	env.capture.Telemetry().AddNetworkBodiesForTest([]types.NetworkBody{
 		{
 			URL:          "https://api.example.com/users",
 			Method:       "GET",
@@ -238,7 +238,7 @@ func TestGetWSEvents_NonEmpty_NoHint(t *testing.T) {
 
 	env := newToolTestEnv(t)
 
-	env.capture.AddWebSocketEventsForTest([]types.WebSocketEvent{
+	env.capture.Telemetry().AddWebSocketEventsForTest([]types.WebSocketEvent{
 		{
 			URL:       "wss://stream.example.com/ws",
 			Type:      "message",

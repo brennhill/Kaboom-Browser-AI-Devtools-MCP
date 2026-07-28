@@ -336,7 +336,7 @@ func TestAPIContract_EnhancedActions_POSTThenRead(t *testing.T) {
 	}
 
 	// Read back via getter
-	actions := c.GetAllEnhancedActions()
+	actions := c.Telemetry().GetAllEnhancedActions()
 	if len(actions) != 2 {
 		t.Errorf("Expected 2 actions after POST, got %d", len(actions))
 	}
@@ -387,7 +387,7 @@ func TestAPIContract_NetworkBodies_POSTThenRead(t *testing.T) {
 	}
 
 	// Read back via getter
-	bodies := c.GetNetworkBodies()
+	bodies := c.Telemetry().GetNetworkBodies()
 	if len(bodies) != 1 {
 		t.Errorf("Expected 1 body after POST, got %d", len(bodies))
 	}

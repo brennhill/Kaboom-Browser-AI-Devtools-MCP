@@ -63,16 +63,16 @@ func TestHandleSnapshot_WithStatsAndActiveTestIDFallback(t *testing.T) {
 		{"level": "warn", "message": "warn", "ts": time.Now().UTC().Format(time.RFC3339Nano)},
 		{"level": "info", "message": "info", "ts": time.Now().UTC().Format(time.RFC3339Nano)},
 	})
-	cap.AddWebSocketEvents([]types.WebSocketEvent{
+	cap.Telemetry().AddWebSocketEvents([]types.WebSocketEvent{
 		{Event: "open", URL: "wss://one"},
 		{Event: "message", URL: "wss://one"},
 		{Event: "open", URL: "wss://two"},
 	})
-	cap.AddNetworkBodies([]types.NetworkBody{
+	cap.Telemetry().AddNetworkBodies([]types.NetworkBody{
 		{URL: "https://example.test/a", Status: 200},
 		{URL: "https://example.test/b", Status: 502},
 	})
-	cap.AddEnhancedActions([]types.EnhancedAction{
+	cap.Telemetry().AddEnhancedActions([]types.EnhancedAction{
 		{Type: "click", Timestamp: 1, URL: "https://example.test"},
 	})
 	cap.Extension().SetTestBoundaryStart("test-123")
@@ -154,7 +154,7 @@ func TestHandleClearAndTestBoundaryHandlers(t *testing.T) {
 	cap := capture.NewCapture()
 
 	srv.logs.AddEntries([]types.LogEntry{{"level": "error", "message": "x"}})
-	cap.AddNetworkBodies([]types.NetworkBody{{URL: "https://example.test", Status: 200}})
+	cap.Telemetry().AddNetworkBodies([]types.NetworkBody{{URL: "https://example.test", Status: 200}})
 
 	clearHandler := ciapi.Clear(srv.logs, cap)
 
@@ -174,8 +174,8 @@ func TestHandleClearAndTestBoundaryHandlers(t *testing.T) {
 	if srv.logs.EntryCount() != 0 {
 		t.Fatalf("server entry count = %d, want 0 after clear", srv.logs.EntryCount())
 	}
-	if len(cap.GetNetworkBodies()) != 0 {
-		t.Fatalf("network bodies len = %d, want 0 after clear", len(cap.GetNetworkBodies()))
+	if len(cap.Telemetry().GetNetworkBodies()) != 0 {
+		t.Fatalf("network bodies len = %d, want 0 after clear", len(cap.Telemetry().GetNetworkBodies()))
 	}
 
 	testBoundary := ciapi.TestBoundary(cap)

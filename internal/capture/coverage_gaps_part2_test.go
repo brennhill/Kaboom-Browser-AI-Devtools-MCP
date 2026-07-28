@@ -87,7 +87,7 @@ func TestGetAllWebSocketEvents_EmptyReturnsEmptySlice(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 
-	result := c.GetAllWebSocketEvents()
+	result := c.Telemetry().GetAllWebSocketEvents()
 	if result == nil {
 		t.Fatal("expected non-nil empty slice, got nil")
 	}
@@ -102,7 +102,7 @@ func TestGetAllEnhancedActions_EmptyReturnsEmptySlice(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 
-	result := c.GetAllEnhancedActions()
+	result := c.Telemetry().GetAllEnhancedActions()
 	if result == nil {
 		t.Fatal("expected non-nil empty slice, got nil")
 	}
@@ -117,7 +117,7 @@ func TestGetNetworkBodies_EmptyReturnsEmptySlice(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 
-	result := c.GetNetworkBodies()
+	result := c.Telemetry().GetNetworkBodies()
 	if result == nil {
 		t.Fatal("expected non-nil empty slice, got nil")
 	}

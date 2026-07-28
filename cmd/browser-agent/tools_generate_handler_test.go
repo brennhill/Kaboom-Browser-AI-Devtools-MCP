@@ -177,7 +177,7 @@ func TestToolsGenerateTest_WithActions(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 
-	cap.AddEnhancedActionsForTest([]types.EnhancedAction{
+	cap.Telemetry().AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "navigate", Timestamp: 1000, URL: "https://example.com", ToURL: "https://example.com"},
 		{Type: "click", Timestamp: 2000, URL: "https://example.com", Selectors: map[string]any{"css": "#btn"}},
 	})
@@ -245,7 +245,7 @@ func TestToolsGeneratePRSummary_WithActivity(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 
-	cap.AddEnhancedActionsForTest([]types.EnhancedAction{
+	cap.Telemetry().AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "click", Timestamp: time.Now().UnixMilli(), URL: "https://example.com"},
 	})
 
@@ -294,7 +294,7 @@ func TestToolsGenerateCSP_WithNetworkData(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 
-	cap.AddNetworkBodies([]types.NetworkBody{
+	cap.Telemetry().AddNetworkBodies([]types.NetworkBody{
 		{URL: "https://cdn.example.com/app.js", ContentType: "application/javascript", Status: 200, Timestamp: time.Now().UTC().Format(time.RFC3339)},
 		{URL: "https://fonts.googleapis.com/css", ContentType: "text/css", Status: 200, Timestamp: time.Now().UTC().Format(time.RFC3339)},
 	})
@@ -337,7 +337,7 @@ func TestToolsGenerateCSP_DefaultMode(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 
-	cap.AddNetworkBodies([]types.NetworkBody{
+	cap.Telemetry().AddNetworkBodies([]types.NetworkBody{
 		{URL: "https://cdn.example.com/app.js", ContentType: "application/javascript", Status: 200, Timestamp: time.Now().UTC().Format(time.RFC3339)},
 	})
 

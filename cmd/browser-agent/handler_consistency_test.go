@@ -195,13 +195,13 @@ func TestDiagnostics_ReturnsRealData(t *testing.T) {
 	mux, _ := setupHTTPRoutes(srv, cap)
 
 	// Ingest some data into various buffers.
-	cap.AddWebSocketEvents([]types.WebSocketEvent{
+	cap.Telemetry().AddWebSocketEvents([]types.WebSocketEvent{
 		{Type: "ws_connect", ID: "conn-1", URL: "wss://example.test"},
 	})
-	cap.AddNetworkBodies([]types.NetworkBody{
+	cap.Telemetry().AddNetworkBodies([]types.NetworkBody{
 		{URL: "https://example.test/api", Method: "GET", Status: 200},
 	})
-	cap.AddEnhancedActions([]types.EnhancedAction{
+	cap.Telemetry().AddEnhancedActions([]types.EnhancedAction{
 		{Type: "click", Timestamp: 1000},
 	})
 

@@ -548,10 +548,10 @@ func (h *MCPHandler) currentTelemetryCursor() passiveTelemetryCursor {
 	if captured == nil {
 		return current
 	}
-	current.networkTotal = captured.GetNetworkTotalAdded()
-	current.networkErrorTotal = captured.GetNetworkErrorTotalAdded()
-	current.wsTotal = captured.GetWebSocketTotalAdded()
-	current.actionTotal = captured.GetActionTotalAdded()
+	current.networkTotal = captured.Telemetry().GetNetworkTotalAdded()
+	current.networkErrorTotal = captured.Telemetry().GetNetworkErrorTotalAdded()
+	current.wsTotal = captured.Telemetry().GetWebSocketTotalAdded()
+	current.actionTotal = captured.Telemetry().GetActionTotalAdded()
 	return current
 }
 

@@ -52,7 +52,7 @@ func TestStressCaptureSystemConcurrent(t *testing.T) {
 							Timestamp: time.Now().Format(time.RFC3339Nano),
 						},
 					}
-					c.AddWebSocketEvents(events)
+					c.Telemetry().AddWebSocketEvents(events)
 				}
 			}(writerID)
 		}
@@ -75,7 +75,7 @@ func TestStressCaptureSystemConcurrent(t *testing.T) {
 							Timestamp:    time.Now().Format(time.RFC3339Nano),
 						},
 					}
-					c.AddNetworkBodies(bodies)
+					c.Telemetry().AddNetworkBodies(bodies)
 				}
 			}(writerID)
 		}
@@ -96,7 +96,7 @@ func TestStressCaptureSystemConcurrent(t *testing.T) {
 							},
 						},
 					}
-					c.AddEnhancedActions(actions)
+					c.Telemetry().AddEnhancedActions(actions)
 				}
 			}(writerID)
 		}
@@ -108,9 +108,9 @@ func TestStressCaptureSystemConcurrent(t *testing.T) {
 				defer wg.Done()
 				for i := 0; i < readsPerReader; i++ {
 					// Read from all three buffers
-					_ = c.GetAllWebSocketEvents()
-					_ = c.GetNetworkBodies()
-					_ = c.GetAllEnhancedActions()
+					_ = c.Telemetry().GetAllWebSocketEvents()
+					_ = c.Telemetry().GetNetworkBodies()
+					_ = c.Telemetry().GetAllEnhancedActions()
 
 					// Yield to allow writers to interleave
 					if i%5 == 0 {
@@ -124,9 +124,9 @@ func TestStressCaptureSystemConcurrent(t *testing.T) {
 		wg.Wait()
 
 		// Verify final state invariants
-		wsEvents := c.GetAllWebSocketEvents()
-		networkBodies := c.GetNetworkBodies()
-		actions := c.GetAllEnhancedActions()
+		wsEvents := c.Telemetry().GetAllWebSocketEvents()
+		networkBodies := c.Telemetry().GetNetworkBodies()
+		actions := c.Telemetry().GetAllEnhancedActions()
 
 		// Buffer capacity bounds must hold
 		if len(wsEvents) > MaxWSEvents {
@@ -155,7 +155,7 @@ func TestStressCaptureSystemConcurrent(t *testing.T) {
 		}
 
 		// Snapshot counts must match actual buffer lengths
-		snap := c.GetSnapshot()
+		snap := c.Telemetry().GetSnapshot()
 		if snap.WebSocketCount != len(wsEvents) {
 			t.Errorf("Snapshot.WebSocketCount %d != len(wsEvents) %d", snap.WebSocketCount, len(wsEvents))
 		}
@@ -198,15 +198,15 @@ func TestStressCaptureWithClears(t *testing.T) {
 					// Alternate between different buffer types
 					switch i % 3 {
 					case 0:
-						c.AddWebSocketEvents([]types.WebSocketEvent{
+						c.Telemetry().AddWebSocketEvents([]types.WebSocketEvent{
 							{ID: fmt.Sprintf("ws-%d-%d", id, i), Event: "message"},
 						})
 					case 1:
-						c.AddNetworkBodies([]types.NetworkBody{
+						c.Telemetry().AddNetworkBodies([]types.NetworkBody{
 							{URL: fmt.Sprintf("https://api.com/%d", i), Method: "GET", Status: 200},
 						})
 					case 2:
-						c.AddEnhancedActions([]types.EnhancedAction{
+						c.Telemetry().AddEnhancedActions([]types.EnhancedAction{
 							{Type: "click", Timestamp: time.Now().UnixNano()},
 						})
 					}
@@ -222,11 +222,11 @@ func TestStressCaptureWithClears(t *testing.T) {
 				for i := 0; i < readsPerReader; i++ {
 					switch i % 3 {
 					case 0:
-						_ = c.GetAllWebSocketEvents()
+						_ = c.Telemetry().GetAllWebSocketEvents()
 					case 1:
-						_ = c.GetNetworkBodies()
+						_ = c.Telemetry().GetNetworkBodies()
 					case 2:
-						_ = c.GetAllEnhancedActions()
+						_ = c.Telemetry().GetAllEnhancedActions()
 					}
 					time.Sleep(1 * time.Microsecond)
 				}
@@ -248,9 +248,9 @@ func TestStressCaptureWithClears(t *testing.T) {
 		wg.Wait()
 
 		// Verify buffers are in valid state after concurrent clears
-		wsEvents := c.GetAllWebSocketEvents()
-		networkBodies := c.GetNetworkBodies()
-		actions := c.GetAllEnhancedActions()
+		wsEvents := c.Telemetry().GetAllWebSocketEvents()
+		networkBodies := c.Telemetry().GetNetworkBodies()
+		actions := c.Telemetry().GetAllEnhancedActions()
 
 		// Capacity bounds must hold even with concurrent clears
 		if len(wsEvents) > MaxWSEvents {
@@ -264,7 +264,7 @@ func TestStressCaptureWithClears(t *testing.T) {
 		}
 
 		// Snapshot must be consistent with buffer contents
-		snap := c.GetSnapshot()
+		snap := c.Telemetry().GetSnapshot()
 		if snap.WebSocketCount < 0 || snap.NetworkCount < 0 || snap.ActionCount < 0 {
 			t.Errorf("Snapshot has negative counts: ws=%d net=%d act=%d",
 				snap.WebSocketCount, snap.NetworkCount, snap.ActionCount)
@@ -296,13 +296,13 @@ func TestStressCaptureSnapshot(t *testing.T) {
 			go func(id int) {
 				defer wg.Done()
 				for i := 0; i < writesPerWriter; i++ {
-					c.AddWebSocketEvents([]types.WebSocketEvent{
+					c.Telemetry().AddWebSocketEvents([]types.WebSocketEvent{
 						{ID: fmt.Sprintf("ws-%d-%d", id, i), Event: "message"},
 					})
-					c.AddNetworkBodies([]types.NetworkBody{
+					c.Telemetry().AddNetworkBodies([]types.NetworkBody{
 						{URL: fmt.Sprintf("https://api.com/%d", i), Method: "GET", Status: 200},
 					})
-					c.AddEnhancedActions([]types.EnhancedAction{
+					c.Telemetry().AddEnhancedActions([]types.EnhancedAction{
 						{Type: "click", Timestamp: time.Now().UnixNano()},
 					})
 				}
@@ -315,7 +315,7 @@ func TestStressCaptureSnapshot(t *testing.T) {
 			go func(id int) {
 				defer wg.Done()
 				for i := 0; i < snapsPerSnapper; i++ {
-					_ = c.GetSnapshot()
+					_ = c.Telemetry().GetSnapshot()
 					time.Sleep(500 * time.Microsecond)
 				}
 			}(snapperID)
@@ -324,7 +324,7 @@ func TestStressCaptureSnapshot(t *testing.T) {
 		wg.Wait()
 
 		// Final snapshot check
-		snapshot := c.GetSnapshot()
+		snapshot := c.Telemetry().GetSnapshot()
 		if snapshot.NetworkCount < 0 || snapshot.WebSocketCount < 0 || snapshot.ActionCount < 0 {
 			t.Errorf("Snapshot has negative counts: %+v", snapshot)
 		}

@@ -122,8 +122,15 @@ redaction methods are deleted.
 Browser resource timings likewise live in an independently synchronized
 `NetworkWaterfallStore`, which owns page/timestamp tagging, capacity eviction,
 snapshots, and clearing. All ingestion and analysis callers use
-`Capture.NetworkWaterfall()`; the former capture-level add/get facade and raw
-waterfall buffer are deleted.
+`Capture.Telemetry().NetworkWaterfall()`; the former capture-level access,
+add/get facades, and raw waterfall buffer are deleted.
+Network bodies, WebSocket events and connection state, enhanced actions,
+navigation callbacks, and the waterfall owner now form one independently
+synchronized `TelemetryStore` returned by `Capture.Telemetry()`. Its consumers
+use that owner directly; the former Capture buffer fields, WebSocket tracker,
+navigation callback, five test helpers, and sixteen production forwarding
+methods are deleted. `Capture.ClearAll` remains only because it genuinely
+coordinates telemetry, extension boundaries, performance, and extension logs.
 Performance snapshots and pre-action correlation snapshots now share an
 independently synchronized `PerformanceStore`. Callers use
 `Capture.Performance()` for add/list/URL lookup and consume-on-read correlation;

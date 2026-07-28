@@ -27,10 +27,10 @@ func TestNetworkBody_BinaryFormatIntegration(t *testing.T) {
 			ResponseBody: msgpackData,
 		},
 	}
-	c.AddNetworkBodies(bodies)
+	c.Telemetry().AddNetworkBodies(bodies)
 
 	// Retrieve and verify binary format was detected
-	result := c.GetNetworkBodies()
+	result := c.Telemetry().GetNetworkBodies()
 	if len(result) != 1 {
 		t.Fatalf("expected 1 body, got %d", len(result))
 	}
@@ -55,10 +55,10 @@ func TestNetworkBody_TextNoFormat(t *testing.T) {
 			ResponseBody: `{"key": "value"}`,
 		},
 	}
-	c.AddNetworkBodies(bodies)
+	c.Telemetry().AddNetworkBodies(bodies)
 
 	// Verify no binary format detected for text
-	result := c.GetNetworkBodies()
+	result := c.Telemetry().GetNetworkBodies()
 	if len(result) != 1 {
 		t.Fatalf("expected 1 body, got %d", len(result))
 	}
@@ -83,10 +83,10 @@ func TestWebSocketEvent_BinaryFormatIntegration(t *testing.T) {
 			Size:      len(protobufData),
 		},
 	}
-	c.AddWebSocketEvents(events)
+	c.Telemetry().AddWebSocketEvents(events)
 
 	// Retrieve and verify binary format was detected
-	result := c.GetWebSocketEvents(types.WebSocketEventFilter{Limit: 1})
+	result := c.Telemetry().GetWebSocketEvents(types.WebSocketEventFilter{Limit: 1})
 	if len(result) != 1 {
 		t.Fatalf("expected 1 event, got %d", len(result))
 	}
@@ -116,10 +116,10 @@ func TestWebSocketEvent_OpenCloseNoFormat(t *testing.T) {
 			CloseReason: "normal",
 		},
 	}
-	c.AddWebSocketEvents(events)
+	c.Telemetry().AddWebSocketEvents(events)
 
 	// Verify no binary format for non-message events
-	result := c.GetWebSocketEvents(types.WebSocketEventFilter{Limit: 10})
+	result := c.Telemetry().GetWebSocketEvents(types.WebSocketEventFilter{Limit: 10})
 	for _, ev := range result {
 		if ev.BinaryFormat != "" {
 			t.Errorf("expected empty binary_format for %s event, got %q", ev.Event, ev.BinaryFormat)
@@ -142,10 +142,10 @@ func TestWebSocketEvent_TextMessageNoFormat(t *testing.T) {
 			Size:      18,
 		},
 	}
-	c.AddWebSocketEvents(events)
+	c.Telemetry().AddWebSocketEvents(events)
 
 	// Verify no binary format for text message
-	result := c.GetWebSocketEvents(types.WebSocketEventFilter{Limit: 1})
+	result := c.Telemetry().GetWebSocketEvents(types.WebSocketEventFilter{Limit: 1})
 	if len(result) != 1 {
 		t.Fatalf("expected 1 event, got %d", len(result))
 	}

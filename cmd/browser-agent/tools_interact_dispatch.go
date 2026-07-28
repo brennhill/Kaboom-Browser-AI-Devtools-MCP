@@ -295,13 +295,13 @@ func (h *ToolHandler) recordAIAction(actionType, url string, details map[string]
 	if len(details) > 0 {
 		action.Selectors = details
 	}
-	h.capture.AddEnhancedActions([]types.EnhancedAction{action})
+	h.capture.Telemetry().AddEnhancedActions([]types.EnhancedAction{action})
 }
 
 func (h *ToolHandler) recordAIEnhancedAction(action types.EnhancedAction) {
 	action.Timestamp = time.Now().UnixMilli()
 	action.Source = "ai"
-	h.capture.AddEnhancedActions([]types.EnhancedAction{action})
+	h.capture.Telemetry().AddEnhancedActions([]types.EnhancedAction{action})
 }
 
 func (h *ToolHandler) recordDOMPrimitiveAction(action, selector, text, value string) {
