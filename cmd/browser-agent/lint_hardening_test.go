@@ -126,3 +126,34 @@ func TestFeaturePackagesDoNotMirrorGuardContract(t *testing.T) {
 		}
 	}
 }
+
+func TestAuthoredGoDoesNotDeclareTypeAliases(t *testing.T) {
+	err := filepath.WalkDir(projectRoot(), func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() {
+			if entry.Name() == ".git" || entry.Name() == "node_modules" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if filepath.Ext(path) != ".go" {
+			return nil
+		}
+		source, readErr := os.ReadFile(path)
+		if readErr != nil {
+			return readErr
+		}
+		for lineNumber, line := range strings.Split(string(source), "\n") {
+			trimmed := strings.TrimSpace(line)
+			if strings.HasPrefix(trimmed, "type ") && strings.Contains(trimmed, " = ") {
+				t.Errorf("%s:%d declares a Go type alias: %s", path, lineNumber+1, trimmed)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}

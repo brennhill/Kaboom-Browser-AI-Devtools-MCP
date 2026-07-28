@@ -81,6 +81,9 @@ Note: the API *contract* checking in `internal/analysis/apicontract` is live and
 
 ## Code and Tests
 
+API contract tests construct canonical `internal/types.NetworkBody` values
+directly; no test-local type alias masks the wire-contract owner.
+
 Observed-traffic API schema inference (`observe {what: "api"}`):
 
 - Schema inference and OpenAPI emission: `internal/analysis/apischema/`

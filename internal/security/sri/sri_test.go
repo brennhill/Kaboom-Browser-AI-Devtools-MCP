@@ -10,14 +10,10 @@ import (
 	"testing"
 )
 
-// NetworkBody keeps the test tables readable; the alias used to live in the
-// old flat security package.
-type NetworkBody = types.NetworkBody
-
 func TestGeneratorBasicHash(t *testing.T) {
 	t.Parallel()
 	gen := NewGenerator()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{
 			URL:          "https://cdn.example.com/app.js",
 			ContentType:  "application/javascript",
@@ -58,7 +54,7 @@ func TestGeneratorKnownHash(t *testing.T) {
 	// Test with known content to verify SHA-384 computation
 	// "test content" SHA-384 hash is known
 	gen := NewGenerator()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{
 			URL:          "https://cdn.example.com/test.js",
 			ContentType:  "application/javascript",
@@ -83,7 +79,7 @@ func TestGeneratorKnownHash(t *testing.T) {
 func TestGeneratorOnlyScriptsAndStyles(t *testing.T) {
 	t.Parallel()
 	gen := NewGenerator()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		// Should be included
 		{URL: "https://cdn.example.com/app.js", ContentType: "application/javascript", ResponseBody: "js code"},
 		{URL: "https://cdn.example.com/style.css", ContentType: "text/css", ResponseBody: "css code"},
@@ -114,7 +110,7 @@ func TestGeneratorOnlyScriptsAndStyles(t *testing.T) {
 func TestGeneratorOnlyThirdParty(t *testing.T) {
 	t.Parallel()
 	gen := NewGenerator()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		// Same origin - should be excluded
 		{URL: "https://myapp.com/app.js", ContentType: "application/javascript", ResponseBody: "first party"},
 		// Third party - should be included
@@ -135,7 +131,7 @@ func TestGeneratorOnlyThirdParty(t *testing.T) {
 func TestGeneratorTagTemplates(t *testing.T) {
 	t.Parallel()
 	gen := NewGenerator()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{URL: "https://cdn.example.com/app.js", ContentType: "application/javascript", ResponseBody: "js"},
 		{URL: "https://cdn.example.com/style.css", ContentType: "text/css", ResponseBody: "css"},
 	}
@@ -179,7 +175,7 @@ func TestGeneratorTagTemplates(t *testing.T) {
 func TestGeneratorVaryUserAgentWarning(t *testing.T) {
 	t.Parallel()
 	gen := NewGenerator()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{
 			URL:          "https://fonts.googleapis.com/css2?family=Roboto",
 			ContentType:  "text/css",
@@ -211,7 +207,7 @@ func TestGeneratorVaryUserAgentWarning(t *testing.T) {
 func TestGeneratorTruncatedBody(t *testing.T) {
 	t.Parallel()
 	gen := NewGenerator()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{
 			URL:               "https://cdn.example.com/large.js",
 			ContentType:       "application/javascript",
@@ -246,7 +242,7 @@ func TestGeneratorTruncatedBody(t *testing.T) {
 func TestGeneratorEmptyBody(t *testing.T) {
 	t.Parallel()
 	gen := NewGenerator()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{
 			URL:          "https://cdn.example.com/empty.js",
 			ContentType:  "application/javascript",
@@ -266,7 +262,7 @@ func TestGeneratorEmptyBody(t *testing.T) {
 func TestGeneratorSummary(t *testing.T) {
 	t.Parallel()
 	gen := NewGenerator()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{URL: "https://cdn1.example.com/a.js", ContentType: "application/javascript", ResponseBody: "a"},
 		{URL: "https://cdn2.example.com/b.js", ContentType: "application/javascript", ResponseBody: "b"},
 		{URL: "https://cdn3.example.com/c.css", ContentType: "text/css", ResponseBody: "c"},
@@ -294,7 +290,7 @@ func TestGeneratorSummary(t *testing.T) {
 func TestGeneratorResourceTypesFilter(t *testing.T) {
 	t.Parallel()
 	gen := NewGenerator()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{URL: "https://cdn.example.com/app.js", ContentType: "application/javascript", ResponseBody: "js"},
 		{URL: "https://cdn.example.com/style.css", ContentType: "text/css", ResponseBody: "css"},
 	}
@@ -316,7 +312,7 @@ func TestGeneratorResourceTypesFilter(t *testing.T) {
 func TestGeneratorOriginsFilter(t *testing.T) {
 	t.Parallel()
 	gen := NewGenerator()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{URL: "https://cdn1.example.com/app.js", ContentType: "application/javascript", ResponseBody: "js1"},
 		{URL: "https://cdn2.example.com/app.js", ContentType: "application/javascript", ResponseBody: "js2"},
 	}
@@ -336,7 +332,7 @@ func TestGeneratorSizeBytes(t *testing.T) {
 	t.Parallel()
 	gen := NewGenerator()
 	content := "console.log('hello world');"
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{
 			URL:          "https://cdn.example.com/app.js",
 			ContentType:  "application/javascript",
@@ -362,7 +358,7 @@ func TestGeneratorAlreadyHasSRI(t *testing.T) {
 	// AlreadyHasSRI would be set based on external data or heuristics.
 	// For now, we just ensure the field exists in the output.
 	gen := NewGenerator()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{URL: "https://cdn.example.com/app.js", ContentType: "application/javascript", ResponseBody: "js"},
 	}
 	pageURLs := []string{"https://myapp.com/"}
@@ -382,7 +378,7 @@ func TestGeneratorDeduplication(t *testing.T) {
 	t.Parallel()
 	gen := NewGenerator()
 	// Same URL loaded twice - should only appear once
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{URL: "https://cdn.example.com/app.js", ContentType: "application/javascript", ResponseBody: "js"},
 		{URL: "https://cdn.example.com/app.js", ContentType: "application/javascript", ResponseBody: "js"},
 	}
@@ -398,7 +394,7 @@ func TestGeneratorDeduplication(t *testing.T) {
 func TestGeneratorMultipleContentTypes(t *testing.T) {
 	t.Parallel()
 	gen := NewGenerator()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		// Various JavaScript content types
 		{URL: "https://cdn.example.com/a.js", ContentType: "application/javascript", ResponseBody: "a"},
 		{URL: "https://cdn.example.com/b.js", ContentType: "text/javascript", ResponseBody: "b"},
@@ -417,7 +413,7 @@ func TestGeneratorMultipleContentTypes(t *testing.T) {
 
 func TestGeneratorHandleMCP(t *testing.T) {
 	t.Parallel()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{URL: "https://cdn.example.com/lib.js", ContentType: "application/javascript", ResponseBody: "code"},
 	}
 	pageURLs := []string{"https://myapp.com/"}
@@ -453,7 +449,7 @@ func TestGeneratorEmptyInput(t *testing.T) {
 
 func TestGeneratorInvalidParams(t *testing.T) {
 	t.Parallel()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{URL: "https://cdn.example.com/lib.js", ContentType: "application/javascript", ResponseBody: "code"},
 	}
 	pageURLs := []string{"https://myapp.com/"}
@@ -468,7 +464,7 @@ func TestGeneratorInvalidParams(t *testing.T) {
 func TestGeneratorPlaceholderBodies(t *testing.T) {
 	t.Parallel()
 	gen := NewGenerator()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		// Placeholder from body read timeout — should be skipped with warning
 		{URL: "https://cdn.example.com/timeout.js", ContentType: "application/javascript", ResponseBody: "[Skipped: body read timeout]"},
 		// Placeholder from read error — should be skipped with warning
@@ -501,7 +497,7 @@ func TestGeneratorPlaceholderBodies(t *testing.T) {
 func TestGeneratorSubdomainFirstParty(t *testing.T) {
 	t.Parallel()
 	gen := NewGenerator()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		// Subdomain of first party - should be excluded
 		{URL: "https://cdn.myapp.com/app.js", ContentType: "application/javascript", ResponseBody: "first party cdn"},
 		// Different domain - should be included

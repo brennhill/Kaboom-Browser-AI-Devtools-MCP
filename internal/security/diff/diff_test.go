@@ -12,16 +12,14 @@ import (
 	"time"
 )
 
-type NetworkBody = types.NetworkBody
-
-func mustTakeSnapshot(t *testing.T, mgr *Manager, name string, bodies []NetworkBody) {
+func mustTakeSnapshot(t *testing.T, mgr *Manager, name string, bodies []types.NetworkBody) {
 	t.Helper()
 	if _, err := mgr.TakeSnapshot(name, bodies); err != nil {
 		t.Fatalf("TakeSnapshot(%q) failed: %v", name, err)
 	}
 }
 
-func mustCompareSnapshots(t *testing.T, mgr *Manager, beforeBodies, afterBodies []NetworkBody) *Result {
+func mustCompareSnapshots(t *testing.T, mgr *Manager, beforeBodies, afterBodies []types.NetworkBody) *Result {
 	t.Helper()
 	mustTakeSnapshot(t, mgr, "before", beforeBodies)
 	mustTakeSnapshot(t, mgr, "after", afterBodies)
@@ -37,7 +35,7 @@ func TestSnapshotCapture(t *testing.T) {
 	t.Parallel()
 	mgr := NewManager()
 
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{
 			URL:         "https://myapp.com/",
 			Method:      "GET",
@@ -120,7 +118,7 @@ func TestSnapshotCapture(t *testing.T) {
 func TestSnapshotNameValidation(t *testing.T) {
 	t.Parallel()
 	mgr := NewManager()
-	bodies := []NetworkBody{{URL: "https://myapp.com/", ContentType: "text/html", ResponseHeaders: map[string]string{"X-Frame-Options": "DENY"}}}
+	bodies := []types.NetworkBody{{URL: "https://myapp.com/", ContentType: "text/html", ResponseHeaders: map[string]string{"X-Frame-Options": "DENY"}}}
 
 	// Empty name
 	_, err := mgr.TakeSnapshot("", bodies)
@@ -151,7 +149,7 @@ func TestSnapshotNameValidation(t *testing.T) {
 func TestSnapshotMaxCount(t *testing.T) {
 	t.Parallel()
 	mgr := NewManager()
-	bodies := []NetworkBody{{URL: "https://myapp.com/", ContentType: "text/html", ResponseHeaders: map[string]string{"X-Frame-Options": "DENY"}}}
+	bodies := []types.NetworkBody{{URL: "https://myapp.com/", ContentType: "text/html", ResponseHeaders: map[string]string{"X-Frame-Options": "DENY"}}}
 
 	// Create 5 snapshots (max)
 	for i := 1; i <= 5; i++ {
@@ -204,7 +202,7 @@ func TestSnapshotTTL(t *testing.T) {
 	mgr := NewManager()
 	mgr.ttl = time.Millisecond // Very short TTL for testing
 
-	bodies := []NetworkBody{{URL: "https://myapp.com/", ContentType: "text/html", ResponseHeaders: map[string]string{"X-Frame-Options": "DENY"}}}
+	bodies := []types.NetworkBody{{URL: "https://myapp.com/", ContentType: "text/html", ResponseHeaders: map[string]string{"X-Frame-Options": "DENY"}}}
 	_, err := mgr.TakeSnapshot("old", bodies)
 	if err != nil {
 		t.Fatal(err)
@@ -223,7 +221,7 @@ func TestSecurityDiffHeaderRemoved(t *testing.T) {
 	mgr := NewManager()
 
 	// Before: has X-Frame-Options
-	beforeBodies := []NetworkBody{
+	beforeBodies := []types.NetworkBody{
 		{
 			URL:         "https://myapp.com/",
 			ContentType: "text/html",
@@ -235,7 +233,7 @@ func TestSecurityDiffHeaderRemoved(t *testing.T) {
 	}
 
 	// After: missing X-Frame-Options
-	afterBodies := []NetworkBody{
+	afterBodies := []types.NetworkBody{
 		{
 			URL:         "https://myapp.com/",
 			ContentType: "text/html",
@@ -278,7 +276,7 @@ func TestSecurityDiffHeaderAdded(t *testing.T) {
 	mgr := NewManager()
 
 	// Before: no CSP
-	beforeBodies := []NetworkBody{
+	beforeBodies := []types.NetworkBody{
 		{
 			URL:         "https://myapp.com/",
 			ContentType: "text/html",
@@ -289,7 +287,7 @@ func TestSecurityDiffHeaderAdded(t *testing.T) {
 	}
 
 	// After: has CSP
-	afterBodies := []NetworkBody{
+	afterBodies := []types.NetworkBody{
 		{
 			URL:         "https://myapp.com/",
 			ContentType: "text/html",
@@ -327,7 +325,7 @@ func TestSecurityDiffCookieFlagLost(t *testing.T) {
 	mgr := NewManager()
 
 	// Before: cookie has HttpOnly, Secure, SameSite
-	beforeBodies := []NetworkBody{
+	beforeBodies := []types.NetworkBody{
 		{
 			URL:         "https://myapp.com/",
 			ContentType: "text/html",
@@ -338,7 +336,7 @@ func TestSecurityDiffCookieFlagLost(t *testing.T) {
 	}
 
 	// After: cookie lost HttpOnly and Secure flags
-	afterBodies := []NetworkBody{
+	afterBodies := []types.NetworkBody{
 		{
 			URL:         "https://myapp.com/",
 			ContentType: "text/html",
@@ -381,7 +379,7 @@ func TestSecurityDiffAuthDropped(t *testing.T) {
 	mgr := NewManager()
 
 	// Before: endpoint has auth
-	beforeBodies := []NetworkBody{
+	beforeBodies := []types.NetworkBody{
 		{
 			URL:           "https://api.myapp.com/users",
 			Method:        "GET",
@@ -391,7 +389,7 @@ func TestSecurityDiffAuthDropped(t *testing.T) {
 	}
 
 	// After: same endpoint, no auth
-	afterBodies := []NetworkBody{
+	afterBodies := []types.NetworkBody{
 		{
 			URL:           "https://api.myapp.com/users",
 			Method:        "GET",
@@ -428,7 +426,7 @@ func TestSecurityDiffTransportDowngrade(t *testing.T) {
 	mgr := NewManager()
 
 	// Before: HTTPS
-	beforeBodies := []NetworkBody{
+	beforeBodies := []types.NetworkBody{
 		{
 			URL:         "https://myapp.com/api/data",
 			Method:      "GET",
@@ -437,7 +435,7 @@ func TestSecurityDiffTransportDowngrade(t *testing.T) {
 	}
 
 	// After: HTTP (downgrade)
-	afterBodies := []NetworkBody{
+	afterBodies := []types.NetworkBody{
 		{
 			URL:         "http://myapp.com/api/data",
 			Method:      "GET",
@@ -472,7 +470,7 @@ func TestSecurityDiffUnchanged(t *testing.T) {
 	t.Parallel()
 	mgr := NewManager()
 
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{
 			URL:         "https://myapp.com/",
 			Method:      "GET",
@@ -514,7 +512,7 @@ func TestSecurityDiffUnchanged(t *testing.T) {
 func TestSecurityDiffListSnapshots(t *testing.T) {
 	t.Parallel()
 	mgr := NewManager()
-	bodies := []NetworkBody{{URL: "https://myapp.com/", ContentType: "text/html", ResponseHeaders: map[string]string{"X-Frame-Options": "DENY"}}}
+	bodies := []types.NetworkBody{{URL: "https://myapp.com/", ContentType: "text/html", ResponseHeaders: map[string]string{"X-Frame-Options": "DENY"}}}
 
 	_, _ = mgr.TakeSnapshot("alpha", bodies)
 	time.Sleep(time.Millisecond)
@@ -549,7 +547,7 @@ func TestSecurityDiffCompareAgainstCurrent(t *testing.T) {
 	mgr := NewManager()
 
 	// Baseline snapshot with auth
-	baselineBodies := []NetworkBody{
+	baselineBodies := []types.NetworkBody{
 		{
 			URL:           "https://api.myapp.com/users",
 			Method:        "GET",
@@ -564,7 +562,7 @@ func TestSecurityDiffCompareAgainstCurrent(t *testing.T) {
 	}
 
 	// Current bodies: auth dropped
-	currentBodies := []NetworkBody{
+	currentBodies := []types.NetworkBody{
 		{
 			URL:           "https://api.myapp.com/users",
 			Method:        "GET",
@@ -607,7 +605,7 @@ func TestSecurityDiffCompareAgainstCurrent(t *testing.T) {
 func TestSecurityDiffHandleDiffSecurity(t *testing.T) {
 	t.Parallel()
 	mgr := NewManager()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{
 			URL:         "https://myapp.com/",
 			Method:      "GET",
@@ -686,7 +684,7 @@ func TestSummary(t *testing.T) {
 	mgr := NewManager()
 
 	// Before: multiple headers, auth, HTTPS
-	beforeBodies := []NetworkBody{
+	beforeBodies := []types.NetworkBody{
 		{
 			URL:         "https://myapp.com/",
 			Method:      "GET",
@@ -701,7 +699,7 @@ func TestSummary(t *testing.T) {
 	}
 
 	// After: all headers removed, auth dropped
-	afterBodies := []NetworkBody{
+	afterBodies := []types.NetworkBody{
 		{
 			URL:             "https://myapp.com/",
 			Method:          "GET",
@@ -730,7 +728,7 @@ func TestSummary(t *testing.T) {
 func TestSecurityDiffLRUEviction(t *testing.T) {
 	t.Parallel()
 	mgr := NewManager()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{URL: "https://app.com/", ContentType: "text/html", Status: 200,
 			ResponseHeaders: map[string]string{"X-Frame-Options": "DENY"}},
 	}
@@ -756,7 +754,7 @@ func TestSecurityDiffLRUEviction(t *testing.T) {
 func TestSecurityDiffCompareWithCurrent(t *testing.T) {
 	t.Parallel()
 	mgr := NewManager()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{URL: "https://app.com/", ContentType: "text/html", Status: 200,
 			ResponseHeaders: map[string]string{
 				"X-Frame-Options":           "DENY",
@@ -772,7 +770,7 @@ func TestSecurityDiffCompareWithCurrent(t *testing.T) {
 	mustTakeSnapshot(t, mgr, "baseline", bodies)
 
 	// Compare baseline vs "current" with all headers removed
-	currentBodies := []NetworkBody{
+	currentBodies := []types.NetworkBody{
 		{URL: "https://app.com/", ContentType: "text/html", Status: 200,
 			ResponseHeaders: map[string]string{},
 			HasAuthHeader:   false},
@@ -795,7 +793,7 @@ func TestSecurityDiffCompareWithCurrent(t *testing.T) {
 func TestSecurityDiffSnapshotOverwrite(t *testing.T) {
 	t.Parallel()
 	mgr := NewManager()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{URL: "https://app.com/", ContentType: "text/html", Status: 200,
 			ResponseHeaders: map[string]string{"X-Frame-Options": "DENY"}},
 	}
@@ -820,7 +818,7 @@ func TestBuildEphemeralSnapshotCookiesAndTransport(t *testing.T) {
 	mgr := NewManager()
 
 	// Baseline with cookies (HttpOnly, Secure, SameSite) and auth
-	mustTakeSnapshot(t, mgr, "before", []NetworkBody{
+	mustTakeSnapshot(t, mgr, "before", []types.NetworkBody{
 		{URL: "https://app.com/api", ContentType: "application/json", Status: 200,
 			Method: "POST",
 			ResponseHeaders: map[string]string{
@@ -830,7 +828,7 @@ func TestBuildEphemeralSnapshotCookiesAndTransport(t *testing.T) {
 	})
 
 	// Current: same origin, cookie flags stripped, auth dropped
-	currentBodies := []NetworkBody{
+	currentBodies := []types.NetworkBody{
 		{URL: "https://app.com/api", ContentType: "application/json", Status: 200,
 			Method: "POST",
 			ResponseHeaders: map[string]string{
@@ -923,7 +921,7 @@ func TestSecurityDiffExpiredSnapshot(t *testing.T) {
 	mgr := NewManager()
 	mgr.ttl = 1 * time.Millisecond // Very short TTL
 
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{URL: "https://app.com/", ContentType: "text/html", Status: 200,
 			ResponseHeaders: map[string]string{"X-Frame-Options": "DENY"}},
 	}

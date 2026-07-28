@@ -97,6 +97,9 @@ directly, without a scan-package compatibility alias.
 
 ## Code and Tests
 
+Security scan, diff, and SRI tests use `internal/types.NetworkBody` directly;
+the former test-only aliases have been removed.
+
 `internal/security` is a namespace of focused subpackages, not a package of its own.
 The dependency direction is one-way — `httpsec`, `netflag`, `policy` and `sri` import
 no sibling; `csp` imports `policy`; `scan` imports `httpsec` and `netflag`; `diff`

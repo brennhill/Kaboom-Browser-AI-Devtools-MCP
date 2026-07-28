@@ -49,6 +49,9 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
+Third-party audit tests consume `internal/types.NetworkBody` directly, keeping
+the test contract aligned with production ownership.
+
 `internal/audit/recorder.go` owns tool-call filtering, error interpretation,
 per-client audit sessions, and session reset. `ToolHandler` retains only the
 canonical recorder and trail references needed by dispatch and configure.

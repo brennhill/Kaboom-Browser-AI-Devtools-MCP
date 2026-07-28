@@ -11,13 +11,10 @@ import (
 	"testing"
 )
 
-// NetworkBody keeps the test tables terse; the audit API takes types.NetworkBody.
-type NetworkBody = types.NetworkBody
-
 func TestThirdPartyBasicClassification(t *testing.T) {
 	t.Parallel()
 	auditor := NewThirdPartyAuditor()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		// Same-origin request — should NOT appear in results
 		{URL: "https://myapp.com/api/data", ContentType: "application/json", Method: "GET"},
 		// Third-party request — should appear
@@ -40,7 +37,7 @@ func TestThirdPartyBasicClassification(t *testing.T) {
 func TestThirdPartyRiskLevels(t *testing.T) {
 	t.Parallel()
 	auditor := NewThirdPartyAuditor()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		// Script from third party = high risk
 		{URL: "https://cdn.evil.com/malware.js", ContentType: "application/javascript", Method: "GET"},
 		// Data sent to third party (POST, no scripts) = medium risk
@@ -76,7 +73,7 @@ func TestThirdPartyRiskLevels(t *testing.T) {
 func TestThirdPartyPIIDetection(t *testing.T) {
 	t.Parallel()
 	auditor := NewThirdPartyAuditor()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{
 			URL:         "https://tracker.example.com/submit",
 			ContentType: "application/json",
@@ -116,7 +113,7 @@ func TestThirdPartyPIIDetection(t *testing.T) {
 func TestThirdPartyCookieDetection(t *testing.T) {
 	t.Parallel()
 	auditor := NewThirdPartyAuditor()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{
 			URL:         "https://tracker.example.com/pixel.gif",
 			ContentType: "image/gif",
@@ -144,7 +141,7 @@ func TestThirdPartyCookieDetection(t *testing.T) {
 func TestThirdPartyReputationKnownCDN(t *testing.T) {
 	t.Parallel()
 	auditor := NewThirdPartyAuditor()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{URL: "https://cdn.jsdelivr.net/npm/vue@3/dist/vue.js", ContentType: "application/javascript", Method: "GET"},
 		{URL: "https://fonts.googleapis.com/css2?family=Roboto", ContentType: "text/css", Method: "GET"},
 	}
@@ -161,7 +158,7 @@ func TestThirdPartyReputationKnownCDN(t *testing.T) {
 func TestThirdPartyReputationAbuseTLD(t *testing.T) {
 	t.Parallel()
 	auditor := NewThirdPartyAuditor()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{URL: "https://tracker.xyz/pixel.gif", ContentType: "image/gif", Method: "GET"},
 	}
 	pageURLs := []string{"https://myapp.com/"}
@@ -190,7 +187,7 @@ func TestThirdPartyReputationDGA(t *testing.T) {
 	t.Parallel()
 	auditor := NewThirdPartyAuditor()
 	// Use a high-entropy subdomain that looks like DGA output (12+ unique chars, entropy > 3.5)
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{URL: "https://xk7q9mzp3fab.example.com/beacon.gif", ContentType: "image/gif", Method: "GET"},
 	}
 	pageURLs := []string{"https://myapp.com/"}
@@ -218,7 +215,7 @@ func TestThirdPartyReputationDGA(t *testing.T) {
 func TestThirdPartyCustomLists(t *testing.T) {
 	t.Parallel()
 	auditor := NewThirdPartyAuditor()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		// Allowed domain
 		{URL: "https://trusted-cdn.corp.com/lib.js", ContentType: "application/javascript", Method: "GET"},
 		// Blocked domain
@@ -266,7 +263,7 @@ func TestThirdPartyCustomLists(t *testing.T) {
 func TestThirdPartyRecommendations(t *testing.T) {
 	t.Parallel()
 	auditor := NewThirdPartyAuditor()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		// Suspicious origin with scripts = should generate critical recommendation
 		{URL: "https://xk7q9mzp3fab.evil.xyz/widget.js", ContentType: "application/javascript", Method: "GET"},
 		// Origin receiving data with PII
@@ -295,7 +292,7 @@ func TestThirdPartyRecommendations(t *testing.T) {
 func TestThirdPartySummary(t *testing.T) {
 	t.Parallel()
 	auditor := NewThirdPartyAuditor()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		// Critical: scripts + outbound
 		{URL: "https://sketchy.net/widget.js", ContentType: "application/javascript", Method: "GET"},
 		{URL: "https://sketchy.net/collect", ContentType: "application/json", Method: "POST", RequestBody: `{"data":"test"}`},
@@ -337,7 +334,7 @@ func TestThirdPartySummary(t *testing.T) {
 
 func TestThirdPartyHandleMCP(t *testing.T) {
 	t.Parallel()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{URL: "https://cdn.example.com/lib.js", ContentType: "application/javascript", Method: "GET"},
 	}
 	pageURLs := []string{"https://myapp.com/"}
@@ -361,7 +358,7 @@ func TestThirdPartyHandleMCP(t *testing.T) {
 func TestThirdPartyFirstPartyOrigins(t *testing.T) {
 	t.Parallel()
 	auditor := NewThirdPartyAuditor()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{URL: "https://api.myapp.com/data", ContentType: "application/json", Method: "GET"},
 		{URL: "https://cdn.example.com/lib.js", ContentType: "application/javascript", Method: "GET"},
 	}
@@ -386,7 +383,7 @@ func TestThirdPartyFirstPartyOrigins(t *testing.T) {
 func TestThirdPartyResourceCounts(t *testing.T) {
 	t.Parallel()
 	auditor := NewThirdPartyAuditor()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{URL: "https://cdn.example.com/app.js", ContentType: "application/javascript", Method: "GET"},
 		{URL: "https://cdn.example.com/style.css", ContentType: "text/css", Method: "GET"},
 		{URL: "https://cdn.example.com/font.woff2", ContentType: "font/woff2", Method: "GET"},
@@ -423,9 +420,9 @@ func TestThirdPartyResourceCounts(t *testing.T) {
 func TestThirdPartyURLLimit(t *testing.T) {
 	t.Parallel()
 	auditor := NewThirdPartyAuditor()
-	bodies := make([]NetworkBody, 15)
+	bodies := make([]types.NetworkBody, 15)
 	for i := 0; i < 15; i++ {
-		bodies[i] = NetworkBody{
+		bodies[i] = types.NetworkBody{
 			URL:         "https://cdn.example.com/file" + string(rune('a'+i)) + ".js",
 			ContentType: "application/javascript",
 			Method:      "GET",
@@ -467,7 +464,7 @@ func TestThirdPartyShannonEntropy(t *testing.T) {
 func TestThirdPartyIncludeStaticFalse(t *testing.T) {
 	t.Parallel()
 	auditor := NewThirdPartyAuditor()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{URL: "https://cdn.example.com/app.js", ContentType: "application/javascript", Method: "GET"},
 		{URL: "https://images.example.com/logo.png", ContentType: "image/png", Method: "GET"},
 	}
@@ -579,7 +576,7 @@ func TestLoadCustomListsFile(t *testing.T) {
 
 func TestHandleAuditThirdPartiesHandler(t *testing.T) {
 	t.Parallel()
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{URL: "https://myapp.com/page", ContentType: "text/html", Status: 200},
 		{URL: "https://cdn.jsdelivr.net/lib.js", ContentType: "application/javascript", Status: 200},
 	}
@@ -618,7 +615,7 @@ func TestThirdPartyCustomListsFromFile(t *testing.T) {
 	tmpFile := t.TempDir() + "/lists.json"
 	os.WriteFile(tmpFile, []byte(`{"allowed":["trusted-cdn.com"],"blocked":["blocked-site.com"]}`), 0600)
 
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{URL: "https://myapp.com/page", ContentType: "text/html", Status: 200},
 		{URL: "https://trusted-cdn.com/lib.js", ContentType: "application/javascript", Status: 200},
 		{URL: "https://blocked-site.com/track.js", ContentType: "application/javascript", Status: 200},

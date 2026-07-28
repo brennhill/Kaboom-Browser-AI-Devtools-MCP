@@ -13,9 +13,6 @@ import (
 	"time"
 )
 
-// Type alias for convenience in tests
-type NetworkBody = types.NetworkBody
-
 // ============================================
 // Schema Learning Tests
 // ============================================
@@ -24,7 +21,7 @@ func TestAPIContractValidator_LearnBasicSchema(t *testing.T) {
 	t.Parallel()
 	v := NewAPIContractValidator()
 
-	body := NetworkBody{
+	body := types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/1",
 		Status:       200,
@@ -54,7 +51,7 @@ func TestAPIContractValidator_LearnMultipleResponses(t *testing.T) {
 
 	// Learn 3 consistent responses to establish the shape
 	for i := 0; i < 3; i++ {
-		v.Learn(NetworkBody{
+		v.Learn(types.NetworkBody{
 			Method:       "GET",
 			URL:          "http://localhost:3000/api/users/1",
 			Status:       200,
@@ -100,7 +97,7 @@ func TestAPIContractValidator_LearnMergesFields(t *testing.T) {
 	v := NewAPIContractValidator()
 
 	// First response with basic fields
-	v.Learn(NetworkBody{
+	v.Learn(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/1",
 		Status:       200,
@@ -109,7 +106,7 @@ func TestAPIContractValidator_LearnMergesFields(t *testing.T) {
 	})
 
 	// Second response adds 'email' field
-	v.Learn(NetworkBody{
+	v.Learn(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/2",
 		Status:       200,
@@ -138,21 +135,21 @@ func TestAPIContractValidator_LearnTracksFieldPresence(t *testing.T) {
 	v := NewAPIContractValidator()
 
 	// 'email' only appears in 1 of 3 responses
-	v.Learn(NetworkBody{
+	v.Learn(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/1",
 		Status:       200,
 		ResponseBody: `{"id":1,"name":"Alice","email":"alice@example.com"}`,
 		ContentType:  "application/json",
 	})
-	v.Learn(NetworkBody{
+	v.Learn(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/2",
 		Status:       200,
 		ResponseBody: `{"id":2,"name":"Bob"}`,
 		ContentType:  "application/json",
 	})
-	v.Learn(NetworkBody{
+	v.Learn(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/3",
 		Status:       200,
@@ -229,7 +226,7 @@ func TestAPIContractValidator_DetectShapeChange(t *testing.T) {
 
 	// Learn 3 consistent responses with 'avatar_url'
 	for i := 0; i < 3; i++ {
-		v.Learn(NetworkBody{
+		v.Learn(types.NetworkBody{
 			Method:       "GET",
 			URL:          "http://localhost:3000/api/users/profile",
 			Status:       200,
@@ -239,7 +236,7 @@ func TestAPIContractValidator_DetectShapeChange(t *testing.T) {
 	}
 
 	// Now response is missing 'avatar_url'
-	violations := v.Validate(NetworkBody{
+	violations := v.Validate(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/profile",
 		Status:       200,
@@ -269,7 +266,7 @@ func TestAPIContractValidator_DetectTypeChange(t *testing.T) {
 
 	// Learn responses where 'price' is a number
 	for i := 0; i < 3; i++ {
-		v.Learn(NetworkBody{
+		v.Learn(types.NetworkBody{
 			Method:       "GET",
 			URL:          "http://localhost:3000/api/products/1",
 			Status:       200,
@@ -279,7 +276,7 @@ func TestAPIContractValidator_DetectTypeChange(t *testing.T) {
 	}
 
 	// Now 'price' is a string
-	violations := v.Validate(NetworkBody{
+	violations := v.Validate(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/products/1",
 		Status:       200,
@@ -315,7 +312,7 @@ func TestAPIContractValidator_DetectErrorSpike(t *testing.T) {
 
 	// 3 successful responses
 	for i := 0; i < 3; i++ {
-		v.Learn(NetworkBody{
+		v.Learn(types.NetworkBody{
 			Method:       "POST",
 			URL:          "http://localhost:3000/api/orders",
 			Status:       201,
@@ -326,7 +323,7 @@ func TestAPIContractValidator_DetectErrorSpike(t *testing.T) {
 
 	// Now 2 error responses
 	for i := 0; i < 2; i++ {
-		violations := v.Validate(NetworkBody{
+		violations := v.Validate(types.NetworkBody{
 			Method:       "POST",
 			URL:          "http://localhost:3000/api/orders",
 			Status:       500,
@@ -357,7 +354,7 @@ func TestAPIContractValidator_DetectNewField(t *testing.T) {
 
 	// Learn 3 consistent responses
 	for i := 0; i < 3; i++ {
-		v.Learn(NetworkBody{
+		v.Learn(types.NetworkBody{
 			Method:       "GET",
 			URL:          "http://localhost:3000/api/users/1",
 			Status:       200,
@@ -367,7 +364,7 @@ func TestAPIContractValidator_DetectNewField(t *testing.T) {
 	}
 
 	// Response with new field 'created_at'
-	violations := v.Validate(NetworkBody{
+	violations := v.Validate(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/1",
 		Status:       200,
@@ -393,7 +390,7 @@ func TestAPIContractValidator_DetectNullField(t *testing.T) {
 
 	// Learn responses where 'avatar' is a string
 	for i := 0; i < 3; i++ {
-		v.Learn(NetworkBody{
+		v.Learn(types.NetworkBody{
 			Method:       "GET",
 			URL:          "http://localhost:3000/api/users/1",
 			Status:       200,
@@ -403,7 +400,7 @@ func TestAPIContractValidator_DetectNullField(t *testing.T) {
 	}
 
 	// Now 'avatar' is null
-	violations := v.Validate(NetworkBody{
+	violations := v.Validate(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/1",
 		Status:       200,
@@ -433,7 +430,7 @@ func TestAPIContractValidator_NoViolationWithConsistentResponses(t *testing.T) {
 
 	// All responses are identical
 	for i := 0; i < 5; i++ {
-		v.Learn(NetworkBody{
+		v.Learn(types.NetworkBody{
 			Method:       "GET",
 			URL:          "http://localhost:3000/api/users/1",
 			Status:       200,
@@ -442,7 +439,7 @@ func TestAPIContractValidator_NoViolationWithConsistentResponses(t *testing.T) {
 		})
 	}
 
-	violations := v.Validate(NetworkBody{
+	violations := v.Validate(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/1",
 		Status:       200,
@@ -460,14 +457,14 @@ func TestAPIContractValidator_NoViolationBeforeMinCalls(t *testing.T) {
 	v := NewAPIContractValidator()
 
 	// Only 2 observations - not enough to establish shape
-	v.Learn(NetworkBody{
+	v.Learn(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/1",
 		Status:       200,
 		ResponseBody: `{"id":1,"name":"Alice","email":"alice@example.com"}`,
 		ContentType:  "application/json",
 	})
-	v.Learn(NetworkBody{
+	v.Learn(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/2",
 		Status:       200,
@@ -476,7 +473,7 @@ func TestAPIContractValidator_NoViolationBeforeMinCalls(t *testing.T) {
 	})
 
 	// Missing field should not be a violation yet (still learning)
-	violations := v.Validate(NetworkBody{
+	violations := v.Validate(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/3",
 		Status:       200,
@@ -501,7 +498,7 @@ func TestAPIContractValidator_ErrorResponsesNotUpdatingShape(t *testing.T) {
 	v := NewAPIContractValidator()
 
 	// Learn success response
-	v.Learn(NetworkBody{
+	v.Learn(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/1",
 		Status:       200,
@@ -510,7 +507,7 @@ func TestAPIContractValidator_ErrorResponsesNotUpdatingShape(t *testing.T) {
 	})
 
 	// Error response with different shape
-	v.Learn(NetworkBody{
+	v.Learn(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/1",
 		Status:       404,
@@ -540,7 +537,7 @@ func TestAPIContractValidator_AnalyzeAction(t *testing.T) {
 
 	// Learn some data
 	for i := 0; i < 3; i++ {
-		v.Learn(NetworkBody{
+		v.Learn(types.NetworkBody{
 			Method:       "GET",
 			URL:          "http://localhost:3000/api/users/1",
 			Status:       200,
@@ -550,7 +547,7 @@ func TestAPIContractValidator_AnalyzeAction(t *testing.T) {
 	}
 
 	// Cause a violation
-	v.Validate(NetworkBody{
+	v.Validate(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/1",
 		Status:       200,
@@ -577,14 +574,14 @@ func TestAPIContractValidator_ReportAction(t *testing.T) {
 
 	// Learn some data for multiple endpoints
 	for i := 0; i < 3; i++ {
-		v.Learn(NetworkBody{
+		v.Learn(types.NetworkBody{
 			Method:       "GET",
 			URL:          "http://localhost:3000/api/users/1",
 			Status:       200,
 			ResponseBody: `{"id":1,"name":"Alice"}`,
 			ContentType:  "application/json",
 		})
-		v.Learn(NetworkBody{
+		v.Learn(types.NetworkBody{
 			Method:       "POST",
 			URL:          "http://localhost:3000/api/orders",
 			Status:       201,
@@ -608,7 +605,7 @@ func TestAPIContractValidator_ClearAction(t *testing.T) {
 	v := NewAPIContractValidator()
 
 	// Learn some data
-	v.Learn(NetworkBody{
+	v.Learn(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/1",
 		Status:       200,
@@ -631,14 +628,14 @@ func TestAPIContractValidator_URLFilter(t *testing.T) {
 
 	// Learn multiple endpoints
 	for i := 0; i < 3; i++ {
-		v.Learn(NetworkBody{
+		v.Learn(types.NetworkBody{
 			Method:       "GET",
 			URL:          "http://localhost:3000/api/users/1",
 			Status:       200,
 			ResponseBody: `{"id":1}`,
 			ContentType:  "application/json",
 		})
-		v.Learn(NetworkBody{
+		v.Learn(types.NetworkBody{
 			Method:       "GET",
 			URL:          "http://localhost:3000/api/orders/1",
 			Status:       200,
@@ -664,21 +661,21 @@ func TestAPIContractValidator_IgnoreEndpoints(t *testing.T) {
 
 	// Learn multiple endpoints
 	for i := 0; i < 3; i++ {
-		v.Learn(NetworkBody{
+		v.Learn(types.NetworkBody{
 			Method:       "GET",
 			URL:          "http://localhost:3000/api/users/1",
 			Status:       200,
 			ResponseBody: `{"id":1}`,
 			ContentType:  "application/json",
 		})
-		v.Learn(NetworkBody{
+		v.Learn(types.NetworkBody{
 			Method:       "GET",
 			URL:          "http://localhost:3000/api/health",
 			Status:       200,
 			ResponseBody: `{"status":"ok"}`,
 			ContentType:  "application/json",
 		})
-		v.Learn(NetworkBody{
+		v.Learn(types.NetworkBody{
 			Method:       "GET",
 			URL:          "http://localhost:3000/api/metrics",
 			Status:       200,
@@ -704,7 +701,7 @@ func TestAPIContractValidator_NonJSONResponse(t *testing.T) {
 	v := NewAPIContractValidator()
 
 	// Non-JSON response should be ignored
-	v.Learn(NetworkBody{
+	v.Learn(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/download",
 		Status:       200,
@@ -725,7 +722,7 @@ func TestAPIContractValidator_EmptyResponseBody(t *testing.T) {
 	t.Parallel()
 	v := NewAPIContractValidator()
 
-	v.Learn(NetworkBody{
+	v.Learn(types.NetworkBody{
 		Method:       "DELETE",
 		URL:          "http://localhost:3000/api/users/1",
 		Status:       204,
@@ -750,7 +747,7 @@ func TestAPIContractValidator_NestedObjectShapeChange(t *testing.T) {
 
 	// Learn with nested object
 	for i := 0; i < 3; i++ {
-		v.Learn(NetworkBody{
+		v.Learn(types.NetworkBody{
 			Method:       "GET",
 			URL:          "http://localhost:3000/api/users/1",
 			Status:       200,
@@ -760,7 +757,7 @@ func TestAPIContractValidator_NestedObjectShapeChange(t *testing.T) {
 	}
 
 	// Nested object missing a field - should detect if we track nested shapes
-	violations := v.Validate(NetworkBody{
+	violations := v.Validate(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/1",
 		Status:       200,
@@ -781,7 +778,7 @@ func TestAPIContractValidator_ArrayShapeConsistency(t *testing.T) {
 
 	// Learn with array of objects
 	for i := 0; i < 3; i++ {
-		v.Learn(NetworkBody{
+		v.Learn(types.NetworkBody{
 			Method:       "GET",
 			URL:          "http://localhost:3000/api/users",
 			Status:       200,
@@ -803,7 +800,7 @@ func TestAPIContractValidator_StatusHistoryLimit(t *testing.T) {
 
 	// Add more than 20 requests (status history limit per spec)
 	for i := 0; i < 25; i++ {
-		v.Learn(NetworkBody{
+		v.Learn(types.NetworkBody{
 			Method:       "GET",
 			URL:          "http://localhost:3000/api/users/1",
 			Status:       200,
@@ -824,7 +821,7 @@ func TestAPIContractValidator_EndpointLimit(t *testing.T) {
 
 	// Add more than 30 unique endpoints (limit per spec)
 	for i := 0; i < 35; i++ {
-		v.Learn(NetworkBody{
+		v.Learn(types.NetworkBody{
 			Method:       "GET",
 			URL:          "http://localhost:3000/api/endpoint" + string(rune('a'+i)),
 			Status:       200,
@@ -849,7 +846,7 @@ func TestAPIContractValidator_ConsistencyCalculation(t *testing.T) {
 
 	// 8 consistent responses
 	for i := 0; i < 8; i++ {
-		v.Learn(NetworkBody{
+		v.Learn(types.NetworkBody{
 			Method:       "GET",
 			URL:          "http://localhost:3000/api/users/1",
 			Status:       200,
@@ -860,7 +857,7 @@ func TestAPIContractValidator_ConsistencyCalculation(t *testing.T) {
 
 	// 2 inconsistent responses (missing 'name')
 	for i := 0; i < 2; i++ {
-		v.Validate(NetworkBody{
+		v.Validate(types.NetworkBody{
 			Method:       "GET",
 			URL:          "http://localhost:3000/api/users/1",
 			Status:       200,
@@ -890,7 +887,7 @@ func TestAPIContractValidator_LastCalledTimestamp(t *testing.T) {
 	v := NewAPIContractValidator()
 
 	before := time.Now()
-	v.Learn(NetworkBody{
+	v.Learn(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/1",
 		Status:       200,
@@ -926,7 +923,7 @@ func TestAPIContractValidator_ProcessNetworkBodies(t *testing.T) {
 	t.Parallel()
 	v := NewAPIContractValidator()
 
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		{Method: "GET", URL: "http://localhost:3000/api/users/1", Status: 200, ResponseBody: `{"id":1,"name":"Alice"}`, ContentType: "application/json"},
 		{Method: "GET", URL: "http://localhost:3000/api/users/2", Status: 200, ResponseBody: `{"id":2,"name":"Bob"}`, ContentType: "application/json"},
 		{Method: "GET", URL: "http://localhost:3000/api/users/3", Status: 200, ResponseBody: `{"id":3,"name":"Carol"}`, ContentType: "application/json"},
@@ -1013,7 +1010,7 @@ func TestAPIContractAnalyze_DataWindowStartedAt(t *testing.T) {
 	}
 
 	// Add some data
-	v.Learn(NetworkBody{
+	v.Learn(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/1",
 		Status:       200,
@@ -1069,7 +1066,7 @@ func TestAPIContractAnalyze_SummaryObject(t *testing.T) {
 
 	// Learn 3 consistent responses to establish the shape
 	for i := 0; i < 3; i++ {
-		v.Learn(NetworkBody{
+		v.Learn(types.NetworkBody{
 			Method:       "GET",
 			URL:          "http://localhost:3000/api/users/1",
 			Status:       200,
@@ -1079,7 +1076,7 @@ func TestAPIContractAnalyze_SummaryObject(t *testing.T) {
 	}
 
 	// Cause a violation
-	v.Validate(NetworkBody{
+	v.Validate(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/1",
 		Status:       200,
@@ -1112,7 +1109,7 @@ func TestAPIContractAnalyze_ViolationTypeAndSeverity(t *testing.T) {
 	v := NewAPIContractValidator()
 
 	for i := 0; i < 3; i++ {
-		v.Learn(NetworkBody{
+		v.Learn(types.NetworkBody{
 			Method:       "GET",
 			URL:          "http://localhost:3000/api/users/1",
 			Status:       200,
@@ -1122,7 +1119,7 @@ func TestAPIContractAnalyze_ViolationTypeAndSeverity(t *testing.T) {
 	}
 
 	// Cause a shape_change violation
-	v.Validate(NetworkBody{
+	v.Validate(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/1",
 		Status:       200,
@@ -1161,7 +1158,7 @@ func TestAPIContractAnalyze_AffectedCallCount(t *testing.T) {
 	v := NewAPIContractValidator()
 
 	for i := 0; i < 3; i++ {
-		v.Learn(NetworkBody{
+		v.Learn(types.NetworkBody{
 			Method:       "GET",
 			URL:          "http://localhost:3000/api/users/1",
 			Status:       200,
@@ -1171,7 +1168,7 @@ func TestAPIContractAnalyze_AffectedCallCount(t *testing.T) {
 	}
 
 	// Cause violations
-	v.Validate(NetworkBody{
+	v.Validate(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/1",
 		Status:       200,
@@ -1198,7 +1195,7 @@ func TestAPIContractAnalyze_ViolationTimestamps(t *testing.T) {
 	v := NewAPIContractValidator()
 
 	for i := 0; i < 3; i++ {
-		v.Learn(NetworkBody{
+		v.Learn(types.NetworkBody{
 			Method:       "GET",
 			URL:          "http://localhost:3000/api/users/1",
 			Status:       200,
@@ -1208,7 +1205,7 @@ func TestAPIContractAnalyze_ViolationTimestamps(t *testing.T) {
 	}
 
 	before := time.Now().Truncate(time.Second)
-	v.Validate(NetworkBody{
+	v.Validate(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/1",
 		Status:       200,
@@ -1284,7 +1281,7 @@ func TestAPIContractAnalyze_HintWhenNoViolations(t *testing.T) {
 
 	// Learn consistent data
 	for i := 0; i < 3; i++ {
-		v.Learn(NetworkBody{
+		v.Learn(types.NetworkBody{
 			Method:       "GET",
 			URL:          "http://localhost:3000/api/users/1",
 			Status:       200,
@@ -1311,7 +1308,7 @@ func TestAPIContractReport_LastCalledAtRename(t *testing.T) {
 	t.Parallel()
 	v := NewAPIContractValidator()
 
-	v.Learn(NetworkBody{
+	v.Learn(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/1",
 		Status:       200,
@@ -1354,7 +1351,7 @@ func TestAPIContractReport_FirstCalledAt(t *testing.T) {
 	t.Parallel()
 	v := NewAPIContractValidator()
 
-	v.Learn(NetworkBody{
+	v.Learn(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/1",
 		Status:       200,
@@ -1384,7 +1381,7 @@ func TestAPIContractReport_ConsistencyScore(t *testing.T) {
 
 	// 8 consistent, then 2 inconsistent = 80% = 0.8
 	for i := 0; i < 8; i++ {
-		v.Learn(NetworkBody{
+		v.Learn(types.NetworkBody{
 			Method:       "GET",
 			URL:          "http://localhost:3000/api/users/1",
 			Status:       200,
@@ -1393,7 +1390,7 @@ func TestAPIContractReport_ConsistencyScore(t *testing.T) {
 		})
 	}
 	for i := 0; i < 2; i++ {
-		v.Validate(NetworkBody{
+		v.Validate(types.NetworkBody{
 			Method:       "GET",
 			URL:          "http://localhost:3000/api/users/1",
 			Status:       200,
@@ -1490,7 +1487,7 @@ func TestAPIContractValidator_FirstCalledTracking(t *testing.T) {
 	v := NewAPIContractValidator()
 
 	before := time.Now()
-	v.Learn(NetworkBody{
+	v.Learn(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/1",
 		Status:       200,
@@ -1509,7 +1506,7 @@ func TestAPIContractValidator_FirstCalledTracking(t *testing.T) {
 
 	// Second call should NOT update FirstCalled
 	time.Sleep(time.Millisecond)
-	v.Learn(NetworkBody{
+	v.Learn(types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://localhost:3000/api/users/2",
 		Status:       200,
