@@ -138,7 +138,7 @@ func TestRichAction_CommandResultEnrichedWithPerfDiff(t *testing.T) {
 	}})
 
 	// Simulate extension completing the command
-	env.capture.ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":true,"action":"refresh"}`), "")
+	env.capture.Queries().ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":true,"action":"refresh"}`), "")
 
 	// Now observe the command_result — should include perf_diff
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
@@ -209,7 +209,7 @@ func TestRichAction_CommandResultNoPerfDiffWhenNoSnapshots(t *testing.T) {
 	corrID := resultData["correlation_id"].(string)
 
 	// Complete the command
-	env.capture.ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":true,"action":"refresh"}`), "")
+	env.capture.Queries().ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":true,"action":"refresh"}`), "")
 
 	// Observe — should return without perf_diff (no crash)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
@@ -245,7 +245,7 @@ func TestRichAction_CommandResultIncludesTimingMs(t *testing.T) {
 
 	// Simulate extension completing the click after a small delay
 	time.Sleep(10 * time.Millisecond)
-	env.capture.ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":true,"action":"click"}`), "")
+	env.capture.Queries().ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":true,"action":"click"}`), "")
 
 	// Observe command_result
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
@@ -324,7 +324,7 @@ func TestRichAction_PerfDiffWithFullWebVitals(t *testing.T) {
 		Network: performance.NetworkSummary{TransferSize: 300000, RequestCount: 25},
 	}})
 
-	env.capture.ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":true,"action":"refresh"}`), "")
+	env.capture.Queries().ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":true,"action":"refresh"}`), "")
 
 	// Observe command_result
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
@@ -413,13 +413,13 @@ func TestRichAction_CompactClickMissingDomSummary_WhenExtensionHangs(t *testing.
 		t.Fatal("click should succeed with pilot enabled")
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	corrID := pq.CorrelationID
 
 	// BUG SCENARIO: Extension never responds because withMutationTracking
 	// is stuck waiting for requestAnimationFrame in a backgrounded tab.
 	// Simulate this by expiring the command (no completed-result callback).
-	env.capture.ExpireCommand(corrID)
+	env.capture.Queries().ExpireCommand(corrID)
 
 	// Observe the expired command
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
@@ -471,7 +471,7 @@ func TestRichAction_CompactClickHasDomSummary_WhenExtensionResponds(t *testing.T
 		"selector": "#btn",
 		"dom_summary": "1 added"
 	}`)
-	env.capture.ApplyCommandResult(corrID, "complete", extensionResult, "")
+	env.capture.Queries().ApplyCommandResult(corrID, "complete", extensionResult, "")
 
 	// Observe command_result
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}

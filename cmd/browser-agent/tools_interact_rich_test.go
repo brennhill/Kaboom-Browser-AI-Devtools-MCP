@@ -36,7 +36,7 @@ func TestRichAction_AnalyzeInPendingQueryParams(t *testing.T) {
 	}
 
 	// Extract the queued pending query and verify analyze is in params
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("No pending query was created")
 	}
@@ -68,7 +68,7 @@ func TestRichAction_AnalyzeFalseNotForwarded(t *testing.T) {
 			result.Content[0].Text)
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("No pending query was created")
 	}
@@ -97,7 +97,7 @@ func TestRichAction_AnalyzeOmittedByDefault(t *testing.T) {
 			result.Content[0].Text)
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("No pending query was created")
 	}
@@ -141,7 +141,7 @@ func TestRichAction_FrameSelectorInPendingQueryParams(t *testing.T) {
 		t.Fatalf("click with frame selector should not error, got: %s", result.Content[0].Text)
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("No pending query was created")
 	}
@@ -168,7 +168,7 @@ func TestRichAction_FrameIndexInPendingQueryParams(t *testing.T) {
 		t.Fatalf("click with frame index should not error, got: %s", result.Content[0].Text)
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("No pending query was created")
 	}
@@ -393,7 +393,7 @@ func TestRichAction_AnalyzeFieldsSurfacedTopLevel(t *testing.T) {
 		"dom_changes": {"added": 3, "removed": 0, "modified": 1, "summary": "3 added, 1 modified"},
 		"analysis": "click completed in 55ms. 3 added, 1 modified."
 	}`)
-	env.capture.ApplyCommandResult(corrID, "complete", extensionResult, "")
+	env.capture.Queries().ApplyCommandResult(corrID, "complete", extensionResult, "")
 
 	// Observe command_result
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
@@ -460,7 +460,7 @@ func TestRichAction_NoAnalyzeFieldsWhenAbsent(t *testing.T) {
 
 	// Extension result WITHOUT analyze fields (compact mode)
 	extensionResult := json.RawMessage(`{"success": true, "action": "click", "dom_summary": "1 added"}`)
-	env.capture.ApplyCommandResult(corrID, "complete", extensionResult, "")
+	env.capture.Queries().ApplyCommandResult(corrID, "complete", extensionResult, "")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
@@ -511,7 +511,7 @@ func TestRichAction_MatchedDiagnosticsSurfacedTopLevel(t *testing.T) {
 			"bbox": {"x": 64, "y": 120, "width": 128, "height": 36}
 		}
 	}`)
-	env.capture.ApplyCommandResult(corrID, "complete", extensionResult, "")
+	env.capture.Queries().ApplyCommandResult(corrID, "complete", extensionResult, "")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
@@ -579,7 +579,7 @@ func TestRichAction_TargetContextSurfacedTopLevel(t *testing.T) {
 			"use_active_tab": false
 		}
 	}`)
-	env.capture.ApplyCommandResult(corrID, "complete", extensionResult, "")
+	env.capture.Queries().ApplyCommandResult(corrID, "complete", extensionResult, "")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
@@ -649,7 +649,7 @@ func TestRichAction_DomSummaryPassthrough(t *testing.T) {
 		"dom_changes": {"added": 2, "removed": 0, "modified": 1, "summary": "2 added, 1 modified"},
 		"analysis": "click completed in 42ms. 2 added, 1 modified."
 	}`)
-	env.capture.ApplyCommandResult(corrID, "complete", extensionResult, "")
+	env.capture.Queries().ApplyCommandResult(corrID, "complete", extensionResult, "")
 
 	// Observe command_result — verify extension fields pass through
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}

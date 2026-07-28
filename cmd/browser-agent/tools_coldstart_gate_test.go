@@ -100,7 +100,7 @@ func TestMaybeWaitForCommand_ExtensionConnected_WaitsForResult(t *testing.T) {
 	handler, _, cap := makeToolHandler(t)
 	handler.coldStartTimeout = 500 * time.Millisecond
 	correlationID := "test-connected-result"
-	cap.RegisterCommand(correlationID, "q-connected-result", 15*time.Second)
+	cap.Queries().RegisterCommand(correlationID, "q-connected-result", 15*time.Second)
 
 	// Extension is already connected (requireExtension would have passed)
 	cap.SimulateExtensionConnectForTest()
@@ -108,7 +108,7 @@ func TestMaybeWaitForCommand_ExtensionConnected_WaitsForResult(t *testing.T) {
 	// Complete the command after 100ms
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		cap.ApplyCommandResult(correlationID, "complete", json.RawMessage(`{"success":true}`), "")
+		cap.Queries().ApplyCommandResult(correlationID, "complete", json.RawMessage(`{"success":true}`), "")
 	}()
 
 	req := mcp.JSONRPCRequest{ID: 1, ClientID: "test-client"}
@@ -134,7 +134,7 @@ func TestMaybeWaitForCommand_ExtensionNotConnected_InstantError(t *testing.T) {
 	handler, _, cap := makeToolHandler(t)
 	handler.coldStartTimeout = 200 * time.Millisecond
 	correlationID := "test-instant-fail"
-	cap.RegisterCommand(correlationID, "q-instant-fail", 15*time.Second)
+	cap.Queries().RegisterCommand(correlationID, "q-instant-fail", 15*time.Second)
 
 	// Extension NOT connected — MaybeWaitForCommand does instant check (no blocking wait)
 	req := mcp.JSONRPCRequest{ID: 1, ClientID: "test-client"}

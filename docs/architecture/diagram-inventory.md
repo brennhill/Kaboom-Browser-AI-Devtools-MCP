@@ -57,7 +57,7 @@ last_verified_date: 2026-03-05
 |-----------------|------------|-----------|--------------|
 | **Extension Message Protocol** | Message routing flow, message types | docs/core/extension-message-protocol.md | Core docs exist but NO visual diagram |
 | **Capture Data Pipeline** | WS → Network → Actions → Logs | internal/capture/ | How telemetry flows from tab to server |
-| **Query Dispatcher** | Query routing logic | internal/capture/query_dispatcher.go | How commands route to extension |
+| **Query Dispatcher** | Query routing logic | internal/queries/dispatcher_queries.go | How commands route to extension |
 | **Buffer Architecture** | Ring buffer, TTL, eviction | internal/buffers/, internal/capture/ | Memory management strategy |
 | **Session/Client Registry** | Multi-client isolation | internal/session/clientreg/ | How concurrent clients are managed |
 | **Security Analysis Pipeline** | CSP → SRI → Threat detection | internal/security/ | Security workflow |

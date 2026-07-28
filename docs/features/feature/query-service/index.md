@@ -15,7 +15,8 @@ code_paths:
   - internal/queries/dispatcher_results.go
   - internal/queries/dispatcher_trace.go
   - internal/queries/types.go
-  - internal/capture/query_dispatcher.go
+  - internal/capture/capture.go
+  - internal/capture/sync.go
   - cmd/browser-agent/tools_async_completion.go
   - cmd/browser-agent/internal/asyncresult/normalization.go
   - src/types/index.ts
@@ -71,6 +72,11 @@ last_verified_date: 2026-03-05
   - `internal/mcp/response_content.go` — image and warning content blocks
   - `internal/mcp/response_clamp.go` — JSON-aware payload clamping
 - Command lifecycle updates accept only `pending`, `complete`, `error`, `timeout`, `expired`, or `cancelled`; noncanonical status text is treated as protocol drift and recorded as an error.
+- Query and command state is accessed through the canonical
+  `Capture.Queries()` owner. The former Capture forwarding layer and test-only
+  pending-query facade have been deleted; disconnect-aware queue reconciliation
+  remains in the sync boundary because it composes extension liveness with query
+  expiry.
 - Tests:
   - `internal/mcp/response_test.go`
   - `internal/queries/no_facade_test.go` and `internal/capture/no_facade_test.go` prevent compatibility-only command lifecycle APIs from returning.

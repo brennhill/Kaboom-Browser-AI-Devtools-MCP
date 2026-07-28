@@ -17,7 +17,7 @@ import (
 func saturatePendingQueryQueue(t *testing.T, cap *capture.Capture) {
 	t.Helper()
 	for i := 0; i < queries.MaxPendingQueries; i++ {
-		_, err := cap.CreatePendingQueryWithTimeout(
+		_, err := cap.Queries().CreatePendingQueryWithTimeout(
 			queries.PendingQuery{
 				Type:          "queue_saturation_test",
 				Params:        json.RawMessage(`{"ok":true}`),

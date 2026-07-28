@@ -154,6 +154,11 @@ func NewCapture() *Capture {
 	return c
 }
 
+// Queries returns the canonical independently synchronized query dispatcher.
+func (c *Capture) Queries() *queries.QueryDispatcher {
+	return c.queryDispatcher
+}
+
 // Close shuts down capture-owned background goroutines.
 //
 // Failure semantics:

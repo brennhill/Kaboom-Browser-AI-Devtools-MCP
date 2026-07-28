@@ -132,7 +132,7 @@ func RunDoctorChecks(cap *capture.Capture) []DoctorCheck {
 	}
 
 	// 5. Command queue.
-	queueDepth := cap.QueueDepth()
+	queueDepth := cap.Queries().QueueDepth()
 	if queueDepth < 5 {
 		detail := "Command queue empty"
 		if queueDepth > 0 {

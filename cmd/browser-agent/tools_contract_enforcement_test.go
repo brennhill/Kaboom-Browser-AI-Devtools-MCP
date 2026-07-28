@@ -168,7 +168,7 @@ func TestContractEnforcement_CommandResult_HasElapsedMs(t *testing.T) {
 	s := newScenario(t)
 
 	// Create and complete a command
-	queryID, _ := s.capture.CreatePendingQueryWithTimeout(
+	queryID, _ := s.capture.Queries().CreatePendingQueryWithTimeout(
 		queries.PendingQuery{
 			Type:          "dom",
 			Params:        json.RawMessage(`{"selector":"body"}`),
@@ -178,7 +178,7 @@ func TestContractEnforcement_CommandResult_HasElapsedMs(t *testing.T) {
 		"",
 	)
 	time.Sleep(10 * time.Millisecond) // small delay to ensure non-zero elapsed
-	s.capture.SetQueryResult(queryID, json.RawMessage(`{"html":"<body/>"}`))
+	s.capture.Queries().SetQueryResult(queryID, json.RawMessage(`{"html":"<body/>"}`))
 
 	result, ok := s.callObserveWithArgs(t, `{"what":"command_result","correlation_id":"elapsed-test-123"}`)
 	if !ok {
@@ -278,7 +278,7 @@ func TestContractPendingQuery_Timeout(t *testing.T) {
 	s := newScenario(t)
 
 	// Create a pending query with a very short timeout
-	queryID, _ := s.capture.CreatePendingQueryWithTimeout(
+	queryID, _ := s.capture.Queries().CreatePendingQueryWithTimeout(
 		queries.PendingQuery{
 			Type:   "test_query",
 			Params: json.RawMessage(`{"test": true}`),
@@ -289,7 +289,7 @@ func TestContractPendingQuery_Timeout(t *testing.T) {
 
 	// Wait for result — nobody will fulfill this query
 	start := time.Now()
-	_, err := s.capture.WaitForResult(queryID, 100*time.Millisecond)
+	_, err := s.capture.Queries().WaitForResult(queryID, 100*time.Millisecond)
 	elapsed := time.Since(start)
 
 	// Must return an error (not hang)
@@ -313,7 +313,7 @@ func TestContractAsyncBridge_RoundTrip(t *testing.T) {
 	s := newScenario(t)
 
 	// 1. Create a pending query
-	queryID, _ := s.capture.CreatePendingQueryWithTimeout(
+	queryID, _ := s.capture.Queries().CreatePendingQueryWithTimeout(
 		queries.PendingQuery{
 			Type:          "dom",
 			Params:        json.RawMessage(`{"selector": "#test"}`),
@@ -328,7 +328,7 @@ func TestContractAsyncBridge_RoundTrip(t *testing.T) {
 	}
 
 	// 2. Verify the query appears in GetPendingQueries (simulates extension poll)
-	pending := s.capture.GetPendingQueries()
+	pending := s.capture.Queries().GetPendingQueries()
 	if len(pending) == 0 {
 		t.Fatal("GetPendingQueries returned 0 queries after creating one")
 	}
@@ -352,11 +352,11 @@ func TestContractAsyncBridge_RoundTrip(t *testing.T) {
 
 	// 3. Deliver result (simulates extension POST /dom-result)
 	resultPayload := json.RawMessage(`{"innerHTML": "<div>test</div>"}`)
-	s.capture.SetQueryResult(queryID, resultPayload)
+	s.capture.Queries().SetQueryResult(queryID, resultPayload)
 
 	// 4. WaitForResult should return immediately with the result
 	start := time.Now()
-	result, err := s.capture.WaitForResult(queryID, 1*time.Second)
+	result, err := s.capture.Queries().WaitForResult(queryID, 1*time.Second)
 	elapsed := time.Since(start)
 
 	if err != nil {
@@ -378,7 +378,7 @@ func TestContractAsyncBridge_RoundTrip(t *testing.T) {
 	}
 
 	// 5. Query should be consumed (not in pending anymore)
-	pendingAfter := s.capture.GetPendingQueries()
+	pendingAfter := s.capture.Queries().GetPendingQueries()
 	for _, pq := range pendingAfter {
 		if pq.ID == queryID {
 			t.Error("query still in pending list after result was delivered")
@@ -391,7 +391,7 @@ func TestContractAsyncBridge_RoundTrip(t *testing.T) {
 func TestContractAsyncBridge_ConcurrentDelivery(t *testing.T) {
 	s := newScenario(t)
 
-	queryID, _ := s.capture.CreatePendingQueryWithTimeout(
+	queryID, _ := s.capture.Queries().CreatePendingQueryWithTimeout(
 		queries.PendingQuery{
 			Type:   "execute",
 			Params: json.RawMessage(`{"script": "1+1"}`),
@@ -407,7 +407,7 @@ func TestContractAsyncBridge_ConcurrentDelivery(t *testing.T) {
 	}
 	ch := make(chan waitResult, 1)
 	go func() {
-		data, err := s.capture.WaitForResult(queryID, 5*time.Second)
+		data, err := s.capture.Queries().WaitForResult(queryID, 5*time.Second)
 		ch <- waitResult{data, err}
 	}()
 
@@ -415,7 +415,7 @@ func TestContractAsyncBridge_ConcurrentDelivery(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	// Deliver the result (simulates extension)
-	s.capture.SetQueryResult(queryID, json.RawMessage(`{"value": 2}`))
+	s.capture.Queries().SetQueryResult(queryID, json.RawMessage(`{"value": 2}`))
 
 	// Wait for the goroutine to complete
 	select {

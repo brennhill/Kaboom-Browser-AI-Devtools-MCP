@@ -26,10 +26,10 @@ func TestCorrelationIDTracking(t *testing.T) {
 		CorrelationID: correlationID,
 	}
 
-	queryID, _ := capture.CreatePendingQueryWithTimeout(query, 5*time.Second, "")
+	queryID, _ := capture.Queries().CreatePendingQueryWithTimeout(query, 5*time.Second, "")
 
 	// Command should be "pending"
-	cmd, found := capture.GetCommandResult(correlationID)
+	cmd, found := capture.Queries().GetCommandResult(correlationID)
 	if !found {
 		t.Fatal("Command not found after creation")
 	}
@@ -42,10 +42,10 @@ func TestCorrelationIDTracking(t *testing.T) {
 
 	// Simulate extension completing the command
 	result := json.RawMessage(`{"success": true}`)
-	capture.SetQueryResult(queryID, result)
+	capture.Queries().SetQueryResult(queryID, result)
 
 	// Command should be "complete"
-	cmd, found = capture.GetCommandResult(correlationID)
+	cmd, found = capture.Queries().GetCommandResult(correlationID)
 	if !found {
 		t.Fatal("Command not found after completion")
 	}
@@ -72,10 +72,10 @@ func TestCorrelationIDExpiration(t *testing.T) {
 		CorrelationID: correlationID,
 	}
 
-	capture.CreatePendingQueryWithTimeout(query, 120*time.Millisecond, "")
+	capture.Queries().CreatePendingQueryWithTimeout(query, 120*time.Millisecond, "")
 
 	// Command starts as "pending"
-	cmd, found := capture.GetCommandResult(correlationID)
+	cmd, found := capture.Queries().GetCommandResult(correlationID)
 	if !found {
 		t.Fatal("Command not found after creation")
 	}
@@ -86,7 +86,7 @@ func TestCorrelationIDExpiration(t *testing.T) {
 	// Wait for expiration with polling to avoid long fixed sleep.
 	deadline := time.Now().Add(800 * time.Millisecond)
 	for time.Now().Before(deadline) {
-		cmd, found = capture.GetCommandResult(correlationID)
+		cmd, found = capture.Queries().GetCommandResult(correlationID)
 		if found && cmd.Status == "expired" {
 			break
 		}
@@ -94,7 +94,7 @@ func TestCorrelationIDExpiration(t *testing.T) {
 	}
 
 	// Command should be "expired" and moved to failedCommands
-	cmd, found = capture.GetCommandResult(correlationID)
+	cmd, found = capture.Queries().GetCommandResult(correlationID)
 	if !found {
 		t.Fatal("Expired command should still be retrievable from failedCommands")
 	}
@@ -118,7 +118,7 @@ func TestCorrelationIDListCommands(t *testing.T) {
 			Params:        json.RawMessage(`{"script":"test"}`),
 			CorrelationID: "pending_" + string(rune('a'+i)),
 		}
-		capture.CreatePendingQueryWithTimeout(query, 10*time.Second, "")
+		capture.Queries().CreatePendingQueryWithTimeout(query, 10*time.Second, "")
 	}
 
 	// Complete 2 commands
@@ -127,16 +127,16 @@ func TestCorrelationIDListCommands(t *testing.T) {
 		Params:        json.RawMessage(`{"script":"test"}`),
 		CorrelationID: "completed_1",
 	}
-	id1, _ := capture.CreatePendingQueryWithTimeout(query1, 10*time.Second, "")
-	capture.SetQueryResult(id1, json.RawMessage(`{"ok":true}`))
+	id1, _ := capture.Queries().CreatePendingQueryWithTimeout(query1, 10*time.Second, "")
+	capture.Queries().SetQueryResult(id1, json.RawMessage(`{"ok":true}`))
 
 	query2 := queries.PendingQuery{
 		Type:          "execute",
 		Params:        json.RawMessage(`{"script":"test"}`),
 		CorrelationID: "completed_2",
 	}
-	id2, _ := capture.CreatePendingQueryWithTimeout(query2, 10*time.Second, "")
-	capture.SetQueryResult(id2, json.RawMessage(`{"ok":true}`))
+	id2, _ := capture.Queries().CreatePendingQueryWithTimeout(query2, 10*time.Second, "")
+	capture.Queries().SetQueryResult(id2, json.RawMessage(`{"ok":true}`))
 
 	// Create 1 expired command
 	expiredQuery := queries.PendingQuery{
@@ -144,27 +144,27 @@ func TestCorrelationIDListCommands(t *testing.T) {
 		Params:        json.RawMessage(`{"script":"test"}`),
 		CorrelationID: "expired_1",
 	}
-	capture.CreatePendingQueryWithTimeout(expiredQuery, 120*time.Millisecond, "")
+	capture.Queries().CreatePendingQueryWithTimeout(expiredQuery, 120*time.Millisecond, "")
 	deadline := time.Now().Add(800 * time.Millisecond)
 	for time.Now().Before(deadline) {
-		if len(capture.GetFailedCommands()) == 1 {
+		if len(capture.Queries().GetFailedCommands()) == 1 {
 			break
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
 
 	// Check counts
-	pending := capture.GetPendingCommands()
+	pending := capture.Queries().GetPendingCommands()
 	if len(pending) != 3 {
 		t.Errorf("Expected 3 pending commands, got %d", len(pending))
 	}
 
-	completed := capture.GetCompletedCommands()
+	completed := capture.Queries().GetCompletedCommands()
 	if len(completed) != 2 {
 		t.Errorf("Expected 2 completed commands, got %d", len(completed))
 	}
 
-	failed := capture.GetFailedCommands()
+	failed := capture.Queries().GetFailedCommands()
 	if len(failed) != 1 {
 		t.Fatalf("Expected 1 failed command, got %d", len(failed))
 	}
@@ -190,10 +190,10 @@ func TestCorrelationIDNoTracking(t *testing.T) {
 		// No CorrelationID
 	}
 
-	capture.CreatePendingQueryWithTimeout(query, 2*time.Second, "")
+	capture.Queries().CreatePendingQueryWithTimeout(query, 2*time.Second, "")
 
 	// Should have no tracked commands
-	pending := capture.GetPendingCommands()
+	pending := capture.Queries().GetPendingCommands()
 	if len(pending) != 0 {
 		t.Errorf("Expected 0 tracked commands (no correlation ID), got %d", len(pending))
 	}
@@ -210,7 +210,7 @@ func TestCorrelationIDMultiClient(t *testing.T) {
 		Params:        json.RawMessage(`{"script":"test"}`),
 		CorrelationID: "client_a_cmd",
 	}
-	idA, _ := capture.CreatePendingQueryWithTimeout(queryA, 10*time.Second, "client_a")
+	idA, _ := capture.Queries().CreatePendingQueryWithTimeout(queryA, 10*time.Second, "client_a")
 
 	// Client B creates command
 	queryB := queries.PendingQuery{
@@ -218,19 +218,19 @@ func TestCorrelationIDMultiClient(t *testing.T) {
 		Params:        json.RawMessage(`{"script":"test"}`),
 		CorrelationID: "client_b_cmd",
 	}
-	idB, _ := capture.CreatePendingQueryWithTimeout(queryB, 10*time.Second, "client_b")
+	idB, _ := capture.Queries().CreatePendingQueryWithTimeout(queryB, 10*time.Second, "client_b")
 
 	// Both should be pending
-	pending := capture.GetPendingCommands()
+	pending := capture.Queries().GetPendingCommands()
 	if len(pending) != 2 {
 		t.Errorf("Expected 2 pending commands, got %d", len(pending))
 	}
 
 	// Client A completes their command
-	capture.SetQueryResultWithClient(idA, json.RawMessage(`{"ok":true}`), "client_a")
+	capture.Queries().SetQueryResultWithClient(idA, json.RawMessage(`{"ok":true}`), "client_a")
 
 	// Check command status (correlation tracking is NOT client-isolated)
-	cmdA, found := capture.GetCommandResult("client_a_cmd")
+	cmdA, found := capture.Queries().GetCommandResult("client_a_cmd")
 	if !found {
 		t.Fatal("Client A command not found")
 	}
@@ -239,7 +239,7 @@ func TestCorrelationIDMultiClient(t *testing.T) {
 	}
 
 	// Client B command still pending
-	cmdB, found := capture.GetCommandResult("client_b_cmd")
+	cmdB, found := capture.Queries().GetCommandResult("client_b_cmd")
 	if !found {
 		t.Fatal("Client B command not found")
 	}
@@ -248,10 +248,10 @@ func TestCorrelationIDMultiClient(t *testing.T) {
 	}
 
 	// Client B completes their command
-	capture.SetQueryResultWithClient(idB, json.RawMessage(`{"ok":true}`), "client_b")
+	capture.Queries().SetQueryResultWithClient(idB, json.RawMessage(`{"ok":true}`), "client_b")
 
 	// Both should be complete
-	completed := capture.GetCompletedCommands()
+	completed := capture.Queries().GetCompletedCommands()
 	if len(completed) != 2 {
 		t.Errorf("Expected 2 completed commands, got %d", len(completed))
 	}

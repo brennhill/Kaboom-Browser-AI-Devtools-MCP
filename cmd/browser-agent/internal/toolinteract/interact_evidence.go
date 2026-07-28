@@ -159,7 +159,7 @@ func CaptureEvidence(store *capture.Capture, clientID string) EvidenceShot {
 		return EvidenceShot{Error: "no_tracked_tab"}
 	}
 
-	queryID, err := store.CreatePendingQueryWithTimeout(
+	queryID, err := store.Queries().CreatePendingQueryWithTimeout(
 		queries.PendingQuery{Type: "screenshot", Params: json.RawMessage(`{}`)},
 		evidenceScreenshotTimeout,
 		clientID,
@@ -168,7 +168,7 @@ func CaptureEvidence(store *capture.Capture, clientID string) EvidenceShot {
 		return EvidenceShot{Error: "queue_full: " + err.Error()}
 	}
 
-	raw, err := store.WaitForResult(queryID, evidenceScreenshotTimeout)
+	raw, err := store.Queries().WaitForResult(queryID, evidenceScreenshotTimeout)
 	if err != nil {
 		return EvidenceShot{Error: "screenshot_timeout: " + err.Error()}
 	}

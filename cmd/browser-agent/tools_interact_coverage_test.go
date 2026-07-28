@@ -29,7 +29,7 @@ func TestHandleSubtitle_SetText(t *testing.T) {
 	}
 
 	// Verify pending query was created
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("subtitle should create a pending query")
 	}
@@ -114,7 +114,7 @@ func TestHandleListInteractive_PilotEnabled(t *testing.T) {
 	}
 
 	// Verify pending query was created
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("list_interactive should create a pending query")
 	}
@@ -167,7 +167,7 @@ func TestHandleListInteractive_WithTabID(t *testing.T) {
 		t.Fatalf("unexpected error: %s", result.Content[0].Text)
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("should create pending query")
 	}
@@ -210,7 +210,7 @@ func TestHandlePilotHighlight_Success(t *testing.T) {
 		t.Fatalf("highlight with pilot enabled should not error, got: %s", result.Content[0].Text)
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("highlight should create a pending query")
 	}
@@ -267,7 +267,7 @@ func TestHandlePilotHighlight_WithTabID(t *testing.T) {
 		t.Fatalf("unexpected error: %s", result.Content[0].Text)
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("should create pending query")
 	}

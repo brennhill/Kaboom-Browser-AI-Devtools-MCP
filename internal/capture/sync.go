@@ -239,7 +239,7 @@ func (c *Capture) HandleSync(w http.ResponseWriter, r *http.Request) {
 
 	c.processSyncCommandResults(req.CommandResults, clientID)
 	if req.LastCommandAck != "" {
-		c.AcknowledgePendingQuery(req.LastCommandAck)
+		c.Queries().AcknowledgePendingQuery(req.LastCommandAck)
 	}
 
 	if state.wasDisconnected {
@@ -258,10 +258,10 @@ func (c *Capture) HandleSync(w http.ResponseWriter, r *http.Request) {
 	// fail it fast instead of waiting for eventual timeout.
 	c.reconcileInProgressCommandState(req.InProgress)
 
-	pendingQueries := c.GetPendingQueries()
+	pendingQueries := c.Queries().GetPendingQueries()
 	if len(pendingQueries) == 0 {
-		c.WaitForPendingQueries(syncLongPollTimeout())
-		pendingQueries = c.GetPendingQueries()
+		c.Queries().WaitForPendingQueries(syncLongPollTimeout())
+		pendingQueries = c.Queries().GetPendingQueries()
 	}
 
 	c.updateSyncLogs(req, now, state.pilotEnabled, len(pendingQueries))
@@ -425,13 +425,13 @@ func (c *Capture) processSyncCommandResults(results []SyncCommandResult, clientI
 	for _, result := range results {
 		if result.ID != "" {
 			if result.CorrelationID != "" {
-				c.SetQueryResultWithClientNoCommandComplete(result.ID, result.Result, clientID)
+				c.Queries().SetQueryResultWithClientNoCommandComplete(result.ID, result.Result, clientID)
 			} else {
-				c.SetQueryResultWithClient(result.ID, result.Result, clientID)
+				c.Queries().SetQueryResultWithClient(result.ID, result.Result, clientID)
 			}
 		}
 		if result.CorrelationID != "" {
-			c.ApplyCommandResult(result.CorrelationID, result.Status, result.Result, result.Error)
+			c.Queries().ApplyCommandResult(result.CorrelationID, result.Status, result.Result, result.Error)
 		}
 	}
 }
@@ -451,6 +451,21 @@ func (c *Capture) updateSyncLogs(req SyncRequest, now time.Time, pilotEnabled bo
 		c.extensionState.extensionVersion = req.ExtensionVersion
 		c.mu.Unlock()
 	}
+}
+
+// GetPendingQueriesDisconnectAware reconciles extension liveness before
+// returning the current query queue for sync delivery.
+func (c *Capture) GetPendingQueriesDisconnectAware() []queries.PendingQueryResponse {
+	c.mu.RLock()
+	neverSynced := c.extensionState.lastSyncSeen.IsZero()
+	disconnected := !neverSynced && time.Since(c.extensionState.lastSyncSeen) >= extensionDisconnectThreshold
+	c.mu.RUnlock()
+
+	if disconnected {
+		c.queryDispatcher.ExpireAllPendingQueries("extension_disconnected")
+		return nil
+	}
+	return c.Queries().GetPendingQueries()
 }
 
 func normalizeInProgressList(in []SyncInProgress) []SyncInProgress {
@@ -516,7 +531,7 @@ func (c *Capture) reconcileInProgressCommandState(inProgress []SyncInProgress) {
 			active[entry.CorrelationID] = struct{}{}
 		}
 	}
-	pending := c.GetPendingCommands()
+	pending := c.Queries().GetPendingCommands()
 	pendingCorrelations := make(map[string]struct{}, len(pending))
 	toFail := make([]string, 0)
 	toFailIDs := make([]string, 0)
@@ -559,7 +574,7 @@ func (c *Capture) reconcileInProgressCommandState(inProgress []SyncInProgress) {
 		if i < len(toFailIDs) {
 			queryID = toFailIDs[i]
 		}
-		c.ApplyCommandResult(
+		c.Queries().ApplyCommandResult(
 			correlationID,
 			"error",
 			nil,

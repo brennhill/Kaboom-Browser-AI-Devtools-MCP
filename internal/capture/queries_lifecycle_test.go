@@ -95,7 +95,7 @@ func TestWaitForResult_NoGoroutineLeakOnTimeout(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 
-	id, _ := c.CreatePendingQuery(queries.PendingQuery{
+	id, _ := c.Queries().CreatePendingQuery(queries.PendingQuery{
 		Type:   "dom",
 		Params: json.RawMessage(`{"selector":"#leak-test"}`),
 	})
@@ -105,7 +105,7 @@ func TestWaitForResult_NoGoroutineLeakOnTimeout(t *testing.T) {
 	before := runtime.NumGoroutine()
 
 	// This will timeout — the key assertion is no goroutine leak after
-	_, err := c.WaitForResult(id, 80*time.Millisecond)
+	_, err := c.Queries().WaitForResult(id, 80*time.Millisecond)
 	if err == nil {
 		t.Fatal("Expected timeout error")
 	}
@@ -127,18 +127,18 @@ func TestWaitForResult_MultipleTimeoutsNoLeak(t *testing.T) {
 	defer c.Close()
 
 	// Short query timeout so CreatePendingQuery cleanup goroutines exit quickly
-	c.SetQueryTimeout(40 * time.Millisecond)
+	c.Queries().SetQueryTimeout(40 * time.Millisecond)
 
 	runtime.GC()
 	time.Sleep(40 * time.Millisecond)
 	before := runtime.NumGoroutine()
 
 	for i := 0; i < 6; i++ {
-		id, _ := c.CreatePendingQuery(queries.PendingQuery{
+		id, _ := c.Queries().CreatePendingQuery(queries.PendingQuery{
 			Type:   "dom",
 			Params: json.RawMessage(`{"selector":"#leak-test"}`),
 		})
-		_, _ = c.WaitForResult(id, 40*time.Millisecond)
+		_, _ = c.Queries().WaitForResult(id, 40*time.Millisecond)
 	}
 
 	// Wait for per-query cleanup goroutines to complete (timeout + margin)
@@ -159,7 +159,7 @@ func TestWaitForResult_ReturnsResultWhenAvailable(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 
-	id, _ := c.CreatePendingQuery(queries.PendingQuery{
+	id, _ := c.Queries().CreatePendingQuery(queries.PendingQuery{
 		Type:   "dom",
 		Params: json.RawMessage(`{"selector":"#test"}`),
 	})
@@ -167,10 +167,10 @@ func TestWaitForResult_ReturnsResultWhenAvailable(t *testing.T) {
 	// Post result after a short delay
 	go func() {
 		time.Sleep(20 * time.Millisecond)
-		c.SetQueryResult(id, json.RawMessage(`{"found": true}`))
+		c.Queries().SetQueryResult(id, json.RawMessage(`{"found": true}`))
 	}()
 
-	result, err := c.WaitForResult(id, 500*time.Millisecond)
+	result, err := c.Queries().WaitForResult(id, 500*time.Millisecond)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}

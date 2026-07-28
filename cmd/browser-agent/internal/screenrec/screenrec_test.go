@@ -47,7 +47,7 @@ func newVideoTestEnv(t *testing.T) *videoTestEnv {
 func testDeps(cap *capture.Capture) Deps {
 	return Deps{
 		EnqueuePendingQuery: func(req mcp.JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (mcp.JSONRPCResponse, bool) {
-			if _, err := cap.CreatePendingQueryWithTimeout(query, timeout, req.ClientID); err != nil {
+			if _, err := cap.Queries().CreatePendingQueryWithTimeout(query, timeout, req.ClientID); err != nil {
 				return mcp.Fail(req, mcp.ErrQueueFull, err.Error(), "Wait for in-flight commands to complete, then retry."), true
 			}
 			return mcp.JSONRPCResponse{}, false
@@ -270,7 +270,7 @@ func TestHandleVideoRecordingSaveValidationAndSuccess(t *testing.T) {
 		t.Fatalf("metadata file missing: %v", err)
 	}
 
-	queryResult, found := env.capture.TakeQueryResult("query-1")
+	queryResult, found := env.capture.Queries().TakeQueryResult("query-1")
 	if !found {
 		t.Fatal("expected query result to be set for query-1")
 	}
@@ -556,7 +556,7 @@ func TestHandleRecordStartAndStop(t *testing.T) {
 		t.Fatalf("screen_recording_start path = %q, want .webm suffix", startData["path"])
 	}
 
-	lastQuery := env.capture.GetLastPendingQuery()
+	lastQuery := env.capture.Queries().GetLastPendingQuery()
 	if lastQuery == nil {
 		t.Fatal("expected pending query for screen_recording_start")
 	}
@@ -585,7 +585,7 @@ func TestHandleRecordStartAndStop(t *testing.T) {
 		t.Fatal("screen_recording_start response missing correlation_id")
 	}
 
-	env.capture.ApplyCommandResult(startCorrelationID, "complete", json.RawMessage(`{"status":"recording","name":"My Video"}`), "")
+	env.capture.Queries().ApplyCommandResult(startCorrelationID, "complete", json.RawMessage(`{"status":"recording","name":"My Video"}`), "")
 
 	stopResp := env.handler.HandleRecordStop(req, json.RawMessage(`{"tab_id":7}`))
 	stopResult := parseToolResult(t, stopResp)
@@ -597,7 +597,7 @@ func TestHandleRecordStartAndStop(t *testing.T) {
 		t.Fatalf("screen_recording_stop recording_state = %v, want %q", stopData["recording_state"], recordingStateStopping)
 	}
 
-	stopQuery := env.capture.GetLastPendingQuery()
+	stopQuery := env.capture.Queries().GetLastPendingQuery()
 	if stopQuery == nil {
 		t.Fatal("expected pending query for screen_recording_stop")
 	}

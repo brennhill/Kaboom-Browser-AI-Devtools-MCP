@@ -321,7 +321,7 @@ func extractErrorMessage(response mcp.JSONRPCResponse) string {
 func (h *ToolHandler) sequenceHandler() *sequencehandler.Handler {
 	return sequencehandler.New(sequencehandler.Deps{
 		Store: h.sessionStoreImpl, ReplayMu: &replayMu, Interact: h.toolInteract,
-		WaitForCommand: h.capture.WaitForCommand, RecordAction: h.recordAIAction,
+		WaitForCommand: h.capture.Queries().WaitForCommand, RecordAction: h.recordAIAction,
 	})
 }
 

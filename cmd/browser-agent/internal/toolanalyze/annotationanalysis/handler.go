@@ -115,7 +115,7 @@ func (h *Handler) getAnonymousAnnotations(req mcp.JSONRPCRequest, wait bool, wai
 		}
 
 		corrID := toolresp.NewCorrelationID("ann")
-		h.capture.RegisterCommand(corrID, "", annotationWaitCommandTTL)
+		h.capture.Queries().RegisterCommand(corrID, "", annotationWaitCommandTTL)
 		h.annotationStore.RegisterWaiter(corrID, "", urlFilter)
 
 		return mcp.Succeed(req, "Waiting for annotations", map[string]any{
@@ -156,7 +156,7 @@ func (h *Handler) getNamedAnnotations(req mcp.JSONRPCRequest, sessionName string
 		}
 
 		corrID := toolresp.NewCorrelationID("ann")
-		h.capture.RegisterCommand(corrID, "", annotationWaitCommandTTL)
+		h.capture.Queries().RegisterCommand(corrID, "", annotationWaitCommandTTL)
 		h.annotationStore.RegisterWaiter(corrID, sessionName, urlFilter)
 
 		return mcp.Succeed(req, "Waiting for annotations", map[string]any{
@@ -305,7 +305,7 @@ func (h *Handler) toolFlushAnnotations(req mcp.JSONRPCRequest, correlationID str
 	sessionName, waiterURLFilter, _ := h.annotationStore.TakeWaiter(correlationID)
 
 	// Idempotent behavior: if the command is already terminal, return current state.
-	if cmd, found := h.capture.GetCommandResult(correlationID); found && cmd != nil && cmd.Status != "pending" {
+	if cmd, found := h.capture.Queries().GetCommandResult(correlationID); found && cmd != nil && cmd.Status != "pending" {
 		return h.formatCommand(req, *cmd, correlationID)
 	}
 
@@ -315,10 +315,10 @@ func (h *Handler) toolFlushAnnotations(req mcp.JSONRPCRequest, correlationID str
 	}
 
 	payload := h.buildFlushedAnnotationResult(sessionName, effectiveURLFilter)
-	h.capture.ApplyCommandResult(correlationID, "complete", payload, "")
+	h.capture.Queries().ApplyCommandResult(correlationID, "complete", payload, "")
 
 	// Normal path: return canonical command_result envelope.
-	if cmd, found := h.capture.GetCommandResult(correlationID); found && cmd != nil {
+	if cmd, found := h.capture.Queries().GetCommandResult(correlationID); found && cmd != nil {
 		return h.formatCommand(req, *cmd, correlationID)
 	}
 

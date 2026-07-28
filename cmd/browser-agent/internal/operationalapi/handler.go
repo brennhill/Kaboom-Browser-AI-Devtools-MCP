@@ -259,7 +259,7 @@ func appendCaptureDiagnostics(resp map[string]any, cap *capture.Capture) {
 	}
 
 	const defaultTraceLimit = 25
-	traces := cap.GetRecentCommandTraces(defaultTraceLimit)
+	traces := cap.Queries().GetRecentCommandTraces(defaultTraceLimit)
 	traceEntries := make([]map[string]any, 0, len(traces))
 	for _, trace := range traces {
 		if trace == nil {

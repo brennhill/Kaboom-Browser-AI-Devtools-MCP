@@ -89,7 +89,7 @@ func TestAsyncQueueReliability(t *testing.T) {
 						}
 
 						// Poll for queries
-						pendingQueries := capture.GetPendingQueries()
+						pendingQueries := capture.Queries().GetPendingQueries()
 
 						mu.Lock()
 						commandsReceived += len(pendingQueries)
@@ -98,7 +98,7 @@ func TestAsyncQueueReliability(t *testing.T) {
 						// Simulate extension processing and posting results
 						for _, query := range pendingQueries {
 							result := json.RawMessage(`{"success": true}`)
-							capture.SetQueryResult(query.ID, result)
+							capture.Queries().SetQueryResult(query.ID, result)
 						}
 					}
 				}
@@ -114,7 +114,7 @@ func TestAsyncQueueReliability(t *testing.T) {
 					CorrelationID: fmt.Sprintf("test_%d", i),
 				}
 
-				capture.CreatePendingQueryWithTimeout(query, 5*time.Second, "")
+				capture.Queries().CreatePendingQueryWithTimeout(query, 5*time.Second, "")
 
 				mu.Lock()
 				commandsSent++
@@ -126,7 +126,7 @@ func TestAsyncQueueReliability(t *testing.T) {
 			// Wait for polling to catch up with a bounded deadline.
 			deadline := time.Now().Add(tt.pollInterval*time.Duration(tt.commandCount+4) + 300*time.Millisecond)
 			for time.Now().Before(deadline) {
-				if len(capture.GetPendingQueries()) == 0 {
+				if len(capture.Queries().GetPendingQueries()) == 0 {
 					break
 				}
 				time.Sleep(10 * time.Millisecond)
@@ -137,7 +137,7 @@ func TestAsyncQueueReliability(t *testing.T) {
 			<-pollingDone
 
 			// Check for expired commands
-			commandsExpired = capture.queryDispatcher.QueueDepth()
+			commandsExpired = capture.Queries().QueueDepth()
 
 			mu.Lock()
 			sent := commandsSent
@@ -174,13 +174,13 @@ func TestAsyncQueueTimeout(t *testing.T) {
 		CorrelationID: "timeout_test",
 	}
 
-	id, _ := capture.CreatePendingQueryWithTimeout(query, 250*time.Millisecond, "")
+	id, _ := capture.Queries().CreatePendingQueryWithTimeout(query, 250*time.Millisecond, "")
 
 	// Wait slightly less than timeout
 	time.Sleep(120 * time.Millisecond)
 
 	// Should still be in queue
-	pendingQueries := capture.GetPendingQueries()
+	pendingQueries := capture.Queries().GetPendingQueries()
 	if len(pendingQueries) != 1 {
 		t.Errorf("Expected 1 pending query before timeout, got %d", len(pendingQueries))
 	}
@@ -189,7 +189,7 @@ func TestAsyncQueueTimeout(t *testing.T) {
 	expired := false
 	deadline := time.Now().Add(700 * time.Millisecond)
 	for time.Now().Before(deadline) {
-		pendingQueries = capture.GetPendingQueries()
+		pendingQueries = capture.Queries().GetPendingQueries()
 		if len(pendingQueries) == 0 {
 			expired = true
 			break
@@ -201,7 +201,7 @@ func TestAsyncQueueTimeout(t *testing.T) {
 	}
 
 	// Result should not exist
-	_, found := capture.TakeQueryResult(id)
+	_, found := capture.Queries().TakeQueryResult(id)
 	if found {
 		t.Error("Result should not exist for expired query")
 	}
@@ -231,7 +231,7 @@ func TestAsyncQueueConcurrentAccess(t *testing.T) {
 					Params:        json.RawMessage(fmt.Sprintf(`{"id":%d}`, j)),
 					CorrelationID: fmt.Sprintf("g%d_cmd%d", goroutineID, j),
 				}
-				capture.CreatePendingQueryWithTimeout(query, queries.AsyncCommandTimeout, "")
+				capture.Queries().CreatePendingQueryWithTimeout(query, queries.AsyncCommandTimeout, "")
 			}
 		}(i)
 	}
@@ -242,10 +242,10 @@ func TestAsyncQueueConcurrentAccess(t *testing.T) {
 		go func(goroutineID int) {
 			defer wg.Done()
 			for j := 0; j < commandsPerGoroutine; j++ {
-				pendingQueries := capture.GetPendingQueries()
+				pendingQueries := capture.Queries().GetPendingQueries()
 				for _, query := range pendingQueries {
 					result := json.RawMessage(`{"ok":true}`)
-					capture.SetQueryResult(query.ID, result)
+					capture.Queries().SetQueryResult(query.ID, result)
 				}
 				time.Sleep(10 * time.Millisecond)
 			}
@@ -261,7 +261,7 @@ func TestAsyncQueueConcurrentAccess(t *testing.T) {
 	}
 
 	// All commands should have been processed or expired
-	pendingQueries := capture.GetPendingQueries()
+	pendingQueries := capture.Queries().GetPendingQueries()
 	if len(pendingQueries) > 5 {
 		t.Errorf("Too many pending queries after concurrent test: %d (max 5 due to queue limit)", len(pendingQueries))
 	}
@@ -278,13 +278,13 @@ func BenchmarkAsyncQueue(b *testing.B) {
 			Params:        json.RawMessage(`{"script":"test"}`),
 			CorrelationID: fmt.Sprintf("bench_%d", i),
 		}
-		capture.CreatePendingQueryWithTimeout(query, queries.AsyncCommandTimeout, "")
+		capture.Queries().CreatePendingQueryWithTimeout(query, queries.AsyncCommandTimeout, "")
 
 		// Simulate extension picking it up
-		pendingQueries := capture.GetPendingQueries()
+		pendingQueries := capture.Queries().GetPendingQueries()
 		if len(pendingQueries) > 0 {
 			result := json.RawMessage(`{"ok":true}`)
-			capture.SetQueryResult(pendingQueries[0].ID, result)
+			capture.Queries().SetQueryResult(pendingQueries[0].ID, result)
 		}
 	}
 }

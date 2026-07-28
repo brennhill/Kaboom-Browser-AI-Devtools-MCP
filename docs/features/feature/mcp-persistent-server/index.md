@@ -146,6 +146,11 @@ last_verified_date: 2026-03-29
 > resolve only through `internal/state`. Process control no longer reads,
 > removes, or writes fallback filesystem locations.
 
+> **2026-07-28:** Route construction now treats a missing capture runtime as an
+> unavailable optional dependency. Guard diagnostics and injected query,
+> performance, and session readers remain nil-safe, allowing middleware-only
+> route tests without inventing a fake Capture.
+
 > **2026-07-27:** Removed the unreachable `main_connection_diag.go`
 > connection-probing path and its dedicated tests. No production caller invoked
 > it. Two unrelated stop-mode tests in the same file were also obsolete because

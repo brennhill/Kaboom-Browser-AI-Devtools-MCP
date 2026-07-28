@@ -50,7 +50,7 @@ func TestCommandResult_EvidenceAlwaysIncludesBeforeAfterPaths(t *testing.T) {
 		t.Fatalf("correlation_id missing in queued response: %v", queued)
 	}
 
-	env.capture.ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":true}`), "")
+	env.capture.Queries().ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":true}`), "")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
@@ -100,7 +100,7 @@ func TestCommandResult_EvidenceOnMutationSkipsReadOnlyAction(t *testing.T) {
 		t.Fatalf("correlation_id missing in queued response: %v", queued)
 	}
 
-	env.capture.ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":true,"value":"headline"}`), "")
+	env.capture.Queries().ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":true,"value":"headline"}`), "")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
@@ -162,7 +162,7 @@ func TestCommandResult_EvidencePartialWhenAfterCaptureFails(t *testing.T) {
 		t.Fatalf("correlation_id missing in queued response: %v", queued)
 	}
 
-	env.capture.ApplyCommandResult(corrID, "error", json.RawMessage(`{"success":false,"error":"element_not_found"}`), "element_not_found")
+	env.capture.Queries().ApplyCommandResult(corrID, "error", json.RawMessage(`{"success":false,"error":"element_not_found"}`), "element_not_found")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)

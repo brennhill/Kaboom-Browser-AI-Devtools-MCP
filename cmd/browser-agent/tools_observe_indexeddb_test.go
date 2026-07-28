@@ -56,7 +56,7 @@ func TestObserveIndexedDB_ReturnsEntries(t *testing.T) {
 	go func() {
 		deadline := time.Now().Add(1200 * time.Millisecond)
 		for time.Now().Before(deadline) {
-			for _, q := range cap.GetPendingQueries() {
+			for _, q := range cap.Queries().GetPendingQueries() {
 				if q.Type != "execute" {
 					continue
 				}
@@ -64,7 +64,7 @@ func TestObserveIndexedDB_ReturnsEntries(t *testing.T) {
 				_ = json.Unmarshal(q.Params, &params)
 				script, _ := params["script"].(string)
 				scriptCh <- script
-				cap.SetQueryResult(q.ID, json.RawMessage(`{"success":true,"result":{"ok":true,"database":"app-cache","store":"users","entries":[{"key":"u1","value":{"id":"u1","name":"Alice"}}],"count":1,"limit":10}}`))
+				cap.Queries().SetQueryResult(q.ID, json.RawMessage(`{"success":true,"result":{"ok":true,"database":"app-cache","store":"users","entries":[{"key":"u1","value":{"id":"u1","name":"Alice"}}],"count":1,"limit":10}}`))
 				return
 			}
 			time.Sleep(10 * time.Millisecond)
@@ -117,13 +117,13 @@ func TestObserveStorage_IncludesIndexedDBListing(t *testing.T) {
 		handledState := false
 		handledExec := false
 		for time.Now().Before(deadline) {
-			for _, q := range cap.GetPendingQueries() {
+			for _, q := range cap.Queries().GetPendingQueries() {
 				switch q.Type {
 				case "state_capture":
 					if handledState {
 						continue
 					}
-					cap.SetQueryResult(q.ID, json.RawMessage(`{"url":"https://app.example.com","localStorage":{"theme":"dark"},"sessionStorage":{"token":"abc"},"cookies":"debug=true"}`))
+					cap.Queries().SetQueryResult(q.ID, json.RawMessage(`{"url":"https://app.example.com","localStorage":{"theme":"dark"},"sessionStorage":{"token":"abc"},"cookies":"debug=true"}`))
 					handledState = true
 				case "execute":
 					if handledExec {
@@ -133,7 +133,7 @@ func TestObserveStorage_IncludesIndexedDBListing(t *testing.T) {
 					_ = json.Unmarshal(q.Params, &params)
 					script, _ := params["script"].(string)
 					scriptCh <- script
-					cap.SetQueryResult(q.ID, json.RawMessage(`{"success":true,"result":{"supported":true,"databases":[{"name":"app-cache","version":3,"object_stores":["users","settings"]}]}}`))
+					cap.Queries().SetQueryResult(q.ID, json.RawMessage(`{"success":true,"result":{"supported":true,"databases":[{"name":"app-cache","version":3,"object_stores":["users","settings"]}]}}`))
 					handledExec = true
 				}
 			}

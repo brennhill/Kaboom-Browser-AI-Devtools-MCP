@@ -23,7 +23,7 @@ func TestMaybeWaitForCommand_TimeoutMs_CustomTimeout(t *testing.T) {
 	handler.coldStartTimeout = 0
 	req := mcp.JSONRPCRequest{ID: 1, ClientID: "test-client"}
 	correlationID := "test-timeout-ms-123"
-	cap.RegisterCommand(correlationID, "q-timeout-ms-123", 60*time.Second)
+	cap.Queries().RegisterCommand(correlationID, "q-timeout-ms-123", 60*time.Second)
 
 	// Connect extension (fast path — no long-poll)
 	cap.SimulateExtensionConnectForTest()
@@ -31,7 +31,7 @@ func TestMaybeWaitForCommand_TimeoutMs_CustomTimeout(t *testing.T) {
 	// Complete the command after 200ms
 	go func() {
 		time.Sleep(200 * time.Millisecond)
-		cap.ApplyCommandResult(correlationID, "complete", json.RawMessage(`{"success":true,"data":"custom-timeout"}`), "")
+		cap.Queries().ApplyCommandResult(correlationID, "complete", json.RawMessage(`{"success":true,"data":"custom-timeout"}`), "")
 	}()
 
 	// Set timeout_ms to 2000ms (should be enough to catch the 200ms result)
@@ -60,7 +60,7 @@ func TestMaybeWaitForCommand_TimeoutMs_ShortTimeout(t *testing.T) {
 	handler.coldStartTimeout = 0
 	req := mcp.JSONRPCRequest{ID: 1, ClientID: "test-client"}
 	correlationID := "test-short-timeout-123"
-	cap.RegisterCommand(correlationID, "q-short-123", 60*time.Second)
+	cap.Queries().RegisterCommand(correlationID, "q-short-123", 60*time.Second)
 
 	// Connect extension (fast path — no long-poll)
 	cap.SimulateExtensionConnectForTest()
@@ -159,10 +159,10 @@ func TestAnalyze_LinkHealth_SyncTrue_WaitsForResult(t *testing.T) {
 	go func() {
 		time.Sleep(200 * time.Millisecond)
 		// Find the pending command and complete it
-		pending := cap.GetPendingCommands()
+		pending := cap.Queries().GetPendingCommands()
 		for _, cmd := range pending {
 			if cmd != nil && strings.HasPrefix(cmd.CorrelationID, "link_health_") {
-				cap.ApplyCommandResult(cmd.CorrelationID, "complete", json.RawMessage(`{"success":true,"healthy":5,"broken":0}`), "")
+				cap.Queries().ApplyCommandResult(cmd.CorrelationID, "complete", json.RawMessage(`{"success":true,"healthy":5,"broken":0}`), "")
 				break
 			}
 		}
@@ -223,10 +223,10 @@ func TestAnalyze_Dom_TimeoutMs_Respected(t *testing.T) {
 	// Complete the command after 200ms
 	go func() {
 		time.Sleep(200 * time.Millisecond)
-		pending := cap.GetPendingCommands()
+		pending := cap.Queries().GetPendingCommands()
 		for _, cmd := range pending {
 			if cmd != nil && strings.HasPrefix(cmd.CorrelationID, "dom_") {
-				cap.ApplyCommandResult(cmd.CorrelationID, "complete", json.RawMessage(`{"success":true,"elements":[]}`), "")
+				cap.Queries().ApplyCommandResult(cmd.CorrelationID, "complete", json.RawMessage(`{"success":true,"elements":[]}`), "")
 				break
 			}
 		}
@@ -245,7 +245,7 @@ func TestAnalyze_Dom_TimeoutMs_Respected(t *testing.T) {
 
 // findPendingCommandByPrefix finds a pending command's correlation ID by prefix
 func findPendingCommandByPrefix(cap *capture.Capture, prefix string) *queries.CommandResult {
-	pending := cap.GetPendingCommands()
+	pending := cap.Queries().GetPendingCommands()
 	for _, cmd := range pending {
 		if cmd != nil && strings.HasPrefix(cmd.CorrelationID, prefix) {
 			return cmd

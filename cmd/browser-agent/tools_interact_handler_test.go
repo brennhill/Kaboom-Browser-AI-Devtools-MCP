@@ -213,7 +213,7 @@ func TestToolsInteractHighlight_Success(t *testing.T) {
 	}
 
 	// Verify pending query created
-	pq := cap.GetLastPendingQuery()
+	pq := cap.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("highlight should create a pending query")
 	}
@@ -651,7 +651,7 @@ func TestToolsInteractDOMPrimitives_SuccessWithPilot(t *testing.T) {
 				t.Errorf("correlation_id should start with 'dom_', got: %s", corr)
 			}
 
-			pq := cap.GetLastPendingQuery()
+			pq := cap.Queries().GetLastPendingQuery()
 			if pq == nil {
 				t.Fatalf("expected pending query for %s", tc.action)
 			}
@@ -675,7 +675,7 @@ func TestToolsInteractDOMPrimitive_ScopeRectQueues(t *testing.T) {
 		t.Fatalf("click with scope_rect should queue, got error: %s", result.Content[0].Text)
 	}
 
-	pq := cap.GetLastPendingQuery()
+	pq := cap.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("expected pending query for click")
 	}
@@ -714,7 +714,7 @@ func TestToolsInteractDOMPrimitive_NearParamsConvertToScopeRect(t *testing.T) {
 		t.Fatalf("list_interactive with near params should queue, got error: %s", result.Content[0].Text)
 	}
 
-	pq := cap.GetLastPendingQuery()
+	pq := cap.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("expected pending query for list_interactive")
 	}
@@ -755,7 +755,7 @@ func TestToolsInteractDOMPrimitive_NearParamsDoNotOverrideScopeRect(t *testing.T
 		t.Fatalf("unexpected error: %s", result.Content[0].Text)
 	}
 
-	pq := cap.GetLastPendingQuery()
+	pq := cap.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("expected pending query")
 	}
@@ -864,7 +864,7 @@ func TestToolsInteractListInteractive_ResponseFields(t *testing.T) {
 		t.Errorf("correlation_id should start with 'dom_list_', got: %s", corr)
 	}
 
-	pq := cap.GetLastPendingQuery()
+	pq := cap.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("expected pending query for list_interactive")
 	}
@@ -900,7 +900,7 @@ func TestToolsInteractGetText_StructuredPassthrough(t *testing.T) {
 		t.Errorf("correlation_id should start with 'dom_get_text_', got: %s", corr)
 	}
 
-	pq := cap.GetLastPendingQuery()
+	pq := cap.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("expected pending query for get_text")
 	}

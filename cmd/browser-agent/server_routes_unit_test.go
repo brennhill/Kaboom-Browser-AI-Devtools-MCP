@@ -154,13 +154,13 @@ func TestSetupHTTPRoutesBasicEndpoints(t *testing.T) {
 		t.Fatal("diagnostics did not include redacted http debug request body")
 	}
 
-	traceQueryID, _ := cap.CreatePendingQueryWithTimeout(queries.PendingQuery{
+	traceQueryID, _ := cap.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
 		Type:          "browser_action",
 		CorrelationID: "diag-trace-corr",
 	}, 30*time.Second, "test-client")
-	_ = cap.GetPendingQueries()
-	cap.AcknowledgePendingQuery(traceQueryID)
-	cap.ApplyCommandResult("diag-trace-corr", "complete", json.RawMessage(`{"ok":true}`), "")
+	_ = cap.Queries().GetPendingQueries()
+	cap.Queries().AcknowledgePendingQuery(traceQueryID)
+	cap.Queries().ApplyCommandResult("diag-trace-corr", "complete", json.RawMessage(`{"ok":true}`), "")
 
 	diagWithTraceRR := httptest.NewRecorder()
 	mux.ServeHTTP(diagWithTraceRR, localRequest(http.MethodGet, "/diagnostics", nil))
@@ -334,6 +334,21 @@ func TestLogsEndpointValidationAndMethods(t *testing.T) {
 	}
 }
 
+func TestSetupHTTPRoutes_NilCaptureDoesNotPanic(t *testing.T) {
+	srv := newTestServerForHandlers(t)
+
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			t.Fatalf("setupHTTPRoutes panicked with nil capture: %v", recovered)
+		}
+	}()
+
+	mux, handler := setupHTTPRoutes(srv, nil)
+	if mux == nil || handler == nil {
+		t.Fatal("setupHTTPRoutes returned a nil route dependency")
+	}
+}
+
 func TestTelemetryEndpointReadContract(t *testing.T) {
 	t.Parallel()
 
@@ -425,7 +440,7 @@ func TestHandleScreenshotRoutes(t *testing.T) {
 		t.Fatalf("filename = %q, expected sanitized hostname", resp["filename"])
 	}
 
-	if result, ok := cap.TakeQueryResult("query-1"); !ok || len(result) == 0 {
+	if result, ok := cap.Queries().TakeQueryResult("query-1"); !ok || len(result) == 0 {
 		t.Fatalf("expected query result for query-1 to be set, got ok=%v result=%q", ok, string(result))
 	}
 

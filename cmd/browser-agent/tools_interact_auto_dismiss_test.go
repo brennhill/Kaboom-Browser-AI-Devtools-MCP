@@ -35,7 +35,7 @@ func TestInteract_AutoDismissOverlays_DispatchesPendingQuery(t *testing.T) {
 		t.Fatalf("auto_dismiss_overlays should not error, got: %s", result.Content[0].Text)
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("auto_dismiss_overlays should create a pending query")
 	}
@@ -114,7 +114,7 @@ func TestInteract_Navigate_AutoDismiss_Composes(t *testing.T) {
 	}
 
 	// The navigate action should have created a pending query for navigation
-	queries := env.capture.GetPendingQueries()
+	queries := env.capture.Queries().GetPendingQueries()
 	if len(queries) < 2 {
 		t.Fatalf("navigate with auto_dismiss should create at least 2 pending queries (nav + dismiss), got %d", len(queries))
 	}
@@ -149,7 +149,7 @@ func TestInteract_Navigate_AutoDismiss_False_NoDismissQuery(t *testing.T) {
 	}
 
 	// Should NOT have a dismiss query
-	queries := env.capture.GetPendingQueries()
+	queries := env.capture.Queries().GetPendingQueries()
 	for _, q := range queries {
 		if q.Type == "dom_action" {
 			var params map[string]any
@@ -180,7 +180,7 @@ func TestInteract_WaitForStable_DispatchesPendingQuery(t *testing.T) {
 		t.Fatalf("wait_for_stable should not error, got: %s", result.Content[0].Text)
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("wait_for_stable should create a pending query")
 	}
@@ -211,7 +211,7 @@ func TestInteract_WaitForStable_DefaultTimeout(t *testing.T) {
 		t.Fatalf("wait_for_stable should not error, got: %s", result.Content[0].Text)
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("wait_for_stable should create a pending query")
 	}
@@ -253,7 +253,7 @@ func TestInteract_WaitForStable_CustomParams(t *testing.T) {
 		t.Fatalf("wait_for_stable should not error, got: %s", result.Content[0].Text)
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("wait_for_stable should create a pending query")
 	}
@@ -308,7 +308,7 @@ func TestInteract_Navigate_WaitForStable_Composes(t *testing.T) {
 	}
 
 	// The navigate action should have created queries: navigation + wait_for_stable
-	queries := env.capture.GetPendingQueries()
+	queries := env.capture.Queries().GetPendingQueries()
 	if len(queries) < 2 {
 		t.Fatalf("navigate with wait_for_stable should create at least 2 pending queries, got %d", len(queries))
 	}
@@ -342,7 +342,7 @@ func TestInteract_Navigate_WaitForStable_False_NoStableQuery(t *testing.T) {
 		t.Fatal("navigate should return result")
 	}
 
-	queries := env.capture.GetPendingQueries()
+	queries := env.capture.Queries().GetPendingQueries()
 	for _, q := range queries {
 		if q.Type == "dom_action" {
 			var params map[string]any
@@ -374,7 +374,7 @@ func TestInteract_Click_WaitForStable_Composes(t *testing.T) {
 	}
 
 	// Find the wait_for_stable query
-	queries := env.capture.GetPendingQueries()
+	queries := env.capture.Queries().GetPendingQueries()
 	foundStable := false
 	for _, q := range queries {
 		if q.Type == "dom_action" {

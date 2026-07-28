@@ -47,7 +47,7 @@ func TestGetScreenshot_InlineImageInResponse(t *testing.T) {
 	var queryID string
 	for i := 0; i < 100; i++ {
 		time.Sleep(10 * time.Millisecond)
-		pending := env.capture.GetPendingQueries()
+		pending := env.capture.Queries().GetPendingQueries()
 		for _, q := range pending {
 			if q.Type == "screenshot" {
 				queryID = q.ID
@@ -63,7 +63,7 @@ func TestGetScreenshot_InlineImageInResponse(t *testing.T) {
 	}
 
 	resultJSON, _ := json.Marshal(screenshotResult)
-	env.capture.SetQueryResult(queryID, resultJSON)
+	env.capture.Queries().SetQueryResult(queryID, resultJSON)
 
 	select {
 	case <-done:
@@ -147,7 +147,7 @@ func TestGetScreenshot_InlineImage_PNGFormat(t *testing.T) {
 	var queryID string
 	for i := 0; i < 100; i++ {
 		time.Sleep(10 * time.Millisecond)
-		pending := env.capture.GetPendingQueries()
+		pending := env.capture.Queries().GetPendingQueries()
 		for _, q := range pending {
 			if q.Type == "screenshot" {
 				queryID = q.ID
@@ -163,7 +163,7 @@ func TestGetScreenshot_InlineImage_PNGFormat(t *testing.T) {
 	}
 
 	resultJSON, _ := json.Marshal(screenshotResult)
-	env.capture.SetQueryResult(queryID, resultJSON)
+	env.capture.Queries().SetQueryResult(queryID, resultJSON)
 
 	select {
 	case <-done:
@@ -216,7 +216,7 @@ func TestGetScreenshot_NoDataURL_StillReturnsTextResult(t *testing.T) {
 	var queryID string
 	for i := 0; i < 100; i++ {
 		time.Sleep(10 * time.Millisecond)
-		pending := env.capture.GetPendingQueries()
+		pending := env.capture.Queries().GetPendingQueries()
 		for _, q := range pending {
 			if q.Type == "screenshot" {
 				queryID = q.ID
@@ -232,7 +232,7 @@ func TestGetScreenshot_NoDataURL_StillReturnsTextResult(t *testing.T) {
 	}
 
 	resultJSON, _ := json.Marshal(screenshotResult)
-	env.capture.SetQueryResult(queryID, resultJSON)
+	env.capture.Queries().SetQueryResult(queryID, resultJSON)
 
 	select {
 	case <-done:
@@ -281,7 +281,7 @@ func TestGetScreenshot_SaveTo_WritesFileAndReturnsPath(t *testing.T) {
 	var queryID string
 	for i := 0; i < 100; i++ {
 		time.Sleep(10 * time.Millisecond)
-		pending := env.capture.GetPendingQueries()
+		pending := env.capture.Queries().GetPendingQueries()
 		for _, q := range pending {
 			if q.Type == "screenshot" {
 				queryID = q.ID
@@ -297,7 +297,7 @@ func TestGetScreenshot_SaveTo_WritesFileAndReturnsPath(t *testing.T) {
 	}
 
 	resultJSON, _ := json.Marshal(screenshotResult)
-	env.capture.SetQueryResult(queryID, resultJSON)
+	env.capture.Queries().SetQueryResult(queryID, resultJSON)
 
 	select {
 	case <-done:
@@ -358,7 +358,7 @@ func TestGetScreenshot_SaveTo_InvalidExtensionReturnsSaveError(t *testing.T) {
 	var queryID string
 	for i := 0; i < 100; i++ {
 		time.Sleep(10 * time.Millisecond)
-		pending := env.capture.GetPendingQueries()
+		pending := env.capture.Queries().GetPendingQueries()
 		for _, q := range pending {
 			if q.Type == "screenshot" {
 				queryID = q.ID
@@ -374,7 +374,7 @@ func TestGetScreenshot_SaveTo_InvalidExtensionReturnsSaveError(t *testing.T) {
 	}
 
 	resultJSON, _ := json.Marshal(screenshotResult)
-	env.capture.SetQueryResult(queryID, resultJSON)
+	env.capture.Queries().SetQueryResult(queryID, resultJSON)
 
 	select {
 	case <-done:

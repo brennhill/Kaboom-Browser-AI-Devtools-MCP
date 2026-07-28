@@ -21,7 +21,7 @@ func callInteractStorageAction(t *testing.T, env *interactHelpersTestEnv, argsJS
 
 func lastPendingQuery(t *testing.T, env *interactHelpersTestEnv) map[string]any {
 	t.Helper()
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("expected pending query to be created")
 	}

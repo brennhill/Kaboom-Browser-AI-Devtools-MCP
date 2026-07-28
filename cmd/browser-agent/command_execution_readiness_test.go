@@ -12,12 +12,12 @@ import (
 )
 
 func addCommandResultForTest(cap *capture.Capture, correlationID string, status string) {
-	cap.RegisterCommand(correlationID, "query-"+correlationID, time.Minute)
+	cap.Queries().RegisterCommand(correlationID, "query-"+correlationID, time.Minute)
 	errText := ""
 	if status != "complete" {
 		errText = "synthetic-" + status
 	}
-	cap.ApplyCommandResult(correlationID, status, nil, errText)
+	cap.Queries().ApplyCommandResult(correlationID, status, nil, errText)
 }
 
 func findDoctorCheck(checks []health.DoctorCheck, name string) (health.DoctorCheck, bool) {

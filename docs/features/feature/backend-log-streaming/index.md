@@ -17,7 +17,7 @@ code_paths:
   - internal/capture/extension_logs.go
   - internal/capture/extension_state.go
   - internal/capture/handlers.go
-  - internal/capture/query_dispatcher.go
+  - internal/queries/dispatcher_queries.go
   - internal/capture/sync.go
   - internal/capture/test_helpers.go
   - internal/circuit/breaker.go

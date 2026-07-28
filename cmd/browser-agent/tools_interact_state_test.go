@@ -125,7 +125,7 @@ func TestSaveState_StateCapture_Captured(t *testing.T) {
 
 	go func() {
 		time.Sleep(50 * time.Millisecond)
-		queries := env.capture.GetPendingQueries()
+		queries := env.capture.Queries().GetPendingQueries()
 		for _, q := range queries {
 			if q.Type == "execute" && strings.HasPrefix(q.CorrelationID, "state_capture_") {
 				result, _ := json.Marshal(map[string]any{
@@ -135,7 +135,7 @@ func TestSaveState_StateCapture_Captured(t *testing.T) {
 						"scroll_position": map[string]any{"x": 0.0, "y": 150.0},
 					},
 				})
-				env.capture.ApplyCommandResult(q.CorrelationID, "complete", result, "")
+				env.capture.Queries().ApplyCommandResult(q.CorrelationID, "complete", result, "")
 				return
 			}
 		}
@@ -173,7 +173,7 @@ func TestSaveState_CapturesStorage(t *testing.T) {
 
 	go func() {
 		time.Sleep(50 * time.Millisecond)
-		queries := env.capture.GetPendingQueries()
+		queries := env.capture.Queries().GetPendingQueries()
 		for _, q := range queries {
 			if q.Type == "execute" && strings.HasPrefix(q.CorrelationID, "state_capture_") {
 				result, _ := json.Marshal(map[string]any{
@@ -186,7 +186,7 @@ func TestSaveState_CapturesStorage(t *testing.T) {
 						"cookies":         map[string]any{"_ga": "GA1.2.123", "prefs": "compact"},
 					},
 				})
-				env.capture.ApplyCommandResult(q.CorrelationID, "complete", result, "")
+				env.capture.Queries().ApplyCommandResult(q.CorrelationID, "complete", result, "")
 				return
 			}
 		}
@@ -244,7 +244,7 @@ func TestSaveState_ServerRedaction_RedactsSensitiveFormValues(t *testing.T) {
 
 	go func() {
 		time.Sleep(50 * time.Millisecond)
-		queries := env.capture.GetPendingQueries()
+		queries := env.capture.Queries().GetPendingQueries()
 		for _, q := range queries {
 			if q.Type == "execute" && strings.HasPrefix(q.CorrelationID, "state_capture_") {
 				result, _ := json.Marshal(map[string]any{
@@ -259,7 +259,7 @@ func TestSaveState_ServerRedaction_RedactsSensitiveFormValues(t *testing.T) {
 						},
 					},
 				})
-				env.capture.ApplyCommandResult(q.CorrelationID, "complete", result, "")
+				env.capture.Queries().ApplyCommandResult(q.CorrelationID, "complete", result, "")
 				return
 			}
 		}
@@ -314,7 +314,7 @@ func TestSaveState_ServerRedaction_RedactsLegacyFormValueShapes(t *testing.T) {
 
 	go func() {
 		time.Sleep(50 * time.Millisecond)
-		queries := env.capture.GetPendingQueries()
+		queries := env.capture.Queries().GetPendingQueries()
 		for _, q := range queries {
 			if q.Type == "execute" && strings.HasPrefix(q.CorrelationID, "state_capture_") {
 				result, _ := json.Marshal(map[string]any{
@@ -332,7 +332,7 @@ func TestSaveState_ServerRedaction_RedactsLegacyFormValueShapes(t *testing.T) {
 						},
 					},
 				})
-				env.capture.ApplyCommandResult(q.CorrelationID, "complete", result, "")
+				env.capture.Queries().ApplyCommandResult(q.CorrelationID, "complete", result, "")
 				return
 			}
 		}
@@ -406,7 +406,7 @@ func TestSaveState_StateCapture_SkippedErrorOnExecuteFailure(t *testing.T) {
 
 	go func() {
 		time.Sleep(50 * time.Millisecond)
-		queries := env.capture.GetPendingQueries()
+		queries := env.capture.Queries().GetPendingQueries()
 		for _, q := range queries {
 			if q.Type == "execute" && strings.HasPrefix(q.CorrelationID, "state_capture_") {
 				result, _ := json.Marshal(map[string]any{
@@ -414,7 +414,7 @@ func TestSaveState_StateCapture_SkippedErrorOnExecuteFailure(t *testing.T) {
 					"error":   "execution_error",
 					"message": "script failed",
 				})
-				env.capture.ApplyCommandResult(q.CorrelationID, "complete", result, "")
+				env.capture.Queries().ApplyCommandResult(q.CorrelationID, "complete", result, "")
 				return
 			}
 		}
@@ -467,7 +467,7 @@ func TestLoadState_StateRestore_Queued(t *testing.T) {
 	}
 
 	// Verify the queued execute command contains the form values
-	pqs := env.capture.GetPendingQueries()
+	pqs := env.capture.Queries().GetPendingQueries()
 	found := false
 	for _, q := range pqs {
 		if q.Type == "execute" && q.CorrelationID == corrID {
@@ -515,7 +515,7 @@ func TestLoadState_RestoresStorage(t *testing.T) {
 	}
 
 	corrID := data["restore_correlation_id"].(string)
-	pqs := env.capture.GetPendingQueries()
+	pqs := env.capture.Queries().GetPendingQueries()
 	for _, q := range pqs {
 		if q.Type == "execute" && q.CorrelationID == corrID {
 			var params map[string]any

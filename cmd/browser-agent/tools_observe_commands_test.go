@@ -50,11 +50,11 @@ func TestToolObserveFailedCommands_WithFailed(t *testing.T) {
 		Params:        json.RawMessage(`{"script":"1+1"}`),
 		CorrelationID: "test-fail-cmd",
 	}
-	env.capture.CreatePendingQueryWithTimeout(query, 1*time.Millisecond, "")
+	env.capture.Queries().CreatePendingQueryWithTimeout(query, 1*time.Millisecond, "")
 	// Wait for expiry
 	time.Sleep(10 * time.Millisecond)
 	// Trigger cleanup by calling ExpireCommand
-	env.capture.ExpireCommand("test-fail-cmd")
+	env.capture.Queries().ExpireCommand("test-fail-cmd")
 
 	args := json.RawMessage(`{}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}

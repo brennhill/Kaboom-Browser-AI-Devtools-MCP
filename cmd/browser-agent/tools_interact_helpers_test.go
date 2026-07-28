@@ -67,7 +67,7 @@ func TestQueueComposableSubtitle_QueuesPendingQuery(t *testing.T) {
 	env.handler.interactAction().QueueComposableSubtitle(req, "Test subtitle text")
 
 	// Verify a pending query was created
-	queries := env.capture.GetPendingQueries()
+	queries := env.capture.Queries().GetPendingQueries()
 	found := false
 	for _, q := range queries {
 		if q.Type == "subtitle" {
@@ -95,7 +95,7 @@ func TestQueueComposableSubtitle_CorrelationIDHasPrefix(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	env.handler.interactAction().QueueComposableSubtitle(req, "text")
 
-	queries := env.capture.GetPendingQueries()
+	queries := env.capture.Queries().GetPendingQueries()
 	for _, q := range queries {
 		if q.Type == "subtitle" {
 			if len(q.CorrelationID) < 9 || q.CorrelationID[:9] != "subtitle_" {
@@ -115,7 +115,7 @@ func TestQueueComposableSubtitle_EmptyText(t *testing.T) {
 	// Empty text is valid (clears the subtitle)
 	env.handler.interactAction().QueueComposableSubtitle(req, "")
 
-	queries := env.capture.GetPendingQueries()
+	queries := env.capture.Queries().GetPendingQueries()
 	found := false
 	for _, q := range queries {
 		if q.Type == "subtitle" {
@@ -142,7 +142,7 @@ func TestQueueComposableSubtitle_UniqueCorrelationIDs(t *testing.T) {
 	env.handler.interactAction().QueueComposableSubtitle(req, "first")
 	env.handler.interactAction().QueueComposableSubtitle(req, "second")
 
-	queries := env.capture.GetPendingQueries()
+	queries := env.capture.Queries().GetPendingQueries()
 	ids := make(map[string]bool)
 	for _, q := range queries {
 		if q.Type == "subtitle" {
@@ -169,7 +169,7 @@ func TestQueueComposableActionDiff_QueuesPendingQuery(t *testing.T) {
 	env.handler.interactAction().QueueComposableActionDiff(req)
 
 	// Verify a pending query was created with type "dom_action"
-	queries := env.capture.GetPendingQueries()
+	queries := env.capture.Queries().GetPendingQueries()
 	found := false
 	for _, q := range queries {
 		if q.Type == "dom_action" {
@@ -196,7 +196,7 @@ func TestQueueComposableActionDiff_CorrelationIDPrefix(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	env.handler.interactAction().QueueComposableActionDiff(req)
 
-	queries := env.capture.GetPendingQueries()
+	queries := env.capture.Queries().GetPendingQueries()
 	for _, q := range queries {
 		if q.Type == "dom_action" {
 			var params map[string]any
@@ -222,7 +222,7 @@ func TestQueueComposableActionDiff_HasTimeoutParam(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	env.handler.interactAction().QueueComposableActionDiff(req)
 
-	queries := env.capture.GetPendingQueries()
+	queries := env.capture.Queries().GetPendingQueries()
 	for _, q := range queries {
 		if q.Type == "dom_action" {
 			var params map[string]any
@@ -260,7 +260,7 @@ func TestQueueStateNavigation_QueuesBrowserAction(t *testing.T) {
 	env.handler.stateInteract().QueueStateNavigation(req, stateData)
 
 	// Should have queued a browser_action query
-	queries := env.capture.GetPendingQueries()
+	queries := env.capture.Queries().GetPendingQueries()
 	found := false
 	for _, q := range queries {
 		if q.Type == "browser_action" {
@@ -303,7 +303,7 @@ func TestQueueStateNavigation_SkipsWhenPilotDisabled(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	env.handler.stateInteract().QueueStateNavigation(req, stateData)
 
-	queries := env.capture.GetPendingQueries()
+	queries := env.capture.Queries().GetPendingQueries()
 	for _, q := range queries {
 		if q.Type == "browser_action" {
 			t.Error("should not queue browser_action when pilot is disabled")
@@ -327,7 +327,7 @@ func TestQueueStateNavigation_SkipsWhenURLEmpty(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	env.handler.stateInteract().QueueStateNavigation(req, stateData)
 
-	queries := env.capture.GetPendingQueries()
+	queries := env.capture.Queries().GetPendingQueries()
 	for _, q := range queries {
 		if q.Type == "browser_action" {
 			t.Error("should not queue browser_action when URL is empty")
@@ -346,7 +346,7 @@ func TestQueueStateNavigation_SkipsWhenURLMissing(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	env.handler.stateInteract().QueueStateNavigation(req, stateData)
 
-	queries := env.capture.GetPendingQueries()
+	queries := env.capture.Queries().GetPendingQueries()
 	for _, q := range queries {
 		if q.Type == "browser_action" {
 			t.Error("should not queue browser_action when URL key is missing")
@@ -365,7 +365,7 @@ func TestQueueStateNavigation_SkipsWhenURLNotString(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	env.handler.stateInteract().QueueStateNavigation(req, stateData)
 
-	queries := env.capture.GetPendingQueries()
+	queries := env.capture.Queries().GetPendingQueries()
 	for _, q := range queries {
 		if q.Type == "browser_action" {
 			t.Error("should not queue browser_action when URL is not a string")

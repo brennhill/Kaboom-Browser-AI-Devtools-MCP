@@ -47,7 +47,7 @@ func decodeSyncResponse(t *testing.T, w *httptest.ResponseRecorder) SyncResponse
 
 func assertCommandResult(t *testing.T, cap *Capture, corrID, wantStatus, wantError string) {
 	t.Helper()
-	cmd, found := cap.GetCommandResult(corrID)
+	cmd, found := cap.Queries().GetCommandResult(corrID)
 	if !found {
 		t.Fatal("expected command result to be present for correlation_id")
 	}

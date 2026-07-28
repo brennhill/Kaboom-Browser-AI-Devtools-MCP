@@ -94,7 +94,7 @@ func TestNavigateAndDocument_URLChangeTimeout(t *testing.T) {
 		_ = json.Unmarshal(q.Params, &payload)
 		return payload["action"] == "click"
 	})
-	env.capture.ApplyCommandResult(clickQuery.CorrelationID, "complete", json.RawMessage(`{"success":true}`), "")
+	env.capture.Queries().ApplyCommandResult(clickQuery.CorrelationID, "complete", json.RawMessage(`{"success":true}`), "")
 
 	select {
 	case <-done:
@@ -142,7 +142,7 @@ func TestNavigateAndDocument_AppendsPageContext(t *testing.T) {
 		_ = json.Unmarshal(q.Params, &payload)
 		return payload["action"] == "click"
 	})
-	env.capture.ApplyCommandResult(clickQuery.CorrelationID, "complete", json.RawMessage(`{"success":true}`), "")
+	env.capture.Queries().ApplyCommandResult(clickQuery.CorrelationID, "complete", json.RawMessage(`{"success":true}`), "")
 	env.capture.UpdateTrackedTab(42, "https://example.com/new", "New")
 
 	select {
@@ -218,8 +218,8 @@ func TestNavigateAndDocument_TabIDMismatchReturnsError(t *testing.T) {
 		t.Fatalf("workflow_trace.status = %v, want failed", traceMeta["status"])
 	}
 
-	if len(env.capture.GetPendingQueries()) != 0 {
-		t.Fatalf("tab mismatch should fail before dispatching click, pending=%d", len(env.capture.GetPendingQueries()))
+	if len(env.capture.Queries().GetPendingQueries()) != 0 {
+		t.Fatalf("tab mismatch should fail before dispatching click, pending=%d", len(env.capture.Queries().GetPendingQueries()))
 	}
 }
 
@@ -235,8 +235,8 @@ func TestNavigateAndDocument_TabIDRequiresTracking(t *testing.T) {
 	resp := env.handler.interactAction().HandleNavigateAndDocument(req, args)
 	assertIsError(t, resp, "requires an actively tracked tab")
 
-	if len(env.capture.GetPendingQueries()) != 0 {
-		t.Fatalf("missing tracked tab should fail before dispatching click, pending=%d", len(env.capture.GetPendingQueries()))
+	if len(env.capture.Queries().GetPendingQueries()) != 0 {
+		t.Fatalf("missing tracked tab should fail before dispatching click, pending=%d", len(env.capture.Queries().GetPendingQueries()))
 	}
 }
 
@@ -268,7 +268,7 @@ func TestNavigateAndDocument_TimeoutBudgetExhaustedBeforeStable(t *testing.T) {
 
 	// Consume the entire workflow budget before click completes.
 	time.Sleep(90 * time.Millisecond)
-	env.capture.ApplyCommandResult(clickQuery.CorrelationID, "complete", json.RawMessage(`{"success":true}`), "")
+	env.capture.Queries().ApplyCommandResult(clickQuery.CorrelationID, "complete", json.RawMessage(`{"success":true}`), "")
 
 	select {
 	case <-done:
@@ -289,7 +289,7 @@ func TestNavigateAndDocument_TimeoutBudgetExhaustedBeforeStable(t *testing.T) {
 		t.Fatalf("expected timeout error details when failed status, got: %s", firstText(result))
 	}
 
-	for _, q := range env.capture.GetPendingQueries() {
+	for _, q := range env.capture.Queries().GetPendingQueries() {
 		if q.Type != "dom_action" {
 			continue
 		}
@@ -328,7 +328,7 @@ func TestInteract_NavigateAndDocument_IncludeScreenshot(t *testing.T) {
 		_ = json.Unmarshal(q.Params, &payload)
 		return payload["action"] == "click"
 	})
-	env.capture.ApplyCommandResult(clickQuery.CorrelationID, "complete", json.RawMessage(`{"success":true}`), "")
+	env.capture.Queries().ApplyCommandResult(clickQuery.CorrelationID, "complete", json.RawMessage(`{"success":true}`), "")
 
 	screenshotQuery := waitForPendingQuery(t, env.capture, func(q queries.PendingQueryResponse) bool {
 		return q.Type == "screenshot"
@@ -339,7 +339,7 @@ func TestInteract_NavigateAndDocument_IncludeScreenshot(t *testing.T) {
 		"path":     "/tmp/navigate-and-document.jpg",
 		"data_url": "data:image/jpeg;base64," + fakeImage,
 	})
-	env.capture.SetQueryResult(screenshotQuery.ID, screenshotPayload)
+	env.capture.Queries().SetQueryResult(screenshotQuery.ID, screenshotPayload)
 
 	select {
 	case <-done:
@@ -367,7 +367,7 @@ func waitForPendingQuery(t *testing.T, cap *capture.Capture, match func(queries.
 	t.Helper()
 	deadline := time.Now().Add(3 * time.Second)
 	for time.Now().Before(deadline) {
-		for _, q := range cap.GetPendingQueries() {
+		for _, q := range cap.Queries().GetPendingQueries() {
 			if match(q) {
 				return q
 			}

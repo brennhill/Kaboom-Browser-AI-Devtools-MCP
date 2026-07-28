@@ -30,7 +30,7 @@ func (h *ToolHandler) attachTransientElements(responseData map[string]any, since
 }
 
 func (h *ToolHandler) EnqueuePendingQuery(req mcp.JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (mcp.JSONRPCResponse, bool) {
-	_, err := h.capture.CreatePendingQueryWithTimeout(query, timeout, req.ClientID)
+	_, err := h.capture.Queries().CreatePendingQueryWithTimeout(query, timeout, req.ClientID)
 	if err == nil {
 		return mcp.JSONRPCResponse{}, false
 	}
@@ -70,13 +70,13 @@ func buildA11yQueryParams(scope string, tags []string, frame any, forceRefresh b
 
 func (h *ToolHandler) ExecuteA11yQuery(scope string, tags []string, frame any, forceRefresh bool) (json.RawMessage, error) {
 	paramsJSON, _ := json.Marshal(buildA11yQueryParams(scope, tags, frame, forceRefresh))
-	queryID, err := h.capture.CreatePendingQueryWithTimeout(queries.PendingQuery{
+	queryID, err := h.capture.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
 		Type: "a11y", Params: paramsJSON,
 	}, a11yQueryTimeout, "")
 	if err != nil {
 		return nil, err
 	}
-	return h.capture.WaitForResult(queryID, a11yQueryTimeout)
+	return h.capture.Queries().WaitForResult(queryID, a11yQueryTimeout)
 }
 
 // finalizeResponseEnrichment attaches evidence, transient elements, and retry context
@@ -294,7 +294,7 @@ func (h *ToolHandler) waitForCommandWithConnectivity(correlationID string, timeo
 	for {
 		remaining := time.Until(deadline)
 		if remaining <= 0 {
-			cmd, found := h.capture.GetCommandResult(correlationID)
+			cmd, found := h.capture.Queries().GetCommandResult(correlationID)
 			disconnected := found && cmd != nil && cmd.Status == "pending" && !h.capture.IsExtensionConnected()
 			return cmd, found, disconnected, waited
 		}
@@ -303,7 +303,7 @@ func (h *ToolHandler) waitForCommandWithConnectivity(correlationID string, timeo
 			waitStep = remaining
 		}
 		stepStart := time.Now()
-		cmd, found := h.capture.WaitForCommand(correlationID, waitStep)
+		cmd, found := h.capture.Queries().WaitForCommand(correlationID, waitStep)
 		waited += time.Since(stepStart).Milliseconds()
 		if !found {
 			return nil, false, false, waited
@@ -318,8 +318,8 @@ func (h *ToolHandler) waitForCommandWithConnectivity(correlationID string, timeo
 }
 
 func (h *ToolHandler) finalizePendingDisconnect(req mcp.JSONRPCRequest, correlationID string) mcp.JSONRPCResponse {
-	h.capture.ApplyCommandResult(correlationID, "error", nil, "extension_disconnected")
-	if cmd, found := h.capture.GetCommandResult(correlationID); found && cmd != nil {
+	h.capture.Queries().ApplyCommandResult(correlationID, "error", nil, "extension_disconnected")
+	if cmd, found := h.capture.Queries().GetCommandResult(correlationID); found && cmd != nil {
 		return h.formatCommandResult(req, *cmd, correlationID)
 	}
 	return mcp.Fail(req, mcp.ErrNoData,
@@ -397,7 +397,7 @@ func (h *ToolHandler) MaybeWaitForCommand(req mcp.JSONRPCRequest, correlationID 
 			"status": "still_processing", "lifecycle_status": "running",
 			"correlation_id": correlationID, "trace_id": correlationID,
 			"queued": false, "final": false, "elapsed_ms": cmd.ElapsedMs(),
-			"queue_depth": h.capture.QueueDepth(),
+			"queue_depth": h.capture.Queries().QueueDepth(),
 			"retry_context": map[string]any{
 				"attempts": attempts, "total_wait_ms": totalWaitMs,
 				"extension_connected": h.capture.IsExtensionConnected(),
@@ -405,7 +405,7 @@ func (h *ToolHandler) MaybeWaitForCommand(req mcp.JSONRPCRequest, correlationID 
 			"suggested_retry_ms": 2000,
 			"message":            "Action is taking longer than expected. Polling is now required. Use observe({what:'command_result', correlation_id:'" + correlationID + "'}) to check the result.",
 		}
-		if pos := h.capture.QueuePosition(correlationID); pos >= 0 {
+		if pos := h.capture.Queries().QueuePosition(correlationID); pos >= 0 {
 			stillProcessing["queue_position"] = pos
 		}
 		return mcp.Succeed(req, "Action still processing", stillProcessing)

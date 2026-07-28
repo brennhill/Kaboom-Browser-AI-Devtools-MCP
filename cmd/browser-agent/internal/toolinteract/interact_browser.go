@@ -449,7 +449,7 @@ func (h *InteractActionHandler) HandleExecuteJSImpl(req mcp.JSONRPCRequest, args
 // The extension-side persistTrackedTab handles async retarget via the
 // next /sync heartbeat. See issue #271.
 func (h *InteractActionHandler) ApplySwitchTabTracking(correlationID string) {
-	cmd, found := h.deps.Capture().GetCommandResult(correlationID)
+	cmd, found := h.deps.Capture().Queries().GetCommandResult(correlationID)
 	if !found || cmd == nil || cmd.Status != "complete" {
 		return
 	}

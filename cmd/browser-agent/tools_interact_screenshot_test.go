@@ -62,7 +62,7 @@ func TestInteract_IncludeScreenshot_AppendsImageBlock(t *testing.T) {
 	var domQueryID string
 	for i := 0; i < 100; i++ {
 		time.Sleep(10 * time.Millisecond)
-		pending := env.capture.GetPendingQueries()
+		pending := env.capture.Queries().GetPendingQueries()
 		for _, q := range pending {
 			if q.Type == "dom_action" {
 				domQueryID = q.CorrelationID
@@ -82,13 +82,13 @@ func TestInteract_IncludeScreenshot_AppendsImageBlock(t *testing.T) {
 		"success": true,
 		"message": "Clicked button",
 	})
-	env.capture.ApplyCommandResult(domQueryID, "complete", actionResult, "")
+	env.capture.Queries().ApplyCommandResult(domQueryID, "complete", actionResult, "")
 
 	// Wait for the screenshot query to be created (triggered after action completion)
 	var screenshotQueryID string
 	for i := 0; i < 100; i++ {
 		time.Sleep(10 * time.Millisecond)
-		pending := env.capture.GetPendingQueries()
+		pending := env.capture.Queries().GetPendingQueries()
 		for _, q := range pending {
 			if q.Type == "screenshot" {
 				screenshotQueryID = q.ID
@@ -123,7 +123,7 @@ func TestInteract_IncludeScreenshot_AppendsImageBlock(t *testing.T) {
 		"path":     "/tmp/screenshots/example.com-20240101-120001.jpg",
 		"data_url": "data:image/jpeg;base64," + base64Data,
 	})
-	env.capture.SetQueryResult(screenshotQueryID, screenshotResult)
+	env.capture.Queries().SetQueryResult(screenshotQueryID, screenshotResult)
 
 	select {
 	case <-done:
@@ -178,7 +178,7 @@ func TestInteract_IncludeScreenshot_DefaultFalse(t *testing.T) {
 	var domQueryID string
 	for i := 0; i < 100; i++ {
 		time.Sleep(10 * time.Millisecond)
-		pending := env.capture.GetPendingQueries()
+		pending := env.capture.Queries().GetPendingQueries()
 		for _, q := range pending {
 			if q.Type == "dom_action" {
 				domQueryID = q.CorrelationID
@@ -195,7 +195,7 @@ func TestInteract_IncludeScreenshot_DefaultFalse(t *testing.T) {
 
 	// Complete the DOM action
 	actionResult, _ := json.Marshal(map[string]any{"success": true})
-	env.capture.ApplyCommandResult(domQueryID, "complete", actionResult, "")
+	env.capture.Queries().ApplyCommandResult(domQueryID, "complete", actionResult, "")
 
 	select {
 	case <-done:

@@ -261,7 +261,7 @@ func TestHandleQueryResult_WithCorrelationID(t *testing.T) {
 
 	// Register a pending command with a known correlation ID
 	corrID := "test-corr-id-001"
-	c.RegisterCommand(corrID, "", 30*time.Second)
+	c.Queries().RegisterCommand(corrID, "", 30*time.Second)
 
 	payload := `{"correlation_id":"` + corrID + `","status":"complete","result":{"value":2}}`
 	rr := httptest.NewRecorder()
@@ -299,7 +299,7 @@ func TestHandleQueryResult_WithCorrelationID_ErrorStatus(t *testing.T) {
 	defer c.Close()
 
 	corrID := "test-corr-id-error-001"
-	c.RegisterCommand(corrID, "", 30*time.Second)
+	c.Queries().RegisterCommand(corrID, "", 30*time.Second)
 
 	payload := `{"correlation_id":"` + corrID + `","status":"error","error":"boom"}`
 	rr := runQueryResultRequest(t, c, payload)
@@ -317,7 +317,7 @@ func TestHandleQueryResult_WithIDAndCorrelationID_PreservesErrorStatus(t *testin
 	defer c.Close()
 
 	corrID := "test-corr-id-error-with-id-001"
-	queryID, _ := c.CreatePendingQueryWithTimeout(queries.PendingQuery{
+	queryID, _ := c.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
 		Type:          "dom_action",
 		Params:        json.RawMessage(`{"action":"click","selector":"#publish"}`),
 		CorrelationID: corrID,

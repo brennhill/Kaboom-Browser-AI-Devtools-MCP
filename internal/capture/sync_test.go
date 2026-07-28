@@ -245,7 +245,7 @@ func TestHandleSync_MissingInProgressHeartbeatFailsStartedCommand(t *testing.T) 
 	cap := NewCapture()
 
 	corrID := "corr-missing-heartbeat"
-	queryID, _ := cap.CreatePendingQueryWithTimeout(queries.PendingQuery{
+	queryID, _ := cap.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
 		Type:          "browser_action",
 		Params:        json.RawMessage(`{"action":"navigate","url":"https://example.com"}`),
 		CorrelationID: corrID,
@@ -272,7 +272,7 @@ func TestHandleSync_MissingInProgressHeartbeatFailsStartedCommand(t *testing.T) 
 		t.Fatalf("second sync status = %d, want 200", secondResp.Code)
 	}
 
-	cmd, found := cap.GetCommandResult(corrID)
+	cmd, found := cap.Queries().GetCommandResult(corrID)
 	if !found {
 		t.Fatal("expected command result after second sync")
 	}
@@ -290,7 +290,7 @@ func TestHandleSync_MissingInProgressHeartbeatFailsStartedCommand(t *testing.T) 
 		t.Fatalf("third sync status = %d, want 200", thirdResp.Code)
 	}
 
-	cmd, found = cap.GetCommandResult(corrID)
+	cmd, found = cap.Queries().GetCommandResult(corrID)
 	if !found {
 		t.Fatal("expected command result after desync reconciliation")
 	}
@@ -363,7 +363,7 @@ func TestHandleSync_AdaptivePoll_FastWhenPendingCommands(t *testing.T) {
 	cap := NewCapture()
 
 	// Create a pending query so there are commands waiting
-	cap.CreatePendingQuery(queries.PendingQuery{
+	cap.Queries().CreatePendingQuery(queries.PendingQuery{
 		Type:   "dom",
 		Params: json.RawMessage(`{"selector":"body"}`),
 	})
@@ -390,7 +390,7 @@ func TestHandleSync_CommandsIncludeTabID(t *testing.T) {
 	t.Parallel()
 	cap := NewCapture()
 
-	cap.CreatePendingQuery(queries.PendingQuery{
+	cap.Queries().CreatePendingQuery(queries.PendingQuery{
 		Type:          "dom_action",
 		Params:        json.RawMessage(`{"action":"click","selector":"#submit"}`),
 		TabID:         42,
@@ -447,7 +447,7 @@ func TestHandleSync_AdaptivePoll_RevertsAfterResultDelivered(t *testing.T) {
 	cap := NewCapture()
 
 	// Create a pending query
-	queryID, _ := cap.CreatePendingQuery(queries.PendingQuery{
+	queryID, _ := cap.Queries().CreatePendingQuery(queries.PendingQuery{
 		Type:   "dom",
 		Params: json.RawMessage(`{"selector":"body"}`),
 	})
@@ -482,7 +482,7 @@ func TestHandleSync_CommandResultPropagatesErrorStatus(t *testing.T) {
 	cap := NewCapture()
 
 	corrID := "sync-corr-error-001"
-	cap.RegisterCommand(corrID, "q-sync-error-001", queries.AsyncCommandTimeout)
+	cap.Queries().RegisterCommand(corrID, "q-sync-error-001", queries.AsyncCommandTimeout)
 
 	req := SyncRequest{
 		ExtSessionID: "test_session",
@@ -508,7 +508,7 @@ func TestHandleSync_CommandResultWithIDAndCorrelationPreservesErrorStatus(t *tes
 	cap := NewCapture()
 
 	corrID := "sync-corr-with-id-error-001"
-	queryID, _ := cap.CreatePendingQueryWithTimeout(queries.PendingQuery{
+	queryID, _ := cap.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
 		Type:          "dom_action",
 		Params:        json.RawMessage(`{"action":"click","selector":"#publish"}`),
 		CorrelationID: corrID,
@@ -608,7 +608,7 @@ func TestHandleSync_CommandResultLifecycleMatrix(t *testing.T) {
 
 			queryID := ""
 			if tc.hasID {
-				queryID, _ = cap.CreatePendingQueryWithTimeout(queries.PendingQuery{
+				queryID, _ = cap.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
 					Type:          "dom_action",
 					Params:        json.RawMessage(`{"action":"click","selector":"#publish"}`),
 					CorrelationID: corrID,
@@ -617,7 +617,7 @@ func TestHandleSync_CommandResultLifecycleMatrix(t *testing.T) {
 					t.Fatal("expected queryID to be created")
 				}
 			} else if tc.hasCorrelation {
-				cap.RegisterCommand(corrID, "q-"+corrID, queries.AsyncCommandTimeout)
+				cap.Queries().RegisterCommand(corrID, "q-"+corrID, queries.AsyncCommandTimeout)
 			}
 
 			result := SyncCommandResult{
@@ -642,7 +642,7 @@ func TestHandleSync_CommandResultLifecycleMatrix(t *testing.T) {
 			}
 
 			if tc.hasCorrelation {
-				cmd, found := cap.GetCommandResult(corrID)
+				cmd, found := cap.Queries().GetCommandResult(corrID)
 				if !found {
 					t.Fatal("expected command result to be present for correlation_id")
 				}
@@ -656,7 +656,7 @@ func TestHandleSync_CommandResultLifecycleMatrix(t *testing.T) {
 			}
 
 			if tc.hasID {
-				if _, found := cap.TakeQueryResult(queryID); !found {
+				if _, found := cap.Queries().TakeQueryResult(queryID); !found {
 					t.Fatal("expected query result to be stored for id-only command result")
 				}
 			}
@@ -675,7 +675,7 @@ func TestHandleSync_WaterfallQueryDelivery(t *testing.T) {
 	cap := NewCapture()
 
 	// Create a waterfall query (simulating MCP requesting fresh data)
-	queryID, _ := cap.CreatePendingQuery(queries.PendingQuery{
+	queryID, _ := cap.Queries().CreatePendingQuery(queries.PendingQuery{
 		Type:   "waterfall",
 		Params: json.RawMessage(`{}`),
 	})
@@ -718,7 +718,7 @@ func TestHandleSync_WaterfallResultDelivery(t *testing.T) {
 	cap := NewCapture()
 
 	// Create a waterfall query
-	queryID, _ := cap.CreatePendingQuery(queries.PendingQuery{
+	queryID, _ := cap.Queries().CreatePendingQuery(queries.PendingQuery{
 		Type:   "waterfall",
 		Params: json.RawMessage(`{}`),
 	})
@@ -750,7 +750,7 @@ func TestHandleSync_WaterfallResultDelivery(t *testing.T) {
 	}
 
 	// Verify result was stored
-	result, found := cap.TakeQueryResult(queryID)
+	result, found := cap.Queries().TakeQueryResult(queryID)
 	if !found {
 		t.Fatal("Expected query result to be stored")
 	}
@@ -771,7 +771,7 @@ func TestHandleSync_LastCommandAckPreventsRedelivery(t *testing.T) {
 	t.Parallel()
 	cap := NewCapture()
 
-	queryID, _ := cap.CreatePendingQuery(queries.PendingQuery{
+	queryID, _ := cap.Queries().CreatePendingQuery(queries.PendingQuery{
 		Type:   "dom",
 		Params: json.RawMessage(`{"selector":"body"}`),
 	})

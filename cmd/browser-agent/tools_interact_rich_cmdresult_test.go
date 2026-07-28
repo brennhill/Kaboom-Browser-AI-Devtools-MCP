@@ -32,11 +32,11 @@ func TestCommandResult_ExpiredSetsIsError(t *testing.T) {
 		t.Fatal("click should succeed")
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	corrID := pq.CorrelationID
 
 	// Simulate expiry — extension never responded
-	env.capture.ExpireCommand(corrID)
+	env.capture.Queries().ExpireCommand(corrID)
 
 	// Observe the expired command
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
@@ -71,11 +71,11 @@ func TestCommandResult_CompleteWithErrorSetsIsError(t *testing.T) {
 		t.Fatal("click should succeed")
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	corrID := pq.CorrelationID
 
 	// Simulate extension completing with an error
-	env.capture.ApplyCommandResult(corrID, "complete", json.RawMessage(`null`), "Element not found: #btn")
+	env.capture.Queries().ApplyCommandResult(corrID, "complete", json.RawMessage(`null`), "Element not found: #btn")
 
 	// Observe the failed command
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
@@ -109,11 +109,11 @@ func TestCommandResult_EmbeddedFailureSetsIsError(t *testing.T) {
 		t.Fatal("click should succeed")
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	corrID := pq.CorrelationID
 
 	// Extension reported failure inside the result payload without setting command error.
-	env.capture.ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":false,"error":"selector_not_found","message":"#btn not found"}`), "")
+	env.capture.Queries().ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":false,"error":"selector_not_found","message":"#btn not found"}`), "")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
@@ -146,10 +146,10 @@ func TestCommandResult_EmbeddedCSPFailureAddsCSPMarkers(t *testing.T) {
 		t.Fatal("execute_js should queue successfully")
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	corrID := pq.CorrelationID
 
-	env.capture.ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":false,"error":"csp_blocked_all_worlds","message":"Page CSP blocks dynamic script execution"}`), "")
+	env.capture.Queries().ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":false,"error":"csp_blocked_all_worlds","message":"Page CSP blocks dynamic script execution"}`), "")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
@@ -184,9 +184,9 @@ func TestCommandResult_ErrorStatusCSPFailureIncludesRetryHint(t *testing.T) {
 		t.Fatal("navigate should queue successfully")
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	corrID := pq.CorrelationID
-	env.capture.ApplyCommandResult(corrID, "error", json.RawMessage(`{"success":false,"error":"csp_blocked_page","message":"This page blocks extension script execution.","csp_blocked":true,"failure_cause":"csp"}`), "csp_blocked_page")
+	env.capture.Queries().ApplyCommandResult(corrID, "error", json.RawMessage(`{"success":false,"error":"csp_blocked_page","message":"This page blocks extension script execution.","csp_blocked":true,"failure_cause":"csp"}`), "csp_blocked_page")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
@@ -273,9 +273,9 @@ func TestCommandResult_InteractFailureCodesIncludeRecoveryRetryGuidance(t *testi
 				t.Fatal("click should queue successfully")
 			}
 
-			pq := env.capture.GetLastPendingQuery()
+			pq := env.capture.Queries().GetLastPendingQuery()
 			corrID := pq.CorrelationID
-			env.capture.ApplyCommandResult(corrID, "error", json.RawMessage(tc.resultJSON), tc.errorCode)
+			env.capture.Queries().ApplyCommandResult(corrID, "error", json.RawMessage(tc.resultJSON), tc.errorCode)
 
 			req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 			args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
@@ -317,11 +317,11 @@ func TestCommandResult_SuccessDoesNotSetIsError(t *testing.T) {
 		t.Fatal("click should succeed")
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	corrID := pq.CorrelationID
 
 	// Simulate successful completion
-	env.capture.ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":true}`), "")
+	env.capture.Queries().ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":true}`), "")
 
 	// Observe the successful command
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
@@ -380,7 +380,7 @@ func TestCommandResult_CompleteHasFinalTrue(t *testing.T) {
 	}
 	corrID := resultData["correlation_id"].(string)
 
-	env.capture.ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":true}`), "")
+	env.capture.Queries().ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":true}`), "")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
@@ -413,7 +413,7 @@ func TestCommandResult_ErrorHasFinalTrue(t *testing.T) {
 	}
 	corrID := resultData["correlation_id"].(string)
 
-	env.capture.ApplyCommandResult(corrID, "complete", nil, "element_not_found")
+	env.capture.Queries().ApplyCommandResult(corrID, "complete", nil, "element_not_found")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
@@ -458,7 +458,7 @@ func TestCommandResult_EffectiveContextSurfaced(t *testing.T) {
 		"effective_tab_id": 42,
 		"effective_url": "https://example.com/page2"
 	}`)
-	env.capture.ApplyCommandResult(corrID, "complete", extensionResult, "")
+	env.capture.Queries().ApplyCommandResult(corrID, "complete", extensionResult, "")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
@@ -500,7 +500,7 @@ func TestCommandResult_CompleteHasQueuedFalse(t *testing.T) {
 	}
 	corrID := resultData["correlation_id"].(string)
 
-	env.capture.ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":true}`), "")
+	env.capture.Queries().ApplyCommandResult(corrID, "complete", json.RawMessage(`{"success":true}`), "")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
@@ -536,7 +536,7 @@ func TestCommandResult_ExpiredHasFinalTrue(t *testing.T) {
 	}
 	corrID := resultData["correlation_id"].(string)
 
-	env.capture.ExpireCommand(corrID)
+	env.capture.Queries().ExpireCommand(corrID)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
@@ -661,9 +661,9 @@ func TestCommandResult_ExpiredIncludesDiagnosticHint(t *testing.T) {
 		t.Fatal("click should succeed")
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	corrID := pq.CorrelationID
-	env.capture.ExpireCommand(corrID)
+	env.capture.Queries().ExpireCommand(corrID)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
@@ -754,7 +754,7 @@ func TestSubtitle_CorrelationID_MatchesPendingQuery(t *testing.T) {
 	}
 
 	// The PendingQuery IS created with a correlationID
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("No pending query created for subtitle")
 	}
@@ -784,7 +784,7 @@ func TestCommandResult_AmbiguousTarget_CandidatesPromotedToTopLevel(t *testing.T
 		t.Fatal("click should queue successfully")
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	corrID := pq.CorrelationID
 
 	// Simulate extension returning ambiguous_target with candidates
@@ -802,7 +802,7 @@ func TestCommandResult_AmbiguousTarget_CandidatesPromotedToTopLevel(t *testing.T
 			{"tag":"a","text_preview":"About Our Team","selector":"a.team-about","element_id":"el_3","visible":false,"bbox":{"x":0,"y":0,"width":0,"height":0}}
 		]
 	}`
-	env.capture.ApplyCommandResult(corrID, "error", json.RawMessage(ambiguousResult), "ambiguous_target")
+	env.capture.Queries().ApplyCommandResult(corrID, "error", json.RawMessage(ambiguousResult), "ambiguous_target")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
@@ -846,7 +846,7 @@ func TestCommandResult_AmbiguousTarget_SuggestedElementID(t *testing.T) {
 		t.Fatal("click should queue successfully")
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	corrID := pq.CorrelationID
 
 	// First candidate is NOT visible, second is visible — suggested should be second
@@ -861,7 +861,7 @@ func TestCommandResult_AmbiguousTarget_SuggestedElementID(t *testing.T) {
 			{"tag":"button","text_preview":"Submit Form","element_id":"el_visible","visible":true}
 		]
 	}`
-	env.capture.ApplyCommandResult(corrID, "error", json.RawMessage(ambiguousResult), "ambiguous_target")
+	env.capture.Queries().ApplyCommandResult(corrID, "error", json.RawMessage(ambiguousResult), "ambiguous_target")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
@@ -895,7 +895,7 @@ func TestCommandResult_AmbiguousTarget_RetryGuidanceMentionsCandidates(t *testin
 		t.Fatal("click should queue successfully")
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	corrID := pq.CorrelationID
 
 	ambiguousResult := `{
@@ -906,7 +906,7 @@ func TestCommandResult_AmbiguousTarget_RetryGuidanceMentionsCandidates(t *testin
 			{"element_id":"el_2","visible":true}
 		]
 	}`
-	env.capture.ApplyCommandResult(corrID, "error", json.RawMessage(ambiguousResult), "ambiguous_target")
+	env.capture.Queries().ApplyCommandResult(corrID, "error", json.RawMessage(ambiguousResult), "ambiguous_target")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)
@@ -946,12 +946,12 @@ func TestCommandResult_AmbiguousTarget_NoCandidates_NoSuggestedElementID(t *test
 		t.Fatal("click should queue successfully")
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	corrID := pq.CorrelationID
 
 	// ambiguous_target with no candidates array (edge case)
 	ambiguousResult := `{"success":false,"error":"ambiguous_target","match_count":2}`
-	env.capture.ApplyCommandResult(corrID, "error", json.RawMessage(ambiguousResult), "ambiguous_target")
+	env.capture.Queries().ApplyCommandResult(corrID, "error", json.RawMessage(ambiguousResult), "ambiguous_target")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 2}
 	args := json.RawMessage(`{"correlation_id":"` + corrID + `"}`)

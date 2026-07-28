@@ -16,8 +16,8 @@ import (
 func HandlePRSummary(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	cap := d.GetCapture()
 	actions := cap.GetAllEnhancedActions()
-	completedCmds := cap.GetCompletedCommands()
-	failedCmds := cap.GetFailedCommands()
+	completedCmds := cap.Queries().GetCompletedCommands()
+	failedCmds := cap.Queries().GetFailedCommands()
 	logs := cap.ExtensionLogs().Entries()
 	networkBodies := cap.GetNetworkBodies()
 	_, _, tabURL := cap.GetTrackingStatus()

@@ -31,7 +31,7 @@ func TestHandleBrowserActionBack_Success(t *testing.T) {
 		t.Fatalf("back should not error, got: %s", result.Content[0].Text)
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("back should create a pending query")
 	}
@@ -70,7 +70,7 @@ func TestHandleBrowserActionForward_Success(t *testing.T) {
 		t.Fatalf("forward should not error, got: %s", result.Content[0].Text)
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("forward should create a pending query")
 	}
@@ -104,7 +104,7 @@ func TestHandleBrowserActionNewTab_Success(t *testing.T) {
 		t.Fatalf("new_tab should not error, got: %s", result.Content[0].Text)
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("new_tab should create a pending query")
 	}
@@ -142,7 +142,7 @@ func TestHandleBrowserActionNewTab_NoURL(t *testing.T) {
 		t.Fatalf("new_tab without url should not error, got: %s", result.Content[0].Text)
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("new_tab without url should create a pending query")
 	}
@@ -185,7 +185,7 @@ func TestHandleBrowserActionSwitchTab_WithTabID(t *testing.T) {
 		t.Fatalf("switch_tab should not error, got: %s", result.Content[0].Text)
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("switch_tab should create a pending query")
 	}
@@ -218,7 +218,7 @@ func TestHandleBrowserActionSwitchTab_WithTabIndex(t *testing.T) {
 		t.Fatalf("switch_tab should not error, got: %s", result.Content[0].Text)
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("switch_tab should create a pending query")
 	}
@@ -248,7 +248,7 @@ func TestHandleBrowserActionCloseTab_WithTabID(t *testing.T) {
 		t.Fatalf("close_tab should not error, got: %s", result.Content[0].Text)
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("close_tab should create a pending query")
 	}
@@ -276,10 +276,10 @@ func TestHandleBrowserActionCloseTab_WithTabID(t *testing.T) {
 func completePendingCommands(env *interactTestEnv, result json.RawMessage, cmdErr string) {
 	for i := 0; i < 100; i++ { // 100 iterations * 10ms = 1s max polling window
 		time.Sleep(10 * time.Millisecond)
-		pending := env.capture.GetPendingCommands()
+		pending := env.capture.Queries().GetPendingCommands()
 		for _, cmd := range pending {
 			if cmd != nil && cmd.CorrelationID != "" && cmd.Status == "pending" {
-				env.capture.ApplyCommandResult(cmd.CorrelationID, "complete", result, cmdErr)
+				env.capture.Queries().ApplyCommandResult(cmd.CorrelationID, "complete", result, cmdErr)
 				return
 			}
 		}
@@ -521,7 +521,7 @@ func TestSmoke_SwitchTab_DispatchesThroughToolInteract(t *testing.T) {
 		t.Errorf("correlation_id should start with 'switchtab_', got: %s", corr)
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("switch_tab should create a pending query")
 	}
@@ -577,7 +577,7 @@ func TestHandleBrowserActionNavigate_NewTabFlagPreserved(t *testing.T) {
 		t.Fatalf("navigate should not error, got: %s", result.Content[0].Text)
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("navigate should create a pending query")
 	}

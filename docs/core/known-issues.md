@@ -128,7 +128,7 @@ the folder-gate numbers as evidence that it did.
 
 | | Current |
 | --- | --- |
-| `Capture` methods (including delegates to independently locked owners) | 136 |
+| `Capture` methods (including delegates to independently locked owners) | 109 |
 | `cmd/browser-agent` production source files (package `main`) | 10 |
 | `*ToolHandler` methods in those files | 87 |
 

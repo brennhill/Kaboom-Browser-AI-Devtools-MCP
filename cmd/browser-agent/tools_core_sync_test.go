@@ -32,7 +32,7 @@ func TestMaybeWaitForCommand_SyncByDefault(t *testing.T) {
 	handler.coldStartTimeout = 0
 	req := mcp.JSONRPCRequest{ID: 1, ClientID: "test-client"}
 	correlationID := "test-sync-123"
-	cap.RegisterCommand(correlationID, "q-sync-123", 15*time.Second)
+	cap.Queries().RegisterCommand(correlationID, "q-sync-123", 15*time.Second)
 
 	// Mock extension connection manually to avoid nil pointer in HandleSync
 	// (Internal knowledge: IsExtensionConnected checks lastSyncSeen)
@@ -41,7 +41,7 @@ func TestMaybeWaitForCommand_SyncByDefault(t *testing.T) {
 	// Create a result after a short delay
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		cap.ApplyCommandResult(correlationID, "complete", json.RawMessage(`{"success":true,"message":"instant result"}`), "")
+		cap.Queries().ApplyCommandResult(correlationID, "complete", json.RawMessage(`{"success":true,"message":"instant result"}`), "")
 	}()
 
 	// Simulate extension connection via a Sync call so IsExtensionConnected() returns true
@@ -91,7 +91,7 @@ func TestToolObserveCommandResult_IncludesTraceTimeline(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	correlationID := "test-trace-obs-123"
 
-	queryID, _ := cap.CreatePendingQueryWithTimeout(queries.PendingQuery{
+	queryID, _ := cap.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
 		Type:          "browser_action",
 		Params:        json.RawMessage(`{"what":"click","selector":"button"}`),
 		CorrelationID: correlationID,
@@ -100,9 +100,9 @@ func TestToolObserveCommandResult_IncludesTraceTimeline(t *testing.T) {
 		t.Fatal("CreatePendingQueryWithTimeout returned empty query ID")
 	}
 
-	_ = cap.GetPendingQueries() // marks "sent"
-	cap.AcknowledgePendingQuery(queryID)
-	cap.ApplyCommandResult(correlationID, "complete", json.RawMessage(`{"success":true}`), "")
+	_ = cap.Queries().GetPendingQueries() // marks "sent"
+	cap.Queries().AcknowledgePendingQuery(queryID)
+	cap.Queries().ApplyCommandResult(correlationID, "complete", json.RawMessage(`{"success":true}`), "")
 
 	resp := handler.observeDispatcher.CommandResult(req, json.RawMessage(`{"correlation_id":"test-trace-obs-123"}`))
 	data := parseMCPResponseData(t, resp.Result)
@@ -179,8 +179,8 @@ func TestMaybeWaitForCommand_PendingDisconnectReturnsTerminalError(t *testing.T)
 	handler := newSyncTestHandler(cap)
 	req := mcp.JSONRPCRequest{ID: 1}
 	correlationID := "test-disconnect-midwait-123"
-	cap.RegisterCommand(correlationID, "q-disconnect-midwait-123", 5*time.Second)
-	cap.CreatePendingQueryWithTimeout(queries.PendingQuery{
+	cap.Queries().RegisterCommand(correlationID, "q-disconnect-midwait-123", 5*time.Second)
+	cap.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
 		Type:   "browser_action",
 		Params: json.RawMessage(`{"action":"noop"}`),
 	}, 5*time.Second, "test-client")
@@ -450,36 +450,36 @@ func TestQueuePosition_And_QueueDepth(t *testing.T) {
 	cap := capture.NewCapture()
 
 	// Queue 3 commands
-	cap.CreatePendingQuery(queries.PendingQuery{
+	cap.Queries().CreatePendingQuery(queries.PendingQuery{
 		Type:          "dom",
 		Params:        json.RawMessage(`{}`),
 		CorrelationID: "pos-0",
 	})
-	cap.CreatePendingQuery(queries.PendingQuery{
+	cap.Queries().CreatePendingQuery(queries.PendingQuery{
 		Type:          "dom",
 		Params:        json.RawMessage(`{}`),
 		CorrelationID: "pos-1",
 	})
-	cap.CreatePendingQuery(queries.PendingQuery{
+	cap.Queries().CreatePendingQuery(queries.PendingQuery{
 		Type:          "dom",
 		Params:        json.RawMessage(`{}`),
 		CorrelationID: "pos-2",
 	})
 
-	if depth := cap.QueueDepth(); depth != 3 {
+	if depth := cap.Queries().QueueDepth(); depth != 3 {
 		t.Errorf("QueueDepth = %d, want 3", depth)
 	}
 
-	if pos := cap.QueuePosition("pos-0"); pos != 0 {
+	if pos := cap.Queries().QueuePosition("pos-0"); pos != 0 {
 		t.Errorf("QueuePosition(pos-0) = %d, want 0", pos)
 	}
-	if pos := cap.QueuePosition("pos-1"); pos != 1 {
+	if pos := cap.Queries().QueuePosition("pos-1"); pos != 1 {
 		t.Errorf("QueuePosition(pos-1) = %d, want 1", pos)
 	}
-	if pos := cap.QueuePosition("pos-2"); pos != 2 {
+	if pos := cap.Queries().QueuePosition("pos-2"); pos != 2 {
 		t.Errorf("QueuePosition(pos-2) = %d, want 2", pos)
 	}
-	if pos := cap.QueuePosition("nonexistent"); pos != -1 {
+	if pos := cap.Queries().QueuePosition("nonexistent"); pos != -1 {
 		t.Errorf("QueuePosition(nonexistent) = %d, want -1", pos)
 	}
 }

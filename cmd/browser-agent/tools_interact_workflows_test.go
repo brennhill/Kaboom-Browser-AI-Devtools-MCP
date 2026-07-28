@@ -306,12 +306,12 @@ func TestRunA11yAndExportSARIF_ReusesAnalyzePayload(t *testing.T) {
 			case <-stop:
 				return
 			case <-ticker.C:
-				for _, q := range cap.GetPendingQueries() {
+				for _, q := range cap.Queries().GetPendingQueries() {
 					if q.Type != "a11y" {
 						continue
 					}
 					atomic.AddInt32(&a11yQueryCount, 1)
-					cap.SetQueryResult(q.ID, result)
+					cap.Queries().SetQueryResult(q.ID, result)
 				}
 			}
 		}

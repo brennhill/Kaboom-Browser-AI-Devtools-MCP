@@ -160,7 +160,7 @@ func TestUploadInteg_PendingQueryPayload(t *testing.T) {
 	}
 
 	// Retrieve the pending query from capture
-	pending := env.capture.GetPendingQueries()
+	pending := env.capture.Queries().GetPendingQueries()
 	if len(pending) == 0 {
 		t.Fatal("expected at least 1 pending query after upload")
 	}

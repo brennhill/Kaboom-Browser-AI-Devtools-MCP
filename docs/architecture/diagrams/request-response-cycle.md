@@ -315,7 +315,7 @@ sequenceDiagram
 **Query Queue:**
 - `internal/capture/capture.go:Capture.queries`
 - `internal/capture/queries.go` - Queue management
-- `internal/capture/query_dispatcher.go` - Routing logic
+- `internal/queries/dispatcher_queries.go` - Routing logic
 
 **Result Storage:**
 - `internal/capture/capture.go:Capture.completedResults`

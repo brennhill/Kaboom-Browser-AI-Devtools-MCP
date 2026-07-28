@@ -225,7 +225,7 @@ func GetStorage(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSO
 		)}
 	}
 
-	queryID, qerr := cap.CreatePendingQueryWithTimeout(
+	queryID, qerr := cap.Queries().CreatePendingQueryWithTimeout(
 		queries.PendingQuery{
 			Type:   "state_capture",
 			Params: json.RawMessage(`{"action":"capture"}`),
@@ -242,7 +242,7 @@ func GetStorage(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSO
 		)}
 	}
 
-	result, err := cap.WaitForResult(queryID, 10*time.Second)
+	result, err := cap.Queries().WaitForResult(queryID, 10*time.Second)
 	if err != nil {
 		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(
 			mcp.ErrExtTimeout,
@@ -466,7 +466,7 @@ func GetScreenshot(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.
 
 	queryParams, _ := json.Marshal(screenshotParams)
 
-	queryID, qerr := cap.CreatePendingQueryWithTimeout(
+	queryID, qerr := cap.Queries().CreatePendingQueryWithTimeout(
 		queries.PendingQuery{
 			Type:   "screenshot",
 			Params: queryParams,
@@ -480,7 +480,7 @@ func GetScreenshot(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.
 		)}
 	}
 
-	result, err := cap.WaitForResult(queryID, 20*time.Second)
+	result, err := cap.Queries().WaitForResult(queryID, 20*time.Second)
 	if err != nil {
 		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(mcp.ErrExtTimeout, "Screenshot capture timeout: "+err.Error(), "Ensure the extension is connected and the page has loaded. Try refreshing the page, then retry.", mcp.WithHint(deps.DiagnosticHintString()))}
 	}

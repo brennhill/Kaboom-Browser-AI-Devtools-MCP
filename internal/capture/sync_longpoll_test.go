@@ -25,7 +25,7 @@ func TestHandleSync_LongPolling(t *testing.T) {
 	// Start a goroutine that will queue a command halfway through the poll window.
 	go func() {
 		time.Sleep(queueDelay)
-		cap.CreatePendingQuery(queries.PendingQuery{
+		cap.Queries().CreatePendingQuery(queries.PendingQuery{
 			Type:   "test_cmd",
 			Params: json.RawMessage(`{"foo":"bar"}`),
 		})

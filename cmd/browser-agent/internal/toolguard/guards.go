@@ -40,6 +40,9 @@ func (g *Guards) SetExtensionReadinessTimeout(timeout time.Duration) {
 
 // InjectCSPBlockedActions adds CSP-blocked action guidance to JSON tool results.
 func (g *Guards) InjectCSPBlockedActions(resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
+	if g.capture == nil {
+		return resp
+	}
 	restricted, level := g.capture.GetCSPStatus()
 	if !restricted {
 		return resp
@@ -72,6 +75,9 @@ func (g *Guards) InjectCSPBlockedActions(resp mcp.JSONRPCResponse) mcp.JSONRPCRe
 
 // DiagnosticHintString renders the runtime state that explains guard failures.
 func (g *Guards) DiagnosticHintString() string {
+	if g.capture == nil {
+		return "capture=unavailable"
+	}
 	extConnected := g.capture.IsExtensionConnected()
 	pilotEnabled := g.capture.IsPilotEnabled()
 	pilotState := ""
@@ -126,7 +132,7 @@ func (g *Guards) DiagnosticHint() func(*mcp.StructuredError) {
 // requirePilot returns (resp, true) if AI Web Pilot is disabled, short-circuiting the caller.
 // Usage: if resp, blocked := g.Guards.RequirePilot(req); blocked { return resp }
 func (g *Guards) RequirePilot(req mcp.JSONRPCRequest, extraOpts ...func(*mcp.StructuredError)) (mcp.JSONRPCResponse, bool) {
-	if g.capture.IsPilotActionAllowed() {
+	if g.capture != nil && g.capture.IsPilotActionAllowed() {
 		return mcp.JSONRPCResponse{}, false
 	}
 	opts := append([]func(*mcp.StructuredError){
@@ -157,7 +163,7 @@ func (g *Guards) RequireExtension(req mcp.JSONRPCRequest, extraOpts ...func(*mcp
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	if g.capture.WaitForExtensionConnected(ctx, timeout) {
+	if g.capture != nil && g.capture.WaitForExtensionConnected(ctx, timeout) {
 		return mcp.JSONRPCResponse{}, false
 	}
 	opts := append([]func(*mcp.StructuredError){
@@ -187,6 +193,9 @@ func (g *Guards) RequireCSPClear(req mcp.JSONRPCRequest, world string) (mcp.JSON
 	if world != "main" {
 		return mcp.JSONRPCResponse{}, false
 	}
+	if g.capture == nil {
+		return mcp.JSONRPCResponse{}, false
+	}
 	restricted, level := g.capture.GetCSPStatus()
 	if !restricted {
 		return mcp.JSONRPCResponse{}, false
@@ -209,7 +218,10 @@ func (g *Guards) RequireCSPClear(req mcp.JSONRPCRequest, world string) (mcp.JSON
 // queuing a command that would time out or target the wrong tab.
 // Usage: if resp, blocked := g.Guards.RequireTabTracking(req); blocked { return resp }
 func (g *Guards) RequireTabTracking(req mcp.JSONRPCRequest, extraOpts ...func(*mcp.StructuredError)) (mcp.JSONRPCResponse, bool) {
-	enabled, _, _ := g.capture.GetTrackingStatus()
+	enabled := false
+	if g.capture != nil {
+		enabled, _, _ = g.capture.GetTrackingStatus()
+	}
 	if enabled {
 		return mcp.JSONRPCResponse{}, false
 	}

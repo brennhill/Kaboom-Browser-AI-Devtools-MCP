@@ -430,7 +430,7 @@ func TestToolGetAnnotations_Flush_CompletesPendingCommand_WithEmptyResultReason(
 		t.Fatalf("result.filter_applied = %v, want none", resultPayload["filter_applied"])
 	}
 
-	cmd, found := h.capture.GetCommandResult(corrID)
+	cmd, found := h.capture.Queries().GetCommandResult(corrID)
 	if !found || cmd == nil {
 		t.Fatal("flushed command should exist in command tracker")
 	}
@@ -490,7 +490,7 @@ func TestToolGetAnnotations_Flush_IsIdempotent(t *testing.T) {
 		t.Fatalf("second terminal_reason = %v, want flushed", secondData["terminal_reason"])
 	}
 
-	cmd, found := h.capture.GetCommandResult(corrID)
+	cmd, found := h.capture.Queries().GetCommandResult(corrID)
 	if !found || cmd == nil {
 		t.Fatal("command should still be queryable after repeated flush")
 	}
@@ -989,7 +989,7 @@ func TestToolGetAnnotations_Flush_UsesExplicitURLFilterWhenWaiterMissing(t *test
 	})
 
 	corrID := "ann_flush_filter_fallback"
-	h.capture.RegisterCommand(corrID, "", 10*time.Minute)
+	h.capture.Queries().RegisterCommand(corrID, "", 10*time.Minute)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: float64(1)}
 	resp := h.annotationAnalysis.GetAnnotations(req, json.RawMessage(`{"what":"annotations","operation":"flush","correlation_id":"`+corrID+`","url":"http://localhost:3000/*"}`))

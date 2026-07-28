@@ -94,15 +94,15 @@ func (c *Capture) HandleQueryResult(w http.ResponseWriter, r *http.Request) {
 		if body.CorrelationID != "" {
 			// Correlated async commands carry explicit lifecycle status below.
 			// Do not force "complete" from query-id bookkeeping.
-			c.SetQueryResultWithClientNoCommandComplete(body.ID, body.Result, body.ClientID)
+			c.Queries().SetQueryResultWithClientNoCommandComplete(body.ID, body.Result, body.ClientID)
 		} else {
-			c.SetQueryResultWithClient(body.ID, body.Result, body.ClientID)
+			c.Queries().SetQueryResultWithClient(body.ID, body.Result, body.ClientID)
 		}
 	}
 
 	// Handle correlation_id for async commands (execute_js, browser actions)
 	if body.CorrelationID != "" {
-		c.ApplyCommandResult(body.CorrelationID, body.Status, body.Result, body.Error)
+		c.Queries().ApplyCommandResult(body.CorrelationID, body.Status, body.Result, body.Error)
 	}
 
 	util.JSONResponse(w, http.StatusOK, map[string]any{

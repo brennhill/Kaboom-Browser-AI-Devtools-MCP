@@ -126,7 +126,7 @@ func (h *InteractActionHandler) HandleBatch(req mcp.JSONRPCRequest, args json.Ra
 			stepResult.CorrelationID = corrID
 			timeout := time.Duration(params.StepTimeoutMs) * time.Millisecond
 			if timeout > 0 {
-				cmd, found := h.deps.Capture().WaitForCommand(corrID, timeout)
+				cmd, found := h.deps.Capture().Queries().WaitForCommand(corrID, timeout)
 				if found {
 					switch cmd.Status {
 					case "pending":

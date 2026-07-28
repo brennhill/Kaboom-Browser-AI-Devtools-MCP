@@ -341,7 +341,7 @@ func (h *ToolHandler) enrichNavigateResponse(resp mcp.JSONRPCResponse, req mcp.J
 		return enqueueResponse
 	}
 	var textContent string
-	command, found := h.capture.WaitForCommand(correlationID, toolinteract.NavigatePageSummaryWait)
+	command, found := h.capture.Queries().WaitForCommand(correlationID, toolinteract.NavigatePageSummaryWait)
 	if found && command.Status != "pending" && command.Result != nil {
 		var summary map[string]any
 		if json.Unmarshal(command.Result, &summary) == nil {

@@ -35,12 +35,12 @@ type CommandStore interface {
 	GetPendingCommands() []*queries.CommandResult
 	GetCompletedCommands() []*queries.CommandResult
 	GetFailedCommands() []*queries.CommandResult
-	GetInProgressCommands() []capture.SyncInProgress
 }
 
 type Config struct {
 	Host             Host
 	Commands         CommandStore
+	InProgress       func() []capture.SyncInProgress
 	AnnotationStore  *annotation.Store
 	Annotations      toolrouting.Handler[Host]
 	AnnotationDetail toolrouting.Handler[Host]
@@ -138,6 +138,9 @@ func (d *Dispatcher) drawSession(_ Host, req mcp.JSONRPCRequest, args json.RawMe
 }
 
 func (d *Dispatcher) CommandResult(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+	if d.commands == nil {
+		return mcp.Fail(req, mcp.ErrNoData, "Command state is unavailable", "Connect the browser extension and retry.")
+	}
 	var params struct {
 		CorrelationID string `json:"correlation_id"`
 	}
@@ -168,13 +171,24 @@ func (d *Dispatcher) CommandResult(req mcp.JSONRPCRequest, args json.RawMessage)
 }
 
 func (d *Dispatcher) pendingCommands(_ Host, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+	if d.commands == nil {
+		data := map[string]any{"pending": []*queries.CommandResult{}, "completed": []*queries.CommandResult{}, "failed": []*queries.CommandResult{}, "extension_in_progress": []capture.SyncInProgress{}, "extension_in_progress_count": 0}
+		return mcp.Succeed(req, "Pending: 0, Completed: 0, Failed: 0, Extension in-progress: 0", data)
+	}
 	pending, completed := d.commands.GetPendingCommands(), d.commands.GetCompletedCommands()
-	failed, inProgress := d.commands.GetFailedCommands(), d.commands.GetInProgressCommands()
+	failed := d.commands.GetFailedCommands()
+	inProgress := []capture.SyncInProgress{}
+	if d.config.InProgress != nil {
+		inProgress = d.config.InProgress()
+	}
 	data := map[string]any{"pending": pending, "completed": completed, "failed": failed, "extension_in_progress": inProgress, "extension_in_progress_count": len(inProgress)}
 	return mcp.Succeed(req, fmt.Sprintf("Pending: %d, Completed: %d, Failed: %d, Extension in-progress: %d", len(pending), len(completed), len(failed), len(inProgress)), data)
 }
 
 func (d *Dispatcher) FailedCommands(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+	if d.commands == nil {
+		return mcp.Succeed(req, "No failed commands found", map[string]any{"commands": []*queries.CommandResult{}, "count": 0})
+	}
 	failed := d.commands.GetFailedCommands()
 	data := map[string]any{"commands": failed, "count": len(failed)}
 	if len(failed) == 0 {

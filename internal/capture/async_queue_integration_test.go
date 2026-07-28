@@ -38,13 +38,13 @@ func TestAsyncQueueIntegration(t *testing.T) {
 		TabID:         0,
 	}
 
-	queryID, _ := capture.CreatePendingQueryWithTimeout(query, queries.AsyncCommandTimeout, "")
+	queryID, _ := capture.Queries().CreatePendingQueryWithTimeout(query, queries.AsyncCommandTimeout, "")
 	if queryID == "" {
 		t.Fatal("CreatePendingQueryWithTimeout returned empty query ID")
 	}
 
 	// Verify command is tracked as "pending"
-	cmd, found := capture.GetCommandResult(correlationID)
+	cmd, found := capture.Queries().GetCommandResult(correlationID)
 	if !found {
 		t.Fatal("Command not registered after CreatePendingQueryWithTimeout")
 	}
@@ -53,7 +53,7 @@ func TestAsyncQueueIntegration(t *testing.T) {
 	}
 
 	// Step 2: Extension polls for pending queries (simulate GET /pending-queries)
-	pendingQueries := capture.GetPendingQueries()
+	pendingQueries := capture.Queries().GetPendingQueries()
 	if len(pendingQueries) != 1 {
 		t.Fatalf("Expected 1 pending query, got %d", len(pendingQueries))
 	}
@@ -73,16 +73,16 @@ func TestAsyncQueueIntegration(t *testing.T) {
 	result := json.RawMessage(`{"value": 42, "success": true}`)
 
 	// Step 4: Extension posts result (simulate POST /dom-result)
-	capture.SetQueryResult(queryID, result)
+	capture.Queries().SetQueryResult(queryID, result)
 
 	// Verify query is no longer in pending list
-	pendingQueries = capture.GetPendingQueries()
+	pendingQueries = capture.Queries().GetPendingQueries()
 	if len(pendingQueries) != 0 {
 		t.Errorf("Expected 0 pending queries after result posted, got %d", len(pendingQueries))
 	}
 
 	// Verify result is stored
-	storedResult, found := capture.TakeQueryResult(queryID)
+	storedResult, found := capture.Queries().TakeQueryResult(queryID)
 	if !found {
 		t.Fatal("Result not found after SetQueryResult")
 	}
@@ -91,7 +91,7 @@ func TestAsyncQueueIntegration(t *testing.T) {
 	}
 
 	// Step 5: MCP retrieves command status (simulate observe({what: 'command_result', correlation_id: '...'}))
-	cmd, found = capture.GetCommandResult(correlationID)
+	cmd, found = capture.Queries().GetCommandResult(correlationID)
 	if !found {
 		t.Fatal("Command not found after result posted")
 	}
@@ -116,22 +116,22 @@ func TestAsyncQueueArchitectureInvariants(t *testing.T) {
 
 	// Verify CreatePendingQueryWithTimeout exists and works
 	query := queries.PendingQuery{Type: "test", Params: json.RawMessage(`{}`)}
-	id, _ := capture.CreatePendingQueryWithTimeout(query, 1*time.Second, "")
+	id, _ := capture.Queries().CreatePendingQueryWithTimeout(query, 1*time.Second, "")
 	if id == "" {
 		t.Error("CreatePendingQueryWithTimeout is broken or missing")
 	}
 
 	// Verify GetPendingQueries exists and works
-	pending := capture.GetPendingQueries()
+	pending := capture.Queries().GetPendingQueries()
 	if pending == nil {
 		t.Error("GetPendingQueries is broken or missing")
 	}
 
 	// Verify SetQueryResult exists and works
-	capture.SetQueryResult(id, json.RawMessage(`{}`))
+	capture.Queries().SetQueryResult(id, json.RawMessage(`{}`))
 
 	// Verify TakeQueryResult exists and works
-	_, _ = capture.TakeQueryResult(id)
+	_, _ = capture.Queries().TakeQueryResult(id)
 
 	// Verify correlation ID tracking methods exist
 	query2 := queries.PendingQuery{
@@ -139,28 +139,28 @@ func TestAsyncQueueArchitectureInvariants(t *testing.T) {
 		Params:        json.RawMessage(`{}`),
 		CorrelationID: "test_corr_id",
 	}
-	capture.CreatePendingQueryWithTimeout(query2, 1*time.Second, "")
+	capture.Queries().CreatePendingQueryWithTimeout(query2, 1*time.Second, "")
 
 	// Verify GetCommandResult exists and works
-	_, found := capture.GetCommandResult("test_corr_id")
+	_, found := capture.Queries().GetCommandResult("test_corr_id")
 	if !found {
 		t.Error("GetCommandResult is broken or correlation ID tracking is missing")
 	}
 
 	// Verify GetPendingCommands exists and works
-	pendingCmds := capture.GetPendingCommands()
+	pendingCmds := capture.Queries().GetPendingCommands()
 	if pendingCmds == nil {
 		t.Error("GetPendingCommands is broken or missing")
 	}
 
 	// Verify GetCompletedCommands exists and works
-	completedCmds := capture.GetCompletedCommands()
+	completedCmds := capture.Queries().GetCompletedCommands()
 	if completedCmds == nil {
 		t.Error("GetCompletedCommands is broken or missing")
 	}
 
 	// Verify GetFailedCommands exists and works
-	failedCmds := capture.GetFailedCommands()
+	failedCmds := capture.Queries().GetFailedCommands()
 	if failedCmds == nil {
 		t.Error("GetFailedCommands is broken or missing")
 	}
@@ -180,7 +180,7 @@ func TestAsyncQueueMultiClientIntegration(t *testing.T) {
 		CorrelationID: "client_a_integration",
 		TabID:         1,
 	}
-	idA, _ := capture.CreatePendingQueryWithTimeout(queryA, queries.AsyncCommandTimeout, "client_a")
+	idA, _ := capture.Queries().CreatePendingQueryWithTimeout(queryA, queries.AsyncCommandTimeout, "client_a")
 
 	// Client B creates command
 	queryB := queries.PendingQuery{
@@ -189,10 +189,10 @@ func TestAsyncQueueMultiClientIntegration(t *testing.T) {
 		CorrelationID: "client_b_integration",
 		TabID:         2,
 	}
-	idB, _ := capture.CreatePendingQueryWithTimeout(queryB, queries.AsyncCommandTimeout, "client_b")
+	idB, _ := capture.Queries().CreatePendingQueryWithTimeout(queryB, queries.AsyncCommandTimeout, "client_b")
 
 	// Client A polls - should only see their query
-	pendingA := capture.GetPendingQueriesForClient("client_a")
+	pendingA := capture.Queries().GetPendingQueriesForClient("client_a")
 	if len(pendingA) != 1 {
 		t.Errorf("Client A: expected 1 pending query, got %d", len(pendingA))
 	}
@@ -201,7 +201,7 @@ func TestAsyncQueueMultiClientIntegration(t *testing.T) {
 	}
 
 	// Client B polls - should only see their query
-	pendingB := capture.GetPendingQueriesForClient("client_b")
+	pendingB := capture.Queries().GetPendingQueriesForClient("client_b")
 	if len(pendingB) != 1 {
 		t.Errorf("Client B: expected 1 pending query, got %d", len(pendingB))
 	}
@@ -211,19 +211,19 @@ func TestAsyncQueueMultiClientIntegration(t *testing.T) {
 
 	// Client A posts result
 	resultA := json.RawMessage(`{"client":"A"}`)
-	capture.SetQueryResultWithClient(idA, resultA, "client_a")
+	capture.Queries().SetQueryResultWithClient(idA, resultA, "client_a")
 
 	// Client B posts result
 	resultB := json.RawMessage(`{"client":"B"}`)
-	capture.SetQueryResultWithClient(idB, resultB, "client_b")
+	capture.Queries().SetQueryResultWithClient(idB, resultB, "client_b")
 
 	// Both commands should be tracked as complete (correlation tracking is global)
-	cmdA, foundA := capture.GetCommandResult("client_a_integration")
+	cmdA, foundA := capture.Queries().GetCommandResult("client_a_integration")
 	if !foundA || cmdA.Status != "complete" {
 		t.Error("Client A command not completed correctly")
 	}
 
-	cmdB, foundB := capture.GetCommandResult("client_b_integration")
+	cmdB, foundB := capture.Queries().GetCommandResult("client_b_integration")
 	if !foundB || cmdB.Status != "complete" {
 		t.Error("Client B command not completed correctly")
 	}
@@ -244,10 +244,10 @@ func TestAsyncQueueExpirationIntegration(t *testing.T) {
 		CorrelationID: correlationID,
 	}
 
-	capture.CreatePendingQueryWithTimeout(query, 120*time.Millisecond, "")
+	capture.Queries().CreatePendingQueryWithTimeout(query, 120*time.Millisecond, "")
 
 	// Initially pending
-	cmd, found := capture.GetCommandResult(correlationID)
+	cmd, found := capture.Queries().GetCommandResult(correlationID)
 	if !found || cmd.Status != "pending" {
 		t.Fatal("Command should be pending initially")
 	}
@@ -255,7 +255,7 @@ func TestAsyncQueueExpirationIntegration(t *testing.T) {
 	// Wait for expiration with polling (faster and less flaky than fixed long sleeps)
 	deadline := time.Now().Add(800 * time.Millisecond)
 	for time.Now().Before(deadline) {
-		cmd, found = capture.GetCommandResult(correlationID)
+		cmd, found = capture.Queries().GetCommandResult(correlationID)
 		if found && cmd.Status == "expired" {
 			break
 		}
@@ -263,7 +263,7 @@ func TestAsyncQueueExpirationIntegration(t *testing.T) {
 	}
 
 	// Should be expired
-	cmd, found = capture.GetCommandResult(correlationID)
+	cmd, found = capture.Queries().GetCommandResult(correlationID)
 	if !found {
 		t.Fatal("Expired command should still be retrievable from failedCommands")
 	}
@@ -275,7 +275,7 @@ func TestAsyncQueueExpirationIntegration(t *testing.T) {
 	}
 
 	// Should be in failed commands list
-	failedCmds := capture.GetFailedCommands()
+	failedCmds := capture.Queries().GetFailedCommands()
 	foundInFailed := false
 	for _, fc := range failedCmds {
 		if fc.CorrelationID == correlationID {

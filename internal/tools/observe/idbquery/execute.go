@@ -88,7 +88,7 @@ func executeScript(cap *capture.Capture, script, reason string, timeout time.Dur
 		"reason":     reason,
 	})
 
-	queryID, qerr := cap.CreatePendingQueryWithTimeout(
+	queryID, qerr := cap.Queries().CreatePendingQueryWithTimeout(
 		queries.PendingQuery{
 			Type:   "execute",
 			Params: params,
@@ -100,7 +100,7 @@ func executeScript(cap *capture.Capture, script, reason string, timeout time.Dur
 		return nil, qerr
 	}
 
-	result, err := cap.WaitForResult(queryID, timeout)
+	result, err := cap.Queries().WaitForResult(queryID, timeout)
 	if err != nil {
 		return nil, err
 	}

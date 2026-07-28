@@ -161,7 +161,7 @@ func NewStateInteractHandler(deps *Deps, store *persistence.SessionStore) *inter
 		GetTrackingStatus:    func() (bool, int, string) { return deps.Capture().GetTrackingStatus() },
 		GetTrackedTabTitle:   func() string { return deps.Capture().GetTrackedTabTitle() },
 		WaitForCommand: func(correlationID string, timeout time.Duration) (*queries.CommandResult, bool) {
-			return deps.Capture().WaitForCommand(correlationID, timeout)
+			return deps.Capture().Queries().WaitForCommand(correlationID, timeout)
 		},
 		EnqueuePendingQuery: func(req mcp.JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (mcp.JSONRPCResponse, bool) {
 			return deps.EnqueuePendingQuery(req, query, timeout)

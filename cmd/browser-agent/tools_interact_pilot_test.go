@@ -29,7 +29,7 @@ func TestHandleBrowserActionNavigate_Success(t *testing.T) {
 		t.Fatalf("navigate should not error, got: %s", result.Content[0].Text)
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("navigate should create a pending query")
 	}
@@ -96,7 +96,7 @@ func TestHandlePilotExecuteJS_Success(t *testing.T) {
 		t.Error("response should contain correlation_id")
 	}
 
-	pq := env.capture.GetLastPendingQuery()
+	pq := env.capture.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("execute_js should create a pending query")
 	}

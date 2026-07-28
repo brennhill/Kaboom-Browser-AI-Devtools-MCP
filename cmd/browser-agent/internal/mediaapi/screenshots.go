@@ -133,7 +133,7 @@ func (h *Handler) HandleScreenshot(w http.ResponseWriter, r *http.Request) {
 		}
 		// Error impossible: map contains only primitive types from input
 		resultJSON, _ := json.Marshal(queryResult)
-		h.capture.SetQueryResult(body.QueryID, resultJSON)
+		h.capture.Queries().SetQueryResult(body.QueryID, resultJSON)
 	}
 
 	// Push screenshot notification to MCP inbox for non-query screenshots

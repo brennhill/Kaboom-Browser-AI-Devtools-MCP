@@ -45,13 +45,13 @@ func TestWaterfallOnDemand_FreshDataNoQuery(t *testing.T) {
 	cap.NetworkWaterfall().Add(entries, "https://example.com")
 
 	// Get pending queries count before call
-	pendingBefore := len(cap.GetPendingQueries())
+	pendingBefore := len(cap.Queries().GetPendingQueries())
 
 	// Call observe network_waterfall - should return cached data without querying
 	resp := observe.GetNetworkWaterfall(th, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
 
 	// Verify no new query was created (data was fresh)
-	pendingAfter := len(cap.GetPendingQueries())
+	pendingAfter := len(cap.Queries().GetPendingQueries())
 	if pendingAfter > pendingBefore {
 		t.Errorf("Expected no new queries for fresh data, but query count changed from %d to %d", pendingBefore, pendingAfter)
 	}
@@ -111,7 +111,7 @@ func TestWaterfallOnDemand_StaleDataCreatesQuery(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 
 		// Check if a waterfall query was created
-		pending := cap.GetPendingQueries()
+		pending := cap.Queries().GetPendingQueries()
 		for _, q := range pending {
 			if q.Type == "waterfall" {
 				queryMu.Lock()
@@ -132,7 +132,7 @@ func TestWaterfallOnDemand_StaleDataCreatesQuery(t *testing.T) {
 					"page_url": "https://example.com/page",
 				}
 				resultBytes, _ := json.Marshal(result)
-				cap.SetQueryResult(q.ID, resultBytes)
+				cap.Queries().SetQueryResult(q.ID, resultBytes)
 				return
 			}
 		}
@@ -194,7 +194,7 @@ func TestWaterfallOnDemand_EmptyBufferCreatesQuery(t *testing.T) {
 	go func() {
 		time.Sleep(50 * time.Millisecond)
 
-		pending := cap.GetPendingQueries()
+		pending := cap.Queries().GetPendingQueries()
 		for _, q := range pending {
 			if q.Type == "waterfall" {
 				queryMu.Lock()
@@ -207,7 +207,7 @@ func TestWaterfallOnDemand_EmptyBufferCreatesQuery(t *testing.T) {
 					"page_url": "https://example.com",
 				}
 				resultBytes, _ := json.Marshal(result)
-				cap.SetQueryResult(q.ID, resultBytes)
+				cap.Queries().SetQueryResult(q.ID, resultBytes)
 				return
 			}
 		}
@@ -241,7 +241,7 @@ func TestWaterfallOnDemand_TimeoutHandling(t *testing.T) {
 	}
 	cap := capture.NewCapture()
 	// Set a very short timeout for this test
-	cap.SetQueryTimeout(100 * time.Millisecond)
+	cap.Queries().SetQueryTimeout(100 * time.Millisecond)
 	handler := NewToolHandler(server, cap)
 	th := handler.toolHandler.(*ToolHandler)
 
@@ -289,7 +289,7 @@ func TestWaterfallOnDemand_ConcurrentRequests(t *testing.T) {
 	go func() {
 		for i := 0; i < 100; i++ {
 			time.Sleep(10 * time.Millisecond)
-			pending := cap.GetPendingQueries()
+			pending := cap.Queries().GetPendingQueries()
 			for _, q := range pending {
 				if q.Type == "waterfall" {
 					result := map[string]any{
@@ -299,7 +299,7 @@ func TestWaterfallOnDemand_ConcurrentRequests(t *testing.T) {
 						"page_url": "https://example.com",
 					}
 					resultBytes, _ := json.Marshal(result)
-					cap.SetQueryResult(q.ID, resultBytes)
+					cap.Queries().SetQueryResult(q.ID, resultBytes)
 				}
 			}
 		}
@@ -353,7 +353,7 @@ func TestWaterfallQueryType_ExistsInPendingQueries(t *testing.T) {
 	cap := capture.NewCapture()
 
 	// Create a waterfall query
-	queryID, _ := cap.CreatePendingQuery(queries.PendingQuery{
+	queryID, _ := cap.Queries().CreatePendingQuery(queries.PendingQuery{
 		Type:   "waterfall",
 		Params: json.RawMessage(`{}`),
 	})
@@ -364,7 +364,7 @@ func TestWaterfallQueryType_ExistsInPendingQueries(t *testing.T) {
 	}
 
 	// Verify it appears in pending queries
-	pending := cap.GetPendingQueries()
+	pending := cap.Queries().GetPendingQueries()
 	found := false
 	for _, q := range pending {
 		if q.ID == queryID && q.Type == "waterfall" {
@@ -402,9 +402,9 @@ func TestWaterfallStalenessThreshold(t *testing.T) {
 	cap.NetworkWaterfall().Add(entries, "https://example.com")
 
 	// Immediately query - should NOT create new query (data is fresh)
-	pendingBefore := len(cap.GetPendingQueries())
+	pendingBefore := len(cap.Queries().GetPendingQueries())
 	_ = observe.GetNetworkWaterfall(th, mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}, json.RawMessage(`{}`))
-	pendingAfter := len(cap.GetPendingQueries())
+	pendingAfter := len(cap.Queries().GetPendingQueries())
 
 	if pendingAfter > pendingBefore {
 		t.Error("Query created for fresh data (<1s old) - threshold may be wrong")
@@ -416,12 +416,12 @@ func TestWaterfallStalenessThreshold(t *testing.T) {
 	// Now query - SHOULD create new query (data is stale)
 	go func() {
 		time.Sleep(50 * time.Millisecond)
-		pending := cap.GetPendingQueries()
+		pending := cap.Queries().GetPendingQueries()
 		for _, q := range pending {
 			if q.Type == "waterfall" {
 				result := map[string]any{"entries": []any{}, "page_url": "https://example.com"}
 				resultBytes, _ := json.Marshal(result)
-				cap.SetQueryResult(q.ID, resultBytes)
+				cap.Queries().SetQueryResult(q.ID, resultBytes)
 			}
 		}
 	}()

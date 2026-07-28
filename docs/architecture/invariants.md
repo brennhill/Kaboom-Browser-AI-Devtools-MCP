@@ -14,7 +14,7 @@ These are non-negotiable system behaviors. Any change that violates one requires
 
 | ID | Invariant | Critical Paths | Minimum Checks |
 | --- | --- | --- | --- |
-| `ARCH_INV_001` | Async queue-and-poll flow remains intact for browser commands (`create -> poll -> execute -> result -> retrieve`). | `internal/queries/dispatcher_queries.go`, `internal/capture/query_dispatcher.go`, `internal/capture/sync.go` | `go test -v ./internal/capture -run TestAsyncQueueIntegration`, `./scripts/validate-architecture.sh` |
+| `ARCH_INV_001` | Async queue-and-poll flow remains intact for browser commands (`create -> poll -> execute -> result -> retrieve`). | `internal/queries/dispatcher_queries.go`, `internal/queries/dispatcher_queries.go`, `internal/capture/sync.go` | `go test -v ./internal/capture -run TestAsyncQueueIntegration`, `./scripts/validate-architecture.sh` |
 | `ARCH_INV_002` | Observe/interact command-status handlers keep real queue-backed behavior and never regress to stubs. | `cmd/browser-agent/internal/toolobserve/dispatcher.go`, `cmd/browser-agent/tools_interact.go`, `cmd/browser-agent/tools_core.go` | `./scripts/validate-architecture.sh`, `go test ./cmd/browser-agent/...` |
 | `ARCH_INV_003` | MCP request/response envelope remains valid JSON-RPC 2.0. | `cmd/browser-agent/handler.go`, `internal/mcp/` | `go test ./cmd/browser-agent/...` |
 | `ARCH_INV_004` | Public MCP tool schemas remain backward compatible unless there is an explicit, versioned breaking-change plan. | `internal/schema/` | `go test ./cmd/browser-agent/...`, docs update in `interfaces.md` |

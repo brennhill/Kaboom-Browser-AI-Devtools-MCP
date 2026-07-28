@@ -7,7 +7,7 @@ owners: []
 last_reviewed: 2026-07-28
 code_paths:
   - internal/capture/accessors.go
-  - internal/capture/query_dispatcher.go
+  - internal/queries/dispatcher_queries.go
   - internal/capture/sync.go
   - internal/capture/events.go
   - internal/capture/wsconn/status.go

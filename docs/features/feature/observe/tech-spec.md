@@ -58,6 +58,6 @@ last_verified_date: 2026-03-05
 - `cmd/browser-agent/internal/toolobserve/dispatcher.go`
 - `cmd/browser-agent/internal/toolobserve/response.go`
 - `cmd/browser-agent/internal/toolobserve/inbox.go`
-- `internal/capture/query_dispatcher.go`
+- `internal/queries/dispatcher_queries.go`
 - `internal/queries/dispatcher_commands.go`
 - `src/background/commands/observe.ts`

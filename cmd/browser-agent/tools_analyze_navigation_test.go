@@ -33,7 +33,7 @@ func TestToolsAnalyzeNavigation_DispatchesQuery(t *testing.T) {
 		t.Errorf("correlation_id should start with 'navigation_', got: %s", corr)
 	}
 
-	pq := cap.GetLastPendingQuery()
+	pq := cap.Queries().GetLastPendingQuery()
 	if pq == nil {
 		t.Fatal("expected pending query to be created")
 	}

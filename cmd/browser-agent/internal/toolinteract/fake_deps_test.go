@@ -228,7 +228,7 @@ func (fs *fakeState) deps() *Deps {
 		DiagnosticHint:     func() func(*mcp.StructuredError) { return mcp.WithHint("diagnostic hint") },
 		GetRedactionEngine: func() RedactionEngine { return fs.redaction },
 		GetCommandResult: func(correlationID string) (*queries.CommandResult, bool) {
-			return fs.cap.GetCommandResult(correlationID)
+			return fs.cap.Queries().GetCommandResult(correlationID)
 		},
 
 		ReplayMu: &sync.Mutex{},

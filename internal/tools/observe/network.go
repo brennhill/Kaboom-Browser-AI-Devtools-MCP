@@ -221,7 +221,7 @@ func refreshWaterfallIfStale(deps Deps) []types.NetworkWaterfallEntry {
 		return allEntries
 	}
 
-	queryID, qerr := cap.CreatePendingQueryWithTimeout(
+	queryID, qerr := cap.Queries().CreatePendingQueryWithTimeout(
 		queries.PendingQuery{
 			Type:   "waterfall",
 			Params: json.RawMessage(`{}`),
@@ -233,7 +233,7 @@ func refreshWaterfallIfStale(deps Deps) []types.NetworkWaterfallEntry {
 		return allEntries
 	}
 
-	result, err := cap.WaitForResult(queryID, 5*time.Second)
+	result, err := cap.Queries().WaitForResult(queryID, 5*time.Second)
 	if err != nil || result == nil {
 		return allEntries
 	}

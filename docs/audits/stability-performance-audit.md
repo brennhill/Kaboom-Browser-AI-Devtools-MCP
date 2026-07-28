@@ -70,7 +70,7 @@ Wrap all stdout writes in connect mode with `mcpStdoutMu.Lock()`/`mcpStdoutMu.Un
 
 ### FINDING 1.2 -- QueryDispatcher.Close() is not concurrency-safe
 
-- **Location:** `internal/capture/query_dispatcher.go:67-72`
+- **Location:** `internal/queries/dispatcher.go`
 - **Category:** Concurrency
 - **Severity:** LOW
 
@@ -98,7 +98,7 @@ Use `sync.Once` to make Close truly safe for concurrent callers.
 
 ### FINDING 1.3 -- Lock hierarchy is well-documented and consistently followed
 
-- **Location:** `internal/capture/capture-struct.go:18-19`, `internal/capture/query_dispatcher.go:34`
+- **Location:** `internal/capture/capture.go`, `internal/queries/dispatcher.go`
 - **Category:** Concurrency
 - **Severity:** N/A (Positive finding)
 

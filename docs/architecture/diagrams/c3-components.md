@@ -42,7 +42,7 @@ graph TB
             Recording["recording_manager.go<br/>Recording lifecycle"]
             Handlers["handlers.go<br/>HTTP endpoints"]
             Queries["queries.go<br/>Pending query queue"]
-            Dispatcher["query_dispatcher.go<br/>Query routing"]
+            Dispatcher["dispatcher_queries.go<br/>Query routing"]
             Sync["sync.go<br/>/sync endpoint"]
             Memory["memory.go<br/>Memory tracking"]
             TTL["ttl.go<br/>TTL eviction"]
@@ -212,7 +212,7 @@ graph TB
 **Key Files:**
 - `types.go` - Capture struct (central hub)
 - `websocket.go`, `network_*.go`, `enhanced_actions.go`, `extension_logs.go` - Event-specific buffers
-- `queries.go`, `query_dispatcher.go` - Query queueing
+- `dispatcher_queries.go`, `dispatcher_results.go` - Query queueing and results
 - `sync.go` - Batched telemetry reception
 - `recording_manager.go` - Recording persistence
 - `handlers.go` - HTTP endpoint handlers

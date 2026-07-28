@@ -39,6 +39,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/issuereport"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -375,7 +376,7 @@ func (h *ToolHandler) armEvidenceForCommand(correlationID, action string, args j
 }
 
 func (h *ToolHandler) getCommandResult(correlationID string) (*queries.CommandResult, bool) {
-	return h.capture.GetCommandResult(correlationID)
+	return h.capture.Queries().GetCommandResult(correlationID)
 }
 
 func (h *ToolHandler) IsExtensionConnected() bool {
@@ -481,7 +482,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	)
 	if handler.capture != nil {
 		handler.annotationStore.SetCommandCompleter(func(correlationID string, result json.RawMessage) {
-			handler.capture.ApplyCommandResult(correlationID, "complete", result, "")
+			handler.capture.Queries().ApplyCommandResult(correlationID, "complete", result, "")
 		})
 	}
 	detectNoise := func() {
@@ -500,12 +501,22 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	handler.securityScannerImpl = scan.NewScanner()
 	handler.thirdPartyAuditorImpl = thirdparty.NewThirdPartyAuditor()
 	handler.apiContractRuntime = apicontract.NewRuntime()
+	var performanceEntries func() []performance.PerformanceSnapshot
+	var queryStore toolobserve.CommandStore
+	var inProgress func() []capture.SyncInProgress
+	var captureReader session.RuntimeCaptureReader
+	if handler.capture != nil {
+		performanceEntries = handler.capture.Performance().Entries
+		queryStore = handler.capture.Queries()
+		inProgress = handler.capture.GetInProgressCommands
+		captureReader = handler.capture
+	}
 	handler.sessionManager = session.NewSessionManager(
 		10,
 		session.NewRuntimeStateReader(
 			handler.server.logs.Entries,
-			handler.capture.Performance().Entries,
-			handler.capture,
+			performanceEntries,
+			captureReader,
 		),
 	)
 	handler.auditTrail = audit.NewAuditTrail(audit.AuditConfig{
@@ -537,7 +548,8 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	handler.interactActionHandler = toolinteract.NewInteractActionHandler(interactDeps)
 	handler.uploadInteractHandler = toolinteract.NewUploadInteractHandler(interactDeps, handler.interactActionHandler)
 	handler.observeDispatcher = toolobserve.NewDispatcher(toolobserve.Config{
-		Host: handler, Commands: handler.capture, AnnotationStore: handler.annotationStore,
+		Host: handler, Commands: queryStore, InProgress: inProgress,
+		AnnotationStore: handler.annotationStore,
 		Annotations: func(_ toolobserve.Host, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return handler.annotationAnalysis.GetAnnotations(req, args)
 		},
@@ -623,6 +635,10 @@ func buildInteractDeps(h *ToolHandler) *toolinteract.Deps {
 	if h.Guards == nil {
 		h.Guards = toolguard.New(h.capture, h.shutdownCtx, defaultExtensionReadinessTimeout())
 	}
+	var getCommandResult func(string) (*queries.CommandResult, bool)
+	if h.capture != nil {
+		getCommandResult = h.capture.Queries().GetCommandResult
+	}
 	return &toolinteract.Deps{
 		RequirePilot: h.Guards.RequirePilot, RequireExtension: h.Guards.RequireExtension,
 		RequireTabTracking: h.Guards.RequireTabTracking, RequireCSPClear: h.Guards.RequireCSPClear,
@@ -661,7 +677,7 @@ func buildInteractDeps(h *ToolHandler) *toolinteract.Deps {
 		GetRedactionEngine: func() toolinteract.RedactionEngine {
 			return h.GetRedactionEngine()
 		},
-		GetCommandResult: h.capture.GetCommandResult,
+		GetCommandResult: getCommandResult,
 		ReplayMu:         &replayMu,
 	}
 }

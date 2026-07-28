@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
 // AddNetworkBodiesForTest adds network bodies directly to the buffer (TEST ONLY)
@@ -155,12 +154,6 @@ func (c *Capture) SetCSPStatusForTest(restricted bool, level string) {
 	defer c.mu.Unlock()
 	c.extensionState.cspRestricted = restricted
 	c.extensionState.cspLevel = level
-}
-
-// GetLastPendingQuery returns the most recently created pending query (TEST ONLY)
-// Returns nil if no queries exist.
-func (c *Capture) GetLastPendingQuery() *queries.PendingQuery {
-	return c.queryDispatcher.GetLastPendingQuery()
 }
 
 // SimulateSyncForTest simulates a /sync connection from the extension,

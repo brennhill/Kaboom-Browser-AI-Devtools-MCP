@@ -230,7 +230,7 @@ last_reviewed: 2026-02-16
 
 ### Correlation ID Tracking
 **Code:**
-- `internal/capture/query_dispatcher.go` (`RegisterCommand`, `ApplyCommandResult`, `ExpireCommand`)
+- `internal/queries/dispatcher_commands.go` (`RegisterCommand`, `ApplyCommandResult`, `ExpireCommand`)
 - cmd/browser-agent/tools_core.go (toolObserveCommandResult, toolObservePendingCommands)
 
 **Docs:**
