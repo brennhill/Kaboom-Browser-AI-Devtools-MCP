@@ -90,7 +90,11 @@ test_paths:
   - tests/extension/sync-manager.test.js
   - tests/extension/observe-screenshot.test.js
   - tests/extension/no-compatibility-facades.test.js
+  - tests/extension/network-bodies-fixture.js
+  - tests/extension/network-bodies-xhr.test.js
   - tests/extension/network-bodies.test.js
+  - tests/extension/network-body-e2e-fixture.js
+  - tests/extension/network-body-e2e.test.js
   - tests/extension/network-waterfall.test.js
   - tests/extension/websocket.test.js
   - tests/extension/websocket-tracking.test.js

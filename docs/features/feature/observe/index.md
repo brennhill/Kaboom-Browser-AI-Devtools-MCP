@@ -76,7 +76,11 @@ test_paths:
   - internal/tools/observe/page_state_screenshot_test.go
   - internal/tools/observe/hints/hints_test.go
   - tests/extension/inject-console-network-exceptions.test.js
+  - tests/extension/network-bodies-fixture.js
+  - tests/extension/network-bodies-xhr.test.js
   - tests/extension/network-bodies.test.js
+  - tests/extension/network-body-e2e-fixture.js
+  - tests/extension/network-body-e2e.test.js
   - tests/extension/content.test.js
   - tests/extension/runtime-log-branding.test.js
   - tests/extension/background-errors-comms.test.js

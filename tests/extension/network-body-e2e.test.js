@@ -1,157 +1,19 @@
 // @ts-nocheck
 /**
- * @fileoverview network-body-e2e.test.js — E2E tests for network body capture.
- * Tests actual fetch behavior with a real HTTP server for edge cases:
- * large body truncation, binary content handling, header sanitization,
- * streaming responses, and error response capture.
- *
- * Requires test server: node extension-tests/fixtures/test-server.mjs
- * Tests skip gracefully if the server is not running.
+ * @fileoverview Network-body integration tests against the optional local HTTP fixture server.
  */
 
 import { test, describe, beforeEach, afterEach, before } from 'node:test'
 import assert from 'node:assert'
-import http from 'node:http'
-
-const TEST_SERVER_PORT = 19891
-const TEST_SERVER_URL = `http://localhost:${TEST_SERVER_PORT}`
-
-// Track captured network body events
-let capturedEvents = []
-let mockWindow
-
-/**
- * Check if test server is running
- * @returns {Promise<boolean>}
- */
-async function isServerRunning() {
-  return new Promise((resolve) => {
-    const req = http.get(`${TEST_SERVER_URL}/health`, (res) => {
-      let data = ''
-      res.on('data', (chunk) => (data += chunk))
-      res.on('end', () => {
-        try {
-          const json = JSON.parse(data)
-          resolve(json.status === 'ok')
-        } catch {
-          resolve(false)
-        }
-      })
-    })
-    req.on('error', () => resolve(false))
-    req.setTimeout(1000, () => {
-      req.destroy()
-      resolve(false)
-    })
-  })
-}
-
-/**
- * Make an HTTP request using Node's http module
- * @param {string} path - URL path
- * @param {Object} options - Request options
- * @returns {Promise<{status: number, headers: Object, body: string|Buffer}>}
- */
-function makeRequest(path, options = {}) {
-  return new Promise((resolve, reject) => {
-    const url = new URL(path, TEST_SERVER_URL)
-    const reqOptions = {
-      hostname: url.hostname,
-      port: url.port,
-      path: url.pathname,
-      method: options.method || 'GET',
-      headers: options.headers || {}
-    }
-
-    const req = http.request(reqOptions, (res) => {
-      const chunks = []
-      res.on('data', (chunk) => chunks.push(chunk))
-      res.on('end', () => {
-        const body = Buffer.concat(chunks)
-        resolve({
-          status: res.statusCode,
-          headers: res.headers,
-          body: options.binary ? body : body.toString()
-        })
-      })
-    })
-
-    req.on('error', reject)
-
-    if (options.body) {
-      req.write(options.body)
-    }
-
-    req.end()
-  })
-}
-
-/**
- * Create a mock window with postMessage capture
- */
-function createTestWindow() {
-  capturedEvents = []
-  return {
-    postMessage: (data) => {
-      if (data && data.type === 'kaboom_network_body') {
-        capturedEvents.push(data.payload)
-      }
-    }
-  }
-}
-
-// Minimal Headers polyfill
-class MockHeaders {
-  constructor(init) {
-    this._map = new Map()
-    if (init) {
-      if (init instanceof MockHeaders) {
-        init._map.forEach((v, k) => this._map.set(k, v))
-      } else if (typeof init === 'object') {
-        Object.entries(init).forEach(([k, v]) => this._map.set(k.toLowerCase(), v))
-      }
-    }
-  }
-  get(name) {
-    return this._map.get(name.toLowerCase()) || null
-  }
-  set(name, value) {
-    this._map.set(name.toLowerCase(), value)
-  }
-  entries() {
-    return this._map.entries()
-  }
-  forEach(fn) {
-    this._map.forEach((v, k) => fn(v, k))
-  }
-}
-
-/**
- * Create a mock Response object from http response
- */
-function createMockResponse(httpRes) {
-  const headers = new MockHeaders()
-  Object.entries(httpRes.headers).forEach(([k, v]) => headers.set(k, v))
-
-  return {
-    ok: httpRes.status >= 200 && httpRes.status < 300,
-    status: httpRes.status,
-    statusText: http.STATUS_CODES[httpRes.status],
-    headers,
-    clone: function () {
-      return {
-        ...this,
-        text: () => Promise.resolve(typeof httpRes.body === 'string' ? httpRes.body : httpRes.body.toString()),
-        blob: () =>
-          Promise.resolve({
-            size: Buffer.byteLength(httpRes.body),
-            type: headers.get('content-type') || ''
-          }),
-        headers: this.headers
-      }
-    }
-  }
-}
+import {
+  createMockResponse,
+  createTestWindow,
+  isServerRunning,
+  makeRequest,
+  MockHeaders,
+  networkBodyE2EState,
+  TEST_SERVER_URL,
+} from './network-body-e2e-fixture.js'
 
 describe('Network Body E2E Tests', async () => {
   let serverAvailable = false
@@ -170,9 +32,9 @@ describe('Network Body E2E Tests', async () => {
     originalWindow = globalThis.window
     originalHeaders = globalThis.Headers
     globalThis.Headers = MockHeaders
-    mockWindow = createTestWindow()
-    globalThis.window = mockWindow
-    capturedEvents = []
+    networkBodyE2EState.mockWindow = createTestWindow()
+    globalThis.window = networkBodyE2EState.mockWindow
+    networkBodyE2EState.capturedEvents = []
   })
 
   afterEach(() => {
@@ -508,7 +370,7 @@ describe('Network Body E2E Tests', async () => {
       // Wait for async body capture
       await new Promise((r) => setTimeout(r, 50))
 
-      const event = capturedEvents.find((e) => e.method === 'POST')
+      const event = networkBodyE2EState.capturedEvents.find((e) => e.method === 'POST')
       assert.ok(event, 'Expected POST event to be captured')
       assert.strictEqual(event.request_body, '{"test":"data"}')
     })
@@ -689,7 +551,7 @@ describe('Network Body E2E Tests', async () => {
       await wrappedFetch('/error-500')
       await new Promise((r) => setTimeout(r, 50))
 
-      const event = capturedEvents.find((e) => e.status === 500)
+      const event = networkBodyE2EState.capturedEvents.find((e) => e.status === 500)
       assert.ok(event, 'Expected 500 error event')
       assert.ok(event.response_body.includes('Internal Server Error'))
     })
@@ -756,8 +618,8 @@ describe('Network Body E2E Tests', async () => {
       assert.strictEqual(response.status, 200)
 
       // Event should be captured
-      assert.ok(capturedEvents.length > 0, 'Expected captured events')
-      const event = capturedEvents[0]
+      assert.ok(networkBodyE2EState.capturedEvents.length > 0, 'Expected captured events')
+      const event = networkBodyE2EState.capturedEvents[0]
       assert.strictEqual(event.method, 'GET')
       assert.strictEqual(event.status, 200)
       assert.ok(event.response_body)
@@ -803,7 +665,7 @@ describe('Network Body E2E Tests', async () => {
       const { wrapFetchWithBodies, setNetworkBodyCaptureEnabled } = await import('../../extension/lib/net/network.js')
 
       setNetworkBodyCaptureEnabled(true)
-      capturedEvents = []
+      networkBodyE2EState.capturedEvents = []
 
       const mockFetch = async () => createMockResponse({ status: 200, headers: {}, body: '{}' })
       const wrappedFetch = wrapFetchWithBodies(mockFetch)
@@ -811,7 +673,7 @@ describe('Network Body E2E Tests', async () => {
       await wrappedFetch('http://localhost:7890/logs')
       await new Promise((r) => setTimeout(r, 50))
 
-      assert.strictEqual(capturedEvents.length, 0, 'Should not capture gasoline server requests')
+      assert.strictEqual(networkBodyE2EState.capturedEvents.length, 0, 'Should not capture gasoline server requests')
     })
   })
 })
