@@ -18,6 +18,7 @@ code_paths:
   - cmd/browser-agent/handler.go
   - cmd/browser-agent/handler_tools_call.go
   - cmd/browser-agent/main.go
+  - cmd/browser-agent/config.go
   - cmd/browser-agent/tools_core.go
   - internal/session/snapshot-manager.go
   - cmd/browser-agent/internal/toolmodule/registry.go
@@ -77,6 +78,7 @@ test_paths:
   - cmd/browser-agent/handler_unit_test.go
   - cmd/browser-agent/handler_unit_telemetry_test.go
   - cmd/browser-agent/main_connection_stop_test.go
+  - cmd/browser-agent/main_flags_test.go
   - cmd/browser-agent/test_daemon_cleanup_test.go
   - cmd/browser-agent/main_connection_pid_contract_test.go
   - internal/diag/output_test.go

@@ -162,9 +162,8 @@ func TestServerPersistence_HealthResponseTime(t *testing.T) {
 // TestServerPersistence_SurvivesStdinClose verifies server stays alive even when
 // stdin closes (current behavior - server waits for SIGTERM/SIGINT).
 //
-// NOTE: The --persist flag controls whether the spawned background server stays
-// alive, not the MCP stdin behavior. In MCP mode, server always waits for signal.
-// This is actually BETTER for reliability - browser extension stays connected.
+// Persistence is the sole runtime model: the daemon waits for a termination
+// signal so browser-extension and later MCP clients can reconnect.
 func TestServerPersistence_SurvivesStdinClose(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping persistence test in short mode")

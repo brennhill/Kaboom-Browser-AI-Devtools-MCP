@@ -161,7 +161,6 @@ Options:
   --doctor               Run full diagnostics (alias of --check)
   --fastpath-min-samples Minimum telemetry samples required for threshold check (default: 50)
   --fastpath-max-failure-ratio Maximum allowed fast-path failure ratio for --check (disabled by default)
-  --persist              Deprecated no-op (kept for backwards compatibility)
   --version              Show version
   --help                 Show this help message
 

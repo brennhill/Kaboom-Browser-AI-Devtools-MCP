@@ -104,8 +104,6 @@ func registerFlags() *parsedFlags {
 	f.uploadDir = flag.String("upload-dir", "", "Directory from which file uploads are allowed (required for Stages 2-4)")
 	f.forceCleanup = flag.Bool("force", false, "Force kill all running kaboom daemons (used during install to ensure clean upgrade)")
 	f.installMode = flag.Bool("install", false, "Auto-install Kaboom to all detected MCP clients")
-	flag.Bool("mcp", false, "Run in MCP mode (default, kept for backwards compatibility)")
-	flag.Bool("persist", true, "Deprecated no-op (server persistence is default, kept for backwards compatibility)")
 	flag.Var(&f.uploadDenyPatterns, "upload-deny-pattern", "Additional sensitive path patterns to block (repeatable)")
 	flag.Var(&f.ssrfAllowedHosts, "ssrf-allow-host", "Host:port to allow for form submit SSRF (repeatable, test use)")
 	flag.Parse()

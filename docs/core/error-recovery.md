@@ -1,7 +1,7 @@
 ---
 doc_type: legacy_doc
 status: reference
-last_reviewed: 2026-02-16
+last_reviewed: 2026-07-28
 ---
 
 # Error Recovery Strategy - Kaboom MCP
@@ -171,29 +171,26 @@ async function executeJavaScript(script, timeoutMs = 5000) {
 
 ### Layer 4: Client Reconnection
 
-When the MCP client disconnects, the server implements graceful shutdown:
+When an MCP client disconnects, the persistent daemon remains available:
 
 #### Disconnect Flow
 
 ```
 MCP Client closes connection
   ↓
-Server detects EOF on stdin
+Bridge detects EOF on stdin
   ↓
-Log "MCP disconnected, shutting down in 100ms"
-  ↓ [if --persist NOT set]
-Exit immediately (frees port for next client)
-  ↓ [if --persist IS set]
-Keep HTTP server running for extension reconnection
+Bridge detaches from the daemon
+  ↓
+Daemon keeps HTTP and extension connections available
 ```
 
 #### Reconnection Strategy
 
-1. Extension detects server shutdown (health check fails)
-2. Extension's circuit breaker opens after 5 consecutive failures
-3. Extension uses exponential backoff: 1s → 2s → 4s → 8s → 30s
-4. When next MCP client connects, daemon restarts
-5. Extension detects server ready, circuit breaker resets to closed
+1. A new MCP bridge probes the local daemon.
+2. If healthy, it reconnects without restarting the daemon.
+3. If unavailable, lifecycle recovery starts a canonical daemon process.
+4. The extension detects readiness and resets its circuit breaker.
 
 ---
 
@@ -316,9 +313,6 @@ Invariant violations are logged as warnings and trigger diagnostic collection.
 ```bash
 # Override port (default: 7890)
 KABOOM_PORT=7891 npx kaboom-mcp
-
-# Keep server running after MCP disconnect
-npx kaboom-mcp --persist
 
 # Enable debug logging
 DEBUG=kaboom:* npx kaboom-mcp

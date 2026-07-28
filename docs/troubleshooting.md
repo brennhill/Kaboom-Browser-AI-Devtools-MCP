@@ -10,7 +10,7 @@ header:
 toc: true
 toc_sticky: true
 status: reference
-last_reviewed: 2026-02-16
+last_reviewed: 2026-07-28
 ---
 
 ## <i class="fas fa-unlink"></i> Extension Not Connecting to Server
@@ -80,21 +80,16 @@ Then retry `/mcp` — Claude Code will spawn a fresh instance.
 
 ## <i class="fas fa-sync-alt"></i> MCP Disconnected — Recovery
 
-When the AI client disconnects (closes its session), Kaboom logs the disconnect and exits after a brief grace period. This is by design — it frees the port so the next AI session can spawn a fresh process.
+When an AI client disconnects, the persistent daemon keeps its local HTTP server running so the extension and other clients remain connected.
 
 **What you'll see on stderr:**
 ```
-[Kaboom] MCP disconnected, shutting down in 100ms (port 7890 will be freed)
-[Kaboom] Shutdown complete
+[Kaboom] MCP client disconnected; daemon remains available on port 7890
 ```
 
-**Want to keep the server running?** Use `--persist`:
-```bash
-npx kaboom-agentic-browser --persist
-```
-This keeps the HTTP server running after MCP disconnect so the extension stays connected between AI sessions. Press Ctrl+C to stop.
+Persistence is the only runtime model; no compatibility flag is required. Use `kaboom --stop` for a clean shutdown or press Ctrl+C in a foreground session.
 
-**To recover:** Simply start a new AI session. Your AI tool will spawn a fresh Kaboom process automatically. The extension reconnects to the new instance on its next poll.
+**To recover:** Start a new AI session. It reconnects to the existing daemon, or starts one if none is running.
 
 **If port is still in use:** A previous Kaboom process may not have exited cleanly. Kill it:
 ```bash
