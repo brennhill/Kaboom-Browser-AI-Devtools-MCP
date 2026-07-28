@@ -8,15 +8,14 @@
 package testgenhandler
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
-// Deps is everything test generation needs from its host. Both halves are
-// interfaces internal/mcp already declares, so *ToolHandler satisfies Deps
-// without gaining a single new method.
-type Deps interface {
-	mcp.LogBufferReader
-	mcp.CaptureProvider
+// Deps supplies the three immutable snapshots consumed by test generation.
+type Deps struct {
+	LogEntries      func() []types.LogEntry
+	EnhancedActions func() []types.EnhancedAction
+	NetworkBodies   func() []types.NetworkBody
 }
 
 // Handler owns generate(what: test_from_context | test_heal | test_classify).

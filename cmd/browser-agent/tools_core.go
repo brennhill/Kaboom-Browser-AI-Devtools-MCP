@@ -506,7 +506,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 			return handler.interactActionHandler.HandleContentExtraction(req, args, "feature_gates", "feature_gates")
 		},
 	})
-	handler.testGenHandler = testgenhandler.New(handler)
+	handler.testGenHandler = testgenhandler.New(buildTestGenerationDeps(handler))
 	handler.generateDispatcher = toolgenerate.NewDispatcher(buildGenerateDeps(handler), handler.testGenHandler)
 	interactDeps := buildInteractDeps(handler)
 	handler.interactActionHandler = toolinteract.NewInteractActionHandler(interactDeps)
@@ -592,6 +592,27 @@ func buildGenerateDeps(h *ToolHandler) toolgenerate.Deps {
 		ExecuteA11yQuery: h.ExecuteA11yQuery,
 		IsExtensionConnected: func() bool {
 			return h.capture.Extension().IsExtensionConnected()
+		},
+	}
+}
+
+func buildTestGenerationDeps(h *ToolHandler) testgenhandler.Deps {
+	return testgenhandler.Deps{
+		LogEntries: func() []types.LogEntry {
+			entries, _ := h.server.logs.EntriesWithAddedAt()
+			return entries
+		},
+		EnhancedActions: func() []types.EnhancedAction {
+			if h.capture == nil {
+				return nil
+			}
+			return h.capture.Telemetry().GetAllEnhancedActions()
+		},
+		NetworkBodies: func() []types.NetworkBody {
+			if h.capture == nil {
+				return nil
+			}
+			return h.capture.Telemetry().GetNetworkBodies()
 		},
 	}
 }

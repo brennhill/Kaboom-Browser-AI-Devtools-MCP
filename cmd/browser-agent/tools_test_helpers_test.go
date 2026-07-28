@@ -403,7 +403,7 @@ func newTestToolHandler() *ToolHandler {
 		MCPHandler: &MCPHandler{server: srv},
 		capture:    cap,
 	}
-	h.testGenHandler = testgenhandler.New(h)
+	h.testGenHandler = testgenhandler.New(buildTestGenerationDeps(h))
 	h.generateDispatcher = toolgenerate.NewDispatcher(buildGenerateDeps(h), h.testGenHandler)
 	h.interactActionHandler = toolinteract.NewInteractActionHandler(buildInteractDeps(h))
 	h.configureLocalDeps = buildConfigureLocalDeps(h)

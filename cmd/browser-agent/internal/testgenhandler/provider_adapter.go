@@ -16,16 +16,15 @@ type dataProviderAdapter struct {
 }
 
 func (a *dataProviderAdapter) GetLogEntries() []types.LogEntry {
-	entries, _ := a.deps.GetLogEntries()
-	return entries
+	return a.deps.LogEntries()
 }
 
 func (a *dataProviderAdapter) GetAllEnhancedActions() []types.EnhancedAction {
-	return a.deps.GetCapture().Telemetry().GetAllEnhancedActions()
+	return a.deps.EnhancedActions()
 }
 
 func (a *dataProviderAdapter) GetNetworkBodies() []types.NetworkBody {
-	return a.deps.GetCapture().Telemetry().GetNetworkBodies()
+	return a.deps.NetworkBodies()
 }
 
 // dataProvider returns a testgen.DataProvider backed by this test-generation handler.

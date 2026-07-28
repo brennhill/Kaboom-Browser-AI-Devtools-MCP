@@ -141,6 +141,17 @@ func TestObserveDispatcherDoesNotRequireHostInterfaces(t *testing.T) {
 	}
 }
 
+func TestTestGenerationDoesNotRequireHostInterface(t *testing.T) {
+	relativePath := "cmd/browser-agent/internal/testgenhandler/handler.go"
+	source, err := os.ReadFile(filepath.Join(projectRoot(), relativePath))
+	if err != nil {
+		t.Fatalf("read %s: %v", relativePath, err)
+	}
+	if strings.Contains(string(source), "type Deps interface {") {
+		t.Fatal("test generation retains host dependency interface")
+	}
+}
+
 func TestGeneratePackagesDoNotRequireHostInterfaces(t *testing.T) {
 	for relativePath, forbidden := range map[string]string{
 		"cmd/browser-agent/internal/toolgenerate/deps.go":                 "type Deps interface {",

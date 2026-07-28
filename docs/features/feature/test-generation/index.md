@@ -37,6 +37,7 @@ test_paths:
   - cmd/browser-agent/internal/testgenhandler/generate_test.go
   - cmd/browser-agent/internal/testgenhandler/heal_test.go
   - cmd/browser-agent/internal/testgenhandler/classify_test.go
+  - cmd/browser-agent/internal/testgenhandler/testhelpers_test.go
   - internal/testgen/generate_test.go
   - internal/testgen/helpers_test.go
   - internal/testgen/classify_test.go
@@ -75,6 +76,8 @@ last_verified_date: 2026-03-05
 - Generate handlers receive an explicit immutable dependency bundle composed
   from the capture, annotation, version, connectivity, and accessibility owners;
   `ToolHandler` is not a generate dependency interface.
+- The context-test sub-handler likewise receives only log, action, and network
+  snapshot functions. It has no capture-provider or log-reader host interface.
 - Context dispatch: `cmd/browser-agent/internal/testgenhandler/generate.go`
 - Canonical contracts: `internal/testgen/types.go`, `internal/testgen/heal/types.go`
 - Provider delegation: `cmd/browser-agent/internal/testgenhandler/provider_adapter.go`
