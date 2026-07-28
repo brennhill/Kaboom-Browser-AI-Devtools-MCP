@@ -83,6 +83,9 @@ test_paths:
   - tests/extension/performance.test.js
   - tests/extension/reliability-fixes.test.js
   - tests/extension/no-compatibility-facades.test.js
+  - tests/extension/sync-client-commands.test.js
+  - tests/extension/sync-client-fixture.js
+  - tests/extension/sync-client-resilience.test.js
   - tests/extension/sync-client.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05

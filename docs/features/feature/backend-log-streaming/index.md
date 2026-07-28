@@ -80,6 +80,9 @@ test_paths:
   - internal/circuit/breaker_test.go
   - internal/debuglog/logger_test.go
   - internal/lifecycle/observer_test.go
+  - tests/extension/sync-client-commands.test.js
+  - tests/extension/sync-client-fixture.js
+  - tests/extension/sync-client-resilience.test.js
   - tests/extension/sync-client.test.js
   - tests/extension/server.test.js
   - tests/extension/background-batching.test.js
