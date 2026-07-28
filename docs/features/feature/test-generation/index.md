@@ -30,6 +30,7 @@ test_paths:
   - cmd/browser-agent/internal/toolgenerate/handlers_coverage_test.go
   - cmd/browser-agent/tools_generate_handler_test.go
   - cmd/browser-agent/tools_generate_validation_test.go
+  - cmd/browser-agent/tools_generate_warning_filter_test.go
   - cmd/browser-agent/internal/testgenhandler/context_test.go
   - cmd/browser-agent/internal/testgenhandler/generate_test.go
   - cmd/browser-agent/internal/testgenhandler/heal_test.go
@@ -67,6 +68,8 @@ last_verified_date: 2026-03-05
 ## Code and Tests
 
 - Sub-handler wiring: `cmd/browser-agent/internal/testgenhandler/handler.go`
+- Tool composition and tests use the owned `testGenHandler` directly; the
+  unchanged-return ToolHandler accessor has been deleted.
 - Context dispatch: `cmd/browser-agent/internal/testgenhandler/generate.go`
 - Canonical contracts: `internal/testgen/types.go`, `internal/testgen/heal/types.go`
 - Provider delegation: `cmd/browser-agent/internal/testgenhandler/provider_adapter.go`

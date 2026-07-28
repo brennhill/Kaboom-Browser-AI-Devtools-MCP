@@ -36,5 +36,5 @@ func newTestEnv() *testEnv {
 
 // newPureHandler builds a Handler for the classification/healing paths, which are
 // pure functions of their arguments and never touch Deps. The old tests expressed
-// this as `(&ToolHandler{}).testGen()`, which was a nil sub-handler.
+// this without an initialized test-generation handler.
 func newPureHandler() *Handler { return New(nil) }

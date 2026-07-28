@@ -402,10 +402,6 @@ func (h *ToolHandler) GetRedactionEngine() RedactionEngine {
 	return h.redactionEngine
 }
 
-func (h *ToolHandler) testGen() *testgenhandler.Handler {
-	return h.testGenHandler
-}
-
 const (
 	defaultColdStartTimeout       = 5 * time.Second
 	testExtensionReadinessTimeout = time.Millisecond
