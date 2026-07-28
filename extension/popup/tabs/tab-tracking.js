@@ -9,7 +9,8 @@
  */
 import { isInternalUrl } from '../shell/ui-utils.js';
 import { StorageKey } from '../../lib/constants.js';
-import { getLocals, onStorageChanged } from '../../lib/storage-utils.js'; // async API only
+import { onStorageChanged } from '../../lib/storage/changes.js';
+import { getLocals } from '../../lib/storage/local.js';
 import { isDomainCloaked } from '../../lib/tabs/cloaked-domains.js';
 import { handleAuditClick, handleStopTracking, handleUrlClick, handleTrackPageClick as handleTrackPageClickAPI } from './tab-tracking-api.js';
 let trackingStorageSyncInstalled = false;

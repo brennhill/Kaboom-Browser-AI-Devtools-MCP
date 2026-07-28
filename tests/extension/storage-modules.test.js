@@ -1,6 +1,6 @@
 // @ts-nocheck
 /**
- * @fileoverview storage-utils.test.js -- Tests for storage-utils module.
+ * @fileoverview storage-modules.test.js -- Tests for focused storage modules.
  * Covers async local storage CRUD, async session storage CRUD,
  * graceful degradation when APIs are unavailable, diagnostics, and
  * service worker restart detection.
@@ -97,7 +97,7 @@ function createStorageMock() {
 }
 
 // We need to set up the chrome mock BEFORE importing the module because
-// storage-utils checks chrome availability at import time.
+// Storage modules check chrome availability at call time.
 let chromeMock = createStorageMock()
 globalThis.chrome = chromeMock
 
@@ -112,12 +112,18 @@ if (!globalThis.navigator || !globalThis.navigator.userAgent) {
 }
 
 // Dynamic import — import once and test against the live chrome global
-let storageUtils
+let storageModules
 async function loadModule() {
-  if (!storageUtils) {
-    storageUtils = await import('../../extension/lib/storage-utils.js')
+  if (!storageModules) {
+    const [io, local, session, changes] = await Promise.all([
+      import('../../extension/lib/storage/io.js'),
+      import('../../extension/lib/storage/local.js'),
+      import('../../extension/lib/storage/session.js'),
+      import('../../extension/lib/storage/changes.js')
+    ])
+    storageModules = { ...io, ...local, ...session, ...changes }
   }
-  return storageUtils
+  return storageModules
 }
 
 // =============================================================================

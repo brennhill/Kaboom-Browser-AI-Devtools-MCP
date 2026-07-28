@@ -10,7 +10,7 @@
 
 import type { WebSocketCaptureMode } from '../types/index.js'
 import { SettingName } from '../lib/constants.js'
-import { getLocals } from '../lib/storage-utils.js'
+import { getLocals } from '../lib/storage/local.js'
 
 /** Whether inject.bundled.js has been injected into the page (MAIN world) */
 let injected = false

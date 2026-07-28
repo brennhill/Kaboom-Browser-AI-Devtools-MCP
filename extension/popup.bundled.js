@@ -98,28 +98,32 @@
     ERROR_GROUPS: "kaboom_error_groups"
   };
 
+  // extension/lib/storage/changes.js
+  function onStorageChanged(listener) {
+    if (typeof chrome === "undefined" || !chrome.storage)
+      return () => {
+      };
+    chrome.storage.onChanged.addListener(listener);
+    return () => chrome.storage.onChanged.removeListener(listener);
+  }
+
   // extension/lib/brand.js
   var KABOOM_LOG_PREFIX = "[KaBOOM!]";
   var KABOOM_RECORDING_LOG_PREFIX = "[KaBOOM! REC]";
 
-  // extension/lib/storage-utils.js
-  function getStorageWithSession() {
-    if (typeof chrome === "undefined" || !chrome.storage)
-      return null;
-    return chrome.storage;
-  }
+  // extension/lib/storage/io.js
   function isPromiseLike(value) {
     return typeof value === "object" && value !== null && typeof value.then === "function";
   }
   function storageLastError() {
     if (typeof chrome === "undefined" || !chrome.runtime)
       return null;
-    const err = chrome.runtime.lastError;
-    return err ? err.message ?? "unknown chrome.storage error" : null;
+    const error = chrome.runtime.lastError;
+    return error ? error.message ?? "unknown chrome.storage error" : null;
   }
   function persist(write, context) {
-    void write.catch((err) => {
-      console.warn(`${KABOOM_LOG_PREFIX} storage write failed (${context}):`, err);
+    void write.catch((error) => {
+      console.warn(`${KABOOM_LOG_PREFIX} storage write failed (${context}):`, error);
     });
   }
   function readStorage(method, keys) {
@@ -148,9 +152,9 @@
         if (settled)
           return;
         settled = true;
-        const errMsg = storageLastError();
-        if (errMsg)
-          reject(new Error(`chrome.storage ${label} failed: ${errMsg}`));
+        const errorMessage2 = storageLastError();
+        if (errorMessage2)
+          reject(new Error(`chrome.storage ${label} failed: ${errorMessage2}`));
         else
           resolve();
       };
@@ -170,6 +174,8 @@
   function removeFromStorage(method, keys) {
     return runStorageWrite("remove", (finish) => method(keys, finish));
   }
+
+  // extension/lib/storage/local.js
   async function getLocal(key) {
     if (typeof chrome === "undefined" || !chrome.storage)
       return void 0;
@@ -201,25 +207,25 @@
       return;
     await removeFromStorage(chrome.storage.local.remove.bind(chrome.storage.local), keys);
   }
+
+  // extension/lib/storage/session.js
+  function getStorageWithSession() {
+    if (typeof chrome === "undefined" || !chrome.storage)
+      return null;
+    return chrome.storage;
+  }
   async function getSession(key) {
     const storage = getStorageWithSession();
-    if (!storage || !storage.session)
+    if (!storage?.session)
       return void 0;
     const result = await readStorage(storage.session.get.bind(storage.session), key);
     return result[key];
   }
   async function setSession(key, value) {
     const storage = getStorageWithSession();
-    if (!storage || !storage.session)
+    if (!storage?.session)
       return;
     await writeStorage(storage.session.set.bind(storage.session), { [key]: value });
-  }
-  function onStorageChanged(listener) {
-    if (typeof chrome === "undefined" || !chrome.storage)
-      return () => {
-      };
-    chrome.storage.onChanged.addListener(listener);
-    return () => chrome.storage.onChanged.removeListener(listener);
   }
 
   // extension/lib/tabs/internal-url.js

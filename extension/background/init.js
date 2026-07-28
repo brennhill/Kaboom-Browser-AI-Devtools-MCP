@@ -25,7 +25,8 @@ import { isRecording, startRecording, stopRecording, initRecording } from './rec
 import { installMessageListener, broadcastTrackingState } from './message-handlers.js';
 import { captureScreenshot } from './sync/screenshot.js';
 import { updateBadge } from './sync/server.js';
-import { wasServiceWorkerRestarted, markStateVersion, setSessionAccessLevel, setLocal, getLocal } from '../lib/storage-utils.js';
+import { getLocal, setLocal } from '../lib/storage/local.js';
+import { markStateVersion, setSessionAccessLevel, wasServiceWorkerRestarted } from '../lib/storage/session.js';
 import { loadServerInstallId } from './sync/sync-client.js';
 /**
  * Initialize the extension on startup

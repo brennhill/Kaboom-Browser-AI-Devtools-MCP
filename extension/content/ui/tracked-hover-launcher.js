@@ -13,7 +13,9 @@ import { playShutterSound, primeShutterAudio, showScreenshotFlash } from './hove
  * Flip to `true` to restore (matches the flag in popup/tab-tracking.ts).
  */
 const AUDIT_BUTTON_ENABLED = false;
-import { getLocal, setLocal, removeLocal, onStorageChanged, persist } from '../../lib/storage-utils.js';
+import { onStorageChanged } from '../../lib/storage/changes.js';
+import { persist } from '../../lib/storage/io.js';
+import { getLocal, removeLocal, setLocal } from '../../lib/storage/local.js';
 import { initTerminalPanelBridge, isTerminalVisible, onTerminalPanelVisibilityChanged, openTerminalPanel, writeToTerminal } from './terminal-panel-bridge.js';
 const ROOT_ID = 'kaboom-tracked-hover-launcher';
 const PANEL_ID = 'kaboom-tracked-hover-panel';

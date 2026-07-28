@@ -16,13 +16,13 @@ const INSTALL_SH = path.join(REPO_ROOT, 'scripts', 'install.sh')
 const INSTALL_PS1 = path.join(REPO_ROOT, 'scripts', 'install.ps1')
 const SERVER_INSTALL_JS = path.join(REPO_ROOT, 'server', 'scripts', 'install.js')
 
-test('bash installer validates bundled or legacy bootstrap and falls back to STABLE source zip', () => {
+test('bash installer validates the canonical bundled layout and falls back to STABLE source zip', () => {
   const script = fs.readFileSync(INSTALL_SH, 'utf8')
 
   assert.match(
     script,
-    /\[ -f "\$base_dir\/early-patch\.bundled\.js" \] \|\| \[ -f "\$base_dir\/theme-bootstrap\.js" \]/,
-    'install.sh must accept early-patch.bundled.js (bundled layout) or theme-bootstrap.js (legacy layout)'
+    /\[ -f "\$base_dir\/early-patch\.bundled\.js" \]/,
+    'install.sh must require the canonical early-patch bundle'
   )
   assert.match(
     script,
@@ -66,7 +66,7 @@ test('bash installer uses staged extension promotion and supports strict checksu
   )
 })
 
-test('powershell installer accepts bundled or legacy extension layout and falls back to STABLE source zip', () => {
+test('powershell installer requires the canonical bundled layout and falls back to STABLE source zip', () => {
   const script = fs.readFileSync(INSTALL_PS1, 'utf8')
 
   assert.match(
@@ -74,29 +74,10 @@ test('powershell installer accepts bundled or legacy extension layout and falls 
     /manifest\.json/,
     'install.ps1 must always require manifest.json in staged extension'
   )
-  // Dual-layout validation (ported from install.sh): each module must accept
-  // the modern bundled file OR the legacy modular file — never hard-require
-  // legacy-only files like theme-bootstrap.js (which no longer ships).
-  assert.match(
-    script,
-    /"background\.js",\s*"background\\init\.js"/,
-    'install.ps1 must accept background.js (bundled) or background\\init.js (legacy)'
-  )
-  assert.match(
-    script,
-    /"content\.bundled\.js",\s*"content\\script-injection\.js"/,
-    'install.ps1 must accept content.bundled.js (bundled) or content\\script-injection.js (legacy)'
-  )
-  assert.match(
-    script,
-    /"inject\.bundled\.js",\s*"inject\\index\.js"/,
-    'install.ps1 must accept inject.bundled.js (bundled) or inject\\index.js (legacy)'
-  )
-  assert.match(
-    script,
-    /"early-patch\.bundled\.js",\s*"theme-bootstrap\.js"/,
-    'install.ps1 must accept early-patch.bundled.js (bundled) or theme-bootstrap.js (legacy)'
-  )
+  for (const file of ['background.js', 'content.bundled.js', 'inject.bundled.js', 'early-patch.bundled.js']) {
+    assert.match(script, new RegExp(file.replaceAll('.', '\\.')), `install.ps1 must require ${file}`)
+  }
+  assert.doesNotMatch(script, /background\\init\.js|content\\script-injection\.js|inject\\index\.js|theme-bootstrap\.js/)
   assert.match(
     script,
     /archive\/refs\/heads\/STABLE\.zip/,

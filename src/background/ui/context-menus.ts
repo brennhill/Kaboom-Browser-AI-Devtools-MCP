@@ -4,7 +4,7 @@
  */
 
 import { StorageKey } from '../../lib/constants.js'
-import { getLocal } from '../../lib/storage-utils.js'
+import { getLocal } from '../../lib/storage/local.js'
 import type { ScreenRecordingHandlers, RecordingShortcutHandlers } from './keyboard-shortcuts.js'
 import { toggleScreenRecording, toggleActionSequenceRecording } from './keyboard-shortcuts.js'
 import { errorMessage } from '../../lib/error-utils.js'

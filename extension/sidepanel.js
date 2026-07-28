@@ -5,7 +5,7 @@
  * Docs: docs/features/feature/terminal/index.md
  */
 import { StorageKey, TERMINAL_PANEL_PORT } from './lib/constants.js';
-import { onStorageChanged } from './lib/storage-utils.js';
+import { onStorageChanged } from './lib/storage/changes.js';
 import { state, resetAllState, getTerminalServerUrl, resolveTerminalServerUrl, TERMINAL_WRITE_SUBMIT_DELAY_MS, TERMINAL_GUARD_POLL_MS } from './content/ui/terminal-widget-types.js';
 import { getServerUrl, getTerminalConfig, persistUIState, loadPersistedSession, clearPersistedSession, validateSession, startSession, getTerminalDevRoot, setTerminalDevRoot, stopActiveSession } from './content/ui/terminal-widget-session.js';
 import { showActionToast } from './content/ui/toast.js';

@@ -5,7 +5,8 @@
  */
 import { DEFAULT_SERVER_URL, StorageKey } from '../../lib/constants.js';
 import { postDaemonJSON } from '../../lib/daemon-http.js';
-import { getLocal, setLocal, removeLocal, persist } from '../../lib/storage-utils.js';
+import { persist } from '../../lib/storage/io.js';
+import { getLocal, removeLocal, setLocal } from '../../lib/storage/local.js';
 const START_LABEL = 'Record action workflow';
 const STOP_LABEL = 'Stop recording';
 function showRecording(els, state) {

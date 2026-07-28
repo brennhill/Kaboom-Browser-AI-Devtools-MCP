@@ -8,7 +8,7 @@
  * Manages the AI Web Pilot feature toggle
  */
 import { StorageKey } from '../lib/constants.js';
-import { getLocal } from '../lib/storage-utils.js';
+import { getLocal } from '../lib/storage/local.js';
 /**
  * Apply pre-loaded AI Web Pilot value to the toggle and wire up change handler.
  * Called from the orchestrator after a single batched storage read.

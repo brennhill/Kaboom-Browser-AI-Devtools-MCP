@@ -5,7 +5,8 @@
  */
 import { KABOOM_LOG_PREFIX } from '../../lib/brand.js';
 import { StorageKey } from '../../lib/constants.js';
-import { getLocal, persist } from '../../lib/storage-utils.js';
+import { persist } from '../../lib/storage/io.js';
+import { getLocal } from '../../lib/storage/local.js';
 import { clearTrackedTab } from '../../lib/tabs/tracked-tab-storage.js';
 import { trackTab, untrackTab } from '../../lib/tabs/tab-tracking-core.js';
 import { focusTabAndWindow } from '../../lib/tabs/tab-focus.js';

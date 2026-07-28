@@ -10,7 +10,7 @@
 
 import { scaleTimeout } from '../../lib/timeouts.js'
 import { StorageKey } from '../../lib/constants.js'
-import { getLocal } from '../../lib/storage-utils.js'
+import { getLocal } from '../../lib/storage/local.js'
 import type { OffscreenRecordingStoppedMessage } from '../../types/runtime-messages.js'
 import { errorMessage, isNoReceiverError } from '../../lib/error-utils.js'
 import { trackUIFeature } from '../ui/ui-usage-tracker.js'

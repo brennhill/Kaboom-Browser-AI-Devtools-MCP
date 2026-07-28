@@ -12,7 +12,9 @@
 
 import { StorageKey } from '../../lib/constants.js'
 import { KABOOM_RECORDING_LOG_PREFIX } from '../../lib/brand.js'
-import { getLocal, removeLocal, onStorageChanged, persist } from '../../lib/storage-utils.js'
+import { onStorageChanged } from '../../lib/storage/changes.js'
+import { persist } from '../../lib/storage/io.js'
+import { getLocal, removeLocal } from '../../lib/storage/local.js'
 import {
   sendRecordingGestureDecision,
   handleStartClick,

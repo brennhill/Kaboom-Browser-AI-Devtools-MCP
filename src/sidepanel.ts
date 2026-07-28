@@ -6,7 +6,7 @@
  */
 
 import { StorageKey, TERMINAL_PANEL_PORT } from './lib/constants.js'
-import { onStorageChanged } from './lib/storage-utils.js'
+import { onStorageChanged } from './lib/storage/changes.js'
 import {
   state,
   resetAllState,

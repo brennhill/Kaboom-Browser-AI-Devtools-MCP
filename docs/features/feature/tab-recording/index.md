@@ -30,6 +30,10 @@ code_paths:
   - src/background/recording/utils.ts
   - src/offscreen/recording-worker.ts
   - src/lib/daemon-http.ts
+  - src/lib/storage/changes.ts
+  - src/lib/storage/io.ts
+  - src/lib/storage/local.ts
+  - src/lib/storage/session.ts
   - src/popup/recording/recording.ts
   - extension/manifest.json
   - extension/popup.html
@@ -41,6 +45,8 @@ test_paths:
   - tests/extension/recording-shortcut-command.test.js
   - tests/extension/context-menus-labels.test.js
   - tests/extension/recording-listeners-target-tab.test.js
+  - tests/extension/storage-modules.test.js
+  - tests/extension/no-compatibility-facades.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -71,3 +77,6 @@ last_verified_date: 2026-03-05
 The implementation and tests for popup/manual recording and shortcut-toggle recording are listed in frontmatter `code_paths` and `test_paths`.
 Saved-video discovery is scoped to the canonical recordings directory; it does
 not merge or deduplicate entries from historical storage roots.
+Extension storage is divided by change lifecycle, shared I/O mechanics, durable
+local state, and ephemeral session state. Consumers import those owners
+directly; there is no all-purpose storage facade or compatibility barrel.

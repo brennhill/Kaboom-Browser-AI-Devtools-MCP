@@ -2,7 +2,7 @@
 // Content scripts bail out early on cloaked domains to avoid interference.
 
 import { StorageKey } from '../constants.js'
-import { getLocal } from '../storage-utils.js'
+import { getLocal } from '../storage/local.js'
 
 /**
  * Built-in domains where Kaboom should never run.

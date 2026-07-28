@@ -11,7 +11,9 @@
 import type { StorageChange } from '../types/index.js'
 import { KABOOM_LOG_PREFIX } from '../lib/brand.js'
 import { StorageKey } from '../lib/constants.js'
-import { getLocal, setLocal, setLocals, onStorageChanged, persist } from '../lib/storage-utils.js'
+import { onStorageChanged } from '../lib/storage/changes.js'
+import { persist } from '../lib/storage/io.js'
+import { getLocal, setLocal, setLocals } from '../lib/storage/local.js'
 import { clearTrackedTab as clearTrackedTabState } from './ui/tab-state.js'
 
 // =============================================================================

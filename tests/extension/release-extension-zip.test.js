@@ -81,9 +81,9 @@ test('extension-zip artifact includes module graph entrypoints', (t) => {
   const required = [
     'manifest.json',
     'background.js',
-    'background/init.js',
-    'content/script-injection.js',
-    'inject/index.js'
+    'content.bundled.js',
+    'inject.bundled.js',
+    'early-patch.bundled.js'
   ]
   for (const file of required) {
     assert.ok(entries.has(file), `extension zip must include ${file}`)

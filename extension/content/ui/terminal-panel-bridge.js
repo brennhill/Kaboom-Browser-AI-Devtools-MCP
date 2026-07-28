@@ -5,7 +5,8 @@
  * Docs: docs/features/feature/terminal/index.md
  */
 import { StorageKey, TERMINAL_PANEL_FALLBACK_HINT, TERMINAL_PANEL_STALE_CONTEXT_HINT } from '../../lib/constants.js';
-import { getSession, onStorageChanged } from '../../lib/storage-utils.js';
+import { onStorageChanged } from '../../lib/storage/changes.js';
+import { getSession } from '../../lib/storage/session.js';
 import { showActionToast } from './toast.js';
 let panelVisible = false;
 let bridgeInitialized = false;

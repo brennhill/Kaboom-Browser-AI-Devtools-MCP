@@ -1,7 +1,7 @@
 // cloaked-domains.ts — Domain blocklist where Kaboom disables itself.
 // Content scripts bail out early on cloaked domains to avoid interference.
 import { StorageKey } from '../constants.js';
-import { getLocal } from '../storage-utils.js';
+import { getLocal } from '../storage/local.js';
 /**
  * Built-in domains where Kaboom should never run.
  * These are also excluded via manifest exclude_matches, but this list

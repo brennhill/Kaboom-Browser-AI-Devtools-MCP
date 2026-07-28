@@ -5,7 +5,9 @@
  */
 import { DEFAULT_SERVER_URL, StorageKey } from '../../lib/constants.js';
 import { getDaemonStartHint } from '../../lib/brand.js';
-import { getLocal, setSession, getSession, removeSessions, setLocal, persist } from '../../lib/storage-utils.js';
+import { persist } from '../../lib/storage/io.js';
+import { getLocal, setLocal } from '../../lib/storage/local.js';
+import { getSession, removeSessions, setSession } from '../../lib/storage/session.js';
 import { state, resolveTerminalServerUrl } from './terminal-widget-types.js';
 // =============================================================================
 // CONFIG HELPERS — read/write chrome.storage.local

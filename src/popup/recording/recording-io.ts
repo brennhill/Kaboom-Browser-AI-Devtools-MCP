@@ -8,7 +8,8 @@
 import { StorageKey } from '../../lib/constants.js'
 import { KABOOM_RECORDING_LOG_PREFIX } from '../../lib/brand.js'
 import { errorMessage } from '../../lib/error-utils.js'
-import { setLocal, removeLocal, persist } from '../../lib/storage-utils.js'
+import { persist } from '../../lib/storage/io.js'
+import { removeLocal, setLocal } from '../../lib/storage/local.js'
 
 export interface RecordingElements {
   row: HTMLElement

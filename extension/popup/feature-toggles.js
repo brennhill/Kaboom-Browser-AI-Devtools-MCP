@@ -4,7 +4,7 @@
  * Docs: docs/features/feature/browser-extension-enhancement/index.md
  */
 import { SettingName, StorageKey } from '../lib/constants.js';
-import { getLocals } from '../lib/storage-utils.js';
+import { getLocals } from '../lib/storage/local.js';
 /**
  * Feature toggle configuration
  */

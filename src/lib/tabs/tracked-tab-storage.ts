@@ -6,7 +6,7 @@
  */
 
 import { StorageKey } from '../constants.js'
-import { setLocals, removeLocals } from '../storage-utils.js'
+import { setLocals, removeLocals } from '../storage/local.js'
 
 /** All storage keys that make up tracked-tab state. Always read/cleared together. */
 export const TRACKED_TAB_STORAGE_KEYS = [

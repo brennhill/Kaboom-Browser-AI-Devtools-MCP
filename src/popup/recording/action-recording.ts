@@ -6,7 +6,8 @@
 
 import { DEFAULT_SERVER_URL, StorageKey } from '../../lib/constants.js'
 import { postDaemonJSON } from '../../lib/daemon-http.js'
-import { getLocal, setLocal, removeLocal, persist } from '../../lib/storage-utils.js'
+import { persist } from '../../lib/storage/io.js'
+import { getLocal, removeLocal, setLocal } from '../../lib/storage/local.js'
 
 interface ActionRecordingElements {
   row: HTMLElement

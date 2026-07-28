@@ -7,7 +7,8 @@
 import { StorageKey } from '../../lib/constants.js';
 import { KABOOM_RECORDING_LOG_PREFIX } from '../../lib/brand.js';
 import { errorMessage } from '../../lib/error-utils.js';
-import { setLocal, removeLocal, persist } from '../../lib/storage-utils.js';
+import { persist } from '../../lib/storage/io.js';
+import { removeLocal, setLocal } from '../../lib/storage/local.js';
 const LOG = `${KABOOM_RECORDING_LOG_PREFIX} Popup:`;
 export function sendRecordingGestureDecision(type) {
     chrome.runtime.sendMessage({ type }, () => {

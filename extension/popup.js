@@ -6,7 +6,10 @@
  * Docs: docs/features/feature/tab-tracking-ux/index.md
  */
 import { RuntimeMessageName, StorageKey } from './lib/constants.js';
-import { getLocal, getLocals, setSession, getSession, onStorageChanged, persist } from './lib/storage-utils.js';
+import { onStorageChanged } from './lib/storage/changes.js';
+import { persist } from './lib/storage/io.js';
+import { getLocal, getLocals } from './lib/storage/local.js';
+import { getSession, setSession } from './lib/storage/session.js';
 import { updateConnectionStatus } from './popup/shell/status-display.js';
 import { setupRecordingUI } from './popup/recording/recording.js';
 import { setupDrawModeButton } from './popup/draw-mode.js';

@@ -13,7 +13,7 @@ import { isAiWebPilotEnabled } from '../state.js'
 import { KABOOM_LOG_PREFIX } from '../../lib/brand.js'
 import { errorMessage, isNoReceiverError } from '../../lib/error-utils.js'
 import { delay } from '../../lib/timeout-utils.js'
-import { setLocals } from '../../lib/storage-utils.js'
+import { setLocals } from '../../lib/storage/local.js'
 import { isInternalUrl } from '../../lib/tabs/internal-url.js'
 
 // =============================================================================

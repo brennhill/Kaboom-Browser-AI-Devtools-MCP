@@ -16,7 +16,7 @@
 
 import { SettingName, StorageKey, DEFAULT_SERVER_URL } from './lib/constants.js'
 import { buildDaemonHeaders, buildDaemonJSONRequestInit } from './lib/daemon-http.js'
-import { getLocal, getLocals, setLocals } from './lib/storage-utils.js'
+import { getLocal, getLocals, setLocals } from './lib/storage/local.js'
 import { KABOOM_LOG_PREFIX } from './lib/brand.js'
 
 interface StorageResult {

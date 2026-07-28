@@ -9,7 +9,8 @@
  */
 
 import { StorageKey } from '../lib/constants.js'
-import { getLocal, onStorageChanged } from '../lib/storage-utils.js'
+import { onStorageChanged } from '../lib/storage/changes.js'
+import { getLocal } from '../lib/storage/local.js'
 
 // Whether this content script's tab is the currently tracked tab
 let isTrackedTab = false

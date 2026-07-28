@@ -12,7 +12,7 @@ import { sendTabToast } from '../ui/tab-state.js'
 import { errorMessage } from '../../lib/error-utils.js'
 import { delay } from '../../lib/timeout-utils.js'
 import { buildRecordingToastLabel } from './utils.js'
-import { setLocal, removeLocal } from '../../lib/storage-utils.js'
+import { setLocal, removeLocal } from '../../lib/storage/local.js'
 import { KABOOM_RECORDING_LOG_PREFIX } from '../../lib/brand.js'
 
 const LOG = KABOOM_RECORDING_LOG_PREFIX

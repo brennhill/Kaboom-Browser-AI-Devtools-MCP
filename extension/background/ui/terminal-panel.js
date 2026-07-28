@@ -9,7 +9,8 @@ import { resolveTerminalWorkspaceTarget } from './tab-state.js';
 import { enableTerminalPanelForTab, SIDE_PANEL_PATH } from './side-panel-availability.js';
 export { syncTerminalPanelAvailability } from './side-panel-availability.js';
 import { TERMINAL_PANEL_PORT, StorageKey } from '../../lib/constants.js';
-import { setSession, persist } from '../../lib/storage-utils.js';
+import { persist } from '../../lib/storage/io.js';
+import { setSession } from '../../lib/storage/session.js';
 import { errorMessage } from '../../lib/error-utils.js';
 /**
  * The live panel document's port, or null when no panel is open.

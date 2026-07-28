@@ -3,7 +3,7 @@
  * Split from event-listeners.ts to keep files under 800 LOC.
  */
 import { StorageKey } from '../../lib/constants.js';
-import { getLocal } from '../../lib/storage-utils.js';
+import { getLocal } from '../../lib/storage/local.js';
 import { toggleScreenRecording, toggleActionSequenceRecording } from './keyboard-shortcuts.js';
 import { errorMessage } from '../../lib/error-utils.js';
 import { toggleDrawModeForTab } from './draw-mode-toggle.js';

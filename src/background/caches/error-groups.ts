@@ -11,7 +11,8 @@
 
 import type { LogEntry } from '../../types/index.js'
 import { StorageKey } from '../../lib/constants.js'
-import { getSession, setSession, persist } from '../../lib/storage-utils.js'
+import { persist } from '../../lib/storage/io.js'
+import { getSession, setSession } from '../../lib/storage/session.js'
 
 // =============================================================================
 // CONSTANTS

@@ -3,7 +3,7 @@
  * Docs: docs/features/feature/csp-safe-execution/index.md
  */
 import { SettingName } from '../lib/constants.js';
-import { getLocals } from '../lib/storage-utils.js';
+import { getLocals } from '../lib/storage/local.js';
 /** Whether inject.bundled.js has been injected into the page (MAIN world) */
 let injected = false;
 /** Whether inject.js has responded to a bridge ping for this page load */

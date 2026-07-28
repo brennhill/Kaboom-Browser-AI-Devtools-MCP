@@ -11,7 +11,8 @@
 
 import type { WebSocketCaptureMode } from '../types/index.js'
 import { SettingName, StorageKey } from '../lib/constants.js'
-import { setLocal, getLocal, persist } from '../lib/storage-utils.js'
+import { persist } from '../lib/storage/io.js'
+import { getLocal, setLocal } from '../lib/storage/local.js'
 
 /**
  * Handle WebSocket mode change

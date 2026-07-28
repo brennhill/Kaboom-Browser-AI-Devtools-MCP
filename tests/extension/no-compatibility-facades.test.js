@@ -140,6 +140,22 @@ test('AI context consumers use focused parsing and enrichment modules', () => {
   )
 })
 
+test('storage consumers use focused owner modules', () => {
+  assert.equal(
+    existsSync('src/lib/storage-utils.ts'),
+    false,
+    'storage-utils.ts combines unrelated storage responsibilities behind a facade'
+  )
+  for (const compiledPath of [
+    'extension/lib/storage-utils.js',
+    'extension/lib/storage-utils.js.map',
+    'extension/lib/storage-utils.d.ts',
+    'extension/lib/storage-utils.d.ts.map'
+  ]) {
+    assert.equal(existsSync(compiledPath), false, `${compiledPath} is a stale compiled facade`)
+  }
+})
+
 test('WebSocket instrumentation does not re-export tracking APIs', () => {
   const source = readFileSync('src/lib/net/websocket.ts', 'utf8')
   assert.doesNotMatch(
