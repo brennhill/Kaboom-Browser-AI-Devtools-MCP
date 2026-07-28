@@ -82,6 +82,8 @@ last_verified_date: 2026-03-05
 
 Security scanning consumes the canonical `internal/types.LogEntry` contract
 directly, without a scan-package compatibility alias.
+Security policy configuration likewise resolves only through the canonical
+state path and does not fall back to historical config directories.
 
 ## Specs
 

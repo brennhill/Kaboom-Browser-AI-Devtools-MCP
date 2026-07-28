@@ -24,15 +24,6 @@ func PIDFilePath(port int) string {
 	return path
 }
 
-// LegacyPIDFilePath returns the old PID path used in previous releases.
-func LegacyPIDFilePath(port int) string {
-	path, err := state.LegacyPIDFile(port)
-	if err != nil {
-		return ""
-	}
-	return path
-}
-
 // WritePIDFile writes the current process ID to the PID file.
 func WritePIDFile(port int) error {
 	path := PIDFilePath(port)
@@ -48,30 +39,26 @@ func WritePIDFile(port int) error {
 
 // ReadPIDFile reads the PID from the PID file, returns 0 if not found or invalid.
 func ReadPIDFile(port int) int {
-	paths := []string{PIDFilePath(port), LegacyPIDFilePath(port)}
-	for _, path := range paths {
-		if path == "" {
-			continue
-		}
-		data, err := os.ReadFile(path)
-		if err != nil {
-			continue
-		}
-		pid, err := strconv.Atoi(strings.TrimSpace(string(data)))
-		if err == nil {
-			return pid
-		}
+	path := PIDFilePath(port)
+	if path == "" {
+		return 0
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return 0
+	}
+	pid, err := strconv.Atoi(strings.TrimSpace(string(data)))
+	if err == nil {
+		return pid
 	}
 	return 0
 }
 
 // RemovePIDFile removes the PID file for a given port.
 func RemovePIDFile(port int) {
-	paths := []string{PIDFilePath(port), LegacyPIDFilePath(port)}
-	for _, path := range paths {
-		if path != "" {
-			_ = os.Remove(path)
-		}
+	path := PIDFilePath(port)
+	if path != "" {
+		_ = os.Remove(path)
 	}
 }
 

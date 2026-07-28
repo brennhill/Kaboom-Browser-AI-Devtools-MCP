@@ -62,27 +62,10 @@ func (r *Recorder) Append(event string, extra map[string]any) string {
 }
 
 func crashLogCandidates() []string {
-	seen := map[string]struct{}{}
-	candidates := make([]string, 0, 3)
-	add := func(path string) {
-		if path == "" {
-			return
-		}
-		if _, exists := seen[path]; exists {
-			return
-		}
-		seen[path] = struct{}{}
-		candidates = append(candidates, path)
-	}
-
 	if p, err := state.CrashLogFile(); err == nil {
-		add(p)
+		return []string{p}
 	}
-	if p, err := state.LegacyCrashLogFile(); err == nil {
-		add(p)
-	}
-	add(filepath.Join(os.TempDir(), "kaboom-crash.log"))
-	return candidates
+	return nil
 }
 
 func writeDiagnosticToCandidates(candidates []string, entry map[string]any) (string, error) {

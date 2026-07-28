@@ -68,6 +68,8 @@ last_verified_date: 2026-03-05
 ## Code and Tests
 
 - Recording capture, persistence, and storage quotas: `internal/recording/`
+- Recording persistence reads and writes only the canonical state recordings
+  directory; historical storage locations are not migration inputs.
 - Replay engine (session lifecycle, action execution, selector fragility): `internal/recording/playback/`
 - Recording comparison and regression reporting: `internal/recording/logdiff/`
 - Both engines read recordings through a one-method source interface that

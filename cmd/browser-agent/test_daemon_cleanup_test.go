@@ -6,14 +6,11 @@ package main
 import (
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"testing"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
 // TestMain enforces process hygiene for the full cmd/browser-agent test suite.
@@ -47,38 +44,4 @@ func killPattern(pattern string) {
 	_ = exec.Command("pkill", "-TERM", "-f", pattern).Run()
 	time.Sleep(200 * time.Millisecond)
 	_ = exec.Command("pkill", "-KILL", "-f", pattern).Run()
-}
-
-func TestCleanupPIDFilesRemovesKaboomAndKaboomPIDVariants(t *testing.T) {
-	stateRoot := t.TempDir()
-	home := t.TempDir()
-	t.Setenv(state.StateDirEnv, stateRoot)
-	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
-
-	paths := []string{
-		filepath.Join(stateRoot, "run", "kaboom-7890.pid"),
-		filepath.Join(stateRoot, "run", "strum-7890.pid"),
-		filepath.Join(home, ".kaboom", "run", "kaboom-7890.pid"),
-		filepath.Join(home, ".strum", "run", "strum-7890.pid"),
-		filepath.Join(home, ".kaboom-7890.pid"),
-		filepath.Join(home, ".strum-7890.pid"),
-	}
-
-	for _, pidPath := range paths {
-		if err := os.MkdirAll(filepath.Dir(pidPath), 0o755); err != nil {
-			t.Fatalf("MkdirAll(%q) error = %v", filepath.Dir(pidPath), err)
-		}
-		if err := os.WriteFile(pidPath, []byte("12345"), 0o600); err != nil {
-			t.Fatalf("WriteFile(%q) error = %v", pidPath, err)
-		}
-	}
-
-	procctl.CleanupPIDFiles()
-
-	for _, pidPath := range paths {
-		if _, err := os.Stat(pidPath); err == nil {
-			t.Fatalf("expected procctl.CleanupPIDFiles to remove %q", pidPath)
-		}
-	}
 }

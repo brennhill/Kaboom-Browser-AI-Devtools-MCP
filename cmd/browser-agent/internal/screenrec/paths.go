@@ -32,17 +32,7 @@ func ReadDirs() []string {
 	if err != nil {
 		return nil
 	}
-	dirs := []string{primaryDir}
-
-	legacyDir, err := state.LegacyRecordingsDir()
-	if err != nil || legacyDir == "" || legacyDir == primaryDir {
-		return dirs
-	}
-	if info, statErr := os.Stat(legacyDir); statErr == nil && info.IsDir() {
-		dirs = append(dirs, legacyDir)
-	}
-
-	return dirs
+	return []string{primaryDir}
 }
 
 func pathWithinDir(path, dir string) bool {

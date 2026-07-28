@@ -28,42 +28,6 @@ func TestGetSettingsPathUsesStateDirectory(t *testing.T) {
 	}
 }
 
-func TestLoadSettingsFromDiskFallsBackToLegacyPath(t *testing.T) {
-	stateRoot := t.TempDir()
-	homeDir := t.TempDir()
-
-	t.Setenv(state.StateDirEnv, stateRoot)
-	t.Setenv("HOME", homeDir)
-	t.Setenv("USERPROFILE", homeDir)
-
-	legacyPath, err := state.LegacySettingsFile()
-	if err != nil {
-		t.Fatalf("LegacySettingsFile() error = %v", err)
-	}
-
-	payload := PersistedSettings{
-		AIWebPilotEnabled: boolPtr(true),
-		Timestamp:         time.Now(),
-		ExtSessionID:      "legacy-session",
-	}
-	data, err := json.Marshal(payload)
-	if err != nil {
-		t.Fatalf("json.Marshal() error = %v", err)
-	}
-	if err := os.WriteFile(legacyPath, data, 0o600); err != nil {
-		t.Fatalf("os.WriteFile(%q) error = %v", legacyPath, err)
-	}
-
-	c := NewCapture()
-	c.LoadSettingsFromDisk()
-
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	if !c.extensionState.pilotEnabled {
-		t.Fatalf("pilotEnabled = false, want true from legacy settings")
-	}
-}
-
 func TestSaveSettingsToDiskWritesToStateDirectory(t *testing.T) {
 	stateRoot := t.TempDir()
 	t.Setenv(state.StateDirEnv, stateRoot)

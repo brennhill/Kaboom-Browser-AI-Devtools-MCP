@@ -1,5 +1,4 @@
-// pidfile_test.go — PID file lifecycle, legacy-path fallback and process
-// liveness checks. Moved here with the code they exercise.
+// pidfile_test.go — PID file lifecycle and process liveness checks.
 
 package procctl
 
@@ -42,16 +41,7 @@ func TestPidFilePath(t *testing.T) {
 	}
 }
 
-func TestLegacyPIDFilePath(t *testing.T) {
-	t.Parallel()
-
-	path := LegacyPIDFilePath(3000)
-	if path == "" {
-		t.Fatal("LegacyPIDFilePath(3000) should return a non-empty path")
-	}
-}
-
-func TestPIDFileLifecycleAndLegacyFallback(t *testing.T) {
+func TestPIDFileLifecycle(t *testing.T) {
 	// Do not run in parallel; uses Setenv.
 	stateRoot := t.TempDir()
 	home := t.TempDir()
@@ -71,14 +61,4 @@ func TestPIDFileLifecycleAndLegacyFallback(t *testing.T) {
 		t.Fatalf("ReadPIDFile(%d) after remove = %d, want 0", port, got)
 	}
 
-	legacyPath, err := state.LegacyPIDFile(43210)
-	if err != nil {
-		t.Fatalf("LegacyPIDFile() error = %v", err)
-	}
-	if err := os.WriteFile(legacyPath, []byte("12345"), 0o600); err != nil {
-		t.Fatalf("WriteFile(legacy pid) error = %v", err)
-	}
-	if got := ReadPIDFile(43210); got != 12345 {
-		t.Fatalf("ReadPIDFile(legacy) = %d, want 12345", got)
-	}
 }

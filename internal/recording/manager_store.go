@@ -22,27 +22,14 @@ func primaryRecordingsDir() (string, error) {
 	return state.RecordingsDir()
 }
 
-func legacyRecordingsDir() (string, error) {
-	return state.LegacyRecordingsDir()
-}
-
-// recordingReadRoots returns directories to search for existing recordings.
-// New state location is preferred; legacy location is included when it exists.
+// recordingReadRoots returns the canonical recording directory.
 func (r *RecordingManager) recordingReadRoots() ([]string, error) {
 	primaryDir, err := primaryRecordingsDir()
 	if err != nil {
 		return nil, fmt.Errorf("cannot_determine_recordings_dir: %w", err)
 	}
 
-	roots := []string{primaryDir}
-	legacyDir, err := legacyRecordingsDir()
-	if err != nil || legacyDir == "" || legacyDir == primaryDir {
-		return roots, nil
-	}
-	if info, statErr := os.Stat(legacyDir); statErr == nil && info.IsDir() {
-		roots = append(roots, legacyDir)
-	}
-	return roots, nil
+	return []string{primaryDir}, nil
 }
 
 // persistRecordingToDisk writes recording metadata.json to state/recordings/{id}/

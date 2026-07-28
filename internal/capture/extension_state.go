@@ -506,10 +506,6 @@ func getSettingsPath() (string, error) {
 	return state.SettingsFile()
 }
 
-func getLegacySettingsPath() (string, error) {
-	return state.LegacySettingsFile()
-}
-
 func readSettingsData() ([]byte, error) {
 	path, err := getSettingsPath()
 	if err != nil {
@@ -521,23 +517,10 @@ func readSettingsData() ([]byte, error) {
 	if err == nil {
 		return data, nil
 	}
-	if !os.IsNotExist(err) {
-		return nil, fmt.Errorf("could not read settings file: %w", err)
-	}
-
-	legacyPath, legacyErr := getLegacySettingsPath()
-	if legacyErr != nil {
+	if os.IsNotExist(err) {
 		return nil, nil
 	}
-	// #nosec G304 -- legacy path is deterministic, not user input.
-	legacyData, readErr := os.ReadFile(legacyPath)
-	if readErr != nil {
-		if !os.IsNotExist(readErr) {
-			return nil, fmt.Errorf("could not read legacy settings file: %w", readErr)
-		}
-		return nil, nil
-	}
-	return legacyData, nil
+	return nil, fmt.Errorf("could not read settings file: %w", err)
 }
 
 func (c *Capture) LoadSettingsFromDisk() {

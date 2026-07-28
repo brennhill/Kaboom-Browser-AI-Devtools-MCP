@@ -69,3 +69,5 @@ last_verified_date: 2026-03-05
 ## Code and Tests
 
 The implementation and tests for popup/manual recording and shortcut-toggle recording are listed in frontmatter `code_paths` and `test_paths`.
+Saved-video discovery is scoped to the canonical recordings directory; it does
+not merge or deduplicate entries from historical storage roots.

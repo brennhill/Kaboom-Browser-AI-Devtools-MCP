@@ -46,16 +46,6 @@ func RootDir() (string, error) {
 	return filepath.Join(homeDir, ".kaboom"), nil
 }
 
-// LegacyRootDir returns the historical runtime root used by earlier versions
-// (os.UserConfigDir()/kaboom, e.g. ~/Library/Application Support/kaboom).
-func LegacyRootDir() (string, error) {
-	configDir, err := os.UserConfigDir()
-	if err != nil {
-		return "", fmt.Errorf("cannot determine user config directory: %w", err)
-	}
-	return filepath.Join(configDir, appName), nil
-}
-
 // ProjectDir returns the centralized project-scoped persistence directory
 // under ~/.kaboom/projects/{abs-path}. The leading path separator is stripped
 // so the absolute project path becomes a relative subpath.
@@ -77,45 +67,17 @@ func DefaultLogFile() (string, error) {
 	return InRoot("logs", "kaboom.jsonl")
 }
 
-// LegacyDefaultLogFile returns the previous default log file path.
-func LegacyDefaultLogFile() (string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("cannot determine home directory: %w", err)
-	}
-	return filepath.Join(homeDir, "kaboom-logs.jsonl"), nil
-}
-
 // CrashLogFile returns the exit-diagnostics log file path. Despite the function
-// name (kept for API stability), this log records EVERY process exit — normal
+// name, this log records EVERY process exit — normal
 // stdin-EOF bridge exits and clean shutdowns as well as panics — so the file is
-// named exit-diagnostics.log, not crash.log: a large file here is churn, not
-// crashes. (The old logs/crash.log may linger from prior versions; it is history.)
+// named exit-diagnostics.log, not crash.log: a large file here is churn, not crashes.
 func CrashLogFile() (string, error) {
 	return InRoot("logs", "exit-diagnostics.log")
-}
-
-// LegacyCrashLogFile returns the previous crash log file path.
-func LegacyCrashLogFile() (string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("cannot determine home directory: %w", err)
-	}
-	return filepath.Join(homeDir, "kaboom-crash.log"), nil
 }
 
 // PIDFile returns the PID file path for the given server port.
 func PIDFile(port int) (string, error) {
 	return InRoot("run", "kaboom-"+strconv.Itoa(port)+".pid")
-}
-
-// LegacyPIDFile returns the historical PID file path for the given server port.
-func LegacyPIDFile(port int) (string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("cannot determine home directory: %w", err)
-	}
-	return filepath.Join(homeDir, ".kaboom-"+strconv.Itoa(port)+".pid"), nil
 }
 
 // RecordingsDir returns the recordings directory.
@@ -128,41 +90,14 @@ func ScreenshotsDir() (string, error) {
 	return InRoot("screenshots")
 }
 
-// LegacyRecordingsDir returns the historical recordings directory.
-func LegacyRecordingsDir() (string, error) {
-	root, err := LegacyRootDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(root, "recordings"), nil
-}
-
 // SettingsFile returns the extension settings cache file path.
 func SettingsFile() (string, error) {
 	return InRoot("settings", "extension-settings.json")
 }
 
-// LegacySettingsFile returns the historical settings cache file path.
-func LegacySettingsFile() (string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("cannot determine home directory: %w", err)
-	}
-	return filepath.Join(homeDir, ".kaboom-settings.json"), nil
-}
-
 // SecurityConfigFile returns the security configuration path.
 func SecurityConfigFile() (string, error) {
 	return InRoot("security", "security.json")
-}
-
-// LegacySecurityConfigFile returns the historical security config path.
-func LegacySecurityConfigFile() (string, error) {
-	root, err := LegacyRootDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(root, "security.json"), nil
 }
 
 // UpgradeMarkerFile returns the path for the binary upgrade marker file.

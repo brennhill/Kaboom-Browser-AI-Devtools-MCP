@@ -1,4 +1,4 @@
-// stop.go — Stops daemon processes and removes canonical or legacy PID state.
+// stop.go — Stops daemon processes and removes canonical PID state.
 
 package procctl
 
@@ -85,15 +85,15 @@ func logCommandInvocation(event string, source string, port int) {
 func resolveLogFile() string {
 	logFile, err := state.DefaultLogFile()
 	if err != nil {
-		if legacy, legacyErr := state.LegacyDefaultLogFile(); legacyErr == nil {
-			return legacy
-		}
-		return filepath.Join(os.TempDir(), "kaboom.jsonl")
+		return ""
 	}
 	return logFile
 }
 
 func writeJSONLogEntry(logFile string, entry map[string]any) {
+	if logFile == "" {
+		return
+	}
 	data, err := json.Marshal(entry)
 	if err != nil {
 		return
@@ -254,7 +254,6 @@ func CleanupPIDFiles() {
 	}
 	for _, port := range ports {
 		RemovePIDFile(port)
-		removeLegacyPIDVariants(port)
 	}
 }
 
@@ -270,38 +269,6 @@ func killWindowsKaboomProcessesQuietly() int {
 		_ = exec.Command("taskkill", "/IM", imageName, "/F").Run()
 	}
 	return 0
-}
-
-func removeLegacyPIDVariants(port int) {
-	homeDir, _ := os.UserHomeDir()
-	roots := []string{}
-	if stateRoot, err := state.RootDir(); err == nil && strings.TrimSpace(stateRoot) != "" {
-		roots = append(roots, filepath.Join(stateRoot, "run"))
-	}
-	if homeDir != "" {
-		roots = append(roots,
-			filepath.Join(homeDir, ".kaboom", "run"),
-			filepath.Join(homeDir, ".gasoline", "run"),
-			filepath.Join(homeDir, ".strum", "run"),
-		)
-	}
-	if xdgStateHome := strings.TrimSpace(os.Getenv("XDG_STATE_HOME")); xdgStateHome != "" {
-		roots = append(roots,
-			filepath.Join(xdgStateHome, "kaboom", "run"),
-			filepath.Join(xdgStateHome, "gasoline", "run"),
-			filepath.Join(xdgStateHome, "strum", "run"),
-		)
-	}
-	for _, root := range roots {
-		_ = os.Remove(filepath.Join(root, "kaboom-"+strconv.Itoa(port)+".pid"))
-		_ = os.Remove(filepath.Join(root, "gasoline-"+strconv.Itoa(port)+".pid"))
-		_ = os.Remove(filepath.Join(root, "strum-"+strconv.Itoa(port)+".pid"))
-	}
-	if homeDir != "" {
-		_ = os.Remove(filepath.Join(homeDir, ".kaboom-"+strconv.Itoa(port)+".pid"))
-		_ = os.Remove(filepath.Join(homeDir, ".gasoline-"+strconv.Itoa(port)+".pid"))
-		_ = os.Remove(filepath.Join(homeDir, ".strum-"+strconv.Itoa(port)+".pid"))
-	}
 }
 
 func printForceCleanupSummary(killed, failedToKill int) {

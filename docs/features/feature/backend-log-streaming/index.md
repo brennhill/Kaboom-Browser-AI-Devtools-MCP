@@ -94,6 +94,8 @@ last_verified_date: 2026-04-13
 - Location: `docs/features/feature/backend-log-streaming`
 
 Capture dependencies use the canonical `capture.Capture` container type.
+Persisted extension settings are read and written only through the canonical
+`internal/state.SettingsFile` location; there is no fallback settings reader.
 The former `capture.Store` and `capture.Snapshot` aliases have been removed.
 Capture APIs and their callers use the canonical wire contracts from
 `internal/types` directly; `internal/capture` does not re-export wire types.

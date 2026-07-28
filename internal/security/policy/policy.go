@@ -47,9 +47,6 @@ func configPath() string {
 
 	path, err := state.SecurityConfigFile()
 	if err != nil {
-		if legacyPath, legacyErr := state.LegacySecurityConfigFile(); legacyErr == nil {
-			return legacyPath
-		}
 		return ""
 	}
 

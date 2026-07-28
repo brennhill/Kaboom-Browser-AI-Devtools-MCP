@@ -4,7 +4,6 @@
 package state
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 )
@@ -84,32 +83,5 @@ func TestRuntimePathsUnderRoot(t *testing.T) {
 	}
 	if want := filepath.Join(root, "settings", "extension-settings.json"); settingsFile != want {
 		t.Fatalf("SettingsFile() = %q, want %q", settingsFile, want)
-	}
-}
-
-func TestLegacyPathsUseUserConfigDir(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
-
-	configDir, err := os.UserConfigDir()
-	if err != nil {
-		t.Fatalf("os.UserConfigDir() error = %v", err)
-	}
-
-	legacyRoot, err := LegacyRootDir()
-	if err != nil {
-		t.Fatalf("LegacyRootDir() error = %v", err)
-	}
-	if want := filepath.Join(configDir, appName); legacyRoot != want {
-		t.Fatalf("LegacyRootDir() = %q, want %q", legacyRoot, want)
-	}
-
-	legacyLog, err := LegacyDefaultLogFile()
-	if err != nil {
-		t.Fatalf("LegacyDefaultLogFile() error = %v", err)
-	}
-	if want := filepath.Join(home, "kaboom-logs.jsonl"); legacyLog != want {
-		t.Fatalf("LegacyDefaultLogFile() = %q, want %q", legacyLog, want)
 	}
 }

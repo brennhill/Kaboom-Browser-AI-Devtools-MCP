@@ -172,37 +172,24 @@ func TestPathWithinDir(t *testing.T) {
 	}
 }
 
-func TestRecordingsReadDirsIncludesLegacyWhenPresent(t *testing.T) {
+func TestRecordingsReadDirsUsesCanonicalDirectory(t *testing.T) {
 	stateRoot := t.TempDir()
-	home := t.TempDir()
 	t.Setenv(state.StateDirEnv, stateRoot)
-	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
 
 	primary, err := state.RecordingsDir()
 	if err != nil {
 		t.Fatalf("state.RecordingsDir() error = %v", err)
 	}
-	legacy, err := state.LegacyRecordingsDir()
-	if err != nil {
-		t.Fatalf("state.LegacyRecordingsDir() error = %v", err)
-	}
 	if err := os.MkdirAll(primary, 0o755); err != nil {
 		t.Fatalf("MkdirAll(primary) error = %v", err)
 	}
-	if err := os.MkdirAll(legacy, 0o755); err != nil {
-		t.Fatalf("MkdirAll(legacy) error = %v", err)
-	}
 
 	dirs := ReadDirs()
-	if len(dirs) != 2 {
-		t.Fatalf("ReadDirs() len = %d, want 2 (primary + legacy)", len(dirs))
+	if len(dirs) != 1 {
+		t.Fatalf("ReadDirs() len = %d, want 1", len(dirs))
 	}
 	if dirs[0] != primary {
 		t.Fatalf("ReadDirs()[0] = %q, want primary %q", dirs[0], primary)
-	}
-	if dirs[1] != legacy {
-		t.Fatalf("ReadDirs()[1] = %q, want legacy %q", dirs[1], legacy)
 	}
 }
 
@@ -364,15 +351,8 @@ func TestToolObserveSavedVideosListsSortsFiltersAndDedupes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("state.RecordingsDir() error = %v", err)
 	}
-	legacyDir, err := state.LegacyRecordingsDir()
-	if err != nil {
-		t.Fatalf("state.LegacyRecordingsDir() error = %v", err)
-	}
 	if err := os.MkdirAll(primaryDir, 0o755); err != nil {
 		t.Fatalf("MkdirAll(primary) error = %v", err)
-	}
-	if err := os.MkdirAll(legacyDir, 0o755); err != nil {
-		t.Fatalf("MkdirAll(legacy) error = %v", err)
 	}
 
 	writeVideoMetadataFile(t, primaryDir, Metadata{
@@ -386,13 +366,6 @@ func TestToolObserveSavedVideosListsSortsFiltersAndDedupes(t *testing.T) {
 		CreatedAt: "2026-01-02T00:00:00Z",
 		URL:       "https://app.example.com/beta",
 		SizeBytes: 20,
-	})
-	// Duplicate name in legacy should be ignored due dedupe-by-name.
-	writeVideoMetadataFile(t, legacyDir, Metadata{
-		Name:      "beta",
-		CreatedAt: "2026-01-03T00:00:00Z",
-		URL:       "https://legacy.example.com/beta",
-		SizeBytes: 999,
 	})
 	// Malformed file should be skipped.
 	if err := os.WriteFile(filepath.Join(primaryDir, "bad_meta.json"), []byte("{bad"), 0o644); err != nil {
