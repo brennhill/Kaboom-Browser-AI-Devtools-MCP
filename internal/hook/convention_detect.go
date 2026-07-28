@@ -142,15 +142,8 @@ func searchProject(root, term, excludeFile string, exts []string) []string {
 			return nil
 		}
 
-		if d.IsDir() {
-			if skipDirs[d.Name()] || (strings.HasPrefix(d.Name(), ".") && d.Name() != ".") {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-
-		if !matchesExtension(path, exts) {
-			return nil
+		if decision, handled := projectDirectoryDecision(d); handled {
+			return decision
 		}
 
 		absPath, _ := filepath.Abs(path)
@@ -158,23 +151,14 @@ func searchProject(root, term, excludeFile string, exts []string) []string {
 			return nil
 		}
 
-		// Skip large/generated files.
-		info, err := d.Info()
-		if err != nil || info.Size() > maxFileSizeForScan {
-			return nil
-		}
-		if isGenerated(d.Name()) {
+		data, ok := readConventionSource(path, d, exts)
+		if !ok {
 			return nil
 		}
 
 		filesScanned++
 		if filesScanned > maxFilesToScan {
 			return filepath.SkipAll
-		}
-
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return nil
 		}
 
 		lines := strings.Split(string(data), "\n")
@@ -200,6 +184,33 @@ func searchProject(root, term, excludeFile string, exts []string) []string {
 	})
 
 	return examples
+}
+
+// projectDirectoryDecision centralizes repository-walk pruning shared by hook
+// scanners. The boolean distinguishes files from directories that should
+// continue normally.
+func projectDirectoryDecision(d os.DirEntry) (error, bool) {
+	if !d.IsDir() {
+		return nil, false
+	}
+	if skipDirs[d.Name()] || (strings.HasPrefix(d.Name(), ".") && d.Name() != ".") {
+		return filepath.SkipDir, true
+	}
+	return nil, true
+}
+
+// readConventionSource applies the single canonical filter for source consumed
+// by convention detection and discovery.
+func readConventionSource(path string, d os.DirEntry, exts []string) ([]byte, bool) {
+	if !matchesExtension(path, exts) || isGenerated(d.Name()) {
+		return nil, false
+	}
+	info, err := d.Info()
+	if err != nil || info.Size() > maxFileSizeForScan {
+		return nil, false
+	}
+	data, err := os.ReadFile(path)
+	return data, err == nil
 }
 
 func isGenerated(name string) bool {

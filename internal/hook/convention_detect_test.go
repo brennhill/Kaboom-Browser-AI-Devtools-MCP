@@ -206,6 +206,44 @@ func TestDetectConventions_SkipsGeneratedFiles(t *testing.T) {
 	}
 }
 
+func TestReadConventionSource_AppliesCanonicalScanFilters(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	validPath := filepath.Join(dir, "valid.go")
+	if err := os.WriteFile(validPath, []byte("package valid\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	validEntry, err := os.Stat(validPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if data, ok := readConventionSource(validPath, fileInfoDirEntry{validEntry}, []string{".go"}); !ok || string(data) != "package valid\n" {
+		t.Fatalf("valid source = (%q, %v), want canonical file contents", data, ok)
+	}
+
+	for _, name := range []string{"wrong.ts", "bundle.bundled.go", "vendor.min.go", "source.go.map"} {
+		path := filepath.Join(dir, name)
+		if err := os.WriteFile(path, []byte("ignored"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := readConventionSource(path, fileInfoDirEntry{info}, []string{".go"}); ok {
+			t.Errorf("%s should be rejected by canonical convention scan filters", name)
+		}
+	}
+}
+
+type fileInfoDirEntry struct {
+	os.FileInfo
+}
+
+func (entry fileInfoDirEntry) Type() os.FileMode          { return entry.Mode().Type() }
+func (entry fileInfoDirEntry) Info() (os.FileInfo, error) { return entry.FileInfo, nil }
+
 func TestFormatConventions_HelperSuggestion(t *testing.T) {
 	t.Parallel()
 	matches := []ConventionMatch{

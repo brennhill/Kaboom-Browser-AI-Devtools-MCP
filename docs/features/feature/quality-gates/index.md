@@ -4,7 +4,7 @@ feature_id: feature-quality-gates
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-29
 code_paths:
   - kaboom-code-standards.md
   - cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go
@@ -65,6 +65,10 @@ last_verified_date: 2026-03-28
 ## Summary
 
 Automated code quality enforcement that catches architectural drift, duplicate code, and pattern violations without burning tokens. Scaffolds `.kaboom.json` and `kaboom-code-standards.md` in the project root. Quality gates are enforced via Claude Code hooks that inject standards, detect conventions (searching the codebase for existing usage of patterns like `http.Client{`, handler maps, type declarations), and suggest helper extraction when 2+ instances exist. The managed hook binary is `kaboom-hooks`, and setup treats prior managed hook entries as replaceable during install/update.
+
+Convention scanning applies extension, generated-file, size, and directory
+filters through one shared source-walk boundary so detection and discovery
+cannot drift.
 
 ## Architecture
 

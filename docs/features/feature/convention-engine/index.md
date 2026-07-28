@@ -4,7 +4,7 @@ feature_id: feature-convention-engine
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-29
 code_paths:
   - internal/hook/convention_discover.go
   - internal/hook/convention_detect.go
@@ -42,5 +42,7 @@ Three plugin tiers: universal (10 principles, always active, free), language bas
 - 5-minute cache per project root + language
 - Deterministic ranking: frequency descending, then pattern text ascending for
   ties, so concurrent cache fills return identical ordered results
+- Detection and discovery share one canonical source-file filter, keeping
+  extension, generated-file, and size exclusions identical.
 - Noise filtering for Go (90+ stdlib patterns) and TS/JS (25+ patterns)
 - Eval fixtures validate discovery against kaboom codebase itself

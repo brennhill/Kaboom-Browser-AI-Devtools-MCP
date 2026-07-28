@@ -256,11 +256,8 @@ func buildImportGraph(projectRoot string) *ImportGraph {
 		if err != nil {
 			return nil
 		}
-		if d.IsDir() {
-			if skipDirs[d.Name()] || (strings.HasPrefix(d.Name(), ".") && d.Name() != ".") {
-				return filepath.SkipDir
-			}
-			return nil
+		if decision, handled := projectDirectoryDecision(d); handled {
+			return decision
 		}
 
 		ext := filepath.Ext(path)
@@ -326,11 +323,11 @@ func extractImports(filePath, ext, projectRoot, goModPath string) []string {
 // --- Language-specific import extraction ---
 
 var (
-	goImportPattern     = regexp.MustCompile(`^\s*"(.+)"`)
-	tsImportPattern     = regexp.MustCompile(`(?:import|from)\s+['"]([^'"]+)['"]`)
-	tsRequirePattern    = regexp.MustCompile(`require\s*\(\s*['"]([^'"]+)['"]`)
-	pyImportPattern     = regexp.MustCompile(`^\s*(?:from\s+(\S+)\s+import|import\s+(\S+))`)
-	rsModUsePattern     = regexp.MustCompile(`^\s*(?:mod|use)\s+(?:crate::)?(\S+)`)
+	goImportPattern  = regexp.MustCompile(`^\s*"(.+)"`)
+	tsImportPattern  = regexp.MustCompile(`(?:import|from)\s+['"]([^'"]+)['"]`)
+	tsRequirePattern = regexp.MustCompile(`require\s*\(\s*['"]([^'"]+)['"]`)
+	pyImportPattern  = regexp.MustCompile(`^\s*(?:from\s+(\S+)\s+import|import\s+(\S+))`)
+	rsModUsePattern  = regexp.MustCompile(`^\s*(?:mod|use)\s+(?:crate::)?(\S+)`)
 )
 
 func extractGoImports(scanner *bufio.Scanner, projectRoot, goModPath string) []string {

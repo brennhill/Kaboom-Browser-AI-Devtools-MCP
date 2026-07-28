@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 )
@@ -97,15 +96,15 @@ var goNoise = map[string]bool{
 // tsNoise are patterns so universal in TS/JS they carry no convention signal.
 var tsNoise = map[string]bool{
 	// builtins
-	"Date.now(":        true, "Math.min(":  true, "Math.max(":    true,
-	"Math.round(":      true, "Math.floor(": true, "Math.ceil(":  true,
-	"Math.abs(":        true, "Math.random(": true,
-	"Array.from(":      true, "Array.isArray(": true,
-	"Object.keys(":     true, "Object.values(": true, "Object.entries(": true,
-	"Object.assign(":   true, "Object.freeze(": true,
+	"Date.now(": true, "Math.min(": true, "Math.max(": true,
+	"Math.round(": true, "Math.floor(": true, "Math.ceil(": true,
+	"Math.abs(": true, "Math.random(": true,
+	"Array.from(": true, "Array.isArray(": true,
+	"Object.keys(": true, "Object.values(": true, "Object.entries(": true,
+	"Object.assign(": true, "Object.freeze(": true,
 	"Number.isFinite(": true, "Number.parseInt(": true,
-	"JSON.stringify(":  true, "JSON.parse(": true,
-	"Promise.all(":     true, "Promise.race(": true, "Promise.resolve(": true,
+	"JSON.stringify(": true, "JSON.parse(": true,
+	"Promise.all(": true, "Promise.race(": true, "Promise.resolve(": true,
 	"String.fromCharCode(": true,
 	// console — borderline, but universal
 	"console.log(": true, "console.error(": true, "console.warn(": true,
@@ -145,31 +144,18 @@ func DiscoverConventions(projectRoot, ext string) []DiscoveredConvention {
 		if err != nil {
 			return nil
 		}
-		if d.IsDir() {
-			if skipDirs[d.Name()] || (strings.HasPrefix(d.Name(), ".") && d.Name() != ".") {
-				return filepath.SkipDir
-			}
-			return nil
+		if decision, handled := projectDirectoryDecision(d); handled {
+			return decision
 		}
-		if !matchesExtension(path, exts) {
-			return nil
-		}
-		info, err := d.Info()
-		if err != nil || info.Size() > maxFileSizeForScan {
-			return nil
-		}
-		if isGenerated(d.Name()) {
+
+		data, ok := readConventionSource(path, d, exts)
+		if !ok {
 			return nil
 		}
 
 		filesScanned++
 		if filesScanned > discoveryMaxFiles {
 			return filepath.SkipAll
-		}
-
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return nil
 		}
 
 		relPath, _ := filepath.Rel(projectRoot, path)
