@@ -6,6 +6,9 @@ package observe
 import (
 	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -14,6 +17,26 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
+
+func TestPageStateUsesCanonicalMCPResponses(t *testing.T) {
+	t.Parallel()
+	_, testFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("resolve test source path")
+	}
+	source, err := os.ReadFile(filepath.Join(filepath.Dir(testFile), "page_state.go"))
+	if err != nil {
+		t.Fatalf("read page_state.go: %v", err)
+	}
+	for _, forbidden := range []string{
+		"mcp.StructuredErrorResponse(",
+		`mcp.JSONRPCResponse{JSONRPC: "2.0"`,
+	} {
+		if strings.Contains(string(source), forbidden) {
+			t.Errorf("page_state.go retains parallel MCP response construction %q", forbidden)
+		}
+	}
+}
 
 // ============================================
 // Mock Deps for RunA11yAudit tests

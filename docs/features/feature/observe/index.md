@@ -133,6 +133,9 @@ health facade remains on the `Capture` composition root.
 Element collection, visibility filtering, limits, and tab metadata use the
 shared command helpers also consumed by `interact-explore`; viewport screenshot
 capture/upload has one implementation for both normal capture and CDP fallback.
+Live-page storage, IndexedDB, screenshot, and accessibility failures use the
+canonical `mcp.Fail` response boundary; queue saturation guidance is built once
+with the canonical `pending_commands` recovery call.
 
 Tool dispatch uses only the canonical `what` selector and canonical mode names;
 `mode`, `action`, `network`, and `ws` routing shortcuts are not accepted.

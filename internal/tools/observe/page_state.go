@@ -217,12 +217,12 @@ func GetStorage(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSO
 	cap := deps.Capture
 	enabled, _, _ := cap.Extension().GetTrackingStatus()
 	if !enabled {
-		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(
+		return mcp.Fail(req,
 			mcp.ErrNoData,
 			"No tab is being tracked. Open the Kaboom extension popup and click 'Track This Tab'.",
 			"Track a tab first, then call observe with what='storage'.",
 			mcp.WithHint(deps.DiagnosticHintString()),
-		)}
+		)
 	}
 
 	queryID, qerr := cap.Queries().CreatePendingQueryWithTimeout(
@@ -234,40 +234,35 @@ func GetStorage(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSO
 		"",
 	)
 	if qerr != nil {
-		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(
-			mcp.ErrQueueFull,
-			"Command queue full: "+qerr.Error(),
-			"Wait for in-flight commands to complete, then retry.",
-			mcp.WithRecoveryToolCall(map[string]any{"tool": "observe", "arguments": map[string]any{"what": "pending_commands"}}),
-		)}
+		return queueFullResponse(req, qerr)
 	}
 
 	result, err := cap.Queries().WaitForResult(queryID, 10*time.Second)
 	if err != nil {
-		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(
+		return mcp.Fail(req,
 			mcp.ErrExtTimeout,
 			"Storage capture timeout: "+err.Error(),
 			"Ensure the extension is connected and the page has loaded.",
 			mcp.WithHint(deps.DiagnosticHintString()),
-		)}
+		)
 	}
 
 	var stateResult map[string]any
 	if err := json.Unmarshal(result, &stateResult); err != nil {
-		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(
+		return mcp.Fail(req,
 			mcp.ErrInvalidJSON,
 			"Failed to parse storage result: "+err.Error(),
 			"Check extension logs for errors",
-		)}
+		)
 	}
 
 	if errMsg, ok := stateResult["error"].(string); ok {
-		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(
+		return mcp.Fail(req,
 			mcp.ErrExtError,
 			"Storage capture failed: "+errMsg,
 			"Check that the tab is accessible.",
 			mcp.WithHint(deps.DiagnosticHintString()),
-		)}
+		)
 	}
 
 	response := map[string]any{
@@ -339,42 +334,42 @@ func GetIndexedDB(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 	mcp.LenientUnmarshal(args, &params)
 
 	if params.Database == "" {
-		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(
+		return mcp.Fail(req,
 			mcp.ErrMissingParam,
 			"Required parameter 'database' is missing for observe(what='indexeddb')",
 			"Add the 'database' parameter and call again.",
 			mcp.WithParam("database"),
-		)}
+		)
 	}
 	if params.Store == "" {
-		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(
+		return mcp.Fail(req,
 			mcp.ErrMissingParam,
 			"Required parameter 'store' is missing for observe(what='indexeddb')",
 			"Add the 'store' parameter and call again.",
 			mcp.WithParam("store"),
-		)}
+		)
 	}
 	params.Limit = clampLimit(params.Limit, 100)
 
 	cap := deps.Capture
 	enabled, _, _ := cap.Extension().GetTrackingStatus()
 	if !enabled {
-		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(
+		return mcp.Fail(req,
 			mcp.ErrNoData,
 			"No tab is being tracked. Open the Kaboom extension popup and click 'Track This Tab'.",
 			"Track a tab first, then call observe with what='indexeddb'.",
 			mcp.WithHint(deps.DiagnosticHintString()),
-		)}
+		)
 	}
 
 	storeData, err := idbquery.Entries(cap, params.Database, params.Store, params.Limit)
 	if err != nil {
-		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(
+		return mcp.Fail(req,
 			mcp.ErrExtError,
 			"IndexedDB inspection failed: "+err.Error(),
 			"Ensure the tab is accessible and the database/store names are correct.",
 			mcp.WithHint(deps.DiagnosticHintString()),
-		)}
+		)
 	}
 
 	entries, _ := storeData["entries"].([]any)
@@ -420,7 +415,7 @@ func GetScreenshot(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.
 	cap := deps.Capture
 	enabled, _, _ := cap.Extension().GetTrackingStatus()
 	if !enabled {
-		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(mcp.ErrNoData, "No tab is being tracked. Open the Kaboom extension popup and click 'Track This Tab' on the page you want to monitor. Check observe with what='pilot' for extension status.", "", mcp.WithHint(deps.DiagnosticHintString()))}
+		return mcp.Fail(req, mcp.ErrNoData, "No tab is being tracked. Open the Kaboom extension popup and click 'Track This Tab' on the page you want to monitor. Check observe with what='pilot' for extension status.", "", mcp.WithHint(deps.DiagnosticHintString()))
 	}
 
 	var params struct {
@@ -434,17 +429,17 @@ func GetScreenshot(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.
 	mcp.LenientUnmarshal(args, &params)
 
 	if params.Format != "" && params.Format != "png" && params.Format != "jpeg" {
-		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(
+		return mcp.Fail(req,
 			mcp.ErrInvalidParam, "Invalid screenshot format: "+params.Format,
 			"Use 'png' or 'jpeg'", mcp.WithParam("format"),
-		)}
+		)
 	}
 
 	if params.Quality != 0 && (params.Quality < 1 || params.Quality > 100) {
-		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(
+		return mcp.Fail(req,
 			mcp.ErrInvalidParam, fmt.Sprintf("Invalid quality: %d (must be 1-100)", params.Quality),
 			"Use a value between 1 and 100", mcp.WithParam("quality"),
-		)}
+		)
 	}
 
 	screenshotParams := map[string]any{}
@@ -475,23 +470,21 @@ func GetScreenshot(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.
 		"",
 	)
 	if qerr != nil {
-		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(mcp.ErrQueueFull, "Command queue full: "+qerr.Error(), "Wait for in-flight commands to complete, then retry.",
-			mcp.WithRecoveryToolCall(map[string]any{"tool": "observe", "arguments": map[string]any{"what": "pending_commands"}}),
-		)}
+		return queueFullResponse(req, qerr)
 	}
 
 	result, err := cap.Queries().WaitForResult(queryID, 20*time.Second)
 	if err != nil {
-		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(mcp.ErrExtTimeout, "Screenshot capture timeout: "+err.Error(), "Ensure the extension is connected and the page has loaded. Try refreshing the page, then retry.", mcp.WithHint(deps.DiagnosticHintString()))}
+		return mcp.Fail(req, mcp.ErrExtTimeout, "Screenshot capture timeout: "+err.Error(), "Ensure the extension is connected and the page has loaded. Try refreshing the page, then retry.", mcp.WithHint(deps.DiagnosticHintString()))
 	}
 
 	var screenshotResult map[string]any
 	if err := json.Unmarshal(result, &screenshotResult); err != nil {
-		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(mcp.ErrInvalidJSON, "Failed to parse screenshot result: "+err.Error(), "Check extension logs for errors")}
+		return mcp.Fail(req, mcp.ErrInvalidJSON, "Failed to parse screenshot result: "+err.Error(), "Check extension logs for errors")
 	}
 
 	if errMsg, ok := screenshotResult["error"].(string); ok {
-		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(mcp.ErrExtError, "Screenshot capture failed: "+errMsg, "Check that the tab is visible and accessible. The extension reported an error.", mcp.WithHint(deps.DiagnosticHintString()))}
+		return mcp.Fail(req, mcp.ErrExtError, "Screenshot capture failed: "+errMsg, "Check that the tab is visible and accessible. The extension reported an error.", mcp.WithHint(deps.DiagnosticHintString()))
 	}
 
 	// Extract data_url before building text block to avoid duplicating
@@ -523,6 +516,15 @@ func GetScreenshot(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.
 	}
 
 	return resp
+}
+
+func queueFullResponse(req mcp.JSONRPCRequest, err error) mcp.JSONRPCResponse {
+	return mcp.Fail(req,
+		mcp.ErrQueueFull,
+		"Command queue full: "+err.Error(),
+		"Wait for in-flight commands to complete, then retry.",
+		mcp.WithRecoveryToolCall(map[string]any{"tool": "observe", "arguments": map[string]any{"what": "pending_commands"}}),
+	)
 }
 
 // parseDataURL extracts the base64 data and MIME type from a data URL.
@@ -605,7 +607,7 @@ func RunA11yAudit(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 
 	enabled, _, _ := deps.Capture.Extension().GetTrackingStatus()
 	if !enabled {
-		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(mcp.ErrNoData, "No tab is being tracked. Open the Kaboom extension popup and click 'Track This Tab' on the page you want to monitor. Check observe with what='pilot' for extension status.", "", mcp.WithHint(deps.DiagnosticHintString()))}
+		return mcp.Fail(req, mcp.ErrNoData, "No tab is being tracked. Open the Kaboom extension popup and click 'Track This Tab' on the page you want to monitor. Check observe with what='pilot' for extension status.", "", mcp.WithHint(deps.DiagnosticHintString()))
 	}
 
 	result, err := deps.ExecuteA11yQuery(params.Scope, params.Tags, params.Frame, params.ForceRefresh)
@@ -626,7 +628,7 @@ func RunA11yAudit(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 
 	var auditResult map[string]any
 	if err := json.Unmarshal(result, &auditResult); err != nil {
-		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(mcp.ErrInvalidJSON, "Failed to parse a11y result: "+err.Error(), "Check extension logs for errors")}
+		return mcp.Fail(req, mcp.ErrInvalidJSON, "Failed to parse a11y result: "+err.Error(), "Check extension logs for errors")
 	}
 
 	if params.Summary {
