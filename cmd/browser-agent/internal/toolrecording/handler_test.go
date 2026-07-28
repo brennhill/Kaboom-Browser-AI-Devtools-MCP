@@ -5,6 +5,8 @@ package toolrecording
 
 import (
 	"encoding/json"
+	"errors"
+	"strings"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -17,6 +19,7 @@ type fakeCapture struct {
 	startURL       string
 	startSensitive bool
 	recordings     []recording.Recording
+	lookupErr      error
 }
 
 func (f *fakeCapture) StartRecording(name, pageURL string, sensitive bool) (string, error) {
@@ -35,10 +38,16 @@ func (f *fakeCapture) ListRecordings(int) ([]recording.Recording, error) {
 }
 
 func (f *fakeCapture) GetRecording(string) (*recording.Recording, error) {
+	if f.lookupErr != nil {
+		return nil, f.lookupErr
+	}
 	return &recording.Recording{}, nil
 }
 
 func (f *fakeCapture) LookupRecording(string) (*recording.Recording, error) {
+	if f.lookupErr != nil {
+		return nil, f.lookupErr
+	}
 	return &recording.Recording{}, nil
 }
 
@@ -78,5 +87,53 @@ func TestHandlerRecordingActionsRequiresRecordingID(t *testing.T) {
 	}
 	if !result.IsError || len(result.Content) == 0 {
 		t.Fatalf("expected structured missing-parameter error, got %#v", result)
+	}
+}
+
+func TestLogDiffHandlersPreserveOperationSpecificFailures(t *testing.T) {
+	t.Parallel()
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 3}
+	args := json.RawMessage(`{"original_id":"before","replay_id":"after"}`)
+
+	tests := []struct {
+		name string
+		run  func(*Handler, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
+		want string
+	}{
+		{name: "summary", run: (*Handler).LogDiff, want: "Failed to diff recordings"},
+		{name: "report", run: (*Handler).LogDiffReport, want: "Failed to generate report"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			handler := NewHandler(&fakeCapture{lookupErr: errors.New("unavailable")}, nil)
+			resp := tt.run(handler, req, args)
+			if !strings.Contains(string(resp.Result), tt.want) {
+				t.Fatalf("response %s does not contain %q", string(resp.Result), tt.want)
+			}
+		})
+	}
+}
+
+func TestRecordingIDHandlersRejectInvalidJSON(t *testing.T) {
+	t.Parallel()
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 4}
+	tests := []struct {
+		name string
+		run  func(*Handler, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
+	}{
+		{name: "stop", run: (*Handler).EventRecordingStop},
+		{name: "actions", run: (*Handler).RecordingActions},
+		{name: "playback", run: (*Handler).Playback},
+		{name: "playback results", run: (*Handler).PlaybackResults},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			resp := tt.run(NewHandler(&fakeCapture{}, nil), req, json.RawMessage(`bad`))
+			if !strings.Contains(string(resp.Result), mcp.ErrInvalidJSON) {
+				t.Fatalf("expected %s, got %s", mcp.ErrInvalidJSON, string(resp.Result))
+			}
+		})
 	}
 }

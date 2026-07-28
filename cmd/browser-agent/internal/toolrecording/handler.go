@@ -93,19 +93,12 @@ func (h *Handler) EventRecordingStart(req mcp.JSONRPCRequest, args json.RawMessa
 
 // EventRecordingStop stops capture and records the lifecycle event.
 func (h *Handler) EventRecordingStop(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	var params struct {
-		RecordingID string `json:"recording_id"`
-	}
-	if len(args) > 0 {
-		if resp, stop := mcp.ParseArgs(req, args, &params); stop {
-			return resp
-		}
-	}
-	if resp, blocked := toolresp.RequireString(req, params.RecordingID, "recording_id", "Provide the recording_id from event_recording_start"); blocked {
-		return resp
+	recordingID, resp := parseRecordingID(req, args, "Provide the recording_id from event_recording_start")
+	if resp != nil {
+		return *resp
 	}
 
-	actionCount, duration, err := h.recordings.StopRecording(params.RecordingID)
+	actionCount, duration, err := h.recordings.StopRecording(recordingID)
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrInternal,
 			fmt.Sprintf("Failed to stop recording: %v", err),
@@ -115,15 +108,15 @@ func (h *Handler) EventRecordingStop(req mcp.JSONRPCRequest, args json.RawMessag
 	h.log(types.LogEntry{
 		"timestamp":    time.Now().Format(time.RFC3339Nano),
 		"level":        "info",
-		"message":      fmt.Sprintf("[RECORDING_STOP] Recording stopped: %s (%d actions, %dms)", params.RecordingID, actionCount, duration),
+		"message":      fmt.Sprintf("[RECORDING_STOP] Recording stopped: %s (%d actions, %dms)", recordingID, actionCount, duration),
 		"category":     "RECORDING",
-		"recording_id": params.RecordingID,
+		"recording_id": recordingID,
 		"action_count": actionCount,
 		"duration_ms":  duration,
 	})
 	return mcp.Succeed(req, "Recording stopped", map[string]any{
 		"status":       "ok",
-		"recording_id": params.RecordingID,
+		"recording_id": recordingID,
 		"action_count": actionCount,
 		"duration_ms":  duration,
 		"message":      fmt.Sprintf("Recording stopped: %d actions captured in %dms", actionCount, duration),
@@ -159,26 +152,19 @@ func (h *Handler) Recordings(req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 
 // RecordingActions returns the actions and metadata for one recording.
 func (h *Handler) RecordingActions(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	var params struct {
-		RecordingID string `json:"recording_id"`
-	}
-	if len(args) > 0 {
-		if resp, stop := mcp.ParseArgs(req, args, &params); stop {
-			return resp
-		}
-	}
-	if resp, blocked := toolresp.RequireString(req, params.RecordingID, "recording_id", "Provide the recording_id from a previous event_recording_start call"); blocked {
-		return resp
+	recordingID, resp := parseRecordingID(req, args, "Provide the recording_id from a previous event_recording_start call")
+	if resp != nil {
+		return *resp
 	}
 
-	recording, err := h.recordings.GetRecording(params.RecordingID)
+	recording, err := h.recordings.GetRecording(recordingID)
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrInternal,
 			fmt.Sprintf("Failed to load recording: %v", err),
 			"Ensure the recording_id is correct")
 	}
-	return mcp.Succeed(req, fmt.Sprintf("%d action(s) from recording %s", len(recording.Actions), params.RecordingID), map[string]any{
-		"recording_id": params.RecordingID,
+	return mcp.Succeed(req, fmt.Sprintf("%d action(s) from recording %s", len(recording.Actions), recordingID), map[string]any{
+		"recording_id": recordingID,
 		"name":         recording.Name,
 		"created_at":   recording.CreatedAt,
 		"start_url":    recording.StartURL,
@@ -190,26 +176,19 @@ func (h *Handler) RecordingActions(req mcp.JSONRPCRequest, args json.RawMessage)
 
 // Playback executes a saved recording and stores its result for later observation.
 func (h *Handler) Playback(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	var params struct {
-		RecordingID string `json:"recording_id"`
-	}
-	if len(args) > 0 {
-		if resp, stop := mcp.ParseArgs(req, args, &params); stop {
-			return resp
-		}
-	}
-	if resp, blocked := toolresp.RequireString(req, params.RecordingID, "recording_id", "Provide a recording_id from a previous recording"); blocked {
-		return resp
+	recordingID, resp := parseRecordingID(req, args, "Provide a recording_id from a previous recording")
+	if resp != nil {
+		return *resp
 	}
 
-	session, err := playback.Execute(h.recordings, params.RecordingID)
+	session, err := playback.Execute(h.recordings, recordingID)
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrInternal,
 			fmt.Sprintf("Failed to execute playback: %v", err),
 			"Ensure the recording_id is valid")
 	}
 	h.playbackMu.Lock()
-	h.playbackSessions[params.RecordingID] = session
+	h.playbackSessions[recordingID] = session
 	h.playbackMu.Unlock()
 
 	total := session.ActionsExecuted + session.ActionsFailed
@@ -218,33 +197,26 @@ func (h *Handler) Playback(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSO
 		"level":            "info",
 		"message":          fmt.Sprintf("[PLAYBACK_COMPLETE] Recording replayed: %d/%d actions succeeded", session.ActionsExecuted, total),
 		"category":         "PLAYBACK",
-		"recording_id":     params.RecordingID,
+		"recording_id":     recordingID,
 		"actions_executed": session.ActionsExecuted,
 		"actions_failed":   session.ActionsFailed,
 	})
-	return BuildPlaybackResult(req, params.RecordingID, session)
+	return BuildPlaybackResult(req, recordingID, session)
 }
 
 // PlaybackResults returns the stored execution snapshot for one playback.
 func (h *Handler) PlaybackResults(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	var params struct {
-		RecordingID string `json:"recording_id"`
-	}
-	if len(args) > 0 {
-		if resp, stop := mcp.ParseArgs(req, args, &params); stop {
-			return resp
-		}
-	}
-	if resp, blocked := toolresp.RequireString(req, params.RecordingID, "recording_id", "Provide the recording_id from playback"); blocked {
-		return resp
+	recordingID, resp := parseRecordingID(req, args, "Provide the recording_id from playback")
+	if resp != nil {
+		return *resp
 	}
 
 	h.playbackMu.RLock()
-	session, found := h.playbackSessions[params.RecordingID]
+	session, found := h.playbackSessions[recordingID]
 	h.playbackMu.RUnlock()
 	if !found {
 		return mcp.Fail(req, mcp.ErrNoData,
-			fmt.Sprintf("No playback results for recording_id %s", params.RecordingID),
+			fmt.Sprintf("No playback results for recording_id %s", recordingID),
 			"Run configure(action:'playback', recording_id:'...') first")
 	}
 
@@ -267,7 +239,7 @@ func (h *Handler) PlaybackResults(req mcp.JSONRPCRequest, args json.RawMessage) 
 
 	total := session.ActionsExecuted + session.ActionsFailed
 	return mcp.Succeed(req, fmt.Sprintf("Playback results: %d/%d actions executed", session.ActionsExecuted, total), map[string]any{
-		"recording_id":      params.RecordingID,
+		"recording_id":      recordingID,
 		"status":            "ok",
 		"actions_executed":  session.ActionsExecuted,
 		"actions_failed":    session.ActionsFailed,
@@ -278,22 +250,30 @@ func (h *Handler) PlaybackResults(req mcp.JSONRPCRequest, args json.RawMessage) 
 	})
 }
 
+type recordingIDParams struct {
+	RecordingID string `json:"recording_id"`
+}
+
+func parseRecordingID(req mcp.JSONRPCRequest, args json.RawMessage, hint string) (string, *mcp.JSONRPCResponse) {
+	var params recordingIDParams
+	if len(args) > 0 {
+		if resp, stop := mcp.ParseArgs(req, args, &params); stop {
+			return "", &resp
+		}
+	}
+	if resp, blocked := toolresp.RequireString(req, params.RecordingID, "recording_id", hint); blocked {
+		return "", &resp
+	}
+	return params.RecordingID, nil
+}
+
 // LogDiff compares two recordings and returns summary delta counts.
 func (h *Handler) LogDiff(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	var params struct {
-		OriginalID string `json:"original_id"`
-		ReplayID   string `json:"replay_id"`
-	}
-	if resp := parseDiffParams(req, args, &params.OriginalID, &params.ReplayID); resp != nil {
+	params, result, resp := h.compareRecordings(req, args, "Failed to diff recordings")
+	if resp != nil {
 		return *resp
 	}
 
-	result, err := logdiff.Compare(h.recordings, params.OriginalID, params.ReplayID)
-	if err != nil {
-		return mcp.Fail(req, mcp.ErrInternal,
-			fmt.Sprintf("Failed to diff recordings: %v", err),
-			"Ensure both recording IDs are valid")
-	}
 	h.log(types.LogEntry{
 		"timestamp":   time.Now().Format(time.RFC3339Nano),
 		"level":       "info",
@@ -317,20 +297,11 @@ func (h *Handler) LogDiff(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSON
 
 // LogDiffReport returns a human-readable regression report for two recordings.
 func (h *Handler) LogDiffReport(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	var params struct {
-		OriginalID string `json:"original_id"`
-		ReplayID   string `json:"replay_id"`
-	}
-	if resp := parseDiffParams(req, args, &params.OriginalID, &params.ReplayID); resp != nil {
+	_, result, resp := h.compareRecordings(req, args, "Failed to generate report")
+	if resp != nil {
 		return *resp
 	}
 
-	result, err := logdiff.Compare(h.recordings, params.OriginalID, params.ReplayID)
-	if err != nil {
-		return mcp.Fail(req, mcp.ErrInternal,
-			fmt.Sprintf("Failed to generate report: %v", err),
-			"Ensure both recording IDs are valid")
-	}
 	return mcp.Succeed(req, "Log diff report", map[string]any{
 		"status":  result.Status,
 		"report":  result.GetRegressionReport(),
@@ -339,23 +310,42 @@ func (h *Handler) LogDiffReport(req mcp.JSONRPCRequest, args json.RawMessage) mc
 	})
 }
 
-func parseDiffParams(req mcp.JSONRPCRequest, args json.RawMessage, originalID, replayID *string) *mcp.JSONRPCResponse {
-	params := struct {
-		OriginalID string `json:"original_id"`
-		ReplayID   string `json:"replay_id"`
-	}{}
+type diffParams struct {
+	OriginalID string `json:"original_id"`
+	ReplayID   string `json:"replay_id"`
+}
+
+func (h *Handler) compareRecordings(
+	req mcp.JSONRPCRequest,
+	args json.RawMessage,
+	failureSummary string,
+) (diffParams, *logdiff.Result, *mcp.JSONRPCResponse) {
+	params, resp := parseDiffParams(req, args)
+	if resp != nil {
+		return diffParams{}, nil, resp
+	}
+	result, err := logdiff.Compare(h.recordings, params.OriginalID, params.ReplayID)
+	if err != nil {
+		failure := mcp.Fail(req, mcp.ErrInternal,
+			fmt.Sprintf("%s: %v", failureSummary, err),
+			"Ensure both recording IDs are valid")
+		return diffParams{}, nil, &failure
+	}
+	return params, result, nil
+}
+
+func parseDiffParams(req mcp.JSONRPCRequest, args json.RawMessage) (diffParams, *mcp.JSONRPCResponse) {
+	var params diffParams
 	if len(args) > 0 {
 		if resp, stop := mcp.ParseArgs(req, args, &params); stop {
-			return &resp
+			return diffParams{}, &resp
 		}
 	}
 	if resp, blocked := toolresp.RequireString(req, params.OriginalID, "original_id", "Provide the original recording ID"); blocked {
-		return &resp
+		return diffParams{}, &resp
 	}
 	if resp, blocked := toolresp.RequireString(req, params.ReplayID, "replay_id", "Provide the replay recording ID"); blocked {
-		return &resp
+		return diffParams{}, &resp
 	}
-	*originalID = params.OriginalID
-	*replayID = params.ReplayID
-	return nil
+	return params, nil
 }
