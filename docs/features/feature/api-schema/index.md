@@ -44,6 +44,9 @@ test_paths:
   - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
   - internal/analysis/apicontract/runtime_handler_test.go
   - internal/analysis/apicontract/contract_test.go
+  - internal/analysis/apicontract/contract_actions_test.go
+  - internal/analysis/apicontract/contract_analyze_test.go
+  - internal/analysis/apicontract/contract_report_test.go
   - internal/analysis/apicontract/branch_coverage_test.go
   - internal/schema/invariants_test.go
   - internal/schema/interact/schema_test.go
