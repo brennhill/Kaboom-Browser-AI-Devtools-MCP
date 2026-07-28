@@ -1,6 +1,6 @@
-// server_routes_diagnostics.go — Serves operational health, diagnostics, and shutdown routes.
+// handler.go — Serves operational health, diagnostics, shutdown, log, and debug routes.
 
-package main
+package operationalapi
 
 import (
 	"encoding/json"
@@ -24,46 +24,70 @@ import (
 
 const shutdownSignalDelay = 100 * time.Millisecond
 
-func buildUpgradeInfo() *health.UpgradeInfo {
-	if binaryUpgradeState == nil {
-		return nil
-	}
-	return health.BuildUpgradeInfo(binaryUpgradeState)
+// TerminalStatus is the operational terminal state exposed by health routes.
+type TerminalStatus struct {
+	Available      bool
+	Port           int
+	Error          string
+	BlockedByPID   int
+	BlockedCommand string
 }
 
-func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request, cap *capture.Store) {
+// Options supplies the runtime-owned state needed by operational endpoints.
+type Options struct {
+	Logs             *logstore.Store
+	Capture          *capture.Store
+	Version          string
+	StartedAt        time.Time
+	TerminalStatus   func() TerminalStatus
+	AvailableVersion func() string
+	UpgradeInfo      func() *health.UpgradeInfo
+	UsageTracker     func() *telemetry.UsageTracker
+	MaxPostBodySize  int64
+}
+
+// Handler owns non-MCP operational HTTP endpoints.
+type Handler struct {
+	options Options
+}
+
+func New(options Options) *Handler {
+	return &Handler{options: options}
+}
+
+func (h *Handler) ServeHealth(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		httpapi.JSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
 	}
 	logFileSize := int64(0)
-	if info, err := os.Stat(s.logs.LogFile()); err == nil {
+	if info, err := os.Stat(h.options.Logs.LogFile()); err == nil {
 		logFileSize = info.Size()
 	}
 	response := map[string]any{
-		"status": "ok", "service-name": identity.MCPServerName, "name": identity.MCPServerName, "version": version,
+		"status": "ok", "service-name": identity.MCPServerName, "name": identity.MCPServerName, "version": h.options.Version,
 		"logs": map[string]any{
-			"entries": s.logs.EntryCount(), "max_entries": s.logs.MaxEntries(),
-			"log_file": s.logs.LogFile(), "log_file_size": logFileSize, "dropped_count": s.logs.DropCount(),
+			"entries": h.options.Logs.EntryCount(), "max_entries": h.options.Logs.MaxEntries(),
+			"log_file": h.options.Logs.LogFile(), "log_file_size": logFileSize, "dropped_count": h.options.Logs.DropCount(),
 		},
 	}
-	s.addTerminalHealth(response)
+	h.addTerminalHealth(response)
 	successReads, failedReads := bridge.SnapshotFastPathResourceReadCounters()
 	response["bridge_fastpath"] = map[string]any{"resources_read_success": successReads, "resources_read_failure": failedReads}
-	if availableVersion := releaseChecker.Available(); availableVersion != "" {
+	if availableVersion := h.availableVersion(); availableVersion != "" {
 		response["available_version"] = availableVersion
 	}
-	if info := buildUpgradeInfo(); info != nil {
+	if info := h.upgradeInfo(); info != nil {
 		response["upgrade_pending"] = info
 	}
-	if cap != nil {
-		extension := cap.GetExtensionStatus()
-		pilot, _ := cap.GetPilotStatus().(map[string]any)
+	if h.options.Capture != nil {
+		extension := h.options.Capture.GetExtensionStatus()
+		pilot, _ := h.options.Capture.GetPilotStatus().(map[string]any)
 		pilotState, _ := pilot["state"].(string)
-		securityMode, productionParity, rewrites := cap.GetSecurityMode()
+		securityMode, productionParity, rewrites := h.options.Capture.GetSecurityMode()
 		response["capture"] = map[string]any{
-			"available": true, "pilot_enabled": cap.IsPilotActionAllowed(), "pilot_state": pilotState,
-			"extension_connected": cap.IsExtensionConnected(), "extension_last_seen": extension["last_seen"],
+			"available": true, "pilot_enabled": h.options.Capture.IsPilotActionAllowed(), "pilot_state": pilotState,
+			"extension_connected": h.options.Capture.IsExtensionConnected(), "extension_last_seen": extension["last_seen"],
 			"extension_client_id": extension["client_id"], "security_mode": securityMode,
 			"production_parity": productionParity, "insecure_rewrites": rewrites,
 		}
@@ -71,12 +95,26 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request, cap *captu
 	httpapi.JSON(w, http.StatusOK, response)
 }
 
-func (s *Server) handleShutdown(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) availableVersion() string {
+	if h.options.AvailableVersion == nil {
+		return ""
+	}
+	return h.options.AvailableVersion()
+}
+
+func (h *Handler) upgradeInfo() *health.UpgradeInfo {
+	if h.options.UpgradeInfo == nil {
+		return nil
+	}
+	return h.options.UpgradeInfo()
+}
+
+func (h *Handler) ServeShutdown(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		httpapi.JSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
 	}
-	_ = s.logs.AppendToFile([]mcp.LogEntry{{
+	_ = h.options.Logs.AppendToFile([]mcp.LogEntry{{
 		"type": "lifecycle", "event": "shutdown_requested", "source": "http",
 		"pid": os.Getpid(), "timestamp": time.Now().UTC().Format(time.RFC3339),
 	}})
@@ -91,8 +129,11 @@ func (s *Server) handleShutdown(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Server) addTerminalHealth(response map[string]any) {
-	status := s.getTerminalStatus()
+func (h *Handler) addTerminalHealth(response map[string]any) {
+	status := TerminalStatus{}
+	if h.options.TerminalStatus != nil {
+		status = h.options.TerminalStatus()
+	}
 	response["terminal_available"] = status.Available
 	if status.Port > 0 {
 		response["terminal_port"] = status.Port
@@ -103,20 +144,20 @@ func (s *Server) addTerminalHealth(response map[string]any) {
 	if status.Error != "" {
 		response["terminal_error"] = status.Error
 	}
-	if status.BlockedByPID > 0 || status.BlockedByCommand != "" {
-		response["terminal_blocked_by"] = map[string]any{"pid": status.BlockedByPID, "command": status.BlockedByCommand}
+	if status.BlockedByPID > 0 || status.BlockedCommand != "" {
+		response["terminal_blocked_by"] = map[string]any{"pid": status.BlockedByPID, "command": status.BlockedCommand}
 	}
 }
 
-func (s *Server) buildHealthPayload() map[string]any {
+func (h *Handler) HealthPayload() map[string]any {
 	response := map[string]any{}
-	s.addTerminalHealth(response)
+	h.addTerminalHealth(response)
 	return response
 }
 
 // lastConsoleEvent returns a summary of the most recent console log entry.
-func (s *Server) lastConsoleEvent() map[string]any {
-	last, ok := s.logs.LastEntry()
+func (h *Handler) lastConsoleEvent() map[string]any {
+	last, ok := h.options.Logs.LastEntry()
 	if !ok {
 		return nil
 	}
@@ -136,7 +177,7 @@ func (s *Server) lastConsoleEvent() map[string]any {
 }
 
 // handleDiagnostics serves the /diagnostics endpoint with debug information.
-func (s *Server) handleDiagnostics(w http.ResponseWriter, r *http.Request, cap *capture.Store) {
+func (h *Handler) ServeDiagnostics(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		httpapi.JSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
@@ -146,8 +187,8 @@ func (s *Server) handleDiagnostics(w http.ResponseWriter, r *http.Request, cap *
 	launch := launchmode.Current()
 	resp := map[string]any{
 		"generated_at":   now.Format(time.RFC3339),
-		"version":        version,
-		"uptime_seconds": int(now.Sub(startTime).Seconds()),
+		"version":        h.options.Version,
+		"uptime_seconds": int(now.Sub(h.options.StartedAt).Seconds()),
 		"system": map[string]any{
 			"os":         runtime.GOOS,
 			"arch":       runtime.GOARCH,
@@ -155,9 +196,9 @@ func (s *Server) handleDiagnostics(w http.ResponseWriter, r *http.Request, cap *
 			"goroutines": runtime.NumGoroutine(),
 		},
 		"logs": map[string]any{
-			"entries":     s.logs.EntryCount(),
-			"max_entries": s.logs.MaxEntries(),
-			"log_file":    s.logs.LogFile(),
+			"entries":     h.options.Logs.EntryCount(),
+			"max_entries": h.options.Logs.MaxEntries(),
+			"log_file":    h.options.Logs.LogFile(),
 		},
 		"launch_mode": map[string]any{
 			"mode":             launch.Mode,
@@ -169,18 +210,18 @@ func (s *Server) handleDiagnostics(w http.ResponseWriter, r *http.Request, cap *
 		},
 	}
 
-	if cap != nil {
-		appendCaptureDiagnostics(resp, cap)
+	if h.options.Capture != nil {
+		appendCaptureDiagnostics(resp, h.options.Capture)
 	}
 
 	lastEvents := map[string]any{}
-	if evt := s.lastConsoleEvent(); evt != nil {
+	if evt := h.lastConsoleEvent(); evt != nil {
 		lastEvents["console"] = evt
 	}
 	resp["last_events"] = lastEvents
 
-	if cap != nil {
-		httpDebugLog := cap.GetHTTPDebugLog()
+	if h.options.Capture != nil {
+		httpDebugLog := h.options.Capture.GetHTTPDebugLog()
 		resp["http_debug_log"] = map[string]any{
 			"count":   len(httpDebugLog),
 			"entries": httpDebugLog,
@@ -264,20 +305,20 @@ func appendCaptureDiagnostics(resp map[string]any, cap *capture.Store) {
 }
 
 // handleLogs ingests or clears operational log entries. Reads use /telemetry?type=logs.
-func (s *Server) handleLogs(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeLogs(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
-		s.handleLogsPost(w, r)
+		h.handleLogsPost(w, r)
 	case http.MethodDelete:
-		s.logs.ClearEntries()
+		h.options.Logs.ClearEntries()
 		httpapi.JSON(w, http.StatusOK, map[string]bool{"cleared": true})
 	default:
 		httpapi.JSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 	}
 }
 
-func (s *Server) handleLogsPost(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, maxPostBodySize)
+func (h *Handler) handleLogsPost(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, h.options.MaxPostBodySize)
 	var body struct {
 		Entries []mcp.LogEntry `json:"entries"`
 	}
@@ -291,63 +332,66 @@ func (s *Server) handleLogsPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	valid, rejected := logstore.ValidateEntries(body.Entries)
-	received := s.logs.AddEntries(valid)
+	received := h.options.Logs.AddEntries(valid)
 	httpapi.JSON(w, http.StatusOK, map[string]int{
 		"received": received,
 		"rejected": rejected,
-		"entries":  s.logs.EntryCount(),
+		"entries":  h.options.Logs.EntryCount(),
 	})
 }
 
 // debugEndpointsEnabled reports whether non-production telemetry inspection routes are enabled.
-func debugEndpointsEnabled() bool {
+func DebugEndpointsEnabled() bool {
 	return os.Getenv("KABOOM_DEBUG") == "1"
 }
 
-func handleDebugUsage(mcp *MCPHandler) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			httpapi.JSON(w, http.StatusMethodNotAllowed, map[string]any{"error": "method not allowed"})
-			return
-		}
-		tracker := mcp.GetUsageTracker()
-		if tracker == nil {
-			httpapi.JSON(w, http.StatusOK, map[string]any{"counts": map[string]int{}})
-			return
-		}
-		httpapi.JSON(w, http.StatusOK, map[string]any{"counts": tracker.Peek()})
+func (h *Handler) ServeDebugUsage(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		httpapi.JSON(w, http.StatusMethodNotAllowed, map[string]any{"error": "method not allowed"})
+		return
 	}
+	tracker := h.usageTracker()
+	if tracker == nil {
+		httpapi.JSON(w, http.StatusOK, map[string]any{"counts": map[string]int{}})
+		return
+	}
+	httpapi.JSON(w, http.StatusOK, map[string]any{"counts": tracker.Peek()})
 }
 
 // handleDebugBeaconFlush returns the usage payload that a beacon would send without transmitting it.
-func handleDebugBeaconFlush(mcp *MCPHandler) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			httpapi.JSON(w, http.StatusMethodNotAllowed, map[string]any{"error": "method not allowed"})
-			return
-		}
-		tracker := mcp.GetUsageTracker()
-		if tracker == nil {
-			httpapi.JSON(w, http.StatusOK, map[string]any{
-				"payload": nil,
-				"flushed": 0,
-				"message": "no usage tracker available",
-			})
-			return
-		}
-		snapshot := tracker.SwapAndReset()
-		if snapshot == nil {
-			httpapi.JSON(w, http.StatusOK, map[string]any{
-				"payload": nil,
-				"flushed": 0,
-				"message": "no activity since last flush",
-			})
-			return
-		}
-		payload := telemetry.BuildUsageSummaryPayload(0, snapshot)
-		httpapi.JSON(w, http.StatusOK, map[string]any{
-			"payload": payload,
-			"flushed": len(snapshot.ToolStats),
-		})
+func (h *Handler) ServeDebugBeaconFlush(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		httpapi.JSON(w, http.StatusMethodNotAllowed, map[string]any{"error": "method not allowed"})
+		return
 	}
+	tracker := h.usageTracker()
+	if tracker == nil {
+		httpapi.JSON(w, http.StatusOK, map[string]any{
+			"payload": nil,
+			"flushed": 0,
+			"message": "no usage tracker available",
+		})
+		return
+	}
+	snapshot := tracker.SwapAndReset()
+	if snapshot == nil {
+		httpapi.JSON(w, http.StatusOK, map[string]any{
+			"payload": nil,
+			"flushed": 0,
+			"message": "no activity since last flush",
+		})
+		return
+	}
+	payload := telemetry.BuildUsageSummaryPayload(0, snapshot)
+	httpapi.JSON(w, http.StatusOK, map[string]any{
+		"payload": payload,
+		"flushed": len(snapshot.ToolStats),
+	})
+}
+
+func (h *Handler) usageTracker() *telemetry.UsageTracker {
+	if h.options.UsageTracker == nil {
+		return nil
+	}
+	return h.options.UsageTracker()
 }

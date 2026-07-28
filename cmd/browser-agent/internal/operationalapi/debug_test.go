@@ -1,6 +1,6 @@
-// server_routes_debug_usage_test.go — Tests for debug telemetry endpoints.
+// debug_test.go — Tests for debug telemetry endpoints.
 
-package main
+package operationalapi
 
 import (
 	"encoding/json"
@@ -11,47 +11,39 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
 )
 
-// stubMCPHandler returns an MCPHandler with a ToolHandler that has the given UsageTracker.
-// Other ToolHandler fields are left at zero values — only usageTracker is needed for debug endpoints.
-func stubMCPHandler(counter *telemetry.UsageTracker) *MCPHandler {
-	h := &MCPHandler{}
-	if counter != nil {
-		th := &ToolHandler{usageTracker: counter}
-		h.toolHandler = th
-	}
-	return h
+func stubHandler(counter *telemetry.UsageTracker) *Handler {
+	return New(Options{UsageTracker: func() *telemetry.UsageTracker { return counter }})
 }
 
 // M5: debugEndpointsEnabled respects KABOOM_DEBUG env var.
 func TestDebugEndpointsEnabled_Unset(t *testing.T) {
 	t.Setenv("KABOOM_DEBUG", "")
-	if debugEndpointsEnabled() {
+	if DebugEndpointsEnabled() {
 		t.Fatal("debugEndpointsEnabled() = true, want false when KABOOM_DEBUG is empty")
 	}
 }
 
 func TestDebugEndpointsEnabled_Set(t *testing.T) {
 	t.Setenv("KABOOM_DEBUG", "1")
-	if !debugEndpointsEnabled() {
+	if !DebugEndpointsEnabled() {
 		t.Fatal("debugEndpointsEnabled() = false, want true when KABOOM_DEBUG=1")
 	}
 }
 
 func TestDebugEndpointsEnabled_WrongValue(t *testing.T) {
 	t.Setenv("KABOOM_DEBUG", "true")
-	if debugEndpointsEnabled() {
+	if DebugEndpointsEnabled() {
 		t.Fatal("debugEndpointsEnabled() = true, want false when KABOOM_DEBUG=true (must be exactly '1')")
 	}
 }
 
 func TestDebugUsage_GET_EmptyCounter(t *testing.T) {
 	t.Parallel()
-	mcp := stubMCPHandler(telemetry.NewUsageTracker())
-	handler := handleDebugUsage(mcp)
+	handler := stubHandler(telemetry.NewUsageTracker())
 
 	req := httptest.NewRequest(http.MethodGet, "/debug/usage", nil)
 	rr := httptest.NewRecorder()
-	handler.ServeHTTP(rr, req)
+	handler.ServeDebugUsage(rr, req)
 
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rr.Code)
@@ -80,12 +72,11 @@ func TestDebugUsage_GET_PopulatedCounter(t *testing.T) {
 	counter.RecordToolCall("observe:page", 0, false)
 	counter.RecordToolCall("interact:click", 0, false)
 
-	mcp := stubMCPHandler(counter)
-	handler := handleDebugUsage(mcp)
+	handler := stubHandler(counter)
 
 	req := httptest.NewRequest(http.MethodGet, "/debug/usage", nil)
 	rr := httptest.NewRecorder()
-	handler.ServeHTTP(rr, req)
+	handler.ServeDebugUsage(rr, req)
 
 	var body map[string]any
 	if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil {
@@ -105,18 +96,17 @@ func TestDebugUsage_GET_DoesNotReset(t *testing.T) {
 	counter := telemetry.NewUsageTracker()
 	counter.RecordToolCall("observe:page", 0, false)
 
-	mcp := stubMCPHandler(counter)
-	handler := handleDebugUsage(mcp)
+	handler := stubHandler(counter)
 
 	// First request
 	req1 := httptest.NewRequest(http.MethodGet, "/debug/usage", nil)
 	rr1 := httptest.NewRecorder()
-	handler.ServeHTTP(rr1, req1)
+	handler.ServeDebugUsage(rr1, req1)
 
 	// Second request — counts should still be there (Peek, not SwapAndReset)
 	req2 := httptest.NewRequest(http.MethodGet, "/debug/usage", nil)
 	rr2 := httptest.NewRecorder()
-	handler.ServeHTTP(rr2, req2)
+	handler.ServeDebugUsage(rr2, req2)
 
 	var body map[string]any
 	_ = json.Unmarshal(rr2.Body.Bytes(), &body)
@@ -128,12 +118,11 @@ func TestDebugUsage_GET_DoesNotReset(t *testing.T) {
 
 func TestDebugUsage_POST_MethodNotAllowed(t *testing.T) {
 	t.Parallel()
-	mcp := stubMCPHandler(telemetry.NewUsageTracker())
-	handler := handleDebugUsage(mcp)
+	handler := stubHandler(telemetry.NewUsageTracker())
 
 	req := httptest.NewRequest(http.MethodPost, "/debug/usage", nil)
 	rr := httptest.NewRecorder()
-	handler.ServeHTTP(rr, req)
+	handler.ServeDebugUsage(rr, req)
 
 	if rr.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("status = %d, want 405", rr.Code)
@@ -142,12 +131,11 @@ func TestDebugUsage_POST_MethodNotAllowed(t *testing.T) {
 
 func TestDebugUsage_NilCounter(t *testing.T) {
 	t.Parallel()
-	mcp := stubMCPHandler(nil)
-	handler := handleDebugUsage(mcp)
+	handler := stubHandler(nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/debug/usage", nil)
 	rr := httptest.NewRecorder()
-	handler.ServeHTTP(rr, req)
+	handler.ServeDebugUsage(rr, req)
 
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rr.Code)
@@ -166,12 +154,11 @@ func TestDebugBeaconFlush_POST_WithData(t *testing.T) {
 	counter.RecordToolCall("observe:errors", 0, false)
 	counter.RecordToolCall("configure:health", 0, false)
 
-	mcp := stubMCPHandler(counter)
-	handler := handleDebugBeaconFlush(mcp)
+	handler := stubHandler(counter)
 
 	req := httptest.NewRequest(http.MethodPost, "/debug/beacon-flush", nil)
 	rr := httptest.NewRecorder()
-	handler.ServeHTTP(rr, req)
+	handler.ServeDebugBeaconFlush(rr, req)
 
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rr.Code)
@@ -219,12 +206,11 @@ func TestDebugBeaconFlush_POST_WithData(t *testing.T) {
 
 func TestDebugBeaconFlush_POST_Empty(t *testing.T) {
 	t.Parallel()
-	mcp := stubMCPHandler(telemetry.NewUsageTracker())
-	handler := handleDebugBeaconFlush(mcp)
+	handler := stubHandler(telemetry.NewUsageTracker())
 
 	req := httptest.NewRequest(http.MethodPost, "/debug/beacon-flush", nil)
 	rr := httptest.NewRecorder()
-	handler.ServeHTTP(rr, req)
+	handler.ServeDebugBeaconFlush(rr, req)
 
 	var body map[string]any
 	_ = json.Unmarshal(rr.Body.Bytes(), &body)
@@ -238,12 +224,11 @@ func TestDebugBeaconFlush_POST_Empty(t *testing.T) {
 
 func TestDebugBeaconFlush_POST_NilCounter(t *testing.T) {
 	t.Parallel()
-	mcp := stubMCPHandler(nil)
-	handler := handleDebugBeaconFlush(mcp)
+	handler := stubHandler(nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/debug/beacon-flush", nil)
 	rr := httptest.NewRecorder()
-	handler.ServeHTTP(rr, req)
+	handler.ServeDebugBeaconFlush(rr, req)
 
 	var body map[string]any
 	_ = json.Unmarshal(rr.Body.Bytes(), &body)
@@ -254,12 +239,11 @@ func TestDebugBeaconFlush_POST_NilCounter(t *testing.T) {
 
 func TestDebugBeaconFlush_GET_MethodNotAllowed(t *testing.T) {
 	t.Parallel()
-	mcp := stubMCPHandler(telemetry.NewUsageTracker())
-	handler := handleDebugBeaconFlush(mcp)
+	handler := stubHandler(telemetry.NewUsageTracker())
 
 	req := httptest.NewRequest(http.MethodGet, "/debug/beacon-flush", nil)
 	rr := httptest.NewRecorder()
-	handler.ServeHTTP(rr, req)
+	handler.ServeDebugBeaconFlush(rr, req)
 
 	if rr.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("status = %d, want 405", rr.Code)

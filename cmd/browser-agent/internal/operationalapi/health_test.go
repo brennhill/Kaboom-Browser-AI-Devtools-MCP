@@ -1,7 +1,7 @@
 // Purpose: Tests for health endpoint fast-path response.
 // Docs: docs/features/feature/mcp-persistent-server/index.md
 
-package main
+package operationalapi
 
 import (
 	"encoding/json"
@@ -22,17 +22,18 @@ func TestHandleHealthIncludesBridgeFastPathCounters(t *testing.T) {
 	bridge.RecordFastPathResourceRead("kaboom://capabilities", true, 0)
 	bridge.RecordFastPathResourceRead("kaboom://playbook/nonexistent/quick", false, -32002)
 
-	s := &Server{
-		logs: logstore.New(logstore.Config{
+	handler := New(Options{
+		Logs: logstore.New(logstore.Config{
 			MaxEntries: 100,
 			LogFile:    filepath.Join(t.TempDir(), "kaboom.jsonl"),
 			AddWarning: func(string) {},
 		}),
-	}
+		Version: "test",
+	})
 
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	rr := httptest.NewRecorder()
-	s.handleHealth(rr, req, nil)
+	handler.ServeHealth(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("handleHealth status = %d, want %d", rr.Code, http.StatusOK)
 	}

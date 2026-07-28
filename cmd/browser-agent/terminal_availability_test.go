@@ -14,6 +14,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/operationalapi"
 )
 
 func newAvailabilityServer(t *testing.T) *Server {
@@ -24,6 +26,22 @@ func newAvailabilityServer(t *testing.T) *Server {
 	}
 	t.Cleanup(func() { server.logs.Shutdown(2 * time.Second) })
 	return server
+}
+
+func terminalHealthPayload(server *Server) map[string]any {
+	handler := operationalapi.New(operationalapi.Options{
+		TerminalStatus: func() operationalapi.TerminalStatus {
+			status := server.getTerminalStatus()
+			return operationalapi.TerminalStatus{
+				Available:      status.Available,
+				Port:           status.Port,
+				Error:          status.Error,
+				BlockedByPID:   status.BlockedByPID,
+				BlockedCommand: status.BlockedByCommand,
+			}
+		},
+	})
+	return handler.HealthPayload()
 }
 
 func TestTerminalStatus_ReportsBlockingProcess(t *testing.T) {
@@ -89,7 +107,7 @@ func TestHealthPayload_ExplainsAnUnavailableTerminal(t *testing.T) {
 	server := newAvailabilityServer(t)
 	server.setTerminalUnavailable(7891, "bind: address already in use", 4242, "postgres -D /var/pg")
 
-	payload := server.buildHealthPayload()
+	payload := terminalHealthPayload(server)
 
 	avail, ok := payload["terminal_available"].(bool)
 	if !ok {
@@ -117,7 +135,7 @@ func TestHealthPayload_HealthyTerminalCarriesNoDiagnosis(t *testing.T) {
 	server := newAvailabilityServer(t)
 	server.setTerminalPort(7891)
 
-	payload := server.buildHealthPayload()
+	payload := terminalHealthPayload(server)
 	if avail, _ := payload["terminal_available"].(bool); !avail {
 		t.Fatal("terminal_available must be true after a successful bind")
 	}

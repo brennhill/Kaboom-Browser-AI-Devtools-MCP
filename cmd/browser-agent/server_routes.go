@@ -18,6 +18,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/insecureproxy"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mcphttp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/mediaapi"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/operationalapi"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testpages"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
@@ -295,6 +296,31 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, cap *capture.Store) 
 	// MCP — The single MCP JSON-RPC endpoint. All AI agent tool calls go through here.
 	mcp := NewToolHandler(server, cap)
 	mux.HandleFunc("/mcp", httpguard.CORS(newMCPHTTPHandler(mcp).ServeHTTP))
+	operations := operationalapi.New(operationalapi.Options{
+		Logs:      server.logs,
+		Capture:   cap,
+		Version:   version,
+		StartedAt: startTime,
+		TerminalStatus: func() operationalapi.TerminalStatus {
+			status := server.getTerminalStatus()
+			return operationalapi.TerminalStatus{
+				Available:      status.Available,
+				Port:           status.Port,
+				Error:          status.Error,
+				BlockedByPID:   status.BlockedByPID,
+				BlockedCommand: status.BlockedByCommand,
+			}
+		},
+		AvailableVersion: releaseChecker.Available,
+		UpgradeInfo: func() *health.UpgradeInfo {
+			if binaryUpgradeState == nil {
+				return nil
+			}
+			return health.BuildUpgradeInfo(binaryUpgradeState)
+		},
+		UsageTracker:    mcp.GetUsageTracker,
+		MaxPostBodySize: maxPostBodySize,
+	})
 
 	// NOT MCP — Dashboard status API (JSON feed for the HTML dashboard)
 	mux.HandleFunc("/api/status", httpguard.CORS(dashboard.Status(dashboard.StatusOptions{
@@ -323,9 +349,7 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, cap *capture.Store) 
 	})))
 
 	// NOT MCP — Health check for extension and monitoring (MCP uses configure(action: "health"))
-	mux.HandleFunc("/health", httpguard.CORS(func(w http.ResponseWriter, r *http.Request) {
-		server.handleHealth(w, r, cap)
-	}))
+	mux.HandleFunc("/health", httpguard.CORS(operations.ServeHealth))
 
 	// NOT MCP — Last-resort altered-environment proxy for CSP-locked debugging sessions.
 	proxyHandler := insecureproxy.New(cap, agenthttp.JSON)
@@ -341,15 +365,13 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, cap *capture.Store) 
 
 	// NOT MCP — Debug: telemetry usage counter inspection and beacon flush.
 	// Gated behind KABOOM_DEBUG=1 to prevent accidental exposure in production.
-	if debugEndpointsEnabled() {
-		mux.HandleFunc("/debug/usage", httpguard.CORS(handleDebugUsage(mcp)))
-		mux.HandleFunc("/debug/beacon-flush", httpguard.CORS(handleDebugBeaconFlush(mcp)))
+	if operationalapi.DebugEndpointsEnabled() {
+		mux.HandleFunc("/debug/usage", httpguard.CORS(operations.ServeDebugUsage))
+		mux.HandleFunc("/debug/beacon-flush", httpguard.CORS(operations.ServeDebugBeaconFlush))
 	}
 
 	// NOT MCP — Graceful shutdown (use CLI --stop flag, not MCP)
-	mux.HandleFunc("/shutdown", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		server.handleShutdown(w, r)
-	})))
+	mux.HandleFunc("/shutdown", httpguard.CORS(httpguard.ExtensionOnly(operations.ServeShutdown)))
 
 	// NOT MCP — Debug diagnostics: HTML for browsers, JSON for programmatic access
 	mux.HandleFunc("/diagnostics", httpguard.CORS(func(w http.ResponseWriter, r *http.Request) {
@@ -358,16 +380,12 @@ func registerCoreRoutes(mux *http.ServeMux, server *Server, cap *capture.Store) 
 			dashboard.Diagnostics(agenthttp.JSON)(w, r)
 			return
 		}
-		server.handleDiagnostics(w, r, cap)
+		operations.ServeDiagnostics(w, r)
 	}))
-	mux.HandleFunc("/diagnostics.json", httpguard.CORS(func(w http.ResponseWriter, r *http.Request) {
-		server.handleDiagnostics(w, r, cap)
-	}))
+	mux.HandleFunc("/diagnostics.json", httpguard.CORS(operations.ServeDiagnostics))
 
 	// NOT MCP — Log ingestion from extension (MCP reads logs via observe(what: "logs"))
-	mux.HandleFunc("/logs", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
-		server.handleLogs(w, r)
-	})))
+	mux.HandleFunc("/logs", httpguard.CORS(httpguard.ExtensionOnly(operations.ServeLogs)))
 
 	// NOT MCP — HTML pages for human navigation
 	mux.HandleFunc("/logs.html", httpguard.CORS(dashboard.Logs(agenthttp.JSON)))
