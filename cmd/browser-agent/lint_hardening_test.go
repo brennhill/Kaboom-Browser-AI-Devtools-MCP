@@ -233,6 +233,16 @@ func TestNavigateEnrichmentBelongsToInteractOwner(t *testing.T) {
 	}
 }
 
+func TestDependencyBuildersAreNotToolHandlerMethods(t *testing.T) {
+	source, err := os.ReadFile(filepath.Join(projectRoot(), "cmd", "browser-agent", "tools_core.go"))
+	if err != nil {
+		t.Fatalf("read tools_core.go: %v", err)
+	}
+	if strings.Contains(string(source), "func (h *ToolHandler) screenrecDeps(") {
+		t.Fatal("screen recording dependency builder remains a ToolHandler method")
+	}
+}
+
 func TestTestGenerationDoesNotRequireHostInterface(t *testing.T) {
 	relativePath := "cmd/browser-agent/internal/testgenhandler/handler.go"
 	source, err := os.ReadFile(filepath.Join(projectRoot(), relativePath))

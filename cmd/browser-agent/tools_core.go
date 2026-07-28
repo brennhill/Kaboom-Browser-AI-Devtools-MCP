@@ -476,7 +476,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	handler.auditRecorder = audit.NewRecorder(handler.auditTrail)
 
 	handler.uploadSecurity = uploadSecurityConfig
-	handler.recordingInteractHandler = screenrec.NewInteractHandler(handler.screenrecDeps())
+	handler.recordingInteractHandler = screenrec.NewInteractHandler(buildScreenrecDeps(handler))
 	analyzeDeps := buildAnalyzeDeps(handler)
 	observeDeps := buildObserveReadDeps(handler)
 	handler.analyzeDispatcher = analyzedispatch.NewDispatcher(analyzedispatch.Config{
@@ -745,7 +745,7 @@ func buildInteractDeps(h *ToolHandler) *toolinteract.Deps {
 	}
 }
 
-func (h *ToolHandler) screenrecDeps() screenrec.Deps {
+func buildScreenrecDeps(h *ToolHandler) screenrec.Deps {
 	if h.Guards == nil {
 		h.Guards = toolguard.New(h.capture, h.shutdownCtx, defaultExtensionReadinessTimeout())
 	}

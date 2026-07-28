@@ -85,4 +85,6 @@ Extension storage is divided by change lifecycle, shared I/O mechanics, durable
 local state, and ephemeral session state. Consumers import those owners
 directly; there is no all-purpose storage facade or compatibility barrel.
 Screen-recording dependencies receive the query owner callback directly from
-composition; no root `getCommandResult` forwarding method is retained.
+the composition boundary through `buildScreenrecDeps`; dependency construction
+is not a `ToolHandler` method, and no root `getCommandResult` forwarding method
+is retained.

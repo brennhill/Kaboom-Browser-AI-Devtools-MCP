@@ -42,7 +42,7 @@ func newVideoTestEnv(t *testing.T) *videoTestEnv {
 	return &videoTestEnv{handler: NewInteractHandler(testDeps(cap)), capture: cap}
 }
 
-// testDeps mirrors the host's screenrecDeps() wiring in ToolHandler, minus the
+// testDeps mirrors the host's buildScreenrecDeps wiring, minus the
 // cold-start wait: the gates read the same capture flags the real ones read.
 func testDeps(cap *capture.Capture) Deps {
 	return Deps{

@@ -7,7 +7,7 @@ import "testing"
 func TestScreenrecDeps_AllSeamsWired(t *testing.T) {
 	t.Parallel()
 	handler, _, _ := makeToolHandler(t)
-	deps := handler.screenrecDeps()
+	deps := buildScreenrecDeps(handler)
 	if deps.EnqueuePendingQuery == nil || deps.RequirePilot == nil ||
 		deps.RequireExtension == nil || deps.RecordAIAction == nil ||
 		deps.DiagnosticHint == nil || deps.GetCommandResult == nil {
