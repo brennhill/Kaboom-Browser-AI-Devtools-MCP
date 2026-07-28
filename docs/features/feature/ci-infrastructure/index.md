@@ -11,6 +11,7 @@ code_paths:
   - cmd/browser-agent/internal/ciapi/types.go
   - cmd/browser-agent/server.go
 test_paths:
+  - internal/capture/state_resetter_owner_test.go
   - cmd/browser-agent/internal/ciapi/snapshot_test.go
   - cmd/browser-agent/ci_test.go
   - cmd/browser-agent/ci_unit_test.go
@@ -45,6 +46,8 @@ last_verified_date: 2026-03-05
 - Route registration: `cmd/browser-agent/server.go`
 - Snapshot, clear, and test-boundary endpoint behavior:
   `cmd/browser-agent/internal/ciapi/handlers.go`
+- The clear route receives `capture.StateResetter` explicitly; snapshot and
+  test-boundary handlers retain only the narrower capture read surface.
 - Snapshot filtering, statistics, and payload contracts:
   `cmd/browser-agent/internal/ciapi/snapshot.go`,
   `cmd/browser-agent/internal/ciapi/types.go`

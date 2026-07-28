@@ -318,7 +318,7 @@ func TestMemory_RunningTotal_ZeroAfterClearAll(t *testing.T) {
 		t.Fatal("expected non-zero networkBodyMemoryTotal before ClearAll")
 	}
 
-	c.ClearAll()
+	NewStateResetter(c).ClearAll()
 
 	c.telemetry.mu.RLock()
 	wsAfter := c.telemetry.buffers.wsMemoryTotal

@@ -23,6 +23,7 @@ code_paths:
   - internal/push/inbox.go
   - internal/types/alert.go
 test_paths:
+  - internal/capture/state_resetter_owner_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - internal/streaming/stream_test.go
   - internal/streaming/alertbuf/alertbuf_test.go

@@ -23,9 +23,13 @@ type Logs interface {
 
 // Capture is the snapshot/test-boundary surface used by CI endpoints.
 type Capture interface {
-	ClearAll() int
 	Extension() *capture.ExtensionRuntime
 	Telemetry() *capture.TelemetryStore
+}
+
+// Resetter is the coordinated runtime reset surface used by CI endpoints.
+type Resetter interface {
+	ClearAll() int
 }
 
 // Snapshot returns the GET /snapshot handler.
@@ -71,7 +75,7 @@ func Snapshot(logs Logs, captured Capture) http.HandlerFunc {
 }
 
 // Clear returns the POST/DELETE /clear handler.
-func Clear(logs Logs, captured Capture) http.HandlerFunc {
+func Clear(logs Logs, resetter Resetter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost && r.Method != http.MethodDelete {
 			util.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
@@ -79,7 +83,7 @@ func Clear(logs Logs, captured Capture) http.HandlerFunc {
 		}
 		previousCount := logs.EntryCount()
 		logs.ClearEntries()
-		captured.ClearAll()
+		resetter.ClearAll()
 		util.JSONResponse(w, http.StatusOK, map[string]any{"cleared": true, "entries_removed": previousCount})
 	}
 }

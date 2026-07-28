@@ -10,6 +10,7 @@ code_paths:
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
 test_paths:
+  - internal/capture/state_resetter_owner_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/tools_configure_coverage_test.go
   - cmd/browser-agent/tools_configure_handler_test.go
@@ -44,4 +45,6 @@ last_verified_date: 2026-03-05
 
 `internal/toolconfigure/clear.go` owns request parsing and the clearing policy
 for capture, log, push inbox, and annotation stores. The root configure registry
-supplies those stores explicitly through `ClearTargets`.
+supplies those stores explicitly through `ClearTargets`, including the
+canonical `capture.StateResetter` for coordinated full-state resets. `Capture`
+has no `ClearAll` forwarding method.

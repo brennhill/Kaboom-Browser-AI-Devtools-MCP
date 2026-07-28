@@ -79,6 +79,7 @@ test_paths:
   - internal/capture/no_facade_test.go
   - internal/capture/http_handlers_owner_test.go
   - internal/capture/health_reader_owner_test.go
+  - internal/capture/state_resetter_owner_test.go
   - internal/capture/sync_handler_owner_test.go
   - internal/circuit/breaker_test.go
   - internal/debuglog/logger_test.go
@@ -136,6 +137,9 @@ diagnostics without adding forwarding methods to `Capture`.
 Aggregate health reads are owned by `capture.HealthReader`; it snapshots the
 independently synchronized telemetry, query, extension, and circuit owners
 without a cross-owner method on `Capture`.
+Coordinated runtime clearing is owned by `capture.StateResetter`; it resets test
+boundaries, telemetry, performance snapshots, and extension logs together
+without exposing `ClearAll` on `Capture`.
 The unused `EventBuffers`, `NetworkWaterfallStore`, `ExtensionLogStore`, and
 `PerformanceSnapshotStore` read-only view layer has been deleted; it wrapped
 canonical capture methods and had no production consumers.

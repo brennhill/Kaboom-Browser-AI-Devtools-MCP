@@ -156,7 +156,7 @@ func TestHandleClearAndTestBoundaryHandlers(t *testing.T) {
 	srv.logs.AddEntries([]types.LogEntry{{"level": "error", "message": "x"}})
 	cap.Telemetry().AddNetworkBodies([]types.NetworkBody{{URL: "https://example.test", Status: 200}})
 
-	clearHandler := ciapi.Clear(srv.logs, cap)
+	clearHandler := ciapi.Clear(srv.logs, capture.NewStateResetter(cap))
 
 	getReq := httptest.NewRequest(http.MethodGet, "/clear", nil)
 	getRR := httptest.NewRecorder()

@@ -481,13 +481,31 @@ func (s *TelemetryStore) ClearActionBuffer() types.BufferClearCounts {
 	return counts
 }
 
+// StateResetter owns the coordinated reset of capture runtime stores.
+type StateResetter struct {
+	extension     *ExtensionRuntime
+	telemetry     *TelemetryStore
+	performance   *PerformanceStore
+	extensionLogs *ExtensionLogStore
+}
+
+// NewStateResetter binds reset behavior to the canonical state owners.
+func NewStateResetter(capture *Capture) *StateResetter {
+	return &StateResetter{
+		extension:     capture.extension,
+		telemetry:     capture.telemetry,
+		performance:   capture.perf,
+		extensionLogs: capture.extensionLogs,
+	}
+}
+
 // ClearAll resets all capture-owned in-memory telemetry state — INCLUDING
 // extension logs — and returns the number of extension-log entries cleared.
-func (c *Capture) ClearAll() int {
-	c.extension.ClearTestBoundaries()
-	c.telemetry.clearAll()
-	c.perf.clear()
-	return c.extensionLogs.Clear()
+func (r *StateResetter) ClearAll() int {
+	r.extension.ClearTestBoundaries()
+	r.telemetry.clearAll()
+	r.performance.clear()
+	return r.extensionLogs.Clear()
 }
 
 func (s *TelemetryStore) clearAll() {

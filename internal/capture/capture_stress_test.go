@@ -240,7 +240,7 @@ func TestStressCaptureWithClears(t *testing.T) {
 				defer wg.Done()
 				for i := 0; i < clearsPerClearer; i++ {
 					time.Sleep(5 * time.Millisecond)
-					c.ClearAll()
+					NewStateResetter(c).ClearAll()
 				}
 			}(clearID)
 		}

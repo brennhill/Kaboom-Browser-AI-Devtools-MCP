@@ -14,6 +14,7 @@ import (
 // ClearTargets are the stores affected by configure(what="clear").
 type ClearTargets struct {
 	Capture     *capture.Capture
+	Resetter    *capture.StateResetter
 	ClearLogs   func() int
 	Inbox       *push.PushInbox
 	Annotations *annotation.Store
@@ -42,7 +43,7 @@ func HandleClear(targets ClearTargets, req mcp.JSONRPCRequest, args json.RawMess
 func clearBuffer(targets ClearTargets, buffer string) (any, bool) {
 	switch buffer {
 	case "all":
-		extensionLogsCleared := targets.Capture.ClearAll()
+		extensionLogsCleared := targets.Resetter.ClearAll()
 		_ = targets.ClearLogs()
 		cleared := map[string]any{"buffers": "all", "extension_logs_cleared": extensionLogsCleared}
 		if targets.Inbox != nil {

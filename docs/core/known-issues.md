@@ -72,7 +72,7 @@ the folder-gate numbers as evidence that it did.
 
 | | Current |
 | --- | --- |
-| `Capture` production methods (composition and cross-owner orchestration) | 13 |
+| `Capture` production methods (composition and owner accessors) | 12 |
 | `cmd/browser-agent` production source files (package `main`) | 10 |
 | `*ToolHandler` methods in those files | 3 |
 
@@ -100,7 +100,7 @@ The extension-facing ingestion boundary is now owned by
 recording-storage, and circuit-health routes migrated together. All server and
 test callers construct that canonical owner directly, and the former
 `Capture.Handle*` methods were deleted rather than kept as facades. The
-The separate session/command transport cluster is now owned by
+separate session/command transport cluster is now owned by
 `capture.SyncHandler`. Heartbeats, command results, long-poll delivery,
 disconnect reconciliation, lifecycle events, and sync diagnostics migrated
 together; all callers construct the owner directly and `Capture` retains no
@@ -109,6 +109,8 @@ Aggregate health composition is now owned by `capture.HealthReader`, which
 depends directly on the telemetry, query, extension, and circuit owners.
 Operational, dashboard, doctor, and configure callers migrated directly; the
 former `Capture.GetHealthSnapshot` method was deleted.
+Coordinated clearing is now owned by `capture.StateResetter`; CI and configure
+callers receive it explicitly, and `Capture.ClearAll` was deleted.
 
 Note also that `src/lib` and `src/background` were **relocated into
 subdirectories, not decomposed** — total file count and LOC are essentially

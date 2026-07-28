@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 )
@@ -248,7 +249,8 @@ func TestToolsConfigureClear_InvalidJSON(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	resp := toolconfigure.HandleClear(toolconfigure.ClearTargets{
-		Capture: h.capture,
+		Capture:  h.capture,
+		Resetter: capture.NewStateResetter(h.capture),
 		ClearLogs: func() int {
 			count := h.server.logs.EntryCount()
 			h.server.logs.ClearEntries()
