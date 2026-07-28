@@ -12,11 +12,17 @@ code_paths:
   - internal/telemetry/usage_beacon.go
   - internal/telemetry/usage_counter.go
 test_paths:
+  - internal/telemetry/beacon_test.go
+  - internal/telemetry/contract_compliance_test.go
   - internal/telemetry/e2e_reporting_test.go
   - internal/telemetry/e2e_session_test.go
   - internal/telemetry/e2e_usage_summary_test.go
-last_verified_version: 0.7.12
-last_verified_date: 2026-03-05
+  - internal/telemetry/install_id_test.go
+  - internal/telemetry/session_test.go
+  - internal/telemetry/usage_beacon_test.go
+  - internal/telemetry/usage_counter_test.go
+last_verified_version: 0.8.8
+last_verified_date: 2026-07-28
 ---
 
 # App Telemetry
@@ -29,3 +35,10 @@ The event suite owns individual beacon envelopes and payloads. The session
 suite owns activity boundaries, shutdown, timeout, and opt-out behavior. The
 usage-summary suite owns counter aggregation, snapshot/reset semantics, and
 summary beacons.
+
+## Specifications
+
+- [Product specification](product-spec.md)
+- [Technical specification](tech-spec.md)
+- [QA plan](qa-plan.md)
+- [Canonical telemetry contract](../../../core/app-metrics.md)
