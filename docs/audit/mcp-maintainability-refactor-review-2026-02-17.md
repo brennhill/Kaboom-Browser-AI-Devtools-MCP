@@ -73,7 +73,7 @@ Impact:
 
 Evidence:
 
-- Lenient parser helper: `cmd/browser-agent/tools_response.go` (`lenientUnmarshal`)
+- Lenient parser helper: `internal/mcp/response.go` (`LenientUnmarshal`)
 - Tool-level unknown-arg warning based on top-level schema: `cmd/browser-agent/handler.go`
 - Structured warning parser exists but is limited in use: `cmd/browser-agent/tools_validation.go`
 - Many extension params parsed from `unknown`/string JSON at execution time: `src/background/pending-queries.ts`
