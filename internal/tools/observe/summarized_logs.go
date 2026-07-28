@@ -34,7 +34,7 @@ func GetSummarizedLogs(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) 
 		}
 	}
 
-	_, trackedTabID, trackedTabURL := deps.GetCapture().GetTrackingStatus()
+	_, trackedTabID, trackedTabURL := deps.GetCapture().Extension().GetTrackingStatus()
 	if params.URL == "" && params.Scope == "current_page" && trackedTabURL != "" {
 		params.URL = trackedTabURL
 	}

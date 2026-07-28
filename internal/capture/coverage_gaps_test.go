@@ -98,7 +98,7 @@ func TestGetVersionMismatch_NoServerVersion(t *testing.T) {
 	defer c.Close()
 
 	c.mu.Lock()
-	c.extensionState.extensionVersion = "6.0.3"
+	c.extension.state.extensionVersion = "6.0.3"
 	c.mu.Unlock()
 
 	_, _, mismatch := c.GetVersionMismatch()
@@ -115,7 +115,7 @@ func TestGetVersionMismatch_Match(t *testing.T) {
 
 	c.SetServerVersion("6.0.3")
 	c.mu.Lock()
-	c.extensionState.extensionVersion = "6.0.5"
+	c.extension.state.extensionVersion = "6.0.5"
 	c.mu.Unlock()
 
 	extVer, srvVer, mismatch := c.GetVersionMismatch()
@@ -138,7 +138,7 @@ func TestGetVersionMismatch_Mismatch(t *testing.T) {
 
 	c.SetServerVersion("6.0.3")
 	c.mu.Lock()
-	c.extensionState.extensionVersion = "5.9.0"
+	c.extension.state.extensionVersion = "5.9.0"
 	c.mu.Unlock()
 
 	_, _, mismatch := c.GetVersionMismatch()
@@ -178,7 +178,7 @@ func TestGetVersionMismatch_InvalidVersionFormat(t *testing.T) {
 
 	c.SetServerVersion("6.0.3")
 	c.mu.Lock()
-	c.extensionState.extensionVersion = "invalid"
+	c.extension.state.extensionVersion = "invalid"
 	c.mu.Unlock()
 
 	_, _, mismatch := c.GetVersionMismatch()

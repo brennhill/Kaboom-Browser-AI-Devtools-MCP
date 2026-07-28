@@ -53,14 +53,14 @@ func testDeps(cap *capture.Capture) Deps {
 			return mcp.JSONRPCResponse{}, false
 		},
 		RequirePilot: func(req mcp.JSONRPCRequest, opts ...func(*mcp.StructuredError)) (mcp.JSONRPCResponse, bool) {
-			if cap.IsPilotActionAllowed() {
+			if cap.Extension().IsPilotActionAllowed() {
 				return mcp.JSONRPCResponse{}, false
 			}
 			return mcp.Fail(req, mcp.ErrCodePilotDisabled, "AI Web Pilot is explicitly disabled",
 				"Enable AI Web Pilot in the extension popup", opts...), true
 		},
 		RequireExtension: func(req mcp.JSONRPCRequest, opts ...func(*mcp.StructuredError)) (mcp.JSONRPCResponse, bool) {
-			if cap.IsExtensionConnected() {
+			if cap.Extension().IsExtensionConnected() {
 				return mcp.JSONRPCResponse{}, false
 			}
 			return mcp.Fail(req, mcp.ErrNotInitialized, "Browser extension is not connected",
@@ -68,7 +68,7 @@ func testDeps(cap *capture.Capture) Deps {
 		},
 		RecordAIAction:   func(action, url string, extra map[string]any) {},
 		DiagnosticHint:   func() func(*mcp.StructuredError) { return func(*mcp.StructuredError) {} },
-		GetCommandResult: cap.GetCommandResult,
+		GetCommandResult: cap.Queries().GetCommandResult,
 	}
 }
 
@@ -201,7 +201,7 @@ func TestHandleVideoRecordingSaveValidationAndSuccess(t *testing.T) {
 	// Method guard.
 	methodReq := httptest.NewRequest(http.MethodGet, "/recordings/save", nil)
 	methodRR := httptest.NewRecorder()
-	HandleSave(methodRR, methodReq, env.capture)
+	HandleSave(methodRR, methodReq, env.capture.Queries())
 	if methodRR.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("method guard status = %d, want 405", methodRR.Code)
 	}
@@ -209,7 +209,7 @@ func TestHandleVideoRecordingSaveValidationAndSuccess(t *testing.T) {
 	// Missing metadata.
 	missingMetaReq := buildRecordingSaveRequest(t, http.MethodPost, []byte("video-bytes"), "", "")
 	missingMetaRR := httptest.NewRecorder()
-	HandleSave(missingMetaRR, missingMetaReq, env.capture)
+	HandleSave(missingMetaRR, missingMetaReq, env.capture.Queries())
 	if missingMetaRR.Code != http.StatusBadRequest {
 		t.Fatalf("missing metadata status = %d, want 400", missingMetaRR.Code)
 	}
@@ -217,7 +217,7 @@ func TestHandleVideoRecordingSaveValidationAndSuccess(t *testing.T) {
 	// Invalid metadata JSON.
 	invalidMetaReq := buildRecordingSaveRequest(t, http.MethodPost, []byte("video-bytes"), "{bad json", "")
 	invalidMetaRR := httptest.NewRecorder()
-	HandleSave(invalidMetaRR, invalidMetaReq, env.capture)
+	HandleSave(invalidMetaRR, invalidMetaReq, env.capture.Queries())
 	if invalidMetaRR.Code != http.StatusBadRequest {
 		t.Fatalf("invalid metadata status = %d, want 400", invalidMetaRR.Code)
 	}
@@ -226,7 +226,7 @@ func TestHandleVideoRecordingSaveValidationAndSuccess(t *testing.T) {
 	traversalMeta := `{"name":"../escape","created_at":"2026-01-01T00:00:00Z"}`
 	traversalReq := buildRecordingSaveRequest(t, http.MethodPost, []byte("video-bytes"), traversalMeta, "")
 	traversalRR := httptest.NewRecorder()
-	HandleSave(traversalRR, traversalReq, env.capture)
+	HandleSave(traversalRR, traversalReq, env.capture.Queries())
 	if traversalRR.Code != http.StatusBadRequest {
 		t.Fatalf("path traversal status = %d, want 400", traversalRR.Code)
 	}
@@ -235,7 +235,7 @@ func TestHandleVideoRecordingSaveValidationAndSuccess(t *testing.T) {
 	okMeta := `{"name":"e2e-checkout","display_name":"Checkout","created_at":"2026-01-01T00:00:00Z","duration_seconds":7,"url":"https://app.example.com/checkout"}`
 	req := buildRecordingSaveRequest(t, http.MethodPost, []byte("video-bytes-123"), okMeta, "query-1")
 	rr := httptest.NewRecorder()
-	HandleSave(rr, req, env.capture)
+	HandleSave(rr, req, env.capture.Queries())
 
 	if rr.Code != http.StatusOK {
 		t.Fatalf("success status = %d, want 200; body=%s", rr.Code, rr.Body.String())
@@ -296,7 +296,7 @@ func TestHandleVideoRecordingSaveRejectsOversizedUpload(t *testing.T) {
 	meta := `{"name":"oversized-recording","created_at":"2026-01-01T00:00:00Z"}`
 	req := buildRecordingSaveRequest(t, http.MethodPost, largeVideo, meta, "")
 	rr := httptest.NewRecorder()
-	HandleSave(rr, req, env.capture)
+	HandleSave(rr, req, env.capture.Queries())
 
 	if rr.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("oversized upload status = %d, want %d (body=%q)", rr.Code, http.StatusRequestEntityTooLarge, rr.Body.String())

@@ -154,7 +154,7 @@ func CaptureEvidence(store *capture.Capture, clientID string) EvidenceShot {
 	if store == nil {
 		return EvidenceShot{Error: "capture_not_initialized"}
 	}
-	enabled, _, _ := store.GetTrackingStatus()
+	enabled, _, _ := store.Extension().GetTrackingStatus()
 	if !enabled {
 		return EvidenceShot{Error: "no_tracked_tab"}
 	}

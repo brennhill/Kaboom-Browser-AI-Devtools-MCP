@@ -123,7 +123,7 @@ func TestCoverageBoost_EnhancedActionsBranches(t *testing.T) {
 		{Action: types.EnhancedAction{Type: "click"}, AddedAt: now},
 		{Action: types.EnhancedAction{Type: "click"}, AddedAt: now},
 	}
-	c.extensionState.activeTestIDs["test-1"] = true
+	c.extension.state.activeTestIDs["test-1"] = true
 	c.mu.Unlock()
 
 	c.AddEnhancedActions([]types.EnhancedAction{{Type: "type", Value: "hello"}})
@@ -159,7 +159,7 @@ func TestCoverageBoost_NetworkBodiesBranches(t *testing.T) {
 		{Body: types.NetworkBody{Method: "GET", URL: "https://a.example", RequestBody: "a", ResponseBody: "a"}, AddedAt: now},
 		{Body: types.NetworkBody{Method: "GET", URL: "https://b.example", RequestBody: "b", ResponseBody: "b"}, AddedAt: now},
 	}
-	c.extensionState.activeTestIDs["tid"] = true
+	c.extension.state.activeTestIDs["tid"] = true
 	c.mu.Unlock()
 
 	c.AddNetworkBodies([]types.NetworkBody{{

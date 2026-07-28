@@ -227,11 +227,11 @@ func (h *ToolHandler) AllWebSocketEvents() []types.WebSocketEvent {
 }
 
 func (h *ToolHandler) GetTrackingStatus() (bool, int, string) {
-	return h.capture.GetTrackingStatus()
+	return h.capture.Extension().GetTrackingStatus()
 }
 
 func (h *ToolHandler) GetPilotStatus() any {
-	return h.capture.GetPilotStatus()
+	return h.capture.Extension().GetPilotStatus()
 }
 
 func (h *ToolHandler) GetToolModuleExamples(toolName string) any {
@@ -243,11 +243,11 @@ func (h *ToolHandler) GetToolModuleExamples(toolName string) any {
 }
 
 func (h *ToolHandler) GetSecurityMode() (string, bool, []string) {
-	return h.capture.GetSecurityMode()
+	return h.capture.Extension().GetSecurityMode()
 }
 
 func (h *ToolHandler) SetSecurityMode(mode string, rewrites []string) {
-	h.capture.SetSecurityMode(mode, rewrites)
+	h.capture.Extension().SetSecurityMode(mode, rewrites)
 }
 
 func (h *ToolHandler) GetTelemetryMode() string {

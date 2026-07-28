@@ -43,7 +43,7 @@ func (g *Guards) InjectCSPBlockedActions(resp mcp.JSONRPCResponse) mcp.JSONRPCRe
 	if g.capture == nil {
 		return resp
 	}
-	restricted, level := g.capture.GetCSPStatus()
+	restricted, level := g.capture.Extension().GetCSPStatus()
 	if !restricted {
 		return resp
 	}
@@ -78,10 +78,10 @@ func (g *Guards) DiagnosticHintString() string {
 	if g.capture == nil {
 		return "capture=unavailable"
 	}
-	extConnected := g.capture.IsExtensionConnected()
-	pilotEnabled := g.capture.IsPilotEnabled()
+	extConnected := g.capture.Extension().IsExtensionConnected()
+	pilotEnabled := g.capture.Extension().IsPilotEnabled()
 	pilotState := ""
-	if status, ok := g.capture.GetPilotStatus().(map[string]any); ok {
+	if status, ok := g.capture.Extension().GetPilotStatus().(map[string]any); ok {
 		if state, ok := status["state"].(string); ok {
 			pilotState = state
 		}
@@ -89,7 +89,7 @@ func (g *Guards) DiagnosticHintString() string {
 			pilotEnabled = effective
 		}
 	}
-	enabled, tabID, tabURL := g.capture.GetTrackingStatus()
+	enabled, tabID, tabURL := g.capture.Extension().GetTrackingStatus()
 
 	var parts []string
 	if extConnected {
@@ -116,7 +116,7 @@ func (g *Guards) DiagnosticHintString() string {
 	} else {
 		parts = append(parts, "tracked_tab=NONE")
 	}
-	cspRestricted, cspLevel := g.capture.GetCSPStatus()
+	cspRestricted, cspLevel := g.capture.Extension().GetCSPStatus()
 	if cspRestricted {
 		parts = append(parts, fmt.Sprintf("csp=RESTRICTED(%s)", cspLevel))
 	} else {
@@ -132,7 +132,7 @@ func (g *Guards) DiagnosticHint() func(*mcp.StructuredError) {
 // requirePilot returns (resp, true) if AI Web Pilot is disabled, short-circuiting the caller.
 // Usage: if resp, blocked := g.Guards.RequirePilot(req); blocked { return resp }
 func (g *Guards) RequirePilot(req mcp.JSONRPCRequest, extraOpts ...func(*mcp.StructuredError)) (mcp.JSONRPCResponse, bool) {
-	if g.capture != nil && g.capture.IsPilotActionAllowed() {
+	if g.capture != nil && g.capture.Extension().IsPilotActionAllowed() {
 		return mcp.JSONRPCResponse{}, false
 	}
 	opts := append([]func(*mcp.StructuredError){
@@ -163,7 +163,7 @@ func (g *Guards) RequireExtension(req mcp.JSONRPCRequest, extraOpts ...func(*mcp
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	if g.capture != nil && g.capture.WaitForExtensionConnected(ctx, timeout) {
+	if g.capture != nil && g.capture.Extension().WaitForExtensionConnected(ctx, timeout) {
 		return mcp.JSONRPCResponse{}, false
 	}
 	opts := append([]func(*mcp.StructuredError){
@@ -196,7 +196,7 @@ func (g *Guards) RequireCSPClear(req mcp.JSONRPCRequest, world string) (mcp.JSON
 	if g.capture == nil {
 		return mcp.JSONRPCResponse{}, false
 	}
-	restricted, level := g.capture.GetCSPStatus()
+	restricted, level := g.capture.Extension().GetCSPStatus()
 	if !restricted {
 		return mcp.JSONRPCResponse{}, false
 	}
@@ -220,7 +220,7 @@ func (g *Guards) RequireCSPClear(req mcp.JSONRPCRequest, world string) (mcp.JSON
 func (g *Guards) RequireTabTracking(req mcp.JSONRPCRequest, extraOpts ...func(*mcp.StructuredError)) (mcp.JSONRPCResponse, bool) {
 	enabled := false
 	if g.capture != nil {
-		enabled, _, _ = g.capture.GetTrackingStatus()
+		enabled, _, _ = g.capture.Extension().GetTrackingStatus()
 	}
 	if enabled {
 		return mcp.JSONRPCResponse{}, false

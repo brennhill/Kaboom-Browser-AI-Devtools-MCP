@@ -152,7 +152,7 @@ func buildTransientsSummary(actions []types.EnhancedAction, meta ResponseMetadat
 
 // ObservePilot returns the current pilot/extension connection status.
 func ObservePilot(deps Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
-	status := deps.GetCapture().GetPilotStatus()
+	status := deps.GetCapture().Extension().GetPilotStatus()
 	if statusMap, ok := status.(map[string]any); ok {
 		statusMap["metadata"] = BuildResponseMetadata(deps.GetCapture(), time.Now())
 	}
@@ -261,7 +261,7 @@ func buildVitalsMap(snapshots []performance.PerformanceSnapshot) map[string]any 
 
 func GetTabs(deps Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
 	cap := deps.GetCapture()
-	enabled, tabID, tabURL := cap.GetTrackingStatus()
+	enabled, tabID, tabURL := cap.Extension().GetTrackingStatus()
 
 	tabs := []any{}
 	if enabled && tabID > 0 {

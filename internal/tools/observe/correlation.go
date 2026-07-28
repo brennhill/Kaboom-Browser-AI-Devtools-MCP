@@ -63,7 +63,7 @@ func GetErrorBundles(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mc
 		params.Scope = "current_page"
 	}
 
-	_, trackedTabID, trackedTabURL := deps.GetCapture().GetTrackingStatus()
+	_, trackedTabID, trackedTabURL := deps.GetCapture().Extension().GetTrackingStatus()
 	if params.URL == "" && params.Scope == "current_page" && trackedTabURL != "" {
 		params.URL = trackedTabURL
 	}
@@ -71,7 +71,7 @@ func GetErrorBundles(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mc
 	errors, logs := collectErrorsAndLogs(deps, params.Limit, params.URL, params.Scope, trackedTabID)
 
 	cap := deps.GetCapture()
-	_, trackedTabID, _ = cap.GetTrackingStatus()
+	_, trackedTabID, _ = cap.Extension().GetTrackingStatus()
 
 	networkBodies := cap.GetNetworkBodies()
 	waterfallEntries := cap.NetworkWaterfall().Entries()
@@ -280,7 +280,7 @@ func filterNetworkBodiesByTab(bodies []types.NetworkBody, tabID int) []types.Net
 // filterWaterfallByTab returns only waterfall entries from the tracked page.
 // NetworkWaterfallEntry lacks a TabID, so we match on the tracked tab's URL via capture.
 func filterWaterfallByTab(entries []types.NetworkWaterfallEntry, tabID int, cap *capture.Capture) []types.NetworkWaterfallEntry {
-	_, _, trackedURL := cap.GetTrackingStatus()
+	_, _, trackedURL := cap.Extension().GetTrackingStatus()
 	if trackedURL == "" {
 		return entries
 	}

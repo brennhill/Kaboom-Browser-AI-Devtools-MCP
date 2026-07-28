@@ -28,7 +28,7 @@ const defaultPort = 7890
 // stashPerfSnapshotImpl saves the current performance snapshot as a "before" baseline
 // for perf_diff computation, keyed by correlation ID.
 func (h *InteractActionHandler) stashPerfSnapshotImpl(correlationID string) {
-	_, _, trackedURL := h.deps.Capture().GetTrackingStatus()
+	_, _, trackedURL := h.deps.Capture().Extension().GetTrackingStatus()
 	u, err := url.Parse(trackedURL)
 	if err != nil || u.Path == "" {
 		return
@@ -48,7 +48,7 @@ func (h *InteractActionHandler) ResolveNavigateURLImpl(rawURL string) (string, e
 		return "", fmt.Errorf("resolve insecure URL: capture not initialized. Initialize capture before using insecure mode")
 	}
 
-	mode, _, _ := h.deps.Capture().GetSecurityMode()
+	mode, _, _ := h.deps.Capture().Extension().GetSecurityMode()
 	if mode != capture.SecurityModeInsecureProxy {
 		return "", fmt.Errorf("resolve insecure URL: requires security_mode=insecure_proxy. Set security mode before navigating")
 	}
@@ -472,5 +472,5 @@ func (h *InteractActionHandler) ApplySwitchTabTracking(correlationID string) {
 
 	tabURL, _ := result["url"].(string)
 	tabTitle, _ := result["title"].(string)
-	h.deps.Capture().UpdateTrackedTab(tabID, tabURL, tabTitle)
+	h.deps.Capture().Extension().UpdateTrackedTab(tabID, tabURL, tabTitle)
 }

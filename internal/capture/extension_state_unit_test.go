@@ -21,11 +21,9 @@ func TestWaitForExtensionConnected_AlreadyConnected(t *testing.T) {
 	c := NewCapture()
 
 	// Simulate extension already connected.
-	c.mu.Lock()
-	c.extensionState.lastSyncSeen = time.Now()
-	c.mu.Unlock()
+	c.SimulateExtensionConnectForTest()
 
-	if !c.WaitForExtensionConnected(context.Background(), 5*time.Second) {
+	if !c.Extension().WaitForExtensionConnected(context.Background(), 5*time.Second) {
 		t.Fatal("WaitForExtensionConnected returned false when extension already connected")
 	}
 }
@@ -38,12 +36,10 @@ func TestWaitForExtensionConnected_ConnectsDuringWait(t *testing.T) {
 	// 150ms margin before the tick catches the connection.
 	go func() {
 		time.Sleep(50 * time.Millisecond)
-		c.mu.Lock()
-		c.extensionState.lastSyncSeen = time.Now()
-		c.mu.Unlock()
+		c.SimulateExtensionConnectForTest()
 	}()
 
-	if !c.WaitForExtensionConnected(context.Background(), time.Second) {
+	if !c.Extension().WaitForExtensionConnected(context.Background(), time.Second) {
 		t.Fatal("WaitForExtensionConnected returned false; expected true after late connection")
 	}
 }
@@ -53,7 +49,7 @@ func TestWaitForExtensionConnected_Timeout(t *testing.T) {
 	c := NewCapture()
 	// Extension never connects.
 
-	if c.WaitForExtensionConnected(context.Background(), 100*time.Millisecond) {
+	if c.Extension().WaitForExtensionConnected(context.Background(), 100*time.Millisecond) {
 		t.Fatal("WaitForExtensionConnected returned true; expected false after timeout")
 	}
 }
@@ -87,11 +83,11 @@ func TestCaptureTestHelpersAndTTL(t *testing.T) {
 	}
 
 	c.SetPilotEnabled(true)
-	if !c.IsPilotEnabled() {
+	if !c.Extension().IsPilotEnabled() {
 		t.Fatal("SetPilotEnabled(true) did not update state")
 	}
 	c.SetTrackingStatusForTest(77, "https://tracked.test")
-	enabled, tabID, tabURL := c.GetTrackingStatus()
+	enabled, tabID, tabURL := c.Extension().GetTrackingStatus()
 	if !enabled || tabID != 77 || tabURL != "https://tracked.test" {
 		t.Fatalf("tracking state = (%v,%d,%q), want (true,77,https://tracked.test)", enabled, tabID, tabURL)
 	}

@@ -122,7 +122,7 @@ func TestNavigateAndDocument_AppendsPageContext(t *testing.T) {
 	env := newToolTestEnv(t)
 	env.capture.SetPilotEnabled(true)
 	env.capture.SimulateExtensionConnectForTest()
-	env.capture.UpdateTrackedTab(42, "https://example.com/old", "Old")
+	env.capture.Extension().UpdateTrackedTab(42, "https://example.com/old", "Old")
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"selector":"a.nav","wait_for_url_change":true,"wait_for_stable":false,"timeout_ms":500}`)
@@ -143,7 +143,7 @@ func TestNavigateAndDocument_AppendsPageContext(t *testing.T) {
 		return payload["action"] == "click"
 	})
 	env.capture.Queries().ApplyCommandResult(clickQuery.CorrelationID, "complete", json.RawMessage(`{"success":true}`), "")
-	env.capture.UpdateTrackedTab(42, "https://example.com/new", "New")
+	env.capture.Extension().UpdateTrackedTab(42, "https://example.com/new", "New")
 
 	select {
 	case <-done:

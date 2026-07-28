@@ -455,10 +455,10 @@ func (c *Capture) ClearActionBuffer() types.BufferClearCounts {
 // ClearAll resets all capture-owned in-memory telemetry state — INCLUDING
 // extension logs — and returns the number of extension-log entries cleared.
 func (c *Capture) ClearAll() int {
+	c.extension.ClearTestBoundaries()
 	c.mu.Lock()
 	c.buffers.clearAllEventBuffers()
 	c.wsConnections.Clear()
-	c.extensionState.activeTestIDs = make(map[string]bool)
 	c.mu.Unlock()
 
 	c.networkWaterfall.Clear()
@@ -486,13 +486,9 @@ func detectAndSetBinaryFormat(body *types.NetworkBody) {
 }
 
 func (c *Capture) AddNetworkBodies(bodies []types.NetworkBody) {
+	activeTestIDs := c.extension.GetActiveTestIDs()
 	c.mu.Lock()
 	defer c.mu.Unlock()
-
-	activeTestIDs := make([]string, 0)
-	for testID := range c.extensionState.activeTestIDs {
-		activeTestIDs = append(activeTestIDs, testID)
-	}
 	c.buffers.appendNetworkBodies(bodies, activeTestIDs, time.Now())
 }
 
@@ -507,13 +503,9 @@ func detectWSBinaryFormat(event *types.WebSocketEvent) {
 }
 
 func (c *Capture) AddWebSocketEvents(events []types.WebSocketEvent) {
+	activeTestIDs := c.extension.GetActiveTestIDs()
 	c.mu.Lock()
 	defer c.mu.Unlock()
-
-	activeTestIDs := make([]string, 0)
-	for testID := range c.extensionState.activeTestIDs {
-		activeTestIDs = append(activeTestIDs, testID)
-	}
 	c.buffers.appendWebSocketEvents(events, activeTestIDs, time.Now(), c.wsConnections.TrackEvent)
 }
 
@@ -601,14 +593,11 @@ func (c *Capture) GetWebSocketStatus(filter types.WebSocketStatusFilter) types.W
 }
 
 func (c *Capture) AddEnhancedActions(actions []types.EnhancedAction) {
+	activeTestIDs := c.extension.GetActiveTestIDs()
 	navigationCallback := func() func() {
 		c.mu.Lock()
 		defer c.mu.Unlock()
 
-		activeTestIDs := make([]string, 0)
-		for testID := range c.extensionState.activeTestIDs {
-			activeTestIDs = append(activeTestIDs, testID)
-		}
 		for i := range actions {
 			actions[i].TestIDs = activeTestIDs
 		}

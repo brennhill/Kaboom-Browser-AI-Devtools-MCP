@@ -380,7 +380,7 @@ func (h *ToolHandler) getCommandResult(correlationID string) (*queries.CommandRe
 }
 
 func (h *ToolHandler) IsExtensionConnected() bool {
-	return h.capture.IsExtensionConnected()
+	return h.capture.Extension().IsExtensionConnected()
 }
 
 func (h *ToolHandler) PushInbox() *push.PushInbox {
@@ -512,7 +512,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	if handler.capture != nil {
 		performanceEntries = handler.capture.Performance().Entries
 		queryStore = handler.capture.Queries()
-		inProgress = handler.capture.GetInProgressCommands
+		inProgress = handler.capture.Extension().GetInProgressCommands
 		captureReader = handler.capture
 	}
 	handler.sessionManager = session.NewSessionManager(
@@ -599,7 +599,7 @@ func (d visualAnalyzeDeps) CaptureScreenshot(req mcp.JSONRPCRequest) mcp.JSONRPC
 }
 
 func (d visualAnalyzeDeps) GetTrackingStatus() (bool, int, string) {
-	return d.h.capture.GetTrackingStatus()
+	return d.h.capture.Extension().GetTrackingStatus()
 }
 
 func (d visualAnalyzeDeps) HasSessionStore() bool { return d.h.sessionStoreImpl != nil }

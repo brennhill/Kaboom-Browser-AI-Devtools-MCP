@@ -213,7 +213,7 @@ func (c *Capture) HandleSync(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	clientID := r.Header.Get("X-Kaboom-Client")
 
-	state := c.updateSyncConnectionState(req, clientID, now)
+	state := c.extension.updateSyncConnectionState(req, clientID, now)
 
 	if !state.wasConnected || state.isReconnect {
 		telemetry.BeaconEvent("extension_connect", map[string]string{"browser": extractBrowserName(r.Header.Get("User-Agent"))})
@@ -331,7 +331,7 @@ func shouldEmitSyncSnapshot(req SyncRequest, state syncConnectionState, commands
 }
 
 func (c *Capture) buildCaptureOverrides() map[string]string {
-	mode, productionParity, rewrites := c.GetSecurityMode()
+	mode, productionParity, rewrites := c.extension.GetSecurityMode()
 	if mode == SecurityModeNormal {
 		return map[string]string{}
 	}
@@ -371,53 +371,53 @@ type syncConnectionState struct {
 	inProgressCount   int
 }
 
-func (c *Capture) updateSyncConnectionState(req SyncRequest, clientID string, now time.Time) syncConnectionState {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+func (r *ExtensionRuntime) updateSyncConnectionState(req SyncRequest, clientID string, now time.Time) syncConnectionState {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
 	state := syncConnectionState{
-		wasConnected:      c.extensionState.lastExtensionConnected,
-		timeSinceLastPoll: now.Sub(c.extensionState.lastPollAt),
+		wasConnected:      r.state.lastExtensionConnected,
+		timeSinceLastPoll: now.Sub(r.state.lastPollAt),
 	}
-	state.wasDisconnected = !c.extensionState.lastSyncSeen.IsZero() && now.Sub(c.extensionState.lastSyncSeen) >= extensionDisconnectThreshold
+	state.wasDisconnected = !r.state.lastSyncSeen.IsZero() && now.Sub(r.state.lastSyncSeen) >= extensionDisconnectThreshold
 	state.isReconnect = state.wasDisconnected
 
-	c.extensionState.lastPollAt = now
-	c.extensionState.lastExtensionConnected = true
-	c.extensionState.lastSyncSeen = now
-	c.extensionState.lastSyncClientID = clientID
-	if req.ExtSessionID != "" && req.ExtSessionID != c.extensionState.extSessionID {
-		c.extensionState.extSessionID = req.ExtSessionID
-		c.extensionState.extSessionChangedAt = now
+	r.state.lastPollAt = now
+	r.state.lastExtensionConnected = true
+	r.state.lastSyncSeen = now
+	r.state.lastSyncClientID = clientID
+	if req.ExtSessionID != "" && req.ExtSessionID != r.state.extSessionID {
+		r.state.extSessionID = req.ExtSessionID
+		r.state.extSessionChangedAt = now
 	}
-	state.extSessionID = c.extensionState.extSessionID
+	state.extSessionID = r.state.extSessionID
 
 	if req.Settings != nil {
-		c.extensionState.pilotEnabled = req.Settings.PilotEnabled
-		c.extensionState.pilotStatusKnown = true
-		c.extensionState.pilotUpdatedAt = now
-		c.extensionState.pilotSource = PilotSourceExtensionSync
-		c.extensionState.trackingEnabled = req.Settings.TrackingEnabled
-		c.extensionState.trackedTabID = req.Settings.TrackedTabID
-		c.extensionState.trackedTabURL = req.Settings.TrackedTabURL
-		c.extensionState.trackedTabTitle = req.Settings.TrackedTabTitle
-		c.extensionState.trackingUpdated = now
+		r.state.pilotEnabled = req.Settings.PilotEnabled
+		r.state.pilotStatusKnown = true
+		r.state.pilotUpdatedAt = now
+		r.state.pilotSource = PilotSourceExtensionSync
+		r.state.trackingEnabled = req.Settings.TrackingEnabled
+		r.state.trackedTabID = req.Settings.TrackedTabID
+		r.state.trackedTabURL = req.Settings.TrackedTabURL
+		r.state.trackedTabTitle = req.Settings.TrackedTabTitle
+		r.state.trackingUpdated = now
 		switch req.Settings.TabStatus {
 		case "loading", "complete":
-			c.extensionState.tabStatus = req.Settings.TabStatus
+			r.state.tabStatus = req.Settings.TabStatus
 		default:
-			c.extensionState.tabStatus = ""
+			r.state.tabStatus = ""
 		}
-		c.extensionState.trackedTabActive = req.Settings.TrackedTabActive
-		c.extensionState.cspRestricted = req.Settings.CspRestricted
-		c.extensionState.cspLevel = req.Settings.CspLevel
+		r.state.trackedTabActive = req.Settings.TrackedTabActive
+		r.state.cspRestricted = req.Settings.CspRestricted
+		r.state.cspLevel = req.Settings.CspLevel
 	}
 	if req.InProgress != nil {
-		c.extensionState.inProgress = normalizeInProgressList(req.InProgress)
-		c.extensionState.inProgressUpdated = now
+		r.state.inProgress = normalizeInProgressList(req.InProgress)
+		r.state.inProgressUpdated = now
 	}
-	state.pilotEnabled = c.extensionState.pilotEnabled
-	state.inProgressCount = len(c.extensionState.inProgress)
+	state.pilotEnabled = r.state.pilotEnabled
+	state.inProgressCount = len(r.state.inProgress)
 	return state
 }
 
@@ -447,19 +447,14 @@ func (c *Capture) updateSyncLogs(req SyncRequest, now time.Time, pilotEnabled bo
 	})
 	c.extensionLogs.addAt(req.ExtensionLogs, now)
 	if req.ExtensionVersion != "" {
-		c.mu.Lock()
-		c.extensionState.extensionVersion = req.ExtensionVersion
-		c.mu.Unlock()
+		c.extension.SetExtensionVersion(req.ExtensionVersion)
 	}
 }
 
 // GetPendingQueriesDisconnectAware reconciles extension liveness before
 // returning the current query queue for sync delivery.
 func (c *Capture) GetPendingQueriesDisconnectAware() []queries.PendingQueryResponse {
-	c.mu.RLock()
-	neverSynced := c.extensionState.lastSyncSeen.IsZero()
-	disconnected := !neverSynced && time.Since(c.extensionState.lastSyncSeen) >= extensionDisconnectThreshold
-	c.mu.RUnlock()
+	_, disconnected := c.extension.Disconnected()
 
 	if disconnected {
 		c.queryDispatcher.ExpireAllPendingQueries("extension_disconnected")
@@ -532,42 +527,7 @@ func (c *Capture) reconcileInProgressCommandState(inProgress []SyncInProgress) {
 		}
 	}
 	pending := c.Queries().GetPendingCommands()
-	pendingCorrelations := make(map[string]struct{}, len(pending))
-	toFail := make([]string, 0)
-	toFailIDs := make([]string, 0)
-
-	func() {
-		c.mu.Lock()
-		defer c.mu.Unlock()
-		if c.extensionState.missingInProgressByCorr == nil {
-			c.extensionState.missingInProgressByCorr = make(map[string]int)
-		}
-		for _, command := range pending {
-			if command == nil || command.CorrelationID == "" {
-				continue
-			}
-			correlationID := command.CorrelationID
-			pendingCorrelations[correlationID] = struct{}{}
-			if _, ok := active[correlationID]; ok {
-				delete(c.extensionState.missingInProgressByCorr, correlationID)
-				continue
-			}
-			if !commandHasStarted(command) {
-				continue
-			}
-			c.extensionState.missingInProgressByCorr[correlationID]++
-			if c.extensionState.missingInProgressByCorr[correlationID] >= 2 {
-				toFail = append(toFail, correlationID)
-				toFailIDs = append(toFailIDs, command.QueryID)
-				delete(c.extensionState.missingInProgressByCorr, correlationID)
-			}
-		}
-		for correlationID := range c.extensionState.missingInProgressByCorr {
-			if _, stillPending := pendingCorrelations[correlationID]; !stillPending {
-				delete(c.extensionState.missingInProgressByCorr, correlationID)
-			}
-		}
-	}()
+	toFail, toFailIDs := c.extension.reconcileMissingCommands(pending, active)
 
 	for i, correlationID := range toFail {
 		queryID := ""
@@ -588,4 +548,40 @@ func (c *Capture) reconcileInProgressCommandState(inProgress []SyncInProgress) {
 			})
 		})
 	}
+}
+
+func (r *ExtensionRuntime) reconcileMissingCommands(
+	pending []*queries.CommandResult,
+	active map[string]struct{},
+) (toFail []string, toFailIDs []string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	pendingCorrelations := make(map[string]struct{}, len(pending))
+	for _, command := range pending {
+		if command == nil || command.CorrelationID == "" {
+			continue
+		}
+		correlationID := command.CorrelationID
+		pendingCorrelations[correlationID] = struct{}{}
+		if _, ok := active[correlationID]; ok {
+			delete(r.state.missingInProgressByCorr, correlationID)
+			continue
+		}
+		if !commandHasStarted(command) {
+			continue
+		}
+		r.state.missingInProgressByCorr[correlationID]++
+		if r.state.missingInProgressByCorr[correlationID] >= 2 {
+			toFail = append(toFail, correlationID)
+			toFailIDs = append(toFailIDs, command.QueryID)
+			delete(r.state.missingInProgressByCorr, correlationID)
+		}
+	}
+	for correlationID := range r.state.missingInProgressByCorr {
+		if _, stillPending := pendingCorrelations[correlationID]; !stillPending {
+			delete(r.state.missingInProgressByCorr, correlationID)
+		}
+	}
+	return toFail, toFailIDs
 }

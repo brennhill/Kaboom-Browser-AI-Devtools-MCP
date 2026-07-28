@@ -372,7 +372,7 @@ func (h *MCPHandler) maybeAddSecurityModeWarning(resp mcp.JSONRPCResponse) mcp.J
 	if captured == nil {
 		return resp
 	}
-	mode, productionParity, rewrites := captured.GetSecurityMode()
+	mode, productionParity, rewrites := captured.Extension().GetSecurityMode()
 	if mode == capture.SecurityModeNormal {
 		return resp
 	}
@@ -523,8 +523,8 @@ func (h *MCPHandler) buildTelemetrySummary(clientID, toolName string) (map[strin
 	}
 	captured := h.toolHandler.GetCapture()
 	if captured != nil {
-		summary["extension_connected"] = captured.IsExtensionConnected()
-		enabled, tabID, tabURL := captured.GetTrackingStatus()
+		summary["extension_connected"] = captured.Extension().IsExtensionConnected()
+		enabled, tabID, tabURL := captured.Extension().GetTrackingStatus()
 		summary["tracking_enabled"] = enabled
 		if tabID > 0 {
 			summary["tracked_tab_id"] = tabID

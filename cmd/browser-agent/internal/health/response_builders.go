@@ -183,7 +183,7 @@ func BuildPilotInfo(cap *capture.Capture) PilotInfo {
 		return defaultStatus
 	}
 
-	statusMap := cap.GetPilotStatus()
+	statusMap := cap.Extension().GetPilotStatus()
 	m, ok := statusMap.(map[string]any)
 	if !ok {
 		return defaultStatus

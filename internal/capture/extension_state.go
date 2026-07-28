@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
@@ -30,8 +31,7 @@ const (
 )
 
 // ExtensionState tracks all extension-related state: connection, pilot, tracking, and test boundaries.
-// Protected by parent Capture.mu (no separate lock) because activeTestIDs is read
-// during hot-path event ingestion (AddWebSocketEvents, AddNetworkBodies, AddEnhancedActions).
+// It is private storage protected by ExtensionRuntime.mu.
 //
 // Invariants:
 // - trackingEnabled implies trackedTabID > 0 for authoritative single-tab mode.
@@ -85,6 +85,23 @@ type ExtensionState struct {
 	activeTestIDs map[string]bool // Active test boundary IDs. Used to tag events during ingestion.
 }
 
+// ExtensionRuntime owns live browser-extension state and its synchronization.
+type ExtensionRuntime struct {
+	mu    sync.RWMutex
+	state ExtensionState
+}
+
+func newExtensionRuntime() *ExtensionRuntime {
+	return &ExtensionRuntime{
+		state: ExtensionState{
+			activeTestIDs:           make(map[string]bool),
+			missingInProgressByCorr: make(map[string]int),
+			pilotSource:             PilotSourceAssumedStartup,
+			securityMode:            SecurityModeNormal,
+		},
+	}
+}
+
 // ExtensionSnapshot contains a point-in-time view of extension state for health reporting.
 type ExtensionSnapshot struct {
 	LastPollAt          time.Time
@@ -92,6 +109,37 @@ type ExtensionSnapshot struct {
 	ExtSessionChangedAt time.Time
 	PilotEnabled        bool
 	ActiveTestIDCount   int
+}
+
+func (r *ExtensionRuntime) Snapshot() ExtensionSnapshot {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return ExtensionSnapshot{
+		LastPollAt:          r.state.lastPollAt,
+		ExtSessionID:        r.state.extSessionID,
+		ExtSessionChangedAt: r.state.extSessionChangedAt,
+		PilotEnabled:        r.state.pilotEnabled,
+		ActiveTestIDCount:   len(r.state.activeTestIDs),
+	}
+}
+
+func (r *ExtensionRuntime) ClearTestBoundaries() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.state.activeTestIDs = make(map[string]bool)
+}
+
+func (r *ExtensionRuntime) SetExtensionVersion(version string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.state.extensionVersion = version
+}
+
+func (r *ExtensionRuntime) Disconnected() (neverSynced bool, disconnected bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	neverSynced = r.state.lastSyncSeen.IsZero()
+	return neverSynced, !neverSynced && time.Since(r.state.lastSyncSeen) >= extensionDisconnectThreshold
 }
 
 type pilotStatusSnapshot struct {
@@ -107,8 +155,8 @@ type pilotStatusSnapshot struct {
 // A zero or negative timeout returns false immediately (no polling).
 // Poll interval is extensionReadinessPollInterval (200ms). ctx cancellation is
 // honoured between polls.
-func (c *Capture) WaitForExtensionConnected(ctx context.Context, timeout time.Duration) bool {
-	if c.IsExtensionConnected() {
+func (r *ExtensionRuntime) WaitForExtensionConnected(ctx context.Context, timeout time.Duration) bool {
+	if r.IsExtensionConnected() {
 		return true
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
@@ -120,7 +168,7 @@ func (c *Capture) WaitForExtensionConnected(ctx context.Context, timeout time.Du
 		case <-ctx.Done():
 			return false
 		case <-ticker.C:
-			if c.IsExtensionConnected() {
+			if r.IsExtensionConnected() {
 				return true
 			}
 		}
@@ -129,10 +177,10 @@ func (c *Capture) WaitForExtensionConnected(ctx context.Context, timeout time.Du
 
 // IsExtensionConnected returns true if the extension has synced within the
 // disconnect threshold (10s). Returns false if never synced or stale.
-func (c *Capture) IsExtensionConnected() bool {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return !c.extensionState.lastSyncSeen.IsZero() && time.Since(c.extensionState.lastSyncSeen) < extensionDisconnectThreshold
+func (r *ExtensionRuntime) IsExtensionConnected() bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return !r.state.lastSyncSeen.IsZero() && time.Since(r.state.lastSyncSeen) < extensionDisconnectThreshold
 }
 
 // GetExtensionStatus returns a detached connection snapshot.
@@ -140,21 +188,21 @@ func (c *Capture) IsExtensionConnected() bool {
 //
 // Failure semantics:
 // - If extension has never synced, last_seen is empty and connected=false.
-func (c *Capture) GetExtensionStatus() map[string]any {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+func (r *ExtensionRuntime) GetExtensionStatus() map[string]any {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 
-	connected := !c.extensionState.lastSyncSeen.IsZero() && time.Since(c.extensionState.lastSyncSeen) < extensionDisconnectThreshold
+	connected := !r.state.lastSyncSeen.IsZero() && time.Since(r.state.lastSyncSeen) < extensionDisconnectThreshold
 
 	lastSeen := ""
-	if !c.extensionState.lastSyncSeen.IsZero() {
-		lastSeen = c.extensionState.lastSyncSeen.Format(time.RFC3339)
+	if !r.state.lastSyncSeen.IsZero() {
+		lastSeen = r.state.lastSyncSeen.Format(time.RFC3339)
 	}
 
 	return map[string]any{
 		"connected": connected,
 		"last_seen": lastSeen,
-		"client_id": c.extensionState.lastSyncClientID,
+		"client_id": r.state.lastSyncClientID,
 	}
 }
 
@@ -163,8 +211,8 @@ func (c *Capture) GetExtensionStatus() map[string]any {
 // A mismatch is detected only when the extension has reported a version (non-empty)
 // and the major.minor portions differ from the server version.
 func (c *Capture) GetVersionMismatch() (extensionVersion string, serverVersion string, hasMismatch bool) {
+	extVer := c.extension.ExtensionVersion()
 	c.mu.RLock()
-	extVer := c.extensionState.extensionVersion
 	srvVer := c.serverVersion
 	c.mu.RUnlock()
 
@@ -179,6 +227,12 @@ func (c *Capture) GetVersionMismatch() (extensionVersion string, serverVersion s
 	}
 
 	return extVer, srvVer, extMajorMinor != srvMajorMinor
+}
+
+func (r *ExtensionRuntime) ExtensionVersion() string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.state.extensionVersion
 }
 
 // majorMinor extracts "X.Y" from a semver string "X.Y.Z".
@@ -203,18 +257,18 @@ func majorMinor(v string) string {
 }
 
 // IsPilotEnabled returns whether AI Web Pilot is currently enabled.
-func (c *Capture) IsPilotEnabled() bool {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.extensionState.pilotEnabled
+func (r *ExtensionRuntime) IsPilotEnabled() bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.state.pilotEnabled
 }
 
 // IsPilotActionAllowed returns whether pilot-gated actions should be allowed.
 // Startup/reconnect uncertainty defaults to allowed until explicit disable arrives.
-func (c *Capture) IsPilotActionAllowed() bool {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	snap := pilotStatusSnapshotFromExtensionState(c.extensionState)
+func (r *ExtensionRuntime) IsPilotActionAllowed() bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	snap := pilotStatusSnapshotFromExtensionState(r.state)
 	return snap.EffectiveEnabled
 }
 
@@ -224,21 +278,21 @@ func (c *Capture) IsPilotActionAllowed() bool {
 //
 // Invariants:
 // - Returned in_progress slice is copied to prevent external mutation.
-func (c *Capture) GetPilotStatus() any {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	snap := pilotStatusSnapshotFromExtensionState(c.extensionState)
+func (r *ExtensionRuntime) GetPilotStatus() any {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	snap := pilotStatusSnapshotFromExtensionState(r.state)
 
 	lastSeen := ""
-	if !c.extensionState.lastSyncSeen.IsZero() {
-		lastSeen = c.extensionState.lastSyncSeen.Format(time.RFC3339)
+	if !r.state.lastSyncSeen.IsZero() {
+		lastSeen = r.state.lastSyncSeen.Format(time.RFC3339)
 	}
 
-	inProgress := make([]SyncInProgress, len(c.extensionState.inProgress))
-	copy(inProgress, c.extensionState.inProgress)
+	inProgress := make([]SyncInProgress, len(r.state.inProgress))
+	copy(inProgress, r.state.inProgress)
 	inProgressUpdated := ""
-	if !c.extensionState.inProgressUpdated.IsZero() {
-		inProgressUpdated = c.extensionState.inProgressUpdated.Format(time.RFC3339)
+	if !r.state.inProgressUpdated.IsZero() {
+		inProgressUpdated = r.state.inProgressUpdated.Format(time.RFC3339)
 	}
 
 	return map[string]any{
@@ -247,7 +301,7 @@ func (c *Capture) GetPilotStatus() any {
 		"authoritative":       snap.Authoritative,
 		"state":               snap.State,
 		"source":              snap.Source,
-		"extension_connected": !c.extensionState.lastSyncSeen.IsZero() && time.Since(c.extensionState.lastSyncSeen) < extensionDisconnectThreshold,
+		"extension_connected": !r.state.lastSyncSeen.IsZero() && time.Since(r.state.lastSyncSeen) < extensionDisconnectThreshold,
 		"extension_last_seen": lastSeen,
 		"in_progress_count":   len(inProgress),
 		"in_progress":         inProgress,
@@ -259,11 +313,11 @@ func (c *Capture) GetPilotStatus() any {
 //
 // Failure semantics:
 // - Returns empty slice when no heartbeat data is available.
-func (c *Capture) GetInProgressCommands() []SyncInProgress {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	out := make([]SyncInProgress, len(c.extensionState.inProgress))
-	copy(out, c.extensionState.inProgress)
+func (r *ExtensionRuntime) GetInProgressCommands() []SyncInProgress {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make([]SyncInProgress, len(r.state.inProgress))
+	copy(out, r.state.inProgress)
 	return out
 }
 
@@ -306,10 +360,10 @@ func pilotStatusSnapshotFromExtensionState(ext ExtensionState) pilotStatusSnapsh
 }
 
 // GetTrackingStatus returns the current tab tracking state.
-func (c *Capture) GetTrackingStatus() (enabled bool, tabID int, tabURL string) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.extensionState.trackingEnabled, c.extensionState.trackedTabID, c.extensionState.trackedTabURL
+func (r *ExtensionRuntime) GetTrackingStatus() (enabled bool, tabID int, tabURL string) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.state.trackingEnabled, r.state.trackedTabID, r.state.trackedTabURL
 }
 
 // UpdateTrackedTab programmatically updates the tracked tab state.
@@ -318,56 +372,56 @@ func (c *Capture) GetTrackingStatus() (enabled bool, tabID int, tabURL string) {
 // Invariants:
 // - tabID must be > 0; zero/negative values are silently ignored.
 // - trackingEnabled is set to true when a valid tabID is provided.
-func (c *Capture) UpdateTrackedTab(tabID int, tabURL string, tabTitle string) {
+func (r *ExtensionRuntime) UpdateTrackedTab(tabID int, tabURL string, tabTitle string) {
 	if tabID <= 0 {
 		return
 	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.extensionState.trackingEnabled = true
-	c.extensionState.trackedTabID = tabID
-	c.extensionState.trackedTabURL = tabURL
-	c.extensionState.trackedTabTitle = tabTitle
-	c.extensionState.trackingUpdated = time.Now()
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.state.trackingEnabled = true
+	r.state.trackedTabID = tabID
+	r.state.trackedTabURL = tabURL
+	r.state.trackedTabTitle = tabTitle
+	r.state.trackingUpdated = time.Now()
 }
 
 // GetTrackedTabTitle returns the tracked tab's title (may be stale).
-func (c *Capture) GetTrackedTabTitle() string {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.extensionState.trackedTabTitle
+func (r *ExtensionRuntime) GetTrackedTabTitle() string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.state.trackedTabTitle
 }
 
 // GetTabStatus returns the Chrome tab status ("loading", "complete", or empty if unknown).
-func (c *Capture) GetTabStatus() string {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.extensionState.tabStatus
+func (r *ExtensionRuntime) GetTabStatus() string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.state.tabStatus
 }
 
 // IsTrackedTabActive returns whether the tracked tab is the foreground tab.
 // Returns (active, known). known=false means the extension has not reported this yet.
-func (c *Capture) IsTrackedTabActive() (bool, bool) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	if c.extensionState.trackedTabActive == nil {
+func (r *ExtensionRuntime) IsTrackedTabActive() (bool, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if r.state.trackedTabActive == nil {
 		return false, false
 	}
-	return *c.extensionState.trackedTabActive, true
+	return *r.state.trackedTabActive, true
 }
 
 // SetTrackedTabActiveForTest sets the tracked tab active state for testing.
-func (c *Capture) SetTrackedTabActiveForTest(active bool) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.extensionState.trackedTabActive = &active
+func (r *ExtensionRuntime) SetTrackedTabActiveForTest(active bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.state.trackedTabActive = &active
 }
 
 // GetCSPStatus returns the last reported CSP restriction level for the tracked page.
-func (c *Capture) GetCSPStatus() (restricted bool, level string) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.extensionState.cspRestricted, c.extensionState.cspLevel
+func (r *ExtensionRuntime) GetCSPStatus() (restricted bool, level string) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.state.cspRestricted, r.state.cspLevel
 }
 
 // CSPBlockedActions returns the actions blocked by the given CSP level and a
@@ -398,17 +452,17 @@ func CSPBlockedActions(level string) (actions []string, reason string) {
 // Invariants:
 // - Any non-insecure mode value normalizes to SecurityModeNormal.
 // - Rewrite slice is copied on write to avoid external aliasing.
-func (c *Capture) SetSecurityMode(mode string, rewrites []string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+func (r *ExtensionRuntime) SetSecurityMode(mode string, rewrites []string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
 	switch mode {
 	case SecurityModeInsecureProxy:
-		c.extensionState.securityMode = SecurityModeInsecureProxy
-		c.extensionState.insecureRewrites = append([]string(nil), rewrites...)
+		r.state.securityMode = SecurityModeInsecureProxy
+		r.state.insecureRewrites = append([]string(nil), rewrites...)
 	default:
-		c.extensionState.securityMode = SecurityModeNormal
-		c.extensionState.insecureRewrites = nil
+		r.state.securityMode = SecurityModeNormal
+		r.state.insecureRewrites = nil
 	}
 }
 
@@ -417,25 +471,25 @@ func (c *Capture) SetSecurityMode(mode string, rewrites []string) {
 //
 // Invariants:
 // - Returned rewrite slice is copied and safe for caller mutation.
-func (c *Capture) GetSecurityMode() (mode string, productionParity bool, rewrites []string) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+func (r *ExtensionRuntime) GetSecurityMode() (mode string, productionParity bool, rewrites []string) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 
-	mode = c.extensionState.securityMode
+	mode = r.state.securityMode
 	if mode == "" {
 		mode = SecurityModeNormal
 	}
 	productionParity = mode == SecurityModeNormal
-	rewrites = append([]string(nil), c.extensionState.insecureRewrites...)
+	rewrites = append([]string(nil), r.state.insecureRewrites...)
 	return mode, productionParity, rewrites
 }
 
 // GetActiveTestIDs returns the list of currently active test IDs.
-func (c *Capture) GetActiveTestIDs() []string {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	result := make([]string, 0, len(c.extensionState.activeTestIDs))
-	for testID := range c.extensionState.activeTestIDs {
+func (r *ExtensionRuntime) GetActiveTestIDs() []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	result := make([]string, 0, len(r.state.activeTestIDs))
+	for testID := range r.state.activeTestIDs {
 		result = append(result, testID)
 	}
 	return result
@@ -445,20 +499,20 @@ func (c *Capture) GetActiveTestIDs() []string {
 //
 // Invariants:
 // - activeTestIDs behaves as a set (idempotent insert).
-func (c *Capture) SetTestBoundaryStart(id string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.extensionState.activeTestIDs[id] = true
+func (r *ExtensionRuntime) SetTestBoundaryStart(id string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.state.activeTestIDs[id] = true
 }
 
 // SetTestBoundaryEnd clears a test boundary marker.
 //
 // Failure semantics:
 // - Deleting unknown IDs is a no-op.
-func (c *Capture) SetTestBoundaryEnd(id string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	delete(c.extensionState.activeTestIDs, id)
+func (r *ExtensionRuntime) SetTestBoundaryEnd(id string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.state.activeTestIDs, id)
 }
 
 type PersistedSettings struct {
@@ -504,15 +558,19 @@ func (c *Capture) LoadSettingsFromDisk() {
 		return
 	}
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
 	if time.Since(settings.Timestamp) > 5*time.Second {
 		return
 	}
 	if settings.AIWebPilotEnabled != nil {
-		c.extensionState.pilotEnabled = *settings.AIWebPilotEnabled
-		c.extensionState.pilotStatusKnown = true
-		c.extensionState.pilotUpdatedAt = settings.Timestamp
-		c.extensionState.pilotSource = PilotSourceSettingsCache
+		c.extension.ApplyCachedPilot(*settings.AIWebPilotEnabled, settings.Timestamp)
 	}
+}
+
+func (r *ExtensionRuntime) ApplyCachedPilot(enabled bool, updatedAt time.Time) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.state.pilotEnabled = enabled
+	r.state.pilotStatusKnown = true
+	r.state.pilotUpdatedAt = updatedAt
+	r.state.pilotSource = PilotSourceSettingsCache
 }

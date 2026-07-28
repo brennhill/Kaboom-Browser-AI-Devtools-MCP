@@ -108,6 +108,7 @@ func (c *Capture) GetHealthSnapshot() HealthSnapshot {
 	// Get sub-struct state (own locks) before acquiring c.mu
 	circuitOpen, circuitReason, circuitOpenedAt, windowEventCount := c.circuit.GetState()
 	querySnap := c.queryDispatcher.GetSnapshot()
+	extensionSnap := c.extension.Snapshot()
 
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -117,17 +118,17 @@ func (c *Capture) GetHealthSnapshot() HealthSnapshot {
 		NetworkBodyCount:      c.buffers.networkCount(),
 		ActionCount:           c.buffers.actionCount(),
 		ConnectionCount:       c.wsConnections.Count(),
-		LastPollTime:          c.extensionState.lastPollAt,
-		ExtSessionID:          c.extensionState.extSessionID,
-		ExtSessionChangedTime: c.extensionState.extSessionChangedAt,
-		PilotEnabled:          c.extensionState.pilotEnabled,
+		LastPollTime:          extensionSnap.LastPollAt,
+		ExtSessionID:          extensionSnap.ExtSessionID,
+		ExtSessionChangedTime: extensionSnap.ExtSessionChangedAt,
+		PilotEnabled:          extensionSnap.PilotEnabled,
 		CircuitOpen:           circuitOpen,
 		WindowEventCount:      windowEventCount,
 		CircuitReason:         circuitReason,
 		CircuitOpenedTime:     circuitOpenedAt,
 		PendingQueryCount:     querySnap.PendingQueryCount,
 		QueryResultCount:      querySnap.QueryResultCount,
-		ActiveTestIDCount:     len(c.extensionState.activeTestIDs),
+		ActiveTestIDCount:     extensionSnap.ActiveTestIDCount,
 		QueryTimeout:          querySnap.QueryTimeout,
 	}
 }

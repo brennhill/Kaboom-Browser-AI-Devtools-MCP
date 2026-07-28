@@ -156,10 +156,10 @@ func NewUploadInteractHandler(deps *Deps, actionHandler *InteractActionHandler) 
 // construction still wins, exactly as it did when this handler read h.deps directly.
 func NewStateInteractHandler(deps *Deps, store *persistence.SessionStore) *interactstate.Handler {
 	return interactstate.New(&interactstate.Deps{
-		IsPilotActionAllowed: func() bool { return deps.Capture().IsPilotActionAllowed() },
-		IsExtensionConnected: func() bool { return deps.Capture().IsExtensionConnected() },
-		GetTrackingStatus:    func() (bool, int, string) { return deps.Capture().GetTrackingStatus() },
-		GetTrackedTabTitle:   func() string { return deps.Capture().GetTrackedTabTitle() },
+		IsPilotActionAllowed: func() bool { return deps.Capture().Extension().IsPilotActionAllowed() },
+		IsExtensionConnected: func() bool { return deps.Capture().Extension().IsExtensionConnected() },
+		GetTrackingStatus:    func() (bool, int, string) { return deps.Capture().Extension().GetTrackingStatus() },
+		GetTrackedTabTitle:   func() string { return deps.Capture().Extension().GetTrackedTabTitle() },
 		WaitForCommand: func(correlationID string, timeout time.Duration) (*queries.CommandResult, bool) {
 			return deps.Capture().Queries().WaitForCommand(correlationID, timeout)
 		},

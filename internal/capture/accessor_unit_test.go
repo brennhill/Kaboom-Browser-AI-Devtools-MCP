@@ -63,7 +63,7 @@ func TestCaptureAccessorSnapshotsAndCopies(t *testing.T) {
 		t.Fatal("GetAllEnhancedActions should return a copied slice")
 	}
 
-	c.SetTestBoundaryStart("health-test")
+	c.Extension().SetTestBoundaryStart("health-test")
 	health := c.GetHealthSnapshot()
 	if health.NetworkBodyCount != 2 || health.WebSocketCount != 1 || health.ActionCount != 1 {
 		t.Fatalf("health counts = %+v, want 2/1/1", health)

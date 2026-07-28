@@ -81,13 +81,13 @@ func (h *Handler) ServeHealth(w http.ResponseWriter, r *http.Request) {
 		response["upgrade_pending"] = info
 	}
 	if h.options.Capture != nil {
-		extension := h.options.Capture.GetExtensionStatus()
-		pilot, _ := h.options.Capture.GetPilotStatus().(map[string]any)
+		extension := h.options.Capture.Extension().GetExtensionStatus()
+		pilot, _ := h.options.Capture.Extension().GetPilotStatus().(map[string]any)
 		pilotState, _ := pilot["state"].(string)
-		securityMode, productionParity, rewrites := h.options.Capture.GetSecurityMode()
+		securityMode, productionParity, rewrites := h.options.Capture.Extension().GetSecurityMode()
 		response["capture"] = map[string]any{
-			"available": true, "pilot_enabled": h.options.Capture.IsPilotActionAllowed(), "pilot_state": pilotState,
-			"extension_connected": h.options.Capture.IsExtensionConnected(), "extension_last_seen": extension["last_seen"],
+			"available": true, "pilot_enabled": h.options.Capture.Extension().IsPilotActionAllowed(), "pilot_state": pilotState,
+			"extension_connected": h.options.Capture.Extension().IsExtensionConnected(), "extension_last_seen": extension["last_seen"],
 			"extension_client_id": extension["client_id"], "security_mode": securityMode,
 			"production_parity": productionParity, "insecure_rewrites": rewrites,
 		}

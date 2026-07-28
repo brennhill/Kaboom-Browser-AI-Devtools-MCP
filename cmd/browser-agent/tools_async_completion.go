@@ -169,7 +169,7 @@ func (h *ToolHandler) formatTimeoutCommandResult(req mcp.JSONRPCRequest, cmd que
 	responseData["error"] = mcp.ErrExtTimeout
 	responseData["message"] = fmt.Sprintf("Command %s timed out waiting for the extension to respond. Error: %s", corrID, cmd.Error)
 	retryMsg := "Extension connected but page execution timed out. This page may block content scripts (common on Google, Chrome Web Store, etc.). Try navigating to a different page: interact({what: 'navigate', url: 'https://example.com'})"
-	if !h.capture.IsExtensionConnected() {
+	if !h.capture.Extension().IsExtensionConnected() {
 		retryMsg = "Extension is disconnected. Ensure the Kaboom extension shows 'Connected' and a tab is tracked, then retry."
 	}
 	responseData["retry"] = retryMsg
@@ -295,7 +295,7 @@ func (h *ToolHandler) waitForCommandWithConnectivity(correlationID string, timeo
 		remaining := time.Until(deadline)
 		if remaining <= 0 {
 			cmd, found := h.capture.Queries().GetCommandResult(correlationID)
-			disconnected := found && cmd != nil && cmd.Status == "pending" && !h.capture.IsExtensionConnected()
+			disconnected := found && cmd != nil && cmd.Status == "pending" && !h.capture.Extension().IsExtensionConnected()
 			return cmd, found, disconnected, waited
 		}
 		waitStep := asyncPollInterval
@@ -311,7 +311,7 @@ func (h *ToolHandler) waitForCommandWithConnectivity(correlationID string, timeo
 		if cmd.Status != "pending" {
 			return cmd, true, false, waited
 		}
-		if !h.capture.IsExtensionConnected() {
+		if !h.capture.Extension().IsExtensionConnected() {
 			return cmd, true, true, waited
 		}
 	}
@@ -351,7 +351,7 @@ func (h *ToolHandler) MaybeWaitForCommand(req mcp.JSONRPCRequest, correlationID 
 			"queued": true, "final": false,
 		})
 	}
-	if !h.capture.IsExtensionConnected() {
+	if !h.capture.Extension().IsExtensionConnected() {
 		return mcp.Fail(req, mcp.ErrNoData, "Extension is not connected", "Ensure the Kaboom extension shows 'Connected' and a tab is tracked.", h.Guards.DiagnosticHint())
 	}
 
@@ -378,7 +378,7 @@ func (h *ToolHandler) MaybeWaitForCommand(req mcp.JSONRPCRequest, correlationID 
 	if disconnected {
 		return h.finalizePendingDisconnect(req, correlationID)
 	}
-	if cmd.Status == "pending" && h.capture.IsExtensionConnected() {
+	if cmd.Status == "pending" && h.capture.Extension().IsExtensionConnected() {
 		attempts = 2
 		cmd, found, disconnected, waitedMs = h.waitForCommandWithConnectivity(correlationID, retryWait)
 		totalWaitMs += waitedMs
@@ -390,7 +390,7 @@ func (h *ToolHandler) MaybeWaitForCommand(req mcp.JSONRPCRequest, correlationID 
 		}
 	}
 	if cmd.Status == "pending" {
-		if !h.capture.IsExtensionConnected() {
+		if !h.capture.Extension().IsExtensionConnected() {
 			return h.finalizePendingDisconnect(req, correlationID)
 		}
 		stillProcessing := map[string]any{
@@ -400,7 +400,7 @@ func (h *ToolHandler) MaybeWaitForCommand(req mcp.JSONRPCRequest, correlationID 
 			"queue_depth": h.capture.Queries().QueueDepth(),
 			"retry_context": map[string]any{
 				"attempts": attempts, "total_wait_ms": totalWaitMs,
-				"extension_connected": h.capture.IsExtensionConnected(),
+				"extension_connected": h.capture.Extension().IsExtensionConnected(),
 			},
 			"suggested_retry_ms": 2000,
 			"message":            "Action is taking longer than expected. Polling is now required. Use observe({what:'command_result', correlation_id:'" + correlationID + "'}) to check the result.",

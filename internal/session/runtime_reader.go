@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
@@ -16,7 +17,7 @@ import (
 type RuntimeCaptureReader interface {
 	GetNetworkBodies() []types.NetworkBody
 	GetWebSocketStatus(types.WebSocketStatusFilter) types.WebSocketStatusResponse
-	GetTrackingStatus() (bool, int, string)
+	Extension() *capture.ExtensionRuntime
 }
 
 type runtimeStateReader struct {
@@ -158,7 +159,7 @@ func (r *runtimeStateReader) GetCurrentPageURL() string {
 	if r.capture == nil {
 		return ""
 	}
-	_, _, trackedURL := r.capture.GetTrackingStatus()
+	_, _, trackedURL := r.capture.Extension().GetTrackingStatus()
 	if trackedURL != "" {
 		return trackedURL
 	}

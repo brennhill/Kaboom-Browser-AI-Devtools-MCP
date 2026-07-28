@@ -63,7 +63,7 @@ func HandleGenerateSRI(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 		})
 	}
 
-	_, _, tabURL := cap.GetTrackingStatus()
+	_, _, tabURL := cap.Extension().GetTrackingStatus()
 	pageURLs := []string{tabURL}
 	result, err := sri.HandleGenerate(args, networkBodies, pageURLs)
 	if err != nil {

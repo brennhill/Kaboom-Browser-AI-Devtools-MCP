@@ -25,7 +25,7 @@ func TestIsExtensionConnected_FalseWhenNeverSynced(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 
-	if c.IsExtensionConnected() {
+	if c.Extension().IsExtensionConnected() {
 		t.Fatal("IsExtensionConnected() = true, want false when no sync has occurred")
 	}
 }
@@ -36,10 +36,10 @@ func TestIsExtensionConnected_TrueAfterRecentSync(t *testing.T) {
 	defer c.Close()
 
 	c.mu.Lock()
-	c.extensionState.lastSyncSeen = time.Now()
+	c.extension.state.lastSyncSeen = time.Now()
 	c.mu.Unlock()
 
-	if !c.IsExtensionConnected() {
+	if !c.Extension().IsExtensionConnected() {
 		t.Fatal("IsExtensionConnected() = false, want true after recent sync")
 	}
 }
@@ -50,10 +50,10 @@ func TestIsExtensionConnected_FalseAfterTimeout(t *testing.T) {
 	defer c.Close()
 
 	c.mu.Lock()
-	c.extensionState.lastSyncSeen = time.Now().Add(-15 * time.Second)
+	c.extension.state.lastSyncSeen = time.Now().Add(-15 * time.Second)
 	c.mu.Unlock()
 
-	if c.IsExtensionConnected() {
+	if c.Extension().IsExtensionConnected() {
 		t.Fatal("IsExtensionConnected() = true, want false after 15s without sync")
 	}
 }
@@ -65,10 +65,10 @@ func TestIsExtensionConnected_TrueAtBoundary(t *testing.T) {
 
 	// Just under the threshold
 	c.mu.Lock()
-	c.extensionState.lastSyncSeen = time.Now().Add(-9 * time.Second)
+	c.extension.state.lastSyncSeen = time.Now().Add(-9 * time.Second)
 	c.mu.Unlock()
 
-	if !c.IsExtensionConnected() {
+	if !c.Extension().IsExtensionConnected() {
 		t.Fatal("IsExtensionConnected() = false, want true at 9s (under 10s threshold)")
 	}
 }
@@ -84,11 +84,11 @@ func TestGetExtensionStatus_ReturnsConnectionInfo(t *testing.T) {
 
 	now := time.Now()
 	c.mu.Lock()
-	c.extensionState.lastSyncSeen = now
-	c.extensionState.lastSyncClientID = "client-abc"
+	c.extension.state.lastSyncSeen = now
+	c.extension.state.lastSyncClientID = "client-abc"
 	c.mu.Unlock()
 
-	status := c.GetExtensionStatus()
+	status := c.Extension().GetExtensionStatus()
 
 	connected, ok := status["connected"].(bool)
 	if !ok || !connected {
@@ -112,11 +112,11 @@ func TestGetExtensionStatus_DisconnectedWhenStale(t *testing.T) {
 	defer c.Close()
 
 	c.mu.Lock()
-	c.extensionState.lastSyncSeen = time.Now().Add(-20 * time.Second)
-	c.extensionState.lastSyncClientID = "client-old"
+	c.extension.state.lastSyncSeen = time.Now().Add(-20 * time.Second)
+	c.extension.state.lastSyncClientID = "client-old"
 	c.mu.Unlock()
 
-	status := c.GetExtensionStatus()
+	status := c.Extension().GetExtensionStatus()
 
 	connected, ok := status["connected"].(bool)
 	if !ok || connected {
@@ -129,7 +129,7 @@ func TestGetExtensionStatus_NeverConnected(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 
-	status := c.GetExtensionStatus()
+	status := c.Extension().GetExtensionStatus()
 
 	connected := status["connected"].(bool)
 	if connected {
@@ -152,7 +152,7 @@ func TestHandleSync_UpdatesLastSyncSeen(t *testing.T) {
 	defer c.Close()
 
 	// Before sync: not connected
-	if c.IsExtensionConnected() {
+	if c.Extension().IsExtensionConnected() {
 		t.Fatal("expected not connected before first sync")
 	}
 
@@ -166,12 +166,12 @@ func TestHandleSync_UpdatesLastSyncSeen(t *testing.T) {
 	c.HandleSync(w, httpReq)
 
 	// After sync: connected
-	if !c.IsExtensionConnected() {
+	if !c.Extension().IsExtensionConnected() {
 		t.Fatal("expected connected after sync")
 	}
 
 	// Verify client ID was tracked
-	status := c.GetExtensionStatus()
+	status := c.Extension().GetExtensionStatus()
 	if status["client_id"] != "client-123" {
 		t.Fatalf("expected client_id='client-123', got %v", status["client_id"])
 	}
@@ -188,15 +188,15 @@ func TestGetPilotStatus_IncludesExtensionLastSeen(t *testing.T) {
 
 	now := time.Now()
 	c.mu.Lock()
-	c.extensionState.pilotEnabled = true
-	c.extensionState.lastPollAt = now
-	c.extensionState.lastSyncSeen = now
-	c.extensionState.lastSyncClientID = "test-client"
+	c.extension.state.pilotEnabled = true
+	c.extension.state.lastPollAt = now
+	c.extension.state.lastSyncSeen = now
+	c.extension.state.lastSyncClientID = "test-client"
 	c.mu.Unlock()
 
-	status, ok := c.GetPilotStatus().(map[string]any)
+	status, ok := c.Extension().GetPilotStatus().(map[string]any)
 	if !ok {
-		t.Fatalf("GetPilotStatus returned unexpected type: %T", c.GetPilotStatus())
+		t.Fatalf("GetPilotStatus returned unexpected type: %T", c.Extension().GetPilotStatus())
 	}
 
 	if status["extension_connected"] != true {
@@ -214,9 +214,9 @@ func TestGetPilotStatus_EmptyLastSeenWhenNeverSynced(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 
-	status, ok := c.GetPilotStatus().(map[string]any)
+	status, ok := c.Extension().GetPilotStatus().(map[string]any)
 	if !ok {
-		t.Fatalf("GetPilotStatus returned unexpected type: %T", c.GetPilotStatus())
+		t.Fatalf("GetPilotStatus returned unexpected type: %T", c.Extension().GetPilotStatus())
 	}
 
 	lastSeen, ok := status["extension_last_seen"].(string)
@@ -230,9 +230,9 @@ func TestGetPilotStatus_DefaultsToAssumedEnabledUntilAuthoritative(t *testing.T)
 	c := NewCapture()
 	defer c.Close()
 
-	status, ok := c.GetPilotStatus().(map[string]any)
+	status, ok := c.Extension().GetPilotStatus().(map[string]any)
 	if !ok {
-		t.Fatalf("GetPilotStatus returned unexpected type: %T", c.GetPilotStatus())
+		t.Fatalf("GetPilotStatus returned unexpected type: %T", c.Extension().GetPilotStatus())
 	}
 
 	if status["enabled"] != true {
@@ -269,9 +269,9 @@ func TestGetPilotStatus_ExplicitDisableFromSyncIsAuthoritative(t *testing.T) {
 	w := httptest.NewRecorder()
 	c.HandleSync(w, httpReq)
 
-	status, ok := c.GetPilotStatus().(map[string]any)
+	status, ok := c.Extension().GetPilotStatus().(map[string]any)
 	if !ok {
-		t.Fatalf("GetPilotStatus returned unexpected type: %T", c.GetPilotStatus())
+		t.Fatalf("GetPilotStatus returned unexpected type: %T", c.Extension().GetPilotStatus())
 	}
 
 	if status["enabled"] != false {
@@ -296,7 +296,7 @@ func TestGetPendingQueries_ExpiresOnDisconnect(t *testing.T) {
 
 	// Simulate extension was connected, then disconnected
 	c.mu.Lock()
-	c.extensionState.lastSyncSeen = time.Now().Add(-15 * time.Second)
+	c.extension.state.lastSyncSeen = time.Now().Add(-15 * time.Second)
 	c.mu.Unlock()
 
 	// Create a pending query with a correlation ID
@@ -338,7 +338,7 @@ func TestGetPendingQueries_DoesNotExpireWhenConnected(t *testing.T) {
 
 	// Simulate extension recently connected
 	c.mu.Lock()
-	c.extensionState.lastSyncSeen = time.Now()
+	c.extension.state.lastSyncSeen = time.Now()
 	c.mu.Unlock()
 
 	// Create pending query
@@ -380,8 +380,8 @@ func TestHandleSync_ExpiresPendingOnDisconnect(t *testing.T) {
 
 	// Simulate a past sync (extension was connected, now stale)
 	c.mu.Lock()
-	c.extensionState.lastSyncSeen = time.Now().Add(-15 * time.Second)
-	c.extensionState.lastPollAt = time.Now().Add(-15 * time.Second)
+	c.extension.state.lastSyncSeen = time.Now().Add(-15 * time.Second)
+	c.extension.state.lastPollAt = time.Now().Add(-15 * time.Second)
 	c.mu.Unlock()
 
 	// Create pending queries with correlation IDs

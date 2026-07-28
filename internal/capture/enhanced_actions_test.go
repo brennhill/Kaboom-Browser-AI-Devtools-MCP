@@ -109,8 +109,8 @@ func TestNewAddEnhancedActions_TestIDTagging(t *testing.T) {
 
 	// Set active test IDs
 	c.mu.Lock()
-	c.extensionState.activeTestIDs["test-alpha"] = true
-	c.extensionState.activeTestIDs["test-beta"] = true
+	c.extension.state.activeTestIDs["test-alpha"] = true
+	c.extension.state.activeTestIDs["test-beta"] = true
 	c.mu.Unlock()
 
 	c.AddEnhancedActions([]types.EnhancedAction{

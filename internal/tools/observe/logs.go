@@ -39,7 +39,7 @@ func GetBrowserErrors(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 		params.Scope = "current_page"
 	}
 
-	_, trackedTabID, trackedTabURL := deps.GetCapture().GetTrackingStatus()
+	_, trackedTabID, trackedTabURL := deps.GetCapture().Extension().GetTrackingStatus()
 	if params.URL == "" && params.Scope == "current_page" && trackedTabURL != "" {
 		params.URL = trackedTabURL
 	}
@@ -156,7 +156,7 @@ func GetBrowserLogs(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 		params.Scope = "current_page"
 	}
 
-	_, trackedTabID, trackedTabURL := deps.GetCapture().GetTrackingStatus()
+	_, trackedTabID, trackedTabURL := deps.GetCapture().Extension().GetTrackingStatus()
 	params.Limit = clampLimit(params.Limit, 100)
 
 	// Default URL filter to the tracked page URL so logs are scoped to

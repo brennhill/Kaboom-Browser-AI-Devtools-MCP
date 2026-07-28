@@ -141,7 +141,7 @@ func TestHandleSwitchTab_AppliesTrackingOnComplete(t *testing.T) {
 	}
 	resp := h.HandleBrowserActionSwitchTabImpl(testReq(), json.RawMessage(`{"tab_id":42}`))
 	assertOK(t, resp)
-	_, tabID, tabURL := fs.cap.GetTrackingStatus()
+	_, tabID, tabURL := fs.cap.Extension().GetTrackingStatus()
 	if tabID != 42 || tabURL != "https://switched.example" {
 		t.Fatalf("tracked tab not updated: tab=%d url=%s", tabID, tabURL)
 	}
@@ -222,7 +222,7 @@ func TestResolveNavigateURL_InsecureRequiresMode(t *testing.T) {
 
 func TestResolveNavigateURL_InsecureProxyRewrite(t *testing.T) {
 	h, fs := newFakeHandler(t)
-	fs.cap.SetSecurityMode(capture.SecurityModeInsecureProxy, nil)
+	fs.cap.Extension().SetSecurityMode(capture.SecurityModeInsecureProxy, nil)
 	got, err := h.ResolveNavigateURLImpl("kaboom-insecure://http://internal.host/path")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -234,7 +234,7 @@ func TestResolveNavigateURL_InsecureProxyRewrite(t *testing.T) {
 
 func TestResolveNavigateURL_InsecureEmptyTarget(t *testing.T) {
 	h, fs := newFakeHandler(t)
-	fs.cap.SetSecurityMode(capture.SecurityModeInsecureProxy, nil)
+	fs.cap.Extension().SetSecurityMode(capture.SecurityModeInsecureProxy, nil)
 	if _, err := h.ResolveNavigateURLImpl("kaboom-insecure://"); err == nil {
 		t.Fatal("expected error for empty insecure target")
 	}
@@ -242,7 +242,7 @@ func TestResolveNavigateURL_InsecureEmptyTarget(t *testing.T) {
 
 func TestResolveNavigateURL_InsecureNonHTTPScheme(t *testing.T) {
 	h, fs := newFakeHandler(t)
-	fs.cap.SetSecurityMode(capture.SecurityModeInsecureProxy, nil)
+	fs.cap.Extension().SetSecurityMode(capture.SecurityModeInsecureProxy, nil)
 	if _, err := h.ResolveNavigateURLImpl("kaboom-insecure://ftp://internal.host"); err == nil {
 		t.Fatal("expected error for non-http insecure target scheme")
 	}

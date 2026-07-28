@@ -5,11 +5,12 @@ package ciapi
 
 import (
 	"encoding/json"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"io"
 	"net/http"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -25,10 +26,8 @@ type Capture interface {
 	GetAllWebSocketEvents() []types.WebSocketEvent
 	GetNetworkBodies() []types.NetworkBody
 	GetAllEnhancedActions() []types.EnhancedAction
-	GetActiveTestIDs() []string
 	ClearAll() int
-	SetTestBoundaryStart(testID string)
-	SetTestBoundaryEnd(testID string)
+	Extension() *capture.ExtensionRuntime
 }
 
 // Snapshot returns the GET /snapshot handler.
@@ -56,7 +55,7 @@ func Snapshot(logs Logs, captured Capture) http.HandlerFunc {
 		networkBodies := captured.GetNetworkBodies()
 		testID := r.URL.Query().Get("test_id")
 		if testID == "" {
-			activeIDs := captured.GetActiveTestIDs()
+			activeIDs := captured.Extension().GetActiveTestIDs()
 			if len(activeIDs) > 0 {
 				testID = activeIDs[0]
 			}
@@ -113,9 +112,9 @@ func TestBoundary(captured Capture) http.HandlerFunc {
 			return
 		}
 		if req.Action == "start" {
-			captured.SetTestBoundaryStart(req.TestID)
+			captured.Extension().SetTestBoundaryStart(req.TestID)
 		} else {
-			captured.SetTestBoundaryEnd(req.TestID)
+			captured.Extension().SetTestBoundaryEnd(req.TestID)
 		}
 		util.JSONResponse(w, http.StatusOK, map[string]any{
 			"test_id": req.TestID, "action": req.Action, "timestamp": time.Now().UTC().Format(time.RFC3339Nano),

@@ -25,25 +25,25 @@ import (
 // GetPageInfo returns information about the currently tracked page.
 func GetPageInfo(deps Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
 	cap := deps.GetCapture()
-	enabled, tabID, trackedURL := cap.GetTrackingStatus()
-	trackedTitle := cap.GetTrackedTabTitle()
+	enabled, tabID, trackedURL := cap.Extension().GetTrackingStatus()
+	trackedTitle := cap.Extension().GetTrackedTabTitle()
 
 	pageURL := resolvePageURL(cap, trackedURL)
 	pageTitle := resolvePageTitle(deps, trackedTitle)
 
-	cspRestricted, cspLevel := cap.GetCSPStatus()
-	tabStatus := cap.GetTabStatus()
+	cspRestricted, cspLevel := cap.Extension().GetCSPStatus()
+	tabStatus := cap.Extension().GetTabStatus()
 
 	// Each state getter acquires c.mu.RLock independently. Between calls, state
 	// could change (e.g., extension disconnects between GetTabStatus and
 	// IsExtensionConnected). This is acceptable for an advisory readiness signal
 	// — the next observe(what:"page") call will correct any inconsistency.
-	extensionConnected := cap.IsExtensionConnected()
+	extensionConnected := cap.Extension().IsExtensionConnected()
 
 	// Use IsPilotEnabled (defaults false) instead of IsPilotActionAllowed (defaults
 	// true during startup). This avoids briefly reporting page_ready_for_commands=true
 	// before the first extension sync confirms pilot status.
-	pilotEnabled := cap.IsPilotEnabled()
+	pilotEnabled := cap.Extension().IsPilotEnabled()
 
 	// page_ready_for_commands is true when all four conditions hold:
 	//   1. extensionConnected — WebSocket link to extension is live
@@ -53,7 +53,7 @@ func GetPageInfo(deps Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONR
 	pageReady := extensionConnected && pilotEnabled && enabled && tabStatus == "complete"
 
 	// Tab focus state: is the tracked tab the active (foreground) tab?
-	tabActive, tabActiveKnown := cap.IsTrackedTabActive()
+	tabActive, tabActiveKnown := cap.Extension().IsTrackedTabActive()
 
 	result := map[string]any{
 		"url":                     pageURL,
@@ -215,7 +215,7 @@ func filterCookies(cookies []any, name string) []any {
 func GetStorage(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	params := parseStorageParams(args)
 	cap := deps.GetCapture()
-	enabled, _, _ := cap.GetTrackingStatus()
+	enabled, _, _ := cap.Extension().GetTrackingStatus()
 	if !enabled {
 		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(
 			mcp.ErrNoData,
@@ -357,7 +357,7 @@ func GetIndexedDB(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 	params.Limit = clampLimit(params.Limit, 100)
 
 	cap := deps.GetCapture()
-	enabled, _, _ := cap.GetTrackingStatus()
+	enabled, _, _ := cap.Extension().GetTrackingStatus()
 	if !enabled {
 		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(
 			mcp.ErrNoData,
@@ -418,7 +418,7 @@ func toInt(v any) (int, bool) {
 // GetScreenshot captures a screenshot of the current page via the extension.
 func GetScreenshot(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	cap := deps.GetCapture()
-	enabled, _, _ := cap.GetTrackingStatus()
+	enabled, _, _ := cap.Extension().GetTrackingStatus()
 	if !enabled {
 		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(mcp.ErrNoData, "No tab is being tracked. Open the Kaboom extension popup and click 'Track This Tab' on the page you want to monitor. Check observe with what='pilot' for extension status.", "", mcp.WithHint(deps.DiagnosticHintString()))}
 	}
@@ -603,7 +603,7 @@ func RunA11yAudit(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 		params.Scope = params.Selector
 	}
 
-	enabled, _, _ := deps.GetCapture().GetTrackingStatus()
+	enabled, _, _ := deps.GetCapture().Extension().GetTrackingStatus()
 	if !enabled {
 		return mcp.JSONRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: mcp.StructuredErrorResponse(mcp.ErrNoData, "No tab is being tracked. Open the Kaboom extension popup and click 'Track This Tab' on the page you want to monitor. Check observe with what='pilot' for extension status.", "", mcp.WithHint(deps.DiagnosticHintString()))}
 	}

@@ -62,32 +62,32 @@ func (c *Capture) AddEnhancedActionsForTest(actions []types.EnhancedAction) {
 
 // SetPilotEnabled sets the pilot enabled state (TEST ONLY)
 func (c *Capture) SetPilotEnabled(enabled bool) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.extensionState.pilotEnabled = enabled
-	c.extensionState.pilotStatusKnown = true
-	c.extensionState.pilotUpdatedAt = time.Now()
-	c.extensionState.pilotSource = PilotSourceTestHelper
+	c.extension.mu.Lock()
+	defer c.extension.mu.Unlock()
+	c.extension.state.pilotEnabled = enabled
+	c.extension.state.pilotStatusKnown = true
+	c.extension.state.pilotUpdatedAt = time.Now()
+	c.extension.state.pilotSource = PilotSourceTestHelper
 }
 
 // SetPilotUnknownForTest resets pilot to startup-uncertain state (TEST ONLY).
 func (c *Capture) SetPilotUnknownForTest() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.extensionState.pilotEnabled = false
-	c.extensionState.pilotStatusKnown = false
-	c.extensionState.pilotUpdatedAt = time.Time{}
-	c.extensionState.pilotSource = PilotSourceAssumedStartup
+	c.extension.mu.Lock()
+	defer c.extension.mu.Unlock()
+	c.extension.state.pilotEnabled = false
+	c.extension.state.pilotStatusKnown = false
+	c.extension.state.pilotUpdatedAt = time.Time{}
+	c.extension.state.pilotSource = PilotSourceAssumedStartup
 }
 
 // SetTrackingStatusForTest sets the tracked tab URL and ID (TEST ONLY)
 func (c *Capture) SetTrackingStatusForTest(tabID int, tabURL string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.extensionState.trackingEnabled = true
-	c.extensionState.trackedTabID = tabID
-	c.extensionState.trackedTabURL = tabURL
-	c.extensionState.trackingUpdated = time.Now()
+	c.extension.mu.Lock()
+	defer c.extension.mu.Unlock()
+	c.extension.state.trackingEnabled = true
+	c.extension.state.trackedTabID = tabID
+	c.extension.state.trackedTabURL = tabURL
+	c.extension.state.trackingUpdated = time.Now()
 }
 
 // SetClientRegistryForTest sets the client registry (TEST ONLY)
@@ -126,34 +126,34 @@ func (c *Capture) GetWSLengthsForTest() (events int, addedAt int, memoryTotal in
 // SimulateExtensionConnectForTest marks the extension as connected by
 // setting lastSyncSeen to now. Thread-safe (operates on the instance, not a global).
 func (c *Capture) SimulateExtensionConnectForTest() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.extensionState.lastSyncSeen = time.Now()
-	c.extensionState.lastExtensionConnected = true
+	c.extension.mu.Lock()
+	defer c.extension.mu.Unlock()
+	c.extension.state.lastSyncSeen = time.Now()
+	c.extension.state.lastExtensionConnected = true
 }
 
 // SimulateExtensionDisconnectForTest marks the extension as disconnected by
 // setting lastSyncSeen far in the past. Thread-safe (operates on the instance, not a global).
 func (c *Capture) SimulateExtensionDisconnectForTest() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.extensionState.lastSyncSeen = time.Now().Add(-1 * time.Hour)
+	c.extension.mu.Lock()
+	defer c.extension.mu.Unlock()
+	c.extension.state.lastSyncSeen = time.Now().Add(-1 * time.Hour)
 }
 
 // SetTabStatusForTest sets the tracked tab status (TEST ONLY).
 // Valid values: "loading", "complete".
 func (c *Capture) SetTabStatusForTest(status string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.extensionState.tabStatus = status
+	c.extension.mu.Lock()
+	defer c.extension.mu.Unlock()
+	c.extension.state.tabStatus = status
 }
 
 // SetCSPStatusForTest sets the CSP restriction state (TEST ONLY)
 func (c *Capture) SetCSPStatusForTest(restricted bool, level string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.extensionState.cspRestricted = restricted
-	c.extensionState.cspLevel = level
+	c.extension.mu.Lock()
+	defer c.extension.mu.Unlock()
+	c.extension.state.cspRestricted = restricted
+	c.extension.state.cspLevel = level
 }
 
 // SimulateSyncForTest simulates a /sync connection from the extension,
@@ -170,7 +170,7 @@ func (c *Capture) SimulateSyncForTest(extSessionID string, clientID string) {
 			TrackedTabID:    1,
 		},
 	}
-	state := c.updateSyncConnectionState(req, clientID, now)
+	state := c.extension.updateSyncConnectionState(req, clientID, now)
 
 	if !state.wasConnected || state.isReconnect {
 		c.emitLifecycleEvent(lifecycle.EventExtensionConnected, map[string]any{

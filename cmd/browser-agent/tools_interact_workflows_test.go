@@ -273,7 +273,7 @@ func TestRunA11yAndExportSARIF_ReusesAnalyzePayload(t *testing.T) {
 	h, _, cap := makeToolHandler(t)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 
-	cap.UpdateTrackedTab(42, "https://example.com", "Example")
+	cap.Extension().UpdateTrackedTab(42, "https://example.com", "Example")
 
 	syncReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	syncReq.Header.Set("X-Kaboom-Client", "test-client")

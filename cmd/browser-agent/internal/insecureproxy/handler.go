@@ -61,7 +61,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mode, productionParity, rewrites := h.capture.GetSecurityMode()
+	mode, productionParity, rewrites := h.capture.Extension().GetSecurityMode()
 	if mode != capture.SecurityModeInsecureProxy {
 		h.respond(w, http.StatusForbidden, map[string]string{
 			"error": "insecure proxy is disabled; enable configure(what='security_mode', mode='insecure_proxy', confirm=true)",

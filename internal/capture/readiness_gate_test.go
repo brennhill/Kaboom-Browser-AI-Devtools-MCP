@@ -17,7 +17,7 @@ func TestWaitForExtensionConnected_NeverConnects(t *testing.T) {
 
 	timeout := 200 * time.Millisecond
 	start := time.Now()
-	ok := c.WaitForExtensionConnected(context.Background(), timeout)
+	ok := c.Extension().WaitForExtensionConnected(context.Background(), timeout)
 	elapsed := time.Since(start)
 
 	if ok {
@@ -39,7 +39,7 @@ func TestWaitForExtensionConnected_ConnectsPartway(t *testing.T) {
 	}()
 
 	start := time.Now()
-	ok := c.WaitForExtensionConnected(context.Background(), 2*time.Second)
+	ok := c.Extension().WaitForExtensionConnected(context.Background(), 2*time.Second)
 	elapsed := time.Since(start)
 
 	if !ok {
@@ -59,7 +59,7 @@ func TestWaitForExtensionConnected_ZeroTimeout(t *testing.T) {
 	c := NewCapture()
 
 	// Zero timeout should behave like a single check
-	ok := c.WaitForExtensionConnected(context.Background(), 0)
+	ok := c.Extension().WaitForExtensionConnected(context.Background(), 0)
 	if ok {
 		t.Fatal("expected false with zero timeout and no connection")
 	}
@@ -70,7 +70,7 @@ func TestWaitForExtensionConnected_ZeroTimeout_AlreadyConnected(t *testing.T) {
 	c := NewCapture()
 	c.SimulateExtensionConnectForTest()
 
-	ok := c.WaitForExtensionConnected(context.Background(), 0)
+	ok := c.Extension().WaitForExtensionConnected(context.Background(), 0)
 	if !ok {
 		t.Fatal("expected true with zero timeout when already connected")
 	}
@@ -90,7 +90,7 @@ func TestWaitForExtensionConnected_ContextCancelled(t *testing.T) {
 	}()
 
 	start := time.Now()
-	ok := c.WaitForExtensionConnected(ctx, 5*time.Second)
+	ok := c.Extension().WaitForExtensionConnected(ctx, 5*time.Second)
 	elapsed := time.Since(start)
 
 	if ok {
@@ -134,7 +134,7 @@ func TestWaitForExtensionConnected_ConnectsThenDisconnects(t *testing.T) {
 	// the connected state. Even though disconnect fires at 400ms, the poll at
 	// ~100ms should see the connection well before the disconnect.
 	start := time.Now()
-	ok := c.WaitForExtensionConnected(context.Background(), 2*time.Second)
+	ok := c.Extension().WaitForExtensionConnected(context.Background(), 2*time.Second)
 	elapsed := time.Since(start)
 
 	if !ok {
@@ -155,7 +155,7 @@ func TestWaitForExtensionConnected_NegativeTimeout(t *testing.T) {
 
 	// Not connected — negative timeout should return false instantly
 	start := time.Now()
-	ok := c.WaitForExtensionConnected(context.Background(), -1*time.Second)
+	ok := c.Extension().WaitForExtensionConnected(context.Background(), -1*time.Second)
 	elapsed := time.Since(start)
 
 	if ok {
@@ -171,7 +171,7 @@ func TestWaitForExtensionConnected_NegativeTimeout_AlreadyConnected(t *testing.T
 	c := NewCapture()
 	c.SimulateExtensionConnectForTest()
 
-	ok := c.WaitForExtensionConnected(context.Background(), -1*time.Second)
+	ok := c.Extension().WaitForExtensionConnected(context.Background(), -1*time.Second)
 	if !ok {
 		t.Fatal("expected true with negative timeout when already connected")
 	}

@@ -128,7 +128,7 @@ the folder-gate numbers as evidence that it did.
 
 | | Current |
 | --- | --- |
-| `Capture` methods (including delegates to independently locked owners) | 93 |
+| `Capture` methods (composition and telemetry-buffer operations) | 74 |
 | `cmd/browser-agent` production source files (package `main`) | 10 |
 | `*ToolHandler` methods in those files | 87 |
 
@@ -137,7 +137,7 @@ package that declares it. Extracted `tool*` packages therefore expose handlers
 through narrow `Deps` contracts while canonical `*ToolHandler` entry points
 remain in `main`. These are the sole implementations, not compatibility shims.
 The 10-file package target is met, but the method count still reflects a broad
-composition root. The active refactor is moving stateful clusters behind
+composition root. The active refactor continues moving stateful clusters behind
 independently synchronized owners and migrating callers directly to those
 canonical APIs.
 

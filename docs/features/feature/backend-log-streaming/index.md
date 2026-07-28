@@ -126,9 +126,13 @@ independently synchronized `PerformanceStore`. Callers use
 the five former capture-level forwarding methods have been removed.
 Rate limiting and circuit health use the canonical breaker returned by
 `Capture.Circuit()`; the former four Capture forwarding methods are deleted.
-Tracked-tab state is updated through the canonical `/sync` contract or
-`UpdateTrackedTab`; the pre-`/sync` `ExtensionStatus` envelope and
-`UpdateExtensionStatus` mutation API have been deleted.
+Extension connection, pilot, tracked-tab, CSP, security-mode, command-heartbeat,
+and test-boundary state now share the independently synchronized
+`ExtensionRuntime` returned by `Capture.Extension()`. Sync ingestion and every
+consumer use that owner directly; the 19 former Capture forwarding methods and
+parent-lock coupling are deleted. Event ingestion takes detached test-boundary
+snapshots before acquiring the buffer lock. The pre-`/sync` `ExtensionStatus`
+envelope and `UpdateExtensionStatus` mutation API remain deleted.
 Buffer-clear APIs likewise return `internal/types.BufferClearCounts` directly.
 The background manifest entrypoint performs initialization only; batching,
 transport, cache, and processing consumers import their canonical owner modules

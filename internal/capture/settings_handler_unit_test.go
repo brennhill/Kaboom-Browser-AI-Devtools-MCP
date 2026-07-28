@@ -41,7 +41,7 @@ func TestLoadSettingsFromDiskStaleAndMalformedAreIgnored(t *testing.T) {
 
 	c := NewCapture()
 	c.LoadSettingsFromDisk()
-	if c.IsPilotEnabled() {
+	if c.Extension().IsPilotEnabled() {
 		t.Fatal("stale settings unexpectedly enabled pilot")
 	}
 
@@ -51,7 +51,7 @@ func TestLoadSettingsFromDiskStaleAndMalformedAreIgnored(t *testing.T) {
 		t.Fatalf("WriteFile(malformed) error = %v", err)
 	}
 	c.LoadSettingsFromDisk()
-	if !c.IsPilotEnabled() {
+	if !c.Extension().IsPilotEnabled() {
 		t.Fatal("malformed settings load should not mutate existing pilot state")
 	}
 }

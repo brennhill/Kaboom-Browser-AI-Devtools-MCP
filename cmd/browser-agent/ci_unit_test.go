@@ -75,7 +75,7 @@ func TestHandleSnapshot_WithStatsAndActiveTestIDFallback(t *testing.T) {
 	cap.AddEnhancedActions([]types.EnhancedAction{
 		{Type: "click", Timestamp: 1, URL: "https://example.test"},
 	})
-	cap.SetTestBoundaryStart("test-123")
+	cap.Extension().SetTestBoundaryStart("test-123")
 
 	handler := ciapi.Snapshot(srv.logs, cap)
 	req := httptest.NewRequest(http.MethodGet, "/snapshot", nil)
@@ -187,7 +187,7 @@ func TestHandleClearAndTestBoundaryHandlers(t *testing.T) {
 		t.Fatalf("start boundary status = %d, want %d", startRR.Code, http.StatusOK)
 	}
 	found := false
-	for _, id := range cap.GetActiveTestIDs() {
+	for _, id := range cap.Extension().GetActiveTestIDs() {
 		if id == "checkout" {
 			found = true
 			break
@@ -203,7 +203,7 @@ func TestHandleClearAndTestBoundaryHandlers(t *testing.T) {
 	if endRR.Code != http.StatusOK {
 		t.Fatalf("end boundary status = %d, want %d", endRR.Code, http.StatusOK)
 	}
-	for _, id := range cap.GetActiveTestIDs() {
+	for _, id := range cap.Extension().GetActiveTestIDs() {
 		if id == "checkout" {
 			t.Fatal("expected checkout to be inactive after end")
 		}

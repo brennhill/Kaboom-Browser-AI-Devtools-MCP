@@ -33,7 +33,7 @@ func BuildResponseMetadata(cap *capture.Capture, newestEntry time.Time) Response
 	now := time.Now()
 	meta := ResponseMetadata{
 		RetrievedAt: now.Format(time.RFC3339),
-		IsStale:     !cap.IsExtensionConnected(),
+		IsStale:     !cap.Extension().IsExtensionConnected(),
 	}
 	if !newestEntry.IsZero() {
 		age := now.Sub(newestEntry)

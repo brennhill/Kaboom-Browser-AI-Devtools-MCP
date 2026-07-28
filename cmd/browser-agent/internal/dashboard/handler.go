@@ -95,7 +95,7 @@ func Status(options StatusOptions) http.HandlerFunc {
 		if options.Capture != nil {
 			snap := options.Capture.GetHealthSnapshot()
 
-			resp["extension_connected"] = options.Capture.IsExtensionConnected()
+			resp["extension_connected"] = options.Capture.Extension().IsExtensionConnected()
 			resp["pilot_enabled"] = snap.PilotEnabled
 			if !snap.LastPollTime.IsZero() {
 				resp["last_poll_at"] = snap.LastPollTime.Format(time.RFC3339)

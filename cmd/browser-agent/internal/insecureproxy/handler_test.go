@@ -25,7 +25,7 @@ func TestInsecureProxyEndpoint_SSRFDenylist(t *testing.T) {
 	t.Parallel()
 
 	cap := capture.NewCapture()
-	cap.SetSecurityMode("insecure_proxy", []string{"csp_headers"})
+	cap.Extension().SetSecurityMode("insecure_proxy", []string{"csp_headers"})
 	handler := New(cap, testRespond)
 
 	// Test various private/internal IP ranges.
@@ -66,7 +66,7 @@ func TestInsecureProxyEndpoint_StripsCSPHeaders(t *testing.T) {
 	defer upstream.Close()
 
 	cap := capture.NewCapture()
-	cap.SetSecurityMode("insecure_proxy", []string{"csp_headers"})
+	cap.Extension().SetSecurityMode("insecure_proxy", []string{"csp_headers"})
 	handler := New(cap, testRespond)
 	handler.client = upstream.Client()
 
@@ -95,7 +95,7 @@ func TestInsecureProxyEndpoint_StripsCSPHeaders(t *testing.T) {
 func TestInsecureProxyEndpoint_RequiresInsecureMode(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	cap.SetSecurityMode("normal", nil)
+	cap.Extension().SetSecurityMode("normal", nil)
 	handler := New(cap, testRespond)
 
 	req := httptest.NewRequest(http.MethodGet, "/insecure-proxy?target="+url.QueryEscape("https://example.com"), nil)

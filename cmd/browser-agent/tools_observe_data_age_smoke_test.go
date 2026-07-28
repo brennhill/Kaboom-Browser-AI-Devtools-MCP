@@ -253,7 +253,7 @@ func TestSmoke_ObservePage_IsActive_PresentWhenKnown(t *testing.T) {
 	cap.SetPilotEnabled(true)
 	cap.SetTrackingStatusForTest(42, "https://example.com")
 	cap.SetTabStatusForTest("complete")
-	cap.SetTrackedTabActiveForTest(true)
+	cap.Extension().SetTrackedTabActiveForTest(true)
 
 	resp := callObserveRaw(h, "page")
 	result := parseToolResult(t, resp)
@@ -278,7 +278,7 @@ func TestSmoke_ObservePage_IsActive_FalseWhenInactive(t *testing.T) {
 	cap.SetPilotEnabled(true)
 	cap.SetTrackingStatusForTest(42, "https://example.com")
 	cap.SetTabStatusForTest("complete")
-	cap.SetTrackedTabActiveForTest(false)
+	cap.Extension().SetTrackedTabActiveForTest(false)
 
 	resp := callObserveRaw(h, "page")
 	result := parseToolResult(t, resp)

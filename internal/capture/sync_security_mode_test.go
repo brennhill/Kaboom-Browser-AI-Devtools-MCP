@@ -13,7 +13,7 @@ import (
 func TestHandleSync_IncludesSecurityModeOverridesWhenInsecureModeActive(t *testing.T) {
 	t.Parallel()
 	cap := NewCapture()
-	cap.SetSecurityMode("insecure_proxy", []string{"csp_headers"})
+	cap.Extension().SetSecurityMode("insecure_proxy", []string{"csp_headers"})
 
 	reqBody, err := json.Marshal(SyncRequest{
 		ExtSessionID: "ext-session-1",

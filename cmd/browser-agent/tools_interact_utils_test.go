@@ -223,7 +223,7 @@ func TestResolveNavigateURL_KaboomInsecure_WrongSecurityMode_ReturnsError(t *tes
 func TestResolveNavigateURL_KaboomInsecure_MissingTarget_ReturnsError(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.SetSecurityMode(capture.SecurityModeInsecureProxy, nil)
+	cap.Extension().SetSecurityMode(capture.SecurityModeInsecureProxy, nil)
 
 	_, err := h.interactAction().ResolveNavigateURLImpl("kaboom-insecure://")
 	if err == nil {
@@ -237,7 +237,7 @@ func TestResolveNavigateURL_KaboomInsecure_MissingTarget_ReturnsError(t *testing
 func TestResolveNavigateURL_KaboomInsecure_InvalidScheme_ReturnsError(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.SetSecurityMode(capture.SecurityModeInsecureProxy, nil)
+	cap.Extension().SetSecurityMode(capture.SecurityModeInsecureProxy, nil)
 
 	_, err := h.interactAction().ResolveNavigateURLImpl("kaboom-insecure://ftp://files.example.com")
 	if err == nil {
@@ -251,7 +251,7 @@ func TestResolveNavigateURL_KaboomInsecure_InvalidScheme_ReturnsError(t *testing
 func TestResolveNavigateURL_KaboomInsecure_MissingHost_ReturnsError(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.SetSecurityMode(capture.SecurityModeInsecureProxy, nil)
+	cap.Extension().SetSecurityMode(capture.SecurityModeInsecureProxy, nil)
 
 	_, err := h.interactAction().ResolveNavigateURLImpl("kaboom-insecure://http://")
 	if err == nil {
@@ -265,7 +265,7 @@ func TestResolveNavigateURL_KaboomInsecure_MissingHost_ReturnsError(t *testing.T
 func TestResolveNavigateURL_KaboomInsecure_ValidTarget_ReturnsProxyURL(t *testing.T) {
 	t.Parallel()
 	h, server, cap := makeToolHandler(t)
-	cap.SetSecurityMode(capture.SecurityModeInsecureProxy, nil)
+	cap.Extension().SetSecurityMode(capture.SecurityModeInsecureProxy, nil)
 
 	port := server.getListenPort()
 
@@ -317,7 +317,7 @@ func TestResolveNavigateURL_KaboomInsecure_ValidTarget_ReturnsProxyURL(t *testin
 func TestResolveNavigateURL_KaboomInsecure_CaseInsensitive(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
-	cap.SetSecurityMode(capture.SecurityModeInsecureProxy, nil)
+	cap.Extension().SetSecurityMode(capture.SecurityModeInsecureProxy, nil)
 
 	// The prefix check is case-insensitive.
 	got, err := h.interactAction().ResolveNavigateURLImpl("KABOOM-INSECURE://https://example.com")

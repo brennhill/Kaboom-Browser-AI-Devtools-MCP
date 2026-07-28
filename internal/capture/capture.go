@@ -77,10 +77,10 @@ type Capture struct {
 	circuit *circuit.CircuitBreaker // Rate limiting + circuit breaker state machine. Has own sync.RWMutex — independent of Capture.mu.
 
 	// ============================================
-	// Extension State (Protected by parent mu)
+	// Extension Runtime (Own Lock)
 	// ============================================
 
-	extensionState ExtensionState // Connection, pilot, tracking, test boundaries. Protected by parent mu (no separate lock).
+	extension *ExtensionRuntime // Connection, pilot, tracking, CSP, and test boundaries. Independently synchronized.
 
 	// ============================================
 	// Debug Logging (Own Lock)
@@ -125,7 +125,7 @@ type Capture struct {
 //
 // Invariants:
 // - queryDispatcher/circuit/debug/recordingManager are non-nil in returned instance.
-// - extensionState.activeTestIDs and extensionState.missingInProgressByCorr start as initialized maps.
+// - extension runtime sets and command-reconciliation maps start initialized.
 func NewCapture() *Capture {
 	logRedactor := redaction.NewRedactionEngine("")
 	c := &Capture{
@@ -133,12 +133,7 @@ func NewCapture() *Capture {
 		networkWaterfall: newNetworkWaterfallStore(DefaultNetworkWaterfallCapacity),
 		extensionLogs:    newExtensionLogStore(logRedactor.Redact),
 		wsConnections:    wsconn.NewTracker(),
-		extensionState: ExtensionState{
-			activeTestIDs:           make(map[string]bool),
-			missingInProgressByCorr: make(map[string]int),
-			pilotSource:             PilotSourceAssumedStartup,
-			securityMode:            SecurityModeNormal,
-		},
+		extension:        newExtensionRuntime(),
 		perf:             newPerformanceStore(),
 		debug:            debuglog.NewLogger(),
 		recordingManager: recording.NewRecordingManager(),
@@ -167,6 +162,11 @@ func (c *Capture) Recordings() *recording.RecordingManager {
 // Circuit returns the canonical independently synchronized circuit breaker.
 func (c *Capture) Circuit() *circuit.CircuitBreaker {
 	return c.circuit
+}
+
+// Extension returns the canonical independently synchronized extension runtime.
+func (c *Capture) Extension() *ExtensionRuntime {
+	return c.extension
 }
 
 // Close shuts down capture-owned background goroutines.

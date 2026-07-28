@@ -52,7 +52,7 @@ func RunDoctorChecks(cap *capture.Capture) []DoctorCheck {
 	snap := cap.GetHealthSnapshot()
 
 	// 1. Extension connectivity.
-	if cap.IsExtensionConnected() {
+	if cap.Extension().IsExtensionConnected() {
 		lastSeen := "unknown"
 		if !snap.LastPollTime.IsZero() {
 			lastSeen = fmt.Sprintf("%.1fs ago", time.Since(snap.LastPollTime).Seconds())
@@ -71,7 +71,7 @@ func RunDoctorChecks(cap *capture.Capture) []DoctorCheck {
 
 	// 2. Pilot enabled/assumed/disabled.
 	pilotState := ""
-	if status, ok := cap.GetPilotStatus().(map[string]any); ok {
+	if status, ok := cap.Extension().GetPilotStatus().(map[string]any); ok {
 		pilotState, _ = status["state"].(string)
 	}
 	switch pilotState {
@@ -88,7 +88,7 @@ func RunDoctorChecks(cap *capture.Capture) []DoctorCheck {
 			Fix:    "Open the extension once to confirm pilot settings, then rerun doctor",
 		})
 	default:
-		if cap.IsPilotActionAllowed() {
+		if cap.Extension().IsPilotActionAllowed() {
 			checks = append(checks, DoctorCheck{
 				Name: "pilot_enabled", Status: "pass",
 				Detail: "AI Web Pilot is enabled",
@@ -103,7 +103,7 @@ func RunDoctorChecks(cap *capture.Capture) []DoctorCheck {
 	}
 
 	// 3. Tracked tab.
-	tracking, tabID, tabURL := cap.GetTrackingStatus()
+	tracking, tabID, tabURL := cap.Extension().GetTrackingStatus()
 	if tracking && tabID != 0 {
 		checks = append(checks, DoctorCheck{
 			Name: "tracked_tab", Status: "pass",

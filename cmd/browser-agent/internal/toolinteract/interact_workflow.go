@@ -452,7 +452,7 @@ func filterNavigateAndDocumentClickArgs(args json.RawMessage) json.RawMessage {
 }
 
 func (h *InteractActionHandler) currentTrackedURL(req mcp.JSONRPCRequest) string {
-	_, _, trackedURL := h.deps.Capture().GetTrackingStatus()
+	_, _, trackedURL := h.deps.Capture().Extension().GetTrackingStatus()
 	if trackedURL != "" {
 		return trackedURL
 	}
@@ -488,7 +488,7 @@ func (h *InteractActionHandler) validateNavigateAndDocumentTab(req mcp.JSONRPCRe
 		return mcp.JSONRPCResponse{}, false
 	}
 
-	enabled, trackedTabID, _ := h.deps.Capture().GetTrackingStatus()
+	enabled, trackedTabID, _ := h.deps.Capture().Extension().GetTrackingStatus()
 	if !enabled || trackedTabID <= 0 {
 		return mcp.Fail(req, mcp.ErrInvalidParam,
 			fmt.Sprintf("navigate_and_document with tab_id=%d requires an actively tracked tab", tabID),

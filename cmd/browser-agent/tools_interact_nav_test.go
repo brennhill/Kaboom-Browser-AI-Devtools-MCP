@@ -298,7 +298,7 @@ func TestSwitchTab_UpdatesTrackedTabOnSuccess(t *testing.T) {
 	env.capture.SetTrackingStatusForTest(100, "https://old-page.example.com")
 
 	// Verify initial state
-	_, oldTabID, oldURL := env.capture.GetTrackingStatus()
+	_, oldTabID, oldURL := env.capture.Extension().GetTrackingStatus()
 	if oldTabID != 100 || oldURL != "https://old-page.example.com" {
 		t.Fatalf("pre-condition: tracked tab = (%d, %q), want (100, old-page)", oldTabID, oldURL)
 	}
@@ -326,7 +326,7 @@ func TestSwitchTab_UpdatesTrackedTabOnSuccess(t *testing.T) {
 	}
 
 	// THE KEY ASSERTION: tracked tab should now be 200, not 100.
-	_, newTabID, newURL := env.capture.GetTrackingStatus()
+	_, newTabID, newURL := env.capture.Extension().GetTrackingStatus()
 	if newTabID != 200 {
 		t.Errorf("tracked tab ID after switch_tab = %d, want 200 (was %d before)", newTabID, oldTabID)
 	}
@@ -335,7 +335,7 @@ func TestSwitchTab_UpdatesTrackedTabOnSuccess(t *testing.T) {
 	}
 
 	// Verify title was updated too
-	newTitle := env.capture.GetTrackedTabTitle()
+	newTitle := env.capture.Extension().GetTrackedTabTitle()
 	if newTitle != "New Page" {
 		t.Errorf("tracked tab title after switch_tab = %q, want 'New Page'", newTitle)
 	}
@@ -362,7 +362,7 @@ func TestSwitchTab_SetTrackedFalse_NoUpdate(t *testing.T) {
 	_ = env.handler.interactAction().HandleBrowserActionSwitchTabImpl(req, json.RawMessage(`{"tab_id":300,"set_tracked":false}`))
 
 	// Tracked tab should remain 100 because set_tracked=false.
-	_, tabID, tabURL := env.capture.GetTrackingStatus()
+	_, tabID, tabURL := env.capture.Extension().GetTrackingStatus()
 	if tabID != 100 {
 		t.Errorf("tracked tab ID should remain 100 with set_tracked=false, got %d", tabID)
 	}
@@ -390,7 +390,7 @@ func TestSwitchTab_FailedCommand_NoUpdate(t *testing.T) {
 	_ = env.handler.interactAction().HandleBrowserActionSwitchTabImpl(req, json.RawMessage(`{"tab_id":999}`))
 
 	// Tracked tab should remain 100 because the command failed.
-	_, tabID, tabURL := env.capture.GetTrackingStatus()
+	_, tabID, tabURL := env.capture.Extension().GetTrackingStatus()
 	if tabID != 100 {
 		t.Errorf("tracked tab ID should remain 100 after failed switch, got %d", tabID)
 	}
@@ -421,7 +421,7 @@ func TestSwitchTab_TabIDZero_NoUpdate(t *testing.T) {
 	_ = env.handler.interactAction().HandleBrowserActionSwitchTabImpl(req, json.RawMessage(`{"tab_id":42}`))
 
 	// Tracked tab should remain 100 because tab_id=0 is invalid.
-	_, tabID, tabURL := env.capture.GetTrackingStatus()
+	_, tabID, tabURL := env.capture.Extension().GetTrackingStatus()
 	if tabID != 100 {
 		t.Errorf("tracked tab ID should remain 100 when ext returns tab_id=0, got %d", tabID)
 	}
@@ -450,7 +450,7 @@ func TestSwitchTab_TabIDMissing_NoUpdate(t *testing.T) {
 	_ = env.handler.interactAction().HandleBrowserActionSwitchTabImpl(req, json.RawMessage(`{"tab_id":42}`))
 
 	// Tracked tab should remain 100 because tab_id is absent (defaults to 0).
-	_, tabID, tabURL := env.capture.GetTrackingStatus()
+	_, tabID, tabURL := env.capture.Extension().GetTrackingStatus()
 	if tabID != 100 {
 		t.Errorf("tracked tab ID should remain 100 when ext omits tab_id, got %d", tabID)
 	}
@@ -486,7 +486,7 @@ func TestSwitchTab_AsyncMode_NoImmediateTrackingUpdate(t *testing.T) {
 	// Tracked tab should remain 100 because async mode does not wait for
 	// the command to complete, so applySwitchTabTracking cannot extract
 	// tab data from the (not-yet-available) extension response.
-	_, tabID, tabURL := env.capture.GetTrackingStatus()
+	_, tabID, tabURL := env.capture.Extension().GetTrackingStatus()
 	if tabID != 100 {
 		t.Errorf("tracked tab ID should remain 100 in async mode, got %d", tabID)
 	}
