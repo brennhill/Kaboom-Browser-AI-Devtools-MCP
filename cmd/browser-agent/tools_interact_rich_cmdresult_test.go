@@ -574,7 +574,7 @@ func TestCommandResult_TimeoutHasFinalTrue(t *testing.T) {
 		Error:         "extension did not respond",
 		CreatedAt:     time.Now().Add(-2 * time.Second),
 	}
-	resp := env.handler.formatCommandResult(req, cmd, cmd.CorrelationID)
+	resp := env.handler.asyncCommands.FormatCommandResult(req, cmd, cmd.CorrelationID)
 
 	var observeResult mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &observeResult); err != nil {

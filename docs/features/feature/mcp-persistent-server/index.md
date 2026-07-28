@@ -10,7 +10,7 @@ code_paths:
   - internal/mcp/response_content.go
   - internal/mcp/protocol.go
   - internal/mcp/types.go
-  - internal/mcp/deps.go
+  - cmd/browser-agent/internal/asynccommand/handler.go
   - internal/types/log.go
   - internal/identity/mcp.go
   - cmd/browser-agent/internal/toolresp/rate_limiter.go
@@ -100,6 +100,8 @@ test_paths:
   - cmd/browser-agent/internal/versioncheck/checker_test.go
   - scripts/check-bridge-stdout-invariant.sh
   - cmd/browser-agent/handler_consistency_test.go
+  - cmd/browser-agent/lint_hardening_test.go
+  - cmd/browser-agent/tools_core_sync_test.go
   - cmd/browser-agent/server_routes_unit_test.go
   - cmd/browser-agent/internal/dashboard/branding_test.go
   - cmd/browser-agent/openapi_branding_test.go
@@ -137,9 +139,10 @@ last_verified_date: 2026-03-29
 
 # MCP Persistent Server
 
-`internal/mcp/deps.go` contains only live diagnostic and asynchronous-command
-contracts. Obsolete capture, log-buffer, accessibility, and noise provider
-interfaces were removed after their consumers migrated to explicit composition.
+The obsolete `internal/mcp/deps.go` provider contracts were deleted after all
+consumers migrated to explicit owner functions. Asynchronous command lifecycle
+behavior now belongs to `internal/asynccommand.Handler`; MCP transport owns no
+capture, accessibility, log-buffer, noise, or completion provider interface.
 `MCPHandler` owns its capture, tool schemas, limiter, redactor, usage tracker,
 and execution backend through one `ToolBackend` value. The executor contract has
 only `HandleToolCall`; no transport-policy getter remains on `ToolHandler`.

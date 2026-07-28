@@ -117,6 +117,20 @@ func TestRootDoesNotReexportCanonicalTypes(t *testing.T) {
 		"func (h *ToolHandler) GetRedactionEngine(",
 		"func (h *ToolHandler) ToolsList(",
 		"func (h *ToolHandler) GetCapture(",
+		"func (h *ToolHandler) attachTransientElements(",
+		"func (h *ToolHandler) EnqueuePendingQuery(",
+		"func (h *ToolHandler) ExecuteA11yQuery(",
+		"func (h *ToolHandler) finalizeResponseEnrichment(",
+		"func (h *ToolHandler) formatCommandResult(",
+		"func (h *ToolHandler) formatErrorCommandResult(",
+		"func (h *ToolHandler) formatExpiredCommandResult(",
+		"func (h *ToolHandler) formatTimeoutCommandResult(",
+		"func (h *ToolHandler) formatCancelledCommandResult(",
+		"func (h *ToolHandler) formatCompletedCommand(",
+		"func (h *ToolHandler) attachPerfDiffIfAvailable(",
+		"func (h *ToolHandler) waitForCommandWithConnectivity(",
+		"func (h *ToolHandler) finalizePendingDisconnect(",
+		"func (h *ToolHandler) MaybeWaitForCommand(",
 	} {
 		for _, path := range rootFiles {
 			if strings.HasSuffix(path, "_test.go") {
@@ -169,26 +183,13 @@ func TestObserveDispatcherDoesNotRequireHostInterfaces(t *testing.T) {
 
 func TestUnusedToolHostContractsStayDeleted(t *testing.T) {
 	for _, relativePath := range []string{
+		"internal/mcp/deps.go",
 		"internal/tools/analyze/deps.go",
 		"internal/tools/configure/deps.go",
 		"internal/tools/interact/deps.go",
 	} {
 		if _, err := os.Stat(filepath.Join(projectRoot(), relativePath)); !os.IsNotExist(err) {
 			t.Errorf("unused tool host contract still exists: %s", relativePath)
-		}
-	}
-	source, err := os.ReadFile(filepath.Join(projectRoot(), "internal", "mcp", "deps.go"))
-	if err != nil {
-		t.Fatalf("read MCP dependency contracts: %v", err)
-	}
-	for _, forbidden := range []string{
-		"type CaptureProvider interface {",
-		"type LogBufferReader interface {",
-		"type A11yQueryExecutor interface {",
-		"type NoiseFilterer interface {",
-	} {
-		if strings.Contains(string(source), forbidden) {
-			t.Errorf("MCP package retains unused host contract %q", forbidden)
 		}
 	}
 }

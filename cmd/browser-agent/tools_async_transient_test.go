@@ -2,17 +2,18 @@
 package main
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/asynccommand"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 func TestAttachTransientElements_AttachesWhenPresent(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	h := &ToolHandler{capture: cap}
+	h := asynccommand.New(asynccommand.Deps{Capture: cap})
 
 	since := time.Now()
 	sinceMs := since.UnixMilli()
@@ -23,7 +24,7 @@ func TestAttachTransientElements_AttachesWhenPresent(t *testing.T) {
 	})
 
 	responseData := map[string]any{}
-	h.attachTransientElements(responseData, since)
+	h.AttachTransientElements(responseData, since)
 
 	transients, ok := responseData["transient_elements"].([]map[string]any)
 	if !ok {
@@ -43,7 +44,7 @@ func TestAttachTransientElements_AttachesWhenPresent(t *testing.T) {
 func TestAttachTransientElements_OmitsWhenEmpty(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	h := &ToolHandler{capture: cap}
+	h := asynccommand.New(asynccommand.Deps{Capture: cap})
 
 	since := time.Now()
 	sinceMs := since.UnixMilli()
@@ -53,7 +54,7 @@ func TestAttachTransientElements_OmitsWhenEmpty(t *testing.T) {
 	})
 
 	responseData := map[string]any{}
-	h.attachTransientElements(responseData, since)
+	h.AttachTransientElements(responseData, since)
 
 	if _, ok := responseData["transient_elements"]; ok {
 		t.Error("transient_elements should not be present when no transients exist")
@@ -63,7 +64,7 @@ func TestAttachTransientElements_OmitsWhenEmpty(t *testing.T) {
 func TestAttachTransientElements_CapsAtMax(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	h := &ToolHandler{capture: cap}
+	h := asynccommand.New(asynccommand.Deps{Capture: cap})
 
 	since := time.Now()
 	sinceMs := since.UnixMilli()
@@ -81,21 +82,21 @@ func TestAttachTransientElements_CapsAtMax(t *testing.T) {
 	cap.Telemetry().AddEnhancedActionsForTest(actions)
 
 	responseData := map[string]any{}
-	h.attachTransientElements(responseData, since)
+	h.AttachTransientElements(responseData, since)
 
 	transients, ok := responseData["transient_elements"].([]map[string]any)
 	if !ok {
 		t.Fatal("transient_elements not present or wrong type")
 	}
-	if len(transients) != maxTransientsPerResult {
-		t.Errorf("transient count = %d, want %d (max cap)", len(transients), maxTransientsPerResult)
+	if len(transients) != asynccommand.MaxTransientsPerResult {
+		t.Errorf("transient count = %d, want %d (max cap)", len(transients), asynccommand.MaxTransientsPerResult)
 	}
 }
 
 func TestAttachTransientElements_FiltersByTimestamp(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	h := &ToolHandler{capture: cap}
+	h := asynccommand.New(asynccommand.Deps{Capture: cap})
 
 	since := time.Now()
 	sinceMs := since.UnixMilli()
@@ -105,7 +106,7 @@ func TestAttachTransientElements_FiltersByTimestamp(t *testing.T) {
 	})
 
 	responseData := map[string]any{}
-	h.attachTransientElements(responseData, since)
+	h.AttachTransientElements(responseData, since)
 
 	transients, ok := responseData["transient_elements"].([]map[string]any)
 	if !ok {
@@ -122,7 +123,7 @@ func TestAttachTransientElements_FiltersByTimestamp(t *testing.T) {
 func TestAttachTransientElements_ClockSkewTolerance(t *testing.T) {
 	t.Parallel()
 	cap := capture.NewCapture()
-	h := &ToolHandler{capture: cap}
+	h := asynccommand.New(asynccommand.Deps{Capture: cap})
 
 	since := time.Now()
 	sinceMs := since.UnixMilli()
@@ -135,7 +136,7 @@ func TestAttachTransientElements_ClockSkewTolerance(t *testing.T) {
 	})
 
 	responseData := map[string]any{}
-	h.attachTransientElements(responseData, since)
+	h.AttachTransientElements(responseData, since)
 
 	transients, ok := responseData["transient_elements"].([]map[string]any)
 	if !ok {
@@ -152,9 +153,9 @@ func TestAttachTransientElements_ClockSkewTolerance(t *testing.T) {
 func TestAttachTransientElements_NilSafety(t *testing.T) {
 	t.Parallel()
 	// Nil handler should not panic
-	var h *ToolHandler
+	var h *asynccommand.Handler
 	responseData := map[string]any{}
-	h.attachTransientElements(responseData, time.Now())
+	h.AttachTransientElements(responseData, time.Now())
 	// Should not have added anything
 	if _, ok := responseData["transient_elements"]; ok {
 		t.Error("should not add transient_elements with nil handler")

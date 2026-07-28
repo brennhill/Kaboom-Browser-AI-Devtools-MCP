@@ -36,7 +36,7 @@ func TestMaybeWaitForCommand_TimeoutMs_CustomTimeout(t *testing.T) {
 
 	// Set timeout_ms to 2000ms (should be enough to catch the 200ms result)
 	start := time.Now()
-	resp := handler.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"timeout_ms":2000}`), "Queued")
+	resp := handler.asyncCommands.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"timeout_ms":2000}`), "Queued")
 	elapsed := time.Since(start)
 
 	result := parseMCPResponseData(t, resp.Result)
@@ -49,14 +49,8 @@ func TestMaybeWaitForCommand_TimeoutMs_CustomTimeout(t *testing.T) {
 }
 
 func TestMaybeWaitForCommand_TimeoutMs_ShortTimeout(t *testing.T) {
-	// Not parallel: mutates package-level asyncPollInterval.
-	prevPoll := asyncPollInterval
-	asyncPollInterval = 50 * time.Millisecond
-	defer func() {
-		asyncPollInterval = prevPoll
-	}()
-
 	handler, _, cap := makeToolHandler(t)
+	handler.asyncCommands.Wait.PollInterval = 50 * time.Millisecond
 	handler.coldStartTimeout = 0
 	req := mcp.JSONRPCRequest{ID: 1, ClientID: "test-client"}
 	correlationID := "test-short-timeout-123"
@@ -67,7 +61,7 @@ func TestMaybeWaitForCommand_TimeoutMs_ShortTimeout(t *testing.T) {
 
 	// Set a very short timeout_ms — command will not complete in time
 	start := time.Now()
-	resp := handler.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"timeout_ms":300}`), "Queued")
+	resp := handler.asyncCommands.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"timeout_ms":300}`), "Queued")
 	elapsed := time.Since(start)
 
 	result := parseMCPResponseData(t, resp.Result)
@@ -94,7 +88,7 @@ func TestMaybeWaitForCommand_TimeoutMs_ZeroUsesDefault(t *testing.T) {
 
 	// With no extension connected and timeout_ms=0, should use default behavior
 	// (which fails fast since extension is not connected)
-	resp := handler.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"timeout_ms":0}`), "Queued")
+	resp := handler.asyncCommands.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"timeout_ms":0}`), "Queued")
 
 	result := parseMCPResponseData(t, resp.Result)
 	// Without extension connected, should get an error
@@ -115,7 +109,7 @@ func TestMaybeWaitForCommand_SyncFalse_ReturnsCorrelationID(t *testing.T) {
 	correlationID := "test-async-275"
 
 	// sync=false should return queued with correlation_id
-	resp := handler.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"sync":false}`), "Queued")
+	resp := handler.asyncCommands.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"sync":false}`), "Queued")
 
 	result := parseMCPResponseData(t, resp.Result)
 	if result["status"] != "queued" {
@@ -136,7 +130,7 @@ func TestMaybeWaitForCommand_TimeoutMs_NegativeIgnored(t *testing.T) {
 
 	// Negative timeout_ms should be treated as default (not infinite)
 	// Without extension, should fail fast
-	resp := handler.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"timeout_ms":-1}`), "Queued")
+	resp := handler.asyncCommands.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"timeout_ms":-1}`), "Queued")
 
 	result := parseMCPResponseData(t, resp.Result)
 	// Should not hang — verify we got a response
@@ -206,14 +200,8 @@ func TestAnalyze_LinkHealth_SyncFalse_ReturnsCorrelationID(t *testing.T) {
 }
 
 func TestAnalyze_Dom_TimeoutMs_Respected(t *testing.T) {
-	// Not parallel: mutates package-level asyncPollInterval.
-	prevPoll := asyncPollInterval
-	asyncPollInterval = 50 * time.Millisecond
-	defer func() {
-		asyncPollInterval = prevPoll
-	}()
-
 	handler, _, cap := makeToolHandler(t)
+	handler.asyncCommands.Wait.PollInterval = 50 * time.Millisecond
 	handler.coldStartTimeout = 0
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1, ClientID: "test-client"}
 

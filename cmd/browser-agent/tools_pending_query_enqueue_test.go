@@ -39,7 +39,7 @@ func TestToolQueryDOM_QueueFullFailsFast(t *testing.T) {
 	saturatePendingQueryQueue(t, env.capture)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := inspect.HandleDOM(env.handler, req, json.RawMessage(`{"selector":"#target"}`))
+	resp := inspect.HandleDOM(buildInspectDeps(env.handler), req, json.RawMessage(`{"selector":"#target"}`))
 	result := parseToolResult(t, resp)
 	assertStructuredErrorCode(t, "toolQueryDOM queue full", result, mcp.ErrQueueFull)
 }

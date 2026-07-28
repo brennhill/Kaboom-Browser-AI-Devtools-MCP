@@ -6,6 +6,7 @@ package main
 import (
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/asynccommand"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
@@ -25,7 +26,7 @@ func TestAttachTraceSummary_OmitsEvents(t *testing.T) {
 	}
 
 	responseData := map[string]any{}
-	attachTraceSummary(responseData, cmd)
+	asynccommand.AttachTraceSummary(responseData, cmd)
 
 	trace, ok := responseData["trace"].(map[string]any)
 	if !ok {

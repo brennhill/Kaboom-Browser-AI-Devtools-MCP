@@ -337,7 +337,7 @@ func (h *ToolHandler) enrichNavigateResponse(resp mcp.JSONRPCResponse, req mcp.J
 	query := queries.PendingQuery{
 		Type: "page_summary", Params: params, TabID: tabID, CorrelationID: correlationID,
 	}
-	if enqueueResponse, blocked := h.EnqueuePendingQuery(req, query, queries.AsyncCommandTimeout); blocked {
+	if enqueueResponse, blocked := h.asyncCommands.EnqueuePendingQuery(req, query, queries.AsyncCommandTimeout); blocked {
 		return enqueueResponse
 	}
 	var textContent string

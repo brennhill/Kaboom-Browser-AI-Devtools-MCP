@@ -1,7 +1,7 @@
-// tools_async_completion.go — Waits for async commands and shapes their final MCP responses.
+// handler.go — Waits for async commands and shapes their final MCP responses.
 // Why: Connectivity-aware waiting and result formatting form one command-completion protocol.
 
-package main
+package asynccommand
 
 import (
 	"encoding/json"
@@ -14,23 +14,61 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/asyncresult"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
-const maxTransientsPerResult = asyncresult.MaxTransientsPerResult
+// MaxTransientsPerResult bounds transient UI enrichment.
+const MaxTransientsPerResult = asyncresult.MaxTransientsPerResult
 
 const a11yQueryTimeout = 30 * time.Second
 
-func (h *ToolHandler) attachTransientElements(responseData map[string]any, since time.Time) {
+// Deps names the owners and cross-feature enrichment operations used by commands.
+type Deps struct {
+	Capture              *capture.Capture
+	DiagnosticHint       func(*mcp.StructuredError)
+	DiagnosticHintString func() string
+	AttachEvidence       func(string, map[string]any)
+	AttachRetryContext   func(string, map[string]any, string, string)
+	SummaryEnabled       func() bool
+	RecordAsyncOutcome   func(string)
+}
+
+// WaitConfig controls synchronous command completion cadence.
+type WaitConfig struct {
+	Initial      time.Duration
+	Retry        time.Duration
+	PollInterval time.Duration
+}
+
+// Handler owns the complete asynchronous command lifecycle.
+type Handler struct {
+	deps Deps
+	Wait WaitConfig
+}
+
+// New constructs an asynchronous command lifecycle owner.
+func New(deps Deps) *Handler {
+	return &Handler{
+		deps: deps,
+		Wait: WaitConfig{
+			Initial: 15 * time.Second, Retry: 5 * time.Second,
+			PollInterval: 500 * time.Millisecond,
+		},
+	}
+}
+
+// AttachTransientElements adds transient UI events created after the command.
+func (h *Handler) AttachTransientElements(responseData map[string]any, since time.Time) {
 	if h == nil || responseData == nil {
 		return
 	}
-	asyncresult.AttachTransientElements(responseData, h.capture.Telemetry().GetAllEnhancedActions(), since)
+	asyncresult.AttachTransientElements(responseData, h.deps.Capture.Telemetry().GetAllEnhancedActions(), since)
 }
 
-func (h *ToolHandler) EnqueuePendingQuery(req mcp.JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (mcp.JSONRPCResponse, bool) {
-	_, err := h.capture.Queries().CreatePendingQueryWithTimeout(query, timeout, req.ClientID)
+func (h *Handler) EnqueuePendingQuery(req mcp.JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (mcp.JSONRPCResponse, bool) {
+	_, err := h.deps.Capture.Queries().CreatePendingQueryWithTimeout(query, timeout, req.ClientID)
 	if err == nil {
 		return mcp.JSONRPCResponse{}, false
 	}
@@ -38,7 +76,7 @@ func (h *ToolHandler) EnqueuePendingQuery(req mcp.JSONRPCRequest, query queries.
 		return mcp.Fail(req, mcp.ErrQueueFull,
 			fmt.Sprintf("Command queue is full; unable to enqueue action type=%q", query.Type),
 			"Wait for in-flight commands to complete, then retry.",
-			mcp.WithRetryable(true), mcp.WithRetryAfterMs(1000), h.Guards.DiagnosticHint(),
+			mcp.WithRetryable(true), mcp.WithRetryAfterMs(1000), h.deps.DiagnosticHint,
 			mcp.WithRecoveryToolCall(map[string]any{
 				"tool": "observe", "arguments": map[string]any{"what": "pending_commands"},
 			}),
@@ -47,11 +85,12 @@ func (h *ToolHandler) EnqueuePendingQuery(req mcp.JSONRPCRequest, query queries.
 	return mcp.Fail(req, mcp.ErrInternal,
 		fmt.Sprintf("Failed to enqueue command type=%q: %v", query.Type, err),
 		"Internal error — do not retry until server health is restored.",
-		h.Guards.DiagnosticHint(),
+		h.deps.DiagnosticHint,
 	), true
 }
 
-func buildA11yQueryParams(scope string, tags []string, frame any, forceRefresh bool) map[string]any {
+// BuildA11yQueryParams creates the extension payload for an accessibility query.
+func BuildA11yQueryParams(scope string, tags []string, frame any, forceRefresh bool) map[string]any {
 	params := map[string]any{}
 	if scope != "" {
 		params["scope"] = scope
@@ -68,26 +107,27 @@ func buildA11yQueryParams(scope string, tags []string, frame any, forceRefresh b
 	return params
 }
 
-func (h *ToolHandler) ExecuteA11yQuery(scope string, tags []string, frame any, forceRefresh bool) (json.RawMessage, error) {
-	paramsJSON, _ := json.Marshal(buildA11yQueryParams(scope, tags, frame, forceRefresh))
-	queryID, err := h.capture.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
+func (h *Handler) ExecuteA11yQuery(scope string, tags []string, frame any, forceRefresh bool) (json.RawMessage, error) {
+	paramsJSON, _ := json.Marshal(BuildA11yQueryParams(scope, tags, frame, forceRefresh))
+	queryID, err := h.deps.Capture.Queries().CreatePendingQueryWithTimeout(queries.PendingQuery{
 		Type: "a11y", Params: paramsJSON,
 	}, a11yQueryTimeout, "")
 	if err != nil {
 		return nil, err
 	}
-	return h.capture.Queries().WaitForResult(queryID, a11yQueryTimeout)
+	return h.deps.Capture.Queries().WaitForResult(queryID, a11yQueryTimeout)
 }
 
 // finalizeResponseEnrichment attaches evidence, transient elements, and retry context
 // to the response data in a single call. Consolidates the repeated triplet pattern.
-func (h *ToolHandler) finalizeResponseEnrichment(corrID string, responseData map[string]any, cmd queries.CommandResult) {
-	h.interactActionHandler.AttachEvidencePayload(corrID, responseData)
-	h.attachTransientElements(responseData, cmd.CreatedAt)
-	h.interactActionHandler.AttachRetryContext(corrID, responseData, cmd.Status, cmd.Error)
+func (h *Handler) finalizeResponseEnrichment(corrID string, responseData map[string]any, cmd queries.CommandResult) {
+	h.deps.AttachEvidence(corrID, responseData)
+	h.AttachTransientElements(responseData, cmd.CreatedAt)
+	h.deps.AttachRetryContext(corrID, responseData, cmd.Status, cmd.Error)
 }
 
-func (h *ToolHandler) formatCommandResult(req mcp.JSONRPCRequest, cmd queries.CommandResult, corrID string) mcp.JSONRPCResponse {
+// FormatCommandResult creates the terminal or polling response for a command.
+func (h *Handler) FormatCommandResult(req mcp.JSONRPCRequest, cmd queries.CommandResult, corrID string) mcp.JSONRPCResponse {
 	traceID := cmd.TraceID
 	if traceID == "" {
 		traceID = cmd.CorrelationID
@@ -102,11 +142,11 @@ func (h *ToolHandler) formatCommandResult(req mcp.JSONRPCRequest, cmd queries.Co
 		"created_at":       cmd.CreatedAt.Format(time.RFC3339),
 		"elapsed_ms":       cmd.ElapsedMs(),
 	}
-	attachTraceSummary(responseData, cmd)
+	AttachTraceSummary(responseData, cmd)
 
 	// Track async command outcome for analytics.
-	if h.usageTracker != nil && cmd.Status != "pending" {
-		h.usageTracker.RecordAsyncOutcome(cmd.Status)
+	if h.deps.RecordAsyncOutcome != nil && cmd.Status != "pending" {
+		h.deps.RecordAsyncOutcome(cmd.Status)
 	}
 
 	switch cmd.Status {
@@ -128,7 +168,7 @@ func (h *ToolHandler) formatCommandResult(req mcp.JSONRPCRequest, cmd queries.Co
 	}
 }
 
-func (h *ToolHandler) formatErrorCommandResult(req mcp.JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) mcp.JSONRPCResponse {
+func (h *Handler) formatErrorCommandResult(req mcp.JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) mcp.JSONRPCResponse {
 	responseData["final"] = true
 	if cmd.Error == "" {
 		cmd.Error = "Command failed in extension"
@@ -152,35 +192,35 @@ func (h *ToolHandler) formatErrorCommandResult(req mcp.JSONRPCRequest, cmd queri
 	return toolresp.FailJSON(req, summary, responseData)
 }
 
-func (h *ToolHandler) formatExpiredCommandResult(req mcp.JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) mcp.JSONRPCResponse {
+func (h *Handler) formatExpiredCommandResult(req mcp.JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) mcp.JSONRPCResponse {
 	responseData["final"] = true
 	responseData["error"] = mcp.ErrExtTimeout
 	responseData["message"] = fmt.Sprintf("Command %s expired before the extension could execute it. Error: %s", corrID, cmd.Error)
 	responseData["retry"] = "The browser extension may be disconnected or the page is not active. Check observe with what='pilot' to verify extension status, then retry the command."
-	responseData["hint"] = h.Guards.DiagnosticHintString()
+	responseData["hint"] = h.deps.DiagnosticHintString()
 
 	h.finalizeResponseEnrichment(corrID, responseData, cmd)
 	summary := fmt.Sprintf("FAILED — Command %s expired: %s", corrID, cmd.Error)
 	return toolresp.FailJSON(req, summary, responseData)
 }
 
-func (h *ToolHandler) formatTimeoutCommandResult(req mcp.JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) mcp.JSONRPCResponse {
+func (h *Handler) formatTimeoutCommandResult(req mcp.JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) mcp.JSONRPCResponse {
 	responseData["final"] = true
 	responseData["error"] = mcp.ErrExtTimeout
 	responseData["message"] = fmt.Sprintf("Command %s timed out waiting for the extension to respond. Error: %s", corrID, cmd.Error)
 	retryMsg := "Extension connected but page execution timed out. This page may block content scripts (common on Google, Chrome Web Store, etc.). Try navigating to a different page: interact({what: 'navigate', url: 'https://example.com'})"
-	if !h.capture.Extension().IsExtensionConnected() {
+	if !h.deps.Capture.Extension().IsExtensionConnected() {
 		retryMsg = "Extension is disconnected. Ensure the Kaboom extension shows 'Connected' and a tab is tracked, then retry."
 	}
 	responseData["retry"] = retryMsg
-	responseData["hint"] = h.Guards.DiagnosticHintString()
+	responseData["hint"] = h.deps.DiagnosticHintString()
 
 	h.finalizeResponseEnrichment(corrID, responseData, cmd)
 	summary := fmt.Sprintf("FAILED — Command %s timed out: %s", corrID, cmd.Error)
 	return toolresp.FailJSON(req, summary, responseData)
 }
 
-func (h *ToolHandler) formatCancelledCommandResult(req mcp.JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) mcp.JSONRPCResponse {
+func (h *Handler) formatCancelledCommandResult(req mcp.JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) mcp.JSONRPCResponse {
 	responseData["final"] = true
 	responseData["error"] = mcp.ErrExtError
 	responseData["message"] = fmt.Sprintf("Command %s was cancelled before completion.", corrID)
@@ -193,7 +233,8 @@ func (h *ToolHandler) formatCancelledCommandResult(req mcp.JSONRPCRequest, cmd q
 	return toolresp.FailJSON(req, summary, responseData)
 }
 
-func attachTraceSummary(responseData map[string]any, cmd queries.CommandResult) {
+// AttachTraceSummary adds compact command trace metadata to a response.
+func AttachTraceSummary(responseData map[string]any, cmd queries.CommandResult) {
 	traceID := cmd.TraceID
 	if traceID == "" {
 		traceID = cmd.CorrelationID
@@ -215,7 +256,7 @@ func attachTraceSummary(responseData map[string]any, cmd queries.CommandResult) 
 	responseData["trace"] = trace
 }
 
-func (h *ToolHandler) formatCompletedCommand(req mcp.JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) mcp.JSONRPCResponse {
+func (h *Handler) formatCompletedCommand(req mcp.JSONRPCRequest, cmd queries.CommandResult, corrID string, responseData map[string]any) mcp.JSONRPCResponse {
 	normalizedResult, normalizedErr := asyncresult.NormalizeCompletedCommandResult(corrID, cmd.Result)
 	responseData["result"] = normalizedResult
 	responseData["completed_at"] = cmd.CompletedAt.Format(time.RFC3339)
@@ -244,15 +285,15 @@ func (h *ToolHandler) formatCompletedCommand(req mcp.JSONRPCRequest, cmd queries
 	asyncresult.StripSuccessOnlyFields(responseData)
 	asyncresult.StripRetryContextOnSuccess(responseData)
 	// #447: Strip verbose fields when summary mode is active
-	if h.summaryPrefs.Enabled() {
+	if h.deps.SummaryEnabled != nil && h.deps.SummaryEnabled() {
 		asyncresult.StripSummaryModeFields(responseData)
 	}
 	summary := fmt.Sprintf("Command %s: complete", corrID)
 	return mcp.Succeed(req, summary, responseData)
 }
 
-func (h *ToolHandler) attachPerfDiffIfAvailable(corrID string, responseData map[string]any) {
-	beforeSnap, ok := h.capture.Performance().TakeBefore(corrID)
+func (h *Handler) attachPerfDiffIfAvailable(corrID string, responseData map[string]any) {
+	beforeSnap, ok := h.deps.Capture.Performance().TakeBefore(corrID)
 	if !ok {
 		return
 	}
@@ -261,11 +302,11 @@ func (h *ToolHandler) attachPerfDiffIfAvailable(corrID string, responseData map[
 	// delay + 500ms batcher debounce). Poll briefly for a snapshot newer than
 	// the "before" baseline. Without this wait, we'd compare the same snapshot
 	// to itself (zero diff) or find nothing.
-	afterSnap, found := h.capture.Performance().ByURL(beforeSnap.URL)
+	afterSnap, found := h.deps.Capture.Performance().ByURL(beforeSnap.URL)
 	if !found || afterSnap.Timestamp == beforeSnap.Timestamp {
 		for retry := 0; retry < 5; retry++ {
 			time.Sleep(500 * time.Millisecond)
-			afterSnap, found = h.capture.Performance().ByURL(beforeSnap.URL)
+			afterSnap, found = h.deps.Capture.Performance().ByURL(beforeSnap.URL)
 			if found && afterSnap.Timestamp != beforeSnap.Timestamp {
 				break // Found a genuinely new snapshot.
 			}
@@ -280,30 +321,22 @@ func (h *ToolHandler) attachPerfDiffIfAvailable(corrID string, responseData map[
 	responseData["perf_diff"] = performance.ComputePerfDiff(before, after)
 }
 
-// Wait/poll cadence for sync-by-default commands. Tests may shorten these;
-// production never mutates them.
-var (
-	asyncInitialWait  = 15 * time.Second
-	asyncRetryWait    = 5 * time.Second
-	asyncPollInterval = 500 * time.Millisecond
-)
-
-func (h *ToolHandler) waitForCommandWithConnectivity(correlationID string, timeout time.Duration) (*queries.CommandResult, bool, bool, int64) {
+func (h *Handler) waitForCommandWithConnectivity(correlationID string, timeout time.Duration) (*queries.CommandResult, bool, bool, int64) {
 	deadline := time.Now().Add(timeout)
 	waited := int64(0)
 	for {
 		remaining := time.Until(deadline)
 		if remaining <= 0 {
-			cmd, found := h.capture.Queries().GetCommandResult(correlationID)
-			disconnected := found && cmd != nil && cmd.Status == "pending" && !h.capture.Extension().IsExtensionConnected()
+			cmd, found := h.deps.Capture.Queries().GetCommandResult(correlationID)
+			disconnected := found && cmd != nil && cmd.Status == "pending" && !h.deps.Capture.Extension().IsExtensionConnected()
 			return cmd, found, disconnected, waited
 		}
-		waitStep := asyncPollInterval
+		waitStep := h.Wait.PollInterval
 		if waitStep <= 0 || waitStep > remaining {
 			waitStep = remaining
 		}
 		stepStart := time.Now()
-		cmd, found := h.capture.Queries().WaitForCommand(correlationID, waitStep)
+		cmd, found := h.deps.Capture.Queries().WaitForCommand(correlationID, waitStep)
 		waited += time.Since(stepStart).Milliseconds()
 		if !found {
 			return nil, false, false, waited
@@ -311,27 +344,27 @@ func (h *ToolHandler) waitForCommandWithConnectivity(correlationID string, timeo
 		if cmd.Status != "pending" {
 			return cmd, true, false, waited
 		}
-		if !h.capture.Extension().IsExtensionConnected() {
+		if !h.deps.Capture.Extension().IsExtensionConnected() {
 			return cmd, true, true, waited
 		}
 	}
 }
 
-func (h *ToolHandler) finalizePendingDisconnect(req mcp.JSONRPCRequest, correlationID string) mcp.JSONRPCResponse {
-	h.capture.Queries().ApplyCommandResult(correlationID, "error", nil, "extension_disconnected")
-	if cmd, found := h.capture.Queries().GetCommandResult(correlationID); found && cmd != nil {
-		return h.formatCommandResult(req, *cmd, correlationID)
+func (h *Handler) finalizePendingDisconnect(req mcp.JSONRPCRequest, correlationID string) mcp.JSONRPCResponse {
+	h.deps.Capture.Queries().ApplyCommandResult(correlationID, "error", nil, "extension_disconnected")
+	if cmd, found := h.deps.Capture.Queries().GetCommandResult(correlationID); found && cmd != nil {
+		return h.FormatCommandResult(req, *cmd, correlationID)
 	}
 	return mcp.Fail(req, mcp.ErrNoData,
 		"Extension disconnected while command was pending",
 		"Ensure the extension is connected, then retry the action.",
-		h.Guards.DiagnosticHint(),
+		h.deps.DiagnosticHint,
 		mcp.WithFinal(true))
 }
 
 // MaybeWaitForCommand implements sync-by-default command completion. Explicit
 // background/async requests return a polling handle immediately.
-func (h *ToolHandler) MaybeWaitForCommand(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse {
+func (h *Handler) MaybeWaitForCommand(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse {
 	var params struct {
 		Sync       *bool `json:"sync"`
 		Wait       *bool `json:"wait"`
@@ -351,11 +384,11 @@ func (h *ToolHandler) MaybeWaitForCommand(req mcp.JSONRPCRequest, correlationID 
 			"queued": true, "final": false,
 		})
 	}
-	if !h.capture.Extension().IsExtensionConnected() {
-		return mcp.Fail(req, mcp.ErrNoData, "Extension is not connected", "Ensure the Kaboom extension shows 'Connected' and a tab is tracked.", h.Guards.DiagnosticHint())
+	if !h.deps.Capture.Extension().IsExtensionConnected() {
+		return mcp.Fail(req, mcp.ErrNoData, "Extension is not connected", "Ensure the Kaboom extension shows 'Connected' and a tab is tracked.", h.deps.DiagnosticHint)
 	}
 
-	initialWait, retryWait := asyncInitialWait, asyncRetryWait
+	initialWait, retryWait := h.Wait.Initial, h.Wait.Retry
 	if params.TimeoutMs > 0 {
 		totalBudget := time.Duration(params.TimeoutMs) * time.Millisecond
 		if totalBudget < 100*time.Millisecond {
@@ -378,7 +411,7 @@ func (h *ToolHandler) MaybeWaitForCommand(req mcp.JSONRPCRequest, correlationID 
 	if disconnected {
 		return h.finalizePendingDisconnect(req, correlationID)
 	}
-	if cmd.Status == "pending" && h.capture.Extension().IsExtensionConnected() {
+	if cmd.Status == "pending" && h.deps.Capture.Extension().IsExtensionConnected() {
 		attempts = 2
 		cmd, found, disconnected, waitedMs = h.waitForCommandWithConnectivity(correlationID, retryWait)
 		totalWaitMs += waitedMs
@@ -390,25 +423,25 @@ func (h *ToolHandler) MaybeWaitForCommand(req mcp.JSONRPCRequest, correlationID 
 		}
 	}
 	if cmd.Status == "pending" {
-		if !h.capture.Extension().IsExtensionConnected() {
+		if !h.deps.Capture.Extension().IsExtensionConnected() {
 			return h.finalizePendingDisconnect(req, correlationID)
 		}
 		stillProcessing := map[string]any{
 			"status": "still_processing", "lifecycle_status": "running",
 			"correlation_id": correlationID, "trace_id": correlationID,
 			"queued": false, "final": false, "elapsed_ms": cmd.ElapsedMs(),
-			"queue_depth": h.capture.Queries().QueueDepth(),
+			"queue_depth": h.deps.Capture.Queries().QueueDepth(),
 			"retry_context": map[string]any{
 				"attempts": attempts, "total_wait_ms": totalWaitMs,
-				"extension_connected": h.capture.Extension().IsExtensionConnected(),
+				"extension_connected": h.deps.Capture.Extension().IsExtensionConnected(),
 			},
 			"suggested_retry_ms": 2000,
 			"message":            "Action is taking longer than expected. Polling is now required. Use observe({what:'command_result', correlation_id:'" + correlationID + "'}) to check the result.",
 		}
-		if pos := h.capture.Queries().QueuePosition(correlationID); pos >= 0 {
+		if pos := h.deps.Capture.Queries().QueuePosition(correlationID); pos >= 0 {
 			stillProcessing["queue_position"] = pos
 		}
 		return mcp.Succeed(req, "Action still processing", stillProcessing)
 	}
-	return h.formatCommandResult(req, *cmd, correlationID)
+	return h.FormatCommandResult(req, *cmd, correlationID)
 }

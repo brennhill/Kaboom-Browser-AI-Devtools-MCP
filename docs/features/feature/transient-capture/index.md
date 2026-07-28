@@ -4,9 +4,9 @@ feature_id: feature-transient-capture
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
-  - cmd/browser-agent/tools_async_completion.go
+  - cmd/browser-agent/internal/asynccommand/handler.go
   - cmd/browser-agent/internal/asyncresult/transients.go
   - src/lib/page/transient-capture.ts
 test_paths:
@@ -29,3 +29,6 @@ last_verified_date: 2026-03-05
 
 ## Canonical Note
 Transient capture should prefer event/timeline-safe snapshots and avoid introducing observer-induced UI mutations.
+Completed command enrichment is owned by `internal/asynccommand.Handler`, which
+reads the canonical capture timeline and delegates filtering and bounds to
+`internal/asyncresult`.

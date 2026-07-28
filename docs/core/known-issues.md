@@ -74,16 +74,19 @@ the folder-gate numbers as evidence that it did.
 | --- | --- |
 | `Capture` methods (composition and cross-owner orchestration) | 35 |
 | `cmd/browser-agent` production source files (package `main`) | 10 |
-| `*ToolHandler` methods in those files | 31 |
+| `*ToolHandler` methods in those files | 17 |
 
 Both remain structurally constrained: Go only permits methods on a type in the
 package that declares it. Extracted `tool*` packages therefore expose handlers
 through narrow `Deps` contracts while canonical `*ToolHandler` entry points
 remain in `main`. These are the sole implementations, not compatibility shims.
-The 10-file package target is met, but the method count still reflects a broad
-composition root. The active refactor continues moving stateful clusters behind
-independently synchronized owners and migrating callers directly to those
-canonical APIs.
+The 10-file production package target is met, but the remaining methods still
+reflect a broad composition root. The asynchronous command lifecycle is now
+owned completely by `internal/asynccommand.Handler`; queueing, accessibility
+execution, waiting, response enrichment, and telemetry no longer remain as root
+methods or MCP provider interfaces. The active refactor continues moving the
+remaining stateful clusters behind independently synchronized owners and
+migrating callers directly to those canonical APIs.
 
 Note also that `src/lib` and `src/background` were **relocated into
 subdirectories, not decomposed** — total file count and LOC are essentially

@@ -21,7 +21,7 @@ code_paths:
   - cmd/browser-agent/internal/toolobserve/site_menus.go
   - cmd/browser-agent/internal/toolresp/toolresp.go
   - internal/mcp/response.go
-  - cmd/browser-agent/tools_async_completion.go
+  - cmd/browser-agent/internal/asynccommand/handler.go
   - internal/a11ysummary/summary.go
   - internal/tools/observe/deps.go
   - internal/tools/observe/filtering.go
@@ -88,6 +88,9 @@ last_verified_date: 2026-03-05
 The background service-worker entrypoint owns startup only. Telemetry tests and
 runtime code import caches, batching, transport, and log processing directly
 from the modules that own those APIs.
+Queued observation modes receive command admission and completion functions
+from `internal/asynccommand.Handler`; observe owns no host interface and the
+composition root provides no forwarding methods.
 The injected page-world entrypoint is also startup-only; observer and telemetry
 APIs remain owned by their focused `src/inject` and `src/lib` modules.
 Go observe modes receive the canonical capture owner plus explicit log, noise,

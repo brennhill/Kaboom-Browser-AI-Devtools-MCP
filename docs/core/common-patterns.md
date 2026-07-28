@@ -10,7 +10,7 @@ Use this as a hard checklist during design, coding, and review.
   - `cmd/browser-agent/internal/toolobserve/dispatcher.go`
   - `cmd/browser-agent/tools_configure.go`
 - Shared async query path:
-  - `cmd/browser-agent/tools_async_completion.go`
+  - `cmd/browser-agent/internal/asynccommand/handler.go`
 - Interact response shaping:
   - `cmd/browser-agent/tools_interact_dispatch.go`
   - `cmd/browser-agent/internal/toolinteract/interact_evidence.go`

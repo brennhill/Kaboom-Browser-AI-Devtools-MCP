@@ -16,10 +16,9 @@ code_paths:
   - cmd/browser-agent/internal/toolanalyze/visual/handler.go
   - cmd/browser-agent/internal/toolanalyze/pageissues/handler.go
   - internal/annotation/draw_sessions_handler.go
-  - cmd/browser-agent/tools_async_completion.go
   - cmd/browser-agent/internal/toolobserve/dispatcher.go
   - cmd/browser-agent/internal/toolobserve/deps.go
-  - cmd/browser-agent/tools_async_completion.go
+  - cmd/browser-agent/internal/asynccommand/handler.go
   - cmd/browser-agent/internal/toolanalyze/combinedaudit/handler.go
   - cmd/browser-agent/internal/toolanalyze/navigation.go
   - cmd/browser-agent/internal/toolanalyze/link_validation.go
@@ -106,6 +105,9 @@ remain in their dedicated modules. The dispatcher closes over separate
 analyze, inspect, observe, audit, and visual dependency groups. Analyze-owned
 telemetry and security access uses explicit function fields, so there is no
 catch-all host interface or root forwarding surface.
+Analyze actions receive queueing, waiting, and accessibility execution directly
+from `internal/asynccommand.Handler`; `ToolHandler` no longer implements an
+asynchronous host contract.
 The background service-worker entrypoint owns startup only. Analysis tests and
 runtime code import their focused owner modules rather than an entrypoint facade.
 

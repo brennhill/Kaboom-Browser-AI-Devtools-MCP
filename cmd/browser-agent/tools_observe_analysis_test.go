@@ -8,6 +8,7 @@ package main
 import (
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/asynccommand"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/a11ysummary"
 )
 
@@ -206,7 +207,7 @@ func TestEnsureA11ySummary_NilViolationsKey(t *testing.T) {
 func TestBuildA11yQueryParams_IncludesFrameWhenProvided(t *testing.T) {
 	t.Parallel()
 
-	params := buildA11yQueryParams("#app", []string{"wcag2a"}, "iframe.editor", false)
+	params := asynccommand.BuildA11yQueryParams("#app", []string{"wcag2a"}, "iframe.editor", false)
 
 	if got := params["scope"]; got != "#app" {
 		t.Fatalf("scope = %v, want #app", got)
@@ -222,7 +223,7 @@ func TestBuildA11yQueryParams_IncludesFrameWhenProvided(t *testing.T) {
 func TestBuildA11yQueryParams_OmitsFrameWhenNil(t *testing.T) {
 	t.Parallel()
 
-	params := buildA11yQueryParams("", nil, nil, false)
+	params := asynccommand.BuildA11yQueryParams("", nil, nil, false)
 
 	if _, ok := params["frame"]; ok {
 		t.Fatal("frame should be omitted when nil")
@@ -238,7 +239,7 @@ func TestBuildA11yQueryParams_OmitsFrameWhenNil(t *testing.T) {
 func TestBuildA11yQueryParams_IncludesForceRefreshWhenTrue(t *testing.T) {
 	t.Parallel()
 
-	params := buildA11yQueryParams("#app", nil, nil, true)
+	params := asynccommand.BuildA11yQueryParams("#app", nil, nil, true)
 	if got, ok := params["force_refresh"].(bool); !ok || !got {
 		t.Fatalf("force_refresh = %v, want true", params["force_refresh"])
 	}

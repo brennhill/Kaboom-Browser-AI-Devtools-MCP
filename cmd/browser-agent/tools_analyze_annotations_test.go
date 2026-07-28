@@ -21,7 +21,7 @@ func replaceAnnotationStoreForTest(h *ToolHandler, store *annotation.Store) {
 	h.annotationAnalysis = annotationanalysis.New(
 		store,
 		h.capture,
-		h.formatCommandResult,
+		h.asyncCommands.FormatCommandResult,
 		h.server.logs.Entries,
 	)
 }

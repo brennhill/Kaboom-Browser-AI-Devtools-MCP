@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/asynccommand"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -18,10 +19,18 @@ import (
 )
 
 func newSyncTestHandler(cap *capture.Capture) *ToolHandler {
-	return &ToolHandler{
+	handler := &ToolHandler{
 		capture: cap,
 		Guards:  toolguard.New(cap, context.Background(), time.Millisecond),
 	}
+	handler.asyncCommands = asynccommand.New(asynccommand.Deps{
+		Capture:              cap,
+		DiagnosticHint:       handler.Guards.DiagnosticHint(),
+		DiagnosticHintString: handler.Guards.DiagnosticHintString,
+		AttachEvidence:       func(string, map[string]any) {},
+		AttachRetryContext:   func(string, map[string]any, string, string) {},
+	})
+	return handler
 }
 
 func TestMaybeWaitForCommand_SyncByDefault(t *testing.T) {
@@ -51,7 +60,7 @@ func TestMaybeWaitForCommand_SyncByDefault(t *testing.T) {
 	cap.HandleSync(httptest.NewRecorder(), httpReq)
 
 	// Call with no explicit sync param (should default to true)
-	resp := handler.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{}`), "Queued")
+	resp := handler.asyncCommands.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{}`), "Queued")
 
 	// Verify
 	result := parseMCPResponseData(t, resp.Result)
@@ -71,7 +80,7 @@ func TestMaybeWaitForCommand_BackgroundOverride(t *testing.T) {
 	correlationID := "test-bg-123"
 
 	// Call with background: true
-	resp := handler.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"background":true}`), "Queued")
+	resp := handler.asyncCommands.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"background":true}`), "Queued")
 
 	result := parseMCPResponseData(t, resp.Result)
 
@@ -149,7 +158,7 @@ func TestMaybeWaitForCommand_TimeoutGracefulFallback(t *testing.T) {
 
 	// Start a goroutine to check if it's blocking
 	start := time.Now()
-	_ = handler.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"sync":true}`), "Queued")
+	_ = handler.asyncCommands.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"sync":true}`), "Queued")
 	duration := time.Since(start)
 
 	// Since we didn't mock connection or result, it should fail fast or timeout.
@@ -163,20 +172,11 @@ func TestMaybeWaitForCommand_PendingDisconnectReturnsTerminalError(t *testing.T)
 	restoreThreshold := capture.SetExtensionDisconnectThresholdForTesting(200 * time.Millisecond)
 	defer restoreThreshold()
 
-	prevInitial := asyncInitialWait
-	prevRetry := asyncRetryWait
-	prevPoll := asyncPollInterval
-	asyncInitialWait = 500 * time.Millisecond
-	asyncRetryWait = 200 * time.Millisecond
-	asyncPollInterval = 20 * time.Millisecond
-	defer func() {
-		asyncInitialWait = prevInitial
-		asyncRetryWait = prevRetry
-		asyncPollInterval = prevPoll
-	}()
-
 	cap := capture.NewCapture()
 	handler := newSyncTestHandler(cap)
+	handler.asyncCommands.Wait.Initial = 500 * time.Millisecond
+	handler.asyncCommands.Wait.Retry = 200 * time.Millisecond
+	handler.asyncCommands.Wait.PollInterval = 20 * time.Millisecond
 	req := mcp.JSONRPCRequest{ID: 1}
 	correlationID := "test-disconnect-midwait-123"
 	cap.Queries().RegisterCommand(correlationID, "q-disconnect-midwait-123", 5*time.Second)
@@ -190,7 +190,7 @@ func TestMaybeWaitForCommand_PendingDisconnectReturnsTerminalError(t *testing.T)
 	httpReq.Header.Set("X-Kaboom-Client", "test-client")
 	cap.HandleSync(httptest.NewRecorder(), httpReq)
 
-	resp := handler.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"sync":true}`), "Queued")
+	resp := handler.asyncCommands.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"sync":true}`), "Queued")
 	result := parseMCPResponseData(t, resp.Result)
 
 	if result["status"] != "error" {
@@ -237,7 +237,7 @@ func TestFormatCommandResult_FinalField(t *testing.T) {
 			CreatedAt:     now,
 			CompletedAt:   now.Add(100 * time.Millisecond),
 		}
-		resp := handler.formatCommandResult(req, cmd, cmd.CorrelationID)
+		resp := handler.asyncCommands.FormatCommandResult(req, cmd, cmd.CorrelationID)
 		data := parseMCPResponseData(t, resp.Result)
 		if final, ok := data["final"]; !ok || final != true {
 			t.Errorf("Expected final=true for complete, got %v", data["final"])
@@ -254,7 +254,7 @@ func TestFormatCommandResult_FinalField(t *testing.T) {
 			Error:         "something failed",
 			CreatedAt:     now,
 		}
-		resp := handler.formatCommandResult(req, cmd, cmd.CorrelationID)
+		resp := handler.asyncCommands.FormatCommandResult(req, cmd, cmd.CorrelationID)
 		data := parseMCPResponseData(t, resp.Result)
 		if final, ok := data["final"]; !ok || final != true {
 			t.Errorf("Expected final=true for error, got %v", data["final"])
@@ -267,7 +267,7 @@ func TestFormatCommandResult_FinalField(t *testing.T) {
 			Status:        "pending",
 			CreatedAt:     now,
 		}
-		resp := handler.formatCommandResult(req, cmd, cmd.CorrelationID)
+		resp := handler.asyncCommands.FormatCommandResult(req, cmd, cmd.CorrelationID)
 		data := parseMCPResponseData(t, resp.Result)
 		if final, ok := data["final"]; !ok || final != false {
 			t.Errorf("Expected final=false for pending, got %v", data["final"])
@@ -284,7 +284,7 @@ func TestFormatCommandResult_FinalField(t *testing.T) {
 			Error:         "timed out",
 			CreatedAt:     now,
 		}
-		resp := handler.formatCommandResult(req, cmd, cmd.CorrelationID)
+		resp := handler.asyncCommands.FormatCommandResult(req, cmd, cmd.CorrelationID)
 		var toolResult mcp.MCPToolResult
 		if err := json.Unmarshal(resp.Result, &toolResult); err != nil {
 			t.Fatalf("Failed to unmarshal: %v", err)
@@ -301,7 +301,7 @@ func TestFormatCommandResult_FinalField(t *testing.T) {
 			Error:         "no response",
 			CreatedAt:     now,
 		}
-		resp := handler.formatCommandResult(req, cmd, cmd.CorrelationID)
+		resp := handler.asyncCommands.FormatCommandResult(req, cmd, cmd.CorrelationID)
 		var toolResult mcp.MCPToolResult
 		if err := json.Unmarshal(resp.Result, &toolResult); err != nil {
 			t.Fatalf("Failed to unmarshal: %v", err)
@@ -326,7 +326,7 @@ func TestFormatCommandResult_ElapsedMs(t *testing.T) {
 			CreatedAt:     now.Add(-500 * time.Millisecond),
 			CompletedAt:   now,
 		}
-		resp := handler.formatCommandResult(req, cmd, cmd.CorrelationID)
+		resp := handler.asyncCommands.FormatCommandResult(req, cmd, cmd.CorrelationID)
 		data := parseMCPResponseData(t, resp.Result)
 
 		elapsedMs, ok := data["elapsed_ms"].(float64)
@@ -344,7 +344,7 @@ func TestFormatCommandResult_ElapsedMs(t *testing.T) {
 			Status:        "pending",
 			CreatedAt:     now.Add(-200 * time.Millisecond),
 		}
-		resp := handler.formatCommandResult(req, cmd, cmd.CorrelationID)
+		resp := handler.asyncCommands.FormatCommandResult(req, cmd, cmd.CorrelationID)
 		data := parseMCPResponseData(t, resp.Result)
 
 		elapsedMs, ok := data["elapsed_ms"].(float64)
@@ -363,7 +363,7 @@ func TestFormatCommandResult_ElapsedMs(t *testing.T) {
 			Error:         "timed out",
 			CreatedAt:     now.Add(-1 * time.Second),
 		}
-		resp := handler.formatCommandResult(req, cmd, cmd.CorrelationID)
+		resp := handler.asyncCommands.FormatCommandResult(req, cmd, cmd.CorrelationID)
 		data := parseMCPResponseData(t, resp.Result)
 
 		elapsedMs, ok := data["elapsed_ms"].(float64)
@@ -391,7 +391,7 @@ func TestFormatCommandResult_ListInteractivePayloadHardening(t *testing.T) {
 			CompletedAt:   now.Add(100 * time.Millisecond),
 		}
 
-		resp := handler.formatCommandResult(req, cmd, cmd.CorrelationID)
+		resp := handler.asyncCommands.FormatCommandResult(req, cmd, cmd.CorrelationID)
 
 		var toolResult mcp.MCPToolResult
 		if err := json.Unmarshal(resp.Result, &toolResult); err != nil {
@@ -424,7 +424,7 @@ func TestFormatCommandResult_ListInteractivePayloadHardening(t *testing.T) {
 			CompletedAt:   now.Add(100 * time.Millisecond),
 		}
 
-		resp := handler.formatCommandResult(req, cmd, cmd.CorrelationID)
+		resp := handler.asyncCommands.FormatCommandResult(req, cmd, cmd.CorrelationID)
 
 		var toolResult mcp.MCPToolResult
 		if err := json.Unmarshal(resp.Result, &toolResult); err != nil {

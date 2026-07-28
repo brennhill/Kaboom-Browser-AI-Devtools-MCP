@@ -296,10 +296,11 @@ Optional compatibility methods during migration:
 
 ### Migration plan
 
-1. Add module interface + adapter without changing behavior.
+1. Define the final module boundary and migrate one complete caller cluster.
 2. Pilot with one medium-coupling tool (`configure` or `observe`) to validate ergonomics.
 3. Move high-churn tools (`interact`, `analyze`) after adapter and tests are stable.
-4. Keep compatibility layer in `tools_core.go` until migration complete.
+4. Delete the old path in the same slice; partial migrations and compatibility
+   layers are not accepted.
 
 ### Success criteria
 

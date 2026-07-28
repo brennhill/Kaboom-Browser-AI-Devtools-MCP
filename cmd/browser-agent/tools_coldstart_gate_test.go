@@ -113,7 +113,7 @@ func TestMaybeWaitForCommand_ExtensionConnected_WaitsForResult(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{ID: 1, ClientID: "test-client"}
 	start := time.Now()
-	resp := handler.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{}`), "Queued")
+	resp := handler.asyncCommands.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{}`), "Queued")
 	elapsed := time.Since(start)
 
 	result := parseMCPResponseData(t, resp.Result)
@@ -139,7 +139,7 @@ func TestMaybeWaitForCommand_ExtensionNotConnected_InstantError(t *testing.T) {
 	// Extension NOT connected — MaybeWaitForCommand does instant check (no blocking wait)
 	req := mcp.JSONRPCRequest{ID: 1, ClientID: "test-client"}
 	start := time.Now()
-	resp := handler.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{}`), "Queued")
+	resp := handler.asyncCommands.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{}`), "Queued")
 	elapsed := time.Since(start)
 
 	// Should get instant no_data error (no blocking wait)
@@ -162,7 +162,7 @@ func TestMaybeWaitForCommand_Background_SkipsColdStartGate(t *testing.T) {
 	// Extension NOT connected, background mode
 	req := mcp.JSONRPCRequest{ID: 1}
 	start := time.Now()
-	resp := handler.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"background":true}`), "Queued")
+	resp := handler.asyncCommands.MaybeWaitForCommand(req, correlationID, json.RawMessage(`{"background":true}`), "Queued")
 	elapsed := time.Since(start)
 
 	result := parseMCPResponseData(t, resp.Result)

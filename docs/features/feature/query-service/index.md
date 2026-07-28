@@ -17,7 +17,7 @@ code_paths:
   - internal/queries/types.go
   - internal/capture/capture.go
   - internal/capture/sync.go
-  - cmd/browser-agent/tools_async_completion.go
+  - cmd/browser-agent/internal/asynccommand/handler.go
   - cmd/browser-agent/internal/asyncresult/normalization.go
   - src/types/index.ts
   - src/types/global.d.ts
@@ -39,6 +39,9 @@ test_paths:
   - internal/capture/no_facade_test.go
   - internal/capture/query_commands_test.go
   - cmd/browser-agent/internal/asyncresult/normalization_test.go
+  - cmd/browser-agent/tools_async_formatting_test.go
+  - cmd/browser-agent/tools_async_timeout_test.go
+  - cmd/browser-agent/tools_core_sync_test.go
   - tests/extension/no-compatibility-facades.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
@@ -77,6 +80,11 @@ last_verified_date: 2026-03-05
   pending-query facade have been deleted; disconnect-aware queue reconciliation
   remains in the sync boundary because it composes extension liveness with query
   expiry.
+- `internal/asynccommand.Handler` owns queue admission, accessibility queries,
+  connectivity-aware waiting, terminal response enrichment, and outcome
+  recording as one lifecycle. Callers receive its functions explicitly; the
+  composition root exposes no parallel command-completion methods or provider
+  interfaces.
 - Tests:
   - `internal/mcp/response_test.go`
   - `internal/queries/no_facade_test.go` and `internal/capture/no_facade_test.go` prevent compatibility-only command lifecycle APIs from returning.

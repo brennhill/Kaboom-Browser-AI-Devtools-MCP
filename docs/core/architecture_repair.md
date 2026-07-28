@@ -20,7 +20,10 @@ internal/tool*/             # feature implementations
 ...
 ```
 
-Shared test helpers consolidated into `tools_test_helpers_test.go`. Shared cross-tool query functions live with the async command protocol in `tools_async_completion.go`; other shared tool state lives in `tools_core.go`.
+Shared test helpers are consolidated in `tools_test_helpers_test.go`. The
+cross-tool queue-to-result protocol lives in
+`internal/asynccommand/handler.go`; the composition root injects its functions
+directly into feature owners.
 
 **Status**: In progress. Root adapters are being removed or colocated with their
 registry while behavior moves behind narrow internal-package contracts.

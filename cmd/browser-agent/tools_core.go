@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/asynccommand"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/noiseautorun"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/screenrec"
@@ -21,6 +22,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/analyzedispatch"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/annotationanalysis"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/combinedaudit"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/inspect"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/tutorial"
@@ -133,6 +135,7 @@ type ToolHandler struct {
 	sequences                *sequencehandler.Handler
 	annotationAnalysis       *annotationanalysis.Handler
 	analyzeDispatcher        *analyzedispatch.Dispatcher
+	asyncCommands            *asynccommand.Handler
 
 	// Passive network traffic recording state (start/stop capture).
 	networkRecording *netrecord.NetworkRecordingState
@@ -402,12 +405,25 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 		handler.noiseConfig = noise.NewNoiseConfig()
 	}
 	handler.redactionEngine = redaction.NewRedactionEngine("")
+	handler.asyncCommands = asynccommand.New(asynccommand.Deps{
+		Capture:              handler.capture,
+		DiagnosticHint:       handler.Guards.DiagnosticHint(),
+		DiagnosticHintString: handler.Guards.DiagnosticHintString,
+		AttachEvidence: func(correlationID string, responseData map[string]any) {
+			handler.interactActionHandler.AttachEvidencePayload(correlationID, responseData)
+		},
+		AttachRetryContext: func(correlationID string, responseData map[string]any, status, reason string) {
+			handler.interactActionHandler.AttachRetryContext(correlationID, responseData, status, reason)
+		},
+		SummaryEnabled:     handler.summaryPrefs.Enabled,
+		RecordAsyncOutcome: handler.usageTracker.RecordAsyncOutcome,
+	})
 
 	handler.annotationStore = server.getAnnotationStore()
 	handler.annotationAnalysis = annotationanalysis.New(
 		handler.annotationStore,
 		handler.capture,
-		handler.formatCommandResult,
+		handler.asyncCommands.FormatCommandResult,
 		handler.server.logs.Entries,
 	)
 	if handler.capture != nil {
@@ -461,7 +477,9 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	analyzeDeps := buildAnalyzeDeps(handler)
 	observeDeps := buildObserveReadDeps(handler)
 	handler.analyzeDispatcher = analyzedispatch.NewDispatcher(analyzedispatch.Config{
-		Analyze: analyzeDeps, Inspect: handler, Observe: observeDeps,
+		Analyze: analyzeDeps,
+		Inspect: buildInspectDeps(handler),
+		Observe: observeDeps,
 		Audit:   combinedaudit.Deps{Analyze: analyzeDeps, Observe: observeDeps},
 		Version: version, AnnotationStore: handler.annotationStore, Visual: visualAnalyzeDeps{h: handler},
 		ValidateAPI: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
@@ -506,7 +524,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 		LogDiffReport: func(_ observe.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return handler.recordingHandler.LogDiffReport(req, args)
 		},
-		FormatCommand: handler.formatCommandResult, InjectSummary: handler.summaryPrefs.Inject,
+		FormatCommand: handler.asyncCommands.FormatCommandResult, InjectSummary: handler.summaryPrefs.Inject,
 		DrainAlerts: handler.alertBuffer.DrainAlerts, DiagnosticHint: handler.Guards.DiagnosticHint(),
 	})
 	handler.stateInteractHandler = toolinteract.NewStateInteractHandler(interactDeps, handler.sessionStoreImpl)
@@ -567,7 +585,7 @@ func buildGenerateDeps(h *ToolHandler) toolgenerate.Deps {
 		Capture:          h.capture,
 		AnnotationStore:  h.annotationStore,
 		Version:          version,
-		ExecuteA11yQuery: h.ExecuteA11yQuery,
+		ExecuteA11yQuery: h.asyncCommands.ExecuteA11yQuery,
 		IsExtensionConnected: func() bool {
 			return h.capture.Extension().IsExtensionConnected()
 		},
@@ -597,8 +615,8 @@ func buildTestGenerationDeps(h *ToolHandler) testgenhandler.Deps {
 
 func buildAnalyzeDeps(h *ToolHandler) toolanalyze.Deps {
 	return toolanalyze.Deps{
-		EnqueuePendingQuery: h.EnqueuePendingQuery,
-		MaybeWaitForCommand: h.MaybeWaitForCommand,
+		EnqueuePendingQuery: h.asyncCommands.EnqueuePendingQuery,
+		MaybeWaitForCommand: h.asyncCommands.MaybeWaitForCommand,
 		GetTrackingStatus: func() (bool, int, string) {
 			if h.capture == nil {
 				return false, 0, ""
@@ -635,15 +653,22 @@ func buildAnalyzeDeps(h *ToolHandler) toolanalyze.Deps {
 			entries, _ := h.server.logs.EntriesWithAddedAt()
 			return entries
 		},
-		ExecuteA11yQuery: h.ExecuteA11yQuery,
+		ExecuteA11yQuery: h.asyncCommands.ExecuteA11yQuery,
+	}
+}
+
+func buildInspectDeps(h *ToolHandler) inspect.Deps {
+	return inspect.Deps{
+		EnqueuePendingQuery: h.asyncCommands.EnqueuePendingQuery,
+		MaybeWaitForCommand: h.asyncCommands.MaybeWaitForCommand,
 	}
 }
 
 func buildObserveLocalDeps(h *ToolHandler) toolobserve.Deps {
 	return toolobserve.Deps{
 		Inbox:               h.server.pushInbox,
-		EnqueuePendingQuery: h.EnqueuePendingQuery,
-		MaybeWaitForCommand: h.MaybeWaitForCommand,
+		EnqueuePendingQuery: h.asyncCommands.EnqueuePendingQuery,
+		MaybeWaitForCommand: h.asyncCommands.MaybeWaitForCommand,
 	}
 }
 
@@ -654,7 +679,7 @@ func buildObserveReadDeps(h *ToolHandler) observe.Deps {
 			return h.server.logs.EntriesWithAddedAt()
 		},
 		LogTotalAdded:    h.server.logs.TotalAdded,
-		ExecuteA11yQuery: h.ExecuteA11yQuery,
+		ExecuteA11yQuery: h.asyncCommands.ExecuteA11yQuery,
 		IsConsoleNoise: func(entry types.LogEntry) bool {
 			if h.noiseConfig == nil {
 				return false
@@ -678,7 +703,7 @@ func buildInteractDeps(h *ToolHandler) *toolinteract.Deps {
 	return &toolinteract.Deps{
 		RequirePilot: h.Guards.RequirePilot, RequireExtension: h.Guards.RequireExtension,
 		RequireTabTracking: h.Guards.RequireTabTracking, RequireCSPClear: h.Guards.RequireCSPClear,
-		EnqueuePendingQuery: h.EnqueuePendingQuery, MaybeWaitForCommand: h.MaybeWaitForCommand,
+		EnqueuePendingQuery: h.asyncCommands.EnqueuePendingQuery, MaybeWaitForCommand: h.asyncCommands.MaybeWaitForCommand,
 		Capture:        func() *capture.Capture { return h.capture },
 		RecordAIAction: h.recordAIAction, RecordAIEnhancedAction: h.recordAIEnhancedAction,
 		RecordDOMPrimitiveAction: h.recordDOMPrimitiveAction,
@@ -727,7 +752,7 @@ func (h *ToolHandler) screenrecDeps() screenrec.Deps {
 		getCommandResult = h.capture.Queries().GetCommandResult
 	}
 	return screenrec.Deps{
-		EnqueuePendingQuery: h.EnqueuePendingQuery,
+		EnqueuePendingQuery: h.asyncCommands.EnqueuePendingQuery,
 		RequirePilot:        h.Guards.RequirePilot,
 		RequireExtension:    h.Guards.RequireExtension,
 		RecordAIAction:      h.recordAIAction,

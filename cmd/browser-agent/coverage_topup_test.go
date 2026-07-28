@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/asynccommand"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/health"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
@@ -52,20 +53,20 @@ func TestValidatePort_InRangeDoesNotExit(t *testing.T) {
 func TestAttachTraceSummary_Branches(t *testing.T) {
 	// No trace identity and no events -> nothing attached.
 	rd := map[string]any{}
-	attachTraceSummary(rd, queries.CommandResult{})
+	asynccommand.AttachTraceSummary(rd, queries.CommandResult{})
 	if _, ok := rd["trace"]; ok {
 		t.Fatalf("expected no trace for an empty command, got %+v", rd["trace"])
 	}
 	// TraceID + QueryID -> a trace map carrying both.
 	rd = map[string]any{}
-	attachTraceSummary(rd, queries.CommandResult{TraceID: "t1", QueryID: "q1"})
+	asynccommand.AttachTraceSummary(rd, queries.CommandResult{TraceID: "t1", QueryID: "q1"})
 	trace, ok := rd["trace"].(map[string]any)
 	if !ok || trace["trace_id"] != "t1" || trace["query_id"] != "q1" {
 		t.Fatalf("trace = %+v, want trace_id=t1 query_id=q1", rd["trace"])
 	}
 	// CorrelationID is used as the trace id when TraceID is empty.
 	rd = map[string]any{}
-	attachTraceSummary(rd, queries.CommandResult{CorrelationID: "c1"})
+	asynccommand.AttachTraceSummary(rd, queries.CommandResult{CorrelationID: "c1"})
 	trace, _ = rd["trace"].(map[string]any)
 	if trace["trace_id"] != "c1" {
 		t.Fatalf("fallback trace_id = %v, want c1", trace["trace_id"])

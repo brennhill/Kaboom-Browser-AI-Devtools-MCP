@@ -5,6 +5,7 @@ package inspect
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
@@ -12,9 +13,9 @@ import (
 	analyze "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/analyze"
 )
 
-type Deps interface {
-	mcp.PendingQueryEnqueuer
-	mcp.AsyncCommandDispatcher
+type Deps struct {
+	EnqueuePendingQuery func(mcp.JSONRPCRequest, queries.PendingQuery, time.Duration) (mcp.JSONRPCResponse, bool)
+	MaybeWaitForCommand func(mcp.JSONRPCRequest, string, json.RawMessage, string) mcp.JSONRPCResponse
 }
 
 func queue(d Deps, req mcp.JSONRPCRequest, prefix, queryType string, args json.RawMessage, tabID int, summary string) mcp.JSONRPCResponse {

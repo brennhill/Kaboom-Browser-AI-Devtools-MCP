@@ -122,12 +122,11 @@ internal/
 
 **Tool composition root** -- `ToolHandler` in `tools_core.go` constructs the concrete feature owners and injects their narrow dependencies. Canonical dispatchers such as `internal/toolobserve/dispatcher.go` own their mode registries; the root does not mirror or forward those APIs.
 
-**Explicit dependencies** -- `internal/mcp/deps.go` defines small composable
-interfaces for true shared host capabilities (`CaptureProvider`,
-`LogBufferReader`, `A11yQueryExecutor`, etc.). Feature-local handlers may
-instead accept function-field dependency values when an interface would force
-the composition root to publish forwarding methods. Configure and tutorial use
-this explicit-value form; `ToolHandler` does not mirror their owner APIs.
+**Explicit dependencies** -- Feature owners accept concrete owners or narrow
+function-field dependency values. Shared host/provider interfaces were deleted
+because they forced the composition root to mirror unrelated APIs.
+`internal/asynccommand.Handler` owns the full queue-to-result lifecycle and its
+functions are injected directly into tool handlers.
 
 **Wire types** -- `internal/types/wire_*.go` are the source of truth for HTTP payload shapes between extension and server. TypeScript counterparts in `src/types/wire/wire-*.ts` are generated from Go. CI enforces drift detection via `make check-wire-drift`.
 
@@ -147,7 +146,7 @@ this explicit-value form; `ToolHandler` does not mirror their owner APIs.
 | Add an HTTP endpoint for the extension  | `internal/capture/` (handler), `server.go` (register in setupHTTPRoutes)                           |
 | Change sync protocol                    | `internal/capture/sync.go` (server), `src/background/sync/sync-client.ts` (extension)                         |
 | Add a wire type                         | `internal/types/wire_*.go` (Go source of truth), run `make check-wire-drift`                              |
-| Add a dependency interface              | `internal/mcp/deps.go` (interface), `internal/tools/<tool>/deps.go` (embed it)                            |
+| Add a feature dependency                | The owning `internal/<feature>/` package; inject a concrete owner or narrow function field at `tools_core.go` |
 | Add a CLI command                       | `cli_commands.go` (parser), `cli.go` (if new output format needed)                                        |
 | Change MCP protocol handling            | `handler.go` (MCPHandler), `tools_core.go` (ToolHandler)                                                 |
 | Add an internal package                 | `internal/<name>/`, import from `cmd/browser-agent/` -- keep it zero-dep                                    |

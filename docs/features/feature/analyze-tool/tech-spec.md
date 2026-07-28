@@ -62,7 +62,7 @@ last_verified_date: 2026-03-05
 - `cmd/browser-agent/internal/toolanalyze/analyzedispatch/dispatcher.go`
 - `cmd/browser-agent/internal/toolanalyze/annotationanalysis/handler.go`
 - `cmd/browser-agent/internal/toolobserve/dispatcher.go`
-- `cmd/browser-agent/tools_async_completion.go`
+- `cmd/browser-agent/internal/asynccommand/handler.go`
 - `internal/annotation/store.go`
 - `internal/annotation/store_results.go`
 - `internal/annotation/store_wait.go`

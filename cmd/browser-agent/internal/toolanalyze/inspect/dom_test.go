@@ -26,11 +26,18 @@ func (f *fakeDeps) MaybeWaitForCommand(req mcp.JSONRPCRequest, _ string, args js
 	return mcp.Succeed(req, summary, map[string]any{"status": "queued"})
 }
 
+func (f *fakeDeps) deps() Deps {
+	return Deps{
+		EnqueuePendingQuery: f.EnqueuePendingQuery,
+		MaybeWaitForCommand: f.MaybeWaitForCommand,
+	}
+}
+
 func TestHandleDOMDefaultsSelector(t *testing.T) {
 	t.Parallel()
 	deps := &fakeDeps{}
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	response := HandleDOM(deps, req, json.RawMessage(`{"tab_id":7}`))
+	response := HandleDOM(deps.deps(), req, json.RawMessage(`{"tab_id":7}`))
 	if response.Error != nil {
 		t.Fatalf("response error = %v", response.Error)
 	}

@@ -23,7 +23,6 @@ code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/tools_interact_dispatch.go
-  - cmd/browser-agent/tools_async_completion.go
   - internal/tools/interact/workflow.go
   - internal/schema/interact/actions.go
   - internal/schema/interact/properties_targeting.go
@@ -66,7 +65,7 @@ code_paths:
   - cmd/browser-agent/internal/asyncresult/enrichment_csp.go
   - cmd/browser-agent/internal/asyncresult/enrichment_recovery.go
   - cmd/browser-agent/internal/asyncresult/lifecycle.go
-  - cmd/browser-agent/tools_async_completion.go
+  - cmd/browser-agent/internal/asynccommand/handler.go
   - cmd/browser-agent/internal/summarypref/cache.go
   - cmd/browser-agent/tools_core.go
 test_paths:
@@ -93,6 +92,7 @@ test_paths:
   - cmd/browser-agent/tools_interact_workflows_test.go
   - cmd/browser-agent/tools_pending_query_enqueue_test.go
   - cmd/browser-agent/tools_interact_rich_test.go
+  - cmd/browser-agent/tools_interact_rich_cmdresult_test.go
   - cmd/browser-agent/tools_interact_navigate_document_test.go
   - cmd/browser-agent/tools_interact_pilot_test.go
   - cmd/browser-agent/tools_interact_utils_test.go
