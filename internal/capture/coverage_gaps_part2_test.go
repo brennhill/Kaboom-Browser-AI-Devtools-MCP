@@ -263,7 +263,7 @@ func TestHandleQueryResult_WithCorrelationID(t *testing.T) {
 	corrID := "test-corr-id-001"
 	c.RegisterCommand(corrID, "", 30*time.Second)
 
-	payload := `{"correlation_id":"` + corrID + `","status":"ok","result":{"value":2}}`
+	payload := `{"correlation_id":"` + corrID + `","status":"complete","result":{"value":2}}`
 	rr := httptest.NewRecorder()
 	c.HandleQueryResult(rr, httptest.NewRequest(http.MethodPost, "/query-result", strings.NewReader(payload)))
 	if rr.Code != http.StatusOK {
@@ -284,7 +284,7 @@ func TestHandleQueryResult_WithQueryID(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 
-	payload := `{"id":"test-query-1","status":"ok","result":{"data":"hello"}}`
+	payload := `{"id":"test-query-1","status":"complete","result":{"data":"hello"}}`
 	rr := httptest.NewRecorder()
 	c.HandleQueryResult(rr, httptest.NewRequest(http.MethodPost, "/query-result", strings.NewReader(payload)))
 	if rr.Code != http.StatusOK {

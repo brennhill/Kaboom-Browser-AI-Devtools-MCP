@@ -70,6 +70,7 @@ last_verified_date: 2026-03-05
   - `internal/mcp/response.go` — marshal helpers plus the canonical `Succeed`/`SucceedText`/`Fail`/`ParseArgs` vocabulary
   - `internal/mcp/response_content.go` — image and warning content blocks
   - `internal/mcp/response_clamp.go` — JSON-aware payload clamping
+- Command lifecycle updates accept only `pending`, `complete`, `error`, `timeout`, `expired`, or `cancelled`; noncanonical status text is treated as protocol drift and recorded as an error.
 - Tests:
   - `internal/mcp/response_test.go`
   - `internal/queries/no_facade_test.go` and `internal/capture/no_facade_test.go` prevent compatibility-only command lifecycle APIs from returning.

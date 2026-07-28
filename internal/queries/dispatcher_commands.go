@@ -9,24 +9,15 @@ import (
 	"time"
 )
 
-// normalizeCommandStatus maps extension-provided status text into canonical lifecycle states.
+// normalizeCommandStatus accepts the canonical lifecycle vocabulary.
 //
 // Failure semantics:
-// - Unknown/non-empty status values are coerced to "error" so protocol drift is visible.
-// - Empty/success-like statuses normalize to "complete" for backward compatibility.
+// - Any noncanonical value is coerced to "error" so protocol drift is visible.
 func normalizeCommandStatus(status string) string {
-	normalized := strings.ToLower(strings.TrimSpace(status))
-	switch normalized {
-	case "", "ok", "success", "succeeded", "done":
-		return "complete"
-	case "pending", "queued", "running", "still_processing":
-		return "pending"
-	case "complete", "error", "timeout", "expired", "cancelled":
-		return normalized
-	case "canceled":
-		return "cancelled"
+	switch status {
+	case "pending", "complete", "error", "timeout", "expired", "cancelled":
+		return status
 	default:
-		// Unknown status values are treated as errors to surface protocol drift.
 		return "error"
 	}
 }

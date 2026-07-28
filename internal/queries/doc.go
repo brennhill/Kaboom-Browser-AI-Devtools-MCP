@@ -15,6 +15,6 @@ Key functions:
   - NewQueryDispatcher: creates a dispatcher with configurable queue size and TTL.
   - CreateQuery: queues a new command for extension delivery.
   - TakeQueryResult: retrieves and consumes a one-time result by correlation ID.
-  - normalizeCommandStatus: maps extension status values into canonical lifecycle states.
+  - normalizeCommandStatus: rejects extension status values outside the canonical lifecycle vocabulary.
 */
 package queries

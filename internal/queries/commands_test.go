@@ -195,6 +195,43 @@ func TestNewQueryDispatcher_ApplyCommandResult_UnknownStatusDefaultsError(t *tes
 	}
 }
 
+func TestApplyCommandResultRejectsNoncanonicalStatusAliases(t *testing.T) {
+	t.Parallel()
+
+	for _, status := range []string{
+		"",
+		"ok",
+		"success",
+		"succeeded",
+		"done",
+		"queued",
+		"running",
+		"still_processing",
+		"canceled",
+		" COMPLETE ",
+	} {
+		status := status
+		t.Run(status, func(t *testing.T) {
+			t.Parallel()
+
+			qd := NewQueryDispatcher()
+			defer qd.Close()
+
+			corrID := "corr-noncanonical-" + strings.ReplaceAll(status, " ", "-")
+			qd.RegisterCommand(corrID, "q-"+corrID, 30*time.Second)
+			qd.ApplyCommandResult(corrID, status, nil, "")
+
+			cmd, found := qd.GetCommandResult(corrID)
+			if !found {
+				t.Fatal("GetCommandResult returned false")
+			}
+			if cmd.Status != "error" {
+				t.Errorf("Status = %q, want error for noncanonical input %q", cmd.Status, status)
+			}
+		})
+	}
+}
+
 func TestNewQueryDispatcher_ApplyCommandResult_UnknownStatusWithErrorField(t *testing.T) {
 	t.Parallel()
 
@@ -223,9 +260,7 @@ func TestNewQueryDispatcher_ApplyCommandResult_ErrorFieldForcesErrorStatus(t *te
 		name   string
 		status string
 	}{
-		{name: "empty status", status: ""},
 		{name: "complete status", status: "complete"},
-		{name: "ok status", status: "ok"},
 		{name: "pending status", status: "pending"},
 	}
 
