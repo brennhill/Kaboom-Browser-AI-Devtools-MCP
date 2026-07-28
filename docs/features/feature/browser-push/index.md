@@ -12,6 +12,7 @@ code_paths:
   - cmd/browser-agent/internal/mediaapi/screenshots.go
   - cmd/browser-agent/internal/mediaapi/draw_mode.go
   - cmd/browser-agent/internal/toolobserve/dispatcher.go
+  - cmd/browser-agent/internal/toolobserve/deps.go
   - cmd/browser-agent/internal/toolobserve/inbox.go
   - src/background/push-handler.ts
   - src/content/ui/chat-widget.ts
@@ -23,6 +24,8 @@ test_paths:
   - cmd/browser-agent/internal/pushapi/handler_test.go
   - cmd/browser-agent/tools_analyze_annotations_draw_test.go
   - cmd/browser-agent/tools_observe_inbox_test.go
+  - cmd/browser-agent/internal/toolobserve/toolobserve_coverage_test.go
+  - cmd/browser-agent/lint_hardening_test.go
   - tests/extension/push-handler-branding.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
@@ -70,6 +73,10 @@ Push browser content (annotations, screenshots, chat messages) to the AI automat
 | `cmd/browser-agent/internal/pushapi/handler.go` | Push HTTP parsing, event delivery, draining, and annotation routing | `handler_test.go` |
 | `cmd/browser-agent/internal/toolobserve/dispatcher.go` | observe(inbox) adapter + piggyback wiring | `tools_observe_inbox_test.go` (6 tests) |
 | `cmd/browser-agent/internal/toolobserve/inbox.go` | inbox response and piggyback behavior | `tools_observe_inbox_test.go` (6 tests) |
+
+The observe dispatcher receives the inbox and command operations through an
+explicit local dependency bundle. It does not require a ToolHandler host or
+retain inbox/connectivity forwarding methods.
 
 ### TypeScript (extension)
 

@@ -24,11 +24,6 @@ import (
 
 const annotationCommandWaitTimeout = 55 * time.Second
 
-type Host interface {
-	Deps
-	observe.Deps
-}
-
 type CommandStore interface {
 	WaitForCommand(string, time.Duration) (*queries.CommandResult, bool)
 	GetCommandResult(string) (*queries.CommandResult, bool)
@@ -38,32 +33,34 @@ type CommandStore interface {
 }
 
 type Config struct {
-	Host             Host
-	Commands         CommandStore
-	InProgress       func() []capture.SyncInProgress
-	AnnotationStore  *annotation.Store
-	Annotations      toolrouting.Handler[Host]
-	AnnotationDetail toolrouting.Handler[Host]
-	Recordings       toolrouting.Handler[Host]
-	RecordingActions toolrouting.Handler[Host]
-	PlaybackResults  toolrouting.Handler[Host]
-	LogDiffReport    toolrouting.Handler[Host]
-	FormatCommand    func(mcp.JSONRPCRequest, queries.CommandResult, string) mcp.JSONRPCResponse
-	InjectSummary    func(json.RawMessage) json.RawMessage
-	DrainAlerts      func() []types.Alert
-	DiagnosticHint   func(*mcp.StructuredError)
+	Observe              observe.Deps
+	Local                Deps
+	IsExtensionConnected func() bool
+	Commands             CommandStore
+	InProgress           func() []capture.SyncInProgress
+	AnnotationStore      *annotation.Store
+	Annotations          toolrouting.Handler[observe.Deps]
+	AnnotationDetail     toolrouting.Handler[observe.Deps]
+	Recordings           toolrouting.Handler[observe.Deps]
+	RecordingActions     toolrouting.Handler[observe.Deps]
+	PlaybackResults      toolrouting.Handler[observe.Deps]
+	LogDiffReport        toolrouting.Handler[observe.Deps]
+	FormatCommand        func(mcp.JSONRPCRequest, queries.CommandResult, string) mcp.JSONRPCResponse
+	InjectSummary        func(json.RawMessage) json.RawMessage
+	DrainAlerts          func() []types.Alert
+	DiagnosticHint       func(*mcp.StructuredError)
 }
 
 type Dispatcher struct {
-	host     Host
+	observe  observe.Deps
 	commands CommandStore
 	config   Config
-	registry toolrouting.Registry[Host]
+	registry toolrouting.Registry[observe.Deps]
 }
 
 func NewDispatcher(config Config) *Dispatcher {
-	d := &Dispatcher{host: config.Host, commands: config.Commands, config: config}
-	handlers := map[string]toolrouting.Handler[Host]{
+	d := &Dispatcher{observe: config.Observe, commands: config.Commands, config: config}
+	handlers := map[string]toolrouting.Handler[observe.Deps]{
 		"errors": wrap(observe.GetBrowserErrors), "logs": wrap(observe.GetBrowserLogs),
 		"extension_logs": wrap(observe.GetExtensionLogs), "network_waterfall": wrap(observe.GetNetworkWaterfall),
 		"network_bodies": wrap(observe.GetNetworkBodies), "websocket_events": wrap(observe.GetWSEvents),
@@ -76,28 +73,28 @@ func NewDispatcher(config Config) *Dispatcher {
 		"transients":  wrap(observe.GetTransients),
 		"annotations": config.Annotations, "annotation_detail": config.AnnotationDetail,
 		"draw_history": d.drawHistory, "draw_session": d.drawSession,
-		"page_inventory": local(HandlePageInventory), "inbox": local(HandleInbox), "site_menus": local(HandleSiteMenus),
-		"command_result": func(_ Host, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		"page_inventory": local(config.Local, HandlePageInventory), "inbox": local(config.Local, HandleInbox), "site_menus": local(config.Local, HandleSiteMenus),
+		"command_result": func(_ observe.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return d.CommandResult(req, args)
 		},
 		"pending_commands": d.pendingCommands,
-		"failed_commands": func(_ Host, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		"failed_commands": func(_ observe.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return d.FailedCommands(req, args)
 		},
 		"saved_videos": d.savedVideos,
 		"recordings":   config.Recordings, "recording_actions": config.RecordingActions,
 		"playback_results": config.PlaybackResults, "log_diff_report": config.LogDiffReport,
 	}
-	d.registry = toolrouting.Registry[Host]{
+	d.registry = toolrouting.Registry[observe.Deps]{
 		Handlers: handlers,
 		Resolution: toolrouting.Resolution{
 			ToolName: "observe", ValidModes: strings.Join(util.SortedMapKeys(handlers), ", "),
 		},
-		PreDispatch: func(_ Host, _ mcp.JSONRPCRequest, args json.RawMessage, _ string) (json.RawMessage, *mcp.JSONRPCResponse) {
+		PreDispatch: func(_ observe.Deps, _ mcp.JSONRPCRequest, args json.RawMessage, _ string) (json.RawMessage, *mcp.JSONRPCResponse) {
 			return config.InjectSummary(args), nil
 		},
-		PostDispatch: func(h Host, _ mcp.JSONRPCRequest, resp mcp.JSONRPCResponse, what string) mcp.JSONRPCResponse {
-			if !h.IsExtensionConnected() && !ServerSideObserveModes[what] {
+		PostDispatch: func(_ observe.Deps, _ mcp.JSONRPCRequest, resp mcp.JSONRPCResponse, what string) mcp.JSONRPCResponse {
+			if !config.IsExtensionConnected() && !ServerSideObserveModes[what] {
 				resp = PrependDisconnectWarning(resp)
 			}
 			if alerts := config.DrainAlerts(); len(alerts) > 0 {
@@ -109,30 +106,30 @@ func NewDispatcher(config Config) *Dispatcher {
 	return d
 }
 
-func wrap(fn func(observe.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) toolrouting.Handler[Host] {
-	return func(h Host, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func wrap(fn func(observe.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) toolrouting.Handler[observe.Deps] {
+	return func(h observe.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return fn(h, req, args)
 	}
 }
 
-func local(fn func(Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) toolrouting.Handler[Host] {
-	return func(h Host, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return fn(h, req, args)
+func local(deps Deps, fn func(Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) toolrouting.Handler[observe.Deps] {
+	return func(_ observe.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		return fn(deps, req, args)
 	}
 }
 
 func (d *Dispatcher) Handle(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	return toolrouting.Dispatch(d.host, req, args, d.registry)
+	return toolrouting.Dispatch(d.observe, req, args, d.registry)
 }
 
 func (d *Dispatcher) ValidModes() []string { return util.SortedMapKeys(d.registry.Handlers) }
 
-func (d *Dispatcher) drawHistory(_ Host, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+func (d *Dispatcher) drawHistory(_ observe.Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
 	dir, err := mediaapi.ScreenshotsDir()
 	return annotation.ListDrawHistory(req, dir, err)
 }
 
-func (d *Dispatcher) drawSession(_ Host, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (d *Dispatcher) drawSession(_ observe.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	dir, err := mediaapi.ScreenshotsDir()
 	return annotation.LoadDrawSession(d.config.AnnotationStore, req, args, dir, err)
 }
@@ -170,7 +167,7 @@ func (d *Dispatcher) CommandResult(req mcp.JSONRPCRequest, args json.RawMessage)
 	return d.config.FormatCommand(req, *command, params.CorrelationID)
 }
 
-func (d *Dispatcher) pendingCommands(_ Host, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+func (d *Dispatcher) pendingCommands(_ observe.Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
 	if d.commands == nil {
 		data := map[string]any{"pending": []*queries.CommandResult{}, "completed": []*queries.CommandResult{}, "failed": []*queries.CommandResult{}, "extension_in_progress": []capture.SyncInProgress{}, "extension_in_progress_count": 0}
 		return mcp.Succeed(req, "Pending: 0, Completed: 0, Failed: 0, Extension in-progress: 0", data)
@@ -197,6 +194,6 @@ func (d *Dispatcher) FailedCommands(req mcp.JSONRPCRequest, _ json.RawMessage) m
 	return mcp.Succeed(req, fmt.Sprintf("Found %d failed/expired commands", len(failed)), data)
 }
 
-func (d *Dispatcher) savedVideos(_ Host, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (d *Dispatcher) savedVideos(_ observe.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return screenrec.HandleObserveSavedVideos(req, args)
 }

@@ -4,19 +4,17 @@
 package toolobserve
 
 import (
+	"encoding/json"
+	"time"
+
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
-// Deps provides all dependencies the observe-local handlers need.
-// *ToolHandler in cmd/browser-agent/ satisfies this interface.
-type Deps interface {
-	mcp.PendingQueryEnqueuer
-	mcp.AsyncCommandDispatcher
-
-	// PushInbox returns the push inbox for draining events, or nil if unavailable.
-	PushInbox() *push.PushInbox
-
-	// IsExtensionConnected reports whether the browser extension is connected.
-	IsExtensionConnected() bool
+// Deps names the state and command operations owned outside observe-local handlers.
+type Deps struct {
+	Inbox               *push.PushInbox
+	EnqueuePendingQuery func(mcp.JSONRPCRequest, queries.PendingQuery, time.Duration) (mcp.JSONRPCResponse, bool)
+	MaybeWaitForCommand func(mcp.JSONRPCRequest, string, json.RawMessage, string) mcp.JSONRPCResponse
 }

@@ -12,7 +12,7 @@ import (
 
 // HandleInbox drains the push inbox and returns pending events.
 func HandleInbox(d Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
-	inbox := d.PushInbox()
+	inbox := d.Inbox
 	if inbox == nil {
 		return mcp.Succeed(req, "Push inbox empty", map[string]any{
 			"events": []any{},
@@ -37,7 +37,7 @@ func HandleInbox(d Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCR
 // AppendPushPiggyback drains the push inbox and inlines events into any tool response.
 // Screenshots are delivered as image content blocks so the LLM sees them immediately.
 func AppendPushPiggyback(d Deps, resp mcp.JSONRPCResponse) mcp.JSONRPCResponse {
-	inbox := d.PushInbox()
+	inbox := d.Inbox
 	if inbox == nil {
 		return resp
 	}

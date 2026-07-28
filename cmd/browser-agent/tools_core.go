@@ -44,7 +44,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/redaction"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
@@ -217,7 +216,7 @@ func (h *ToolHandler) HandleToolCall(req mcp.JSONRPCRequest, name string, args j
 	}
 
 	// Piggyback push inbox hint if events are pending
-	resp = toolobserve.AppendPushPiggyback(h, resp)
+	resp = toolobserve.AppendPushPiggyback(buildObserveLocalDeps(h), resp)
 
 	h.auditRecorder.Record(req, name, args, resp, start)
 
@@ -353,14 +352,6 @@ func (h *ToolHandler) GetLogTotalAdded() int64 {
 
 func (h *ToolHandler) ToolsList() []mcp.MCPTool {
 	return schema.AllTools()
-}
-
-func (h *ToolHandler) IsExtensionConnected() bool {
-	return h.capture.Extension().IsExtensionConnected()
-}
-
-func (h *ToolHandler) PushInbox() *push.PushInbox {
-	return h.server.pushInbox
 }
 
 func (h *ToolHandler) GetToolCallLimiter() RateLimiter {
@@ -524,24 +515,26 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	handler.issueReportDeps = buildIssueReportDeps(handler)
 	handler.uploadInteractHandler = toolinteract.NewUploadInteractHandler(interactDeps, handler.interactActionHandler)
 	handler.observeDispatcher = toolobserve.NewDispatcher(toolobserve.Config{
-		Host: handler, Commands: queryStore, InProgress: inProgress,
+		Observe: handler, Local: buildObserveLocalDeps(handler),
+		IsExtensionConnected: func() bool { return handler.capture.Extension().IsExtensionConnected() },
+		Commands:             queryStore, InProgress: inProgress,
 		AnnotationStore: handler.annotationStore,
-		Annotations: func(_ toolobserve.Host, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		Annotations: func(_ observe.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return handler.annotationAnalysis.GetAnnotations(req, args)
 		},
-		AnnotationDetail: func(_ toolobserve.Host, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		AnnotationDetail: func(_ observe.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return handler.annotationAnalysis.GetAnnotationDetail(req, args)
 		},
-		Recordings: func(_ toolobserve.Host, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		Recordings: func(_ observe.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return handler.recordingHandler.Recordings(req, args)
 		},
-		RecordingActions: func(_ toolobserve.Host, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		RecordingActions: func(_ observe.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return handler.recordingHandler.RecordingActions(req, args)
 		},
-		PlaybackResults: func(_ toolobserve.Host, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		PlaybackResults: func(_ observe.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return handler.recordingHandler.PlaybackResults(req, args)
 		},
-		LogDiffReport: func(_ toolobserve.Host, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		LogDiffReport: func(_ observe.Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return handler.recordingHandler.LogDiffReport(req, args)
 		},
 		FormatCommand: handler.formatCommandResult, InjectSummary: handler.summaryPrefs.Inject,
@@ -644,6 +637,14 @@ func buildAnalyzeDeps(h *ToolHandler) toolanalyze.Deps {
 			return entries
 		},
 		ExecuteA11yQuery: h.ExecuteA11yQuery,
+	}
+}
+
+func buildObserveLocalDeps(h *ToolHandler) toolobserve.Deps {
+	return toolobserve.Deps{
+		Inbox:               h.server.pushInbox,
+		EnqueuePendingQuery: h.EnqueuePendingQuery,
+		MaybeWaitForCommand: h.MaybeWaitForCommand,
 	}
 }
 

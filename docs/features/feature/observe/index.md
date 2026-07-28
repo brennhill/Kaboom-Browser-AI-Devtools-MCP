@@ -13,6 +13,7 @@ code_paths:
   - internal/capture/wsconn/status.go
   - internal/capture/wsconn/tracker.go
   - cmd/browser-agent/internal/toolobserve/dispatcher.go
+  - cmd/browser-agent/internal/toolobserve/deps.go
   - cmd/browser-agent/internal/toolobserve/response.go
   - cmd/browser-agent/internal/toolobserve/inbox.go
   - cmd/browser-agent/internal/toolobserve/registry.go
@@ -47,6 +48,9 @@ code_paths:
   - src/inject/observers.ts
   - src/lib/net/network.ts
 test_paths:
+  - cmd/browser-agent/lint_hardening_test.go
+  - cmd/browser-agent/internal/toolobserve/toolobserve_coverage_test.go
+  - cmd/browser-agent/tools_observe_inbox_test.go
   - cmd/browser-agent/tools_observe_handler_test.go
   - cmd/browser-agent/tools_observe_blackbox_test.go
   - cmd/browser-agent/tools_observe_audit_test.go

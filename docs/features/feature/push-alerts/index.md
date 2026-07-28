@@ -8,6 +8,7 @@ last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolobserve/dispatcher.go
+  - cmd/browser-agent/internal/toolobserve/deps.go
   - cmd/browser-agent/internal/toolobserve/inbox.go
   - cmd/browser-agent/internal/toolconfigure/clear.go
   - internal/streaming/stream.go
@@ -27,6 +28,7 @@ test_paths:
   - cmd/browser-agent/tools_observe_inbox_test.go
   - cmd/browser-agent/tools_observe_unit_test.go
   - cmd/browser-agent/tools_contract_test.go
+  - cmd/browser-agent/lint_hardening_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -57,4 +59,5 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-Add concrete implementation and test links here as this feature evolves.
+Observe response post-processing receives connectivity and alert-drain
+operations explicitly; it does not dispatch through a catch-all host.

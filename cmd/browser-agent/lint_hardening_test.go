@@ -108,6 +108,8 @@ func TestRootDoesNotReexportCanonicalTypes(t *testing.T) {
 		"func (h *ToolHandler) SubmitIssueReport(",
 		"func (h *ToolHandler) GetAnnotationStore(",
 		"func (h *ToolHandler) GetVersion(",
+		"func (h *ToolHandler) IsExtensionConnected(",
+		"func (h *ToolHandler) PushInbox(",
 	} {
 		for _, path := range rootFiles {
 			if strings.HasSuffix(path, "_test.go") {
@@ -120,6 +122,21 @@ func TestRootDoesNotReexportCanonicalTypes(t *testing.T) {
 			if strings.Contains(string(source), forbidden) {
 				t.Errorf("%s re-exports canonical API %q", filepath.Base(path), forbidden)
 			}
+		}
+	}
+}
+
+func TestObserveDispatcherDoesNotRequireHostInterfaces(t *testing.T) {
+	for relativePath, forbidden := range map[string]string{
+		"cmd/browser-agent/internal/toolobserve/deps.go":       "type Deps interface {",
+		"cmd/browser-agent/internal/toolobserve/dispatcher.go": "type Host interface {",
+	} {
+		source, err := os.ReadFile(filepath.Join(projectRoot(), relativePath))
+		if err != nil {
+			t.Fatalf("read %s: %v", relativePath, err)
+		}
+		if strings.Contains(string(source), forbidden) {
+			t.Errorf("%s retains host dependency interface %q", relativePath, forbidden)
 		}
 	}
 }

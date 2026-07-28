@@ -22,6 +22,7 @@ code_paths:
   - internal/capture/handlers.go
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolobserve/dispatcher.go
+  - cmd/browser-agent/internal/toolobserve/deps.go
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/internal/toolrecording/handler.go
   - cmd/browser-agent/internal/toolrecording/helpers.go

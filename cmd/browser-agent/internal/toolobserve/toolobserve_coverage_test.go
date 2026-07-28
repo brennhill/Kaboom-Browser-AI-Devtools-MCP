@@ -20,8 +20,7 @@ import (
 // ---------------------------------------------------------------------------
 
 type fakeDeps struct {
-	inbox     *push.PushInbox
-	connected bool
+	inbox *push.PushInbox
 
 	// EnqueuePendingQuery behavior.
 	blockEnqueue bool
@@ -33,9 +32,6 @@ type fakeDeps struct {
 	waitResp        mcp.JSONRPCResponse
 	waitCorrelation string
 }
-
-func (f *fakeDeps) PushInbox() *push.PushInbox { return f.inbox }
-func (f *fakeDeps) IsExtensionConnected() bool { return f.connected }
 
 func (f *fakeDeps) EnqueuePendingQuery(req mcp.JSONRPCRequest, query queries.PendingQuery, timeout time.Duration) (mcp.JSONRPCResponse, bool) {
 	f.enqueued = true
@@ -49,6 +45,14 @@ func (f *fakeDeps) EnqueuePendingQuery(req mcp.JSONRPCRequest, query queries.Pen
 func (f *fakeDeps) MaybeWaitForCommand(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse {
 	f.waitCorrelation = correlationID
 	return f.waitResp
+}
+
+func (f *fakeDeps) deps() Deps {
+	return Deps{
+		Inbox:               f.inbox,
+		EnqueuePendingQuery: f.EnqueuePendingQuery,
+		MaybeWaitForCommand: f.MaybeWaitForCommand,
+	}
 }
 
 func testReq() mcp.JSONRPCRequest {
@@ -70,7 +74,7 @@ func parseResult(t *testing.T, resp mcp.JSONRPCResponse) mcp.MCPToolResult {
 
 func TestHandleInbox_NilInbox(t *testing.T) {
 	d := &fakeDeps{inbox: nil}
-	resp := HandleInbox(d, testReq(), nil)
+	resp := HandleInbox(d.deps(), testReq(), nil)
 	result := parseResult(t, resp)
 	if !strings.Contains(result.Content[0].Text, "Push inbox empty") {
 		t.Errorf("expected empty inbox summary, got %q", result.Content[0].Text)
@@ -79,7 +83,7 @@ func TestHandleInbox_NilInbox(t *testing.T) {
 
 func TestHandleInbox_EmptyInbox(t *testing.T) {
 	d := &fakeDeps{inbox: push.NewPushInbox(10)}
-	resp := HandleInbox(d, testReq(), nil)
+	resp := HandleInbox(d.deps(), testReq(), nil)
 	result := parseResult(t, resp)
 	if !strings.Contains(result.Content[0].Text, "Push inbox empty") {
 		t.Errorf("expected empty inbox summary, got %q", result.Content[0].Text)
@@ -92,7 +96,7 @@ func TestHandleInbox_WithEvents(t *testing.T) {
 	inbox.Enqueue(push.PushEvent{Type: "chat", Message: "world", PageURL: "https://x"})
 	d := &fakeDeps{inbox: inbox}
 
-	resp := HandleInbox(d, testReq(), nil)
+	resp := HandleInbox(d.deps(), testReq(), nil)
 	result := parseResult(t, resp)
 	if !strings.Contains(result.Content[0].Text, "Push inbox drained") {
 		t.Errorf("expected drained summary, got %q", result.Content[0].Text)
@@ -118,7 +122,7 @@ func baseResp(t *testing.T) mcp.JSONRPCResponse {
 func TestAppendPushPiggyback_NilInbox(t *testing.T) {
 	d := &fakeDeps{inbox: nil}
 	resp := baseResp(t)
-	got := AppendPushPiggyback(d, resp)
+	got := AppendPushPiggyback(d.deps(), resp)
 	if string(got.Result) != string(resp.Result) {
 		t.Error("nil inbox should return response unchanged")
 	}
@@ -127,7 +131,7 @@ func TestAppendPushPiggyback_NilInbox(t *testing.T) {
 func TestAppendPushPiggyback_EmptyInbox(t *testing.T) {
 	d := &fakeDeps{inbox: push.NewPushInbox(10)}
 	resp := baseResp(t)
-	got := AppendPushPiggyback(d, resp)
+	got := AppendPushPiggyback(d.deps(), resp)
 	if string(got.Result) != string(resp.Result) {
 		t.Error("empty inbox should return response unchanged")
 	}
@@ -139,7 +143,7 @@ func TestAppendPushPiggyback_InvalidResultJSON(t *testing.T) {
 	d := &fakeDeps{inbox: inbox}
 
 	resp := mcp.JSONRPCResponse{JSONRPC: "2.0", ID: 1, Result: json.RawMessage("not valid json")}
-	got := AppendPushPiggyback(d, resp)
+	got := AppendPushPiggyback(d.deps(), resp)
 	if string(got.Result) != "not valid json" {
 		t.Errorf("invalid result JSON should return response unchanged, got %s", string(got.Result))
 	}
@@ -161,7 +165,7 @@ func TestAppendPushPiggyback_MixedEvents(t *testing.T) {
 	})
 	d := &fakeDeps{inbox: inbox}
 
-	got := AppendPushPiggyback(d, baseResp(t))
+	got := AppendPushPiggyback(d.deps(), baseResp(t))
 	result := parseResult(t, got)
 
 	all := ""
@@ -197,7 +201,7 @@ func TestAppendPushPiggyback_SingleScreenshotNoSkip(t *testing.T) {
 	inbox.Enqueue(push.PushEvent{Type: "screenshot", TabID: 1, PageURL: "https://only", ScreenshotB64: "QQ=="})
 	d := &fakeDeps{inbox: inbox}
 
-	got := AppendPushPiggyback(d, baseResp(t))
+	got := AppendPushPiggyback(d.deps(), baseResp(t))
 	result := parseResult(t, got)
 	all := ""
 	for _, b := range result.Content {
@@ -217,7 +221,7 @@ func TestAppendPushPiggyback_SingleScreenshotNoSkip(t *testing.T) {
 
 func TestHandlePageInventory_InvalidJSON(t *testing.T) {
 	d := &fakeDeps{}
-	resp := HandlePageInventory(d, testReq(), json.RawMessage(`{bad json`))
+	resp := HandlePageInventory(d.deps(), testReq(), json.RawMessage(`{bad json`))
 	result := parseResult(t, resp)
 	if !result.IsError {
 		t.Error("invalid JSON args should produce an error response")
@@ -231,7 +235,7 @@ func TestHandlePageInventory_Blocked(t *testing.T) {
 	sentinel := mcp.Succeed(testReq(), "blocked", map[string]any{"blocked": true})
 	d := &fakeDeps{blockEnqueue: true, blockResp: sentinel}
 
-	resp := HandlePageInventory(d, testReq(), json.RawMessage(`{"tab_id":5,"limit":10}`))
+	resp := HandlePageInventory(d.deps(), testReq(), json.RawMessage(`{"tab_id":5,"limit":10}`))
 	if string(resp.Result) != string(sentinel.Result) {
 		t.Error("blocked enqueue should return the block response")
 	}
@@ -247,7 +251,7 @@ func TestHandlePageInventory_QueuedSuccess(t *testing.T) {
 	waitResp := mcp.Succeed(testReq(), "inventory ready", map[string]any{"elements": []any{}})
 	d := &fakeDeps{waitResp: waitResp}
 
-	resp := HandlePageInventory(d, testReq(), nil) // empty args path
+	resp := HandlePageInventory(d.deps(), testReq(), nil) // empty args path
 	if string(resp.Result) != string(waitResp.Result) {
 		t.Error("expected MaybeWaitForCommand response for queued inventory")
 	}
@@ -271,7 +275,7 @@ func TestHandleSiteMenus_Blocked(t *testing.T) {
 	sentinel := mcp.Succeed(testReq(), "blocked", map[string]any{"blocked": true})
 	d := &fakeDeps{blockEnqueue: true, blockResp: sentinel}
 
-	resp := HandleSiteMenus(d, testReq(), nil)
+	resp := HandleSiteMenus(d.deps(), testReq(), nil)
 	if string(resp.Result) != string(sentinel.Result) {
 		t.Error("blocked enqueue should return the block response")
 	}
@@ -284,7 +288,7 @@ func TestHandleSiteMenus_ErrorResultPassthrough(t *testing.T) {
 	errResp := mcp.Fail(testReq(), mcp.ErrInvalidJSON, "boom", "retry")
 	d := &fakeDeps{waitResp: errResp}
 
-	resp := HandleSiteMenus(d, testReq(), nil)
+	resp := HandleSiteMenus(d.deps(), testReq(), nil)
 	result := parseResult(t, resp)
 	if !result.IsError {
 		t.Error("error result from wait should pass through unchanged")
@@ -296,7 +300,7 @@ func TestHandleSiteMenus_NoElements(t *testing.T) {
 	waitResp := mcp.SucceedText(testReq(), "no braces here just text")
 	d := &fakeDeps{waitResp: waitResp}
 
-	resp := HandleSiteMenus(d, testReq(), nil)
+	resp := HandleSiteMenus(d.deps(), testReq(), nil)
 	result := parseResult(t, resp)
 	if result.IsError {
 		t.Error("no-elements case should still be a success response")
@@ -313,7 +317,7 @@ func TestHandleSiteMenus_WithElementsFull(t *testing.T) {
 	}
 	d := &fakeDeps{waitResp: listInteractiveResp(t, elements)}
 
-	resp := HandleSiteMenus(d, testReq(), json.RawMessage(`{"summary":false}`))
+	resp := HandleSiteMenus(d.deps(), testReq(), json.RawMessage(`{"summary":false}`))
 	result := parseResult(t, resp)
 	if result.IsError {
 		t.Errorf("expected success, got error: %q", result.Content[0].Text)
@@ -329,7 +333,7 @@ func TestHandleSiteMenus_WithElementsSummary(t *testing.T) {
 	}
 	d := &fakeDeps{waitResp: listInteractiveResp(t, elements)}
 
-	resp := HandleSiteMenus(d, testReq(), json.RawMessage(`{"summary":true}`))
+	resp := HandleSiteMenus(d.deps(), testReq(), json.RawMessage(`{"summary":true}`))
 	result := parseResult(t, resp)
 	if result.IsError {
 		t.Errorf("expected success summary, got error: %q", result.Content[0].Text)

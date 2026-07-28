@@ -10,6 +10,7 @@ code_paths:
   - internal/schema/interact/actions.go
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/internal/toolobserve/dispatcher.go
+  - cmd/browser-agent/internal/toolobserve/deps.go
   - cmd/browser-agent/internal/screenrec/deps.go
   - cmd/browser-agent/internal/toolguard/guards.go
   - cmd/browser-agent/internal/screenrec/types.go
