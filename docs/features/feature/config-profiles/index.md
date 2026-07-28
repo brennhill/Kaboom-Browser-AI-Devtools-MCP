@@ -26,6 +26,7 @@ test_paths:
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/internal/summarypref/cache_test.go
   - cmd/browser-agent/tools_configure_handler_test.go
+  - cmd/browser-agent/tools_configure_persistence_actions_test.go
   - cmd/browser-agent/tools_configure_capabilities_test.go
   - cmd/browser-agent/tools_configure_jitter_test.go
   - cmd/browser-agent/tools_configure_noise_test.go
@@ -95,6 +96,7 @@ that owns executable modules and input schemas.
   directly and retains no boundary mutex, map, or forwarding methods.
 - Tests:
   - `cmd/browser-agent/tools_configure_handler_test.go`
+  - `cmd/browser-agent/tools_configure_persistence_actions_test.go`
   - `cmd/browser-agent/tools_configure_session_test.go`
   - `internal/tools/configure/boundaries_test.go`
   - `internal/tools/configure/rewrite_test.go`

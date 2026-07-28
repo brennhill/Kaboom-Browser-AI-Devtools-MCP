@@ -13,6 +13,7 @@ test_paths:
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/tools_configure_coverage_test.go
   - cmd/browser-agent/tools_configure_handler_test.go
+  - cmd/browser-agent/tools_configure_runtime_actions_test.go
   - cmd/browser-agent/tools_configure_clear_annotations_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
