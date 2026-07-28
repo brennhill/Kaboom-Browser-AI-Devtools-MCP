@@ -9,10 +9,13 @@ code_paths:
   - cmd/browser-agent/internal/toolinteract/interactstate/state.go
   - cmd/browser-agent/tools_interact_dispatch.go
   - internal/schema/interact/actions.go
+  - src/inject/state.ts
 test_paths:
   - cmd/browser-agent/internal/toolinteract/interactstate/state_test.go
   - cmd/browser-agent/tools_interact_state_test.go
   - internal/schema/interact/schema_test.go
+  - tests/extension/pilot-state.test.js
+  - tests/extension/no-compatibility-facades.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -42,6 +45,7 @@ last_verified_date: 2026-03-05
 
 - State capture, persistence, restore, listing, and deletion:
   - `cmd/browser-agent/internal/toolinteract/interactstate/state.go`
+  - `src/inject/state.ts`
 - Public `interact` action routing:
   - `cmd/browser-agent/tools_interact_dispatch.go`
 - Canonical public action schemas:
@@ -50,3 +54,5 @@ last_verified_date: 2026-03-05
   - `cmd/browser-agent/internal/toolinteract/interactstate/state_test.go`
   - `cmd/browser-agent/tools_interact_state_test.go`
   - `internal/schema/interact/schema_test.go`
+  - `tests/extension/pilot-state.test.js`
+  - `tests/extension/no-compatibility-facades.test.js`

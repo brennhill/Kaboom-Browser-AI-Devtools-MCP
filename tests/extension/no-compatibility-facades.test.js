@@ -95,6 +95,13 @@ test('inject runtime entrypoint is not an API compatibility facade', () => {
   }
 })
 
+test('inject state exposes no performance snapshot compatibility wrapper', () => {
+  for (const path of ['src/inject/state.ts', 'extension/inject/state.js', 'extension/inject/state.d.ts']) {
+    const source = readFileSync(path, 'utf8')
+    assert.doesNotMatch(source, /sendPerformanceSnapshotWrapper/, `${path} retains a compatibility-only export`)
+  }
+})
+
 test('pending query dispatcher does not re-export APIs owned by command modules', () => {
   const source = readFileSync('src/background/pending-queries.ts', 'utf8')
   assert.doesNotMatch(source, /export\s+(?:type\s+)?\{/, 'dispatcher must not re-export command helper APIs')

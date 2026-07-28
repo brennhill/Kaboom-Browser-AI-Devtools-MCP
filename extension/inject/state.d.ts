@@ -52,8 +52,4 @@ export declare function highlightElement(selector: string, durationMs?: number):
  * Clear any existing highlight
  */
 export declare function clearHighlight(): void;
-/**
- * Wrapper for sending performance snapshot (exported for compatibility)
- */
-export declare function sendPerformanceSnapshotWrapper(): void;
 //# sourceMappingURL=state.d.ts.map
