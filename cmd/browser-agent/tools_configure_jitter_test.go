@@ -20,7 +20,7 @@ func TestToolConfigureActionJitter_SetValue(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"action_jitter_ms":200}`)
-	resp := toolconfigure.HandleActionJitter(h, req, args)
+	resp := toolconfigure.HandleActionJitter(h.configureLocalDeps, req, args)
 
 	result := parseToolResult(t, resp)
 	if result.IsError {
@@ -39,7 +39,7 @@ func TestToolConfigureActionJitter_ResponseContainsSummary(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"action_jitter_ms":100}`)
-	resp := toolconfigure.HandleActionJitter(h, req, args)
+	resp := toolconfigure.HandleActionJitter(h.configureLocalDeps, req, args)
 
 	result := parseToolResult(t, resp)
 	if result.IsError {
@@ -60,7 +60,7 @@ func TestToolConfigureActionJitter_NegativeClampedToZero(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"action_jitter_ms":-100}`)
-	resp := toolconfigure.HandleActionJitter(h, req, args)
+	resp := toolconfigure.HandleActionJitter(h.configureLocalDeps, req, args)
 
 	result := parseToolResult(t, resp)
 	if result.IsError {
@@ -104,7 +104,7 @@ func TestToolConfigureActionJitter_MaxClamp(t *testing.T) {
 			h, _, _ := makeToolHandler(t)
 
 			req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-			resp := toolconfigure.HandleActionJitter(h, req, json.RawMessage(tt.args))
+			resp := toolconfigure.HandleActionJitter(h.configureLocalDeps, req, json.RawMessage(tt.args))
 
 			result := parseToolResult(t, resp)
 			if result.IsError {
@@ -125,7 +125,7 @@ func TestToolConfigureActionJitter_ZeroPreserved(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	args := json.RawMessage(`{"action_jitter_ms":0}`)
-	resp := toolconfigure.HandleActionJitter(h, req, args)
+	resp := toolconfigure.HandleActionJitter(h.configureLocalDeps, req, args)
 
 	result := parseToolResult(t, resp)
 	if result.IsError {
@@ -149,7 +149,7 @@ func TestToolConfigureActionJitter_PartialUpdate(t *testing.T) {
 
 	// Set initial value
 	args1 := json.RawMessage(`{"action_jitter_ms":300}`)
-	resp1 := toolconfigure.HandleActionJitter(h, req, args1)
+	resp1 := toolconfigure.HandleActionJitter(h.configureLocalDeps, req, args1)
 	result1 := parseToolResult(t, resp1)
 	if result1.IsError {
 		t.Fatalf("initial set should succeed, got: %s", firstText(result1))
@@ -157,7 +157,7 @@ func TestToolConfigureActionJitter_PartialUpdate(t *testing.T) {
 
 	// Update with new value
 	args2 := json.RawMessage(`{"action_jitter_ms":500}`)
-	resp2 := toolconfigure.HandleActionJitter(h, req, args2)
+	resp2 := toolconfigure.HandleActionJitter(h.configureLocalDeps, req, args2)
 	result2 := parseToolResult(t, resp2)
 	if result2.IsError {
 		t.Fatalf("update should succeed, got: %s", firstText(result2))
@@ -181,14 +181,14 @@ func TestToolConfigureActionJitter_EmptyJSON_ReturnsCurrentValues(t *testing.T) 
 
 	// Set known value first
 	args1 := json.RawMessage(`{"action_jitter_ms":250}`)
-	resp1 := toolconfigure.HandleActionJitter(h, req, args1)
+	resp1 := toolconfigure.HandleActionJitter(h.configureLocalDeps, req, args1)
 	result1 := parseToolResult(t, resp1)
 	if result1.IsError {
 		t.Fatalf("initial set should succeed, got: %s", firstText(result1))
 	}
 
 	// Query with empty JSON — should return current value unchanged
-	resp2 := toolconfigure.HandleActionJitter(h, req, json.RawMessage(`{}`))
+	resp2 := toolconfigure.HandleActionJitter(h.configureLocalDeps, req, json.RawMessage(`{}`))
 	result2 := parseToolResult(t, resp2)
 	if result2.IsError {
 		t.Fatalf("empty JSON should succeed, got: %s", firstText(result2))
@@ -205,7 +205,7 @@ func TestToolConfigureActionJitter_NilArgs_ReturnsDefaults(t *testing.T) {
 	h, _, _ := makeToolHandler(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := toolconfigure.HandleActionJitter(h, req, nil)
+	resp := toolconfigure.HandleActionJitter(h.configureLocalDeps, req, nil)
 	result := parseToolResult(t, resp)
 	if result.IsError {
 		t.Fatalf("nil args should succeed, got: %s", firstText(result))
@@ -226,7 +226,7 @@ func TestToolConfigureActionJitter_InvalidJSON_LenientFallback(t *testing.T) {
 	h, _, _ := makeToolHandler(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := toolconfigure.HandleActionJitter(h, req, json.RawMessage(`{bad json`))
+	resp := toolconfigure.HandleActionJitter(h.configureLocalDeps, req, json.RawMessage(`{bad json`))
 
 	// mcp.LenientUnmarshal silently ignores parse errors — invalid JSON is treated
 	// as "no params" and returns current jitter value (not an error).
@@ -246,7 +246,7 @@ func TestToolConfigureActionJitter_ResponseID_Matches(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 42}
 	args := json.RawMessage(`{"action_jitter_ms":100}`)
-	resp := toolconfigure.HandleActionJitter(h, req, args)
+	resp := toolconfigure.HandleActionJitter(h.configureLocalDeps, req, args)
 
 	if resp.JSONRPC != "2.0" {
 		t.Errorf("JSONRPC = %q, want \"2.0\"", resp.JSONRPC)
@@ -287,7 +287,7 @@ func TestToolConfigureActionJitter_UnknownParamsIgnored(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
 	// Unknown params should be ignored without error
 	args := json.RawMessage(`{"action_jitter_ms":200,"unknown_param":999}`)
-	resp := toolconfigure.HandleActionJitter(h, req, args)
+	resp := toolconfigure.HandleActionJitter(h.configureLocalDeps, req, args)
 
 	result := parseToolResult(t, resp)
 	if result.IsError {

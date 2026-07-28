@@ -7,10 +7,12 @@ owners: []
 last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/internal/toolconfigure/noise_actions.go
+  - cmd/browser-agent/internal/toolconfigure/deps.go
   - internal/mcp/response.go
   - cmd/browser-agent/internal/noiseautorun/autorun.go
   - cmd/browser-agent/internal/toolconfigure/auditlog/handler.go
   - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/internal/toolconfigure/session.go
   - internal/noise/noise.go
   - internal/noise/noise_builtin.go
@@ -21,6 +23,9 @@ code_paths:
   - internal/noise/noise_stats.go
   - internal/util/url.go
 test_paths:
+  - cmd/browser-agent/lint_hardening_test.go
+  - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
+  - cmd/browser-agent/tools_configure_noise_test.go
   - cmd/browser-agent/internal/noiseautorun/autorun_test.go
   - cmd/browser-agent/noise_first_connect_test.go
   - cmd/browser-agent/internal/toolconfigure/auditlog/handler_test.go
@@ -62,3 +67,6 @@ wiring, and telemetry adaptation are owned together by
 required `mcp.NoiseFilterer` method and initialization wiring. Automatic URL
 classification imports the canonical `internal/util` path normalizer directly;
 there is no capture-layer pass-through.
+Configure noise handlers receive their owner callbacks through the explicit
+configure dependency value; no noise-specific ToolHandler adapter surface
+remains.

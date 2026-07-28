@@ -7,6 +7,8 @@ owners: []
 last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/internal/toolconfigure/capabilities.go
+  - cmd/browser-agent/internal/toolconfigure/deps.go
+  - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/server.go
   - internal/analysis/apicontract/contract.go
@@ -33,6 +35,7 @@ code_paths:
   - internal/schema/interact/properties_output_batch.go
   - internal/schema/interact/properties_targeting.go
 test_paths:
+  - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/tools_configure_capabilities_test.go
   - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
   - internal/analysis/apicontract/runtime_handler_test.go

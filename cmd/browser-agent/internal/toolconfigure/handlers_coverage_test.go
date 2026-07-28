@@ -18,7 +18,6 @@ import (
 // Test fakes
 // ---------------------------------------------------------------------------
 
-// fakeConfigureDeps implements toolconfigure.Deps.
 type fakeConfigureDeps struct {
 	noiseConfig      *noise.NoiseConfig
 	consoleEntries   []types.LogEntry
@@ -40,31 +39,37 @@ type fakeConfigureDeps struct {
 	setJitterCalled       int
 }
 
-func (f *fakeConfigureDeps) NoiseConfig() *noise.NoiseConfig            { return f.noiseConfig }
-func (f *fakeConfigureDeps) ConsoleEntries() []types.LogEntry           { return f.consoleEntries }
-func (f *fakeConfigureDeps) NetworkBodies() []types.NetworkBody         { return f.networkBodies }
-func (f *fakeConfigureDeps) AllWebSocketEvents() []types.WebSocketEvent { return f.wsEvents }
-func (f *fakeConfigureDeps) ToolsList() []mcp.MCPTool                   { return f.tools }
-func (f *fakeConfigureDeps) GetToolModuleExamples(string) any           { return f.moduleExamples }
-func (f *fakeConfigureDeps) HasCapture() bool                           { return f.hasCapture }
-func (f *fakeConfigureDeps) GetSecurityMode() (string, bool, []string) {
-	return f.securityMode, f.productionParity, f.rewrites
+func (f *fakeConfigureDeps) deps() Deps {
+	return Deps{
+		NoiseConfig:        func() *noise.NoiseConfig { return f.noiseConfig },
+		ConsoleEntries:     func() []types.LogEntry { return f.consoleEntries },
+		NetworkBodies:      func() []types.NetworkBody { return f.networkBodies },
+		AllWebSocketEvents: func() []types.WebSocketEvent { return f.wsEvents },
+		ToolsList:          func() []mcp.MCPTool { return f.tools },
+		GetToolModuleExamples: func(string) any {
+			return f.moduleExamples
+		},
+		HasCapture: func() bool { return f.hasCapture },
+		GetSecurityMode: func() (string, bool, []string) {
+			return f.securityMode, f.productionParity, f.rewrites
+		},
+		SetSecurityMode: func(mode string, rewrites []string) {
+			f.setSecurityCalledWith = mode
+			f.setSecurityRewrites = rewrites
+			f.securityMode = mode
+		},
+		GetTelemetryMode: func() string { return f.telemetryMode },
+		SetTelemetryMode: func(mode string) {
+			f.setTelemetryCalled = mode
+			f.telemetryMode = mode
+		},
+		InteractActionSetJitter: func(ms int) {
+			f.setJitterCalled = ms
+			f.jitterMs = ms
+		},
+		InteractActionGetJitter: func() int { return f.jitterMs },
+	}
 }
-func (f *fakeConfigureDeps) SetSecurityMode(mode string, rewrites []string) {
-	f.setSecurityCalledWith = mode
-	f.setSecurityRewrites = rewrites
-	f.securityMode = mode
-}
-func (f *fakeConfigureDeps) GetTelemetryMode() string { return f.telemetryMode }
-func (f *fakeConfigureDeps) SetTelemetryMode(mode string) {
-	f.setTelemetryCalled = mode
-	f.telemetryMode = mode
-}
-func (f *fakeConfigureDeps) InteractActionSetJitter(ms int) {
-	f.setJitterCalled = ms
-	f.jitterMs = ms
-}
-func (f *fakeConfigureDeps) InteractActionGetJitter() int { return f.jitterMs }
 
 // parseResp decodes an MCP tool result into (isError, text).
 func parseResp(t *testing.T, resp mcp.JSONRPCResponse) (bool, string) {
@@ -127,7 +132,7 @@ func TestHandleActionJitter(t *testing.T) {
 			if tt.args != "" {
 				args = json.RawMessage(tt.args)
 			}
-			resp := HandleActionJitter(d, newReq(), args)
+			resp := HandleActionJitter(d.deps(), newReq(), args)
 			isErr, text := parseResp(t, resp)
 			if isErr {
 				t.Fatalf("unexpected error response: %s", text)
@@ -170,7 +175,7 @@ func TestHandleTelemetry(t *testing.T) {
 			if tt.args != "" {
 				args = json.RawMessage(tt.args)
 			}
-			resp := HandleTelemetry(d, newReq(), args)
+			resp := HandleTelemetry(d.deps(), newReq(), args)
 			isErr, _ := parseResp(t, resp)
 			if isErr != tt.wantErr {
 				t.Fatalf("isError = %v, want %v", isErr, tt.wantErr)
@@ -189,7 +194,7 @@ func TestHandleTelemetry(t *testing.T) {
 func TestHandleSecurityMode(t *testing.T) {
 	t.Run("no capture returns error", func(t *testing.T) {
 		d := &fakeConfigureDeps{hasCapture: false}
-		resp := HandleSecurityMode(d, newReq(), json.RawMessage(`{"mode":"normal"}`))
+		resp := HandleSecurityMode(d.deps(), newReq(), json.RawMessage(`{"mode":"normal"}`))
 		isErr, text := parseResp(t, resp)
 		if !isErr {
 			t.Fatalf("expected error, got: %s", text)
@@ -198,7 +203,7 @@ func TestHandleSecurityMode(t *testing.T) {
 
 	t.Run("empty mode returns current", func(t *testing.T) {
 		d := &fakeConfigureDeps{hasCapture: true, securityMode: capture.SecurityModeNormal, productionParity: true}
-		resp := HandleSecurityMode(d, newReq(), json.RawMessage(`{}`))
+		resp := HandleSecurityMode(d.deps(), newReq(), json.RawMessage(`{}`))
 		isErr, text := parseResp(t, resp)
 		if isErr {
 			t.Fatalf("unexpected error: %s", text)
@@ -210,7 +215,7 @@ func TestHandleSecurityMode(t *testing.T) {
 
 	t.Run("set normal", func(t *testing.T) {
 		d := &fakeConfigureDeps{hasCapture: true}
-		resp := HandleSecurityMode(d, newReq(), json.RawMessage(`{"mode":"NORMAL"}`))
+		resp := HandleSecurityMode(d.deps(), newReq(), json.RawMessage(`{"mode":"NORMAL"}`))
 		isErr, text := parseResp(t, resp)
 		if isErr {
 			t.Fatalf("unexpected error: %s", text)
@@ -222,7 +227,7 @@ func TestHandleSecurityMode(t *testing.T) {
 
 	t.Run("insecure_proxy without confirm errors", func(t *testing.T) {
 		d := &fakeConfigureDeps{hasCapture: true}
-		resp := HandleSecurityMode(d, newReq(), json.RawMessage(`{"mode":"insecure_proxy"}`))
+		resp := HandleSecurityMode(d.deps(), newReq(), json.RawMessage(`{"mode":"insecure_proxy"}`))
 		isErr, _ := parseResp(t, resp)
 		if !isErr {
 			t.Fatal("expected error when confirm missing")
@@ -234,7 +239,7 @@ func TestHandleSecurityMode(t *testing.T) {
 
 	t.Run("insecure_proxy with confirm succeeds", func(t *testing.T) {
 		d := &fakeConfigureDeps{hasCapture: true}
-		resp := HandleSecurityMode(d, newReq(), json.RawMessage(`{"mode":"insecure_proxy","confirm":true}`))
+		resp := HandleSecurityMode(d.deps(), newReq(), json.RawMessage(`{"mode":"insecure_proxy","confirm":true}`))
 		isErr, text := parseResp(t, resp)
 		if isErr {
 			t.Fatalf("unexpected error: %s", text)
@@ -249,7 +254,7 @@ func TestHandleSecurityMode(t *testing.T) {
 
 	t.Run("invalid mode errors", func(t *testing.T) {
 		d := &fakeConfigureDeps{hasCapture: true}
-		resp := HandleSecurityMode(d, newReq(), json.RawMessage(`{"mode":"chaos"}`))
+		resp := HandleSecurityMode(d.deps(), newReq(), json.RawMessage(`{"mode":"chaos"}`))
 		isErr, _ := parseResp(t, resp)
 		if !isErr {
 			t.Fatal("expected error for invalid mode")
@@ -263,7 +268,7 @@ func TestHandleSecurityMode(t *testing.T) {
 
 func TestHandleNoise_NotInitialized(t *testing.T) {
 	d := &fakeConfigureDeps{noiseConfig: nil}
-	resp := HandleNoise(d, newReq(), json.RawMessage(`{"action":"list"}`))
+	resp := HandleNoise(d.deps(), newReq(), json.RawMessage(`{"action":"list"}`))
 	if isErr, _ := parseResp(t, resp); !isErr {
 		t.Fatal("nil noise config should error")
 	}
@@ -272,7 +277,7 @@ func TestHandleNoise_NotInitialized(t *testing.T) {
 func TestHandleNoise_Actions(t *testing.T) {
 	t.Run("list", func(t *testing.T) {
 		d := &fakeConfigureDeps{noiseConfig: noise.NewNoiseConfig()}
-		resp := HandleNoise(d, newReq(), json.RawMessage(`{"action":"list"}`))
+		resp := HandleNoise(d.deps(), newReq(), json.RawMessage(`{"action":"list"}`))
 		if isErr, text := parseResp(t, resp); isErr {
 			t.Fatalf("list should succeed: %s", text)
 		}
@@ -280,7 +285,7 @@ func TestHandleNoise_Actions(t *testing.T) {
 
 	t.Run("reset", func(t *testing.T) {
 		d := &fakeConfigureDeps{noiseConfig: noise.NewNoiseConfig()}
-		resp := HandleNoise(d, newReq(), json.RawMessage(`{"action":"reset"}`))
+		resp := HandleNoise(d.deps(), newReq(), json.RawMessage(`{"action":"reset"}`))
 		if isErr, text := parseResp(t, resp); isErr {
 			t.Fatalf("reset should succeed: %s", text)
 		}
@@ -288,7 +293,7 @@ func TestHandleNoise_Actions(t *testing.T) {
 
 	t.Run("auto_detect with empty inputs", func(t *testing.T) {
 		d := &fakeConfigureDeps{noiseConfig: noise.NewNoiseConfig()}
-		resp := HandleNoise(d, newReq(), json.RawMessage(`{"action":"auto_detect"}`))
+		resp := HandleNoise(d.deps(), newReq(), json.RawMessage(`{"action":"auto_detect"}`))
 		if isErr, text := parseResp(t, resp); isErr {
 			t.Fatalf("auto_detect should succeed: %s", text)
 		}
@@ -297,7 +302,7 @@ func TestHandleNoise_Actions(t *testing.T) {
 	t.Run("add valid rule", func(t *testing.T) {
 		d := &fakeConfigureDeps{noiseConfig: noise.NewNoiseConfig()}
 		args := `{"action":"add","rules":[{"category":"console","classification":"noise","match_spec":{"message_regex":"^HMR"}}]}`
-		resp := HandleNoise(d, newReq(), json.RawMessage(args))
+		resp := HandleNoise(d.deps(), newReq(), json.RawMessage(args))
 		if isErr, text := parseResp(t, resp); isErr {
 			t.Fatalf("add should succeed: %s", text)
 		}
@@ -307,7 +312,7 @@ func TestHandleNoise_Actions(t *testing.T) {
 		// Nested quantifiers are rejected by the noise validator (ReDoS guard).
 		d := &fakeConfigureDeps{noiseConfig: noise.NewNoiseConfig()}
 		args := `{"action":"add","rules":[{"match_spec":{"message_regex":".*+"}}]}`
-		resp := HandleNoise(d, newReq(), json.RawMessage(args))
+		resp := HandleNoise(d.deps(), newReq(), json.RawMessage(args))
 		if isErr, _ := parseResp(t, resp); !isErr {
 			t.Fatal("nested-quantifier regex should be rejected")
 		}
@@ -315,7 +320,7 @@ func TestHandleNoise_Actions(t *testing.T) {
 
 	t.Run("remove without rule_id errors", func(t *testing.T) {
 		d := &fakeConfigureDeps{noiseConfig: noise.NewNoiseConfig()}
-		resp := HandleNoise(d, newReq(), json.RawMessage(`{"action":"remove"}`))
+		resp := HandleNoise(d.deps(), newReq(), json.RawMessage(`{"action":"remove"}`))
 		if isErr, _ := parseResp(t, resp); !isErr {
 			t.Fatal("remove without rule_id should error")
 		}
@@ -323,7 +328,7 @@ func TestHandleNoise_Actions(t *testing.T) {
 
 	t.Run("remove nonexistent rule errors", func(t *testing.T) {
 		d := &fakeConfigureDeps{noiseConfig: noise.NewNoiseConfig()}
-		resp := HandleNoise(d, newReq(), json.RawMessage(`{"action":"remove","rule_id":"user_999"}`))
+		resp := HandleNoise(d.deps(), newReq(), json.RawMessage(`{"action":"remove","rule_id":"user_999"}`))
 		if isErr, _ := parseResp(t, resp); !isErr {
 			t.Fatal("remove of nonexistent rule should error")
 		}
@@ -333,7 +338,7 @@ func TestHandleNoise_Actions(t *testing.T) {
 		nc := noise.NewNoiseConfig()
 		d := &fakeConfigureDeps{noiseConfig: nc}
 		addArgs := `{"action":"add","rules":[{"match_spec":{"message_regex":"^HMR"}}]}`
-		HandleNoise(d, newReq(), json.RawMessage(addArgs))
+		HandleNoise(d.deps(), newReq(), json.RawMessage(addArgs))
 		// Find the user rule ID.
 		var userID string
 		for _, r := range nc.ListRules() {
@@ -345,7 +350,7 @@ func TestHandleNoise_Actions(t *testing.T) {
 		if userID == "" {
 			t.Fatal("expected a user rule to have been added")
 		}
-		resp := HandleNoise(d, newReq(), json.RawMessage(`{"action":"remove","rule_id":"`+userID+`"}`))
+		resp := HandleNoise(d.deps(), newReq(), json.RawMessage(`{"action":"remove","rule_id":"`+userID+`"}`))
 		if isErr, text := parseResp(t, resp); isErr {
 			t.Fatalf("remove of existing rule should succeed: %s", text)
 		}
@@ -353,7 +358,7 @@ func TestHandleNoise_Actions(t *testing.T) {
 
 	t.Run("unknown action errors", func(t *testing.T) {
 		d := &fakeConfigureDeps{noiseConfig: noise.NewNoiseConfig()}
-		resp := HandleNoise(d, newReq(), json.RawMessage(`{"action":"teleport"}`))
+		resp := HandleNoise(d.deps(), newReq(), json.RawMessage(`{"action":"teleport"}`))
 		if isErr, _ := parseResp(t, resp); !isErr {
 			t.Fatal("unknown action should error")
 		}
@@ -367,7 +372,7 @@ func TestHandleNoise_Actions(t *testing.T) {
 func TestHandleDescribeCapabilities(t *testing.T) {
 	t.Run("mode without tool errors", func(t *testing.T) {
 		d := &fakeConfigureDeps{tools: []mcp.MCPTool{sampleTool()}}
-		resp := HandleDescribeCapabilities(d, newReq(), json.RawMessage(`{"mode":"telemetry"}`), "1.0")
+		resp := HandleDescribeCapabilities(d.deps(), newReq(), json.RawMessage(`{"mode":"telemetry"}`), "1.0")
 		if isErr, _ := parseResp(t, resp); !isErr {
 			t.Fatal("mode without tool should error")
 		}
@@ -375,7 +380,7 @@ func TestHandleDescribeCapabilities(t *testing.T) {
 
 	t.Run("unknown tool errors", func(t *testing.T) {
 		d := &fakeConfigureDeps{tools: []mcp.MCPTool{sampleTool()}}
-		resp := HandleDescribeCapabilities(d, newReq(), json.RawMessage(`{"tool":"nope"}`), "1.0")
+		resp := HandleDescribeCapabilities(d.deps(), newReq(), json.RawMessage(`{"tool":"nope"}`), "1.0")
 		if isErr, _ := parseResp(t, resp); !isErr {
 			t.Fatal("unknown tool should error")
 		}
@@ -383,7 +388,7 @@ func TestHandleDescribeCapabilities(t *testing.T) {
 
 	t.Run("tool with valid mode", func(t *testing.T) {
 		d := &fakeConfigureDeps{tools: []mcp.MCPTool{sampleTool()}}
-		resp := HandleDescribeCapabilities(d, newReq(), json.RawMessage(`{"tool":"configure","mode":"telemetry"}`), "1.0")
+		resp := HandleDescribeCapabilities(d.deps(), newReq(), json.RawMessage(`{"tool":"configure","mode":"telemetry"}`), "1.0")
 		if isErr, text := parseResp(t, resp); isErr {
 			t.Fatalf("valid tool+mode should succeed: %s", text)
 		}
@@ -391,7 +396,7 @@ func TestHandleDescribeCapabilities(t *testing.T) {
 
 	t.Run("tool with invalid mode errors", func(t *testing.T) {
 		d := &fakeConfigureDeps{tools: []mcp.MCPTool{sampleTool()}}
-		resp := HandleDescribeCapabilities(d, newReq(), json.RawMessage(`{"tool":"configure","mode":"nonexistent"}`), "1.0")
+		resp := HandleDescribeCapabilities(d.deps(), newReq(), json.RawMessage(`{"tool":"configure","mode":"nonexistent"}`), "1.0")
 		if isErr, _ := parseResp(t, resp); !isErr {
 			t.Fatal("invalid mode should error")
 		}
@@ -399,7 +404,7 @@ func TestHandleDescribeCapabilities(t *testing.T) {
 
 	t.Run("tool only with examples", func(t *testing.T) {
 		d := &fakeConfigureDeps{tools: []mcp.MCPTool{sampleTool()}, moduleExamples: map[string]any{"ex": 1}}
-		resp := HandleDescribeCapabilities(d, newReq(), json.RawMessage(`{"tool":"configure"}`), "1.0")
+		resp := HandleDescribeCapabilities(d.deps(), newReq(), json.RawMessage(`{"tool":"configure"}`), "1.0")
 		if isErr, text := parseResp(t, resp); isErr {
 			t.Fatalf("tool only should succeed: %s", text)
 		}
@@ -407,7 +412,7 @@ func TestHandleDescribeCapabilities(t *testing.T) {
 
 	t.Run("summary", func(t *testing.T) {
 		d := &fakeConfigureDeps{tools: []mcp.MCPTool{sampleTool()}}
-		resp := HandleDescribeCapabilities(d, newReq(), json.RawMessage(`{"summary":true}`), "1.0")
+		resp := HandleDescribeCapabilities(d.deps(), newReq(), json.RawMessage(`{"summary":true}`), "1.0")
 		if isErr, text := parseResp(t, resp); isErr {
 			t.Fatalf("summary should succeed: %s", text)
 		}
@@ -415,7 +420,7 @@ func TestHandleDescribeCapabilities(t *testing.T) {
 
 	t.Run("full no filter", func(t *testing.T) {
 		d := &fakeConfigureDeps{tools: []mcp.MCPTool{sampleTool()}}
-		resp := HandleDescribeCapabilities(d, newReq(), nil, "1.0")
+		resp := HandleDescribeCapabilities(d.deps(), newReq(), nil, "1.0")
 		if isErr, text := parseResp(t, resp); isErr {
 			t.Fatalf("full listing should succeed: %s", text)
 		}

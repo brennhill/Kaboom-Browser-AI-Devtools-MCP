@@ -85,6 +85,18 @@ func TestRootDoesNotReexportCanonicalTypes(t *testing.T) {
 		"func (h *ToolHandler) loadSummaryPref(",
 		"func (h *ToolHandler) invalidateSummaryPref(",
 		"func (h *ToolHandler) maybeInjectSummary(",
+		"func (h *ToolHandler) NoiseConfig(",
+		"func (h *ToolHandler) ConsoleEntries(",
+		"func (h *ToolHandler) AllWebSocketEvents(",
+		"func (h *ToolHandler) GetPilotStatus(",
+		"func (h *ToolHandler) GetToolModuleExamples(",
+		"func (h *ToolHandler) GetSecurityMode(",
+		"func (h *ToolHandler) SetSecurityMode(",
+		"func (h *ToolHandler) GetTelemetryMode(",
+		"func (h *ToolHandler) SetTelemetryMode(",
+		"func (h *ToolHandler) InteractActionSetJitter(",
+		"func (h *ToolHandler) InteractActionGetJitter(",
+		"func (h *ToolHandler) HasCapture(",
 	} {
 		for _, path := range rootFiles {
 			if strings.HasSuffix(path, "_test.go") {

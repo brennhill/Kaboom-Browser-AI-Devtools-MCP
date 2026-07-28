@@ -74,7 +74,7 @@ the folder-gate numbers as evidence that it did.
 | --- | --- |
 | `Capture` methods (composition and cross-owner orchestration) | 35 |
 | `cmd/browser-agent` production source files (package `main`) | 10 |
-| `*ToolHandler` methods in those files | 63 |
+| `*ToolHandler` methods in those files | 51 |
 
 Both remain structurally constrained: Go only permits methods on a type in the
 package that declares it. Extracted `tool*` packages therefore expose handlers

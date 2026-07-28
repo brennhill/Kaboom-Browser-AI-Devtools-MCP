@@ -12,6 +12,8 @@ code_paths:
   - cmd/browser-agent/internal/cli/cli_output.go
   - cmd/browser-agent/internal/health/doctor.go
   - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/tools_core.go
+  - cmd/browser-agent/internal/toolconfigure/deps.go
   - cmd/browser-agent/internal/health/doctor_fastpath_telemetry.go
   - internal/diag/output.go
   - cmd/browser-agent/internal/toolconfigure/tutorial/handlers.go
@@ -46,6 +48,8 @@ code_paths:
   - npm/kaboom-agentic-browser/lib/codex-config.js
   - docs/mcp-install-guide.md
 test_paths:
+  - cmd/browser-agent/lint_hardening_test.go
+  - cmd/browser-agent/tools_interface_check_test.go
   - cmd/browser-agent/main_flags_test.go
   - cmd/browser-agent/main_io_unit_test.go
   - cmd/browser-agent/main_helpers_more_test.go
@@ -146,6 +150,9 @@ OpenAPI contract.
 - Install now also fixes the Claude Code `claude mcp add-json` invocation (JSON passed as a positional arg, not stdin) and adds **Codex CLI** as a supported client (`~/.codex/config.toml`, TOML; honors `$CODEX_HOME`).
 - Daemon setup diagnostics use one canonical CLI entry point, `--doctor`; the duplicate `--check` facade is rejected.
 - Runtime help uses one canonical configure mode, `tutorial`; the duplicate `examples` mode is rejected.
+- Tutorial context receives its three live browser signals through an explicit
+  dependency value composed at startup; it no longer requires ToolHandler to
+  mirror tracking or pilot APIs for configure.
 - Direct CLI diagnostics and formatted results use the writer injected through
   `cli.RuntimeConfig`; production supplies the canonical diagnostic sink, and
   tests use owned buffers without replacing process stdout or stderr.

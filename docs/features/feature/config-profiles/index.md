@@ -8,6 +8,7 @@ last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/internal/toolconfigure/deps.go
   - cmd/browser-agent/internal/toolconfigure/session.go
   - cmd/browser-agent/internal/summarypref/cache.go
   - internal/session/snapshot-manager.go
@@ -21,6 +22,11 @@ test_paths:
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/internal/summarypref/cache_test.go
   - cmd/browser-agent/tools_configure_handler_test.go
+  - cmd/browser-agent/tools_configure_capabilities_test.go
+  - cmd/browser-agent/tools_configure_jitter_test.go
+  - cmd/browser-agent/tools_configure_noise_test.go
+  - cmd/browser-agent/tools_interface_check_test.go
+  - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
   - cmd/browser-agent/tools_configure_session_test.go
   - internal/tools/configure/audit_test.go
   - internal/tools/configure/boundaries_test.go
@@ -65,6 +71,12 @@ last_verified_date: 2026-03-05
 - Shared configure argument normalization/parsing:
   - `internal/tools/configure/boundaries.go`
   - `internal/tools/configure/rewrite.go`
+- Configure-local noise, capability, security, telemetry, and jitter handlers
+  receive one explicit function-field dependency value composed in
+  `tools_configure.go`. Tutorial receives its own three-signal value. The
+  former broad host interfaces and twelve configure-only ToolHandler adapters
+  are deleted and structurally prohibited; analyze-owned shared boundaries are
+  unchanged.
 - Test-boundary start/end state and synchronization are owned together by
   `configure.BoundaryHandler`. The root `ToolHandler` router calls that owner
   directly and retains no boundary mutex, map, or forwarding methods.

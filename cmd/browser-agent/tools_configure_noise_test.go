@@ -181,7 +181,7 @@ func TestToolConfigureNoise_InvalidJSON(t *testing.T) {
 
 	args := json.RawMessage(`{bad json}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := toolconfigure.HandleNoise(env.handler, req, args)
+	resp := toolconfigure.HandleNoise(env.handler.configureLocalDeps, req, args)
 
 	result := parseToolResult(t, resp)
 	if !result.IsError {

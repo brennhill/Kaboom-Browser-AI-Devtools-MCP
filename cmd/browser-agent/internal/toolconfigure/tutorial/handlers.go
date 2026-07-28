@@ -10,26 +10,17 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
-// Deps is everything the tutorial handler needs from the host server: the three
-// runtime signals that shape the context block and its diagnostics. It is
-// deliberately narrower than toolconfigure.Deps, which carries the noise,
-// security, telemetry and jitter accessors this package never touches.
-// *ToolHandler in cmd/browser-agent/ satisfies it, as does any
-// toolconfigure.Deps value. A nil Deps is valid and yields default context.
-type Deps interface {
-	// GetTrackingStatus returns (enabled, tabID, tabURL) for the tracked tab.
-	GetTrackingStatus() (bool, int, string)
-
-	// GetPilotStatus returns the AI Web Pilot status.
-	GetPilotStatus() any
-
-	// IsExtensionConnected returns whether the extension is connected.
-	IsExtensionConnected() bool
+// Deps contains the three runtime signals that shape tutorial context. A nil
+// dependency value is valid and yields default context.
+type Deps struct {
+	GetTrackingStatus    func() (bool, int, string)
+	GetPilotStatus       func() any
+	IsExtensionConnected func() bool
 }
 
 // HandleTutorial handles configure(what="tutorial").
 // failureRecoveryPlaybooks is injected from the caller (lives in playbooks sub-package).
-func HandleTutorial(d Deps, req mcp.JSONRPCRequest, args json.RawMessage, failureRecoveryPlaybooks map[string]any) mcp.JSONRPCResponse {
+func HandleTutorial(d *Deps, req mcp.JSONRPCRequest, args json.RawMessage, failureRecoveryPlaybooks map[string]any) mcp.JSONRPCResponse {
 	context := TutorialContext(d)
 	return mcp.Succeed(req, "Tutorial", map[string]any{
 		"status":                     "ok",
@@ -52,7 +43,7 @@ func HandleTutorial(d Deps, req mcp.JSONRPCRequest, args json.RawMessage, failur
 }
 
 // TutorialContext builds the runtime context map for tutorial responses.
-func TutorialContext(d Deps) map[string]any {
+func TutorialContext(d *Deps) map[string]any {
 	ctx := map[string]any{
 		"pilot_enabled":       true,
 		"pilot_state":         "assumed_enabled",

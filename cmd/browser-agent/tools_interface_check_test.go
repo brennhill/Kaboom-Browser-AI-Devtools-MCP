@@ -7,9 +7,7 @@ package main
 
 import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/tutorial"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate/annotations"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolobserve"
@@ -26,11 +24,9 @@ var _ mcp.PendingQueryEnqueuer = (*ToolHandler)(nil)
 // Phase 2: Tool-specific dependency interfaces
 var _ observe.Deps = (*ToolHandler)(nil)
 var _ toolobserve.Deps = (*ToolHandler)(nil)
-var _ toolconfigure.Deps = (*ToolHandler)(nil)
 var _ toolanalyze.Deps = (*ToolHandler)(nil)
 var _ toolgenerate.Deps = (*ToolHandler)(nil)
 
 // Phase 3: Narrow sub-package dependency interfaces
-var _ tutorial.Deps = (*ToolHandler)(nil)
 var _ annotations.Deps = (*ToolHandler)(nil)
 var _ netrecord.NetworkBodyProvider = (*capture.TelemetryStore)(nil)

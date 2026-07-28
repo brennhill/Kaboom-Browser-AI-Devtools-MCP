@@ -22,6 +22,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/annotationanalysis"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/tutorial"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolguard"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
@@ -124,6 +125,8 @@ type ToolHandler struct {
 	generateDispatcher       *toolgenerate.Dispatcher
 	observeDispatcher        *toolobserve.Dispatcher
 	stateInteractHandler     *interactstate.Handler
+	configureLocalDeps       toolconfigure.Deps
+	tutorialDeps             *tutorial.Deps
 	configureSessions        *toolconfigure.SessionHandler
 	testBoundaries           *cfg.BoundaryHandler
 	sequences                *sequencehandler.Handler
@@ -520,6 +523,8 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	handler.generateDispatcher = toolgenerate.NewDispatcher(handler, handler.testGenHandler)
 	interactDeps := buildInteractDeps(handler)
 	handler.interactActionHandler = toolinteract.NewInteractActionHandler(interactDeps)
+	handler.configureLocalDeps = buildConfigureLocalDeps(handler)
+	handler.tutorialDeps = buildTutorialDeps(handler)
 	handler.uploadInteractHandler = toolinteract.NewUploadInteractHandler(interactDeps, handler.interactActionHandler)
 	handler.observeDispatcher = toolobserve.NewDispatcher(toolobserve.Config{
 		Host: handler, Commands: queryStore, InProgress: inProgress,

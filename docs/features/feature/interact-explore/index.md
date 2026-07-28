@@ -152,6 +152,9 @@ one-line ToolHandler forwarding methods are structurally prohibited.
 Summary response-mode behavior belongs to `summarypref.Cache`; async formatting
 and dependency wiring use that owner directly, and the former four-method root
 forwarding layer plus its duplicate tests have been deleted.
+Configure action-jitter handlers receive `InteractActionHandler` callbacks
+through the explicit configure dependency value; root jitter forwarding methods
+are deleted.
 Public state actions likewise use only `save_state`, `load_state`,
 `list_states`, and `delete_state`; duplicate `state_*` entry points are not
 registered. The similarly named extension pending-query types remain internal.

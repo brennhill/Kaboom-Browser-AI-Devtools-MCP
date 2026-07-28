@@ -122,7 +122,12 @@ internal/
 
 **Tool composition root** -- `ToolHandler` in `tools_core.go` constructs the concrete feature owners and injects their narrow dependencies. Canonical dispatchers such as `internal/toolobserve/dispatcher.go` own their mode registries; the root does not mirror or forward those APIs.
 
-**Dependency interfaces** -- `internal/mcp/deps.go` defines small composable interfaces (`CaptureProvider`, `LogBufferReader`, `A11yQueryExecutor`, etc.). Each `internal/tools/*` package defines its own `Deps` interface by embedding only the sub-interfaces it needs. `*ToolHandler` satisfies all of them with zero adapter code.
+**Explicit dependencies** -- `internal/mcp/deps.go` defines small composable
+interfaces for true shared host capabilities (`CaptureProvider`,
+`LogBufferReader`, `A11yQueryExecutor`, etc.). Feature-local handlers may
+instead accept function-field dependency values when an interface would force
+the composition root to publish forwarding methods. Configure and tutorial use
+this explicit-value form; `ToolHandler` does not mirror their owner APIs.
 
 **Wire types** -- `internal/types/wire_*.go` are the source of truth for HTTP payload shapes between extension and server. TypeScript counterparts in `src/types/wire/wire-*.ts` are generated from Go. CI enforces drift detection via `make check-wire-drift`.
 

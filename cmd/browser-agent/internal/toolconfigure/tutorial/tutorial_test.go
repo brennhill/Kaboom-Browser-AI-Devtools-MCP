@@ -9,8 +9,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
-// fakeTutorialDeps implements Deps.
-type fakeTutorialDeps struct {
+type tutorialState struct {
 	trackingEnabled bool
 	tabID           int
 	tabURL          string
@@ -18,11 +17,15 @@ type fakeTutorialDeps struct {
 	extConnected    bool
 }
 
-func (f *fakeTutorialDeps) GetTrackingStatus() (bool, int, string) {
-	return f.trackingEnabled, f.tabID, f.tabURL
+func tutorialDeps(state *tutorialState) *Deps {
+	return &Deps{
+		GetTrackingStatus: func() (bool, int, string) {
+			return state.trackingEnabled, state.tabID, state.tabURL
+		},
+		GetPilotStatus:       func() any { return state.pilotStatus },
+		IsExtensionConnected: func() bool { return state.extConnected },
+	}
 }
-func (f *fakeTutorialDeps) GetPilotStatus() any        { return f.pilotStatus }
-func (f *fakeTutorialDeps) IsExtensionConnected() bool { return f.extConnected }
 
 // parseResp decodes an MCP tool result into (isError, text).
 func parseResp(t *testing.T, resp mcp.JSONRPCResponse) (bool, string) {
@@ -50,13 +53,13 @@ func newReq() mcp.JSONRPCRequest { return mcp.JSONRPCRequest{JSONRPC: "2.0", ID:
 // ---------------------------------------------------------------------------
 
 func TestHandleTutorial(t *testing.T) {
-	d := &fakeTutorialDeps{
+	d := tutorialDeps(&tutorialState{
 		extConnected:    true,
 		trackingEnabled: true,
 		tabID:           5,
 		tabURL:          "https://example.com",
 		pilotStatus:     map[string]any{"enabled": true, "state": "enabled", "authoritative": true},
-	}
+	})
 	playbooks := map[string]any{"foo": "bar"}
 
 	resp := HandleTutorial(d, newReq(), json.RawMessage(`{"what":"tutorial"}`), playbooks)
@@ -76,13 +79,13 @@ func TestTutorialContext_NilDeps(t *testing.T) {
 }
 
 func TestTutorialContext_WithDeps(t *testing.T) {
-	d := &fakeTutorialDeps{
+	d := tutorialDeps(&tutorialState{
 		extConnected:    true,
 		trackingEnabled: true,
 		tabID:           9,
 		tabURL:          "https://x.test",
 		pilotStatus:     map[string]any{"enabled": false, "state": "explicitly_disabled", "authoritative": true},
-	}
+	})
 	ctx := TutorialContext(d)
 	if ctx["extension_connected"] != true {
 		t.Error("extension_connected should reflect deps")
@@ -99,7 +102,7 @@ func TestTutorialContext_WithDeps(t *testing.T) {
 }
 
 func TestTutorialContext_NonMapPilotStatus(t *testing.T) {
-	d := &fakeTutorialDeps{pilotStatus: "not-a-map"}
+	d := tutorialDeps(&tutorialState{pilotStatus: "not-a-map"})
 	ctx := TutorialContext(d)
 	// Falls back to defaults for pilot fields.
 	if ctx["pilot_enabled"] != true {

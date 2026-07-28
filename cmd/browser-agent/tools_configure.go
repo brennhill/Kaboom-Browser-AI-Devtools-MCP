@@ -29,6 +29,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/issuereport"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
 	cfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
@@ -62,7 +63,7 @@ var configureHandlers = map[string]toolrouting.Handler[*ToolHandler]{
 		if err != nil {
 			return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
 		}
-		return toolconfigure.HandleNoise(h, req, rewrittenArgs)
+		return toolconfigure.HandleNoise(h.configureLocalDeps, req, rewrittenArgs)
 	},
 	"clear": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return toolconfigure.HandleClear(toolconfigure.ClearTargets{
@@ -98,10 +99,10 @@ var configureHandlers = map[string]toolrouting.Handler[*ToolHandler]{
 	},
 	"telemetry": cfgLocal(toolconfigure.HandleTelemetry),
 	"describe_capabilities": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return toolconfigure.HandleDescribeCapabilities(h, req, args, version)
+		return toolconfigure.HandleDescribeCapabilities(h.configureLocalDeps, req, args, version)
 	},
 	"tutorial": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return tutorial.HandleTutorial(h, req, args, playbooks.TutorialFailureRecoveryPlaybooks())
+		return tutorial.HandleTutorial(h.tutorialDeps, req, args, playbooks.TutorialFailureRecoveryPlaybooks())
 	},
 	"save_sequence": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return h.sequences.Save(req, args)
@@ -133,7 +134,7 @@ var configureHandlers = map[string]toolrouting.Handler[*ToolHandler]{
 
 func cfgLocal(fn func(toolconfigure.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) toolrouting.Handler[*ToolHandler] {
 	return func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return fn(h, req, args)
+		return fn(h.configureLocalDeps, req, args)
 	}
 }
 
@@ -228,69 +229,69 @@ func (h *ToolHandler) toolConfigure(req mcp.JSONRPCRequest, args json.RawMessage
 	return toolrouting.Dispatch(h, req, args, reg)
 }
 
-func (h *ToolHandler) NoiseConfig() *noise.NoiseConfig {
-	return h.noiseConfig
-}
-
-func (h *ToolHandler) ConsoleEntries() []types.LogEntry {
-	snapshot := h.server.logs.Entries()
-	entries := make([]types.LogEntry, len(snapshot))
-	for i, entry := range snapshot {
-		entries[i] = types.LogEntry(entry)
+func buildConfigureLocalDeps(h *ToolHandler) toolconfigure.Deps {
+	return toolconfigure.Deps{
+		NoiseConfig: func() *noise.NoiseConfig { return h.noiseConfig },
+		ConsoleEntries: func() []types.LogEntry {
+			snapshot := h.server.logs.Entries()
+			entries := make([]types.LogEntry, len(snapshot))
+			for index, entry := range snapshot {
+				entries[index] = types.LogEntry(entry)
+			}
+			return entries
+		},
+		NetworkBodies:      func() []types.NetworkBody { return h.capture.Telemetry().GetNetworkBodies() },
+		AllWebSocketEvents: func() []types.WebSocketEvent { return h.capture.Telemetry().GetAllWebSocketEvents() },
+		ToolsList:          schema.AllTools,
+		GetToolModuleExamples: func(toolName string) any {
+			h.ensureToolModules()
+			if examples := h.toolModules.Examples(toolName); len(examples) > 0 {
+				return examples
+			}
+			return nil
+		},
+		HasCapture:      func() bool { return h.capture != nil },
+		GetSecurityMode: func() (string, bool, []string) { return h.capture.Extension().GetSecurityMode() },
+		SetSecurityMode: func(mode string, rewrites []string) {
+			h.capture.Extension().SetSecurityMode(mode, rewrites)
+		},
+		GetTelemetryMode:        func() string { return h.server.logs.TelemetryMode() },
+		SetTelemetryMode:        h.server.logs.SetTelemetryMode,
+		InteractActionSetJitter: h.interactActionHandler.SetJitter,
+		InteractActionGetJitter: h.interactActionHandler.GetJitter,
 	}
-	return entries
 }
 
-func (h *ToolHandler) NetworkBodies() []types.NetworkBody {
-	return h.capture.Telemetry().GetNetworkBodies()
+func buildTutorialDeps(h *ToolHandler) *tutorial.Deps {
+	return &tutorial.Deps{
+		GetTrackingStatus: func() (bool, int, string) {
+			if h.capture == nil {
+				return false, 0, ""
+			}
+			return h.capture.Extension().GetTrackingStatus()
+		},
+		GetPilotStatus: func() any {
+			if h.capture == nil {
+				return nil
+			}
+			return h.capture.Extension().GetPilotStatus()
+		},
+		IsExtensionConnected: func() bool {
+			return h.capture != nil && h.capture.Extension().IsExtensionConnected()
+		},
+	}
 }
 
-func (h *ToolHandler) AllWebSocketEvents() []types.WebSocketEvent {
-	return h.capture.Telemetry().GetAllWebSocketEvents()
-}
-
+// GetTrackingStatus is the shared analyze host boundary. Configure tutorial
+// receives the same owner callback through tutorialDeps instead.
 func (h *ToolHandler) GetTrackingStatus() (bool, int, string) {
 	return h.capture.Extension().GetTrackingStatus()
 }
 
-func (h *ToolHandler) GetPilotStatus() any {
-	return h.capture.Extension().GetPilotStatus()
-}
-
-func (h *ToolHandler) GetToolModuleExamples(toolName string) any {
-	h.ensureToolModules()
-	if examples := h.toolModules.Examples(toolName); len(examples) > 0 {
-		return examples
-	}
-	return nil
-}
-
-func (h *ToolHandler) GetSecurityMode() (string, bool, []string) {
-	return h.capture.Extension().GetSecurityMode()
-}
-
-func (h *ToolHandler) SetSecurityMode(mode string, rewrites []string) {
-	h.capture.Extension().SetSecurityMode(mode, rewrites)
-}
-
-func (h *ToolHandler) GetTelemetryMode() string {
-	return h.server.logs.TelemetryMode()
-}
-
-func (h *ToolHandler) SetTelemetryMode(mode string) {
-	h.server.logs.SetTelemetryMode(mode)
-}
-
-func (h *ToolHandler) InteractActionSetJitter(ms int) {
-	h.interactActionHandler.SetJitter(ms)
-}
-
-func (h *ToolHandler) InteractActionGetJitter() int {
-	return h.interactActionHandler.GetJitter()
-}
-
-func (h *ToolHandler) HasCapture() bool {
-	return h.capture != nil
+// NetworkBodies is the shared analyze host boundary. Configure noise receives
+// the same telemetry callback through configureLocalDeps instead.
+func (h *ToolHandler) NetworkBodies() []types.NetworkBody {
+	return h.capture.Telemetry().GetNetworkBodies()
 }
 
 func (h *ToolHandler) CollectIssueReport(template, title, userContext string) issuereport.IssueReport {
