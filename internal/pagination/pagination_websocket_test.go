@@ -6,12 +6,14 @@ package pagination
 
 import (
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 func TestEnrichWebSocketEntries(t *testing.T) {
 	tests := []struct {
 		name             string
-		events           []WebSocketEvent
+		events           []types.WebSocketEvent
 		wsTotalAdded     int64
 		expectedFirstSeq int64
 		expectedLastSeq  int64
@@ -19,7 +21,7 @@ func TestEnrichWebSocketEntries(t *testing.T) {
 	}{
 		{
 			name:             "empty buffer",
-			events:           []WebSocketEvent{},
+			events:           []types.WebSocketEvent{},
 			wsTotalAdded:     0,
 			expectedFirstSeq: 0,
 			expectedLastSeq:  0,
@@ -27,7 +29,7 @@ func TestEnrichWebSocketEntries(t *testing.T) {
 		},
 		{
 			name: "single event",
-			events: []WebSocketEvent{
+			events: []types.WebSocketEvent{
 				{Event: "message", ID: "ws-1", URL: "wss://echo.example.com", Timestamp: "2026-01-30T10:15:23Z"},
 			},
 			wsTotalAdded:     1,
@@ -37,7 +39,7 @@ func TestEnrichWebSocketEntries(t *testing.T) {
 		},
 		{
 			name: "multiple events no eviction",
-			events: []WebSocketEvent{
+			events: []types.WebSocketEvent{
 				{Event: "open", ID: "ws-1", URL: "wss://echo.example.com", Timestamp: "2026-01-30T10:15:20Z"},
 				{Event: "message", ID: "ws-1", URL: "wss://echo.example.com", Timestamp: "2026-01-30T10:15:21Z"},
 				{Event: "close", ID: "ws-1", URL: "wss://echo.example.com", Timestamp: "2026-01-30T10:15:22Z"},
@@ -49,7 +51,7 @@ func TestEnrichWebSocketEntries(t *testing.T) {
 		},
 		{
 			name: "buffer with evictions (wsTotalAdded > len)",
-			events: []WebSocketEvent{
+			events: []types.WebSocketEvent{
 				{Event: "message", ID: "ws-2", URL: "wss://echo.example.com", Timestamp: "2026-01-30T10:20:00Z"},
 				{Event: "close", ID: "ws-2", URL: "wss://echo.example.com", Timestamp: "2026-01-30T10:20:01Z"},
 			},
@@ -89,9 +91,9 @@ func TestEnrichWebSocketEntries(t *testing.T) {
 
 func TestApplyWebSocketCursorPagination_NoCursor(t *testing.T) {
 	// Create 100 events
-	events := make([]WebSocketEvent, 100)
+	events := make([]types.WebSocketEvent, 100)
 	for i := 0; i < 100; i++ {
-		events[i] = WebSocketEvent{
+		events[i] = types.WebSocketEvent{
 			Event:     "message",
 			ID:        "ws-1",
 			URL:       "wss://echo.example.com",
@@ -134,9 +136,9 @@ func TestApplyWebSocketCursorPagination_NoCursor(t *testing.T) {
 
 func TestApplyWebSocketCursorPagination_AfterCursor(t *testing.T) {
 	// Create 100 events (sequences 1-100)
-	events := make([]WebSocketEvent, 100)
+	events := make([]types.WebSocketEvent, 100)
 	for i := 0; i < 100; i++ {
-		events[i] = WebSocketEvent{
+		events[i] = types.WebSocketEvent{
 			Event:     "message",
 			ID:        "ws-1",
 			URL:       "wss://echo.example.com",
@@ -169,9 +171,9 @@ func TestApplyWebSocketCursorPagination_AfterCursor(t *testing.T) {
 
 func TestApplyWebSocketCursorPagination_CursorExpired(t *testing.T) {
 	// Buffer has sequences 101-200 (100 entries evicted)
-	events := make([]WebSocketEvent, 100)
+	events := make([]types.WebSocketEvent, 100)
 	for i := 0; i < 100; i++ {
-		events[i] = WebSocketEvent{
+		events[i] = types.WebSocketEvent{
 			Event:     "message",
 			ID:        "ws-1",
 			URL:       "wss://echo.example.com",
@@ -229,7 +231,7 @@ func TestApplyWebSocketCursorPagination_CursorExpired(t *testing.T) {
 
 func TestSerializeWebSocketEntryWithSequence(t *testing.T) {
 	event := WebSocketEntryWithSequence{
-		Entry: WebSocketEvent{
+		Entry: types.WebSocketEvent{
 			Event:     "message",
 			ID:        "ws-1",
 			URL:       "wss://echo.example.com",

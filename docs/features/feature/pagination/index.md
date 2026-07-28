@@ -52,3 +52,6 @@ last_verified_date: 2026-03-05
 - `internal/pagination/pagination_test.go` now reuses shared before/after cursor runners and common log-entry fixture builders.
 - Log pagination consumes `internal/types.LogEntry` directly; the package-local
   compatibility alias has been removed.
+- Action and WebSocket pagination tests consume `internal/types.EnhancedAction`
+  and `internal/types.WebSocketEvent` directly; pagination does not re-export
+  canonical entry contracts.

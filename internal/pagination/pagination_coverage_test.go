@@ -243,7 +243,7 @@ func TestApplyLogCursorPagination_SinceCursor(t *testing.T) {
 func TestSerializeActionEntryWithSequence_AllOptionalFields(t *testing.T) {
 	t.Parallel()
 	action := ActionEntryWithSequence{
-		Entry: EnhancedAction{
+		Entry: types.EnhancedAction{
 			Type:          "click",
 			Timestamp:     1738238123456,
 			URL:           "https://example.com",
@@ -298,7 +298,7 @@ func TestSerializeActionEntryWithSequence_AllOptionalFields(t *testing.T) {
 func TestSerializeActionEntryWithSequence_NoOptionalFields(t *testing.T) {
 	t.Parallel()
 	action := ActionEntryWithSequence{
-		Entry: EnhancedAction{
+		Entry: types.EnhancedAction{
 			Type:      "navigate",
 			Timestamp: 1738238123456,
 		},

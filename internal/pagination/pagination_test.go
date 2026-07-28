@@ -6,11 +6,25 @@ package pagination
 
 import (
 	"fmt"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
+
+func TestPaginationDoesNotReexportCanonicalEntryTypes(t *testing.T) {
+	source, err := os.ReadFile("pagination.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, forbidden := range []string{"EnhancedAction = types.EnhancedAction", "WebSocketEvent = types.WebSocketEvent"} {
+		if strings.Contains(string(source), forbidden) {
+			t.Errorf("pagination retains compatibility type alias %q", forbidden)
+		}
+	}
+}
 
 func buildSequentialLogEntries(baseTime time.Time, startIndex, count int) []LogEntryWithSequence {
 	entries := make([]LogEntryWithSequence, count)

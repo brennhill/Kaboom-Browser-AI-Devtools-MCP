@@ -6,12 +6,14 @@ package pagination
 
 import (
 	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 func TestEnrichActionEntries(t *testing.T) {
 	tests := []struct {
 		name             string
-		actions          []EnhancedAction
+		actions          []types.EnhancedAction
 		actionTotalAdded int64
 		expectedFirstSeq int64
 		expectedLastSeq  int64
@@ -19,7 +21,7 @@ func TestEnrichActionEntries(t *testing.T) {
 	}{
 		{
 			name:             "empty buffer",
-			actions:          []EnhancedAction{},
+			actions:          []types.EnhancedAction{},
 			actionTotalAdded: 0,
 			expectedFirstSeq: 0,
 			expectedLastSeq:  0,
@@ -27,7 +29,7 @@ func TestEnrichActionEntries(t *testing.T) {
 		},
 		{
 			name: "single action",
-			actions: []EnhancedAction{
+			actions: []types.EnhancedAction{
 				{Type: "click", Timestamp: 1738238123456, URL: "https://example.com"},
 			},
 			actionTotalAdded: 1,
@@ -37,7 +39,7 @@ func TestEnrichActionEntries(t *testing.T) {
 		},
 		{
 			name: "multiple actions no eviction",
-			actions: []EnhancedAction{
+			actions: []types.EnhancedAction{
 				{Type: "click", Timestamp: 1738238123000, URL: "https://example.com"},
 				{Type: "input", Timestamp: 1738238124000, URL: "https://example.com"},
 				{Type: "navigate", Timestamp: 1738238125000, URL: "https://example.com/page2"},
@@ -49,7 +51,7 @@ func TestEnrichActionEntries(t *testing.T) {
 		},
 		{
 			name: "buffer with evictions (actionTotalAdded > len)",
-			actions: []EnhancedAction{
+			actions: []types.EnhancedAction{
 				{Type: "click", Timestamp: 1738238200000, URL: "https://example.com"},
 				{Type: "input", Timestamp: 1738238201000, URL: "https://example.com"},
 			},
@@ -93,9 +95,9 @@ func TestEnrichActionEntries(t *testing.T) {
 
 func TestApplyActionCursorPagination_NoCursor(t *testing.T) {
 	// Create 100 actions
-	actions := make([]EnhancedAction, 100)
+	actions := make([]types.EnhancedAction, 100)
 	for i := 0; i < 100; i++ {
-		actions[i] = EnhancedAction{
+		actions[i] = types.EnhancedAction{
 			Type:      "click",
 			Timestamp: int64(1738238000000 + i*1000), // 1 second apart
 			URL:       "https://example.com",
@@ -137,9 +139,9 @@ func TestApplyActionCursorPagination_NoCursor(t *testing.T) {
 
 func TestApplyActionCursorPagination_AfterCursor(t *testing.T) {
 	// Create 100 actions (sequences 1-100)
-	actions := make([]EnhancedAction, 100)
+	actions := make([]types.EnhancedAction, 100)
 	for i := 0; i < 100; i++ {
-		actions[i] = EnhancedAction{
+		actions[i] = types.EnhancedAction{
 			Type:      "click",
 			Timestamp: int64(1738238000000 + i*1000),
 			URL:       "https://example.com",
@@ -171,9 +173,9 @@ func TestApplyActionCursorPagination_AfterCursor(t *testing.T) {
 
 func TestApplyActionCursorPagination_BeforeCursor(t *testing.T) {
 	// Create 100 actions (sequences 1-100)
-	actions := make([]EnhancedAction, 100)
+	actions := make([]types.EnhancedAction, 100)
 	for i := 0; i < 100; i++ {
-		actions[i] = EnhancedAction{
+		actions[i] = types.EnhancedAction{
 			Type:      "click",
 			Timestamp: int64(1738238000000 + i*1000),
 			URL:       "https://example.com",
@@ -245,9 +247,9 @@ func TestApplyActionCursorPagination_BeforeCursor(t *testing.T) {
 
 func TestApplyActionCursorPagination_CursorExpired(t *testing.T) {
 	// Buffer has sequences 101-200 (100 entries evicted)
-	actions := make([]EnhancedAction, 100)
+	actions := make([]types.EnhancedAction, 100)
 	for i := 0; i < 100; i++ {
-		actions[i] = EnhancedAction{
+		actions[i] = types.EnhancedAction{
 			Type:      "click",
 			Timestamp: int64(1738238000000 + (100+i)*1000), // Start from 100 seconds in
 			URL:       "https://example.com",
@@ -305,7 +307,7 @@ func TestApplyActionCursorPagination_CursorExpired(t *testing.T) {
 
 func TestSerializeActionEntryWithSequence(t *testing.T) {
 	action := ActionEntryWithSequence{
-		Entry: EnhancedAction{
+		Entry: types.EnhancedAction{
 			Type:      "click",
 			Timestamp: 1738238123456,
 			URL:       "https://example.com",
@@ -356,7 +358,7 @@ func TestSerializeActionEntryWithSequence(t *testing.T) {
 
 func TestSerializeActionEntryWithSequence_NoTabID(t *testing.T) {
 	action := ActionEntryWithSequence{
-		Entry: EnhancedAction{
+		Entry: types.EnhancedAction{
 			Type:      "navigate",
 			Timestamp: 1738238123456,
 			URL:       "https://example.com",
