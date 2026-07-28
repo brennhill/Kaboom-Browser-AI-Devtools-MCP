@@ -17,6 +17,9 @@ code_paths:
   - internal/audit/audit_trail.go
 test_paths:
   - internal/audit/audit_trail_test.go
+  - internal/audit/audit_query_test.go
+  - internal/audit/audit_session_test.go
+  - internal/audit/audit_redaction_test.go
   - internal/audit/no_facade_test.go
   - cmd/browser-agent/tools_configure_audit_test.go
   - cmd/browser-agent/tools_configure_wave_abc_tdd_test.go
