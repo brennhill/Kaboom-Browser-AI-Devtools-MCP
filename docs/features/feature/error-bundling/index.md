@@ -11,6 +11,10 @@ code_paths:
   - src/lib/page/exceptions.ts
   - src/inject/api.ts
 test_paths:
+  - tests/extension/ai-context-fixture.js
+  - tests/extension/ai-context-frameworks.test.js
+  - tests/extension/ai-context-pipeline.test.js
+  - tests/extension/ai-context.test.js
   - tests/extension/ai-context-parsing.test.js
   - tests/extension/ai-context-enrichment.test.js
   - tests/extension/no-compatibility-facades.test.js
