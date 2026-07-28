@@ -37,7 +37,7 @@ func cleanupGoTestDaemons() {
 	killPattern("kaboom-test-binary --port")
 
 	// Clean known test PID file ranges used by shell and regression tests.
-	cleanupPIDFiles()
+	procctl.CleanupPIDFiles()
 	for port := 17890; port <= 17999; port++ {
 		procctl.RemovePIDFile(port)
 	}
@@ -74,11 +74,11 @@ func TestCleanupPIDFilesRemovesKaboomAndKaboomPIDVariants(t *testing.T) {
 		}
 	}
 
-	cleanupPIDFiles()
+	procctl.CleanupPIDFiles()
 
 	for _, pidPath := range paths {
 		if _, err := os.Stat(pidPath); err == nil {
-			t.Fatalf("expected cleanupPIDFiles to remove %q", pidPath)
+			t.Fatalf("expected procctl.CleanupPIDFiles to remove %q", pidPath)
 		}
 	}
 }

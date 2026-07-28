@@ -240,7 +240,7 @@ func handleEarlyExitModes(flags *parsedFlags) {
 		os.Exit(0)
 	}
 	if *flags.forceCleanup {
-		runForceCleanup()
+		procctl.ForceCleanup()
 		os.Exit(0)
 	}
 	if *flags.checkSetup || *flags.doctorMode {
@@ -254,11 +254,11 @@ func handleEarlyExitModes(flags *parsedFlags) {
 		os.Exit(0)
 	}
 	if *flags.stopMode {
-		runStopMode(*flags.port)
+		procctl.Stop(*flags.port, bridge.IsServerRunning)
 		os.Exit(0)
 	}
 	if *flags.installMode {
-		nativeinstall.Run(runForceCleanupQuietly)
+		nativeinstall.Run(procctl.ForceCleanupQuietly)
 		os.Exit(0)
 	}
 	if *flags.connectMode {

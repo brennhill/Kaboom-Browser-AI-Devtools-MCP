@@ -123,9 +123,9 @@ Fix by running: make sync-version
 
 ### Go Binary: `--force` Flag
 
-**Files:** `cmd/browser-agent/config.go` and `cmd/browser-agent/main_connection_stop.go`
+**Files:** `cmd/browser-agent/config.go` and `cmd/browser-agent/internal/procctl/stop.go`
 
-The `--force` flag invokes `runForceCleanup()` which:
+The `--force` flag invokes `procctl.ForceCleanup()` which:
 
 1. **Finds all kaboom processes** using:
    - `lsof -c kaboom` (Unix-like systems)
@@ -289,6 +289,6 @@ The sync-version Makefile target will automatically update:
 - `npm/kaboom-mcp/package.json` - Main package with daemon cleanup hooks
 - `npm/kaboom-mcp/lib/validate-versions.js` - Version validation script
 - `cmd/browser-agent/config.go` - `--force` flag definition and dispatch
-- `cmd/browser-agent/main_connection_stop.go` - `runForceCleanup()` implementation
+- `cmd/browser-agent/internal/procctl/stop.go` - daemon stop and forced cleanup implementation
 - `scripts/clean-old-daemons.sh` - User-friendly cleanup script
 - `Makefile` - sync-version and validate-deps-versions targets

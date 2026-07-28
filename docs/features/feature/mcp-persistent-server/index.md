@@ -37,7 +37,7 @@ code_paths:
   - cmd/browser-agent/internal/daemonlife/version_compare.go
   - cmd/browser-agent/internal/daemonlife/deps.go
   - cmd/browser-agent/main_connection_recovery.go
-  - cmd/browser-agent/main_connection_stop.go
+  - cmd/browser-agent/internal/procctl/stop.go
   - cmd/browser-agent/main_connection_mcp.go
   - cmd/browser-agent/internal/procctl/pidfile.go
   - cmd/browser-agent/internal/procctl/port.go
@@ -77,7 +77,8 @@ test_paths:
   - cmd/browser-agent/command_execution_readiness_test.go
   - cmd/browser-agent/handler_unit_test.go
   - cmd/browser-agent/handler_unit_telemetry_test.go
-  - cmd/browser-agent/main_connection_stop_test.go
+  - cmd/browser-agent/internal/procctl/stop_parse_test.go
+  - cmd/browser-agent/internal/procctl/stop_test.go
   - cmd/browser-agent/main_flags_test.go
   - cmd/browser-agent/test_daemon_cleanup_test.go
   - cmd/browser-agent/main_connection_pid_contract_test.go

@@ -102,12 +102,12 @@ func TestCleanupPIDFiles_CoversCrossWrapperKnownPorts(t *testing.T) {
 		}
 	}
 
-	cleanupPIDFiles()
+	procctl.CleanupPIDFiles()
 
 	for _, port := range ports {
 		pidPath := procctl.PIDFilePath(port)
 		if _, err := os.Stat(pidPath); !os.IsNotExist(err) {
-			t.Fatalf("expected cleanupPIDFiles to remove %q, stat err = %v", pidPath, err)
+			t.Fatalf("expected procctl.CleanupPIDFiles to remove %q, stat err = %v", pidPath, err)
 		}
 	}
 }

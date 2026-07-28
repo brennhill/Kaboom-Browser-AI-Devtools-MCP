@@ -1,8 +1,6 @@
-// Purpose: Tests daemon stop and force-cleanup process discovery helpers.
+// stop_parse_test.go — Tests lsof parsing used by the force-cleanup process sweep.
 
-// main_connection_force_cleanup_strategies_test.go — Tests for lsof output
-// parsing used by the force-cleanup process sweep.
-package main
+package procctl
 
 import "testing"
 

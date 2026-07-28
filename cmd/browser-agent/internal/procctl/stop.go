@@ -1,7 +1,6 @@
-// Purpose: Implements top-level stop/force commands that orchestrate daemon shutdown strategies.
-// Why: Keeps command flow readable while platform/process mechanics live in dedicated helpers.
+// stop.go — Stops daemon processes and removes canonical or legacy PID state.
 
-package main
+package procctl
 
 import (
 	"encoding/json"
@@ -16,8 +15,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/bridge"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/procctl"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/diag"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
@@ -31,9 +28,9 @@ const (
 
 var forceCleanupCommandNames = []string{"kaboom", "gasoline", "strum"}
 
-// runStopMode gracefully stops a running server on the specified port.
+// Stop gracefully stops a running server on the specified port.
 // Uses hybrid approach: PID file (fast) -> HTTP /shutdown (graceful) -> platform-aware process kill (fallback).
-func runStopMode(port int) {
+func Stop(port int, isServerRunning func(int) bool) {
 	diag.Printf("Stopping kaboom server on port %d...\n", port)
 	logCommandInvocation("stop_command_invoked", "kaboom --stop", port)
 
@@ -43,12 +40,12 @@ func runStopMode(port int) {
 	if stopViaHTTP(port) {
 		return
 	}
-	stopViaProcessLookup(port)
+	stopViaProcessLookup(port, isServerRunning)
 }
 
-// runForceCleanup kills ALL running kaboom daemons across all ports.
+// ForceCleanup kills ALL running kaboom daemons across all ports.
 // Used during package install to ensure clean upgrade from older versions.
-func runForceCleanup() {
+func ForceCleanup() {
 	diag.Println("Force cleanup: Killing all running kaboom daemons...")
 
 	logFile := resolveLogFile()
@@ -68,7 +65,7 @@ func runForceCleanup() {
 		killed = killWindowsKaboomProcesses()
 	}
 
-	cleanupPIDFiles()
+	CleanupPIDFiles()
 	printForceCleanupSummary(killed, failedToKill)
 }
 
@@ -114,8 +111,8 @@ func writeJSONLogEntry(logFile string, entry map[string]any) {
 }
 
 func stopViaPIDFile(port int) bool {
-	pid := procctl.ReadPIDFile(port)
-	if pid <= 0 || !procctl.IsProcessAlive(pid) {
+	pid := ReadPIDFile(port)
+	if pid <= 0 || !IsProcessAlive(pid) {
 		return false
 	}
 	diag.Printf("Found server (PID %d) via PID file\n", pid)
@@ -129,15 +126,15 @@ func stopViaPIDFile(port int) bool {
 	diag.Printf("Sent SIGTERM to PID %d\n", pid)
 	for i := 0; i < 20; i++ {
 		time.Sleep(stopPollInterval)
-		if !procctl.IsProcessAlive(pid) {
+		if !IsProcessAlive(pid) {
 			diag.Println("Server stopped successfully")
-			procctl.RemovePIDFile(port)
+			RemovePIDFile(port)
 			return true
 		}
 	}
 	diag.Println("Server did not exit within 2 seconds, sending SIGKILL")
 	_ = process.Kill()
-	procctl.RemovePIDFile(port)
+	RemovePIDFile(port)
 	diag.Println("Server killed")
 	return true
 }
@@ -150,7 +147,7 @@ func stopViaHTTP(port int) bool {
 	if err == nil && resp.StatusCode == http.StatusOK {
 		_ = resp.Body.Close() // lint:body-close-ok immediate close on success path
 		diag.Println("Server stopped via HTTP endpoint")
-		procctl.RemovePIDFile(port)
+		RemovePIDFile(port)
 		return true
 	}
 	if resp != nil {
@@ -159,24 +156,24 @@ func stopViaHTTP(port int) bool {
 	return false
 }
 
-func stopViaProcessLookup(port int) {
+func stopViaProcessLookup(port int, isServerRunning func(int) bool) {
 	diag.Println("Trying process lookup fallback...")
-	pids, findErr := procctl.FindProcessOnPort(port)
+	pids, findErr := FindProcessOnPort(port)
 	if findErr != nil || len(pids) == 0 {
 		diag.Printf("No server found on port %d\n", port)
-		procctl.RemovePIDFile(port)
+		RemovePIDFile(port)
 		return
 	}
 	for _, pidNum := range pids {
 		diag.Printf("Sending termination signal to PID %d\n", pidNum)
-		_ = procctl.KillProcessByPID(pidNum)
+		_ = KillProcessByPID(pidNum)
 	}
 	time.Sleep(stopProcessLookupSettleDelay)
-	if !bridge.IsServerRunning(port) {
+	if !isServerRunning(port) {
 		diag.Println("Server stopped successfully")
-		procctl.RemovePIDFile(port)
+		RemovePIDFile(port)
 	} else {
-		diag.Printf("Server may still be running, try: %s\n", procctl.PortKillHintForce(port))
+		diag.Printf("Server may still be running, try: %s\n", PortKillHintForce(port))
 	}
 }
 
@@ -223,7 +220,7 @@ func terminateProcess(pid int) (int, int) {
 	if err := process.Signal(syscall.SIGTERM); err == nil {
 		diag.Printf("  Sent SIGTERM to PID %d\n", pid)
 		time.Sleep(terminateSignalSettleDelay)
-		if !procctl.IsProcessAlive(pid) {
+		if !IsProcessAlive(pid) {
 			return 1, 0
 		}
 	}
@@ -250,13 +247,13 @@ func killWindowsKaboomProcesses() int {
 	return killed
 }
 
-func cleanupPIDFiles() {
+func CleanupPIDFiles() {
 	ports := []int{17890}
 	for port := 7890; port <= 7910; port++ {
 		ports = append(ports, port)
 	}
 	for _, port := range ports {
-		procctl.RemovePIDFile(port)
+		RemovePIDFile(port)
 		removeLegacyPIDVariants(port)
 	}
 }
@@ -322,12 +319,12 @@ func printForceCleanupSummary(killed, failedToKill int) {
 	diag.Println("Cleaned up PID files. Safe to proceed with installation.")
 }
 
-func runForceCleanupQuietly() error {
+func ForceCleanupQuietly() error {
 	if runtime.GOOS != "windows" {
 		_, _ = killUnixKaboomProcessesQuietly()
 	} else {
 		_ = killWindowsKaboomProcessesQuietly()
 	}
-	cleanupPIDFiles()
+	CleanupPIDFiles()
 	return nil
 }
