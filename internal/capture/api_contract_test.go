@@ -177,25 +177,6 @@ func TestAPIContract_AddExtensionLogs(t *testing.T) {
 	}
 }
 
-func TestAPIContract_UpdateExtensionStatus(t *testing.T) {
-	t.Parallel()
-	c := NewCapture()
-
-	c.UpdateExtensionStatus(ExtensionStatus{
-		TrackingEnabled: true,
-		TrackedTabID:    123,
-		TrackedTabURL:   "https://example.com",
-	})
-
-	enabled, tabID, _ := c.GetTrackingStatus()
-	if !enabled {
-		t.Errorf("UpdateExtensionStatus should set tracking_enabled=true")
-	}
-	if tabID != 123 {
-		t.Errorf("UpdateExtensionStatus should set tracked_tab_id=123, got %d", tabID)
-	}
-}
-
 func TestAPIContract_NetworkWaterfall_AcceptsPOST(t *testing.T) {
 	t.Parallel()
 	c := NewCapture()

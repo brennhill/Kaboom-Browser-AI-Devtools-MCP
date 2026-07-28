@@ -99,6 +99,9 @@ Persisted extension settings are read and written only through the canonical
 The former `capture.Store` and `capture.Snapshot` aliases have been removed.
 Capture APIs and their callers use the canonical wire contracts from
 `internal/types` directly; `internal/capture` does not re-export wire types.
+Tracked-tab state is updated through the canonical `/sync` contract or
+`UpdateTrackedTab`; the pre-`/sync` `ExtensionStatus` envelope and
+`UpdateExtensionStatus` mutation API have been deleted.
 Buffer-clear APIs likewise return `internal/types.BufferClearCounts` directly.
 The background manifest entrypoint performs initialization only; batching,
 transport, cache, and processing consumers import their canonical owner modules

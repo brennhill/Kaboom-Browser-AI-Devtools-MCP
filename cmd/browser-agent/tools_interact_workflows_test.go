@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -274,11 +273,7 @@ func TestRunA11yAndExportSARIF_ReusesAnalyzePayload(t *testing.T) {
 	h, _, cap := makeToolHandler(t)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 
-	cap.UpdateExtensionStatus(capture.ExtensionStatus{
-		TrackingEnabled: true,
-		TrackedTabID:    42,
-		TrackedTabURL:   "https://example.com",
-	})
+	cap.UpdateTrackedTab(42, "https://example.com", "Example")
 
 	syncReq := httptest.NewRequest("POST", "/sync", strings.NewReader(`{"ext_session_id":"test"}`))
 	syncReq.Header.Set("X-Kaboom-Client", "test-client")
