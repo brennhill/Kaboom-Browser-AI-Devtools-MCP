@@ -27,6 +27,10 @@ code_paths:
   - scripts/smoke-test.sh
   - package.json
 test_paths:
+  - tests/extension/draw-mode-drawing.test.js
+  - tests/extension/draw-mode-enrichment.test.js
+  - tests/extension/draw-mode-fixture.js
+  - tests/extension/draw-mode-routing.test.js
   - internal/schema/invariants_test.go
   - tests/extension/draw-mode.test.js
   - internal/annotation/store_test.go
@@ -89,7 +93,11 @@ last_verified_date: 2026-03-05
 - `internal/schema/analyze.go` + `internal/tools/configure/capabilities/modespecs_analyze.go` — analyze annotations schema/capability metadata for the canonical `url` filter
 
 ### Tests
-- `tests/extension/draw-mode.test.js` — "Element Detail Enrichment" describe block
+- `tests/extension/draw-mode-enrichment.test.js` — element detail, framework, and selector enrichment
+- `tests/extension/draw-mode-drawing.test.js` — pointer mechanics and annotation context capture
+- `tests/extension/draw-mode-routing.test.js` — message routing, lifecycle, accessibility, and re-entry
+- `tests/extension/draw-mode.test.js` — activation, annotation CRUD, persistence, and export
+- `tests/extension/draw-mode-fixture.js` — shared DOM, Chrome, timer, and module fixtures
 - `internal/annotation/store_maintenance_test.go` — `TestStore_SessionTTL_Is2Hours`
 - `internal/annotation/draw_sessions_handler_test.go` and `cmd/browser-agent/tools_analyze_annotations_draw_test.go` — safe persisted-session loading and end-to-end store hydration
 - `cmd/browser-agent/tools_analyze_annotations_test.go` — enrichment fields (`selector_candidates`, `js_framework`, `component`), error correlation, hints tests
