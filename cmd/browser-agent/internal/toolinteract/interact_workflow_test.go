@@ -12,35 +12,35 @@ import (
 )
 
 func TestHandleFillForm_Success(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeWorkflowActions(t)
 	args := `{"fields":[{"selector":"#name","value":"Ada"},{"selector":"#email","value":"a@b.co"}]}`
 	assertOK(t, h.HandleFillForm(testReq(), json.RawMessage(args)))
 }
 
 func TestHandleFillForm_EmptyFields(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeWorkflowActions(t)
 	assertErr(t, h.HandleFillForm(testReq(), json.RawMessage(`{"fields":[]}`)), mcp.ErrMissingParam)
 }
 
 func TestHandleFillForm_InvalidJSON(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeWorkflowActions(t)
 	assertErr(t, h.HandleFillForm(testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
 }
 
 func TestHandleFillForm_FieldMissingSelectorAndIndex(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeWorkflowActions(t)
 	assertErr(t, h.HandleFillForm(testReq(), json.RawMessage(`{"fields":[{"value":"x"}]}`)), mcp.ErrMissingParam)
 }
 
 func TestHandleFillForm_ByIndex_NotInRegistry(t *testing.T) {
 	// Without a prior list_interactive to populate the element-index registry,
 	// resolving field index 0 returns an invalid_param "call list_interactive first" error.
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeWorkflowActions(t)
 	assertErr(t, h.HandleFillForm(testReq(), json.RawMessage(`{"fields":[{"index":0,"value":"x"}]}`)), mcp.ErrInvalidParam)
 }
 
 func TestHandleFillFormAndSubmit_Success(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeWorkflowActions(t)
 	args := `{"fields":[{"selector":"#name","value":"Ada"}],"submit_selector":"#go"}`
 	assertOK(t, h.HandleFillFormAndSubmit(testReq(), json.RawMessage(args)))
 }
@@ -48,29 +48,29 @@ func TestHandleFillFormAndSubmit_Success(t *testing.T) {
 func TestHandleFillFormAndSubmit_BySubmitIndex_NotInRegistry(t *testing.T) {
 	// submit_index requires a populated element-index registry (list_interactive first);
 	// without it, the submit step returns an invalid_param error.
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeWorkflowActions(t)
 	args := `{"fields":[{"selector":"#name","value":"Ada"}],"submit_index":2}`
 	assertErr(t, h.HandleFillFormAndSubmit(testReq(), json.RawMessage(args)), mcp.ErrInvalidParam)
 }
 
 func TestHandleFillFormAndSubmit_MissingSubmit(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeWorkflowActions(t)
 	args := `{"fields":[{"selector":"#name","value":"Ada"}]}`
 	assertErr(t, h.HandleFillFormAndSubmit(testReq(), json.RawMessage(args)), mcp.ErrMissingParam)
 }
 
 func TestHandleFillFormAndSubmit_EmptyFields(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeWorkflowActions(t)
 	assertErr(t, h.HandleFillFormAndSubmit(testReq(), json.RawMessage(`{"fields":[],"submit_selector":"#go"}`)), mcp.ErrMissingParam)
 }
 
 func TestHandleFillFormAndSubmit_InvalidJSON(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeWorkflowActions(t)
 	assertErr(t, h.HandleFillFormAndSubmit(testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
 }
 
 func TestHandleFillForm_SelectFallback(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakeWorkflowActions(t)
 	// First type returns not_typeable, forcing a select fallback.
 	call := 0
 	fs.waitFn = func(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse {
@@ -86,28 +86,28 @@ func TestHandleFillForm_SelectFallback(t *testing.T) {
 }
 
 func TestHandleNavigateAndWaitFor_Success(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeWorkflowActions(t)
 	args := `{"url":"https://example.org","wait_for":"#ready"}`
 	assertOK(t, h.HandleNavigateAndWaitFor(testReq(), json.RawMessage(args)))
 }
 
 func TestHandleNavigateAndWaitFor_MissingURL(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeWorkflowActions(t)
 	assertErr(t, h.HandleNavigateAndWaitFor(testReq(), json.RawMessage(`{"wait_for":"#x"}`)), mcp.ErrMissingParam)
 }
 
 func TestHandleNavigateAndWaitFor_MissingWaitFor(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeWorkflowActions(t)
 	assertErr(t, h.HandleNavigateAndWaitFor(testReq(), json.RawMessage(`{"url":"https://x.io"}`)), mcp.ErrMissingParam)
 }
 
 func TestHandleNavigateAndWaitFor_InvalidJSON(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeWorkflowActions(t)
 	assertErr(t, h.HandleNavigateAndWaitFor(testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
 }
 
 func TestHandleNavigateAndWaitFor_IncludeContent(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakeWorkflowActions(t)
 	args := `{"url":"https://example.org","wait_for":"#ready","include_content":true}`
 	assertOK(t, h.HandleNavigateAndWaitFor(testReq(), json.RawMessage(args)))
 	enqueued := fs.enqueuedSnapshot()
@@ -117,18 +117,18 @@ func TestHandleNavigateAndWaitFor_IncludeContent(t *testing.T) {
 }
 
 func TestHandleNavigateAndDocument_WaitsDisabled(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeWorkflowActions(t)
 	args := `{"selector":"#link","wait_for_url_change":false,"wait_for_stable":false}`
 	assertOK(t, h.HandleNavigateAndDocument(testReq(), json.RawMessage(args)))
 }
 
 func TestHandleNavigateAndDocument_InvalidJSON(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeWorkflowActions(t)
 	assertErr(t, h.HandleNavigateAndDocument(testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
 }
 
 func TestHandleNavigateAndDocument_TabMismatch(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakeWorkflowActions(t)
 	// tracked tab is 1; request tab_id 2 should mismatch.
 	fs.cap.Extension().SetTrackingStatusForTest(1, "https://example.com/page")
 	args := `{"selector":"#link","tab_id":2,"wait_for_url_change":false,"wait_for_stable":false}`
@@ -136,7 +136,7 @@ func TestHandleNavigateAndDocument_TabMismatch(t *testing.T) {
 }
 
 func TestHandleNavigateAndDocument_ClickError(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakeWorkflowActions(t)
 	fs.waitFn = func(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse {
 		return mcp.Fail(req, mcp.ErrExtError, "click failed", "retry")
 	}
@@ -145,12 +145,12 @@ func TestHandleNavigateAndDocument_ClickError(t *testing.T) {
 }
 
 func TestHandleRunA11yAndExportSARIF_Success(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeWorkflowActions(t)
 	assertOK(t, h.HandleRunA11yAndExportSARIF(testReq(), json.RawMessage(`{"scope":"page"}`)))
 }
 
 func TestHandleRunA11yAndExportSARIF_A11yError(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakeWorkflowActions(t)
 	fs.analyzeFn = func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return mcp.Fail(req, mcp.ErrExtError, "audit failed", "retry")
 	}
@@ -158,7 +158,7 @@ func TestHandleRunA11yAndExportSARIF_A11yError(t *testing.T) {
 }
 
 func TestHandleRunA11yAndExportSARIF_InvalidJSON(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeWorkflowActions(t)
 	assertErr(t, h.HandleRunA11yAndExportSARIF(testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
 }
 

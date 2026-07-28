@@ -1,4 +1,4 @@
-// interact_action_handler.go — InteractActionHandler state, retry policy, jitter,
+// action_runtime.go — Shared interact execution policy and response enrichment.
 // and response enrichment applied on the way out.
 // Why one file: these policies share the handler's mutex-protected lifecycle state
 // and decorate every command response through the same boundary.
@@ -13,14 +13,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract/elemindex"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
 
-// InteractActionHandler handles interact action dispatch, jitter, evidence, and retry contracts.
-type InteractActionHandler struct {
-	deps *Deps
+// ActionRuntime owns command lifecycle policy shared by action-family owners.
+type ActionRuntime struct {
+	deps RuntimeDeps
 
 	// Action jitter: randomized micro-delays before interact actions.
 	jitterMu          sync.RWMutex
@@ -33,18 +32,14 @@ type InteractActionHandler struct {
 	// Deterministic retry contract metadata keyed by correlation_id.
 	retryContractMu sync.Mutex
 	retryByCommand  map[string]*commandRetryState
-
-	// Scoped element index registry used by list_interactive/index follow-up actions.
-	elementIndexRegistry *elemindex.Registry
 }
 
-// NewInteractActionHandler creates a new InteractActionHandler with the given dependencies.
-func NewInteractActionHandler(deps *Deps) *InteractActionHandler {
-	return &InteractActionHandler{
-		deps:                 deps,
-		evidenceByCommand:    make(map[string]*commandEvidenceState),
-		retryByCommand:       make(map[string]*commandRetryState),
-		elementIndexRegistry: elemindex.New(),
+// NewActionRuntime creates the shared command runtime.
+func NewActionRuntime(deps RuntimeDeps) *ActionRuntime {
+	return &ActionRuntime{
+		deps:              deps,
+		evidenceByCommand: make(map[string]*commandEvidenceState),
+		retryByCommand:    make(map[string]*commandRetryState),
 	}
 }
 
@@ -129,7 +124,7 @@ func stableMarshalForRetry(value map[string]any) string {
 	return string(encoded)
 }
 
-func (h *InteractActionHandler) armRetryContract(correlationID, action string, args json.RawMessage) {
+func (h *ActionRuntime) armRetryContract(correlationID, action string, args json.RawMessage) {
 	if h == nil || correlationID == "" {
 		return
 	}
@@ -172,14 +167,14 @@ func (h *InteractActionHandler) armRetryContract(correlationID, action string, a
 	h.storeRetryState(correlationID, state)
 }
 
-func (h *InteractActionHandler) getRetryState(correlationID string) (*commandRetryState, bool) {
+func (h *ActionRuntime) getRetryState(correlationID string) (*commandRetryState, bool) {
 	h.retryContractMu.Lock()
 	defer h.retryContractMu.Unlock()
 	state, ok := h.retryByCommand[correlationID]
 	return state, ok
 }
 
-func (h *InteractActionHandler) storeRetryState(correlationID string, state *commandRetryState) {
+func (h *ActionRuntime) storeRetryState(correlationID string, state *commandRetryState) {
 	h.retryContractMu.Lock()
 	defer h.retryContractMu.Unlock()
 
@@ -190,7 +185,7 @@ func (h *InteractActionHandler) storeRetryState(correlationID string, state *com
 	h.pruneRetryStatesLocked(2048)
 }
 
-func (h *InteractActionHandler) pruneRetryStatesLocked(maxEntries int) {
+func (h *ActionRuntime) pruneRetryStatesLocked(maxEntries int) {
 	if len(h.retryByCommand) <= maxEntries {
 		return
 	}
@@ -223,7 +218,7 @@ func deriveRetryReason(responseData map[string]any, fallback string) string {
 	return "unknown"
 }
 
-func (h *InteractActionHandler) AttachRetryContext(correlationID string, responseData map[string]any, status string, fallbackReason string) retryTerminalDecision {
+func (h *ActionRuntime) AttachRetryContext(correlationID string, responseData map[string]any, status string, fallbackReason string) retryTerminalDecision {
 	if h == nil || correlationID == "" || responseData == nil {
 		return retryTerminalDecision{}
 	}
@@ -324,14 +319,14 @@ func buildRetryEvidenceSummary(correlationID, reason string, retryContext map[st
 }
 
 // SetJitter sets the maximum jitter delay in milliseconds.
-func (h *InteractActionHandler) SetJitter(maxMs int) {
+func (h *ActionRuntime) SetJitter(maxMs int) {
 	h.jitterMu.Lock()
 	defer h.jitterMu.Unlock()
 	h.actionJitterMaxMs = maxMs
 }
 
 // GetJitter returns the current maximum jitter delay in milliseconds.
-func (h *InteractActionHandler) GetJitter() int {
+func (h *ActionRuntime) GetJitter() int {
 	h.jitterMu.RLock()
 	defer h.jitterMu.RUnlock()
 	return h.actionJitterMaxMs
@@ -359,7 +354,7 @@ var ReadOnlyInteractActions = map[string]bool{
 }
 
 // ApplyJitter sleeps for a random duration up to maxMs if jitter is configured.
-func (h *InteractActionHandler) ApplyJitter(action string) int {
+func (h *ActionRuntime) ApplyJitter(action string) int {
 	if ReadOnlyInteractActions[action] {
 		return 0
 	}
@@ -412,7 +407,7 @@ func isResponseQueued(resp mcp.JSONRPCResponse) bool {
 }
 
 // appendScreenshotToResponse captures a screenshot and appends it as an inline image block.
-func (h *InteractActionHandler) AppendScreenshotToResponse(resp mcp.JSONRPCResponse, req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
+func (h *PageActions) AppendScreenshotToResponse(resp mcp.JSONRPCResponse, req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
 	screenshotReq := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: req.ID}
 	screenshotResp := h.deps.GetScreenshot(screenshotReq, nil)
 
@@ -442,10 +437,10 @@ func (h *InteractActionHandler) AppendScreenshotToResponse(resp mcp.JSONRPCRespo
 }
 
 // appendInteractiveToResponse appends list_interactive text to the response.
-func (h *InteractActionHandler) AppendInteractiveToResponse(resp mcp.JSONRPCResponse, req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
+func (h *PageActions) AppendInteractiveToResponse(resp mcp.JSONRPCResponse, req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
 	listReq := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: req.ID, ClientID: req.ClientID}
 	listArgs := marshalQueryParams(map[string]any{"what": "list_interactive", "visible_only": true})
-	listResp := h.HandleListInteractive(listReq, listArgs)
+	listResp := h.dom.HandleListInteractive(listReq, listArgs)
 
 	var listResult mcp.MCPToolResult
 	if err := json.Unmarshal(listResp.Result, &listResult); err != nil || listResult.IsError {
@@ -475,7 +470,7 @@ func (h *InteractActionHandler) AppendInteractiveToResponse(resp mcp.JSONRPCResp
 }
 
 // readPageContext returns a compact page context payload (url/title/tab_id) from observe(what="page").
-func (h *InteractActionHandler) readPageContext(req mcp.JSONRPCRequest) (map[string]any, bool) {
+func (h *PageActions) readPageContext(req mcp.JSONRPCRequest) (map[string]any, bool) {
 	pageReq := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: req.ID}
 	pageResp := h.deps.GetPageInfo(pageReq, nil)
 
@@ -518,7 +513,7 @@ func (h *InteractActionHandler) readPageContext(req mcp.JSONRPCRequest) (map[str
 }
 
 // appendPageContextToResponse appends a compact page context block to the response.
-func (h *InteractActionHandler) AppendPageContextToResponse(resp mcp.JSONRPCResponse, req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
+func (h *PageActions) AppendPageContextToResponse(resp mcp.JSONRPCResponse, req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
 	pageCtx, ok := h.readPageContext(req)
 	if !ok {
 		return resp
@@ -552,7 +547,7 @@ func (h *InteractActionHandler) AppendPageContextToResponse(resp mcp.JSONRPCResp
 
 // appendWorkflowTraceToResponse appends a normalized workflow trace envelope
 // into MCP metadata while preserving the existing response shape/content.
-func (h *InteractActionHandler) AppendWorkflowTraceToResponse(
+func (h *ActionRuntime) AppendWorkflowTraceToResponse(
 	resp mcp.JSONRPCResponse,
 	workflow string,
 	trace []act.WorkflowStep,

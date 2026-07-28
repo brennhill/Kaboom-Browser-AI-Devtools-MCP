@@ -3,9 +3,8 @@
 //
 // Package interactstate owns the state-time-travel actions of the interact tool.
 // It is a separate package because it is a separate handler: it never touches
-// InteractActionHandler, its persistence dependency (a SessionStore) is nobody
-// else's, and its Deps is a nine-field contract rather than the twenty-five-field
-// one the action handler needs. Everything it asks for arrives through Deps as a
+// browser, DOM, or workflow owner; its persistence dependency (a SessionStore)
+// is nobody else's. Everything it asks for arrives through Deps as a
 // function value, which is what lets every branch here be tested with fakes and
 // no real browser, extension or disk.
 //

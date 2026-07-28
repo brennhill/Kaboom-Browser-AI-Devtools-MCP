@@ -81,7 +81,7 @@ func TestNavigateAndDocument_URLChangeTimeout(t *testing.T) {
 	var resp mcp.JSONRPCResponse
 	done := make(chan struct{})
 	go func() {
-		resp = env.handler.interactActionHandler.HandleNavigateAndDocument(req, args)
+		resp = env.handler.workflowActions.HandleNavigateAndDocument(req, args)
 		close(done)
 	}()
 
@@ -129,7 +129,7 @@ func TestNavigateAndDocument_AppendsPageContext(t *testing.T) {
 	var resp mcp.JSONRPCResponse
 	done := make(chan struct{})
 	go func() {
-		resp = env.handler.interactActionHandler.HandleNavigateAndDocument(req, args)
+		resp = env.handler.workflowActions.HandleNavigateAndDocument(req, args)
 		close(done)
 	}()
 
@@ -206,7 +206,7 @@ func TestNavigateAndDocument_TabIDMismatchReturnsError(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"selector":"a.nav","tab_id":99,"wait_for_url_change":true,"wait_for_stable":false}`)
 
-	resp := env.handler.interactActionHandler.HandleNavigateAndDocument(req, args)
+	resp := env.handler.workflowActions.HandleNavigateAndDocument(req, args)
 	assertIsError(t, resp, "tracked tab_id")
 	result := parseToolResult(t, resp)
 	traceMeta, ok := result.Metadata["workflow_trace"].(map[string]any)
@@ -231,7 +231,7 @@ func TestNavigateAndDocument_TabIDRequiresTracking(t *testing.T) {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args := json.RawMessage(`{"selector":"a.nav","tab_id":42,"wait_for_url_change":true,"wait_for_stable":false}`)
 
-	resp := env.handler.interactActionHandler.HandleNavigateAndDocument(req, args)
+	resp := env.handler.workflowActions.HandleNavigateAndDocument(req, args)
 	assertIsError(t, resp, "requires an actively tracked tab")
 
 	if len(env.capture.Queries().GetPendingQueries()) != 0 {
@@ -252,7 +252,7 @@ func TestNavigateAndDocument_TimeoutBudgetExhaustedBeforeStable(t *testing.T) {
 	var resp mcp.JSONRPCResponse
 	done := make(chan struct{})
 	go func() {
-		resp = env.handler.interactActionHandler.HandleNavigateAndDocument(req, args)
+		resp = env.handler.workflowActions.HandleNavigateAndDocument(req, args)
 		close(done)
 	}()
 

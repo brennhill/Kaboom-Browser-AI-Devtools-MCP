@@ -13,7 +13,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
-func setEvidenceCaptureForTest(t *testing.T, capture func(*toolinteract.Deps, string) toolinteract.EvidenceShot) {
+func setEvidenceCaptureForTest(t *testing.T, capture func(string) toolinteract.EvidenceShot) {
 	t.Helper()
 	toolinteract.SetEvidenceCaptureFn(capture)
 	t.Cleanup(toolinteract.ResetEvidenceCaptureFn)
@@ -29,7 +29,7 @@ func TestCommandResult_EvidenceAlwaysIncludesBeforeAfterPaths(t *testing.T) {
 		{Path: "/tmp/evidence-after.png"},
 	}
 	idx := 0
-	setEvidenceCaptureForTest(t, func(_ *toolinteract.Deps, _ string) toolinteract.EvidenceShot {
+	setEvidenceCaptureForTest(t, func(_ string) toolinteract.EvidenceShot {
 		calls++
 		if idx >= len(shots) {
 			return toolinteract.EvidenceShot{Error: "unexpected_extra_capture"}
@@ -84,7 +84,7 @@ func TestCommandResult_EvidenceOnMutationSkipsReadOnlyAction(t *testing.T) {
 	env.capture.Extension().SetPilotEnabled(true)
 
 	calls := 0
-	setEvidenceCaptureForTest(t, func(_ *toolinteract.Deps, _ string) toolinteract.EvidenceShot {
+	setEvidenceCaptureForTest(t, func(_ string) toolinteract.EvidenceShot {
 		calls++
 		return toolinteract.EvidenceShot{Path: "/tmp/should-not-capture.png"}
 	})
@@ -141,7 +141,7 @@ func TestCommandResult_EvidencePartialWhenAfterCaptureFails(t *testing.T) {
 		{Error: "screenshot_timeout"},
 	}
 	idx := 0
-	setEvidenceCaptureForTest(t, func(_ *toolinteract.Deps, _ string) toolinteract.EvidenceShot {
+	setEvidenceCaptureForTest(t, func(_ string) toolinteract.EvidenceShot {
 		calls++
 		if idx >= len(shots) {
 			return toolinteract.EvidenceShot{Error: "unexpected_extra_capture"}

@@ -256,8 +256,8 @@ func buildConfigureLocalDeps(h *ToolHandler) toolconfigure.Deps {
 		},
 		GetTelemetryMode:        func() string { return h.server.logs.TelemetryMode() },
 		SetTelemetryMode:        h.server.logs.SetTelemetryMode,
-		InteractActionSetJitter: h.interactActionHandler.SetJitter,
-		InteractActionGetJitter: h.interactActionHandler.GetJitter,
+		InteractActionSetJitter: h.interactRuntime.SetJitter,
+		InteractActionGetJitter: h.interactRuntime.GetJitter,
 	}
 }
 

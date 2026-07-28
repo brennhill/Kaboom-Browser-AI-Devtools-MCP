@@ -72,7 +72,7 @@ func toFloat64(v any) (float64, bool) {
 	return 0, false
 }
 
-func (h *InteractActionHandler) HandleDOMPrimitive(req mcp.JSONRPCRequest, args json.RawMessage, action string) mcp.JSONRPCResponse {
+func (h *DOMActions) HandleDOMPrimitive(req mcp.JSONRPCRequest, args json.RawMessage, action string) mcp.JSONRPCResponse {
 	params, err := ParseDOMPrimitiveParams(args)
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
@@ -104,7 +104,7 @@ func (h *InteractActionHandler) HandleDOMPrimitive(req mcp.JSONRPCRequest, args 
 
 	args = normalizeDOMActionArgs(args, action)
 
-	return h.newCommand("dom_"+action).
+	return h.runtime.newCommand("dom_"+action).
 		correlationPrefix("dom_"+action).
 		reason(action).
 		queryType("dom_action").
@@ -195,7 +195,7 @@ func updateArgsSelector(args json.RawMessage, selector string) json.RawMessage {
 }
 
 // resolveDOMSelectorFromIndex resolves index -> selector for primitive actions that omitted selector/element_id.
-func (h *InteractActionHandler) resolveDOMSelectorFromIndex(req mcp.JSONRPCRequest, args json.RawMessage, params *DOMPrimitiveParams) (json.RawMessage, mcp.JSONRPCResponse, bool) {
+func (h *DOMActions) resolveDOMSelectorFromIndex(req mcp.JSONRPCRequest, args json.RawMessage, params *DOMPrimitiveParams) (json.RawMessage, mcp.JSONRPCResponse, bool) {
 	if params.Index == nil || params.Selector != "" || params.ElementID != "" {
 		return args, mcp.JSONRPCResponse{}, false
 	}
@@ -309,7 +309,7 @@ func ValidateDOMActionParams(req mcp.JSONRPCRequest, action, text, value, name s
 
 // handleHardwareClick dispatches a coordinate-based click via CDP Input.dispatchMouseEvent.
 // This gives LLMs an explicit "I see coordinates in a screenshot, click there" path.
-func (h *InteractActionHandler) HandleHardwareClick(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *DOMActions) HandleHardwareClick(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	params, err := parseHardwareClickParams(args)
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
@@ -326,8 +326,8 @@ func (h *InteractActionHandler) HandleHardwareClick(req mcp.JSONRPCRequest, args
 }
 
 // handleCDPClick creates a cdp_action query for a hardware-level click at coordinates.
-func (h *InteractActionHandler) HandleCDPClick(req mcp.JSONRPCRequest, args json.RawMessage, action string, x, y float64, tabID int) mcp.JSONRPCResponse {
-	return h.newCommand("cdp_click").
+func (h *DOMActions) HandleCDPClick(req mcp.JSONRPCRequest, args json.RawMessage, action string, x, y float64, tabID int) mcp.JSONRPCResponse {
+	return h.runtime.newCommand("cdp_click").
 		correlationPrefix("cdp_click").
 		reason(action).
 		queryType("cdp_action").
@@ -346,7 +346,7 @@ func (h *InteractActionHandler) HandleCDPClick(req mcp.JSONRPCRequest, args json
 		execute(req, args)
 }
 
-func (h *InteractActionHandler) HandleListInteractive(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *DOMActions) HandleListInteractive(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		TabID       int  `json:"tab_id,omitempty"`
 		VisibleOnly bool `json:"visible_only,omitempty"`
@@ -357,7 +357,7 @@ func (h *InteractActionHandler) HandleListInteractive(req mcp.JSONRPCRequest, ar
 	}
 
 	args = normalizeDOMActionArgs(args, "list_interactive")
-	resp, correlationID := h.newCommand("list_interactive").
+	resp, correlationID := h.runtime.newCommand("list_interactive").
 		correlationPrefix("dom_list").
 		reason("list_interactive").
 		queryType("dom_action").
@@ -378,7 +378,7 @@ func (h *InteractActionHandler) HandleListInteractive(req mcp.JSONRPCRequest, ar
 	return resp
 }
 
-func (h *InteractActionHandler) buildElementIndexFromResponse(clientID string, tabID int, generation string, resp mcp.JSONRPCResponse) string {
+func (h *DOMActions) buildElementIndexFromResponse(clientID string, tabID int, generation string, resp mcp.JSONRPCResponse) string {
 	block, ok := decodeFirstToolResultJSONBlock(resp)
 	if !ok {
 		return ""
@@ -495,7 +495,7 @@ func setNestedElements(data map[string]any, elements []any) {
 
 var extractElementList = act.ExtractElementList
 
-func (h *InteractActionHandler) resolveIndexToSelector(clientID string, tabID int, index int, generation string) (string, bool, bool, string) {
+func (h *DOMActions) resolveIndexToSelector(clientID string, tabID int, index int, generation string) (string, bool, bool, string) {
 	if h.elementIndexRegistry == nil {
 		return "", false, false, ""
 	}

@@ -85,7 +85,7 @@ func TestHandleSubtitle_InvalidJSON(t *testing.T) {
 
 	args := json.RawMessage(`{invalid}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := env.handler.interactActionHandler.HandleSubtitleImpl(req, args)
+	resp := env.handler.browserActions.HandleSubtitleImpl(req, args)
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -182,7 +182,7 @@ func TestHandleListInteractive_InvalidJSON(t *testing.T) {
 
 	args := json.RawMessage(`{bad json}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := env.handler.interactActionHandler.HandleListInteractive(req, args)
+	resp := env.handler.domActions.HandleListInteractive(req, args)
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -282,7 +282,7 @@ func TestHandlePilotHighlight_InvalidJSON(t *testing.T) {
 
 	args := json.RawMessage(`{bad}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := env.handler.interactActionHandler.HandleHighlightImpl(req, args)
+	resp := env.handler.browserActions.HandleHighlightImpl(req, args)
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {

@@ -70,7 +70,7 @@ func validateKeyedStorageParams(req mcp.JSONRPCRequest, params keyedStorageComma
 	return storageExpr, mcp.JSONRPCResponse{}, true
 }
 
-func (h *InteractActionHandler) HandleSetStorage(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *StorageActions) HandleSetStorage(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params setStorageParams
 	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
@@ -89,7 +89,7 @@ func (h *InteractActionHandler) HandleSetStorage(req mcp.JSONRPCRequest, args js
 	return h.queueExecuteScript(req, args, "storage_set", params.TabID, params.TimeoutMs, params.World, script, "set_storage", "set_storage queued")
 }
 
-func (h *InteractActionHandler) HandleDeleteStorage(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *StorageActions) HandleDeleteStorage(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params keyedStorageCommandParams
 	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
@@ -105,7 +105,7 @@ func (h *InteractActionHandler) HandleDeleteStorage(req mcp.JSONRPCRequest, args
 	return h.queueExecuteScript(req, args, "storage_del", params.TabID, params.TimeoutMs, params.World, script, "delete_storage", "delete_storage queued")
 }
 
-func (h *InteractActionHandler) HandleClearStorage(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *StorageActions) HandleClearStorage(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params storageCommandParams
 	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
@@ -121,7 +121,7 @@ func (h *InteractActionHandler) HandleClearStorage(req mcp.JSONRPCRequest, args 
 	return h.queueExecuteScript(req, args, "storage_clear", params.TabID, params.TimeoutMs, params.World, script, "clear_storage", "clear_storage queued")
 }
 
-func (h *InteractActionHandler) HandleSetCookie(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *StorageActions) HandleSetCookie(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params setCookieParams
 	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
@@ -140,7 +140,7 @@ func (h *InteractActionHandler) HandleSetCookie(req mcp.JSONRPCRequest, args jso
 	return h.queueExecuteScript(req, args, "cookie_set", params.TabID, params.TimeoutMs, params.World, script, "set_cookie", "set_cookie queued")
 }
 
-func (h *InteractActionHandler) HandleDeleteCookie(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *StorageActions) HandleDeleteCookie(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params cookieCommandParams
 	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
 		return resp
@@ -168,7 +168,7 @@ func buildCookie(nameValue, path, domain string) string {
 	return cookie
 }
 
-func (h *InteractActionHandler) queueExecuteScript(
+func (h *StorageActions) queueExecuteScript(
 	req mcp.JSONRPCRequest,
 	waitArgs json.RawMessage,
 	correlationPrefix string,
@@ -185,7 +185,7 @@ func (h *InteractActionHandler) queueExecuteScript(
 		timeoutMs = 5000
 	}
 
-	return h.newCommand(reason).
+	return h.runtime.newCommand(reason).
 		correlationPrefix(correlationPrefix).
 		reason(reason).
 		queryType("execute").

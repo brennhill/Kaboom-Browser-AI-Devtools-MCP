@@ -24,7 +24,7 @@ const (
 var ReplayMu sync.Mutex
 
 // handleBatch executes a sequence of interact steps provided inline.
-func (h *InteractActionHandler) HandleBatch(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *BatchActions) HandleBatch(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	// Fail fast if pilot/extension are not available — avoids acquiring replayMu
 	// and iterating steps that would all fail individually (#9.R3.9).
 	if resp, blocked := checkGuards(req, h.deps.RequirePilot, h.deps.RequireExtension); blocked {

@@ -20,14 +20,14 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 )
 
-func TestDepsDoesNotReexportMCPProtocolSurface(t *testing.T) {
+func TestActionOwnersDoNotReexportMCPProtocolSurface(t *testing.T) {
 	_, testFile, _, ok := runtime.Caller(0)
 	if !ok {
 		t.Fatal("resolve test source path")
 	}
-	source, err := os.ReadFile(filepath.Join(filepath.Dir(testFile), "deps.go"))
+	source, err := os.ReadFile(filepath.Join(filepath.Dir(testFile), "action_owners.go"))
 	if err != nil {
-		t.Fatalf("read deps.go: %v", err)
+		t.Fatalf("read action_owners.go: %v", err)
 	}
 	for _, forbidden := range []string{
 		"type JSONRPCRequest =",
@@ -49,7 +49,38 @@ func TestDepsDoesNotReexportMCPProtocolSurface(t *testing.T) {
 		"GetRedactionEngine func()",
 	} {
 		if strings.Contains(string(source), forbidden) {
-			t.Errorf("deps.go retains MCP compatibility facade %q", forbidden)
+			t.Errorf("action_owners.go retains MCP compatibility facade %q", forbidden)
+		}
+	}
+}
+
+func TestActionFamiliesHaveNoBroadHandlerOrDependencyBag(t *testing.T) {
+	_, testFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("resolve test source path")
+	}
+	files, err := filepath.Glob(filepath.Join(filepath.Dir(testFile), "*.go"))
+	if err != nil {
+		t.Fatalf("list toolinteract sources: %v", err)
+	}
+	for _, path := range files {
+		if strings.HasSuffix(path, "_test.go") {
+			continue
+		}
+		source, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read %s: %v", path, err)
+		}
+		for _, forbidden := range []string{
+			"type Deps struct",
+			"type InteractActionHandler struct",
+			"NewInteractActionHandler",
+			"NewUploadInteractHandler",
+			"NewStateInteractHandler",
+		} {
+			if strings.Contains(string(source), forbidden) {
+				t.Errorf("%s retains broad interact surface %q", filepath.Base(path), forbidden)
+			}
 		}
 	}
 }
@@ -82,6 +113,28 @@ type fakeState struct {
 	sarifFn    func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse
 	listenPort int
 	evidenceFn func(clientID string) EvidenceShot
+}
+
+type fakeCapabilities struct {
+	RequirePilot, RequireExtension, RequireTabTracking toolguard.Check
+	RequireCSPClear                                    func(mcp.JSONRPCRequest, string) (mcp.JSONRPCResponse, bool)
+	EnqueuePendingQuery                                func(mcp.JSONRPCRequest, queries.PendingQuery, time.Duration) (mcp.JSONRPCResponse, bool)
+	MaybeWaitForCommand                                func(mcp.JSONRPCRequest, string, json.RawMessage, string) mcp.JSONRPCResponse
+	Capture                                            func() *capture.Capture
+	RecordAIAction                                     func(string, string, map[string]any)
+	RecordAIEnhancedAction                             func(types.EnhancedAction)
+	RecordDOMPrimitiveAction                           func(string, string, string, string)
+	ToolInteract, ToolAnalyze, ToolExportSARIF         func(mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
+	InjectCSPBlockedActions                            func(mcp.JSONRPCResponse) mcp.JSONRPCResponse
+	GetScreenshot, GetPageInfo                         func(mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse
+	MarkDrawStarted                                    func()
+	GetListenPort                                      func() int
+	DefaultEvidenceCapture                             func(string) EvidenceShot
+	RequireSessionStore                                func(mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool)
+	DiagnosticHint                                     func() func(*mcp.StructuredError)
+	Redact                                             func(map[string]any) map[string]any
+	GetCommandResult                                   func(string) (*queries.CommandResult, bool)
+	ReplayMu                                           *sync.Mutex
 }
 
 // newFakeState builds a fakeState with pilot enabled, a tracked tab, and a connected extension.
@@ -133,8 +186,8 @@ func guardFn(block *bool, code, msg string) toolguard.Check {
 }
 
 // deps builds a fully-populated *Deps wired to this fakeState.
-func (fs *fakeState) deps() *Deps {
-	return &Deps{
+func (fs *fakeState) deps() *fakeCapabilities {
+	return &fakeCapabilities{
 		RequirePilot:       guardFn(&fs.blockPilot, mcp.ErrCodePilotDisabled, "Pilot mode disabled"),
 		RequireExtension:   guardFn(&fs.blockExt, mcp.ErrNotInitialized, "Extension not connected"),
 		RequireTabTracking: guardFn(&fs.blockTab, mcp.ErrNotInitialized, "Tab tracking not active"),
@@ -244,11 +297,61 @@ func (fs *fakeState) deps() *Deps {
 	}
 }
 
-// newFakeHandler returns an InteractActionHandler wired to a fresh fakeState.
-func newFakeHandler(t *testing.T) (*InteractActionHandler, *fakeState) {
+type fakeActionOwners struct {
+	runtime  *ActionRuntime
+	dom      *DOMActions
+	browser  *BrowserActions
+	page     *PageActions
+	workflow *WorkflowActions
+	storage  *StorageActions
+	batch    *BatchActions
+}
+
+func newFakeActionOwners(t *testing.T) (*fakeActionOwners, *fakeState) {
 	t.Helper()
 	fs := newFakeState()
-	return NewInteractActionHandler(fs.deps()), fs
+	deps := fs.deps()
+	runtime := NewActionRuntime(RuntimeDeps{
+		RequireCSPClear: deps.RequireCSPClear, EnqueuePendingQuery: deps.EnqueuePendingQuery,
+		MaybeWaitForCommand: deps.MaybeWaitForCommand, RecordAIAction: deps.RecordAIAction,
+		DefaultEvidenceCapture: deps.DefaultEvidenceCapture,
+	})
+	dom := NewDOMActions(runtime, DOMDeps{deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking, deps.RecordDOMPrimitiveAction})
+	storage := NewStorageActions(runtime, StorageDeps{deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking})
+	page := NewPageActions(runtime, dom, storage, PageDeps{
+		deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking, deps.Capture,
+		deps.EnqueuePendingQuery, deps.RecordAIAction, deps.MarkDrawStarted, deps.GetScreenshot, deps.GetPageInfo,
+	})
+	browser := NewBrowserActions(runtime, page, BrowserDeps{
+		deps.RequirePilot, deps.RequireExtension, deps.RequireTabTracking, deps.Capture,
+		deps.InjectCSPBlockedActions, deps.GetListenPort,
+	})
+	workflow := NewWorkflowActions(runtime, dom, browser, page, WorkflowDeps{deps.Capture, deps.ToolAnalyze, deps.ToolExportSARIF})
+	batch := NewBatchActions(runtime, BatchDeps{
+		deps.RequirePilot, deps.RequireExtension, deps.Capture, deps.RecordAIAction, deps.ToolInteract, deps.ReplayMu,
+	})
+	return &fakeActionOwners{runtime, dom, browser, page, workflow, storage, batch}, fs
+}
+
+func newFakeDOMActions(t *testing.T) (*DOMActions, *fakeState) {
+	o, s := newFakeActionOwners(t)
+	return o.dom, s
+}
+func newFakeBrowserActions(t *testing.T) (*BrowserActions, *fakeState) {
+	o, s := newFakeActionOwners(t)
+	return o.browser, s
+}
+func newFakePageActions(t *testing.T) (*PageActions, *fakeState) {
+	o, s := newFakeActionOwners(t)
+	return o.page, s
+}
+func newFakeWorkflowActions(t *testing.T) (*WorkflowActions, *fakeState) {
+	o, s := newFakeActionOwners(t)
+	return o.workflow, s
+}
+func newFakeStorageActions(t *testing.T) (*StorageActions, *fakeState) {
+	o, s := newFakeActionOwners(t)
+	return o.storage, s
 }
 
 // testReq returns a standard JSON-RPC request for interact handler tests.

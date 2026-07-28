@@ -146,7 +146,7 @@ const (
 
 // EvidenceCaptureFn is the pluggable evidence capture function.
 // Tests can replace it to avoid real screenshot I/O.
-var evidenceCaptureFn func(deps *Deps, clientID string) EvidenceShot
+var evidenceCaptureFn func(clientID string) EvidenceShot
 
 // CaptureEvidence captures one screenshot through the canonical query lifecycle.
 // It lives with evidence state because its error vocabulary is part of that contract.
@@ -191,14 +191,14 @@ func CaptureEvidence(store *capture.Capture, clientID string) EvidenceShot {
 	return EvidenceShot{Path: path, Filename: filename}
 }
 
-func (h *InteractActionHandler) captureEvidenceWithRetry(clientID string) EvidenceShot {
+func (h *ActionRuntime) captureEvidenceWithRetry(clientID string) EvidenceShot {
 	retries := evidenceRetryCount()
 	attempts := retries + 1
 	last := EvidenceShot{Error: "evidence_capture_not_attempted"}
 
 	captureFn := evidenceCaptureFn
 	if captureFn == nil && h.deps.DefaultEvidenceCapture != nil {
-		captureFn = func(_ *Deps, cid string) EvidenceShot {
+		captureFn = func(cid string) EvidenceShot {
 			return h.deps.DefaultEvidenceCapture(cid)
 		}
 	}
@@ -207,7 +207,7 @@ func (h *InteractActionHandler) captureEvidenceWithRetry(clientID string) Eviden
 	}
 
 	for i := 0; i < attempts; i++ {
-		shot := captureFn(h.deps, clientID)
+		shot := captureFn(clientID)
 		shot.Attempts = i + 1
 		if strings.TrimSpace(shot.Path) != "" {
 			return shot
@@ -225,7 +225,7 @@ func (h *InteractActionHandler) captureEvidenceWithRetry(clientID string) Eviden
 }
 
 // SetEvidenceCaptureFn overrides the evidence capture function (for testing).
-func SetEvidenceCaptureFn(fn func(deps *Deps, clientID string) EvidenceShot) {
+func SetEvidenceCaptureFn(fn func(clientID string) EvidenceShot) {
 	evidenceCaptureFn = fn
 }
 
@@ -234,13 +234,13 @@ func ResetEvidenceCaptureFn() {
 	evidenceCaptureFn = nil
 }
 
-func (h *InteractActionHandler) clearEvidenceState(correlationID string) {
+func (h *ActionRuntime) clearEvidenceState(correlationID string) {
 	h.evidenceMu.Lock()
 	defer h.evidenceMu.Unlock()
 	delete(h.evidenceByCommand, correlationID)
 }
 
-func (h *InteractActionHandler) storeEvidenceState(correlationID string, state *commandEvidenceState) {
+func (h *ActionRuntime) storeEvidenceState(correlationID string, state *commandEvidenceState) {
 	h.evidenceMu.Lock()
 	defer h.evidenceMu.Unlock()
 	if h.evidenceByCommand == nil {
@@ -249,7 +249,7 @@ func (h *InteractActionHandler) storeEvidenceState(correlationID string, state *
 	h.evidenceByCommand[correlationID] = state
 }
 
-func (h *InteractActionHandler) loadEvidenceAttachContext(correlationID string) (cached map[string]any, needsAfter bool, clientID string, done bool) {
+func (h *ActionRuntime) loadEvidenceAttachContext(correlationID string) (cached map[string]any, needsAfter bool, clientID string, done bool) {
 	h.evidenceMu.Lock()
 	defer h.evidenceMu.Unlock()
 
@@ -264,7 +264,7 @@ func (h *InteractActionHandler) loadEvidenceAttachContext(correlationID string) 
 	return nil, state.shouldCapture && state.maxCaptures > 1, state.clientID, false
 }
 
-func (h *InteractActionHandler) finalizeEvidencePayload(correlationID string, needsAfter bool, after EvidenceShot) (map[string]any, bool) {
+func (h *ActionRuntime) finalizeEvidencePayload(correlationID string, needsAfter bool, after EvidenceShot) (map[string]any, bool) {
 	h.evidenceMu.Lock()
 	defer h.evidenceMu.Unlock()
 
@@ -348,7 +348,7 @@ func cloneAnyMap(in map[string]any) map[string]any {
 	return out
 }
 
-func (h *InteractActionHandler) ArmEvidenceForCommand(correlationID, action string, args json.RawMessage, clientID string) {
+func (h *ActionRuntime) ArmEvidenceForCommand(correlationID, action string, args json.RawMessage, clientID string) {
 	if h == nil || correlationID == "" {
 		return
 	}
@@ -399,7 +399,7 @@ func (h *InteractActionHandler) ArmEvidenceForCommand(correlationID, action stri
 	h.storeEvidenceState(correlationID, state)
 }
 
-func (h *InteractActionHandler) AttachEvidencePayload(correlationID string, responseData map[string]any) {
+func (h *ActionRuntime) AttachEvidencePayload(correlationID string, responseData map[string]any) {
 	if h == nil || correlationID == "" || responseData == nil {
 		return
 	}

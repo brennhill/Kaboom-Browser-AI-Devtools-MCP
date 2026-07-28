@@ -11,7 +11,7 @@ import (
 )
 
 func TestHandleNavigate_Success(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakeBrowserActions(t)
 	resp := h.HandleBrowserActionNavigateImpl(testReq(), json.RawMessage(`{"url":"https://example.org"}`))
 	assertOK(t, resp)
 	if fs.enqueuedCount() != 1 {
@@ -23,19 +23,19 @@ func TestHandleNavigate_Success(t *testing.T) {
 }
 
 func TestHandleNavigate_MissingURL(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeBrowserActions(t)
 	resp := h.HandleBrowserActionNavigateImpl(testReq(), json.RawMessage(`{}`))
 	assertErr(t, resp, mcp.ErrMissingParam)
 }
 
 func TestHandleNavigate_InvalidJSON(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeBrowserActions(t)
 	resp := h.HandleBrowserActionNavigateImpl(testReq(), json.RawMessage(`{bad`))
 	assertErr(t, resp, mcp.ErrInvalidJSON)
 }
 
 func TestHandleNavigate_PilotBlocked(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakeBrowserActions(t)
 	fs.blockPilot = true
 	resp := h.HandleBrowserActionNavigateImpl(testReq(), json.RawMessage(`{"url":"https://example.org"}`))
 	assertErr(t, resp, mcp.ErrCodePilotDisabled)
@@ -45,7 +45,7 @@ func TestHandleNavigate_PilotBlocked(t *testing.T) {
 }
 
 func TestHandleNavigate_IncludeContent(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakeBrowserActions(t)
 	resp := h.HandleBrowserActionNavigateImpl(testReq(), json.RawMessage(`{"url":"https://example.org","include_content":true}`))
 	assertOK(t, resp)
 	enqueued := fs.enqueuedSnapshot()
@@ -65,14 +65,14 @@ func TestHandleNavigate_IncludeContent(t *testing.T) {
 }
 
 func TestHandleNavigate_InsecureURLRejected(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeBrowserActions(t)
 	// security mode is Normal by default => insecure prefix rejected.
 	resp := h.HandleBrowserActionNavigateImpl(testReq(), json.RawMessage(`{"url":"kaboom-insecure://http://internal"}`))
 	assertErr(t, resp, mcp.ErrInvalidParam)
 }
 
 func TestHandleRefresh_Success(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakeBrowserActions(t)
 	resp := h.HandleBrowserActionRefreshImpl(testReq(), json.RawMessage(`{}`))
 	assertOK(t, resp)
 	if fs.enqueuedCount() != 1 {
@@ -81,14 +81,14 @@ func TestHandleRefresh_Success(t *testing.T) {
 }
 
 func TestHandleRefresh_TabBlocked(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakeBrowserActions(t)
 	fs.blockTab = true
 	resp := h.HandleBrowserActionRefreshImpl(testReq(), json.RawMessage(`{}`))
 	assertErr(t, resp, mcp.ErrNotInitialized)
 }
 
 func TestHandleBackForward(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakeBrowserActions(t)
 	assertOK(t, h.HandleBrowserActionBackImpl(testReq(), json.RawMessage(`{}`)))
 	assertOK(t, h.HandleBrowserActionForwardImpl(testReq(), json.RawMessage(`{}`)))
 	if fs.enqueuedCount() != 2 {
@@ -97,7 +97,7 @@ func TestHandleBackForward(t *testing.T) {
 }
 
 func TestHandleNewTab_Success(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakeBrowserActions(t)
 	resp := h.HandleBrowserActionNewTabImpl(testReq(), json.RawMessage(`{"url":"https://example.org"}`))
 	assertOK(t, resp)
 	if fs.enqueuedCount() != 1 {
@@ -106,30 +106,30 @@ func TestHandleNewTab_Success(t *testing.T) {
 }
 
 func TestHandleNewTab_NoURL(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeBrowserActions(t)
 	// No URL is valid for new_tab (opens blank).
 	assertOK(t, h.HandleBrowserActionNewTabImpl(testReq(), json.RawMessage(`{}`)))
 }
 
 func TestHandleNewTab_InvalidJSON(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeBrowserActions(t)
 	assertErr(t, h.HandleBrowserActionNewTabImpl(testReq(), json.RawMessage(`nope`)), mcp.ErrInvalidJSON)
 }
 
 func TestHandleSwitchTab_MissingTarget(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeBrowserActions(t)
 	resp := h.HandleBrowserActionSwitchTabImpl(testReq(), json.RawMessage(`{}`))
 	assertErr(t, resp, mcp.ErrMissingParam)
 }
 
 func TestHandleSwitchTab_NegativeIndex(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeBrowserActions(t)
 	resp := h.HandleBrowserActionSwitchTabImpl(testReq(), json.RawMessage(`{"tab_index":-1}`))
 	assertErr(t, resp, mcp.ErrInvalidParam)
 }
 
 func TestHandleSwitchTab_Success(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakeBrowserActions(t)
 	resp := h.HandleBrowserActionSwitchTabImpl(testReq(), json.RawMessage(`{"tab_id":5}`))
 	assertOK(t, resp)
 	if fs.enqueuedCount() != 1 {
@@ -138,7 +138,7 @@ func TestHandleSwitchTab_Success(t *testing.T) {
 }
 
 func TestHandleSwitchTab_AppliesTrackingOnComplete(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakeBrowserActions(t)
 	// Complete the switch_tab command so ApplySwitchTabTracking updates the tracked tab.
 	fs.waitFn = func(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse {
 		fs.cap.Queries().RegisterCommand(correlationID, correlationID, time.Minute)
@@ -154,7 +154,7 @@ func TestHandleSwitchTab_AppliesTrackingOnComplete(t *testing.T) {
 }
 
 func TestHandleActivateAndCloseTab(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakeBrowserActions(t)
 	assertOK(t, h.HandleActivateTabImpl(testReq(), json.RawMessage(`{}`)))
 	assertOK(t, h.HandleBrowserActionCloseTabImpl(testReq(), json.RawMessage(`{"tab_id":3}`)))
 	if fs.enqueuedCount() != 2 {
@@ -163,55 +163,55 @@ func TestHandleActivateAndCloseTab(t *testing.T) {
 }
 
 func TestHandleCloseTab_InvalidJSON(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeBrowserActions(t)
 	assertErr(t, h.HandleBrowserActionCloseTabImpl(testReq(), json.RawMessage(`x`)), mcp.ErrInvalidJSON)
 }
 
 func TestHandleHighlight_Success(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeBrowserActions(t)
 	assertOK(t, h.HandleHighlightImpl(testReq(), json.RawMessage(`{"selector":"#btn"}`)))
 }
 
 func TestHandleHighlight_MissingSelector(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeBrowserActions(t)
 	assertErr(t, h.HandleHighlightImpl(testReq(), json.RawMessage(`{}`)), mcp.ErrMissingParam)
 }
 
 func TestHandleExecuteJS_Success(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeBrowserActions(t)
 	assertOK(t, h.HandleExecuteJSImpl(testReq(), json.RawMessage(`{"script":"1+1"}`)))
 }
 
 func TestHandleExecuteJS_MissingScript(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeBrowserActions(t)
 	assertErr(t, h.HandleExecuteJSImpl(testReq(), json.RawMessage(`{}`)), mcp.ErrMissingParam)
 }
 
 func TestHandleExecuteJS_InvalidWorld(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeBrowserActions(t)
 	assertErr(t, h.HandleExecuteJSImpl(testReq(), json.RawMessage(`{"script":"1","world":"moon"}`)), mcp.ErrInvalidParam)
 }
 
 func TestHandleExecuteJS_MainWorldCSPBlocked(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakeBrowserActions(t)
 	fs.blockCSP = true
 	resp := h.HandleExecuteJSImpl(testReq(), json.RawMessage(`{"script":"1","world":"main"}`))
 	assertErr(t, resp, mcp.ErrInvalidParam)
 }
 
 func TestHandleSubtitle_SetAndClear(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeBrowserActions(t)
 	assertOK(t, h.HandleSubtitleImpl(testReq(), json.RawMessage(`{"text":"hello"}`)))
 	assertOK(t, h.HandleSubtitleImpl(testReq(), json.RawMessage(`{"text":""}`)))
 }
 
 func TestHandleSubtitle_MissingText(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeBrowserActions(t)
 	assertErr(t, h.HandleSubtitleImpl(testReq(), json.RawMessage(`{}`)), mcp.ErrMissingParam)
 }
 
 func TestResolveNavigateURL_PassThrough(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeBrowserActions(t)
 	got, err := h.ResolveNavigateURLImpl("https://example.com/x")
 	if err != nil || got != "https://example.com/x" {
 		t.Fatalf("plain url should pass through, got %q err=%v", got, err)
@@ -219,7 +219,7 @@ func TestResolveNavigateURL_PassThrough(t *testing.T) {
 }
 
 func TestResolveNavigateURL_InsecureRequiresMode(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeBrowserActions(t)
 	_, err := h.ResolveNavigateURLImpl("kaboom-insecure://http://internal.host/path")
 	if err == nil {
 		t.Fatal("expected error when security mode is not insecure_proxy")
@@ -227,7 +227,7 @@ func TestResolveNavigateURL_InsecureRequiresMode(t *testing.T) {
 }
 
 func TestResolveNavigateURL_InsecureProxyRewrite(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakeBrowserActions(t)
 	fs.cap.Extension().SetSecurityMode(capture.SecurityModeInsecureProxy, nil)
 	got, err := h.ResolveNavigateURLImpl("kaboom-insecure://http://internal.host/path")
 	if err != nil {
@@ -239,7 +239,7 @@ func TestResolveNavigateURL_InsecureProxyRewrite(t *testing.T) {
 }
 
 func TestResolveNavigateURL_InsecureEmptyTarget(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakeBrowserActions(t)
 	fs.cap.Extension().SetSecurityMode(capture.SecurityModeInsecureProxy, nil)
 	if _, err := h.ResolveNavigateURLImpl("kaboom-insecure://"); err == nil {
 		t.Fatal("expected error for empty insecure target")
@@ -247,7 +247,7 @@ func TestResolveNavigateURL_InsecureEmptyTarget(t *testing.T) {
 }
 
 func TestResolveNavigateURL_InsecureNonHTTPScheme(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakeBrowserActions(t)
 	fs.cap.Extension().SetSecurityMode(capture.SecurityModeInsecureProxy, nil)
 	if _, err := h.ResolveNavigateURLImpl("kaboom-insecure://ftp://internal.host"); err == nil {
 		t.Fatal("expected error for non-http insecure target scheme")

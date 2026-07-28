@@ -8,9 +8,9 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
-// newTestHandler creates a minimal InteractActionHandler for unit tests.
-func newTestHandler() *InteractActionHandler {
-	return NewInteractActionHandler(&Deps{})
+// newTestHandler creates a minimal DOM owner for element-index tests.
+func newTestHandler() *DOMActions {
+	return NewDOMActions(NewActionRuntime(RuntimeDeps{}), DOMDeps{})
 }
 
 // parseToolResult is a test helper that unmarshals a mcp.JSONRPCResponse result into mcp.MCPToolResult.

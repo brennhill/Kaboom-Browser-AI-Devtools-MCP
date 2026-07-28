@@ -64,7 +64,7 @@ func TestQueueComposableSubtitle_QueuesPendingQuery(t *testing.T) {
 	env := newInteractHelpersTestEnv(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	env.handler.interactActionHandler.QueueComposableSubtitle(req, "Test subtitle text")
+	env.handler.pageActions.QueueComposableSubtitle(req, "Test subtitle text")
 
 	// Verify a pending query was created
 	queries := env.capture.Queries().GetPendingQueries()
@@ -93,7 +93,7 @@ func TestQueueComposableSubtitle_CorrelationIDHasPrefix(t *testing.T) {
 	env := newInteractHelpersTestEnv(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	env.handler.interactActionHandler.QueueComposableSubtitle(req, "text")
+	env.handler.pageActions.QueueComposableSubtitle(req, "text")
 
 	queries := env.capture.Queries().GetPendingQueries()
 	for _, q := range queries {
@@ -113,7 +113,7 @@ func TestQueueComposableSubtitle_EmptyText(t *testing.T) {
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	// Empty text is valid (clears the subtitle)
-	env.handler.interactActionHandler.QueueComposableSubtitle(req, "")
+	env.handler.pageActions.QueueComposableSubtitle(req, "")
 
 	queries := env.capture.Queries().GetPendingQueries()
 	found := false
@@ -139,8 +139,8 @@ func TestQueueComposableSubtitle_UniqueCorrelationIDs(t *testing.T) {
 	env := newInteractHelpersTestEnv(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	env.handler.interactActionHandler.QueueComposableSubtitle(req, "first")
-	env.handler.interactActionHandler.QueueComposableSubtitle(req, "second")
+	env.handler.pageActions.QueueComposableSubtitle(req, "first")
+	env.handler.pageActions.QueueComposableSubtitle(req, "second")
 
 	queries := env.capture.Queries().GetPendingQueries()
 	ids := make(map[string]bool)
@@ -166,7 +166,7 @@ func TestQueueComposableActionDiff_QueuesPendingQuery(t *testing.T) {
 	env := newInteractHelpersTestEnv(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	env.handler.interactActionHandler.QueueComposableActionDiff(req)
+	env.handler.pageActions.QueueComposableActionDiff(req)
 
 	// Verify a pending query was created with type "dom_action"
 	queries := env.capture.Queries().GetPendingQueries()
@@ -194,7 +194,7 @@ func TestQueueComposableActionDiff_CorrelationIDPrefix(t *testing.T) {
 	env := newInteractHelpersTestEnv(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	env.handler.interactActionHandler.QueueComposableActionDiff(req)
+	env.handler.pageActions.QueueComposableActionDiff(req)
 
 	queries := env.capture.Queries().GetPendingQueries()
 	for _, q := range queries {
@@ -220,7 +220,7 @@ func TestQueueComposableActionDiff_HasTimeoutParam(t *testing.T) {
 	env := newInteractHelpersTestEnv(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
-	env.handler.interactActionHandler.QueueComposableActionDiff(req)
+	env.handler.pageActions.QueueComposableActionDiff(req)
 
 	queries := env.capture.Queries().GetPendingQueries()
 	for _, q := range queries {

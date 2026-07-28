@@ -2,7 +2,7 @@
 // mapped back to CSS selectors, per (client, tab), with a generation stamp.
 //
 // Package elemindex owns that mapping and nothing else. It is the one piece of
-// InteractActionHandler's state with no dependency on MCP, on Deps, or on the
+// DOMActions' state with no dependency on MCP, action-family dependencies, or the
 // browser: a map, an RWMutex, and one invariant — a caller holding an index from
 // generation A must never be silently served a selector from generation B, because
 // the page has re-rendered underneath it and index 7 is now a different element.

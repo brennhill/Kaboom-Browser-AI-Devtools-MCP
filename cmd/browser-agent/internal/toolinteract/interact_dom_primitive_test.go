@@ -9,7 +9,7 @@ import (
 )
 
 func TestHandleDOMPrimitive_ClickSuccess(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakeDOMActions(t)
 	resp := h.HandleDOMPrimitive(testReq(), json.RawMessage(`{"selector":"#go","action":"click"}`), "click")
 	assertOK(t, resp)
 	if fs.enqueuedCount() != 1 {
@@ -22,35 +22,35 @@ func TestHandleDOMPrimitive_ClickSuccess(t *testing.T) {
 }
 
 func TestHandleDOMPrimitive_InvalidJSON(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeDOMActions(t)
 	assertErr(t, h.HandleDOMPrimitive(testReq(), json.RawMessage(`{bad`), "click"), mcp.ErrInvalidJSON)
 }
 
 func TestHandleDOMPrimitive_MissingSelector(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeDOMActions(t)
 	// click requires a selector/element_id/index.
 	assertErr(t, h.HandleDOMPrimitive(testReq(), json.RawMessage(`{"action":"click"}`), "click"), mcp.ErrMissingParam)
 }
 
 func TestHandleDOMPrimitive_TypeRequiresText(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeDOMActions(t)
 	// type action requires text field.
 	assertErr(t, h.HandleDOMPrimitive(testReq(), json.RawMessage(`{"selector":"#i","action":"type"}`), "type"), mcp.ErrMissingParam)
 }
 
 func TestHandleDOMPrimitive_TypeSuccess(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeDOMActions(t)
 	assertOK(t, h.HandleDOMPrimitive(testReq(), json.RawMessage(`{"selector":"#i","text":"hi","action":"type"}`), "type"))
 }
 
 func TestHandleDOMPrimitive_SelectorOptionalActions(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeDOMActions(t)
 	// open_composer doesn't require a selector.
 	assertOK(t, h.HandleDOMPrimitive(testReq(), json.RawMessage(`{"action":"open_composer"}`), "open_composer"))
 }
 
 func TestHandleDOMPrimitive_ClickWithCoordsRoutesCDP(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakeDOMActions(t)
 	resp := h.HandleDOMPrimitive(testReq(), json.RawMessage(`{"x":10,"y":20,"action":"click"}`), "click")
 	assertOK(t, resp)
 	if fs.enqueuedCount() != 1 {
@@ -66,40 +66,40 @@ func TestHandleDOMPrimitive_ClickWithCoordsRoutesCDP(t *testing.T) {
 }
 
 func TestHandleDOMPrimitive_IndexResolvesToSelector(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeDOMActions(t)
 	h.elementIndexRegistry.Store("client-test", 0, "gen_1", map[int]string{2: "#resolved"})
 	resp := h.HandleDOMPrimitive(testReq(), json.RawMessage(`{"index":2,"action":"click"}`), "click")
 	assertOK(t, resp)
 }
 
 func TestHandleDOMPrimitive_IndexNotFound(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeDOMActions(t)
 	resp := h.HandleDOMPrimitive(testReq(), json.RawMessage(`{"index":9,"action":"click"}`), "click")
 	assertErr(t, resp, mcp.ErrInvalidParam)
 }
 
 func TestHandleHardwareClick_Success(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeDOMActions(t)
 	assertOK(t, h.HandleHardwareClick(testReq(), json.RawMessage(`{"x":5,"y":6}`)))
 }
 
 func TestHandleHardwareClick_MissingX(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeDOMActions(t)
 	assertErr(t, h.HandleHardwareClick(testReq(), json.RawMessage(`{"y":6}`)), mcp.ErrMissingParam)
 }
 
 func TestHandleHardwareClick_MissingY(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeDOMActions(t)
 	assertErr(t, h.HandleHardwareClick(testReq(), json.RawMessage(`{"x":6}`)), mcp.ErrMissingParam)
 }
 
 func TestHandleHardwareClick_InvalidJSON(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakeDOMActions(t)
 	assertErr(t, h.HandleHardwareClick(testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
 }
 
 func TestHandleCDPClick_PilotBlocked(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakeDOMActions(t)
 	fs.blockPilot = true
 	assertErr(t, h.HandleCDPClick(testReq(), json.RawMessage(`{}`), "hardware_click", 1, 2, 0), mcp.ErrCodePilotDisabled)
 }

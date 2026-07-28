@@ -27,7 +27,7 @@ const defaultPort = 7890
 
 // stashPerfSnapshotImpl saves the current performance snapshot as a "before" baseline
 // for perf_diff computation, keyed by correlation ID.
-func (h *InteractActionHandler) stashPerfSnapshotImpl(correlationID string) {
+func (h *BrowserActions) stashPerfSnapshotImpl(correlationID string) {
 	_, _, trackedURL := h.deps.Capture().Extension().GetTrackingStatus()
 	u, err := url.Parse(trackedURL)
 	if err != nil || u.Path == "" {
@@ -38,7 +38,7 @@ func (h *InteractActionHandler) stashPerfSnapshotImpl(correlationID string) {
 	}
 }
 
-func (h *InteractActionHandler) ResolveNavigateURLImpl(rawURL string) (string, error) {
+func (h *BrowserActions) ResolveNavigateURLImpl(rawURL string) (string, error) {
 	trimmed := strings.TrimSpace(rawURL)
 	const insecurePrefix = "kaboom-insecure://"
 	if !strings.HasPrefix(strings.ToLower(trimmed), insecurePrefix) {
@@ -91,7 +91,7 @@ type browserActionOpts struct {
 // queueBrowserAction is the shared helper for simple browser actions that follow
 // the guard → correlate → arm evidence → enqueue → record → wait pattern.
 // Uses commandBuilder to eliminate repeated boilerplate.
-func (h *InteractActionHandler) queueBrowserAction(req mcp.JSONRPCRequest, args json.RawMessage, opts browserActionOpts) mcp.JSONRPCResponse {
+func (h *BrowserActions) queueBrowserAction(req mcp.JSONRPCRequest, args json.RawMessage, opts browserActionOpts) mcp.JSONRPCResponse {
 	actionParams := opts.params
 	if actionParams == nil {
 		actionParams = marshalQueryParams(map[string]any{"action": opts.action})
@@ -102,7 +102,7 @@ func (h *InteractActionHandler) queueBrowserAction(req mcp.JSONRPCRequest, args 
 		recordAction = opts.action
 	}
 
-	cmd := h.newCommand(opts.action).
+	cmd := h.runtime.newCommand(opts.action).
 		correlationPrefix(opts.correlationPfx).
 		reason(opts.action).
 		queryType("browser_action").
@@ -120,7 +120,7 @@ func (h *InteractActionHandler) queueBrowserAction(req mcp.JSONRPCRequest, args 
 	return cmd.execute(req, args)
 }
 
-func (h *InteractActionHandler) HandleSubtitleImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *BrowserActions) HandleSubtitleImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Text *string `json:"text"`
 	}
@@ -137,7 +137,7 @@ func (h *InteractActionHandler) HandleSubtitleImpl(req mcp.JSONRPCRequest, args 
 		queuedMsg = "Subtitle cleared"
 	}
 
-	return h.newCommand("subtitle").
+	return h.runtime.newCommand("subtitle").
 		correlationPrefix("subtitle").
 		reason("subtitle").
 		queryType("subtitle").
@@ -146,7 +146,7 @@ func (h *InteractActionHandler) HandleSubtitleImpl(req mcp.JSONRPCRequest, args 
 		execute(req, args)
 }
 
-func (h *InteractActionHandler) HandleBrowserActionNavigateImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *BrowserActions) HandleBrowserActionNavigateImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		URL            string `json:"url"`
 		TabID          int    `json:"tab_id,omitempty"`
@@ -174,7 +174,7 @@ func (h *InteractActionHandler) HandleBrowserActionNavigateImpl(req mcp.JSONRPCR
 	actionParams["url"] = resolvedURL
 	actionPayload := marshalQueryParams(actionParams)
 
-	resp := h.newCommand("navigate").
+	resp := h.runtime.newCommand("navigate").
 		correlationPrefix("nav").
 		reason("navigate").
 		queryType("browser_action").
@@ -191,7 +191,7 @@ func (h *InteractActionHandler) HandleBrowserActionNavigateImpl(req mcp.JSONRPCR
 
 	// If include_content is requested and navigate succeeded, enrich with page content.
 	if params.IncludeContent {
-		resp = h.enrichNavigateResponse(resp, req, params.TabID)
+		resp = h.page.enrichNavigateResponse(resp, req, params.TabID)
 	}
 
 	// Include blocked_actions/blocked_reason when CSP restricts — omit entirely
@@ -201,7 +201,7 @@ func (h *InteractActionHandler) HandleBrowserActionNavigateImpl(req mcp.JSONRPCR
 	return resp
 }
 
-func (h *InteractActionHandler) HandleBrowserActionRefreshImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *BrowserActions) HandleBrowserActionRefreshImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		TabID int `json:"tab_id,omitempty"`
 	}
@@ -209,7 +209,7 @@ func (h *InteractActionHandler) HandleBrowserActionRefreshImpl(req mcp.JSONRPCRe
 		return resp
 	}
 
-	return h.newCommand("refresh").
+	return h.runtime.newCommand("refresh").
 		correlationPrefix("refresh").
 		reason("refresh").
 		queryType("browser_action").
@@ -222,7 +222,7 @@ func (h *InteractActionHandler) HandleBrowserActionRefreshImpl(req mcp.JSONRPCRe
 		execute(req, args)
 }
 
-func (h *InteractActionHandler) HandleBrowserActionBackImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *BrowserActions) HandleBrowserActionBackImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return h.queueBrowserAction(req, args, browserActionOpts{
 		action:         "back",
 		correlationPfx: "back",
@@ -230,7 +230,7 @@ func (h *InteractActionHandler) HandleBrowserActionBackImpl(req mcp.JSONRPCReque
 	})
 }
 
-func (h *InteractActionHandler) HandleBrowserActionForwardImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *BrowserActions) HandleBrowserActionForwardImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return h.queueBrowserAction(req, args, browserActionOpts{
 		action:         "forward",
 		correlationPfx: "forward",
@@ -238,7 +238,7 @@ func (h *InteractActionHandler) HandleBrowserActionForwardImpl(req mcp.JSONRPCRe
 	})
 }
 
-func (h *InteractActionHandler) HandleBrowserActionNewTabImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *BrowserActions) HandleBrowserActionNewTabImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		URL string `json:"url"`
 	}
@@ -266,7 +266,7 @@ func (h *InteractActionHandler) HandleBrowserActionNewTabImpl(req mcp.JSONRPCReq
 	}
 	actionPayload := marshalQueryParams(actionParams)
 
-	return h.newCommand("new_tab").
+	return h.runtime.newCommand("new_tab").
 		correlationPrefix("newtab").
 		reason("new_tab").
 		queryType("browser_action").
@@ -280,7 +280,7 @@ func (h *InteractActionHandler) HandleBrowserActionNewTabImpl(req mcp.JSONRPCReq
 		execute(req, args)
 }
 
-func (h *InteractActionHandler) HandleBrowserActionSwitchTabImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *BrowserActions) HandleBrowserActionSwitchTabImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		TabID      int   `json:"tab_id,omitempty"`
 		TabIndex   *int  `json:"tab_index,omitempty"`
@@ -313,7 +313,7 @@ func (h *InteractActionHandler) HandleBrowserActionSwitchTabImpl(req mcp.JSONRPC
 
 	// No requireTabTracking gate: switch_tab IS how you establish tracking
 	// for an existing tab. The handler calls applySwitchTabTracking on success.
-	resp, correlationID := h.newCommand("switch_tab").
+	resp, correlationID := h.runtime.newCommand("switch_tab").
 		correlationPrefix("switchtab").
 		reason("switch_tab").
 		queryType("browser_action").
@@ -340,7 +340,7 @@ func (h *InteractActionHandler) HandleBrowserActionSwitchTabImpl(req mcp.JSONRPC
 	return resp
 }
 
-func (h *InteractActionHandler) HandleActivateTabImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *BrowserActions) HandleActivateTabImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	return h.queueBrowserAction(req, args, browserActionOpts{
 		action:         "activate_tab",
 		correlationPfx: "activate",
@@ -348,7 +348,7 @@ func (h *InteractActionHandler) HandleActivateTabImpl(req mcp.JSONRPCRequest, ar
 	})
 }
 
-func (h *InteractActionHandler) HandleBrowserActionCloseTabImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *BrowserActions) HandleBrowserActionCloseTabImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		TabID int `json:"tab_id,omitempty"`
 	}
@@ -379,7 +379,7 @@ var validWorldValues = act.ValidWorldValues
 // truncateToLen delegates to the interact package.
 var truncateToLen = act.TruncateToLen
 
-func (h *InteractActionHandler) HandleHighlightImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *BrowserActions) HandleHighlightImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Selector   string `json:"selector"`
 		DurationMs int    `json:"duration_ms,omitempty"`
@@ -393,7 +393,7 @@ func (h *InteractActionHandler) HandleHighlightImpl(req mcp.JSONRPCRequest, args
 		return resp
 	}
 
-	return h.newCommand("highlight").
+	return h.runtime.newCommand("highlight").
 		correlationPrefix("highlight").
 		reason("highlight").
 		queryType("highlight").
@@ -405,7 +405,7 @@ func (h *InteractActionHandler) HandleHighlightImpl(req mcp.JSONRPCRequest, args
 		execute(req, args)
 }
 
-func (h *InteractActionHandler) HandleExecuteJSImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func (h *BrowserActions) HandleExecuteJSImpl(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 	var params struct {
 		Script    string `json:"script"`
 		TimeoutMs int    `json:"timeout_ms,omitempty"`
@@ -427,7 +427,7 @@ func (h *InteractActionHandler) HandleExecuteJSImpl(req mcp.JSONRPCRequest, args
 		return mcp.Fail(req, mcp.ErrInvalidParam, "Invalid 'world' value: "+params.World, "Use 'auto' (default, tries main then isolated), 'main' (page JS access), or 'isolated' (bypasses CSP, DOM only)", mcp.WithParam("world"))
 	}
 
-	return h.newCommand("execute_js").
+	return h.runtime.newCommand("execute_js").
 		correlationPrefix("exec").
 		reason("execute_js").
 		queryType("execute").
@@ -448,7 +448,7 @@ func (h *InteractActionHandler) HandleExecuteJSImpl(req mcp.JSONRPCRequest, args
 // (background=true), server-side tracking is NOT immediately updated.
 // The extension-side persistTrackedTab handles async retarget via the
 // next /sync heartbeat. See issue #271.
-func (h *InteractActionHandler) ApplySwitchTabTracking(correlationID string) {
+func (h *BrowserActions) ApplySwitchTabTracking(correlationID string) {
 	cmd, found := h.deps.Capture().Queries().GetCommandResult(correlationID)
 	if !found || cmd == nil || cmd.Status != "complete" {
 		return

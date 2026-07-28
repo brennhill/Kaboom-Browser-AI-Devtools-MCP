@@ -5,8 +5,8 @@
 // ToolHandler. Those arrive as function fields, so every decision here is
 // testable with fakes and the dependency arrow stays one-way (host -> screenrec).
 //
-// This mirrors toolinteract.Deps and daemonlife.Deps rather than inventing a
-// third shape. It is a struct, not an interface: the host's gates are unexported
+// This is the recording action family's explicit host boundary. It is a struct,
+// not an interface: the host's gates are unexported
 // methods, and an interface would force ToolHandler to grow exported adapters for
 // seams it already hands to two other sub-packages as plain funcs.
 // Docs: docs/features/feature/tab-recording/index.md

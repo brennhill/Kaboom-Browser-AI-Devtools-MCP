@@ -10,6 +10,7 @@ code_paths:
   - cmd/browser-agent/internal/sequencehandler/handler.go
   - cmd/browser-agent/internal/sequencehandler/replay.go
   - cmd/browser-agent/internal/toolinteract/interact_batch.go
+  - cmd/browser-agent/internal/toolinteract/action_owners.go
   - cmd/browser-agent/tools_interact_dispatch.go
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go

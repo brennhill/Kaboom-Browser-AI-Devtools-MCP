@@ -6,11 +6,11 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-28
 code_paths:
-  - cmd/browser-agent/internal/toolinteract/deps.go
+  - cmd/browser-agent/internal/toolinteract/action_owners.go
   - cmd/browser-agent/internal/toolguard/guards.go
   - cmd/browser-agent/internal/toolinteract/interactstate/state.go
   - cmd/browser-agent/internal/toolinteract/interactupload/upload.go
-  - cmd/browser-agent/internal/toolinteract/interact_action_handler.go
+  - cmd/browser-agent/internal/toolinteract/action_runtime.go
   - cmd/browser-agent/internal/toolinteract/interact_command_builder.go
   - cmd/browser-agent/internal/toolinteract/interact_browser.go
   - cmd/browser-agent/internal/toolinteract/interact_dom.go
@@ -157,18 +157,18 @@ State dispatch and tests use the composed `stateInteractHandler` directly; the
 root unchanged-return accessor has been deleted and is structurally prohibited.
 The unused generic `internal/tools/interact` host declaration is also deleted;
 interaction dependencies live only with the handlers that consume them.
-All other action dispatch, async enrichment, configuration, and tests likewise
-use the composed `interactActionHandler` directly. Both the root unchanged-return
-accessor and the test-only shim that mirrored it have been deleted and are
-structurally prohibited.
+Action dispatch is split among direct DOM, browser/tab, page/composable,
+workflow, storage, and batch owners. A small action runtime owns only shared
+command lifecycle policy. The former broad `InteractActionHandler` and
+`toolinteract.Deps` surfaces are deleted and structurally prohibited; no
+forwarding facade remains.
 Composition also supplies evidence and query callbacks directly; dead or
 one-line ToolHandler forwarding methods are structurally prohibited.
 Summary response-mode behavior belongs to `summarypref.Cache`; async formatting
 and dependency wiring use that owner directly, and the former four-method root
 forwarding layer plus its duplicate tests have been deleted.
-Configure action-jitter handlers receive `InteractActionHandler` callbacks
-through the explicit configure dependency value; root jitter forwarding methods
-are deleted.
+Configure action-jitter handlers receive `ActionRuntime` callbacks through the
+explicit configure dependency value; root jitter forwarding methods are deleted.
 Public state actions likewise use only `save_state`, `load_state`,
 `list_states`, and `delete_state`; duplicate `state_*` entry points are not
 registered. The similarly named extension pending-query types remain internal.
@@ -204,9 +204,9 @@ are grouped in the pure `commands/results` module and shared directly by
 
 `navigate_and_document` combines click-driven navigation, optional URL-change/stability waits, and page-context enrichment (`url`, `title`, `tab_id`) in a single interact workflow.
 
-Navigation page-summary enrichment is colocated with the interact page-content
-owner. Navigate and workflow handlers call it directly; neither `ToolHandler`
-nor `toolinteract.Deps` retains an enrichment callback facade.
+Navigation page-summary enrichment is colocated with the page action owner.
+Browser and workflow owners call it directly through explicit owner
+relationships; no broad dependency bag or enrichment callback facade remains.
 
 Workflow types and response classification come directly from
 `internal/tools/interact/workflow.go`; browser-agent layers do not maintain

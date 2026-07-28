@@ -36,7 +36,7 @@ import (
 //	    queuedMessage("Highlight queued").
 //	    execute(req, args)
 type commandBuilder struct {
-	handler *InteractActionHandler
+	runtime *ActionRuntime
 
 	// Identity
 	name string // descriptive name (for debugging; not used in output)
@@ -78,11 +78,11 @@ type commandBuilder struct {
 	queuedMsg string // message for MaybeWaitForCommand when command is async
 }
 
-// newCommand creates a new commandBuilder bound to the interactActionHandler.
+// newCommand creates a command builder bound to shared execution policy.
 // The name is descriptive only (for debugging/logging).
-func (h *InteractActionHandler) newCommand(name string) *commandBuilder {
+func (h *ActionRuntime) newCommand(name string) *commandBuilder {
 	return &commandBuilder{
-		handler: h,
+		runtime: h,
 		name:    name,
 	}
 }
@@ -208,14 +208,14 @@ func (b *commandBuilder) executeWithCorrelation(req mcp.JSONRPCRequest, waitArgs
 
 	// 1b. Run CSP guard if configured
 	if b.cspWorld != "" {
-		if resp, blocked := b.handler.deps.RequireCSPClear(req, b.cspWorld); blocked {
+		if resp, blocked := b.runtime.deps.RequireCSPClear(req, b.cspWorld); blocked {
 			return resp, ""
 		}
 	}
 
 	// 2. Generate correlation ID and arm evidence
 	correlationID := toolresp.NewCorrelationID(b.corrPrefix)
-	b.handler.ArmEvidenceForCommand(correlationID, b.reasonStr, waitArgs, req.ClientID)
+	b.runtime.ArmEvidenceForCommand(correlationID, b.reasonStr, waitArgs, req.ClientID)
 
 	// 2b. Pre-enqueue callback (e.g. stash perf snapshot)
 	if b.preEnqueueFn != nil {
@@ -241,13 +241,13 @@ func (b *commandBuilder) executeWithCorrelation(req mcp.JSONRPCRequest, waitArgs
 		TabID:         b.qTabID,
 		CorrelationID: correlationID,
 	}
-	if enqueueResp, blocked := b.handler.deps.EnqueuePendingQuery(req, query, timeout); blocked {
+	if enqueueResp, blocked := b.runtime.deps.EnqueuePendingQuery(req, query, timeout); blocked {
 		return enqueueResp, correlationID
 	}
 
 	// 6. Record AI action (optional)
 	if b.doRecord {
-		b.handler.deps.RecordAIAction(b.recAction, b.recURL, b.recExtra)
+		b.runtime.deps.RecordAIAction(b.recAction, b.recURL, b.recExtra)
 	}
 
 	// 6b. Post-enqueue callback (for example DOM primitive recording)
@@ -256,5 +256,5 @@ func (b *commandBuilder) executeWithCorrelation(req mcp.JSONRPCRequest, waitArgs
 	}
 
 	// 7. Wait for command
-	return b.handler.deps.MaybeWaitForCommand(req, correlationID, waitArgs, b.queuedMsg), correlationID
+	return b.runtime.deps.MaybeWaitForCommand(req, correlationID, waitArgs, b.queuedMsg), correlationID
 }

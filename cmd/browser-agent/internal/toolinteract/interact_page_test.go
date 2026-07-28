@@ -10,7 +10,7 @@ import (
 )
 
 func TestHandleGetReadable(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakePageActions(t)
 	assertOK(t, h.HandleGetReadable(testReq(), json.RawMessage(`{}`)))
 	if fs.enqueuedCount() != 1 {
 		t.Fatalf("expected 1 enqueue, got %d", fs.enqueuedCount())
@@ -18,33 +18,33 @@ func TestHandleGetReadable(t *testing.T) {
 }
 
 func TestHandleGetMarkdown(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakePageActions(t)
 	assertOK(t, h.HandleGetMarkdown(testReq(), json.RawMessage(`{"timeout_ms":40000}`)))
 }
 
 func TestHandleContentExtraction_TabBlocked(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakePageActions(t)
 	fs.blockTab = true
 	assertErr(t, h.HandleContentExtraction(testReq(), json.RawMessage(`{}`), "get_readable", "readable"), mcp.ErrNotInitialized)
 }
 
 func TestHandleWaitForStable(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakePageActions(t)
 	assertOK(t, h.HandleWaitForStable(testReq(), json.RawMessage(`{}`)))
 }
 
 func TestHandleWaitForStable_WithParams(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakePageActions(t)
 	assertOK(t, h.HandleWaitForStable(testReq(), json.RawMessage(`{"stability_ms":300,"timeout_ms":2000}`)))
 }
 
 func TestHandleAutoDismissOverlays(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakePageActions(t)
 	assertOK(t, h.HandleAutoDismissOverlays(testReq(), json.RawMessage(`{}`)))
 }
 
 func TestQueueComposableHelpers(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakePageActions(t)
 	h.QueueComposableAutoDismiss(testReq())
 	h.QueueComposableActionDiff(testReq())
 	h.QueueComposableWaitForStable(testReq(), 0)
@@ -56,7 +56,7 @@ func TestQueueComposableHelpers(t *testing.T) {
 }
 
 func TestHandleClipboardRead(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakePageActions(t)
 	assertOK(t, h.HandleClipboardRead(testReq(), json.RawMessage(`{}`)))
 	// records clipboard_read on success.
 	if fs.recordedCount() != 1 {
@@ -65,22 +65,22 @@ func TestHandleClipboardRead(t *testing.T) {
 }
 
 func TestHandleClipboardWrite(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakePageActions(t)
 	assertOK(t, h.HandleClipboardWrite(testReq(), json.RawMessage(`{"text":"copy me"}`)))
 }
 
 func TestHandleClipboardWrite_MissingText(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakePageActions(t)
 	assertErr(t, h.HandleClipboardWrite(testReq(), json.RawMessage(`{}`)), mcp.ErrMissingParam)
 }
 
 func TestHandleClipboardWrite_InvalidJSON(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakePageActions(t)
 	assertErr(t, h.HandleClipboardWrite(testReq(), json.RawMessage(`bad`)), mcp.ErrInvalidJSON)
 }
 
 func TestHandleClipboardRead_PilotBlockedNoRecord(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakePageActions(t)
 	fs.blockPilot = true
 	assertErr(t, h.HandleClipboardRead(testReq(), json.RawMessage(`{}`)), mcp.ErrCodePilotDisabled)
 	if fs.recordedCount() != 0 {
@@ -89,7 +89,7 @@ func TestHandleClipboardRead_PilotBlockedNoRecord(t *testing.T) {
 }
 
 func TestHandleDrawModeStart_Success(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakePageActions(t)
 	resp := h.HandleDrawModeStart(testReq(), json.RawMessage(`{"annot_session":"s1"}`))
 	assertOK(t, resp)
 	if fs.drawStarted != 1 {
@@ -98,12 +98,12 @@ func TestHandleDrawModeStart_Success(t *testing.T) {
 }
 
 func TestHandleDrawModeStart_NoArgs(t *testing.T) {
-	h, _ := newFakeHandler(t)
+	h, _ := newFakePageActions(t)
 	assertOK(t, h.HandleDrawModeStart(testReq(), nil))
 }
 
 func TestHandleDrawModeStart_ExtensionBlocked(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakePageActions(t)
 	fs.blockExt = true
 	assertErr(t, h.HandleDrawModeStart(testReq(), json.RawMessage(`{}`)), mcp.ErrNotInitialized)
 	if fs.drawStarted != 0 {
@@ -112,13 +112,13 @@ func TestHandleDrawModeStart_ExtensionBlocked(t *testing.T) {
 }
 
 func TestHandleDrawModeStart_TabBlocked(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakePageActions(t)
 	fs.blockTab = true
 	assertErr(t, h.HandleDrawModeStart(testReq(), json.RawMessage(`{}`)), mcp.ErrNotInitialized)
 }
 
 func TestHandleListInteractive_Success(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakePageActions(t)
 	// Return a response with elements so index metadata is built.
 	fs.waitFn = func(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse {
 		return mcp.Succeed(req, "list_interactive results", map[string]any{
@@ -128,21 +128,21 @@ func TestHandleListInteractive_Success(t *testing.T) {
 			},
 		})
 	}
-	resp := h.HandleListInteractive(testReq(), json.RawMessage(`{}`))
+	resp := h.dom.HandleListInteractive(testReq(), json.RawMessage(`{}`))
 	result := assertOK(t, resp)
 	// index_generation should be annotated into the response text.
 	if !contains(firstText(result), "index_generation") {
 		t.Fatalf("expected index_generation annotation, got: %s", firstText(result))
 	}
 	// The element index should now resolve.
-	sel, ok, _, _ := h.resolveIndexToSelector("client-test", 0, 1, "")
+	sel, ok, _, _ := h.dom.resolveIndexToSelector("client-test", 0, 1, "")
 	if !ok || sel != "#b" {
 		t.Fatalf("expected #b resolved, got %q ok=%v", sel, ok)
 	}
 }
 
 func TestHandleListInteractive_Truncation(t *testing.T) {
-	h, fs := newFakeHandler(t)
+	h, fs := newFakePageActions(t)
 	fs.waitFn = func(req mcp.JSONRPCRequest, correlationID string, args json.RawMessage, queuedSummary string) mcp.JSONRPCResponse {
 		elems := make([]any, 8)
 		for i := range elems {
@@ -150,7 +150,7 @@ func TestHandleListInteractive_Truncation(t *testing.T) {
 		}
 		return mcp.Succeed(req, "list_interactive results", map[string]any{"elements": elems})
 	}
-	resp := h.HandleListInteractive(testReq(), json.RawMessage(`{"limit":3}`))
+	resp := h.dom.HandleListInteractive(testReq(), json.RawMessage(`{"limit":3}`))
 	result := assertOK(t, resp)
 	if !contains(firstText(result), "\"truncated\":true") {
 		t.Fatalf("expected truncated marker, got: %s", firstText(result))

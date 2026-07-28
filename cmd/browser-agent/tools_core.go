@@ -118,8 +118,13 @@ type ToolHandler struct {
 	// Default: 5s. Set to 0 in tests to restore instant-fail behavior.
 	coldStartTimeout time.Duration
 
-	// Dedicated interact action routing/jitter sub-handler.
-	interactActionHandler *toolinteract.InteractActionHandler
+	interactRuntime *toolinteract.ActionRuntime
+	domActions      *toolinteract.DOMActions
+	browserActions  *toolinteract.BrowserActions
+	pageActions     *toolinteract.PageActions
+	workflowActions *toolinteract.WorkflowActions
+	storageActions  *toolinteract.StorageActions
+	batchActions    *toolinteract.BatchActions
 
 	recordingInteractHandler *screenrec.InteractHandler
 	recordingHandler         *toolrecording.Handler
@@ -393,10 +398,10 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 		DiagnosticHint:       handler.Guards.DiagnosticHint(),
 		DiagnosticHintString: handler.Guards.DiagnosticHintString,
 		AttachEvidence: func(correlationID string, responseData map[string]any) {
-			handler.interactActionHandler.AttachEvidencePayload(correlationID, responseData)
+			handler.interactRuntime.AttachEvidencePayload(correlationID, responseData)
 		},
 		AttachRetryContext: func(correlationID string, responseData map[string]any, status, reason string) {
-			handler.interactActionHandler.AttachRetryContext(correlationID, responseData, status, reason)
+			handler.interactRuntime.AttachRetryContext(correlationID, responseData, status, reason)
 		},
 		SummaryEnabled:     handler.summaryPrefs.Enabled,
 		RecordAsyncOutcome: handler.usageTracker.RecordAsyncOutcome,
@@ -469,21 +474,24 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 			return handler.apiContractRuntime.Handle(req, args, handler.capture.Telemetry().GetNetworkBodies())
 		},
 		PageSummary: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return handler.interactActionHandler.HandleContentExtraction(req, args, "page_summary", "page_summary")
+			return handler.pageActions.HandleContentExtraction(req, args, "page_summary", "page_summary")
 		},
 		Annotations: handler.annotationAnalysis.GetAnnotations, AnnotationDetail: handler.annotationAnalysis.GetAnnotationDetail,
 		FeatureGates: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-			return handler.interactActionHandler.HandleContentExtraction(req, args, "feature_gates", "feature_gates")
+			return handler.pageActions.HandleContentExtraction(req, args, "feature_gates", "feature_gates")
 		},
 	})
 	handler.testGenHandler = testgenhandler.New(buildTestGenerationDeps(handler))
 	handler.generateDispatcher = toolgenerate.NewDispatcher(buildGenerateDeps(handler), handler.testGenHandler)
-	interactDeps := buildInteractDeps(handler)
-	handler.interactActionHandler = toolinteract.NewInteractActionHandler(interactDeps)
+	initializeInteractActionOwners(handler)
 	handler.configureLocalDeps = buildConfigureLocalDeps(handler)
 	handler.tutorialDeps = buildTutorialDeps(handler)
 	handler.issueReportDeps = buildIssueReportDeps(handler)
-	handler.uploadInteractHandler = toolinteract.NewUploadInteractHandler(interactDeps, handler.interactActionHandler)
+	handler.uploadInteractHandler = interactupload.New(&interactupload.Deps{
+		RequirePilot: handler.Guards.RequirePilot, RequireExtension: handler.Guards.RequireExtension,
+		RequireTabTracking:  handler.Guards.RequireTabTracking,
+		EnqueuePendingQuery: handler.asyncCommands.EnqueuePendingQuery, RecordAIAction: handler.actionRecorder.Record,
+	}, handler.interactRuntime)
 	handler.observeDispatcher = toolobserve.NewDispatcher(toolobserve.Config{
 		Observe: observeDeps, Local: buildObserveLocalDeps(handler),
 		IsExtensionConnected: func() bool { return handler.capture.Extension().IsExtensionConnected() },
@@ -510,7 +518,44 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 		FormatCommand: handler.asyncCommands.FormatCommandResult, InjectSummary: handler.summaryPrefs.Inject,
 		DrainAlerts: handler.alertBuffer.DrainAlerts, DiagnosticHint: handler.Guards.DiagnosticHint(),
 	})
-	handler.stateInteractHandler = toolinteract.NewStateInteractHandler(interactDeps, handler.sessionStoreImpl)
+	handler.stateInteractHandler = interactstate.New(&interactstate.Deps{
+		IsPilotActionAllowed: func() bool {
+			return handler.capture != nil && handler.capture.Extension().IsPilotActionAllowed()
+		},
+		IsExtensionConnected: func() bool {
+			return handler.capture != nil && handler.capture.Extension().IsExtensionConnected()
+		},
+		GetTrackingStatus: func() (bool, int, string) {
+			if handler.capture == nil {
+				return false, 0, ""
+			}
+			return handler.capture.Extension().GetTrackingStatus()
+		},
+		GetTrackedTabTitle: func() string {
+			if handler.capture == nil {
+				return ""
+			}
+			return handler.capture.Extension().GetTrackedTabTitle()
+		},
+		WaitForCommand: func(correlationID string, timeout time.Duration) (*queries.CommandResult, bool) {
+			if handler.capture == nil {
+				return nil, false
+			}
+			return handler.capture.Queries().WaitForCommand(correlationID, timeout)
+		},
+		EnqueuePendingQuery: handler.asyncCommands.EnqueuePendingQuery,
+		RecordAIAction:      handler.actionRecorder.Record,
+		RequireSessionStore: func(req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool) {
+			return sessionStoreGuard(handler.sessionStoreImpl, req)
+		},
+		DiagnosticHint: handler.Guards.DiagnosticHint,
+		Redact: func(data map[string]any) map[string]any {
+			if handler.redactionEngine == nil {
+				return data
+			}
+			return handler.redactionEngine.RedactMapValues(data)
+		},
+	}, handler.sessionStoreImpl)
 	handler.configureSessions = toolconfigure.NewSessionHandler(toolconfigure.SessionDeps{
 		RequireStore: func(req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool) {
 			return sessionStoreGuard(handler.sessionStoreImpl, req)
@@ -673,59 +718,62 @@ func buildObserveReadDeps(h *ToolHandler) observe.Deps {
 	}
 }
 
-// buildInteractDeps is the composition boundary between ToolHandler and the
-// canonical interact owner. All cross-feature dependencies are wired here.
-func buildInteractDeps(h *ToolHandler) *toolinteract.Deps {
+func initializeInteractActionOwners(h *ToolHandler) {
 	if h.Guards == nil {
 		h.Guards = toolguard.New(h.capture, h.shutdownCtx, defaultExtensionReadinessTimeout())
 	}
-	var getCommandResult func(string) (*queries.CommandResult, bool)
-	if h.capture != nil {
-		getCommandResult = h.capture.Queries().GetCommandResult
-	}
-	return &toolinteract.Deps{
-		RequirePilot: h.Guards.RequirePilot, RequireExtension: h.Guards.RequireExtension,
-		RequireTabTracking: h.Guards.RequireTabTracking, RequireCSPClear: h.Guards.RequireCSPClear,
+	captureStore := func() *capture.Capture { return h.capture }
+	h.interactRuntime = toolinteract.NewActionRuntime(toolinteract.RuntimeDeps{
+		RequireCSPClear:     h.Guards.RequireCSPClear,
 		EnqueuePendingQuery: h.asyncCommands.EnqueuePendingQuery, MaybeWaitForCommand: h.asyncCommands.MaybeWaitForCommand,
-		Capture:        func() *capture.Capture { return h.capture },
-		RecordAIAction: h.actionRecorder.Record, RecordAIEnhancedAction: h.actionRecorder.RecordEnhanced,
-		RecordDOMPrimitiveAction: h.actionRecorder.RecordDOMPrimitive,
-		ToolInteract:             h.toolInteract, ToolAnalyze: h.analyzeDispatcher.Handle,
-		ToolExportSARIF:         h.generateDispatcher.ExportSARIF,
-		InjectCSPBlockedActions: h.Guards.InjectCSPBlockedActions,
+		RecordAIAction: h.actionRecorder.Record,
+		DefaultEvidenceCapture: func(clientID string) toolinteract.EvidenceShot {
+			return toolinteract.CaptureEvidence(h.capture, clientID)
+		},
+	})
+	h.domActions = toolinteract.NewDOMActions(h.interactRuntime, toolinteract.DOMDeps{
+		RequirePilot: h.Guards.RequirePilot, RequireExtension: h.Guards.RequireExtension,
+		RequireTabTracking: h.Guards.RequireTabTracking, RecordDOMPrimitiveAction: h.actionRecorder.RecordDOMPrimitive,
+	})
+	h.storageActions = toolinteract.NewStorageActions(h.interactRuntime, toolinteract.StorageDeps{
+		RequirePilot: h.Guards.RequirePilot, RequireExtension: h.Guards.RequireExtension,
+		RequireTabTracking: h.Guards.RequireTabTracking,
+	})
+	h.pageActions = toolinteract.NewPageActions(h.interactRuntime, h.domActions, h.storageActions, toolinteract.PageDeps{
+		RequirePilot: h.Guards.RequirePilot, RequireExtension: h.Guards.RequireExtension,
+		RequireTabTracking: h.Guards.RequireTabTracking, Capture: captureStore,
+		EnqueuePendingQuery: h.asyncCommands.EnqueuePendingQuery, RecordAIAction: h.actionRecorder.Record,
+		MarkDrawStarted: func() {
+			if h.annotationStore != nil {
+				h.annotationStore.MarkDrawStarted()
+			}
+		},
 		GetScreenshot: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return observe.GetScreenshot(buildObserveReadDeps(h), req, args)
 		},
 		GetPageInfo: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 			return observe.GetPageInfo(buildObserveReadDeps(h), req, args)
 		},
-		MarkDrawStarted: func() {
-			if h.annotationStore != nil {
-				h.annotationStore.MarkDrawStarted()
-			}
-		},
+	})
+	h.browserActions = toolinteract.NewBrowserActions(h.interactRuntime, h.pageActions, toolinteract.BrowserDeps{
+		RequirePilot: h.Guards.RequirePilot, RequireExtension: h.Guards.RequireExtension,
+		RequireTabTracking: h.Guards.RequireTabTracking, Capture: captureStore,
+		InjectCSPBlockedActions: h.Guards.InjectCSPBlockedActions,
 		GetListenPort: func() int {
 			if h.server != nil {
 				return h.server.getListenPort()
 			}
 			return defaultPort
 		},
-		DefaultEvidenceCapture: func(clientID string) toolinteract.EvidenceShot {
-			return toolinteract.CaptureEvidence(h.capture, clientID)
-		},
-		RequireSessionStore: func(req mcp.JSONRPCRequest) (mcp.JSONRPCResponse, bool) {
-			return sessionStoreGuard(h.sessionStoreImpl, req)
-		},
-		DiagnosticHint: h.Guards.DiagnosticHint,
-		Redact: func(data map[string]any) map[string]any {
-			if h.redactionEngine == nil {
-				return data
-			}
-			return h.redactionEngine.RedactMapValues(data)
-		},
-		GetCommandResult: getCommandResult,
-		ReplayMu:         &replayMu,
-	}
+	})
+	h.workflowActions = toolinteract.NewWorkflowActions(
+		h.interactRuntime, h.domActions, h.browserActions, h.pageActions,
+		toolinteract.WorkflowDeps{Capture: captureStore, ToolAnalyze: h.analyzeDispatcher.Handle, ToolExportSARIF: h.generateDispatcher.ExportSARIF},
+	)
+	h.batchActions = toolinteract.NewBatchActions(h.interactRuntime, toolinteract.BatchDeps{
+		RequirePilot: h.Guards.RequirePilot, RequireExtension: h.Guards.RequireExtension, Capture: captureStore,
+		RecordAIAction: h.actionRecorder.Record, ToolInteract: h.toolInteract, ReplayMu: &replayMu,
+	})
 }
 
 func buildScreenrecDeps(h *ToolHandler) screenrec.Deps {
