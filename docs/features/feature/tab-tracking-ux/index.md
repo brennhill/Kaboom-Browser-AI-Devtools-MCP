@@ -39,6 +39,8 @@ test_paths:
   - tests/extension/tracked-hover-launcher.test.js
   - tests/extension/logo-motion.test.js
   - tests/extension/content.test.js
+  - tests/extension/content-tab-filtering.test.js
+  - tests/extension/content-tab-tracking.test.js
   - tests/extension/runtime-log-branding.test.js
   - tests/extension/sidepanel-terminal-fixture.js
   - tests/extension/sidepanel-terminal-io.test.js
