@@ -27,7 +27,7 @@ globalThis.chrome = {
   tabs: { get: mock.fn(), query: mock.fn(), onRemoved: { addListener: mock.fn() } }
 }
 
-import { createCircuitBreaker } from '../../extension/background.js'
+import { createCircuitBreaker } from '../../extension/background/sync/circuit-breaker.js'
 
 describe('Circuit Breaker', () => {
   let _clock

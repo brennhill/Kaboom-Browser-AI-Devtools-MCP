@@ -114,7 +114,10 @@ describe('page_structure target resolution', () => {
       })
     )
 
-    bgModule = await import('../../extension/background.js')
+    bgModule = {
+      ...(await import('../../extension/background/index.js')),
+      ...(await import('../../extension/background/state.js'))
+    }
     ;({ _resetPilotCacheForTesting: resetPilotCacheForTesting } = await import('../../extension/background/state.js'))
     bgModule.markInitComplete()
     resetPilotCacheForTesting(true)

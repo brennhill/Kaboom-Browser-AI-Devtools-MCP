@@ -421,7 +421,7 @@ describe('Snapshot CRUD in background.js', () => {
   })
 
   test('saveStateSnapshot should store snapshot with name and size', async () => {
-    const { saveStateSnapshot } = await import('../../extension/background.js')
+    const { saveStateSnapshot } = await import('../../extension/background/message-handlers.js')
 
     const state = {
       url: 'http://localhost:3000/test',
@@ -444,7 +444,7 @@ describe('Snapshot CRUD in background.js', () => {
   })
 
   test('loadStateSnapshot should retrieve stored snapshot', async () => {
-    const { saveStateSnapshot, loadStateSnapshot } = await import('../../extension/background.js')
+    const { saveStateSnapshot, loadStateSnapshot } = await import('../../extension/background/message-handlers.js')
 
     const state = {
       url: 'http://localhost:3000/test',
@@ -465,7 +465,7 @@ describe('Snapshot CRUD in background.js', () => {
   })
 
   test('loadStateSnapshot should return null for non-existent snapshot', async () => {
-    const { loadStateSnapshot } = await import('../../extension/background.js')
+    const { loadStateSnapshot } = await import('../../extension/background/message-handlers.js')
 
     const loaded = await loadStateSnapshot('non-existent')
 
@@ -473,7 +473,7 @@ describe('Snapshot CRUD in background.js', () => {
   })
 
   test('listStateSnapshots should return metadata for all snapshots', async () => {
-    const { saveStateSnapshot, listStateSnapshots } = await import('../../extension/background.js')
+    const { saveStateSnapshot, listStateSnapshots } = await import('../../extension/background/message-handlers.js')
 
     await saveStateSnapshot('snap1', {
       url: 'http://localhost:3000/page1',
@@ -508,7 +508,9 @@ describe('Snapshot CRUD in background.js', () => {
   })
 
   test('deleteStateSnapshot should remove snapshot', async () => {
-    const { saveStateSnapshot, loadStateSnapshot, deleteStateSnapshot } = await import('../../extension/background.js')
+    const { saveStateSnapshot, loadStateSnapshot, deleteStateSnapshot } = await import(
+      '../../extension/background/message-handlers.js'
+    )
 
     await saveStateSnapshot('to-delete', {
       url: 'http://localhost:3000/',
@@ -533,7 +535,7 @@ describe('Snapshot CRUD in background.js', () => {
   })
 
   test('listStateSnapshots should return empty array when no snapshots', async () => {
-    const { listStateSnapshots } = await import('../../extension/background.js')
+    const { listStateSnapshots } = await import('../../extension/background/message-handlers.js')
 
     const list = await listStateSnapshots()
 

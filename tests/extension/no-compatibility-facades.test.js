@@ -1,7 +1,7 @@
 // no-compatibility-facades.test.js — Prevents deleted extension compatibility barrels from returning.
 
 import assert from 'node:assert/strict'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import test from 'node:test'
 
 test('obsolete extension type compatibility barrel is absent', () => {
@@ -50,10 +50,37 @@ test('background sync modules have no communication facade', () => {
   )
 })
 
+test('background runtime entrypoint is not an API compatibility facade', () => {
+  const source = readFileSync('src/background.ts', 'utf8')
+  assert.doesNotMatch(
+    source,
+    /export\s+(?:type\s+)?(?:\{|\*)[^;]*\s+from\s+['"]/s,
+    'background.ts is a runtime entrypoint; consumers must import the focused owner module'
+  )
+
+  for (const testPath of collectTestFiles('tests/extension')) {
+    const testSource = readFileSync(testPath, 'utf8')
+    assert.doesNotMatch(
+      testSource,
+      /(?:from\s+|import\s*\()\s*['"][^'"]*extension\/background\.js['"]/,
+      `${testPath} imports the background runtime entrypoint instead of an owner module`
+    )
+  }
+})
+
 test('pending query dispatcher does not re-export APIs owned by command modules', () => {
   const source = readFileSync('src/background/pending-queries.ts', 'utf8')
   assert.doesNotMatch(source, /export\s+(?:type\s+)?\{/, 'dispatcher must not re-export command helper APIs')
 })
+
+function collectTestFiles(directory) {
+  const entries = readdirSync(directory, { withFileTypes: true })
+  return entries.flatMap((entry) => {
+    const path = `${directory}/${entry.name}`
+    if (entry.isDirectory()) return collectTestFiles(path)
+    return entry.name.endsWith('.test.js') ? [path] : []
+  })
+}
 
 test('event listener module does not re-export UI module APIs', () => {
   const source = readFileSync('src/background/event-listeners.ts', 'utf8')

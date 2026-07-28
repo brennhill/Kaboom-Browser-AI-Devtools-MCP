@@ -213,7 +213,7 @@ describe('AI Web Pilot Command Gating', () => {
       callback({ aiWebPilotEnabled: false })
     })
 
-    const { isAiWebPilotEnabled } = await import('../../extension/background.js')
+    const { isAiWebPilotEnabled } = await import('../../extension/background/state.js')
     await resetPilotCacheForTesting(false)
     const enabled = await isAiWebPilotEnabled()
     assert.strictEqual(enabled, false, 'Should return false when toggle is off')
@@ -224,7 +224,7 @@ describe('AI Web Pilot Command Gating', () => {
       callback({}) // No value set
     })
 
-    const { isAiWebPilotEnabled } = await import('../../extension/background.js')
+    const { isAiWebPilotEnabled } = await import('../../extension/background/state.js')
     await resetPilotCacheForTesting(false)
     const enabled = await isAiWebPilotEnabled()
     assert.strictEqual(enabled, false, 'Should return false when toggle is undefined')
@@ -235,7 +235,7 @@ describe('AI Web Pilot Command Gating', () => {
       callback({ aiWebPilotEnabled: true })
     })
 
-    const { isAiWebPilotEnabled } = await import('../../extension/background.js')
+    const { isAiWebPilotEnabled } = await import('../../extension/background/state.js')
     // Reset module-level cache (persists across Node.js cached imports)
     await resetPilotCacheForTesting(true)
 
@@ -260,7 +260,7 @@ describe('Pilot Commands Rejection When Disabled', () => {
       callback({ aiWebPilotEnabled: false })
     })
 
-    const { handlePilotCommand } = await import('../../extension/background.js')
+    const { handlePilotCommand } = await import('../../extension/background/commands/interact.js')
     await resetPilotCacheForTesting(false)
 
     const result = await handlePilotCommand('kaboom_highlight', { selector: '.test' })
@@ -277,7 +277,7 @@ describe('Pilot Commands Rejection When Disabled', () => {
       callback({ aiWebPilotEnabled: false })
     })
 
-    const { handlePilotCommand } = await import('../../extension/background.js')
+    const { handlePilotCommand } = await import('../../extension/background/commands/interact.js')
     await resetPilotCacheForTesting(false)
 
     const result = await handlePilotCommand('kaboom_manage_state', { action: 'save' })
@@ -294,7 +294,7 @@ describe('Pilot Commands Rejection When Disabled', () => {
       callback({ aiWebPilotEnabled: false })
     })
 
-    const { handlePilotCommand } = await import('../../extension/background.js')
+    const { handlePilotCommand } = await import('../../extension/background/commands/interact.js')
     await resetPilotCacheForTesting(false)
 
     const result = await handlePilotCommand('kaboom_execute_js', { script: 'console.log("test")' })
@@ -324,7 +324,7 @@ describe('Pilot Commands Acceptance When Enabled', () => {
     // Mock tabs.sendMessage to simulate successful forwarding
     mockChrome.tabs.sendMessage.mock.mockImplementation(() => Promise.resolve({ success: true }))
 
-    const { handlePilotCommand } = await import('../../extension/background.js')
+    const { handlePilotCommand } = await import('../../extension/background/commands/interact.js')
     await resetPilotCacheForTesting(true)
 
     const result = await handlePilotCommand('kaboom_highlight', { selector: '.test' })
@@ -342,7 +342,7 @@ describe('Pilot Commands Acceptance When Enabled', () => {
 
     mockChrome.tabs.sendMessage.mock.mockImplementation(() => Promise.resolve({ success: true }))
 
-    const { handlePilotCommand } = await import('../../extension/background.js')
+    const { handlePilotCommand } = await import('../../extension/background/commands/interact.js')
     await resetPilotCacheForTesting(true)
 
     const result = await handlePilotCommand('kaboom_manage_state', { action: 'list' })
@@ -360,7 +360,7 @@ describe('Pilot Commands Acceptance When Enabled', () => {
 
     mockChrome.tabs.sendMessage.mock.mockImplementation(() => Promise.resolve({ result: 'executed' }))
 
-    const { handlePilotCommand } = await import('../../extension/background.js')
+    const { handlePilotCommand } = await import('../../extension/background/commands/interact.js')
     await resetPilotCacheForTesting(true)
 
     const result = await handlePilotCommand('kaboom_execute_js', { script: 'return 1+1' })
@@ -425,7 +425,7 @@ describe('AI Web Pilot Single Source of Truth Architecture', () => {
   })
 
   test('background should receive setAiWebPilotEnabled message and update cache', async () => {
-    const { isAiWebPilotEnabled } = await import('../../extension/background.js')
+    const { isAiWebPilotEnabled } = await import('../../extension/background/state.js')
     await resetPilotCacheForTesting(false)
 
     // Verify cache starts as false

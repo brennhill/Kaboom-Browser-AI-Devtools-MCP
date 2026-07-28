@@ -28,6 +28,7 @@ code_paths:
   - internal/capture/wsconn/tracker.go
   - internal/types/log.go
   - internal/types/network.go
+  - src/background.ts
   - src/background/sync/server.ts
   - src/background/sync/circuit-breaker.ts
   - src/background/sync/batchers.ts
@@ -93,6 +94,9 @@ The former `capture.Store` and `capture.Snapshot` aliases have been removed.
 Capture APIs and their callers use the canonical wire contracts from
 `internal/types` directly; `internal/capture` does not re-export wire types.
 Buffer-clear APIs likewise return `internal/types.BufferClearCounts` directly.
+The background manifest entrypoint performs initialization only; batching,
+transport, cache, and processing consumers import their canonical owner modules
+directly instead of relying on re-exported compatibility names.
 
 ## Specs
 

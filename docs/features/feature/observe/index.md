@@ -35,6 +35,7 @@ code_paths:
   - internal/tools/observe/hints/hints.go
   - internal/tools/observe/idbquery/execute.go
   - internal/tools/observe/idbquery/scripts.go
+  - src/background.ts
   - src/background/commands/observe.ts
   - src/lib/brand.ts
   - src/lib/page/context.ts
@@ -68,12 +69,20 @@ test_paths:
   - tests/extension/network-bodies.test.js
   - tests/extension/content.test.js
   - tests/extension/runtime-log-branding.test.js
+  - tests/extension/background-errors-comms.test.js
+  - tests/extension/performance.test.js
+  - tests/extension/reliability-fixes.test.js
+  - tests/extension/no-compatibility-facades.test.js
   - tests/extension/sync-client.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
 
 # Observe
+
+The background service-worker entrypoint owns startup only. Telemetry tests and
+runtime code import caches, batching, transport, and log processing directly
+from the modules that own those APIs.
 
 ## TL;DR
 - Status: shipped

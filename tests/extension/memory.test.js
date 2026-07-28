@@ -69,9 +69,9 @@ import {
   MEMORY_AVG_LOG_ENTRY_SIZE,
   MEMORY_AVG_WS_EVENT_SIZE,
   MEMORY_AVG_NETWORK_BODY_SIZE,
-  MEMORY_AVG_ACTION_SIZE,
-  createLogBatcher
-} from '../../extension/background.js'
+  MEMORY_AVG_ACTION_SIZE
+} from '../../extension/background/caches/cache-limits.js'
+import { createLogBatcher } from '../../extension/background/sync/batchers.js'
 
 describe('Memory Enforcement: Constants', () => {
   test('soft limit should be 20MB', () => {

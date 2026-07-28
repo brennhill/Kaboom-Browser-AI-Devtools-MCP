@@ -36,6 +36,7 @@ code_paths:
   - internal/tools/analyze/imagediff/regions.go
   - internal/tools/analyze/imagediff/imageio.go
   - internal/schema/analyze.go
+  - src/background.ts
   - src/background/commands/analyze.ts
   - src/background/exec/frame-targeting.ts
   - src/background/dom/primitives/dom-frame-probe.ts
@@ -67,6 +68,8 @@ test_paths:
   - internal/tools/analyze/visual_diff_test.go
   - internal/tools/analyze/imagediff/imagediff_test.go
   - tests/extension/data-table.test.js
+  - tests/extension/page-structure-targeting.test.js
+  - tests/extension/no-compatibility-facades.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -90,6 +93,8 @@ last_verified_date: 2026-03-05
 The mode registry, alias policy, and narrow `toolanalyze.Deps` adaptation are
 owned by `internal/toolanalyze/analyzedispatch/dispatcher.go`; feature implementations remain in
 their dedicated modules.
+The background service-worker entrypoint owns startup only. Analysis tests and
+runtime code import their focused owner modules rather than an entrypoint facade.
 
 Structured extraction modes:
 - `analyze({what:"form_state"})` returns current form values and field metadata.

@@ -110,7 +110,7 @@ describe('Issue 1: _processingQueries TTL-based cleanup', () => {
 
   beforeEach(async () => {
     mock.reset()
-    bgModule = await import('../../extension/background.js')
+    bgModule = await import('../../extension/background/caches/snapshots.js')
   })
 
   afterEach(() => {
@@ -219,7 +219,7 @@ describe('Issue 4: sourceMapCache LRU eviction', () => {
 
   beforeEach(async () => {
     mock.reset()
-    bgModule = await import('../../extension/background.js')
+    bgModule = await import('../../extension/background/caches/cache-limits.js')
     bgModule.clearSourceMapCache()
   })
 
@@ -292,7 +292,7 @@ describe('Issue 5: setInterval stacking prevention', () => {
 
   beforeEach(async () => {
     mock.reset()
-    bgModule = await import('../../extension/background.js')
+    bgModule = await import('../../extension/background/polling.js')
   })
 
   test(
@@ -371,7 +371,7 @@ describe('Issue 6: errorGroups periodic cleanup', () => {
 
   beforeEach(async () => {
     mock.reset()
-    bgModule = await import('../../extension/background.js')
+    bgModule = await import('../../extension/background/caches/error-groups.js')
     errorGroupsModule = await import('../../extension/background/caches/error-groups.js')
     // Clear error groups
     bgModule.flushErrorGroups()
@@ -441,7 +441,7 @@ describe('Issue 6: errorGroups periodic cleanup', () => {
 
 describe('Integration: Memory and reliability safeguards', () => {
   test('Maps should have bounded growth', async () => {
-    const bgModule = await import('../../extension/background.js')
+    const bgModule = await import('../../extension/background/caches/cache-limits.js')
     const { getErrorGroupsState } = await import('../../extension/background/caches/error-groups.js')
 
     // sourceMapCache should be bounded to 50

@@ -539,7 +539,7 @@ describe('Background Script Pilot Command Handler', () => {
 
     mockChrome.tabs.sendMessage.mock.mockImplementation(() => Promise.resolve({ success: true, result: 'executed' }))
 
-    const { handlePilotCommand } = await import('../../extension/background.js')
+    const { handlePilotCommand } = await import('../../extension/background/commands/interact.js')
     await resetPilotCacheForTesting(true)
 
     await handlePilotCommand('kaboom_execute_js', {
@@ -560,7 +560,7 @@ describe('Background Script Pilot Command Handler', () => {
       callback({ aiWebPilotEnabled: false })
     })
 
-    const { handlePilotCommand } = await import('../../extension/background.js')
+    const { handlePilotCommand } = await import('../../extension/background/commands/interact.js')
     await resetPilotCacheForTesting(false)
 
     const result = await handlePilotCommand('kaboom_execute_js', {

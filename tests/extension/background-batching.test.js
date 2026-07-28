@@ -76,18 +76,15 @@ const mockChrome = {
 globalThis.chrome = mockChrome
 
 // Import after mocking
+import { createLogBatcher } from '../../extension/background/sync/batchers.js'
+import { sendLogsToServer, checkServerHealth, updateBadge } from '../../extension/background/sync/server.js'
+import { formatLogEntry, shouldCaptureLog } from '../../extension/background/sync/log-processing.js'
 import {
-  createLogBatcher,
-  sendLogsToServer,
-  checkServerHealth,
-  updateBadge,
-  formatLogEntry,
-  shouldCaptureLog,
   measureContextSize,
   checkContextAnnotations,
   getContextWarning,
   resetContextWarning
-} from '../../extension/background.js'
+} from '../../extension/background/caches/snapshots.js'
 
 describe('Log Batcher', () => {
   beforeEach(() => {

@@ -76,15 +76,14 @@ const mockChrome = {
 globalThis.chrome = mockChrome
 
 // Import after mocking
+import { createLogBatcher } from '../../extension/background/sync/batchers.js'
+import { sendEnhancedActionsToServer } from '../../extension/background/sync/server.js'
 import {
-  createLogBatcher,
-  sendEnhancedActionsToServer,
   createErrorSignature,
   processErrorGroup,
-  flushErrorGroups,
-  canTakeScreenshot,
-  recordScreenshot
-} from '../../extension/background.js'
+  flushErrorGroups
+} from '../../extension/background/caches/error-groups.js'
+import { canTakeScreenshot, recordScreenshot } from '../../extension/background/caches/cache-limits.js'
 
 // Import installMessageListener directly (not re-exported from barrel)
 import { installMessageListener } from '../../extension/background/message-handlers.js'
@@ -430,7 +429,7 @@ describe('captureScreenshot', () => {
 
 describe('Debug Logging', () => {
   test('should log debug entries', async () => {
-    const { debugLog, getDebugLog, clearDebugLog, DebugCategory } = await import('../../extension/background.js')
+    const { debugLog, getDebugLog, clearDebugLog, DebugCategory } = await import('../../extension/background/index.js')
 
     // Clear any existing entries
     clearDebugLog()
@@ -455,7 +454,7 @@ describe('Debug Logging', () => {
   })
 
   test('should clear debug log', async () => {
-    const { debugLog, getDebugLog, clearDebugLog, DebugCategory } = await import('../../extension/background.js')
+    const { debugLog, getDebugLog, clearDebugLog, DebugCategory } = await import('../../extension/background/index.js')
 
     // Add an entry
     debugLog(DebugCategory.ERROR, 'Error test')
@@ -471,7 +470,7 @@ describe('Debug Logging', () => {
   })
 
   test('should export debug log as JSON', async () => {
-    const { debugLog, exportDebugLog, clearDebugLog, DebugCategory } = await import('../../extension/background.js')
+    const { debugLog, exportDebugLog, clearDebugLog, DebugCategory } = await import('../../extension/background/index.js')
 
     clearDebugLog()
     debugLog(DebugCategory.CAPTURE, 'Capture test')
@@ -495,7 +494,7 @@ describe('Debug Logging', () => {
   // NOTE: setDebugMode test moved to co-located test file: extension/background/index.test.js
 
   test('should limit debug log buffer size', async () => {
-    const { debugLog, getDebugLog, clearDebugLog, DebugCategory } = await import('../../extension/background.js')
+    const { debugLog, getDebugLog, clearDebugLog, DebugCategory } = await import('../../extension/background/index.js')
 
     clearDebugLog()
 
@@ -510,7 +509,7 @@ describe('Debug Logging', () => {
   })
 
   test('should queue debug logs even while disconnected for later sync flush', async () => {
-    const { debugLog, DebugCategory } = await import('../../extension/background.js')
+    const { debugLog, DebugCategory } = await import('../../extension/background/index.js')
     const { clearExtensionLogQueue, getExtensionLogQueue, setConnectionStatus } = await import(
       '../../extension/background/state.js'
     )
@@ -698,7 +697,7 @@ describe('GET_TAB_ID Message Handler', () => {
 
 describe('Performance Snapshot Batching (W6)', () => {
   test('sendPerformanceSnapshotToServer does NOT exist — replaced by perfBatcher', async () => {
-    const bgModule = await import('../../extension/background.js')
+    const bgModule = await import('../../extension/background/sync/server.js')
     assert.strictEqual(
       typeof bgModule.sendPerformanceSnapshotToServer,
       'undefined',

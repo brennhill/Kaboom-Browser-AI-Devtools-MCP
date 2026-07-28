@@ -29,6 +29,7 @@ code_paths:
   - internal/schema/interact/properties_output_batch.go
   - internal/tools/configure/capabilities/modespecs_interact.go
   - scripts/docs/reference/check-reference-schema-sync.mjs
+  - src/background.ts
   - src/background/pending-queries.ts
   - src/background/exec/query-execution.ts
   - src/background/commands/helpers.ts
@@ -93,11 +94,21 @@ test_paths:
   - cmd/browser-agent/internal/asyncresult/asyncresult_test.go
   - cmd/browser-agent/tools_async_formatting_test.go
   - tests/extension/interact-content-fallback.test.js
+  - tests/extension/async-timeout.test.js
+  - tests/extension/pending-query-targeting.test.js
+  - tests/extension/pilot-execute.test.js
+  - tests/extension/pilot-state.test.js
+  - tests/extension/pilot-toggle.test.js
+  - tests/extension/no-compatibility-facades.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
 
 # Interact Tool
+
+The background service-worker entrypoint owns startup only. Interaction
+consumers import state, command, snapshot, and query APIs from their focused
+owner modules; no compatibility facade is retained.
 
 ## TL;DR
 - Status: shipped

@@ -361,22 +361,24 @@ describe('Full Pipeline Integration After Refactoring', () => {
     try {
       // Import all modules that interact with each other
       const injectModule = await import('../../extension/inject.js')
-      const backgroundModule = await import('../../extension/background.js')
+      const logProcessing = await import('../../extension/background/sync/log-processing.js')
+      const errorGroups = await import('../../extension/background/caches/error-groups.js')
 
       // Verify modules loaded without errors
       assert.ok(injectModule, 'Inject module should load')
-      assert.ok(backgroundModule, 'Background module should load')
+      assert.ok(logProcessing, 'Log processing module should load')
+      assert.ok(errorGroups, 'Error grouping module should load')
 
       // Verify key functions exist and have correct signatures
       assert.strictEqual(typeof injectModule.safeSerialize, 'function', 'safeSerialize should exist')
-      assert.strictEqual(typeof backgroundModule.formatLogEntry, 'function', 'formatLogEntry should exist')
-      assert.strictEqual(typeof backgroundModule.createErrorSignature, 'function', 'createErrorSignature should exist')
+      assert.strictEqual(typeof logProcessing.formatLogEntry, 'function', 'formatLogEntry should exist')
+      assert.strictEqual(typeof errorGroups.createErrorSignature, 'function', 'createErrorSignature should exist')
 
       // Test that functions work together
       const serialized = injectModule.safeSerialize({ test: 'data', nested: { value: 42 } })
       assert.ok(serialized, 'Serialization should work')
 
-      const formatted = backgroundModule.formatLogEntry({
+      const formatted = logProcessing.formatLogEntry({
         level: 'info',
         type: 'console',
         args: [serialized],

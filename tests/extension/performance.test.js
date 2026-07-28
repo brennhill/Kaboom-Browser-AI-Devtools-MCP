@@ -178,7 +178,7 @@ describe('Performance Benchmarks', () => {
 
   describe('Error Signature Performance', () => {
     test('should compute error signature under 1ms', async () => {
-      const { createErrorSignature } = await import('../../extension/background.js')
+      const { createErrorSignature } = await import('../../extension/background/caches/error-groups.js')
 
       const errorEntry = {
         type: 'exception',
@@ -197,7 +197,7 @@ describe('Performance Benchmarks', () => {
     })
 
     test('should compute network error signature under 0.1ms', async () => {
-      const { createErrorSignature } = await import('../../extension/background.js')
+      const { createErrorSignature } = await import('../../extension/background/caches/error-groups.js')
 
       const networkEntry = {
         type: 'network',
@@ -216,7 +216,7 @@ describe('Performance Benchmarks', () => {
 
   describe('Log Entry Formatting Performance', () => {
     test('should format log entry under 0.1ms', async () => {
-      const { formatLogEntry } = await import('../../extension/background.js')
+      const { formatLogEntry } = await import('../../extension/background/sync/log-processing.js')
 
       const rawEntry = {
         level: 'error',
@@ -232,7 +232,7 @@ describe('Performance Benchmarks', () => {
     })
 
     test('should format entry with large args under 1ms', async () => {
-      const { formatLogEntry } = await import('../../extension/background.js')
+      const { formatLogEntry } = await import('../../extension/background/sync/log-processing.js')
 
       const rawEntry = {
         level: 'error',
@@ -250,7 +250,7 @@ describe('Performance Benchmarks', () => {
 
   describe('Error Grouping Performance', () => {
     test('should process error group under 0.2ms', async () => {
-      const { processErrorGroup } = await import('../../extension/background.js')
+      const { processErrorGroup } = await import('../../extension/background/caches/error-groups.js')
 
       const entry = {
         type: 'exception',
@@ -390,7 +390,10 @@ describe('Performance Benchmarks', () => {
 
   describe('Full Error Path Performance', () => {
     test('should handle complete error flow under 5ms', async () => {
-      const { formatLogEntry, createErrorSignature, processErrorGroup } = await import('../../extension/background.js')
+      const { formatLogEntry } = await import('../../extension/background/sync/log-processing.js')
+      const { createErrorSignature, processErrorGroup } = await import(
+        '../../extension/background/caches/error-groups.js'
+      )
       const { safeSerialize } = await import('../../extension/inject.js')
 
       // Simulate the complete error handling path
@@ -426,7 +429,9 @@ describe('Performance Benchmarks', () => {
 
   describe('Memory Safety', () => {
     test('should maintain bounded memory with repeated operations', async () => {
-      const { createErrorSignature, processErrorGroup } = await import('../../extension/background.js')
+      const { createErrorSignature, processErrorGroup } = await import(
+        '../../extension/background/caches/error-groups.js'
+      )
 
       // Run 3 batches to check for memory growth stabilization
       const memoryReadings = []

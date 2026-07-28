@@ -57,7 +57,8 @@ globalThis.chrome = {
 // Mock fetch globally
 globalThis.fetch = mock.fn()
 
-import { createCircuitBreaker, createBatcherWithCircuitBreaker, RATE_LIMIT_CONFIG } from '../../extension/background.js'
+import { createCircuitBreaker } from '../../extension/background/sync/circuit-breaker.js'
+import { createBatcherWithCircuitBreaker, RATE_LIMIT_CONFIG } from '../../extension/background/sync/batchers.js'
 
 describe('Rate Limit: Batcher Circuit Breaker Wiring', () => {
   beforeEach(() => {

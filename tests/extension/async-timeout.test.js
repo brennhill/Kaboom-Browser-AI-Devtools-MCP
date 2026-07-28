@@ -148,7 +148,11 @@ describe('Bug #5: Async Execute Command Await', () => {
       })
     )
 
-    bgModule = await import('../../extension/background.js')
+    bgModule = {
+      ...(await import('../../extension/background/index.js')),
+      ...(await import('../../extension/background/state.js')),
+      ...(await import('../../extension/background/caches/snapshots.js'))
+    }
     ;({ _resetPilotCacheForTesting: resetPilotCacheForTesting } = await import('../../extension/background/state.js'))
     bgModule.markInitComplete()
     resetPilotCacheForTesting(true)
@@ -305,7 +309,10 @@ describe('Bug #5: Async Browser Action Await (regression test)', () => {
         json: () => Promise.resolve({ queries: [] })
       })
     )
-    bgModule = await import('../../extension/background.js')
+    bgModule = {
+      ...(await import('../../extension/background/index.js')),
+      ...(await import('../../extension/background/state.js'))
+    }
     bgModule.markInitComplete()
     // Enable pilot cache so browser_action paths don't short-circuit
     resetPilotCacheForTesting(true)
@@ -368,7 +375,10 @@ describe('Bug #5: Extension Stability Under Load', () => {
         json: () => Promise.resolve({ queries: [] })
       })
     )
-    bgModule = await import('../../extension/background.js')
+    bgModule = {
+      ...(await import('../../extension/background/index.js')),
+      ...(await import('../../extension/background/state.js'))
+    }
     bgModule.markInitComplete()
     // Enable pilot cache so execute/browser_action paths don't short-circuit
     resetPilotCacheForTesting(true)
@@ -467,7 +477,10 @@ describe('Bug #5: Error Handling Robustness', () => {
         json: () => Promise.resolve({ queries: [] })
       })
     )
-    bgModule = await import('../../extension/background.js')
+    bgModule = {
+      ...(await import('../../extension/background/index.js')),
+      ...(await import('../../extension/background/state.js'))
+    }
     bgModule.markInitComplete()
     // Enable pilot cache so execute paths don't short-circuit
     resetPilotCacheForTesting(true)
