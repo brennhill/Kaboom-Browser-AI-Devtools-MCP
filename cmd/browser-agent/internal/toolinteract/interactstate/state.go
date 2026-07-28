@@ -163,23 +163,32 @@ func (h *Handler) QueueStateNavigation(req mcp.JSONRPCRequest, stateData map[str
 	stateData["correlation_id"] = correlationID
 }
 
+type snapshotRequest struct {
+	SnapshotName string `json:"snapshot_name"`
+	IncludeURL   bool   `json:"include_url,omitempty"`
+}
+
+func (h *Handler) parseSnapshotRequest(req mcp.JSONRPCRequest, args json.RawMessage) (snapshotRequest, mcp.JSONRPCResponse, bool) {
+	var params snapshotRequest
+	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
+		return snapshotRequest{}, resp, true
+	}
+	if resp, blocked := requireSnapshotName(req, params.SnapshotName); blocked {
+		return snapshotRequest{}, resp, true
+	}
+	if resp, blocked := h.deps.RequireSessionStore(req); blocked {
+		return snapshotRequest{}, resp, true
+	}
+	return params, mcp.JSONRPCResponse{}, false
+}
+
 // HandleStateSave persists a named snapshot of the tracked tab's page state.
 func (h *Handler) HandleStateSave(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	var params struct {
-		SnapshotName string `json:"snapshot_name"`
-	}
-	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
+	params, resp, stop := h.parseSnapshotRequest(req, args)
+	if stop {
 		return resp
 	}
-
 	snapshotName := params.SnapshotName
-	if resp, blocked := requireSnapshotName(req, snapshotName); blocked {
-		return resp
-	}
-
-	if resp, blocked := h.deps.RequireSessionStore(req); blocked {
-		return resp
-	}
 
 	_, tabID, tabURL := h.deps.GetTrackingStatus()
 	tabTitle := h.deps.GetTrackedTabTitle()
@@ -228,22 +237,11 @@ func (h *Handler) HandleStateSave(req mcp.JSONRPCRequest, args json.RawMessage) 
 
 // HandleStateLoad restores a named snapshot into the tracked tab.
 func (h *Handler) HandleStateLoad(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	var params struct {
-		SnapshotName string `json:"snapshot_name"`
-		IncludeURL   bool   `json:"include_url,omitempty"`
-	}
-	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
+	params, resp, stop := h.parseSnapshotRequest(req, args)
+	if stop {
 		return resp
 	}
-
 	snapshotName := params.SnapshotName
-	if resp, blocked := requireSnapshotName(req, snapshotName); blocked {
-		return resp
-	}
-
-	if resp, blocked := h.deps.RequireSessionStore(req); blocked {
-		return resp
-	}
 
 	data, err := h.sessionStoreImpl.Load(act.StateNamespace, snapshotName)
 	if err != nil {
@@ -345,21 +343,11 @@ func (h *Handler) buildStateEntry(key string) map[string]any {
 
 // HandleStateDelete removes a saved snapshot.
 func (h *Handler) HandleStateDelete(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	var params struct {
-		SnapshotName string `json:"snapshot_name"`
-	}
-	if resp, stop := mcp.ParseArgs(req, args, &params); stop {
+	params, resp, stop := h.parseSnapshotRequest(req, args)
+	if stop {
 		return resp
 	}
-
 	snapshotName := params.SnapshotName
-	if resp, blocked := requireSnapshotName(req, snapshotName); blocked {
-		return resp
-	}
-
-	if resp, blocked := h.deps.RequireSessionStore(req); blocked {
-		return resp
-	}
 
 	if err := h.sessionStoreImpl.Delete(act.StateNamespace, snapshotName); err != nil {
 		return mcp.Fail(req, mcp.ErrNoData, "State not found: "+snapshotName, "Use interact with action='list_states' to see available snapshots", h.deps.DiagnosticHint())

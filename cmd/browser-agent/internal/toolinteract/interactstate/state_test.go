@@ -138,6 +138,30 @@ func TestStateSnapshotHandlers_RequireSnapshotName(t *testing.T) {
 	}
 }
 
+func TestStateSnapshotHandlers_RejectInvalidJSON(t *testing.T) {
+	t.Parallel()
+	for name, call := range map[string]func(*Handler) mcp.JSONRPCResponse{
+		"save": func(h *Handler) mcp.JSONRPCResponse {
+			return h.HandleStateSave(req(), json.RawMessage(`bad`))
+		},
+		"load": func(h *Handler) mcp.JSONRPCResponse {
+			return h.HandleStateLoad(req(), json.RawMessage(`bad`))
+		},
+		"delete": func(h *Handler) mcp.JSONRPCResponse {
+			return h.HandleStateDelete(req(), json.RawMessage(`bad`))
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			h, _ := newHandler(t)
+			resp := call(h)
+			if !strings.Contains(string(resp.Result), mcp.ErrInvalidJSON) {
+				t.Fatalf("expected %s, got %s", mcp.ErrInvalidJSON, string(resp.Result))
+			}
+		})
+	}
+}
+
 func TestHandleStateSave_AcceptsSnapshotName(t *testing.T) {
 	h, _ := newHandler(t)
 	got := payload(t, h.HandleStateSave(req(), json.RawMessage(`{"snapshot_name":"new"}`)))

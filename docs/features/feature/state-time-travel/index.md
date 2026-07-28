@@ -52,6 +52,8 @@ last_verified_date: 2026-03-05
 - State capture, persistence, restore, listing, and deletion:
   - `cmd/browser-agent/internal/toolinteract/interactstate/state.go`
   - `src/inject/state.ts`
+- Save, load, and delete share one request-validation boundary for canonical
+  snapshot naming and session-store readiness.
 - Public `interact` action routing:
   - `cmd/browser-agent/tools_interact_dispatch.go`
 - Composition owns the canonical state handler directly:
