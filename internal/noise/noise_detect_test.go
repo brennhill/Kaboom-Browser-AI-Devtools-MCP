@@ -1,7 +1,6 @@
-// Purpose: Tests for automatic noise pattern detection.
+// noise_detect_test.go — Tests automatic noise-pattern detection.
 // Docs: docs/features/feature/noise-filtering/index.md
 
-// ai_noise_detect_test.go — Tests for auto-detection of noise patterns from browser telemetry.
 package noise
 
 import (
@@ -584,5 +583,164 @@ func TestAutoDetect_EmptyURLPathIgnored(t *testing.T) {
 		if p.Rule.Category == "network" {
 			t.Errorf("should not propose rules for empty URL paths, got: %+v", p)
 		}
+	}
+}
+
+// ============================================
+// Test Scenario 15: Auto-detect with 15 identical messages -> proposed rule with confidence > 0.7
+// ============================================
+
+func TestNoiseAutoDetectFrequency(t *testing.T) {
+	t.Parallel()
+	nc := NewNoiseConfig()
+
+	// Create entries with 15 identical messages
+	var entries []types.LogEntry
+	for i := 0; i < 15; i++ {
+		entries = append(entries, types.LogEntry{
+			"level":   "info",
+			"message": "Repeated polling message from my app",
+			"source":  "http://localhost:3000/app.js",
+		})
+	}
+
+	proposals := nc.AutoDetect(entries, nil, nil)
+
+	// Should have at least one proposal
+	if len(proposals) == 0 {
+		t.Fatal("expected at least one auto-detected proposal")
+	}
+
+	// Check confidence > 0.7
+	found := false
+	for _, p := range proposals {
+		if p.Confidence > 0.7 {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("expected at least one proposal with confidence > 0.7")
+	}
+}
+
+// ============================================
+// Test Scenario 16: Auto-detect doesn't duplicate existing rules
+// ============================================
+
+func TestNoiseAutoDetectNoDuplicates(t *testing.T) {
+	t.Parallel()
+	nc := NewNoiseConfig()
+
+	// The built-in chrome extension rule already covers this
+	var entries []types.LogEntry
+	for i := 0; i < 20; i++ {
+		entries = append(entries, types.LogEntry{
+			"level":   "warn",
+			"message": "Extension warning",
+			"source":  "chrome-extension://abc123/script.js",
+		})
+	}
+
+	proposals := nc.AutoDetect(entries, nil, nil)
+
+	// Should NOT propose a rule that duplicates the chrome extension built-in
+	for _, p := range proposals {
+		if p.Rule.MatchSpec.SourceRegex != "" && p.Rule.MatchSpec.SourceRegex == "chrome-extension://" {
+			t.Error("auto-detect should not duplicate existing rules")
+		}
+	}
+}
+
+// ============================================
+// Test Scenario 17: High-confidence auto-detected rules are automatically applied
+// ============================================
+
+func TestNoiseAutoDetectHighConfidenceApplied(t *testing.T) {
+	t.Parallel()
+	nc := NewNoiseConfig()
+
+	// Create 50 identical messages (should yield high confidence: 0.7 + 50/100 = 1.2, capped at 0.99)
+	var entries []types.LogEntry
+	for i := 0; i < 50; i++ {
+		entries = append(entries, types.LogEntry{
+			"level":   "info",
+			"message": "Unique auto-apply test message xyz",
+			"source":  "http://localhost:3000/worker.js",
+		})
+	}
+
+	beforeCount := len(nc.ListRules())
+	proposals := nc.AutoDetect(entries, nil, nil)
+
+	// High confidence proposals (>= 0.9) should be auto-applied
+	highConfCount := 0
+	for _, p := range proposals {
+		if p.Confidence >= 0.9 {
+			highConfCount++
+		}
+	}
+
+	afterCount := len(nc.ListRules())
+	if highConfCount > 0 && afterCount <= beforeCount {
+		t.Error("high-confidence proposals should be automatically applied as rules")
+	}
+}
+
+func TestNoiseAutoDetectNetworkFrequency(t *testing.T) {
+	t.Parallel()
+	nc := NewNoiseConfig()
+
+	// Create 25 network requests to /health endpoint
+	var bodies []types.NetworkBody
+	for i := 0; i < 25; i++ {
+		bodies = append(bodies, types.NetworkBody{
+			Method: "GET",
+			URL:    "http://localhost:3000/health",
+			Status: 200,
+		})
+	}
+
+	proposals := nc.AutoDetect(nil, bodies, nil)
+
+	// Should propose a rule for /health
+	found := false
+	for _, p := range proposals {
+		if p.Rule.Category == "network" && p.Confidence >= 0.8 {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("expected network frequency proposal for /health endpoint with confidence >= 0.8")
+	}
+}
+
+func TestNoiseAutoDetectSourceAnalysis(t *testing.T) {
+	t.Parallel()
+	nc := NewNoiseConfig()
+
+	// Create entries from node_modules
+	var entries []types.LogEntry
+	for i := 0; i < 5; i++ {
+		entries = append(entries, types.LogEntry{
+			"level":   "warn",
+			"message": "Some lib warning " + string(rune('A'+i)),
+			"source":  "http://localhost:3000/node_modules/some-lib/index.js",
+		})
+	}
+
+	proposals := nc.AutoDetect(entries, nil, nil)
+
+	// Should detect node_modules source
+	found := false
+	for _, p := range proposals {
+		if p.Rule.Category == "console" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("expected auto-detect to flag node_modules source entries")
 	}
 }

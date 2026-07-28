@@ -31,7 +31,8 @@ test_paths:
   - cmd/browser-agent/internal/noiseautorun/autorun_test.go
   - cmd/browser-agent/noise_first_connect_test.go
   - cmd/browser-agent/internal/toolconfigure/auditlog/handler_test.go
-  - internal/noise/noise_test.go
+  - internal/noise/noise_builtin_matching_test.go
+  - internal/noise/noise_rule_management_test.go
   - internal/noise/noise_detect_test.go
   - internal/noise/noise_edge_test.go
   - internal/noise/noise_persistence_test.go
