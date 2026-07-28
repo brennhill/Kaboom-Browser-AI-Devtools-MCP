@@ -6,6 +6,7 @@ package snapdiff
 
 import (
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // computeMetricIfNonZero returns a MetricChange if at least one value is non-zero, else nil.
@@ -17,7 +18,7 @@ func computeMetricIfNonZero(before, after float64) *MetricChange {
 }
 
 // Performance compares performance metrics between two snapshots.
-func Performance(a, b *NamedSnapshot) PerformanceDiff {
+func Performance(a, b *types.NamedSnapshot) PerformanceDiff {
 	if a.Performance == nil || b.Performance == nil {
 		return PerformanceDiff{}
 	}

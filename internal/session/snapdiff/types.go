@@ -14,14 +14,7 @@
 package snapdiff
 
 import (
-	gastypes "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
-)
-
-// Snapshot* types are aliases to the canonical snapshot contract in internal/types.
-type (
-	SnapshotError          = gastypes.SnapshotError
-	SnapshotNetworkRequest = gastypes.SnapshotNetworkRequest
-	NamedSnapshot          = gastypes.NamedSnapshot
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // Result is the full comparison result between two snapshots.
@@ -36,17 +29,17 @@ type Result struct {
 
 // ErrorDiff holds the error comparison between two snapshots.
 type ErrorDiff struct {
-	New       []SnapshotError `json:"new"`
-	Resolved  []SnapshotError `json:"resolved"`
-	Unchanged []SnapshotError `json:"unchanged"`
+	New       []types.SnapshotError `json:"new"`
+	Resolved  []types.SnapshotError `json:"resolved"`
+	Unchanged []types.SnapshotError `json:"unchanged"`
 }
 
 // NetworkDiff holds the network comparison between two snapshots.
 type NetworkDiff struct {
-	NewErrors        []SnapshotNetworkRequest `json:"new_errors"`
-	StatusChanges    []NetworkChange          `json:"status_changes"`
-	NewEndpoints     []SnapshotNetworkRequest `json:"new_endpoints"`
-	MissingEndpoints []SnapshotNetworkRequest `json:"missing_endpoints"`
+	NewErrors        []types.SnapshotNetworkRequest `json:"new_errors"`
+	StatusChanges    []NetworkChange                `json:"status_changes"`
+	NewEndpoints     []types.SnapshotNetworkRequest `json:"new_endpoints"`
+	MissingEndpoints []types.SnapshotNetworkRequest `json:"missing_endpoints"`
 }
 
 // NetworkChange represents a status code change for the same endpoint.

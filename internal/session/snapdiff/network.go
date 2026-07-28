@@ -6,6 +6,7 @@ package snapdiff
 
 import (
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
@@ -17,8 +18,8 @@ type endpointKey struct {
 }
 
 // buildEndpointMap indexes network requests by (method, path).
-func buildEndpointMap(requests []SnapshotNetworkRequest) map[endpointKey]SnapshotNetworkRequest {
-	m := make(map[endpointKey]SnapshotNetworkRequest, len(requests))
+func buildEndpointMap(requests []types.SnapshotNetworkRequest) map[endpointKey]types.SnapshotNetworkRequest {
+	m := make(map[endpointKey]types.SnapshotNetworkRequest, len(requests))
 	for _, req := range requests {
 		key := endpointKey{Method: req.Method, Path: capture.ExtractURLPath(req.URL)}
 		m[key] = req
@@ -40,12 +41,12 @@ func formatDurationChange(beforeDur, afterDur int) string {
 
 // Network compares network requests between two snapshots.
 // Requests are matched by (method, URL path) — query params are ignored.
-func Network(a, b *NamedSnapshot) NetworkDiff {
+func Network(a, b *types.NamedSnapshot) NetworkDiff {
 	diff := NetworkDiff{
-		NewErrors:        make([]SnapshotNetworkRequest, 0),
+		NewErrors:        make([]types.SnapshotNetworkRequest, 0),
 		StatusChanges:    make([]NetworkChange, 0),
-		NewEndpoints:     make([]SnapshotNetworkRequest, 0),
-		MissingEndpoints: make([]SnapshotNetworkRequest, 0),
+		NewEndpoints:     make([]types.SnapshotNetworkRequest, 0),
+		MissingEndpoints: make([]types.SnapshotNetworkRequest, 0),
 	}
 
 	aEndpoints := buildEndpointMap(a.NetworkRequests)

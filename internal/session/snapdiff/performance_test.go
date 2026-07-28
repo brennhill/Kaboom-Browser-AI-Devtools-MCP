@@ -6,6 +6,7 @@
 package snapdiff
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
@@ -210,8 +211,8 @@ func TestFormatPctChange_LargePositive(t *testing.T) {
 
 func TestDiffPerformance_BothNilPerformance(t *testing.T) {
 	t.Parallel()
-	snapA := &NamedSnapshot{Performance: nil}
-	snapB := &NamedSnapshot{Performance: nil}
+	snapA := &types.NamedSnapshot{Performance: nil}
+	snapB := &types.NamedSnapshot{Performance: nil}
 
 	diff := Performance(snapA, snapB)
 	if diff.LoadTime != nil {
@@ -227,8 +228,8 @@ func TestDiffPerformance_BothNilPerformance(t *testing.T) {
 
 func TestDiffPerformance_AIsNil(t *testing.T) {
 	t.Parallel()
-	snapA := &NamedSnapshot{Performance: nil}
-	snapB := &NamedSnapshot{
+	snapA := &types.NamedSnapshot{Performance: nil}
+	snapB := &types.NamedSnapshot{
 		Performance: &performance.PerformanceSnapshot{
 			Timing:  performance.PerformanceTiming{Load: 1000},
 			Network: performance.NetworkSummary{RequestCount: 10, TransferSize: 50000},
@@ -243,13 +244,13 @@ func TestDiffPerformance_AIsNil(t *testing.T) {
 
 func TestDiffPerformance_BIsNil(t *testing.T) {
 	t.Parallel()
-	snapA := &NamedSnapshot{
+	snapA := &types.NamedSnapshot{
 		Performance: &performance.PerformanceSnapshot{
 			Timing:  performance.PerformanceTiming{Load: 1000},
 			Network: performance.NetworkSummary{RequestCount: 10, TransferSize: 50000},
 		},
 	}
-	snapB := &NamedSnapshot{Performance: nil}
+	snapB := &types.NamedSnapshot{Performance: nil}
 
 	diff := Performance(snapA, snapB)
 	if diff.LoadTime != nil {
@@ -259,13 +260,13 @@ func TestDiffPerformance_BIsNil(t *testing.T) {
 
 func TestDiffPerformance_AllMetrics(t *testing.T) {
 	t.Parallel()
-	snapA := &NamedSnapshot{
+	snapA := &types.NamedSnapshot{
 		Performance: &performance.PerformanceSnapshot{
 			Timing:  performance.PerformanceTiming{Load: 1000},
 			Network: performance.NetworkSummary{RequestCount: 10, TransferSize: 50000},
 		},
 	}
-	snapB := &NamedSnapshot{
+	snapB := &types.NamedSnapshot{
 		Performance: &performance.PerformanceSnapshot{
 			Timing:  performance.PerformanceTiming{Load: 2000},
 			Network: performance.NetworkSummary{RequestCount: 20, TransferSize: 100000},
@@ -322,13 +323,13 @@ func TestDiffPerformance_AllMetrics(t *testing.T) {
 
 func TestDiffPerformance_ZeroMetrics(t *testing.T) {
 	t.Parallel()
-	snapA := &NamedSnapshot{
+	snapA := &types.NamedSnapshot{
 		Performance: &performance.PerformanceSnapshot{
 			Timing:  performance.PerformanceTiming{Load: 0},
 			Network: performance.NetworkSummary{RequestCount: 0, TransferSize: 0},
 		},
 	}
-	snapB := &NamedSnapshot{
+	snapB := &types.NamedSnapshot{
 		Performance: &performance.PerformanceSnapshot{
 			Timing:  performance.PerformanceTiming{Load: 0},
 			Network: performance.NetworkSummary{RequestCount: 0, TransferSize: 0},
@@ -351,13 +352,13 @@ func TestDiffPerformance_ZeroMetrics(t *testing.T) {
 
 func TestDiffPerformance_Improvement(t *testing.T) {
 	t.Parallel()
-	snapA := &NamedSnapshot{
+	snapA := &types.NamedSnapshot{
 		Performance: &performance.PerformanceSnapshot{
 			Timing:  performance.PerformanceTiming{Load: 3000},
 			Network: performance.NetworkSummary{RequestCount: 50, TransferSize: 500000},
 		},
 	}
-	snapB := &NamedSnapshot{
+	snapB := &types.NamedSnapshot{
 		Performance: &performance.PerformanceSnapshot{
 			Timing:  performance.PerformanceTiming{Load: 800},
 			Network: performance.NetworkSummary{RequestCount: 10, TransferSize: 50000},

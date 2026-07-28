@@ -13,9 +13,18 @@ code_paths:
   - internal/session/clientreg/registry.go
   - internal/session/clientreg/state.go
   - internal/session/types.go
+  - internal/session/snapshot-manager.go
+  - internal/session/comparison.go
+  - internal/session/snapdiff/types.go
+  - internal/types/snapshot.go
 test_paths:
   - cmd/browser-agent/server_routes_clients_test.go
   - internal/session/clientreg/clientreg_test.go
+  - internal/session/snapshot_manager_test.go
+  - internal/session/comparison_test.go
+  - internal/session/snapdiff/errors_test.go
+  - internal/session/snapdiff/network_test.go
+  - internal/session/snapdiff/performance_test.go
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -49,4 +58,7 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-Add concrete implementation and test links here as this feature evolves.
+`internal/types/snapshot.go` owns the snapshot contract. Session capture and
+diff modules consume those types directly; they do not re-export package-local
+aliases. Snapshot manager, comparison, and diff tests exercise the same
+canonical contract.

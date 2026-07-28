@@ -6,6 +6,7 @@
 package snapdiff
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 )
 
@@ -36,7 +37,7 @@ func TestBuildEndpointMap_Empty(t *testing.T) {
 		t.Errorf("Expected empty map for nil input, got %d entries", len(m))
 	}
 
-	m2 := buildEndpointMap([]SnapshotNetworkRequest{})
+	m2 := buildEndpointMap([]types.SnapshotNetworkRequest{})
 	if len(m2) != 0 {
 		t.Errorf("Expected empty map for empty slice, got %d entries", len(m2))
 	}
@@ -44,7 +45,7 @@ func TestBuildEndpointMap_Empty(t *testing.T) {
 
 func TestBuildEndpointMap_KeyByMethodAndPath(t *testing.T) {
 	t.Parallel()
-	requests := []SnapshotNetworkRequest{
+	requests := []types.SnapshotNetworkRequest{
 		{Method: "GET", URL: "/api/users?page=1", Status: 200, Duration: 100},
 		{Method: "POST", URL: "/api/users", Status: 201, Duration: 50},
 	}
@@ -77,7 +78,7 @@ func TestBuildEndpointMap_KeyByMethodAndPath(t *testing.T) {
 
 func TestBuildEndpointMap_DuplicateKeysLastWins(t *testing.T) {
 	t.Parallel()
-	requests := []SnapshotNetworkRequest{
+	requests := []types.SnapshotNetworkRequest{
 		{Method: "GET", URL: "/api/data", Status: 200},
 		{Method: "GET", URL: "/api/data", Status: 500},
 	}
@@ -159,13 +160,13 @@ func TestFormatDurationChange_NegativeValues(t *testing.T) {
 
 func TestDiffNetwork_NewEndpoints(t *testing.T) {
 	t.Parallel()
-	snapA := &NamedSnapshot{
-		NetworkRequests: []SnapshotNetworkRequest{
+	snapA := &types.NamedSnapshot{
+		NetworkRequests: []types.SnapshotNetworkRequest{
 			{Method: "GET", URL: "/api/users", Status: 200},
 		},
 	}
-	snapB := &NamedSnapshot{
-		NetworkRequests: []SnapshotNetworkRequest{
+	snapB := &types.NamedSnapshot{
+		NetworkRequests: []types.SnapshotNetworkRequest{
 			{Method: "GET", URL: "/api/users", Status: 200},
 			{Method: "GET", URL: "/api/orders", Status: 200},
 			{Method: "POST", URL: "/api/payments", Status: 201},
@@ -193,15 +194,15 @@ func TestDiffNetwork_NewEndpoints(t *testing.T) {
 
 func TestDiffNetwork_MissingEndpoints(t *testing.T) {
 	t.Parallel()
-	snapA := &NamedSnapshot{
-		NetworkRequests: []SnapshotNetworkRequest{
+	snapA := &types.NamedSnapshot{
+		NetworkRequests: []types.SnapshotNetworkRequest{
 			{Method: "GET", URL: "/api/users", Status: 200},
 			{Method: "GET", URL: "/api/legacy", Status: 200},
 			{Method: "DELETE", URL: "/api/cleanup", Status: 204},
 		},
 	}
-	snapB := &NamedSnapshot{
-		NetworkRequests: []SnapshotNetworkRequest{
+	snapB := &types.NamedSnapshot{
+		NetworkRequests: []types.SnapshotNetworkRequest{
 			{Method: "GET", URL: "/api/users", Status: 200},
 		},
 	}
@@ -227,13 +228,13 @@ func TestDiffNetwork_MissingEndpoints(t *testing.T) {
 
 func TestDiffNetwork_StatusChanges(t *testing.T) {
 	t.Parallel()
-	snapA := &NamedSnapshot{
-		NetworkRequests: []SnapshotNetworkRequest{
+	snapA := &types.NamedSnapshot{
+		NetworkRequests: []types.SnapshotNetworkRequest{
 			{Method: "GET", URL: "/api/data", Status: 200, Duration: 50},
 		},
 	}
-	snapB := &NamedSnapshot{
-		NetworkRequests: []SnapshotNetworkRequest{
+	snapB := &types.NamedSnapshot{
+		NetworkRequests: []types.SnapshotNetworkRequest{
 			{Method: "GET", URL: "/api/data", Status: 500, Duration: 200},
 		},
 	}
@@ -264,13 +265,13 @@ func TestDiffNetwork_StatusChanges(t *testing.T) {
 
 func TestDiffNetwork_StatusChangeOKToError_AddsToNewErrors(t *testing.T) {
 	t.Parallel()
-	snapA := &NamedSnapshot{
-		NetworkRequests: []SnapshotNetworkRequest{
+	snapA := &types.NamedSnapshot{
+		NetworkRequests: []types.SnapshotNetworkRequest{
 			{Method: "POST", URL: "/api/submit", Status: 200},
 		},
 	}
-	snapB := &NamedSnapshot{
-		NetworkRequests: []SnapshotNetworkRequest{
+	snapB := &types.NamedSnapshot{
+		NetworkRequests: []types.SnapshotNetworkRequest{
 			{Method: "POST", URL: "/api/submit", Status: 503},
 		},
 	}
@@ -289,13 +290,13 @@ func TestDiffNetwork_StatusChangeOKToError_AddsToNewErrors(t *testing.T) {
 func TestDiffNetwork_StatusChangeErrorToError_NotNewError(t *testing.T) {
 	t.Parallel()
 	// 500 -> 502: error changed but was already an error
-	snapA := &NamedSnapshot{
-		NetworkRequests: []SnapshotNetworkRequest{
+	snapA := &types.NamedSnapshot{
+		NetworkRequests: []types.SnapshotNetworkRequest{
 			{Method: "GET", URL: "/api/health", Status: 500},
 		},
 	}
-	snapB := &NamedSnapshot{
-		NetworkRequests: []SnapshotNetworkRequest{
+	snapB := &types.NamedSnapshot{
+		NetworkRequests: []types.SnapshotNetworkRequest{
 			{Method: "GET", URL: "/api/health", Status: 502},
 		},
 	}
@@ -317,11 +318,11 @@ func TestDiffNetwork_StatusChangeErrorToError_NotNewError(t *testing.T) {
 
 func TestDiffNetwork_NewEndpointWithErrorStatus(t *testing.T) {
 	t.Parallel()
-	snapA := &NamedSnapshot{
-		NetworkRequests: []SnapshotNetworkRequest{},
+	snapA := &types.NamedSnapshot{
+		NetworkRequests: []types.SnapshotNetworkRequest{},
 	}
-	snapB := &NamedSnapshot{
-		NetworkRequests: []SnapshotNetworkRequest{
+	snapB := &types.NamedSnapshot{
+		NetworkRequests: []types.SnapshotNetworkRequest{
 			{Method: "GET", URL: "/api/broken", Status: 404},
 			{Method: "GET", URL: "/api/ok", Status: 200},
 		},
@@ -347,13 +348,13 @@ func TestDiffNetwork_NewEndpointWithErrorStatus(t *testing.T) {
 
 func TestDiffNetwork_NoChanges(t *testing.T) {
 	t.Parallel()
-	requests := []SnapshotNetworkRequest{
+	requests := []types.SnapshotNetworkRequest{
 		{Method: "GET", URL: "/api/users", Status: 200},
 		{Method: "POST", URL: "/api/login", Status: 200},
 	}
 
-	snapA := &NamedSnapshot{NetworkRequests: requests}
-	snapB := &NamedSnapshot{NetworkRequests: requests}
+	snapA := &types.NamedSnapshot{NetworkRequests: requests}
+	snapB := &types.NamedSnapshot{NetworkRequests: requests}
 
 	diff := Network(snapA, snapB)
 	assertNetworkDiffEmpty(t, diff)
@@ -365,8 +366,8 @@ func TestDiffNetwork_NoChanges(t *testing.T) {
 
 func TestDiffNetwork_BothEmpty(t *testing.T) {
 	t.Parallel()
-	snapA := &NamedSnapshot{NetworkRequests: []SnapshotNetworkRequest{}}
-	snapB := &NamedSnapshot{NetworkRequests: []SnapshotNetworkRequest{}}
+	snapA := &types.NamedSnapshot{NetworkRequests: []types.SnapshotNetworkRequest{}}
+	snapB := &types.NamedSnapshot{NetworkRequests: []types.SnapshotNetworkRequest{}}
 
 	diff := Network(snapA, snapB)
 	assertNetworkDiffEmpty(t, diff)
@@ -374,8 +375,8 @@ func TestDiffNetwork_BothEmpty(t *testing.T) {
 
 func TestDiffNetwork_NilNetworkRequests(t *testing.T) {
 	t.Parallel()
-	snapA := &NamedSnapshot{NetworkRequests: nil}
-	snapB := &NamedSnapshot{NetworkRequests: nil}
+	snapA := &types.NamedSnapshot{NetworkRequests: nil}
+	snapB := &types.NamedSnapshot{NetworkRequests: nil}
 
 	diff := Network(snapA, snapB)
 
@@ -391,13 +392,13 @@ func TestDiffNetwork_NilNetworkRequests(t *testing.T) {
 func TestDiffNetwork_DurationChangeNoDuration(t *testing.T) {
 	t.Parallel()
 	// Status change with zero duration (missing data)
-	snapA := &NamedSnapshot{
-		NetworkRequests: []SnapshotNetworkRequest{
+	snapA := &types.NamedSnapshot{
+		NetworkRequests: []types.SnapshotNetworkRequest{
 			{Method: "GET", URL: "/api/data", Status: 200, Duration: 0},
 		},
 	}
-	snapB := &NamedSnapshot{
-		NetworkRequests: []SnapshotNetworkRequest{
+	snapB := &types.NamedSnapshot{
+		NetworkRequests: []types.SnapshotNetworkRequest{
 			{Method: "GET", URL: "/api/data", Status: 500, Duration: 0},
 		},
 	}
@@ -418,13 +419,13 @@ func TestDiffNetwork_DurationChangeNoDuration(t *testing.T) {
 
 func TestDiffNetwork_QueryParamsIgnoredForMatching(t *testing.T) {
 	t.Parallel()
-	snapA := &NamedSnapshot{
-		NetworkRequests: []SnapshotNetworkRequest{
+	snapA := &types.NamedSnapshot{
+		NetworkRequests: []types.SnapshotNetworkRequest{
 			{Method: "GET", URL: "https://api.example.com/users?page=1&limit=10", Status: 200},
 		},
 	}
-	snapB := &NamedSnapshot{
-		NetworkRequests: []SnapshotNetworkRequest{
+	snapB := &types.NamedSnapshot{
+		NetworkRequests: []types.SnapshotNetworkRequest{
 			{Method: "GET", URL: "https://api.example.com/users?page=2&limit=20", Status: 200},
 		},
 	}

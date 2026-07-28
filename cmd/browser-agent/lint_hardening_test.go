@@ -7,6 +7,9 @@
 package main
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -141,16 +144,19 @@ func TestAuthoredGoDoesNotDeclareTypeAliases(t *testing.T) {
 		if filepath.Ext(path) != ".go" {
 			return nil
 		}
-		source, readErr := os.ReadFile(path)
-		if readErr != nil {
-			return readErr
+		fileSet := token.NewFileSet()
+		parsed, parseErr := parser.ParseFile(fileSet, path, nil, 0)
+		if parseErr != nil {
+			return parseErr
 		}
-		for lineNumber, line := range strings.Split(string(source), "\n") {
-			trimmed := strings.TrimSpace(line)
-			if strings.HasPrefix(trimmed, "type ") && strings.Contains(trimmed, " = ") {
-				t.Errorf("%s:%d declares a Go type alias: %s", path, lineNumber+1, trimmed)
+		ast.Inspect(parsed, func(node ast.Node) bool {
+			spec, ok := node.(*ast.TypeSpec)
+			if ok && spec.Assign.IsValid() {
+				position := fileSet.Position(spec.Pos())
+				t.Errorf("%s:%d declares Go type alias %s", path, position.Line, spec.Name.Name)
 			}
-		}
+			return true
+		})
 		return nil
 	})
 	if err != nil {

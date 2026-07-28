@@ -7,6 +7,7 @@ package session
 
 import (
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/session/snapdiff"
 )
@@ -21,7 +22,7 @@ func (sm *SessionManager) Compare(a, b string) (*snapdiff.Result, error) {
 		return nil, fmt.Errorf("snapshot %q not found", a)
 	}
 
-	var snapB *NamedSnapshot
+	var snapB *types.NamedSnapshot
 	if b == reservedSnapshotName {
 		// Compare against current live state
 		snapB = sm.captureCurrentState("current", snapA.URLFilter)

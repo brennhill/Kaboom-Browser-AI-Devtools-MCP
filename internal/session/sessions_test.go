@@ -5,6 +5,7 @@ package session
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"sync"
 	"testing"
 	"time"
@@ -18,38 +19,38 @@ import (
 // ============================================
 
 type mockCaptureState struct {
-	consoleErrors   []SnapshotError
-	consoleWarnings []SnapshotError
-	networkRequests []SnapshotNetworkRequest
-	wsConnections   []SnapshotWSConnection
+	consoleErrors   []types.SnapshotError
+	consoleWarnings []types.SnapshotError
+	networkRequests []types.SnapshotNetworkRequest
+	wsConnections   []types.SnapshotWSConnection
 	performance     *performance.PerformanceSnapshot
 	pageURL         string
 }
 
-func (m *mockCaptureState) GetConsoleErrors() []SnapshotError {
+func (m *mockCaptureState) GetConsoleErrors() []types.SnapshotError {
 	if m.consoleErrors == nil {
-		return []SnapshotError{}
+		return []types.SnapshotError{}
 	}
 	return m.consoleErrors
 }
 
-func (m *mockCaptureState) GetConsoleWarnings() []SnapshotError {
+func (m *mockCaptureState) GetConsoleWarnings() []types.SnapshotError {
 	if m.consoleWarnings == nil {
-		return []SnapshotError{}
+		return []types.SnapshotError{}
 	}
 	return m.consoleWarnings
 }
 
-func (m *mockCaptureState) GetNetworkRequests() []SnapshotNetworkRequest {
+func (m *mockCaptureState) GetNetworkRequests() []types.SnapshotNetworkRequest {
 	if m.networkRequests == nil {
-		return []SnapshotNetworkRequest{}
+		return []types.SnapshotNetworkRequest{}
 	}
 	return m.networkRequests
 }
 
-func (m *mockCaptureState) GetWSConnections() []SnapshotWSConnection {
+func (m *mockCaptureState) GetWSConnections() []types.SnapshotWSConnection {
 	if m.wsConnections == nil {
-		return []SnapshotWSConnection{}
+		return []types.SnapshotWSConnection{}
 	}
 	return m.wsConnections
 }
@@ -69,17 +70,17 @@ func (m *mockCaptureState) GetCurrentPageURL() string {
 func TestSessionManager_CaptureSnapshot(t *testing.T) {
 	t.Parallel()
 	mock := &mockCaptureState{
-		consoleErrors: []SnapshotError{
+		consoleErrors: []types.SnapshotError{
 			{Type: "console", Message: "TypeError: cannot read null", Count: 1},
 		},
-		consoleWarnings: []SnapshotError{
+		consoleWarnings: []types.SnapshotError{
 			{Type: "console", Message: "Deprecation warning: componentWillMount", Count: 2},
 		},
-		networkRequests: []SnapshotNetworkRequest{
+		networkRequests: []types.SnapshotNetworkRequest{
 			{Method: "GET", URL: "/api/users", Status: 200, Duration: 150},
 			{Method: "POST", URL: "/api/login", Status: 401, Duration: 50},
 		},
-		wsConnections: []SnapshotWSConnection{
+		wsConnections: []types.SnapshotWSConnection{
 			{URL: "ws://localhost:8080/ws", State: "open"},
 		},
 		performance: &performance.PerformanceSnapshot{
@@ -137,7 +138,7 @@ func TestSessionManager_CaptureSnapshot(t *testing.T) {
 func TestSessionManager_CaptureWithURLFilter(t *testing.T) {
 	t.Parallel()
 	mock := &mockCaptureState{
-		networkRequests: []SnapshotNetworkRequest{
+		networkRequests: []types.SnapshotNetworkRequest{
 			{Method: "GET", URL: "/api/users", Status: 200},
 			{Method: "GET", URL: "/api/dashboard", Status: 200},
 			{Method: "GET", URL: "/static/main.js", Status: 200},
@@ -162,7 +163,7 @@ func TestSessionManager_CaptureWithURLFilter(t *testing.T) {
 func TestSessionManager_CaptureOverwritesDuplicate(t *testing.T) {
 	t.Parallel()
 	mock := &mockCaptureState{
-		consoleErrors: []SnapshotError{
+		consoleErrors: []types.SnapshotError{
 			{Type: "console", Message: "Error one", Count: 1},
 		},
 		pageURL: "http://localhost:3000",
@@ -176,7 +177,7 @@ func TestSessionManager_CaptureOverwritesDuplicate(t *testing.T) {
 	}
 
 	// Update mock state
-	mock.consoleErrors = []SnapshotError{
+	mock.consoleErrors = []types.SnapshotError{
 		{Type: "console", Message: "Error two", Count: 1},
 	}
 
@@ -253,11 +254,11 @@ func TestSessionManager_CompareDetectsNewErrors(t *testing.T) {
 	sm := NewSessionManager(10, mock)
 
 	// Snapshot A: no errors
-	mock.consoleErrors = []SnapshotError{}
+	mock.consoleErrors = []types.SnapshotError{}
 	sm.Capture("before", "")
 
 	// Snapshot B: has errors
-	mock.consoleErrors = []SnapshotError{
+	mock.consoleErrors = []types.SnapshotError{
 		{Type: "console", Message: "React hydration mismatch", Count: 3},
 	}
 	sm.Capture("after", "")
@@ -284,14 +285,14 @@ func TestSessionManager_CompareDetectsResolvedErrors(t *testing.T) {
 	sm := NewSessionManager(10, mock)
 
 	// Snapshot A: has errors
-	mock.consoleErrors = []SnapshotError{
+	mock.consoleErrors = []types.SnapshotError{
 		{Type: "console", Message: "TypeError: x is null", Count: 1},
 		{Type: "console", Message: "ReferenceError: y is not defined", Count: 1},
 	}
 	sm.Capture("before", "")
 
 	// Snapshot B: one error resolved
-	mock.consoleErrors = []SnapshotError{
+	mock.consoleErrors = []types.SnapshotError{
 		{Type: "console", Message: "TypeError: x is null", Count: 1},
 	}
 	sm.Capture("after", "")
@@ -320,12 +321,12 @@ func TestSessionManager_CompareDetectsNewNetworkCalls(t *testing.T) {
 	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
 	sm := NewSessionManager(10, mock)
 
-	mock.networkRequests = []SnapshotNetworkRequest{
+	mock.networkRequests = []types.SnapshotNetworkRequest{
 		{Method: "GET", URL: "/api/users", Status: 200},
 	}
 	sm.Capture("before", "")
 
-	mock.networkRequests = []SnapshotNetworkRequest{
+	mock.networkRequests = []types.SnapshotNetworkRequest{
 		{Method: "GET", URL: "/api/users", Status: 200},
 		{Method: "GET", URL: "/api/feature-flags", Status: 200},
 	}
@@ -349,13 +350,13 @@ func TestSessionManager_CompareDetectsRemovedNetworkCalls(t *testing.T) {
 	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
 	sm := NewSessionManager(10, mock)
 
-	mock.networkRequests = []SnapshotNetworkRequest{
+	mock.networkRequests = []types.SnapshotNetworkRequest{
 		{Method: "GET", URL: "/api/users", Status: 200},
 		{Method: "GET", URL: "/api/legacy", Status: 200},
 	}
 	sm.Capture("before", "")
 
-	mock.networkRequests = []SnapshotNetworkRequest{
+	mock.networkRequests = []types.SnapshotNetworkRequest{
 		{Method: "GET", URL: "/api/users", Status: 200},
 	}
 	sm.Capture("after", "")
@@ -378,12 +379,12 @@ func TestSessionManager_CompareDetectsStatusCodeChanges(t *testing.T) {
 	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
 	sm := NewSessionManager(10, mock)
 
-	mock.networkRequests = []SnapshotNetworkRequest{
+	mock.networkRequests = []types.SnapshotNetworkRequest{
 		{Method: "GET", URL: "/api/dashboard", Status: 200, Duration: 100},
 	}
 	sm.Capture("before", "")
 
-	mock.networkRequests = []SnapshotNetworkRequest{
+	mock.networkRequests = []types.SnapshotNetworkRequest{
 		{Method: "GET", URL: "/api/dashboard", Status: 502, Duration: 440},
 	}
 	sm.Capture("after", "")
@@ -410,12 +411,12 @@ func TestSessionManager_CompareDetectsNewNetworkErrors(t *testing.T) {
 	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
 	sm := NewSessionManager(10, mock)
 
-	mock.networkRequests = []SnapshotNetworkRequest{
+	mock.networkRequests = []types.SnapshotNetworkRequest{
 		{Method: "GET", URL: "/api/users", Status: 200},
 	}
 	sm.Capture("before", "")
 
-	mock.networkRequests = []SnapshotNetworkRequest{
+	mock.networkRequests = []types.SnapshotNetworkRequest{
 		{Method: "GET", URL: "/api/users", Status: 200},
 		{Method: "GET", URL: "/api/notifications", Status: 502},
 	}
@@ -479,13 +480,13 @@ func TestSessionManager_CompareVsCurrent(t *testing.T) {
 	sm := NewSessionManager(10, mock)
 
 	// Save snapshot
-	mock.consoleErrors = []SnapshotError{
+	mock.consoleErrors = []types.SnapshotError{
 		{Type: "console", Message: "Error A", Count: 1},
 	}
 	sm.Capture("saved", "")
 
 	// Change mock state to simulate "current"
-	mock.consoleErrors = []SnapshotError{
+	mock.consoleErrors = []types.SnapshotError{
 		{Type: "console", Message: "Error A", Count: 1},
 		{Type: "console", Message: "Error B", Count: 1},
 	}
@@ -529,13 +530,13 @@ func TestSessionManager_VerdictImproved(t *testing.T) {
 	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
 	sm := NewSessionManager(10, mock)
 
-	mock.consoleErrors = []SnapshotError{
+	mock.consoleErrors = []types.SnapshotError{
 		{Type: "console", Message: "Error one", Count: 1},
 		{Type: "console", Message: "Error two", Count: 1},
 	}
 	sm.Capture("before", "")
 
-	mock.consoleErrors = []SnapshotError{}
+	mock.consoleErrors = []types.SnapshotError{}
 	sm.Capture("after", "")
 
 	diff, err := sm.Compare("before", "after")
@@ -553,10 +554,10 @@ func TestSessionManager_VerdictRegressed(t *testing.T) {
 	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
 	sm := NewSessionManager(10, mock)
 
-	mock.consoleErrors = []SnapshotError{}
+	mock.consoleErrors = []types.SnapshotError{}
 	sm.Capture("before", "")
 
-	mock.consoleErrors = []SnapshotError{
+	mock.consoleErrors = []types.SnapshotError{
 		{Type: "console", Message: "New error", Count: 1},
 	}
 	sm.Capture("after", "")
@@ -576,12 +577,12 @@ func TestSessionManager_VerdictRegressedByNetworkError(t *testing.T) {
 	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
 	sm := NewSessionManager(10, mock)
 
-	mock.networkRequests = []SnapshotNetworkRequest{
+	mock.networkRequests = []types.SnapshotNetworkRequest{
 		{Method: "GET", URL: "/api/data", Status: 200},
 	}
 	sm.Capture("before", "")
 
-	mock.networkRequests = []SnapshotNetworkRequest{
+	mock.networkRequests = []types.SnapshotNetworkRequest{
 		{Method: "GET", URL: "/api/data", Status: 500},
 	}
 	sm.Capture("after", "")
@@ -628,10 +629,10 @@ func TestSessionManager_VerdictUnchanged(t *testing.T) {
 	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
 	sm := NewSessionManager(10, mock)
 
-	mock.consoleErrors = []SnapshotError{
+	mock.consoleErrors = []types.SnapshotError{
 		{Type: "console", Message: "Error A", Count: 1},
 	}
-	mock.networkRequests = []SnapshotNetworkRequest{
+	mock.networkRequests = []types.SnapshotNetworkRequest{
 		{Method: "GET", URL: "/api/users", Status: 200},
 	}
 	sm.Capture("before", "")
@@ -653,13 +654,13 @@ func TestSessionManager_VerdictMixed(t *testing.T) {
 	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
 	sm := NewSessionManager(10, mock)
 
-	mock.consoleErrors = []SnapshotError{
+	mock.consoleErrors = []types.SnapshotError{
 		{Type: "console", Message: "Old error", Count: 1},
 	}
 	sm.Capture("before", "")
 
 	// Old error resolved, but new one appeared
-	mock.consoleErrors = []SnapshotError{
+	mock.consoleErrors = []types.SnapshotError{
 		{Type: "console", Message: "New error", Count: 1},
 	}
 	sm.Capture("after", "")
@@ -683,12 +684,12 @@ func TestSessionManager_List(t *testing.T) {
 	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
 	sm := NewSessionManager(10, mock)
 
-	mock.consoleErrors = []SnapshotError{
+	mock.consoleErrors = []types.SnapshotError{
 		{Type: "console", Message: "Err", Count: 1},
 	}
 	sm.Capture("snapshot-1", "")
 
-	mock.consoleErrors = []SnapshotError{}
+	mock.consoleErrors = []types.SnapshotError{}
 	sm.Capture("snapshot-2", "")
 
 	list := sm.List()
@@ -805,10 +806,10 @@ func TestSessionManager_CaseSensitiveNames(t *testing.T) {
 	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
 	sm := NewSessionManager(10, mock)
 
-	mock.consoleErrors = []SnapshotError{{Type: "console", Message: "E1", Count: 1}}
+	mock.consoleErrors = []types.SnapshotError{{Type: "console", Message: "E1", Count: 1}}
 	sm.Capture("Snapshot", "")
 
-	mock.consoleErrors = []SnapshotError{{Type: "console", Message: "E2", Count: 1}}
+	mock.consoleErrors = []types.SnapshotError{{Type: "console", Message: "E2", Count: 1}}
 	sm.Capture("snapshot", "")
 
 	list := sm.List()
@@ -825,10 +826,10 @@ func TestSessionManager_ConcurrentSafety(t *testing.T) {
 	t.Parallel()
 	mock := &mockCaptureState{
 		pageURL: "http://localhost:3000",
-		consoleErrors: []SnapshotError{
+		consoleErrors: []types.SnapshotError{
 			{Type: "console", Message: "concurrent error", Count: 1},
 		},
-		networkRequests: []SnapshotNetworkRequest{
+		networkRequests: []types.SnapshotNetworkRequest{
 			{Method: "GET", URL: "/api/test", Status: 200},
 		},
 	}
@@ -867,7 +868,7 @@ func TestSessionManager_ConcurrentSaveAndCompare(t *testing.T) {
 	t.Parallel()
 	mock := &mockCaptureState{
 		pageURL:       "http://localhost:3000",
-		consoleErrors: []SnapshotError{{Type: "console", Message: "err", Count: 1}},
+		consoleErrors: []types.SnapshotError{{Type: "console", Message: "err", Count: 1}},
 	}
 	sm := NewSessionManager(10, mock)
 
@@ -956,9 +957,9 @@ func TestSessionDiff_JSONSerialization(t *testing.T) {
 	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
 	sm := NewSessionManager(10, mock)
 
-	mock.consoleErrors = []SnapshotError{}
+	mock.consoleErrors = []types.SnapshotError{}
 	sm.Capture("a", "")
-	mock.consoleErrors = []SnapshotError{{Type: "console", Message: "err", Count: 1}}
+	mock.consoleErrors = []types.SnapshotError{{Type: "console", Message: "err", Count: 1}}
 	sm.Capture("b", "")
 
 	diff, err := sm.Compare("a", "b")
@@ -989,10 +990,10 @@ func TestHandleDiffSessions_Capture(t *testing.T) {
 	t.Parallel()
 	mock := &mockCaptureState{
 		pageURL: "http://localhost:3000/test",
-		consoleErrors: []SnapshotError{
+		consoleErrors: []types.SnapshotError{
 			{Type: "console", Message: "test error", Count: 1},
 		},
-		networkRequests: []SnapshotNetworkRequest{
+		networkRequests: []types.SnapshotNetworkRequest{
 			{Method: "GET", URL: "/api/health", Status: 200},
 		},
 	}
@@ -1062,9 +1063,9 @@ func TestHandleDiffSessions_Compare(t *testing.T) {
 	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
 	sm := NewSessionManager(10, mock)
 
-	mock.consoleErrors = []SnapshotError{}
+	mock.consoleErrors = []types.SnapshotError{}
 	sm.Capture("before", "")
-	mock.consoleErrors = []SnapshotError{{Type: "console", Message: "err", Count: 1}}
+	mock.consoleErrors = []types.SnapshotError{{Type: "console", Message: "err", Count: 1}}
 	sm.Capture("after", "")
 
 	params := map[string]any{
@@ -1184,7 +1185,7 @@ func TestHandleDiffSessions_URLFilter(t *testing.T) {
 	t.Parallel()
 	mock := &mockCaptureState{
 		pageURL: "http://localhost:3000",
-		networkRequests: []SnapshotNetworkRequest{
+		networkRequests: []types.SnapshotNetworkRequest{
 			{Method: "GET", URL: "/api/users", Status: 200},
 			{Method: "GET", URL: "/static/app.js", Status: 200},
 		},
@@ -1216,12 +1217,12 @@ func TestSessionManager_CompareMatchesByMethodAndURLPath(t *testing.T) {
 	sm := NewSessionManager(10, mock)
 
 	// Same URL path, different query params — should match
-	mock.networkRequests = []SnapshotNetworkRequest{
+	mock.networkRequests = []types.SnapshotNetworkRequest{
 		{Method: "GET", URL: "/api/users?page=1", Status: 200},
 	}
 	sm.Capture("before", "")
 
-	mock.networkRequests = []SnapshotNetworkRequest{
+	mock.networkRequests = []types.SnapshotNetworkRequest{
 		{Method: "GET", URL: "/api/users?page=2", Status: 200},
 	}
 	sm.Capture("after", "")
@@ -1245,12 +1246,12 @@ func TestSessionManager_CompareDifferentMethodsSameURL(t *testing.T) {
 	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
 	sm := NewSessionManager(10, mock)
 
-	mock.networkRequests = []SnapshotNetworkRequest{
+	mock.networkRequests = []types.SnapshotNetworkRequest{
 		{Method: "GET", URL: "/api/users", Status: 200},
 	}
 	sm.Capture("before", "")
 
-	mock.networkRequests = []SnapshotNetworkRequest{
+	mock.networkRequests = []types.SnapshotNetworkRequest{
 		{Method: "POST", URL: "/api/users", Status: 201},
 	}
 	sm.Capture("after", "")
@@ -1279,9 +1280,9 @@ func TestSessionManager_ConsoleEntriesLimit(t *testing.T) {
 	sm := NewSessionManager(10, mock)
 
 	// Create more than 50 errors
-	errors := make([]SnapshotError, 60)
+	errors := make([]types.SnapshotError, 60)
 	for i := range errors {
-		errors[i] = SnapshotError{Type: "console", Message: "Error " + string(rune('A'+i%26)), Count: 1}
+		errors[i] = types.SnapshotError{Type: "console", Message: "Error " + string(rune('A'+i%26)), Count: 1}
 	}
 	mock.consoleErrors = errors
 
@@ -1301,9 +1302,9 @@ func TestSessionManager_NetworkRequestsLimit(t *testing.T) {
 	sm := NewSessionManager(10, mock)
 
 	// Create more than 100 requests
-	requests := make([]SnapshotNetworkRequest, 120)
+	requests := make([]types.SnapshotNetworkRequest, 120)
 	for i := range requests {
-		requests[i] = SnapshotNetworkRequest{Method: "GET", URL: "/api/" + string(rune('a'+i%26)), Status: 200}
+		requests[i] = types.SnapshotNetworkRequest{Method: "GET", URL: "/api/" + string(rune('a'+i%26)), Status: 200}
 	}
 	mock.networkRequests = requests
 

@@ -29,17 +29,17 @@ func NewRuntimeStateReader(entries func() []types.LogEntry, captureReader Runtim
 	return &runtimeStateReader{entries: entries, capture: captureReader}
 }
 
-func (r *runtimeStateReader) GetConsoleErrors() []SnapshotError {
+func (r *runtimeStateReader) GetConsoleErrors() []types.SnapshotError {
 	return r.collectConsoleByLevel(map[string]bool{"error": true})
 }
 
-func (r *runtimeStateReader) GetConsoleWarnings() []SnapshotError {
+func (r *runtimeStateReader) GetConsoleWarnings() []types.SnapshotError {
 	return r.collectConsoleByLevel(map[string]bool{"warn": true, "warning": true})
 }
 
-func (r *runtimeStateReader) collectConsoleByLevel(levels map[string]bool) []SnapshotError {
+func (r *runtimeStateReader) collectConsoleByLevel(levels map[string]bool) []types.SnapshotError {
 	if r.entries == nil {
-		return []SnapshotError{}
+		return []types.SnapshotError{}
 	}
 
 	entries := r.entries()
@@ -74,9 +74,9 @@ func (r *runtimeStateReader) collectConsoleByLevel(levels map[string]bool) []Sna
 		return keys[i].msg < keys[j].msg
 	})
 
-	out := make([]SnapshotError, 0, len(keys))
+	out := make([]types.SnapshotError, 0, len(keys))
 	for _, k := range keys {
-		out = append(out, SnapshotError{
+		out = append(out, types.SnapshotError{
 			Type:    k.level,
 			Message: k.msg,
 			Count:   counts[k],
@@ -85,14 +85,14 @@ func (r *runtimeStateReader) collectConsoleByLevel(levels map[string]bool) []Sna
 	return out
 }
 
-func (r *runtimeStateReader) GetNetworkRequests() []SnapshotNetworkRequest {
+func (r *runtimeStateReader) GetNetworkRequests() []types.SnapshotNetworkRequest {
 	if r.capture == nil {
-		return []SnapshotNetworkRequest{}
+		return []types.SnapshotNetworkRequest{}
 	}
 	bodies := r.capture.GetNetworkBodies()
-	out := make([]SnapshotNetworkRequest, 0, len(bodies))
+	out := make([]types.SnapshotNetworkRequest, 0, len(bodies))
 	for _, body := range bodies {
-		out = append(out, SnapshotNetworkRequest{
+		out = append(out, types.SnapshotNetworkRequest{
 			Method:       body.Method,
 			URL:          body.URL,
 			Status:       body.Status,
@@ -104,14 +104,14 @@ func (r *runtimeStateReader) GetNetworkRequests() []SnapshotNetworkRequest {
 	return out
 }
 
-func (r *runtimeStateReader) GetWSConnections() []SnapshotWSConnection {
+func (r *runtimeStateReader) GetWSConnections() []types.SnapshotWSConnection {
 	if r.capture == nil {
-		return []SnapshotWSConnection{}
+		return []types.SnapshotWSConnection{}
 	}
 	status := r.capture.GetWebSocketStatus(types.WebSocketStatusFilter{})
-	out := make([]SnapshotWSConnection, 0, len(status.Connections))
+	out := make([]types.SnapshotWSConnection, 0, len(status.Connections))
 	for _, conn := range status.Connections {
-		out = append(out, SnapshotWSConnection{
+		out = append(out, types.SnapshotWSConnection{
 			URL:         conn.URL,
 			State:       conn.State,
 			MessageRate: conn.MessageRate.Incoming.PerSecond + conn.MessageRate.Outgoing.PerSecond,

@@ -5,7 +5,11 @@
 // Covers: Errors, countPerfRegressions, hasStatusRegression, Summarize.
 package snapdiff
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+)
 
 // ============================================
 // diffErrors
@@ -13,8 +17,8 @@ import "testing"
 
 func TestDiffErrors_NewErrors(t *testing.T) {
 	t.Parallel()
-	snapA := &NamedSnapshot{ConsoleErrors: []SnapshotError{}}
-	snapB := &NamedSnapshot{ConsoleErrors: []SnapshotError{
+	snapA := &types.NamedSnapshot{ConsoleErrors: []types.SnapshotError{}}
+	snapB := &types.NamedSnapshot{ConsoleErrors: []types.SnapshotError{
 		{Type: "error", Message: "TypeError: x is null", Count: 2},
 		{Type: "error", Message: "RangeError: invalid index", Count: 1},
 	}}
@@ -34,11 +38,11 @@ func TestDiffErrors_NewErrors(t *testing.T) {
 
 func TestDiffErrors_ResolvedErrors(t *testing.T) {
 	t.Parallel()
-	snapA := &NamedSnapshot{ConsoleErrors: []SnapshotError{
+	snapA := &types.NamedSnapshot{ConsoleErrors: []types.SnapshotError{
 		{Type: "error", Message: "old error 1", Count: 1},
 		{Type: "error", Message: "old error 2", Count: 3},
 	}}
-	snapB := &NamedSnapshot{ConsoleErrors: []SnapshotError{}}
+	snapB := &types.NamedSnapshot{ConsoleErrors: []types.SnapshotError{}}
 
 	diff := Errors(snapA, snapB)
 
@@ -55,11 +59,11 @@ func TestDiffErrors_ResolvedErrors(t *testing.T) {
 
 func TestDiffErrors_UnchangedErrors(t *testing.T) {
 	t.Parallel()
-	errors := []SnapshotError{
+	errors := []types.SnapshotError{
 		{Type: "error", Message: "persistent error", Count: 5},
 	}
-	snapA := &NamedSnapshot{ConsoleErrors: errors}
-	snapB := &NamedSnapshot{ConsoleErrors: errors}
+	snapA := &types.NamedSnapshot{ConsoleErrors: errors}
+	snapB := &types.NamedSnapshot{ConsoleErrors: errors}
 
 	diff := Errors(snapA, snapB)
 
@@ -82,11 +86,11 @@ func TestDiffErrors_UnchangedErrors(t *testing.T) {
 
 func TestDiffErrors_MixedChanges(t *testing.T) {
 	t.Parallel()
-	snapA := &NamedSnapshot{ConsoleErrors: []SnapshotError{
+	snapA := &types.NamedSnapshot{ConsoleErrors: []types.SnapshotError{
 		{Type: "error", Message: "stays", Count: 1},
 		{Type: "error", Message: "goes away", Count: 1},
 	}}
-	snapB := &NamedSnapshot{ConsoleErrors: []SnapshotError{
+	snapB := &types.NamedSnapshot{ConsoleErrors: []types.SnapshotError{
 		{Type: "error", Message: "stays", Count: 1},
 		{Type: "error", Message: "brand new", Count: 1},
 	}}
@@ -117,8 +121,8 @@ func TestDiffErrors_MixedChanges(t *testing.T) {
 
 func TestDiffErrors_BothEmpty(t *testing.T) {
 	t.Parallel()
-	snapA := &NamedSnapshot{ConsoleErrors: []SnapshotError{}}
-	snapB := &NamedSnapshot{ConsoleErrors: []SnapshotError{}}
+	snapA := &types.NamedSnapshot{ConsoleErrors: []types.SnapshotError{}}
+	snapB := &types.NamedSnapshot{ConsoleErrors: []types.SnapshotError{}}
 
 	diff := Errors(snapA, snapB)
 
@@ -135,8 +139,8 @@ func TestDiffErrors_BothEmpty(t *testing.T) {
 
 func TestDiffErrors_NilConsoleErrors(t *testing.T) {
 	t.Parallel()
-	snapA := &NamedSnapshot{ConsoleErrors: nil}
-	snapB := &NamedSnapshot{ConsoleErrors: nil}
+	snapA := &types.NamedSnapshot{ConsoleErrors: nil}
+	snapB := &types.NamedSnapshot{ConsoleErrors: nil}
 
 	diff := Errors(snapA, snapB)
 
@@ -151,11 +155,11 @@ func TestDiffErrors_NilConsoleErrors(t *testing.T) {
 func TestDiffErrors_DuplicateMessagesDeduped(t *testing.T) {
 	t.Parallel()
 	// Two entries with same message in A - map deduplication means last wins
-	snapA := &NamedSnapshot{ConsoleErrors: []SnapshotError{
+	snapA := &types.NamedSnapshot{ConsoleErrors: []types.SnapshotError{
 		{Type: "error", Message: "duplicate", Count: 1},
 		{Type: "error", Message: "duplicate", Count: 5},
 	}}
-	snapB := &NamedSnapshot{ConsoleErrors: []SnapshotError{}}
+	snapB := &types.NamedSnapshot{ConsoleErrors: []types.SnapshotError{}}
 
 	diff := Errors(snapA, snapB)
 
@@ -291,8 +295,8 @@ func TestHasStatusRegression_BoundaryValues(t *testing.T) {
 func TestComputeSummary_Unchanged(t *testing.T) {
 	t.Parallel()
 	result := &Result{
-		Errors:      ErrorDiff{New: []SnapshotError{}, Resolved: []SnapshotError{}, Unchanged: []SnapshotError{{Message: "still here"}}},
-		Network:     NetworkDiff{NewErrors: []SnapshotNetworkRequest{}, StatusChanges: []NetworkChange{}},
+		Errors:      ErrorDiff{New: []types.SnapshotError{}, Resolved: []types.SnapshotError{}, Unchanged: []types.SnapshotError{{Message: "still here"}}},
+		Network:     NetworkDiff{NewErrors: []types.SnapshotNetworkRequest{}, StatusChanges: []NetworkChange{}},
 		Performance: PerformanceDiff{},
 	}
 
@@ -312,8 +316,8 @@ func TestComputeSummary_Unchanged(t *testing.T) {
 func TestComputeSummary_Improved(t *testing.T) {
 	t.Parallel()
 	result := &Result{
-		Errors:      ErrorDiff{New: []SnapshotError{}, Resolved: []SnapshotError{{Message: "fixed"}}, Unchanged: []SnapshotError{}},
-		Network:     NetworkDiff{NewErrors: []SnapshotNetworkRequest{}, StatusChanges: []NetworkChange{}},
+		Errors:      ErrorDiff{New: []types.SnapshotError{}, Resolved: []types.SnapshotError{{Message: "fixed"}}, Unchanged: []types.SnapshotError{}},
+		Network:     NetworkDiff{NewErrors: []types.SnapshotNetworkRequest{}, StatusChanges: []NetworkChange{}},
 		Performance: PerformanceDiff{},
 	}
 
@@ -329,8 +333,8 @@ func TestComputeSummary_Improved(t *testing.T) {
 func TestComputeSummary_Regressed_NewErrors(t *testing.T) {
 	t.Parallel()
 	result := &Result{
-		Errors:      ErrorDiff{New: []SnapshotError{{Message: "new err"}}, Resolved: []SnapshotError{}, Unchanged: []SnapshotError{}},
-		Network:     NetworkDiff{NewErrors: []SnapshotNetworkRequest{}, StatusChanges: []NetworkChange{}},
+		Errors:      ErrorDiff{New: []types.SnapshotError{{Message: "new err"}}, Resolved: []types.SnapshotError{}, Unchanged: []types.SnapshotError{}},
+		Network:     NetworkDiff{NewErrors: []types.SnapshotNetworkRequest{}, StatusChanges: []NetworkChange{}},
 		Performance: PerformanceDiff{},
 	}
 
@@ -343,8 +347,8 @@ func TestComputeSummary_Regressed_NewErrors(t *testing.T) {
 func TestComputeSummary_Regressed_NetworkErrors(t *testing.T) {
 	t.Parallel()
 	result := &Result{
-		Errors:      ErrorDiff{New: []SnapshotError{}, Resolved: []SnapshotError{}, Unchanged: []SnapshotError{}},
-		Network:     NetworkDiff{NewErrors: []SnapshotNetworkRequest{{Status: 500}}, StatusChanges: []NetworkChange{}},
+		Errors:      ErrorDiff{New: []types.SnapshotError{}, Resolved: []types.SnapshotError{}, Unchanged: []types.SnapshotError{}},
+		Network:     NetworkDiff{NewErrors: []types.SnapshotNetworkRequest{{Status: 500}}, StatusChanges: []NetworkChange{}},
 		Performance: PerformanceDiff{},
 	}
 
@@ -360,8 +364,8 @@ func TestComputeSummary_Regressed_NetworkErrors(t *testing.T) {
 func TestComputeSummary_Regressed_PerfRegressions(t *testing.T) {
 	t.Parallel()
 	result := &Result{
-		Errors:      ErrorDiff{New: []SnapshotError{}, Resolved: []SnapshotError{}, Unchanged: []SnapshotError{}},
-		Network:     NetworkDiff{NewErrors: []SnapshotNetworkRequest{}, StatusChanges: []NetworkChange{}},
+		Errors:      ErrorDiff{New: []types.SnapshotError{}, Resolved: []types.SnapshotError{}, Unchanged: []types.SnapshotError{}},
+		Network:     NetworkDiff{NewErrors: []types.SnapshotNetworkRequest{}, StatusChanges: []NetworkChange{}},
 		Performance: PerformanceDiff{LoadTime: &MetricChange{Regression: true}},
 	}
 
@@ -377,9 +381,9 @@ func TestComputeSummary_Regressed_PerfRegressions(t *testing.T) {
 func TestComputeSummary_Regressed_StatusRegression(t *testing.T) {
 	t.Parallel()
 	result := &Result{
-		Errors: ErrorDiff{New: []SnapshotError{}, Resolved: []SnapshotError{}, Unchanged: []SnapshotError{}},
+		Errors: ErrorDiff{New: []types.SnapshotError{}, Resolved: []types.SnapshotError{}, Unchanged: []types.SnapshotError{}},
 		Network: NetworkDiff{
-			NewErrors:     []SnapshotNetworkRequest{},
+			NewErrors:     []types.SnapshotNetworkRequest{},
 			StatusChanges: []NetworkChange{{BeforeStatus: 200, AfterStatus: 500}},
 		},
 		Performance: PerformanceDiff{},
@@ -395,10 +399,10 @@ func TestComputeSummary_Mixed(t *testing.T) {
 	t.Parallel()
 	result := &Result{
 		Errors: ErrorDiff{
-			New:      []SnapshotError{{Message: "new"}},
-			Resolved: []SnapshotError{{Message: "fixed"}},
+			New:      []types.SnapshotError{{Message: "new"}},
+			Resolved: []types.SnapshotError{{Message: "fixed"}},
 		},
-		Network:     NetworkDiff{NewErrors: []SnapshotNetworkRequest{}, StatusChanges: []NetworkChange{}},
+		Network:     NetworkDiff{NewErrors: []types.SnapshotNetworkRequest{}, StatusChanges: []NetworkChange{}},
 		Performance: PerformanceDiff{},
 	}
 

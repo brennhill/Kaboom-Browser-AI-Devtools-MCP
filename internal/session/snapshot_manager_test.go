@@ -8,6 +8,7 @@ package session
 
 import (
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"sync"
 	"testing"
 
@@ -70,16 +71,16 @@ func TestNewSessionManager_InitialState(t *testing.T) {
 func TestCapture_AllFieldsPopulated(t *testing.T) {
 	t.Parallel()
 	mock := &mockCaptureState{
-		consoleErrors: []SnapshotError{
+		consoleErrors: []types.SnapshotError{
 			{Type: "error", Message: "Uncaught TypeError", Count: 3},
 		},
-		consoleWarnings: []SnapshotError{
+		consoleWarnings: []types.SnapshotError{
 			{Type: "warning", Message: "Deprecation warning", Count: 1},
 		},
-		networkRequests: []SnapshotNetworkRequest{
+		networkRequests: []types.SnapshotNetworkRequest{
 			{Method: "GET", URL: "/api/data", Status: 200, Duration: 45, ResponseSize: 1024, ContentType: "application/json"},
 		},
-		wsConnections: []SnapshotWSConnection{
+		wsConnections: []types.SnapshotWSConnection{
 			{URL: "ws://localhost:8080/ws", State: "open", MessageRate: 5.2},
 		},
 		performance: &performance.PerformanceSnapshot{
@@ -203,7 +204,7 @@ func TestCapture_NilPerformance(t *testing.T) {
 func TestCapture_URLFilterMatchesSubstring(t *testing.T) {
 	t.Parallel()
 	mock := &mockCaptureState{
-		networkRequests: []SnapshotNetworkRequest{
+		networkRequests: []types.SnapshotNetworkRequest{
 			{Method: "GET", URL: "https://example.com/api/v1/users", Status: 200},
 			{Method: "GET", URL: "https://example.com/api/v2/users", Status: 200},
 			{Method: "GET", URL: "https://cdn.example.com/style.css", Status: 200},
@@ -229,7 +230,7 @@ func TestCapture_URLFilterMatchesSubstring(t *testing.T) {
 func TestCapture_EmptyURLFilterKeepsAll(t *testing.T) {
 	t.Parallel()
 	mock := &mockCaptureState{
-		networkRequests: []SnapshotNetworkRequest{
+		networkRequests: []types.SnapshotNetworkRequest{
 			{Method: "GET", URL: "/api/users", Status: 200},
 			{Method: "GET", URL: "/static/app.js", Status: 200},
 		},
@@ -290,7 +291,7 @@ func TestCapture_OverwriteDoesNotEvict(t *testing.T) {
 	sm.Capture("snap-b", "")
 
 	// Overwriting snap-a should not trigger eviction
-	mock.consoleErrors = []SnapshotError{{Type: "error", Message: "updated", Count: 1}}
+	mock.consoleErrors = []types.SnapshotError{{Type: "error", Message: "updated", Count: 1}}
 	snap, err := sm.Capture("snap-a", "")
 	if err != nil {
 		t.Fatalf("Overwrite capture failed: %v", err)
@@ -350,9 +351,9 @@ func TestCapture_ConsoleErrorsLimit(t *testing.T) {
 	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
 	sm := NewSessionManager(10, mock)
 
-	errors := make([]SnapshotError, 60)
+	errors := make([]types.SnapshotError, 60)
 	for i := range errors {
-		errors[i] = SnapshotError{Type: "console", Message: fmt.Sprintf("err-%d", i), Count: 1}
+		errors[i] = types.SnapshotError{Type: "console", Message: fmt.Sprintf("err-%d", i), Count: 1}
 	}
 	mock.consoleErrors = errors
 
@@ -371,9 +372,9 @@ func TestCapture_ConsoleWarningsLimit(t *testing.T) {
 	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
 	sm := NewSessionManager(10, mock)
 
-	warnings := make([]SnapshotError, 60)
+	warnings := make([]types.SnapshotError, 60)
 	for i := range warnings {
-		warnings[i] = SnapshotError{Type: "warning", Message: fmt.Sprintf("warn-%d", i), Count: 1}
+		warnings[i] = types.SnapshotError{Type: "warning", Message: fmt.Sprintf("warn-%d", i), Count: 1}
 	}
 	mock.consoleWarnings = warnings
 
@@ -392,9 +393,9 @@ func TestCapture_NetworkRequestsLimit(t *testing.T) {
 	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
 	sm := NewSessionManager(10, mock)
 
-	requests := make([]SnapshotNetworkRequest, 120)
+	requests := make([]types.SnapshotNetworkRequest, 120)
 	for i := range requests {
-		requests[i] = SnapshotNetworkRequest{Method: "GET", URL: fmt.Sprintf("/api/%d", i), Status: 200}
+		requests[i] = types.SnapshotNetworkRequest{Method: "GET", URL: fmt.Sprintf("/api/%d", i), Status: 200}
 	}
 	mock.networkRequests = requests
 
@@ -437,7 +438,7 @@ func TestList_InsertionOrder(t *testing.T) {
 func TestList_EntryMetadata(t *testing.T) {
 	t.Parallel()
 	mock := &mockCaptureState{
-		consoleErrors: []SnapshotError{
+		consoleErrors: []types.SnapshotError{
 			{Type: "console", Message: "err-1", Count: 1},
 			{Type: "console", Message: "err-2", Count: 1},
 		},
@@ -534,7 +535,7 @@ func TestSessionManager_ConcurrentCaptureDeleteList(t *testing.T) {
 	t.Parallel()
 	mock := &mockCaptureState{
 		pageURL:       "http://localhost:3000",
-		consoleErrors: []SnapshotError{{Type: "error", Message: "err", Count: 1}},
+		consoleErrors: []types.SnapshotError{{Type: "error", Message: "err", Count: 1}},
 	}
 	sm := NewSessionManager(20, mock)
 

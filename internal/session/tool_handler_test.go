@@ -8,6 +8,7 @@ package session
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 )
 
@@ -55,13 +56,13 @@ func TestSessionHandleTool_UnknownAction(t *testing.T) {
 func TestSessionHandleTool_CaptureSuccess(t *testing.T) {
 	t.Parallel()
 	mock := &mockCaptureState{
-		consoleErrors: []SnapshotError{
+		consoleErrors: []types.SnapshotError{
 			{Type: "error", Message: "test-err", Count: 2},
 		},
-		consoleWarnings: []SnapshotError{
+		consoleWarnings: []types.SnapshotError{
 			{Type: "warning", Message: "deprecation", Count: 1},
 		},
-		networkRequests: []SnapshotNetworkRequest{
+		networkRequests: []types.SnapshotNetworkRequest{
 			{Method: "GET", URL: "/api/health", Status: 200},
 		},
 		pageURL: "http://localhost:3000/app",
@@ -122,7 +123,7 @@ func TestSessionHandleTool_CaptureMissingName(t *testing.T) {
 func TestSessionHandleTool_CaptureWithURLFilter(t *testing.T) {
 	t.Parallel()
 	mock := &mockCaptureState{
-		networkRequests: []SnapshotNetworkRequest{
+		networkRequests: []types.SnapshotNetworkRequest{
 			{Method: "GET", URL: "/api/data", Status: 200},
 			{Method: "GET", URL: "/static/app.js", Status: 200},
 		},
@@ -167,10 +168,10 @@ func TestSessionHandleTool_CompareSuccess(t *testing.T) {
 	mock := &mockCaptureState{pageURL: "http://localhost:3000"}
 	sm := NewSessionManager(10, mock)
 
-	mock.consoleErrors = []SnapshotError{}
+	mock.consoleErrors = []types.SnapshotError{}
 	sm.Capture("snap-a", "")
 
-	mock.consoleErrors = []SnapshotError{{Type: "error", Message: "err", Count: 1}}
+	mock.consoleErrors = []types.SnapshotError{{Type: "error", Message: "err", Count: 1}}
 	sm.Capture("snap-b", "")
 
 	params := json.RawMessage(`{"action":"compare","compare_a":"snap-a","compare_b":"snap-b"}`)
@@ -354,7 +355,7 @@ func TestSessionHandleTool_DeleteNonExistent(t *testing.T) {
 func TestSessionHandleTool_JSONFieldsAreSnakeCase(t *testing.T) {
 	t.Parallel()
 	mock := &mockCaptureState{
-		consoleErrors: []SnapshotError{{Type: "error", Message: "e", Count: 1}},
+		consoleErrors: []types.SnapshotError{{Type: "error", Message: "e", Count: 1}},
 		pageURL:       "http://localhost:3000",
 	}
 	sm := NewSessionManager(10, mock)
@@ -419,17 +420,17 @@ func TestSessionHandleTool_CaptureCompareIntegration(t *testing.T) {
 	sm := NewSessionManager(10, mock)
 
 	// Capture "before" with no errors
-	mock.consoleErrors = []SnapshotError{}
-	mock.networkRequests = []SnapshotNetworkRequest{
+	mock.consoleErrors = []types.SnapshotError{}
+	mock.networkRequests = []types.SnapshotNetworkRequest{
 		{Method: "GET", URL: "/api/data", Status: 200, Duration: 50},
 	}
 	sm.HandleTool(json.RawMessage(`{"action":"capture","name":"before"}`))
 
 	// Capture "after" with errors
-	mock.consoleErrors = []SnapshotError{
+	mock.consoleErrors = []types.SnapshotError{
 		{Type: "error", Message: "Something broke", Count: 1},
 	}
-	mock.networkRequests = []SnapshotNetworkRequest{
+	mock.networkRequests = []types.SnapshotNetworkRequest{
 		{Method: "GET", URL: "/api/data", Status: 500, Duration: 200},
 	}
 	sm.HandleTool(json.RawMessage(`{"action":"capture","name":"after"}`))

@@ -7,6 +7,7 @@ package session
 
 import (
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"sync"
 	"time"
@@ -17,7 +18,7 @@ import (
 // SessionManager manages named session snapshots.
 type SessionManager struct {
 	mu      sync.RWMutex
-	snaps   map[string]*NamedSnapshot
+	snaps   map[string]*types.NamedSnapshot
 	order   []string
 	maxSize int
 	reader  CaptureStateReader
@@ -29,7 +30,7 @@ func NewSessionManager(maxSnapshots int, reader CaptureStateReader) *SessionMana
 		maxSnapshots = 10
 	}
 	return &SessionManager{
-		snaps:   make(map[string]*NamedSnapshot),
+		snaps:   make(map[string]*types.NamedSnapshot),
 		order:   make([]string, 0),
 		maxSize: maxSnapshots,
 		reader:  reader,
@@ -37,7 +38,7 @@ func NewSessionManager(maxSnapshots int, reader CaptureStateReader) *SessionMana
 }
 
 // Capture stores the current state as a named snapshot.
-func (sm *SessionManager) Capture(name, urlFilter string) (*NamedSnapshot, error) {
+func (sm *SessionManager) Capture(name, urlFilter string) (*types.NamedSnapshot, error) {
 	if err := sm.validateName(name); err != nil {
 		return nil, err
 	}
@@ -68,7 +69,7 @@ func (sm *SessionManager) Capture(name, urlFilter string) (*NamedSnapshot, error
 }
 
 // captureCurrentState reads the current state from reader and builds a snapshot.
-func (sm *SessionManager) captureCurrentState(name, urlFilter string) *NamedSnapshot {
+func (sm *SessionManager) captureCurrentState(name, urlFilter string) *types.NamedSnapshot {
 	errors := sm.reader.GetConsoleErrors()
 	warnings := sm.reader.GetConsoleWarnings()
 	network := sm.reader.GetNetworkRequests()
@@ -78,7 +79,7 @@ func (sm *SessionManager) captureCurrentState(name, urlFilter string) *NamedSnap
 
 	// Apply URL filter to network requests
 	if urlFilter != "" {
-		filtered := make([]SnapshotNetworkRequest, 0, len(network))
+		filtered := make([]types.SnapshotNetworkRequest, 0, len(network))
 		for _, req := range network {
 			if strings.Contains(req.URL, urlFilter) {
 				filtered = append(filtered, req)
@@ -105,7 +106,7 @@ func (sm *SessionManager) captureCurrentState(name, urlFilter string) *NamedSnap
 		perfCopy = &p
 	}
 
-	return &NamedSnapshot{
+	return &types.NamedSnapshot{
 		Name:                 name,
 		CapturedAt:           time.Now(),
 		URLFilter:            urlFilter,

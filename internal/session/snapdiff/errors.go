@@ -4,20 +4,22 @@
 // errors.go — Console error diff computation plus the aggregate verdict.
 package snapdiff
 
+import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+
 // Errors computes the set difference of console errors between two snapshots.
-func Errors(a, b *NamedSnapshot) ErrorDiff {
+func Errors(a, b *types.NamedSnapshot) ErrorDiff {
 	diff := ErrorDiff{
-		New:       make([]SnapshotError, 0),
-		Resolved:  make([]SnapshotError, 0),
-		Unchanged: make([]SnapshotError, 0),
+		New:       make([]types.SnapshotError, 0),
+		Resolved:  make([]types.SnapshotError, 0),
+		Unchanged: make([]types.SnapshotError, 0),
 	}
 
-	aMessages := make(map[string]SnapshotError)
+	aMessages := make(map[string]types.SnapshotError)
 	for _, e := range a.ConsoleErrors {
 		aMessages[e.Message] = e
 	}
 
-	bMessages := make(map[string]SnapshotError)
+	bMessages := make(map[string]types.SnapshotError)
 	for _, e := range b.ConsoleErrors {
 		bMessages[e.Message] = e
 	}

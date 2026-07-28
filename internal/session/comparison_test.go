@@ -6,6 +6,7 @@
 package session
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
 
@@ -73,7 +74,7 @@ func TestCompare_ResultFieldsAB(t *testing.T) {
 func TestCompare_AgainstCurrentBuildsLiveSnapshot(t *testing.T) {
 	t.Parallel()
 	mock := &mockCaptureState{
-		consoleErrors: []SnapshotError{
+		consoleErrors: []types.SnapshotError{
 			{Type: "console", Message: "base error", Count: 1},
 		},
 		pageURL: "http://localhost:3000",
@@ -82,7 +83,7 @@ func TestCompare_AgainstCurrentBuildsLiveSnapshot(t *testing.T) {
 	sm.Capture("baseline", "")
 
 	// Mutate mock to represent "current" state
-	mock.consoleErrors = []SnapshotError{
+	mock.consoleErrors = []types.SnapshotError{
 		{Type: "console", Message: "base error", Count: 1},
 		{Type: "console", Message: "new live error", Count: 1},
 	}
@@ -106,7 +107,7 @@ func TestCompare_AgainstCurrentBuildsLiveSnapshot(t *testing.T) {
 func TestCompare_CurrentUsesURLFilterFromSnapshotA(t *testing.T) {
 	t.Parallel()
 	mock := &mockCaptureState{
-		networkRequests: []SnapshotNetworkRequest{
+		networkRequests: []types.SnapshotNetworkRequest{
 			{Method: "GET", URL: "/api/data", Status: 200},
 			{Method: "GET", URL: "/static/app.js", Status: 200},
 		},
@@ -118,7 +119,7 @@ func TestCompare_CurrentUsesURLFilterFromSnapshotA(t *testing.T) {
 	sm.Capture("filtered-snap", "/api/")
 
 	// Add a new /api/ endpoint to the live state
-	mock.networkRequests = []SnapshotNetworkRequest{
+	mock.networkRequests = []types.SnapshotNetworkRequest{
 		{Method: "GET", URL: "/api/data", Status: 200},
 		{Method: "GET", URL: "/api/new-endpoint", Status: 200},
 		{Method: "GET", URL: "/static/app.js", Status: 200},
@@ -149,10 +150,10 @@ func TestCompare_FullDiffStructure(t *testing.T) {
 	sm := NewSessionManager(10, mock)
 
 	// Snapshot A: errors, network, performance
-	mock.consoleErrors = []SnapshotError{
+	mock.consoleErrors = []types.SnapshotError{
 		{Type: "console", Message: "old error", Count: 1},
 	}
-	mock.networkRequests = []SnapshotNetworkRequest{
+	mock.networkRequests = []types.SnapshotNetworkRequest{
 		{Method: "GET", URL: "/api/users", Status: 200, Duration: 100},
 		{Method: "POST", URL: "/api/data", Status: 200, Duration: 50},
 	}
@@ -163,10 +164,10 @@ func TestCompare_FullDiffStructure(t *testing.T) {
 	sm.Capture("a", "")
 
 	// Snapshot B: different errors, different network, worse performance
-	mock.consoleErrors = []SnapshotError{
+	mock.consoleErrors = []types.SnapshotError{
 		{Type: "console", Message: "new error", Count: 2},
 	}
-	mock.networkRequests = []SnapshotNetworkRequest{
+	mock.networkRequests = []types.SnapshotNetworkRequest{
 		{Method: "GET", URL: "/api/users", Status: 500, Duration: 300},
 		{Method: "GET", URL: "/api/new-thing", Status: 404},
 	}
@@ -276,10 +277,10 @@ func TestCompare_BothSnapshotsEmpty(t *testing.T) {
 func TestCompare_IdenticalSnapshots(t *testing.T) {
 	t.Parallel()
 	mock := &mockCaptureState{
-		consoleErrors: []SnapshotError{
+		consoleErrors: []types.SnapshotError{
 			{Type: "console", Message: "persists", Count: 5},
 		},
-		networkRequests: []SnapshotNetworkRequest{
+		networkRequests: []types.SnapshotNetworkRequest{
 			{Method: "GET", URL: "/api/health", Status: 200, Duration: 10},
 		},
 		performance: &performance.PerformanceSnapshot{
