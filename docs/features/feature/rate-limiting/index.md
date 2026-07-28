@@ -11,6 +11,7 @@ code_paths:
   - internal/capture/capture.go
   - internal/capture/handlers.go
 test_paths:
+  - internal/capture/http_handlers_owner_test.go
   - internal/circuit/breaker_test.go
   - internal/lifecycle/observer_test.go
   - internal/capture/coverage_gaps_test.go
@@ -20,6 +21,9 @@ last_verified_date: 2026-03-05
 ---
 
 # Rate Limiting
+
+The extension-facing rate-limit HTTP boundary is owned directly by
+`capture.HTTPHandlers`; `Capture` has no forwarding handler methods.
 
 ## TL;DR
 

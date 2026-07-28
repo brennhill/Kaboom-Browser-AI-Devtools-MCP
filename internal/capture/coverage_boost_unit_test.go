@@ -65,14 +65,14 @@ func TestCoverageBoost_RateLimitHealthHandler(t *testing.T) {
 
 	rrBad := httptest.NewRecorder()
 	reqBad := httptest.NewRequest(http.MethodPost, "/health", nil)
-	c.HandleHealth(rrBad, reqBad)
+	NewHTTPHandlers(c).HandleHealth(rrBad, reqBad)
 	if rrBad.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("POST /health status = %d, want %d", rrBad.Code, http.StatusMethodNotAllowed)
 	}
 
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
-	c.HandleHealth(rr, req)
+	NewHTTPHandlers(c).HandleHealth(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("GET /health status = %d, want %d", rr.Code, http.StatusOK)
 	}
@@ -241,17 +241,17 @@ func TestCoverageBoost_ResultHandlersAndPendingQueries(t *testing.T) {
 
 	// Unified /query-result endpoint
 	rr := httptest.NewRecorder()
-	c.HandleQueryResult(rr, httptest.NewRequest(http.MethodGet, "/query-result", nil))
+	NewHTTPHandlers(c).HandleQueryResult(rr, httptest.NewRequest(http.MethodGet, "/query-result", nil))
 	if rr.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("GET query-result status = %d, want %d", rr.Code, http.StatusMethodNotAllowed)
 	}
 	rr = httptest.NewRecorder()
-	c.HandleQueryResult(rr, httptest.NewRequest(http.MethodPost, "/query-result", strings.NewReader("{bad")))
+	NewHTTPHandlers(c).HandleQueryResult(rr, httptest.NewRequest(http.MethodPost, "/query-result", strings.NewReader("{bad")))
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("invalid JSON query-result status = %d, want %d", rr.Code, http.StatusBadRequest)
 	}
 	rr = httptest.NewRecorder()
-	c.HandleQueryResult(rr, httptest.NewRequest(http.MethodPost, "/query-result", strings.NewReader(`{"id":"q-dom","result":{"ok":true},"client_id":"client-1"}`)))
+	NewHTTPHandlers(c).HandleQueryResult(rr, httptest.NewRequest(http.MethodPost, "/query-result", strings.NewReader(`{"id":"q-dom","result":{"ok":true},"client_id":"client-1"}`)))
 	if rr.Code != http.StatusOK {
 		t.Fatalf("valid query-result status = %d, want %d", rr.Code, http.StatusOK)
 	}
@@ -260,7 +260,7 @@ func TestCoverageBoost_ResultHandlersAndPendingQueries(t *testing.T) {
 	}
 
 	rr = httptest.NewRecorder()
-	c.HandleQueryResult(rr, httptest.NewRequest(http.MethodPost, "/query-result", strings.NewReader(`{"id":"q-a11y","result":{"score":0.9}}`)))
+	NewHTTPHandlers(c).HandleQueryResult(rr, httptest.NewRequest(http.MethodPost, "/query-result", strings.NewReader(`{"id":"q-a11y","result":{"score":0.9}}`)))
 	if rr.Code != http.StatusOK {
 		t.Fatalf("valid query-result (a11y) status = %d, want %d", rr.Code, http.StatusOK)
 	}
@@ -270,7 +270,7 @@ func TestCoverageBoost_ResultHandlersAndPendingQueries(t *testing.T) {
 
 	c.Queries().RegisterCommand("corr-1", "q-exec", time.Minute)
 	rr = httptest.NewRecorder()
-	c.HandleQueryResult(rr, httptest.NewRequest(http.MethodPost, "/query-result", strings.NewReader(`{"id":"q-exec","correlation_id":"corr-1","status":"complete","result":{"ok":true},"client_id":"client-2"}`)))
+	NewHTTPHandlers(c).HandleQueryResult(rr, httptest.NewRequest(http.MethodPost, "/query-result", strings.NewReader(`{"id":"q-exec","correlation_id":"corr-1","status":"complete","result":{"ok":true},"client_id":"client-2"}`)))
 	if rr.Code != http.StatusOK {
 		t.Fatalf("valid query-result (execute) status = %d, want %d", rr.Code, http.StatusOK)
 	}
@@ -282,7 +282,7 @@ func TestCoverageBoost_ResultHandlersAndPendingQueries(t *testing.T) {
 	}
 
 	rr = httptest.NewRecorder()
-	c.HandleQueryResult(rr, httptest.NewRequest(http.MethodPost, "/query-result", strings.NewReader(`{"id":"q-highlight","result":{"found":true}}`)))
+	NewHTTPHandlers(c).HandleQueryResult(rr, httptest.NewRequest(http.MethodPost, "/query-result", strings.NewReader(`{"id":"q-highlight","result":{"found":true}}`)))
 	if rr.Code != http.StatusOK {
 		t.Fatalf("valid query-result (highlight) status = %d, want %d", rr.Code, http.StatusOK)
 	}
@@ -298,19 +298,19 @@ func TestCoverageBoost_RecordingStorageHandlerAndDelegations(t *testing.T) {
 	c := newCoverageCapture(t)
 
 	rr := httptest.NewRecorder()
-	c.HandleRecordingStorage(rr, httptest.NewRequest(http.MethodGet, "/recording/storage", nil))
+	NewHTTPHandlers(c).HandleRecordingStorage(rr, httptest.NewRequest(http.MethodGet, "/recording/storage", nil))
 	if rr.Code != http.StatusOK {
 		t.Fatalf("GET recording storage status = %d, want %d", rr.Code, http.StatusOK)
 	}
 
 	rr = httptest.NewRecorder()
-	c.HandleRecordingStorage(rr, httptest.NewRequest(http.MethodDelete, "/recording/storage", nil))
+	NewHTTPHandlers(c).HandleRecordingStorage(rr, httptest.NewRequest(http.MethodDelete, "/recording/storage", nil))
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("DELETE missing recording_id status = %d, want %d", rr.Code, http.StatusBadRequest)
 	}
 
 	rr = httptest.NewRecorder()
-	c.HandleRecordingStorage(rr, httptest.NewRequest(http.MethodDelete, "/recording/storage?recording_id=missing", nil))
+	NewHTTPHandlers(c).HandleRecordingStorage(rr, httptest.NewRequest(http.MethodDelete, "/recording/storage?recording_id=missing", nil))
 	if rr.Code != http.StatusNotFound {
 		t.Fatalf("DELETE missing recording status = %d, want %d", rr.Code, http.StatusNotFound)
 	}
@@ -327,20 +327,20 @@ func TestCoverageBoost_RecordingStorageHandlerAndDelegations(t *testing.T) {
 	}
 
 	rr = httptest.NewRecorder()
-	c.HandleRecordingStorage(rr, httptest.NewRequest(http.MethodPost, "/recording/storage", nil))
+	NewHTTPHandlers(c).HandleRecordingStorage(rr, httptest.NewRequest(http.MethodPost, "/recording/storage", nil))
 	if rr.Code != http.StatusOK {
 		t.Fatalf("POST recalculate storage status = %d, want %d", rr.Code, http.StatusOK)
 	}
 
 	rr = httptest.NewRecorder()
 	deleteURL := "/recording/storage?recording_id=" + url.QueryEscape(recordingID)
-	c.HandleRecordingStorage(rr, httptest.NewRequest(http.MethodDelete, deleteURL, nil))
+	NewHTTPHandlers(c).HandleRecordingStorage(rr, httptest.NewRequest(http.MethodDelete, deleteURL, nil))
 	if rr.Code != http.StatusOK {
 		t.Fatalf("DELETE existing recording status = %d, want %d; body=%q", rr.Code, http.StatusOK, rr.Body.String())
 	}
 
 	rr = httptest.NewRecorder()
-	c.HandleRecordingStorage(rr, httptest.NewRequest(http.MethodPut, "/recording/storage", nil))
+	NewHTTPHandlers(c).HandleRecordingStorage(rr, httptest.NewRequest(http.MethodPut, "/recording/storage", nil))
 	if rr.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("PUT recording storage status = %d, want %d", rr.Code, http.StatusMethodNotAllowed)
 	}

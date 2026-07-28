@@ -14,7 +14,7 @@ import (
 func TestHandleStorageGet_Success(t *testing.T) {
 	c := NewCapture()
 	w := httptest.NewRecorder()
-	c.handleStorageGet(w)
+	NewHTTPHandlers(c).handleStorageGet(w)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", w.Code)
@@ -32,7 +32,7 @@ func TestHandleStorageGet_Success(t *testing.T) {
 func TestHandleStorageRecalculate_Success(t *testing.T) {
 	c := NewCapture()
 	w := httptest.NewRecorder()
-	c.handleStorageRecalculate(w)
+	NewHTTPHandlers(c).handleStorageRecalculate(w)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", w.Code)

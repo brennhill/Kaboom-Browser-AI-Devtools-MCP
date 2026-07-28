@@ -10,14 +10,15 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // ============================================
@@ -335,7 +336,7 @@ func TestGetWSStatus_SummaryMode_ReturnsCompactShape(t *testing.T) {
 	req := httptest.NewRequest("POST", "/websocket-events", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
-	env.capture.HandleWebSocketEvents(rec, req)
+	capture.NewHTTPHandlers(env.capture).HandleWebSocketEvents(rec, req)
 	if rec.Code != 200 {
 		t.Fatalf("expected websocket-events ingest 200, got %d", rec.Code)
 	}

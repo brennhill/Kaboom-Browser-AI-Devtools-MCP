@@ -24,7 +24,7 @@ func TestV4PostWebSocketEventsEndpoint(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 
-	capture.HandleWebSocketEvents(rec, req)
+	NewHTTPHandlers(capture).HandleWebSocketEvents(rec, req)
 
 	if rec.Code != http.StatusOK {
 		t.Errorf("Expected 200, got %d", rec.Code)
@@ -43,7 +43,7 @@ func TestV4PostWebSocketEventsInvalidJSON(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 
-	capture.HandleWebSocketEvents(rec, req)
+	NewHTTPHandlers(capture).HandleWebSocketEvents(rec, req)
 
 	if rec.Code != http.StatusBadRequest {
 		t.Errorf("Expected 400, got %d", rec.Code)
@@ -186,7 +186,7 @@ func TestV4HandleWebSocketStatus_EmptyState(t *testing.T) {
 	req := httptest.NewRequest("GET", "/websocket-status", nil)
 	rec := httptest.NewRecorder()
 
-	capture.HandleWebSocketStatus(rec, req)
+	NewHTTPHandlers(capture).HandleWebSocketStatus(rec, req)
 
 	if rec.Code != http.StatusOK {
 		t.Errorf("expected 200, got %d", rec.Code)
@@ -223,7 +223,7 @@ func TestV4HandleWebSocketStatus_WithConnections(t *testing.T) {
 	req := httptest.NewRequest("GET", "/websocket-status", nil)
 	rec := httptest.NewRecorder()
 
-	capture.HandleWebSocketStatus(rec, req)
+	NewHTTPHandlers(capture).HandleWebSocketStatus(rec, req)
 
 	if rec.Code != http.StatusOK {
 		t.Errorf("expected 200, got %d", rec.Code)
@@ -252,7 +252,7 @@ func TestV4HandleWebSocketStatus_WithClosedConnections(t *testing.T) {
 	req := httptest.NewRequest("GET", "/websocket-status", nil)
 	rec := httptest.NewRecorder()
 
-	capture.HandleWebSocketStatus(rec, req)
+	NewHTTPHandlers(capture).HandleWebSocketStatus(rec, req)
 
 	var status types.WebSocketStatusResponse
 	if err := json.Unmarshal(rec.Body.Bytes(), &status); err != nil {
@@ -355,7 +355,7 @@ func TestV4HandleWebSocketEvents_RejectsGET(t *testing.T) {
 	req := httptest.NewRequest("GET", "/websocket-events", nil)
 	rec := httptest.NewRecorder()
 
-	capture.HandleWebSocketEvents(rec, req)
+	NewHTTPHandlers(capture).HandleWebSocketEvents(rec, req)
 
 	if rec.Code != http.StatusMethodNotAllowed {
 		t.Errorf("expected 405, got %d", rec.Code)
@@ -377,7 +377,7 @@ func TestV4HandleWebSocketEvents_POST_RateLimited(t *testing.T) {
 	req := httptest.NewRequest("POST", "/websocket-events", bytes.NewBufferString(body))
 	rec := httptest.NewRecorder()
 
-	capture.HandleWebSocketEvents(rec, req)
+	NewHTTPHandlers(capture).HandleWebSocketEvents(rec, req)
 
 	if rec.Code != http.StatusTooManyRequests {
 		t.Errorf("expected 429, got %d", rec.Code)
@@ -393,7 +393,7 @@ func TestV4HandleWebSocketEvents_POST_BodyTooLarge(t *testing.T) {
 	req := httptest.NewRequest("POST", "/websocket-events", strings.NewReader(largePayload))
 	rec := httptest.NewRecorder()
 
-	capture.HandleWebSocketEvents(rec, req)
+	NewHTTPHandlers(capture).HandleWebSocketEvents(rec, req)
 
 	if rec.Code != http.StatusRequestEntityTooLarge {
 		t.Errorf("expected 413, got %d", rec.Code)
@@ -408,7 +408,7 @@ func TestV4HandleWebSocketEvents_POST_BadJSON(t *testing.T) {
 	req := httptest.NewRequest("POST", "/websocket-events", bytes.NewBufferString("not json!"))
 	rec := httptest.NewRecorder()
 
-	capture.HandleWebSocketEvents(rec, req)
+	NewHTTPHandlers(capture).HandleWebSocketEvents(rec, req)
 
 	if rec.Code != http.StatusBadRequest {
 		t.Errorf("expected 400 for bad JSON, got %d", rec.Code)
@@ -436,7 +436,7 @@ func TestV4HandleWebSocketEvents_POST_RateLimitAfterRecording(t *testing.T) {
 	req := httptest.NewRequest("POST", "/websocket-events", bytes.NewReader(payload))
 	rec := httptest.NewRecorder()
 
-	capture.HandleWebSocketEvents(rec, req)
+	NewHTTPHandlers(capture).HandleWebSocketEvents(rec, req)
 
 	if rec.Code != http.StatusTooManyRequests {
 		t.Errorf("expected 429 after recording pushes over threshold, got %d", rec.Code)

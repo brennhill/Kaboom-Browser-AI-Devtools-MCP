@@ -47,7 +47,7 @@ func TestHandleNetworkWaterfall_AcceptsValidPayload(t *testing.T) {
 	req := httptest.NewRequest("POST", "/network-waterfall", bytes.NewReader(body))
 	w := httptest.NewRecorder()
 
-	capture.HandleNetworkWaterfall(w, req)
+	NewHTTPHandlers(capture).HandleNetworkWaterfall(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", w.Code)
@@ -61,7 +61,7 @@ func TestHandleNetworkWaterfall_RejectsMalformedJSON(t *testing.T) {
 	req := httptest.NewRequest("POST", "/network-waterfall", bytes.NewReader([]byte(`{invalid json`)))
 	w := httptest.NewRecorder()
 
-	capture.HandleNetworkWaterfall(w, req)
+	NewHTTPHandlers(capture).HandleNetworkWaterfall(w, req)
 
 	if w.Code == http.StatusOK {
 		t.Errorf("Expected error status, got %d", w.Code)
@@ -88,7 +88,7 @@ func TestHandleNetworkWaterfall_StoresTimestamp(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	beforeTime := time.Now()
-	capture.HandleNetworkWaterfall(w, req)
+	NewHTTPHandlers(capture).HandleNetworkWaterfall(w, req)
 	afterTime := time.Now()
 
 	entries := capture.Telemetry().NetworkWaterfall().Entries()
@@ -122,7 +122,7 @@ func TestHandleNetworkWaterfall_StoresPageURL(t *testing.T) {
 	req := httptest.NewRequest("POST", "/network-waterfall", bytes.NewReader(body))
 	w := httptest.NewRecorder()
 
-	capture.HandleNetworkWaterfall(w, req)
+	NewHTTPHandlers(capture).HandleNetworkWaterfall(w, req)
 
 	entries := capture.Telemetry().NetworkWaterfall().Entries()
 	if len(entries) == 0 {
@@ -163,7 +163,7 @@ func TestNetworkWaterfall_RingBufferEviction(t *testing.T) {
 		req := httptest.NewRequest("POST", "/network-waterfall", bytes.NewReader(body))
 		w := httptest.NewRecorder()
 
-		capture.HandleNetworkWaterfall(w, req)
+		NewHTTPHandlers(capture).HandleNetworkWaterfall(w, req)
 	}
 
 	count := len(capture.Telemetry().NetworkWaterfall().Entries())
@@ -198,7 +198,7 @@ func TestNetworkWaterfall_MultipleEntriesInSinglePayload(t *testing.T) {
 	req := httptest.NewRequest("POST", "/network-waterfall", bytes.NewReader(body))
 	w := httptest.NewRecorder()
 
-	capture.HandleNetworkWaterfall(w, req)
+	NewHTTPHandlers(capture).HandleNetworkWaterfall(w, req)
 
 	if entries := capture.Telemetry().NetworkWaterfall().Entries(); len(entries) != 2 {
 		t.Errorf("Expected 2 entries, got %d", len(entries))
@@ -267,7 +267,7 @@ func TestNetworkWaterfall_ConcurrentWrites(t *testing.T) {
 			req := httptest.NewRequest("POST", "/network-waterfall", bytes.NewReader(body))
 			w := httptest.NewRecorder()
 
-			capture.HandleNetworkWaterfall(w, req)
+			NewHTTPHandlers(capture).HandleNetworkWaterfall(w, req)
 			done <- true
 		}(i)
 	}

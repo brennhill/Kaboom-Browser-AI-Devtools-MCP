@@ -26,7 +26,7 @@ func TestNewReadIngestBody_Success(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/ingest", bytes.NewReader(body))
 	w := httptest.NewRecorder()
 
-	result, ok := c.readIngestBody(w, req)
+	result, ok := NewHTTPHandlers(c).readIngestBody(w, req)
 	if !ok {
 		t.Fatal("readIngestBody returned false, want true")
 	}
@@ -49,7 +49,7 @@ func TestNewReadIngestBody_TooLargeBody(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/ingest", strings.NewReader(bigBody))
 	w := httptest.NewRecorder()
 
-	result, ok := c.readIngestBody(w, req)
+	result, ok := NewHTTPHandlers(c).readIngestBody(w, req)
 	if ok {
 		t.Fatal("readIngestBody returned true for too-large body, want false")
 	}
@@ -75,7 +75,7 @@ func TestNewReadIngestBody_RateLimited(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/ingest", strings.NewReader(`{}`))
 	w := httptest.NewRecorder()
 
-	result, ok := c.readIngestBody(w, req)
+	result, ok := NewHTTPHandlers(c).readIngestBody(w, req)
 	if ok {
 		// If rate limit was triggered, should return false
 		// If not triggered (timing dependent), that's ok too
@@ -96,7 +96,7 @@ func TestNewRecordAndRecheck_NormalFlow(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	ok := c.recordAndRecheck(w, 1)
+	ok := NewHTTPHandlers(c).recordAndRecheck(w, 1)
 	if !ok {
 		t.Fatal("recordAndRecheck returned false for 1 event, want true")
 	}
@@ -110,7 +110,7 @@ func TestNewRecordAndRecheck_RecordsEventCount(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	c.recordAndRecheck(w, 10)
+	NewHTTPHandlers(c).recordAndRecheck(w, 10)
 	// After recording 10 events, health should reflect them
 	health := c.Circuit().GetHealthStatus()
 	if health.CurrentRate < 10 {

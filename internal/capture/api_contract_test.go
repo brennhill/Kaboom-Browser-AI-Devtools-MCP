@@ -29,7 +29,7 @@ func postNetworkBodies(t *testing.T, c *Capture, payload map[string]any) *httpte
 	req := httptest.NewRequest("POST", "/network-bodies", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
-	c.HandleNetworkBodies(w, req)
+	NewHTTPHandlers(c).HandleNetworkBodies(w, req)
 	return w
 }
 
@@ -68,7 +68,7 @@ func TestAPIContract_NetworkBodies_RejectsGET(t *testing.T) {
 	req := httptest.NewRequest("GET", "/network-bodies", nil)
 	w := httptest.NewRecorder()
 
-	c.HandleNetworkBodies(w, req)
+	NewHTTPHandlers(c).HandleNetworkBodies(w, req)
 
 	if w.Code != http.StatusMethodNotAllowed {
 		t.Errorf("GET /network-bodies should return 405, got %d", w.Code)
@@ -90,7 +90,7 @@ func TestAPIContract_EnhancedActions_AcceptsPOST(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	c.HandleEnhancedActions(w, req)
+	NewHTTPHandlers(c).HandleEnhancedActions(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("POST /enhanced-actions should return 200, got %d", w.Code)
@@ -112,7 +112,7 @@ func TestAPIContract_EnhancedActions_RejectsGET(t *testing.T) {
 	req := httptest.NewRequest("GET", "/enhanced-actions", nil)
 	w := httptest.NewRecorder()
 
-	c.HandleEnhancedActions(w, req)
+	NewHTTPHandlers(c).HandleEnhancedActions(w, req)
 
 	if w.Code != http.StatusMethodNotAllowed {
 		t.Errorf("GET /enhanced-actions should return 405, got %d", w.Code)
@@ -134,7 +134,7 @@ func TestAPIContract_PerformanceSnapshots_AcceptsPOST(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	c.HandlePerformanceSnapshots(w, req)
+	NewHTTPHandlers(c).HandlePerformanceSnapshots(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("POST /performance-snapshots should return 200, got %d", w.Code)
@@ -156,7 +156,7 @@ func TestAPIContract_PerformanceSnapshots_RejectsGET(t *testing.T) {
 	req := httptest.NewRequest("GET", "/performance-snapshots", nil)
 	w := httptest.NewRecorder()
 
-	c.HandlePerformanceSnapshots(w, req)
+	NewHTTPHandlers(c).HandlePerformanceSnapshots(w, req)
 
 	if w.Code != http.StatusMethodNotAllowed {
 		t.Errorf("GET /performance-snapshots should return 405, got %d", w.Code)
@@ -191,7 +191,7 @@ func TestAPIContract_NetworkWaterfall_AcceptsPOST(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	c.HandleNetworkWaterfall(w, req)
+	NewHTTPHandlers(c).HandleNetworkWaterfall(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("POST /network-waterfall should return 200, got %d", w.Code)
@@ -205,7 +205,7 @@ func TestAPIContract_NetworkWaterfall_RejectsGET(t *testing.T) {
 	req := httptest.NewRequest("GET", "/network-waterfall", nil)
 	w := httptest.NewRecorder()
 
-	c.HandleNetworkWaterfall(w, req)
+	NewHTTPHandlers(c).HandleNetworkWaterfall(w, req)
 
 	if w.Code != http.StatusMethodNotAllowed {
 		t.Errorf("GET /network-waterfall should return 405, got %d", w.Code)
@@ -227,7 +227,7 @@ func TestAPIContract_WebSocketEvents_AcceptsPOST(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	c.HandleWebSocketEvents(w, req)
+	NewHTTPHandlers(c).HandleWebSocketEvents(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("POST /websocket-events should return 200, got %d", w.Code)
@@ -241,7 +241,7 @@ func TestAPIContract_WebSocketEvents_RejectsGET(t *testing.T) {
 	req := httptest.NewRequest("GET", "/websocket-events", nil)
 	w := httptest.NewRecorder()
 
-	c.HandleWebSocketEvents(w, req)
+	NewHTTPHandlers(c).HandleWebSocketEvents(w, req)
 
 	if w.Code != http.StatusMethodNotAllowed {
 		t.Errorf("GET /websocket-events should return 405, got %d", w.Code)
@@ -266,7 +266,7 @@ func TestAPIContract_QueryResult_AcceptsPOST(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	c.HandleQueryResult(w, req)
+	NewHTTPHandlers(c).HandleQueryResult(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("POST /query-result should return 200, got %d", w.Code)
@@ -280,7 +280,7 @@ func TestAPIContract_QueryResult_RejectsGET(t *testing.T) {
 	req := httptest.NewRequest("GET", "/query-result", nil)
 	w := httptest.NewRecorder()
 
-	c.HandleQueryResult(w, req)
+	NewHTTPHandlers(c).HandleQueryResult(w, req)
 
 	if w.Code != http.StatusMethodNotAllowed {
 		t.Errorf("GET /query-result should return 405, got %d", w.Code)
@@ -303,7 +303,7 @@ func TestAPIContract_QueryResult_WithCorrelationID(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	c.HandleQueryResult(w, req)
+	NewHTTPHandlers(c).HandleQueryResult(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("POST /query-result with correlation_id should return 200, got %d", w.Code)
@@ -329,7 +329,7 @@ func TestAPIContract_EnhancedActions_POSTThenRead(t *testing.T) {
 	req := httptest.NewRequest("POST", "/enhanced-actions", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
-	c.HandleEnhancedActions(w, req)
+	NewHTTPHandlers(c).HandleEnhancedActions(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("POST failed with %d", w.Code)
@@ -357,7 +357,7 @@ func TestAPIContract_PerformanceSnapshots_POSTThenRead(t *testing.T) {
 	req := httptest.NewRequest("POST", "/performance-snapshots", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
-	c.HandlePerformanceSnapshots(w, req)
+	NewHTTPHandlers(c).HandlePerformanceSnapshots(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("POST failed with %d", w.Code)

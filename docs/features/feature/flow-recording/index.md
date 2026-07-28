@@ -36,6 +36,7 @@ code_paths:
   - src/lib/brand.ts
   - src/lib/daemon-http.ts
 test_paths:
+  - internal/capture/http_handlers_owner_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/internal/toolrecording/handler_test.go

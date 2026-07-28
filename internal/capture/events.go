@@ -591,11 +591,11 @@ func (s *TelemetryStore) GetWebSocketEvents(filter types.WebSocketEventFilter) [
 	return filtered
 }
 
-func (c *Capture) HandleWebSocketEvents(w http.ResponseWriter, r *http.Request) {
+func (h *HTTPHandlers) HandleWebSocketEvents(w http.ResponseWriter, r *http.Request) {
 	if !util.RequireMethod(w, r, "POST") {
 		return
 	}
-	body, ok := c.readIngestBody(w, r)
+	body, ok := h.readIngestBody(w, r)
 	if !ok {
 		return
 	}
@@ -606,15 +606,15 @@ func (c *Capture) HandleWebSocketEvents(w http.ResponseWriter, r *http.Request) 
 		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return
 	}
-	if !c.recordAndRecheck(w, len(payload.Events)) {
+	if !h.recordAndRecheck(w, len(payload.Events)) {
 		return
 	}
-	c.telemetry.AddWebSocketEvents(payload.Events)
+	h.capture.telemetry.AddWebSocketEvents(payload.Events)
 	w.WriteHeader(http.StatusOK)
 }
 
-func (c *Capture) HandleWebSocketStatus(w http.ResponseWriter, _ *http.Request) {
-	status := c.telemetry.GetWebSocketStatus(types.WebSocketStatusFilter{})
+func (h *HTTPHandlers) HandleWebSocketStatus(w http.ResponseWriter, _ *http.Request) {
+	status := h.capture.telemetry.GetWebSocketStatus(types.WebSocketStatusFilter{})
 	util.JSONResponse(w, http.StatusOK, status)
 }
 

@@ -72,7 +72,7 @@ the folder-gate numbers as evidence that it did.
 
 | | Current |
 | --- | --- |
-| `Capture` methods (composition and cross-owner orchestration) | 35 |
+| `Capture` production methods (composition and cross-owner orchestration) | 20 |
 | `cmd/browser-agent` production source files (package `main`) | 10 |
 | `*ToolHandler` methods in those files | 3 |
 
@@ -94,6 +94,13 @@ immutable `internal/toolcatalog.Catalog`; the parallel lazy root caches and
 their initialization methods were deleted. The active refactor continues moving the
 remaining stateful clusters behind independently synchronized owners and
 migrating callers directly to those canonical APIs.
+
+The extension-facing ingestion boundary is now owned by
+`capture.HTTPHandlers`: network, action, performance, WebSocket, query-result,
+recording-storage, and circuit-health routes migrated together. All server and
+test callers construct that canonical owner directly, and the former
+`Capture.Handle*` methods were deleted rather than kept as facades. The
+remaining `HandleSync` method is a separate session/command transport cluster.
 
 Note also that `src/lib` and `src/background` were **relocated into
 subdirectories, not decomposed** — total file count and LOC are essentially

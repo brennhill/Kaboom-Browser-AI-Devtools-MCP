@@ -563,7 +563,7 @@ func TestObserveWebSocketEvents_EndToEnd(t *testing.T) {
 	req := httptest.NewRequest("POST", "/websocket-events", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
-	cap.HandleWebSocketEvents(w, req)
+	capture.NewHTTPHandlers(cap).HandleWebSocketEvents(w, req)
 
 	// Call observe websocket_events
 	th := handler.tools.Executor.(*ToolHandler)

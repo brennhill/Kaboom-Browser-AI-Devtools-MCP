@@ -77,6 +77,7 @@ test_paths:
   - internal/capture/buffer_clear_test.go
   - internal/capture/testhelpers_test.go
   - internal/capture/no_facade_test.go
+  - internal/capture/http_handlers_owner_test.go
   - internal/circuit/breaker_test.go
   - internal/debuglog/logger_test.go
   - internal/lifecycle/observer_test.go
@@ -123,6 +124,11 @@ URL-path normalization consumers import `internal/util.ExtractURLPath`
 directly; the capture-package pass-through and its duplicate tests are deleted.
 Capture APIs and their callers use the canonical wire contracts from
 `internal/types` directly; `internal/capture` does not re-export wire types.
+HTTP ingestion, query-result, recording-storage, performance, WebSocket, and
+circuit-health routes are owned by `capture.HTTPHandlers`. Server registration
+and tests construct that owner directly; the corresponding `Capture.Handle*`
+methods were deleted rather than retained as forwarding facades. The sync
+transport stays on its separate lifecycle and command-coordination boundary.
 The unused `EventBuffers`, `NetworkWaterfallStore`, `ExtensionLogStore`, and
 `PerformanceSnapshotStore` read-only view layer has been deleted; it wrapped
 canonical capture methods and had no production consumers.

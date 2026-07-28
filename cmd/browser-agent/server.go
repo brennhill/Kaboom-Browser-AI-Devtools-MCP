@@ -454,19 +454,20 @@ func setupHTTPRoutes(server *Server, captured *capture.Capture) (*http.ServeMux,
 }
 
 func registerCaptureRoutes(mux *http.ServeMux, server *Server, captured *capture.Capture) {
-	mux.HandleFunc("/websocket-events", httpguard.CORS(httpguard.ExtensionOnly(captured.HandleWebSocketEvents)))
-	mux.HandleFunc("/websocket-status", httpguard.CORS(httpguard.ExtensionOnly(captured.HandleWebSocketStatus)))
-	mux.HandleFunc("/network-bodies", httpguard.CORS(httpguard.ExtensionOnly(captured.HandleNetworkBodies)))
-	mux.HandleFunc("/network-waterfall", httpguard.CORS(httpguard.ExtensionOnly(captured.HandleNetworkWaterfall)))
-	mux.HandleFunc("/query-result", httpguard.CORS(httpguard.ExtensionOnly(captured.HandleQueryResult)))
-	mux.HandleFunc("/enhanced-actions", httpguard.CORS(httpguard.ExtensionOnly(captured.HandleEnhancedActions)))
-	mux.HandleFunc("/performance-snapshots", httpguard.CORS(httpguard.ExtensionOnly(captured.HandlePerformanceSnapshots)))
+	captureHTTP := capture.NewHTTPHandlers(captured)
+	mux.HandleFunc("/websocket-events", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandleWebSocketEvents)))
+	mux.HandleFunc("/websocket-status", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandleWebSocketStatus)))
+	mux.HandleFunc("/network-bodies", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandleNetworkBodies)))
+	mux.HandleFunc("/network-waterfall", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandleNetworkWaterfall)))
+	mux.HandleFunc("/query-result", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandleQueryResult)))
+	mux.HandleFunc("/enhanced-actions", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandleEnhancedActions)))
+	mux.HandleFunc("/performance-snapshots", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandlePerformanceSnapshots)))
 	mux.HandleFunc("/sync", httpguard.CORS(httpguard.ExtensionOnly(captured.HandleSync)))
 	registerClientRegistryRoutes(mux, captured)
 	mux.HandleFunc("/recordings/save", httpguard.CORS(httpguard.ExtensionOnly(func(w http.ResponseWriter, r *http.Request) {
 		screenrec.HandleSave(w, r, captured.Queries())
 	})))
-	mux.HandleFunc("/recordings/storage", httpguard.CORS(httpguard.ExtensionOnly(captured.HandleRecordingStorage)))
+	mux.HandleFunc("/recordings/storage", httpguard.CORS(httpguard.ExtensionOnly(captureHTTP.HandleRecordingStorage)))
 	mux.HandleFunc("/recordings/reveal", httpguard.CORS(httpguard.ExtensionOnly(screenrec.HandleReveal)))
 	mux.HandleFunc("/telemetry", httpguard.CORS(handleTelemetry(server, captured)))
 	mux.HandleFunc("/snapshot", httpguard.CORS(httpguard.ExtensionOnly(ciapi.Snapshot(server.logs, captured))))

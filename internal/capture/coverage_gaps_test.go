@@ -345,7 +345,7 @@ func TestHandleNetworkBodies_MethodNotAllowed(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 	rr := httptest.NewRecorder()
-	c.HandleNetworkBodies(rr, httptest.NewRequest(http.MethodGet, "/network-bodies", nil))
+	NewHTTPHandlers(c).HandleNetworkBodies(rr, httptest.NewRequest(http.MethodGet, "/network-bodies", nil))
 	if rr.Code != http.StatusMethodNotAllowed {
 		t.Errorf("status = %d, want %d", rr.Code, http.StatusMethodNotAllowed)
 	}
@@ -356,7 +356,7 @@ func TestHandleNetworkBodies_InvalidJSON(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 	rr := httptest.NewRecorder()
-	c.HandleNetworkBodies(rr, httptest.NewRequest(http.MethodPost, "/network-bodies", strings.NewReader("{invalid")))
+	NewHTTPHandlers(c).HandleNetworkBodies(rr, httptest.NewRequest(http.MethodPost, "/network-bodies", strings.NewReader("{invalid")))
 	if rr.Code != http.StatusBadRequest {
 		t.Errorf("status = %d, want %d", rr.Code, http.StatusBadRequest)
 	}
@@ -368,7 +368,7 @@ func TestHandleNetworkBodies_Success(t *testing.T) {
 	defer c.Close()
 	payload := `{"bodies":[{"method":"GET","url":"https://example.com","status":200}]}`
 	rr := httptest.NewRecorder()
-	c.HandleNetworkBodies(rr, httptest.NewRequest(http.MethodPost, "/network-bodies", strings.NewReader(payload)))
+	NewHTTPHandlers(c).HandleNetworkBodies(rr, httptest.NewRequest(http.MethodPost, "/network-bodies", strings.NewReader(payload)))
 	if rr.Code != http.StatusOK {
 		t.Errorf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
@@ -386,7 +386,7 @@ func TestHandleEnhancedActions_MethodNotAllowed(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 	rr := httptest.NewRecorder()
-	c.HandleEnhancedActions(rr, httptest.NewRequest(http.MethodGet, "/enhanced-actions", nil))
+	NewHTTPHandlers(c).HandleEnhancedActions(rr, httptest.NewRequest(http.MethodGet, "/enhanced-actions", nil))
 	if rr.Code != http.StatusMethodNotAllowed {
 		t.Errorf("status = %d, want %d", rr.Code, http.StatusMethodNotAllowed)
 	}
@@ -397,7 +397,7 @@ func TestHandleEnhancedActions_InvalidJSON(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 	rr := httptest.NewRecorder()
-	c.HandleEnhancedActions(rr, httptest.NewRequest(http.MethodPost, "/enhanced-actions", strings.NewReader("{bad")))
+	NewHTTPHandlers(c).HandleEnhancedActions(rr, httptest.NewRequest(http.MethodPost, "/enhanced-actions", strings.NewReader("{bad")))
 	if rr.Code != http.StatusBadRequest {
 		t.Errorf("status = %d, want %d", rr.Code, http.StatusBadRequest)
 	}
@@ -408,7 +408,7 @@ func TestHandleEnhancedActions_Success(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 	rr := httptest.NewRecorder()
-	c.HandleEnhancedActions(rr, httptest.NewRequest(http.MethodPost, "/enhanced-actions", strings.NewReader(`{"actions":[{"type":"click","selector":"#btn"}]}`)))
+	NewHTTPHandlers(c).HandleEnhancedActions(rr, httptest.NewRequest(http.MethodPost, "/enhanced-actions", strings.NewReader(`{"actions":[{"type":"click","selector":"#btn"}]}`)))
 	if rr.Code != http.StatusOK {
 		t.Errorf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
@@ -419,7 +419,7 @@ func TestHandlePerformanceSnapshots_MethodNotAllowed(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 	rr := httptest.NewRecorder()
-	c.HandlePerformanceSnapshots(rr, httptest.NewRequest(http.MethodGet, "/performance-snapshots", nil))
+	NewHTTPHandlers(c).HandlePerformanceSnapshots(rr, httptest.NewRequest(http.MethodGet, "/performance-snapshots", nil))
 	if rr.Code != http.StatusMethodNotAllowed {
 		t.Errorf("status = %d, want %d", rr.Code, http.StatusMethodNotAllowed)
 	}
@@ -430,7 +430,7 @@ func TestHandlePerformanceSnapshots_InvalidJSON(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 	rr := httptest.NewRecorder()
-	c.HandlePerformanceSnapshots(rr, httptest.NewRequest(http.MethodPost, "/performance-snapshots", strings.NewReader("{bad")))
+	NewHTTPHandlers(c).HandlePerformanceSnapshots(rr, httptest.NewRequest(http.MethodPost, "/performance-snapshots", strings.NewReader("{bad")))
 	if rr.Code != http.StatusBadRequest {
 		t.Errorf("status = %d, want %d", rr.Code, http.StatusBadRequest)
 	}
@@ -441,7 +441,7 @@ func TestHandlePerformanceSnapshots_Success(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 	rr := httptest.NewRecorder()
-	c.HandlePerformanceSnapshots(rr, httptest.NewRequest(http.MethodPost, "/performance-snapshots", strings.NewReader(`{"snapshots":[{"url":"https://example.com","timestamp":"2026-01-01T00:00:00Z"}]}`)))
+	NewHTTPHandlers(c).HandlePerformanceSnapshots(rr, httptest.NewRequest(http.MethodPost, "/performance-snapshots", strings.NewReader(`{"snapshots":[{"url":"https://example.com","timestamp":"2026-01-01T00:00:00Z"}]}`)))
 	if rr.Code != http.StatusOK {
 		t.Errorf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
@@ -452,7 +452,7 @@ func TestHandleNetworkWaterfall_MethodNotAllowed(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 	rr := httptest.NewRecorder()
-	c.HandleNetworkWaterfall(rr, httptest.NewRequest(http.MethodGet, "/network-waterfall", nil))
+	NewHTTPHandlers(c).HandleNetworkWaterfall(rr, httptest.NewRequest(http.MethodGet, "/network-waterfall", nil))
 	if rr.Code != http.StatusMethodNotAllowed {
 		t.Errorf("status = %d, want %d", rr.Code, http.StatusMethodNotAllowed)
 	}
@@ -463,7 +463,7 @@ func TestHandleNetworkWaterfall_InvalidJSON(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 	rr := httptest.NewRecorder()
-	c.HandleNetworkWaterfall(rr, httptest.NewRequest(http.MethodPost, "/network-waterfall", strings.NewReader("{bad")))
+	NewHTTPHandlers(c).HandleNetworkWaterfall(rr, httptest.NewRequest(http.MethodPost, "/network-waterfall", strings.NewReader("{bad")))
 	if rr.Code != http.StatusBadRequest {
 		t.Errorf("status = %d, want %d", rr.Code, http.StatusBadRequest)
 	}
@@ -474,7 +474,7 @@ func TestHandleNetworkWaterfall_Success(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 	rr := httptest.NewRecorder()
-	c.HandleNetworkWaterfall(rr, httptest.NewRequest(http.MethodPost, "/network-waterfall", strings.NewReader(`{"entries":[{"name":"https://example.com/app.js","duration":50}],"page_url":"https://example.com"}`)))
+	NewHTTPHandlers(c).HandleNetworkWaterfall(rr, httptest.NewRequest(http.MethodPost, "/network-waterfall", strings.NewReader(`{"entries":[{"name":"https://example.com/app.js","duration":50}],"page_url":"https://example.com"}`)))
 	if rr.Code != http.StatusOK {
 		t.Errorf("status = %d, want %d; body = %s", rr.Code, http.StatusOK, rr.Body.String())
 	}

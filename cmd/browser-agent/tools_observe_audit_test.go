@@ -161,7 +161,7 @@ func TestObserveAudit_NetworkBodies_DataFlow(t *testing.T) {
 	payload, _ := json.Marshal(map[string]any{"bodies": []types.NetworkBody{body}})
 	req := httptest.NewRequest("POST", "/network-bodies", bytes.NewReader(payload))
 	w := httptest.NewRecorder()
-	env.capture.HandleNetworkBodies(w, req)
+	capture.NewHTTPHandlers(env.capture).HandleNetworkBodies(w, req)
 
 	if w.Code != 200 {
 		t.Fatalf("POST /network-bodies failed: %d", w.Code)
@@ -194,7 +194,7 @@ func TestObserveAudit_EnhancedActions_DataFlow(t *testing.T) {
 	payload, _ := json.Marshal(map[string]any{"actions": []types.EnhancedAction{action}})
 	req := httptest.NewRequest("POST", "/enhanced-actions", bytes.NewReader(payload))
 	w := httptest.NewRecorder()
-	env.capture.HandleEnhancedActions(w, req)
+	capture.NewHTTPHandlers(env.capture).HandleEnhancedActions(w, req)
 
 	if w.Code != 200 {
 		t.Fatalf("POST /enhanced-actions failed: %d", w.Code)

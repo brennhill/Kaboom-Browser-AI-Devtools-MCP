@@ -19,9 +19,20 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
+// HTTPHandlers owns capture's HTTP ingestion, result, storage, performance,
+// and circuit-health request boundary.
+type HTTPHandlers struct {
+	capture *Capture
+}
+
+// NewHTTPHandlers binds the HTTP request boundary to canonical capture owners.
+func NewHTTPHandlers(capture *Capture) *HTTPHandlers {
+	return &HTTPHandlers{capture: capture}
+}
+
 // HandleNetworkBodies handles POST /network-bodies from the extension.
 // Reads go through GET /telemetry?type=network_bodies.
-func (c *Capture) HandleNetworkBodies(w http.ResponseWriter, r *http.Request) {
+func (h *HTTPHandlers) HandleNetworkBodies(w http.ResponseWriter, r *http.Request) {
 	if !util.RequireMethod(w, r, "POST") {
 		return
 	}
@@ -34,7 +45,7 @@ func (c *Capture) HandleNetworkBodies(w http.ResponseWriter, r *http.Request) {
 		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return
 	}
-	c.Telemetry().AddNetworkBodies(payload.Bodies)
+	h.capture.Telemetry().AddNetworkBodies(payload.Bodies)
 	util.JSONResponse(w, http.StatusOK, map[string]any{
 		"status": "ok",
 		"count":  len(payload.Bodies),
@@ -43,7 +54,7 @@ func (c *Capture) HandleNetworkBodies(w http.ResponseWriter, r *http.Request) {
 
 // HandleNetworkWaterfall handles POST /network-waterfall from the extension.
 // Reads go through GET /telemetry?type=network_waterfall.
-func (c *Capture) HandleNetworkWaterfall(w http.ResponseWriter, r *http.Request) {
+func (h *HTTPHandlers) HandleNetworkWaterfall(w http.ResponseWriter, r *http.Request) {
 	if !util.RequireMethod(w, r, "POST") {
 		return
 	}
@@ -54,7 +65,7 @@ func (c *Capture) HandleNetworkWaterfall(w http.ResponseWriter, r *http.Request)
 		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return
 	}
-	c.Telemetry().NetworkWaterfall().Add(payload.Entries, payload.PageURL)
+	h.capture.Telemetry().NetworkWaterfall().Add(payload.Entries, payload.PageURL)
 	util.JSONResponse(w, http.StatusOK, map[string]any{
 		"status": "ok",
 		"count":  len(payload.Entries),
@@ -64,7 +75,7 @@ func (c *Capture) HandleNetworkWaterfall(w http.ResponseWriter, r *http.Request)
 // HandleQueryResult processes all query/command results from the extension.
 // Unified handler replacing separate dom-result, a11y-result, state-result,
 // execute-result, and highlight-result endpoints.
-func (c *Capture) HandleQueryResult(w http.ResponseWriter, r *http.Request) {
+func (h *HTTPHandlers) HandleQueryResult(w http.ResponseWriter, r *http.Request) {
 	if !util.RequireMethod(w, r, "POST") {
 		return
 	}
@@ -90,15 +101,15 @@ func (c *Capture) HandleQueryResult(w http.ResponseWriter, r *http.Request) {
 		if body.CorrelationID != "" {
 			// Correlated async commands carry explicit lifecycle status below.
 			// Do not force "complete" from query-id bookkeeping.
-			c.Queries().SetQueryResultWithClientNoCommandComplete(body.ID, body.Result, body.ClientID)
+			h.capture.Queries().SetQueryResultWithClientNoCommandComplete(body.ID, body.Result, body.ClientID)
 		} else {
-			c.Queries().SetQueryResultWithClient(body.ID, body.Result, body.ClientID)
+			h.capture.Queries().SetQueryResultWithClient(body.ID, body.Result, body.ClientID)
 		}
 	}
 
 	// Handle correlation_id for async commands (execute_js, browser actions)
 	if body.CorrelationID != "" {
-		c.Queries().ApplyCommandResult(body.CorrelationID, body.Status, body.Result, body.Error)
+		h.capture.Queries().ApplyCommandResult(body.CorrelationID, body.Status, body.Result, body.Error)
 	}
 
 	util.JSONResponse(w, http.StatusOK, map[string]any{
@@ -108,7 +119,7 @@ func (c *Capture) HandleQueryResult(w http.ResponseWriter, r *http.Request) {
 
 // HandleEnhancedActions handles POST /enhanced-actions from the extension.
 // Reads go through GET /telemetry?type=actions.
-func (c *Capture) HandleEnhancedActions(w http.ResponseWriter, r *http.Request) {
+func (h *HTTPHandlers) HandleEnhancedActions(w http.ResponseWriter, r *http.Request) {
 	if !util.RequireMethod(w, r, "POST") {
 		return
 	}
@@ -121,7 +132,7 @@ func (c *Capture) HandleEnhancedActions(w http.ResponseWriter, r *http.Request) 
 		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return
 	}
-	c.Telemetry().AddEnhancedActions(payload.Actions)
+	h.capture.Telemetry().AddEnhancedActions(payload.Actions)
 	util.JSONResponse(w, http.StatusOK, map[string]any{
 		"status": "ok",
 		"count":  len(payload.Actions),
@@ -132,21 +143,21 @@ func (c *Capture) HandleEnhancedActions(w http.ResponseWriter, r *http.Request) 
 // GET: returns storage info
 // DELETE: deletes a recording (requires recording_id query param)
 // POST: recalculates storage usage
-func (c *Capture) HandleRecordingStorage(w http.ResponseWriter, r *http.Request) {
+func (h *HTTPHandlers) HandleRecordingStorage(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		c.handleStorageGet(w)
+		h.handleStorageGet(w)
 	case "DELETE":
-		c.handleStorageDelete(w, r)
+		h.handleStorageDelete(w, r)
 	case "POST":
-		c.handleStorageRecalculate(w)
+		h.handleStorageRecalculate(w)
 	default:
 		util.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 	}
 }
 
-func (c *Capture) handleStorageGet(w http.ResponseWriter) {
-	info, err := c.Recordings().GetStorageInfo()
+func (h *HTTPHandlers) handleStorageGet(w http.ResponseWriter) {
+	info, err := h.capture.Recordings().GetStorageInfo()
 	if err != nil {
 		util.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
@@ -154,14 +165,14 @@ func (c *Capture) handleStorageGet(w http.ResponseWriter) {
 	util.JSONResponse(w, http.StatusOK, info)
 }
 
-func (c *Capture) handleStorageDelete(w http.ResponseWriter, r *http.Request) {
+func (h *HTTPHandlers) handleStorageDelete(w http.ResponseWriter, r *http.Request) {
 	recordingID := r.URL.Query().Get("recording_id")
 	if recordingID == "" {
 		fmt.Fprintf(os.Stderr, "[Kaboom] HandleRecordingStorage: Missing recording_id query parameter\n")
 		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Missing recording_id query parameter"})
 		return
 	}
-	if err := c.Recordings().DeleteRecording(recordingID); err != nil {
+	if err := h.capture.Recordings().DeleteRecording(recordingID); err != nil {
 		fmt.Fprintf(os.Stderr, "[Kaboom] HandleRecordingStorage: Failed to delete recording %s - %v\n", recordingID, err)
 		util.JSONResponse(w, http.StatusNotFound, map[string]string{"error": err.Error()})
 		return
@@ -169,13 +180,13 @@ func (c *Capture) handleStorageDelete(w http.ResponseWriter, r *http.Request) {
 	util.JSONResponse(w, http.StatusOK, map[string]any{"status": "ok", "deleted": recordingID})
 }
 
-func (c *Capture) handleStorageRecalculate(w http.ResponseWriter) {
-	if err := c.Recordings().RecalculateStorageUsed(); err != nil {
+func (h *HTTPHandlers) handleStorageRecalculate(w http.ResponseWriter) {
+	if err := h.capture.Recordings().RecalculateStorageUsed(); err != nil {
 		fmt.Fprintf(os.Stderr, "[Kaboom] HandleRecordingStorage: Failed to recalculate storage - %v\n", err)
 		util.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	info, err := c.Recordings().GetStorageInfo()
+	info, err := h.capture.Recordings().GetStorageInfo()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[Kaboom] HandleRecordingStorage: Failed to get storage info - %v\n", err)
 		util.JSONResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
@@ -186,7 +197,7 @@ func (c *Capture) handleStorageRecalculate(w http.ResponseWriter) {
 
 // HandlePerformanceSnapshots handles POST /performance-snapshots from the extension.
 // Reads go through GET /telemetry?type=performance_snapshots.
-func (c *Capture) HandlePerformanceSnapshots(w http.ResponseWriter, r *http.Request) {
+func (h *HTTPHandlers) HandlePerformanceSnapshots(w http.ResponseWriter, r *http.Request) {
 	if !util.RequireMethod(w, r, "POST") {
 		return
 	}
@@ -198,16 +209,16 @@ func (c *Capture) HandlePerformanceSnapshots(w http.ResponseWriter, r *http.Requ
 		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return
 	}
-	c.Performance().Add(payload.Snapshots)
+	h.capture.Performance().Add(payload.Snapshots)
 	util.JSONResponse(w, http.StatusOK, map[string]any{
 		"status": "ok",
 		"count":  len(payload.Snapshots),
 	})
 }
 
-func (c *Capture) readIngestBody(w http.ResponseWriter, r *http.Request) ([]byte, bool) {
-	if c.Circuit().CheckRateLimit() {
-		c.Circuit().WriteRateLimitResponse(w)
+func (h *HTTPHandlers) readIngestBody(w http.ResponseWriter, r *http.Request) ([]byte, bool) {
+	if h.capture.Circuit().CheckRateLimit() {
+		h.capture.Circuit().WriteRateLimitResponse(w)
 		return nil, false
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxExtensionPostBody)
@@ -219,22 +230,22 @@ func (c *Capture) readIngestBody(w http.ResponseWriter, r *http.Request) ([]byte
 	return body, true
 }
 
-func (c *Capture) recordAndRecheck(w http.ResponseWriter, count int) bool {
-	c.Circuit().RecordEvents(count)
-	if c.Circuit().CheckRateLimit() {
-		c.Circuit().WriteRateLimitResponse(w)
+func (h *HTTPHandlers) recordAndRecheck(w http.ResponseWriter, count int) bool {
+	h.capture.Circuit().RecordEvents(count)
+	if h.capture.Circuit().CheckRateLimit() {
+		h.capture.Circuit().WriteRateLimitResponse(w)
 		return false
 	}
 	return true
 }
 
-func (c *Capture) HandleHealth(w http.ResponseWriter, r *http.Request) {
+func (h *HTTPHandlers) HandleHealth(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		util.JSONResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
 		return
 	}
 
-	health := c.Circuit().GetHealthStatus()
+	health := h.capture.Circuit().GetHealthStatus()
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(health)
