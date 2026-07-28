@@ -9,10 +9,10 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
-type HandlerDeps interface {
-	CollectIssueReport(template, title, userContext string) IssueReport
-	SanitizeIssueReport(report IssueReport) IssueReport
-	SubmitIssueReport(report IssueReport) SubmitResult
+type HandlerDeps struct {
+	Collect  func(template, title, userContext string) IssueReport
+	Sanitize func(report IssueReport) IssueReport
+	Submit   func(report IssueReport) SubmitResult
 }
 
 func Handle(d HandlerDeps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
@@ -61,7 +61,7 @@ func preview(d HandlerDeps, req mcp.JSONRPCRequest, template, userContext string
 	if GetTemplate(template) == nil {
 		return unknownTemplate(req, template)
 	}
-	report := d.SanitizeIssueReport(d.CollectIssueReport(template, "Preview: "+template, userContext))
+	report := d.Sanitize(d.Collect(template, "Preview: "+template, userContext))
 	return mcp.Succeed(req, "Issue preview (nothing sent)", map[string]any{
 		"operation":      "preview",
 		"template":       template,
@@ -82,8 +82,8 @@ func submit(d HandlerDeps, req mcp.JSONRPCRequest, template, title, userContext 
 	if GetTemplate(template) == nil {
 		return unknownTemplate(req, template)
 	}
-	report := d.SanitizeIssueReport(d.CollectIssueReport(template, title, userContext))
-	return mcp.Succeed(req, "Issue submission result", d.SubmitIssueReport(report))
+	report := d.Sanitize(d.Collect(template, title, userContext))
+	return mcp.Succeed(req, "Issue submission result", d.Submit(report))
 }
 
 func unknownTemplate(req mcp.JSONRPCRequest, template string) mcp.JSONRPCResponse {

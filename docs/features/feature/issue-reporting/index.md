@@ -4,8 +4,9 @@ feature_id: feature-issue-reporting
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
+  - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/tools_configure.go
   - internal/issuereport/handler.go
   - internal/schema/configure/properties_runtime.go
@@ -14,6 +15,7 @@ code_paths:
   - internal/issuereport/sanitize.go
   - internal/issuereport/submit.go
 test_paths:
+  - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/tools_configure_report_issue_test.go
   - internal/issuereport/handler_test.go
   - internal/issuereport/templates_test.go
@@ -41,3 +43,7 @@ last_verified_date: 2026-03-05
 ## Canonical Note
 
 Opt-in issue reporting via `configure(what="report_issue")` — collects sanitized diagnostics and files GitHub issues via `gh` CLI, with explicit user approval before any data leaves the machine.
+
+Collection, sanitization, and submission are composed once as explicit
+issue-report dependencies. The handler no longer requires a host interface,
+and ToolHandler exposes no issue-report forwarding methods.

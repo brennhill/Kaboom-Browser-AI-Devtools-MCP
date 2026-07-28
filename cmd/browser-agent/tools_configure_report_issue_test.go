@@ -224,7 +224,7 @@ func TestReportIssue_InvalidJSON(t *testing.T) {
 	h, _, _ := makeToolHandler(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := issuereport.Handle(h, req, json.RawMessage(`{invalid`))
+	resp := issuereport.Handle(h.issueReportDeps, req, json.RawMessage(`{invalid`))
 	result := parseToolResult(t, resp)
 	if !result.IsError {
 		t.Fatal("expected error for invalid JSON")

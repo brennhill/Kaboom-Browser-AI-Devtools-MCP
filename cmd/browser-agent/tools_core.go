@@ -128,6 +128,7 @@ type ToolHandler struct {
 	stateInteractHandler     *interactstate.Handler
 	configureLocalDeps       toolconfigure.Deps
 	tutorialDeps             *tutorial.Deps
+	issueReportDeps          issuereport.HandlerDeps
 	configureSessions        *toolconfigure.SessionHandler
 	testBoundaries           *cfg.BoundaryHandler
 	sequences                *sequencehandler.Handler
@@ -528,6 +529,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	handler.interactActionHandler = toolinteract.NewInteractActionHandler(interactDeps)
 	handler.configureLocalDeps = buildConfigureLocalDeps(handler)
 	handler.tutorialDeps = buildTutorialDeps(handler)
+	handler.issueReportDeps = buildIssueReportDeps(handler)
 	handler.uploadInteractHandler = toolinteract.NewUploadInteractHandler(interactDeps, handler.interactActionHandler)
 	handler.observeDispatcher = toolobserve.NewDispatcher(toolobserve.Config{
 		Host: handler, Commands: queryStore, InProgress: inProgress,

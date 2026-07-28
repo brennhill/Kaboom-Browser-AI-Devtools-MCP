@@ -125,7 +125,7 @@ var configureHandlers = map[string]toolrouting.Handler[*ToolHandler]{
 	},
 	"action_jitter": cfgLocal(toolconfigure.HandleActionJitter),
 	"report_issue": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return issuereport.Handle(h, req, args)
+		return issuereport.Handle(h.issueReportDeps, req, args)
 	},
 	"setup_quality_gates": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
 		return qualitygates.Handle(h.server, req, args)
@@ -282,41 +282,43 @@ func buildTutorialDeps(h *ToolHandler) *tutorial.Deps {
 	}
 }
 
-func (h *ToolHandler) CollectIssueReport(template, title, userContext string) issuereport.IssueReport {
-	report := issuereport.IssueReport{Template: template, Title: title, UserContext: userContext}
-	report.Diagnostics.Server.Version = version
-	report.Diagnostics.Platform.OS = runtime.GOOS
-	report.Diagnostics.Platform.Arch = runtime.GOARCH
-	report.Diagnostics.Platform.GoVersion = runtime.Version()
-	if h.healthMetrics != nil {
-		report.Diagnostics.Server.UptimeSeconds = h.healthMetrics.GetUptime().Seconds()
-		audit := h.healthMetrics.BuildAuditInfo()
-		report.Diagnostics.Server.TotalCalls = audit.TotalCalls
-		report.Diagnostics.Server.TotalErrors = audit.TotalErrors
-		report.Diagnostics.Server.ErrorRatePct = audit.ErrorRatePct
+func buildIssueReportDeps(h *ToolHandler) issuereport.HandlerDeps {
+	return issuereport.HandlerDeps{
+		Collect: func(template, title, userContext string) issuereport.IssueReport {
+			report := issuereport.IssueReport{Template: template, Title: title, UserContext: userContext}
+			report.Diagnostics.Server.Version = version
+			report.Diagnostics.Platform.OS = runtime.GOOS
+			report.Diagnostics.Platform.Arch = runtime.GOARCH
+			report.Diagnostics.Platform.GoVersion = runtime.Version()
+			if h.healthMetrics != nil {
+				report.Diagnostics.Server.UptimeSeconds = h.healthMetrics.GetUptime().Seconds()
+				audit := h.healthMetrics.BuildAuditInfo()
+				report.Diagnostics.Server.TotalCalls = audit.TotalCalls
+				report.Diagnostics.Server.TotalErrors = audit.TotalErrors
+				report.Diagnostics.Server.ErrorRatePct = audit.ErrorRatePct
+			}
+			if h.capture != nil {
+				health := h.capture.GetHealthSnapshot()
+				report.Diagnostics.Extension.Connected = health.ConnectionCount > 0
+				report.Diagnostics.Extension.Source = health.ExtSessionID
+				report.Diagnostics.Buffers.NetworkEntries = health.NetworkBodyCount
+				report.Diagnostics.Buffers.ActionEntries = health.ActionCount
+			}
+			if h.server != nil {
+				report.Diagnostics.Buffers.ConsoleEntries = h.server.logs.EntryCount()
+			}
+			return report
+		},
+		Sanitize: func(report issuereport.IssueReport) issuereport.IssueReport {
+			if h.redactionEngine == nil {
+				return report
+			}
+			return issuereport.NewSanitizer(h.redactionEngine).SanitizeReport(report)
+		},
+		Submit: func(report issuereport.IssueReport) issuereport.SubmitResult {
+			return issuereport.SubmitViaGH(h.shutdownCtx, report, h.issueCommandRunner)
+		},
 	}
-	if h.capture != nil {
-		health := h.capture.GetHealthSnapshot()
-		report.Diagnostics.Extension.Connected = health.ConnectionCount > 0
-		report.Diagnostics.Extension.Source = health.ExtSessionID
-		report.Diagnostics.Buffers.NetworkEntries = health.NetworkBodyCount
-		report.Diagnostics.Buffers.ActionEntries = health.ActionCount
-	}
-	if h.server != nil {
-		report.Diagnostics.Buffers.ConsoleEntries = h.server.logs.EntryCount()
-	}
-	return report
-}
-
-func (h *ToolHandler) SanitizeIssueReport(report issuereport.IssueReport) issuereport.IssueReport {
-	if h.redactionEngine == nil {
-		return report
-	}
-	return issuereport.NewSanitizer(h.redactionEngine).SanitizeReport(report)
-}
-
-func (h *ToolHandler) SubmitIssueReport(report issuereport.IssueReport) issuereport.SubmitResult {
-	return issuereport.SubmitViaGH(h.shutdownCtx, report, h.issueCommandRunner)
 }
 
 func extractErrorMessage(response mcp.JSONRPCResponse) string {

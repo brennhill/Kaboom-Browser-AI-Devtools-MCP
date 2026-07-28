@@ -103,6 +103,9 @@ func TestRootDoesNotReexportCanonicalTypes(t *testing.T) {
 		"func (h *ToolHandler) ConsoleSecurityEntries(",
 		"func (h *ToolHandler) SecurityScanner(",
 		"func (h *ToolHandler) LogEntries(",
+		"func (h *ToolHandler) CollectIssueReport(",
+		"func (h *ToolHandler) SanitizeIssueReport(",
+		"func (h *ToolHandler) SubmitIssueReport(",
 	} {
 		for _, path := range rootFiles {
 			if strings.HasSuffix(path, "_test.go") {
@@ -116,6 +119,16 @@ func TestRootDoesNotReexportCanonicalTypes(t *testing.T) {
 				t.Errorf("%s re-exports canonical API %q", filepath.Base(path), forbidden)
 			}
 		}
+	}
+}
+
+func TestIssueReportDoesNotRequireHostInterface(t *testing.T) {
+	source, err := os.ReadFile(filepath.Join(projectRoot(), "internal", "issuereport", "handler.go"))
+	if err != nil {
+		t.Fatalf("read issue report handler: %v", err)
+	}
+	if strings.Contains(string(source), "type HandlerDeps interface {") {
+		t.Fatal("issue report handler retains host dependency interface")
 	}
 }
 
