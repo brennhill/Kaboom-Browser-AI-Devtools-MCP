@@ -248,24 +248,10 @@ func (h *ToolHandler) toolConfigureClear(req JSONRPCRequest, args json.RawMessag
 }
 ```
 
-Update `toolConfigure` dispatcher:
-
-```go
-func (h *ToolHandler) toolConfigure(req JSONRPCRequest, args json.RawMessage) JSONRPCResponse {
-	// ... existing code ...
-
-	switch params.Action {
-	// ... existing cases ...
-
-	case "clear":
-		resp = h.toolConfigureClear(req, args)
-
-	// ... rest ...
-	}
-
-	return resp
-}
-```
+Register `clear` with the canonical `internal/toolconfigure.Dispatcher`.
+Composition supplies a handler that calls `toolconfigure.HandleClear` with
+explicit capture, log, inbox, and annotation owners; no `ToolHandler`
+forwarding method or central switch is retained.
 
 ---
 
@@ -426,7 +412,7 @@ func TestToolConfigureClearNetwork(t *testing.T) {
 
 	// Clear via MCP tool
 	args := json.RawMessage(`{"action": "clear", "buffer": "network"}`)
-	resp := handler.toolConfigure(JSONRPCRequest{ID: json.RawMessage(`1`)}, args)
+	resp := handler.configureDispatcher.Handle(JSONRPCRequest{ID: json.RawMessage(`1`)}, args)
 
 	// Verify response
 	var result MCPToolResult
@@ -449,7 +435,7 @@ func TestToolConfigureClearBackwardCompatible(t *testing.T) {
 
 	// Clear without buffer parameter (backward compatible)
 	args := json.RawMessage(`{"action": "clear"}`)
-	resp := handler.toolConfigure(JSONRPCRequest{ID: json.RawMessage(`1`)}, args)
+	resp := handler.configureDispatcher.Handle(JSONRPCRequest{ID: json.RawMessage(`1`)}, args)
 
 	// Verify logs cleared
 	assert.Equal(t, 0, len(server.entries))
@@ -468,7 +454,7 @@ func TestToolConfigureClearInvalidBuffer(t *testing.T) {
 
 	// Try invalid buffer
 	args := json.RawMessage(`{"action": "clear", "buffer": "invalid"}`)
-	resp := handler.toolConfigure(JSONRPCRequest{ID: json.RawMessage(`1`)}, args)
+	resp := handler.configureDispatcher.Handle(JSONRPCRequest{ID: json.RawMessage(`1`)}, args)
 
 	// Verify error
 	assert.NotNil(t, resp.Error)
@@ -567,7 +553,7 @@ configure({what: "clear", buffer: "network"})
 - [ ] Add `ClearAllBuffers()` helper
 - [ ] Add `buffer` parameter to configure tool schema
 - [ ] Add `toolConfigureClear()` handler
-- [ ] Update `toolConfigure()` dispatcher
+- [ ] Update `internal/toolconfigure.Dispatcher`
 
 ### Testing
 

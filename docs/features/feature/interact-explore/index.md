@@ -22,6 +22,7 @@ code_paths:
   - cmd/browser-agent/internal/toolinteract/elemindex/registry.go
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
   - cmd/browser-agent/tools_interact_dispatch.go
   - internal/recording/actionlog/recorder.go
   - internal/tools/interact/workflow.go
@@ -70,6 +71,7 @@ code_paths:
   - cmd/browser-agent/internal/summarypref/cache.go
   - cmd/browser-agent/tools_core.go
 test_paths:
+  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/lint_hardening_test.go
   - internal/recording/actionlog/recorder_test.go
   - cmd/browser-agent/internal/summarypref/cache_test.go

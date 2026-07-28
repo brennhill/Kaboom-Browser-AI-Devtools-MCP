@@ -283,7 +283,7 @@ func TestConfigureClearBuffer(t *testing.T) {
 
 	// Clear via MCP tool
 	args := json.RawMessage(`{"action": "clear", "buffer": "network"}`)
-	resp := handler.toolConfigure(JSONRPCRequest{ID: json.RawMessage(`1`)}, args)
+	resp := handler.configureDispatcher.Handle(JSONRPCRequest{ID: json.RawMessage(`1`)}, args)
 
 	// Verify response
 	var result MCPToolResult

@@ -61,7 +61,7 @@ func (e *configureTestEnv) callConfigure(t *testing.T, argsJSON string) (mcp.MCP
 
 	args := json.RawMessage(argsJSON)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := e.handler.toolConfigure(req, args)
+	resp := e.handler.configureDispatcher.Handle(req, args)
 
 	if resp.Result == nil {
 		return mcp.MCPToolResult{}, false
@@ -363,7 +363,7 @@ func TestConfigureAudit_InvalidJSON_ReturnsParseError(t *testing.T) {
 
 	args := json.RawMessage(`{invalid json here}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := env.handler.toolConfigure(req, args)
+	resp := env.handler.configureDispatcher.Handle(req, args)
 
 	// ASSERTION: Returns some response (not nil/panic)
 	if resp.Result == nil && resp.Error == nil {
@@ -482,7 +482,7 @@ func TestConfigureAudit_AllActions(t *testing.T) {
 		t.Run(tc.action, func(t *testing.T) {
 			args := json.RawMessage(tc.args)
 			req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-			resp := handler.toolConfigure(req, args)
+			resp := handler.configureDispatcher.Handle(req, args)
 			validateConfigureResponse(t, tc.action, resp)
 		})
 	}
@@ -507,7 +507,7 @@ func TestConfigureAudit_NoiseRule_AllOperations(t *testing.T) {
 		t.Run("noise_rule_"+tc.op, func(t *testing.T) {
 			args := json.RawMessage(tc.args)
 			req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-			resp := handler.toolConfigure(req, args)
+			resp := handler.configureDispatcher.Handle(req, args)
 			validateConfigureResponse(t, "noise_rule:"+tc.op, resp)
 		})
 	}
@@ -530,7 +530,7 @@ func TestConfigureAudit_AuditLog_AllOperations(t *testing.T) {
 		t.Run("audit_log_"+tc.op, func(t *testing.T) {
 			args := json.RawMessage(tc.args)
 			req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-			resp := handler.toolConfigure(req, args)
+			resp := handler.configureDispatcher.Handle(req, args)
 			validateConfigureResponse(t, "audit_log:"+tc.op, resp)
 		})
 	}
@@ -542,7 +542,7 @@ func TestConfigureAudit_Health_Detailed(t *testing.T) {
 
 	args := json.RawMessage(`{"what":"health"}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := handler.toolConfigure(req, args)
+	resp := handler.configureDispatcher.Handle(req, args)
 
 	if resp.Result == nil {
 		t.Fatal("health should return result")
@@ -564,7 +564,7 @@ func TestConfigureAudit_UnknownAction(t *testing.T) {
 
 	args := json.RawMessage(`{"what":"nonexistent_action_xyz"}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := handler.toolConfigure(req, args)
+	resp := handler.configureDispatcher.Handle(req, args)
 
 	// Should return error, not panic
 	if resp.Result != nil {
@@ -583,7 +583,7 @@ func TestConfigureAudit_EmptyArgs(t *testing.T) {
 
 	args := json.RawMessage(`{}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := handler.toolConfigure(req, args)
+	resp := handler.configureDispatcher.Handle(req, args)
 
 	validateConfigureResponse(t, "empty", resp)
 }
@@ -594,7 +594,7 @@ func TestConfigureAudit_InvalidJSON(t *testing.T) {
 
 	args := json.RawMessage(`{invalid}`)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := handler.toolConfigure(req, args)
+	resp := handler.configureDispatcher.Handle(req, args)
 
 	if resp.Error == nil && resp.Result == nil {
 		t.Error("invalid JSON should return some response")

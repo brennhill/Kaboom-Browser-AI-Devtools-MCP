@@ -17,8 +17,10 @@ code_paths:
   - cmd/browser-agent/internal/bridge/stdioisolate/dup2_linux.go
   - cmd/browser-agent/internal/bridge/stdioisolate/dup2_unix_nonlinux.go
   - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
   - internal/schema/configure/tool.go
 test_paths:
+  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/bridge_test.go
   - cmd/browser-agent/bridge_startup_contention_test.go
   - cmd/browser-agent/bridge_faststart_extended_test.go
@@ -62,7 +64,7 @@ last_verified_date: 2026-03-05
 | `cmd/browser-agent/bridge_startup_orchestration.go` | Startup coordinator: leader election, follower wait, stale-lock takeover |
 | `cmd/browser-agent/bridge_startup_lock.go` | Lock-file startup leadership (`bridge-startup-<port>.lock.json`) |
 | `cmd/browser-agent/bridge_startup_state.go` | Daemon readiness/failed signaling, bounded respawn peer-wait, and stale-wait leadership reclaim |
-| `cmd/browser-agent/tools_configure.go` | `toolConfigureRestart()` daemon-side handler |
+| `cmd/browser-agent/tools_configure.go` | `handleConfigureRestart()` daemon-side handler |
 | `internal/schema/configure/tool.go` | Schema: `restart` in configure action enum + oneOf |
 | `cmd/browser-agent/bridge_test.go` | Unit tests for `extractToolAction()` |
 | `cmd/browser-agent/bridge_startup_contention_test.go` | Multi-client startup convergence integration test |

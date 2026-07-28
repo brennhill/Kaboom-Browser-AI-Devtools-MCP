@@ -8,6 +8,7 @@ last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
   - cmd/browser-agent/internal/toolconfigure/deps.go
   - cmd/browser-agent/internal/toolconfigure/session.go
   - cmd/browser-agent/internal/summarypref/cache.go
@@ -19,6 +20,7 @@ code_paths:
   - internal/tools/configure/capabilities/schema.go
   - internal/tools/configure/capabilities/modespecs.go
 test_paths:
+  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/internal/summarypref/cache_test.go
   - cmd/browser-agent/tools_configure_handler_test.go
@@ -38,6 +40,11 @@ last_verified_date: 2026-03-05
 ---
 
 # Config Profiles
+
+Configure mode registration and unknown-mode handling are owned by the
+immutable `internal/toolconfigure.Dispatcher`. The composition boundary supplies
+final handlers with explicit dependencies; `ToolHandler` exposes no configure
+forwarding methods.
 
 ## TL;DR
 

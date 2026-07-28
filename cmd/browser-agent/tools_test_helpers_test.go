@@ -184,10 +184,10 @@ func callAnalyzeRaw(h *ToolHandler, argsJSON string) mcp.JSONRPCResponse {
 	return h.analyzeDispatcher.Handle(req, normalizeAnalyzeArgsForAsync(argsJSON))
 }
 
-// callConfigureRaw invokes toolConfigure directly.
+// callConfigureRaw invokes the canonical configure dispatcher directly.
 func callConfigureRaw(h *ToolHandler, argsJSON string) mcp.JSONRPCResponse {
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	return h.toolConfigure(req, json.RawMessage(argsJSON))
+	return h.configureDispatcher.Handle(req, json.RawMessage(argsJSON))
 }
 
 // callGenerateRaw invokes toolGenerate directly.

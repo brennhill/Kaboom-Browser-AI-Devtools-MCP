@@ -79,7 +79,7 @@ func TestToolsConfigureDispatch_EmptyArgs(t *testing.T) {
 	h, _, _ := makeToolHandler(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolConfigure(req, nil)
+	resp := h.configureDispatcher.Handle(req, nil)
 	result := parseToolResult(t, resp)
 	if !result.IsError {
 		t.Fatal("nil args (no 'action') should return isError:true")
@@ -87,20 +87,21 @@ func TestToolsConfigureDispatch_EmptyArgs(t *testing.T) {
 }
 
 // ============================================
-// getValidConfigureActions Tests
+// Canonical configure action registry tests
 // ============================================
 
 func TestToolsConfigure_GetValidConfigureActions(t *testing.T) {
 	t.Parallel()
 
-	actions := getValidConfigureActions()
-	actionList := strings.Split(actions, ", ")
+	h, _, _ := makeToolHandler(t)
+	actionList := h.configureDispatcher.Actions()
 	for i := 1; i < len(actionList); i++ {
 		if actionList[i-1] > actionList[i] {
 			t.Errorf("actions not sorted: %q > %q", actionList[i-1], actionList[i])
 		}
 	}
 
+	actions := strings.Join(actionList, ", ")
 	for _, required := range []string{"clear", "health", "noise_rule", "store", "load", "streaming"} {
 		if !strings.Contains(actions, required) {
 			t.Errorf("valid actions missing %q: %s", required, actions)

@@ -34,8 +34,9 @@ func TestSchemaParity_GenerateWhatEnumMatchesHandlers(t *testing.T) {
 
 func TestSchemaParity_ConfigureWhatEnumMatchesHandlers(t *testing.T) {
 	t.Parallel()
+	h, _, _ := makeToolHandler(t)
 	schemaActions := mustToolEnumValues(t, toolSchemasForTest(), "configure", "what")
-	runtimeActions := sortedKeysConfigureHandlers()
+	runtimeActions := h.configureDispatcher.Actions()
 	assertSameStringSet(t, "configure.what enum vs configureHandlers", schemaActions, runtimeActions)
 }
 
@@ -61,15 +62,6 @@ func TestSchemaParity_ObserveWhatEnumMatchesHandlers(t *testing.T) {
 
 func sortedKeysGenerateHandlers() []string {
 	return strings.Split(toolgenerate.ValidFormats(), ", ")
-}
-
-func sortedKeysConfigureHandlers() []string {
-	keys := make([]string, 0, len(configureHandlers))
-	for action := range configureHandlers {
-		keys = append(keys, action)
-	}
-	sort.Strings(keys)
-	return keys
 }
 
 // observeSilentModes are registered handlers intentionally omitted from the

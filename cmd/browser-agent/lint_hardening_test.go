@@ -243,6 +243,25 @@ func TestDependencyBuildersAreNotToolHandlerMethods(t *testing.T) {
 	}
 }
 
+func TestConfigureLifecycleDoesNotReturnToToolHandler(t *testing.T) {
+	source, err := os.ReadFile(filepath.Join(projectRoot(), "cmd", "browser-agent", "tools_configure.go"))
+	if err != nil {
+		t.Fatalf("read tools_configure.go: %v", err)
+	}
+	for _, forbidden := range []string{
+		"func (h *ToolHandler) toolGetHealth(",
+		"func (h *ToolHandler) toolDoctor(",
+		"func (h *ToolHandler) toolConfigure(",
+		"func (h *ToolHandler) toolGetAuditLog(",
+		"func (h *ToolHandler) toolConfigureStreaming(",
+		"func (h *ToolHandler) toolConfigureRestart(",
+	} {
+		if strings.Contains(string(source), forbidden) {
+			t.Errorf("configure lifecycle retains root method %q", forbidden)
+		}
+	}
+}
+
 func TestTestGenerationDoesNotRequireHostInterface(t *testing.T) {
 	relativePath := "cmd/browser-agent/internal/testgenhandler/handler.go"
 	source, err := os.ReadFile(filepath.Join(projectRoot(), relativePath))

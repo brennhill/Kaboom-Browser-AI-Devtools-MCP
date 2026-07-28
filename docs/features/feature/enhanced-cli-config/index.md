@@ -12,6 +12,7 @@ code_paths:
   - cmd/browser-agent/internal/cli/cli_output.go
   - cmd/browser-agent/internal/health/doctor.go
   - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/internal/toolconfigure/deps.go
   - cmd/browser-agent/internal/health/doctor_fastpath_telemetry.go
@@ -48,6 +49,7 @@ code_paths:
   - npm/kaboom-agentic-browser/lib/codex-config.js
   - docs/mcp-install-guide.md
 test_paths:
+  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/tools_interface_check_test.go
   - cmd/browser-agent/main_flags_test.go

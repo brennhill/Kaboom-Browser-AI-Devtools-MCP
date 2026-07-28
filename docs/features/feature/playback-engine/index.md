@@ -21,12 +21,14 @@ code_paths:
   - internal/capture/capture.go
   - internal/capture/handlers.go
   - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
   - cmd/browser-agent/internal/toolobserve/dispatcher.go
   - cmd/browser-agent/internal/toolobserve/deps.go
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/internal/toolrecording/handler.go
   - cmd/browser-agent/internal/toolrecording/helpers.go
 test_paths:
+  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/internal/toolrecording/handler_test.go
   - cmd/browser-agent/internal/toolrecording/toolrecording_test.go

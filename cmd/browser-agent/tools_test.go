@@ -393,7 +393,7 @@ func TestToolConfigure_MissingAction(t *testing.T) {
 		ID:      json.RawMessage(`"test-id"`),
 	}
 
-	resp := toolHandler.toolConfigure(req, json.RawMessage(`{}`))
+	resp := toolHandler.configureDispatcher.Handle(req, json.RawMessage(`{}`))
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -419,7 +419,7 @@ func TestToolConfigure_UnknownAction(t *testing.T) {
 		ID:      json.RawMessage(`"test-id"`),
 	}
 
-	resp := toolHandler.toolConfigure(req, json.RawMessage(`{"what": "invalid_action"}`))
+	resp := toolHandler.configureDispatcher.Handle(req, json.RawMessage(`{"what": "invalid_action"}`))
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
@@ -448,7 +448,7 @@ func TestToolConfigure_Health(t *testing.T) {
 		ID:      json.RawMessage(`"test-id"`),
 	}
 
-	resp := toolHandler.toolConfigure(req, json.RawMessage(`{"what": "health"}`))
+	resp := toolHandler.configureDispatcher.Handle(req, json.RawMessage(`{"what": "health"}`))
 
 	var result mcp.MCPToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {

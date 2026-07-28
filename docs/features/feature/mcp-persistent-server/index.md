@@ -17,6 +17,7 @@ code_paths:
   - cmd/browser-agent/internal/toolresp/toolresp.go
   - cmd/browser-agent/internal/toolguard/guards.go
   - cmd/browser-agent/internal/toolrouting/routing.go
+  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
   - cmd/browser-agent/handler.go
   - cmd/browser-agent/main.go
   - cmd/browser-agent/config.go
@@ -70,6 +71,7 @@ code_paths:
   - internal/util/proc_windows.go
 test_paths:
   - cmd/browser-agent/internal/toolrouting/routing_test.go
+  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - internal/mcp/response_test.go
   - cmd/browser-agent/internal/toolresp/toolresp_test.go
   - cmd/browser-agent/tools_errors_test.go

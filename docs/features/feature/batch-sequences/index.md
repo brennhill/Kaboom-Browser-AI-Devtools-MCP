@@ -12,12 +12,14 @@ code_paths:
   - cmd/browser-agent/internal/toolinteract/interact_batch.go
   - cmd/browser-agent/tools_interact_dispatch.go
   - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
   - internal/recording/actionlog/recorder.go
   - internal/tools/interact/workflow.go
   - internal/schema/interact/actions.go
   - internal/schema/interact/properties_output_batch.go
   - internal/tools/configure/capabilities/modespecs_interact.go
 test_paths:
+  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/internal/replay/contract_test.go
   - cmd/browser-agent/internal/sequencehandler/handler_test.go
   - cmd/browser-agent/tools_interact_batch_test.go

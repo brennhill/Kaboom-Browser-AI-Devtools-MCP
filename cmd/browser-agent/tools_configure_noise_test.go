@@ -280,7 +280,7 @@ func TestToolConfigureNoise_FullLifecycle(t *testing.T) {
 	// This simulates what the HTTP endpoint returns
 	listArgs := json.RawMessage(`{"what":"noise_rule","noise_action":"list"}`)
 	listReq := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 42}
-	listResp := env.handler.toolConfigure(listReq, listArgs)
+	listResp := env.handler.configureDispatcher.Handle(listReq, listArgs)
 	wireJSON, _ := json.Marshal(listResp)
 	t.Logf("Wire-format JSON-RPC response: %s", string(wireJSON))
 }

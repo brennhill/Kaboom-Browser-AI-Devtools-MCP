@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"runtime"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -24,12 +23,13 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/qualitygates"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/tutorial"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolrouting"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/audit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/issuereport"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/schema"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/streaming/alertbuf"
 	cfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/configure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
@@ -39,121 +39,136 @@ const restartSelfSignalDelay = 100 * time.Millisecond
 
 var replayMu sync.Mutex
 
-var configureHandlers = map[string]toolrouting.Handler[*ToolHandler]{
-	"store": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return h.configureSessions.Store(req, args)
-	},
-	"load": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return h.configureSessions.Load(req, args)
-	},
-	"diff_sessions": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return h.configureSessions.Diff(req, args)
-	},
-	"health": func(h *ToolHandler, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
-		return h.toolGetHealth(req)
-	},
-	"restart": func(h *ToolHandler, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
-		return h.toolConfigureRestart(req)
-	},
-	"doctor": func(h *ToolHandler, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
-		return h.toolDoctor(req)
-	},
-	"noise_rule": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		rewrittenArgs, err := cfg.RewriteNoiseRuleArgs(args)
-		if err != nil {
-			return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
-		}
-		return toolconfigure.HandleNoise(h.configureLocalDeps, req, rewrittenArgs)
-	},
-	"clear": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return toolconfigure.HandleClear(toolconfigure.ClearTargets{
-			Capture: h.capture,
-			ClearLogs: func() int {
-				count := h.server.logs.EntryCount()
-				h.server.logs.ClearEntries()
-				return count
-			},
-			Inbox:       h.server.pushInbox,
-			Annotations: h.annotationStore,
-		}, req, args)
-	},
-	"audit_log": (*ToolHandler).toolGetAuditLog,
-	"streaming": (*ToolHandler).toolConfigureStreaming,
-	"test_boundary_start": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return h.testBoundaries.Start(req, args)
-	},
-	"test_boundary_end": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return h.testBoundaries.End(req, args)
-	},
-	"event_recording_start": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return h.recordingHandler.EventRecordingStart(req, args)
-	},
-	"event_recording_stop": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return h.recordingHandler.EventRecordingStop(req, args)
-	},
-	"playback": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return h.recordingHandler.Playback(req, args)
-	},
-	"log_diff": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return h.recordingHandler.LogDiff(req, args)
-	},
-	"telemetry": cfgLocal(toolconfigure.HandleTelemetry),
-	"describe_capabilities": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return toolconfigure.HandleDescribeCapabilities(h.configureLocalDeps, req, args, version)
-	},
-	"tutorial": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return tutorial.HandleTutorial(h.tutorialDeps, req, args, playbooks.TutorialFailureRecoveryPlaybooks())
-	},
-	"save_sequence": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return h.sequences.Save(req, args)
-	},
-	"get_sequence": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return h.sequences.Get(req, args)
-	},
-	"list_sequences": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return h.sequences.List(req, args)
-	},
-	"delete_sequence": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return h.sequences.Delete(req, args)
-	},
-	"replay_sequence": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return h.sequences.Replay(req, args)
-	},
-	"security_mode": cfgLocal(toolconfigure.HandleSecurityMode),
-	"network_recording": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return netrecord.HandleNetworkRecording(h.capture.Telemetry(), h.networkRecording, req, args)
-	},
-	"action_jitter": cfgLocal(toolconfigure.HandleActionJitter),
-	"report_issue": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return issuereport.Handle(h.issueReportDeps, req, args)
-	},
-	"setup_quality_gates": func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return qualitygates.Handle(h.server, req, args)
-	},
+func buildConfigureDispatcher(h *ToolHandler) *toolconfigure.Dispatcher {
+	return toolconfigure.NewDispatcher(map[string]toolconfigure.Handler{
+		"store": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return h.configureSessions.Store(req, args)
+		},
+		"load": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return h.configureSessions.Load(req, args)
+		},
+		"diff_sessions": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return h.configureSessions.Diff(req, args)
+		},
+		"health": func(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+			return handleConfigureHealth(h.healthMetrics, h.capture, h.server, req)
+		},
+		"restart": func(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+			return handleConfigureRestart(req)
+		},
+		"doctor": func(req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCResponse {
+			return handleConfigureDoctor(h.healthMetrics, h.capture, h.Guards.DiagnosticHintString, req)
+		},
+		"noise_rule": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			rewrittenArgs, err := cfg.RewriteNoiseRuleArgs(args)
+			if err != nil {
+				return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
+			}
+			return toolconfigure.HandleNoise(h.configureLocalDeps, req, rewrittenArgs)
+		},
+		"clear": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return toolconfigure.HandleClear(toolconfigure.ClearTargets{
+				Capture: h.capture,
+				ClearLogs: func() int {
+					count := h.server.logs.EntryCount()
+					h.server.logs.ClearEntries()
+					return count
+				},
+				Inbox:       h.server.pushInbox,
+				Annotations: h.annotationStore,
+			}, req, args)
+		},
+		"audit_log": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return handleConfigureAuditLog(h.auditTrail, h.auditRecorder, req, args)
+		},
+		"streaming": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return handleConfigureStreaming(h.alertBuffer, req, args)
+		},
+		"test_boundary_start": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return h.testBoundaries.Start(req, args)
+		},
+		"test_boundary_end": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return h.testBoundaries.End(req, args)
+		},
+		"event_recording_start": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return h.recordingHandler.EventRecordingStart(req, args)
+		},
+		"event_recording_stop": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return h.recordingHandler.EventRecordingStop(req, args)
+		},
+		"playback": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return h.recordingHandler.Playback(req, args)
+		},
+		"log_diff": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return h.recordingHandler.LogDiff(req, args)
+		},
+		"telemetry": configureLocal(h.configureLocalDeps, toolconfigure.HandleTelemetry),
+		"describe_capabilities": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return toolconfigure.HandleDescribeCapabilities(h.configureLocalDeps, req, args, version)
+		},
+		"tutorial": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return tutorial.HandleTutorial(h.tutorialDeps, req, args, playbooks.TutorialFailureRecoveryPlaybooks())
+		},
+		"save_sequence": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return h.sequences.Save(req, args)
+		},
+		"get_sequence": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return h.sequences.Get(req, args)
+		},
+		"list_sequences": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return h.sequences.List(req, args)
+		},
+		"delete_sequence": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return h.sequences.Delete(req, args)
+		},
+		"replay_sequence": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return h.sequences.Replay(req, args)
+		},
+		"security_mode": configureLocal(h.configureLocalDeps, toolconfigure.HandleSecurityMode),
+		"network_recording": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return netrecord.HandleNetworkRecording(h.capture.Telemetry(), h.networkRecording, req, args)
+		},
+		"action_jitter": configureLocal(h.configureLocalDeps, toolconfigure.HandleActionJitter),
+		"report_issue": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return issuereport.Handle(h.issueReportDeps, req, args)
+		},
+		"setup_quality_gates": func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+			return qualitygates.Handle(h.server, req, args)
+		},
+	})
 }
 
-func cfgLocal(fn func(toolconfigure.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse) toolrouting.Handler[*ToolHandler] {
-	return func(h *ToolHandler, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-		return fn(h.configureLocalDeps, req, args)
+func configureLocal(
+	deps toolconfigure.Deps,
+	fn func(toolconfigure.Deps, mcp.JSONRPCRequest, json.RawMessage) mcp.JSONRPCResponse,
+) toolconfigure.Handler {
+	return func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+		return fn(deps, req, args)
 	}
 }
 
-func getValidConfigureActions() string {
-	return strings.Join(util.SortedMapKeys(configureHandlers), ", ")
-}
-
-func (h *ToolHandler) toolGetHealth(req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
-	if h.healthMetrics == nil {
+func handleConfigureHealth(
+	metrics *health.Metrics,
+	captureStore *capture.Capture,
+	server *Server,
+	req mcp.JSONRPCRequest,
+) mcp.JSONRPCResponse {
+	if metrics == nil {
 		return mcp.Fail(req, mcp.ErrInternal, "Health metrics not initialized", "Internal server error — do not retry")
 	}
-	response := getHealthResponse(h.healthMetrics, h.capture, h.server, version)
+	response := getHealthResponse(metrics, captureStore, server, version)
 	return mcp.Succeed(req, "Server health", response)
 }
 
-func (h *ToolHandler) toolDoctor(req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
-	checks := health.RunDoctorChecks(h.capture)
-	if h.healthMetrics != nil {
-		uptime := h.healthMetrics.GetUptime()
+func handleConfigureDoctor(
+	metrics *health.Metrics,
+	captureStore *capture.Capture,
+	diagnosticHint func() string,
+	req mcp.JSONRPCRequest,
+) mcp.JSONRPCResponse {
+	checks := health.RunDoctorChecks(captureStore)
+	if metrics != nil {
+		uptime := metrics.GetUptime()
 		checks = append(checks, health.DoctorCheck{
 			Name: "server_uptime", Status: "pass",
 			Detail: fmt.Sprintf("Server running for %s (version %s)", uptime.Round(time.Second), version),
@@ -172,7 +187,7 @@ func (h *ToolHandler) toolDoctor(req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
 	}
 	return mcp.Succeed(req, "Doctor: "+overallStatus, map[string]any{
 		"status": overallStatus, "ready_for_interaction": readyForInteraction,
-		"checks": checks, "hint": h.Guards.DiagnosticHintString(),
+		"checks": checks, "hint": diagnosticHint(),
 	})
 }
 
@@ -211,22 +226,6 @@ func getLaunchModeInfo() health.LaunchModeInfo {
 	return health.LaunchModeInfo{
 		Mode: lm.Mode, Reason: lm.Reason, ParentProcess: lm.ParentProcess,
 	}
-}
-
-// configureRegistry is the tool registry for configure dispatch.
-var configureRegistry = toolrouting.Registry[*ToolHandler]{
-	Handlers: configureHandlers,
-	Resolution: toolrouting.Resolution{
-		ToolName:   "configure",
-		ValidModes: "", // populated lazily
-	},
-}
-
-// toolConfigure dispatches configure requests based on the 'what' parameter.
-func (h *ToolHandler) toolConfigure(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	reg := configureRegistry
-	reg.Resolution.ValidModes = getValidConfigureActions()
-	return toolrouting.Dispatch(h, req, args, reg)
 }
 
 func buildConfigureLocalDeps(h *ToolHandler) toolconfigure.Deps {
@@ -328,8 +327,13 @@ func extractErrorMessage(response mcp.JSONRPCResponse) string {
 	return "unknown error"
 }
 
-func (h *ToolHandler) toolGetAuditLog(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
-	result, problem := auditlog.New(h.auditTrail).Execute(args)
+func handleConfigureAuditLog(
+	trail *audit.AuditTrail,
+	recorder *audit.Recorder,
+	req mcp.JSONRPCRequest,
+	args json.RawMessage,
+) mcp.JSONRPCResponse {
+	result, problem := auditlog.New(trail).Execute(args)
 	if problem != nil {
 		switch problem.Kind {
 		case auditlog.Unavailable:
@@ -345,7 +349,7 @@ func (h *ToolHandler) toolGetAuditLog(req mcp.JSONRPCRequest, args json.RawMessa
 
 	switch result.Operation {
 	case "clear":
-		h.auditRecorder.ResetSessions()
+		recorder.ResetSessions()
 		return mcp.Succeed(req, "Audit log cleared", map[string]any{
 			"status": "ok", "operation": result.Operation, "cleared": result.Cleared,
 		})
@@ -360,7 +364,11 @@ func (h *ToolHandler) toolGetAuditLog(req mcp.JSONRPCRequest, args json.RawMessa
 	}
 }
 
-func (h *ToolHandler) toolConfigureStreaming(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {
+func handleConfigureStreaming(
+	alertBuffer *alertbuf.AlertBuffer,
+	req mcp.JSONRPCRequest,
+	args json.RawMessage,
+) mcp.JSONRPCResponse {
 	rewritten, err := cfg.RewriteStreamingArgs(args)
 	if err != nil {
 		return mcp.Fail(req, mcp.ErrInvalidJSON, "Invalid JSON arguments: "+err.Error(), "Fix JSON syntax and call again")
@@ -378,7 +386,7 @@ func (h *ToolHandler) toolConfigureStreaming(req mcp.JSONRPCRequest, args json.R
 	if resp, blocked := toolresp.RequireString(req, params.Action, "action", "Add the 'action' parameter and call again"); blocked {
 		return resp
 	}
-	result := h.alertBuffer.Stream.Configure(
+	result := alertBuffer.Stream.Configure(
 		params.Action,
 		params.Events,
 		params.ThrottleSeconds,
@@ -388,7 +396,7 @@ func (h *ToolHandler) toolConfigureStreaming(req mcp.JSONRPCRequest, args json.R
 	return mcp.Succeed(req, "Streaming configuration", result)
 }
 
-func (h *ToolHandler) toolConfigureRestart(req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
+func handleConfigureRestart(req mcp.JSONRPCRequest) mcp.JSONRPCResponse {
 	resp := mcp.Succeed(req, "Daemon restarting", map[string]any{
 		"status":    "ok",
 		"restarted": true,

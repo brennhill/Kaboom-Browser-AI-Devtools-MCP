@@ -12,6 +12,7 @@ code_paths:
   - cmd/browser-agent/internal/noiseautorun/autorun.go
   - cmd/browser-agent/internal/toolconfigure/auditlog/handler.go
   - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/internal/toolconfigure/session.go
   - internal/noise/noise.go
@@ -23,6 +24,7 @@ code_paths:
   - internal/noise/noise_stats.go
   - internal/util/url.go
 test_paths:
+  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go
   - cmd/browser-agent/tools_configure_noise_test.go

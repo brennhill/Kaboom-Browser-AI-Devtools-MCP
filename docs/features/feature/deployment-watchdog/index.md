@@ -9,6 +9,7 @@ code_paths:
   - cmd/browser-agent/internal/binarywatch/watcher.go
   - cmd/browser-agent/config.go
   - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
   - cmd/browser-agent/internal/operationalapi/handler.go
   - cmd/browser-agent/handler.go
   - cmd/browser-agent/server.go
@@ -16,6 +17,7 @@ code_paths:
   - cmd/browser-agent/internal/dashboard/diagnostics.html
   - src/generated/openapi-types.ts
 test_paths:
+  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/internal/binarywatch/watcher_test.go
   - cmd/browser-agent/internal/operationalapi/health_test.go
   - cmd/browser-agent/server_routes_unit_test.go

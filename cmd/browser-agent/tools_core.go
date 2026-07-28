@@ -129,6 +129,7 @@ type ToolHandler struct {
 	observeDispatcher        *toolobserve.Dispatcher
 	stateInteractHandler     *interactstate.Handler
 	configureLocalDeps       toolconfigure.Deps
+	configureDispatcher      *toolconfigure.Dispatcher
 	tutorialDeps             *tutorial.Deps
 	issueReportDeps          issuereport.HandlerDeps
 	configureSessions        *toolconfigure.SessionHandler
@@ -242,7 +243,7 @@ func (h *ToolHandler) ensureToolModules() {
 			toolmodule.Spec{Name: "generate", Summary: "Generate artifacts (reproduction, csp, sarif, tests) from captured context",
 				Examples: []json.RawMessage{json.RawMessage(`{"what":"reproduction","last_n":20}`)}, Handle: h.generateDispatcher.Handle},
 			toolmodule.Spec{Name: "configure", Summary: "Session settings, diagnostics, and recording utilities",
-				Examples: []json.RawMessage{json.RawMessage(`{"what":"health"}`), json.RawMessage(`{"what":"clear","buffer":"logs"}`)}, Handle: h.toolConfigure},
+				Examples: []json.RawMessage{json.RawMessage(`{"what":"health"}`), json.RawMessage(`{"what":"clear","buffer":"logs"}`)}, Handle: h.configureDispatcher.Handle},
 			toolmodule.Spec{Name: "interact", Summary: "Browser automation: navigate, click, type, fill forms, take screenshots, and control any web page",
 				Examples: []json.RawMessage{json.RawMessage(`{"what":"navigate","url":"https://example.com"}`), json.RawMessage(`{"what":"click","selector":"button.submit"}`), json.RawMessage(`{"what":"type","selector":"input[name=search]","text":"hello"}`)}, Handle: h.toolInteract},
 		)
@@ -552,6 +553,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 		WaitForCommand: waitForSequenceCommand,
 		RecordAction:   handler.actionRecorder.Record,
 	})
+	handler.configureDispatcher = buildConfigureDispatcher(handler)
 	handler.ensureToolModules()
 	handler.ensureToolSchemas()
 

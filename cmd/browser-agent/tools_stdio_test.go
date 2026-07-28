@@ -169,7 +169,7 @@ func TestToolHandler_Configure_NoStdout(t *testing.T) {
 			}
 
 			output := captureStdout(t, func() {
-				_ = handler.toolConfigure(req, args)
+				_ = handler.configureDispatcher.Handle(req, args)
 			})
 
 			if output != "" {

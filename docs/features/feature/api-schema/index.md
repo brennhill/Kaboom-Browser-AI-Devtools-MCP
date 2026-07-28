@@ -9,6 +9,7 @@ code_paths:
   - cmd/browser-agent/internal/toolconfigure/capabilities.go
   - cmd/browser-agent/internal/toolconfigure/deps.go
   - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/server.go
   - internal/analysis/apicontract/contract.go
@@ -35,6 +36,7 @@ code_paths:
   - internal/schema/interact/properties_output_batch.go
   - internal/schema/interact/properties_targeting.go
 test_paths:
+  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/tools_configure_capabilities_test.go
   - cmd/browser-agent/internal/toolconfigure/handlers_coverage_test.go

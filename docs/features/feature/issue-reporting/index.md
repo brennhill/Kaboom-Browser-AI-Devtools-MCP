@@ -8,6 +8,7 @@ last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
   - internal/issuereport/handler.go
   - internal/schema/configure/properties_runtime.go
   - internal/issuereport/types.go
@@ -15,6 +16,7 @@ code_paths:
   - internal/issuereport/sanitize.go
   - internal/issuereport/submit.go
 test_paths:
+  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/tools_configure_report_issue_test.go
   - internal/issuereport/handler_test.go

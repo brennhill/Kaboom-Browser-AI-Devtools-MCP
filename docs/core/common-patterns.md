@@ -67,7 +67,9 @@ Use this as a hard checklist during design, coding, and review.
 
 ## 7) Tool Dispatch + Registry Pattern
 
-- Top-level tool entrypoints (`toolObserve`, `toolConfigure`, `toolInteract`, `toolAnalyze`, `toolGenerate`) should delegate through `dispatchTool(...)`.
+- Top-level tool entrypoints delegate to their canonical dispatcher owners.
+  Configure routes through `internal/toolconfigure.Dispatcher`; do not recreate
+  package-main mode registries or forwarding methods.
 - Mode/action registration belongs in the tool registry files (`tools_*_registry.go`), not ad-hoc `switch` blocks in entrypoint files.
 - Tool routing is canonical-only: every top-level tool call uses `what`, and
   registries must not add alternate selector or mode names.

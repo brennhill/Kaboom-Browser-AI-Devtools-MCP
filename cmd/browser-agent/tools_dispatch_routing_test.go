@@ -39,7 +39,7 @@ func TestToolDispatchRequiresCanonicalWhat(t *testing.T) {
 			return h.generateDispatcher.Handle(req, args)
 		},
 		"configure action": func(args json.RawMessage) mcp.JSONRPCResponse {
-			return h.toolConfigure(req, args)
+			return h.configureDispatcher.Handle(req, args)
 		},
 		"interact action": func(args json.RawMessage) mcp.JSONRPCResponse {
 			return h.toolInteract(req, args)
@@ -128,7 +128,7 @@ func TestUnknownMode_IncludesRecoveryToolCall_Configure(t *testing.T) {
 	h, _, _ := makeToolHandler(t)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: 1}
-	resp := h.toolConfigure(req, json.RawMessage(`{"what":"nonexistent_action"}`))
+	resp := h.configureDispatcher.Handle(req, json.RawMessage(`{"what":"nonexistent_action"}`))
 	result := parseToolResult(t, resp)
 	if !result.IsError {
 		t.Fatal("expected error for unknown mode")

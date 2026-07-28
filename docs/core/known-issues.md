@@ -74,7 +74,7 @@ the folder-gate numbers as evidence that it did.
 | --- | --- |
 | `Capture` methods (composition and cross-owner orchestration) | 35 |
 | `cmd/browser-agent` production source files (package `main`) | 10 |
-| `*ToolHandler` methods in those files | 12 |
+| `*ToolHandler` methods in those files | 6 |
 
 Both remain structurally constrained: Go only permits methods on a type in the
 package that declares it. Extracted `tool*` packages therefore expose handlers
@@ -86,7 +86,10 @@ owned completely by `internal/asynccommand.Handler`; queueing, accessibility
 execution, waiting, response enrichment, and telemetry no longer remain as root
 methods or MCP provider interfaces. AI action normalization is likewise owned by
 `internal/recording/actionlog.Recorder`, shared directly by interact, state,
-upload, sequence, and screen-recording callers. The active refactor continues moving the
+upload, sequence, and screen-recording callers. Configure mode registration and
+dispatch now belong to `internal/toolconfigure.Dispatcher`; health, doctor,
+audit, streaming, and restart receive explicit dependencies rather than root
+methods. The active refactor continues moving the
 remaining stateful clusters behind independently synchronized owners and
 migrating callers directly to those canonical APIs.
 

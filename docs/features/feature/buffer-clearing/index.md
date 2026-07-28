@@ -8,7 +8,9 @@ last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/internal/toolconfigure/clear.go
   - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
 test_paths:
+  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/tools_configure_coverage_test.go
   - cmd/browser-agent/tools_configure_handler_test.go
   - cmd/browser-agent/tools_configure_clear_annotations_test.go

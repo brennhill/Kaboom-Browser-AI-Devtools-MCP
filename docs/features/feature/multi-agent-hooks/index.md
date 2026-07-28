@@ -11,7 +11,9 @@ code_paths:
   - cmd/hooks/main.go
   - cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go
   - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
 test_paths:
+  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - internal/hook/protocol_test.go
   - internal/hook/session_store_test.go
   - cmd/hooks/main_test.go

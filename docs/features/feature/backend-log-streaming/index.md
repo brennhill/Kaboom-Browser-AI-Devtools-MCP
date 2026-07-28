@@ -7,6 +7,7 @@ owners: []
 last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
   - cmd/browser-agent/internal/toolconfigure/netrecord/handlers.go
   - cmd/browser-agent/internal/toolconfigure/netrecord/state.go
   - cmd/browser-agent/internal/toolconfigure/netrecord/filters.go
@@ -54,6 +55,7 @@ code_paths:
   - src/early-patch.ts
   - src/lib/page/safe-global-patch.ts
 test_paths:
+  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/tools_configure_network_recording_test.go
   - cmd/browser-agent/internal/toolconfigure/netrecord/netrecord_test.go
   - internal/capture/sync_test.go

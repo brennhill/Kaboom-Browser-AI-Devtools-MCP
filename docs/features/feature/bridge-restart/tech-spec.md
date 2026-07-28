@@ -53,7 +53,7 @@ Main orchestrator. Returns true if the request was handled (i.e., it was `config
 6. Wait on ready/failed channels with 6s timeout
 7. Return MCP tool result via `sendFastResponse()`
 
-### `toolConfigureRestart(req) JSONRPCResponse`
+### `handleConfigureRestart(req) JSONRPCResponse`
 
 Daemon-side handler for when the daemon is responsive. Sends self-SIGTERM via `util.SafeGo` after 100ms delay (so the response is sent first). The bridge detects the daemon died and auto-respawns.
 

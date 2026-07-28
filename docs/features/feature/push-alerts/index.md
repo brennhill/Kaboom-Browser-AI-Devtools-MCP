@@ -7,6 +7,7 @@ owners: []
 last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
   - cmd/browser-agent/internal/toolobserve/dispatcher.go
   - cmd/browser-agent/internal/toolobserve/deps.go
   - cmd/browser-agent/internal/toolobserve/inbox.go
@@ -22,6 +23,7 @@ code_paths:
   - internal/push/inbox.go
   - internal/types/alert.go
 test_paths:
+  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - internal/streaming/stream_test.go
   - internal/streaming/alertbuf/alertbuf_test.go
   - internal/push/inbox_test.go

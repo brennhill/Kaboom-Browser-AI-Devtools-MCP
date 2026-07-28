@@ -7,6 +7,7 @@ owners: []
 last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/tools_configure.go
+  - cmd/browser-agent/internal/toolconfigure/dispatcher.go
   - cmd/browser-agent/internal/toolobserve/dispatcher.go
   - cmd/browser-agent/internal/toolobserve/deps.go
   - cmd/browser-agent/tools_core.go
@@ -35,6 +36,7 @@ code_paths:
   - src/lib/brand.ts
   - src/lib/daemon-http.ts
 test_paths:
+  - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/internal/toolrecording/handler_test.go
   - cmd/browser-agent/internal/toolrecording/toolrecording_test.go
