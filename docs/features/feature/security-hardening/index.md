@@ -55,6 +55,8 @@ test_paths:
   - internal/security/policy/boundary_test.go
   - internal/security/policy/config_path_test.go
   - internal/security/scan/scan_test.go
+  - internal/security/scan/scan_sensitive_data_test.go
+  - internal/security/scan/scan_transport_policy_test.go
   - internal/security/scan/unit_test.go
   - internal/security/scan/coverage_test.go
   - internal/security/scan/coverage_part2_test.go
@@ -130,4 +132,6 @@ imports `httpsec`.
 - `internal/security/policy/boundary_test.go` — LLM trust boundary: MCP mode detection and blocked config mutations.
 - `internal/security/csp/boundary_test.go` — session-only whitelist overrides are applied, warned about, audited, and never persisted.
 - `internal/security/diff/diff_test.go` — regression/improvement diff coverage with shared snapshot/compare test helpers for consistent setup.
-- `internal/security/scan/scan_test.go` — end-to-end scanner coverage across every check category.
+- `internal/security/scan/scan_test.go` — scanner orchestration, filtering, serialization, and fuzz safety.
+- `internal/security/scan/scan_sensitive_data_test.go` — credential, PII, and evidence-redaction findings.
+- `internal/security/scan/scan_transport_policy_test.go` — headers, cookies, and transport-policy findings.
