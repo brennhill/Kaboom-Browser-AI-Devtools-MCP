@@ -6,6 +6,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -63,16 +64,16 @@ func TestHandleSnapshot_WithStatsAndActiveTestIDFallback(t *testing.T) {
 		{"level": "warn", "message": "warn", "ts": time.Now().UTC().Format(time.RFC3339Nano)},
 		{"level": "info", "message": "info", "ts": time.Now().UTC().Format(time.RFC3339Nano)},
 	})
-	cap.AddWebSocketEvents([]capture.WebSocketEvent{
+	cap.AddWebSocketEvents([]types.WebSocketEvent{
 		{Event: "open", URL: "wss://one"},
 		{Event: "message", URL: "wss://one"},
 		{Event: "open", URL: "wss://two"},
 	})
-	cap.AddNetworkBodies([]capture.NetworkBody{
+	cap.AddNetworkBodies([]types.NetworkBody{
 		{URL: "https://example.test/a", Status: 200},
 		{URL: "https://example.test/b", Status: 502},
 	})
-	cap.AddEnhancedActions([]capture.EnhancedAction{
+	cap.AddEnhancedActions([]types.EnhancedAction{
 		{Type: "click", Timestamp: 1, URL: "https://example.test"},
 	})
 	cap.SetTestBoundaryStart("test-123")
@@ -154,7 +155,7 @@ func TestHandleClearAndTestBoundaryHandlers(t *testing.T) {
 	cap := capture.NewCapture()
 
 	srv.logs.AddEntries([]mcp.LogEntry{{"level": "error", "message": "x"}})
-	cap.AddNetworkBodies([]capture.NetworkBody{{URL: "https://example.test", Status: 200}})
+	cap.AddNetworkBodies([]types.NetworkBody{{URL: "https://example.test", Status: 200}})
 
 	clearHandler := ciapi.Clear(srv.logs, cap)
 
@@ -237,12 +238,12 @@ func TestFilterLogsSinceAndComputeSnapshotStats(t *testing.T) {
 			{"level": "warning"},
 			{"level": "warn"},
 		},
-		[]capture.WebSocketEvent{
+		[]types.WebSocketEvent{
 			{URL: "wss://one"},
 			{URL: "wss://one"},
 			{URL: "wss://two"},
 		},
-		[]capture.NetworkBody{
+		[]types.NetworkBody{
 			{Status: 200},
 			{Status: 404},
 		},

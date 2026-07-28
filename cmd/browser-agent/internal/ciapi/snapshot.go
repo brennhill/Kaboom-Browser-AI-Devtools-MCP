@@ -4,9 +4,9 @@
 package ciapi
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -27,7 +27,7 @@ func FilterLogsSince(logs []mcp.LogEntry, since time.Time) []mcp.LogEntry {
 }
 
 // ComputeSnapshotStats computes summary statistics for a snapshot.
-func ComputeSnapshotStats(logs []mcp.LogEntry, wsEvents []capture.WebSocketEvent, networkBodies []capture.NetworkBody) SnapshotStats {
+func ComputeSnapshotStats(logs []mcp.LogEntry, wsEvents []types.WebSocketEvent, networkBodies []types.NetworkBody) SnapshotStats {
 	stats := SnapshotStats{TotalLogs: len(logs)}
 	for _, entry := range logs {
 		level, _ := entry["level"].(string)

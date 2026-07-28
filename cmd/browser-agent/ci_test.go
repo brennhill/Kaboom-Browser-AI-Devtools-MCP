@@ -5,11 +5,11 @@
 package main
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/ciapi"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -47,7 +47,7 @@ func TestComputeSnapshotStats(t *testing.T) {
 	})
 
 	t.Run("counts network failures", func(t *testing.T) {
-		bodies := []capture.NetworkBody{
+		bodies := []types.NetworkBody{
 			{Status: 200, URL: "/ok"},
 			{Status: 404, URL: "/missing"},
 			{Status: 500, URL: "/error"},
@@ -61,7 +61,7 @@ func TestComputeSnapshotStats(t *testing.T) {
 	})
 
 	t.Run("counts unique WS connections", func(t *testing.T) {
-		wsEvents := []capture.WebSocketEvent{
+		wsEvents := []types.WebSocketEvent{
 			{URL: "ws://host/a", Event: "open"},
 			{URL: "ws://host/a", Event: "message"},
 			{URL: "ws://host/b", Event: "open"},
@@ -79,10 +79,10 @@ func TestComputeSnapshotStats(t *testing.T) {
 			{"level": "error", "msg": "err1"},
 			{"level": "info", "msg": "info1"},
 		}
-		wsEvents := []capture.WebSocketEvent{
+		wsEvents := []types.WebSocketEvent{
 			{URL: "ws://host/a", Event: "open"},
 		}
-		bodies := []capture.NetworkBody{
+		bodies := []types.NetworkBody{
 			{Status: 500, URL: "/fail"},
 		}
 		stats := ciapi.ComputeSnapshotStats(logs, wsEvents, bodies)

@@ -5,10 +5,9 @@
 package generate
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 func TestGenerateTestScript_NoActions(t *testing.T) {
@@ -34,7 +33,7 @@ func TestGenerateTestScript_NoActions(t *testing.T) {
 func TestGenerateTestScript_WithActions(t *testing.T) {
 	t.Parallel()
 
-	actions := []capture.EnhancedAction{
+	actions := []types.EnhancedAction{
 		{Type: "navigate", Timestamp: 1000, ToURL: "https://example.com/page"},
 		{Type: "click", Timestamp: 2000, URL: "https://example.com/page"},
 	}
@@ -62,7 +61,7 @@ func TestGroupActionsByNavigation(t *testing.T) {
 	}
 
 	// Single navigate
-	groups = GroupActionsByNavigation([]capture.EnhancedAction{
+	groups = GroupActionsByNavigation([]types.EnhancedAction{
 		{Type: "navigate", Timestamp: 1000},
 	})
 	if len(groups) != 1 {
@@ -70,7 +69,7 @@ func TestGroupActionsByNavigation(t *testing.T) {
 	}
 
 	// Navigate + click + navigate + click
-	groups = GroupActionsByNavigation([]capture.EnhancedAction{
+	groups = GroupActionsByNavigation([]types.EnhancedAction{
 		{Type: "navigate", Timestamp: 1000},
 		{Type: "click", Timestamp: 2000},
 		{Type: "navigate", Timestamp: 3000},
@@ -97,7 +96,7 @@ func TestTestLabelForGroup(t *testing.T) {
 	}
 
 	// Navigate with URL
-	label = testLabelForGroup([]capture.EnhancedAction{
+	label = testLabelForGroup([]types.EnhancedAction{
 		{Type: "navigate", ToURL: "https://example.com/dashboard"},
 	}, 0)
 	if !strings.Contains(label, "/dashboard") {
@@ -105,7 +104,7 @@ func TestTestLabelForGroup(t *testing.T) {
 	}
 
 	// Non-navigate first action
-	label = testLabelForGroup([]capture.EnhancedAction{
+	label = testLabelForGroup([]types.EnhancedAction{
 		{Type: "click", Timestamp: 1000},
 	}, 2)
 	if label != "step 3" {
@@ -116,7 +115,7 @@ func TestTestLabelForGroup(t *testing.T) {
 func TestFilterLastN(t *testing.T) {
 	t.Parallel()
 
-	actions := []capture.EnhancedAction{
+	actions := []types.EnhancedAction{
 		{Type: "navigate", Timestamp: 1000},
 		{Type: "click", Timestamp: 2000},
 		{Type: "click", Timestamp: 3000},

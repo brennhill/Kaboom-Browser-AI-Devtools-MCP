@@ -6,6 +6,7 @@ package toolinteract
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"sync"
 	"time"
 
@@ -55,7 +56,7 @@ type Deps struct {
 	RecordAIAction func(action, url string, extra map[string]any)
 
 	// RecordAIEnhancedAction records a fully populated AI-driven action.
-	RecordAIEnhancedAction func(action capture.EnhancedAction)
+	RecordAIEnhancedAction func(action types.EnhancedAction)
 
 	// RecordDOMPrimitiveAction records a DOM primitive action for reproduction.
 	RecordDOMPrimitiveAction func(action, selector, text, value string)

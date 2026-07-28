@@ -23,7 +23,7 @@ type fakeConfigureDeps struct {
 	noiseConfig      *noise.NoiseConfig
 	consoleEntries   []types.LogEntry
 	networkBodies    []types.NetworkBody
-	wsEvents         []capture.WebSocketEvent
+	wsEvents         []types.WebSocketEvent
 	tools            []mcp.MCPTool
 	moduleExamples   any
 	hasCapture       bool
@@ -40,13 +40,13 @@ type fakeConfigureDeps struct {
 	setJitterCalled       int
 }
 
-func (f *fakeConfigureDeps) NoiseConfig() *noise.NoiseConfig              { return f.noiseConfig }
-func (f *fakeConfigureDeps) ConsoleEntries() []types.LogEntry             { return f.consoleEntries }
-func (f *fakeConfigureDeps) NetworkBodies() []types.NetworkBody           { return f.networkBodies }
-func (f *fakeConfigureDeps) AllWebSocketEvents() []capture.WebSocketEvent { return f.wsEvents }
-func (f *fakeConfigureDeps) ToolsList() []mcp.MCPTool                     { return f.tools }
-func (f *fakeConfigureDeps) GetToolModuleExamples(string) any             { return f.moduleExamples }
-func (f *fakeConfigureDeps) HasCapture() bool                             { return f.hasCapture }
+func (f *fakeConfigureDeps) NoiseConfig() *noise.NoiseConfig            { return f.noiseConfig }
+func (f *fakeConfigureDeps) ConsoleEntries() []types.LogEntry           { return f.consoleEntries }
+func (f *fakeConfigureDeps) NetworkBodies() []types.NetworkBody         { return f.networkBodies }
+func (f *fakeConfigureDeps) AllWebSocketEvents() []types.WebSocketEvent { return f.wsEvents }
+func (f *fakeConfigureDeps) ToolsList() []mcp.MCPTool                   { return f.tools }
+func (f *fakeConfigureDeps) GetToolModuleExamples(string) any           { return f.moduleExamples }
+func (f *fakeConfigureDeps) HasCapture() bool                           { return f.hasCapture }
 func (f *fakeConfigureDeps) GetSecurityMode() (string, bool, []string) {
 	return f.securityMode, f.productionParity, f.rewrites
 }

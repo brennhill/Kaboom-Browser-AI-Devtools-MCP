@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -26,8 +25,8 @@ type Finding struct {
 type LogEntry = types.LogEntry
 
 type Input struct {
-	NetworkBodies    []capture.NetworkBody
-	WaterfallEntries []capture.NetworkWaterfallEntry
+	NetworkBodies    []types.NetworkBody
+	WaterfallEntries []types.NetworkWaterfallEntry
 	ConsoleEntries   []LogEntry
 	PageURLs         []string
 	URLFilter        string

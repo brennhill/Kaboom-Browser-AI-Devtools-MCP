@@ -3,14 +3,13 @@
 package pageissues
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 func TestCollectNetworkFailuresCapsAndMapsSeverity(t *testing.T) {
 	t.Parallel()
-	issues := collectNetworkFailures([]capture.NetworkBody{
+	issues := collectNetworkFailures([]types.NetworkBody{
 		{URL: "/ok", Status: 200},
 		{URL: "/missing", Status: 404},
 		{URL: "/broken", Status: 503},

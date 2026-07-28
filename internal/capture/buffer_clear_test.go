@@ -4,6 +4,7 @@
 package capture
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 	"time"
 )
@@ -15,13 +16,13 @@ func TestClearNetworkBuffers(t *testing.T) {
 
 	// Add network data directly to buffers
 	capture.mu.Lock()
-	capture.networkWaterfall.entries = []NetworkWaterfallEntry{
+	capture.networkWaterfall.entries = []types.NetworkWaterfallEntry{
 		{URL: "https://example.com/1"},
 		{URL: "https://example.com/2"},
 	}
 	capture.mu.Unlock()
 
-	capture.AddNetworkBodies([]NetworkBody{
+	capture.AddNetworkBodies([]types.NetworkBody{
 		{URL: "https://example.com/1"},
 	})
 
@@ -72,14 +73,14 @@ func TestClearWebSocketBuffers(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Add WS events
-	capture.AddWebSocketEvents([]WebSocketEvent{
+	capture.AddWebSocketEvents([]types.WebSocketEvent{
 		{ID: "conn1", Direction: "outgoing", Data: "test"},
 		{ID: "conn1", Direction: "incoming", Data: "response"},
 	})
 
 	// Add WS connections (open event only — it does not enter the event buffer).
 	capture.mu.Lock()
-	capture.wsConnections.TrackEvent(WebSocketEvent{Event: "open", ID: "conn1", URL: "ws://localhost"})
+	capture.wsConnections.TrackEvent(types.WebSocketEvent{Event: "open", ID: "conn1", URL: "ws://localhost"})
 	capture.mu.Unlock()
 
 	// Clear
@@ -110,7 +111,7 @@ func TestClearActionBuffer(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Add actions
-	capture.AddEnhancedActions([]EnhancedAction{
+	capture.AddEnhancedActions([]types.EnhancedAction{
 		{Type: "click", Timestamp: 1738238000000},
 		{Type: "input", Timestamp: 1738238001000},
 	})
@@ -138,7 +139,7 @@ func TestClearExtensionLogs(t *testing.T) {
 
 	// Add extension logs
 	capture.mu.Lock()
-	capture.extensionLogs.logs = append(capture.extensionLogs.logs, ExtensionLog{Level: "debug", Message: "ext log", Timestamp: time.Now()})
+	capture.extensionLogs.logs = append(capture.extensionLogs.logs, types.ExtensionLog{Level: "debug", Message: "ext log", Timestamp: time.Now()})
 	capture.mu.Unlock()
 
 	// Clear
@@ -164,18 +165,18 @@ func TestClearAllCapture(t *testing.T) {
 
 	// Add data to all capture buffers
 	capture.mu.Lock()
-	capture.networkWaterfall.entries = []NetworkWaterfallEntry{{URL: "test"}}
+	capture.networkWaterfall.entries = []types.NetworkWaterfallEntry{{URL: "test"}}
 	capture.mu.Unlock()
 
-	capture.AddWebSocketEvents([]WebSocketEvent{{ID: "conn1", Data: "test"}})
-	capture.AddEnhancedActions([]EnhancedAction{{Type: "click", Timestamp: 1738238000000}})
+	capture.AddWebSocketEvents([]types.WebSocketEvent{{ID: "conn1", Data: "test"}})
+	capture.AddEnhancedActions([]types.EnhancedAction{{Type: "click", Timestamp: 1738238000000}})
 
 	// Regression: extension logs must be cleared by ClearAll too. They used to be
 	// left behind ("All" was a lie), so any caller that forgot the separate
 	// ClearExtensionLogs() leaked stale logs. ClearAll now clears them and returns
 	// the count.
 	capture.mu.Lock()
-	capture.extensionLogs.logs = append(capture.extensionLogs.logs, ExtensionLog{Level: "debug", Message: "ext log", Timestamp: time.Now()})
+	capture.extensionLogs.logs = append(capture.extensionLogs.logs, types.ExtensionLog{Level: "debug", Message: "ext log", Timestamp: time.Now()})
 	capture.mu.Unlock()
 
 	// Clear all

@@ -11,6 +11,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
 	"time"
@@ -177,7 +178,7 @@ func TestErrorBundles_ErrorWithNetwork(t *testing.T) {
 	now := time.Now().UTC()
 
 	// Add a network body 1 second before the error
-	env.capture.AddNetworkBodiesForTest([]capture.NetworkBody{
+	env.capture.AddNetworkBodiesForTest([]types.NetworkBody{
 		{
 			URL:          "https://api.example.com/users",
 			Method:       "GET",
@@ -229,7 +230,7 @@ func TestErrorBundles_ErrorWithAction(t *testing.T) {
 	now := time.Now().UTC()
 
 	// Add an action 2 seconds before the error
-	env.capture.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	env.capture.AddEnhancedActionsForTest([]types.EnhancedAction{
 		{
 			Type:      "click",
 			Timestamp: now.Add(-2 * time.Second).UnixMilli(),
@@ -323,7 +324,7 @@ func TestErrorBundles_WindowBoundary(t *testing.T) {
 	now := time.Now().UTC()
 
 	// Add action at T-2s (within 3s window) — should be included
-	env.capture.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	env.capture.AddEnhancedActionsForTest([]types.EnhancedAction{
 		{
 			Type:      "click",
 			Timestamp: now.Add(-2 * time.Second).UnixMilli(),
@@ -332,7 +333,7 @@ func TestErrorBundles_WindowBoundary(t *testing.T) {
 	})
 
 	// Add action at T-5s (outside 3s window) — should be excluded
-	env.capture.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	env.capture.AddEnhancedActionsForTest([]types.EnhancedAction{
 		{
 			Type:      "click",
 			Timestamp: now.Add(-5 * time.Second).UnixMilli(),
@@ -374,7 +375,7 @@ func TestErrorBundles_CustomWindow(t *testing.T) {
 	now := time.Now().UTC()
 
 	// Add action at T-4s
-	env.capture.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	env.capture.AddEnhancedActionsForTest([]types.EnhancedAction{
 		{
 			Type:      "click",
 			Timestamp: now.Add(-4 * time.Second).UnixMilli(),
@@ -454,7 +455,7 @@ func TestErrorBundles_SharedContext(t *testing.T) {
 	now := time.Now().UTC()
 
 	// Add a network body
-	env.capture.AddNetworkBodiesForTest([]capture.NetworkBody{
+	env.capture.AddNetworkBodiesForTest([]types.NetworkBody{
 		{
 			URL:       "https://api.example.com/data",
 			Method:    "GET",

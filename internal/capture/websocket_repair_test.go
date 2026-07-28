@@ -6,6 +6,7 @@
 package capture
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 )
 
@@ -13,7 +14,7 @@ func TestWSEntryBuffer_EqualLength(t *testing.T) {
 	t.Parallel()
 	c := NewCapture()
 
-	c.AddWebSocketEventsForTest([]WebSocketEvent{
+	c.AddWebSocketEventsForTest([]types.WebSocketEvent{
 		{Event: "message", Data: "hello", ID: "ws1"},
 		{Event: "message", Data: "world", ID: "ws1"},
 	})
@@ -24,7 +25,7 @@ func TestWSEntryBuffer_EqualLength(t *testing.T) {
 	}
 
 	// Add via production path
-	c.AddWebSocketEvents([]WebSocketEvent{{Event: "message", Data: "new", ID: "ws1"}})
+	c.AddWebSocketEvents([]types.WebSocketEvent{{Event: "message", Data: "new", ID: "ws1"}})
 
 	events, addedAt, _ = c.GetWSLengthsForTest()
 	if events != addedAt {
@@ -40,7 +41,7 @@ func TestWSEntryBuffer_ExtraEventsViaTestHelper(t *testing.T) {
 	c := NewCapture()
 
 	// Add 2 events, then 3 extra via test helper
-	c.AddWebSocketEventsForTest([]WebSocketEvent{
+	c.AddWebSocketEventsForTest([]types.WebSocketEvent{
 		{Event: "message", Data: "matched1", ID: "ws1"},
 		{Event: "message", Data: "matched2", ID: "ws1"},
 	})
@@ -56,7 +57,7 @@ func TestWSEntryBuffer_ExtraEventsViaTestHelper(t *testing.T) {
 	}
 
 	// Adding another event should work fine
-	c.AddWebSocketEvents([]WebSocketEvent{{Event: "message", Data: "trigger", ID: "ws1"}})
+	c.AddWebSocketEvents([]types.WebSocketEvent{{Event: "message", Data: "trigger", ID: "ws1"}})
 
 	events, addedAt, _ = c.GetWSLengthsForTest()
 	if events != addedAt {
@@ -72,7 +73,7 @@ func TestWSEntryBuffer_MemoryTracked(t *testing.T) {
 	c := NewCapture()
 
 	// Add events with known data sizes
-	c.AddWebSocketEventsForTest([]WebSocketEvent{
+	c.AddWebSocketEventsForTest([]types.WebSocketEvent{
 		{Event: "message", Data: "aaaa", ID: "ws1"},   // 4 bytes data
 		{Event: "message", Data: "bbbbbb", ID: "ws1"}, // 6 bytes data
 	})
@@ -80,7 +81,7 @@ func TestWSEntryBuffer_MemoryTracked(t *testing.T) {
 	c.AddExtraWSEventsForTest(1)
 
 	// Add via production path to trigger memory accounting
-	c.AddWebSocketEvents([]WebSocketEvent{{Event: "message", Data: "cc", ID: "ws1"}})
+	c.AddWebSocketEvents([]types.WebSocketEvent{{Event: "message", Data: "cc", ID: "ws1"}})
 
 	events, addedAt, mem := c.GetWSLengthsForTest()
 	if events != addedAt {
@@ -102,7 +103,7 @@ func TestWSEntryBuffer_BothEmpty(t *testing.T) {
 	}
 
 	// Adding an event should work fine
-	c.AddWebSocketEvents([]WebSocketEvent{{Event: "open", ID: "ws1"}})
+	c.AddWebSocketEvents([]types.WebSocketEvent{{Event: "open", ID: "ws1"}})
 
 	events, addedAt, _ = c.GetWSLengthsForTest()
 	if events != addedAt {

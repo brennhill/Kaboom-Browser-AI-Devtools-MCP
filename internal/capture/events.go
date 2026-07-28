@@ -16,21 +16,21 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
-// wsEventEntry bundles a WebSocketEvent with its ingestion timestamp.
+// wsEventEntry bundles a types.WebSocketEvent with its ingestion timestamp.
 type wsEventEntry struct {
-	Event   WebSocketEvent
+	Event   types.WebSocketEvent
 	AddedAt time.Time
 }
 
-// networkBodyEntry bundles a NetworkBody with its ingestion timestamp.
+// networkBodyEntry bundles a types.NetworkBody with its ingestion timestamp.
 type networkBodyEntry struct {
-	Body    NetworkBody
+	Body    types.NetworkBody
 	AddedAt time.Time
 }
 
-// enhancedActionEntry bundles an EnhancedAction with its ingestion timestamp.
+// enhancedActionEntry bundles an types.EnhancedAction with its ingestion timestamp.
 type enhancedActionEntry struct {
-	Action  EnhancedAction
+	Action  types.EnhancedAction
 	AddedAt time.Time
 }
 
@@ -94,33 +94,33 @@ func (s *BufferStore) actionTimestamps() []time.Time {
 	return out
 }
 
-func (s *BufferStore) networkBodiesCopy() []NetworkBody {
+func (s *BufferStore) networkBodiesCopy() []types.NetworkBody {
 	if len(s.networkBodies) == 0 {
-		return []NetworkBody{}
+		return []types.NetworkBody{}
 	}
-	out := make([]NetworkBody, len(s.networkBodies))
+	out := make([]types.NetworkBody, len(s.networkBodies))
 	for i := range s.networkBodies {
 		out[i] = s.networkBodies[i].Body
 	}
 	return out
 }
 
-func (s *BufferStore) webSocketEventsCopy() []WebSocketEvent {
+func (s *BufferStore) webSocketEventsCopy() []types.WebSocketEvent {
 	if len(s.wsEvents) == 0 {
-		return []WebSocketEvent{}
+		return []types.WebSocketEvent{}
 	}
-	out := make([]WebSocketEvent, len(s.wsEvents))
+	out := make([]types.WebSocketEvent, len(s.wsEvents))
 	for i := range s.wsEvents {
 		out[i] = s.wsEvents[i].Event
 	}
 	return out
 }
 
-func (s *BufferStore) enhancedActionsCopy() []EnhancedAction {
+func (s *BufferStore) enhancedActionsCopy() []types.EnhancedAction {
 	if len(s.enhancedActions) == 0 {
-		return []EnhancedAction{}
+		return []types.EnhancedAction{}
 	}
-	out := make([]EnhancedAction, len(s.enhancedActions))
+	out := make([]types.EnhancedAction, len(s.enhancedActions))
 	for i := range s.enhancedActions {
 		out[i] = s.enhancedActions[i].Action
 	}
@@ -151,7 +151,7 @@ func (s *BufferStore) clearAllEventBuffers() {
 	s.clearActionBuffers()
 }
 
-func (s *BufferStore) appendEnhancedActions(actions []EnhancedAction, now time.Time) bool {
+func (s *BufferStore) appendEnhancedActions(actions []types.EnhancedAction, now time.Time) bool {
 	s.actionTotalAdded += int64(len(actions))
 	hasNavigation := false
 	for i := range actions {
@@ -172,7 +172,7 @@ func (s *BufferStore) appendEnhancedActions(actions []EnhancedAction, now time.T
 	return hasNavigation
 }
 
-func (s *BufferStore) appendNetworkBodies(bodies []NetworkBody, testIDs []string, now time.Time) {
+func (s *BufferStore) appendNetworkBodies(bodies []types.NetworkBody, testIDs []string, now time.Time) {
 	s.networkTotalAdded += int64(len(bodies))
 	for i := range bodies {
 		if bodies[i].Status >= 400 {
@@ -190,7 +190,7 @@ func (s *BufferStore) appendNetworkBodies(bodies []NetworkBody, testIDs []string
 	s.evictNetworkForMemory()
 }
 
-func (s *BufferStore) appendWebSocketEvents(events []WebSocketEvent, testIDs []string, now time.Time, onEvent func(WebSocketEvent)) {
+func (s *BufferStore) appendWebSocketEvents(events []types.WebSocketEvent, testIDs []string, now time.Time, onEvent func(types.WebSocketEvent)) {
 	s.wsTotalAdded += int64(len(events))
 	for i := range events {
 		events[i].TestIDs = testIDs
@@ -308,12 +308,12 @@ const (
 // ============================================
 
 // wsEventMemory returns the memory estimate for a single WS event.
-func wsEventMemory(e *WebSocketEvent) int64 {
+func wsEventMemory(e *types.WebSocketEvent) int64 {
 	return int64(len(e.Data)) + wsEventOverhead
 }
 
 // nbEntryMemory returns the memory estimate for a single network body entry.
-func nbEntryMemory(b *NetworkBody) int64 {
+func nbEntryMemory(b *types.NetworkBody) int64 {
 	return int64(len(b.RequestBody)+len(b.ResponseBody)) + networkBodyOverhead
 }
 
@@ -452,7 +452,7 @@ func (c *Capture) ClearAll() int {
 	return c.extensionLogs.clear()
 }
 
-func detectAndSetBinaryFormat(body *NetworkBody) {
+func detectAndSetBinaryFormat(body *types.NetworkBody) {
 	if body.BinaryFormat != "" {
 		return
 	}
@@ -471,7 +471,7 @@ func detectAndSetBinaryFormat(body *NetworkBody) {
 	}
 }
 
-func (c *Capture) AddNetworkBodies(bodies []NetworkBody) {
+func (c *Capture) AddNetworkBodies(bodies []types.NetworkBody) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -488,7 +488,7 @@ func (c *Capture) GetNetworkBodyCount() int {
 	return c.buffers.networkCount()
 }
 
-func (c *Capture) AddNetworkWaterfallEntries(entries []NetworkWaterfallEntry, pageURL string) {
+func (c *Capture) AddNetworkWaterfallEntries(entries []types.NetworkWaterfallEntry, pageURL string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.networkWaterfall.appendEntries(entries, pageURL, time.Now())
@@ -500,16 +500,16 @@ func (c *Capture) GetNetworkWaterfallCount() int {
 	return c.networkWaterfall.count()
 }
 
-func (c *Capture) GetNetworkWaterfallEntries() []NetworkWaterfallEntry {
+func (c *Capture) GetNetworkWaterfallEntries() []types.NetworkWaterfallEntry {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	if c.networkWaterfall.count() == 0 {
-		return []NetworkWaterfallEntry{}
+		return []types.NetworkWaterfallEntry{}
 	}
 	return c.networkWaterfall.snapshot()
 }
 
-func (b *NetworkWaterfallBuffer) appendEntries(entries []NetworkWaterfallEntry, pageURL string, now time.Time) {
+func (b *NetworkWaterfallBuffer) appendEntries(entries []types.NetworkWaterfallEntry, pageURL string, now time.Time) {
 	for i := range entries {
 		entries[i].PageURL = pageURL
 		entries[i].Timestamp = now
@@ -518,7 +518,7 @@ func (b *NetworkWaterfallBuffer) appendEntries(entries []NetworkWaterfallEntry, 
 	if len(b.entries) <= b.capacity {
 		return
 	}
-	kept := make([]NetworkWaterfallEntry, b.capacity)
+	kept := make([]types.NetworkWaterfallEntry, b.capacity)
 	copy(kept, b.entries[len(b.entries)-b.capacity:])
 	b.entries = kept
 }
@@ -527,19 +527,19 @@ func (b *NetworkWaterfallBuffer) count() int {
 	return len(b.entries)
 }
 
-func (b *NetworkWaterfallBuffer) snapshot() []NetworkWaterfallEntry {
-	out := make([]NetworkWaterfallEntry, len(b.entries))
+func (b *NetworkWaterfallBuffer) snapshot() []types.NetworkWaterfallEntry {
+	out := make([]types.NetworkWaterfallEntry, len(b.entries))
 	copy(out, b.entries)
 	return out
 }
 
 func (b *NetworkWaterfallBuffer) clear() int {
 	count := len(b.entries)
-	b.entries = make([]NetworkWaterfallEntry, 0, b.capacity)
+	b.entries = make([]types.NetworkWaterfallEntry, 0, b.capacity)
 	return count
 }
 
-func detectWSBinaryFormat(event *WebSocketEvent) {
+func detectWSBinaryFormat(event *types.WebSocketEvent) {
 	if event.Event != "message" || event.BinaryFormat != "" || len(event.Data) == 0 {
 		return
 	}
@@ -549,7 +549,7 @@ func detectWSBinaryFormat(event *WebSocketEvent) {
 	}
 }
 
-func (c *Capture) AddWebSocketEvents(events []WebSocketEvent) {
+func (c *Capture) AddWebSocketEvents(events []types.WebSocketEvent) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -566,7 +566,7 @@ func (c *Capture) GetWebSocketEventCount() int {
 	return c.buffers.webSocketCount()
 }
 
-func matchesWSEventFilter(event *WebSocketEvent, filter WebSocketEventFilter) bool {
+func matchesWSEventFilter(event *types.WebSocketEvent, filter types.WebSocketEventFilter) bool {
 	if filter.ConnectionID != "" && event.ID != filter.ConnectionID {
 		return false
 	}
@@ -591,7 +591,7 @@ func containsTestID(testIDs []string, target string) bool {
 	return false
 }
 
-func (c *Capture) GetWebSocketEvents(filter WebSocketEventFilter) []WebSocketEvent {
+func (c *Capture) GetWebSocketEvents(filter types.WebSocketEventFilter) []types.WebSocketEvent {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -599,7 +599,7 @@ func (c *Capture) GetWebSocketEvents(filter WebSocketEventFilter) []WebSocketEve
 	if limit <= 0 {
 		limit = defaultWSLimit
 	}
-	filtered := make([]WebSocketEvent, 0, limit)
+	filtered := make([]types.WebSocketEvent, 0, limit)
 	for i := len(c.buffers.wsEvents) - 1; i >= 0; i-- {
 		entry := &c.buffers.wsEvents[i]
 		if c.TTL > 0 && isExpiredByTTL(entry.AddedAt, c.TTL) {
@@ -625,7 +625,7 @@ func (c *Capture) HandleWebSocketEvents(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	var payload struct {
-		Events []WebSocketEvent `json:"events"`
+		Events []types.WebSocketEvent `json:"events"`
 	}
 	if err := json.Unmarshal(body, &payload); err != nil {
 		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
@@ -639,17 +639,17 @@ func (c *Capture) HandleWebSocketEvents(w http.ResponseWriter, r *http.Request) 
 }
 
 func (c *Capture) HandleWebSocketStatus(w http.ResponseWriter, _ *http.Request) {
-	status := c.GetWebSocketStatus(WebSocketStatusFilter{})
+	status := c.GetWebSocketStatus(types.WebSocketStatusFilter{})
 	util.JSONResponse(w, http.StatusOK, status)
 }
 
-func (c *Capture) GetWebSocketStatus(filter WebSocketStatusFilter) WebSocketStatusResponse {
+func (c *Capture) GetWebSocketStatus(filter types.WebSocketStatusFilter) types.WebSocketStatusResponse {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.wsConnections.Status(filter)
 }
 
-func (c *Capture) AddEnhancedActions(actions []EnhancedAction) {
+func (c *Capture) AddEnhancedActions(actions []types.EnhancedAction) {
 	navigationCallback := func() func() {
 		c.mu.Lock()
 		defer c.mu.Unlock()

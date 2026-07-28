@@ -5,18 +5,18 @@ package testgen
 
 import (
 	"errors"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/reproduction"
 )
 
 // DataProvider abstracts access to captured browser data for test generation.
 type DataProvider interface {
 	GetLogEntries() []map[string]any
-	GetAllEnhancedActions() []capture.EnhancedAction
-	GetNetworkBodies() []capture.NetworkBody
+	GetAllEnhancedActions() []types.EnhancedAction
+	GetNetworkBodies() []types.NetworkBody
 }
 
 // ContextDispatch maps context values to their generator functions.
@@ -212,13 +212,13 @@ func FindTargetError(dp DataProvider, errorID string) (map[string]any, string, i
 }
 
 // GetActionsInTimeWindow returns actions within a time window around a center timestamp.
-func GetActionsInTimeWindow(dp DataProvider, centerTimestamp int64, windowMs int64) ([]capture.EnhancedAction, error) {
+func GetActionsInTimeWindow(dp DataProvider, centerTimestamp int64, windowMs int64) ([]types.EnhancedAction, error) {
 	allActions := dp.GetAllEnhancedActions()
 	if len(allActions) == 0 {
 		return nil, errors.New(ErrNoActionsCaptured)
 	}
 
-	var relevant []capture.EnhancedAction
+	var relevant []types.EnhancedAction
 	for i := range allActions {
 		action := &allActions[i]
 		timeDiff := action.Timestamp - centerTimestamp

@@ -4,13 +4,12 @@ package reproduction
 
 import (
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // GeneratePlaywrightScript converts actions to a Playwright test script.
-func GeneratePlaywrightScript(actions []capture.EnhancedAction, opts Params) string {
+func GeneratePlaywrightScript(actions []types.EnhancedAction, opts Params) string {
 	if len(actions) == 0 {
 		return "// No actions captured\n"
 	}
@@ -37,7 +36,7 @@ func writePlaywrightHeader(b *strings.Builder, opts Params) {
 	fmt.Fprintf(b, "test('%s', async ({ page }) => {\n", EscapeJS(testName))
 }
 
-func writePlaywrightSteps(b *strings.Builder, actions []capture.EnhancedAction, opts Params) {
+func writePlaywrightSteps(b *strings.Builder, actions []types.EnhancedAction, opts Params) {
 	var prevTs int64
 	for _, action := range actions {
 		WritePauseComment(b, prevTs, action.Timestamp, "  // [%ds pause]\n")
@@ -57,7 +56,7 @@ func writePlaywrightFooter(b *strings.Builder, opts Params) {
 }
 
 // PlaywrightStep converts a single action to a Playwright code line.
-func PlaywrightStep(action capture.EnhancedAction, opts Params) string {
+func PlaywrightStep(action types.EnhancedAction, opts Params) string {
 	switch action.Type {
 	case "navigate":
 		return pwNavigateStep(action, opts)
@@ -88,7 +87,7 @@ func PlaywrightStep(action capture.EnhancedAction, opts Params) string {
 	}
 }
 
-func pwNavigateStep(action capture.EnhancedAction, opts Params) string {
+func pwNavigateStep(action types.EnhancedAction, opts Params) string {
 	toURL := action.ToURL
 	if toURL == "" {
 		return ""
@@ -99,7 +98,7 @@ func pwNavigateStep(action capture.EnhancedAction, opts Params) string {
 	return fmt.Sprintf("await page.goto('%s');", EscapeJS(toURL))
 }
 
-func pwNewTabStep(action capture.EnhancedAction, opts Params) string {
+func pwNewTabStep(action types.EnhancedAction, opts Params) string {
 	targetURL := action.URL
 	if targetURL == "" {
 		return "// Open new tab"
@@ -110,7 +109,7 @@ func pwNewTabStep(action capture.EnhancedAction, opts Params) string {
 	return fmt.Sprintf("// Open new tab: %s", EscapeJS(targetURL))
 }
 
-func pwLocatorAction(action capture.EnhancedAction, actionName, fallbackLabel string) string {
+func pwLocatorAction(action types.EnhancedAction, actionName, fallbackLabel string) string {
 	loc := PlaywrightLocator(action.Selectors)
 	if loc == "" {
 		return fmt.Sprintf("// %s - no selector available", fallbackLabel)
@@ -118,7 +117,7 @@ func pwLocatorAction(action capture.EnhancedAction, actionName, fallbackLabel st
 	return fmt.Sprintf("await page.%s.%s();", loc, actionName)
 }
 
-func pwInputStep(action capture.EnhancedAction) string {
+func pwInputStep(action types.EnhancedAction) string {
 	loc := PlaywrightLocator(action.Selectors)
 	if loc == "" {
 		return "// input - no selector available"
@@ -130,7 +129,7 @@ func pwInputStep(action capture.EnhancedAction) string {
 	return fmt.Sprintf("await page.%s.fill('%s');", loc, EscapeJS(value))
 }
 
-func pwSelectStep(action capture.EnhancedAction) string {
+func pwSelectStep(action types.EnhancedAction) string {
 	loc := PlaywrightLocator(action.Selectors)
 	if loc == "" {
 		return "// select - no selector available"

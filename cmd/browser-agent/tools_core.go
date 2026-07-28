@@ -588,7 +588,7 @@ func (d visualAnalyzeDeps) HandleSessionStore(args persistence.SessionStoreArgs)
 	return d.h.sessionStoreImpl.HandleSessionStore(args)
 }
 
-func (h *ToolHandler) NetworkWaterfallEntries() []capture.NetworkWaterfallEntry {
+func (h *ToolHandler) NetworkWaterfallEntries() []types.NetworkWaterfallEntry {
 	return h.capture.GetNetworkWaterfallEntries()
 }
 

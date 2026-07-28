@@ -5,13 +5,11 @@ package testgen
 
 import (
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"regexp"
 	"strings"
 	"time"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
-
 
 // filenameAllowlistRe matches any character NOT in the safe set [a-z0-9-].
 var filenameAllowlistRe = regexp.MustCompile(`[^a-z0-9]+`)
@@ -54,7 +52,7 @@ func GenerateTestFilename(input, framework string) string {
 }
 
 // ExtractSelectorsFromActions extracts unique CSS selectors from action entries.
-func ExtractSelectorsFromActions(actions []capture.EnhancedAction) []string {
+func ExtractSelectorsFromActions(actions []types.EnhancedAction) []string {
 	selectorSet := make(map[string]bool)
 	for i := range actions {
 		addSelectorsFromEntry(selectorSet, actions[i].Selectors)
@@ -107,10 +105,8 @@ func NormalizeTimestamp(tsStr string) int64 {
 	return t.UnixMilli()
 }
 
-
-
 // DeriveInteractionTestName derives a test name from the first action's URL or type.
-func DeriveInteractionTestName(actions []capture.EnhancedAction) string {
+func DeriveInteractionTestName(actions []types.EnhancedAction) string {
 	if len(actions) == 0 {
 		return "user-interaction"
 	}
@@ -124,7 +120,7 @@ func DeriveInteractionTestName(actions []capture.EnhancedAction) string {
 }
 
 // BuildRegressionAssertions builds assertion lines for regression tests.
-func BuildRegressionAssertions(errorMessages []string, networkBodies []capture.NetworkBody) ([]string, int) {
+func BuildRegressionAssertions(errorMessages []string, networkBodies []types.NetworkBody) ([]string, int) {
 	var assertions []string
 	assertionCount := 0
 

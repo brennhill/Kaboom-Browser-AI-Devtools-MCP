@@ -23,6 +23,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -150,14 +151,14 @@ func TestObserveAudit_NetworkBodies_DataFlow(t *testing.T) {
 	env := newObserveTestEnv(t)
 
 	// Add network body via HTTP handler (correct field names)
-	body := capture.NetworkBody{
+	body := types.NetworkBody{
 		URL:          "https://unique-test-api.example.com/endpoint",
 		Method:       "POST",
 		Status:       201,
 		RequestBody:  `{"test": "request"}`,
 		ResponseBody: `{"test": "response"}`,
 	}
-	payload, _ := json.Marshal(map[string]any{"bodies": []capture.NetworkBody{body}})
+	payload, _ := json.Marshal(map[string]any{"bodies": []types.NetworkBody{body}})
 	req := httptest.NewRequest("POST", "/network-bodies", bytes.NewReader(payload))
 	w := httptest.NewRecorder()
 	env.capture.HandleNetworkBodies(w, req)
@@ -185,12 +186,12 @@ func TestObserveAudit_EnhancedActions_DataFlow(t *testing.T) {
 	env := newObserveTestEnv(t)
 
 	// Add enhanced action via HTTP handler
-	action := capture.EnhancedAction{
+	action := types.EnhancedAction{
 		Type:      "click",
 		Timestamp: time.Now().UnixMilli(),
 		URL:       "https://example.com/unique-action-test",
 	}
-	payload, _ := json.Marshal(map[string]any{"actions": []capture.EnhancedAction{action}})
+	payload, _ := json.Marshal(map[string]any{"actions": []types.EnhancedAction{action}})
 	req := httptest.NewRequest("POST", "/enhanced-actions", bytes.NewReader(payload))
 	w := httptest.NewRecorder()
 	env.capture.HandleEnhancedActions(w, req)

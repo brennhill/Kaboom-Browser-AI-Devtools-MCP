@@ -1,7 +1,6 @@
-// model.go — Capture's public compatibility model, local state types, and limits.
-// Purpose: Keeps the package API and runtime constraints in one stable boundary.
-// Why: Aliases, local model types, and their capacity constants change together when
-// capture delegates another responsibility to a focused subsystem.
+// model.go — Capture-local state types and runtime limits.
+// Purpose: Keeps capture-owned state containers and runtime constraints together.
+// Why: These types describe capture storage, while wire contracts live in internal/types.
 // Docs: docs/features/feature/backend-log-streaming/index.md
 
 package capture
@@ -13,76 +12,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
-
-// ============================================
-// Canonical wire types — declared in internal/types
-// ============================================
-
-// WebSocketEvent is an alias to canonical definition in internal/types/network.go
-type WebSocketEvent = types.WebSocketEvent
-
-// SamplingInfo is an alias to canonical definition in internal/types/network.go
-type SamplingInfo = types.SamplingInfo
-
-// WebSocketEventFilter is an alias to canonical definition in internal/types/network.go
-type WebSocketEventFilter = types.WebSocketEventFilter
-
-// WebSocketStatusFilter is an alias to canonical definition in internal/types/network.go
-type WebSocketStatusFilter = types.WebSocketStatusFilter
-
-// WebSocketStatusResponse is an alias to canonical definition in internal/types/network.go
-type WebSocketStatusResponse = types.WebSocketStatusResponse
-
-// WebSocketConnection is an alias to canonical definition in internal/types/network.go
-type WebSocketConnection = types.WebSocketConnection
-
-// WebSocketClosedConnection is an alias to canonical definition in internal/types/network.go
-type WebSocketClosedConnection = types.WebSocketClosedConnection
-
-// WebSocketMessageRate is an alias to canonical definition in internal/types/network.go
-type WebSocketMessageRate = types.WebSocketMessageRate
-
-// WebSocketDirectionStats is an alias to canonical definition in internal/types/network.go
-type WebSocketDirectionStats = types.WebSocketDirectionStats
-
-// WebSocketLastMessage is an alias to canonical definition in internal/types/network.go
-type WebSocketLastMessage = types.WebSocketLastMessage
-
-// WebSocketMessagePreview is an alias to canonical definition in internal/types/network.go
-type WebSocketMessagePreview = types.WebSocketMessagePreview
-
-// WebSocketSchema is an alias to canonical definition in internal/types/network.go
-type WebSocketSchema = types.WebSocketSchema
-
-// WebSocketSamplingStatus is an alias to canonical definition in internal/types/network.go
-type WebSocketSamplingStatus = types.WebSocketSamplingStatus
-
-// NetworkWaterfallEntry is an alias to canonical definition in internal/types/network.go
-type NetworkWaterfallEntry = types.NetworkWaterfallEntry
-
-// NetworkWaterfallPayload is an alias to canonical definition in internal/types/network.go
-type NetworkWaterfallPayload = types.NetworkWaterfallPayload
-
-// NetworkBody is an alias to canonical definition in internal/types/network.go
-type NetworkBody = types.NetworkBody
-
-// NetworkBodyFilter is an alias to canonical definition in internal/types/network.go
-type NetworkBodyFilter = types.NetworkBodyFilter
-
-// EnhancedAction is an alias to canonical definition in internal/types/network.go
-type EnhancedAction = types.EnhancedAction
-
-// EnhancedActionFilter is an alias to canonical definition in internal/types/network.go
-type EnhancedActionFilter = types.EnhancedActionFilter
-
-// ExtensionLog is an alias to canonical definition in internal/types/log.go
-type ExtensionLog = types.ExtensionLog
-
-// PollingLogEntry is an alias to canonical definition in internal/types/log.go
-type PollingLogEntry = types.PollingLogEntry
-
-// HTTPDebugEntry is an alias to canonical definition in internal/types/log.go
-type HTTPDebugEntry = types.HTTPDebugEntry
 
 const (
 	MaxWSEvents        = 500
@@ -133,12 +62,12 @@ type PerformanceStore struct {
 }
 
 type NetworkWaterfallBuffer struct {
-	entries  []NetworkWaterfallEntry
+	entries  []types.NetworkWaterfallEntry
 	capacity int
 }
 
 type ExtensionLogBuffer struct {
-	logs []ExtensionLog
+	logs []types.ExtensionLog
 }
 
 type ClientRegistry interface {

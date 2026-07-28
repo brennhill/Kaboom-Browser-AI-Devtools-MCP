@@ -7,13 +7,12 @@ package diff
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 	"time"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
-type NetworkBody = capture.NetworkBody
+type NetworkBody = types.NetworkBody
 
 func mustTakeSnapshot(t *testing.T, mgr *Manager, name string, bodies []NetworkBody) {
 	t.Helper()

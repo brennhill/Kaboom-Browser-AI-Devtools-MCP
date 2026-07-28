@@ -6,10 +6,10 @@
 package testgenhandler
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testgen"
 )
 
@@ -21,7 +21,7 @@ func TestGenerateTestFromInteraction_VitestFramework(t *testing.T) {
 	t.Parallel()
 	env := newTestEnv()
 
-	env.cap.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	env.cap.AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "click", URL: "https://example.com"},
 	})
 
@@ -43,7 +43,7 @@ func TestGenerateTestFromInteraction_Selectors(t *testing.T) {
 	t.Parallel()
 	env := newTestEnv()
 
-	env.cap.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	env.cap.AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "click", Selectors: map[string]any{"testId": "login-btn", "id": "loginBtn"}},
 	})
 
@@ -62,7 +62,7 @@ func TestGenerateTestFromInteraction_NoMocksContextUsed(t *testing.T) {
 	t.Parallel()
 	env := newTestEnv()
 
-	env.cap.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	env.cap.AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "click", Selectors: map[string]any{"target": "#btn"}},
 	})
 
@@ -89,7 +89,7 @@ func TestGenerateTestFromRegression_WithMocks(t *testing.T) {
 	t.Parallel()
 	env := newTestEnv()
 
-	env.cap.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	env.cap.AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "click", Selectors: map[string]any{"target": "#x"}},
 	})
 
@@ -109,7 +109,7 @@ func TestGenerateTestFromRegression_JestFramework(t *testing.T) {
 	t.Parallel()
 	env := newTestEnv()
 
-	env.cap.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	env.cap.AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "click", Selectors: map[string]any{"target": "#a"}},
 	})
 
@@ -131,7 +131,7 @@ func TestGenerateTestFromRegression_SelectorsExtracted(t *testing.T) {
 	t.Parallel()
 	env := newTestEnv()
 
-	env.cap.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	env.cap.AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "click", Selectors: map[string]any{"testId": "save-btn", "id": "saveBtn"}},
 	})
 
@@ -150,7 +150,7 @@ func TestGenerateTestFromRegression_ContentHasActions(t *testing.T) {
 	t.Parallel()
 	env := newTestEnv()
 
-	env.cap.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	env.cap.AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "click", Selectors: map[string]any{"id": "go"}, URL: "https://example.com"},
 		{Type: "input", Selectors: map[string]any{"id": "name"}, Value: "test"},
 	})

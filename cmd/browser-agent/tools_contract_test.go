@@ -8,9 +8,8 @@
 package main
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // ============================================
@@ -120,7 +119,7 @@ func newGenerateContractEnv(t *testing.T) *generateContractEnv {
 func TestContractGenerate_Reproduction(t *testing.T) {
 	env := newGenerateContractEnv(t)
 	// Seed actions so reproduction has data to generate from
-	env.capture.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	env.capture.AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "navigate", Timestamp: 1000, URL: "https://example.com", ToURL: "https://example.com"},
 		{Type: "click", Timestamp: 2000, URL: "https://example.com", Selectors: map[string]any{"text": "Go"}},
 	})

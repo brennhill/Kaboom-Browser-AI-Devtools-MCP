@@ -9,6 +9,7 @@ package capture
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -192,7 +193,7 @@ func TestGetVersionMismatch_InvalidVersionFormat(t *testing.T) {
 
 func TestDetectAndSetBinaryFormat_AlreadySet(t *testing.T) {
 	t.Parallel()
-	body := &NetworkBody{BinaryFormat: "png", RequestBody: "some content"}
+	body := &types.NetworkBody{BinaryFormat: "png", RequestBody: "some content"}
 	detectAndSetBinaryFormat(body)
 	if body.BinaryFormat != "png" {
 		t.Errorf("BinaryFormat = %q, want png (should not change)", body.BinaryFormat)
@@ -201,7 +202,7 @@ func TestDetectAndSetBinaryFormat_AlreadySet(t *testing.T) {
 
 func TestDetectAndSetBinaryFormat_EmptyBodies(t *testing.T) {
 	t.Parallel()
-	body := &NetworkBody{}
+	body := &types.NetworkBody{}
 	detectAndSetBinaryFormat(body)
 	if body.BinaryFormat != "" {
 		t.Errorf("BinaryFormat = %q, want empty for empty bodies", body.BinaryFormat)
@@ -211,7 +212,7 @@ func TestDetectAndSetBinaryFormat_EmptyBodies(t *testing.T) {
 func TestDetectAndSetBinaryFormat_PNG_ResponseBody(t *testing.T) {
 	t.Parallel()
 	pngMagic := "\x89PNG\r\n\x1a\n" + strings.Repeat("\x00", 20)
-	body := &NetworkBody{ResponseBody: pngMagic}
+	body := &types.NetworkBody{ResponseBody: pngMagic}
 	detectAndSetBinaryFormat(body)
 	if body.BinaryFormat == "" {
 		t.Skip("PNG detection not triggered — util.DetectBinaryFormat may need longer header")
@@ -220,7 +221,7 @@ func TestDetectAndSetBinaryFormat_PNG_ResponseBody(t *testing.T) {
 
 func TestDetectAndSetBinaryFormat_TextBodies(t *testing.T) {
 	t.Parallel()
-	body := &NetworkBody{RequestBody: `{"hello":"world"}`, ResponseBody: `{"ok":true}`}
+	body := &types.NetworkBody{RequestBody: `{"hello":"world"}`, ResponseBody: `{"ok":true}`}
 	detectAndSetBinaryFormat(body)
 	if body.BinaryFormat != "" {
 		t.Errorf("BinaryFormat = %q, want empty for text content", body.BinaryFormat)
@@ -292,7 +293,7 @@ func TestRedactExtensionLog_NilRedactor(t *testing.T) {
 	c.mu.Lock()
 	c.logRedactor = nil
 	c.mu.Unlock()
-	log := ExtensionLog{Message: "test message", Source: "background", Category: "debug"}
+	log := types.ExtensionLog{Message: "test message", Source: "background", Category: "debug"}
 	result := c.redactExtensionLog(log)
 	if result.Message != "test message" {
 		t.Errorf("Message = %q, want unchanged when redactor is nil", result.Message)
@@ -303,7 +304,7 @@ func TestRedactExtensionLog_WithRedactor(t *testing.T) {
 	t.Parallel()
 	c := NewCapture()
 	defer c.Close()
-	log := ExtensionLog{Message: "some data", Source: "content-script", Category: "warn", Data: json.RawMessage(`{"key":"secret"}`)}
+	log := types.ExtensionLog{Message: "some data", Source: "content-script", Category: "warn", Data: json.RawMessage(`{"key":"secret"}`)}
 	result := c.redactExtensionLog(log)
 	if result.Message != "some data" {
 		t.Errorf("Message = %q, want some data (default engine has no patterns)", result.Message)

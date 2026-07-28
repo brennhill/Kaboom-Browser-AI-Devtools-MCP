@@ -5,9 +5,9 @@ package generate
 
 import (
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/reproduction"
 )
 
@@ -23,7 +23,7 @@ type TestGenParams struct {
 }
 
 // GenerateTestScript builds a complete Playwright test file from captured actions.
-func GenerateTestScript(actions []capture.EnhancedAction, params TestGenParams) string {
+func GenerateTestScript(actions []types.EnhancedAction, params TestGenParams) string {
 	var b strings.Builder
 
 	b.WriteString("import { test, expect } from '@playwright/test';\n\n")
@@ -46,7 +46,7 @@ func GenerateTestScript(actions []capture.EnhancedAction, params TestGenParams) 
 }
 
 // writeTestSteps groups actions into logical test blocks and writes them.
-func writeTestSteps(b *strings.Builder, actions []capture.EnhancedAction, params TestGenParams) {
+func writeTestSteps(b *strings.Builder, actions []types.EnhancedAction, params TestGenParams) {
 	groups := GroupActionsByNavigation(actions)
 
 	for i, group := range groups {
@@ -71,12 +71,12 @@ func writeTestSteps(b *strings.Builder, actions []capture.EnhancedAction, params
 }
 
 // GroupActionsByNavigation splits actions into groups at each navigate action.
-func GroupActionsByNavigation(actions []capture.EnhancedAction) [][]capture.EnhancedAction {
+func GroupActionsByNavigation(actions []types.EnhancedAction) [][]types.EnhancedAction {
 	if len(actions) == 0 {
 		return nil
 	}
-	var groups [][]capture.EnhancedAction
-	var current []capture.EnhancedAction
+	var groups [][]types.EnhancedAction
+	var current []types.EnhancedAction
 
 	for _, action := range actions {
 		if action.Type == "navigate" && len(current) > 0 {
@@ -92,7 +92,7 @@ func GroupActionsByNavigation(actions []capture.EnhancedAction) [][]capture.Enha
 }
 
 // testLabelForGroup generates a descriptive test label for a group of actions.
-func testLabelForGroup(group []capture.EnhancedAction, index int) string {
+func testLabelForGroup(group []types.EnhancedAction, index int) string {
 	if len(group) == 0 {
 		return fmt.Sprintf("step %d", index+1)
 	}
@@ -114,7 +114,7 @@ func testLabelForGroup(group []capture.EnhancedAction, index int) string {
 }
 
 // writeTestAssertions adds expect() assertions at the end of a test block.
-func writeTestAssertions(b *strings.Builder, group []capture.EnhancedAction, params TestGenParams) {
+func writeTestAssertions(b *strings.Builder, group []types.EnhancedAction, params TestGenParams) {
 	hasNavigate := false
 	for _, a := range group {
 		if a.Type == "navigate" {
@@ -144,7 +144,7 @@ func writeTestAssertions(b *strings.Builder, group []capture.EnhancedAction, par
 }
 
 // FilterLastN returns the last n actions, or all if n <= 0.
-func FilterLastN(actions []capture.EnhancedAction, n int) []capture.EnhancedAction {
+func FilterLastN(actions []types.EnhancedAction, n int) []types.EnhancedAction {
 	if n <= 0 || n >= len(actions) {
 		return actions
 	}

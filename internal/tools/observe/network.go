@@ -7,10 +7,10 @@ package observe
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/buffers"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/hints"
@@ -33,7 +33,7 @@ func GetNetworkBodies(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) m
 
 	allBodies := deps.GetCapture().GetNetworkBodies()
 	var bodyFilterErr error
-	filtered := buffers.ReverseFilterLimit(allBodies, func(b capture.NetworkBody) bool {
+	filtered := buffers.ReverseFilterLimit(allBodies, func(b types.NetworkBody) bool {
 		if bodyFilterErr != nil {
 			return false
 		}
@@ -128,7 +128,7 @@ func GetWSEvents(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JS
 	params.Limit = clampLimit(params.Limit, 100)
 
 	allEvents := deps.GetCapture().GetAllWebSocketEvents()
-	filtered := buffers.ReverseFilterLimit(allEvents, func(evt capture.WebSocketEvent) bool {
+	filtered := buffers.ReverseFilterLimit(allEvents, func(evt types.WebSocketEvent) bool {
 		if params.URL != "" && !ContainsIgnoreCase(evt.URL, params.URL) {
 			return false
 		}
@@ -214,7 +214,7 @@ func GetNetworkWaterfall(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage
 	return mcp.Succeed(req, "Network waterfall", response)
 }
 
-func refreshWaterfallIfStale(deps Deps) []capture.NetworkWaterfallEntry {
+func refreshWaterfallIfStale(deps Deps) []types.NetworkWaterfallEntry {
 	cap := deps.GetCapture()
 	allEntries := cap.GetNetworkWaterfallEntries()
 	if len(allEntries) > 0 && time.Since(allEntries[len(allEntries)-1].Timestamp) < 1*time.Second {
@@ -239,8 +239,8 @@ func refreshWaterfallIfStale(deps Deps) []capture.NetworkWaterfallEntry {
 	}
 
 	var waterfallResult struct {
-		Entries []capture.NetworkWaterfallEntry `json:"entries"`
-		PageURL string                          `json:"page_url"`
+		Entries []types.NetworkWaterfallEntry `json:"entries"`
+		PageURL string                        `json:"page_url"`
 	}
 	if err := json.Unmarshal(result, &waterfallResult); err == nil && len(waterfallResult.Entries) > 0 {
 		cap.AddNetworkWaterfallEntries(waterfallResult.Entries, waterfallResult.PageURL)
@@ -249,8 +249,8 @@ func refreshWaterfallIfStale(deps Deps) []capture.NetworkWaterfallEntry {
 	return allEntries
 }
 
-func filterWaterfallEntries(allEntries []capture.NetworkWaterfallEntry, urlFilter string, limit int) []map[string]any {
-	matched := buffers.ReverseFilterLimit(allEntries, func(entry capture.NetworkWaterfallEntry) bool {
+func filterWaterfallEntries(allEntries []types.NetworkWaterfallEntry, urlFilter string, limit int) []map[string]any {
+	matched := buffers.ReverseFilterLimit(allEntries, func(entry types.NetworkWaterfallEntry) bool {
 		return urlFilter == "" || (entry.URL != "" && ContainsIgnoreCase(entry.URL, urlFilter))
 	}, limit)
 
@@ -261,7 +261,7 @@ func filterWaterfallEntries(allEntries []capture.NetworkWaterfallEntry, urlFilte
 	return entries
 }
 
-func waterfallEntryToMap(entry capture.NetworkWaterfallEntry) map[string]any {
+func waterfallEntryToMap(entry types.NetworkWaterfallEntry) map[string]any {
 	return map[string]any{
 		"url":               entry.URL,
 		"initiator_type":    entry.InitiatorType,
@@ -275,7 +275,7 @@ func waterfallEntryToMap(entry capture.NetworkWaterfallEntry) map[string]any {
 	}
 }
 
-func waterfallSummaryEntry(entry capture.NetworkWaterfallEntry) map[string]any {
+func waterfallSummaryEntry(entry types.NetworkWaterfallEntry) map[string]any {
 	url := entry.URL
 	if len(url) > 80 {
 		url = url[:80] + "..."
@@ -283,8 +283,8 @@ func waterfallSummaryEntry(entry capture.NetworkWaterfallEntry) map[string]any {
 	return map[string]any{"url": url, "ms": entry.Duration, "type": entry.InitiatorType}
 }
 
-func filterWaterfallSummaryEntries(allEntries []capture.NetworkWaterfallEntry, urlFilter string, limit int) []map[string]any {
-	matched := buffers.ReverseFilterLimit(allEntries, func(entry capture.NetworkWaterfallEntry) bool {
+func filterWaterfallSummaryEntries(allEntries []types.NetworkWaterfallEntry, urlFilter string, limit int) []map[string]any {
+	matched := buffers.ReverseFilterLimit(allEntries, func(entry types.NetworkWaterfallEntry) bool {
 		return urlFilter == "" || (entry.URL != "" && ContainsIgnoreCase(entry.URL, urlFilter))
 	}, limit)
 
@@ -309,7 +309,7 @@ func GetWSStatus(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JS
 		}
 	}
 
-	filter := capture.WebSocketStatusFilter{
+	filter := types.WebSocketStatusFilter{
 		URLFilter:    arguments.URL,
 		ConnectionID: arguments.ConnectionID,
 	}
@@ -339,7 +339,7 @@ func GetWSStatus(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JS
 	return mcp.Succeed(req, "WebSocket status", response)
 }
 
-func buildWSStatusSummary(status capture.WebSocketStatusResponse, metadata ResponseMetadata) map[string]any {
+func buildWSStatusSummary(status types.WebSocketStatusResponse, metadata ResponseMetadata) map[string]any {
 	activeURLs := make([]string, 0, wsStatusSummarySampleLimit)
 	activeIDs := make([]string, 0, wsStatusSummarySampleLimit)
 	closedURLs := make([]string, 0, wsStatusSummarySampleLimit)
@@ -390,7 +390,7 @@ func buildWSStatusSummary(status capture.WebSocketStatusResponse, metadata Respo
 // GetWebVitals returns Core Web Vitals metrics from performance snapshots.
 
 // buildNetworkBodiesSummary returns {total, by_status_group, by_method, top_urls, metadata}.
-func buildNetworkBodiesSummary(bodies []capture.NetworkBody, meta ResponseMetadata) map[string]any {
+func buildNetworkBodiesSummary(bodies []types.NetworkBody, meta ResponseMetadata) map[string]any {
 	byStatus := make(map[string]int)
 	byMethod := make(map[string]int)
 	seenURLs := make(map[string]bool)
@@ -450,7 +450,7 @@ func statusGroup(status int) string {
 
 // buildWSEventsSummary returns {total, by_direction, by_event_type, connection_count, metadata}.
 
-func buildWSEventsSummary(events []capture.WebSocketEvent, meta ResponseMetadata) map[string]any {
+func buildWSEventsSummary(events []types.WebSocketEvent, meta ResponseMetadata) map[string]any {
 	byDirection := make(map[string]int)
 	byEvent := make(map[string]int)
 	connIDs := make(map[string]bool)

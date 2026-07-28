@@ -5,6 +5,7 @@
 package capture
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 	"time"
 )
@@ -19,7 +20,7 @@ func TestNewAddEnhancedActions_SingleAction(t *testing.T) {
 	c := NewCapture()
 	t.Cleanup(c.Close)
 
-	action := EnhancedAction{
+	action := types.EnhancedAction{
 		Type:      "click",
 		Timestamp: time.Now().UnixMilli(),
 		URL:       "https://example.com/page",
@@ -28,7 +29,7 @@ func TestNewAddEnhancedActions_SingleAction(t *testing.T) {
 		Source:    "human",
 	}
 
-	c.AddEnhancedActions([]EnhancedAction{action})
+	c.AddEnhancedActions([]types.EnhancedAction{action})
 
 	if got := c.GetEnhancedActionCount(); got != 1 {
 		t.Fatalf("GetEnhancedActionCount() = %d, want 1", got)
@@ -64,7 +65,7 @@ func TestNewAddEnhancedActions_MultipleBatch(t *testing.T) {
 	c := NewCapture()
 	t.Cleanup(c.Close)
 
-	actions := []EnhancedAction{
+	actions := []types.EnhancedAction{
 		{Type: "click", URL: "https://example.com"},
 		{Type: "type", Value: "hello", InputType: "text"},
 		{Type: "navigate", FromURL: "https://a.com", ToURL: "https://b.com"},
@@ -112,7 +113,7 @@ func TestNewAddEnhancedActions_TestIDTagging(t *testing.T) {
 	c.extensionState.activeTestIDs["test-beta"] = true
 	c.mu.Unlock()
 
-	c.AddEnhancedActions([]EnhancedAction{
+	c.AddEnhancedActions([]types.EnhancedAction{
 		{Type: "click"},
 		{Type: "type", Value: "text"},
 	})
@@ -142,7 +143,7 @@ func TestNewAddEnhancedActions_NoActiveTestIDs(t *testing.T) {
 	c := NewCapture()
 	t.Cleanup(c.Close)
 
-	c.AddEnhancedActions([]EnhancedAction{{Type: "click"}})
+	c.AddEnhancedActions([]types.EnhancedAction{{Type: "click"}})
 
 	actions := c.GetAllEnhancedActions()
 	if len(actions[0].TestIDs) != 0 {
@@ -156,8 +157,8 @@ func TestNewAddEnhancedActions_IncrementsTotalAdded(t *testing.T) {
 	c := NewCapture()
 	t.Cleanup(c.Close)
 
-	c.AddEnhancedActions([]EnhancedAction{{Type: "click"}, {Type: "type"}})
-	c.AddEnhancedActions([]EnhancedAction{{Type: "navigate"}})
+	c.AddEnhancedActions([]types.EnhancedAction{{Type: "click"}, {Type: "type"}})
+	c.AddEnhancedActions([]types.EnhancedAction{{Type: "navigate"}})
 
 	c.mu.RLock()
 	total := c.buffers.actionTotalAdded
@@ -174,7 +175,7 @@ func TestNewAddEnhancedActions_EmptyBatch(t *testing.T) {
 	c := NewCapture()
 	t.Cleanup(c.Close)
 
-	c.AddEnhancedActions([]EnhancedAction{})
+	c.AddEnhancedActions([]types.EnhancedAction{})
 
 	if got := c.GetEnhancedActionCount(); got != 0 {
 		t.Errorf("GetEnhancedActionCount() after empty batch = %d, want 0", got)
@@ -193,9 +194,9 @@ func TestNewAddEnhancedActions_RingBufferEviction(t *testing.T) {
 
 	// Fill beyond MaxEnhancedActions
 	overflow := MaxEnhancedActions + 50
-	batch := make([]EnhancedAction, overflow)
+	batch := make([]types.EnhancedAction, overflow)
 	for i := 0; i < overflow; i++ {
-		batch[i] = EnhancedAction{
+		batch[i] = types.EnhancedAction{
 			Type:      "click",
 			Timestamp: int64(i),
 		}
@@ -227,9 +228,9 @@ func TestNewAddEnhancedActions_ExactCapacity(t *testing.T) {
 	c := NewCapture()
 	t.Cleanup(c.Close)
 
-	batch := make([]EnhancedAction, MaxEnhancedActions)
+	batch := make([]types.EnhancedAction, MaxEnhancedActions)
 	for i := range batch {
-		batch[i] = EnhancedAction{Type: "click", Timestamp: int64(i)}
+		batch[i] = types.EnhancedAction{Type: "click", Timestamp: int64(i)}
 	}
 
 	c.AddEnhancedActions(batch)
@@ -246,16 +247,16 @@ func TestNewAddEnhancedActions_IncrementalOverflow(t *testing.T) {
 	t.Cleanup(c.Close)
 
 	// Fill to capacity
-	batch := make([]EnhancedAction, MaxEnhancedActions)
+	batch := make([]types.EnhancedAction, MaxEnhancedActions)
 	for i := range batch {
-		batch[i] = EnhancedAction{Type: "click", Timestamp: int64(i)}
+		batch[i] = types.EnhancedAction{Type: "click", Timestamp: int64(i)}
 	}
 	c.AddEnhancedActions(batch)
 
 	// Add 5 more
-	extra := make([]EnhancedAction, 5)
+	extra := make([]types.EnhancedAction, 5)
 	for i := range extra {
-		extra[i] = EnhancedAction{Type: "type", Timestamp: int64(MaxEnhancedActions + i)}
+		extra[i] = types.EnhancedAction{Type: "type", Timestamp: int64(MaxEnhancedActions + i)}
 	}
 	c.AddEnhancedActions(extra)
 
@@ -286,14 +287,14 @@ func TestNewAddEnhancedActions_AppendAfterDirectBufferSet(t *testing.T) {
 	now := time.Now()
 	c.mu.Lock()
 	c.buffers.enhancedActions = []enhancedActionEntry{
-		{Action: EnhancedAction{Type: "click"}, AddedAt: now},
-		{Action: EnhancedAction{Type: "type"}, AddedAt: now},
-		{Action: EnhancedAction{Type: "navigate"}, AddedAt: now},
+		{Action: types.EnhancedAction{Type: "click"}, AddedAt: now},
+		{Action: types.EnhancedAction{Type: "type"}, AddedAt: now},
+		{Action: types.EnhancedAction{Type: "navigate"}, AddedAt: now},
 	}
 	c.mu.Unlock()
 
 	// Adding appends to existing entries
-	c.AddEnhancedActions([]EnhancedAction{{Type: "scroll"}})
+	c.AddEnhancedActions([]types.EnhancedAction{{Type: "scroll"}})
 
 	// 3 existing + 1 new = 4
 	if got := c.GetEnhancedActionCount(); got != 4 {
@@ -322,12 +323,12 @@ func TestNewGetEnhancedActionCount_AfterAdds(t *testing.T) {
 	c := NewCapture()
 	t.Cleanup(c.Close)
 
-	c.AddEnhancedActions([]EnhancedAction{{Type: "click"}})
+	c.AddEnhancedActions([]types.EnhancedAction{{Type: "click"}})
 	if got := c.GetEnhancedActionCount(); got != 1 {
 		t.Errorf("GetEnhancedActionCount() after 1 add = %d, want 1", got)
 	}
 
-	c.AddEnhancedActions([]EnhancedAction{{Type: "type"}, {Type: "navigate"}})
+	c.AddEnhancedActions([]types.EnhancedAction{{Type: "type"}, {Type: "navigate"}})
 	if got := c.GetEnhancedActionCount(); got != 3 {
 		t.Errorf("GetEnhancedActionCount() after 2 adds = %d, want 3", got)
 	}
@@ -343,7 +344,7 @@ func TestNewAddEnhancedActions_AllFieldsPreserved(t *testing.T) {
 	c := NewCapture()
 	t.Cleanup(c.Close)
 
-	action := EnhancedAction{
+	action := types.EnhancedAction{
 		Type:          "click",
 		Timestamp:     1700000000000,
 		URL:           "https://example.com/page",
@@ -360,7 +361,7 @@ func TestNewAddEnhancedActions_AllFieldsPreserved(t *testing.T) {
 		Source:        "ai",
 	}
 
-	c.AddEnhancedActions([]EnhancedAction{action})
+	c.AddEnhancedActions([]types.EnhancedAction{action})
 	stored := c.GetAllEnhancedActions()[0]
 
 	if stored.Type != "click" {

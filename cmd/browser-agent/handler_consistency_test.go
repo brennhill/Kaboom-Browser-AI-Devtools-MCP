@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -194,13 +195,13 @@ func TestDiagnostics_ReturnsRealData(t *testing.T) {
 	mux, _ := setupHTTPRoutes(srv, cap)
 
 	// Ingest some data into various buffers.
-	cap.AddWebSocketEvents([]capture.WebSocketEvent{
+	cap.AddWebSocketEvents([]types.WebSocketEvent{
 		{Type: "ws_connect", ID: "conn-1", URL: "wss://example.test"},
 	})
-	cap.AddNetworkBodies([]capture.NetworkBody{
+	cap.AddNetworkBodies([]types.NetworkBody{
 		{URL: "https://example.test/api", Method: "GET", Status: 200},
 	})
-	cap.AddEnhancedActions([]capture.EnhancedAction{
+	cap.AddEnhancedActions([]types.EnhancedAction{
 		{Type: "click", Timestamp: 1000},
 	})
 

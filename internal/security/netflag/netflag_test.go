@@ -9,10 +9,9 @@
 package netflag
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 	"time"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // ============================================
@@ -126,7 +125,7 @@ func TestCheckNonStandardPort_AllowsDevPorts(t *testing.T) {
 
 func TestCheckMixedContent_FlagsHTTPOnHTTPS(t *testing.T) {
 	t.Parallel()
-	entry := capture.NetworkWaterfallEntry{
+	entry := types.NetworkWaterfallEntry{
 		URL:           "http://cdn.example.com/script.js",
 		InitiatorType: "script",
 	}
@@ -149,7 +148,7 @@ func TestCheckMixedContent_FlagsHTTPOnHTTPS(t *testing.T) {
 
 func TestCheckMixedContent_AllowsHTTPSOnHTTPS(t *testing.T) {
 	t.Parallel()
-	entry := capture.NetworkWaterfallEntry{
+	entry := types.NetworkWaterfallEntry{
 		URL:           "https://cdn.example.com/script.js",
 		InitiatorType: "script",
 	}
@@ -164,7 +163,7 @@ func TestCheckMixedContent_AllowsHTTPSOnHTTPS(t *testing.T) {
 
 func TestCheckMixedContent_AllowsHTTPOnHTTP(t *testing.T) {
 	t.Parallel()
-	entry := capture.NetworkWaterfallEntry{
+	entry := types.NetworkWaterfallEntry{
 		URL:           "http://cdn.example.com/script.js",
 		InitiatorType: "script",
 	}
@@ -270,7 +269,7 @@ func TestCheckTyposquatting_AllowsLegitDomains(t *testing.T) {
 
 func TestAnalyzeNetworkSecurity_RunsAllChecks(t *testing.T) {
 	t.Parallel()
-	entry := capture.NetworkWaterfallEntry{
+	entry := types.NetworkWaterfallEntry{
 		URL:           "http://cdn-malicious.xyz:8443/script.js",
 		InitiatorType: "script",
 		Timestamp:     time.Now(),
@@ -301,7 +300,7 @@ func TestAnalyzeNetworkSecurity_RunsAllChecks(t *testing.T) {
 
 func TestAnalyzeNetworkSecurity_ReturnsEmptyForSafeOrigins(t *testing.T) {
 	t.Parallel()
-	entry := capture.NetworkWaterfallEntry{
+	entry := types.NetworkWaterfallEntry{
 		URL:           "https://cdn.example.com/library.js",
 		InitiatorType: "script",
 		Timestamp:     time.Now(),

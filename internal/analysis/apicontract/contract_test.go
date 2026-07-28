@@ -7,15 +7,14 @@ package apicontract
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // Type alias for convenience in tests
-type NetworkBody = capture.NetworkBody
+type NetworkBody = types.NetworkBody
 
 // ============================================
 // Schema Learning Tests

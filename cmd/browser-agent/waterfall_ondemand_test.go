@@ -10,6 +10,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"sync"
 	"testing"
 	"time"
@@ -38,7 +39,7 @@ func TestWaterfallOnDemand_FreshDataNoQuery(t *testing.T) {
 	th := handler.toolHandler.(*ToolHandler)
 
 	// Add fresh entries (just now)
-	entries := []capture.NetworkWaterfallEntry{
+	entries := []types.NetworkWaterfallEntry{
 		{URL: "https://api.example.com/users", PageURL: "https://example.com"},
 	}
 	cap.AddNetworkWaterfallEntries(entries, "https://example.com")
@@ -92,7 +93,7 @@ func TestWaterfallOnDemand_StaleDataCreatesQuery(t *testing.T) {
 	th := handler.toolHandler.(*ToolHandler)
 
 	// Add stale entries (2 seconds ago - simulated by waiting)
-	entries := []capture.NetworkWaterfallEntry{
+	entries := []types.NetworkWaterfallEntry{
 		{URL: "https://old.example.com/stale", PageURL: "https://example.com"},
 	}
 	cap.AddNetworkWaterfallEntries(entries, "https://example.com")
@@ -395,7 +396,7 @@ func TestWaterfallStalenessThreshold(t *testing.T) {
 	th := handler.toolHandler.(*ToolHandler)
 
 	// Add entries
-	entries := []capture.NetworkWaterfallEntry{
+	entries := []types.NetworkWaterfallEntry{
 		{URL: "https://example.com/test", PageURL: "https://example.com"},
 	}
 	cap.AddNetworkWaterfallEntries(entries, "https://example.com")

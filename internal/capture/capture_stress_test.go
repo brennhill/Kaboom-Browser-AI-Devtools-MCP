@@ -41,7 +41,7 @@ func TestStressCaptureSystemConcurrent(t *testing.T) {
 			go func(id int) {
 				defer wg.Done()
 				for i := 0; i < eventsPerWriter; i++ {
-					events := []WebSocketEvent{
+					events := []types.WebSocketEvent{
 						{
 							ID:        fmt.Sprintf("ws-%d-%d", id, i),
 							Event:     "message",
@@ -86,7 +86,7 @@ func TestStressCaptureSystemConcurrent(t *testing.T) {
 			go func(id int) {
 				defer wg.Done()
 				for i := 0; i < actionsPerWriter; i++ {
-					actions := []EnhancedAction{
+					actions := []types.EnhancedAction{
 						{
 							Type:      "click",
 							Timestamp: time.Now().UnixNano(),
@@ -198,7 +198,7 @@ func TestStressCaptureWithClears(t *testing.T) {
 					// Alternate between different buffer types
 					switch i % 3 {
 					case 0:
-						c.AddWebSocketEvents([]WebSocketEvent{
+						c.AddWebSocketEvents([]types.WebSocketEvent{
 							{ID: fmt.Sprintf("ws-%d-%d", id, i), Event: "message"},
 						})
 					case 1:
@@ -206,7 +206,7 @@ func TestStressCaptureWithClears(t *testing.T) {
 							{URL: fmt.Sprintf("https://api.com/%d", i), Method: "GET", Status: 200},
 						})
 					case 2:
-						c.AddEnhancedActions([]EnhancedAction{
+						c.AddEnhancedActions([]types.EnhancedAction{
 							{Type: "click", Timestamp: time.Now().UnixNano()},
 						})
 					}
@@ -296,13 +296,13 @@ func TestStressCaptureSnapshot(t *testing.T) {
 			go func(id int) {
 				defer wg.Done()
 				for i := 0; i < writesPerWriter; i++ {
-					c.AddWebSocketEvents([]WebSocketEvent{
+					c.AddWebSocketEvents([]types.WebSocketEvent{
 						{ID: fmt.Sprintf("ws-%d-%d", id, i), Event: "message"},
 					})
 					c.AddNetworkBodies([]types.NetworkBody{
 						{URL: fmt.Sprintf("https://api.com/%d", i), Method: "GET", Status: 200},
 					})
-					c.AddEnhancedActions([]EnhancedAction{
+					c.AddEnhancedActions([]types.EnhancedAction{
 						{Type: "click", Timestamp: time.Now().UnixNano()},
 					})
 				}

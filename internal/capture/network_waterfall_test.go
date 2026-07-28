@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -28,9 +29,9 @@ func TestHandleNetworkWaterfall_AcceptsValidPayload(t *testing.T) {
 	t.Parallel()
 	capture := NewCapture()
 
-	payload := NetworkWaterfallPayload{
+	payload := types.NetworkWaterfallPayload{
 		PageURL: "https://example.com",
-		Entries: []NetworkWaterfallEntry{
+		Entries: []types.NetworkWaterfallEntry{
 			{
 				Name:            "https://example.com/app.js",
 				URL:             "https://example.com/app.js",
@@ -71,9 +72,9 @@ func TestHandleNetworkWaterfall_StoresTimestamp(t *testing.T) {
 	t.Parallel()
 	capture := NewCapture()
 
-	payload := NetworkWaterfallPayload{
+	payload := types.NetworkWaterfallPayload{
 		PageURL: "https://example.com",
-		Entries: []NetworkWaterfallEntry{
+		Entries: []types.NetworkWaterfallEntry{
 			{
 				Name:          "https://example.com/app.js",
 				URL:           "https://example.com/app.js",
@@ -107,9 +108,9 @@ func TestHandleNetworkWaterfall_StoresPageURL(t *testing.T) {
 	capture := NewCapture()
 
 	expectedURL := "https://example.com/page"
-	payload := NetworkWaterfallPayload{
+	payload := types.NetworkWaterfallPayload{
 		PageURL: expectedURL,
-		Entries: []NetworkWaterfallEntry{
+		Entries: []types.NetworkWaterfallEntry{
 			{
 				Name:          "https://example.com/app.js",
 				URL:           "https://example.com/app.js",
@@ -151,9 +152,9 @@ func TestNetworkWaterfall_RingBufferEviction(t *testing.T) {
 
 	// Add 12 entries which should trigger eviction since we set max to 10
 	for i := 0; i < 12; i++ {
-		payload := NetworkWaterfallPayload{
+		payload := types.NetworkWaterfallPayload{
 			PageURL: "https://example.com",
-			Entries: []NetworkWaterfallEntry{
+			Entries: []types.NetworkWaterfallEntry{
 				{
 					Name:          fmt.Sprintf("https://example.com/resource%d", i),
 					URL:           fmt.Sprintf("https://example.com/resource%d", i),
@@ -183,9 +184,9 @@ func TestNetworkWaterfall_MultipleEntriesInSinglePayload(t *testing.T) {
 	t.Parallel()
 	capture := NewCapture()
 
-	payload := NetworkWaterfallPayload{
+	payload := types.NetworkWaterfallPayload{
 		PageURL: "https://example.com",
-		Entries: []NetworkWaterfallEntry{
+		Entries: []types.NetworkWaterfallEntry{
 			{
 				Name:          "https://example.com/app.js",
 				URL:           "https://example.com/app.js",
@@ -263,9 +264,9 @@ func TestNetworkWaterfall_ConcurrentWrites(t *testing.T) {
 	done := make(chan bool, 100)
 	for i := 0; i < 100; i++ {
 		go func(index int) {
-			payload := NetworkWaterfallPayload{
+			payload := types.NetworkWaterfallPayload{
 				PageURL: "https://example.com",
-				Entries: []NetworkWaterfallEntry{
+				Entries: []types.NetworkWaterfallEntry{
 					{
 						Name:          fmt.Sprintf("https://example.com/resource%d", index),
 						URL:           fmt.Sprintf("https://example.com/resource%d", index),

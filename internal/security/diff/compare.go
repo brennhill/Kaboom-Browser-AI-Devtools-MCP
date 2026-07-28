@@ -5,13 +5,15 @@
 
 package diff
 
-import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+)
 
 // Compare computes regressions/improvements between two snapshots.
 //
 // Failure semantics:
 // - Missing/expired snapshot references return errors rather than partial comparisons.
-func (m *Manager) Compare(fromName, toName string, currentBodies []capture.NetworkBody) (*Result, error) {
+func (m *Manager) Compare(fromName, toName string, currentBodies []types.NetworkBody) (*Result, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 

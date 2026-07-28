@@ -2,6 +2,7 @@
 package main
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 	"time"
 
@@ -15,7 +16,7 @@ func TestAttachTransientElements_AttachesWhenPresent(t *testing.T) {
 
 	since := time.Now()
 	sinceMs := since.UnixMilli()
-	cap.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	cap.AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "click", Timestamp: sinceMs + 100, URL: "https://example.com"},
 		{Type: "transient", Timestamp: sinceMs + 200, URL: "https://example.com", Classification: "toast", Value: "Saved", Role: "status"},
 		{Type: "transient", Timestamp: sinceMs + 300, URL: "https://example.com", Classification: "alert", Value: "Error!", Role: "alert"},
@@ -46,7 +47,7 @@ func TestAttachTransientElements_OmitsWhenEmpty(t *testing.T) {
 
 	since := time.Now()
 	sinceMs := since.UnixMilli()
-	cap.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	cap.AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "click", Timestamp: sinceMs + 100, URL: "https://example.com"},
 		{Type: "input", Timestamp: sinceMs + 200, URL: "https://example.com"},
 	})
@@ -66,9 +67,9 @@ func TestAttachTransientElements_CapsAtMax(t *testing.T) {
 
 	since := time.Now()
 	sinceMs := since.UnixMilli()
-	actions := make([]capture.EnhancedAction, 15)
+	actions := make([]types.EnhancedAction, 15)
 	for i := 0; i < 15; i++ {
-		actions[i] = capture.EnhancedAction{
+		actions[i] = types.EnhancedAction{
 			Type:           "transient",
 			Timestamp:      sinceMs + int64(i*100),
 			URL:            "https://example.com",
@@ -98,7 +99,7 @@ func TestAttachTransientElements_FiltersByTimestamp(t *testing.T) {
 
 	since := time.Now()
 	sinceMs := since.UnixMilli()
-	cap.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	cap.AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "transient", Timestamp: sinceMs - 1000, URL: "https://example.com", Classification: "toast", Value: "Old", Role: "status"},
 		{Type: "transient", Timestamp: sinceMs + 200, URL: "https://example.com", Classification: "alert", Value: "New", Role: "alert"},
 	})
@@ -126,7 +127,7 @@ func TestAttachTransientElements_ClockSkewTolerance(t *testing.T) {
 	since := time.Now()
 	sinceMs := since.UnixMilli()
 	// Actions must be in chronological order (append-only buffer invariant)
-	cap.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	cap.AddEnhancedActionsForTest([]types.EnhancedAction{
 		// 1000ms before server time — outside 500ms tolerance, should be EXCLUDED
 		{Type: "transient", Timestamp: sinceMs - 1000, URL: "https://example.com", Classification: "alert", Value: "TooOld", Role: "alert"},
 		// 300ms before server time — within 500ms tolerance, should be INCLUDED

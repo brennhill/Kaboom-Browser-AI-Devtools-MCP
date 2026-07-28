@@ -7,15 +7,14 @@ package apicontract
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"sort"
 	"strings"
 	"time"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // detectErrorSpike checks if there's a pattern of success followed by errors.
-func (v *APIContractValidator) detectErrorSpike(tracker *EndpointTracker, body capture.NetworkBody) *APIContractViolation {
+func (v *APIContractValidator) detectErrorSpike(tracker *EndpointTracker, body types.NetworkBody) *APIContractViolation {
 	history := tracker.StatusHistory
 	if len(history) < 3 {
 		return nil

@@ -46,7 +46,7 @@ type SamplingRequest struct {
 // SamplingParams holds the parameters for a sampling/createMessage request.
 type SamplingParams struct {
 	Messages       []SamplingMessage `json:"messages"`
-	MaxTokens      int               `json:"maxTokens"`      // SPEC:MCP — camelCase per MCP sampling spec
+	MaxTokens      int               `json:"maxTokens"`                // SPEC:MCP — camelCase per MCP sampling spec
 	SystemPrompt   string            `json:"systemPrompt,omitempty"`   // SPEC:MCP
 	IncludeContext string            `json:"includeContext,omitempty"` // SPEC:MCP
 }
@@ -60,7 +60,7 @@ type SamplingMessage struct {
 // SamplingContent is either text or image content.
 type SamplingContent struct {
 	Type     string `json:"type"`               // SPEC:MCP — "text" | "image"
-	Text     string `json:"text,omitempty"`      // SPEC:MCP
-	Data     string `json:"data,omitempty"`      // SPEC:MCP — base64
-	MimeType string `json:"mimeType,omitempty"`  // SPEC:MCP
+	Text     string `json:"text,omitempty"`     // SPEC:MCP
+	Data     string `json:"data,omitempty"`     // SPEC:MCP — base64
+	MimeType string `json:"mimeType,omitempty"` // SPEC:MCP
 }

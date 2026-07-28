@@ -9,7 +9,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -119,7 +118,7 @@ func TestNoiseFavicon404(t *testing.T) {
 	t.Parallel()
 	nc := NewNoiseConfig()
 
-	body := capture.NetworkBody{
+	body := types.NetworkBody{
 		Method: "GET",
 		URL:    "http://localhost:3000/favicon.ico",
 		Status: 404,
@@ -138,7 +137,7 @@ func TestNoiseAPI500NotNoise(t *testing.T) {
 	t.Parallel()
 	nc := NewNoiseConfig()
 
-	body := capture.NetworkBody{
+	body := types.NetworkBody{
 		Method: "POST",
 		URL:    "http://localhost:3000/api/users",
 		Status: 500,
@@ -168,7 +167,7 @@ func TestNoiseAnalyticsURL(t *testing.T) {
 	}
 
 	for _, url := range analyticsURLs {
-		body := capture.NetworkBody{
+		body := types.NetworkBody{
 			Method: "GET",
 			URL:    url,
 			Status: 200,
@@ -187,7 +186,7 @@ func TestNoiseCORSPreflight(t *testing.T) {
 	t.Parallel()
 	nc := NewNoiseConfig()
 
-	body := capture.NetworkBody{
+	body := types.NetworkBody{
 		Method: "OPTIONS",
 		URL:    "http://localhost:3000/api/users",
 		Status: 204,
@@ -582,7 +581,7 @@ func TestNoiseDismissNetworkCategory(t *testing.T) {
 
 	nc.DismissNoise("/api/health", "network", "health check noise")
 
-	body := capture.NetworkBody{
+	body := types.NetworkBody{
 		Method: "GET",
 		URL:    "http://localhost:3000/api/health",
 		Status: 200,
@@ -682,14 +681,14 @@ func TestNoiseConcurrentAccess(t *testing.T) {
 				}
 				nc.IsConsoleNoise(entry)
 
-				body := capture.NetworkBody{
+				body := types.NetworkBody{
 					Method: "GET",
 					URL:    "http://localhost:3000/favicon.ico",
 					Status: 404,
 				}
 				nc.IsNetworkNoise(body)
 
-				wsEvent := capture.WebSocketEvent{
+				wsEvent := types.WebSocketEvent{
 					URL: "ws://localhost:3000/ws",
 				}
 				nc.IsWebSocketNoise(wsEvent)
@@ -738,7 +737,7 @@ func TestNoiseAuthNeverFiltered(t *testing.T) {
 	_ = nc.AddRules([]NoiseRule{rule})
 
 	// 401 should never be noise
-	body401 := capture.NetworkBody{
+	body401 := types.NetworkBody{
 		Method: "GET",
 		URL:    "http://localhost:3000/api/protected",
 		Status: 401,
@@ -748,7 +747,7 @@ func TestNoiseAuthNeverFiltered(t *testing.T) {
 	}
 
 	// 403 should never be noise
-	body403 := capture.NetworkBody{
+	body403 := types.NetworkBody{
 		Method: "GET",
 		URL:    "http://localhost:3000/api/admin",
 		Status: 403,
@@ -758,7 +757,7 @@ func TestNoiseAuthNeverFiltered(t *testing.T) {
 	}
 
 	// 200 to the same pattern should still be noise
-	body200 := capture.NetworkBody{
+	body200 := types.NetworkBody{
 		Method: "GET",
 		URL:    "http://localhost:3000/api/data",
 		Status: 200,
@@ -776,7 +775,7 @@ func TestNoiseSourceMap404(t *testing.T) {
 	t.Parallel()
 	nc := NewNoiseConfig()
 
-	body := capture.NetworkBody{
+	body := types.NetworkBody{
 		Method: "GET",
 		URL:    "http://localhost:3000/assets/app.js.map",
 		Status: 404,
@@ -805,7 +804,7 @@ func TestNoiseHMRNetworkURLs(t *testing.T) {
 	}
 
 	for _, url := range hmrURLs {
-		body := capture.NetworkBody{
+		body := types.NetworkBody{
 			Method: "GET",
 			URL:    url,
 			Status: 200,
@@ -882,7 +881,7 @@ func TestNoiseWebSocketEvent(t *testing.T) {
 	}
 	_ = nc.AddRules([]NoiseRule{rule})
 
-	event := capture.WebSocketEvent{
+	event := types.WebSocketEvent{
 		URL:   "ws://localhost:3000/sockjs-node/websocket",
 		Event: "message",
 		Data:  "heartbeat",
@@ -893,7 +892,7 @@ func TestNoiseWebSocketEvent(t *testing.T) {
 	}
 
 	// Normal WebSocket should not be noise
-	event2 := capture.WebSocketEvent{
+	event2 := types.WebSocketEvent{
 		URL:   "ws://localhost:3000/api/live",
 		Event: "message",
 		Data:  "user data",
@@ -909,9 +908,9 @@ func TestNoiseAutoDetectNetworkFrequency(t *testing.T) {
 	nc := NewNoiseConfig()
 
 	// Create 25 network requests to /health endpoint
-	var bodies []capture.NetworkBody
+	var bodies []types.NetworkBody
 	for i := 0; i < 25; i++ {
-		bodies = append(bodies, capture.NetworkBody{
+		bodies = append(bodies, types.NetworkBody{
 			Method: "GET",
 			URL:    "http://localhost:3000/health",
 			Status: 200,
@@ -1007,7 +1006,7 @@ func TestNoiseMatchSpecMethodFilter(t *testing.T) {
 	}
 	_ = nc.AddRules([]NoiseRule{rule})
 
-	getBody := capture.NetworkBody{
+	getBody := types.NetworkBody{
 		Method: "GET",
 		URL:    "http://localhost:3000/internal/status",
 		Status: 200,
@@ -1016,7 +1015,7 @@ func TestNoiseMatchSpecMethodFilter(t *testing.T) {
 		t.Error("GET to /internal/ should be noise")
 	}
 
-	postBody := capture.NetworkBody{
+	postBody := types.NetworkBody{
 		Method: "POST",
 		URL:    "http://localhost:3000/internal/status",
 		Status: 200,
@@ -1042,7 +1041,7 @@ func TestNoiseMatchSpecStatusRange(t *testing.T) {
 	}
 	_ = nc.AddRules([]NoiseRule{rule})
 
-	body404 := capture.NetworkBody{
+	body404 := types.NetworkBody{
 		Method: "GET",
 		URL:    "http://localhost:3000/styles.css.map",
 		Status: 404,
@@ -1051,7 +1050,7 @@ func TestNoiseMatchSpecStatusRange(t *testing.T) {
 		t.Error(".css.map 404 should be noise")
 	}
 
-	body200 := capture.NetworkBody{
+	body200 := types.NetworkBody{
 		Method: "GET",
 		URL:    "http://localhost:3000/styles.css.map",
 		Status: 200,
@@ -1124,7 +1123,7 @@ func TestDismissNoise_WebSocketCategory(t *testing.T) {
 	}
 
 	// Verify the rule actually matches websocket events
-	event := capture.WebSocketEvent{
+	event := types.WebSocketEvent{
 		URL: "wss://example.com/socket",
 	}
 	if !nc.IsWebSocketNoise(event) {
@@ -1222,9 +1221,9 @@ func TestIsURLCoveredLocked_RegexMatch(t *testing.T) {
 	_ = nc.AddRules([]NoiseRule{rule})
 
 	// Create enough network bodies to trigger frequency detection (>= 20)
-	bodies := make([]capture.NetworkBody, 25)
+	bodies := make([]types.NetworkBody, 25)
 	for i := range bodies {
-		bodies[i] = capture.NetworkBody{
+		bodies[i] = types.NetworkBody{
 			URL:    "http://localhost:3000/health",
 			Method: "GET",
 			Status: 200,
@@ -1250,9 +1249,9 @@ func TestIsURLCoveredLocked_StatusMinMaxRange(t *testing.T) {
 	// only checks urlRegex, not status ranges)
 
 	// Create enough .map requests to trigger frequency detection
-	bodies := make([]capture.NetworkBody, 25)
+	bodies := make([]types.NetworkBody, 25)
 	for i := range bodies {
-		bodies[i] = capture.NetworkBody{
+		bodies[i] = types.NetworkBody{
 			URL:    "http://localhost:3000/__webpack_hmr",
 			Method: "GET",
 			Status: 200,

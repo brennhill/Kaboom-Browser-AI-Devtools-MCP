@@ -1,6 +1,7 @@
 package capture
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
@@ -9,11 +10,11 @@ import (
 func TestCaptureStoreViews_ExposeFocusedSnapshotContracts(t *testing.T) {
 	c := NewCapture()
 
-	c.AddNetworkBodiesForTest([]NetworkBody{{URL: "https://api.example.com/data", Method: "GET", Status: 200}})
-	c.AddWebSocketEventsForTest([]WebSocketEvent{{Event: "message", ID: "ws-1", URL: "wss://example.com/ws", Data: "ok"}})
-	c.AddEnhancedActionsForTest([]EnhancedAction{{Type: "click", URL: "https://example.com"}})
-	c.AddNetworkWaterfallEntries([]NetworkWaterfallEntry{{URL: "https://cdn.example.com/app.js"}}, "https://example.com")
-	c.AddExtensionLogs([]ExtensionLog{{Level: "info", Message: "extension ok"}})
+	c.AddNetworkBodiesForTest([]types.NetworkBody{{URL: "https://api.example.com/data", Method: "GET", Status: 200}})
+	c.AddWebSocketEventsForTest([]types.WebSocketEvent{{Event: "message", ID: "ws-1", URL: "wss://example.com/ws", Data: "ok"}})
+	c.AddEnhancedActionsForTest([]types.EnhancedAction{{Type: "click", URL: "https://example.com"}})
+	c.AddNetworkWaterfallEntries([]types.NetworkWaterfallEntry{{URL: "https://cdn.example.com/app.js"}}, "https://example.com")
+	c.AddExtensionLogs([]types.ExtensionLog{{Level: "info", Message: "extension ok"}})
 	c.AddPerformanceSnapshots([]performance.PerformanceSnapshot{{URL: "https://example.com"}})
 
 	events := c.EventBuffers()

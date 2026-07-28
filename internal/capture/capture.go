@@ -8,6 +8,7 @@
 package capture
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"sync"
 	"time"
 
@@ -131,11 +132,11 @@ func NewCapture() *Capture {
 	c := &Capture{
 		buffers: newBufferStore(),
 		networkWaterfall: NetworkWaterfallBuffer{
-			entries:  make([]NetworkWaterfallEntry, 0, DefaultNetworkWaterfallCapacity),
+			entries:  make([]types.NetworkWaterfallEntry, 0, DefaultNetworkWaterfallCapacity),
 			capacity: DefaultNetworkWaterfallCapacity,
 		},
 		extensionLogs: ExtensionLogBuffer{
-			logs: make([]ExtensionLog, 0, MaxExtensionLogs),
+			logs: make([]types.ExtensionLog, 0, MaxExtensionLogs),
 		},
 		wsConnections: wsconn.NewTracker(),
 		extensionState: ExtensionState{
@@ -161,7 +162,7 @@ func NewCapture() *Capture {
 	c.circuit = circuit.NewCircuitBreaker(c.lifecycle.Emit)
 
 	// Note: clientRegistry is initialized by capture.New() in capture package
-	// to avoid circular import (those packages import capture for NetworkBody, WebSocketEvent, etc.)
+	// to avoid circular import (those packages import capture for types.NetworkBody, types.WebSocketEvent, etc.)
 	return c
 }
 

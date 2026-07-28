@@ -4,6 +4,7 @@
 package netflag
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"net"
 	"net/url"
 	"strings"
@@ -72,7 +73,7 @@ func checkNonStandardPort(origin string) *capture.SecurityFlag {
 	}
 }
 
-func checkMixedContent(entry capture.NetworkWaterfallEntry, pageURL string) *capture.SecurityFlag {
+func checkMixedContent(entry types.NetworkWaterfallEntry, pageURL string) *capture.SecurityFlag {
 	pageParsed, err := url.Parse(pageURL)
 	if err != nil || pageParsed.Scheme != "https" {
 		return nil

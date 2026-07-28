@@ -8,6 +8,7 @@ package capture
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -27,7 +28,7 @@ func TestAddExtensionLogs_ZeroTimestamp(t *testing.T) {
 	c := NewCapture()
 	defer c.Close()
 
-	logs := []ExtensionLog{
+	logs := []types.ExtensionLog{
 		{Message: "test1", Source: "background", Category: "debug"},
 	}
 	c.AddExtensionLogs(logs)
@@ -56,9 +57,9 @@ func TestAddExtensionLogs_Eviction(t *testing.T) {
 	// After compaction, the buffer is trimmed to MaxExtensionLogs (500),
 	// then remaining batch items are appended, so final count is
 	// between MaxExtensionLogs and evictionThreshold.
-	batch := make([]ExtensionLog, evictionThreshold+10)
+	batch := make([]types.ExtensionLog, evictionThreshold+10)
 	for i := range batch {
-		batch[i] = ExtensionLog{
+		batch[i] = types.ExtensionLog{
 			Message:   "log entry",
 			Source:    "background",
 			Category:  "debug",

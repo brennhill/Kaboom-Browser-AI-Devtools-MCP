@@ -5,10 +5,9 @@
 package generate
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 func TestExtractOrigin(t *testing.T) {
@@ -103,7 +102,7 @@ func TestBuildCSPPolicyString_Deterministic(t *testing.T) {
 func TestBuildCSPDirectives_DeterministicOrigins(t *testing.T) {
 	t.Parallel()
 
-	bodies := []capture.NetworkBody{
+	bodies := []types.NetworkBody{
 		{URL: "https://zebra.example.com/a.js", ContentType: "application/javascript"},
 		{URL: "https://alpha.example.com/b.js", ContentType: "application/javascript"},
 		{URL: "https://middle.example.com/c.js", ContentType: "application/javascript"},

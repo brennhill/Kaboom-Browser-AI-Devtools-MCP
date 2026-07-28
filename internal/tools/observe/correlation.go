@@ -7,6 +7,7 @@ package observe
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"sort"
 	"time"
 
@@ -24,9 +25,9 @@ type timedEntry struct {
 
 // bundleContext holds all data sources needed for window-joining bundles.
 type bundleContext struct {
-	networkBodies    []capture.NetworkBody
-	waterfallEntries []capture.NetworkWaterfallEntry
-	actions          []capture.EnhancedAction
+	networkBodies    []types.NetworkBody
+	waterfallEntries []types.NetworkWaterfallEntry
+	actions          []types.EnhancedAction
 	logs             []timedEntry
 	windowSeconds    int
 }
@@ -198,7 +199,7 @@ func errorEntryToMap(data map[string]any) map[string]any {
 	}
 }
 
-func matchNetworkBodies(bodies []capture.NetworkBody, start, end time.Time) []map[string]any {
+func matchNetworkBodies(bodies []types.NetworkBody, start, end time.Time) []map[string]any {
 	matched := make([]map[string]any, 0)
 	for _, nb := range bodies {
 		nbTs := util.ParseTimestamp(nb.Timestamp)
@@ -214,7 +215,7 @@ func matchNetworkBodies(bodies []capture.NetworkBody, start, end time.Time) []ma
 	return matched
 }
 
-func matchWaterfall(entries []capture.NetworkWaterfallEntry, start, end time.Time) []map[string]any {
+func matchWaterfall(entries []types.NetworkWaterfallEntry, start, end time.Time) []map[string]any {
 	matched := make([]map[string]any, 0)
 	for _, w := range entries {
 		if w.Timestamp.IsZero() || !w.Timestamp.After(start) || w.Timestamp.After(end) {
@@ -229,7 +230,7 @@ func matchWaterfall(entries []capture.NetworkWaterfallEntry, start, end time.Tim
 	return matched
 }
 
-func matchActions(actions []capture.EnhancedAction, start, end time.Time) []map[string]any {
+func matchActions(actions []types.EnhancedAction, start, end time.Time) []map[string]any {
 	matched := make([]map[string]any, 0)
 	for _, a := range actions {
 		aTs := time.UnixMilli(a.Timestamp)
@@ -266,8 +267,8 @@ func matchLogs(logs []timedEntry, start, end time.Time) []map[string]any {
 }
 
 // filterNetworkBodiesByTab returns only network bodies from the specified tab.
-func filterNetworkBodiesByTab(bodies []capture.NetworkBody, tabID int) []capture.NetworkBody {
-	filtered := make([]capture.NetworkBody, 0, len(bodies))
+func filterNetworkBodiesByTab(bodies []types.NetworkBody, tabID int) []types.NetworkBody {
+	filtered := make([]types.NetworkBody, 0, len(bodies))
 	for _, nb := range bodies {
 		if nb.TabID == tabID {
 			filtered = append(filtered, nb)
@@ -278,12 +279,12 @@ func filterNetworkBodiesByTab(bodies []capture.NetworkBody, tabID int) []capture
 
 // filterWaterfallByTab returns only waterfall entries from the tracked page.
 // NetworkWaterfallEntry lacks a TabID, so we match on the tracked tab's URL via capture.
-func filterWaterfallByTab(entries []capture.NetworkWaterfallEntry, tabID int, cap *capture.Capture) []capture.NetworkWaterfallEntry {
+func filterWaterfallByTab(entries []types.NetworkWaterfallEntry, tabID int, cap *capture.Capture) []types.NetworkWaterfallEntry {
 	_, _, trackedURL := cap.GetTrackingStatus()
 	if trackedURL == "" {
 		return entries
 	}
-	filtered := make([]capture.NetworkWaterfallEntry, 0, len(entries))
+	filtered := make([]types.NetworkWaterfallEntry, 0, len(entries))
 	for _, w := range entries {
 		if w.PageURL != "" && !ContainsIgnoreCase(w.PageURL, trackedURL) {
 			continue
@@ -294,8 +295,8 @@ func filterWaterfallByTab(entries []capture.NetworkWaterfallEntry, tabID int, ca
 }
 
 // filterActionsByTab returns only actions from the specified tab.
-func filterActionsByTab(actions []capture.EnhancedAction, tabID int) []capture.EnhancedAction {
-	filtered := make([]capture.EnhancedAction, 0, len(actions))
+func filterActionsByTab(actions []types.EnhancedAction, tabID int) []types.EnhancedAction {
+	filtered := make([]types.EnhancedAction, 0, len(actions))
 	for _, a := range actions {
 		if a.TabID == tabID {
 			filtered = append(filtered, a)
@@ -439,7 +440,7 @@ func collectTimelineErrors(deps Deps) []timelineEntry {
 	return entries
 }
 
-func collectTimelineNetwork(networkEntries []capture.NetworkWaterfallEntry) []timelineEntry {
+func collectTimelineNetwork(networkEntries []types.NetworkWaterfallEntry) []timelineEntry {
 	entries := make([]timelineEntry, 0, len(networkEntries))
 	for _, n := range networkEntries {
 		var ts string
@@ -457,7 +458,7 @@ func collectTimelineNetwork(networkEntries []capture.NetworkWaterfallEntry) []ti
 	return entries
 }
 
-func collectTimelineWebSocket(wsEvents []capture.WebSocketEvent) []timelineEntry {
+func collectTimelineWebSocket(wsEvents []types.WebSocketEvent) []timelineEntry {
 	entries := make([]timelineEntry, 0, len(wsEvents))
 	for _, ws := range wsEvents {
 		summary := ws.Event

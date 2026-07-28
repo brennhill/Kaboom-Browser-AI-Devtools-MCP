@@ -4,15 +4,14 @@
 package observe
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 	"time"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 func TestWaterfallSummaryEntry_CompactFields(t *testing.T) {
 	t.Parallel()
-	entry := capture.NetworkWaterfallEntry{
+	entry := types.NetworkWaterfallEntry{
 		URL:             "https://example.com/api/data",
 		InitiatorType:   "fetch",
 		Duration:        123.45,
@@ -52,7 +51,7 @@ func TestWaterfallSummaryEntry_URLTruncation(t *testing.T) {
 	// Build a URL that's definitely > 80 chars
 	longURL = "https://example.com/api/v1/very/long/path/that/exceeds/eighty/characters/limit/and/keeps/going/further"
 
-	entry := capture.NetworkWaterfallEntry{
+	entry := types.NetworkWaterfallEntry{
 		URL:           longURL,
 		InitiatorType: "xmlhttprequest",
 		Duration:      50.0,
@@ -71,7 +70,7 @@ func TestWaterfallSummaryEntry_URLTruncation(t *testing.T) {
 
 func TestWaterfallSummaryEntry_ShortURL(t *testing.T) {
 	t.Parallel()
-	entry := capture.NetworkWaterfallEntry{
+	entry := types.NetworkWaterfallEntry{
 		URL:           "https://a.co/x",
 		InitiatorType: "script",
 		Duration:      10.0,
@@ -85,7 +84,7 @@ func TestWaterfallSummaryEntry_ShortURL(t *testing.T) {
 
 func TestFilterWaterfallSummaryEntries(t *testing.T) {
 	t.Parallel()
-	entries := []capture.NetworkWaterfallEntry{
+	entries := []types.NetworkWaterfallEntry{
 		{URL: "https://example.com/a", InitiatorType: "fetch", Duration: 10.0},
 		{URL: "https://example.com/b", InitiatorType: "script", Duration: 20.0},
 		{URL: "https://other.com/c", InitiatorType: "img", Duration: 30.0},
@@ -105,7 +104,7 @@ func TestFilterWaterfallSummaryEntries(t *testing.T) {
 
 func TestFilterWaterfallSummaryEntries_WithFilter(t *testing.T) {
 	t.Parallel()
-	entries := []capture.NetworkWaterfallEntry{
+	entries := []types.NetworkWaterfallEntry{
 		{URL: "https://example.com/a", InitiatorType: "fetch", Duration: 10.0},
 		{URL: "https://other.com/b", InitiatorType: "script", Duration: 20.0},
 	}
@@ -118,7 +117,7 @@ func TestFilterWaterfallSummaryEntries_WithFilter(t *testing.T) {
 
 func TestFilterWaterfallSummaryEntries_WithLimit(t *testing.T) {
 	t.Parallel()
-	entries := []capture.NetworkWaterfallEntry{
+	entries := []types.NetworkWaterfallEntry{
 		{URL: "https://example.com/a", InitiatorType: "fetch", Duration: 10.0},
 		{URL: "https://example.com/b", InitiatorType: "script", Duration: 20.0},
 		{URL: "https://example.com/c", InitiatorType: "img", Duration: 30.0},
@@ -136,7 +135,7 @@ func TestFilterWaterfallSummaryEntries_WithLimit(t *testing.T) {
 
 func TestBuildNetworkBodiesSummary_StatusGrouping(t *testing.T) {
 	t.Parallel()
-	bodies := []capture.NetworkBody{
+	bodies := []types.NetworkBody{
 		{URL: "http://a.com/api", Method: "GET", Status: 200},
 		{URL: "http://a.com/api2", Method: "GET", Status: 201},
 		{URL: "http://a.com/api3", Method: "POST", Status: 404},
@@ -162,7 +161,7 @@ func TestBuildNetworkBodiesSummary_StatusGrouping(t *testing.T) {
 func TestBuildNetworkBodiesSummary_RecentURLs(t *testing.T) {
 	t.Parallel()
 	longURL := "http://example.com/" + string(make([]byte, 100))
-	bodies := []capture.NetworkBody{
+	bodies := []types.NetworkBody{
 		{URL: longURL, Method: "GET", Status: 200},
 		{URL: "http://short.com", Method: "GET", Status: 200},
 	}
@@ -183,7 +182,7 @@ func TestBuildNetworkBodiesSummary_RecentURLs(t *testing.T) {
 
 func TestBuildWSEventsSummary_ByDirection(t *testing.T) {
 	t.Parallel()
-	events := []capture.WebSocketEvent{
+	events := []types.WebSocketEvent{
 		{Direction: "incoming", ID: "conn1", Event: "message"},
 		{Direction: "incoming", ID: "conn1", Event: "message"},
 		{Direction: "outgoing", ID: "conn1", Event: "message"},
@@ -204,7 +203,7 @@ func TestBuildWSEventsSummary_ByDirection(t *testing.T) {
 
 func TestBuildWSEventsSummary_UniqueConnections(t *testing.T) {
 	t.Parallel()
-	events := []capture.WebSocketEvent{
+	events := []types.WebSocketEvent{
 		{Direction: "incoming", ID: "conn1", Event: "message"},
 		{Direction: "incoming", ID: "conn2", Event: "message"},
 		{Direction: "incoming", ID: "conn1", Event: "message"},

@@ -4,9 +4,8 @@
 package pagination
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // BenchmarkParseCursor measures cursor parsing performance
@@ -75,10 +74,10 @@ func BenchmarkApplyLogCursorPagination(b *testing.B) {
 // BenchmarkEnrichWebSocketEntries measures WebSocket enrichment performance
 func BenchmarkEnrichWebSocketEntries(b *testing.B) {
 	// Create 1000 WebSocket events
-	events := make([]capture.WebSocketEvent, 1000)
+	events := make([]types.WebSocketEvent, 1000)
 
 	for i := 0; i < 1000; i++ {
-		events[i] = capture.WebSocketEvent{
+		events[i] = types.WebSocketEvent{
 			Timestamp: "2026-01-30T10:15:23.456789Z",
 			ID:        "ws_bench",
 			Event:     "message",
@@ -97,10 +96,10 @@ func BenchmarkEnrichWebSocketEntries(b *testing.B) {
 // BenchmarkApplyWebSocketCursorPagination measures WebSocket pagination performance
 func BenchmarkApplyWebSocketCursorPagination(b *testing.B) {
 	// Create and enrich 1000 WebSocket events
-	events := make([]capture.WebSocketEvent, 1000)
+	events := make([]types.WebSocketEvent, 1000)
 
 	for i := 0; i < 1000; i++ {
-		events[i] = capture.WebSocketEvent{
+		events[i] = types.WebSocketEvent{
 			Timestamp: "2026-01-30T10:15:23.456789Z",
 			ID:        "ws_bench",
 			Event:     "message",
@@ -121,10 +120,10 @@ func BenchmarkApplyWebSocketCursorPagination(b *testing.B) {
 // BenchmarkEnrichActionEntries measures action enrichment performance
 func BenchmarkEnrichActionEntries(b *testing.B) {
 	// Create 1000 actions
-	actions := make([]capture.EnhancedAction, 1000)
+	actions := make([]types.EnhancedAction, 1000)
 
 	for i := 0; i < 1000; i++ {
-		actions[i] = capture.EnhancedAction{
+		actions[i] = types.EnhancedAction{
 			Timestamp: 1706615723456789000,
 			Type:      "click",
 			Selectors: map[string]any{"css": "button"},
@@ -143,10 +142,10 @@ func BenchmarkEnrichActionEntries(b *testing.B) {
 // BenchmarkApplyActionCursorPagination measures action pagination performance
 func BenchmarkApplyActionCursorPagination(b *testing.B) {
 	// Create and enrich 1000 actions
-	actions := make([]capture.EnhancedAction, 1000)
+	actions := make([]types.EnhancedAction, 1000)
 
 	for i := 0; i < 1000; i++ {
-		actions[i] = capture.EnhancedAction{
+		actions[i] = types.EnhancedAction{
 			Timestamp: 1706615723456789000,
 			Type:      "click",
 			Selectors: map[string]any{"css": "button"},

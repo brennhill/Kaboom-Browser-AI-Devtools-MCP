@@ -6,15 +6,14 @@ package sri
 import (
 	"encoding/json"
 	"fmt"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // HandleGenerate parses params and returns SRI generation output.
 //
 // Failure semantics:
 // - Invalid JSON params return an explicit error and no partial output.
-func HandleGenerate(params json.RawMessage, bodies []capture.NetworkBody, pageURLs []string) (any, error) {
+func HandleGenerate(params json.RawMessage, bodies []types.NetworkBody, pageURLs []string) (any, error) {
 	var toolParams Params
 	if len(params) > 0 {
 		if err := json.Unmarshal(params, &toolParams); err != nil {

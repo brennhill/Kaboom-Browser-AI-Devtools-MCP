@@ -5,6 +5,7 @@ package capture
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"net/http"
 	"strings"
 	"testing"
@@ -90,7 +91,7 @@ func TestHandleSync_WithExtensionLogs(t *testing.T) {
 	// Create request with extension logs
 	req := SyncRequest{
 		ExtSessionID: "test_session",
-		ExtensionLogs: []ExtensionLog{
+		ExtensionLogs: []types.ExtensionLog{
 			{
 				Level:    "info",
 				Message:  "Test log message",
@@ -127,7 +128,7 @@ func TestHandleSync_WithExtensionLogs_RedactsSensitiveData(t *testing.T) {
 
 	req := SyncRequest{
 		ExtSessionID: "test_session",
-		ExtensionLogs: []ExtensionLog{
+		ExtensionLogs: []types.ExtensionLog{
 			{
 				Level:    "debug",
 				Message:  "sync saw " + bearer,

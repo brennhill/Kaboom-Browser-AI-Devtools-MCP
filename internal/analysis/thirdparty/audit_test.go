@@ -5,15 +5,14 @@ package thirdparty
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"os"
 	"strings"
 	"testing"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
-// NetworkBody keeps the test tables terse; the audit API takes capture.NetworkBody.
-type NetworkBody = capture.NetworkBody
+// NetworkBody keeps the test tables terse; the audit API takes types.NetworkBody.
+type NetworkBody = types.NetworkBody
 
 func TestThirdPartyBasicClassification(t *testing.T) {
 	t.Parallel()

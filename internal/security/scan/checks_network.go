@@ -4,11 +4,11 @@
 package scan
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/netflag"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
-func (s *Scanner) checkNetworkSecurity(entries []capture.NetworkWaterfallEntry, pageURLs []string) []Finding {
+func (s *Scanner) checkNetworkSecurity(entries []types.NetworkWaterfallEntry, pageURLs []string) []Finding {
 	var findings []Finding
 	pageURL := ""
 	if len(pageURLs) > 0 {

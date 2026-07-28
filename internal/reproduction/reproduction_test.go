@@ -7,18 +7,17 @@
 package reproduction
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // ============================================
 // Test Helpers
 // ============================================
 
-func makeTestAction(typ string, ts int64, opts map[string]any) capture.EnhancedAction {
-	a := capture.EnhancedAction{
+func makeTestAction(typ string, ts int64, opts map[string]any) types.EnhancedAction {
+	a := types.EnhancedAction{
 		Type:      typ,
 		Timestamp: ts,
 		URL:       "https://example.com",
@@ -50,8 +49,8 @@ func makeTestAction(typ string, ts int64, opts map[string]any) capture.EnhancedA
 	return a
 }
 
-func basicFlow() []capture.EnhancedAction {
-	return []capture.EnhancedAction{
+func basicFlow() []types.EnhancedAction {
+	return []types.EnhancedAction{
 		makeTestAction("navigate", 1000, map[string]any{
 			"toURL": "https://example.com/login",
 		}),
@@ -106,7 +105,7 @@ func TestReproduction_Kaboom_BasicFlow(t *testing.T) {
 
 func TestReproduction_Kaboom_AllActionTypes(t *testing.T) {
 	t.Parallel()
-	actions := []capture.EnhancedAction{
+	actions := []types.EnhancedAction{
 		makeTestAction("navigate", 1000, map[string]any{"toURL": "https://example.com"}),
 		makeTestAction("click", 2000, map[string]any{
 			"selectors": map[string]any{"text": "Go"},
@@ -213,7 +212,7 @@ func TestReproduction_Kaboom_ElementDescriptionPriority(t *testing.T) {
 
 func TestReproduction_Kaboom_TimingPauses(t *testing.T) {
 	t.Parallel()
-	actions := []capture.EnhancedAction{
+	actions := []types.EnhancedAction{
 		makeTestAction("click", 1000, map[string]any{
 			"selectors": map[string]any{"text": "A"},
 		}),
@@ -244,7 +243,7 @@ func TestReproduction_Kaboom_TimingPauses(t *testing.T) {
 
 func TestReproduction_Kaboom_RedactedValues(t *testing.T) {
 	t.Parallel()
-	actions := []capture.EnhancedAction{
+	actions := []types.EnhancedAction{
 		makeTestAction("input", 1000, map[string]any{
 			"selectors": map[string]any{"role": map[string]any{"role": "textbox", "name": "Password"}},
 			"value":     "[redacted]",
@@ -263,7 +262,7 @@ func TestReproduction_Kaboom_RedactedValues(t *testing.T) {
 
 func TestReproduction_Kaboom_AIActions(t *testing.T) {
 	t.Parallel()
-	actions := []capture.EnhancedAction{
+	actions := []types.EnhancedAction{
 		makeTestAction("click", 1000, map[string]any{
 			"selectors": map[string]any{"text": "Submit"},
 			"source":    "ai",
@@ -383,7 +382,7 @@ func TestReproduction_Playwright_LocatorPriority(t *testing.T) {
 
 func TestReproduction_Playwright_URLRewriting(t *testing.T) {
 	t.Parallel()
-	actions := []capture.EnhancedAction{
+	actions := []types.EnhancedAction{
 		makeTestAction("navigate", 1000, map[string]any{
 			"toURL": "https://production.example.com/dashboard",
 		}),
@@ -403,7 +402,7 @@ func TestReproduction_Playwright_URLRewriting(t *testing.T) {
 
 func TestReproduction_Playwright_SpecialCharacters(t *testing.T) {
 	t.Parallel()
-	actions := []capture.EnhancedAction{
+	actions := []types.EnhancedAction{
 		makeTestAction("input", 1000, map[string]any{
 			"selectors": map[string]any{"id": "msg"},
 			"value":     "it's a \"test\"\nnewline",
@@ -419,7 +418,7 @@ func TestReproduction_Playwright_SpecialCharacters(t *testing.T) {
 
 func TestReproduction_Playwright_TimingPauses(t *testing.T) {
 	t.Parallel()
-	actions := []capture.EnhancedAction{
+	actions := []types.EnhancedAction{
 		makeTestAction("click", 1000, map[string]any{"selectors": map[string]any{"text": "A"}}),
 		makeTestAction("click", 6000, map[string]any{"selectors": map[string]any{"text": "B"}}),
 	}
@@ -451,7 +450,7 @@ func TestReproduction_EmptyActions(t *testing.T) {
 
 func TestReproduction_LastN(t *testing.T) {
 	t.Parallel()
-	actions := []capture.EnhancedAction{
+	actions := []types.EnhancedAction{
 		makeTestAction("click", 1000, map[string]any{"selectors": map[string]any{"text": "First"}}),
 		makeTestAction("click", 2000, map[string]any{"selectors": map[string]any{"text": "Second"}}),
 		makeTestAction("click", 3000, map[string]any{"selectors": map[string]any{"text": "Third"}}),
@@ -579,7 +578,7 @@ func TestPlaywrightStep_UnknownType(t *testing.T) {
 
 func TestReproduction_NavigateNoURL(t *testing.T) {
 	t.Parallel()
-	actions := []capture.EnhancedAction{
+	actions := []types.EnhancedAction{
 		makeTestAction("navigate", 1000, map[string]any{}), // no URL
 		makeTestAction("click", 2000, map[string]any{"selectors": map[string]any{"text": "Go"}}),
 	}
@@ -624,7 +623,7 @@ func TestPlaywrightStep_Forward(t *testing.T) {
 
 func TestPlaywrightStep_NewTab(t *testing.T) {
 	t.Parallel()
-	action := capture.EnhancedAction{
+	action := types.EnhancedAction{
 		Type:      "new_tab",
 		Timestamp: 1000,
 		URL:       "https://example.com/page",
@@ -637,7 +636,7 @@ func TestPlaywrightStep_NewTab(t *testing.T) {
 
 func TestPlaywrightStep_NewTabNoURL(t *testing.T) {
 	t.Parallel()
-	action := capture.EnhancedAction{
+	action := types.EnhancedAction{
 		Type:      "new_tab",
 		Timestamp: 1000,
 		// URL intentionally empty
@@ -699,7 +698,7 @@ func TestKaboomStep_Forward(t *testing.T) {
 
 func TestKaboomStep_NewTab(t *testing.T) {
 	t.Parallel()
-	action := capture.EnhancedAction{
+	action := types.EnhancedAction{
 		Type:      "new_tab",
 		Timestamp: 1000,
 		URL:       "https://example.com/new",
@@ -739,7 +738,7 @@ func TestKaboomStep_ScrollElement(t *testing.T) {
 func TestReproduction_AIActionsFromInteract(t *testing.T) {
 	t.Parallel()
 	// Simulate what handleDOMPrimitive records: normalized types with proper fields
-	actions := []capture.EnhancedAction{
+	actions := []types.EnhancedAction{
 		{
 			Type:      "navigate",
 			Timestamp: 1000,

@@ -5,9 +5,8 @@
 package netflag
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 func TestCheckNonStandardPortBranches(t *testing.T) {
@@ -43,14 +42,14 @@ func TestFlaggingInputValidationBranches(t *testing.T) {
 		t.Fatalf("invalid URL should not be flagged for IP origin, got %+v", got)
 	}
 
-	if got := checkMixedContent(capture.NetworkWaterfallEntry{URL: "http://cdn.example.com/a.js"}, "://bad-page-url"); got != nil {
+	if got := checkMixedContent(types.NetworkWaterfallEntry{URL: "http://cdn.example.com/a.js"}, "://bad-page-url"); got != nil {
 		t.Fatalf("invalid page URL should not produce mixed-content flag, got %+v", got)
 	}
-	if got := checkMixedContent(capture.NetworkWaterfallEntry{URL: "://bad-entry-url"}, "https://example.com"); got != nil {
+	if got := checkMixedContent(types.NetworkWaterfallEntry{URL: "://bad-entry-url"}, "https://example.com"); got != nil {
 		t.Fatalf("invalid resource URL should not produce mixed-content flag, got %+v", got)
 	}
 
-	flags := Analyze(capture.NetworkWaterfallEntry{URL: "://bad-url"}, "https://example.com")
+	flags := Analyze(types.NetworkWaterfallEntry{URL: "://bad-url"}, "https://example.com")
 	if len(flags) != 0 {
 		t.Fatalf("invalid entry URL should return no flags, got %v", flags)
 	}
@@ -60,7 +59,7 @@ func TestCheckMixedContentSeverityByInitiatorType(t *testing.T) {
 	t.Parallel()
 
 	scriptFlag := checkMixedContent(
-		capture.NetworkWaterfallEntry{
+		types.NetworkWaterfallEntry{
 			URL:           "http://cdn.example.com/script.js",
 			InitiatorType: "script",
 		},
@@ -71,7 +70,7 @@ func TestCheckMixedContentSeverityByInitiatorType(t *testing.T) {
 	}
 
 	imageFlag := checkMixedContent(
-		capture.NetworkWaterfallEntry{
+		types.NetworkWaterfallEntry{
 			URL:           "http://cdn.example.com/image.png",
 			InitiatorType: "img",
 		},

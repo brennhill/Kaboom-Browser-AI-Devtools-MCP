@@ -6,6 +6,7 @@ package capture
 
 import (
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 	"time"
 )
@@ -13,10 +14,10 @@ import (
 func TestExtensionLogBuffer_AppendAppliesAmortizedEviction(t *testing.T) {
 	t.Parallel()
 
-	buf := ExtensionLogBuffer{logs: make([]ExtensionLog, 0)}
+	buf := ExtensionLogBuffer{logs: make([]types.ExtensionLog, 0)}
 	total := MaxExtensionLogs + MaxExtensionLogs/2 + 1
 	for i := 0; i < total; i++ {
-		buf.append(ExtensionLog{
+		buf.append(types.ExtensionLog{
 			Level:     "info",
 			Message:   fmt.Sprintf("log-%d", i),
 			Timestamp: time.Unix(int64(i), 0),
@@ -41,7 +42,7 @@ func TestExtensionLogBuffer_SnapshotReturnsDetachedCopy(t *testing.T) {
 	t.Parallel()
 
 	buf := ExtensionLogBuffer{
-		logs: []ExtensionLog{{Level: "info", Message: "one"}, {Level: "warn", Message: "two"}},
+		logs: []types.ExtensionLog{{Level: "info", Message: "one"}, {Level: "warn", Message: "two"}},
 	}
 
 	snap := buf.snapshot()
@@ -59,7 +60,7 @@ func TestExtensionLogBuffer_ClearReturnsCountAndEmpties(t *testing.T) {
 	t.Parallel()
 
 	buf := ExtensionLogBuffer{
-		logs: []ExtensionLog{{Level: "info", Message: "one"}, {Level: "warn", Message: "two"}},
+		logs: []types.ExtensionLog{{Level: "info", Message: "one"}, {Level: "warn", Message: "two"}},
 	}
 
 	count := buf.clear()

@@ -4,16 +4,15 @@
 package asyncresult
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"time"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // MaxTransientsPerResult bounds transient enrichment response size.
 const MaxTransientsPerResult = 10
 
 // AttachTransientElements adds recent transient actions to responseData.
-func AttachTransientElements(responseData map[string]any, actions []capture.EnhancedAction, since time.Time) {
+func AttachTransientElements(responseData map[string]any, actions []types.EnhancedAction, since time.Time) {
 	if responseData == nil {
 		return
 	}

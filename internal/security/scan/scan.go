@@ -5,13 +5,12 @@ package scan
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"time"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
-func (s *Scanner) runSecurityChecks(checkSet map[string]bool, bodies []capture.NetworkBody, input Input) []Finding {
+func (s *Scanner) runSecurityChecks(checkSet map[string]bool, bodies []types.NetworkBody, input Input) []Finding {
 	type checkEntry struct {
 		name string
 		fn   func() []Finding
@@ -61,7 +60,7 @@ func (s *Scanner) Scan(input Input) Result {
 	}
 }
 
-func (s *Scanner) HandleSecurityAudit(params json.RawMessage, bodies []capture.NetworkBody, entries []LogEntry, pageURLs []string, waterfallEntries []capture.NetworkWaterfallEntry) (any, error) {
+func (s *Scanner) HandleSecurityAudit(params json.RawMessage, bodies []types.NetworkBody, entries []LogEntry, pageURLs []string, waterfallEntries []types.NetworkWaterfallEntry) (any, error) {
 	var toolParams struct {
 		Checks      []string `json:"checks"`
 		URLFilter   string   `json:"url"`
@@ -85,7 +84,7 @@ func (s *Scanner) HandleSecurityAudit(params json.RawMessage, bodies []capture.N
 	return result, nil
 }
 
-func buildSummary(findings []Finding, bodies []capture.NetworkBody) Summary {
+func buildSummary(findings []Finding, bodies []types.NetworkBody) Summary {
 	bySeverity := make(map[string]int)
 	byCheck := make(map[string]int)
 	for _, f := range findings {
@@ -106,11 +105,11 @@ func buildSummary(findings []Finding, bodies []capture.NetworkBody) Summary {
 	}
 }
 
-func filterBodiesByURL(bodies []capture.NetworkBody, filter string) []capture.NetworkBody {
+func filterBodiesByURL(bodies []types.NetworkBody, filter string) []types.NetworkBody {
 	if filter == "" {
 		return bodies
 	}
-	var filtered []capture.NetworkBody
+	var filtered []types.NetworkBody
 	for _, b := range bodies {
 		if strings.Contains(b.URL, filter) {
 			filtered = append(filtered, b)

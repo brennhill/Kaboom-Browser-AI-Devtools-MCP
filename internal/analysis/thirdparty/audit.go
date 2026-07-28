@@ -13,8 +13,8 @@ package thirdparty
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -103,12 +103,12 @@ func NewThirdPartyAuditor() *ThirdPartyAuditor {
 
 // originData groups network bodies and URLs for a single origin.
 type originData struct {
-	bodies []capture.NetworkBody
+	bodies []types.NetworkBody
 	urls   []string
 }
 
 // Audit analyzes network bodies to identify and classify third-party origins.
-func (a *ThirdPartyAuditor) Audit(bodies []capture.NetworkBody, pageURLs []string, params ThirdPartyParams) ThirdPartyResult {
+func (a *ThirdPartyAuditor) Audit(bodies []types.NetworkBody, pageURLs []string, params ThirdPartyParams) ThirdPartyResult {
 	customLists := resolveCustomLists(params)
 	firstPartyOrigins := buildFirstPartySet(params, pageURLs, customLists)
 
@@ -130,7 +130,7 @@ func (a *ThirdPartyAuditor) Audit(bodies []capture.NetworkBody, pageURLs []strin
 }
 
 // HandleAuditThirdParties is the MCP handler for the audit_third_parties tool.
-func HandleAuditThirdParties(params json.RawMessage, bodies []capture.NetworkBody, pageURLs []string) (any, error) {
+func HandleAuditThirdParties(params json.RawMessage, bodies []types.NetworkBody, pageURLs []string) (any, error) {
 	var p ThirdPartyParams
 	if len(params) > 0 {
 		if err := json.Unmarshal(params, &p); err != nil {

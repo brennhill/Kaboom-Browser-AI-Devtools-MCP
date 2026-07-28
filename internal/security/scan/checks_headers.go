@@ -7,9 +7,9 @@ package scan
 
 import (
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/httpsec"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
@@ -31,7 +31,7 @@ var requiredSecurityHeaders = []struct {
 }
 
 // shouldSkipHSTS returns true if an HSTS check should be skipped for this body.
-func shouldSkipHSTS(headerName string, body capture.NetworkBody) bool {
+func shouldSkipHSTS(headerName string, body types.NetworkBody) bool {
 	if headerName != "Strict-Transport-Security" {
 		return false
 	}
@@ -39,7 +39,7 @@ func shouldSkipHSTS(headerName string, body capture.NetworkBody) bool {
 }
 
 // checkHeadersForOrigin checks a single HTML response for missing security headers.
-func checkHeadersForOrigin(body capture.NetworkBody, origin string) []Finding {
+func checkHeadersForOrigin(body types.NetworkBody, origin string) []Finding {
 	var findings []Finding
 	for _, header := range requiredSecurityHeaders {
 		if shouldSkipHSTS(header.Name, body) {
@@ -60,7 +60,7 @@ func checkHeadersForOrigin(body capture.NetworkBody, origin string) []Finding {
 	return findings
 }
 
-func (s *Scanner) checkSecurityHeaders(bodies []capture.NetworkBody) []Finding {
+func (s *Scanner) checkSecurityHeaders(bodies []types.NetworkBody) []Finding {
 	var findings []Finding
 	checkedOrigins := make(map[string]bool)
 

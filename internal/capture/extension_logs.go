@@ -8,6 +8,7 @@ package capture
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"time"
 )
 
@@ -28,7 +29,7 @@ import (
 //
 // Failure semantics:
 // - Missing timestamps are filled with server receive time.
-func (c *Capture) AddExtensionLogs(logs []ExtensionLog) {
+func (c *Capture) AddExtensionLogs(logs []types.ExtensionLog) {
 	now := time.Now()
 
 	c.mu.Lock()
@@ -47,14 +48,14 @@ func (c *Capture) AddExtensionLogs(logs []ExtensionLog) {
 //
 // Failure semantics:
 // - Returns empty slice when buffer is empty.
-func (c *Capture) GetExtensionLogs() []ExtensionLog {
+func (c *Capture) GetExtensionLogs() []types.ExtensionLog {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.extensionLogs.snapshot()
 }
 
 // redactExtensionLog scrubs sensitive data from extension log fields before storage.
-func (c *Capture) redactExtensionLog(log ExtensionLog) ExtensionLog {
+func (c *Capture) redactExtensionLog(log types.ExtensionLog) types.ExtensionLog {
 	if c.logRedactor == nil {
 		return log
 	}
@@ -102,21 +103,21 @@ func redactJSONValue(value any, redactFn func(string) string) any {
 }
 
 // append adds one extension log entry and applies amortized eviction.
-func (b *ExtensionLogBuffer) append(log ExtensionLog) {
+func (b *ExtensionLogBuffer) append(log types.ExtensionLog) {
 	b.logs = append(b.logs, log)
 	evictionThreshold := MaxExtensionLogs + MaxExtensionLogs/2
 	if len(b.logs) <= evictionThreshold {
 		return
 	}
 
-	kept := make([]ExtensionLog, MaxExtensionLogs)
+	kept := make([]types.ExtensionLog, MaxExtensionLogs)
 	copy(kept, b.logs[len(b.logs)-MaxExtensionLogs:])
 	b.logs = kept
 }
 
 // snapshot returns a detached copy of the buffer contents.
-func (b *ExtensionLogBuffer) snapshot() []ExtensionLog {
-	out := make([]ExtensionLog, len(b.logs))
+func (b *ExtensionLogBuffer) snapshot() []types.ExtensionLog {
+	out := make([]types.ExtensionLog, len(b.logs))
 	copy(out, b.logs)
 	return out
 }
@@ -124,23 +125,23 @@ func (b *ExtensionLogBuffer) snapshot() []ExtensionLog {
 // clear removes all buffered logs and returns removed count.
 func (b *ExtensionLogBuffer) clear() int {
 	count := len(b.logs)
-	b.logs = make([]ExtensionLog, 0)
+	b.logs = make([]types.ExtensionLog, 0)
 	return count
 }
 
-func (c *Capture) logPollingActivity(entry PollingLogEntry) {
+func (c *Capture) logPollingActivity(entry types.PollingLogEntry) {
 	c.debug.LogPollingActivity(entry)
 }
 
-func (c *Capture) LogHTTPDebugEntry(entry HTTPDebugEntry) {
+func (c *Capture) LogHTTPDebugEntry(entry types.HTTPDebugEntry) {
 	c.debug.LogHTTPDebugEntry(c.redactHTTPDebugEntry(entry))
 }
 
-func (c *Capture) GetHTTPDebugLog() []HTTPDebugEntry {
+func (c *Capture) GetHTTPDebugLog() []types.HTTPDebugEntry {
 	return c.debug.GetHTTPDebugLog()
 }
 
-func (c *Capture) redactHTTPDebugEntry(entry HTTPDebugEntry) HTTPDebugEntry {
+func (c *Capture) redactHTTPDebugEntry(entry types.HTTPDebugEntry) types.HTTPDebugEntry {
 	if c.logRedactor == nil {
 		return entry
 	}

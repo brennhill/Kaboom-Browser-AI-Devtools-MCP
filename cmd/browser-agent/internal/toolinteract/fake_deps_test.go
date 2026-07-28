@@ -5,6 +5,7 @@ package toolinteract
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -158,7 +159,7 @@ func (fs *fakeState) deps() *Deps {
 		Capture: func() *capture.Capture { return fs.cap },
 
 		RecordAIAction:           func(action, url string, extra map[string]any) { fs.record(action) },
-		RecordAIEnhancedAction:   func(action capture.EnhancedAction) { fs.record("enhanced") },
+		RecordAIEnhancedAction:   func(action types.EnhancedAction) { fs.record("enhanced") },
 		RecordDOMPrimitiveAction: func(action, selector, text, value string) { fs.record("dom:" + action) },
 
 		ToolInteract: func(req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {

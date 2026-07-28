@@ -5,9 +5,9 @@ package sri
 
 import (
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -76,7 +76,7 @@ func isPlaceholderBody(body string) bool {
 //
 // Failure semantics:
 // - Placeholder/truncated bodies are surfaced as warnings and skipped from hash output.
-func (g *Generator) evaluateBody(body capture.NetworkBody, cfg filterConfig, seenURLs map[string]bool) bodyOutcome {
+func (g *Generator) evaluateBody(body types.NetworkBody, cfg filterConfig, seenURLs map[string]bool) bodyOutcome {
 	if body.ResponseBody == "" {
 		return bodyOutcome{skip: true}
 	}
@@ -137,7 +137,7 @@ func buildWarnings(truncated, placeholder, varyUA []string) []string {
 //
 // Failure semantics:
 // - Non-hashable resources are excluded with warnings instead of aborting the run.
-func (g *Generator) Generate(bodies []capture.NetworkBody, pageURLs []string, params Params) Result {
+func (g *Generator) Generate(bodies []types.NetworkBody, pageURLs []string, params Params) Result {
 	cfg := newFilterConfig(pageURLs, params)
 	result := Result{Resources: []Resource{}, Warnings: []string{}}
 	seenURLs := make(map[string]bool)

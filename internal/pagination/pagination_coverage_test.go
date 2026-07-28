@@ -5,9 +5,8 @@
 package pagination
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // ============================================
@@ -105,6 +104,7 @@ func TestEntryStr_NonStringValue(t *testing.T) {
 		t.Errorf("entryStr(int value) = %q, want empty", got)
 	}
 }
+
 // ============================================
 // resolveCursorType — "since" branch
 // ============================================
@@ -323,9 +323,9 @@ func TestSerializeActionEntryWithSequence_NoOptionalFields(t *testing.T) {
 
 func TestSerializeWebSocketEntryWithSequence_AllOptionalFields(t *testing.T) {
 	t.Parallel()
-	sampled := &capture.SamplingInfo{Rate: "1/10", Logged: "5", Window: "60s"}
+	sampled := &types.SamplingInfo{Rate: "1/10", Logged: "5", Window: "60s"}
 	event := WebSocketEntryWithSequence{
-		Entry: capture.WebSocketEvent{
+		Entry: types.WebSocketEvent{
 			Event:            "message",
 			ID:               "ws-42",
 			URL:              "wss://echo.example.com",
@@ -383,9 +383,9 @@ func TestSerializeWebSocketEntryWithSequence_AllOptionalFields(t *testing.T) {
 	if result["tab_id"] != 7 {
 		t.Errorf("tab_id = %v, want 7", result["tab_id"])
 	}
-	gotSampled, ok := result["sampled"].(*capture.SamplingInfo)
+	gotSampled, ok := result["sampled"].(*types.SamplingInfo)
 	if !ok {
-		t.Fatalf("sampled is not *capture.SamplingInfo, got %T", result["sampled"])
+		t.Fatalf("sampled is not *types.SamplingInfo, got %T", result["sampled"])
 	}
 	if gotSampled.Rate != "1/10" {
 		t.Errorf("sampled.Rate = %q, want %q", gotSampled.Rate, "1/10")
@@ -395,7 +395,7 @@ func TestSerializeWebSocketEntryWithSequence_AllOptionalFields(t *testing.T) {
 func TestSerializeWebSocketEntryWithSequence_NoOptionalFields(t *testing.T) {
 	t.Parallel()
 	event := WebSocketEntryWithSequence{
-		Entry: capture.WebSocketEvent{
+		Entry: types.WebSocketEvent{
 			Event: "open",
 			ID:    "ws-1",
 		},

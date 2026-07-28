@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
@@ -108,8 +107,8 @@ type pageIssuesChecker struct {
 
 // Pre-fetch shared data once to avoid redundant buffer copies across parallel checkers.
 type sharedPageData struct {
-	networkBodies    []capture.NetworkBody
-	waterfallEntries []capture.NetworkWaterfallEntry
+	networkBodies    []types.NetworkBody
+	waterfallEntries []types.NetworkWaterfallEntry
 	logEntries       []types.LogEntry
 	consoleEntries   []scan.LogEntry
 	tabURL           string
@@ -269,7 +268,7 @@ func collectConsoleErrors(entries []types.LogEntry, limit int) []map[string]any 
 }
 
 // collectNetworkFailures gathers HTTP 4xx/5xx from pre-fetched data.
-func collectNetworkFailures(bodies []capture.NetworkBody, limit int) []map[string]any {
+func collectNetworkFailures(bodies []types.NetworkBody, limit int) []map[string]any {
 	issues := make([]map[string]any, 0)
 	for _, b := range bodies {
 		if b.Status < 400 {

@@ -6,11 +6,11 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -60,7 +60,7 @@ func TestToolGenerateCSP_WithNetworkBodies(t *testing.T) {
 	t.Parallel()
 	env := newObserveTestEnv(t)
 
-	env.capture.AddNetworkBodiesForTest([]capture.NetworkBody{
+	env.capture.AddNetworkBodiesForTest([]types.NetworkBody{
 		{URL: "https://cdn.example.com/app.js", ContentType: "application/javascript", Method: "GET", Status: 200},
 		{URL: "https://cdn.example.com/style.css", ContentType: "text/css", Method: "GET", Status: 200},
 		{URL: "https://api.example.com/data", ContentType: "application/json", Method: "GET", Status: 200},

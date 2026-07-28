@@ -10,12 +10,12 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
 )
@@ -33,7 +33,7 @@ func TestGetNetworkBodies_EmptyWithWaterfallData_ReturnsHint(t *testing.T) {
 	env := newToolTestEnv(t)
 
 	// Add waterfall entries (network requests exist)
-	waterfallEntries := []capture.NetworkWaterfallEntry{
+	waterfallEntries := []types.NetworkWaterfallEntry{
 		{
 			URL:           "https://api.github.com/repos",
 			InitiatorType: "fetch",
@@ -127,7 +127,7 @@ func TestGetNetworkBodies_NonEmpty_NoHint(t *testing.T) {
 
 	env := newToolTestEnv(t)
 
-	env.capture.AddNetworkBodiesForTest([]capture.NetworkBody{
+	env.capture.AddNetworkBodiesForTest([]types.NetworkBody{
 		{
 			URL:          "https://api.github.com/repos",
 			Method:       "GET",
@@ -161,7 +161,7 @@ func TestGetNetworkBodies_EmptyWithURLFilter_HintMentionsFilter(t *testing.T) {
 	env := newToolTestEnv(t)
 
 	// Add a body that won't match the filter
-	env.capture.AddNetworkBodiesForTest([]capture.NetworkBody{
+	env.capture.AddNetworkBodiesForTest([]types.NetworkBody{
 		{
 			URL:          "https://api.example.com/users",
 			Method:       "GET",
@@ -238,7 +238,7 @@ func TestGetWSEvents_NonEmpty_NoHint(t *testing.T) {
 
 	env := newToolTestEnv(t)
 
-	env.capture.AddWebSocketEventsForTest([]capture.WebSocketEvent{
+	env.capture.AddWebSocketEventsForTest([]types.WebSocketEvent{
 		{
 			URL:       "wss://stream.example.com/ws",
 			Type:      "message",
@@ -303,9 +303,9 @@ func TestGetWSStatus_SummaryMode_ReturnsCompactShape(t *testing.T) {
 	now := time.Now()
 
 	wsPayload := struct {
-		Events []capture.WebSocketEvent `json:"events"`
+		Events []types.WebSocketEvent `json:"events"`
 	}{
-		Events: []capture.WebSocketEvent{
+		Events: []types.WebSocketEvent{
 			{
 				URL:       "wss://realtime.example.com/live",
 				Type:      "websocket",

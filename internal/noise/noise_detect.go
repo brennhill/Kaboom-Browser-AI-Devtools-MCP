@@ -18,7 +18,7 @@ import (
 // High-confidence proposals (>= 0.9) are automatically applied.
 // Note: This function holds a write lock for the entire analysis. It is designed for
 // infrequent manual invocation via the MCP tool, not for hot-path usage.
-func (nc *NoiseConfig) AutoDetect(consoleEntries []types.LogEntry, networkBodies []capture.NetworkBody, wsEvents []capture.WebSocketEvent) []NoiseProposal {
+func (nc *NoiseConfig) AutoDetect(consoleEntries []types.LogEntry, networkBodies []types.NetworkBody, wsEvents []types.WebSocketEvent) []NoiseProposal {
 	nc.mu.Lock()
 	defer nc.mu.Unlock()
 
@@ -97,7 +97,7 @@ func (nc *NoiseConfig) detectNodeModuleSources(entries []types.LogEntry) []Noise
 }
 
 // detectInfrastructureURLs proposes rules for high-frequency infrastructure network paths.
-func (nc *NoiseConfig) detectInfrastructureURLs(bodies []capture.NetworkBody) []NoiseProposal {
+func (nc *NoiseConfig) detectInfrastructureURLs(bodies []types.NetworkBody) []NoiseProposal {
 	if len(bodies) == 0 {
 		return nil
 	}

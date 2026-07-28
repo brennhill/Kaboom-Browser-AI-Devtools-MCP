@@ -7,16 +7,16 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"os"
 	"sort"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	gen "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/generate"
 )
 
 func TestGoldenCSPModerate(t *testing.T) {
-	networkBodies := []capture.NetworkBody{
+	networkBodies := []types.NetworkBody{
 		{URL: "https://cdn.example.com/app.js", ContentType: "application/javascript"},
 		{URL: "https://cdn.example.com/vendor.js", ContentType: "application/javascript"},
 		{URL: "https://cdn.example.com/styles.css", ContentType: "text/css"},

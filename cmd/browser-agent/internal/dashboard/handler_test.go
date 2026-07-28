@@ -6,12 +6,11 @@ package dashboard
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 func testJSONResponse(w http.ResponseWriter, status int, value any) {
@@ -158,7 +157,7 @@ func TestParseMCPCommand_ToolCalls(t *testing.T) {
 }
 
 func TestBuildRecentCommands_UsesToolAndParams(t *testing.T) {
-	entries := []capture.HTTPDebugEntry{
+	entries := []types.HTTPDebugEntry{
 		{
 			Timestamp:      time.Now(),
 			Endpoint:       "/mcp",

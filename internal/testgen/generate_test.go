@@ -5,23 +5,22 @@
 package testgen
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // mockDataProvider implements DataProvider for testing.
 type mockDataProvider struct {
 	logEntries []map[string]any
-	actions    []capture.EnhancedAction
-	bodies     []capture.NetworkBody
+	actions    []types.EnhancedAction
+	bodies     []types.NetworkBody
 }
 
-func (m *mockDataProvider) GetLogEntries() []map[string]any         { return m.logEntries }
-func (m *mockDataProvider) GetAllEnhancedActions() []capture.EnhancedAction { return m.actions }
-func (m *mockDataProvider) GetNetworkBodies() []capture.NetworkBody { return m.bodies }
+func (m *mockDataProvider) GetLogEntries() []map[string]any               { return m.logEntries }
+func (m *mockDataProvider) GetAllEnhancedActions() []types.EnhancedAction { return m.actions }
+func (m *mockDataProvider) GetNetworkBodies() []types.NetworkBody         { return m.bodies }
 
 // ============================================
 // Tests for FindTargetError
@@ -131,7 +130,7 @@ func TestGetActionsInTimeWindow_NoActions(t *testing.T) {
 func TestGetActionsInTimeWindow_NoneInWindow(t *testing.T) {
 	t.Parallel()
 	dp := &mockDataProvider{
-		actions: []capture.EnhancedAction{
+		actions: []types.EnhancedAction{
 			{Type: "click", Timestamp: 1000},
 			{Type: "input", Timestamp: 2000},
 		},
@@ -146,7 +145,7 @@ func TestGetActionsInTimeWindow_NoneInWindow(t *testing.T) {
 func TestGetActionsInTimeWindow_AllInWindow(t *testing.T) {
 	t.Parallel()
 	dp := &mockDataProvider{
-		actions: []capture.EnhancedAction{
+		actions: []types.EnhancedAction{
 			{Type: "click", Timestamp: 900},
 			{Type: "input", Timestamp: 1000},
 			{Type: "navigate", Timestamp: 1100},
@@ -165,7 +164,7 @@ func TestGetActionsInTimeWindow_AllInWindow(t *testing.T) {
 func TestGetActionsInTimeWindow_PartialMatch(t *testing.T) {
 	t.Parallel()
 	dp := &mockDataProvider{
-		actions: []capture.EnhancedAction{
+		actions: []types.EnhancedAction{
 			{Type: "click", Timestamp: 100},
 			{Type: "input", Timestamp: 900},
 			{Type: "navigate", Timestamp: 1000},
@@ -186,7 +185,7 @@ func TestGetActionsInTimeWindow_PartialMatch(t *testing.T) {
 func TestGetActionsInTimeWindow_ExactBoundary(t *testing.T) {
 	t.Parallel()
 	dp := &mockDataProvider{
-		actions: []capture.EnhancedAction{
+		actions: []types.EnhancedAction{
 			{Type: "click", Timestamp: 500},
 			{Type: "input", Timestamp: 1500},
 		},
@@ -217,7 +216,7 @@ func TestCountNetworkAssertions_Empty(t *testing.T) {
 func TestCountNetworkAssertions_WithBodies(t *testing.T) {
 	t.Parallel()
 	dp := &mockDataProvider{
-		bodies: []capture.NetworkBody{
+		bodies: []types.NetworkBody{
 			{Method: "GET", URL: "/api/users", Status: 200},
 			{Method: "POST", URL: "/api/login", Status: 201},
 			{Method: "GET", URL: "/api/data", Status: 0},
@@ -232,7 +231,7 @@ func TestCountNetworkAssertions_WithBodies(t *testing.T) {
 func TestCountNetworkAssertions_NegativeStatusIgnored(t *testing.T) {
 	t.Parallel()
 	dp := &mockDataProvider{
-		bodies: []capture.NetworkBody{{Method: "GET", URL: "/api/a", Status: -1}},
+		bodies: []types.NetworkBody{{Method: "GET", URL: "/api/a", Status: -1}},
 	}
 
 	if count := CountNetworkAssertions(dp); count != 0 {
@@ -349,7 +348,7 @@ func TestGenerateTestFromError_Success(t *testing.T) {
 		logEntries: []map[string]any{
 			{"level": "error", "message": "click failed", "error_id": "e1", "ts": errorTime.Format(time.RFC3339)},
 		},
-		actions: []capture.EnhancedAction{
+		actions: []types.EnhancedAction{
 			{
 				Type: "click", Selectors: map[string]any{"target": "#submit-btn"},
 				URL: "https://app.example.com", Timestamp: errorTime.Add(-2 * time.Second).UnixMilli(),
@@ -397,7 +396,7 @@ func TestGenerateTestFromInteraction_NoActions(t *testing.T) {
 func TestGenerateTestFromInteraction_Basic(t *testing.T) {
 	t.Parallel()
 	dp := &mockDataProvider{
-		actions: []capture.EnhancedAction{
+		actions: []types.EnhancedAction{
 			{Type: "click", Selectors: map[string]any{"target": "#btn", "testId": "submit"}, URL: "https://app.example.com"},
 			{Type: "input", Selectors: map[string]any{"target": "#email"}, Value: "user@test.com"},
 		},
@@ -427,10 +426,10 @@ func TestGenerateTestFromInteraction_Basic(t *testing.T) {
 func TestGenerateTestFromInteraction_WithMocks(t *testing.T) {
 	t.Parallel()
 	dp := &mockDataProvider{
-		actions: []capture.EnhancedAction{
+		actions: []types.EnhancedAction{
 			{Type: "click", Selectors: map[string]any{"target": "#btn"}},
 		},
-		bodies: []capture.NetworkBody{
+		bodies: []types.NetworkBody{
 			{Method: "GET", URL: "/api/data", Status: 200},
 			{Method: "POST", URL: "/api/submit", Status: 201},
 			{Method: "GET", URL: "/api/noop", Status: 0},
@@ -469,7 +468,7 @@ func TestGenerateTestFromRegression_NoActions(t *testing.T) {
 func TestGenerateTestFromRegression_CleanBaseline(t *testing.T) {
 	t.Parallel()
 	dp := &mockDataProvider{
-		actions: []capture.EnhancedAction{
+		actions: []types.EnhancedAction{
 			{Type: "click", Selectors: map[string]any{"target": "#submit"}},
 			{Type: "navigate", ToURL: "https://app.example.com/dashboard"},
 		},
@@ -496,14 +495,14 @@ func TestGenerateTestFromRegression_CleanBaseline(t *testing.T) {
 func TestGenerateTestFromRegression_WithErrorsAndNetwork(t *testing.T) {
 	t.Parallel()
 	dp := &mockDataProvider{
-		actions: []capture.EnhancedAction{
+		actions: []types.EnhancedAction{
 			{Type: "click", Selectors: map[string]any{"target": "#btn"}},
 		},
 		logEntries: []map[string]any{
 			{"level": "error", "message": "TypeError: undefined is not a function"},
 			{"level": "error", "message": "ReferenceError: x is not defined"},
 		},
-		bodies: []capture.NetworkBody{
+		bodies: []types.NetworkBody{
 			{Method: "GET", URL: "/api/users", Status: 200},
 		},
 	}

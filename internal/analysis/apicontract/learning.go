@@ -6,14 +6,13 @@ package apicontract
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"time"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // Learn records a network body observation for contract tracking.
-func (v *APIContractValidator) Learn(body capture.NetworkBody) {
+func (v *APIContractValidator) Learn(body types.NetworkBody) {
 	v.mu.Lock()
 	defer v.mu.Unlock()
 
@@ -47,7 +46,7 @@ func (v *APIContractValidator) getOrCreateTracker(endpoint string) *EndpointTrac
 	return tracker
 }
 
-func (v *APIContractValidator) learnShape(tracker *EndpointTracker, body capture.NetworkBody) {
+func (v *APIContractValidator) learnShape(tracker *EndpointTracker, body types.NetworkBody) {
 	if body.ResponseBody == "" {
 		return
 	}

@@ -6,17 +6,16 @@ package reproduction
 
 import (
 	"bytes"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"os"
 	"regexp"
 	"testing"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 var updateGolden = os.Getenv("UPDATE_GOLDEN") == "1"
 
 func TestGoldenReproductionPlaywright(t *testing.T) {
-	actions := []capture.EnhancedAction{
+	actions := []types.EnhancedAction{
 		{
 			Type:      "navigate",
 			Timestamp: 1705312800000,

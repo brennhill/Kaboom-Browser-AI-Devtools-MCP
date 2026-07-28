@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -25,7 +24,7 @@ func TestAutoDetect_AllEmptyInputs(t *testing.T) {
 		t.Fatalf("expected 0 proposals for nil inputs, got %d", len(proposals))
 	}
 
-	proposals = nc.AutoDetect([]types.LogEntry{}, []capture.NetworkBody{}, []capture.WebSocketEvent{})
+	proposals = nc.AutoDetect([]types.LogEntry{}, []types.NetworkBody{}, []types.WebSocketEvent{})
 	if len(proposals) != 0 {
 		t.Fatalf("expected 0 proposals for empty slices, got %d", len(proposals))
 	}
@@ -233,9 +232,9 @@ func TestAutoDetect_InfraURLsBelowThreshold(t *testing.T) {
 	nc := NewNoiseConfig()
 
 	// 19 requests (threshold is 20)
-	bodies := make([]capture.NetworkBody, 19)
+	bodies := make([]types.NetworkBody, 19)
 	for i := range bodies {
-		bodies[i] = capture.NetworkBody{
+		bodies[i] = types.NetworkBody{
 			URL:    "http://localhost:3000/health",
 			Method: "GET",
 			Status: 200,
@@ -259,9 +258,9 @@ func TestAutoDetect_NonInfraPathIgnored(t *testing.T) {
 	nc := NewNoiseConfig()
 
 	// 25 requests to a non-infrastructure path
-	bodies := make([]capture.NetworkBody, 25)
+	bodies := make([]types.NetworkBody, 25)
 	for i := range bodies {
-		bodies[i] = capture.NetworkBody{
+		bodies[i] = types.NetworkBody{
 			URL:    "http://localhost:3000/api/users",
 			Method: "GET",
 			Status: 200,
@@ -423,9 +422,9 @@ func TestAutoDetect_AllInfraPatterns(t *testing.T) {
 	for _, path := range infraPaths {
 		nc := NewNoiseConfig()
 
-		bodies := make([]capture.NetworkBody, 25)
+		bodies := make([]types.NetworkBody, 25)
 		for i := range bodies {
-			bodies[i] = capture.NetworkBody{
+			bodies[i] = types.NetworkBody{
 				URL:    "http://localhost:3000" + path,
 				Method: "GET",
 				Status: 200,
@@ -544,9 +543,9 @@ func TestAutoDetect_InfraReasonString(t *testing.T) {
 	t.Parallel()
 	nc := NewNoiseConfig()
 
-	bodies := make([]capture.NetworkBody, 30)
+	bodies := make([]types.NetworkBody, 30)
 	for i := range bodies {
-		bodies[i] = capture.NetworkBody{
+		bodies[i] = types.NetworkBody{
 			URL:    "http://localhost:3000/ping",
 			Method: "GET",
 			Status: 200,
@@ -571,9 +570,9 @@ func TestAutoDetect_EmptyURLPathIgnored(t *testing.T) {
 	t.Parallel()
 	nc := NewNoiseConfig()
 
-	bodies := make([]capture.NetworkBody, 25)
+	bodies := make([]types.NetworkBody, 25)
 	for i := range bodies {
-		bodies[i] = capture.NetworkBody{
+		bodies[i] = types.NetworkBody{
 			URL:    "", // empty URL
 			Method: "GET",
 			Status: 200,

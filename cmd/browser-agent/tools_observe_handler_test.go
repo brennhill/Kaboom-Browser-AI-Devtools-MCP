@@ -9,12 +9,12 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolobserve"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -368,7 +368,7 @@ func TestToolsObserveExtensionLogs_ResponseFields(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 
-	cap.AddExtensionLogs([]capture.ExtensionLog{{
+	cap.AddExtensionLogs([]types.ExtensionLog{{
 		Level:     "info",
 		Message:   "Extension started",
 		Source:    "background.js",
@@ -412,7 +412,7 @@ func TestToolsObserveNetworkBodies_ResponseFields(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 
-	cap.AddNetworkBodies([]capture.NetworkBody{
+	cap.AddNetworkBodies([]types.NetworkBody{
 		{
 			URL:         "https://api.example.com/users",
 			Method:      "GET",
@@ -448,7 +448,7 @@ func TestToolsObserveNetworkBodies_Filters(t *testing.T) {
 	h, _, cap := makeToolHandler(t)
 
 	ts := time.Now().UTC().Format(time.RFC3339)
-	cap.AddNetworkBodies([]capture.NetworkBody{
+	cap.AddNetworkBodies([]types.NetworkBody{
 		{URL: "https://api.example.com/users", Method: "GET", Status: 200, Timestamp: ts},
 		{URL: "https://api.example.com/orders", Method: "POST", Status: 201, Timestamp: ts},
 		{URL: "https://other.com/data", Method: "GET", Status: 404, Timestamp: ts},
@@ -488,7 +488,7 @@ func TestToolsObserveNetworkBodies_BodyPathFilter(t *testing.T) {
 	h, _, cap := makeToolHandler(t)
 
 	ts := time.Now().UTC().Format(time.RFC3339)
-	cap.AddNetworkBodies([]capture.NetworkBody{
+	cap.AddNetworkBodies([]types.NetworkBody{
 		{
 			URL:          "https://api.example.com/graphql",
 			Method:       "POST",
@@ -538,7 +538,7 @@ func TestToolsObserveNetworkBodies_BodyPathValidation(t *testing.T) {
 	h, _, cap := makeToolHandler(t)
 
 	ts := time.Now().UTC().Format(time.RFC3339)
-	cap.AddNetworkBodies([]capture.NetworkBody{
+	cap.AddNetworkBodies([]types.NetworkBody{
 		{
 			URL:          "https://api.example.com/data",
 			Method:       "GET",
@@ -564,7 +564,7 @@ func TestToolsObserveWSEvents_ResponseFields(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 
-	cap.AddWebSocketEvents([]capture.WebSocketEvent{
+	cap.AddWebSocketEvents([]types.WebSocketEvent{
 		{
 			ID:        "ws-1",
 			URL:       "wss://stream.example.com",
@@ -598,7 +598,7 @@ func TestToolsObserveActions_ResponseFields(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 
-	cap.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	cap.AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "click", Timestamp: time.Now().UnixMilli(), URL: "https://example.com"},
 	})
 

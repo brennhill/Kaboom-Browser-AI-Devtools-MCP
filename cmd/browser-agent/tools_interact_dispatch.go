@@ -6,6 +6,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"math/rand/v2"
 	"sort"
 	"strings"
@@ -15,7 +16,6 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolresp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolrouting"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
@@ -348,19 +348,19 @@ func mergeAsyncAlias(args json.RawMessage) json.RawMessage {
 }
 
 func (h *ToolHandler) recordAIAction(actionType, url string, details map[string]any) {
-	action := capture.EnhancedAction{
+	action := types.EnhancedAction{
 		Type: actionType, Timestamp: time.Now().UnixMilli(), URL: url, Source: "ai",
 	}
 	if len(details) > 0 {
 		action.Selectors = details
 	}
-	h.capture.AddEnhancedActions([]capture.EnhancedAction{action})
+	h.capture.AddEnhancedActions([]types.EnhancedAction{action})
 }
 
-func (h *ToolHandler) recordAIEnhancedAction(action capture.EnhancedAction) {
+func (h *ToolHandler) recordAIEnhancedAction(action types.EnhancedAction) {
 	action.Timestamp = time.Now().UnixMilli()
 	action.Source = "ai"
-	h.capture.AddEnhancedActions([]capture.EnhancedAction{action})
+	h.capture.AddEnhancedActions([]types.EnhancedAction{action})
 }
 
 func (h *ToolHandler) recordDOMPrimitiveAction(action, selector, text, value string) {
@@ -369,7 +369,7 @@ func (h *ToolHandler) recordDOMPrimitiveAction(action, selector, text, value str
 		h.recordAIAction("dom_"+action, "", map[string]any{"selector": selector})
 		return
 	}
-	enhanced := capture.EnhancedAction{
+	enhanced := types.EnhancedAction{
 		Type: reproType, Selectors: act.ParseSelectorForReproduction(selector),
 	}
 	switch action {

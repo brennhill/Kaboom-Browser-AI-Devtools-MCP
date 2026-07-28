@@ -4,6 +4,7 @@
 package capture
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 	"time"
 )
@@ -12,13 +13,13 @@ import (
 // Per-Buffer Memory Tracking Tests
 // ============================================
 
-// Helper: create a WebSocketEvent with a specific data size
-func makeWSEvent(dataSize int) WebSocketEvent {
+// Helper: create a types.WebSocketEvent with a specific data size
+func makeWSEvent(dataSize int) types.WebSocketEvent {
 	data := make([]byte, dataSize)
 	for i := range data {
 		data[i] = 'x'
 	}
-	return WebSocketEvent{
+	return types.WebSocketEvent{
 		ID:        "conn-1",
 		Event:     "message",
 		Direction: "incoming",
@@ -27,8 +28,8 @@ func makeWSEvent(dataSize int) WebSocketEvent {
 	}
 }
 
-// Helper: create a NetworkBody with specific body sizes
-func makeNetworkBody(reqSize, respSize int) NetworkBody {
+// Helper: create a types.NetworkBody with specific body sizes
+func makeNetworkBody(reqSize, respSize int) types.NetworkBody {
 	reqBody := make([]byte, reqSize)
 	for i := range reqBody {
 		reqBody[i] = 'r'
@@ -37,7 +38,7 @@ func makeNetworkBody(reqSize, respSize int) NetworkBody {
 	for i := range respBody {
 		respBody[i] = 'R'
 	}
-	return NetworkBody{
+	return types.NetworkBody{
 		Method:       "GET",
 		URL:          "http://example.com/api",
 		Status:       200,
@@ -46,9 +47,9 @@ func makeNetworkBody(reqSize, respSize int) NetworkBody {
 	}
 }
 
-// Helper: create an EnhancedAction
-func makeAction() EnhancedAction {
-	return EnhancedAction{
+// Helper: create an types.EnhancedAction
+func makeAction() types.EnhancedAction {
+	return types.EnhancedAction{
 		Type:      "click",
 		Timestamp: time.Now().UnixMilli(),
 		URL:       "http://example.com",
@@ -68,18 +69,18 @@ func recalcMemoryTotals(c *Capture) {
 	}
 }
 
-// extractWSEvents extracts WebSocketEvent values from entry wrappers (test helper).
-func extractWSEvents(entries []wsEventEntry) []WebSocketEvent {
-	out := make([]WebSocketEvent, len(entries))
+// extractWSEvents extracts types.WebSocketEvent values from entry wrappers (test helper).
+func extractWSEvents(entries []wsEventEntry) []types.WebSocketEvent {
+	out := make([]types.WebSocketEvent, len(entries))
 	for i := range entries {
 		out[i] = entries[i].Event
 	}
 	return out
 }
 
-// extractNetworkBodies extracts NetworkBody values from entry wrappers (test helper).
-func extractNetworkBodies(entries []networkBodyEntry) []NetworkBody {
-	out := make([]NetworkBody, len(entries))
+// extractNetworkBodies extracts types.NetworkBody values from entry wrappers (test helper).
+func extractNetworkBodies(entries []networkBodyEntry) []types.NetworkBody {
+	out := make([]types.NetworkBody, len(entries))
 	for i := range entries {
 		out[i] = entries[i].Body
 	}
@@ -87,7 +88,7 @@ func extractNetworkBodies(entries []networkBodyEntry) []NetworkBody {
 }
 
 // bruteForceWSMemory recalculates WS memory by iterating all events (reference implementation).
-func bruteForceWSMemory(events []WebSocketEvent) int64 {
+func bruteForceWSMemory(events []types.WebSocketEvent) int64 {
 	var total int64
 	for i := range events {
 		total += int64(len(events[i].Data)) + wsEventOverhead
@@ -96,7 +97,7 @@ func bruteForceWSMemory(events []WebSocketEvent) int64 {
 }
 
 // bruteForceNBMemory recalculates NB memory by iterating all bodies (reference implementation).
-func bruteForceNBMemory(bodies []NetworkBody) int64 {
+func bruteForceNBMemory(bodies []types.NetworkBody) int64 {
 	var total int64
 	for i := range bodies {
 		total += int64(len(bodies[i].RequestBody)+len(bodies[i].ResponseBody)) + networkBodyOverhead
@@ -168,7 +169,7 @@ func TestMemory_RunningTotal_WSAccurateAfterAdd(t *testing.T) {
 	t.Parallel()
 	c := NewCapture()
 
-	events := []WebSocketEvent{
+	events := []types.WebSocketEvent{
 		makeWSEvent(500),
 		makeWSEvent(1000),
 		makeWSEvent(2000),
@@ -189,7 +190,7 @@ func TestMemory_RunningTotal_NBAccurateAfterAdd(t *testing.T) {
 	t.Parallel()
 	c := NewCapture()
 
-	bodies := []NetworkBody{
+	bodies := []types.NetworkBody{
 		makeNetworkBody(500, 500),
 		makeNetworkBody(1000, 2000),
 	}
@@ -210,7 +211,7 @@ func TestMemory_RunningTotal_WSAccurateAfterRotation(t *testing.T) {
 	c := NewCapture()
 
 	// Fill to capacity, then add more to trigger ring buffer rotation
-	events := make([]WebSocketEvent, MaxWSEvents+10)
+	events := make([]types.WebSocketEvent, MaxWSEvents+10)
 	for i := range events {
 		events[i] = makeWSEvent(100 + i)
 	}
@@ -235,7 +236,7 @@ func TestMemory_RunningTotal_NBAccurateAfterRotation(t *testing.T) {
 	c := NewCapture()
 
 	// Fill to capacity, then add more to trigger ring buffer rotation
-	bodies := make([]NetworkBody, MaxNetworkBodies+5)
+	bodies := make([]types.NetworkBody, MaxNetworkBodies+5)
 	for i := range bodies {
 		bodies[i] = makeNetworkBody(100+i, 200+i)
 	}
@@ -261,7 +262,7 @@ func TestMemory_RunningTotal_WSAccurateAfterPerBufferEviction(t *testing.T) {
 
 	// Add events that exceed per-buffer WS memory limit (4MB)
 	// Each event with 50KB data = ~50200 bytes; 100 events = ~5MB
-	events := make([]WebSocketEvent, 100)
+	events := make([]types.WebSocketEvent, 100)
 	for i := range events {
 		events[i] = makeWSEvent(50000)
 	}
@@ -282,7 +283,7 @@ func TestMemory_RunningTotal_NBAccurateAfterPerBufferEviction(t *testing.T) {
 	c := NewCapture()
 
 	// Add bodies that exceed per-buffer NB memory limit (8MB)
-	bodies := make([]NetworkBody, 100)
+	bodies := make([]types.NetworkBody, 100)
 	for i := range bodies {
 		bodies[i] = makeNetworkBody(maxRequestBodySize, maxResponseBodySize)
 	}
@@ -302,8 +303,8 @@ func TestMemory_RunningTotal_ZeroAfterClearAll(t *testing.T) {
 	t.Parallel()
 	c := NewCapture()
 
-	c.AddWebSocketEvents([]WebSocketEvent{makeWSEvent(1000), makeWSEvent(2000)})
-	c.AddNetworkBodies([]NetworkBody{makeNetworkBody(500, 500), makeNetworkBody(1000, 1000)})
+	c.AddWebSocketEvents([]types.WebSocketEvent{makeWSEvent(1000), makeWSEvent(2000)})
+	c.AddNetworkBodies([]types.NetworkBody{makeNetworkBody(500, 500), makeNetworkBody(1000, 1000)})
 
 	c.mu.RLock()
 	wsBefore := c.buffers.wsMemoryTotal
@@ -336,7 +337,7 @@ func TestMemory_CalcWSMemory_ReturnsRunningTotal(t *testing.T) {
 	t.Parallel()
 	c := NewCapture()
 
-	c.AddWebSocketEvents([]WebSocketEvent{makeWSEvent(500), makeWSEvent(1000)})
+	c.AddWebSocketEvents([]types.WebSocketEvent{makeWSEvent(500), makeWSEvent(1000)})
 
 	c.mu.RLock()
 	calcResult := c.buffers.calcWSMemory()
@@ -352,7 +353,7 @@ func TestMemory_CalcNBMemory_ReturnsRunningTotal(t *testing.T) {
 	t.Parallel()
 	c := NewCapture()
 
-	c.AddNetworkBodies([]NetworkBody{makeNetworkBody(500, 500)})
+	c.AddNetworkBodies([]types.NetworkBody{makeNetworkBody(500, 500)})
 
 	c.mu.RLock()
 	calcResult := c.buffers.calcNBMemory()
@@ -369,13 +370,13 @@ func TestMemory_RunningTotal_MultipleAddEvictCycles(t *testing.T) {
 	c := NewCapture()
 
 	// Cycle 1: add events
-	c.AddWebSocketEvents([]WebSocketEvent{makeWSEvent(500), makeWSEvent(1000)})
-	c.AddNetworkBodies([]NetworkBody{makeNetworkBody(200, 300)})
+	c.AddWebSocketEvents([]types.WebSocketEvent{makeWSEvent(500), makeWSEvent(1000)})
+	c.AddNetworkBodies([]types.NetworkBody{makeNetworkBody(200, 300)})
 
 	// Cycle 2: add more (may trigger rotation if near capacity)
 	for i := 0; i < 5; i++ {
-		c.AddWebSocketEvents([]WebSocketEvent{makeWSEvent(100 * (i + 1))})
-		c.AddNetworkBodies([]NetworkBody{makeNetworkBody(50*(i+1), 75*(i+1))})
+		c.AddWebSocketEvents([]types.WebSocketEvent{makeWSEvent(100 * (i + 1))})
+		c.AddNetworkBodies([]types.NetworkBody{makeNetworkBody(50*(i+1), 75*(i+1))})
 	}
 
 	c.mu.RLock()

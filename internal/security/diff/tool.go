@@ -8,15 +8,14 @@ package diff
 import (
 	"encoding/json"
 	"fmt"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // HandleDiffSecurity dispatches MCP diff tool actions.
 //
 // Failure semantics:
 // - Invalid JSON/action returns explicit error and performs no mutation.
-func (m *Manager) HandleDiffSecurity(params json.RawMessage, bodies []capture.NetworkBody) (any, error) {
+func (m *Manager) HandleDiffSecurity(params json.RawMessage, bodies []types.NetworkBody) (any, error) {
 	var toolParams struct {
 		Action      string `json:"action"`
 		Name        string `json:"name"`

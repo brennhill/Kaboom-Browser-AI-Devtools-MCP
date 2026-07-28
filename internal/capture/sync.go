@@ -7,6 +7,7 @@ package capture
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"net/http"
 	"os"
 	"strings"
@@ -61,7 +62,7 @@ type SyncRequest struct {
 	Settings *SyncSettings `json:"settings,omitempty"`
 
 	// Extension logs batch (replaces /extension-logs POST)
-	ExtensionLogs []ExtensionLog `json:"extension_logs,omitempty"`
+	ExtensionLogs []types.ExtensionLog `json:"extension_logs,omitempty"`
 
 	// Ack last processed command ID (for reliable delivery)
 	LastCommandAck string `json:"last_command_ack,omitempty"`
@@ -439,7 +440,7 @@ func (c *Capture) updateSyncLogs(req SyncRequest, now time.Time, pilotEnabled bo
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.logPollingActivity(PollingLogEntry{
+	c.logPollingActivity(types.PollingLogEntry{
 		Timestamp:    now,
 		Endpoint:     "sync",
 		Method:       "POST",

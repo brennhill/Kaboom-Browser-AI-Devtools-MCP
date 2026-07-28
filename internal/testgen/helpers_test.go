@@ -5,14 +5,13 @@
 package testgen
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/reproduction"
 )
-
 
 func TestGenerateTestFilename(t *testing.T) {
 	t.Parallel()
@@ -77,7 +76,7 @@ func TestGenerateTestFilename(t *testing.T) {
 func TestExtractSelectorsFromActions(t *testing.T) {
 	t.Parallel()
 
-	actions := []capture.EnhancedAction{
+	actions := []types.EnhancedAction{
 		{
 			Type: "click",
 			Selectors: map[string]any{
@@ -132,7 +131,7 @@ func TestNormalizeTimestamp(t *testing.T) {
 func TestGeneratePlaywrightScript(t *testing.T) {
 	t.Parallel()
 
-	actions := []capture.EnhancedAction{
+	actions := []types.EnhancedAction{
 		{Type: "click", Selectors: map[string]any{"id": "login"}},
 		{Type: "input", Selectors: map[string]any{"id": "email"}, Value: "user@example.com"},
 		{Type: "navigate", ToURL: "https://app.example.com/dashboard"},
@@ -162,26 +161,26 @@ func TestDeriveInteractionTestName(t *testing.T) {
 	if name := DeriveInteractionTestName(nil); name != "user-interaction" {
 		t.Fatalf("DeriveInteractionTestName(nil) = %q, want user-interaction", name)
 	}
-	if name := DeriveInteractionTestName([]capture.EnhancedAction{}); name != "user-interaction" {
+	if name := DeriveInteractionTestName([]types.EnhancedAction{}); name != "user-interaction" {
 		t.Fatalf("DeriveInteractionTestName([]) = %q, want user-interaction", name)
 	}
 
-	actions := []capture.EnhancedAction{{Type: "click", URL: "https://app.example.com/login"}}
+	actions := []types.EnhancedAction{{Type: "click", URL: "https://app.example.com/login"}}
 	if name := DeriveInteractionTestName(actions); name != "https://app.example.com/login" {
 		t.Fatalf("DeriveInteractionTestName(URL) = %q, want URL", name)
 	}
 
-	actions = []capture.EnhancedAction{{Type: "click", URL: ""}}
+	actions = []types.EnhancedAction{{Type: "click", URL: ""}}
 	if name := DeriveInteractionTestName(actions); name != "click-flow" {
 		t.Fatalf("DeriveInteractionTestName(Type) = %q, want click-flow", name)
 	}
 
-	actions = []capture.EnhancedAction{{URL: "", Type: ""}}
+	actions = []types.EnhancedAction{{URL: "", Type: ""}}
 	if name := DeriveInteractionTestName(actions); name != "user-interaction" {
 		t.Fatalf("DeriveInteractionTestName(empty) = %q, want user-interaction", name)
 	}
 
-	actions = []capture.EnhancedAction{{Type: "navigate", URL: "https://example.com"}}
+	actions = []types.EnhancedAction{{Type: "navigate", URL: "https://example.com"}}
 	if name := DeriveInteractionTestName(actions); name != "https://example.com" {
 		t.Fatalf("URL should take precedence over type; got %q", name)
 	}
@@ -220,7 +219,7 @@ func TestBuildRegressionAssertions_WithErrors(t *testing.T) {
 func TestBuildRegressionAssertions_WithNetworkBodies(t *testing.T) {
 	t.Parallel()
 
-	bodies := []capture.NetworkBody{
+	bodies := []types.NetworkBody{
 		{Method: "GET", URL: "/api/users", Status: 200},
 		{Method: "POST", URL: "/api/login", Status: 201},
 		{Method: "PUT", URL: "/api/update", Status: 204},
@@ -234,7 +233,7 @@ func TestBuildRegressionAssertions_WithNetworkBodies(t *testing.T) {
 func TestBuildRegressionAssertions_NetworkLimitedToThree(t *testing.T) {
 	t.Parallel()
 
-	bodies := []capture.NetworkBody{
+	bodies := []types.NetworkBody{
 		{Method: "GET", URL: "/api/1", Status: 200},
 		{Method: "GET", URL: "/api/2", Status: 200},
 		{Method: "GET", URL: "/api/3", Status: 200},
@@ -254,7 +253,7 @@ func TestBuildRegressionAssertions_NetworkLimitedToThree(t *testing.T) {
 func TestBuildRegressionAssertions_SkipsZeroStatusNetworkBodies(t *testing.T) {
 	t.Parallel()
 
-	bodies := []capture.NetworkBody{
+	bodies := []types.NetworkBody{
 		{Method: "GET", URL: "/api/ok", Status: 200},
 		{Method: "GET", URL: "/api/zero", Status: 0},
 	}

@@ -6,10 +6,10 @@
 package testgenhandler
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testgen"
 )
 
@@ -21,7 +21,7 @@ func TestBuildRegressionAssertions_ErrorsWithNetwork(t *testing.T) {
 	t.Parallel()
 
 	errors := []string{"some error"}
-	bodies := []capture.NetworkBody{
+	bodies := []types.NetworkBody{
 		{Method: "GET", URL: "/api/data", Status: 200},
 	}
 	assertions, count := testgen.BuildRegressionAssertions(errors, bodies)

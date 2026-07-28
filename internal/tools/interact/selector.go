@@ -3,7 +3,9 @@
 
 package interact
 
-import "strings"
+import (
+	"strings"
+)
 
 // ParseSelectorForReproduction converts an interact-tool selector string into
 // a selectors map compatible with the reproduction formatter.

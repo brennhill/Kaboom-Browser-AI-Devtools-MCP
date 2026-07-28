@@ -4,7 +4,9 @@
 
 package pagination
 
-import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+)
 
 // ============================================
 // WebSocket Pagination
@@ -12,9 +14,9 @@ import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 
 // WebSocketEntryWithSequence pairs a websocket event with its sequence number and timestamp for pagination.
 type WebSocketEntryWithSequence struct {
-	Entry     capture.WebSocketEvent
+	Entry     types.WebSocketEvent
 	Sequence  int64
-	Timestamp string // RFC3339 timestamp (already string in capture.WebSocketEvent)
+	Timestamp string // RFC3339 timestamp (already string in types.WebSocketEvent)
 }
 
 // GetSequence implements Sequenced.
@@ -25,7 +27,7 @@ func (e WebSocketEntryWithSequence) GetTimestamp() string { return e.Timestamp }
 
 // EnrichWebSocketEntries adds sequence numbers to websocket events for pagination.
 // Must be called with the UNFILTERED entry list to get correct sequence numbers.
-func EnrichWebSocketEntries(events []capture.WebSocketEvent, wsTotalAdded int64) []WebSocketEntryWithSequence {
+func EnrichWebSocketEntries(events []types.WebSocketEvent, wsTotalAdded int64) []WebSocketEntryWithSequence {
 	enriched := make([]WebSocketEntryWithSequence, len(events))
 	baseSeq := wsTotalAdded - int64(len(events)) + 1
 

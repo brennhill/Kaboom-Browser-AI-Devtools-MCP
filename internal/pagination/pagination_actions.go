@@ -4,7 +4,9 @@
 
 package pagination
 
-import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
+)
 
 // ============================================
 // Action Pagination
@@ -12,7 +14,7 @@ import "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 
 // ActionEntryWithSequence pairs an action entry with its sequence number and timestamp for pagination.
 type ActionEntryWithSequence struct {
-	Entry     capture.EnhancedAction
+	Entry     types.EnhancedAction
 	Sequence  int64
 	Timestamp string // RFC3339 normalized timestamp
 }
@@ -25,7 +27,7 @@ func (e ActionEntryWithSequence) GetTimestamp() string { return e.Timestamp }
 
 // EnrichActionEntries adds sequence numbers and normalized timestamps to action entries for pagination.
 // Must be called with the UNFILTERED entry list to get correct sequence numbers.
-func EnrichActionEntries(actions []capture.EnhancedAction, actionTotalAdded int64) []ActionEntryWithSequence {
+func EnrichActionEntries(actions []types.EnhancedAction, actionTotalAdded int64) []ActionEntryWithSequence {
 	enriched := make([]ActionEntryWithSequence, len(actions))
 	baseSeq := actionTotalAdded - int64(len(actions)) + 1
 

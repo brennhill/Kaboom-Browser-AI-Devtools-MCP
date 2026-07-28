@@ -13,11 +13,12 @@ package netflag
 
 import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
 // Analyze runs the full set of origin/resource checks for one network entry.
-func Analyze(entry capture.NetworkWaterfallEntry, pageURL string) []capture.SecurityFlag {
+func Analyze(entry types.NetworkWaterfallEntry, pageURL string) []capture.SecurityFlag {
 	origin := util.ExtractOrigin(entry.URL)
 	if origin == "" {
 		return nil

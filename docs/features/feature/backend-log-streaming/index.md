@@ -26,6 +26,8 @@ code_paths:
   - internal/capture/wsconn/doc.go
   - internal/capture/wsconn/status.go
   - internal/capture/wsconn/tracker.go
+  - internal/types/log.go
+  - internal/types/network.go
   - src/background/sync/server.ts
   - src/background/sync/circuit-breaker.ts
   - src/background/sync/batchers.ts
@@ -88,6 +90,8 @@ last_verified_date: 2026-04-13
 
 Capture dependencies use the canonical `capture.Capture` container type.
 The former `capture.Store` and `capture.Snapshot` aliases have been removed.
+Capture APIs and their callers use the canonical wire contracts from
+`internal/types` directly; `internal/capture` does not re-export wire types.
 
 ## Specs
 

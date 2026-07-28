@@ -4,18 +4,18 @@
 package ciapi
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
 func TestComputeSnapshotStatsCountsFailuresAndConnections(t *testing.T) {
 	stats := ComputeSnapshotStats(
 		[]mcp.LogEntry{{"level": "error"}, {"level": "warning"}},
-		[]capture.WebSocketEvent{{URL: "wss://one"}, {URL: "wss://one"}, {URL: "wss://two"}},
-		[]capture.NetworkBody{{Status: 200}, {Status: 503}},
+		[]types.WebSocketEvent{{URL: "wss://one"}, {URL: "wss://one"}, {URL: "wss://two"}},
+		[]types.NetworkBody{{Status: 200}, {Status: 503}},
 	)
 
 	if stats.TotalLogs != 2 || stats.ErrorCount != 1 || stats.WarningCount != 1 {

@@ -6,8 +6,8 @@ package toolgenerate
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/export"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
@@ -28,7 +28,7 @@ func HandleExportHAR(d Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.J
 	cap := d.GetCapture()
 	bodies := cap.GetNetworkBodies()
 	waterfall := cap.GetNetworkWaterfallEntries()
-	filter := capture.NetworkBodyFilter{
+	filter := types.NetworkBodyFilter{
 		URLFilter: params.URL,
 		Method:    params.Method,
 		StatusMin: params.StatusMin,

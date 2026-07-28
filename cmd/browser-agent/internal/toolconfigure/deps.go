@@ -5,7 +5,6 @@
 package toolconfigure
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
@@ -29,7 +28,7 @@ type Deps interface {
 	NetworkBodies() []types.NetworkBody
 
 	// AllWebSocketEvents returns captured WebSocket events.
-	AllWebSocketEvents() []capture.WebSocketEvent
+	AllWebSocketEvents() []types.WebSocketEvent
 
 	// ToolsList returns the list of registered MCP tools.
 	ToolsList() []mcp.MCPTool

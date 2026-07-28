@@ -6,10 +6,10 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe"
@@ -174,7 +174,7 @@ func TestToolAnalyzeHistory_WithNavigations(t *testing.T) {
 	t.Parallel()
 	env := newObserveTestEnv(t)
 
-	env.capture.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	env.capture.AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "navigate", Timestamp: 1704067201000, ToURL: "https://example.com/page1", FromURL: "https://example.com"},
 		{Type: "click", Timestamp: 1704067202000, URL: "https://example.com/page2"},
 		{Type: "navigate", Timestamp: 1704067203000, ToURL: "https://example.com/page1"}, // Duplicate URL — should be deduped

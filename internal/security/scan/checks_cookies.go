@@ -7,10 +7,10 @@ package scan
 
 import (
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"regexp"
 	"strings"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/httpsec"
 )
 
@@ -58,7 +58,7 @@ func checkSingleCookie(cookie httpsec.CookieAttrs, bodyURL string, isHTTPS bool)
 	return findings
 }
 
-func (s *Scanner) checkCookies(bodies []capture.NetworkBody) []Finding {
+func (s *Scanner) checkCookies(bodies []types.NetworkBody) []Finding {
 	var findings []Finding
 	for _, body := range bodies {
 		if body.ResponseHeaders == nil {

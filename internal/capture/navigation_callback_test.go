@@ -5,6 +5,7 @@
 package capture
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -26,7 +27,7 @@ func TestNavigationCallback_FiredOnNavigationAction(t *testing.T) {
 		called.Add(1)
 	})
 
-	c.AddEnhancedActions([]EnhancedAction{
+	c.AddEnhancedActions([]types.EnhancedAction{
 		{Type: "navigation", Timestamp: time.Now().UnixMilli()},
 	})
 
@@ -49,7 +50,7 @@ func TestNavigationCallback_NotFiredOnNonNavigationAction(t *testing.T) {
 		called.Add(1)
 	})
 
-	c.AddEnhancedActions([]EnhancedAction{
+	c.AddEnhancedActions([]types.EnhancedAction{
 		{Type: "click", Timestamp: time.Now().UnixMilli()},
 		{Type: "type", Timestamp: time.Now().UnixMilli()},
 		{Type: "scroll", Timestamp: time.Now().UnixMilli()},
@@ -74,7 +75,7 @@ func TestNavigationCallback_FiredOnceForMultipleNavigationsInBatch(t *testing.T)
 	})
 
 	// Two navigation actions in the same batch should fire callback only once
-	c.AddEnhancedActions([]EnhancedAction{
+	c.AddEnhancedActions([]types.EnhancedAction{
 		{Type: "navigation", Timestamp: time.Now().UnixMilli()},
 		{Type: "click", Timestamp: time.Now().UnixMilli()},
 		{Type: "navigation", Timestamp: time.Now().UnixMilli()},
@@ -94,7 +95,7 @@ func TestNavigationCallback_NotSetDoesNotPanic(t *testing.T) {
 	t.Cleanup(c.Close)
 
 	// No callback set — should not panic
-	c.AddEnhancedActions([]EnhancedAction{
+	c.AddEnhancedActions([]types.EnhancedAction{
 		{Type: "navigation", Timestamp: time.Now().UnixMilli()},
 	})
 }
@@ -107,7 +108,7 @@ func TestNavigationCallback_NilCallbackDoesNotPanic(t *testing.T) {
 
 	c.SetNavigationCallback(nil)
 
-	c.AddEnhancedActions([]EnhancedAction{
+	c.AddEnhancedActions([]types.EnhancedAction{
 		{Type: "navigation", Timestamp: time.Now().UnixMilli()},
 	})
 }
@@ -131,7 +132,7 @@ func TestNavigationCallback_FiredOutsideLock(t *testing.T) {
 		}
 	})
 
-	c.AddEnhancedActions([]EnhancedAction{
+	c.AddEnhancedActions([]types.EnhancedAction{
 		{Type: "navigation", Timestamp: time.Now().UnixMilli()},
 	})
 

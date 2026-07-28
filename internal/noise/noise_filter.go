@@ -5,7 +5,6 @@
 package noise
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -46,7 +45,7 @@ func matchesConsoleRule(compiled *compiledRule, message, source string) bool {
 
 // IsNetworkNoise checks if a network body matches any noise rule.
 // Security invariant: 401/403 responses are NEVER noise.
-func (nc *NoiseConfig) IsNetworkNoise(body capture.NetworkBody) bool {
+func (nc *NoiseConfig) IsNetworkNoise(body types.NetworkBody) bool {
 	if body.Status == 401 || body.Status == 403 {
 		return false
 	}
@@ -73,7 +72,7 @@ func (nc *NoiseConfig) IsNetworkNoise(body capture.NetworkBody) bool {
 }
 
 // matchesNetworkFilters returns true if the body passes the rule's method and status filters.
-func matchesNetworkFilters(compiled *compiledRule, body capture.NetworkBody) bool {
+func matchesNetworkFilters(compiled *compiledRule, body types.NetworkBody) bool {
 	if compiled.rule.MatchSpec.Method != "" && compiled.rule.MatchSpec.Method != body.Method {
 		return false
 	}
@@ -96,7 +95,7 @@ func matchesNetworkRule(compiled *compiledRule, rawURL string) bool {
 }
 
 // IsWebSocketNoise checks if a WebSocket event matches any noise rule.
-func (nc *NoiseConfig) IsWebSocketNoise(event capture.WebSocketEvent) bool {
+func (nc *NoiseConfig) IsWebSocketNoise(event types.WebSocketEvent) bool {
 	nc.mu.RLock()
 	defer nc.mu.RUnlock()
 

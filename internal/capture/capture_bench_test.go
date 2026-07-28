@@ -14,7 +14,7 @@ import (
 func BenchmarkAddWebSocketEvents(b *testing.B) {
 	cap := NewCapture()
 
-	events := []WebSocketEvent{
+	events := []types.WebSocketEvent{
 		{
 			Timestamp: time.Now().Format(time.RFC3339Nano),
 			ID:        "ws_123",
@@ -57,7 +57,7 @@ func BenchmarkAddNetworkBodies(b *testing.B) {
 func BenchmarkAddEnhancedActions(b *testing.B) {
 	cap := NewCapture()
 
-	actions := []EnhancedAction{
+	actions := []types.EnhancedAction{
 		{
 			Timestamp: time.Now().UnixNano(),
 			Type:      "click",
@@ -79,7 +79,7 @@ func BenchmarkMemoryEnforcement(b *testing.B) {
 
 	// Pre-populate with data near soft limit
 	for i := 0; i < 1000; i++ {
-		cap.AddWebSocketEvents([]WebSocketEvent{
+		cap.AddWebSocketEvents([]types.WebSocketEvent{
 			{
 				Timestamp: time.Now().Format(time.RFC3339Nano),
 				ID:        "ws_bench",
@@ -89,7 +89,7 @@ func BenchmarkMemoryEnforcement(b *testing.B) {
 		})
 	}
 
-	event := []WebSocketEvent{{
+	event := []types.WebSocketEvent{{
 		Timestamp: time.Now().Format(time.RFC3339Nano),
 		ID:        "ws_bench",
 		Event:     "message",
@@ -106,7 +106,7 @@ func BenchmarkMemoryEnforcement(b *testing.B) {
 func BenchmarkConcurrentCapture(b *testing.B) {
 	cap := NewCapture()
 
-	wsEvent := []WebSocketEvent{{
+	wsEvent := []types.WebSocketEvent{{
 		Timestamp: time.Now().Format(time.RFC3339Nano),
 		ID:        "ws_concurrent",
 		Event:     "message",
@@ -120,7 +120,7 @@ func BenchmarkConcurrentCapture(b *testing.B) {
 		Status:    200,
 	}}
 
-	action := []EnhancedAction{{
+	action := []types.EnhancedAction{{
 		Timestamp: time.Now().UnixNano(),
 		Type:      "click",
 		Selectors: map[string]any{"css": "button"},

@@ -7,13 +7,12 @@ package apicontract
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // Validate checks a network body against the learned schema and returns violations.
-func (v *APIContractValidator) Validate(body capture.NetworkBody) []APIContractViolation {
+func (v *APIContractValidator) Validate(body types.NetworkBody) []APIContractViolation {
 	v.mu.Lock()
 	defer v.mu.Unlock()
 
@@ -35,7 +34,7 @@ func (v *APIContractValidator) Validate(body capture.NetworkBody) []APIContractV
 }
 
 // validateErrorResponse checks for error spikes in error responses.
-func (v *APIContractValidator) validateErrorResponse(tracker *EndpointTracker, body capture.NetworkBody) []APIContractViolation {
+func (v *APIContractValidator) validateErrorResponse(tracker *EndpointTracker, body types.NetworkBody) []APIContractViolation {
 	spike := v.detectErrorSpike(tracker, body)
 	if spike == nil {
 		return nil
@@ -45,7 +44,7 @@ func (v *APIContractValidator) validateErrorResponse(tracker *EndpointTracker, b
 }
 
 // validateShapeConsistency compares a successful response shape against the established schema.
-func (v *APIContractValidator) validateShapeConsistency(tracker *EndpointTracker, endpoint string, body capture.NetworkBody) []APIContractViolation {
+func (v *APIContractValidator) validateShapeConsistency(tracker *EndpointTracker, endpoint string, body types.NetworkBody) []APIContractViolation {
 	if body.ResponseBody == "" {
 		return nil
 	}

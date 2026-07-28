@@ -4,6 +4,7 @@
 package capture
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
 	"time"
@@ -19,7 +20,7 @@ func TestLogHTTPDebugEntry_RedactsSensitiveFields(t *testing.T) {
 		ghPAT  = "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef123456"
 	)
 
-	c.LogHTTPDebugEntry(HTTPDebugEntry{
+	c.LogHTTPDebugEntry(types.HTTPDebugEntry{
 		Timestamp: time.Now(),
 		Endpoint:  "/mcp",
 		Method:    "POST",
@@ -34,7 +35,7 @@ func TestLogHTTPDebugEntry_RedactsSensitiveFields(t *testing.T) {
 	})
 
 	entries := c.GetHTTPDebugLog()
-	var found *HTTPDebugEntry
+	var found *types.HTTPDebugEntry
 	for i := range entries {
 		if entries[i].Method == "POST" && entries[i].Endpoint == "/mcp" {
 			found = &entries[i]

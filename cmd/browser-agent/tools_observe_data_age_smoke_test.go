@@ -6,11 +6,11 @@
 package main
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -97,7 +97,7 @@ func TestSmoke_ObserveNetworkBodies_DataAgeMs_Present(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 
-	cap.AddNetworkBodiesForTest([]capture.NetworkBody{
+	cap.AddNetworkBodiesForTest([]types.NetworkBody{
 		{
 			URL:       "https://api.example.com/smoke",
 			Method:    "GET",
@@ -136,7 +136,7 @@ func TestSmoke_ObserveActions_DataAgeMs_Present(t *testing.T) {
 	t.Parallel()
 	h, _, cap := makeToolHandler(t)
 
-	cap.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	cap.AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "click", Timestamp: time.Now().UnixMilli(), URL: "https://example.com/smoke"},
 	})
 

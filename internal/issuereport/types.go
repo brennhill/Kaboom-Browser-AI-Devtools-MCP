@@ -39,7 +39,7 @@ type ServerDiag struct {
 // ExtensionDiag contains extension connectivity diagnostics.
 type ExtensionDiag struct {
 	Connected bool   `json:"connected"`
-	Source     string `json:"source,omitempty"`
+	Source    string `json:"source,omitempty"`
 }
 
 // PlatformDiag contains platform information.

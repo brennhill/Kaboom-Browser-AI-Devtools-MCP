@@ -3,9 +3,8 @@
 package httpsec
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // ============================================
@@ -91,10 +90,10 @@ func TestIsLocalhostURL_Variants(t *testing.T) {
 
 func TestIsHTMLResponse(t *testing.T) {
 	t.Parallel()
-	if !IsHTMLResponse(capture.NetworkBody{ContentType: "Text/HTML; charset=utf-8"}) {
+	if !IsHTMLResponse(types.NetworkBody{ContentType: "Text/HTML; charset=utf-8"}) {
 		t.Error("text/html content type should be reported as HTML")
 	}
-	if IsHTMLResponse(capture.NetworkBody{ContentType: "application/json"}) {
+	if IsHTMLResponse(types.NetworkBody{ContentType: "application/json"}) {
 		t.Error("application/json should not be reported as HTML")
 	}
 }

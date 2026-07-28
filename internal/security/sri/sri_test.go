@@ -5,15 +5,14 @@ package sri
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // NetworkBody keeps the test tables readable; the alias used to live in the
 // old flat security package.
-type NetworkBody = capture.NetworkBody
+type NetworkBody = types.NetworkBody
 
 func TestGeneratorBasicHash(t *testing.T) {
 	t.Parallel()

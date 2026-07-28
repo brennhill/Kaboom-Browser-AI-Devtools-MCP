@@ -5,10 +5,10 @@
 package thirdparty
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"sort"
 	"strings"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
 
@@ -58,7 +58,7 @@ func addInternalDomains(firstParty map[string]bool, customLists *CustomLists) {
 }
 
 // groupByThirdPartyOrigin groups bodies by third-party origin (excluding first-party).
-func groupByThirdPartyOrigin(bodies []capture.NetworkBody, firstParty map[string]bool) map[string]*originData {
+func groupByThirdPartyOrigin(bodies []types.NetworkBody, firstParty map[string]bool) map[string]*originData {
 	originMap := make(map[string]*originData)
 	for _, body := range bodies {
 		origin := util.ExtractOrigin(body.URL)

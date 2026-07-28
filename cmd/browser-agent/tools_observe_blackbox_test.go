@@ -12,6 +12,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -63,7 +64,7 @@ var sampleConsoleLog = mcp.LogEntry{
 }
 
 // Sample network waterfall entry
-var sampleNetworkEntry = capture.NetworkWaterfallEntry{
+var sampleNetworkEntry = types.NetworkWaterfallEntry{
 	URL:             "https://api.example.com/users",
 	Name:            "https://api.example.com/users",
 	InitiatorType:   "fetch",
@@ -78,7 +79,7 @@ var sampleNetworkEntry = capture.NetworkWaterfallEntry{
 }
 
 // Sample extension log
-var sampleExtensionLog = capture.ExtensionLog{
+var sampleExtensionLog = types.ExtensionLog{
 	Level:     "debug",
 	Message:   "Connection established to server",
 	Source:    "background",
@@ -260,7 +261,7 @@ func TestObserveNetworkWaterfall_EndToEnd(t *testing.T) {
 	handler := NewToolHandler(server, cap)
 
 	// Add network waterfall entry directly to capture
-	cap.AddNetworkWaterfallEntries([]capture.NetworkWaterfallEntry{sampleNetworkEntry}, "https://example.com/dashboard")
+	cap.AddNetworkWaterfallEntries([]types.NetworkWaterfallEntry{sampleNetworkEntry}, "https://example.com/dashboard")
 
 	// Call observe network_waterfall
 	th := handler.toolHandler.(*ToolHandler)
@@ -304,7 +305,7 @@ func TestObserveNetworkWaterfall_URLFilter(t *testing.T) {
 	handler := NewToolHandler(server, cap)
 
 	// Add multiple entries
-	entries := []capture.NetworkWaterfallEntry{
+	entries := []types.NetworkWaterfallEntry{
 		{URL: "https://api.example.com/users", PageURL: "https://example.com"},
 		{URL: "https://cdn.example.com/style.css", PageURL: "https://example.com"},
 		{URL: "https://api.example.com/orders", PageURL: "https://example.com"},
@@ -346,7 +347,7 @@ func TestObserveExtensionLogs_EndToEnd(t *testing.T) {
 	handler := NewToolHandler(server, cap)
 
 	// Add extension logs directly
-	cap.AddExtensionLogs([]capture.ExtensionLog{sampleExtensionLog})
+	cap.AddExtensionLogs([]types.ExtensionLog{sampleExtensionLog})
 
 	// Call observe extension_logs
 	th := handler.toolHandler.(*ToolHandler)
@@ -390,7 +391,7 @@ func TestObservePage_ExtractsFromWaterfall(t *testing.T) {
 	handler := NewToolHandler(server, cap)
 
 	// Add network entry with page_url
-	cap.AddNetworkWaterfallEntries([]capture.NetworkWaterfallEntry{sampleNetworkEntry}, "https://example.com/dashboard")
+	cap.AddNetworkWaterfallEntries([]types.NetworkWaterfallEntry{sampleNetworkEntry}, "https://example.com/dashboard")
 
 	// Call observe page
 	th := handler.toolHandler.(*ToolHandler)
@@ -430,7 +431,7 @@ func TestObservePage_PrioritizesTrackedURL(t *testing.T) {
 	handler := NewToolHandler(server, cap)
 
 	// Add STALE waterfall entry with old URL
-	cap.AddNetworkWaterfallEntries([]capture.NetworkWaterfallEntry{sampleNetworkEntry}, "https://old-stale-url.com/page")
+	cap.AddNetworkWaterfallEntries([]types.NetworkWaterfallEntry{sampleNetworkEntry}, "https://old-stale-url.com/page")
 
 	// Simulate extension sync with FRESH tracked tab URL
 	// This is what the extension sends via /sync endpoint
@@ -499,7 +500,7 @@ func TestObserveNetworkBodies_EndToEnd(t *testing.T) {
 	handler := NewToolHandler(server, cap)
 
 	// Add network body using test helper (simulates browser extension POST)
-	cap.AddNetworkBodiesForTest([]capture.NetworkBody{
+	cap.AddNetworkBodiesForTest([]types.NetworkBody{
 		{
 			URL:          "https://api.example.com/users",
 			Method:       "GET",
@@ -546,9 +547,9 @@ func TestObserveWebSocketEvents_EndToEnd(t *testing.T) {
 
 	// Simulate WebSocket event POST
 	wsPayload := struct {
-		Events []capture.WebSocketEvent `json:"events"`
+		Events []types.WebSocketEvent `json:"events"`
 	}{
-		Events: []capture.WebSocketEvent{
+		Events: []types.WebSocketEvent{
 			{
 				URL:       "wss://realtime.example.com/socket",
 				Type:      "message",

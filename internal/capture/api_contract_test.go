@@ -13,6 +13,7 @@ package capture
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -166,7 +167,7 @@ func TestAPIContract_AddExtensionLogs(t *testing.T) {
 	t.Parallel()
 	c := NewCapture()
 
-	c.AddExtensionLogs([]ExtensionLog{
+	c.AddExtensionLogs([]types.ExtensionLog{
 		{Level: "debug", Message: "test", Source: "background"},
 	})
 

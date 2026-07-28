@@ -6,10 +6,9 @@ package observe
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strconv"
 	"strings"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // LogLevelRank returns the severity rank of a log level (higher = more severe).
@@ -46,7 +45,7 @@ type jsonPathToken struct {
 }
 
 // ApplyNetworkBodyFilter filters a network body by JSON path extraction.
-func ApplyNetworkBodyFilter(body capture.NetworkBody, bodyPath string) (capture.NetworkBody, bool, error) {
+func ApplyNetworkBodyFilter(body types.NetworkBody, bodyPath string) (types.NetworkBody, bool, error) {
 	if bodyPath == "" {
 		return body, true, nil
 	}
@@ -69,7 +68,7 @@ func ApplyNetworkBodyFilter(body capture.NetworkBody, bodyPath string) (capture.
 	return encodeFilteredNetworkBody(body, value)
 }
 
-func encodeFilteredNetworkBody(body capture.NetworkBody, value any) (capture.NetworkBody, bool, error) {
+func encodeFilteredNetworkBody(body types.NetworkBody, value any) (types.NetworkBody, bool, error) {
 	raw, err := json.Marshal(value)
 	if err != nil {
 		return body, false, fmt.Errorf("failed to encode filtered value: %w", err)

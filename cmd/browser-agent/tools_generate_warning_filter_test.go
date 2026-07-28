@@ -7,12 +7,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -20,7 +20,7 @@ func TestGenerateTestFromContext_NoWarningsForDispatchParams(t *testing.T) {
 	t.Parallel()
 
 	h := newTestToolHandler()
-	h.capture.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	h.capture.AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "navigate", Timestamp: 1000, URL: "https://example.com", ToURL: "https://example.com"},
 		{Type: "click", Timestamp: 1200, URL: "https://example.com", Selectors: map[string]any{"text": "Login"}},
 	})
@@ -54,7 +54,7 @@ func TestHandleGenerateTestFromContext_FiltersOnlyDispatchWarnings(t *testing.T)
 	t.Parallel()
 
 	h := newTestToolHandler()
-	h.capture.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	h.capture.AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "navigate", Timestamp: 1000, URL: "https://example.com", ToURL: "https://example.com"},
 		{Type: "click", Timestamp: 1200, URL: "https://example.com", Selectors: map[string]any{"text": "Login"}},
 	})

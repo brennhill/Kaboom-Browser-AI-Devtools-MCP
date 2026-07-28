@@ -5,9 +5,9 @@
 package testgenhandler
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testgen"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/testgen/heal"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // dataProviderAdapter adapts Deps to testgen.DataProvider.
@@ -20,11 +20,11 @@ func (a *dataProviderAdapter) GetLogEntries() []map[string]any {
 	return entries
 }
 
-func (a *dataProviderAdapter) GetAllEnhancedActions() []capture.EnhancedAction {
+func (a *dataProviderAdapter) GetAllEnhancedActions() []types.EnhancedAction {
 	return a.deps.GetCapture().GetAllEnhancedActions()
 }
 
-func (a *dataProviderAdapter) GetNetworkBodies() []capture.NetworkBody {
+func (a *dataProviderAdapter) GetNetworkBodies() []types.NetworkBody {
 	return a.deps.GetCapture().GetNetworkBodies()
 }
 

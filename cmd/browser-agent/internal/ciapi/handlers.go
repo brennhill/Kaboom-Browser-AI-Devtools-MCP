@@ -5,11 +5,11 @@ package ciapi
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"io"
 	"net/http"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
@@ -23,9 +23,9 @@ type Logs interface {
 
 // Capture is the snapshot/test-boundary surface used by CI endpoints.
 type Capture interface {
-	GetAllWebSocketEvents() []capture.WebSocketEvent
-	GetNetworkBodies() []capture.NetworkBody
-	GetAllEnhancedActions() []capture.EnhancedAction
+	GetAllWebSocketEvents() []types.WebSocketEvent
+	GetNetworkBodies() []types.NetworkBody
+	GetAllEnhancedActions() []types.EnhancedAction
 	GetActiveTestIDs() []string
 	ClearAll() int
 	SetTestBoundaryStart(testID string)

@@ -6,9 +6,8 @@ package reproduction
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"time"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // Params are the parsed arguments for generate({format: "reproduction"}).
@@ -62,7 +61,7 @@ func ValidateOutputFormat(format string) string {
 }
 
 // FilterLastN returns the last N actions, or all if lastN <= 0.
-func FilterLastN(actions []capture.EnhancedAction, lastN int) []capture.EnhancedAction {
+func FilterLastN(actions []types.EnhancedAction, lastN int) []types.EnhancedAction {
 	if lastN > 0 && lastN < len(actions) {
 		return actions[len(actions)-lastN:]
 	}
@@ -70,7 +69,7 @@ func FilterLastN(actions []capture.EnhancedAction, lastN int) []capture.Enhanced
 }
 
 // GenerateScript dispatches to the correct format generator.
-func GenerateScript(actions []capture.EnhancedAction, params Params) string {
+func GenerateScript(actions []types.EnhancedAction, params Params) string {
 	switch params.OutputFormat {
 	case "playwright":
 		return GeneratePlaywrightScript(actions, params)
@@ -80,7 +79,7 @@ func GenerateScript(actions []capture.EnhancedAction, params Params) string {
 }
 
 // BuildResult assembles the response payload from a generated script.
-func BuildResult(script string, params Params, actions, allActions []capture.EnhancedAction) Result {
+func BuildResult(script string, params Params, actions, allActions []types.EnhancedAction) Result {
 	startURL := reproStartURL(actions)
 	var durationMs int64
 	if len(actions) > 1 {
@@ -101,7 +100,7 @@ func BuildResult(script string, params Params, actions, allActions []capture.Enh
 	}
 }
 
-func reproStartURL(actions []capture.EnhancedAction) string {
+func reproStartURL(actions []types.EnhancedAction) string {
 	if len(actions) == 0 {
 		return ""
 	}

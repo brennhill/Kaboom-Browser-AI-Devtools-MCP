@@ -5,6 +5,7 @@ package capture
 
 import (
 	"context"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 	"time"
 
@@ -65,14 +66,14 @@ func TestCaptureTestHelpersAndTTL(t *testing.T) {
 
 	c := NewCapture()
 
-	c.AddNetworkBodiesForTest([]NetworkBody{
+	c.AddNetworkBodiesForTest([]types.NetworkBody{
 		{URL: "https://example.test/a", Status: 200},
 		{URL: "https://example.test/b", Status: 500},
 	})
-	c.AddWebSocketEventsForTest([]WebSocketEvent{
+	c.AddWebSocketEventsForTest([]types.WebSocketEvent{
 		{Event: "open", URL: "wss://example.test"},
 	})
-	c.AddEnhancedActionsForTest([]EnhancedAction{
+	c.AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "click", URL: "https://example.test", Timestamp: 123},
 	})
 	if got := c.GetNetworkTotalAdded(); got != 2 {

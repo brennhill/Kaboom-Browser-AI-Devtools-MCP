@@ -6,6 +6,7 @@ package dashboard
 import (
 	_ "embed"
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"net/http"
 	"os"
 	"runtime"
@@ -171,7 +172,7 @@ type recentCommand struct {
 	DurationMs int64     `json:"duration_ms"`
 }
 
-func buildRecentCommands(entries []capture.HTTPDebugEntry) []recentCommand {
+func buildRecentCommands(entries []types.HTTPDebugEntry) []recentCommand {
 	var result []recentCommand
 	for _, entry := range entries {
 		if entry.Timestamp.IsZero() {

@@ -9,6 +9,7 @@ package capture
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"io"
 	"net/http"
 	"os"
@@ -30,7 +31,7 @@ func (c *Capture) HandleNetworkBodies(w http.ResponseWriter, r *http.Request) {
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxExtensionPostBody)
 	var payload struct {
-		Bodies []NetworkBody `json:"bodies"`
+		Bodies []types.NetworkBody `json:"bodies"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		fmt.Fprintf(os.Stderr, "[Kaboom] HandleNetworkBodies: Invalid JSON - %v\n", err)
@@ -51,7 +52,7 @@ func (c *Capture) HandleNetworkWaterfall(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxExtensionPostBody)
-	var payload NetworkWaterfallPayload
+	var payload types.NetworkWaterfallPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		fmt.Fprintf(os.Stderr, "[Kaboom] HandleNetworkWaterfall: Invalid JSON - %v\n", err)
 		util.JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
@@ -117,7 +118,7 @@ func (c *Capture) HandleEnhancedActions(w http.ResponseWriter, r *http.Request) 
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxExtensionPostBody)
 	var payload struct {
-		Actions []EnhancedAction `json:"actions"`
+		Actions []types.EnhancedAction `json:"actions"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		fmt.Fprintf(os.Stderr, "[Kaboom] HandleEnhancedActions: Invalid JSON - %v\n", err)

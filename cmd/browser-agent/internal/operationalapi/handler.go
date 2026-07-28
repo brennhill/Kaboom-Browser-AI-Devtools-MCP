@@ -4,6 +4,7 @@ package operationalapi
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"net/http"
 	"os"
 	"runtime"
@@ -244,7 +245,7 @@ func appendCaptureDiagnostics(resp map[string]any, cap *capture.Capture) {
 		"query_results":    snap.QueryResultCount,
 	}
 
-	wsStatus := cap.GetWebSocketStatus(capture.WebSocketStatusFilter{})
+	wsStatus := cap.GetWebSocketStatus(types.WebSocketStatusFilter{})
 	conns := make([]map[string]any, 0, len(wsStatus.Connections))
 	for _, c := range wsStatus.Connections {
 		conns = append(conns, map[string]any{

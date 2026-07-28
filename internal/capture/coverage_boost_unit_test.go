@@ -5,6 +5,7 @@ package capture
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -86,14 +87,14 @@ func TestCoverageBoost_RateLimitHealthHandler(t *testing.T) {
 func TestCoverageBoost_PublicMemoryAndBufferGetters(t *testing.T) {
 	c := newCoverageCapture(t)
 
-	c.AddWebSocketEvents([]WebSocketEvent{{
+	c.AddWebSocketEvents([]types.WebSocketEvent{{
 		ID:        "conn-1",
 		Event:     "message",
 		Direction: "incoming",
 		Data:      "hello",
 		Timestamp: time.Now().Format(time.RFC3339Nano),
 	}})
-	c.AddNetworkBodies([]NetworkBody{{
+	c.AddNetworkBodies([]types.NetworkBody{{
 		Method:       "POST",
 		URL:          "https://example.test/api",
 		Status:       200,
@@ -118,13 +119,13 @@ func TestCoverageBoost_EnhancedActionsBranches(t *testing.T) {
 	c.mu.Lock()
 	now := time.Now()
 	c.buffers.enhancedActions = []enhancedActionEntry{
-		{Action: EnhancedAction{Type: "click"}, AddedAt: now},
-		{Action: EnhancedAction{Type: "click"}, AddedAt: now},
+		{Action: types.EnhancedAction{Type: "click"}, AddedAt: now},
+		{Action: types.EnhancedAction{Type: "click"}, AddedAt: now},
 	}
 	c.extensionState.activeTestIDs["test-1"] = true
 	c.mu.Unlock()
 
-	c.AddEnhancedActions([]EnhancedAction{{Type: "type", Value: "hello"}})
+	c.AddEnhancedActions([]types.EnhancedAction{{Type: "type", Value: "hello"}})
 	if got := c.GetEnhancedActionCount(); got != 3 {
 		t.Fatalf("GetEnhancedActionCount() = %d, want 3 after add", got)
 	}
@@ -138,9 +139,9 @@ func TestCoverageBoost_EnhancedActionsBranches(t *testing.T) {
 		t.Fatalf("last action TestIDs = %+v, want [test-1]", last.TestIDs)
 	}
 
-	many := make([]EnhancedAction, MaxEnhancedActions+5)
+	many := make([]types.EnhancedAction, MaxEnhancedActions+5)
 	for i := range many {
-		many[i] = EnhancedAction{Type: "click"}
+		many[i] = types.EnhancedAction{Type: "click"}
 	}
 	c.AddEnhancedActions(many)
 	if got := c.GetEnhancedActionCount(); got != MaxEnhancedActions {
@@ -154,13 +155,13 @@ func TestCoverageBoost_NetworkBodiesBranches(t *testing.T) {
 	now := time.Now()
 	c.mu.Lock()
 	c.buffers.networkBodies = []networkBodyEntry{
-		{Body: NetworkBody{Method: "GET", URL: "https://a.example", RequestBody: "a", ResponseBody: "a"}, AddedAt: now},
-		{Body: NetworkBody{Method: "GET", URL: "https://b.example", RequestBody: "b", ResponseBody: "b"}, AddedAt: now},
+		{Body: types.NetworkBody{Method: "GET", URL: "https://a.example", RequestBody: "a", ResponseBody: "a"}, AddedAt: now},
+		{Body: types.NetworkBody{Method: "GET", URL: "https://b.example", RequestBody: "b", ResponseBody: "b"}, AddedAt: now},
 	}
 	c.extensionState.activeTestIDs["tid"] = true
 	c.mu.Unlock()
 
-	c.AddNetworkBodies([]NetworkBody{{
+	c.AddNetworkBodies([]types.NetworkBody{{
 		Method:       "POST",
 		URL:          "https://example.test/upload",
 		RequestBody:  "ping",
@@ -177,7 +178,7 @@ func TestCoverageBoost_NetworkBodiesBranches(t *testing.T) {
 
 	c2 := newCoverageCapture(t)
 	huge := strings.Repeat("x", nbBufferMemoryLimit)
-	c2.AddNetworkBodies([]NetworkBody{{
+	c2.AddNetworkBodies([]types.NetworkBody{{
 		Method:       "POST",
 		URL:          "https://example.test/huge",
 		RequestBody:  huge,
@@ -203,7 +204,7 @@ func TestCoverageBoost_NetworkWaterfallGetters(t *testing.T) {
 	c.networkWaterfall.capacity = 1
 	c.mu.Unlock()
 
-	c.AddNetworkWaterfallEntries([]NetworkWaterfallEntry{
+	c.AddNetworkWaterfallEntries([]types.NetworkWaterfallEntry{
 		{Name: "https://one.example"},
 		{Name: "https://two.example"},
 	}, "https://page.example")

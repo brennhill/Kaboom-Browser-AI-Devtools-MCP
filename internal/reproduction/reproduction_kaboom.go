@@ -4,14 +4,13 @@ package reproduction
 
 import (
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"time"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // GenerateKaboomScript converts actions to numbered human-readable steps.
-func GenerateKaboomScript(actions []capture.EnhancedAction, opts Params) string {
+func GenerateKaboomScript(actions []types.EnhancedAction, opts Params) string {
 	if len(actions) == 0 {
 		return "# No actions captured\n"
 	}
@@ -27,7 +26,7 @@ func GenerateKaboomScript(actions []capture.EnhancedAction, opts Params) string 
 	return b.String()
 }
 
-func writeKaboomHeader(b *strings.Builder, actions []capture.EnhancedAction, opts Params) {
+func writeKaboomHeader(b *strings.Builder, actions []types.EnhancedAction, opts Params) {
 	startURL := reproStartURL(actions)
 	desc := "captured user actions"
 	if opts.ErrorMessage != "" {
@@ -38,7 +37,7 @@ func writeKaboomHeader(b *strings.Builder, actions []capture.EnhancedAction, opt
 		time.Now().Format(time.RFC3339), len(actions), startURL)
 }
 
-func writeKaboomSteps(b *strings.Builder, actions []capture.EnhancedAction, opts Params) {
+func writeKaboomSteps(b *strings.Builder, actions []types.EnhancedAction, opts Params) {
 	stepNum := 0
 	var prevTs int64
 	for _, action := range actions {
@@ -67,7 +66,7 @@ func WritePauseComment(b *strings.Builder, prevTs, curTs int64, format string) {
 }
 
 // KaboomStep converts a single action to a natural language step.
-func KaboomStep(action capture.EnhancedAction, opts Params) string {
+func KaboomStep(action types.EnhancedAction, opts Params) string {
 	switch action.Type {
 	case "navigate":
 		return kaboomNavigateStep(action, opts)
@@ -98,7 +97,7 @@ func KaboomStep(action capture.EnhancedAction, opts Params) string {
 	}
 }
 
-func kaboomNavigateStep(action capture.EnhancedAction, opts Params) string {
+func kaboomNavigateStep(action types.EnhancedAction, opts Params) string {
 	toURL := action.ToURL
 	if toURL == "" {
 		return ""
@@ -109,7 +108,7 @@ func kaboomNavigateStep(action capture.EnhancedAction, opts Params) string {
 	return "Navigate to: " + toURL
 }
 
-func kaboomNewTabStep(action capture.EnhancedAction, opts Params) string {
+func kaboomNewTabStep(action types.EnhancedAction, opts Params) string {
 	targetURL := action.URL
 	if targetURL == "" {
 		return "Open new tab"
@@ -120,7 +119,7 @@ func kaboomNewTabStep(action capture.EnhancedAction, opts Params) string {
 	return "Open new tab: " + targetURL
 }
 
-func kaboomInputStep(action capture.EnhancedAction) string {
+func kaboomInputStep(action types.EnhancedAction) string {
 	value := action.Value
 	if value == "[redacted]" {
 		value = "[user-provided]"
@@ -128,7 +127,7 @@ func kaboomInputStep(action capture.EnhancedAction) string {
 	return fmt.Sprintf("Type %q into: %s", value, DescribeElement(action))
 }
 
-func kaboomSelectStep(action capture.EnhancedAction) string {
+func kaboomSelectStep(action types.EnhancedAction) string {
 	text := action.SelectedText
 	if text == "" {
 		text = action.SelectedValue

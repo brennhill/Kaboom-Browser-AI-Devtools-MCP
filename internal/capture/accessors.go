@@ -5,6 +5,7 @@
 package capture
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
@@ -153,21 +154,21 @@ func (c *Capture) GetActionTimestamps() []time.Time {
 }
 
 // GetNetworkBodies returns a copy of the network bodies slice (thread-safe)
-func (c *Capture) GetNetworkBodies() []NetworkBody {
+func (c *Capture) GetNetworkBodies() []types.NetworkBody {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.buffers.networkBodiesCopy()
 }
 
 // GetAllWebSocketEvents returns a copy of all WebSocket events slice (thread-safe)
-func (c *Capture) GetAllWebSocketEvents() []WebSocketEvent {
+func (c *Capture) GetAllWebSocketEvents() []types.WebSocketEvent {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.buffers.webSocketEventsCopy()
 }
 
 // GetAllEnhancedActions returns a copy of all enhanced actions slice (thread-safe)
-func (c *Capture) GetAllEnhancedActions() []EnhancedAction {
+func (c *Capture) GetAllEnhancedActions() []types.EnhancedAction {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.buffers.enhancedActionsCopy()
@@ -289,20 +290,20 @@ func (s *PerformanceStore) clear() {
 
 // EventBufferStore exposes high-volume event buffers through read-only snapshots.
 type EventBufferStore interface {
-	NetworkBodies() []NetworkBody
-	WebSocketEvents() []WebSocketEvent
-	EnhancedActions() []EnhancedAction
+	NetworkBodies() []types.NetworkBody
+	WebSocketEvents() []types.WebSocketEvent
+	EnhancedActions() []types.EnhancedAction
 }
 
 // NetworkWaterfallStore exposes network-waterfall snapshots.
 type NetworkWaterfallStore interface {
-	Entries() []NetworkWaterfallEntry
+	Entries() []types.NetworkWaterfallEntry
 	Count() int
 }
 
 // ExtensionLogStore exposes extension log snapshots.
 type ExtensionLogStore interface {
-	Entries() []ExtensionLog
+	Entries() []types.ExtensionLog
 }
 
 // PerformanceSnapshotStore exposes performance snapshots keyed by URL.
@@ -315,15 +316,15 @@ type eventBufferView struct {
 	capture *Capture
 }
 
-func (v eventBufferView) NetworkBodies() []NetworkBody {
+func (v eventBufferView) NetworkBodies() []types.NetworkBody {
 	return v.capture.GetNetworkBodies()
 }
 
-func (v eventBufferView) WebSocketEvents() []WebSocketEvent {
+func (v eventBufferView) WebSocketEvents() []types.WebSocketEvent {
 	return v.capture.GetAllWebSocketEvents()
 }
 
-func (v eventBufferView) EnhancedActions() []EnhancedAction {
+func (v eventBufferView) EnhancedActions() []types.EnhancedAction {
 	return v.capture.GetAllEnhancedActions()
 }
 
@@ -331,7 +332,7 @@ type networkWaterfallView struct {
 	capture *Capture
 }
 
-func (v networkWaterfallView) Entries() []NetworkWaterfallEntry {
+func (v networkWaterfallView) Entries() []types.NetworkWaterfallEntry {
 	return v.capture.GetNetworkWaterfallEntries()
 }
 
@@ -343,7 +344,7 @@ type extensionLogView struct {
 	capture *Capture
 }
 
-func (v extensionLogView) Entries() []ExtensionLog {
+func (v extensionLogView) Entries() []types.ExtensionLog {
 	return v.capture.GetExtensionLogs()
 }
 

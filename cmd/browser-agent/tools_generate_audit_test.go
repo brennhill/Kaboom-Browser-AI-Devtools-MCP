@@ -22,6 +22,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
 
@@ -80,7 +81,7 @@ func TestGenerateAudit_Reproduction_DataFlow(t *testing.T) {
 	env := newGenerateTestEnv(t)
 
 	// Seed actions so reproduction has data to work with
-	env.capture.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	env.capture.AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "navigate", Timestamp: 1000, URL: "https://example.com", ToURL: "https://example.com"},
 		{Type: "click", Timestamp: 2000, URL: "https://example.com", Selectors: map[string]any{"text": "Go"}},
 	})

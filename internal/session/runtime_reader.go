@@ -5,18 +5,18 @@
 package session
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"sort"
 	"strings"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 )
 
 type RuntimeCaptureReader interface {
-	GetNetworkBodies() []capture.NetworkBody
-	GetWebSocketStatus(capture.WebSocketStatusFilter) capture.WebSocketStatusResponse
+	GetNetworkBodies() []types.NetworkBody
+	GetWebSocketStatus(types.WebSocketStatusFilter) types.WebSocketStatusResponse
 	GetPerformanceSnapshots() []performance.PerformanceSnapshot
 	GetTrackingStatus() (bool, int, string)
 }
@@ -109,7 +109,7 @@ func (r *runtimeStateReader) GetWSConnections() []SnapshotWSConnection {
 	if r.capture == nil {
 		return []SnapshotWSConnection{}
 	}
-	status := r.capture.GetWebSocketStatus(capture.WebSocketStatusFilter{})
+	status := r.capture.GetWebSocketStatus(types.WebSocketStatusFilter{})
 	out := make([]SnapshotWSConnection, 0, len(status.Connections))
 	for _, conn := range status.Connections {
 		out = append(out, SnapshotWSConnection{

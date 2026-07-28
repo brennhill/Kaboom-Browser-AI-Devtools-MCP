@@ -5,6 +5,7 @@
 package capture
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/lifecycle"
@@ -13,7 +14,7 @@ import (
 
 // AddNetworkBodiesForTest adds network bodies directly to the buffer (TEST ONLY)
 // Normal production code should use HTTP handlers
-func (c *Capture) AddNetworkBodiesForTest(bodies []NetworkBody) {
+func (c *Capture) AddNetworkBodiesForTest(bodies []types.NetworkBody) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -31,7 +32,7 @@ func (c *Capture) AddNetworkBodiesForTest(bodies []NetworkBody) {
 }
 
 // AddWebSocketEventsForTest adds WebSocket events directly to the buffer (TEST ONLY)
-func (c *Capture) AddWebSocketEventsForTest(events []WebSocketEvent) {
+func (c *Capture) AddWebSocketEventsForTest(events []types.WebSocketEvent) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -46,7 +47,7 @@ func (c *Capture) AddWebSocketEventsForTest(events []WebSocketEvent) {
 }
 
 // AddEnhancedActionsForTest adds enhanced actions directly to the buffer (TEST ONLY)
-func (c *Capture) AddEnhancedActionsForTest(actions []EnhancedAction) {
+func (c *Capture) AddEnhancedActionsForTest(actions []types.EnhancedAction) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -104,7 +105,7 @@ func (c *Capture) AddExtraWSEventsForTest(count int) {
 	now := time.Now()
 	for i := 0; i < count; i++ {
 		c.buffers.wsEvents = append(c.buffers.wsEvents, wsEventEntry{
-			Event: WebSocketEvent{
+			Event: types.WebSocketEvent{
 				Event: "message",
 				Data:  "extra-event",
 				ID:    "ws-extra",

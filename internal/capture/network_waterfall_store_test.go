@@ -1,6 +1,7 @@
 package capture
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 	"time"
 )
@@ -8,11 +9,11 @@ import (
 func TestNetworkWaterfallBuffer_AppendEntriesTagsAndEvicts(t *testing.T) {
 	now := time.Unix(1700000000, 0).UTC()
 	buf := NetworkWaterfallBuffer{
-		entries:  make([]NetworkWaterfallEntry, 0, 2),
+		entries:  make([]types.NetworkWaterfallEntry, 0, 2),
 		capacity: 2,
 	}
 
-	buf.appendEntries([]NetworkWaterfallEntry{
+	buf.appendEntries([]types.NetworkWaterfallEntry{
 		{URL: "https://a.test/a"},
 		{URL: "https://a.test/b"},
 		{URL: "https://a.test/c"},
@@ -37,10 +38,10 @@ func TestNetworkWaterfallBuffer_AppendEntriesTagsAndEvicts(t *testing.T) {
 func TestNetworkWaterfallBuffer_SnapshotDetached(t *testing.T) {
 	now := time.Unix(1700000100, 0).UTC()
 	buf := NetworkWaterfallBuffer{
-		entries:  make([]NetworkWaterfallEntry, 0, 2),
+		entries:  make([]types.NetworkWaterfallEntry, 0, 2),
 		capacity: 2,
 	}
-	buf.appendEntries([]NetworkWaterfallEntry{{URL: "https://a.test/a"}}, "https://app.local", now)
+	buf.appendEntries([]types.NetworkWaterfallEntry{{URL: "https://a.test/a"}}, "https://app.local", now)
 
 	snap := buf.snapshot()
 	if len(snap) != 1 {
@@ -56,10 +57,10 @@ func TestNetworkWaterfallBuffer_SnapshotDetached(t *testing.T) {
 func TestNetworkWaterfallBuffer_Clear(t *testing.T) {
 	now := time.Unix(1700000200, 0).UTC()
 	buf := NetworkWaterfallBuffer{
-		entries:  make([]NetworkWaterfallEntry, 0, 3),
+		entries:  make([]types.NetworkWaterfallEntry, 0, 3),
 		capacity: 3,
 	}
-	buf.appendEntries([]NetworkWaterfallEntry{
+	buf.appendEntries([]types.NetworkWaterfallEntry{
 		{URL: "https://a.test/a"},
 		{URL: "https://a.test/b"},
 	}, "https://app.local", now)

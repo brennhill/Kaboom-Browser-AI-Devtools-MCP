@@ -9,14 +9,13 @@ package scan
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // NetworkBody keeps the test tables readable.
-type NetworkBody = capture.NetworkBody
+type NetworkBody = types.NetworkBody
 
 // Test fixtures: Stripe-like keys for security scanner tests.
 // Constructed via concatenation to avoid GitHub push protection flagging.

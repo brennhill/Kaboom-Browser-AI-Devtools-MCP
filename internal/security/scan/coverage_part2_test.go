@@ -10,10 +10,9 @@
 package scan
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // ============================================
@@ -23,7 +22,7 @@ import (
 func TestCheckPII_RequestBodyToThirdParty(t *testing.T) {
 	t.Parallel()
 	s := NewScanner()
-	bodies := []capture.NetworkBody{
+	bodies := []types.NetworkBody{
 		{
 			URL:         "https://analytics.external.com/collect",
 			Method:      "POST",
@@ -41,7 +40,7 @@ func TestCheckPII_RequestBodyToThirdParty(t *testing.T) {
 func TestCheckPII_ResponseBody(t *testing.T) {
 	t.Parallel()
 	s := NewScanner()
-	bodies := []capture.NetworkBody{
+	bodies := []types.NetworkBody{
 		{
 			URL:          "https://api.myapp.com/users/1",
 			Method:       "GET",
@@ -62,7 +61,7 @@ func TestCheckPII_ResponseBody(t *testing.T) {
 func TestCheckSecurityHeaders_MissingHeaders(t *testing.T) {
 	t.Parallel()
 	s := NewScanner()
-	bodies := []capture.NetworkBody{
+	bodies := []types.NetworkBody{
 		{
 			URL:             "https://example.com/page",
 			ContentType:     "text/html",
@@ -79,16 +78,16 @@ func TestCheckSecurityHeaders_MissingHeaders(t *testing.T) {
 func TestCheckSecurityHeaders_SkipsHSTSForLocalhost(t *testing.T) {
 	t.Parallel()
 
-	if !shouldSkipHSTS("Strict-Transport-Security", capture.NetworkBody{URL: "http://localhost:3000"}) {
+	if !shouldSkipHSTS("Strict-Transport-Security", types.NetworkBody{URL: "http://localhost:3000"}) {
 		t.Error("should skip HSTS for localhost")
 	}
-	if !shouldSkipHSTS("Strict-Transport-Security", capture.NetworkBody{URL: "http://example.com"}) {
+	if !shouldSkipHSTS("Strict-Transport-Security", types.NetworkBody{URL: "http://example.com"}) {
 		t.Error("should skip HSTS for non-HTTPS")
 	}
-	if shouldSkipHSTS("Strict-Transport-Security", capture.NetworkBody{URL: "https://example.com"}) {
+	if shouldSkipHSTS("Strict-Transport-Security", types.NetworkBody{URL: "https://example.com"}) {
 		t.Error("should not skip HSTS for HTTPS non-localhost")
 	}
-	if shouldSkipHSTS("X-Frame-Options", capture.NetworkBody{URL: "http://localhost:3000"}) {
+	if shouldSkipHSTS("X-Frame-Options", types.NetworkBody{URL: "http://localhost:3000"}) {
 		t.Error("should not skip non-HSTS header")
 	}
 }
@@ -233,7 +232,7 @@ func TestScanURLForGenericSecrets_GenericSecretParam(t *testing.T) {
 func TestCheckTransport_MixedContentJS(t *testing.T) {
 	t.Parallel()
 	s := NewScanner()
-	bodies := []capture.NetworkBody{
+	bodies := []types.NetworkBody{
 		{
 			URL:         "http://evil.example.com/inject.js",
 			Method:      "GET",
@@ -262,7 +261,7 @@ func TestCheckTransport_MixedContentJS(t *testing.T) {
 func TestCheckTransport_LocalhostSkipped(t *testing.T) {
 	t.Parallel()
 	s := NewScanner()
-	bodies := []capture.NetworkBody{
+	bodies := []types.NetworkBody{
 		{URL: "http://localhost:3000/api", Method: "GET"},
 	}
 
@@ -279,7 +278,7 @@ func TestCheckTransport_LocalhostSkipped(t *testing.T) {
 func TestCheckCookies_SessionCookieMissingFlags(t *testing.T) {
 	t.Parallel()
 	s := NewScanner()
-	bodies := []capture.NetworkBody{
+	bodies := []types.NetworkBody{
 		{
 			URL: "https://example.com/login",
 			ResponseHeaders: map[string]string{
@@ -297,7 +296,7 @@ func TestCheckCookies_SessionCookieMissingFlags(t *testing.T) {
 func TestCheckCookies_NilHeaders(t *testing.T) {
 	t.Parallel()
 	s := NewScanner()
-	bodies := []capture.NetworkBody{
+	bodies := []types.NetworkBody{
 		{URL: "https://example.com", ResponseHeaders: nil},
 	}
 

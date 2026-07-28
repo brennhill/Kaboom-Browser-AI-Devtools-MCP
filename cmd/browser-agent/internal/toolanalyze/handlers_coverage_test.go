@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
@@ -24,7 +23,7 @@ type fakeScanner struct {
 	err    error
 }
 
-func (s fakeScanner) HandleSecurityAudit(_ json.RawMessage, _ []capture.NetworkBody, _ []scan.LogEntry, _ []string, _ []capture.NetworkWaterfallEntry) (any, error) {
+func (s fakeScanner) HandleSecurityAudit(_ json.RawMessage, _ []types.NetworkBody, _ []scan.LogEntry, _ []string, _ []types.NetworkWaterfallEntry) (any, error) {
 	return s.result, s.err
 }
 
@@ -32,8 +31,8 @@ type fakeAnalyzeDeps struct {
 	trackingEnabled bool
 	tabID           int
 	tabURL          string
-	networkBodies   []capture.NetworkBody
-	waterfall       []capture.NetworkWaterfallEntry
+	networkBodies   []types.NetworkBody
+	waterfall       []types.NetworkWaterfallEntry
 	consoleSec      []scan.LogEntry
 	scanner         SecurityScannerInterface
 	scannerSet      bool
@@ -55,8 +54,8 @@ func (f *fakeAnalyzeDeps) EnqueuePendingQuery(req mcp.JSONRPCRequest, _ queries.
 func (f *fakeAnalyzeDeps) GetTrackingStatus() (bool, int, string) {
 	return f.trackingEnabled, f.tabID, f.tabURL
 }
-func (f *fakeAnalyzeDeps) NetworkBodies() []capture.NetworkBody { return f.networkBodies }
-func (f *fakeAnalyzeDeps) NetworkWaterfallEntries() []capture.NetworkWaterfallEntry {
+func (f *fakeAnalyzeDeps) NetworkBodies() []types.NetworkBody { return f.networkBodies }
+func (f *fakeAnalyzeDeps) NetworkWaterfallEntries() []types.NetworkWaterfallEntry {
 	return f.waterfall
 }
 func (f *fakeAnalyzeDeps) ConsoleSecurityEntries() []scan.LogEntry { return f.consoleSec }

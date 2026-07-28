@@ -6,8 +6,8 @@ package csp
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/policy"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 )
@@ -60,7 +60,7 @@ func (g *Generator) applyWhitelistOverrides(response *Response, overrides []stri
 
 // RecordOriginFromBody extracts origin and resource type from a NetworkBody
 // and records it in the origin accumulator. Called from the network ingestion path.
-func (g *Generator) RecordOriginFromBody(body capture.NetworkBody, pageURL string) {
+func (g *Generator) RecordOriginFromBody(body types.NetworkBody, pageURL string) {
 	origin := util.ExtractOrigin(body.URL)
 	if origin == "" {
 		return

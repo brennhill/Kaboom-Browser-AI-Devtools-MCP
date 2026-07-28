@@ -3,10 +3,9 @@
 package reproduction
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"net/url"
 	"strings"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // EscapeJS escapes a string for embedding in JavaScript string literals.
@@ -37,7 +36,7 @@ func ChopString(s string, maxLen int) string {
 }
 
 // collectSelectorTypes returns the unique selector types present across actions.
-func collectSelectorTypes(actions []capture.EnhancedAction) []string {
+func collectSelectorTypes(actions []types.EnhancedAction) []string {
 	types := make(map[string]bool)
 	for _, a := range actions {
 		if a.Selectors == nil {

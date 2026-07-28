@@ -6,11 +6,10 @@ package csp
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // ============================================
@@ -952,31 +951,31 @@ func TestCSPRecordOriginFromBody(t *testing.T) {
 	gen := NewGenerator()
 
 	// JavaScript resource → script-src
-	gen.RecordOriginFromBody(capture.NetworkBody{
+	gen.RecordOriginFromBody(types.NetworkBody{
 		URL:         "https://cdn.example.com/app.js",
 		ContentType: "application/javascript",
 	}, "https://myapp.com/")
 
 	// CSS resource → style-src
-	gen.RecordOriginFromBody(capture.NetworkBody{
+	gen.RecordOriginFromBody(types.NetworkBody{
 		URL:         "https://cdn.example.com/style.css",
 		ContentType: "text/css",
 	}, "https://myapp.com/")
 
 	// Font resource → font-src
-	gen.RecordOriginFromBody(capture.NetworkBody{
+	gen.RecordOriginFromBody(types.NetworkBody{
 		URL:         "https://fonts.gstatic.com/font.woff2",
 		ContentType: "font/woff2",
 	}, "https://myapp.com/")
 
 	// Image resource → img-src
-	gen.RecordOriginFromBody(capture.NetworkBody{
+	gen.RecordOriginFromBody(types.NetworkBody{
 		URL:         "https://images.example.com/logo.png",
 		ContentType: "image/png",
 	}, "https://myapp.com/")
 
 	// API call → connect-src
-	gen.RecordOriginFromBody(capture.NetworkBody{
+	gen.RecordOriginFromBody(types.NetworkBody{
 		URL:         "https://api.example.com/data",
 		ContentType: "application/json",
 	}, "https://myapp.com/")
@@ -1052,13 +1051,13 @@ func TestCSPRecordOriginFromBodyInvalidURL(t *testing.T) {
 	gen := NewGenerator()
 
 	// Empty URL should not panic
-	gen.RecordOriginFromBody(capture.NetworkBody{
+	gen.RecordOriginFromBody(types.NetworkBody{
 		URL:         "",
 		ContentType: "application/javascript",
 	}, "https://myapp.com/")
 
 	// Invalid URL should not panic
-	gen.RecordOriginFromBody(capture.NetworkBody{
+	gen.RecordOriginFromBody(types.NetworkBody{
 		URL:         "://invalid",
 		ContentType: "application/javascript",
 	}, "https://myapp.com/")

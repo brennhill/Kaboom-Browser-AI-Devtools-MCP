@@ -3,6 +3,7 @@ package observe
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
 	"time"
@@ -26,7 +27,7 @@ func (m *mockTransientDeps) ExecuteA11yQuery(_ string, _ []string, _ any, _ bool
 }
 
 func seedTransientActions(c *capture.Capture) {
-	c.AddEnhancedActionsForTest([]capture.EnhancedAction{
+	c.AddEnhancedActionsForTest([]types.EnhancedAction{
 		{Type: "click", Timestamp: 1000, URL: "https://example.com"},
 		{Type: "transient", Timestamp: 2000, URL: "https://example.com", Classification: "toast", Value: "Saved", Role: "status"},
 		{Type: "transient", Timestamp: 3000, URL: "https://example.com", Classification: "alert", Value: "Error occurred", Role: "alert"},

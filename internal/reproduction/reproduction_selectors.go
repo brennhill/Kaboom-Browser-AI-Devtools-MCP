@@ -4,8 +4,7 @@ package reproduction
 
 import (
 	"fmt"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 type elementCandidate struct {
@@ -15,7 +14,7 @@ type elementCandidate struct {
 
 // DescribeElement returns the most human-readable description of the target element.
 // Priority: text+role > ariaLabel+role > role.name+role > testId > text > ariaLabel > id > cssPath
-func DescribeElement(action capture.EnhancedAction) string {
+func DescribeElement(action types.EnhancedAction) string {
 	s := action.Selectors
 	if s == nil {
 		return "(unknown element)"

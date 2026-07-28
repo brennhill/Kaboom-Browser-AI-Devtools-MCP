@@ -7,9 +7,9 @@ package diff
 
 import (
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/httpsec"
 )
 
@@ -20,7 +20,7 @@ import (
 //
 // Failure semantics:
 // - Name validation failure returns error and leaves store unchanged.
-func (m *Manager) TakeSnapshot(name string, bodies []capture.NetworkBody) (*Snapshot, error) {
+func (m *Manager) TakeSnapshot(name string, bodies []types.NetworkBody) (*Snapshot, error) {
 	if err := validateSnapshotName(name); err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func newEmptySnapshot(name string) *Snapshot {
 	}
 }
 
-func populateSnapshotFromBodies(snapshot *Snapshot, bodies []capture.NetworkBody) {
+func populateSnapshotFromBodies(snapshot *Snapshot, bodies []types.NetworkBody) {
 	for _, body := range bodies {
 		origin := extractSnapshotOrigin(body.URL)
 		populateHeaders(snapshot, origin, body)
@@ -102,7 +102,7 @@ func populateSnapshotFromBodies(snapshot *Snapshot, bodies []capture.NetworkBody
 	}
 }
 
-func populateHeaders(snapshot *Snapshot, origin string, body capture.NetworkBody) {
+func populateHeaders(snapshot *Snapshot, origin string, body types.NetworkBody) {
 	if !httpsec.IsHTMLResponse(body) || body.ResponseHeaders == nil {
 		return
 	}
@@ -116,7 +116,7 @@ func populateHeaders(snapshot *Snapshot, origin string, body capture.NetworkBody
 	}
 }
 
-func populateCookies(snapshot *Snapshot, origin string, body capture.NetworkBody) {
+func populateCookies(snapshot *Snapshot, origin string, body types.NetworkBody) {
 	if body.ResponseHeaders == nil {
 		return
 	}
@@ -167,7 +167,7 @@ func (m *Manager) resolveSnapshot(name string) (*Snapshot, error) {
 	return snapshot, nil
 }
 
-func (m *Manager) resolveToSnapshot(toName string, currentBodies []capture.NetworkBody) (*Snapshot, error) {
+func (m *Manager) resolveToSnapshot(toName string, currentBodies []types.NetworkBody) (*Snapshot, error) {
 	if toName == "" || toName == "current" {
 		snapshot := newEmptySnapshot("current")
 		populateSnapshotFromBodies(snapshot, currentBodies)

@@ -6,15 +6,14 @@ package thirdparty
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"os"
 	"regexp"
 	"strings"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // buildThirdPartyEntry creates a ThirdPartyEntry for a single origin.
-func buildThirdPartyEntry(origin string, bodies []capture.NetworkBody, urls []string, customLists *CustomLists) ThirdPartyEntry {
+func buildThirdPartyEntry(origin string, bodies []types.NetworkBody, urls []string, customLists *CustomLists) ThirdPartyEntry {
 	entry := ThirdPartyEntry{
 		Origin:       origin,
 		RequestCount: len(bodies),
@@ -40,7 +39,7 @@ func buildThirdPartyEntry(origin string, bodies []capture.NetworkBody, urls []st
 }
 
 // countResources counts resource types and detects cookie-setting from response headers.
-func countResources(entry *ThirdPartyEntry, bodies []capture.NetworkBody) {
+func countResources(entry *ThirdPartyEntry, bodies []types.NetworkBody) {
 	for _, body := range bodies {
 		switch contentTypeToResourceType(body.ContentType) {
 		case "script":
@@ -74,7 +73,7 @@ func hasSetCookieHeader(headers map[string]string) bool {
 }
 
 // collectOutboundData detects outbound data methods, content types, and PII.
-func collectOutboundData(entry *ThirdPartyEntry, bodies []capture.NetworkBody) {
+func collectOutboundData(entry *ThirdPartyEntry, bodies []types.NetworkBody) {
 	methodSet := make(map[string]bool)
 	ctSet := make(map[string]bool)
 	var outboundMethods, outboundContentTypes, allPIIFields []string

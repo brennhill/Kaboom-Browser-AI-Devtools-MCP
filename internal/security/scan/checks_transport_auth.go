@@ -7,9 +7,9 @@ package scan
 
 import (
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/httpsec"
 )
 
@@ -17,7 +17,7 @@ import (
 // Transport Security Check
 // ============================================
 
-func (s *Scanner) checkTransport(bodies []capture.NetworkBody, pageURLs []string) []Finding {
+func (s *Scanner) checkTransport(bodies []types.NetworkBody, pageURLs []string) []Finding {
 	var findings []Finding
 
 	pageIsHTTPS := false
@@ -70,7 +70,7 @@ func (s *Scanner) checkTransport(bodies []capture.NetworkBody, pageURLs []string
 // Auth Pattern Check
 // ============================================
 
-func (s *Scanner) checkAuthPatterns(bodies []capture.NetworkBody) []Finding {
+func (s *Scanner) checkAuthPatterns(bodies []types.NetworkBody) []Finding {
 	var findings []Finding
 
 	for _, body := range bodies {

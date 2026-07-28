@@ -4,6 +4,7 @@
 package capture_test
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 
 	cap "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
@@ -18,7 +19,7 @@ func TestNetworkBody_BinaryFormatIntegration(t *testing.T) {
 
 	// Add a network body with MessagePack binary data
 	msgpackData := string([]byte{0x81, 0xa3, 0x6b, 0x65, 0x79, 0xa5, 0x76, 0x61, 0x6c, 0x75, 0x65})
-	bodies := []cap.NetworkBody{
+	bodies := []types.NetworkBody{
 		{
 			URL:          "https://api.example.com/data",
 			Method:       "GET",
@@ -46,7 +47,7 @@ func TestNetworkBody_TextNoFormat(t *testing.T) {
 	c := cap.NewCapture()
 
 	// Add a network body with JSON text data
-	bodies := []cap.NetworkBody{
+	bodies := []types.NetworkBody{
 		{
 			URL:          "https://api.example.com/json",
 			Method:       "GET",
@@ -72,7 +73,7 @@ func TestWebSocketEvent_BinaryFormatIntegration(t *testing.T) {
 
 	// Add a WebSocket message with protobuf binary data
 	protobufData := string([]byte{0x08, 0x96, 0x01})
-	events := []cap.WebSocketEvent{
+	events := []types.WebSocketEvent{
 		{
 			Event:     "message",
 			ID:        "ws-1",
@@ -85,7 +86,7 @@ func TestWebSocketEvent_BinaryFormatIntegration(t *testing.T) {
 	c.AddWebSocketEvents(events)
 
 	// Retrieve and verify binary format was detected
-	result := c.GetWebSocketEvents(cap.WebSocketEventFilter{Limit: 1})
+	result := c.GetWebSocketEvents(types.WebSocketEventFilter{Limit: 1})
 	if len(result) != 1 {
 		t.Fatalf("expected 1 event, got %d", len(result))
 	}
@@ -102,7 +103,7 @@ func TestWebSocketEvent_OpenCloseNoFormat(t *testing.T) {
 	c := cap.NewCapture()
 
 	// Add open/close events which shouldn't have binary format detection
-	events := []cap.WebSocketEvent{
+	events := []types.WebSocketEvent{
 		{
 			Event: "open",
 			ID:    "ws-1",
@@ -118,7 +119,7 @@ func TestWebSocketEvent_OpenCloseNoFormat(t *testing.T) {
 	c.AddWebSocketEvents(events)
 
 	// Verify no binary format for non-message events
-	result := c.GetWebSocketEvents(cap.WebSocketEventFilter{Limit: 10})
+	result := c.GetWebSocketEvents(types.WebSocketEventFilter{Limit: 10})
 	for _, ev := range result {
 		if ev.BinaryFormat != "" {
 			t.Errorf("expected empty binary_format for %s event, got %q", ev.Event, ev.BinaryFormat)
@@ -131,7 +132,7 @@ func TestWebSocketEvent_TextMessageNoFormat(t *testing.T) {
 	c := cap.NewCapture()
 
 	// Add a text message
-	events := []cap.WebSocketEvent{
+	events := []types.WebSocketEvent{
 		{
 			Event:     "message",
 			ID:        "ws-1",
@@ -144,7 +145,7 @@ func TestWebSocketEvent_TextMessageNoFormat(t *testing.T) {
 	c.AddWebSocketEvents(events)
 
 	// Verify no binary format for text message
-	result := c.GetWebSocketEvents(cap.WebSocketEventFilter{Limit: 1})
+	result := c.GetWebSocketEvents(types.WebSocketEventFilter{Limit: 1})
 	if len(result) != 1 {
 		t.Fatalf("expected 1 event, got %d", len(result))
 	}

@@ -6,16 +6,15 @@ package pagination
 
 import (
 	"fmt"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // Type aliases for imported types to avoid qualifying every use.
 type (
 	// EnhancedAction is a user action from the capture package.
-	EnhancedAction = capture.EnhancedAction
+	EnhancedAction = types.EnhancedAction
 	// WebSocketEvent is a WebSocket event from the capture package.
-	WebSocketEvent = capture.WebSocketEvent
+	WebSocketEvent = types.WebSocketEvent
 )
 
 // ============================================

@@ -4,16 +4,15 @@
 package observe
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 	"time"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 func TestBuildHistoryEntries_Limit(t *testing.T) {
 	t.Parallel()
 	now := time.Now().UnixMilli()
-	actions := []capture.EnhancedAction{
+	actions := []types.EnhancedAction{
 		{Type: "navigate", Timestamp: now - 3000, ToURL: "https://a.com"},
 		{Type: "navigate", Timestamp: now - 2000, ToURL: "https://b.com"},
 		{Type: "navigate", Timestamp: now - 1000, ToURL: "https://c.com"},
@@ -69,7 +68,7 @@ func TestLimitHistoryEntries_ZeroLimit(t *testing.T) {
 func TestBuildActionsSummary_ByType(t *testing.T) {
 	t.Parallel()
 	now := time.Now().UnixMilli()
-	actions := []capture.EnhancedAction{
+	actions := []types.EnhancedAction{
 		{Type: "click", Timestamp: now},
 		{Type: "click", Timestamp: now + 1000},
 		{Type: "type", Timestamp: now + 2000},
@@ -98,7 +97,7 @@ func TestBuildActionsSummary_TimeRange(t *testing.T) {
 	t.Parallel()
 	t1 := time.Date(2024, 1, 1, 10, 0, 0, 0, time.UTC).UnixMilli()
 	t2 := time.Date(2024, 1, 1, 10, 5, 0, 0, time.UTC).UnixMilli()
-	actions := []capture.EnhancedAction{
+	actions := []types.EnhancedAction{
 		{Type: "click", Timestamp: t1},
 		{Type: "click", Timestamp: t2},
 	}
@@ -116,7 +115,7 @@ func TestBuildActionsSummary_TimeRange(t *testing.T) {
 func TestBuildActionsSummary_EpochTimestamp(t *testing.T) {
 	t.Parallel()
 	// Timestamp 0 = Unix epoch. Should still produce time_range.
-	actions := []capture.EnhancedAction{
+	actions := []types.EnhancedAction{
 		{Type: "click", Timestamp: 0},
 		{Type: "click", Timestamp: 1000},
 	}

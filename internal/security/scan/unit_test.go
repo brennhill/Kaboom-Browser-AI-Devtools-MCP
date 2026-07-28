@@ -6,17 +6,16 @@ package scan
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 func TestCheckCookies_FlagsMissingSessionCookieSecurityAttributes(t *testing.T) {
 	t.Parallel()
 	scanner := NewScanner()
 
-	bodies := []capture.NetworkBody{
+	bodies := []types.NetworkBody{
 		{
 			URL: "https://app.example.com/dashboard",
 			ResponseHeaders: map[string]string{
@@ -49,7 +48,7 @@ func TestCheckSecurityHeaders_SkipsHSTSOnLocalhost(t *testing.T) {
 	t.Parallel()
 	scanner := NewScanner()
 
-	bodies := []capture.NetworkBody{
+	bodies := []types.NetworkBody{
 		{
 			URL:         "https://localhost:3000/",
 			ContentType: "text/html; charset=utf-8",
@@ -71,7 +70,7 @@ func TestCheckTransport_HTTPJSOnHTTPSPageIncludesCriticalMixedContent(t *testing
 	t.Parallel()
 	scanner := NewScanner()
 
-	bodies := []capture.NetworkBody{
+	bodies := []types.NetworkBody{
 		{
 			Method:      "GET",
 			URL:         "http://cdn.example.com/app.js",
@@ -123,7 +122,7 @@ func TestScanForPII_ThirdPartyEscalatesSeverity(t *testing.T) {
 func TestHelperFunctions_FilterAndParsing(t *testing.T) {
 	t.Parallel()
 
-	filteredBodies := filterBodiesByURL([]capture.NetworkBody{
+	filteredBodies := filterBodiesByURL([]types.NetworkBody{
 		{URL: "https://api.example.com/users"},
 		{URL: "https://cdn.example.com/app.js"},
 	}, "api.example.com")
@@ -172,7 +171,7 @@ func TestCredentialScanner_URLPatterns(t *testing.T) {
 	t.Parallel()
 	scanner := NewScanner()
 
-	apiFindings := scanner.scanURLForCredentials(capture.NetworkBody{
+	apiFindings := scanner.scanURLForCredentials(types.NetworkBody{
 		Method: "GET",
 		URL:    "https://api.example.com/data?api_key=live_secret_1234567890abcdef",
 	})
@@ -180,7 +179,7 @@ func TestCredentialScanner_URLPatterns(t *testing.T) {
 		t.Fatalf("expected critical API-key finding, got %+v", apiFindings)
 	}
 
-	genericFindings := scanner.scanURLForCredentials(capture.NetworkBody{
+	genericFindings := scanner.scanURLForCredentials(types.NetworkBody{
 		Method: "GET",
 		URL:    "https://api.example.com/data?password=superSecretValue123456",
 	})
@@ -188,7 +187,7 @@ func TestCredentialScanner_URLPatterns(t *testing.T) {
 		t.Fatalf("expected credential URL finding for password param, got %+v", genericFindings)
 	}
 
-	jwtFindings := scanner.scanURLForCredentials(capture.NetworkBody{
+	jwtFindings := scanner.scanURLForCredentials(types.NetworkBody{
 		Method: "GET",
 		URL:    "https://api.example.com/verify?token=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.signature1234567890",
 	})
@@ -196,7 +195,7 @@ func TestCredentialScanner_URLPatterns(t *testing.T) {
 		t.Fatalf("expected JWT URL finding, got %+v", jwtFindings)
 	}
 
-	awsFindings := scanner.scanURLForCredentials(capture.NetworkBody{
+	awsFindings := scanner.scanURLForCredentials(types.NetworkBody{
 		Method: "GET",
 		URL:    "https://api.example.com/config?access_key=AKIA1234567890ABCDEF",
 	})
@@ -282,7 +281,7 @@ func TestHandleSecurityAudit_CredentialsOnlyPath(t *testing.T) {
 	scanner := NewScanner()
 
 	params := json.RawMessage(`{"checks":["credentials"]}`)
-	bodies := []capture.NetworkBody{
+	bodies := []types.NetworkBody{
 		{
 			Method: "GET",
 			URL:    "https://api.example.com/data?api_key=live_secret_1234567890abcdef",

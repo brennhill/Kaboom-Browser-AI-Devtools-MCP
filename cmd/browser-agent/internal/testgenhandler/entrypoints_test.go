@@ -9,13 +9,13 @@ package testgenhandler
 import (
 	"encoding/json"
 	"errors"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -72,7 +72,7 @@ func TestHandleGenerateTestFromContext(t *testing.T) {
 
 		env := newTestEnv()
 		// The action must fall inside the generator's 5s window around the error.
-		env.cap.AddEnhancedActionsForTest([]capture.EnhancedAction{
+		env.cap.AddEnhancedActionsForTest([]types.EnhancedAction{
 			{Type: "click", URL: "https://example.com", Timestamp: errorMillis},
 		})
 
@@ -98,7 +98,7 @@ func TestHandleGenerateTestFromContext(t *testing.T) {
 	t.Run("interaction context generates a test and defaults the framework", func(t *testing.T) {
 		t.Parallel()
 		env := newTestEnv()
-		env.cap.AddEnhancedActionsForTest([]capture.EnhancedAction{
+		env.cap.AddEnhancedActionsForTest([]types.EnhancedAction{
 			{Type: "click", URL: "https://example.com"},
 		})
 

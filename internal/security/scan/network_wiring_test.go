@@ -5,10 +5,9 @@
 package scan
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"strings"
 	"testing"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // ============================================
@@ -19,7 +18,7 @@ func TestScan_NetworkCheckDetectsSuspiciousTLD(t *testing.T) {
 	scanner := NewScanner()
 
 	input := Input{
-		WaterfallEntries: []capture.NetworkWaterfallEntry{
+		WaterfallEntries: []types.NetworkWaterfallEntry{
 			{URL: "https://cdn-analytics.xyz/tracker.js", InitiatorType: "script"},
 		},
 		PageURLs: []string{"https://myapp.com"},
@@ -50,7 +49,7 @@ func TestScan_NetworkCheckDetectsTyposquatting(t *testing.T) {
 	scanner := NewScanner()
 
 	input := Input{
-		WaterfallEntries: []capture.NetworkWaterfallEntry{
+		WaterfallEntries: []types.NetworkWaterfallEntry{
 			{URL: "https://unpkg.cm/library.js", InitiatorType: "script"},
 		},
 		PageURLs: []string{"https://myapp.com"},
@@ -74,7 +73,7 @@ func TestScan_NetworkCheckDetectsMixedContent(t *testing.T) {
 	scanner := NewScanner()
 
 	input := Input{
-		WaterfallEntries: []capture.NetworkWaterfallEntry{
+		WaterfallEntries: []types.NetworkWaterfallEntry{
 			{URL: "http://cdn.example.com/script.js", InitiatorType: "script"},
 		},
 		PageURLs: []string{"https://myapp.com"},
@@ -101,7 +100,7 @@ func TestScan_NetworkCheckSafeOriginNoFindings(t *testing.T) {
 	scanner := NewScanner()
 
 	input := Input{
-		WaterfallEntries: []capture.NetworkWaterfallEntry{
+		WaterfallEntries: []types.NetworkWaterfallEntry{
 			{URL: "https://cdn.example.com/library.js", InitiatorType: "script"},
 		},
 		PageURLs: []string{"https://myapp.com"},
@@ -122,7 +121,7 @@ func TestScan_NetworkCheckIncludedByDefault(t *testing.T) {
 
 	// No explicit Checks — should run all including "network"
 	input := Input{
-		WaterfallEntries: []capture.NetworkWaterfallEntry{
+		WaterfallEntries: []types.NetworkWaterfallEntry{
 			{URL: "https://cdn-analytics.xyz/tracker.js", InitiatorType: "script"},
 		},
 		PageURLs: []string{"https://myapp.com"},

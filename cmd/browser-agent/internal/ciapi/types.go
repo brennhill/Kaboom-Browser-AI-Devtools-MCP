@@ -4,19 +4,19 @@
 package ciapi
 
 import (
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 // SnapshotResponse is the aggregated state returned by GET /snapshot.
 type SnapshotResponse struct {
-	Timestamp       string                   `json:"timestamp"`
-	TestID          string                   `json:"test_id,omitempty"`
-	Logs            []mcp.LogEntry           `json:"logs"`
-	WebSocket       []capture.WebSocketEvent `json:"websocket_events"`
-	NetworkBodies   []capture.NetworkBody    `json:"network_bodies"`
-	EnhancedActions []capture.EnhancedAction `json:"enhanced_actions,omitempty"`
-	Stats           SnapshotStats            `json:"stats"`
+	Timestamp       string                 `json:"timestamp"`
+	TestID          string                 `json:"test_id,omitempty"`
+	Logs            []mcp.LogEntry         `json:"logs"`
+	WebSocket       []types.WebSocketEvent `json:"websocket_events"`
+	NetworkBodies   []types.NetworkBody    `json:"network_bodies"`
+	EnhancedActions []types.EnhancedAction `json:"enhanced_actions,omitempty"`
+	Stats           SnapshotStats          `json:"stats"`
 }
 
 // SnapshotStats summarizes the snapshot contents.

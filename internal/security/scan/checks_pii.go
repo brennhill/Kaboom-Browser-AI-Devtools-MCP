@@ -7,10 +7,10 @@ package scan
 
 import (
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"regexp"
 	"strings"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/httpsec"
 )
 
@@ -25,7 +25,7 @@ var (
 	ccPattern    = regexp.MustCompile(`\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b`)
 )
 
-func (s *Scanner) checkPII(bodies []capture.NetworkBody, pageURLs []string) []Finding {
+func (s *Scanner) checkPII(bodies []types.NetworkBody, pageURLs []string) []Finding {
 	var findings []Finding
 
 	for _, body := range bodies {

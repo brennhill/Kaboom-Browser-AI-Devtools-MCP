@@ -4,10 +4,9 @@
 package httpsec
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"net/url"
 	"strings"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // IsLocalhostURL reports whether rawURL points at a loopback or any-address host.
@@ -21,7 +20,7 @@ func IsLocalhostURL(rawURL string) bool {
 }
 
 // IsHTMLResponse reports whether a captured body carries an HTML content type.
-func IsHTMLResponse(body capture.NetworkBody) bool {
+func IsHTMLResponse(body types.NetworkBody) bool {
 	ct := strings.ToLower(body.ContentType)
 	return strings.Contains(ct, "text/html")
 }

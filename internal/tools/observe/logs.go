@@ -8,11 +8,11 @@ package observe
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"sort"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/buffers"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/pagination"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/errorcluster"
@@ -374,8 +374,8 @@ func normalizeBrowserLogEntry(entry map[string]any) map[string]any {
 	return normalized
 }
 
-func buildExtensionLogEntries(allLogs []capture.ExtensionLog, limit int, level string, minLevel string) []map[string]any {
-	matched := buffers.ReverseFilterLimit(allLogs, func(entry capture.ExtensionLog) bool {
+func buildExtensionLogEntries(allLogs []types.ExtensionLog, limit int, level string, minLevel string) []map[string]any {
+	matched := buffers.ReverseFilterLimit(allLogs, func(entry types.ExtensionLog) bool {
 		if level != "" && entry.Level != level {
 			return false
 		}

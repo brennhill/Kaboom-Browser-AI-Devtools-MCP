@@ -10,12 +10,12 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"net/http/httptest"
 	"sort"
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -67,7 +67,7 @@ func (s *scenario) loadConsoleData(t *testing.T) {
 // loadNetworkData populates capture with network waterfall and body entries.
 func (s *scenario) loadNetworkData(t *testing.T) {
 	t.Helper()
-	s.capture.AddNetworkWaterfallEntries([]capture.NetworkWaterfallEntry{
+	s.capture.AddNetworkWaterfallEntries([]types.NetworkWaterfallEntry{
 		{
 			URL: "https://api.example.com/users", Name: "https://api.example.com/users",
 			InitiatorType: "fetch", Duration: 150.5, StartTime: 1000.0,
@@ -77,7 +77,7 @@ func (s *scenario) loadNetworkData(t *testing.T) {
 		},
 	}, "https://app.example.com/dashboard")
 
-	s.capture.AddNetworkBodiesForTest([]capture.NetworkBody{
+	s.capture.AddNetworkBodiesForTest([]types.NetworkBody{
 		{
 			URL: "https://api.example.com/users", Method: "GET", Status: 200,
 			ResponseBody: `{"users":[{"id":1,"name":"Alice"}]}`,
@@ -90,9 +90,9 @@ func (s *scenario) loadNetworkData(t *testing.T) {
 func (s *scenario) loadWebSocketData(t *testing.T) {
 	t.Helper()
 	wsPayload := struct {
-		Events []capture.WebSocketEvent `json:"events"`
+		Events []types.WebSocketEvent `json:"events"`
 	}{
-		Events: []capture.WebSocketEvent{
+		Events: []types.WebSocketEvent{
 			{
 				URL: "wss://realtime.example.com/ws", Type: "websocket",
 				Event: "open", ID: "ws-conn-1",
@@ -122,9 +122,9 @@ func (s *scenario) loadWebSocketData(t *testing.T) {
 func (s *scenario) loadActionData(t *testing.T) {
 	t.Helper()
 	actionPayload := struct {
-		Actions []capture.EnhancedAction `json:"actions"`
+		Actions []types.EnhancedAction `json:"actions"`
 	}{
-		Actions: []capture.EnhancedAction{
+		Actions: []types.EnhancedAction{
 			{
 				Type: "click", Timestamp: time.Now().Add(-1 * time.Second).UnixMilli(),
 				URL: "https://app.example.com/dashboard",
@@ -146,7 +146,7 @@ func (s *scenario) loadActionData(t *testing.T) {
 // loadExtensionLogs populates capture with extension debug logs.
 func (s *scenario) loadExtensionLogs(t *testing.T) {
 	t.Helper()
-	s.capture.AddExtensionLogs([]capture.ExtensionLog{
+	s.capture.AddExtensionLogs([]types.ExtensionLog{
 		{
 			Level: "debug", Message: "Connection established",
 			Source: "background", Category: "CONNECTION",

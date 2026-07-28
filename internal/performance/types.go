@@ -124,8 +124,8 @@ type PerformanceRegression struct {
 type ResourceEntry struct {
 	URL            string  `json:"url"`
 	Type           string  `json:"type"`
-	TransferSize   int64   `json:"transfer_size"`              // snake_case (from browser PerformanceResourceTiming)
-	Duration       float64 `json:"duration"`                  // snake_case (from browser PerformanceResourceTiming)
+	TransferSize   int64   `json:"transfer_size"` // snake_case (from browser PerformanceResourceTiming)
+	Duration       float64 `json:"duration"`      // snake_case (from browser PerformanceResourceTiming)
 	RenderBlocking bool    `json:"render_blocking,omitempty"`
 }
 

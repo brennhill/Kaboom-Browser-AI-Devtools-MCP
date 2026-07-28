@@ -5,11 +5,10 @@ package scan
 
 import (
 	"fmt"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
-func (s *Scanner) checkCredentials(bodies []capture.NetworkBody, entries []LogEntry) []Finding {
+func (s *Scanner) checkCredentials(bodies []types.NetworkBody, entries []LogEntry) []Finding {
 	var findings []Finding
 
 	// Scan network bodies (URLs and body content)
@@ -72,7 +71,7 @@ func (s *Scanner) scanURLForGenericSecrets(url string) []Finding {
 	return findings
 }
 
-func (s *Scanner) scanURLForCredentials(body capture.NetworkBody) []Finding {
+func (s *Scanner) scanURLForCredentials(body types.NetworkBody) []Finding {
 	var findings []Finding
 	findings = append(findings, s.scanURLForAPIKeys(body.URL)...)
 	findings = append(findings, s.scanURLForGenericSecrets(body.URL)...)

@@ -4,14 +4,13 @@
 package generate
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"sort"
 	"strings"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // BuildCSPDirectives extracts unique origins from network bodies and groups them by CSP directive.
-func BuildCSPDirectives(networkBodies []capture.NetworkBody) map[string][]string {
+func BuildCSPDirectives(networkBodies []types.NetworkBody) map[string][]string {
 	originsByType := make(map[string]map[string]bool)
 	for _, body := range networkBodies {
 		origin := ExtractOrigin(body.URL)

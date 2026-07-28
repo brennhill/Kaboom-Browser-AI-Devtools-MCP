@@ -5,6 +5,7 @@ package capture
 
 import (
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
 	"time"
 
@@ -20,14 +21,14 @@ func TestCaptureAccessorSnapshotsAndCopies(t *testing.T) {
 		t.Fatal("new capture should return empty timestamp slices")
 	}
 
-	c.AddNetworkBodies([]NetworkBody{
+	c.AddNetworkBodies([]types.NetworkBody{
 		{URL: "https://example.test/a", Status: 200, Duration: 80},
 		{URL: "https://example.test/b", Status: 503, Duration: 120},
 	})
-	c.AddWebSocketEvents([]WebSocketEvent{
+	c.AddWebSocketEvents([]types.WebSocketEvent{
 		{Event: "open", URL: "wss://example.test/ws", ID: "ws-1"},
 	})
-	c.AddEnhancedActions([]EnhancedAction{
+	c.AddEnhancedActions([]types.EnhancedAction{
 		{Type: "click", URL: "https://example.test", Timestamp: 123},
 	})
 
@@ -138,9 +139,9 @@ func TestCaptureSnapshotTimestampsAreCopied(t *testing.T) {
 	t.Parallel()
 
 	c := NewCapture()
-	c.AddNetworkBodies([]NetworkBody{{URL: "https://example.test", Status: 200}})
-	c.AddWebSocketEvents([]WebSocketEvent{{Event: "open", ID: "1", URL: "wss://example.test"}})
-	c.AddEnhancedActions([]EnhancedAction{{Type: "click", Timestamp: time.Now().UnixMilli()}})
+	c.AddNetworkBodies([]types.NetworkBody{{URL: "https://example.test", Status: 200}})
+	c.AddWebSocketEvents([]types.WebSocketEvent{{Event: "open", ID: "1", URL: "wss://example.test"}})
+	c.AddEnhancedActions([]types.EnhancedAction{{Type: "click", Timestamp: time.Now().UnixMilli()}})
 
 	netTS := c.GetNetworkTimestamps()
 	wsTS := c.GetWebSocketTimestamps()

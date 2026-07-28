@@ -294,7 +294,7 @@ func TestRunQualityGate_WithConventions(t *testing.T) {
 
 	// Simulate Edit tool input with new_string containing the pattern.
 	input := Input{
-		ToolName:  "Edit",
+		ToolName: "Edit",
 		ToolInput: mustMarshal(map[string]string{
 			"file_path":  editedFile,
 			"new_string": `client := &http.Client{Timeout: 1e9}`,

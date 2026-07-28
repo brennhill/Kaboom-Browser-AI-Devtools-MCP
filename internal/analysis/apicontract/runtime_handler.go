@@ -5,9 +5,9 @@ package apicontract
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"sync"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
 
@@ -21,7 +21,7 @@ func NewRuntime() *Runtime {
 	return &Runtime{validator: NewAPIContractValidator()}
 }
 
-func (r *Runtime) Handle(req mcp.JSONRPCRequest, args json.RawMessage, bodies []capture.NetworkBody) mcp.JSONRPCResponse {
+func (r *Runtime) Handle(req mcp.JSONRPCRequest, args json.RawMessage, bodies []types.NetworkBody) mcp.JSONRPCResponse {
 	var params struct {
 		Operation       string   `json:"operation"`
 		URLFilter       string   `json:"url"`
@@ -79,7 +79,7 @@ func (r *Runtime) Handle(req mcp.JSONRPCRequest, args json.RawMessage, bodies []
 	}
 }
 
-func (r *Runtime) process(bodies []capture.NetworkBody) *APIContractValidator {
+func (r *Runtime) process(bodies []types.NetworkBody) *APIContractValidator {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.validator == nil {

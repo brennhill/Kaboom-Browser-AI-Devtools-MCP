@@ -7,10 +7,10 @@ package observe
 
 import (
 	"encoding/json"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/buffers"
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/observe/hints"
@@ -30,7 +30,7 @@ func GetEnhancedActions(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage)
 	params.Limit = clampLimit(params.Limit, 100)
 
 	allActions := deps.GetCapture().GetAllEnhancedActions()
-	filtered := buffers.ReverseFilterLimit(allActions, func(a capture.EnhancedAction) bool {
+	filtered := buffers.ReverseFilterLimit(allActions, func(a types.EnhancedAction) bool {
 		if params.Type != "" && a.Type != params.Type {
 			return false
 		}
@@ -91,7 +91,7 @@ func GetTransients(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.
 	params.Limit = clampLimit(params.Limit, 50)
 
 	allActions := deps.GetCapture().GetAllEnhancedActions()
-	filtered := buffers.ReverseFilterLimit(allActions, func(a capture.EnhancedAction) bool {
+	filtered := buffers.ReverseFilterLimit(allActions, func(a types.EnhancedAction) bool {
 		if a.Type != "transient" {
 			return false
 		}
@@ -133,7 +133,7 @@ func GetTransients(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp.
 }
 
 // buildTransientsSummary returns {total, by_classification, metadata}.
-func buildTransientsSummary(actions []capture.EnhancedAction, meta ResponseMetadata) map[string]any {
+func buildTransientsSummary(actions []types.EnhancedAction, meta ResponseMetadata) map[string]any {
 	byClassification := make(map[string]int)
 	for _, a := range actions {
 		cls := a.Classification
@@ -199,7 +199,7 @@ func AnalyzeHistory(deps Deps, req mcp.JSONRPCRequest, args json.RawMessage) mcp
 	})
 }
 
-func buildHistoryEntries(actions []capture.EnhancedAction) []historyEntry {
+func buildHistoryEntries(actions []types.EnhancedAction) []historyEntry {
 	entries := make([]historyEntry, 0)
 	seenURLs := make(map[string]bool)
 
@@ -280,7 +280,7 @@ func GetTabs(deps Deps, req mcp.JSONRPCRequest, _ json.RawMessage) mcp.JSONRPCRe
 	})
 }
 
-func buildActionsSummary(actions []capture.EnhancedAction, meta ResponseMetadata) map[string]any {
+func buildActionsSummary(actions []types.EnhancedAction, meta ResponseMetadata) map[string]any {
 	byType := make(map[string]int)
 	var firstTS, lastTS int64
 	hasTS := false

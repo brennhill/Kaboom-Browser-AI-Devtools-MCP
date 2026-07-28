@@ -9,9 +9,8 @@
 package scan
 
 import (
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"testing"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 // ============================================
@@ -268,7 +267,7 @@ func TestThirdPartySeverity(t *testing.T) {
 func TestCheckAuthPatterns_PIIWithoutAuth(t *testing.T) {
 	t.Parallel()
 	s := NewScanner()
-	bodies := []capture.NetworkBody{
+	bodies := []types.NetworkBody{
 		{
 			URL:           "https://api.example.com/users",
 			Method:        "GET",
@@ -289,7 +288,7 @@ func TestCheckAuthPatterns_PIIWithoutAuth(t *testing.T) {
 func TestCheckAuthPatterns_PIIWithAuth(t *testing.T) {
 	t.Parallel()
 	s := NewScanner()
-	bodies := []capture.NetworkBody{
+	bodies := []types.NetworkBody{
 		{
 			URL:           "https://api.example.com/users",
 			Method:        "GET",
@@ -307,7 +306,7 @@ func TestCheckAuthPatterns_PIIWithAuth(t *testing.T) {
 func TestCheckAuthPatterns_NoPII(t *testing.T) {
 	t.Parallel()
 	s := NewScanner()
-	bodies := []capture.NetworkBody{
+	bodies := []types.NetworkBody{
 		{
 			URL:           "https://api.example.com/status",
 			Method:        "GET",
@@ -325,7 +324,7 @@ func TestCheckAuthPatterns_NoPII(t *testing.T) {
 func TestCheckAuthPatterns_EmptyResponse(t *testing.T) {
 	t.Parallel()
 	s := NewScanner()
-	bodies := []capture.NetworkBody{
+	bodies := []types.NetworkBody{
 		{
 			URL:           "https://api.example.com/ping",
 			Method:        "GET",

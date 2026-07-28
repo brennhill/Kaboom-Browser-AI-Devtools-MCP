@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -402,7 +403,7 @@ func handleTelemetry(server *Server, captured *capture.Capture) http.HandlerFunc
 			}
 			result, count = entries, len(entries)
 		case "websocket_events":
-			entries := captured.GetWebSocketEvents(capture.WebSocketEventFilter{})
+			entries := captured.GetWebSocketEvents(types.WebSocketEventFilter{})
 			if limit > 0 && len(entries) > limit {
 				entries = entries[len(entries)-limit:]
 			}
@@ -426,7 +427,7 @@ func handleTelemetry(server *Server, captured *capture.Capture) http.HandlerFunc
 			}
 			result, count = entries, len(entries)
 		case "websocket_status":
-			status := captured.GetWebSocketStatus(capture.WebSocketStatusFilter{})
+			status := captured.GetWebSocketStatus(types.WebSocketStatusFilter{})
 			httpapi.JSON(w, http.StatusOK, map[string]any{
 				"type": telemetryType, "connections": status.Connections,
 				"closed": status.Closed, "count": len(status.Connections),

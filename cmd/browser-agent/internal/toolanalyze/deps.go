@@ -6,7 +6,6 @@ package toolanalyze
 import (
 	"encoding/json"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/security/scan"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
@@ -22,10 +21,10 @@ type Deps interface {
 	GetTrackingStatus() (bool, int, string)
 
 	// NetworkBodies returns captured network bodies.
-	NetworkBodies() []capture.NetworkBody
+	NetworkBodies() []types.NetworkBody
 
 	// NetworkWaterfallEntries returns captured network waterfall entries.
-	NetworkWaterfallEntries() []capture.NetworkWaterfallEntry
+	NetworkWaterfallEntries() []types.NetworkWaterfallEntry
 
 	// ConsoleSecurityEntries returns console entries as scan.LogEntry for security scanning.
 	ConsoleSecurityEntries() []scan.LogEntry
@@ -42,5 +41,5 @@ type Deps interface {
 
 // SecurityScannerInterface is the narrow interface for security scanning.
 type SecurityScannerInterface interface {
-	HandleSecurityAudit(args json.RawMessage, bodies []capture.NetworkBody, console []scan.LogEntry, pageURLs []string, waterfall []capture.NetworkWaterfallEntry) (any, error)
+	HandleSecurityAudit(args json.RawMessage, bodies []types.NetworkBody, console []scan.LogEntry, pageURLs []string, waterfall []types.NetworkWaterfallEntry) (any, error)
 }

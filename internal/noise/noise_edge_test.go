@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
@@ -262,7 +261,7 @@ func TestIsNetworkNoise_MethodOnlyRule(t *testing.T) {
 	}
 	_ = nc.AddRules([]NoiseRule{rule})
 
-	body := capture.NetworkBody{
+	body := types.NetworkBody{
 		Method: "HEAD",
 		URL:    "http://localhost:3000/any/path",
 		Status: 200,
@@ -271,7 +270,7 @@ func TestIsNetworkNoise_MethodOnlyRule(t *testing.T) {
 		t.Error("HEAD request matching method-only rule should be noise")
 	}
 
-	bodyGet := capture.NetworkBody{
+	bodyGet := types.NetworkBody{
 		Method: "GET",
 		URL:    "http://localhost:3000/any/path",
 		Status: 200,
@@ -299,7 +298,7 @@ func TestIsNetworkNoise_StatusRangeOnlyRule(t *testing.T) {
 	}
 	_ = nc.AddRules([]NoiseRule{rule})
 
-	body301 := capture.NetworkBody{
+	body301 := types.NetworkBody{
 		Method: "GET",
 		URL:    "http://localhost:3000/redirect",
 		Status: 301,
@@ -308,7 +307,7 @@ func TestIsNetworkNoise_StatusRangeOnlyRule(t *testing.T) {
 		t.Error("301 should match status-range-only rule")
 	}
 
-	body200 := capture.NetworkBody{
+	body200 := types.NetworkBody{
 		Method: "GET",
 		URL:    "http://localhost:3000/ok",
 		Status: 200,
@@ -360,14 +359,14 @@ func TestIsWebSocketNoise_BuiltinRules(t *testing.T) {
 	}
 
 	for _, url := range noiseURLs {
-		event := capture.WebSocketEvent{URL: url, Event: "message"}
+		event := types.WebSocketEvent{URL: url, Event: "message"}
 		if !nc.IsWebSocketNoise(event) {
 			t.Errorf("expected builtin WS noise for URL: %s", url)
 		}
 	}
 
 	// Normal WebSocket should not match
-	event := capture.WebSocketEvent{URL: "wss://api.example.com/live", Event: "message"}
+	event := types.WebSocketEvent{URL: "wss://api.example.com/live", Event: "message"}
 	if nc.IsWebSocketNoise(event) {
 		t.Error("normal WebSocket URL should not be noise")
 	}
@@ -458,7 +457,7 @@ func TestIsNetworkNoise_SignalRecorded(t *testing.T) {
 	t.Parallel()
 	nc := NewNoiseConfig()
 
-	body := capture.NetworkBody{
+	body := types.NetworkBody{
 		Method: "POST",
 		URL:    "http://localhost:3000/api/orders",
 		Status: 200,
@@ -479,7 +478,7 @@ func TestIsWebSocketNoise_SignalRecorded(t *testing.T) {
 	t.Parallel()
 	nc := NewNoiseConfig()
 
-	event := capture.WebSocketEvent{URL: "wss://api.example.com/live", Event: "message"}
+	event := types.WebSocketEvent{URL: "wss://api.example.com/live", Event: "message"}
 	nc.IsWebSocketNoise(event)
 
 	stats := nc.GetStatistics()
