@@ -243,8 +243,7 @@ func buildConfigureLocalDeps(h *ToolHandler) toolconfigure.Deps {
 		AllWebSocketEvents: func() []types.WebSocketEvent { return h.capture.Telemetry().GetAllWebSocketEvents() },
 		ToolsList:          schema.AllTools,
 		GetToolModuleExamples: func(toolName string) any {
-			h.ensureToolModules()
-			if examples := h.toolModules.Examples(toolName); len(examples) > 0 {
+			if examples := h.toolCatalog.Examples(toolName); len(examples) > 0 {
 				return examples
 			}
 			return nil

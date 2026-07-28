@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/asynccommand"
@@ -23,6 +22,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/annotationanalysis"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/combinedaudit"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolanalyze/inspect"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolcatalog"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/netrecord"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolconfigure/tutorial"
@@ -143,13 +143,8 @@ type ToolHandler struct {
 	// Passive network traffic recording state (start/stop capture).
 	networkRecording *netrecord.NetworkRecordingState
 
-	// Module registry for plugin-style tool dispatch (incremental migration).
-	toolModulesOnce sync.Once
-	toolModules     *toolmodule.Registry
-
-	// Tool schema cache for parameter-warning validation.
-	toolSchemasOnce sync.Once
-	toolSchemas     map[string]map[string]any
+	// Immutable executable modules, examples, and validation schemas.
+	toolCatalog *toolcatalog.Catalog
 
 	// Session-level response-mode preference.
 	summaryPrefs *summarypref.Cache
@@ -171,9 +166,7 @@ type ToolHandler struct {
 func (h *ToolHandler) HandleToolCall(req mcp.JSONRPCRequest, name string, args json.RawMessage) (mcp.JSONRPCResponse, bool) {
 	start := time.Now()
 
-	h.ensureToolModules()
-	h.ensureToolSchemas()
-	resp, handled := h.toolModules.Dispatch(req, name, args)
+	resp, handled := h.toolCatalog.Dispatch(req, name, args)
 	if !handled {
 		return mcp.JSONRPCResponse{}, false
 	}
@@ -189,8 +182,8 @@ func (h *ToolHandler) HandleToolCall(req mcp.JSONRPCRequest, name string, args j
 	// Validate params against tool schema and append warnings for unknown fields.
 	// Skip validation for error responses (already failed, warnings would be noise).
 	if !resultIsError {
-		if schema := h.getToolSchema(name); schema != nil {
-			if warnings := mcp.ValidateParamsAgainstSchema(args, schema); len(warnings) > 0 {
+		if inputSchema := h.toolCatalog.Schema(name); inputSchema != nil {
+			if warnings := mcp.ValidateParamsAgainstSchema(args, inputSchema); len(warnings) > 0 {
 				if parsedOK && mcp.AppendWarningsToToolResult(parsedResult, warnings) {
 					resp.Result = mcp.SafeMarshal(parsedResult, string(resp.Result))
 				} else {
@@ -227,15 +220,9 @@ func (h *ToolHandler) HandleToolCall(req mcp.JSONRPCRequest, name string, args j
 	return resp, true
 }
 
-// getToolSchema returns the InputSchema for a tool by name (cached).
-func (h *ToolHandler) getToolSchema(name string) map[string]any {
-	h.ensureToolSchemas()
-	return h.toolSchemas[name]
-}
-
-func (h *ToolHandler) ensureToolModules() {
-	h.toolModulesOnce.Do(func() {
-		h.toolModules = toolmodule.New(
+func buildToolCatalog(h *ToolHandler) *toolcatalog.Catalog {
+	return toolcatalog.New(
+		[]toolmodule.Spec{
 			toolmodule.Spec{Name: "observe", Summary: "Read captured browser state: logs, network, screenshots, and async results",
 				Examples: []json.RawMessage{json.RawMessage(`{"what":"logs"}`), json.RawMessage(`{"what":"screenshot"}`)}, Handle: h.observeDispatcher.Handle},
 			toolmodule.Spec{Name: "analyze", Summary: "Run analysis checks over DOM, links, accessibility, and audits",
@@ -246,8 +233,9 @@ func (h *ToolHandler) ensureToolModules() {
 				Examples: []json.RawMessage{json.RawMessage(`{"what":"health"}`), json.RawMessage(`{"what":"clear","buffer":"logs"}`)}, Handle: h.configureDispatcher.Handle},
 			toolmodule.Spec{Name: "interact", Summary: "Browser automation: navigate, click, type, fill forms, take screenshots, and control any web page",
 				Examples: []json.RawMessage{json.RawMessage(`{"what":"navigate","url":"https://example.com"}`), json.RawMessage(`{"what":"click","selector":"button.submit"}`), json.RawMessage(`{"what":"type","selector":"input[name=search]","text":"hello"}`)}, Handle: h.toolInteract},
-		)
-	})
+		},
+		schema.AllTools(),
+	)
 }
 
 // extractWhatParam extracts the "what" string from raw JSON args.
@@ -292,15 +280,6 @@ func usageKey(args json.RawMessage) string {
 		prefix = prefix[:idx]
 	}
 	return "command_result:" + prefix
-}
-
-func (h *ToolHandler) ensureToolSchemas() {
-	h.toolSchemasOnce.Do(func() {
-		h.toolSchemas = make(map[string]map[string]any)
-		for _, tool := range schema.AllTools() {
-			h.toolSchemas[tool.Name] = tool.InputSchema
-		}
-	})
 }
 
 func parseToolResultForPostProcessing(raw json.RawMessage) (*mcp.MCPToolResult, bool) {
@@ -554,8 +533,7 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 		RecordAction:   handler.actionRecorder.Record,
 	})
 	handler.configureDispatcher = buildConfigureDispatcher(handler)
-	handler.ensureToolModules()
-	handler.ensureToolSchemas()
+	handler.toolCatalog = buildToolCatalog(handler)
 
 	handler.MCPHandler.SetToolBackend(buildMCPToolBackend(handler))
 	return handler.MCPHandler

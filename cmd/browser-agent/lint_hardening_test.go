@@ -262,6 +262,24 @@ func TestConfigureLifecycleDoesNotReturnToToolHandler(t *testing.T) {
 	}
 }
 
+func TestToolCatalogDoesNotReturnToCompositionRoot(t *testing.T) {
+	source, err := os.ReadFile(filepath.Join(projectRoot(), "cmd", "browser-agent", "tools_core.go"))
+	if err != nil {
+		t.Fatalf("read tools_core.go: %v", err)
+	}
+	for _, forbidden := range []string{
+		"func (h *ToolHandler) getToolSchema(",
+		"func (h *ToolHandler) ensureToolModules(",
+		"func (h *ToolHandler) ensureToolSchemas(",
+		"toolModulesOnce sync.Once",
+		"toolSchemasOnce sync.Once",
+	} {
+		if strings.Contains(string(source), forbidden) {
+			t.Errorf("composition root retains tool catalog state %q", forbidden)
+		}
+	}
+}
+
 func TestTestGenerationDoesNotRequireHostInterface(t *testing.T) {
 	relativePath := "cmd/browser-agent/internal/testgenhandler/handler.go"
 	source, err := os.ReadFile(filepath.Join(projectRoot(), relativePath))

@@ -24,6 +24,7 @@ code_paths:
   - cmd/browser-agent/tools_core.go
   - internal/session/snapshot-manager.go
   - cmd/browser-agent/internal/toolmodule/registry.go
+  - cmd/browser-agent/internal/toolcatalog/catalog.go
   - cmd/browser-agent/server.go
   - cmd/browser-agent/internal/playbooks/resource_catalog.go
   - cmd/browser-agent/internal/playbooks/playbooks_resolver.go
@@ -91,6 +92,7 @@ test_paths:
   - cmd/browser-agent/mcp_protocol_test.go
   - cmd/browser-agent/stdout_sync_unit_test.go
   - cmd/browser-agent/tools_registry_test.go
+  - cmd/browser-agent/internal/toolcatalog/catalog_test.go
   - cmd/browser-agent/terminal_availability_test.go
   - cmd/browser-agent/reclaim_port_identity_test.go
   - cmd/browser-agent/reclaim_port_test.go
@@ -148,6 +150,9 @@ capture, accessibility, log-buffer, noise, or completion provider interface.
 `MCPHandler` owns its capture, tool schemas, limiter, redactor, usage tracker,
 and execution backend through one `ToolBackend` value. The executor contract has
 only `HandleToolCall`; no transport-policy getter remains on `ToolHandler`.
+The execution modules, examples, and validation schemas used by that call path
+are constructed once in `internal/toolcatalog.Catalog`; the composition root
+does not maintain parallel lazy registries.
 
 > **2026-07-27:** Deleted the package-main type facade. MCP wire contracts and
 > protocol negotiation now come directly from `internal/mcp`; server identity,

@@ -15,6 +15,7 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/logstore"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/testgenhandler"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolcatalog"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolgenerate"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/cmd/browser-agent/internal/toolinteract"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
@@ -409,6 +410,7 @@ func newTestToolHandler() *ToolHandler {
 	h.testGenHandler = testgenhandler.New(buildTestGenerationDeps(h))
 	h.generateDispatcher = toolgenerate.NewDispatcher(buildGenerateDeps(h), h.testGenHandler)
 	h.interactActionHandler = toolinteract.NewInteractActionHandler(buildInteractDeps(h))
+	h.toolCatalog = toolcatalog.New(nil, schema.AllTools())
 	h.configureLocalDeps = buildConfigureLocalDeps(h)
 	h.tutorialDeps = buildTutorialDeps(h)
 	return h

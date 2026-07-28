@@ -44,11 +44,11 @@ func (m *stubToolModule) Examples() []json.RawMessage {
 func TestNewToolHandler_WiresCoreToolModules(t *testing.T) {
 	env := newToolTestEnv(t)
 
-	if env.handler.toolModules == nil {
+	if env.handler.toolCatalog == nil {
 		t.Fatal("toolModules should be initialized")
 	}
 	for _, name := range []string{"observe", "analyze", "generate", "configure", "interact"} {
-		module, ok := env.handler.toolModules.Get(name)
+		module, ok := env.handler.toolCatalog.Get(name)
 		if !ok || module == nil {
 			t.Fatalf("%s module should be registered", name)
 		}
@@ -65,7 +65,7 @@ func TestNewToolHandler_WiresCoreToolModules(t *testing.T) {
 func TestHandleToolCall_DispatchesRegisteredModule(t *testing.T) {
 	env := newToolTestEnv(t)
 	stub := &stubToolModule{}
-	env.handler.toolModules.Register("stub_tool", stub)
+	env.handler.toolCatalog.Register("stub_tool", stub)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`"test-id"`), Method: "tools/call"}
 	resp, handled := env.handler.HandleToolCall(req, "stub_tool", json.RawMessage(`{"x":1}`))
@@ -92,7 +92,7 @@ func TestHandleToolCall_DispatchesRegisteredModule(t *testing.T) {
 func TestHandleToolCall_ModuleValidationError(t *testing.T) {
 	env := newToolTestEnv(t)
 	stub := &stubToolModule{validateErr: errors.New("bad params")}
-	env.handler.toolModules.Register("stub_tool", stub)
+	env.handler.toolCatalog.Register("stub_tool", stub)
 
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`"test-id"`), Method: "tools/call"}
 	resp, handled := env.handler.HandleToolCall(req, "stub_tool", json.RawMessage(`{"x":1}`))

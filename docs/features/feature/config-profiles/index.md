@@ -9,6 +9,7 @@ code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
+  - cmd/browser-agent/internal/toolcatalog/catalog.go
   - cmd/browser-agent/internal/toolconfigure/deps.go
   - cmd/browser-agent/internal/toolconfigure/session.go
   - cmd/browser-agent/internal/summarypref/cache.go
@@ -21,6 +22,7 @@ code_paths:
   - internal/tools/configure/capabilities/modespecs.go
 test_paths:
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
+  - cmd/browser-agent/internal/toolcatalog/catalog_test.go
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/internal/summarypref/cache_test.go
   - cmd/browser-agent/tools_configure_handler_test.go
@@ -45,6 +47,8 @@ Configure mode registration and unknown-mode handling are owned by the
 immutable `internal/toolconfigure.Dispatcher`. The composition boundary supplies
 final handlers with explicit dependencies; `ToolHandler` exposes no configure
 forwarding methods.
+Capability examples resolve through the same `internal/toolcatalog.Catalog`
+that owns executable modules and input schemas.
 
 ## TL;DR
 
