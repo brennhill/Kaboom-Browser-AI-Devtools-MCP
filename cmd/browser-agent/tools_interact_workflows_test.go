@@ -251,7 +251,7 @@ func TestRunA11yAndExportSARIF_InvalidJSON(t *testing.T) {
 
 func TestRunA11yAndExportSARIF_ValidParams(t *testing.T) {
 	t.Parallel()
-	h := newTestToolHandler()
+	h, _, _ := makeToolHandler(t)
 	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`1`)}
 	args, _ := json.Marshal(map[string]any{
 		"scope": "page",

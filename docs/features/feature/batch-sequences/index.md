@@ -4,7 +4,7 @@ feature_id: feature-batch-sequences
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 code_paths:
   - cmd/browser-agent/internal/replay/contract.go
   - cmd/browser-agent/internal/sequencehandler/handler.go
@@ -43,4 +43,5 @@ last_verified_date: 2026-03-05
 Batch execution and reusable configure sequences share replay primitives and one
 concurrency lock. Saved-sequence persistence, CRUD, and replay orchestration stay
 together in `internal/sequencehandler`; interactive batch orchestration remains
-with the interact feature.
+with the interact feature. Configure actions and saved interact steps both use
+the canonical `what` discriminator.

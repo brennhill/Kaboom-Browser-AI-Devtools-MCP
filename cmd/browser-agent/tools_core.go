@@ -513,9 +513,6 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 
 	handler.uploadSecurity = uploadSecurityConfig
 	handler.recordingInteractHandler = screenrec.NewInteractHandler(handler.screenrecDeps())
-	interactDeps := buildInteractDeps(handler)
-	handler.interactActionHandler = toolinteract.NewInteractActionHandler(interactDeps)
-	handler.uploadInteractHandler = toolinteract.NewUploadInteractHandler(interactDeps, handler.interactActionHandler)
 	handler.analyzeDispatcher = analyzedispatch.NewDispatcher(analyzedispatch.Config{
 		Host: handler, Version: version, AnnotationStore: handler.annotationStore,
 		Visual: visualAnalyzeDeps{h: handler},
@@ -532,6 +529,9 @@ func NewToolHandler(server *Server, captureStore *capture.Capture) *MCPHandler {
 	})
 	handler.testGenHandler = testgenhandler.New(handler)
 	handler.generateDispatcher = toolgenerate.NewDispatcher(handler, handler.testGenHandler)
+	interactDeps := buildInteractDeps(handler)
+	handler.interactActionHandler = toolinteract.NewInteractActionHandler(interactDeps)
+	handler.uploadInteractHandler = toolinteract.NewUploadInteractHandler(interactDeps, handler.interactActionHandler)
 	handler.observeDispatcher = toolobserve.NewDispatcher(toolobserve.Config{
 		Host: handler, Commands: handler.capture, AnnotationStore: handler.annotationStore,
 		Annotations: func(_ toolobserve.Host, req mcp.JSONRPCRequest, args json.RawMessage) mcp.JSONRPCResponse {

@@ -358,13 +358,13 @@ func TestReplaySequence_QueuesPendingAsyncCommands(t *testing.T) {
 	mockConnectedTrackedTab(t, env.capture)
 
 	callConfigureRaw(env.handler, `{
-		"action": "save_sequence",
+		"what": "save_sequence",
 		"name": "one-exec-step",
-		"steps": [{"action":"execute_js","script":"document.title"}]
+		"steps": [{"what":"execute_js","script":"document.title"}]
 	}`)
 
 	resp := callConfigureRaw(env.handler, `{
-		"action": "replay_sequence",
+		"what": "replay_sequence",
 		"name": "one-exec-step",
 		"step_timeout_ms": 50
 	}`)
