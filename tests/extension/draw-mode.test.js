@@ -114,7 +114,7 @@ describe('Draw Mode — Export', () => {
   beforeEach(async () => {
     setupGlobals()
     const mod = await import(
-      `../../extension/content/draw-mode-export.js?v=${nextModuleVersion()}`,
+      `../../extension/content/draw-mode-export.js?v=${nextModuleVersion()}`
     )
     compositeAnnotations = mod.compositeAnnotations
   })

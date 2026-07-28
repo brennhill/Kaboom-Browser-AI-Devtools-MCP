@@ -4,7 +4,6 @@
  */
 
 import { mock } from 'node:test'
-import { StorageKey } from '../../extension/lib/constants.js'
 
 export const sidepanelState = {
   importCounter: 0,

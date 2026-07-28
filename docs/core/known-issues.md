@@ -161,6 +161,9 @@ tracking from the extension popup.
 
 ### v0.8.x
 
+- All authored Go, TypeScript, and JavaScript files, including tests, are now
+  enforced at 800 LOC with no waiver comments. The oversized suites were split
+  by change-coupled responsibility; generated and compiled outputs are excluded.
 - All 207 authored Node test files now run through the canonical sharded test
   command, including `.cjs` and `.mjs` suites under CLI, docs, packaging, site,
   and release scripts. The dormant-test gate now checks Go and Node inventories,

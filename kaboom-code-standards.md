@@ -79,12 +79,12 @@
 - 5 tools only: observe, generate, configure, interact, analyze.
 - New modes register in the dispatch registry (`*_registry.go`), not inline.
 - Use `method()` wrapper for ToolHandler methods in registries.
-- Responses use `succeed()` / `fail()` helpers from `tools_response.go`.
+- MCP responses use the canonical `internal/mcp/toolresp` package directly.
 - WebSocket < 0.1ms, HTTP < 0.5ms performance budgets.
 
 ## Documentation Contract
 
 - Every feature ships with docs in `docs/features/feature/<name>/`.
 - Feature index must include `code_paths`, `test_paths`, `last_reviewed`.
-- Flow maps in `docs/architecture/flow-maps/`.
-- Cross-links must be bidirectional.
+- Refactors update the owning feature index `code_paths`, `test_paths`, and
+  `last_reviewed` fields in the same change.

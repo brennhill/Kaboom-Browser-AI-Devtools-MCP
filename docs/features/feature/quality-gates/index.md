@@ -6,6 +6,7 @@ feature_type: feature
 owners: []
 last_reviewed: 2026-07-28
 code_paths:
+  - kaboom-code-standards.md
   - cmd/browser-agent/internal/toolconfigure/qualitygates/handler.go
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
@@ -19,6 +20,7 @@ code_paths:
   - internal/tracking/token_tracker.go
   - internal/tracking/stats_endpoint.go
   - cmd/hooks/main.go
+  - scripts/check-file-length.sh
   - scripts/check-folder-size.cjs
   - scripts/check-dormant-tests.sh
   - scripts/test-js-sharded.sh
@@ -35,6 +37,8 @@ test_paths:
   - internal/hook/convention_detect_test.go
   - internal/tracking/token_tracker_test.go
   - internal/tracking/stats_endpoint_test.go
+  - scripts/check-file-length.test.mjs
+  - scripts/check-folder-size.test.mjs
   - scripts/release/install-upgrade-regression.contract.test.mjs
   - scripts/test-install-hooks-only.sh
   - scripts/docs/features/check-feature-paths.test.mjs

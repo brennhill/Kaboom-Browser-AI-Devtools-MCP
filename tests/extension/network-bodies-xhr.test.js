@@ -3,7 +3,7 @@
  * @fileoverview XMLHttpRequest network-body capture, filtering, redaction, and restore tests.
  */
 
-import { test, describe, mock, beforeEach, afterEach } from 'node:test'
+import { test, describe, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert'
 import { createMockWindow } from './helpers.js'
 import { MockHeaders } from './network-bodies-fixture.js'

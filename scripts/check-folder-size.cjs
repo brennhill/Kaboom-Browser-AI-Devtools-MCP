@@ -18,7 +18,9 @@ const fs = require('fs')
 const path = require('path')
 
 const MAX_FILES = 10
-const REPO_ROOT = path.resolve(__dirname, '..')
+const REPO_ROOT = process.env.CHECK_FOLDER_SIZE_ROOT
+  ? path.resolve(process.env.CHECK_FOLDER_SIZE_ROOT)
+  : path.resolve(__dirname, '..')
 const BASELINE_PATH = path.join(REPO_ROOT, '.folder-size-baseline.json')
 
 // Only hand-written source counts. Build output, generated code, vendored deps and
@@ -32,7 +34,7 @@ const EXCLUDED_DIR = new Set([
 const EXCLUDED_PREFIX = ['extension/', 'npm/', 'gokaboom.dev/', 'scratchpad/']
 
 function isTestFile(name) {
-  return /(_test\.go|\.test\.(ts|js|cjs|mjs)|\.spec\.(ts|js))$/.test(name)
+  return /(_test\.go|\.test\.(ts|js|cjs|mjs)|\.spec\.(ts|js)|-fixture\.(ts|js|cjs|mjs))$/.test(name)
 }
 
 /** Walk the repo and return {relDir: sourceFileCount}. */

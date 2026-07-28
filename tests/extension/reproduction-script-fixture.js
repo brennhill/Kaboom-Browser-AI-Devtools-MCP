@@ -5,8 +5,6 @@
 
 import { mock } from 'node:test'
 
-let originalWindow
-
 // Mock DOM elements
 export function createElement(tag, attrs = {}, opts = {}) {
   const el = {
