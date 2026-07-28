@@ -44,6 +44,9 @@ test_paths:
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/screenrec_wiring_test.go
   - cmd/browser-agent/tools_interact_handler_test.go
+  - cmd/browser-agent/tools_interact_page_commands_test.go
+  - cmd/browser-agent/tools_interact_dom_routing_test.go
+  - cmd/browser-agent/tools_interact_state_queries_test.go
   - cmd/browser-agent/internal/screenrec/screenrec_test.go
   - internal/recording/actionlog/recorder_test.go
   - tests/extension/recording-shortcut-command.test.js
