@@ -40,6 +40,9 @@ test_paths:
   - tests/extension/logo-motion.test.js
   - tests/extension/content.test.js
   - tests/extension/runtime-log-branding.test.js
+  - tests/extension/sidepanel-terminal-fixture.js
+  - tests/extension/sidepanel-terminal-io.test.js
+  - tests/extension/sidepanel-terminal-ui.test.js
   - tests/extension/sidepanel-terminal.test.js
   - tests/extension/tab-tracking-core.test.js
   - extension/background/event-listeners.test.js

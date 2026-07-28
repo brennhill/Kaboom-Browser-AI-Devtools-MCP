@@ -57,6 +57,9 @@ test_paths:
   - cmd/browser-agent/internal/terminal/handlers_test.go
   - cmd/browser-agent/internal/terminal/ws_panic_test.go
   - cmd/browser-agent/internal/terminal/supervisor/supervisor_test.go
+  - tests/extension/sidepanel-terminal-fixture.js
+  - tests/extension/sidepanel-terminal-io.test.js
+  - tests/extension/sidepanel-terminal-ui.test.js
   - tests/extension/sidepanel-terminal.test.js
   - tests/extension/terminal-widget-session-branding.test.js
   - tests/extension/terminal-root-folder.test.js
@@ -71,7 +74,6 @@ test_paths:
   - tests/extension/message-handlers.test.js
   - tests/extension/terminal-panel-gesture-entrypoints.test.js
   - tests/extension/terminal-panel-presence.test.js
-  - tests/extension/sidepanel-terminal.test.js
   - tests/extension/terminal-session-stop.test.js
   - tests/extension/entry-point-parity.test.js
   - internal/pty/manager_test.go
