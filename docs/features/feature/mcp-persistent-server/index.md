@@ -4,7 +4,7 @@ feature_id: feature-mcp-persistent-server
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-29
 code_paths:
   - internal/mcp/response.go
   - internal/mcp/response_content.go
@@ -103,6 +103,7 @@ test_paths:
   - cmd/browser-agent/reclaim_port_test.go
   - cmd/browser-agent/bridge_startup_contention_test.go
   - cmd/browser-agent/bridge_faststart_extended_test.go
+  - cmd/browser-agent/start_timeout_norace_test.go
   - cmd/browser-agent/internal/mcphttp/handler_test.go
   - cmd/browser-agent/internal/httpguard/middleware_test.go
   - cmd/browser-agent/internal/connectmode/runner_test.go
@@ -148,9 +149,11 @@ last_verified_date: 2026-03-29
 
 # MCP Persistent Server
 
-Fast-start compatibility tests use the canonical build-tagged server startup
-budget (5 seconds normally, 30 seconds under the race detector). Post-start MCP
-resource latency remains independently enforced at 500 milliseconds.
+Fast-start compatibility tests use the canonical server startup budget
+(5 seconds normally, 30 seconds under the race detector or coverage
+instrumentation). This wider setup ceiling only absorbs instrumentation
+overhead; post-start MCP resource latency remains independently enforced at
+500 milliseconds.
 
 The obsolete `internal/mcp/deps.go` provider contracts were deleted after all
 consumers migrated to explicit owner functions. Asynchronous command lifecycle

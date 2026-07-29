@@ -5,6 +5,25 @@
 
 package main
 
-import "time"
+import (
+	"testing"
+	"time"
+)
 
-const serverStartTimeout = 5 * time.Second
+var serverStartTimeout = testServerStartTimeout(testing.CoverMode())
+
+func testServerStartTimeout(coverageMode string) time.Duration {
+	if coverageMode != "" {
+		return 30 * time.Second
+	}
+	return 5 * time.Second
+}
+
+func TestServerStartTimeoutAccountsForInstrumentation(t *testing.T) {
+	if got := testServerStartTimeout(""); got != 5*time.Second {
+		t.Fatalf("ordinary timeout = %v, want 5s", got)
+	}
+	if got := testServerStartTimeout("set"); got != 30*time.Second {
+		t.Fatalf("coverage timeout = %v, want 30s", got)
+	}
+}
