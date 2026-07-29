@@ -4,8 +4,15 @@
  *      so background and popup never drift (e.g., leaving a stale TRACKED_TAB_TITLE behind).
  * Docs: docs/features/feature/tab-tracking-ux/index.md
  */
+export interface TrackedTabState {
+    id?: number;
+    url?: string;
+    title?: string;
+}
 /** All storage keys that make up tracked-tab state. Always read/cleared together. */
 export declare const TRACKED_TAB_STORAGE_KEYS: ("trackedTabId" | "trackedTabUrl" | "trackedTabTitle")[];
+/** Read the complete tracked-tab identity as one consistent snapshot. */
+export declare function readTrackedTab(): Promise<TrackedTabState>;
 /**
  * Persist tracked tab state.
  */

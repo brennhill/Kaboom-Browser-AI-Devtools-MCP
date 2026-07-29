@@ -6,7 +6,13 @@
  */
 
 import { StorageKey } from '../constants.js'
-import { setLocals, removeLocals } from '../storage/local.js'
+import { getLocals, setLocals, removeLocals } from '../storage/local.js'
+
+export interface TrackedTabState {
+  id?: number
+  url?: string
+  title?: string
+}
 
 /** All storage keys that make up tracked-tab state. Always read/cleared together. */
 export const TRACKED_TAB_STORAGE_KEYS = [
@@ -14,6 +20,16 @@ export const TRACKED_TAB_STORAGE_KEYS = [
   StorageKey.TRACKED_TAB_URL,
   StorageKey.TRACKED_TAB_TITLE
 ]
+
+/** Read the complete tracked-tab identity as one consistent snapshot. */
+export async function readTrackedTab(): Promise<TrackedTabState> {
+  const stored = await getLocals(TRACKED_TAB_STORAGE_KEYS)
+  return {
+    id: stored[StorageKey.TRACKED_TAB_ID] as number | undefined,
+    url: stored[StorageKey.TRACKED_TAB_URL] as string | undefined,
+    title: stored[StorageKey.TRACKED_TAB_TITLE] as string | undefined
+  }
+}
 
 /**
  * Persist tracked tab state.

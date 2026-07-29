@@ -4,7 +4,7 @@
  * Docs: docs/features/feature/tab-tracking-ux/index.md
  */
 export type ShowStateFn = (btn: HTMLButtonElement) => void;
-export type ShowTrackingStateFn = (btn: HTMLButtonElement, url: string | undefined, tabId: number | undefined) => void;
+export type ShowTrackingStateFn = (btn: HTMLButtonElement, title: string | undefined, url: string | undefined, tabId: number | undefined) => void;
 /**
  * Handle launching the tracked-site audit workflow from popup controls.
  */

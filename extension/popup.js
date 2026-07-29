@@ -6,7 +6,6 @@
  * Docs: docs/features/feature/tab-tracking-ux/index.md
  */
 import { RuntimeMessageName, StorageKey } from './lib/constants.js';
-import { onStorageChanged } from './lib/storage/changes.js';
 import { persist } from './lib/storage/io.js';
 import { getLocal, getLocals } from './lib/storage/local.js';
 import { getSession, setSession } from './lib/storage/session.js';
@@ -154,16 +153,6 @@ export function initPopup() {
     chrome.runtime.onMessage.addListener((message) => {
         if (message.type === 'status_update' && message.status) {
             renderPopupStatus(message.status);
-        }
-    });
-    // Listen for storage changes (e.g., tracked tab URL updates)
-    onStorageChanged((changes, areaName) => {
-        if (areaName === 'local' && changes[StorageKey.TRACKED_TAB_URL]) {
-            const urlEl = document.getElementById('tracking-bar-url');
-            if (urlEl && changes[StorageKey.TRACKED_TAB_URL].newValue) {
-                urlEl.textContent = changes[StorageKey.TRACKED_TAB_URL].newValue;
-                console.log('[KaBOOM!] Tracked tab URL updated in popup:', changes[StorageKey.TRACKED_TAB_URL].newValue);
-            }
         }
     });
     // ── Cached status: hydrate from sessionStorage (sync read) ───────────

@@ -4,10 +4,8 @@
  * Docs: docs/features/feature/tab-tracking-ux/index.md
  */
 import { KABOOM_LOG_PREFIX } from '../../lib/brand.js';
-import { StorageKey } from '../../lib/constants.js';
 import { persist } from '../../lib/storage/io.js';
-import { getLocal } from '../../lib/storage/local.js';
-import { clearTrackedTab } from '../../lib/tabs/tracked-tab-storage.js';
+import { clearTrackedTab, readTrackedTab } from '../../lib/tabs/tracked-tab-storage.js';
 import { trackTab, untrackTab } from '../../lib/tabs/tab-tracking-core.js';
 import { focusTabAndWindow } from '../../lib/tabs/tab-focus.js';
 import { requestAudit } from '../../lib/tabs/request-audit.js';
@@ -21,7 +19,7 @@ export async function handleAuditClick(pageUrl, tabId) {
  * Handle stop tracking from the compact tracking bar stop button.
  */
 export async function handleStopTracking(showIdleState) {
-    const prevTabId = await getLocal(StorageKey.TRACKED_TAB_ID);
+    const prevTabId = (await readTrackedTab()).id;
     if (!prevTabId)
         return;
     // Shared core clears storage and notifies the content script; the popup cannot
@@ -64,11 +62,18 @@ export async function handleUrlClick(tabId) {
 export async function handleTrackPageClick(showInternalPageState, showCloakedState, showTrackingState, showIdleState) {
     const btn = document.getElementById('track-page-btn');
     // Check if we're currently tracking
-    const trackedTabId = await getLocal(StorageKey.TRACKED_TAB_ID);
+    const trackedTabId = (await readTrackedTab()).id;
     if (trackedTabId) {
-        // Untrack — delegate to the shared stop handler
-        await handleStopTracking(showIdleState);
-        return;
+        try {
+            await chrome.tabs.get(trackedTabId);
+            // A live tracked tab keeps the existing toggle-to-stop behavior.
+            await handleStopTracking(showIdleState);
+            return;
+        }
+        catch {
+            // A stale identity is replaced atomically below. setTrackedTab writes the
+            // complete identity snapshot, so no intermediate untracked state leaks.
+        }
     }
     // Track current tab. All guards (internal page, cloaked domain) and the
     // content-script injection live in the shared core so the popup and the
@@ -88,7 +93,7 @@ export async function handleTrackPageClick(showInternalPageState, showCloakedSta
         return;
     }
     if (btn)
-        showTrackingState(btn, tab.url, tab.id);
+        showTrackingState(btn, tab.title, tab.url, tab.id);
     console.log(KABOOM_LOG_PREFIX, 'Now tracking tab:', tab.id, tab.url);
 }
 //# sourceMappingURL=tab-tracking-api.js.map

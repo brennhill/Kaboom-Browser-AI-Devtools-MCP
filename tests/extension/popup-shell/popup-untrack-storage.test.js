@@ -116,4 +116,22 @@ describe('popup untrack clears all tracked-tab keys', () => {
       trackedTabTitle: 'App Page'
     })
   })
+
+  test('one click replaces a stale tracked tab with the active tab', async () => {
+    storageState = {
+      trackedTabId: 91,
+      trackedTabUrl: 'https://closed.example/work',
+      trackedTabTitle: 'Closed workspace'
+    }
+    globalThis.chrome.tabs.get = mock.fn(() => Promise.reject(new Error('No tab with id: 91')))
+    globalThis.chrome.tabs.query = mock.fn(() => Promise.resolve([
+      { id: 7, url: 'https://active.example/', title: 'Active workspace' }
+    ]))
+
+    await handleTrackPageClick(mock.fn(), mock.fn(), mock.fn(), mock.fn())
+
+    assert.strictEqual(storageState.trackedTabId, 7)
+    assert.strictEqual(storageState.trackedTabUrl, 'https://active.example/')
+    assert.strictEqual(storageState.trackedTabTitle, 'Active workspace')
+  })
 })

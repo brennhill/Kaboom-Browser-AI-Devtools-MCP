@@ -10,7 +10,7 @@
 import { isInternalUrl } from '../shell/ui-utils.js';
 import { StorageKey } from '../../lib/constants.js';
 import { onStorageChanged } from '../../lib/storage/changes.js';
-import { getLocals } from '../../lib/storage/local.js';
+import { readTrackedTab } from '../../lib/tabs/tracked-tab-storage.js';
 import { isDomainCloaked } from '../../lib/tabs/cloaked-domains.js';
 import { handleAuditClick, handleStopTracking, handleUrlClick, handleTrackPageClick as handleTrackPageClickAPI } from './tab-tracking-api.js';
 let trackingStorageSyncInstalled = false;
@@ -53,7 +53,7 @@ function showCloakedState(btn) {
     btn.title = 'This domain is in the cloaked domains list. KaBOOM! is disabled here to prevent interference.';
     Object.assign(btn.style, { opacity: '0.5', background: '#252525', color: '#888', borderColor: '#333' });
 }
-function showTrackingState(btn, trackedTabUrl, trackedTabId) {
+function showTrackingState(btn, trackedTabTitle, trackedTabUrl, trackedTabId) {
     // Hide the hero button area
     const heroEl = document.getElementById('track-hero');
     if (heroEl)
@@ -63,11 +63,14 @@ function showTrackingState(btn, trackedTabUrl, trackedTabId) {
         noTrackEl.style.display = 'none';
     // Show the compact tracking bar
     const trackingBar = document.getElementById('tracking-bar');
+    const trackingBarTitle = document.getElementById('tracking-bar-title');
     const trackingBarUrl = document.getElementById('tracking-bar-url');
     const trackingBarAudit = document.getElementById('tracking-bar-audit');
     const trackingBarStop = document.getElementById('tracking-bar-stop');
     if (trackingBar)
         trackingBar.style.display = 'flex';
+    if (trackingBarTitle)
+        trackingBarTitle.textContent = trackedTabTitle || 'Tracked tab';
     if (trackingBarUrl && trackedTabUrl) {
         trackingBarUrl.textContent = trackedTabUrl;
         trackingBarUrl.onclick = () => {
@@ -97,6 +100,19 @@ function showTrackingState(btn, trackedTabUrl, trackedTabId) {
         };
     }
 }
+function showStaleState(btn, trackedTabTitle, trackedTabUrl) {
+    showIdleState(btn);
+    btn.textContent = 'Track Current Tab';
+    btn.title = 'The previously tracked tab is gone. Track the current tab instead.';
+    const warning = document.getElementById('no-tracking-warning');
+    if (warning)
+        warning.textContent = 'The previously tracked tab is no longer available.';
+    const identity = document.getElementById('stale-tracking-identity');
+    if (identity) {
+        identity.textContent = [trackedTabTitle, trackedTabUrl].filter(Boolean).join(' — ');
+        identity.style.display = identity.textContent ? 'block' : 'none';
+    }
+}
 function showIdleState(btn) {
     // Show the hero button area
     const heroEl = document.getElementById('track-hero');
@@ -122,17 +138,22 @@ function showIdleState(btn) {
     hideAuditButton();
     // Show "no tracking" warning
     const noTrackEl = document.getElementById('no-tracking-warning');
-    if (noTrackEl)
+    if (noTrackEl) {
         noTrackEl.style.display = 'block';
+        noTrackEl.textContent = 'No tab tracked — data capture disabled';
+    }
+    const staleIdentity = document.getElementById('stale-tracking-identity');
+    if (staleIdentity) {
+        staleIdentity.textContent = '';
+        staleIdentity.style.display = 'none';
+    }
 }
 function syncTrackButtonState(btn) {
-    void getLocals([StorageKey.TRACKED_TAB_ID, StorageKey.TRACKED_TAB_URL]).then((result) => {
-        const trackedTabId = result[StorageKey.TRACKED_TAB_ID];
-        const trackedTabUrl = result[StorageKey.TRACKED_TAB_URL];
+    void readTrackedTab().then(({ id: trackedTabId, url: trackedTabUrl, title: trackedTabTitle }) => {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             const currentUrl = tabs?.[0]?.url;
             if (trackedTabId) {
-                showTrackingState(btn, trackedTabUrl, trackedTabId);
+                void chrome.tabs.get(trackedTabId).then(() => showTrackingState(btn, trackedTabTitle, trackedTabUrl, trackedTabId), () => showStaleState(btn, trackedTabTitle, trackedTabUrl));
             }
             else if (isInternalUrl(currentUrl)) {
                 showInternalPageState(btn);
@@ -163,7 +184,9 @@ function installTrackingStorageSync(btn) {
     onStorageChanged((changes, areaName) => {
         if (areaName !== 'local')
             return;
-        if (!changes[StorageKey.TRACKED_TAB_ID] && !changes[StorageKey.TRACKED_TAB_URL])
+        if (!changes[StorageKey.TRACKED_TAB_ID] &&
+            !changes[StorageKey.TRACKED_TAB_URL] &&
+            !changes[StorageKey.TRACKED_TAB_TITLE])
             return;
         syncTrackButtonState(btn);
     });

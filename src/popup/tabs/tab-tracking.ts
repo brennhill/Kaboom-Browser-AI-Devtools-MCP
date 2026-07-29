@@ -12,7 +12,7 @@
 import { isInternalUrl } from '../shell/ui-utils.js'
 import { StorageKey } from '../../lib/constants.js'
 import { onStorageChanged } from '../../lib/storage/changes.js'
-import { getLocals } from '../../lib/storage/local.js'
+import { readTrackedTab } from '../../lib/tabs/tracked-tab-storage.js'
 import { isDomainCloaked } from '../../lib/tabs/cloaked-domains.js'
 import {
   handleAuditClick,
@@ -65,6 +65,7 @@ function showCloakedState(btn: HTMLButtonElement): void {
 
 function showTrackingState(
   btn: HTMLButtonElement,
+  trackedTabTitle: string | undefined,
   trackedTabUrl: string | undefined,
   trackedTabId: number | undefined
 ): void {
@@ -76,11 +77,13 @@ function showTrackingState(
 
   // Show the compact tracking bar
   const trackingBar = document.getElementById('tracking-bar')
+  const trackingBarTitle = document.getElementById('tracking-bar-title')
   const trackingBarUrl = document.getElementById('tracking-bar-url')
   const trackingBarAudit = document.getElementById('tracking-bar-audit') as HTMLButtonElement | null
   const trackingBarStop = document.getElementById('tracking-bar-stop')
 
   if (trackingBar) trackingBar.style.display = 'flex'
+  if (trackingBarTitle) trackingBarTitle.textContent = trackedTabTitle || 'Tracked tab'
   if (trackingBarUrl && trackedTabUrl) {
     trackingBarUrl.textContent = trackedTabUrl
     trackingBarUrl.onclick = () => {
@@ -110,6 +113,24 @@ function showTrackingState(
   }
 }
 
+function showStaleState(
+  btn: HTMLButtonElement,
+  trackedTabTitle: string | undefined,
+  trackedTabUrl: string | undefined
+): void {
+  showIdleState(btn)
+  btn.textContent = 'Track Current Tab'
+  btn.title = 'The previously tracked tab is gone. Track the current tab instead.'
+
+  const warning = document.getElementById('no-tracking-warning')
+  if (warning) warning.textContent = 'The previously tracked tab is no longer available.'
+  const identity = document.getElementById('stale-tracking-identity')
+  if (identity) {
+    identity.textContent = [trackedTabTitle, trackedTabUrl].filter(Boolean).join(' — ')
+    identity.style.display = identity.textContent ? 'block' : 'none'
+  }
+}
+
 function showIdleState(btn: HTMLButtonElement): void {
   // Show the hero button area
   const heroEl = document.getElementById('track-hero')
@@ -134,19 +155,28 @@ function showIdleState(btn: HTMLButtonElement): void {
 
   // Show "no tracking" warning
   const noTrackEl = document.getElementById('no-tracking-warning')
-  if (noTrackEl) noTrackEl.style.display = 'block'
+  if (noTrackEl) {
+    noTrackEl.style.display = 'block'
+    noTrackEl.textContent = 'No tab tracked — data capture disabled'
+  }
+  const staleIdentity = document.getElementById('stale-tracking-identity')
+  if (staleIdentity) {
+    staleIdentity.textContent = ''
+    staleIdentity.style.display = 'none'
+  }
 }
 
 function syncTrackButtonState(btn: HTMLButtonElement): void {
-  void getLocals([StorageKey.TRACKED_TAB_ID, StorageKey.TRACKED_TAB_URL]).then(
-    (result: Record<string, unknown>) => {
-      const trackedTabId = result[StorageKey.TRACKED_TAB_ID] as number | undefined
-      const trackedTabUrl = result[StorageKey.TRACKED_TAB_URL] as string | undefined
+  void readTrackedTab().then(
+    ({ id: trackedTabId, url: trackedTabUrl, title: trackedTabTitle }) => {
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs: chrome.tabs.Tab[]) => {
         const currentUrl = tabs?.[0]?.url
 
         if (trackedTabId) {
-          showTrackingState(btn, trackedTabUrl, trackedTabId)
+          void chrome.tabs.get(trackedTabId).then(
+            () => showTrackingState(btn, trackedTabTitle, trackedTabUrl, trackedTabId),
+            () => showStaleState(btn, trackedTabTitle, trackedTabUrl)
+          )
         } else if (isInternalUrl(currentUrl)) {
           showInternalPageState(btn)
         } else {
@@ -172,7 +202,11 @@ function installTrackingStorageSync(btn: HTMLButtonElement): void {
 
   onStorageChanged((changes, areaName) => {
     if (areaName !== 'local') return
-    if (!changes[StorageKey.TRACKED_TAB_ID] && !changes[StorageKey.TRACKED_TAB_URL]) return
+    if (
+      !changes[StorageKey.TRACKED_TAB_ID] &&
+      !changes[StorageKey.TRACKED_TAB_URL] &&
+      !changes[StorageKey.TRACKED_TAB_TITLE]
+    ) return
     syncTrackButtonState(btn)
   })
 }

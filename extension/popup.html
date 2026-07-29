@@ -153,9 +153,13 @@
       >
         No tab tracked - data capture disabled
       </div>
+      <div id="stale-tracking-identity" class="stale-tracking-identity" style="display: none"></div>
       <div id="tracking-bar" class="tracking-bar" style="display: none">
         <div class="tracking-bar-indicator"></div>
-        <div id="tracking-bar-url" class="tracking-bar-url" title="Click to switch to tracked tab"></div>
+        <div class="tracking-bar-identity" title="Click the URL to switch to the tracked tab">
+          <div id="tracking-bar-title" class="tracking-bar-title"></div>
+          <div id="tracking-bar-url" class="tracking-bar-url"></div>
+        </div>
         <button id="tracking-bar-audit" class="tracking-bar-audit" type="button" style="display: none">Audit</button>
         <button id="tracking-bar-stop" class="tracking-bar-stop" title="Stop tracking">&#x2715;</button>
       </div>

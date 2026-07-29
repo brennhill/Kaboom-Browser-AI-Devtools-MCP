@@ -4,6 +4,7 @@ import assert from 'node:assert'
 
 let storageState = {}
 let storageChangeListener = null
+let trackedTabExists = true
 
 const mockChrome = {
   runtime: {
@@ -39,7 +40,9 @@ const mockChrome = {
     query: mock.fn((_queryInfo, callback) => callback([{ id: 7, url: 'https://active/7', title: 'Active Tab' }])),
     sendMessage: mock.fn(() => Promise.resolve({ status: 'alive' })),
     update: mock.fn(() => Promise.resolve({ id: 7 })),
-    get: mock.fn(() => Promise.resolve({ id: 7, windowId: 1 })),
+    get: mock.fn((tabId) => trackedTabExists
+      ? Promise.resolve({ id: tabId, windowId: 1, title: 'Active Tab', url: 'https://active/7' })
+      : Promise.reject(new Error('No tab with id'))),
     reload: mock.fn(() => Promise.resolve())
   },
   windows: {
@@ -89,6 +92,7 @@ describe('popup tab tracking sync', () => {
     mock.reset()
     storageState = {}
     storageChangeListener = null
+    trackedTabExists = true
     globalThis.document = createMockDocument()
   })
 
@@ -121,5 +125,43 @@ describe('popup tab tracking sync', () => {
     // src/popup/tabs/tab-tracking.ts). The tracking bar itself must still appear.
     assert.strictEqual(auditButton.style.display, 'none')
     assert.strictEqual(warning.style.display, 'none')
+  })
+
+  test('shows stale tracked identity with one-click current-tab recovery', async () => {
+    storageState = {
+      trackedTabId: 91,
+      trackedTabUrl: 'https://closed.example/work',
+      trackedTabTitle: 'Closed workspace'
+    }
+    trackedTabExists = false
+
+    const { initTrackPageButton } = await import('../../../extension/popup.js')
+    initTrackPageButton()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    const button = document.getElementById('track-page-btn')
+    const warning = document.getElementById('no-tracking-warning')
+    const staleIdentity = document.getElementById('stale-tracking-identity')
+    assert.strictEqual(button.textContent, 'Track Current Tab')
+    assert.strictEqual(button.disabled, false)
+    assert.strictEqual(warning.style.display, 'block')
+    assert.match(warning.textContent, /no longer available/i)
+    assert.match(staleIdentity.textContent, /Closed workspace/)
+    assert.match(staleIdentity.textContent, /closed\.example/)
+  })
+
+  test('renders the same tracked title and URL in the healthy identity bar', async () => {
+    storageState = {
+      trackedTabId: 7,
+      trackedTabUrl: 'https://active/7',
+      trackedTabTitle: 'Active Tab'
+    }
+
+    const { initTrackPageButton } = await import('../../../extension/popup.js')
+    initTrackPageButton()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    assert.strictEqual(document.getElementById('tracking-bar-title').textContent, 'Active Tab')
+    assert.strictEqual(document.getElementById('tracking-bar-url').textContent, 'https://active/7')
   })
 })

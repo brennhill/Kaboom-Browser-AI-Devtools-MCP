@@ -10,6 +10,7 @@ code_paths:
   - src/lib/constants.ts
   - src/lib/tabs/request-audit.ts
   - src/lib/tabs/tab-tracking-core.ts
+  - src/lib/tabs/tracked-tab-storage.ts
   - src/lib/tabs/internal-url.ts
   - src/types/runtime-messages.ts
   - src/content.ts
@@ -34,6 +35,7 @@ test_paths:
   - tests/extension/popup-shell/popup-audit-button.test.js
   - tests/extension/popup-shell/popup-tab-tracking-branding.test.js
   - tests/extension/popup-shell/popup-tab-tracking-sync.test.js
+  - tests/extension/popup-shell/popup-untrack-storage.test.js
   - tests/extension/reliability/request-audit.test.js
   - tests/extension/recording-ui/recording-listeners-target-tab.test.js
   - tests/extension/ui-controls/tracked-hover-launcher.test.js
@@ -71,6 +73,11 @@ last_verified_date: 2026-04-03
 - The hover launcher settings gear now points at `gokaboom.dev/docs` and the Kaboom repo, and tracked-tab-loss guidance tells users to reopen the Kaboom popup.
 - Draw-mode recovery warnings from the hover launcher now use Kaboom copy when the extension was reloaded or the draw bundle is unavailable.
 - Popup tab-tracking logs now use the shared Kaboom runtime prefix instead of hardcoded Kaboom labels.
+- The popup validates the stored tab ID before presenting it as healthy. A closed
+  tab now shows its last title and URL with a one-click **Track Current Tab**
+  recovery action.
+- Healthy tracking identity consistently presents both the tracked page title
+  and URL. Reads and writes use the canonical tracked-tab storage module.
 
 ## Specs
 

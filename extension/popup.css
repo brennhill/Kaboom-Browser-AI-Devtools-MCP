@@ -425,14 +425,34 @@
       }
 
       .tracking-bar-url {
-        flex: 1;
-        min-width: 0;
         color: #aaa;
         cursor: pointer;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
         transition: color 0.15s;
+      }
+
+      .tracking-bar-identity {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .tracking-bar-title {
+        color: #e6edf3;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .stale-tracking-identity {
+        margin-top: 6px;
+        padding: 0 12px 8px;
+        color: #d29922;
+        font-size: 11px;
+        line-height: 1.4;
+        overflow-wrap: anywhere;
       }
 
       .tracking-bar-url:hover {
