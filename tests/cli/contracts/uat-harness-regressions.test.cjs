@@ -5,6 +5,9 @@ const assert = require('node:assert/strict')
 const { execFileSync } = require('node:child_process')
 const { readFileSync } = require('node:fs')
 const { describe, test } = require('node:test')
+const { chmodSync, copyFileSync, mkdirSync, mkdtempSync, writeFileSync } = require('node:fs')
+const { tmpdir } = require('node:os')
+const { join } = require('node:path')
 
 function frameworkCall(command) {
   return execFileSync('/bin/bash', ['-c', `source scripts/tests/framework/framework.sh; ${command}`], {
@@ -89,6 +92,110 @@ describe('comprehensive UAT harness regressions', () => {
 
     assert.match(runner, /19\) echo 600/)
     assert.match(dynamicUpgrade.trimEnd(), /finish_category$/)
+  })
+
+  test('result parsing preserves skips and rejects missing or malformed files', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'kaboom-uat-result-'))
+    const valid = join(dir, 'valid.results')
+    const malformed = join(dir, 'malformed.results')
+    writeFileSync(
+      valid,
+      'PASS_COUNT=8\nFAIL_COUNT=0\nSKIP_COUNT=1\nELAPSED=18\nCATEGORY_ID=23\nCATEGORY_NAME="Draw Mode"\n'
+    )
+    writeFileSync(malformed, 'PASS_COUNT=oops\nFAIL_COUNT=0\nSKIP_COUNT=1\n')
+
+    const parsed = execFileSync(
+      '/bin/bash',
+      [
+        '-c',
+        `source scripts/uat-result-lib.sh; parse_uat_category_result "$1"; printf '%s|%s|%s|%s\\n' "$UAT_RESULT_PASS" "$UAT_RESULT_FAIL" "$UAT_RESULT_SKIP" "$UAT_RESULT_ELAPSED"`,
+        'bash',
+        valid
+      ],
+      { cwd: process.cwd(), encoding: 'utf8' }
+    ).trim()
+    assert.equal(parsed, '8|0|1|18')
+
+    for (const [path, status] of [
+      [join(dir, 'missing.results'), 1],
+      [malformed, 3]
+    ]) {
+      const result = require('node:child_process').spawnSync(
+        '/bin/bash',
+        ['-c', 'source scripts/uat-result-lib.sh; parse_uat_category_result "$1"', 'bash', path],
+        { cwd: process.cwd(), encoding: 'utf8' }
+      )
+      assert.equal(result.status, status)
+    }
+
+    const runner = readFileSync('scripts/test-all-tools-comprehensive.sh', 'utf8')
+    assert.match(runner, /AGGREGATION_ERRORS/)
+    assert.match(runner, /UAT_RESULT_SKIP/)
+    assert.match(runner, /missing result file/)
+    assert.match(runner, /malformed result file/)
+  })
+
+  test('runner reports category skips and exits nonzero when a selected result is missing', () => {
+    const makeProject = (withResults) => {
+      const root = mkdtempSync(join(tmpdir(), 'kaboom-uat-runner-'))
+      const testsDir = join(root, 'scripts', 'tests')
+      mkdirSync(join(testsDir, 'framework'), { recursive: true })
+      copyFileSync(
+        'scripts/tests/framework/uat-user-state.sh',
+        join(testsDir, 'framework', 'uat-user-state.sh')
+      )
+      const wrapper = join(root, 'kaboom-agentic-browser')
+      writeFileSync(wrapper, '#!/bin/sh\nexit 0\n')
+      chmodSync(wrapper, 0o755)
+      if (withResults) {
+        for (const id of [
+          '01',
+          '02',
+          '03',
+          '04',
+          '05',
+          '06',
+          '07',
+          '08',
+          '09',
+          '10',
+          '11',
+          '12',
+          '13',
+          '20',
+          '25',
+          '26',
+          '28'
+        ]) {
+          const script = join(testsDir, `cat-${id}-fake.sh`)
+          writeFileSync(
+            script,
+            `#!/bin/sh\ncat > "$2" <<EOF\nPASS_COUNT=1\nFAIL_COUNT=0\nSKIP_COUNT=1\nELAPSED=0\nCATEGORY_ID=${id}\nCATEGORY_NAME="Fake ${id}"\nEOF\n`
+          )
+          chmodSync(script, 0o755)
+        }
+      }
+      return { root, wrapper }
+    }
+    const run = ({ root, wrapper }) =>
+      require('node:child_process').spawnSync(
+        '/bin/bash',
+        ['scripts/test-all-tools-comprehensive.sh', '--suite', 'offline'],
+        {
+          cwd: process.cwd(),
+          encoding: 'utf8',
+          env: { ...process.env, KABOOM_PROJECT_ROOT: root, KABOOM_UAT_WRAPPER: wrapper }
+        }
+      )
+
+    const missing = run(makeProject(false))
+    assert.equal(missing.status, 1)
+    assert.match(missing.stderr, /missing result file for category 01/)
+
+    const complete = run(makeProject(true))
+    assert.equal(complete.status, 0)
+    assert.match(complete.stdout, /TOTAL\s+\|\s+17\s+\|\s+0\s+\|\s+17\s+\|\s+34/)
+    assert.match(complete.stdout, /ALL 17 TESTS PASSED \(17 skipped\)/)
   })
 
   test('user daemon and tracked-tab state restore exactly once on normal completion', () => {

@@ -141,6 +141,8 @@ CONNECTED_CAT_IDS="14 15 16 18 19 23 24"
 
 # shellcheck source=tests/framework/uat-user-state.sh
 source "$TESTS_DIR/framework/uat-user-state.sh"
+# shellcheck source=uat-result-lib.sh
+source "$SCRIPT_DIR/uat-result-lib.sh"
 if [ "$SUITE" = "connected" ] || [ "$SUITE" = "all" ]; then
     uat_snapshot_user_state "$CONNECTED_UAT_PORT" "$WRAPPER"
 fi
@@ -200,7 +202,8 @@ _uat_cleanup() {
             lsof -tiTCP:"$_p" -sTCP:LISTEN 2>/dev/null | xargs kill -9 2>/dev/null || true
         done
     done
-    if [ -f "$SCRIPT_DIR/cleanup-test-daemons.sh" ]; then
+    if [ "${KABOOM_TEST_DISABLE_GLOBAL_CLEANER:-0}" != "1" ] &&
+        [ -f "$SCRIPT_DIR/cleanup-test-daemons.sh" ]; then
         bash "$SCRIPT_DIR/cleanup-test-daemons.sh" --quiet >/dev/null 2>&1 || true
     fi
     uat_restore_user_state
@@ -297,6 +300,8 @@ get_default_name() {
 
 TOTAL_PASS=0
 TOTAL_FAIL=0
+TOTAL_SKIP=0
+AGGREGATION_ERRORS=0
 
 # Print category outputs in order
 for cat_id in $CAT_IDS; do
@@ -314,56 +319,66 @@ echo "############################################################"
 echo "# COMPREHENSIVE UAT RESULTS"
 echo "############################################################"
 echo ""
-printf "%-28s | %4s | %4s | %5s | %5s\n" "Category" "Pass" "Fail" "Total" "Time"
-echo "------------------------------------------------------------"
+printf "%-28s | %4s | %4s | %4s | %5s | %5s\n" \
+    "Category" "Pass" "Fail" "Skip" "Total" "Time"
+echo "-------------------------------------------------------------------"
 
 for cat_id in $CAT_IDS; do
     results_file="$RESULTS_DIR/results-${cat_id}.txt"
     cat_pass=0
     cat_fail=0
+    cat_skip=0
     cat_elapsed="?"
     cat_name="$(get_default_name "$cat_id")"
 
-    if [ -f "$results_file" ]; then
-        # Source the results file to read variables
-        eval "$(grep '^PASS_COUNT=' "$results_file" 2>/dev/null)"
-        eval "$(grep '^FAIL_COUNT=' "$results_file" 2>/dev/null)"
-        eval "$(grep '^ELAPSED=' "$results_file" 2>/dev/null)"
-        eval "$(grep '^CATEGORY_NAME=' "$results_file" 2>/dev/null)"
-
-        cat_pass="${PASS_COUNT:-0}"
-        cat_fail="${FAIL_COUNT:-0}"
-        cat_elapsed="${ELAPSED:-?}"
-        if [ -n "$CATEGORY_NAME" ]; then
-            cat_name="$CATEGORY_NAME"
+    if parse_uat_category_result "$results_file"; then
+        if [ "$UAT_RESULT_CATEGORY_ID" != "$cat_id" ]; then
+            echo "AGGREGATION ERROR: malformed result file for category $cat_id (CATEGORY_ID=$UAT_RESULT_CATEGORY_ID)" >&2
+            cat_fail=1
+            AGGREGATION_ERRORS="$((AGGREGATION_ERRORS + 1))"
+        else
+            cat_pass="$UAT_RESULT_PASS"
+            cat_fail="$UAT_RESULT_FAIL"
+            cat_skip="$UAT_RESULT_SKIP"
+            cat_elapsed="$UAT_RESULT_ELAPSED"
+            if [ -n "$UAT_RESULT_CATEGORY_NAME" ]; then
+                cat_name="$UAT_RESULT_CATEGORY_NAME"
+            fi
         fi
-
-        # Reset for next iteration
-        unset PASS_COUNT FAIL_COUNT ELAPSED CATEGORY_NAME
+    else
+        result_status="$?"
+        if [ "$result_status" -eq 1 ]; then
+            echo "AGGREGATION ERROR: missing result file for category $cat_id: $results_file" >&2
+        else
+            echo "AGGREGATION ERROR: malformed result file for category $cat_id: $results_file" >&2
+        fi
+        cat_fail=1
+        AGGREGATION_ERRORS="$((AGGREGATION_ERRORS + 1))"
     fi
 
-    cat_total="$((cat_pass + cat_fail))"
+    cat_total="$((cat_pass + cat_fail + cat_skip))"
     TOTAL_PASS="$((TOTAL_PASS + cat_pass))"
     TOTAL_FAIL="$((TOTAL_FAIL + cat_fail))"
+    TOTAL_SKIP="$((TOTAL_SKIP + cat_skip))"
 
-    printf "%2s. %-24s | %4d | %4d | %5d | %3ss\n" \
-        "$cat_id" "$cat_name" "$cat_pass" "$cat_fail" "$cat_total" "$cat_elapsed"
+    printf "%2s. %-24s | %4d | %4d | %4d | %5d | %3ss\n" \
+        "$cat_id" "$cat_name" "$cat_pass" "$cat_fail" "$cat_skip" "$cat_total" "$cat_elapsed"
 done
 
-TOTAL_ALL="$((TOTAL_PASS + TOTAL_FAIL))"
+TOTAL_ALL="$((TOTAL_PASS + TOTAL_FAIL + TOTAL_SKIP))"
 OVERALL_ELAPSED="$(( $(date +%s) - OVERALL_START ))"
 
-echo "------------------------------------------------------------"
-printf "%-28s | %4d | %4d | %5d | %3ss\n" \
-    "TOTAL" "$TOTAL_PASS" "$TOTAL_FAIL" "$TOTAL_ALL" "$OVERALL_ELAPSED"
+echo "-------------------------------------------------------------------"
+printf "%-28s | %4d | %4d | %4d | %5d | %3ss\n" \
+    "TOTAL" "$TOTAL_PASS" "$TOTAL_FAIL" "$TOTAL_SKIP" "$TOTAL_ALL" "$OVERALL_ELAPSED"
 
 echo ""
 
 # ── Final Verdict ─────────────────────────────────────────
-if [ "$TOTAL_FAIL" -eq 0 ] && [ "$TOTAL_PASS" -gt 0 ]; then
-    echo "ALL $TOTAL_PASS TESTS PASSED"
+if [ "$TOTAL_FAIL" -eq 0 ] && [ "$TOTAL_PASS" -gt 0 ] && [ "$AGGREGATION_ERRORS" -eq 0 ]; then
+    echo "ALL $TOTAL_PASS TESTS PASSED ($TOTAL_SKIP skipped)"
 else
-    echo "FAILURES: $TOTAL_FAIL of $TOTAL_ALL tests failed"
+    echo "FAILURES: $TOTAL_FAIL failed, $TOTAL_SKIP skipped of $TOTAL_ALL tests ($AGGREGATION_ERRORS aggregation errors)"
 fi
 
 echo ""
@@ -375,7 +390,7 @@ else
 fi
 
 # Exit code
-if [ "$TOTAL_FAIL" -gt 0 ]; then
+if [ "$TOTAL_FAIL" -gt 0 ] || [ "$AGGREGATION_ERRORS" -gt 0 ]; then
     exit 1
 fi
 exit 0

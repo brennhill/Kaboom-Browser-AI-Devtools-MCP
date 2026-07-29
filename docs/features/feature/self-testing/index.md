@@ -93,6 +93,8 @@ last_verified_date: 2026-03-05
 - Smoke module contracts for push/upload/framework resilience/stability: `scripts/smoke-tests/14-browser-push.sh`, `scripts/smoke-tests/15-file-upload.sh`, `scripts/smoke-tests/29-framework-selector-resilience.sh`, `scripts/smoke-tests/30-stability-shutdown.sh`
 - Split UAT orchestration + integrity checks: `scripts/test-all-split.sh`, `scripts/test-original-uat.sh`, `scripts/test-new-uat.sh`
 - Shared UAT result parsing: `scripts/uat-result-lib.sh`
+- Comprehensive aggregation reports pass/fail/skip counts and fails closed when
+  any selected category omits or corrupts its structured result file.
 - Category daemon lifecycle and result-file contract: `scripts/tests/framework/framework.sh`
 - User-state guard: `scripts/tests/framework/uat-user-state.sh` snapshots the
   prior daemon executable, LaunchAgent lifecycle, version, and tracked tab
