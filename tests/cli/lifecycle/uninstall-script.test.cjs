@@ -72,8 +72,12 @@ test('uninstall.sh covers every install.sh artifact', () => {
   assert.match(script, /kaboom-managed-skill/)
   assert.doesNotMatch(script, /\b(?:gasoline|strum|legacy)\b/i)
 
-  // Telemetry opt-out parity with install.sh.
-  assert.match(script, /KABOOM_TELEMETRY/)
+  // Environment-only telemetry controls are not installed artifacts. The
+  // uninstaller must not retain beacon or version-capture code after telemetry
+  // is removed from the uninstall flow.
+  assert.doesNotMatch(script, /KABOOM_TELEMETRY/)
+  assert.doesNotMatch(script, /telemetry beacon/i)
+  assert.doesNotMatch(script, /^\s*VERSION=/m)
 })
 
 test('uninstall.sh never deletes shared client config files outright', () => {

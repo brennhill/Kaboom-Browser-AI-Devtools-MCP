@@ -256,15 +256,6 @@ function diagnosticReport(report) {
     }
   }
 
-  // Legacy path warnings
-  if (report.legacyWarnings && report.legacyWarnings.length > 0) {
-    output += '\n⚠️  Legacy Configs Found:\n';
-    report.legacyWarnings.forEach(w => {
-      output += `   ${w.description}: ${w.path}\n`;
-      output += `   This path is no longer used. You can safely remove the legacy entry.\n`;
-    });
-  }
-
   output += `\n${report.summary}\n`;
   return output;
 }

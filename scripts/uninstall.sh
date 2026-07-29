@@ -164,13 +164,6 @@ if [ "$DRY_RUN" != "1" ] && [ "$ASSUME_YES" != "1" ]; then
     fi
 fi
 
-# Capture the version for the telemetry beacon before the binary is deleted.
-VERSION="unknown"
-if [ -x "$BIN_DIR/kaboom-agentic-browser" ]; then
-    VERSION=$("$BIN_DIR/kaboom-agentic-browser" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown")
-    [ -n "$VERSION" ] || VERSION="unknown"
-fi
-
 # ─────────────────────────────────────────────────────────────
 # 1. Stop running daemons
 # ─────────────────────────────────────────────────────────────

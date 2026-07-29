@@ -150,6 +150,8 @@ OpenAPI contract.
   uninstalls only canonical Kaboom identities and state paths. It does not
   retain migration branches for historical server names, skill markers,
   process names, config keys, config paths, or PID files.
+- Skill-install and doctor output report only fields produced by the canonical
+  installers; obsolete legacy-removal counters and warning renderers are gone.
 - Server postinstall now validates `kaboom-browser-devtools` on `/health` reuse checks and points manual extension loading at `KABOOM_EXTENSION_DIR` / `~/KaboomAgenticDevtoolExtension`.
 - Server postinstall process discovery and health gating use only canonical
   Kaboom binary and service identities.
@@ -159,6 +161,9 @@ OpenAPI contract.
   locations. They contain no historical-brand cleanup or alternate config-key
   branches; the authored installer scripts are regression-checked below 800
   lines.
+- Uninstall removes only installed artifacts; telemetry environment controls
+  are not treated as artifacts, and the shell uninstaller retains no beacon or
+  dead version-capture path.
 - Managed Codex skills keep YAML frontmatter as the first document block; the
   Kaboom ownership/version marker is inserted immediately after frontmatter so
   Codex validation and safe managed cleanup both recognize the installed file.

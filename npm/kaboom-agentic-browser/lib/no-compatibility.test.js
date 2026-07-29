@@ -8,11 +8,14 @@ const test = require('node:test');
 
 const canonicalModules = [
   'auto-approve.js',
+  'cli.js',
   'codex-config.js',
   'config.js',
   'doctor.js',
   'install.js',
   'kill-daemon.js',
+  'output.js',
+  'postinstall-skills.js',
   'skills.js',
   'uninstall.js',
 ];
@@ -23,5 +26,10 @@ test('npm installer modules contain only canonical Kaboom identities', () => {
     assert.doesNotMatch(source, /\b(?:gasoline|strum)\b/i, `${filename} retains an old-brand shim`);
     assert.doesNotMatch(source, /\bLEGACY_/i, `${filename} retains a compatibility branch`);
     assert.doesNotMatch(source, /\blegacyConfig(?:Keys|Paths)\b/, `${filename} retains an old config boundary`);
+    assert.doesNotMatch(
+      source,
+      /\blegacy_(?:removed|warnings)\b|\blegacyWarnings\b/i,
+      `${filename} retains obsolete legacy reporting`
+    );
   }
 });

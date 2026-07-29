@@ -33,7 +33,7 @@ async function run() {
     console.log(
       `[kaboom-mcp] skills installed (${result.agents.join(', ')} / ${result.scope}): ` +
         `source=${result.source} created=${s.created} updated=${s.updated} unchanged=${s.unchanged} ` +
-        `skipped=${s.skipped_user_owned} legacy_removed=${s.legacy_removed} errors=${s.errors}`
+        `skipped=${s.skipped_user_owned} errors=${s.errors}`
     );
     for (const warning of result.warnings || []) {
       console.warn(`[kaboom-mcp] warning: ${warning}`);

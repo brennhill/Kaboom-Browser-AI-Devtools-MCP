@@ -163,7 +163,7 @@ async function installCommand(options) {
           console.log(
             `🧠 Skills installed (${skillInstall.agents.join(', ')} / ${skillInstall.scope}): ` +
             `source=${skillInstall.source}, created=${s.created}, updated=${s.updated}, unchanged=${s.unchanged}, ` +
-            `skipped=${s.skipped_user_owned}, legacy_removed=${s.legacy_removed}, errors=${s.errors}`
+            `skipped=${s.skipped_user_owned}, errors=${s.errors}`
           );
           for (const warning of skillInstall.warnings || []) {
             console.warn(`⚠️  ${warning}`);
