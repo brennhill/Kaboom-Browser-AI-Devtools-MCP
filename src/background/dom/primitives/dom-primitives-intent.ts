@@ -47,17 +47,19 @@ export function domPrimitiveIntent(
     bbox?: { x: number; y: number; width: number; height: number }
     visible?: boolean
   }>
-  viewport?: { scroll_x: number; scroll_y: number; viewport_width: number; viewport_height: number; page_height: number }
+  viewport?: {
+    scroll_x: number
+    scroll_y: number
+    viewport_width: number
+    viewport_height: number
+    page_height: number
+  }
 } {
   // — Shared helpers (duplicated for self-containment) —
 
   function isKaboomOwnedElement(element: Element | null): boolean {
     let node: Element | null = element
     while (node) {
-      const id = (node as HTMLElement).id || ''
-      if (id.startsWith('kaboom-')) return true
-      const className = (node as HTMLElement).className
-      if (typeof className === 'string' && className.includes('kaboom-')) return true
       if (node.getAttribute && node.getAttribute('data-kaboom-owned') === 'true') return true
       node = node.parentElement
     }
@@ -79,9 +81,10 @@ export function domPrimitiveIntent(
     for (const match of matches) {
       if (!isKaboomOwnedElement(match)) results.push(match)
     }
-    const children = 'children' in root
-      ? (root as Element).children
-      : (root as Document).body?.children || (root as Document).documentElement?.children
+    const children =
+      'children' in root
+        ? (root as Element).children
+        : (root as Document).body?.children || (root as Document).documentElement?.children
     if (!children) return results
     for (let i = 0; i < children.length; i++) {
       const child = children[i]!
@@ -101,9 +104,10 @@ export function domPrimitiveIntent(
 
   function querySelectorDeepWalk(selector: string, root: ParentNode, depth: number = 0): Element | null {
     if (depth > 10) return null
-    const children = 'children' in root
-      ? (root as Element).children
-      : (root as Document).body?.children || (root as Document).documentElement?.children
+    const children =
+      'children' in root
+        ? (root as Element).children
+        : (root as Document).body?.children || (root as Document).documentElement?.children
     if (!children) return null
     for (let i = 0; i < children.length; i++) {
       const child = children[i]!
@@ -145,9 +149,8 @@ export function domPrimitiveIntent(
 
   function isActionableVisible(el: Element): boolean {
     if (!(el instanceof HTMLElement)) return true
-    const rect = typeof el.getBoundingClientRect === 'function'
-      ? el.getBoundingClientRect()
-      : ({ width: 0, height: 0 } as DOMRect)
+    const rect =
+      typeof el.getBoundingClientRect === 'function' ? el.getBoundingClientRect() : ({ width: 0, height: 0 } as DOMRect)
     if (!(rect.width > 0 && rect.height > 0)) return false
     if (el.offsetParent === null) {
       const style = typeof getComputedStyle === 'function' ? getComputedStyle(el) : null
@@ -245,20 +248,26 @@ export function domPrimitiveIntent(
       return { x: 0, y: 0, width: 0, height: 0 }
     }
     const rect = el.getBoundingClientRect()
-    const x = typeof rect.left === 'number' ? rect.left : (typeof rect.x === 'number' ? rect.x : 0)
-    const y = typeof rect.top === 'number' ? rect.top : (typeof rect.y === 'number' ? rect.y : 0)
+    const x = typeof rect.left === 'number' ? rect.left : typeof rect.x === 'number' ? rect.x : 0
+    const y = typeof rect.top === 'number' ? rect.top : typeof rect.y === 'number' ? rect.y : 0
     const width = Number.isFinite(rect.width) ? rect.width : 0
     const height = Number.isFinite(rect.height) ? rect.height : 0
     return { x, y, width, height }
   }
 
-  function captureViewport(): { scroll_x: number; scroll_y: number; viewport_width: number; viewport_height: number; page_height: number } {
+  function captureViewport(): {
+    scroll_x: number
+    scroll_y: number
+    viewport_width: number
+    viewport_height: number
+    page_height: number
+  } {
     const w = typeof window !== 'undefined' ? window : null
     const docEl = document?.documentElement
     const body = document?.body
     return {
-      scroll_x: Math.round((w?.scrollX ?? w?.pageXOffset ?? 0)),
-      scroll_y: Math.round((w?.scrollY ?? w?.pageYOffset ?? 0)),
+      scroll_x: Math.round(w?.scrollX ?? w?.pageXOffset ?? 0),
+      scroll_y: Math.round(w?.scrollY ?? w?.pageYOffset ?? 0),
       viewport_width: w?.innerWidth ?? docEl?.clientWidth ?? 0,
       viewport_height: w?.innerHeight ?? docEl?.clientHeight ?? 0,
       page_height: Math.max(body?.scrollHeight || 0, docEl?.scrollHeight || 0)
@@ -324,11 +333,19 @@ export function domPrimitiveIntent(
       const visibleInteractive = interactiveCandidates.filter(isVisibleElement).length
       const hiddenInteractive = Math.max(0, interactiveCandidates.length - visibleInteractive)
       const rect = (candidate as HTMLElement).getBoundingClientRect?.()
-      const areaScoreVal = rect && rect.width > 0 && rect.height > 0
-        ? Math.min(20, Math.round((rect.width * rect.height) / 50000))
-        : 0
-      const score = visibleTextboxes*1000 + submitLikeButtons*250 + visibleButtons*10 + visibleInteractive - hiddenInteractive + areaScoreVal
-      if (score > bestScore) { bestScore = score; best = candidate }
+      const areaScoreVal =
+        rect && rect.width > 0 && rect.height > 0 ? Math.min(20, Math.round((rect.width * rect.height) / 50000)) : 0
+      const score =
+        visibleTextboxes * 1000 +
+        submitLikeButtons * 250 +
+        visibleButtons * 10 +
+        visibleInteractive -
+        hiddenInteractive +
+        areaScoreVal
+      if (score > bestScore) {
+        bestScore = score
+        best = candidate
+      }
     }
     return best
   }
@@ -337,17 +354,31 @@ export function domPrimitiveIntent(
 
   const submitVerb = /(post|share|publish|send|submit|save|done|continue|next|create|apply|confirm|yes|allow|accept)/i
   const dismissVerb = /(close|dismiss|cancel|not now|no thanks|skip|x|×|hide|back)/i
-  const composerVerb = /(start( a)? post|create post|write (a )?post|what'?s on your mind|share( an)? update|compose|new post)/i
+  const composerVerb =
+    /(start( a)? post|create post|write (a )?post|what'?s on your mind|share( an)? update|compose|new post)/i
 
-  function domError(error: string, message: string): {
-    success: false; action: string; selector: string; error: string; message: string
+  function domError(
+    error: string,
+    message: string
+  ): {
+    success: false
+    action: string
+    selector: string
+    error: string
+    message: string
   } {
     return { success: false, action, selector: '', error, message }
   }
 
   function summarizeCandidates(candidates: Element[]): Array<{
-    tag?: string; role?: string; aria_label?: string; text_preview?: string
-    selector?: string; element_id?: string; bbox?: { x: number; y: number; width: number; height: number }; visible?: boolean
+    tag?: string
+    role?: string
+    aria_label?: string
+    text_preview?: string
+    selector?: string
+    element_id?: string
+    bbox?: { x: number; y: number; width: number; height: number }
+    visible?: boolean
   }> {
     return candidates.slice(0, 8).map((candidate) => {
       const htmlEl = candidate as HTMLElement
@@ -372,7 +403,12 @@ export function domPrimitiveIntent(
     matchStrategy: string,
     notFoundError: string,
     notFoundMessage: string
-  ): { element?: Element; error?: ReturnType<typeof domError> & { candidates?: unknown[]; match_count?: number; match_strategy?: string }; match_count?: number; match_strategy?: string } {
+  ): {
+    element?: Element
+    error?: ReturnType<typeof domError> & { candidates?: unknown[]; match_count?: number; match_strategy?: string }
+    match_count?: number
+    match_strategy?: string
+  } {
     const viable = ranked
       .filter((entry) => entry.score > 0 && isActionableVisible(entry.element))
       .sort((a, b) => b.score - a.score)
@@ -408,14 +444,26 @@ export function domPrimitiveIntent(
 
   // — Intent resolution —
 
-  type IntentResult = { element?: Element; error?: ReturnType<typeof domError>; match_count?: number; match_strategy?: string; scope_selector_used?: string }
+  type IntentResult = {
+    element?: Element
+    error?: ReturnType<typeof domError>
+    match_count?: number
+    match_strategy?: string
+    scope_selector_used?: string
+  }
 
   function resolveIntentTarget(): IntentResult {
     if (action === 'open_composer') {
       const selectors = [
-        'button', '[role="button"]', 'a[href]', '[role="link"]',
-        '[contenteditable="true"]', '[role="textbox"]', 'textarea',
-        'input[type="text"]', 'input:not([type])'
+        'button',
+        '[role="button"]',
+        'a[href]',
+        '[role="link"]',
+        '[contenteditable="true"]',
+        '[role="textbox"]',
+        'textarea',
+        'input[type="text"]',
+        'input:not([type])'
       ]
       const candidates: Element[] = []
       for (const candidateSelector of selectors) {
@@ -435,7 +483,12 @@ export function domPrimitiveIntent(
         score += elementZIndexScore(candidate)
         return { element: candidate, score }
       })
-      const best = pickBestIntentTarget(ranked, 'intent_open_composer', 'composer_not_found', 'No composer trigger was found. Try a tighter scope_selector.')
+      const best = pickBestIntentTarget(
+        ranked,
+        'intent_open_composer',
+        'composer_not_found',
+        'No composer trigger was found. Try a tighter scope_selector.'
+      )
       return { ...best, scope_selector_used: requestedScope || undefined }
     }
 
@@ -444,15 +497,22 @@ export function domPrimitiveIntent(
       let scopeUsed: string | undefined = requestedScope || undefined
       if (!requestedScope) {
         const dialogs = collectDialogs()
-        const rankedDialogs = dialogs.map((dialog) => {
-          const textboxes = querySelectorAllDeep('[role="textbox"], textarea, [contenteditable="true"]', dialog).filter(isActionableVisible).length
-          const buttons = querySelectorAllDeep('button, [role="button"], input[type="submit"]', dialog)
-          const submitLikeButtons = buttons.filter((button) => isActionableVisible(button) && submitVerb.test(extractElementLabel(button))).length
-          return {
-            element: dialog,
-            score: textboxes * 1200 + submitLikeButtons * 300 + elementZIndexScore(dialog) * 2 + areaScore(dialog, 80)
-          }
-        }).sort((a, b) => b.score - a.score)
+        const rankedDialogs = dialogs
+          .map((dialog) => {
+            const textboxes = querySelectorAllDeep(
+              '[role="textbox"], textarea, [contenteditable="true"]',
+              dialog
+            ).filter(isActionableVisible).length
+            const buttons = querySelectorAllDeep('button, [role="button"], input[type="submit"]', dialog)
+            const submitLikeButtons = buttons.filter(
+              (button) => isActionableVisible(button) && submitVerb.test(extractElementLabel(button))
+            ).length
+            return {
+              element: dialog,
+              score: textboxes * 1200 + submitLikeButtons * 300 + elementZIndexScore(dialog) * 2 + areaScore(dialog, 80)
+            }
+          })
+          .sort((a, b) => b.score - a.score)
         if ((rankedDialogs[0]?.score || 0) > 0) {
           resolvedScope = rankedDialogs[0]!.element
           scopeUsed = 'intent:auto_composer_scope'
@@ -468,7 +528,12 @@ export function domPrimitiveIntent(
         score += elementZIndexScore(candidate)
         return { element: candidate, score }
       })
-      const best = pickBestIntentTarget(ranked, 'intent_submit_active_composer', 'composer_submit_not_found', 'No submit control found in active composer scope.')
+      const best = pickBestIntentTarget(
+        ranked,
+        'intent_submit_active_composer',
+        'composer_submit_not_found',
+        'No submit control found in active composer scope.'
+      )
       return { ...best, scope_selector_used: scopeUsed }
     }
 
@@ -487,7 +552,12 @@ export function domPrimitiveIntent(
         score += elementZIndexScore(candidate)
         return { element: candidate, score }
       })
-      const best = pickBestIntentTarget(ranked, 'intent_confirm_top_dialog', 'confirm_action_not_found', 'No confirm control found in the top dialog.')
+      const best = pickBestIntentTarget(
+        ranked,
+        'intent_confirm_top_dialog',
+        'confirm_action_not_found',
+        'No confirm control found in the top dialog.'
+      )
       return { ...best, scope_selector_used: requestedScope || 'intent:auto_top_dialog' }
     }
 
@@ -519,15 +589,16 @@ export function domPrimitiveIntent(
   if (action === 'open_composer') {
     const tag = node.tagName.toLowerCase()
     const isInputLike =
-      node.isContentEditable ||
-      node.getAttribute('role') === 'textbox' ||
-      tag === 'textarea' ||
-      tag === 'input'
+      node.isContentEditable || node.getAttribute('role') === 'textbox' || tag === 'textarea' || tag === 'input'
     if (isInputLike) {
       node.focus()
       return {
-        success: true, action, selector: '', reason: 'composer_ready',
-        matched: matchedInfo, match_count: resolved.match_count || 1,
+        success: true,
+        action,
+        selector: '',
+        reason: 'composer_ready',
+        matched: matchedInfo,
+        match_count: resolved.match_count || 1,
         match_strategy: resolved.match_strategy || 'intent_open_composer',
         viewport: captureViewport()
       }
@@ -539,8 +610,11 @@ export function domPrimitiveIntent(
   }
 
   return {
-    success: true, action, selector: '',
-    matched: matchedInfo, match_count: resolved.match_count || 1,
+    success: true,
+    action,
+    selector: '',
+    matched: matchedInfo,
+    match_count: resolved.match_count || 1,
     match_strategy: resolved.match_strategy || 'selector',
     viewport: captureViewport()
   }

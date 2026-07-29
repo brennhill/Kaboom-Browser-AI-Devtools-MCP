@@ -54,6 +54,7 @@ export function showSubtitle(text) {
     if (!bar) {
         bar = document.createElement('div');
         bar.id = ELEMENT_ID;
+        bar.setAttribute?.('data-kaboom-owned', 'true');
         Object.assign(bar.style, {
             position: 'fixed',
             bottom: '24px',
@@ -171,6 +172,7 @@ export function toggleRecordingWatermark(visible) {
         return;
     const container = document.createElement('div');
     container.id = ELEMENT_ID;
+    container.setAttribute?.('data-kaboom-owned', 'true');
     Object.assign(container.style, {
         position: 'fixed',
         bottom: '16px',

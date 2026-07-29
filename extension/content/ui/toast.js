@@ -61,6 +61,7 @@ export function showActionToast(text, detail, state = 'trying', durationMs = 300
     const arrowChar = '\u2191';
     const toast = document.createElement('div');
     toast.id = 'kaboom-action-toast';
+    toast.setAttribute?.('data-kaboom-owned', 'true');
     if (isAudioPrompt) {
         toast.className = 'kaboom-toast-pulse';
     }

@@ -95,7 +95,7 @@ run_test_28_3() {
     local valid_resp
     valid_resp=$(get_http_body "http://localhost:${TERM_PORT}/terminal/validate?token=${token}")
     local is_valid
-    is_valid=$(echo "$valid_resp" | jq -r '.valid // empty' 2>/dev/null)
+    is_valid=$(json_boolean "$valid_resp" valid)
 
     if [ "$is_valid" != "true" ]; then
         fail "Validate returned $is_valid for live session (expected true). Response: $valid_resp"
@@ -110,7 +110,7 @@ run_test_28_3() {
 
     # Validate again — should be false
     valid_resp=$(get_http_body "http://localhost:${TERM_PORT}/terminal/validate?token=${token}")
-    is_valid=$(echo "$valid_resp" | jq -r '.valid // empty' 2>/dev/null)
+    is_valid=$(json_boolean "$valid_resp" valid)
 
     if [ "$is_valid" = "false" ]; then
         pass "Validate returns true for live session, false after stop."

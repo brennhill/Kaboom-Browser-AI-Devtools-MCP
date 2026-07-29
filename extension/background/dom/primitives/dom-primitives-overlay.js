@@ -17,12 +17,6 @@ export function domPrimitiveOverlay(action, options) {
     function isKaboomOwnedElement(element) {
         let node = element;
         while (node) {
-            const id = node.id || '';
-            if (id.startsWith('kaboom-'))
-                return true;
-            const className = node.className;
-            if (typeof className === 'string' && className.includes('kaboom-'))
-                return true;
             if (node.getAttribute && node.getAttribute('data-kaboom-owned') === 'true')
                 return true;
             node = node.parentElement;
@@ -57,9 +51,7 @@ export function domPrimitiveOverlay(action, options) {
     function isActionableVisible(el) {
         if (!(el instanceof HTMLElement))
             return true;
-        const rect = typeof el.getBoundingClientRect === 'function'
-            ? el.getBoundingClientRect()
-            : { width: 0, height: 0 };
+        const rect = typeof el.getBoundingClientRect === 'function' ? el.getBoundingClientRect() : { width: 0, height: 0 };
         if (!(rect.width > 0 && rect.height > 0))
             return false;
         if (el.offsetParent === null) {
@@ -141,8 +133,8 @@ export function domPrimitiveOverlay(action, options) {
             return { x: 0, y: 0, width: 0, height: 0 };
         }
         const rect = el.getBoundingClientRect();
-        const x = typeof rect.left === 'number' ? rect.left : (typeof rect.x === 'number' ? rect.x : 0);
-        const y = typeof rect.top === 'number' ? rect.top : (typeof rect.y === 'number' ? rect.y : 0);
+        const x = typeof rect.left === 'number' ? rect.left : typeof rect.x === 'number' ? rect.x : 0;
+        const y = typeof rect.top === 'number' ? rect.top : typeof rect.y === 'number' ? rect.y : 0;
         const width = Number.isFinite(rect.width) ? rect.width : 0;
         const height = Number.isFinite(rect.height) ? rect.height : 0;
         return { x, y, width, height };
@@ -152,8 +144,8 @@ export function domPrimitiveOverlay(action, options) {
         const docEl = document?.documentElement;
         const body = document?.body;
         return {
-            scroll_x: Math.round((w?.scrollX ?? w?.pageXOffset ?? 0)),
-            scroll_y: Math.round((w?.scrollY ?? w?.pageYOffset ?? 0)),
+            scroll_x: Math.round(w?.scrollX ?? w?.pageXOffset ?? 0),
+            scroll_y: Math.round(w?.scrollY ?? w?.pageYOffset ?? 0),
             viewport_width: w?.innerWidth ?? docEl?.clientWidth ?? 0,
             viewport_height: w?.innerHeight ?? docEl?.clientHeight ?? 0,
             page_height: Math.max(body?.scrollHeight || 0, docEl?.scrollHeight || 0)
@@ -170,10 +162,20 @@ export function domPrimitiveOverlay(action, options) {
     // — Overlay detection —
     function findTopmostOverlay() {
         const dialogSelectors = [
-            '[role="dialog"]', '[role="alertdialog"]', '[aria-modal="true"]', 'dialog[open]',
-            '.modal.show', '.modal.in', '.modal.is-active', '.modal[style*="display: block"]',
-            '.overlay', '.popup', '.lightbox',
-            '[data-modal]', '[data-overlay]', '[data-dialog]',
+            '[role="dialog"]',
+            '[role="alertdialog"]',
+            '[aria-modal="true"]',
+            'dialog[open]',
+            '.modal.show',
+            '.modal.in',
+            '.modal.is-active',
+            '.modal[style*="display: block"]',
+            '.overlay',
+            '.popup',
+            '.lightbox',
+            '[data-modal]',
+            '[data-overlay]',
+            '[data-dialog]'
         ];
         const candidates = [];
         for (const dialogSelector of dialogSelectors) {
@@ -258,13 +260,13 @@ export function domPrimitiveOverlay(action, options) {
                         if (resSrc.startsWith('chrome-extension://') || resSrc.startsWith('moz-extension://'))
                             return true;
                     }
-                    if (extensionTagPrefixes.some(prefix => hostTag.startsWith(prefix)))
+                    if (extensionTagPrefixes.some((prefix) => hostTag.startsWith(prefix)))
                         return true;
                     if (host.hasAttributes()) {
                         const attrs = host.attributes;
                         for (let k = 0; k < attrs.length; k++) {
                             const attrName = attrs[k].name.toLowerCase();
-                            if (extensionAttrPatterns.some(pat => attrName.startsWith(pat) || attrName.includes(pat)))
+                            if (extensionAttrPatterns.some((pat) => attrName.startsWith(pat) || attrName.includes(pat)))
                                 return true;
                         }
                     }
@@ -345,11 +347,21 @@ export function domPrimitiveOverlay(action, options) {
         }
         // Strategy A: close button selectors
         const closeButtonSelectors = [
-            'button.close', '.btn-close',
-            '[aria-label="Close"]', '[aria-label="close"]', '[aria-label="Dismiss"]', '[aria-label="dismiss"]',
-            '[data-dismiss="modal"]', '[data-bs-dismiss="modal"]', '[data-dismiss="dialog"]',
-            '[data-dismiss="alert"]', '[data-bs-dismiss="alert"]',
-            'button.modal-close', '.dialog-close', '.overlay-close', '.popup-close',
+            'button.close',
+            '.btn-close',
+            '[aria-label="Close"]',
+            '[aria-label="close"]',
+            '[aria-label="Dismiss"]',
+            '[aria-label="dismiss"]',
+            '[data-dismiss="modal"]',
+            '[data-bs-dismiss="modal"]',
+            '[data-dismiss="dialog"]',
+            '[data-dismiss="alert"]',
+            '[data-bs-dismiss="alert"]',
+            'button.modal-close',
+            '.dialog-close',
+            '.overlay-close',
+            '.popup-close'
         ];
         for (const closeSelector of closeButtonSelectors) {
             const matches = querySelectorAllDeep(closeSelector, overlayElement);
@@ -438,7 +450,7 @@ export function domPrimitiveOverlay(action, options) {
             '.cc-accept',
             '.cc-dismiss',
             'button[id*="cookie" i][id*="accept" i]',
-            'button[id*="consent" i][id*="accept" i]',
+            'button[id*="consent" i][id*="accept" i]'
         ];
         for (const consentSelector of consentSelectors) {
             try {
@@ -459,9 +471,7 @@ export function domPrimitiveOverlay(action, options) {
         return { error: domError('no_overlays', 'No cookie consent banners or overlays found to dismiss.') };
     }
     // — Execute action —
-    const resolved = action === 'auto_dismiss_overlays'
-        ? resolveAutoDismissTarget()
-        : resolveDismissTarget();
+    const resolved = action === 'auto_dismiss_overlays' ? resolveAutoDismissTarget() : resolveDismissTarget();
     if (resolved.error)
         return resolved.error;
     const node = resolved.element;
@@ -497,8 +507,11 @@ export function domPrimitiveOverlay(action, options) {
     // Strategy: escape_fallback
     if (resolvedMatchStrategy === 'dismiss_escape_fallback') {
         const escKb = {
-            key: 'Escape', code: 'Escape', keyCode: 27,
-            bubbles: true, cancelable: true
+            key: 'Escape',
+            code: 'Escape',
+            keyCode: 27,
+            bubbles: true,
+            cancelable: true
         };
         dispatchEventIfPossible(document, new KeyboardEvent('keydown', escKb));
         dispatchEventIfPossible(document, new KeyboardEvent('keyup', escKb));

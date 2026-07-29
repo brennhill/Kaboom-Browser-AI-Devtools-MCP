@@ -220,7 +220,8 @@ interface AnnotationDetail {
 // "handle them now": queuing them means the agent works through every comment —
 // including older ones it hasn't addressed yet — instead of only acting on the
 // latest batch and dropping the rest.
-const ANNOTATION_TERMINAL_NUDGE = 'Check the kaboom annotations and add each comment to your todo list, then work through them'
+const ANNOTATION_TERMINAL_NUDGE =
+  'Check the kaboom annotations and add each comment to your todo list, then work through them'
 
 function handleAnnotationsReady(event: Event): void {
   const detail = (event as CustomEvent).detail as
@@ -283,8 +284,11 @@ async function startDrawMode(): Promise<void> {
       drawModeModule.activateDrawMode('user')
     }
   } catch (err) {
-    console.warn('[KaBOOM!] Draw mode failed to load: ' + (err instanceof Error ? err.message : String(err)) +
-      '. The extension may need to be reloaded at chrome://extensions.')
+    console.warn(
+      '[KaBOOM!] Draw mode failed to load: ' +
+        (err instanceof Error ? err.message : String(err)) +
+        '. The extension may need to be reloaded at chrome://extensions.'
+    )
   }
 }
 
@@ -348,9 +352,12 @@ function createActionButton(label: string, title: string, onClick: () => void): 
   return button
 }
 
-const ICON_DOCS = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>'
-const ICON_GITHUB = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>'
-const ICON_HIDE = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+const ICON_DOCS =
+  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>'
+const ICON_GITHUB =
+  '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>'
+const ICON_HIDE =
+  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
 
 function createSettingsMenuItem(iconSvg: string, label: string): HTMLElement {
   const item = document.createElement('div')
@@ -564,10 +571,7 @@ function createLauncherUi(): HTMLDivElement {
   })
 
   const docsLink = createSettingsMenuLink(ICON_DOCS, 'Docs', KABOOM_DOCS_URL)
-  const repoLink = createSettingsMenuLink(
-    ICON_GITHUB, 'GitHub Repository',
-    KABOOM_REPOSITORY_URL
-  )
+  const repoLink = createSettingsMenuLink(ICON_GITHUB, 'GitHub Repository', KABOOM_REPOSITORY_URL)
 
   const hideButton = createSettingsMenuItem(ICON_HIDE, 'Hide KaBOOM! Devtool')
   hideButton.addEventListener('click', () => {
@@ -683,6 +687,7 @@ function mountLauncher(): void {
   // the boundary, and box-sizing is normalized for the content.
   const host = document.createElement('div')
   host.id = ROOT_ID
+  host.setAttribute?.('data-kaboom-owned', 'true')
   const shadow = host.attachShadow({ mode: 'open' })
   const style = document.createElement('style')
   style.textContent = ':host { all: initial; } *, *::before, *::after { box-sizing: border-box; }'
@@ -733,7 +738,9 @@ export async function setTrackedHoverLauncherEnabled(enabled: boolean): Promise<
   // the flame silently never appeared.
   try {
     await initTerminalPanelBridge()
-  } catch { /* keep last-known terminal visibility */ }
+  } catch {
+    /* keep last-known terminal visibility */
+  }
   installTerminalVisibilitySync()
   // The annotation -> terminal listener must live at the subsystem level, NOT in
   // mountLauncher: the launcher UI unmounts precisely when the terminal panel is
@@ -746,9 +753,13 @@ export async function setTrackedHoverLauncherEnabled(enabled: boolean): Promise<
     } else {
       await uninstallAnnotationListener()
     }
-  } catch { /* nonce publish failed; annotation auto-paste degrades, launcher still shows */ }
+  } catch {
+    /* nonce publish failed; annotation auto-paste degrades, launcher still shows */
+  }
   try {
     await syncHiddenStateFromStorage()
-  } catch { /* proceed with the default hidden state */ }
+  } catch {
+    /* proceed with the default hidden state */
+  }
   applyVisibilityFromState()
 }

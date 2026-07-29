@@ -86,16 +86,10 @@ export function domPrimitiveForm(action, selector, options) {
     function isKaboomOwnedElement(element) {
         let node = element;
         while (node) {
-            const id = node.id || "";
-            if (id.startsWith("kaboom-"))
-                return true;
-            const className = node.className;
-            if (typeof className === "string" && className.includes("kaboom-"))
-                return true;
             if (node.getAttribute && node.getAttribute("data-kaboom-owned") === "true")
                 return true;
-            node =
-                node.parentElement;
+            node = node.
+                parentElement;
         }
         return false;
     }

@@ -1,6 +1,6 @@
 #!/bin/bash
-# test-all-tools-comprehensive.sh — Parallel UAT runner for Kaboom MCP.
-# Launches 8 groups of category tests, collects results, prints summary.
+# test-all-tools-comprehensive.sh — Deterministic connected-browser UAT runner for Kaboom MCP.
+# Runs each category sequentially against the extension's configured daemon port.
 # Compatible with bash 3.2+ (macOS default).
 # NO set -e: we need to collect all results even if some groups fail.
 #
@@ -32,8 +32,7 @@ check_deps() {
 
 check_deps
 
-# Disable per-category global cleanup while running categories in parallel.
-# Each category still cleans up its own daemon by port.
+# Categories share the extension's configured port and clean up their own daemon.
 export KABOOM_TEST_DISABLE_GLOBAL_CLEANER=1
 # Comprehensive run should collect all test outcomes, not abort category scripts
 # on first non-zero helper command.
@@ -165,45 +164,17 @@ fi
 echo "Pre-flight: extension connected (last seen: $EXT_LAST_SEEN)"
 echo ""
 
-# ── Port Assignments ──────────────────────────────────────
-# Each parallel group gets its own port so it can spin up an
-# independent daemon. This lets all groups run simultaneously
-# without contention — total UAT wall time is ~the slowest group
-# instead of the sum of all groups.
-# IMPORTANT: Stride of 2 — each daemon also binds port+1 for the terminal server.
-PORT_GROUP1=7890  # cat-01-protocol        (terminal: 7891)
-PORT_GROUP2=7892  # cat-02-observe          (terminal: 7893)
-PORT_GROUP3=7894  # cat-03-generate         (terminal: 7895)
-PORT_GROUP4=7896  # cat-04-configure + cat-05-interact (terminal: 7897)
-PORT_GROUP5=7898  # cat-07-concurrency      (terminal: 7899)
-PORT_GROUP6=7900  # cat-08-security + cat-09-http (terminal: 7901)
-PORT_GROUP7=7902  # cat-06-lifecycle        (terminal: 7903)
-PORT_GROUP8=7904  # cat-10-regression       (terminal: 7905)
-PORT_GROUP9=7906  # cat-11-data-pipeline    (terminal: 7907)
-PORT_GROUP10=7908 # cat-12-rich-actions     (terminal: 7909)
-PORT_GROUP11=7910 # cat-13-pilot-contract   (terminal: 7911)
-PORT_GROUP12=7912 # cat-14-extension-startup (terminal: 7913)
-PORT_GROUP13=7914 # cat-15-pilot-success-path (terminal: 7915)
-PORT_GROUP14=7916 # cat-16-api-contract     (terminal: 7917)
-PORT_GROUP15=7918 # cat-18-recording        (terminal: 7919)
-PORT_GROUP16=7920 # cat-19-link-health      (terminal: 7921)
-PORT_GROUP18=7922 # cat-23-draw-mode        (terminal: 7923)
-PORT_GROUP19=7924 # cat-24-upload           (terminal: 7925)
-PORT_GROUP20=7926 # cat-25-annotations      (terminal: 7927)
-PORT_GROUP21=7928 # cat-26-dynamic-upgrade  (terminal: 7929)
-PORT_GROUP22=7930 # cat-28-terminal         (terminal: 7931)
-
-# All ports used by this runner
-ALL_UAT_PORTS="$PORT_GROUP1 $PORT_GROUP2 $PORT_GROUP3 $PORT_GROUP4 $PORT_GROUP5 $PORT_GROUP6 $PORT_GROUP7 $PORT_GROUP8 $PORT_GROUP9 $PORT_GROUP10 $PORT_GROUP11 $PORT_GROUP12 $PORT_GROUP13 $PORT_GROUP14 $PORT_GROUP15 $PORT_GROUP16 $PORT_GROUP18 $PORT_GROUP19 $PORT_GROUP20 $PORT_GROUP21 $PORT_GROUP22"
-# NOTE: PORT_GROUP17 is defined later (line ~357) and added to cleanup below
+# ── Shared Extension Port ─────────────────────────────────
+# A browser extension has one daemon endpoint. Parallel daemons on alternate
+# ports cannot receive its commands, so connected-browser categories must run
+# sequentially on the configured endpoint.
+UAT_PORT=7890
 
 # Safety-net trap: kill daemons on all ports if runner exits abnormally
 _uat_cleanup() {
-    for port in $ALL_UAT_PORTS 7932; do  # 7932 = PORT_GROUP17 (defined later)
-        lsof -ti :"$port" 2>/dev/null | xargs kill -9 2>/dev/null || true
-    done
+    lsof -ti :"$UAT_PORT" 2>/dev/null | xargs kill -9 2>/dev/null || true
     # Also kill upload test servers that cat-24 may have spawned
-    for _p in $((PORT_GROUP19 + 100)) $((PORT_GROUP19 + 101)) $((PORT_GROUP19 + 102)); do
+    for _p in $((UAT_PORT + 100)) $((UAT_PORT + 101)) $((UAT_PORT + 102)); do
         lsof -ti :"$_p" 2>/dev/null | xargs kill -9 2>/dev/null || true
     done
     if [ -f "$SCRIPT_DIR/cleanup-test-daemons.sh" ]; then
@@ -212,228 +183,43 @@ _uat_cleanup() {
 }
 trap _uat_cleanup EXIT
 
-# Kill anything on our ports before starting
-for port in $ALL_UAT_PORTS 7932; do  # 7932 = PORT_GROUP17 (defined later)
-    lsof -ti :"$port" 2>/dev/null | xargs kill -9 2>/dev/null || true
-done
+# Kill anything on the shared port before starting
+lsof -ti :"$UAT_PORT" 2>/dev/null | xargs kill -9 2>/dev/null || true
 sleep 0.5
 
-# ── Launch Groups ─────────────────────────────────────────
-PIDS=""
+# ── Run Categories ────────────────────────────────────────
+CAT_IDS="01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 18 19 20 23 24 25 26 28"
 
-# Group 1: Protocol (single script)
-(
-    cd "$PROJECT_ROOT" || exit
-    "$TIMEOUT_CMD" 120 bash "$TESTS_DIR/cat-01-protocol.sh" "$PORT_GROUP1" "$RESULTS_DIR/results-01.txt" \
-        > "$RESULTS_DIR/output-01.txt" 2>&1
-) &
-PIDS="$PIDS $!"
+category_timeout() {
+    case "$1" in
+        19) echo 600 ;;
+        26) echo 180 ;;
+        *) echo 120 ;;
+    esac
+}
 
-# Group 2: Observe (single script)
-(
-    cd "$PROJECT_ROOT" || exit
-    "$TIMEOUT_CMD" 120 bash "$TESTS_DIR/cat-02-observe.sh" "$PORT_GROUP2" "$RESULTS_DIR/results-02.txt" \
-        > "$RESULTS_DIR/output-02.txt" 2>&1
-) &
-PIDS="$PIDS $!"
+run_category() {
+    local cat_id="$1"
+    local timeout_seconds
+    timeout_seconds="$(category_timeout "$cat_id")"
+    (
+        cd "$PROJECT_ROOT" || exit
+        "$TIMEOUT_CMD" "$timeout_seconds" bash "$TESTS_DIR/cat-${cat_id}-"*.sh \
+            "$UAT_PORT" "$RESULTS_DIR/results-${cat_id}.txt" \
+            > "$RESULTS_DIR/output-${cat_id}.txt" 2>&1
+    ) || true
+}
 
-# Group 3: Generate (single script)
-(
-    cd "$PROJECT_ROOT" || exit
-    "$TIMEOUT_CMD" 120 bash "$TESTS_DIR/cat-03-generate.sh" "$PORT_GROUP3" "$RESULTS_DIR/results-03.txt" \
-        > "$RESULTS_DIR/output-03.txt" 2>&1
-) &
-PIDS="$PIDS $!"
-
-# Group 4: Configure then Interact (sequential, same port)
-(
-    cd "$PROJECT_ROOT" || exit
-    "$TIMEOUT_CMD" 120 bash "$TESTS_DIR/cat-04-configure.sh" "$PORT_GROUP4" "$RESULTS_DIR/results-04.txt" \
-        > "$RESULTS_DIR/output-04.txt" 2>&1
-    "$TIMEOUT_CMD" 120 bash "$TESTS_DIR/cat-05-interact.sh" "$PORT_GROUP4" "$RESULTS_DIR/results-05.txt" \
-        > "$RESULTS_DIR/output-05.txt" 2>&1
-) &
-PIDS="$PIDS $!"
-
-# Group 5: Concurrency (single script)
-(
-    cd "$PROJECT_ROOT" || exit
-    "$TIMEOUT_CMD" 120 bash "$TESTS_DIR/cat-07-concurrency.sh" "$PORT_GROUP5" "$RESULTS_DIR/results-07.txt" \
-        > "$RESULTS_DIR/output-07.txt" 2>&1
-) &
-PIDS="$PIDS $!"
-
-# Group 6: Security then HTTP (sequential, same port)
-(
-    cd "$PROJECT_ROOT" || exit
-    "$TIMEOUT_CMD" 120 bash "$TESTS_DIR/cat-08-security.sh" "$PORT_GROUP6" "$RESULTS_DIR/results-08.txt" \
-        > "$RESULTS_DIR/output-08.txt" 2>&1
-    "$TIMEOUT_CMD" 120 bash "$TESTS_DIR/cat-09-http.sh" "$PORT_GROUP6" "$RESULTS_DIR/results-09.txt" \
-        > "$RESULTS_DIR/output-09.txt" 2>&1
-) &
-PIDS="$PIDS $!"
-
-# Group 7: Lifecycle (single script)
-(
-    cd "$PROJECT_ROOT" || exit
-    "$TIMEOUT_CMD" 120 bash "$TESTS_DIR/cat-06-lifecycle.sh" "$PORT_GROUP7" "$RESULTS_DIR/results-06.txt" \
-        > "$RESULTS_DIR/output-06.txt" 2>&1
-) &
-PIDS="$PIDS $!"
-
-# Group 8: Regression (single script)
-(
-    cd "$PROJECT_ROOT" || exit
-    "$TIMEOUT_CMD" 120 bash "$TESTS_DIR/cat-10-regression.sh" "$PORT_GROUP8" "$RESULTS_DIR/results-10.txt" \
-        > "$RESULTS_DIR/output-10.txt" 2>&1
-) &
-PIDS="$PIDS $!"
-
-# Group 9: Data Pipeline (single script)
-(
-    cd "$PROJECT_ROOT" || exit
-    "$TIMEOUT_CMD" 120 bash "$TESTS_DIR/cat-11-data-pipeline.sh" "$PORT_GROUP9" "$RESULTS_DIR/results-11.txt" \
-        > "$RESULTS_DIR/output-11.txt" 2>&1
-) &
-PIDS="$PIDS $!"
-
-# Group 10: Rich Action Results (single script)
-(
-    cd "$PROJECT_ROOT" || exit
-    "$TIMEOUT_CMD" 120 bash "$TESTS_DIR/cat-12-rich-actions.sh" "$PORT_GROUP10" "$RESULTS_DIR/results-12.txt" \
-        > "$RESULTS_DIR/output-12.txt" 2>&1
-) &
-PIDS="$PIDS $!"
-
-# Group 11: Pilot Contract Tests (single script)
-(
-    cd "$PROJECT_ROOT" || exit
-    "$TIMEOUT_CMD" 120 bash "$TESTS_DIR/cat-13-pilot-contract.sh" "$PORT_GROUP11" "$RESULTS_DIR/results-13.txt" \
-        > "$RESULTS_DIR/output-13.txt" 2>&1
-) &
-PIDS="$PIDS $!"
-
-# Group 12: Extension Startup (single script)
-(
-    cd "$PROJECT_ROOT" || exit
-    "$TIMEOUT_CMD" 120 bash "$TESTS_DIR/cat-14-extension-startup.sh" "$PORT_GROUP12" "$RESULTS_DIR/results-14.txt" \
-        > "$RESULTS_DIR/output-14.txt" 2>&1
-) &
-PIDS="$PIDS $!"
-
-# Group 13: Pilot Success Path (single script)
-(
-    cd "$PROJECT_ROOT" || exit
-    "$TIMEOUT_CMD" 120 bash "$TESTS_DIR/cat-15-pilot-success-path.sh" "$PORT_GROUP13" "$RESULTS_DIR/results-15.txt" \
-        > "$RESULTS_DIR/output-15.txt" 2>&1
-) &
-PIDS="$PIDS $!"
-
-# Group 14: API Contract (single script)
-(
-    cd "$PROJECT_ROOT" || exit
-    "$TIMEOUT_CMD" 120 bash "$TESTS_DIR/cat-16-api-contract.sh" "$PORT_GROUP14" "$RESULTS_DIR/results-16.txt" \
-        > "$RESULTS_DIR/output-16.txt" 2>&1
-) &
-PIDS="$PIDS $!"
-
-# Group 15: Recording & Audio (single script)
-(
-    cd "$PROJECT_ROOT" || exit
-    "$TIMEOUT_CMD" 120 bash "$TESTS_DIR/cat-18-recording.sh" "$PORT_GROUP15" "$RESULTS_DIR/results-18.txt" \
-        > "$RESULTS_DIR/output-18.txt" 2>&1
-) &
-PIDS="$PIDS $!"
-
-# Group 16: Link Health Analyzer (single script)
-(
-    cd "$PROJECT_ROOT" || exit
-    bash "$TESTS_DIR/cat-19-link-health.sh" "$PORT_GROUP16" "$RESULTS_DIR/results-19.txt" \
-        > "$RESULTS_DIR/output-19.txt" 2>&1
-) &
-PIDS="$PIDS $!"
-
-# Group 17: Noise Rule Persistence (single script)
-PORT_GROUP17=7932  # cat-20-noise-persistence (terminal: 7933)
-(
-    cd "$PROJECT_ROOT" || exit
-    bash "$TESTS_DIR/cat-20-noise-persistence.sh" "$PORT_GROUP17" "$RESULTS_DIR/results-20.txt" \
-        > "$RESULTS_DIR/output-20.txt" 2>&1
-) &
-PIDS="$PIDS $!"
-
-# Group 18: Draw Mode (single script)
-(
-    cd "$PROJECT_ROOT" || exit
-    "$TIMEOUT_CMD" 120 bash "$TESTS_DIR/cat-23-draw-mode.sh" "$PORT_GROUP18" "$RESULTS_DIR/results-23.txt" \
-        > "$RESULTS_DIR/output-23.txt" 2>&1
-) &
-PIDS="$PIDS $!"
-
-# Group 19: Upload (single script)
-(
-    cd "$PROJECT_ROOT" || exit
-    "$TIMEOUT_CMD" 120 bash "$TESTS_DIR/cat-24-upload.sh" "$PORT_GROUP19" "$RESULTS_DIR/results-24.txt" \
-        > "$RESULTS_DIR/output-24.txt" 2>&1
-) &
-PIDS="$PIDS $!"
-
-# Group 20: Annotation Integration (single script)
-(
-    cd "$PROJECT_ROOT" || exit
-    "$TIMEOUT_CMD" 120 bash "$TESTS_DIR/cat-25-annotations.sh" "$PORT_GROUP20" "$RESULTS_DIR/results-25.txt" \
-        > "$RESULTS_DIR/output-25.txt" 2>&1
-) &
-PIDS="$PIDS $!"
-
-# Group 21: Dynamic Binary Upgrade (single script)
-(
-    cd "$PROJECT_ROOT" || exit
-    "$TIMEOUT_CMD" 180 bash "$TESTS_DIR/cat-26-dynamic-upgrade.sh" "$PORT_GROUP21" "$RESULTS_DIR/results-26.txt" \
-        > "$RESULTS_DIR/output-26.txt" 2>&1
-) &
-PIDS="$PIDS $!"
-
-# Group 22: Terminal HTTP Endpoints (single script)
-(
-    cd "$PROJECT_ROOT" || exit
-    "$TIMEOUT_CMD" 120 bash "$TESTS_DIR/cat-28-terminal.sh" "$PORT_GROUP22" "$RESULTS_DIR/results-28.txt" \
-        > "$RESULTS_DIR/output-28.txt" 2>&1
-) &
-PIDS="$PIDS $!"
-
-# ── Wait for All Groups ──────────────────────────────────
-echo "Running 22 parallel groups..."
+echo "Running 24 categories sequentially on extension port $UAT_PORT..."
 echo ""
 
-# Master watchdog: kill all groups if UAT exceeds 5 minutes total
-WATCHDOG_TIMEOUT=300
-(
-    sleep "$WATCHDOG_TIMEOUT"
-    echo ""
-    echo "WATCHDOG: UAT exceeded ${WATCHDOG_TIMEOUT}s master timeout. Killing all groups." >&2
-    for pid in $PIDS; do
-        kill "$pid" 2>/dev/null || true
-    done
-    # Also kill any daemons on our ports
-    for port in $ALL_UAT_PORTS 7906; do
-        lsof -ti :"$port" 2>/dev/null | xargs kill -9 2>/dev/null || true
-    done
-) &
-WATCHDOG_PID="$!"
-
-for pid in $PIDS; do
-    wait "$pid" 2>/dev/null || true
+for cat_id in $CAT_IDS; do
+    run_category "$cat_id"
 done
-
-# Cancel the watchdog — all groups finished in time
-kill "$WATCHDOG_PID" 2>/dev/null || true
-wait "$WATCHDOG_PID" 2>/dev/null || true
 
 # ── Collect and Display Results ───────────────────────────
 
 # Category display order and default names
-CAT_IDS="01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 18 19 20 23 24 25 26 28"
 get_default_name() {
     case "$1" in
         01) echo "Protocol Compliance" ;;
@@ -538,10 +324,8 @@ fi
 echo ""
 
 # ── Cleanup ───────────────────────────────────────────────
-# Kill any remaining daemons on our ports (trap also handles this on abnormal exit)
-for port in $ALL_UAT_PORTS 7906; do
-    lsof -ti :"$port" 2>/dev/null | xargs kill -9 2>/dev/null || true
-done
+# Kill any remaining daemon on the shared port (trap also handles abnormal exit)
+lsof -ti :"$UAT_PORT" 2>/dev/null | xargs kill -9 2>/dev/null || true
 
 if [ "${KABOOM_KEEP_RESULTS:-0}" = "1" ]; then
     echo "Results kept at: $RESULTS_DIR"

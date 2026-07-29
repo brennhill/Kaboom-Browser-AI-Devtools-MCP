@@ -17,9 +17,8 @@ root.body?.children||root.documentElement?.children;if(!children)return results;
 child);if(shadow){querySelectorAllDeep(selector2,shadow,results,depth+1)}}return results}function resolveDeepCombinator(selector2,root=document){const parts=selector2.
 split(" >>> ");if(parts.length<=1)return null;let current=root;for(let i=0;i<parts.length;i++){const part=parts[i].trim();if(i<parts.length-1){const host=querySelectorDeep(
 part,current);if(!host)return null;const shadow=getShadowRoot(host);if(!shadow)return null;current=shadow}else{return querySelectorDeep(part,current)}}return null}
-function isKaboomOwnedElement(element){let node=element;while(node){const id=node.id||"";if(id.startsWith("kaboom-"))return true;const className=node.className;
-if(typeof className==="string"&&className.includes("kaboom-"))return true;if(node.getAttribute&&node.getAttribute("data-kaboom-owned")==="true")return true;node=
-node.parentElement}return false}function isVisible(el2){if(isKaboomOwnedElement(el2))return false;if(!(el2 instanceof HTMLElement))return true;const style=getComputedStyle(
+function isKaboomOwnedElement(element){let node=element;while(node){if(node.getAttribute&&node.getAttribute("data-kaboom-owned")==="true")return true;node=node.
+parentElement}return false}function isVisible(el2){if(isKaboomOwnedElement(el2))return false;if(!(el2 instanceof HTMLElement))return true;const style=getComputedStyle(
 el2);if(style.visibility==="hidden"||style.display==="none")return false;if(el2.offsetParent===null&&style.position!=="fixed"&&style.position!=="sticky"){const rect=el2.
 getBoundingClientRect();if(rect.width===0&&rect.height===0)return false}return true}function firstVisible(els){let fallback=null;for(const el2 of els){if(!fallback)
 fallback=el2;if(isVisible(el2))return el2}return fallback}function resolveScopeRoot(rawScope){const scope=(rawScope||"").trim();if(!scope)return document;try{const matches=querySelectorAllDeep(

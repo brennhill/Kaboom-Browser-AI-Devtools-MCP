@@ -254,7 +254,8 @@ async function startDrawMode() {
         }
     }
     catch (err) {
-        console.warn('[KaBOOM!] Draw mode failed to load: ' + (err instanceof Error ? err.message : String(err)) +
+        console.warn('[KaBOOM!] Draw mode failed to load: ' +
+            (err instanceof Error ? err.message : String(err)) +
             '. The extension may need to be reloaded at chrome://extensions.');
     }
 }
@@ -624,6 +625,7 @@ function mountLauncher() {
     // the boundary, and box-sizing is normalized for the content.
     const host = document.createElement('div');
     host.id = ROOT_ID;
+    host.setAttribute?.('data-kaboom-owned', 'true');
     const shadow = host.attachShadow({ mode: 'open' });
     const style = document.createElement('style');
     style.textContent = ':host { all: initial; } *, *::before, *::after { box-sizing: border-box; }';
@@ -671,7 +673,9 @@ export async function setTrackedHoverLauncherEnabled(enabled) {
     try {
         await initTerminalPanelBridge();
     }
-    catch { /* keep last-known terminal visibility */ }
+    catch {
+        /* keep last-known terminal visibility */
+    }
     installTerminalVisibilitySync();
     // The annotation -> terminal listener must live at the subsystem level, NOT in
     // mountLauncher: the launcher UI unmounts precisely when the terminal panel is
@@ -686,11 +690,15 @@ export async function setTrackedHoverLauncherEnabled(enabled) {
             await uninstallAnnotationListener();
         }
     }
-    catch { /* nonce publish failed; annotation auto-paste degrades, launcher still shows */ }
+    catch {
+        /* nonce publish failed; annotation auto-paste degrades, launcher still shows */
+    }
     try {
         await syncHiddenStateFromStorage();
     }
-    catch { /* proceed with the default hidden state */ }
+    catch {
+        /* proceed with the default hidden state */
+    }
     applyVisibilityFromState();
 }
 //# sourceMappingURL=tracked-hover-launcher.js.map

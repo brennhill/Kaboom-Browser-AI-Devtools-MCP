@@ -1361,6 +1361,7 @@
     const arrowChar = "\u2191";
     const toast = document.createElement("div");
     toast.id = "kaboom-action-toast";
+    toast.setAttribute?.("data-kaboom-owned", "true");
     if (isAudioPrompt) {
       toast.className = "kaboom-toast-pulse";
     }
@@ -1480,6 +1481,7 @@
     if (!bar) {
       bar = document.createElement("div");
       bar.id = ELEMENT_ID;
+      bar.setAttribute?.("data-kaboom-owned", "true");
       Object.assign(bar.style, {
         position: "fixed",
         bottom: "24px",
@@ -1584,6 +1586,7 @@
       return;
     const container = document.createElement("div");
     container.id = ELEMENT_ID;
+    container.setAttribute?.("data-kaboom-owned", "true");
     Object.assign(container.style, {
       position: "fixed",
       bottom: "16px",
@@ -2889,6 +2892,7 @@
     const root = createLauncherUi();
     const host = document.createElement("div");
     host.id = ROOT_ID;
+    host.setAttribute?.("data-kaboom-owned", "true");
     const shadow = host.attachShadow({ mode: "open" });
     const style = document.createElement("style");
     style.textContent = ":host { all: initial; } *, *::before, *::after { box-sizing: border-box; }";

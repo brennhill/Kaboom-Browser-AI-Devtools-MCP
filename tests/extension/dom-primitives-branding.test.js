@@ -25,4 +25,28 @@ describe('DOM primitive branding contracts', () => {
       assert.match(contents, /__kaboomElementHandles/, `${relativePath} should use __kaboomElementHandles storage`)
     }
   })
+
+  test('DOM ownership uses an explicit marker instead of page naming conventions', () => {
+    const selectorTemplate = readFileSync('scripts/templates/partials/_dom-selectors.tpl', 'utf8')
+    const standalonePrimitives = [
+      'src/background/dom/primitives/dom-primitives-intent.ts',
+      'src/background/dom/primitives/dom-primitives-overlay.ts'
+    ]
+
+    for (const [relativePath, contents] of [
+      ['scripts/templates/partials/_dom-selectors.tpl', selectorTemplate],
+      ...standalonePrimitives.map(relativePath => [relativePath, readFileSync(relativePath, 'utf8')])
+    ]) {
+      assert.match(
+        contents,
+        /getAttribute\('data-kaboom-owned'\) === 'true'/,
+        `${relativePath} should recognize the explicit Kaboom ownership marker`
+      )
+      assert.doesNotMatch(
+        contents,
+        /id\.startsWith\('kaboom-'\)|className\.includes\('kaboom-'\)/,
+        `${relativePath} must not claim ordinary page elements by ID or class prefix`
+      )
+    }
+  })
 })

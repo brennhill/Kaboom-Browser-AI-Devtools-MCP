@@ -304,6 +304,7 @@ function runHighlightFallback(params: { selector?: unknown; duration_ms?: unknow
     const rect = target.getBoundingClientRect()
     const overlay = document.createElement('div')
     overlay.id = 'kaboom-highlighter'
+    overlay.setAttribute?.('data-kaboom-owned', 'true')
     overlay.dataset.selector = selector
     overlay.style.position = 'fixed'
     overlay.style.top = `${rect.top}px`

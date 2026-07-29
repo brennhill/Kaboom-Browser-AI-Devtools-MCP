@@ -133,6 +133,7 @@ function createTerminalHeader(deps) {
 export function createPanelShell(token, deps) {
     const root = document.createElement('div');
     root.id = WIDGET_ID;
+    root.setAttribute?.('data-kaboom-owned', 'true');
     Object.assign(root.style, {
         position: 'fixed',
         inset: '0',
@@ -157,12 +158,7 @@ export function createPanelShell(token, deps) {
     const header = createTerminalHeader(deps);
     const terminalBody = document.createElement('div');
     terminalBody.id = TERMINAL_BODY_ID;
-    terminalBody.style.cssText = [
-        'flex:1',
-        'min-height:0',
-        'display:block',
-        'background:#1a1b26'
-    ].join(';');
+    terminalBody.style.cssText = ['flex:1', 'min-height:0', 'display:block', 'background:#1a1b26'].join(';');
     if (token) {
         const iframe = document.createElement('iframe');
         iframe.id = IFRAME_ID;

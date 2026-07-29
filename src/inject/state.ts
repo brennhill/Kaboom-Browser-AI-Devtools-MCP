@@ -221,6 +221,7 @@ export function highlightElement(selector: string, durationMs: number = 5000): H
 
   kaboomHighlighter = document.createElement('div')
   kaboomHighlighter.id = 'kaboom-highlighter'
+  kaboomHighlighter.setAttribute?.('data-kaboom-owned', 'true')
   kaboomHighlighter.dataset.selector = selector
   Object.assign(kaboomHighlighter.style, {
     position: 'fixed',

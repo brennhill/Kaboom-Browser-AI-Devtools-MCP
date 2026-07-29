@@ -44,17 +44,19 @@ export function domPrimitiveOverlay(
   }
   match_count?: number
   match_strategy?: string
-  viewport?: { scroll_x: number; scroll_y: number; viewport_width: number; viewport_height: number; page_height: number }
+  viewport?: {
+    scroll_x: number
+    scroll_y: number
+    viewport_width: number
+    viewport_height: number
+    page_height: number
+  }
 } {
   // — Shared helpers (duplicated for self-containment) —
 
   function isKaboomOwnedElement(element: Element | null): boolean {
     let node: Element | null = element
     while (node) {
-      const id = (node as HTMLElement).id || ''
-      if (id.startsWith('kaboom-')) return true
-      const className = (node as HTMLElement).className
-      if (typeof className === 'string' && className.includes('kaboom-')) return true
       if (node.getAttribute && node.getAttribute('data-kaboom-owned') === 'true') return true
       node = node.parentElement
     }
@@ -76,9 +78,10 @@ export function domPrimitiveOverlay(
     for (const match of matches) {
       if (!isKaboomOwnedElement(match)) results.push(match)
     }
-    const children = 'children' in root
-      ? (root as Element).children
-      : (root as Document).body?.children || (root as Document).documentElement?.children
+    const children =
+      'children' in root
+        ? (root as Element).children
+        : (root as Document).body?.children || (root as Document).documentElement?.children
     if (!children) return results
     for (let i = 0; i < children.length; i++) {
       const child = children[i]!
@@ -92,9 +95,8 @@ export function domPrimitiveOverlay(
 
   function isActionableVisible(el: Element): boolean {
     if (!(el instanceof HTMLElement)) return true
-    const rect = typeof el.getBoundingClientRect === 'function'
-      ? el.getBoundingClientRect()
-      : ({ width: 0, height: 0 } as DOMRect)
+    const rect =
+      typeof el.getBoundingClientRect === 'function' ? el.getBoundingClientRect() : ({ width: 0, height: 0 } as DOMRect)
     if (!(rect.width > 0 && rect.height > 0)) return false
     if (el.offsetParent === null) {
       const style = typeof getComputedStyle === 'function' ? getComputedStyle(el) : null
@@ -185,20 +187,26 @@ export function domPrimitiveOverlay(
       return { x: 0, y: 0, width: 0, height: 0 }
     }
     const rect = el.getBoundingClientRect()
-    const x = typeof rect.left === 'number' ? rect.left : (typeof rect.x === 'number' ? rect.x : 0)
-    const y = typeof rect.top === 'number' ? rect.top : (typeof rect.y === 'number' ? rect.y : 0)
+    const x = typeof rect.left === 'number' ? rect.left : typeof rect.x === 'number' ? rect.x : 0
+    const y = typeof rect.top === 'number' ? rect.top : typeof rect.y === 'number' ? rect.y : 0
     const width = Number.isFinite(rect.width) ? rect.width : 0
     const height = Number.isFinite(rect.height) ? rect.height : 0
     return { x, y, width, height }
   }
 
-  function captureViewport(): { scroll_x: number; scroll_y: number; viewport_width: number; viewport_height: number; page_height: number } {
+  function captureViewport(): {
+    scroll_x: number
+    scroll_y: number
+    viewport_width: number
+    viewport_height: number
+    page_height: number
+  } {
     const w = typeof window !== 'undefined' ? window : null
     const docEl = document?.documentElement
     const body = document?.body
     return {
-      scroll_x: Math.round((w?.scrollX ?? w?.pageXOffset ?? 0)),
-      scroll_y: Math.round((w?.scrollY ?? w?.pageYOffset ?? 0)),
+      scroll_x: Math.round(w?.scrollX ?? w?.pageXOffset ?? 0),
+      scroll_y: Math.round(w?.scrollY ?? w?.pageYOffset ?? 0),
       viewport_width: w?.innerWidth ?? docEl?.clientWidth ?? 0,
       viewport_height: w?.innerHeight ?? docEl?.clientHeight ?? 0,
       page_height: Math.max(body?.scrollHeight || 0, docEl?.scrollHeight || 0)
@@ -216,10 +224,20 @@ export function domPrimitiveOverlay(
 
   function findTopmostOverlay(): Element | null {
     const dialogSelectors = [
-      '[role="dialog"]', '[role="alertdialog"]', '[aria-modal="true"]', 'dialog[open]',
-      '.modal.show', '.modal.in', '.modal.is-active', '.modal[style*="display: block"]',
-      '.overlay', '.popup', '.lightbox',
-      '[data-modal]', '[data-overlay]', '[data-dialog]',
+      '[role="dialog"]',
+      '[role="alertdialog"]',
+      '[aria-modal="true"]',
+      'dialog[open]',
+      '.modal.show',
+      '.modal.in',
+      '.modal.is-active',
+      '.modal[style*="display: block"]',
+      '.overlay',
+      '.popup',
+      '.lightbox',
+      '[data-modal]',
+      '[data-overlay]',
+      '[data-dialog]'
     ]
     const candidates: Element[] = []
     for (const dialogSelector of dialogSelectors) {
@@ -249,7 +267,11 @@ export function domPrimitiveOverlay(
     return ranked[0]?.element || null
   }
 
-  function describeOverlay(el: Element): { overlay_type: string; overlay_selector: string; overlay_text_preview: string } {
+  function describeOverlay(el: Element): {
+    overlay_type: string
+    overlay_selector: string
+    overlay_text_preview: string
+  } {
     const tag = el.tagName.toLowerCase()
     const role = el.getAttribute('role') || ''
     const ariaModal = el.getAttribute('aria-modal') || ''
@@ -291,12 +313,12 @@ export function domPrimitiveOverlay(
             const resSrc = res.getAttribute('src') || res.getAttribute('href') || ''
             if (resSrc.startsWith('chrome-extension://') || resSrc.startsWith('moz-extension://')) return true
           }
-          if (extensionTagPrefixes.some(prefix => hostTag.startsWith(prefix))) return true
+          if (extensionTagPrefixes.some((prefix) => hostTag.startsWith(prefix))) return true
           if (host.hasAttributes()) {
             const attrs = host.attributes
             for (let k = 0; k < attrs.length; k++) {
               const attrName = attrs[k]!.name.toLowerCase()
-              if (extensionAttrPatterns.some(pat => attrName.startsWith(pat) || attrName.includes(pat))) return true
+              if (extensionAttrPatterns.some((pat) => attrName.startsWith(pat) || attrName.includes(pat))) return true
             }
           }
           node = host
@@ -337,15 +359,30 @@ export function domPrimitiveOverlay(
   const dismissVerb = /(close|dismiss|cancel|not now|no thanks|skip|x|×|hide|back)/i
   const submitVerb = /(post|share|publish|send|submit|save|done|continue|next|create|apply|confirm|yes|allow|accept)/i
 
-  function domError(error: string, message: string): {
-    success: false; action: string; selector: string; error: string; message: string
-    overlay_type?: string; overlay_selector?: string; overlay_text_preview?: string; overlay_source?: 'extension' | 'page'
+  function domError(
+    error: string,
+    message: string
+  ): {
+    success: false
+    action: string
+    selector: string
+    error: string
+    message: string
+    overlay_type?: string
+    overlay_selector?: string
+    overlay_text_preview?: string
+    overlay_source?: 'extension' | 'page'
   } {
     return { success: false, action, selector: '', error, message }
   }
 
   function matchedTarget(node: Element): {
-    tag: string; role?: string; aria_label?: string; text_preview?: string; selector?: string; element_id?: string
+    tag: string
+    role?: string
+    aria_label?: string
+    text_preview?: string
+    selector?: string
+    element_id?: string
     bbox?: { x: number; y: number; width: number; height: number }
   } {
     const htmlEl = node as HTMLElement
@@ -384,8 +421,8 @@ export function domPrimitiveOverlay(
         const loopError = domError(
           'dismiss_loop_detected',
           `Overlay (${info.overlay_selector}) was already attempted ${Math.round(elapsed / 1000)}s ago and is still visible. ` +
-          'It may be non-dismissable. Try a different approach: use a specific selector to target its close mechanism, ' +
-          'navigate away, or ignore it if it does not block interaction.'
+            'It may be non-dismissable. Try a different approach: use a specific selector to target its close mechanism, ' +
+            'navigate away, or ignore it if it does not block interaction.'
         )
         loopError.overlay_type = info.overlay_type
         loopError.overlay_selector = info.overlay_selector
@@ -398,11 +435,21 @@ export function domPrimitiveOverlay(
 
     // Strategy A: close button selectors
     const closeButtonSelectors = [
-      'button.close', '.btn-close',
-      '[aria-label="Close"]', '[aria-label="close"]', '[aria-label="Dismiss"]', '[aria-label="dismiss"]',
-      '[data-dismiss="modal"]', '[data-bs-dismiss="modal"]', '[data-dismiss="dialog"]',
-      '[data-dismiss="alert"]', '[data-bs-dismiss="alert"]',
-      'button.modal-close', '.dialog-close', '.overlay-close', '.popup-close',
+      'button.close',
+      '.btn-close',
+      '[aria-label="Close"]',
+      '[aria-label="close"]',
+      '[aria-label="Dismiss"]',
+      '[aria-label="dismiss"]',
+      '[data-dismiss="modal"]',
+      '[data-bs-dismiss="modal"]',
+      '[data-dismiss="dialog"]',
+      '[data-dismiss="alert"]',
+      '[data-bs-dismiss="alert"]',
+      'button.modal-close',
+      '.dialog-close',
+      '.overlay-close',
+      '.popup-close'
     ]
     for (const closeSelector of closeButtonSelectors) {
       const matches = querySelectorAllDeep(closeSelector, overlayElement as ParentNode)
@@ -413,10 +460,14 @@ export function domPrimitiveOverlay(
     }
 
     // Strategy B: dismiss-like text buttons
-    const dismissTextPatterns = action === 'auto_dismiss_overlays'
-      ? /^(close|dismiss|cancel|not now|no thanks|skip|hide|got it|maybe later|x|\u00d7|\u2715|\u2716|\u2573|accept|allow|agree|ok|okay)$/i
-      : /^(close|dismiss|cancel|not now|no thanks|skip|hide|back|got it|maybe later|x|\u00d7|\u2715|\u2716|\u2573)$/i
-    const allButtons = querySelectorAllDeep('button, [role="button"], [aria-label], [data-testid], [title]', overlayElement as ParentNode)
+    const dismissTextPatterns =
+      action === 'auto_dismiss_overlays'
+        ? /^(close|dismiss|cancel|not now|no thanks|skip|hide|got it|maybe later|x|\u00d7|\u2715|\u2716|\u2573|accept|allow|agree|ok|okay)$/i
+        : /^(close|dismiss|cancel|not now|no thanks|skip|hide|back|got it|maybe later|x|\u00d7|\u2715|\u2716|\u2573)$/i
+    const allButtons = querySelectorAllDeep(
+      'button, [role="button"], [aria-label], [data-testid], [title]',
+      overlayElement as ParentNode
+    )
     type RankedCandidate = { element: Element; score: number }
     const dismissButtons: RankedCandidate[] = []
     for (const btn of uniqueElements(allButtons)) {
@@ -469,8 +520,8 @@ export function domPrimitiveOverlay(
           const loopError = domError(
             'dismiss_loop_detected',
             `Overlay (${info.overlay_selector}) was already attempted ${Math.round(elapsed / 1000)}s ago and is still visible. ` +
-            'It may be non-dismissable. Try a different approach: use a specific selector to target its close mechanism, ' +
-            'navigate away, or ignore it if it does not block interaction.'
+              'It may be non-dismissable. Try a different approach: use a specific selector to target its close mechanism, ' +
+              'navigate away, or ignore it if it does not block interaction.'
           )
           loopError.overlay_type = info.overlay_type
           loopError.overlay_selector = info.overlay_selector
@@ -493,7 +544,7 @@ export function domPrimitiveOverlay(
       '.cc-accept',
       '.cc-dismiss',
       'button[id*="cookie" i][id*="accept" i]',
-      'button[id*="consent" i][id*="accept" i]',
+      'button[id*="consent" i][id*="accept" i]'
     ]
     for (const consentSelector of consentSelectors) {
       try {
@@ -502,7 +553,9 @@ export function domPrimitiveOverlay(
         if (visible.length > 0) {
           return { element: visible[0], match_strategy: 'consent_framework_selector' }
         }
-      } catch { continue }
+      } catch {
+        continue
+      }
     }
 
     // Strategy 2: Fall back to dismiss_top_overlay approach
@@ -515,9 +568,7 @@ export function domPrimitiveOverlay(
 
   // — Execute action —
 
-  const resolved = action === 'auto_dismiss_overlays'
-    ? resolveAutoDismissTarget()
-    : resolveDismissTarget()
+  const resolved = action === 'auto_dismiss_overlays' ? resolveAutoDismissTarget() : resolveDismissTarget()
 
   if (resolved.error) return resolved.error
   const node = resolved.element!
@@ -558,8 +609,11 @@ export function domPrimitiveOverlay(
   // Strategy: escape_fallback
   if (resolvedMatchStrategy === 'dismiss_escape_fallback') {
     const escKb: KeyboardEventInit & { keyCode?: number } = {
-      key: 'Escape', code: 'Escape', keyCode: 27,
-      bubbles: true, cancelable: true
+      key: 'Escape',
+      code: 'Escape',
+      keyCode: 27,
+      bubbles: true,
+      cancelable: true
     }
     dispatchEventIfPossible(document, new KeyboardEvent('keydown', escKb))
     dispatchEventIfPossible(document, new KeyboardEvent('keyup', escKb))

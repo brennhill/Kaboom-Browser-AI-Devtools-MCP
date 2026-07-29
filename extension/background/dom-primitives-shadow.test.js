@@ -270,6 +270,8 @@ function setupShadowDocument() {
   const lightBtn = new MockHTMLElement('button', { id: 'light-button', textContent: 'Light' })
   const lightDiv = new MockHTMLElement('div', { id: 'light-btn' })
   lightDiv.appendChild(lightBtn)
+  const prefixedSelect = new globalThis.HTMLSelectElement('select', { id: 'kaboom-uat-select' })
+  prefixedSelect.value = 'one'
 
   // Component 1 with nested shadow
   const comp1 = new MockHTMLElement('my-component', { id: 'comp1' })
@@ -331,7 +333,7 @@ function setupShadowDocument() {
     }
   }
 
-  const allTopLevel = [lightDiv, comp1, comp2]
+  const allTopLevel = [lightDiv, prefixedSelect, comp1, comp2]
 
   globalThis.document = {
     children: allTopLevel,
@@ -340,6 +342,7 @@ function setupShadowDocument() {
       // Only finds light DOM elements (simulates real browser behavior)
       if (sel === '#light-button') return lightBtn
       if (sel === '#light-btn') return lightDiv
+      if (sel === '#kaboom-uat-select') return prefixedSelect
       if (sel === '#comp1' || sel === 'my-component') return comp1
       if (sel === '#comp2' || sel === 'another-component') return comp2
       // Shadow elements are NOT found by document.querySelector
@@ -352,6 +355,7 @@ function setupShadowDocument() {
     querySelectorAll(sel) {
       if (sel === '*') return allTopLevel
       if (sel === 'button') return [lightBtn]
+      if (sel === '#kaboom-uat-select' || sel === 'select') return [prefixedSelect]
       if (sel === 'label') return []
       if (sel === '[aria-label]') return []
       if (sel.startsWith('[aria-label="')) return []
@@ -372,7 +376,20 @@ function setupShadowDocument() {
     getElementById: (id) => globalThis.document.querySelector(`#${id}`)
   }
 
-  return { lightBtn, lightDiv, comp1, comp2, shadowBtn, nested1, deepInput, shadowLink, shadow1, shadow2, shadow3 }
+  return {
+    lightBtn,
+    lightDiv,
+    prefixedSelect,
+    comp1,
+    comp2,
+    shadowBtn,
+    nested1,
+    deepInput,
+    shadowLink,
+    shadow1,
+    shadow2,
+    shadow3
+  }
 }
 
 // ===========================================================================
@@ -575,6 +592,15 @@ describe('actions work on shadow DOM elements', () => {
 // ===========================================================================
 
 describe('regression: non-shadow pages unaffected', () => {
+  test('select targets ordinary page IDs that begin with kaboom-', async () => {
+    setupShadowDocument()
+
+    const result = await domPrimitiveForm('select', '#kaboom-uat-select', { value: 'two' })
+
+    assert.strictEqual(result.success, true, JSON.stringify(result))
+    assert.strictEqual(result.value, 'two')
+  })
+
   test('standard selector resolves without deep traversal', () => {
     setupShadowDocument()
     const result = domPrimitiveRead('get_text', '#light-button', {})

@@ -16,12 +16,6 @@ export function domPrimitiveIntent(action, options) {
     function isKaboomOwnedElement(element) {
         let node = element;
         while (node) {
-            const id = node.id || '';
-            if (id.startsWith('kaboom-'))
-                return true;
-            const className = node.className;
-            if (typeof className === 'string' && className.includes('kaboom-'))
-                return true;
             if (node.getAttribute && node.getAttribute('data-kaboom-owned') === 'true')
                 return true;
             node = node.parentElement;
@@ -114,9 +108,7 @@ export function domPrimitiveIntent(action, options) {
     function isActionableVisible(el) {
         if (!(el instanceof HTMLElement))
             return true;
-        const rect = typeof el.getBoundingClientRect === 'function'
-            ? el.getBoundingClientRect()
-            : { width: 0, height: 0 };
+        const rect = typeof el.getBoundingClientRect === 'function' ? el.getBoundingClientRect() : { width: 0, height: 0 };
         if (!(rect.width > 0 && rect.height > 0))
             return false;
         if (el.offsetParent === null) {
@@ -205,8 +197,8 @@ export function domPrimitiveIntent(action, options) {
             return { x: 0, y: 0, width: 0, height: 0 };
         }
         const rect = el.getBoundingClientRect();
-        const x = typeof rect.left === 'number' ? rect.left : (typeof rect.x === 'number' ? rect.x : 0);
-        const y = typeof rect.top === 'number' ? rect.top : (typeof rect.y === 'number' ? rect.y : 0);
+        const x = typeof rect.left === 'number' ? rect.left : typeof rect.x === 'number' ? rect.x : 0;
+        const y = typeof rect.top === 'number' ? rect.top : typeof rect.y === 'number' ? rect.y : 0;
         const width = Number.isFinite(rect.width) ? rect.width : 0;
         const height = Number.isFinite(rect.height) ? rect.height : 0;
         return { x, y, width, height };
@@ -216,8 +208,8 @@ export function domPrimitiveIntent(action, options) {
         const docEl = document?.documentElement;
         const body = document?.body;
         return {
-            scroll_x: Math.round((w?.scrollX ?? w?.pageXOffset ?? 0)),
-            scroll_y: Math.round((w?.scrollY ?? w?.pageYOffset ?? 0)),
+            scroll_x: Math.round(w?.scrollX ?? w?.pageXOffset ?? 0),
+            scroll_y: Math.round(w?.scrollY ?? w?.pageYOffset ?? 0),
             viewport_width: w?.innerWidth ?? docEl?.clientWidth ?? 0,
             viewport_height: w?.innerHeight ?? docEl?.clientHeight ?? 0,
             page_height: Math.max(body?.scrollHeight || 0, docEl?.scrollHeight || 0)
@@ -281,10 +273,13 @@ export function domPrimitiveIntent(action, options) {
             const visibleInteractive = interactiveCandidates.filter(isVisibleElement).length;
             const hiddenInteractive = Math.max(0, interactiveCandidates.length - visibleInteractive);
             const rect = candidate.getBoundingClientRect?.();
-            const areaScoreVal = rect && rect.width > 0 && rect.height > 0
-                ? Math.min(20, Math.round((rect.width * rect.height) / 50000))
-                : 0;
-            const score = visibleTextboxes * 1000 + submitLikeButtons * 250 + visibleButtons * 10 + visibleInteractive - hiddenInteractive + areaScoreVal;
+            const areaScoreVal = rect && rect.width > 0 && rect.height > 0 ? Math.min(20, Math.round((rect.width * rect.height) / 50000)) : 0;
+            const score = visibleTextboxes * 1000 +
+                submitLikeButtons * 250 +
+                visibleButtons * 10 +
+                visibleInteractive -
+                hiddenInteractive +
+                areaScoreVal;
             if (score > bestScore) {
                 bestScore = score;
                 best = candidate;
@@ -346,9 +341,15 @@ export function domPrimitiveIntent(action, options) {
     function resolveIntentTarget() {
         if (action === 'open_composer') {
             const selectors = [
-                'button', '[role="button"]', 'a[href]', '[role="link"]',
-                '[contenteditable="true"]', '[role="textbox"]', 'textarea',
-                'input[type="text"]', 'input:not([type])'
+                'button',
+                '[role="button"]',
+                'a[href]',
+                '[role="link"]',
+                '[contenteditable="true"]',
+                '[role="textbox"]',
+                'textarea',
+                'input[type="text"]',
+                'input:not([type])'
             ];
             const candidates = [];
             for (const candidateSelector of selectors) {
@@ -380,7 +381,8 @@ export function domPrimitiveIntent(action, options) {
             let scopeUsed = requestedScope || undefined;
             if (!requestedScope) {
                 const dialogs = collectDialogs();
-                const rankedDialogs = dialogs.map((dialog) => {
+                const rankedDialogs = dialogs
+                    .map((dialog) => {
                     const textboxes = querySelectorAllDeep('[role="textbox"], textarea, [contenteditable="true"]', dialog).filter(isActionableVisible).length;
                     const buttons = querySelectorAllDeep('button, [role="button"], input[type="submit"]', dialog);
                     const submitLikeButtons = buttons.filter((button) => isActionableVisible(button) && submitVerb.test(extractElementLabel(button))).length;
@@ -388,7 +390,8 @@ export function domPrimitiveIntent(action, options) {
                         element: dialog,
                         score: textboxes * 1200 + submitLikeButtons * 300 + elementZIndexScore(dialog) * 2 + areaScore(dialog, 80)
                     };
-                }).sort((a, b) => b.score - a.score);
+                })
+                    .sort((a, b) => b.score - a.score);
                 if ((rankedDialogs[0]?.score || 0) > 0) {
                     resolvedScope = rankedDialogs[0].element;
                     scopeUsed = 'intent:auto_composer_scope';
@@ -452,15 +455,16 @@ export function domPrimitiveIntent(action, options) {
     // Execute the action
     if (action === 'open_composer') {
         const tag = node.tagName.toLowerCase();
-        const isInputLike = node.isContentEditable ||
-            node.getAttribute('role') === 'textbox' ||
-            tag === 'textarea' ||
-            tag === 'input';
+        const isInputLike = node.isContentEditable || node.getAttribute('role') === 'textbox' || tag === 'textarea' || tag === 'input';
         if (isInputLike) {
             node.focus();
             return {
-                success: true, action, selector: '', reason: 'composer_ready',
-                matched: matchedInfo, match_count: resolved.match_count || 1,
+                success: true,
+                action,
+                selector: '',
+                reason: 'composer_ready',
+                matched: matchedInfo,
+                match_count: resolved.match_count || 1,
                 match_strategy: resolved.match_strategy || 'intent_open_composer',
                 viewport: captureViewport()
             };
@@ -472,8 +476,11 @@ export function domPrimitiveIntent(action, options) {
         node.click();
     }
     return {
-        success: true, action, selector: '',
-        matched: matchedInfo, match_count: resolved.match_count || 1,
+        success: true,
+        action,
+        selector: '',
+        matched: matchedInfo,
+        match_count: resolved.match_count || 1,
         match_strategy: resolved.match_strategy || 'selector',
         viewport: captureViewport()
     };

@@ -360,6 +360,19 @@ check_http_status() {
     [ "$actual" = "$expected" ]
 }
 
+elapsed_seconds() {
+    local started_at="$1"
+    local finished_at="${2:-$(date +%s)}"
+    echo "$((finished_at - started_at))"
+}
+
+json_boolean() {
+    local payload="$1"
+    local field="$2"
+    echo "$payload" | jq -r --arg field "$field" \
+        'if has($field) and (.[$field] | type == "boolean") then .[$field] else empty end' 2>/dev/null
+}
+
 get_http_status() {
     local url="$1"
     shift
@@ -471,7 +484,8 @@ finish_category() {
     lsof -ti :"$PORT" 2>/dev/null | xargs kill -9 2>/dev/null || true
 
     # Clean up temp
-    local elapsed="$(( "$(date +%s)" - START_TIME ))"
+    local elapsed
+    elapsed="$(elapsed_seconds "$START_TIME")"
 
     # Write structured results for the runner
     if [ "$RESULTS_FILE" != "/dev/null" ]; then

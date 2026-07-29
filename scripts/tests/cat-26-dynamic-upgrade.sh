@@ -218,3 +218,5 @@ run_test_26_3() {
     fi
 }
 run_test_26_3
+
+finish_category

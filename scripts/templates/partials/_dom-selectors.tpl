@@ -91,10 +91,6 @@
   function isKaboomOwnedElement(element: Element | null): boolean {
     let node: Element | null = element
     while (node) {
-      const id = (node as HTMLElement).id || ''
-      if (id.startsWith('kaboom-')) return true
-      const className = (node as HTMLElement).className
-      if (typeof className === 'string' && className.includes('kaboom-')) return true
       if (node.getAttribute && node.getAttribute('data-kaboom-owned') === 'true') return true
       node = node.parentElement
     }

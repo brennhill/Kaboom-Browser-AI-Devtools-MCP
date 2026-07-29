@@ -4,7 +4,7 @@ feature_id: feature-self-testing
 status: in-progress
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-29
 code_paths:
   - scripts/smoke-test.sh
   - scripts/smoke-tests/framework-smoke.sh
@@ -17,11 +17,13 @@ code_paths:
   - scripts/test-new-uat.sh
   - scripts/uat-result-lib.sh
   - scripts/tests/framework.sh
+  - scripts/test-all-tools-comprehensive.sh
   - cmd/browser-agent/server.go
   - cmd/browser-agent/internal/testpages/http.go
   - cmd/browser-agent/internal/testpages/websocket.go
   - cmd/browser-agent/internal/wsframe/frame.go
 test_paths:
+  - tests/cli/uat-harness-regressions.test.cjs
   - scripts/smoke-tests/14-browser-push.sh
   - scripts/smoke-tests/15-file-upload.sh
   - scripts/smoke-tests/29-framework-selector-resilience.sh
@@ -86,6 +88,9 @@ last_verified_date: 2026-03-05
 - Split UAT orchestration + integrity checks: `scripts/test-all-split.sh`, `scripts/test-original-uat.sh`, `scripts/test-new-uat.sh`
 - Shared UAT result parsing: `scripts/uat-result-lib.sh`
 - Category daemon lifecycle and result-file contract: `scripts/tests/framework.sh`
+- Comprehensive connected-browser UAT runs categories sequentially on the
+  extension's single configured daemon port, preventing cross-daemon
+  contention and preserving trustworthy per-category aggregation.
 - UAT category suites: `scripts/tests/cat-*.sh`
 - HTTP fixtures and embedded test pages: `cmd/browser-agent/internal/testpages/http.go`
 - WebSocket harness: `cmd/browser-agent/internal/testpages/websocket.go`
