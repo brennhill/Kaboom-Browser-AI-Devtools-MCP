@@ -13,14 +13,21 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
+type queuedBatch struct {
+	entries    []types.LogEntry
+	generation int64
+}
+
 // AddEntries adds new entries to the in-memory window and queues them for
 // append-only persistence. The hot path performs no file I/O: all file writes
 // (appends, compaction rewrites, size rotation) happen on the async logger
 // worker goroutine, which is the single file writer.
 func (ls *Store) AddEntries(newEntries []types.LogEntry) int {
+	ls.lifecycleMu.RLock()
 	appendOnly, cb := ls.addEntriesInMemory(newEntries)
-
-	if err := ls.AppendToFile(appendOnly); err != nil {
+	err := ls.appendToFileLocked(appendOnly)
+	ls.lifecycleMu.RUnlock()
+	if err != nil {
 		ls.addWarning(fmt.Sprintf("log_append_failed: %v", err))
 	}
 
@@ -67,22 +74,43 @@ func (ls *Store) addEntriesInMemory(newEntries []types.LogEntry) (appendOnly []t
 func (ls *Store) RunWorker() {
 	defer close(ls.logDone)
 
-	for entries := range ls.logChan {
-		// Synchronous file I/O happens here (off the hot path)
-		if err := ls.appendToFileSync(entries); err != nil {
-			ls.addWarning(fmt.Sprintf("log_write_failed: %v", err))
+	for {
+		select {
+		case batch := <-ls.logChan:
+			ls.writeBatch(batch)
+		case <-ls.stopChan:
+			for {
+				select {
+				case batch := <-ls.logChan:
+					ls.writeBatch(batch)
+				default:
+					return
+				}
+			}
 		}
-		ls.maybeCompactLogFile()
 	}
 }
 
+func (ls *Store) writeBatch(batch queuedBatch) {
+	if batch.generation != ls.clearGen.Load() {
+		return
+	}
+	if err := ls.appendToFileSync(batch.entries, batch.generation); err != nil {
+		ls.addWarning(fmt.Sprintf("log_write_failed: %v", err))
+	}
+	ls.maybeCompactLogFile()
+}
+
 // appendToFileSync does synchronous file I/O (called by async worker only).
-func (ls *Store) appendToFileSync(entries []types.LogEntry) error {
+func (ls *Store) appendToFileSync(entries []types.LogEntry, generation int64) error {
 	if ls.logFile == "" {
 		return nil
 	}
 	ls.fileMu.Lock()
 	defer ls.fileMu.Unlock()
+	if generation != ls.clearGen.Load() {
+		return nil
+	}
 	f, err := os.OpenFile(ls.logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600) // #nosec G304 -- path set at startup
 	if err != nil {
 		return err
@@ -177,11 +205,17 @@ func (ls *Store) maybeCompactLogFile() {
 
 // AppendToFile queues log entries for async writing (never blocks).
 func (ls *Store) AppendToFile(entries []types.LogEntry) error {
-	if ls.logChanClosed.Load() {
+	ls.lifecycleMu.RLock()
+	defer ls.lifecycleMu.RUnlock()
+	return ls.appendToFileLocked(entries)
+}
+
+func (ls *Store) appendToFileLocked(entries []types.LogEntry) error {
+	if ls.stopped {
 		return fmt.Errorf("log channel closed, %d entries dropped", len(entries))
 	}
 	select {
-	case ls.logChan <- entries:
+	case ls.logChan <- queuedBatch{entries: entries, generation: ls.clearGen.Load()}:
 		// Queued successfully
 		return nil
 	default:
@@ -201,10 +235,11 @@ func (ls *Store) AppendToFile(entries []types.LogEntry) error {
 // The truncate synchronizes with the async worker via fileMu so it cannot
 // interleave with an in-progress append or compaction, and the clear
 // generation bump makes the worker discard compaction snapshots taken before
-// the clear. Batches already queued in logChan before the clear may still be
-// appended afterwards; that window is short and the next compaction rewrites
-// the file from (cleared) memory.
+// the clear. Queue admission shares lifecycleMu with clear, and queued batches
+// carry that generation so the worker discards all pre-clear persistence work.
 func (ls *Store) ClearEntries() {
+	ls.lifecycleMu.Lock()
+	defer ls.lifecycleMu.Unlock()
 	ls.clearEntriesInMemory()
 	if ls.logFile == "" {
 		return
@@ -229,11 +264,12 @@ func (ls *Store) clearEntriesInMemory() {
 // Shutdown gracefully shuts down the async logger, draining remaining logs.
 // Safe to call multiple times (e.g., from both Server.Close and awaitShutdownSignal).
 func (ls *Store) Shutdown(timeout time.Duration) {
-	// Guard against double-close panic: only the first caller closes the channel.
-	if !ls.logChanClosed.CompareAndSwap(false, true) {
-		return
+	ls.lifecycleMu.Lock()
+	if !ls.stopped {
+		ls.stopped = true
+		close(ls.stopChan)
 	}
-	close(ls.logChan)
+	ls.lifecycleMu.Unlock()
 
 	// Wait for worker to finish draining, with timeout
 	select {

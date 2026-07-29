@@ -6,9 +6,9 @@
 import { getConnectionStatus, setConnectionStatus, setConnectionCheckRunning, isConnectionCheckRunning as isConnectionCheckRunningFlag, applyConnectionOverrides } from './runtime-state/connection-state.js';
 import { getServerUrl, getCurrentLogLevel, isScreenshotOnError, setDebugModeRaw, isAiControlled, isDebugMode, applySettingOverrides } from './runtime-state/settings-state.js';
 import { isAiWebPilotEnabled } from './runtime-state/pilot-state.js';
-import { getExtensionLogQueueSnapshot, pushExtensionLog, capExtensionLogs, acknowledgeExtensionLogQueue } from './runtime-state/log-queue.js';
+import { getExtensionLogQueueSnapshot, acknowledgeExtensionLogQueue } from './runtime-state/log-queue.js';
 import { EXTENSION_SESSION_ID } from './runtime-state/startup-state.js';
-import { addDebugLogEntry, getDebugLog as getDebugLogEntries, clearDebugLog as clearDebugLogEntries } from './caches/debug-log.js';
+import { getDebugLog as getDebugLogEntries, clearDebugLog as clearDebugLogEntries } from './caches/debug-log.js';
 import { isSourceMapEnabled, canTakeScreenshot, recordScreenshot } from './caches/cache-limits.js';
 import { processErrorGroup } from './caches/error-groups.js';
 import { resolveStackTrace } from './caches/snapshots.js';
@@ -17,7 +17,7 @@ import { RATE_LIMIT_CONFIG } from './sync/batchers.js';
 import { shouldCaptureLog, formatLogEntry } from './sync/log-processing.js';
 import { captureScreenshot } from './sync/screenshot.js';
 import { updateBadge, checkServerHealth } from './sync/server.js';
-import { DebugCategory } from './debug.js';
+import { DebugCategory, debugLog } from './debug.js';
 import { getRequestHeaders } from './sync/server.js';
 import { updateVersionFromHealth } from './sync/version-check.js';
 import { createBatcherInstances } from './sync/batcher-instances.js';
@@ -35,42 +35,6 @@ function diagnosticLog(message) {
         console.log(message);
     }
 }
-/**
- * Log a debug message (only when debug mode is enabled)
- */
-export function debugLog(category, message, data = null) {
-    const timestamp = new Date().toISOString();
-    // Cast category to DebugCategory - callers use DebugCategory constants
-    const entry = {
-        ts: timestamp,
-        category: category,
-        message,
-        ...(data !== null ? { data } : {})
-    };
-    addDebugLogEntry(entry);
-    // Always queue debug logs, even while disconnected, so the next successful
-    // sync can flush the full failure timeline to the daemon for root-cause analysis.
-    pushExtensionLog({
-        timestamp,
-        level: 'debug',
-        message,
-        source: 'background',
-        category,
-        ...(data !== null ? { data } : {})
-    });
-    capExtensionLogs(2000);
-    if (isDebugMode()) {
-        const prefix = `${KABOOM_LOG_PREFIX.slice(0, -1)}:${category}]`;
-        if (data !== null) {
-            console.log(prefix, message, data); // nosemgrep: javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring -- console.log with internal error message, not user-controlled
-        }
-        else {
-            console.log(prefix, message); // nosemgrep: javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring -- console.log with internal error message, not user-controlled
-        }
-    }
-}
-;
-globalThis.__KABOOM_DEBUG_LOG__ = debugLog;
 /**
  * Get all debug log entries
  */

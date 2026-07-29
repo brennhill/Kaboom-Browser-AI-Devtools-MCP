@@ -30,6 +30,7 @@ func TestRecordFastPathEvent_WritesTelemetryLog(t *testing.T) {
 
 	testRunner.RecordFastPathEvent("tools/call", true, 0)
 	testRunner.RecordFastPathEvent("tools/call", false, -32000)
+	FlushFastPathTelemetry()
 
 	path, err := FastPathTelemetryLogPath()
 	if err != nil {
@@ -55,6 +56,7 @@ func TestResetFastPathCounters_ResetsSuccessCount(t *testing.T) {
 	testRunner.RecordFastPathEvent("tools/call", true, 0)
 	ResetFastPathCounters()
 	testRunner.RecordFastPathEvent("tools/call", true, 0)
+	FlushFastPathTelemetry()
 
 	path, err := FastPathTelemetryLogPath()
 	if err != nil {
@@ -85,6 +87,7 @@ func TestRecordFastPathResourceRead_CountersAndLog(t *testing.T) {
 
 	testRunner.RecordFastPathResourceRead("kaboom://capabilities", true, 0)
 	testRunner.RecordFastPathResourceRead("kaboom://capabilities", false, 404)
+	FlushFastPathTelemetry()
 
 	success, failure := SnapshotFastPathResourceReadCounters()
 	if success != 1 || failure != 1 {

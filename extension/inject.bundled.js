@@ -2999,6 +2999,17 @@ function createConnectionTracker(id, url) {
 // extension/lib/net/websocket.js
 var originalWebSocket = null;
 var webSocketCaptureEnabled = true;
+function snapshotDeferredPayload(data) {
+  if (data instanceof ArrayBuffer) {
+    return data.slice(0);
+  }
+  if (ArrayBuffer.isView(data)) {
+    const snapshot = new Uint8Array(data.byteLength);
+    snapshot.set(new Uint8Array(data.buffer, data.byteOffset, data.byteLength));
+    return snapshot.buffer;
+  }
+  return data;
+}
 function postLifecycleEvent(event, connectionId, urlString, extra) {
   window.postMessage({
     type: "kaboom_ws",
@@ -3040,7 +3051,8 @@ function attachMessageCapture(ws, connectionId, urlString, tracker) {
     tracker.recordMessage("incoming", event.data);
     if (!tracker.shouldSample("incoming"))
       return;
-    queueMicrotask(() => postMessageEvent(connectionId, urlString, "incoming", event.data, tracker));
+    const snapshot = snapshotDeferredPayload(event.data);
+    queueMicrotask(() => postMessageEvent(connectionId, urlString, "incoming", snapshot, tracker));
   });
   const originalSend = ws.send.bind(ws);
   ws.send = function(data) {
@@ -3048,7 +3060,8 @@ function attachMessageCapture(ws, connectionId, urlString, tracker) {
       tracker.recordMessage("outgoing", data);
     }
     if (webSocketCaptureEnabled && tracker.shouldSample("outgoing")) {
-      queueMicrotask(() => postMessageEvent(connectionId, urlString, "outgoing", data, tracker));
+      const snapshot = snapshotDeferredPayload(data);
+      queueMicrotask(() => postMessageEvent(connectionId, urlString, "outgoing", snapshot, tracker));
     }
     return originalSend(data);
   };

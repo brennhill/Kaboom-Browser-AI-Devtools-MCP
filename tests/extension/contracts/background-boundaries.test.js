@@ -12,10 +12,7 @@ test('background routing is composed from feature-owned handler modules', () => 
   const router = fs.readFileSync('src/background/message-handlers.ts', 'utf8')
   assert.doesNotMatch(router, /interface MessageHandlerDependencies/)
   assert.match(router, /MessageHandlerOwner/)
-  assert.match(router, /createTelemetryMessageHandler/)
-  assert.match(router, /createSettingsMessageHandler/)
-  assert.match(router, /createPilotMessageHandler/)
-  assert.match(router, /createCaptureMessageHandler/)
+  assert.doesNotMatch(router, /export\s+(?:type\s+)?\{[^}]*\}\s+from/s)
 })
 
 test('background mutable state is owned by change-coupled modules', () => {

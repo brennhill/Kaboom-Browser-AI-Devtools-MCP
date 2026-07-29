@@ -4,7 +4,7 @@ feature_id: feature-interact-explore
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-07-30
 code_paths:
   - cmd/browser-agent/internal/toolinteract/action_owners.go
   - cmd/browser-agent/internal/toolguard/guards.go
@@ -39,6 +39,7 @@ code_paths:
   - src/background/commands/results/element-results.ts
   - src/background/commands/interact-explore.ts
   - src/background/exec/browser-actions.ts
+  - src/background/runtime-state/csp-state.ts
   - src/background/dom/cdp/cdp-dispatch.ts
   - src/background/dom/dom-dispatch.ts
   - src/background/exec/frame-targeting.ts
@@ -78,6 +79,7 @@ code_paths:
   - cmd/browser-agent/internal/summarypref/cache.go
   - cmd/browser-agent/tools_core.go
 test_paths:
+  - scripts/contracts/check-architecture-boundaries.test.cjs
   - cmd/browser-agent/internal/toolinteract/action_runtime_edge_test.go
   - cmd/browser-agent/internal/toolinteract/interact_evidence_test.go
   - cmd/browser-agent/internal/toolinteract/interact_page_test.go

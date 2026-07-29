@@ -118,7 +118,7 @@ func TestStoreLoadEntriesBoundsAndMalformedLines(t *testing.T) {
 
 func TestStoreAppendToFileDropAndShutdownTimeout(t *testing.T) {
 	ls := New(Config{ChanSize: 1, AddWarning: func(string) {}})
-	ls.logChan <- []types.LogEntry{{"level": "info", "message": "queued"}}
+	ls.logChan <- queuedBatch{entries: []types.LogEntry{{"level": "info", "message": "queued"}}}
 	if err := ls.AppendToFile([]types.LogEntry{{"level": "info", "message": "drop"}}); err == nil {
 		t.Fatal("AppendToFile() expected drop error when channel is full")
 	}
@@ -285,7 +285,7 @@ func TestStoreDropCount(t *testing.T) {
 	}
 
 	// Fill channel, then trigger a drop
-	ls.logChan <- []types.LogEntry{{"level": "info", "message": "fill"}}
+	ls.logChan <- queuedBatch{entries: []types.LogEntry{{"level": "info", "message": "fill"}}}
 	_ = ls.AppendToFile([]types.LogEntry{{"level": "info", "message": "drop"}})
 
 	if got := ls.DropCount(); got != 1 {
@@ -312,7 +312,7 @@ func TestStoreAppendToFileSyncSkipsUnmarshalableEntry(t *testing.T) {
 	err := ls.appendToFileSync([]types.LogEntry{
 		{"level": "info", "message": "ok"},
 		{"level": "info", "value": math.NaN()},
-	})
+	}, ls.clearGen.Load())
 	if err != nil {
 		t.Fatalf("appendToFileSync() error = %v", err)
 	}

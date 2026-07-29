@@ -377,6 +377,92 @@ describe('WebSocket Interception', () => {
 
     uninstallWebSocketCapture()
   })
+
+  test('snapshots incoming ArrayBuffer bytes before deferred formatting', async () => {
+    const { installWebSocketCapture, uninstallWebSocketCapture, setWebSocketCaptureMode } =
+      await import('../../../extension/lib/net/websocket.js')
+    setWebSocketCaptureMode('messages')
+    installWebSocketCapture()
+
+    const ws = new globalThis.window.WebSocket('wss://example.com/ws')
+    const buffer = Uint8Array.from([0x01, 0x02, 0x03]).buffer
+    ws._emit('message', { data: buffer })
+    new Uint8Array(buffer).fill(0xff)
+
+    await Promise.resolve()
+    const message = globalThis.window.postMessage.mock.calls.find(
+      (c) => c.arguments[0].type === 'kaboom_ws' && c.arguments[0].payload.direction === 'incoming'
+    )
+    assert.strictEqual(message.arguments[0].payload.data, '[Binary: 3B] 010203')
+    assert.strictEqual(message.arguments[0].payload.size, 3)
+
+    uninstallWebSocketCapture()
+  })
+
+  test('retains incoming ArrayBuffer bytes when the application detaches the source', async () => {
+    const { installWebSocketCapture, uninstallWebSocketCapture, setWebSocketCaptureMode } =
+      await import('../../../extension/lib/net/websocket.js')
+    setWebSocketCaptureMode('messages')
+    installWebSocketCapture()
+
+    const ws = new globalThis.window.WebSocket('wss://example.com/ws')
+    const buffer = Uint8Array.from([0x0a, 0x1b, 0x2c]).buffer
+    ws._emit('message', { data: buffer })
+    structuredClone(buffer, { transfer: [buffer] })
+
+    await Promise.resolve()
+    const message = globalThis.window.postMessage.mock.calls.find(
+      (c) => c.arguments[0].type === 'kaboom_ws' && c.arguments[0].payload.direction === 'incoming'
+    )
+    assert.strictEqual(message.arguments[0].payload.data, '[Binary: 3B] 0a1b2c')
+    assert.strictEqual(message.arguments[0].payload.size, 3)
+
+    uninstallWebSocketCapture()
+  })
+
+  test('snapshots only the outgoing typed-view bytes before deferred formatting', async () => {
+    const { installWebSocketCapture, uninstallWebSocketCapture, setWebSocketCaptureMode } =
+      await import('../../../extension/lib/net/websocket.js')
+    setWebSocketCaptureMode('messages')
+    installWebSocketCapture()
+
+    const ws = new globalThis.window.WebSocket('wss://example.com/ws')
+    const buffer = Uint8Array.from([0xff, 0x11, 0x22, 0x33, 0xee]).buffer
+    const view = new Uint8Array(buffer, 1, 3)
+    ws.send(view)
+    view.fill(0xaa)
+
+    await Promise.resolve()
+    const message = globalThis.window.postMessage.mock.calls.find(
+      (c) => c.arguments[0].type === 'kaboom_ws' && c.arguments[0].payload.direction === 'outgoing'
+    )
+    assert.strictEqual(message.arguments[0].payload.data, '[Binary: 3B] 112233')
+    assert.strictEqual(message.arguments[0].payload.size, 3)
+
+    uninstallWebSocketCapture()
+  })
+
+  test('retains outgoing typed-view bytes when send detaches the source buffer', async () => {
+    const { installWebSocketCapture, uninstallWebSocketCapture, setWebSocketCaptureMode } =
+      await import('../../../extension/lib/net/websocket.js')
+    setWebSocketCaptureMode('messages')
+    installWebSocketCapture()
+
+    const ws = new globalThis.window.WebSocket('wss://example.com/ws')
+    const buffer = Uint8Array.from([0x44, 0x55, 0x66]).buffer
+    const view = new Uint8Array(buffer)
+    ws.send(view)
+    structuredClone(buffer, { transfer: [buffer] })
+
+    await Promise.resolve()
+    const message = globalThis.window.postMessage.mock.calls.find(
+      (c) => c.arguments[0].type === 'kaboom_ws' && c.arguments[0].payload.direction === 'outgoing'
+    )
+    assert.strictEqual(message.arguments[0].payload.data, '[Binary: 3B] 445566')
+    assert.strictEqual(message.arguments[0].payload.size, 3)
+
+    uninstallWebSocketCapture()
+  })
 })
 
 describe('Adaptive Sampling', () => {
@@ -795,15 +881,19 @@ describe('Connection Stats', () => {
     assert.ok(tracker.stats.incoming.lastPreview.length <= 200)
   })
 
-  test('should track last message timestamp', async () => {
+  test('should update all incoming stats from one complete record operation', async () => {
     const { createConnectionTracker } = await import('../../../extension/lib/net/websocket-tracking.js')
 
     const tracker = createConnectionTracker('test-id', 'wss://example.com')
-    const before = Date.now()
+    mock.method(Date, 'now', () => 1_700_000_000_000)
 
-    tracker.recordMessage('incoming', '{"msg":"test"}')
+    tracker.recordMessage('incoming', '{"msg":"complete"}')
 
-    assert.ok(tracker.stats.incoming.lastAt >= before)
-    assert.ok(tracker.stats.incoming.lastAt <= Date.now())
+    assert.deepStrictEqual(tracker.stats.incoming, {
+      count: 1,
+      bytes: 18,
+      lastAt: 1_700_000_000_000,
+      lastPreview: '{"msg":"complete"}'
+    })
   })
 })

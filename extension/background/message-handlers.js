@@ -1,9 +1,3 @@
-export { createTelemetryMessageHandler } from './message-routing/telemetry-handler.js';
-export { createStatusMessageHandler } from './message-routing/status-handler.js';
-export { createSettingsMessageHandler } from './message-routing/settings-handler.js';
-export { createPilotMessageHandler, broadcastTrackingState } from './message-routing/pilot-handler.js';
-export { createCaptureMessageHandler } from './message-routing/capture-handler.js';
-export { createUtilityMessageHandler } from './message-routing/utility-handler.js';
 function isValidMessageSender(sender) {
     if (sender.tab?.id !== undefined && sender.tab?.url)
         return true;

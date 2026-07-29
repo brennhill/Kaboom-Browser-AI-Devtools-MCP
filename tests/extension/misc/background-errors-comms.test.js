@@ -431,7 +431,8 @@ describe('captureScreenshot', () => {
 
 describe('Debug Logging', () => {
   test('should log debug entries', async () => {
-    const { debugLog, getDebugLog, clearDebugLog } = await import('../../../extension/background/index.js')
+    const { debugLog } = await import('../../../extension/background/debug.js')
+    const { getDebugLog, clearDebugLog } = await import('../../../extension/background/index.js')
 
     // Clear any existing entries
     clearDebugLog()
@@ -456,7 +457,8 @@ describe('Debug Logging', () => {
   })
 
   test('should clear debug log', async () => {
-    const { debugLog, getDebugLog, clearDebugLog } = await import('../../../extension/background/index.js')
+    const { debugLog } = await import('../../../extension/background/debug.js')
+    const { getDebugLog, clearDebugLog } = await import('../../../extension/background/index.js')
 
     // Add an entry
     debugLog(DebugCategory.ERROR, 'Error test')
@@ -472,7 +474,8 @@ describe('Debug Logging', () => {
   })
 
   test('should export debug log as JSON', async () => {
-    const { debugLog, exportDebugLog, clearDebugLog } = await import('../../../extension/background/index.js')
+    const { debugLog } = await import('../../../extension/background/debug.js')
+    const { exportDebugLog, clearDebugLog } = await import('../../../extension/background/index.js')
 
     clearDebugLog()
     debugLog(DebugCategory.CAPTURE, 'Capture test')
@@ -496,7 +499,8 @@ describe('Debug Logging', () => {
   // NOTE: setDebugMode test moved to co-located test file: extension/background/index.test.js
 
   test('should limit debug log buffer size', async () => {
-    const { debugLog, getDebugLog, clearDebugLog } = await import('../../../extension/background/index.js')
+    const { debugLog } = await import('../../../extension/background/debug.js')
+    const { getDebugLog, clearDebugLog } = await import('../../../extension/background/index.js')
 
     clearDebugLog()
 
@@ -511,7 +515,7 @@ describe('Debug Logging', () => {
   })
 
   test('should queue debug logs even while disconnected for later sync flush', async () => {
-    const { debugLog } = await import('../../../extension/background/index.js')
+    const { debugLog } = await import('../../../extension/background/debug.js')
     const { clearExtensionLogsForTesting, getExtensionLogQueueSnapshot } = await import(
       '../../../extension/background/runtime-state/log-queue.js'
     )

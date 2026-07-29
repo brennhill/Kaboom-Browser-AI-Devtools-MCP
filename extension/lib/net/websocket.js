@@ -11,6 +11,21 @@ let webSocketCaptureEnabled = true;
 // =============================================================================
 // CAPTURE EVENT HELPERS
 // =============================================================================
+/**
+ * Copy mutable binary data before capture work crosses the microtask boundary.
+ * ArrayBuffer views are normalized to the exact byte range supplied to send().
+ */
+function snapshotDeferredPayload(data) {
+    if (data instanceof ArrayBuffer) {
+        return data.slice(0);
+    }
+    if (ArrayBuffer.isView(data)) {
+        const snapshot = new Uint8Array(data.byteLength);
+        snapshot.set(new Uint8Array(data.buffer, data.byteOffset, data.byteLength));
+        return snapshot.buffer;
+    }
+    return data;
+}
 /** Post a WebSocket lifecycle event (open/close/error) */
 function postLifecycleEvent(event, connectionId, urlString, extra) {
     window.postMessage({
@@ -55,7 +70,8 @@ function attachMessageCapture(ws, connectionId, urlString, tracker) {
         tracker.recordMessage('incoming', event.data);
         if (!tracker.shouldSample('incoming'))
             return;
-        queueMicrotask(() => postMessageEvent(connectionId, urlString, 'incoming', event.data, tracker));
+        const snapshot = snapshotDeferredPayload(event.data);
+        queueMicrotask(() => postMessageEvent(connectionId, urlString, 'incoming', snapshot, tracker));
     });
     const originalSend = ws.send.bind(ws);
     // Match the native WebSocket.send parameter type exactly so the wrapper stays a
@@ -66,7 +82,8 @@ function attachMessageCapture(ws, connectionId, urlString, tracker) {
             tracker.recordMessage('outgoing', data);
         }
         if (webSocketCaptureEnabled && tracker.shouldSample('outgoing')) {
-            queueMicrotask(() => postMessageEvent(connectionId, urlString, 'outgoing', data, tracker));
+            const snapshot = snapshotDeferredPayload(data);
+            queueMicrotask(() => postMessageEvent(connectionId, urlString, 'outgoing', snapshot, tracker));
         }
         return originalSend(data);
     };

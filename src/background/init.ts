@@ -13,9 +13,8 @@ import { getTrackedTabLostToastDetail, KABOOM_LOG_PREFIX } from '../lib/brand.js
 import { DEFAULT_SERVER_URL } from '../lib/constants.js'
 import { syncTerminalPanelAvailability } from './ui/side-panel-availability.js'
 import { watchTerminalPanelState } from './ui/terminal-panel.js'
-import { DebugCategory } from './debug.js'
+import { DebugCategory, debugLog } from './debug.js'
 import {
-  debugLog,
   setDebugMode,
   resetSyncClientConnection,
   sharedServerCircuitBreaker,
@@ -89,16 +88,13 @@ import {
 } from './ui/tab-state.js'
 import { installPushCommandListener, installChatCommandListener } from './push-handler.js'
 import { isRecording, startRecording, stopRecording, initRecording } from './recording/index.js'
-import {
-  installMessageListener,
-  broadcastTrackingState,
-  createTelemetryMessageHandler,
-  createStatusMessageHandler,
-  createSettingsMessageHandler,
-  createPilotMessageHandler,
-  createCaptureMessageHandler,
-  createUtilityMessageHandler
-} from './message-handlers.js'
+import { installMessageListener } from './message-handlers.js'
+import { createTelemetryMessageHandler } from './message-routing/telemetry-handler.js'
+import { createStatusMessageHandler } from './message-routing/status-handler.js'
+import { createSettingsMessageHandler } from './message-routing/settings-handler.js'
+import { broadcastTrackingState, createPilotMessageHandler } from './message-routing/pilot-handler.js'
+import { createCaptureMessageHandler } from './message-routing/capture-handler.js'
+import { createUtilityMessageHandler } from './message-routing/utility-handler.js'
 import { captureScreenshot } from './sync/screenshot.js'
 import { updateBadge } from './sync/server.js'
 import { getLocal, setLocal } from '../lib/storage/local.js'

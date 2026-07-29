@@ -4,7 +4,6 @@
  */
 import type { PendingQuery } from '../../types/index.js';
 import type { SyncClient } from '../sync/sync-client.js';
-import { type CSPProbeResult } from './query-execution.js';
 import type { SendAsyncResultFn, ActionToastFn } from '../commands/helpers.js';
 export type BrowserActionResult = {
     success: boolean;
@@ -23,8 +22,6 @@ export type BrowserActionResult = {
     csp_level?: string;
     failure_cause?: string;
 };
-/** Get the CSP status from the most recent navigation (for sync layer) */
-export declare function getLastCSPStatus(): CSPProbeResult;
 export declare function handleBrowserAction(tabId: number, params: {
     action?: string;
     what?: string;

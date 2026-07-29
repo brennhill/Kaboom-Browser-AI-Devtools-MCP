@@ -145,10 +145,12 @@ type Store struct {
 	TTL             time.Duration          // TTL for read-time filtering (0 means unlimited)
 
 	// Async logging
-	logChan       chan []types.LogEntry // buffered channel for async log writes
-	logDropCount  int64                 // atomic counter for dropped logs (when channel full)
-	logDone       chan struct{}         // signal when async logger exits
-	logChanClosed atomic.Bool           // guards against double-close panic on logChan
+	logChan      chan queuedBatch // buffered channel for async log writes
+	logDropCount int64            // atomic counter for dropped logs (when channel full)
+	logDone      chan struct{}    // signal when async logger exits
+	stopChan     chan struct{}    // closed once to ask the worker to drain and exit
+	lifecycleMu  sync.RWMutex     // synchronizes queue admission with clear and shutdown
+	stopped      bool             // protected by lifecycleMu
 
 	// Single-writer file persistence state. The async logger worker is the only
 	// hot-path file writer; ClearEntries (rare, user-triggered) synchronizes with
@@ -186,8 +188,9 @@ func New(cfg Config) *Store {
 		maxFileSize:   DefaultMaxFileSize,
 		window:        newEntryWindow(cfg.MaxEntries),
 		telemetryMode: cfg.TelemetryMode,
-		logChan:       make(chan []types.LogEntry, chanSize),
+		logChan:       make(chan queuedBatch, chanSize),
 		logDone:       make(chan struct{}),
+		stopChan:      make(chan struct{}),
 		addWarning:    addWarning,
 		stderrf:       stderrf,
 	}

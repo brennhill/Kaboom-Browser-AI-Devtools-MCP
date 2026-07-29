@@ -22,6 +22,7 @@ func TestHandleHealthIncludesBridgeFastPathCounters(t *testing.T) {
 	runner := bridge.NewRunner(bridge.Identity{Version: "test"}, bridge.Transport{}, bridge.Protocol{}, bridge.Lifecycle{})
 	runner.RecordFastPathResourceRead("kaboom://capabilities", true, 0)
 	runner.RecordFastPathResourceRead("kaboom://playbook/nonexistent/quick", false, -32002)
+	bridge.FlushFastPathTelemetry()
 
 	handler := New(Options{
 		Logs: logstore.New(logstore.Config{

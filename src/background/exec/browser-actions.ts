@@ -9,10 +9,10 @@
 import type { PendingQuery } from '../../types/index.js'
 import type { SyncClient } from '../sync/sync-client.js'
 import { waitForTabLoad, pingContentScript, getActiveTab } from '../ui/tab-state.js'
-import { debugLog } from '../index.js'
+import { debugLog, DebugCategory } from '../debug.js'
 import { isAiWebPilotEnabled } from '../runtime-state/pilot-state.js'
-import { DebugCategory } from '../debug.js'
-import { broadcastTrackingState } from '../message-handlers.js'
+import { broadcastTrackingState } from '../message-routing/pilot-handler.js'
+import { setLastCSPStatus } from '../runtime-state/csp-state.js'
 import { executeWithWorldRouting, probeCSPStatus, type CSPProbeResult } from './query-execution.js'
 import { ASYNC_COMMAND_TIMEOUT_MS } from '../../lib/constants.js'
 import type { SendAsyncResultFn, ActionToastFn } from '../commands/helpers.js'
@@ -70,14 +70,6 @@ export type BrowserActionResult = {
   failure_cause?: string
 }
 
-/** Cached CSP status from the most recent navigation */
-let lastCSPStatus: CSPProbeResult = { csp_restricted: false, csp_level: 'none' }
-
-/** Get the CSP status from the most recent navigation (for sync layer) */
-export function getLastCSPStatus(): CSPProbeResult {
-  return lastCSPStatus
-}
-
 // =============================================================================
 // NAVIGATION
 // =============================================================================
@@ -86,7 +78,7 @@ export function getLastCSPStatus(): CSPProbeResult {
 async function enrichWithCSP(tabId: number, result: BrowserActionResult): Promise<BrowserActionResult> {
   try {
     const csp = await probeCSPStatus(tabId)
-    lastCSPStatus = csp
+    setLastCSPStatus(csp)
     return { ...result, csp_restricted: csp.csp_restricted, csp_level: csp.csp_level }
   } catch {
     return result

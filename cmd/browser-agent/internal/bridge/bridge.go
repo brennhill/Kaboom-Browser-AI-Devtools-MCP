@@ -101,6 +101,7 @@ func FlushStdout() {
 // immediately while daemon starts in background. Only blocks on tools/call.
 // #lizard forgives
 func (r *Runner) StdioToHTTPFast(endpoint string, state *daemonState, port int) {
+	defer FlushFastPathTelemetry()
 	reader := bufio.NewReaderSize(os.Stdin, 64*1024)
 
 	client := &http.Client{} // per-request timeouts via context

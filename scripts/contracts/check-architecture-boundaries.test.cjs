@@ -14,6 +14,8 @@ function fixture(files, overrides = {}) {
     max_exports_per_file: 2,
     export_exceptions: {},
     forbidden_imports: { content: ['background'], background: ['content'] },
+    forbidden_reexports: {},
+    enforce_zero_cycles: true,
     ...overrides
   }
   writeFileSync(join(root, '.architecture-boundaries.json'), JSON.stringify(config))
@@ -55,4 +57,41 @@ test('rejects oversized public surfaces unless a documented exception budgets th
     )
   )
   assert.equal(accepted.status, 0)
+})
+
+test('rejects circular source dependencies and reports every module in the cycle', () => {
+  const result = check(
+    fixture({
+      'src/background/index.ts': "import { sync } from './sync/sync-manager.js'\nexport const hub = sync\n",
+      'src/background/sync/sync-manager.ts':
+        "import { execute } from '../exec/browser-actions.js'\nexport const sync = execute\n",
+      'src/background/exec/browser-actions.ts': "import { hub } from '../index.js'\nexport const execute = hub\n"
+    })
+  )
+
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /circular dependency/)
+  assert.match(result.stderr, /src\/background\/index\.ts/)
+  assert.match(result.stderr, /src\/background\/sync\/sync-manager\.ts/)
+  assert.match(result.stderr, /src\/background\/exec\/browser-actions\.ts/)
+})
+
+test('rejects compatibility re-exports from configured router modules', () => {
+  const result = check(
+    fixture(
+      {
+        'src/background/message-handlers.ts':
+          "export { createPilotMessageHandler } from './message-routing/pilot-handler.js'\n",
+        'src/background/message-routing/pilot-handler.ts': 'export const createPilotMessageHandler = 1\n'
+      },
+      {
+        forbidden_reexports: {
+          'src/background/message-handlers.ts': ['./message-routing/']
+        }
+      }
+    )
+  )
+
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /compatibility re-export/)
 })

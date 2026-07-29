@@ -2,10 +2,12 @@
 /**
  * Test-only composition for feature-owned background message handlers.
  */
-import {
-  createTelemetryMessageHandler, createStatusMessageHandler, createSettingsMessageHandler,
-  createPilotMessageHandler, createCaptureMessageHandler, createUtilityMessageHandler
-} from '../../../extension/background/message-handlers.js'
+import { createTelemetryMessageHandler } from '../../../extension/background/message-routing/telemetry-handler.js'
+import { createStatusMessageHandler } from '../../../extension/background/message-routing/status-handler.js'
+import { createSettingsMessageHandler } from '../../../extension/background/message-routing/settings-handler.js'
+import { createPilotMessageHandler } from '../../../extension/background/message-routing/pilot-handler.js'
+import { createCaptureMessageHandler } from '../../../extension/background/message-routing/capture-handler.js'
+import { createUtilityMessageHandler } from '../../../extension/background/message-routing/utility-handler.js'
 
 export function composeBackgroundHandlers(deps) {
   return [

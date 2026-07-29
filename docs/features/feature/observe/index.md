@@ -4,7 +4,7 @@ feature_id: feature-observe
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-07-30
 code_paths:
   - internal/capture/accessors.go
   - internal/queries/dispatcher_queries.go
@@ -151,6 +151,9 @@ Accessibility (`what:"accessibility"`) normalizes `summary` counts to the
 canonical keys `violations`, `passes`, `incomplete`, and `inapplicable`.
 Legacy `*_count` compatibility fields are not part of the contract.
 WebSocket status (`what:"websocket_status"`) supports `summary:true` with compact URL/connection-id previews while preserving the full default payload when `summary` is omitted.
+Sampled WebSocket capture snapshots mutable `ArrayBuffer` payloads and the exact
+byte range of outbound typed-array views before deferred formatting, preserving
+the wire bytes even when application code mutates or transfers the source buffer.
 Network-bodies empty-result hints now echo all active filters (`url`, `method`, `status_*`, `body_path`) so retry guidance is specific to the current query.
 Log severity filtering uses only `min_level`, with threshold semantics (for
 example, `warn` returns warning and error entries).

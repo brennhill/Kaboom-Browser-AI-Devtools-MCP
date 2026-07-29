@@ -3,9 +3,8 @@
  * Docs: docs/features/feature/interact-explore/index.md
  */
 import { delay, fetchWithTimeout } from '../../lib/timeout-utils.js';
-import { debugLog } from '../index.js';
 import { getServerUrl } from '../runtime-state/settings-state.js';
-import { DebugCategory } from '../debug.js';
+import { DebugCategory, debugLog } from '../debug.js';
 import { errorMessage } from '../../lib/error-utils.js';
 import { buildDaemonHeaders, buildDaemonJSONRequestInit } from '../../lib/daemon-http.js';
 // ============================================

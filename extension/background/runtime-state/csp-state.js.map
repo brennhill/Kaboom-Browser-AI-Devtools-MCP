@@ -1,0 +1,1 @@
+{"version":3,"file":"csp-state.js","sourceRoot":"","sources":["../../../src/background/runtime-state/csp-state.ts"],"names":[],"mappings":"AAKA,IAAI,aAAa,GAAmB,EAAE,cAAc,EAAE,KAAK,EAAE,SAAS,EAAE,MAAM,EAAE,CAAA;AAEhF,MAAM,UAAU,gBAAgB;IAC9B,OAAO,aAAa,CAAA;AACtB,CAAC;AAED,MAAM,UAAU,gBAAgB,CAAC,MAAsB;IACrD,aAAa,GAAG,MAAM,CAAA;AACxB,CAAC"}

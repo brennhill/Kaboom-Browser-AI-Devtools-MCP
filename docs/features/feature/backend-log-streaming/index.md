@@ -4,7 +4,7 @@ feature_id: feature-backend-log-streaming
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-07-30
 code_paths:
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
@@ -43,6 +43,7 @@ code_paths:
   - src/background/message-handlers.ts
   - src/background/message-routing/
   - src/background/runtime-state/
+  - src/background/runtime-state/csp-state.ts
   - src/background/caches/cache-limits.ts
   - src/background/caches/error-groups.ts
   - src/background/caches/snapshots.ts
@@ -59,6 +60,7 @@ code_paths:
   - src/early-patch.ts
   - src/lib/page/safe-global-patch.ts
 test_paths:
+  - scripts/contracts/check-architecture-boundaries.test.cjs
   - tests/extension/contracts/background-boundaries.test.js
   - tests/extension/contracts/no-dynamic-import-background.test.js
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go

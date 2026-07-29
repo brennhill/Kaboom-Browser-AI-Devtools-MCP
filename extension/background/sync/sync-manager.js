@@ -3,7 +3,7 @@
  * Docs: docs/features/feature/backend-log-streaming/index.md
  */
 import { createSyncClient } from './sync-client.js';
-import { getLastCSPStatus } from '../exec/browser-actions.js';
+import { getLastCSPStatus } from '../runtime-state/csp-state.js';
 import { DebugCategory } from '../debug.js';
 import { updateBadge } from './server.js';
 import { isQueryProcessing, addProcessingQuery, removeProcessingQuery } from '../caches/snapshots.js';

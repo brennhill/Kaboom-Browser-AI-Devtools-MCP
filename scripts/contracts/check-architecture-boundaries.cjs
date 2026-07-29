@@ -9,6 +9,7 @@ const root = path.resolve(process.argv[2] || process.cwd())
 const config = JSON.parse(fs.readFileSync(path.join(root, '.architecture-boundaries.json'), 'utf8'))
 const sourceRoot = path.join(root, 'src')
 const violations = []
+const dependencyGraph = new Map()
 
 function sourceFiles(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -36,17 +37,79 @@ function importedFeature(specifier, file) {
   return relative.split(path.sep)[0]
 }
 
-for (const file of sourceFiles(sourceRoot)) {
+function resolvedSourceImport(specifier, file, knownFiles) {
+  if (!specifier.startsWith('.')) return null
+  const resolved = path.resolve(path.dirname(file), specifier)
+  const candidate = resolved.endsWith('.js') ? `${resolved.slice(0, -3)}.ts` : `${resolved}.ts`
+  return knownFiles.has(candidate) ? candidate : null
+}
+
+function circularComponents(graph) {
+  let nextIndex = 0
+  const indexes = new Map()
+  const lowLinks = new Map()
+  const stack = []
+  const onStack = new Set()
+  const components = []
+
+  function visit(file) {
+    indexes.set(file, nextIndex)
+    lowLinks.set(file, nextIndex)
+    nextIndex += 1
+    stack.push(file)
+    onStack.add(file)
+
+    for (const dependency of graph.get(file) || []) {
+      if (!indexes.has(dependency)) {
+        visit(dependency)
+        lowLinks.set(file, Math.min(lowLinks.get(file), lowLinks.get(dependency)))
+      } else if (onStack.has(dependency)) {
+        lowLinks.set(file, Math.min(lowLinks.get(file), indexes.get(dependency)))
+      }
+    }
+
+    if (lowLinks.get(file) !== indexes.get(file)) return
+    const component = []
+    let member
+    do {
+      member = stack.pop()
+      onStack.delete(member)
+      component.push(member)
+    } while (member !== file)
+    if (component.length > 1 || (graph.get(file) || []).includes(file)) components.push(component)
+  }
+
+  for (const file of graph.keys()) {
+    if (!indexes.has(file)) visit(file)
+  }
+  return components
+}
+
+const files = sourceFiles(sourceRoot)
+const knownFiles = new Set(files)
+for (const file of files) {
   const relative = path.relative(root, file).split(path.sep).join('/')
   const source = fs.readFileSync(file, 'utf8')
   const owner = path.relative(sourceRoot, file).split(path.sep)[0]
   const forbidden = config.forbidden_imports[owner] || []
   const importPattern = /(?:from\s+|import\s*\()\s*['"]([^'"]+)['"]/g
+  const dependencies = []
   let match
   while ((match = importPattern.exec(source)) !== null) {
+    const dependency = resolvedSourceImport(match[1], file, knownFiles)
+    if (dependency) dependencies.push(dependency)
     const target = importedFeature(match[1], file)
     if (target && forbidden.includes(target)) {
       violations.push(`${relative}: ${owner} must not import ${target} (${match[1]})`)
+    }
+  }
+  dependencyGraph.set(file, dependencies)
+
+  const forbiddenReexports = config.forbidden_reexports?.[relative] || []
+  const reexportPattern = /export\s+(?:type\s+)?(?:\{[^}]*\}|\*)\s+from\s+['"]([^'"]+)['"]/g
+  while ((match = reexportPattern.exec(source)) !== null) {
+    if (forbiddenReexports.some((prefix) => match[1].startsWith(prefix))) {
+      violations.push(`${relative}: compatibility re-export is prohibited (${match[1]})`)
     }
   }
 
@@ -55,6 +118,16 @@ for (const file of sourceFiles(sourceRoot)) {
   const maximum = exception?.max ?? config.max_exports_per_file
   if (count > maximum) {
     violations.push(`${relative}: ${count} exports exceeds public-surface budget ${maximum}`)
+  }
+}
+
+if (config.enforce_zero_cycles) {
+  for (const component of circularComponents(dependencyGraph)) {
+    const members = component
+      .map((file) => path.relative(root, file).split(path.sep).join('/'))
+      .sort()
+      .join(' -> ')
+    violations.push(`circular dependency: ${members}`)
   }
 }
 

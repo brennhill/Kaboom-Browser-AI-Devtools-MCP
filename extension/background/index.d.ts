@@ -11,10 +11,6 @@
  */
 import type { LogEntry, ChromeMessageSender } from '../types/index.js';
 /**
- * Log a debug message (only when debug mode is enabled)
- */
-export declare function debugLog(category: string, message: string, data?: unknown): void;
-/**
  * Get all debug log entries
  */
 export declare function getDebugLog(): import("../types/index.js").DebugLogEntry[];

@@ -4,7 +4,7 @@ feature_id: feature-browser-extension-enhancement
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-07-30
 code_paths:
   - src/popup/system-doctor.ts
   - src/popup.ts
@@ -26,6 +26,7 @@ code_paths:
   - extension/popup.css
   - extension/options.html
 test_paths:
+  - scripts/contracts/check-architecture-boundaries.test.cjs
   - tests/extension/system-doctor/system-doctor-ui.test.js
   - cmd/browser-agent/internal/health/health_coverage_test.go
   - tests/extension/popup-shell/popup-features.test.js

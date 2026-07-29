@@ -36,6 +36,11 @@ test_paths:
 
 Kaboom supports a **lazy server start** model: users can bind pages (track tabs) and configure the extension at any time, regardless of whether the MCP daemon is running. The server starts automatically when an AI tool (Claude Code, Cursor, etc.) invokes its first MCP command.
 
+Fast-path diagnostics use a bounded asynchronous queue. Request handling updates
+its counters and enqueues an immutable JSON record without filesystem I/O; the
+bridge drains accepted records when its stdio loop ends. A full queue drops
+diagnostics instead of delaying or corrupting MCP protocol traffic.
+
 ## Contracts
 
 ### 1. Tab Tracking is Always Available

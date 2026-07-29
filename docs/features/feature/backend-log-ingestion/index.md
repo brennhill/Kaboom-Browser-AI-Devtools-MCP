@@ -4,11 +4,13 @@ feature_id: feature-backend-log-ingestion
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-29
+last_reviewed: 2026-07-30
 code_paths:
   - cmd/browser-agent/internal/logstore/async.go
   - cmd/browser-agent/internal/logstore/store.go
 test_paths:
+  - cmd/browser-agent/internal/logstore/async_test.go
+  - cmd/browser-agent/internal/logstore/store_test.go
   - cmd/browser-agent/internal/logstore/ring_window_test.go
   - cmd/browser-agent/internal/logstore/ring_window_bench_test.go
 last_verified_version: 0.7.12
@@ -42,3 +44,8 @@ The daemon's in-memory log window uses fixed-capacity circular storage in
 `cmd/browser-agent/internal/logstore`. HTTP ingestion overwrites the oldest slot in place after
 capacity is reached, while detached snapshots preserve chronological order for
 readers and persistence compaction.
+
+Queue admission, clear generations, and shutdown use one lifecycle boundary:
+clearing invalidates already queued batches before truncating persistence, and
+shutdown stops new producers before the worker drains accepted batches. This
+prevents cleared logs from being resurrected and avoids send/close races.

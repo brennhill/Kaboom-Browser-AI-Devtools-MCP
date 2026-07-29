@@ -10,7 +10,7 @@
 import type { PendingQuery, ConnectionStatus } from '../../types/index.js'
 import type { ExtensionLogQueueEntry } from '../runtime-state/log-queue.js'
 import { createSyncClient, type SyncClient, type SyncCommand, type SyncSettings } from './sync-client.js'
-import { getLastCSPStatus } from '../exec/browser-actions.js'
+import { getLastCSPStatus } from '../runtime-state/csp-state.js'
 import { DebugCategory } from '../debug.js'
 import { updateBadge } from './server.js'
 import { isQueryProcessing, addProcessingQuery, removeProcessingQuery } from '../caches/snapshots.js'

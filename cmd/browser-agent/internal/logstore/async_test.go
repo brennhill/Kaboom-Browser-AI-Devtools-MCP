@@ -155,6 +155,54 @@ func TestLogStoreClearEntriesTruncatesFileAndResetsCount(t *testing.T) {
 	}
 }
 
+// TestLogStoreClearEntriesDiscardsQueuedPreClearBatches verifies that a clear
+// is a persistence boundary: work accepted before the clear must not recreate
+// deleted logs when the async worker eventually drains its queue.
+func TestLogStoreClearEntriesDiscardsQueuedPreClearBatches(t *testing.T) {
+	logFile := filepath.Join(t.TempDir(), "clear-generation.jsonl")
+	ls := New(Config{LogFile: logFile, MaxEntries: 10, AddWarning: func(string) {}})
+
+	if err := ls.AppendToFile([]types.LogEntry{{"level": "info", "message": "sensitive-before-clear"}}); err != nil {
+		t.Fatalf("AppendToFile() error = %v", err)
+	}
+	ls.ClearEntries()
+
+	go ls.RunWorker()
+	ls.Shutdown(2 * time.Second)
+
+	if lines := readLogLines(t, logFile); len(lines) != 0 {
+		t.Fatalf("pre-clear queued batch was resurrected: %v", lines)
+	}
+}
+
+// TestLogStoreAppendRacingShutdownNeverPanics is a race regression for the
+// former check-then-send against a channel concurrently closed by Shutdown.
+func TestLogStoreAppendRacingShutdownNeverPanics(t *testing.T) {
+	ls, _ := newAsyncLogStoreForTest(t, 128)
+
+	const appenders = 16
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	for i := 0; i < appenders; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			<-start
+			for n := 0; n < 200; n++ {
+				_ = ls.AppendToFile([]types.LogEntry{{"level": "info", "message": fmt.Sprintf("%d-%d", id, n)}})
+			}
+		}(i)
+	}
+
+	close(start)
+	ls.Shutdown(2 * time.Second)
+	wg.Wait()
+
+	if err := ls.AppendToFile([]types.LogEntry{{"level": "info", "message": "after-stop"}}); err == nil {
+		t.Fatal("AppendToFile() after Shutdown returned nil, want lifecycle error")
+	}
+}
+
 // TestLogStoreConcurrentAddsProduceValidFile exercises concurrent POST
 // goroutines against the single async writer. Run with -race in CI. Before the
 // single-writer fix, concurrent request goroutines rewrote the same .tmp path

@@ -61,6 +61,22 @@ interface KaboomWsMessage {
 // CAPTURE EVENT HELPERS
 // =============================================================================
 
+/**
+ * Copy mutable binary data before capture work crosses the microtask boundary.
+ * ArrayBuffer views are normalized to the exact byte range supplied to send().
+ */
+function snapshotDeferredPayload(data: WebSocketMessageData | ArrayBufferView): WebSocketMessageData {
+  if (data instanceof ArrayBuffer) {
+    return data.slice(0)
+  }
+  if (ArrayBuffer.isView(data)) {
+    const snapshot = new Uint8Array(data.byteLength)
+    snapshot.set(new Uint8Array(data.buffer, data.byteOffset, data.byteLength))
+    return snapshot.buffer
+  }
+  return data
+}
+
 /** Post a WebSocket lifecycle event (open/close/error) */
 function postLifecycleEvent(
   event: string,
@@ -128,7 +144,8 @@ function attachMessageCapture(
     if (!webSocketCaptureEnabled) return
     tracker.recordMessage('incoming', event.data)
     if (!tracker.shouldSample('incoming')) return
-    queueMicrotask(() => postMessageEvent(connectionId, urlString, 'incoming', event.data, tracker))
+    const snapshot = snapshotDeferredPayload(event.data)
+    queueMicrotask(() => postMessageEvent(connectionId, urlString, 'incoming', snapshot, tracker))
   })
 
   const originalSend = ws.send.bind(ws)
@@ -140,7 +157,8 @@ function attachMessageCapture(
       tracker.recordMessage('outgoing', data as WebSocketMessageData)
     }
     if (webSocketCaptureEnabled && tracker.shouldSample('outgoing')) {
-      queueMicrotask(() => postMessageEvent(connectionId, urlString, 'outgoing', data as WebSocketMessageData, tracker))
+      const snapshot = snapshotDeferredPayload(data)
+      queueMicrotask(() => postMessageEvent(connectionId, urlString, 'outgoing', snapshot, tracker))
     }
     return originalSend(data)
   }

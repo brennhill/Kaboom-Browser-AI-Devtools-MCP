@@ -17,6 +17,7 @@ import (
 
 	internbridge "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
 	statecfg "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 )
@@ -153,6 +154,58 @@ type bridgeFastPathResourceReadCounters struct {
 
 var fastPathResourceReadCounters bridgeFastPathResourceReadCounters
 
+const fastPathTelemetryQueueCapacity = 256
+
+type fastPathTelemetryRecord struct {
+	path string
+	line []byte
+}
+
+var (
+	fastPathTelemetryOnce    sync.Once
+	fastPathTelemetryQueue   = make(chan fastPathTelemetryRecord, fastPathTelemetryQueueCapacity)
+	fastPathTelemetryPending sync.WaitGroup
+)
+
+func startFastPathTelemetryWorker() {
+	util.SafeGo(func() {
+		for record := range fastPathTelemetryQueue {
+			appendFastPathTelemetryRecord(record)
+			fastPathTelemetryPending.Done()
+		}
+	})
+}
+
+func enqueueFastPathTelemetry(path string, line []byte) {
+	fastPathTelemetryOnce.Do(startFastPathTelemetryWorker)
+	record := fastPathTelemetryRecord{path: path, line: line}
+	fastPathTelemetryPending.Add(1)
+	select {
+	case fastPathTelemetryQueue <- record:
+	default:
+		fastPathTelemetryPending.Done()
+	}
+}
+
+func appendFastPathTelemetryRecord(record fastPathTelemetryRecord) {
+	if err := os.MkdirAll(filepath.Dir(record.path), 0o750); err != nil {
+		return
+	}
+	// #nosec G304 -- paths are deterministic under the local state root.
+	f, err := os.OpenFile(record.path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+	if err != nil {
+		return
+	}
+	_, _ = f.Write(append(record.line, '\n'))
+	_ = f.Close()
+}
+
+// FlushFastPathTelemetry waits for telemetry accepted by the bounded queue.
+// Bridge shutdown calls it after the request loop, never on the request path.
+func FlushFastPathTelemetry() {
+	fastPathTelemetryPending.Wait()
+}
+
 // ResetFastPathResourceReadCounters resets the resource read telemetry counters.
 func ResetFastPathResourceReadCounters() {
 	fastPathResourceReadCounters.mu.Lock()
@@ -168,13 +221,15 @@ func (r *Runner) RecordFastPathResourceRead(uri string, success bool, errorCode 
 
 func (r *Runner) recordFastPathResourceRead(uri string, success bool, errorCode int) {
 	fastPathResourceReadCounters.mu.Lock()
-	defer fastPathResourceReadCounters.mu.Unlock()
 	if success {
 		fastPathResourceReadCounters.success++
 	} else {
 		fastPathResourceReadCounters.failure++
 	}
-	r.appendFastPathResourceReadTelemetry(uri, success, errorCode, fastPathResourceReadCounters.success, fastPathResourceReadCounters.failure)
+	successCount := fastPathResourceReadCounters.success
+	failureCount := fastPathResourceReadCounters.failure
+	fastPathResourceReadCounters.mu.Unlock()
+	r.appendFastPathResourceReadTelemetry(uri, success, errorCode, successCount, failureCount)
 }
 
 // SnapshotFastPathResourceReadCounters returns the current success/failure counts.
@@ -194,9 +249,6 @@ func (r *Runner) appendFastPathResourceReadTelemetry(uri string, success bool, e
 	if err != nil {
 		return
 	}
-	if mkErr := os.MkdirAll(filepath.Dir(path), 0o750); mkErr != nil {
-		return
-	}
 	entry := map[string]any{
 		"timestamp":      time.Now().UTC().Format(time.RFC3339Nano),
 		"event":          "bridge_fastpath_resources_read",
@@ -212,14 +264,7 @@ func (r *Runner) appendFastPathResourceReadTelemetry(uri string, success bool, e
 	if marshalErr != nil {
 		return
 	}
-	// #nosec G304 -- path is deterministic under state root
-	f, openErr := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
-	if openErr != nil {
-		return
-	}
-	defer func() { _ = f.Close() }()
-	_, _ = f.Write(line)
-	_, _ = f.Write([]byte("\n"))
+	enqueueFastPathTelemetry(path, line)
 }
 
 type bridgeFastPathCounters struct {
@@ -264,10 +309,6 @@ func (r *Runner) recordFastPathEvent(method string, success bool, errorCode int)
 	if err != nil {
 		return
 	}
-	// #nosec G301 -- runtime state directory for local diagnostics.
-	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
-		return
-	}
 	event := map[string]any{
 		"timestamp":     time.Now().UTC().Format(time.RFC3339Nano),
 		"event":         "bridge_fastpath_method",
@@ -283,11 +324,5 @@ func (r *Runner) recordFastPathEvent(method string, success bool, errorCode int)
 	if err != nil {
 		return
 	}
-	// #nosec G304 -- deterministic diagnostics path rooted in runtime state directory.
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600) // nosemgrep: go_filesystem_rule-fileread -- local diagnostics log append
-	if err != nil {
-		return
-	}
-	defer func() { _ = f.Close() }()
-	_, _ = f.Write(append(payload, '\n'))
+	enqueueFastPathTelemetry(path, payload)
 }

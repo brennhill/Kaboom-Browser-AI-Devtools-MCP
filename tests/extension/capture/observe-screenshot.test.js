@@ -33,12 +33,6 @@ mock.module('../../../extension/background/caches/cache-limits.js', {
   }
 })
 
-mock.module('../../../extension/background/index.js', {
-  namedExports: {
-    debugLog: mockDebugLog
-  }
-})
-
 mock.module('../../../extension/background/runtime-state/settings-state.js', {
   namedExports: {
     getServerUrl: () => 'http://localhost:7890'
@@ -47,7 +41,8 @@ mock.module('../../../extension/background/runtime-state/settings-state.js', {
 
 mock.module('../../../extension/background/debug.js', {
   namedExports: {
-    DebugCategory: { CAPTURE: 'capture' }
+    DebugCategory: { CAPTURE: 'capture' },
+    debugLog: mockDebugLog
   }
 })
 
