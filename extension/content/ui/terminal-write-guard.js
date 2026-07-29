@@ -6,7 +6,8 @@
  * Docs: docs/features/feature/terminal/index.md
  */
 import { showActionToast } from './toast.js';
-import { state, getTerminalServerUrl, TERMINAL_WRITE_SUBMIT_DELAY_MS, TERMINAL_TYPING_IDLE_MS, TERMINAL_GUARD_POLL_MS, TERMINAL_GUARD_TOAST_INTERVAL_MS, TERMINAL_GUARD_MAX_WAIT_MS, MAX_QUEUED_WRITES, MAX_QUEUED_WRITE_BYTES } from './terminal-widget-types.js';
+import { getTerminalServerUrl } from '../../lib/terminal-server.js';
+import { state, TERMINAL_WRITE_SUBMIT_DELAY_MS, TERMINAL_TYPING_IDLE_MS, TERMINAL_GUARD_POLL_MS, TERMINAL_GUARD_TOAST_INTERVAL_MS, TERMINAL_GUARD_MAX_WAIT_MS, MAX_QUEUED_WRITES, MAX_QUEUED_WRITE_BYTES } from './terminal-widget-types.js';
 /**
  * Post a command to the terminal iframe. No-op when it is not mounted.
  *

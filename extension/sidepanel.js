@@ -6,7 +6,8 @@
  */
 import { StorageKey, TERMINAL_PANEL_PORT } from './lib/constants.js';
 import { onStorageChanged } from './lib/storage/changes.js';
-import { state, resetAllState, getTerminalServerUrl, resolveTerminalServerUrl, TERMINAL_WRITE_SUBMIT_DELAY_MS, TERMINAL_GUARD_POLL_MS } from './content/ui/terminal-widget-types.js';
+import { getTerminalServerUrl, resolveTerminalServerUrl } from './lib/terminal-server.js';
+import { state, resetAllState, TERMINAL_WRITE_SUBMIT_DELAY_MS, TERMINAL_GUARD_POLL_MS } from './content/ui/terminal-widget-types.js';
 import { getServerUrl, getTerminalConfig, persistUIState, loadPersistedSession, clearPersistedSession, validateSession, startSession, getTerminalDevRoot, setTerminalDevRoot, stopActiveSession } from './content/ui/terminal-widget-session.js';
 import { showActionToast } from './content/ui/toast.js';
 import { startPageAnnotation, closeBrowserSidePanel } from './content/ui/panel/host-tab.js';

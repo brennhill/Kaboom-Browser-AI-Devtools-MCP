@@ -68,6 +68,7 @@ This flow covers the terminal side panel host, the page hover launcher terminal 
 - `src/sidepanel.ts`
 - `src/content/ui/terminal-widget-session.ts`
 - `src/content/ui/terminal-widget-types.ts`
+- `src/lib/terminal-server.ts`
 - `src/content/ui/terminal-widget-ui.ts`
 - `extension/manifest.json`
 - `extension/sidepanel.html`

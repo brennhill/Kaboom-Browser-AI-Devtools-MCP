@@ -11,7 +11,8 @@
  * return value.
  * Docs: docs/features/feature/terminal/index.md
  */
-import { IFRAME_ID, HEADER_ID, TERMINAL_BODY_ID, DISCONNECT_TERMINAL_BUTTON_ID, ANNOTATE_TERMINAL_BUTTON_ID, CLOSE_TERMINAL_BUTTON_ID, REDRAW_TERMINAL_BUTTON_ID, MINIMIZE_TERMINAL_BUTTON_ID, WIDGET_ID, TERMINAL_PROVIDER_BADGE_ID, getTerminalServerUrl } from '../terminal-widget-types.js';
+import { IFRAME_ID, HEADER_ID, TERMINAL_BODY_ID, DISCONNECT_TERMINAL_BUTTON_ID, ANNOTATE_TERMINAL_BUTTON_ID, CLOSE_TERMINAL_BUTTON_ID, REDRAW_TERMINAL_BUTTON_ID, MINIMIZE_TERMINAL_BUTTON_ID, WIDGET_ID, TERMINAL_PROVIDER_BADGE_ID } from '../terminal-widget-types.js';
+import { getTerminalServerUrl } from '../../../lib/terminal-server.js';
 /**
  * Build one 24×24 icon button for the terminal header. All four header controls
  * (disconnect / redraw / minimize / close) share the same box, hover affordance,

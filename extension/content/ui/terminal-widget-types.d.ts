@@ -86,27 +86,4 @@ export interface TerminalWidgetState {
 export declare const state: TerminalWidgetState;
 /** Reset all mutable state to initial values. Used by tests to isolate module-cached state. */
 export declare function resetAllState(): void;
-/** Clear the discovered-port cache (context teardown and tests). */
-export declare function resetTerminalPortDiscovery(): void;
-/**
- * Compute the terminal server URL for a base daemon URL.
- *
- * Synchronous, so it can serve call sites that cannot await (notifyIframe's
- * postMessage target origin). It uses the discovered port when this context has
- * one and otherwise derives base + TERMINAL_PORT_OFFSET — the daemon's own
- * default, so this is never worse than the old behaviour. Prefer
- * resolveTerminalServerUrl wherever awaiting is possible.
- */
-export declare function getTerminalServerUrl(baseUrl: string): string;
-/**
- * Resolve the terminal server URL, discovering the daemon's real terminal port
- * first (once per TTL). Discovery lives INSIDE this helper rather than at the call
- * sites so no caller can forget it (rule 19).
- *
- * Every failure mode — daemon down, non-OK response, unparseable body, no
- * `terminal_port` field (Windows, or a terminal server that failed to bind) —
- * falls through to the derived port, so discovery can only ever improve on the
- * old assumption, never break a working setup.
- */
-export declare function resolveTerminalServerUrl(baseUrl: string): Promise<string>;
 //# sourceMappingURL=terminal-widget-types.d.ts.map

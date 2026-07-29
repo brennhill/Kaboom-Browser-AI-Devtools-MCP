@@ -1,0 +1,33 @@
+{
+  "max_exports_per_file": 24,
+  "export_exceptions": {
+    "src/lib/constants.ts": {
+      "max": 64,
+      "reason": "Canonical extension-wide constants and storage keys."
+    },
+    "src/types/runtime-messages.ts": {
+      "max": 56,
+      "reason": "Canonical cross-context runtime message contract."
+    },
+    "src/types/utils.ts": {
+      "max": 52,
+      "reason": "Canonical shared utility type declarations."
+    },
+    "src/content/ui/terminal-widget-types.ts": {
+      "max": 37,
+      "reason": "Canonical terminal state and timing contract."
+    },
+    "src/background/state.ts": {
+      "max": 32,
+      "reason": "Ratcheted legacy state surface; may shrink but cannot grow."
+    }
+  },
+  "forbidden_imports": {
+    "background": ["content", "inject", "popup", "offscreen"],
+    "content": ["background", "inject", "popup", "offscreen"],
+    "inject": ["background", "content", "popup", "offscreen"],
+    "lib": ["background", "content", "inject", "popup", "offscreen"],
+    "offscreen": ["background", "content", "inject", "popup"],
+    "popup": ["background", "content", "inject", "offscreen"]
+  }
+}

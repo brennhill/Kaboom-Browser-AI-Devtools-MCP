@@ -22,9 +22,9 @@ import {
   REDRAW_TERMINAL_BUTTON_ID,
   MINIMIZE_TERMINAL_BUTTON_ID,
   WIDGET_ID,
-  TERMINAL_PROVIDER_BADGE_ID,
-  getTerminalServerUrl
+  TERMINAL_PROVIDER_BADGE_ID
 } from '../terminal-widget-types.js'
+import { getTerminalServerUrl } from '../../../lib/terminal-server.js'
 
 export interface ShellDeps {
   serverUrl: string

@@ -33,8 +33,7 @@ import { setKaboomOverlayVisibility } from './ui/tab-state.js'
 import { openTerminalSidePanel } from './ui/terminal-panel.js'
 import { trackUIFeature } from './ui/ui-usage-tracker.js'
 // Static import: dynamic import() is not allowed in MV3 service workers.
-// terminal-widget-types.js is a pure helper module (constants + types, no DOM access at load time).
-import { resolveTerminalServerUrl } from '../content/ui/terminal-widget-types.js'
+import { resolveTerminalServerUrl } from '../lib/terminal-server.js'
 
 // =============================================================================
 // TYPE DEFINITIONS

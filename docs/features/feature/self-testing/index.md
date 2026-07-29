@@ -19,6 +19,8 @@ code_paths:
   - scripts/tests/framework/framework.sh
   - scripts/tests/framework/uat-artifacts.sh
   - scripts/tests/framework/uat-user-state.sh
+  - scripts/contracts/check-architecture-boundaries.cjs
+  - .architecture-boundaries.json
   - scripts/test-all-tools-comprehensive.sh
   - scripts/cleanup-test-daemons.sh
   - cmd/browser-agent/server.go
@@ -27,6 +29,7 @@ code_paths:
   - cmd/browser-agent/internal/wsframe/frame.go
 test_paths:
   - tests/cli/contracts/uat-harness-regressions.test.cjs
+  - scripts/contracts/check-architecture-boundaries.test.cjs
   - tests/cli/contracts/test-layout-contract.test.cjs
   - scripts/smoke-tests/14-browser-push.sh
   - scripts/smoke-tests/15-file-upload.sh
@@ -100,6 +103,10 @@ last_verified_date: 2026-03-05
   `artifacts/uat/uat-results.json` and `uat-results.xml` reports. Both contain
   every selected category, skip reasons, durations, prerequisite readiness,
   aggregation completeness, and user-state restoration status.
+- `make check-structure` enforces runtime-context dependency direction,
+  ratcheted public-surface budgets, the 800-line and 10-file physical limits,
+  dormant-test detection, circular dependency reporting, and zero non-trivial
+  clones across background/popup.
 - Category daemon lifecycle and result-file contract: `scripts/tests/framework/framework.sh`
 - User-state guard: `scripts/tests/framework/uat-user-state.sh` snapshots the
   prior daemon executable, LaunchAgent lifecycle, version, and tracked tab

@@ -7,11 +7,10 @@
 
 import { StorageKey, TERMINAL_PANEL_PORT } from './lib/constants.js'
 import { onStorageChanged } from './lib/storage/changes.js'
+import { getTerminalServerUrl, resolveTerminalServerUrl } from './lib/terminal-server.js'
 import {
   state,
   resetAllState,
-  getTerminalServerUrl,
-  resolveTerminalServerUrl,
   WIDGET_ID,
   IFRAME_ID,
   HEADER_ID,

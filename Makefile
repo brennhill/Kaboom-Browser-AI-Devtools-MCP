@@ -27,7 +27,7 @@ PLATFORMS := \
 	release-check install-hooks bench-baseline bump-version sync-version validate-versions \
 	pypi-binaries pypi-build pypi-publish pypi-test-publish pypi-clean \
 	security-check pre-commit verify-all npm-binaries validate-semver \
-	verify-llm check-folder-size check-structure check-dormant-tests folder-baseline-update \
+	verify-llm check-folder-size check-structure check-dormant-tests check-duplicates folder-baseline-update \
 	test-upgrade-guards release-gate clean-test-daemons uat \
 	generate-wire-types generate-dom-primitives \
 	site-dev site-build site-preview \
@@ -185,8 +185,12 @@ folder-baseline-update:
 check-dormant-tests:
 	@bash scripts/check-dormant-tests.sh
 
-# All structural gates.
-check-structure: check-file-length check-folder-size check-dormant-tests
+# All structural gates: physical size, dependency direction, public surface,
+# cycles, dormant tests, and high-risk extension duplication.
+check-structure: check-file-length check-folder-size check-dormant-tests lint-boundaries lint-circular check-duplicates
+
+check-duplicates:
+	@npx jscpd src/background src/popup --min-lines 8 --min-tokens 60 --threshold 0
 
 # Validate strict semver (X.Y.Z format, no pre-release)
 validate-semver:
@@ -315,7 +319,7 @@ lint-circular:
 	@bash scripts/check-circular-deps.sh
 
 lint-boundaries:
-	@bash scripts/check-import-boundaries.sh
+	@node scripts/contracts/check-architecture-boundaries.cjs
 
 lint-json-casing:
 	@bash scripts/check-json-casing.sh
@@ -338,7 +342,7 @@ format-fix:
 typecheck:
 	npx tsc --noEmit
 
-check: check-file-length lint lint-boundaries lint-json-casing format typecheck check-invariants
+check: check-structure lint lint-json-casing format typecheck check-invariants
 
 check-wire-drift:
 	@node scripts/build/generate-wire-types.js --check
@@ -456,7 +460,7 @@ verify-llm:
 
 # Quality gate for top 1% standards (comprehensive)
 # `test` already includes the JS suite (test-js).
-quality-gate: check-file-length lint lint-hardening lint-dead lint-circular lint-boundaries lint-json-casing typecheck security-check test validate-deps-versions
+quality-gate: check-structure lint lint-hardening lint-dead lint-json-casing typecheck security-check test validate-deps-versions
 	@echo ""
 	@echo "═══════════════════════════════════════════"
 	@echo "✅ QUALITY GATE PASSED - Top 1% Standards"

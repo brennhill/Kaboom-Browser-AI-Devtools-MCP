@@ -7,9 +7,9 @@
  */
 
 import { showActionToast } from './toast.js'
+import { getTerminalServerUrl } from '../../lib/terminal-server.js'
 import {
   state,
-  getTerminalServerUrl,
   TERMINAL_WRITE_SUBMIT_DELAY_MS,
   TERMINAL_TYPING_IDLE_MS,
   TERMINAL_GUARD_POLL_MS,

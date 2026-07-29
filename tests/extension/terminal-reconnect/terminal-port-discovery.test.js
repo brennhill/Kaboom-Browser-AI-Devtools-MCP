@@ -14,10 +14,10 @@ import { beforeEach, afterEach, describe, test } from 'node:test'
 import assert from 'node:assert'
 
 import {
-  resetAllState,
+  resetTerminalPortDiscovery,
   getTerminalServerUrl,
   resolveTerminalServerUrl
-} from '../../../extension/content/ui/terminal-widget-types.js'
+} from '../../../extension/lib/terminal-server.js'
 
 const BASE = 'http://127.0.0.1:7890'
 const realFetch = globalThis.fetch
@@ -37,10 +37,10 @@ function healthResponse(body) {
 }
 
 describe('terminal port discovery', () => {
-  beforeEach(() => resetAllState())
+  beforeEach(() => resetTerminalPortDiscovery())
   afterEach(() => {
     globalThis.fetch = realFetch
-    resetAllState()
+    resetTerminalPortDiscovery()
   })
 
   test('uses the terminal_port the daemon publishes', async () => {
@@ -77,7 +77,7 @@ describe('terminal port discovery', () => {
     stubHealth(() => healthResponse({ status: 'ok' }))
     assert.strictEqual(await resolveTerminalServerUrl(BASE), 'http://127.0.0.1:7891')
 
-    resetAllState()
+    resetTerminalPortDiscovery()
     stubHealth(() => healthResponse({ status: 'ok', terminal_port: 0 }))
     assert.strictEqual(await resolveTerminalServerUrl(BASE), 'http://127.0.0.1:7891')
   })
