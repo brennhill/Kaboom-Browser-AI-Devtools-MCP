@@ -8,7 +8,6 @@
  * Uses async/await for cleaner control flow (replaces callback nesting).
  */
 import { getTrackedTabLostToastDetail, KABOOM_LOG_PREFIX } from '../lib/brand.js';
-import { beacon } from '../lib/telemetry-beacon.js';
 import { syncTerminalPanelAvailability } from './ui/side-panel-availability.js';
 import { watchTerminalPanelState } from './ui/terminal-panel.js';
 import { debugLog, DebugCategory, setDebugMode, resetSyncClientConnection, sharedServerCircuitBreaker, logBatcher, wsBatcher, enhancedActionBatcher, networkBodyBatcher, perfBatcher, handleLogMessage, handleClearLogs, checkConnectionAndUpdate, exportDebugLog, clearDebugLog, DEFAULT_SERVER_URL } from './index.js';
@@ -58,8 +57,6 @@ export function initializeExtension() {
  */
 async function initializeExtensionAsync() {
     try {
-        // Anonymous telemetry: service worker activation (once per session)
-        beacon('extension_start');
         // ============= STEP 1: Check service worker restart =============
         const wasRestarted = await wasServiceWorkerRestarted();
         if (wasRestarted) {

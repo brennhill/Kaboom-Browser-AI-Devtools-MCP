@@ -227,7 +227,6 @@ func (h *SyncHandler) HandleSync(w http.ResponseWriter, r *http.Request) {
 	state := h.capture.extension.updateSyncConnectionState(req, clientID, now)
 
 	if !state.wasConnected || state.isReconnect {
-		telemetry.BeaconEvent("extension_connect", map[string]string{"browser": extractBrowserName(r.Header.Get("User-Agent"))})
 		util.SafeGo(func() {
 			h.capture.Lifecycle().Emit(lifecycle.EventExtensionConnected, map[string]any{
 				"ext_session_id":     state.extSessionID,

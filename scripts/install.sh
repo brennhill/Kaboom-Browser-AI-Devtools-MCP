@@ -50,17 +50,6 @@ ORANGE='\033[38;5;208m'
 BOLD='\033[1m'
 NC='\033[0m' # No Color (Reset)
 
-# Anonymous install error beacon (disable: KABOOM_TELEMETRY=off).
-# Fire-and-forget, never blocks, never fails the install.
-beacon_error() {
-    local step="${1:-unknown}"
-    if [ "${KABOOM_TELEMETRY:-}" = "off" ]; then return; fi
-    curl -s --max-time 2 -X POST "https://t.gokaboom.dev/v1/event" \
-        -H "Content-Type: application/json" \
-        -d "{\"event\":\"install_error\",\"v\":\"${VERSION:-unknown}\",\"os\":\"$(uname -s)-$(uname -m)\",\"props\":{\"step\":\"${step}\",\"method\":\"curl\"}}" \
-        > /dev/null 2>&1 || true
-}
-
 # Cleanup: Ensure temporary files are removed even if the script crashes or is interrupted.
 # Uses mktemp to prevent predictable filename attacks.
 TEMP_ROOT=$(mktemp -d)
@@ -452,7 +441,6 @@ download_and_verify() {
         echo -e "${RED}Download failed after 3 attempts.${NC}"
         echo -e "URL: $dl_url"
         echo -e "Check your network connection, proxy settings, or try again later."
-        beacon_error "download_failed"
         exit 1
     fi
 
@@ -762,17 +750,6 @@ register_path() {
 }
 
 register_path
-
-# ─────────────────────────────────────────────────────────────
-# 13. Anonymous telemetry (disable: KABOOM_TELEMETRY=off)
-# ─────────────────────────────────────────────────────────────
-
-if [ "${KABOOM_TELEMETRY:-}" != "off" ]; then
-    curl -s --max-time 2 -X POST "https://t.gokaboom.dev/v1/event" \
-        -H "Content-Type: application/json" \
-        -d "{\"event\":\"install_complete\",\"v\":\"${VERSION}\",\"os\":\"$(uname -s)-$(uname -m)\",\"props\":{\"method\":\"curl\"}}" \
-        > /dev/null 2>&1 &
-fi
 
 # ─────────────────────────────────────────────────────────────
 # 14. Final summary

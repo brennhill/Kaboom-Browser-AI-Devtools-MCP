@@ -249,9 +249,6 @@ func runInstaller(forceCleanup func() error, startDaemon func(string), targetArg
 		}
 	}
 
-	// NOTE: install_complete lifecycle event not yet in Counterscale contract.
-	// Add to LIFECYCLE_EVENTS in counterscale ingest before re-enabling.
-
 	// 4. Start the Daemon
 	// We start the daemon so the extension works immediately and the user
 	// can verify the install with a health check.

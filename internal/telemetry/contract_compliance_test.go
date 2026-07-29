@@ -70,6 +70,27 @@ func TestContract_ToolCallHasNoNullAsyncOutcome(t *testing.T) {
 	}
 }
 
+func TestContract_RejectsUnsupportedProducerEvents(t *testing.T) {
+	resetDeliveryDiagnostics()
+	fired := make(chan bool, 1)
+	setOnFireBeacon(func(sent bool) { fired <- sent })
+	defer setOnFireBeacon(nil)
+
+	fireStructuredBeacon(map[string]any{"event": "daemon_start"})
+
+	select {
+	case sent := <-fired:
+		if sent {
+			t.Fatal("unsupported event was sent")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("unsupported event was not rejected")
+	}
+	if got := DeliveryDiagnostics(); got.Dropped != 1 {
+		t.Fatalf("unsupported event diagnostics = %+v, want one drop", got)
+	}
+}
+
 // TestContract_ToolCallV2Envelope verifies tool_call beacons have all required v2 envelope fields.
 func TestContract_ToolCallV2Envelope(t *testing.T) {
 	received := captureBeacon(t)

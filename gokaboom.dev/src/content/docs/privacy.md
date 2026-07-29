@@ -47,7 +47,6 @@ We collect anonymous usage counters to understand how Kaboom is used:
 | Random install ID | `f7a2c1e9b4d8` | Correlate usage over time without identifying you |
 | Tool usage counts | `observe:errors: 12` | Know which features matter |
 | OS and version | `darwin-arm64`, `0.8.1` | Know what to support |
-| Install/scaffold outcomes | `install_complete`, `scaffold_complete` | Measure onboarding success |
 | Error categories | `bridge_connection_error` | Fix common failure patterns |
 
 **What we DON'T collect:**
@@ -75,26 +74,30 @@ When Kaboom first starts, it generates a random 12-character hex string (e.g., `
 
 ---
 
-## Usage Summary Beacon
+## Product Events
 
-Every 10 minutes (if there was activity), Kaboom sends one aggregated event:
+The local daemon sends canonical session, tool-call, usage-summary, and
+product-error events. Browser extension startup and shell install/uninstall
+scripts do not send separate events.
 
 ```json
 {
   "event": "usage_summary",
-  "v": "0.8.1",
+  "v": "0.9.0",
   "os": "darwin-arm64",
   "iid": "f7a2c1e9b4d8",
-  "props": {
-    "window_m": "10",
-    "observe:errors": "12",
-    "interact:click": "24",
-    "analyze:accessibility": "1"
-  }
+  "sid": "8510f6ce8ca743c2",
+  "ts": "2026-07-29T18:00:00Z",
+  "channel": "stable",
+  "window_m": 5,
+  "tool_stats": [
+    {"family": "observe", "name": "errors", "tool": "observe:errors", "count": 12}
+  ]
 }
 ```
 
-That's it. Tool names and counts. No URLs, no selectors, no content. If Kaboom is idle, no beacon is sent.
+No URLs, selectors, or content are included. If Kaboom is idle, no usage
+summary is sent.
 
 ---
 
@@ -181,11 +184,13 @@ Everything is auditable:
 
 - **Telemetry beacon code:** [internal/telemetry/beacon.go](https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/blob/UNSTABLE/internal/telemetry/beacon.go)
 - **Install ID generator:** [internal/telemetry/install_id.go](https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/blob/UNSTABLE/internal/telemetry/install_id.go)
-- **Telemetry endpoint:** [github.com/brennhill/kaboom-analytics](https://github.com/brennhill/kaboom-analytics) (the Cloudflare Worker that receives beacons)
+- **Telemetry endpoint:** [github.com/brennhill/kaboom-telemetry](https://github.com/brennhill/kaboom-telemetry) (the Cloudflare Worker that receives beacons)
 - **Extension manifest:** [extension/manifest.json](https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/blob/UNSTABLE/extension/manifest.json)
 - **Redaction logic:** [extension/lib/serialize.js](https://github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/blob/UNSTABLE/extension/lib/serialize.js)
 
-**Don't take our word for it.** Read the source. The telemetry code is ~80 lines of Go. Every beacon call site is searchable with `grep -rn 'BeaconEvent\|BeaconError'`.
+**Don't take our word for it.** Read the source. Every outbound event is built
+inside `internal/telemetry`; the extension and installer contain no production
+telemetry transport.
 
 ---
 

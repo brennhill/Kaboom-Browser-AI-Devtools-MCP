@@ -35,7 +35,7 @@ telemetry APIs and the package owns its synchronization and local state.
 tool or lifecycle event
         |
         v
-UsageTracker / AppError / BeaconEvent
+UsageTracker / AppError
         |
         +--> session and install identity
         |
@@ -75,10 +75,12 @@ increments that arrive after the swap.
 
 `fireBeacon` checks opt-out before serialization or network access. It marshals
 the payload once, then attempts to acquire a slot from a 50-entry semaphore.
-When capacity is exhausted, the event is dropped. Accepted sends run in a safe
+When capacity is exhausted, the event is dropped. Sends run in a safe
 background goroutine through a shared `http.Client` with a two-second timeout.
-Response bodies are drained and closed for connection reuse. HTTP and encoding
-failures are intentionally not returned to callers.
+Response bodies are drained and closed for connection reuse. Only `202
+Accepted` counts as accepted delivery; every other HTTP response is rejected,
+and transport failures are counted separately. `/health` and `/diagnostics`
+publish these payload-free outcome counters.
 
 Telemetry sends use the network only; they do not log to stdout. MCP stdout
 remains reserved for JSON-RPC protocol messages.
@@ -89,6 +91,11 @@ The shared envelope supplies `event`, application version, OS/architecture,
 install ID, session ID, and the MCP client name when known. Structured events
 add the timestamp and release channel. Tool keys are split into `family:name`
 for the canonical `family`, `name`, and `tool` fields.
+
+Only the daemon owns event construction. The extension and shell
+install/uninstall scripts never post directly to the ingest endpoint. Unknown
+event names are rejected before serialization, so a producer cannot silently
+create a legacy envelope.
 
 The five-minute reporting loop swaps aggregates only when activity exists.
 Context cancellation emits `session_end` with reason `shutdown` and terminates

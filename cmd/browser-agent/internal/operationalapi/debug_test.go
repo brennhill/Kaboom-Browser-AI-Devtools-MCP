@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/telemetry"
@@ -20,6 +21,25 @@ func TestDebugEndpointsEnabled_Unset(t *testing.T) {
 	t.Setenv("KABOOM_DEBUG", "")
 	if DebugEndpointsEnabled() {
 		t.Fatal("debugEndpointsEnabled() = true, want false when KABOOM_DEBUG is empty")
+	}
+}
+
+func TestHealthPayloadIncludesPayloadFreeTelemetryDeliveryDiagnostics(t *testing.T) {
+	t.Parallel()
+
+	payload := stubHandler(nil).HealthPayload()
+	delivery, ok := payload["telemetry_delivery"].(telemetry.DeliverySnapshot)
+	if !ok {
+		t.Fatalf("telemetry_delivery type = %T, want telemetry.DeliverySnapshot", payload["telemetry_delivery"])
+	}
+	encoded, err := json.Marshal(delivery)
+	if err != nil {
+		t.Fatalf("marshal delivery diagnostics: %v", err)
+	}
+	for _, forbidden := range []string{"payload", "event", "iid", "sid"} {
+		if strings.Contains(string(encoded), forbidden) {
+			t.Fatalf("delivery diagnostics leak %q: %s", forbidden, encoded)
+		}
 	}
 }
 

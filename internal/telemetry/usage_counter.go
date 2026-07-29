@@ -254,8 +254,10 @@ func (u *UsageTracker) EmitSessionEnd(reason string) {
 // fireStructuredBeacon sends a beacon with the standard envelope + extra fields.
 func fireStructuredBeacon(fields map[string]any) {
 	event, ok := fields["event"].(string)
-	if !ok || event == "" {
-		return // silently drop malformed beacon
+	if !ok || !isSupportedEvent(event) {
+		deliveryCounters.dropped.Add(1)
+		callOnFireBeacon(false)
+		return
 	}
 	payload := buildEnvelope(event)
 	payload["ts"] = time.Now().UTC().Format(time.RFC3339)
@@ -266,4 +268,13 @@ func fireStructuredBeacon(fields map[string]any) {
 		}
 	}
 	fireBeacon(payload)
+}
+
+func isSupportedEvent(event string) bool {
+	switch event {
+	case "tool_call", "first_tool_call", "session_start", "session_end", "usage_summary", "app_error":
+		return true
+	default:
+		return false
+	}
 }

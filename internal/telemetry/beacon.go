@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/util"
@@ -49,6 +50,46 @@ var sem = make(chan struct{}, maxConcurrentBeacons)
 
 // beaconClient is a shared HTTP client for all beacons. Reuses connections.
 var beaconClient = &http.Client{Timeout: 2 * time.Second}
+
+// DeliverySnapshot exposes payload-free telemetry transport outcomes.
+type DeliverySnapshot struct {
+	Accepted      uint64 `json:"accepted"`
+	Rejected      uint64 `json:"rejected"`
+	NetworkErrors uint64 `json:"network_errors"`
+	Dropped       uint64 `json:"dropped"`
+	Suppressed    uint64 `json:"suppressed"`
+	LastStatus    int    `json:"last_status"`
+}
+
+var deliveryCounters struct {
+	accepted      atomic.Uint64
+	rejected      atomic.Uint64
+	networkErrors atomic.Uint64
+	dropped       atomic.Uint64
+	suppressed    atomic.Uint64
+	lastStatus    atomic.Int64
+}
+
+// DeliveryDiagnostics returns aggregate transport outcomes without event data.
+func DeliveryDiagnostics() DeliverySnapshot {
+	return DeliverySnapshot{
+		Accepted:      deliveryCounters.accepted.Load(),
+		Rejected:      deliveryCounters.rejected.Load(),
+		NetworkErrors: deliveryCounters.networkErrors.Load(),
+		Dropped:       deliveryCounters.dropped.Load(),
+		Suppressed:    deliveryCounters.suppressed.Load(),
+		LastStatus:    int(deliveryCounters.lastStatus.Load()),
+	}
+}
+
+func resetDeliveryDiagnostics() {
+	deliveryCounters.accepted.Store(0)
+	deliveryCounters.rejected.Store(0)
+	deliveryCounters.networkErrors.Store(0)
+	deliveryCounters.dropped.Store(0)
+	deliveryCounters.suppressed.Store(0)
+	deliveryCounters.lastStatus.Store(0)
+}
 
 // buildEnvelope returns the base fields included in every beacon.
 // Only includes fields defined in the Counterscale contract shared envelope.
@@ -127,12 +168,6 @@ func normalizeAppErrorCode(category string) string {
 	return strings.ToUpper(replacer.Replace(strings.TrimSpace(category)))
 }
 
-// BeaconEvent fires an anonymous lifecycle event.
-// Fire-and-forget: backgrounded, 2s timeout, never blocks caller, never panics.
-func BeaconEvent(event string, props map[string]string) {
-	sendBeacon(event, props)
-}
-
 // BeaconUsageSummary fires a structured usage_summary beacon.
 func BeaconUsageSummary(windowMinutes int, snapshot *UsageSnapshot) {
 	payload := BuildUsageSummaryPayload(windowMinutes, snapshot)
@@ -157,15 +192,6 @@ func BuildUsageSummaryPayload(windowMinutes int, snapshot *UsageSnapshot) map[st
 		payload["async_outcomes"] = snapshot.AsyncOutcomes
 	}
 	return payload
-}
-
-func sendBeacon(event string, props map[string]string) {
-	payload := buildEnvelope(event)
-	if props != nil {
-		payload["props"] = props
-	}
-
-	fireBeacon(payload)
 }
 
 // telemetryOptedOut returns true if the user has disabled telemetry.
@@ -199,6 +225,7 @@ func callOnFireBeacon(sent bool) {
 
 func fireBeacon(payload map[string]any) {
 	if telemetryOptedOut() {
+		deliveryCounters.suppressed.Add(1)
 		callOnFireBeacon(false)
 		return
 	}
@@ -209,12 +236,15 @@ func fireBeacon(payload map[string]any) {
 	testBinary := strings.HasSuffix(filepath.Base(os.Args[0]), ".test") ||
 		strings.HasSuffix(filepath.Base(os.Args[0]), ".test.exe")
 	if !shouldSendToEndpoint(ep, testBinary) {
+		deliveryCounters.suppressed.Add(1)
 		callOnFireBeacon(false)
 		return
 	}
 
 	data, err := json.Marshal(payload)
 	if err != nil {
+		deliveryCounters.dropped.Add(1)
+		callOnFireBeacon(false)
 		return // best-effort
 	}
 
@@ -225,16 +255,26 @@ func fireBeacon(payload map[string]any) {
 
 			resp, err := beaconClient.Post(ep, "application/json", bytes.NewReader(data))
 			if err != nil {
+				deliveryCounters.networkErrors.Add(1)
+				deliveryCounters.lastStatus.Store(0)
 				callOnFireBeacon(false)
 				return // best-effort
 			}
 			// Drain body before close so the HTTP transport can reuse the connection.
 			_, _ = io.Copy(io.Discard, resp.Body)
 			_ = resp.Body.Close()
-			callOnFireBeacon(true)
+			deliveryCounters.lastStatus.Store(int64(resp.StatusCode))
+			if resp.StatusCode == http.StatusAccepted {
+				deliveryCounters.accepted.Add(1)
+				callOnFireBeacon(true)
+				return
+			}
+			deliveryCounters.rejected.Add(1)
+			callOnFireBeacon(false)
 		})
 	default:
 		// At capacity, drop this beacon silently
+		deliveryCounters.dropped.Add(1)
 		callOnFireBeacon(false)
 	}
 }

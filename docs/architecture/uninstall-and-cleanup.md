@@ -68,7 +68,6 @@ for the install-side flow):
    layouts).
 7. Strip `# kaboom` PATH lines from all candidate rc files.
 8. Remove extension dir, state roots, and legacy artifacts.
-9. Fire-and-forget `uninstall_complete` beacon (opt-out: `KABOOM_TELEMETRY=off`).
 10. Print manual steps: remove the unpacked extension in `chrome://extensions`,
     restart the terminal, delete `.bak` backups once verified.
 

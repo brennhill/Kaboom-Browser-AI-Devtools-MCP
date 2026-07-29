@@ -353,12 +353,23 @@ Example:
 
 ### Event emission
 
+- The daemon is the only outbound producer. Extension and install/uninstall
+  processes do not emit separate lifecycle envelopes.
 - Emit `session_start` on the first activity in a new session.
 - Emit `tool_call` for each meaningful tool invocation.
 - Emit `first_tool_call` once per install ever.
 - Emit `session_end` when the session closes.
 - Emit `usage_summary` every 5 minutes when there has been activity in the window.
 - Emit `app_error` only for runtime/product failures that are not one ordinary failed tool call.
+
+### Delivery diagnostics
+
+- Only `202 Accepted` confirms ingestion.
+- Other HTTP statuses count as rejected delivery.
+- Network errors, local drops, and opt-out/test suppressions are counted
+  separately.
+- `/health` and `/diagnostics` expose these aggregate counters under
+  `telemetry_delivery`; they never expose event payloads or identities.
 
 ### Privacy
 

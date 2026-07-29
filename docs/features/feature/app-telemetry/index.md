@@ -4,7 +4,7 @@ feature_id: feature-app-telemetry
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-29
 code_paths:
   - internal/telemetry/beacon.go
   - internal/telemetry/install_id.go
@@ -12,10 +12,6 @@ code_paths:
   - internal/telemetry/usage_beacon.go
   - internal/telemetry/usage_counter.go
   - cmd/browser-agent/internal/operationalapi/handler.go
-  - scripts/test-all-tools-comprehensive.sh
-  - scripts/tests/framework/framework.sh
-  - scripts/smoke-test.sh
-  - scripts/release/install-upgrade-regression.mjs
 test_paths:
   - internal/telemetry/beacon_test.go
   - internal/telemetry/contract_compliance_test.go
@@ -29,6 +25,7 @@ test_paths:
   - cmd/browser-agent/internal/operationalapi/debug_test.go
   - tests/cli/contracts/uat-harness-regressions.test.cjs
   - scripts/release/install-upgrade-regression.contract.test.mjs
+  - scripts/tests/contracts/app-telemetry-producers.test.mjs
 last_verified_version: 0.8.8
 last_verified_date: 2026-07-28
 ---
@@ -49,6 +46,17 @@ converge on one persisted value.
 The operational debug endpoint reads non-destructive flat counters through the
 canonical `UsageTracker.DebugCounts` API; the former compatibility-named
 counter accessor is deleted.
+
+Only the daemon emits product telemetry. Installer, uninstaller, and extension
+service-worker lifecycle paths do not send independent envelopes because they
+cannot satisfy the canonical install/session identity contract. The generic
+lifecycle event surface is deleted; every emitted event is one of the six
+documented canonical event types.
+
+`/health` and `/diagnostics` expose payload-free `telemetry_delivery` counters
+for accepted `202` responses, rejected non-`202` responses, network errors,
+drops, suppressions, and the last HTTP status. No event or identity data is
+included in these diagnostics.
 
 ## Specifications
 

@@ -422,17 +422,6 @@ if [ -n "${XDG_STATE_HOME:-}" ]; then
 fi
 
 # ─────────────────────────────────────────────────────────────
-# 7. Anonymous telemetry (disable: KABOOM_TELEMETRY=off)
-# ─────────────────────────────────────────────────────────────
-
-if [ "$DRY_RUN" != "1" ] && [ "${KABOOM_TELEMETRY:-}" != "off" ]; then
-    curl -s --max-time 2 -X POST "https://t.gokaboom.dev/v1/event" \
-        -H "Content-Type: application/json" \
-        -d "{\"event\":\"uninstall_complete\",\"v\":\"${VERSION}\",\"os\":\"$(uname -s)-$(uname -m)\",\"props\":{\"method\":\"curl\"}}" \
-        > /dev/null 2>&1 || true
-fi
-
-# ─────────────────────────────────────────────────────────────
 # 8. Final summary
 # ─────────────────────────────────────────────────────────────
 

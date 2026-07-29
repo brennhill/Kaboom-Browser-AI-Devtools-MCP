@@ -66,6 +66,7 @@ func (h *Handler) ServeHealth(w http.ResponseWriter, r *http.Request) {
 	}
 	response := map[string]any{
 		"status": "ok", "name": identity.MCPServerName, "version": h.options.Version,
+		"telemetry_delivery": telemetry.DeliveryDiagnostics(),
 		"logs": map[string]any{
 			"entries": h.options.Logs.EntryCount(), "max_entries": h.options.Logs.MaxEntries(),
 			"log_file": h.options.Logs.LogFile(), "log_file_size": logFileSize, "dropped_count": h.options.Logs.DropCount(),
@@ -150,7 +151,9 @@ func (h *Handler) addTerminalHealth(response map[string]any) {
 }
 
 func (h *Handler) HealthPayload() map[string]any {
-	response := map[string]any{}
+	response := map[string]any{
+		"telemetry_delivery": telemetry.DeliveryDiagnostics(),
+	}
 	h.addTerminalHealth(response)
 	return response
 }
@@ -208,6 +211,7 @@ func (h *Handler) ServeDiagnostics(w http.ResponseWriter, r *http.Request) {
 			"strict_required":  launch.StrictRequired,
 			"under_supervisor": launch.UnderSupervisor,
 		},
+		"telemetry_delivery": telemetry.DeliveryDiagnostics(),
 	}
 
 	if h.options.Capture != nil {

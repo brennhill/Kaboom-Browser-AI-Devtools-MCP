@@ -9,10 +9,16 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"regexp"
 	"testing"
 	"time"
 )
+
+func emitTestSessionStart() {
+	fireStructuredBeacon(map[string]any{
+		"event":  "session_start",
+		"reason": "startup",
+	})
+}
 
 func TestShouldSendToEndpoint_BlocksProductionFromTestBinaries(t *testing.T) {
 	if shouldSendToEndpoint(defaultEndpoint, true) {
@@ -24,6 +30,74 @@ func TestShouldSendToEndpoint_BlocksProductionFromTestBinaries(t *testing.T) {
 	if !shouldSendToEndpoint(defaultEndpoint, false) {
 		t.Fatal("production binary must be able to send to the production endpoint")
 	}
+}
+
+func TestBeaconDeliveryRequiresAcceptedStatus(t *testing.T) {
+	drainSem()
+	resetDeliveryDiagnostics()
+
+	statuses := make(chan int, 2)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(<-statuses)
+	}))
+	defer srv.Close()
+	overrideEndpoint(srv.URL)
+	defer resetEndpoint()
+
+	statuses <- http.StatusOK
+	fireStructuredBeacon(map[string]any{
+		"event":  "session_start",
+		"reason": "startup",
+	})
+	waitForDeliveryCount(t, 1)
+
+	first := DeliveryDiagnostics()
+	if first.Accepted != 0 || first.Rejected != 1 || first.LastStatus != http.StatusOK {
+		t.Fatalf("200 delivery diagnostics = %+v, want one rejection", first)
+	}
+
+	statuses <- http.StatusAccepted
+	fireStructuredBeacon(map[string]any{
+		"event":  "session_start",
+		"reason": "startup",
+	})
+	waitForDeliveryCount(t, 2)
+
+	second := DeliveryDiagnostics()
+	if second.Accepted != 1 || second.Rejected != 1 || second.LastStatus != http.StatusAccepted {
+		t.Fatalf("202 delivery diagnostics = %+v, want one accepted and one rejected", second)
+	}
+}
+
+func TestBeaconDeliveryRecordsNetworkFailureWithoutPayload(t *testing.T) {
+	drainSem()
+	resetDeliveryDiagnostics()
+	overrideEndpoint("http://127.0.0.1:1")
+	defer resetEndpoint()
+
+	fireStructuredBeacon(map[string]any{
+		"event":  "session_start",
+		"reason": "startup",
+	})
+	waitForDeliveryCount(t, 1)
+
+	got := DeliveryDiagnostics()
+	if got.NetworkErrors != 1 || got.LastStatus != 0 {
+		t.Fatalf("network failure diagnostics = %+v", got)
+	}
+}
+
+func waitForDeliveryCount(t *testing.T, want uint64) {
+	t.Helper()
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		got := DeliveryDiagnostics()
+		if got.Accepted+got.Rejected+got.NetworkErrors+got.Dropped+got.Suppressed >= want {
+			return
+		}
+		time.Sleep(time.Millisecond)
+	}
+	t.Fatalf("timed out waiting for %d delivery decisions: %+v", want, DeliveryDiagnostics())
 }
 
 func TestBeacon_DisabledByEnv(t *testing.T) {
@@ -48,7 +122,7 @@ func TestBeacon_DisabledByEnv(t *testing.T) {
 	overrideEndpoint(srv.URL)
 	defer resetEndpoint()
 
-	BeaconEvent("test_event", map[string]string{"key": "val"})
+	emitTestSessionStart()
 
 	select {
 	case sent := <-fired:
@@ -65,125 +139,17 @@ func TestBeacon_DisabledByEnv(t *testing.T) {
 }
 
 func TestBeacon_FireAndForget(t *testing.T) {
-	// Verify BeaconEvent returns immediately even when server is unreachable.
+	// Verify canonical event emission returns immediately when unreachable.
 	// Use a non-routable address so the goroutine doesn't linger on other test servers.
 	overrideEndpoint("http://198.51.100.1:1") // TEST-NET-2, non-routable
 	defer resetEndpoint()
 
 	start := time.Now()
-	BeaconEvent("slow_test", nil)
+	emitTestSessionStart()
 	elapsed := time.Since(start)
 
 	if elapsed > 100*time.Millisecond {
-		t.Fatalf("BeaconEvent blocked for %v, expected fire-and-forget", elapsed)
-	}
-}
-
-func TestBeacon_FormatsJSON(t *testing.T) {
-	drainSem()
-	received := make(chan map[string]any, 10)
-
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var body map[string]any
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			t.Errorf("failed to decode JSON body: %v", err)
-		}
-		select {
-		case received <- body:
-		default:
-		}
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer srv.Close()
-
-	overrideEndpoint(srv.URL)
-	defer resetEndpoint()
-
-	BeaconEvent("test_error", map[string]string{"error_code": "conn_refused", "port": "7890"})
-
-	// Drain until we find our specific event (stale goroutines may send others first).
-	var body map[string]any
-	for {
-		select {
-		case b := <-received:
-			if b["event"] == "test_error" {
-				body = b
-				goto found
-			}
-		case <-time.After(2 * time.Second):
-			t.Fatal("beacon not received within timeout")
-		}
-	}
-found:
-
-	if body["event"] != "test_error" {
-		t.Errorf("event = %v, want test_error", body["event"])
-	}
-
-	props, ok := body["props"].(map[string]any)
-	if !ok {
-		t.Fatalf("props is not a map: %T", body["props"])
-	}
-	if props["error_code"] != "conn_refused" {
-		t.Errorf("props.error_code = %v, want conn_refused", props["error_code"])
-	}
-	if props["port"] != "7890" {
-		t.Errorf("props.port = %v, want 7890", props["port"])
-	}
-
-	// Verify install ID is present and is 12-char hex.
-	iid, ok := body["iid"].(string)
-	if !ok {
-		t.Fatalf("missing or non-string 'iid' field in beacon payload")
-	}
-	if !regexp.MustCompile(`^[0-9a-f]{12}$`).MatchString(iid) {
-		t.Errorf("iid = %q, want 12-char hex string", iid)
-	}
-
-	// Verify session ID is present and is 16-char hex.
-	sid, ok := body["sid"].(string)
-	if !ok {
-		t.Fatalf("missing or non-string 'sid' field in beacon payload")
-	}
-	if !regexp.MustCompile(`^[0-9a-f]{16}$`).MatchString(sid) {
-		t.Errorf("sid = %q, want 16-char hex string", sid)
-	}
-}
-
-func TestBeaconEvent_IncludesVersion(t *testing.T) {
-	received := make(chan map[string]any, 1)
-
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var body map[string]any
-		_ = json.NewDecoder(r.Body).Decode(&body)
-		select {
-		case received <- body:
-		default:
-		}
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer srv.Close()
-
-	overrideEndpoint(srv.URL)
-	defer resetEndpoint()
-
-	BeaconEvent("daemon_start", map[string]string{"mode": "bridge"})
-
-	var body map[string]any
-	select {
-	case body = <-received:
-	case <-time.After(2 * time.Second):
-		t.Fatal("beacon not received within timeout")
-	}
-
-	if _, ok := body["v"]; !ok {
-		t.Error("missing 'v' (version) field in beacon payload")
-	}
-	if _, ok := body["os"]; !ok {
-		t.Error("missing 'os' field in beacon payload")
-	}
-	if body["event"] != "daemon_start" {
-		t.Errorf("event = %v, want daemon_start", body["event"])
+		t.Fatalf("event emission blocked for %v, expected fire-and-forget", elapsed)
 	}
 }
 
@@ -194,11 +160,11 @@ func TestBeacon_IgnoresHTTPFailure(t *testing.T) {
 	defer resetEndpoint()
 
 	start := time.Now()
-	BeaconEvent("unreachable", map[string]string{"key": "val"})
+	emitTestSessionStart()
 	elapsed := time.Since(start)
 
 	if elapsed > 100*time.Millisecond {
-		t.Fatalf("BeaconEvent blocked for %v on unreachable server, expected fire-and-forget", elapsed)
+		t.Fatalf("event emission blocked for %v on unreachable server, expected fire-and-forget", elapsed)
 	}
 	// The goroutine will fail in the background — that's fine. Give it time to clean up.
 	time.Sleep(50 * time.Millisecond)
@@ -236,7 +202,7 @@ func TestBeacon_SemaphoreBackpressure(t *testing.T) {
 	// Fire a 51st beacon — should be silently dropped (no panic, no block).
 	done := make(chan struct{})
 	go func() {
-		BeaconEvent("overflow_test", map[string]string{"seq": "51"})
+		emitTestSessionStart()
 		close(done)
 	}()
 
@@ -244,7 +210,7 @@ func TestBeacon_SemaphoreBackpressure(t *testing.T) {
 	case <-done:
 		// Good — beacon was dropped without blocking.
 	case <-time.After(2 * time.Second):
-		t.Fatal("BeaconEvent blocked when semaphore was full — should drop silently")
+		t.Fatal("event emission blocked when semaphore was full — should drop silently")
 	}
 
 	// Drain and verify beacon works again after slots are freed.
@@ -266,7 +232,7 @@ func TestBeacon_SemaphoreBackpressure(t *testing.T) {
 	overrideKaboomDir(dir)
 	defer resetKaboomDir()
 
-	BeaconEvent("post_drain", nil)
+	emitTestSessionStart()
 	select {
 	case <-received:
 		// Good — beacon fired after slots were freed.
@@ -294,7 +260,7 @@ func TestBeacon_LLMFieldInEnvelope(t *testing.T) {
 	SetLLMName("claude-code")
 	defer SetLLMName("")
 
-	BeaconEvent("llm_test", nil)
+	emitTestSessionStart()
 
 	var body map[string]any
 	select {
@@ -308,8 +274,8 @@ func TestBeacon_LLMFieldInEnvelope(t *testing.T) {
 	}
 }
 
-// #14: Opt-out tests for BeaconEvent and BeaconUsageSummary.
-func TestBeaconEvent_DisabledByEnv(t *testing.T) {
+// #14: Opt-out tests for canonical events and BeaconUsageSummary.
+func TestCanonicalBeacon_DisabledByEnv(t *testing.T) {
 	t.Setenv("KABOOM_TELEMETRY", "off")
 	drainSem()
 	time.Sleep(10 * time.Millisecond) // let stale goroutines finish
@@ -326,12 +292,12 @@ func TestBeaconEvent_DisabledByEnv(t *testing.T) {
 	overrideEndpoint("http://198.51.100.1:1")
 	defer resetEndpoint()
 
-	BeaconEvent("should_not_fire", nil)
+	emitTestSessionStart()
 
 	select {
 	case sent := <-fired:
 		if sent {
-			t.Fatal("BeaconEvent was sent despite KABOOM_TELEMETRY=off")
+			t.Fatal("canonical event was sent despite KABOOM_TELEMETRY=off")
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("onFireBeacon hook not called")
@@ -370,7 +336,7 @@ func TestBeaconUsageSummary_DisabledByEnv(t *testing.T) {
 }
 
 // M4: Case-insensitive opt-out.
-func TestBeaconEvent_DisabledByEnv_CaseInsensitive(t *testing.T) {
+func TestCanonicalBeacon_DisabledByEnv_CaseInsensitive(t *testing.T) {
 	t.Setenv("KABOOM_TELEMETRY", "OFF")
 
 	fired := make(chan bool, 1)
@@ -385,12 +351,12 @@ func TestBeaconEvent_DisabledByEnv_CaseInsensitive(t *testing.T) {
 	overrideEndpoint("http://198.51.100.1:1")
 	defer resetEndpoint()
 
-	BeaconEvent("case_test", nil)
+	emitTestSessionStart()
 
 	select {
 	case sent := <-fired:
 		if sent {
-			t.Fatal("BeaconEvent was sent despite KABOOM_TELEMETRY=OFF (uppercase)")
+			t.Fatal("canonical event was sent despite KABOOM_TELEMETRY=OFF (uppercase)")
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("onFireBeacon hook not called")
@@ -487,7 +453,7 @@ func TestBeacon_SemaphoreCleanupOnFailure(t *testing.T) {
 	// Verify beacon is dropped (not blocked) when semaphore is full.
 	done := make(chan struct{})
 	go func() {
-		BeaconEvent("overflow", nil)
+		emitTestSessionStart()
 		close(done)
 	}()
 
@@ -495,36 +461,5 @@ func TestBeacon_SemaphoreCleanupOnFailure(t *testing.T) {
 	case <-done:
 	case <-time.After(time.Second):
 		t.Fatal("beacon blocked on full semaphore")
-	}
-}
-
-func TestBeacon_NilProps(t *testing.T) {
-	received := make(chan map[string]any, 1)
-
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var body map[string]any
-		_ = json.NewDecoder(r.Body).Decode(&body)
-		select {
-		case received <- body:
-		default:
-		}
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer srv.Close()
-
-	overrideEndpoint(srv.URL)
-	defer resetEndpoint()
-
-	BeaconEvent("nil_props_test", nil)
-
-	var body map[string]any
-	select {
-	case body = <-received:
-	case <-time.After(2 * time.Second):
-		t.Fatal("beacon not received within timeout")
-	}
-
-	if body["event"] != "nil_props_test" {
-		t.Errorf("event = %v, want nil_props_test", body["event"])
 	}
 }
