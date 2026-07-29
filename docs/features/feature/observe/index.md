@@ -50,6 +50,9 @@ code_paths:
   - src/inject/observers.ts
   - src/lib/net/network.ts
 test_paths:
+  - internal/tools/observe/correlation_test.go
+  - internal/tools/observe/logs_edge_test.go
+  - internal/tools/observe/idbquery/execute_test.go
   - internal/capture/health_reader_owner_test.go
   - tests/extension/dom/command-element-results.test.js
   - cmd/browser-agent/lint_hardening_test.go

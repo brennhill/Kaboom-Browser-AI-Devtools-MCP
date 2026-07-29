@@ -186,7 +186,7 @@ func materializeFixtureFile(raw json.RawMessage, repoRoot string) (json.RawMessa
 		return raw, nil
 	}
 	path := file.Name()
-	if _, err = file.WriteString(strings.Repeat("// eval fixture line\n", 801)); err != nil {
+	if _, err = file.WriteString("package evalfixture\n\n" + strings.Repeat("// eval fixture line\n", 801)); err != nil {
 		_ = file.Close()
 		_ = os.Remove(path)
 		return raw, nil

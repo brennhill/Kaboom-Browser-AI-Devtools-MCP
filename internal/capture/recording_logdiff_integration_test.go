@@ -86,10 +86,15 @@ func TestLogDiffNewErrors(t *testing.T) {
 		}
 		_ = capture.Recordings().AddRecordingAction(action)
 	}
-	capture.Recordings().StopRecording(recordingID1)
+	if _, _, err := capture.Recordings().StopRecording(recordingID1); err != nil {
+		t.Fatalf("stop original recording: %v", err)
+	}
 
 	// Create replay recording with more actions (simulating a regression)
-	recordingID2, _ := capture.Recordings().StartRecording("replay", "https://example.com", false)
+	recordingID2, err := capture.Recordings().StartRecording("replay", "https://example.com", false)
+	if err != nil {
+		t.Fatalf("start replay recording: %v", err)
+	}
 	for i := 0; i < 3; i++ {
 		action := recordingmodel.RecordingAction{
 			Type:        "click",
@@ -106,11 +111,13 @@ func TestLogDiffNewErrors(t *testing.T) {
 		Text:        "Network error occurred",
 	}
 	_ = capture.Recordings().AddRecordingAction(extraAction)
-	capture.Recordings().StopRecording(recordingID2)
+	if _, _, err := capture.Recordings().StopRecording(recordingID2); err != nil {
+		t.Fatalf("stop replay recording: %v", err)
+	}
 
 	// Load both recordings
-	rec1, _ := capture.Recordings().GetRecording(recordingID1)
-	rec2, _ := capture.Recordings().GetRecording(recordingID2)
+	rec1 := mustGetRecording(t, capture, recordingID1)
+	rec2 := mustGetRecording(t, capture, recordingID2)
 
 	// Verify recordings are different
 	if rec1.ActionCount == rec2.ActionCount {

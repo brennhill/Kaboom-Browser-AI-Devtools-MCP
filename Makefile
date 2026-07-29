@@ -120,9 +120,7 @@ test-race:
 	go test -race -v ./...
 
 test-cover:
-	go test -coverprofile=coverage.out ./...
-	@go tool cover -func=coverage.out | grep total | awk '{print $$3}' | sed 's/%//' | \
-		awk '{if ($$1 < 89) {print "FAIL: Coverage " $$1 "% is below 89% threshold"; exit 1} else {print "OK: Coverage " $$1 "%"}}'
+	./scripts/build/run-go-coverage.sh
 
 test-integration:
 	@set -e; trap 'bash ./scripts/cleanup-test-daemons.sh --quiet >/dev/null 2>&1 || true' EXIT; \

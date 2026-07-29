@@ -48,7 +48,7 @@ var (
 )
 
 func init() {
-	if dir := os.Getenv("GOCOVERDIR"); dir != "" {
+	if dir := os.Getenv("KABOOM_GO_COVERDIR"); dir != "" {
 		testCoverDir = dir
 	}
 }
@@ -57,7 +57,11 @@ func buildTestBinary(t *testing.T) string {
 	t.Helper()
 	testBinaryOnce.Do(func() {
 		testBinaryPath = filepath.Join(os.TempDir(), "kaboom-test-binary")
-		cmd := exec.Command("go", "build", "-cover", "-o", testBinaryPath, ".") // #nosec G204,G202 -- test binary from buildTestBinary(t)
+		args := []string{"build", "-cover", "-o", testBinaryPath, "."}
+		if testCoverDir != "" {
+			args = []string{"build", "-cover", "-coverpkg=./...", "-o", testBinaryPath, "."}
+		}
+		cmd := exec.Command("go", args...) // #nosec G204,G202 -- fixed test build arguments
 		if output, err := cmd.CombinedOutput(); err != nil {
 			testBinaryErr = fmt.Errorf("failed to build kaboom: %v\nOutput: %s", err, output)
 		}
@@ -109,7 +113,11 @@ func startServerCmd(t *testing.T, binary string, args ...string) *exec.Cmd {
 	cmd := exec.Command(binary, args...) // #nosec G204 -- test-only: binary is from buildTestBinary(t) // nosemgrep: go.lang.security.audit.dangerous-exec-command.dangerous-exec-command, go_subproc_rule-subproc -- test spawns own binary
 	cmd.Env = append(os.Environ(), statecfg.StateDirEnv+"="+stateDir)
 	if testCoverDir != "" {
-		cmd.Env = append(cmd.Env, "GOCOVERDIR="+testCoverDir)
+		coverDir, err := os.MkdirTemp(testCoverDir, "browser-")
+		if err != nil {
+			t.Fatalf("create subprocess coverage directory: %v", err)
+		}
+		cmd.Env = append(cmd.Env, "GOCOVERDIR="+coverDir)
 	}
 	return cmd
 }

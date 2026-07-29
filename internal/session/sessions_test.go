@@ -8,9 +8,77 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/performance"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
+
+func TestRuntimeStateReaderProjectsCanonicalTelemetry(t *testing.T) {
+	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
+	cap.Extension().SetTrackingStatusForTest(4, "https://tracked.example.test")
+	cap.Telemetry().AddNetworkBodies([]types.NetworkBody{{
+		Method:       "GET",
+		URL:          "https://api.example.test/data",
+		Status:       503,
+		Duration:     42,
+		ResponseBody: "down",
+		ContentType:  "application/json",
+	}})
+	cap.Telemetry().AddWebSocketEvents([]types.WebSocketEvent{
+		{Event: "open", ID: "socket-1", URL: "wss://example.test/live"},
+		{Event: "message", ID: "socket-1", Direction: "incoming", Data: "hello"},
+	})
+	entries := []types.LogEntry{
+		{"level": "error", "message": " broken "},
+		{"level": "error", "message": "broken"},
+		{"level": "warn", "message": "careful"},
+		{"level": "info", "message": "ignored"},
+	}
+	perf := []performance.PerformanceSnapshot{
+		{URL: "https://old.example.test", Timestamp: "2026-01-01T00:00:00Z"},
+		{URL: "https://new.example.test", Timestamp: "2026-01-01T00:00:01.123Z"},
+	}
+	reader := NewRuntimeStateReader(
+		func() []types.LogEntry { return entries },
+		func() []performance.PerformanceSnapshot { return perf },
+		cap,
+	)
+
+	errors := reader.GetConsoleErrors()
+	if len(errors) != 1 || errors[0].Message != "broken" || errors[0].Count != 2 {
+		t.Fatalf("console errors = %#v", errors)
+	}
+	warnings := reader.GetConsoleWarnings()
+	if len(warnings) != 1 || warnings[0].Message != "careful" {
+		t.Fatalf("console warnings = %#v", warnings)
+	}
+	requests := reader.GetNetworkRequests()
+	if len(requests) != 1 || requests[0].Status != 503 || requests[0].ResponseSize != 4 {
+		t.Fatalf("network requests = %#v", requests)
+	}
+	connections := reader.GetWSConnections()
+	if len(connections) != 1 || connections[0].URL != "wss://example.test/live" {
+		t.Fatalf("websocket connections = %#v", connections)
+	}
+	if snapshot := reader.GetPerformance(); snapshot == nil || snapshot.URL != "https://new.example.test" {
+		t.Fatalf("performance snapshot = %#v", snapshot)
+	}
+	if got := reader.GetCurrentPageURL(); got != "https://tracked.example.test" {
+		t.Fatalf("page URL = %q", got)
+	}
+}
+
+func TestRuntimeStateReaderHandlesMissingSources(t *testing.T) {
+	reader := NewRuntimeStateReader(nil, nil, nil)
+	if len(reader.GetConsoleErrors()) != 0 ||
+		len(reader.GetNetworkRequests()) != 0 ||
+		len(reader.GetWSConnections()) != 0 ||
+		reader.GetPerformance() != nil ||
+		reader.GetCurrentPageURL() != "" {
+		t.Fatal("missing runtime sources should project empty state")
+	}
+}
 
 // ============================================
 // Mock CaptureStateReader

@@ -18,12 +18,12 @@ import (
 )
 
 const (
-	sessionBaseDir     = ".kaboom/sessions"
-	touchesFile        = "touches.jsonl"
-	metaFile           = "meta.json"
-	staleSessionAge    = 8 * time.Hour
-	maxTouchLinelen    = 512
-	maxSummaryLen      = 100
+	sessionBaseDir  = ".kaboom/sessions"
+	touchesFile     = "touches.jsonl"
+	metaFile        = "meta.json"
+	staleSessionAge = 8 * time.Hour
+	maxTouchLinelen = 512
+	maxSummaryLen   = 100
 )
 
 // TouchEntry represents a single tool use recorded in the session log.
@@ -132,6 +132,9 @@ func ReadTouches(sessionDir string) ([]TouchEntry, error) {
 		if json.Unmarshal(scanner.Bytes(), &e) == nil {
 			entries = append(entries, e)
 		}
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
 	}
 	// Newest first.
 	sort.Slice(entries, func(i, j int) bool {

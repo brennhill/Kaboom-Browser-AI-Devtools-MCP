@@ -175,6 +175,10 @@ func fileConfigTargets(home string) []mcpFileConfig {
 
 // Run detects and configures all supported MCP clients.
 func Run(forceCleanup func() error, targetArgs ...string) error {
+	return runInstaller(forceCleanup, startDaemonSilently, targetArgs...)
+}
+
+func runInstaller(forceCleanup func() error, startDaemon func(string), targetArgs ...string) error {
 	targets, targetErr := parseInstallTargets(targetArgs)
 	if targetErr != nil {
 		return targetErr
@@ -252,7 +256,7 @@ func Run(forceCleanup func() error, targetArgs ...string) error {
 	// We start the daemon so the extension works immediately and the user
 	// can verify the install with a health check.
 	diag.Printf("🚀 Starting Kaboom server...")
-	startDaemonSilently(exe)
+	startDaemon(exe)
 
 	// 5. BIG SUCCESS MESSAGE
 	diag.Printf("\n\033[1;32m✅ KABOOM INSTALLED & RUNNING!\033[0m\n")

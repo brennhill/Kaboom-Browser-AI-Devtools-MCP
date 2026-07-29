@@ -41,6 +41,7 @@ code_paths:
   - extension/popup.html
   - extension/popup.css
 test_paths:
+  - cmd/browser-agent/internal/screenrec/state_test.go
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/screenrec_wiring_test.go
   - cmd/browser-agent/tools_interact_handler_test.go

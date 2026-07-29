@@ -54,6 +54,7 @@ code_paths:
   - npm/kaboom-agentic-browser/lib/codex-config.js
   - docs/mcp-install-guide.md
 test_paths:
+  - cmd/browser-agent/internal/nativeinstall/installer_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/tools_interface_check_test.go

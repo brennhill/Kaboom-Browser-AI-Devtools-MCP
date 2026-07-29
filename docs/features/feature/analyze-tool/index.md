@@ -49,6 +49,7 @@ code_paths:
   - src/inject/message-handlers.ts
   - src/types/runtime-messages.ts
 test_paths:
+  - cmd/browser-agent/internal/toolanalyze/inspect/forms_test.go
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/tools_interface_check_test.go
   - cmd/browser-agent/internal/toolanalyze/handlers_coverage_test.go

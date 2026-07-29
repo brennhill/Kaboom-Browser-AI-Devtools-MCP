@@ -5,9 +5,82 @@
 package observe
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
+
+func TestGetSummarizedLogsFiltersAndBuildsWireResponse(t *testing.T) {
+	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
+	cap.Extension().SetTrackingStatusForTest(7, "https://app.example.test")
+	entries := []types.LogEntry{
+		{"type": "lifecycle", "message": "ignored"},
+		{"level": "warn", "message": "noisy", "tabId": float64(7), "url": "https://app.example.test", "ts": "2026-01-01T00:00:00Z"},
+		{"level": "info", "message": "wrong level", "tabId": float64(7), "url": "https://app.example.test", "ts": "2026-01-01T00:00:01Z"},
+		{"level": "error", "message": "wrong tab", "tabId": float64(9), "url": "https://app.example.test", "ts": "2026-01-01T00:00:02Z"},
+		{"level": "error", "message": "Request 1001 failed", "source": "console", "tabId": float64(7), "url": "https://app.example.test/a", "ts": "2026-01-01T00:00:03Z"},
+		{"level": "error", "message": "Request 1002 failed", "source": "console", "tabId": float64(7), "url": "https://app.example.test/b", "ts": "2026-01-01T00:00:04Z"},
+	}
+	deps := Deps{
+		Capture: cap,
+		LogEntries: func() ([]types.LogEntry, []time.Time) {
+			return entries, nil
+		},
+		IsConsoleNoise: func(entry types.LogEntry) bool {
+			return entry["message"] == "noisy"
+		},
+	}
+	req := mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`7`)}
+
+	resp := GetSummarizedLogs(deps, req, json.RawMessage(`{
+		"scope":"current_page",
+		"min_level":"warn",
+		"source":"console",
+		"min_group_size":2
+	}`))
+	id, ok := resp.ID.(json.RawMessage)
+	if !ok || string(id) != "7" {
+		t.Fatalf("response id = %v, want raw 7", resp.ID)
+	}
+	var result mcp.MCPToolResult
+	if err := json.Unmarshal(resp.Result, &result); err != nil {
+		t.Fatalf("decode result: %v", err)
+	}
+	if result.IsError || len(result.Content) != 1 {
+		t.Fatalf("unexpected result: %+v", result)
+	}
+	text := result.Content[0].Text
+	for _, want := range []string{
+		`"total_entries":2`,
+		`"noise_suppressed":1`,
+		`"groups":1`,
+		`"start":"2026-01-01T00:00:03Z"`,
+		`"end":"2026-01-01T00:00:04Z"`,
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("response missing %s: %s", want, text)
+		}
+	}
+}
+
+func TestGetSummarizedLogsRejectsUnknownScope(t *testing.T) {
+	cap := capture.NewCapture()
+	t.Cleanup(cap.Close)
+	resp := GetSummarizedLogs(
+		Deps{Capture: cap},
+		mcp.JSONRPCRequest{JSONRPC: "2.0", ID: json.RawMessage(`8`)},
+		json.RawMessage(`{"scope":"workspace"}`),
+	)
+	if !strings.Contains(string(resp.Result), "Invalid scope") {
+		t.Fatalf("unexpected result: %s", resp.Result)
+	}
+}
 
 // ============================================
 // Fingerprinting Tests

@@ -78,6 +78,9 @@ code_paths:
   - cmd/browser-agent/internal/summarypref/cache.go
   - cmd/browser-agent/tools_core.go
 test_paths:
+  - cmd/browser-agent/internal/toolinteract/action_runtime_edge_test.go
+  - cmd/browser-agent/internal/toolinteract/interact_evidence_test.go
+  - cmd/browser-agent/internal/toolinteract/interact_page_test.go
   - tests/extension/misc/upload-handler.test.js
   - tests/extension/dom/command-element-results.test.js
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go

@@ -20,6 +20,9 @@ type fakeCapture struct {
 	startSensitive bool
 	recordings     []recording.Recording
 	lookupErr      error
+	stopErr        error
+	listErr        error
+	recording      *recording.Recording
 }
 
 func (f *fakeCapture) StartRecording(name, pageURL string, sensitive bool) (string, error) {
@@ -30,23 +33,105 @@ func (f *fakeCapture) StartRecording(name, pageURL string, sensitive bool) (stri
 }
 
 func (f *fakeCapture) StopRecording(string) (int, int64, error) {
-	return 3, 125, nil
+	return 3, 125, f.stopErr
 }
 
 func (f *fakeCapture) ListRecordings(int) ([]recording.Recording, error) {
-	return f.recordings, nil
+	return f.recordings, f.listErr
 }
 
 func (f *fakeCapture) GetRecording(string) (*recording.Recording, error) {
 	if f.lookupErr != nil {
 		return nil, f.lookupErr
 	}
+	if f.recording != nil {
+		return f.recording, nil
+	}
 	return &recording.Recording{}, nil
+}
+
+func TestRecordingLifecycleAndLookupSuccesses(t *testing.T) {
+	rec := recording.Recording{Name: "checkout", StartURL: "https://example.test", ActionCount: 1}
+	deps := &fakeCapture{recordings: []recording.Recording{rec}, recording: &rec}
+	handler := NewHandler(deps, nil)
+	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}
+	for name, response := range map[string]mcp.JSONRPCResponse{
+		"stop":       handler.EventRecordingStop(req, json.RawMessage(`{"recording_id":"rec-1"}`)),
+		"list":       handler.Recordings(req, json.RawMessage(`{}`)),
+		"actions":    handler.RecordingActions(req, json.RawMessage(`{"recording_id":"rec-1"}`)),
+		"list limit": handler.Recordings(req, json.RawMessage(`{"limit":2}`)),
+	} {
+		var result mcp.MCPToolResult
+		if err := json.Unmarshal(response.Result, &result); err != nil || result.IsError {
+			t.Fatalf("%s response = %s, %v", name, response.Result, err)
+		}
+	}
+}
+
+func TestRecordingLifecycleStorageFailures(t *testing.T) {
+	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}
+	for name, response := range map[string]mcp.JSONRPCResponse{
+		"stop":    NewHandler(&fakeCapture{stopErr: errors.New("stop failed")}, nil).EventRecordingStop(req, json.RawMessage(`{"recording_id":"rec-1"}`)),
+		"list":    NewHandler(&fakeCapture{listErr: errors.New("list failed")}, nil).Recordings(req, nil),
+		"actions": NewHandler(&fakeCapture{lookupErr: errors.New("load failed")}, nil).RecordingActions(req, json.RawMessage(`{"recording_id":"rec-1"}`)),
+		"playback": NewHandler(&fakeCapture{lookupErr: errors.New("load failed")}, nil).
+			Playback(req, json.RawMessage(`{"recording_id":"rec-1"}`)),
+		"results": NewHandler(&fakeCapture{}, nil).
+			PlaybackResults(req, json.RawMessage(`{"recording_id":"rec-1"}`)),
+	} {
+		var result mcp.MCPToolResult
+		if err := json.Unmarshal(response.Result, &result); err != nil || !result.IsError {
+			t.Fatalf("%s response = %s, %v", name, response.Result, err)
+		}
+	}
+}
+
+func TestDiffParamsRequireBothRecordingIDs(t *testing.T) {
+	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}
+	for _, args := range []json.RawMessage{
+		nil,
+		json.RawMessage(`{"original_id":"before"}`),
+		json.RawMessage(`bad`),
+	} {
+		if _, response := parseDiffParams(req, args); response == nil {
+			t.Fatalf("args %s unexpectedly accepted", args)
+		}
+	}
+}
+
+func TestPlaybackAndResultsRoundTrip(t *testing.T) {
+	rec := &recording.Recording{
+		ID: "flow",
+		Actions: []recording.RecordingAction{
+			{Type: "navigate"},
+			{Type: "click", Selector: "#save", X: 10, Y: 20},
+			{Type: "type", Text: "hello"},
+		},
+	}
+	handler := NewHandler(&fakeCapture{recording: rec}, nil)
+	req := mcp.JSONRPCRequest{JSONRPC: mcp.JSONRPCVersion, ID: 1}
+	playbackResponse := handler.Playback(req, json.RawMessage(`{"recording_id":"flow"}`))
+	var playbackResult mcp.MCPToolResult
+	if err := json.Unmarshal(playbackResponse.Result, &playbackResult); err != nil || playbackResult.IsError {
+		t.Fatalf("playback = %s, %v", playbackResponse.Result, err)
+	}
+	resultsResponse := handler.PlaybackResults(req, json.RawMessage(`{"recording_id":"flow"}`))
+	var results mcp.MCPToolResult
+	if err := json.Unmarshal(resultsResponse.Result, &results); err != nil || results.IsError {
+		t.Fatalf("results = %s, %v", resultsResponse.Result, err)
+	}
+	if !strings.Contains(string(resultsResponse.Result), `actions_total`) ||
+		!strings.Contains(string(resultsResponse.Result), `coordinates`) {
+		t.Fatalf("results missing action details: %s", resultsResponse.Result)
+	}
 }
 
 func (f *fakeCapture) LookupRecording(string) (*recording.Recording, error) {
 	if f.lookupErr != nil {
 		return nil, f.lookupErr
+	}
+	if f.recording != nil {
+		return f.recording, nil
 	}
 	return &recording.Recording{}, nil
 }

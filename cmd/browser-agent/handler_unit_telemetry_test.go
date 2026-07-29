@@ -622,3 +622,23 @@ func TestMCPHandlerHandleHTTP_IDNullIsInvalidRequest(t *testing.T) {
 		t.Fatalf("id:null response id = %v, want null", nullIDResp.ID)
 	}
 }
+
+func TestMCPHandlerEvictsOnlyStaleTelemetryCursors(t *testing.T) {
+	t.Parallel()
+
+	now := time.Now()
+	handler := NewMCPHandler(nil, "v-test")
+	handler.telemetryCursors = map[string]passiveTelemetryCursor{
+		"fresh": {lastSeen: now},
+		"stale": {lastSeen: now.Add(-telemetryCursorTTL - time.Second)},
+	}
+
+	handler.evictStaleCursorsLocked()
+
+	if _, ok := handler.telemetryCursors["stale"]; ok {
+		t.Fatal("stale telemetry cursor was not evicted")
+	}
+	if _, ok := handler.telemetryCursors["fresh"]; !ok {
+		t.Fatal("fresh telemetry cursor was evicted")
+	}
+}

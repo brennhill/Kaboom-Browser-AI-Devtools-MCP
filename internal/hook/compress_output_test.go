@@ -313,3 +313,47 @@ func TestCompressOutput_ContentDetection_NoCommand(t *testing.T) {
 		t.Errorf("Category = %q, want test_output", result.Category)
 	}
 }
+
+func TestBuildCompressorsKeepOnlyActionableLines(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		got   string
+		keeps []string
+		drops string
+	}{
+		{
+			name:  "npm",
+			got:   compressByNpmBuild([]string{"building", "ERROR bundle failed", "Module not found: x"}),
+			keeps: []string{"ERROR bundle failed", "Module not found: x"},
+			drops: "building",
+		},
+		{
+			name:  "cargo",
+			got:   compressByCargoBuild([]string{"Compiling crate", "error[E0308]: mismatched types"}),
+			keeps: []string{"error[E0308]: mismatched types"},
+			drops: "Compiling crate",
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			for _, want := range tt.keeps {
+				if !strings.Contains(tt.got, want) {
+					t.Errorf("compressed output %q does not contain %q", tt.got, want)
+				}
+			}
+			if strings.Contains(tt.got, tt.drops) {
+				t.Errorf("compressed output %q retained noise %q", tt.got, tt.drops)
+			}
+		})
+	}
+
+	if got := compressByNpmBuild([]string{"building", "done"}); got != "" {
+		t.Fatalf("noise-only npm output = %q, want empty", got)
+	}
+	if got := compressByCargoBuild([]string{"Compiling crate", "Finished"}); got != "" {
+		t.Fatalf("noise-only cargo output = %q, want empty", got)
+	}
+}

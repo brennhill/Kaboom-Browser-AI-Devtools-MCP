@@ -71,6 +71,10 @@ code_paths:
   - internal/util/proc_unix.go
   - internal/util/proc_windows.go
 test_paths:
+  - cmd/browser-agent/cli_modes_subprocess_test.go
+  - cmd/browser-agent/main_connection_adapters_test.go
+  - cmd/browser-agent/main_connection_recovery_primitives_test.go
+  - cmd/browser-agent/server_telemetry_contract_test.go
   - internal/capture/health_reader_owner_test.go
   - cmd/browser-agent/internal/toolrouting/routing_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go

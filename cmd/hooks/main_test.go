@@ -27,7 +27,11 @@ func TestMain(m *testing.M) {
 
 	binPath := filepath.Join(dir, "kaboom-hooks")
 	repoRoot := findRepoRoot()
-	cmd := exec.Command("go", "build", "-o", binPath, ".")
+	buildArgs := []string{"build", "-o", binPath, "."}
+	if os.Getenv("KABOOM_GO_COVERDIR") != "" {
+		buildArgs = []string{"build", "-cover", "-coverpkg=./...", "-o", binPath, "."}
+	}
+	cmd := exec.Command("go", buildArgs...)
 	cmd.Dir = filepath.Join(repoRoot, "cmd", "hooks")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -37,6 +41,20 @@ func TestMain(m *testing.M) {
 
 	hooksBinary = binPath
 	os.Exit(m.Run())
+}
+
+func hooksCommand(t *testing.T, args ...string) *exec.Cmd {
+	t.Helper()
+	cmd := exec.Command(hooksBinary, args...)
+	cmd.Env = os.Environ()
+	if root := os.Getenv("KABOOM_GO_COVERDIR"); root != "" {
+		dir, err := os.MkdirTemp(root, "hooks-")
+		if err != nil {
+			t.Fatalf("create hook coverage directory: %v", err)
+		}
+		cmd.Env = append(os.Environ(), "GOCOVERDIR="+dir)
+	}
+	return cmd
 }
 
 func findRepoRoot() string {
@@ -58,7 +76,7 @@ func findRepoRoot() string {
 
 func TestCLI_NoArgs(t *testing.T) {
 	t.Parallel()
-	cmd := exec.Command(hooksBinary)
+	cmd := hooksCommand(t)
 	out, err := cmd.CombinedOutput()
 	if err == nil {
 		t.Fatal("expected non-zero exit with no args")
@@ -75,7 +93,7 @@ func TestCLI_NoArgs(t *testing.T) {
 
 func TestCLI_Version(t *testing.T) {
 	t.Parallel()
-	out, err := exec.Command(hooksBinary, "--version").CombinedOutput()
+	out, err := hooksCommand(t, "--version").CombinedOutput()
 	if err != nil {
 		t.Fatalf("--version failed: %v\n%s", err, out)
 	}
@@ -92,7 +110,7 @@ func TestCLI_Version(t *testing.T) {
 
 func TestCLI_Help(t *testing.T) {
 	t.Parallel()
-	out, err := exec.Command(hooksBinary, "--help").CombinedOutput()
+	out, err := hooksCommand(t, "--help").CombinedOutput()
 	if err != nil {
 		t.Fatalf("--help failed: %v\n%s", err, out)
 	}
@@ -107,7 +125,7 @@ func TestCLI_Help(t *testing.T) {
 
 func TestCLI_UnknownCommand(t *testing.T) {
 	t.Parallel()
-	cmd := exec.Command(hooksBinary, "nonexistent")
+	cmd := hooksCommand(t, "nonexistent")
 	out, err := cmd.CombinedOutput()
 	if err == nil {
 		t.Fatal("expected error for unknown command")
@@ -119,7 +137,7 @@ func TestCLI_UnknownCommand(t *testing.T) {
 
 func TestCLI_QualityGate_EmptyStdin(t *testing.T) {
 	t.Parallel()
-	cmd := exec.Command(hooksBinary, "quality-gate")
+	cmd := hooksCommand(t, "quality-gate")
 	cmd.Stdin = strings.NewReader("")
 	if err := cmd.Run(); err != nil {
 		t.Fatalf("quality-gate with empty stdin should exit 0, got: %v", err)
@@ -128,7 +146,7 @@ func TestCLI_QualityGate_EmptyStdin(t *testing.T) {
 
 func TestCLI_CompressOutput_EmptyStdin(t *testing.T) {
 	t.Parallel()
-	cmd := exec.Command(hooksBinary, "compress-output")
+	cmd := hooksCommand(t, "compress-output")
 	cmd.Stdin = strings.NewReader("")
 	if err := cmd.Run(); err != nil {
 		t.Fatalf("compress-output with empty stdin should exit 0, got: %v", err)
@@ -157,7 +175,7 @@ func TestCLI_QualityGate_ValidInput(t *testing.T) {
 	}
 	inputJSON, _ := json.Marshal(input)
 
-	cmd := exec.Command(hooksBinary, "quality-gate")
+	cmd := hooksCommand(t, "quality-gate")
 	cmd.Stdin = bytes.NewReader(inputJSON)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -202,7 +220,7 @@ func TestCLI_CompressOutput_GoTestOutput(t *testing.T) {
 	}
 	inputJSON, _ := json.Marshal(input)
 
-	cmd := exec.Command(hooksBinary, "compress-output")
+	cmd := hooksCommand(t, "compress-output")
 	cmd.Stdin = bytes.NewReader(inputJSON)
 	// Set port 0 so token savings POST silently fails (no daemon).
 	cmd.Env = append(os.Environ(), "KABOOM_PORT=0")
@@ -217,5 +235,47 @@ func TestCLI_CompressOutput_GoTestOutput(t *testing.T) {
 	var result map[string]any
 	if err := json.Unmarshal(out, &result); err != nil {
 		t.Fatalf("output is not valid JSON: %v\n%s", err, out)
+	}
+}
+
+func TestCLI_StatefulHookCommands(t *testing.T) {
+	project := t.TempDir()
+	if err := os.WriteFile(filepath.Join(project, "go.mod"), []byte("module example.test/app\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	edited := filepath.Join(project, "service.go")
+	if err := os.WriteFile(edited, []byte("package app\n\nfunc Exported() {}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	input, err := json.Marshal(map[string]any{
+		"tool_name": "Edit",
+		"tool_input": map[string]string{
+			"file_path":  edited,
+			"new_string": "func Exported() { println(\"changed\") }",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, command := range []string{"session-track", "blast-radius", "decision-guard"} {
+		t.Run(command, func(t *testing.T) {
+			cmd := hooksCommand(t, command)
+			cmd.Stdin = bytes.NewReader(input)
+			cmd.Env = append(cmd.Env,
+				"HOME="+t.TempDir(),
+				"KABOOM_STATE_DIR="+t.TempDir(),
+			)
+			output, err := cmd.CombinedOutput()
+			if err != nil {
+				t.Fatalf("%s failed: %v\n%s", command, err, output)
+			}
+			if len(output) > 0 {
+				var result map[string]any
+				if err := json.Unmarshal(output, &result); err != nil {
+					t.Fatalf("%s output is not hook JSON: %v\n%s", command, err, output)
+				}
+			}
+		})
 	}
 }

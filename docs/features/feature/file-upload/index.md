@@ -24,6 +24,7 @@ code_paths:
   - internal/upload/osauto/pid.go
   - scripts/smoke-tests/upload-server.py
 test_paths:
+  - internal/upload/osauto/pid_test.go
   - cmd/browser-agent/internal/toolinteract/interactupload/upload_test.go
   - internal/upload/httpapi/contracts_test.go
   - internal/upload/httpapi/handlers_test.go

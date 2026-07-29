@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/bridge"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/push"
 )
 
 func TestExtractClientCapabilities_ClaudeCode(t *testing.T) {
@@ -20,6 +21,48 @@ func TestExtractClientCapabilities_ClaudeCode(t *testing.T) {
 	}
 	if caps.ClientName != "claude-code" {
 		t.Fatalf("expected claude-code, got %s", caps.ClientName)
+	}
+}
+
+func TestPushRuntimeFramingCallbackAndOutboundPayloads(t *testing.T) {
+	var payloads [][]byte
+	var framings []bridge.StdioFraming
+	runtime := NewRuntime(func(payload []byte, framing bridge.StdioFraming) {
+		payloads = append(payloads, append([]byte(nil), payload...))
+		framings = append(framings, framing)
+	})
+	runtime.StoreFraming(bridge.StdioFramingContentLength)
+	if runtime.Framing() != bridge.StdioFramingContentLength {
+		t.Fatalf("framing = %v", runtime.Framing())
+	}
+
+	var changed push.ClientCapabilities
+	runtime.OnCapabilitiesChange(func(caps push.ClientCapabilities) { changed = caps })
+	wantCaps := push.ClientCapabilities{SupportsSampling: true, ClientName: "client"}
+	runtime.SetCapabilities(wantCaps)
+	if changed != wantCaps {
+		t.Fatalf("callback caps = %+v", changed)
+	}
+
+	request := push.SamplingRequest{JSONRPC: "2.0", ID: 7, Method: "sampling/createMessage"}
+	if err := runtime.SendSampling(request); err != nil {
+		t.Fatal(err)
+	}
+	runtime.SendNotification("notifications/message", map[string]any{"message": "hello"})
+	if len(payloads) != 2 || len(framings) != 2 {
+		t.Fatalf("writes = %d payloads, %d framings", len(payloads), len(framings))
+	}
+	for index, payload := range payloads {
+		if !json.Valid(payload) || framings[index] != bridge.StdioFramingContentLength {
+			t.Fatalf("write %d = %s, %v", index, payload, framings[index])
+		}
+	}
+}
+
+func TestExtractClientCapabilitiesNullSampling(t *testing.T) {
+	caps := ExtractClientCapabilities(json.RawMessage(`{"capabilities":{"sampling":null},"clientInfo":{"name":"codex"}}`))
+	if caps.SupportsSampling || !caps.SupportsNotifications {
+		t.Fatalf("capabilities = %+v", caps)
 	}
 }
 

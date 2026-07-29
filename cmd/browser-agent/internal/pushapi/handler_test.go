@@ -263,3 +263,38 @@ func TestPushEventID_HasPrefix(t *testing.T) {
 		t.Fatalf("expected push-chat- prefix, got %s", id)
 	}
 }
+
+func TestHandleDrainContracts(t *testing.T) {
+	t.Parallel()
+	t.Run("method", func(t *testing.T) {
+		handler := NewHandler(nil, nil, nil, testJSONResponse, 1024)
+		w := httptest.NewRecorder()
+		handler.HandleDrain(w, httptest.NewRequest(http.MethodPost, "/push/drain", nil))
+		if w.Code != http.StatusMethodNotAllowed {
+			t.Fatalf("status = %d", w.Code)
+		}
+	})
+	t.Run("nil inbox", func(t *testing.T) {
+		handler := NewHandler(nil, nil, nil, testJSONResponse, 1024)
+		w := httptest.NewRecorder()
+		handler.HandleDrain(w, httptest.NewRequest(http.MethodGet, "/push/drain", nil))
+		if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"count":0`) {
+			t.Fatalf("response = %d %s", w.Code, w.Body.String())
+		}
+	})
+	t.Run("empty and populated", func(t *testing.T) {
+		inbox := push.NewPushInbox(3)
+		handler := NewHandler(nil, inbox, nil, testJSONResponse, 1024)
+		w := httptest.NewRecorder()
+		handler.HandleDrain(w, httptest.NewRequest(http.MethodGet, "/push/drain", nil))
+		if !strings.Contains(w.Body.String(), `"count":0`) {
+			t.Fatalf("empty response = %s", w.Body.String())
+		}
+		inbox.Enqueue(push.PushEvent{ID: "one", Type: "chat"})
+		w = httptest.NewRecorder()
+		handler.HandleDrain(w, httptest.NewRequest(http.MethodGet, "/push/drain", nil))
+		if !strings.Contains(w.Body.String(), `"count":1`) || inbox.Len() != 0 {
+			t.Fatalf("populated response = %s, inbox=%d", w.Body.String(), inbox.Len())
+		}
+	})
+}

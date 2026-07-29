@@ -24,6 +24,8 @@ code_paths:
   - scripts/check-folder-size.cjs
   - scripts/check-dormant-tests.sh
   - scripts/test-js-sharded.sh
+  - scripts/build/run-go-coverage.sh
+  - scripts/build/merge-go-coverage.mjs
   - package.json
   - .github/workflows/ci.yml
 test_paths:
@@ -39,6 +41,7 @@ test_paths:
   - internal/tracking/stats_endpoint_test.go
   - scripts/check-file-length.test.mjs
   - scripts/check-folder-size.test.mjs
+  - scripts/tests/contracts/go-coverage-profile.test.mjs
   - scripts/release/install-upgrade-regression.contract.test.mjs
   - scripts/test-install-hooks-only.sh
   - scripts/docs/features/check-feature-paths.test.mjs
@@ -69,6 +72,11 @@ Automated code quality enforcement that catches architectural drift, duplicate c
 Convention scanning applies extension, generated-file, size, and directory
 filters through one shared source-walk boundary so detection and discovery
 cannot drift.
+
+`make test-cover` performs one uncached, cross-package Go run and also captures
+normally exiting black-box CLI binaries. Coverage blocks are merged by maximum
+execution count, so cross-package behavior is retained without counting the
+same statement more than once.
 
 ## Architecture
 

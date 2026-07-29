@@ -11,12 +11,78 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 )
 
 func testJSONResponse(w http.ResponseWriter, status int, value any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(value)
+}
+
+func TestDashboardPagesAndMethodContracts(t *testing.T) {
+	for name, handler := range map[string]http.HandlerFunc{
+		"diagnostics": Diagnostics(testJSONResponse),
+		"logs":        Logs(testJSONResponse),
+		"setup":       Setup(testJSONResponse),
+		"docs":        Docs(testJSONResponse),
+	} {
+		t.Run(name, func(t *testing.T) {
+			response := httptest.NewRecorder()
+			handler(response, httptest.NewRequest(http.MethodGet, "/"+name, nil))
+			if response.Code != http.StatusOK || response.Header().Get("Content-Type") != "text/html; charset=utf-8" {
+				t.Fatalf("GET = %d %q", response.Code, response.Header().Get("Content-Type"))
+			}
+			response = httptest.NewRecorder()
+			handler(response, httptest.NewRequest(http.MethodPost, "/"+name, nil))
+			if response.Code != http.StatusMethodNotAllowed {
+				t.Fatalf("POST = %d", response.Code)
+			}
+		})
+	}
+}
+
+func TestStatusWithConnectedCaptureAndMethodValidation(t *testing.T) {
+	store := capture.NewCapture()
+	store.Extension().UpdateTrackedTab(7, "https://example.test", "Example")
+	handler := Status(StatusOptions{
+		Version: "test", StartedAt: time.Now(), Capture: store, JSONResponse: testJSONResponse,
+		Logs: func() (int, int) { return 0, 100 },
+		Terminal: func() (int, int, []string) {
+			return 0, 0, nil
+		},
+		ListenPort: func() int { return 7890 },
+		Audit:      func() any { return nil },
+	})
+	response := httptest.NewRecorder()
+	handler(response, httptest.NewRequest(http.MethodGet, "/api/status", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("GET status = %d", response.Code)
+	}
+	response = httptest.NewRecorder()
+	handler(response, httptest.NewRequest(http.MethodPost, "/api/status", nil))
+	if response.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("POST status = %d", response.Code)
+	}
+}
+
+func TestRootRejectsUnknownPathAndMethod(t *testing.T) {
+	handler := Root(RootOptions{Name: "kaboom", Version: "test", JSONResponse: testJSONResponse})
+	for _, tc := range []struct {
+		method string
+		path   string
+		status int
+	}{
+		{method: http.MethodGet, path: "/missing", status: http.StatusNotFound},
+		{method: http.MethodPost, path: "/", status: http.StatusMethodNotAllowed},
+	} {
+		response := httptest.NewRecorder()
+		handler(response, httptest.NewRequest(tc.method, tc.path, nil))
+		if response.Code != tc.status {
+			t.Fatalf("%s %s = %d", tc.method, tc.path, response.Code)
+		}
+	}
 }
 
 func TestRootNegotiatesHTMLAndJSON(t *testing.T) {

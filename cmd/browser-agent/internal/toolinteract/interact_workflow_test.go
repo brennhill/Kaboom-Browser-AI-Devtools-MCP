@@ -216,3 +216,34 @@ func TestRemainingNavigateAndDocumentTimeoutMs(t *testing.T) {
 		t.Fatalf("expected positive remaining, got %d ok=%v", ms, ok)
 	}
 }
+
+func TestBuildRetryEvidenceSummaryPrefersEffectiveURL(t *testing.T) {
+	retryContext := map[string]any{"attempt": 2, "terminal_stop": true}
+	evidence := map[string]any{"screenshot": "shot.png"}
+	summary := buildRetryEvidenceSummary(
+		"corr-7",
+		"element_not_found",
+		retryContext,
+		map[string]any{
+			"evidence":      evidence,
+			"effective_url": "https://effective.example.test",
+			"resolved_url":  "https://resolved.example.test",
+		},
+	)
+	if summary["correlation_id"] != "corr-7" ||
+		summary["failure_reason"] != "element_not_found" ||
+		summary["url"] != "https://effective.example.test" {
+		t.Fatalf("summary = %#v", summary)
+	}
+	if summary["captured_evidence"] == nil || summary["retry_context"] == nil {
+		t.Fatalf("summary omitted evidence: %#v", summary)
+	}
+
+	resolved := buildRetryEvidenceSummary("", "", nil, map[string]any{
+		"effective_url": " ",
+		"resolved_url":  "https://resolved.example.test",
+	})
+	if resolved["url"] != "https://resolved.example.test" {
+		t.Fatalf("resolved fallback = %#v", resolved)
+	}
+}

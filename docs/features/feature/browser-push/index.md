@@ -17,6 +17,8 @@ code_paths:
   - src/background/push-handler.ts
   - src/content/ui/chat-widget.ts
 test_paths:
+  - cmd/browser-agent/internal/pushapi/handler_test.go
+  - cmd/browser-agent/internal/pushapi/runtime_test.go
   - internal/push/inbox_test.go
   - internal/push/router_test.go
   - internal/push/sampling_test.go

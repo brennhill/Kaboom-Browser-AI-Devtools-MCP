@@ -28,6 +28,7 @@ code_paths:
   - cmd/browser-agent/internal/testpages/websocket.go
   - cmd/browser-agent/internal/wsframe/frame.go
 test_paths:
+  - cmd/browser-agent/internal/testpages/websocket_test.go
   - tests/cli/contracts/uat-harness-regressions.test.cjs
   - scripts/contracts/check-architecture-boundaries.test.cjs
   - tests/cli/contracts/test-layout-contract.test.cjs

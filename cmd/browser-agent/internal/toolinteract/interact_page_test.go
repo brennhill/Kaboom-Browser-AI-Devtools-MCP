@@ -6,6 +6,7 @@ package toolinteract
 import (
 	"encoding/json"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"strings"
 	"testing"
 )
 
@@ -171,5 +172,61 @@ func TestSetNestedElements_Nested(t *testing.T) {
 	inner := data["result"].(map[string]any)["elements"].([]any)
 	if len(inner) != 1 {
 		t.Fatal("expected nested elements replaced")
+	}
+}
+
+func TestEnrichExploreWithMenusSeparatesNavigation(t *testing.T) {
+	payload := map[string]any{
+		"interactive_count": float64(4),
+		"interactive_elements": []any{
+			map[string]any{"index": float64(0), "label": "Home", "tag": "a", "href": "/", "landmark_tag": "nav", "visible": true, "bbox": map[string]any{"x": float64(10), "y": float64(10), "width": float64(50), "height": float64(20)}},
+			map[string]any{"index": float64(1), "label": "Docs", "tag": "a", "href": "/docs", "landmark_tag": "nav", "visible": true, "bbox": map[string]any{"x": float64(70), "y": float64(10), "width": float64(50), "height": float64(20)}},
+			map[string]any{"index": float64(2), "label": "Save", "tag": "button", "role": "button", "visible": false},
+			"unparsed",
+		},
+	}
+	resp := mcp.Succeed(testReq(), "Explore page", payload)
+	enriched := enrichExploreWithMenus(resp)
+	result := parseToolResult(t, enriched)
+	text := firstText(result)
+	if !strings.Contains(text, `"site_menus"`) || !strings.Contains(text, `"interactive_count":2`) {
+		t.Fatalf("enriched response = %s", text)
+	}
+	if strings.Contains(text, `"label":"Home"`) && strings.Contains(text, `"interactive_elements":[{"bbox"`) {
+		t.Fatalf("menu elements remained in interactive list: %s", text)
+	}
+}
+
+func TestEnrichExploreWithMenusLeavesUnusableResultsAlone(t *testing.T) {
+	responses := []mcp.JSONRPCResponse{
+		{Result: json.RawMessage(`not-json`)},
+		mcp.SucceedText(testReq(), "no JSON here"),
+		mcp.SucceedText(testReq(), "prefix\n{bad"),
+		mcp.Succeed(testReq(), "Explore", map[string]any{"interactive_elements": []any{}}),
+	}
+	for _, response := range responses {
+		before := string(response.Result)
+		if got := enrichExploreWithMenus(response); string(got.Result) != before {
+			t.Fatalf("response changed: %s -> %s", before, got.Result)
+		}
+	}
+}
+
+func TestAppendInteractiveToResponseBestEffortFailures(t *testing.T) {
+	h, fs := newFakePageActions(t)
+	base := mcp.JSONRPCResponse{Result: json.RawMessage(`bad`)}
+	fs.waitFn = func(req mcp.JSONRPCRequest, _ string, _ json.RawMessage, _ string) mcp.JSONRPCResponse {
+		return mcp.SucceedText(req, "button")
+	}
+	if got := h.AppendInteractiveToResponse(base, testReq()); string(got.Result) != "bad" {
+		t.Fatalf("malformed base changed: %s", got.Result)
+	}
+
+	fs.waitFn = func(req mcp.JSONRPCRequest, _ string, _ json.RawMessage, _ string) mcp.JSONRPCResponse {
+		return mcp.Fail(req, "blocked", "blocked", "retry")
+	}
+	base = mcp.SucceedText(testReq(), "complete")
+	if got := h.AppendInteractiveToResponse(base, testReq()); string(got.Result) != string(base.Result) {
+		t.Fatalf("error list response changed base: %s", got.Result)
 	}
 }

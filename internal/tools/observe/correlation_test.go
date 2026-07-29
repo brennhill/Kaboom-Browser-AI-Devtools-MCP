@@ -6,6 +6,9 @@ package observe
 import (
 	"testing"
 	"time"
+
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/types"
 )
 
 func TestBuildTimelineSummary_CountsByType(t *testing.T) {
@@ -93,5 +96,94 @@ func TestBuildErrorBundlesSummary_Counts(t *testing.T) {
 	// Verify metadata is included
 	if _, ok := result["metadata"]; !ok {
 		t.Error("expected metadata key in error bundles summary")
+	}
+}
+
+func TestCorrelationWindowJoinsOnlyEntriesInsideWindow(t *testing.T) {
+	t.Parallel()
+	end := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	start := end.Add(-3 * time.Second)
+	inside := end.Add(-time.Second)
+	bodies := []types.NetworkBody{
+		{Timestamp: inside.Format(time.RFC3339Nano), Method: "GET", URL: "/inside", Status: 200},
+		{Timestamp: start.Format(time.RFC3339Nano), URL: "/boundary"},
+		{Timestamp: "bad", URL: "/bad"},
+	}
+	waterfall := []types.NetworkWaterfallEntry{
+		{Timestamp: inside, URL: "/inside", PageURL: "https://example.test"},
+		{Timestamp: end.Add(time.Second), URL: "/late"},
+	}
+	actions := []types.EnhancedAction{
+		{Timestamp: inside.UnixMilli(), Type: "click", URL: "/inside", Value: "v", Selectors: map[string]any{"css": "#go"}},
+		{Timestamp: start.UnixMilli(), Type: "click"},
+	}
+	logs := []timedEntry{
+		{ts: inside, data: map[string]any{"level": "info", "message": "inside", "timestamp": inside.Format(time.RFC3339)}},
+		{ts: end.Add(time.Second), data: map[string]any{"message": "late"}},
+	}
+	if got := matchNetworkBodies(bodies, start, end); len(got) != 1 || got[0]["url"] != "/inside" {
+		t.Fatalf("network matches = %#v", got)
+	}
+	if got := matchWaterfall(waterfall, start, end); len(got) != 1 || got[0]["url"] != "/inside" {
+		t.Fatalf("waterfall matches = %#v", got)
+	}
+	if got := matchActions(actions, start, end); len(got) != 1 || got[0]["selector"] != "#go" || got[0]["value"] != "v" {
+		t.Fatalf("action matches = %#v", got)
+	}
+	if got := matchLogs(logs, start, end); len(got) != 1 || got[0]["message"] != "inside" {
+		t.Fatalf("log matches = %#v", got)
+	}
+
+	errors := []timedEntry{{ts: end, data: map[string]any{"message": "boom", "timestamp": end.Format(time.RFC3339)}}}
+	bundles := buildBundles(errors, bundleContext{
+		networkBodies: bodies, waterfallEntries: waterfall, actions: actions, logs: logs, windowSeconds: 3,
+	})
+	if len(bundles) != 1 || bundles[0]["context_window_seconds"] != 3 {
+		t.Fatalf("bundles = %#v", bundles)
+	}
+}
+
+func TestCorrelationTabFiltersAndTimelineIncludes(t *testing.T) {
+	t.Parallel()
+	bodies := []types.NetworkBody{{TabID: 1}, {TabID: 2}}
+	if got := filterNetworkBodiesByTab(bodies, 2); len(got) != 1 || got[0].TabID != 2 {
+		t.Fatalf("network tab filter = %#v", got)
+	}
+	actions := []types.EnhancedAction{{TabID: 1}, {TabID: 2}}
+	if got := filterActionsByTab(actions, 1); len(got) != 1 || got[0].TabID != 1 {
+		t.Fatalf("action tab filter = %#v", got)
+	}
+
+	cap := capture.NewCapture()
+	entries := []types.NetworkWaterfallEntry{{PageURL: "https://example.test/page"}, {PageURL: "https://other.test"}, {}}
+	if got := filterWaterfallByTab(entries, 7, cap); len(got) != len(entries) {
+		t.Fatalf("untracked waterfall = %#v", got)
+	}
+	cap.Extension().UpdateTrackedTab(7, "https://example.test", "Example")
+	got := filterWaterfallByTab(entries, 7, cap)
+	if len(got) != 2 || got[0].PageURL != "https://example.test/page" {
+		t.Fatalf("tracked waterfall = %#v", got)
+	}
+
+	all := parseTimelineIncludes(nil)
+	if !all.actions || !all.errors || !all.network || !all.ws {
+		t.Fatalf("default includes = %+v", all)
+	}
+	selected := parseTimelineIncludes([]string{"actions", "errors", "network", "websocket", "unknown"})
+	if !selected.actions || !selected.errors || !selected.network || !selected.ws {
+		t.Fatalf("selected includes = %+v", selected)
+	}
+}
+
+func TestErrorEntryAndTimestampFallback(t *testing.T) {
+	t.Parallel()
+	ts := "2026-01-02T03:04:05Z"
+	entry := map[string]any{"message": "boom", "source": "app", "ts": ts}
+	if got := parseEntryTimestamp(entry); got.IsZero() {
+		t.Fatal("ts fallback was not parsed")
+	}
+	mapped := errorEntryToMap(entry)
+	if mapped["message"] != "boom" || mapped["source"] != "app" {
+		t.Fatalf("error map = %#v", mapped)
 	}
 }

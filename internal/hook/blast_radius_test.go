@@ -196,6 +196,48 @@ func TestBuildImportGraph(t *testing.T) {
 	}
 }
 
+func TestExtractImportsForPythonAndRust(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "pkg"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, root, "shared.py", "VALUE = 1\n")
+	writeFile(t, root, "pkg/helper.py", "VALUE = 2\n")
+	writeFile(t, root, "pkg/app.py", "import shared\nfrom .helper import VALUE\nimport external_package\n")
+
+	pythonImports := extractImports(filepath.Join(root, "pkg/app.py"), ".py", root, "")
+	for _, want := range []string{"shared.py", filepath.Join("pkg", "helper.py")} {
+		found := false
+		for _, got := range pythonImports {
+			if got == want {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("Python imports %v missing %q", pythonImports, want)
+		}
+	}
+
+	if err := os.MkdirAll(filepath.Join(root, "src", "model"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, root, "src/client.rs", "pub fn call() {}\n")
+	writeFile(t, root, "src/model/mod.rs", "pub struct Model;\n")
+	writeFile(t, root, "src/main.rs", "mod client;\nuse crate::model::Model;\nuse external::Thing;\n")
+	rustImports := extractImports(filepath.Join(root, "src/main.rs"), ".rs", root, "")
+	for _, want := range []string{filepath.Join("src", "client.rs"), filepath.Join("src", "model", "mod.rs")} {
+		found := false
+		for _, got := range rustImports {
+			if got == want {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("Rust imports %v missing %q", rustImports, want)
+		}
+	}
+}
+
 // setupTestProject creates a temporary Go project with known import relationships.
 func setupTestProject(t *testing.T) string {
 	t.Helper()
