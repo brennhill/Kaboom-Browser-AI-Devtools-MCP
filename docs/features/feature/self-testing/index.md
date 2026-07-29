@@ -17,6 +17,7 @@ code_paths:
   - scripts/test-new-uat.sh
   - scripts/uat-result-lib.sh
   - scripts/tests/framework/framework.sh
+  - scripts/tests/framework/uat-artifacts.sh
   - scripts/tests/framework/uat-user-state.sh
   - scripts/test-all-tools-comprehensive.sh
   - scripts/cleanup-test-daemons.sh
@@ -95,6 +96,10 @@ last_verified_date: 2026-03-05
 - Shared UAT result parsing: `scripts/uat-result-lib.sh`
 - Comprehensive aggregation reports pass/fail/skip counts and fails closed when
   any selected category omits or corrupts its structured result file.
+- `make uat` runs both suite boundaries and emits canonical
+  `artifacts/uat/uat-results.json` and `uat-results.xml` reports. Both contain
+  every selected category, skip reasons, durations, prerequisite readiness,
+  aggregation completeness, and user-state restoration status.
 - Category daemon lifecycle and result-file contract: `scripts/tests/framework/framework.sh`
 - User-state guard: `scripts/tests/framework/uat-user-state.sh` snapshots the
   prior daemon executable, LaunchAgent lifecycle, version, and tracked tab

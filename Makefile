@@ -28,7 +28,7 @@ PLATFORMS := \
 	pypi-binaries pypi-build pypi-publish pypi-test-publish pypi-clean \
 	security-check pre-commit verify-all npm-binaries validate-semver \
 	verify-llm check-folder-size check-structure check-dormant-tests folder-baseline-update \
-	test-upgrade-guards release-gate clean-test-daemons \
+	test-upgrade-guards release-gate clean-test-daemons uat \
 	generate-wire-types generate-dom-primitives \
 	site-dev site-build site-preview \
 	$(PLATFORMS)
@@ -40,6 +40,9 @@ GO_TEST_P ?= 8
 GO_TEST_STATE_DIR ?= /tmp/kaboom-state-test
 GO_TEST_TOOLCHAIN ?= auto
 GO_TEST_CACHE_DIR ?= /tmp/go-build-cache
+
+uat:
+	./scripts/test-all-tools-comprehensive.sh --suite all
 
 all: validate-semver clean build
 

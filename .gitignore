@@ -38,6 +38,7 @@ Thumbs.db
 tests/e2e/.tmp/
 tests/e2e/test-results/
 tests/e2e/playwright-report/
+/artifacts/uat/
 
 # Lint/build caches
 .eslintcache

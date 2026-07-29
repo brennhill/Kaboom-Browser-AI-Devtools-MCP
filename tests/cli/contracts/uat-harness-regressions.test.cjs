@@ -252,6 +252,10 @@ describe('comprehensive UAT harness regressions', () => {
         'scripts/tests/framework/uat-user-state.sh',
         join(testsDir, 'framework', 'uat-user-state.sh')
       )
+      copyFileSync(
+        'scripts/tests/framework/uat-artifacts.sh',
+        join(testsDir, 'framework', 'uat-artifacts.sh')
+      )
       const wrapper = join(root, 'kaboom-agentic-browser')
       writeFileSync(wrapper, '#!/bin/sh\nexit 0\n')
       chmodSync(wrapper, 0o755)
@@ -285,16 +289,25 @@ describe('comprehensive UAT harness regressions', () => {
       }
       return { root, wrapper }
     }
-    const run = ({ root, wrapper }) =>
+    const run = ({ root, wrapper }) => {
+      const artifactDir = join(root, 'artifacts')
+      const result =
       require('node:child_process').spawnSync(
         '/bin/bash',
         ['scripts/test-all-tools-comprehensive.sh', '--suite', 'offline'],
         {
           cwd: process.cwd(),
           encoding: 'utf8',
-          env: { ...process.env, KABOOM_PROJECT_ROOT: root, KABOOM_UAT_WRAPPER: wrapper }
+          env: {
+            ...process.env,
+            KABOOM_PROJECT_ROOT: root,
+            KABOOM_UAT_WRAPPER: wrapper,
+            KABOOM_UAT_ARTIFACT_DIR: artifactDir
+          }
         }
       )
+      return { ...result, artifactDir }
+    }
 
     const missing = run(makeProject(false))
     assert.equal(missing.status, 1)
@@ -304,6 +317,40 @@ describe('comprehensive UAT harness regressions', () => {
     assert.equal(complete.status, 0)
     assert.match(complete.stdout, /TOTAL\s+\|\s+17\s+\|\s+0\s+\|\s+17\s+\|\s+34/)
     assert.match(complete.stdout, /ALL 17 TESTS PASSED \(17 skipped\)/)
+    const report = JSON.parse(readFileSync(join(complete.artifactDir, 'uat-results.json'), 'utf8'))
+    assert.equal(report.categories.length, 17)
+    assert.equal(report.totals.skip, 17)
+    assert.equal(report.restoration.status, 'not_required')
+    assert.match(readFileSync(join(complete.artifactDir, 'uat-results.xml'), 'utf8'), /<testsuites/)
+  })
+
+  test('machine-readable artifacts preserve skip reasons and incomplete categories', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'kaboom-uat-artifacts-'))
+    const records = join(dir, 'categories.ndjson')
+    const json = join(dir, 'uat.json')
+    const junit = join(dir, 'uat.xml')
+    writeFileSync(records, [
+      '{"id":"01","name":"Protocol & <XML>","pass":2,"fail":0,"skip":1,"total":3,"elapsed_seconds":4,"result_status":"complete","skip_reasons":["Needs connected browser"]}',
+      '{"id":"02","name":"Observe","pass":0,"fail":1,"skip":0,"total":1,"elapsed_seconds":1,"result_status":"missing_result","skip_reasons":[]}'
+    ].join('\n'))
+
+    execFileSync('/bin/bash', [
+      '-c',
+      'source scripts/tests/framework/uat-artifacts.sh; uat_emit_artifacts "$1" "$2" "$3" all 5 failed ready',
+      'bash',
+      records,
+      json,
+      junit
+    ], { cwd: process.cwd() })
+
+    const report = JSON.parse(readFileSync(json, 'utf8'))
+    assert.deepEqual(report.categories[0].skip_reasons, ['Needs connected browser'])
+    assert.equal(report.totals.aggregation_errors, 1)
+    assert.equal(report.restoration.status, 'failed')
+    const xml = readFileSync(junit, 'utf8')
+    assert.match(xml, /Protocol &amp; &lt;XML&gt;/)
+    assert.match(xml, /<skipped message="Needs connected browser"/)
+    assert.match(xml, /<failure message="missing_result"/)
   })
 
   test('user daemon and tracked-tab state restore exactly once on normal completion', () => {

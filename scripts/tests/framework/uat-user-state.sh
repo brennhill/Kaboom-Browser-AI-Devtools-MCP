@@ -4,6 +4,7 @@
 
 UAT_USER_STATE_SNAPSHOTTED=0
 UAT_USER_STATE_RESTORED=0
+UAT_USER_STATE_RESTORE_STATUS="not_required"
 UAT_PRIOR_DAEMON_RUNNING=0
 UAT_PRIOR_DAEMON_PID=""
 UAT_PRIOR_DAEMON_EXEC=""
@@ -299,26 +300,38 @@ uat_restore_user_state() {
     [ "$UAT_USER_STATE_SNAPSHOTTED" = "1" ] || return 0
     [ "$UAT_USER_STATE_RESTORED" = "0" ] || return 0
     UAT_USER_STATE_RESTORED=1
+    UAT_USER_STATE_RESTORE_STATUS="restored"
 
-    uat_close_disposable_tab ||
+    if ! uat_close_disposable_tab; then
+        UAT_USER_STATE_RESTORE_STATUS="failed"
         echo "WARNING: failed to close disposable UAT tab $UAT_DISPOSABLE_TAB_ID" >&2
+    fi
     uat_stop_port "$UAT_USER_DAEMON_PORT"
     if [ "$UAT_PRIOR_LAUNCHAGENT_REGISTERED" = "1" ] &&
         [ "$UAT_PRIOR_LAUNCHAGENT_RUNNING" = "0" ]; then
-        uat_restore_stopped_launchagent_registration ||
+        if ! uat_restore_stopped_launchagent_registration; then
+            UAT_USER_STATE_RESTORE_STATUS="failed"
             echo "WARNING: failed to restore stopped Kaboom LaunchAgent registration" >&2
+        fi
     fi
     if [ "$UAT_PRIOR_DAEMON_RUNNING" = "1" ]; then
         if [ "$UAT_PRIOR_LAUNCHAGENT_RUNNING" = "1" ]; then
-            uat_restore_launchagent || echo "WARNING: failed to restore Kaboom LaunchAgent" >&2
+            if ! uat_restore_launchagent; then
+                UAT_USER_STATE_RESTORE_STATUS="failed"
+                echo "WARNING: failed to restore Kaboom LaunchAgent" >&2
+            fi
         else
-            uat_restore_standalone_daemon ||
+            if ! uat_restore_standalone_daemon; then
+                UAT_USER_STATE_RESTORE_STATUS="failed"
                 echo "WARNING: failed to restore prior Kaboom daemon" >&2
+            fi
         fi
         if uat_wait_for_daemon "$UAT_USER_DAEMON_PORT" "$UAT_PRIOR_DAEMON_VERSION" &&
             [ -n "$UAT_PRIOR_TRACKED_TAB_ID" ]; then
-            uat_restore_tracked_tab "$UAT_PRIOR_TRACKED_TAB_ID" "$UAT_PRIOR_TRACKED_TAB_URL" ||
+            if ! uat_restore_tracked_tab "$UAT_PRIOR_TRACKED_TAB_ID" "$UAT_PRIOR_TRACKED_TAB_URL"; then
+                UAT_USER_STATE_RESTORE_STATUS="failed"
                 echo "WARNING: failed to restore tracked tab $UAT_PRIOR_TRACKED_TAB_ID" >&2
+            fi
         fi
     fi
 }

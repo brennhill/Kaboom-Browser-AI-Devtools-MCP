@@ -120,6 +120,11 @@ fi
 # ── Temp Dir for Results ──────────────────────────────────
 RESULTS_DIR="$(mktemp -d)"
 OVERALL_START="$(date +%s)"
+ARTIFACT_DIR="${KABOOM_UAT_ARTIFACT_DIR:-$PROJECT_ROOT/artifacts/uat}"
+JSON_ARTIFACT="$ARTIFACT_DIR/uat-results.json"
+JUNIT_ARTIFACT="$ARTIFACT_DIR/uat-results.xml"
+CATEGORY_RECORDS="$RESULTS_DIR/categories.ndjson"
+: > "$CATEGORY_RECORDS"
 
 echo ""
 echo "############################################################"
@@ -141,6 +146,8 @@ CONNECTED_CAT_IDS="14 15 16 18 19 23 24"
 
 # shellcheck source=tests/framework/uat-user-state.sh
 source "$TESTS_DIR/framework/uat-user-state.sh"
+# shellcheck source=tests/framework/uat-artifacts.sh
+source "$TESTS_DIR/framework/uat-artifacts.sh"
 # shellcheck source=uat-result-lib.sh
 source "$SCRIPT_DIR/uat-result-lib.sh"
 if [ "$SUITE" = "connected" ] || [ "$SUITE" = "all" ]; then
@@ -328,11 +335,13 @@ for cat_id in $CAT_IDS; do
     cat_skip=0
     cat_elapsed="?"
     cat_name="$(get_default_name "$cat_id")"
+    result_status="complete"
 
     if parse_uat_category_result "$results_file"; then
         if [ "$UAT_RESULT_CATEGORY_ID" != "$cat_id" ]; then
             echo "AGGREGATION ERROR: malformed result file for category $cat_id (CATEGORY_ID=$UAT_RESULT_CATEGORY_ID)" >&2
             cat_fail=1
+            result_status="category_id_mismatch"
             AGGREGATION_ERRORS="$((AGGREGATION_ERRORS + 1))"
         else
             cat_pass="$UAT_RESULT_PASS"
@@ -347,8 +356,10 @@ for cat_id in $CAT_IDS; do
         result_status="$?"
         if [ "$result_status" -eq 1 ]; then
             echo "AGGREGATION ERROR: missing result file for category $cat_id: $results_file" >&2
+            result_status="missing_result"
         else
             echo "AGGREGATION ERROR: malformed result file for category $cat_id: $results_file" >&2
+            result_status="malformed_result"
         fi
         cat_fail=1
         AGGREGATION_ERRORS="$((AGGREGATION_ERRORS + 1))"
@@ -358,6 +369,25 @@ for cat_id in $CAT_IDS; do
     TOTAL_PASS="$((TOTAL_PASS + cat_pass))"
     TOTAL_FAIL="$((TOTAL_FAIL + cat_fail))"
     TOTAL_SKIP="$((TOTAL_SKIP + cat_skip))"
+
+    skip_reasons='[]'
+    if [ -f "$RESULTS_DIR/output-${cat_id}.txt" ]; then
+        skip_reasons="$(sed -n 's/^[[:space:]]*SKIP: //p' "$RESULTS_DIR/output-${cat_id}.txt" |
+            jq -Rsc 'split("\n") | map(select(length > 0))')"
+    fi
+    jq -cn \
+        --arg id "$cat_id" \
+        --arg name "$cat_name" \
+        --arg result_status "$result_status" \
+        --argjson pass "$cat_pass" \
+        --argjson fail "$cat_fail" \
+        --argjson skip "$cat_skip" \
+        --argjson total "$cat_total" \
+        --argjson elapsed_seconds "${cat_elapsed//[^0-9]/0}" \
+        --argjson skip_reasons "$skip_reasons" \
+        '{id:$id,name:$name,pass:$pass,fail:$fail,skip:$skip,total:$total,
+          elapsed_seconds:$elapsed_seconds,result_status:$result_status,
+          skip_reasons:$skip_reasons}' >> "$CATEGORY_RECORDS"
 
     printf "%2s. %-24s | %4d | %4d | %4d | %5d | %3ss\n" \
         "$cat_id" "$cat_name" "$cat_pass" "$cat_fail" "$cat_skip" "$cat_total" "$cat_elapsed"
@@ -379,6 +409,15 @@ else
     echo "FAILURES: $TOTAL_FAIL failed, $TOTAL_SKIP skipped of $TOTAL_ALL tests ($AGGREGATION_ERRORS aggregation errors)"
 fi
 
+echo ""
+
+uat_restore_user_state
+uat_emit_artifacts \
+    "$CATEGORY_RECORDS" "$JSON_ARTIFACT" "$JUNIT_ARTIFACT" "$SUITE" \
+    "$OVERALL_ELAPSED" "$UAT_USER_STATE_RESTORE_STATUS" \
+    "${UAT_CONNECTED_READINESS_REASON:-not_applicable}"
+echo "JSON:  $JSON_ARTIFACT"
+echo "JUnit: $JUNIT_ARTIFACT"
 echo ""
 
 if [ "${KABOOM_KEEP_RESULTS:-0}" = "1" ]; then
