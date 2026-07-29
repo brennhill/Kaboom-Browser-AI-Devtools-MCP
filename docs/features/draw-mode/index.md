@@ -4,9 +4,12 @@ feature_id: draw-mode
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-05
-code_paths: []
-test_paths: []
+last_reviewed: 2026-07-29
+code_paths:
+  - extension/content/draw-mode.js
+test_paths:
+  - tests/extension/draw-mode/draw-mode.test.js
+  - tests/extension/draw-mode/draw-mode-drawing.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -34,4 +37,6 @@ last_verified_date: 2026-03-05
 
 ## Code and Tests
 
-Add concrete implementation and test links here as this feature evolves.
+Draw mode uses standard modal keyboard semantics: Enter saves the active
+annotation, a subsequent Enter submits completed annotations, and Escape
+cancels the session without delivering results.

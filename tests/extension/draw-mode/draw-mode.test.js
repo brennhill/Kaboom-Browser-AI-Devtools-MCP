@@ -148,7 +148,7 @@ describe('Draw Mode — Event Handling Basics', () => {
     dm = await importDrawMode()
   })
 
-  test('ESC keydown triggers deactivation and sends messages', async () => {
+  test('Escape cancels draw mode without submitting annotations', async () => {
     dm.activateDrawMode('user')
 
     // Track all sendMessage calls in order
@@ -174,25 +174,11 @@ describe('Draw Mode — Event Handling Basics', () => {
       }
       keydownHandler(event)
 
-      // Wait for the 300ms fade-out delay before deactivation completes
-      await new Promise((r) => setTimeout(r, 350))
-
-      // After ESC + fade, draw mode should be deactivated
-      assert.strictEqual(dm.isDrawModeActive(), false, 'draw mode should be deactivated after ESC')
-
-      // Should have sent messages (toast + capture screenshot + completed)
-      assert.ok(sentMessages.length > 0, 'expected at least one sendMessage call')
-
-      // Find the DRAW_MODE_COMPLETED message
-      const completed = sentMessages.find((m) => m.type === 'draw_mode_completed')
-      assert.ok(completed, 'expected DRAW_MODE_COMPLETED message')
-      assert.ok(Array.isArray(completed.annotations), 'expected annotations array')
-
-      // Verify toast was sent
+      assert.strictEqual(dm.isDrawModeActive(), false, 'draw mode should be inactive after Escape')
+      assert.ok(!sentMessages.some((m) => m.type === 'draw_mode_completed'), 'Escape must not submit annotations')
       const toast = sentMessages.find((m) => m.type === 'kaboom_action_toast')
-      assert.ok(toast, 'expected GASOLINE_ACTION_TOAST message')
-      assert.strictEqual(toast.text, 'Annotations submitted')
-      assert.strictEqual(toast.state, 'success')
+      assert.ok(toast, 'expected cancellation feedback')
+      assert.strictEqual(toast.text, 'Annotations cancelled')
     }
   })
 

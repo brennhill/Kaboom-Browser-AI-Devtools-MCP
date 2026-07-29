@@ -34,7 +34,7 @@ Today, when a developer wants an LLM to change a specific part of a UI:
 ### The workflow:
 1. **LLM activates** draw mode via `interact({what: "draw_mode_start"})` and asks the user to annotate what they want changed
 2. **User draws** rectangles around elements and types feedback (e.g., "this button should be darker", "add padding here")
-3. **User presses ESC** to finish annotating
+3. **User presses Enter** after completing the final annotation to submit
 4. **LLM reads** all annotations via `analyze({what: "annotations"})` -- gets element summaries, user text, and an annotated screenshot
 5. **LLM drills down** via `analyze({what: "annotation_detail", correlation_id: "..."})` to get full computed styles and precise selectors
 6. **LLM writes code** with exact knowledge of which elements to change and what the user wants
@@ -59,7 +59,7 @@ LLM: "I'll activate draw mode -- please draw rectangles around the
 LLM: [calls interact({what: "draw_mode_start"})]
 User: [draws rectangle around heading] "make this bigger and bolder"
 User: [draws rectangle around button] "change color to dark blue"
-User: [presses ESC]
+User: [presses Enter after completing the final annotation]
 LLM: [calls analyze({what: "annotations"})]
 LLM: "I see 2 annotations. Let me get the details..."
 LLM: [calls analyze({what: "annotation_detail", correlation_id: "..."})]
@@ -73,7 +73,7 @@ LLM: "The heading is an h1.hero-title with font-size 24px. The button is
 ```
 User: [presses Cmd+Shift+D or clicks toggle in popup]
 User: [draws rectangles and types annotations]
-User: [presses ESC]
+User: [presses Enter after completing the final annotation]
 User: "I just annotated the page -- can you fix these issues?"
 LLM: [calls analyze({what: "annotations"})]
 LLM: "I see your annotations. Let me make those changes."
@@ -104,12 +104,13 @@ LLM: "I have the exact selector and current styles. Updating the CSS now."
 | Popup toggle | User | Click "Draw Mode" toggle in extension popup |
 | MCP interact tool | LLM | `interact({what: "draw_mode_start"})` |
 
-### Deactivation Methods
+### Exit Methods
 
 | Method | Actor | Trigger |
 |--------|-------|---------|
-| ESC key | User | Press ESC while in draw mode |
-| Popup toggle | User | Click "Draw Mode" toggle again in extension popup |
+| Submit | User | Press Enter when no annotation editor is open |
+| Cancel | User | Press Escape to exit without submitting annotations |
+| Popup toggle | User | Click "Draw Mode" toggle again to submit and exit |
 
 **Design constraint:** LLMs cannot deactivate draw mode. Only the user can exit, ensuring the user always has control over when they are done annotating.
 
@@ -126,6 +127,8 @@ LLM: "I have the exact selector and current styles. Updating the CSS now."
 - [ ] After drawing a rectangle, a text input appears for the user to type feedback
 - [ ] Text input auto-focuses after rectangle is drawn
 - [ ] Enter key confirms text and allows drawing another rectangle
+- [ ] Enter with completed annotations and no open text input submits the session
+- [ ] Escape cancels and exits without delivering annotations
 - [ ] Empty text on blur removes the annotation
 - [ ] Existing annotations remain visible while drawing new ones
 
@@ -180,7 +183,8 @@ LLM: "I have the exact selector and current styles. Updating the CSS now."
 - DOM element details (selector, computed styles) are accurate and actionable
 - Annotated screenshot is captured and accessible via MCP
 - All three activation methods work (keyboard, popup, MCP)
-- ESC exits cleanly with all data preserved
+- Enter submits completed annotations and exits cleanly
+- Escape cancels the session without delivering annotation results
 
 ### Non-Functional
 

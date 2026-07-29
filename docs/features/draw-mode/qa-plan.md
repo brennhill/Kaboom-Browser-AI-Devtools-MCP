@@ -67,7 +67,7 @@ last_verified_date: 2026-03-05
 | DM-EXT-021 | Enter key confirms text | Text saved to annotation, input removed, state returns to DRAWING |
 | DM-EXT-022 | Blur with non-empty text auto-confirms | Text saved to annotation, same as Enter |
 | DM-EXT-023 | Blur with empty text removes annotation | Rectangle removed from canvas, annotation deleted |
-| DM-EXT-024 | Text input does not capture ESC key | ESC during text input exits draw mode (not just text input) |
+| DM-EXT-024 | Escape during text input cancels session | Overlay exits and no completion payload is sent |
 | DM-EXT-025 | Text input positioned near rectangle | Input appears adjacent to or overlapping the drawn rectangle |
 | DM-EXT-026 | Long text truncated in display | Text longer than 200 chars displayed with ellipsis on canvas |
 
@@ -111,11 +111,12 @@ last_verified_date: 2026-03-05
 
 | Test ID | Test Case | Expected Result |
 |---------|-----------|-----------------|
-| DM-EXT-060 | ESC key deactivates draw mode | Overlay removed, results packaged |
+| DM-EXT-060 | Escape cancels draw mode | Overlay removed, working annotations cleared, no results packaged |
 | DM-EXT-061 | Cmd+Shift+D activates draw mode (macOS) | Overlay created, state set to DRAWING |
 | DM-EXT-062 | Ctrl+Shift+D activates draw mode (Windows/Linux) | Overlay created, state set to DRAWING |
-| DM-EXT-063 | Cmd+Shift+D while active deactivates | Toggle behavior, same as ESC |
+| DM-EXT-063 | Cmd+Shift+D while active deactivates | Toggle submits current valid text and exits |
 | DM-EXT-064 | Other keyboard shortcuts still work during draw mode | Tab, Cmd+C, etc. not intercepted |
+| DM-EXT-065 | Enter after a completed annotation submits | Screenshot and completion payload contain all annotations |
 
 ---
 
@@ -235,7 +236,7 @@ last_verified_date: 2026-03-05
 | Test ID | Test Case | Expected Result |
 |---------|-----------|-----------------|
 | DM-INT-001 | LLM activates draw mode -> user draws -> LLM reads annotations | Full round-trip with annotations returned |
-| DM-INT-002 | Blocking analyze resolves on draw completion | analyze({wait: true}) returns after user presses ESC |
+| DM-INT-002 | Blocking analyze resolves on draw completion | analyze({wait: true}) returns after user submits with Enter |
 | DM-INT-003 | Screenshot included in results | screenshot_path points to valid PNG file |
 | DM-INT-004 | Annotation detail drill-down | annotation_detail returns computed_styles for valid correlation_id |
 | DM-INT-005 | Detail after TTL expiry returns error | correlation_expired error after 10 min |
@@ -287,7 +288,7 @@ last_verified_date: 2026-03-05
 | DM-EDGE-020 | draw_mode_start called twice in rapid succession | Second call returns already_active |
 | DM-EDGE-021 | analyze({wait: true}) called before draw_mode_start | Blocks, resolves when draw mode completes (or timeout) |
 | DM-EDGE-022 | Two analyze({wait: true}) calls simultaneously | Both resolve with same data |
-| DM-EDGE-023 | draw_mode_start then immediate ESC (< 1 second) | Valid result with 0 annotations |
+| DM-EDGE-023 | draw_mode_start then immediate Escape (< 1 second) | Session cancels with no completion payload |
 
 ### 4. Content Edge Cases
 
@@ -324,8 +325,8 @@ last_verified_date: 2026-03-05
 7. Type annotation text "make this bigger"
 8. Press Enter
 9. Verify: text appears near rectangle
-10. Press ESC
-11. Verify: overlay removed, page is interactive again
+10. Press Enter again
+11. Verify: overlay removed, annotations submitted, page is interactive again
 
 **Expected:** Draw mode activates and deactivates cleanly via popup.
 
@@ -336,8 +337,8 @@ last_verified_date: 2026-03-05
 2. Press Cmd+Shift+D (macOS) or Ctrl+Shift+D (Windows/Linux)
 3. Verify: draw mode activates (crosshair cursor)
 4. Draw a rectangle and type annotation
-5. Press ESC
-6. Verify: draw mode deactivates
+5. Press Enter to save the annotation, then Enter again
+6. Verify: draw mode submits and deactivates
 
 **Expected:** Keyboard shortcut toggles draw mode correctly.
 
@@ -349,7 +350,7 @@ last_verified_date: 2026-03-05
 3. Call `interact({what: "draw_mode_start"})`
 4. Verify: extension activates draw mode on active tab
 5. Draw 2-3 rectangles with annotations in the browser
-6. Press ESC
+6. Press Enter after completing the final annotation
 7. Call `analyze({what: "annotations"})`
 8. Verify: response includes all annotations with element_summary and screenshot_path
 
@@ -392,8 +393,8 @@ last_verified_date: 2026-03-05
 1. Activate draw mode via Cmd+Shift+D
 2. Resize the browser window
 3. Verify: overlay resizes, existing annotations still visible
-4. Press ESC with no annotations drawn
-5. Verify: results returned with count: 0
+4. Press Escape with no annotations drawn
+5. Verify: draw mode cancels and no completion payload is sent
 6. Activate draw mode again
 7. Navigate to a different page (type new URL)
 8. Verify: annotations from previous page are sent to server
@@ -427,7 +428,7 @@ node --test tests/extension/*.test.js
 - Start server: `./dist/kaboom --port 7890`
 - Open test page
 - Call `interact({what: "draw_mode_start"})` via MCP client
-- Draw 2 annotations, press ESC
+- Draw 2 annotations, press Enter after completing the final annotation
 - Call `analyze({what: "annotations"})` and verify response
 - Call `analyze({what: "annotation_detail"})` and verify computed styles
 

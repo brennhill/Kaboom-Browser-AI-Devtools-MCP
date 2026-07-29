@@ -211,6 +211,67 @@ describe('Draw Mode — Drawing Mechanics', () => {
     assert.strictEqual(completed.annotations[0].text, 'submit-via-shortcut')
   })
 
+  test('Enter after completing an annotation submits the session', async () => {
+    dm.activateDrawMode('user')
+    const overlay = documentBody.children[0]
+    const sentMessages = []
+    globalThis.chrome.runtime.sendMessage = mock.fn((msg, callback) => {
+      sentMessages.push(msg)
+      if (msg.type === 'kaboom_capture_screenshot' && typeof callback === 'function') {
+        callback({ dataUrl: 'data:image/png;base64,mockscreenshot' })
+      }
+      return undefined
+    })
+
+    overlay._dispatch('mousedown', { button: 0, clientX: 100, clientY: 100 })
+    overlay._dispatch('mouseup', { clientX: 250, clientY: 200 })
+    const inputEl = createdElements.find((el) => el.tagName === 'INPUT')
+    inputEl.value = 'submit-on-second-enter'
+    inputEl._listeners['keydown'][0]({
+      key: 'Enter',
+      preventDefault: mock.fn(),
+      stopPropagation: mock.fn()
+    })
+
+    const keydownHandler = globalThis.document.addEventListener.mock.calls.find(
+      (call) => call.arguments[0] === 'keydown'
+    )?.arguments[1]
+    keydownHandler({
+      key: 'Enter',
+      preventDefault: mock.fn(),
+      stopPropagation: mock.fn()
+    })
+    await new Promise((resolve) => setTimeout(resolve, 350))
+
+    assert.strictEqual(dm.isDrawModeActive(), false)
+    const completed = sentMessages.find((message) => message.type === 'draw_mode_completed')
+    assert.ok(completed, 'second Enter should submit the session')
+    assert.strictEqual(completed.annotations[0].text, 'submit-on-second-enter')
+  })
+
+  test('Escape from the annotation editor cancels the whole session', () => {
+    dm.activateDrawMode('user')
+    const overlay = documentBody.children[0]
+    const sentMessages = []
+    globalThis.chrome.runtime.sendMessage = mock.fn((message) => {
+      sentMessages.push(message)
+    })
+
+    overlay._dispatch('mousedown', { button: 0, clientX: 100, clientY: 100 })
+    overlay._dispatch('mouseup', { clientX: 250, clientY: 200 })
+    const inputEl = createdElements.find((el) => el.tagName === 'INPUT')
+    inputEl.value = 'must not be submitted'
+    inputEl._listeners['keydown'][0]({
+      key: 'Escape',
+      preventDefault: mock.fn(),
+      stopPropagation: mock.fn()
+    })
+
+    assert.strictEqual(dm.isDrawModeActive(), false)
+    assert.deepStrictEqual(dm.getAnnotations(), [])
+    assert.ok(!sentMessages.some((message) => message.type === 'draw_mode_completed'))
+  })
+
   test('second shortcut submit path with empty text keeps editor open and warns user', () => {
     dm.activateDrawMode('user')
     const overlay = documentBody.children[0]

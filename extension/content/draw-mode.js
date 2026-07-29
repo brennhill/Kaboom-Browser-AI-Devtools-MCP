@@ -216,9 +216,9 @@ function createOverlay() {
     zIndex: String(OVERLAY_Z_INDEX + 1),
     textAlign: 'center'
   })
-  // Persistent bar (stays for the whole session): ESC exits, and the toggle
-  // shortcut is the always-visible reminder of how to start/stop the mode.
-  escHint.textContent = `Press ESC when done · ${TOGGLE_DRAW_MODE_SHORTCUT} toggles draw mode`
+  // Persistent bar (stays for the whole session): Enter submits completed
+  // annotations, Escape cancels, and the shortcut toggles the mode.
+  escHint.textContent = `Enter submits · Esc cancels · ${TOGGLE_DRAW_MODE_SHORTCUT} toggles draw mode`
   overlay.appendChild(escHint)
 
   // Center instruction toast — fades out after 2.5s
@@ -245,7 +245,8 @@ function createOverlay() {
   })
   instruction.innerHTML =
     'Draw a box around what you want to change' +
-    '<br><span style="font-size:13px;color:#aaa">Then type your instruction. Press ESC when done.</span>' +
+    '<br><span style="font-size:13px;color:#aaa">Type your instruction, press Enter to save it, then Enter again to submit.</span>' +
+    '<br><span style="font-size:12px;color:#888">Esc cancels without submitting.</span>' +
     `<br><span style="font-size:12px;color:#888">Start or stop draw mode anytime with ${TOGGLE_DRAW_MODE_SHORTCUT}</span>`
   overlay.appendChild(instruction)
   setTimeout(() => {
@@ -383,13 +384,11 @@ function onMouseUp(e) {
 
 function onKeyDown(e) {
   if (e.key === 'Escape') {
-    if (textInput) {
-      cancelTextInput()
-      renderAnnotations()
-    } else {
-      // Exit draw mode entirely
-      deactivateAndSendResults()
-    }
+    cancelDrawMode()
+    e.preventDefault()
+    e.stopPropagation()
+  } else if (e.key === 'Enter' && !textInput && annotations.length > 0) {
+    deactivateAndSendResults()
     e.preventDefault()
     e.stopPropagation()
   }
@@ -616,7 +615,7 @@ function showTextInput(rect, elementData) {
     pointerEvents: 'none',
     zIndex: String(OVERLAY_Z_INDEX + 2)
   })
-  inputHint.textContent = 'Enter to submit \u00b7 Draw shortcut again submits + exits \u00b7 Esc cancels'
+  inputHint.textContent = 'Enter saves annotation \u00b7 Enter again submits all \u00b7 Esc cancels session'
   overlay.appendChild(inputHint)
 
   textInput = input
@@ -630,8 +629,7 @@ function onTextInputKeyDown(e) {
     confirmTextInput()
   } else if (e.key === 'Escape') {
     e.preventDefault()
-    cancelTextInput()
-    renderAnnotations()
+    cancelDrawMode()
   }
 }
 
@@ -1701,10 +1699,10 @@ function loadAnnotations() {
 // ============================================================================
 
 /**
- * Called when user presses ESC (no active text input), from popup toggle,
- * or from KABOOM_DRAW_MODE_STOP message.
+ * Called when the user submits with Enter, from popup toggle, or from
+ * KABOOM_DRAW_MODE_STOP message.
  * Captures screenshot WHILE overlay is still visible, then deactivates and sends results.
- * Protected by re-entry guard to prevent double-ESC races.
+ * Protected by a re-entry guard to prevent repeated-submit races.
  */
 export function deactivateAndSendResults() {
   if (!active || isDeactivating) return
@@ -1844,6 +1842,29 @@ export function deactivateAndSendResults() {
   } else {
     deactivateDrawMode()
     isDeactivating = false
+  }
+}
+
+/**
+ * Exit draw mode without delivering annotations.
+ * Escape always follows this path, including while the annotation editor is open.
+ */
+function cancelDrawMode() {
+  if (!active) return
+  isDeactivating = false
+  deactivateDrawMode()
+  clearPersistedAnnotations()
+  try {
+    if (typeof chrome !== 'undefined' && chrome.runtime) {
+      chrome.runtime.sendMessage({
+        type: 'kaboom_action_toast',
+        text: 'Annotations cancelled',
+        state: 'info',
+        duration_ms: 1600
+      })
+    }
+  } catch {
+    // Extension context may be invalidated
   }
 }
 

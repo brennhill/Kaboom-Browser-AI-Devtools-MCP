@@ -82,7 +82,7 @@ sequenceDiagram
 
     User->>CS: Draw more rectangles...
 
-    User->>CS: Press ESC (done annotating)
+    User->>CS: Press Enter (submit completed annotations)
     CS->>CS: Capture annotated screenshot (PNG)
     CS->>BG: DRAW_MODE_COMPLETED<br/>{annotations, screenshot_path}
     BG->>Server: POST /draw-mode-result<br/>{correlation_id, annotations, screenshot}
@@ -120,7 +120,7 @@ sequenceDiagram
 
     Note over CS: If annotation text input is open,<br/>pressing Cmd+Shift+D again submits text and exits.<br/>Empty text keeps editor open with validation toast.
 
-    User->>CS: Press ESC
+    User->>CS: Press Enter (submit completed annotations)
     CS->>CS: Capture screenshot
     CS->>BG: DRAW_MODE_COMPLETED<br/>{annotations, screenshot_path}
     BG->>Server: POST /draw-mode-result<br/>{annotations, screenshot}
@@ -253,11 +253,13 @@ Returned when draw mode completes or `analyze({what: "annotations"})` is called.
 
 **Resolution:** No-op. Returns `{status: "already_active", annotation_count: N}` with the current annotation count. Does not create a second overlay or reset existing annotations.
 
-### 3. User Exits With Zero Annotations
+### 3. User Cancels With Escape
 
-**Scenario:** User activates draw mode, draws nothing, and presses ESC.
+**Scenario:** User presses Escape with zero or more annotations.
 
-**Resolution:** Still captures a screenshot (clean page). Sends results with `count: 0` and empty annotations array. The LLM receives this and can ask the user to try again or proceed differently.
+**Resolution:** Draw mode exits, clears its persisted working state, and does
+not send `draw_mode_completed`. No screenshot or annotation payload is
+delivered because Escape is cancellation, not submission.
 
 ### 4. Window Resize During Draw Mode
 
@@ -321,13 +323,13 @@ Returned when draw mode completes or `analyze({what: "annotations"})` is called.
     |           | <------+                          |           |
     +-----------+        |                          +-----+-----+
          ^               |                                |
-         |               |  ESC (with 0 annotations)      | mousedown + drag
+         |               |  Enter (annotations exist)     | mousedown + drag
          |               |                                v
          |          +----+------+                   +-----+-----+
          |          |           |                   |           |
          +--------- | FINISHING | <---------------- |TEXT_INPUT |
-           ESC      |           |    Enter/blur     |           |
-      (with N > 0)  +-----------+    (text saved)   +-----------+
+          submit    |           |    Enter/blur     |           |
+                    +-----------+    (text saved)   +-----------+
                           |
                           | Screenshot captured,
                           | results sent to server
@@ -345,8 +347,10 @@ Returned when draw mode completes or `analyze({what: "annotations"})` is called.
 |------|---------|----|-------------|
 | INACTIVE | Cmd+Shift+D / popup toggle / MCP draw_mode_start | DRAWING | Create overlay, register mouse handlers |
 | DRAWING | mousedown + drag (>= 5px) | TEXT_INPUT | Render rectangle, identify DOM element, show text input |
-| DRAWING | ESC | FINISHING | Capture screenshot, send results (count may be 0) |
+| DRAWING | Enter with annotations | FINISHING | Capture screenshot, send results |
+| DRAWING | Escape | INACTIVE | Discard annotations, clear persistence, remove overlay |
 | TEXT_INPUT | Enter key | DRAWING | Save annotation text, persist to storage |
+| TEXT_INPUT | Escape | INACTIVE | Discard editor and session without sending results |
 | TEXT_INPUT | Blur (non-empty text) | DRAWING | Auto-save annotation text, persist to storage |
 | TEXT_INPUT | Blur (empty text) | DRAWING | Remove annotation (rectangle deleted) |
 | FINISHING | Screenshot captured + results sent | INACTIVE | Remove overlay, clean up handlers |
@@ -354,7 +358,6 @@ Returned when draw mode completes or `analyze({what: "annotations"})` is called.
 ### Invalid Transitions
 
 - INACTIVE -> TEXT_INPUT (must go through DRAWING first)
-- TEXT_INPUT -> INACTIVE (must go through FINISHING)
 - FINISHING -> DRAWING (must fully deactivate first)
 
 ---
@@ -389,7 +392,7 @@ When `analyze({what: "annotations", wait: true})` is called:
 - Server checks if draw mode is active (PendingQuery exists)
 - If active, blocks with a 5-minute timeout
 - When `/draw-mode-result` is posted, the blocked call resolves
-- If timeout expires, returns `{status: "timeout", message: "Draw mode timed out after 5 minutes. User may have forgotten to press ESC."}`
+- If timeout expires, returns `{status: "timeout", message: "Draw mode timed out after 5 minutes. User may have forgotten to submit with Enter."}`
 
 #### Screenshot Transfer:
 
@@ -493,10 +496,10 @@ When `analyze({what: "annotations", wait: true})` is called:
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Canvas overlay blocks page interaction | User cannot interact with page while annotating | By design -- draw mode is a modal state. ESC exits cleanly. |
+| Canvas overlay blocks page interaction | User cannot interact with page while annotating | By design -- draw mode is a modal state. Enter submits; Escape cancels. |
 | Large screenshots (>5MB base64) | Slow HTTP POST, memory pressure | Compress PNG, cap at 2MB. If exceeds, reduce quality. |
 | Element selector fragility | Selector generated at draw time may not match later | Re-query on detail request; include warning if element changed. |
-| User forgets to press ESC | Blocking analyze call hangs | 5-minute timeout with clear message. |
+| User forgets to submit with Enter | Blocking analyze call hangs | 5-minute timeout with clear message. |
 | Dynamic page content shifts annotations | Rectangles may not align with elements after DOM changes | Annotations capture state at creation time; document this limitation. |
 
 ---
