@@ -7,6 +7,7 @@ import { beforeEach, describe, mock, test } from 'node:test'
 import assert from 'node:assert'
 import { StorageKey } from '../../extension/lib/constants.js'
 import {
+  dispatchWindowEvent,
   findButton,
   getElementById,
   makeResponse,
@@ -77,6 +78,37 @@ describe('terminal side panel host', () => {
     assert.ok(titleNode, 'terminal header should show Kaboom Terminal')
     assert.strictEqual(newProjectButton, null, 'placeholder palette action should not be rendered')
     assert.strictEqual(root.children.length, 1, 'terminal shell should be the only top-level panel child')
+  })
+
+  test('API billing detected by the terminal becomes a visible subscription warning', async () => {
+    sidepanelState.fetchHandler = ({ url }) => {
+      if (url.endsWith('/terminal/start')) {
+        return Promise.resolve(makeResponse(200, {
+          session_id: 'session-api-billing',
+          token: 'token-api-billing',
+          pid: 999
+        }))
+      }
+      throw new Error(`Unexpected fetch call: ${url}`)
+    }
+
+    const module = await import(`../../extension/sidepanel.js?v=${++sidepanelState.importCounter}`)
+    await module._terminalPanelForTests.bootTerminalPanel(true)
+    dispatchWindowEvent('message', {
+      origin: 'http://localhost:7891',
+      data: { source: 'kaboom-terminal', event: 'api_billing_detected', data: {} }
+    })
+
+    const toast = getElementById('kaboom-action-toast')
+    assert.ok(toast, 'API billing must be surfaced in the visible panel UI')
+    const warning = walkTree(toast, (child) =>
+      typeof child.textContent === 'string' && child.textContent.includes('API billing is active')
+    )
+    const guidance = walkTree(toast, (child) =>
+      typeof child.textContent === 'string' && child.textContent.includes('not your subscription')
+    )
+    assert.ok(warning)
+    assert.ok(guidance)
   })
 
   test('daemon-unavailable fallback uses Kaboom copy', async () => {

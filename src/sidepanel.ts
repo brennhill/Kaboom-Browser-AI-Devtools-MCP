@@ -42,7 +42,13 @@ import {
 import { showActionToast } from './content/ui/toast.js'
 import { getHostTabId, startPageAnnotation, closeBrowserSidePanel } from './content/ui/panel/host-tab.js'
 import { createRootFolderBar } from './content/ui/terminal-root-folder.js'
-import { renderNoSessionState, renderStartFailure, renderStartPending } from './content/ui/terminal-panel-states.js'
+import {
+  renderNoSessionState,
+  renderStartFailure,
+  renderStartPending,
+  showAPIBillingWarning,
+  surfaceTerminalStartFailure
+} from './content/ui/terminal-panel-states.js'
 import { createPanelShell as buildPanelShell } from './content/ui/panel/shell.js'
 import {
   notifyIframe,
@@ -168,7 +174,9 @@ function showTerminalBody(): void {
  */
 function showNoSessionState(): void {
   if (!panel.terminalBodyEl) return
-  renderNoSessionState(panel.terminalBodyEl, () => { void bootTerminalPanel(true) })
+  renderNoSessionState(panel.terminalBodyEl, () => {
+    void bootTerminalPanel(true)
+  })
 }
 
 const BOOT_PENDING_ID = 'kaboom-terminal-boot-pending'
@@ -211,7 +219,9 @@ function clearBootPending(): void {
 function createRootFolderBarElement(): HTMLDivElement {
   const bar = createRootFolderBar({
     initialRoot: '',
-    onApply: (root: string) => { void applyRootFolder(root) }
+    onApply: (root: string) => {
+      void applyRootFolder(root)
+    }
   })
   panel.rootFolderBar = bar
   void getTerminalDevRoot().then((root) => bar.setRoot(root))
@@ -255,15 +265,7 @@ function showSandboxError(
     return
   }
   panel.pendingSandboxError = { message, instruction, command }
-  if (panel.terminalBodyEl) {
-    renderStartFailure(panel.terminalBodyEl, message, instruction, command)
-  } else {
-    // No body to render into yet (daemon-down-at-open): surface via toast so the
-    // failure is visible instead of only reaching the console. A subsequent
-    // remount re-renders it inline from pendingSandboxError.
-    const detail = [instruction, command].filter(Boolean).join(' ')
-    showActionToast(message, detail || 'Terminal', 'error', 6000)
-  }
+  surfaceTerminalStartFailure(panel.terminalBodyEl, message, instruction, command)
 }
 
 function updateStatusDot(dotState: 'connected' | 'disconnected' | 'exited'): void {
@@ -338,6 +340,9 @@ function handleIframeMessage(event: MessageEvent): void {
       state.terminalFocused = false
       resetWriteGuardState()
       break
+    case 'api_billing_detected':
+      showAPIBillingWarning()
+      break
     case 'focus':
       state.terminalFocused = Boolean((event.data.data as { focused?: boolean } | undefined)?.focused)
       if (state.terminalFocused) {
@@ -365,18 +370,40 @@ function handleIframeMessage(event: MessageEvent): void {
 function createPanelShell(token: string): HTMLDivElement {
   return buildPanelShell(token, {
     serverUrl: state.serverUrl,
-    onExit: () => { void exitTerminalSession() },
-    onAnnotate: () => { void startPageAnnotation() },
-    onRedraw: () => { void redrawTerminal() },
-    onMinimize: () => { void minimizePanel() },
-    onClose: () => { void closePanelKeepingSession() },
+    onExit: () => {
+      void exitTerminalSession()
+    },
+    onAnnotate: () => {
+      void startPageAnnotation()
+    },
+    onRedraw: () => {
+      void redrawTerminal()
+    },
+    onMinimize: () => {
+      void minimizePanel()
+    },
+    onClose: () => {
+      void closePanelKeepingSession()
+    },
     createRootFolderBar: () => createRootFolderBarElement(),
-    setStatusDot: (el) => { panel.statusDotEl = el },
-    setMinimizeButton: (el) => { panel.minimizeButtonEl = el },
-    setTerminalShell: (el) => { panel.terminalShellEl = el },
-    setTerminalBody: (el) => { panel.terminalBodyEl = el },
-    setWidget: (el) => { state.widgetEl = el },
-    setIframe: (el) => { state.iframeEl = el }
+    setStatusDot: (el) => {
+      panel.statusDotEl = el
+    },
+    setMinimizeButton: (el) => {
+      panel.minimizeButtonEl = el
+    },
+    setTerminalShell: (el) => {
+      panel.terminalShellEl = el
+    },
+    setTerminalBody: (el) => {
+      panel.terminalBodyEl = el
+    },
+    setWidget: (el) => {
+      state.widgetEl = el
+    },
+    setIframe: (el) => {
+      state.iframeEl = el
+    }
   })
 }
 
@@ -526,26 +553,28 @@ function writeToTerminal(text: string): void {
 function installRuntimeListener(): void {
   if (panel.runtimeListenerInstalled) return
   panel.runtimeListenerInstalled = true
-  chrome.runtime.onMessage.addListener((
-    message: { type?: string; text?: string },
-    sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: unknown) => void
-  ) => {
-    if (sender.id !== chrome.runtime.id) return false
-    // The background cannot close a side panel document on every Chrome version,
-    // but this document can, so it asks us to.
-    if (message.type === 'close_terminal_panel') {
-      void closePanelKeepingSession()
+  chrome.runtime.onMessage.addListener(
+    (
+      message: { type?: string; text?: string },
+      sender: chrome.runtime.MessageSender,
+      sendResponse: (response?: unknown) => void
+    ) => {
+      if (sender.id !== chrome.runtime.id) return false
+      // The background cannot close a side panel document on every Chrome version,
+      // but this document can, so it asks us to.
+      if (message.type === 'close_terminal_panel') {
+        void closePanelKeepingSession()
+        return false
+      }
+      if (message.type !== 'terminal_panel_write') return false
+      // Acknowledge synchronously: this document existing IS the proof the sender
+      // needs that the write reached a live panel (the background never replies to
+      // this type). Ack first so a later fault in writeToTerminal can't swallow it.
+      sendResponse({ received: true })
+      if (typeof message.text === 'string') writeToTerminal(message.text)
       return false
     }
-    if (message.type !== 'terminal_panel_write') return false
-    // Acknowledge synchronously: this document existing IS the proof the sender
-    // needs that the write reached a live panel (the background never replies to
-    // this type). Ack first so a later fault in writeToTerminal can't swallow it.
-    sendResponse({ received: true })
-    if (typeof message.text === 'string') writeToTerminal(message.text)
-    return false
-  })
+  )
 }
 
 /**
@@ -653,7 +682,6 @@ async function ensureTerminalSession(): Promise<void> {
   if (!ss) return
   state.sessionState = ss
 }
-
 
 /**
  * Boot (or rebuild) the terminal panel — GENERATION-based, not serialized.

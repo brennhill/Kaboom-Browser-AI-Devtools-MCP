@@ -40,4 +40,30 @@ describe('terminal widget session branding', () => {
     assert.match(message, /npx kaboom-agentic-browser/)
     assert.doesNotMatch(message, /Gasoline daemon|STRUM daemon|gasoline-agentic-browser|strum-agentic-browser/)
   })
+
+  test('AI init command warns before API-billed credentials reach the CLI', async () => {
+    const { buildAIInitCommand } = await import('../../extension/content/ui/terminal-widget-session.js')
+
+    const command = buildAIInitCommand('claude')
+
+    assert.match(command, /ANTHROPIC_API_KEY/)
+    assert.match(command, /ANTHROPIC_AUTH_TOKEN/)
+    assert.match(command, /API billing credentials detected/)
+    assert.match(command, /subscription/)
+    assert.match(command, /; claude$/)
+    assert.doesNotMatch(command, /\\$ANTHROPIC_API_KEY[^:]/,
+      'the command must test credential presence without printing its value')
+  })
+
+  test('Codex init checks saved authentication mode as well as environment overrides', async () => {
+    const { buildAIInitCommand } = await import('../../extension/content/ui/terminal-widget-session.js')
+
+    const command = buildAIInitCommand('codex')
+
+    assert.match(command, /OPENAI_API_KEY/)
+    assert.match(command, /codex login status/)
+    assert.match(command, /API key/)
+    assert.match(command, /API billing credentials detected/)
+    assert.match(command, /; codex$/)
+  })
 })

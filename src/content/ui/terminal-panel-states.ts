@@ -6,6 +6,32 @@
  */
 
 import { START_TERMINAL_BUTTON_ID } from './terminal-widget-types.js'
+import { showActionToast } from './toast.js'
+
+/** Warn without blocking users who intentionally selected API billing. */
+export function showAPIBillingWarning(): void {
+  showActionToast(
+    'API billing is active',
+    'Using API billing, not your subscription. Log out and sign in with your subscription account.',
+    'warning',
+    12000
+  )
+}
+
+/** Render a start failure inline when mounted, otherwise fail loud via toast. */
+export function surfaceTerminalStartFailure(
+  container: HTMLElement | null,
+  message: string,
+  instruction: string,
+  command: string
+): void {
+  if (container) {
+    renderStartFailure(container, message, instruction, command)
+    return
+  }
+  const detail = [instruction, command].filter(Boolean).join(' ')
+  showActionToast(message, detail || 'Terminal', 'error', 6000)
+}
 
 /**
  * Render a recoverable "no shell" state into `container`.

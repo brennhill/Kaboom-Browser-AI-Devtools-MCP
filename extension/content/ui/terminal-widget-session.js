@@ -51,6 +51,36 @@ async function getTerminalAICommand() {
         return 'claude';
     }
 }
+/**
+ * Build the command entered into the login shell after it has loaded the user's
+ * profile. Checking here (rather than in the daemon's own environment) catches
+ * API credentials exported by .zprofile/.zshrc without ever reading or sending
+ * their values to the extension.
+ */
+export function buildAIInitCommand(aiCommand) {
+    if (!aiCommand)
+        return '';
+    const billingOverrides = [
+        'ANTHROPIC_API_KEY',
+        'ANTHROPIC_AUTH_TOKEN',
+        'ANTHROPIC_BASE_URL',
+        'CLAUDE_CODE_USE_BEDROCK',
+        'CLAUDE_CODE_USE_VERTEX',
+        'CLAUDE_CODE_USE_FOUNDRY',
+        'OPENAI_API_KEY',
+        'OPENAI_BASE_URL',
+        'CODEX_ACCESS_TOKEN',
+        'AWS_BEARER_TOKEN_BEDROCK'
+    ];
+    const presenceCheck = billingOverrides.map((name) => `\${${name}:-}`).join('');
+    const warning = '\\033[1;33m⚠ API billing credentials detected. This AI tool may charge API usage instead of using your subscription.\\033[0m\\n';
+    const firstCommand = aiCommand.trimStart().split(/\s+/, 1)[0] ?? '';
+    const isCodex = /(^|\/)codex$/.test(firstCommand);
+    const savedCodexAuthCheck = isCodex
+        ? ` codex_auth_status="$(codex login status 2>&1)"; case "$codex_auth_status" in *"API key"*|*"access token"*) kaboom_api_billing=1;; esac;`
+        : '';
+    return `kaboom_api_billing=0; if [ -n "${presenceCheck}" ]; then kaboom_api_billing=1; fi;${savedCodexAuthCheck} if [ "$kaboom_api_billing" = 1 ]; then printf '${warning}'; fi; unset kaboom_api_billing codex_auth_status; ${aiCommand}`;
+}
 export async function getTerminalDevRoot() {
     try {
         const value = await getLocal(StorageKey.TERMINAL_DEV_ROOT);
@@ -67,19 +97,25 @@ function persistSession(ss) {
     try {
         persist(setSession(StorageKey.TERMINAL_SESSION, ss), 'terminal-session');
     }
-    catch { /* extension context invalidated */ }
+    catch {
+        /* extension context invalidated */
+    }
 }
 export function clearPersistedSession() {
     try {
         persist(removeSessions([StorageKey.TERMINAL_SESSION, StorageKey.TERMINAL_UI_STATE]), 'terminal-session-clear');
     }
-    catch { /* extension context invalidated */ }
+    catch {
+        /* extension context invalidated */
+    }
 }
 export function persistUIState(uiState) {
     try {
         persist(setSession(StorageKey.TERMINAL_UI_STATE, uiState), 'terminal-ui-state');
     }
-    catch { /* extension context invalidated */ }
+    catch {
+        /* extension context invalidated */
+    }
 }
 export async function loadPersistedSession() {
     try {
@@ -101,10 +137,12 @@ export async function validateSession(token) {
     try {
         const base = await getServerUrl();
         const termUrl = await resolveTerminalServerUrl(base);
-        const resp = await fetch(`${termUrl}/terminal/validate?token=${encodeURIComponent(token)}`, { signal: AbortSignal.timeout(2000) });
+        const resp = await fetch(`${termUrl}/terminal/validate?token=${encodeURIComponent(token)}`, {
+            signal: AbortSignal.timeout(2000)
+        });
         if (!resp.ok)
             return false;
-        const data = await resp.json();
+        const data = (await resp.json());
         return data.valid === true;
     }
     catch {
@@ -127,7 +165,9 @@ export async function listTerminalDirs(path) {
     try {
         const base = await getServerUrl();
         const termUrl = await resolveTerminalServerUrl(base);
-        resp = await fetch(`${termUrl}/terminal/dirs?path=${encodeURIComponent(path)}`, { signal: AbortSignal.timeout(3000) });
+        resp = await fetch(`${termUrl}/terminal/dirs?path=${encodeURIComponent(path)}`, {
+            signal: AbortSignal.timeout(3000)
+        });
     }
     catch {
         return { ok: false, reason: 'unreachable' }; // No answer at all.
@@ -148,7 +188,7 @@ export async function listTerminalDirs(path) {
     if (!resp.ok)
         return { ok: false, reason: 'unreachable' };
     try {
-        const data = await resp.json();
+        const data = (await resp.json());
         return {
             ok: true,
             listing: {
@@ -171,7 +211,7 @@ export async function listTerminalDirs(path) {
  */
 async function readDaemonError(resp) {
     try {
-        const body = await resp.json();
+        const body = (await resp.json());
         return typeof body.error === 'string' ? body.error : '';
     }
     catch {
@@ -245,7 +285,8 @@ export async function startSession(config, onSandboxError) {
     const devRoot = await getTerminalDevRoot();
     try {
         // Build init_command: unset CLAUDECODE to avoid nesting detection, then launch the AI tool.
-        const initCommand = aiCommand ? `unset CLAUDECODE 2>/dev/null; ${aiCommand}` : '';
+        const launchCommand = buildAIInitCommand(aiCommand);
+        const initCommand = launchCommand ? `unset CLAUDECODE 2>/dev/null; ${launchCommand}` : '';
         const resp = await fetch(`${termUrl}/terminal/start`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -257,7 +298,7 @@ export async function startSession(config, onSandboxError) {
             })
         });
         if (!resp.ok) {
-            const body = await resp.json();
+            const body = (await resp.json());
             // Session already exists — reconnect using the returned token.
             if (resp.status === 409 && body.token) {
                 const ss = { sessionId: body.session_id ?? 'default', token: body.token };
@@ -280,7 +321,7 @@ export async function startSession(config, onSandboxError) {
             reportStartFailure(`Terminal start was refused (HTTP ${resp.status}): ${body.error ?? 'unknown error'}.`, '', '', 'unavailable', onSandboxError);
             return null;
         }
-        const data = await resp.json();
+        const data = (await resp.json());
         const ss = { sessionId: data.session_id, token: data.token };
         persistSession(ss);
         return ss;

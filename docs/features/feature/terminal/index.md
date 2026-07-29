@@ -4,7 +4,7 @@ feature_id: feature-terminal
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-29
 code_paths:
   - internal/pty/upload/upload.go
   - src/content/ui/hover/screenshot-feedback.ts
@@ -118,6 +118,7 @@ last_verified_date: 2026-03-28
 - Background must call `chrome.sidePanel.open()` in the original click gesture path; tab-specific `setOptions()` cannot be awaited first or Chrome may refuse to open the panel
 - Header redraw control (`↻`) reloads iframe graphics without killing the PTY session
 - Header power control (`⏻`) closes the side panel and ends the PTY session
+- AI launches warn visibly before known Claude/Codex API credentials or provider overrides reach the CLI. Codex also checks its saved `codex login status`, and Claude's own `API Usage Billing` status is promoted from terminal output to a panel warning. Detection transmits only a billing-mode signal—never credential values—and remains advisory so intentional API use still works.
 - Header minimize control hides the side panel while preserving the current PTY session
 - The current side panel rollout is terminal-only; xterm fills the available panel height
 - Terminal startup failure guidance now consistently points users at the Kaboom daemon command: `npx kaboom-agentic-browser`

@@ -20,6 +20,13 @@ export type TerminalSandboxErrorHandler = (message: string, instruction: string,
 export declare function getServerUrl(): Promise<string>;
 export declare function getTerminalConfig(): Promise<TerminalConfig>;
 export declare function saveTerminalConfig(config: TerminalConfig): void;
+/**
+ * Build the command entered into the login shell after it has loaded the user's
+ * profile. Checking here (rather than in the daemon's own environment) catches
+ * API credentials exported by .zprofile/.zshrc without ever reading or sending
+ * their values to the extension.
+ */
+export declare function buildAIInitCommand(aiCommand: string): string;
 export declare function getTerminalDevRoot(): Promise<string>;
 export declare function clearPersistedSession(): void;
 export declare function persistUIState(uiState: TerminalUIState): void;

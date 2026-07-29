@@ -11,7 +11,7 @@ import { getServerUrl, getTerminalConfig, persistUIState, loadPersistedSession, 
 import { showActionToast } from './content/ui/toast.js';
 import { startPageAnnotation, closeBrowserSidePanel } from './content/ui/panel/host-tab.js';
 import { createRootFolderBar } from './content/ui/terminal-root-folder.js';
-import { renderNoSessionState, renderStartFailure, renderStartPending } from './content/ui/terminal-panel-states.js';
+import { renderNoSessionState, renderStartPending, showAPIBillingWarning, surfaceTerminalStartFailure } from './content/ui/terminal-panel-states.js';
 import { createPanelShell as buildPanelShell } from './content/ui/panel/shell.js';
 import { notifyIframe, resetWriteGuardState, shouldDeferQueuedWrite, maybeShowQueuedWriteToast, scheduleQueuedWriteFlush, scheduleQueuedSubmit, enqueueBoundedWrite } from './content/ui/terminal-write-guard.js';
 function freshPanelUi() {
@@ -87,7 +87,9 @@ function showTerminalBody() {
 function showNoSessionState() {
     if (!panel.terminalBodyEl)
         return;
-    renderNoSessionState(panel.terminalBodyEl, () => { void bootTerminalPanel(true); });
+    renderNoSessionState(panel.terminalBodyEl, () => {
+        void bootTerminalPanel(true);
+    });
 }
 const BOOT_PENDING_ID = 'kaboom-terminal-boot-pending';
 /**
@@ -128,7 +130,9 @@ function clearBootPending() {
 function createRootFolderBarElement() {
     const bar = createRootFolderBar({
         initialRoot: '',
-        onApply: (root) => { void applyRootFolder(root); }
+        onApply: (root) => {
+            void applyRootFolder(root);
+        }
     });
     panel.rootFolderBar = bar;
     void getTerminalDevRoot().then((root) => bar.setRoot(root));
@@ -165,16 +169,7 @@ function showSandboxError(message, instruction, command, kind) {
         return;
     }
     panel.pendingSandboxError = { message, instruction, command };
-    if (panel.terminalBodyEl) {
-        renderStartFailure(panel.terminalBodyEl, message, instruction, command);
-    }
-    else {
-        // No body to render into yet (daemon-down-at-open): surface via toast so the
-        // failure is visible instead of only reaching the console. A subsequent
-        // remount re-renders it inline from pendingSandboxError.
-        const detail = [instruction, command].filter(Boolean).join(' ');
-        showActionToast(message, detail || 'Terminal', 'error', 6000);
-    }
+    surfaceTerminalStartFailure(panel.terminalBodyEl, message, instruction, command);
 }
 function updateStatusDot(dotState) {
     if (!panel.statusDotEl)
@@ -251,6 +246,9 @@ function handleIframeMessage(event) {
             state.terminalFocused = false;
             resetWriteGuardState();
             break;
+        case 'api_billing_detected':
+            showAPIBillingWarning();
+            break;
         case 'focus':
             state.terminalFocused = Boolean(event.data.data?.focused);
             if (state.terminalFocused) {
@@ -278,18 +276,40 @@ function handleIframeMessage(event) {
 function createPanelShell(token) {
     return buildPanelShell(token, {
         serverUrl: state.serverUrl,
-        onExit: () => { void exitTerminalSession(); },
-        onAnnotate: () => { void startPageAnnotation(); },
-        onRedraw: () => { void redrawTerminal(); },
-        onMinimize: () => { void minimizePanel(); },
-        onClose: () => { void closePanelKeepingSession(); },
+        onExit: () => {
+            void exitTerminalSession();
+        },
+        onAnnotate: () => {
+            void startPageAnnotation();
+        },
+        onRedraw: () => {
+            void redrawTerminal();
+        },
+        onMinimize: () => {
+            void minimizePanel();
+        },
+        onClose: () => {
+            void closePanelKeepingSession();
+        },
         createRootFolderBar: () => createRootFolderBarElement(),
-        setStatusDot: (el) => { panel.statusDotEl = el; },
-        setMinimizeButton: (el) => { panel.minimizeButtonEl = el; },
-        setTerminalShell: (el) => { panel.terminalShellEl = el; },
-        setTerminalBody: (el) => { panel.terminalBodyEl = el; },
-        setWidget: (el) => { state.widgetEl = el; },
-        setIframe: (el) => { state.iframeEl = el; }
+        setStatusDot: (el) => {
+            panel.statusDotEl = el;
+        },
+        setMinimizeButton: (el) => {
+            panel.minimizeButtonEl = el;
+        },
+        setTerminalShell: (el) => {
+            panel.terminalShellEl = el;
+        },
+        setTerminalBody: (el) => {
+            panel.terminalBodyEl = el;
+        },
+        setWidget: (el) => {
+            state.widgetEl = el;
+        },
+        setIframe: (el) => {
+            state.iframeEl = el;
+        }
     });
 }
 function mountPanel(root) {

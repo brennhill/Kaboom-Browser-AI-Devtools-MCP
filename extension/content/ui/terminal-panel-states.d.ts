@@ -4,6 +4,10 @@
  * keeping them out of sidepanel.ts keeps that file within the size limit.
  * Docs: docs/features/feature/terminal/index.md
  */
+/** Warn without blocking users who intentionally selected API billing. */
+export declare function showAPIBillingWarning(): void;
+/** Render a start failure inline when mounted, otherwise fail loud via toast. */
+export declare function surfaceTerminalStartFailure(container: HTMLElement | null, message: string, instruction: string, command: string): void;
 /**
  * Render a recoverable "no shell" state into `container`.
  *

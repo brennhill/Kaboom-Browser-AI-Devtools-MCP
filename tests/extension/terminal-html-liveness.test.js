@@ -107,6 +107,11 @@ function openSocket(h) {
 }
 
 describe('terminal.html half-open socket detection', () => {
+  test('reports Claude API billing mode to the parent UI', () => {
+    assert.match(html, /API Usage Billing/)
+    assert.match(html, /notifyParent\('api_billing_detected'/)
+  })
+
   test('a socket silent past the threshold is force-closed and recovery starts', () => {
     const h = runTerminalPage()
     openSocket(h)
