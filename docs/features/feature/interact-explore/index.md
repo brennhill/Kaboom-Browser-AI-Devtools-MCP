@@ -4,7 +4,7 @@ feature_id: feature-interact-explore
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-29
 code_paths:
   - cmd/browser-agent/internal/toolinteract/action_owners.go
   - cmd/browser-agent/internal/toolguard/guards.go
@@ -73,6 +73,7 @@ code_paths:
   - cmd/browser-agent/internal/summarypref/cache.go
   - cmd/browser-agent/tools_core.go
 test_paths:
+  - tests/extension/upload-handler.test.js
   - tests/extension/command-element-results.test.js
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/lint_hardening_test.go
@@ -203,6 +204,10 @@ are grouped in the pure `commands/results` module and shared directly by
 `execute_js` host-object serialization must preserve prototype-backed values (for example `DOMRect`) so return payloads remain structured and parse-safe.
 
 `navigate_and_document` combines click-driven navigation, optional URL-change/stability waits, and page-context enrichment (`url`, `title`, `tab_id`) in a single interact workflow.
+
+Upload-handler unit tests replace native-dialog and verification waits at the
+time boundary. Production backoff remains unchanged, while mocked Chrome and
+daemon paths complete deterministically under concurrent shard load.
 
 Navigation page-summary enrichment is colocated with the page action owner.
 Browser and workflow owners call it directly through explicit owner

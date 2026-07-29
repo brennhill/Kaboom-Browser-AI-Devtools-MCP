@@ -131,6 +131,12 @@ tracking from the extension popup.
 
 ### v0.8.x
 
+- Upload-handler unit tests used the production native-dialog and verification
+  delays despite mocking every external result. Under concurrent JavaScript
+  shard load, event-loop starvation stretched an ~8-second unit case past 100
+  seconds and left the module escalation mutex occupied for the following test.
+  The tests now replace only the delay/fetch time boundary and enforce a 500ms
+  ceiling; production timing is unchanged. (`kaboom-00v`)
 - The broad `Capture` behavior was decomposed into change-coupled
   `HTTPHandlers`, `SyncHandler`, `HealthReader`, and `StateResetter` owners.
   `Capture` now exposes only canonical owner accessors and lifecycle close;

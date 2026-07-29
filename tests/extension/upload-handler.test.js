@@ -53,6 +53,19 @@ const _originalFetch = globalThis.fetch
 const mockFetch = mock.fn()
 globalThis.fetch = mockFetch
 
+// Unit tests own daemon and Chrome results, so production dialog/backoff waits
+// add no coverage and make the suite dependent on event-loop scheduling under
+// shard load. Preserve the module's remaining exports while replacing only its
+// time boundary.
+const timeoutUtils = await import('../../extension/lib/timeout-utils.js')
+mock.module('../../extension/lib/timeout-utils.js', {
+  exports: {
+    ...timeoutUtils,
+    delay: mock.fn(() => Promise.resolve()),
+    fetchWithTimeout: mock.fn((url, init) => globalThis.fetch(url, init))
+  }
+})
+
 // ============================================
 // Import compiled extension modules
 // ============================================
@@ -145,7 +158,7 @@ describe('escalateToStage4', () => {
     mockFetch.mock.resetCalls()
   })
 
-  test('calls /api/os-automation/inject with browser_pid: 0', async () => {
+  test('calls /api/os-automation/inject with browser_pid: 0', { timeout: 500 }, async () => {
     if (!escalateToStage4) return
 
     // Mock: click succeeds, then verify returns true (after automation)
@@ -186,7 +199,7 @@ describe('escalateToStage4', () => {
     assert.strictEqual(body.browser_pid, 0, 'Should send browser_pid: 0 for auto-detection')
   })
 
-  test('reports error with OS-specific message when daemon returns 403', async () => {
+  test('reports error with OS-specific message when daemon returns 403', { timeout: 500 }, async () => {
     if (!escalateToStage4) return
 
     // Mock: click succeeds
