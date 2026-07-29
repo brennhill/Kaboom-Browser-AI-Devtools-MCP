@@ -34,6 +34,8 @@ let rafId = null
 let saveTimeout = null
 let isDeactivating = false // Re-entry guard for deactivateAndSendResults
 let recentActions = []
+let actionSubmitButton = null
+let actionUndoButton = null
 
 const MIN_RECT_SIZE = 5
 const OVERLAY_Z_INDEX = 2147483644
@@ -124,6 +126,7 @@ export function clearAnnotations() {
     renderAnnotations()
   }
   persistAnnotations()
+  updateActionBar()
 }
 
 /**
@@ -201,6 +204,8 @@ function createOverlay() {
   badge.appendChild(dot)
   badge.appendChild(document.createTextNode('Draw Mode'))
   overlay.appendChild(badge)
+
+  createActionBar()
 
   // Persistent centered ESC hint — stays visible throughout draw mode
   const escHint = document.createElement('div')
@@ -320,8 +325,68 @@ function destroyOverlay() {
   canvas = null
   ctx = null
   textInput = null
+  actionSubmitButton = null
+  actionUndoButton = null
   drawing = false
   removeStyles()
+}
+
+function createActionBar() {
+  const bar = document.createElement('div')
+  bar.id = 'kaboom-draw-actions'
+  Object.assign(bar.style, {
+    position: 'absolute',
+    top: '12px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '8px',
+    background: 'rgba(15, 23, 42, 0.94)',
+    border: '1px solid rgba(255, 255, 255, 0.18)',
+    borderRadius: '10px',
+    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
+    zIndex: String(OVERLAY_Z_INDEX + 2),
+    cursor: 'default'
+  })
+
+  actionUndoButton = createActionButton('kaboom-draw-undo', 'Undo', undoLatestAnnotation, true)
+  actionSubmitButton = createActionButton('kaboom-draw-submit', 'Submit 0 annotations', deactivateAndSendResults, true)
+  const cancelButton = createActionButton('kaboom-draw-cancel', 'Cancel', cancelDrawMode, false)
+  cancelButton.style.color = '#fca5a5'
+
+  bar.appendChild(actionUndoButton)
+  bar.appendChild(actionSubmitButton)
+  bar.appendChild(cancelButton)
+  overlay.appendChild(bar)
+  updateActionBar()
+}
+
+function createActionButton(id, label, action, disabled) {
+  const button = document.createElement('button')
+  button.id = id
+  button.type = 'button'
+  button.textContent = label
+  button.disabled = disabled
+  Object.assign(button.style, {
+    padding: '7px 11px',
+    background: 'rgba(255, 255, 255, 0.08)',
+    color: '#f8fafc',
+    border: '1px solid rgba(255, 255, 255, 0.18)',
+    borderRadius: '6px',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    fontSize: '12px',
+    fontWeight: '600',
+    cursor: disabled ? 'not-allowed' : 'pointer'
+  })
+  button.addEventListener('mousedown', (event) => event.stopPropagation())
+  button.addEventListener('click', (event) => {
+    event.preventDefault()
+    event.stopPropagation()
+    if (!button.disabled) action()
+  })
+  return button
 }
 
 function injectStyles() {
@@ -468,6 +533,30 @@ function renderAnnotations() {
   if (!ctx || !canvas) return
   ctx.clearRect(0, 0, canvas.width, canvas.height)
   drawExistingAnnotations()
+}
+
+function updateActionBar() {
+  const count = annotations.length
+  if (actionSubmitButton) {
+    actionSubmitButton.textContent = `Submit ${count} ${count === 1 ? 'annotation' : 'annotations'}`
+    actionSubmitButton.disabled = count === 0
+    actionSubmitButton.style.cursor = count === 0 ? 'not-allowed' : 'pointer'
+    actionSubmitButton.style.opacity = count === 0 ? '0.55' : '1'
+  }
+  if (actionUndoButton) {
+    actionUndoButton.disabled = count === 0
+    actionUndoButton.style.cursor = count === 0 ? 'not-allowed' : 'pointer'
+    actionUndoButton.style.opacity = count === 0 ? '0.55' : '1'
+  }
+}
+
+function undoLatestAnnotation() {
+  const removed = annotations.pop()
+  if (!removed) return
+  if (removed.correlation_id) elementDetails.delete(removed.correlation_id)
+  renderAnnotations()
+  persistAnnotations()
+  updateActionBar()
 }
 
 function drawRoundRect(x, y, w, h, radius) {
@@ -705,6 +794,7 @@ function confirmTextInput() {
 
   renderAnnotations()
   persistAnnotations()
+  updateActionBar()
 }
 
 function cancelTextInput() {
@@ -1702,6 +1792,7 @@ function loadAnnotations() {
       if (data?.annotations && data.page_url === window.location.href) {
         annotations = data.annotations.map(normalizeLoadedAnnotation)
         renderAnnotations()
+        updateActionBar()
       }
     })
   } catch {

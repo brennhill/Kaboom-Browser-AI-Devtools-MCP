@@ -122,6 +122,30 @@ function renderAnnotations() {
   drawExistingAnnotations()
 }
 
+function updateActionBar() {
+  const count = annotations.length
+  if (actionSubmitButton) {
+    actionSubmitButton.textContent = `Submit ${count} ${count === 1 ? 'annotation' : 'annotations'}`
+    actionSubmitButton.disabled = count === 0
+    actionSubmitButton.style.cursor = count === 0 ? 'not-allowed' : 'pointer'
+    actionSubmitButton.style.opacity = count === 0 ? '0.55' : '1'
+  }
+  if (actionUndoButton) {
+    actionUndoButton.disabled = count === 0
+    actionUndoButton.style.cursor = count === 0 ? 'not-allowed' : 'pointer'
+    actionUndoButton.style.opacity = count === 0 ? '0.55' : '1'
+  }
+}
+
+function undoLatestAnnotation() {
+  const removed = annotations.pop()
+  if (!removed) return
+  if (removed.correlation_id) elementDetails.delete(removed.correlation_id)
+  renderAnnotations()
+  persistAnnotations()
+  updateActionBar()
+}
+
 function drawRoundRect(x, y, w, h, radius) {
   ctx.beginPath()
   ctx.moveTo(x + radius, y)
@@ -357,6 +381,7 @@ function confirmTextInput() {
 
   renderAnnotations()
   persistAnnotations()
+  updateActionBar()
 }
 
 function cancelTextInput() {

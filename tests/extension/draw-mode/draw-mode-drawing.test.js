@@ -249,6 +249,69 @@ describe('Draw Mode — Drawing Mechanics', () => {
     assert.strictEqual(completed.annotations[0].text, 'submit-on-second-enter')
   })
 
+  test('action bar counts annotations and undo removes the latest mark', () => {
+    dm.activateDrawMode('user')
+    const overlay = documentBody.children[0]
+    const submitButton = createdElements.find((el) => el.id === 'kaboom-draw-submit')
+    const undoButton = createdElements.find((el) => el.id === 'kaboom-draw-undo')
+    const cancelButton = createdElements.find((el) => el.id === 'kaboom-draw-cancel')
+
+    assert.ok(submitButton, 'explicit submit action should exist')
+    assert.ok(undoButton, 'undo action should exist')
+    assert.ok(cancelButton, 'explicit cancel action should exist')
+    assert.strictEqual(submitButton.textContent, 'Submit 0 annotations')
+    assert.strictEqual(submitButton.disabled, true)
+    assert.strictEqual(undoButton.disabled, true)
+
+    for (const [text, offset] of [['first change', 0], ['second change', 180]]) {
+      overlay._dispatch('mousedown', { button: 0, clientX: 100 + offset, clientY: 100 })
+      overlay._dispatch('mouseup', { clientX: 250 + offset, clientY: 200 })
+      const inputEl = createdElements.filter((el) => el.tagName === 'INPUT').at(-1)
+      inputEl.value = text
+      inputEl._listeners.keydown[0]({
+        key: 'Enter',
+        preventDefault: mock.fn(),
+        stopPropagation: mock.fn()
+      })
+    }
+
+    assert.strictEqual(submitButton.textContent, 'Submit 2 annotations')
+    assert.strictEqual(submitButton.disabled, false)
+    undoButton._dispatch('click', { preventDefault: mock.fn(), stopPropagation: mock.fn() })
+    assert.deepStrictEqual(dm.getAnnotations().map((annotation) => annotation.text), ['first change'])
+    assert.strictEqual(submitButton.textContent, 'Submit 1 annotation')
+
+    cancelButton._dispatch('click', { preventDefault: mock.fn(), stopPropagation: mock.fn() })
+    assert.strictEqual(dm.isDrawModeActive(), false, 'Cancel action exits without submission')
+  })
+
+  test('explicit Submit action delivers completed annotations', async () => {
+    dm.activateDrawMode('user')
+    const overlay = documentBody.children[0]
+    const sentMessages = []
+    globalThis.chrome.runtime.sendMessage = mock.fn((message, callback) => {
+      sentMessages.push(message)
+      if (message.type === 'kaboom_capture_screenshot') callback?.({ dataUrl: 'data:image/png;base64,mock' })
+    })
+
+    overlay._dispatch('mousedown', { button: 0, clientX: 100, clientY: 100 })
+    overlay._dispatch('mouseup', { clientX: 250, clientY: 200 })
+    const inputEl = createdElements.find((el) => el.tagName === 'INPUT')
+    inputEl.value = 'submit from action bar'
+    inputEl._listeners.keydown[0]({
+      key: 'Enter',
+      preventDefault: mock.fn(),
+      stopPropagation: mock.fn()
+    })
+
+    const submitButton = createdElements.find((el) => el.id === 'kaboom-draw-submit')
+    submitButton._dispatch('click', { preventDefault: mock.fn(), stopPropagation: mock.fn() })
+    await new Promise((resolve) => setTimeout(resolve, 350))
+
+    const completed = sentMessages.find((message) => message.type === 'draw_mode_completed')
+    assert.strictEqual(completed.annotations[0].text, 'submit from action bar')
+  })
+
   test('Escape from the annotation editor cancels the whole session', () => {
     dm.activateDrawMode('user')
     const overlay = documentBody.children[0]

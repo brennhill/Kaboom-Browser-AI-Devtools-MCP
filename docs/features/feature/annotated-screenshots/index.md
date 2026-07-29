@@ -92,6 +92,11 @@ last_verified_date: 2026-03-05
   persistence/submission, and geometry/context. `scripts/build/generate-draw-mode.js`
   assembles the MV3-loadable `extension/content/draw-mode.js` artifact and
   `--check` fails on drift.
+- The persistent action bar exposes **Undo**, a live
+  **Submit N annotations** action, and **Cancel**. Escape always cancels,
+  Enter saves the active annotation, and the next Enter submits.
+- Persisted annotations restored after an interrupted extension lifecycle
+  immediately update the action count and remain undoable.
 
 ### Go (store + handler)
 - `internal/annotation/store.go` — `Detail` struct with ParentContext, Siblings, CSSFramework fields; session TTL = 2 hours

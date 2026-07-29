@@ -54,6 +54,7 @@ function loadAnnotations() {
       if (data?.annotations && data.page_url === window.location.href) {
         annotations = data.annotations.map(normalizeLoadedAnnotation)
         renderAnnotations()
+        updateActionBar()
       }
     })
   } catch {
