@@ -4,7 +4,7 @@ feature_id: feature-flow-recording
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-29
 code_paths:
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
@@ -51,17 +51,17 @@ test_paths:
   - internal/recording/logdiff/logdiff_test.go
   - internal/recording/no_facade_test.go
   - internal/recording/actionlog/recorder_test.go
-  - tests/extension/recording-fixture.js
-  - tests/extension/recording-lifecycle.test.js
-  - tests/extension/recording-recovery.test.js
-  - tests/extension/recording.test.js
-  - tests/extension/recording-listeners-target-tab.test.js
-  - tests/extension/recording-capture-branding.test.js
-  - tests/extension/recording-log-branding.test.js
-  - tests/extension/recording-shortcut-command.test.js
-  - tests/extension/action-recording-reconcile.test.js
-  - tests/extension/entry-point-parity.test.js
-  - tests/extension/tracked-hover-launcher.test.js
+  - tests/extension/recording-lifecycle/recording-fixture.js
+  - tests/extension/recording-lifecycle/recording-lifecycle.test.js
+  - tests/extension/recording-lifecycle/recording-recovery.test.js
+  - tests/extension/recording-lifecycle/recording.test.js
+  - tests/extension/recording-ui/recording-listeners-target-tab.test.js
+  - tests/extension/recording-ui/recording-capture-branding.test.js
+  - tests/extension/recording-ui/recording-log-branding.test.js
+  - tests/extension/recording-ui/recording-shortcut-command.test.js
+  - tests/extension/recording-lifecycle/action-recording-reconcile.test.js
+  - tests/extension/contracts/entry-point-parity.test.js
+  - tests/extension/ui-controls/tracked-hover-launcher.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---
@@ -130,9 +130,9 @@ canonical owners directly; root one-line forwarding wrappers are prohibited.
   - `cmd/browser-agent/internal/toolrecording/toolrecording_test.go`
   - `cmd/browser-agent/recording_playback_result_test.go`
   - `internal/capture/recording_manager_test.go`
-  - `tests/extension/recording.test.js`
-  - `tests/extension/recording-listeners-target-tab.test.js`
-  - `tests/extension/recording-capture-branding.test.js`
-  - `tests/extension/recording-log-branding.test.js`
-  - `tests/extension/recording-shortcut-command.test.js`
-  - `tests/extension/tracked-hover-launcher.test.js`
+  - `tests/extension/recording-lifecycle/recording.test.js`
+  - `tests/extension/recording-ui/recording-listeners-target-tab.test.js`
+  - `tests/extension/recording-ui/recording-capture-branding.test.js`
+  - `tests/extension/recording-ui/recording-log-branding.test.js`
+  - `tests/extension/recording-ui/recording-shortcut-command.test.js`
+  - `tests/extension/ui-controls/tracked-hover-launcher.test.js`

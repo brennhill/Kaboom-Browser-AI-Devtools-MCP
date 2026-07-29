@@ -36,7 +36,7 @@ From `/tmp/kaboom-uat-multitier-1770672748/`:
 
 ### 1. Framework.sh: Exponential Backoff for Health Polling
 
-**File:** `scripts/tests/framework.sh`
+**File:** `scripts/tests/framework/framework.sh`
 
 **Change:** Replaced fixed 0.1s sleep with exponential backoff:
 
@@ -81,7 +81,7 @@ Created conservative parallel test executors that run tests in smaller groups wi
 
 ### 3. Potential Speed Critical Path
 
-**File:** `scripts/tests/cat-11-data-pipeline.sh` (869 LOC)
+**File:** `scripts/tests/capture/cat-11-data-pipeline.sh` (869 LOC)
 - Currently takes ~60 seconds for 31 tests
 - Could be parallelized further if needed (currently sequential operations)
 
@@ -155,5 +155,5 @@ The tiered approach (`test-tiered-parallel.sh`, `test-multi-tier.sh`) should not
 ## References
 
 - QA Analysis: Analysis of parallel test failures, root causes, and recommendations
-- Framework: `scripts/tests/framework.sh` — daemon lifecycle, health polling
+- Framework: `scripts/tests/framework/framework.sh` — daemon lifecycle, health polling
 - Test Runners: `scripts/test-original-uat-safe.sh`, `scripts/test-new-uat-conservative.sh`

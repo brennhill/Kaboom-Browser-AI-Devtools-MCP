@@ -4,7 +4,7 @@ feature_id: feature-ai-web-pilot
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-29
 code_paths:
   - cmd/browser-agent/internal/toolguard/guards.go
   - cmd/browser-agent/tools_core.go
@@ -27,8 +27,8 @@ code_paths:
 test_paths:
   - cmd/browser-agent/tools_interact_gate_test.go
   - cmd/browser-agent/tools_coldstart_gate_test.go
-  - tests/extension/pilot-toggle.test.js
-  - tests/extension/dom-primitives-branding.test.js
+  - tests/extension/pilot/pilot-toggle.test.js
+  - tests/extension/dom/dom-primitives-branding.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

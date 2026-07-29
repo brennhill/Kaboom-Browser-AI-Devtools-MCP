@@ -174,7 +174,7 @@ last_verified_date: 2026-03-05
 
 **Framework:** Bash scripts (see cat-20-noise-persistence.sh)
 
-**File:** `/Users/brenn/dev/kaboom/scripts/tests/cat-20-noise-persistence.sh`
+**File:** `/Users/brenn/dev/kaboom/scripts/tests/capture/cat-20-noise-persistence.sh`
 
 #### 10 Tests Implemented:
 
@@ -305,10 +305,10 @@ Per QA Plan section DL-1 through DL-3 (marked CRITICAL):
 
 ```bash
 # Run all 10 persistence tests
-./scripts/tests/cat-20-noise-persistence.sh 7890 /dev/null
+./scripts/tests/capture/cat-20-noise-persistence.sh 7890 /dev/null
 
 # Or with output to file
-./scripts/tests/cat-20-noise-persistence.sh 7890 ./cat-20-results.txt
+./scripts/tests/capture/cat-20-noise-persistence.sh 7890 ./cat-20-results.txt
 ```
 
 ### Full Test Suite

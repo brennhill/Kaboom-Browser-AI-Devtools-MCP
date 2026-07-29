@@ -4,7 +4,7 @@ feature_id: feature-auto-fix
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-29
 code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/internal/toolanalyze/deps.go
@@ -31,11 +31,11 @@ test_paths:
   - cmd/browser-agent/internal/toolanalyze/pageissues/handler_test.go
   - cmd/browser-agent/internal/toolanalyze/pageissues/summary_test.go
   - cmd/browser-agent/internal/terminal/intent_store_test.go
-  - tests/extension/request-audit.test.js
-  - tests/extension/message-handlers.test.js
-  - tests/extension/popup-audit-button.test.js
-  - tests/extension/popup-tab-tracking-sync.test.js
-  - tests/extension/tracked-hover-launcher.test.js
+  - tests/extension/reliability/request-audit.test.js
+  - tests/extension/content/message-handlers.test.js
+  - tests/extension/popup-shell/popup-audit-button.test.js
+  - tests/extension/popup-shell/popup-tab-tracking-sync.test.js
+  - tests/extension/ui-controls/tracked-hover-launcher.test.js
   - tests/packaging/kaboom-audit-workflow.test.js
   - tests/packaging/kaboom-skills-branding.test.js
 last_verified_version: 0.8.1

@@ -4,7 +4,7 @@ feature_id: feature-reproduction-scripts
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-29
 code_paths:
   - cmd/browser-agent/internal/toolgenerate/dispatcher.go
   - cmd/browser-agent/internal/toolgenerate/deps.go
@@ -19,9 +19,9 @@ test_paths:
   - internal/reproduction/reproduction_test.go
   - internal/reproduction/golden_test.go
   - cmd/browser-agent/lint_hardening_test.go
-  - tests/extension/reproduction-script-fixture.js
-  - tests/extension/reproduction-script-generation.test.js
-  - tests/extension/reproduction-script.test.js
+  - tests/extension/reproduction/reproduction-script-fixture.js
+  - tests/extension/reproduction/reproduction-script-generation.test.js
+  - tests/extension/reproduction/reproduction-script.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

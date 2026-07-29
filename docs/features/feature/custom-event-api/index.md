@@ -4,17 +4,17 @@ feature_id: feature-custom-event-api
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-29
 code_paths:
   - src/inject/api.ts
   - src/inject.ts
   - scripts/build/bundle-content.js
 test_paths:
-  - tests/extension/inject-context-api-actions.test.js
-  - tests/extension/inject-v5-wiring.test.js
-  - tests/extension/performance-marks.test.js
-  - tests/extension/network-waterfall.test.js
-  - tests/extension/no-compatibility-facades.test.js
+  - tests/extension/injection/inject-context-api-actions.test.js
+  - tests/extension/injection/inject-v5-wiring.test.js
+  - tests/extension/performance/performance-marks.test.js
+  - tests/extension/network-http/network-waterfall.test.js
+  - tests/extension/contracts/no-compatibility-facades.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

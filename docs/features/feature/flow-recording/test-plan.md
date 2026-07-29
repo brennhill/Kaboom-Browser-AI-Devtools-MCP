@@ -131,7 +131,7 @@ last_verified_date: 2026-03-05
 
 **Framework:** Bash scripts
 
-**File:** `/Users/brenn/dev/kaboom/scripts/tests/cat-18-recording.sh`
+**File:** `/Users/brenn/dev/kaboom/scripts/tests/capture/cat-18-recording.sh`
 
 #### 7 Tests Implemented:
 
@@ -233,10 +233,10 @@ The cat-18 tests focus on **API contract (start/stop/list)**. They don't test th
 
 ```bash
 # Run all 7 recording API tests
-./scripts/tests/cat-18-recording.sh 7890 /dev/null
+./scripts/tests/capture/cat-18-recording.sh 7890 /dev/null
 
 # Or with output to file
-./scripts/tests/cat-18-recording.sh 7890 ./cat-18-results.txt
+./scripts/tests/capture/cat-18-recording.sh 7890 ./cat-18-results.txt
 ```
 
 ### Full Test Suite

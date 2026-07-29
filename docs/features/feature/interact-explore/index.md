@@ -77,8 +77,8 @@ code_paths:
   - cmd/browser-agent/internal/summarypref/cache.go
   - cmd/browser-agent/tools_core.go
 test_paths:
-  - tests/extension/upload-handler.test.js
-  - tests/extension/command-element-results.test.js
+  - tests/extension/misc/upload-handler.test.js
+  - tests/extension/dom/command-element-results.test.js
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/lint_hardening_test.go
   - internal/recording/actionlog/recorder_test.go
@@ -119,24 +119,24 @@ test_paths:
   - cmd/browser-agent/tools_interact_state_test.go
   - cmd/browser-agent/internal/toolinteract/interactstate/state_test.go
   - extension/background/__tests__/dom-dispatch-structured.test.js
-  - tests/extension/dom-primitives-branding.test.js
-  - tests/extension/dom-primitives-generation.test.js
-  - tests/extension/dom-action-family-routing.test.js
-  - tests/extension/action-toast-labels.test.js
-  - tests/extension/execute-js.test.js
+  - tests/extension/dom/dom-primitives-branding.test.js
+  - tests/extension/dom/dom-primitives-generation.test.js
+  - tests/extension/dom/dom-action-family-routing.test.js
+  - tests/extension/ui-controls/action-toast-labels.test.js
+  - tests/extension/injection/execute-js.test.js
   - internal/tools/interact/workflow_test.go
   - internal/tools/configure/capabilities/modespecs_test.go
-  - tests/extension/toggle-overlay.test.js
+  - tests/extension/ui-controls/toggle-overlay.test.js
   - cmd/browser-agent/internal/asyncresult/asyncresult_test.go
   - cmd/browser-agent/tools_async_formatting_test.go
-  - tests/extension/interact-content-fallback.test.js
-  - tests/extension/async-timeout.test.js
-  - tests/extension/pending-query-targeting.test.js
-  - tests/extension/pilot-execute.test.js
-  - tests/extension/pilot-state.test.js
-  - tests/extension/pilot-toggle.test.js
-  - tests/extension/no-compatibility-facades.test.js
-  - tests/extension/content-message-correlation.test.js
+  - tests/extension/pilot/interact-content-fallback.test.js
+  - tests/extension/pilot/async-timeout.test.js
+  - tests/extension/sync/pending-query-targeting.test.js
+  - tests/extension/pilot/pilot-execute.test.js
+  - tests/extension/pilot/pilot-state.test.js
+  - tests/extension/pilot/pilot-toggle.test.js
+  - tests/extension/contracts/no-compatibility-facades.test.js
+  - tests/extension/content/content-message-correlation.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

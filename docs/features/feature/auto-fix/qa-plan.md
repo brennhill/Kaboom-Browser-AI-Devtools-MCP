@@ -116,7 +116,7 @@ Server source: `cmd/browser-agent/internal/toolanalyze/pageissues/handler.go`. T
 | IT-5 | requestAudit trigger | popup and hover | Both call `requestAudit`; terminal opened first, then bridge sent | must |
 | IT-6 | Fallback nudge | PTY injection unavailable | `qa_scan` intent stored; next MCP response prepends `ACTION REQUIRED` | must |
 
-Extension tests: `tests/extension/request-audit.test.js`, `tests/extension/message-handlers.test.js`. Post-process test: `cmd/browser-agent/handler_tools_call_postprocess_test.go`.
+Extension tests: `tests/extension/reliability/request-audit.test.js`, `tests/extension/content/message-handlers.test.js`. Post-process test: `cmd/browser-agent/handler_tools_call_postprocess_test.go`.
 
 ### 4.3 Edge Case Tests
 

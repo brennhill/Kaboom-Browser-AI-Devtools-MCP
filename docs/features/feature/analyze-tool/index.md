@@ -4,7 +4,7 @@ feature_id: feature-analyze-tool
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-29
 code_paths:
   - cmd/browser-agent/tools_core.go
   - cmd/browser-agent/internal/toolanalyze/deps.go
@@ -76,9 +76,9 @@ test_paths:
   - internal/tools/analyze/link_validation_test.go
   - internal/tools/analyze/visual_diff_test.go
   - internal/tools/analyze/imagediff/imagediff_test.go
-  - tests/extension/data-table.test.js
-  - tests/extension/page-structure-targeting.test.js
-  - tests/extension/no-compatibility-facades.test.js
+  - tests/extension/misc/data-table.test.js
+  - tests/extension/dom/page-structure-targeting.test.js
+  - tests/extension/contracts/no-compatibility-facades.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

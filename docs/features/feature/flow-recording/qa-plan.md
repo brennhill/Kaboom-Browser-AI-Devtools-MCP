@@ -39,7 +39,7 @@ make test
 go test ./cmd/browser-agent/...
 
 # Extension tests only
-node --test tests/extension/recording.test.js
+node --test tests/extension/recording-lifecycle/recording.test.js
 
 # Full CI (includes lint, typecheck)
 make ci-local
@@ -548,7 +548,7 @@ THEN: Error includes:
 
 ### Module 5: Extension Recording
 
-**File:** `tests/extension/recording.test.js` (new)
+**File:** `tests/extension/recording-lifecycle/recording.test.js` (new)
 
 #### Test Case 5.1: Start Recording
 ```

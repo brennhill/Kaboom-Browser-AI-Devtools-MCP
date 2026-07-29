@@ -4,7 +4,7 @@ feature_id: feature-browser-extension-enhancement
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-29
 code_paths:
   - src/popup.ts
   - src/popup/feature-toggles.ts
@@ -18,16 +18,16 @@ code_paths:
   - extension/popup.css
   - extension/options.html
 test_paths:
-  - tests/extension/popup-features.test.js
-  - tests/extension/popup-toggles.test.js
-  - tests/extension/toggle-feature.test.js
-  - tests/extension/logo-motion.test.js
-  - tests/extension/popup-status.test.js
-  - tests/extension/version-check-branding.test.js
-  - tests/extension/sync-client-commands.test.js
-  - tests/extension/sync-client-fixture.js
-  - tests/extension/sync-client-resilience.test.js
-  - tests/extension/sync-client.test.js
+  - tests/extension/popup-shell/popup-features.test.js
+  - tests/extension/popup-shell/popup-toggles.test.js
+  - tests/extension/ui-controls/toggle-feature.test.js
+  - tests/extension/branding/logo-motion.test.js
+  - tests/extension/popup-shell/popup-status.test.js
+  - tests/extension/branding/version-check-branding.test.js
+  - tests/extension/sync/sync-client-commands.test.js
+  - tests/extension/sync/sync-client-fixture.js
+  - tests/extension/sync/sync-client-resilience.test.js
+  - tests/extension/sync/sync-client.test.js
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-28
 ---

@@ -184,7 +184,7 @@ wait
 scripts/tests/cat-15-extended.sh
 scripts/tests/cat-17-generation-logic.sh
 scripts/tests/cat-17-healing-logic.sh
-scripts/tests/cat-17-performance.sh
+scripts/tests/runtime/cat-17-performance.sh
 scripts/tests/cat-18-recording-logic.sh
 scripts/tests/cat-18-recording-automation.sh
 scripts/tests/cat-18-playback-logic.sh
@@ -193,8 +193,8 @@ scripts/tests/cat-19-link-crawling.sh
 scripts/tests/cat-20-security.sh
 scripts/tests/cat-20-filtering-logic.sh
 scripts/tests/cat-20-auto-detect.sh
-scripts/tests/cat-21-stress.sh
-scripts/tests/cat-22-advanced.sh
+scripts/tests/runtime/cat-21-stress.sh
+scripts/tests/runtime/cat-22-advanced.sh
 ```
 
 ### Documentation

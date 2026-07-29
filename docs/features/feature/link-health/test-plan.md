@@ -174,7 +174,7 @@ last_verified_date: 2026-03-05
 
 **Framework:** Bash scripts (see cat-19-link-health.sh)
 
-**File:** `/Users/brenn/dev/kaboom/scripts/tests/cat-19-link-health.sh`
+**File:** `/Users/brenn/dev/kaboom/scripts/tests/browser/cat-19-link-health.sh`
 
 #### 19 Tests Implemented:
 
@@ -270,10 +270,10 @@ The cat-19 tests focus on **API contract & MCP protocol validation**. They don't
 
 ```bash
 # Run all 19 link-health API contract tests
-./scripts/tests/cat-19-link-health.sh 7890 /dev/null
+./scripts/tests/browser/cat-19-link-health.sh 7890 /dev/null
 
 # Or with output to file
-./scripts/tests/cat-19-link-health.sh 7890 ./cat-19-results.txt
+./scripts/tests/browser/cat-19-link-health.sh 7890 ./cat-19-results.txt
 ```
 
 ### Smoke Tests

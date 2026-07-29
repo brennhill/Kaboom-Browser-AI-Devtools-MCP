@@ -4,7 +4,7 @@ feature_id: feature-observe
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-29
 code_paths:
   - internal/capture/accessors.go
   - internal/queries/dispatcher_queries.go
@@ -51,7 +51,7 @@ code_paths:
   - src/lib/net/network.ts
 test_paths:
   - internal/capture/health_reader_owner_test.go
-  - tests/extension/command-element-results.test.js
+  - tests/extension/dom/command-element-results.test.js
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/internal/toolobserve/toolobserve_coverage_test.go
   - cmd/browser-agent/tools_observe_inbox_test.go
@@ -79,22 +79,22 @@ test_paths:
   - internal/tools/observe/page_state_storage_test.go
   - internal/tools/observe/page_state_screenshot_test.go
   - internal/tools/observe/hints/hints_test.go
-  - tests/extension/inject-console-network-exceptions.test.js
-  - tests/extension/network-bodies-fixture.js
-  - tests/extension/network-bodies-xhr.test.js
-  - tests/extension/network-bodies.test.js
-  - tests/extension/network-body-e2e-fixture.js
-  - tests/extension/network-body-e2e.test.js
-  - tests/extension/content.test.js
-  - tests/extension/runtime-log-branding.test.js
-  - tests/extension/background-errors-comms.test.js
-  - tests/extension/performance.test.js
-  - tests/extension/reliability-fixes.test.js
-  - tests/extension/no-compatibility-facades.test.js
-  - tests/extension/sync-client-commands.test.js
-  - tests/extension/sync-client-fixture.js
-  - tests/extension/sync-client-resilience.test.js
-  - tests/extension/sync-client.test.js
+  - tests/extension/injection/inject-console-network-exceptions.test.js
+  - tests/extension/network-http/network-bodies-fixture.js
+  - tests/extension/network-http/network-bodies-xhr.test.js
+  - tests/extension/network-http/network-bodies.test.js
+  - tests/extension/network-http/network-body-e2e-fixture.js
+  - tests/extension/network-http/network-body-e2e.test.js
+  - tests/extension/content/content.test.js
+  - tests/extension/branding/runtime-log-branding.test.js
+  - tests/extension/misc/background-errors-comms.test.js
+  - tests/extension/performance/performance.test.js
+  - tests/extension/reliability/reliability-fixes.test.js
+  - tests/extension/contracts/no-compatibility-facades.test.js
+  - tests/extension/sync/sync-client-commands.test.js
+  - tests/extension/sync/sync-client-fixture.js
+  - tests/extension/sync/sync-client-resilience.test.js
+  - tests/extension/sync/sync-client.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

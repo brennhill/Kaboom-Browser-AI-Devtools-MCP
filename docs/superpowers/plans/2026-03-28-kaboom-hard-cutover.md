@@ -35,10 +35,10 @@
 - `src/options.ts`
 - `src/popup/logo-motion.ts`
 - `src/content/ui/tracked-hover-launcher.ts`
-- `tests/extension/logo-motion.test.js`
-- `tests/extension/sidepanel-terminal.test.js`
-- `tests/extension/tracked-hover-launcher.test.js`
-- `tests/extension/options.test.js`
+- `tests/extension/branding/logo-motion.test.js`
+- `tests/extension/terminal-sidepanel/sidepanel-terminal.test.js`
+- `tests/extension/ui-controls/tracked-hover-launcher.test.js`
+- `tests/extension/popup-shell/options.test.js`
 
 ### Site And Domain
 
@@ -135,21 +135,21 @@
 - Modify: `extension/icons/logo-animated.svg`
 - Modify: `extension/manifest.json`
 - Modify: `src/popup/logo-motion.ts`
-- Test: `tests/extension/logo-motion.test.js`
-- Test: `tests/extension/popup-features.test.js`
+- Test: `tests/extension/branding/logo-motion.test.js`
+- Test: `tests/extension/popup-shell/popup-features.test.js`
 
 - [ ] **Step 1: Write the failing tests**
   Add assertions that the extension shell uses `Kaboom` labels and the flame asset paths instead of Kaboom-specific assets.
 
 - [ ] **Step 2: Run tests to verify they fail**
-  Run: `node --test tests/extension/logo-motion.test.js tests/extension/popup-features.test.js`
+  Run: `node --test tests/extension/branding/logo-motion.test.js tests/extension/popup-shell/popup-features.test.js`
 
 - [ ] **Step 3: Implement the minimal branding change**
   Restore flame-based SVG assets and update manifest/popup logo-motion references to `Kaboom`.
 
 - [ ] **Step 4: Compile and rerun**
   Run: `make compile-ts`
-  Run: `node --test tests/extension/logo-motion.test.js tests/extension/popup-features.test.js`
+  Run: `node --test tests/extension/branding/logo-motion.test.js tests/extension/popup-shell/popup-features.test.js`
 
 - [ ] **Step 5: Commit**
   Commit: `git commit -m "brand: restore flame icon and kaboom extension shell"`
@@ -162,22 +162,22 @@
 - Modify: `src/sidepanel.ts`
 - Modify: `src/content/ui/tracked-hover-launcher.ts`
 - Modify: `src/options.ts`
-- Test: `tests/extension/sidepanel-terminal.test.js`
-- Test: `tests/extension/tracked-hover-launcher.test.js`
-- Test: `tests/extension/options.test.js`
+- Test: `tests/extension/terminal-sidepanel/sidepanel-terminal.test.js`
+- Test: `tests/extension/ui-controls/tracked-hover-launcher.test.js`
+- Test: `tests/extension/popup-shell/options.test.js`
 
 - [ ] **Step 1: Write the failing tests**
   Add assertions for `Kaboom` labels, terminal fallback copy, hover launcher strings, and options diagnostics text.
 
 - [ ] **Step 2: Run tests to verify they fail**
-  Run: `node --test tests/extension/sidepanel-terminal.test.js tests/extension/tracked-hover-launcher.test.js tests/extension/options.test.js`
+  Run: `node --test tests/extension/terminal-sidepanel/sidepanel-terminal.test.js tests/extension/ui-controls/tracked-hover-launcher.test.js tests/extension/popup-shell/options.test.js`
 
 - [ ] **Step 3: Implement the minimal string rename**
   Replace visible Kaboom/Kaboom copy with `Kaboom` in the three UI entry points only.
 
 - [ ] **Step 4: Verify**
   Run: `make compile-ts`
-  Run: `node --test tests/extension/sidepanel-terminal.test.js tests/extension/tracked-hover-launcher.test.js tests/extension/options.test.js`
+  Run: `node --test tests/extension/terminal-sidepanel/sidepanel-terminal.test.js tests/extension/ui-controls/tracked-hover-launcher.test.js tests/extension/popup-shell/options.test.js`
   Run: `npm run typecheck`
 
 - [ ] **Step 5: Commit**
@@ -279,19 +279,19 @@
 - Modify: `package.json`
 - Modify: `CONTRIBUTING.md`
 - Modify: `CLAUDE.md`
-- Create: `tests/cli/root-metadata-branding.test.cjs`
+- Create: `tests/cli/contracts/root-metadata-branding.test.cjs`
 
 - [ ] **Step 1: Write the failing test**
   Assert root metadata points at Kaboom naming and `gokaboom.dev`.
 
 - [ ] **Step 2: Run test to verify it fails**
-  Run: `node --test tests/cli/root-metadata-branding.test.cjs`
+  Run: `node --test tests/cli/contracts/root-metadata-branding.test.cjs`
 
 - [ ] **Step 3: Implement the minimal metadata rename**
   Update package metadata and root docs that define the repo/site-facing public identity.
 
 - [ ] **Step 4: Verify**
-  Run: `node --test tests/cli/root-metadata-branding.test.cjs`
+  Run: `node --test tests/cli/contracts/root-metadata-branding.test.cjs`
 
 - [ ] **Step 5: Commit**
   Commit: `git commit -m "brand: rename root metadata to kaboom"`
@@ -337,20 +337,20 @@
 - Modify: `npm/linux-x64/package.json`
 - Modify: `npm/win32-x64/package.json`
 - Modify: `npm/publish.sh`
-- Test: `tests/cli/install.test.cjs`
-- Test: `tests/cli/uninstall.test.cjs`
+- Test: `tests/cli/lifecycle/install.test.cjs`
+- Test: `tests/cli/lifecycle/uninstall.test.cjs`
 
 - [ ] **Step 1: Write the failing tests**
   Extend CLI tests to assert platform package names/descriptions and publish script references use Kaboom names.
 
 - [ ] **Step 2: Run tests to verify they fail**
-  Run: `node --test tests/cli/install.test.cjs tests/cli/uninstall.test.cjs`
+  Run: `node --test tests/cli/lifecycle/install.test.cjs tests/cli/lifecycle/uninstall.test.cjs`
 
 - [ ] **Step 3: Implement the minimal platform metadata rename**
   Update the platform package descriptors and publish script references only.
 
 - [ ] **Step 4: Verify**
-  Run: `node --test tests/cli/install.test.cjs tests/cli/uninstall.test.cjs`
+  Run: `node --test tests/cli/lifecycle/install.test.cjs tests/cli/lifecycle/uninstall.test.cjs`
 
 - [ ] **Step 5: Commit**
   Commit: `git commit -m "brand: rename npm platform packages to kaboom"`
@@ -429,21 +429,21 @@
 - Modify: `src/options.ts`
 - Modify: `src/types/runtime-messages.ts`
 - Modify: `src/lib/constants.ts`
-- Test: `tests/extension/options.test.js`
-- Test: `tests/extension/tooling-contracts.test.js`
+- Test: `tests/extension/popup-shell/options.test.js`
+- Test: `tests/extension/contracts/tooling-contracts.test.js`
 
 - [ ] **Step 1: Write the failing tests**
   Assert header names, storage keys, and visible option persistence names use Kaboom contracts.
 
 - [ ] **Step 2: Run tests to verify they fail**
-  Run: `node --test tests/extension/options.test.js tests/extension/tooling-contracts.test.js`
+  Run: `node --test tests/extension/popup-shell/options.test.js tests/extension/contracts/tooling-contracts.test.js`
 
 - [ ] **Step 3: Implement the minimal contract rename**
   Rename TS-side headers/storage/message constants without touching the window API yet.
 
 - [ ] **Step 4: Verify**
   Run: `make compile-ts`
-  Run: `node --test tests/extension/options.test.js tests/extension/tooling-contracts.test.js`
+  Run: `node --test tests/extension/popup-shell/options.test.js tests/extension/contracts/tooling-contracts.test.js`
   Run: `npm run typecheck`
 
 - [ ] **Step 5: Commit**
@@ -457,21 +457,21 @@
 - Modify: `src/inject/api.ts`
 - Modify: `src/inject/index.ts`
 - Modify: `src/types/global.d.ts`
-- Test: `tests/extension/inject-context-api-actions.test.js`
-- Test: `tests/extension/inject-v5-wiring.test.js`
+- Test: `tests/extension/injection/inject-context-api-actions.test.js`
+- Test: `tests/extension/injection/inject-v5-wiring.test.js`
 
 - [ ] **Step 1: Write the failing tests**
   Assert the browser-exposed API is `window.__kaboom` and that old `window.__kaboom` references are removed.
 
 - [ ] **Step 2: Run tests to verify they fail**
-  Run: `node --test tests/extension/inject-context-api-actions.test.js tests/extension/inject-v5-wiring.test.js`
+  Run: `node --test tests/extension/injection/inject-context-api-actions.test.js tests/extension/injection/inject-v5-wiring.test.js`
 
 - [ ] **Step 3: Implement the minimal API rename**
   Rename only the injected developer API and its type exports.
 
 - [ ] **Step 4: Verify**
   Run: `make compile-ts`
-  Run: `node --test tests/extension/inject-context-api-actions.test.js tests/extension/inject-v5-wiring.test.js`
+  Run: `node --test tests/extension/injection/inject-context-api-actions.test.js tests/extension/injection/inject-v5-wiring.test.js`
   Run: `npm run typecheck`
 
 - [ ] **Step 5: Commit**
@@ -519,19 +519,19 @@
 - Modify: `npm/kaboom-agentic-browser/lib/postinstall-skills.js`
 - Modify: `npm/kaboom-agentic-browser/lib/skills.js`
 - Test: `npm/kaboom-agentic-browser/lib/install.test.js`
-- Test: `tests/cli/install.test.cjs`
+- Test: `tests/cli/lifecycle/install.test.cjs`
 
 - [ ] **Step 1: Write the failing tests**
   Add install tests that create legacy Kaboom/Kaboom managed artifacts and assert Kaboom install removes them before writing new config/skills.
 
 - [ ] **Step 2: Run tests to verify they fail**
-  Run: `node --test npm/kaboom-agentic-browser/lib/install.test.js tests/cli/install.test.cjs`
+  Run: `node --test npm/kaboom-agentic-browser/lib/install.test.js tests/cli/lifecycle/install.test.cjs`
 
 - [ ] **Step 3: Implement the minimal install cleanup**
   Add one shared cleanup helper that removes first-party managed legacy artifacts and old state during install/postinstall.
 
 - [ ] **Step 4: Verify**
-  Run: `node --test npm/kaboom-agentic-browser/lib/install.test.js tests/cli/install.test.cjs`
+  Run: `node --test npm/kaboom-agentic-browser/lib/install.test.js tests/cli/lifecycle/install.test.cjs`
 
 - [ ] **Step 5: Commit**
   Commit: `git commit -m "feat: wipe legacy installs before kaboom npm install"`
@@ -544,19 +544,19 @@
 - Modify: `npm/kaboom-agentic-browser/lib/uninstall.js`
 - Modify: `npm/kaboom-agentic-browser/lib/cli.js`
 - Test: `npm/kaboom-agentic-browser/lib/uninstall.test.js`
-- Test: `tests/cli/uninstall.test.cjs`
+- Test: `tests/cli/lifecycle/uninstall.test.cjs`
 
 - [ ] **Step 1: Write the failing tests**
   Add uninstall/update-oriented tests that assert Kaboom removes Kaboom, Kaboom, and Kaboom managed entries and skills.
 
 - [ ] **Step 2: Run tests to verify they fail**
-  Run: `node --test npm/kaboom-agentic-browser/lib/uninstall.test.js tests/cli/uninstall.test.cjs`
+  Run: `node --test npm/kaboom-agentic-browser/lib/uninstall.test.js tests/cli/lifecycle/uninstall.test.cjs`
 
 - [ ] **Step 3: Implement the minimal uninstall/update cleanup**
   Reuse the cleanup helper and ensure update paths invoke cleanup before reinstall.
 
 - [ ] **Step 4: Verify**
-  Run: `node --test npm/kaboom-agentic-browser/lib/uninstall.test.js tests/cli/uninstall.test.cjs`
+  Run: `node --test npm/kaboom-agentic-browser/lib/uninstall.test.js tests/cli/lifecycle/uninstall.test.cjs`
 
 - [ ] **Step 5: Commit**
   Commit: `git commit -m "feat: wipe legacy installs on kaboom uninstall and update"`
@@ -634,7 +634,7 @@
 - Modify: `docs/features/feature/tab-tracking-ux/flow-map.md`
 
 - [ ] **Step 1: Write a failing docs contract check if needed**
-  If existing docs checks do not cover the renamed flow-map references, add the smallest failing assertion to a docs script test or create `tests/cli/docs-branding-contract.test.cjs`.
+  If existing docs checks do not cover the renamed flow-map references, add the smallest failing assertion to a docs script test or create `tests/cli/contracts/docs-branding-contract.test.cjs`.
 
 - [ ] **Step 2: Run the docs check to verify it fails**
   Run: `npm run docs:lint:content-contract`
@@ -678,7 +678,7 @@
 **Budget:** <=500 changed LOC plus generated artifact refresh
 
 **Files:**
-- Modify: `tests/cli/root-metadata-branding.test.cjs`
+- Modify: `tests/cli/contracts/root-metadata-branding.test.cjs`
 - Modify: `tests/site/gokaboom-domain-contract.test.js`
 - Modify: any last small stragglers found by scan
 - Regenerate: compiled extension outputs and site outputs after code changes are complete
@@ -687,7 +687,7 @@
   Add a final scan test that rejects surviving first-party `Kaboom`, `Kaboom`, `gokaboom`, and `gokaboom` strings outside approved historical/spec files.
 
 - [ ] **Step 2: Run the final audit to verify it fails**
-  Run: `node --test tests/cli/root-metadata-branding.test.cjs tests/site/gokaboom-domain-contract.test.js`
+  Run: `node --test tests/cli/contracts/root-metadata-branding.test.cjs tests/site/gokaboom-domain-contract.test.js`
 
 - [ ] **Step 3: Clear remaining legacy names in small follow-up commits**
   Only touch the files identified by the scan; split into multiple sub-500 LOC commits if necessary.
@@ -705,9 +705,9 @@
 - `make compile-ts`
 - `npm run typecheck`
 - `npm run docs:lint:content-contract`
-- `node --test tests/extension/logo-motion.test.js tests/extension/sidepanel-terminal.test.js tests/extension/tracked-hover-launcher.test.js tests/extension/options.test.js`
+- `node --test tests/extension/branding/logo-motion.test.js tests/extension/terminal-sidepanel/sidepanel-terminal.test.js tests/extension/ui-controls/tracked-hover-launcher.test.js tests/extension/popup-shell/options.test.js`
 - `node --test tests/site/kaboom-brand-shell.test.js tests/site/gokaboom-domain-contract.test.js`
-- `node --test tests/cli/install.test.cjs tests/cli/uninstall.test.cjs tests/cli/root-metadata-branding.test.cjs`
+- `node --test tests/cli/lifecycle/install.test.cjs tests/cli/lifecycle/uninstall.test.cjs tests/cli/contracts/root-metadata-branding.test.cjs`
 - `node --test npm/kaboom-agentic-browser/lib/install.test.js npm/kaboom-agentic-browser/lib/uninstall.test.js`
 - `python3 -m unittest pypi/kaboom-agentic-browser/tests/test_install.py pypi/kaboom-agentic-browser/tests/test_uninstall.py pypi/kaboom-agentic-browser/tests/test_platform_cleanup.py`
 - `go test ./cmd/browser-agent -run 'Test(NativeInstall|DaemonCleanup|Stop.*|Resources|ReadResource|Handle.*)'`

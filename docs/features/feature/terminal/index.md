@@ -44,40 +44,40 @@ code_paths:
   - internal/pty/fanout.go
   - internal/pty/diag.go
   - npm/kaboom-agentic-browser/lib/kill-daemon.js
-  - scripts/tests/framework.sh
-  - scripts/tests/cat-28-terminal.sh
+  - scripts/tests/framework/framework.sh
+  - scripts/tests/workflows/cat-28-terminal.sh
 test_paths:
-  - tests/extension/terminal-html-liveness.test.js
+  - tests/extension/terminal-reconnect/terminal-html-liveness.test.js
   - cmd/browser-agent/internal/terminal/relay_rebind_test.go
   - cmd/browser-agent/internal/terminal/spawn_retry_test.go
   - cmd/browser-agent/internal/terminal/sandbox_error_test.go
   - cmd/browser-agent/internal/terminal/handlers_start_decisions_test.go
-  - tests/extension/terminal-start-pending.test.js
-  - tests/extension/brand-metadata.test.js
-  - tests/extension/terminal-write-guard.test.js
+  - tests/extension/terminal-session/terminal-start-pending.test.js
+  - tests/extension/branding/brand-metadata.test.js
+  - tests/extension/terminal-session/terminal-write-guard.test.js
   - cmd/browser-agent/internal/terminal/dirs_test.go
   - cmd/browser-agent/internal/terminal/handlers_test.go
   - cmd/browser-agent/internal/terminal/ws_panic_test.go
   - cmd/browser-agent/internal/terminal/supervisor/supervisor_test.go
-  - tests/extension/sidepanel-terminal-fixture.js
-  - tests/extension/sidepanel-terminal-io.test.js
-  - tests/extension/sidepanel-terminal-ui.test.js
-  - tests/extension/sidepanel-terminal.test.js
-  - tests/extension/terminal-widget-session-branding.test.js
-  - tests/extension/terminal-root-folder.test.js
-  - tests/extension/terminal-session-start-errors.test.js
+  - tests/extension/terminal-sidepanel/sidepanel-terminal-fixture.js
+  - tests/extension/terminal-sidepanel/sidepanel-terminal-io.test.js
+  - tests/extension/terminal-sidepanel/sidepanel-terminal-ui.test.js
+  - tests/extension/terminal-sidepanel/sidepanel-terminal.test.js
+  - tests/extension/terminal-session/terminal-widget-session-branding.test.js
+  - tests/extension/terminal-session/terminal-root-folder.test.js
+  - tests/extension/terminal-session/terminal-session-start-errors.test.js
   - cmd/browser-agent/internal/terminal/handlers_logging_test.go
-  - tests/extension/terminal-panel-presence.test.js
-  - tests/extension/terminal-panel-close-and-scope.test.js
-  - tests/extension/terminal-panel-open-failure.test.js
-  - tests/extension/terminal-panel-gesture-entrypoints.test.js
-  - tests/extension/tracked-hover-launcher.test.js
-  - tests/extension/terminal-panel-bridge.test.js
-  - tests/extension/message-handlers.test.js
-  - tests/extension/terminal-panel-gesture-entrypoints.test.js
-  - tests/extension/terminal-panel-presence.test.js
-  - tests/extension/terminal-session-stop.test.js
-  - tests/extension/entry-point-parity.test.js
+  - tests/extension/terminal-panel/terminal-panel-presence.test.js
+  - tests/extension/terminal-panel/terminal-panel-close-and-scope.test.js
+  - tests/extension/terminal-panel/terminal-panel-open-failure.test.js
+  - tests/extension/terminal-panel/terminal-panel-gesture-entrypoints.test.js
+  - tests/extension/ui-controls/tracked-hover-launcher.test.js
+  - tests/extension/terminal-panel/terminal-panel-bridge.test.js
+  - tests/extension/content/message-handlers.test.js
+  - tests/extension/terminal-panel/terminal-panel-gesture-entrypoints.test.js
+  - tests/extension/terminal-panel/terminal-panel-presence.test.js
+  - tests/extension/terminal-session/terminal-session-stop.test.js
+  - tests/extension/contracts/entry-point-parity.test.js
   - internal/pty/manager_test.go
   - internal/pty/manager_fake_spawn_test.go
   - internal/pty/manager_selfheal_test.go
@@ -96,13 +96,13 @@ test_paths:
   - cmd/browser-agent/internal/terminal/intent_handlers_test.go
   - cmd/browser-agent/internal/daemonlife/lifecycle_takeover_test.go
   - cmd/browser-agent/internal/nativeinstall/connect_refused_test.go
-  - tests/extension/terminal-html-reconnect.test.js
-  - tests/extension/terminal-reconnect-recovery-contract.test.js
-  - tests/extension/terminal-reconnect-budget-contract.test.js
-  - tests/extension/terminal-port-discovery.test.js
-  - tests/extension/terminal-iframe-message-contract.test.js
+  - tests/extension/terminal-reconnect/terminal-html-reconnect.test.js
+  - tests/extension/terminal-reconnect/terminal-reconnect-recovery-contract.test.js
+  - tests/extension/terminal-reconnect/terminal-reconnect-budget-contract.test.js
+  - tests/extension/terminal-reconnect/terminal-port-discovery.test.js
+  - tests/extension/terminal-reconnect/terminal-iframe-message-contract.test.js
   - npm/kaboom-agentic-browser/lib/kill-daemon.test.js
-  - tests/cli/uat-harness-regressions.test.cjs
+  - tests/cli/contracts/uat-harness-regressions.test.cjs
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-28
 ---

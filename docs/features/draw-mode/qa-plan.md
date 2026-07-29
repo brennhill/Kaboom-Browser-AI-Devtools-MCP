@@ -24,7 +24,7 @@ last_verified_date: 2026-03-05
 
 ### Test Locations
 
-- **Extension:** `tests/extension/draw-mode.test.js`, `tests/extension/draw-mode-export.test.js`
+- **Extension:** `tests/extension/draw-mode/draw-mode.test.js`, `tests/extension/draw-mode-export.test.js`
 - **Go Server:** `cmd/browser-agent/draw_mode_test.go`, `cmd/browser-agent/annotation_store_test.go`
 - **Integration:** `tests/integration/draw_mode_test.go`
 
@@ -32,7 +32,7 @@ last_verified_date: 2026-03-05
 
 ## Unit Tests: Extension -- Draw Mode Overlay
 
-**Location:** `tests/extension/draw-mode.test.js`
+**Location:** `tests/extension/draw-mode/draw-mode.test.js`
 
 ### 1. Overlay Lifecycle
 
@@ -409,7 +409,7 @@ After any changes to draw mode:
 ### 1. Quick Smoke Test (2 min)
 
 ```bash
-node --test tests/extension/draw-mode.test.js
+node --test tests/extension/draw-mode/draw-mode.test.js
 node --test tests/extension/draw-mode-export.test.js
 go test -short ./cmd/browser-agent/... -run DrawMode
 go test -short ./cmd/browser-agent/... -run AnnotationStore

@@ -36,7 +36,7 @@ prevent them, and the remaining instances found by a codebase-wide audit.
 - **ESLint** `no-empty: { allowEmptyCatch: false }` made explicit (bans bare `catch {}`).
   Note: ESLint is JS-only in this repo (no typescript-eslint), so it does not reach
   `src/**/*.ts` — the two AST guardrails below cover the TypeScript source instead.
-- **Fail-loud contract test (Class 3):** `tests/extension/fail-loud-contract.test.js`
+- **Fail-loud contract test (Class 3):** `tests/extension/contracts/fail-loud-contract.test.js`
   AST-scans `src` (via the `typescript` dev dep) for any `start|save|write|persist|
   upload|stop|spawn|connect` function that masks a failure as `catch { return
   false|null }`. Attribution walks up to the nearest *named* enclosing function, so
@@ -45,7 +45,7 @@ prevent them, and the remaining instances found by a codebase-wide audit.
   must trip the detector). **Known limitation:** an object return that masks failure
   as success (the 409-with-token shape) is not machine-detectable without semantic
   analysis, so it is out of scope — code review remains the backstop for that form.
-- **Entry-point parity test (Class 4):** `tests/extension/entry-point-parity.test.js`
+- **Entry-point parity test (Class 4):** `tests/extension/contracts/entry-point-parity.test.js`
   asserts each multi-entry action (tab tracking, action-recording, terminal toggle,
   annotation tracking) routes through its one shared helper. Uses TS-AST
   call-verification (`functionContainsCall`/`fileContainsCall`), not substring

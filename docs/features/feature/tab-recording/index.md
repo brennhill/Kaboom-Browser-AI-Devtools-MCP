@@ -4,7 +4,7 @@ feature_id: feature-tab-recording
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-29
 code_paths:
   - cmd/browser-agent/tools_interact_dispatch.go
   - internal/schema/interact/actions.go
@@ -49,11 +49,11 @@ test_paths:
   - cmd/browser-agent/tools_interact_state_queries_test.go
   - cmd/browser-agent/internal/screenrec/screenrec_test.go
   - internal/recording/actionlog/recorder_test.go
-  - tests/extension/recording-shortcut-command.test.js
-  - tests/extension/context-menus-labels.test.js
-  - tests/extension/recording-listeners-target-tab.test.js
-  - tests/extension/storage-modules.test.js
-  - tests/extension/no-compatibility-facades.test.js
+  - tests/extension/recording-ui/recording-shortcut-command.test.js
+  - tests/extension/ui-controls/context-menus-labels.test.js
+  - tests/extension/recording-ui/recording-listeners-target-tab.test.js
+  - tests/extension/contracts/storage-modules.test.js
+  - tests/extension/contracts/no-compatibility-facades.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

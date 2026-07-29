@@ -16,44 +16,45 @@ code_paths:
   - scripts/test-original-uat.sh
   - scripts/test-new-uat.sh
   - scripts/uat-result-lib.sh
-  - scripts/tests/framework.sh
+  - scripts/tests/framework/framework.sh
   - scripts/test-all-tools-comprehensive.sh
   - cmd/browser-agent/server.go
   - cmd/browser-agent/internal/testpages/http.go
   - cmd/browser-agent/internal/testpages/websocket.go
   - cmd/browser-agent/internal/wsframe/frame.go
 test_paths:
-  - tests/cli/uat-harness-regressions.test.cjs
+  - tests/cli/contracts/uat-harness-regressions.test.cjs
+  - tests/cli/contracts/test-layout-contract.test.cjs
   - scripts/smoke-tests/14-browser-push.sh
   - scripts/smoke-tests/15-file-upload.sh
   - scripts/smoke-tests/29-framework-selector-resilience.sh
   - scripts/smoke-tests/30-stability-shutdown.sh
-  - scripts/tests/cat-01-protocol.sh
-  - scripts/tests/cat-02-observe.sh
-  - scripts/tests/cat-03-generate.sh
-  - scripts/tests/cat-04-configure.sh
-  - scripts/tests/cat-05-interact.sh
-  - scripts/tests/cat-06-lifecycle.sh
-  - scripts/tests/cat-07-concurrency.sh
-  - scripts/tests/cat-08-security.sh
-  - scripts/tests/cat-09-http.sh
-  - scripts/tests/cat-10-regression.sh
-  - scripts/tests/cat-11-data-pipeline.sh
-  - scripts/tests/cat-12-rich-actions.sh
-  - scripts/tests/cat-13-pilot-contract.sh
-  - scripts/tests/cat-14-extension-startup.sh
-  - scripts/tests/cat-15-pilot-success-path.sh
-  - scripts/tests/cat-16-api-contract.sh
-  - scripts/tests/cat-17-performance.sh
-  - scripts/tests/cat-18-recording.sh
-  - scripts/tests/cat-19-link-health.sh
-  - scripts/tests/cat-20-noise-persistence.sh
-  - scripts/tests/cat-21-stress.sh
-  - scripts/tests/cat-22-advanced.sh
-  - scripts/tests/cat-29-reproduction.sh
-  - scripts/tests/cat-30-recording-automation.sh
-  - scripts/tests/cat-31-link-crawling.sh
-  - scripts/tests/cat-32-auto-detect.sh
+  - scripts/tests/contracts/cat-01-protocol.sh
+  - scripts/tests/tools/cat-02-observe.sh
+  - scripts/tests/tools/cat-03-generate.sh
+  - scripts/tests/tools/cat-04-configure.sh
+  - scripts/tests/tools/cat-05-interact.sh
+  - scripts/tests/runtime/cat-06-lifecycle.sh
+  - scripts/tests/runtime/cat-07-concurrency.sh
+  - scripts/tests/contracts/cat-08-security.sh
+  - scripts/tests/contracts/cat-09-http.sh
+  - scripts/tests/contracts/cat-10-regression.sh
+  - scripts/tests/capture/cat-11-data-pipeline.sh
+  - scripts/tests/tools/cat-12-rich-actions.sh
+  - scripts/tests/browser/cat-13-pilot-contract.sh
+  - scripts/tests/browser/cat-14-extension-startup.sh
+  - scripts/tests/browser/cat-15-pilot-success-path.sh
+  - scripts/tests/contracts/cat-16-api-contract.sh
+  - scripts/tests/runtime/cat-17-performance.sh
+  - scripts/tests/capture/cat-18-recording.sh
+  - scripts/tests/browser/cat-19-link-health.sh
+  - scripts/tests/capture/cat-20-noise-persistence.sh
+  - scripts/tests/runtime/cat-21-stress.sh
+  - scripts/tests/runtime/cat-22-advanced.sh
+  - scripts/tests/workflows/cat-29-reproduction.sh
+  - scripts/tests/workflows/cat-30-recording-automation.sh
+  - scripts/tests/workflows/cat-31-link-crawling.sh
+  - scripts/tests/workflows/cat-32-auto-detect.sh
   - cmd/browser-agent/internal/testpages/testpages_test.go
   - cmd/browser-agent/internal/wsframe/frame_test.go
 last_verified_version: 0.7.12
@@ -87,7 +88,7 @@ last_verified_date: 2026-03-05
 - Smoke module contracts for push/upload/framework resilience/stability: `scripts/smoke-tests/14-browser-push.sh`, `scripts/smoke-tests/15-file-upload.sh`, `scripts/smoke-tests/29-framework-selector-resilience.sh`, `scripts/smoke-tests/30-stability-shutdown.sh`
 - Split UAT orchestration + integrity checks: `scripts/test-all-split.sh`, `scripts/test-original-uat.sh`, `scripts/test-new-uat.sh`
 - Shared UAT result parsing: `scripts/uat-result-lib.sh`
-- Category daemon lifecycle and result-file contract: `scripts/tests/framework.sh`
+- Category daemon lifecycle and result-file contract: `scripts/tests/framework/framework.sh`
 - Comprehensive UAT has explicit `offline`, `connected`, and `all` suites.
   Offline contracts use an isolated daemon port; connected-browser categories
   run sequentially on the extension's configured port after connectivity

@@ -28,9 +28,9 @@
   Why: Single helper that opens the terminal side panel and then requests the shared audit workflow.
 - `src/background/message-handlers.ts`
   Why: Keeps the existing `qa_scan_requested` bridge, but updates the injected prompt text to the new audit workflow.
-- `tests/extension/request-audit.test.js`
+- `tests/extension/reliability/request-audit.test.js`
   Why: Guards the shared two-step trigger contract.
-- `tests/extension/message-handlers.test.js`
+- `tests/extension/content/message-handlers.test.js`
   Why: Verifies audit-trigger prompt text, fallback behavior, and background routing.
 
 ### Popup And Hover Entrypoints
@@ -45,11 +45,11 @@
   Why: Delegate popup-side audit clicks to the shared helper with the tracked page URL.
 - `src/content/ui/tracked-hover-launcher.ts`
   Why: Keep the hover action aligned with the new `Audit` terminology and shared trigger path.
-- `tests/extension/popup-audit-button.test.js`
+- `tests/extension/popup-shell/popup-audit-button.test.js`
   Why: Covers the tracked popup CTA behavior directly.
-- `tests/extension/popup-tab-tracking-sync.test.js`
+- `tests/extension/popup-shell/popup-tab-tracking-sync.test.js`
   Why: Verifies tracked-state sync still reveals the right controls.
-- `tests/extension/tracked-hover-launcher.test.js`
+- `tests/extension/ui-controls/tracked-hover-launcher.test.js`
   Why: Verifies hover-surface wording and runtime behavior.
 
 ### Audit Workflow Assets
@@ -100,12 +100,12 @@
 **Files:**
 - Create: `src/lib/tabs/request-audit.ts`
 - Modify: `src/background/message-handlers.ts`
-- Test: `tests/extension/request-audit.test.js`
-- Test: `tests/extension/message-handlers.test.js`
+- Test: `tests/extension/reliability/request-audit.test.js`
+- Test: `tests/extension/content/message-handlers.test.js`
 
 - [ ] **Step 1: Write the failing tests**
 
-Create `tests/extension/request-audit.test.js` with explicit assertions for the shared two-step contract:
+Create `tests/extension/reliability/request-audit.test.js` with explicit assertions for the shared two-step contract:
 
 ```js
 await requestAudit('https://tracked.example/')
@@ -117,7 +117,7 @@ assert.deepStrictEqual(sentTypes, [
 assert.strictEqual(lastAuditMessage.page_url, 'https://tracked.example/')
 ```
 
-Extend `tests/extension/message-handlers.test.js` so `qa_scan_requested` verifies the injected text points at the audit workflow rather than the old QA wording:
+Extend `tests/extension/content/message-handlers.test.js` so `qa_scan_requested` verifies the injected text points at the audit workflow rather than the old QA wording:
 
 ```js
 assert.match(injectedText, /audit/i)
@@ -130,7 +130,7 @@ assert.doesNotMatch(injectedText, /Find Problems.*QA skill only/)
 Run:
 
 ```bash
-node --test tests/extension/request-audit.test.js tests/extension/message-handlers.test.js -v
+node --test tests/extension/reliability/request-audit.test.js tests/extension/content/message-handlers.test.js -v
 ```
 
 Expected:
@@ -168,7 +168,7 @@ Run:
 
 ```bash
 make compile-ts
-node --test tests/extension/request-audit.test.js tests/extension/message-handlers.test.js -v
+node --test tests/extension/reliability/request-audit.test.js tests/extension/content/message-handlers.test.js -v
 npm run typecheck
 npx jscpd src/background src/popup --min-lines 8 --min-tokens 60
 ```
@@ -183,7 +183,7 @@ Expected:
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/lib/tabs/request-audit.ts src/background/message-handlers.ts tests/extension/request-audit.test.js tests/extension/message-handlers.test.js
+git add src/lib/tabs/request-audit.ts src/background/message-handlers.ts tests/extension/reliability/request-audit.test.js tests/extension/content/message-handlers.test.js
 git commit -m "feat: add shared audit trigger helper"
 ```
 
@@ -195,13 +195,13 @@ git commit -m "feat: add shared audit trigger helper"
 - Modify: `src/popup/tab-tracking.ts`
 - Modify: `src/popup/tab-tracking-api.ts`
 - Modify: `src/content/ui/tracked-hover-launcher.ts`
-- Test: `tests/extension/popup-audit-button.test.js`
-- Test: `tests/extension/popup-tab-tracking-sync.test.js`
-- Test: `tests/extension/tracked-hover-launcher.test.js`
+- Test: `tests/extension/popup-shell/popup-audit-button.test.js`
+- Test: `tests/extension/popup-shell/popup-tab-tracking-sync.test.js`
+- Test: `tests/extension/ui-controls/tracked-hover-launcher.test.js`
 
 - [ ] **Step 1: Write the failing tests**
 
-Create `tests/extension/popup-audit-button.test.js` with direct popup CTA assertions:
+Create `tests/extension/popup-shell/popup-audit-button.test.js` with direct popup CTA assertions:
 
 ```js
 assert.strictEqual(document.getElementById('tracking-bar-audit').style.display, 'none')
@@ -216,15 +216,15 @@ assert.ok(runtimeSendMessage.mock.calls.some(
 
 Extend:
 
-- `tests/extension/popup-tab-tracking-sync.test.js` to assert tracked-state sync reveals the audit CTA.
-- `tests/extension/tracked-hover-launcher.test.js` to assert the hover action title uses `Audit` wording instead of `Find Problems`.
+- `tests/extension/popup-shell/popup-tab-tracking-sync.test.js` to assert tracked-state sync reveals the audit CTA.
+- `tests/extension/ui-controls/tracked-hover-launcher.test.js` to assert the hover action title uses `Audit` wording instead of `Find Problems`.
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run:
 
 ```bash
-node --test tests/extension/popup-audit-button.test.js tests/extension/popup-tab-tracking-sync.test.js tests/extension/tracked-hover-launcher.test.js -v
+node --test tests/extension/popup-shell/popup-audit-button.test.js tests/extension/popup-shell/popup-tab-tracking-sync.test.js tests/extension/ui-controls/tracked-hover-launcher.test.js -v
 ```
 
 Expected:
@@ -258,7 +258,7 @@ Run:
 
 ```bash
 make compile-ts
-node --test tests/extension/popup-audit-button.test.js tests/extension/popup-tab-tracking-sync.test.js tests/extension/tracked-hover-launcher.test.js -v
+node --test tests/extension/popup-shell/popup-audit-button.test.js tests/extension/popup-shell/popup-tab-tracking-sync.test.js tests/extension/ui-controls/tracked-hover-launcher.test.js -v
 npm run typecheck
 npx jscpd src/background src/popup --min-lines 8 --min-tokens 60
 ```
@@ -272,7 +272,7 @@ Expected:
 - [ ] **Step 5: Commit**
 
 ```bash
-git add extension/popup.html extension/popup.css src/popup/tab-tracking.ts src/popup/tab-tracking-api.ts src/content/ui/tracked-hover-launcher.ts tests/extension/popup-audit-button.test.js tests/extension/popup-tab-tracking-sync.test.js tests/extension/tracked-hover-launcher.test.js
+git add extension/popup.html extension/popup.css src/popup/tab-tracking.ts src/popup/tab-tracking-api.ts src/content/ui/tracked-hover-launcher.ts tests/extension/popup-shell/popup-audit-button.test.js tests/extension/popup-shell/popup-tab-tracking-sync.test.js tests/extension/ui-controls/tracked-hover-launcher.test.js
 git commit -m "feat: add audit entrypoints for tracked sites"
 ```
 
@@ -501,7 +501,7 @@ Run:
 
 ```bash
 make compile-ts
-node --test tests/extension/request-audit.test.js tests/extension/popup-audit-button.test.js tests/extension/popup-tab-tracking-sync.test.js tests/extension/tracked-hover-launcher.test.js tests/extension/message-handlers.test.js tests/packaging/kaboom-audit-workflow.test.js tests/packaging/kaboom-skills-branding.test.js -v
+node --test tests/extension/reliability/request-audit.test.js tests/extension/popup-shell/popup-audit-button.test.js tests/extension/popup-shell/popup-tab-tracking-sync.test.js tests/extension/ui-controls/tracked-hover-launcher.test.js tests/extension/content/message-handlers.test.js tests/packaging/kaboom-audit-workflow.test.js tests/packaging/kaboom-skills-branding.test.js -v
 go test ./cmd/browser-agent -run 'TestMaybeAddPendingIntents_UsesAuditWorkflowCopy|TestToolsAnalyzePageIssues' -v
 npm run typecheck
 npx jscpd src/background src/popup --min-lines 8 --min-tokens 60

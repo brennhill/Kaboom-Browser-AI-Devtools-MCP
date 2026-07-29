@@ -577,9 +577,9 @@ All existing tests pass with no regressions:
 
 ### Test Coverage
 
-- `tests/extension/rate-limit.test.js` - Circuit breaker, backoff, memory
-- `tests/extension/options.test.js` - Storage persistence
-- `tests/extension/performance.test.js` - Performance benchmarks
+- `tests/extension/performance/rate-limit.test.js` - Circuit breaker, backoff, memory
+- `tests/extension/popup-shell/options.test.js` - Storage persistence
+- `tests/extension/performance/performance.test.js` - Performance benchmarks
 - All message handler tests pass
 - All storage access works correctly
 

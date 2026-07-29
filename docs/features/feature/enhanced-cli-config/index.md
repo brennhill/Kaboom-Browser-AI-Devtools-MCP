@@ -85,24 +85,24 @@ test_paths:
   - npm/kaboom-agentic-browser/lib/skills.test.js
   - npm/kaboom-agentic-browser/lib/no-compatibility.test.js
   - tests/packaging/kaboom-packaging-branding.test.js
-  - tests/extension/install-script-extension-source.test.js
+  - tests/extension/release/install-script-extension-source.test.js
   - server/scripts/install.test.js
-  - tests/extension/release-extension-zip.test.js
-  - tests/extension/release-extension-crx-fallback.test.js
-  - tests/extension/manifest-startup-integrity.test.js
-  - tests/cli/server-install-hardening.test.cjs
-  - tests/cli/cli-integration.test.cjs
-  - tests/cli/config.test.cjs
-  - tests/cli/doctor.test.cjs
-  - tests/cli/install.test.cjs
-  - tests/cli/uninstall.test.cjs
-  - tests/cli/uninstall-script.test.cjs
-  - tests/cli/clean-old-daemons-branding.test.cjs
-  - tests/cli/install-script-safety.test.cjs
-  - tests/cli/operator-script-branding.test.cjs
+  - tests/extension/release/release-extension-zip.test.js
+  - tests/extension/release/release-extension-crx-fallback.test.js
+  - tests/extension/release/manifest-startup-integrity.test.js
+  - tests/cli/lifecycle/server-install-hardening.test.cjs
+  - tests/cli/runtime/cli-integration.test.cjs
+  - tests/cli/runtime/config.test.cjs
+  - tests/cli/runtime/doctor.test.cjs
+  - tests/cli/lifecycle/install.test.cjs
+  - tests/cli/lifecycle/uninstall.test.cjs
+  - tests/cli/lifecycle/uninstall-script.test.cjs
+  - tests/cli/lifecycle/clean-old-daemons-branding.test.cjs
+  - tests/cli/lifecycle/install-script-safety.test.cjs
+  - tests/cli/contracts/operator-script-branding.test.cjs
   - scripts/release/canonical-installer-scripts.test.mjs
   - scripts/release/version/version-sync.test.mjs
-  - tests/extension/tooling-contracts.test.js
+  - tests/extension/contracts/tooling-contracts.test.js
   - cmd/browser-agent/internal/cli/cli_test.go
   - cmd/browser-agent/internal/cli/cli_coverage_extra_test.go
 last_verified_version: 0.8.1

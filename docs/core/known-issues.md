@@ -35,7 +35,7 @@ investigating the daemon itself.
 ### 2. Flaky tests (pre-existing)
 
 - `TestAsyncQueueReliability/Slow_polling` — intermittent 30s timeout
-- `tests/extension/async-timeout.test.js` — 3 tests flaky
+- `tests/extension/pilot/async-timeout.test.js` — 3 tests flaky
 - `TestFastStart_ClientCompatibilityMatrix/claude_code` — fails only under
   full-suite load; passes in isolation. Local runs are additionally sensitive to
   anything already holding port 7891.

@@ -15,7 +15,7 @@ last_verified_date: 2026-03-21
 
 1. `go test ./cmd/browser-agent -run Terminal -count=1`
 2. `go test ./internal/pty/...`
-3. `node --test tests/extension/sidepanel-terminal.test.js`
+3. `node --test tests/extension/terminal-sidepanel/sidepanel-terminal.test.js`
 4. `npm run docs:check:strict`
 
 ## Manual Checks

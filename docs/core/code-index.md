@@ -97,7 +97,7 @@ last_reviewed: 2026-02-16
 - extension/icons/icon-glow.svg (static)
 
 **Tests:**
-- tests/extension/favicon-replacer.test.js
+- tests/extension/branding/favicon-replacer.test.js
 
 ---
 
@@ -254,7 +254,7 @@ last_reviewed: 2026-02-16
 - architecture/diagrams/flame-flicker-visual.md
 
 **Tests:**
-- tests/extension/favicon-replacer.test.js
+- tests/extension/branding/favicon-replacer.test.js
 
 ---
 

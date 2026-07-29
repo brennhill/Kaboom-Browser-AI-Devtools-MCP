@@ -25,7 +25,7 @@ last_reviewed: 2026-02-16
 
 **Test Suites Audited:**
 - 15 smoke test files (`scripts/smoke-tests/01-*.sh` through `15-*.sh`)
-- 2 test framework files (`scripts/tests/framework.sh`, `scripts/smoke-tests/framework-smoke.sh`)
+- 2 test framework files (`scripts/tests/framework/framework.sh`, `scripts/smoke-tests/framework-smoke.sh`)
 - ~100 Go unit test files across `cmd/browser-agent/` and `internal/`
 - 13 regression test files (`tests/regression/`)
 - 29 UAT category test files (`scripts/tests/cat-*.sh`)
@@ -179,7 +179,7 @@ The upload test suite spawns a Python HTTP server for file upload testing. If Py
 
 ## Part 2: Test Frameworks
 
-### File: `scripts/tests/framework.sh`
+### File: `scripts/tests/framework/framework.sh`
 
 **[CRITICAL] `check_not_error` -- Only checks isError flag, not content**
 Lines 214-219: `check_not_error` only verifies `isError != "true"`. It does not verify the response has any content, that the content is valid JSON, or that the content contains expected data. Tests relying solely on `check_not_error` can pass with empty or garbage responses.

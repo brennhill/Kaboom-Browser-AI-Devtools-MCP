@@ -42,7 +42,7 @@ test_paths:
   - scripts/release/install-upgrade-regression.contract.test.mjs
   - scripts/test-install-hooks-only.sh
   - scripts/docs/features/check-feature-paths.test.mjs
-  - tests/cli/root-metadata-branding.test.cjs
+  - tests/cli/contracts/root-metadata-branding.test.cjs
   - tests/site/gokaboom-domain-contract.test.js
 last_verified_version: 0.8.1
 last_verified_date: 2026-03-28

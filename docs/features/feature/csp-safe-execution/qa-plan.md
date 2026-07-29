@@ -10,8 +10,8 @@ last_verified_date: 2026-03-05
 # CSP-Safe Execution QA Plan
 
 ## Automated Coverage
-- `tests/extension/csp-safe-integration.test.js`
-- `tests/extension/execute-js.test.js`
+- `tests/extension/capture/csp-safe-integration.test.js`
+- `tests/extension/injection/execute-js.test.js`
 - `extension/background/__tests__/query-execution-serialization.test.js`
 
 ## Required Scenarios

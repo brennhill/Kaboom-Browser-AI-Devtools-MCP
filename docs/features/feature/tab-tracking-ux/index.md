@@ -4,7 +4,7 @@ feature_id: feature-tab-tracking-ux
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-29
 code_paths:
   - src/lib/brand.ts
   - src/lib/constants.ts
@@ -30,27 +30,27 @@ code_paths:
   - src/background/ui/context-menus.ts
   - src/background/recording/listeners.ts
 test_paths:
-  - tests/extension/brand-metadata.test.js
-  - tests/extension/popup-audit-button.test.js
-  - tests/extension/popup-tab-tracking-branding.test.js
-  - tests/extension/popup-tab-tracking-sync.test.js
-  - tests/extension/request-audit.test.js
-  - tests/extension/recording-listeners-target-tab.test.js
-  - tests/extension/tracked-hover-launcher.test.js
-  - tests/extension/logo-motion.test.js
-  - tests/extension/content.test.js
-  - tests/extension/content-tab-filtering.test.js
-  - tests/extension/content-tab-tracking.test.js
-  - tests/extension/runtime-log-branding.test.js
-  - tests/extension/sidepanel-terminal-fixture.js
-  - tests/extension/sidepanel-terminal-io.test.js
-  - tests/extension/sidepanel-terminal-ui.test.js
-  - tests/extension/sidepanel-terminal.test.js
-  - tests/extension/tab-tracking-core.test.js
+  - tests/extension/branding/brand-metadata.test.js
+  - tests/extension/popup-shell/popup-audit-button.test.js
+  - tests/extension/popup-shell/popup-tab-tracking-branding.test.js
+  - tests/extension/popup-shell/popup-tab-tracking-sync.test.js
+  - tests/extension/reliability/request-audit.test.js
+  - tests/extension/recording-ui/recording-listeners-target-tab.test.js
+  - tests/extension/ui-controls/tracked-hover-launcher.test.js
+  - tests/extension/branding/logo-motion.test.js
+  - tests/extension/content/content.test.js
+  - tests/extension/content/content-tab-filtering.test.js
+  - tests/extension/content/content-tab-tracking.test.js
+  - tests/extension/branding/runtime-log-branding.test.js
+  - tests/extension/terminal-sidepanel/sidepanel-terminal-fixture.js
+  - tests/extension/terminal-sidepanel/sidepanel-terminal-io.test.js
+  - tests/extension/terminal-sidepanel/sidepanel-terminal-ui.test.js
+  - tests/extension/terminal-sidepanel/sidepanel-terminal.test.js
+  - tests/extension/tab-state/tab-tracking-core.test.js
   - extension/background/event-listeners.test.js
-  - tests/extension/entry-point-parity.test.js
-  - tests/extension/integration.test.cjs
-  - tests/extension/no-compatibility-facades.test.js
+  - tests/extension/contracts/entry-point-parity.test.js
+  - tests/extension/misc/integration.test.cjs
+  - tests/extension/contracts/no-compatibility-facades.test.js
 last_verified_version: 0.8.1
 last_verified_date: 2026-04-03
 ---

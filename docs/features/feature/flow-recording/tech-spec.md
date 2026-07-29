@@ -743,7 +743,7 @@ configure({what: 'test_boundary_end', test_id: 'replay-1'})
 | `cmd/browser-agent/playback.go` | Replay actions + self-healing selectors | ~250 LOC |
 | `cmd/browser-agent/log-diff.go` | Compare logs, detect regressions | ~180 LOC |
 | `cmd/browser-agent/recording_test.go` | Unit tests (storage, playback, diffing) | ~450 LOC |
-| `tests/extension/recording.test.js` | Extension tests (capture, playback, metadata) | ~300 LOC |
+| `tests/extension/recording-lifecycle/recording.test.js` | Extension tests (capture, playback, metadata) | ~300 LOC |
 
 ### Modified Files
 

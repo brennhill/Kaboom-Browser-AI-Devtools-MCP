@@ -4,7 +4,7 @@ feature_id: feature-deployment-watchdog
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-29
 code_paths:
   - cmd/browser-agent/internal/binarywatch/watcher.go
   - cmd/browser-agent/config.go
@@ -22,7 +22,7 @@ test_paths:
   - cmd/browser-agent/internal/binarywatch/watcher_test.go
   - cmd/browser-agent/internal/operationalapi/health_test.go
   - cmd/browser-agent/server_routes_unit_test.go
-  - tests/extension/no-compatibility-facades.test.js
+  - tests/extension/contracts/no-compatibility-facades.test.js
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

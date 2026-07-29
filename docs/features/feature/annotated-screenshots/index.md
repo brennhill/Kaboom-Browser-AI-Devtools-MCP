@@ -4,7 +4,7 @@ feature_id: feature-annotated-screenshots
 status: active
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-29
 code_paths:
   - extension/content/draw-mode.js
   - internal/annotation/store.go
@@ -28,12 +28,12 @@ code_paths:
   - scripts/smoke-test.sh
   - package.json
 test_paths:
-  - tests/extension/draw-mode-drawing.test.js
-  - tests/extension/draw-mode-enrichment.test.js
-  - tests/extension/draw-mode-fixture.js
-  - tests/extension/draw-mode-routing.test.js
+  - tests/extension/draw-mode/draw-mode-drawing.test.js
+  - tests/extension/draw-mode/draw-mode-enrichment.test.js
+  - tests/extension/draw-mode/draw-mode-fixture.js
+  - tests/extension/draw-mode/draw-mode-routing.test.js
   - internal/schema/invariants_test.go
-  - tests/extension/draw-mode.test.js
+  - tests/extension/draw-mode/draw-mode.test.js
   - internal/annotation/store_test.go
   - internal/annotation/named_test.go
   - internal/annotation/store_named_sessions_test.go
@@ -48,7 +48,7 @@ test_paths:
   - cmd/browser-agent/tools_generate_annotations_test.go
   - cmd/browser-agent/internal/toolgenerate/annotations/annotations_test.go
   - cmd/browser-agent/lint_hardening_test.go
-  - tests/extension/entry-point-parity.test.js
+  - tests/extension/contracts/entry-point-parity.test.js
   - scripts/smoke-tests/31-annotation-parity.sh
   - scripts/smoke-tests/annotation-parity-benchmark.sh
 last_verified_version: 0.7.12
@@ -97,11 +97,11 @@ last_verified_date: 2026-03-05
 - `internal/schema/analyze.go` + `internal/tools/configure/capabilities/modespecs_analyze.go` — analyze annotations schema/capability metadata for the canonical `url` filter
 
 ### Tests
-- `tests/extension/draw-mode-enrichment.test.js` — element detail, framework, and selector enrichment
-- `tests/extension/draw-mode-drawing.test.js` — pointer mechanics and annotation context capture
-- `tests/extension/draw-mode-routing.test.js` — message routing, lifecycle, accessibility, and re-entry
-- `tests/extension/draw-mode.test.js` — activation, annotation CRUD, persistence, and export
-- `tests/extension/draw-mode-fixture.js` — shared DOM, Chrome, timer, and module fixtures
+- `tests/extension/draw-mode/draw-mode-enrichment.test.js` — element detail, framework, and selector enrichment
+- `tests/extension/draw-mode/draw-mode-drawing.test.js` — pointer mechanics and annotation context capture
+- `tests/extension/draw-mode/draw-mode-routing.test.js` — message routing, lifecycle, accessibility, and re-entry
+- `tests/extension/draw-mode/draw-mode.test.js` — activation, annotation CRUD, persistence, and export
+- `tests/extension/draw-mode/draw-mode-fixture.js` — shared DOM, Chrome, timer, and module fixtures
 - `internal/annotation/store_maintenance_test.go` — `TestStore_SessionTTL_Is2Hours`
 - `internal/annotation/draw_sessions_handler_test.go` and `cmd/browser-agent/tools_analyze_annotations_draw_test.go` — safe persisted-session loading and end-to-end store hydration
 - `cmd/browser-agent/tools_analyze_annotations_test.go` — enrichment fields (`selector_candidates`, `js_framework`, `component`), error correlation, hints tests

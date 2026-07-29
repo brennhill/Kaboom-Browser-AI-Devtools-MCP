@@ -4,7 +4,7 @@ feature_id: feature-backend-log-streaming
 status: proposed
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-29
 code_paths:
   - cmd/browser-agent/tools_configure.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher.go
@@ -84,27 +84,27 @@ test_paths:
   - internal/circuit/breaker_test.go
   - internal/debuglog/logger_test.go
   - internal/lifecycle/observer_test.go
-  - tests/extension/sync-client-commands.test.js
-  - tests/extension/sync-client-fixture.js
-  - tests/extension/sync-client-resilience.test.js
-  - tests/extension/sync-client.test.js
-  - tests/extension/server.test.js
-  - tests/extension/background-batching.test.js
-  - tests/extension/batcher-instances.test.js
-  - tests/extension/sync-manager.test.js
-  - tests/extension/observe-screenshot.test.js
-  - tests/extension/no-compatibility-facades.test.js
-  - tests/extension/network-bodies-fixture.js
-  - tests/extension/network-bodies-xhr.test.js
-  - tests/extension/network-bodies.test.js
-  - tests/extension/network-body-e2e-fixture.js
-  - tests/extension/network-body-e2e.test.js
-  - tests/extension/network-waterfall.test.js
-  - tests/extension/websocket.test.js
-  - tests/extension/websocket-tracking.test.js
-  - tests/extension/early-patch-hardened-restore.test.js
-  - tests/extension/early-patch-branding.test.js
-  - tests/extension/safe-global-patch.test.js
+  - tests/extension/sync/sync-client-commands.test.js
+  - tests/extension/sync/sync-client-fixture.js
+  - tests/extension/sync/sync-client-resilience.test.js
+  - tests/extension/sync/sync-client.test.js
+  - tests/extension/reliability/server.test.js
+  - tests/extension/sync/background-batching.test.js
+  - tests/extension/sync/batcher-instances.test.js
+  - tests/extension/sync/sync-manager.test.js
+  - tests/extension/capture/observe-screenshot.test.js
+  - tests/extension/contracts/no-compatibility-facades.test.js
+  - tests/extension/network-http/network-bodies-fixture.js
+  - tests/extension/network-http/network-bodies-xhr.test.js
+  - tests/extension/network-http/network-bodies.test.js
+  - tests/extension/network-http/network-body-e2e-fixture.js
+  - tests/extension/network-http/network-body-e2e.test.js
+  - tests/extension/network-http/network-waterfall.test.js
+  - tests/extension/network-realtime/websocket.test.js
+  - tests/extension/network-realtime/websocket-tracking.test.js
+  - tests/extension/injection/early-patch-hardened-restore.test.js
+  - tests/extension/injection/early-patch-branding.test.js
+  - tests/extension/injection/safe-global-patch.test.js
 last_verified_version: 0.8.1
 last_verified_date: 2026-04-13
 ---

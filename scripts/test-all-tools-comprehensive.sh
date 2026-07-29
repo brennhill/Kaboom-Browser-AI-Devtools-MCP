@@ -7,7 +7,7 @@
 # NOTE: cat-27-interactive-overlays.sh is NOT included here — it requires
 # a human operator to visually verify browser overlays (subtitle, draw mode,
 # recording watermark, action toast, tracked hover launcher island).
-# Run it standalone: bash scripts/tests/cat-27-interactive-overlays.sh <port>
+# Run it standalone: bash scripts/tests/capture/cat-27-interactive-overlays.sh <port>
 
 # ── Suite Selection ───────────────────────────────────────
 SUITE="all"
@@ -204,11 +204,17 @@ category_timeout() {
 run_category() {
     local cat_id="$1"
     local uat_port="$2"
+    local category_script
     local timeout_seconds
+    category_script="$(find "$TESTS_DIR" -type f -name "cat-${cat_id}-*.sh" -print | head -n 1)"
+    if [ -z "$category_script" ]; then
+        echo "Missing category script: cat-${cat_id}-*.sh" > "$RESULTS_DIR/output-${cat_id}.txt"
+        return
+    fi
     timeout_seconds="$(category_timeout "$cat_id")"
     (
         cd "$PROJECT_ROOT" || exit
-        "$TIMEOUT_CMD" "$timeout_seconds" bash "$TESTS_DIR/cat-${cat_id}-"*.sh \
+        "$TIMEOUT_CMD" "$timeout_seconds" bash "$category_script" \
             "$uat_port" "$RESULTS_DIR/results-${cat_id}.txt" \
             > "$RESULTS_DIR/output-${cat_id}.txt" 2>&1
     ) || true

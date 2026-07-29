@@ -20,8 +20,8 @@ test_paths:
   - cmd/browser-agent/internal/toolanalyze/pageissues/handler_test.go
   - cmd/browser-agent/internal/toolanalyze/pageissues/summary_test.go
   - cmd/browser-agent/handler_tools_call_postprocess_test.go
-  - tests/extension/request-audit.test.js
-  - tests/extension/message-handlers.test.js
+  - tests/extension/reliability/request-audit.test.js
+  - tests/extension/content/message-handlers.test.js
 ---
 
 # Auto-Fix Tech Spec

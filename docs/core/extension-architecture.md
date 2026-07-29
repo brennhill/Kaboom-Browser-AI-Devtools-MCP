@@ -149,7 +149,7 @@ src/
 
 ## Testing
 
-Tests live in both `tests/extension/` and `extension/background/` and use the Node.js built-in test runner. Chrome APIs are mocked via factory functions (see `tests/extension/helpers.js`). The mocks cover `chrome.runtime`, `chrome.storage`, `chrome.tabs`, and `chrome.scripting`.
+Tests live in both `tests/extension/` and `extension/background/` and use the Node.js built-in test runner. Chrome APIs are mocked via factory functions (see `tests/extension/shared/helpers.js`). The mocks cover `chrome.runtime`, `chrome.storage`, `chrome.tabs`, and `chrome.scripting`.
 
 ```bash
 npm run test:ext       # Run all extension tests (both roots, sharded)

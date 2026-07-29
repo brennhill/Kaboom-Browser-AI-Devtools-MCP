@@ -2,7 +2,7 @@
 # Shared result parsing helpers for split UAT runners.
 
 # parse_uat_category_result reads a category result file written by
-# scripts/tests/framework.sh and sets these globals on success:
+# scripts/tests/framework/framework.sh and sets these globals on success:
 #   UAT_RESULT_PASS, UAT_RESULT_FAIL, UAT_RESULT_SKIP,
 #   UAT_RESULT_CATEGORY_ID, UAT_RESULT_CATEGORY_NAME
 # Return codes:
