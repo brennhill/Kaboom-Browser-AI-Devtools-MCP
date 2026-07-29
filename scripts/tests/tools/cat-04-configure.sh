@@ -181,7 +181,7 @@ run_test_4_6() {
 
     # Step 4: Remove the rule by ID
     local REMOVE_RESP
-    REMOVE_RESP=$(call_tool "configure" "{\"action\":\"noise_rule\",\"noise_action\":\"remove\",\"rule_id\":\"$rule_id\"}")
+    REMOVE_RESP=$(call_tool "configure" "{\"what\":\"noise_rule\",\"noise_action\":\"remove\",\"rule_id\":\"$rule_id\"}")
     if ! check_not_error "$REMOVE_RESP"; then
         fail "Noise rule remove returned error for rule_id=$rule_id. Content: $(truncate "$(extract_content_text "$REMOVE_RESP")")"
         return

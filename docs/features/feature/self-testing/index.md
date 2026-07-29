@@ -51,6 +51,9 @@ test_paths:
   - scripts/tests/capture/cat-20-noise-persistence.sh
   - scripts/tests/runtime/cat-21-stress.sh
   - scripts/tests/runtime/cat-22-advanced.sh
+  - scripts/tests/browser/cat-23-draw-mode.sh
+  - scripts/tests/browser/cat-24-upload.sh
+  - scripts/tests/runtime/cat-26-dynamic-upgrade.sh
   - scripts/tests/workflows/cat-29-reproduction.sh
   - scripts/tests/workflows/cat-30-recording-automation.sh
   - scripts/tests/workflows/cat-31-link-crawling.sh

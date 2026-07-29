@@ -247,7 +247,7 @@ run_test_6_5() {
 
     # Source 3: --version flag
     local cli_version
-    cli_version=$("$WRAPPER" --version 2>/dev/null | awk '{print $NF}' | sed 's/^v//' | tr -d '[:space:]')
+    cli_version=$("$WRAPPER" --version 2>&1 | awk '{print $NF}' | sed 's/^v//' | tr -d '[:space:]')
 
     if [ -z "$cli_version" ]; then
         fail "Could not get version from --version flag."

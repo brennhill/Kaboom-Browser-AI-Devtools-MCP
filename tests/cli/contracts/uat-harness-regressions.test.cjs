@@ -45,6 +45,14 @@ describe('comprehensive UAT harness regressions', () => {
   test('offline suite is isolated from the extension port and connected suite is preflighted', () => {
     const runner = readFileSync('scripts/test-all-tools-comprehensive.sh', 'utf8')
 
+    assert.ok(
+      runner.indexOf('KABOOM_UAT_WRAPPER') < runner.indexOf('command -v kaboom-agentic-browser'),
+      'explicit UAT binary override must take precedence'
+    )
+    assert.ok(
+      runner.indexOf('command -v kaboom-agentic-browser') < runner.indexOf('$PROJECT_ROOT/dist/kaboom-agentic-browser'),
+      'UAT must prefer the installed package from PATH'
+    )
     assert.match(runner, /OFFLINE_UAT_PORT=.*17890/)
     assert.match(runner, /CONNECTED_UAT_PORT=.*7890/)
     assert.match(runner, /preflight_connected_extension/)

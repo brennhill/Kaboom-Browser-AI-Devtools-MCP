@@ -506,6 +506,23 @@ class UploadHandler(http.server.BaseHTTPRequestHandler):
         )
         return None
 
+    def _read_request_body(self):
+        if "chunked" not in self.headers.get("Transfer-Encoding", "").lower():
+            return self.rfile.read(int(self.headers.get("Content-Length", 0)))
+
+        chunks = []
+        while True:
+            size_line = self.rfile.readline().strip().split(b";", 1)[0]
+            size = int(size_line, 16)
+            if size == 0:
+                while self.rfile.readline() not in (b"\r\n", b"\n", b""):
+                    pass
+                break
+            chunks.append(self.rfile.read(size))
+            if self.rfile.read(2) != b"\r\n":
+                raise ValueError("invalid chunk terminator")
+        return b"".join(chunks)
+
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
@@ -691,8 +708,7 @@ class UploadHandler(http.server.BaseHTTPRequestHandler):
             )
             return
 
-        content_length = int(self.headers.get("Content-Length", 0))
-        body = self.rfile.read(content_length)
+        body = self._read_request_body()
         content_type = self.headers.get("Content-Type", "")
 
         fields, files = parse_multipart(content_type, body)

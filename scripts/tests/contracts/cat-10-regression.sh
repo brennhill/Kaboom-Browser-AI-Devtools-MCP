@@ -161,7 +161,7 @@ run_test_10_3() {
 
     # Source 2: --version flag output
     local version_flag
-    version_flag=$("$WRAPPER" --version 2>/dev/null)
+    version_flag=$("$WRAPPER" --version 2>&1)
     if [ -z "$version_flag" ]; then
         fail "kaboom-agentic-browser --version returned empty output."
         return

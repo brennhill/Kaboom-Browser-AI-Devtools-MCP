@@ -195,12 +195,12 @@ run_test_5_9() {
     for action in $actions; do
         local args
         case "$action" in
-            type) args="{\"action\":\"$action\",\"selector\":\"#x\",\"text\":\"hi\"}" ;;
-            select) args="{\"action\":\"$action\",\"selector\":\"#x\",\"value\":\"v\"}" ;;
-            get_attribute|set_attribute) args="{\"action\":\"$action\",\"selector\":\"#x\",\"name\":\"href\"}" ;;
-            key_press) args="{\"action\":\"$action\",\"selector\":\"#x\",\"text\":\"Enter\"}" ;;
-            list_interactive) args="{\"action\":\"$action\"}" ;;
-            *) args="{\"action\":\"$action\",\"selector\":\"#x\"}" ;;
+            type) args="{\"what\":\"$action\",\"selector\":\"#x\",\"text\":\"hi\"}" ;;
+            select) args="{\"what\":\"$action\",\"selector\":\"#x\",\"value\":\"v\"}" ;;
+            get_attribute|set_attribute) args="{\"what\":\"$action\",\"selector\":\"#x\",\"name\":\"href\"}" ;;
+            key_press) args="{\"what\":\"$action\",\"selector\":\"#x\",\"text\":\"Enter\"}" ;;
+            list_interactive) args="{\"what\":\"$action\"}" ;;
+            *) args="{\"what\":\"$action\",\"selector\":\"#x\"}" ;;
         esac
         RESPONSE=$(call_tool "interact" "$args")
         if ! check_is_error "$RESPONSE"; then
@@ -230,8 +230,8 @@ run_test_5_10() {
     for action in click type focus get_text; do
         local args
         case "$action" in
-            type) args="{\"action\":\"$action\",\"text\":\"hello\"}" ;;
-            *) args="{\"action\":\"$action\"}" ;;
+            type) args="{\"what\":\"$action\",\"text\":\"hello\"}" ;;
+            *) args="{\"what\":\"$action\"}" ;;
         esac
         RESPONSE=$(call_tool "interact" "$args")
         if ! check_is_error "$RESPONSE"; then
@@ -333,9 +333,9 @@ run_test_5_14() {
 run_test_5_14
 
 # ── 5.15 — DOM primitives: key_press missing selector returns error ──
-begin_test "5.15" "interact(key_press) missing selector returns error" \
-    "key_press requires selector parameter; omitting it should return isError mentioning 'selector'" \
-    "Required param validation for key_press."
+begin_test "5.15" "interact(key_press) permits active-element targeting" \
+    "key_press without selector should pass validation and reach the offline extension guard" \
+    "key_press intentionally targets the active element when selector is omitted."
 run_test_5_15() {
     RESPONSE=$(call_tool "interact" '{"what":"key_press","text":"Enter"}')
     if ! check_is_error "$RESPONSE"; then
@@ -344,10 +344,10 @@ run_test_5_15() {
     fi
     local text
     text=$(extract_content_text "$RESPONSE")
-    if check_contains "$text" "selector"; then
-        pass "key_press without selector correctly returned error mentioning 'selector' parameter."
+    if check_contains "$text" "Extension not connected"; then
+        pass "key_press without selector passed validation and reached the extension guard."
     else
-        fail "key_press error should mention 'selector'. Content: $(truncate "$text")"
+        fail "key_press without selector should target the active element. Content: $(truncate "$text")"
     fi
 }
 run_test_5_15

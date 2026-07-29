@@ -104,12 +104,14 @@ PROJECT_ROOT="$(resolve_project_root)" || {
 }
 TESTS_DIR="$PROJECT_ROOT/scripts/tests"
 
-if [ -x "$PROJECT_ROOT/dist/kaboom-agentic-browser" ]; then
+if [ -n "${KABOOM_UAT_WRAPPER:-}" ] && [ -x "${KABOOM_UAT_WRAPPER:-}" ]; then
+    WRAPPER="$KABOOM_UAT_WRAPPER"
+elif command -v kaboom-agentic-browser >/dev/null 2>&1; then
+    WRAPPER="$(command -v kaboom-agentic-browser)"
+elif [ -x "$PROJECT_ROOT/dist/kaboom-agentic-browser" ]; then
     WRAPPER="$PROJECT_ROOT/dist/kaboom-agentic-browser"
 elif [ -x "$PROJECT_ROOT/npm/kaboom-agentic-browser/bin/kaboom-agentic-browser" ]; then
     WRAPPER="$PROJECT_ROOT/npm/kaboom-agentic-browser/bin/kaboom-agentic-browser"
-elif command -v kaboom-agentic-browser >/dev/null 2>&1; then
-    WRAPPER="$(command -v kaboom-agentic-browser)"
 else
     echo "FATAL: kaboom-agentic-browser not found in $PROJECT_ROOT or PATH" >&2
     exit 1

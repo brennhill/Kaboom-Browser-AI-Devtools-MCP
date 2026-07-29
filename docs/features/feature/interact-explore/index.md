@@ -27,6 +27,7 @@ code_paths:
   - internal/recording/actionlog/recorder.go
   - internal/tools/interact/workflow.go
   - internal/schema/interact/actions.go
+  - internal/schema/interact/tool.go
   - internal/schema/interact/properties_targeting.go
   - internal/schema/interact/properties_output_batch.go
   - internal/tools/configure/capabilities/modespecs_interact.go

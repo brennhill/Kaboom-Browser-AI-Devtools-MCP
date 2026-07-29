@@ -15,7 +15,7 @@ begin_category "26" "Dynamic Binary Upgrade" "3"
 # We use a dedicated temp directory and build two binaries with different versions.
 UPGRADE_DIR="$TEMP_DIR/upgrade-test"
 mkdir -p "$UPGRADE_DIR"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 UPGRADE_PORT=19160
 
 # Build helper: compile a kaboom binary with a specific version

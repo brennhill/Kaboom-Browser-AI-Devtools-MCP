@@ -12,19 +12,20 @@ init_framework "$1" "$2"
 
 begin_category "20" "Noise Persistence" "5"
 
+# Keep destructive persistence checks isolated from the user's real state.
+STATE_ROOT="$TEMP_DIR/state"
+export KABOOM_STATE_DIR="$STATE_ROOT"
+
 # Resolve project-scoped noise persistence path:
 # ${STATE_ROOT}/projects/${ABS_PROJECT_PATH_WITHOUT_LEADING_SLASH}/noise/rules.json
-if [ -n "${KABOOM_STATE_DIR:-}" ]; then
-    STATE_ROOT="$KABOOM_STATE_DIR"
-elif [ -n "${XDG_STATE_HOME:-}" ]; then
-    STATE_ROOT="$XDG_STATE_HOME/kaboom"
-else
-    STATE_ROOT="$HOME/.kaboom"
-fi
 PROJECT_ABS="$(pwd -P)"
 PROJECT_REL="${PROJECT_ABS#/}"
 NOISE_DIR="$STATE_ROOT/projects/$PROJECT_REL/noise"
 RULES_FILE="$NOISE_DIR/rules.json"
+
+start_noise_daemon() {
+    start_daemon_with_flags --state-dir "$STATE_ROOT"
+}
 
 # wait_for_persisted_user_rules polls RULES_FILE until at least N distinct
 # user_* rule IDs are persisted, or timeout (seconds) elapses.
@@ -55,7 +56,7 @@ begin_test "20.1" "Rules persist to disk and survive restart" \
     "Persistence must survive crashes/kills"
 
 # Start daemon and add a rule
-start_daemon
+start_noise_daemon
 
 # Add rule via stdin invocation (single call, not send_mcp)
 request='{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"configure","arguments":{"what":"noise_rule","noise_action":"add","rules":[{"category":"console","classification":"test","match_spec":{"message_regex":"test.*pattern"}}]}}}'
@@ -68,9 +69,11 @@ else
     fail "Failed to add rule" "Response: $response"
 fi
 
-sleep 0.5
+# Persistence is intentionally write-behind during normal operation. A graceful
+# daemon stop flushes dirty session state synchronously.
+kill_server
 
-# Verify file exists
+# Verify the shutdown flush wrote a valid file.
 if wait_for_persisted_user_rules 1 8; then
     if jq . "$RULES_FILE" > /dev/null 2>&1; then
         pass "Rules persisted to $RULES_FILE"
@@ -81,10 +84,8 @@ else
     fail "Persisted user rule not written to disk within timeout"
 fi
 
-# Kill and restart daemon
-kill_server
-sleep 0.5
-start_daemon
+# Restart daemon and verify the flushed rule reloads.
+start_noise_daemon
 sleep 0.5
 
 # List rules using call_tool helper (startup-retry aware)
@@ -113,7 +114,10 @@ else
     fail "Failed to add second rule"
 fi
 
-# Check persisted file for both user_1 and user_2
+# Stop to flush the second rule before inspecting disk.
+kill_server
+
+# Check persisted file for both user_1 and user_2.
 if [ -f "$RULES_FILE" ]; then
     wait_for_persisted_user_rules 2 8 >/dev/null 2>&1 || true
     user_rule_count=$(jq '[.rules[] | select(.id | startswith("user_")) | .id] | unique | length' "$RULES_FILE" 2>/dev/null || echo "0")
@@ -126,6 +130,9 @@ if [ -f "$RULES_FILE" ]; then
 else
     fail "Persisted file missing after second add"
 fi
+
+start_noise_daemon
+sleep 0.5
 
 # ── Test 20.3: RemoveRule persists across restart ────────────────
 begin_test "20.3" "RemoveRule persists - deleted rule stays gone" \
@@ -147,7 +154,7 @@ sleep 0.5
 # Kill and restart
 kill_server
 sleep 0.5
-start_daemon
+start_noise_daemon
 sleep 0.5
 
 # List rules - user_1 should be gone
@@ -179,7 +186,7 @@ sleep 0.5
 # Kill and restart
 kill_server
 sleep 0.5
-start_daemon
+start_noise_daemon
 sleep 0.5
 
 # List rules - should only have built-ins
@@ -208,7 +215,7 @@ kill_server
 sleep 0.5
 
 # Attempt to start daemon - should succeed despite corruption
-if start_daemon; then
+if start_noise_daemon; then
     pass "Server started despite corrupted persistence file"
 
     # Verify built-ins still load

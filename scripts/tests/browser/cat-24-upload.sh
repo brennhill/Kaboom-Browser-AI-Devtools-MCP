@@ -76,9 +76,9 @@ run_test_24_1
 # Upload stages 1-3 and MCP handler work without any flag — no restart needed
 
 # ── 24.2 — upload in interact schema enum ──────────────────
-begin_test "24.2" "upload in tools/list interact action enum" \
-    "Verify tools/list includes upload in interact action enum" \
-    "Schema correctness: LLMs discover upload action via tools/list."
+begin_test "24.2" "upload in tools/list interact what enum" \
+    "Verify tools/list includes upload in interact what enum" \
+    "Schema correctness: LLMs discover upload via the canonical interact discriminator."
 run_test_24_2() {
     local TOOLS_RESP
     TOOLS_RESP=$(send_mcp '{"jsonrpc":"2.0","id":'"$MCP_ID"',"method":"tools/list"}')
@@ -90,13 +90,13 @@ run_test_24_2() {
     has_upload=$(echo "$TOOLS_RESP" | jq -r '
         .result.tools[]
         | select(.name == "interact")
-        | .inputSchema.properties.action.enum[]
+        | .inputSchema.properties.what.enum[]
         | select(. == "upload")
     ' 2>/dev/null)
     if [ "$has_upload" = "upload" ]; then
-        pass "upload found in interact action enum."
+        pass "upload found in interact what enum."
     else
-        fail "upload NOT found in interact action enum. Response: $(truncate "$TOOLS_RESP" 300)"
+        fail "upload NOT found in interact what enum. Response: $(truncate "$TOOLS_RESP" 300)"
     fi
 }
 run_test_24_2
@@ -525,7 +525,7 @@ run_test_24_19() {
     UPLOAD_PORT=$((PORT + 100))
 
     # Start Python upload server
-    python3 "$SCRIPT_DIR/../smoke-tests/upload-server.py" "$UPLOAD_PORT" &
+    python3 "$SCRIPT_DIR/../../smoke-tests/upload-server.py" "$UPLOAD_PORT" &
     local UPLOAD_SERVER_PID=$!
     sleep 1
 
@@ -628,7 +628,7 @@ run_test_24_20() {
     # Start upload server
     local UPLOAD_PORT
     UPLOAD_PORT=$((PORT + 101))
-    python3 "$SCRIPT_DIR/../smoke-tests/upload-server.py" "$UPLOAD_PORT" &
+    python3 "$SCRIPT_DIR/../../smoke-tests/upload-server.py" "$UPLOAD_PORT" &
     local UPLOAD_SERVER_PID=$!
     sleep 1
 
@@ -681,7 +681,7 @@ run_test_24_21() {
     # Start upload server
     local UPLOAD_PORT
     UPLOAD_PORT=$((PORT + 102))
-    python3 "$SCRIPT_DIR/../smoke-tests/upload-server.py" "$UPLOAD_PORT" &
+    python3 "$SCRIPT_DIR/../../smoke-tests/upload-server.py" "$UPLOAD_PORT" &
     local UPLOAD_SERVER_PID=$!
     sleep 1
 

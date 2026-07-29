@@ -13,6 +13,7 @@ Usage:
 import http.client
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -138,6 +139,47 @@ class TestStandardForm(unittest.TestCase):
         body = resp.read().decode("utf-8")
         conn.close()
         self.assertNotIn("isTrusted", body, "Standard form should NOT check isTrusted")
+
+    def test_chunked_multipart_submission_accepts_valid_csrf(self):
+        conn = http.client.HTTPConnection("127.0.0.1", SERVER_PORT)
+        conn.request("GET", "/upload", headers={"Cookie": self.cookie})
+        resp = conn.getresponse()
+        form = resp.read().decode("utf-8")
+        conn.close()
+        token_match = re.search(r'name="csrf_token" value="([^"]+)"', form)
+        self.assertIsNotNone(token_match, "Upload form should expose a CSRF token")
+
+        boundary = "kaboom-test-boundary"
+        body = (
+            f"--{boundary}\r\n"
+            'Content-Disposition: form-data; name="csrf_token"\r\n\r\n'
+            f"{token_match.group(1)}\r\n"
+            f"--{boundary}\r\n"
+            'Content-Disposition: form-data; name="title"\r\n\r\n'
+            "Chunked upload\r\n"
+            f"--{boundary}\r\n"
+            'Content-Disposition: form-data; name="Filedata"; filename="test.txt"\r\n'
+            "Content-Type: text/plain\r\n\r\n"
+            "file content\r\n"
+            f"--{boundary}--\r\n"
+        ).encode()
+        conn = http.client.HTTPConnection("127.0.0.1", SERVER_PORT)
+        conn.request(
+            "POST",
+            "/upload",
+            body=(body[index : index + 17] for index in range(0, len(body), 17)),
+            headers={
+                "Cookie": self.cookie,
+                "Content-Type": f"multipart/form-data; boundary={boundary}",
+            },
+            encode_chunked=True,
+        )
+        resp = conn.getresponse()
+        resp.read()
+        status = resp.status
+        conn.close()
+
+        self.assertEqual(status, 302)
 
 
 if __name__ == "__main__":

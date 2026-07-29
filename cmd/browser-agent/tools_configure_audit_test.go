@@ -28,6 +28,7 @@ import (
 
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/capture"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/noise"
 )
 
 // ============================================
@@ -52,6 +53,7 @@ func newConfigureTestEnv(t *testing.T) *configureTestEnv {
 	cap.Extension().SetPilotEnabled(false) // explicit default for configure context tests
 	mcpHandler := NewToolHandler(server, cap)
 	handler := mcpHandler.tools.Executor.(*ToolHandler)
+	handler.noiseConfig = noise.NewNoiseConfig()
 	return &configureTestEnv{handler: handler, server: server, capture: cap}
 }
 

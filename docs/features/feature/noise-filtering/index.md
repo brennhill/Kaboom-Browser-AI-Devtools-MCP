@@ -4,7 +4,7 @@ feature_id: feature-noise-filtering
 status: shipped
 feature_type: feature
 owners: []
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-29
 code_paths:
   - cmd/browser-agent/internal/toolconfigure/noise_actions.go
   - cmd/browser-agent/internal/toolconfigure/deps.go
@@ -37,6 +37,7 @@ test_paths:
   - internal/noise/noise_edge_test.go
   - internal/noise/noise_persistence_test.go
   - internal/noise/noise_validation_test.go
+  - scripts/tests/capture/cat-20-noise-persistence.sh
 last_verified_version: 0.7.12
 last_verified_date: 2026-03-05
 ---

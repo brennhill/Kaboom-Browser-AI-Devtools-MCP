@@ -100,8 +100,8 @@ run_test_9_3() {
 run_test_9_3
 
 # ── 9.4 — /api/status returns valid JSON ───────────────────
-begin_test "9.4" "/api/status returns valid JSON with expected fields" \
-    "GET /api/status — verify JSON with server, capture, terminal fields" \
+begin_test "9.4" "/api/status returns valid flat JSON contract" \
+    "GET /api/status — verify version, buffers, extension, and terminal fields" \
     "Dashboard API status endpoint. Missing fields break the dashboard UI."
 run_test_9_4() {
     local body
@@ -114,23 +114,28 @@ run_test_9_4() {
         fail "/api/status returned invalid JSON. Body: $(truncate "$body")"
         return
     fi
-    local has_server has_capture has_terminal
-    has_server=$(echo "$body" | jq -e '.server' 2>/dev/null)
-    has_capture=$(echo "$body" | jq -e '.capture' 2>/dev/null)
+    local has_version has_buffers has_extension has_terminal
+    has_version=$(echo "$body" | jq -e '.version' 2>/dev/null)
+    has_buffers=$(echo "$body" | jq -e '.buffers' 2>/dev/null)
+    has_extension=$(echo "$body" | jq -e 'has("extension_connected")' 2>/dev/null)
     has_terminal=$(echo "$body" | jq -e '.terminal' 2>/dev/null)
-    if [ -z "$has_server" ] || [ "$has_server" = "null" ]; then
-        fail "/api/status missing 'server' field. Body: $(truncate "$body")"
+    if [ -z "$has_version" ] || [ "$has_version" = "null" ]; then
+        fail "/api/status missing 'version' field. Body: $(truncate "$body")"
         return
     fi
-    if [ -z "$has_capture" ] || [ "$has_capture" = "null" ]; then
-        fail "/api/status missing 'capture' field. Body: $(truncate "$body")"
+    if [ -z "$has_buffers" ] || [ "$has_buffers" = "null" ]; then
+        fail "/api/status missing 'buffers' field. Body: $(truncate "$body")"
+        return
+    fi
+    if [ "$has_extension" != "true" ]; then
+        fail "/api/status missing 'extension_connected' field. Body: $(truncate "$body")"
         return
     fi
     if [ -z "$has_terminal" ] || [ "$has_terminal" = "null" ]; then
         fail "/api/status missing 'terminal' field. Body: $(truncate "$body")"
         return
     fi
-    pass "/api/status returned valid JSON with server, capture, and terminal fields. Body: $(truncate "$body" 200)"
+    pass "/api/status returned the flat version, buffers, extension, and terminal contract. Body: $(truncate "$body" 200)"
 }
 run_test_9_4
 

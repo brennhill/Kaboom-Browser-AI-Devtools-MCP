@@ -2,8 +2,18 @@ package interact
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
+
+func TestInteractToolSchema_DescribesAutomaticPerformanceDiff(t *testing.T) {
+	t.Parallel()
+
+	description := strings.ToLower(ToolSchema().Description)
+	if !strings.Contains(description, "perf_diff") || !strings.Contains(description, "timing") {
+		t.Fatalf("interact description must advertise automatic perf_diff timing data: %q", description)
+	}
+}
 
 func TestActionSpecHasNoCompatibilityMetadata(t *testing.T) {
 	t.Parallel()
