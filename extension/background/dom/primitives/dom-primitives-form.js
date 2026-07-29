@@ -3,6 +3,7 @@
 // Source: scripts/templates/dom-primitives.ts.tpl + partials/
 // Action family: form
 // Generator: scripts/build/generate-dom-primitives.js
+// jscpd:ignore-start -- injected functions must be self-contained when Chrome serializes them.
 export function domPrimitiveForm(action, selector, options) {
     function getShadowRoot(el2) { return el2.shadowRoot ?? null; }
     function querySelectorDeep(selector2, root = document) {
@@ -1472,4 +1473,5 @@ er", code: "Enter", keyCode: 13 }, Tab: { key: "Tab", code: "Tab", keyCode: 9 },
     }
     return rawResult;
 }
+// jscpd:ignore-end
 //# sourceMappingURL=dom-primitives-form.js.map

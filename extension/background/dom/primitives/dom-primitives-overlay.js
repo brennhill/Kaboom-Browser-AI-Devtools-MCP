@@ -1,3 +1,9 @@
+// @ts-nocheck -- generated JavaScript is type-checked before transformation.
+// AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
+// Source: scripts/templates/dom-primitives-overlay.ts.tpl + partials/
+// Action family: overlay
+// Generator: scripts/build/generate-dom-primitives.js
+// jscpd:ignore-start -- injected functions must be self-contained when Chrome serializes them.
 /**
  * Purpose: Self-contained DOM primitives for overlay dismiss actions (dismiss_top_overlay, auto_dismiss_overlays).
  * Why: Extracted from dom-primitives.ts to keep file sizes under the 800 LOC limit (#502).
@@ -13,7 +19,8 @@
  * MUST NOT reference any module-level variables.
  */
 export function domPrimitiveOverlay(action, options) {
-    // — Shared helpers (duplicated for self-containment) —
+    // --- PARTIAL: Self-Contained DOM Traversal Core ---
+    // Emitted into each injected function because Chrome serializes functions without module scope.
     function isKaboomOwnedElement(element) {
         let node = element;
         while (node) {
@@ -567,4 +574,5 @@ export function domPrimitiveOverlay(action, options) {
         viewport: captureViewport()
     };
 }
+// jscpd:ignore-end
 //# sourceMappingURL=dom-primitives-overlay.js.map

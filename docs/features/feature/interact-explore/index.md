@@ -64,6 +64,10 @@ code_paths:
   - scripts/templates/partials/_dom-intent.tpl
   - scripts/templates/partials/_dom-selectors.tpl
   - scripts/templates/dom-primitives.ts.tpl
+  - scripts/templates/dom-primitives-intent.ts.tpl
+  - scripts/templates/dom-primitives-overlay.ts.tpl
+  - scripts/templates/partials/shared/_dom-self-contained-core.tpl
+  - scripts/build/generate-dom-primitives.js
   - cmd/browser-agent/internal/asyncresult/normalization.go
   - cmd/browser-agent/internal/asyncresult/enrichment.go
   - cmd/browser-agent/internal/asyncresult/enrichment_csp.go
@@ -116,6 +120,7 @@ test_paths:
   - cmd/browser-agent/internal/toolinteract/interactstate/state_test.go
   - extension/background/__tests__/dom-dispatch-structured.test.js
   - tests/extension/dom-primitives-branding.test.js
+  - tests/extension/dom-primitives-generation.test.js
   - tests/extension/dom-action-family-routing.test.js
   - tests/extension/action-toast-labels.test.js
   - tests/extension/execute-js.test.js
@@ -173,6 +178,10 @@ explicit configure dependency value; root jitter forwarding methods are deleted.
 Public state actions likewise use only `save_state`, `load_state`,
 `list_states`, and `delete_state`; duplicate `state_*` entry points are not
 registered. The similarly named extension pending-query types remain internal.
+Intent, overlay, pointer, form, and read DOM primitives are generated from
+canonical templates. Shared injected traversal logic is maintained once in a
+generator partial; generated copies remain self-contained because Chrome
+serializes injected functions without module scope.
 
 ## TL;DR
 - Status: shipped

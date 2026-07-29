@@ -3,6 +3,7 @@
 // Source: scripts/templates/dom-primitives.ts.tpl + partials/
 // Action family: pointer
 // Generator: scripts/build/generate-dom-primitives.js
+// jscpd:ignore-start -- injected functions must be self-contained when Chrome serializes them.
 
 import type { DOMPrimitiveOptions, DOMResult } from '../dom-types.js'
 
@@ -277,3 +278,4 @@ bubbles:true,cancelable:true,clientX:centerX,clientY:centerY};node.dispatchEvent
 if(!handler){return domError("unknown_action",`Unknown DOM action: ${action}`)}const rawResult=handler();if(!resolvedAmbiguousMatches)return rawResult;if(rawResult instanceof
 Promise){return rawResult.then(r=>{if(r&&typeof r==="object"&&r.success){return{...r,ambiguous_matches:resolvedAmbiguousMatches}}return r})}if(rawResult&&typeof rawResult===
 "object"&&rawResult.success){return{...rawResult,ambiguous_matches:resolvedAmbiguousMatches}}return rawResult}
+// jscpd:ignore-end

@@ -6,7 +6,7 @@
 /**
  * generate-dom-primitives.js
  *
- * Generates pointer, form, and read primitive modules from the canonical template and partials.
+ * Generates all self-contained DOM primitive modules from canonical templates and partials.
  *   scripts/templates/dom-primitives.ts.tpl
  *   scripts/templates/partials/_dom-selectors.tpl
  *   scripts/templates/partials/_dom-semantic-resolvers.tpl
@@ -36,6 +36,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.join(__dirname, '..', '..')
 
 const TEMPLATE_PATH = path.join(ROOT, 'scripts', 'templates', 'dom-primitives.ts.tpl')
+const STANDALONE_TEMPLATES = {
+  intent: path.join(ROOT, 'scripts', 'templates', 'dom-primitives-intent.ts.tpl'),
+  overlay: path.join(ROOT, 'scripts', 'templates', 'dom-primitives-overlay.ts.tpl')
+}
 const PARTIALS_DIR = path.join(ROOT, 'scripts', 'templates', 'partials')
 const OUTPUT_DIR = path.join(ROOT, 'src', 'background', 'dom', 'primitives')
 const CHECK_ONLY = process.argv.includes('--check')
@@ -46,13 +50,15 @@ const ACTION_FAMILIES = {
   read: ['get_text', 'get_value', 'get_attribute', 'wait_for', 'wait_for_text', 'wait_for_absent']
 }
 
-const GENERATED_BANNER = (family) => `// @ts-nocheck -- generated JavaScript is type-checked before transformation.
+const GENERATED_BANNER = (family, source) => `// @ts-nocheck -- generated JavaScript is type-checked before transformation.
 // AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
-// Source: scripts/templates/dom-primitives.ts.tpl + partials/
+// Source: ${source} + partials/
 // Action family: ${family}
 // Generator: scripts/build/generate-dom-primitives.js
+// jscpd:ignore-start -- injected functions must be self-contained when Chrome serializes them.
 
 `
+const GENERATED_END = '\n// jscpd:ignore-end\n'
 
 function normalize(content) {
   return content.replace(/\r\n/g, '\n').trimEnd() + '\n'
@@ -113,7 +119,15 @@ function buildOutput(templateContent, family, actions) {
     `export function ${exportName}(action: string, selector: string, options: DOMPrimitiveOptions): DOMResult | Promise<DOMResult>`
   )
   const typeImport = "import type { DOMPrimitiveOptions, DOMResult } from '../dom-types.js'\n\n"
-  return GENERATED_BANNER(family) + typeImport + normalize(typedExport)
+  return GENERATED_BANNER(family, 'scripts/templates/dom-primitives.ts.tpl') +
+    typeImport + normalize(typedExport).trimEnd() + GENERATED_END
+}
+
+function buildStandaloneOutput(templatePath, family) {
+  const templateContent = fs.readFileSync(templatePath, 'utf8')
+  const source = path.relative(ROOT, templatePath).split(path.sep).join('/')
+  return GENERATED_BANNER(family, source) +
+    normalize(resolveIncludes(templateContent)).trimEnd() + GENERATED_END
 }
 
 function main() {
@@ -129,15 +143,25 @@ function main() {
     const existingContent = fs.existsSync(outputPath) ? fs.readFileSync(outputPath, 'utf8') : ''
     return { outputPath, generatedContent, isDrifted: normalize(existingContent) !== normalize(generatedContent) }
   })
+  for (const [family, templatePath] of Object.entries(STANDALONE_TEMPLATES)) {
+    if (!fs.existsSync(templatePath)) {
+      console.error(`Template not found: ${templatePath}`)
+      process.exit(1)
+    }
+    const outputPath = path.join(OUTPUT_DIR, `dom-primitives-${family}.ts`)
+    const generatedContent = buildStandaloneOutput(templatePath, family)
+    const existingContent = fs.existsSync(outputPath) ? fs.readFileSync(outputPath, 'utf8') : ''
+    outputs.push({ outputPath, generatedContent, isDrifted: normalize(existingContent) !== normalize(generatedContent) })
+  }
   const isDrifted = outputs.some((output) => output.isDrifted)
 
   if (CHECK_ONLY) {
     if (isDrifted) {
-      console.error('DOM action-family primitives are out of date.')
+      console.error('DOM primitives are out of date.')
       console.error('Run: node scripts/build/generate-dom-primitives.js')
       process.exit(1)
     }
-    console.log('DOM action-family primitives are up to date.')
+    console.log('DOM primitives are up to date.')
     return
   }
 
@@ -145,9 +169,9 @@ function main() {
     fs.writeFileSync(outputPath, generatedContent, 'utf8')
   }
   if (isDrifted) {
-    console.log('Generated action-family DOM primitives from template.')
+    console.log('Generated DOM primitives from templates.')
   } else {
-    console.log('DOM action-family primitives already current.')
+    console.log('DOM primitives already current.')
   }
 }
 

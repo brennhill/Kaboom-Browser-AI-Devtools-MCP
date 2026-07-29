@@ -3,6 +3,7 @@
 // Source: scripts/templates/dom-primitives.ts.tpl + partials/
 // Action family: pointer
 // Generator: scripts/build/generate-dom-primitives.js
+// jscpd:ignore-start -- injected functions must be self-contained when Chrome serializes them.
 export function domPrimitivePointer(action, selector, options) {
     function getShadowRoot(el2) { return el2.shadowRoot ?? null; }
     function querySelectorDeep(selector2, root = document) {
@@ -1494,4 +1495,5 @@ is not an HTMLElement: ${node.tagName}`);
     }
     return rawResult;
 }
+// jscpd:ignore-end
 //# sourceMappingURL=dom-primitives-pointer.js.map

@@ -3,6 +3,7 @@
 // Source: scripts/templates/dom-primitives.ts.tpl + partials/
 // Action family: read
 // Generator: scripts/build/generate-dom-primitives.js
+// jscpd:ignore-start -- injected functions must be self-contained when Chrome serializes them.
 export function domPrimitiveRead(action, selector, options) {
     function getShadowRoot(el2) { return el2.shadowRoot ?? null; }
     function querySelectorDeep(selector2, root = document) {
@@ -1420,4 +1421,5 @@ _present" };
     }
     return rawResult;
 }
+// jscpd:ignore-end
 //# sourceMappingURL=dom-primitives-read.js.map
