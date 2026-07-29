@@ -225,7 +225,7 @@ func TestLogDiffValueChanges(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Create recording with type action that has specific value
-	recordingID, _ := capture.Recordings().StartRecording("value-test", "https://example.com", true)
+	recordingID := mustStartRecording(t, capture, "value-test", "https://example.com", true)
 
 	action := recordingmodel.RecordingAction{
 		Type:        "type",

@@ -7,6 +7,7 @@ package interactstate
 
 import (
 	"encoding/json"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -14,8 +15,22 @@ import (
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/mcp"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/persistence"
 	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/queries"
+	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 	act "github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/tools/interact"
 )
+
+func TestMain(m *testing.M) {
+	stateRoot, err := os.MkdirTemp("", "kaboom-interactstate-tests-*")
+	if err != nil {
+		panic("create interactstate test root: " + err.Error())
+	}
+	if err := os.Setenv(state.StateDirEnv, stateRoot); err != nil {
+		panic("set interactstate test root: " + err.Error())
+	}
+	code := m.Run()
+	_ = os.RemoveAll(stateRoot)
+	os.Exit(code)
+}
 
 type fake struct {
 	pilot     bool

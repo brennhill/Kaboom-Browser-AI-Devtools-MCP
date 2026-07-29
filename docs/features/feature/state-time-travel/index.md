@@ -54,6 +54,8 @@ last_verified_date: 2026-03-05
   - `src/inject/state.ts`
 - Save, load, and delete share one request-validation boundary for canonical
   snapshot naming and session-store readiness.
+- The handler package tests install a package-owned temporary state root, so
+  recursive and restricted-home runs never touch the user's `~/.kaboom`.
 - Public `interact` action routing:
   - `cmd/browser-agent/tools_interact_dispatch.go`
 - Composition owns the canonical state handler directly:

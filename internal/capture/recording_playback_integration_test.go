@@ -15,7 +15,7 @@ func TestPlaybackLoadRecording(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Create and persist a recording
-	recordingID, _ := capture.Recordings().StartRecording("playback-test", "https://example.com", false)
+	recordingID := mustStartRecording(t, capture, "playback-test", "https://example.com", false)
 	for i := 0; i < 8; i++ {
 		capture.Recordings().AddRecordingAction(recordingmodel.RecordingAction{
 			Type:        "click",
@@ -59,7 +59,7 @@ func TestPlaybackNavigateAction(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Create a recording with navigate action
-	recordingID, _ := capture.Recordings().StartRecording("nav-test", "https://example.com", false)
+	recordingID := mustStartRecording(t, capture, "nav-test", "https://example.com", false)
 	capture.Recordings().AddRecordingAction(recordingmodel.RecordingAction{
 		Type:        "navigate",
 		URL:         "https://example.com/checkout",
@@ -100,7 +100,7 @@ func TestPlaybackClickAction(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Create a recording with click action
-	recordingID, _ := capture.Recordings().StartRecording("click-test", "https://example.com", false)
+	recordingID := mustStartRecording(t, capture, "click-test", "https://example.com", false)
 	capture.Recordings().AddRecordingAction(recordingmodel.RecordingAction{
 		Type:        "click",
 		Selector:    "[data-testid=add-to-cart]",
@@ -112,7 +112,7 @@ func TestPlaybackClickAction(t *testing.T) {
 	capture.Recordings().StopRecording(recordingID)
 
 	// Load and verify action
-	recording, _ := capture.Recordings().GetRecording(recordingID)
+	recording := mustGetRecording(t, capture, recordingID)
 	action := recording.Actions[0]
 
 	if action.Type != "click" {
@@ -139,7 +139,7 @@ func TestPlaybackClickSelfHealing(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Create action with data-testid (primary selector)
-	recordingID, _ := capture.Recordings().StartRecording("healing-test", "https://example.com", false)
+	recordingID := mustStartRecording(t, capture, "healing-test", "https://example.com", false)
 	capture.Recordings().AddRecordingAction(recordingmodel.RecordingAction{
 		Type:        "click",
 		Selector:    "[data-testid=add-to-cart]",
@@ -151,7 +151,7 @@ func TestPlaybackClickSelfHealing(t *testing.T) {
 	capture.Recordings().StopRecording(recordingID)
 
 	// Verify action has fallback coordinates for self-healing
-	recording, _ := capture.Recordings().GetRecording(recordingID)
+	recording := mustGetRecording(t, capture, recordingID)
 	action := recording.Actions[0]
 
 	// Self-healing should use fallback strategies
@@ -174,7 +174,7 @@ func TestPlaybackFragileSelectorDetection(t *testing.T) {
 	// For now, just test that we can record actions with potentially fragile selectors
 
 	capture := setupTestCapture(t)
-	recordingID, _ := capture.Recordings().StartRecording("fragile-test", "https://example.com", false)
+	recordingID := mustStartRecording(t, capture, "fragile-test", "https://example.com", false)
 
 	// Add click actions (could have fragile selectors)
 	for i := 0; i < 3; i++ {
@@ -188,7 +188,7 @@ func TestPlaybackFragileSelectorDetection(t *testing.T) {
 	}
 	capture.Recordings().StopRecording(recordingID)
 
-	recording, _ := capture.Recordings().GetRecording(recordingID)
+	recording := mustGetRecording(t, capture, recordingID)
 	if len(recording.Actions) != 3 {
 		t.Errorf("Expected 3 actions, got: %d", len(recording.Actions))
 	}
@@ -207,7 +207,7 @@ func TestPlaybackNonBlockingError(t *testing.T) {
 	capture := setupTestCapture(t)
 
 	// Create a recording with 5 actions
-	recordingID, _ := capture.Recordings().StartRecording("error-test", "https://example.com", false)
+	recordingID := mustStartRecording(t, capture, "error-test", "https://example.com", false)
 	for i := 0; i < 5; i++ {
 		capture.Recordings().AddRecordingAction(recordingmodel.RecordingAction{
 			Type:        "click",
@@ -217,7 +217,7 @@ func TestPlaybackNonBlockingError(t *testing.T) {
 	}
 	capture.Recordings().StopRecording(recordingID)
 
-	recording, _ := capture.Recordings().GetRecording(recordingID)
+	recording := mustGetRecording(t, capture, recordingID)
 
 	// Verify all actions are still recorded even if some might fail
 	if len(recording.Actions) != 5 {

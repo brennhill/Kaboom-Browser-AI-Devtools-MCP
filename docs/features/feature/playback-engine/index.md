@@ -28,8 +28,10 @@ code_paths:
   - cmd/browser-agent/internal/toolrecording/handler.go
   - cmd/browser-agent/internal/toolrecording/helpers.go
 test_paths:
+  - internal/capture/testhelpers_test.go
   - internal/capture/http_handlers_owner_test.go
   - internal/capture/recording_playback_integration_test.go
+  - internal/capture/recording_logdiff_integration_test.go
   - cmd/browser-agent/internal/toolconfigure/dispatcher_test.go
   - cmd/browser-agent/lint_hardening_test.go
   - cmd/browser-agent/internal/toolrecording/handler_test.go
@@ -73,6 +75,10 @@ last_verified_date: 2026-03-05
 - FEATURE_PLAYBACK_ENGINE_009 — Playback prerequisites and environment checks
 
 ## Code and Tests
+
+- Capture integration tests install a package-owned temporary state root before
+  constructing the production recording manager. Recording setup/load helpers
+  fail immediately on persistence errors, preventing secondary nil/index panics.
 
 - Recording capture, persistence, and storage quotas: `internal/recording/`
 - Recording persistence reads and writes only the canonical state recordings
