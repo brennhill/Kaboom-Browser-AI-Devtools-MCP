@@ -10,7 +10,7 @@ KaBOOM is an open-source MCP server that gives OpenAI Codex access to browser co
 
 ## Auto-Install
 
-If you installed KaBOOM from npm, the CLI can write the Codex config for you:
+The native binary and npm CLI can write the Codex config for you:
 
 ```bash
 kaboom-agentic-browser --install codex
@@ -18,7 +18,9 @@ kaboom-agentic-browser --install codex
 
 This writes a managed `[mcp_servers.kaboom-browser-devtools]` block to `~/.codex/config.toml` (or `$CODEX_HOME/config.toml`) and sets whole-server tool approval. Your existing settings and comments are preserved — only the KaBOOM block is replaced.
 
-If you installed KaBOOM with the `install.sh` / `install.ps1` script instead, use the manual configuration below. That installer configures JSON-based clients only, so it does not touch `config.toml`.
+The `install.sh` / `install.ps1` bootstrap also uses the native Codex writer
+when a Codex home exists. It honors `$CODEX_HOME`, preserves unrelated TOML and
+comments, and replaces only Kaboom's managed MCP server block.
 
 ## Manual Configuration
 

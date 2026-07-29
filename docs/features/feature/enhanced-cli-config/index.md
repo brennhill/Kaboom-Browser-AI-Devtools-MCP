@@ -27,6 +27,7 @@ code_paths:
   - .github/workflows/release.yml
   - scripts/release/build-crx.js
   - cmd/browser-agent/internal/nativeinstall/installer.go
+  - cmd/browser-agent/internal/nativeinstall/codex.go
   - npm/kaboom-agentic-browser/lib/extension.js
   - npm/kaboom-agentic-browser/lib/browser.js
   - npm/kaboom-agentic-browser/lib/health.js
@@ -67,6 +68,7 @@ test_paths:
   - cmd/browser-agent/stdout_protocol_boundary_test.go
   - cmd/browser-agent/internal/toolconfigure/tutorial/tutorial_test.go
   - cmd/browser-agent/internal/nativeinstall/installer_test.go
+  - cmd/browser-agent/internal/nativeinstall/codex_test.go
   - cmd/browser-agent/internal/nativeinstall/config_test.go
   - cmd/browser-agent/internal/nativeinstall/open_test.go
   - cmd/browser-agent/internal/nativeinstall/connect_test.go
@@ -157,6 +159,11 @@ OpenAPI contract.
   branches; the authored installer scripts are regression-checked below 800
   lines.
 - Install now also fixes the Claude Code `claude mcp add-json` invocation (JSON passed as a positional arg, not stdin) and adds **Codex CLI** as a supported client (`~/.codex/config.toml`, TOML; honors `$CODEX_HOME`).
+- Native `--install` has the same Codex support as the npm entry point.
+  `--install codex` selects Codex explicitly; unknown positional targets fail
+  instead of silently configuring every JSON client. The native TOML writer
+  preserves comments and unrelated tables and atomically replaces only the
+  canonical Kaboom server block.
 - Daemon setup diagnostics use one canonical CLI entry point, `--doctor`; the duplicate `--check` facade is rejected.
 - Runtime help uses one canonical configure mode, `tutorial`; the duplicate `examples` mode is rejected.
 - Tutorial context receives its three live browser signals through an explicit

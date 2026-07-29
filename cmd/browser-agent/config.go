@@ -257,7 +257,10 @@ func handleEarlyExitModes(flags *parsedFlags) {
 		os.Exit(0)
 	}
 	if *flags.installMode {
-		nativeinstall.Run(procctl.ForceCleanupQuietly)
+		if err := nativeinstall.Run(procctl.ForceCleanupQuietly, flag.Args()...); err != nil {
+			fmt.Fprintf(os.Stderr, "install_failed: %v\n", err)
+			os.Exit(2)
+		}
 		os.Exit(0)
 	}
 	if *flags.connectMode {

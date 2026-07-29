@@ -19,7 +19,7 @@ Codex stores MCP servers in `~/.codex/config.toml` (TOML), not JSON like the oth
 
 ## <i class="fas fa-bolt"></i> Auto-Install
 
-The npm CLI can write the Codex config for you:
+Both the native binary and npm CLI can write the Codex config for you:
 
 ```bash
 kaboom-agentic-browser --install codex
@@ -27,7 +27,10 @@ kaboom-agentic-browser --install codex
 
 This writes a managed `[mcp_servers.kaboom-browser-devtools]` block to `~/.codex/config.toml` (or `$CODEX_HOME/config.toml`) and sets whole-server tool approval. The edit is section-scoped: your other settings and comments are left byte-for-byte intact.
 
-**The `install.sh` / `install.ps1` bootstrap does not cover Codex.** That script runs the native binary's `--install`, which configures JSON-based clients only. If you installed that way, use the manual configuration below.
+The `install.sh` / `install.ps1` bootstrap runs the native installer and now
+configures Codex automatically when a Codex home exists. The native writer
+honors `$CODEX_HOME`, preserves unrelated TOML and comments, and replaces only
+Kaboom's `[mcp_servers.kaboom-browser-devtools]` block.
 
 ## <i class="fas fa-file-code"></i> Manual Configuration
 

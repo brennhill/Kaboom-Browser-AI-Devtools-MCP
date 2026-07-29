@@ -174,7 +174,11 @@ func fileConfigTargets(home string) []mcpFileConfig {
 }
 
 // Run detects and configures all supported MCP clients.
-func Run(forceCleanup func() error) {
+func Run(forceCleanup func() error, targetArgs ...string) error {
+	targets, targetErr := parseInstallTargets(targetArgs)
+	if targetErr != nil {
+		return targetErr
+	}
 	// 1. Silent Reset (Kill stale instances)
 	// We do this first to ensure config files aren't being held open
 	// and no old versions are interfering.
@@ -195,8 +199,10 @@ func Run(forceCleanup func() error) {
 	extDir := extensionInstallDir(home)
 
 	// 2. Claude Code
-	if err := installClaudeCode(exe); err != nil {
-		diag.Printf("  ⚠️  Claude Code: %v\n", err)
+	if !targets.codexOnly {
+		if err := installClaudeCode(exe); err != nil {
+			diag.Printf("  ⚠️  Claude Code: %v\n", err)
+		}
 	}
 
 	// 3. File-based configs
@@ -206,23 +212,35 @@ func Run(forceCleanup func() error) {
 		// cwd-relative junk paths, so skip the file-based configs entirely.
 		diag.Printf("  ⚠️  Could not determine home directory (%v); skipping file-based MCP client configs\n", homeErr)
 	} else {
-		for _, cfg := range fileConfigTargets(home) {
-			path := cfg.path
-			if strings.HasPrefix(path, "~/") {
-				path = filepath.Join(home, path[2:])
-			} else if !filepath.IsAbs(path) {
-				path = filepath.Join(home, path)
-			}
-
-			if _, err := os.Stat(filepath.Dir(path)); os.IsNotExist(err) {
-				continue // Client directory doesn't exist, skip
-			}
-
-			if err := mergeJSONConfig(path, cfg.key, exe, cfg.isCustom); err != nil {
+		codexPath := codexConfigPath(home)
+		_, codexDirErr := os.Stat(filepath.Dir(codexPath))
+		if targets.codexOnly || codexDirErr == nil {
+			if err := mergeCodexConfig(codexPath, exe); err != nil {
 				telemetry.AppError("install_config_error", nil)
-				diag.Printf("  ⚠️  %s: %v\n", cfg.name, err)
+				diag.Printf("  ⚠️  Codex: %v\n", err)
 			} else {
 				clientsConfigured++
+			}
+		}
+		if !targets.codexOnly {
+			for _, cfg := range fileConfigTargets(home) {
+				path := cfg.path
+				if strings.HasPrefix(path, "~/") {
+					path = filepath.Join(home, path[2:])
+				} else if !filepath.IsAbs(path) {
+					path = filepath.Join(home, path)
+				}
+
+				if _, err := os.Stat(filepath.Dir(path)); os.IsNotExist(err) {
+					continue // Client directory doesn't exist, skip
+				}
+
+				if err := mergeJSONConfig(path, cfg.key, exe, cfg.isCustom); err != nil {
+					telemetry.AppError("install_config_error", nil)
+					diag.Printf("  ⚠️  %s: %v\n", cfg.name, err)
+				} else {
+					clientsConfigured++
+				}
 			}
 		}
 	}
@@ -254,6 +272,7 @@ func Run(forceCleanup func() error) {
 	diag.Printf("   The Kaboom server is active on port 7890.\n")
 	diag.Printf("   Your AI tool (Claude, Cursor, etc.) is now configured.\n")
 	diag.Printf("\033[1;36m+----------------------------------------------------------+\033[0m\n")
+	return nil
 }
 
 func startDaemonSilently(exe string) {
