@@ -14,6 +14,18 @@ import (
 	"time"
 )
 
+func TestShouldSendToEndpoint_BlocksProductionFromTestBinaries(t *testing.T) {
+	if shouldSendToEndpoint(defaultEndpoint, true) {
+		t.Fatal("test binary must never send to the production telemetry endpoint")
+	}
+	if !shouldSendToEndpoint("http://127.0.0.1:12345", true) {
+		t.Fatal("test binary must still be able to exercise an explicitly local endpoint")
+	}
+	if !shouldSendToEndpoint(defaultEndpoint, false) {
+		t.Fatal("production binary must be able to send to the production endpoint")
+	}
+}
+
 func TestBeacon_DisabledByEnv(t *testing.T) {
 	t.Setenv("KABOOM_TELEMETRY", "off")
 

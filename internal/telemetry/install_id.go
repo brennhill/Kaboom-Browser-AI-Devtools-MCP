@@ -9,8 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
 // kaboomDir is the directory where install_id is persisted. Overridable for tests.
@@ -31,18 +29,15 @@ var firstToolCallOnce sync.Once
 // cachedFirstToolCallInstallID is the install ID that has already emitted first_tool_call.
 var cachedFirstToolCallInstallID string
 
-// defaultKaboomDir resolves the runtime state root the same way every other
-// Kaboom artifact does — via state.RootDir(), which honours KABOOM_STATE_DIR and
-// XDG_STATE_HOME before falling back to ~/.kaboom. Deriving ~/.kaboom directly
-// here (the old behaviour) scattered install_id/first_tool_call outside a
-// configured state dir, so a project-isolated daemon lost its install identity.
-// The no-env default is unchanged (~/.kaboom).
+// defaultKaboomDir resolves the installation root. Installation identity must
+// not follow KABOOM_STATE_DIR or XDG_STATE_HOME: those roots isolate runtime
+// data for projects and tests, while iid must survive every upgrade and launch.
 func defaultKaboomDir() string {
-	root, err := state.RootDir()
+	home, err := os.UserHomeDir()
 	if err != nil {
 		return filepath.Join(os.TempDir(), ".kaboom")
 	}
-	return root
+	return filepath.Join(home, ".kaboom")
 }
 
 // Warm pre-loads install ID and session state so the first tool call
@@ -77,9 +72,28 @@ func loadOrGenerateInstallID() string {
 	// Generate a new random ID.
 	id := generateRandomID()
 
-	// Best-effort persist: create dir and write file.
+	// Best-effort persist through a fully-written temporary file and an atomic
+	// hard-link create. Concurrent processes can generate candidates, but only
+	// one candidate can become install_id and every process returns that winner.
 	if err := os.MkdirAll(kaboomDir, 0700); err == nil {
-		_ = os.WriteFile(idPath, []byte(id), 0600)
+		tmp, createErr := os.CreateTemp(kaboomDir, ".install-id-*")
+		if createErr == nil {
+			tmpPath := tmp.Name()
+			defer os.Remove(tmpPath)
+			_ = tmp.Chmod(0600)
+			_, writeErr := tmp.WriteString(id)
+			closeErr := tmp.Close()
+			if writeErr == nil && closeErr == nil {
+				if linkErr := os.Link(tmpPath, idPath); linkErr == nil {
+					return id
+				}
+				if winner, readErr := os.ReadFile(idPath); readErr == nil {
+					if persisted := strings.TrimSpace(string(winner)); persisted != "" {
+						return persisted
+					}
+				}
+			}
+		}
 	}
 
 	return id

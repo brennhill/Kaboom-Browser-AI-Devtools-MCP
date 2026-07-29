@@ -52,6 +52,27 @@ describe('comprehensive UAT harness regressions', () => {
     assert.match(runner, /--suite offline\|connected\|all/)
   })
 
+  test('comprehensive UAT never emits production telemetry', () => {
+    const runner = readFileSync('scripts/test-all-tools-comprehensive.sh', 'utf8')
+    assert.match(
+      runner,
+      /export KABOOM_TELEMETRY=off/,
+      'isolated UAT daemon states must not inflate production install analytics'
+    )
+    const smokeRunner = readFileSync('scripts/smoke-test.sh', 'utf8')
+    assert.match(
+      smokeRunner,
+      /export KABOOM_TELEMETRY=off/,
+      'smoke tests must not create production analytics activity'
+    )
+    const framework = readFileSync('scripts/tests/framework/framework.sh', 'utf8')
+    assert.match(
+      framework,
+      /export KABOOM_TELEMETRY=off/,
+      'standalone category tests must not create production analytics activity'
+    )
+  })
+
   test('offline suite is isolated from the extension port and connected suite is preflighted', () => {
     const runner = readFileSync('scripts/test-all-tools-comprehensive.sh', 'utf8')
 

@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -205,6 +206,12 @@ func fireBeacon(payload map[string]any) {
 	beaconMu.RLock()
 	ep := endpoint
 	beaconMu.RUnlock()
+	testBinary := strings.HasSuffix(filepath.Base(os.Args[0]), ".test") ||
+		strings.HasSuffix(filepath.Base(os.Args[0]), ".test.exe")
+	if !shouldSendToEndpoint(ep, testBinary) {
+		callOnFireBeacon(false)
+		return
+	}
 
 	data, err := json.Marshal(payload)
 	if err != nil {
@@ -230,6 +237,10 @@ func fireBeacon(payload map[string]any) {
 		// At capacity, drop this beacon silently
 		callOnFireBeacon(false)
 	}
+}
+
+func shouldSendToEndpoint(ep string, testBinary bool) bool {
+	return !testBinary || ep != defaultEndpoint
 }
 
 // overrideEndpoint sets a custom endpoint for testing.

@@ -260,6 +260,7 @@ async function main() {
     ...process.env,
     HOME: homeDir,
     USERPROFILE: homeDir,
+    KABOOM_TELEMETRY: 'off',
     KABOOM_RELEASES_URL: 'http://127.0.0.1:1/releases/latest'
   }
 

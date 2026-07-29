@@ -339,8 +339,11 @@ Example:
 ### Install identity
 
 - Generate `iid` once per install.
-- Persist it locally.
+- Persist it at `~/.kaboom/install_id`, independently of configurable runtime
+  state roots.
 - Keep it stable across launches and upgrades.
+- Automated tests must disable production telemetry and must not contribute
+  install identities or activity rows.
 
 ### Session identity
 
@@ -453,7 +456,7 @@ Notes:
 
 | Question | Primary source |
 |----------|----------------|
-| Monthly active installs | distinct `iid` over range |
+| Monthly active installs | distinct valid `iid` with activity in the trailing 30 days |
 | Tool popularity | `tool_call` and `tool_summary` |
 | Tool latency | `tool_call.latency_ms` and `tool_summary.latency_*` |
 | Error rate by tool | `tool_call.outcome = error` and `tool_summary.error_count` |

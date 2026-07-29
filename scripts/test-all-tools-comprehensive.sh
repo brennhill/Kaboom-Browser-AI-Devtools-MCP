@@ -52,6 +52,9 @@ check_deps
 
 # Categories share the extension's configured port and clean up their own daemon.
 export KABOOM_TEST_DISABLE_GLOBAL_CLEANER=1
+# UAT launches many isolated daemon states. Never let those synthetic sessions
+# create production analytics rows or inflate distinct active-install counts.
+export KABOOM_TELEMETRY=off
 # Comprehensive run should collect all test outcomes, not abort category scripts
 # on first non-zero helper command.
 export KABOOM_TEST_FAIL_FAST=0

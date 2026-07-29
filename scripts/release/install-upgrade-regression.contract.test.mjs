@@ -21,6 +21,11 @@ test('upgrade regression script validates health service identity', () => {
     /kaboom-browser-devtools/i,
     'expected service identity check to enforce kaboom-browser-devtools'
   )
+  assert.match(
+    source,
+    /KABOOM_TELEMETRY:\s*'off'/,
+    'upgrade regression daemons must not emit production telemetry'
+  )
 })
 
 test('shell installer uses Kaboom canonical binaries and install roots', () => {

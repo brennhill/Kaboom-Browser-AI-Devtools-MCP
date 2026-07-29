@@ -4,12 +4,12 @@ scope: feature/app-telemetry
 ai-priority: medium
 tags: [telemetry, architecture, privacy]
 relates-to: [index.md, product-spec.md, qa-plan.md, ../../../core/app-metrics.md]
-last-verified: 2026-07-28
+last-verified: 2026-07-29
 doc_type: tech-spec
 feature_id: feature-app-telemetry
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-29
 last_verified_version: 0.8.8
-last_verified_date: 2026-07-28
+last_verified_date: 2026-07-29
 ---
 
 # App Telemetry — Technical Specification
@@ -55,8 +55,13 @@ increments that arrive after the swap.
 
 ## Identity and Lifecycle
 
-- The install ID is random, persisted in the Kaboom state directory, cached
-  after loading, and represented as 12 lowercase hexadecimal characters.
+- The install ID is random, persisted at the installation root
+  (`~/.kaboom/install_id`), cached after loading, and represented as 12
+  lowercase hexadecimal characters. Runtime-state overrides never relocate it:
+  project isolation and UAT must not manufacture new analytics identities.
+- First creation publishes a fully written candidate atomically. Concurrent
+  daemon starts therefore converge on the same persisted ID instead of caching
+  different candidates while overwriting one another.
 - The first-tool marker is persisted per install so `first_tool_call` is
   emitted once for that install.
 - Session IDs are random 16-character lowercase hexadecimal values.
@@ -92,6 +97,8 @@ the loop.
 ## Concurrency and Failure Properties
 
 - Package state and tracker aggregates are mutex-protected.
+- Installation identity is invariant across upgrade, runtime-state overrides,
+  and concurrent daemon starts.
 - Delivery concurrency is bounded without blocking producers.
 - Empty snapshots and idle reporting windows do not emit events.
 - Caller-supplied app-error properties cannot overwrite canonical error fields.

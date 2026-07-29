@@ -10,6 +10,9 @@
 #   bash scripts/smoke-test.sh 7890 --start-from 07
 set -euo pipefail
 
+# Smoke traffic is synthetic and must never reach production analytics.
+export KABOOM_TELEMETRY=off
+
 RUNNER_DIR="$(cd "$(dirname "$0")" && pwd)"
 SMOKE_DIR="$RUNNER_DIR/smoke-tests"
 PORT="7890"

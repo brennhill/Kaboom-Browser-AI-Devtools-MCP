@@ -8,9 +8,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"sync"
 	"testing"
-
-	"github.com/brennhill/Kaboom-Browser-AI-Devtools-MCP/internal/state"
 )
 
 var hexPattern = regexp.MustCompile(`^[0-9a-f]{12}$`)
@@ -123,31 +122,65 @@ func TestGetInstallID_TrimsCarriageReturn(t *testing.T) {
 	}
 }
 
-// Regression: defaultKaboomDir() used to derive ~/.kaboom directly, ignoring
-// KABOOM_STATE_DIR / XDG_STATE_HOME. It must route through state.RootDir() so a
-// project-isolated daemon persists install_id under the configured state root
-// (consistent with every other Kaboom artifact) instead of scattering it to
-// ~/.kaboom. Fails before the fix, passes after.
-func TestDefaultKaboomDir_HonorsStateDirEnv(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv(state.StateDirEnv, dir) // t.Setenv forbids t.Parallel and auto-restores
+// Installation identity is machine-install scoped, not runtime-state scoped.
+// UAT and project-isolated daemons routinely override these state roots; letting
+// those overrides rotate iid inflates active-install analytics.
+func TestDefaultKaboomDir_IgnoresRuntimeStateOverrides(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("KABOOM_STATE_DIR", filepath.Join(t.TempDir(), "isolated"))
+	t.Setenv("XDG_STATE_HOME", filepath.Join(t.TempDir(), "xdg"))
 	t.Cleanup(resetKaboomDir)
 
 	resetInstallIDState()
-	resetKaboomDir() // recompute kaboomDir now that KABOOM_STATE_DIR is set
+	resetKaboomDir()
 
-	if kaboomDir != dir {
-		t.Fatalf("kaboomDir = %q, want %q (KABOOM_STATE_DIR must be honored)", kaboomDir, dir)
+	want := filepath.Join(home, ".kaboom")
+	if kaboomDir != want {
+		t.Fatalf("kaboomDir = %q, want installation root %q", kaboomDir, want)
 	}
 
-	// The install_id file must actually land under the configured root.
 	id := GetInstallID()
-	data, err := os.ReadFile(filepath.Join(dir, "install_id"))
+	data, err := os.ReadFile(filepath.Join(want, "install_id"))
 	if err != nil {
-		t.Fatalf("install_id not written under KABOOM_STATE_DIR: %v", err)
+		t.Fatalf("install_id not written under installation root: %v", err)
 	}
 	if string(data) != id {
 		t.Fatalf("install_id file content = %q, want %q", string(data), id)
+	}
+}
+
+// Concurrent daemon starts must converge on the one ID that wins file
+// creation. A normal overwriting write lets every process cache a different ID.
+func TestLoadOrGenerateInstallID_ConcurrentCreatorsConverge(t *testing.T) {
+	dir := t.TempDir()
+	overrideKaboomDir(dir)
+	t.Cleanup(resetKaboomDir)
+
+	const creators = 32
+	start := make(chan struct{})
+	results := make(chan string, creators)
+	var wg sync.WaitGroup
+	wg.Add(creators)
+	for range creators {
+		go func() {
+			defer wg.Done()
+			<-start
+			results <- loadOrGenerateInstallID()
+		}()
+	}
+	close(start)
+	wg.Wait()
+	close(results)
+
+	var first string
+	for id := range results {
+		if first == "" {
+			first = id
+		}
+		if id != first {
+			t.Fatalf("concurrent creators returned %q and %q", first, id)
+		}
 	}
 }
 

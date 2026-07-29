@@ -4,6 +4,9 @@
 # MCP request sending, daemon lifecycle, and structured output.
 set -eo pipefail
 
+# Category traffic is synthetic, including when a category is run standalone.
+export KABOOM_TELEMETRY=off
+
 FRAMEWORK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TEST_DAEMON_CLEANER="$FRAMEWORK_DIR/../../cleanup-test-daemons.sh"
 # shellcheck source=uat-user-state.sh
