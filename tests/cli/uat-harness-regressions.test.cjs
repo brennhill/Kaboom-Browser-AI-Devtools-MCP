@@ -24,11 +24,31 @@ describe('comprehensive UAT harness regressions', () => {
     assert.equal(frameworkCall(`json_boolean '{}' valid`), '')
   })
 
-  test('connected-extension categories share one sequential daemon port', () => {
+  test('offline and connected categories have explicit, disjoint suite boundaries', () => {
+    const runner = readFileSync('scripts/test-all-tools-comprehensive.sh', 'utf8')
+    const categoryIds = (name) => {
+      const match = runner.match(new RegExp(`^${name}="([^"]+)"$`, 'm'))
+      assert.ok(match, `${name} must be declared`)
+      return match[1].split(' ')
+    }
+    const offline = categoryIds('OFFLINE_CAT_IDS')
+    const connected = categoryIds('CONNECTED_CAT_IDS')
+
+    assert.equal(new Set([...offline, ...connected]).size, 24)
+    assert.deepEqual(offline.filter((id) => connected.includes(id)), [])
+    assert.ok(offline.includes('05'), 'Pilot-unavailable contract belongs offline')
+    assert.ok(connected.includes('15'), 'Pilot success path belongs connected')
+    assert.ok(connected.includes('24'), 'Upload success path dispatches through the extension')
+    assert.match(runner, /--suite offline\|connected\|all/)
+  })
+
+  test('offline suite is isolated from the extension port and connected suite is preflighted', () => {
     const runner = readFileSync('scripts/test-all-tools-comprehensive.sh', 'utf8')
 
-    assert.match(runner, /UAT_PORT=7890/)
-    assert.match(runner, /Running \d+ categories sequentially/)
+    assert.match(runner, /OFFLINE_UAT_PORT=.*17890/)
+    assert.match(runner, /CONNECTED_UAT_PORT=.*7890/)
+    assert.match(runner, /preflight_connected_extension/)
+    assert.match(runner, /Running .* categories sequentially/)
     assert.doesNotMatch(runner, /Running \d+ parallel groups/)
     assert.doesNotMatch(runner, /PORT_GROUP\d+=/)
   })

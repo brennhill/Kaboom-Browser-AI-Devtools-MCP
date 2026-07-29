@@ -1,6 +1,6 @@
 #!/bin/bash
-# test-all-tools-comprehensive.sh — Deterministic connected-browser UAT runner for Kaboom MCP.
-# Runs each category sequentially against the extension's configured daemon port.
+# test-all-tools-comprehensive.sh — Deterministic offline and connected-browser UAT runner.
+# Usage: test-all-tools-comprehensive.sh [--suite offline|connected|all]
 # Compatible with bash 3.2+ (macOS default).
 # NO set -e: we need to collect all results even if some groups fail.
 #
@@ -8,6 +8,24 @@
 # a human operator to visually verify browser overlays (subtitle, draw mode,
 # recording watermark, action toast, tracked hover launcher island).
 # Run it standalone: bash scripts/tests/cat-27-interactive-overlays.sh <port>
+
+# ── Suite Selection ───────────────────────────────────────
+SUITE="all"
+if [ "$#" -gt 0 ]; then
+    if [ "$#" -ne 2 ] || [ "$1" != "--suite" ]; then
+        echo "Usage: $0 [--suite offline|connected|all]" >&2
+        exit 2
+    fi
+    SUITE="$2"
+fi
+
+case "$SUITE" in
+    offline|connected|all) ;;
+    *)
+        echo "Usage: $0 [--suite offline|connected|all]" >&2
+        exit 2
+        ;;
+esac
 
 # ── Dependency Checks ─────────────────────────────────────
 check_deps() {
@@ -109,73 +127,64 @@ echo ""
 echo "Binary:     $WRAPPER"
 echo "Tests dir:  $TESTS_DIR"
 echo "Results:    $RESULTS_DIR"
+echo "Suite:      $SUITE"
 echo ""
 
-# ── Pre-flight: Extension Connectivity ────────────────────
-# UAT MUST NOT pass without a browser extension connected.
-# Start a temporary daemon, check extension_connected, abort if false.
-PREFLIGHT_PORT=7890
-lsof -ti :"$PREFLIGHT_PORT" 2>/dev/null | xargs kill -9 2>/dev/null || true
-sleep 0.3
+# Offline contracts run away from the extension's configured endpoint so their
+# Pilot-unavailable assertions cannot be invalidated by a live browser.
+OFFLINE_UAT_PORT="${KABOOM_UAT_OFFLINE_PORT:-17890}"
+CONNECTED_UAT_PORT="${KABOOM_UAT_CONNECTED_PORT:-7890}"
+OFFLINE_CAT_IDS="01 02 03 04 05 06 07 08 09 10 11 12 13 20 25 26 28"
+CONNECTED_CAT_IDS="14 15 16 18 19 23 24"
 
-echo "Pre-flight: checking extension connectivity..."
-(cd "$PROJECT_ROOT" && "$WRAPPER" --daemon --port "$PREFLIGHT_PORT" >/dev/null 2>&1) &
-PREFLIGHT_PID="$!"
+case "$SUITE" in
+    offline) CAT_IDS="$OFFLINE_CAT_IDS" ;;
+    connected) CAT_IDS="$CONNECTED_CAT_IDS" ;;
+    all) CAT_IDS="$OFFLINE_CAT_IDS $CONNECTED_CAT_IDS" ;;
+esac
 
-# Wait for health endpoint
-for _pf_i in $(seq 1 30); do
-    if curl -s --connect-timeout 1 "http://localhost:${PREFLIGHT_PORT}/health" >/dev/null 2>&1; then
-        break
+preflight_connected_extension() {
+    local preflight_pid=""
+    local preflight_health=""
+    local ext_connected=""
+    local ext_last_seen=""
+
+    lsof -ti :"$CONNECTED_UAT_PORT" 2>/dev/null | xargs kill -9 2>/dev/null || true
+    sleep 0.3
+    echo "Pre-flight: checking extension connectivity..."
+    (cd "$PROJECT_ROOT" && "$WRAPPER" --daemon --port "$CONNECTED_UAT_PORT" >/dev/null 2>&1) &
+    preflight_pid="$!"
+
+    for _pf_i in $(seq 1 30); do
+        if curl -s --connect-timeout 1 "http://localhost:${CONNECTED_UAT_PORT}/health" >/dev/null 2>&1; then
+            break
+        fi
+        sleep 0.1
+    done
+    sleep 3
+
+    preflight_health="$(curl -s --max-time 5 "http://localhost:${CONNECTED_UAT_PORT}/health" 2>/dev/null)"
+    ext_connected="$(echo "$preflight_health" | jq -r '.capture.extension_connected // false' 2>/dev/null)"
+    ext_last_seen="$(echo "$preflight_health" | jq -r '.capture.extension_last_seen // "never"' 2>/dev/null)"
+    kill "$preflight_pid" 2>/dev/null || true
+    lsof -ti :"$CONNECTED_UAT_PORT" 2>/dev/null | xargs kill -9 2>/dev/null || true
+    wait "$preflight_pid" 2>/dev/null || true
+
+    if [ "$ext_connected" != "true" ]; then
+        echo "FATAL: connected suite requires the Kaboom extension on port $CONNECTED_UAT_PORT." >&2
+        echo "Extension last seen: $ext_last_seen" >&2
+        return 1
     fi
-    sleep 0.1
-done
-
-# Give extension 3 seconds to connect (it polls every ~1s)
-sleep 3
-
-PREFLIGHT_HEALTH=$(curl -s --max-time 5 "http://localhost:${PREFLIGHT_PORT}/health" 2>/dev/null)
-EXT_CONNECTED=$(echo "$PREFLIGHT_HEALTH" | jq -r '.capture.extension_connected // false' 2>/dev/null)
-EXT_LAST_SEEN=$(echo "$PREFLIGHT_HEALTH" | jq -r '.capture.extension_last_seen // "never"' 2>/dev/null)
-
-# Kill preflight daemon
-kill "$PREFLIGHT_PID" 2>/dev/null || true
-lsof -ti :"$PREFLIGHT_PORT" 2>/dev/null | xargs kill -9 2>/dev/null || true
-wait "$PREFLIGHT_PID" 2>/dev/null || true
-
-if [ "$EXT_CONNECTED" != "true" ]; then
-    echo ""
-    echo "############################################################"
-    echo "# FATAL: No browser extension connected"
-    echo "############################################################"
-    echo ""
-    echo "UAT requires a Chrome browser with the Kaboom extension"
-    echo "connected and tracking a tab."
-    echo ""
-    echo "  Extension last seen: $EXT_LAST_SEEN"
-    echo ""
-    echo "Steps:"
-    echo "  1. Open Chrome with the Kaboom extension installed"
-    echo "  2. Click the Kaboom icon → 'Track This Tab'"
-    echo "  3. Re-run this UAT script"
-    echo ""
-    exit 1
-fi
-
-echo "Pre-flight: extension connected (last seen: $EXT_LAST_SEEN)"
-echo ""
-
-# ── Shared Extension Port ─────────────────────────────────
-# A browser extension has one daemon endpoint. Parallel daemons on alternate
-# ports cannot receive its commands, so connected-browser categories must run
-# sequentially on the configured endpoint.
-UAT_PORT=7890
+    echo "Pre-flight: extension connected (last seen: $ext_last_seen)"
+}
 
 # Safety-net trap: kill daemons on all ports if runner exits abnormally
 _uat_cleanup() {
-    lsof -ti :"$UAT_PORT" 2>/dev/null | xargs kill -9 2>/dev/null || true
-    # Also kill upload test servers that cat-24 may have spawned
-    for _p in $((UAT_PORT + 100)) $((UAT_PORT + 101)) $((UAT_PORT + 102)); do
-        lsof -ti :"$_p" 2>/dev/null | xargs kill -9 2>/dev/null || true
+    for _base_port in "$OFFLINE_UAT_PORT" "$CONNECTED_UAT_PORT"; do
+        lsof -ti :"$_base_port" 2>/dev/null | xargs kill -9 2>/dev/null || true
+        for _p in $((_base_port + 100)) $((_base_port + 101)) $((_base_port + 102)); do
+            lsof -ti :"$_p" 2>/dev/null | xargs kill -9 2>/dev/null || true
+        done
     done
     if [ -f "$SCRIPT_DIR/cleanup-test-daemons.sh" ]; then
         bash "$SCRIPT_DIR/cleanup-test-daemons.sh" --quiet >/dev/null 2>&1 || true
@@ -183,13 +192,7 @@ _uat_cleanup() {
 }
 trap _uat_cleanup EXIT
 
-# Kill anything on the shared port before starting
-lsof -ti :"$UAT_PORT" 2>/dev/null | xargs kill -9 2>/dev/null || true
-sleep 0.5
-
 # ── Run Categories ────────────────────────────────────────
-CAT_IDS="01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 18 19 20 23 24 25 26 28"
-
 category_timeout() {
     case "$1" in
         19) echo 600 ;;
@@ -200,22 +203,40 @@ category_timeout() {
 
 run_category() {
     local cat_id="$1"
+    local uat_port="$2"
     local timeout_seconds
     timeout_seconds="$(category_timeout "$cat_id")"
     (
         cd "$PROJECT_ROOT" || exit
         "$TIMEOUT_CMD" "$timeout_seconds" bash "$TESTS_DIR/cat-${cat_id}-"*.sh \
-            "$UAT_PORT" "$RESULTS_DIR/results-${cat_id}.txt" \
+            "$uat_port" "$RESULTS_DIR/results-${cat_id}.txt" \
             > "$RESULTS_DIR/output-${cat_id}.txt" 2>&1
     ) || true
 }
 
-echo "Running 24 categories sequentially on extension port $UAT_PORT..."
-echo ""
+run_suite() {
+    local suite_name="$1"
+    local uat_port="$2"
+    local suite_cat_ids="$3"
+    local category_count
+    category_count="$(echo "$suite_cat_ids" | wc -w | tr -d ' ')"
 
-for cat_id in $CAT_IDS; do
-    run_category "$cat_id"
-done
+    lsof -ti :"$uat_port" 2>/dev/null | xargs kill -9 2>/dev/null || true
+    sleep 0.5
+    echo "Running $category_count $suite_name categories sequentially on port $uat_port..."
+    echo ""
+    for cat_id in $suite_cat_ids; do
+        run_category "$cat_id" "$uat_port"
+    done
+}
+
+if [ "$SUITE" = "offline" ] || [ "$SUITE" = "all" ]; then
+    run_suite "offline-contract" "$OFFLINE_UAT_PORT" "$OFFLINE_CAT_IDS"
+fi
+if [ "$SUITE" = "connected" ] || [ "$SUITE" = "all" ]; then
+    preflight_connected_extension || exit 1
+    run_suite "connected-browser" "$CONNECTED_UAT_PORT" "$CONNECTED_CAT_IDS"
+fi
 
 # ── Collect and Display Results ───────────────────────────
 

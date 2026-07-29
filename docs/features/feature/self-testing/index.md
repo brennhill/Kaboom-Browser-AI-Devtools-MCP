@@ -88,9 +88,10 @@ last_verified_date: 2026-03-05
 - Split UAT orchestration + integrity checks: `scripts/test-all-split.sh`, `scripts/test-original-uat.sh`, `scripts/test-new-uat.sh`
 - Shared UAT result parsing: `scripts/uat-result-lib.sh`
 - Category daemon lifecycle and result-file contract: `scripts/tests/framework.sh`
-- Comprehensive connected-browser UAT runs categories sequentially on the
-  extension's single configured daemon port, preventing cross-daemon
-  contention and preserving trustworthy per-category aggregation.
+- Comprehensive UAT has explicit `offline`, `connected`, and `all` suites.
+  Offline contracts use an isolated daemon port; connected-browser categories
+  run sequentially on the extension's configured port after connectivity
+  preflight. Run either boundary with `--suite offline|connected`.
 - UAT category suites: `scripts/tests/cat-*.sh`
 - HTTP fixtures and embedded test pages: `cmd/browser-agent/internal/testpages/http.go`
 - WebSocket harness: `cmd/browser-agent/internal/testpages/websocket.go`
